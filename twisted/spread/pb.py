@@ -422,7 +422,7 @@ class _NetUnjellier(jelly._Unjellier):
         return obj
 
     def _unjelly_remote(self, rest):
-        obj = RemoteReference(self.broker.getPerspective(), self.broker, rest[0], 1)
+        obj = RemoteReference(self.broker.unserializingPerspective, self.broker, rest[0], 1)
         return obj
 
     def _unjelly_local(self, rest):
@@ -669,9 +669,6 @@ class Broker(banana.Banana):
         instance = self.locallyCachedObjects[cid]
         return instance
 
-    def getPerspective(self):
-        return self.perspective
-
     def jelly(self, object):
         return self.jellier.jelly(object)
 
@@ -688,8 +685,15 @@ class Broker(banana.Banana):
                 'kw': kw
                 })
             return object
+        
+        # XXX This call is NOT REENTRANT and testing for reentrancy is just
+        # crazy, so it likely won't be.  Don't ever write methods that call the
+        # broker's serialize() method recursively (e.g. sending a method call
+        # from within a getState (this causes concurrency problems anyway so
+        # you really, really shouldn't do it))
+        
         self.jellier = _NetJellier(self)
-        self.perspective = perspective
+        self.serializingPerspective = perspective
         self.jellyMethod = method
         self.jellyArgs = args
         self.jellyKw = kw
@@ -697,7 +701,7 @@ class Broker(banana.Banana):
             return self.jellier.jelly(object)
         finally:
             self.jellier = None
-            self.perspective = None
+            self.serializingPerspective = None
             self.jellyMethod = None
             self.jellyArgs = None
             self.jellyKw = None
@@ -706,12 +710,12 @@ class Broker(banana.Banana):
         """Unjelly an sexp according to the local security rules for this broker.
         """
 
-        self.perspective = perspective
+        self.unserializingPerspective = perspective
         self.unjellier = _NetUnjellier(self)
         try:
             return self.unjellier.unjelly(sexp)
         finally:
-            self.perspective = None
+            self.unserializingPerspective = None
             self.unjellier = None
 
     def newLocalID(self):

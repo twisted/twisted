@@ -65,6 +65,11 @@ class IOPump:
         self.clientIO = clientIO
         self.serverIO = serverIO
 
+    def flush(self):
+        "Pump until there is no more input or output."
+        while self.pump():
+            pass
+
     def pump(self):
         """Move data back and forth.
 
@@ -108,8 +113,7 @@ def connectedServerAndClient():
     s.makeConnection(protocol.FileWrapper(sio))
     pump = IOPump(c, s, cio, sio)
     # Challenge-response authentication:
-    while pump.pump():
-        pass
+    pump.flush()
     return c, s, pump
 
 class SimpleRemote(pb.Referenceable):
@@ -332,6 +336,7 @@ class BrokerTestCase(unittest.TestCase):
         pump.pump()
         assert self.thunkResult.check() == 1, "check failed"
 
+
     def testObserve(self):
         c, s, pump = connectedServerAndClient()
 
@@ -463,19 +468,65 @@ class BrokerTestCase(unittest.TestCase):
         pb.logIn(authRef, None, "test", "guest", "guest", "any").addCallbacks(accum.append, self.whatTheHell)
         # ident = c.remoteForName("identity")
         # ident.attach("test", "any", None).addCallback(accum.append)
-        pump.pump() # send call
-        pump.pump() # get response
-        while pump.pump(): # uh, do it more
-            pass
+        pump.flush()
         test = accum.pop() # okay, this should be our perspective...
         test.getDummyViewPoint().addCallback(accum.append)
-        pump.pump() # send call
-        pump.pump() # get response
+        pump.flush()
         accum.pop().doNothing().addCallback(accum.append)
-        pump.pump()
-        pump.pump()
+        pump.flush()
         assert accum.pop() == 'hello world!', 'oops...'
 
+    def testPublishable(self):
+        print '<<< PUBLISHABLE'
+        try:
+            import os
+            try:
+                os.unlink('None-None-TESTING.pub') # from RemotePublished.getFileName
+            except OSError:
+                print "couldn't unlink publishable cache file"
+            else:
+                print "unlinked publishable cache file"
+            c, s, pump = connectedServerAndClient()
+            foo = GetPublisher()
+            # foo.pub.timestamp = 1.0
+            s.setNameForLocal("foo", foo)
+            bar = c.remoteForName("foo")
+            accum = []
+            bar.getPub().addCallbacks(accum.append, self.thunkErrorBad)
+            pump.flush()
+            obj = accum.pop()
+            self.assertEquals(obj.activateCalled, 1)
+            self.assertEquals(obj.isActivated, 1)
+            self.assertEquals(obj.yayIGotPublished, 1)
+            self.assertEquals(obj._wasCleanWhenLoaded, 0) # timestamp's dirty, we don't have a cache file
+            c, s, pump = connectedServerAndClient()
+            s.setNameForLocal("foo", foo)
+            bar = c.remoteForName("foo")
+            bar.getPub().addCallbacks(accum.append, self.thunkErrorBad)
+            pump.flush()
+            obj = accum.pop()
+            self.assertEquals(obj._wasCleanWhenLoaded, 1) # timestamp's clean, our cache file is up-to-date
+        finally:
+            print '>>> PUBLISHABLE'
+
+from twisted.spread import publish
+
+class DumbPublishable(publish.Publishable):
+    def getStateToPublish(self):
+        return {"yayIGotPublished": 1}
+
+class DumbPub(publish.RemotePublished):
+    def activated(self):
+        self.activateCalled = 1
+
+class GetPublisher(pb.Referenceable):
+    def __init__(self):
+        self.pub = DumbPublishable("TESTING")
+    def remote_getPub(self):
+        return self.pub
+
+
+pb.setCopierForClass(str(DumbPublishable), DumbPub)
 
 class DisconnectionTestCase(unittest.TestCase):
     """Test disconnection callbacks."""

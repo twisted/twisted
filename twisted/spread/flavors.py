@@ -274,7 +274,7 @@ class Viewable(Serializable):
     def remoteSerialize(self, broker):
         """Serialize a ViewPoint for me and the perspective of the given broker.
         """
-        return ViewPoint(broker.getPerspective(), self).remoteSerialize(broker)
+        return ViewPoint(broker.serializingPerspective, self).remoteSerialize(broker)
 
 
 
@@ -335,7 +335,7 @@ class Copyable(Serializable):
         not override this method.
         """
 
-        p = broker.getPerspective()
+        p = broker.serializingPerspective
         return (copy_atom, self.getTypeToCopyFor(p),
                 broker.jelly(self.getStateToCopyFor(p)))
 
@@ -376,7 +376,7 @@ class Cacheable(Copyable):
         luid = broker.cachedRemotelyAs(self)
         if luid is None:
             luid = broker.cacheRemotely(self)
-            p = broker.getPerspective()
+            p = broker.serializingPerspective
             type_ = self.getTypeToCopyFor(p)
             observer = RemoteCacheObserver(broker, self, p)
             state = self.getStateToCacheAndObserveFor(p, observer)
@@ -471,12 +471,16 @@ class RemoteCache(RemoteCopy, Serializable):
         """
         return id(self.__dict__)
 
+    broker = None
+    luid = None
+
     def __del__(self):
         """Do distributed reference counting on finalize.
         """
         try:
             # print 'decache: %s %d' % (self, self.luid)
-            self.broker.decCacheRef(self.luid)
+            if self.broker:
+                self.broker.decCacheRef(self.luid)
         except:
             log.deferr()
 
