@@ -143,13 +143,15 @@ class Choice(Argument):
     be a list of tuples of tag, value, and description.  The tag will be
     the value returned if the user hits "Submit", and the description
     is the bale for the enumerated type.  default is a list of all the
-    tags (values to be returned upon hitting "Submit").  If no defaults
-    are specified, initially nothing will be selected.  Only one item
-    can (should) be selected at once.
+    values (seconds element in choices).  If no defaults are specified,
+    initially the first item will be selected.  Only one item can (should)
+    be selected at once.
     """
     def __init__(self, name, choices=[], default=[], shortDesc=None,
                  longDesc=None, hints=None):
         self.choices = choices
+        if choices and not default:
+            default = [choices[0][1]]
         Argument.__init__(self, name, default, shortDesc, longDesc, hints)
 
     def coerce(self, inIdent):
@@ -166,9 +168,9 @@ class Flags(Argument):
     list of tuples of tag, value, and description. The tag will be
     the value returned if the user hits "Submit", and the description
     is the bale for the enumerated type.  default is a list of all the
-    tags (values to be returned upon hitting "Submit").  If no defaults
-    are specified, initially nothing will be selected.  Several items may
-    be selected at once.
+    values (second elements in flags).  If no defaults are specified,
+    initially nothing will be selected.  Several items may be selected at
+    once.
     """
     def __init__(self, name, flags=(), default=(), shortDesc=None,
                  longDesc=None, hints=None):
@@ -206,6 +208,19 @@ class Boolean(Argument):
             return 0
         return 1
 
+class File(Argument):
+    def __init__(self, name, allowNone=1, shortDesc=None, longDesc=None,
+                 hints=None):
+        self.allowNone = allowNone
+        Argument.__init__(self, name, None, shortDesc, longDesc, hints)
+
+    def coerce(self, file):
+        if not file and self.allowNone:
+            return None
+        elif file:
+            return file
+        else:
+            raise InputError, "Invalid File"
 
 def positiveInt(x):
     x = int(x)

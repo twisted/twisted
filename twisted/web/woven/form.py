@@ -81,7 +81,7 @@ class FormFillerWidget(widgets.Widget):
             #model hints and values override anything in the template
             val = model.getHint(attrib, templateAttributes.get(attrib, None))
             if val:
-                arguments[attrib] = val
+                arguments[attrib] = str(val)
             
         value = self.getValue(request, model)
         if value:
@@ -135,7 +135,7 @@ class FormFillerWidget(widgets.Widget):
         default = self.getValue(request, model)
         for tag, value, desc in model.choices:
             kw = {}
-            if value == default:
+            if value in default:
                 kw = {'selected' : '1'}
             s.option(value=tag, **kw).text(desc)
         return s
@@ -158,7 +158,6 @@ class FormFillerWidget(widgets.Widget):
         rows = model.getHint('rows', templateAttributes.get('rows', None))
         cols = model.getHint('cols', templateAttributes.get('cols', None))
         defaults = self.getValues(request, model)
-        state = "row"
         if (rows and rows>1) or (cols and cols>1):  #build a table
             s = content.table(border="0")
             if cols:
@@ -207,6 +206,14 @@ class FormFillerWidget(widgets.Widget):
         if self.getValue(request, model):
             kw = {'checked' : '1'}
         return content.input(type="checkbox", name=model.name, **kw)
+
+    def input_file(self, request, content, model, templateAttributes={}):
+        kw = {}
+        for attrib in ['size', 'accept']:
+            val = model.getHint(attrib, templateAttributes.get(attrib, None))
+            if val:
+                kw[attrib] = str(val)
+        return content.input(type="file", name=model.name, **kw)
 
     def input_date(self, request, content, model, templateAttributes={}):
         breakLines = model.getHint('breaklines', 1)
@@ -368,7 +375,8 @@ class FormProcessor(resource.Resource):
         outDict = {}
         errDict = {}
         for methodArg in self.formMethod.getArgs():
-            valmethod = getattr(self,"mangle_"+(methodArg.__class__.__name__.lower()), None)
+            valmethod = getattr(self,"mangle_"+
+                                (methodArg.__class__.__name__.lower()), None)
             tmpval = request.args.get(methodArg.name)
             if valmethod:
                 # mangle the argument to a basic datatype that coerce will like
@@ -381,7 +389,8 @@ class FormProcessor(resource.Resource):
                 errDict[methodArg.name] = failure.Failure()
         if errDict:
             # there were problems processing the form
-            return self.errback(self.errorModelFactory(request.args, outDict, errDict)).render(request)
+            return self.errback(self.errorModelFactory(
+                request.args, outDict, errDict)).render(request)
         else:
             try:
                 if self.formMethod.takesRequest:
@@ -389,7 +398,8 @@ class FormProcessor(resource.Resource):
                 else:
                     outObj = self.formMethod.call(**outDict)
             except formmethod.FormException, e:
-                err = request.errorInfo = self.errorModelFactory(request.args, outDict, e)
+                err = request.errorInfo = self.errorModelFactory(
+                    request.args, outDict, e)
                 return self.errback(err).render(request)
             else:
                 request._outDict = outDict # CHOMP CHOMP!
@@ -399,7 +409,8 @@ class FormProcessor(resource.Resource):
                 if isinstance(outObj, defer.Deferred):
                     def _ebModel(err):
                         if err.trap(formmethod.FormException):
-                            mf = self.errorModelFactory(request.args, outDict, err.value)
+                            mf = self.errorModelFactory(request.args, outDict,
+                                                        err.value)
                             return self.errback(mf)
                         raise err
                     (outObj
@@ -408,7 +419,8 @@ class FormProcessor(resource.Resource):
                      .addErrback(_ebModel))
                     return util.DeferredResource(outObj).render(request)
                 else:
-                    return self.callback(self.modelFactory(outObj)).render(request)
+                    return self.callback(self.modelFactory(outObj)).render(
+                        request)
 
     def errorModelFactory(self, args, out, err):
         return FormErrorModel(self.formMethod, args, err)
@@ -469,7 +481,7 @@ class FormProcessor(resource.Resource):
         ''' % bodyStr
         return v
 
-    # mangliezrs
+    # manglizers
 
     def mangle_single(self, args):
         if args:
@@ -486,14 +498,17 @@ class FormProcessor(resource.Resource):
     mangle_boolean = mangle_single
     mangle_hidden = mangle_single
     mangle_submit = mangle_single
+    mangle_file = mangle_single
+    mangle_radiogroup = mangle_single
     
-    def mangle_flags(self, args):
+    def mangle_multi(self, args):
         if args is None:
             return []
         return args
 
-
-
+    mangle_checkgroup = mangle_multi
+    mangle_flags = mangle_multi
+    
 from twisted.python.formmethod import FormMethod
 
 view.registerViewForModel(FormFillerWidget, FormDisplayModel)
