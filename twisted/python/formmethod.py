@@ -166,7 +166,7 @@ class IntegerRange(Integer):
         if self.allowNone and result == None:
             return result
         if result < self.min:
-            raise InputError, "Value %s is too small, is should be at least %s" % (result, self.min)
+            raise InputError, "Value %s is too small, it should be at least %s" % (result, self.min)
         if result > self.max:
             raise InputError, "Value %s is too large, it should be at most %s" % (result, self.max)
         return result
