@@ -28,6 +28,7 @@ import sys
 import time
 import threadable
 import failure
+import warnings
 
 # Sibling Imports
 
@@ -77,17 +78,11 @@ def debug(*stuff,**otherstuff):
     msg(debug=True, *stuff, **otherstuff)
 
 def showwarning(message, category, filename, lineno, file=None):
-##     import pdb
-##     pdb.set_trace()
     if file is None:
         msg(warning=message, category=category, filename=filename, lineno=lineno,
             format="%(filename)s:%(lineno)s: %(category)s: %(warning)s")
     else:
         _oldshowwarning(message, category, filename, lineno, filename)
-
-import warnings
-_oldshowwarning = warnings.showwarning
-warnings.showwarning = showwarning
 
 _keepErrors = 0
 _keptErrors = []
@@ -299,8 +294,21 @@ class StdioOnnaStick:
             msg(line, printed=True, isError=self.isError)
 
 
+try:
+    _oldshowwarning
+except NameError:
+    _oldshowwarning = None
+
+
 def startLogging(file, setStdout=1):
     """Initialize logging to a specified file."""
+    global defaultObserver, _oldshowwarning
+    if not _oldshowwarning:
+        _oldshowwarning = warnings.showwarning
+        warnings.showwarning = showwarning
+    if defaultObserver:
+        defaultObserver.stop()
+        defaultObserver = None
     flo = FileLogObserver(file)
     flo.start()
     msg("Log opened.")
@@ -330,3 +338,33 @@ try:
 except NameError:
     logfile = StdioOnnaStick(0)
     logerr = StdioOnnaStick(1)
+
+
+class DefaultObserver:
+    """Default observer.
+
+    Will ignore all non-error messages and send error messages to sys.stderr.
+    Will be removed when startLogging() is called for the first time.
+    """
+
+    def _emit(self, eventDict):
+        if eventDict["isError"]:
+            if eventDict.has_key('failure'):
+                text = eventDict['failure'].getTraceback()
+            else:
+                text = " ".join([str(m) for m in eventDict["message"]]) + "\n"
+            sys.stderr.write(text)
+            sys.stderr.flush()
+    
+    def start(self):
+        addObserver(self._emit)
+
+    def stop(self):
+        removeObserver(self._emit)
+
+
+try:
+    defaultObserver
+except NameError:
+    defaultObserver = DefaultObserver()
+    defaultObserver.start()
