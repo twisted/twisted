@@ -7,7 +7,7 @@ from twisted.python import reflect, log, failure, components
 from twisted.internet import interfaces
 
 # system imports
-import sys, time, string, traceback, types, os, glob, pdb
+import sys, time, string, traceback, types, os, glob, pdb, gc
 
 log.startKeepingErrors()
 
@@ -175,6 +175,11 @@ class TestSuite:
                 output.reportError(testClass, method, sys.exc_info())
             ok = 0
 
+        # garbage collect now, to make sure any Deferreds with pending
+        # errbacks are caught and counted against this test, not some later
+        # one.
+        gc.collect()
+        
         for e in log.flushErrors():
             ok = 0
             output.reportError(testClass, method, e)
