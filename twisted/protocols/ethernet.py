@@ -15,7 +15,12 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 #
 # -*- test-case-name: twisted.test.test_ethernet -*-
+
+"""Support for working directly with ethernet frames"""
+
 import struct
+
+
 from twisted.internet import protocol
 from twisted.protocols import raw
 from twisted.python import components

@@ -15,10 +15,15 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 #
 # -*- test-case-name: twisted.test.test_ip -*-
+
+"""Support for working directly with IP packets"""
+
+import struct
+import socket
+
 from twisted.internet import protocol
 from twisted.protocols import raw
 from twisted.python import components
-import struct, socket
 
 class IPHeader:
     def __init__(self, data):

@@ -1,3 +1,4 @@
+# -*- test-case-name: twisted.test.test_rawudp -*-
 # Twisted, the Framework of Your Internet
 # Copyright (C) 2001-2002 Matthew W. Lefkowitz
 #
@@ -14,10 +15,13 @@
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 #
-# -*- test-case-name: twisted.test.test_rawudp -*-
+
+"""Implementation of raw packet interfaces for UDP"""
+
+import struct
+
 from twisted.internet import protocol
 from twisted.protocols import raw
-import struct
 
 class UDPHeader:
     def __init__(self, data):
