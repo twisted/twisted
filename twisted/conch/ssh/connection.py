@@ -164,12 +164,22 @@ class SSHConnection(service.SSHService):
         localChannel = struct.unpack('>L', packet[: 4])[0]
         requestType, rest = common.getNS(packet[4:])
         wantReply = ord(rest[0])
-        if self.channels[localChannel].requestReceived(requestType, rest[1:]):
-            reply = MSG_CHANNEL_SUCCESS
-        else:
-            reply = MSG_CHANNEL_FAILURE
+        d = self.channels[localChannel].requestReceived(requestType, rest[1:])
         if wantReply:
-            self.transport.sendPacket(reply, struct.pack('>L', 
+            if isinstance(d, defer.Deferred):
+                d.addCallback(self._cbChannelRequest, localChannel)
+                d.addErrback(self._ebChannelRequest, localChannel)
+            elif d:
+                self._cbChannelRequest(None, localChannel)
+            else:
+                self._ebChannelRequest(None, localChannel)
+
+    def _cbChannelRequest(self, result, localChannel):
+            self.transport.sendPacket(MSG_CHANNEL_SUCCESS, struct.pack('>L', 
+                                    self.localToRemoteChannel[localChannel]))
+
+    def _ebChannelRequest(self, result, localChannel):
+            self.transport.sendPacket(MSG_CHANNEL_FAILURE, struct.pack('>L', 
                                     self.localToRemoteChannel[localChannel]))
 
     def ssh_CHANNEL_SUCCESS(self, packet):

@@ -1,3 +1,10 @@
+2003-02-17  Paul Swartz  <z3p@twistedmatrix.com>
+
+	* twisted/scripts/conch.py: Added experimental support for connection
+	caching, where if a connection is already available to a server, the
+	client will multiplex another session over the existing connection,
+	rather that creating a new one.
+
 2003-02-16  Jp Calderone  <exarkun@twistedmatrix.com>
 
 	* doc/examples/echoserv.py: Rewrote main code to not create a .tap
