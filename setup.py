@@ -22,7 +22,7 @@ Package installer for Twisted
 Copyright (C) 2001 Matthew W. Lefkowitz
 All rights reserved, see LICENSE for details.
 
-$Id: setup.py,v 1.111 2003/05/05 02:13:29 spiv Exp $
+$Id: setup.py,v 1.112 2003/05/05 04:49:16 radix Exp $
 """
 
 import distutils, os, sys, string
@@ -278,18 +278,29 @@ if hasattr(distutils.dist.DistributionMetadata, 'get_platforms'):
 imPath = os.path.join('twisted', 'im')
 pbuiPath = os.path.join('twisted','spread','ui')
 manuiPath = os.path.join('twisted','manhole','ui')
-testPath = os.path.join("twisted", 'test')
 lorePath = os.path.join("twisted", 'lore')
+
+testPath = os.path.join("twisted", 'test')
+testFiles = ['server.pem', 'rfc822.message']
+
+wovenPath = os.path.join('twisted', 'web', 'woven')
+wovenFiles = ['FlashConduitGlue.html', 'WebConduitGlue.html',
+              'FlashConduit.fla', 'WebConduit2_mozilla.js',
+              'FlashConduit.swf', 'WebConduit2_msie.js']
 
 setup_args['data_files']=[
     (imPath, [os.path.join(imPath, 'instancemessenger.glade')]),
     (pbuiPath, [os.path.join(pbuiPath, 'login2.glade')]),
     (manuiPath, [os.path.join(manuiPath, 'gtk2manhole.glade')]),
-    (testPath, [os.path.join(testPath, "server.pem")]),
-    (testPath, [os.path.join(testPath, "rfc822.message")]),
     (lorePath, [os.path.join(lorePath, "template.mgp")]),
     ('twisted', [os.path.join('twisted', 'plugins.tml')]),
     ]
+
+for pathname, filenames in [(wovenPath, wovenFiles),
+                            (testPath, testFiles)]:
+    setup_args['data_files'].extend(
+        [(pathname, [os.path.join(pathname, filename)])
+            for filename in filenames])
 
 # always define WIN32 under Windows
 if os.name == 'nt':
