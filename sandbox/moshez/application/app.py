@@ -46,6 +46,10 @@ def loadApplication(config, passphrase):
         style = 'pickle'
     log.msg("Loading %s..." % (filename,))
     application = loadPersisted(filename, style, passphrase)
+    if service.IService(application, None) is None:
+        # oh my god! it is an old style application
+        # convert convert before anyone sees us with it
+        application = compat.convert(application)
     log.msg("Loaded.")
     return application
 
@@ -103,10 +107,6 @@ def getApplication(config, passphrase):
         log.msg(s)
         log.deferr()
         sys.exit('\n' + s + '\n')
-    if service.IService(application, None) is None:
-        # oh my god! it is an old style application
-        # convert convert before anyone sees us with it
-        application = compat.convert(application)
     return application
 
 def reportProfile(report_profile, name):
