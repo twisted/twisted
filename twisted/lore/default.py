@@ -19,9 +19,14 @@ from __future__ import nested_scopes
 from twisted.lore import tree, latex, lint
 from twisted.web import microdom
 
+htmlDefault = {'template': 'template.tpl', 'baseurl': '%s', 'ext': '.xhtml'}
+
 class ProcessingFunctionFactory:
 
     def generate_html(self, d):
+        n = htmlDefault.copy()
+        n.update(d)
+        d = n
         if d['ext'] == "None":
             ext = ""
         else:
