@@ -32,12 +32,8 @@ from twisted.internet import protocol
 from twisted.python import log
 
 # sibling importsa
-from common import NS, getNS, MP, getMP, ffs # ease of use
+from common import NS, getNS, MP, getMP, ffs, entropy # ease of use
 import keys
-
-
-entropy = randpool.RandomPool()
-entropy.stir()
 
 
 class SSHTransportBase(protocol.Protocol):

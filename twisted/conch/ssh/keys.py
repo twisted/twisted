@@ -27,6 +27,7 @@ from Crypto import Util
 # sibling imports
 import asn1, common
 
+
 class BadKeyError(Exception):
     """
     raised when a key isn't what we expected from it.
@@ -110,7 +111,7 @@ def signData_rsa(obj, data):
 
 def signData_dsa(obj, data):
     sigData = sha.new(data).digest()
-    randData = open('/dev/random').read(19)
+    randData = common.entropy.get_bytes(19)
     sig = obj.sign(sigData, randData)
     return common.NS(''.join(map(Util.number.long_to_bytes, sig)))
 

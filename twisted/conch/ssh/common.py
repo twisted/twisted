@@ -16,6 +16,11 @@
 # 
 import struct
 from Crypto import Util
+from Crypto.Util import randpool
+
+entropy = randpool.RandomPool()
+entropy.stir()
+
 
 def NS(t):
     """
