@@ -22,7 +22,7 @@ Package installer for Twisted
 Copyright (C) 2001 Matthew W. Lefkowitz
 All rights reserved, see LICENSE for details.
 
-$Id: setup.py,v 1.56 2002/09/28 12:53:06 moshez Exp $
+$Id: setup.py,v 1.57 2002/10/02 12:16:31 moshez Exp $
 """
 
 import distutils, os, sys, string
@@ -181,7 +181,7 @@ class build_ext_twisted(build_ext):
         # instead but it defaults to None in unixccompiler.py.
         ok = 1
         try:
-            compiler.compile(["conftest.c"])
+            compiler.compile(["conftest.c"], output_dir='')
         except CompileError:
             ok = 0
 
