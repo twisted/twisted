@@ -207,8 +207,8 @@ class Resolver(common.ResolverBase):
             return defer.fail(IOError("No domain name servers available"))
 
         return self.protocol.query(address, queries, timeout[0]
-        ).addErrback(self._reissue, address, queries, timeout[1:]
-        )
+            ).addErrback(self._reissue, address, queries, timeout[1:]
+            )
 
 
     def _reissue(self, reason, address, query, timeout):
@@ -317,6 +317,7 @@ def createResolver(servers = None, resolvconf = None, hosts = None):
     L = [hostResolver, cache.CacheResolver(), theResolver]
     return resolve.ResolverChain(L)
 
+theResolver = None
 def _makeLookup(method):
     def lookup(*a, **kw):
         global theResolver
