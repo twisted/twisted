@@ -306,17 +306,14 @@ wanted to use the <code>HairDryer</code> with the <code>AmericanSocket</code>,
 we could know that it would be safe to do so by checking whether it implements
 <code>IAmericanSocket</code>. However, if we decide we want to use
 <code>HairDryer</code> with a <code>ForeignSocket</code> instance, we must
-<em>adapt</em> it to <code>IAmericanSocket</code> before doing so.  We use <code
-class="API" base="twisted.python.components">getAdapter</code> to do this:</p>
+<em>adapt</em> it to <code>IAmericanSocket</code> before doing so.  We use the interface object to do this:</p>
 
 <pre class="python-interpreter">
-&gt;&gt;&gt; components.getAdapter(fs, IAmericanSocket)
+&gt;&gt;&gt; IAmericanSocket(fs)
 &lt;__main__.AdaptToAmericanSocket instance at 0x1a5120&gt;
 </pre>
 
-<p>When calling <code class="API"
-base="twisted.python.components">getAdapter</code> with an instance and an
-interface, <code class="API" base="twisted.python.components">getAdapter</code>
+<p>When calling an interface with an object as an argument, the interface
 looks in the adapter registry for an adapter which implements the interface for
 the given instance's class. If it finds one, it constructs an instance of the
 Adapter class, passing the constructor the original instance, and returns it.
@@ -326,7 +323,7 @@ which already implements <code>IAmericanSocket</code>? We simply get back the
 original instance:</p>
 
 <pre class="python-interpreter">
-&gt;&gt;&gt; components.getAdapter(as, IAmericanSocket)
+&gt;&gt;&gt; IAmericanSocket(as)
 &lt;__main__.AmericanSocket instance at 0x36bff0&gt;
 </pre>
 
@@ -336,7 +333,7 @@ automatically looked up an adapter for the socket you tried to plug it into:</p>
 <pre class="python">
 class HairDryer:
     def plug(self, socket):
-        adapted = components.getAdapter(socket, IAmericanSocket)
+        adapted = IAmericanSocket(socket)
         assert socket.voltage() == 110, "BOOM"
         print "I was plugged in properly and am operating"
 </pre>
