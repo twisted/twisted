@@ -7,7 +7,7 @@
 namespace Twisted {
     using namespace boost::python;
 
-    /* Deallocate a buffer. */
+    // Deallocation strategy for buffers.
     class Deallocator
     {
     public:
@@ -15,12 +15,19 @@ namespace Twisted {
 	virtual void dealloc(char* buf) = 0;
     };
     
+    // delete[] the buffer.
     class DeleteDeallocator : public Deallocator
     {
 	virtual void dealloc(char* buf) { delete[] buf; }
     };
 
-    inline object import(char* module)
+    // Do nothing.
+    class NullDeallocator : public Deallocator
+    {
+	virtual void dealloc(char* buf) {}
+    };
+
+    Inline object import(char* module)
     {
 	PyObject* m = PyImport_ImportModule(module);
 	return extract<object>(m);
