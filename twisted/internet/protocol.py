@@ -22,7 +22,7 @@ Twisted Python.  The Protocol class contains some introductory material.
 """
 
 from twisted.python import log
-from twisted.internet.interfaces import IProtocolFactory, ITransport
+from twisted.internet import interfaces
 
 
 class Factory:
@@ -32,7 +32,7 @@ class Factory:
     self.protocol.
     """
 
-    __implements__ = (IProtocolFactory,)
+    __implements__ = (interfaces.IProtocolFactory,)
 
     # put a subclass of Protocol here:
     protocol = None
@@ -90,8 +90,29 @@ class Factory:
 
 
 class ClientFactory(Factory):
-    """Subclass this to indicate that your protocol.Factory is only usable for clients.
+    """A Protocol factory for clients.
+
+    This can be used together with the various connectXXX methods in
+    twisted.internet.app.Application.
     """
+
+    def startedConnecting(self, connector, connecting):
+        """Called when a connection has been started.
+
+        Arguments:
+           - connector: a Connector object.
+           - connecting: a IConnecting object.
+        """
+
+    def connectionFailed(self, connector, reason):
+        """Called when a connection has failed."""
+
+    def connectionLost(self, connector):
+        """Called when a connection is lost.
+
+        It may be useful to call connector.connect() - this will reconnect.
+        """
+        
 
 class ServerFactory(Factory):
     """Subclass this to indicate that your protocol.Factory is only usable for servers.
@@ -189,7 +210,7 @@ class FileWrapper:
     """A wrapper around a file-like object to make it behave as a Transport.
     """
 
-    __implements__ = ITransport
+    __implements__ = interfaces.ITransport
     
     closed = 0
     disconnecting = 0
@@ -218,3 +239,61 @@ class FileWrapper:
 
     def handleException(self):
         pass
+
+
+class Connector:
+    """Default implementation of connector.
+
+    This is used by twisted.internet.app.Application.
+    """
+
+    __implements__ = interfaces.IConnector
+
+    timeoutID = None
+    
+    def __init__(self, factory, timeout, methodName, *args):
+        self.hasConnection = 0
+        self.factory = factory
+        self.timeout = timeout
+        self.methodName = methodName
+        self.args = args
+
+    def connect(self):
+        """Start connection to remote server."""
+        assert not self.hasConnection
+        self.hasConnection = 1
+        self.factory.doStart()
+        from twisted.internet import reactor
+        c = apply(getattr(reactor, "startConnect" + self.methodName), tuple(self.args) + (self,))
+        if self.timeout is not None:
+            self.timeoutID = reactor.callLater(self.timeout, c.stopConnecting)
+        self.factory.startedConnecting(self, c)
+
+    def cancelTimeout(self):
+        if self.timeoutID:
+            from twisted.internet import reactor
+            try:
+                reactor.cancelCallLater(self.timeoutID)
+            except ValueError:
+                pass
+            del self.timeoutID
+    
+    def buildProtocol(self, addr):
+        self.cancelTimeout()
+        return self.factory.buildProtocol(addr)
+
+    def connectionFailed(self, reason):
+        self.cancelTimeout()
+        self.hasConnection = 0
+        self.factory.connectionFailed(self, reason)
+        if not self.hasConnection:
+            # factory hasn't called our connect() method
+            self.factory.doStop()
+
+    def connectionLost(self):
+        self.hasConnection = 0
+        self.factory.connectionLost(self)
+        if not self.hasConnection:
+            # factory hasn't called our connect() method
+            self.factory.doStop()
+        

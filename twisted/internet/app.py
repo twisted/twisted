@@ -55,6 +55,7 @@ class _SSLlistener:
     def listen(self):
         self.app.listenSSL(self.port, self.fac, self.ctx, self.backlog, self.interface)
 
+
 class Application(log.Logger, styles.Versioned, marmalade.DOMJellyable):
     """I am the `root object' in a Twisted process.
 
@@ -350,26 +351,35 @@ class Application(log.Logger, styles.Versioned, marmalade.DOMJellyable):
     def connectTCP(self, host, port, factory, timeout=30):
         """Connect a given client protocol factory to a specific TCP server.
 
-        If the client gets disconnected, a new instance will be created
-        and will attempt to reconnect. If you only want a single connection,
-        use twisted.internet.reactor's clientTCP() method instead.
+        This creates a new protocol.Connector and returns it.
         """
-        from twisted.internet import tcp
-        self.addConnector(tcp.Connector(host, port, factory, timeout))
-
-    def connectSSL(self, host, port, factory, ctxFactory=None):
-        """Connect a given client protocol factory to a specific SSL server."""
-        from twisted.internet import ssl
-        c = ssl.Connector(host, port, factory)
-        if ctxFactory:
-            c.contextFactory = ctxFactory
+        c = protocol.Connector(factory, timeout, "TCP", host, port) 
         self.addConnector(c)
+        return c
+
+    def connectSSL(self, host, port, factory, ctxFactory, timeout=30):
+        """Connect a given client protocol factory to a specific SSL server.
+
+        This creates a new protocol.Connector and returns it.
+        """
+        c = protocol.Connector(factory, timeout, host, port, ctxFactory)
+        self.addConnector(c)
+        return c
+
+    def connectUNIX(self, address, factory, timeout=30):
+        """Connect a given client protocol factory to a specific UNIX socket.
+
+        This creates a new protocol.Connector and returns it.
+        """
+        c = protocol.Connector(factory, timeout, "TCP", address) 
+        self.addConnector(c)
+        return c
 
     def addConnector(self, connector):
         """Add a connector to this Application."""
         self.connectors.append(connector)
         if self.running:
-            connector.startConnecting()
+            connector.connect()
 
     def addDelayed(self, delayed):
         """
@@ -501,11 +511,12 @@ class Application(log.Logger, styles.Versioned, marmalade.DOMJellyable):
                     log.msg('error on SSL port %s: %s' % (port, msg))
                     return
             for connector in self.connectors:
-                connector.startConnecting()
+                connector.connect()
             for service in self.services.values():
                 service.startService()
             self.running = 1
             log.logOwner.disown(self)
+    
     def run(self, save=1, installSignalHandlers=1):
         """run(save=1, installSignalHandlers=1)
         Run this application, running the main loop if necessary.

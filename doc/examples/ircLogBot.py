@@ -91,6 +91,14 @@ class LogBotFactory(protocol.ClientFactory):
         self.channel = channel
         self.filename = filename
 
+    def connectionLost(self, connector):
+        connector.connect()
+
+    def connectionFailed(self, connector, reason):
+        print "connection failed:", reason
+        from twisted.internet import reactor
+        reactor.stop()
+
 
 if __name__ == '__main__':
     # create factory protocol and application
