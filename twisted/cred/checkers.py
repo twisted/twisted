@@ -42,7 +42,8 @@ class AllowAnonymousAccess:
 class InMemoryUsernamePasswordDatabaseDontUse:
     __implements__ = ICredentialsChecker
 
-    credentialInterfaces = (credentials.IUsernamePassword,)
+    credentialInterfaces = (credentials.IUsernamePassword,
+        credentials.IUsernameHashedPassword)
 
     def __init__(self):
         self.users = {}

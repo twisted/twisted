@@ -78,7 +78,7 @@ class NewCredTest(unittest.TestCase):
         p.registerChecker(up)
 
     def testListCheckers(self):
-        expected = [credentials.IUsernamePassword]
+        expected = [credentials.IUsernamePassword, credentials.IUsernameHashedPassword]
         got = self.portal.listCredentialsInterfaces()
         expected.sort()
         got.sort()
