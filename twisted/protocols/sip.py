@@ -115,6 +115,8 @@ specialCases = {
     'cseq': 'CSeq',
     'call-id': 'Call-ID',
     'www-authenticate': 'WWW-Authenticate',
+    'proxy-authenticate': 'Proxy-Authenticate',
+    'proxy-authorization':'Proxy-Authorization',
 }
 
 def unq(s):
@@ -201,7 +203,7 @@ class Via:
         s = "SIP/2.0/%s %s:%s" % (self.transport, self.host, self.port)
         if self.hidden:
             s += ";hidden"
-        for n in "ttl", "received", "branch", "maddr", "rport":
+        for n in "ttl", "rport", "branch", "maddr", "received":
             value = getattr(self, n)
             if value == True:
                 s += ";" + n
@@ -638,7 +640,7 @@ class Base(protocol.DatagramProtocol):
     def datagramReceived(self, data, addr):
         self.parser.dataReceived(data)
         self.parser.dataDone()
-        for m in self.messages:
+        for m in self.messages:            
             self._fixupNAT(m, addr)
             if self.debug:
                 log.msg("Received %r from %r" % (m.toString(), addr))
@@ -649,14 +651,17 @@ class Base(protocol.DatagramProtocol):
         self.messages[:] = []
 
     def _fixupNAT(self, message, (srcHost, srcPort)):
-        # RFC 2543 6.40.2, 
+        # RFC 2543 6.40.2,
+        print "checking for NAT fixups"
         senderVia = parseViaHeader(message.headers["via"][0])
         if senderVia.host != srcHost:
+            print "lies! client claims to be from %s but is from %s" %(senderVia.host, srcHost)
             senderVia.received = srcHost
             if senderVia.port != srcPort:
                 senderVia.rport = srcPort
             message.headers["via"][0] = senderVia.toString()
         elif senderVia.rport == True:
+            print "hosts match, rport found"
             senderVia.received = srcHost
             senderVia.rport = srcPort
             message.headers["via"][0] = senderVia.toString()
@@ -773,6 +778,8 @@ class Proxy(Base):
         return Via(host=self.host, port=self.port)
 
     def handle_request(self, message, addr):
+        # send immediate 100/trying message before processing
+        self.deliverResponse(self.responseFromRequest(100, message))
         f = getattr(self, "handle_%s_request" % message.method, None)
         if f is None:
             f = self.handle_request_default
@@ -806,6 +813,8 @@ class Proxy(Base):
 
         message.headers["via"].insert(0, viaHeader.toString())
         name, uri, tags = parseAddress(message.headers["to"][0], clean=1)
+
+        # this is broken and needs refactoring to use cred
         d = self.locator.getAddress(uri)
         d.addCallback(self.sendMessage, message)
         d.addErrback(self._cantForwardRequest, message)
@@ -831,6 +840,10 @@ class Proxy(Base):
         response = Response(code)
         for name in ("via", "to", "from", "call-id", "cseq"):
             response.headers[name] = request.headers.get(name, [])[:]
+        #compatibility guesses
+        response.addHeader("allow","INVITE, ACK, CANCEL, OPTIONS, BYE, REFER")
+        response.addHeader("User-Agent", "Asterisk PBX") # ha ha we deceive you foolish client
+        response.addHeader("date", time.asctime())
         return response
     
     def handle_response(self, message, addr):
@@ -1008,24 +1021,26 @@ class RegisterProxy(Proxy):
             self.register(message, host, port)
         else:
             # There is a portal.  Check for credentials.
-            if not message.headers.has_key("authorization"):
+            import pprint; pprint.pprint(message.headers)
+            if not message.headers.has_key("proxy-authorization"):
                 return self.unauthorized(message, host, port)
             else:
                 return self.login(message, host, port)
     
     def unauthorized(self, message, host, port):
         m = self.responseFromRequest(407, message)
+        m.addHeader('contact', message.headers['contact'][0])
         for (scheme, auth) in self.authorizers.iteritems():
             chal = auth.getChallenge((host, port))
             if chal is None:
                 value = '%s realm="%s"' % (scheme.title(), self.host)
             else:
                 value = '%s %s,realm="%s"' % (scheme.title(), chal, self.host)
-            m.headers.setdefault('www-authenticate', []).append(value)
+            m.headers.setdefault('Proxy-Authenticate', []).append(value)
         self.deliverResponse(m)
 
     def login(self, message, host, port):
-        parts = message.headers['authorization'][0].split(None, 1)
+        parts = message.headers['proxy-authorization'][0].split(None, 1)
         a = self.authorizers.get(parts[0].lower())
         if a:
             try:
@@ -1149,7 +1164,7 @@ class InMemoryRegistry:
         else:
             dc.cancel()
             del self.users[username]
-        return defer.succeed(Registration(0, url))
+            return defer.succeed(Registration(0, url))
     
     def registerAddress(self, domainURL, logicalURL, physicalURL):
         if domainURL.host != self.domain:
