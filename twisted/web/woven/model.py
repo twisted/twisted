@@ -1,4 +1,4 @@
-
+# -*- test-case-name: twisted.test.test_woven -*-
 # Twisted, the Framework of Your Internet
 # Copyright (C) 2000-2002 Matthew W. Lefkowitz
 #
@@ -15,7 +15,9 @@
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
-import types, weakref
+import types
+import weakref
+import warnings
 
 from twisted.python import components, reflect
 from twisted.internet import defer
@@ -127,6 +129,7 @@ class Model:
             return 1
 
     protected_names = ['initialize', 'addView', 'addSubview', 'removeView', 'notify', 'getSubmodel', 'setSubmodel', 'getData', 'setData']
+    allowed_names = []
 
     def lookupSubmodel(self, submodelName):
         """
@@ -172,6 +175,26 @@ class Model:
         return adapted
 
 
+    def submodelCheck(self, name):
+        """Check if a submodel name is allowed.  Subclass me to implement a
+        name security policy.
+        """
+        if self.allowed_names:
+            return (name in self.allowed_names)
+        else:
+            return (name and name[0] != '_' and name not in self.protected_names)
+
+
+    def submodelFactory(self, name):
+        warnings.warn("Warning: default Model lookup strategy is changing:"
+                      "use either AttributeModel or MethodModel for now.",
+                      DeprecationWarning)
+        if hasattr(self, name):
+            return getattr(self, name)
+        else:
+            return None
+
+
     def getSubmodel(self, name):
         """
         Get the submodel `name' of this model. If I ever return a
@@ -180,13 +203,14 @@ class Model:
         """
         if self.submodels.has_key(name):
             return self.submodels[name]
-        if name and name[0] != '_' and name not in self.protected_names:
-            if hasattr(self, name):
-                m = getattr(self, name)
-                sm = adaptToIModel(m, self, name)
-                self.submodels[name] = sm
-                return sm
+        if not self.submodelCheck(name):
             return None
+        m = self.submodelFactory(name)
+        if m is None:
+            return None
+        sm = adaptToIModel(m, self, name)
+        self.submodels[name] = sm
+        return sm
 
     def setSubmodel(self, name, value):
         """
@@ -195,7 +219,7 @@ class Model:
         lookupSubmodel/getSubmodel know about, so they can use it as a
         cache.
         """
-        if name[0] != '_' and name not in self.protected_names:
+        if self.submodelCheck(name):
             if self.submodels.has_key(name):
                 del self.submodels[name]
             setattr(self, name, value)
@@ -208,6 +232,29 @@ class Model:
             self.parent.setSubmodel(self.name, data)
         if hasattr(self, 'orig'):
             self.orig = data
+
+class MethodModel(Model):
+    """Look up submodels with wmfactory_* methods.
+    """
+
+    def submodelCheck(self, name):
+        """Allow any submodel for which I have a submodel.
+        """
+        return hasattr(self, "wmfactory_"+name)
+
+    def submodelFactory(self, name):
+        """Call a wmfactory_name method on this model.
+        """
+        return getattr(self, "wmfactory_"+name)()
+
+class AttributeModel(Model):
+    """Look up submodels as attributes with hosts.allow/deny-style security.
+    """
+    def submodelFactory(self, name):
+        if hasattr(self, name):
+            return getattr(self, name)
+        else:
+            return None
 
 
 #backwards compatibility
