@@ -405,10 +405,11 @@ from __future__ import generators
 from twisted.internet import reactor
 import flow
 
-class Count(flow.ThreadedIterator):
+class Count:
     def __init__(self, count):
-        flow.ThreadedIterator.__init__(self)
         self.count = count
+    def __iter__(self):
+        return self
     def next(self): # this is run in a separate thread
         from time import sleep
         sleep(.2)
@@ -418,7 +419,7 @@ class Count(flow.ThreadedIterator):
         print "producing", val
         return val
 
-d = flow.Deferred(Count(5))
+d = flow.Deferred(flow.Threaded(Count(5)))
 def prn(x):
     print "results", x
 d.addCallback(prn)
@@ -432,6 +433,9 @@ reactor.run()
 #   producing 2
 #   producing 1
 #   results [5, 4, 3, 2, 1]
+
+# list(flow.Block(flow.Threaded(Count(5))))
+
 </pre>
 
 
@@ -460,7 +464,7 @@ UNION ALL
 """
 
 def consumer():
-    query = flow.wrap(flow.QueryIterator(dbpool, sql))
+    query = flow.Threaded(flow.QueryIterator(dbpool, sql))
     while 1:
         yield query
         if query.stop: break

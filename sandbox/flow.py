@@ -67,11 +67,7 @@ def wrap(obj, trap = None):
     """ Wraps various objects for use within a flow """
     if isinstance(obj, Stage):
         return obj
-    if trap:
-        import types
-        if type(trap) == types.ClassType: 
-            trap = (trap,)
-    return _Iterable(obj, trap)
+    return Iterable(obj, trap)
 
 class Instruction:
     """ Has special meaning when yielded in a flow """
@@ -124,8 +120,13 @@ class Stage(Instruction):
 
     """      
     def __init__(self, trap = None):
+        if trap:
+            import types
+            if type(trap) == types.ClassType: 
+                trap = (trap,)
+        else:
+            trap = tuple()
         self._ready = 0
-        if not trap: trap = tuple()
         self._trap = trap
         self.stop   = 0
         self.result = None
@@ -143,7 +144,7 @@ class Stage(Instruction):
             return self.result.trap(*self._trap)
         return self.result
     def _yield(self):
-        """ executed during a yield statement
+        """ executed during a yield statement by previous flow
 
             This method is private within the scope of the flow
             module, it is used by one stage in the flow to ask
@@ -156,7 +157,7 @@ class Stage(Instruction):
         self.result = None
 
 
-class _Iterable(Stage):
+class Iterable(Stage):
     """ Wraps iterables (generator/iterator) for use in a flow """      
     def __init__(self, iterable, trap):
         Stage.__init__(self, trap)
@@ -216,10 +217,10 @@ class _Iterable(Stage):
 class Merge(Stage):
     """ Merges two or more Stages results into a single stream
 
-        Basically, this Stage can be used for merging two iterators 
-        into a single iterator, all while maintaining the ability to 
-        pause the iterator using Cooperate.   Note, that the order of
-        the items returned is not necessarly predictable.
+        This Stage can be used for merging two stages into a single
+        stage, all while maintaining the ability to pause during Cooperate.
+        Note that while this code may be deterministic, applications of
+        this module should not depend upon a particular order.
     """
     def __init__(self, *stages):
         Stage.__init__(self)
@@ -256,11 +257,9 @@ class Merge(Stage):
 class Block(Stage):
     """ A stage which Blocks on Cooperate events
 
-        This converts a Stage into the Iterator interface for 
-        use in situation where blocking for the next value is
-        acceptable.   Basically, it wraps any iterator/generator
-        as a Stage object, and then eats any Cooperate results.
-
+        This converts a Stage into an iterable which can be used 
+        directly in python for loops and other iteratable constructs.
+        It does this by eating any Cooperate values and sleeping.
         This is largely helpful for testing or within a threaded
         environment.  It converts other stages into one which 
         does not emit cooperate events.
@@ -268,6 +267,7 @@ class Block(Stage):
     def __init__(self, stage):
         self._stage = wrap(stage)
     def __iter__(self):
+        self._stage = iter(self._stage)
         return self
     def next(self):
         """ fetch the next value from the Stage flow """
@@ -281,6 +281,63 @@ class Block(Stage):
                     continue
                 raise TypeError("Invalid stage result")
             return stage.next()
+
+#
+# Items following this comment depend upon twisted.internet
+#
+
+class Threaded(Stage):
+    """ A stage which runs a blocking iterable in a separate thread
+
+        This stage tunnels output from an iterable executed in a separate
+        thread to the main thread.   This process is carried out by 
+        a result buffer, and returning Cooperate if the buffer is
+        empty.   The wrapped iterable's __iter__ and next() methods
+        will only be invoked in the spawned thread.
+
+        This can be used in one of two ways, first, it can be 
+        extended via inheritance; with the functionality of the
+        inherited code implementing next(), and using init() for
+        initialization code to be run in the thread.
+    """
+    def __init__(self, iterable, trap = None, extend = 0):
+        Stage.__init__(self, trap)
+        self._iterable  = iterable
+        self._stop      = 0
+        self._buffer    = []
+        if extend:
+            self._append = self._buffer.extend
+        else:
+            self._append = self._buffer.append
+    def __iter__(self): 
+        """ start the process running in a separate thread """
+        from twisted.internet.reactor import callInThread
+        callInThread(self._process)
+        return self
+    def _process(self):
+        """ pull values from the iterable and add them to the buffer """
+        try:
+            self._iterable = self._iterable.__iter__()
+        except: 
+            self._append(Failure())
+        else:
+            try:
+                while 1:
+                    self._append(self._iterable.next())
+            except StopIteration: pass
+            except: 
+                self._append(Failure())
+        self._stop = 1
+    def _yield(self):
+        """ update locals from the buffer, or return Cooperate """
+        Stage._yield(self)
+        if self._buffer:
+            self.result = self._buffer.pop(0)
+            return
+        if self._stop:
+            self.stop = 1
+            return
+        return Cooperate()
 
 from twisted.internet import defer
 class Deferred(defer.Deferred):
@@ -311,7 +368,7 @@ class Deferred(defer.Deferred):
         defer.Deferred.__init__(self)
         self.failureAsResult = failureAsResult
         self._results = []
-        self._stage = wrap(stage)
+        self._stage = iter(wrap(stage))
         from twisted.internet import reactor
         reactor.callLater(0, self._execute)
     def _execute(self):
@@ -333,104 +390,25 @@ class Deferred(defer.Deferred):
                     self.errback(cmd.result)
                     return
             self._results.append(cmd.result)
-        
+
 #
-# The following is a thread package which really is othogonal to
-# flow.  Flow does not depend on it, but it does depend on flow.Cooperate
-# Although, if you are trying to bring the output of a thread into
-# a flow, it is exactly what you want.   The QueryIterator is 
-# just an obvious application of the ThreadedIterator.
+# This only depends upon twisted.enterprise.adbapi or any
+# other 'pool' object which has a connect() method returning
+# a DBAPI 2.0 database connection
 #
 
-class ThreadedIterator:
-    """
-       This is an iterator which tunnels output from an iterator
-       executed in a thread to the main thread.   Note, unlike
-       regular iterators, this one throws a Cooperate exception
-       which must be handled by calling reactor.callLater so that
-       the producer threads can have a chance to send events to 
-       the main thread.
-
-       Basically, the 'init' and 'next' method of subclasses are
-       executed in this alternative thread.  The results of 'next'
-       are marshalled back into the primary thread.  If when the
-       main thread data is not available, then a particular 
-       exception.
-    """
-    def __init__(self, outer = None, extend = 0 ):
-        class _Tunnel:
-            def __init__(self, source, extend ):
-                """
-                    This is the setup, the source argument is the iterator
-                    being wrapped, which exists in another thread.
-                """
-                self.source     = source
-                self.stop       = 0
-                self.failure    = None
-                self.buff       = []
-                self.extend     = extend
-            def process(self):
-                """
-                    This is called in the 'source' thread, and 
-                    just basically sucks the iterator, appending
-                    items back to the main thread.
-                """
-                try:
-                    self.source.init()
-                except: 
-                    self.failure = Failure()
-                try:
-                    while 1:
-                        val = self.source.next()
-                        if self.extend:
-                            self.buff.extend(val)
-                        else:
-                            self.buff.append(val)
-                except StopIteration:
-                    self.stop = 1
-                except: 
-                    if not self.failure:
-                        self.failure = Failure()
-                self.source = None
-            def next(self):
-                if self.buff:
-                   return self.buff.pop(0)
-                if self.stop:  
-                    raise StopIteration
-                if self.failure:
-                    raise self.failure
-                raise Cooperate()
-        tunnel = _Tunnel(self, extend)
-        self._tunnel = tunnel
-        self._outer  = outer
-
-    def __iter__(self): 
-        from twisted.internet.reactor import callInThread
-        callInThread(self._tunnel.process)
-        return self._tunnel
-    
-    def init(self):
-        if self._outer: 
-            self._outer = self._outer.__iter__()
-     
-    def next(self):
-        if self._outer: 
-            return self._outer.next()
-        raise StopIteration
-
-class QueryIterator(ThreadedIterator):
+class QueryIterator:
+    """ Converts a database query into a result iterator """
     def __init__(self, pool, sql, fetchall=0):
-        ThreadedIterator.__init__(self, extend = 1 )
         self.curs = None
         self.sql  = sql
         self.pool = pool
         self.fetchall = fetchall
-     
-    def init(self):
+    def __iter__(self):
         conn = self.pool.connect()
         self.curs = conn.cursor()
         self.curs.execute(self.sql)
- 
+        return self
     def next(self):
         res = None
         if self.curs:
@@ -443,3 +421,4 @@ class QueryIterator(ThreadedIterator):
             self.curs = None
             raise StopIteration
         return res
+

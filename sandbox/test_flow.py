@@ -103,18 +103,17 @@ class badgen:
         return 'x'
     def yield_done(self):
         err = 3 / 0
-        raise StopIteration
+        raise flow.StopIteration
     def next(self):
         return self.state()
 
 def toList(it):
-    from twisted.python.compat import iter, StopIteration
     ret = []
-    it = iter(it)
+    it = flow.iter(it)
     try:
        while 1:
            ret.append(it.next())
-    except StopIteration: pass
+    except flow.StopIteration: pass
     return ret         
 
 class FlowTest(unittest.TestCase):
@@ -172,10 +171,11 @@ class FlowTest(unittest.TestCase):
         self.failUnless(isinstance(r[1].value,ZeroDivisionError))
 
     def testThreaded(self):
-        class CountIterator(flow.ThreadedIterator):
+        class CountIterator:
             def __init__(self, count):
-                flow.ThreadedIterator.__init__(self)
                 self.count = count
+            def __iter__(self):
+                return self
             def next(self): # this is run in a separate thread
                 from time import sleep
                 sleep(.1)
@@ -184,5 +184,6 @@ class FlowTest(unittest.TestCase):
                     raise flow.StopIteration
                 self.count -= 1
                 return val
-        d = flow.Deferred(CountIterator(5))
+        #print list(flow.Block(flow.Threaded(CountIterator(5))))
+        d = flow.Deferred(flow.Threaded(CountIterator(5)))
         self.assertEquals(unittest.deferredResult(d),[5,4,3,2,1])
