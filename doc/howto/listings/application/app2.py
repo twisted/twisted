@@ -1,12 +1,12 @@
 #! /usr/bin/python
 
-import twisted.internet.app
+from twisted.internet.app import Application
 from twisted.protocols.wire import Daytime
 from twisted.internet.protocol import Factory
 
-app = twisted.internet.app.Application("daytimer")
+application = Application("daytimer")
 f = Factory()
 f.protocol = Daytime
-app.listenTCP(8813, f)
+application.listenTCP(8813, f)
 
-app.save("start")
+application.save("start")
