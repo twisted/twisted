@@ -19,30 +19,21 @@ from twisted.application import service, compat, app
 from twisted.python import usage, util, plugin
 import sys, os
 try:
-    import pwd
+    import pwd, grp
 except ImportError:
-    pwd = None
-try:
-    import grp
-except ImportError:
-    grp = None
-
-def getid(uid, gid):
-    if uid is not None:
+    def getid(uid, gid):
+        return map(int, (uid or 0, gid or 0))
+else:
+    def getid(uid, gid):
         try:
-            uid = int(uid)
+            uid = int(uid or 0)
         except ValueError:
-            if not pwd:
-                raise
             uid = pwd.getpwnam(uid)[2]
-    if gid is not None:
         try:
-            gid = int(gid)
+            gid = int(gid or 0)
         except ValueError:
-            if not grp:
-                raise
             gid = grp.getgrnam(gid)[2]
-    return uid, gid
+        return uid, gid
 
 
 def loadPlugins(debug = None, progress = None):
