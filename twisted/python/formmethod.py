@@ -182,7 +182,7 @@ class Boolean(Argument):
         if not inVal:
             return 0
         lInVal = str(inVal).lower()
-        if lInVal in ('no', 'n', 'f', 'false'):
+        if lInVal in ('no', 'n', 'f', 'false', '0'):
             return 0
         return 1
 
