@@ -1097,6 +1097,20 @@ class _ObjectRetrieval:
             del self.broker
             self.deferred.armAndErrback("connection failed")
 
+
+class BrokerClientFactory(protocol.ClientFactory):
+
+    def __init__(self, protocol):
+        if not isinstance(protocol,Broker): raise TypeError, "protocol is not an instance of Broker"
+        self.protocol = protocol
+
+    def buildProtocol(self, addr):
+        return self.protocol
+
+    def clientConnectionFailed(self, connector, reason):
+        self.protocol.connectionFailed()
+
+
 def getObjectAt(host, port, timeout=None):
     """Establishes a PB connection and returns with a RemoteReference.
 
@@ -1116,12 +1130,13 @@ def getObjectAt(host, port, timeout=None):
     """
     d = defer.Deferred()
     b = Broker(1)
+    bf = BrokerClientFactory(b)
     _ObjectRetrieval(b, d)
     if host == "unix":
         # every time you use this, God kills a kitten
-        reactor.clientUNIX(port, b, timeout)
+        reactor.connectUNIX(port, bf, timeout)
     else:
-        reactor.clientTCP(host, port, b, timeout)
+        reactor.connectTCP(host, port, bf, timeout)
     return d
 
 def connect(host, port, username, password, serviceName,
