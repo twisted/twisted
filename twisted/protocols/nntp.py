@@ -560,7 +560,7 @@ class NNTPServer(basic.LineReceiver):
                 if cmd in NNTPServer.COMMANDS:
                     func = getattr(self, 'do_%s' % cmd)
                     try:
-                        apply(func, parts)
+                        func(*parts)
                     except TypeError:
                         self.sendLine('501 command syntax error')
                         log.msg("501 command syntax error")
