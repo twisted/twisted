@@ -154,11 +154,7 @@ class SSHConnection(service.SSHService):
         channel.closed()
         del self.localToRemoteChannel[localChannel]
         del self.channels[localChannel]
-        try:
-            del self.channelsToRemoteChannel[channel]
-        except KeyError:
-            pass # we'd already closed this end
-
+        del self.channelsToRemoteChannel[channel]
 
     def ssh_CHANNEL_REQUEST(self, packet):
         localChannel = struct.unpack('>L', packet[: 4])[0]
@@ -322,7 +318,6 @@ class SSHConnection(service.SSHService):
             return # we're already closed
         self.transport.sendPacket(MSG_CHANNEL_CLOSE, struct.pack('>L', 
                                     self.channelsToRemoteChannel[channel]))
-        del self.channelsToRemoteChannel[channel]
 
     # methods to override
     def getChannel(self, channelType, windowSize, maxPacket, data):
