@@ -15,7 +15,9 @@ class XMLStream(microdom.MicroDOMParser):
 
     def connectionMade(self):
         microdom.MicroDOMParser.connectionMade(self)
-        self.transport.write("<stream:stream>")
+        attributes = ' '.join(['%s="%s"' % (k, v) for (k, v) in 
+                                         self.getGlobalAttributes().items()])
+        self.transport.write("<stream:stream %s>" % attributes)
 
     def loseConnection(self):
         self.transport.write("</stream:stream>")
@@ -26,6 +28,7 @@ class XMLStream(microdom.MicroDOMParser):
             if name != "stream:stream":
                 raise BadStream()
             self.first = 0
+            self.gotGlobalAttributes(attributes)
         else:
             microdom.MicroDOMParser.gotTagStart(self, name, attributes)
 
@@ -45,15 +48,62 @@ class XMLStream(microdom.MicroDOMParser):
         element.writexml(self)
 
 
+def parseJID(jid):
+    resource = jid.rfind('/')
+    if resource != -1:
+        jid, resource = jid[:resource], jid[resource+1:]
+    else:
+        resource = None
+    user = jid.find('@')
+    if user != -1:
+        user, jid = jid[:user], jid[user+1:]
+    else:
+        user = None
+    return user, jid, resource
+
+def makeJID(user, host, resource):
+    if user is not None:
+        jid = user+'@'+host
+    else:
+        jid = host
+    if resource is not None:
+        jid += '/'+resource
+    return jid
+    
+
 class JabberBasic(XMLStream):
 
+    def gotGlobalAttributes(self, attributes):
+        self.gotGlobalFrom(attributes.get('from'))
+        self.gotGlobalID(attributes.get('id'))
+        self.gotGlobalTo(attributes.get('to'))
+
     def gotElement(self, element):
-        elementName = element.tagName
+        elementName = element.tagName.replace(':', '_')
         m = getattr(self, "gotElement_"+elementName, self.gotUnknownElement)
         m(element)
 
+    def gotElement_stream_error(self, element):
+        self.loseConnection()
+
     def gotUnknownElement(self, element):
         pass # degrade gracefully
+
+    def gotGlobalFrom(self, from_):
+        pass # usually we don't care
+
+    def gotGlobalID(self, id):
+        self.id = id
+
+    def gotGlobalTo(self, to):
+        pass # usually we don't care
+
+    # probably wanna override this for servers
+    def getGlobalAttributes(self):
+        return {'to': self.getGlobalTo(self)}
+
+    def getGlobalTo(self):
+        return ''
 
 
 def _getElementNamedOrNone(self, element, name):
@@ -141,28 +191,24 @@ class JabberIQMixin:
 
     def gotElement_iq(self, element):
         type = element.attributes['type']
-        m = getattr(self, 'gotIQ_'+type, None)
-        if not m:
-            return # unrecognized types must be ignored as per spec
         id = element.attributes.get('id')
         from_ = element.attributes.get('from')
         to = element.attributes.get('to')
-        m(type, from_, to, id, element)
-
-    def gotIQ_error(self, type, from_, to, id, element):
-        error = _getElementNamedOrNone(message, 'error')
-        code = error.attributes['code']
-        text = domhelpers.getNodeText(error)
-        self.gotIQError(from_, to, id, code, text)
-
-    def gotIQ_get(self, type, from_, to, id, element):
-        pass # implemented in implementation-dependent manner
-
-    def gotIQ_set(self, type, from_, to, id, element):
-        pass # implemented in implementation-dependent manner
-
-    def gotIQ_result(self, type, from_, to, id, element):
-        pass # implemented in implementation-dependent manner
+        if type == 'error':
+            error = _getElementNamedOrNone(message, 'error')
+            code = error.attributes['code']
+            text = domhelpers.getNodeText(error)
+            return self.gotIQError(type, from_, to, id, code, text)
+        query = _getElementNamedOrNone(message, 'query')
+        if query is None: # technically, there could be those.
+            return
+        ns = query.attributes['xmlns']
+        pns = type+'_'+ns.replace(':', '_').replace('/', '_')
+        m = getattr(self, 'gotIQ_'+pns, self.gotIQUnknown)
+        m(type, ns, id, from_, to, query)
+         
+    def gotIQUnknown(self, type, ns, from_, to, id, query):
+        return # ignore unknown IQs by default
 
     def gotIQError(self, from_, to, id, code, text):
         raise NotImplementedError
@@ -170,4 +216,3 @@ class JabberIQMixin:
 
 class JabberCoreMixin(JabberMessageMixin, JabberPresenceMixin, JabberIQMixin):
     pass
-
