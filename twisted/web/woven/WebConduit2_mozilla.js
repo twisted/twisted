@@ -1,33 +1,54 @@
+var woven_eventQueue = []
+woven_eventQueueBusy = 0
+woven_clientSideEventNum = 0
+
 function woven_eventHandler(eventName, node) {
-    var input = document.getElementById('woven_inputConduit')
     var eventTarget = node.getAttribute('id')
     var additionalArguments = ''
     for (i = 2; i<arguments.length; i++) {
         additionalArguments += '&woven_clientSideEventArguments='
         additionalArguments += escape(eval(arguments[i]))
     }
-    var source = '?woven_clientSideEventName=' + eventName + '&woven_clientSideEventTarget=' + eventTarget + additionalArguments
-
-    input.src = source
-}
-
-function onkeyevent(theEvent)
-{ 	
-    if (!theEvent) {
-        theEvent = event
+    var source = '?woven_clientSideEventName=' + eventName + '&woven_clientSideEventTarget=' + eventTarget + additionalArguments + '&woven_clientSideEventNum=' + woven_clientSideEventNum
+    woven_clientSideEventNum += 1
+    
+    woven_eventQueue.unshift(source)
+    if (!woven_eventQueueBusy) {
+        woven_sendTopEvent()
     }
-	code = theEvent.keyCode;
-	if (code==13) {
-		send()
-	}
 }
 
-function send() {
-    var inputText = document.getElementById('inputText')
-    document.getElementById("woven_inputConduit").src = "?wovenLivePageInput=" + escape(inputText.value)
-    recv("-> " + inputText.value)
-    inputText.value = ""
-    inputText.focus()
+function woven_sendTopEvent() {
+    woven_eventQueueBusy = 1
+    var url = woven_eventQueue.shift()
+    var input = document.getElementById('woven_inputConduit')
+    
+    input.src = url
+}
+
+function woven_clientToServerEventComplete() {
+    if (this.woven_eventQueue.length) {
+        this.woven_sendTopEvent()
+    } else {
+        this.woven_eventQueueBusy = 0
+    }
+    var focus = document.getElementById('woven_firstResponder')
+    focus.focus()
+}
+
+function woven_attemptFocus(theNode) {
+    // focus the first input element in the new node
+    if (theNode.tagName == 'INPUT') {
+        theNode.focus()
+        return 1
+    } else {
+/*         for (i=0; i<theNode.childNodes.length; i++) { */
+/*             if(woven_attemptFocus(theNode.childNodes[i])) { */
+/*                 return 1 */
+/*             } */
+/*         } */
+        return 0
+    }
 }
 
 function woven_replaceElement(theId, htmlStr) {
@@ -36,21 +57,10 @@ function woven_replaceElement(theId, htmlStr) {
     r.setStartBefore(oldNode);
     var parsedHTML = r.createContextualFragment(htmlStr);
     oldNode.parentNode.replaceChild(parsedHTML, oldNode);
+    var newNode = document.getElementById(theId)
+    woven_attemptFocus(newNode)
 }
 
-
-function recv(stuff) {
-    var output = document.getElementById("content")
-// Works on ie mac and mozilla but not as well on ie win
-    output.appendChild(document.createTextNode(unescape(stuff)))
-    output.appendChild(document.createElement("br"))
-// Works on ie win & mac, and mozilla, but is a bit slower
-    //output.innerHTML = output.innerHTML + unescape(stuff) + '<br \>'
-    window.scrollBy(0, window.innerHeight)
+function FlashConduit_swf_DoFScommand(cmd, arg) {
+    alert("ha")
 }
-
-function focusInput() {
-    document.getElementById('inputText').focus()
-}
-
-document.onkeypress = onkeyevent

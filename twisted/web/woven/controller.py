@@ -17,7 +17,7 @@
 
 from __future__ import nested_scopes
 
-__version__ = "$Revision: 1.30 $"[11:-2]
+__version__ = "$Revision: 1.31 $"[11:-2]
 
 import os
 import cgi
@@ -229,6 +229,7 @@ class LiveController(Controller):
             request.d = self.view.d
             target = self.view.subviews[eventTarget]
             target.onEvent(request, eventName, *eventArgs)
+            sess.sendScript('woven_clientToServerEventComplete()')
             return '''<html>
     <body>
         %s event sent to %s with arguments %s.
@@ -273,7 +274,12 @@ class LiveController(Controller):
 
     def wchild_FlashConduit_swf(self, request):
         print "returning flash file"
-        return static.File(os.path.join(WOVEN_PATH, "flashconduit.swf"))
+        h = request.getHeader("user-agent")
+        if h.count("MSIE"):
+            fl = "FlashConduit.swf"
+        else:
+            fl = "FlashConduit.swf"
+        return static.File(os.path.join(WOVEN_PATH, fl))
 
     def wchild_input_html(self, request):
         return BlankPage()
@@ -281,7 +287,7 @@ class LiveController(Controller):
 
 class BlankPage(resource.Resource):
     def render(self, request):
-        return "<html>nothing</html>"
+        return "<html>This space intentionally left blank</html>"
 
 
 WController = Controller
