@@ -64,7 +64,7 @@ on TCP or UDP ports, by doing:</p>
 <pre class="python-interpreter">
 from twisted.internet import app
 a = app.theApplication
-service = a.getServiceNamed("manhole")
+service = a.getServiceNamed("twisted.manhole")
 (port, factory, backlog, interface) = a.tcpPorts[0]
 </pre>
 
