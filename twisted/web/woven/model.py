@@ -47,13 +47,13 @@ class ListModel:
 # and breathe just like lists. pyPgSQL really shouldn't do this, but this works
 try:
     from pyPgSQL import PgSQL
-    components.registerAdapter(ListModel, PgSQL.PgResultSet, IModel)
+    components.registerAdapter(ListModel, PgSQL.PgResultSet, mvc.IModel)
 except:
     pass
 
 
 class Wrapper:
-    __implements__ = IModel
+    __implements__ = mvc.IModel
     
     parent = None
     name = None
@@ -76,10 +76,10 @@ class Wrapper:
 from twisted.internet import defer
 
 try:
-    components.registerAdapter(ListModel, types.ListType, IModel)
-    components.registerAdapter(Wrapper, types.StringType, IModel)
-    components.registerAdapter(Wrapper, types.TupleType, IModel)
-    components.registerAdapter(Wrapper, defer.Deferred, IModel)
+    components.registerAdapter(ListModel, types.ListType, mvc.IModel)
+    components.registerAdapter(Wrapper, types.StringType, mvc.IModel)
+    components.registerAdapter(Wrapper, types.TupleType, mvc.IModel)
+    components.registerAdapter(Wrapper, defer.Deferred, mvc.IModel)
 except ValueError:
     # The adapters were already registered
     pass
