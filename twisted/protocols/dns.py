@@ -31,6 +31,21 @@ Future Plans:
 import StringIO, struct, random, types, socket
 from math import ceil, floor
 
+try:
+    from Crypto.Util import randpool
+except ImportError:
+    import warnings, random
+    warnings.warn(
+        "PyCrypto not available - proceeding with non-cryptographically "
+        "secure random source",
+        RuntimeWarning,
+        1
+    )
+
+    randomSource = lambda: random.randint(0, 65535)
+else:
+    randomSource = lambda r = randpool.RandomPool().get_bytes: struct.unpack('h', r(2))[0]
+
 # Twisted imports
 from twisted.internet import protocol, defer, error
 from twisted.python.compat import dict, isinstance
@@ -1027,9 +1042,20 @@ class DNSDatagramProtocol(protocol.DatagramProtocol):
 
 
     def pickID(self):
-        self.id += 1
+        while 1:
+            self.id += randomSource() % (2 ** 10)
+            self.id %= 2 ** 16
+            if not self.liveMessages.has_key(self.id):
+                break
         return self.id
 
+
+#    def writeMessage(self, message, address):
+#        from twisted.internet import reactor
+#        # Hmm.  Let the system pick a random port?
+#        # Or do it ourself?  For now, let's let the system do it.
+#        reactor.listenUDP(0, self, maxPacketSize=512)
+#        self.transport.write(message.toStr(), address)
 
     def writeMessage(self, message, address):
         if not self.transport:
@@ -1122,7 +1148,11 @@ class DNSProtocol(protocol.Protocol):
 
 
     def pickID(self):
-        self.id += 1
+        while 1:
+            self.id += randomSource() % (2 ** 10)
+            self.id %= 2 ** 16
+            if not self.liveMessages.has_key(self.id):
+                break
         return self.id
 
 
