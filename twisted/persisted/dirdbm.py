@@ -1,4 +1,5 @@
-
+# -*- test-case-name: twisted.test.test_dirdbm -*-
+#
 # Twisted, the Framework of Your Internet
 # Copyright (C) 2001 Matthew W. Lefkowitz
 # 
@@ -17,7 +18,7 @@
 
 
 """
-I am a DBM-style interface to a directory.
+DBM-style interface to a directory.
 
 Each key is stored as a single file.  This is not expected to be very fast or
 efficient, but it's good for easy debugging.
@@ -34,6 +35,7 @@ import string
 import glob
 import cPickle
 _open = open
+
 
 class DirDBM:
     """A directory with a DBM interface.
@@ -202,7 +204,6 @@ class DirDBM:
         key = self._encode(key)
         return os.path.isfile(os.path.join(self.dname, key))
 
-
     def get(self, key, default = None):
         """
         @type key: str
@@ -218,7 +219,6 @@ class DirDBM:
         else:
             return default
 
-
     def __contains__(self, key):
         """
         C{key in dirdbm}
@@ -231,7 +231,6 @@ class DirDBM:
         assert type(key) == types.StringType, AssertionError("DirDBM key must be a string")
         key = self._encode(key)
         return os.path.isfile(os.path.join(self.dname, key))
-
 
     def update(self, dict):
         """
@@ -248,6 +247,20 @@ class DirDBM:
         """
         Close this dbm: no-op, for dbm-style interface compliance.
         """
+
+    def getModificationTime(self, key):
+        """
+        Returns modification time of an entry.
+        
+        @return: Last modification date (seconds since epoch) of entry C{key}
+        @raise KeyError: Raised when there is no such key
+        """
+        assert type(key) == types.StringType, AssertionError("DirDBM key must be a string")
+        path = os.path.join(self.dname, self._encode(key))
+        if os.path.isfile(path):
+            return os.path.getmtime(path)
+        else:
+            raise KeyError, key
 
 
 class Shelf(DirDBM):

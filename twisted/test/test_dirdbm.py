@@ -1,4 +1,3 @@
-
 # Twisted, the Framework of Your Internet
 # Copyright (C) 2001 Matthew W. Lefkowitz
 # 
@@ -81,6 +80,11 @@ class DirDbmTestCase(unittest.TestCase):
         assert len(d.values()) == 0, "database has values"
         assert len(d.items()) == 0, "database has items"
 
+    def testModificationTime(self):
+        import time
+        self.dbm["k"] = "v"
+        self.assert_(0 <= time.time() - self.dbm.getModificationTime("k") < 1)
+    
     def testRecovery(self):
         """DirDBM: test recovery from directory after a faked crash""" 
         k = self.dbm._encode("key1")
