@@ -6,7 +6,7 @@ L{UsernamePasswordWrapper}.
 
 from __future__ import nested_scopes
 
-__version__ = "$Revision: 1.30 $"[11:-2]
+__version__ = "$Revision: 1.31 $"[11:-2]
 
 import random
 import time
@@ -155,6 +155,8 @@ def _setSession(wrap, req, cook):
 
 class SessionWrapper(Resource):
 
+    sessionLifetime = 1800
+    
     def __init__(self, rsrc, cookieKey=None):
         Resource.__init__(self)
         self.resource = rsrc
@@ -186,7 +188,7 @@ class SessionWrapper(Resource):
         setupURL = request.setupSessionURL = urlToChild(INIT_SESSION, *([path]+request.postpath))
         request.setupSession = lambda: Redirect(setupURL)
         if self.sessions.has_key(path):
-            self.sessions[path].setLifetime(1800)
+            self.sessions[path].setLifetime(self.sessionLifetime)
             if cookie == path:
                 # /sessionized-url/aef9c34aecc3d9148/foo
                 #                  ^
