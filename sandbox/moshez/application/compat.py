@@ -14,6 +14,15 @@
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 #
+"""Backwards compatibility module
+
+This module allows Applications to behave (partially) like old Application
+objects, and converts olds Applications to new ones. 
+
+API Stability: unstable
+
+Maintainer: U{Moshe Zadka<mailto:moshez@twistedmatrix.com>}
+"""
 from twisted.python import components
 from twisted.application import internet, service
 from twisted.persisted import sob
@@ -21,61 +30,171 @@ import warnings
 
 class IOldApplication(components.Interface):
 
+    """A subset of the interface old Application objects had implicitly
+
+    This interface defines a subset of the interface old Application
+    objects had, so that new objects can support it for compatibility
+    with old code
+    """
     def listenWith(self, portType, *args, **kw):
-        pass
+        """Add a service that starts an instance of C{portType} listening.
+
+        @type portType: type which implements C{IListeningPort}
+        @param portType: The object given by C{portType(*args, **kw)}
+        will be started listening.
+        """
 
     def listenTCP(self, port, factory, backlog=5, interface=''):
-        pass
+        """Add a service that connects a given protocol factory to the port.
+
+        @param port: a port number on which to listen
+
+        @param factory: a twisted.internet.protocol.ServerFactory instance
+
+        @param backlog: size of the listen queue
+
+        @param interface: the hostname to bind to, defaults to '' (all)
+        """
 
     def listenUNIX(self, filename, factory, backlog=5, mode=0666):
-        pass
+        """Add a service that listens on a UNIX socket.
+
+        @param address: a path to a unix socket on the filesystem.
+
+        @param factory: a L{twisted.internet.protocol.Factory} instance.
+
+        @param backlog: number of connections to allow in backlog.
+
+        @param mode: mode to set on the unix socket.
+        """
 
     def listenUDP(self, port, proto, interface='', maxPacketSize=8192):
-        pass
+        """Add a service that connects a given DatagramProtocol to the port.
+        """
 
     def listenSSL(self, port, factory, ctxFactory, backlog=5, interface=''):
-        pass
+        """Add a service that connects a given protocol factory to the port.
+
+        The connection is a SSL one, using contexts created by the context
+        factory.
+
+        @param port: a port number on which to listen
+
+        @param factory: a L{twisted.internet.protocol.ServerFactory} instance
+
+        @param contextFactory: a L{twisted.internet.ssl.ContextFactory} instance
+
+        @param backlog: size of the listen queue
+
+        @param interface: the hostname to bind to, defaults to '' (all)
+        """
 
     def connectWith(self, connectorType, *args, **kw):
-        pass
+        """Add a service that starts an instance of C{connectorType} connecting.
+
+        @type connectorType: type which implements C{IConnector}
+        @param connectorType: The object given by C{connectorType(*args, **kw)}
+        will be started connecting.
+        """
 
     def connectUDP(self, remotehost, remoteport, protocol, localport=0,
                   interface='', maxPacketSize=8192):
-        pass
+        """Add a service that connects a L{ConnectedDatagramProtocol} to a port.
+        """
 
     def connectTCP(self, host, port, factory, timeout=30, bindAddress=None):
-        pass
+        """Add a service that connects a TCP client.
+
+        @param host: a host name
+
+        @param port: a port number
+
+        @param factory: a twisted.internet.protocol.ClientFactory instance
+
+        @param timeout: number of seconds to wait before assuming the
+                        connection has failed.
+
+        @param bindAddress: a (host, port) tuple of local address to bind
+                            to, or None.
+        """
 
     def connectSSL(self, host, port, factory, ctxFactory, timeout=30,
                    bindAddress=None):
-        pass
+        """Add a service that connects a client Protocol to a remote SSL socket.
+
+        @param host: a host name
+
+        @param port: a port number
+
+        @param factory: a L{twisted.internet.protocol.ClientFactory} instance
+
+        @param contextFactory: a L{twisted.internet.ssl.ClientContextFactory}
+
+        @param timeout: number of seconds to wait before assuming the connection
+            has failed
+
+        @param bindAddress: a (host, port) tuple of local address to bind to, or
+            C{None}
+        """
 
     def connectUNIX(self, address, factory, timeout=30):
-        pass
+        """Add a service that connects a client protocol to a UNIX socket.
+
+        @param address: a path to a unix socket on the filesystem.
+
+        @param factory: a L{twisted.internet.protocol.ClientFactory} instance
+
+        @param timeout: number of seconds to wait before assuming the connection
+            has failed.
+        """
 
     def addService(self, service):
-        pass
+        """Add a service to this collection.
+        """
 
     def getServiceNamed(self, name):
-        pass
+        """Retrieve the named service from this application.
 
-    def unlistenWith(self, portType, *args, **kw):
-        pass
-
-    def unlistenTCP(self, port, interface=''):
-        pass
-
-    def unlistenUNIX(self, filename):
-        pass
-
-    def unlistenUDP(self, port, interface=''):
-        pass
-
-    def unlistenSSL(self, port, interface=''):
-        pass
+        Raise a KeyError if there is no such service name.
+        """
 
     def removeService(self, service):
-        pass
+        """Remove a service from this collection."""
+
+    def unlistenWith(self, portType, *args, **kw):
+        """Maybe remove a listener
+
+        This function is inherently unreliable, and may or may
+        not remove a service.
+        """
+
+    def unlistenTCP(self, port, interface=''):
+        """Maybe remove a listener
+
+        This function is inherently unreliable, and may or may
+        not remove a service.
+        """
+
+    def unlistenUNIX(self, filename):
+        """Maybe remove a listener
+
+        This function is inherently unreliable, and may or may
+        not remove a service.
+        """
+
+    def unlistenUDP(self, port, interface=''):
+        """Maybe remove a listener
+
+        This function is inherently unreliable, and may or may
+        not remove a service.
+        """
+
+    def unlistenSSL(self, port, interface=''):
+        """Maybe remove a listener
+
+        This function is inherently unreliable, and may or may
+        not remove a service.
+        """
 
 
 
@@ -175,13 +294,17 @@ components.registerAdapter(_ServiceNetwork,
                            service.IServiceCollection, IOldApplication)
 
 
-mapping = []
+_mapping = []
 for tran in 'tcp unix udp ssl'.split():
-    mapping.append((tran+'Ports', getattr(internet, tran.upper()+'Server')))
-    mapping.append((tran+'Connectors',getattr(internet, tran.upper()+'Client')))
+    _mapping.append((tran+'Ports', getattr(internet, tran.upper()+'Server')))
+    _mapping.append((tran+'Connectors',getattr(internet,tran.upper()+'Client')))
 
 def convert(oldApp):
-    '''
+    '''Convert an C{i.app.Application} to a C{application.service.Application}
+
+    @type oldApp: C{twisted.internet.app.Application}
+    @rtype C{twisted.application.service.Application}
+
     This function might damage oldApp beyond repair: services
     that other parts might be depending on might be missing.
     It is not safe to use oldApp after it has been converted.
@@ -195,7 +318,7 @@ def convert(oldApp):
                            (oldApp.extraConnectors, internet.GenericClient),]:
         for (portType, args, kw) in pList:
             klass(portType, *args, **kw).setServiceParent(c)
-    for (name, klass) in mapping:
+    for (name, klass) in _mapping:
         for args in getattr(oldApp, name):
             klass(*args).setServiceParent(c)
     for s in c:
