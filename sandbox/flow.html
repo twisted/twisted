@@ -14,67 +14,110 @@
 
 <h3>Handling more than one Request</h3>
 
-<p>When creating services which handle more than once client at a given
-time, the current state of each request must be managed.  A typical way to
-keep the current state is to use the call stack, a stack of functions and
-their arguments.  Unfortunately, this doesn't work well when you have
-more than one simultaneous request.</p>
+<p>When creating services to handle simoutaneous requests, processing state
+must be managed.  A common approach, threading, applies the method used 
+for single user operations:  keeping processing state within local variables 
+and function arguments.  In this case, the operating environment handles 
+variable allocation and cleanup.   Unfortunately, threading requires much
+preemption and locking magic to keep each thread's execution independent,
+yet allowing data to be shared between threads.  This magic can lead to 
+subtle programming errors, and, in the case of Python, slowness as every
+changes to a mutable object must be synchronized with the global 
+interpreter lock.</p>
 
-<p>One primary approach to this problem is preemptive multi-tasking, where
-each request is handled by a new process or thread which has its own
-call stack.  The primary difference between processes and threads, from the
-programmer's perspective, is primarily in how objects common to multiple
-requests are shared.   For processes, one must use sockets or shared memory;
-in threads, the programmer must take care to lock objects which could be
-touched by other threads.  In either case, each request is given its own
-call stack, making things easy for the programmer.  However, the programmer
-must take extra care with information that is not managed with the stack
-and are shared between requests.</p>
+<p>An alternative is to use a event-driven approach, where each operation
+is broken down into distinct steps, each step scheduled for operation in 
+an delayed execution queue.  In this approach, an object is often used 
+used to maintain state information between each step, allowing other 
+operations to be performed.  Often each step is a member function, queued
+within Twisted using <code>reactor.CallLater</code>.</p>
 
-<p>Another approach, is to use a event-driven approach, where each request
-is broken down into distinct stages of work, and when each stage is done, 
-it schedules the next stage to be run.  This is called cooperative
-multi-tasking.   The Twisted framework primarily uses this approach to
-handling multiple requests.  In Twisted, the execution of each stage is
-typically scheduled with <code>reactor.callLater</code> and the result of
-each stage is reported with a call-back, usually managed by a
-<code>internet.defer.Deferred</code> object.</p>
+<pre class="python">
+from twisted.internet import reactor
 
-<p>While this <code>Deferred</code> approach is very good, it starts to have
-problems when the flow of the request is not a simple linear sequence of
-stages, or when results must flow between stages incrementally. An 
-alternative cooperative multitasking approach is to view data flows as
-a hierarchy of stages, where the last stage in the flow pulls from previous
-stages, and so on.  This approach allows for a more granular control of 
-the flow, giving both incremental results and also allowing the next 
-state of the information to be chosen more dynamically.  Unfortunately,
-this approach is somewhat complicated since building iterators isn't easy.
-Luckily, in version 2.2 and up, Python has generators, which are, in short,
-syntax sugar for making iterators.</p>
+class Request:
+    def __init__(self, name):
+        self.name = name
+        reactor.callLater(0, self.step_one)
+    def step_one(self):
+        print self.name, ": Step One"
+        reactor.callLater(0, self.step_two)
+    def step_two(self):
+        print self.name, ": Step Two"
+        reactor.callLater(0, self.step_done)
+    def step_done(self):
+        # cleanup, and don't call reactor again.
+        pass
 
-<p>A further complication to this iterator based approach is that every once
-and a while, a iterator in the flow (perhaps one nested several layers deep)
-may have to block on a resource.  In this case, the flow must be paused so
-that other flows in the system have a chance to produce results.  So, rather
-than blocking, the entire state of the iterator chain must be saved so that
-it can be resumed later.   Furthermore, traditional exception handling
-doesn't work since the call stack for a given request may be paused
-indefinitely.  Helping the programmer manage these sorts of things is what
-the flow module does.   While it does not depend on generators, to use
-flow effectively, generators are very useful.</p>
+Request("James")
+Request("Wendy")
 
-<h3>Iterators and generators</h3>
+# start and shut down the event loop
+reactor.callLater(1, reactor.stop) 
+reactor.run()
+</pre>
+
+<p>In the output of this example, one can see that execution alternates
+between steps for James and Wendy's request.  In effect, the requests
+are done in a parallel, cooperative manner.   While this is a good start,
+it isn't perfect as the event loop is stopped with a hard-coded timeout.
+It would be better for each Request object to signal when it is completed 
+so that the event loop can be shuot down sooner.
+
+<h3>Deferred Callbacks</h3>
+
+<p>In Twisted, communication between operations is often accomplished with 
+<code>defer.Deferred</code>.  The Deferred object decouples an asyncronous 
+operation by providing a temporary storage location for its result.  Instead 
+of calling the operation and waiting for a return value, an operation 
+schedules itself to be executed with <code>reactor.callLater</code>and then
+returns a <code>defer.Deferred</code> object.   At this point, the caller 
+can register a callback function to be executed when the operation has
+completed.  In the example below, <code>defer.DeferredList</code> is used 
+to merge the result of each request into a single notification, which is
+used to stop the main event loop.
+</p>
+
+<pre>
+from twisted.internet import reactor, defer
+
+class Request:
+    def __init__(self, name):
+        self.name = name
+        self.d    = defer.Deferred()
+        reactor.callLater(0, self.step_one)
+    def step_one(self):
+        print self.name, ": Step One"
+        reactor.callLater(0, self.step_two)
+    def step_two(self):
+        print self.name, ": Step Two"
+        reactor.callLater(0, self.step_done)
+    def step_done(self):
+        self.d.callback(None) # notify callback that we are done
+
+james = Request("James")
+wendy = Request("Wendy")
+
+# start and shut down the event loop
+d = defer.DeferredList([james.d, wendy.d])
+d.addCallback(lambda _: reactor.stop())
+reactor.run()
+</pre>
+
+<p>While this <code>Deferred</code> approach is very good, it can get
+quickly complicated, especially if the request is not a simple linear
+sequence of steps, or when results must flow between steps incrementally.
+The flow module addresses these shortcomings using python generators.</p>
+
+<h2>Iterators and generators</h2>
 
 <p>An iterator is basically an object which produces a sequence of values.
 Python's iterators are simply objects with an <code>__iter__()</code> 
 member function which returns an object (usually itself) which has a
 <code>next()</code> member function.   The <code>next()</code> method is
-then invoked till it raises a <code>StopIteration</code> exception.
-In Python 2.2, the for syntax knows about iterators, making them
-very nice to use.</p>
+then invoked till it raises a <code>StopIteration</code> exception.</p>
 
 <pre class="python">
-
 from twisted.python.compat import iter, StopIteration
 
 class Counter:
@@ -89,19 +132,16 @@ class Counter:
         raise StopIteration
         return ret
 
-def list(it):
-    ret = []
-    import sys
-    if sys.version_info &gt;= (2,2):
-        for x in it:
-           ret.append(x)
-    else:
+import sys
+if sys.version_info &lt; (2,2):
+    def list(it):
+        ret = []
         it = iter(it)
         try:
             while 1:
                 ret.append(it.next())
         except StopIteration: pass
-    return ret
+        return ret
 
 print list(Counter(3))
 
@@ -110,32 +150,26 @@ print list(Counter(3))
 
 <h3>State pattern</h3>
 
-<p>Often times it is useful for an iterator to change state during
-its production of values.  This can be done nicely with the 'state'
-pattern.  Simply store in the iterator the next function to be run.
-</p>
+<p>Often times it is useful for an iterator to change state during its 
+production of values.  This can be done nicely with the 'state' pattern.</p>
 
 <pre class="python">
-
 class States:
     def __iter__(self):
-        self.state = self.next_initial
+        self.next = self.state_one
         return self
-    def next_initial(self):
-        self.state = self.next_middle
+    def state_one(self):
+        self.next = self.state_two
         return "one"
-    def next_middle(self):
-        self.state = self.next_final
+    def state_two(self):
+        self.next = self.state_stop
         return "two"
-    def next_final(self):
+    def state_stop(self):
         raise StopIteration
-    def next(self):
-        return self.state()
 
 print list(States())
 
 # prints: ['one', 'two']
-
 </pre>
 
 <h3>Generators</h3>
@@ -147,7 +181,7 @@ gives the subsequent value produced by the <code>yield</code> statement.
 With generators, the two iterators above become very easy to express.
 
 <pre class="python">
-from __future__ import generators   # &lt;-- first line of file
+from __future__ import generators 
 
 def Counter(count):
     while count > 0:
@@ -158,7 +192,6 @@ def States():
     yield "one"
     yield "two"
 
-
 print list(Counter(3))
 print list(States())
 
@@ -168,25 +201,19 @@ print list(States())
 
 </pre>
 
-<p>An important detail here, is that code which uses both iterators and
-generators (dump) can be expressed in a manner which works in with 2.1 and
-thus can be included in Twisted's code base.  One technical difference
-between iterators and generators, is that raising an exception from a
-generator permanently halts the generator, while raising an exception from
-an iterator's <code>next()</code> method does not necessarily stop the
-iterator, that is, one could call the <code>next()</code> method again and
-possibly get results.   From here on, we use the generator syntax for
-expressing iterators.</p>
+<p>One technical difference between iterators and generators, is that raising 
+an exception from a generator permanently halts the generator, while raising 
+an exception from an iterator's <code>next()</code> method does not
+invalidate the iterator, that is, one could call the <code>next()</code> 
+method again and possibly get results.   From here on, we use the generator 
+syntax for building iterators.</p>
 
-<h2>Introducing Flow</h2>
+<h3>Chaining Generators</h3>
 
-<p>It is possible, and often useful to view a data flow as a nested
-iterator.  In this view, the 'last' iterator in the chain 'pulls'
-data from previous iterators in the data flow. If you wish, you may
-call the last iterator a consumer, and the first iterator a producer.
-In the following example, we use the counter generator defined above
-as our producer.
-</p>
+<p>It is often useful to view an operation information as a flow between 
+stages, where each stage may have several states or steps.  This can be
+coded where the output of one generator is consumed by another.  In this
+view, the last generator in the chain 'pulls' data from previous stages.</p>
 
 <pre class="python">
 from __future__ import generators 
@@ -197,7 +224,8 @@ def Counter(count):
         count -= 1
 
 def Consumer():
-    for result in Counter(3):
+    producer = Counter(3)
+    for result in producer:
         if 2 != result:
             yield result
 
@@ -206,24 +234,22 @@ print list(Consumer())
 # prints: [3, 1]
 </pre>
 
-<p>The problem with this approach, in a cooperative multi-tasking
-environment, is that a producer could potentially block, and if it 
-did, the entire process would stop servicing all other requests.
-Thus, some mechanism for pausing the flow and running it later
-is required.</p>
+<p>While this is a very clean syntax for creating a multi-stage operation,
+it would block all other operations.   Therefore, some mechanism for pausing
+the generator and resuming it later is required.</p>
 
-<h3>Flow Basics</h3>
+<h2>Introducing Flow</h2>
 
-<p>The flow module provides this ability to cooperate with other tasks by
-placing a control mechanism between each stage of a flow.  This is
-accomplished in code , by creating a wrapper object for each iterable,
-which one should yield before every call to next(), implicit or otherwise.
-In the yield, the control mechanism can then take over to support the
-underlying cooperative multi-tasking mechanism.</p>
+<p>The flow module provides this ability to cooperate with other tasks.
+This is accomplished by wrapping iterables in a flow stage object and 
+following an alternating yield pattern.  That is, before each value pulled
+from the stage, the operation must yield the wrapper object.  During this
+yield bookkeeping is done to prepare the next value, or, if the next value
+is not available, re-scheduling the operation to be executed later.</p>
 
 <pre>
 from __future__ import generators
-import flow
+<font color="blue">import flow</font>
 
 def Counter(count):
     while count &gt; 0:
@@ -231,165 +257,204 @@ def Counter(count):
         count -= 1
 
 def Consumer():
+  <font color="blue">
     producer = flow.wrap(Counter(3))
     yield producer
+  </font>
     for result in producer:
         if 2 != result:
             yield result
-        yield producer
+        <font color="blue">yield producer</font>
 
 print list(flow.Block(Consumer))
 
 # prints: [3, 1]
 </pre>
 
-<p>In the code above, <code>producer.next()</code> is implicitly
-called.  It does several things like checking for the end of the
-iterator and scanning for failures.   Its behavior can best be
-described with a more verbose version below, with Counter
-replaced with a simple list, for brevity.</p>
+
+<h3>Equivalent Forms</h3>
+
+<p>In the above code, <code>producer.next()</code> is called
+implicitly, and thus the generator above is equivalent to...</p>
 
 <pre>
-from __future__ import generators
-import flow
-
 def Consumer():
-    producer = flow.wrap([3,2,1])
-    while 1:
+    producer = flow.wrap(Counter(3))
+    while True:
         yield producer
-        if producer.stop: break
-        if producer.isFailure():
-            raise producer.result
-        if 2 != producer.result:
-            yield producer.result
+        result = producer.next()
+        if 2 != result:
+            yield result
+</pre>
 
-print list(flow.Block(Consumer))
+<p>The <code>next()</code> method of the wrapper object does several
+things.  First, it checks to see if there are results ready, if so it
+returns the next one.  If not, it looks for a failure, raising it.
+And finally, checking to see if the end of the input has been reached.
+More concretely...
+</p>
 
-# prints: [3, 1]
+<pre>
+def Consumer():
+    producer = flow.wrap(Counter(3))
+    while True:
+        yield producer
+        if producer.results:
+            result = producer.results.pop(0)
+            yield result
+            continue
+        if producer.failure:
+            producer.failure.trap()
+            producer.stop = 1
+        if producer.stop:
+            break
 </pre>
 
 <h3>Handling failures</h3>
 
 <p>Another difference between plain old iterables and one wrapped with
-the flow module is that exceptions thrown must be delayed for later
-delivery.  This is done with <code>twisted.python.fail.Failure</code>.
-Within a for loop, failure objects are raised if they are not provided
-to <code>wrap()</code>.  Furthermore, Failure must also be used to 
-send Exceptions back from generators if it is recoverable.</p>
+the flow module is that exceptions caught are wrapped with a
+<code>twisted.python.failure.Failure</code> object for later delivery.
+There are two basic ways to recover from exceptions.  One way is to list
+expected exceptions in the call to <code>flow.wrap</code>.  Alternatively, 
+a try/except block can be used, catching <code>flow.Failure</code> objects.
+</p>
 
 <pre>
 from __future__ import generators
 import flow
 
-def Producer():
+def Producer(throw):
     yield 1
-    yield flow.Failure(IOError("recoverable"))
     yield 2
-    assert 0, "asserting"
+    raise throw
     yield 3
 
-def Consumer():
-    producer = flow.wrap(Producer(), trap=IOError)
+def Consumer(producer):
+    producer = flow.wrap(producer, IOError)
     yield producer
     try:
         for result in producer:
             if result is IOError:
-                # handle recoverable error
-                pass
+                # handle trapped error
+                yield "trapped"
             else:
                 yield result
             yield producer
     except flow.Failure, fail:
         # pass other failures up the stack
         fail.trap(AssertionError)
-        # handle non-recoverable error
+        # handle non-trapped error
         yield str(fail.value)
 
-print list(flow.Block(Consumer))
+print list(flow.Block(Consumer(Producer(IOError("trap")))))
+print list(flow.Block(Consumer(Producer(AssertionError("notrap")))))
 
-# prints: [1, 2, 'asserting']
-
+# prints: [1, 2, 'trapped']
+# prints: [1, 2, 'notrap']
 </pre>
 
 <h3>Cooperate</h3>
 
-<p>This seems like quite the effort, wrapping each iterator and 
-then having to alter the calling sequence.  Why?  The answer is
-that it allows for a <code>flow.Cooperate</code> object to be
-returned.   When this happens, the entire call chain can be
-paused so that other flows can use the call stack.   For 
-flow.Iterator (which blocks), the implementation of Cooperate
+<p>This seems like quite the effort, wrapping each iterator and then 
+having to alter the calling sequence.  Why?  The answer is that it
+allows for a <code>flow.Cooperate</code> object to be returned.   When 
+this happens, the entire call chain can be paused so that other flows
+can use the call stack.   For flow.Block, the implementation of Cooperate
 simply puts the call chain to sleep.</p>
 
 <pre class="python">
+from __future__ import generators
 import flow
 
-lst = ['1','2', flow.Cooperate(4), '3']
-print list(flow.Block(lst))
+def gen():
+    yield 'immediate'
+    yield flow.Cooperate(2)
+    yield 'delayed'
 
-# prints: ['1,'2','3']
+for x in flow.Block(gen):
+   print x
 
+# prints:
+#  immediate
+#  delayed
 </pre>
 
-<h3>Merging iterators</h3>
+<h3>Merge and Zip</h3>
 
-<p>An application of Cooperate can be demonstrated with the
-Merge command.  This simply zips two or more wrapped iterators 
-together, without blocking one or the other.  In the example 
-below, the <code>States</code> iterator isn't blocked by the 
-<code>Counter</code> iterator.
-</p>
+<p>Cooperate can be demonstrated with <code>flow.Merge</code> and 
+<code>flow.Zip</code> components.  These two stages join two or more
+generators into a single stream.  The Merge operation does this by
+rotating between any of its input streams which are available.  The
+Zip operation, on the other hand, waits for a result from each stream
+before it produces a result.</p>
 
 <pre class="python">
 from __future__ import generators
 import flow
 
-def States():
+def Right():
     yield "one"
     yield "two"
+    yield flow.Cooperate()
+    yield "three"
 
-def Counter(count):
-    while count &gt; 0:
-        if not count % 2:
-            yield flow.Cooperate()
-        yield count
-        count -= 1
+def Left():
+    yield 1
+    yield 2
+    yield 3
 
-mrg = flow.Merge(Counter(3),States)
-print list(flow.Block(mrg))
+print "Zip", list(flow.Block(flow.Zip(Right,Left)))
+print "Merge", list(flow.Block(flow.Merge(Right,Left)))
 
-# prints: [3, 'one', 'two', 2, 1]
-
+# Zip [('one', 1), ('two', 2), ('three', 3)]
+# Merge ['one', 1, 'two', 2, 3, 'three']
 </pre>
 
+<h2>Integrating with Twisted</h2>
 
-<h2>Deferred Flow</h2>
+<p>While <code>flow.Block</code> is useful for understanding how flow
+works, it undermines the whole purpose by sleeping during Cooperate
+and blocking other operations.   Following are numerous examples of how
+to integrate flow with the Twisted framework in a non-blocking manner.
 
-<p>The real value in Flow comes not from its stand-alone use, in this case,
-<code>Cooperate</code> does very little and the overhead imposed by flow
-doesn't offset the functionality.  However, when flow is combined with
-Twisted's <code>reactor.callLater</code> and
-<code>internet.defer.Deferred</code> mechanism, things get very cosy. In
-the example below, the first two items in the list are produced (although
-they are not delivered yet), other events in the reactor are allowed to
-proceed, and then the last item in the list is produced.</p>
+<h3>Deferred Flow</h3>
 
+<p>For starters, the long example of Wendy and James, with its numerous
+calls to <code>reactor.callLater</code> to schedule each step of the 
+operation can be rewritten using flow.Deferred.</p>
 
 <pre class="python">
 from __future__ import generators
-from twisted.internet import reactor
+from twisted.internet import reactor, defer
 import flow
 
-def prn(x): 
-    print x
-d = flow.Deferred([1,2,flow.Cooperate(1),3])
-d.addCallback(prn)
-reactor.callLater(2, reactor.stop)
-reactor.run()
+def request(name):
+    print name, ": Step One"
+    yield flow.Cooperate()
+    print name, ": Step Two"
 
-# prints
-#   [1,2,3]
+james = flow.Deferred(request("James"))
+wendy = flow.Deferred(request("Wendy"))
+
+# start and shut down the event loop
+d = defer.DeferredList([wendy, james])
+d.addCallback(lambda _: reactor.stop())
+reactor.run()
 </pre>
+
+<p>Under the sheets, when <code>flow.Deferred</code> encounters a
+<code>flow.Cooperate</code> event, it reschedules itself to be resumed
+at a later time, allowing other asyncronous operations to proceed. Once
+again, <code>defer.DeferredList</code> is only used here to stop the
+reactor after all operations are completed.</p>
+
+<h3>Flow resources</h3>
+
+
+
+
+
 
 <h2>Dealing /w Threads</h2>
 

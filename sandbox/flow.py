@@ -92,6 +92,9 @@ def wrap(obj, *trap):
     if isinstance(obj, defer.Deferred):
         return DeferredWrapper(obj, *trap)
 
+    if callable(obj):
+        obj = obj()
+
     try:
         return Iterable(obj, *trap)
     except TypeError: 
@@ -327,10 +330,7 @@ class Iterable(Stage):
 
     def _yield(self):
         """ executed during a yield statement """
-        if self.results or self.stop:
-            return
-        if self.failure:
-            self.stop = True
+        if self.results or self.stop or self.failure:
             return
         while True:
             next = self._next
@@ -369,10 +369,7 @@ class Zip(Stage):
         self._index  = 0
 
     def _yield(self):
-        if self.results or self.stop:
-            return
-        if self.failure:
-            self.stop = True
+        if self.results or self.stop or self.failure:
             return
         if not self._index:
             self._curr = []
@@ -421,10 +418,7 @@ class Concurrent(Stage):
             self._stages.append(wrap(stage))
 
     def _yield(self):
-        if self.results or self.stop:
-            return
-        if self.failure:
-            self.stop = True
+        if self.results or self.stop or self.failure:
             return
         stages = self._stages
         coop = None
@@ -432,6 +426,8 @@ class Concurrent(Stage):
         exit = None
         while stages:
             if stages[0] is exit:
+                if self.results:
+                    return
                 break
             curr = stages.pop(0)
             instruction = curr._yield()
@@ -477,10 +473,7 @@ class Merge(Stage):
         self.concurrent = Concurrent(*stages)
 
     def _yield(self):
-        if self.results or self.stop:
-            return
-        if self.failure:
-            self.stop = True
+        if self.results or self.stop or self.failure:
             return
         instruction = self.concurrent._yield()
         if instruction: 
@@ -491,7 +484,6 @@ class Merge(Stage):
         self.concurrent.results = []
         if self.concurrent.stop:
             self.stop = True
-            return
         self.failure =  self.concurrent.failure
 
 class Block(Stage):
@@ -556,9 +548,7 @@ class Callback(Stage):
         self.failure = fail
         self._cooperate.flow()
     def _yield(self):
-        if self.results or self.stop:
-            return
-        if self.failure:
+        if self.results or self.stop or self.failure:
             return
         if not self.results: 
             if self._finished:
@@ -596,6 +586,8 @@ class DeferredWrapper(Stage):
         self.failure = fail
 
     def _yield(self):
+        if self.results or self.stop or self.failure:
+            return
         if not self._called:
             return self._cooperate
         if self._fetched:
@@ -635,7 +627,7 @@ class Threaded(Stage):
         Stage.__init__(self, trap)
         self._iterable  = iterable
         self._cooperate = Threaded.Instruction()
-        self.chunked = getattr(iterable, 'chunked', False)
+        self.srcchunked = getattr(iterable, 'chunked', False)
         reactor.callInThread(self._process)
 
     def _process(self):
@@ -650,7 +642,7 @@ class Threaded(Stage):
             try:
                 while True:
                     val = self._iterable.next()
-                    if self.chunked:
+                    if self.srcchunked:
                         self.results.extend(val)
                     else:
                         self.results.append(val)
@@ -663,10 +655,7 @@ class Threaded(Stage):
         self._cooperate()
 
     def _yield(self):
-        if self.results or self.stop:
-            return
-        if self.failure:
-            self.stop = True
+        if self.results or self.stop or self.failure:
             return
         return self._cooperate
 
@@ -692,18 +681,22 @@ class Deferred(defer.Deferred):
         self._stage = wrap(stage, *trap)
         self._execute()
 
+    def results(self, results):
+        self._results.extend(results)
+
     def _execute(self, dummy = None):
         cmd = self._stage
         while True:
             result = cmd._yield()
             if cmd.results:
-                self._results.extend(cmd.results)
+                self.results(cmd.results)
                 cmd.results = []
             if cmd.stop:
                 if not self.called:
                     self.callback(self._results)
                 return
             if cmd.failure:
+                cmd.stop = True
                 if cmd._trap:
                     error = cmd.failure.check(*cmd._trap)
                     if error:
@@ -766,7 +759,7 @@ def makeProtocol(controller, baseClass = protocol.Protocol,
                     self.transport.loseConnection()
                     return
                 if cmd.failure:
-                    print "flow.py: TODO: Help! Any ideas on reporting faliures?"
+                    print "TODO: Help! Any ideas on reporting faliures?"
                     cmd.failure.trap()
                     return
                 if cmd.results:

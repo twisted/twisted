@@ -24,8 +24,17 @@ from twisted.trial import unittest
 from twisted.python import failure
 from twisted.internet import defer, reactor, protocol
 
+class slowlist:
+    def __init__(self, list):
+        self.list = list[:]
+    def __iter__(self):
+        return self
+    def next(self):
+        if self.list:
+            return self.list.pop(0)
+        raise flow.StopIteration
 
-class onetwothree:
+class onetwothree(slowlist):
     """ iterator version of the following generator... 
 
         def onetwothree():
@@ -35,13 +44,8 @@ class onetwothree:
             yield 'three'
 
     """
-    def __iter__(self):
-        self.list = ['one','two',flow.Cooperate(),'three']
-        return self
-    def next(self):
-        if self.list:
-            return self.list.pop(0)
-        raise flow.StopIteration
+    def __init__(self):
+        slowlist.__init__(self,['one','two',flow.Cooperate(),'three'])
 
 class producer:
     """ iterator version of the following generator... 
@@ -233,6 +237,11 @@ class FlowTest(unittest.TestCase):
         rhs = list(flow.Block(onetwothree()))
         self.assertEqual(lhs,rhs)
 
+    def testCallable(self):
+        lhs = ['one','two','three']
+        rhs = list(flow.Block(onetwothree))
+        self.assertEqual(lhs,rhs)
+
     def testBasicList(self):
         lhs = [1,2,3]
         rhs = list(flow.Block([1,2,flow.Cooperate(),3]))
@@ -253,7 +262,8 @@ class FlowTest(unittest.TestCase):
         self.assertEqual(['x',ZeroDivisionError],
                          list(flow.Block(badgen(),ZeroDivisionError)))
         self.assertEqual(['x',ZeroDivisionError],
-                         list(flow.Block(flow.wrap(badgen()),ZeroDivisionError)))
+                         list(flow.Block(flow.wrap(badgen()),
+                                                   ZeroDivisionError)))
 
     def testZip(self):
         lhs = [(1,'a'),(2,'b'),(3,'c')]
@@ -262,8 +272,8 @@ class FlowTest(unittest.TestCase):
         self.assertEqual(lhs,rhs)
 
     def testMerge(self):
-        lhs = ['one', 1, 2, 'two', 3, 'three']
-        mrg = flow.Merge(onetwothree(),[1,2,flow.Cooperate(),3])
+        lhs = ['one', 1, 'two', 2, 3, 'three']
+        mrg = flow.Merge(onetwothree(),slowlist([1,2,3]))
         rhs = list(flow.Block(mrg))
         self.assertEqual(lhs,rhs)
 
@@ -301,7 +311,7 @@ class FlowTest(unittest.TestCase):
         from twisted.internet import reactor 
         a = defer.Deferred()
         reactor.callLater(0, lambda: a.callback("test"))
-        b = flow.Merge(a, [1,2,flow.Cooperate(),3])
+        b = flow.Merge(a, slowlist([1,2,flow.Cooperate(),3]))
         rhs = unittest.deferredResult(flow.Deferred(b))
         self.assertEquals(rhs, [1, 2, 'test', 3])
     

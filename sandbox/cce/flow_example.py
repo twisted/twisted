@@ -1,4 +1,4 @@
-#
+
 # Why flow?
 #
 #   The flow module provides a mechanism for delivering results
@@ -132,7 +132,9 @@ def render(req):
         for x in range(cnt):
             yield zips; 
             if x: req.write(", ")
-            req.write(zips.result)
+            for result in zips.results:
+               req.write(result)
+               zips.results = []
         req.write("""
             </td></tr>
         """)
@@ -142,7 +144,7 @@ def render(req):
 class FlowResource(resource.Resource):
     def isLeaf(self): return true
     def render(self, req):
-        flow.Deferred(render(req))
+        self.d = flow.Deferred(render(req))
         return server.NOT_DONE_YET
 
 # compute a factorial just for fun
