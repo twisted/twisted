@@ -263,6 +263,8 @@ class FormFillerWidget(widgets.Widget):
     def input_verifiedpassword(self, request, content, model, templateAttributes={}):
         breakLines = model.getHint('breaklines', 1)
         values = self.getValues(request, model)
+        if isinstance(values, (str, unicode)):
+            values = (values, values)
         if not values:
             p1, p2 = "", ""
         elif len(values) == 1:
