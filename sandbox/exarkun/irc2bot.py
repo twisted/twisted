@@ -9,7 +9,7 @@ from twisted.internet import defer, task
 # import sys
 # log.startLogging(sys.stdout)
 
-metachannel = ["#arnis"]
+metachannel = "#arnis"
 channels = ['#arnis1', '#arnis2']
 
 states = dict.fromkeys(channels)
@@ -19,19 +19,23 @@ class State(object):
         self.voicedUsers = []
 
 class Client(AdvancedClient):
-    nickname = 'irc2test'
+    nickname = 'snuggle-bunny'
     lineRate = 0.9
-
+    favoredChannel = ""
     def signedOn(self):
+        self.msg("NickServ", "identify ")
+        self.msg("ChanServ", "invite %s" % metachannel)
+        self.join(metachannel)
         for ch in channels:
             d = self.join(ch)
             d.addCallback(Client.names, ch)
             d.addCallback(self._cbJ, ch)
             d.addErrback(self._ebJ, ch)
 
+        
         self._cleanupRaceCall = task.LoopingCall(self._raceConditionsCanBeDefeated)
         self._cleanupRaceCall.start(10)
-
+        
     def connectionLost(self, reason):
         self._cleanupRaceCall.stop()
         del self._cleanupRaceCall
@@ -44,7 +48,9 @@ class Client(AdvancedClient):
     def _eliminateRaceResults(self, allNames):
         voicedUsers = {}
         unvoicedUsers = {}
+        populations = []
         for (channel, nameListing) in allNames.iteritems():
+            populations.append((len(nameListing), channel))
             for name in nameListing:
                 if name.startswith('@'):
                     continue
@@ -66,7 +72,16 @@ class Client(AdvancedClient):
         for user, channels in unvoicedUsers.iteritems():
             if user not in voicedUsers:
                 self.mode(channels[0], True, 'v', user=user)
+            
+        populations.sort()
+        print "Examining channel populations", populations
+        print "Favored channel is", self.favoredChannel
+        if (populations[1][0] -  populations[0][0]) > 1 and populations[0][1] != self.favoredChannel:            
 
+            self.favoredChannel = populations[0][1]
+            print "Setting new favored channel to", self.favoredChannel
+            self.mode(metachannel, True, "f", mask=self.favoredChannel)
+            
 
     def _cbJ(self, names, channel):
         state = states[channel] = State()
