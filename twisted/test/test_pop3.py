@@ -218,7 +218,6 @@ QUIT''', '\n')
         a = StringIOWithoutClosing()
         dummy = DummyPOP3()
         dummy.makeConnection(protocol.FileWrapper(a))
-        p = pop3.POP3()
         lines = ['APOP spiv dummy', 'NOOP', 'QUIT']
         expected_output = '+OK <moshez>\r\n+OK Authentication succeeded\r\n+OK \r\n+OK \r\n'
         for line in lines:
