@@ -39,6 +39,7 @@ install2.1:
 	cp debian/copyright debian/python2.1-twisted/usr/share/doc/python2.1-twisted/
 	cp bin/manhole bin/tap2deb bin/mktap bin/twistd bin/im bin/t-im bin/coil debian/python2.1-twisted/usr/bin/
 	for file in debian/python2.1-twisted/usr/bin/*;do sed '1s|.*|#!/usr/bin/python2.1|' $$file > $$file.$$$$;cat $$file.$$$$ > $$file''2.1;rm $$file $$file.$$$$;done
+	chmod +x debian/python2.1-twisted/usr/bin/*
 	for file in doc/man/*.1;do cp $$file debian/python2.1-twisted/usr/share/man/man1/`basename $$file .1`2.1.1;done
 	gzip -9 debian/python2.1-twisted/usr/share/man/man1/*
 
@@ -53,6 +54,7 @@ install2.2:
 	cp debian/copyright debian/python2.2-twisted/usr/share/doc/python2.2-twisted/
 	cp bin/manhole bin/tap2deb bin/mktap bin/twistd bin/im bin/t-im bin/coil debian/python2.2-twisted/usr/bin/
 	for file in debian/python2.2-twisted/usr/bin/*;do sed '1s|.*|#!/usr/bin/python2.2|' $$file > $$file.$$$$;cat $$file.$$$$ > $$file''2.2;rm $$file $$file.$$$$;done
+	chmod +x debian/python2.2-twisted/usr/bin/*
 	for file in doc/man/*.1;do cp $$file debian/python2.2-twisted/usr/share/man/man1/`basename $$file .1`2.2.1;done
 	gzip -9 debian/python2.2-twisted/usr/share/man/man1/*
 
