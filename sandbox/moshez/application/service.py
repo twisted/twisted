@@ -144,7 +144,7 @@ class MultiService(Service):
             service.stopService()
 
 
-class IProcess:
+class IProcess(components.Interface):
     pass
 
 
