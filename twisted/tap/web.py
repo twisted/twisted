@@ -33,6 +33,9 @@ class Options(usage.Options):
     optParameters = [["port", "p", "8080","Port to start the server on."],
                      ["telnet", "t", None, "Run a telnet server on this port."],
                      ["logfile", "l", None, "Path to web log file."],
+                     ["https", "s", None, "Port to listen on for Secure HTTP."],
+                     ["certificate", "c", "server.pem", "SSL certificate to use for HTTPS."],
+                     ["privkey", "k", "server.pem", "SSL certificate to use for HTTPS."],
                      ]
     optFlags = [["personal", "",
                  "Instead of generating a webserver, generate a "
@@ -142,4 +145,10 @@ def updateApplication(app, config):
                                    distrib.UserDirectory.userSocketName),
                       pb.BrokerFactory(distrib.ResourcePublisher(site)))
     else:
+        if config['https']:
+            from twisted.internet.ssl import DefaultOpenSSLContextFactory
+            app.listenSSL(int(config['https']),
+                          site,
+                          DefaultOpenSSLContextFactory(config['privkey'],
+                                                       config['certificate']))
         app.listenTCP(int(config.opts['port']), site)

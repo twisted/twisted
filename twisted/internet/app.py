@@ -31,6 +31,30 @@ from twisted.cred.authorizer import DefaultAuthorizer
 # Sibling Imports
 import main
 
+class _SSLlistener:
+    """persistence utility; ignore me
+    """
+    ctx = None
+    fac = None
+    def __init__(self, app, port, interface, backlog):
+        self.app = app
+        self.port = port
+        self.interface = interface
+        self.backlog = backlog
+
+    def setFactory(self, fac):
+        self.fac = fac
+        if self.ctx:
+            self.listen()
+
+    def setContext(self, ctx):
+        self.ctx = ctx
+        if self.fac:
+            self.listen()
+
+    def listen(self):
+        self.app.listenSSL(self.port, self.fac, self.ctx, self.backlog, self.interface)
+
 class Application(log.Logger, styles.Versioned, marmalade.DOMJellyable):
     """I am the `root object' in a Twisted process.
 
@@ -83,6 +107,8 @@ class Application(log.Logger, styles.Versioned, marmalade.DOMJellyable):
         node.setAttribute("name", self.name)
         tcpnode = jellier.document.createElement("tcp")
         node.appendChild(tcpnode)
+        sslnode = jellier.document.createElement("ssl")
+        node.appendChild(sslnode)
         svcnode = jellier.document.createElement("services")
         node.appendChild(svcnode)
         delaynode = jellier.document.createElement("delayeds")
@@ -99,6 +125,17 @@ class Application(log.Logger, styles.Versioned, marmalade.DOMJellyable):
             if interface != '':
                 n.setAttribute("parent:interface", str(interface))
             tcpnode.appendChild(n)
+        for port, factory, ctxFactory, backlog, interface in self.sslPorts:
+            n = jellier.jellyToNode(factory)
+            n.setAttribute("parent:listen", str(port))
+            if backlog != 5:
+                n.setAttribute("parent:backlog", str(backlog))
+            if interface != '':
+                n.setAttribute("parent:interface", str(interface))
+            n2 = jellier.jellyToNode(ctxFactory)
+            n2.setAttribute("parent:ctxfactory", 1)
+            n.appendChild(n2)
+            sslnode.appendChild(n)
         for connector in self.connectors:
             n = jellier.jellyToNode(connector.factory)
             n.setAttribute("parent:connect", "%s:%d" % (connector.host, connector.portno))
@@ -117,8 +154,16 @@ class Application(log.Logger, styles.Versioned, marmalade.DOMJellyable):
         self.listenTCP(portno, factory, backlog, interface)
 
 
-    def unjellyFromDOM_1(self, unjellier, node):
+    def _getChildElements(self, node):
         from xml.dom.minidom import Element
+        l = []
+        for subnode in node.childNodes:
+            if isinstance(subnode, Element):
+                l.append(subnode)
+        return l
+
+        
+    def unjellyFromDOM_1(self, unjellier, node):
         if node.hasAttribute("uid"):
             self.uid = int(node.getAttribute("uid"))
             self.gid = int(node.getAttribute("gid"))
@@ -126,40 +171,50 @@ class Application(log.Logger, styles.Versioned, marmalade.DOMJellyable):
         self.udpPorts = []
         self.sslPorts = []
         self.asXML = 1
-        for subnode in node.childNodes:
-            if isinstance(subnode, Element):
-                if subnode.tagName == 'tcp':
-                    self.tcpPorts = []
-                    self.connectors = []
-                    for facnode in subnode.childNodes:
-                        if isinstance(facnode, Element):
-                            if facnode.hasAttribute("parent:connect"):
-                                s = facnode.getAttribute("parent:connect")
-                                hostname, portno = string.split(s, ":")
-                                portno = int(portno)
-                                s = facnode.getAttribute("parent:timeout") or 0
-                                timeout = int(s)
-                                unjellier.unjellyLater(facnode).addCallback(self._cbConnectTCP, hostname, portno, timeout).arm()
-                            elif facnode.hasAttribute("parent:listen"):
-                                portno = int(facnode.getAttribute("parent:listen"))
-                                interface = facnode.getAttribute("parent:interface") or ''
-                                backlog = int(facnode.getAttribute("parent:backlog") or 5)
-                                unjellier.unjellyLater(facnode).addCallback(self._cbListenTCP, portno, backlog, interface).arm()
-                            else:
-                                raise ValueError("Couldn't determine type of TCP node.")
-                elif subnode.tagName == 'services':
-                    self.services = {}
-                    for svcnode in subnode.childNodes:
-                        if isinstance(svcnode, Element):
-                            unjellier.unjellyLater(svcnode).addCallback(self.addService).arm()
-                elif subnode.tagName == 'authorizer':
-                    authnode = marmalade.getValueElement(subnode)
-                    unjellier.unjellyAttribute(self, "authorizer", authnode)
-                elif subnode.tagName == 'delayeds':
-                    self.delayeds = []
-                    for delnode in subnode.childNodes:
-                        if isinstance(delnode, Element):
-                            unjellier.unjellyLater(delnode).addCallback(self.addDelayed).arm()
+        for subnode in self._getChildElements(node):
+            if subnode.tagName == 'ssl':
+                self.sslPorts = []
+                for facnode in self._getChildElements(subnode):
+                    if facnode.hasAttribute("parent:listen"):
+                        for posCtxN in self._getChildElements(facnode):
+                            if posCtxN.hasAttribute("parent:ctxfactory"):
+                                ctxFacNode = posCtxN
+                        facnode.removeChild(ctxFacNode)
+                        portno = int(facnode.getAttribute("parent:listen"))
+                        interface = facnode.getAttribute("parent:interface") or ''
+                        backlog = int(facnode.getAttribute("parent:backlog") or 5)
+                        listener = _SSLlistener(self, portno, interface, backlog)
+                        unjellier.unjellyLater(ctxFacNode).addCallback(listener.setContext).arm()
+                        unjellier.unjellyLater(facnode).addCallback(listener.setFactory).arm()
+            if subnode.tagName == 'tcp':
+                self.tcpPorts = []
+                self.connectors = []
+                for facnode in self._getChildElements(subnode):
+                    if facnode.hasAttribute("parent:connect"):
+                        s = facnode.getAttribute("parent:connect")
+                        hostname, portno = string.split(s, ":")
+                        portno = int(portno)
+                        s = facnode.getAttribute("parent:timeout") or 0
+                        timeout = int(s)
+                        unjellier.unjellyLater(facnode).addCallback(self._cbConnectTCP, hostname, portno, timeout).arm()
+                    elif facnode.hasAttribute("parent:listen"):
+                        portno = int(facnode.getAttribute("parent:listen"))
+                        interface = facnode.getAttribute("parent:interface") or ''
+                        backlog = int(facnode.getAttribute("parent:backlog") or 5)
+                        unjellier.unjellyLater(facnode).addCallback(self._cbListenTCP, portno, backlog, interface).arm()
+                    else:
+                        raise ValueError("Couldn't determine type of TCP node.")
+            elif subnode.tagName == 'services':
+                self.services = {}
+                for svcnode in self._getChildElements(subnode):
+                    unjellier.unjellyLater(svcnode).addCallback(self.addService).arm()
+            elif subnode.tagName == 'authorizer':
+                authnode = marmalade.getValueElement(subnode)
+                unjellier.unjellyAttribute(self, "authorizer", authnode)
+            elif subnode.tagName == 'delayeds':
+                self.delayeds = []
+                for delnode in self._getChildElements(subnode):
+                    unjellier.unjellyLater(delnode).addCallback(self.addDelayed).arm()
 
     persistenceVersion = 7
 
@@ -244,9 +299,15 @@ class Application(log.Logger, styles.Versioned, marmalade.DOMJellyable):
             from twisted.internet import reactor
             reactor.listenTCP(port, factory, backlog, interface)
 
-    def dontListenTCP(self, portno):
-        raise 'temporarily not implemented'
-
+    def dontListenTCP(self, port, interface=''):
+        toRemove = []
+        for t in self.tcpPorts:
+            port_, factory_, backlog_, interface_ = t
+            if port == port_ and interface == interface_:
+                toRemove.append(t)
+        for t in toRemove:
+            self.tcpPorts.remove(t)
+        
     def listenUDP(self, port, factory, interface='', maxPacketSize=8192):
         """
         Connects a given protocol factory to the given numeric UDP port.
@@ -265,7 +326,10 @@ class Application(log.Logger, styles.Versioned, marmalade.DOMJellyable):
         The connection is a SSL one, using contexts created by the context
         factory.
         """
-        raise 'temporarily unimplemented'
+        from twisted.internet import reactor
+        self.sslPorts.append((port, factory, ctxFactory, backlog, interface))
+        if self.running:
+            reactor.listenSSL(port, factory, ctxFactory, backlog, interface)
 
     def connectTCP(self, host, port, factory, timeout=30):
         """Connect a given client protocol factory to a specific TCP server.
@@ -417,6 +481,12 @@ class Application(log.Logger, styles.Versioned, marmalade.DOMJellyable):
                     reactor.listenUDP(port, factory, interface, maxPacketSize)
                 except socket.error, msg:
                     log.msg('error on UDP port %s: %s' % (port, msg))
+                    return
+            for port, factory, ctxFactory, backlog, interface in self.sslPorts:
+                try:
+                    reactor.listenSSL(port, factory, ctxFactory, backlog, interface)
+                except socket.error, msg:
+                    log.msg('error on SSL port %s: %s' % (port, msg))
                     return
             for connector in self.connectors:
                 connector.startConnecting()

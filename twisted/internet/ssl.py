@@ -39,6 +39,36 @@ class ContextFactory:
         raise NotImplementedError
 
 
+class DefaultOpenSSLContextFactory(ContextFactory):
+
+    def __init__(self, privateKeyFileName, certificateFileName,
+                 sslmethod=SSL.SSLv23_METHOD):
+        self.privateKeyFileName = privateKeyFileName
+        self.certificateFileName = certificateFileName
+        self.sslmethod = sslmethod
+        self.cacheContext()
+
+    def cacheContext(self):
+        ctx = SSL.Context(self.sslmethod)
+        ctx.use_certificate_file(self.certificateFileName)
+        ctx.use_privatekey_file(self.privateKeyFileName)
+        self._context = ctx
+
+    def __getstate__(self):
+        d = self.__dict__.copy()
+        del d['_context']
+        return d
+
+    def __setstate__(self, state):
+        self.__dict__ = state
+        self.cacheContext()
+
+    def getContext(self):
+        """Create an SSL context.
+        """
+        return self._context
+
+
 class ClientContextFactory(ContextFactory):
     """A sample context factory for SSL clients."""
     

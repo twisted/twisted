@@ -1,5 +1,5 @@
 # -*- Python -*-
-# $Id: default.py,v 1.14 2002/06/04 15:43:01 itamarst Exp $
+# $Id: default.py,v 1.15 2002/06/08 14:15:59 glyph Exp $
 #
 # Twisted, the Framework of Your Internet
 # Copyright (C) 2001 Matthew W. Lefkowitz
@@ -160,7 +160,9 @@ class PosixReactorBase(ReactorBase):
         return ssl.Client(host, port, protocol, contextFactory, timeout)
 
     def listenSSL(self, port, factory, contextFactory, backlog=5, interface=''):
-        return ssl.Port(port, factory, contextFactory, backlog, interface)
+        p = ssl.Port(port, factory, contextFactory, backlog, interface)
+        p.startListening()
+        return p
 
 
 
