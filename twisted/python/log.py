@@ -28,7 +28,6 @@ except ImportError:
 import sys
 import time
 import threadable
-import traceback
 import failure
 
 # Sibling Imports
@@ -56,9 +55,12 @@ def callWithLogger(logger, func, *args, **kw):
     Utility method which wraps a function in a try:/except:, logs a failure if
     one occurrs, and uses the system's logPrefix.
     """
-    lp = '(buggy logPrefix method)'
     try:
         lp = logger.logPrefix()
+    except:
+        lp = '(buggy logPrefix method)'
+        err(system=lp)
+    try:
         callWithContext({"system": lp}, func, *args, **kw)
     except:
         err(system=lp)
@@ -247,7 +249,7 @@ file_protocol = ['close', 'closed', 'fileno', 'flush', 'mode', 'name', 'read',
 
 class StdioOnnaStick:
     closed = 0
-    softspace = 0
+    softspace = 1
     mode = 'wb'
     name = '<stdio (log)>'
     def __init__(self, isError=0):
