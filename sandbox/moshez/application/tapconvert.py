@@ -14,7 +14,7 @@
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 from twisted.python import usage
-from twisted.application import apprun
+from twisted.application import app
 
 class ConvertOptions(usage.Options):
     synopsis = "Usage: tapconvert [options]"
@@ -35,7 +35,7 @@ class ConvertOptions(usage.Options):
             raise usage.UsageError("You must specify the input filename.")
         if options["typein"] == "guess":
             try:
-                options["typein"] = apprun.guessType(options["in"])
+                options["typein"] = app.guessType(options["in"])
             except KeyError:
                 raise usage.UsageError("Could not guess type for '%s'" %
                                        options["typein"])
@@ -51,8 +51,8 @@ def run():
     if options.opts['decrypt']:
         import getpass
         passphrase = getpass.getpass('Passphrase: ')
-    a = apprun.loadPersisted(options["in"], options["typein"], passphrase)
-    apprun.saveApplication(a, options['typeout'],
+    a = app.loadPersisted(options["in"], options["typein"], passphrase)
+    app.saveApplication(a, options['typeout'],
                            options["encrypt"], options["out"])
 
 if __name__ == '__main__':

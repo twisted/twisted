@@ -14,13 +14,13 @@
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 from twisted.python import util, log, logfile, syslog
-from twisted.application import apprun, service
+from twisted.application import app, service
 import sys, os, errno, signal
 
 util.addPluginDir()
 
 
-class ServerOptions(apprun.ServerOptions):
+class ServerOptions(app.ServerOptions):
     synopsis = "Usage: twistd [options]"
 
     optFlags = [['nodaemon','n',  "don't daemonize"],
@@ -160,28 +160,28 @@ def startApplication(config, application):
     shedPrivileges(config['euid'], process.uid, process.gid)
     service.IService(application).startService()
     if not config['no_save']:
-        apprun.scheduleSave(application)
+        app.scheduleSave(application)
     reactor.addSystemEventTrigger('before', 'shutdown',
                                   service.IService(application).stopService)
  
 
 def runApp(config):
-    passphrase = apprun.getPassphrase(config['encrypted'])
-    apprun.installReactor(config['reactor'])
+    passphrase = app.getPassphrase(config['encrypted'])
+    app.installReactor(config['reactor'])
     config['nodaemon'] = config['nodaemon'] and not config['debug']
     oldstdout = sys.stdout
     oldstderr = sys.stderr
     startLogging(config['logfile'], config['syslog'], config['prefix'],
                  config['nodaemon'])
-    apprun.initialLog()
+    app.initialLog()
     checkPID(config['pidfile'])
-    startApplication(config, apprun.getApplication(config, passphrase))
-    apprun.runReactorWithLogging(config, oldstdout, oldstderr)
+    startApplication(config, app.getApplication(config, passphrase))
+    app.runReactorWithLogging(config, oldstdout, oldstderr)
     removePID(config['pidfile'])
     if config['report-profile']:
-        apprun.reportProfile(config['report-profile'], application.processName)
+        app.reportProfile(config['report-profile'], application.processName)
     log.msg("Server Shut Down.")
 
 
 def run():
-    apprun.run(runApp, ServerOptions)
+    app.run(runApp, ServerOptions)

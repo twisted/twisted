@@ -14,12 +14,12 @@
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 from twisted.python import util, log, logfile
-from twisted.application import apprun, service
+from twisted.application import app, service
 import sys, os
 
 util.addPluginDir()
 
-class ServerOptions(apprun.ServerOptions):
+class ServerOptions(app.ServerOptions):
     synopsis = "Usage: twistw [options]"
 
     def opt_version(self):
@@ -41,29 +41,29 @@ def startLogging(logfilename):
     sys.stdout.flush()
 
 def runApp(config):
-    passphrase = apprun.getPassphrase(config['encrypted'])
-    apprun.installReactor(config['reactor'])
+    passphrase = app.getPassphrase(config['encrypted'])
+    app.installReactor(config['reactor'])
     oldstdout = sys.stdout
     oldstderr = sys.stderr
     startLogging(config['logfile'])
-    apprun.initialLog()
+    app.initialLog()
     os.chdir(config['rundir'])
-    application = apprun.getApplication(config, passphrase)
+    application = app.getApplication(config, passphrase)
     from twisted.internet import reactor
     service.IService(application).privilegedStartService()
     service.IService(application).startService()
     if not config['no_save']:
-        apprun.scheduleSave(application)
+        app.scheduleSave(application)
     reactor.addSystemEventTrigger('before', 'shutdown',
                                   service.IService(application).stopService)
     def callMeAgain():
         reactor.callLater(0.1, callMeAgain)
     reactor.callLater(0.1, callMeAgain)
-    apprun.runReactorWithLogging(config, oldstdout, oldstderr)
+    app.runReactorWithLogging(config, oldstdout, oldstderr)
     if config['report-profile']:
-        apprun.reportProfile(config['report-profile'], application.processName)
+        app.reportProfile(config['report-profile'], application.processName)
     log.msg("Server Shut Down.")
 
 
 def run():
-    apprun.run(runApp, ServerOptions)
+    app.run(runApp, ServerOptions)

@@ -15,7 +15,7 @@
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 #
-from twisted.application import service, compat, apprun
+from twisted.application import service, compat, app
 from twisted.persisted import sob
 from twisted.python import usage, util, plugin
 import sys, traceback, os
@@ -210,5 +210,5 @@ def run():
         sys.exit(2)
     except KeyboardInterrupt:
         sys.exit(1)
-    apprun.saveApplication(sob.IPersistable(a),
+    app.saveApplication(sob.IPersistable(a),
                     options['type'], options['encrypted'], options['append'])
