@@ -229,7 +229,7 @@ class FileLogObserver:
     
     @ivar timeFormat: Format string passed to strftime()
     """
-    timeFormat = "%Y/%m/%d %H:%M %Z"
+    timeFormat = "%Y/%m/%d %H:%M:%S %Z"
 
     def __init__(self, f):
         self.write = f.write
