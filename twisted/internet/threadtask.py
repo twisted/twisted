@@ -16,15 +16,11 @@
 
 """A thread pool that is integrated with the Twisted event loop."""
 
-import sys
-
-# Sibling Import
-import task, main
-
 # Twisted Import
 from twisted.python import threadpool, threadable, log, failure
-
+from twisted.internet import reactor
 threadable.init(1)
+
 
 class ThreadDispatcher(threadpool.ThreadPool):
     """A thread pool that is integrated with the Twisted event loop.
@@ -43,16 +39,16 @@ class ThreadDispatcher(threadpool.ThreadPool):
 
     def __init__(self, *args, **kwargs):
         apply(threadpool.ThreadPool.__init__, (self,) + args, kwargs)
-        main.callWhenRunning(self.start)
+        reactor.addSystemEventTrigger('after', 'startup', self.start)
         self._callbacks = []
 
     def _runWithCallback(self, callback, errback, func, args, kwargs):
         try:
             result = apply(func, args, kwargs)
         except:
-            task.schedule(errback, failure.Failure())
+            reactor.callFromThread(errback, failure.Failure())
         else:
-            task.schedule(callback, result)
+            reactor.callFromThread(callback, result)
 
     def dispatchWithCallback(self, owner, callback, errback, func, *args, **kw):
         """Dispatch a function, returning the result to a callback function.
@@ -80,4 +76,4 @@ def dispatchApply(callback, errback, func, args, kw):
 def dispatch(callback, errback, func, *args, **kw):
     theDispatcher.dispatchApply(log.logOwner.owner(), callback, errback, func, args, kw)
 
-main.callDuringShutdown(theDispatcher.stop)
+reactor.addSystemEventTrigger('during', 'shutdown', theDispatcher.stop)
