@@ -42,7 +42,8 @@ class InetdProtocol(Protocol):
         # FIXME: maybe this should be done in process.py?  are other uses of
         #        Process possibly affected by this?
         fdesc.setBlocking(sockFD)
-        fdesc.setBlocking(childFDs[2])
+        if childFDs.has_key(2):
+            fdesc.setBlocking(childFDs[2])
 
         service = self.factory.service
         uid = service.user
