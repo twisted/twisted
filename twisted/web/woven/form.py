@@ -74,7 +74,7 @@ class FormFillerWidget(widgets.Widget):
         s = content.select(name=arg.name)
         default = getValue(request, arg)
         for tag, value, desc in arg.choices:
-            if tag == default:
+            if value == default:
                 kw = {'selected' : '1'}
             else:
                 kw = {}
@@ -85,7 +85,7 @@ class FormFillerWidget(widgets.Widget):
         s = content.div()
         defaults = getValues(request, arg)
         for tag, value, desc in arg.choices:
-            if tag in defaults:
+            if value in defaults:
                 kw = {'checked' : '1'}
             else:
                 kw = {}
@@ -97,7 +97,7 @@ class FormFillerWidget(widgets.Widget):
         s = content.div()
         defaults = getValues(request, arg)
         for tag, value, desc in arg.choices:
-            if tag in defaults:
+            if value in defaults:
                 kw = {'checked' : '1'}
             else:
                 kw = {}
@@ -123,7 +123,7 @@ class FormFillerWidget(widgets.Widget):
     def input_flags(self, request, content, arg):
         defaults = getValues(request, arg)
         for key, val, label in arg.flags:
-            if key in defaults:
+            if val in defaults:
                 kw = {'checked' : '1'}
             else:
                 kw = {}
