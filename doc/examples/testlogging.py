@@ -24,11 +24,12 @@ from twisted.internet import reactor
 
 import sys, warnings
 
-def test():
-    log.msg("message")
-    warnings.warn("warning")
+def test(i):
+    print "printed", i
+    log.msg("message %s" % i)
+    warnings.warn("warning %s" % i)
     try:
-        raise RuntimeError, "error"
+        raise RuntimeError, "error %s" % i
     except:
         log.deferr()
 
@@ -39,14 +40,14 @@ def end():
     reactor.stop()
 
 # pre-reactor run
-test()
+test(1)
 
 # after reactor run
-reactor.callLater(0.1, test)
+reactor.callLater(0.1, test, 2)
 reactor.callLater(0.2, startlog)
 
 # after startLogging
-reactor.callLater(0.3, test)
+reactor.callLater(0.3, test, 3)
 reactor.callLater(0.4, end)
 
 reactor.run()
