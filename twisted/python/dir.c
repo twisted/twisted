@@ -338,7 +338,7 @@ static PyObject *
 PyDirObject_seek(PyDirObject *self, PyObject* args) {
 	off_t pos;
 	
-	if (!PyArg_ParseTuple(args, "i:seek", &pos))
+	if (!PyArg_ParseTuple(args, "l:seek", &pos))
 		return NULL;
 	
 	if (!self->directory) {
@@ -346,7 +346,7 @@ PyDirObject_seek(PyDirObject *self, PyObject* args) {
 			"DirObject.seek() called on closed DirObject");
 		return NULL;
 	}
-	seekdir(self->directory, (off_t)pos);
+	seekdir(self->directory, pos);
 	
 	Py_INCREF(Py_None);
 	return Py_None;
