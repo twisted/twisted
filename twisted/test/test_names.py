@@ -70,56 +70,61 @@ reverse_soa = dns.Record_SOA(
                      retry = 30
                 )
 
+test_domain_com = NoFileAuthority(
+    soa = ('test-domain.com', soa_record),
+    records = {
+        'test-domain.com': [
+            dns.Record_A('127.0.0.1'),
+            dns.Record_NS('39.28.189.39'),
+            dns.Record_MX(10, 'host.test-domain.com'),
+            dns.Record_HINFO(os='Linux', cpu='A Fast One, Dontcha know'),
+            dns.Record_CNAME('canonical.name.com'),
+            dns.Record_MB('mailbox.test-domain.com'),
+            dns.Record_MG('mail.group.someplace'),
+            dns.Record_TXT('A First piece of Text', 'a SecoNd piece'),
+            dns.Record_TXT('Some more text, haha!  Yes.  \0  Still here?'),
+            dns.Record_MR('mail.redirect.or.whatever'),
+            dns.Record_MINFO(rmailbx='r mail box', emailbx='e mail box'),
+            dns.Record_AFSDB(subtype=1, hostname='afsdb.test-domain.com'),
+            dns.Record_RP(mbox='whatever.i.dunno', txt='some.more.text'),
+            dns.Record_WKS(0x12EF4303, socket.IPPROTO_TCP, '\x12\x01\x16\xfe\xc1\x00\x01'),
+            soa_record
+        ],
+        'http.tcp.test-domain.com': [
+            dns.Record_SRV(257, 16383, 43690, 'some.other.place.fool')
+        ],
+        'host.test-domain.com': [
+            dns.Record_A('123.242.1.5'),
+            dns.Record_A('0.255.0.255'),
+        ],
+        'host-two.test-domain.com': [
+#
+#  Python bug
+#           dns.Record_A('255.255.255.255'),
+#
+            dns.Record_A('255.255.255.254'),
+            dns.Record_A('0.0.0.0')
+        ],
+    }
+)
+
+reverse_domain = NoFileAuthority(
+    soa = ('93.84.28.in-addr.arpa', reverse_soa),
+    records = {
+        '123.93.84.28.in-addr.arpa': [
+             dns.Record_PTR('test.host-reverse.lookup.com'),
+             reverse_soa
+        ]
+    }
+)
+
+
 class ServerDNSTestCase(unittest.DeferredTestCase):
     """Test cases for DNS server and client."""
     
     def setUp(self):
         self.factory = server.DNSServerFactory([
-            NoFileAuthority(
-                soa = ('test-domain.com', soa_record),
-                records = {
-                    'test-domain.com': [
-                        dns.Record_A('127.0.0.1'),
-                        dns.Record_NS('39.28.189.39'),
-                        dns.Record_MX(10, 'host.test-domain.com'),
-                        dns.Record_HINFO(os='Linux', cpu='A Fast One, Dontcha know'),
-                        dns.Record_CNAME('canonical.name.com'),
-                        dns.Record_MB('mailbox.test-domain.com'),
-                        dns.Record_MG('mail.group.someplace'),
-                        dns.Record_TXT('A First piece of Text', 'a SecoNd piece'),
-                        dns.Record_TXT('Some more text, haha!  Yes.  \0  Still here?'),
-                        dns.Record_MR('mail.redirect.or.whatever'),
-                        dns.Record_MINFO(rmailbx='r mail box', emailbx='e mail box'),
-                        dns.Record_AFSDB(subtype=1, hostname='afsdb.test-domain.com'),
-                        dns.Record_RP(mbox='whatever.i.dunno', txt='some.more.text'),
-                        dns.Record_WKS(0x12EF4303, socket.IPPROTO_TCP, '\x12\x01\x16\xfe\xc1\x00\x01'),
-                        soa_record
-                    ],
-                    'http.tcp.test-domain.com': [
-                        dns.Record_SRV(257, 16383, 43690, 'some.other.place.fool')
-                    ],
-                    'host.test-domain.com': [
-                        dns.Record_A('123.242.1.5'),
-                        dns.Record_A('0.255.0.255'),
-                    ],
-                    'host-two.test-domain.com': [
-#
-#  Python bug
-#                        dns.Record_A('255.255.255.255'),
-#
-                        dns.Record_A('255.255.255.254'),
-                        dns.Record_A('0.0.0.0')
-                    ],
-                }
-            ), NoFileAuthority(
-                soa = ('93.84.28.in-addr.arpa', reverse_soa),
-                records = {
-                    '123.93.84.28.in-addr.arpa': [
-                        dns.Record_PTR('test.host-reverse.lookup.com'),
-                        reverse_soa
-                    ]
-                }
-            )
+            test_domain_com, reverse_domain
         ], verbose=2)
         
         self.listenerTCP = reactor.listenTCP(PORT, self.factory)
@@ -283,4 +288,12 @@ class ServerDNSTestCase(unittest.DeferredTestCase):
         self.namesTest(
             self.resolver.lookupWellKnownServices('test-domain.com'),
             [dns.Record_WKS(0x12EF4303, socket.IPPROTO_TCP, '\x12\x01\x16\xfe\xc1\x00\x01')]
+        )
+
+
+    def testZoneTransfer(self):
+        """Test DNS 'AXFR' queries (Zone transfer)"""
+        self.namesTest(
+            self.resolver.lookupZone('test-domain.com'),
+            test_domain_com
         )
