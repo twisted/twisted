@@ -334,7 +334,7 @@ class DictLookupFactory(protocol.ClientFactory):
         p.factory = self
         return p
 
-def Define(host, port, database, word):
+def define(host, port, database, word):
     """Look up a word using a dict server"""
     d = defer.Deferred()
     factory = DictLookupFactory("define", (database, word), d)
@@ -343,7 +343,7 @@ def Define(host, port, database, word):
     reactor.connectTCP(host, port, factory)
     return d
 
-def Match(host, port, database, strategy, word):
+def match(host, port, database, strategy, word):
     """Match a word using a dict server"""
     d = defer.Deferred()
     factory = DictLookupFactory("match", (database, strategy, word), d)
