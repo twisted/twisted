@@ -14,32 +14,30 @@
 # You should have received a copy of the GNU Lesser General Public
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+
+"""
+Lookup a name using multiple resolvers.
+
+API Stability: Unstable
+
+Future plans: Other types of queries
+
+@author: U{Jp Calderone<mailto:exarkun@twistedmatrix.com}
+"""
+
 from twisted.internet import defer
 
-class Request:
-
-    def __init__(self, deferred, resolver, name, type, timeout):
-        self.name = name
-        self.deferred = deferred
-        self.type = type
-        self.timeout = timeout
-        self.resolver = resolver
-
-    def __call__(self):
-        self.resolver.resolve(deferrd, self.name, self.type, self.timeout)
-
 class ResolverChain:
+    """Lookup an address using multiple C{IResolver}s
+    """
 
     def __init__(self, resolvers):
         self.resolvers = resolvers
         self.resolvers.reverse()
 
-    def resolve(self, deferred, name, type=1, timeout=10):
-        origCallback = deferred.callback
-        errback = deferred.errback
-        for resolver in self.resolvers[:-1]:
-            errback = Request(deferred, resolver, name, type, timeout)
-            deferred = defer.Deferred()
-            deferred.addCallback(origCallback)
-            deferred.addErrback(errback)
-        self.resolvers[-1].resolve(name, deferred, type, timeout)
+
+    def resolve(self, name, timeout=10):
+        d = r.lookupAddress(name, timeout)
+        for r in self.resolvers:
+            d = d.addErrback(r.lookupAddress, name, timeout)
+        return d
