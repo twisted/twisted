@@ -22,6 +22,8 @@ TEST, TEST.
  * ChangeLog: Add an entry: * .: Releasing Twisted <version>
  * twisted/copyright.py: Update the version number.
 
+ * CVS tag release-X_X_X. switch to a new tmp directory and cvs export the newly-tagged version.
+
  * Alright, we're ready to pack it up!
  * from one directory above "Twisted" CVS repos, run './Twisted/admin/release-twisted -v <version>'
    * note that <version> must match the version number in twisted/copyright.py; I made
