@@ -43,6 +43,11 @@ from twisted.internet import abstract, interfaces, defer
 from twisted.spread import pb
 from twisted.persisted import styles
 
+dangerousPathError = error.NoResource("Invalid request URL.")
+
+def isDangerous(path):
+    return path == '..' or '/' in path or os.sep in path
+
 class Data(resource.Resource):
     """
     This is a static, in-memory resource.
@@ -283,7 +288,6 @@ class File(resource.Resource, styles.Versioned):
         self.ignoredExts.append(ext)
 
     childNotFound = error.NoResource("File not found.")
-    _suckItCodeRed = error.NoResource("Invalid request URL.")
 
     def getChild(self, path, request):
         """See twisted.web.Resource.getChild.
@@ -291,8 +295,8 @@ class File(resource.Resource, styles.Versioned):
         if not os.path.isdir(self.path):
             return self.childNotFound
 
-        if path == '..' or '/' in path or os.sep in path:
-            return self._suckItCodeRed
+        if isDangerous(path):
+            return dangerousPathError
 
         if path == '':
             for indexName in self.indexNames:

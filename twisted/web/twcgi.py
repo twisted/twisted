@@ -35,6 +35,7 @@ import server
 import error
 import html
 import resource
+import static
 from server import NOT_DONE_YET
 
 class CGIDirectory(resource.Resource):
@@ -43,6 +44,9 @@ class CGIDirectory(resource.Resource):
         self.path = pathname
 
     def getChild(self, path, request):
+        if static.isDangerous(path):
+            return static.dangerousPathError
+
         fn = os.path.join(self.path, path)
 
         if os.path.isdir(fn):
