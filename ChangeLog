@@ -1,3 +1,7 @@
+2004-03-07  Christopher Armstrong  <radix@twistedmatrix.com>
+
+	* .: Releasing Twisted 1.2.1alpha1.
+
 2004-03-03  Christopher Armstrong  <radix@twistedmatrix.com>
 
 	* twisted/web/server.py: Fix UnsupportedMethod so that users'
