@@ -59,6 +59,9 @@ class Test(widgets.Gadget, widgets.Presentation, coil.Configurable):
     %%%%self.funkyForm()%%%%
     </ul>
     '''
+
+    configName = 'Twisted Web Test Page'
+
     def __init__(self):
         """Initialize.
         """

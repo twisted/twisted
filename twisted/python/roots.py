@@ -203,6 +203,7 @@ class Constrained(Collection):
                 raise ConstraintViolation("Entity constraint violated.")
         else:
             raise ConstraintViolation("Name constraint violated.")
+
                 
 
 class Locked(Constrained):
@@ -229,3 +230,8 @@ class Homogenous(Constrained):
             raise ConstraintViolation("%s of incorrect type (%s)" %
                                       (entity, self.entityType))
 
+    def getNameType(self):
+        return "Name"
+
+    def getEntityType(self):
+        return self.entityType.__name__

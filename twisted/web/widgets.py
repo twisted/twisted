@@ -676,12 +676,18 @@ class Gadget(resource.Resource):
 class TitleBox(Presentation):
 
     template = '''\
-    <table cellpadding="1" cellspacing="0" border="0"><tr>\
-    <td bgcolor="#000000"><center><font color="#FFFFFF">%%%%title%%%%</font\
-    ></center><table width="100%" cellpadding="3" cellspacing="0" border="0"><tr>\
-    <td bgcolor="#FFFFFF"><font color="#000000">%%%%widget%%%%</font></td>\
-    </tr></table></td></tr></table>\
-    '''
+<table %%%%self.widthOption%%%% cellpadding="1" cellspacing="0" border="0"><tr>\
+<td bgcolor="%%%%self.borderColor%%%%"><center><font color="%%%%self.titleTextColor%%%%">%%%%self.title%%%%</font></center>\
+<table width="100%" cellpadding="3" cellspacing="0" border="0"><tr>\
+<td bgcolor="%%%%self.boxColor%%%%"><font color="%%%%self.boxTextColor%%%%">%%%%self.widget%%%%</font></td>\
+</tr></table></td></tr></table>\
+'''
+
+    borderColor = '#000000'
+    titleTextColor = '#ffffff'
+    boxTextColor = '#000000'
+    boxColor = '#ffffff'
+    widthOption = 'width="100%"'
 
     title = 'No Title'
     widget = 'No Widget'

@@ -1421,7 +1421,6 @@ class BrokerFactory(protocol.Factory, styles.Versioned, coil.Configurable):
     """I am a server for object brokerage.
     """
     persistenceVersion = 3
-    configTypes = {'objectToBroker': Root}
     def __init__(self, objectToBroker):
         self.objectToBroker = objectToBroker
 
@@ -1432,6 +1431,10 @@ class BrokerFactory(protocol.Factory, styles.Versioned, coil.Configurable):
 ##        del self.services
 ##        from twisted.internet.main import theApplication
 ##        self.__init__(theApplication)
+
+
+    configTypes = {'objectToBroker': Root}
+    configName = 'PB Broker Factory'
 
     def configInit(self, container, name):
         self.__init__(AuthRoot(container.app))

@@ -519,6 +519,7 @@ class Site(protocol.Factory, coil.Configurable, roots.Collection):
     # configuration
     
     configTypes = {'resource': resource.Resource}
+    configName = 'HTTP Web Site'
 
     def config_resource(self, res):
         self.resource = res

@@ -53,10 +53,12 @@ class Configurator(widgets.Presentation):
         self.dispenseMethods = {}
 
     template = '''
-    <table>
-    <tr><td valign="top">%%%%self.streamCall(self.displayTree, request)%%%%</td>
-    <td valign="top">%%%%self.configd%%%%</td></tr>
+    <center>
+    <table width="95%">
+    <tr><td width="20%" valign="top">%%%%self.streamCall(self.displayTree, request)%%%%</td>
+    <td width="80%" valign="top">%%%%self.configd%%%%</td></tr>
     </table>
+    </center>
     '''
     isLeaf = 1
     
@@ -96,9 +98,9 @@ class Configurator(widgets.Presentation):
         ret = []
         linkfrom = string.join(['config']+request.postpath, '/') + '/'
         if isinstance(obj, coil.Configurable) and obj.configTypes:
-            ret.extend(ConfigForm(self, obj, linkfrom).display(request))
+            ret.extend(widgets.TitleBox("Configuration", ConfigForm(self, obj, linkfrom)).display(request))
         if isinstance(obj, roots.Homogenous): # and isinstance(obj.entityType, coil.Configurable):
-            ret.extend(CollectionForm(self, obj, linkfrom).display(request))
+            ret.extend(widgets.TitleBox("Listing", CollectionForm(self, obj, linkfrom)).display(request))
         ret.append(html.PRE(str(obj)))
         return ret
 
@@ -180,6 +182,7 @@ class ConfigForm(widgets.Form):
                 created[name] = cfgInfo
         try:
             self.cfgr.configure(created)
+            self.format(self.getFormFields(request), write, request)
         except coil.InvalidConfiguration, ic:
             raise widgets.FormInputError(ic)
 
@@ -200,9 +203,9 @@ class CollectionForm(widgets.Form):
                              html.escape(repr(val))), 0])
         return widgets.Form.getFormFields(
             self, request,
-            [['checkgroup', 'Items', 'items', itemlst],
-             ['string', "Name", "name", ""],
-             ['menu', "Type", "type", self.configurator.makeConfigMenu(self.coll.entityType)]])
+            [['checkgroup', 'Items in Set<br>(Select to Delete)', 'items', itemlst],
+             ['string', "%s to Insert" % self.coll.getNameType(), "name", ""],
+             ['menu', "%s to Insert" % self.coll.getEntityType(), "type", self.configurator.makeConfigMenu(self.coll.entityType)]])
 
     def process(self, write, request, submit, name, type, items):
         # write(str(('YAY', name, type)))

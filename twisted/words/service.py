@@ -347,6 +347,8 @@ class Service(pb.Service, styles.Versioned, coil.Configurable):
         'name': types.StringType
         }
 
+    configName = 'Twisted Words PB Service'
+
     def config_name(self, name):
         raise coil.InvalidConfiguration("You can't change a Service's name.")
 

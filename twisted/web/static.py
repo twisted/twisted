@@ -121,6 +121,8 @@ class File(resource.Resource, coil.Configurable):
                    'execCGI': 'boolean',
                    'execEPY': 'boolean'}
 
+    configName = 'Web Filesystem Access'
+
     def config_path(self, path):
         self.path = path
 

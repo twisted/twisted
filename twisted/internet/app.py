@@ -71,6 +71,12 @@ class PortCollection(roots.Homogenous):
         else:
             return 1
 
+    def getEntityType(self):
+        return "Protocol Factory"
+
+    def getNameType(self):
+        return "Port Number"
+
 
 class ServiceCollection(roots.Homogenous):
     entityType = passport.Service
