@@ -145,7 +145,7 @@ class BindAuthority(FileAuthority):
     """An Authority that loads BIND configuration files"""
     
     def loadFile(self, filename):
-        self.origin = os.path.basename(filename) # XXX - this might suck
+        self.origin = os.path.basename(filename) + '.' # XXX - this might suck
         lines = open(filename).readlines()
         lines = self.stripComments(lines)
         lines = self.collapseContinuations(lines)
