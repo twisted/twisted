@@ -83,6 +83,9 @@ class Widget(view.View):
     # Should we clear the node before we render the widget?
     clearNode = 0
     
+    # If some code has to ask if a widget is livePage, the answer is yes
+    livePage = 1
+    
     tagName = None
     def __init__(self, model = None, submodel = None, setup = None, controller = None, viewStack=None, *args, **kwargs):
         """
