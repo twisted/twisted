@@ -736,23 +736,23 @@ class BOSConnection(SNACBased):
         add an item to the SSI server.  if buddyID == 0, then this should be a group.
         this gets a callback when it's finished, but you can probably ignore it.
         """
-        if not groupID:
+        if groupID is None:
             groupID = item.group.group.findIDFor(item.group)
-        if not buddyID:
+        if buddyID is None:
             buddyID = item.group.findIDFor(item)
         return self.sendSNAC(0x13,0x08, item.oscarRep(groupID, buddyID))
 
     def modifyItemSSI(self, item, groupID = None, buddyID = None):
-        if not groupID:
+        if groupID is None:
             groupID = item.group.group.findIDFor(item.group)
-        if not buddyID:
+        if buddyID is None:
             buddyID = item.group.findIDFor(item)
         return self.sendSNAC(0x13,0x09, item.oscarRep(groupID, buddyID))
 
     def delItemSSI(self, item, groupID = None, buddyID = None):
-        if not groupID:
+        if groupID is None:
             groupID = item.group.group.findIDFor(item.group)
-        if not buddyID:
+        if buddyID is None:
             buddyID = item.group.findIDFor(item)
         return self.sendSNAC(0x13,0x0A, item.oscarRep(groupID, buddyID))
 
@@ -766,7 +766,7 @@ class BOSConnection(SNACBased):
         """
         self.profile = profile
         tlvs = ''
-        if self.profile:
+        if self.profile is not None:
             tlvs =  TLV(1,'text/aolrtf; charset="us-ascii"') + \
                     TLV(2,self.profile)
 
