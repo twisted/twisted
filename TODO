@@ -128,8 +128,7 @@ this file directly.
     single defined API for connecting protocols to their transports.
     (listenTCP, listenSSL, connectTCP, connectSSL, etc)
 
-025 Add INTERN support to banana. Fix C encoder for banana. Unicode, longs
-    and floats have been added by Glyph.
+025 *{Glyph Lefkowitz}* Fix C encoder for banana.
 
 026 *{Someone}* More ircd-style names for virtual nicks in words; LoginServ (or maybe
     NickServ) instead of *login*.  The asterisks break some clients.
