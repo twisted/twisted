@@ -23,6 +23,7 @@ from pyunit import unittest
 from twisted.internet import main
 import twisted.protocols.protocol, twisted.protocols.smtp
 from twisted import protocols
+from twisted.protocols import loopback
 from twisted.test.test_protocols import StringIOWithoutClosing
 
 
@@ -68,9 +69,7 @@ Someone set up us the bomb!\015
         for message in self.messages:
             protocol.lineReceived('MAIL FROM:<%s>' % message[0])
             for target in message[1]:
-                print "rcpt to"
                 protocol.lineReceived('RCPT TO:<%s>' % target)
-            print self.output.getvalue()
             protocol.lineReceived('DATA')
             protocol.dataReceived(message[2])
             protocol.lineReceived('.')
@@ -103,6 +102,18 @@ class MySMTPClient(protocols.smtp.SMTPClient):
         self.mail = None, None, None
 
 
+
+class LoopbackSMTPTestCase(unittest.TestCase):
+
+    def testMessages(self):
+        factory = protocols.protocol.Factory()
+        factory.domains = {}
+        factory.domains['foo.bar'] = DummyDomain(['moshez'])
+        protocol =  protocols.smtp.DomainSMTP()
+        protocol.factory = factory
+        clientProtocol = MySMTPClient()
+        loopback.loopback(protocol, clientProtocol)
+
 class SMTPClientTestCase(unittest.TestCase):
 
     expected_output='''\
@@ -134,4 +145,4 @@ QUIT\r
         if self.output.getvalue() != self.expected_output:
             raise AssertionError(`self.output.getvalue()`)
 
-testCases = [SMTPTestCase, SMTPClientTestCase]
+testCases = [SMTPTestCase, SMTPClientTestCase, LoopbackSMTPTestCase]
