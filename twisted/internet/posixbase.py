@@ -159,7 +159,12 @@ class PosixReactorBase(ReactorBase):
 
     def _handleSignals(self):
         """Install the signal handlers for the Twisted event loop."""
-        import signal
+        try:
+            import signal
+        except ImportError:
+            log.msg("Warning: signal module unavailabe -- not installing signal handlers.")
+            return
+
         if signal.getsignal(signal.SIGINT) == signal.default_int_handler:
             # only handle if there isn't already a handler, e.g. for Pdb.
             signal.signal(signal.SIGINT, self.sigInt)

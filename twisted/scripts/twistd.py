@@ -7,7 +7,7 @@ from twisted.python import log, syslog
 from twisted.python.util import switchUID
 from twisted.application import app, service
 from twisted import copyright
-import os, errno, signal, sys
+import os, errno, sys
 
 class ServerOptions(app.ServerOptions):
     synopsis = "Usage: twistd [options]"
@@ -91,10 +91,16 @@ def startLogging(logfilename, sysLog, prefix, nodaemon):
         logFile = sys.stdout
     else:
         logFile = app.getLogFile(logfilename or 'twistd.log')
-        def rotateLog(signal, frame):
-            from twisted.internet import reactor
-            reactor.callFromThread(logFile.rotate)
-        signal.signal(signal.SIGUSR1, rotateLog)
+        try:
+            import signal
+        except ImportError:
+            pass
+        else:
+            def rotateLog(signal, frame):
+                from twisted.internet import reactor
+                reactor.callFromThread(logFile.rotate)
+            signal.signal(signal.SIGUSR1, rotateLog)
+        
     if not sysLog:
         log.startLogging(logFile)
     sys.stdout.flush()

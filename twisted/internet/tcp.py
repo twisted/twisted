@@ -33,9 +33,11 @@ try:
 except ImportError:
     SSL = None
 
-if os.name == 'nt':
+from twisted.python.runtime import platform, platformType
+
+if platformType == 'win32':
      # no such thing as WSAEPERM or error code 10001 according to winsock.h or MSDN
-    from errno import EPERM
+    EPERM=object()
     from errno import WSAEINVAL as EINVAL
     from errno import WSAEWOULDBLOCK as EWOULDBLOCK
     from errno import WSAEINPROGRESS as EINPROGRESS
@@ -45,7 +47,8 @@ if os.name == 'nt':
     from errno import WSAENOTCONN as ENOTCONN
     from errno import WSAEINTR as EINTR
     from errno import WSAENOBUFS as ENOBUFS
-elif os.name != 'java':
+    EAGAIN=EWOULDBLOCK
+else:
     from errno import EPERM
     from errno import EINVAL
     from errno import EWOULDBLOCK
@@ -56,14 +59,13 @@ elif os.name != 'java':
     from errno import ENOTCONN
     from errno import EINTR
     from errno import ENOBUFS
-from errno import EAGAIN
+    from errno import EAGAIN
 
 # Twisted Imports
 from twisted.internet import protocol, defer, base, address
 from twisted.persisted import styles
 from twisted.python import log, failure, reflect, components
 from twisted.python.util import unsignedID
-from twisted.python.runtime import platform, platformType
 from twisted.internet.error import CannotListenError
 
 # Sibling Imports

@@ -17,6 +17,7 @@ def shortPythonVersion():
 
 knownPlatforms = {
     'nt': 'win32',
+    'ce': 'win32', 
     'posix': 'posix',
     'java': 'java',
     'org.python.modules.os': 'java',
