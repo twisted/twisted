@@ -57,6 +57,7 @@ from __future__ import nested_scopes
 
 from twisted.lore import default
 from twisted.web import domhelpers, microdom
+from twisted.python import text
 # These should be factored out
 from twisted.lore.latex import BaseLatexSpitter, processFile, getLatexText
 from twisted.lore.tree import getHeaders
@@ -64,14 +65,19 @@ from twisted.lore.tree import getHeaders
 import os, os.path
 from cStringIO import StringIO
 
+hacked_entities = { 'amp': ' &', 'gt': ' >', 'lt': ' <', 'quot': ' "',
+                    'copy': ' (c)'}
+
 entities = { 'amp': '&', 'gt': '>', 'lt': '<', 'quot': '"',
              'copy': '(c)'}
 
 class MagicpointOutput(BaseLatexSpitter):
+    bulletDepth = 0
+
     def writeNodeData(self, node):
         buf = StringIO()
-        getLatexText(node, buf.write, entities=entities)
-        self.writer(buf.getvalue())
+        getLatexText(node, buf.write, entities=hacked_entities)
+        self.writer(buf.getvalue().rstrip())
 
     def visitNode_title(self, node):
         self.title = domhelpers.getNodeText(node)
@@ -94,14 +100,26 @@ class MagicpointOutput(BaseLatexSpitter):
 
     def visitNode_pre(self, node):
         # TODO: Syntax highlighting
-        text = domhelpers.getNodeText(node)
-        lines = text.split('\n')
-        self.writer('%font "typewriter", size 4\n')
+        buf = StringIO()
+        getLatexText(node, buf.write, entities=entities)
+        data = buf.getvalue()
+        data = text.removeLeadingTrailingBlanks(data)
+        lines = data.split('\n')
         self.fontStack.append(('typewriter', 4))
+        self.writer('%' + self.fontName() + '\n')
         for line in lines:
             self.writer(' ' + line + '\n')
         del self.fontStack[-1]
         self.writer('%' + self.fontName() + '\n')
+
+    def visitNode_ul(self, node):
+        if self.bulletDepth > 0:
+            self.writer(self._start_ul)
+        self.bulletDepth += 1
+        self.start_li = self._start_li * self.bulletDepth
+        self.visitNodeDefault(node)
+        self.bulletDepth -= 1
+        self.start_li = self._start_li * self.bulletDepth
 
     def visitNode_strong(self, node):
         self.doFont(node, 'bold')
@@ -114,7 +132,7 @@ class MagicpointOutput(BaseLatexSpitter):
 
     def doFont(self, node, style):
         self.fontStack.append((style, None))
-        self.writer('\n%cont, ' + self.fontName() + '\n')
+        self.writer(' \n%cont, ' + self.fontName() + '\n')
         self.visitNodeDefault(node)
         del self.fontStack[-1]
         self.writer('\n%cont, ' + self.fontName() + '\n')
@@ -138,14 +156,17 @@ class MagicpointOutput(BaseLatexSpitter):
         sizes.reverse()
         for size in sizes:
             if size:
-                return 'font "%s" size %d' % (name, size)
+                return 'font "%s", size %d' % (name, size)
 
         return 'font "%s"' % name
 
     start_h2 = "%page\n\n"
-    end_h2 = '\n\n%font "typewriter", size 2\n\n%font "standard"\n'
+    #end_h2 = '\n\n%font "typewriter", size 2\n\n%font "standard"\n'
+    end_h2 = '\n\n\n'
 
-    start_li = "\t"
+    _start_ul = '\n'
+    
+    _start_li = "\t"
     end_li = "\n"
     
 
