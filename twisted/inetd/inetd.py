@@ -156,6 +156,7 @@ def main(options=None):
 
         if rpc:
             protocol = protocol[4:]     # trim 'rpc/'
+            service.port = 0            # listen on a random ephemeral port
 
             # RPC has extra options, so extract that
             try:
@@ -217,15 +218,15 @@ def main(options=None):
             factory = ServerFactory()
             factory.protocol = internalProtocols[service.name]
         elif rpc:
-            factory = RPCFactory(service, rpcConf[service.name], rpcVersions)
+            factory = RPCFactory(service, rpcConf.services[name], rpcVersions)
         else:
             # Non-internal non-rpc services use InetdFactory
             factory = InetdFactory(service)
 
         if protocol == 'tcp':
-            p = app.listenTCP(service.port, factory)
+            p = reactor.listenTCP(service.port, factory)
         elif protocol == 'udp':
-            p = app.listenUDP(service.port, factory)
+            p = reactor.listenUDP(service.port, factory)
     
         if rpc:
             factory.setPort(p.getHost()[2])
