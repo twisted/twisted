@@ -61,7 +61,7 @@ class BogusReporter(reporter.TreeReporter):
     def endModule(self, mod):
         super(BogusReporter, self).endModule(mod)
         self.endCtr['module'] += 1
-        assertIdentical(self.module, mod)
+        assertEqual(self.module, mod)
 
     def startClass(self, klass):
         super(BogusReporter, self).startClass(klass)
@@ -71,7 +71,7 @@ class BogusReporter(reporter.TreeReporter):
     def endClass(self, klass):
         super(BogusReporter, self).endClass(klass)
         self.endCtr['class'] += 1
-        assertIdentical(self.klass, klass)
+        assertEqual(self.klass, klass)
 
     def startTest(self, tm):
         super(BogusReporter, self).startTest(tm)
@@ -81,7 +81,7 @@ class BogusReporter(reporter.TreeReporter):
     def endTest(self, tm):
         super(BogusReporter, self).endTest(tm)
         self.endCtr['test'] += 1
-        assertIdentical(self.tm, tm)
+        assertEqual(self.tm, tm)
 
     def upDownError(self, method, warn=True, printStatus=True):
         super(BogusReporter, self).upDownError(method, False, printStatus)
