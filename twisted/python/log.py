@@ -15,8 +15,7 @@
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
-"""
-twisted.log: Logfile and multi-threaded file support.
+"""Logging and metrics infrastructure.
 """
 
 # System Imports
@@ -183,18 +182,29 @@ class EscapeFromTheMeaninglessConfinesOfCapital:
 
 logOwner = EscapeFromTheMeaninglessConfinesOfCapital()
 
+
 class LogPublisher:
+    """Class for singleton log message publishing."""
+    
     synchronized = ['msg']
+
     def __init__(self):
         self.observers = []
 
     def addObserver(self, other):
+        """Add a new observer.
+
+        Observers are callable objects that will be called with each new log
+        message (a dict).
+        """
         self.observers.append(other)
 
     def removeObserver(self, other):
+        """Remove an observer."""
         self.observers.remove(other)
 
     def msg(self, *message, **kw):
+        """Log a new message."""
         actualEventDict = (context.get(ILogContext) or {}).copy()
         actualEventDict.update(kw)
         actualEventDict['message'] = message
@@ -203,10 +213,14 @@ class LogPublisher:
             o(actualEventDict)
 
 
-theLogPublisher = LogPublisher()
-addObserver = theLogPublisher.addObserver
-removeObserver = theLogPublisher.removeObserver
-msg = theLogPublisher.msg
+try:
+    theLogPublisher
+except NameError:
+    theLogPublisher = LogPublisher()
+    addObserver = theLogPublisher.addObserver
+    removeObserver = theLogPublisher.removeObserver
+    msg = theLogPublisher.msg
+
 
 def initThreads():
     global msg
@@ -217,7 +231,10 @@ def initThreads():
 threadable.synchronize(LogPublisher)
 threadable.whenThreaded(initThreads)
 
+
 class FileLogObserver:
+    """Log observer that writes to a file-like object."""
+    
     def __init__(self, f):
         self.write = f.write
         self.flush = f.flush
@@ -238,20 +255,22 @@ class FileLogObserver:
         self.flush()                    # hoorj!
 
     def start(self):
+        """Start observing log events."""
         addObserver(self._emit)
 
     def stop(self):
+        """Stop observing log events."""
         removeObserver(self._emit)
 
-file_protocol = ['close', 'closed', 'fileno', 'flush', 'mode', 'name', 'read',
-                 'readline', 'readlines', 'seek', 'softspace', 'tell',
-                 'write', 'writelines']
 
 class StdioOnnaStick:
+    """Class that pretends to be stout/err."""
+    
     closed = 0
     softspace = 1
     mode = 'wb'
     name = '<stdio (log)>'
+
     def __init__(self, isError=0):
         self.isError = isError
 
@@ -279,7 +298,7 @@ class StdioOnnaStick:
         for line in lines:
             msg(line, printed=True, isError=self.isError)
 
-# Make sure we have some basic logging setup.  This only works in cpython.
+
 def startLogging(file, setStdout=1):
     """Initialize logging to a specified file."""
     flo = FileLogObserver(file)
@@ -289,12 +308,6 @@ def startLogging(file, setStdout=1):
         sys.stdout = logfile
         sys.stderr = logerr
 
-# Prevent logfile from being erased on reload.  This only works in cpython.
-try:
-    logfile
-except NameError:
-    logfile = StdioOnnaStick(0)
-    logerr = StdioOnnaStick(1)
 
 class NullFile:
     softspace = 0
@@ -303,6 +316,7 @@ class NullFile:
     def flush(self): pass
     def close(self): pass
 
+
 def discardLogs():
     """Throw away all logs.
     """
@@ -310,4 +324,9 @@ def discardLogs():
     logfile = NullFile()
 
 
-__all__ = ["Log", "Logger", "startLogging", "msg", "write"]
+# Prevent logfile from being erased on reload.  This only works in cpython.
+try:
+    logfile
+except NameError:
+    logfile = StdioOnnaStick(0)
+    logerr = StdioOnnaStick(1)
