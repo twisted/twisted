@@ -64,8 +64,8 @@ class EPollReactor(default.PosixReactorBase):
             if fd in other:
                 flags = antidir
                 cmd = _epoll.CTL_MOD
+            else:
                 del selectables[fd]
-                del other[fd]
             del primary[fd]
             poller.control(cmd, fd, flags)
 
