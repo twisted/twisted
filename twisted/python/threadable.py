@@ -207,6 +207,12 @@ def _synchPost(self, *a, **b):
 _to_be_synched = []
 
 def synchronize(*klasses):
+    """Make all methods listed in each class' synchronized attribute synchronized.
+    
+    The synchronized attribute should be a list of strings, consisting of the
+    names of methods that must be synchronized. If we are running in threaded
+    mode these methods will be wrapped with a lock.
+    """
     global _to_be_synched
     if threaded is None:
         map(_to_be_synched.append, klasses)
@@ -223,11 +229,15 @@ threaded = None
 ioThread = None
 
 def requireInit():
+    """Make sure that threading has been initialized.
+    """
     global threaded
     if threaded is None:
         init(0)
 
 def init(with_threads):
+    """Initialize threading. Should be run once, at the beginning of program.
+    """
     global threaded, _to_be_synched, dispatcher, dispatch, Waiter, dispatchOS
     if threaded == with_threads:
         return
@@ -252,6 +262,8 @@ def init(with_threads):
     dispatchOS = dispatcher.dispatchOS
 
 def isInIOThread():
+    """Are we in the thread responsable for I/O requests (the event loop)?
+    """
     global threaded
     global ioThread
     if threaded:
@@ -263,9 +275,8 @@ def isInIOThread():
     return 1
 
 def registerAsIOThread():
-    '''
-    Mark the current thread as responsable for I/O requests.
-    '''
+    """Mark the current thread as responsable for I/O requests.
+    """
     global threaded
     global ioThread
     if threaded:
