@@ -325,32 +325,33 @@ class File(resource.Resource, styles.Versioned, filepath.FilePath):
         if request.setLastModified(self.getmtime()) is http.CACHED:
             return ''
 
-        try:
-            range = request.getHeader('range')
-
-            if range is not None:
-                # This is a request for partial data...
-                bytesrange = string.split(range, '=')
-                assert bytesrange[0] == 'bytes',\
-                       "Syntactically invalid http range header!"
-                start, end = string.split(bytesrange[1],'-')
-                if start:
-                    f.seek(int(start))
-                if end:
-                    end = int(end)
-                    size = end
-                else:
-                    end = size
-                request.setResponseCode(http.PARTIAL_CONTENT)
-                request.setHeader('content-range',"bytes %s-%s/%s " % (
-                    str(start), str(end), str(size)))
-                #content-length should be the actual size of the stuff we're
-                #sending, not the full size of the on-server entity.
-                fsize = end - int(start)
-
-            request.setHeader('content-length', str(fsize))
-        except:
-            traceback.print_exc(file=log.logfile)
+# Commented out because it's totally broken. --jknight 11/29/04
+#         try:
+#             range = request.getHeader('range')
+# 
+#             if range is not None:
+#                 # This is a request for partial data...
+#                 bytesrange = string.split(range, '=')
+#                 assert bytesrange[0] == 'bytes',\
+#                        "Syntactically invalid http range header!"
+#                 start, end = string.split(bytesrange[1],'-')
+#                 if start:
+#                     f.seek(int(start))
+#                 if end:
+#                     end = int(end)
+#                     size = end
+#                 else:
+#                     end = size
+#                 request.setResponseCode(http.PARTIAL_CONTENT)
+#                 request.setHeader('content-range',"bytes %s-%s/%s " % (
+#                     str(start), str(end), str(size)))
+#                 #content-length should be the actual size of the stuff we're
+#                 #sending, not the full size of the on-server entity.
+#                 fsize = end - int(start)
+# 
+#             request.setHeader('content-length', str(fsize))
+#         except:
+#             traceback.print_exc(file=log.logfile)
 
         if request.method == 'HEAD':
             return ''
