@@ -15,7 +15,7 @@
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 #
-# $Id: mktap.py,v 1.12 2002/06/11 02:48:38 carmstro Exp $
+# $Id: mktap.py,v 1.13 2002/07/10 23:47:14 dp Exp $
 
 """ Implementation module for the `mktap` command.
 """
@@ -124,7 +124,7 @@ def run():
     if not options.opts['append']:
         a = app.Application(options.args[0], int(options.opts['uid']), int(options.opts['gid']))
     else:
-        a = cPickle.load(open(options.opts['append']))
+        a = cPickle.load(open(options.opts['append'], 'rb'))
 
     try:
         mod.updateApplication(a, config)
