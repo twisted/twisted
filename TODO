@@ -100,3 +100,6 @@ this file directly.
 
 019 IMAP support, possibly based on alpha code written by Michel Pelletier
     (http://www.zope.org/Members/michel/MyWiki/IMAPServer).
+
+020 NNTP support, server can be based off asyncore code itamar got from Sum
+    Rushing (and is known to work with Netscape and Pan).
