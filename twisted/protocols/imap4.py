@@ -3754,6 +3754,8 @@ class _FetchParser:
         type = 'body'
         peek = False
         header = None
+        mime = None
+        text = None
         partialBegin = None
         partialLength = None
         def __str__(self):
