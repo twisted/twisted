@@ -159,9 +159,9 @@ class ServerDNSTestCase(unittest.TestCase):
     
     def tearDown(self):
         self.listenerTCP.loseConnection()
-        wait(self.listenerUDP.stopListening())
+        wait(defer.maybeDeferred(self.listenerUDP.stopListening))
         if getattr(self.resolver.protocol, 'transport', None) is not None:
-            wait(self.resolver.protocol.transport.stopListening())
+            wait(defer.maybeDeferred(self.resolver.protocol.transport.stopListening))
         spinUntil(lambda :self.listenerUDP.disconnected and 
                           self.listenerTCP.disconnected)
                    
