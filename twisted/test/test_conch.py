@@ -1002,6 +1002,7 @@ class SSHTransportTestCase(unittest.TestCase):
         exe = sys.executable
         twisted_path = os.path.dirname(twisted.__file__)
         conch_path = os.path.abspath('%s/../bin/conch' % twisted_path)
+        log.msg((exe, twisted_path, conch_path))
         cmds = (cmd % (exe, conch_path, port)).split()
         p = SSHTestOpenSSHProcess()
         def _failTest():
