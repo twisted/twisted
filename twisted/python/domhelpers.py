@@ -1,6 +1,6 @@
 # domhelpers.py
 
-from xml.dom import minidom
+from twisted.web import microdom
 
 class NodeLookupError(Exception): pass
 
@@ -91,7 +91,7 @@ def superAppendAttribute(node, key, value):
         for child in node.childNodes:
             superAppendAttribute(child, key, value)
 
-class RawText(minidom.Text):
+class RawText(microdom.Text):
     """This is an evil and horrible speed hack. Basically, if you have a big
     chunk of XML that you want to insert into the DOM, but you don't want
     to incur the cost of parsing it, you can construct one of these and insert 

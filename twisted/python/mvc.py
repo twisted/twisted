@@ -187,7 +187,7 @@ class Model:
         else:
             return 1
 
-    protected_names = []
+    protected_names = ['initialize', 'addView', 'addSubview', 'removeView', 'notify', 'getSubmodel', 'setSubmodel', 'getData', 'setData']
     
     def getSubmodel(self, name):
         if name[0] != '_' and name not in self.protected_names:
