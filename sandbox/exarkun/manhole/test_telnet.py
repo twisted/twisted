@@ -277,6 +277,12 @@ class TelnetTestCase(unittest.TestCase):
         self.assertEquals(self.t.value(), telnet.IAC + telnet.DONT + '\x29')
         self.assertEquals(s.him.state, 'no')
 
+        h = self.p.protocol
+        self.assertEquals(h.enabledLocal, [])
+        self.assertEquals(h.enabledRemote, [])
+        self.assertEquals(h.disabledLocal, [])
+        self.assertEquals(h.disabledRemote, ['\x29'])
+
     def testAcceptDont(self):
         # Try to disable an option.  The server must allow any option to
         # be disabled at any time.  Make sure it disables it and sends
@@ -295,6 +301,12 @@ class TelnetTestCase(unittest.TestCase):
         self.assertEquals(self.p.protocol.bytes, bytes.replace(cmd, ''))
         self.assertEquals(self.t.value(), telnet.IAC + telnet.WONT + '\x29')
         self.assertEquals(s.us.state, 'no')
+
+        h = self.p.protocol
+        self.assertEquals(h.enabledLocal, [])
+        self.assertEquals(h.enabledRemote, [])
+        self.assertEquals(h.disabledLocal, ['\x29'])
+        self.assertEquals(h.disabledRemote, [])
 
     def testIgnoreWont(self):
         # Try to disable an option.  The option is already disabled.  The
