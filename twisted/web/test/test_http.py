@@ -389,6 +389,21 @@ Content-Type: application/x-www-form-urlencoded
 
         self.runRequest(httpRequest, MyRequest)
 
+    def testMissingContentDisposition(self):
+        req = '''\
+POST / HTTP/1.0
+Content-Type: multipart/form-data; boundary=AaB03x
+Content-Length: 103
+
+--AaB03x
+Content-Type: text/plain
+Content-Transfer-Encoding: quoted-printable
+
+abasdfg
+--AaB03x--
+'''
+        self.runRequest(req, http.Request, success=False)
+        
 class QueryArgumentsTestCase(unittest.TestCase):
     def testUnquote(self):
         try:
@@ -425,4 +440,3 @@ class QueryArgumentsTestCase(unittest.TestCase):
             raise unittest.SkipTest
         self.failUnlessEqual("!@#+b",
             _c_urlarg.unquote("+21+40+23+b", "+"))
-
