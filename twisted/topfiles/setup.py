@@ -15,6 +15,8 @@ if sys.version_info < (2,2):
 import distutils
 from distutils.core import Extension
 
+if os.path.exists('twisted'):
+    sys.path.append('.') # eek! need this to import twisted. sorry.
 from twisted import copyright
 from twisted.python import dist, util
 
