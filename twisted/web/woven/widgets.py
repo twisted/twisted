@@ -616,7 +616,7 @@ class Anchor(Widget):
             href = href + '?' + params
         data = self.getData()
         self['href'] = href or str(data) + self.trailingSlash
-        self['href'] = urllib.quote(self['href'])
+        #self['href'] = urllib.quote(self['href'])
         if data is None:
             data = ""
         self.add(Text(self.text or data, self.raw, 0))
