@@ -303,8 +303,6 @@ class DeferredTestCase(TestCase):
     that uses a deferred operation, just set up some callbacks and return
     the Deferred object.
     """
-    from twisted.internet import defer
-    
     def deferredFail(self, failure):
         failure.trap(self.failureException)
         self.testResult.addFailure(self, failure)
@@ -342,6 +340,7 @@ class DeferredTestCase(TestCase):
         deferred.addCallback(self._deferredFUEqualCallback, expected)
 
     def _runSetUp(self):
+        from twisted.internet import defer
         testDeferred = 0
         self.testResult.startTest(self)
         try:
@@ -358,6 +357,7 @@ class DeferredTestCase(TestCase):
             self._runTest()
 
     def _runTest(self, ignored=None):
+        from twisted.internet import defer
         tearDownDeferred = 0
         try:
             d = self.testMethod()
@@ -374,6 +374,7 @@ class DeferredTestCase(TestCase):
             self._runTearDown()
 
     def _runTearDown(self, ignored=None):
+        from twisted.internet import defer
         cleanupDeferred = 0
         try:
             d = self.tearDown()
@@ -391,8 +392,6 @@ class DeferredTestCase(TestCase):
     def cleanup(self, ignored=None):
         from twisted.internet import reactor
         self.testResult.stopTest(self)
-        #reactor.runUntilCurrent()
-        reactor.stop()
         if self.testResult.wasSuccessful():
             self.testResult.addSuccess(self)
 
@@ -401,7 +400,7 @@ class DeferredTestCase(TestCase):
         if testResult is None: testResult = self.defaultTestResult()
         self.testResult = testResult
         self._runSetUp()
-        reactor.run()
+        reactor.runUntilCurrent()
 
 
 class TestSuite:
