@@ -43,7 +43,7 @@ Test coverage needs to be better.
 <http://www.irchelp.org/irchelp/rfc/ctcpspec.html>}
 """
 
-__version__ = '$Revision: 1.83 $'[11:-2]
+__version__ = '$Revision: 1.84 $'[11:-2]
 
 from twisted.internet import reactor, protocol
 from twisted.persisted import styles
@@ -1139,11 +1139,11 @@ class DccSendProtocol(protocol.Protocol, styles.Ephemeral):
             # XXX? Add some checks to see if we've stalled out?
             return
         elif bytesShesGot > self.bytesSent:
-            self.transport.log("DCC SEND %s: She says she has %d bytes "
-                               "but I've only sent %d.  I'm stopping "
-                               "this screwy transfer."
-                               % (self.file,
-                                  bytesShesGot, self.bytesSent))
+            # self.transport.log("DCC SEND %s: She says she has %d bytes "
+            #                    "but I've only sent %d.  I'm stopping "
+            #                    "this screwy transfer."
+            #                    % (self.file,
+            #                       bytesShesGot, self.bytesSent))
             self.transport.loseConnection()
             return
 
@@ -1447,7 +1447,7 @@ class DccFileReceive(DccFileReceiveBasic):
             logmsg = "%s and written to %s.\n" % (logmsg, self.file.name)
             if hasattr(self.file, 'close'): self.file.close()
 
-        self.transport.log(logmsg)
+        # self.transport.log(logmsg)
 
     def __str__(self):
         if not self.connected:
