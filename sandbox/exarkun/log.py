@@ -81,10 +81,15 @@ class LogWrapper:
     
     def __init__(self, f):
         self.f = f
+        self.buffer = []
 
     def write(self, s):
-        self.f(s)
-    
+        self.buffer.append(s)
+        if self.buffer[-1].endswith('\n'):
+            s = ''.join(self.buffer).rstrip()
+            del self.buffer[:]
+            self.f(s)
+
     def flush(self):
         logOwner.filer.flush()
 
