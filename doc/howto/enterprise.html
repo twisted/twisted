@@ -141,8 +141,13 @@
     arbitrary callbacks to be called upon completion (or upon
     failure).</p>
 
-    <p>Also worth noting is that I'm assuming that dbmodule uses
-    the "qmarks" paramstyle in my SQL query.</p>
+    <p>Also worth noting is that this example assumes that dbmodule
+    uses the "qmarks" paramstyle (see the DB-API specification).  If
+    your dbmodule uses a different paramstyle (e.g. pyformat) then use
+    that.  Twisted doesn't attempt to offer any sort of magic
+    paramater munging -- <code class="python">runQuery(query, params,
+    ...)</code> maps directly onto <code
+    class="python">cursor.execute(query, params, ...)</code>.</p>
 
     <h2>And that's it!</h2>
 
@@ -151,16 +156,6 @@
     documentation to get an idea of the other functions it has, but
     hopefully this document presents the core ideas.</p>
 
-    <h2>Credits</h2>
-
-    <p>This tutorial was written by Andrew Bennetts (andrew at
-    puzzling dot org). I would like to thank the Twisted crew for
-    their fun (and useful!) framework, and also dash in #python for
-    explaining the database stuff to me in the first place. The
-    final example was improved with the aid of suggestion from
-    Glyph.</p>
-
-    <p>Suggestions to improve this document are welcomed.</p>
     <hr />
 
     <address>
