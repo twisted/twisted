@@ -404,7 +404,7 @@ class NewRenderTestCase(unittest.TestCase):
         req = self._getReq()
         req.requestReceived('HEAD', '/newrender', 'HTTP/1.0')
         self.assertEquals(req.code, 200)
-        self.assertNotIn('hi hi', req.transport.getvalue())
+        self.assertEquals(-1, req.transport.getvalue().find('hi hi'))
 
 
 class SDResource(resource.Resource):
