@@ -406,8 +406,11 @@ class IMAP4Server(basic.LineReceiver):
     select_EXAMINE = auth_EXAMINE
 
     def auth_CREATE(self, tag, args):
+        name = parseNestedParens(args)
+        if len(name) != 1:
+            raise IllegalClientResponse, args
         try:
-            self.account.create(args.strip())
+            self.account.create(name[0])
         except MailboxCollision, c:
             self.sendNegativeResponse(tag, str(c))
         else:
@@ -415,8 +418,11 @@ class IMAP4Server(basic.LineReceiver):
     select_CREATE = auth_CREATE
 
     def auth_DELETE(self, tag, args):
+        name = parseNestedParens(args)
+        if len(name) != 1:
+            raise IllegalClientResponse, args
         try:
-            self.account.delete(args.strip())
+            self.account.delete(name[0])
         except MailboxException, m:
             self.sendNegativeResponse(tag, str(m))
         else:
@@ -425,8 +431,11 @@ class IMAP4Server(basic.LineReceiver):
 
 
     def auth_RENAME(self, tag, args):
+        names = parseNestedParens(args)
+        if len(name) != 2 or isinstance(names[0], types.ListType) or isinstance(names[1], types.ListType):
+            raise IllegalClientResponse, args
         try:
-            self.account.rename(*args.strip().split())
+            self.account.rename(*names)
         except TypeError:
             self.sendBadResponse(tag, 'Invalid command syntax')
         except MailboxException, m:
@@ -436,8 +445,11 @@ class IMAP4Server(basic.LineReceiver):
     select_RENAME = auth_RENAME
 
     def auth_SUBSCRIBE(self, tag, args):
+        name = parseNestedParens(args)
+        if len(name) != 1:
+            raise IllegalClientResponse, args
         try:
-            self.account.subscribe(args.strip())
+            self.account.subscribe(name[0])
         except MailboxError, m:
             self.sendNegativeResponse(tag, str(m))
         else:
@@ -445,8 +457,11 @@ class IMAP4Server(basic.LineReceiver):
     select_SUBSCRIBE= auth_SUBSCRIBE
 
     def auth_UNSUBSCRIBE(self, tag, args):
+        name = parseNestedParens(args)
+        if len(name) != 1:
+            raise IllegalClientResponse, args
         try:
-            self.account.unsubscribe(args.strip())
+            self.account.unsubscribe(name[0])
         except MailboxError, m:
             self.sendNegativeResponse(tag, str(m))
         else:
@@ -672,7 +687,7 @@ class IMAP4Server(basic.LineReceiver):
 
     def select_STORE(self, tag, args, uid=0):
         parts = parseNestedParens(args)
-        if 2 >= len(parts) >= 3:
+        if 2 <= len(parts) <= 3:
             messages = parseIdList(parts[0], self.mbox.getUIDNext())
             mode = parts[1].upper()
             if len(parts) == 3:
@@ -680,7 +695,11 @@ class IMAP4Server(basic.LineReceiver):
             else:
                 flags = ()
         else:
-            raise IllegalClientResponse, args
+            raise IllegalClientResponse, ('Wrong number of arguments', args)
+
+        if uid:
+            topPart = ~(self.mbox.getUIDValidity() << 16)
+            messages = map(topPart.__and__, messages)
 
         silent = mode.endswith('SILENT')
         if mode.startswith('+'):
