@@ -274,9 +274,7 @@ class FileDescriptor(log.Logger, styles.Ephemeral):
         This method must be overridden or assigned in subclasses to
         indicate a valid file descriptor for the operating system.
         """
-        raise NotImplementedError(reflect.qual(self.__class__)+' has no fileno method')
-
-
+        return -1
 
 def isIPAddress(addr):
     parts = string.split(addr, '.')
