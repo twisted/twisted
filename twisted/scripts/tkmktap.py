@@ -312,6 +312,7 @@ class TkConfigFrame(Tkinter.Frame):
                     self.subOptFrame.destroy()
                     self.subOptFrame = TkConfigFrame(self.commandFrame, self.optMap[s])
                     self.subOptFrame.pack()
+        self.subCmdPoll = reactor.callLater(0.1, self.pollSubCommands)
 
 
 class TkAppMenu(Tkinter.Menu):
@@ -340,7 +341,19 @@ def run():
     keyList = taps.keys()
     keyList.sort()
 
-    config = TkMkAppFrame(r, taps.values()[0])
+    coil = None
+    # Find a tap that doesn't give us an error
+    for t in taps.values():
+        try:
+            t.load().Options()
+        except:
+            pass
+        else:
+            break
+    else:
+        coil = t
+        
+    config = TkMkAppFrame(r, coil)
     menu = TkAppMenu(
         r,
         config.createApplication,
