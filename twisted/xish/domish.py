@@ -38,6 +38,7 @@ class _Serializer:
     def __init__(self, prefixes = None):
         self.cio = StringIO.StringIO()
         self.prefixes = prefixes or {}
+        self.prefixes["http://www.w3.org/XML/1998/namespace"] = "xml"
         self.prefixCounter = 0
 
     def getValue(self):
@@ -87,7 +88,7 @@ class _Serializer:
         for k,v in elem.attributes.items():
             # If the attribute name is a list, it's a qualified attribute
             if isinstance(k, types.TupleType):
-                write(" %s:%s='%s'" % (self.getPrefix[k[0]], k[1], escapeToXml(v, 1)).encode("utf-8"))
+                write((" %s:%s='%s'" % (self.getPrefix(k[0]), k[1], escapeToXml(v, 1))).encode("utf-8"))
             else:
                 write((" %s='%s'" % ( k, escapeToXml(v, 1))).encode("utf-8"))
 
@@ -599,7 +600,8 @@ class ExpatElementStream:
         # Process attributes
         for k, v in attrs.items():
             if k.find(" ") != -1:
-                attrs[k.split(" ")] = v
+                aqname = k.split(" ")
+                attrs[(aqname[0], aqname[1])] = v
                 del attrs[k]
 
         # Construct the new element
