@@ -115,10 +115,11 @@ class SMTPError(Exception):
     pass
 
 class SMTPClientError(SMTPError):
-    def __init__(self, code, resp, log=None):
+    def __init__(self, code, resp, log=None, addresses=None):
         self.code = code
         self.resp = resp
         self.log = log
+        self.addresses = addresses
 
     def __str__(self):
         if self.code > 0:
@@ -1222,8 +1223,8 @@ class SMTPSender(SMTPClient):
                     errlog.append("%s: %03d %s" % (addr, acode, aresp))
             if numOk:
                 errlog.append(str(log))
-            self.factory.result.errback(SMTPDeliveryError(code, resp,
-                                                          '\n'.join(errlog)))
+            exc = SMTPDeliveryError(code, resp, '\n'.join(errlog), addresses)
+            self.factory.result.errback(exc)
         else:
             self.factory.result.callback((numOk, addresses))
 
