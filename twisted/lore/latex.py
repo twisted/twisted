@@ -32,7 +32,7 @@ def latexEscape(text):
                                     '\\'+x.group(), text)
     return text.replace('\n', ' ')
 
-entities = { 'amp': '&', 'gt': '>', 'lt': '<', 'quot': '"',
+entities = { 'amp': '\&', 'gt': '>', 'lt': '<', 'quot': '"',
              'copy': '\\copyright'}
 
 def getLatexText(node, writer, filter=lambda x:x, entities=entities):
