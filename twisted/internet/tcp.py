@@ -278,6 +278,7 @@ class Client(BaseClient):
         
         whenDone = self.resolveAddress
         err = None
+        skt = None
 
         try:
             skt = self.createInternetSocket()
