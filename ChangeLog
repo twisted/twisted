@@ -1,3 +1,9 @@
+2003-07-28  Itamar Shtull-Trauring  <itamar@itamarst.org>
+
+	* twisted/spread/pb.py (PBClientFactory): a new, superior API for
+	starting PB connections. Create a factory, do a
+	reactor.connectTCP/SSL() etc., then factory.getPerspective().
+
 2003-07-27  Dave Peticolas  <dave@krondo.com>
 
 	* twisted/test/test_enterprise.py: enable tests that depend on
