@@ -617,10 +617,6 @@ class Request:
             # write headers
             self.write('')
 
-        # debug code just in case I made a mistake
-        if self.chunked and self.code in NO_BODY_CODES:
-            raise RuntimeError, "we screwed up"
-
         if self.chunked:
             # write last chunk and closing CRLF
             self.transport.write("0\r\n\r\n")
@@ -649,7 +645,7 @@ class Request:
             # persistent connections.
             if ((version == "HTTP/1.1") and
                 (self.headers.get('content-length', None) is None) and
-                (self.code not in NO_BODY_CODES)):
+                self.method != "HEAD" and self.code not in NO_BODY_CODES):
                 l.append("%s: %s\r\n" % ('Transfer-encoding', 'chunked'))
                 self.chunked = 1
             if self.lastModified is not None:
