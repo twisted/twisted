@@ -660,7 +660,10 @@ class POP3Client(basic.LineOnlyReceiver):
         self.mode = SHORT
 
     def sendLong(self, command, params):
-        self.sendLine('%s %s' % (command, params))
+        if params:
+            self.sendLine('%s %s' % (command, params))
+        else:
+            self.sendLine(command)
         self.command = command
         self.mode = FIRST_LONG
 
