@@ -10,7 +10,10 @@ def laterResult(n, result):
     
 class GThreadlessTest(unittest.TestCase):
     def _getDeferred(self):
+        import greenlet
+        #print "getD is", greenlet.getcurrent()
         r = blockOn(laterResult(0.1, 'goofledorf'), desc="_getDeferred")
+        #print "GeTD Is DonEnEN"
         return r
     _getDeferred = deferredGreenlet(_getDeferred)
 
@@ -35,7 +38,13 @@ class GThreadlessTest(unittest.TestCase):
         self.assertRaises(CalledFromMain, blockOn, defer.succeed(1))
 
     def testNestedBlocks(self):
-        thingy = deferredGreenlet(lambda: blockOn(self._getDeferred(), "thingy"))
+        #print
+        #print "++++++++++++"
+        def f1():
+            import greenlet
+            #print "f1 is", greenlet.getcurrent()
+            return blockOn(self._getDeferred(), "thingy")
+        thingy = deferredGreenlet(f1)
         d = thingy().addCallback(self.assertEquals, "goofledorf")
         return d
     testNestedBlocks.timeout = 2
