@@ -466,7 +466,7 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
         self.sendNegativeResponse(tag, 'Authentication failed: ' + str(failure.value))
     
     def __ebAuthChunk(self, failure, tag):
-        self.sendNegativeResponse(tag, 'Authentication failed: ' + str(falure.value))
+        self.sendNegativeResponse(tag, 'Authentication failed: ' + str(failure.value))
 
     def unauth_STARTTLS(self, tag, args):
         if self.ctx and implements(self.transport, ITLSTransport):
@@ -1445,7 +1445,7 @@ class IMAP4Client(basic.LineReceiver):
                 begin = parts.find('[')
                 end = parts.find(']')
                 if begin == -1 or end == -1:
-                    raise IllegalServerResponse(line)
+                    raise IllegalServerResponse(parts)
                 else:
                     content = parts[begin+1:end].split(None, 1)
                     if len(content) >= 1:
