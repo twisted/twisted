@@ -72,7 +72,7 @@ class ReflectorAuthorizer(authorizer.Authorizer):
         return i
 
 class DatabaseAuthorizer(authorizer.Authorizer, adbapi.Augmentation):
-    """A PyPgSQL authorizer for Twisted Internet Passport
+    """A PyPgSQL authorizer for Twisted Cred
     """
 
     schema = """
@@ -104,7 +104,7 @@ class DatabaseAuthorizer(authorizer.Authorizer, adbapi.Augmentation):
         adbapi.Augmentation.__init__(self, dbpool)
 
     def addIdentity(self, identity):
-        """Create an identity.
+        """Store an identity in the database.
         """
         passwd = base64.encodestring(identity.hashedPassword)
         username = identity.name
