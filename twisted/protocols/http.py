@@ -226,6 +226,20 @@ def fromChunk(data):
     return rest[:length], rest[length+2:]
 
 
+
+class StringTransport:
+    """
+    I am a StringIO wrapper that conforms for the transport API. I support
+    the `writeSequence' method.
+    """
+    def __init__(self):
+        self.s = StringIO()
+    def writeSequence(self, seq):
+        self.s.write(''.join(seq))
+    def __getattr__(self, attr):
+        return getattr(self.__dict__['s'], attr)
+
+
 class HTTPClient(basic.LineReceiver):
     """A client for HTTP 1.0
 
@@ -317,7 +331,7 @@ class Request:
         self.cookies = [] # outgoing cookies
 
         if queued:
-            self.transport = StringIO()
+            self.transport = StringTransport()
         else:
             self.transport = self.channel.transport
     
