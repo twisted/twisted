@@ -170,6 +170,7 @@ class IMyTarget(pb.IRemoteInterface):
     #add = schema.callable(add) # the metaclass makes this unnecessary
     # but it could be used for adding options or something
     def join(self, a=str, b=str, c=int): return str
+    def getName(self): return str
     disputed = schema.RemoteMethodSchema(_response=int, a=int)
 
 class IMyTarget2(pb.IRemoteInterface):
@@ -183,13 +184,16 @@ class IMyTarget3(IMyTarget):
 class Target(pb.Referenceable):
     implements(IMyTarget)
 
-    def __init__(self):
+    def __init__(self, name=None):
         self.calls = []
+        self.name = name
     def getMethodSchema(self, methodname):
         return None
     def remote_add(self, a, b):
         self.calls.append((a,b))
         return a+b
+    def remote_getName(self):
+        return self.name
     def remote_disputed(self, a):
         return 24
 
@@ -298,7 +302,8 @@ class TestInterface(unittest.TestCase, TargetMixin):
         s = t.getSchema()
         methods = s.getMethods()
         methods.sort()
-        self.failUnlessEqual(methods, ["add", "add1", "disputed", "join"])
+        self.failUnlessEqual(methods,
+                             ["add", "add1", "disputed", "getName", "join"])
 
         # 'add' is defined with 'def'
         s1 = s.getMethodSchema("add")
@@ -605,7 +610,7 @@ class TestReferenceable(unittest.TestCase, TargetMixin):
         self.failUnlessIdentical(res, r)
 
 class TestFactory(unittest.TestCase):
-    def testCall(self):
+    def testCall1(self):
         t = Target()
         s = pb.PBServerFactory(t)
         port = reactor.listenTCP(0, s, interface="127.0.0.1")
@@ -631,4 +636,16 @@ class TestFactory(unittest.TestCase):
         # likewise, f.value is a Violation instance, not a string 
         #self.failUnless(f.value.find("method 'missing' not defined") != -1)
         self.failUnless(f.value.args[0].find("method 'missing' not defined") != -1)
+
+    def testCall2(self):
+        t = Target("fred")
+        t2 = Target2("gabriel")
+        s = pb.PBServerFactory(t)
+        s.registerReferenceable("two", t2)
+        port = reactor.listenTCP(0, s, interface="127.0.0.1")
+        portnum = port.getHost().port
+        d = pb.callRemoteURL_TCP("localhost", portnum, "two",
+                                 IMyTarget, "getName")
+        res = dr(d)
+        self.failUnlessEqual(res, "gabriel")
 

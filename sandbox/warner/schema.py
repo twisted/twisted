@@ -628,6 +628,8 @@ class RemoteMethodSchema:
         names, _, _, typeList = inspect.getargspec(method)
         assert names[0] == "self"
         names.pop(0)
+        if not names:
+            typeList = []
         assert len(names) == len(typeList)
         self.argumentNames = names
         self.argConstraints = {}
