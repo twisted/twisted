@@ -1,3 +1,5 @@
+# -*- test-case-name: twisted.conch.test.test_sftp -*-
+#
 # Copyright (c) 2001-2004 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
@@ -10,6 +12,8 @@ from twisted.python import failure, log
 
 from common import NS, getNS
 from twisted.conch.interfaces import ISFTPServer, ISFTPFile
+
+from zope import interface
 
 class FileTransferBase(protocol.Protocol):
 
@@ -325,8 +329,9 @@ class FileTransferServer(FileTransferBase):
         data = data[4:]
         handle, data = getNS(data)
         assert data == '', 'still have data in FSTAT: %s' % repr(data)
-        if handle not in self.openDirs:
-            self._ebStatus(failure.Failure(KeyError()), requestId)
+        if handle not in self.openFiles:
+            self._ebStatus(failure.Failure(KeyError('%s not in self.openFiles' 
+                                        % handle)), requestId)
         else:
             fileObj = self.openFiles[handle]
             d = defer.maybeDeferred(fileObj.getAttrs)
@@ -375,7 +380,7 @@ class FileTransferServer(FileTransferBase):
 
     def packet_SYMLINK(self, data):
         requestId, = struct.unpack('!L', data[:4])
-        data = ata[4:]
+        data = data[4:]
         linkPath, data = getNS(data)
         targetPath, data = getNS(data)
         d = defer.maybeDeferred(self.client.makeLink, linkPath, targetPath)
@@ -569,7 +574,7 @@ class FileTransferClient(FileTransferBase):
         """
         return self._sendRequest(FXP_OPENDIR, NS(path))
 
-    def getAttrs(self, path, followLinks):
+    def getAttrs(self, path, followLinks=0):
         """
         Return the attributes for the given path.
 
@@ -620,7 +625,7 @@ class FileTransferClient(FileTransferBase):
         This method returns when the link is made, or a Deferred that
         returns the same.
         """
-        return self._sendRequest(FXP_SYMLINK, NS(linkpath)+NS(targetpath))
+        return self._sendRequest(FXP_SYMLINK, NS(linkPath)+NS(targetPath))
 
     def realPath(self, path):
         """
@@ -631,7 +636,12 @@ class FileTransferClient(FileTransferBase):
         This method returns the absolute path as a string, or a Deferred
         that returns the same.
         """
-        return self._sendRequest(FXP_REALPATH, NS(path))
+        d = self._sendRequest(FXP_REALPATH, NS(path))
+        return d.addCallback(self._cbRealPath)
+
+    def _cbRealPath(self, result):
+        name, longname, attrs = result[0]
+        return name
 
     def extendedRequest(self, request, data):
         return self._sendRequest(FXP_EXTENDED, data)
@@ -655,17 +665,17 @@ class FileTransferClient(FileTransferBase):
         lang = getNS(data)
         if code == FX_OK:
             d.callback((msg, lang))
+        elif code == FX_EOF:
+            d.errback(EOFError(msg))
         else:
             d.errback(SFTPError(code, msg, lang))
 
     def packet_HANDLE(self, data):
         d, data = self._parseRequest(data)
-        print 'got a handle'
         if self.wasAFile.has_key(d):
             d.callback(ClientFile(self, getNS(data)[0]))
             del self.wasAFile[d]
         else:
-            print 'was a directory'
             d.callback(ClientDirectory(self, getNS(data)[0]))
 
     def packet_DATA(self, data):
@@ -673,7 +683,6 @@ class FileTransferClient(FileTransferBase):
         d.callback(getNS(data)[0])
 
     def packet_NAME(self, data):
-        print 'got a name request'
         d, data = self._parseRequest(data)
         count, = struct.unpack('!L', data[:4])
         data = data[4:]
@@ -704,6 +713,8 @@ class FileTransferClient(FileTransferBase):
         """
 
 class ClientFile:
+
+    interface.implements(ISFTPFile)
 
     def __init__(self, parent, handle):
         self.parent = parent
@@ -749,11 +760,19 @@ class ClientDirectory:
             return self.filesCache.pop(0)
         d = self.read()
         d.addCallback(self._cbReadDir)
+        d.addErrback(self._ebReadDir)
         return d
 
     def _cbReadDir(self, names):
         self.filesCache = names[1:]
         return names[0]
+
+    def _ebReadDir(self, reason):
+        reason.trap(EOFError)
+        def _():
+            raise StopIteration
+        self.next = _
+        return reason
 
 
 class SFTPError(Exception):
