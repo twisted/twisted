@@ -165,17 +165,16 @@ def getEntireStream(stream):
     
 def parsePOSTData(request):
     def _gotURLEncodedData(data):
-        print "_gotURLEncodedData"
+        #print "_gotURLEncodedData"
         request.args.update(cgi.parse_qs(data.read(), 1))
         
     def _gotMultipartData(data):
-        print "_gotMultipartData"
+        #print "_gotMultipartData"
         try:
             data.reset()
-            import pdb; pdb.set_trace()
             d=cgi.parse_multipart(data, dict(ctype.params))
             data.reset()
-            print "_gotMultipartData:",d, dict(ctype.params), data.read()
+            #print "_gotMultipartData:",d, dict(ctype.params), data.read()
             request.args.update(d)
         except KeyError, e:
             if e.args[0] == 'content-disposition':

@@ -168,7 +168,6 @@ class OldRequestAdapter(components.Componentized, object):
             expires=max_age-time.time()
         cookie = http_headers.Cookie(k,v, expires=expires, domain=domain, path=path, comment=comment, secure=secure)
         self.response.headers.setHeader('Set-Cookie', self.request.headers.getHeader('Set-Cookie', ())+(cookie,))
-        print "Added cookie:", cookie
         
 ### TODO:
     def getHost(self):
