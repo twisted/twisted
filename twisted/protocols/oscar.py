@@ -251,9 +251,9 @@ class OscarConnection(protocol.Protocol):
         log.msg("Connection Lost! %s" % self)
         self.stopKeepAlive()
 
-    def connectionFailed(self):
-        log.msg("Connection Failed! %s" % self)
-        self.stopKeepAlive()
+#    def connectionFailed(self):
+#        log.msg("Connection Failed! %s" % self)
+#        self.stopKeepAlive()
 
     def sendFLAP(self,data,channel = 0x02):
         header="!cBHH"
@@ -458,9 +458,12 @@ class BOSConnection(SNACBased):
         service = struct.unpack('!H',tlvs[0x0d])[0]
         ip = tlvs[5]
         cookie = tlvs[6]
-        c = serviceClasses[service](self, cookie, d)
-        reactor.clientTCP(ip, 5190, c)
-        self.services[service] = c
+        #c = serviceClasses[service](self, cookie, d)
+        c = protocol.ClientCreator(reactor, serviceClasses[service], self, cookie, d)
+        def addService(x):
+            self.services[service] = x
+        c.connectTCP(ip, 5190).addCallback(addService)
+        #self.services[service] = c
 
     def oscar_01_07(self,snac):
         """
@@ -968,18 +971,6 @@ class OSCARService(SNACBased):
         self.bos = bos
         self.d = d
 
-    def connectionLost(self, reason):
-        for k,v in self.bos.services.items():
-            if v == self:
-                del self.bos.services[k]
-        SNACBased.connectionLost(self, reason)
-
-    def connectionFailed(self):
-        for k,v in self.bos.services.items():
-            if v == self:
-                del self.bos.services[k]
-        SNACBased.connectionFailed(self)
-
     def clientReady(self):
         SNACBased.clientReady(self)
         if self.d:
@@ -1168,9 +1159,10 @@ class OscarAuthenticator(OscarConnection):
         if tlvs.has_key(6):
             self.cookie=tlvs[6]
             server,port=string.split(tlvs[5],":")
-            bos=self.BOSClass(self.username,self.cookie)
-            if self.deferred: self.deferred.callback(bos)
-            reactor.clientTCP(server,int(port),bos)
+            c = protocol.ClientCreator(reactor, self.BOSClass, self.username, self.cookie)
+            d = c.connectTCP(server, int(port))
+            d.addErrback(lambda x: log.msg("Connection Failed! Reason: %s" % x))
+            d.chainDeferred(self.deferred)
             self.disconnect()
         elif tlvs.has_key(8):
             errorcode=tlvs[8]
