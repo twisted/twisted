@@ -7,7 +7,7 @@ THIS MODULE IS HIGHLY EXPERIMENTAL AND MAY BE DEPRECATED SOON.
 
 from __future__ import nested_scopes
 
-__version__ = "$Revision: 1.9 $"[11:-2]
+__version__ = "$Revision: 1.10 $"[11:-2]
 
 # System Imports
 import sys
@@ -120,7 +120,7 @@ class Tapestry(Resource):
 
         vm = getattr(self, 'wvfactory_'+viewName, None)
         if vm:
-            return vm(model)
+            return vm(request, node, model)
 
     def render(self, request):
         return redirectTo(addSlash(request), request)
