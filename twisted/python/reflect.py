@@ -32,12 +32,17 @@ import string
 import pickle
 import new
 
-try:
-    from pydoc import TextRepr
-    _textRepr = TextRepr()
-    _safe_repr = _textRepr.repr
-except:
-    _safe_repr = repr
+def _safe_repr(o):
+    try:
+        return repr(o)
+    except:
+        try:
+            return "<%s instance at %s>" % (o.__class__.__name__, id(o))
+        except:
+            try:
+                return "<%s object at %s>" % (type(o).__name__, id(o))
+            except:
+                return "<unrepresentable object at %s>" % (id(o),)
 
 try:
     import cStringIO as StringIO
