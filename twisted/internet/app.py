@@ -84,7 +84,7 @@ class Application(log.Logger, styles.Versioned, marmalade.DOMJellyable):
         self.tcpPorts = []              # check
         self.udpPorts = []
         self.sslPorts = []
-        self._listenerDict = []
+        self._listenerDict = {}
         # a list of (tcp, ssl, udp) Connectors
         self.connectors = []            # check
         # a list of twisted.python.delay.Delayeds
