@@ -105,4 +105,6 @@ class LookupDNSTestCase(unittest.TestCase):
     def testMX(self):
         self._testLookup("zoteca.com", 15, ['israel2.maxnm.com', 'www.maxnm.com'])
 
-    
+
+# XXX move this test into accepttests
+del LookupDNSTestCase

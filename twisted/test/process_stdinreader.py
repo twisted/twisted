@@ -31,4 +31,6 @@ sys.stdout.write(data)
 sys.stdout.write("\nout\n")
 sys.stderr.write("err\n")
 
-time.sleep(0.5)
+sys.stdout.flush()
+sys.stderr.flush()
+
