@@ -25,18 +25,22 @@ to format methods.  Currently this is only used by woven.
 import calendar
 
 
-class InputError(Exception):
-    """
-    An error occurred with some input.
-    """
-
-
 class FormException(Exception):
     """An error occured calling the form method.
     """
     def __init__(self, *args, **kwargs):
         Exception.__init__(self, *args)
         self.descriptions = kwargs
+
+
+class InputError(FormException):
+    """
+    An error occurred with some input.
+    """
+
+    def __init__(self, name, *args, **kwargs):
+        self.name = name # the name of the Argument that had the error
+        FormException.__init__(self, *args, **kwargs)
 
 
 class Argument:
