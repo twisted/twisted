@@ -80,7 +80,7 @@ class IMAP4UTF7TestCase(unittest.TestCase):
         for (input, output) in self.tests:
             # XXX - Piece of *crap* 2.1
             self.assertEquals(input, imap4.decoder(output)[0])
-    
+
     def testPrintableSingletons(self):
         # All printables represent themselves
         for o in range(0x20, 0x26) + range(0x27, 0x7f):
@@ -826,7 +826,7 @@ class IMAP4ServerTestCase(IMAP4HelperMixin, unittest.TestCase):
         self.connected.addCallback(strip(getCaps)).addErrback(self._ebGeneral)
         self.loopback()
 
-        self.assertEquals({'IMAP4rev1': None, 'NAMESPACE': None}, caps)
+        self.assertEquals({'IMAP4rev1': None, 'NAMESPACE': None, 'IDLE': None}, caps)
 
     def testCapabilityWithAuth(self):
         caps = {}
@@ -839,7 +839,8 @@ class IMAP4ServerTestCase(IMAP4HelperMixin, unittest.TestCase):
         self.connected.addCallback(strip(getCaps)).addErrback(self._ebGeneral)
         self.loopback()
 
-        self.assertEquals({'IMAP4rev1': None, 'NAMESPACE': None, 'AUTH': ['CRAM-MD5']}, caps)
+        expCap = {'IMAP4rev1': None, 'NAMESPACE': None, 'IDLE': None, 'AUTH': ['CRAM-MD5']}
+        self.assertEquals(expCap, caps)
 
     def testLogout(self):
         self.loggedOut = 0
@@ -2090,7 +2091,7 @@ class FetchSearchStoreTestCase(unittest.TestCase, IMAP4HelperMixin):
         self.server_received_query = query
         self.server_received_uid = uid
         return self.expected
-        
+
     def addListener(self, *a, **kw):
         pass
     removeListener = addListener
@@ -2186,20 +2187,20 @@ class FakeMailbox:
 
 class FeaturefulMessage:
     __implements__ = imap4.IMessageFile,
-    
+
     def getFlags(self):
         return 'flags'
-    
+
     def getInternalDate(self):
         return 'internaldate'
-    
+
     def open(self):
         return StringIO("open")
 
 class CopyWorkerTestCase(unittest.TestCase):
     def testFeaturefulMessage(self):
         s = imap4.IMAP4Server()
-        
+
         # Yes.  I am grabbing this uber-non-public method to test it.
         # It is complex.  It needs to be tested directly!
         # Perhaps it should be refactored, simplified, or split up into
@@ -2209,42 +2210,42 @@ class CopyWorkerTestCase(unittest.TestCase):
         m = FakeMailbox()
         d = f([(i, FeaturefulMessage()) for i in range(1, 11)], 'tag', m)
         r = unittest.deferredResult(d)
-        
+
         for a in m.args:
             self.assertEquals(a[0].read(), "open")
             self.assertEquals(a[1], "flags")
             self.assertEquals(a[2], "internaldate")
-        
+
         for (status, result) in r:
             self.failUnless(status)
             self.assertEquals(result, None)
 
     def testUnfeaturefulMessage(self):
         s = imap4.IMAP4Server()
-        
+
         # See above comment
         f = s._IMAP4Server__cbCopy
-        
+
         m = FakeMailbox()
         msgs = [FakeyMessage({'Header-Counter': str(i)}, (), 'Date', 'Body %d' % (i,), i + 10, None) for i in range(1, 11)]
         d = f([im for im in zip(range(1, 11), msgs)], 'tag', m)
         r = unittest.deferredResult(d)
-        
+
         seen = []
         for a in m.args:
             seen.append(a[0].read())
             self.assertEquals(a[1], ())
             self.assertEquals(a[2], "Date")
-        
+
         seen.sort()
         exp = ["Header-Counter: %d\r\n\r\nBody %d" % (i, i) for i in range(1, 11)]
         exp.sort()
         self.assertEquals(seen, exp)
-        
+
         for (status, result) in r:
             self.failUnless(status)
             self.assertEquals(result, None)
-        
+
 
 class TLSTestCase(IMAP4HelperMixin, unittest.TestCase):
     serverCTX = ServerTLSContext and ServerTLSContext()
