@@ -982,8 +982,17 @@ def getRemoteURL_TCP(host, port, pathname, *interfaces):
     reactor.connectTCP(host, port, f)
     return d
 
+# callRemoteURL_TCP is temporary, for testing. Use callRemoteURL() instead.
 def callRemoteURL_TCP(_host, _port, _pathname,
                       _interface, _methodname, **args):
     d = getRemoteURL_TCP(_host, _port, _pathname, _interface)
+    d.addCallback(lambda ref: ref.callRemote(_methodname, **args))
+    return d
+
+def getRemoteURL(url, *interfaces):
+    raise NotImplementedError("glyph said he'd write this")
+
+def callRemoteURL(_url, _interface, _methodname, **args):
+    d = getRemoteURL(_url, _interface)
     d.addCallback(lambda ref: ref.callRemote(_methodname, **args))
     return d
