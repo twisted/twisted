@@ -349,7 +349,7 @@ class TimeoutMixin:
         self.__timeoutCall = None
 
         now = time.time()
-        if now - self.__lastReceived() > self.timeOut:
+        if now - self.__lastReceived > self.timeOut:
             self.timeoutConnection()
         else:
             when = self.__lastReceived - now + self.timeOut
