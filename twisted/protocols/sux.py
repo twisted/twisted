@@ -82,19 +82,24 @@ class XMLParser(Protocol):
             self.state = 'begin'
         curState = self.state
         stateFn = getattr(self, 'do_' + curState)
+        lineno, colno = self.lineno, self.colno
+        def saveMark():
+            return (lineno, colno)
+        self.saveMark = saveMark
         for byte in data:
             # do newline stuff
             if byte == '\n':
-                self.lineno += 1
-                self.colno = 0
+                lineno += 1
+                colno = 0
             else:
-                self.colno += 1
+                colno += 1
             newState = stateFn(byte)
             if newState is not None and newState != curState:
                 getattr(self, "end_" + curState, nop)()
                 getattr(self, "begin_" + newState, nop)(byte)
                 curState = newState
                 stateFn = getattr(self, "do_" + curState)
+        self.lineno, self.colno = lineno, colno
         self.state = curState
 
     # state methods
