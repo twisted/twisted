@@ -22,7 +22,11 @@
 # Twisted imports
 from twisted.protocols import basic
 from twisted.internet import protocol, defer, reactor
-from twisted.python import log, components, util, reflect
+from twisted.python import log
+from twisted.python import components
+from twisted.python import util
+from twisted.python import reflect
+from twisted.python import tpfile
 
 # System imports
 import time, string, re, base64, types, socket, os, random
@@ -788,9 +792,10 @@ class SMTPClient(basic.LineReceiver):
             self.sendLine('RCPT TO:%s' % quoteaddr(self.lastAddress))
 
     def smtpState_data(self, code, resp):
-        self.mailFile = self.getMailData()
-        self.lastsent = ''
-        self.transport.registerProducer(self, 0)
+        s = tpfile.FileSender()
+        s.beginFileTransfer(
+            self.getMailData(), self.transport, self.transformChunk
+        ).addCallback(self.finishedFileTransfer)
         self._expected = SUCCESS
         self._okresponse = self.smtpState_msgSent
 
@@ -820,32 +825,20 @@ class SMTPClient(basic.LineReceiver):
         self.sendLine('RSET')
         self._exected = SUCCESS
         self._okresponse = self.smtpState_from
-        
-    # IProducer interface
-    def resumeProducing(self):
-        """Write another """
-        if self.mailFile:
-            chunk = self.mailFile.read(8192)
-        if not self.mailFile or not chunk:
-            self.mailFile = None
-            self.transport.unregisterProducer()
-            if self.lastsent != '\n':
-                line = '\r\n.'
-            else:
-                line = '.'
-            self.sendLine(line)
-            return
+     
+    ##   
+    ## Helpers for FileSender
+    ##
+    def transformChunk(self, chunk):
+        return chunk.replace('\n', '\r\n').replace('\r\n.', '\r\n..')
 
-        chunk = string.replace(chunk, "\n", "\r\n")
-        chunk = string.replace(chunk, "\r\n.", "\r\n..")
-        self.transport.write(chunk)
-        self.lastsent = chunk[-1]
-
-    def pauseProducing(self):
-        pass
-
-    def stopProducing(self):
-        self.mailFile = None
+    def finishedFileTransfer(self, lastsent):
+        if lastsent != '\n':
+            line = '\r\n.'
+        else:
+            line = '.'
+        self.sendLine(line)
+    ##
 
     def connectionLost(self, reason=protocol.connectionDone):
         """We are no longer connected"""

@@ -1678,13 +1678,18 @@ class IMAP4Client(basic.LineReceiver):
         )
         continuation = defer.Deferred()
         continuation.addCallback(self.__cbContinueAppend, message)
+        continuation.addErrback(self.__ebContinueAppend)
         d = self.sendCommand(Command('APPEND', cmd, continuation))
         d.addCallback(self.__cbAppend)
         return d
 
     def __cbContinueAppend(self, lines, message):
-        # XXX
-        self.transport.write(message.read())
+        s = basic.FileSender()
+        return s.beginFileTransfer(message, self.transport, lambda x: x)
+
+    def __ebContinueAppend(self, failure):
+        log.err()
+        return failure
 
     def __cbAppend(self, result):
         return None

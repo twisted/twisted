@@ -35,6 +35,7 @@ from twisted.internet import defer
 from twisted.internet import interfaces
 from twisted.python import components
 from twisted.python import log
+from twisted.python import tpfile
 
 from twisted import cred
 import twisted.cred.error
@@ -177,26 +178,19 @@ class POP3(basic.LineReceiver):
             return
         size = max(int(size), resp)
         self.successResponse(size)
-        self.msgFile = fp
-        self.transport.registerProducer(self, 0)
+        s = tpfile.FileSender()
+        s.beginFileTransfer(fp, self.transport, self.transformChunk
+        ).addCallback(self.finishedFileTransfer)
     
-    def resumeProducing(self):
-        if self.msgFile:
-            chunk = self.msgFile.read(8192)
-        if not self.msgFile or not chunk:
-            self.mailFile = None
-            self.transport.unregisterProducer()
-            if self.lastsent != '\n':
-                line = '\r\n.'
-            else:
-                line = '.'
-            self.sendLine('.')
-            return
+    def transformChunk(self, chunk):
+        return chunk.replace('\n', '\r\n').replace('\r\n.', '\r\n..')
 
-        chunk = chunk.replace('\n', '\r\n')
-        chunk = chunk.replace('\r\n.', '\r\n..')
-        self.transport.write(chunk)
-        self.lastsent = chunk[-1]
+    def finishedFileTransfer(self, lastsent):
+        if self.lastsent != '\n':
+            line = '\r\n.'
+        else:
+            line = '.'
+        self.sendLine('.')
         
     def do_RETR(self, i):
         self.highest = max(self.highest, i)
