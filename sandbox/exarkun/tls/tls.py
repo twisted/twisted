@@ -5,6 +5,8 @@ import hmac
 import time
 import struct
 
+from twisted.python import components
+
 def P_hash(hash, secret, seed, bytes):
     """Data expansion function.
     
@@ -47,6 +49,10 @@ def XOR(A, B):
 def PRF(secret, label, seed):
     S1, S2 = dividedSecret(secret)
     return XOR(P_MD5(S1, label + seed), P_SHA1(S2, label + seed))
+
+class IEncodable(components.Interface):
+    def encode(self):
+        pass
 
 class ConnectionState:
     """Describes the security parameters for a TLS Connection read or write state
@@ -251,15 +257,32 @@ class Handshake:
         high = len(body) >> 8
         low = len(body) & 0xff
         return struct.pack('>BHB', self.handshakeType, high, low) + body
-    
+
+class Random:
+    __implements__ = (IEncodable,)
+
+    def __init__(self, tstamp=None, rbytes=None):
+        self.time = tstamp or int(time.time())
+        self.rbytes = rbytes or getRandomBytes(28)
+
+    def encode(self):
+        return struct.pack('>I', self.time) + self.rbytes
+
 class ClientHello(Handshake):
-    def __init__(self, bytes):
+    def __init__(self, random, session_id, ciphers, compressors):
         Handshake.__init__(self, Handshake.CLIENT_HELLO)
-        self.gmt_unix_time = int(time.time())
-        self.bytes = bytes
+        self.random = random
+        self.sessionID = session_id
+        self.ciphers = ciphers
+        self.compressors = compressors
     
     def handshake_encode(self):
-        return struct.pack('>I', self.gmt_unix_time) + self.bytes
+        rand = self.random.encode()
+        sess = chr(len(self.sessionID)) + self.sessionID
+        ciph = ''.join([struct.pack('>H', c) for c in self.ciphers])
+        ciph = struct.pack('>H', len(ciph)) + ciph
+        comp = chr(len(self.compressors)) + ''.join(map(chr, self.compressors))
+        return rand + sess + ciph + comp
 
 import sys
 sys.path.append('../../pahan/statefulprotocol')
@@ -297,7 +320,7 @@ class TLSClient(StatefulProtocol):
         StatefulProtocol.dataReceived(self, data)
 
     def connectionMade(self):
-        self.send(ClientHello('x' * 28))
+        self.send(ClientHello('x' * 28, '', [], []))
 
     def state_RecordType(self, data):
         method, length = self.CONTENT_TYPE_MAP[data]
