@@ -682,7 +682,7 @@ static PyMethodDef iocpcore_methods[] = {
 static PyTypeObject iocpcoreType = {
     PyObject_HEAD_INIT(NULL)
     0,                         /*ob_size*/
-    "iocpcore.iocpcore",             /*tp_name*/
+    "_iocp.iocpcore",             /*tp_name*/
     sizeof(iocpcore),             /*tp_basicsize*/
     0,                         /*tp_itemsize*/
     (destructor)iocpcore_dealloc, /*tp_dealloc*/
