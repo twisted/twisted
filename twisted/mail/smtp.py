@@ -1036,7 +1036,7 @@ class SMTPClient(basic.LineReceiver):
 
 class ESMTPClient(SMTPClient):
     # Fall back to HELO if the server does not support EHLO
-    heloFallback = 1
+    heloFallback = True
 
     # Refuse to proceed if authentication cannot be performed
     requireAuthentication = False
@@ -1075,7 +1075,6 @@ class ESMTPClient(SMTPClient):
             self._failresponse = self.smtpState_helo
 
 
-    ###XXX: New method
     def esmtpState_serverConfig(self, code, resp):
         items = {}
         for line in resp.splitlines():
@@ -1321,15 +1320,17 @@ class SenderMixin:
             for addr, acode, aresp in addresses:
                 if code not in SUCCESS:
                     errlog.append("%s: %03d %s" % (addr, acode, aresp))
+
             if numOk:
                 errlog.append(str(log))
+
             exc = SMTPDeliveryError(code, resp, '\n'.join(errlog), addresses)
             self.factory.result.errback(exc)
         else:
             self.factory.result.callback((numOk, addresses))
 
 
-class SMTPSender(SMTPClient, SenderMixin):
+class SMTPSender(SenderMixin, SMTPClient):
     pass
 
 
@@ -1430,7 +1431,7 @@ class PLAINAuthenticator:
            return "%s\0%s" % (self.user, secret)
 
 
-class ESMTPSender(ESMTPClient, SenderMixin):
+class ESMTPSender(SenderMixin, ESMTPClient):
 
     requireAuthentication = True
     requireTransportSecurity = True
@@ -1466,13 +1467,21 @@ class ESMTPSenderFactory(SMTPSenderFactory):
 
     protocol = ESMTPSender
 
-    def __init__(self, username, password, fromEmail, toEmail, file, deferred, retries=5):
+    def __init__(self, username, password, fromEmail, toEmail, file, deferred, retries=5,
+                 heloFallback=False, requireAuthentication=True, requireTransportSecurity=True):
+
         SMTPSenderFactory.__init__(self, fromEmail, toEmail, file, deferred, retries)
         self.username = username
         self.password = password
+        self._heloFallback = heloFallback
+        self._requireAuthentication = requireAuthentication
+        self._requireTransportSecurity = requireTransportSecurity
 
     def buildProtocol(self, addr):
         p = self.protocol(self.username, self.password, self.domain, len(self.toEmail)*2+2)
+        p.heloFallback = self._heloFallback
+        p.requireAuthentication = self._requireAuthentication
+        p.requireTransportSecurity = self._requireTransportSecurity
         p.factory = self
         return p
 
