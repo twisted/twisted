@@ -149,6 +149,10 @@ class LineReceiver(protocol.Protocol):
     delimiter = '\r\n'
     MAX_LENGTH = 16384
 
+    def clearLineBuffer(self):
+        """Clear buffered data."""
+        self.__buffer = ""
+    
     def dataReceived(self, data):
         """Protocol.dataReceived.
         Translates bytes into lines, and calls lineReceived (or
@@ -171,7 +175,7 @@ class LineReceiver(protocol.Protocol):
                     self.lineLengthExceeded(line)
                     return
                 self.lineReceived(line)
-                if self.transport.disconnecting:
+                if self.transport != None and self.transport.disconnecting:
                     return
         else:
             data, self.__buffer = self.__buffer, ''
