@@ -204,6 +204,20 @@ class ThreadedResolver:
 
 components.backwardsCompatImplements(ThreadedResolver)
 
+class BlockingResolver:
+    implements(IResolverSimple)
+
+    def getHostByName(self, name, timeout = (1, 3, 11, 45)):
+        try:
+            address = socket.gethostbyname(name)
+        except socket.error:
+            msg = "address %r not found" % (name,)
+            err = error.DNSLookupError(msg)
+            return defer.fail(err)
+        else:      
+            return defer.succeed(address)
+
+components.backwardsCompatImplements(BlockingResolver)
 
 class ReactorBase:
     """Default base class for Reactors.
@@ -222,8 +236,8 @@ class ReactorBase:
         self._cancellations = 0
         self.running = 0
         self.waker = None
-        self.resolver = ThreadedResolver(self)
         self.usingThreads = 0
+        self.resolver = BlockingResolver()
         self.addSystemEventTrigger('during', 'shutdown', self.crash)
         self.addSystemEventTrigger('during', 'shutdown', self.disconnectAll)
         threadable.whenThreaded(self.initThreads)
@@ -626,7 +640,7 @@ class BaseConnector(styles.Ephemeral):
 
     def connectionFailed(self, reason):
         self.cancelTimeout()
-        del self.transport
+        self.transport = None
         self.state = "disconnected"
         self.factory.clientConnectionFailed(self, reason)
         if self.state == "disconnected":
