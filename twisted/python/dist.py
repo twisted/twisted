@@ -24,7 +24,7 @@ def setup(**kw):
         kw['packages'] = getPackages(projdir, parent='twisted')
         kw['data_files'] = getDataFiles(projdir, parent='twisted')
         del kw['twisted_subproject']
-        if not 'scripts' in kw:
+        if not 'scripts' in kw and os.path.exists('bin'):
             scriptdir = os.path.join('bin', projname)
             if not os.path.isdir(scriptdir):
                 scriptdir = 'bin'

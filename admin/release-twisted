@@ -231,10 +231,12 @@ def createSubprojectDirectory(proj, version):
     sh('''
     ln -s `pwd`/Twisted.exp/twisted/%(proj)s/* %(sdir)s/twisted/%(proj)s
     rm %(sdir)s/twisted/%(proj)s/topfiles
-    ln -s `pwd`/Twisted.exp/doc/%(proj)s %(sdir)s/doc
-    ln -s `pwd`/Twisted.exp/bin/%(proj)s %(sdir)s/bin
     ln -s `pwd`/Twisted.exp/twisted/%(proj)s/topfiles/* %(sdir)s
     ''' % locals())
+    if os.path.exists('Twisted.exp/doc/'+proj):
+        sh('ln -s `pwd`/Twisted.exp/doc/%(proj)s %(sdir)s/doc' % locals())
+    if os.path.exists('Twisted.exp/bin/'+proj):
+        sh('ln -s `pwd`/Twisted.exp/bin/%(proj)s %(sdir)s/bin' % locals())
 
 
 def makeMakeBall(proj):
@@ -302,7 +304,6 @@ def makeBalls(opts):
 
 
 def finalizeTag(opts):
-    # atomic-assumption
     sh('svn mv -m "Finalizing release of %s" %s %s'
        % (opts['base-version'], opts['temptagurl'], opts['tagurl']))
 
