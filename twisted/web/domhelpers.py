@@ -143,11 +143,12 @@ For example::
 @rtype: str
 """
     gathered=[]
+    gathered_append=gathered.append
     slice=[iNode]
     while len(slice)>0:
         c=slice.pop(0)
         if hasattr(c, 'nodeValue') and c.nodeValue is not None:
-            gathered.append(c.nodeValue)
+            gathered_append(c.nodeValue)
         slice=c.childNodes+slice
     return ''.join(gathered)
 
