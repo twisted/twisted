@@ -730,21 +730,21 @@ listed in the Banana <a href="banana.xhtml">docs</a>.</p>
 object).</p>
 
 <table border="" width="">
-  <TR><TD colspan="2">PB (method call) Sequences</TD></TR>
+  <tr><td colspan="2">PB (method call) Sequences</td></tr>
 
-  <TR><TD>method call (<code>callRemote</code>)</TD>
-      <TD>OPEN(call) INT(request-id) INT/STR(your-reference-id)
+  <tr><td>method call (<code>callRemote</code>)</td>
+      <td>OPEN(call) INT(request-id) INT/STR(your-reference-id)
         STRING(interfacename) STRING(methodname)
         (STRING(argname),argvalue)..
-        CLOSE</TD></TR>
+        CLOSE</td></tr>
 
-  <TR><TD>method response (success)</TD>
-      <TD>OPEN(answer) INT(request-id) value CLOSE</TD></TR>
-  <TR><TD>method response (exception)</TD>
-      <TD>OPEN(error) INT(request-id) value CLOSE</TD></TR>
+  <tr><td>method response (success)</td>
+      <td>OPEN(answer) INT(request-id) value CLOSE</td></tr>
+  <tr><td>method response (exception)</td>
+      <td>OPEN(error) INT(request-id) value CLOSE</td></tr>
 
-  <TR><TD>RemoteReference.__del__</TD>
-      <TD>OPEN(decref) INT(your-reference-id) CLOSE</TD></TR>
+  <tr><td>RemoteReference.__del__</td>
+      <td>OPEN(decref) INT(your-reference-id) CLOSE</td></tr>
   
 </table>
 
@@ -755,19 +755,19 @@ never appear at the top-level, but only as the argument value or return
 value (or somewhere inside them).</p>
 
 <table border="" width="">
-  <TR><TD colspan="2">PB (method call) Sequences</TD></TR>
+  <tr><td colspan="2">PB (method call) Sequences</td></tr>
 
-  <TR><TD>pb.Referenceable</TD>
-      <TD>OPEN(my-reference) INT(clid)
+  <tr><td>pb.Referenceable</td>
+      <td>OPEN(my-reference) INT(clid)
         [OPEN(list) InterfaceList.. CLOSE]
-        CLOSE</TD></TR>
+        CLOSE</td></tr>
 
-  <TR><TD>pb.RemoteReference</TD>
-      <TD>OPEN(your-reference) INT/STR(clid)
-        CLOSE</TD></TR>
+  <tr><td>pb.RemoteReference</td>
+      <td>OPEN(your-reference) INT/STR(clid)
+        CLOSE</td></tr>
 
-  <TR><TD>pb.Copyable</TD><TD>OPEN(copyable) STRING(reflect.qual(class))
-  (attr,value).. CLOSE</TD></TR>
+  <tr><td>pb.Copyable</td><td>OPEN(copyable) STRING(reflect.qual(class))
+  (attr,value).. CLOSE</td></tr>
 
 </table>
 
