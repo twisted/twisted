@@ -24,6 +24,8 @@ from twisted.python import components
 from twisted.python import util
 from twisted.internet import defer
 
+import hmac
+
 try:
     from crypt import crypt
 except ImportError:
@@ -119,7 +121,7 @@ class CramMD5CredentialsTestCase(unittest.TestCase):
     def testCheckPassword(self):
         c = credentials.CramMD5Credentials()
         chal = c.getChallenge()
-        c.response = util.keyed_md5('secret', chal)
+        c.response = hmac.HMAC('secret', chal).hexdigest()
         self.failUnless(c.checkPassword('secret'))
 
     def testWrongPassword(self):

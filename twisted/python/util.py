@@ -18,9 +18,12 @@
 
 from __future__ import nested_scopes, generators
 
-__version__ = '$Revision: 1.41 $'[11:-2]
+__version__ = '$Revision: 1.42 $'[11:-2]
 
-import os, sys
+import os
+import sys
+import hmac
+
 from UserDict import UserDict
 
 class InsensitiveDict:
@@ -328,24 +331,12 @@ def str_xor(s, b):
 
 def keyed_md5(secret, challenge):
     """Create the keyed MD5 string for the given secret and challenge."""
-    opad = 0x5C
-    ipad = 0x36
-
-    import md5
-
-    if len(secret) < 64:
-        secret = secret + (64 - len(secret)) * '\0'
-    elif len(secret) > 64:
-        # Is this supposed to be zero-padded to 64 bytes?  I don't know :(
-        secret = md5.new(secret).digest()
-
-    return md5.new(
-        str_xor(secret, opad) +
-        md5.new(
-            str_xor(secret, ipad) + challenge
-        ).digest()
-    ).hexdigest()
-
+    import warnings
+    warnings.warn(
+        "keyed_md5() is deprecated.  Use the stdlib module hmac instead.",
+        DeprecationWarning, stacklevel=2
+    )
+    return hmac.HMAC(secret, challenge).hexdigest()
 
 def makeStatBar(width, maxPosition, doneChar = '=', undoneChar = '-', currentChar = '>'):
     """Creates a function that will return a string representing a progress bar.

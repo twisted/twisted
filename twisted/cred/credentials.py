@@ -3,6 +3,7 @@
 from twisted.python import components
 from twisted.python import util
 
+import hmac
 import time
 import random
 
@@ -103,7 +104,7 @@ class CramMD5Credentials:
         return self.challenge
 
     def checkPassword(self, password):
-        verify = util.keyed_md5(password, self.challenge)
+        verify = hmac.HMAC(password, self.challenge).hexdigest()
         return verify == self.response
 
 class UsernameHashedPassword:

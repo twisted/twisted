@@ -48,6 +48,7 @@ import twisted.cred.credentials
 
 import base64
 import binascii
+import hmac
 import re
 import tempfile
 import string
@@ -3179,7 +3180,7 @@ class CramMD5ClientAuthenticator:
         return "CRAM-MD5"
 
     def challengeResponse(self, secret, chal):
-        response = util.keyed_md5(secret, chal)
+        response = hmac.HMAC(secret, chal).hexdigest()
         return '%s %s' % (self.user, response)
 
 class MailboxException(IMAP4Exception): pass
