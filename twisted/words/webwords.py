@@ -117,9 +117,9 @@ class WordsGadget(widgets.Gadget, widgets.Widget, styles.Versioned):
 
 
     def display(self, request):
-        return [html.linkList([[request.childLink("create"),
+        return [html.linkList([[request.sibLink("create"),
                                 "Create an Account"],
-                               [request.childLink("users"),
+                               [request.sibLink("users"),
                                 "View the list of Participants"]])]
     
     
