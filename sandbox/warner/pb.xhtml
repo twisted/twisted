@@ -186,7 +186,9 @@ you against memory consumption attacks.</p>
 <p>RemoteInterfaces are passed by name. Each side of a PB connection has a
 table which maps names to RemoteInterfaces (subclasses of
 <code>pb.RemoteInterface</code>). Metaclass magic is used to add an entry to
-this table each time you define a RemoteInterface subclass.</p>
+this table each time you define a RemoteInterface subclass, using the
+<code>__remote_name__</code> attribute (or reflect.qual() if that is not
+set).</p>
 
 <p>Each <code>Referenceable</code> that goes over the wire is accompanied by
 the list of RemoteInterfaces which it claims to implement. On the receiving
@@ -207,7 +209,7 @@ something that will exist with a <q>remote_</q> prefix on any
 value of each parameter is something which can be turned into a
 <code>Constraint</code> according to the rules of schema.makeConstraint .
 This means you can use things like <code>(int, str, str)</code> to mean a
-tuple of exactly those three items.</p>
+tuple of exactly those three types.</p>
 
 <p>Note that the methods of the RemoteInterface do <em>not</em> list
 <q>self</q> as a parameter. As the zope.interface documentation points out,
@@ -235,7 +237,8 @@ brainstorming sessions have come up with the following ideas:</p>
 </ul>
 
 <p>We are also considering how to merge the RemoteInterface with other useful
-interface specifications, in particular zope.interface and formless.</p>
+interface specifications, in particular zope.interface and
+formless.TypedInterface .</p>
 
 
 <h2>Argument Transformation</h2>
@@ -373,13 +376,12 @@ qualities.</p>
 <p>Some objects can be marked to indicate that they should be copied bodily
 each time they traverse the wire (pass-by-value instead of
 pass-by-reference). Classes which inherit from <code>pb.Copyable</code> are
-passed-by-value. Their <code>getTypeToCopy</code> and
+passed by value. Their <code>getTypeToCopy</code> and
 <code>getStateToCopy</code> methods are used to assemble the data that will
 be serialized. These methods default to plain old <code>reflect.qual</code>
-and <code>__dict__</code>, which just uses the fully-qualified name of the
-class and its regular <code>__dict__</code>. You can override these to
-provide a different (or smaller) set of state attributes to the remote
-end.</p>
+(which provides the fully-qualified name of the class) and the instance's
+attribute <code>__dict__</code>. You can override these to provide a
+different (or smaller) set of state attributes to the remote end.</p>
 
 
 <pre class="python">
@@ -431,13 +433,16 @@ registerAdapter(Source3Copier, Source3, flavors.ICopyable)
 <p>On the other end of the wire, the receiving side must register a
 <code>RemoteCopy</code> subclass under the same name as returned by the
 sender's <code>getTypeToCopy</code> value. This subclass is used as a factory
-to create instances that correspond to the original <code>Copyable</code>.</p>
+to create instances that correspond to the original <code>Copyable</code>.
+The registration can either take place explicitly (with
+<code>pb.registerRemoteCopy</code>), or automatically (by setting the
+<code>copytype</code> attribute in the class definition).</p>
 
 <p>The default <code>RemoteCopy</code> behavior simply sets the instance's
-<code>__dict__</code> to the incoming state, which may be plenty if you trust
-your sender enough to let them arbitrarily manipulate your object state. If
-so, and you believe both peers are importing the same source file, it is
-enough to register the <code>RemoteCopy</code> at the same time you create
+<code>__dict__</code> to the incoming state, which may be plenty if you are
+willing to let outsiders arbitrarily manipulate your object state. If so, and
+you believe both peers are importing the same source file, it is enough to
+create and register the <code>RemoteCopy</code> at the same time you create
 the <code>Copyable</code>:</p>
 
 <pre class="python">
@@ -448,9 +453,7 @@ class Source(pb.Copyable):
         state['children'] = []
         return state
 class Remote(pb.RemoteCopy):
-    pass
-# TODO: it ought to be possible to do pb.registerRemoteCopy(Source, Remote)
-pb.registerRemoteCopy(reflect.qual(Source), Remote)
+    copytype = reflect.qual(Source)
 </pre>
 
 <p>You can do something special with the incoming object state by overriding
@@ -463,12 +466,16 @@ class Remote(pb.RemoteCopy):
         state['count'] = 0
         self.__dict__ = state
         self.total = self.one + self.two
+
+# show explicit registration, instead of using 'copytype' class attribute
+pb.registerRemoteCopy(reflect.qual(Source), Remote)
 </pre>
 
-<p>You can also set a <q>constraint</q> on the inbound object state, which
-provides a way to enforce some type checking on the state components as they
-arrive. This protects against resource-consumption attacks where someone
-sends you a zillion-byte string as part of the object's state.</p>
+<p>You can also set a <a href="schema.xhtml">constraint</a> on the inbound
+object state, which provides a way to enforce some type checking on the state
+components as they arrive. This protects against resource-consumption attacks
+where someone sends you a zillion-byte string as part of the object's
+state.</p>
 
 <pre class="python">
 class Remote(pb.RemoteCopy):
@@ -486,12 +493,200 @@ constraints.</p>
 
 <h3>Slicers, ISlicer</h3>
 
-<p>Each object gets <q>Sliced</q> as it goes over the wire: Referenceable
-and Copyable are merely special cases. They have Slicers which implement
-specific behaviors when they appear before the serialization process. You
-can implement your own Slicers to do other things.</p>
+<p>Each object gets <q>Sliced</q> into a stream of tokens as they go over the
+wire: Referenceable and Copyable are merely special cases. These classes have
+Slicers which implement specific behaviors when the serialization process is
+asked to send their instances to the remote side. You can implement your own
+Slicers to take complete control over the serialization process. The most
+useful reason to take advantage of this feature is to implement <q>streaming
+slicers</q>, which can minimize in-memory buffering by only producing Banana
+tokens on demand as space opens up in the transport.</p>
 
-<p>TODO: more text</p>
+<p>Banana Slicers are documented in detail in the <a
+href="banana.xhtml">Banana</a> documentation. Once you create a Slicer class,
+you will want to <q>register</q> it, letting Banana know that this Slicer is
+useful for conveying certain types of objects across the wire. The registry
+maps a type to a Slicer class (which is really a slicer factory), and is
+implemented by registering the slicer as a regular <q>adapter</q> for the
+<code>ISlicer</code> interface. For example, lists are serialized by the
+<code>ListSlicer</code> class, so <code>ListSlicer</code> is registered as
+the slicer for the <code>list</code> type:</p>
+
+<pre class="python">
+class ListSlicer(BaseSlicer):
+    opentype = ("list",)
+    slices = list
+</pre>
+
+<p>Slicer registration can be either explicit or implicit. In this example,
+an implicit registration is used: by setting the <q>slices</q> attribute to
+the <code>list</code> type, the BaseSlicer's metaclass automatically
+registers the mapping from <code>list</code> to ListSlicer.</p>
+
+<p>To explicitly register a slicer, just leave <code>opentype</code> set to
+None (to disable auto-registration), and then register the slicer
+manually.</p>
+
+<pre class="python">
+class TupleSlicer(BaseSlicer):
+    opentype = ("tuple",)
+    slices = None
+    ...
+registerAdapter(TupleSlicer, tuple, pb.ISlicer)
+</pre>
+
+<p>As with ICopyable, registering an ISlicer adapter allows you to define
+exactly how you wish to serialize third-party classes which you do not get to
+modify.</p>
+
+
+<h3>Unslicers</h3>
+
+<p>On the other side of the wire, the incoming token stream is handed to an
+<code>Unslicer</code>, which is responsible for turning the set of tokens
+into a single finished object. They are also responsible for enforcing limits
+on the types and sizes of the tokens that make up the stream. Unslicers are
+also described in greater detail in the <a href="banana.xhtml">Banana</a>
+docs.</p>
+
+<p>As with Slicers, Unslicers need to be registered to be useful. This
+registry maps <q>opentypes</q> to Unslicer classes (i.e. factories which can
+produce an unslicer instance each time the given opentype appears in the
+token stream). Therefore it maps tuples to subclasses of
+<code>BaseUnslicer</code>.</p>
+
+<p>Again, this registry can be either implicit or explicit. If the Unslicer
+has a non-None class attribute named <code>opentype</code>, then it is
+automatically registered. If it does not have this attribute (or if it is set
+to None), then no registration is performed, and the Unslicer must be
+manually registered:</p>
+
+<pre class="python">
+class MyUnslicer(BaseUnslicer):
+    ...
+
+pb.registerUnslicer(('myopentype',), MyUnslicer)
+</pre>
+
+<p>Also remember that this registry is global, and that you cannot register
+two Unslicers for the same opentype (you'll get an exception at
+class-definition time, which will probably result in an ImportError).</p>
+
+
+<h3>Slicer/Unslicer Example</h3>
+
+<p>The simplest kind of slicer has a <code>sliceBody</code> method (a
+generator) which yields a series of tokens. To demonstrate how to build a
+useful Slicer, we'll write one that can send large strings across the wire in
+pieces. Banana can send arbitrarily long strings in a single token, but each
+token must be handed to the transport layer in an indivisble chunk, and
+anything that doesn't fit in the transmit buffers will be stored in RAM until
+some space frees up in the socket. Practically speaking, this means that
+anything larger than maybe 50kb will spend a lot of time in memory,
+increasing the RAM footprint for no good reason.</p>
+
+<p>Because of this, it is useful to be able to send large amounts of data in
+smaller pieces, and let the remote end reassemble them. The following Slicer
+is registered to handle all open files (perhaps not the best idea), and
+simply emits the contents in 10kb chunks.</p>
+
+<p>(readers familiar with oldpb will notice that this Slicer/Unslicer pair
+provide similar functionality to the old FilePager class. The biggest
+improvement is that newpb can accomplish this without the extra round-trip
+per chunk. On the other side, unless you enable streaming in your Broker, no
+other methods can be invoked while the file is being transmitted.)</p>
+
+<pre class="python">
+class BigFileSlicer(BaseSlicer):
+    opentype = ("bigfile",)
+    slices = types.FileType
+    CHUNKSIZE = 10000
+
+    def sliceBody(self, streamable, banana):
+        while 1:
+            chunk = self.obj.read(self.CHUNKSIZE)
+            if not chunk:
+                return
+            yield chunk
+</pre>
+
+<p>To receive this, you would use the following minimal Unslicer at the other
+end. Note that this Unslicer does not do as much as it could in the way of
+constraint enforcement: an attacker could easily make you consume as much
+memory as they wished by simply sending you a never-ending series of
+chunks.</p>
+
+<pre class="python">
+class BigFileUnslicer(LeafUnslicer):
+    opentype = ("bigfile",)
+
+    def __init__(self):
+        self.chunks = []
+
+    def checkToken(self, typebyte, size):
+        if typebyte != tokens.STRING:
+            raise BananaError("BigFileUnslicer only accepts strings")
+
+    def receiveChild(self, obj):
+        self.chunks.append(obj)
+
+    def receiveClose(self):
+        return "".join(self.chunks)
+</pre>
+
+<p>The <code>opentype</code> attribute causes this Unslicer to be implicitly
+registered to handle any incoming sequences with an <q>index tuple</q> of
+<code>("bigfile",)</code>, so each time BigFileSlicer is used, a
+BigFileUnslicer will be created to handle the results.</p>
+
+<p>A more complete example would want to write the file chunks to disk at
+they arrived, or process them incrementally. It might also want to have some
+way to limit the overall size of the file, perhaps by having the first chunk
+be an integer with the promised file size. In this case, the example might
+look like this somewhat contrived (and somewhat insecure) Unslicer:</p>
+
+<pre class="python">
+class SomewhatLargeFileUnslicer(LeafUnslicer):
+    opentype = ("bigfile",)
+
+    def __init__(self):
+        self.fileSize = None
+        self.size = 0
+        self.output = open("/tmp/bigfile.txt", "w")
+
+    def checkToken(self, typebyte, size):
+        if self.fileSize is None:
+            if typebyte != tokens.INT:
+                raise BananaError("fileSize must be an INT")
+        else:
+            if typebyte != tokens.STRING:
+                raise BananaError("BigFileUnslicer only accepts strings")
+            if self.size + size > self.fileSize:
+                raise BananaError("size limit exceeded")
+
+    def receiveChild(self, obj):
+        if self.fileSize is None:
+            self.fileSize = obj
+            # decide if self.fileSize is too big, raise error to refuse it
+        else:
+            self.output.write(obj)
+            self.size += len(obj)
+
+    def receiveClose(self):
+        self.output.close()
+        return open("/tmp/bigfile.txt", "r")
+</pre>
+
+<p>This constrained BigFileUnslicer uses the fact that each STRING token
+comes with a size, which can be used to enforce the promised filesize that
+was provided in the first token. The data is streamed to a disk file as it
+arrives, so no more than CHUNKSIZE of memory is required at any given
+time.</p>
+
+
+<h3>Streaming Slicers</h3>
+
+<p>TODO: add example</p>
 
 <h3>Arbitrary Instances are NOT serialized</h3>
 
@@ -518,8 +713,9 @@ dangerous.</p>
 
 <p>Both ends must be willing to transport the object. The sending side
 expresses this by marking the class (subclassing Copyable, or registering an
-ISlicer adapter). The receiving side must register the class as well (TODO:
-how?).</p>
+ISlicer adapter). The receiving side must register the class as well, by
+doing registerUnslicer or using the <code>opentype</code> attribute in a
+suitable Unslicer subclass definition.</p>
 
 
 <h2>PB Sequences</h2>
@@ -538,17 +734,9 @@ object).</p>
 
   <TR><TD>method call (<code>callRemote</code>)</TD>
       <TD>OPEN(call) INT(request-id) INT/STR(your-reference-id)
-        STRING(methodname)
-        (STRING(argname),argvalue)..
-        CLOSE</TD></TR>
-
-  <TR><TD>method call++ (<code>callRemoteInterface</code>)</TD>
-      <TD>OPEN(call2) INT(request-id) INT/STR(your-reference-id)
         STRING(interfacename) STRING(methodname)
         (STRING(argname),argvalue)..
-        CLOSE
-        (this could be folded into 'call' with only 2 bytes of overhead)
-      </TD></TR>
+        CLOSE</TD></TR>
 
   <TR><TD>method response (success)</TD>
       <TD>OPEN(answer) INT(request-id) value CLOSE</TD></TR>

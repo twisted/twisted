@@ -191,7 +191,6 @@ class IRemoteCopy(Interface):
 
     Note that the constructor of an IRemoteCopy class will be called without
     any arguments.
-    
     """
 
     def setCopyableState(self, statedict):
@@ -218,7 +217,37 @@ class IRemoteCopy(Interface):
     passed to setCopyableState.""")
 
 
+CopyableRegistry = {}
+def registerRemoteCopy(typename, factory, registry=None):
+    """Tell PB that 'factory' can be used to handle Copyable objects that
+    provide a getTypeToCopy name of 'typename'. 'factory' can be a
+    RemoteCopy subclass (it implements IRemoteCopy), or they can be an
+    Unslicer class (it implements IUnslicer). In addition, IRemoteCopy
+    factories with a true .nonCyclic attribute will be created with the
+    NonCyclicRemoteCopyUnslicer.
+    """
+    # to get more control than this, register an Unslicer instead
+    assert (IRemoteCopy.implementedBy(factory) or
+            tokens.IUnslicer.implementedBy(factory))
+    assert type(typename) is str
+    if registry == None:
+        registry = CopyableRegistry
+    assert not registry.has_key(typename)
+    registry[typename] = factory
+
+class RemoteCopyClass(type):
+    # auto-register RemoteCopy classes
+    def __init__(self, name, bases, dict):
+        type.__init__(self, name, bases, dict)
+        copytype = dict.get('copytype')
+        reg = dict.get('copyableRegistry')
+        if copytype:
+            registerRemoteCopy(copytype, self, reg)
+
 class RemoteCopy(object):
+    __metaclass__ = RemoteCopyClass
+    copytype = None
+
     implements(IRemoteCopy)
 
     stateSchema = None # always a class attribute
@@ -319,20 +348,6 @@ class NonCyclicRemoteCopyUnslicer(RemoteCopyUnslicer):
         obj = self.factory()
         obj.setCopyableState(self.d)
         return obj
-
-CopyableRegistry = {}
-def registerRemoteCopy(typename, factory):
-    """Tell PB that 'factory' can be used to handle Copyable objects that
-    provide a getTypeToCopy name of 'typename'. 'factory' can be a
-    RemoteCopy subclass (it implements IRemoteCopy), or they can be an
-    Unslicer class (it implements IUnslicer). In addition, IRemoteCopy
-    factories with a true .nonCyclic attribute will be created with the
-    NonCyclicRemoteCopyUnslicer.
-    """
-    # to be more clever than this, register an Unslicer instead
-    assert (IRemoteCopy.implementedBy(factory) or
-            tokens.IUnslicer.implementedBy(factory))
-    CopyableRegistry[typename] = factory
 
 
 class Referenceable(object):

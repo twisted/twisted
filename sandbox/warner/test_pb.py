@@ -603,7 +603,6 @@ class MyCopyable1(pb.Copyable):
     pass
 class MyRemoteCopy1(pb.RemoteCopy):
     pass
-#print "MyCopyable1:", reflect.qual(MyCopyable1)
 pb.registerRemoteCopy(reflect.qual(MyCopyable1), MyRemoteCopy1)
 
 class MyCopyable2(pb.Copyable):
@@ -612,10 +611,10 @@ class MyCopyable2(pb.Copyable):
     def getStateToCopy(self):
         return {"a": 1, "b": self.b}
 class MyRemoteCopy2(pb.RemoteCopy):
+    copytype = "MyCopyable2name"
     def setCopyableState(self, state):
         self.c = 1
         self.d = state["b"]
-pb.registerRemoteCopy("MyCopyable2name", MyRemoteCopy2)
 
 
 class MyCopyable3(MyCopyable2):
@@ -653,10 +652,10 @@ pb.registerRemoteCopy("MyCopyable3name", MyRemoteCopy3Unslicer)
 class MyCopyable4(pb.Copyable):
     pass
 class MyRemoteCopy4(pb.RemoteCopy):
+    copytype = reflect.qual(MyCopyable4)
     stateSchema = schema.AttributeDictConstraint(('foo', int),
                                                  ('bar', str))
     pass
-pb.registerRemoteCopy(reflect.qual(MyCopyable4), MyRemoteCopy4)
 
 
 class RIHelper(pb.RemoteInterface):
