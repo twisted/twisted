@@ -21,7 +21,7 @@ from __future__ import nested_scopes
 ### Twisted Preamble
 # This makes sure that users don't have to set up their environment
 # specially in order to run these programs from bin/.
-import sys, os, string
+import sys, os, string, time
 if string.find(os.path.abspath(sys.argv[0]), os.sep+'Twisted') != -1:
     sys.path.insert(0, os.path.normpath(os.path.join(os.path.abspath(sys.argv[0]), os.pardir, os.pardir)))
 sys.path.insert(0, os.curdir)
@@ -118,7 +118,7 @@ def main():
         sys.exit(2)
 
     if not opts['commands']:
-        opts['commands'] = ['exp', 'dist', 'docs', 'balls', 'rel']
+        opts['commands'] = ['upver', 'tag', 'exp', 'dist', 'docs', 'balls', 'rel']#, 'debian']
 
     d = {'exp': exportCVS,
          'docs': makeDocs,
@@ -166,8 +166,8 @@ def updateVersions(opts):
     files = ('README', 'doc/howto/installing-twisted.html', 'twisted/copyright.py')
     for file in files:
         replaceInFile(file, oldver, newver)
-    sh('cvs diff')
-    sh('cvs commit %s' % ' '.join(files), 1)
+    sh('cvs -q diff')
+    sh('cvs commit -m "Preparing for %s" %s' % (newver, ' '.join(files)), 1)
     os.chdir('..')
 
 def tag(opts):
