@@ -129,13 +129,11 @@ wrong pathnames to the parsers.</p>
 for more examples regarding twisted.web and CGI.</p>
 
 <pre class="python">
-from twisted.internet import main, app
-from twisted.web import server, static, twcgi
+from twisted.web import static, twcgi
 
 class PerlScript(twcgi.FilteredScript):
     filter = '/usr/bin/perl' # Points to the perl parser
 
-application = app.Application("perlwebserver")
 resource = static.File("/perlsite") # Points to the perl website
 resource.processors = {".pl": PerlScript} # Files that end with .pl will be processed by PerlScript
 resource.indexNames = ['index.pl']
