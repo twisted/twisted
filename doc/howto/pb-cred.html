@@ -78,10 +78,11 @@ don't give her a reference to the wrong object.</p>
 
 <p>Note that the reference that the server gives to a client is only useable
 by that one client: if they try to hand it off to a third party, they'll get
-an exception (XXX: which?). This helps somewhat: only the client you gave
-the reference to can cause any damage with it. Of course, the client might
-be a brainless zombie, simply doing anything some third party wants. When
-it's not proxying <code>callRemote</code> invocations, it's probably terrorizing
+an exception (XXX: which? looks like an assert in pb.py:290
+RemoteReference.jellyFor). This helps somewhat: only the client you gave the
+reference to can cause any damage with it. Of course, the client might be a
+brainless zombie, simply doing anything some third party wants. When it's
+not proxying <code>callRemote</code> invocations, it's probably terrorizing
 the living and searching out human brains for sustenance. In short, if you
 don't trust them, don't give them that reference.</p>
 
@@ -253,11 +254,12 @@ connects, and survives after they disconnect. <code>.attached()</code> and
 <code>.detached()</code> are invoked to let the Perspective know when the user
 has connected and disconnected.</p>
 
-<p> When the client runs <code>pb.connect</code> to establish the connection,
-they can provide it with an optional <code>client</code> argument (which must
-be a <code>pb.Referenceable</code> object). If they do, then a reference to that
-object will be handed to the server-side Perspective's <code>.attached</code>
-method, in the <code>clientref</code> argument. </p>
+<p> When the client runs <code>pb.connect</code> to establish the
+connection, they can provide it with an optional <code>client</code>
+argument (which must be a <code>pb.Referenceable</code> object). If they do,
+then a reference to that object will be handed to the server-side
+Perspective's <code>.attached</code> method, in the <code>clientref</code>
+argument. </p>
 
 <p> The server-side Perspective can use it to invoke remote methods on
 something in the client, so that the client doesn't always have to drive the
@@ -268,11 +270,12 @@ boards. To actually use it, you'd probably want to subclass Perspective and
 change the .attached method to stash the clientref somewhere, because the
 default implementation just drops it.</p>
 
-<p><code>.attached()</code> also receives a reference to the <code>Identity</code>
-object that represents the user. (The user has proved, by using a password
-of some sort, that they are that <code>Identity</code>, and then they can access
-any service/perspective on the Identity's keyring). The method can use that
-reference to extract more information about the user.</p>
+<p><code>.attached()</code> also receives a reference to the
+<code>Identity</code> object that represents the user. (The user has proved,
+by using a password of some sort, that they are that <code>Identity</code>,
+and then they can access any service/perspective on the Identity's keyring).
+The method can use that reference to extract more information about the
+user.</p>
 
 <p>In addition, <code>.attached()</code> has the opportunity to return a
 different Perspective, if it so chooses. You could have all users initially
@@ -282,15 +285,15 @@ their individual Identities. The client will get a reference to whatever
 <code>.attached()</code> returns, so the default case is to 'return self'.</p>
 
 <p>Finally, when the client goes away (i.e., the network connection has been
-closed), <code>.detached()</code> will be called. The Perspective can use this
-to mark the user as having gone away: this may mean that outgoing messages
-should be queued in the Perspective until they reconnect, or callers should
-be given an error message because they messages cannot be delivered, etc. It
-can also be used to terminate or suspend any sessions the user was
-participating in. <code>detached</code> is called with the same 'clientref' and
-Identity objects that were given to the original 'attached' call. It will be
-invoked on the Perspective object that was returned by <code>.attached()</code>.
-</p>
+closed), <code>.detached()</code> will be called. The Perspective can use
+this to mark the user as having gone away: this may mean that outgoing
+messages should be queued in the Perspective until they reconnect, or
+callers should be given an error message because they messages cannot be
+delivered, etc. It can also be used to terminate or suspend any sessions the
+user was participating in. <code>detached</code> is called with the same
+'clientref' and Identity objects that were given to the original 'attached'
+call. It will be invoked on the Perspective object that was returned by
+<code>.attached()</code>.</p>
 
 </div>
 
