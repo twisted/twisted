@@ -15,13 +15,25 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
 from twisted.protocols import protocol
-from twisted.internet import reactor, main
-from twisted.python import delay
+from twisted.internet import reactor, main, defer
 import struct
 import md5
 import string
-import random
 import socket
+import random
+import time
+import types
+
+def logPacketData(data):
+    lines = len(data)/16
+    if lines*16 != len(data): lines=lines+1
+    for i in range(lines):
+        d = tuple(data[16*i:16*i+16])
+        hex = map(lambda x: "%02X"%ord(x),d)
+        text = map(lambda x: (len(repr(x))>3 and '.') or x, d)
+        print ' '.join(hex)+ ' '*3*(16-len(d)),
+        print ''.join(text)
+    print ''
 
 def SNAC(fam,sub,id,data,flags=[0,0]):
     header="!HHBBL"
@@ -54,7 +66,7 @@ def readTLVs(data,count=None):
 def encryptPasswordMD5(password,key):
     m=md5.new()
     m.update(key)
-    m.update(password)
+    m.update(md5.new(password).digest())
     m.update("AOL Instant Messenger (SM)")
     return m.digest()
 
@@ -66,23 +78,153 @@ def encryptPasswordICQ(password):
         r=r+chr(bytes[i]^key[i%len(key)])
     return r
 
+def dehtml(text):
+    text=string.replace(text,"<br>","\n")
+    text=string.replace(text,"<BR>","\n")
+    text=string.replace(text,"<Br>","\n") # XXX make this a regexp
+    text=string.replace(text,"<bR>","\n")
+    text=re.sub('<.*?>','',text)
+    text=string.replace(text,'&gt;','>')
+    text=string.replace(text,'&lt;','<')
+    text=string.replace(text,'&amp;','&')
+    text=string.replace(text,'&nbsp;',' ')
+    text=string.replace(text,'&#34;','"')
+    return text
+
+def html(text):
+    text=string.replace(text,'"','&#34;')
+    text=string.replace(text,'&amp;','&')
+    text=string.replace(text,'&lt;','<')
+    text=string.replace(text,'&gt;','>')
+    text=string.replace(text,"\n","<br>")
+    return '<html><body bgcolor="white"><font color="black">%s</font></body></html>'%text
+
+class OSCARUser:  
+    def __init__(self, name, warn, tlvs):
+        self.name = name
+        self.warning = warn
+        self.flags = []
+        self.caps = []
+        for k,v in tlvs.items():
+            if k == 1: # user flags
+                v=struct.unpack('!H',v)[0]
+                for o, f in [(1,'trial'),
+                             (2,'unknown bit 2'),
+                             (4,'aol'),
+                             (8,'unknown bit 4'),
+                             (16,'aim'),
+                             (32,'away'),
+                             (1024,'activebuddy')]:
+                    if v&o: self.flags.append(f)
+            elif k == 2: # member since date
+                self.memberSince = struct.unpack('!L',v)[0]
+            elif k == 3: # on-since
+                self.onSince = struct.unpack('!L',v)[0]
+            elif k == 4: # idle time
+                self.idleTime = struct.unpack('!H',v)[0]
+            elif k == 5: # unknown
+                pass
+            elif k == 6: # icq online status
+                self.icqStatus = int(v)
+            elif k == 10: # icq ip address
+                self.icqIPaddy = socket.inet_ntoa(v)
+            elif k == 12: # icq random stuff
+                self.icqRandom = v
+            elif k == 13: # capabilities
+                caps=[]
+                while v:
+                    c=v[:16]
+                    if c==CAP_ICON: caps.append("icon")
+                    elif c==CAP_IMAGE: caps.append("image")
+                    elif c==CAP_VOICE: caps.append("voice")
+                    elif c==CAP_CHAT: caps.append("chat")
+                    elif c==CAP_GET_FILE: caps.append("getfile")
+                    elif c==CAP_SEND_FILE: caps.append("sendfile")
+                    elif c==CAP_SEND_LIST: caps.append("sendlist")
+                    elif c==CAP_GAMES: caps.append("games")
+                    else: caps.append(("unknown",c))
+                    v=v[16:]
+                caps.sort()
+                self.caps=caps
+            elif k == 14: pass
+            elif k == 15: # session length (aim)
+                self.sessionLength = struct.unpack('!L',v)[0]
+            elif k == 16: # session length (aol)
+                self.sessionLength = struct.unpack('!L',v)[0]
+            elif k == 30: # no idea
+                pass 
+            else:
+                print "unknown tlv for user %s\nt: %s\nv: %s"%(self.name,k,repr(v))
+
+    def __str__(self):
+        s = '<OSCARUser %s' % self.name
+        o = []
+        if self.warning!=0: o.append('warning level %s'%self.warning)
+        if hasattr(self, 'flags'): o.append('flags %s'%self.flags)
+        if hasattr(self, 'sessionLength'): o.append('online for %i minutes' % (self.sessionLength/60,))
+        if hasattr(self, 'idleTime'): o.append('idle for %i minutes' % self.idleTime)
+        if self.caps: o.append('caps %s'%self.caps)
+        if o:
+            s=s+', '+', '.join(o)
+        s=s+'>'
+        return s
+            
+class SSIGroup:
+    def __init__(self, name, tlvs):
+        self.name = name
+        self.users = []
+        if not tlvs.has_key(0xC8): return
+        buddyIDs = tlvs[0xC8]
+        while buddyIDs:
+            bid = struct.unpack('!H',buddyIDs[:2])[0]
+            buddyIDs = buddyIDs[2:]
+            self.users.append(bid)
+
+    def addUser(self, buddyID, user):
+        i = self.users.index(buddyID)
+        self.users[i] = user
+
+class SSIBuddy:
+    def __init__(self, name, tlvs):
+        self.name = name
+        for k,v in tlvs.items():
+            if k == 0x013c: # buddy comment
+                self.buddyComment = v
+            elif k == 0x013d: # buddy alerts
+                actionFlag = ord(v[0])
+                whenFlag = ord(v[1])
+                self.alertActions = []
+                self.alertWhen = []
+                if actionFlag&1:
+                    self.alertActions.append('popup')
+                if actionFlag&2:
+                    self.alertActions.append('sound')
+                if whenFlag&1:
+                    self.alertWhen.append('online')
+                if whenFlag&2:
+                    self.alertWhen.append('unidle')
+                if whenFlag&4:
+                    self.alertWhen.append('unaway')
+            elif k == 0x013e:
+                self.alertSound = v
 
 class OscarConnection(protocol.Protocol):
     def connectionMade(self):
         self.state=""
         self.seqnum=0
         self.buf=''
-        self.stopper=None
+        self.stopKeepAliveID = None
+        self.setKeepAlive(4*60) # 4 minutes
 
     def connectionLost(self):
-        print "Connection Lost!"
+        print "Connection Lost!",self
         self.stopKeepAlive()
 
     def connectionFailed(self):
-        print "Connection Failed!"
+        print "Connection Failed!",self
         self.stopKeepAlive()
 
-    def sendFlap(self,channel,data):
+    def sendFLAP(self,data,channel = 0x02):
         #print repr((channel,data))
         header="!cBHH"
         self.seqnum=(self.seqnum+1)%0xFFFF
@@ -90,6 +232,9 @@ class OscarConnection(protocol.Protocol):
         head=struct.pack(header,'*', channel,
                          seqnum, len(data))
         self.transport.write(head+str(data))
+#        if isinstance(self, ChatService):
+#            print time.ctime()+'\t127.0.0.1:0000 > %s:%s'%self.transport.getHost()[1:]
+#            logPacketData(head+str(data))
 
     def readFlap(self):
         header="!cBHH"
@@ -100,6 +245,9 @@ class OscarConnection(protocol.Protocol):
         return [flap[1],data]
 
     def dataReceived(self,data):
+#        if isinstance(self, ChatService):
+#            print time.ctime()+'\t'+'127.0.0.1:0000 < %s:%s'%self.transport.getHost()[1:]
+#            logPacketData(data)
         self.buf=self.buf+data
         flap=self.readFlap()
         while flap:
@@ -114,619 +262,754 @@ class OscarConnection(protocol.Protocol):
 
     def setKeepAlive(self,t):
         self.keepAliveDelay=t
-        d=delay.Delayed()
-        d.ticktime=1
-        self.stopper=d.loop(self.sendKeepAlive,t)
-        main.addDelayed(d)
+        self.stopKeepAlive()
+        self.stopKeepAliveID = reactor.callLater(t, self.sendKeepAlive)
 
     def sendKeepAlive(self):
-        self.sendFlap(0x05,"")
+        self.sendFLAP("",0x05)
+        self.stopKeepAliveID = reactor.callLater(self.keepAliveDelay, self.sendKeepAlive)
 
     def stopKeepAlive(self):
-        if self.stopper:
-            self.stopper.stop()
-            self.stopper=None
+        if self.stopKeepAliveID:
+            reactor.cancelCallLater(self.stopKeepAliveID)
+            self.stopKeepAliveID = None
+
+    def disconnect(self):
+        """
+        send the disconnect flap, and sever the connection
+        """
+        self.sendFLAP('', 0x04)
+        def f(): pass
+        self.connectionLost = f
+        self.transport.loseConnection()
 
 
 class SNACBased(OscarConnection):
+    snacFamilies = {
+        # family : (version, toolID, toolVersion)
+    }
     def __init__(self,cookie):
         self.cookie=cookie
         self.lastID=0
-        self.requestCallbacks={} # request id:[callback,errback]
+        self.supportedFamilies = ()
+        self.requestCallbacks={} # request id:Deferred
 
-    def sendSNAC(self,fam,sub,data,callback=None,errback=None,flags=[0,0]):
+    def sendSNAC(self,fam,sub,data,flags=[0,0]):
+        """
+        send a snac and wait for the response by returning a Deferred.
+        """
         reqid=self.lastID
         self.lastID=reqid+1
-        if callback or errback:
-            if not callback: callback=lambda x: None
-            if not errback: errback=lambda x: None
-        if callback:
-            self.requestCallbacks[reqid]=[callback,errback]
+        d = defer.Deferred()
+        d.reqid = reqid
+
+        d.addErrback(self._ebDeferredError,fam,sub,data) # XXX for testing
+
+        self.requestCallbacks[reqid] = d
         #print [fam,sub,data]
-        self.sendFlap(0x02,SNAC(fam,sub,reqid,data))
-        return reqid
+        self.sendFLAP(SNAC(fam,sub,reqid,data))
+        return d
+
+    def _ebDeferredError(self, error, fam, sub, data):
+        print 'ERROR IN DEFERRED', error
+        print 'on sending of message, family 0x%02x, subtype 0x%02x' % (fam, sub)
+        print 'data: %s' % repr(data)
+
+    def sendSNACnr(self,fam,sub,data,flags=[0,0]):
+        """
+        send a snac, but don't bother adding a deferred, we don't care.
+        """
+        self.sendFLAP(SNAC(fam,sub,0x10000*fam+sub,data))
 
     def oscar_(self,data):
-        self.sendFlap(0x01,"\000\000\000\001"+TLV(6,self.cookie))
+        self.sendFLAP("\000\000\000\001"+TLV(6,self.cookie), 0x01)
         return "Data"
 
     def oscar_Data(self,data):
         snac=readSNAC(data[1])
         #print snac
         if self.requestCallbacks.has_key(snac[4]):
-            callback,errback=self.requestCallbacks[snac[4]]
+            d = self.requestCallbacks[snac[4]]
             del self.requestCallbacks[snac[4]]
             if snac[1]!=1:
-                callback(snac)
+                d.armAndCallback(snac)
             else:
-                errback(snac)
+                d.armAndErrback(snac)
             return
-        func=getattr(self,"oscar_%02X_%02X"%(snac[0],snac[1]),None)
+        func=getattr(self,'oscar_%02X_%02X'%(snac[0],snac[1]),None)
         if not func:
             self.oscar_unknown(snac)
         else:
             func(snac[2:])
         return "Data"
 
-    def oscar_unknown(self,snac): print "unknown",snac
+    def oscar_unknown(self,snac):
+        print "unknown for ",self
+        print snac
+        
 
+    def oscar_01_03(self, snac):
+        numFamilies = len(snac[3])/2
+        self.supportedFamilies = struct.unpack("!"+str(numFamilies)+'H', snac[3])
+        d = ''
+        for fam in self.supportedFamilies:
+            if self.snacFamilies.has_key(fam):
+                d=d+struct.pack('!2H',fam,self.snacFamilies[fam][0])
+        self.sendSNACnr(0x01,0x17, d)
+
+    def oscar_01_0A(self,snac):
+        """
+        change of rate information.
+        """
+        # this can be parsed, maybe we can even work it in
+        pass
+
+    def oscar_01_18(self,snac):
+        """
+        host versions, in the same format as we sent
+        """
+        self.sendSNACnr(0x01,0x06,"") #pass
+
+    def clientReady(self):
+        """
+        called when the client is ready to be online
+        """
+        d = ''
+        for fam in self.supportedFamilies:
+            if self.snacFamilies.has_key(fam):
+                version, toolID, toolVersion = self.snacFamilies[fam]
+                d = d + struct.pack('!4H',fam,version,toolID,toolVersion)
+        self.sendSNACnr(0x01,0x02,d)
 
 class BOSConnection(SNACBased):
+    snacFamilies = {
+        0x01:(3, 0x0110, 0x059b),
+        0x13:(3, 0x0110, 0x059b),
+        0x02:(1, 0x0110, 0x059b),
+        0x03:(1, 0x0110, 0x059b),
+        0x04:(1, 0x0110, 0x059b),
+        0x06:(1, 0x0110, 0x059b),
+        0x08:(1, 0x0104, 0x0001),
+        0x09:(1, 0x0110, 0x059b),
+        0x0a:(1, 0x0110, 0x059b),
+        0x0b:(1, 0x0104, 0x0001),
+        0x0c:(1, 0x0104, 0x0001)
+    }
+        
     def __init__(self,username,cookie):
         SNACBased.__init__(self,cookie)
         self.username=username
-        self.screenname=None
-        self.evilness=None
-        self.userInfo=""
-        self.awayMessage=""
-        self.groups=[]
-        self.groupDict={}
-        self.onlineFlag=0
+        self.profile = None
+        self.awayMessage = None
+        self.services = {}
 
-        self.capabilities=CAP_IMAGE+CAP_CHAT
-
-        self.directConnections = {} # user: DirectConnection
-        
-        self.chatService=None
-        
-        self.waitingChats={} # request id:[chatname,invite message]
-
-        self.waitingForInfo={} # request id: username
-        self.waitingForAway={} # request id: username
-        self.userInfos={} # user: info/away
+        self.capabilities = CAP_CHAT
 
     def parseUser(self,data,count=None):
         l=ord(data[0])
-        screenname=data[1:1+l]
+        name=data[1:1+l]
         warn,foo=struct.unpack("!HH",data[1+l:5+l])
-        warn=int(warn)
+        warn=int(warn/10)
         tlvs=data[5+l:]
         if count:
-            tlvs,rest=readTLVs(tlvs,foo)
-            return (screenname,warn,tlvs),rest
-        return (screenname,warn,readTLVs(tlvs))
-
-    def oscar_01_03(self,snac):
-        self.sendSNAC(0x01,0x17,"\x00\x01\x00\x03\x00\x13\x00\x01\x00\x02\x00\x01\x00\x03\x00\x01\x00\x04\x00\x01\x00\x06\x00\x01\x00\x08\x00\x01\x00\x09\x00\x01\x00\x0a\x00\x01\x00\x0B\x00\x01\x00\x0C\x00\x01")
+            tlvs,rest = readTLVs(tlvs,foo)
+        else:
+            tlvs,rest = readTLVs(tlvs), None
+        u = OSCARUser(name, warn, tlvs)
+        if rest == None:
+            return u
+        else:
+            return u, rest
         
-    def oscar_01_07(self,snac):
-        self.sendSNAC(0x01,0x08,"\x00\x01\x00\x02\x00\x03\x00\x04\x00\x05")
-        self.sendSNAC(0x01,0x0e,"")
-        self.sendSNAC(0x13,0x02,"")
-        self.sendSNAC(0x13,0x05,"\x00"*6)
-        self.sendSNAC(0x02,0x02,"")
-        self.sendSNAC(0x03,0x02,"")
-        self.sendSNAC(0x04,0x04,"")
-        self.sendSNAC(0x09,0x02,"")
+    def oscar_01_05(self, snac, d = None):
+        """
+        data for a new service connection
+        d might be a deferred to be called back when the service is ready
+        """
+        tlvs = readTLVs(snac[3][2:])
+        service = struct.unpack('!H',tlvs[0x0d])[0]
+        ip = tlvs[5]
+        cookie = tlvs[6]
+        c = serviceClasses[service](self, cookie, d)
+        reactor.clientTCP(ip, 5190, c)
+        self.services[service] = c
 
-    def oscar_01_0F(self,snac):
-        l=ord(snac[3][0])
-        self.screenName=snac[3][1:1+l]
-        warn,foo=struct.unpack("!HH",snac[3][1+l:5+l])
-        self.warningLevel=int(warn)
-        tlvs=snac[3][5+l:]
-#        print self.screenName,self.warningLevel,readTLVs(tlvs)
+    def oscar_01_07(self,snac):
+        """
+        rate paramaters
+        """
+        self.sendSNACnr(0x01,0x08,"\x00\x01\x00\x02\x00\x03\x00\x04\x00\x05") # ack
+        self.initDone()
+        self.sendSNACnr(0x13,0x02,'') # SSI rights info
+        self.sendSNACnr(0x02,0x02,'') # location rights info
+        self.sendSNACnr(0x03,0x02,'') # buddy list rights
+        self.sendSNACnr(0x04,0x04,'') # ICBM parms
+        self.sendSNACnr(0x09,0x02,'') # BOS rights
+
+    def oscar_01_10(self,snac):
+        """
+        we've been warned
+        """
+        skip = struct.unpack('!H',snac[3][:2])[0]
+        newLevel = struct.unpack('!H',snac[3][2+skip:4+skip])[0]/10
+        if len(snac[3])>4+skip:
+            by = self.parseUser(snac[3][4+skip:])
+        else:
+            by = None
+        self.receiveWarning(newLevel, by)
 
     def oscar_01_13(self,snac):
-        self.sendSNAC(0x01,0x06,"")
+        """
+        MOTD
+        """
+        pass # we don't care for now
 
-    def oscar_01_18(self,snac): pass
+    def oscar_02_03(self, snac):
+        """
+        location rights response
+        """
+        tlvs = readTLVs(snac[3])
+        self.maxProfileLength = tlvs[1]
 
-    def oscar_02_03(self,snac): pass
+    def oscar_03_03(self, snac):
+        """
+        buddy list rights response
+        """
+        tlvs = readTLVs(snac[3])
+        self.maxBuddies = tlvs[1]
+        self.maxWatchers = tlvs[2]
 
-    def oscar_03_03(self,snac): pass
+    def oscar_03_0B(self, snac):
+        """
+        buddy update
+        """
+        self.updateBuddy(self.parseUser(snac[3]))
 
-    def oscar_03_0B(self,snac):
-        user=self.parseUser(snac[3])
-        statenumber=struct.unpack("!H",user[2][1])[0]
-        state=""
-        accounttype=""
-        if statenumber&1:
-            accounttype="Unconfirmed Internet"
-            statenumber=statenumber^1
-        elif statenumber&16:
-            accounttype="Internet"
-            statenumber=statenumber^16
-        elif statenumber&4:
-            accounttype="AOL"
-            statenumber=statenumber^16
-        if statenumber==32: state="Away"
-        else: state="Online"
-        caps=[]
-        if user[2].has_key(13): # caps
-            t=user[2][13]
-            while t:
-                c=t[:16]
-                if c==CAP_ICON: caps.append("icon")
-                elif c==CAP_IMAGE: caps.append("image")
-                elif c==CAP_VOICE: caps.append("voice")
-                elif c==CAP_CHAT: caps.append("chat")
-                elif c==CAP_GET_FILE: caps.append("getfile")
-                elif c==CAP_SEND_FILE: caps.append("sendfile")
-                elif c==CAP_SEND_LIST: caps.append("sendlist")
-                elif c==CAP_GAMES: caps.append("games")
-                else: caps.append(("unknown",c))
-                t=t[16:]
-#        if not caps: return
-        caps.sort()
-        if user[2].has_key(4):
-            idle=struct.unpack("!H",user[2][4])[0]
-        else:
-            idle=0
-        self.updateUser(user[0],state,accounttype,user[1]/10,idle,caps)
+    def oscar_03_0C(self, snac):
+        """
+        buddy offline
+        """
+        self.offlineBuddy(self.parseUser(snac[3]))
 
-    def oscar_03_0C(self,snac):
-        user=self.parseUser(snac[3])
-        self.updateUser(user[0],"Offline","",0,0,[])
-
-    def oscar_04_05(self,snac): pass
-
-    def oscar_04_07(self,snac):
-        user,rest=self.parseUser(snac[3][10:],1)
-        if rest[:2]=='\000\002':
-            self.gotMessage(user[0],rest[19:-14])
-            if self.awayMessage:
-                self.sendAutoReply(user[0],'<font color="#0000ff">'+self.awayMessage)
-        elif rest[:2]=='\000\004': # away message
-            self.gotAutoReply(user[0],rest[57:])
-        elif rest[:2]=='\000\005':
-            self.sendAutoReply(user[0],'<font color="#0000ff">'+self.awayMessage)
-            cap=rest[14:30]
-            tlvs=readTLVs(rest[30:])
-            if cap==CAP_IMAGE: # direct connection
-                if tlvs.has_key(11): # cancel
-                    self.imageCancel(user[0])
-                else:
-                    port=struct.unpack("!H",tlvs[5])[0]
-                    ip=string.join(map(str,map(ord,tlvs[4])),".")
-                    self.imageGotRequest(user[0],ip,port)
-            else:
-                print repr(rest)
-        else:
-            print user,repr(rest)
-
-    def oscar_04_0C(self,snac): pass
-
-    def oscar_09_02(self,snac):
-        self.error(snac[3])
-
-    def oscar_09_03(self,snac): pass
-
-    def oscar_0B_02(self,snac):
-        t=struct.unpack("!H",snac[3])[0]
-        self.setKeepAlive(t)
-
-    def oscar_13_03(self,snac): pass
-
-    def oscar_13_06(self,snac): # buddy list
-        revision=struct.unpack("!H",snac[3][1:3])
-        rest=snac[3][3:]
-        groups=self.groups
-        permit=[]
-        deny=[]
-        dict=self.groupDict
-        mode=""
-        while len(rest)>4:
-            l=struct.unpack("!H",rest[:2])[0]
-            name=rest[2:2+l]
-            gid,bid,flag,addl=struct.unpack("!4H",rest[2+l:10+l])
-            tlvs=readTLVs(rest[10+l:10+l+addl])
-            if gid and flag==1 and not dict.has_key(gid):
-                dict[gid]=len(groups)
-                groups.append((name,[]))
-            elif gid and flag==0:
-                groups[dict[gid]][1].append(name)
-            elif flag==2:
-                if not mode: mode="permitlist"
-                permit.append(name)
-            elif flag==3:
-                if not mode: mode="denylist"
-                deny.append(name)
-            elif flag==4:
-                if tlvs.has_key(202):
-                    if tlvs[202]=='\001':
-                        mode="permitall"
-                    elif tlvs[202]=='\002':
-                        mode="denyall"
-#                    else:
-#                        print name,gid,bid,flag,tlvs
-#                else:
-#                    print name,gid,bid,flag,tlvs
-            elif flag==5:
-                if tlvs.has_key(200) and tlvs[200]=='\000\000\004\000':
-                    mode="permitbuddies"
-#                else:
-#                    print name,gid,bid,flag,tlvs
-#            else:
-#                print name,gid,bid,flag,tlvs
-            rest=rest[10+l+addl:]
-        self.sendSNAC(0x13,0x07,"")
-        self.groups=groups
-        self.groupDict=dict
-        self.gotBuddyList(groups,mode,permit,deny)
-        #self.sendFlap(2,SNAC(0x13,0x13,0x13,""))
-
-    def oscar_13_0F(self,snac):
-        self.sendSNAC(0x13,0x07,"")
-        self.gotBuddyList([],[],[])
-       
-    # called functions
-    def setInfo(self,info):
-        self.userInfo=info
-        self.sendSNAC(0x02,0x04,
-                             TLV(1,'text/x-aolrtf; charset="us-ascii"')+
-                             TLV(2,self.userInfo)+
-                             TLV(3,'text/x-aolrtf; charset="us-ascii"')+
-                             TLV(4,self.awayMessage)+
-                             TLV(5,self.capabilities)) # capabilities here
-
-    def away(self,away):
-        self.awayMessage=away
-        self.sendSNAC(0x02,0x04,
-                             TLV(1,'text/x-aolrtf; charset="us-ascii"')+
-                             TLV(2,self.userInfo)+
-                             TLV(3,'text/x-aolrtf; charset="us-ascii"')+
-                             TLV(4,self.awayMessage)+
-                             TLV(5,CAP_CHAT+CAP_IMAGE)) # capabilities here
-
-    def online(self):
-        if self.onlineFlag: return
-        self.sendSNAC(0x01,0x02,"\x00\x01\x00\x03\x01\x10\x04\x7b\x00\x13\x00\x01\x01\x10\x04\x7b\x00\x02\x00\x01\x01\x01\x04\x7b\x00\x03\x00\x01\x01\x10\x04\x7b\x00\x04\x00\x01\x01\x10\x04\x7b\x00\x06\x00\x01\x01\x10\x04\x7b\x00\x08\x00\x01\x01\x04\x00\x01\x00\x09\x00\x01\x01\x10\x04\x7b\x00\x0a\x00\x01\x01\x10\x04\x7b\x00\x0b\x00\x01\x01\x00\x00\x01\x00\x0c\x00\x01\x01\x04\x00\x01")
-        self.onlineFlag=1
-
-    def sendIM(self,user,message):
-        if self.directConnections.has_key(user):
-            self.directConnections[user].sendMessage(message)
-            return
-        self.sendSNAC(0x04,0x06,
-                             "\x3c\x35\x46\x4a\x36\x31\x00\x78\x00\x01"+
-                             chr(len(user))+
-                             user+
-                             "\000\002"+
-                             struct.pack("!H",len(message)+15)+
-                             "\005\001\000\003\001\001\002\001\001"+
-                             struct.pack("!H",len(message)+4)+
-                             "\000\000\000\000"+
-                             message)
-
-    def sendAutoReply(self,user,reply):
-                self.sendSNAC(0x04,0x06,
-                             "\x3c\x35\x46\x4a\x36\x31\x00\x78\x00\x01"+
-                             chr(len(user))+
-                             user+
-                             "\000\002"+
-                             struct.pack("!H",len(reply)+15)+
-                             "\005\001\000\003\001\001\002\001\001"+
-                             struct.pack("!H",len(reply)+4)+
-                             "\000\000\000\000"+
-                             reply+
-                             "\000\004\000\000")
-
-    def joinChat(self,room):
-        if not self.chatService:
-            def callback(snac,room=room,self=self):
-                tlvs=readTLVs(snac[5])
-                cookie=tlvs[6]
-                serverip=tlvs[5]
-                self.chatService=ChatService(self,cookie)
-                self.chatService.joinChat(room)
-                reactor.clientTCP(serverip,5190,self.chatService)
-            self.sendSNAC(0x01,0x04,"\x00\x0d",callback) # ask for chat service
-        else:
-            self.chatService.joinChat(group)
-
-    def leaveChat(self,room):
-        self.chatService.leaveChat(room)
-
-    def chatSendMessage(self,room,message):
-        self.chatService.sendMessage(room,message)
-            
-    def getInfo(self,user):
-        reqid=self.sendSNAC(0x02,0x05,"\000\001"+chr(len(user))+user
-                            ,self.userInfoCallback,self.userInfoErrback)
-        self.waitingForInfo[reqid]=user
-        reqid=self.sendSNAC(0x02,0x05,"\000\003"+chr(len(user))+user
-                            ,self.userAwayCallback,self.userAwayErrback)
-        self.waitingForAway[reqid]=user
-
-    def userInfoCallback(self,snac):
-        try:
-            userinfo=self.parseUser(snac[5])[2][2]
-        except KeyError:
-            userinfo="Note: AOL member profiles are not accessible through AOL Instant Messenger."
-        username=self.waitingForInfo[snac[4]]
-        del self.waitingForInfo[snac[4]]
-        if self.userInfos.has_key(username):
-            self.gotUserInfo(username,userinfo,self.userInfos[username])
-            del self.userInfos[username]
-        else:
-            self.userInfos[username]=userinfo
-
-    def userInfoErrback(self,snac):
-        username=self.waitingForInfo[snac[4]]
-        del self.waitingForInfo[snac[4]]
-        if self.userInfos.has_key(username):
-            self.gotUserInfo(username,None,self.userInfos[username])
-            del self.userInfos[username]
-        else:
-            self.userInfos[username]=None
-
-    def userAwayCallback(self,snac):
-        user=self.parseUser(snac[5])
-        if user[2].has_key(4):
-            useraway=self.parseUser(snac[5])[2][4]
-        else:
-            useraway=""
-        username=self.waitingForAway[snac[4]]
-        del self.waitingForAway[snac[4]]
-        if self.userInfos.has_key(username):
-            self.gotUserInfo(username,self.userInfos[username],useraway)
-            del self.userInfos[username]
-        else:
-            self.userInfos[username]=useraway
-
-    def userAwayErrback(self,snac):
-        username=self.waitingForAway[snac[4]]
-        del self.waitingForAway[snac[4]]
-        if self.userInfos.has_key(username):
-            self.gotUserInfo(username,self.userInfos[username],None)
-            del self.userInfos[username]
-        else:
-            self.userInfos[username]=None
-
-    def imageAskConnect(self,user):
-#        if not self.directConnectionServer:
-#            self.directConnectionServer=DirectConnectionServer(self)
-#        if self.directConnections.has_key(user):
-#            self.directConnections[user]=self.directConnectionServer
-#            tcp.Server("localhost",5190,self.directConnections[user])
-        self.sendSNAC(0x04,0x06,
-                      "\x3c\x35\x46\x4a\x00\x0a\xdb\xae\x00\x02"+
-                      chr(len(user))+
-                      user+
-                      "\000\005\000\062\000\000"+
-                      "\000"*8+
-                      CAP_IMAGE+
-                      TLV(0x0a,"\000\001")+
-                      TLV(0x0F,"")+
-                      TLV(0x04,socket.inet_aton(socket.gethostbyname(socket.gethostname())))+
-                      TLV(0x05,"\024\106")+
-                      TLV(0x03,""),self.imageAcceptCallback)
-
-    def imageAcceptCallback(self,snac):
-        #print snac
-        pass
-
-    def imageAccept(self,user,ip,port):
-        self.sendSNAC(0x04,0x06,
-                      "\x3c\x35\x46\x4a\x00\x0a\xdb\xae\00\x02"+
-                      chr(len(user))+
-                      user+
-                      "\000\005\000\062\000\000"+
-                      "\000"*8+
-                      CAP_IMAGE+
-                      TLV(0x0a,"\000\002")+
-                      TLV(0x0F,"")+
-                      TLV(0x04,socket.inet_aton(socket.gethostbyname(socket.gethostname())))+
-                      TLV(0x05,"\121\106")+
-                      TLV(0x03,""))
-        self.directConnections[user]=DirectConnection(self)
-        reactor.clientTCP(ip,4443,self.directConnections[user])
-
-    # callback
-    def error(self,url): print url
-
-    def updateUser(self,screenname,state,accounttype,warning,idle,caps):
-        print screenname,state,accounttype,warning,idle
-
-    def gotMessage(self,user,message):
-        print user,message
-        #if not self.directConnections.has_key(user): self.imageAskConnect(user)
-        #self.sendIM(user,message)
-
-    def gotAutoReply(self,user,reply):
-        print user,"autoreply",reply
-
-    def gotUserInfo(self,user,info,away):
-        print user,info,away
-
-    def gotBuddyList(self,groups,mode,permit,deny):
-        print groups,mode,permit,deny
-        self.setInfo("I am a wicked Twisted user!")
-        self.online()
-
-    def chatJoined(self,room):
-        print "chat joined",room
-
-    def chatLeft(self,room):
-        print "chat left", room
-
-    def chatGotMembers(self,room,users):
-        print "chat members",room,users
-
-    def chatMemberJoined(self,room,user):
-        print "chat member joined",room,user
-
-    def chatMemberLeft(self,room,user):
-        print "chat member left",room,user
-
-    def chatMessage(self,room,user,message):
-        print "chat message",room,user,message
-
-    def imageCancel(self,user):
-        print "image cancel",user
-
-    def imageGotRequest(self,user,ip,port):
-        print "image request",user,ip,port
-        self.imageAccept(user,ip,port)
-
-    def imageGotMessage(self,user,message):
-        self.gotMessage(user,message)
-    
-
-class ICQConnection(SNACBased):
-    def __init__(self,uin,cookie):
-        SNACBased.__init__(cookie)
-        self.uin=uin
-
-    def oscar_01_03(self,snac):
-        self.sendSNAC(0x01,0x17,'\x00\x01\x00\x03\x00\x13\x00\x02\x00\x02\x00\x01\x00\x03\x00\x01\x00\x15\x00\x01\x00\x04\x00\x01\x00\x06\x00\x01\x00\x09\x00\x01\x00\x0A\x00\x01\x00\x0B\x00\x01')
-
-    def oscar_01_07(self,snac):
-        self.sendSNAC(0x01,0x08,"\x00\x01\x00\x02\x00\x03\x00\x04\x00\x05")
-        self.sendSNAC(0x01,0x0E,"")
-        self.sendSNAC(0x13,0x02,"")
-        self.sendSNAC(0x13,0x05,"\x3C\x5C\x36\x28\x00\x04")
-        self.sendSNAC(0x02,0x02,"")
-        self.sendSNAC(0x03,0x02,"")
-        self.sendSNAC(0x04,0x04,"")
-        self.sendSNAC(0x09,0x02,"")
-
-    def oscar_01_0F(self,snac): pass
-
-    def oscar_01_18(self,snac):
-        self.sendSNAC(0x01,0x06,"")
-
-    def oscar_02_03(self,snac): pass
-
-    def oscar_04_05(self,snac): pass
-
-    def oscar_09_03(self,snac): pass
-
-    def oscar_13_03(self,snac): pass
-
-    def oscar_13_0F(self,snac):
-        self.sendSNAC(0x13,0x07,"")
-        self.sendSNAC(0x02,0x04,"\x00\x00")
-        self.sendSNAC(0x04,0x02,"\x00\x00\x00\x00\x00\x03\x1F\x40\x03\xE7\x03\xE7\x00\x00\x00\x00")
-        self.sendSNAC(0x01,0x1E,
-                      TLV(0x06,"\x20\x03\x00\x00")+
-                      TLV(0x08,"\x00\x00")+
-                      TLV(0x0C,"\x42\x2C\x69\x25\x00\x00\x23\x56\x02\x00\x08\x64\x92\x40\x3C\x00\x00\x00\x50\x00\x00\x00\x03\x3C\x5C\x69\xFD\x3C\x5C\x69\x8F\x3C\x5Cv69\x8F\x00\x00"))
-        self.sendSNAC(0x01,0x02,"\x00\x01\x00\x03\x01\x10\x04\x7B\x00\x13\x00\x02\x01\x10\x04\x7B\x00\x02\x00\x01\x01\x01\x04\x7B\x00\x03\x00\x01\x01\x10\x04\x7B\x00\x15\x00\x01\x01\x10\x04\x7B\x00\x04\x00\x01\x01\x10\x04\x7B\x00\x06\x00\x01\x01\x10\x04\x7B\x00\x09\x00\x01\x01\x10\x04\x7B\x00\x0A\x00\x01\x01\x10\x04\x7B\x00\x0B\x00\x01\x01\x10\x04\x7B")
-        self.sendSNAC(0x15,0x02,"\x00\x01\x00\x0A\x08\x00\x0E\x87\xE8\x08\x3C\x00\x02\x00")
-
-    def oscaR_15_02(self,snac): pass
-
-
-class ChatService(SNACBased):
-    def __init__(self,bos,cookie):
-        SNACBased.__init__(self,cookie)
-        self.bos=bos
-        self.online=0
-        self.joins=[]
-        self.roomConnections={}
-
-    def oscar_01_03(self,snac):
-        self.sendSNAC(0x01,0x17,"\000\001\000\003\000\015\000\001")
-
-    def oscar_01_07(self,snac):
-        self.sendSNAC(0x01,0x08,"\000\001\000\002\000\003\000\004\000\005")
-        self.sendSNAC(0x0d,0x02,"")
-
-    def oscar_01_18(self,snac):
-        self.sendSNAC(0x01,0x06,"")
-        self.setKeepAlive(300)
-
-    def oscar_0D_09(self,snac):
-        if not self.online:
-            self.sendSNAC(0x01,0x02,"\000\001\000\003\000\020\004{\000\015\000\001\000\020\004{")
-            self.online=1
-            for j in self.joins:
-                self.joinChat(j)
-            self.joins=[]
-        else:
-            urllen=ord(snac[3][6])
-            url=snac[3][7:7+urllen]
-            tlvs=readTLVs(snac[3][6+urllen:])
-            def callback(snac,self=self,room=tlvs[211]):
-                tlvs=readTLVs(snac[5])
-                cookie=tlvs[6]
-                serverip=tlvs[5]
-                self.roomConnections[room]=ChatRoomConnection(self.bos,room,cookie)
-                reactor.clientTCP(serverip,5190,self.roomConnections[room])
-            self.bos.sendSNAC(0x01,0x04,"\x00\x0e\x00\x01\x00 \x00\x04\x1b"+url+"\x00\x00",callback)
-
-    def room(self,room): return self.roomConnections[room]    
-
-    def joinChat(self,room):
-        if not self.online:
-            self.joins.append(room)
-            return
-        self.sendSNAC(0x0d,0x08,"\000\004\006create\377\377\001\000\003"+
-                            TLV(0xd7,"en")+
-                            TLV(0xd6,"us-ascii")+
-                            TLV(0xd3,room))
-    def leaveChat(self,room):
-        self.room(room).transport.loseConnection()
-
-    def sendMessage(self,room,message):
-        self.room(room).sendMessage(message)
+#    def oscar_04_03(self, snac):
         
+    def oscar_04_05(self, snac):
+        """
+        ICBM parms response
+        """
+        self.sendSNACnr(0x04,0x02,'\x00\x00\x00\x00\x00\x0b\x1f@\x03\xe7\x03\xe7\x00\x00\x00\x00') # IM rights
 
-class ChatRoomConnection(SNACBased):
-    def __init__(self,bos,room,cookie):
-        SNACBased.__init__(self,cookie)
-        self.bos=bos
-        self.room=room
+    def oscar_04_07(self, snac):
+        """
+        ICBM message (instant message)
+        """
+        data = snac[3]
+        cookie, data = data[:8], data[8:]
+        channel = struct.unpack('!H',data[:2])[0]
+        data = data[2:]
+        user, data = self.parseUser(data, 1)
+        tlvs = readTLVs(data)
+#        print user.name, channel, tlvs
+        if channel == 1: # message
+            flags = []
+            multiparts = []
+            for k, v in tlvs.items():
+                if k == 2:
+                    while v:
+                        v = v[2:] # skip bad data
+                        messageLength, charSet, charSubSet = struct.unpack('!3H', v[:6])
+                        messageLength -= 4
+                        message = [v[6:6+messageLength]]
+                        if charSet == 0:
+                            pass # don't add anything special
+                        elif charSet == 2:
+                            message.append('unicode')
+                        elif charSet == 3:
+                            message.append('iso-8859-1')
+                        elif charSet == 0xffff:
+                            message.append('none')
+                        if charSubSet == 0xb:
+                            message.append('macintosh')
+                        if messageLength > 0: multiparts.append(tuple(message))
+                        v = v[6+messageLength:]
+                elif k == 3:
+                    flags.append('acknowledge')
+                elif k == 4:
+                    flags.append('auto')
+                elif k == 6:
+                    flags.append('offline')
+                elif k == 8:
+                    iconLength, foo, iconSum, iconStamp = struct.unpack('!LHHL',v)
+                    if iconLength:
+                        flags.append('icon')
+                        flags.append((iconLength, iconSum, iconStamp))
+                elif k == 9:
+                    flags.append('buddyrequest')
+                elif k == 0xb: # unknown
+                    pass
+                elif k == 0x17:
+                    flags.append('extradata')
+                    flags.append(v)
+                else:
+                    print 'unknown TLV for incoming IM, %04x, %s' % (k,repr(v))
+            self.receiveMessage(user, multiparts, flags)
+        elif channel == 2: # rondevouz
+            status = struct.unpack('!H',tlvs[5][:2])
+            requestClass = tlvs[5][10:26]
+            moreTLVs = readTLVs(tlvs[5][26:])
+            #print status, requestClass, moreTLVs
+            if requestClass == CAP_CHAT: # a chat request
+                exchange = struct.unpack('!H',moreTLVs[10001][:2])[0]
+                name = moreTLVs[10001][3:-2]
+                instance = struct.unpack('!H',moreTLVs[10001][-2:])[0]
+                if not self.services.has_key(SERVICE_CHATNAV):
+                    self.connectService(SERVICE_CHATNAV,1).addCallback(lambda x: self.services[SERVICE_CHATNAV].getChatInfo(exchange, name, instance).\
+                        addCallback(self._cbGetChatInfoForInvite, user, moreTLVs[12]))
+                else:
+                    self.services[SERVICE_CHATNAV].getChatInfo(exchange, name, instance).\
+                        addCallback(self._cbGetChatInfoForInvite, user, moreTLVs[12])
+        else:
+            print 'unknown channel %02x' % channel
+            print tlvs
 
-    def oscar_01_03(self,snac):
-        self.sendSNAC(0x01,0x17,"\000\001\000\003\000\015\000\001")
+    def _cbGetChatInfoForInvite(self, info, user, message):
+        apply(self.receiveChatInvite, (user,message)+info)
+
+    def oscar_09_03(self, snac):
+        """
+        BOS rights response
+        """
+        tlvs = readTLVs(snac[3])
+        self.maxPermitList = tlvs[1]
+        self.maxDenyList = tlvs[2]
+
+    def oscar_0B_02(self, snac):
+        """
+        stats reporting interval
+        """
+        self.reportingInterval = struct.unpack('!H',snac[3])[0]
+
+    def oscar_13_03(self, snac):
+        """
+        SSI rights response
+        """
+        #tlvs = readTLVs(snac[3])
+        pass # we don't know how to parse this
+
+    # methods to be called by the client, and their support methods
+    def requestSelfInfo(self):
+        """
+        ask for the OSCARUser for ourselves
+        """
+        d = defer.Deferred()
+        self.sendSNAC(0x01, 0x0E, '').addCallback(self._cbRequestSelfInfo, d)
+        return d
+
+    def _cbRequestSelfInfo(self, snac, d):
+        d.armAndCallback(self.parseUser(snac[5]))
+
+    def initSSI(self):
+        """
+        this sends the rate request for family 0x13 (Server Side Information)
+        so we can then use it
+        """
+        d = defer.Deferred()
+        self.sendSNAC(0x13, 0x02, '').addCallback(self._cbInitSSI, d)
+
+    def _cbInitSSI(self, snac, d):
+        d.armAndCallback({}) # don't even bother parsing this
+
+    def requestSSI(self, timestamp = 0, revision = 0):
+        """
+        request the server side information
+        if the deferred gets None, it means the SSI is the same
+        """
+        d = defer.Deferred()
+        self.sendSNAC(0x13, 0x05,
+            struct.pack('!LH',timestamp,revision)).addCallback(self._cbRequestSSI, d)
+        return d
+
+    def _cbRequestSSI(self, snac, d, args = ()):
+        if snac[1] == 0x0f: # same SSI as we have
+            d.armAndCallback(None)
+        itemdata = snac[5][3:]
+        if args:
+            revision, groups, permit, deny, permitMode, visibility = args
+        else:
+            version, revision = struct.unpack('!BH', snac[5][:3])
+            groups = {}
+            permit = []
+            deny = []
+            permitMode = None
+            visibility = None
+        while len(itemdata)>4:
+            nameLength = struct.unpack('!H', itemdata[:2])[0]
+            name = itemdata[2:2+nameLength]
+            groupID, buddyID, itemType, restLength = \
+                struct.unpack('!4H', itemdata[2+nameLength:10+nameLength])
+            tlvs = readTLVs(itemdata[10+nameLength:10+nameLength+restLength])
+            itemdata = itemdata[10+nameLength+restLength:]
+            if itemType == 0: # buddies
+                groups[groupID].addUser(buddyID, SSIBuddy(name, tlvs))
+            elif itemType == 1: # group
+                g = SSIGroup(name, tlvs)
+                if groups.has_key(0): groups[0].addUser(groupID, g)
+                groups[groupID] = g
+            elif itemType == 2: # permit
+                permit.append(name)
+            elif itemType == 3: # deny
+                deny.append(name)
+            elif itemType == 4: # permit deny info
+                permitMode = {1:'permitall',2:'denyall',3:'permitsome',4:'denysome',5:'permitbuddies'}[ord(tlvs[0xca])]
+                visibility = {'\xff\xff\xff\xff':'all','\x00\x00\x00\x04':'notaim'}[tlvs[0xcb]]
+            elif itemType == 5: # unknown (perhaps idle data)?
+                pass
+            else:
+                print name, groupID, buddyID, itemType, tlvs
+        timestamp = struct.unpack('!L',itemdata)[0]
+        if not timestamp: # we've got more packets coming
+            # which means add some deferred stuff
+            d2 = defer.Deferred()
+            self.requestCallbacks[snac[4]] = d2
+            d2.addCallback(self._cbRequestSSI, d, (revision, groups, permit, deny, permitMode, visibility))
+            return
+        d.armAndCallback((groups[0].users,permit,deny,permitMode,visibility,timestamp,revision)) 
+
+    def activateSSI(self):
+        """
+        active the data stored on the server (use buddy list, permit deny settings, etc.)
+        """
+        self.sendSNACnr(0x13,0x07,'')
+
+    def setProfile(self, profile):
+        """
+        set the profile.
+        send None to not set a profile (different from '' for a blank one)
+        """
+        self.profile = profile
+        tlvs = ''
+        if self.profile:
+            tlvs =  TLV(1,'text/aolrtf; charset="us-ascii"') + \
+                    TLV(2,self.profile)
+        
+        tlvs = tlvs + TLV(5, self.capabilities)
+        self.sendSNACnr(0x02, 0x04, tlvs)
+
+    def setAway(self, away = None):
+        """
+        set the away message, or return (if away == None)
+        """
+        self.awayMessage = away
+        tlvs = TLV(3,'text/aolrtf; charset="us-ascii"') + \
+               TLV(4,away or '')
+        self.sendSNACnr(0x02, 0x04, tlvs)
+
+    def setIdleTime(self, idleTime):
+        """
+        set our idle time.  don't call more than once with a non-0 idle time.
+        """
+        self.sendSNACnr(0x01, 0x11, struct.pack('!L',idleTime))
+
+    def sendMessage(self, user, message, wantAck = 0, autoResponse = 0, offline = 0 ):  \
+                    #haveIcon = 0, ):
+        """
+        send a message to user (not an OSCARUseR).
+        message can be a string, or a multipart tuple.
+        if wantAck, we return a Deferred that gets a callback when the message is sent.
+        if autoResponse, this message is an autoResponse, as if from an away message.
+        if offline, this is an offline message (ICQ only, I think)
+        """
+        data = ''.join([chr(random.randrange(0, 127)) for i in range(8)]) # cookie
+        data = data + '\x00\x01' + chr(len(user)) + user
+        if not type(message) in (types.TupleType, types.ListType):
+            message = [[message,]]
+            if type(message[0][0]) == types.UnicodeType:
+                message[0].append('unicode')
+        messageData = ''
+        for part in message:
+            charSet = 0
+            if 'unicode' in part[1:]:
+                charSet = 2
+            elif 'iso-8859-1' in part[1:]:
+                charSet = 3
+            elif 'none' in part[1:]:
+                charSet = 0xffff
+            if 'macintosh' in part[1:]:
+                charSubSet = 0xb
+            else:
+                charSubSet = 0
+            messageData = messageData + '\x01\x01' + \
+                          struct.pack('!3H',len(part[0])+4,charSet,charSubSet)
+            messageData = messageData + part[0]
+        data = data + TLV(2, '\x05\x01\x00\x03\x01\x01\x02'+messageData)
+        if wantAck:
+            data = data + TLV(3,'')
+        if autoResponse:
+            data = data + TLV(4,'')
+        if offline:
+            data = data + TLV(6,'')
+        if wantAck:
+            return self.sendSNAC(0x04, 0x06, data).addCallback(self._cbSendMessageAck, user)
+            self.sendSNACnr(0x04, 0x06, data)
+
+    def _cbSendMessageAck(self, snac, user):
+        return user
+
+    def connectService(self, service, wantCallback = 0, extraData = ''):
+        """
+        connect to another service
+        if wantCallback, we return a Deferred that gets called back when the service is online.
+        if extraData, append that to our request.
+        """
+        if wantCallback:
+            d = defer.Deferred()
+            self.sendSNAC(0x01,0x04,struct.pack('!H',service) + extraData).addCallback(self._cbConnectService, d)
+            return d
+        else:
+            self.sendSNACnr(0x01,0x04,struct.pack('!H',service))
+
+    def _cbConnectService(self, snac, d):
+        d.arm()
+        self.oscar_01_05(snac[2:], d)
+
+    def createChat(self, shortName):
+        """
+        create a chat room
+        """
+        if self.services.has_key(SERVICE_CHATNAV):
+            return self.services[SERVICE_CHATNAV].createChat(shortName)
+        else:
+            d = defer.Deferred()
+            self.connectService(SERVICE_CHATNAV,1).addCallback(lambda s:d.arm() or s.createChat(shortName).chainDeferred(d))
+            return d
+            
+
+    def joinChat(self, exchange, fullName, instance):
+        """
+        join a chat room
+        """
+        #d = defer.Deferred()
+        return self.connectService(0x0e, 1, TLV(0x01, struct.pack('!HB',exchange, len(fullName)) + fullName +
+                          struct.pack('!H', instance))).addCallback(self._cbJoinChat) #, d)
+        #return d
+
+    def _cbJoinChat(self, chat):
+        del self.services[SERVICE_CHAT]
+        return chat
+
+    def warnUser(self, user, anon = 0):
+        return self.sendSNAC(0x04, 0x08, '\x00'+chr(anon)+chr(len(user))+user).addCallback(self._cbWarnUser)
+
+    def _cbWarnUser(self, snac):
+        oldLevel, newLevel = struct.unpack('!2H', snac[5])
+        return oldLevel, newLevel
+
+    def getInfo(self, user):
+        return self.sendSNAC(0x02, 0x05, '\x00\x01'+chr(len(user))+user).addCallback(self._cbGetInfo)
+
+    def _cbGetInfo(self, snac):
+        tlvs = readTLVs(snac[5])
+        return tlvs[0x02]
+
+    def getAway(self, user):
+        return self.sendSNAC(0x02, 0x05, '\x00\x03'+chr(len(user))+user).addCallback(self._cbGetAway)
+
+    def _cbGetAway(self, snac):
+        tlvs = readTLVs(snac[5])
+        return tlvs.get(0x04,None) # return None if there is no away message
+
+    # methods to be overriden by the client
+    def initDone(self):
+        """
+        called when we get the rate information, which means we should do other init. stuff.
+        """
+        print self,'initDone'
+        pass
+
+    def updateBuddy(self, user):
+        """
+        called when a buddy changes status, with the OSCARUser for that buddy.
+        """
+        print self,'updateBuddy',user
+        pass
+
+    def offlineBuddy(self, user):
+        """
+        called when a buddy goes offline
+        """
+        print self,'offlineBuddy',user
+        pass
+
+    def receiveMessage(self, user, multiparts, flags):
+        """
+        called when someone sends us a message
+        """
+        pass
+
+    def receiveWarning(self, newLevel, user):
+        """
+        called when someone warns us.
+        user is either None (if it was anonymous) or an OSCARUser
+        """
+        pass
+
+    def receiveChatInvite(self, user, message, exchange, fullName, instance, shortName, inviteTime):
+        """
+        called when someone invites us to a chat room
+        """
+        pass
+
+    def chatReceiveMessage(self, chat, user, message):
+        """
+        called when someone in a chatroom sends us a message in the chat
+        """
+        pass
+
+    def chatMemberJoined(self, chat, member):
+        """
+        called when a member joins the chat
+        """
+        pass
+
+    def chatMemberLeft(self, chat, member):
+        """
+        called when a member leaves the chat
+        """
+        pass     
+
+class OSCARService(SNACBased):
+    def __init__(self, bos, cookie, d = None):
+        SNACBased.__init__(self, cookie)
+        self.bos = bos
+        self.d = d
+
+    def connectionLost(self):
+        for k,v in self.bos.services.items():
+            if v == self:
+                del self.bos.services[k]
+        SNACBased.connectionLost(self)
+
+    def connectionFailed(self):
+        for k,v in self.bos.services.items():
+            if v == self:
+                del self.bos.services[k]
+        SNACBased.connectionFailed(self)
+
+    def clientReady(self):
+        SNACBased.clientReady(self)
+        if self.d:
+            self.d.armAndCallback(self)
+            self.d = None
+
+class ChatNavService(OSCARService):
+    snacFamilies = {
+        0x01:(3, 0x0010, 0x059b),
+        0x0d:(1, 0x0010, 0x059b)
+    }
+    def oscar_01_07(self, snac):
+        # rate info
+        self.sendSNACnr(0x01, 0x08, '\000\001\000\002\000\003\000\004\000\005')
+        self.sendSNACnr(0x0d, 0x02, '')
+
+    def oscar_0D_09(self, snac):
+        self.clientReady()
+
+    def getChatInfo(self, exchange, name, instance):
+        d = defer.Deferred()
+        self.sendSNAC(0x0d,0x04,struct.pack('!HB',exchange,len(name)) + \
+                      name + struct.pack('!HB',instance,2)). \
+            addCallback(self._cbGetChatInfo, d)
+        return d
+
+    def _cbGetChatInfo(self, snac, d):
+        data = snac[5][4:]
+        exchange, length = struct.unpack('!HB',data[:3])
+        fullName = data[3:3+length]
+        instance = struct.unpack('!H',data[3+length:5+length])[0]
+        tlvs = readTLVs(data[8+length:])
+        shortName = tlvs[0x6a]
+        inviteTime = struct.unpack('!L',tlvs[0xca])[0]
+        info = (exchange,fullName,instance,shortName,inviteTime)
+        d.armAndCallback(info)
+
+    def createChat(self, shortName):
+        #d = defer.Deferred()
+        data = '\x00\x04\x06create\xff\xff\x01\x00\x03'
+        data = data + TLV(0xd7, 'en')
+        data = data + TLV(0xd6, 'us-ascii')
+        data = data + TLV(0xd3, shortName)
+        return self.sendSNAC(0x0d, 0x08, data).addCallback(self._cbCreateChat)
+        #return d
+
+    def _cbCreateChat(self, snac): #d):
+        exchange, length = struct.unpack('!HB',snac[5][4:7])
+        fullName = snac[5][7:7+length]
+        instance = struct.unpack('!H',snac[5][7+length:9+length])[0]
+        #d.armAndCallback((exchange, fullName, instance))
+        return exchange, fullName, instance
+    
+class ChatService(OSCARService):
+    snacFamilies = {
+        0x01:(3, 0x0010, 0x059b),
+        0x0E:(1, 0x0010, 0x059b)
+    }
+    def __init__(self,bos,cookie, d = None):
+        OSCARService.__init__(self,bos,cookie,d)
+        self.exchange = None
+        self.fullName = None
+        self.instance = None
+        self.name = None
+        self.members = None
+
+    clientReady = SNACBased.clientReady # we'll do our own callback
 
     def oscar_01_07(self,snac):
         self.sendSNAC(0x01,0x08,"\000\001\000\002\000\003\000\004\000\005")
-        self.sendSNAC(0x01,0x02,"\000\001\000\003\000\020\004{\000\016\000\001\000\020\004{")
-
-    def oscar_01_18(self,snac):
-        self.sendSNAC(0x01,0x06,"")
-        self.setKeepAlive(300)
-        self.bos.chatJoined(self.room)
-
-    def oscar_0E_02(self,snac):
-        pass
+        self.clientReady()
+        
+    def oscar_0E_02(self, snac):
+#        try: # this is EVIL
+#            data = snac[3][4:]
+#            self.exchange, length = struct.unpack('!HB',data[:3])
+#            self.fullName = data[3:3+length]
+#            self.instance = struct.unpack('!H',data[3+length:5+length])[0]
+#            tlvs = readTLVs(data[8+length:])
+#            self.name = tlvs[0xd3]
+#            self.d.armAndCallback(self)
+#        except KeyError:
+        data = snac[3]
+        self.exchange, length = struct.unpack('!HB',data[:3])
+        self.fullName = data[3:3+length]
+        self.instance = struct.unpack('!H',data[3+length:5+length])[0]
+        tlvs = readTLVs(data[8+length:])
+        self.name = tlvs[0xd3]
+        self.d.armAndCallback(self)
 
     def oscar_0E_03(self,snac):
         users=[]
         rest=snac[3]
         while rest:
-            l=ord(rest[0])
-            name=rest[1:1+l]
-            foo,count=struct.unpack("!HH",rest[1+l:5+l])
-            tlvs,rest=readTLVs(rest[5+l:],count)
-            users.append(name)
-        if len(users)>1:
-            self.bos.chatGotMembers(self.room,users)
+            user, rest = self.bos.parseUser(rest, 1)
+            users.append(user)
+        if not self.fullName:
+            self.members = users
         else:
-            self.bos.chatMemberJoined(self.room,users[0])
+            self.members.append(users[0])
+            self.bos.chatMemberJoined(self,users[0])
 
     def oscar_0E_04(self,snac):
         user=self.bos.parseUser(snac[3])
-        self.bos.chatMemberLeft(self.room,user[0])
+        for u in self.members:
+            if u.name == user.name: # same person!
+                self.members.remove(u)
+        self.bos.chatMemberLeft(self,user)
 
     def oscar_0E_06(self,snac):
-        user,warn,tlvs=self.bos.parseUser(snac[3][14:])
-        message=readTLVs(tlvs[5])[1]
-        self.bos.chatMessage(self.room,user,message)
+        data = snac[3]
+        user,rest=self.bos.parseUser(snac[3][14:],1)
+        tlvs = readTLVs(rest[8:])
+        message=tlvs[1]
+        self.bos.chatReceiveMessage(self,user,message)
 
     def sendMessage(self,message):
         tlvs=TLV(0x02,"us-ascii")+TLV(0x03,"en")+TLV(0x01,message)
@@ -735,71 +1018,29 @@ class ChatRoomConnection(SNACBased):
                       struct.pack("!H",len(tlvs))+
                       tlvs)
 
-       
-class DirectConnection(protocol.Protocol):
-    def __init__(self,bos):
-        self.bos=bos
-        self.buf=''
-        self.buffered=1
-        self.mode="Message"
-
-    def sendMessage(self,message,pad=""):
-        t="ODC2"
-        t=t+struct.pack("!H",0x4c+len(pad))
-        t=t+"\000\001\000\006\000\000"
-        t=t+"\000"*16
-        t=t+struct.pack("!L",len(message))
-        t=t+"\000"*12
-        t=t+self.bos.screenName
-        t=t+"\000"*(32-len(self.bos.screenName))
-        t=t+message
-        self.transport.write(t)
-
-    def dataReceived(self,data):
-        self.buf=self.buf+data
-        if len(self.buf)<6: return
-        l=struct.unpack("!H",self.buf[4:6])[0]
-        if len(self.buf)<l: return
-        things=struct.unpack("!HHHLLLLLLLL",self.buf[6:44])
-        lmsg=things[7]
-        if len(self.buf)<l+lmsg: return
-        user=self.buf[44:76]
-        luser=string.find(user,"\000")
-        user=user[:luser]
-        if l>76:
-            pad=self.buf[76:l]
-        message=self.buf[l:l+lmsg]
-        self.buf=self.buf[l+lmsg:]
-        if message:
-            self.bos.imageGotMessage(user,message)
-
-
-class DirectConnectionServer(protocol.Factory):
-    def __init__(self,bos):
-        self.protocol=lambda x,bos=bos:DirectConnection(bos)
-
+    def leaveChat(self):
+        self.disconnect()
 
 class OscarAuthenticator(OscarConnection):
     BOSClass = BOSConnection
-    def __init__(self,username,password,callback=None,icq=0):
+    def __init__(self,username,password,deferred=None,icq=0):
         self.username=username
         self.password=password
-        self.callback=callback
-        self.icq=icq # icq mode
-        if icq and self.BOSClass==BOSConnection:
-            self.BOSClass=ICQConnection
+        self.deferred=deferred
+        self.icq=0 # icq mode is disabled
+        #if icq and self.BOSClass==BOSConnection:
+        #    self.BOSClass=ICQConnection
 
     def oscar_(self,flap):
         if not self.icq:
-            self.sendFlap(FLAP_CHANNEL_NEW_CONNECTION,"\000\000\000\001")
-            self.sendFlap(FLAP_CHANNEL_DATA,
-                          SNAC(0x17,0x06,0,
-                               TLV(TLV_USERNAME,self.username)))
+            self.sendFLAP("\000\000\000\001", 0x01)
+            self.sendFLAP(SNAC(0x17,0x06,0,
+                               TLV(TLV_USERNAME,self.username)+
+                               TLV(0x004B,'')))
             self.state="Key"
         else:
             encpass=encryptPasswordICQ(self.password)
-            self.sendFlap(FLAP_CHANNEL_NEW_CONNECTION,
-                          '\000\000\000\001'+
+            self.sendFLAP('\000\000\000\001'+
                           TLV(0x01,self.username)+
                           TLV(0x02,encpass)+
                           TLV(0x03,'ICQ Inc. - Product of ICQ (TM).2001b.5.15.1.3638.85')+
@@ -810,27 +1051,27 @@ class OscarAuthenticator(OscarConnection):
                           TLV(0x1a,"\x0eK")+
                           TLV(0x14,"\x00\x00\x00U")+
                           TLV(0x0f,"en")+
-                          TLV(0x0e,"us"))
+                          TLV(0x0e,"us"),0x01)
             self.state="Cookie"
 
     def oscar_Key(self,data):
         snac=readSNAC(data[1])
         key=snac[5][2:]
         encpass=encryptPasswordMD5(self.password,key)
-        self.sendFlap(FLAP_CHANNEL_DATA,
-                      SNAC(0x17,0x02,0,
+        self.sendFLAP(SNAC(0x17,0x02,0,
                            TLV(TLV_USERNAME,self.username)+
                            TLV(TLV_PASSWORD,encpass)+
-                           TLV(TLV_CLIENTNAME,"AOL Instant Messenger (SM), version 4.7.2468/WIN32")+
-                           TLV(TLV_RANDOM1,"\x01\x09")+
-                           TLV(TLV_CLIENTMAX,"\000\004")+
-                           TLV(TLV_CLIENTMIN,"\000\007")+
-                           TLV(TLV_RANDOM2,"\000\000")+
-                           TLV(TLV_CLIENTSUB,"\x09\xa4")+
-                           TLV(TLV_RANDOM3,"\x00\x00\x00\x9e")+
+                           TLV(0x004C, '')+ # unknown
+                           TLV(TLV_CLIENTNAME,"AOL Instant Messenger (SM), version 4.8.2790/WIN32")+
+                           TLV(0x0016,"\x01\x09")+
+                           TLV(TLV_CLIENTMAJOR,"\000\004")+
+                           TLV(TLV_CLIENTMINOR,"\000\010")+
+                           TLV(0x0019,"\000\000")+
+                           TLV(TLV_CLIENTSUB,"\x0A\xE6")+
+                           TLV(0x0014,"\x00\x00\x00\xBB")+
                            TLV(TLV_LANG,"en")+
                            TLV(TLV_COUNTRY,"us")+
-                           TLV(TLV_RANDOM4,"\001")))
+                           TLV(TLV_USESSI,"\001")))
         return "Cookie"
 
     def oscar_Cookie(self,data):
@@ -843,9 +1084,9 @@ class OscarAuthenticator(OscarConnection):
             self.cookie=tlvs[6]
             server,port=string.split(tlvs[5],":")
             bos=self.BOSClass(self.username,self.cookie)
-            if self.callback: self.callback(bos)
+            if self.deferred: self.deferred.armAndCallback(bos)
             reactor.clientTCP(server,int(port),bos)
-            self.transport.loseConnection()
+            self.disconnect()
         elif tlvs.has_key(8):
             errorcode=tlvs[8]
             errorurl=tlvs[4]
@@ -853,7 +1094,7 @@ class OscarAuthenticator(OscarConnection):
                 error="You are attempting to sign on again too soon.  Please try again later."
             elif errorcode=='\000\005':
                 error="Invalid Username or Password."
-            else: error=errorcode
+            else: error=repr(errorcode)
             self.error(error,errorurl)
         else:
             print tlvs
@@ -863,31 +1104,29 @@ class OscarAuthenticator(OscarConnection):
 
     def error(self,error,url):
         print "ERROR!",error,url
+        if self.deferred: self.deferred.armAndErrback((error,url))
         self.transport.loseConnection()
 
 FLAP_CHANNEL_NEW_CONNECTION = 0x01
 FLAP_CHANNEL_DATA = 0x02
 FLAP_CHANNEL_ERROR = 0x03
 FLAP_CHANNEL_CLOSE_CONNECTION = 0x04
-FLAPS={
-    FLAP_CHANNEL_NEW_CONNECTION:'NewConnection',
-    FLAP_CHANNEL_DATA:'Data',
-    FLAP_CHANNEL_ERROR:'Error',
-    FLAP_CHANNEL_CLOSE_CONNECTION:'CloseConnection'
-}
 
-TLV_USERNAME = 0x01
-TLV_CLIENTNAME = 0x03
-TLV_COUNTRY = 0x0E
-TLV_LANG = 0x0F
-TLV_RANDOM3 = 0x14
-TLV_RANDOM1 = 0x16
-TLV_CLIENTMAX = 0x17
-TLV_CLIENTMIN = 0x18
-TLV_RANDOM2 = 0x19
-TLV_CLIENTSUB = 0x1A
-TLV_PASSWORD = 0x25
-TLV_RANDOM4 = 0x4a
+SERVICE_CHATNAV = 0x0d
+SERVICE_CHAT = 0x0e
+serviceClasses = {
+    SERVICE_CHATNAV:ChatNavService,
+    SERVICE_CHAT:ChatService
+}
+TLV_USERNAME = 0x0001
+TLV_CLIENTNAME = 0x0003
+TLV_COUNTRY = 0x000E
+TLV_LANG = 0x000F
+TLV_CLIENTMAJOR = 0x0017
+TLV_CLIENTMINOR = 0x0018
+TLV_CLIENTSUB = 0x001A
+TLV_PASSWORD = 0x0025
+TLV_USESSI = 0x004A
 
 CAP_ICON = '\011F\023FL\177\021\321\202"DEST\000\000'
 CAP_VOICE = '\011F\023AL\177\021\321\202"DEST\000\000'
@@ -897,3 +1136,4 @@ CAP_GET_FILE = '\011F\023HL\177\021\321\202"DEST\000\000'
 CAP_SEND_FILE = '\011F\023CL\177\021\321\202"DEST\000\000'
 CAP_GAMES = '\011F\023GL\177\021\321\202"DEST\000\000'
 CAP_SEND_LIST = '\011F\023KL\177\021\321\202"DEST\000\000'
+        
