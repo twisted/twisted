@@ -15,7 +15,7 @@ register("Twisted Web",
 
 register("Twisted FTP",
          "twisted.tap.ftp",
-         description="An INSECURE FTP server.",
+         description="An FTP server.",
          type="tap")
 
 register("Twisted Mail",
