@@ -1,6 +1,9 @@
 # -*- coding: Latin-1 -*-
 
-from irc2 import ActionInProgress, NoSuchChannel, AdvancedClient
+from irc2 import AdvancedClient
+from irc2 import NoSuchNickname, NoSuchChannel
+from irc2 import NicknameMissing, NicknameCollision
+from irc2 import ErroneousNickname, NicknameInUse
 
 from twisted.python import log
 from twisted.internet import defer
@@ -94,18 +97,6 @@ class SimpleActionTestCase(unittest.TestCase):
         loopback.loopback(server, client)
         self.failUnless(self.success)
     
-    def testIllegalQuit(self):
-        server = protocol.Protocol()
-        server.dataReceived = lambda data: server.transport.loseConnection()
-        client = AdvancedTestClient()
-        client.onC.addCallback(lambda p: (p.quit(), p.quit())
-            ).addCallback(self.succeed
-            ).addErrback(self.fail, client
-            )
-        loopback.loopback(server, client)
-        self.failIf(self.success)
-        self.failure.trap(ActionInProgress)
-
     def testNames(self):
         server = LineSendingProtocol([
             ":server 353 user = #channel :user another1 another2 another3",
@@ -182,7 +173,7 @@ class SimpleActionTestCase(unittest.TestCase):
             )
         loopback.loopback(server, client)
         self.failIf(whois)
-        self.failure.trap(NoSuchChannel)
+        self.failure.trap(NoSuchNickname)
 
     def testTopic(self):
         server = LineSendingProtocol([
@@ -226,3 +217,77 @@ class SimpleActionTestCase(unittest.TestCase):
         loopback.loopback(server, client)
         self.failIf(topic)
         self.failure.trap(NoSuchChannel)
+
+    def testNick(self):
+        server = LineSendingProtocol([
+            ":user!ident@hostmask NICK :newNick",
+        ], False)
+        nick = []
+        client = AdvancedTestClient()
+        client.onC.addCallback(lambda p: p.nick("newNick")
+            ).addCallback(nick.append
+            ).addCallback(lambda _: client.transport.loseConnection()
+            ).addErrback(self.fail, client
+            )
+        loopback.loopback(server, client)
+        self.assertEquals(nick, ["newNick"])
+
+    def testMissingNick(self):
+        server = LineSendingProtocol([
+            ":server 431 user :No nickname given",
+        ], False)
+        nick = []
+        client = AdvancedTestClient()
+        client.onC.addCallback(lambda p: p.nick("")
+            ).addCallback(nick.append
+            ).addCallback(lambda _: client.transport.loseConnection()
+            ).addErrback(self.fail, client
+            )
+        loopback.loopback(server, client)
+        self.failIf(nick)
+        self.failure.trap(NicknameMissing)
+
+    def testErroneousNick(self):
+        server = LineSendingProtocol([
+            ":server 432 user illegalNick :Erroneous Nickname",
+        ], False)
+        nick = []
+        client = AdvancedTestClient()
+        client.onC.addCallback(lambda p: p.nick("illegalNick")
+            ).addCallback(nick.append
+            ).addCallback(lambda _: client.transport.loseConnection()
+            ).addErrback(self.fail, client
+            )
+        loopback.loopback(server, client)
+        self.failIf(nick)
+        self.failure.trap(ErroneousNickname)
+
+    def testNickInUse(self):
+        server = LineSendingProtocol([
+            ":server 433 user usedNickname :Nickname is already in use.",
+        ], False)
+        nick = []
+        client = AdvancedTestClient()
+        client.onC.addCallback(lambda p: p.nick("usedNickname")
+            ).addCallback(nick.append
+            ).addCallback(lambda _: client.transport.loseConnection()
+            ).addErrback(self.fail, client
+            )
+        loopback.loopback(server, client)
+        self.failIf(nick)
+        self.failure.trap(NicknameInUse)
+
+    def testNickCollision(self):
+        server = LineSendingProtocol([
+            ":server 436 user usedNickname :Nickname collision",
+        ], False)
+        nick = []
+        client = AdvancedTestClient()
+        client.onC.addCallback(lambda p: p.nick("usedNickname")
+            ).addCallback(nick.append
+            ).addCallback(lambda _: client.transport.loseConnection()
+            ).addErrback(self.fail, client
+            )
+        loopback.loopback(server, client)
+        self.failIf(nick)
+        self.failure.trap(NicknameCollision)
