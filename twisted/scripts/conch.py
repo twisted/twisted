@@ -15,7 +15,7 @@
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 #
-# $Id: conch.py,v 1.16 2002/11/30 18:07:35 z3p Exp $
+# $Id: conch.py,v 1.17 2002/11/30 18:17:02 z3p Exp $
 
 #""" Implementation module for the `ssh` command.
 #"""
@@ -60,10 +60,12 @@ class GeneralOptions(usage.Options):
     def opt_escape(self, esc):
         if esc == 'none':
             self['escape'] = None
-        elif esc[0] == '^':
+        elif esc[0] == '^' and len(esc) == 2:
             self['escape'] = chr(ord(esc[1])-64)
-        else:
+        elif len(esc) == 1:
             self['escape'] = esc
+        else:
+            sys.exit("Bad escape character '%s'." % esc)
 
     def opt_cipher(self, cipher):
         if cipher in SSHClientTransport.supportedCiphers:
