@@ -66,6 +66,15 @@ What can I do with it?
   (IRC), and AOL Instant Messenger (with the TOC protocol).
 
 
+Requirements
+
+  SSL/TLS: PyOpenSSL (http://pyopenssl.sf.net)
+  Serial: PySerial (http://pyserial.sf.net)
+  SSH: PyCrypto (http://pycrypto.sf.net)
+       PyPAM (optional - http://www.tummy.com/Software/PyPam/index.html)
+       initgroups, TGmp, PyShadow (optional)
+
+
 Unit Tests
 
   See our unit tests run proving that the software is BugFree(TM)::
