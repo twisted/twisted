@@ -121,9 +121,9 @@ db = AgeDatabase(dbpool)
  
 # These will *not* block.  Hooray! 
 db.getAge("Andrew").addCallbacks(gotAge, db.operationError, 
-                                 callbackArgs="Andrew")
+                                 callbackArgs=("Andrew",))
 db.getAge("Glyph").addCallbacks(gotAge, db.operationError, 
-                                callbackArgs="Glyph")
+                                callbackArgs=("Glyph",))
 
 # Of course, nothing will happen until the reactor is started
 from twisted.internet import reactor
