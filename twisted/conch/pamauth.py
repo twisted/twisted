@@ -28,12 +28,10 @@ import sys, time, getpass, threading, os
 
 def pamAuthenticateThread(service, user, conv):
     def _conv(p, items, foo):
-        print 'called conv'
         try:
             d = conv(items)
         except:
             import traceback
-            print 'FOOOFOFOFOSDFOSDF'
             traceback.print_exc()
             return
         ev = threading.Event()
@@ -45,7 +43,6 @@ def pamAuthenticateThread(service, user, conv):
             ev.set()
         reactor.callFromThread(d.addCallbacks, cb, eb)
         ev.wait()
-        print 'ASDASDASDASD'
         done = ev.r
         if done[0]:
             return done[1]
