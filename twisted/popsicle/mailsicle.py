@@ -272,7 +272,13 @@ class Mailsicle(repos.DirectoryRepository):
         opj = os.path.join
         idxd = "index-" + idx
         try:
-            entries = os.listdir(opj(self.dirname, idxd, value))
+            if value == '*':
+                entries = []
+                values = os.listdir(opj(self.dirname, idxd))
+                for v in values:
+                    entries.extend(os.listdir(opj(self.dirname, idxd, v)))
+            else:
+                entries = os.listdir(opj(self.dirname, idxd, value))
         except OSError:
             return QueryResults([], self)
         return QueryResults(entries, self)
