@@ -7,7 +7,6 @@
 Test cases for Twisted.names' root resolver.
 """
 
-from twisted.flow import flow
 from twisted.internet import defer
 from twisted.names import root, dns
 from twisted.trial import unittest

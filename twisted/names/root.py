@@ -20,7 +20,6 @@ from __future__ import generators
 
 import random
 
-from twisted.flow import flow
 from twisted.python import log
 from twisted.internet import defer
 from twisted.names import dns
@@ -50,8 +49,7 @@ class Resolver(common.ResolverBase):
         self.hints = hints
 
     def _lookup(self, name, cls, type, timeout):
-        return flow.Deferred(discoverAuthority(name, self.hints)
-            ).addCallback(lambda a: a[0]
+        d = discoverAuthority(name, self.hints
             ).addCallback(self.discoveredAuthority, name, cls, type, timeout
             )
         return d
@@ -126,9 +124,9 @@ def discoverAuthority(host, roots, cache=None, p=None):
     for part in parts:
         soFar = part + '.' + soFar
         # print '///////',  soFar, authority, p
-        msg = flow.wrap(lookupNameservers(soFar, authority, p))
+        msg = defer.waitForDeferred(lookupNameservers(soFar, authority, p))
         yield msg
-        msg = msg.next()
+        msg = msg.getResult()
 
         newAuth, nameservers = extractAuthority(msg, cache)
 
@@ -139,15 +137,15 @@ def discoverAuthority(host, roots, cache=None, p=None):
             if nameservers:
                 r = str(nameservers[0].payload.name)
                 # print 'Recursively discovering authority for', r
-                authority = flow.wrap(discoverAuthority(r, roots, cache, p))
+                authority = defer.waitForDeferred(discoverAuthority(r, roots, cache, p))
                 yield authority
-                authority = authority.next()
+                authority = authority.getResult()
                 # print 'Discovered to be', authority, 'for', r
 ##            else:
 ##                # print 'Doing address lookup for', soFar, 'at', authority
-##                msg = flow.wrap(lookupAddress(soFar, authority, p))
+##                msg = defer.waitForDeferred(lookupAddress(soFar, authority, p))
 ##                yield msg
-##                msg = msg.next()
+##                msg = msg.getResult()
 ##                records = msg.answers + msg.authority + msg.additional
 ##                addresses = [r for r in records if r.type == dns.A]
 ##                if addresses:
@@ -157,6 +155,8 @@ def discoverAuthority(host, roots, cache=None, p=None):
     # print "Yielding authority", authority
     yield authority
 
+discoverAuthority = defer.deferredGenerator(discoverAuthority)
+    
 def makePlaceholder(deferred, name):
     def placeholder(*args, **kw):
         deferred.addCallback(lambda r: getattr(r, name)(*args, **kw))
