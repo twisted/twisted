@@ -39,6 +39,7 @@ class VersionTestCase(unittest.TestCase):
             ok = 0
         pkcl = pickle.dumps(NullVersioned())
         class NullVersioned(styles.Versioned):
+            persistenceVersion = 1
             def upgradeToVersion1(self):
                 self.ok = 1
         mnv = pickle.loads(pkcl)
