@@ -1,5 +1,5 @@
 
-from helper import TerminalBuffer
+import helper
 from insults import ServerProtocol, ClientProtocol
 from insults import G0, G1, G2, G3
 from insults import IRM
@@ -12,7 +12,7 @@ HEIGHT = 24
 
 class BufferTestCase(unittest.TestCase):
     def setUp(self):
-        self.term = TerminalBuffer()
+        self.term = helper.TerminalBuffer()
         self.term.connectionMade()
 
     def testInitialState(self):
@@ -229,6 +229,37 @@ class BufferTestCase(unittest.TestCase):
         self.failUnless(ch[1].bold)
         self.failIf(ch[1].underline)
         self.failIf(ch[1].reverseVideo)
+
+    def testColorAttributes(self):
+        s1 = "Merry xmas"
+        s2 = "Just kidding"
+        self.term.selectGraphicRendition(helper.FOREGROUND + helper.RED,
+                                         helper.BACKGROUND + helper.GREEN)
+        self.term.write(s1 + "\n")
+        self.term.selectGraphicRendition(NORMAL)
+        self.term.write(s2 + "\n")
+
+        for i in range(len(s1)):
+            ch = self.term.getCharacter(i, 0)
+            self.assertEquals(ch[0], s1[i])
+            self.assertEquals(ch[1].charset, G0)
+            self.assertEquals(ch[1].bold, False)
+            self.assertEquals(ch[1].underline, False)
+            self.assertEquals(ch[1].blink, False)
+            self.assertEquals(ch[1].reverseVideo, False)
+            self.assertEquals(ch[1].foreground, helper.RED)
+            self.assertEquals(ch[1].background, helper.GREEN)
+
+        for i in range(len(s2)):
+            ch = self.term.getCharacter(i, 1)
+            self.assertEquals(ch[0], s2[i])
+            self.assertEquals(ch[1].charset, G0)
+            self.assertEquals(ch[1].bold, False)
+            self.assertEquals(ch[1].underline, False)
+            self.assertEquals(ch[1].blink, False)
+            self.assertEquals(ch[1].reverseVideo, False)
+            self.assertEquals(ch[1].foreground, helper.WHITE)
+            self.assertEquals(ch[1].background, helper.BLACK)
 
     def testEraseLine(self):
         s1 = 'line 1'

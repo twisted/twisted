@@ -4,16 +4,9 @@ from twisted.python import log
 
 import insults
 
-BLACK, RED, GREEN, YELLOW, BLUE, MAGENTA, CYAN, WHITE = range(8)
-COLORS = {
-    BLACK: 'BLACK',
-    RED: 'RED',
-    GREEN: 'GREEN',
-    YELLOW: 'YELLOW',
-    BLUE: 'BLUE',
-    MAGENTA: 'MAGENTA',
-    CYAN: 'CYAN',
-    WHITE: 'WHITE'}
+FOREGROUND = 30
+BACKGROUND = 40
+BLACK, RED, GREEN, YELLOW, BLUE, MAGENTA, CYAN, WHITE, N_COLORS = range(9)
 
 class CharacterAttribute:
     def __init__(self, charset, bold, underline, blink, reverseVideo,
@@ -167,7 +160,9 @@ class TerminalBuffer(protocol.Protocol):
                     'bold': False,
                     'underline': False,
                     'blink': False,
-                    'reverseVideo': False}
+                    'reverseVideo': False,
+                    'foreground': WHITE,
+                    'background': BLACK}
             elif a == insults.BOLD:
                 self.graphicRendition['bold'] = True
             elif a == insults.UNDERLINE:
@@ -182,10 +177,10 @@ class TerminalBuffer(protocol.Protocol):
                 except ValueError:
                     log.msg("Unknown graphic rendition attribute: " + repr(a))
                 else:
-                    if 30 <= v <= 37:
-                        self.graphicRendition['foreground'] = COLORS[v - 30]
-                    elif 40 <= v <= 47:
-                        self.graphicRendition['backgrond'] = COLORS[v - 40]
+                    if FOREGROUND <= v <= FOREGROUND + N_COLORS:
+                        self.graphicRendition['foreground'] = v - FOREGROUND
+                    elif BACKGROUND <= v <= BACKGROUND + N_COLORS:
+                        self.graphicRendition['background'] = v - BACKGROUND
                     else:
                         log.msg("Unknown graphic rendition attribute: " + repr(a))
 
@@ -237,8 +232,8 @@ class TerminalBuffer(protocol.Protocol):
             'underline': False,
             'blink': False,
             'reverseVideo': False,
-            'foreground': 'WHITE',
-            'background': 'BLACK'}
+            'foreground': WHITE,
+            'background': BLACK}
         self.charsets = {
             insults.G0: insults.CS_US,
             insults.G1: insults.CS_US,
