@@ -1,3 +1,9 @@
+2003-03-01  Kevin Turner  <acapnotic@twistedmatrix.com>
+
+	* twisted/internet/htb.py: Heirarchial Token Bucket traffic
+	shaping, patterened after Martin Devera's Hierarchical Token
+	Bucket traffic shaper for the Linux kernel.
+
 2003-02-24  Brian Warner  <warner@lothar.com>
 
 	* twisted/internet/tcp.py, base.py: set FD_CLOEXEC on all new
