@@ -221,6 +221,7 @@ try:
     import cBanana
 except ImportError:
     #print 'using python banana'
+    pass
 else:
     #print 'using C banana'
     Banana = Canana
