@@ -190,7 +190,12 @@ class ResourceGuard(resource.Resource):
         self.sessionIdentity = sessionIdentity
 
     def __getattr__(self, k):
+        if not self.__dict__.has_key("res"):
+            raise AttributeError, k
         return getattr(self.res, k)
+
+    def __getstate__(self):
+        return self.__dict__.copy()
     
     def listNames(self):
         return self.res.listNames()
