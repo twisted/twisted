@@ -15,7 +15,7 @@
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
-__version__ = "$Revision: 1.38 $"[11:-2]
+__version__ = "$Revision: 1.39 $"[11:-2]
 
 import types
 import weakref
@@ -29,7 +29,7 @@ from twisted.web.woven import interfaces
 
 
 def adaptToIModel(m, parent=None, submodel=None):
-    adapted = components.getAdapter(m, interfaces.IModel, None)
+    adapted = components.getAdapter(m, interfaces.IModel, None, components.getAdapterClassWithInheritance)
     if adapted is None:
         adapted = Wrapper(m)
     adapted.parent = parent
@@ -105,7 +105,6 @@ class Model:
         in.
         """
         self.cachedValid = 0
-        self.submodels = {}
         if changed is None: changed = {}
         retVal = []
         for view in self.views:
@@ -233,6 +232,9 @@ class Model:
                 del self.submodels[name]
             setattr(self, name, value)
 
+    def dataWillChange(self):
+        pass
+
     def getData(self, request=None):
         if self._getter is not None:
             func = self._getter
@@ -242,7 +244,7 @@ class Model:
                 func = func.im_func
             args, varargs, varkw, defaults = inspect.getargspec(func)
             self.cachedValid = 1
-            self.submodels = {}
+            self.dataWillChange()
             if len(args) == num:
                 self.orig = self._getter(request)
             else:
@@ -328,6 +330,9 @@ class Wrapper(Model):
         Model.__init__(self)
         self.orig = orig
 
+    def dataWillChange(self):
+        pass
+
     def getData(self, request=None):
         if self._getter is not None:
             func = self._getter
@@ -337,7 +342,7 @@ class Wrapper(Model):
                 func = func.im_func
             args, varargs, varkw, defaults = inspect.getargspec(func)
             self.cachedValid = 1
-            self.submodels = {}
+            self.dataWillChange()
             if len(args) == num:
                 self.orig = self._getter(request)
             else:
@@ -377,6 +382,9 @@ class ListModel(Wrapper):
     I wrap a Python list and allow it to interact with the Woven
     models and submodels.
     """
+    def dataWillChange(self):
+        self.submodels = {}
+
     def getSubmodel(self, request=None, name=None):
         if name is None and type(request) is type(""):
             warnings.warn("Warning!")
@@ -400,6 +408,9 @@ class ListModel(Wrapper):
             name = request
             request = None
         self.orig[int(name)] = value
+
+    def __len__(self):
+        return len(self.orig)
 
     def __getitem__(self, name):
         return self.getSubmodel(None, str(name))
@@ -435,6 +446,9 @@ class DictionaryModel(Wrapper):
     I wrap a Python dictionary and allow it to interact with the Woven
     models and submodels.
     """
+    def dataWillChange(self):
+        self.submodels = {}
+
     def getSubmodel(self, request=None, name=None):
         if name is None and type(request) is type(""):
             warnings.warn("Warning!")
