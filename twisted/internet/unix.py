@@ -27,8 +27,9 @@ import os, stat, socket
 if not hasattr(socket, 'AF_UNIX'):
     raise ImportError, "UNIX sockets not supported on this platform"
 
-# Python imports
+# Twisted imports
 from twisted.internet import base, tcp, error
+from twisted.internet.error import CannotListenError
 from twisted.python import log
 from twisted.python.compat import *
 
@@ -48,7 +49,7 @@ class Port(tcp.Port):
     
     transport = Server
 
-    def __init__(self, fileName, factory, backlog, reactor=None):
+    def __init__(self, fileName, factory, backlog=5, reactor=None):
         tcp.Port.__init__(self, fileName, factory, backlog, reactor=reactor)
 
     def __repr__(self):
