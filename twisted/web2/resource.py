@@ -100,7 +100,6 @@ class Resource(object):
         """Ensures there is no incoming body data, and calls render."""
         request = iweb.IRequest(ctx)
         if request.stream.length != 0:
-            print request.stream.length
             return http.Response(REQUEST_ENTITY_TOO_LARGE)
         return self.render(ctx)
 

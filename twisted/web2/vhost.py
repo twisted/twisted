@@ -14,6 +14,7 @@ import string
 import resource
 import responsecode
 import iweb
+import http
 
 class NameVirtualHost(resource.Resource):
     """I am a resource which represents named virtual hosts. 
@@ -77,12 +78,38 @@ class NameVirtualHost(resource.Resource):
         return (self.hosts.get(host, self.default) or responsecode.NOT_FOUND), segments
 
 class VHostURIRewrite(resource.Resource):
+    """ I do request mangling to insure that children know what host they are being 
+        accessed from behind mod_proxy.
+
+        Usage:
+        -Twisted-
+            root = MyResource()
+            vur = vhost.VHostURIRewrite(uri='http://hostname:port/', resource=root)
+            server.Site(vur)
+            
+        -Apache-
+            <VirtualHost hostname:port>
+                ProxyPass / http://localhost:8080/
+                Servername hostname
+            </VirtualHost>
+
+        If the trailing / is ommitted in the second argument to ProxyPass VHostURIRewrite
+        will return a 404 response code.
+        
+        uri must be a fully specified uri complete with scheme://hostname/
+    """
+
+    addSlash = True
+
     def __init__(self, uri, resource):
         self.uri = uri
         self.host = uri.split('/')[2]
 
         self.resource = resource
-        
+
+    def render(self, ctx):
+        return http.Response(responsecode.NOT_FOUND)
+
     def locateChild(self, ctx, segments):
         req = iweb.IRequest(ctx)
         req.headers.setHeader('host', self.host)
