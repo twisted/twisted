@@ -119,6 +119,20 @@ class LookupsTestCaseII(unittest.TestCase):
             AttributeError,
             reflect.namedAny, "twisted.python.reflect.Summer.nosuchattributeintheworld")
 
+        # Finally, invalid module names should raise a ValueError
+        self.assertRaises(
+            ValueError,
+            reflect.namedAny, "")
+        self.assertRaises(
+            ValueError,
+            reflect.namedAny, "12345")
+        self.assertRaises(
+            ValueError,
+            reflect.namedAny, "@#$@(#.!@(#!@#")
+        self.assertRaises(
+            ValueError,
+            reflect.namedAny, "tcelfer.nohtyp.detsiwt")
+
 class ObjectGrep(unittest.TestCase):
     def testDictionary(self):
         o = object()

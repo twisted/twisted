@@ -345,14 +345,20 @@ class Options(usage.Options):
 
     def _tryNamedAny(self, arg):
         try:
-            n = reflect.namedAny(arg)
-        except ValueError:
-            raise ArgumentError
+            try:
+                n = reflect.namedAny(arg)
+            except ValueError, ve:
+                if ve.args == ('Empty module name',):
+                    raise ArgumentError
+                else:
+                    raise
+        except ArgumentError:
+            raise
         except:
             f = failure.Failure()
             f.printTraceback()
             self['_couldNotImport'][arg] = f
-            return 
+            return
 
         # okay, we can use named any to import it, so now wtf is it?
         if inspect.ismodule(n):
