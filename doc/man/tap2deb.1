@@ -13,6 +13,13 @@ do not sign the Debian pacakge
 \fB\-t\fR, \fB\--tapfile\fR \fI<tapfile>\fR
 Build the application around the given .tap (default twistd.tap)
 .TP
+\fB\-y\fR, \fB\--type\fR \fI<type>\fR
+The configuration has the given type . Allowable types are
+\fBtap\fR, \fBsource\fR, \fBxml\fR and \fBpython\fR.
+The first three types are \fBmktap(1)\fR output formats,
+while the last one is a manual building of application 
+(see \fBtwistd(1)\fR, the \fB\-y\fR option).
+.TP
 \fB\-p\fR, \fB\--protocol\fR \fI<protocol>\fR
 The name of the protocol this will be used to serve. This is intended
 as a part of the description. Default is the name of the tapfile, minus

@@ -28,8 +28,15 @@ class MyOptions(usage.Options):
                   ["long_description", "l", ""],
                   ["version", "v", "1.0"],
                   ["debfile", "d", None]]
+                  ["type", "y", "tap", "type of configuration: 'tap', 'xml, 'source' or 'python'"]]
 
 
+type_dict = {
+'tap': 'file',
+'python': 'python',
+'source': 'source',
+'xml': 'xml',
+}
 
 def save_to_file(file, text):
     open(file, 'w').write(text)
@@ -50,6 +57,7 @@ def run():
     maintainer = config['maintainer']
     description = config['description'] or ('A TCP server for %(protocol)s' % vars())
     long_description = config['long_description'] or 'Automatically created by tap2deb'
+    twistd_option = type_dict[config['type']]
     date = string.strip(os.popen('822-date').read())
     directory = deb_file + '-' + version
     python_version = '%s.%s' % sys.version_info[:2]
@@ -104,7 +112,7 @@ def run():
             start-stop-daemon --start --quiet --exec /usr/bin/twistd%(python_version)s -- \
                               --pidfile=$pidfile \
                               --rundir=$rundir \
-                              --file=$file \
+                              --%(twistd_option)s=$file \
                               --logfile=$logfile \
                               --quiet
             echo "."	
