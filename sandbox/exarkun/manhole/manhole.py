@@ -51,7 +51,7 @@ class ManholeInterpreter(code.InteractiveInterpreter):
         return more
 
     def runcode(self, *a, **kw):
-        orighook, sys.displayhook = sys.displayhook, self.write
+        orighook, sys.displayhook = sys.displayhook, lambda s: self.write(repr(s))
         try:
             origout, sys.stdout = sys.stdout, FileWrapper(self.handler)
             try:
@@ -62,7 +62,7 @@ class ManholeInterpreter(code.InteractiveInterpreter):
             sys.displayhook = orighook
 
     def write(self, data):
-        self.handler.addOutput(repr(data))
+        self.handler.addOutput(data)
 
 class Manhole(recvline.HistoricRecvLineHandler):
     def __init__(self, proto):

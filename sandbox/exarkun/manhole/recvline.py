@@ -7,6 +7,8 @@ class RecvLineHandler:
     width = 80
     height = 24
 
+    TABSTOP = 4
+
     ps = ('>>> ', '... ')
     pn = 0
 
@@ -26,6 +28,7 @@ class RecvLineHandler:
             proto.RIGHT_ARROW: self.handle_RIGHT,
             '\r': self.handle_RETURN,
             '\x7f': self.handle_BACKSPACE,
+            '\t': self.handle_TAB,
             proto.DELETE: self.handle_DELETE,
             proto.INSERT: self.handle_INSERT,
             proto.HOME: self.handle_HOME,
@@ -77,6 +80,10 @@ class RecvLineHandler:
             self.proto.write(keyID)
         else:
             print 'Received', repr(keyID)
+
+    def handle_TAB(self):
+        for i in range(self.TABSTOP - (len(self.lineBuffer) % self.TABSTOP)):
+            self.keystrokeReceived(' ')
 
     def handle_LEFT(self):
         if self.lineBufferIndex > 0:
@@ -167,6 +174,7 @@ class HistoricRecvLineHandler(RecvLineHandler):
             self.lineBufferIndex = 0
 
     def handle_RETURN(self):
-        self.historyLines.append(''.join(self.lineBuffer))
+        if self.lineBuffer:
+            self.historyLines.append(''.join(self.lineBuffer))
         self.historyPosition = len(self.historyLines)
         return RecvLineHandler.handle_RETURN(self)
