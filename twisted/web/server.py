@@ -290,7 +290,8 @@ class Request(pb.Copyable, http.Request):
             hostport = ''
         else:
             hostport = ':%d' % port
-        return urllib.quote('http://%s%s/%s' % (
+        return urllib.quote('http%s://%s%s/%s' % (
+            self.isSecure() and 's' or '',
             string.split(self.getHeader("host"), ':', 1)[0],
             hostport,
             string.join(self.prepath, '/')), "/:")
@@ -403,9 +404,7 @@ class Site(http.HTTPFactory):
     def render(self, request):
         """Redirect because a Site is always a directory.
         """
-        request.setHeader("location","http://%s%s/" % (
-            request.getHeader("host"),
-            (string.split(request.uri,'?')[0])))
+        request.setHeader("location",request.prePathURL() + '/')
         request.setResponseCode(http.TEMPORARY_REDIRECT)
         return 'redirect!'
 

@@ -587,6 +587,9 @@ class Request:
         else:
             return None
 
+    def isSecure(self):
+        return (self.client[0] == 'SSL')
+
     def _authorize(self):
         # Authorization, (mostly) per the RFC
         try:

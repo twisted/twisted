@@ -60,9 +60,10 @@ class Data(resource.Resource):
         return self.data
 
 def addSlash(request):
-    return "http://%s%s/" % (
-            request.getHeader("host"),
-            (string.split(request.uri,'?')[0]))
+    return "http%s://%s%s/" % (
+        request.isSecure() and 's' or '',
+        request.getHeader("host"),
+        (string.split(request.uri,'?')[0]))
 
 def redirectTo(URL, request):
     request.setHeader("location", URL)

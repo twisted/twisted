@@ -927,7 +927,8 @@ class Gadget(resource.Resource):
         #Redirect to view this entity as a collection.
         request.setResponseCode(http.TEMPORARY_REDIRECT)
         # TODO who says it's not https?
-        request.setHeader("location","http://%s%s/" % (
+        request.setHeader("location","http%s://%s%s/" % (
+            request.isSecure() and 's' or '',
             request.getHeader("host"),
             (string.split(request.uri,'?')[0])))
         return "NO DICE!"
