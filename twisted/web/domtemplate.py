@@ -129,7 +129,7 @@ class DefaultHandler(Controller):
 
 class DefaultWidget(domwidgets.Widget):
     def generateDOM(self, request, node):
-        return None
+        return node
 
     def setId(self, id):
         self.id = id
