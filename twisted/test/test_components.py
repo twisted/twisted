@@ -191,8 +191,12 @@ class ITest(components.Interface):
     pass
 class ITest2(components.Interface):
     pass
-class Test:
-    __implements__ = ITest,
+class ITest3(components.Interface):
+    pass
+class ITest4(components.Interface):
+    pass
+class Test(components.Adapter):
+    __implements__ = ITest, ITest3, ITest4
     def __init__(self, orig):
         pass
 class Test2:
@@ -202,6 +206,7 @@ class Test2:
         pass
 
 components.registerAdapter(Test, AComp, ITest)
+components.registerAdapter(Test, AComp, ITest3)
 components.registerAdapter(Test2, AComp, ITest2)
 
 
@@ -223,6 +228,15 @@ class ComponentizedTestCase(unittest.TestCase):
         co4 = c.getComponent(ITest2)
         assert co1 is co2
         assert co3 is not co4
+
+    def testMultiAdapter(self):
+        c = CComp()
+        co1 = c.getComponent(ITest)
+        co2 = c.getComponent(ITest2)
+        co3 = c.getComponent(ITest3)
+        co4 = c.getComponent(ITest4)
+        assert co4 == None
+        assert co1 is co3
 
 
 

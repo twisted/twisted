@@ -192,6 +192,14 @@ class Adapter:
     Adapter, not PyObject*
     """
 
+    # These attributes are used with Componentized.
+    
+    temporaryAdapter = 0
+    # should this adapter be ephemeral?
+    multiComponent = 1
+    # If this adapter is persistent, should it be automatically registered for
+    # all appropriate interfaces when it is loaded?
+
     def __init__(self, original):
         """Set my 'original' attribute to be the object I am adapting.
         """
@@ -237,10 +245,10 @@ class Componentized:
         cached and kept alive for the lifetime of this Componentized object,
         set the attribute 'temporaryAdapter' to True on your adapter class.
         """
-        if implements(self, interface):
-            return self
         if self._adapterCache.has_key(interface):
             return self._adapterCache[interface]
+        elif implements(self, interface):
+            return self
         else:
             adapter = getAdapter(self, interface, None,
                                  self.locateAdapterClass)
@@ -248,6 +256,15 @@ class Componentized:
                 hasattr(adapter, "temporaryAdapter") and
                 adapter.temporaryAdapter):
                 self._adapterCache[interface] = adapter
+                # TODO: document the following behavior better
+                if (hasattr(adapter, "multiComponent") and
+                    adapter.multiComponent and
+                    hasattr(adapter, '__implements__')):
+                    for iface in adapter.__implements__:
+                        ac = self.locateAdapterClass(self.__class__, iface, None)
+                        if ac == adapter.__class__:
+                            self._adapterCache[iface] = adapter
+                    
             return adapter
 
 
