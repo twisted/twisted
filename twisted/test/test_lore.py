@@ -184,13 +184,16 @@ class TestFactory(unittest.TestCase):
         inputFilename = sp('lore_index_test.xhtml')
 
         bf = open(fn, 'w')
-        bf.write('Chapter("%s", None)\r\n' % inputFilename)
+        bf.write('Chapter(r"%s", None)\r\n' % inputFilename)
         bf.close()
 
         book = htmlbook.Book(fn)
-        self.assertEquals("{'indexFilename': None, 'chapters': [('%s', None)]}"
-                          % inputFilename,
-                          str(book.__dict__))
+        expected = {'indexFilename': None, 
+                    'chapters': [(inputFilename, None)],
+                    }
+        dct = book.__dict__
+        for k in dct:
+            self.assertEquals(dct[k], expected[k])
 
     def test_runningLore(self):
         options = lore.Options()
@@ -200,7 +203,7 @@ class TestFactory(unittest.TestCase):
 
         bookFilename = sp('lore_test_book.book')
         bf = open(bookFilename, 'w')
-        bf.write('Chapter("%s", None)\n' % inputFilename)
+        bf.write('Chapter(r"%s", None)\n' % inputFilename)
         bf.close()
 
         options.parseOptions(['--null', '--book=%s' % bookFilename,
@@ -219,8 +222,8 @@ class TestFactory(unittest.TestCase):
 
         bookFilename = sp('lore_test_book.book')
         bf = open(bookFilename, 'w')
-        bf.write('Chapter("%s", None)\n' % inputFilename)
-        bf.write('Chapter("%s", None)\n' % inputFilename2)
+        bf.write('Chapter(r"%s", None)\n' % inputFilename)
+        bf.write('Chapter(r"%s", None)\n' % inputFilename2)
         bf.close()
 
         options = lore.Options()
