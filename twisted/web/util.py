@@ -75,6 +75,31 @@ class ChildRedirector(Redirect):
         return ChildRedirector(newUrl)
 
 
+class DeferredResource(Resource):
+    """
+    I wrap up a Deferred that will eventually result in a Resource
+    object.
+    """
+    isLeaf = 1
+    def __init__(self, d):
+        Resource.__init__(self)
+        self.d = d
+
+    def render(self, request):
+        # TODO: getChild stuffs
+        self.d.addCallback(self._cbChild, request).addErrback(
+            self._ebChild,request)
+        return NOT_DONE_YET
+
+    def _cbChild(self, child, request):
+        request.render(child)
+        return child
+
+    def _ebChild(self, reason, request):
+        request.processingFailed(reason)
+        return reason
+
+
 stylesheet = """
 <style type="text/css">
     p.error {

@@ -7,7 +7,11 @@ THIS MODULE IS HIGHLY EXPERIMENTAL AND MAY BE DEPRECATED SOON.
 
 from __future__ import nested_scopes
 
-__version__ = "$Revision: 1.12 $"[11:-2]
+__version__ = "$Revision: 1.13 $"[11:-2]
+
+
+import warnings
+warnings.warn("The tapestry module is deprecated. Use page instead.", DeprecationWarning, 1)
 
 # System Imports
 import sys
@@ -20,6 +24,7 @@ from twisted.internet.defer import Deferred
 from twisted.web.resource import Resource, IResource
 from twisted.web.static import redirectTo, addSlash, File, Data
 from twisted.web.server import NOT_DONE_YET
+from twisted.web import util
 
 from twisted.python.reflect import qual
 from twisted.python import components
@@ -27,26 +32,7 @@ from twisted.python import components
 # Sibling Imports
 from twisted.web.woven.view import View
 
-class _ChildJuggler(Resource):
-    isLeaf = 1
-    def __init__(self, d):
-        Resource.__init__(self)
-        self.d = d
-
-    def render(self, request):
-        # TODO: getChild stuffs
-        self.d.addCallback(self._cbChild, request).addErrback(
-            self._ebChild,request)
-        return NOT_DONE_YET
-
-    def _cbChild(self, child, request):
-        request.render(child)
-        return child
-
-    def _ebChild(self, reason, request):
-        request.processingFailed(reason)
-        return reason
-
+_ChildJuggler = util.DeferredResource
 
 class ModelLoader(Resource):
     """Resource for loading models.  (see loadModel)
@@ -65,7 +51,7 @@ class ModelLoader(Resource):
         d.addCallback(
             lambda result: self.parent.makeView(self.modelClass(result),
                                                 templateFile, 1))
-        return _ChildJuggler(d)
+        return util.DeferredResource(d)
 
     def loadModelNow(self, path, request):
         """Override this rather than loadModel if your model-loading is
@@ -176,7 +162,7 @@ class Tapestry(Resource):
         if cm:
             p = cm(request)
             if isinstance(p, Deferred):
-                return _ChildJuggler(p)
+                return util.DeferredResource(p)
             adapter = components.getAdapter(p, IResource, None)
             if adapter is not None:
                 return adapter

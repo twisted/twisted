@@ -9,11 +9,11 @@ from __future__ import nested_scopes
 
 from twisted.python import formmethod, failure
 from twisted.python.components import registerAdapter, getAdapter
-from twisted.web import domhelpers, resource
+from twisted.web import domhelpers, resource, util
 from twisted.internet import defer
 
 # Sibling Imports
-from twisted.web.woven import model, view, controller, widgets, input, interfaces, tapestry
+from twisted.web.woven import model, view, controller, widgets, input, interfaces
 
 from twisted.web.microdom import parseString, lmx
 
@@ -406,7 +406,7 @@ class FormProcessor(resource.Resource):
                      .addCallback(self.modelFactory)
                      .addCallback(self.callback)
                      .addErrback(_ebModel))
-                    return tapestry._ChildJuggler(outObj).render(request)
+                    return util.DeferredResource(outObj).render(request)
                 else:
                     return self.callback(self.modelFactory(outObj)).render(request)
 

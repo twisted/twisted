@@ -3,7 +3,7 @@
 
 from __future__ import nested_scopes
 
-__version__ = "$Revision: 1.21 $"[11:-2]
+__version__ = "$Revision: 1.22 $"[11:-2]
 
 import random
 import time
@@ -13,7 +13,7 @@ import md5
 
 from twisted.python import log, components
 from twisted.web.resource import Resource, IResource
-from twisted.web.util import redirectTo, Redirect
+from twisted.web.util import redirectTo, Redirect, DeferredResource
 from twisted.web.static import addSlash
 from twisted.internet import reactor
 from twisted.cred.error import Unauthorized, LoginFailed, UnauthorizedLogin
@@ -321,7 +321,6 @@ newLoginSignature = fm.MethodSignature(
     )
 
 from twisted.cred.credentials import UsernamePassword, Anonymous
-import tapestry
 
 class UsernamePasswordWrapper(Resource):
     def __init__(self, portal, callback=None, errback=None):
@@ -370,7 +369,7 @@ class UsernamePasswordWrapper(Resource):
                 ## Delegate our getChild to the resource our portal says is the right one.
                 return r[0].getChildWithDefault(path, request)
             else:
-                return tapestry._ChildJuggler(
+                return DeferredResource(
                     self.portal.login(Anonymous(), None, IResource
                                       ).addCallback(
                     lambda (interface, avatarAspect, logout):
