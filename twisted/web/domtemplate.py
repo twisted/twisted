@@ -378,7 +378,8 @@ class DOMTemplate(Resource, View):
             return node
 
         id = node.getAttribute('model')
-        if id is None: id = node.getAttribute('id')
+        if not id: id = node.getAttribute('id')
+        if not id: id = node.getAttribute('class')
         
         controller = self.getNodeController(request, node)
         view, viewMethod = self.getNodeView(request, node)
@@ -431,10 +432,11 @@ class DOMTemplate(Resource, View):
         process = {}
         for controller, data, node in successes:
             process[str(node.getAttribute('name'))] = data
+            controller.commit(request, node, data)
         return process
 
     def process(self, request, **kwargs):
-        print "Processing results: ", process
+        print "Processing results: ", kwargs
 
 # DOMView is now deprecated since the functionality was merged into domtemplate
 DOMView = DOMTemplate
@@ -461,4 +463,4 @@ class DOMController(mvc.Controller, Resource):
         return self.view.render(request)
 
     def process(self, request, **kwargs):
-        print "Processing results: ", process
+        print "Processing results: ", kwargs

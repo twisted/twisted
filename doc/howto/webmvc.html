@@ -67,27 +67,61 @@ Here is an example MVC triad for the web:
 </p>
 
 <pre class="python">
-from twisted.python import mvc
-from twisted.web import domtemplate
-from twisted.web import resource
+from twisted.python import wmvc
 
-class MExample(mvc.Model):
+
+class MExample(wmvc.WModel):
     pass
-class VExample(domtemplate.DOMTemplate):
-    resourceFile = 'Example.xhtml'
-class CExample(domtemplate.DOMController):
+class VExample(wmvc.WView):
+    templateFile = 'Example.xhtml'
+class CExample(wmvc.WController):
     pass
 
-# Register CExample as the Resource for MExample
-# This will cause Controller.render(request) to be called
-# when someone wants to view a MExample object.
-components.registerAdapter(CExample, MExample, resource.IResource)
+
 # Register VExample as a View for MExample
-components.registerAdapter(VExample, MExample, mvc.IView)
+wmvc.registerViewForModel(VExample, MExample)
 # Register CExample as a Controller for MExample
-components.registerAdapter(CExample, MExample, mvc.IController)
+wmvc.registerControllerForModel(CExample, MExample)
 </pre>
 
-  </body>
+<p>
+While using Twisted's WebMVC you will be using all this boilerplate code for every page on your web site. It may seem excessive at first, but it has several advantages. By defining a complete MVC triad to represent a web page, you give your page three seperate namespaces for your web page's components; by following the MVC division of labor properly you make it easier to locate and isolate a piece of code based on what it does; and by componentizing your logic your code becomes far easier to reuse in other parts of your application, speeding development time.
+</p>
+
+<p>
+Now, let's take a look at an actual application written in WebMVC. Here is a template that a designer has provided for the quote page on our site:
+</p>
+
+<a href="listings/TwistedQuotes/WebQuotes.xhtml" class="html-listing">Listing 1: WebQuotes.html: Twisted Quotes Web Template</a>
+
+<p>
+Notice that we have placed "class" and "id" attributes on those elements that we are interested in operating on. When DOMTemplate is iterating the template looking for nodes to operate on, any node with a class or id will be looked for in both the view and controller. If a node has the class or id "foo" the method factory_foo will be looked for in the view and controller.
+</p>
+
+<p>
+These factory methods will be called with the request object and current node object as parameters. A view factory is expected to return a Widget subclass; there are many widgets in twisted.web.domwidgets that can be composed into larger widgets which are specific to your application. A controller factory, usually only relevant on an INPUT node, is expected to return an InputHandler subclass; these are defined in domhandlers.
+</p>
+
+<p>
+<a href="listings/TwistedQuotes/webmvcquotes.py" class="py-listing">Listing 2: webquoteresource.py: Twisted Quotes Web Resource module</a>
+</p>
+
+<p>
+So, to bring our template to life, we first override setUp to prepare the view for rendering. We then add factory_quote and factory_title methods on our view subclass. In the case of title we can simply return a domwidgets.Text instance. Since this factory was called in response to a node with the class of "title", when the node is rendered it will use the "title" attribute of the model as it's data. For our quote factory, we have implemented a custom widget. This makes our logic componentized and reusable. The same QuoteWidget could potentially be used to render multiple different pieces of data.
+</p>
+
+<p>
+A DOMWidget's main responsibility is implementing generateDOM, which should return a DOM node heirarchy suitable for inserting into the tree. In this case, we take advantage of the higher level Widgets API and rely on domwidgets.Widget.generateDOM to do the work for us.
+</p>
+
+<p>
+Finally, we provide a factory_newQuote method on the controller which returns a custom InputHandler subclass. There are a few methods handlers may override to deal with data, but in this case we override "check", which decides if the input the user enterred was valid, and "commit", which applies the user's input. For check, we simply see if the user entered anything at all; for commit, we append the newly entered quote to the end of the quotefile.
+</p>
+
+<p>
+This is only the beginning of what can be done with Twisted's WebMVC modules. With a little extra work put into componentizing your logic into seperate domains, I think you will find that you will be creating more and more complex web sites with ease in no time.
+</p>
+
+</body>
 </html>
 

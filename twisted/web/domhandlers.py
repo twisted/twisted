@@ -55,15 +55,10 @@ class InputHandler(Controller):
     
     def handleValid(self, request, data):
         """
-        Once it has been determined that the input is valid, we should
-        update our submodel and notify the model that it has changed.
+        It has been determined that the input for this handler is valid;
+        however, that does not mean the entire form is valid.
         """
-        if not self.submodel or not self.model: return
-        data = str(data)
-        assert ';' not in self.submodel, "Semicolon is not legal in handler ids."
-        if data != self.view.getData():
-            exec "self.model." + self.submodel + " = " + `data`
-            self.model.notify({self.submodel: data})
+        pass
 
     def handleInvalid(self, request, data):
         """
@@ -72,6 +67,17 @@ class InputHandler(Controller):
         """
         self.view.setError("Error!")
 
+    def commit(self, request, node, data):
+        """
+        It has been determined that the input for the entire form is completely
+        valid; it is now safe for all handlers to commit changes to the model.
+        """
+        if not self.submodel or not self.model: return
+        data = str(data)
+        assert ';' not in self.submodel, "Semicolon is not legal in handler ids."
+        if data != self.view.getData():
+            exec "self.model." + self.submodel + " = " + `data`
+            self.model.notify({self.submodel: data})
 
 class SingleValue(InputHandler):
     def getInput(self, request):
