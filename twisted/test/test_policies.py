@@ -160,6 +160,8 @@ class ThrottlingTestCase(unittest.TestCase):
         c1.transport.loseConnection()
         c2.transport.loseConnection()
         port.stopListening()
+        for p in tServer.protocols.keys():
+            p.loseConnection()
         reactor.iterate(); reactor.iterate()
 
     def testReadLimit(self):
@@ -180,13 +182,13 @@ class ThrottlingTestCase(unittest.TestCase):
         self.assertEquals(c1.buffer, "0123456789")
         self.assertEquals(c2.buffer, "abcdefghij")
         self.assertEquals(tServer.readThisSecond, 20)
-        
+
         # we wrote 20 bytes, so after one second it should stop reading
         # and then a second later start reading again
         while time.time() - now < 1.05:
             reactor.iterate()
         self.assertEquals(tServer.readThisSecond, 0)
-        
+
         # write some more - data should *not* get written for another second
         c1.transport.write("0123456789")
         c2.transport.write("abcdefghij")
@@ -195,7 +197,7 @@ class ThrottlingTestCase(unittest.TestCase):
         self.assertEquals(c1.buffer, "0123456789")
         self.assertEquals(c2.buffer, "abcdefghij")
         self.assertEquals(tServer.readThisSecond, 0)
-        
+
         while time.time() - now < 2.05:
             reactor.iterate()
         self.assertEquals(c1.buffer, "01234567890123456789")
@@ -203,4 +205,6 @@ class ThrottlingTestCase(unittest.TestCase):
         c1.transport.loseConnection()
         c2.transport.loseConnection()
         port.stopListening()
+        for p in tServer.protocols.keys():
+            p.loseConnection()
         reactor.iterate(); reactor.iterate()

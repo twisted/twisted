@@ -1,5 +1,9 @@
 2003-01-10  Dave Peticolas  <dave@krondo.com>
 
+	* twisted/test/test_policies.py: cleanup timers
+
+	* twisted/protocols/policies.py: start/stop bandwidth timers as needed
+
 	* twisted/test/test_internet.py: cleanup timers
 
 	* twisted/test/test_woven.py: expire sessions to clean up timers
