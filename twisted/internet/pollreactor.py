@@ -32,7 +32,7 @@ import select, errno, sys
 
 # Twisted imports
 from twisted.python import log, threadable, failure
-from twisted.internet import main, default
+from twisted.internet import main, default, error
 
 # globals
 reads = {}
@@ -97,7 +97,7 @@ class PollReactor(default.PosixReactorBase):
             writes[fd] =  1
             self._updateRegistration(fd)
 
-    def removeReader(self, reader):
+    def removeReader(self, reader, reads=reads):
         """Remove a Selectable for notification of data available to read.
         """
         return self._dictRemove(reader, reads)
@@ -107,7 +107,7 @@ class PollReactor(default.PosixReactorBase):
         """
         return self._dictRemove(writer, writes)
 
-    def removeAll(self):
+    def removeAll(self, reads=reads, writes=writes, selectables=selectables):
         """Remove all selectables, and return a list of them."""
         result = selectables.values()
         fds = selectables.keys()
@@ -146,7 +146,11 @@ class PollReactor(default.PosixReactorBase):
 
     doIteration = doPoll
 
-    def _doReadOrWrite(self, selectable, fd, event, POLLIN, POLLOUT, log):
+    def _doReadOrWrite(self, selectable, fd, event, POLLIN, POLLOUT, log, 
+        faildict={
+            error.ConnectionDone: failure.Failure(error.ConnectionDone()),
+            error.ConnectionLost: failure.Failure(error.ConnectionLost())
+        }):
         why = None
         if event & POLL_DISCONNECTED and not (event & POLLIN):
             why = main.CONNECTION_LOST
@@ -164,7 +168,11 @@ class PollReactor(default.PosixReactorBase):
         if why:
             self.removeReader(selectable)
             self.removeWriter(selectable)
-            selectable.connectionLost(failure.Failure(why))
+            f = faildict.get(why.__class__)
+            if f:
+                selectable.connectionLost(f)
+            else:
+                selectable.connectionLost(failure.Failure(why))
 
 
 def install():
