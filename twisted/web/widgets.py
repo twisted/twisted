@@ -729,7 +729,7 @@ class RenderSession:
         self.pauseList.append(deferred)
         deferred.addCallbacks(self.callback, self.callback,
                               callbackArgs=args, errbackArgs=args)
-        
+
 
     def callback(self, result, sentinel, decNeedsHeaders):
         if self.forgotten:
@@ -1010,10 +1010,10 @@ class TitleBox(Presentation):
 </tr></table></td></tr></table>\
 '''
 
-    borderColor = '#000'
-    titleTextColor = '#fff'
-    boxTextColor = '#000'
-    boxColor = '#fff'
+    borderColor = '#000000'
+    titleTextColor = '#ffffff'
+    boxTextColor = '#000000'
+    boxColor = '#ffffff'
     widthOption = 'width="100%"'
 
     title = 'No Title'
