@@ -113,7 +113,7 @@ class IRCChatter(irc.IRC, service.WordsClient):
                                 prefix="%s@%s!%s" %
                                 (sender, sender, self.servicename))
 
-    def connectionLost(self):
+    def connectionLost(self, reason):
         log.msg( "%s lost connection" % self.nickname )
         if self.participant:
             self.participant.detached(self, self.identity)

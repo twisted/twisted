@@ -1,3 +1,4 @@
+# -*- test-case-name: twisted.test.test_issues -*-
 # Twisted, the Framework of Your Internet
 # Copyright (C) 2001-2002 Matthew W. Lefkowitz
 # 
@@ -14,7 +15,6 @@
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 # 
-# -*- test-case-name: twisted.test.test_issues -*-
 
 from twisted.spread import pb
 from twisted.internet import defer
@@ -143,12 +143,12 @@ class IssueRepository(pb.Service):
 
     perspectiveClass = IssuePerson
 
-    def __init__(self, serviceName, application=None):
-        pb.Service.__init__(self, serviceName, application)
+    def __init__(self, serviceName, serviceParent=None, authorizer=None):
+        pb.Service.__init__(self, serviceName, serviceParent, authorizer)
         self.currentIssueNumber = 0
-        self.issues = {}                # issueNumber: issue
+        self.issues = {}               # issueNumber: issue
         self.tasks = {}                # taskNumber: task
-        self.queues = {}                # name: queue
+        self.queues = {}               # name: queue
         self.buildQueue("default")
 
     def getQueue(self, name):

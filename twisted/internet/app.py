@@ -228,17 +228,24 @@ class Application(log.Logger, styles.Versioned, marmalade.DOMJellyable,
         # a list of twisted.internet.cred.service.Services
         self.services = {}              # check
         # a cred authorizer
-        self._authorizer = authorizer or authorizer_ or DefaultAuthorizer() # check
-        self._authorizer.setApplication(self)
+        a = authorizer or authorizer_
+        if a:
+            self._authorizer = a
+            self._authorizer.setApplication(self)
         if platform.getType() == "posix":
             self.uid = uid or os.getuid()
             self.gid = gid or os.getgid()
 
-    persistenceVersion = 9
+    persistenceVersion = 10
+
+    _authorizer = None
 
     def get_authorizer(self):
         warnings.warn("Application.authorizer attribute is deprecated, use Service.authorizer instead",
                       category=DeprecationWarning, stacklevel=3)
+        if not self._authorizer:
+            self._authorizer = DefaultAuthorizer()
+            self._authorizer.setApplication(self)
         return self._authorizer
 
     def upgradeToVersion9(self):

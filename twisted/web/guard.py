@@ -93,7 +93,7 @@ class AuthForm(widgets.Form):
         return self.reqauth.reallyRender(request)
     
     def didntGetPerspective(self, error, request):
-        log.msg('Password not verified! Error:', error)
+        log.msg('Password not verified! Error: %s' % error)
         io = StringIO()
         io.write(self.formatError("Login incorrect."))
         self.format(self.getFormFields(request), io.write, request)

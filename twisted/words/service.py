@@ -433,8 +433,8 @@ class Service(pb.Service, styles.Versioned):
 
     perspectiveClass = Participant
     
-    def __init__(self, name, app):
-        pb.Service.__init__(self, name, app)
+    def __init__(self, name, parent=None, auth=None):
+        pb.Service.__init__(self, name, parent, auth)
         self.groups = {}
         self.bots = []
 

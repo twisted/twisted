@@ -18,12 +18,13 @@
 # System Imports
 import time
 import string
+import pydoc
 
 # Twisted Imports
 from twisted.issues.repo import IIssueNotifier, CouldNotTranscribe
 from twisted.words.service import WordsClient
 from twisted.issues.task import Task
-from twisted.python import log
+from twisted.python import log, reflect
 
 # Sibling Imports
 import issue
@@ -101,13 +102,13 @@ class IssueBot(WordsClient):
         self.voiceToPerson = {}
         if repository is None:
             repository = repo.IssueRepository(self.protoServiceName,
-                                              self.voice.service.application)
+                                              self.voice.service.serviceParent,
+                                              self.voice.service.authorizer)
         self.repository = repository
 
     # bot methods
 
     def receiveDirectMessage(self, sender, message, metadata=None):
-        log.msg('zing!')
         cmds = string.split(message, maxsplit=1)
         command = cmds[0]
         args = (len(cmds)>1 and cmds[1]) or ''
@@ -152,6 +153,8 @@ class IssueBot(WordsClient):
             i.setState(issue.FixerClosed())
 
     def issue_transfer(self, issuePerson, message):
+        """Transfer an issue to another support representative.
+        """
         l = message.split(" ", 1)
         if len(l) == 2:
             issuenum, personName = l
@@ -164,7 +167,8 @@ class IssueBot(WordsClient):
             i.setState(issue.InTransfer(issuePerson, otherPerson))
 
     def issue_accept(self, issuePerson, message):
-        pass
+        """Accept the transfer of an issue (UNIMPLEMENTED.)
+        """
 
     def issue_complain(self, issuePerson, message):
         """Complain about an issue.
@@ -191,6 +195,8 @@ class IssueBot(WordsClient):
         issuePerson.notifyText("no such issue: #%s" % issueNumber)
 
     def issue_comment(self, issuePerson, message):
+        """Add a comment to an existing issue.
+        """
         number, comment = message.split(" ", 1)
         self._loadIssueAnd(number, issuePerson, self._cbCommentIssue, comment)
 
@@ -199,6 +205,8 @@ class IssueBot(WordsClient):
         issuePerson.notifyText("Added comment.")
 
     def issue_showlogs(self, issuePerson, message):
+        """Show logs for an existing issue.
+        """
         i = self.repository.issues[int(message)] # XXX cheating
         for state in i.states:
             if hasattr(state, 'transcript'):
@@ -206,6 +214,8 @@ class IssueBot(WordsClient):
                     issuePerson.notifyText("%s <%s> %s" % (tim, vname, message))
 
     def issue_list(self, issuePerson, message):
+        """List issues in a specified queue.
+        """
         q = self.repository.getQueue(message)
         now = time.time()
         for issue in q.issues:
@@ -219,6 +229,8 @@ class IssueBot(WordsClient):
                 ))
 
     def issue_next(self, issuePerson, message):
+        """Pull the next issue out of a specified queue.
+        """
         if message:
             qname = message
         else:
@@ -229,13 +241,47 @@ class IssueBot(WordsClient):
         issuePerson.notifyText("YOU HAVE RESPONDED TO AN ISSUE.")
 
     def issue_needstask(self, issuePerson, message):
-        number, taskcomment
+        """Flag an issue as needing a task, and create a new task for it.
+        """
+        number, taskcomment = message.split(' ', 1)
         self._loadIssueAnd(number, issuePerson, self._cbNeedsTask, taskcomment)
 
     def _cbNeedsTask(self, issue, issuePerson, taskcomment):
         t = self.repository.buildTask(issuePerson, taskcomment)
         t.addDependentIssue(issue)
         issuePerson.notifyText("ADDED")
+
+    # meta
+
+    def issue_hello(self, issuePerson, message):
+        """Greet me.
+        """
+        issuePerson.notifyText("Hello!  I am a chatterbot interface to the twisted.issues issue tracking and live support system.  If you need help, try saying 'help'.  Have a nice day!")
+
+    def issue_help(self, issuePerson, message):
+        """Get help with this bot.
+        """
+        if message:
+            try:
+                method = getattr(self, "issue_"+message)
+            except AttributeError:
+                issuePerson.notifyText("No such command %r" % message)
+                return
+            doc = method.__doc__ or ''
+            issuePerson.notifyText("help on %r: %s" %
+                                   (method.__name__.split('_', 1)[1],
+                                    doc.strip()))
+            return
+        
+        issuePerson.notifyText("Here is a brief summary of all the commands I support:")
+        mymethods = reflect.prefixedMethods(self, "issue_")
+        for method in mymethods:
+            disc, name = method.__name__.split('_', 1)
+            if method.__doc__:
+                docco = pydoc.splitdoc(method.__doc__)[0]
+            else:
+                docco = '<undocumented>'
+            issuePerson.notifyText("%s: %s" % (name, docco))
 
 def createBot():
     return IssueBot()

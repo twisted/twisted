@@ -1,3 +1,4 @@
+# -*- test-case-name: twisted.test.test_cred -*-
 # Twisted, the Framework of Your Internet
 # Copyright (C) 2001 Matthew W. Lefkowitz
 #
@@ -16,18 +17,28 @@
 
 # Twisted Imports
 from twisted.internet import defer
+from twisted.python.reflect import Accessor
 
 # Sibling Imports
 from twisted.cred import identity, error
 
 
-class Authorizer:
+class Authorizer(Accessor):
     """An interface to a set of identities.
     """
+
+    def __init__(self, serviceCollection=None):
+        self.serviceCollection = serviceCollection
+
+    def get_application(self):
+        warnings.warn("Authorizer.application attribute is deprecated.",
+                      category=DeprecationWarning, stacklevel=3)
+        return self.serviceCollection
+
     def setApplication(self, app):
         """Set the application for this authorizer.
         """
-        self.application = app
+        self.serviceCollection = app
 
     identityClass = identity.Identity
 
@@ -59,7 +70,7 @@ class Authorizer:
         raise NotImplementedError("%s.getIdentityRequest"%str(self.__class__))
 
     def getServiceNamed(self, name):
-        return self.application.getServiceNamed(name)
+        return self.serviceCollection.getServiceNamed(name)
 
 
 class DefaultAuthorizer(Authorizer):
@@ -68,9 +79,10 @@ class DefaultAuthorizer(Authorizer):
     I am implemented as a hash of Identities.
     """
 
-    def __init__(self):
+    def __init__(self, serviceCollection=None):
         """Create a hash of identities.
         """
+        Authorizer.__init__(self, serviceCollection)
         self.identities = {}
 
     def addIdentity(self, identity):

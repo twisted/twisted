@@ -97,7 +97,7 @@ class Perspective:
     def getIdentityRequest(self):
         """Request my identity.
         """
-        return (self.service.application.authorizer.
+        return (self.service.authorizer.
                 getIdentityRequest(self.identityName))
 
     _attachedCount = 0
