@@ -46,6 +46,19 @@ static IOVectors* IOVectors_Remove(IOVectors *head, size_t bytes);
 /* Deallocate iovec storage for object */
 static void IOVectors_Wipe(IOVectors *v);
 
+/* Calculate the number of iovecs in an IOVectors linked list */
+static int IOVectors_Length(IOVectors *v);
+
+/* Calculate the length of the IOVectors linked list itself */
+static int IOVectors_ListLength(IOVectors *v);
+
+/* Make clean to be passed up as PyStrings */
+/* -1 for err, >=0 for how many strings were created */
+static int IOVectors_MakePyStrings(IOVectors *v);
+
+/* Make a PyTuple out of the current element */
+static PyObject* IOVectors_AsTuple(IOVectors *v);
+
 /* Write to a fileno, return a new head */
 /* written length stored in result, -1 if errno is set */
 static IOVectors* IOVectors_writev(IOVectors *v, long fileno, int *result);
@@ -196,6 +209,69 @@ IOVectors_Remove(IOVectors* head, size_t bytes) {
     return head;
 }
 
+static int
+IOVectors_MakePyStrings(IOVectors *v) {
+    int idx;
+    PyObject *obj;
+    int res = 0;
+    if (v == NULL) {
+        return 0;
+    }
+    for (idx = v->first; idx < v->last; ++idx) {
+        obj = v->objects[idx];
+        if (obj == NULL) {
+            ++res;
+            obj = PyString_FromStringAndSize((const char *)v->vectors[idx].iov_base, (int)v->vectors[idx].iov_len);
+            if (obj == NULL) {
+                PyErr_NoMemory();
+                return -1;
+            }
+            PyMem_Del(v->vectors[idx].iov_base);
+            v->objects[idx] = obj;
+            v->vectors[idx].iov_base = PyString_AsString(obj);
+        } else if (v->vectors[idx].iov_base != PyString_AsString(obj)) {
+            ++res;
+            obj = PyString_FromStringAndSize((const char *)v->vectors[idx].iov_base, (int)v->vectors[idx].iov_len);
+            if (obj == NULL) {
+                PyErr_NoMemory();
+                return -1;
+            }
+            Py_DECREF(v->objects[idx]);
+            v->objects[idx] = obj;
+            v->vectors[idx].iov_base = PyString_AsString(obj);
+        }
+    }
+    if (res > 0) {
+        printf("DEBUG: %d new strings created\n", res);
+    }
+    return res;
+}
+
+static PyObject*
+IOVectors_AsTuple(IOVectors *v) {
+    int i,idx;
+    PyObject *tuple;
+    if (v == NULL) {
+        PyErr_SetString(iovec_error, "Trying to turn NULL into a tuple?!");
+        return NULL;
+    }
+    if (IOVectors_MakePyStrings(v) == -1) {
+        /* XXX - memory error */
+        return NULL;
+    }
+
+    if ((tuple = PyTuple_New(v->last - v->first)) == NULL) {
+        return PyErr_NoMemory();
+    }
+
+    i = 0;
+    for (idx = v->first; idx < v->last; ++idx) {
+        Py_INCREF(v->objects[idx]);
+        PyTuple_SET_ITEM(tuple, i++, v->objects[idx]);
+    }
+    return tuple;   
+}    
+
 static IOVectors*
 IOVectors_writev(IOVectors *v, long fileno, int *result) {
     int bytes = 0, res = 0;
@@ -224,6 +300,24 @@ IOVectors_writev_error:
     return v;
 }
     
+static int 
+IOVectors_Length(IOVectors *v) {
+    int len = 0;
+    while (v != NULL) {
+        len += v->last - v->first;
+        v = v->next;
+    }
+    return len;
+}
+
+static int
+IOVectors_ListLength(IOVectors *v) {
+    int len = 0;
+    while (v != NULL && ++len) {
+        v = v->next;
+    }
+    return len;
+}
 
 static PyIOVector*
 PyIOVector_new(PyObject* args) {
@@ -380,11 +474,38 @@ PyIOVector_write(PyIOVector* self, PyObject* args) {
     return PyInt_FromLong(result);
 }
 
+static char PyIOVector__asTuple_doc[] = "Internal use";
+
+static PyObject*
+PyIOVector__asTuple(PyIOVector* self, PyObject* args) {
+    int i=0;
+    PyObject *tuple, *innerTuple;
+    IOVectors *v = self->head;
+    if ((tuple = PyTuple_New(IOVectors_ListLength(v))) == NULL) {
+        goto PyIOVector__asTuple_NoTuple;
+    }
+    while (v != NULL) {
+        if ((innerTuple = IOVectors_AsTuple(v)) == NULL) {
+            goto PyIOVector__asTuple_NoInnerTuple;
+        }
+        PyTuple_SET_ITEM(tuple, i++, innerTuple);
+        v = v->next;
+    }
+    return tuple;
+
+PyIOVector__asTuple_NoInnerTuple:
+    Py_DECREF(tuple);
+PyIOVector__asTuple_NoTuple:
+    return PyErr_NoMemory();
+}
+
 static PyMethodDef PyIOVector_methods[] = {
     {"add", (PyCFunction)PyIOVector_append, METH_VARARGS, PyIOVector_append_doc},
     {"append", (PyCFunction)PyIOVector_append, METH_VARARGS, PyIOVector_append_doc},
+    /*{"read", (PyCFunction)PyIOVector_read, METH_VARARGS, PyIOVector_read_doc},*/
     {"write", (PyCFunction)PyIOVector_write, METH_VARARGS, PyIOVector_write_doc},
     {"extend", (PyCFunction)PyIOVector_extend, METH_VARARGS, PyIOVector_extend_doc},
+    {"_asTuple", (PyCFunction)PyIOVector__asTuple, METH_VARARGS, PyIOVector__asTuple_doc},
     {NULL, NULL},
 };
 

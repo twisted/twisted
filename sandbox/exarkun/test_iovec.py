@@ -22,6 +22,11 @@ class IOVectorTestCase(unittest.TestCase):
         for s in [chr(i + ord('a')) * i for i in range(1, HARD_CHUNK_SIZE+1)]:
             v.append(s)
         self.assertEquals(arith(HARD_CHUNK_SIZE), v.bytes)
+
+    def testExtend(self):
+        v = iovec.iovec()
+        v.extend([chr(i + ord('a')) * i for i in range(1, HARD_CHUNK_SIZE+1)])
+        self.assertEquals(arith(HARD_CHUNK_SIZE), v.bytes)
         
     def testWriteToFile(self):
         v = iovec.iovec()
