@@ -206,9 +206,9 @@ class VirtualPOP3(POP3):
             user, domain = string.split(user, self.domainSpecifier, 1)
         except ValueError:
             domain = ''
-        if not self.transport.server.domains.has_key(domain):
+        if not self.factory.domains.has_key(domain):
              raise POP3Error("no such domain %s" % domain)
-        domain = self.transport.server.domains[domain]
+        domain = self.factory.domains[domain]
         mbox = domain.authenticateUserAPOP(user, self.magic, digest, domain)
         if mbox is None:
             raise POP3Error("bad authentication")

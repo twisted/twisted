@@ -103,15 +103,16 @@ class DomainSMTPHandler(SMTPHandler):
             user, domain = string.split(destination, '@', 1)
         except ValueError:
             return 0
-        if not self.transport.server.domains.has_key(domain):
+        if not self.factory.domains.has_key(domain):
+            print "no such domain", domain
             return 0
-        if not self.transport.server.domains[domain].exists(user, domain):
+        if not self.factory.domains[domain].exists(user, domain):
+            print "no such user in", self.factory.domains[domain]
             return 0
         return 1
 
     def handleMessage(self, helo, origin, recipients, message):
         for recipient in recipients:
             user, domain = string.split(recipient, '@', 1)
-            self.transport.server.domains[domain].saveMessage(user, message,
-                                                            domain)
-
+            self.factory.domains[domain].saveMessage(user, message,
+                                                     domain)
