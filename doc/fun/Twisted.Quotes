@@ -2683,3 +2683,9 @@ wrapper refuses to acknowledge setuid bits
 <exarkun> It's enough to make a guy buy a rifle and start shooting people.
 <glyph> exarkun: what kind of rifle
 %
+<jml> anyway, wasn't bruce_ writing a C implementation of spread?
+* jml decides to write a C++ one just to piss dash off
+<dash> jml: that wouldn't piss me off
+<dash> jml: that's like trying to annoy an eye surgeon by stabbing yourself in
+       the face with a pencil
+%
