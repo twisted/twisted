@@ -45,6 +45,10 @@ class Platform:
     def getType(self):
         """Return 'posix', 'win32' or 'java'"""
         return self.type
+
+    def isMacOSX(self):
+        """Return if we are runnng on Mac OS X."""
+        return sys.platform == "darwin"
     
     def isWinNT(self):
         """Are we running in Windows NT?"""
