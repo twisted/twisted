@@ -317,7 +317,7 @@ class ConsoleInput:
         return False
     
     def key_ctrl_p(self, entry, event):
-        log.msg('C-p key event')
+        log.msg(input='C-p key event')
 
         hist = self.history.prev()
         text = self.getText()
@@ -329,7 +329,7 @@ class ConsoleInput:
         return False
 
     def key_ctrl_n(self, entry, event):
-        log.msg('C-n key event')
+        log.msg(input='C-n key event')
 
         text = self.getText()
 
