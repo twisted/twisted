@@ -45,11 +45,26 @@
       <li><a href="#qt">Qt</a></li>
       <li><a href="#tkinter">Tkinter</a></li>
       <li><a href="#wxpython">WxPython</a></li>
+      <li><a href="#win32">Win32</a></li>
     </ul>
 
     <p>When using applications that runnable using <code>twistd</code>, e.g.
        TAPs or plugins, there is no need to choose a reactor explicitly, since
        this can be chosen using <code>twistd</code>'s -r option.</p>
+
+    <h2>Reactor Functionality</h2>
+
+    <table cellpadding="7" cellspacing="0" border="1">
+    <tr><td></td><th>TCP</th><th>SSL</th><th>UDP</th><th>Threading</th><th>Processes</th><th>Scheduling</th><th>Platforms</th></tr>
+    <tr><th>select()</th><td>Y</td><td>Y</td><td>Y</td><td>Y</td><td>Y (Unix only)</td><td>Y</td><td>Unix, Win32</td></tr>
+    <tr><th>poll()</th><td>Y</td><td>Y</td><td>Y</td><td>Y</td><td>Y</td><td>Y</td><td>Unix</td></tr>
+    <tr><th>Win32</th><td>Y</td><td>Y</td><td>Y</td><td>Y</td><td>Y</td><td>Y</td><td>Win32</td></tr>
+    <tr><th>Java</th><td>Y</td><td>N</td><td>N</td><td>Y</td><td>N</td><td>Y</td><td>Java 1.1+</td></tr>
+    <tr><th>GTK+</th><td>Y</td><td>Y</td><td>Y</td><td>Y</td><td>Y (Unix only)</td><td>Y</td><td>Unix, Win32</td></tr>
+    <tr><th>Qt</th><td>Y</td><td>Y</td><td>Y</td><td>Y</td><td>Y (Unix only)</td><td>Y</td><td>Unix, Win32</td></tr>
+    <tr><th>kqueue</th><td>Y</td><td>Y</td><td>Y</td><td>Y</td><td>Y</td><td>Y</td><td>FreeBSD</td></tr>
+    <tr><th>C</th><td>Y</td><td>N</td><td>N</td><td>Y</td><td>Y</td><td>Y</td><td>Unix</td></tr>
+    </table>
 
     <h2>General Purpose Reactors</h2>
 
@@ -120,10 +135,9 @@ javareactor.install()
    <h3><a name="win32">Win32</a></h3>
 
     <p>The Win32 reactor is not yet complete and has various limitations
-    and issues that need to be addressed.  One of the limitations is
-    that it doesn't yet support GUI events, so it is currently not very
-    useful for GUI applications.  Contributed improvements in this area
-    are very welcome.</p>
+    and issues that need to be addressed.  The reactor supports GUI integration
+    with the win32gui module, so it can be used for native Win32 GUI applications.
+    </p>
 
 <pre class="python">
 from twisted.internet import win32eventreactor

@@ -192,7 +192,7 @@ class CGIProcessProtocol(protocol.ProcessProtocol, pb.Viewable):
     def errReceived(self, error):
         self.errortext = self.errortext + error
 
-    def dataReceived(self, output):
+    def outReceived(self, output):
         """
         Handle a chunk of input
         """
@@ -237,7 +237,7 @@ class CGIProcessProtocol(protocol.ProcessProtocol, pb.Viewable):
         if not self.handling_headers:
             self.request.write(output)
 
-    def processEnded(self):
+    def processEnded(self, reason):
         if self.handling_headers:
             self.request.write(
                 error.ErrorPage(http.INTERNAL_SERVER_ERROR,

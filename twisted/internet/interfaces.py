@@ -561,3 +561,19 @@ class ISSLTransport(ITCPTransport):
 
     def getPeerCertificate(self):
         """Return an object with the peer's certificate info."""
+
+
+class IProcessTransport(ITransport):
+    """A process transport."""
+
+    def closeStdin(self):
+        """Close stdin after all data has been written out."""
+
+    def closeStdout(self):
+        """Close stdout."""
+
+    def closeStderr(self):
+        """Close stderr."""
+
+    def loseConnection(self):
+        """Close stdin, stderr and stdout."""

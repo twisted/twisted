@@ -15,13 +15,16 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
 """
-This module provides support for Twisted to interact with the PyQt mainloop.
+This module provides experimental support for the PyQt mainloop.
+
+This may go away in the future - the recommended way of using Qt is
+the Qt reactor support (qtreactor.py).
 
 In order to use this support, simply do the following::
 
     |  # given a QApplication instance qtApp:
     |  from twisted.internet import qtsupport
-    |  qtreactor.install(qtApp)
+    |  qtsupport.install(qtApp)
 
 Then use twisted.internet APIs as usual.  The other methods here are not
 intended to be called directly.

@@ -15,10 +15,10 @@
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
-"""Primary interfaces for the twisted protocols collection.
+"""Standard implementations of Twisted protocol-related interfaces.
 
 Start here if you are looking to write a new protocol implementation for
-Twisted Python.  The Protocol class contains some introductory material.
+Twisted.  The Protocol class contains some introductory material.
 """
 
 # Twisted Imports
@@ -127,7 +127,8 @@ class ServerFactory(Factory):
     """Subclass this to indicate that your protocol.Factory is only usable for servers.
     """
 
-class Protocol:
+
+class BaseProtocol:
     """This is the abstract superclass of all protocols.
 
     If you are going to write a new protocol for Twisted, start here.  The
@@ -167,6 +168,9 @@ class Protocol:
         send any greeting or initial message, do it here.
         """
 
+
+class Protocol(BaseProtocol):
+    
     def dataReceived(self, data):
         """Called whenever data is received.
 
@@ -201,12 +205,13 @@ class Protocol:
 
 
 
-class ProcessProtocol(Protocol):
+class ProcessProtocol(BaseProtocol):
     """Processes have some additional methods besides receiving data.
-
-    data* and connection* methods from Protocol are used for stdout, but stderr
-    and process signals are supported below.
     """
+    
+    def outReceived(self, data):
+        """Some data was received from stdout."""
+    
     def errReceived(self, data):
         """Some data was received from stderr.
         """
@@ -215,11 +220,16 @@ class ProcessProtocol(Protocol):
         """This will be called when stderr is closed.
         """
 
-    def connectionLost(self):
+    def outConnectionLost(self):
         """Called when stdout is shut down."""
 
-    def processEnded(self):
+    def inConnectionLost(self):
+        """Called when stdin is shut down."""
+    
+    def processEnded(self, reason):
         """This will be called when the subprocess is finished.
+
+        reason is a Failure object.
         """
 
 

@@ -14,37 +14,47 @@
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
-# This library is free software; you can redistribute it and/or
-# modify it under the terms of version 2.1 of the GNU Lesser General Public
-# License as published by the Free Software Foundation.
-# 
-# This library is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-# Lesser General Public License for more details.
-# 
-# You should have received a copy of the GNU Lesser General Public
-# License along with this library; if not, write to the Free Software
-# Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+"""A win32event based implementation of the Twisted main loop.
 
-"""A win32event based implementation of the twisted main loop.
+This requires win32all or ActivePython to be installed.
 
-This requires win32all to be installed.
+
+LIMITATIONS:
+1. WaitForMultipleObjects and thus the event loop can only handle 64 objects.
+2. Process running has some problems (see Process docstring).
+
 
 TODO:
-1. Pass tests.
-2. WaitForMultipleObjects can only handle 64 objects, so we need threads.
-3. Event loop handling of writes is *very* problematic (use a delayed?)
-4. Support GUI events.
-5. Replace icky socket loopback waker with event based waker.
-6. Switch everyone to a decent OS so we don't have to deal with insane APIs.
+1. Event loop handling of writes is *very* problematic (this is causing failed tests).
+   Switch to doing it the correct way, whatever that means (see below).
+2. Replace icky socket loopback waker with event based waker (use dummyEvent object)
+3. Switch everyone to using Free Software so we don't have to deal with proprietary APIs.
+
+
+ALTERNATIVE SOLUTIONS:
+* IIRC, sockets can only be registered once. So we switch to a structure
+  like the poll() reactor, thus allowing us to deal with write events in
+  a decent fashion. This should allow us to pass tests, but we're still
+  limited to 64 events.
+
+Or:
+
+* Instead of doing a reactor, we make this an addon to the default reactor.
+  The WFMO event loop runs in a separate thread. This means no need to maintain
+  separate code for networking, 64 event limit doesn't apply to sockets,
+  we can run processes and other win32 stuff in default event loop. The
+  only problem is that we're stuck with the icky socket based waker.
+  Another benefit is that this could be extended to support >64 events
+  in a simpler manner than the previous solution.
+
+The 2nd solution is probably what will get implemented.
 """
 
 # Win32 imports
 from win32file import WSAEventSelect, FD_READ, FD_WRITE, FD_CLOSE, \
                       FD_ACCEPT, FD_CONNECT
-from win32event import CreateEvent, WaitForMultipleObjects, \
-                       WAIT_OBJECT_0, WAIT_TIMEOUT, INFINITE
+from win32event import CreateEvent, MsgWaitForMultipleObjects, \
+                       WAIT_OBJECT_0, WAIT_TIMEOUT, INFINITE, QS_ALLINPUT, QS_ALLEVENTS
 import win32api
 import win32con
 import win32event
@@ -54,9 +64,10 @@ import win32process
 import win32security
 import pywintypes
 import msvcrt
+import win32gui
 
 # Twisted imports
-from twisted.internet import abstract, default
+from twisted.internet import abstract, default, main
 from twisted.python import log, threadable, failure
 from twisted.internet.interfaces import IReactorFDSet
 
@@ -79,6 +90,8 @@ class Win32Reactor(default.PosixReactorBase):
     """Reactor that uses Win32 event APIs."""
 
     __implements__ = (default.PosixReactorBase.__implements__, IReactorFDSet)
+
+    dummyEvent = CreateEvent(None, 0, 0, None)
     
     def _makeSocketEvent(self, fd, action, why, events=events):
         """Make a win32 event object for a socket."""
@@ -166,14 +179,15 @@ class Win32Reactor(default.PosixReactorBase):
         if canDoMoreWrites:
             timeout = 0
 
-        if not events:
-            time.sleep(timeout / 1000.0)
-            return
-
-        handles = events.keys()
-        val = WaitForMultipleObjects(handles, 0, timeout)
+        handles = events.keys() or [self.dummyEvent]
+        val = MsgWaitForMultipleObjects(handles, 0, timeout, QS_ALLINPUT | QS_ALLEVENTS)
         if val == WAIT_TIMEOUT:
             return
+        elif val == WAIT_OBJECT_0 + len(handles):
+            exit = win32gui.PumpWaitingMessages()
+            if exit:
+                self.callLater(0, self.stop)
+                return
         elif val >= WAIT_OBJECT_0 and val < WAIT_OBJECT_0 + len(handles):
             fd, action = events[handles[val - WAIT_OBJECT_0]]
             closed = 0
@@ -210,6 +224,12 @@ def install():
 
 class Process(abstract.FileDescriptor):
     """A process that integrates with the Twisted event loop.
+
+    Issues:
+
+     - stdin close is actually signalled by process shutdown, which is wrong.
+       Solution is to register stdin pipe with event loop and check for the
+       correct event type - this needs to be implemented.
     
     If your subprocess is a python program, you need to:
     
@@ -279,8 +299,8 @@ class Process(abstract.FileDescriptor):
 
         # notify protocol
         self.protocol.makeConnection(self)
-        
-        self.reactor.addEvent(self.hProcess, self, self.connectionLostNotify)
+
+        self.reactor.addEvent(self.hProcess, self, self.inConnectionLost)
         threading.Thread(target=self.doWrite).start()
         threading.Thread(target=self.doReadOut).start()
         threading.Thread(target=self.doReadErr).start()
@@ -293,18 +313,43 @@ class Process(abstract.FileDescriptor):
         """Close the process' stdin."""
         self.outQueue.put(None)
 
+    def closeStderr(self):
+        if hasattr(self, "hStderrR"):
+            win32file.CloseHandle(self.hStderrR)
+            del self.hStderrR
+    
+    def closeStdout(self):
+        if hasattr(self, "hStdoutR"):
+            win32file.CloseHandle(self.hStdoutR)
+            del self.hStdoutR
+    
     def loseConnection(self):
-        """Close the process' stdout."""
-        raise NotImplementedError, "not implemented yet - fix me."
+        """Close the process' stdout, in and err."""
+        self.closeStdin()
+        self.closeStdout()
+        self.closeStderr()
     
     def outConnectionLost(self):
-        self.protocol.connectionLost()
+        self.closeStdout() # in case process closed it, not us
+        self.protocol.outConnectionLost()
         self.connectionLostNotify()
 
     def errConnectionLost(self):
+        self.closeStderr() # in case processed closed it
         self.protocol.errConnectionLost()
         self.connectionLostNotify()
-    
+
+    def _closeStdin(self):
+        if hasattr(self, "hStdinW"):
+            win32file.CloseHandle(self.hStdinW)
+            del self.hStdinW
+            self.outQueue.put(None)
+
+    def inConnectionLost(self):
+        self._closeStdin()
+        self.protocol.inConnectionLost()
+        self.connectionLostNotify()
+
     def connectionLostNotify(self):
         """Will be called 3 times, by stdout/err threads and process handle."""
         self.closedNotifies = self.closedNotifies + 1
@@ -316,10 +361,7 @@ class Process(abstract.FileDescriptor):
         """Shut down resources."""
         self.reactor.removeEvent(self.hProcess)
         abstract.FileDescriptor.connectionLost(self, reason)
-        self.closeStdin()
-        win32file.CloseHandle(self.hStdoutR)
-        win32file.CloseHandle(self.hStderrR)
-        self.protocol.processEnded()
+        self.protocol.processEnded(failure.Failure(main.CONNECTION_DONE))
     
     def doWrite(self):
         """Runs in thread."""
@@ -331,8 +373,8 @@ class Process(abstract.FileDescriptor):
                 win32file.WriteFile(self.hStdinW, data, None)
             except win32api.error:
                 break
-        
-        win32file.CloseHandle(self.hStdinW)
+
+        self._closeStdin()
     
     def doReadOut(self):
         """Runs in thread."""
@@ -347,7 +389,7 @@ class Process(abstract.FileDescriptor):
             except win32api.error:
                 finished = 1
             else:
-                self.reactor.callFromThread(self.protocol.dataReceived, data)
+                self.reactor.callFromThread(self.protocol.outReceived, data)
             
             if finished:
                 self.reactor.callFromThread(self.outConnectionLost)

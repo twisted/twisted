@@ -1,5 +1,5 @@
 # -*- Python -*-
-# $Id: default.py,v 1.30 2002/08/19 03:21:54 radix Exp $
+# $Id: default.py,v 1.31 2002/08/19 19:39:56 itamarst Exp $
 #
 # Twisted, the Framework of Your Internet
 # Copyright (C) 2001 Matthew W. Lefkowitz
@@ -54,6 +54,12 @@ if platform.getType() != 'java':
 
 if platform.getType() == 'posix':
     import process
+
+if platform.getType() == "win32":
+    try:
+        import win32process
+    except ImportError:
+        win32process = None
 
 
 class BaseConnector:
@@ -266,8 +272,17 @@ class PosixReactorBase(ReactorBase):
     
     def spawnProcess(self, processProtocol, executable, args=(), env={}, path=None,
                      uid=None, gid=None):
-        if platform.getType() == 'posix':
+        p = platform.getType()
+        if p == 'posix':
             return process.Process(executable, args, env, path, processProtocol, uid, gid)
+        # This is possible, just needs work - talk to itamar if you want this.
+        #elif p == "win32":
+        #    if win32process:
+        #        threadable.init(1)
+        #        import win32eventreactor
+        #        return win32eventreactor.Process(self, processProtocol, executable, args, env, path)
+        #    else:
+        #        raise NotImplementedError, "process not available since win32all is not installed"
         else:
             raise NotImplementedError, "process only available in this reactor on POSIX"
 

@@ -37,10 +37,10 @@ class TestProcessProtocol(protocol.ProcessProtocol):
         self.err = ''
         self.transport.write("abcd")
 
-    def dataReceived(self, data):
+    def outReceived(self, data):
         self.data = self.data + data
 
-    def connectionLost(self):
+    def outConnectionLost(self):
         self.stages.append(2)
         if self.data != "abcd":
             raise RuntimeError
@@ -56,10 +56,34 @@ class TestProcessProtocol(protocol.ProcessProtocol):
         self.transport.write("abcd")
         self.stages.append(4)
 
-    def processEnded(self):
+    def inConnectionLost(self):
+        self.stages.append(5)
+    
+    def processEnded(self, reason):
         self.finished = 1
 
 
+class EchoProtocol(protocol.ProcessProtocol):
+
+    s = "1234567" * 1001
+    finished = 0
+    
+    def connectionMade(self):
+        for i in range(10):
+            self.transport.write(self.s)
+        self.buffer = ""
+
+    def outReceived(self, data):
+        print data, 
+        self.buffer += data
+        if len(self.buffer) == 70070:
+            print "done"
+            self.transport.loseConnection()
+    
+    def processEnded(self, reason):
+        self.finished = 1
+
+        
 class ProcessTestCase(unittest.TestCase):
     """Test running a process."""
     
@@ -70,7 +94,16 @@ class ProcessTestCase(unittest.TestCase):
         reactor.spawnProcess(p, exe, ["python", "-u", scriptPath])
         while not p.finished:
             reactor.iterate()
-        self.assertEquals(p.stages, [1, 2, 3, 4])
+        self.assertEquals(p.stages, [1, 2, 3, 4, 5])
+
+    def testEcho(self):
+        exe = sys.executable
+        scriptPath = util.sibpath(__file__, "process_echoer.py")
+        p = EchoProtocol()
+        reactor.spawnProcess(p, exe, ["python", "-u", scriptPath])
+        while not p.finished:
+            reactor.iterate(0.01)
+        self.assertEquals(len(p.buffer), len(p.s * 10))
 
 
 class Accumulator(protocol.ProcessProtocol):
@@ -83,7 +116,7 @@ class Accumulator(protocol.ProcessProtocol):
         self.outF = cStringIO.StringIO()
         self.errF = cStringIO.StringIO()
 
-    def dataReceived(self, d):
+    def outReceived(self, d):
         # print "data", repr(d)
         self.outF.write(d)
 
@@ -91,7 +124,7 @@ class Accumulator(protocol.ProcessProtocol):
         # print "err", repr(d)
         self.errF.write(d)
 
-    def connectionLost(self):
+    def outConnectionLost(self):
         # print "out closed"
         pass
 
@@ -99,7 +132,7 @@ class Accumulator(protocol.ProcessProtocol):
         # print "err closed"
         pass
     
-    def processEnded(self):
+    def processEnded(self, reason):
         self.closed = 1
 
 
@@ -128,7 +161,6 @@ class PosixProcessTestCase(unittest.TestCase):
 	p = Accumulator()
         reactor.spawnProcess(p, cmd, [cmd, "-c"], {}, "/tmp")
         p.transport.write(s)
-        # p.transport.loseConnection()
         p.transport.closeStdin()
 
         while not p.closed:
@@ -144,7 +176,7 @@ class PosixProcessTestCase(unittest.TestCase):
 
 	p = Accumulator()
         reactor.spawnProcess(p, '/bin/ls', ["/bin/ls", "ZZXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"], {}, "/tmp")
-        p.transport.loseConnection()
+
         while not p.closed:
             reactor.iterate()
         self.assertEquals(lsOut, p.errF.getvalue())
@@ -175,3 +207,6 @@ else:
 
 if runtime.platform.getType() != 'win32':
     del Win32ProcessTestCase
+else:
+    def testEcho(self): raise RuntimeError, "this test is disabled since it goes into infinite loop on windows :("
+    ProcessTestCase.testEcho = testEcho
