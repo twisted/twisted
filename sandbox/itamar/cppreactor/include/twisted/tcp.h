@@ -66,11 +66,18 @@ namespace Twisted
 
     class Protocol
     {
-    private:
+    public:
 	PyObject* self;
 	TCPTransport* transport;
-    public:
-	Protocol(PyObject* s, TCPTransport* t) : self(s), transport(t) {};
+
+	Protocol() {};
+	void init(PyObject* s) { 
+	    this->self = s;
+	}
+	void makeConnection(TCPTransport* t) {
+	    this->transport = t;
+	    this->connectionMade();
+	}
 	virtual void connectionMade() {
 	    call_method<void>(self, "connectionMade");
 	}
