@@ -31,7 +31,7 @@ if not hasattr(socket, 'AF_UNIX'):
     raise ImportError, "UNIX sockets not supported on this platform"
 
 # Twisted imports
-from twisted.internet import base, tcp, udp, error, interfaces, protocol, address
+from twisted.internet import base, tcp, udp, error, interfaces, protocol, address, defer
 from twisted.internet.error import CannotListenError
 from twisted.python import lockfile, log, reflect, failure
 
@@ -58,7 +58,7 @@ class Port(tcp.Port):
         self.mode = mode
         self.wantPID = wantPID
         self.lockFile = None
-
+         
     def __repr__(self):
         return '<%s on %r>' % (self.factory.__class__, self.port)
 
@@ -72,16 +72,22 @@ class Port(tcp.Port):
         This is called on unserialization, and must be called after creating a
         server to begin listening on the specified port.
         """
-        if self.wantPID:
-            d = lockfile.createLock(self.port, usePID=1)
-            d.addCallback(self._cbGotLock)
-            d.addErrback(self.connectionLost)
-        else:
-            self._cbGotLock(None)
-
-    def _cbGotLock(self, lf):
-        self.lockFile = lf
         log.msg("%s starting on %r" % (self.factory.__class__, repr(self.port)))
+        if self.wantPID:
+            lf = []
+            error = []
+            #d = defer.Deferred()
+            d = lockfile.createLock(self.port, retryCount=1, usePID=1)
+            d.addCallback(lambda f,l=lf:l.append(f))
+            d.addErrback(lambda f,e=error:e.append(f))
+            #log.msg('calling lockfile')
+            #log.msg('lockfile returned')
+            log.msg(repr(error))
+            log.msg(repr(lf))
+            if error:
+                raise CannotListenError, (None, self.port, error[0].value)
+            else:
+                self.lockFile = lf[0]
         self.factory.doStart()
         try:
             skt = self.createInternetSocket()

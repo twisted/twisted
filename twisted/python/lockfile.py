@@ -7,7 +7,11 @@ def createLock(lockedFile, retryCount = 10, retryTime = 5, usePID = 0):
     _tryCreateLock(d, filename, retryCount, 0, retryTime, usePID)
     return d
 
-class DidNotGetLock(Exception): pass
+class DidNotGetLock(Exception): 
+    def __repr__(self):
+        return "DidNotGetLock()"
+
+    __str__ = __repr__
 
 class LockFile:
 
@@ -16,11 +20,12 @@ class LockFile:
         pid = os.getpid()
         t = (time.time()%1)*10
         host = os.uname()[1]
-        uniq = ".lk%05d%x%s" % (pid, t, host)
+        uniq = os.path.join(os.path.dirname(filename), 
+                            ".lk%05d%x%s" % (pid, t, host))
         if writePID:
             data = str(os.getpid())
         else:
-            data = ""
+            data = "a"
         open(uniq,'w').write(data)
         uniqStat = list(os.stat(uniq))
         del uniqStat[3]
@@ -34,6 +39,7 @@ class LockFile:
         if fileStat != uniqStat:
             raise DidNotGetLock()
         self.filename = filename
+        self.writePID = writePID
         self._killLaterTouch = reactor.callLater(60, self._laterTouch)
 
     def _laterTouch(self):
@@ -44,7 +50,10 @@ class LockFile:
     def touch(self):
         f = open(self.filename, 'w')
         f.seek(0)
-        f.write(str(os.getpid()))
+        if self.writePID:
+            f.write(str(os.getpid()))
+        else:
+            f.write("a")
         f.close() # keep the lock fresh
 
     def remove(self):
@@ -54,8 +63,6 @@ class LockFile:
 
 def _tryCreateLock(d, filename, retryCount, retryCurrent, retryTime, usePID):
     from twisted.internet import reactor
-    if retryCount == retryCurrent:
-        return d.errback(DidNotGetLock())
     if retryTime > 60: retryTime = 60
     try:
         l = LockFile(filename, usePID)
@@ -68,6 +75,7 @@ def _tryCreateLock(d, filename, retryCount, retryCurrent, retryTime, usePID):
             try:
                 pid = int(open(filename).read())
             except ValueError:
+                os.remove(filename)
                 return _tryCreateLock(d, filename, retryCount, retryCurrent, retryTime, usePID)
             try:
                 os.kill(pid, 0)
@@ -77,7 +85,11 @@ def _tryCreateLock(d, filename, retryCount, retryCurrent, retryTime, usePID):
                     return _tryCreateLock(d, filename, retryCount, retryCurrent, retryTime, usePID)
     else:
         return d.callback(l)
-    reactor.callLater(retryTime, _tryCreateLock, d, filename, retryCount, retryCurrent+1, retryTime + 5, usePID)
+    retryCurrent +=1 
+    if retryCount == retryCurrent:
+        return d.errback(DidNotGetLock())
+
+    reactor.callLater(retryTime, _tryCreateLock, d, filename, retryCount, retryCurrent, retryTime + 5, usePID)
 
 def checkLock(lockedFile, usePID=0):
     filename = lockedFile + ".lock"
