@@ -150,28 +150,16 @@ class LatexSpitter:
                     % latexEscape(fileName))
 
     def visitNode_a_href(self, node):
-        href = node.getAttribute('href')
-        externalhref = None
-        external = 0
-        if href.startswith('http://') or href.startswith('https://'):
-            external = 1
-            # If the text of the link is the url already, don't bother
-            # repeating the url.
-            if node.childNodes[0].data != href:
-                externalhref = '\\footnote{%s}' % latexEscape(href)
-        
         self.visitNodeDefault(node)
-        ref = None
-        if href.startswith('#'):
-            ref = self.filename + 'HASH' + href[1:]
-        elif href.find('#') != 1 and not href.startswith('http:'):
+        href = node.getAttribute('href')
+        if href.startswith('http://') or href.startswith('https://'):
+            if node.childNodes[0].data != href:
+                self.writer('\\footnote{%s}' % latexEscape(href))
+        else:
+            if href.startswith('#'):
+                href = self.filename + href
             ref = href.replace('#', 'HASH')
-        elif not external:
-            ref = href
-        if ref:
             self.writer(' (page \\pageref{%s})' % ref)
-        if externalhref:
-            self.writer(externalhref)
 
     def visitNode_a_name(self, node):
         self.writer('\\label{%sHASH%s}' % (self.filename,
