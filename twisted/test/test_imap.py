@@ -1788,7 +1788,7 @@ class NewFetchTestCase(unittest.TestCase, IMAP4HelperMixin):
             FakeyMessage({'Header': 'Value'}, (), '', 'BODY TEXT\r\n', 91, None),
         ]
         self.expected = {
-            0: {'RFC822': 'Header: Value\r\nBODY TEXT\r\n'}
+            0: {'RFC822': 'Header: Value\r\n\r\nBODY TEXT\r\n'}
         }
         self._fetchWork(uid)
 
@@ -1802,7 +1802,7 @@ class NewFetchTestCase(unittest.TestCase, IMAP4HelperMixin):
             FakeyMessage({'H1': 'V1', 'H2': 'V2'}, (), '', '', 99, None),
         ]
         self.expected = {
-            0: {'RFC822.HEADER': imap4._formatHeaders({'H1': 'V1', 'H2': 'V2'}) + '\r\n'},
+            0: {'RFC822.HEADER': imap4._formatHeaders({'H1': 'V1', 'H2': 'V2'})},
         }
         self._fetchWork(uid)
 
