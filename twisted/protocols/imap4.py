@@ -1229,13 +1229,13 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
     def __cbFetch(self, results, tag, mbox, uid):
         for (mId, parts) in results.iteritems():
             if uid:
-                if not parts.has_key('UID'):
-                    parts['UID'] = str(mbox.getUID(mId))
-            P = []
+                if 'UID' not in parts:
+                    parts['UID'] = str(mId)
+            finalParts = []
             for p in parts.iteritems():
-                P.extend(p)
+                finalParts.extend(p)
             self.sendUntaggedResponse(
-                '%d FETCH %s' % (mId, collapseNestedLists([P]))
+                '%d FETCH %s' % (mId, collapseNestedLists([finalParts]))
             )
         self.sendPositiveResponse(tag, 'FETCH completed')
 
@@ -3644,9 +3644,10 @@ class IMailbox(components.Interface):
         otherwise they are message sequence IDs.
 
         @rtype: C{dict} or C{Deferred}
-        @return: A C{dict} mapping message identifiers to C{dicts} mapping
-        portion identifiers to strings representing that portion of that message, or a
-        C{Deferred} whose callback will be invoked with such a C{dict}.
+        @return: A C{dict} mapping message sequence numbers (if uid is False) or
+        message UIDs (if uid is True) to C{dicts} mapping portion
+        identifiers to strings representing that portion of that message, or
+        a C{Deferred} whose callback will be invoked with such a C{dict}.
         """
 
     def store(self, messages, flags, mode, uid):
