@@ -124,6 +124,7 @@ def str_xor(s, b):
     return ''.join([chr(ord(c) ^ b) for c in s])
 
 def keyed_md5(secret, challenge):
+    """Create the keyed MD5 string for the given secret and challenge."""
     opad = 0x5C
     ipad = 0x36
     
@@ -141,3 +142,8 @@ def keyed_md5(secret, challenge):
             str_xor(secret, ipad) + challenge
         ).digest()
     ).hexdigest()
+
+__all__ = [
+    "uniquify", "padTo", "getPluginDirs", "addPluginDir", "sibpath",
+    "getPassword", "dict", "println", "keyed_md5"
+]
