@@ -1,0 +1,19 @@
+{
+    IBClasses = (
+        {CLASS = FirstResponder; LANGUAGE = ObjC; SUPERCLASS = NSObject; }, 
+        {
+            ACTIONS = {printDocument = id; reloadVisibleData = id; }; 
+            CLASS = WSTConnectionWindowController; 
+            LANGUAGE = ObjC; 
+            OUTLETS = {
+                methodDescriptionTextView = NSTextView; 
+                methodsTable = NSTableView; 
+                progressIndicator = NSProgressIndicator; 
+                statusTextField = NSTextField; 
+                urlTextField = NSTextField; 
+            }; 
+            SUPERCLASS = NSWindowController; 
+        }
+    ); 
+    IBVersion = 1; 
+}

@@ -1,0 +1,2 @@
+def now():
+    return CFAbsoluteTimeGetCurrent()
