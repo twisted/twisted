@@ -38,7 +38,7 @@ print g.getData(3)
     The solution for this issue is to refactor the code, so that
     instead of blocking until data is available, we return
     immediately, and use a callback to notify the requester once
-    the data eventuall arrives. However, this is harder to use,
+    the data eventually arrives. However, this is harder to use,
     doesn't deal with error raised while waiting for the data, and
     makes connecting such classes together rather difficult.
     Nonetheless, looking at how this is implemented will help us
