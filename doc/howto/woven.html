@@ -244,7 +244,7 @@ resource = page.Page(model, template=template)
 
   <p>When Woven renders a page, it first constructs a DOM (Document Object Model) which represents the template in memory using Python objects.</p>
 
-  <p>Woven then traverses the DOM, depth first, looking for nodes with woven directives (nodes with <code>model=</code>, <code>view=</code>, or <code>controller=</code> attributes).</p>
+  <p>Woven then examines the DOM using a pre-order traversal looking for nodes with woven directives (nodes with <code>model=</code>, <code>view=</code>, or <code>controller=</code> attributes).</p>
 
   <p>When a directive node is encountered, Woven locates/constructs Model, View, and Controller objects to handle this node.</p>
 
