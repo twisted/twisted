@@ -86,7 +86,9 @@ XML_ESCAPE_CHARS = HTML_ESCAPE_CHARS + (("'", '&apos;'),)
 
 def unescape(text, chars=HTML_ESCAPE_CHARS):
     "Perform the exact opposite of 'escape'."
-    for s, h in chars:
+    rchars = list(chars)
+    rchars.reverse()
+    for s, h in rchars:
         text = text.replace(h, s)
     return text
 
