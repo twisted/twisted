@@ -19,8 +19,10 @@
 
     <p>
       The banana protocol is a stream of data composed of elements. Each element has the
-      following structure - first, the length of element encoded in base-128, least signficant
-      bit first. For example length 4674 will be sent as <code>0x42 0x24</code>.
+      following general structure - first, the length of element encoded in base-128, least signficant
+      bit first. For example length 4674 will be sent as <code>0x42 0x24</code>. For certain element
+      types the length will be omitted (e.g. float) or have a different meaning (it is the actual
+      value of integer elements).
     </p>
 
     <p>
