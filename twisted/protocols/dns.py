@@ -945,7 +945,6 @@ class Message:
         byte4 = ( ( (self.recAv & 1 ) << 7 )
                   | (self.rCode & 0xf ) )
         
-        print 'Replying with %d answers' % len(self.answers)
         strio.write(struct.pack(self.headerFmt, self.id, byte3, byte4,
                                 len(self.queries), len(self.answers), 
                                 len(self.ns), len(self.add)))
