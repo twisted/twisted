@@ -67,7 +67,7 @@ applied when serializing arguments.
 @author: U{Glyph Lefkowitz<mailto:glyph@twistedmatrix.com>}
 """
 
-__version__ = "$Revision: 1.153 $"[11:-2]
+__version__ = "$Revision: 1.154 $"[11:-2]
 
 
 # System Imports
@@ -489,8 +489,8 @@ setUnjellyableForClass(CopyableFailure, CopiedFailure)
 
 def failure2Copyable(fail, unsafeTracebacks=0):
     f = CopyableFailure()
-    f.unsafeTracebacks = unsafeTracebacks
     f.__dict__ = fail.__dict__
+    f.unsafeTracebacks = unsafeTracebacks
     return f
 
 class Broker(banana.Banana):
