@@ -15,7 +15,7 @@ static PyMethodDef sendmsgMethods[] = {
 };
 
 void initsendmsg(void) {
-    PyObject *module, *dict;
+    PyObject *module;
     module = Py_InitModule("sendmsg", sendmsgMethods);
     if(-1 == PyModule_AddIntConstant(module, "SCM_RIGHTS", SCM_RIGHTS)) {
         return;
@@ -25,15 +25,10 @@ void initsendmsg(void) {
     if(!module) {
         return;
     }
-    dict = PyModule_GetDict(module);
-    if(!dict) {
-        return;
-    }
-    g_socketerror = PyDict_GetItemString(dict, "error");
+    g_socketerror = PyObject_GetAttrString(module, "error");
     if(!g_socketerror) {
         return;
     }
-    Py_INCREF(g_socketerror); // we hold a permanent reference to it! don't want it to die or something
 }
 
 static PyObject *sendmsg_sendmsg(PyObject *self, PyObject *args, PyObject *keywds) {
