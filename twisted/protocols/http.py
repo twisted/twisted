@@ -198,7 +198,12 @@ def fromChunk(data):
 
 
 class HTTPClient(basic.LineReceiver):
-    """A client for HTTP
+    """A client for HTTP 1.0
+
+    Notes:
+    You probably want to send a 'Host' header with the name of
+    the site you're connecting to, in order to not break name
+    based virtual hosting.
     """
 
     firstLine = 0
