@@ -2713,3 +2713,8 @@ wrapper refuses to acknowledge setuid bits
 <dash> schedule?
 <dash> my _brain_ is in space
 %
+<radix> mozilla runs on macosx, right?
+<glyph> radix: yes.
+<glyph> radix: but it's slooooooowwwwww
+<fzZzy> It's not too bad on my 933 with 1.25 gb of ram
+%
