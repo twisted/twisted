@@ -269,3 +269,6 @@ def Application(name, uid=None, gid=None):
         ret.addComponent(comp, ignoreClass=1)
     IService(ret).setName(name)
     return ret
+
+__all__ = ['IService', 'Service', 'IServiceCollection', 'MultiService',
+           'IProcess', 'Process', 'Application']
