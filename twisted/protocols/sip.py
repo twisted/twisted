@@ -19,6 +19,7 @@
 """Session Initialization Protocol.
 
 Documented in RFC 2543.
+[Superceded by 3261]
 """
 
 # system imports
