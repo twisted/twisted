@@ -15,7 +15,7 @@
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 #
-# $Id: conch.py,v 1.17 2002/11/30 18:17:02 z3p Exp $
+# $Id: conch.py,v 1.18 2002/12/01 14:46:10 z3p Exp $
 
 #""" Implementation module for the `ssh` command.
 #"""
@@ -331,6 +331,7 @@ class SSHSession(session.SSHChannel):
                 ptyReqData = session.packRequest_pty_req(term, winSize, '')
                 self.conn.sendRequest(self, 'pty-req', ptyReqData)
             self.conn.sendRequest(self, 'shell', '')
+        self.conn.transport.transport.setTcpNoDelay(1)
 
     def handleInput(self, char):
         #log.msg('handling %s' % repr(char))
@@ -385,7 +386,3 @@ class SSHSession(session.SSHChannel):
 
     def sendEOF(self):
         self.conn.sendEOF(self)
-
-# Make it script-callable for testing purposes
-if __name__ == "__main__":
-    sys.exit(run())
