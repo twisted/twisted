@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 from twisted.cred import portal, checkers
-from twisted.conch import error, realm
+from twisted.conch import error, avatar
 from twisted.conch.checkers import SSHPublicKeyDatabase
 from twisted.conch.ssh import factory, userauth, connection, keys, session
 from twisted.internet import reactor, protocol, defer
@@ -12,7 +12,7 @@ log.startLogging(sys.stderr)
 log in with username "user" and password "password".
 """
 
-class ExampleAvatar(realm.ConchUser):
+class ExampleAvatar(avatar.ConchUser):
 
     def __init__(self, username):
         realm.ConchUser.__init__(self)
