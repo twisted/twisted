@@ -10,10 +10,13 @@
 # This is the debhelper compatability version to use.
 export DH_COMPAT=3
 
+DEFAULT_PYTHON=`/usr/bin/python -c 'import sys;v=sys.hexversion;print "%s.%s" %  ( (v>>24)&0xff, (v>>16)&0xff)'`
+
 build: build-stamp
 build-stamp:
 	dh_testdir
 	/usr/bin/python2.1 setup.py build
+	/usr/bin/python2.2 setup.py build
 	touch build-stamp
 
 clean:
@@ -25,31 +28,56 @@ clean:
 	# Add here commands to clean up after the build process.
 	dh_clean
 
+install2.1:
+	rm -rf debian/python2.1-twisted/
+	dh_installdirs -p python2.1-twisted
+	cp -rf build/lib*-2.1/twisted debian/python2.1-twisted/usr/lib/python2.1/site-packages/
+	cp twisted/im/instancemessenger.glade debian/python2.1-twisted/usr/lib/python2.1/site-packages/twisted/im
+	cp twisted/plugins.tml debian/python2.1-twisted/usr/lib/python2.1/site-packages/twisted/
+	cp TODO README CREDITS debian/python2.1-twisted/usr/share/doc/python2.1-twisted/
+	cp ChangeLog debian/python2.1-twisted/usr/share/doc/python2.1-twisted/changelog
+	cp debian/copyright debian/python2.1-twisted/usr/share/doc/python2.1-twisted/
+	cp bin/manhole bin/tap2deb bin/mktap bin/twistd bin/im bin/t-im bin/coil debian/python2.1-twisted/usr/bin/
+	for file in debian/python2.1-twisted/usr/bin/*;do sed '1s|.*|#!/usr/bin/python2.1|' $$file > $$file.$$$$;cat $$file.$$$$ > $$file''2.1;rm $$file.$$$$;done
+	cp doc/man/*.1 debian/python2.1-twisted/usr/share/man/man1/
+	for file in doc/man/*.1;cp $$file debian/python2.1-twisted/usr/share/man/man1/`basename $$file .1`2.1.1
+	gzip -9 debian/python2.1-twisted/usr/share/man/man1/*
+
+install2.2:
+	rm -rf debian/python2.2-twisted/
+	dh_installdirs -p python2.2-twisted
+	cp -rf build/lib*-2.2/twisted debian/python2.2-twisted/usr/lib/python2.2/site-packages/
+	cp twisted/im/instancemessenger.glade debian/python2.2-twisted/usr/lib/python2.2/site-packages/twisted/im
+	cp twisted/plugins.tml debian/python2.2-twisted/usr/lib/python2.2/site-packages/twisted/
+	cp TODO README CREDITS debian/python2.2-twisted/usr/share/doc/python2.2-twisted/
+	cp ChangeLog debian/python2.2-twisted/usr/share/doc/python2.2-twisted/changelog
+	cp debian/copyright debian/python2.2-twisted/usr/share/doc/python2.2-twisted/
+	cp bin/manhole bin/tap2deb bin/mktap bin/twistd bin/im bin/t-im bin/coil debian/python2.2-twisted/usr/bin/
+	for file in debian/python2.2-twisted/usr/bin/*;do sed '1s|.*|#!/usr/bin/python2.2|' $$file > $$file.$$$$;cat $$file.$$$$ > $$file''2.2;rm $$file.$$$$;done
+	cp doc/man/*.1 debian/python2.2-twisted/usr/share/man/man1/
+	for file in doc/man/*.1;cp $$file debian/python2.1-twisted/usr/share/man/man1/`basename $$file .1`2.2.1
+	gzip -9 debian/python2.2-twisted/usr/share/man/man1/*
+
 install: install-stamp
-install-stamp: build-stamp
+install-stamp: build-stamp install2.1 install2.2
 	dh_testdir
 	dh_testroot
-	dh_clean -k
 
-	# Add here commands to install the package into debian/twisted.
-	# Add here commands to install the package into debian/twisted-doc.
-	dh_installdirs -A
-	cp -rf build/lib*/twisted debian/twisted/usr/lib/python2.1/site-packages/
-	cp twisted/im/instancemessenger.glade debian/twisted/usr/lib/python2.1/site-packages/twisted/im
-	cp twisted/plugins.tml debian/twisted/usr/lib/python2.1/site-packages/twisted/
-	cp TODO README CREDITS debian/twisted/usr/share/doc/twisted/
-	cp ChangeLog debian/twisted/usr/share/doc/twisted/changelog
-	cp debian/copyright debian/twisted/usr/share/doc/twisted/
-	cp bin/manhole bin/tap2deb bin/mktap bin/twistd bin/im bin/t-im bin/coil debian/twisted/usr/bin/
-	for file in debian/twisted/usr/bin/*;do sed '1s|.*|#!/usr/bin/python2.1|' $$file > $$file.$$$$;cat $$file.$$$$ > $$file;rm $$file.$$$$;done
-	cp doc/man/*.1 debian/twisted/usr/share/man/man1/
-	gzip -9 debian/twisted/usr/share/man/man1/*
+	for file in debian/python${DEFAULT_PYTHON}-twisted/usr/bin/;do ln -s `basename $$file` debian/python${DEFAULT_PYTHON}-twisted/usr/bin/`echo $$file|sed 's/...$$//'`; done
+	for file in debian/python${DEFAULT_PYTHON}-twisted/usr/share/man/man1/;do ln -s `basename $$file` debian/python${DEFAULT_PYTHON}-twisted/usr/bin/`echo $$file|sed 's/$DEFAULT_PYTHON//'`; done
+
+	dh_installdirs -p twisted-doc
 	cp debian/copyright debian/twisted-doc/usr/share/doc/twisted-doc/
 	cp doc/howto/*.html debian/twisted-doc/usr/share/doc/twisted-doc/howto/
 	cp doc/img/*.{png,bmp} debian/twisted-doc/usr/share/doc/twisted-doc/img/
 	cp -r doc/api/* debian/twisted-doc/usr/share/doc/twisted-doc/
 	cp doc/examples/*.py debian/twisted-doc/usr/share/doc/twisted-doc/examples/
 	gzip -9 debian/twisted-doc/usr/share/doc/twisted-doc/examples/*.py
+
+	dh_installdirs -p python-twisted
+	cp debian/copyright debian/python-twisted/usr/share/doc/python-twisted/
+	cp debian/python2.1.README.Debian debian/python-twisted/usr/share/doc/python-twisted/README.Debian
+
 	touch install-stamp
 
 binary-indep: build install

@@ -1,0 +1,2 @@
+This is a dummy package, which depends on python<x>-twisted, where
+<x> is the version of the Debian default Python version.
