@@ -51,7 +51,7 @@ from twisted.persisted import styles
 
 # Sibling Imports
 import error
-import resource
+from twisted.web import util as webutil
 
 
 # backwards compatability
@@ -223,10 +223,9 @@ class Request(pb.Copyable, http.Request):
         self.finish()
 
     def processingFailed(self, reason):
-        import widgets
         body = ("<HTML><BODY><br>web.Server Traceback \n\n"
                 "%s\n\n</body></html>\n"
-                % widgets.formatFailure(reason))
+                % webutil.formatFailure(reason))
         reason.printTraceback()
         self.setResponseCode(http.INTERNAL_SERVER_ERROR)
         self.setHeader('content-type',"text/html")
