@@ -571,7 +571,7 @@ class Request:
 
     def finish(self):
         """We are finished writing data."""
-        if not hasattr(self, 'channel'):
+        if self.finished:
             warnings.warn("Warning! request.finish called twice.", stacklevel=2)
             return
 
@@ -653,7 +653,7 @@ class Request:
         """Set an outgoing HTTP cookie.
 
         In general, you should consider using sessions instead of cookies, see
-        twisted.web.server.Resource.getSession and the
+        twisted.web.server.Request.getSession and the
         twisted.web.server.Session class for details.
         """
         cookie = '%s=%s' % (k, v)
