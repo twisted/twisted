@@ -1236,6 +1236,9 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
                 (tag, query, uid), None, (tag,), None
             )
         else:
+            if 'bodystructure' in [p.type for p in query]:
+                self.sendNegativeResponse(tag, "BODYSTRUCTURE is totally unsupported, dude.")
+                return
             maybeDeferred(self.mbox.fetch, messages, uid=uid).addCallbacks(
                 self.__cbFetch, self.__ebFetch,
                 (tag, query, uid), None, (tag,), None
@@ -1338,14 +1341,11 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
                         hdrs = '\r\n'.join(hdrs)
                         response.extend((str(part), hdrs + '\r\n\r\n'))
                     else:
-                        headers = []
-                        for (h, v) in subM.getHeaders().iteritems():
-                            if h.upper() in part.header.fields:
-                                if not self.header.negate:
-                                    headers.append('%s: %s' % (h, v))
-                            elif self.header.negate:
-                                headers.append('%s: %s' % (h, v))
-                        response.extend((str(part), '\r\n'.join(headers) + '\r\n\r\n'))
+                        hdrs = subMsg.getHeaders(part.header.fields, part.header.negate)
+                        hdrs = ['%s: %s' % x for x in hdrs.iteritems()]
+                        hdrs.append('')
+                        hdrs = '\r\n'.join(hdrs) + '\r\n'
+                        response.extend((str(part), hdrs))
                 elif part.text:
                     response.extend((str(part), subMsg.getBodyFile()))
                 elif part.mime:
