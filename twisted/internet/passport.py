@@ -1,3 +1,20 @@
+
+# Twisted, the Framework of Your Internet
+# Copyright (C) 2001 Matthew W. Lefkowitz
+# 
+# This library is free software; you can redistribute it and/or
+# modify it under the terms of version 2.1 of the GNU Lesser General Public
+# License as published by the Free Software Foundation.
+# 
+# This library is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+# Lesser General Public License for more details.
+# 
+# You should have received a copy of the GNU Lesser General Public
+# License along with this library; if not, write to the Free Software
+# Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+
 """Authorization & authentication in Twisted.
 """
 
@@ -6,7 +23,7 @@ import md5
 import random
 
 # Twisted Imports
-from twisted.python import defer
+from twisted.python import defer, log
 
 class Unauthorized(Exception):
     """An exception that is raised when unauthorized actions are attempted.
@@ -49,7 +66,8 @@ class Service:
     """
 
     application = None
-    
+    serviceType = None
+
     def __init__(self, serviceName, application=None):
         """Create me, attached to the given application.
 
@@ -60,8 +78,13 @@ class Service:
         self.setApplication(application)
 
     def startService(self):
-        """LOADING IS COMPLETE.  END OF LINE.
+        """A hook called when the application that this service is a part of has fully loaded.
+
+        This can be used to perform 'unserialization' tasks that are best put
+        off until things are actually running, such as connecting to a
+        database, opening files, etcetera.
         """
+        log.msg("(%s started up!)" % str(self.__class__))
 
     def setApplication(self, application):
         assert not self.application, "Application already set!"
@@ -73,7 +96,7 @@ class Service:
         """Add a perspective to this Service.
         """
         self.perspectives[perspective.getPerspectiveName()] = perspective
-    
+
     def getPerspectiveNamed(self, name):
         """Return a perspective that represents a user for this service.
 

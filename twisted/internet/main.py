@@ -1,12 +1,23 @@
 
+# Twisted, the Framework of Your Internet
+# Copyright (C) 2001 Matthew W. Lefkowitz
+# 
+# This library is free software; you can redistribute it and/or
+# modify it under the terms of version 2.1 of the GNU Lesser General Public
+# License as published by the Free Software Foundation.
+# 
+# This library is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+# Lesser General Public License for more details.
+# 
+# You should have received a copy of the GNU Lesser General Public
+# License along with this library; if not, write to the Free Software
+# Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+
+
 # System Imports
-import os
-import select
-import traceback
-import sys
-import copy
-import signal
-import socket
+import os , select , traceback , sys , copy , signal , socket
 from errno import EINTR
 
 CONNECTION_LOST = -1
@@ -54,7 +65,7 @@ class Application(log.Logger):
 
     def __repr__(self):
         return "<%s app>" % self.name
-    
+
     def __getstate__(self):
         dict = copy.copy(self.__dict__)
         if dict.has_key("running"):
@@ -80,7 +91,7 @@ class Application(log.Logger):
         """
         Adds a twisted.python.delay.Delayed object for execution in my event
         loop.
-        
+
         The timeout for select() will be calculated based on the sum of all
         Delayed instances attached to me, using their 'ticktime' attribute.  In
         this manner, delayed instances should have their various callbacks
@@ -91,7 +102,7 @@ class Application(log.Logger):
         callbacks may be called in more or less time.  However, 'simulation
         time' for each Delayed instance will be monotonically increased on a
         regular basis.
-        
+
         See the documentation for twisted.python.delay.Delayed for details.
         """
         self.delayeds.append(delayed)
@@ -99,6 +110,8 @@ class Application(log.Logger):
             delayeds.append(delayed)
 
     def setUID(self):
+        """Retrieve persistent uid/gid pair (if possible) and set the current process's uid/gid
+        """
         if hasattr(os, 'getgid'):
             if not os.getgid():
                 os.setgid(self.gid)
@@ -106,9 +119,13 @@ class Application(log.Logger):
                 log.msg('set uid/gid %s/%s' % (self.uid, self.gid))
 
     def shutDownSave(self):
+        """Persist a pickle named "%(self.name)s-shutdown.tap"
+        """
         self.save("shutdown")
 
     def save(self, tag=None):
+        """Save a pickle of this application to a file in the current directory.
+        """
         from cPickle import dump
         if tag:
             filename = self.name+'-'+tag+'-2.tap'
@@ -125,6 +142,8 @@ class Application(log.Logger):
         log.msg("Saved.")
 
     def logPrefix(self):
+        """A log prefix which describes me.
+        """
         return self.name+" application"
 
     def run(self, save=1):

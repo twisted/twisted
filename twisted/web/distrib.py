@@ -1,4 +1,21 @@
 
+# Twisted, the Framework of Your Internet
+# Copyright (C) 2001 Matthew W. Lefkowitz
+# 
+# This library is free software; you can redistribute it and/or
+# modify it under the terms of version 2.1 of the GNU Lesser General Public
+# License as published by the Free Software Foundation.
+# 
+# This library is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+# Lesser General Public License for more details.
+# 
+# You should have received a copy of the GNU Lesser General Public
+# License along with this library; if not, write to the Free Software
+# Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+
+
 # System Imports
 import types, os, copy, string, cStringIO
 
@@ -31,7 +48,7 @@ pb.setCopierForClass(str(server.Request), Request)
 class Issue:
     def __init__(self, request):
         self.request = request
-        
+
     def finished(self, result):
         if result != NOT_DONE_YET:
             assert isinstance(result, types.StringType),\
@@ -81,7 +98,7 @@ class ResourceSubscription(resource.Resource):
         identity.attach(self.service, None,
                         pbcallback = self.connected,
                         pberrback = self.notConnected)
-    
+
 
     def connected(self, publisher):
         """I've connected to a publisher; I'll now send all my requests.
@@ -111,7 +128,7 @@ class ResourceSubscription(resource.Resource):
 
     def render(self, request):
         """Render this request, from my server.
-        
+
         This will always be asynchronous, and therefore return NOT_DONE_YET.
         It spins off a request to the pb client, and either adds it to the list
         of pending issues or requests it immediately, depending on if the
@@ -140,7 +157,7 @@ class ResourcePublisher(pb.Service, pb.Perspective):
         pb.Service.__init__(self, name, app)
         pb.Perspective.__init__(self, "web", self, "web")
         self.site = site
-        
+
     def getPerspectiveNamed(self, name):
         return self
 
