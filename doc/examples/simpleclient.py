@@ -19,12 +19,12 @@
 An example client. Run simpleserv.py first before running this.
 """
 
-from twisted.internet.protocol import Protocol, Factory
+from twisted.internet import protocol
 
 
 # a client protocol
 
-class EchoClient(Protocol):
+class EchoClient(protocol.Protocol):
     """Once connected, send a message, then print the result."""
     
     def connectionMade(self):

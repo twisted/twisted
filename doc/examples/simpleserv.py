@@ -15,11 +15,10 @@
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
-from twisted.internet.protocol import Protocol, ServerFactory
-from twisted.interner import protocol
+from twisted.internet import reactor, protocol
 
 
-class Echo(Protocol):
+class Echo(protocol.Protocol):
     """This is just about the simplest possible protocol"""
     
     def dataReceived(self, data):
@@ -29,7 +28,7 @@ class Echo(Protocol):
 
 def main():
     """This runs the protocol on port 8000"""
-    factory = ServerFactory()
+    factory = protocol.ServerFactory()
     factory.protocol = Echo
     reactor.listenTCP(8000,factory)
     reactor.run()
