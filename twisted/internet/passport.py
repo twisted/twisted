@@ -107,7 +107,7 @@ class Perspective:
     perform upon a service, and the state associated with that
     user for that service.
     """
-    service = None
+
     def __init__(self, perspectiveName, identityName="Nobody"):
         """Create me.
 

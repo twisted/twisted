@@ -4,7 +4,6 @@
 This is designed to integrate with twisted.internet.threadtask.
 """
 
-from twisted.python import threadable
 from twisted.spread import pb
 from twisted.internet import task, threadtask
 

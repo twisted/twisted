@@ -21,17 +21,14 @@
 # Many operations in twisted are not thread safe. Therefore, when using threads
 # you need to do a number of things.
 #
+# First, in order to enable threads, you can not just import 'thread'; you must
+# import twisted.python.threadable and call threadable.init().  This prepares
+# Twisted to be used with threads.
+#
 # When you want to call a non thread-safe operation, you don't call it, but
 # instead you add the operation to the twisted.internet.task scheduler. The
 # main thread running the event loop will then read these tasks from the
 # scheduler and execute them.
-#
-# Additionally, you must make sure to run twisd in threaded mode (by using the
-# '-t' option.) If you are not using twistd to run your app but are running it
-# directly, make sure to do:
-#
-#    from twisted.python import threadable
-#    threadable.init(1)
 #
 # The following example server has a thread for each connections that does the
 # actual processing of the protocol, in this case echoing back all received
@@ -43,7 +40,7 @@
 
 import threading, Queue
 from twisted.python import threadable
-threadable.init(1)
+threadable.init()
 
 from twisted.protocols.protocol import Protocol, Factory
 from twisted.internet import task

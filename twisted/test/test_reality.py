@@ -27,13 +27,13 @@ from twisted import reality
 class ContainmentTestCase(unittest.TestCase):
     def setUp(self):
         r = self.reality = reality.Reality()
-        self.ball =   reality.Thing("ball")
-        self.box =    reality.Thing("box")
-        self.table =  reality.Thing("table")
-        self.slab =   reality.Thing("slab")
-        self.bob =    reality.Player("bob")
-        self.room =   reality.Room("room")
-        self.area =   reality.Room("area")
+        self.ball =   reality.Thing("ball", r)
+        self.box =    reality.Thing("box", r)
+        self.table =  reality.Thing("table", r)
+        self.slab =   reality.Thing("slab", r)
+        self.bob =    reality.Player("bob", r)
+        self.room =   reality.Room("room", r)
+        self.area =   reality.Room("area", r)
 
     def tearDown(self):
         for x in 'ball', 'table', 'slab', 'bob', 'room':

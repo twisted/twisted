@@ -207,10 +207,10 @@ def synchronize(*klasses):
     mode these methods will be wrapped with a lock.
     """
     global _to_be_synched
-    if threaded is None:
+    if not threaded:
         map(_to_be_synched.append, klasses)
         return
-    
+
     if threaded:
         for klass in klasses:
 ##            hook.addPre(klass, '__init__', _synch_init)
@@ -220,31 +220,34 @@ def synchronize(*klasses):
             
 threaded = None
 ioThread = None
+threadCallbacks = []
 
-def requireInit():
-    """Make sure that threading has been initialized.
-    """
-    global threaded
-    if threaded is None:
-        init(0)
+def whenThreaded(cb):
+    if threaded:
+        cb()
+    else:
+        threadCallbacks.append(cb)
 
-def init(with_threads):
+def init(with_threads=1):
     """Initialize threading. Should be run once, at the beginning of program.
     """
     global threaded, _to_be_synched, Waiter
     global threadingmodule, threadmodule
     if threaded == with_threads:
         return
-    if threaded is not None:
-        raise AssertionError("You may not initialize the 'threadable' module twice.")
+    elif threaded:
+        raise RuntimeError("threads cannot be disabled, once enabled")
     threaded = with_threads
     if threaded:
+        print 'Enabling Multithreading.'
         Waiter = _ThreadedWaiter
         apply(synchronize, _to_be_synched)
         _to_be_synched = []
         import thread, threading
         threadmodule = thread
         threadingmodule = threading
+        for cb in threadCallbacks:
+            cb()
     else:
         Waiter = _Waiter
         # Hack to allow XLocks to be unpickled on an unthreaded system.
@@ -275,3 +278,4 @@ def registerAsIOThread():
 
 
 synchronize(_ThreadedWaiter)
+init(0)

@@ -38,7 +38,6 @@ theApplication = None
 
 from twisted.python import threadable, log, delay
 from twisted.persisted import styles
-threadable.requireInit()
 
 # Sibling Imports
 
@@ -536,16 +535,21 @@ def wakeUp():
 wakerInstalled = 0
 
 def installWaker():
+    """Install a `waker' to allow other threads to wake up the IO thread.
+    """
     global addReader, addWriter, waker, wakerInstalled
     if not wakerInstalled:
         wakerInstalled = 1
         waker = _Waker()
         addReader(waker)
 
-if threadable.threaded and platform.getType() != 'java':
-    installWaker()
+def initThreads():
+    """Perform initialization required for threading.
+    """
+    if platform.getType() != 'java':
+        installWaker()
 
-
+threadable.whenThreaded(initThreads)
 # Sibling Import
 import process
 

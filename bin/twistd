@@ -20,7 +20,6 @@
 """
 Usage: twistd [options]
 Options:
-     -t --threaded    use threads
      -q --quiet       be a little more quiet
      -n --nodaemon    don't daemonize
      -p --profile     run profiler
@@ -64,7 +63,6 @@ class ServerOptions(usage.Options):
 
     optFlags = [['nodaemon','n',"don't daemonize"],
                 ['profile','p',"run profiler"],
-                ['threaded','t',"use threads"],
                 ['quiet','q',"be a little more quiet"],
                 ['no_save','o',"do not save state on shutdown"]]
 
@@ -96,11 +94,8 @@ if os.name != 'java':
     # java can't chdir
     os.chdir(config.rundir)
 sys.path.append(config.rundir)
-from twisted.python import threadable
-threadable.init(config.threaded)
 
 # Twisted Imports
-# (It's important that these come *after* the threadable init.)
 from twisted import copyright
 from twisted.python import usage, log, runtime
 from twisted.internet import main
@@ -196,6 +191,7 @@ if not config.nodaemon:
 if os.name != 'java':
     # java doesn't have getpid
     open(config.pidfile,'wb').write(str(os.getpid()))
+
 
 try:
     if config.profile:

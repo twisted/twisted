@@ -125,13 +125,13 @@ class Scheduler:
         for function, args, kwargs in tasks:
             apply(function, args, kwargs)
 
-
-threadable.requireInit()
-if threadable.threaded:
+def initThreads():
+    global theScheduler, thread
     import thread
     theScheduler = ThreadedScheduler()
-else:
-    theScheduler = Scheduler()
+
+threadable.whenThreaded(initThreads)
+theScheduler = Scheduler()
 
 schedule = theScheduler.addTask
 

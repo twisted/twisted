@@ -25,6 +25,8 @@ import os
 import string
 import cStringIO
 import time
+import threadable
+
 
 StringIO = cStringIO
 del cStringIO
@@ -76,22 +78,6 @@ def msg(stuff):
     logfile.write(str(stuff) + os.linesep)
     logfile.flush()
 
-
-def startLogging(file):
-    """Initialize logging to a specified file."""
-    global logfile, logOwner
-    import threadable
-    threadable.requireInit()
-
-    lgr = Logger()
-    if threadable.threaded:
-        logOwner = ThreadedLogOwner(lgr)
-    else:
-        logOwner = LogOwner(lgr)
-    logfile = Log(file, logOwner)
-
-    sys.stdout = sys.stderr = logfile
-    msg( "Log opened." )
 
 
 class Logger:
@@ -148,9 +134,9 @@ class Output:
 class LogOwner:
     """Allow object to register themselves as owners of the log."""
 
-    def __init__(self, defaultOwner):
+    def __init__(self):
         self.owners = []
-        self.defaultOwner = defaultOwner
+        self.defaultOwner = Logger()
 
     def own(self, owner):
         """Set an object as owner of the log."""
@@ -174,11 +160,11 @@ class LogOwner:
 class ThreadedLogOwner:
     """Allow object to register themselves as owners of the log, per thread."""
 
-    def __init__(self, defaultOwner):
+    def __init__(self):
         import thread
         self.threadId = thread.get_ident
         self.ownersPerThread = {}
-        self.defaultOwner = defaultOwner
+        self.defaultOwner = Logger()
 
     def own(self, owner):
         """Set an object as owner of the log."""
@@ -209,10 +195,7 @@ class ThreadedLogOwner:
 class Log:
     """
     This will create a Log file (intended to be written to with
-    'print', but usable from anywhere that a file is) from a file
-    and an 'ownable' object.  The ownable object must have a
-    method called 'owner', which takes no arguments and returns a
-    Logger.
+    'print', but usable from anywhere that a file is) from a file.
     """
     
     synchronized = ['write', 'writelines']
@@ -222,12 +205,11 @@ class Log:
         for attr in file_protocol:
             if not hasattr(self,attr):
                 setattr(self,attr,getattr(file,attr))
-        self.ownable = ownable
 
     def write(self,bytes):
         if not bytes:
             return
-        logger = self.ownable.owner()
+        logger = logOwner.owner()
         if logger:
             bytes = logger.log(bytes)
         if not bytes:
@@ -244,7 +226,20 @@ class Log:
 try:
     logOwner
 except NameError:
-    logOwner = LogOwner(None)
+    logOwner = LogOwner()
+
+def initThreads():
+    global logOwner
+    logOwner = ThreadedLogOwner()
+
+threadable.whenThreaded(initThreads)
+
+def startLogging(file):
+    """Initialize logging to a specified file."""
+    global logfile
+    logfile = sys.stdout = sys.stderr = Log(file, logOwner)
+    msg("Log opened.")
+
 
 
 __all__ = ["logOwner", "Log", "Logger", "startLogging", "msg", "write"]

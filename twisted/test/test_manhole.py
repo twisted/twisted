@@ -35,9 +35,14 @@ class DummyManholeClient:
     def getMessages(self):
         return self.messages[self.zero:]
 
+class DummyApp:
+    name = 'None'
+    def addService(self, serv):
+        pass
+
 class ManholeTest(unittest.TestCase):
     def setUp(self):
-        self.service = service.Service()
+        self.service = service.Service(application=DummyApp())
         self.p = service.Perspective("UnitTest")
         self.p.setService(self.service)
         self.client = DummyManholeClient()

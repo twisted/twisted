@@ -22,8 +22,7 @@ import task, main
 # Twisted Import
 from twisted.python import threadpool, threadable, log
 
-if not threadable.threaded:
-    print 'warning! importing twisted.internet.threadtask in single-threaded mode'
+threadable.init(1)
 
 class ThreadDispatcher(threadpool.ThreadPool):
     """A thread pool that is integrated with the Twisted event loop.

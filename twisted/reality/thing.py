@@ -1,16 +1,16 @@
 
 # Twisted, the Framework of Your Internet
 # Copyright (C) 2001 Matthew W. Lefkowitz
-#
+# 
 # This library is free software; you can redistribute it and/or
 # modify it under the terms of version 2.1 of the GNU Lesser General Public
 # License as published by the Free Software Foundation.
-#
+# 
 # This library is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
 # Lesser General Public License for more details.
-#
+# 
 # You should have received a copy of the GNU Lesser General Public
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
@@ -71,7 +71,7 @@ class Ambiguous:
 
     def get(self,key):
         """Retrieve a value.
-
+        
         This always returns a list; if it is empty, then I do not contain the
         given key.  If it has one entry, then the retrieval is not ambiguous.
         If it has more than one, the retrieval is ambiguous.
@@ -96,8 +96,7 @@ class Ambiguous:
 
 class Thing(observable.Publisher,
             observable.Subscriber,
-            reflect.Settable,
-            styles.Versioned):
+            reflect.Settable):
     """Thing(name[,reality])
 
     name: a string, which will be both the unique keyed name of this
@@ -108,6 +107,10 @@ class Thing(observable.Publisher,
     value of the module-global '_default'.
     """
 
+    # Version: this is independant of the twisted reality version; it
+    # is important so that the pickles can be re-read and frobbed as
+    # necessary
+    __version = 4
     # Most rooms aren't doors; they don't "go" anywhere.
     destination = None
     # most things are opaque.
@@ -129,19 +132,45 @@ class Thing(observable.Publisher,
     # if you're performing actions, are you an administrator?
     wizbit=0
 
-    def __init__(self, name):
+    def __init__(self, name, reality=''):
         """Thing(name [, reality])
 
         Initialize a Thing.
         """
         # State setup.
         self.__index = Ambiguous()
+        self.__version = self.__version
         self.__description = {"__MAIN__":""}
         self.__exits = {}
         self.__synonyms = []
         self._containers = []
         self._contained = []
-        self.name = name
+
+        # More state setup, these with constraints.
+        self.name = str(name)
+        if reality == '':
+            #this is for backwards-compatibility: check both the package
+            #_default and the local _default. Delete this check for 0.9.1
+            if _default is not None:
+                self.reality = _default
+            elif twisted.reality._default is not None:
+                self.reality = twisted.reality._default
+            else:
+                self.reality = None #this could happen before, so it still can.
+        else:
+            self.reality = reality
+
+    def set_reality(self, reality):
+        if self.reality is reality:
+            return
+        if self.reality is not None:
+            self.reality._removeThing(self)
+        if reality is not None:
+            reality._addThing(self)
+        self.reallySet('reality',reality)
+        for thing in self.things:
+            thing.reality = reality
+
 
     # The 'true name' string of this object.
     name=None
@@ -159,8 +188,10 @@ class Thing(observable.Publisher,
             return
         if self.name is not None:
             self.removeSynonym(self.name)
-        oldname = self.name
+        oldname=self.name
         self.reallySet('name',name)
+        if self.reality is not None:
+            self.reality._updateName(self,oldname,name)
         self.addSynonym(name)
         if not self.displayName:
             self.publish('name',self)
@@ -232,7 +263,7 @@ class Thing(observable.Publisher,
 
     def containedPhrase(self, observer, containedThing):
         """Thing.containedPhrase(observer, containedThing) -> 'A containedThing is in the self'
-
+        
         This returns a phrase which relates self's relationship to
         containedThing.  It's used to calculate containedThing's presentPhrase
         to the given observer. """
@@ -240,17 +271,17 @@ class Thing(observable.Publisher,
         return "%s is %s %s." % (string.capitalize(containedThing.nounPhrase(observer)),
                                 self.contained_preposition,
                                 self.nounPhrase(observer))
-
+                
     def presentPhrase(self, observer):
         """Thing.presentPhrase(observer) -> 'A self is in the box', 'Bob is holding the self'
-
+        
         A brief phrase describing the presence and status of this object, such
         as 'A fish is here' or 'A bicycle is leaning against the rack.'.  """
-
+        
         location = self.location
         if location is None:
             return "%s%s is nowhere" % self.indefiniteArticle(observer)
-
+        
         return location.containedPhrase(observer, self)
 
 
@@ -258,7 +289,7 @@ class Thing(observable.Publisher,
         """Thing.shortName(observer) -> 'blue box'
         The unadorned name of this object, as it appears to the specified
         observer.  """
-
+        
         displayName = self.displayName
         if displayName:
             if callable(displayName):
@@ -274,7 +305,7 @@ class Thing(observable.Publisher,
 
     def get_allThings(self):
         """Thing.allThings -> a complete list of contents for this object.
-
+        
         This is the list of contents of an object, plus any objects in surfaces
         which are visible from it.
         """
@@ -293,7 +324,7 @@ class Thing(observable.Publisher,
         or not) which are visible to the player"""
         # of course, invisibility isn't implemented yet.
         return self.allThings
-
+    
     def getThings(self, observer):
         """Thing.getThings(observer) -> list of Things
         This function filters out the objects which are not obvious to the
@@ -302,7 +333,7 @@ class Thing(observable.Publisher,
         for thing in self.allThings:
             if thing.isObviousTo(observer):
                 things.append(thing)
-
+        
         return things
 
     gender='n'
@@ -433,12 +464,12 @@ class Thing(observable.Publisher,
         of oneHears).  Prefer this form, as it will deal with the actor and
         target having multiple and/or separate locations.
         """
-
+        
         self.broadcastToPair(target=None,
                              to_subject=to_subject,
                              to_target=(),
                              to_other=to_other)
-
+                       
 
 
     def pairHears(self,
@@ -642,19 +673,19 @@ class Thing(observable.Publisher,
         question: a question you want to ask the player
 
         default: a default response you supply
-        callback: An object with two methods --
+        callback: An object with two methods --    
           ok: a callable object that takes a single string argument.
               This will be called if the user sends back a response.
 
-          cancel: this will be called if the user performs an action
+          cancel: this will be called if the user performs an action 
                   that indicates they will not be sending a response.
                   There is no guarantee that this will ever be called
                   in the event of a disconnection.  (It SHOULD be
                   garbage collected for sure, but garbage collection
                   is tricky. ^_^) """
-
+        
         self.intelligence.request(question,default,callback)
-
+        
     def execute(self, sentencestring):
         """Thing.execute(string)
         Execute a string as if this player typed it at a prompt.
@@ -709,7 +740,7 @@ class Thing(observable.Publisher,
             self.hears(self, ' smells nice.')
 
         defines a flower that I can smell."""
-
+        
         if preposition:
             return getattr(self, "verb_%s_%s"%(verbstring,preposition), None)
         else:
@@ -724,7 +755,7 @@ class Thing(observable.Publisher,
         locations (in order from outermost to innermost).
 
         For example:
-
+        
         class ComfyChair(twisted.library.furniture.Chair):
           def ambient_go(self, sentence):
             self.hears('But you\'re so comfy!')
@@ -738,12 +769,12 @@ class Thing(observable.Publisher,
         """Thing.getAbility(verbName) callable or None
 
         Return the appropriate method to call for the given ability.  Abilities
-        are intrinsic verbs which a player can execute -- they are methods of
+        are intrinsic verbs which a player can execute -- they are methods of 
         the form ability_<name>(self, sentence) (similiar to verbs).
         """
-
+        
         return getattr(self, 'ability_%s' % verbstring, None)
-
+    
     # place = None
     location = None
 
@@ -763,6 +794,8 @@ class Thing(observable.Publisher,
         movement = Event(source      = oldlocation,
                          destination = location,
                          mover       = self)
+        if location is not None:
+            self.reality = location.reality
         if oldlocation is not None:
             oldlocation.toss(self, destination=location)
             self.reallyDel('location')
@@ -778,7 +811,7 @@ class Thing(observable.Publisher,
         """
         if self._hasIntelligence():
             self.focus = self.place.focusProxy(self)
-
+        
     def focusProxy(self, player):
         """This is a hook for darkness and the like; it indicates what your
         focus will default to when you enter a location.
@@ -832,9 +865,9 @@ class Thing(observable.Publisher,
             channel = 'enter'
         else:
             channel = 'leave'
-
+            
         allContainers = self.allContainers
-
+        
         for thing in self.allThings:
             event = Event(
                 source = self,
@@ -898,7 +931,7 @@ class Thing(observable.Publisher,
         if not self.locations:
             return None
         return self.locations[-1]
-
+    
     def __resetPlace(self):
         """(private) Thing.__resetPlace() -> None
 
@@ -936,7 +969,7 @@ class Thing(observable.Publisher,
                 for container2 in container.allContainers:
                     cont.append(container2)
         return tuple(cont)
-
+    
     def get_containers(self):
         """Thing.containers -> a list of objects that contain this
         This is a list of objects which directly contain this object.
@@ -986,7 +1019,7 @@ class Thing(observable.Publisher,
         doc this better) """
         assert not thing in self._contained,\
                "Duplicate grab: %s already has %s." % (str(self), str(thing))
-
+        
         thing._containers.append(self)
         self._contained.append(thing)
         location = self.location
@@ -1004,10 +1037,10 @@ class Thing(observable.Publisher,
         Remove an object from a container and sends the appropriate
         events.  (Optionally, publish the given source with 'leave'
         instead of constructing one.)"""
-
+        
         assert thing in self._contained,\
                "can't toss %s from %s" % (thing, self)
-
+        
         self._publishEnterOrLeave('leave',
                                   mover=thing,
                                   source=self,
@@ -1065,11 +1098,11 @@ class Thing(observable.Publisher,
 
     def destroy(self):
         """Thing.destroy() -> None: Destroy this object.
-
+        
         If you write code which maintains a reference to a Thing, you probably
         need to register a subscriber method so that you can drop that Thing
         reference when it's destroyed.
-
+        
         Publishes:
             * 'destroy' to self: Event with 'destroyed' attribute.
         """
@@ -1086,6 +1119,8 @@ class Thing(observable.Publisher,
         for l in self.__index.data.values():
             for x in l:
                 print self, x, x.location
+        # Then, take all of my non-component stuff and kill it.
+        self.reality._removeThing(self)
 
     ### Searching
 
@@ -1105,7 +1140,7 @@ class Thing(observable.Publisher,
 
     def find(self, name):
         """Thing.find(name) -> Thing
-
+        
         Search the contents of this Thing for a Thing known by the synonym
         given.  If there is only one result, return it; otherwise, raise an
         Ambiguity describing the failure."""
@@ -1135,13 +1170,13 @@ class Thing(observable.Publisher,
         elif word in ('him','her','it'):
             if self.antecedent:
                 return self.antecedent
-
+            
         stuff = {}
         for loc in self, self.location, self.focus:
             if loc:
                 for found in loc._find(word):
                     stuff[found] = None
-
+                    
         stuff = stuff.keys()
         ls = len(stuff)
         if ls == 1:
@@ -1247,15 +1282,67 @@ class Thing(observable.Publisher,
                                    destination=None))
 
     ### Persistence
-    persistenceVersion = 2
 
-    def upgradeToVersion2(self):
-        del self.__version              # persistence version now handled by styles
+    def __upgrade_0(self):
+        print 'upgrading from version 0 to version 1'
+
+    def __upgrade_1(self):
+        print 'upgrading',self,'from version 1 to version 2'
+        self._containers = [self.location]
+        self._contained = []
+        for child in self.__contents.keys():
+            if child.location is self:
+                self._contained.append(child)
+
+    def __upgrade_2(self):
+        print 'upgrading',self,'from version 2 to version 3'
+        if self._containers == [None]:
+            self._containers = []
+
+    def __v3UpgradeRemoveSyns(self, sub):
+        if self not in sub._containers:
+            self._contained.remove(sub)
+            for synonym in sub.synonyms:
+                self.__remref(synonym, sub)
+    
+    def __upgrade_3(self):
+        print 'upgrading',self,'from version 3 to version 4:',
+        del self.__contents
+        if self.__dict__.has_key('place'):
+            del self.__dict__['place']
+        # in this version, contents and
+        if hasattr(self, '_dov3update'):
+            for loc in self._dov3update:
+                print '-',
+                loc.__v3UpgradeRemoveSyns(self)
+            del self._dov3update
+                
+        for contained in copy.copy(self._contained):
+            # haven't initialized the other object yet
+            print '.',
+            if hasattr(contained, '_containers'):
+                print '.',
+                self.__v3UpgradeRemoveSyns(contained)
+            else:
+                print 'x',
+                v3uplst = getattr(contained, '_dov3update', [])
+                v3uplst.append(self)
+                contained._dov3update = v3uplst
+        print '!'
+
+    def __setstate__(self, dict):
+        """Persistent state callback.
+        """
+        assert self.__version <= Thing.__version
+        self.__dict__.update(dict)
+        while self.__version != Thing.__version:
+            getattr(self,'_Thing__upgrade_%s' % self.__version)()
+            self.__version = self.__version + 1
 
     def __getstate__(self):
         """Persistent state callback.
         """
-        dict = styles.Versioned.__getstate__(self)
+        dict = copy.copy(self.__dict__)
 
         for k, v in dict.items():
             if (reflect.isinst(v, styles.Ephemeral) or
@@ -1273,13 +1360,15 @@ class Thing(observable.Publisher,
 
     def printSource(self,write):
         """Print out a Python source-code representation of this object.
-
+        
         See the source code for a detailed description of how this is done; it
         is not expected to be 100% reliable, merely informative.
         """
-        ## TODO: figure out if the module has already been imported
-        ## for this persistence session, write out "import" if it
-        ## hasn't.
+        if (not hasattr(self.reality,'sourcemods') or not
+            self.reality.sourcemods.has_key(self.__class__.__module__)):
+            write("import %s\n"%self.__class__.__module__)
+            if hasattr(self.reality,'sourcemods'):
+                self.reality.sourcemods[self.__class__.__module__]=1
 
         write("%s.%s(%s)(\n"%(self.__class__.__module__,
                               self.__class__.__name__,
@@ -1291,7 +1380,9 @@ class Thing(observable.Publisher,
         # These will all automatically be re-generated when the object
         # is constructed, so they're not worth writing to the file.
         ephemeral = ('_Thing__index',
+                     '_Thing__version',
                      '_contained',
+                     'reality',
                      'thing_id',
                      'changed',
                      'place',
@@ -1307,13 +1398,13 @@ class Thing(observable.Publisher,
         del dct['_Thing__synonyms']
         # take my name out of the synonyms list
         s.remove(string.lower(self.name))
-
+        
         # if I've got a displayName, and it's a string, remove it from my list
         # of synonyms too.
-
+        
         if type(self.displayName) is types.StringType:
             s.remove(string.lower(self.displayName))
-
+            
         if s:
             dct['synonyms']=s
 
