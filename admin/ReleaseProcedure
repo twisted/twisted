@@ -35,10 +35,8 @@ $SOMEWHERE/admin/release-twisted -V <version> --checkout --release=/twisted/Rele
  * run "apt-get update;apt-get upgrade"
 
  * restart the main Twisted server
-cd /var/www
-kill `cat twistd.pid`
-mv web-shutdown.tap web-`date +%Y-%m-%d`.tap
-./start-twisted.sh web-`date +%Y-%m-%d`.tap
+sudo /etc/init.d/twisted-web stop
+sudo /etc/init.d/twisted-web start
 
  * Restart snibril's server
 su jh; ~jh/bin/stop; ~jh/bin/start; exit
