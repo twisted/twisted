@@ -6,6 +6,7 @@ import traceback
 import sys
 import copy
 import signal
+import socket
 from errno import EINTR
 
 CONNECTION_LOST = -1
