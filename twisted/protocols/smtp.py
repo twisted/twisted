@@ -111,6 +111,22 @@ class IMessageDelivery(components.Interface):
         not to be accepted.
         """
 
+class IMessageDeliveryFactory(components.Interface):
+    """An alternate interface to implement for handling message delivery.
+
+    It is useful to implement this interface instead of L{IMessageDelivery}
+    directly because it allows the implementor to distinguish between
+    different messages delivery over the same connection.  This can be
+    used to optimize delivery of a single message to multiple recipients,
+    something which cannot be done by L{IMessageDelivery} implementors
+    due to their lack of information.
+    """
+    def getMessageDelivery(self):
+        """Return an L{IMessageDelivery} object.
+
+        This will be called once per message.
+        """
+
 class SMTPError(Exception):
     pass
 
@@ -402,15 +418,31 @@ class SMTP(basic.LineReceiver, policies.TimeoutMixin):
     timeout = 600
     host = DNSNAME
     portal = None
+
+    # A factory for IMessageDelivery objects.  If an
+    # avatar implementing IMessageDeliveryFactory can
+    # be acquired from the portal, it will be used to
+    # create a new IMessageDelivery object for each
+    # message which is received.
+    deliveryFactory = None
+
+    # An IMessageDelivery object.  A new instance is
+    # used for each message received if we can get an
+    # IMessageDeliveryFactory from the portal.  Otherwise,
+    # a single instance is used throughout the lifetime
+    # of the connection.
     delivery = None
+
+    # Cred cleanup function.
     _onLogout = None
 
-    def __init__(self, delivery=None):
+    def __init__(self, delivery=None, deliveryFactory=None):
         self.mode = COMMAND
         self._from = None
         self._helo = None
         self._to = []
         self.delivery = delivery
+        self.deliveryFactory = deliveryFactory
 
     def timeoutConnection(self):
         msg = '%s Timeout. Try talking faster next time!' % (self.host,)
@@ -700,8 +732,14 @@ class SMTP(basic.LineReceiver, policies.TimeoutMixin):
         log.err(failure)
 
     def _cbAuthenticated(self, (iface, avatar, logout)):
-        assert iface is IMessageDelivery, "IMessageDelivery is the only supported interface"
-        self.delivery = avatar
+        if issubclass(iface, IMessageDeliveryFactory):
+            self.deliveryFactory = avatar
+            self.delivery = None
+        elif issubclass(iface, IMessageDelivery):
+            self.deliveryFactory = None
+            self.delivery = avatar
+        else:
+            raise RuntimeError("%s is not a supported interface" % (iface.__name__,))
         self._onLogout = logout
         self.authenticated = 1
         self.challenger = None
@@ -735,16 +773,19 @@ class SMTP(basic.LineReceiver, policies.TimeoutMixin):
         @raise SMTPBadSender: Raised of messages from this address are
         not to be accepted.
         """
-        if self.delivery:
+        if self.deliveryFactory is not None:
+            self.delivery = self.deliveryFactory.getMessageDelivery()
+
+        if self.delivery is not None:
             return defer.maybeDeferred(self.delivery.validateFrom,
-                helo, origin)
+                                       helo, origin)
 
         # No login has been performed, no default delivery object has been
         # provided: try to perform an anonymous login and then invoke this
         # method again.
         if self.portal:
             return self.portal.login(cred.credentials.Anonymous(), None,
-                    IMessageDelivery
+                    IMessageDeliveryFactory, IMessageDelivery
                 ).addCallback(self._cbAuthenticated
                 ).addCallback(lambda _: self.validateFrom(helo, origin)
                 ).addErrback(self._ebAuthenticated
@@ -1189,7 +1230,8 @@ class ESMTP(SMTP):
             if self.challenger.moreChallenges():
                 self.authenticate(self.challenger)
             else:
-                self.portal.login(self.challenger, None, IMessageDelivery
+                self.portal.login(self.challenger, None,
+                        IMessageDeliveryFactory, IMessageDelivery
                     ).addCallback(self._cbAuthenticated
                     ).addCallback(lambda _: self.sendCode(235, 'Authentication successful.')
                     ).addErrback(self._ebAuthenticated
