@@ -612,12 +612,7 @@ class TestInternet2(unittest.TestCase):
         t1 = copy.copy(t)
         self.assert_(not hasattr(t1, '_port'))
         t.stopService()
-        t = internet.TimerService(1, lambda:None)
-        t.startService()
-        self.assert_(hasattr(t, '_call'))
-        t1 = copy.copy(t)
-        self.assert_(not hasattr(t1, '_call'))
-        t.stopService()
+
         factory = protocol.ClientFactory()
         factory.protocol = wire.Echo
         t = internet.UNIXClient('echo.skt', factory)
@@ -646,27 +641,49 @@ class TestInternet2(unittest.TestCase):
         self.assertEqual(l, [None])
 
     def testTimer(self):
+        timeout = 30
         l = []
         t = internet.TimerService(1, l.append, "hello")
         t.startService()
         while not l:
             reactor.iterate(0.1)
+            timeout -= 1
+            self.failIf(timeout == 0)
         t.stopService()
         self.failIf(t.running)
         self.assertEqual(l, ["hello"])
-        l = []
+        l.pop()
+
+        # restart the same TimerService
+        timeout = 30
+        t.startService()
+        while not l:
+            reactor.iterate(0.1)
+            timeout -= 1
+            self.failIf(timeout == 0)
+        t.stopService()
+        self.failIf(t.running)
+        self.assertEqual(l, ["hello"])
+        l.pop()
+
+        timeout = 30
         t = internet.TimerService(0.01, l.append, "hello")
         t.startService()
         while len(l)<10:
             reactor.iterate(0.1)
+            timeout -= 1
+            self.failIf(timeout == 0)
         t.stopService()
         self.assertEqual(l, ["hello"]*10)
 
     def testBrokenTimer(self):
         t = internet.TimerService(1, lambda: 1 / 0)
+        timeout = 30
         t.startService()
-        while t.loop is not None:
+        while t.loop.running:
             reactor.iterate(0.1)
+            timeout -= 1
+            self.failIf(timeout == 0)
         t.stopService()
         self.assertEquals([ZeroDivisionError],
                           [o.value.__class__ for o in log.flushErrors(ZeroDivisionError)])

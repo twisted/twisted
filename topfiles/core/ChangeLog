@@ -1,9 +1,17 @@
-2004-7-18  Paul Swartz <z3p@twistedmatrix.com>
+2004-08-24  Brian Warner  <warner@lothar.com>
+
+	* twisted/application/internet.py (TimerService): make it possible
+	to restart a stopped TimerService. Threw out a lot of (apparently)
+	unnecessary code in the process.
+	* twisted/test/test_application.py (TestInternet2.testTimer): test
+	the changes, and update the way the test peeks inside TimerService 
+
+2004-07-18  Paul Swartz <z3p@twistedmatrix.com>
 
 	* twisted/internet/utils.py: By passing errortoo=1, you can get 
 	stderr from getProcessOutput
 
-2004-7-18  Paul Swartz <z3p@twistedmatrix.com>
+2004-07-18  Paul Swartz <z3p@twistedmatrix.com>
 
 	* twisted/conch/unix.py: if the utmp module is available, record
 	user logins/logouts into utmp/wtmp.
@@ -3779,4 +3787,5 @@
 --- 0.13.0 Release ---
 
 # Local Variables:
+# add-log-time-format: add-log-iso8601-time-string
 # End:

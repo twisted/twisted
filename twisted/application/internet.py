@@ -133,8 +133,6 @@ for tran in 'Generic TCP UNIX SSL UDP UNIXDatagram Multicast'.split():
 
 class TimerService(_VolatileDataService):
 
-    volatile = ['_call']
-
     """Service to periodically call a function
 
     Every C{step} seconds call the given function with the given arguments.
@@ -148,26 +146,20 @@ class TimerService(_VolatileDataService):
         self.loop = LoopingCall(callable, *args, **kwargs)
 
     def startService(self):
-        from twisted.internet import reactor
         service.Service.startService(self)
-        self._call = reactor.callLater(self.step, self._startLoop, self.step)
+        self.loop.start(self.step, now=True).addErrback(self._failed)
 
-    def _startLoop(self, step):
-        self._call = None
-        self.loop.start(step).addBoth(self._cleanupLoop).addErrback(log.err)
-
-    def _cleanupLoop(self, result):
-        self.loop = None
-        return result
+    def _failed(self, why):
+        # make a note that the LoopingCall is no longer looping, so we don't
+        # try to shut it down a second time in stopService. I think this
+        # should be in LoopingCall. -warner
+        self.loop.running = False
+        log.err(why)
 
     def stopService(self):
-        service.Service.stopService(self)
-        if self._call is not None:
-            _call, self._call = self._call, None
-            _call.cancel()
-        elif self.loop is not None:
-            loop, self.loop = self.loop, None
-            loop.stop()
+        if self.loop.running:
+            self.loop.stop()
+        return service.Service.stopService(self)
 
 
 __all__ = (['TimerService']+
