@@ -298,6 +298,12 @@ class DeferredList(Deferred):
     I track a list of L{Deferred}s for their callbacks, and make a single
     callback when they have all completed, a list of (success, result)
     tuples, 'success' being a boolean.
+
+    Note that you can still use a L{Deferred} after putting it in a
+    DeferredList.  In particular, if you want to suppress 'Unhandled error in
+    Deferred' messages, you will still need to add errbacks to the Deferreds
+    *after* putting them in the DeferredList, as a DeferredList won't swallow
+    the errors.
     """
 
     fireOnOneCallback = 0
