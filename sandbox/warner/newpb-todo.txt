@@ -346,3 +346,58 @@ value). This also requires that constraints be serializable.
 do this, should be referenceable (round-trip should return the same object),
 should use the same registration lookup that RemoteReference(interfacelist)
 uses
+
+* remove 'copy' prefix from remotecopy banana type names?
+
+<glyph> warner: did we ever finish our conversation on the usefulness of the
+(copy foo blah) namespace rather than just (foo blah)?
+<warner> glyph: no, I don't think we did
+<glyph> warner: do you still have (copy foo blah)?
+<warner> glyph: yup
+<warner> so far, it seems to make some things easier
+<warner> glyph: the sender can subclass pb.Copyable and not write any new
+code, while the receiver can write an Unslicer and do a registerRemoteCopy
+<warner> glyph: instead of the sender writing a whole slicer and the receiver
+registering at the top-level
+<glyph> warner: aah
+<warner> glyph: although the fact that it's easier that way may be an artifact
+of my sucky registration scheme
+<glyph> warner: so the advantage is in avoiding registration of each new
+unslicer token?
+<glyph> warner: yes. I'm thinking that a metaclass will handily remove the
+need for extra junk in the protocol ;)
+<warner> well, the real reason is my phobia about namespace purity, of course
+<glyph> warner: That's what the dots are for
+<warner> but ease of dispatch is also important
+<glyph> warner: I'm concerned about it because I consider my use of the same
+idiom in the first version of PB to be a serious wart
+* warner nods
+<warner> I will put together a list of my reasoning
+<glyph> warner: I think it's likely that PB implementors in other languages
+are going to want to introduce new standard "builtin" types; our "builtins"
+shouldn't be limited to python's provided data structures
+<moshez> glyph: wait
+<warner> ok
+<moshez> glyph: are you talking of banana types
+<moshez> glyph: or really PB
+<warner> in which case (copy blah blah) is a non-builtin type, while
+(type-foo) is a builtin type
+<glyph> warner: plus, our namespaces are already quite well separated, I can
+tell you I will never be declaring new types outside of quotient.* and
+twisted.* :)
+<warner> moshez: this is mostly banana (or what used to be jelly, really)
+<glyph> warner: my inclination is to standardize by convention
+<glyph> warner: *.* is a non-builtin type, [~.] is a builtin
+<moshez> glyph: ?
+<glyph> sorry [^.]*
+<glyph> my regular expressions and shell globs are totally confused but you
+know what I mean
+<glyph> moshez: yes
+<moshez> glyph: hrm
+<saph_w> glyph: you're making crazy anime faces
+<moshez> glyph: why do we need any non-Python builtin types
+<glyph> moshez: because I want to destroy SOAP, and doing that means working
+with people I don't like
+<glyph> moshez: outside of python
+<moshez> glyph: I meant, "what specific types"
+<moshez> I'd appreciate a blog on that

@@ -1013,6 +1013,15 @@ def callRemoteURL_TCP(_host, _port, _pathname,
     d.addCallback(lambda ref: ref.callRemote(_methodname, **args))
     return d
 
+# <glyph> warner: twisted.python.urlpath
+# <glyph> warner: >>> URLPath.fromString("pb://stuff.com/1234")
+# <glyph> URLPath(scheme='pb', netloc='', path='//stuff.com/1234', query='',
+# fragment='')
+# <glyph> oh wait
+# <glyph> huh, that's not right
+# <glyph> warner: you need to do urlparse.uses_netloc.append('pb')
+# <glyph> but other than that, the parser in URLPath is fine
+
 def getRemoteURL(url, *interfaces):
     raise NotImplementedError("glyph said he'd write this")
 
