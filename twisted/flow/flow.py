@@ -117,8 +117,4 @@ from twisted.flow.stage import *
 from twisted.flow.wrap import wrap
 from twisted.flow.controller import Deferred, Block
 from twisted.flow.protocol import makeProtocol, Protocol
-#
-# disabled temporarly till find threading issue 
-#
-#from twisted.flow.threads import Threaded, QueryIterator
-# 
+from twisted.flow.threads import Threaded, QueryIterator

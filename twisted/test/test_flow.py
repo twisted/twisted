@@ -20,6 +20,7 @@ from twisted.flow import flow
 from twisted.trial import unittest
 from twisted.python import failure
 from twisted.internet import defer, reactor, protocol
+from time import sleep
 
 class slowlist:
     """ this is a generator based list
@@ -220,6 +221,19 @@ class echoClient:
         self.conn.factory.d.callback(self.conn.next())
         raise StopIteration()
  
+class CountIterator:
+    def __init__(self, count):
+        self.count = count
+    def __iter__(self):
+        return self
+    def next(self): # this is run in a separate thread
+        sleep(.1)
+        val = self.count
+        if not(val):
+            raise StopIteration
+        self.count -= 1
+        return val
+
 class FlowTest(unittest.TestCase):
     def testNotReady(self):
         x = flow.wrap([1,2,3])
@@ -381,28 +395,25 @@ class FlowTest(unittest.TestCase):
         loopback.loopback(server, client)
         self.assertEquals('testing', unittest.deferredResult(client.factory.d))
 
-    def _disabled_testThreaded(self):
-        from time import sleep
-        #self.fail("This test freezes and consumes 100% CPU.")
-        class CountIterator:
-            def __init__(self, count):
-                self.count = count
-            def __iter__(self):
-                return self
-            def next(self): # this is run in a separate thread
-                sleep(.1)
-                val = self.count
-                if not(val):
-                    raise StopIteration
-                self.count -= 1
-                return val
-        result = [7,6,5,4,3,2,1]
-        d = flow.Deferred(flow.Threaded(CountIterator(7)))
-        self.assertEquals(result, unittest.deferredResult(d))
-        d = flow.Deferred(flow.Threaded(CountIterator(7)))
-        sleep(2)
-        self.assertEquals(result, unittest.deferredResult(d))
-        d = flow.Deferred(flow.Threaded(CountIterator(7)))
-        sleep(.3)
+    def testThreaded(self):
+        result = [5,4,3,2,1]
+        d = flow.Deferred(flow.Threaded(CountIterator(5)))
         self.assertEquals(result, unittest.deferredResult(d))
 
+    def testThreadedSleep(self):
+        result = [5,4,3,2,1]
+        d = flow.Deferred(flow.Threaded(CountIterator(5)))
+        sleep(.5)
+        self.assertEquals(result, unittest.deferredResult(d))
+        
+    def testThreadedYield(self):
+        # test for a nasty race condition
+        result = [5,4,3,2,1]
+        f = flow.Threaded(CountIterator(5))
+        cl = f._yield()
+        sleep(1)
+        d = defer.Deferred()
+        def callback():
+            d.callback(f.results)
+        cl.callLater(callback)
+        self.assertEquals(result, unittest.deferredResult(d))
