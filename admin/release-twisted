@@ -16,10 +16,12 @@ sys.path.insert(0, os.curdir)
 ### end of preamble
 
 from twisted.python import usage, util, failure
+from twisted.python.release import runChdirSafe, sh, CommandFailed, DirectoryExists, DirectoryDoesntExist
 
 import shutil, re
 
-defaultSVNBase = 'svn+ssh://svn.twistedmatrix.com/svn/Twisted'
+repourl = 'svn+ssh://svn.twistedmatrix.com/svn/Twisted'
+trunkurl = repourl + '/trunk'
 
 debug = False
 
@@ -27,81 +29,39 @@ class Options(usage.Options):
     optParameters = [
         ['base-version', None, None,
          "(required) The BASE of the version of this release"],
-        ['type', None, None,
-         "(required) The type of this release (alpha, rc, or final)"],
         ['tinyver', None, None,
          "(optional) The alpha or rc revision."],
-        ['lastdeb', None, None,
-         "(required) The version of the previous Debian package."],
         ['commands', None, None,
          "(optional) The individual steps to run; You should only use "
          "this if something broke"],
-        ['qotrfile', None, None,
-         "(optional) The filename containing the QOTR to use."],
-##        ['mergefiles', None, None,
-##         "(optional) The filenames (relative to the root of the repo) to "
-##         "merge from trunk for this release"],
-        ['svnurl', None, defaultSVNBase,
-         "The BASE of the SVN root. trunk, branches/foo, etc, will "
-         "automatically be added"],
         ['releasedir', None, '/twisted/Releases',
          "The directory to put tarballs."],
         ['docdir', None, '/twisted/TwistedDocs',
          "The directory to deploy documentation to."],
-        ['webdir', None, os.path.expanduser('~/Projects/WebSite/twistedmatrix.com'),
-         "The directory where your working copy of the tm.com website is."],
         ['sfname', None, None,
          "Your username on sourceforge."],
         ]
 
     optFlags = [
-        ['notpermanent', None,
-         "Don't do anything 'permanent': finalize tags, upload tarballs, etc."]]
-
-    def opt_debug(self):
-        """
-        Turn on debug mode (Ask before running commands).
-        """
-        global debug
-        debug = True
+        ['nopermanent', None,
+         "Don't do anything permanent: finalize tags, upload tarballs, etc."]]
 
     def postOptions(self):
         ## assertions ##
-        for reqkey in ['base-version', 'type', 'lastdeb']:
-            if self[reqkey] is None:
-                raise usage.UsageError("--%s is required!" % reqkey)
-
-        typemustbe = ('alpha', 'rc', 'final')
-        if self['type'] not in typemustbe:
-            raise usage.UsageError("--type must be one of %r."
-                                   % (typemustbe,))
-
-        if self['type'] in ('alpha', 'rc'):
-            if self['tinyver'] is None:
-                raise usage.UsageError("When doing an alpha or RC, "
-                                       "--tinyver is required.")
-##        if self['type'] == 'alpha':
-##            if self['mergefiles'] is not None:
-##                raise usage.UsageError("--mergefiles is only usable "
-##                                       "for rc and final.")
+        if self['base-version'] is None:
+            raise usage.UsageError("--base-version is required!")
 
         ## set up some convenience ##
 
-        if self['type'] in ('alpha', 'rc'):
-            self['full-version'] = (self['base-version']
-                                    + self['type']
-                                    + self['tinyver'])
-        else:
-            self['full-version'] = self['base-version']
+        # BRANCH, CHECKOUT, FUCKAROUND, COMMIT, TAG, EXPORT, TARBALL,
+        # RELEASE, FINALIZE
 
-        self['trunkurl'] = self['svnurl'] + '/trunk'
-        self['wipurl'] = '%s/branches/wip-%s' % (self['svnurl'],
+        self['wipurl'] = '%s/branches/wip-%s' % (repourl,
                                                  self['base-version'])
-        self['tagurl'] = '%s/tags/release-%s' % (self['svnurl'],
-                                                 self['full-version'])
-        self['temptagurl'] = self['tagurl'] + '-TEMP'
+        self['tagurl'] = '%s/tags/release-%s' % (repourl,
+                                                 self['base-version'])
 
-        for x in ['trunkurl', 'wipurl', 'tagurl', 'temptagurl']:
+        for x in ['wipurl', 'tagurl']:
             print "%s: %s" % (x, self[x])
 
 
@@ -117,631 +77,268 @@ class Options(usage.Options):
             # This code expresses the high-level workflow of the
             # release procedure.
 
-            if (self['type'] == 'alpha'
-                or (self['type'] == 'rc'
-                    and self['tinyver'] == '1')):
-                commands += [CopyTrunkToWIP]
+            commands += [
+                copyTrunkToWIP,
+                checkoutWIP,
+                updateVersion,
+                tagTemp,
+                exportTemp,
+                makeDocs,
+                makeBalls,
+                ]
 
-            commands += [CheckoutWIP,
-                         UpdateVersion,
-                         ]
-
-            ## if (self['type'] in ('rc', 'final')
-            ##     and self['mergefiles'] is not None):
-            ##     commands += [MergeFilesToWIP]
-
-            commands += [TagTemp,
-                         ExportTemp,
-                         MakeDocs,
-                         MakeBalls,
-                         MakeDebs]
-
-            if not self['notpermanent']:
+            if not self['nopermanent']:
                 commands += [
-                    FinalizeTag,
-                    ReleaseBalls,
-                    ReleaseDebs,
-                    ReleaseSourceforge,
+                    finalizeTag,
+                    releaseBalls,
+                   releaseSourceforge,
                     ]
-
-                if self['type'] == 'final':
-                    commands += [UpdateWebDocs]
-
-                #yeah yeah, maybe next year
-##                commands += [Announce,
-##                             NotifyPackagers,
-##                             ]
+                commands += [updateWebDocs]
 
         self['commands'] = commands
 
         print "GOING TO DO", [x.__name__ for x in commands]
 
 
-def runChdirSafe(f, *args, **kw):
-    origdir = os.path.abspath('.')
-    try:
-        f(*args, **kw)
-    finally:
-        os.chdir(origdir)
-
-class Transaction:
-    """I am a dead-simple Transaction."""
-
-    sensitiveUndo = 0
-
-    def run(self, data):
-        """
-        Try to run this self.doIt; if it fails, call self.undoIt and
-        return a Failure.
-        """
-        print "*", self.__class__.__name__
-
-        try:
-            runChdirSafe(self.doIt, data)
-        except:
-            f = failure.Failure()
-            print "%s failed!" % self.__class__.__name__
-            if self.sensitiveUndo:
-                if raw_input("Are you sure you want to roll back "
-                             "this transaction? ").lower().startswith('n'):
-                    return f
-            print "rolling back transaction."
-            try:
-                runChdirSafe(self.undoIt, data, f)
-            except:
-                print "Argh, the rollback failed."
-                import traceback
-                traceback.print_exc()
-            return f
-
-    def doIt(self, data):
-        """Le's get it on!"""
-        raise NotImplementedError
-
-    def undoIt(self, data, fail):
-        """Oops."""
-        print "%s HAS NO ROLLBACK!" % self.__class__.__name__
-
-
-#errors
-
-class DirectoryExists(OSError):
-    """Some directory exists when it shouldn't."""
-    pass
-
-class DirectoryDoesntExist(OSError):
-    """Some directory doesn't exist when it should."""
-    pass
-
-class CommandFailed(OSError):
-    pass
-
-
 def main():
-    
     try:
         opts = Options()
         opts.parseOptions()
     except usage.UsageError, ue:
         print "%s: %s (see --help)" % (sys.argv[0], ue)
         sys.exit(2)
-    #sys.exit("BYE")
-
-##    sys.path.insert(0, os.path.abspath('Twisted'))
-
-##    if not os.path.exists('_twisted_release'):
-##        os.mkdir('_twisted_release')
-##    os.chdir('_twisted_release')
-
-    last = None
 
     for command in opts['commands']:
-        try:
-            f = command().run(opts)
-            if f is not None:
-                raise f
-        except:
-            print ("ERROR: %s failed. last successful command was %s. "
-                   "Traceback follows:" % (command.__name__, last))
-            import traceback
-            traceback.print_exc()
-            break
-
-        last = command
-
-
-# utilities
-
-
-def sh(command):#, sensitive=0):
-    """
-    I'll try to execute `command', and if `sensitive' is true, I'll
-    ask before running it.  If the command returns something other
-    than 0, I'll raise CommandFailed(command).
-    """
-    if debug:# or sensitive:
-        if raw_input("%r ?? " % command).startswith('n'):
-            return
-    print command
-    if os.system(command) != 0:
-        raise CommandFailed(command)
-
-        
-def replaceInFile(filename, oldstr, newstr, escape=True):
-    """
-    I replace the text `oldstr' with `newstr' in `filename' using sed
-    and mv.
-    """
-    sh('cp %s %s.bak' % (filename, filename))
-    if escape:
-        oldstr = re.escape(oldstr)
-    sh("sed -e 's/%s/%s/' < %s > %s.new" % (oldstr,
-                                            newstr, filename, filename))
-    sh('cp %s.new %s' % (filename,  filename))
+        print "-->", command.__name__
+        f = runChdirSafe(command, opts)
 
 
 ##
-# The transactions.
+# The MEAT.
 ##
 
-class CopyTrunkToWIP(Transaction):
-    def doIt(self, opts):
-        try:
-            sh('svn ls %s' % opts['wipurl'])
-        except CommandFailed:
-            pass
-        else:
-            sh('svn rm -m "Removing wip-%s in order to re-copy from trunk" %s' % (opts['base-version'], opts['wipurl']))
+def copyTrunkToWIP(opts):
+    try:
+        sh('svn ls %s' % opts['wipurl'])
+    except CommandFailed:
+        pass
+    else:
+        sh('svn rm -m "Removing wip-%s in order to re-copy from trunk" %s'
+           % (opts['base-version'], opts['wipurl']))
 
-        sh('svn cp -m "Copying trunk to wip-%s branch." %s %s' % (opts['base-version'], opts['trunkurl'], opts['wipurl']))
+    sh('svn cp -m "Copying trunk to wip-%s branch." %s %s'
+       % (opts['base-version'], trunkurl, opts['wipurl']))
 
-    def undoIt(self, opts, fail):
-        print "Sorry! Can't do anything about a failed cp."
 
 checkoutdir = 'Twisted.WIP'
 
-class CheckoutWIP(Transaction):
-    def doIt(self, opts):
+def checkoutWIP(opts):
+    if os.path.exists(checkoutdir):
+        raise DirectoryExists("CheckoutWIP: %s (--root) already exists"
+                              % checkoutdir)
 
-        if os.path.exists(checkoutdir):
-            raise DirectoryExists("CheckoutWIP: %s (--root) already exists" % checkoutdir)
-
-        sh('svn co %s %s' % (opts['wipurl'], checkoutdir))
-
-    def undoIt(self, opts, fail):
-        # we don't want to remove the directory if we didn't create it
-        if fail.check(DirectoryExists):
-            return 
-        
-        if os.path.exists(checkoutdir):
-            sh('rm -rf %s' % (checkoutdir,))
+    sh('svn co %s %s' % (opts['wipurl'], checkoutdir))
 
     
-class UpdateVersion(Transaction):
-    #  * the SVN tree is modified. to back out we must copy all the
-    #    .bak files created by replaceInFile back to their original
-    #    location, and remove them.
-    #  * the tree is committed. this is atomic, afaict.
-    #    [this isn't, but pretend it is anyway -- Moshe]
-    #    [maybe it is now that we use SVN? --radix]
+def updateVersion(opts):
+    oldver = 'SVN-trunk'
+    newver = opts['base-version']
 
-    files = None
-    
-    def doIt(self, opts):
-        oldver = 'SVN-trunk'
-        newver = opts['full-version']
-
-
-        # XXX rar rar - It will not always be SVN-trunk! RCN>1 and
-        # finals use the same branch, and we've committed the version
-        # number!
-        r = checkoutdir
-        self.files = ('README', 'twisted/copyright.py', 'admin/twisted.spec')
-        for file in self.files:
-            replaceInFile(os.path.join(r, file), oldver, newver)
-            crapout = os.popen('cd %s && svn diff %s' % (r, file)).read()
-            print "diff output:"
-            print crapout
-            if not crapout:
-                raise Exception("No diff output!")
-        sh('cd %s &&  svn commit -m "Setting version for %s" %s'
-           % (r, newver, ' '.join(self.files)))#, sensitive=1)
-
-    def undoIt(self, opts, fail):
-        if self.files:
-            for file in self.files:
-                try:
-                    sh('mv %s.bak %s' % (file, file))
-                except:
-                    print "WARNING: couldn't move %s.bak back to %s, chugging along" % (file, file)
+    r = checkoutdir
+    self.files = ('README', 'twisted/copyright.py', 'admin/twisted.spec')
+    for file in self.files:
+        replaceInFile(os.path.join(r, file), oldver, newver)
+        crapout = os.popen('cd %s && svn diff %s' % (r, file)).read()
+        print "diff output:"
+        print crapout
+        if not crapout:
+            raise Exception("No diff output!")
+    sh('cd %s &&  svn commit -m "Setting version for %s" %s'
+       % (r, newver, ' '.join(self.files)))#, sensitive=1)
 
 
-##class MergeFilesToWIP(Transaction):
-##    def doIt(self, opts):
-##        pass
+def tagTemp(opts):
+    sh('cd %s &&  svn cp %s %s -m "Tagging preliminary %s"'
+       % (checkoutdir, opts['wipurl'],
+          opts['temptagurl'], opts['base-version']),
+       )# sensitive=1)
 
 
-class TagTemp(Transaction):
-    def doIt(self, opts):
-        sh('cd %s &&  svn cp %s %s -m "Tagging preliminary %s"'
-           % (checkoutdir, opts['wipurl'],
-              opts['temptagurl'], opts['full-version']),
-           )# sensitive=1)
+def exportTemp(opts):
+    if os.path.exists('Twisted.exp'):
+        raise DirectoryExists("ExportTemp: 'Twisted' already exists")
+    sh('svn export %s Twisted.exp' % (opts['temptagurl'],))
 
 
-class ExportTemp(Transaction):
-    def doIt(self, opts):
-        if os.path.exists('Twisted.exp'):
-            raise DirectoryExists("ExportTemp: 'Twisted' already exists")
-        sh('svn export %s Twisted.exp' % (opts['temptagurl'],))
+def makeDocs(opts):
+    ver = opts['base-version']
+    tdir = 'Twisted.exp'
 
-    def undoIt(self, opts, fail):
-        # we don't want to remove the directory if we didn't create it
-        if fail.check(DirectoryExists):
-            return
-        sh('rm -rf Twisted.exp')
+    if not os.path.exists(tdir):
+        raise DirectoryDoesntExist("GenerateDocs: %s doesn't exist!" % tdir)
 
-##class PrepareDist(Transaction):
-##    def doIt(self, opts):
-##        ver = opts['full-version']
-##        tdir = "Twisted-%s" % ver
+    sh('cd %s &&  ./admin/epyrun -o doc/api' % (tdir))
 
-##        if os.path.exists(tdir):
-##            raise DirectoryExists("PrepareDist: %s exists already." % tdir)
+    sh('cd %s && ./admin/process-docs %s' % (tdir, ver))
 
-##        shutil.copytree('Twisted', tdir)
-
-##    def undoIt(self, opts, fail):
-##        #don't delete the directory if we didn't create it!
-##        if not fail.check(DirectoryExists):
-##            ver = opts['full-version']
-##            tdir = "Twisted-%s" % ver
-
-##            sh('rm -rf %s' % tdir)
+    #shwack the crap
+    for ext in ['*.pyc', '.cvsignore']:
+        sh('find %s -name "%s" | xargs rm -f' % (tdir, ext))
 
 
-class MakeDocs(Transaction):
 
-    # documentation generation can take a looong time, so we don't
-    # want to force redoing everything
-    #sensitiveUndo = 1
-    
-    def doIt(self, opts):
-        ver = opts['full-version']
-        tdir = 'Twisted.exp'
-        
-        if not os.path.exists(tdir):
-            raise DirectoryDoesntExist("GenerateDocs: %s doesn't exist!" % tdir)
-        
-        sh('cd %s &&  ./admin/epyrun -o doc/api' % (tdir))
+def makeBalls(opts):
+    ver = opts['base-version']
+    tdir = "Twisted-%s" % (ver,)
 
-        sh('cd %s && ./admin/process-docs %s' % (tdir, ver))
+    if not os.path.exists('Twisted.exp'):
+        raise DirectoryDoesntExist("MakeBalls: Twisted.exp doesn't exist"
+                                   % tdir)
 
-        #shwack the crap
-        for ext in ['*.pyc', '.cvsignore']:
-            sh('find %s -name "%s" | xargs rm -f' % (tdir, ext))
+    if os.path.exists(tdir):
+        raise DirectoryExists('MakeBalls: %s exists' % tdir)
 
+    shutil.copytree('Twisted.exp', tdir)
 
-    def undoIt(self, opts, fail):
+    print "MakeBalls: Twisted_NoDocs."
+    sh('''
+    tar --exclude %(tdir)s/doc -cf - %(tdir)s \
+        |gzip -9 > Twisted_NoDocs-%(ver)s.tar.gz && 
+    tar --exclude %(tdir)s/doc -cjf Twisted_NoDocs-%(ver)s.tar.bz2 %(tdir)s
+    ''' % locals())
 
-        if fail.check(DirectoryDoesntExist):
-            #no state change here
-            return
+    print "MakeBalls: Twisted"
+    sh('''
+    tar cf - %(tdir)s | gzip -9 > %(tdir)s.tar.gz&&
+    tar cjf   %(tdir)s.tar.bz2 %(tdir)s
+    ''' % locals())
 
-        tdir = "Twisted.exp"
+    print "MakeBalls: TwistedDocs"
+    docdir = "TwistedDocs-%s" % ver
+    sh('''
+    cd %(tdir)s && 
+    mv doc %(docdir)s
 
-        #first shwack the epydocs
-        sh('rm -rf %s/doc/api/*' % tdir)
+    tar cf -  %(docdir)s | gzip -9 > %(docdir)s.tar.gz&& 
+    mv %(docdir)s.tar.gz ../ && 
 
-        #then swhack the results of generate-domdocs
-        # This isn't really necessary, so screw it.
-##        sh('rm -f %s/doc/howto/*.html' % tdir)
-##        sh('rm -f %s/doc/specifications/*.html' % tdir)
-
-        #then swhack the results of the latex stuff
-        sh('cd %s/doc/howto && rm -f *.eps *.tex *.aux *.log book.*' % tdir)
-
-class MakeBalls(Transaction):
-
-    def doIt(self, opts):
-        ver = opts['full-version']
-        tdir = "Twisted-%s" % (ver,)
-
-        if not os.path.exists('Twisted.exp'):
-            raise DirectoryDoesntExist("MakeBalls: Twisted.exp doesn't exist"
-                                       % tdir)
-
-        if os.path.exists(tdir):
-            raise DirectoryExists('MakeBalls: %s exists' % tdir)
-
-        shutil.copytree('Twisted.exp', tdir)
-
-        print "MakeBalls: Twisted_NoDocs."
-        sh('''
-        tar --exclude %(tdir)s/doc -cf - %(tdir)s \
-            |gzip -9 > Twisted_NoDocs-%(ver)s.tar.gz && 
-        tar --exclude %(tdir)s/doc -cjf Twisted_NoDocs-%(ver)s.tar.bz2 %(tdir)s
-        ''' % locals())
-
-        print "MakeBalls: Twisted"
-        sh('''
-        tar cf - %(tdir)s | gzip -9 > %(tdir)s.tar.gz&&
-        tar cjf   %(tdir)s.tar.bz2 %(tdir)s
-        ''' % locals())
-
-        print "MakeBalls: TwistedDocs"
-        docdir = "TwistedDocs-%s" % ver
-        sh('''
-        cd %(tdir)s && 
-        mv doc %(docdir)s
-
-        tar cf -  %(docdir)s | gzip -9 > %(docdir)s.tar.gz&& 
-        mv %(docdir)s.tar.gz ../ && 
-
-        tar cjf   %(docdir)s.tar.bz2 %(docdir)s && 
-        mv %(docdir)s.tar.bz2 ../
-        ''' % locals())
+    tar cjf   %(docdir)s.tar.bz2 %(docdir)s && 
+    mv %(docdir)s.tar.bz2 ../
+    ''' % locals())
 
 
-##    def undoIt(self, opts, fail):
-##        ver = opts['full-version']
-##        for ext in ['tar.gz', 'tar.bz2']:
-##            for prefix in ['Twisted_NoDocs', 'TwistedDocs', 'Twisted']:
-##                try:
-##                    sh('rm -f %s-%s.%s' % (prefix, ver, ext))
-##                except:
-##                    pass
+def finalizeTag(opts):
+    # atomic-assumption
+    sh('svn mv -m "Finalizing release of %s" %s %s'
+       % (opts['base-version'], opts['temptagurl'], opts['tagurl']))
 
-class MakeDebs(Transaction):
 
-    #takes a while
-    #sensitiveUndo = 1
-    
-    def doIt(self, opts):
-        #rel = os.path.abspath('.')
-        ver = opts['full-version']
-        tgz = os.path.abspath('Twisted-%s.tar.gz' % (ver,))
-        unique = 't-r-%s.%s' % (time.time(), os.getpid())
-        debdir = 'debian-%s' % ver
-        lastdeb = opts['lastdeb']
 
-        os.mkdir('/sid-chroot/tmp/%s' % unique)
-        sh('cd /sid-chroot/tmp/%s && tar xzf %s' % (unique, tgz))
-        sh("ssh -p 9022 localhost "
-             "'cd /tmp/%(unique)s && "
-             "./Twisted-%(ver)s/admin/make-deb -a -o %(lastdeb)s'"%vars())
+def releaseBalls(opts):
+    rel = opts['releasedir']
+    ver = opts['base-version']
+    tdir = "Twisted-%s" % ver
 
-        if not os.path.isdir(debdir):
-            os.mkdir(debdir)
+    if not os.path.exists(rel):
+        print "Distribute: Creating", rel
+        os.mkdir(rel)
 
-        sys.stdout.write("Moving files to %s" % debdir)
-        sys.stdout.flush()
+    if not os.path.exists("%s/old" % rel):
+        print "Distribute: creating %s/old" % rel
+        os.mkdir("%s/old" % rel)
 
-        for file in glob.glob('/sid-chroot/tmp/%s/*' % unique):
-            if not os.path.isfile(file):
-                continue
-            sh('cp %(file)s %(debdir)s' % vars())
-            sys.stdout.write(".")
-            sys.stdout.flush()
-        sys.stdout.write("\n")
+    sh('mv %(rel)s/*.tar.gz %(rel)s/*.tar.bz2 %(rel)s/old || true' % locals())
 
-        os.chdir(debdir)
-        sh('tar xzf %(tgz)s Twisted-%(ver)s/admin' % vars())
-        sh('mv Twisted-%(ver)s/admin/override .' % vars())
-        sh('./Twisted-%(ver)s/admin/createpackages override'% vars())
-        sh('rm -rf woody')
+    sh('''
+    cp Twisted_NoDocs-%(ver)s.tar.gz  %(rel)s &&
+    cp Twisted_NoDocs-%(ver)s.tar.bz2 %(rel)s
+    ''' % locals())
 
-        os.mkdir('woody')
-        sh('cp *.orig.tar.gz *.diff.gz *.dsc woody/')
-        os.chdir('woody')
-        sh('dpkg-source -x *.dsc')
-        twisted_dir = filter(os.path.isdir, glob.glob('twisted-*'))[0]
-        os.chdir(twisted_dir)
-        replaceInFile('debian/changelog', ver+'-1', ver+'-1woody')
-        replaceInFile('debian/control', ', python2.3-dev', '')
-        sh('rm -f debian/*.bak')
-        sh('dpkg-buildpackage -rfakeroot -us -uc')
+
+    sh('''
+    cp TwistedDocs-%(ver)s.tar.gz  %(rel)s &&
+    cp TwistedDocs-%(ver)s.tar.bz2 %(rel)s
+    ''' % locals())
+
+    sh('''
+    cp %(tdir)s.tar.gz %(rel)s &&
+    cp %(tdir)s.tar.bz2 %(rel)s
+    ''' % locals())
+
+def releaseSourceforge(opts):
+    name = opts['sfname']
+    rel = opts['releasedir']
+    ver = opts['base-version']
+    path = '/home/users/'+name[0]+'/'+name[:2]+'/'+name 
+    sh("ssh %(name)s@shell.sf.net mkdir Twisted-%(ver)s || true" % vars())
+    sh("scp -r %(rel)s/Twisted*%(ver)s* debian-%(ver)s "
+       "%(name)s@shell.sf.net:%(path)s/Twisted-%(ver)s/" % vars())
+    sh("echo "
+       "'"
+       "umask 0002&&"
+       "rm -f /home/groups/t/tw/twisted/htdocs/debian/woody/Packages.gz&&"
+       "rm -f /home/groups/t/tw/twisted/htdocs/debian/woody/Sources.gz&&"
+       "rm -f /home/groups/t/tw/twisted/htdocs/debian/woody/override&&"
+       "rm -f /home/groups/t/tw/twisted/htdocs/debian/Packages.gz&&"
+       "rm -f /home/groups/t/tw/twisted/htdocs/debian/Sources.gz&&"
+       "rm -f /home/groups/t/tw/twisted/htdocs/debian/override&&"
+       "mv Twisted-%(ver)s/debian-%(ver)s/woody/* "
+          "/home/groups/t/tw/twisted/htdocs/debian/woody/&&"
+       "rmdir Twisted-%(ver)s/debian-%(ver)s/woody&&"
+       "mv Twisted-%(ver)s/debian-%(ver)s/* "
+          "/home/groups/t/tw/twisted/htdocs/debian/&&"
+       "rmdir Twisted-%(ver)s/debian-%(ver)s&&"
+       "mv Twisted-%(ver)s/* /home/groups/t/tw/twisted/htdocs&&"
+       "cd /home/groups/t/tw/twisted/htdocs&&"
+       "tar xzf TwistedDocs-%(ver)s.tar.gz'"
+       "|ssh %(name)s@shell.sf.net newgrp twisted" % vars())
+
+
+def updateWebDocs(opts):
+    os.chdir(opts['docdir'])
+
+    tdocdir = os.path.join(opts['docdir'],
+                           'TwistedDocs-%s' % opts['base-version'])
+
+    tbz2 = '%s/TwistedDocs-%s.tar.bz2' % (opts['releasedir'],
+                                          opts['base-version'])
+    if os.path.exists(tdocdir):
+        raise DirectoryExists('%s already exists!' % tdocdir)
+
+    sh('tar xjf %s' % tbz2)
+
+    # lore-ize all the docs
+
+    os.chdir('%s/howto' % tdocdir)
+
+    template = os.path.abspath('website-template.tpl')
+
+    lorecmd = (("lore -p --config template=%s " % template)
+               + "--config baseurl="
+               "http://twistedmatrix.com/documents/current/api/%s.html")
+    sh("%s --config ext= *.xhtml" % lorecmd)
+    os.chdir('..')
+    for dir in ['examples', 'historic',
+                'specifications', 'vision']:
+        os.chdir(dir)
+        sh('%s  --config ext= -l../howto/ *.xhtml' % lorecmd)
         os.chdir('..')
-        sh('rm -rf %(twisted_dir)s' % vars())
-        sh('../Twisted-%(ver)s/admin/createpackages ../override'% vars())
 
-        sh('rm -rf ../Twisted-%(ver)s' % vars())
-        sh('rm -rf /sid-chroot/tmp/%s' % unique)
+    os.chdir('man')
+    sh('lore -p --config ext=.xhtml -l../howto -iman -olore *.1')
+    sh('%s --config ext=-man -l ../howto *.xhtml' % lorecmd)
 
-##    def undoIt(self, opts, fail):
-##        ver = opts['full-version']
-##        sh("rm -rf debian-%(ver)s" % vars())
+    os.chdir('../..') # should be in docdir now
 
+    # 'deploy' to web
 
-class FinalizeTag(Transaction):
-    def doIt(self, opts):
-        # atomic-assumption
-        sh('svn mv -m "Finalizing release of %s" %s %s' % (opts['full-version'], opts['temptagurl'], opts['tagurl']))
+    if os.path.exists('current'):
+        if os.path.islink('current'):
+            os.unlink('current')
+        else:
+            raise Exception("'current' exists and is NOT a symlink. Won't remove.")
 
-
-class ReleaseDebs(Transaction):
-
-    target = '/twisted/Debian'
-
-    def doIt(self, opts):
-        ver = opts['full-version']
-        debdir = 'debian-%s' % ver
-        target = self.target
-
-        for file in ('Packages.gz', 'Sources.gz', 'override'):
-            if os.path.isfile('%(target)s/%(file)s' % vars()):
-                sh('rm -f %(target)s/%(file)s.old' % vars())
-                sh('mv %(target)s/%(file)s %(target)s/%(file)s.old' % vars())
-            if os.path.isfile('%(target)s/woody/%(file)s' % vars()):
-                sh('rm -f %(target)s/woody/%(file)s.old' % vars())
-                sh('mv %(target)s/woody/%(file)s %(target)s/woody/%(file)s.old' % vars())
-
-        for file in os.listdir(debdir):
-            if file == 'woody':
-                continue
-            sh("cp %(debdir)s/%(file)s %(target)s/" % vars())
-
-        sh("cp %(debdir)s/woody/* %(target)s/woody/" % vars())
-
-    def undoIt(self, opts, fail):
-        ver = opts['full-version']
-        target = self.target
-        for dir in (target, target+'/woody'):
-            for file in glob.glob('%(dir)s/*.old' % vars()):
-                new = os.path.splitext(file)[0]
-                sh('mv %(file)s %(new)s' % vars())
-                sh('mv %(file)s %(new)s' % vars())
-            sh('rm -f %(dir)s/*%(ver)s*' % vars())
-
-
-
-
-class ReleaseBalls(Transaction):
-    def doIt(self, opts):
-        rel = opts['releasedir']
-        ver = opts['full-version']
-        tdir = "Twisted-%s" % ver
-
-        if not os.path.exists(rel):
-            print "Distribute: Creating", rel
-            os.mkdir(rel)
-
-        if not os.path.exists("%s/old" % rel):
-            print "Distribute: creating %s/old" % rel
-            os.mkdir("%s/old" % rel)
-
-        sh('mv %(rel)s/*.tar.gz %(rel)s/*.tar.bz2 %(rel)s/old || true' % locals())
-
-        sh('''
-        cp Twisted_NoDocs-%(ver)s.tar.gz  %(rel)s &&
-        cp Twisted_NoDocs-%(ver)s.tar.bz2 %(rel)s
-        ''' % locals())
-
-
-        sh('''
-        cp TwistedDocs-%(ver)s.tar.gz  %(rel)s &&
-        cp TwistedDocs-%(ver)s.tar.bz2 %(rel)s
-        ''' % locals())
-
-        sh('''
-        cp %(tdir)s.tar.gz %(rel)s &&
-        cp %(tdir)s.tar.bz2 %(rel)s
-        ''' % locals())
-
-    def undoIt(self, opts, fail):
-        ver = opts['full-version']
-        rel = opts['releasedir']
-
-        for ext in ['zip', 'tar.gz', 'tar.bz2']:
-            for prefix in ['Twisted_NoDocs', 'TwistedDocs', 'Twisted']:
-                try:
-                    sh('rm -f %s/%s-%s.%s' % (rel, prefix, ver, ext))
-                except:
-                    pass
-
-class ReleaseSourceforge(Transaction):
-
-    #takes a long time
-    #sensitiveUndo = 1
-    
-    def doIt(self, opts):
-        name = opts['sfname']
-        rel = opts['releasedir']
-        ver = opts['full-version']
-        path = '/home/users/'+name[0]+'/'+name[:2]+'/'+name 
-        sh("ssh %(name)s@shell.sf.net mkdir Twisted-%(ver)s || true" % vars())
-        sh("scp -r %(rel)s/Twisted*%(ver)s* debian-%(ver)s "
-           "%(name)s@shell.sf.net:%(path)s/Twisted-%(ver)s/" % vars())
-        sh("echo "
-           "'"
-           "umask 0002&&"
-           "rm -f /home/groups/t/tw/twisted/htdocs/debian/woody/Packages.gz&&"
-           "rm -f /home/groups/t/tw/twisted/htdocs/debian/woody/Sources.gz&&"
-           "rm -f /home/groups/t/tw/twisted/htdocs/debian/woody/override&&"
-           "rm -f /home/groups/t/tw/twisted/htdocs/debian/Packages.gz&&"
-           "rm -f /home/groups/t/tw/twisted/htdocs/debian/Sources.gz&&"
-           "rm -f /home/groups/t/tw/twisted/htdocs/debian/override&&"
-           "mv Twisted-%(ver)s/debian-%(ver)s/woody/* "
-              "/home/groups/t/tw/twisted/htdocs/debian/woody/&&"
-           "rmdir Twisted-%(ver)s/debian-%(ver)s/woody&&"
-           "mv Twisted-%(ver)s/debian-%(ver)s/* "
-              "/home/groups/t/tw/twisted/htdocs/debian/&&"
-           "rmdir Twisted-%(ver)s/debian-%(ver)s&&"
-           "mv Twisted-%(ver)s/* /home/groups/t/tw/twisted/htdocs&&"
-           "cd /home/groups/t/tw/twisted/htdocs&&"
-           "tar xzf TwistedDocs-%(ver)s.tar.gz'"
-           "|ssh %(name)s@shell.sf.net newgrp twisted" % vars())
-
-
-class UpdateWebDocs(Transaction):
-    origlinkdest = None
-    def doIt(self, opts):
-        os.chdir(opts['docdir'])
-
-        tdocdir = os.path.join(opts['docdir'],
-                               'TwistedDocs-%s' % opts['full-version'])
-
-        tbz2 = '%s/TwistedDocs-%s.tar.bz2' % (opts['releasedir'],
-                                              opts['full-version'])
-        if os.path.exists(tdocdir):
-            raise DirectoryExists('%s already exists!' % tdocdir)
-
-        sh('tar xjf %s' % tbz2)
-
-        # lore-ize all the docs
-
-        os.chdir('%s/howto' % tdocdir)
-
-        template = os.path.abspath('website-template.tpl')
-
-        lorecmd = (("lore -p --config template=%s " % template)
-                   + "--config baseurl="
-                   "http://twistedmatrix.com/documents/current/api/%s.html")
-        sh("%s --config ext= *.xhtml" % lorecmd)
-        os.chdir('..')
-        for dir in ['examples', 'historic',
-                    'specifications', 'vision']:
-            os.chdir(dir)
-            sh('%s  --config ext= -l../howto/ *.xhtml' % lorecmd)
-            os.chdir('..')
-
-        os.chdir('man')
-        sh('lore -p --config ext=.xhtml -l../howto -iman -olore *.1')
-        sh('%s --config ext=-man -l ../howto *.xhtml' % lorecmd)
-
-        os.chdir('../..') # should be in docdir now
-
-        # 'deploy' to web
-
-        if os.path.exists('current'):
-            if os.path.islink('current'):
-                self.origlinkdest = os.path.realpath('current')
-                os.unlink('current')
-            else:
-                raise Exception("'current' exists and is NOT a symlink. Won't remove.")
-
-        os.symlink(tdocdir, 'current')
-        # who cares where we're chdir'd to; Transaction'll set us back.
-
-    def undoIt(self, opts, fail):
-        if fail.check(DirectoryExists):
-            return
-        os.chdir(opts['docdir'])
-
-        if self.origlinkdest is not None:
-            if not os.path.exists('current'):
-                os.symlink(self.origlinkdest, 'current')
-            # I can't imagine 'else' of this ever having a useful back-out
-
-        sh('rm -rf TwistedDocs-%s' % opts['full-version'])
-
-
-class Announce(Transaction):
-    pass
-
-
-class NotifyPackagers(Transaction):
-    pass
+    os.symlink(tdocdir, 'current')
 
 
 if __name__=='__main__':

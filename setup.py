@@ -75,12 +75,11 @@ twisted_subprojects = ["conch", "flow", "lore", "mail", "names",
                        "news", "pair", "runner", "web", "web2",
                        "words", "xish"]
 
-ver = copyright.version.replace('-', '_') #RPM doesn't like '-'
 setup_args = dict(
     # metadata
     name="Twisted",
-    version=ver,
-    description="Twisted %s is a framework to build frameworks" % ver,
+    version=copyright.version,
+    description="Twisted is a framework to build frameworks",
     author="Twisted Matrix Laboratories",
     author_email="twisted-python@twistedmatrix.com",
     maintainer="Glyph Lefkowitz",
