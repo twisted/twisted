@@ -132,7 +132,7 @@ class ChangeColor(input.Anything):
     def commit(self, request, node, data):
         session = request.getSession()
         session.color = data
-        self.model.setData(data)
+        self.model.setData(request, data)
         self.model.notify({'request': request})
 
 
@@ -293,8 +293,8 @@ class InventoryUpdater(input.Anything):
         log = self.model.getSubmodel("log")
         inv = invmodel.getData()
         inv.append(data) # just add a string to the list
-        log.setData(log.getData() + ("%s added to servers\n" % data))
-        invmodel.setData(inv)
+        log.setData(request, log.getData() + ("%s added to servers\n" % data))
+        invmodel.setData(request, inv)
         invmodel.notify({'request': request})
 
 
