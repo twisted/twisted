@@ -173,6 +173,16 @@ class SearchUpwardsTest(unittest.TestCase):
         expected=None
         self.assertEqual(actual, expected)
 
+class Foo:
+    def __init__(self, x):
+        self.x = x
+
+class DSU(unittest.TestCase):
+    def testDSU(self):
+        L = [Foo(x) for x in range(20, 9, -1)]
+        L2 = util.dsu(L, lambda o: o.x)
+        self.assertEquals(range(10, 21), [o.x for o in L2])
+
 class IntervalDifferentialTestCase(unittest.TestCase):
     def testDefault(self):
         d = iter(util.IntervalDifferential([], 10))

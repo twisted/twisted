@@ -18,7 +18,7 @@
 
 from __future__ import nested_scopes, generators
 
-__version__ = '$Revision: 1.46 $'[11:-2]
+__version__ = '$Revision: 1.47 $'[11:-2]
 
 import os
 import sys
@@ -563,9 +563,14 @@ class FancyEqMixin:
                 return False
         return True
 
+def dsu(list, key):
+    L2 = [(key(e), i, e) for (i, e) in zip(range(len(list)), list)]
+    L2.sort()
+    return [e[2] for e in L2]
+
 __all__ = [
     "uniquify", "padTo", "getPluginDirs", "addPluginDir", "sibpath",
     "getPassword", "dict", "println", "keyed_md5", "makeStatBar",
     "OrderedDict", "spewer", "searchupwards", "LineLog", "raises",
-    "IntervalDifferential", "FancyStrMixin", "FancyEqMixin"
+    "IntervalDifferential", "FancyStrMixin", "FancyEqMixin", "dsu"
 ]
