@@ -22,7 +22,7 @@ Package installer for Twisted
 Copyright (c) 2001 by Twisted Matrix Laboratories
 All rights reserved, see LICENSE for details.
 
-$Id: setup.py,v 1.5 2001/08/18 09:31:01 glyph Exp $
+$Id: setup.py,v 1.6 2001/08/18 10:34:58 moshez Exp $
 """
 
 import distutils, os, sys
@@ -58,12 +58,19 @@ your toaster.
         'twisted.protocols',
         'twisted.python',
         'twisted.reality',
+        'twisted.reality.ui',
         'twisted.spread',
+        'twisted.spread.ui',
+        'twisted.words',
+        'twisted.words.ui',
+        'twisted.words.ui.gateways',
         'twisted.test',
         'twisted.web',
         'twisted.tap',
         'twisted.mail',
-        'twisted.enterprise'
+        'twisted.enterprise',
+        'twisted.manhole',
+        'twisted.manhole.ui',
     ],
 }
 
