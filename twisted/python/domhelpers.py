@@ -10,7 +10,7 @@ def substitute(request, node, subs):
     for child in node.childNodes:
         if child.nodeValue:
             child.replaceData(0, len(child.nodeValue), child.nodeValue % subs)
-        self.substitute(request, child, subs)
+        substitute(request, child, subs)
 
 def _get(node, nodeId):
     if hasattr(node, 'hasAttributes') and node.hasAttributes() and ((str(node.getAttribute("id")) == nodeId) or (str(node.getAttribute("class")) == nodeId) or (str(node.getAttribute("model")) == nodeId)):
