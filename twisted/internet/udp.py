@@ -71,7 +71,6 @@ class Port(base.BasePort):
         self.maxPacketSize = maxPacketSize
         self.interface = interface
         self.setLogStr()
-        self._connected = False
         self._connectedAddr = None
     
     def __repr__(self):
@@ -118,9 +117,8 @@ class Port(base.BasePort):
                 if no in (EAGAIN, EINTR, EWOULDBLOCK):
                     return
                 if (no == ECONNREFUSED) or (platformType == "win32" and no == WSAECONNRESET):
-                    # XXX for the moment we don't deal with connection refused
-                    # in non-connected UDP sockets.
-                    pass
+                    if self._connectedAddr:
+                        self.protocol.connectionRefused()                        
                 else:
                     raise
             except:
@@ -131,7 +129,7 @@ class Port(base.BasePort):
 
         @param addr: should be a tuple (ip, port), can be None in connected mode.
         """
-        if self._connected:
+        if self._connectedAddr:
             assert addr in (None, self._connectedAddr)
             try:
                 return self.socket.send(datagram)
@@ -165,11 +163,10 @@ class Port(base.BasePort):
 
     def connect(self, host, port):
         """'Connect' to remote server."""
-        if self._connected:
+        if self._connectedAddr:
             raise RuntimeError, "already connected, reconnecting is not currently supported"
         if not abstract.isIPAddress(host):
             raise ValueError, "please pass only IP addresses, not domain names"
-        self._connected = True
         self._connectedAddr = (host, port)
         self.socket.connect((host, port))
     
