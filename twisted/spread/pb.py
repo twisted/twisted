@@ -1297,6 +1297,7 @@ class Broker(banana.Banana):
         callback, errback = self.waitingForAnswers[requestID]
         del self.waitingForAnswers[requestID]
         result = self.unserialize(netResult)
+        # XXX should this exception be caught?
         callback(result)
 
 

@@ -22,7 +22,7 @@ class Interaction(gtk.GtkWindow):
         vb.pack_start(gtkim.scrolltxt(self.input), 1,1,0)
 
         self.send = gtkim.cbutton("Send", self.sendMessage)
-        vb.pack_start(self.send, 1,1,0)
+        vb.pack_start(self.send, 0,0,0)
 
         self.add(vb)
         self.signal_connect('destroy', sys.exit, None)
@@ -31,7 +31,7 @@ class Interaction(gtk.GtkWindow):
         t = self.output
         t.set_point(t.get_length())
         t.freeze()
-        t.insert_defaults('\n'+str(message))
+        t.insert_defaults('\n'+message)
         a = t.get_vadjustment()
         t.thaw()
         a.set_value(a.upper - a.page_size)
