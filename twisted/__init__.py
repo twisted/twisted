@@ -20,10 +20,10 @@ Twisted: The Framework Of Your Internet.
 """
 
 # Ensure compat gets imported
-from python import compat
+from twisted.python import compat
 del compat
 
 # setup version
-import copyright
+from twisted import copyright
 __version__ = copyright.version
 del copyright
