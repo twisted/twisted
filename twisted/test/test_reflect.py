@@ -88,7 +88,9 @@ class LookupsTestCaseII(unittest.TestCase):
                                  reflect.Summer)
 
     def testAttributeLookup(self):
-        # Why does Identical break down here?
+        # Note - not failUnlessIdentical because unbound method lookup
+        # creates a new object every time.  This is a foolishness of
+        # Python's object implementation, not a bug in Twisted.
         self.failUnlessEqual(reflect.namedAny("twisted.python."
                                               "reflect.Summer.reallySet"),
                              reflect.Summer.reallySet)
