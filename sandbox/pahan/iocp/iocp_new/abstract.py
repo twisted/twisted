@@ -37,8 +37,7 @@ class RWHandle(log.logger, styles.Ephemeral):
             self.startWriting()
 
     def writeErr(self, err):
-        # TODO: call connectionLost or some such. Restart if cancelled?
-        pass
+        raise NotImplementedError
 
     # called at start and never again? depends on future consumer thing
     def startReading(self):
@@ -57,17 +56,56 @@ class RWHandle(log.logger, styles.Ephemeral):
         raise NotImplementedError
 
     def readErr(self, err):
-        # TODO: call connectionLost or some such. Restart if cancelled?
+        raise NotImplementedError
+
+# this is a handle with special read/write ops and error handling, Protocol dispatch and connection loss
+class Socket(RWHandle):
+    read_op = WSARecvOp
+    write_op = WSASendOp
+
+    def __init__(self, skt, protocol):
+        self.socket = skt
+        self.handle = skt.fileno()
+        self.protocol = protocol
+
+class ConnectedSocket(Socket):
+    def dataReceived(self, data, **kw):
+        self.protocol.dataReceived(data)
+
+    def writeErr(self, err):
+        # XXX: depending on whether it was cancelled or
+        # a socket fuckup occurred, what should we do?
+        self.connectionLost(err)
+
+    def readErr(self, err):
+        self.connectionLost(err)
+
+    def connectionLost(self, err):
+        # TODO: copy and paste to do the right thing
+        self.socket.shutdown(2) # close the socket too?
+        self.protocol.connectionLost(err)
+
+    def loseConnection(self):
+        # TODO: groan, "write remaining data" semantics
+        # where should that stuff be?
         pass
 
-class Port:
-    def __init__(self
+# TODO: devise a socket family specific initialization method
+class AbstractSocketPort:
+    addressFamily = None
+    socketType = None
+    def __init__(self, address, factory, backlog, **kw):
+        self.address = address
+        self.factory = factory
+        self.kw = kw
+
     def startListening(self):
-        pass
+        skt = socket(self.addressFamily, self.socketType)
+        skt.bind(self.address)
 
-    def stopListening(self):
-        pass
-
-    def getHost(self):
-        pass
+class ListenSocketPort(SocketPort):
+    transport = ConnectedSocket
+    accept_op = AcceptExOp
+        skt.listen(self.backlog)
+        self.startAccepting
 
