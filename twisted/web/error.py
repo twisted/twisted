@@ -22,7 +22,7 @@ class ErrorPage(resource.Resource):
 
     def render(self, request):
         request.setResponseCode(self.code)
-        return "<HTML><BODY><H1>%s</h1><p>%s</p></BODY></HTML>" % (self.brief, self.detail)
+        return "<HTML><BODY><H1>%s</h1><p>%s</p></BODY></HTML>\n\n" % (self.brief, self.detail)
 
     def getChild(self, chnam, request):
         return self

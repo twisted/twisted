@@ -39,12 +39,12 @@ class BananaTestCase(unittest.TestCase):
     def testInteger(self):
         self.enc.sendEncoded(1015)
         self.enc.dataReceived(self.io.getvalue())
-        assert self.result == 1015
+        assert self.result == 1015, "should be 1015, got %s" % self.result
 
     def testNegative(self):
         self.enc.sendEncoded(-1015)
         self.enc.dataReceived(self.io.getvalue())
-        assert self.result == -1015
+        assert self.result == -1015, "should be -1015, got %s" % self.result
         
     def testFloat(self):
         self.enc.sendEncoded(1015.)

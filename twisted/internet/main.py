@@ -117,7 +117,11 @@ class Application(log.Logger):
             delayeds.extend(self.delayeds)
             shutdowns.append(self.shutDownSave)
             for port in self.ports:
-                port.startListening()
+                try:
+                    port.startListening()
+                except socket.error:
+                    print 'port %s already bound' % port.port
+                    return
             self.running = 1
             threadable.dispatcher.disown(self)
         if not running:

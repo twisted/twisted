@@ -5,11 +5,11 @@ Package installer for Twisted
 Copyright (c) 2001 by Twisted Matrix Laboratories
 All rights reserved, see LICENSE for details.
 
-$Id: setup.py,v 1.2 2001/07/09 18:35:11 jh Exp $
+$Id: setup.py,v 1.3 2001/07/24 08:42:47 glyph Exp $
 """
 
 import distutils, os, sys
-from distutils.core import setup
+from distutils.core import setup, Extension
 from twisted import copyright
 
 #############################################################################
@@ -56,6 +56,17 @@ if hasattr(distutils.dist.DistributionMetadata, 'get_platforms'):
 if sys.platform == 'posix':
     import glob
     setup_args['scripts'] = filter(os.path.isfile, glob.glob('bin/*'))
+
+#'"
+# for building C banana...
+
+def extpath(path):
+    return os.path.join(os.path.dirname(os.path.abspath(sys.argv[0])), path)
+    
+
+setup_args['ext_modules'] = [
+    Extension("twisted.spread.cBanana", [extpath("twisted/spread/cBanana.c")]),
+    ]
 
 apply(setup, (), setup_args)
 

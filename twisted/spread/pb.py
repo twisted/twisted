@@ -557,24 +557,11 @@ class Broker(banana.Banana):
         self.disconnected = 0
         self.disconnects = []
 
-##    def symbolicExpressionReceived(self, sexp):
-##        """Evaluate an expression as it's received.
-##        """
-##        if isinstance(sexp, sexpy.SymbolicExpression):
-##            command = sexp[0]
-##            methodName = "proto_%s" % command
-##            method = getattr(self, methodName, None)
-##            if method:
-##                apply(method, sexp[1:])
-##            else:
-##                self.sendCall("didNotUnderstand", command)
-##        else:
-##            raise ProxyBrokerProtocolError("Non-list expression received.")
-
     def expressionReceived(self, sexp):
         """Evaluate an expression as it's received.
         """
         if isinstance(sexp, types.ListType):
+            # print "pb:",sexp
             command = sexp[0]
             methodName = "proto_%s" % command
             method = getattr(self, methodName, None)
@@ -583,7 +570,7 @@ class Broker(banana.Banana):
             else:
                 self.sendCall("didNotUnderstand", command)
         else:
-            raise ProxyBrokerProtocolError("Non-list expression received.")
+            raise ProtocolError("Non-list expression received.")
 
         
     def proto_version(self, vnum):

@@ -74,6 +74,7 @@ def latestClass(oldClass):
     module = __import__(oldClass.__module__, {}, {}, 'nothing')
     newClass = getattr(module, oldClass.__name__)
     newBases = []
+    # print 'latest:', oldClass
     for base in newClass.__bases__:
         newBases.append(latestClass(base))
     newClass.__bases__ = tuple(newBases)
@@ -191,7 +192,9 @@ def rebuild(module, doLog=1):
             else:
                 # Replace bases of non-module classes just to be sure.
                 if type(v) == types.ClassType:
-                    latestClass(v)
+                    for base in v.__bases__:
+                        if fromOldModule(base):
+                            latestClass(v)
         if doLog and not changed and ((modcount % 10) ==0) :
             sys.stdout.write(".")
             sys.stdout.flush()

@@ -205,3 +205,21 @@ class Banana(protocol.Protocol):
         else:
             assert 0, "could not send object: %s" % repr(obj)
 
+class Canana(Banana):
+    def connectionMade(self):
+        self.state = cBanana.newState()
+
+    def dataReceived(self, chunk):
+        buffer = self.buffer + chunk
+        processed = cBanana.dataReceived(self.state, buffer, self.expressionReceived)
+        self.buffer = buffer[processed:]
+
+Pynana = Banana
+
+try:
+    import cBanana
+except ImportError:
+    print 'using python banana'
+else:
+    print 'using C banana'
+    Banana = Canana
