@@ -163,3 +163,13 @@ class IRCGateway(irc.IRCClient,gateway.Gateway):
 	else:
 	    self.receiveDirectMessage(nickname,message)
 
+def sendAction(im,gateway,group,currenttext,currentusers):
+    return "\001ACTION %s\001"%currenttext
+
+groupExtras=[
+    ["Send Action",sendAction]
+]
+
+conversationExtras=[]
+
+contactListExtras=[]

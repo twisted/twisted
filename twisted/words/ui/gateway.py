@@ -202,3 +202,48 @@ class Gateway:
         raise NotImplementedError # XXX: override for gateway
 
     
+groupExtras=[]
+"""
+groupExtras is a list of extra options for a group window for this gateway.
+each extra is a list:
+    [extraName (string), functionToCall (function)]
+extraName is the name of the extra on the menu.
+functionToCall is what gets called when the extra is selected.  it takes:
+    im := the IM client to use (class InstanceMessenger)
+    gateway := the gateway to use (class Gateway)
+    group := the name of the group (string)
+    currenttext := the text currently in the input box (string)
+    users := any users currently selected in the userlist box (list)
+it returns:
+    the text to set the input box to (string)
+"""
+
+conversationExtras=[]
+"""
+conversationExtras is a list of extra options for a conversation window for
+this gateway.
+each extra is a list:
+    [extraName (string), functionToCall (function)]
+extraName is the name of the extra on the menu.
+functionToCall is what gets called when the extra is selected.  it takes:
+    im := the IM client to use (class InstanceMessenger)
+    gateway := the gateway to use (class Gateway)
+    user := the name of the user the conversation is with (string)
+    currenttext := the text currently in the input box (string)
+it returns:
+    the text to set the input box to (string)
+"""
+
+contactListExtras=[]
+"""
+contactListExtras is a list of extra options that belong on the contact list.
+each extra is a list:
+    [extraName (string), functionToCall (function)]
+extraName is the name of the extra on the menu.
+functionToCall is what gets called when the extra is selected.  it takes:
+    im := the IM client to use (class InstanceMessenger)
+    gateway := the gateway to use (class Gateway)
+    user := the name of the currently selected user, or None if none is selected
+        for this gateway (string|None)
+    userstate := the state of that user, or None if user is None (string|None)
+"""

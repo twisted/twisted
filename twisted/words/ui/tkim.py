@@ -135,6 +135,9 @@ class GroupSession(Toplevel):
         f=Frame(self)
         Button(f,text="Send",command=self.say).grid(column=0,row=0,sticky=N+E+S+W)
         Button(f,text="Leave",command=self.close).grid(column=1,row=0,sticky=N+E+S+W)
+        b=Button(f,text="%s Extras"%gateway.protocol)
+        b.grid(column=2,row=0,sticky=N+E+S+W)
+        b.bind('<ButtonRelease-1>',self.showExtrasMenu)
         f.grid(column=0,row=2,columnspan=4)
         tkutil.grid_setexpand(self)
         self.rowconfigure(0,weight=3)
@@ -160,6 +163,19 @@ class GroupSession(Toplevel):
         self.output.insert(END,text)
         self.output.see(END)
         self.output.config(state=DISABLED)
+
+    def showExtrasMenu(self,e):
+        m=Menu()
+        extras=gateways.__gateways__[self.gateway.protocol].groupExtras
+        for name,func in extras:
+            m.add_command(label=name,command=lambda s=self,f=func:s.runExtra(f))
+        m.post(e.x_root,e.y_root)
+
+    def runExtra(self,f):
+        i=self.input.get("1.0",END)[:-1]
+        s=f(self.im,self.gateway,self.name,i,list(self.list.get(0,END)))
+        self.input.delete("1.0",END)
+        self.input.insert(END,s)
     
     def receiveGroupMembers(self,list):
         for m in list:
@@ -254,16 +270,36 @@ class Conversation(Toplevel):
         self.bar["command"]=self.output.yview
         self.input.grid(column=0,row=1,columnspan=2,sticky=N+E+S+W)
         self.input.bind('<Return>',self.say)
-        #self.pack()
+        f=Frame(self)
+        b=Button(f,text="%s Extras"%gateway.protocol)
+        b.grid(column=0,row=0,sticky=N+E+S+W)
+        b.bind('<ButtonRelease-1>',self.showExtrasMenu)
+        Button(f,text="Send",command=self.say).grid(column=1,row=0,sticky=N+E+S+W)
+        Button(f,text="Close",command=self.close).grid(column=2,row=0,sticky=N+E+S+W)
+        f.grid(column=0,row=2)
         self.protocol("WM_DELETE_WINDOW",self.close)
         tkutil.grid_setexpand(self)
         self.rowconfigure(0,weight=3)
+        self.rowconfigure(2,weight=0)
         self.columnconfigure(1,weight=0)
     
     def close(self):
         self.destroy()
         self.im.endConversation(self.gateway,self.contact)
     
+    def showExtrasMenu(self,e):
+        m=Menu()
+        extras=gateways.__gateways__[self.gateway.protocol].conversationExtras
+        for name,func in extras:
+            m.add_command(label=name,command=lambda s=self,f=func:s.runExtra(f))
+        m.post(e.x_root,e.y_root)
+
+    def runExtra(self,f):
+        i=self.input.get("1.0",END)[:-1]
+        s=f(self.im,self.gateway,self.contact,i)
+        self.input.delete("1.0",END)
+        self.input.insert(END,s)
+
     def _addtext(self,text):
         self.output["state"]=NORMAL
         #self.outputhtml.feed(text)
@@ -313,6 +349,9 @@ class ContactList(Toplevel):
         Button(f,text="Remove Contact",command=self.removeContact).grid(column=1,row=1)
         Button(f,text="Send Message",command=self.sendMessage).grid(column=2,row=1)
         Button(f,text="Join Group",command=self.joinGroup).grid(column=3,row=1)
+        b=Button(f,text="Extras")
+        b.grid(column=4,row=1,sticky=N+E+S+W)
+        b.bind('<ButtonRelease-1>',self.showExtrasMenu)
         f.grid(column=0,row=1,columnspan=2,sticky=E+S+W)
         self.title("Instance Messenger")
         self.protocol("WM_DELETE_WINDOW",self.close)
@@ -369,6 +408,24 @@ class ContactList(Toplevel):
     
     def joinGroup(self):
         JoinGroup(self.im)
+
+    def showExtrasMenu(self,e):
+        m=Menu()
+        for g in self.im.gateways.values():
+            subm=Menu(m)
+            extras=gateways.__gateways__[g.protocol].contactListExtras
+            for name,func in extras:
+                subm.add_command(label=name,command=lambda s=self,g=g,f=func:s.runExtra(g,f))
+            m.add_cascade(label=g.name,menu=subm)
+        m.post(e.x_root,e.y_root)
+
+    def runExtra(self,gateway,func):
+        gatewayname,user,state=self.list.get(ACTIVE)
+        if gatewayname!=gateway.name:
+            user=None
+            state=None
+        func(self.im,gateway,user,state)
+
         
 class ChooseGateway(Toplevel):
     def __init__(self,callback,**kw):

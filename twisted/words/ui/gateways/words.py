@@ -145,3 +145,9 @@ class WordsGateway(gateway.Gateway,pb.Referenceable):
 
     def groupMessage(self,group,message):
         self.remote.groupMessage(group,message)
+
+groupExtras=[]
+
+conversationExtras=[]
+
+contactListExtras=[]

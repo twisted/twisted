@@ -188,3 +188,18 @@ class TOCGateway(gateway.Gateway,toc.TOCClient):
                 id=k
         if not id: return
         self.chat_say(id,message)
+
+def setAway(im,gateway,*args):
+    gateway.away("I'm not here right now, but leave a message")
+
+def setOnline(im,gateway,*args):
+    gateway.away("")
+
+groupExtras=[]
+
+conversationExtras=[]
+
+contactListExtras=[
+    ["Set As Away",setAway],
+    ["Set As Online",setOnline]
+]
