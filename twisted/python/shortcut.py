@@ -26,9 +26,10 @@ import os
 
 def open(filename):
     """Open an existing shortcut for reading.
-@return: The shortcut object
-@rtype: Shortcut
-"""
+
+    @return: The shortcut object
+    @rtype: Shortcut
+    """
     sc=Shortcut()
     sc.load(filename)
     return sc
@@ -45,6 +46,7 @@ class Shortcut:
     @param iconpath: Filename that contains an icon for the shortcut
     @param iconidx: If iconpath is set, optional index of the icon desired
     """
+
     def __init__(self, 
                  path=None,
                  arguments=None, 
@@ -57,7 +59,7 @@ class Shortcut:
             pythoncom.CLSCTX_INPROC_SERVER, shell.IID_IShellLink
         )
         data = map(None, 
-                   [os.path.abspath(path), arguments, description,
+                   ['"%s"' % os.path.abspath(path), arguments, description,
                     os.path.abspath(workingdir), os.path.abspath(iconpath)], 
                    ("SetPath", "SetArguments", "SetDescription",
                    "SetWorkingDirectory") )
@@ -71,11 +73,14 @@ class Shortcut:
     def load( self, filename ):
         """Read a shortcut file from disk."""
         self._base.QueryInterface(pythoncom.IID_IPersistFile).Load(filename)
+    
     def save( self, filename ):
         """Write the shortcut to disk.
+
         The file should be named something.lnk.
         """
         self._base.QueryInterface(pythoncom.IID_IPersistFile).Save(filename, 0)
+    
     def __getattr__( self, name ):
         if name != "_base":
             return getattr(self._base, name)
