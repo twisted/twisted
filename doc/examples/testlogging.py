@@ -31,7 +31,7 @@ def test(i):
     try:
         raise RuntimeError, "error %s" % i
     except:
-        log.deferr()
+        log.err()
 
 def startlog():
     log.startLogging(sys.stdout)
