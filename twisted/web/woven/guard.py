@@ -3,7 +3,7 @@
 
 from __future__ import nested_scopes
 
-__version__ = "$Revision: 1.16 $"[11:-2]
+__version__ = "$Revision: 1.17 $"[11:-2]
 
 import random
 import time
@@ -14,6 +14,7 @@ import md5
 from twisted.python import log, components
 from twisted.web.resource import Resource
 from twisted.web.util import redirectTo, Redirect
+from twisted.web.static import addSlash
 from twisted.internet import reactor
 from twisted.cred.error import Unauthorized
 
@@ -137,6 +138,9 @@ class SessionWrapper(Resource):
             cookieKey = "woven_session_" + _sessionCookie()
         self.cookieKey = cookieKey
         self.sessions = {}
+
+    def render(self, request):
+        return redirectTo(addSlash(request), request)
 
     def getChild(self, path, request):
         # XXX refactor with PerspectiveWrapper
