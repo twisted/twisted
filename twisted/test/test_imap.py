@@ -904,6 +904,23 @@ class IMAP4ServerTestCase(IMAP4HelperMixin, unittest.TestCase):
         
         self.assertEquals(SimpleServer.theAccount.mailboxes.keys(), ['NEWNAME'])
     
+    def testIllegalInboxRename(self):
+        self.stashed = None
+        def login():
+            return self.client.login('testuser', 'password-test')
+        def rename():
+            return self.client.rename('inbox', 'frotz')
+        def stash(stuff):
+            self.stashed = stuff
+        
+        d = self.connected.addCallback(strip(login))
+        d.addCallbacks(strip(rename), self._ebGeneral)
+        d.addBoth(stash)
+        d.addCallbacks(self._cbStopClient, self._ebGeneral)
+        self.loopback()
+
+        self.failUnless(isinstance(self.stashed, failure.Failure))
+
     def testHierarchicalRename(self):
         SimpleServer.theAccount.create('oldmbox/m1')
         SimpleServer.theAccount.create('oldmbox/m2')

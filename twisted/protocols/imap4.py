@@ -1114,6 +1114,9 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
 
     def do_RENAME(self, tag, oldname, newname):
         oldname, newname = [self._parseMbox(n) for n in oldname, newname]
+        if oldname.lower() == 'inbox' or newname.lower() == 'inbox':
+            self.sendNegativeResponse(tag, 'You cannot rename the inbox, or rename another mailbox to inbox.')
+            return
         try:
             self.account.rename(oldname, newname)
         except TypeError:
