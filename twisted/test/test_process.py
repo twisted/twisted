@@ -128,7 +128,7 @@ class ProcessTestCase(unittest.TestCase):
         exe = sys.executable
         scriptPath = util.sibpath(__file__, "process_tester.py")
         p = TestProcessProtocol()
-        reactor.spawnProcess(p, exe, [exe, "-u", scriptPath])
+        reactor.spawnProcess(p, exe, [exe, "-u", scriptPath], env=None)
         while not p.finished:
             reactor.iterate()
         self.assertEquals(p.stages, [1, 2, 3, 4, 5])
@@ -150,7 +150,7 @@ class ProcessTestCase(unittest.TestCase):
         exe = sys.executable
         scriptPath = util.sibpath(__file__, "process_echoer.py")
         p = EchoProtocol()
-        reactor.spawnProcess(p, exe, [exe, "-u", scriptPath])
+        reactor.spawnProcess(p, exe, [exe, "-u", scriptPath], env=None)
         while not p.finished:
             reactor.iterate(0.01)
         self.assertEquals(len(p.buffer), len(p.s * 10))
@@ -183,7 +183,7 @@ class TestTwoProcessesBase:
             self.pp[num] = TwoProcessProtocol()
             self.pp[num].num = num 
             p = reactor.spawnProcess(self.pp[num],
-                                     exe, [exe, "-u", scriptPath],
+                                     exe, [exe, "-u", scriptPath], env=None,
                                      usePTY=usePTY)
             self.processes[num] = p
 
@@ -322,7 +322,7 @@ class PosixProcessBase:
         else: raise RuntimeError("true not found in /bin or /usr/bin")
 
         p = TrivialProcessProtocol()
-        reactor.spawnProcess(p, cmd, ['true'],
+        reactor.spawnProcess(p, cmd, ['true'], env=None,
                              usePTY=self.usePTY)
 
         while not p.finished:
@@ -337,7 +337,7 @@ class PosixProcessBase:
         else: raise RuntimeError("false not found in /bin or /usr/bin")
 
         p = TrivialProcessProtocol()
-        reactor.spawnProcess(p, cmd, ['false'],
+        reactor.spawnProcess(p, cmd, ['false'], env=None,
                              usePTY=self.usePTY)
 
         while not p.finished:
@@ -354,6 +354,7 @@ class PosixProcessBase:
         for sig in signals:
             p = SignalProtocol(sig, self)
             reactor.spawnProcess(p, exe, [exe, "-u", scriptPath, sig],
+                                 env=None,
                                  usePTY=self.usePTY)
             protocols.append(p)
 
@@ -368,8 +369,8 @@ class PosixProcessTestCase(unittest.TestCase, PosixProcessBase):
         exe = sys.executable
         scriptPath = util.sibpath(__file__, "process_twisted.py")
         p = Accumulator()
-        reactor.spawnProcess(p, exe, [exe, "-u", scriptPath], None, None,
-                             usePTY=self.usePTY)
+        reactor.spawnProcess(p, exe, [exe, "-u", scriptPath], env=None,
+                             path=None, usePTY=self.usePTY)
         p.transport.write("hello, world")
         p.transport.write("abc")
         p.transport.write("123")
@@ -383,7 +384,10 @@ class PosixProcessTestCase(unittest.TestCase, PosixProcessBase):
         if not os.path.exists('/bin/ls'): raise RuntimeError("/bin/ls not found")
 
         p = Accumulator()
-        reactor.spawnProcess(p, '/bin/ls', ["/bin/ls", "ZZXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"], {}, "/tmp",
+        reactor.spawnProcess(p, '/bin/ls',
+                             ["/bin/ls",
+                              "ZZXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"],
+                             env=None, path="/tmp",
                              usePTY=self.usePTY)
 
         while not p.closed:
@@ -396,7 +400,7 @@ class PosixProcessTestCase(unittest.TestCase, PosixProcessBase):
         else: raise RuntimeError("gzip not found in /bin or /usr/bin")
         s = "there's no place like home!\n" * 3
         p = Accumulator()
-        reactor.spawnProcess(p, cmd, [cmd, "-c"], {}, "/tmp",
+        reactor.spawnProcess(p, cmd, [cmd, "-c"], env=None, path="/tmp",
                              usePTY=self.usePTY)
         p.transport.write(s)
         p.transport.closeStdin()
@@ -425,7 +429,8 @@ class Win32ProcessTestCase(unittest.TestCase):
         pyExe = sys.executable
         scriptPath = util.sibpath(__file__, "process_stdinreader.py")
         p = Accumulator()
-        reactor.spawnProcess(p, pyExe, [pyExe, "-u", scriptPath], None, None)
+        reactor.spawnProcess(p, pyExe, [pyExe, "-u", scriptPath], env=None,
+                             path=None)
         p.transport.write("hello, world")
         p.transport.closeStdin()
 

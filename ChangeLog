@@ -1,5 +1,8 @@
 2003-04-29  Brian Warner  <warner@lothar.com>
 
+	* twisted/test/test_process.py: make all child processes inherit
+	their parent's environment
+
 	* twisted/web/resource.py, twisted/python/roots.py: add
 	test-case-name tag
 
