@@ -1,5 +1,8 @@
 2003-04-09  Brian Warner  <warner@lothar.com>
 
+	* twisted/scripts/trial.py (Options.opt_reactor): install reactor
+	before parseArgs() does an import and installs the default one
+
 	* twisted/internet/process.py: fix typo,
 	s/registerReapProccessHandler/registerReapProcessHandler)/
 

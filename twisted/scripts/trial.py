@@ -47,6 +47,12 @@ class Options(usage.Options):
         self['testcases'] = []
         self['methods'] = []
 
+    def opt_reactor(self, reactorName):
+        # this must happen before parseArgs does lots of imports
+        mod = 'twisted.internet.' + reactorName
+        print "Using %s reactor" % mod
+        reflect.namedModule(mod).install()
+        
     def opt_module(self, module):
         "Module to test"
         self['modules'].append(module)
@@ -98,6 +104,8 @@ class Options(usage.Options):
                     self['modules'].append(arg)
                     continue
 
+            # this is a problem: it imports the module, which installs a
+            # reactor, and this happens before --reactor is processed
             arg = reflect.namedAny(arg)
 
             if inspect.ismodule(arg):
@@ -138,11 +146,6 @@ def run():
     except usage.error, ue:
         print "%s: %s" % (sys.argv[0], ue)
         os._exit(1)
-
-    if config['reactor']:
-        mod = 'twisted.internet.' + config['reactor']
-        print "Using %s reactor" % mod
-        reflect.namedModule(mod).install()
 
     suite = unittest.TestSuite()
     for package in config['packages']:
