@@ -90,7 +90,6 @@ class _HeadersPlusNLines:
             dsplit = (self.buf+data).split('\n')
             self.buf = dsplit[-1]
             for ln in dsplit[:-1]:
-                print 'incr linecount', self.linecount, self.n
                 if self.linecount > self.n:
                     self.done = 1
                     return val
