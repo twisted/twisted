@@ -135,10 +135,14 @@ class IRC(protocol.Protocol):
             command = string.upper(command)
             log.msg( "%s %s %s" % (prefix, command, params))
             method = getattr(self, "irc_%s" % command, None)
-            if method is not None:
-                method(prefix, params)
-            else:
-                self.irc_unknown(prefix, command, params)
+            try:
+                if method is not None:
+                    method(prefix, params)
+                else:
+                    self.irc_unknown(prefix, command, params)
+            except:
+                sl = apply(traceback.format_exception, sys.exc_info())
+                log.msg(string.join(sl, ''))
 
     def irc_unknown(self, prefix, command, params):
         """Implement me!"""
@@ -194,7 +198,7 @@ class IRCClient(basic.LineReceiver):
         By default, this is equivalent to IRCClient.privmsg, but if your
         client makes any automated replies, you must override this!
         From the RFC:
-        
+
             The difference between NOTICE and PRIVMSG is that
             automatic replies MUST NEVER be sent in response to a
             NOTICE message. [...] The object of this rule is to avoid
