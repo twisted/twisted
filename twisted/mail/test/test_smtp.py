@@ -16,16 +16,14 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
 """
-Test cases for twisted.protocols.smtp module.
+Test cases for twisted.mail.smtp module.
 """
 
 from twisted.trial import unittest
-import twisted.internet.protocol
-import twisted.protocols.smtp
 from twisted import protocols
 from twisted import internet
 from twisted.protocols import loopback
-from twisted.protocols import smtp
+from twisted.mail import smtp
 from twisted.internet import defer, protocol, reactor, interfaces
 from twisted.test.test_protocols import StringIOWithoutClosing
 from twisted.python import components
@@ -35,6 +33,9 @@ import twisted.cred.error
 import twisted.cred.portal
 import twisted.cred.checkers
 import twisted.cred.credentials
+
+from twisted.mail import imap4
+
 
 try:
     from ssl_helpers import ClientTLSContext, ServerTLSContext
@@ -359,8 +360,6 @@ class AnotherSMTPTestCase(AnotherTestCase, unittest.TestCase):
     clientClass = MySMTPClient
 
 
-# XXX - These need to be moved
-from twisted.protocols import imap4
 
 class DummyChecker:
     __implements__ = (cred.checkers.ICredentialsChecker,)

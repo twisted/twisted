@@ -234,6 +234,7 @@ desktop environments, and your toaster.
         "twisted.internet.serialport",
         "twisted.lore",
         "twisted.mail",
+        "twisted.mail.test",
         "twisted.manhole",
         "twisted.manhole.ui",
         "twisted.names",

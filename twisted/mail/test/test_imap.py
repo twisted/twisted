@@ -15,7 +15,7 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-7  USA
 
 """
-Test case for twisted.protocols.imap4
+Test case for twisted.mail.imap4
 """
 
 from __future__ import nested_scopes
@@ -29,9 +29,9 @@ import os
 import sys
 import types
 
-from twisted.protocols.imap4 import MessageSet
-from twisted.protocols import imap4
-from twisted.protocols import smtp
+from twisted.mail.imap4 import MessageSet
+from twisted.mail import imap4
+from twisted.mail import smtp
 from twisted.protocols import loopback
 from twisted.internet import defer
 from twisted.trial import unittest

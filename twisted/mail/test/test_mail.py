@@ -24,8 +24,8 @@ import StringIO
 import rfc822
 
 from twisted.trial import unittest
-from twisted.protocols import smtp
-from twisted.protocols import pop3
+from twisted.mail import smtp
+from twisted.mail import pop3
 from twisted.names import dns
 from twisted.protocols import basic
 from twisted.internet import protocol
@@ -51,9 +51,9 @@ import twisted.cred.checkers
 import twisted.cred.portal
 
 # Since we run a couple processes, we need SignalMixin from test_process
-import test_process
+from twisted.test import test_process
 
-from proto_helpers import LineSendingProtocol
+from twisted.test.proto_helpers import LineSendingProtocol
 
 class DomainWithDefaultsTestCase(unittest.TestCase):
     def testMethods(self):

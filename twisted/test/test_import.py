@@ -83,12 +83,9 @@ class AtLeastImportTestCase(unittest.TestCase):
         from twisted.protocols import ftp
         from twisted.protocols import http
         from twisted.protocols import irc
-        from twisted.protocols import pop3
-        from twisted.protocols import smtp
         from twisted.protocols import telnet
         from twisted.protocols import oscar
         from twisted.protocols import toc
-        from twisted.protocols import imap4
         from twisted.protocols import policies
     
     def test_web(self):
@@ -110,16 +107,6 @@ class AtLeastImportTestCase(unittest.TestCase):
         """
         from twisted.words import service
         from twisted.words import ircservice
-
-    def test_mail(self):
-        """Test importing mail
-        """
-        from twisted.mail import mail
-        from twisted.mail import maildir
-        from twisted.mail import pb
-        from twisted.mail import relaymanager
-        from twisted.mail import protocols
-        from twisted.mail import tap
 
     def test_enterprise(self):
         from twisted.enterprise import adbapi

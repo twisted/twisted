@@ -19,7 +19,6 @@
 """
 
 # Twisted imports
-from twisted.protocols import smtp
 from twisted.python import components
 from twisted.internet import defer
 from twisted.application import service, internet
@@ -30,7 +29,7 @@ from twisted import cred
 import twisted.cred.portal
 
 # Sibling imports
-import protocols
+from twisted.mail import protocols, smtp
 
 # System imports
 import os

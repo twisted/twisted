@@ -31,8 +31,8 @@ try:
 except ImportError:
     import StringIO
 
-from twisted.protocols import pop3
-from twisted.protocols import smtp
+from twisted.mail import pop3
+from twisted.mail import smtp
 from twisted.persisted import dirdbm
 from twisted.python import log
 from twisted.mail import mail

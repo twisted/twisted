@@ -18,8 +18,8 @@
 """Protocol support for twisted.mail."""
 
 # twisted imports
-from twisted.protocols import pop3
-from twisted.protocols import smtp
+from twisted.mail import pop3
+from twisted.mail import smtp
 from twisted.internet import protocol
 from twisted.internet import defer
 from twisted.copyright import longversion

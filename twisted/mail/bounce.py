@@ -23,7 +23,7 @@ import time
 import os
 
 
-from twisted.protocols import smtp
+from twisted.mail import smtp
 
 BOUNCE_FORMAT = """\
 From: postmaster@%(failedDomain)s

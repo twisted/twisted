@@ -30,7 +30,7 @@ TODO: Monitor files for reparsing
 import os
 import tempfile
 
-from twisted.protocols import smtp
+from twisted.mail import smtp
 from twisted.internet import protocol
 from twisted.internet import defer
 from twisted.internet import error

@@ -36,7 +36,7 @@ from twisted.python import util
 from twisted.mail import relay
 from twisted.mail import bounce
 from twisted.internet import protocol
-from twisted.protocols import smtp
+from twisted.mail import smtp
 from twisted.application import internet
 
 import rfc822

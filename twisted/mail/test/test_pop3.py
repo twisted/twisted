@@ -16,7 +16,7 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
 """
-Test cases for twisted.protocols.pop3 module.
+Test cases for twisted.mail.pop3 module.
 """
 
 import StringIO
@@ -27,11 +27,10 @@ import base64
 from twisted.trial import unittest
 from twisted import mail
 import twisted.mail.protocols
-import twisted.protocols.pop3
+import twisted.mail.pop3
 import twisted.internet.protocol
-from twisted import protocols
 from twisted import internet
-from twisted.protocols import pop3
+from twisted.mail import pop3
 from twisted.internet import protocol
 from twisted.test.test_protocols import StringIOWithoutClosing
 from twisted.protocols import loopback
@@ -42,7 +41,7 @@ import twisted.cred.portal
 import twisted.cred.checkers
 import twisted.cred.credentials
 
-from proto_helpers import LineSendingProtocol
+from twisted.test.proto_helpers import LineSendingProtocol
 
 class MyVirtualPOP3(mail.protocols.VirtualPOP3):
 

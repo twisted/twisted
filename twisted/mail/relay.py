@@ -17,7 +17,7 @@
 
 """Support for relaying mail for twisted.mail"""
 
-from twisted.protocols import smtp
+from twisted.mail import smtp
 from twisted.python import log
 
 import os

@@ -35,8 +35,7 @@ except:
     import StringIO
 
 from twisted.internet import reactor
-from twisted.protocols import smtp
-from twisted.mail import bounce
+from twisted.mail import bounce, smtp
 
 GLOBAL_CFG = "/etc/mailmail"
 LOCAL_CFG = os.path.expanduser("~/.twisted/mailmail")
@@ -291,8 +290,7 @@ def failure(f):
     failed = f
 
 def sendmail(host, options, ident):
-    from twisted.protocols.smtp import sendmail
-    d = sendmail(host, options.sender, options.to, options.body)
+    d = smtp.sendmail(host, options.sender, options.to, options.body)
     d.addCallbacks(success, failure)
     reactor.run()
 
@@ -303,8 +301,7 @@ def senderror(failure, options):
     failure.printTraceback(file=error)
     body = StringIO.StringIO(ERROR_FMT % error.getvalue())
 
-    from twisted.protocols.smtp import sendmail
-    d = sendmail('localhost', sender, recipient, body)
+    d = smtp.sendmail('localhost', sender, recipient, body)
     d.addBoth(lambda _: reactor.stop())
 
 def deny(conf):

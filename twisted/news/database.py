@@ -29,7 +29,7 @@ less NNTP specific
 from __future__ import nested_scopes
 
 from twisted.news.nntp import NNTPError
-from twisted.protocols import smtp
+from twisted.mail import smtp
 from twisted.internet import defer
 from twisted.enterprise import adbapi
 from twisted.persisted import dirdbm
