@@ -177,6 +177,8 @@ class Arrows(unittest.TestCase):
         for ch in 'xyz':
             kR(ch)
 
+        kR(self.pt.INSERT)
+
         kR(self.pt.LEFT_ARROW)
         kR('A')
         self.assertEquals(self.p.currentLineBuffer(), ('xyA', 'z'))
@@ -190,8 +192,6 @@ class Arrows(unittest.TestCase):
 
         for ch in 'xyz':
             kR(ch)
-
-        kR(self.pt.INSERT)
 
         kR(self.pt.LEFT_ARROW)
         kR('A')
