@@ -1,3 +1,9 @@
+2004-10-24  Itamar Shtull-Trauring  <itamar@itamarst.org>
+
+	* TCP: Half-close of write and read for TCP connections, including
+	protocol notification for protocols that implement
+	IHalfCloseableProtocol.
+
 2004-10-07  Jp Calderone  <exarkun@twistedmatrix.com>
 
 	* Transports: Add a maximum to the number of bytes that will be
