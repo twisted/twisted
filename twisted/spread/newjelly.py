@@ -1,4 +1,4 @@
-# -*- test-case-name: twisted.test.test_jelly -*-
+# -*- test-case-name: twisted.test.test_newjelly -*-
 
 # Twisted, the Framework of Your Internet
 # Copyright (C) 2001 Matthew W. Lefkowitz
@@ -65,7 +65,7 @@ Instance Method: s.center, where s is an instance of UserString.UserString:
 @author: U{Glyph Lefkowitz<mailto:glyph@twistedmatrix.com>}
 """
 
-__version__ = "$Revision: 1.1 $"[11:-2]
+__version__ = "$Revision: 1.2 $"[11:-2]
 
 # System Imports
 import string
@@ -404,6 +404,8 @@ class NullReference(Exception):
 
     """
 
+_theNullRef = NullReference()
+
 class _Unjellier:
     def __init__(self, taster, persistentLoad, invoker):
         self.taster = taster
@@ -421,6 +423,7 @@ class _Unjellier:
     def unjelly(self, obj):
         if type(obj) is not types.ListType:
             return obj
+        self.references.append(_theNullRef)
         jelType = obj[0]
         if not self.taster.isTypeAllowed(jelType):
             raise InsecureJelly(jelType)
@@ -428,11 +431,12 @@ class _Unjellier:
         if regClass is not None:
             if isinstance(regClass, ClassType):
                 inst = _Dummy() # XXX chomp, chomp
+                self.resolveReference(inst)
                 inst.__class__ = regClass
-                method = inst.unjellyFor
+                val = inst.unjellyFor(self,obj)
             else:
-                method = regClass # this is how it ought to be done
-            val = method(self, obj)
+                val = regClass(self, obj) # this is how it ought to be done
+                self.resolveReference(val)
             if hasattr(val, 'postUnjelly'):
                 self.postCallbacks.append(inst.postUnjelly)
             return val
@@ -465,21 +469,28 @@ class _Unjellier:
                 self.postCallbacks.append(ret.postUnjelly)
         return ret
 
+    def resolveReference(self, obj, index=-1):
+        if isinstance(self.references[index], NotKnown):
+            assert not isinstance(obj, NotKnown)
+            self.references[index].resolveDependants(obj)
+        self.references[index] = obj
+        return obj
+
     def _unjelly_None(self, exp):
-        return None
+        return self.resolveReference(None)
 
     def _unjelly_unicode(self, exp):
         if UnicodeType:
-            return unicode(exp[0], "UTF-8")
+            return self.resolveReference(unicode(exp[0], "UTF-8"))
         else:
-            return Unpersistable(exp[0])
+            return self.resolveReference(Unpersistable(exp[0]))
 
     def _unjelly_boolean(self, exp):
         if BooleanType:
             assert exp[0] in ('true', 'false')
-            return exp[0] == 'true'
+            return self.resolveReference(exp[0] == 'true')
         else:
-            return Unpersistable(exp[0])
+            return self.resolveReference(Unpersistable(exp[0]))
 
     def unjellyInto(self, obj, loc, jel):
         o = self.unjelly(jel)
@@ -490,47 +501,39 @@ class _Unjellier:
 
     def _unjelly_dereference(self, lst):
         refid = lst[0]
-        x = self.references.get(refid)
-        if x is not None:
-            return x
-        der = _Dereference(refid)
-        self.references[refid] = der
-        return der
+        return self.references[refid]
 
-    def _unjelly_reference(self, lst):
-        refid = lst[0]
-        exp = lst[1]
-        o = self.unjelly(exp)
-        ref = self.references.get(refid)
-        if (ref is None):
-            self.references[refid] = o
-        elif isinstance(ref, NotKnown):
-            ref.resolveDependants(o)
-            self.references[refid] = o
-        else:
-            assert 0, "Multiple references with same ID!"
-        return o
+    def getRefId(self):
+        return len(self.references) - 1
 
     def _unjelly_tuple(self, lst):
         l = range(len(lst))
-        finished = 1
+        result = None
+        preTuple = NotKnown()
+        refid = self.getRefId()
+        self.references[-1] = preTuple
         for elem in l:
-            if isinstance(self.unjellyInto(l, elem, lst[elem]), NotKnown):
-                finished = 0
-        if finished:
-            return tuple(l)
-        else:
-            return _Tuple(l)
-
+            val = self.unjelly(lst[elem])
+            assert not isinstance(val, NotKnown),\
+                   "Sorry, tuples need stuff resolved"
+            l[elem] = val
+        realTuple = tuple(l)
+        preTuple.resolveDependants(realTuple)
+        self.resolveReference(realTuple, refid)
+        return realTuple
+    
     def _unjelly_list(self, lst):
         l = range(len(lst))
+        self.resolveReference(l)
         for elem in l:
             self.unjellyInto(l, elem, lst[elem])
         return l
 
     def _unjelly_dictionary(self, lst):
         d = {}
+        self.resolveReference(d)
         for k, v in lst:
+            self.references.append(_theNullRef)
             kvd = _DictKeyAndValue(d)
             self.unjellyInto(kvd, 0, k)
             self.unjellyInto(kvd, 1, v)
@@ -539,15 +542,18 @@ class _Unjellier:
 
     def _unjelly_module(self, rest):
         moduleName = rest[0]
+        # if len(rest) > 0: warn("reference numbers will be out of sync")
         if type(moduleName) != types.StringType:
             raise InsecureJelly("Attempted to unjelly a module with a non-string name.")
         if not self.taster.isModuleAllowed(moduleName):
             raise InsecureJelly("Attempted to unjelly module named %s" % repr(moduleName))
         mod = __import__(moduleName, {}, {},"x")
+        self.resolveReference(mod)
         return mod
 
     def _unjelly_class(self, rest):
         clist = string.split(rest[0], '.')
+        # if len(rest) > 0: warn("reference numbers will be out of sync")
         modName = string.join(clist[:-1], '.')
         if not self.taster.isModuleAllowed(modName):
             raise InsecureJelly("module %s not allowed" % modName)
@@ -556,26 +562,22 @@ class _Unjellier:
             raise InsecureJelly("class %s unjellied to something that isn't a class: %s" % (repr(name), repr(klaus)))
         if not self.taster.isClassAllowed(klaus):
             raise InsecureJelly("class not allowed: %s" % qual(klaus))
+        self.resolveReference(klaus)
         return klaus
 
     def _unjelly_function(self, rest):
         modSplit = string.split(rest[0], '.')
+        # if len(rest) > 0: warn("reference numbers will be out of sync")
         modName = string.join(modSplit[:-1], '.')
         if not self.taster.isModuleAllowed(modName):
             raise InsecureJelly("Module not allowed: %s"% modName)
         # XXX do I need an isFunctionAllowed?
         function = namedObject(rest[0])
+        self.resolveReference(function)
         return function
 
-    def _unjelly_persistent(self, rest):
-        if self.persistentLoad:
-            pload = self.persistentLoad(rest[0], self)
-            return pload
-        else:
-            return Unpersistable("persistent callback not found")
-
     def _unjelly_unpersistable(self, rest):
-        return Unpersistable(rest[0])
+        return self.resolveReference(Unpersistable(rest[0]))
 
     def _unjelly_method(self, rest):
         ''' (internal) unjelly a method
@@ -596,7 +598,7 @@ class _Unjellier:
                                     im_class)
         else:
             raise 'instance method changed'
-        return im
+        return self.resolveReference(im)
 
 
 class _Dummy:
