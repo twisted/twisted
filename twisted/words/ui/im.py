@@ -523,7 +523,7 @@ def logonAccount(im,account):
     """
     if len(account.options)<len(gateways.__gateways__[account.gatewayname].loginOptions):
         ret=[]
-        for foo,key,bar in gateways.__gateways__[account.gatewayname].loginOptions:
+        for type,foo,key,bar in gateways.__gateways__[account.gatewayname].loginOptions:
             if not account.options.has_key(key):
                 ret.append([foo,key,bar])
         return ret
