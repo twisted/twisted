@@ -138,11 +138,10 @@ class LineOnlyReceiver(protocol.Protocol):
     MAX_LENGTH = 16384
     
     def dataReceived(self, data):
-        """Protocol.dataReceived.
-        Translates bytes into lines, and calls lineReceived.
-        """
-        
-        lines  = (self._buffer+data).split(self.delimiter)
+        """Translates bytes into lines, and calls lineReceived."""
+        lines  = data.split(self.delimiter)
+        if self._buffer:
+            lines[0] = self._buffer + lines[0]
         self._buffer = lines[-1]
         for line in lines[:-1]:
             if self.transport.disconnecting:
