@@ -22,7 +22,7 @@ Package installer for Twisted
 Copyright (c) 2001 by Twisted Matrix Laboratories
 All rights reserved, see LICENSE for details.
 
-$Id: setup.py,v 1.23 2002/03/19 21:15:46 jh Exp $
+$Id: setup.py,v 1.24 2002/03/19 22:15:29 jh Exp $
 """
 
 import distutils, os, sys, string
@@ -45,8 +45,9 @@ script_preamble = """
 # specially in order to run these programs from bin/.
 import sys, os, string
 pos = string.find(os.path.abspath(sys.argv[0]), os.sep+'Twisted'+os.sep)
-if pos != -1: sys.path.append(os.path.abspath(sys.argv[0])[:pos+8])
-sys.path.append('.')
+if pos != -1:
+    sys.path.insert(0, os.path.abspath(sys.argv[0])[:pos+8])
+sys.path.insert(0, os.curdir)
 ### end of preamble
 """
 
