@@ -13,9 +13,10 @@
 # You should have received a copy of the GNU Lesser General Public
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+from __future__ import nested_scopes
 
 import sys, os
-from twisted.lore import tree
+from twisted.lore import tree, math
 from twisted.python import usage
 from twisted.web import microdom
 
@@ -27,33 +28,32 @@ def dircount(d):
 
 class Walker:
 
-    def __init__(self, templ, baseurl, ext, linkrel):
-        self.templ = templ
-        self.baseurl = baseurl
-        self.ext = ext
+    def __init__(self, df, fext, linkrel):
+        self.df = df
         self.linkrel = linkrel
+        self.fext = fext
         self.walked = []
 
     def walkdir(self, topdir):
         self.basecount = dircount(topdir)
         os.path.walk(topdir, self.walk, None)
-        self.walkAround()
 
     def walk(self, ig, d, names):
         linkrel = '../' * (dircount(d) - self.basecount)
         for name in names:
             fullpath = os.path.join(d, name)
-            fname, fext = os.path.splitext(fullpath)
-            if fext == '.html':
-                self.walked.append((linkrel, fname, fullpath, d))
+            fext = os.path.splitext(name)[1]
+            if fext == self.fext:
+                self.walked.append((linkrel, fullpath))
                 
-    def walkAround(self):
+    def generate(self):
         i = 0
-        for linkrel, fname, fullpath, d in self.walked:
+        for linkrel, fullpath in self.walked:
             linkrel = self.linkrel + linkrel
             i += 1
+            fname = os.path.splitext(fullpath)[0]
             self.percentdone((float(i) / len(self.walked)), fname)
-            tree.doFile(fullpath, d, self.ext, self.baseurl, self.templ,linkrel)
+            self.df(fullpath, linkrel)
         self.percentdone(1., "*Done*")
 
     def percentdone(self, percent, fname):
@@ -97,11 +97,13 @@ def run():
     else:
         ext = opt['ext']
     templ = microdom.parse(open(opt['template']))
+    df = lambda file, linkrel: tree.doFile(file, linkrel, ext,
+                                           opt['baseurl'], templ)
+    w = Walker(df, '.html', opt['linkrel'])
     if opt['files']:
         for fn in opt['files']:
-            tree.doFile(fn, opt['docsdir'] or os.path.dirname(fn),
-                        ext, opt['baseurl'], templ, opt['linkrel'])
+            w.walked.append(('', fn))
     else:
-        w = Walker(templ, opt['baseurl'], ext, opt['linkrel'])
         w.walkdir(opt['docsdir'] or '.')
-        print
+    w.generate()
+    print

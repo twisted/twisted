@@ -221,8 +221,8 @@ def parseFileAndReport(fn):
     except microdom.ParseError, e:
         print e
 
-def doFile(fn, docsdir, ext, url, templ, linkrel=''):
+def doFile(fn, linkrel, ext, url, templ):
     doc = parseFileAndReport(fn)
     cn = templ.cloneNode(1)
-    munge(doc, cn, linkrel, docsdir, fn, ext, url)
+    munge(doc, cn, linkrel, os.path.dirname(fn), fn, ext, url)
     cn.writexml(open(os.path.splitext(fn)[0]+ext, 'wb'))
