@@ -89,7 +89,8 @@ class SQLReflector(reflector.Reflector, adbapi.Augmentation):
         """
         return quote(value, type, string_escaper=self.escape_string)
 
-    def loadObjectsFrom(self, tableName, parentRow=None, data=None, whereClause=None, forceChildren=0):
+    def loadObjectsFrom(self, tableName, parentRow=None, data=None,
+                        whereClause=None, forceChildren=0):
         """Load a set of RowObjects from a database.
 
         Create a set of python objects of <rowClass> from the contents
@@ -111,7 +112,7 @@ class SQLReflector(reflector.Reflector, adbapi.Augmentation):
 
         NOTE: the objects and all children should be loaded in a single transaction.
         NOTE: can specify a parentRow _OR_ a whereClause.
-        
+
         """
         if parentRow and whereClause:
             raise DBError("Must specify one of parentRow _OR_ whereClause")
@@ -125,7 +126,7 @@ class SQLReflector(reflector.Reflector, adbapi.Augmentation):
             whereClause = []
         return self.runInteraction(self._rowLoader, tableName, parentRow, data, whereClause, forceChildren)
 
-    
+
     def _rowLoader(self, transaction, tableName, parentRow, data, whereClause, forceChildren):
         """immediate loading of rowobjects from the table with the whereClause.
         """
@@ -171,7 +172,8 @@ class SQLReflector(reflector.Reflector, adbapi.Augmentation):
             # find the row in the cache or add it
             resultObject = self.findInCache(tableInfo.rowClass, kw)
             if not resultObject:
-                resultObject = apply(tableInfo.rowFactoryMethod[0], (tableInfo.rowClass, data, kw) )
+                resultObject = apply(tableInfo.rowFactoryMethod[0],
+                                     (tableInfo.rowClass, data, kw))
                 self.addToCache(resultObject)
                 newRows.append(resultObject)
             results.append(resultObject)
@@ -179,20 +181,21 @@ class SQLReflector(reflector.Reflector, adbapi.Augmentation):
         # add these rows to the parentRow if required
         if parentRow:
             self.addToParent(parentRow, newRows, tableName)
-            
+
         # load children or each of these rows if required
         for relationship in tableInfo.relationships:
             if not forceChildren and not relationship.autoLoad:
                 continue
             for row in results:
                 # build where clause
-                childWhereClause = self.buildWhereClause(relationship, row)             
+                childWhereClause = self.buildWhereClause(relationship, row)
                 # load the children immediately, but do nothing with them
-                self._rowLoader(transaction, relationship.childRowClass.rowTableName, row, data, childWhereClause, forceChildren)
+                self._rowLoader(transaction,
+                                relationship.childRowClass.rowTableName,
+                                row, data, childWhereClause, forceChildren)
 
         return results
 
-        
     def findTypeFor(self, tableName, columnName):
         tableInfo = self.schema[tableName]
         for column, type in tableInfo.rowColumns:
@@ -306,7 +309,6 @@ class SQLReflector(reflector.Reflector, adbapi.Augmentation):
         """
         rowObject.setDirty(0)
         sql = self.insertRowSQL(rowObject)
-        self.addToCache(rowObject)
         return self.runOperation(sql)
 
     def deleteRowSQL(self, rowObject):
