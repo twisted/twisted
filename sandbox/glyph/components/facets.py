@@ -1,9 +1,5 @@
 # -*- test-case-name: imagination.test -*-
 
-from twisted.python.components import getRegistry
-
-_nope = object()
-
 class Faceted(dict):
 
     __slots__ = ()
