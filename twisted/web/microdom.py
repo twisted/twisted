@@ -56,12 +56,11 @@ def getElementsByTagName(iNode, name):
     if iNode.nodeName == name:
         matches_append(iNode)
     slice = iNode.childNodes[:]
-    slice_extend = slice.extend
     while len(slice)>0:
         c = slice.pop(0)
         if c.nodeName == name:
             matches_append(c)
-        slice_extend(c.childNodes)
+        slice[:0] = c.childNodes
     return matches
 
 def getElementsByTagNameNoCase(iNode, name):
@@ -71,12 +70,11 @@ def getElementsByTagNameNoCase(iNode, name):
     if iNode.nodeName.lower() == name:
         matches.append(iNode)
     slice = iNode.childNodes[:]
-    slice_extend = slice.extend
     while len(slice)>0:
         c = slice.pop(0)
         if c.nodeName.lower() == name:
             matches_append(c)
-        slice_extend(c.childNodes)
+        slice[:0] = c.childNodes
     return matches
 
 # order is important

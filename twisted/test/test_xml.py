@@ -241,16 +241,19 @@ class MicroDOMTest(TestCase):
         d = microdom.parseString(s)
         d2 = microdom.parseString(s2, caseInsensitive=0, preserveCase=1)
         d3 = microdom.parseString(s2, caseInsensitive=1, preserveCase=1)
+
         root = d.documentElement
         self.assertEquals(root.firstChild(), d.getElementById('me'))
         self.assertEquals(d.getElementsByTagName("foo"),
                           [root, root.lastChild().firstChild()])
+
         root = d2.documentElement
         self.assertEquals(root.firstChild(), d2.getElementById('me'))
         self.assertEquals(d2.getElementsByTagName('fOo'), [root])
         self.assertEquals(d2.getElementsByTagName('fOO'), 
                           [root.lastChild().firstChild()])
         self.assertEquals(d2.getElementsByTagName('foo'), []) 
+
         root = d3.documentElement
         self.assertEquals(root.firstChild(), d3.getElementById('me'))
         self.assertEquals(d3.getElementsByTagName('FOO'),
