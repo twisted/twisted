@@ -62,7 +62,11 @@ class Port(base.BasePort):
         self._connectedAddr = None
 
     def __repr__(self):
-        return "<%s on %s>" % (self.protocol.__class__, getattr(self.getHost(), 'port', ''))
+        if hasattr(self, 'socket'):
+            return "<%s on %s>" % (self.protocol.__class__, 
+                                            getattr(self.getHost(), 'port', ''))
+        else:
+            return "<%s not connected>" % (self.protocol.__class__,)
 
     def getHandle(self):
         """Return a socket object."""

@@ -85,9 +85,11 @@ class OldConnectedUDPTestCase(PortCleanerUpper):
         self.assertEquals(client.started, 1)
         self.assertEquals(client.stopped, 0)
         l = []
+        self.assert_(repr(port2).find('test_udp.Client') > 0)
         defer.maybeDeferred(port2.stopListening).addCallback(l.append)
         reactor.iterate()
         reactor.iterate()
+        self.assert_(repr(port2).find('test_udp.Client') > 0)
         self.assertEquals(client.stopped, 1)
         self.assertEquals(len(l), 1)
     testStartStop = util.suppressWarnings(testStartStop,
