@@ -157,10 +157,12 @@ class Element(Node):
         
 
 class MicroDOMParser(XMLParser):
-    # Sorta SAX-ish API
     def __init__(self):
         self.elementstack = []
         self.documents = []
+
+    # parser options:
+    caseInsensitive = 1
 
     def _getparent(self):
         if self.elementstack:
@@ -171,7 +173,10 @@ class MicroDOMParser(XMLParser):
 
     def gotTagStart(self, name, attributes):
         parent = self._getparent()
+        if self.caseInsensitive:
+            name = name.lower()
         el = Element(name, attributes, parent)
+        el._markpos = self.saveMark()
         self.elementstack.append(el)
         if parent:
             parent.appendChild(el)
@@ -196,8 +201,11 @@ class MicroDOMParser(XMLParser):
 
     def gotTagEnd(self, name):
         el = self.elementstack.pop()
+        if self.caseInsensitive:
+            name = name.lower()
         if el.tagName != name:
-            raise Exception("Foo! %s" % str(self.saveMark()))
+            raise Exception("expected closing %s, got closing %s line: %s col: %s, began line: %s col: %s" %
+                            ((el.tagName, name)+self.saveMark()+el._markpos) )
         if not self.elementstack:
             self.documents.append(el)
 

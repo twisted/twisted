@@ -34,7 +34,7 @@ def nop(*args, **kw):
 class XMLParser(Protocol):
     state = None
     def connectionMade(self):
-        self.lineno = 0
+        self.lineno = 1
         self.colno = 0
 
     def saveMark(self):

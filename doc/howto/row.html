@@ -4,8 +4,6 @@
 </HEAD>
 <BODY>
 
-</head><body></P>
-
 <H1>Twisted Enterprise Row Objects</H1>
 
 <P>The <CODE>twisted.enterprise.row</CODE> module is a method
@@ -37,17 +35,17 @@ table that class corresponds to. The required class attributes
 are:</P>
 
 <UL>
-  <LI>rowColumns - list of the columns in the table with the correct case
-  <LI>rowKeyColumns - list of key columns in form: [(columnName, typeName)]
-  <LI>rowTableName - the name of the database table
+  <LI>rowColumns - list of the columns in the table with the correct case</LI>
+  <LI>rowKeyColumns - list of key columns in form: [(columnName, typeName)]</LI>
+  <LI>rowTableName - the name of the database table</LI>
 </UL>
 
 <P>There are also two optional class attributes that can be specified:</P>
 
 <UL>
   <LI>rowForeignKeys - list of foreign keys to other database tables
-  in the form: [(tableName, [(columnName, columnType)]]
-  <LI>rowFactoryMethod - a method that creates instances of this class
+  in the form: [(tableName, [(columnName, columnType)]]</LI>
+  <LI>rowFactoryMethod - a method that creates instances of this class</LI>
 </UL>
 
 <P>For example:</P>
@@ -169,7 +167,7 @@ child table.</P>
 already loaded, it will return a reference to the existing rowObject
 rather than creating a new instance.  The reflector maintains a cache
 of weak references to all loaded row objects by their unique keys for
-this purpose.<P>
+this purpose.</P>
 
 <H2>Updating Row Objects</H2>
 
