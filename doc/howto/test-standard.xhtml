@@ -144,7 +144,7 @@ class MyTestCase(unittest.TestCase):
         dotest()
 
 if not haveThing:
-    MyTestCase.testThing.skip = "cannot test without Thing"
+    MyTestCase.testThing.im_func.skip = "cannot test without Thing"
     # but testOne() will still run
 </pre>
 
