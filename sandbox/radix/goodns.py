@@ -30,7 +30,7 @@ D_CNAME = 4
 D_NS = 4
 
 
-def _scroungeRecords(result, reqkey, dnstype,
+def _scroungeRecords((answers, authority, additional), reqkey, dnstype,
                      cnameLevel, nsLevel, resolver):
     """
     Find relevant records in a list of RRs, following CNAME and NS
@@ -45,24 +45,24 @@ def _scroungeRecords(result, reqkey, dnstype,
     cnames = []
     nses = []
 
-    for rec in reduce(operator.add, result):
-        if rec.type == dnstype and rec.name.name == reqkey:
-            r.append(rec)
-        elif rec.type == dns.CNAME:
-            cnames.append(rec.payload)
-        elif rec.type == dns.NS:
-            nses.append(rec.payload)
+    for rec in answers:
+        if rec.name.name == reqkey:
+            if rec.type == dnstype:
+                r.append(rec)
+            elif rec.type == dns.CNAME:
+                cnames.append(rec.payload)
 
     if r:
         return r
 
-    # XXX - timeouts??
+    # XXX - timeouts? Need more state. :(
 
     if cnames:
         if not cnameLevel:
             return []
         m = getattr(resolver, common.typeToMethod[dnstype])
-        # XXX what about multiple CNAMEs?
+        # XXX - hey! what if they were nice enough to give the A of
+        # the CNAME already?
         newkey = cnames[0].name.name
         d = m(cnames[0].name.name)
         d.addCallback(_scroungeRecords, newkey, dnstype,
@@ -72,9 +72,8 @@ def _scroungeRecords(result, reqkey, dnstype,
     if nses:
         if not nsLevel:
             return []
-        from twisted.names import client
-        # XXX - what about multiple NSes?
-        r = client.Resolver(servers=[(str(nses[0].name), dns.PORT)])
+        # XXX - what about multiple NSes? Maybe randomly choose one.
+        r = client.Resolver(servers=[(str(authority[0].name), dns.PORT)])
         m = getattr(r, common.typeToMethod[dnstype])
         d = m(reqkey)
         d.addCallback(_scroungeRecords, reqkey, dnstype,
@@ -141,6 +140,15 @@ def _cbResolveResults(result, resolver):
             dl.append(defer.succeed((pri, val)))
     return defer.gatherResults(dl)
 
+
+def lookupNameservers(name, cnameLevel=D_CNAME, nsLevel=D_NS,
+                      resolver=client, timeout=None):
+    d = resolver.lookupNameservers(name, timeout)
+    d.addCallback(_scroungeRecords, name, dns.NS, cnameLevel, nsLevel, resolver)
+    d.addCallback(_cbExtractNames, name)
+    return d
+
+
 def ptrize(ip):
     """
     Convert an IP address to something you can pass to L{lookupPointer}.
@@ -151,11 +159,15 @@ def ptrize(ip):
     parts.reverse()
     return '.'.join(parts) + '.in-addr.arpa'
 
+
 def lookupPointer(name, cnameLevel=D_CNAME, nsLevel=D_NS,
                   resolver=client, timeout=None):
     """
-    Look up a PTR record for a given name.
+    Look up a PTR record for a given name. You probably want to pass
+    an IP address to L{ptrize} and pass the result to this function.
 
+    @param name: The name to look up the PTR record for.
+    
     @rtype: list of str
     @return: hostnames.
     """
@@ -169,6 +181,7 @@ def _cbExtractNames(result, name):
     if not result:
         return []
     return [x.payload.name.name for x in result]
+
 
 def lookupAddress(name, cnameLevel=D_CNAME, nsLevel=D_NS,
                   resolver=client, timeout=None):
@@ -188,6 +201,7 @@ def _cbExtractAddresses(result, name):
     if not result:
         return []
     return [x.payload.dottedQuad() for x in result]
+
 
 def lookupService(protocol, transport, hostname, cnameLevel=D_CNAME, nsLevel=D_NS,
                   resolver=client, timeout=None):
@@ -223,7 +237,7 @@ globalParameters = """
     @param cnameLevel: (optional) The number of CNAMEs to follow.
     @param nsLevel: (optional) The number of NSes to follow.
     @param resolver: (optional) The resolver to use. The default is the
-           twisted.names.client module.
+           L{twisted.names.client} module.
     @param timeout: (optional) How long to wait for a result before
            timing out.
 """
