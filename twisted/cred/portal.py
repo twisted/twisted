@@ -38,6 +38,16 @@ class IRealm(components.Interface):
 
 
 class Portal:
+    """A mediator between clients and a realm.
+    
+    A portal is associated with one Realm and zero or more credentials checkers.
+    When a login is attempted, the portal finds the appropriate credentials
+    checker for the credentials given, invokes it, and if the credentials are
+    valid, retrieves the appropriate avatar from the Realm.
+    
+    This class is not intended to be subclassed.  Customization should be done
+    in the realm object and in the credentials checker objects.
+    """
     def __init__(self, realm, checkers=()):
         """Create a Portal to a L{IRealm}.
         """
