@@ -47,7 +47,7 @@ class DummyResolver:
     """
     def resolve(self, deferred, name, type=1, timeout=10):
         if type != 1:
-            deferred.errback(failure.Failure(ValueError("type not supportded")))
+            deferred.errback(failure.Failure(ValueError("type not supported")))
             return
         try:
             address = socket.gethostbyname(name)

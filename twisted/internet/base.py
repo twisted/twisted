@@ -149,7 +149,7 @@ class ReactorBase:
             else:
                 deferred.callback(address)
         else:
-            deferred.errback(failure.Failure(ValueError("type not supportded")))
+            deferred.errback(failure.Failure(ValueError("type not supported")))
         return deferred
 
     # Installation.
