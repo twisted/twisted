@@ -23,11 +23,11 @@ WEBBROWSER='galeon -n' IRCCLIENT=epic4 admin/accepttests -b
    * make sure it is named "Twisted.CVS", and in the directory immediately
      above it there is nothing else (that can be done via symlinks)
    * run
-./Twisted.CVS/admin/release-twisted -v <version> --release=/twisted/Releases --upver --tag --exp --dist --docs --balls --rel --deb --debi
+./Twisted.CVS/admin/release-twisted -V <version> --release=/twisted/Releases --upver --tag --exp --dist --docs --balls --rel --deb --debi
  * If you want to release the latest CVS version of Twisted, have a
    reasonably checkout of Twisted in $SOMEWHERE, and in an empty directory
    do
-$SOMEWHERE/admin/release-twisted -v <version> --checkout --release=/twisted/Releases --upver --tag --exp --dist --docs --balls --rel --deb --debi
+$SOMEWHERE/admin/release-twisted -V <version> --checkout --release=/twisted/Releases --upver --tag --exp --dist --docs --balls --rel --deb --debi
 
  * run 'md5sums ~/Releases/Twisted*', and 'gpg --clearsign' the output. update 
    /products/download/twisted-<ver>-md5sums.txt on the website.
