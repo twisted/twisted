@@ -287,7 +287,7 @@ class MulticastTestCase(unittest.TestCase):
         c = Server()
         p = reactor.listenMulticast(0, c)
         self.runUntilSuccess(self.server.transport.joinGroup, "225.0.0.250")
-        c.transport.write("hello world", ("225.0.0.250", self.server.transport.getHost()[2]))
+        c.transport.write("hello world", ("225.0.0.250", self.server.transport.getHost().port))
         
         iters = 0
         while iters < 100 and len(self.server.packets) == 0:
@@ -295,6 +295,23 @@ class MulticastTestCase(unittest.TestCase):
             iters += 1
         self.assertEquals(self.server.packets[0][0], "hello world")
         p.stopListening()
+
+    def testMultiListen(self):
+        c = Server()
+        p = reactor.listenMulticast(0, c, listenMultiple=True)
+        self.runUntilSuccess(self.server.transport.joinGroup, "225.0.0.250")
+        portno = p.getHost().port
+        c2 = Server()
+        p2 = reactor.listenMulticast(portno, c2, listenMultiple=True)
+        self.runUntilSuccess(self.server.transport.joinGroup, "225.0.0.250")
+        c.transport.write("hello world", ("225.0.0.250", portno))
+
+        self.runReactor(0.4, True)
+        self.assertEquals(c.packets[0][0], "hello world")
+        self.assertEquals(c2.packets[0][0], "hello world")
+        p.stopListening()
+        p2.stopListening()
+
 
 if not components.implements(reactor, interfaces.IReactorUDP):
     UDPTestCase.skip = "This reactor does not support UDP"

@@ -353,6 +353,16 @@ class MulticastPort(MulticastMixin, Port):
 
     __implements__ = Port.__implements__, interfaces.IMulticastTransport
 
+    def __init__(self, port, proto, interface='', maxPacketSize=8192, reactor=None, listenMultiple=False):
+        Port.__init__(self, port, proto, interface, maxPacketSize, reactor)
+        self.listenMultiple = listenMultiple
+
+    def createInternetSocket(self):
+        skt = Port.createInternetSocket(self)
+        if self.listenMultiple:
+            skt.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        return skt
+
 
 class ConnectedMulticastPort(MulticastMixin, ConnectedPort):
     """DEPRECATED.

@@ -347,9 +347,10 @@ class IReactorMulticast(Interface):
     without backwards compatability. Suggestions are welcome.
     """
 
-    def listenMulticast(self, port, protocol, interface='', maxPacketSize=8192):
+    def listenMulticast(self, port, protocol, interface='', maxPacketSize=8192, listenMultiple=False):
         """Connects a given L{DatagramProtocol<twisted.internet.protocol.DatagramProtocol>} to the given numeric UDP port.
 
+        @param listenMultiple: boolean indicating whether multiple sockets can bind to same UDP port.
         @returns: object conforming to L{IListeningPort}.
         """
 
