@@ -261,11 +261,6 @@ class %(name)s_ServiceControl(win32serviceutil.ServiceFramework):
         from twisted.application import service
         from twisted.python import util, log
 
-        # add to sys.path so i can look for plugins there
-#        i_am_py2exe = not not re.match("<.* from archive>", __file__)
-#        if i_am_py2exe:
-#            sys.path.insert(0, util.sibpath(sys.executable, ''))
-
         # look for a readable config file
         for cf in (util.sibpath(sys.executable, basecf),
                    util.sibpath(__file__, basecf),
