@@ -109,7 +109,7 @@ class RR:
         self.name.encode(strio, compDict)
         strio.write(struct.pack(self.fmt, self.type, self.cls,
                                 self.ttl, len( self.data)))
-        strio.write(data)
+        strio.write(self.data)
 
     def decode(self, strio):
         self.name.decode(strio)
@@ -149,6 +149,12 @@ class Message:
         body_tmp = StringIO.StringIO()
         for q in self.queries:
             q.encode(body_tmp, compDict)
+        for q in self.answers:
+            q.encode(body_tmp, compDict)
+        for q in self.ns:
+            q.encode(body_tmp, compDict)
+        for q in self.add:
+            q.encode(body_tmp, compDict)
         body = body_tmp.getvalue()
         size = len(body) + self.headerSize
         if self.maxSize and size > self.maxSize:
@@ -162,7 +168,8 @@ class Message:
         byte4 = ( ( (self.recAv & 1 ) << 7 )
                   | (self.rCode & 0xf ) )
         strio.write(struct.pack(self.headerFmt, self.id, byte3, byte4,
-                                len(self.queries), 0, 0, 0))
+                                len(self.queries), len(self.answers), 
+                                len(self.ns), len(self.add)))
         strio.write(body)
 
     def decode(self, strio):
