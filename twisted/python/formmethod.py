@@ -121,7 +121,7 @@ class Integer(Argument):
         try:
             return int(val)
         except ValueError:
-            raise InputError, "Invalid integer: %s" % val
+            raise InputError, "%s is not valid, please enter a whole number, e.g. 10" % val
 
 
 class IntegerRange(Integer):
