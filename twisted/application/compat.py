@@ -1,3 +1,5 @@
+# -*- test-case-name: twisted.test.test_application -*-
+
 # Twisted, the Framework of Your Internet
 # Copyright (C) 2001-2003 Matthew W. Lefkowitz
 #
@@ -382,8 +384,11 @@ def convert(oldApp):
     for s in oldApp.services.values():
         if not components.implements(s, service.IService):
             s = _NewService(s)
-        s.disownServiceParent()
-        s.setServiceParent(IOldApplication(c))
+            s.serviceParent = None
+            s.setServiceParent(IOldApplication(c))
+        else:
+            s.serviceParent = None
+            s.setServiceParent(c)
     return ret
 
 
