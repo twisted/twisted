@@ -30,6 +30,12 @@ from twisted.python import log, util
 from reflect import namedModule
 
 try:
+    from twisted.python.dir import listDirectories
+    print 'Using dir'
+except ImportError:
+    listDirectories = os.listdir
+
+try:
     from os.path import realpath as cacheTransform
 except ImportError:
     from os.path import abspath as cacheTransform
@@ -157,7 +163,7 @@ def getPluginFileList(debugInspection=None, showProgress=None):
         else:
             debugInspection('Recursing through ' + d)
         try:
-            subDirs = os.listdir(d)
+            subDirs = listDirectories(d)
         except OSError, (err, s):
             # Permission denied, carry on
             if err == errno.EACCES:

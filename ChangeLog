@@ -1,3 +1,8 @@
+2004-07-04  Jp Calderone  <exarkun@twistedmatrix.com>
+
+	* twisted/python/dir.c: Wrapper around opendir(3), readdir(3),
+	and scandir(3) for use by twisted.python.plugins.
+
 2003-07-03  Jp Calderone  <exarkun@twistedmatrix.com>
 
 	* twisted/news/database.py: NewsShelf.articleRequest() and

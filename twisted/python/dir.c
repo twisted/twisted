@@ -1,12 +1,29 @@
+/*
+ * Twisted, the Framework of Your Internet
+ * Copyright (C) 2001-2002 Matthew W. Lefkowitz
+ * 
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of version 2.1 of the GNU Lesser General Public
+ * License as published by the Free Software Foundation.
+ * 
+ * This library is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
+ * 
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with this library; if not, write to the Free Software
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ * 
+ */
 
 #include "Python.h"
 #include "structmember.h"
 
 #include <string.h>
-#include <signal.h>
 
 static char dir__doc__[] =
-"Wrapper for opendir(2) and readdir(2)";
+"Wrapper for opendir(3), readdir(3), and scandir(3)";
 
 /* We link this module statically for convenience.  If compiled as a shared
    library instead, some compilers don't allow addresses of Python objects
@@ -103,8 +120,6 @@ PyDirObjectIterator_next(PyDirObjectIterator *self) {
 	PyObject *args;
 	PyObject *result;
 	
-	/* kill(0, SIGINT); */
-
 	if (self->filter == Py_None)
 		return PyDirObject_readdir(self->dirobj);
 	
