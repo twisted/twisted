@@ -61,6 +61,9 @@ class DelayedCall(styles.Ephemeral):
         self.canceller = cancel
         self.cancelled = self.called = 0
 
+    def getTime(self):
+        return self.time
+    
     def cancel(self):
         if self.cancelled:
             raise error.AlreadyCancelled

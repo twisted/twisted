@@ -268,6 +268,13 @@ class InterfaceTestCase(unittest.TestCase):
         del self._resetcallbackTime
         del self._delaycallbackTime
 
+    def testCallLaterTime(self):
+        d = reactor.callLater(10, lambda: None)
+        try:
+            self.failUnless(d.getTime() - (time.time() + 10) < 1)
+        finally:
+            d.cancel()
+    
     def testWakeUp(self):
         """reactor.wakeUp should terminate reactor.iterate(5)"""
         def wake(reactor=reactor):

@@ -359,6 +359,7 @@ class IReactorProcess(Interface):
 class IReactorTime(Interface):
     """Time methods that a Reactor should implement.
     """
+
     def callLater(self, delay, callable, *args, **kw):
         """Call a function later.
 
@@ -403,6 +404,12 @@ class IDelayedCall(Interface):
     There are probably other useful methods we can add to this interface;
     suggestions are welcome.
     """
+
+    def getTime(self):
+        """Get time when delayed call will happen.
+
+        @returns: time in seconds since epoch (a float).
+        """
 
     def cancel(self):
         """Cancel the scheduled call.
