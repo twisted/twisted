@@ -164,7 +164,7 @@ def run():
             tty.tcsetattr(fd, tty.TCSANOW, old)
         if (options['command'] and options['tty']) or not options['notty']:
             signal.signal(signal.SIGWINCH, signal.SIG_DFL)
-    if sys.stdout.isatty():
+    if sys.stdout.isatty() and not options['command']:
         print 'Connection to %s closed.' % options['host']
     sys.exit(exitStatus)
 
@@ -530,10 +530,10 @@ class SSHUnixChannel(channel.SSHChannel):
             stopConnection()
 
 class SSHClientFactory(protocol.ClientFactory):
-    noisy = 1
+#    noisy = 1
 
-    def stopFactory(self):
-        stopConnection()
+#    def stopFactory(self):
+        #stopConnection()
 
     def buildProtocol(self, addr):
         return SSHClientTransport()
@@ -720,6 +720,7 @@ class SSHConnection(connection.SSHConnection):
     def serviceStarted(self):
         global conn, keyAgent
         conn = self
+        self.remoteForwards = {}
         if keyAgent:
             keyAgent.transport.loseConnection()
         onConnect()
@@ -729,14 +730,18 @@ class SSHConnection(connection.SSHConnection):
         self.sendGlobalRequest('tcpip-forward', data)
         self.remoteForwards[remotePort] = hostport
         log.msg('requesting remote forwarding %s:%s' %(remotePort, hostport))
+        log.msg(repr(self.remoteForwards))
 
     def cancelRemoteForwarding(self, remotePort):
-        data = forwarding.packGlobal_tcpip_forward(('127.0.0.1', remotePort))
+        data = forwarding.packGlobal_tcpip_forward(('0.0.0.0', remotePort))
         self.sendGlobalRequest('cancel-tcpip-forward', data)
+        log.msg('cancelling remote forwarding %s' % remotePort)
         del self.remoteForwards[remotePort]
+        log.msg(repr(self.remoteForwards))
 
     def channel_forwarded_tcpip(self, windowSize, maxPacket, data):
         remoteHP, origHP = forwarding.unpackOpen_forwarded_tcpip(data)
+        log.msg(self.remoteForwards)
         if self.remoteForwards.has_key(remoteHP[1]):
             connectHP = self.remoteForwards[remoteHP[1]]
             log.msg('connect forwarding %s' % (connectHP,))

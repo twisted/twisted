@@ -17,13 +17,14 @@
 
 import struct, array, os, stat, time, errno
 
+from twisted.python.components import Interface
 from twisted.internet import defer, protocol
 from twisted.python import failure, log
+#from twisted.conch.realm import UnixConchUser
 
 from common import NS, getNS
 
-
-class ISFTPServer:
+class ISFTPServer(Interface):
     """
     The only attribute of this class is "avatar".  It is the avatar
     returned by the Realm that we are authenticated with, and
@@ -367,11 +368,9 @@ class FileTransferBase(protocol.Protocol):
 
 class FileTransferServer(FileTransferBase):
 
-    __implements__ = ISFTPServer
-
-    def __init__(self, avatar):
+    def __init__(self, data=None, avatar=None):
         FileTransferBase.__init__(self)
-        self.avatar = avatar
+        self.client = ISFTPServer(avatar) # yay interfaces
         self.openFiles = {}
         self.openDirs = {}
 
@@ -384,7 +383,7 @@ class FileTransferServer(FileTransferBase):
             ext_name, data = getNS(data)
             ext_data, data = getNS(data)
             ext[ext_name] = ext_data
-        our_ext = self.gotVersion(version, ext)
+        our_ext = self.client.gotVersion(version, ext)
         our_ext_data = ""
         for (k,v) in our_ext.items():
             our_ext_data += NS(k) + NS(v)
@@ -397,7 +396,7 @@ class FileTransferServer(FileTransferBase):
         flags, data = struct.unpack('!L', data[:4])[0], data[4:]
         attrs, data = self._parseAttributes(data)
         assert data == '', 'still have data in OPEN: %s' % repr(data)
-        d = defer.maybeDeferred(self.openFile, filename, flags, attrs)
+        d = defer.maybeDeferred(self.avatar.openFile, filename, flags, attrs)
         d.addCallback(self._cbOpenFile, requestId)
         d.addErrback(self._ebStatus, requestId, "open failed")
 
@@ -468,7 +467,7 @@ class FileTransferServer(FileTransferBase):
         requestId, data = struct.unpack('!L', data[:4])[0], data[4:]
         filename, data = getNS(data)
         assert data == '', 'still have data in REMOVE: %s' % repr(data)
-        d = defer.maybeDeferred(self.removeFile, filename)
+        d = defer.maybeDeferred(self.client.removeFile, filename)
         d.addCallback(self._cbStatus, requestId, "remove succeeded")
         d.addErrback(self._ebStatus, requestId, "remove failed")
 
@@ -477,7 +476,7 @@ class FileTransferServer(FileTransferBase):
         oldPath, data = getNS(data)
         newPath, data = getNS(data)
         assert data == '', 'still have data in RENAME: %s' % repr(data)
-        d = defer.maybeDeferred(self.renameFile, oldPath, newPath)
+        d = defer.maybeDeferred(self.client.renameFile, oldPath, newPath)
         d.addCallback(self._cbStatus, requestId, "rename succeeded")
         d.addErrback(self._ebStatus, requestId, "rename failed")
 
@@ -486,7 +485,7 @@ class FileTransferServer(FileTransferBase):
         path, data = getNS(data)
         attrs, data = self._parseAttributes(data)
         assert data == '', 'still have data in MKDIR: %s' % repr(data)
-        d = defer.maybeDeferred(self.makeDirectory, path, attrs)
+        d = defer.maybeDeferred(self.client.makeDirectory, path, attrs)
         d.addCallback(self._cbStatus, requestId, "mkdir succeeded")
         d.addErrback(self._ebStatus, requestId, "mkdir failed")
 
@@ -494,7 +493,7 @@ class FileTransferServer(FileTransferBase):
         requestId, data = struct.unpack('!L', data[:4])[0], data[4:]
         path, data = getNS(data)
         assert data == '', 'still have data in RMDIR: %s' % repr(data)
-        d = defer.maybeDeferred(self.removeDirectory, path)
+        d = defer.maybeDeferred(self.client.removeDirectory, path)
         d.addCallback(self._cbStatus, requestId, "rmdir succeeded")
         d.addErrback(self._ebStatus, requestId, "rmdir failed")
 
@@ -502,7 +501,7 @@ class FileTransferServer(FileTransferBase):
         requestId, data = struct.unpack('!L', data[:4])[0], data[4:]
         path, data = getNS(data)
         assert data == '', 'still have data in OPENDIR: %s' % repr(data)
-        d = defer.maybeDeferred(self.openDirectory, path)
+        d = defer.maybeDeferred(self.client.openDirectory, path)
         d.addCallback(self._cbOpenDirectory, requestId)
         d.addErrback(self._ebStatus, requestId, "opendir failed")
 
@@ -557,7 +556,7 @@ class FileTransferServer(FileTransferBase):
         requestId, data = struct.unpack('!L', data[:4])[0], data[4:]
         path, data = getNS(data)
         assert data == '', 'still have data in STAT/LSTAT: %s' % repr(data)
-        d = defer.maybeDeferred(self.getAttrs, path, followLinks)
+        d = defer.maybeDeferred(self.client.getAttrs, path, followLinks)
         d.addCallback(self._cbStat, requestId)
         d.addErrback(self._ebStatus, requestId, 'stat/lstat failed')
 
@@ -585,7 +584,7 @@ class FileTransferServer(FileTransferBase):
         path, data = getNS(data)
         attrs, data = self._parseAttributes(data)
         assert data == '', 'still have data in SETSTAT: %s' % repr(data)
-        d = defer.maybeDeferred(self.setAttrs, path, attrs)
+        d = defer.maybeDeferred(self.client.setAttrs, path, attrs)
         d.addCallback(self._cbStatus, requestId, 'setstat succeeded')
         d.addErrback(self._ebStatus, requestId, 'setstat failed')
 
@@ -606,7 +605,7 @@ class FileTransferServer(FileTransferBase):
         requestId, data = struct.unpack('!L', data[:4])[0], data[4:]
         path, data = getNS(data)
         assert data == '', 'still have data in READLINK: %s' % repr(data)
-        d = defer.maybeDeferred(self.readLink, path)
+        d = defer.maybeDeferred(self.client.readLink, path)
         d.addCallback(self._cbReadLink, requestId)
         d.addErrback(self._ebStatus, requestId, 'readlink failed')
 
@@ -617,7 +616,7 @@ class FileTransferServer(FileTransferBase):
         requestId, data = struct.unpack('!L', data[:4])[0], data[4:]
         linkPath, data = getNS(data)
         targetPath, data = getNS(data)
-        d = defer.maybeDeferred(self.makeLink, linkPath, targetPath)
+        d = defer.maybeDeferred(self.client.makeLink, linkPath, targetPath)
         d.addCallback(self._cbStatus, requestId, 'symlink succeeded')
         d.addErrback(self._ebStatus, requestId, 'symlink failed')
 
@@ -625,7 +624,7 @@ class FileTransferServer(FileTransferBase):
         requestId, data = struct.unpack('!L', data[:4])[0], data[4:]
         path, data = getNS(data)
         assert data == '', 'still have data in REALPATH: %s' % repr(data)
-        d = defer.maybeDeferred(self.realPath, path)
+        d = defer.maybeDeferred(self.client.realPath, path)
         d.addCallback(self._cbReadLink, requestId) # same return format
         d.addErrback(self._ebStatus, requestId, 'realpath failed')
 
@@ -664,25 +663,13 @@ class FileTransferServer(FileTransferBase):
         data += NS(lang)
         self.sendPacket(FXP_STATUS, data)
 
-    def _runAsUser(self, f, *args):
-        euid = os.geteuid()
-        egid = os.getegid()
-        uid, gid = self.avatar.getUserGroupId()
-        os.setegid(0)
-        os.seteuid(0)
-        os.setegid(gid)
-        os.seteuid(uid)
-        try:
-            if not hasattr(f,'__iter__'):
-                f = [(f, ) + args]
-            for i in f:
-                r = i[0](*i[1:])
-        finally:
-            os.setegid(0)
-            os.seteuid(0)
-            os.setegid(egid)
-            os.seteuid(euid)
-        return r
+class SFTPServerForUnixConchUser:
+
+    __implements__ = ISFTPServer
+
+    def __init__(self, avatar):
+        self.avatar = avatar
+
 
     def _setAttrs(self, path, attrs):
         """
@@ -716,54 +703,54 @@ class FileTransferServer(FileTransferBase):
         return {}
 
     def openFile(self, filename, flags, attrs):
-        return SFTPFile(self, self._absPath(filename), flags, attrs)
+        return UnixSFTPFile(self, self._absPath(filename), flags, attrs)
 
     def removeFile(self, filename):
         filename = self._absPath(filename)
-        return self._runAsUser(os.remove, filename)
+        return self.avatar._runAsUser(os.remove, filename)
 
     def renameFile(self, oldpath, newpath):
         oldpath = self._absPath(oldpath)
         newpath = self._absPath(newpath)
-        return self._runAsUser(os.rename, oldpath, newpath)
+        return self.avatar._runAsUser(os.rename, oldpath, newpath)
 
     def makeDirectory(self, path, attrs):
         path = self._absPath(path)
-        return self._runAsUser([(os.mkdir, path),
-                                (self._setAttrs, path, attrs)])
+        return self.avatar._runAsUser([(os.mkdir, (path,)),
+                                (self._setAttrs, (path, attrs))])
 
     def removeDirectory(self, path):
         path = self._absPath(path)
-        self._runAsUser(os.rmdir, path)
+        self.avatar._runAsUser(os.rmdir, path)
 
     def openDirectory(self, path):
-        return SFTPDirectory(self, self._absPath(path))
+        return UnixSFTPDirectory(self, self._absPath(path))
 
     def getAttrs(self, path, followLinks):
         path = self._absPath(path)
         if followLinks:
-            s = self._runAsUser(os.stat, path)
+            s = self.avatar._runAsUser(os.stat, path)
         else:
-            s = self._runAsUser(os.lstat, path)
+            s = self.avatar._runAsUser(os.lstat, path)
         return self._getAttrs(s)
 
     def setAttrs(self, path, attrs):
         path = self._absPath(path)
-        self._runAsUser(self._setAttrs, path, attrs)
+        self.avatar._runAsUser(self._setAttrs, path, attrs)
 
     def readLink(self, path):
         path = self._absPath(path)
-        return self._runAsUser(os.readlink, path)
+        return self.avatar._runAsUser(os.readlink, path)
 
     def makeLink(self, linkPath, targetPath):
         linkPath = self._absPath(linkPath)
         targetPath = self._absPath(targetPath)
-        return self._runAsUser(os.symlink, targetPath, linkPath)
+        return self.avatar._runAsUser(os.symlink, targetPath, linkPath)
 
     def realPath(self, path):
         return self._absPath(path)
 
-class SFTPFile:
+class UnixSFTPFile:
 
     __implements__ = ISFTPFile
 
@@ -789,33 +776,34 @@ class SFTPFile:
             del attrs["permissions"]
         else:
             mode = 0777
-        fd = server._runAsUser(os.open, filename, openFlags, mode)
+        fd = server.avatar._runAsUser(os.open, filename, openFlags, mode)
         if attrs:
-            server._runAsUser(server._setAttrs, filename, attrs)
+            server.avatar._runAsUser(server._setAttrs, filename, attrs)
         self.fd = fd
 
     def close(self):
-        return self.server._runAsUser(os.close, self.fd)
+        return self.server.avatar_runAsUser(os.close, self.fd)
 
     def readChunk(self, offset, length):
-        return self.server._runAsUser([(os.lseek, self.fd, offset, 0),
-                                       (os.read, self.fd, length)])
+        return self.server.avatar._runAsUser([(os.lseek, (self.fd, offset, 0)),
+                                       (os.read, (self.fd, length))])
 
     def writeChunk(self, offset, data):
-        return self.server._runAsUser([(os.lseek, self.fd, offset, 0),
-                                       (os.write, self.fd, data)])
+        return self.server.avatar._runAsUser([(os.lseek, (self.fd, offset, 0)),
+                                       (os.write, (self.fd, data))])
 
     def getAttrs(self):
-        s = self.server._runAsUser(os.fstat, self.fd)
+        s = self.server.avatar._runAsUser(os.fstat, self.fd)
         return self.server._getAttrs(s)
 
     def setAttrs(self, attrs):
         raise NotImplementedError
 
-class SFTPDirectory:
+class UnixSFTPDirectory:
+
     def __init__(self, server, directory):
         self.server = server
-        self.files = server._runAsUser(os.listdir, directory)
+        self.files = server.avatar._runAsUser(os.listdir, directory)
         self.dir = directory
 
     def __iter__(self):
@@ -827,7 +815,7 @@ class SFTPDirectory:
         except IndexError:
             raise StopIteration
         else:
-            s = self.server._runAsUser(os.lstat, os.path.join(self.dir, f))
+            s = self.server.avatar._runAsUser(os.lstat, os.path.join(self.dir, f))
             longname = _lsLine(f, s)
             attrs = self.server._getAttrs(s)
             return (f, longname, attrs)

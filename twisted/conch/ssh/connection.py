@@ -42,11 +42,12 @@ class SSHConnection(service.SSHService):
         self.deferreds = {} # local channel -> list of deferreds for pending 
                             # requests or 'global' -> list of deferreds for 
                             # global requests
-        self.remoteForwards = {} # list of ports we should accept from server
-                            # (client only)
-        self.listeners = {} # dict mapping (internface, port) -> listener
         self.transport = None # gets set later
 
+    def serviceStarted(self):
+        if hasattr(self.transport, 'avatar'): 
+            self.transport.avatar.conn = self
+    
     def serviceStopped(self):
         for channel in self.channels.values():
             channel.closed()
@@ -79,8 +80,8 @@ class SSHConnection(service.SSHService):
         channelType, rest = common.getNS(packet)
         senderChannel, windowSize, maxPacket = struct.unpack('>3L', rest[: 12])
         packet = rest[12:]
-        channel = self.getChannel(channelType, windowSize, maxPacket, packet)
-        if type(channel) != type((1, )):
+        try:
+            channel = self.getChannel(channelType, windowSize, maxPacket, packet)
             localChannel = self.localChannelID
             self.localChannelID+=1
             channel.id = localChannel
@@ -92,8 +93,12 @@ class SSHConnection(service.SSHService):
                     channel.localWindowSize, 
                     channel.localMaxPacket)+channel.specificData)
             channel.channelOpen('')
-        else:
-            reason, textualInfo = channel
+        except Exception, e:
+            if isinstance(e, error.ConchError):
+                reason, textualInfo = c.data, c.value
+            else:
+                reason = OPEN_CONNECT_FAILED
+                textualInfo = "unknown failure"
             self.transport.sendPacket(MSG_CHANNEL_OPEN_FAILURE, 
                                 struct.pack('>2L', senderChannel, reason)+ \
                                common.NS(textualInfo)+common.NS(''))
@@ -327,8 +332,7 @@ class SSHConnection(service.SSHService):
         maxPacket is the largest packet we should send,
         data is any other packet data (often nothing).
 
-        We return either a subclass of SSHChannel, or a tuple of
-        (errorCode, errorMessage).
+        We return a subclass of SSHChan
 
         By default, this dispatches to a method 'channel_channelType' with any
         non-alphanumerics in the channelType replace with _'s.  If it cannot 
@@ -341,42 +345,20 @@ class SSHConnection(service.SSHService):
         @type data:         C{str}
         @rtype:             subclass of C{SSHChannel}/C{tuple}
         """
-        channelType = channelType.translate(TRANSLATE_TABLE)
-        f = getattr(self, 'channel_%s' % channelType, None)
-        if not f:
-            log.msg('got channel %s request, but it is unhandled' % channelType)
-            return OPEN_UNKNOWN_CHANNEL_TYPE, "don't know that channel"
         log.msg('got channel %s request' % channelType)
-        return f(windowSize, maxPacket, data)
-
-    def channel_session(self, windowSize, maxPacket, data):
-        if self.transport.isClient:
-            return OPEN_ADMINISTRATIVELY_PROHIBITED, 'not on the client'
-        return session.SSHSession(remoteWindow = windowSize,
-                                  remoteMaxPacket = maxPacket,
-                                  conn = self)
-
-    def channel_forwarded_tcpip(self, windowSize, maxPacket, data):
-        remoteHP, origHP = forwarding.unpackOpen_forwarded_tcpip(data)
-        if self.remoteForwards.has_key(remoteHP[1]):
-            connectHP = self.remoteForwards[remoteHP[1]]
-            return forwarding.SSHConnectForwardingChannel(connectHP,
-                                                remoteWindow = windowSize,
-                                                remoteMaxPacket = maxPacket,
-                                                conn = self)
+        if hasattr(self.transport, "avatar"): # this is a server!
+            chan = self.transport.avatar.lookupChannel(channelType, 
+                                                       windowSize, 
+                                                       maxPacket, 
+                                                       data)
+            chan.conn = self
+            return chan
         else:
-            return OPEN_CONNECT_FAILED, "don't know about that port"
-        if self.transport.isClient and channelType != 'forwarded-tcpip':
-            return OPEN_ADMINISTRATIVELY_PROHIBITED, 'not on the client bubba'
-
-    def channel_direct_tcpip(self, windowSize, maxPacket, data):
-        if self.transport.isClient:
-            return OPEN_ADMINITRATIVELY_PROHIBITED, 'not on the client'
-        remoteHP, origHP = forwarding.unpackOpen_direct_tcpip(data)
-        return forwarding.SSHConnectForwardingChannel(remoteHP,
-                                            remoteWindow = windowSize,
-                                            remoteMaxPacket = maxPacket,
-                                            conn = self)
+            channelType = channelType.translate(TRANSLATE_TABLE)
+            f = getattr(self, 'channel_%s' % channelType, None)
+            if not f:
+                return OPEN_UNKNOWN_CHANNEL_TYPE, "don't know that channel"
+            return f(windowSize, maxPacket, data)
 
     def gotGlobalRequest(self, requestType, data):
         """
@@ -396,40 +378,16 @@ class SSHConnection(service.SSHService):
         @type data:         C{str}
         @rtype:             C{int}/C{tuple}
         """
+        log.msg('got global %s request' % requestType)
+        if hasattr(self.transport, 'avatar'): # this is a server!
+            return self.transport.avatar.gotGlobalRequest(requestType, data)
+
         requestType = requestType.replace('-','_')
         f = getattr(self, 'global_%s' % requestType, None)
         if not f:
             return 0
-        log.msg('got global %s request' % requestType)
         return f(data)
 
-    def global_tcpip_forward(self, data):
-        if self.transport.isClient:
-            return 0 # no such luck
-        hostToBind, portToBind = forwarding.unpackGlobal_tcpip_forward(data)
-        if portToBind < 1024:
-            return 0 # fix this later, for now don't even try
-        from twisted.internet import reactor
-        listener = reactor.listenTCP(portToBind, 
-                        forwarding.SSHListenForwardingFactory(self,
-                            (hostToBind, portToBind),
-                            forwarding.SSHListenServerForwardingChannel), 
-                        interface = hostToBind)
-        self.listeners[(hostToBind, portToBind)] = listener
-        if portToBind == 0:
-            portToBind = listener.getHost()[2] # the port
-            return 1, struct.pack('>L', portToBind)
-        else:
-            return 1
-
-    def global_cancel_tcpip_forward(self, data):
-        hostToBind, portToBind = forwarding.unpackGlobal_tcpip_forward(data)
-        listener = self.listeners.get((hostToBind, portToBind), None)
-        if not listener:
-            return 0
-        del self.listeners[(hostToBind, portToBind)]
-        listener.stopListening()
-        return 1
 
 MSG_GLOBAL_REQUEST = 80
 MSG_REQUEST_SUCCESS = 81
@@ -460,12 +418,6 @@ for v in dir(connection):
         messages[getattr(connection, v)] = v # doesn't handle doubles
 
 import string
-TRANSLATE_TABLE = ""
-alphanums = string.ascii_letters + string.digits
-for i in range(256):
-    if chr(i) not in alphanums:
-        TRANSLATE_TABLE += "_"
-    else:
-        TRANSLATE_TABLE += chr(i)
-
+alphanums = string.letters + string.digits
+TRANSLATE_TABLE = ''.join([chr(i) in alphanums and chr(i) or '_' for i in range(256)])
 SSHConnection.protocolMessages = messages

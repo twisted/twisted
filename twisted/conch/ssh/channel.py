@@ -28,7 +28,7 @@ class SSHChannel:
     name = None # only needed for client channels
     def __init__(self, localWindow = 0, localMaxPacket = 0, 
                        remoteWindow = 0, remoteMaxPacket = 0, 
-                       conn = None):
+                       conn = None, data=None, avatar = None):
         self.localWindowSize = localWindow or 131072
         self.localWindowLeft = self.localWindowSize
         self.localMaxPacket = localMaxPacket or 32768
@@ -36,6 +36,8 @@ class SSHChannel:
         self.remoteMaxPacket = remoteMaxPacket
         self.areWriting = 1
         self.conn = conn
+        self.data = data
+        self.avatar = avatar
         self.specificData = ''
         self.buf = ''
         self.extBuf = ''

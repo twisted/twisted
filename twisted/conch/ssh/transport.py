@@ -81,6 +81,8 @@ class SSHTransportBase(protocol.Protocol):
     def connectionLost(self, reason):
         if self.service:
             self.service.serviceStopped()
+        if hasattr(self, 'avatar'):
+            self.logoutFunction()
         log.msg('connection lost')
 
     def connectionMade(self):

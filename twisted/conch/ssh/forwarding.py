@@ -81,7 +81,7 @@ class SSHConnectForwardingChannel(channel.SSHChannel):
 
     def __init__(self, hostport, *args, **kw):
         channel.SSHChannel.__init__(self, *args, **kw)
-        self.hostport = hostport
+        self.hostport = hostport 
         self.client = None
         self.clientBuf = ''
 
@@ -92,9 +92,13 @@ class SSHConnectForwardingChannel(channel.SSHChannel):
 
     def _setClient(self, client):
         self.client = client
+        log.msg("connected to %s:%i" % self.hostport)
         if self.clientBuf:
             self.client.transport.write(self.clientBuf)
             self.clientBuf = None
+        if self.client.buf[1:]:
+            self.write(self.client.buf[1:])
+        self.client.buf = ''
 
     def _close(self, reason):
         log.msg("failed to connect: %s" % reason)
@@ -113,6 +117,13 @@ class SSHConnectForwardingChannel(channel.SSHChannel):
                 self.loseConnection()
             self.client.transport.loseConnection()
             del self.client
+
+def openConnectForwardingClient(remoteWindow, remoteMaxPacket, data, avatar):
+    remoteHP, origHP = unpackOpen_direct_tcpip(data)
+    return SSHConnectForwardingChannel(remoteHP, 
+                                       remoteWindow=remoteWindow,
+                                       remoteMaxPacket=remoteMaxPacket,
+                                       avatar=avatar)
 
 class SSHForwardingClient(protocol.Protocol):
 

@@ -42,36 +42,30 @@ class SSHSession(channel.SSHChannel):
 
     def request_subsystem(self, data):
         subsystem = common.getNS(data)[0]
-        f = getattr(self, 'subsystem_%s'%subsystem, None)
-        if f:
-            client = f()
-            if client:
-                log.msg('starting subsystem %s'%subsystem)
-                self.client = client
-                return 1
-            else:
-                return 0
-        elif self.conn.factory.authorizer.clients.has_key(subsytem):
-            # we have a client for a pb service
-            pass # for now
-        log.msg('failed to get subsystem %s'%subsystem)
-        return 0
+        client = self.avatar.lookupSubsystem(subsystem, data)
+        if client:
+            client.makeConnection(self)
+            log.msg('starting subsystem %s'%subsystem)
+            self.client = client
+            return 1
+        else:
+            log.msg('failed to get subsystem %s'%subsystem)
+            return 0
 
     def request_shell(self, data):
         import fcntl, tty
         if not self.ptyTuple: # we didn't get a pty-req
             log.msg('tried to get shell without pty, failing')
             return 0
-        user = self.conn.transport.authenticatedUser
-        uid, gid = user.getUserGroupId()
-        homeDir = user.getHomeDir()
-        shell = user.getShell()
-        self.environ['USER'] = user.username
+        uid, gid = self.avatar.getUserGroupId()
+        homeDir = self.avatar.getHomeDir()
+        shell = self.avatar.getShell()
+        self.environ['USER'] = self.avatar.username
         self.environ['HOME'] = homeDir
         self.environ['SHELL'] = shell
-        peerHP = tuple(self.conn.transport.transport.getPeer()[1:])
-        hostP = (self.conn.transport.transport.getHost()[2],)
-        self.environ['SSH_CLIENT'] = '%s %s %s' % (peerHP+hostP)
+        peer = self.conn.transport.transport.getPeer()
+        host = self.conn.transport.transport.getHost()
+        self.environ['SSH_CLIENT'] = '%s %s %s' % (peer.host, peer.port, host.port)
         self.getPtyOwnership()
         try:
             self.client = SSHSessionClient()
@@ -94,14 +88,13 @@ class SSHSession(channel.SSHChannel):
 
     def request_exec(self, data):
         command = common.getNS(data)[0]
-        user = self.conn.transport.authenticatedUser
-        uid, gid = user.getUserGroupId()
-        homeDir = user.getHomeDir()
-        shell = user.getShell() or '/bin/sh'
+        uid, gid = self.avatar.getUserGroupId()
+        homeDir = self.avatar.getHomeDir()
+        shell = self.avatar.getShell()
         command = [shell, '-c', command]
-        peerHP = tuple(self.conn.transport.transport.getPeer()[1:])
-        hostP = (self.conn.transport.transport.getHost()[2],)
-        self.environ['SSH_CLIENT'] = '%s %s %s' % (peerHP+hostP)
+        peer = self.conn.transport.transport.getPeer()
+        host = self.conn.transport.transport.getHost()
+        self.environ['SSH_CLIENT'] = '%s %s %s' % (peer.host, peer.port, host.port)
         if self.ptyTuple:
             self.getPtyOwnership()
         try:
@@ -146,49 +139,15 @@ class SSHSession(channel.SSHChannel):
                     struct.pack('4H', *self.winSize))
         return 1
 
-    def subsystem_python(self):
-        """This is disabled by default, because it allows access to a
-        python shell running as the owner of the process.
-        """
-        return 0
-        # XXX hack hack hack
-        # this should be refacted into the 'interface to pb service' part
-        from twisted.manhole import telnet
-        pyshell = telnet.Shell()
-        pyshell.connectionMade = lambda*args: None
-        pyshell.lineBuffer = []
-        self.namespace = {
-        'session': self, 
-            'connection': self.conn, 
-            'transport': self.conn.transport, 
-         }
-        pyshell.factory = self # we need pyshell.factory.namespace
-        pyshell.delimiters.append('\n')
-        pyshell.mode = 'Command'
-        pyshell.makeConnection(self) # because we're the transport
-        pyshell.loggedIn() # since we've logged in by the time we make it here
-        self.receiveEOF = self.loseConnection
-        return pyshell
-    
-    def subsystem_sftp(self):
-        ft=filetransfer.FileTransferServer(self.conn.transport.authenticatedUser)
-        ft.makeConnection(self)
-        return ft
-
     def getPtyOwnership(self):
         ttyGid = os.stat(self.ptyTuple[2])[5]
-        euid = os.geteuid()
-        egid = os.getegid()
-        uid = self.conn.transport.authenticatedUser.getUserGroupId()[0]
+        uid = self.avatar.getUserGroupId()[0]
+        euid, egid = os.geteuid(), os.getegid()
         os.setegid(0)
         os.seteuid(0)
         try:
             os.chown(self.ptyTuple[2], uid, ttyGid)
-        except:
-            os.setegid(egid)
-            os.seteuid(euid)
-            raise
-        else:
+        finally:
             os.setegid(egid)
             os.seteuid(euid)
         
