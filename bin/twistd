@@ -48,7 +48,7 @@ if string.find(os.path.abspath(sys.argv[0]),'Twisted') != -1:
         os.path.dirname(os.path.abspath(sys.argv[0]))))
 ### end of preamble
 
-from twisted.python import usage, util
+from twisted.python import usage, util, runtime
 
 util.addPluginDir()
 
@@ -94,10 +94,15 @@ except usage.error, ue:
     print "%s: %s" % (sys.argv[0], ue)
     os._exit(1)
 
-if os.name != 'java':
+platformType = runtime.platform.getType()
+if platformType != 'java':
     # java can't chdir
     os.chdir(config.rundir)
 sys.path.append(config.rundir)
+
+if platformType != 'posix':
+    # only posix can fork
+    config.nodaemon = 1
 
 # Twisted Imports
 from twisted import copyright
