@@ -1,11 +1,13 @@
 
+import time
+
 from irc2 import AdvancedClient
 
 from twisted.python import failure, log
 from twisted.internet import defer, task
 
-import sys
-log.startLogging(sys.stdout)
+# import sys
+# log.startLogging(sys.stdout)
 
 metachannel = ["#arnis"]
 channels = ['#arnis1', '#arnis2']
@@ -21,7 +23,12 @@ class Client(AdvancedClient):
     lineRate = 0.9
 
     def signedOn(self):
-        map(self.join, channels)
+        for ch in channels:
+            d = self.join(ch)
+            d.addCallback(Client.names, ch)
+            d.addCallback(self._cbJ, ch)
+            d.addErrback(self._ebJ, ch)
+
         self._cleanupRaceCall = task.LoopingCall(self._raceConditionsCanBeDefeated)
         self._cleanupRaceCall.start(10)
 
@@ -31,18 +38,23 @@ class Client(AdvancedClient):
 
     def _raceConditionsCanBeDefeated(self):
         allNames = []
-        for ch in states.iterkeys():
-            allNames.append(self.names(ch).addCallback(lambda result, channel=ch: (channel, result)))
-        defer.DeferredList(allNames).addCallback(self._eliminateRaceResults)
+        print 'Looking up names for', states.keys()
+        self.names(*states.iterkeys()).addCallback(self._eliminateRaceResults)
 
     def _eliminateRaceResults(self, allNames):
         voicedUsers = {}
         unvoicedUsers = {}
-        for (channel, nameListing) in allNames:
+        for (channel, nameListing) in allNames.iteritems():
             for name in nameListing:
-                if name.startswith('+'):
+                if name.startswith('@'):
+                    continue
+                voice = False
+                if name[:1] == '+':
+                    voice = True
+                    name = name[1:]
+                if voice:
                     try:
-                        del unvoicedUsers[name[1:]]
+                        del unvoicedUsers[name]
                     except KeyError:
                         pass
                     if name in voicedUsers:
@@ -52,11 +64,9 @@ class Client(AdvancedClient):
                 else:
                     unvoicedUsers.setdefault(name, []).append(channel)
         for user, channels in unvoicedUsers.iteritems():
-            self.mode(channels[0], True, 'v', user=user)
+            if user not in voicedUsers:
+                self.mode(channels[0], True, 'v', user=user)
 
-    def joined(self, channel):
-        channel = channel.lower()
-        self.names(channel).addCallback(self._cbJ, channel).addErrback(self._ebJ, channel)
 
     def _cbJ(self, names, channel):
         state = states[channel] = State()
@@ -72,6 +82,8 @@ class Client(AdvancedClient):
             del states[channel]
         except KeyError:
             pass
+        return AdvancedClient.left(self, channel)
+
 
     def userJoined(self, user, channel):
         user = user.lower()
@@ -111,4 +123,8 @@ def main():
     cf = protocol.ClientFactory()
     cf.protocol = lambda: proto
     reactor.connectTCP('irc.freenode.net', 6667, cf)
-    return proto
+    reactor.run()
+    # return proto
+
+main()
+

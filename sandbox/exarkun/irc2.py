@@ -176,8 +176,20 @@ class AdvancedClient(irc.IRCClient):
         @return: A mapping of channel names to lists of users in those
         channels.
         """
-        self.sendLine("NAMES " + " ".join(channels))
-        return self._makeCommand("NAMES", {})
+        # IRC sucks.  NAMES should take multiple channels, but some servers
+        # only return results for the first name given.
+        nameCalls = []
+        for ch in channels:
+            self.sendLine("NAMES " + ch)
+            nameCalls.append(self._makeCommand("NAMES", {}))
+        return defer.DeferredList(nameCalls, fireOnOneErrback=True).addCallback(self._cbNames)
+
+    def _cbNames(self, results):
+        d = {}
+        for (success, r) in results:
+            assert success, "I don't understand DeferredList, apparently."
+            d.update(r)
+        return d
     
     def irc_RPL_NAMREPLY(self, prefix, params):
         channel = params[2]
