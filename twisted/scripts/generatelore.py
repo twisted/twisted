@@ -56,7 +56,7 @@ def run():
         opt.parseOptions()
     except usage.UsageError, errortext:
         print '%s: %s' % (sys.argv[0], errortext)
-        print '%s: Try --help for usage details.' % (sys.argv[0])
+        print '%s: Try --help for usage details.' % sys.argv[0]
         sys.exit(1)
     df = makeProcessingFunction(opt)
     w = process.Walker(df, '.html', opt['linkrel'])
