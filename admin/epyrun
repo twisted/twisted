@@ -80,6 +80,18 @@ from twisted.python import reflect
 from twisted.internet import reactor
 # epydoc
 from epydoc.cli import cli
+from epydoc.html import HTMLFormatter
+
+def _uid_to_uri(self, uid):
+    if uid.is_module() or uid.is_class():
+        return uid.name() + '.html'
+
+    parent = uid.parent()
+    if parent is None:
+        return uid.name() + '.html'
+
+    return parent.name() + '.html#' + uid.shortname()
+HTMLFormatter._uid_to_uri = _uid_to_uri
 
 modnames = []
 def addMod(arg, path, files):
@@ -105,3 +117,4 @@ __builtins__.__import__ = im
 sys.argv = osrv
 sys.argv.extend(modnames)              # list of modules
 cli()
+print 'Done!'
