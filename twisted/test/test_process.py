@@ -307,55 +307,9 @@ class Accumulator(protocol.ProcessProtocol):
         self.closed = 1
 
 
-class PosixProcessTestCase(unittest.TestCase):
+class PosixProcessBase:
     """Test running processes."""
     usePTY = 0
-        
-    def testStdio(self):
-        """twisted.internet.stdio test."""
-        exe = sys.executable
-        scriptPath = util.sibpath(__file__, "process_twisted.py")
-        p = Accumulator()
-        reactor.spawnProcess(p, exe, [exe, "-u", scriptPath], None, None,
-                             usePTY=self.usePTY)
-        p.transport.write("hello, world")
-        p.transport.write("abc")
-        p.transport.write("123")
-        p.transport.closeStdin()
-        while not p.closed:
-            reactor.iterate(0.01)
-        self.assertEquals(p.outF.getvalue(), "hello, worldabc123", "Error message from process_twisted follows:\n\n%s\n\n" % p.errF.getvalue())
-
-    def testProcess(self):
-        if os.path.exists('/bin/gzip'): cmd = '/bin/gzip'
-        elif os.path.exists('/usr/bin/gzip'): cmd = '/usr/bin/gzip'
-        else: raise RuntimeError("gzip not found in /bin or /usr/bin")
-        s = "there's no place like home!\n" * 3
-        p = Accumulator()
-        reactor.spawnProcess(p, cmd, [cmd, "-c"], {}, "/tmp",
-                             usePTY=self.usePTY)
-        p.transport.write(s)
-        p.transport.closeStdin()
-
-        while not p.closed:
-            reactor.iterate(0.01)
-        f = p.outF
-        f.seek(0, 0)
-        gf = gzip.GzipFile(fileobj=f)
-        self.assertEquals(gf.read(), s)
-
-    def testStderr(self):
-        # we assume there is no file named ZZXXX..., both in . and in /tmp
-        if not os.path.exists('/bin/ls'): raise RuntimeError("/bin/ls not found")
-
-        p = Accumulator()
-        reactor.spawnProcess(p, '/bin/ls', ["/bin/ls", "ZZXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"], {}, "/tmp",
-                             usePTY=self.usePTY)
-
-        while not p.closed:
-            reactor.iterate(0.01)
-        self.assertEquals(lsOut, p.errF.getvalue())
-
 
     def testNormalTermination(self):
         if os.path.exists('/bin/true'): cmd = '/bin/true'
@@ -371,7 +325,6 @@ class PosixProcessTestCase(unittest.TestCase):
         p.reason.trap(error.ProcessDone)
         self.assertEquals(p.reason.value.exitCode, 0)
         self.assertEquals(p.reason.value.signal, None)
-
 
     def testAbnormalTermination(self):
         if os.path.exists('/bin/false'): cmd = '/bin/false'
@@ -402,25 +355,63 @@ class PosixProcessTestCase(unittest.TestCase):
         while reduce(lambda a,b:a+b,[p.going for p in protocols]):
             reactor.iterate(0.01)
 
-class PosixProcessTestCasePTY(PosixProcessTestCase):
+class PosixProcessTestCase(unittest.TestCase, PosixProcessBase):
+    # add three non-pty test cases
+        
+    def testStdio(self):
+        """twisted.internet.stdio test."""
+        exe = sys.executable
+        scriptPath = util.sibpath(__file__, "process_twisted.py")
+        p = Accumulator()
+        reactor.spawnProcess(p, exe, [exe, "-u", scriptPath], None, None,
+                             usePTY=self.usePTY)
+        p.transport.write("hello, world")
+        p.transport.write("abc")
+        p.transport.write("123")
+        p.transport.closeStdin()
+        while not p.closed:
+            reactor.iterate(0.01)
+        self.assertEquals(p.outF.getvalue(), "hello, worldabc123", "Error message from process_twisted follows:\n\n%s\n\n" % p.errF.getvalue())
+
+    def testStderr(self):
+        # we assume there is no file named ZZXXX..., both in . and in /tmp
+        if not os.path.exists('/bin/ls'): raise RuntimeError("/bin/ls not found")
+
+        p = Accumulator()
+        reactor.spawnProcess(p, '/bin/ls', ["/bin/ls", "ZZXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"], {}, "/tmp",
+                             usePTY=self.usePTY)
+
+        while not p.closed:
+            reactor.iterate(0.01)
+        self.assertEquals(lsOut, p.errF.getvalue())
+
+    def testProcess(self):
+        if os.path.exists('/bin/gzip'): cmd = '/bin/gzip'
+        elif os.path.exists('/usr/bin/gzip'): cmd = '/usr/bin/gzip'
+        else: raise RuntimeError("gzip not found in /bin or /usr/bin")
+        s = "there's no place like home!\n" * 3
+        p = Accumulator()
+        reactor.spawnProcess(p, cmd, [cmd, "-c"], {}, "/tmp",
+                             usePTY=self.usePTY)
+        p.transport.write(s)
+        p.transport.closeStdin()
+
+        while not p.closed:
+            reactor.iterate(0.01)
+        f = p.outF
+        f.seek(0, 0)
+        gf = gzip.GzipFile(fileobj=f)
+        self.assertEquals(gf.read(), s)
+    
+class PosixProcessTestCasePTY(unittest.TestCase, PosixProcessBase):
     """Just like PosixProcessTestCase, but use ptys instead of pipes."""
     usePTY = 1
     # PTYs are not pipes. What still makes sense?
-    # testProcess, but not without p.transport.closeStdin
     # testNormalTermination
     # testAbnormalTermination
     # testSignal
-    #
-    # others are skipped. I wish I knew of a way to make this "do these N
-    # tests" instead of "skip these other M-N tests".
-    def testStdio(self):
-        raise unittest.SkipTest("ptys cannot do closeStdin()")
-    def testStderr(self):
-        raise unittest.SkipTest("ptys don't have a distinct stderr stream")
-
-    def testProcess(self):
-        # might be solveable
-        raise unittest.SkipTest("testProcess requires closeable stdin")
+    # testProcess, but not without p.transport.closeStdin
+    #  might be solveable: TODO: add test if so
     
 class Win32ProcessTestCase(unittest.TestCase):
     """Test process programs that are packaged with twisted."""
