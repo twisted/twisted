@@ -231,7 +231,7 @@ class Port(tcp.Port):
             s = self.sessionno
             self.sessionno = s+1
             transport = self.transport(skt, protocol, addr, self, s)
-            protocol.makeConnection(transport, self)
+            protocol.makeConnection(transport)
         except:
             log.deferr()
 
