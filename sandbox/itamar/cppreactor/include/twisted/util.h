@@ -8,12 +8,46 @@
 namespace Twisted {
     using namespace boost::python;
 
-    inline object import(char* module)
+    inline object import(const char* module)
     {
-	PyObject* m = PyImport_ImportModule(module);
+	PyObject* m = PyImport_ImportModule(const_cast<char*>(module));
 	return extract<object>(m);
     }
 
+    /* Wrap a C++ function so it's callable from Python. */
+    class CPPFunction 
+    {
+    private:
+	boost::function<void()> m_function;
+    public:
+	CPPFunction(boost::function<void()> f) : m_function(f) {}
+	void operator() () { m_function(); }
+    };
+
+    /* Call a function every <interval> seconds.
+
+    May want to reimplement this in C++ for efficiency at some point.
+    */
+    class LoopingCall
+    {
+    private:
+	object m_lc;
+    public:
+	LoopingCall(boost::function<void()> f) {
+	    m_lc = import("twisted.internet.task").attr("LoopingCall")(CPPFunction(f));
+	}
+	void start(double interval) {
+	    m_lc.attr("start")(interval);
+	}
+	void stop() {
+	    m_lc.attr("stop")();
+	}
+    };
+
+    /* Result of scheduled call via callLater().
+
+    Should not be created directly.
+    */
     class DelayedCall
     {
     private:
