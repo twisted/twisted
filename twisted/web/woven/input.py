@@ -21,6 +21,7 @@ import os
 
 from twisted.internet import defer
 from twisted.python import log
+from twisted.python.reflect import qual
 
 from twisted.web.woven import template, controller, utils
 
@@ -102,7 +103,7 @@ class InputHandler(controller.Controller):
         and return a boolean indicating validity.
         """
         if self._check is None:
-            raise NotImplementedError
+            raise NotImplementedError(qual(self.__class__)+'.check')
         return self._check(data)
 
     def handleValid(self, request, data):
