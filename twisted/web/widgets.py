@@ -86,7 +86,7 @@ class Presentation(Widget):
                     x = eval(elem, namespace, namespace)
                 except:
                     io = StringIO()
-                    io.write("Traceback evaluating code in %s:" % str(self.__class__))
+                    io.write("Traceback evaluating code in %s: %s\n\n" % (str(self.__class__), elem))
                     traceback.print_exc(file = io)
                     tm.append(html.PRE(io.getvalue()))
                 else:
