@@ -105,6 +105,9 @@ class IRCClient(basic.LineReceiver):
     def join(self, channel):
         self.sendLine("JOIN #%s" % channel)
 
+    def leave(self, channel):
+        self.sendLine("PART #%s" % channel)
+
     def say(self, channel, message):
         self.sendLine("PRIVMSG #%s :%s" % (channel, message))
 
@@ -138,6 +141,7 @@ class IRCClient(basic.LineReceiver):
 
     def lineReceived(self, line):
         prefix, command, params = parsemsg(line)
+        print command, prefix, params
         method = getattr(self, "irc_%s" % command, None)
         if method is not None:
             method(prefix, params)

@@ -295,9 +295,9 @@ class InstanceMessenger:
         group := the name of the group (string)
         """
         if self.sendEvent(gateway,"joinGroup",group):
-            gateway.joinGroup(group)
-            self.groups[str(gateway)+group]=GroupSession(self,group,gateway)
-            self._log(gateway,group+".chat","Joined group!")
+            if not gateway.joinGroup(group): # if it returns true, don't join
+                self.groups[str(gateway)+group]=GroupSession(self,group,gateway)
+                self._log(gateway,group+".chat","Joined group!")
         
     def leaveGroup(self,gateway,group):
         """

@@ -132,6 +132,8 @@ class Gateway:
     def joinGroup(self,group):
         """
         join a group.
+        if this method returns true, we are already in the group, and shouldn't
+        recreate the window.
         group := the name of the group to join
         """
         raise NotImplementedError # XXX: override for gateway

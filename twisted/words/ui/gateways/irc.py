@@ -48,6 +48,7 @@ class IRCGateway(irc.IRCClient,gateway.Gateway):
         self.password=password
         self.realname=realname
         self._ingroups={}
+        self._groups={}
     
     def connectionMade(self):
 	irc.IRCClient.connectionMade(self)
@@ -80,20 +81,22 @@ class IRCGateway(irc.IRCClient,gateway.Gateway):
         pass 
 
     def joinGroup(self,group):
-        self.sendLine("JOIN #%s"%group)
+        if self._groups.has_key(string.lower(group)):
+            return 1
+        self.join(group)
+        self._groups[string.lower(group)]=group
 
     def leaveGroup(self,group):
-        self.sendLine("PART #%s"%group)
-        del self._namreplies[group]
-
+        self.leave(group)
+                
     def getGroupMembers(self,group):
         pass # this gets automatically done
 
     def directMessage(self,recipientName,message):
-        self.sendLine("PRIVMSG %s :%s"%(recipientName,message))
+        self.msg(recipientName,message)
 
     def groupMessage(self,groupName,message):
-        self.sendLine("PRIVMSG #%s :%s"%(groupName,message))
+        self.say(groupName,message)
 
     def irc_353(self,prefix,params):
 	"""
@@ -118,6 +121,7 @@ class IRCGateway(irc.IRCClient,gateway.Gateway):
     def irc_366(self,prefix,params):
 	group=params[1][1:]
 	self.receiveGroupMembers(self._namreplies[group],group)
+	del self._namreplies[group]
 
     def irc_NICK(self,prefix,params):
 	oldname=string.split(prefix,"!")[0]
@@ -125,7 +129,7 @@ class IRCGateway(irc.IRCClient,gateway.Gateway):
 
     def irc_JOIN(self,prefix,params):
 	nickname=string.split(prefix,"!")[0]
-	group=params[0][1:]
+	group=self._groups[string.lower(params[0][1:])]
 	if nickname!=self.nickname:
             try:
                 self._ingroups[nickname].append(group)
@@ -135,10 +139,15 @@ class IRCGateway(irc.IRCClient,gateway.Gateway):
 
     def irc_PART(self,prefix,params):
 	nickname=string.split(prefix,"!")[0]
-	group=params[0][1:]
+	group=self._groups[string.lower(params[0][1:])]
 	if nickname!=self.nickname:
-            self._ingroups[nickname].remove(group)
-	    self.memberLeft(nickname,group)
+            if group in self._ingroups[nickname]:
+                self._ingroups[nickname].remove(group)
+                self.memberLeft(nickname,group)
+            else:
+                print "%s left %s, but wasn't in the room."%(nickname,group)
+        else:
+            del self._groups[string.lower(group)]
 
     def irc_QUIT(self,prefix,params):
         nickname=string.split(prefix,"!")[0]
@@ -150,11 +159,12 @@ class IRCGateway(irc.IRCClient,gateway.Gateway):
 	nickname=string.split(prefix,"!")[0]
 	message=params[1]
 	if params[0][0]=="#": # channel
-	    self.receiveGroupMessage(nickname,params[0][1:],message)
+            group=self._groups[string.lower(params[0][1:])]
+	    self.receiveGroupMessage(nickname,group,message)
 	else:
 	    if message[0]=="\001":
 		if message[1:5]=="PING":
-		    self.directMessage(nickname,"\001PONG %s\001"%message[6:])
+		    self.directMessage(nickname,"\001PONG %s"%message[6:])
 		    return
 	    self.receiveDirectMessage(nickname,message)
 

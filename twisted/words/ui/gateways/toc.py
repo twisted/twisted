@@ -165,7 +165,10 @@ class TOCGateway(gateway.Gateway,toc.TOCClient):
         pass # XXX: need to define what newStatus is
 
     def joinGroup(self,groupname):
-        self._chatmapping[toc.normalize(groupname)]=groupname
+        n=toc.normalize(groupname)
+        if self._chatmapping.has_key(n):
+            return 1
+        self._chatmapping[n]=groupname
         self.chat_join(4,groupname)
 
     def leaveGroup(self,groupname):
