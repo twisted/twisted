@@ -90,6 +90,7 @@ class BaseLatexSpitter:
 class LatexSpitter(BaseLatexSpitter):
 
     baseLevel = 0
+    diaHack = not not os.popen('which dia').read()
 
     def writeNodeData(self, node):
         buf = StringIO()
@@ -113,16 +114,22 @@ class LatexSpitter(BaseLatexSpitter):
     def visitNode_img(self, node):
         fileName = os.path.join(self.currDir, node.getAttribute('src'))
         target, ext = os.path.splitext(fileName)
-        m = getattr(self, 'convert_'+ext[1:], None)
-        if not m:
+        if self.diaHack and os.access(target + '.dia', os.R_OK):
+            ext = '.dia'
+            fileName = target + ext
+        f = getattr(self, 'convert_'+ext[1:], None)
+        if not f:
             return
         target = os.path.join(self.currDir, os.path.basename(target)+'.eps')
-        m(fileName, target)
+        f(fileName, target)
         target = os.path.basename(target)
         self.writer('\\includegraphics{%s}\n' % target)
 
     def convert_png(self, src, target):
         os.system("pngtopnm %s | pnmtops > %s" % (src, target))
+
+    def convert_dia(self, src, target):
+        os.system("dia %s -n -e %s" % (src, target))
 
     def visitNodeHeader(self, node):
         level = (int(node.tagName[1])-2)+self.baseLevel
