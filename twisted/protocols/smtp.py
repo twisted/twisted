@@ -15,7 +15,7 @@
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
-"""Simple Mail Transfer Protcol implementation.
+"""Simple Mail Transfer Protocol implementation.
 """
 
 from twisted.protocols import basic
@@ -41,10 +41,11 @@ class User:
 
 class SMTP(basic.LineReceiver):
 
-    mode = COMMAND
-    __from_ = None
-    __helo = None
-    __to = ()
+    def __init__(self):
+        self.mode = COMMAND
+        self.__from = None
+        self.__helo = None
+        self.__to = ()
 
     def connectionMade(self):
         self.sendCode(220, 'Spammers beware, your ass is on fire')
@@ -107,6 +108,10 @@ class SMTP(basic.LineReceiver):
         self.mode = DATA
         self.sendCode(354, 'Continue')
 
+    def do_RSET(self, rest):
+        self.__init__()
+        self.sendCode(250, 'I remember nothing.')
+
     def handleDataLine(self, line):
         if line[:1] == '.':
             if line == '.':
@@ -136,7 +141,7 @@ class SMTP(basic.LineReceiver):
     def validateTo(self, user, success, failure):
         success(user)
 
-    def handleMessage(self, helo, origin, recipients, message, 
+    def handleMessage(self, recipients, message, 
                       success, failure):
         success()
 
