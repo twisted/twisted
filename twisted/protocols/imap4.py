@@ -24,6 +24,7 @@ API Stability: Semi-stable
 """
 
 from __future__ import nested_scopes
+from __future__ import generators
 
 from twisted.protocols import basic
 from twisted.protocols import policies
@@ -31,16 +32,73 @@ from twisted.internet import defer
 from twisted.internet.defer import maybeDeferred
 from twisted.python import log, components, util, failure
 from twisted.cred import identity, error, perspective
-
 from twisted.python.components import implements
 from twisted.internet.interfaces import ITLSTransport
 
 import base64, binascii, operator, re, string, time, types, rfc822, random
+import sys
 
 try:
     import cStringIO as StringIO
 except:
     import StringIO
+
+class MessageSet:
+    def __init__(self, *ranges):
+        assert len(ranges) % 2 == 0, "Arguments must be low-high pairs"
+        self.ranges = zip(*[iter(ranges)] * 2)
+
+    def __add__(self, other):
+        if isinstance(other, MessageSet):
+            ranges = self.ranges + other.ranges
+        else:
+            ranges = []
+            map(ranges.extend, self.ranges)
+            ranges.extend(other)
+        return MessageSet(*ranges)
+    
+    def __contains__(self, value):
+        for (low, high) in self.ranges:
+            if (low is None or value >= low) and (high is None or value < high):
+                return True
+        return False
+    
+    def map(self, callable):
+        return MessageSet(*map(callable, self.ranges))
+    
+    def __eq__(self, other):
+        if isinstance(other, MessageSet):
+            return self.ranges == other.ranges
+        return False
+    
+    def __len__(self):
+        if self.ranges:
+            if self.ranges[-1][1] is None:
+                return sys.maxint
+            L = 0
+            for (low, high) in self.ranges:
+                L = L + high - low
+            return L
+        return 0
+    
+    def __iter__(self):
+        def i():
+            for (low, high) in iter(self.ranges):
+                while high is None or low < high:
+                    yield low
+                    low += 1
+        return i()
+    
+    def __repr__(self):
+        p = []
+        for (low, high) in self.ranges:
+            if low + 1 == high:
+                p.append(str(low))
+            elif high is None:
+                p.append('%d:*' % (low,))
+            else:
+                p.append('%d:%d' % (low, high))
+        return '<%s>' % (','.join(p),)
 
 class Command:
     _1_RESPONSES = ('CAPABILITY', 'FLAGS', 'LIST', 'LSUB', 'STATUS', 'SEARCH')
@@ -720,13 +778,13 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
         if len(parts) != 2:
             raise IllegalClientResponse, args
         messages, args = parts
-        messages = parseIdList(messages, self.mbox.getUIDNext())
+        messages = parseIdList(messages)
         query = parseNestedParens(args)
         while len(query) == 1 and isinstance(query[0], types.ListType):
             query = query[0]
         if uid:
             topPart = ~(self.mbox.getUIDValidity() << 16)
-            messages = map(topPart.__and__, messages)
+            messages = messages.map(topPart.__and__)
         maybeDeferred(None, self.mbox.fetch, messages, query).addCallbacks(
             self.__cbFetch, self.__ebFetch,
             (tag, uid), None, (tag,), None
@@ -753,7 +811,7 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
     def select_STORE(self, tag, args, uid=0):
         parts = parseNestedParens(args)
         if 2 <= len(parts) <= 3:
-            messages = parseIdList(parts[0], self.mbox.getUIDNext())
+            messages = parseIdList(parts[0])
             mode = parts[1].upper()
             if len(parts) == 3:
                 flags = parts[2]
@@ -764,7 +822,7 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
 
         if uid:
             topPart = ~(self.mbox.getUIDValidity() << 16)
-            messages = map(topPart.__and__, messages)
+            messages = messages.map(topPart.__and__)
 
         silent = mode.endswith('SILENT')
         if mode.startswith('+'):
@@ -793,15 +851,14 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
             raise IllegalClientResponse, args
         ids = parts[0]
         mbox = self._parseMbox(parts[1])
-        messages = parseIdList(ids, self.mbox.getUIDNext())
+        messages = parseIdList(ids)
         mbox = self.account.select(mbox)
         if not mbox:
             self.sendNegativeResponse(tag, 'No such mailbox: ' + parts[1])
         else:
             if uid:
                 topPart = self.mbox.getUIDValidity() << 16
-                for i in range(len(messages)):
-                    messages[i] = messages[i] | topPart
+                messages = messages.map(topPart.__or__)
             maybeDeferred(None,
                 self.mbox.fetch, messages,
                 ['BODY', [], 'INTERNALDATE', 'FLAGS']
@@ -2249,8 +2306,8 @@ class IMAP4Client(basic.LineReceiver):
 
 class IllegalIdentifierError(IMAP4Exception): pass
 
-def parseIdList(s, topValue):
-    res = []
+def parseIdList(s):
+    res = MessageSet()
     parts = s.split(',')
     for p in parts:
         if ':' in p:
@@ -2258,18 +2315,18 @@ def parseIdList(s, topValue):
             try:
                 low = int(low)
                 if high == '*':
-                    high = topValue
+                    res = res + (low, None)
                 else:
-                    high = int(high) + 1
+                    res = res + (low, int(high) + 1)
+            except ValueError:
+                raise IllegalIdentifierError, p
+        else:
+            try:
+                p = int(p)
             except ValueError:
                 raise IllegalIdentifierError, p
             else:
-                res.extend(range(low, high))
-        else:
-            try:
-                res.append(int(p))
-            except ValueError:
-                raise IllegalIdentifierError, p
+                res = res + (p, p + 1)
     return res
 
 class IllegalQueryError(IMAP4Exception): pass
@@ -3171,7 +3228,7 @@ class IMailbox(components.Interface):
     def fetch(self, messages, parts):
         """Retrieve one or more portions of one or more messages.
 
-        @type messages: sequence of C{int}
+        @type messages: iterable of C{int}
         @param messages: The identifiers of messages to retrieve information
         about
 

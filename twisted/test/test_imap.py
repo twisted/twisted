@@ -25,9 +25,11 @@ try:
 except ImportError:
     from StringIO import StringIO
 
-import os, types
+import os, sys, types
 
-from twisted.protocols import imap4, loopback
+from twisted.protocols.imap4 import MessageSet
+from twisted.protocols import imap4
+from twisted.protocols import loopback
 from twisted.internet import defer
 from twisted.trial import unittest
 from twisted.python import util
@@ -234,6 +236,9 @@ class IMAP4HelperTestCase(unittest.TestCase):
     
     def testIdListParser(self):
         inputs = [
+            '1:*',
+            '5:*',
+            '1:2,5:*',
             '1',
             '1,2',
             '1,3,5',
@@ -246,20 +251,32 @@ class IMAP4HelperTestCase(unittest.TestCase):
         ]
         
         outputs = [
-            [1],
-            [1, 2],
-            [1, 3, 5],
-            range(1, 11),
-            range(1, 12),
-            range(1, 6) + range(10, 21),
-            [1] + range(5, 11),
-            [1] + range(5, 11) + range(15, 21),
-            range(1, 11) + [15] + range(20, 26),
+            MessageSet(1, None),
+            MessageSet(5, None),
+            MessageSet(1, 3, 5, None),
+            MessageSet(1, 2),
+            MessageSet(1, 2, 2, 3),
+            MessageSet(1, 2, 3, 4, 5, 6),
+            MessageSet(1, 11),
+            MessageSet(1, 11, 11, 12),
+            MessageSet(1, 6, 10, 21),
+            MessageSet(1, 2, 5, 11),
+            MessageSet(1, 2, 5, 11, 15, 21),
+            MessageSet(1, 11, 15, 16, 20, 26),
+        ]
+        
+        lengths = [
+            sys.maxint, sys.maxint, sys.maxint,
+            1, 2, 3, 10, 11, 16, 7, 13, 17,
         ]
         
         for (input, expected) in zip(inputs, outputs):
-            self.assertEquals(imap4.parseIdList(input, None), expected)
-        self.assertEquals(imap4.parseIdList('1:*', 50), range(1, 50))
+            self.assertEquals(imap4.parseIdList(input), expected)
+
+        for (input, expected) in zip(inputs, lengths):
+            L = len(imap4.parseIdList(input))
+            self.assertEquals(L, expected,
+                "len(%r) = %d != %d" % (input, L, expected))
 
 class SimpleMailbox:
     flags = ('\\Flag1', 'Flag2', '\\AnotherSysFlag', 'LastFlag')
