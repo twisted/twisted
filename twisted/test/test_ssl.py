@@ -88,9 +88,10 @@ class ServerTLSContext(ssl.DefaultOpenSSLContextFactory):
         ssl.DefaultOpenSSLContextFactory.__init__(self, *args, **kw)
 
 class LineCollector(basic.LineReceiver):
-    def __init__(self, doTLS):
+    def __init__(self, doTLS, fillBuffer=0):
         self.doTLS = doTLS
-
+        self.fillBuffer = fillBuffer
+        
     def connectionMade(self):
         self.factory.rawdata = ''
         self.factory.lines = []
@@ -98,6 +99,9 @@ class LineCollector(basic.LineReceiver):
     def lineReceived(self, line):
         self.factory.lines.append(line)
         if line == 'STARTTLS':
+            if self.fillBuffer:
+                for x in range(500):
+                    self.sendLine('X'*1000)
             self.sendLine('READY')
             if self.doTLS:
                 ctx = ServerTLSContext(
@@ -116,13 +120,15 @@ class LineCollector(basic.LineReceiver):
         self.factory.done = 1
 
 class TLSTestCase(unittest.TestCase):
+    fillBuffer = 0
+    
     def testTLS(self):
         cf = protocol.ClientFactory()
         cf.protocol = UnintelligentProtocol
         cf.client = 1
 
         sf = protocol.ServerFactory()
-        sf.protocol = lambda: LineCollector(1)
+        sf.protocol = lambda: LineCollector(1, self.fillBuffer)
         sf.done = 0
         sf.server = 1
 
@@ -132,7 +138,7 @@ class TLSTestCase(unittest.TestCase):
         reactor.connectTCP('127.0.0.1', portNo, cf)
         
         i = 0
-        while i < 5000 and not sf.done:
+        while i < 1000 and not sf.done:
             reactor.iterate(0.01)
             i += 1
         
@@ -148,7 +154,7 @@ class TLSTestCase(unittest.TestCase):
         cf.client = 1
 
         sf = protocol.ServerFactory()
-        sf.protocol = lambda: LineCollector(0)
+        sf.protocol = lambda: LineCollector(0, self.fillBuffer)
         sf.done = 0
         sf.server = 1
 
@@ -158,7 +164,7 @@ class TLSTestCase(unittest.TestCase):
         reactor.connectTCP('127.0.0.1', portNo, cf)
         
         i = 0
-        while i < 5000 and not sf.done:
+        while i < 1000 and not sf.done:
             reactor.iterate(0.01)
             i += 1
         
@@ -171,7 +177,7 @@ class TLSTestCase(unittest.TestCase):
 
     def testBackwardsTLS(self):
         cf = protocol.ClientFactory()
-        cf.protocol = lambda: LineCollector(1)
+        cf.protocol = lambda: LineCollector(1, self.fillBuffer)
         cf.server = 0
         cf.done = 0
 
@@ -185,7 +191,7 @@ class TLSTestCase(unittest.TestCase):
         reactor.connectTCP('127.0.0.1', portNo, cf)
         
         i = 0
-        while i < 2000 and not cf.done:
+        while i < 1000 and not cf.done:
             reactor.iterate(0.01)
             i += 1
         
@@ -194,6 +200,13 @@ class TLSTestCase(unittest.TestCase):
             cf.lines,
             UnintelligentProtocol.pretext + UnintelligentProtocol.posttext
         )
+
+    
+class SpammyTLSTestCase(TLSTestCase):
+    fillBuffer = 1
+
+SpammyTLSTestCase.testTLS.im_func.todo = "startTLS doesn't empty buffer before starting TLS. :("
+SpammyTLSTestCase.testBackwardsTLS.im_func.todo = "startTLS doesn't empty buffer before starting TLS. :("
 
 class SingleLineServerProtocol(protocol.Protocol):
     def connectionMade(self):
@@ -236,9 +249,9 @@ class BufferingTestCase(unittest.TestCase):
         self.assertEquals(client.buffer, ["+OK <some crap>\r\n"])
 
 if SSL is None:
-    for case in (BufferingTestCase, TLSTestCase, StolenTCPTestCase):
+    for case in (BufferingTestCase, TLSTestCase, SpammyTLSTestCase, StolenTCPTestCase):
         case.skip = "OpenSSL not present"
 
 if not interfaces.IReactorSSL(reactor, None):
-    for case in (BufferingTestCase, TLSTestCase, StolenTCPTestCase):
+    for case in (BufferingTestCase, TLSTestCase, SpammyTLSTestCase, StolenTCPTestCase):
         case.skip = "Reactor doesn't support SSL"
