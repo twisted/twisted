@@ -219,6 +219,11 @@ class MultiService(_AbstractServiceCollection, ApplicationService):
         ApplicationService.stopService(self)
         v = self.services.values()
         l = [svc.stopService() for svc in v]
+        # The default stopService returns None, but you can't make that part
+        # of a DeferredList.
+        for i in range(len(l)):
+            if l[i] is None:
+                l[i] = defer.succeed(None)
         return defer.DeferredList(l).addBoth(self._cbAttachServiceNames, v)
 
     def _cbAttachServiceNames(self, result, services):

@@ -1,22 +1,22 @@
 # Twisted, the Framework of Your Internet
 # Copyright (C) 2001 Matthew W. Lefkowitz
-# 
+#
 # This library is free software; you can redistribute it and/or
 # modify it under the terms of version 2.1 of the GNU Lesser General Public
 # License as published by the Free Software Foundation.
-# 
+#
 # This library is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
 # Lesser General Public License for more details.
-# 
+#
 # You should have received a copy of the GNU Lesser General Public
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
 from pyunit import unittest
 from twisted.internet import reactor, protocol, error, app
-from twisted.internet.defer import Deferred, succeed, fail
+from twisted.internet.defer import SUCCESS, FAILURE, Deferred, succeed, fail
 from twisted.python import threadable
 threadable.init(1)
 
@@ -70,7 +70,7 @@ class InterfaceTestCase(unittest.TestCase):
         self.assertEquals(len(l2), 0)
 
     _called = 0
-    
+
     def _callback(self, x, **d):
         """Callback for testCallLater"""
         self.assertEquals(x, 1)
@@ -84,9 +84,9 @@ class InterfaceTestCase(unittest.TestCase):
             raise RuntimeError, "this shouldn't have been called"
         i = reactor.callLater(0.1, bad)
         i.cancel()
-        
+
         self.assertRaises(error.AlreadyCancelled, i.cancel)
-        
+
         start = time.time()
         i = reactor.callLater(0.5, self._callback, 1, a=1)
 
@@ -112,7 +112,7 @@ class InterfaceTestCase(unittest.TestCase):
 
 class Counter:
     index = 0
-    
+
     def add(self):
         self.index = self.index + 1
 
@@ -120,19 +120,19 @@ class Counter:
 class Order:
 
     stage = 0
-    
+
     def a(self):
         if self.stage != 0: raise RuntimeError
         self.stage = 1
-    
+
     def b(self):
         if self.stage != 1: raise RuntimeError
         self.stage = 2
-    
+
     def c(self):
         if self.stage != 2: raise RuntimeError
         self.stage = 3
-    
+
 
 class ThreadOrder(threading.Thread, Order):
 
@@ -148,7 +148,7 @@ class callFromThreadTestCase(unittest.TestCase):
     def schedule(self, *args, **kwargs):
         """Override in subclasses."""
         apply(reactor.callFromThread, args, kwargs)
-    
+
     def testScheduling(self):
         c = Counter()
         for i in range(100):
@@ -156,7 +156,7 @@ class callFromThreadTestCase(unittest.TestCase):
         for i in range(100):
             reactor.iterate()
         self.assertEquals(c.index, 100)
-    
+
     def testCorrectOrder(self):
         o = Order()
         self.schedule(o.a)
@@ -166,7 +166,7 @@ class callFromThreadTestCase(unittest.TestCase):
         reactor.iterate()
         reactor.iterate()
         self.assertEquals(o.stage, 3)
-    
+
     def testNotRunAtOnce(self):
         c = Counter()
         self.schedule(c.add)
@@ -181,7 +181,7 @@ class MyProtocol(protocol.Protocol):
 
 class MyFactory(protocol.Factory):
     """Sample factory."""
-    
+
     protocol = MyProtocol
 
 
@@ -206,8 +206,15 @@ class StoppingService(app.ApplicationService):
         else:
             return fail(Exception('boo'))
 
+class StoppingServiceII(app.ApplicationService):
+    def stopService(self):
+        # The default stopService returns None.
+        return None # return app.ApplicationService.stopService(self)
 
 class MultiServiceTestCase(unittest.TestCase):
+    def setUp(self):
+        self.callbackRan = 0
+
     def testDeferredStopService(self):
         ms = app.MultiService("MultiService")
         self.s1 = StoppingService("testService", 0)
@@ -217,8 +224,32 @@ class MultiServiceTestCase(unittest.TestCase):
         ms.stopService().addCallback(self.woohoo)
 
     def woohoo(self, res):
+        self.callbackRan = 1
         self.assertEqual(res[self.s1][0], 0)
         self.assertEqual(res[self.s2][0], 1)
 
-        
+    def testStopServiceNone(self):
+        """MultiService.stopService returns Deferred when service returns None.
+        """
+        ms = app.MultiService("MultiService")
+        self.s1 = StoppingServiceII("testService")
+        ms.addService(self.s1)
+        d = ms.stopService()
+        d.addCallback(self.cb_nonetest)
 
+    def cb_nonetest(self, res):
+        self.callbackRan = 1
+        self.assertEqual((SUCCESS, None), res[self.s1])
+
+    def testEmptyStopService(self):
+        """MutliService.stopService returns Deferred when empty."""
+        ms = app.MultiService("MultiService")
+        d = ms.stopService()
+        d.addCallback(self.cb_emptytest)
+
+    def cb_emptytest(self, res):
+        self.callbackRan = 1
+        self.assertEqual(len(res), 0)
+
+    def tearDown(self):
+        self.failUnless(self.callbackRan, "Callback was never run.")

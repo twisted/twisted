@@ -27,12 +27,12 @@ from twisted.python import failure
 class GenericError(Exception): pass
 
 class DeferredTestCase(unittest.TestCase):
-    
+
     def setUp(self):
         self.callback_results = None
         self.errback_results = None
         self.callback2_results = None
-        
+
     def _callback(self, *args, **kw):
         self.callback_results = args, kw
         return args[0]
@@ -92,7 +92,7 @@ class DeferredTestCase(unittest.TestCase):
                     #result[1][1] is now a Failure instead of an Exception
                               (result[1][0], str(result[1][1].value)),
                               result[2]],
-                             
+
                              [(defer.SUCCESS, "1"),
                               (defer.FAILURE, "2"),
                               (defer.SUCCESS, "3")])
@@ -107,7 +107,7 @@ class DeferredTestCase(unittest.TestCase):
         defr1.callback("1")
         defr2.errback(GenericError("2"))
         self.failUnlessEqual([str(result[0].value[0].value), str(result[0].value[1])],
-                             
+
                              ["2", "1"])
 
     def testTimeOut(self):
@@ -164,5 +164,20 @@ class DeferredTestCase(unittest.TestCase):
         assert self.callback_results[0][0] == 2, "Result should have been from second deferred:%s"% (self.callback_results,)
 
 
+class DeferredTestCaseII(unittest.TestCase):
+    def setUp(self):
+        self.callbackRan = 0
 
-testCases = [DeferredTestCase]
+    def testDeferredListEmpty(self):
+        """Testing empty DeferredList."""
+        dl = defer.DeferredList([])
+        dl.addCallback(self.cb_empty)
+
+    def cb_empty(self, res):
+        self.callbackRan = 1
+        self.failUnlessEqual([], res)
+
+    def tearDown(self):
+        self.failUnless(self.callbackRan, "Callback was never run.")
+
+testCases = [DeferredTestCase, DeferredTestCaseII]

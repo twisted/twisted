@@ -277,7 +277,7 @@ class Deferred:
                                                             self.result)
         return "<Deferred at %s>" % hex(id(self))
     __repr__ = __str__
-        
+
 
     def __del__(self):
         """Print tracebacks and die.
@@ -316,6 +316,9 @@ class DeferredList(Deferred):
         """
         self.resultList = [None] * len(deferredList)
         Deferred.__init__(self)
+        if len(deferredList) == 0:
+            self.callback([])
+
         index = 0
         for deferred in deferredList:
             deferred.addCallbacks(self._cbDeferred, self._cbDeferred,
@@ -332,7 +335,7 @@ class DeferredList(Deferred):
         deferred.addCallbacks(self._cbDeferred, self._cbDeferred,
                                   callbackArgs=(index,SUCCESS),
                                   errbackArgs=(index,FAILURE))
-        
+
     def _cbDeferred(self, result, index, succeeded):
         """(internal) Callback for when one of my deferreds fires.
         """
