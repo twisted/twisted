@@ -22,7 +22,7 @@ Package installer for Twisted
 Copyright (C) 2001 Matthew W. Lefkowitz
 All rights reserved, see LICENSE for details.
 
-$Id: setup.py,v 1.79 2002/12/09 19:17:11 radix Exp $
+$Id: setup.py,v 1.80 2002/12/10 16:16:52 moonfallen Exp $
 """
 
 import distutils, os, sys, string
@@ -49,7 +49,8 @@ class install_scripts_twisted(install_scripts):
         install_scripts.run(self)
         if os.name == "nt":
             for file in self.get_outputs():
-                os.rename(file, file + ".py")
+                if not file.endswith(".py"):
+                    os.rename(file, file + ".py")
 
 
 # make sure data files are installed in twisted package
@@ -229,6 +230,7 @@ http://starship.python.net/crew/mhammond/win32/Downloads.html
         'bin/coil', 'bin/tapconvert', 'bin/websetroot',
         'bin/generatelore', 'bin/html2latex', 'bin/hlint',
         'bin/tkmktap', 'bin/conch',
+        'twisted-post-install.py',
     ],
     'cmdclass': {
         'install_scripts': install_scripts_twisted,
@@ -244,8 +246,9 @@ if hasattr(distutils.dist.DistributionMetadata, 'get_platforms'):
     setup_args['platforms'] = "win32 posix"
 
 imPath = os.path.join('twisted', 'im')
-setup_args['data_files'] = [(imPath, [os.path.join(imPath, 'instancemessenger.glade')]),
-                            ('twisted', [os.path.join('twisted', 'plugins.tml')])]
+setup_args['data_files']=[(imPath, [os.path.join(imPath, 'instancemessenger.glade')]),
+                          ('twisted', [os.path.join('twisted', 'plugins.tml')]),
+                          ]
 
 # always define WIN32 under Windows
 if os.name == 'nt':
