@@ -93,15 +93,8 @@ class LatexSpitter:
         fout = StringIO()
         getLatexText(node, fout.write, latexEscape)
         data = fout.getvalue()
-        
-        # Insert hyphenation points at what look like reasonable spots.
-        olddata = data
-        # Try inserting them between lower- and upper-case letters.
-        data = lowerUpperRE.sub(r'\1\\textrm{\\-}\2', data)
-        if data == olddata:
-            # No hyphenation points were added, so fall back to adding
-            # hyphenation points at dots (except not for leading dots)
-            data = data[:1] + data[1:].replace('.', '.\\textrm{\\-}')
+        data = lowerUpperRE.sub(r'\1\\linebreak[1]\2', data)
+        data = data[:1] + data[1:].replace('.', '.\\linebreak[1]')
         self.writer('\\texttt{'+data+'}')
 
     def visitNode_img(self, node):
