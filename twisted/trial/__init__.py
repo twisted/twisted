@@ -71,7 +71,7 @@ class TrialAdapterRegistry(object):
                         (runner.PyUnitTestCaseRunner, itrial.IPyUnitTCFactory, itrial.ITestRunner),
                         (runner.TestCaseMethodRunner, types.MethodType, itrial.ITestRunner),
                         (runner.TestMethod, types.MethodType, itrial.ITestMethod),
-                        (trialdoctest.ModuleDocTestsRunner, types.ListType, itrial.ITestRunner),
+#:                        (trialdoctest.ModuleDocTestsRunner, types.ListType, itrial.ITestRunner),
                         
                         # ---- ITestStats  ------------------------------------
                         (reporter.TestStats, itrial.ITestSuite, itrial.ITestStats),
