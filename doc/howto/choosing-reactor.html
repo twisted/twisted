@@ -41,11 +41,12 @@
     toolkits:</p>
 
     <ul>
-      <li><a href="#gtk">GTK+</a></li>
+      <li><a href="#gtk">GTK+ 1.2 and 2.0</a></li>
       <li><a href="#qt">Qt</a></li>
       <li><a href="#tkinter">Tkinter</a></li>
       <li><a href="#wxpython">WxPython</a></li>
       <li><a href="#win32">Win32</a></li>
+      <li><a href="#pyui">PyUI</a></li>
     </ul>
 
     <p>When using applications that runnable using <code>twistd</code>, e.g.
@@ -152,8 +153,8 @@ win32eventreactor.install()
     <h3>GTK+</h3><a name="gtk" />
 
     <p>Twisted integrates with <a href="http://www.daa.com.au/~james/pygtk/"
-    >PyGTK</a>.  Sample applications using GTK+ and Twisted are available
-    in the Twisted CVS.</p>
+    >PyGTK</a>, versions 1.2 and 2.0.  Sample applications using GTK+ and
+    Twisted are available in the Twisted CVS.</p>
 
 <pre class="python">
 from twisted.internet import gtkreactor
@@ -214,6 +215,21 @@ wxsupport.install(myWxAppInstance)
 
     <p>An example Twisted application that uses WxWindows can be found
     in <code class="py-filename">doc/examples/wxdemo.py</code>.</p>
+
+    <h3>PyUI</h3><a name="pyui" />
+
+    <p>As with <a href="#tkinter">Tkinter</a>, the support for integrating
+    Twisted with a <a href="http://pyui.sourceforge.net">PyUI</a>
+    application uses specialized support code rather than a simple reactor.</p>
+
+<pre class="python">
+from twisted.internet import pyuisupport, reactor
+
+pyuisupport.install(args=(640, 480), kw={'renderer': 'gl'})
+</pre>
+
+    <p>An example Twisted application that uses PyUI can bve found in <code
+    class="py-filename">doc/examples/pyuidemo.py</code>.</p>
 
   </body>
 </html>
