@@ -11,6 +11,10 @@
 
 	* .: Releasing Twisted 1.0.7rc1.
 
+2003-09-12  Itamar Shtull-Trauring  <itamar@itamarst.org>
+
+	* twisted/spread/pb.py: new cred support for Perspective Broker.
+	
 2003-08-26  Dave Peticolas  <dave@krondo.com>
 
 	* doc/howto/xmlrpc.html: document sub-handler and introspection
