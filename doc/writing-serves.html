@@ -241,4 +241,96 @@ What now?
 <P>
 That is it. You have written a twisted server.
 
+<H2>Post-finishing Touches</H2>
+
+<P>
+So, you are happily running a twisted server via twistd, when suddenly,
+you wish you could add another HTTP server running on port 833. Or maybe
+you want your living HTTP server to become virtual-domains based. What
+are you going to do?
+</P>
+
+<P>
+Well, you have several options.
+</P>
+
+<STRONG>Warning: some of this stuff assumes a 0.9.6 or later version
+of twisted. If you are running an older version, you should upgrade</STRONG>
+
+<P>
+To add another HTTP server to your tap, just use mktap's --append option.
+Note how that does not require support in the twisted.tap.whatever
+module, so it will just work even for your newly written protocol.
+</P>
+
+<P>
+Changing the HTTP is a bit more complicated. What you will certainly
+want to do is add a telnet server to your tap. Just use "mktap --append telnet".
+It is recommended to give the username/password arguments and not use
+the defaults, for obvious reasons.
+</P>
+
+<P>
+Now that you have the telnet server, you can just telnet into your
+application and change things there on the run.
+</P>
+
+<P>
+When you telnet, you are given, after the usual name/password login box,
+absolutely no prompt. Hopefully, this will change. The first thing you
+will want to do is import __main__. In __main__, there is a global
+named "application". This is your application. If you want, you can add
+servers to it on the fly:
+
+<PRE>
+import __main__
+from twisted.web import static, server
+file = static.File("/var/www")
+factory = server.Site(file)
+__main__.application.listenOn(8443, factory)
+</PRE>
+
+<P>
+That's it! It really is this easy.
+</P>
+
+<P>
+Now, let us say you want to configure the server to serve another
+directory instead.
+</P>
+
+<PRE>
+import __main__
+__main__.application.ports
+-> [&lt;twisted.protocols.telnet.ShellFactory on 4040>, &lt;twisted.web.server.Site on 8443>]
+</PRE>
+
+<P>
+So it is the second port. Great!
+</P>
+
+<PRE>
+__main__.application.ports[1].factory.resource.path = 'static'
+</PRE>
+
+<P>
+In similar ways, you can configure your factory's resource to be 
+a vhost.NamedVirtualHost, configure the name servers, and leave it
+running.
+</P>
+
+<P>
+If you want to save known good configurations, just use
+</P>
+
+<PRE>
+__main__.application.save("known-good")
+</PRE>
+
+<P>
+Which will save the application to &lt;original tap file>+"known-good.tap"
+On shutdown, it will behave as if __main__.application.save("shutdown")
+has been issued.
+</P>
+
 </BODY></HTML>
