@@ -121,6 +121,66 @@ def unq(s):
         return s[1:-1]
     return s
 
+def DigestCalcHA1(
+    pszAlg,
+    pszUserName,
+    pszRealm,
+    pszPassword,
+    pszNonce,
+    pszCNonce,
+):
+    m = md5.md5()
+    m.update(pszUserName)
+    m.update(":")
+    m.update(pszRealm)
+    m.update(":")
+    m.update(pszPassword)
+    HA1 = m.digest()
+    if pszAlg == "md5-sess":
+        m = md5.md5()
+        m.update(HA1)
+        m.update(":")
+        m.update(pszNonce)
+        m.update(":")
+        m.update(pszCNonce)
+        HA1 = m.digest()
+    return HA1.encode('hex')
+
+def DigestCalcResponse(
+    HA1,
+    pszNonce,
+    pszNonceCount,
+    pszCNonce,
+    pszQop,
+    pszMethod,
+    pszDigestUri,
+    pszHEntity,
+):
+    m = md5.md5()
+    m.update(pszMethod)
+    m.update(":")
+    m.update(pszDigestUri)
+    if pszQop == "auth-int":
+        m.update(":")
+        m.update(HEntity)
+    HA2 = m.digest().encode('hex')
+    
+    m = md5.md5()
+    m.update(HA1)
+    m.update(":")
+    m.update(pszNonce)
+    m.update(":")
+    if pszNonceCount and pszCNonce: # pszQop:
+        m.update(pszNonceCount)
+        m.update(":")
+        m.update(pszCNonce)
+        m.update(":")
+        m.update(pszQop)
+        m.update(":")
+    m.update(HA2)
+    hash = m.digest().encode('hex')
+    return hash
+
 class Via:
     """A SIP Via header."""
 
@@ -793,6 +853,11 @@ class IAuthorizer(Interface):
         """
  
 class BasicAuthorizer:
+    """Authorizer for insecure Basic (base64-encoded plaintext) authentication.
+    
+    This form of authentication is broken and insecure.  Do not use it.
+    """
+
     __implements__ = (IAuthorizer,)
     
     def getChallenge(self, peer):
@@ -818,32 +883,35 @@ class BasicAuthorizer:
 class DigestedCredentials(cred.credentials.UsernameHashedPassword):
     """Yet Another Simple Digest-MD5 authentication scheme"""
     
-    def __init__(self, username, fields):
+    def __init__(self, username, fields, challenges):
         self.username = username
         self.fields = fields
+        self.challenges = challenges
     
     def checkPassword(self, password):
-        H = lambda x: md5.md5(x).digest()
-        KD = lambda s, d: H(s + ":" + d)
 
         method = 'REGISTER'
         response = self.fields.get('response')
         uri = self.fields.get('uri')
-        nonce = self.fields.get('nonce', '')
+        nonce = self.fields.get('nonce')
+        cnonce = self.fields.get('cnonce')
+        nc = self.fields.get('nc')
+        algo = self.fields.get('algorithm')
+        qop = self.fields.get('qop-options')
+        opaque = self.fields.get('opaque')
 
+        if opaque not in self.challenges:
+            return False
+        del self.challenges[opaque]
+        
         user, domain = self.username.split('@', 1)
         if uri is None:
             uri = 'sip:' + domain
 
-        print 'user=%(user)s\ndomain=%(domain)s\nuri=%(uri)s' % locals()
-        print 'method=%(method)s\nresponse=%(response)s\nnonce=%(nonce)s' % locals()
-
-        A1 = H(user + ':' + domain + ':' + password).encode('hex')
-        A2 = H(method + ':' + uri).encode('hex')
-        expected = KD(A1, nonce + ":" + A2).encode('hex')
-        
-        print 'A1=%(A1)s\nA2=%(A2)s\nexpected=%(expected)s' % locals()
-
+        expected = DigestCalcResponse(
+            DigestCalcHA1(algo, user, domain, password, nonce, cnonce),
+            nonce, nc, cnonce, qop, method, uri, None,
+        )
         return expected == response
 
 class DigestAuthorizer:
@@ -857,23 +925,25 @@ class DigestAuthorizer:
     def getChallenge(self, peer):
         c = tuple([random.randrange(sys.maxint) for _ in range(3)])
         c = '%d%d%d' % c
-        self.outstanding[c] = True
+        o = str(random.randrange(sys.maxint))
+        self.outstanding[o] = c
         return ','.join((
-            'nonce="%s"' % 'abcdefg', # c.encode('base64').strip(),
-            'opaque="%s"' % str(random.randrange(sys.maxint)),
+            'nonce="%s"' % c,
+            'opaque="%s"' % o,
             'qop-options="auth"',
+            'algorithm="MD5"',
         ))
         
     def decode(self, response):
         response = ' '.join(response.splitlines())
         parts = response.split(',')
-        auth = dict([(k, unq(v)) for (k, v) in [p.split('=', 1) for p in parts]])
+        auth = dict([(k.strip(), unq(v.strip())) for (k, v) in [p.split('=', 1) for p in parts]])
         try:
             username = auth['username']
         except KeyError:
             raise SIPError(401)
         try:
-            return DigestedCredentials(username, auth)
+            return DigestedCredentials(username, auth, self.outstanding)
         except:
             raise SIPError(400)
 
