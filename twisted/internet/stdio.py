@@ -106,4 +106,4 @@ class StandardIO(abstract.FileDescriptor):
     def connectionLost(self, reason):
         """The connection was lost.
         """
-        self.protocol.connectionLost()
+        self.protocol.connectionLost(reason)
