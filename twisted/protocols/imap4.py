@@ -298,7 +298,7 @@ class LiteralFile:
         self.size = size
         self.defer = defered
         if size > self._memoryFileLimit:
-            self.data = tempfile.TemproraryFile()
+            self.data = tempfile.TemporaryFile()
         else:
             self.data = StringIO.StringIO()
 
@@ -1485,7 +1485,7 @@ class IMAP4Client(basic.LineReceiver):
         @return: A file-like object
         """
         if octets > self._memoryFileLimit:
-            return tempfile.TemproraryFile()
+            return tempfile.TemporaryFile()
         else:
             return StringIO.StringIO()
 
