@@ -48,26 +48,73 @@ class Order:
         self.stage = 3
     
 
-class TaskTestCase(unittest.TestCase):
-    """Test the task scheduler."""
+class TaskTestMixin:
+    """Mixin for task scheduler tests."""
+    
+    def schedule(self, *args, **kwargs):
+        """Override in subclasses."""
+        raise NotImplentedError
     
     def testScheduling(self):
         c = Counter()
         for i in range(100):
-            task.schedule(c.add)
+            self.schedule(c.add)
         for i in range(100):
             main.iterate()
         self.assertEquals(c.index, 100)
     
     def testCorrectOrder(self):
         o = Order()
-        task.schedule(o.a)
-        task.schedule(o.b)
-        task.schedule(o.c)
+        self.schedule(o.a)
+        self.schedule(o.b)
+        self.schedule(o.c)
         main.iterate()
         main.iterate()
         main.iterate()
         self.assertEquals(o.stage, 3)
+    
+    def testNotRunAtOnce(self):
+        c = Counter()
+        self.schedule(c.add)
+        # scheduled tasks should not be run at once:
+        self.assertEquals(c.index, 0)
+        main.iterate()
+        self.assertEquals(c.index, 1)
 
 
-testCases = [TaskTestCase]
+class DefaultTaskTestCase(TaskTestMixin, unittest.TestCase):
+    """Test the task.schedule scheduler."""
+    
+    def schedule(self, *args, **kwargs):
+        apply(task.schedule, args, kwargs)
+
+
+class ThreadedTaskTestCase(TaskTestMixin, unittest.TestCase):
+    """Test the thread-safe task scheduler."""
+    
+    def setUp(self):
+        self.scheduler = task.ThreadedScheduler()
+        main.addDelayed(self.scheduler)
+    
+    def tearDown(self):
+        main.removeDelayed(self.scheduler)
+        del self.scheduler
+    
+    def schedule(self, *args, **kwargs):
+        apply(self.scheduler.addTask, args, kwargs)
+
+
+class NonThreadedTaskTestCase(TaskTestMixin, unittest.TestCase):
+    """Test the non-thread-safe task scheduler."""
+    
+    def setUp(self):
+        self.scheduler = task.Scheduler()
+        main.addDelayed(self.scheduler)
+    
+    def tearDown(self):
+        main.removeDelayed(self.scheduler)
+        del self.scheduler
+    
+    def schedule(self, *args, **kwargs):
+        apply(self.scheduler.addTask, args, kwargs)
+
