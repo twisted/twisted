@@ -226,8 +226,10 @@ class Process(styles.Ephemeral):
         if not signal.getsignal(signal.SIGCHLD):
             log.msg("spawnProcess called, but the SIGCHLD handler is not " +
                     "installed. This probably means you have not yet " +
-                    "called reactor.run, and you will probably never see " +
-                    "this process finish")
+                    "called reactor.run, or called " + 
+                    "reactor.run(installSignalHandler=0). You will probably " +
+                    "never see this process finish, and it may become a " +
+                    "zombie process.")
             # if you see this message during a unit test, look in
             # test-standard.xhtml or twisted.test.test_process.SignalMixin
             # for a workaround
