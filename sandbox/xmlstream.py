@@ -1,5 +1,7 @@
 "THIS DOESN'T WORK"
+from __future__ import nested_scopes
 
+import cgi
 from twisted.web import microdom, domhelpers
 from twisted.python import reflect
 
@@ -235,9 +237,25 @@ class JabberIQMixin:
              query = _getElementNamedOrNone(message, 'query')
              ns = query.attributes['xmlns']
              d = self.methodCalled(type, ns, id, from_, to, query)
-             d.addCallback() # do something to send an iq type=result
-             d.addErrback() # do something to send an iq type=error
-         
+             def _(query):
+                 myTo, myFrom = from_, to
+                 e = microdom.Element('iq', {'id': id, 'from': to,
+                                             'to': 'from})
+                 e.appendChild(query)
+                 self.writeElement(e)
+             d.addCallback(_)
+             def _(failure):
+                 failure.trap(IQFailure)
+                 code, text = failure.value
+                 myTo, myFrom = from_, to
+                 e = microdom.Element('iq', {'id': id, 'from': to,
+                                             'to': 'from})
+                 error = microdom.Element('error', {'code': code})
+                 error.appendChild(microdom.Text(cgi.escape(text)))
+                 e.appendChild(error)
+                 self.writeElement(e)
+             d.addErrback(_)
+
     def methodCalled(self, type, ns, from_, to, id, query):
         # fail
         return defer.fail(IQFailure(502, "I am a silly monkey"))
