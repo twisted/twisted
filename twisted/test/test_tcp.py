@@ -517,7 +517,6 @@ class ProperlyCloseFilesTestCase(unittest.TestCase):
     def _connectionMade(self):
         self.totalConnections += 1
         self.connector()
-        print 'connection made'
 
     def tearDown(self):
         self.listener.stopListening()
