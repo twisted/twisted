@@ -65,4 +65,3 @@ def output(func, *args, **kw):
     except:
         io = StringIO()
         return PRE(io.getvalue())
-

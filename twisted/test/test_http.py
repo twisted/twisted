@@ -94,7 +94,7 @@ Accept: text/html
 
 '''
     requests = string.replace(requests, '\n', '\r\n')
-    
+
     expected_response = "HTTP/1.0 200 OK\015\012Request: /\015\012Command: GET\015\012Version: HTTP/1.0\015\012Content-length: 13\015\012\015\012'''\012None\012'''\012"
 
     def testBuffer(self):
@@ -137,7 +137,7 @@ Content-Length: 10
 
 '''
     requests = string.replace(requests, '\n', '\r\n')
-    
+
     expected_response = "HTTP/1.1 200 OK\015\012Request: /\015\012Command: GET\015\012Version: HTTP/1.1\015\012Content-length: 13\015\012\015\012'''\012None\012'''\012HTTP/1.1 200 OK\015\012Request: /\015\012Command: POST\015\012Version: HTTP/1.1\015\012Content-length: 21\015\012\015\012'''\01210\0120123456789'''\012HTTP/1.1 200 OK\015\012Request: /\015\012Command: POST\015\012Version: HTTP/1.1\015\012Content-length: 21\015\012\015\012'''\01210\0120123456789'''\012HTTP/1.1 200 OK\015\012Request: /\015\012Command: HEAD\015\012Version: HTTP/1.1\015\012Content-length: 13\015\012\015\012"
 
 class HTTP1_1_close_TestCase(HTTP1_0TestCase):
@@ -152,7 +152,7 @@ GET / HTTP/1.0
 '''
 
     requests = string.replace(requests, '\n', '\r\n')
-    
+
     expected_response = "HTTP/1.1 200 OK\015\012Connection: close\015\012Request: /\015\012Command: GET\015\012Version: HTTP/1.1\015\012Content-length: 13\015\012\015\012'''\012None\012'''\012"
 
 
@@ -162,12 +162,12 @@ class HTTP0_9TestCase(HTTP1_0TestCase):
 GET /
 '''
     requests = string.replace(requests, '\n', '\r\n')
-    
+
     expected_response = "'''\012None\012'''\012"
 
 
 class HTTPLoopbackTestCase(unittest.TestCase):
-    
+
     expectedHeaders = {'request' : '/foo/bar',
                        'command' : 'GET',
                        'version' : 'HTTP/1.0',
@@ -176,24 +176,24 @@ class HTTPLoopbackTestCase(unittest.TestCase):
     gotStatus = 0
     gotResponse = 0
     gotEndHeaders = 0
-    
+
     def _handleStatus(self, version, status, message):
         self.gotStatus = 1
         self.assertEquals(version, "HTTP/1.0")
         self.assertEquals(status, "200")
-    
+
     def _handleResponse(self, data):
         self.gotResponse = 1
         self.assertEquals(data, "'''\n10\n0123456789'''\n")
-    
+
     def _handleHeader(self, key, value):
         self.numHeaders = self.numHeaders + 1
         self.assertEquals(self.expectedHeaders[string.lower(key)], value)
-    
+
     def _handleEndHeaders(self):
         self.gotEndHeaders = 1
         self.assertEquals(self.numHeaders, 4)
-    
+
     def testLoopback(self):
         server = http.HTTPChannel()
         server.requestFactory = DummyHTTPHandler
@@ -233,8 +233,8 @@ class PersistenceTestCase(unittest.TestCase):
               (PRequest(), "HTTP/1.1", 1, {'connection': None}),
               (PRequest(), "HTTP/0.9", 0, {'connection': None}),
               ]
-              
-              
+
+
     def testAlgorithm(self):
         c = http.HTTPChannel()
         for req, version, correctResult, resultHeaders in self.ptests:
@@ -248,7 +248,7 @@ class ChunkingTestCase(unittest.TestCase):
 
     strings = ["abcv", "", "fdfsd423", "Ffasfas\r\n",
                "523523\n\rfsdf", "4234"]
-    
+
     def testChunks(self):
         for s in self.strings:
             self.assertEquals((s, ''), http.fromChunk(http.toChunk(s)))
@@ -265,5 +265,3 @@ class ChunkingTestCase(unittest.TestCase):
             except ValueError:
                 pass
         self.assertEquals(result, self.strings)
-
-        

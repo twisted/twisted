@@ -42,7 +42,7 @@ class NetstringReceiver(protocol.Protocol):
 
     Each string makes a callback to stringReceived, with a single
     argument of that string.
-    
+
     Security features:
     1) Messages are limited in size, useful if you don't want someone
        sending you a 500MB netstring (change MAX_LENGTH to the maximum
@@ -114,7 +114,7 @@ class NetstringReceiver(protocol.Protocol):
         except NetstringParseError:
             self.transport.loseConnection()
             self.brokenPeer = 1
-    
+
     def sendString(self, data):
         self.transport.write('%d:%s,' % (len(data), data))
 
@@ -204,10 +204,10 @@ class Int32StringReceiver(protocol.Protocol):
 
     An int32 string is a string prefixed by 4 bytes, the 32-bit length of
     the string encoded in network byte order.
-    
+
     This class publishes the same interface as NetstringReceiver.
     """
-    
+
     MAX_LENGTH = 99999
     recvd = ""
 
@@ -242,10 +242,10 @@ class Int16StringReceiver(protocol.Protocol):
 
     An int16 string is a string prefixed by 2 bytes, the 16-bit length of
     the string encoded in network byte order.
-    
+
     This class publishes the same interface as NetstringReceiver.
     """
-    
+
     recvd = ""
 
     def stringReceived(self, msg):
@@ -280,7 +280,7 @@ class StatefulStringProtocol:
     (prefixed with 'proto_') depending on state."""
 
     state = 'init'
-    
+
     def stringReceived(self,string):
         """Choose a protocol phase function and call it.
 

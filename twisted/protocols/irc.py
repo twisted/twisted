@@ -207,11 +207,11 @@ class IRCClient(basic.LineReceiver):
 
     dcc_destdir = '.'
     dcc_sessions = None
-    
+
     # If this is false, no attempt will be made to identify
     # ourself to the server.
     performLogin = 1
-    
+
     # Delay between sending lines, default to no throttling
     # to retain traditional behavior
     lineRate = None

@@ -74,7 +74,7 @@ class WireTestCase(unittest.TestCase):
         t = StringIOWithoutClosing()
         a = wire.QOTD()
         a.makeConnection(protocol.FileWrapper(t))
-        self.failUnlessEqual(t.getvalue(), 
+        self.failUnlessEqual(t.getvalue(),
                              "An apple a day keeps the doctor away.\r\n")
 
     def testDiscard(self):
@@ -175,5 +175,3 @@ class NetstringReceiverTestCase(unittest.TestCase):
             r.dataReceived(s)
             if not r.brokenPeer:
                 raise AssertionError("connection wasn't closed on illegal netstring %s" % repr(s))
-
-
