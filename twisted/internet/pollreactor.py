@@ -53,6 +53,9 @@ class PollReactor(posixbase.PosixReactorBase):
         try:
             # the easy way
             fd = selectable.fileno()
+            # make sure the fd is actually real.  In some situations we can get
+            # -1 here.
+            mdict[fd]
         except:
             # the hard way: necessary because fileno() may disappear at any
             # moment, thanks to python's underlying sockets impl
