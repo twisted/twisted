@@ -47,11 +47,10 @@ class SimpleRealm:
 
 
 if __name__ == '__main__':
-    import pbecho
     from twisted.internet import reactor
     from twisted.cred.portal import Portal
     from twisted.cred.checkers import InMemoryUsernamePasswordDatabaseDontUse
-    portal = Portal(pbecho.SimpleRealm())
+    portal = Portal(SimpleRealm())
     checker = InMemoryUsernamePasswordDatabaseDontUse()
     checker.addUser("guest", "guest")
     portal.registerChecker(checker)
