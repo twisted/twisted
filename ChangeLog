@@ -1,3 +1,9 @@
+2003-09-30  Brian Warner  <warner@lothar.com>
+
+	* twisted/test/test_conch.py (testOurServerOpenSSHClient): replace
+	reactor.run() with .iterate calls: when using .run, exceptions in
+	the server cause a hang.
+
 2003-9-29  Moshe Zadka <moshez@twistedmatrix.com>
 
 	* twisted/tap/procmon.py twisted/plugins.tml: remove procmon

@@ -436,6 +436,9 @@ class SSHTestOpenSSHProcess(protocol.ProcessProtocol):
         self.buf += data
         theTest.fac.proto.expectedLoseConnection = 1
 
+    def errReceived(self, data):
+        print "ERR(ssh): '%s'" % data
+
     def processEnded(self, reason):
         global theTest
         self.done = 1
@@ -536,15 +539,13 @@ class SSHTransportTestCase(unittest.TestCase):
             reactor.iterate(0.1)
             reactor.iterate(0.1)
             reactor.iterate(0.1)
-            reactor.crash()
             p.done = 1
             self.fail('test took too long')
         call = reactor.callLater(10, _failTest)
         reactor.spawnProcess(p, ssh_path, cmds)
-        reactor.run()
         # wait for process to finish
         while not p.done:
-            reactor.iterate()
+            reactor.iterate(0.1)
         try:
             call.cancel()
         except:
