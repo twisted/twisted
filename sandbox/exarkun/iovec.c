@@ -85,7 +85,7 @@ PyIOVector_add(PyIOVector* self, PyObject* args) {
         return PyErr_NoMemory();
     }
     
-    printf("Allocated (vectors[%d].iov_base) %p\n", self->size, vectors[self->size].iov_base);
+    printf("Allocated (vectors[%d].iov_base) %p\n", (int)self->size, vectors[self->size].iov_base);
 
     memcpy(vectors[self->size].iov_base, buf, len);
     vectors[self->size].iov_len = len;
@@ -108,11 +108,17 @@ iovec_delete(PyIOVector* iovec, int bytes) {
 
     if (bytes == iovec->bytes) {
         iovec_dealloc_vectors(iovec);
-        return;
+        return PyInt_FromLong(bytes);
+    } else if (bytes > iovec->bytes) {
+        /* XXX - raise a ValueError here */
+        printf("Wanted to delete %d bytes, but the iovec is only %d long\n", bytes, (int)iovec->size);
+        return NULL;
     }
     
     for (i = 0; i < iovec->size; ++i) {
         if (bytes == 0) {
+            if (i == 0)
+                break;
             /* Chop! */
             struct iovec* vtmp;
             
@@ -131,7 +137,7 @@ iovec_delete(PyIOVector* iovec, int bytes) {
             
             iovec->size -= i;
             iovec->bytes -= origBytes;
-            return;
+            break;
         } else if (bytes < iovec->vectors[i].iov_len) {
             /* Partial deletion */
             struct iovec* vtmp = iovec->vectors;
@@ -157,9 +163,9 @@ iovec_delete(PyIOVector* iovec, int bytes) {
             iovec->size -= i;
 
             if (i == 0) /* We're actually done cleaning up already */
-                return;
+                return NULL;
 
-            printf("New iovec %d elements\n", iovec->size);
+            printf("New iovec %d elements\n", (int)iovec->size);
             iovec->vectors = PyMem_New(struct iovec, iovec->size);
             if (iovec->vectors == NULL) {
                 printf("Deallocate (tmp) %p\n", tmp);
@@ -177,10 +183,11 @@ iovec_delete(PyIOVector* iovec, int bytes) {
             printf("Deallocate (previous iovec->vectors) %p\n", vtmp);
             PyMem_Del(vtmp);
 
-            return;
+            return NULL;
         }
         bytes -= iovec->vectors[i].iov_len;
     }
+    return PyInt_FromLong(origBytes);
 }
 
 static char PyIOVector_write_doc[] =
