@@ -22,7 +22,7 @@ Package installer for Twisted
 Copyright (C) 2001 Matthew W. Lefkowitz
 All rights reserved, see LICENSE for details.
 
-$Id: setup.py,v 1.137 2003/09/22 01:19:38 exarkun Exp $
+$Id: setup.py,v 1.138 2003/09/22 01:37:38 exarkun Exp $
 """
 
 import distutils, os, sys, string
@@ -137,9 +137,8 @@ class build_ext_twisted(build_ext):
         return self._compile_helper("""\
 %s
 int main(int argc, char **argv)
-{ struct %s foo, bar;  foo.%s = bar.%s;  return(0); }
-""" % ('\n'.join(['#include <%s>' % n for n in include_files]), struct, member,
-        member))
+{ struct %s foo;  (void)foo.%s;  return(0); }
+""" % ('\n'.join(['#include <%s>' % n for n in include_files]), struct, member))
     
     def _detect_modules(self):
         """
