@@ -175,6 +175,9 @@ class Element(Node):
     def hasAttribute(self, name):
         return self.attributes.has_key(name)
 
+    def hasChildNodes(self):
+        return self.childNodes
+
     def appendChild(self, child):
         # should we be checking the type of the child?
         self.childNodes.append(child)
