@@ -65,7 +65,7 @@ Instance Method: s.center, where s is an instance of UserString.UserString:
 @author: U{Glyph Lefkowitz<mailto:glyph@twistedmatrix.com>}
 """
 
-__version__ = "$Revision: 1.3 $"[11:-2]
+__version__ = "$Revision: 1.4 $"[11:-2]
 
 # System Imports
 import string
@@ -437,18 +437,22 @@ class _Unjellier:
                 inst.__class__ = regClass
                 val = inst.unjellyFor(self,obj)
             else:
+                refid = self.getRefId()
+                self.resolveReference(NotKnown())
                 val = regClass(self, obj) # this is how it ought to be done
-                self.resolveReference(val)
+                self.resolveReference(val, refid)
             if hasattr(val, 'postUnjelly'):
                 self.postCallbacks.append(inst.postUnjelly)
             return val
         regFactory = unjellyableFactoryRegistry.get(jelType)
         if regFactory is not None:
+            refid = self.getRefId()
+            self.resolveReference(NotKnown())
             state = self.unjelly(obj[1])
             inst = regFactory(state)
             if hasattr(inst, 'postUnjelly'):
                 self.postCallbacks.append(inst.postUnjelly)
-            return inst
+            return self.resolveReference(inst, refid)
         thunk = getattr(self, '_unjelly_%s'%jelType, None)
         if thunk is not None:
             ret = thunk(obj[1:])
@@ -462,11 +466,14 @@ class _Unjellier:
                 raise InsecureJelly("Class %s not allowed." % jelType)
             if hasattr(clz, "__setstate__"):
                 ret = instance(clz, {})
+                self.resolveReference(ret)
                 state = self.unjelly(obj[1])
                 ret.__setstate__(state)
             else:
+                ret = instance(clz, {})
+                self.resolveReference(ret)
                 state = self.unjelly(obj[1])
-                ret = instance(clz, state)
+                ret.__dict__ = state
             if hasattr(clz, 'postUnjelly'):
                 self.postCallbacks.append(ret.postUnjelly)
         return ret
@@ -509,20 +516,14 @@ class _Unjellier:
         return len(self.references) - 1
 
     def _unjelly_tuple(self, lst):
-        l = range(len(lst))
+        l = [NotKnown()] * len(lst)
         result = None
-        preTuple = NotKnown()
+        preTuple = _Tuple(l)
         refid = self.getRefId()
-        self.references[-1] = preTuple
-        for elem in l:
-            val = self.unjelly(lst[elem])
-            assert not isinstance(val, NotKnown),\
-                   "Sorry, tuples need stuff resolved"
-            l[elem] = val
-        realTuple = tuple(l)
-        preTuple.resolveDependants(realTuple)
-        self.resolveReference(realTuple, refid)
-        return realTuple
+        self.resolveReference(preTuple)
+        for elem in xrange(len(l)):
+            self.unjellyInto(preTuple, elem, lst[elem])
+        return preTuple.resolvedObject or preTuple
     
     def _unjelly_list(self, lst):
         l = range(len(lst))

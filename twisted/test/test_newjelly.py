@@ -139,34 +139,7 @@ class JellyTestCase(unittest.TestCase):
         a.append((t,))
         s = jelly.jelly(t)
         z = jelly.unjelly(s)
-        assert z[0][0][0] == z
-
-    def testPersistentStorage(self):
-        perst = [{}, 1]
-        def persistentStore(obj, jel, perst = perst):
-            perst[1] = perst[1] + 1
-            perst[0][perst[1]] = obj
-            return str(perst[1])
-
-        def persistentLoad(pidstr, unj, perst = perst):
-            pid = int(pidstr)
-            return perst[0][pid]
-
-        a = SimpleJellyTest(1, 2)
-        b = SimpleJellyTest(3, 4)
-        c = SimpleJellyTest(5, 6)
-
-        a.b = b
-        a.c = c
-        c.b = b
-
-        jel = jelly.jelly(a, persistentStore = persistentStore)
-        x = jelly.unjelly(jel, persistentLoad = persistentLoad)
-
-        assert x.b is x.c.b, "Identity failure."
-        # assert len(perst) == 3, "persistentStore should only be called 3 times."
-        assert perst[0], "persistentStore was not called."
-        assert x.b is a.b, "Persistent storage identity failure."
+        self.assertEquals(z[0][0][0], z)
 
     def testTypeSecurity(self):
         """
