@@ -243,7 +243,7 @@ class DOMTemplate(Resource):
 #            parent.savePickleChild(compiledTemplatePath, compiledTemplate)
         else:
             from cPickle import load
-            compiledTemplate = load(open(compiledTemplatePath))
+            compiledTemplate = load(open(compiledTemplatePath, "rb"))
         return compiledTemplate
 
     def setUp(self, request, document):
