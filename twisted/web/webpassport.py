@@ -56,7 +56,6 @@ class SessionPerspectiveMixin(widgets.WidgetMixin):
         """See widgets.WidgetMixin.
         """
         sess = request.getSession()
-        print 'I bet we NEVER SEE THIS', sess
         if hasattr(sess,'perspectives'):
             if sess.perspectives.has_key(self.service.serviceName):
                 return self.displayMixedWidget(request)
@@ -70,7 +69,6 @@ class SessionPerspectiveMixin(widgets.WidgetMixin):
         """Return a Perspective instance.
         """
         sess = request.getSession()
-        print 'in getPerspective', sess
         if hasattr(sess, 'perspectives'):
             return sess.perspectives.get(self.service.serviceName)
 

@@ -44,6 +44,38 @@ class ForumPage(widgets.WidgetPage):
     }
     '''
 
+    template = '''
+    <HTML>
+    <STYLE>
+    %%%%self.stylesheet%%%%
+    </style>
+    <HEAD>
+    <TITLE>%%%%self.title%%%%</title>
+    <BASE href="%%%%request.prePathURL()%%%%">
+    </head>
+    <BODY>
+    %%%%self.header(request)%%%%
+    %%%%self.widget%%%%
+    %%%%self.footer(request)%%%%
+    </body>
+    </html>
+    '''
+
+    def header(self, request):
+        p = self.widget.getPerspective(request)
+        if p:
+            msg = "logged in as %s" % p.perspectiveName
+        else:
+            msg = "<a href=/login/>not logged in</a>"
+        title = "<table border=0 width=100%%> <tr> <td> %s:</td> <td> <a href='/'>%s</a></td> <td align=right> %s </td></tr></table><hr>" % (
+            time.ctime(),
+            self.widget.service.desc,
+            msg)
+        return title
+
+    def footer(self, request):
+        return "<hr> <i> Twisted Forums - %s </i>  (%d users online)" % (self.widget.service.desc, self.widget.service.usersOnline)
+    
 class ForumBaseGadget(webpassport.SessionPerspectiveMixin, widgets.Gadget, widgets.StreamWidget):
     """
     base gadget class for all forum gadgets. This sets the page template.
@@ -53,27 +85,6 @@ class ForumBaseGadget(webpassport.SessionPerspectiveMixin, widgets.Gadget, widge
     def __init__(self, service):
         self.service = service
         widgets.Gadget.__init__(self)
-
-    def streamHeader(self, write, request):
-        p = self.getPerspective(request)
-        title = "<table border=0 width=100%%> <tr> <td> %s:</td> <td> <a href='/'>%s</a></td> <td align=right> logged in as %s </td></tr></table><hr>" % (
-            time.ctime(),
-            self.service.desc,
-            (p and p.perspectiveName) or 'anonymous')
-        write(title)
-
-    def streamContent(self, write, request):
-        write("No content for Forum page(?)")
-
-    def streamFooter(self, write, request):
-        write("<hr> <i> Twisted Forums - %s </i>  (%d users online)" % (self.service.desc, self.service.usersOnline))
-
-    def stream(self, write, request):
-        self.streamHeader(write, request)
-        self.streamContent(write, request)
-        self.streamFooter(write, request)
-
-        
     
 """The forum application has these functional pages:
      intro   - (/)        - List of forums
@@ -84,13 +95,14 @@ class ForumBaseGadget(webpassport.SessionPerspectiveMixin, widgets.Gadget, widge
      reply   - (/reply)   - Reply form to reply to a message
      new     - (/new)     - Post a new message/thread
      register- (/register) - Register a new user
+     login   - (/login)   - enter username and password to log in
 
   The ForumGadget contains widgets to perform each of these functions.
   
 """
 
 class ForumsGadget(ForumBaseGadget):
-    title = " "
+    title = "List of Forums"
 
     def __init__(self, service):
         ForumBaseGadget.__init__(self, service)
@@ -101,11 +113,12 @@ class ForumsGadget(ForumBaseGadget):
         self.putWidget('reply',   ReplyForm(self.service))
         self.putWidget('new',     NewPostForm(self.service))
         self.putWidget('register',RegisterUser(self.service))
+        self.putWidget('login',   LoginForm(self.service))
 
-    def streamContent(self, write, request):
+    def stream(self, write, request):
         """Display the intro list of forums. This is only called if there is no URI.
         """
-        write(self.service.manager.getForums('poster', self.gotForums, widgets.formatFailure))
+        write( self.service.manager.getForums('poster', self.gotForums, widgets.formatFailure) )
 
     def gotForums(self, data):
         l = []
@@ -126,14 +139,14 @@ class ThreadsGadget(ForumBaseGadget):
     """Displays a list of threads for a forum
     """
     
-    title = " "
+    title = "List of Threads for a forum"
     
-    def streamContent(self, write, request):
+    def stream(self, write, request):
         self.forum_id = int(request.args.get('forum_id',[0])[0])
         print "Getting threads for forum: %d" % self.forum_id
-        write(self.service.manager.getTopMessages(self.forum_id, 'poster',
+        write( self.service.manager.getTopMessages(self.forum_id, 'poster',
                                                   self.onThreadData,
-                                                  self.onThreadError))
+                                                  self.onThreadError) )
 
     def onThreadData(self, data):
         l = []
@@ -172,15 +185,15 @@ class FullGadget(ForumBaseGadget):
     """Displays a full details of all posts for a thread in a forum
     """
     
-    title = " "
+    title = "Contents of a thread"
     
-    def streamContent(self, write, request):
+    def stream(self, write, request):
         self.request = request
         self.forum_id = int(request.args.get('forum_id',[0])[0])
         self.post_id = int(request.args.get('post_id',[0])[0])        
         print "Getting posts for thread %d for forum: %d" % (self.post_id, self.forum_id)
-        write(self.service.manager.getFullMessages(self.forum_id, self.post_id, 'poster',
-                                                   self.onPostData, self.onPostError))
+        write( self.service.manager.getFullMessages(self.forum_id, self.post_id, 'poster',
+                                                   self.onPostData, self.onPostError) )
 
     def onPostData(self, data):
         if len(data) == 0:
@@ -226,13 +239,13 @@ class PostsGadget(ForumBaseGadget):
     """Displays a list of posts for a thread in a forum
     """
     
-    title = " "
+    title = "lists of posts for a thread"
     
-    def streamContent(self, write, request):
+    def stream(self, write, request):
         self.forum_id = int(request.args.get('forum_id',[0])[0])
         self.post_id = int(request.args.get('post_id',[0])[0])        
         print "Getting posts for thread %d for forum: %d" % (self.post_id, self.forum_id)
-        write(self.service.manager.getThreadMessages(self.forum_id, self.post_id, self.onPostData, self.onPostError))
+        write( self.service.manager.getThreadMessages(self.forum_id, self.post_id, self.onPostData, self.onPostError) )
 
     def onPostData(self, data):
         if len(data) == 0:
@@ -278,13 +291,13 @@ class PostsGadget(ForumBaseGadget):
         return "ERROR: " + repr(error)
 
 class DetailsGadget(ForumBaseGadget):
-    title = " "
+    title = "details for a post"
     
-    def streamContent(self, write, request):
+    def stream(self, write, request):
         self.request = request
         self.post_id = int(request.args.get('post_id',[0])[0])
         print "Getting details for post %d" % (self.post_id)
-        write(self.service.manager.getMessage(self.post_id, self.onDetailData, self.onDetailError))
+        write( self.service.manager.getMessage(self.post_id, self.onDetailData, self.onDetailError) )
         
     def onDetailData(self, data):
         (post_id, parent_id, forum_id, thread_id, subject, posted, user, body) = data[0]
@@ -294,7 +307,6 @@ class DetailsGadget(ForumBaseGadget):
         #l.append( '<PRE>' + body  + '</PRE>')
         l.append(body)
         return l
-
 
     def onDetailError(self, error):
         print error
@@ -307,28 +319,32 @@ class ActionsWidget(widgets.StreamWidget):
         self.forum_id = forum_id
         self.thread_id = thread_id
 
-    def streamContent(self, write, request):
+    def stream(self, write, request):
         # setup the thread ID correctly for top level posts
         if self.thread_id == 0:
             self.thread_id = self.post_id
+
+        l = []
         self.makeMenu(write, "/posts/?post_id=%d" % self.post_id, "Back to Threads", 1)
         self.makeMenu(write, "/details/?post_id=%d" % self.parent_id, "Prev Thread", self.parent_id != 0)
         self.makeMenu(write, "/details/?post_id=%d" % self.parent_id, "Next Thread", 0)
         self.makeMenu(write, "/details/?post_id=%d" % (self.post_id-1), "Prev Date", self.post_id > 1)
         self.makeMenu(write, "/details/?post_id=%d" % (self.post_id+1), "Next Date", self.post_id > 0) #NOTE: TODO
         self.makeMenu(write, "/reply/?post_id=%d&amp;forum_id=%d&amp;thread_id=%d" % (self.post_id, self.forum_id, self.thread_id), "Reply", 1)
-        
+        return l
+    
     def makeMenu(self, write, link, text, flag):
         if flag:
-            write( '[<a href="%s">%s</a>]\n' % (link, text))
+            write( '[<a href="%s">%s</a>]\n' % (link, text) )
         else:
-            write( "[ %s ]\n" % (text))
+            write( "[ %s ]\n" % (text) )
 
 
 class ReplyForm(webpassport.SessionPerspectiveMixin, widgets.Form, widgets.Gadget):
     
     title = "Reply to Posted message:"
-
+    page = ForumPage
+    
     def __init__(self, service):
         self.service = service
         widgets.Gadget.__init__(self)
@@ -376,13 +392,11 @@ class ReplyForm(webpassport.SessionPerspectiveMixin, widgets.Form, widgets.Gadge
         print "ERROR: populating Reply", error
         return "ERROR"
 
-
-
-
 class NewPostForm(webpassport.SessionPerspectiveMixin, widgets.Form, widgets.Gadget):
     
     title = "Post a new message:"
-
+    page = ForumPage
+    
     def __init__(self, service):
         self.service = service
         widgets.Gadget.__init__(self)
@@ -407,14 +421,13 @@ class NewPostForm(webpassport.SessionPerspectiveMixin, widgets.Form, widgets.Gad
         write("Posted new message '%s'.<hr>\n" % subject)
         write("<a href='/threads/?forum_id=%s'>Return to Threads</a>" % self.forum_id)
 
-        
 
-class RegisterUser(widgets.Form, widgets.Gadget):
+class RegisterUser(webpassport.SessionPerspectiveMixin, widgets.Form, widgets.Gadget):
     """This creates a new identity and perspective for the user.
     """
-    page = ForumPage
     
     title = "Register new user"
+    page = ForumPage    
 
     def __init__(self, service):
         self.service = service
@@ -479,7 +492,8 @@ class RegisterUser(widgets.Form, widgets.Gadget):
 class NewForumForm(webpassport.SessionPerspectiveMixin, widgets.Form, widgets.Gadget):
     
     title = "Create a new forum:"
-
+    page = ForumPage
+    
     def __init__(self, service):
         self.service = service
         widgets.Gadget.__init__(self)
@@ -500,5 +514,29 @@ class NewForumForm(webpassport.SessionPerspectiveMixin, widgets.Form, widgets.Ga
         write("Created new forum '%s'.<hr>\n" % name)
         write("<a href='/'>Return</a>")
 
-        
+    
+class LoginForm(webpassport.LogInForm, widgets.Gadget):
 
+    title = "Enter the forum"
+    page = ForumPage
+    
+    def __init__(self, service):
+        self.service = service
+        widgets.Gadget.__init__(self)
+
+    def getPerspective(self, request):
+        """dummy method - this page does not require login.
+        """
+        return None
+    
+    def display(self, request):
+        self.request = request
+        
+        self.formFields = [
+            ['string','User Name','identityName',''],
+            ['password','Password','password','']
+            ]
+        
+        l = widgets.Form.display(self, self.request)
+        l.insert(0, "<p align=center><a href=/register>[Create a new account]</a></p><hr>")
+        return l

@@ -113,6 +113,8 @@ CREATE TABLE forum_permissions
         return self.runQuery("SELECT * FROM forum_perspectives WHERE user_name = '%s'" % adbapi.safe(name), self._finishPerspective, self._errorPerspective)
 
     def _finishPerspective(self, result):
+        if len(result) == 0:
+            return defer.fail("Perspective not found.")
         identity_name, user_name, signature = result[0]
         return service.ForumUser(identity_name, user_name, signature)
 
