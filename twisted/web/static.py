@@ -87,9 +87,42 @@ class Redirect(resource.Resource):
     def render(self, request):
         return redirectTo(self.url, request)
 
+from twisted.internet.interfaces import IServiceCollection
+from twisted.internet.app import ApplicationService
 
 class Registry(components.Componentized):
-    pass
+    def _grabService(self, svc, sclas):
+        """
+        Find an instance of a particular class in a service collection and all
+        subcollections.
+        """
+        for s in svc.services.values():
+            if isinstance(s, sclas):
+                return s
+            if components.implements(s, IServiceCollection):
+                ss = self._grabService(s)
+                if ss:
+                    return ss
+
+    def getComponent(self, interface):
+        """
+        Very similar to Componentized.getComponent, with a little magic.
+
+        This adds the additional default behavior that if no component already
+        exists and 'interface' is a subclass of
+        L{twisted.internet.app.ApplicationService}, it will automatically scan
+        through twisted.internet.app.theApplication and look for
+        
+        """
+        c = components.Componentized.getComponent(self, interface)
+        if c is not None:
+            return c
+        elif issubclass(interface, ApplicationService):
+            from twisted.internet.app import theApplication
+            gs = self._grabService(theApplication, interface)
+            if gs:
+                self.setComponent(interface, gs)
+                return gs
 
 
 def _upgradeRegistry(registry):
