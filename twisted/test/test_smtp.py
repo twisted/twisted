@@ -29,6 +29,9 @@ from twisted.test.test_protocols import StringIOWithoutClosing
 import string, re
 from cStringIO import StringIO
 
+def spameater(*spam, **eggs):
+    return None
+
 class DummyMessage:
 
     def __init__(self, domain, user):
@@ -59,7 +62,7 @@ class DummyDomain:
    def exists(self, user):
        if self.messages.has_key(user.dest.local):
            return defer.succeed(user)
-       return defer.succeed(None)
+       return defer.fail(smtp.SMTPBadRcpt(user))
 
    def startMessage(self, user):
        return DummyMessage(self, user)
@@ -86,6 +89,7 @@ Someone set up us the bomb!\015
         protocol =  protocols.DomainSMTP()
         protocol.service = self.factory
         protocol.factory = self.factory
+        protocol.receivedHeader = spameater
         protocol.makeConnection(self.transport)
         protocol.lineReceived('HELO yyy.com')
         for message in self.messages:
@@ -124,7 +128,7 @@ class MySMTPClient(protocols.smtp.SMTPClient):
     def getMailData(self):
         return StringIO(self.mail[2])
 
-    def sentMail(self, addresses):
+    def sentMail(self, code, resp, numOk, addresses, log):
         self.mail = None, None, None
 
 
@@ -200,9 +204,7 @@ class DummySMTPMessage:
         self.buffer = []
 
     def lineReceived(self, line):
-        # Throw away the generated Received: header
-        if not re.match('Received: From foo.com \(\[.*\]\) by foo.com;', line):
-            self.buffer.append(line)
+        self.buffer.append(line)
 
     def eomReceived(self):
         message = string.join(self.buffer, '\n')+'\n'
@@ -223,6 +225,9 @@ class DummySMTP(smtp.SMTP):
 
     def startMessage(self, users):
         return [DummySMTPMessage(self, users)]
+
+    def receivedHeader(*spam):
+        return None
 
 class AnotherSMTPTestCase(unittest.TestCase):
 

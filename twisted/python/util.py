@@ -18,7 +18,7 @@
 
 from __future__ import nested_scopes
 
-__version__ = '$Revision: 1.30 $'[11:-2]
+__version__ = '$Revision: 1.31 $'[11:-2]
 
 import os, sys
 from UserDict import UserDict
@@ -136,39 +136,50 @@ def _getpass(prompt):
     except EOFError:
         raise KeyboardInterrupt
 
-def getPassword(prompt = 'Password: ', confirm = 0):
+def getPassword(prompt = 'Password: ', confirm = 0, forceTTY = 0):
     """Obtain a password by prompting or from stdin.
 
     If stdin is a terminal, prompt for a new password, and confirm (if
     C{confirm} is true) by asking again to make sure the user typed the same
     thing, as keystrokes will not be echoed.
 
-    If stdin is not a terminal, read in a line and use it as the password,
-    less the trailing newline, if any.
+    If stdin is not a terminal, and C{forceTTY} is not true, read in a line
+    and use it as the password, less the trailing newline, if any.  If
+    C{forceTTY} is true, attempt to open a tty and prompt for the password
+    using it.  Raise a RuntimeException if this is not possible.
 
     @returns: C{str}
     """
-    # If standard input is a terminal, I prompt for a password and
-    # confirm it.  Otherwise, I use the first line from standard
-    # input, stripping off a trailing newline if there is one.
-    if os.isatty(sys.stdin.fileno()):
-        gotit = 0
-        while not gotit:
+    isaTTY = hasattr(sys.stdin, 'isatty') and sys.stdin.isatty()
+    
+    old = None
+    try:
+        if not isaTTY:
+            if forceTTY:
+                try:
+                    old = sys.stdin, sys.stdout
+                    sys.stdin = sys.stdout = open('/dev/tty', 'r+')
+                except:
+                    raise RuntimeException, "Cannot obtain a TTY"
+            else:
+                password = sys.stdin.readline()
+                if password[-1] == '\n':
+                    password = password[:-1]
+                return password
+
+        while 1:
             try1 = _getpass(prompt)
             if not confirm:
                 return try1
             try2 = _getpass("Confirm: ")
             if try1 == try2:
-                gotit = 1
+                return try1
             else:
                 sys.stderr.write("Passwords don't match.\n")
-        else:
-            password = try1
-    else:
-        password = sys.stdin.readline()
-        if password[-1] == '\n':
-            password = password[:-1]
-    return password
+    finally:
+        if old:
+            sys.stdin.close()
+            sys.stdin, sys.stdout = old
 
 
 def dict(*a, **k):
@@ -274,8 +285,43 @@ def searchupwards(start, files=[], dirs=[]):
     return None
 
 
+class LineLog:
+    """
+    A limited-size line-based log, useful for logging line-based
+    protocols such as SMTP.
+    
+    When the log fills up, old entries drop off the end.
+    """
+    def __init__(self, size=10):
+        """
+        Create a new log, with size lines of storage (default 10).
+        A log size of 0 (or less) means an infinite log.
+        """
+        if size < 0:
+            size = 0
+        self.log = [None]*size
+        self.size = size
+
+    def append(self,line):
+        if self.size:
+            self.log[:-1] = self.log[1:]
+            self.log[-1] = line
+        else:
+            self.log.append(line)
+
+    def str(self):
+        return '\n'.join(filter(None,self.log))
+
+    def __getitem__(self, item):
+        return filter(None,self.log)[item]
+
+    def clear(self):
+        """Empty the log"""
+        self.log = [None]*self.size
+
+
 __all__ = [
     "uniquify", "padTo", "getPluginDirs", "addPluginDir", "sibpath",
     "getPassword", "dict", "println", "keyed_md5", "makeStatBar",
-    "OrderedDict", "spewer", "searchupwards",
+    "OrderedDict", "spewer", "searchupwards", "LineLog"
 ]
