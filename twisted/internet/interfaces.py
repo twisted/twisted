@@ -941,6 +941,9 @@ class ITransport(Interface):
 
     def loseConnection(self):
         """Close my connection, after writing all pending data.
+
+        Note that if there is a registered producer on a transport it
+        will not be closed until the producer has been unregistered.
         """
 
     def getPeer(self):
@@ -963,6 +966,20 @@ class ITransport(Interface):
 class ITCPTransport(ITransport):
     """A TCP based transport."""
 
+    def halfCloseConnection(self, read=False, write=False):
+        """Half-close the TCP connection.
+
+        This can close either read side or write side of the
+        connection. Only write closes are visible to the other side of
+        the connection.
+        
+        If the protocol this is attached to implements
+        IHalfCloseableProtocol, it will get notified when the
+        operation is done. When closing write connection, as with
+        loseConnection this will only happen when buffer has emptied
+        and there is no registered producer.
+        """
+    
     def getTcpNoDelay(self):
         """Return if TCP_NODELAY is enabled."""
 
