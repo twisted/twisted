@@ -1,5 +1,5 @@
 # -*- Python -*-
-# $Id: usage.py,v 1.56 2003/10/29 17:28:03 tv Exp $
+# $Id: usage.py,v 1.57 2004/01/30 18:00:18 exarkun Exp $
 # Twisted, the Framework of Your Internet
 # Copyright (C) 2001 Matthew W. Lefkowitz
 #
@@ -37,7 +37,6 @@ from os import path
 import reflect
 import text
 import util
-import log
 
 class UsageError(Exception):
     pass
@@ -286,7 +285,8 @@ class Options(dict):
         reflect.accumulateClassList(self.__class__, 'optStrings',
                                     parameters)
         if parameters:
-            log.msg("Warning: Options.optStrings is deprecated, please use optParameters instead.")
+            import warnings
+            warnings.warn("Options.optStrings is deprecated, please use optParameters instead.", stacklevel=2)
 
         reflect.accumulateClassList(self.__class__, 'optParameters',
                                     parameters)
