@@ -225,7 +225,7 @@ class IReactorSSL(Interface):
 
         @param factory: a L{twisted.internet.protocol.ClientFactory} instance
 
-        @param contextFactory: a L{twisted.internet.ssl.ContextFactory} object.
+        @param contextFactory: a L{twisted.internet.ssl.ClientContextFactory} object.
 
         @param timeout: number of seconds to wait before assuming the connection
             has failed.
