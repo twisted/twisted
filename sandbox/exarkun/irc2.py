@@ -74,6 +74,7 @@ class AdvancedClient(irc.IRCClient):
             d = self._pendingParts[channel.lower()] = defer.Deferred()
             irc.IRCClient.leave(self, channel, reason)
             return d
+    part = leave
     
     def left(self, channel):
         try:
@@ -85,7 +86,6 @@ class AdvancedClient(irc.IRCClient):
             d.callback(self)
 
     def irc_ERR_NOSUCHCHANNEL(self, prefix, params):
-        print 'No such'
         # This whole scheme is probably wrong.
         channel = params[1]
         try:
