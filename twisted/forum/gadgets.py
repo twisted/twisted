@@ -81,9 +81,19 @@ p    '''
             self.widget.service.desc, self.widget.service.usersOnline)
 
 class ForumBaseWidget(webpassport.SessionPerspectiveMixin, widgets.StreamWidget):
+
+    defaultUsername = "poster"
+    
     def __init__(self, service):
         self.service = service
-    
+        self.manager = service.manager
+
+    def getUserName(self, request):
+        p = self.getPerspective(request)
+        if p:
+            return p.perspectiveName
+        else:
+            return self.defaultUsername
 
 class ForumsGadget(ForumBaseWidget, widgets.Gadget):
     """The forum application has these functional pages:
@@ -119,9 +129,7 @@ class ForumsGadget(ForumBaseWidget, widgets.Gadget):
     def stream(self, write, request):
         """Display the intro list of forums. This is only called if there is no URI.
         """
-        p = self.getPerspective(request)
-        if p: p = p.perspectiveName
-        write(self.service.manager.getForums(p or 'poster')
+        write(self.manager.getForums(self.getUserName(request))
               .addCallback(self._cbForums))
 
     def _cbForums(self, data):
@@ -146,15 +154,15 @@ class ThreadsWidget(ForumBaseWidget):
     title = "List of Threads for a forum"
     
     def stream(self, write, request):
-        write(self.service.manager.getTopMessages(
-            request.args.get(['forum_id'][0])[0], 'poster').
-              addCallback(self._cbThreadData, request))
+        forum_id = int(request.args.get(['forum_id'][0])[0])
+        d = self.manager.getTopMessages(forum_id, self.getUserName(request)).addCallback(self._cbThreadData, request)
+        write(d)
 
     def _cbThreadData(self, data, request):
         forum_id = int(request.args.get('forum_id',[0])[0])
         l = []
         w = l.append
-        w( '<h3> %s:</h3>' % self.service.manager.getForumByID(forum_id) )
+        w( '<h3> %s:</h3>' % self.manager.getForumByID(forum_id) )
         w('''
         <table cellpadding=4 cellspacing=1 border=0 width="95%">
         <tr bgcolor="#ff9900">
@@ -191,7 +199,7 @@ class FullWidget(ForumBaseWidget):
         self.forum_id = int(request.args.get('forum_id',[0])[0])
         self.post_id = int(request.args.get('post_id',[0])[0])        
         print "Getting posts for thread %d for forum: %d" % (self.post_id, self.forum_id)
-        write(self.service.manager.getFullMessages(self.forum_id, self.post_id, 'poster').addCallback(self._cbPostData))
+        write(self.manager.getFullMessages(self.forum_id, self.post_id, self.getUserName(request)).addCallback(self._cbPostData))
 
     def _cbPostData(self, data):
         if len(data) == 0:
@@ -241,7 +249,7 @@ class PostsWidget(ForumBaseWidget):
         self.forum_id = int(request.args.get('forum_id',[0])[0])
         self.post_id = int(request.args.get('post_id',[0])[0])        
         print "Getting posts for thread %d for forum: %d" % (self.post_id, self.forum_id)
-        write( self.service.manager.getThreadMessages(self.forum_id, self.post_id).addCallback(self._cbPostData) )
+        write( self.manager.getThreadMessages(self.forum_id, self.post_id).addCallback(self._cbPostData) )
 
     def _cbPostData(self, data):
         if len(data) == 0:
@@ -289,7 +297,7 @@ class DetailsWidget(ForumBaseWidget):
         self.request = request
         self.post_id = int(request.args.get('post_id',[0])[0])
         print "Getting details for post %d" % (self.post_id)
-        write( self.service.manager.getMessage(self.post_id).addCallback( self._cbDetailData) )
+        write( self.manager.getMessage(self.post_id).addCallback( self._cbDetailData) )
         
     def _cbDetailData(self, data):
         (post_id, parent_id, forum_id, thread_id, subject, posted, user, body) = data[0]
@@ -342,17 +350,19 @@ class ReplyForm(webpassport.SessionPerspectiveMixin, widgets.Form):
     page = ForumPage
     def __init__(self, service):
         self.service = service
+        self.manager = service.manager
+        
     def display(self, request):
         self.request = request
         self.post_id = int(request.args.get('post_id',[0])[0])
         self.forum_id = int(request.args.get('forum_id',[0])[0])
         self.thread_id = int(request.args.get('thread_id',[0])[0])
-        return [self.service.manager.getMessage(self.post_id).addCallback(self._cbDetailData)]
+        return [self.manager.getMessage(self.post_id).addCallback(self._cbDetailData)]
 
     def process(self, write, request, submit, subject, body, post_id, forum_id, thread_id):
         p = self.getPerspective(self.request)
         name = (p and p.perspectiveName) or 'anonymous'
-        write(self.service.manager.postMessage(
+        write(self.manager.postMessage(
             self.forum_id, name, self.thread_id, int(post_id), 0,
             subject, body).addCallback(self._cbPostDone))
         write("<a href='threads?forum_id=%s'>Return to Threads</a>"
@@ -383,6 +393,7 @@ class NewPostForm(webpassport.SessionPerspectiveMixin, widgets.Form):
     
     def __init__(self, service):
         self.service = service
+        self.manager = service.manager
 
     def display(self, request):
         self.request = request
@@ -399,7 +410,7 @@ class NewPostForm(webpassport.SessionPerspectiveMixin, widgets.Form):
     def process(self, write, request, submit, subject, body, forum_id):
         p = self.getPerspective(request)
         name = (p and p.perspectiveName) or 'anonymous'
-        write(self.service.manager.newMessage(self.forum_id, name, subject, body).addCallback(self._cbPosted, subject, forum_id))
+        write(self.manager.newMessage(self.forum_id, name, subject, body).addCallback(self._cbPosted, subject, forum_id))
 
     def _cbPosted(self, result, subject, forum_id):
         return ["Posted new message '%s'.<hr>\n"
@@ -414,7 +425,8 @@ class RegisterUser(webpassport.SessionPerspectiveMixin, widgets.Form):
 
     def __init__(self, service):
         self.service = service
-
+        self.manager = service.manager
+        
     def display(self, request):
         self.request = request
 
@@ -445,7 +457,7 @@ class RegisterUser(webpassport.SessionPerspectiveMixin, widgets.Form):
         return ["Creating identity...",self.service.application.authorizer.addIdentity(newIdentity).addCallbacks(self._doneIdentity, self._errIdentity)]
 
     def _errIdentity(self, failure):
-        failure.trap(self.service.manager.dbpool.dbapi.OperationalError)
+        failure.trap(self.manager.dbpool.dbapi.OperationalError)
         return self.tryAgain("This identity is already taken.", self.request)
 
     def _doneIdentity(self, result):
@@ -455,7 +467,7 @@ class RegisterUser(webpassport.SessionPerspectiveMixin, widgets.Form):
             sess.identity = self.identity
             sess.perspectives = {}
         return ["Created identity...<br>Creating perspective...",
-                self.service.manager.createUser(self.name, self.signature)
+                self.manager.createUser(self.name, self.signature)
                 .addCallback(self.donePerspective)]
 
     def donePerspective(self, result):
@@ -468,7 +480,8 @@ class NewForumForm(webpassport.SessionPerspectiveMixin, widgets.Form):
 
     def __init__(self, service):
         self.service = service
-
+        self.manager = service.manager
+        
     def display(self, request):
         self.request = request
 
@@ -481,7 +494,7 @@ class NewForumForm(webpassport.SessionPerspectiveMixin, widgets.Form):
         return widgets.Form.display(self, self.request)
 
     def process(self, write, request, submit, name, description, default_access):
-        self.service.manager.createForum(name, description, default_access)
+        self.manager.createForum(name, description, default_access)
         write("Created new forum '%s'.<hr>\n" % name)
         write("<a href='../'>Return</a>")
 
