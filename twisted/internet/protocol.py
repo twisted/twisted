@@ -355,16 +355,6 @@ class Protocol(BaseProtocol):
         @type reason: L{twisted.python.failure.Failure}
         """
 
-    def connectionFailed(self):
-        """(Deprecated)
-
-        This used to be called when the connection was not properly
-        established.
-        """
-        import warnings
-        warnings.warn("connectionFailed is deprecated.  See new Client API",
-                      category=DeprecationWarning, stacklevel=2)
-
 components.backwardsCompatImplements(Protocol)
 
 
