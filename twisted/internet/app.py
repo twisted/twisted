@@ -259,11 +259,13 @@ class Application(log.Logger, styles.Versioned,
         self.tcpPorts = []              # check
         self.udpPorts = []
         self.sslPorts = []
+        self.unixPorts = []
         self.extraPorts = []
         self._listenerDict = {}
         self._extraListeners = {}
         # a list of (tcp, ssl, udp) Connectors
         self.tcpConnectors = []
+        self.udpConnectors = []
         self.sslConnectors = []
         self.unixConnectors = []
         self.extraConnectors = []
@@ -296,6 +298,8 @@ class Application(log.Logger, styles.Versioned,
         self._extraListeners = {}
         self.extraPorts = []
         self.extraConnectors = []
+        self.unixPorts = []
+        self.udpConnectors = []
 
     def upgradeToVersion10(self):
         # persistenceVersion was 10, but this method did not exist
@@ -431,6 +435,26 @@ class Application(log.Logger, styles.Versioned,
         if self._listenerDict.has_key((port_, interface_)):
             self._listenerDict[port_,interface_].stopListening()
 
+    def listenUNIX(self, filename, factory, backlog=5):
+        """
+        Connects a given protocol factory to the UNIX socket with the given filename.
+        """
+        self.unixPorts.append((filename, factory, backlog))
+        if self.running:
+            from twisted.internet import reactor
+            return reactor.listenUNIX(filename, factory, backlog)
+
+    def unlistenUNIX(self, filename):
+        toRemove = []
+        for t in self.unixPorts:
+            filename_, factory_, backlog_ = t
+            if filename == filename_:
+                toRemove.append(t)
+        for t in toRemove:
+            self.unixPorts.remove(t)
+        if self._listenerDict.has_key((filename_)):
+            self._listenerDict[filename_].stopListening()
+
     def listenUDP(self, port, factory, interface='', maxPacketSize=8192):
         """
         Connects a given protocol factory to the given numeric UDP port.
@@ -440,8 +464,18 @@ class Application(log.Logger, styles.Versioned,
             from twisted.internet import reactor
             return reactor.listenUDP(port, factory, interface, maxPacketSize)
 
-    def dontListenUDP(self, portno):
-        raise 'temporarily not implemented'
+    def unlistenUDP(self, port, interface=''):
+        """
+        Stop a DatagramProtocol listening on the given local port and
+        interface.
+        """
+        toRemove = []
+        for t in self.udpPorts:
+            port_, factory_, interface_, size_ = t
+            if port_ == port and interface_ == interface:
+                toRemove.append(t)
+        for t in toRemove:
+            self.udpPorts.remove(t)
 
     def listenSSL(self, port, factory, ctxFactory, backlog=5, interface=''):
         """
@@ -464,6 +498,23 @@ class Application(log.Logger, styles.Versioned,
         if self.running:
             from twisted.internet import reactor
             return reactor.connectWith(connectorType, *args, **kw)
+
+    def connectUDP(self, remotehost, remoteport, protocol, localport=0,
+                  interface='', maxPacketSize=8192):
+        """Connects a L{ConnectedDatagramProtocol} instance to a UDP port.
+        
+        EXPERIMENTAL.
+        """
+        self.udpConnectors.append((
+            remotehost, remoteport, protocol,
+            localport, interface, maxPacketSize
+        ))
+        if self.running:
+            from twisted.internet import reactor
+            return reactor.connectUDP(
+                remotehost, remoteport, protocol,
+                localport, interface, maxPacketSize
+            )
 
     def connectTCP(self, host, port, factory, timeout=30, bindAddress=None):
         """Connect a given client protocol factory to a specific TCP server."""
@@ -620,6 +671,13 @@ class Application(log.Logger, styles.Versioned,
             log.logOwner.own(self)
             for delayed in self.delayeds:
                 main.addDelayed(delayed)
+            
+            for filename, factory, backlog in self.unixPorts:
+                try:
+                    self._listenerDict[filename] = reactor.listenUNIX(filename, factory, backlog)
+                except error.CannotListenError, msg:
+                    log.msg('error on UNIX socket %s: %s' % (filename, msg))
+                    return
             for port, factory, backlog, interface in self.tcpPorts:
                 try:
                     self._listenerDict[port, interface] = reactor.listenTCP(port, factory, backlog, interface)
@@ -645,6 +703,8 @@ class Application(log.Logger, styles.Versioned,
                 reactor.connectSSL(host, port, factory, ctxFactory, timeout, bindAddress)
             for host, port, factory, timeout, bindAddress in self.tcpConnectors:
                 reactor.connectTCP(host, port, factory, timeout, bindAddress)
+            for rhost, rport, protocol, lport, interface, size in self.udpConnectors:
+                reactor.connectUDP(rhost, rport, protocol, lport, interface, size)
             for address, factory, timeout in self.unixConnectors:
                 reactor.connectUNIX(address, factory, timeout)
             for connectorType, args, kw in self.extraConnectors:
