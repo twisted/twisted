@@ -17,6 +17,84 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
 
+"""
+
+Twisted Words Service objects.  Chat and messaging for Twisted.
+
+Twisted words is a general-purpose chat and instant messaging system designed
+to be a suitable replacement both for Instant Messenger systems and
+conferencing systems like IRC.
+
+Currently it provides presence notification, web-based account creation, and a
+simple group-chat abstraction.
+
+Stability: incendiary
+
+Maintainer: Maintainer: U{Glyph Lefkowitz<mailto:glyph@twistedmatrix.com>}
+
+Future Plans: Woah boy.  This module is incredibly unstable.  It has an
+incredible deficiency of features.  There are also several features which are
+pretty controvertial.  As far as stability goes, it is lucky that the current
+interfaces are really simple: at least the uppermost external ones will almost
+certainly be preserved, but there is a lot of plumbing work.
+
+First of all the fact that users must have accounts generated through a web
+interface to sign in is a serious annoyance, especially to people who are
+familiar with IRC's semantics.  The following features are proposed to
+mitigate this annoyance:
+
+  - account creation through the various client interfaces available to Words
+    users.
+
+  - guest accounts, so that users who join for an hour once don't pollute the
+    authentication database with huge amounts of cruft.
+
+  - 'mood' metadata for users.  Since you can't change nicks, you need a way to
+    do the equivalent thing on IRC where people will sign in multiple times and
+    have foo_work and foo_home
+
+There is no plan to make it possible to log-in without an account.  This is
+simply a broken behavior of IRC; all possible convenience features that mimic
+this should be integrated, but authentication is an important part of chat.
+
+There are also certain things that are just missing.
+
+  - restricted group operations.  Typical IRC-style stuff, except you don't
+    ever see the @.  Permimssions should be grantable in a capability style,
+    rather than with a single bit.
+
+  - server-to-server communication.  As much as possible this should be
+    decentralized and not have the notion of 'hub' servers; rooms have
+    'physical' locality.  This is really hard to integrate with IRC client
+    protocol stuff, so it may end up that this feature requires a rewrite of
+    Twisted Words so that servers that present an IRC gateway are treated as
+    leaf nodes, and the recommended mode of operation is for the user to run a
+    lightweight proxy locally.
+
+  - a serious logging, monitoring, and routing framework
+
+Then there's a whole bunch of things that would be nice to have.
+
+  - public key authentication
+
+  - robust wire-level security
+
+  - integrated consensus web authoring tools
+
+  - management tools and guidelines for community leaders
+
+  - interface to operator functionality through 'bot' interface with
+    per-channel personality configuration
+
+  - graphical extensions to clients to allow formatted text (but detect
+    obviously annoying or abusive formatting)
+
+  - rate limiting, simple DoS protection, firewall integration
+
+  - basically everything OPN wants to be able to do, but better
+
+"""
+
 # System Imports
 import types, time
 
