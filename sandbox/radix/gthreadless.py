@@ -3,9 +3,9 @@ from twisted.internet import defer
 
 def deferredGreenlet(func):
     """
-    I'm a function decorator that makes a greenletty-function (one
-    that might 'block', etc) into one that returns a Deferred for
-    integrating with Twisted.
+    I am a function decorator for functions that call blockOn.  The
+    function I return will call the original function inside of a
+    greenlet, and return a Deferred.
 
     XXX: Do a hack so the name of 'replacement' is the name of 'func'.
     """
@@ -23,20 +23,31 @@ def deferredGreenlet(func):
 class CalledFromMain(Exception):
     pass
 
+class _IAmAnException(object):
+    def __init__(self, f):
+        self.f = f
+
 def blockOn(d):
     """
-    Use me in grenletty-code to wait for a Deferred to fire.
-    XXX: If the result is a failure, raise its exception.
+    Use me in non-main greenlets to wait for a Deferred to fire.
     """
     g = greenlet.getcurrent()
     if g is greenlet.main:
         raise CalledFromMain("You cannot call blockOn from the main greenlet.")
+
     def cb(r):
         g.switch(r)
-    d.addBoth(cb)
-    return greenlet.main.switch()
+    def eb(f):
+        g.switch(_IAmAnException(f))
+    d.addCallback(cb)
+    d.addErrback(eb)
 
-class GreenletWrapper(object):   
+    x = greenlet.main.switch()
+    if isinstance(x, _IAmAnException):
+        x.f.raiseException()
+    return x
+
+class GreenletWrapper(object):
     """Wrap an object which presents an asynchronous interface (via Deferreds).
     
     The wrapped object will present the same interface, but all methods will

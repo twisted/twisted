@@ -1,6 +1,6 @@
 from twisted.internet import defer
 from twisted.trial import unittest
-from gthreadless import blockOn, deferredGreenlet, GreenletWrapper
+import gthreadless
 
 class GThreadlessTest(unittest.TestCase):
     def testBasic(self):
@@ -8,25 +8,27 @@ class GThreadlessTest(unittest.TestCase):
         def getDeferred():
             d = defer.Deferred()
             reactor.callLater(0.1, d.callback, 'goofledorf')
-            r = blockOn(d)
+            r = gthreadless.blockOn(d)
             return r
-        getDeferred = deferredGreenlet(getDeferred)
+        getDeferred = gthreadless.deferredGreenlet(getDeferred)
         d = getDeferred()
         d.addCallback(self.assertEquals, 'goofledorf')
         return d
 
+    def _magic(self):
+        o = gthreadless.GreenletWrapper(Asynchronous())
+        self.assertEquals(o.syncResult(3), 3)
+        self.assertEquals(o.asyncResult(0.1, 4), 4)
+        self.assertRaises(ZeroDivisionError, o.syncException)
+        self.assertRaises(ZeroDivisionError, o.asyncException, 0.1)
+        return "hi there"
+
     def testGreenletWrapper(self):
-        def magic():
-            o = GreenletWrapper(Asynchronous())
-            print o.syncResult(3), o.asyncResult(0.1, 4)
-            self.assertEquals(o.syncResult(3), 3)
-            self.assertEquals(o.asyncResult(0.1, 4), 4)
-            self.assertRaises(ZeroDivisionError, o.syncException)
-            self.assertRaises(ZeroDivisionError, o.asyncException, 0.1)
-            return "hi there"
-        d = deferredGreenlet(magic)()
+        d = gthreadless.deferredGreenlet(self._magic)()
         return d.addCallback(self.assertEquals, "hi there")
-        
+
+    def testCallFromMain(self):
+        self.assertRaises(gthreadless.CalledFromMain, gthreadless.blockOn, defer.succeed(1))
 
 class Asynchronous(object):
     def syncResult(self, v):
