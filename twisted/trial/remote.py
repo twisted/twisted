@@ -9,11 +9,11 @@
 
 For reporting test results in a seperate process.
 """
-
-from __future__ import nested_scopes
+from __future__ import nested_scopes, generators
 
 
 from twisted.python import components, failure, reflect
+from twisted.python.compat import adict
 from twisted.spread import jelly
 from twisted.trial import reporter, itrial
 from twisted.python.reflect import qual, namedAny
@@ -32,11 +32,11 @@ class JellyableTestMethod(jelly.Jellyable, jelly.Unjellyable):
     def getStateFor(self, jellier):
         tm = self.original
         m = tm.method
-        d = dict(name = qual(m).split('.')[-1],
-                 klass = qual(m.im_class),
-                 fullName = qual(m),
-                 setUp = qual(m.im_class.setUp),
-                 tearDown = qual(m.im_class.tearDown))
+        d = adict(name = qual(m).split('.')[-1],
+                  klass = qual(m.im_class),
+                  fullName = qual(m),
+                  setUp = qual(m.im_class.setUp),
+                  tearDown = qual(m.im_class.tearDown))
 
         for eqattr in ['module', 'timeout', 'runs', 'startTime',
                        'endTime', 'skip', 'todo', 'hasTbs',

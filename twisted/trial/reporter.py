@@ -9,7 +9,7 @@ import sys, time, pdb, string, types
 import traceback, os.path as osp, warnings
 
 from twisted.python import reflect, failure, log
-from twisted.python.compat import sets
+from twisted.python.compat import sets, adict
 from twisted.internet import defer
 from twisted.trial import itrial 
 import zope.interface as zi
@@ -55,10 +55,10 @@ UNCLEAN_REACTOR_WARN = "REACTOR UNCLEAN! traceback(s) follow: "
 
 PASSED, FAILED = "PASSED", "FAILED"
 
-methNameWarnMsg = dict(setUpClass = SET_UP_CLASS_WARN,
-                       setUp = SET_UP_WARN,
-                       tearDown = TEAR_DOWN_WARN,
-                       tearDownClass = TEAR_DOWN_CLASS_WARN)
+methNameWarnMsg = adict(setUpClass = SET_UP_CLASS_WARN,
+                        setUp = SET_UP_WARN,
+                        tearDown = TEAR_DOWN_WARN,
+                        tearDownClass = TEAR_DOWN_CLASS_WARN)
 
 # -------------------------------------------------------------------------------
 
