@@ -316,10 +316,10 @@ class Query:
     
     
     def __cmp__(self, other):
-        return cmp(
+        return isinstance(other, Query) and cmp(
             (str(self.name).lower(), self.type, self.cls),
             (str(other.name).lower(), other.type, other.cls)
-        )
+        ) or cmp(self.__class__, other.__class__)
 
 
     def __str__(self):
@@ -343,6 +343,7 @@ class RRHeader:
     @ivar cls: The query class of the original request.
     @ivar ttl: The time-to-live for this record.
     @ivar payload: An object that implements the IEncodable interface
+    @ivar auth: Whether this header is authoritative or not.
     """
 
     __implements__ = (IEncodable,)
@@ -511,7 +512,11 @@ class Record_A:
 
 
     def __str__(self):
-        return '<A %s>' % (socket.inet_ntoa(self.address),)
+        return '<A %s>' % (self.dottedQuad(),)
+
+
+    def dottedQuad(self):
+        return socket.inet_ntoa(self.address)
 
 
 class Record_SOA:
