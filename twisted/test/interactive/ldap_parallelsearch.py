@@ -31,7 +31,7 @@ class LDAPSearchAndPrint(ldap.LDAPSearch):
         print "%s: %s %s"%(self.prefix, objectName,
                            repr(map(lambda (a,l):
                                     (str(a),
-                                     map(lambda i, l=l: str(i), l)),
+                                     map(lambda i: str(i), l)),
                                     attributes)))
 
     def handle_fail(self, resultCode, errorMessage):
