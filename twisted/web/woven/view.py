@@ -18,7 +18,7 @@
 
 from __future__ import nested_scopes
 
-__version__ = "$Revision: 1.89 $"[11:-2]
+__version__ = "$Revision: 1.90 $"[11:-2]
 
 # Sibling imports
 import interfaces
@@ -506,7 +506,14 @@ class View:
             if not controller:
                 controller = input.DefaultHandler(model)
 
-            if model is not peek(self.viewStack).model and not isinstance(view, widgets.DefaultWidget):
+            prevView, stack = self.viewStack
+            while isinstance(prevView, widgets.DefaultWidget) and stack is not None:
+                prevView, stack = stack
+            if prevView is None:
+                prevMod = None
+            else:
+                prevMod = prevView.model
+            if model is not prevMod and not isinstance(view, widgets.DefaultWidget):
                 model.addView(view)
             submodelList = [x.name for x in filterStack(self.modelStack) if x.name]
             submodelList.reverse()
