@@ -37,7 +37,7 @@ class SimpleUserAuth(userauth.SSHUserAuthClient):
         path = os.path.expanduser('~/.ssh/id_dsa') 
         # this works with rsa too
         # just change the name here and in getPrivateKey
-        if not os.path.exists(path) or hasattr(self, 'lastPublicKey'):
+        if not os.path.exists(path) or self.lastPublicKey:
             # the file doesn't exist, or we've tried a public key
             return
         return keys.getPublicKeyString(path+'.pub')
