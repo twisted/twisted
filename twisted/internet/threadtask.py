@@ -1,15 +1,15 @@
 # Twisted, the Framework of Your Internet
 # Copyright (C) 2001 Matthew W. Lefkowitz
-# 
+#
 # This library is free software; you can redistribute it and/or
 # modify it under the terms of version 2.1 of the GNU Lesser General Public
 # License as published by the Free Software Foundation.
-# 
+#
 # This library is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
 # Lesser General Public License for more details.
-# 
+#
 # You should have received a copy of the GNU Lesser General Public
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
@@ -37,14 +37,14 @@ class ThreadDispatcher(threadpool.ThreadPool):
         from twisted.internet import main
         from twisted.internet import threadtask
         tpool = ThreadDispatcher()
-        main.addShutdown(tpool.stop)
+        main.callBeforeShutdown(tpool.stop)
 
     """
-    
+
     def __init__(self, *args, **kwargs):
         apply(threadpool.ThreadPool.__init__, (self,) + args, kwargs)
         self._callbacks = []
-    
+
     def _runWithCallback(self, callback, errback, func, args, kwargs):
         try:
             result = apply(func, args, kwargs)
@@ -52,16 +52,20 @@ class ThreadDispatcher(threadpool.ThreadPool):
             task.schedule(errback, failure.Failure())
         else:
             task.schedule(callback, result)
-    
+
     def dispatchWithCallback(self, owner, callback, errback, func, *args, **kw):
         """Dispatch a function, returning the result to a callback function.
-        
+
         The callback function will be called in the main event loop thread.
         """
         self.dispatchApply(owner, callback, errback, func, args, kw)
 
     def dispatchApply(self, owner, callback, errback, func, args, kw):
         self.dispatch(owner, self._runWithCallback, callback, errback, func, args, kw)
+
+    def stop(self):
+        log.msg("stopping thread pool " +str(self))
+        threadpool.ThreadPool.stop(self)
 
 
 theDispatcher = ThreadDispatcher(0)
@@ -72,4 +76,4 @@ def dispatchApply(callback, errback, func, args, kw):
 def dispatch(callback, errback, func, *args, **kw):
     dispatchApply(callback, errback, func, args, kw)
 
-main.addShutdown(theDispatcher.stop)
+main.callDuringShutdown(theDispatcher.stop)

@@ -50,11 +50,11 @@ def fail(result):
 
 class Deferred:
     """This is a callback which will be put off until later.
-    
+
     Why do we want this? Well, in cases where a function in a threaded
     program would block until it gets a result, for Twisted it should
     not block. Instead, it should return a Deferred.
-    
+
     This can be implemented for protocols that run over the network by
     writing an asynchronous protocol for twisted.internet. For methods
     that come from outside packages that are not under our control, we use
@@ -194,7 +194,7 @@ class Deferred:
 
 class DeferredList(Deferred):
     """I combine a group of deferreds into one callback.
-    
+
     I track a list of Deferreds for their callbacks, and make a single
     callback when they have all completed.
     """
@@ -214,6 +214,7 @@ class DeferredList(Deferred):
                                   errbackArgs=(index,FAILURE))
             self.resultList.append(None)
             index = index + 1
+            deferred.arm()
 
     def _cbDeferred(self, result, index, succeeded):
         """(internal) Callback for when one of my deferreds fires.

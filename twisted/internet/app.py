@@ -342,7 +342,7 @@ class Application(log.Logger, styles.Versioned, roots.Locked):
             for delayed in self.delayeds:
                 main.addDelayed(delayed)
             if save:
-                main.addShutdown(self.shutDownSave)
+                main.callAfterShutdown(self.shutDownSave)
             for port in self.ports:
                 try:
                     port.startListening()
