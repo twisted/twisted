@@ -68,7 +68,7 @@ RESPONSES = {
     SEE_OTHER: "See Other",
     NOT_MODIFIED: "Not Modified",
     USE_PROXY: "Use Proxy",
-    # 306 not defined??
+    # 306 unused
     TEMPORARY_REDIRECT: "Temporary Redirect",
 
     # 400

@@ -494,11 +494,14 @@ def addCookie(self, k, v, expires=None, domain=None, path=None, max_age=None, co
 # Header object
 _RecalcNeeded = object()
 
+DefaultHTTPParsers = dict()
+DefaultHTTPGenerators = dict()
+
 class Headers:
     """This class stores the HTTP headers as both a parsed representation and
     the raw string representation. It converts between the two on demand."""
     
-    def __init__(self, parsers=None, generators=None):
+    def __init__(self, parsers=DefaultHTTPParsers, generators=DefaultHTTPGenerators):
         self._raw_headers = {}
         self._headers = {}
         self.parsers=parsers
@@ -553,22 +556,18 @@ class Headers:
         self._raw_headers[name] = h
         return h
     
-    def getHeader(self, name, default=Exception):
+    def getHeader(self, name, default=None):
         """Returns the parsed representation of the given header.
         The exact form of the return value depends on the header in question.
         
         If no parser for the header exists, raise ValueError.
         
-        If the header doesn't exist, return default if specified, else
-        raise KeyError
+        If the header doesn't exist, return default (or None if not specified)
         """
     
         parsed = self._headers.get(name, default)
         if parsed is not _RecalcNeeded:
-            if parsed is Exception:
-                raise KeyError(name)
-            else:
-                return parsed
+			return parsed
         parser = self._parser(name)
         
         h = self._raw_headers[name]
@@ -744,12 +743,10 @@ generator_entity_headers = {
     'Last-Modified':(generateDateTime, singleHeader),
     }
 
-DefaultHTTPParsers = dict()
 DefaultHTTPParsers.update(parser_general_headers)
 DefaultHTTPParsers.update(parser_request_headers)
 DefaultHTTPParsers.update(parser_entity_headers)
 
-DefaultHTTPGenerators = dict()
 DefaultHTTPGenerators.update(generator_general_headers)
 DefaultHTTPGenerators.update(generator_request_headers)
 DefaultHTTPGenerators.update(generator_entity_headers)
