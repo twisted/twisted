@@ -62,16 +62,17 @@ class IResolverSimple(Interface):
 
         @type name: C{str}
         @type timeout: C{int}
-        @rtype: C{Deferred}
-        @return: The callback of the C{Deferred} that is returned will be
-            passed a string that represents the IP address of the specified
-            name, or the errback will be called if the lookup times out.  If
-            multiple types of address records are associated with the name,
-            A6 records will be returned in preference to AAAA records, which
-            will be returned in preference to A records.  If there are multiple
-            records of the type to be returned, one will be selected at random.
+        @rtype: L{twisted.internet.defer.Deferred}
+        @return: The callback of the Deferred that is returned will be
+        passed a string that represents the IP address of the specified
+        name, or the errback will be called if the lookup times out.  If
+        multiple types of address records are associated with the name,
+        A6 records will be returned in preference to AAAA records, which
+        will be returned in preference to A records.  If there are multiple
+        records of the type to be returned, one will be selected at random.
+
         @raise twisted.internet.defer.TimeoutError: Raised (asynchronously)
-            if the name cannot be resolved within the specified timeout period.
+        if the name cannot be resolved within the specified timeout period.
         """
 
 class IResolver(IResolverSimple):
@@ -326,7 +327,7 @@ class IReactorUDP(Interface):
 
     def connectUDP(self, remotehost, remoteport, protocol, localport=0,
                   interface='', maxPacketSize=8192):
-        """Connects a L{ConnectedDatagramProtocol} instance to a UDP port.
+        """Connects a L{twisted.internet.protocol.ConnectedDatagramProtocol} instance to a UDP port.
         """
 
 
@@ -354,7 +355,7 @@ class IReactorProcess(Interface):
     def spawnProcess(self, processProtocol, executable, args=(), env={}, path=None, uid=None, gid=None, usePTY=0):
         """Spawn a process, with a process protocol.
 
-        @param processProtocol: a L{ProcessProtocol} instance
+        @param processProtocol: a L{twisted.internet.protocol.ProcessProtocol} instance
 
         @param executable: the file name to spawn - the full path should be
                            used.
@@ -508,7 +509,7 @@ class IReactorCore(Interface):
     """
 
     def resolve(self, name, timeout=10):
-        """Return a L{Deferred} that will resolve a hostname.
+        """Return a L{twisted.internet.defer.Deferred} that will resolve a hostname.
         """
 
 
