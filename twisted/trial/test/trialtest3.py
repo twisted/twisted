@@ -1,4 +1,3 @@
-# -*- test-case-name: twisted.trial.test.trialtest3.TestTests -*-
 
 import cPickle as pickle
 import warnings
