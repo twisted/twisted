@@ -1,3 +1,24 @@
+# -*- Python -*-
+# $Id: default.py,v 1.3 2002/04/29 19:36:02 acapnotic Exp $
+#
+# Twisted, the Framework of Your Internet
+# Copyright (C) 2001 Matthew W. Lefkowitz
+#
+# This library is free software; you can redistribute it and/or
+# modify it under the terms of version 2.1 of the GNU Lesser General Public
+# License as published by the Free Software Foundation.
+#
+# This library is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+# Lesser General Public License for more details.
+#
+# You should have received a copy of the GNU Lesser General Public
+# License along with this library; if not, write to the Free Software
+# Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+
+"""XXX - twisted.internet.default needs docstring
+"""
 
 from bisect import insort
 from time import time
@@ -24,7 +45,6 @@ from main import CONNECTION_LOST, CONNECTION_DONE
 if platform.getType() != 'java':
     import select
     from errno import EINTR, EBADF
-
 
 
 class _Win32Waker(styles.Ephemeral):
@@ -60,6 +80,7 @@ class _Win32Waker(styles.Ephemeral):
         """Read some data from my connection.
         """
         self.r.recv(8192)
+
 
 class _UnixWaker(styles.Ephemeral):
     """This class provides a simple interface to wake up the select() loop.
@@ -115,18 +136,16 @@ class DefaultSelectReactor:
 
     installed = 0
 
-    
     def __init__(self, installSignalHandlers=1):
         self._installSignalHandlers = installSignalHandlers
         self._eventTriggers = {}
         self._pendingTimedCalls = []
         threadable.whenThreaded(self.initThreads)
 
-    
     # override in subclasses
 
     wakerInstalled = 0
-    
+
     def initThreads(self):
         """Perform initialization required for threading.
         """
@@ -148,7 +167,7 @@ class DefaultSelectReactor:
         """Wake up the event loop."""
         if not threadable.isInIOThread():
             self.waker.wakeUp()
-        
+
     def _preenDescriptors(self):
         log.msg("Malformed file descriptor found.  Preening lists.")
         readers = reads.keys()
@@ -163,7 +182,6 @@ class DefaultSelectReactor:
                     log.msg("bad descriptor %s" % selectable)
                 else:
                     selDict[selectable] = 1
-
 
     def doSelect(self, timeout,
                  # Since this loop should really be as fast as possible,
@@ -266,10 +284,10 @@ class DefaultSelectReactor:
 
 
     # Installation.
-    
+
     def install(self):
         self.installed = 1
-        
+
         # this stuff should be common to all reactors.
         import twisted.internet
         import sys
@@ -289,7 +307,7 @@ class DefaultSelectReactor:
         if hasattr(self, "waker"):
             main.waker = self.waker
         main.wakeUp = self.wakeUp
-        
+
     # IReactorCore
 
     def run(self):
@@ -316,12 +334,10 @@ class DefaultSelectReactor:
         """
         main.iterate(delay)
 
-
     def callFromThread(self, callable, *args, **kw):
         """See twisted.internet.interfaces.IReactorCore.callFromThread.
         """
         apply(task.schedule, (callable,)+ args, kw)
-
 
     def fireSystemEvent(self, eventType):
         """See twisted.internet.interfaces.IReactorCore.fireSystemEvent.
@@ -357,7 +373,6 @@ class DefaultSelectReactor:
                 except:
                     log.deferr()
 
-
     def addSystemEventTrigger(self, phase, eventType, callable, *args, **kw):
         """See twisted.internet.interfaces.IReactorCore.addSystemEventTrigger.
         """
@@ -370,7 +385,6 @@ class DefaultSelectReactor:
         evtList.append((callable, args, kw))
         return (phase, eventType, (callable, args, kw))
 
-
     def removeSystemEventTrigger(self, triggerID):
         """See twisted.internet.interfaces.IReactorCore.removeSystemEventTrigger.
         """
@@ -379,7 +393,7 @@ class DefaultSelectReactor:
                                         "during": 1,
                                         "after":  2}[phase]
                                        ].remove(item)
-        
+
 
     # IReactorTime
 
@@ -389,7 +403,6 @@ class DefaultSelectReactor:
         tple = (time() + seconds, callable, args, kw)
         insort(self._pendingTimedCalls, tple)
         return tple
-
 
     def cancelCallLater(self, callID):
         """See twisted.internet.interfaces.IReactorTime.cancelCallLater.
@@ -418,14 +431,14 @@ class DefaultSelectReactor:
     # IReactorProcess ## XXX TODO!
 
     # IReactorUDP
-    
+
     def listenUDP(self, port, factory, interface='', maxPacketSize=8192):
         """See twisted.internet.interfaces.IReactorUDP.listenUDP
         """
         return udp.Port(self, port, factory, interface, maxPacketSize)
 
     # IReactorUNIX
-    
+
     def clientUNIX(self, address, protocol, timeout=30):
         """See twisted.internet.interfaces.IReactorUNIX.clientUNIX
         """
@@ -438,7 +451,7 @@ class DefaultSelectReactor:
 
 
     # IReactorTCP
-    
+
     def listenTCP(self, port, factory, backlog=5, interface=''):
         """See twisted.internet.interfaces.IReactorTCP.listenTCP
         """
