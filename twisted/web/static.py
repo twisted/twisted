@@ -291,7 +291,7 @@ class File(resource.Resource, styles.Versioned):
         if not os.path.isdir(self.path):
             return self.childNotFound
 
-        if path == '..':
+        if path == '..' or '/' in path:
             return self._suckItCodeRed
 
         if path == '':
