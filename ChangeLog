@@ -1,3 +1,12 @@
+2002-03-13  Itamar Shtull-Trauring  <itamarst@twistedmatrix.com>
+
+        * Refactored coil, the configuration mechanism for Twisted.
+        See twisted.coil and twisted.coil.plugins for examples of how
+        to use the new interface. Chris Armstrong did some UI improvements
+        for coil as well.
+        
+        * Checked in win32 Process support, and fixed win32 event loop.
+
 2002-03-11  Glyph Lefkowitz  <glyph@janus.twistedmatrix.com>
 
 	* More robust shutdown sequence for default mainloop (other
