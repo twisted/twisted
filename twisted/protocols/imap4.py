@@ -1548,7 +1548,16 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
         else:
             self.spewMessage(id, msg, query, uid
                 ).addCallback(lambda _: self.__cbFetch(results, tag, query, uid)
+                ).addErrback(self.__ebSpewMessage
                 )
+    
+    def __ebSpewMessage(self, failure):
+        # This indicates a programming error.
+        # There's no reliable way to indicate anything to the client, since we
+        # may have already written an arbitrary amount of data in response to
+        # the command.
+        log.err(failure)
+        self.transport.loseConnection()
 
     def spew_envelope(self, id, msg):
         self.transport.write('ENVELOPE ' + collapseNestedLists([getEnvelope(msg)]))
