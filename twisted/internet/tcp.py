@@ -219,6 +219,7 @@ class Client(Connection):
                 pass
             elif se.args[0] in (EWOULDBLOCK, EINVAL):
                 self.startReading()
+                self.startWriting()
                 return
             else:
                 self.protocol.connectionFailed()
@@ -232,6 +233,7 @@ class Client(Connection):
         self.connected = 1
         # we first stop and then start, to reset any references to the old doRead
         self.stopReading()
+        self.stopWriting()
         self.startReading()
         self.protocol.makeConnection(self)
 
@@ -292,6 +294,12 @@ class Connector:
     def getProtocol(self):
         """Get the current protocol instance."""
         return self.protocol
+
+    def __getstate__(self):
+        state = self.__dict__.copy()
+        if state.has_key('protocol'):
+            del state['protocol']
+        return state
 
 
 class Server(Connection):
