@@ -124,6 +124,10 @@ db.getAge("Andrew").addCallbacks(gotAge, db.operationError,
                                  callbackArgs="Andrew")
 db.getAge("Glyph").addCallbacks(gotAge, db.operationError, 
                                 callbackArgs="Glyph")
+
+# Of course, nothing will happen until the reactor is started
+from twisted.internet import reactor
+reactor.run()
 </pre>
 
     <p>This is straightforward, except perhaps for the return value
