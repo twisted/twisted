@@ -71,10 +71,10 @@ class Threaded(Stage):
             else:
                 self.flow = callable
         def __call__(self, final = False):
+            self.final = final
             if self.flow:
                 reactor.callFromThread(self.flow)
                 self.flow = None
-            self.final = final
 
     def __init__(self, iterable, *trap):
         Stage.__init__(self, trap)
