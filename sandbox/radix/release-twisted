@@ -257,7 +257,7 @@ def sh(command):#, sensitive=0):
     ask before running it.  If the command returns something other
     than 0, I'll raise CommandFailed(command).
     """
-   if debug:# or sensitive:
+    if debug:# or sensitive:
         if raw_input("%r ?? " % command).startswith('n'):
             return
     print command
