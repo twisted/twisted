@@ -1075,7 +1075,6 @@ class AliasTestCase(unittest.TestCase):
         A4 = mail.alias.AliasGroup(['|process', 'alias1'], domain, 'alias4')
         aliases['alias4'] = A4
         
-        print os.system('/bin/ls')
         p = reactor.spawnProcess(protocol.ProcessProtocol(), "/bin/ls")
         r = map(str, A4.resolve(aliases).objs)
         r.sort()
