@@ -17,9 +17,16 @@
 
 
 # System Imports
-import os , select , traceback , sys , copy , signal , socket
-from errno import EINTR
+import os
 
+if os.name != 'java':
+    import select, signal
+    from errno import EINTR
+
+import traceback
+import sys
+import copy
+import socket
 CONNECTION_LOST = -1
 CONNECTION_DONE = -2
 
@@ -340,13 +347,11 @@ def run():
     global running
     running = 1
     threadable.registerAsIOThread()
-    # Register signal handlers on platforms that support them.
-    if os.name != 'java':
-        signal.signal(signal.SIGINT, shutDown)
-        signal.signal(signal.SIGTERM, shutDown)
-        if os.name == 'posix':
-            signal.signal(signal.SIGCHLD, process.reapProcess)
-            
+    signal.signal(signal.SIGINT, shutDown)
+    signal.signal(signal.SIGTERM, shutDown)
+    if os.name == 'posix':
+        signal.signal(signal.SIGCHLD, process.reapProcess)
+
     work = threadable.dispatcher.work
     try:
         try:
@@ -548,3 +553,7 @@ def addPluginDir():
 
 # Sibling Import
 import process
+
+# eep
+if os.name == 'java':
+    import jnternet

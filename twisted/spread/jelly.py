@@ -48,6 +48,21 @@ reference_atom = 'reference'        # r
 tuple_atom = "tuple"                # t
 unpersistable_atom = "unpersistable"# u
 
+typeNames = {
+    types.StringType: "string",
+    types.IntType: "int",
+    types.FloatType: "float",
+    types.ClassType: "class",
+    types.DictType: "dictionary",
+    types.ListType: "list",
+    types.TupleType: "tuple",
+    types.BuiltinMethodType: "builtin_function_or_method",
+    types.FunctionType: "function",
+    types.ModuleType: "module",
+    types.InstanceType: "instance",
+    types.NoneType: "None",
+    }
+
 class Unpersistable:
     """
     This is an instance of a class that comes back when something couldn't be
@@ -133,7 +148,7 @@ class _Jellier:
         if self.preserved.has_key(id(object)):
             self._cook(object)
             return self.cooked[id(object)]
-        typnm = string.replace(type(object).__name__, ' ', '_')
+        typnm = string.replace(typeNames[type(object)], ' ', '_')
 ### this next block not _necessarily_ correct due to some tricks in
 ### NetJellier's _jelly_instance...
 ##        if not self.taster.isTypeAllowed(typnm):
@@ -142,7 +157,7 @@ class _Jellier:
         if typfn:
             return typfn(object)
         else:
-            return self.unpersistable("type: %s" % type(object).__name__)
+            return self.unpersistable("type: %s" % repr(type(object)))
 
     def _jelly_string(self, st):
         """(internal) Return the serialized representation of a string.
@@ -150,8 +165,6 @@ class _Jellier:
         This just happens to be the string itself.
         """
         return st
-
-    _jelly_str = _jelly_string
 
     def _jelly_int(self, nt):
         """(internal)

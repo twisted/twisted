@@ -26,7 +26,6 @@ StringIO = cStringIO
 del cStringIO
 import string
 import socket
-import errno
 import traceback
 import types
 import os

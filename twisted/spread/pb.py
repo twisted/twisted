@@ -1124,6 +1124,16 @@ class Broker(banana.Banana):
     def serialize(self, object, perspective=None, method=None, args=None, kw=None):
         """Jelly an object according to the remote security rules for this broker.
         """
+        if isinstance(object, defer.Deferred):
+            object.addCallbacks(self.serialize, lambda x: x,
+                                callbackKeywords={
+                'perspective': perspective,
+                'method': method,
+                'args': args,
+                'kw': kw
+                })
+            return object
+                
         self.jellier = _NetJellier(self)
         self.perspective = perspective
         self.jellyMethod = method
@@ -1256,66 +1266,53 @@ class Broker(banana.Banana):
             self.waitingForAnswers[requestID] = callback, errback
         self.sendCall(prefix+"message", requestID, objectID, message, answerRequired, netArgs, netKw)
 
+
     def proto_message(self, requestID, objectID, message, answerRequired, netArgs, netKw):
+        self._recvMessage(self.localObjectForID, requestID, objectID, message, answerRequired, netArgs, netKw)
+
+    def proto_cachemessage(self, requestID, objectID, message, answerRequired, netArgs, netKw):
+        self._recvMessage(self.cachedLocallyAs, requestID, objectID, message, answerRequired, netArgs, netKw)
+        
+    def _recvMessage(self, findObjMethod, requestID, objectID, message, answerRequired, netArgs, netKw):
         """Received a message-send.
 
         Look up message based on object, unserialize the arguments, and invoke
         it with args, and send an 'answer' or 'error' response.
         """
         try:
-            object = self.localObjectForID(objectID)
+            object = findObjMethod(objectID)
             if object is None:
                 raise Error("Invalid Object ID")
             # Special message to check for validity of object-ID.
             if message == '__ping__':
                 result = (object is not None)
             else:
-                netResult = object.remoteMessageReceived(self, message,
-                                                         netArgs, netKw)
+                netResult = object.remoteMessageReceived(self, message, netArgs, netKw)
         except Error, e:
             if answerRequired:
-                self.sendError(requestID, str(e))
+                self._sendError(str(e), requestID)
         except:
             io = cStringIO.StringIO()
             traceback.print_exc(file=io)
             if answerRequired:
-                self.sendError(requestID, io.getvalue())
+                self._sendError(io.getvalue(), requestID)
             else:
                 log.msg("Client Ignored PB Traceback:")
                 log.msg(io.getvalue())
         else:
             if answerRequired:
-                self.sendAnswer(requestID, netResult)
+                if isinstance(netResult, defer.Deferred):
+                    args = (requestID,)
+                    netResult.addCallbacks(
+                        self._sendAnswer, self._sendError,
+                        callbackArgs=args, errbackArgs=args
+                        )
+                    netResult.arm()
+                else:
+                    self._sendAnswer(netResult, requestID)
 
 
-    def proto_cachemessage(self, requestID, cacheID, message, answerRequired, netArgs, netKw):
-        """Received a message-send to a Cacheable instance on the other side -- this needs to go to my RemoteCache.
-
-        Look up message based on a locally cached object, unserialize the
-        arguments, and invoke it with args, and send an 'answer' or 'error'
-        response.
-        """
-        try:
-            object = self.cachedLocallyAs(cacheID)
-            args = self.unserialize(netArgs)
-            kw = self.unserialize(netKw)
-            netResult = object.remoteMessageReceived(self, message, args, kw)
-        except Error, e:
-            if answerRequired:
-                self.sendError(requestID, str(e))
-        except:
-            io = cStringIO.StringIO()
-            traceback.print_exc(file=io)
-            if answerRequired:
-                self.sendError(requestID, io.getvalue())
-            else:
-                log.msg("Client Ignored PB Traceback:")
-                log.msg(io.getvalue())
-        else:
-            if answerRequired:
-                self.sendAnswer(requestID, netResult)
-
-    def sendAnswer(self, requestID, netResult):
+    def _sendAnswer(self, netResult, requestID):
         """(internal) Send an answer to a previously sent message.
         """
         self.sendCall("answer", requestID, netResult)
@@ -1333,7 +1330,7 @@ class Broker(banana.Banana):
         callback(result)
 
 
-    def sendError(self, requestID, descriptiveString):
+    def _sendError(self, descriptiveString, requestID):
         """(internal) Send an error for a previously sent message.
         """
         self.sendCall("error", requestID, descriptiveString)

@@ -19,8 +19,9 @@
 """
 
 # System Imports
-import os, sys
-import errno
+import os, sys, traceback
+if os.name != 'java':
+    import errno
 
 if os.name == 'posix':
     # Inter-process communication and FCNTL fun isn't available on windows.
@@ -136,7 +137,7 @@ class Process(abstract.FileDescriptor, styles.Ephemeral):
     These calls may not exist elsewhere so this code is not cross-platform.
     (also, windows can only select on sockets...)
     """
-    def __init__(self, command, args, environment):
+    def __init__(self, command, args, environment, path):
         """Initialize a Process object.
 
         Actual spawning of the process is deferred, to be sure that it happens
@@ -147,15 +148,16 @@ class Process(abstract.FileDescriptor, styles.Ephemeral):
         # reaping can happen there too.  This means that processes are
         # in an inconsistent state when they're initialized.
         threadable.dispatchOS(self, self.startProcess, command, args,
-                              environment)
+                              environment, path)
 
-    def startProcess(self, command, args, environment):
+    def startProcess(self, command, args, environment, path):
         """Spawn an operating-system process.
 
         This is where the hard work of disconnecting all currently open files /
         forking / executing the new process happens.  (This is executed
         automatically when a Process is instantiated.)
         """
+        command = os.path.abspath(command)
         stdout_read, stdout_write = os.pipe()
         stderr_read, stderr_write = os.pipe()
         stdin_read,  stdin_write  = os.pipe()
@@ -173,18 +175,18 @@ class Process(abstract.FileDescriptor, styles.Ephemeral):
                 for fd in range(3, 256):
                     try:    os.close(fd)
                     except: pass
-                os.chdir(os.path.dirname(os.path.abspath(command)))
+                if path:
+                    os.chdir(path)
                 os.execvpe(command, args, environment)
             except:
                 # If there are errors, bail and try to write something
                 # descriptive to stderr.
                 stderr = os.fdopen(2,'w')
-                traceback.print_exc(file=log.logfile)
+                traceback.print_exc(file=stderr)
                 stderr.flush()
                 for fd in range(3):
                     os.close(fd)
             os._exit(1)
-
         self.status = -1
         for fd in stdout_write, stderr_write, stdin_read:
             os.close(fd)
@@ -221,7 +223,6 @@ class Process(abstract.FileDescriptor, styles.Ephemeral):
     def doRead(self):
         """Called when my standard output stream is ready for reading.
         """
-
         try:
             output = self.stdout.read()
         except IOError, ioe:

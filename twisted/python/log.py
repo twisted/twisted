@@ -55,11 +55,8 @@ def output(func, *args, **kw):
                  (func,)+args,kw)
         
         
-file_protocol = ['close', 'closed', 'fileno',
-                 'flush', 'isatty', 'mode',
-                 'name', 'read', 'readinto',
-                 'readline', 'readlines', 'seek',
-                 'softspace', 'tell', 'truncate',
+file_protocol = ['close', 'closed', 'fileno', 'flush', 'mode', 'name', 'read',
+                 'readline', 'readlines', 'seek', 'softspace', 'tell',
                  'write', 'writelines']
 
 # Prevent logfile from being erased on reload.  This only works in cpython.

@@ -192,7 +192,7 @@ class File(resource.Resource):
         if self.encoding:
             request.setHeader('content-encoding', self.encoding)
 
-        f = open(self.path)
+        f = open(self.path,'rb')
         try:
             range = request.getHeader('range')
             if range is not None:

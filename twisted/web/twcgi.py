@@ -102,11 +102,16 @@ class CGIScript(resource.Resource):
         else:
             env['QUERY_STRING'] = ''
 
+        # Propogate HTTP headers
         for title, header in request.received.items():
             envname = string.upper(string.replace(title, '-', '_'))
             if title not in ('content-type', 'content-length'):
                 envname = "HTTP_" + envname
             env[envname] = header
+        # Propogate our environment
+        for key, value in os.environ.items():
+            if not env.has_key(key):
+                env[key] = value
         # And they're off!
         self.runProcess(env, request)
         return NOT_DONE_YET
@@ -114,7 +119,7 @@ class CGIScript(resource.Resource):
     def runProcess(self, env, request):
         """Callback that actually creates a process.
         """
-        CGIProcess(self.filename, [self.filename], env, request)
+        CGIProcess(self.filename, [self.filename], env, os.path.dirname(self.filename), request)
 
 class FilteredScript(CGIScript):
     """I am a special version of a CGI script, that uses a specific executable.
@@ -126,7 +131,7 @@ class FilteredScript(CGIScript):
     """
     filter = '/usr/bin/cat'
     def runProcess(self, env, request):
-        CGIProcess(self.filter, [self.filename], env, request)
+        CGIProcess(self.filter, [self.filename], env, os.path.dirname(self.filename), request)
 
 class PHPScript(FilteredScript):
     """I am a FilteredScript that uses the default PHP3 command on most systems.
@@ -150,13 +155,13 @@ class CGIProcess(process.Process, pb.Viewable):
     def view_stopProducing(self, issuer):
         self.stopProducing()
     
-    def __init__(self, script, args, env, request):
+    def __init__(self, script, args, env, path, request):
         self.request = request
-        process.Process.__init__(self, script, args, env)
+        process.Process.__init__(self, script, args, env, os.path.dirname(script))
 
-    def startProcess(self, script, args, env):
+    def startProcess(self, script, args, env, path):
         self.request.registerProducer(self, 1)
-        process.Process.startProcess(self, script, args, env)
+        process.Process.startProcess(self, script, args, env, path)
         if self.request.content:
             self.write(self.request.content)
         self.closeStdin()
@@ -214,7 +219,8 @@ class CGIProcess(process.Process, pb.Viewable):
         if self.handling_headers:
             self.request.write(
                 error.ErrorPage(http.INTERNAL_SERVER_ERROR,
-                          "CGI Script Error",
-                          "Premature end of script headers; errors follow:<hr>" +
-                          html.PRE(self.errortext) + "<hr>").render(self.request))
+                                "CGI Script Error",
+                                "Premature end of script headers; errors follow:<hr>" +
+                                html.PRE(self.errortext) + "<hr>" +
+                                html.PRE(self.headertext) + "<hr>").render(self.request))
         self.request.finish()

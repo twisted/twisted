@@ -27,6 +27,7 @@ from pyunit import unittest
 from twisted.spread import pb
 from twisted.protocols import protocol
 from twisted.internet import passport, main
+from twisted.python import defer
 
 class Dummy(pb.Viewable):
     def view_doNothing(self, user):
@@ -234,6 +235,24 @@ class Observable(pb.Referenceable):
         for observer in self.observers:
             observer.notify(self, obj)
 
+class DeferredRemote(pb.Referenceable):
+    def __init__(self):
+        self.run = 0
+
+    def runMe(self, arg):
+        self.run = arg
+        return arg + 1
+
+    def dontRunMe(self, arg):
+        print arg
+        assert 0, "shouldn't have been run!"
+
+    def remote_doItLater(self):
+        d = defer.Deferred()
+        d.addCallbacks(self.runMe, self.dontRunMe)
+        self.d = d
+        return d
+
 
 class Observer(pb.Referenceable):
     notified = 0
@@ -335,6 +354,21 @@ class BrokerTestCase(unittest.TestCase):
         assert b.obj == 1, 'notified too much'
 
 
+    def testDefer(self):
+        c, s, pump = connectedServerAndClient()
+        d = DeferredRemote()
+        s.setNameForLocal("d", d)
+        e = c.remoteForName("d")
+        pump.pump(); pump.pump()
+        results = []
+        e.doItLater(pbcallback=results.append)
+        pump.pump(); pump.pump()
+        assert not d.run, "Deferred method run too early."
+        d.d.callback(5)
+        assert d.run == 5, "Deferred method run too late."
+        pump.pump(); pump.pump()
+        assert results[0] == 6, "Incorrect result."
+        
     def testRefcount(self):
         c, s, pump = connectedServerAndClient()
         foo = NestedRemote()

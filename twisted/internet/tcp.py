@@ -38,7 +38,7 @@ if os.name == 'nt':
     ECONNRESET  = 10054
     EISCONN     = 10056
     ENOTCONN    = 10057
-else:
+elif os.name != 'java':
     from errno import EINVAL
     from errno import EWOULDBLOCK
     from errno import EINPROGRESS
@@ -59,10 +59,10 @@ import main
 class Connection(abstract.FileDescriptor,
                  protocol.Transport,
                  styles.Ephemeral):
-    """I am the superclass of all socket-based selectables.
+    """I am the superclass of all socket-based FileDescriptors.
     
-    This is an abstract superclass of all objects which are networkably
-    selectable (those that use a TCP/IP or similiar socket).
+    This is an abstract superclass of all objects which represent a TCP/IP
+    connection based socket.
     """
     def __init__(self, skt, protocol):
         self.socket = skt

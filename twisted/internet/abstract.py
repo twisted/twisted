@@ -183,8 +183,7 @@ class FileDescriptor(log.Logger):
         If this is a non-streaming producer, resumeProducing will be called
         immediately, to start the flow of data.  Otherwise it is assumed that
         the producer starts out life unpaused.
-
-        Producers must implement the interface: """
+        """
 
         self.producer = producer
         self.streamingProducer = streaming
@@ -203,8 +202,7 @@ class FileDescriptor(log.Logger):
         consumer to go lose its connection (and break potential circular
         references).
         """
-
-        self.producer = None
+        self.unregisterProducer()
         self.loseConnection()
 
     # producer interface

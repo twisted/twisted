@@ -104,7 +104,9 @@ except usage.error, ue:
     print "%s: %s" % (sys.argv[0], ue)
     os._exit(1)
 
-os.chdir(config.rundir)
+if os.name != 'java':
+    # java can't chdir
+    os.chdir(config.rundir)
 sys.path.append(config.rundir)
 threadable.init(config.threaded)
 
@@ -175,7 +177,9 @@ if not config.nodaemon:
     oldstdout.close()
     oldstderr.close()
 
-open(config.pidfile,'wb').write(str(os.getpid()))
+if os.name != 'java':
+    # java doesn't have getpid
+    open(config.pidfile,'wb').write(str(os.getpid()))
 
 try:
     if config.profile:
@@ -190,5 +194,7 @@ except:
         file = open("TWISTD-CRASH.log",'a')
     traceback.print_exc(file=file)
     file.flush()
-os.unlink(config.pidfile)
+if os.name != 'java':
+    # again, java with the not having getpid
+    os.unlink(config.pidfile)
 print "Server Shut Down."
