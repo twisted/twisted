@@ -17,5 +17,3 @@ CREATE TABLE users
   name         varchar(32),
   sig          varchar(64)
 );
-
-  

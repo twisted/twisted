@@ -6,6 +6,7 @@ This is designed to integrate with twisted.internet.threadtask.
 
 from twisted.spread import pb
 from twisted.internet import task, threadtask
+from twisted.python import reflect
 
 import traceback
 
@@ -23,37 +24,44 @@ class Transaction:
 class ConnectionPool(pb.Referenceable):
     """I represent a pool of connections to a DB-API 2.0 compliant database.
     """
-    def __init__(self, dbapi, connargs):#, **connkw):
+    def __init__(self, dbapiName, *connargs, **connkw):
         """See ConnectionPool.__doc__
         """
-        self.dbapi = dbapi
-        assert dbapi.apilevel == '2.0', 'DB API module not DB API 2.0 compliant.'
-        assert dbapi.threadsafety > 0, 'DB API module not sufficiently thread-safe.'
+        self.dbapiName = dbapiName
+        print "Connecting to database: %s %s %s" % (dbapiName, connargs, connkw)
+        self.dbapi = reflect.namedModule(dbapiName)
+        assert self.dbapi.apilevel == '2.0', 'DB API module not DB API 2.0 compliant.'
+        assert self.dbapi.threadsafety > 0, 'DB API module not sufficiently thread-safe.'
         self.connargs = connargs
-        #self.connkw = connkw
+        self.connkw = connkw
         import thread
         self.threadID = thread.get_ident
         self.connections = {}
 
+    def __getstate__(self):
+        return {'dbapiName': self.dbapiName,
+                'connargs': self.connargs,
+                'connkw': self.connkw}
+
+    def __setstate__(self, state):
+        self.__dict__ = state
+        apply(self.__init__, (self.dbapiName, )+self.connargs, self.connkw)
+
     def connect(self):
-        print 'connecting using', self.connargs
         tid = self.threadID()
         conn = self.connections.get(tid)
         if not conn:
-            conn = self.dbapi.connect(self.connargs)#, self.connkw)
+            print 'connecting using', self.dbapiName, self.connargs, self.connkw
+            conn = apply(self.dbapi.connect, self.connargs, self.connkw)
             self.connections[tid] = conn
             print 'connected'
-        else:
-            print 'already'
         return conn
 
     def _runQuery(self, qstr, eater, chunkSize):
-        print 'running query'
         conn = self.connect()
         curs = conn.cursor()
         try:
             curs.execute(qstr)
-            print 'ran it!'
             if eater is not None:
                 task.schedule(eater, curs.fetchmany(chunkSize))
                 result = None

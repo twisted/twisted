@@ -13,15 +13,8 @@ import gadgets
 
 class ForumService(pb.Service):
 
-    def __init__(self, name, app, dbhost, dbport):
+    def __init__(self, name, app, dbpool):
         pb.Service.__init__(self, name, app)
-        self.dbhost = dbhost
-        self.dbport = dbport
-        connectString = "%s:%d" % (dbhost, dbport)
-        self.pool = adbapi.ConnectionPool(PgSQL, connectString)
+        self.pool = dbpool# adbapi.ConnectionPool(PgSQL, connectString)
         self.pool.connect()
 
-        
-        
-                                       
-        

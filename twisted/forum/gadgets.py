@@ -100,7 +100,7 @@ class DetailsGadget(widgets.Gadget, widgets.StreamWidget):
 
     def display(self, request):
         self.id = request.args.get('id',[0])[0]
-        print "ID = ", self.id
+        # print "ID = ", self.id
         self.request = request
         d = defer.Deferred()
         d.addCallbacks(self.gotData, self.gotError)

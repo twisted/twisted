@@ -1,0 +1,29 @@
+#!python
+
+## Twisted Modules List
+
+register("Twisted Words",
+         "twisted.words.service",
+         description="A chat and collaboration system.")
+
+register("Twisted Reality",
+         "twisted.reality.reality",
+         description="MUD and MOO-like services for Twisted.")
+
+register("Twisted Web",
+         "twisted.web.server",
+         description="Web servers & services for Twisted")
+
+## Pending Moshe's integration of coil w/ mail.
+##register("Twisted Mail",
+##         "twisted.mail.mail",
+##         description="Mail protocol implementations for Twisted.")
+
+register("Twisted Manhole",
+         "twisted.manhole.service",
+         description="Mail protocol implementation for Twisted.")
+
+## Pending making this realistically work...
+##register("Twisted Forum",
+##         "twisted.forum.service",
+##         description="Web-based threaded forum for Twisted.")

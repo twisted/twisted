@@ -22,6 +22,7 @@ import types
 import string
 import sys
 import new
+import os
 
 # Twisted Imports
 from twisted.python import util
@@ -211,4 +212,53 @@ class Configurable:
         """
         return self.configuration
 
-### Web Stuff
+class Module:
+    def __init__(self, name, module, description):
+        self.name = name
+        self.module = module
+        self.description = description
+
+    def isImported(self):
+        return sys.modules.has_key(self.module)
+
+    def doImport(self):
+        __import__(self.module)
+
+    def __repr__(self):
+        return "<Coil Module %s %s %s>" % (self.name, self.module, self.isImported())
+
+class Package:
+    def __init__(self, name):
+        self.name = name
+        self.modules = []
+        
+    def register(self, name, module, description):
+        self.modules.append(Module(name, module, description))
+
+    def __repr__(self):
+        return "<Coil Package %s %s>" % (self.name, self.modules)
+
+def getModuleList():
+    dirs = util.getPluginDirs()
+    import twisted
+    result = []
+    plugindirs = []
+    for d in dirs:
+        if os.path.exists(d):
+            for plugindir in os.listdir(d):
+                plugindirs.append(os.path.join(d, plugindir))
+    plugindirs.append(
+        apply(os.path.join,
+              os.path.split(os.path.dirname(twisted.__file__))))
+    for plugindir in plugindirs:
+        tmlname = os.path.join(plugindir, "modules.tml")
+        pname = os.path.split(os.path.abspath(plugindir))[-1]
+        if os.path.exists(tmlname):
+            p = Package(pname)
+            ns = {'register': p.register}
+            execfile(tmlname, ns)
+            result.append(p)
+            print "Successfully loaded %s!" % plugindir
+        elif os.path.exists(os.path.join(plugindir,'__init__.py')):
+            print "module %s has no modules index. (%s)" % (pname, plugindir)
+    return result
