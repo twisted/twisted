@@ -142,6 +142,8 @@ class EventDispatcher:
 
 
     def dispatch(self, object, event = None):
+        foundTarget = False
+        
         # Aiyiyi! If this dispatch occurs within a dispatch
         # we need to preserve the original dispatching flag
         # and not mess up the updateQueue
@@ -150,11 +152,13 @@ class EventDispatcher:
         if event != None:
             if event in self._eventObservers:
                 self._eventObservers[event].callback(object)
+                foundTarget = True
         else:
             for query in self._orderedXpathObserverKeys:
                 callbacklist = self._xpathObservers[query]
                 if query.matches(object):
                     callbacklist.callback(object)
+                    foundTarget = True
 
         self._dispatchDepth = self._dispatchDepth -1
 
@@ -166,4 +170,5 @@ class EventDispatcher:
             for f in self._updateQueue:
                 f()
             self._updateQueue = []
-            
+
+        return foundTarget

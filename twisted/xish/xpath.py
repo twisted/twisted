@@ -253,15 +253,11 @@ class _AnyLocation:
 class XPathQuery:
     def __init__(self, queryStr):
         self.queryStr = queryStr
-        self.priority = 0
         from twisted.xish.xpathparser import parse
         self.baseLocation = parse('XPATH', queryStr)
 
     def __hash__(self):
         return self.queryStr.__hash__()
-
-    def __cmp__(self, other):
-        return self.priority.__cmp__(other.priority)
 
     def matches(self, elem):
         return self.baseLocation.matches(elem)

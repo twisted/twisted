@@ -79,8 +79,8 @@ class EventDispatcherTest(unittest.TestCase):
         self.assertEquals(cb1.called, 2)
         self.assertEquals(cb2.called, 1)
         self.assertEquals(cb2.object, pres)
-
         self.assertEquals(cb3.called, 0)
+        
         d.dispatch(d, "//event/testevent")
         self.assertEquals(cb3.called, 1)
         self.assertEquals(cb3.object, d)
@@ -113,25 +113,16 @@ class EventDispatcherTest(unittest.TestCase):
         d.dispatch(msg)
         self.assertEquals(cb.called, 1)
 
-    def testPriorityDispatch(self):
+    def testDispatcherResult(self):
         d = EventDispatcher()
         msg = Element(("ns", "message"))
-        msg.addElement("foobar")
-        cb = OrderedCallbackTracer()
+        pres = Element(("ns", "presence"))
+        cb = CallbackTracker()
 
-        # In order for the priority patch to work, each
-        # XPath must be unique (since we do intern'ing
-        # All of the xpaths below should match our example
-        # with varying degrees of detail
-        d.addObserver("/message", cb.call1)
-        d.addObserver("/message[@xmlns='ns']", cb.call2, 5)
-        d.addObserver("/message/foobar", cb.call3, 1)
+        d.addObserver("/presence", cb.call)
+        result = d.dispatch(msg)
+        self.assertEquals(False, result)
 
-        expectedOrder = [cb.call2, cb.call3, cb.call1]
-
-        d.dispatch(msg)
-
-        self.assertEquals(expectedOrder, cb.callList)
-        
-        
+        result = d.dispatch(pres)
+        self.assertEquals(True, result)
 
