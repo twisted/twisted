@@ -1,7 +1,6 @@
 # -*- test-case-name: twisted.test.test_record -*-
 
-import types
-import struct
+import types, math, struct, itertools
 
 class Integer:
     def __init__(self, bits, signed=False):
@@ -38,15 +37,39 @@ class Int255String:
 def unsignedNegation(n, w):
     return struct.unpack('>I', struct.pack('>i', n))[0] & (2 ** w - 1)
 
-
-from binary import binary
+def genmask(start, length):
+    """Make a byte mask from 'start' and including 'length' bits.
+       'start' counts from the MSB as 0. Hence:
+       genmask(2,3) returns 00111000, or 0x38
+    """
+    return ((2**(8-start))-1) & ~(2 **(8-start-length)-1)
+    
 def extract(bytes, offset, size):
+    print "extract", [hex(ord(x)) for x in bytes], offset, size
+    
+    i = offset / 8
+    ch = ord(bytes[i])
+    offset = offset % 8
     result = 0
-    b = binary(ord(bytes)).zfill(8)
-    print b[offset:offset+size]
-    for i in range(offset, offset + size):
-        ch = ord(bytes[i / 8])
-        print bool(ch >> (i % 8))
+    if offset+size > 8: # ono we span multiple bytes
+        if offset: # double oh no, we start in the middle of a byte
+            result = long(ch & genmask(offset, 8-offset))
+            size -= 8-offset
+        else:
+            result = ch
+            size -= 8
+            
+        while size >= 8:
+            # eat a byte at a time 
+            i += 1
+            ch = ord(bytes[i])
+            result = (result << 8) + ch
+            size -= 8
+        offset = 0
+
+    if size:
+        mask = genmask(offset, size)
+        result = (result << size) + ((mask & ch) >> 8-offset-size)
     return result
 
 def processDecode(attrs, toproc, bytes):
