@@ -3,7 +3,7 @@ from twisted.python import log
 class StateEventMachineType(type):
     def makeHandleGetter(klass, name):
         def helpful(self):
-#            log.msg("looking up %s in state %s" % (name, self.state))
+            log.msg("looking up %s in state %s" % (name, self.state))
             return getattr(self, "handle_%s_%s" % (self.state, name))
         return helpful
     makeHandleGetter = classmethod(makeHandleGetter)

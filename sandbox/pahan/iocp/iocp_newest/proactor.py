@@ -2,14 +2,14 @@ from twisted.internet import defer, base, main
 from twisted.internet.interfaces import IReactorTCP, IReactorUDP
 from twisted.python import threadable, log
 
-import tcp#, udp
+import tcp, udp
 from iocpcore import iocpcore
 
 class Proactor(iocpcore, base.ReactorBase):
     # TODO: IReactorArbitrary, IReactorUDP, IReactorMulticast,
     # IReactorSSL (or leave it until exarkun finishes TLS)
     # IReactorProcess, IReactorCore (cleanup)
-    __implements__ = base.ReactorBase.__implements__ + (IReactorTCP,)#IReactorUDP)
+    __implements__ = base.ReactorBase.__implements__ + (IReactorTCP, IReactorUDP)
     handles = None
     iocp = None
 
@@ -67,7 +67,6 @@ class Proactor(iocpcore, base.ReactorBase):
         c.connect()
         return c
 
-"""
     def listenUDP(self, port, protocol, interface='', maxPacketSize=8192):
         p = udp.Port((interface, port), protocol, maxPacketSize)
         p.startListening()
@@ -75,10 +74,9 @@ class Proactor(iocpcore, base.ReactorBase):
 
     def connectUDP(self, remotehost, remoteport, protocol, localport=0,
                   interface='', maxPacketSize=8192):
-        p = udp.ConnectedPort((interface, localport), (remotehost, remoteport), protocol, maxPacketSize)
+        p = udp.ConnectedPort((remotehost, remoteport), (interface, localport), protocol, maxPacketSize)
         p.startListening()
         return p
-"""
 
 def install():
     from twisted.python import threadable

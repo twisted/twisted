@@ -1,3 +1,3 @@
 # iocp's personal debug flag! Isn't this special?
-debug = 0
-
+#debug = True
+debug = False

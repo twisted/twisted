@@ -277,6 +277,172 @@ static PyObject *iocpcore_ReadFile(iocpcore* self, PyObject *args) {
     return Py_BuildValue("ll", err, bytes);
 }
 
+// yay, rape'n'paste of getsockaddrarg from socketmodule.c. "I couldn't understand what it does, so I removed it!"
+static int makesockaddr(int sock_family, PyObject *args, struct sockaddr **addr_ret, int *len_ret)
+{
+    switch (sock_family) {
+    case AF_INET:
+    {
+        struct sockaddr_in* addr;
+        char *host;
+        int port;
+        unsigned long result;
+        if(!PyTuple_Check(args)) {
+            PyErr_Format(PyExc_TypeError, "AF_INET address must be tuple, not %.500s", args->ob_type->tp_name);
+            return 0;
+        }
+        if(!PyArg_ParseTuple(args, "si", &host, &port)) {
+            return 0;
+        }
+        addr = PyMem_Malloc(sizeof(struct sockaddr_in));
+        result = inet_addr(host);
+        if(result == -1) {
+            PyMem_Free(addr);
+            PyErr_SetString(PyExc_ValueError, "Can't parse ip address string");
+            return 0;
+        }
+#ifdef SPEW
+        printf("makesockaddr setting addr, %lu, %d, %hu\n", result, AF_INET, htons((short)port));
+#endif
+        addr->sin_addr.s_addr = result;
+        addr->sin_family = AF_INET;
+        addr->sin_port = htons((short)port);
+        *addr_ret = (struct sockaddr *) addr;
+        *len_ret = sizeof *addr;
+        return 1;
+    }
+    default:
+        PyErr_SetString(PyExc_ValueError, "bad family");
+        return 0;
+    }
+}
+
+static PyObject *iocpcore_WSASendTo(iocpcore* self, PyObject *args) {
+    HANDLE handle;
+    char *buf;
+    int buflen, res, family, addrlen;
+    DWORD err, bytes, flags = 0;
+    PyObject *object, *object_arg, *address;
+    MyOVERLAPPED *ov;
+    WSABUF wbuf;
+    struct sockaddr *addr;
+//    LARGE_INTEGER time, time_after;
+//    QueryPerformanceCounter(&time);
+    if(!PyArg_ParseTuple(args, "lt#iOOO", &handle, &buf, &buflen, &family, &address, &object, &object_arg)) {
+        return NULL;
+    }
+    if(buflen <= 0) {
+        PyErr_SetString(PyExc_ValueError, "Invalid length specified");
+        return NULL;
+    }
+    if(!makesockaddr(family, address, &addr, &addrlen)) {
+        return NULL;
+    }
+    if(!PyCallable_Check(object)) {
+        PyErr_SetString(PyExc_TypeError, "Callback must be callable");
+        return NULL;
+    }
+    ov = PyMem_Malloc(sizeof(MyOVERLAPPED));
+    if(!ov) {
+        PyErr_NoMemory();
+        return NULL;
+    }
+    memset(ov, 0, sizeof(MyOVERLAPPED));
+    Py_INCREF(object);
+    Py_INCREF(object_arg);
+    ov->callback = object;
+    ov->callback_arg = object_arg;
+    wbuf.len = buflen;
+    wbuf.buf = buf;
+    CreateIoCompletionPort(handle, self->iocp, 0, 1);
+#ifdef SPEW
+    printf("calling WSASendTo(%d, 0x%p, %d, 0x%p, %ld, 0x%p, %d, 0x%p, 0x%p)\n", handle, &wbuf, 1, &bytes, flags, addr, addrlen, ov, NULL);
+#endif
+    Py_BEGIN_ALLOW_THREADS;
+    res = WSASendTo((SOCKET)handle, &wbuf, 1, &bytes, flags, addr, addrlen, (OVERLAPPED *)ov, NULL);
+    Py_END_ALLOW_THREADS;
+    err = GetLastError();
+#ifdef SPEW
+    printf("    wst returned %d, err %ld\n", res, err);
+#endif
+    if(res == SOCKET_ERROR && err != ERROR_IO_PENDING) {
+        Py_DECREF(object);
+        Py_DECREF(object_arg);
+        PyMem_Free(ov);
+        return PyErr_SetFromWindowsErr(err);
+    }
+    if(!res) {
+        err = 0;
+    }
+//    QueryPerformanceCounter(&time_after);
+//    printf("st total ticks is %ld", time_after.LowPart - time.LowPart);
+    return Py_BuildValue("ll", err, bytes);
+}
+
+static PyObject *iocpcore_WSARecvFrom(iocpcore* self, PyObject *args) {
+    HANDLE handle;
+    char *buf;
+    int buflen, res, ablen;
+    DWORD err, bytes, flags = 0;
+    PyObject *object, *object_arg;
+    MyOVERLAPPED *ov;
+    WSABUF wbuf;
+    AddrBuffer *ab;
+//    LARGE_INTEGER time, time_after;
+//    QueryPerformanceCounter(&time);
+    if(!PyArg_ParseTuple(args, "lw#w#OO", &handle, &buf, &buflen, &ab, &ablen, &object, &object_arg)) {
+        return NULL;
+    }
+    if(buflen <= 0) {
+        PyErr_SetString(PyExc_ValueError, "Invalid length specified");
+        return NULL;
+    }
+    if(ablen < sizeof(int)+sizeof(struct sockaddr)) {
+        PyErr_SetString(PyExc_ValueError, "Address buffer too small");
+        return NULL;
+    }
+    if(!PyCallable_Check(object)) {
+        PyErr_SetString(PyExc_TypeError, "Callback must be callable");
+        return NULL;
+    }
+    ov = PyMem_Malloc(sizeof(MyOVERLAPPED));
+    if(!ov) {
+        PyErr_NoMemory();
+        return NULL;
+    }
+    memset(ov, 0, sizeof(MyOVERLAPPED));
+    Py_INCREF(object);
+    Py_INCREF(object_arg);
+    ov->callback = object;
+    ov->callback_arg = object_arg;
+    wbuf.len = buflen;
+    wbuf.buf = buf;
+    ab->size = ablen;
+    CreateIoCompletionPort(handle, self->iocp, 0, 1);
+#ifdef SPEW
+    printf("calling WSARecvFrom(%d, 0x%p, %d, 0x%p, 0x%p, 0x%p, 0x%p, 0x%p, 0x%p)\n", handle, &wbuf, 1, &bytes, &flags, (struct sockaddr *)ab->buffer, &ab->size, ov, NULL);
+#endif
+    Py_BEGIN_ALLOW_THREADS;
+    res = WSARecvFrom((SOCKET)handle, &wbuf, 1, &bytes, &flags, (struct sockaddr *)ab->buffer, &ab->size, (OVERLAPPED *)ov, NULL);
+    Py_END_ALLOW_THREADS;
+    err = GetLastError();
+#ifdef SPEW
+    printf("    wrf returned %d, err %ld\n", res, err);
+#endif
+    if(res == SOCKET_ERROR && err != ERROR_IO_PENDING) {
+        Py_DECREF(object);
+        Py_DECREF(object_arg);
+        PyMem_Free(ov);
+        return PyErr_SetFromWindowsErr(err);
+    }
+    if(!res) {
+        err = 0;
+    }
+//    QueryPerformanceCounter(&time_after);
+//    printf("wrf total ticks is %ld", time_after.LowPart - time.LowPart);
+    return Py_BuildValue("ll", err, bytes);
+}
+
 // rape'n'paste from socketmodule.c
 static PyObject *parsesockaddr(struct sockaddr *addr, int addrlen)
 {
@@ -320,46 +486,6 @@ static PyObject *iocpcore_interpretAB(iocpcore* self, PyObject *args) {
     }
     ab = (AddrBuffer *)buf;
     return parsesockaddr((struct sockaddr *)(ab->buffer), ab->size);
-}
-
-// yay, rape'n'paste of getsockaddrarg from socketmodule.c. "I couldn't understand what it does, so I removed it!"
-static int makesockaddr(int sock_family, PyObject *args, struct sockaddr **addr_ret, int *len_ret)
-{
-    switch (sock_family) {
-    case AF_INET:
-    {
-        struct sockaddr_in* addr;
-        char *host;
-        int port;
-        unsigned long result;
-        if(!PyTuple_Check(args)) {
-            PyErr_Format(PyExc_TypeError, "AF_INET address must be tuple, not %.500s", args->ob_type->tp_name);
-            return 0;
-        }
-        if(!PyArg_ParseTuple(args, "si", &host, &port)) {
-            return 0;
-        }
-        addr = PyMem_Malloc(sizeof(struct sockaddr_in));
-        result = inet_addr(host);
-        if(result == -1) {
-            PyMem_Free(addr);
-            PyErr_SetString(PyExc_ValueError, "Can't parse ip address string");
-            return 0;
-        }
-#ifdef SPEW
-        printf("makesockaddr setting addr, %lu, %d, %hu\n", result, AF_INET, htons((short)port));
-#endif
-        addr->sin_addr.s_addr = result;
-        addr->sin_family = AF_INET;
-        addr->sin_port = htons((short)port);
-        *addr_ret = (struct sockaddr *) addr;
-        *len_ret = sizeof *addr;
-        return 1;
-    }
-    default:
-        PyErr_SetString(PyExc_ValueError, "bad family");
-        return 0;
-    }
 }
 
 static PyObject *iocpcore_getsockinfo(iocpcore* self, PyObject *args) {
@@ -534,6 +660,10 @@ static PyMethodDef iocpcore_methods[] = {
      "Issue an overlapped WriteFile operation"},
     {"issueReadFile", (PyCFunction)iocpcore_ReadFile, METH_VARARGS,
      "Issue an overlapped ReadFile operation"},
+    {"issueWSASendTo", (PyCFunction)iocpcore_WSASendTo, METH_VARARGS,
+     "Issue an overlapped WSASendTo operation"},
+    {"issueWSARecvFrom", (PyCFunction)iocpcore_WSARecvFrom, METH_VARARGS,
+     "Issue an overlapped WSARecvFrom operation"},
     {"interpretAB", (PyCFunction)iocpcore_interpretAB, METH_VARARGS,
      "Interpret address buffer as returned by WSARecvFrom"},
     {"issueAcceptEx", (PyCFunction)iocpcore_AcceptEx, METH_VARARGS,

@@ -73,7 +73,6 @@ class ConnectedSocket(log.Logger, styles.Ephemeral, object):
             self.state = "disconnecting"
         else:
             self.connectionLost(failure.Failure(main.CONNECTION_DONE))
-            return None
 
     def _cbWriteShutdown(self):
         self.removeBufferCallback(self._cbWriteShutdown, "buffer empty")

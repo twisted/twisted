@@ -40,6 +40,28 @@ class WriteFileOp(OverlappedOp):
     def initiateOp(self, handle, buffer):
         self.reactor.issueWriteFile(handle, buffer, self.ovDone, (handle, buffer))
 
+class WSASendToOp(OverlappedOp):
+    def ovDone(self, ret, bytes, (handle, buffer)):
+        if ret or not bytes:
+            self.transport.writeErr(ret, bytes)
+        else:
+            self.transport.writeDone(bytes)
+
+    def initiateOp(self, handle, buffer, addr):
+        max_addr, family, type, protocol = self.reactor.getsockinfo(handle)
+        self.reactor.issueWSASendTo(handle, buffer, family, addr, self.ovDone, (handle, buffer))
+
+class WSARecvFromOp(OverlappedOp):
+    def ovDone(self, ret, bytes, (handle, buffer, ab)):
+        if ret or not bytes:
+            self.transport.readErr(ret, bytes)
+        else:
+            self.transport.readDone(bytes, self.reactor.interpretAB(ab))
+
+    def initiateOp(self, handle, buffer):
+        ab = self.reactor.AllocateReadBuffer(1024)
+        self.reactor.issueWSARecvFrom(handle, buffer, ab, self.ovDone, (handle, buffer, ab))
+
 class AcceptExOp(OverlappedOp):
     def ovDone(self, ret, bytes, (handle, buffer, acc_sock)):
         if ret == 64: # ERROR_NETNAME_DELETED
