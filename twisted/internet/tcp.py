@@ -106,7 +106,11 @@ class Connection(abstract.FileDescriptor,
         """See abstract.FileDescriptor.connectionLost().
         """
         abstract.FileDescriptor.connectionLost(self)
-        self.socket.close()
+        # This used to close() the socket, but that doesn't *really* close it if
+        # there's another reference to it in the TCP/IP stack, e.g. if it was
+        # was inherited by a subprocess. And we really do want to close the 
+        # connection.
+        self.socket.shutdown(2)
         protocol = self.protocol
         del self.protocol
         del self.socket
