@@ -224,8 +224,7 @@ class RemoteCopyUnslicer(slicer.BaseUnslicer):
     def checkToken(self, typebyte, size):
         if self.attrname == None:
             if typebyte not in (tokens.STRING, tokens.VOCAB):
-                raise BananaError("RemoteCopyUnslicer keys must be STRINGs",
-                                  self.where())
+                raise BananaError("RemoteCopyUnslicer keys must be STRINGs")
 
     def doOpen(self, opentype):
         if self.attrConstraint:
@@ -241,8 +240,7 @@ class RemoteCopyUnslicer(slicer.BaseUnslicer):
         if self.attrname == None:
             attrname = obj
             if self.d.has_key(attrname):
-                raise BananaError("duplicate attribute name '%s'" % attrname,
-                                  self.where())
+                raise BananaError("duplicate attribute name '%s'" % attrname)
             s = self.schema
             if s:
                 accept, self.attrConstraint = s.getAttrConstraint(attrname)
@@ -253,8 +251,7 @@ class RemoteCopyUnslicer(slicer.BaseUnslicer):
                 # TODO: this is an artificial restriction, and it might
                 # be possible to remove it, but I need to think through
                 # it carefully first
-                raise BananaError("unreferenceable object in attribute",
-                                  self.where())
+                raise BananaError("unreferenceable object in attribute")
             self.setAttribute(self.attrname, obj)
             self.attrname = None
 

@@ -345,9 +345,6 @@ class BaseUnslicer:
     def describe(self):
         return "??"
 
-    def where(self):
-        return self.protocol.describeReceive()
-
     def setConstraint(self, constraint):
         pass
 
@@ -484,15 +481,14 @@ class UnicodeUnslicer(LeafUnslicer):
 
     def checkToken(self, typebyte, size):
         if typebyte != tokens.STRING:
-            raise BananaError("UnicodeUnslicer only accepts strings",
-                              self.where())
+            raise BananaError("UnicodeUnslicer only accepts strings")
         if self.constraint:
             self.constraint.checkToken(typebyte, size)
 
     def receiveChild(self, obj):
         self.propagateUnbananaFailures(obj)
         if self.string != None:
-            raise BananaError("already received a string", self.where())
+            raise BananaError("already received a string")
         self.string = unicode(obj, "UTF-8")
 
     def receiveClose(self):
@@ -732,13 +728,12 @@ class DictUnslicer(BaseUnslicer):
         # however: OPEN(dict), OPEN(tuple), OPEN(reference), 0, CLOSE, CLOSE,
         # "value", CLOSE
         if isinstance(key, Deferred):
-            raise BananaError("incomplete object as dictionary key",
-                              self.where())
+            raise BananaError("incomplete object as dictionary key")
         try:
             if self.d.has_key(key):
-                raise BananaError("duplicate key '%s'" % key, self.where())
+                raise BananaError("duplicate key '%s'" % key)
         except TypeError:
-            raise BananaError("unhashable key '%s'" % key, self.where())
+            raise BananaError("unhashable key '%s'" % key)
         self.key = key
 
     def receiveValue(self, value):
@@ -771,19 +766,16 @@ class VocabUnslicer(LeafUnslicer):
     def checkToken(self, typebyte, size):
         if self.key is None:
             if typebyte != tokens.INT:
-                raise BananaError("VocabUnslicer only accepts INT keys",
-                                  self.where())
+                raise BananaError("VocabUnslicer only accepts INT keys")
         else:
             if typebyte != tokens.STRING:
-                raise BananaError("VocabUnslicer only accepts STRING values",
-                                  self.where())
+                raise BananaError("VocabUnslicer only accepts STRING values")
 
     def receiveChild(self, token):
         self.propagateUnbananaFailures(token)
         if self.key is None:
             if self.d.has_key(token):
-                raise BananaError("duplicate key '%s'" % token,
-                                  self.where())
+                raise BananaError("duplicate key '%s'" % token)
             self.key = token
         else:
             self.d[self.key] = token
@@ -857,12 +849,10 @@ class InstanceUnslicer(BaseUnslicer):
     def checkToken(self, typebyte, size):
         if self.classname is None:
             if typebyte not in (tokens.STRING, tokens.VOCAB):
-                raise BananaError("InstanceUnslicer classname must be string",
-                                  self.where())
+                raise BananaError("InstanceUnslicer classname must be string")
         elif self.attrname is None:
             if typebyte not in (tokens.STRING, tokens.VOCAB):
-                raise BananaError("InstanceUnslicer keys must be STRINGs",
-                                  self.where())
+                raise BananaError("InstanceUnslicer keys must be STRINGs")
 
     def receiveChild(self, obj):
         self.propagateUnbananaFailures(obj)
@@ -876,11 +866,9 @@ class InstanceUnslicer(BaseUnslicer):
                 # TODO: this is an artificial restriction, and it might
                 # be possible to remove it, but I need to think through
                 # it carefully first
-                raise BananaError("unreferenceable object in attribute",
-                                  self.where())
+                raise BananaError("unreferenceable object in attribute")
             if self.d.has_key(self.attrname):
-                raise BananaError("duplicate attribute name '%s'" % name,
-                                  self.where())
+                raise BananaError("duplicate attribute name '%s'" % name)
             self.setAttribute(self.attrname, obj)
             self.attrname = None
 
@@ -919,14 +907,12 @@ class ReferenceUnslicer(LeafUnslicer):
 
     def checkToken(self, typebyte,size):
         if typebyte != tokens.INT:
-            raise BananaError("ReferenceUnslicer only accepts INTs",
-                              self.where())
+            raise BananaError("ReferenceUnslicer only accepts INTs")
 
     def receiveChild(self, num):
         self.propagateUnbananaFailures(num)
         if self.finished:
-            raise BananaError("ReferenceUnslicer only accepts one int",
-                              self.where())
+            raise BananaError("ReferenceUnslicer only accepts one int")
         self.obj = self.protocol.getObject(num)
         self.finished = True
         # assert that this conforms to the constraint
@@ -944,14 +930,12 @@ class ModuleUnslicer(LeafUnslicer):
 
     def checkToken(self, typebyte, size):
         if typebyte not in (tokens.STRING, tokens.VOCAB):
-            raise BananaError("ModuleUnslicer only accepts strings",
-                              self.where())
+            raise BananaError("ModuleUnslicer only accepts strings")
 
     def receiveChild(self, name):
         self.propagateUnbananaFailures(name)
         if self.finished:
-            raise BananaError("ModuleUnslicer only accepts one string",
-                              self.where())
+            raise BananaError("ModuleUnslicer only accepts one string")
         self.finished = True
         # TODO: taste here!
         mod = __import__(moduleName, {}, {}, "x")
@@ -959,8 +943,7 @@ class ModuleUnslicer(LeafUnslicer):
 
     def receiveClose(self):
         if not self.finished:
-            raise BananaError("ModuleUnslicer requires a string",
-                              self.where())
+            raise BananaError("ModuleUnslicer requires a string")
         return self.mod
 
 class ClassUnslicer(LeafUnslicer):
@@ -968,22 +951,19 @@ class ClassUnslicer(LeafUnslicer):
 
     def checkToken(self, typebyte, size):
         if typebyte not in (tokens.STRING, tokens.VOCAB):
-            raise BananaError("ClassUnslicer only accepts strings",
-                              self.where())
+            raise BananaError("ClassUnslicer only accepts strings")
 
     def receiveChild(self, name):
         self.propagateUnbananaFailures(name)
         if self.finished:
-            raise BananaError("ClassUnslicer only accepts one string",
-                              self.where())
+            raise BananaError("ClassUnslicer only accepts one string")
         self.finished = True
         # TODO: taste here!
         self.klass = reflect.namedObject(name)
 
     def receiveClose(self):
         if not self.finished:
-            raise BananaError("ClassUnslicer requires a string",
-                              self.where())
+            raise BananaError("ClassUnslicer requires a string")
         return self.klass
 
 class MethodUnslicer(BaseUnslicer):
@@ -1000,28 +980,23 @@ class MethodUnslicer(BaseUnslicer):
     def checkToken(self, typebyte, size):
         if self.state == 0:
             if typebyte not in (tokens.STRING, tokens.VOCAB):
-                raise BananaError("MethodUnslicer methodname must be a string",
-                                  self.where())
+                raise BananaError("MethodUnslicer methodname must be a string")
         elif self.state == 1:
             if typebyte != tokens.OPEN:
-                raise BananaError("MethodUnslicer instance must be OPEN",
-                                  self.where())
+                raise BananaError("MethodUnslicer instance must be OPEN")
         elif self.state == 2:
             if typebyte != tokens.OPEN:
-                raise BananaError("MethodUnslicer class must be an OPEN",
-                                  self.where())
+                raise BananaError("MethodUnslicer class must be an OPEN")
 
     def doOpen(self, opentype):
         # check the opentype
         if self.state == 1:
             if opentype[0] not in ("instance", "none"):
                 raise BananaError("MethodUnslicer instance must be " +
-                                  "instance or None",
-                                  self.where())
+                                  "instance or None")
         elif self.state == 2:
             if opentype[0] != "class":
-                raise BananaError("MethodUnslicer class must be a class",
-                                  self.where())
+                raise BananaError("MethodUnslicer class must be a class")
         unslicer = self.open(opentype)
         # TODO: apply constraint
         return unslicer
@@ -1040,13 +1015,11 @@ class MethodUnslicer(BaseUnslicer):
             self.im_class = obj
             self.state = 3
         else:
-            raise BananaError("MethodUnslicer only accepts three objects",
-                              self.where())
+            raise BananaError("MethodUnslicer only accepts three objects")
 
     def receiveClose(self):
         if self.state != 3:
-            raise BananaError("MethodUnslicer requires three objects",
-                              self.where())
+            raise BananaError("MethodUnslicer requires three objects")
         if self.im_self is None:
             meth = getattr(self.im_class, self.im_func)
             # getattr gives us an unbound method
@@ -1066,28 +1039,24 @@ class FunctionUnslicer(LeafUnslicer):
 
     def checkToken(self, typebyte, size):
         if typebyte not in (tokens.STRING, tokens.VOCAB):
-            raise BananaError("FunctionUnslicer only accepts strings",
-                              self.where())
+            raise BananaError("FunctionUnslicer only accepts strings")
 
     def receiveChild(self, name):
         self.propagateUnbananaFailures(name)
         if self.finished:
-            raise BananaError("FunctionUnslicer only accepts one string",
-                              self.where())
+            raise BananaError("FunctionUnslicer only accepts one string")
         self.finished = True
         # TODO: taste here!
         self.func = reflect.namedObject(name)
 
     def receiveClose(self):
         if not self.finished:
-            raise BananaError("FunctionUnslicer requires a string",
-                              self.where())
+            raise BananaError("FunctionUnslicer requires a string")
         return self.func
 
 class NoneUnslicer(LeafUnslicer):
     def checkToken(self, typebyte, size):
-        raise BananaError("NoneUnslicer does not accept any tokens",
-                          self.where())
+        raise BananaError("NoneUnslicer does not accept any tokens")
     def receiveClose(self):
         return None
 
@@ -1101,11 +1070,9 @@ class BooleanUnslicer(LeafUnslicer):
 
     def checkToken(self, typebyte, size):
         if typebyte != tokens.INT:
-            raise BananaError("BooleanUnslicer only accepts an INT token",
-                              self.where())
+            raise BananaError("BooleanUnslicer only accepts an INT token")
         if self.value != None:
-            raise BananaError("BooleanUnslicer only accepts one token",
-                              self.where())
+            raise BananaError("BooleanUnslicer only accepts one token")
 
     def receiveChild(self, obj):
         self.propagateUnbananaFailures(obj)

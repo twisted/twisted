@@ -191,6 +191,23 @@ being used, and the body is empty.</p>
   <p>LONGNEG is handled exactly like LONGINT but the number is negated
   first.</p>
   </li>
+
+  <li>
+  <code>0x8D: ERROR [len-ERROR-chars]</code>
+
+  <p>This token defines a string of ASCII characters which hold an error
+  message. When a severe protocol violation occurs, the offended side will
+  emit an ERROR token and then close the transport. The side which receives
+  the ERROR token should put the message in a developer-readable logfile and
+  close the transport as well.</p>
+
+  <p>The ERROR token is formatted exactly like the STRING token, except that
+  it is defined to be encoded in ASCII (the STRING token does not claim to
+  be encoded in any particular character set, nor does it necessarily
+  represent human-readable characters).</p>
+
+  <p>The ERROR token is limited to 1000 characters.</p>
+  </li>
   
 </ul>
 

@@ -8,7 +8,7 @@ from twisted.python import log
 
 import slicer, tokens
 from tokens import SIZE_LIMIT, STRING, LIST, INT, NEG, \
-     LONGINT, LONGNEG, VOCAB, FLOAT, OPEN, CLOSE, ABORT, \
+     LONGINT, LONGNEG, VOCAB, FLOAT, OPEN, CLOSE, ABORT, ERROR, \
      BananaError, UnbananaFailure, Violation
 
 def int2b128(integer, stream):
@@ -381,6 +381,15 @@ class Banana(protocol.Protocol):
         int2b128(count, self.transport.write)
         self.transport.write(ABORT)
 
+    def sendError(self, msg):
+        if len(msg) > SIZE_LIMIT:
+            raise BananaError, \
+                  "error string is too long to send (%d)" % len(msg)
+        int2b128(len(msg), self.transport.write)
+        self.transport.write(ERROR)
+        self.transport.write(msg)
+        # now you should drop the connection
+
     def sendFailed(self, f):
         # call this if an exception is raised in transmission. The Failure
         # will be logged and the connection will be dropped. This is
@@ -407,6 +416,7 @@ class Banana(protocol.Protocol):
     debugReceive = False
     logViolations = False
     logDiscardCount = False
+    logReceiveErrors = True
 
     def initReceive(self):
         self.rootUnslicer = self.unslicerClass()
@@ -464,6 +474,23 @@ class Banana(protocol.Protocol):
             top.checkToken(typebyte, size) # might raise Violation
 
     def dataReceived(self, chunk):
+        try:
+            self.handleData(chunk)
+        except BananaError, e:
+            # send them the text of the error
+            e.where = self.describeReceive()
+            self.sendError(str(e))
+            if self.logReceiveErrors:
+                log.err()
+            self.transport.loseConnection(Failure())
+        except:
+            # don't reveal the reason, just hang up
+            if self.logReceiveErrors:
+                log.err()
+            self.transport.loseConnection(Failure())
+
+
+    def handleData(self, chunk):
         # buffer, assemble into tokens
         # call self.receiveToken(token) with each
         if self.skipBytes:
@@ -525,13 +552,13 @@ class Banana(protocol.Protocol):
             # determine if this token will be accepted, and if so, how large
             # it is allowed to be (for STRING and LONGINT/LONGNEG)
 
-            if (not rejected) and (typebyte not in (ABORT, CLOSE)):
-                # CLOSE and ABORT are always legal. All others (including
-                # OPEN) can be rejected by the schema: for example, a list
-                # of integers would reject STRING, VOCAB, and OPEN because
-                # none of those will produce integers. If the unslicer's
-                # .checkToken rejects the tokentype, its .receiveChild will
-                # immediately get an UnbananaFailure
+            if (not rejected) and (typebyte not in (ABORT, CLOSE, ERROR)):
+                # ABORT, CLOSE, and ERROR are always legal. All others
+                # (including OPEN) can be rejected by the schema: for
+                # example, a list of integers would reject STRING, VOCAB,
+                # and OPEN because none of those will produce integers. If
+                # the unslicer's .checkToken rejects the tokentype, its
+                # .receiveChild will immediately get an UnbananaFailure
                 try:
                     self.checkToken(typebyte, header)
                 except Violation, v:
@@ -542,6 +569,11 @@ class Banana(protocol.Protocol):
                         if self.logDiscardCount:
                             print "discardCount+++++ now", self.discardCount
                     gotItem(UnbananaFailure(v, self.describeReceive()))
+
+            if typebyte == ERROR and header > SIZE_LIMIT:
+                # someone is trying to spam us with an ERROR token. Drop
+                # them with extreme prejudice.
+                raise BananaError("oversized ERROR token")
 
             rest = buffer[pos+1:]
 
@@ -665,8 +697,20 @@ class Banana(protocol.Protocol):
                 self.handleViolation(v, "receive-abort", True)
                 continue
 
+            elif typebyte == ERROR:
+                strlen = header
+                if len(rest) >= strlen:
+                    # the whole string is available
+                    buffer = rest[strlen:]
+                    obj = rest[:strlen]
+                    # handleError must drop the connection
+                    self.handleError(obj)
+                    return
+                else:
+                    return # there is more to come
+
             else:
-                raise BananaError(("Invalid Type Byte 0x%x" % ord(typebyte)))
+                raise BananaError("Invalid Type Byte 0x%x" % ord(typebyte))
 
             if not rejected:
                 if self.inOpen:
@@ -746,7 +790,8 @@ class Banana(protocol.Protocol):
         if self.receiveStack[-1].openCount != closeCount:
             print "LOST SYNC"
             self.printStack()
-            assert(0)
+            raise BananaError("lost sync, got CLOSE(%d) but expecting %d" \
+                              % (closeCount, self.receiveStack[-1].openCount))
 
         child = self.receiveStack[-1] # don't pop yet: describe() needs it
 
@@ -837,6 +882,10 @@ class Banana(protocol.Protocol):
 
         # and give the UnbananaFailure to the (new) parent
         self.handleToken(f)
+
+    def handleError(self, msg):
+        log.msg("got banana ERROR from remote side: %s" % msg)
+        self.transport.loseConnection(BananaError("remote error: %s" % msg))
 
 
     def describeReceive(self):

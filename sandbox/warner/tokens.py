@@ -18,6 +18,7 @@ VOCAB    = chr(0x87)
 OPEN     = chr(0x88)
 CLOSE    = chr(0x89)
 ABORT    = chr(0x8A)
+ERROR    = chr(0x8D)
 
 tokenNames = {
     LIST: "LIST",
@@ -31,10 +32,11 @@ tokenNames = {
     OPEN: "OPEN",
     CLOSE: "CLOSE",
     ABORT: "ABORT",
+    ERROR: "ERROR",
     }
 
 SIZE_LIMIT = 1000 # default limit on the body length of long tokens (STRING,
-                  # LONGINT, LONGNEG)
+                  # LONGINT, LONGNEG, ERROR)
 
 class InvalidRemoteInterface(Exception):
     pass
@@ -78,21 +80,16 @@ class BananaError(Exception):
     """This exception is raised in response to a fundamental protocol
     violation. The connection should be dropped immediately.
 
-    .why is a string that describes what kind of violation occurred
-    
     .where is an optional string that describes the node of the object graph
     where the failure was noticed.
     """
-
-    def __init__(self, why, where=None):
-        self.why = why
-        self.where = where
+    where = None
 
     def __str__(self):
         if self.where:
-            return "BananaError(in %s): %s" % (self.where, self.why)
+            return "BananaError(in %s): %s" % (self.where, self.args)
         else:
-            return "BananaError: %s" % (self.why,)
+            return "BananaError: %s" % (self.args,)
 
 class UnbananaFailure(Failure):
     """This subclass of Failure adds a .where attribute which records the
