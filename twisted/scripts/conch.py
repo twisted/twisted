@@ -176,6 +176,8 @@ def onConnect():
 #    if keyAgent and options['agent']:
 #        cc = protocol.ClientCreator(reactor, SSHAgentForwardingLocal, conn)
 #        cc.connectUNIX(os.environ['SSH_AUTH_SOCK'])
+    if hasattr(conn.transport, 'sendIgnore'):
+        keepAlive()
     if options.localForwards:
         for localPort, hostport in options.localForwards:
             reactor.listenTCP(localPort,
@@ -200,6 +202,9 @@ def onConnect():
                 import errno
                 if e.errno != errno.EBADF:
                     raise
+def keepAlive():
+    conn.transport.sendIgnore('')
+    reactor.callLater(300, keepAlive)
 
 def stopConnection():
     if options.remoteForwards:

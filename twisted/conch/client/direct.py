@@ -79,6 +79,7 @@ class SSHClientTransport(transport.SSHClientTransport):
                                           fingerprint)
 
     def setService(self, service):
+        transport.SSHClientTransport.setService(self, service)
         if service.name == 'ssh-connection':
             # listen for UNIX
             if not self.factory.options['nocache']:
@@ -90,7 +91,6 @@ class SSHClientTransport(transport.SSHClientTransport):
                 except Exception, e:
                     log.deferr()
                     pass
-        transport.SSHClientTransport.setService(self, service)
 
     def connectionSecure(self):
         if not self.factory.d: return
