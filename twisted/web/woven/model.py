@@ -137,21 +137,27 @@ class Model:
 
         submodelList = submodelName.split('/')  #[:-1]
 #         print "submodelList", submodelList
-        currentModel = adapted = self
+        currentModel = self
         for element in submodelList:
             parentModel = currentModel
             currentModel = currentModel.getSubmodel(element)
             if currentModel is None:
                 return None
-            adapted = components.getAdapter(currentModel, interfaces.IModel, None)
-            if adapted is None:
-                adapted = Wrapper(currentModel)
-            #assert adapted is not None, "No IModel adapter registered for %s" % currentModel
-            adapted.parent = parentModel
-            adapted.name = element
             if isinstance(currentModel, defer.Deferred):
-                return adapted
-            currentModel = adapted
+                currentModel.addCallback(self._getModelWrapper,
+                                         element, parentModel)
+                return currentModel
+            currentModel = self._getModelWrapper(currentModel,
+                                                 element, parentModel)
+        return currentModel
+
+
+    def _getModelWrapper(self, currentModel, element, parentModel):
+        adapted = components.getAdapter(currentModel, interfaces.IModel, None)
+        if adapted is None:
+            adapted = Wrapper(currentModel)
+        adapted.parent = parentModel
+        adapted.name = element
         return adapted
 
 

@@ -290,12 +290,19 @@ class View(template.DOMTemplate):
         model = self.getNodeModel(request, node, submodelName)
 
         if isinstance(model, defer.Deferred):
-            model.addCallback(self.handleModel, request, node, submodelName)
+            model.addCallback(self.handleModelLater,
+                              request, node, submodelName)
+            self.outstandingCallbacks += 1
         else:
             self.handleModel(model, request, node, submodelName)
 
-    def handleModel(self, model, request, node, submodelName):
+    def handleModelLater(self, model, request, node, submodelName):
+        self.outstandingCallbacks -= 1
+        self.handleModel(model, request, node, submodelName)
+        if not self.outstandingCallbacks:
+            self.sendPage(request)
 
+    def handleModel(self, model, request, node, submodelName):
         view = self.getNodeView(request, node, submodelName, model)
         controller = self.getNodeController(request, node, submodelName, model)
 
