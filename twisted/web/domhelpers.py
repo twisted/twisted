@@ -27,7 +27,7 @@ def substitute(request, node, subs):
     attempt to do string substitution with the given parameter.
     """
     for child in node.childNodes:
-        if child.nodeValue:
+        if hasattr(child, 'nodeValue') and child.nodeValue:
             child.replaceData(0, len(child.nodeValue), child.nodeValue % subs)
         substitute(request, child, subs)
 
@@ -137,20 +137,27 @@ def getElementsByTagName(iNode, name):
     while childNodes:
         node = childNodes.pop(0)
         if node.childNodes:
-            childNodes.extend(node.childNodes)
+            [childNodes.insert(0, ch_node) for ch_node in node.childNodes]
         if node.nodeName == name:
             gathered.append(node)
+    gathered.reverse()
     return gathered
 
 def gatherTextNodes(iNode):
+    """Collect the text nodes for each node in the tree rooted at iNode, in a
+preorder traversal.  '<a>1<b>2<c>3</c>4</b></a>' -> 1234.
+@return: the gathered nodes as a single string
+@rtype: str
+"""
     childNodes = iNode.childNodes[:]
     gathered = []
     while childNodes:
         node = childNodes.pop(0)
         if node.childNodes:
-            childNodes.extend(node.childNodes)
+            [childNodes.insert(0, ch_node) for ch_node in node.childNodes]
         if hasattr(node, 'nodeValue'):
             gathered.append(node.nodeValue)
+    gathered.reverse()
     return ''.join(gathered)
 
 
