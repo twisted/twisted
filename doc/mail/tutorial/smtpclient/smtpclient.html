@@ -364,6 +364,61 @@ sufficient.  It instantiates the protocol with no arguments, but
 version of the client, we'll override <code>buildProtocol</code> to
 fix this problem.</p>
 
+<h3>SMTP Client 6</h3>
+
+<p><a href="smtpclient-6.tac">smtpclient-6.tac</a> introduces a
+<code>twisted.internet.protocol.ClientFactory</code> subclass with an
+overridden <code>buildProtocol</code> method to overcome the problem
+encountered in the previous example.</p>
+
+<blockquote><code><pre>
+class SMTPClientFactory(protocol.ClientFactory):
+    protocol = smtp.ESMTPClient
+
+    def buildProtocol(self, addr):
+        return self.protocol(secret=None, identity=None)
+</pre></code></blockquote>
+
+<p>The overridden method does almost the same thing as the base
+implementation: the only change is that it passes values for two
+arguments to <code>twisted.mail.smtp.ESMTPClient</code>'s initializer.
+Another minor change to note is that the <code>protocol</code>
+attribute is now defined in the class definition, rather than tacked
+onto an instance after one is created.  This means it is a class
+attribute, rather than an instance attribute, now, which makes no
+difference as far as this example is concerned.  There are
+circumstances in which the difference is important: be sure you
+understand the implications of each approach when creating your own
+factories.</p>
+
+<p>One other change is required: instead of instantiating <code>twisted.internet.protocol.ClientFactory</code>, we will now instantiate <code>SMTPClientFactory</code>:</p>
+
+<blockquote><code>
+smtpClientFactory = SMTPClientFactory()
+</code></blockquote>
+
+<p>Running this version of the code, we observe that we are once more
+traceback-free:</p>
+
+<blockquote><code><pre>
+exarkun@boson:~/Projects/svn/Twisted/trunk/doc/mail/tutorial/smtpclient$ twistd -noy smtpclient-6.tac
+2005/03/27 22:53 EST [-] Log opened.
+2005/03/27 22:53 EST [-] twistd SVN-Trunk (/usr/bin/python2.4 2.4.1) starting up
+2005/03/27 22:53 EST [-] reactor class: twisted.internet.selectreactor.SelectReactor
+2005/03/27 22:53 EST [-] Loading smtpclient-6.tac...
+2005/03/27 22:53 EST [-] Loaded.
+2005/03/27 22:53 EST [-] Starting factory <__builtin__.SMTPClientFactory instance at 0xb791e68c>
+2005/03/27 22:53 EST [-] Enabling Multithreading.
+2005/03/27 22:53 EST [-] Received SIGINT, shutting down.
+2005/03/27 22:53 EST [ESMTPClient,client] Stopping factory <__builtin__.SMTPClientFactory instance at 0xb791e68c>
+2005/03/27 22:53 EST [-] Main loop terminated.
+2005/03/27 22:53 EST [-] Server Shut Down.
+exarkun@boson:~/Projects/svn/Twisted/trunk/doc/mail/tutorial/smtpclient$ 
+</pre></code></blockquote>
+
+<p>However, our client <strong>still</strong> doesn't do anything!  We
+are quite close, however.  In example 7, we will see how to actually
+get a message sent.</p>
 
 </body>
 </html>
