@@ -34,17 +34,11 @@ sys.path.insert(0, os.curdir)
 from twisted.python import usage, util, failure
 from twisted import copyright
 
-import shutil, tempfile, re
-
-# magic for CVS guessing
-try:
-    defaultRoot = open(util.sibpath(sys.argv[0], 'CVS/Root')).read().strip()
-except:
-    defaultRoot = None
+import shutil, re
 
 defaultOptions = '--upver --tag --exp --dist --docs --balls --rel --deb' # --debi'
 
-
+defaultSVNBase = 'svn+ssh://svn.twistedmatrix.com/svn/Twisted'
 
 debug = 0
 
@@ -60,9 +54,11 @@ class Options(usage.Options):
 
                      ['sfname', 'n', os.environ['USER'], "The Sourceforge.net user name"],
 
-                     ['cvsroot', 'c', defaultRoot, "The CVSROOT to export and/or checkout from. (only revelant for --exp and --checkout)."],
+                     ['svnurl', 's', defaultSVNBase,
+                      "The *base* SVN URL to export and/or checkout from. /trunk/ and /tags/foo will be added automatically. (only revelant for --exp and --checkout)."],
 
-                     ['root', 't', os.path.abspath('Twisted.CVS'), "The directory containing your CVS checkout (unneccessary if using --checkout)."]]
+                     ['root', 't', os.path.abspath('Twisted.SVN'),
+                      "The directory containing your SVN checkout (unneccessary if using --checkout)."]]
 
     longdesc = "Specify -v and all steps to execute; if no steps are given, default is %r." % defaultOptions
     
@@ -80,12 +76,12 @@ class Options(usage.Options):
         self['commands'].append(UpdateVersion)
 
     def opt_tag(self):
-        """`cvs tag -c <version>'s a CVS checkout.
+        """`svn cp . svnurl/tags/<version>'s a SVN checkout.
         Reqs: A `Twisted' directory."""
         self['commands'].append(Tag)
 
     def opt_exp(self):
-        """Exports Twisted from cvsroot as given with -c.
+        """Exports Twisted from svnurl as given with -s.
         Reqs: release-$ver has been tagged."""
         self['commands'].append(Export)
         
@@ -251,23 +247,13 @@ class CheckOut(Transaction):
     
     def doIt(self, opts):
         print "CheckOut"
-        cvsroot = opts['cvsroot']
+        svntrunk = opts['svnurl'] + '/trunk/'
         target = opts['root']
         
         if os.path.exists(target):
             raise DirectoryExists("%s (--root) already exists" % target)
         
-        tmp = None
-        if os.path.exists('Twisted'):
-            tmp = tempfile.mktemp()
-            sh('mv Twisted %s' % tmp) #hrm...
-
-        
-        sh('cvs -z6 -d %s co Twisted' % (cvsroot))
-        sh('mv Twisted %s' % target)
-        
-        if tmp:
-            sh('mv %s Twisted' % tmp)
+        sh('svn co %s %s' % (svntrunk, target))
 
     def undoIt(self, opts, fail):
         if fail.check(DirectoryExists):
@@ -281,9 +267,10 @@ class UpdateVersion(Transaction):
     #  * ? (a failed `sh' command)
     #
     # state changes:
-    #  * the CVS tree is modified. to back out we must copy all the .bak files created by replaceInFile back to their original location, and remove them.
-    #  * the tree is committed. this is atomic, afaict. [this isn't, but
-    #    pretend it is anyway -- Moshe]
+    #  * the SVN tree is modified. to back out we must copy all the .bak files created by replaceInFile back to their original location, and remove them.
+    #  * the tree is committed. this is atomic, afaict.
+    #    [this isn't, but pretend it is anyway -- Moshe]
+    #    [maybe it is now that we use SVN? --radix]
 
     files = None
     
@@ -296,8 +283,8 @@ class UpdateVersion(Transaction):
         self.files = ('README', 'twisted/copyright.py', 'admin/twisted.spec')
         for file in self.files:
             replaceInFile(os.path.join(r, file), oldver, newver)
-        sh('cd %s &&  cvs -q diff || true' % (r))
-        sh('cd %s &&  cvs commit -m "Preparing for %s" %s' % (r, newver, ' '.join(self.files)), 1)
+        sh('cd %s &&  svn diff || true' % (r))
+        sh('cd %s &&  svn commit -m "Preparing for %s" %s' % (r, newver, ' '.join(self.files)), sensitive=1)
 
     def undoIt(self, opts, fail):
         if self.files:
@@ -313,7 +300,10 @@ class Tag(Transaction):
     def doIt(self, opts):
         print "Tag"
         ver = opts['release-version']
-        sh('cd %s &&  cvs tag -c release-%s' % (opts['root'], ver.replace('.', '_')), 1)
+        svntag = opts['svnurl'] + ('tags/release-%s' % ver.replace('.', '_'))
+        sh('cd %s &&  svn cp . %s' % (opts['root'],
+                                      svntag),
+           sensitive=1)
 
     #tagging is atomic, afaict, so no undoIt
 
@@ -322,11 +312,15 @@ class Export(Transaction):
     # errors? no idea
     def doIt(self, opts):
         print "Export"
-        root = opts['cvsroot']
         ver = opts['release-version']
-        sh('cvs -d%s export -r release-%s Twisted' % (root, ver.replace('.', '_')))
+        svntag = opts['svnurl'] + ('/tags/release-%s' % ver.replace('.', '_'))
+        if os.path.exists('Twisted'):
+            raise DirectoryExists("Twisted already exists")
+        sh('svn export %s Twisted' % (svntag,))
 
     def undoIt(self, opts, fail):
+        if fail.check(DirectoryExists):
+            return #we don't want to remove the directory if we didn't create it
         sh('rm -rf Twisted')
 
 class PrepareDist(Transaction):
