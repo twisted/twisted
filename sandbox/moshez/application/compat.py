@@ -55,7 +55,7 @@ class ServiceNetwork:
     __implements__ = IOldApplication,
 
     def __init__(self, app):
-        self.app = IServiceCollection(app)
+        self.app = service.IServiceCollection(app)
 
     def listenWith(self, portType, *args, **kw):
         internet.GenericServer(portType, *args, **kw).setServiceParent(self.app)
