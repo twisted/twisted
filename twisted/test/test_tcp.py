@@ -25,12 +25,20 @@ from twisted.internet import protocol, reactor
 from twisted.internet import error
 
 
+class ClosingProtocol(protocol.Protocol):
+
+    def connectionMade(self):
+        self.transport.loseConnection()
+
+    def connectionLost(self, reason):
+        reason.trap(error.ConnectionDone)
+
 class ClosingFactory(protocol.ServerFactory):
     """Factory that closes port immediatley."""
     
     def buildProtocol(self, conn):
         self.port.loseConnection()
-        return
+        return ClosingProtocol()
 
 
 class MyProtocol(protocol.Protocol):
@@ -131,7 +139,7 @@ class LoopbackTestCase(PortCleanerUpper):
         
         self.assert_(clientF.protocol.made)
         self.assert_(port.disconnected)
-        clientF.lostReason.trap(error.ConnectionLost)
+        clientF.lostReason.trap(error.ConnectionDone)
 
     def testTcpNoDelay(self):
         f = MyServerFactory()
@@ -318,9 +326,9 @@ class ConnectorTestCase(PortCleanerUpper):
         reactor.iterate()
         reactor.iterate()
 
-        l = []
+        l = []; m = []
         factory = ClientStartStopFactory()
-        factory.clientConnectionLost = lambda c, r: l.append(c)
+        factory.clientConnectionLost = lambda c, r: (l.append(c), m.append(r))
         factory.startedConnecting = lambda c: l.append(c)
         connector = reactor.connectTCP("127.0.0.1", n, factory)
         self.assertEquals(connector.getDestination(), ('INET', "127.0.0.1", n))
@@ -329,7 +337,7 @@ class ConnectorTestCase(PortCleanerUpper):
         while i < 50 and not factory.stopped:
             reactor.iterate(0.1)
             i += 1
-
+        m[0].trap(error.ConnectionDone)
         self.assertEquals(l, [connector, connector])
 
     def testUserFail(self):

@@ -223,7 +223,7 @@ class Connection(abstract.FileDescriptor):
             else:
                 return main.CONNECTION_LOST
         if not data:
-            return main.CONNECTION_LOST
+            return main.CONNECTION_DONE
         return self.protocol.dataReceived(data)
 
     def writeSomeData(self, data):
