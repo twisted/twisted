@@ -177,21 +177,24 @@ resource = myresource.MyResource()
 
 <p>Non-trivial configurations of Twisted Web are achieved with Python
 configuration files. This is a Python snippet which builds up a variable
-called application. Usually, the <code>listenTCP</code> method will
+called application. Usually, a <code class="API">twisted.application.internet.TCPServer</code> instance will
 be used to make the application listen on a TCP port (80, in case direct
 web serving is desired), with the listener being a
-<code class="API">twisted.web.server.Site</code>.</p>
+<code class="API">twisted.web.server.Site</code>. The resulting file can then
+be run with <code class="shell">twistd -y</code>. Alternatively a reactor
+object can be used directly to make a runnable script.</p>
 
 <p>The <code>Site</code> will wrap a <code>Resource</code> object -- the
 root.</p>
 
 <pre class="python">
-from twisted.internet import app
+from twisted.application import internet, service
 from twisted.web import static, server
 
 root = static.File("/var/www/htdocs")
-application = app.Application('web')
-application.listenTCP(80, server.Site(root))
+application = service.Application('web')
+site = server.Site(root)
+service.IService(application).addService(internet.TCPServer(80, site))
 </pre>
 
 <p>Most advanced configurations will be in the form of tweaking the
@@ -208,23 +211,23 @@ to serve the documentation of the installed packages, while the second
 one adds a <code>cgi-bin</code> directory for CGI scripts.</p>
 
 <pre class="python">
-from twisted.internet import app
+from twisted.internet import reactor
 from twisted.web import static, server
 
 root = static.File("/var/www/htdocs")
 root.putChild("doc", static.File("/usr/share/doc"))
-application = app.Application('web')
-application.listenTCP(80, server.Site(root))
+reactor.listenTCP(80, server.Site(root))
+reactor.run()
 </pre>
 
 <pre class="python">
-from twisted.internet import app
+from twisted.internet import reactor
 from twisted.web import static, server, twcgi
 
 root = static.File("/var/www/htdocs")
 root.putChild("cgi-bin", twcgi.CGIDirectory("/var/www/cgi-bin"))
-application = app.Application('web')
-application.listenTCP(80, server.Site(root))
+reactor.listenTCP(80, server.Site(root))
+reactor.run()
 </pre>
 
 <h3>Modifying File Resources</h3>
@@ -241,14 +244,15 @@ extensions are Resource Scripts, and which renders directories by
 searching for a <code>index.rpy</code> file.</p>
 
 <pre class="python">
-from twisted.internet import app
+from twisted.application import internet, service
 from twisted.web import static, server, script
 
 root = static.File("/var/www/htdocs")
 root.indices=['index.rpy']
 root.processors = {'.rpy': script.ResourceScript}
-application = app.Application('web')
-application.listenTCP(80, server.Site(root))
+application = service.Application('web')
+site = server.Site(root)
+service.IService(application).addService(internet.TCPServer(80, site))
 </pre>
 
 <p><code>File</code> objects also have a method called <code>ignoreExt</code>.
@@ -256,14 +260,15 @@ This method can be used to give extension-less URLs to users, so that
 implementation is hidden. Here is an example:</p>
 
 <pre class="python">
-from twisted.internet import app
+from twisted.application import internet, service
 from twisted.web import static, server, script
 
 root = static.File("/var/www/htdocs")
 root.ignoreExt(".rpy")
 root.processors = {'.rpy': script.ResourceScript}
-application = app.Application('web')
-application.listenTCP(80, server.Site(root))
+application = service.Application('web')
+site = server.Site(root)
+service.IService(application).addService(internet.TCPServer(80, site))
 </pre>
 
 <p>Now, a URL such as <code>/foo</code> might be served from a Resource
@@ -279,7 +284,7 @@ which holds the default website. If a different root for some other
 name is desired, the <code>addHost</code> method should be called.</p>
 
 <pre class="python">
-from twisted.internet import app
+from twisted.application import internet, service
 from twisted.web import static, server, vhost, script
 
 root = vhost.NameVirtualHost()
@@ -299,8 +304,9 @@ baz.processors = {'.rpy': script.ResourceScript}
 baz.ignoreExt('.rpy')
 root.addHost('baz', baz)
 
-application = app.Application('web')
-application.listenTCP(80, server.Site(root))
+application = service.Application('web')
+site = server.Site(root)
+service.IService(application).addService(internet.TCPServer(80, site))
 </pre>
 
 <h3>Advanced Techniques</h3>
@@ -312,29 +318,31 @@ use the full power of Python. Here are some simple examples:</p>
 # No need for configuration of virtual hosts -- just make sure
 # a directory /var/vhosts/&lt;vhost name&gt; exists:
 from twisted.web import vhost, static, server
-from twisted.internet import app
+from twisted.application import internet, service
 
 root = vhost.NameVirtualHost()
 root.default = static.File("/var/www/htdocs")
 for dir in os.listdir("/var/vhosts"):
     root.addHost(dir, static.File(os.path.join("/var/vhosts", dir)))
 
-application = app.Application('web')
-application.listenTCP(80, server.Site(root))
+application = service.Application('web')
+site = server.Site(root)
+service.IService(application).addService(internet.TCPServer(80, site))
 </pre>
 
 <pre class="python">
 # Determine ports we listen on based on a file with numbers:
 from twisted.web import vhost, static, server
-from twisted.internet import app
+from twisted.application import internet, service
 
 root = static.File("/var/www/htdocs")
 
 site = server.Site(root)
-application = app.Application('web')
+application = service.Application('web')
+serviceCollection = service.IService(application)
 
 for num in map(int, open("/etc/web/ports").read().split()):
-    application.listenTCP(num, server.Site(root))
+    serviceCollection.addCollection(internet.TCPServer(num, site))
 </pre>
 
 
@@ -545,7 +553,7 @@ ServerName example.com
 <p>Here is an example for Twisted.Web's reverse proxy:</p>
 
 <pre class="python">
-from twisted.internet import app
+from twisted.application import internet, service
 from twisted.web import proxy, server, vhost
 vhostName = 'example.com'
 reverseProxy = proxy.ReverseProxyResource('internal', 8538,
@@ -553,8 +561,8 @@ reverseProxy = proxy.ReverseProxyResource('internal', 8538,
 root = vhost.NameVirtualHost()
 root.addHost(vhostName, reverseProxy)
 site = server.Site(root)
-application = app.Application('web-proxy')
-application.listenTCP(80, site)
+application = service.Application('web-proxy')
+service.IService(application).addService(internet.TCPServer(80, site))
 </pre>
 
 <h2>Rewriting URLs</h2>
