@@ -76,6 +76,10 @@ class FileDescriptor(log.Logger, styles.Ephemeral):
 
         raise NotImplementedError("%s does not implement writeSomeData" %
                                   reflect.qual(self.__class__))
+    
+    def doRead(self):
+        raise NotImplementedError("%s does not implement doRead" %
+                                  reflect.qual(self.__class__))
 
     def doWrite(self):
         """Called when data is available for writing.
