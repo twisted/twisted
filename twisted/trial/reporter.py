@@ -340,8 +340,8 @@ class MinimalReporter(Reporter):
         tstats = itrial.ITestStats(suite)
         t = (tstats.runningTime, tstats.numTests, tstats.numTests,
              # XXX: expectedTests == runTests
-             len(tstats.importErrors), len(tstats.errors),
-             len(tstats.failures), len(tstats.skips))
+             len(tstats.importErrors), len(tstats.get_errors()),
+             len(tstats.get_failures()), len(tstats.get_skips()))
         self.stream.write(' '.join(map(str,t))+'\n')
 
 
