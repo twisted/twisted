@@ -53,10 +53,29 @@
 
 <h2>Release</h2>
 
-<h3>win32</h3>
-<p>Run win32/bdist_wininst.bat.</p>
-
 <h3>Unix</h3>
+
+<p>If you're doing an rcN > 1, then you need to base the release on
+the previous RC. You do that with something like this:</p>
+
+<pre class="shell">
+cvs -dradix@cvs.twistedmatrix.com:/cvs co -r release-X_X_XrcN Twisted
+mv Twisted Twisted.CVS
+cd Twisted.CVS
+
+# the following files should be updated on _every_ RC
+cvs up -A README ChangeLog admin/twisted.spec twisted/copyright.py
+
+# run cvs up -A for all other files which contained bugs and should be
+# updated for this RC
+cvs up -A $OTHER_FILES_WHICH_SHOULD_BE_UPDATED
+cd ..
+</pre>
+
+<p>
+After doing this, use the first command below. If you're doing a
+release from HEAD (i.e., an alpha or rc1), use the second command.
+</p>
 
 <ul>
   <li>
@@ -86,6 +105,10 @@ $SOMEWHERE/admin/release-twisted -V $VERSION -o $LASTVERSION --checkout \
 </pre>
   </li>
 </ul>
+
+
+<h3>win32</h3>
+<p>Run win32/bdist_wininst.bat.</p>
 
 
 <h2>Post-release</h2>
