@@ -180,7 +180,7 @@ def rebuild(module, doLog=1):
         if mod == module or mod is None:
             continue
 
-        if mod.__name__ != '__main__' and not hasattr(mod, '__file__'):
+        if hasattr(mod, '__name__') and mod.__name__ != '__main__' and not hasattr(mod, '__file__'):
             # It's a builtin module; nothing to replace here.
             continue
         changed = 0
