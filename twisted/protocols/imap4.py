@@ -4595,7 +4595,7 @@ class IMailbox(components.Interface):
         otherwise they are message sequence IDs.
 
         @rtype: C{dict} or C{Deferred}
-        @return: A C{dict} mapping message identifiers to sequences of C{str}
+        @return: A C{dict} mapping message sequence numbers to sequences of C{str}
         representing the flags set on the message after this operation has
         been performed, or a C{Deferred} whose callback will be invoked with
         such a C{dict}.
