@@ -50,7 +50,7 @@ class ServerOptions(usage.Options):
                 ['debug', 'b',    "run the application in the Python Debugger (implies nodaemon), sending SIGINT will drop into debugger"],
                 ['quiet','q',     "be a little more quiet"],
                 ['no_save','o',   "do not save state on shutdown"],
-                ['syslog', None,   "do not save state on shutdown"],
+                ['syslog', None,   "Log to syslog, not to file"],
                 ['euid', '',     "Set only effective user-id rather than real user-id. "
                                   "(This option has no effect unless the server is running as root, "
                                   "in which case it means not to shed all privileges after binding "
