@@ -800,8 +800,8 @@ class DNSClientProtocol(protocol.DatagramProtocol):
 
 
     def _reissueQuery(self, message, address, counter, timer):
+        d, _ = self.liveMessages[message.id]
         if counter <= 0:
-            d, _ = self.liveMessages[message.id]
             d.errback(error.TimeoutError(message.queries))
             del self.liveMessages[message.id]
         else:
