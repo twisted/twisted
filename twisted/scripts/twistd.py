@@ -37,6 +37,12 @@ class ServerOptions(app.ServerOptions):
                      ['uid', 'u', None, "The uid to run as."],
                      ['gid', 'g', None, "The gid to run as."],
                     ]
+    zsh_altArgDescr = {"prefix":"Use the given prefix when syslogging (default: twisted)",
+                       "pidfile":"Name of the pidfile (default: twistd.pid)",}
+    #zsh_multiUse = ["foo", "bar"]
+    #zsh_mutuallyExclusive = [("foo", "bar"), ("bar", "baz")]
+    zsh_actions = {"pidfile":'_files -g "*.pid"', "chroot":'_dirs'}
+    zsh_actionDescr = {"chroot":"chroot directory"}
 
     def opt_version(self):
         """Print version information and exit.

@@ -19,6 +19,12 @@ class MyOptions(usage.Options):
                   ["debfile", "d", None],
                   ["type", "y", "tap", "type of configuration: 'tap', 'xml, 'source' or 'python' for .tac files"]]
 
+    #zsh_altArgDescr = {"foo":"use this description for foo instead"}
+    #zsh_multiUse = ["foo", "bar"]
+    #zsh_mutuallyExclusive = [("foo", "bar"), ("bar", "baz")]
+    zsh_actions = {"type":"(tap xml source python)"}
+    #zsh_actionDescr = {"logfile":"log file name", "random":"random seed"}
+
     def postOptions(self):
         if not self["maintainer"]:
             raise usage.UsageError, "maintainer must be specified."

@@ -101,6 +101,12 @@ class Options(usage.Options):
                      ["reporter-args", None, None,
                       "a string passed to the reporter's 'args' kwarg"]]
 
+    #zsh_altArgDescr = {"foo":"use this description for foo instead"}
+    #zsh_multiUse = ["foo", "bar"]
+    #zsh_mutuallyExclusive = [("foo", "bar"), ("bar", "baz")]
+    zsh_actions = {"reactor":"(%s)" % " ".join(app.reactorTypes.keys())}
+    zsh_actionDescr = {"logfile":"log file name",
+                       "random":"random seed"}
 
     fallbackReporter = reporter.TreeReporter
     defaultReporter = None

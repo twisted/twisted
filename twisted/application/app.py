@@ -220,6 +220,17 @@ class ServerOptions(usage.Options):
                       'if the application to be run has an application '
                       'name.']]
 
+    #zsh_altArgDescr = {"foo":"use this description for foo instead"}
+    #zsh_multiUse = ["foo", "bar"]
+    zsh_mutuallyExclusive = [("file", "python", "xml", "source")]
+    zsh_actions = {"file":'_files -g "*.tap"',
+                   "python":'_files -g "*.(tac|py)"', 
+                   "xml":'_files -g "*.tax"', 
+                   "source":'_files -g "*.tas"',
+                   "rundir":"_dirs",
+                   "reactor":"(%s)" % " ".join(reactorTypes.keys()),}
+    #zsh_actionDescr = {"logfile":"log file name", "random":"random seed"}
+
     def __init__(self, *a, **kw):
         self['debug'] = False
         usage.Options.__init__(self, *a, **kw)
@@ -236,8 +247,8 @@ class ServerOptions(usage.Options):
     opt_b = opt_debug
 
     def opt_spew(self):
-        """Print an insanely verbose log of everything that happens.  Useful
-        when debugging freezes or locks in complex code."""
+        """Print an insanely verbose log of everything that happens.
+        Useful when debugging freezes or locks in complex code."""
         sys.settrace(util.spewer)
         try:
             import threading

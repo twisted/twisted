@@ -35,6 +35,12 @@ class GeneralOptions(usage.Options):
                 ['quiet', 'q', 'Quiet.'],
                 ['showpub', 'y', 'Read private key file and print public key.']]
 
+    #zsh_altArgDescr = {"bits":"Number of bits in the key (default: 1024)"}
+    #zsh_multiUse = ["foo", "bar"]
+    #zsh_mutuallyExclusive = [("foo", "bar"), ("bar", "baz")]
+    zsh_actions = {"type":"(rsa dsa)"}
+    #zsh_actionDescr = {"logfile":"log file name", "random":"random seed"}
+
 def run():
     options = GeneralOptions()
     try:

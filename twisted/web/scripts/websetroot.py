@@ -30,6 +30,15 @@ class Options(usage.Options):
                    "Read an application from a .tas file (AOT format)."],
                     ]
 
+    #zsh_altArgDescr = {"foo":"use this description for foo instead"}
+    #zsh_multiUse = ["foo", "bar"]
+    zsh_mutuallyExclusive = [("file", "python", "xml", "source")]
+    zsh_actions = {"file":'_files -g "*.tap"',
+                   "python":'_files -g "*.py"', 
+                   "xml":'_files -g "*.tax"', 
+                   "source":'_files -g "*.tas"',}
+    #zsh_actionDescr = {"logfile":"log file name", "random":"random seed"}
+
     def opt_script(self, scriptname):
         """Set the root resource of the web server to the resource created 
         (and put into the `resource' variable) by this script."""

@@ -32,6 +32,22 @@ class ConchOptions(usage.Options):
                 ['noagent', 'a', 'Disable authentication agent forwarding (default)'],
                 ['reconnect', 'r', 'Reconnect to the server if the connection is lost.'],
                ]
+    zsh_altArgDescr = {"connection-usage":"Connection types to use"}
+    #zsh_multiUse = ["foo", "bar"]
+    zsh_mutuallyExclusive = [("agent", "noagent")]
+    zsh_actions = {"user":"_users",
+                   "ciphers":"_values -s , 'ciphers to choose from' %s" %
+                       " ".join(SSHClientTransport.supportedCiphers),
+                   "macs":"_values -s , 'macs to choose from' %s" %
+                       " ".join(SSHClientTransport.supportedMACs),
+                   "host-key-algorithms":"_values -s , 'host key algorithms to choose from' %s" %
+                       " ".join(SSHClientTransport.supportedPublicKeys),
+                   "connection-usage":"_values -s , 'connection types to choose from' %s" %
+                       " ".join(connect.connectTypes.keys()),
+                   #"user-authentications":"_values -s , 'user authentication types to choose from' %s" %
+                   #    " ".join(???),
+                   }
+    #zsh_actionDescr = {"logfile":"log file name", "random":"random seed"}
 
     def __init__(self, *args, **kw):
         usage.Options.__init__(self, *args, **kw)
@@ -43,7 +59,7 @@ class ConchOptions(usage.Options):
         self.identitys.append(i)
 
     def opt_ciphers(self, ciphers):
-        "Select encryption algorithm"
+        "Select encryption algorithms"
         ciphers = ciphers.split(',')
         for cipher in ciphers:
             if cipher not in SSHClientTransport.supportedCiphers:

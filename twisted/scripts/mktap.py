@@ -127,6 +127,13 @@ class FirstPassOptions(usage.Options):
         ['progress', 'p',  "Show progress information for plugin loading"],
         ['help', 'h',  "Display this message"],
     ]
+    #zsh_altArgDescr = {"foo":"use this description for foo instead"}
+    #zsh_multiUse = ["foo", "bar"]
+    #zsh_mutuallyExclusive = [("foo", "bar"), ("bar", "baz")]
+    zsh_actions = {"append":'_files -g "*.tap"',
+                   "type":"(pickle xml source)"}
+    zsh_actionDescr = {"append":"tap file to append to", "uid":"uid to run as",
+                       "gid":"gid to run as", "type":"output format"}
 
     def init(self, tapLookup):
         sc = []

@@ -32,6 +32,11 @@ class ClientOptions(options.ConchOptions):
                     ['batchfile', 'b', None, 'File to read commands from, or \'-\' for stdin.'],
                     ['requests', 'R', 5, 'Number of requests to make before waiting for a reply.'],
                     ['subsystem', 's', 'sftp', 'Subsystem/server program to connect to.']]
+    zsh_altArgDescr = {"buffersize":"Size of send/receive buffer (default: 32768)"}
+    #zsh_multiUse = ["foo", "bar"]
+    #zsh_mutuallyExclusive = [("foo", "bar"), ("bar", "baz")]
+    #zsh_actions = {"foo":'_files -g "*.foo"', "bar":"(one two three)"}
+    #zsh_actionDescr = {"logfile":"log file name", "random":"random seed"}
 
     def parseArgs(self, host, localPath=None):
         self['remotePath'] = ''

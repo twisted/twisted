@@ -200,6 +200,14 @@ class GeneralOptions(usage.Options):
                 ['log', 'v', 'Log to stderr'],
                 ['ansilog', 'a', 'Print the receieved data to stdout']]
 
+    #zsh_altArgDescr = {"foo":"use this description for foo instead"}
+    #zsh_multiUse = ["foo", "bar"]
+    zsh_mutuallyExclusive = [("tty", "notty")]
+#    zsh_actions = {"cipher":"(%s)" % " ".join(SSHClientTransport.supportedCiphers),
+#                   "macs":"(%s)" % " ".join(SSHClientTransport.supportedMACs)}
+    zsh_actionDescr = {"localforward":"listen-port:host:port",
+                       "remoteforward":"listen-port:host:port"}
+
     identitys = []
     localForwards = []
     remoteForwards = []
