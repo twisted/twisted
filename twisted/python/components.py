@@ -104,8 +104,7 @@ class Interface:
 
 
     You can call an Interface with a single argument; If the passed object can
-    be adapted to the Interface in some way, it will be returned.
-
+    be adapted to the Interface in some way, the adapter will be returned.
     """
 
     __metaclass__ = MetaInterface
