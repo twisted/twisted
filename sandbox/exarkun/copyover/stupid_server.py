@@ -13,7 +13,10 @@ tf2.write("I lied!")
 tf2.flush()
 
 s = socket(AF_UNIX, SOCK_STREAM)
-os.unlink("fd_control")
+try:
+    os.unlink("fd_control")
+except OSError:
+    pass
 s.bind("fd_control")
 s.listen(1)
 while 1:
