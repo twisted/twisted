@@ -411,6 +411,22 @@ class FDTest(unittest.TestCase):
         self.failUnless(p.done, "timeout")
         self.failIf(p.failed, p.failed)
 
+    def testLinger(self):
+        # see what happens when all the pipes close before the process
+        # actually stops
+        exe = sys.executable
+        scriptPath = util.sibpath(__file__, "process_linger.py")
+        p = Accumulator()
+        reactor.spawnProcess(p, exe, [exe, "-u", scriptPath], env=None,
+                             path=None,
+                             childFDs={1:"r", 2:2},
+                             )
+        timeout = time.time() + 7
+        while not p.closed and time.time() < timeout:
+            reactor.iterate(0.01)
+        self.failUnless(p.closed, "timeout")
+        self.failUnlessEqual(p.outF.getvalue(),
+                             "here is some text\ngoodbye\n")
 
 class Accumulator(protocol.ProcessProtocol):
     """Accumulate data from a process."""

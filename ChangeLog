@@ -1,3 +1,7 @@
+2004-02-19  Brian Warner  <warner@lothar.com>
+
+	* twisted/test/test_process.py (FDTest.testLinger): expose Process bug
+
 2004-02-18  Christopher Armstrong  <radix@twistedmatrix.com>
 
 	* .: Releasing Twisted 1.2.0rc2. Brown-paper bag release bug.
