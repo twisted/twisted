@@ -894,11 +894,17 @@ class RootUnslicer(BaseUnslicer):
     def start(self, count):
         pass
 
+    def open(self, opentype):
+        return UnslicerRegistry[opentype]()
+
     def doOpen(self, opentype):
         if len(self.protocol.receiveStack) == 1 and opentype == "vocab":
             # only legal at top-level
-            return VocabUnslicer()
-        return UnslicerRegistry[opentype]()
+            child = VocabUnslicer()
+        else:
+            child = self.open(opentype)
+        child.opener = self.open
+        return child
 
     def receiveToken(self, token):
         raise ValueError, "top-level should never receive non-OPEN tokens"

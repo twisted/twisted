@@ -256,12 +256,8 @@ class Banana(protocol.Protocol):
         objectCount = self.objectCounter
         self.objectCounter += 1
         try:
-            # ask openers what to use
-            child = None
-            for i in range(len(self.receiveStack)-1, -1, -1):
-                child = self.receiveStack[i].doOpen(opentype)
-                if child:
-                    break
+            # ask opener what to use
+            child = self.receiveStack[-1].doOpen(opentype)
             if child == None:
                 raise "nothing to open"
             if self.debug:
