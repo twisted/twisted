@@ -309,6 +309,25 @@ class QueueMethod:
     def __call__(self, *args):
         self.calls.append((self.name, args))
 
+def getArgumentCount(obj):
+    """ returns the number of arguments that a callable supports
+
+        Knowing the argument count of a callable is useful
+        for two reasons: (a) sometimes you may want to add
+        arguments to a callback, but you have legacy code,
+        (b) sometimes you may want to provide extended info
+        to callbacks depending on how many arguments they
+        accept.   This lets the type of information sent to
+        the callback be dependent on the number of arguments
+        it accepts, rather than having extensive configuration
+        information overhead or multiple callbacks, etc.
+    """
+    from types import InstanceType, ClassType, FunctionType
+    typ = type(obj)
+    if typ is FunctionType: return obj.func_code.co_argcount
+    if typ is ClassType:  meth = obj.__init__
+    if typ is InstanceType: meth = obj.__call__
+    return meth.im_func.func_code.co_argcount - 1
 
 def funcinfo(function):
     """
