@@ -114,7 +114,11 @@ class BaseLatexSpitter:
 class LatexSpitter(BaseLatexSpitter):
 
     baseLevel = 0
-    diaHack = not not os.popen('which dia').read()
+    try:
+        diaHack = not not os.popen('which dia').read()
+    except:
+        # That's a no, then.
+        diaHack = 0
 
     def writeNodeData(self, node):
         buf = StringIO()
