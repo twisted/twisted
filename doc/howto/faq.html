@@ -7,18 +7,22 @@
 <body>
 <h1>The Twisted FAQ</h1>
 
-<h2>What is <q>Twisted</q>?</h2>
+
+<h2>General</h2>
+
+<h3>What is <q>Twisted</q>?</h3>
 
 <p>Please see
 <a href="http://twistedmatrix.com/products/twisted">Twisted</a>
 </p>
 
-<h2>Why should I use Twisted?</h2>
+
+<h3>Why should I use Twisted?</h3>
 
 <p>See <a href="http://twistedmatrix.com/services/twisted-advantage">The
 Twisted Advantage</a></p>
 
-<h2>I have a problem <q>getting</q> Twisted.</h2>
+<h3>I have a problem <q>getting</q> Twisted.</h3>
 
 <p>Did you check the HOWTO collection? There are so many documents there
 that they might overwhelm you... try starting from the index, reading through
@@ -28,7 +32,7 @@ inside the distribution. And, remember, the source will be with
 you... always.</p>
 
 
-<h2>Why is Twisted so big?</h2>
+<h3>Why is Twisted so big?</h3>
 
 <p>Twisted is a lot of things, rolled into one big package. We're not sure if 
 it'll stay this way, yet, but for now, if you have only specific needs, we
@@ -43,7 +47,7 @@ parts of Twisted and inter-version compatibility.</p>
 <p>If you are distributing Twisted to end-users, you can base your distribution
 on the <q>Nodocs</q> packages, which are signficantly smaller.</p>
 
-<h2>But won't Twisted bloat my program, since it's so big?</h2>
+<h3>But won't Twisted bloat my program, since it's so big?</h3>
 
 <p>No. You only need to import the sub-packages which you want to use, meaning
 only those will be loaded into memory. So if you write a low-level network
@@ -52,7 +56,9 @@ like twisted.web, etc. Twisted itself is very careful with internal
 dependancies, so importing one subpackage is not likely to import the whole
 twisted package.</p>
 
-<h2>Does the 1.0 release mean that all of Twisted's APIs are stable?</h2>
+<h2>Versioning</h2>
+
+<h3>Does the 1.0 release mean that all of Twisted's APIs are stable?</h3>
 
 <p>No, only specific parts of Twisted are stable, i.e. we only promise
 backwards compatibility for some parts of Twisted. While these APIs may be
@@ -65,7 +71,7 @@ as well. In general, the more the module or package are used, and the closer the
 are to being feature complete, the more we will concentrate on providing backwards
 compatibility when API changes take place.</p>
 
-<h2>Which parts of Twisted 1.0 are stable?</h2>
+<h3>Which parts of Twisted 1.0 are stable?</h3>
 
 <p>Only modules explictily marked as such can be considered stable. Semi-stable
 modules may change, but not in a large way and some sort of backwards-compatibily
@@ -82,7 +88,9 @@ the module is unstable.</p>
 But as always, the only accurate way of knowing a module's stability is reading
 the module's docstrings.</p>
 
-<h2>How can I access self.factory from my Protocol's __init__?</h2>
+<h2>Core Twisted</h2>
+
+<h3>How can I access self.factory from my Protocol's __init__?</h3>
 
 <p>You can't.  A Protocol doesn't have a Factory when it is created.  Instead,
 you should probably be doing that in your Protocol's
@@ -95,102 +103,14 @@ databases, in a Factory's <code>__init__</code> either.  Instead, do that in
 <p>See <a href="servers.html">Writing Servers</a> and 
 <a href="clients.html">Writing Clients</a> for more details.</p>
 
-<h2>Is the Twisted web server a toy?</h2>
-
-<p>No. It is a production grade server. It is running continously on several
-sites and has been proven quite stable. The server can take loads of up to 3000
-users at a time and still keep churning several million requests a day, even on
-low end hardware. It can serve static files or dynamically rendered pages.</p>
-
-<h2>But can Twisted Web do PHP?</h2>
-
-<p>Yes.  It works out-of-the-box, so long as you've got the standalone php
-interpreter installed.  You might also want to take a look at Woven, Twisted's
-native web templating system.</p>
-
-<h2>And can Twisted Web do virtual hosting?</h2>
-
-<p>Can it ever!</p>
-
-<p>You can decide to go with one big process for all of them, a front server
-and a seperate server for each virtual host (for example, for permission
-reasons), and you can even mix-and-match between Apache and Twisted (for
-example, put Apache in the front and have Twisted handle some subset of the
-virtual host).</p>
-
-<h2>Where can I find out how to write Twisted servers?</h2>
+<h3>Where can I find out how to write Twisted servers?</h3>
 
 <p>Try <a href="http://www.twistedmatrix.com/documents/howto/servers">Writing
 Servers</a>.</p> 
 
-<h2>Twisted is cool, but I need to add more functionality.</h2>
 
-<p>Great! Read our the docs, and if you're feeling generous, contribute
-patches.</p>
-
-<h2>I have a patch. How do I maximize the chances the Twisted developers
-will include it?</h2>
-
-<p>Use unified diff. Either use <code class="shell">cvs diff -u</code> or,
-better yet, make a clean checkout and use
-<code class="shell">diff -urN</code> between them. Make sure your patch
-applies cleanly. Then, send it to the mailing list inlined and without
-any word wrapping.</p> 
-
-<h2>Twisted really needs documentation for X, Y or Z - how come it's not documented?.</h2>
-
-<p>We are doing the best we can, and there is documentation
-in progress for many parts of Twisted. There is a limit to how much we
-can do in our free time. See also the answer to the next question.</p>
-
-<h2>My company would love to use Twisted, but it's missing feature X, can you implement it?</h2>
-
-<p>You have 3 options:</p>
-
-<ul>
-<li>Pay one of the Twisted developers to implement the feature.</li>
-<li>Implement the feature yourself.</li>
-<li>Add a feature request to our bug tracker. We will try to implement the
-feature, but there are no guarantees when and if this will happen.</li>
-</ul>
-
-<h2>Help!</h2>
-
-<p>Ask for help <a href="http://twistedmatrix.com/services/online-help">where
-the Twisted team hangs out</a></p>
-
-<h2>I have this cool patch. To whom do I send it?</h2>
-
-<p>To the <a href="http://twistedmatrix.com/cgi-bin/mailman/listinfo/twisted-python">mailing list</a>.
-If no one picks it up after a days, it's recommended that you add it to the 
-<a href="http://sourceforge.net/tracker/?group_id=49387&amp;atid=456015">bug tracker</a> so that
-it doesn't get lost.</p>
-
-<h2>There's a bug in Twisted. Where do I report it?</h2>
-
-<p>Unless it is a show-stopper bug, we usually won't fix it if it's already
-fixed in <a href="http://twistedmatrix.com/developers/cvs">CVS</a>, so you
-would do well to look there. Then send any pertinent information about the
-bug (hopefully as much information needed to reproduce it: OS, CVS versions
-of any important files, Python version, code you wrote or things you did
-to trigger the bug, etc.) to the <a href="http://twistedmatrix.com/cgi-bin/mailman/listinfo/twisted-python">mailing list</a>. If no one answers immediately, you should add it to the 
-<a href="http://sourceforge.net/tracker/?group_id=49387&amp;atid=456015">bug tracker</a>.</p>
-
-<h2>How do I use twisted.web to do complex things?</h2>
-
-<p>See <a href="using-twistedweb.html">the Twisted.Web Howto</a>.</p>
-
-<h2>I've been using Woven since before it was called Woven.  I just upgraded
-and now I'm getting a confusing traceback talking about INodeMutator. What
-gives?</h2>
-
-<p>You probably have code that's survived the upgrade from PyXML's
-<code>minidom</code> to Twisted's <code>microdom</code>.  Try deleting any
-<code>.pxp</code> files that you have lying around and the error will probably
-go away.</p>
-
-<h2>When I try to install my reactor, I get errors about a reactor
-already being installed. What gives?</h2>
+<h3>When I try to install my reactor, I get errors about a reactor
+already being installed. What gives?</h3>
 
 <p>Here's the rule - installing a reactor should always be the
 <strong>first</strong> thing you do, and I do mean first. Importing other stuff
@@ -199,16 +119,7 @@ before you install the reactor can break your code.</p>
 <p>Tkinter and wxPython support, as they do not install a new reactor, can be
 done at any point, IIRC.</p>
 
-<h2>Wow the Twisted documentation is nice! I want my docs to look like that
-too!</h2>
-
-<p>Now you can, with <code class="API">twisted.lore</code>. See the manual
-page for <code class="shell">lore</code>. For
-source format documentation, see <a href="doc-standard.html">the documentation
-standard description</a>. For a more comprehensive explanation, see
-<a href="lore.html">the Lore HOWTO</a>.</p>
-
-<h2><code>twistd</code> won't load my <code>.tap</code> file!</h2>
+<h3><code>twistd</code> won't load my <code>.tap</code> file!</h3>
 
 <p>When the pickled application state cannot be loaded for some reason, it
 is common to get a rather opaque error like so:</p>
@@ -260,7 +171,128 @@ that name will be recorded in the pickled <code>.tap</code> file. When the
 <a class="py-listing" skipLines="16" href="../examples/echoserv.py" 
 >doc/examples/echoserv.py</a>
 
-<h2>How do I e-mail a Twisted developer?</h2>
+
+
+<h2>Web</h2>
+
+<h3>Is the Twisted web server a toy?</h3>
+
+<p>No. It is a production grade server. It is running continously on several
+sites and has been proven quite stable. The server can take loads of up to 3000
+users at a time and still keep churning several million requests a day, even on
+low end hardware. It can serve static files or dynamically rendered pages.</p>
+
+<h3>But can Twisted Web do PHP?</h3>
+
+<p>Yes.  It works out-of-the-box, so long as you've got the standalone php
+interpreter installed.  You might also want to take a look at Woven, Twisted's
+native web templating system.</p>
+
+<h3>And can Twisted Web do virtual hosting?</h3>
+
+<p>Can it ever!</p>
+
+<p>You can decide to go with one big process for all of them, a front server
+and a seperate server for each virtual host (for example, for permission
+reasons), and you can even mix-and-match between Apache and Twisted (for
+example, put Apache in the front and have Twisted handle some subset of the
+virtual host).</p>
+
+<h3>How do I use twisted.web to do complex things?</h3>
+
+<p>See <a href="using-twistedweb.html">the Twisted.Web Howto</a>.</p>
+
+<h3>I've been using Woven since before it was called Woven.  I just upgraded
+and now I'm getting a confusing traceback talking about INodeMutator. What
+gives?</h3>
+
+<p>You probably have code that's survived the upgrade from PyXML's
+<code>minidom</code> to Twisted's <code>microdom</code>.  Try deleting any
+<code>.pxp</code> files that you have lying around and the error will probably
+go away.</p>
+
+
+
+
+<h2>Requests and Contributing</h2>
+
+<h3>Twisted is cool, but I need to add more functionality.</h3>
+
+<p>Great! Read our the docs, and if you're feeling generous, contribute
+patches.</p>
+
+<h3>I have a patch. How do I maximize the chances the Twisted developers
+will include it?</h3>
+
+<p>Use unified diff. Either use <code class="shell">cvs diff -u</code>
+or, better yet, make a clean checkout and use <code class="shell">diff
+-urN</code> between them. Make sure your patch applies cleanly. In
+your post to the mailing list, make sure it is inlined and without any
+word wrapping.</p>
+
+
+<h3>And to whom do I send it?</h3>
+
+<p>To the <a href="http://twistedmatrix.com/cgi-bin/mailman/listinfo/twisted-python">mailing list</a>.
+If no one picks it up after a few days, it's recommended that you add it to the 
+<a href="http://sourceforge.net/tracker/?group_id=49387&amp;atid=456015">bug tracker</a> so that
+it doesn't get lost.</p>
+
+
+<h3>My company would love to use Twisted, but it's missing feature X, can you implement it?</h3>
+
+<p>You have 3 options:</p>
+
+<ul>
+<li>Pay one of the Twisted developers to implement the feature.</li>
+<li>Implement the feature yourself.</li>
+<li>Add a feature request to our bug tracker. We will try to implement the
+feature, but there are no guarantees when and if this will happen.</li>
+</ul>
+
+
+<h2>Documentation</h2>
+
+<h3>Twisted really needs documentation for X, Y or Z - how come it's not documented?.</h3>
+
+<p>We are doing the best we can, and there is documentation
+in progress for many parts of Twisted. There is a limit to how much we
+can do in our free time. See also the answer to the next question.</p>
+
+
+<h3>Wow the Twisted documentation is nice! I want my docs to look like that
+too!</h3>
+
+<p>Now you can, with <code class="API">twisted.lore</code>. See the manual
+page for <code class="shell">lore</code>. For
+source format documentation, see <a href="doc-standard.html">the documentation
+standard description</a>. For a more comprehensive explanation, see
+<a href="lore.html">the Lore HOWTO</a>.</p>
+
+
+
+
+
+
+<h2>Communicating with us</h2>
+
+<h3>There's a bug in Twisted. Where do I report it?</h3>
+
+<p>Unless it is a show-stopper bug, we usually won't fix it if it's already
+fixed in <a href="http://twistedmatrix.com/developers/cvs">CVS</a>, so you
+would do well to look there. Then send any pertinent information about the
+bug (hopefully as much information needed to reproduce it: OS, CVS versions
+of any important files, Python version, code you wrote or things you did
+to trigger the bug, etc.) to the <a href="http://twistedmatrix.com/cgi-bin/mailman/listinfo/twisted-python">mailing list</a>. If no one answers immediately, you should add it to the 
+<a href="http://sourceforge.net/tracker/?group_id=49387&amp;atid=456015">bug tracker</a>.</p>
+
+<h3>Where do I go for help?</h3>
+
+<p>Ask for help <a href="http://twistedmatrix.com/services/online-help">where
+the Twisted team hangs out</a></p>
+
+
+<h3>How do I e-mail a Twisted developer?</h3>
 
 <p>First, note that in many cases this is the wrong thing to do: if
 you have a question about a part of Twisted, it's usually better to
