@@ -1946,7 +1946,25 @@ class IMAP4Client(basic.LineReceiver):
         @rtype: C{Deferred}
         @return: A deferred whose callback is invoked with mailbox
         information if the select is successful and whose errback is
-        invoked otherwise.
+        invoked otherwise.  Mailbox information consists of a dictionary
+        with the following keys and values::
+        
+                FLAGS: A list of strings containing the flags settable on
+                        messages in this mailbox.
+                
+                EXISTS: An integer indicating the number of messages in this
+                        mailbox.
+                
+                RECENT: An integer indicating the number of \"recent\"
+                        messages in this mailbox.
+                
+                UNSEEN: An integer indicating the number of messages not
+                        flagged \\Seen in this mailbox.
+                
+                PERMANENTFLAGS: A list of strings containing the flags that
+                        can be permanently set on messages in this mailbox.
+                
+                UIDVALIDITY: An integer uniquely identifying this mailbox.
         """
         cmd = 'SELECT'
         args = mailbox.encode('imap4-utf-7')
@@ -1966,7 +1984,25 @@ class IMAP4Client(basic.LineReceiver):
         @rtype: C{Deferred}
         @return: A deferred whose callback is invoked with mailbox
         information if the examine is successful and whose errback
-        is invoked otherwise.
+        is invoked otherwise.  Mailbox information consists of a dictionary
+        with the following keys and values::
+        
+            'FLAGS': A list of strings containing the flags settable on
+                        messages in this mailbox.
+                
+            'EXISTS': An integer indicating the number of messages in this
+                        mailbox.
+                
+            'RECENT': An integer indicating the number of \"recent\"
+                        messages in this mailbox.
+                
+            'UNSEEN': An integer indicating the number of messages not
+                        flagged \\Seen in this mailbox.
+                
+            'PERMANENTFLAGS': A list of strings containing the flags that
+                        can be permanently set on messages in this mailbox.
+                
+            'UIDVALIDITY': An integer uniquely identifying this mailbox.
         """
         cmd = 'EXAMINE'
         args = mailbox.encode('imap4-utf-7')
