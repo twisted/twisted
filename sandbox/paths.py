@@ -4,6 +4,7 @@
 import os
 from os.path import isdir, isabs, isfile, exists, normpath, abspath
 from os.path import split as splitpath
+from os.path import join as joinpath
 from os import sep as slash
 
 class InsecurePath(Exception):
@@ -12,23 +13,23 @@ class InsecurePath(Exception):
 class FilesystemPath:
     """Immutable filesystem path.
     """
-    def __init__(self, st):
-        self.path = normpath(st)
-
-    def child(self, path):
-        if not path:
-            raise InsecurePath("Pathnames shouldn't end with /.")
-        if os.sep in path:
-            raise InsecurePath("Attempt to absolute path.")
-        if path == '..':
-            raise InsecurePath("Attempt to change directory.")
-        if path == '.':
-            raise InsecurePath("Attempt to access same directory.")
-        if self.path == '/':
-            # why doesn't normpath cover this!?
-            return FilesystemPath(self.path + path)
+    def __init__(self, path, abs=None):
+        if abs is None:
+            self.path = normpath(path)
+            self.abs = abspath(self.path)
         else:
-            return FilesystemPath(slash.join((self.path, path)))
+            self.path = path
+            self.abs = abs
+
+    def child(self, path, allowDotDot=0):
+        norm = normpath(path)
+        if os.sep in norm:
+            raise InsecurePath()
+        newpath = normpath(joinpath(self.path, norm))
+        newabs = abspath(newpath)
+        if not newabs.startswith(self.abs):
+            raise InsecurePath()
+        return FilesystemPath(newpath, newabs)
 
     def open(self, mode='r'):
         return open(self.path, mode+'b')
@@ -111,7 +112,7 @@ class URLPath:
         newpath = '/'.join(l)
         return self._pathMod(path, keepQuery)
 
-    def parent(self, keepQuery):
+    def parent(self, keepQuery=0):
         l = self.pathList()
         l[-2:] = []
         newpath = '/'.join(l)
@@ -142,7 +143,7 @@ class URLPath:
                         fragment)
 
     fromString = staticmethod(fromString)
-
+    
     def __str__(self):
         x = urlparse.urlunsplit((
             self.scheme, self.netloc, self.path,
@@ -158,6 +159,12 @@ def test():
     print fs.child('hello').child('goodbye')
     fs = FilesystemPath('')
     print fs.child('hello').child('goodbye')
+    try:
+        print fs.child('..')
+    except InsecurePath:
+        pass
+    else:
+        raise 'this is definitely insecure'
     hp = URLPath.fromString('http://www.twistedmatrix.com:8080/')
     print hp
     print repr(hp)
