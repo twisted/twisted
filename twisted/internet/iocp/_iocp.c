@@ -733,7 +733,7 @@ static PyMethodDef module_methods[] = {
 #define PyMODINIT_FUNC void
 #endif
 PyMODINIT_FUNC
-initiocpcore(void) 
+init_iocp(void) 
 {
     int have_connectex = 1;
     PyObject *m;
@@ -765,7 +765,7 @@ initiocpcore(void)
 
     closesocket(s);
 
-    m = Py_InitModule3("iocpcore", module_methods,
+    m = Py_InitModule3("_iocp", module_methods,
                        "core functionality for IOCP reactor");
     if(!m) {
         return;
