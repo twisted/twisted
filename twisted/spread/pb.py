@@ -19,22 +19,22 @@
 """
 Perspective Broker
 
-    \"This isn\'t a professional opinion, but it's probably got enough
-    internet to kill you.\" --glyph
+\"This isn\'t a professional opinion, but it's probably got enough
+internet to kill you.\" --glyph
 
- Introduction
+Introduction
 
-  This is a broker for proxies for and copies of objects.  It provides a
-  translucent interface layer to those proxies.
+This is a broker for proxies for and copies of objects.  It provides a
+translucent interface layer to those proxies.
 
-  The protocol is not opaque, because it provides objects which
-  represent the remote proxies and require no context (server
-  references, IDs) to operate on.
+The protocol is not opaque, because it provides objects which
+represent the remote proxies and require no context (server
+references, IDs) to operate on.
 
-  It is not transparent because it does *not* attempt to make remote
-  objects behave identically, or even similiarly, to local objects.
-  Method calls are invoked asynchronously, and specific rules are
-  applied when serializing arguments.
+It is not transparent because it does *not* attempt to make remote
+objects behave identically, or even similiarly, to local objects.
+Method calls are invoked asynchronously, and specific rules are
+applied when serializing arguments.
 
 """
 
@@ -105,7 +105,7 @@ class RemoteMethod:
     """This is a translucent reference to a remote message.
     """
     def __init__(self, obj, name):
-        """Initialize with a RemoteReference and the name of this message.
+        """Initialize with a L{RemoteReference} and the name of this message.
         """
         self.obj = obj
         self.name = name
@@ -155,17 +155,17 @@ class Perspective(perspective.Perspective):
     Perspective.
 
     Initially, a peer requesting a perspective will receive only a
-    RemoteReference to a Perspective.  When a method is called on
-    that RemoteReference, it will translate to a method on the remote
+    L{RemoteReference} to a Perspective.  When a method is called on
+    that L{RemoteReference}, it will translate to a method on the remote
     perspective named 'perspective_methodname'.  (For more information
-    on invoking methods on other objects, see ViewPoint.)
+    on invoking methods on other objects, see L{flavors.ViewPoint}.)
     """
 
     def brokerAttached(self, reference, identity, broker):
         """An intermediary method to override.
 
         Normally you will want to use 'attached', as described in
-        twisted.cred.perspective.Perspective.attached; however, this method
+        L{twisted.cred.perspective.Perspective}.attached; however, this method
         serves the same purpose, and in some circumstances, you are sure that
         the protocol that objects will be attaching to your Perspective with is
         Perspective Broker, and in that case you may wish to get the Broker
@@ -177,7 +177,7 @@ class Perspective(perspective.Perspective):
         return self.attached(reference, identity)
 
     def brokerDetached(self, reference, identity, broker):
-        """See brokerAttached.
+        """See L{brokerAttached}.
         """
         return self.detached(reference, identity)
 
@@ -186,8 +186,8 @@ class Perspective(perspective.Perspective):
 
         I will call::
 
-            self.perspective_%(message)s(*broker.unserialize(args),
-                                         **broker.unserialize(kw))
+          |  self.perspective_%(message)s(*broker.unserialize(args),
+          |                               **broker.unserialize(kw))
 
         to handle the method; subclasses of Perspective are expected to
         implement methods of this naming convention.
@@ -208,7 +208,7 @@ class Service(service.Service):
     """A service for Perspective Broker.
 
     On this Service, the result of a perspective request must be a
-    pb.Perspective rather than a perspective.Perspective.
+    L{pb.Perspective} rather than a L{twisted.cred.perspective.Perspective}.
     """
     perspectiveClass = Perspective
 
@@ -226,15 +226,16 @@ class AsReferenceable(Referenceable):
 class RemoteReference(Serializable, styles.Ephemeral):
     """This is a translucent reference to a remote object.
 
-    I may be a reference to a ViewPoint, a Referenceable, or
-    a Perspective.  From the client's perspective, it is not
-    possible to tell which except by convention.
+    I may be a reference to a L{flavors.ViewPoint}, a
+    L{flavors.Referenceable}, or a L{Perspective}.  From the
+    client's perspective, it is not possible to tell which
+    except by convention.
 
     I am a "translucent" reference because although no additional
     bookkeeping overhead is given to the application programmer for
     manipulating a reference, return values are asynchronous.
 
-    See also twisted.internet.defer.
+    See also L{twisted.internet.defer}.
     """
 
     def __init__(self, perspective, broker, luid, doRefCount):
@@ -287,28 +288,23 @@ class RemoteReference(Serializable, styles.Ephemeral):
     def callRemote(self, name, *args, **kw):
         """Asynchronously invoke a remote method.
 
-        Arguments:
-
-          * name: the name of the remote method to invoke
-
-          * *args: arguments to serialize for the remote function
-
-          * **kw: keyword arguments to serialize for the remote function.
-
-        Returns:
-
-          a Deferred which will be fired when the result of this remote call is
-          received.
+        @type name:   C{string}
+        @param name:  the name of the remote method to invoke
+        @param args: arguments to serialize for the remote function
+        @param kw:  keyword arguments to serialize for the remote function.
+        @rtype:   L{twisted.internet.defer.Deferred}
+        @returns: a Deferred which will be fired when the result of
+                  this remote call is received.
         """
         return self.broker._sendMessage('',self.perspective, self.luid, name, args, kw)
 
     def remoteMethod(self, key):
-        """Get a RemoteMethod for this key.
+        """Get a L{RemoteMethod} for this key.
         """
         return RemoteMethod(self, key)
 
     def __cmp__(self,other):
-        """Compare me [to another RemoteReference].
+        """Compare me [to another L{RemoteReference}].
         """
         if isinstance(other, RemoteReference):
             if other.broker == self.broker:
@@ -364,7 +360,10 @@ class _RemoteCacheDummy:
 ##
 
 class CopyableFailure(failure.Failure, Copyable):
-    """A RemoteCopy and Copyable version of failure.Failure for serialization."""
+    """
+    A L{flavors.RemoteCopy} and L{flavors.Copyable} version of
+    L{twisted.python.failure.Failure} for serialization.
+    """
 
     def getStateToCopy(self):
         #state = self.__getstate__()
@@ -469,7 +468,7 @@ class Broker(banana.Banana):
         self.sendEncoded(exp)
 
     def proto_didNotUnderstand(self, command):
-        """Respond to stock 'didNotUnderstand' message.
+        """Respond to stock 'C{didNotUnderstand}' message.
 
         Log the command that was not understood and continue. (Note:
         this will probably be changed to close the connection or raise
@@ -571,7 +570,7 @@ class Broker(banana.Banana):
         """Get a local object for a locally unique ID.
 
         I will return an object previously stored with
-        self.registerReference, or None if XXX:Unfinished thought:XXX
+        self.L{registerReference}, or C{None} if XXX:Unfinished thought:XXX
         """
 
         lob = self.localObjects.get(luid)
@@ -625,7 +624,7 @@ class Broker(banana.Banana):
         return RemoteReference(None, self, name, 0)
 
     def cachedRemotelyAs(self, instance, incref=0):
-        """Returns an ID that says what this instance is cached as remotely, or None if it's not.
+        """Returns an ID that says what this instance is cached as remotely, or C{None} if it's not.
         """
 
         puid = instance.processUniqueID()
@@ -958,7 +957,7 @@ class _Detacher:
                                         self.broker)
 
 class IdentityWrapper(Referenceable):
-    """I delegate most functionality to a identity.Identity.
+    """I delegate most functionality to a L{twisted.cred.identity.Identity}.
     """
 
     def __init__(self, broker, identity):
@@ -1018,7 +1017,7 @@ class AuthChallenger(Referenceable):
 class AuthServ(Referenceable):
     """XXX
 
-    See also: AuthRoot
+    See also: L{AuthRoot}
     """
 
     def __init__(self, auth, broker):
@@ -1040,7 +1039,7 @@ class AuthServ(Referenceable):
             return challenge, AuthChallenger(ident, self, challenge)
 
 class _ObjectRetrieval:
-    """(Internal) Does callbacks for getObjectAt.
+    """(Internal) Does callbacks for L{getObjectAt}.
     """
 
     def __init__(self, broker, d):
@@ -1090,8 +1089,8 @@ class BrokerClientFactory(protocol.ClientFactory):
 def getObjectRetreiver():
     """Get a factory which retreives a root object from its client
 
-    @returns A pair: A ClientFactory and a Deferred which will be passed a
-    remote reference to the root object of a PB server.x
+    @returns: A pair: A ClientFactory and a Deferred which will be passed a
+              remote reference to the root object of a PB server.x
     """
     d = defer.Deferred()
     b = Broker(1)
@@ -1101,7 +1100,7 @@ def getObjectRetreiver():
 
 
 def getObjectAt(host, port, timeout=None):
-    """Establishes a PB connection and returns with a RemoteReference.
+    """Establishes a PB connection and returns with a L{RemoteReference}.
 
     @param host: the host to connect to
 
@@ -1110,7 +1109,7 @@ def getObjectAt(host, port, timeout=None):
     @param timeout: a value in milliseconds to wait before failing by
       default. (OPTIONAL)
 
-    @returns A Deferred which will be passed a remote reference to the
+    @returns: A Deferred which will be passed a remote reference to the
       root object of a PB server.x
     """
     bf, d = getObjectRetreiver()
@@ -1131,7 +1130,7 @@ def getObjectAtSSL(host, port,  timeout=None):
     @param timeout: a value in milliseconds to wait before failing by
       default. (OPTIONAL)
 
-    @returns A Deferred which will be passed a remote reference to the
+    @returns: A Deferred which will be passed a remote reference to the
       root object of a PB server.x
     """
     bf, d = getObjectRetreiver()
@@ -1143,25 +1142,22 @@ def connect(host, port, username, password, serviceName,
     """Connects and authenticates, then retrieves a PB service.
 
     Required arguments:
-        host -- the host the service is running on
-        port -- the port on the host to connect to
-        username -- the name you will be identified as to the authorizer
-        password -- the password for this username
-        serviceName -- name of the service to request
+       - host -- the host the service is running on
+       - port -- the port on the host to connect to
+       - username -- the name you will be identified as to the authorizer
+       - password -- the password for this username
+       - serviceName -- name of the service to request
 
     Optional (keyword) arguments:
-        perspectiveName -- the name of the perspective to request, if
+       - perspectiveName -- the name of the perspective to request, if
             different than the username
-        client -- XXX the \"reference\" argument to
+       - client -- XXX the \"reference\" argument to
                   perspective.Perspective.attached
-        timeout -- see twisted.internet.tcp.Client
+       - timeout -- see twisted.internet.tcp.Client
 
-    Returns:
-
-        A Deferred instance that gets a callback when the final Perspective is
-        connected, and an errback when an error occurs at any stage of
-        connecting.
-
+    @returns: A Deferred instance that gets a callback when the final
+              Perspective is connected, and an errback when an error
+              occurs at any stage of connecting.
     """
     d = defer.Deferred()
     getObjectAt(host,port,timeout).addCallbacks(
