@@ -40,6 +40,7 @@ class MyView(view.View):
         # pretend self.foo is what the user now sees on their screen
         self.foo = self.model.foo
         self.random = self.model.random
+        self.controller = components.getAdapter(self.model, interfaces.IController, None)
 
     def update_foo(self, newValue):
         # pretend self.foo is what the user actually sees on the screen

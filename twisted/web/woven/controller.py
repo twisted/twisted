@@ -17,6 +17,8 @@
 
 from __future__ import nested_scopes
 
+import cgi
+
 from twisted.python import log
 from twisted.python import components
 from twisted.web import resource, server
@@ -49,16 +51,12 @@ class Controller(resource.Resource):
         #self.start = now()
         resource.Resource.__init__(self)
         self.model = m
+        # It's the responsibility of the calling code to make sure setView is
+        # called on this controller before it's rendered.
+        self.view = None
         self.subcontrollers = []
         if self.setupStacks:
             self.setupControllerStack()
-        if self.model is not None and view is None:
-            viewFactory = components.getAdapterClass(self.model.__class__, interfaces.IView, None)
-            if viewFactory:
-                view = viewFactory(self.model, controller=self)
-        if view:
-            self.view = view
-            view.setController(self)
         if inputhandlers is None:
             self._inputhandlers = []
         else:
@@ -91,13 +89,13 @@ class Controller(resource.Resource):
                 warnings.warn("factory_ methods are deprecated; please use "
                               "wcfactory_ instead", DeprecationWarning)
         if cm:
-            try:
-                controller = cm(request, node, model)
-            except TypeError:
-                controller = cm(model)
+            if cm.func_code.co_argcount == 1:
                 warnings.warn("A Controller Factory takes "
                               "(request, node, model) "
                               "now instead of (model)", DeprecationWarning)
+                controller = controllerFactory(model)
+            else:
+                controller = cm(request, node, model)
         return controller
 
     def setSubcontrollerFactory(self, name, factory, setup=None):
@@ -148,6 +146,9 @@ class Controller(resource.Resource):
         return self.renderView(request, block=block)
 
     def renderView(self, request, block=0):
+        if self.view is None:
+            self.setView(components.getAdapter(self.model, interfaces.IView, None))
+            self.view.setController(self)
         return self.view.render(request, doneCallback=self.gatheredControllers, block=block)
 
     def gatheredControllers(self, v, d, request):
@@ -156,7 +157,6 @@ class Controller(resource.Resource):
             key.commit(request, None, value)
             process[key.submodel] = value
         self.process(request, **process)
-        from twisted.web.woven import view
         #log.msg("Sending page!")
         utils.doSendPage(v, d, request)
         #v.unlinkViews()
@@ -215,7 +215,11 @@ class LiveController(Controller):
             request.d = self.view.d
             target = self.view.subviews[eventTarget]
             target.onEvent(request, eventName, *eventArgs)
-            return '''<html><body>event sent.</body></html>'''
+            return '''<html>
+    <body>
+        %s event sent to %s with arguments %s.
+    </body>
+</html>''' % (eventName, cgi.escape(str(target)), eventArgs)
 
         # Unlink the current page in this user's session from MVC notifications
         page = sess.getCurrentPage()

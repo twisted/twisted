@@ -49,6 +49,9 @@ class View(template.DOMTemplate):
 
     __implements__ = (template.DOMTemplate.__implements__, interfaces.IView)
     # wvfactory_xxx method signature: request, node, model; returns Widget
+    # wvupdate_xxx method signature: request, widget, data; mutates widget 
+    #    based on data (not necessarily an IModel; 
+    #    has been unwrapped at this point)
 
     wantsAllNotifications = 0
 
@@ -62,14 +65,13 @@ class View(template.DOMTemplate):
         if not components.implements(m, interfaces.IModel):
             m = model.adaptToIModel(m, None, None)
         self.model = self.mainModel = m
+        # It's the responsibility of the calling code to make sure
+        # setController is called on this view before it's rendered.
+        self.controller = None
         self.subviews = {}
         if self.setupStacks:
             self.model.modelStack = Stack([self.model])
             self.setupViewStack()
-            if controller:
-                self.controller = controller
-            else:
-                self.controller = self.controllerFactory(self.model)
             if doneCallback is None:
                 self.doneCallback = doSendPage
             else:
@@ -111,19 +113,6 @@ class View(template.DOMTemplate):
             handler = getattr(self, 'update_' + name, None)
             if handler:
                 apply(handler, (changed[name],))
-
-    def controllerFactory(self, model):
-        """
-        Hook for subclasses to customize the controller that is associated
-        with the model associated with this view.
-        """
-        # TODO: Decide what to do as a default Controller
-        # if you don't need to use one...
-        # Something that ignores all messages?
-        controller = components.getAdapter(model, interfaces.IController, None)
-        if controller:
-            controller.setView(self)
-        return controller
 
     def generate(self, request, node):
         """Allow a view to be used like a widget. Will look up the template
@@ -234,9 +223,7 @@ class View(template.DOMTemplate):
                 warnings.warn("factory_ methods are deprecated; please use "
                               "wvfactory_ instead", DeprecationWarning)
         if vm:
-            try:
-                view = vm(request, node, model)
-            except TypeError:
+            if vm.func_code.co_argcount == 3:
                  warnings.warn("wvfactory_ methods take (request, node, "
                                "model) instead of (request, node) now. \n"
                                "Please instanciate your widgets with a "
@@ -245,6 +232,8 @@ class View(template.DOMTemplate):
                  self.model = model
                  view = vm(request, node)
                  self.model = self.mainModel
+            else:
+                view = vm(request, node, model)
 
         setupMethod = getattr(self, 'wvupdate_' + viewName, None)
         if setupMethod:
