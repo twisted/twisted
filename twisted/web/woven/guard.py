@@ -3,7 +3,7 @@
 
 from __future__ import nested_scopes
 
-__version__ = "$Revision: 1.11 $"[11:-2]
+__version__ = "$Revision: 1.12 $"[11:-2]
 
 import random
 import time
@@ -99,6 +99,7 @@ class GuardSession(components.Componentized):
         self.lastModified = time.time()
 
     def checkExpired(self):
+        self.checkExpiredID = None
         # If I haven't been touched in 15 minutes:
         if time.time() - self.lastModified > self.lifetime / 2:
             if self.guard.sessions.has_key(self.uid):
