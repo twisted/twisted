@@ -274,7 +274,7 @@ class LogfileFactory(Factory):
         self.file = fileName
 
     def startFactory(self):
-        self.fp = open(file, 'a')
+        self.fp = open(self.file, 'a')
 
     def stopFactory(self):
         self.fp.close()
