@@ -29,7 +29,7 @@ import os
 
 class MailConfigurator(coil.Configurator, coil.ConfigCollection):
     
-    __implements__ = [coil.IConfigurator, coil.IConfigCollection]
+    __implements__ = (coil.IConfigurator, coil.IConfigCollection)
     
     configurableClass = mail.MailService
     
@@ -75,7 +75,7 @@ components.registerAdapter(MailConfigurator, mail.MailService, coil.IConfigColle
 
 class MaildirDBMConfigurator(coil.Configurator, coil.ConfigCollection):
 
-    __implements__ = [coil.IConfigurator, coil.IConfigCollection]
+    __implements__ = (coil.IConfigurator, coil.IConfigCollection)
     
     entityType = types.StringType
     

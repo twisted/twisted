@@ -45,7 +45,7 @@ class IBar(IFoo):
 
 class CustomConfigurable:
     
-    __implements__ = [IBar]
+    __implements__ = IBar
     
     def __init__(self, name):
         self.name = name

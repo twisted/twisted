@@ -1,3 +1,11 @@
+2002-04-24  Itamar Shtull-Trauring <twisted@itamarst.org>
+
+	* twisted/python/components.py: Twisted's interfaces are now
+	more like Zope's - __implements__ is an Interface subclass
+	or a tuple (or tuple of tuples). Additonally, an instance can
+	implement an interface even if its class doesn't have an
+	__implements__.
+
 2002-04-20  Chris Armstrong  <carmstro@twistedmatrix.com>
 
 	* .: Releasing Twisted 0.17.4.

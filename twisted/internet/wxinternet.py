@@ -34,7 +34,7 @@ from twisted.python import delay
 class GuiDelayed:
     """Delayed that assures GUI events are handled."""
 
-    __implements__ = delay.IDelayed,
+    __implements__ = delay.IDelayed
     
     def __init__(self, app):
         self.app = app

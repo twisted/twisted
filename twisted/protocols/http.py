@@ -261,7 +261,7 @@ class HTTPClient(basic.LineReceiver):
 class Request:
     """A HTTP request."""
     
-    __implements__ = [interfaces.IConsumer]
+    __implements__ = interfaces.IConsumer
     
     producer = None
     finished = 0

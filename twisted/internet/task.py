@@ -55,7 +55,7 @@ class ThreadedScheduler:
       3) Async/Half-Async - http://www.cs.wustl.edu/~schmidt/PDF/PLoP-95.pdf
     """
     
-    __implements__ = delay.IDelayed,
+    __implements__ = delay.IDelayed
     
     def __init__(self):
         self.threadTasks = {}
@@ -118,7 +118,7 @@ class Scheduler:
     """I am a non-thread-safe delayed scheduler for synchronous event loops.
     """
     
-    __implements__ = delay.IDelayed,
+    __implements__ = delay.IDelayed
     
     def __init__(self):
         self.tasks = []

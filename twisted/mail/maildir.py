@@ -41,7 +41,7 @@ class AbstractMaildirDomain:
     """Abstract maildir-backed domain.
     """
     
-    __implements__ = [mail.IDomain]
+    __implements__ = mail.IDomain
     
     def __init__(self, root):
         """Initialize.

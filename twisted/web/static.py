@@ -85,7 +85,7 @@ class File(resource.Resource, styles.Versioned):
     """
     
     # we don't implement IConfigCollection
-    __implements__ = [resource.IResource]
+    __implements__ = resource.IResource
     
     contentTypes = {
         ".css": "text/css",

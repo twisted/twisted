@@ -19,6 +19,9 @@
 # sibling imports
 import reflect, util
 
+# system imports
+import types
+
 
 class Interface:
     """Base class for interfaces.
@@ -26,9 +29,13 @@ class Interface:
     Interfaces define and document an interface for a class. An interface
     class's name must begin with I, and all its methods must raise 
     NotImplementedError, to show they are abstract.
+
+    Objects that implement an interface should have an attribute __implements__,
+    that should be either an Interface subclass or a tuple, or tuple of tuples,
+    of such Interface classes.
     
-    A class that implements an interface should list the interfaces it
-    implements in a class-level list, __implements__.
+    A class whose instances implement an interface should list the interfaces
+    its instances implement in a class-level __implements__.
     
     For example::
     
@@ -41,7 +48,7 @@ class Interface:
         |
         | class Adder:
         | 
-        |     __implements__ = [IAdder]
+        |     __implements__ = IAdder
         |     
         |     def add(self, a, b):
         |         return a + b
@@ -49,33 +56,36 @@ class Interface:
     """
 
 
+def tupleTreeToList(t, l=None):
+    """Convert an instance, or tree of tuples, into list."""
+    if l is None: l = []
+    if isinstance(t, types.TupleType):
+        for o in t:
+            tupleTreeToList(o, l)
+    else:
+        l.append(t)
+    return l
+
+
 def implements(obj, interfaceClass):
     """Return boolean indicating if obj implements the given interface."""
-    if not hasattr(obj, '__class__'):
+    if not hasattr(obj, '__implements__'):
         return 0
     
-    return classImplements(obj.__class__, interfaceClass)
-
-
-def classImplements(klass, interfaceClass):
-    """Return boolean indicating if class implements the given interface."""
-    if not hasattr(klass, '__implements__'):
-        return 0
-    
-    for i in klass.__implements__:
+    for i in tupleTreeToList(obj.__implements__):
         if issubclass(i, interfaceClass):
             return 1
     
     return 0
 
 
-def getInterfaces(klass):
+def getInterfaces(obj):
     """Return list of all interfaces a class implements."""
-    if not hasattr(klass, '__implements__'):
+    if not hasattr(obj, '__implements__'):
         return []
     
     result = []
-    for i in klass.__implements__:
+    for i in tupleTreeToList(obj.__implements__):
         result.append(i)
         result.extend(reflect.allYourBase(i))
     result = util.uniquify(result)
@@ -104,9 +114,10 @@ def registerAdapter(adapterClass, origClass, interfaceClass):
     """
     if adapterRegistry.has_key((origClass, interfaceClass)):
         raise ValueError, "an adapter was already registered."
-    
-    if not classImplements(adapterClass, interfaceClass):
-        raise ValueError, "%s doesn't implement interface %s" % (adapterClass, interfaceClass)
+
+    # this may need to be removed
+    if not implements(adapterClass, interfaceClass):
+        raise ValueError, "%s instances don't implement interface %s" % (adapterClass, interfaceClass)
     
     if not issubclass(interfaceClass, Interface):
         raise ValueError, "interface %s doesn't inherit from %s" % (interfaceClass, Interface)
@@ -140,3 +151,7 @@ def getAdapter(obj, interfaceClass, default):
 def getAdapterClass(klass, interfaceClass, default):
     """Return registered adapter for a given class and interface."""
     return adapterRegistry.get((klass, interfaceClass), default)
+
+
+__all__ = ["Interface", "implements", "getInterfaces", "superInterfaces",
+           "registerAdapter", "getAdapterClass", "getAdapter"]

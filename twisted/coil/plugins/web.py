@@ -28,7 +28,7 @@ import types
 class SiteConfigurator(coil.Configurator):
     """Configurator for web sites."""
     
-    __implements__ = [coil.IConfigurator, coil.IStaticCollection]
+    __implements__ = (coil.IConfigurator, coil.IStaticCollection)
     
     configurableClass = server.Site
     configTypes = {'resource': [resource.IResource, "Resource", "The resource at the site's root."] }
@@ -67,7 +67,7 @@ class MimeTypeCollection(coil.ConfigCollection):
 
 class StaticConfigurator(coil.Configurator, coil.StaticCollection):
     
-    __implements__ = [coil.IConfigurator, coil.IStaticCollection]
+    __implements__ = (coil.IConfigurator, coil.IStaticCollection)
     
     configurableClass = static.File
     

@@ -295,7 +295,7 @@ class IDomain(components.Interface):
 
 class SimpleDomain:
 
-    __implements__ = [IDomain]
+    __implements__ = IDomain
     
     ttl = 60*60*24
 

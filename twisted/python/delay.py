@@ -169,7 +169,7 @@ class IDelayed:
 class Time:
     """I am a list of events which will happen at particular points in time.
     """
-    __implements__ = (IDelayed,)
+    __implements__ = IDelayed
 
     def __init__(self):
         self.queue = []
@@ -235,7 +235,7 @@ class LockstepSimulation(rebuild.Sensitive):
     made.
     """
 
-    __implements__ = (IDelayed,)
+    __implements__ = IDelayed
 
     fudgefactor = 0.01
 

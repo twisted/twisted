@@ -70,7 +70,7 @@ class BounceDomain:
 
 class FileMessage:
 
-    __implements__ = smtp.IMessage,
+    __implements__ = smtp.IMessage
 
     def __init__(self, fp, name, finalName):
         self.fp = fp

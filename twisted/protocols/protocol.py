@@ -38,7 +38,7 @@ class Factory:
     self.protocol.
     """
     
-    __implements__ = [IFactory]
+    __implements__ = IFactory
     
     protocol = None
 

@@ -120,7 +120,7 @@ class SendFileTransfer:
     file = None
     filesize = None
     
-    __implements__ = (IProducer,)
+    __implements__ = IProducer
     
     def __init__(self, file, filesize, request):
         self.request = request

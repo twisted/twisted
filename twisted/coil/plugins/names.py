@@ -47,7 +47,7 @@ coil.registerConfigurator(SimpleDomainConfigurator, simpleDomainFactory)
 class DNSServerConfigurator(coil.Configurator, coil.ConfigCollection):
     """Configurator for DNS server."""
     
-    __implements__ = [coil.IConfigurator, coil.IConfigCollection]
+    __implements__ = (coil.IConfigurator, coil.IConfigCollection)
     
     entityType = dns.IDomain
     

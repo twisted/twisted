@@ -42,7 +42,7 @@ class IMultiply(components.Interface):
 class IntAdder:
     """Class that implements IAdder interface."""
     
-    __implements__ = [IAdder]
+    __implements__ = IAdder
     
     def add(self, a, b):
         return a + b
@@ -50,7 +50,7 @@ class IntAdder:
 class Sub:
     """Class that implements ISub."""
     
-    __implements__ = [ISub]
+    __implements__ = ISub
     
     def add(self, a, b):
         return 3
@@ -59,7 +59,7 @@ class Sub:
 class IntMultiplyWithAdder:
     """Multiply, using Adder object."""
     
-    __implements__ = [IMultiply]
+    __implements__ = IMultiply
     
     def __init__(self, adder):
         self.adder = adder
@@ -75,7 +75,7 @@ components.registerAdapter(IntMultiplyWithAdder, IntAdder, IMultiply)
 class MultiplyAndAdd:
     """Multiply and add."""
     
-    __implements__ = [IAdder, IMultiply]
+    __implements__ = (IAdder, IMultiply)
     
     def add(self, a, b):
         return a + b
@@ -88,7 +88,7 @@ class IFoo(ISub):
 
 class FooAdapterForMAA:
     
-    __implements__ = [IFoo]
+    __implements__ = IFoo
     
     def __init__(self, instance):
         self.instance = instance
@@ -102,12 +102,22 @@ components.registerAdapter(FooAdapterForMAA, MultiplyAndAdd, IFoo)
 
 class InterfacesTestCase(unittest.TestCase):
     """Test interfaces."""
+
+    tuples = ([1, [1]],
+              [(2, 3), [2, 3]],
+              [(2, (3, (4,)), (1, 5)), [2, 3, 4, 1, 5]],
+              [(), []],
+              )
+    def testTupleTrees(self):
+        for tree, result in self.tuples:
+            self.assertEquals(components.tupleTreeToList(tree), result)
     
     def testClasses(self):
-        self.assert_( components.classImplements(MultiplyAndAdd, IMultiply) )
-        self.assert_( components.classImplements(MultiplyAndAdd, IAdder) )
-        self.assert_( components.classImplements(Sub, IAdder) )
-        self.assert_( components.classImplements(Sub, ISub) )
+        # is this a right thing to do?
+        self.assert_( components.implements(MultiplyAndAdd, IMultiply) )
+        self.assert_( components.implements(MultiplyAndAdd, IAdder) )
+        self.assert_( components.implements(Sub, IAdder) )
+        self.assert_( components.implements(Sub, ISub) )
     
     def testInstances(self):
         o = MultiplyAndAdd()
@@ -117,6 +127,12 @@ class InterfacesTestCase(unittest.TestCase):
         o = Sub()
         self.assert_( components.implements(o, IAdder) )
         self.assert_( components.implements(o, ISub) )
+
+    def testInstanceOnlyImplements(self):
+        class Blah: pass
+        o = Blah()
+        o.__implements__ = IAdder
+        self.assert_( components.implements(o, IAdder) )
     
     def testOther(self):
         self.assert_( not components.implements(3, ISub) )

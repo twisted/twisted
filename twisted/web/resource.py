@@ -37,7 +37,7 @@ class Resource(coil.ConfigCollection):
     abstract directory structure for URL retrieval.
     """
 
-    __implements__ = [IResource, coil.IConfigCollection]
+    __implements__ = (IResource, coil.IConfigCollection)
     
     entityType = IResource
     

@@ -197,7 +197,7 @@ class Configurator:
     the instance that is being configured.
     """
 
-    __implements__ = [IConfigurator]
+    __implements__ = IConfigurator
 
     # Change this attribute in subclasses.
     configurableClass = None
@@ -270,13 +270,13 @@ class Configurator:
 class StaticCollection(roots.Locked):
     """A roots.Locked that implement IStaticCollection."""
 
-    __implements__ = [IStaticCollection]
+    __implements__ = IStaticCollection
 
 
 class ConfigCollection(roots.Constrained):
     """A default implementation of IConfigCollection."""
 
-    __implements__ = [IConfigCollection]
+    __implements__ = IConfigCollection
 
     # override in subclasses
     entityType = components.Interface
@@ -300,7 +300,7 @@ class ConfigCollection(roots.Constrained):
 class CollectionWrapper:
     """Wrap an existing roots.Collection as a IConfigCollection."""
 
-    __implements__ = [IConfigCollection]
+    __implements__ = IConfigCollection
 
     def __init__(self, collection):
         self._collection = collection
