@@ -59,7 +59,7 @@ class Argument:
         return self.shortDesc or self.name.capitalize()
 
     def getLongDescription(self):
-        return self.longDesc or "The %s." % self.name
+        return self.longDesc or self.shortDesc or "The %s." % self.name
 
     def coerce(self, val):
         """Convert the value to the correct format."""
