@@ -142,7 +142,8 @@ def makeDocCore(opts):
     ver = opts['core-version']
     os.chdir('Twisted.exp')
 
-    for docdir in ['howto', 'howto/tutorial', 'howto/policy',
+    for docdir in ['howto', 'howto/tutorial', 'howto/policy', 'upgrades',
+                   'upgrades/2.0', # ugh
                    'specifications', 'vision']:
         lore(ver, os.path.join('doc/core', docdir))
 

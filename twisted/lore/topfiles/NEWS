@@ -1,0 +1,3 @@
+0.1.0:
+ - Use htmlizer mode that doesn't insert extra span tags, thus making
+   it not mess up in Safari.

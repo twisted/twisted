@@ -1,0 +1,9 @@
+0.5.0:
+ - Client properly reports timeouts as error
+ - "Socially deprecate" woven
+ - Fix memory leak in _c_urlarg library
+ - Stop using _c_urlarg library
+ - Fix 'gzip' and 'bzip2' content-encodings
+ - Escape log entries so remote user cannot corrupt the log
+ - Commented out range support because it's broken
+ - Fix HEAD responses without content-length

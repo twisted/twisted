@@ -1,0 +1,5 @@
+0.1.0:
+ - Fix some miscellaneous bugs in OSCAR
+ - Add QUIT notification for IRC
+ - Fix message wrapping
+ - Misc Jabber fixes

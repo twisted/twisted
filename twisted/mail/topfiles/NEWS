@@ -1,0 +1,21 @@
+0.1.0:
+
+ - Tons of bugfixes in IMAP4, POP3, and SMTP protocols
+ - Maildir append support
+ - Brand new, improved POP3 client (twisted.mail.pop3.AdvancedPOP3Client)
+ - SMTP client:
+   - Support SMTP AUTH
+   - Allow user to supply SSL context
+   - Improved error handling, via new exception classes and an overridable
+     hook to customize handling.
+   - Order to try the authenication schemes is user-definable.
+   - Timeout support.
+ - SMTP server:
+   - Properly understand <> sender.
+   - Parameterize remote port
+ - IMAP4:
+   - LOGIN authentication compatibility improved
+   - Improved unicode mailbox support
+   - Fix parsing/handling of "FETCH BODY[HEADER]"
+   - Many many quoting fixes
+   - Timeout support on client

@@ -1,0 +1,23 @@
+0.5.0:
+
+ Many improvements to SSH support. Here's some in particular:
+  - Add --reconnect option to conch binary
+  - utmp/wtmp logging
+  - Unix login improvements, PAM support
+  - Add "cftp" -- Conch SFTP.
+  - Deferred retrieval of public keys is supported
+  - PAM support for client and server
+  - Bugfixes: 
+	- fix conch failing to exit, and hangs.
+	- Remote->Local forwarding
+	- Channel closing
+	- Invalid known_host writing
+	- Many others
+
+ New functionality:
+  - twisted.conch.telnet: new, much improved telnet implementation.
+  - twisted.conch.insults: Basic curses-like terminal support (server-side).
+  - twisted.conch.manhole: new interactive python interactive interpreter,
+    can be used with conch's telnet, ssh, or on the console.
+	- Main features: Syntax coloring, line editing, and useful interactive
+       handling of Deferreds.
