@@ -7,6 +7,7 @@ static PyObject* iovec_error = NULL;
 
 static PyObject* iovec_writev(PyObject* self, PyObject* args) {
   int i = 0;
+  int error = 0;
   int fileno = 0;
   int nStrs = 0;
   int retval = 0;
@@ -15,44 +16,54 @@ static PyObject* iovec_writev(PyObject* self, PyObject* args) {
 
   struct iovec* vectors;
 
-  if (!PyArg_ParseTuple(args, "iO:writev", &fileno, &strList))
-    return NULL;
+  if (!PyArg_ParseTuple(args, "iO:writev", &fileno, &strList)) {
+    error = 1;
+    /* TypeError is set for us */
+    goto parse_tuple_failure;
+  }
   
-  Py_INCREF(strList);
   nStrs = PySequence_Size(strList);
   if (nStrs == -1) {
+    error = 1;
     PyErr_SetString(iovec_error, "Argument 2 to writev() must be a sequence");
-    return NULL;
+    goto non_sequence_failure;
   }
 
-  if ((vectors = PyMem_Malloc(sizeof(struct iovec) * nStrs)) == NULL)
-    return NULL;
+  if ((vectors = PyMem_Malloc(sizeof(struct iovec) * nStrs)) == NULL) {
+    error = 1;
+    /* MemoryError is set for us */
+    goto mem_malloc_failure;
+  }
 
   for (i = 0; i < nStrs; ++i) {
     s = PySequence_GetItem(strList, i);
-    if (PyObject_AsReadBuffer(s, (const void**)&(vectors[i].iov_base), &vectors[i].iov_len) == -1)
+    if (PyObject_AsReadBuffer(s, (const void**)&(vectors[i].iov_base), &vectors[i].iov_len) == -1) {
+      error = 1;
+      /* TypeError is set for us */
       goto acquire_readbuf_failure;
+    }
     Py_INCREF(s);
   }
 
+  Py_INCREF(strList);
+  Py_BEGIN_ALLOW_THREADS;
   retval = writev(fileno, vectors, nStrs);
-
-  for (i = 0; i < nStrs; ++i)
-    Py_DECREF(PySequence_GetItem(strList, i));
+  Py_END_ALLOW_THREADS;
   Py_DECREF(strList);
-
-  if (retval == -1) {
-    PyErr_SetFromErrno(iovec_error);
-    return NULL;
-  }
-
-  return PyInt_FromLong(retval);
 
  acquire_readbuf_failure:
-  for (i = i - 1; i >= 0; --i)
+  for (--i; i > 0; --i)
     Py_DECREF(PySequence_GetItem(strList, i));
-  Py_DECREF(strList);
-  return NULL;
+  PyMem_Free(vectors);
+
+ mem_malloc_failure:
+ non_sequence_failure:
+ parse_tuple_failure:
+
+  if (error)
+    return NULL;
+
+  return PyInt_FromLong(retval);
 }
 
 static PyMethodDef iovec_methods[] = {

@@ -15,6 +15,19 @@ def arith(x):
 HARD_CHUNK_SIZE = 37
 
 class IOVec(unittest.TestCase):
+    def testNotASequence(self):
+        self.assertRaises(iovec.error, iovec.writev, 0, 10)
+        self.assertRaises(iovec.error, iovec.writev, 0, 10.0)
+        self.assertRaises(iovec.error, iovec.writev, 0, 10j)
+        self.assertRaises(iovec.error, iovec.writev, 0, {})
+        self.assertRaises(iovec.error, iovec.writev, 0, iovec.writev)
+
+    def testNotASequenceOfStrings(self):
+        self.assertRaises(TypeError, iovec.writev, 0, ["0", 1, 2])
+        self.assertRaises(TypeError, iovec.writev, 0, [0, "1", 2])
+        self.assertRaises(TypeError, iovec.writev, 0, [0, 1, "2"])
+        self.assertRaises(TypeError, iovec.writev, 0, [0, 1, 2])
+
     def testWriteToFileDescriptor(self):
         s = [chr(i + ord('a')) * i for i in range(1, HARD_CHUNK_SIZE+1)]
         f = tempfile.TemporaryFile('w+')
@@ -47,6 +60,8 @@ class IOVec(unittest.TestCase):
 
         while v:
             written = iovec.writev(client.fileno(), v)
+            if written == -1:
+                continue
             while True:
                 try:
                     bytes += s.recv(written * 10)
