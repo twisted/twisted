@@ -188,12 +188,16 @@ class Augmentation:
         #self.createSchema()
 
     def operationDone(self, done):
-        """Default callback for database operation success.
+        """Example callback for database operation success.
+
+        Override this, and/or define your own callbacks.
         """
         log.msg("%s Operation Done: %s" % (reflect.qual(self.__class__), done))
 
     def operationError(self, error):
-        """Default callback for database operation failure.
+        """Example callback for database operation failure.
+
+        Override this, and/or define your own callbacks.
         """
         log.msg("%s Operation Failed: %s" % (reflect.qual(self.__class__), error))
         log.err(error)
