@@ -98,9 +98,12 @@ class ManholeInterpreter(code.InteractiveInterpreter):
         self.handler.addOutput(data, async)
 
 class Manhole(recvline.HistoricRecvLine):
+    namespace = None
+
     def __init__(self, namespace):
         recvline.HistoricRecvLine.__init__(self, namespace)
-        self.namespace = namespace.copy()
+        if namespace is not None:
+            self.namespace = namespace.copy()
 
     def connectionMade(self):
         recvline.HistoricRecvLine.connectionMade(self)
@@ -185,6 +188,17 @@ def lastColorizedLine(source):
     return str(w)
 
 class ColoredManhole(Manhole):
+    def getSource(self):
+        """Return a string containing the currently entered source.
+
+        This is only the code which will be considered for execution
+        next.
+        """
+        return ('\n'.join(self.interpreter.buffer) +
+                '\n' +
+                ''.join(self.lineBuffer))
+
+
     def characterReceived(self, ch):
         if self.mode == 'insert':
             self.lineBuffer.insert(self.lineBufferIndex, ch)
@@ -192,14 +206,12 @@ class ColoredManhole(Manhole):
             self.lineBuffer[self.lineBufferIndex:self.lineBufferIndex+1] = [ch]
         self.lineBufferIndex += 1
 
-        source = ('\n'.join(self.interpreter.buffer) +
-                  '\n' +
-                  ''.join(self.lineBuffer))
-
         if ch == ' ':
             # Don't bother to try to color whitespace
             self.transport.write(ch)
             return
+
+        source = self.getSource()
 
         # Try to write some junk
         try:

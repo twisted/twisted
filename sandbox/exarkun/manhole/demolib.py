@@ -26,7 +26,11 @@ def makeService(args):
     components.registerAdapter(ConstructedSession, TerminalUser, session.ISession)
 
     f = protocol.ServerFactory()
-    f.protocol = lambda: TelnetTransport(TelnetBootstrapProtocol, TerminalForwardingProtocol, args['protocolFactory'])
+    f.protocol = lambda: TelnetTransport(TelnetBootstrapProtocol,
+                                         TerminalForwardingProtocol,
+                                         args['protocolFactory'],
+                                         *args.get('protocolArgs', ()),
+                                         **args.get('protocolKwArgs', {}))
     tsvc = internet.TCPServer(args['telnet'], f)
 
     f = ConchFactory([checker])
