@@ -134,7 +134,8 @@ class PosixReactorBase(ReactorBase):
         }):
         """Utility function for disconnecting a selectable.
 
-        Supports half-close notification.
+        Supports half-close notification, isRead should be boolean indicating
+        whether error resulted from doRead().
         """
         self.removeReader(selectable)
         f = faildict.get(why.__class__)
