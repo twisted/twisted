@@ -199,11 +199,76 @@ class FactoryTestCase(unittest.TestCase):
 
         factory = ClientStartStopFactory()
         reactor.connectTCP("127.0.0.1", 9995, factory)
-
+        self.assert_(factory.started)
+        reactor.iterate()
+        reactor.iterate()
+        
         while not factory.stopped:
             reactor.iterate()
 
 
+class ConnectorTestCase(unittest.TestCase):
+
+    def testConnectorIdentity(self):
+        f = ClosingFactory()
+        p = reactor.listenTCP(9995, f, interface="127.0.0.1")
+        f.port = p
+        reactor.iterate()
+        reactor.iterate()
+
+        l = []
+        factory = ClientStartStopFactory()
+        factory.connectionLost = factory.startedConnecting = lambda c, l=l: l.append(c)
+        connector = reactor.connectTCP("127.0.0.1", 9995, factory)
+        self.assertEquals(connector.getDestination(), ('INET', "127.0.0.1", 9995))
+        
+        while not factory.stopped:
+            reactor.iterate()
+
+        self.assertEquals(l, [connector, connector])
+
+    def testUserFail(self):
+        f = MyServerFactory()
+        p = reactor.listenTCP(9991, f, interface="127.0.0.1")
+        
+        def startedConnecting(connector):
+            connector.stopConnecting()
+
+        factory = ClientStartStopFactory()
+        factory.startedConnecting = startedConnecting
+        reactor.connectTCP("127.0.0.1", 9991, factory)
+
+        while not factory.stopped:
+            reactor.iterate()
+
+        self.assertEquals(factory.failed, 1)
+        factory.reason.trap(error.UserError)
+
+        p.stopListening()
+        reactor.iterate()
+
+
+    def testReconnect(self):
+        f = ClosingFactory()
+        p = reactor.listenTCP(9995, f, interface="127.0.0.1")
+        f.port = p
+        reactor.iterate()
+        reactor.iterate()
+
+        factory = MyClientFactory()
+        def connectionLost(c):
+            c.connect()
+        factory.connectionLost = connectionLost
+        reactor.connectTCP("127.0.0.1", 9995, factory)
+        
+        while not factory.failed:
+            reactor.iterate()
+
+        p = factory.protocol
+        self.assertEquals((p.made, p.closed), (1, 1))
+        factory.reason.trap(error.ConnectionRefusedError)
+
+        
 class CannotBindTestCase (unittest.TestCase):
     """Tests for correct behavior when a reactor cannot bind to the required TCP port."""
 
