@@ -1,3 +1,10 @@
+2002-12-22  Paul Swartz  <z3p@twistedmatrix.com>
+
+	* twisted/conch/ssh/keys.py, twisted/conch/ssh/asn1.py: support for 
+	writing	public and private keys.
+
+	* bin/ckeygen: new script to create public/private key pairs
+
 2002-12-22  Jp Calderone  <exarkun@twistedmatrix.com>
 
 	* twisted/protocols/dns.py: Support for AFSDB, RP, and SRV RRs
