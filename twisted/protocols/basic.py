@@ -267,6 +267,7 @@ class Int16StringReceiver(protocol.Protocol):
     def sendString(self, data):
         """Send an int16-prefixed string to the other end of the connection.
         """
+        assert len(data) < 65536, "message too long"
         self.transport.write(struct.pack("!h",len(data)) + data)
 
 
