@@ -28,7 +28,7 @@ class Portal:
     def login(self, credentials, mind, *interfaces):
         """    
         @param credentials: an implementor of
-        twisted.cred.interfaces.ICredentials
+        twisted.cred.credentials.ICredentials
 
         @param mind: an object which implements a client-side interface for
         your particular realm.  In many cases, this may be None, so if the word
