@@ -24,7 +24,7 @@ L{UsernamePasswordWrapper}.
 
 from __future__ import nested_scopes
 
-__version__ = "$Revision: 1.32 $"[11:-2]
+__version__ = "$Revision: 1.33 $"[11:-2]
 
 import random
 import time
@@ -234,7 +234,7 @@ class SessionWrapper(Resource):
             #                 ^ we are this getChild
             # with a session
             _setSession(self, request, cookie)
-            return self.resource.getChildWithDefault(path, request)
+            return getResource(self.resource, path, request)
         elif path == INIT_SESSION:
             # initialize the session
             # /sessionized-url/session-init
@@ -252,7 +252,14 @@ class SessionWrapper(Resource):
             #                 ^ we are this getChild
             # without a session
             request.getSession = lambda interface=None: None
-            return self.resource.getChildWithDefault(path, request)
+            return getResource(self.resource, path, request)
+
+def getResource(resource, path, request):
+    if resource.isLeaf:
+        request.postpath.insert(0, request.prepath.pop())
+        return resource
+    else:
+        return resource.getChildWithDefault(path, request)
 
 INIT_PERSPECTIVE = 'perspective-init'
 DESTROY_PERSPECTIVE = 'perspective-destroy'
@@ -337,8 +344,8 @@ class PerspectiveWrapper(Resource):
         else:
             sc = s.clientForService(self.service)
             if sc:
-                return sc.getChildWithDefault(path, request)
-            return self.noAuthResource.getChildWithDefault(path, request)
+                return getResource(sc, path, request)
+            return getResource(self.noAuthResource, path, request)
 
 newLoginSignature = fm.MethodSignature(
     fm.String("username", "",
@@ -439,14 +446,16 @@ class UsernamePasswordWrapper(Resource):
             r = s.resourceForPortal(self.portal)
             if r:
                 ## Delegate our getChild to the resource our portal says is the right one.
-                return r[0].getChildWithDefault(path, request)
+                return getResource(r[0], path, request)
             else:
                 return DeferredResource(
                     self.portal.login(Anonymous(), None, IResource
                                       ).addCallback(
                     lambda (interface, avatarAspect, logout):
-                    s.setResourceForPortal(avatarAspect,
-                                           self.portal, logout))).getChildWithDefault(path, request)
+                    getResource(s.setResourceForPortal(avatarAspect,
+                                           self.portal, logout),
+                                path, request)))
+
 
 
 from twisted.web.woven import interfaces, utils
