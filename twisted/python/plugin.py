@@ -38,9 +38,20 @@ class PlugIn:
             setattr(self, key, value)
 
     def isLoaded(self):
+        """Check to see if the module for this plugin has been imported yet.
+        
+        @rtype: C{int}
+        @return: A true value if the module for this plugin has been loaded,
+        false otherwise.
+        """
         return sys.modules.has_key(self.module)
 
     def load(self):
+        """Load the module for this plugin.
+        
+        @rtype: C{ModuleType}
+        @return: The module object that is loaded.
+        """
         return namedModule(self.module)
 
     def __repr__(self):
@@ -60,13 +71,26 @@ class DropIn:
     def register(self, name, module, **kw):
         """Register a new plug-in.
         """
-        self.plugins.append(apply(PlugIn, (name, module), kw))
+        self.plugins.append(PlugIn(name, module, **kw))
 
     def __repr__(self):
         return "<Package %s %s>" % (self.name, self.plugins)
 
 
 def getPluginFileList(debugInspection=0, showProgress=0):
+    """Find plugin.tml files in C{sys.path}
+
+    @type debugInspection: C{int}
+    @param debugInspection: If true, debug information about the loading
+    process is printed.
+    
+    @type showProgress: C{int}
+    @param showProgress: If true, an indication of the loading progress is
+    printed.
+    
+    @rtype: C{list} of C{str}
+    @return: A list of the plugin.tml files found.
+    """
     result = []
     loaded = {}
     if showProgress:
@@ -123,6 +147,29 @@ def getPluginFileList(debugInspection=0, showProgress=0):
     return result
 
 def loadPlugins(plugInType, fileList, debugInspection=0, showProgress=0):
+    """Traverse the given list of files and attempt to load plugins from them.
+
+    @type plugInType: C{str}
+    @param plugInType: The type of plugin to search for.  This is tested
+    against the C{type} argument to the C{register} function in the
+    plugin.tml files.
+    
+    @type fileList: C{list} of C{str}
+    @param fileList: A list of the files to attempt to load plugin
+    information from.  One name is put in their scope, the C{register}
+    function.
+    
+    @type debugInspection: C{int}
+    @param debugInspection: If true, debug information about the loading
+    process is printed.
+    
+    @type showProgress: C{int}
+    @param showProgress: If true, an indication of the loading progress is
+    printed.
+
+    @rtype C{list}
+    @return: A list of the C{PlugIn} objects found.
+    """
     result = []
     if showProgress:
         log.logfile.write('Loading plugins.tml files: [')
@@ -164,5 +211,23 @@ def loadPlugins(plugInType, fileList, debugInspection=0, showProgress=0):
     return result
 
 def getPlugIns(plugInType, debugInspection=0, showProgress=0):
+    """Helper function to get all the plugins of a particular type.
+    
+    @type plugInType: C{str}
+    @param plugInType: The type of plugin to search for.  This is tested
+    against the C{type} argument to the C{register} function in the
+    plugin.tml files.
+    
+    @type debugInspection: C{int}
+    @param debugInspection: If true, debug information about the loading
+    process is printed.
+    
+    @type showProgress: C{int}
+    @param showProgress: If true, an indication of the loading progress is
+    printed.
+    
+    @rtype: C{list}
+    @return: A list of C{PlugIn} objects that were found.
+    """
     tmlFiles = getPluginFileList(debugInspection, showProgress)
     return loadPlugins(plugInType, tmlFiles, debugInspection, showProgress)
