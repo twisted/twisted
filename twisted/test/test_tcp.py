@@ -661,6 +661,56 @@ class AddressTestCase(unittest.TestCase):
         del self.ran
 
 
+class LargeBufferWriterProtocol(protocol.Protocol):
+    def connectionMade(self):
+        # write 60MB
+        self.transport.write('X'*self.factory.len)
+        self.factory.done = 1
+        self.transport.loseConnection()
+
+class LargeBufferReaderProtocol(protocol.Protocol):
+    def dataReceived(self, data):
+        self.factory.len += len(data)
+    def connectionLost(self, reason):
+        self.factory.done = 1
+
+class LargeBufferReaderClientFactory(protocol.ClientFactory):
+    def __init__(self):
+        self.done = 0
+        self.len = 0
+    def buildProtocol(self, addr):
+        p = LargeBufferReaderProtocol()
+        p.factory = self
+        self.protocol = p
+        return p
+    
+class LargeBufferTestCase(PortCleanerUpper):
+    """Test that buffering large amounts of data works.
+    """
+
+    datalen = 60*1024*1024
+    def testWriter(self):
+        f = protocol.Factory()
+        f.protocol = LargeBufferWriterProtocol
+        f.done = 0
+        f.problem = 0
+        f.len = self.datalen
+        p = reactor.listenTCP(0, f, interface="127.0.0.1")
+        n = p.getHost().port
+        self.ports.append(p)
+        clientF = LargeBufferReaderClientFactory()
+        reactor.connectTCP("localhost", n, clientF)
+        count = 0
+        while not ((count > 3000) or (f.done and clientF.done)):
+            reactor.iterate()
+            count += 1
+        self.failUnless(f.done, "writer didn't finish, it probably died")
+        self.failUnless(clientF.done, "client didn't see connection dropped")
+        self.failUnless(clientF.len == self.datalen,
+                        "client didn't receive all the data it expected (%d != %d)" %
+                        (clientF.len, self.datalen))
+        p.stopListening()
+
 try:
     import resource
 except ImportError:

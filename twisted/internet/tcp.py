@@ -58,6 +58,7 @@ if os.name == 'nt':
     EISCONN     = 10056
     ENOTCONN    = 10057
     EINTR       = 10004
+    from errno import WSAENOBUFS as ENOBUFS
 elif os.name != 'java':
     from errno import EPERM
     from errno import EINVAL
@@ -68,6 +69,7 @@ elif os.name != 'java':
     from errno import EISCONN
     from errno import ENOTCONN
     from errno import EINTR
+    from errno import ENOBUFS
 from errno import EAGAIN
 
 # Twisted Imports
@@ -262,11 +264,13 @@ class Connection(abstract.FileDescriptor):
         (which is negative)
         """
         try:
-            return self.socket.send(data)
+            # Limit length of buffer to try to send, because some OSes are too
+            # stupid to do so themselves (ahem windows)
+            return self.socket.send(buffer(data, 0, 131072))
         except socket.error, se:
             if se.args[0] == EINTR:
                 return self.writeSomeData(data)
-            elif se.args[0] == EWOULDBLOCK:
+            elif se.args[0] in (EWOULDBLOCK, ENOBUFS):
                 return 0
             else:
                 return main.CONNECTION_LOST
