@@ -351,15 +351,15 @@ class TelnetTestCase(unittest.TestCase):
         # properly, make sure the result indicates the option was enabled.
         d = self.p.do('\x42')
 
+        h = self.p.protocol
+        h.remoteEnableable = ('\x42',)
+
         self.assertEquals(self.t.value(), telnet.IAC + telnet.DO + '\x42')
 
         self.p.dataReceived(telnet.IAC + telnet.WILL + '\x42')
 
         self.assertEquals(util.wait(d), True)
-
-        # None of these should be called, because the notification
-        # came through the Deferred.
-        self.assertEquals(self.p.protocol.enabledRemote, [])
+        self.assertEquals(self.p.protocol.enabledRemote, ['\x42'])
         self.assertEquals(self.p.protocol.enabledLocal, [])
         self.assertEquals(self.p.protocol.disabledRemote, [])
         self.assertEquals(self.p.protocol.disabledLocal, [])
@@ -375,17 +375,14 @@ class TelnetTestCase(unittest.TestCase):
 
         self.p.dataReceived(telnet.IAC + telnet.WONT + '\x42')
 
-        self.assertEquals(util.wait(d), False)
-
-        # None of these should be called, because the notification
-        # came through the Deferred.
+        self.assertRaises(telnet.OptionRefused, util.wait, d)
         self.assertEquals(self.p.protocol.enabledLocal, [])
         self.assertEquals(self.p.protocol.disabledLocal, [])
         self.assertEquals(self.p.protocol.enabledRemote, [])
         self.assertEquals(self.p.protocol.disabledRemote, [])
 
     def testAcceptedDisableRequest(self):
-        # Try to enable an option through the user-level API.  This
+        # Try to disable an option through the user-level API.  This
         # returns a Deferred that fires when negotiation about the option
         # finishes.  Make sure it fires, make sure state gets updated
         # properly, make sure the result indicates the option was enabled.
@@ -399,16 +396,13 @@ class TelnetTestCase(unittest.TestCase):
         self.p.dataReceived(telnet.IAC + telnet.WONT + '\x42')
 
         self.assertEquals(util.wait(d), True)
-
-        # None of these should be called, because the notification
-        # came through the Deferred.
         self.assertEquals(self.p.protocol.enabledLocal, [])
         self.assertEquals(self.p.protocol.enabledRemote, [])
-        self.assertEquals(self.p.protocol.disabledRemote, [])
+        self.assertEquals(self.p.protocol.disabledRemote, ['\x42'])
         self.assertEquals(self.p.protocol.disabledLocal, [])
 
     def testNegotiationBlocksFurtherNegotiation(self):
-        # Try to enable an option, then immediately try to enable it, then
+        # Try to disable an option, then immediately try to enable it, then
         # immediately try to disable it.  Ensure that the 2nd and 3rd calls
         # fail quickly with the right exception.
         s = self.p.getOptionState('\x24')

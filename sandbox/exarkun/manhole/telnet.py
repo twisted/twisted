@@ -106,8 +106,6 @@ class ITelnetProtocol(iinternet.IProtocol):
         telnet connection and return True.  If False is returned,
         the option will be treated as still disabled and the peer
         will be notified.
-
-        This is only called when option negotiation is initiated remotely.
         """
 
     def enableRemote(self, option):
@@ -115,8 +113,6 @@ class ITelnetProtocol(iinternet.IProtocol):
 
         Returns True if the peer should be allowed to enable this option,
         False otherwise.
-
-        This is only called when option negotiation is initiated remotely.
         """
 
     def disableLocal(self, option):
@@ -124,14 +120,10 @@ class ITelnetProtocol(iinternet.IProtocol):
 
         Unlike enableLocal, this method cannot fail.  The option must be
         disabled.
-
-        This is only called when option negotiation is initiated remotely.
         """
 
     def disableRemote(self, option):
         """Indicate that the peer has disabled this option.
-
-        This is only called when option negotiation is initiated remotely.
         """
 
 class ITelnetTransport(iinternet.ITransport):
@@ -206,6 +198,9 @@ class TelnetError(Exception):
     pass
 
 class NegotiationError(TelnetError):
+    pass
+
+class OptionRefused(NegotiationError):
     pass
 
 class AlreadyEnabled(NegotiationError):
@@ -487,6 +482,7 @@ class Telnet(protocol.Protocol):
         d = state.him.onResult
         state.him.onResult = None
         d.callback(True)
+        self.enableRemote(option)
 
     def will_yes_false(self, state, option):
         # He is unilaterally offering to enable an already-enabled option.
@@ -516,7 +512,7 @@ class Telnet(protocol.Protocol):
         state.him.negotiating = False
         d = state.him.onResult
         state.him.onResult = None
-        d.callback(False)
+        d.errback(OptionRefused(option))
 
     def wont_yes_false(self, state, option):
         # Peer is unilaterally demanding that an option be disabled.
@@ -531,6 +527,7 @@ class Telnet(protocol.Protocol):
         d = state.him.onResult
         state.him.onResult = None
         d.callback(True)
+        self.disableRemote(option)
 
     wontMap = {('no', False): wont_no_false,   ('no', True): wont_no_true,
                ('yes', False): wont_yes_false, ('yes', True): wont_yes_true}
@@ -554,6 +551,7 @@ class Telnet(protocol.Protocol):
         d = state.us.onResult
         state.us.onResult = None
         d.callback(True)
+        self.enableRemote(option)
 
     def do_yes_false(self, state, option):
         # Peer is unilaterally requesting us to enable an already-enabled option.
@@ -596,6 +594,7 @@ class Telnet(protocol.Protocol):
         d = state.us.onResult
         state.us.onResult = d
         d.callback(True)
+        self.disableLocal(option)
 
     dontMap = {('no', False): dont_no_false,   ('no', True): dont_no_true,
                ('yes', False): dont_yes_false, ('yes', True): dont_yes_true}
