@@ -175,10 +175,8 @@ class Resolver(common.ResolverBase):
             if message.trunc:
                 return self.queryTCP(message.queries).addCallback(self.filterAnswers(type))
             else:
-                results = [(ans.payload, ans.ttl) for ans in message.answers if not type or ans.type == type]
-                for r in results:
-                    r[0].ttl = r[1]
-                return [r[0] for r in results]
+                results = [ans for ans in message.answers if not type or ans.type == type]
+                return results
         return getOfType
 
 
@@ -192,6 +190,12 @@ class Resolver(common.ResolverBase):
     def lookupAllRecords(self, name, timeout = 10):
         return self.queryUDP(
             [dns.Query(name, dns.ALL_RECORDS, dns.IN)], timeout
+        ).addCallback(self.filterAnswers(None))
+    
+    # This one doesn't ever belong on UDP
+    def lookupZone(self, name, timeout = 10):
+        return self.queryTCP(
+            [dns.Query(name, dns.AXFR, dns.IN)], timeout
         ).addCallback(self.filterAnswers(None))
 
 

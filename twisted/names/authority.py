@@ -17,7 +17,7 @@
 
 from __future__ import nested_scopes
 
-import os, copy, StringIO
+import os, copy, operator
 
 from twisted.protocols import dns
 from twisted.internet import defer
@@ -37,27 +37,33 @@ class FileAuthority(common.ResolverBase):
 
 
     def _lookup(self, name, cls, type, timeout = 10):
-# XXX - How to do this?  Grar, I think it needs to go through a different
-# interface entirely
-#
-#        if type == dns.AXFR or type == dns.IXFR:
-#            s = StringIO.StringIO()
-#            bind.writeAuthority(self.soa, self.records, file=s)
-#            return defer.succeed(s.getvalue())
-#
+        results = []
+        ttl = max(self.soa[1].minimum, self.soa[1].expire)
         try:
-            r = []
-            for rec in self.records[name.lower()]:
-                if rec.TYPE == type or type == dns.ALL_RECORDS:
-                    rec = copy.copy(rec)
-                    rec.ttl = max(self.soa[1].minimum, self.soa[1].expire)
-                    r.append(rec)
-            return defer.succeed(r)
+            for record in self.records[name.lower()]:
+                if record.TYPE == type or type == dns.ALL_RECORDS:
+                    results.append(
+                        dns.RRHeader(name, record.TYPE, dns.IN, ttl, record)
+                    )
+            return defer.succeed(results)
         except KeyError:
             if name.lower().endswith(self.soa[0].lower()):
                 # We are the authority and we didn't find it.  Goodbye.
                 return defer.fail(failure.Failure(dns.AuthoritativeDomainError(name)))
             return defer.fail(failure.Failure(dns.DomainError(name)))
+
+
+    def lookupZone(self, name, timeout = 10):
+        if self.soa[0].lower() == name.lower():
+            # Wee hee hee hooo yea
+            ttl = max(self.soa[1].minimum, self.soa[1].expire)
+            results = [dns.RRHeader(self.soa[0], dns.SOA, dns.IN, ttl, self.soa[1])]
+            for (k, r) in self.records.items():
+                for rec in r:
+                    if rec.TYPE != dns.SOA:
+                        results.append(dns.RRHeader(k, rec.TYPE, dns.IN, ttl, rec))
+            return defer.succeed(results)
+        return defer.fail(failure.Failure(dns.DomainError(name)))
 
 
 class PySourceAuthority(FileAuthority):

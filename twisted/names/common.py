@@ -32,6 +32,7 @@ class ResolverBase:
 
     def addHeader(self, results, name, cls):
         """Add the RR header to each of a list of answers"""
+        print 'ADDING HEADERS TO ', results
         return [
             dns.RRHeader(
                 name, r.TYPE, cls,
@@ -41,9 +42,9 @@ class ResolverBase:
 
     def query(self, query, timeout = 10):
         try:
-            d = self.typeToMethod[query.type](str(query.name), timeout)
-            return d.addCallback(self.addHeader, str(query.name), query.cls)
-        except KeyError:
+            return self.typeToMethod[query.type](str(query.name), timeout)
+        except KeyError, e:
+            log.deferr()
             return defer.fail(failure.Failure(ValueError(dns.ENOTIMP)))
 
     def _lookup(self, name, cls, type, timeout):
@@ -110,6 +111,11 @@ class ResolverBase:
         )
 
 
+    def lookupZone(self, name, timeout = 10):
+        return self._lookup(name, dns.IN, dns.AXFR, timeout)
+        raise NotImplementedError, "zone transfer not implemented for this resolver"
+
+
 typeToMethod = {
     dns.A:     'lookupAddress',
     dns.NS:    'lookupNameservers',
@@ -130,5 +136,6 @@ typeToMethod = {
     dns.AFSDB: 'lookupAFSDatabase',
     dns.SRV:   'lookupService',
     
+    dns.AXFR:         'lookupZone',
     dns.ALL_RECORDS:  'lookupAllRecords',
 }

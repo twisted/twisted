@@ -123,9 +123,10 @@ class DNSServerFactory(protocol.ServerFactory):
 
 
     def handleQuery(self, message, protocol, address):
-        assert len(message.queries) == 1
+        # Discard all but the first query!  HOO-AAH HOOOOO-AAAAH
+        query = message.queries[0]
         
-        return self.resolver.query(message.queries[0]).addCallback(
+        return self.resolver.query(query).addCallback(
             self.gotResolverResponse, protocol, message, address
         ).addErrback(
             self.gotResolverError, protocol, message, address

@@ -58,13 +58,12 @@ class CacheResolver(common.ResolverBase):
                 log.msg('Cache miss for ' + repr(name))
             return defer.fail(failure.Failure(dns.DomainError(name)))
         else:
-            records = [copy.copy(r) for r in records]
-            for r in records:
-                r.ttl = int(r.ttl - now)
-            if len(records):
+            if records:
                 if self.verbose:
                     log.msg('Cache hit for ' + repr(name))
-                return defer.succeed(records)
+                return defer.succeed([
+                    dns.RRHeader(name, type, cls, r.ttl - now, r) for r in records
+                ])
             else:
                 if self.verbose:
                     log.msg('Cache miss (expired) for ' + repr(name))
@@ -72,18 +71,18 @@ class CacheResolver(common.ResolverBase):
 
 
     def lookupAllRecords(self, name, timeout = 10):
+        now = time.time()
         try:
-            r = defer.succeed(
-                reduce(
-                    operator.add,
-                    self.cache[name.lower()][dns.IN].values(),
-                    []
-                )
+            rec = reduce(
+                operator.add,
+                self.cache[name.lower()][dns.IN].values(),
             )
             if self.verbose:
                 log.msg('Cache hit for ' + repr(name))
-            return r
-        except KeyError:
+            return defer.succeed([
+                dns.RRHeader(name, r.TYPE, dns.IN, r.ttl - now, r) for r in rec
+            ])
+        except (KeyError, TypeError), e:
             if self.verbose > 1:
                 log.msg('Cache miss for ' + repr(name))
             return defer.fail(failure.Failure(dns.DomainError(name)))

@@ -43,20 +43,25 @@ class Resolver:
 
     __implements__ = (interfaces.IResolverSimple,)
 
-    def __init__(self, file='/etc/hosts'):
+    def __init__(self, file='/etc/hosts', ttl = 60 * 60):
         self.file = file
-    
-    
+        self.ttl = ttl
+
+
     def _lookup(self, name, cls, type, timeout):
         if cls != dns.IN or type != dns.A:
             raise NotImplementedError, (type, cls)
-        return self.lookupAddress(name, timeout)
+        return self.lookupAddress(
+            name, timeout
+        ).addCallback(self.addHeader, name, cls)
 
 
     def lookupAddress(self, name, timeout=10):
         res = searchFileFor(self.file, name)
-        if res is not None:
-            return defer.succeed([res])
+        if res:
+            return defer.succeed([
+                dns.RRHeader(name, dns.A, dns.IN, self.ttl)
+            ])
         return defer.fail(failure.Failure(dns.DomainError(name)))
 
 

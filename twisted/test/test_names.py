@@ -19,35 +19,29 @@
 """
 Test cases for twisted.names.
 """
-import sys, socket
+import sys, socket, operator
 from pyunit import unittest
 
 from twisted.internet import reactor, protocol, defer
-from twisted.names import client, server, common
+from twisted.names import client, server, common, authority
 from twisted.protocols import dns
-from twisted.python import log
+from twisted.python import log, failure
 
 
 gotResponse = 0
-PORT = 2053
 
 def setDone(message):
     global gotResponse
-    gotResponse = 1
-    return message
+    gotResponse = message
 
-class NoFileAuthority(common.ResolverBase):
+def justPayload(results):
+    return [r.payload for r in results]
+
+class NoFileAuthority(authority.FileAuthority):
     def __init__(self, soa, records):
+        # Yes, skip FileAuthority
         common.ResolverBase.__init__(self)
         self.soa, self.records = soa, records
-
-    def _lookup(self, name, cls, type, timeout = 10):
-        if name.lower().endswith(self.soa[0].lower()):
-            l = [r for r in self.records[name.lower()] if type == dns.ALL_RECORDS or r.TYPE == type]
-            for r in l:
-                r.ttl = 10
-            return defer.succeed(l)
-        return defer.fail(dns.DomainError(name))
 
 
 soa_record = dns.Record_SOA(
@@ -74,6 +68,7 @@ test_domain_com = NoFileAuthority(
     soa = ('test-domain.com', soa_record),
     records = {
         'test-domain.com': [
+            soa_record,
             dns.Record_A('127.0.0.1'),
             dns.Record_NS('39.28.189.39'),
             dns.Record_MX(10, 'host.test-domain.com'),
@@ -87,8 +82,7 @@ test_domain_com = NoFileAuthority(
             dns.Record_MINFO(rmailbx='r mail box', emailbx='e mail box'),
             dns.Record_AFSDB(subtype=1, hostname='afsdb.test-domain.com'),
             dns.Record_RP(mbox='whatever.i.dunno', txt='some.more.text'),
-            dns.Record_WKS(0x12EF4303, socket.IPPROTO_TCP, '\x12\x01\x16\xfe\xc1\x00\x01'),
-            soa_record
+            dns.Record_WKS(0x12EF4303, socket.IPPROTO_TCP, '\x12\x01\x16\xfe\xc1\x00\x01')
         ],
         'http.tcp.test-domain.com': [
             dns.Record_SRV(257, 16383, 43690, 'some.other.place.fool')
@@ -127,12 +121,13 @@ class ServerDNSTestCase(unittest.DeferredTestCase):
             test_domain_com, reverse_domain
         ], verbose=2)
         
-        self.listenerTCP = reactor.listenTCP(PORT, self.factory)
-        
+        self.listenerTCP = reactor.listenTCP(0, self.factory)
+        port = self.listenerTCP.getHost()[2]
+
         p = dns.DNSDatagramProtocol(self.factory)
-        self.listenerUDP = reactor.listenUDP(PORT, p)
+        self.listenerUDP = reactor.listenUDP(port, p)
         
-        self.resolver = client.Resolver(servers=[('127.0.0.1', PORT)])
+        self.resolver = client.Resolver(servers=[('127.0.0.1', port)])
 
 
     def tearDown(self):
@@ -142,10 +137,18 @@ class ServerDNSTestCase(unittest.DeferredTestCase):
 
     def namesTest(self, d, r):
         global gotResponse
-        gotResponse = 0
-        self.deferredFailUnlessEqual(d.addBoth(setDone), r)
+        gotResponse = None
+        d.addBoth(setDone)
         while not gotResponse:
             reactor.iterate(0.05)
+
+        if isinstance(gotResponse, failure.Failure):
+            raise gotResponse.value
+        
+        results = justPayload(gotResponse)
+        assert len(results) == len(r), "%s != %s" % (map(str, results), map(str, r))
+        for rec in results:
+            assert rec in r, "%s not in %s" % (rec, map(repr, r))
 
 
     def testAddressRecord1(self):
@@ -299,9 +302,9 @@ class ServerDNSTestCase(unittest.DeferredTestCase):
 #        )
 
 
-#    def testZoneTransfer(self):
-#        """Test DNS 'AXFR' queries (Zone transfer)"""
-#        self.namesTest(
-#            self.resolver.lookupZone('test-domain.com'),
-#            test_domain_com
-#        )
+    def testZoneTransfer(self):
+        """Test DNS 'AXFR' queries (Zone transfer)"""
+        self.namesTest(
+            self.resolver.lookupZone('test-domain.com'),
+            reduce(operator.add, test_domain_com.records.values())
+        )
