@@ -81,7 +81,7 @@ class IQ(domish.Element):
         self.callbacks.callback(iq)
         self.callbacks = None
 
-class BasicAuthenticator(xmlstream.Authenticator):
+class BasicAuthenticator(xmlstream.ConnectAuthenticator):
     """ Authenticates an XmlStream against a Jabber server as a Client
 
     This only implements non-SASL authentication, per
@@ -108,7 +108,7 @@ class BasicAuthenticator(xmlstream.Authenticator):
     REGISTER_FAILED_EVENT = "//event/client/basicauth/registerfailed"
 
     def __init__(self, jid, password):
-        xmlstream.Authenticator.__init__(self, jid.host)
+        xmlstream.ConnectAuthenticator.__init__(self, jid.host)
         self.jid = jid
         self.password = password
 

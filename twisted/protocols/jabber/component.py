@@ -21,12 +21,12 @@ from twisted.protocols import xmlstream
 from twisted.protocols.jabber import jstrports
 
 def componentFactory(componentid, password):
-    a = ComponentAuthenticator(componentid, password)
+    a = ConnectComponentAuthenticator(componentid, password)
     return xmlstream.XmlStreamFactory(a)
 
-class ComponentAuthenticator(xmlstream.Authenticator):
+class ConnectComponentAuthenticator(xmlstream.ConnectAuthenticator):
     """ Authenticator to permit an XmlStream to authenticate against a Jabber
-    Server as a Component
+    Server as a Component (where the Authenticator is initiating the stream).
 
     This implements the basic component authentication. Unfortunately this
     protocol is not formally described anywhere. Fortunately, all the Jabber
@@ -43,7 +43,7 @@ class ComponentAuthenticator(xmlstream.Authenticator):
         @type password: C{str}
         @param password: Password/secret this component uses to authenticate.
         """
-        xmlstream.Authenticator.__init__(self, componentjid)
+        xmlstream.ConnectAuthenticator.__init__(self, componentjid)
         self.password = password
 
     def streamStarted(self, rootelem):
@@ -57,6 +57,10 @@ class ComponentAuthenticator(xmlstream.Authenticator):
 
     def _handshakeEvent(self, elem):
         self.xmlstream.dispatch(self.xmlstream, xmlstream.STREAM_AUTHD_EVENT)
+
+class ListenComponentAuthenticator(xmlstream.Authenticator):
+    """ Placeholder for listening components """
+    pass
 
 
 from twisted.application import service

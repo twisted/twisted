@@ -18,7 +18,7 @@
 import sys, os, sha
 from twisted.trial import unittest
 
-from twisted.protocols.jabber.component import ComponentAuthenticator
+from twisted.protocols.jabber.component import ConnectComponentAuthenticator
 from twisted.protocols import xmlstream
 
 class ComponentAuthTest(unittest.TestCase):
@@ -29,7 +29,7 @@ class ComponentAuthTest(unittest.TestCase):
         self.authComplete = False
         outlist = []
 
-        ca = ComponentAuthenticator("cjid", "secret")
+        ca = ConnectComponentAuthenticator("cjid", "secret")
         xs = xmlstream.XmlStream(ca)
 
         xs.addObserver(xmlstream.STREAM_AUTHD_EVENT,

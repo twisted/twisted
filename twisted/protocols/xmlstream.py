@@ -68,6 +68,17 @@ class Authenticator:
         self.streamHost = streamHost
         self.xmlstream = None
 
+    def connectionMade(self):
+        """
+        Called by the XmlStream when the underlying socket connection is
+        in place. This allows the Authenticator to send an initial root
+        element, if it's connecting, or wait for an inbound root from
+        the peer if it's accepting the connection
+
+        Subclasses can use self.xmlstream.send() with the provided xmlstream
+        parameter to send any initial data to the peer
+        """
+
     def streamStarted(self, rootelem):
         """
         Called by the XmlStream when it has received a root element from
@@ -77,7 +88,6 @@ class Authenticator:
         @param rootelem: The root element of the XmlStream received from
                          the streamHost
         """
-        pass
 
     def associateWithStream(self, xmlstream):
         """
@@ -95,7 +105,17 @@ class Authenticator:
         """
         self.xmlstream = xmlstream
 
-
+class ConnectAuthenticator(Authenticator):
+    def connectionMade(self):
+        # Generate stream header
+        if self.version == 1.0:
+            sh = "<stream:stream xmlns='%s' xmlns:stream='http://etherx.jabber.org/streams' version='1.0'>" % \
+                 (self.namespace)
+        else:
+            sh = "<stream:stream xmlns='%s' xmlns:stream='http://etherx.jabber.org/streams' to='%s'>" % \
+                 (self.namespace, self.streamHost)
+        self.xmlstream.send(sh)
+    
 class XmlStream(protocol.Protocol, utility.EventDispatcher):
     def __init__(self, authenticator):
         utility.EventDispatcher.__init__(self)
@@ -127,14 +147,7 @@ class XmlStream(protocol.Protocol, utility.EventDispatcher):
         self.stream.ElementEvent = self.onElement
         self.stream.DocumentEndEvent = self.onDocumentEnd
 
-        # Generate stream header
-        if self.authenticator.version == 1.0:
-            sh = "<stream:stream xmlns='%s' xmlns:stream='http://etherx.jabber.org/streams' version='1.0'>" % \
-                 (self.authenticator.namespace)
-        else:
-            sh = "<stream:stream xmlns='%s' xmlns:stream='http://etherx.jabber.org/streams' to='%s'>" % \
-                 (self.authenticator.namespace, self.authenticator.streamHost)
-        self.send(sh)
+        self.authenticator.connectionMade()
 
     def dataReceived(self, buf):
         try:
@@ -154,7 +167,8 @@ class XmlStream(protocol.Protocol, utility.EventDispatcher):
     ###
     ### --------------------------------------------------------------
     def onDocumentStart(self, rootelem):
-        self.sid = rootelem["id"]                  # Extract stream identifier
+        if rootelem.hasAttribute("id"):
+            self.sid = rootelem["id"]                  # Extract stream identifier
         self.authenticator.streamStarted(rootelem) # Notify authenticator
         self.dispatch(self, STREAM_START_EVENT)    
 
@@ -178,7 +192,6 @@ class XmlStream(protocol.Protocol, utility.EventDispatcher):
             self.rawDataOutFn(obj)
             
         self.transport.write(obj)
-
 
 
 class XmlStreamFactory(protocol.ReconnectingClientFactory):

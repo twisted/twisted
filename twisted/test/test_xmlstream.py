@@ -21,7 +21,7 @@ from twisted.trial import unittest
 from twisted.protocols import xmlstream
 from twisted.xish import utility
 
-class AuthStandin(xmlstream.Authenticator):
+class AuthStandin(xmlstream.ConnectAuthenticator):
     namespace = "testns"
     def __init__(self, testcase):
         xmlstream.Authenticator.__init__(self, "foob")
