@@ -128,7 +128,7 @@ this file directly.
 
 025 Jelly needs to handle floats and longs correctly, and banana needs to use
     the appropriate types for struct.pack. Add INTERN support to banana. Add
-    Sopwith's C encoder for banana.
+    Sopwith's C encoder for banana. Add unicode support to Jelly.
 
 026 More ircd-style names for virtual nicks in words; LoginServ (or maybe
     NickServ) instead of *login*.  The asterisks break some clients.
@@ -157,5 +157,13 @@ this file directly.
 
 034 Voice & video streaming for Twisted Words.
 
-035 Asynchronous equivalent to getPerspectiveNamed, so that perspectives can be
-    loaded from a database a-la getIdentityRequest.
+035 *{Glyph Lefkowitz}* Asynchronous equivalent to getPerspectiveNamed, so that
+    perspectives can be loaded from a database a-la getIdentityRequest.
+
+036 twisted.metrics OS metrics for Linux, FreeBSD, Solaris, etc..
+
+037 twisted.web cookie-based sessions need to be redone in a more secure fashion.
+    See http://cookies.lcs.mit.edu/pubs.html for details.
+
+038 Integrate mbac's client FTP protocol.
+
