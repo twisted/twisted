@@ -1,3 +1,8 @@
+2003-11-18  Sam Jordan  <sam@twistedmatrix.com>
+
+	* twisted/protocols/msn.py: support for MSNP8
+	* doc/examples/msn_example.py: small msn example
+
 2003-11-13  Paul Swartz  <z3p@twistedmatrix.com>
 
 	* twisted/conch/ssh/agent.py: support for the OpenSSH agent protocol
