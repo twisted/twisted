@@ -252,4 +252,4 @@ binary: binary-indep binary-arch
 os.chmod(os.path.join('.build', directory, 'debian', 'rules'), 0755)
 
 os.chdir('.build/%(directory)s' % vars())
-os.system('dpkg-buildpackage -rfakeroot -uc -us')
+os.system('dpkg-buildpackage -rfakeroot'+ ['', ' -uc -us'][config.unsigned])
