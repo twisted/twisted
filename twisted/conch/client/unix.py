@@ -25,21 +25,26 @@ import os, stat, pickle
 import types # this is for evil
 
 class SSHUnixClientFactory(protocol.ClientFactory):
-    noisy = 1
+#    noisy = 1
 
     def __init__(self, d, options, userAuthObject):
         self.d = d
         self.options = options
         self.userAuthObject = userAuthObject
         
-#    def clientConnectionLost(self, connector, reason):
-#        stopConnection()
+    def clientConnectionLost(self, connector, reason):
+        log.msg('lost connection, reason:')
+        log.err(reason)
+        if self.options['reconnect']:
+            connector.connect()
 
     def clientConnectionFailed(self, connector, reason):
         try:
             os.unlink(connector.transport.addr)
         except:
             pass
+        log.msg('failed to connect, reason:')
+        log.err(reason)
         if not self.d: return
         d = self.d
         self.d = None

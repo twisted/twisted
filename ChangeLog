@@ -1,3 +1,7 @@
+2004-06-12  Paul Swartz  <z3p@twistedmatrix.com>
+	* twisted/conch/client: added -r flag to reconnect to the server if
+	the connection is lost (closes 623).
+
 2004-06-06  Dave Peticolas  <dave@krondo.com>
 
 	* twisted/test/test_enterprise.py: test open callback and

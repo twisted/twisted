@@ -32,10 +32,15 @@ class SSHClientFactory(protocol.ClientFactory):
         self.verifyHostKey = verifyHostKey
         self.userAuthObject = userAuthObject
 
-#    def stopFactory(self):
-#        stopConnection()
+    def clientConnectionLost(self, connector, reason):
+        log.msg('lost connection, reason:')
+        log.err(reason)
+        if self.options['reconnect']:
+            connector.connect()
 
-    def connectionFailed(self, reason):
+    def clientConnectionFailed(self, connector, reason):
+        log.msg('failed to connect, reason:')
+        log.err(reason)
         if not self.d: return
         d = self.d
         self.d = None

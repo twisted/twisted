@@ -79,7 +79,7 @@ class SSHAgentClient(protocol.Protocol):
         co
         return self.sendRequest(AGENTC_ADD_IDENTITY, req)
 
-    def signData(self,blob, data):
+    def signData(self, blob, data):
         req = NS(blob)
         req += NS(data)
         req += '\000\000\000\000' # flags

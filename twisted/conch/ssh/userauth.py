@@ -218,10 +218,11 @@ class SSHUserAuthClient(service.SSHService):
     def __init__(self, user, instance):
         self.user = user
         self.instance = instance
-        self.authenticatedWith = []
-        self.triedPublicKeys = []
 
     def serviceStarted(self):
+        self.authenticatedWith = []
+        self.triedPublicKeys = []
+        self.lastPublicKey = None
         self.askForAuth('none', '')
 
     def askForAuth(self, kind, extraData):
@@ -240,7 +241,7 @@ class SSHUserAuthClient(service.SSHService):
         
     def ssh_USERAUTH_SUCCESS(self, packet):
         self.transport.setService(self.instance)
-        self.ssh_USERAUTH_SUCCESS = lambda *a: None # ignore these
+        #self.ssh_USERAUTH_SUCCESS = lambda *a: None # ignore these
 
     def ssh_USERAUTH_FAILURE(self, packet):
         canContinue, partial = getNS(packet)

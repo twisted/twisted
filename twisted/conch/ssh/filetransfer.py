@@ -724,6 +724,10 @@ class ClientDirectory:
         self.handle = NS(handle)
         self.filesCache = []
 
+    def read(self):
+        d = self.parent._sendRequest(FXP_READDIR, self.handle)
+        return d
+
     def close(self):
         return self.parent._sendRequest(FXP_CLOSE, self.handle)
 
@@ -733,7 +737,7 @@ class ClientDirectory:
     def next(self):
         if self.filesCache:
             return self.filesCache.pop(0)
-        d = self.parent._sendRequest(FXP_READDIR, self.handle)
+        d = self.read()
         d.addCallback(self._cbReadDir)
         return d
 

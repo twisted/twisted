@@ -17,6 +17,8 @@
 from twisted.conch.ssh.transport import SSHClientTransport
 from twisted.python import usage
 
+import connect
+
 import sys
 
 class ConchOptions(usage.Options):
@@ -37,6 +39,7 @@ class ConchOptions(usage.Options):
                 ['nox11', 'x', 'Disable X11 connection forwarding (default)'],
                 ['agent', 'A', 'Enable authentication agent forwarding.'],
                 ['noagent', 'a', 'Disable authentication agent forwarding (default.'],
+                 ['reconnect', 'r', 'Reconnect to the server if the connection is lost.'],
                ]
 
     identitys = []
@@ -64,7 +67,12 @@ class ConchOptions(usage.Options):
 
 #    def opt_user_authentications(self, uas):
     def opt_connection_usage(self, conns):
-        self.conns = conns.split(',')
+        conns = conns.split(',')
+        connTypes = connect.connectTypes.keys()
+        for conn in conns:
+            if conn not in connTypes:
+                sys.exit("Unknown connection type '%s'" % conn)
+        self.conns = conns
         
 #    def opt_compress(self):
 #        "Enable compression"

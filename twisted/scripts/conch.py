@@ -89,7 +89,6 @@ class ClientOptions(options.ConchOptions):
 options = None
 conn = None
 exitStatus = 0
-keyAgent = None
 old = None
 _inRawMode = 0
 _savedRawMode = None
@@ -213,19 +212,18 @@ def stopConnection():
         for remotePort, hostport in options.remoteForwards:
             log.msg('cancelling %s:%s' % (remotePort, hostport))
             conn.cancelRemoteForwarding(remotePort)
-    try:
-        reactor.stop()
-    except RuntimeError: # ignore "can't stop stopped reactor"
-        pass
+    if not options['reconnect']:
+        try:
+            reactor.stop()
+        except RuntimeError: # ignore "can't stop stopped reactor"
+            pass
 
 
 class SSHConnection(connection.SSHConnection):
     def serviceStarted(self):
-        global conn, keyAgent
+        global conn
         conn = self
         self.remoteForwards = {}
-        if keyAgent:
-            keyAgent.transport.loseConnection()
         onConnect()
 
     def serviceStopped(self):
@@ -258,22 +256,19 @@ class SSHConnection(connection.SSHConnection):
         else:
             return connection.OPEN_CONNECT_FAILED, "don't know about that port"
 
-    def channel_auth_agent_openssh_com(self, windowSize, maxPacket, data):
-        if options['agent'] and keyAgent:
-            return agent.SSHAgentForwardingChannel(remoteWindow = windowSize,
-                                             remoteMaxPacket = maxPacket,
-                                             conn = self)
-        else:
-            return connection.OPEN_CONNECT_FAILED, "don't have an agent"
+#    def channel_auth_agent_openssh_com(self, windowSize, maxPacket, data):
+#        if options['agent'] and keyAgent:
+#            return agent.SSHAgentForwardingChannel(remoteWindow = windowSize,
+#                                             remoteMaxPacket = maxPacket,
+#                                             conn = self)
+#        else:
+#            return connection.OPEN_CONNECT_FAILED, "don't have an agent"
 
 class SSHSession(channel.SSHChannel):
 
     name = 'session'
 
     def channelOpen(self, foo):
-        #global globalSession
-        #globalSession = self
-        # turn off local echo
         log.msg('session %s open' % self.id)
         if options['agent']:
             d = self.conn.sendRequest(self, 'auth-agent-req@openssh.com', '', wantReply=1)

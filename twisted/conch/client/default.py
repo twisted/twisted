@@ -111,6 +111,11 @@ class SSHUserAuthClient(userauth.SSHUserAuthClient):
         else:
             userauth.SSHUserAuthClient.serviceStarted(self)
 
+    def serviceStopped(self):
+        if self.keyAgent:
+            self.keyAgent.transport.loseConnection()
+            self.keyAgent = None
+
     def _setAgent(self, a):
         self.keyAgent = a
         d = self.keyAgent.getPublicKeys()
