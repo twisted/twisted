@@ -21,7 +21,7 @@
 # Twisted imports
 from twisted.protocols import protocol, pop3, smtp
 from twisted.cred import service
-from twisted.python import roots, defer
+from twisted.python import defer, components
 
 # System imports
 import types
@@ -90,3 +90,18 @@ class FileMessage:
     def connectionLost(self):
         self.fp.close()
         os.remove(self.name)
+
+
+class IDomain(components.Interface):
+    """An email domain."""
+
+
+class MailService(service.Service):
+    """An email service."""
+    
+    # path where email will be stored
+    storagePath = "/tmp/changeme"
+    
+    def __init__(self, name, app):
+        service.Service.__init__(self, name, app)
+        self.domains = DomainWithDefaultDict({}, BounceDomain())

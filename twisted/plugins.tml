@@ -42,10 +42,10 @@ register("FTP Server",
          description="FTP Server.",
          type='coil')
 
-# register("Twisted Mail",
-         # "twisted.coil.plugins.mail",
-         # description="Email services for Twisted.",
-         # type='coil')
+register("Twisted Mail",
+         "twisted.coil.plugins.mail",
+         description="Email services for Twisted.",
+         type='coil')
 
 register("Twisted Names",
          "twisted.coil.plugins.names",

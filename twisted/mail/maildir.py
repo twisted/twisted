@@ -40,6 +40,9 @@ def _generateMaildirName():
 class AbstractMaildirDomain:
     """Abstract maildir-backed domain.
     """
+    
+    __implements__ = [mail.IDomain]
+    
     def __init__(self, root):
         """Initialize.
         """
@@ -178,20 +181,3 @@ class MaildirDirdbmDomain(AbstractMaildirDomain):
         my_digest = string.join(map(lambda x: "%02x"%ord(x), my_digest), '')
         if digest == my_digest:
             return MaildirMailbox(os.path.join(self.root, user, 'inbox'))
-    
-    # XXX config interfaces - port these to new coil
-    def configInit(self, container, name):
-        path = os.path.join(container.storagePath, name)
-        if not os.path.exists(path):
-            os.makedirs(path)
-        self.__init__(path)
-
-    def getConfiguration(self):
-        return {"postmaster": self.postmaster}
-
-    configTypes = {"postmaster": "boolean"}
-
-    configName = 'Maildir DBM Domain'
-
-    def config_postmaster(self, postmaster):
-        self.postmaster = postmaster
