@@ -2,7 +2,7 @@ from twisted.internet import tcp, main
 from twisted.spread import pb
 
 
-class dbClient:
+class DbClient:
 
     def __init__(self, host, name, password):
         self.host = host
@@ -19,18 +19,18 @@ class dbClient:
     def gotConnection(self, player):
         print 'connected:', player
         self.player = player
-        self.player.request("select * from sysusers", pbcallback=self.gotData)
+        self.player.request("select * from accounts", pbcallback=self.gotData)
 
 
     def gotData(self, data):
         print "got Data back %d  %d rows" % (self.count, len(data))
         self.count = self.count + 1
         # do it again!
-        self.player.request("select * from sysusers", pbcallback=self.gotData)    
+        self.player.request("select * from accounts", pbcallback=self.gotData)    
         
 
 def run():
-    c = dbClient("localhost", "sean", "test")
+    c = DbClient("localhost", "sean", "test")
     c.doLogin()
     main.run()
 

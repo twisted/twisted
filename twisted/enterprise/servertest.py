@@ -8,7 +8,7 @@ import dbserver
 
 import time
 
-manager = dbserver.dbManager(
+manager = dbserver.DbManager(
     service =  "sybase",
     server =   "max",
     database = "twisted",
@@ -16,12 +16,16 @@ manager = dbserver.dbManager(
     password = "matrix",
     numConnections = 1 )
 
-manager.connect()
+
 manager.addUser("sean", "test")
 manager.addUser("glyph", "second")
+for i in range(0,100):
+    manager.addUser("trash", "xxx")
+#manager.connect()
+#time.sleep(3)
 manager.disconnect()
 
-service = dbservice.dbService(manager)
+service = dbservice.DbService(manager)
 
 app = main.Application("db")
 

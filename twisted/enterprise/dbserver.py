@@ -4,12 +4,12 @@ This service provides a way to interact with a relational database.
 This interface is database vendor neutral.
 """
 
-import md5
-from twisted.spread import pb
+import threading
+import time
 
-    
-class dbManager(pb.Service):
-    """Manager that handles connections and requests. A dbManager handles connections
+        
+class DbManager:
+    """Manager that handles connections and requests. A DbManager handles connections
     to a particular database. It chooses the apropriate database driver (for a vendor)
     based on the "service" string passed in.
 
@@ -17,17 +17,15 @@ class dbManager(pb.Service):
     gets specified in the "servertest.py" script currently as a server called 'max', a database
     called 'twisted', and a user 'twisted' with a password 'matrix'.
 
-    The actual user names that users supply are not database level user names, but names that
-    exist in the "accounts" table in the database. For now, the accounts table is:
-
-    create table accounts
-    (
-        name      char(24),
-        password  char(24),
-        accountid int
-    );
-
-    servertest.py adds two users to the accounts table for now. duplicates are ignored.
+    The DbManager knows nothing of application level usernames or passwords.
+    
+    requests processing sequence is:
+        main thread - request is added to the requests queue
+        connection thread gets the request
+        connection thread processes the request
+        connection thread adds the request to the results queue
+        main thread - in update, the callback for the request is run
+        main thread - the request is deleted.
     
     """
     def __init__(self, service, server, database, username, password, numConnections = 1):
@@ -38,12 +36,10 @@ class dbManager(pb.Service):
         self.service = service
         self.numConnections = numConnections
         self.connections = []
-        self.requests = []
-        self.busy = []
-        self.users = {}
+        self.requests = DbRequestQueue()
+        self.results = DbRequestQueue()
         self.connected = 0
         self.driver = None
-        self.value = None  #utility variable to handle asynchronous data callbacks.
 
         ## Load the correct driver
         if service == "sybase":
@@ -53,112 +49,210 @@ class dbManager(pb.Service):
             print "Postgres not implemented yet...."
         else:
             print "ERROR: Uknown database service"
-
-    def executeNow(self, sql):
-        """Utility method to get the results of a sql request.
-        NOT THREAD SAFE!!!
-        """
-        self.value = None
-        newRequest = dbRequest(sql, self.gotValue)
-        self.addRequest(newRequest)
-        self.update() # arg this blocks for now!        
-        return self.value
-
-    def gotValue(self, value):
-        """helper method for executeNow"""
-        self.value = value
-
-    def addUser(self, name, password):
-        """Creates the user in the accounts table in the database.
-        TODO: return the account ID of the new account.
-        """
-        print "Adding new user to database '%s' '%s'"%(name,password)        
-        result = self.executeNow("insert into accounts ( name, password, accountid ) values ('%s', '%s', 0)" % (name, password) )
-        result = self.executeNow("commit")
-
-    def getPassword(self, name):
-        """Gets the password for a user in the accounts table in the database.
-        Also does the md5 encoding of it. 
-        """
-        #print "Getting password for %s"%(name)
-        data = self.executeNow("select password from accounts where name = '%s'"%name)
-        if len(data) == 0:
-            return None
-        password = data[0][0]
-        newPassword =  md5.md5(password).digest()        
-        return newPassword
-
-    def loginUser(self, name):
-        """User has been authenticated. Log the user in to the system and return a perspective.
-        """
-        newUser = dbUser(name, self)
-        self.users[name] = newUser
-        return newUser
     
     def connect(self):
         """Connect all the correct number of connections to the database/server specified.
         NOTE: auto_commit is false by default for sybase...
         """
+        count = 0
         for i in range(0,self.numConnections):
-            newConnection = self.driver.connect(self.server, self.username, self.password, database=self.database)
-            newConnection.request = None
-            self.connections.append(newConnection) 
-            print "%d. Connected to %s" % (i, self.database)
-        self.connected = 1
+            newConnection = DbConnection(self)
+            if newConnection.connect():
+                newConnection.start()
+                self.connections.append(newConnection)
+                count = count + 1
+        if count == self.numConnections:
+            self.connected = 1
+            return 1
+        else:
+            print "Error in connection to database."
+            return 0
 
     def disconnect(self):
-        print "Disconnecting from db"
+        #print "Disconnecting from db"
         for con in self.connections:
             con.close()
+        for con in self.connections:
+            self.requests.incrementForClose(self.numConnections)
+        for con in self.connections:
+            con.join()
         self.connections = []
         self.connected = 0
             
     def addRequest(self, request):
-        # TODO: lock the requets Q
-        self.requests.append(request)
+        """Add a request to the queue of requests to be processed
+        """
+        self.requests.addRequest(request)
 
+    def getRequest(self):
+        """This is run in DbConnection threads NOT the main thread. it retrieves
+        a request from the queue, but blocks if there are not requests until one arrives.
+        """
+        request = self.requests.waitForRequest()
+        return request
+
+    def addResult(self, request):
+        """This is run from the DbConnection threads NOT the main thread. it posts the
+        results of a request to the results queue to be run by the main thread in it's
+        update loop.
+        """
+        self.results.addRequest(request)
+        
     def update(self):
         """This is called periodically by the server framework to do processing of database requests.
-        Currently it blocks on db requests - they are processed synchronously. It should be easy
-        to add threads and multiple connections here eventually so requests can be handled simulateously
         """
         if self.connected == 0:
-            self.connect()
+            if self.connect() == 0:
+                return
 
-        if len(self.requests) > 0 and len(self.connections) > 0:
-            print "%d requests %d connections" %(len(self.requests), len(self.connections))                        
-            connection = self.connections[0]
-            connection.request = self.requests.pop()
-            c = connection.cursor()
-            print "Executing: %s" % connection.request.sql
-            try:
-                c.execute(connection.request.sql)
-                connection.request.status = 1
-                connection.request.callback( c.fetchall() )
-            except self.driver.InternalError, e:
-                print "ERROR: ", e
-                connection.request.status = 0
-                connection.request.callback( None )
-        else:
-            print "nothing to do."
-            pass
-                
-class dbRequest:
-    """A database request that includes the SQL to be executed, and the callback
-    to pass the results to.
-    """
-    def __init__(self, sql, callback):
-        self.sql = sql
-        self.callback = callback
+        request = self.results.getRequest()
+        
+        while request:
+            if request.callback:
+                request.callback(request.results)
+            request = self.results.getRequest()
+            
+        return
 
-class dbUser(pb.Perspective):
-    """A User that wants to interact with the database.
+
+class DbConnection(threading.Thread):
+    """A thread that handles a database connection. The 'execute' method of DbRequests
+    is run in this thread.
     """
-    def __init__(self, name, manager):
-        self.name = name
+    connectionID = 0
+    
+    def __init__(self, manager):
+        threading.Thread.__init__(self)
         self.manager = manager
+        self.id = DbConnection.connectionID
+        DbConnection.connectionID = DbConnection.connectionID + 1
 
-    def perspective_request(self, sql):
-        #print "Got SQL request:" , sql
-        data = self.manager.executeNow(sql)
-        return data
+    def connect(self):
+        try:
+            self.connection = self.manager.driver.connect(self.manager.server, self.manager.username, self.manager.password, database=self.manager.database)
+        except self.manager.driver.InternalError, e:
+            print "unable to connect to database!"
+            return 0
+        self.running = 1
+        return 1
+        
+    def run(self):
+        while self.running:
+            # block for a request
+            request = self.manager.getRequest()
+            if not request:
+                # empty request means time to go
+                break
+
+            # process the request
+            result = 0
+            try:
+                result = request.execute(self.connection)
+            except self.manager.driver.InternalError, e:
+                text = "SQL ERROR:\n"
+                self.error = e[0][1]
+                
+                for k in self.error.keys():
+                    text = text +  "    %s: %s\n" % (k, self.error[k])
+                request.status = 0
+                print text
+                
+            self.manager.addResult(request)
+                
+    def close(self):
+        #print "Thread (%d): Closing" % ( self.id)
+        self.running = 0
+        self.connection.close()
+
+class DbRequestQueue:
+    """A thread safe FIFO queue of requests. waitForRequest is intended to be run in
+    a thread that blocks until there is a request to process available. getRequest
+    doesn't block but returns with None if there are not requests.
+    """
+    def __init__(self):
+        self.lock = threading.Lock()
+        self.sem = threading.Semaphore(0)
+        self.queue = []
+
+    def addRequest(self, request):
+        self.lock.acquire()            # acquire exclusive access to queue
+        self.queue.append(request)     # add request to queue
+        self.sem.release()             # increment semaphore
+        self.lock.release()            # release access to queue
+
+    def waitForRequest(self):
+        self.sem.acquire()             # block on semaphore to get a request
+        self.lock.acquire()
+        if len(self.queue) > 0:
+            request = self.queue.pop(0)
+            self.lock.release()
+            return request
+        else:
+            self.lock.release()
+            return None
+
+    def getRequest(self):
+        self.lock.acquire()
+        if len(self.queue) > 0:
+            request = self.queue.pop(0)
+            self.lock.release()
+            return request
+        else:
+            self.lock.release()
+            return None
+
+    def incrementForClose(self, num):
+        """special method to increment the semaphore so that every thread wakes up.
+        used to shutdown the threads waiting for requests in a blocked state.
+        """
+        self.lock.acquire()
+        for i in range(0,num):
+            self.sem.release()
+        self.lock.release()
+
+    def getSize(self):
+        self.lock.acquire()
+        s = len(self.queue)
+        self.lock.release()
+        return s
+
+    def waitForSize(self, size):
+        """WARNING: NASTY SPIN LOOP
+        if the queue is not at the specified size, poll it at intervals until it is.
+        This is equivelant to blocking, but uses CPU. bad.
+        """
+        self.lock.acquire()
+        s = len(self.queue)
+        self.lock.release()        
+        if s == size:
+            return
+
+        while s != size:
+            self.lock.acquire()
+            s = len(self.queue)
+            self.lock.release()        
+            time.sleep(0.11)
+            
+class DbRequest:
+    """base class for database requests to be executed in dbconnection threads.
+    the method 'execute' will be run. 'self.callback' will be executed after the request
+    has been processed (in the main thread) with the data in 'self.results'
+    """
+    lastId = 0
+    
+    def __init__(self, callback):
+        self.status = 0
+        self.error = None
+        self.results = None
+        self.callback = callback        
+        self.id = DbRequest.lastId
+        DbRequest.lastId = DbRequest.lastId + 1
+        
+    def execute(self, connection):
+        """Method to be implemented by derived classes. this is run when the
+        request is processed. This will be run within a try/except block that
+        catched database exceptions.  The results of the query should be stored in
+        the member variable 'results'. set self.status to 1 for successful execution.
+        """
+        print "WARNING: empty DBRequest being run"
+        self.status = 1
