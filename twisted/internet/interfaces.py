@@ -669,6 +669,9 @@ class IListeningPort(Interface):
 
     def stopListening(self):
         """Stop listening on this port.
+
+        If it does not complete immediately, will return Deferred that fires
+        upon completion.
         """
 
     def getHost(self):
