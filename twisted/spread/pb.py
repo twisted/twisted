@@ -40,6 +40,14 @@ PBClientFactory.getRootObject() instead of getObjectAt().  Server side
 should switch to updated cred APIs by using PBServerFactory, at which
 point clients would switch to PBClientFactory.login().
 
+The new cred support means a different method is sent for login,
+although the protocol is compatible on the binary level. When we
+switch to pluggable credentials this will introduce another change,
+although the current change will still be supported.
+
+TODO: Allow PBServerFactory to accept and adapt to IPBRoot or somesuch
+so portals aren't required.
+
 
 Introduction
 ============
@@ -59,7 +67,7 @@ applied when serializing arguments.
 @author: U{Glyph Lefkowitz<mailto:glyph@twistedmatrix.com>}
 """
 
-__version__ = "$Revision: 1.142 $"[11:-2]
+__version__ = "$Revision: 1.143 $"[11:-2]
 
 
 # System Imports
