@@ -103,7 +103,7 @@ class TagChecker:
                     # Strip blank lines
                     lines = filter(None,[l.rstrip() for l in text.split('\n')])
                     # Strip leading space
-                    while not [1 for line in lines if line[:1] not in ('', ' ')]:
+                    while not [1 for line in lines if line[:1] not in ('',' ')]:
                         lines = [line[1:] for line in lines]
                     text = '\n'.join(lines) + '\n'
                     try:
