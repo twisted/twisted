@@ -41,7 +41,7 @@ class ProcessingFunctionFactory:
             raise process.NoProcessorError(e.filename+": "+e.strerror)
         except sux.ParseError, e:
             raise process.NoProcessorError(str(e))
-        df = lambda file, linkrel: self.doFile[0](file, linkrel, d['ext'],
+        df = lambda file, linkrel: self.doFile[0](file, linkrel, ext,
                                            d['baseurl'], templ)
         return df
 
