@@ -2,7 +2,7 @@
 import struct
 
 from twisted.application import internet
-from twisted.internet import protocol, interfaces as iinternet
+from twisted.internet import protocol, interfaces as iinternet, defer
 from twisted.protocols import telnet
 from twisted.python import components, log
 

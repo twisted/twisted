@@ -5,7 +5,8 @@ from twisted.trial import unittest
 from twisted.test import proto_helpers
 
 class TestProtocol:
-    def __init__(self, proto, enableable=()):
+    enableable = ()
+    def __init__(self, proto):
         self.bytes = ''
         self.subcmd = ''
         self.calls = []
@@ -18,7 +19,6 @@ class TestProtocol:
             d[getattr(telnet, cmd)] = lambda arg, cmd=cmd: self.calls.append(cmd)
 
         self.enabled = []
-        self.enableable = enableable
 
     def makeConnection(self, transport):
         pass
@@ -285,3 +285,48 @@ class TelnetTestCase(unittest.TestCase):
 
         self.assertEquals(self.p.protocol.bytes, bytes.replace(cmd, ''))
         self.assertEquals(self.t.value(), '')
+
+    def testAcceptedEnableRequest(self):
+        # Try to enable an option through the user-level API.  This
+        # returns a Deferred that fires when negotiation about the option
+        # finishes.  Make sure it fires, make sure state gets updated
+        # properly, make sure the result indicates the option was enabled.
+        d = self.p.requestEnable('\x42')
+
+        self.assertEquals(self.t.value(), telnet.IAC + telnet.DO + '\x42')
+
+        self.p.dataReceived(telnet.IAC + telnet.WILL + '\x42')
+
+        # XXX I want a construct for asserting that a Deferred _has_ fired
+        # and examining its value _right now_.
+        self.assertEquals(d.result, None)
+
+    def testRefusedEnableRequest(self):
+        # Try to enable an option through the user-level API.  This
+        # returns a Deferred that fires when negotiation about the option
+        # finishes.  Make sure it fires, make sure state gets updated
+        # properly, make sure the result indicates the option was enabled.
+        d = self.p.requestEnable('\x42')
+
+        self.assertEquals(self.t.value(), telnet.IAC + telnet.DO + '\x42')
+
+        self.p.dataReceived(telnet.IAC + telnet.WONT + '\x42')
+
+        # XXX I want a construct for asserting that a Deferred _has_ fired
+        # and examining its value _right now_.
+        self.assertEquals(d.result.type, telnet.OptionRefused)
+
+    def testAcceptedDisableRequest(self):
+        # Try to enable an option through the user-level API.  This
+        # returns a Deferred that fires when negotiation about the option
+        # finishes.  Make sure it fires, make sure state gets updated
+        # properly, make sure the result indicates the option was enabled.
+        d = self.p.requestDisable('\x42')
+
+        self.assertEquals(self.t.value(), telnet.IAC + telnet.DONT + '\x42')
+
+        self.p.dataReceived(telnet.IAC + telnet.WONT + '\x42')
+
+        # XXX I want a construct for asserting that a Deferred _has_ fired
+        # and examining its value _right now_.
+        self.assertEquals(d.result, None)
