@@ -69,6 +69,7 @@ def calcnext(version, type):
     return strtag(major, minor, patch)
 
 def system(command, do):
+    print "running", repr(command)
     if not do:
         return
     n = os.system(command)
@@ -76,7 +77,10 @@ def system(command, do):
         sys.exit(n)
 
 def setqotr(qotr, do):
-    if qotr is None or not do:
+    if qotr is None:
+        return
+    print "setting quote to", repr(qotr)
+    if not do:
         return
     res = []
     fp = iter(file("README"))
@@ -104,8 +108,9 @@ def run(config):
     print "next version is", tag
     if do:
         os.chdir("Twisted.CVS")
-    system("cvs up -A %s" % ' '.join(config.updates), do)
-    system("./admin/release-twisted -V %s -o %s --upver" % (old, tag), do)
+    if config.updates:
+        system("cvs up -A %s" % ' '.join(config.updates), do)
+    system("./admin/release-twisted -o %s -V %s --upver" % (old, tag), do)
     setqotr(config['qotr'], do)
 
 def main():
@@ -114,9 +119,4 @@ def main():
     run(c)
 
 if __name__=='__main__':
-   qotr='''\
-Haha foolish humans
-I am your ruler.
-ROOR
-'''
-   setqotr(qotr, 1)
+    main()
