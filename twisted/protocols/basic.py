@@ -433,5 +433,5 @@ class FileSender:
     
     def stopProducing(self):
         if self.deferred:
-            self.deferred.errback(Exception())
+            self.deferred.errback(Exception("Consumer asked us to stop producing"))
             self.deferred = None
