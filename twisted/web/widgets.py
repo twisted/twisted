@@ -566,7 +566,10 @@ class Form(Widget):
                 formData = formData[0]
                 method = self.formParse.get(inputType)
                 if method:
-                    formData = method(formData)
+                    try:
+                        formData = method(formData)
+                    except:
+                        raise FormInputError("%s: %s" % (displayName, "error"))
             kw[inputName] = formData
         submitAction = args.get('submit')
         if submitAction:
