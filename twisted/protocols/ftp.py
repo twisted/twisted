@@ -1112,6 +1112,12 @@ class FTPAnonymousShell(object):
         self.tld      = None
         self.debug    = True
 
+    def _getUserUIDAndGID(self):
+        import pwd, grp
+        pw_name, pw_passwd, pw_uid, pw_gid, pw_dir = range(5)
+        p = pwd.getpwnam(self.user)
+        self.uid, self.gid = p[pw_uid], p[pw_gid]
+
     # basically, i'm thinking of the paths as a list of path elements
     #
     # some terminology:
@@ -1166,10 +1172,10 @@ class FTPAnonymousShell(object):
         raise AnonUserDeniedError()
  
     def retr(self, path):
+        import os.path as osp
         cpath, spath = self.mapCPathToSPath(path)
-        if not os.path.isfile(spath):
+        if not osp.isfile(spath):
             raise FileNotFoundError(cpath)
-        # TODO: need to do some kind of permissions checking here
         try:
             return (file(spath, 'rb'), os.path.getsize(spath))
         except OSError, (e,):
@@ -1295,6 +1301,137 @@ class FTPRealm:
 
 
 # --- FTP CLIENT  -------------------------------------------------------------
+
+from twisted.internet.defer import Deferred, DeferredList, FAILURE
+from twisted.python.failure import Failure
+from twisted.internet.protocol import ClientFactory, ServerFactory, Protocol, \
+                                      ConsumerToProtocolAdapter
+from twisted.internet.interfaces import IProducer, IConsumer, IProtocol, IFinishableConsumer
+
+####
+# And now for the client...
+
+# Notes:
+#   * Reference: http://cr.yp.to/ftp.html
+#   * FIXME: Does not support pipelining (which is not supported by all
+#     servers anyway).  This isn't a functionality limitation, just a
+#     small performance issue.
+#   * Only has a rudimentary understanding of FTP response codes (although
+#     the full response is passed to the caller if they so choose).
+#   * Assumes that USER and PASS should always be sent
+#   * Always sets TYPE I  (binary mode)
+#   * Doesn't understand any of the weird, obscure TELNET stuff (\377...)
+#   * FIXME: Doesn't share any code with the FTPServer
+
+class FTPError(Exception):
+    pass
+
+class ConnectionLost(FTPError):
+    pass
+
+class CommandFailed(FTPError):
+    pass
+
+class BadResponse(FTPError):
+    pass
+
+class UnexpectedResponse(FTPError):
+    pass
+
+class FTPCommand:
+    def __init__(self, text=None, public=0):
+        self.text = text
+        self.deferred = Deferred()
+        self.ready = 1
+        self.public = public
+
+    def fail(self, failure):
+        if self.public:
+            self.deferred.errback(failure)
+
+
+class ProtocolWrapper(Protocol):
+    def __init__(self, original, deferred):
+        self.original = original
+        self.deferred = deferred
+    def makeConnection(self, transport):
+        self.original.makeConnection(transport)
+    def dataReceived(self, data):
+        self.original.dataReceived(data)
+    def connectionLost(self, reason):
+        self.original.connectionLost(reason)
+        # Signal that transfer has completed
+        self.deferred.callback(None)
+    def connectionFailed(self):
+        self.deferred.errback(Failure(FTPError('Connection failed')))
+
+
+class SenderProtocol(Protocol):
+    __implements__ = Protocol.__implements__ + (IFinishableConsumer,)
+
+    def __init__(self):
+        # Fired upon connection
+        self.connectedDeferred = Deferred()
+
+        # Fired upon disconnection
+        self.deferred = Deferred()
+
+    #Protocol stuff
+    def dataReceived(self, data):
+        assert 0, ("We received data from the server - "
+                   "this shouldn't happen.")
+
+    def makeConnection(self, transport):
+        Protocol.makeConnection(self, transport)
+        self.connectedDeferred.callback(self)
+        
+    def connectionLost(self, reason):
+        if reason.check(error.ConnectionDone):
+            self.deferred.callback('connection done')
+        else:
+            self.deferred.errback(reason)
+
+    #IFinishableConsumer stuff
+    def write(self, data):
+        self.transport.write(data)
+
+    def registerProducer(self):
+        pass
+
+    def unregisterProducer(self):
+        pass
+
+    def finish(self):
+        self.transport.loseConnection()
+    
+    
+def decodeHostPort(line):
+    """Decode an FTP response specifying a host and port.
+
+    @returns: a 2-tuple of (host, port).
+    """
+    abcdef = re.sub('[^0-9, ]', '', line[4:])
+    a, b, c, d, e, f = map(str.strip, abcdef.split(','))
+    host = "%s.%s.%s.%s" % (a, b, c, d)
+    port = (int(e)<<8) + int(f)
+    return host, port
+
+
+class FTPDataPortFactory(ServerFactory):
+    """Factory for data connections that use the PORT command
+    
+    (i.e. "active" transfers)
+    """
+    noisy = 0
+    def buildProtocol(self, connection):
+        # This is a bit hackish -- we already have a Protocol instance,
+        # so just return it instead of making a new one
+        # FIXME: Reject connections from the wrong address/port
+        #        (potential security problem)
+        self.protocol.factory = self
+        self.port.loseConnection()
+        return self.protocol
+
 
 class FTPClient(basic.LineReceiver):
     """A Twisted FTP Client
@@ -1681,6 +1818,7 @@ class FTPClient(basic.LineReceiver):
             
         # Run the next command
         self.sendNextCommand()
+        
 
 class FTPFileListProtocol(basic.LineReceiver):
     """Parser for standard FTP file listings
@@ -1723,6 +1861,8 @@ class FTPFileListProtocol(basic.LineReceiver):
             dict = match.groupdict()
             dict['size'] = int(dict['size'])
             self.files.append(dict)
+
+
 
 def parsePWDResponse(response):
     """Returns the path from a response to a PWD command.
