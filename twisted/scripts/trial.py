@@ -27,6 +27,7 @@ class Options(usage.Options):
     optFlags = [["help", "h"],
                 ["text", "t", "Text mode (ignored)"],
                 ["verbose", "v", "Verbose output"],
+                ["bwverbose", "o", "Colorless verbose output"],
                 ["summary", "s", "summary output"],
                 ["debug", "b", "Run tests in the Python debugger"]]
     optParameters = [["reactor", "r", None,
@@ -115,6 +116,8 @@ def run():
 
     if config['verbose']:
         reporter = unittest.TreeReporter(sys.stdout)
+    elif config['bwverbose']:
+        reporter = unittest.VerboseTextReporter(sys.stdout)
     elif config['summary']:
         reporter = unittest.MinimalReporter(sys.stdout)
     else:
