@@ -18,7 +18,7 @@
 
 from __future__ import nested_scopes
 
-__version__ = '$Revision: 1.27 $'[11:-2]
+__version__ = '$Revision: 1.28 $'[11:-2]
 
 import os, sys
 from UserDict import UserDict
@@ -234,6 +234,7 @@ def makeStatBar(width, maxPosition, doneChar = '=', undoneChar = '-', currentCha
     return statBar
 
 def spewer(frame, s, ignored):
+    """A trace function for sys.settrace that prints every method call."""
     from twisted.python import reflect
     if frame.f_locals.has_key('self'):
         se = frame.f_locals['self']
@@ -245,5 +246,5 @@ def spewer(frame, s, ignored):
 __all__ = [
     "uniquify", "padTo", "getPluginDirs", "addPluginDir", "sibpath",
     "getPassword", "dict", "println", "keyed_md5", "makeStatBar",
-    "OrderedDict", "spewer"
+    "OrderedDict", "spewer", 
 ]
