@@ -567,7 +567,7 @@ def dsu(list, key):
 
 try:
     import pwd, grp
-    from os import setgroups
+    from os import setgroups, getgroups
     def initgroups(uid, primaryGid):
         username = pwd.getpwuid(uid)[0]
         l=[primaryGid]
@@ -577,7 +577,12 @@ try:
         try:
             setgroups(l)
         except OSError, e:
-            if e.errno != errno.EPERM:
+            if e.errno == errno.EPERM:
+                groups = getgroups()
+                for g in getgroups():
+                    if g not in l:
+                        raise
+            else:
                 raise
 
 except:
