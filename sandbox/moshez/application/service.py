@@ -14,9 +14,8 @@
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 #
-from twisted.python import components, runtime
+from twisted.python import components
 from twisted.persisted import sob
-import os
 
 class IService(components.Interface):
 
