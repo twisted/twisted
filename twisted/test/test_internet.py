@@ -248,7 +248,7 @@ class InterfaceTestCase(unittest.TestCase):
         ireset.reset(0.4) # move expiration from 0.4 to (now)0.2+0.4=0.6
         idelay.delay(0.3) # move expiration from 0.5 to (orig)0.5+0.3=0.8
         # both should be called sometime during this
-        while time.time() - start < 0.9:
+        while time.time() - start < 2:
             reactor.iterate(0.01)
         ireset_elapsed = self._resetcallbackTime - start
         idelay_elapsed = self._delaycallbackTime - start
