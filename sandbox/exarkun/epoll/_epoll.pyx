@@ -67,10 +67,14 @@ cdef class epoll:
 			os.close(self.fd)
 			self.initialized = 0
 
+	def fileno(self):
+		return self.fd
+
 	def control(self, int op, int fd, int events):
 		cdef int result
 		cdef epoll_event evt
 		evt.events = events
+		evt.data.fd = fd
 		result = epoll_ctl(self.fd, op, fd, &evt)
 		if result == -1:
 			raise OSError(errno, os.strerror(errno))
