@@ -1,3 +1,12 @@
+2003-02-16  Jp Calderone  <exarkun@twistedmatrix.com>
+
+	* doc/examples/echoserv.py: Rewrote main code to not create a .tap
+	file (examples should be simple, and demonstrate as few things as
+	possible each).
+
+	* doc/examples/echoclient.py: Added UDP echo protocol
+	implementation; it is unused by default, but easily enabled.
+
 2003-02-16  Cory Dodt  <corydodt@yahoo.com>
     
 	* twisted/lore/{latex,default}.py: provide a --config book option 
