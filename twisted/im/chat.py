@@ -92,8 +92,11 @@ class Conversation(InputOutputWindow):
         return "Conversation - " + self.person.name
 
     def sendText(self, text):
-        # parse the text for possible metadata...? /me, etc...
-        self.person.sendMessage(text).addCallback(self._cbTextSent, text)
+        metadata = None
+        if text[:4] == "/me ":
+            text = text[4:]
+            metadata = {"style": "emote"}
+        self.person.sendMessage(text, metadata).addCallback(self._cbTextSent, text, metadata)
 
     def showMessage(self, text, metadata=None):
         text = string.replace(text, '\n', '\n\t')
@@ -103,9 +106,14 @@ class Conversation(InputOutputWindow):
                 msg = "* %s %s\n" % (self.person.name, text)
         self.output.insert_defaults(msg)
 
-    def _cbTextSent(self, result, text):
+    def _cbTextSent(self, result, text, metadata=None):
         print 'result:',result
-        self.output.insert_defaults("<%s> %s\n" % (self.person.account.name, text))
+        text = string.replace(text, '\n', '\n\t')
+        msg = "<%s> %s\n" % (self.person.account.name, text)
+        if metadata:
+            if metadata.get("style", None) == "emote":
+                msg = "* %s %s\n" % (self.person.account.name, text)
+        self.output.insert_defaults(msg)
 
 class GroupConversation(InputOutputWindow):
     def __init__(self, group):

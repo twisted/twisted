@@ -25,10 +25,23 @@ class TwistedWordsPerson:
         return ((self.status == ONLINE) and "Online" or
                 "Away")
 
-    def sendMessage(self, text):
+    def sendMessage(self, text, metadata):
         """Return a deferred...
         """
+        if metadata:
+            d=self.account.perspective.directMessage(self.name,
+                                                    text, metadata)
+            d.addCallbacks(lambda x: None, #OK, this is really freaking lame.
+                           self.metadataFailed,
+                           errbackArgs=("* "+text,))
+            return d
+        else:
+            return self.account.perspective.directMessage(self.name, text)
+
+    def metadataFailed(self, result, text):
+        print "result:",result,"text:",text
         return self.account.perspective.directMessage(self.name, text)
+
 
     def setStatus(self, status):
         self.status = status
