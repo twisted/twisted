@@ -2304,3 +2304,12 @@ near some businessmen for a while
 <dash> glyph: wrong game
  * dash twitches violently as he thinks of "nethack, enterprise edition"
 %
+<spiv:#twisted> AaronSw: You should never, ever be creating a transport... Twisted is supposed to do that for you.
+<AaronSw:#twisted> I should never create the tcp.Client stuff or I shouldn't manually set them as the transport?
+<spiv:#twisted> AaronSw: Use reactor.clientTCP (or better yet, reactor.connectTCP in CVS).
+<spiv:#twisted> Don't create tcp.Client directly either.       
+<spiv:#twisted> http://twistedmatrix.com/documents/TwistedDocs/Twisted-0.19.0/twisted/internet/interfaces_IReactorTCP.py.html
+<spiv:#twisted> AaronSw: But of course, that API is deprecated in 0.99  (but creating a tcp.Client directly is even more deprecated :P)
+<AaronSw:#twisted> Are you guys abstraction astronauts or something? ;-)
+%
+
