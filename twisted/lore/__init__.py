@@ -22,7 +22,7 @@ Maintainer: U{Andrew Bennetts<spiv@twistedmatrix.com>}
 
 # TODO
 # Abstract
-# Bybliography
+# Bibliography
 # Index
 # Allow non-web image formats (EPS, specifically)
 # Allow pickle output and input to minimize parses
