@@ -31,6 +31,14 @@ class DomishTestCase(unittest.TestCase):
         self.assertEquals(e.toXml(), "<foo/>")
         self.assertEquals(e.toXml(closeElement = 0), "<foo>")
 
+    def testRawXMLSerialization(self):
+        e = domish.Element(("testns", "foo"))
+        e.addRawXml("<abc123>")
+        # The testcase below should NOT generate valid XML -- that's
+        # the whole point of using the raw XML call -- it's the callers
+        # responsiblity to ensure that the data inserted is valid
+        self.assertEquals(e.toXml(), "<foo><abc123></foo>")
+
     def testUnicodeSerialization(self):
         for s in (domish._Serializer, domish._ListSerializer):
             domish.SerializerClass = s

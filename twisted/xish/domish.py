@@ -52,7 +52,12 @@ class _Serializer:
     def serialize(self, elem, closeElement = 1):
         # Optimization shortcuts
         write = self.cio.write
-        
+
+        # Shortcut, check to see if elem is actually a chunk o' serialized XML
+        if isinstance(elem, SerializedXML):
+            write(elem.encode("utf-8"))
+            return
+
         # Shortcut, check to see if elem is actually a string (aka Cdata)
         if isinstance(elem, types.StringTypes):
             write(escapeToXml(elem).encode("utf-8")) 
@@ -64,10 +69,6 @@ class _Serializer:
         uri = elem.uri
         defaultUri = elem.defaultUri
 
-        # Shortcut, check to see if elem is actually a chunk o' serialized XML
-        if isinstance(elem, SerializedXML):
-            write(elem.data.encode("utf-8"))
-            return
         
         # Seralize element name
         if defaultUri == uri:
@@ -129,7 +130,12 @@ class _ListSerializer:
     def serialize(self, elem, closeElement = 1):
         # Optimization shortcuts
         write = self.writelist.append
-        
+
+        # Shortcut, check to see if elem is actually a chunk o' serialized XML
+        if isinstance(elem, SerializedXML):
+            write(elem)
+            return
+
         # Shortcut, check to see if elem is actually a string (aka Cdata)
         if isinstance(elem, types.StringTypes):
             write(escapeToXml(elem))
@@ -140,11 +146,6 @@ class _ListSerializer:
         name = elem.name
         uri = elem.uri
         defaultUri = elem.defaultUri
-
-        # Shortcut, check to see if elem is actually a chunk o' serialized XML
-        if isinstance(elem, SerializedXML):
-            write(elem.data)
-            return
         
         # Seralize element name
         if defaultUri == uri:
