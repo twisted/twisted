@@ -75,6 +75,10 @@ class IRCChatter(irc.IRC):
             self.sendLine(":%s!%s@%s PRIVMSG #%s :%s" %
                           (sender, sender, self.servicename, group, message))
 
+    def setGroupMetadata(self, metadata, groupName):
+        if metadata.has_key('topic'):
+            self.irc_TOPIC('', ["#"+groupName])
+
 
     def connectionLost(self):
         log.msg( "%s lost connection" % self.nickname )
@@ -331,9 +335,9 @@ class IRCChatter(irc.IRC):
             channame = params[0][1:]
             group = self.service.getGroup(channame)
             self.sendMessage(irc.RPL_TOPIC,
-                             "#" + group.name, ":" + group.topic)
+                             "#" + group.name, ":" + group.metadata['topic'])
             self.sendMessage('333', # not in the RFC
-                             "#" + group.name, "god", "1")
+                             "#" + group.name, group.metadata['topic_author'], "1")
         else:
             #<< TOPIC #qdf :test
             #>> :glyph!glyph@adsl-64-123-27-108.dsl.austtx.swbell.net TOPIC #qdf :test

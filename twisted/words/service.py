@@ -225,6 +225,11 @@ class Participant(pb.Perspective, styles.Versioned):
                                                 group.name)
         raise NotInGroupError(groupName)
 
+    def getGroupMetadata(self, groupName):
+        for group in self.groups:
+            if group.name == groupName:
+                self.client.setGroupMetadata(group.metadata, group.name)
+
     def receiveDirectMessage(self, sender, message):
         if self.client:
             self.client.receiveDirectMessage(sender.name, message)
@@ -255,6 +260,10 @@ class Participant(pb.Perspective, styles.Versioned):
                 return
         raise NotInGroupError(groupName)
 
+    def setGroupMetadata(self, dict_, groupName):
+        if self.client:
+            self.client.setGroupMetadata(dict_, groupName)
+
     # Establish client protocol for PB.
     perspective_changeStatus = changeStatus
     perspective_joinGroup = joinGroup
@@ -275,29 +284,25 @@ class Participant(pb.Perspective, styles.Versioned):
                 self.service.serviceName, id(self)))
         return s
 
-class Group(pb.Cacheable):
+class Group(styles.Versioned):
 
     def __init__(self, name):
         self.name = name
         self.members = []
-        self.topic = "Welcome to '%s'." % self.name
+        self.metadata = {'topic': 'Welcome to %s!' % self.name,
+                         'topic_author': 'admin'}
 
     def __getstate__(self):
-        state = self.__dict__.copy()
+        state = styles.Versioned.__getstate__(self)
         state['members'] = []
         return state
-
-    def getStateToCopyFor(self, participant):
-        assert participant in self.members, "illegal copy of group"
-        return {'name':    self.name,
-                'members': self.members,
-                'remote':  pb.ViewPoint(participant, self)}
 
     def addMember(self, participant):
         if participant in self.members:
             return
         for member in self.members:
             member.memberJoined(participant, self)
+        participant.setGroupMetadata(self.metadata, self.name)
         self.members.append(participant)
 
     def removeMember(self, participant):
@@ -313,9 +318,24 @@ class Group(pb.Cacheable):
         for member in self.members:
             member.receiveGroupMessage(sender, self, message)
 
+    def setMetadata(dict_):
+        self.metadata.update(dict_)
+        for member in self.members:
+            member.setGroupMetadata(dict_)
+
     def __repr__(self):
         s = "<%s '%s' at %x>" % (self.__class__, self.name, id(self))
         return s
+
+
+    ##Persistence Versioning
+    
+    persistenceVersion = 1
+
+    def upgradeToVersion1(self):
+        self.metadata = {'topic': self.topic}
+        del self.topic
+        self.metadata['topic_author'] = 'admin'
 
 class Service(pb.Service, styles.Versioned, coil.Configurable):
     """I am a chat service.
