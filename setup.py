@@ -22,7 +22,7 @@ Package installer for Twisted
 Copyright (C) 2001 Matthew W. Lefkowitz
 All rights reserved, see LICENSE for details.
 
-$Id: setup.py,v 1.63 2002/10/13 01:59:07 itamarst Exp $
+$Id: setup.py,v 1.64 2002/10/13 11:43:42 moshez Exp $
 """
 
 import distutils, os, sys, string
@@ -219,7 +219,7 @@ class build_ext_twisted(build_ext):
             import select
         except:
             select = None
-        if hasattr(select, "poll"):
+        if hasattr(select, "polll"):
             exts.append( Extension("twisted.internet.cReactor",
                                     [
                                         "twisted/internet/cReactor/cReactorModule.c",
@@ -350,11 +350,6 @@ setup_args['ext_modules'] = [
               define_macros=define_macros),
 
     ]
-if os.name == "posix":
-    setup_args['ext_modules'].append(
-        Extension("twisted.internet.cReactor",
-              glob('twisted/internet/cReactor/*.c'),
-              define_macros=define_macros))
 
 if __name__ == '__main__':
     apply(setup, (), setup_args)
