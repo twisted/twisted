@@ -1,3 +1,4 @@
+# -*- test-case-name: twisted.test.test_app -*-
 # Twisted, the Framework of Your Internet
 # Copyright (C) 2001 Matthew W. Lefkowitz
 #
@@ -171,43 +172,6 @@ def removeCallAfterShutdown(function):
     warnings.warn("Please use reactor methods instead of twisted.internet.main")
     _getReactor().removeSystemEventTrigger(('after', 'shutdown',
                                             (function, (), {})))
-
-
-
-class Delayeds:
-    """Wrapper for twisted.python.delay.IDelayed objects, so they use IReactorTime."""
-
-    def __init__(self):
-        self.delayeds = []
-
-    def addDelayed(self, d):
-        warnings.warn("Delayeds are deprecated. use reactor.callLater instead.")
-        self.delayeds.append(d)
-
-    def removeDelayed(self, d):
-        self.delayeds.remove(d)
-
-    def timeout(self):
-        """Return timeout until next run."""
-        timeout = None
-        for delay in self.delayeds:
-            newTimeout = delay.timeout()
-            if ((newTimeout is not None) and
-                ((timeout is None) or
-                 (newTimeout < timeout))):
-                timeout = newTimeout
-        return timeout
-
-    def runUntilCurrent(self):
-        """Run delayeds."""
-        for d in self.delayeds:
-            d.runUntilCurrent()
-
-
-# delayeds backwards compatability - DO NOT USE THIS IT WILL DIE SOON
-_delayeds = Delayeds()
-addDelayed = _delayeds.addDelayed
-removeDelayed = _delayeds.removeDelayed
 
 
 __all__ = ["CONNECTION_LOST", "CONNECTION_DONE", "installReactor"]

@@ -60,7 +60,6 @@ class AtLeastImportTestCase(unittest.TestCase):
     def test_twistedPython(self):
         """Test importing twisted.python
         """
-        from twisted.python import delay
         from twisted.python import hook
         from twisted.python import log
         from twisted.python import observable

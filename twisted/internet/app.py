@@ -309,6 +309,7 @@ class DependentMultiService(MultiService):
                 errback=self._emergencyStopService, errbackArgs=(svc,))
         return d.addCallback(self._finishStopService)
 
+
 class Application(log.Logger, styles.Versioned,
                   Accessor, _AbstractServiceCollection):
     """I am the `root object' in a Twisted process.
@@ -360,8 +361,6 @@ class Application(log.Logger, styles.Versioned,
         self.sslConnectors = []
         self.unixConnectors = []
         self.extraConnectors = []
-        # a list of twisted.python.delay.Delayeds
-        self.delayeds = []              # check
         # a dict of ApplicationServices
         self.services = {}              # check
         # a cred authorizer
@@ -681,22 +680,6 @@ class Application(log.Logger, styles.Versioned,
             from twisted.internet import reactor
             return reactor.connectUNIX(address, factory, timeout)
 
-    def addDelayed(self, delayed):
-        """This methods is deprecated."""
-        warnings.warn("twisted.python.delay is deprecated. Please use reactor methods.",
-                      DeprecationWarning, stacklevel=2)
-        self.delayeds.append(delayed)
-        if main.running and self.running:
-            main.addDelayed(delayed)
-
-    def removeDelayed(self, delayed):
-        """This method is deprecated."""
-        warnings.warn("twisted.python.delay is deprecated. Please use reactor methods.",
-                      DeprecationWarning, stacklevel=2)
-        self.delayeds.remove(delayed)
-        if main.running and self.running:
-            main.removeDelayed(delayed)
-
     def setEUID(self):
         """Retrieve persistent uid/gid pair (if possible) and set the current
         process's euid/egid.
@@ -800,8 +783,6 @@ class Application(log.Logger, styles.Versioned,
         self._boundPorts = 1
         if not self.running:
             log.logOwner.own(self)
-            for delayed in self.delayeds:
-                main.addDelayed(delayed)
 
             for filename, factory, backlog, mode in self.unixPorts:
                 try:
