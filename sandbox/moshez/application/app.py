@@ -74,6 +74,12 @@ def getPassphrase(needed):
     else:
         return None
 
+def getSavePassphrase(needed):
+    if needed:
+        passphrase = util.getPassword("Encryption passphrase: ")
+    else:
+        return None
+
 def getApplication(config, passphrase):
     s = [(config[t], t)
            for t in ['python', 'xml', 'source', 'file'] if config[t]][0]
@@ -166,23 +172,12 @@ def initialLog():
     log.msg('reactor class: %s' % reactor.__class__)
 
 
-def loadOrCreate(name, filename, procname, uid, gid):
-    if filename and os.path.exists(filename):
-        a = service.loadApplication(filename, 'pickle', None)
-    else:
-        a = service.Application(name, uid, gid)
-    if procname:
-        service.IProcess(a).processName = procname
-    return a
-
 def convertStyle(filein, typein, passphrase, fileout, typeout, encrypt):
     application = service.loadApplication(filein, typein, passphrase)
     sob.IPersistable(application).setStyle(typeout)
-    if encrypt:
-        passphrase = util.getPassword("Encryption passphrase: ")
+    passphrase = getSavePassphrase(encrypt)
+    if passphrase:
         fileout = None
-    else:
-        passphrase = None
     sob.IPersistable(application).save(filename=fileout, passphrase=passphrase)
 
 def startApplication(application, save):

@@ -56,13 +56,21 @@ def makeService(mod, s, options):
         mod.updateApplication(compat.IOldApplication(ser), options)
     else:
         ser = mod.makeService(options)
-    ser.setServiceParent(s)
+    return ser
 
-def makeApplication(module, name, append, procname, type, encrypted, options,
-                    uid, gid):
-    a = app.loadOrCreate(name, append, procname, uid, gid)
-    makeService(module, service.IServiceCollection(a), options)
-    app.saveApplication(a, type, encrypted, append)
+def addToApplication(ser, name, append, procname, type, encrypted, uid, gid):
+    if append and os.path.exists(append):
+        a = service.loadApplication(append, 'pickle', None)
+    else:
+        a = service.Application(append, uid, gid)
+    if procname:
+        service.IProcess(a).processName = procname
+    ser.setServiceParent(service.IServiceCollection(a))
+    sob.IPersistable(a).setStyle(type)
+    passphrase = app.getSavePassphrase(encrypted)
+    if passphrase:
+        append = None
+    sob.IPersistable(a).save(filename=append, passphrase=passphrase)
 
 class FirstPassOptions(usage.Options):
     synopsis = """Usage:    mktap [options] <command> [command options] """
@@ -144,8 +152,8 @@ def run():
         sys.exit(2)
     except KeyboardInterrupt:
         sys.exit(1)
-    makeApplication(options.tapLookup[options.subCommand].load(),
-                    options.subCommand, options['append'], options['appname'],
-                    options['type'],
-                    options['encrypted'], options.subOptions,
-                    *getid(options['uid'], options['gid']))
+    ser = makeService(options.tapLookup[options.subCommand].load(),
+                      options.subOptions)
+    addToApplication(options.subCommand, options['append'], options['appname'],
+                     options['type'], options['encrypted'],
+                     *getid(options['uid'], options['gid']))
