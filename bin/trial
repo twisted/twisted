@@ -26,6 +26,9 @@ if string.find(os.path.abspath(sys.argv[0]), os.sep+'Twisted') != -1:
 sys.path.insert(0, os.curdir)
 ### end of preamble
 
+# begin chdir armor
+sys.path[:] = map(os.path.abspath, sys.path)
+# end chdir armor
 
 from twisted.scripts.trial import run
 run()

@@ -29,7 +29,7 @@ class Options(usage.Options):
                 ["verbose", "v", "Verbose output"]]
     optParameters = [["reactor", "r", None,
                       "The Twisted reactor to install before running the tests (looked up as a module contained in twisted.internet)"],
-                     ["logfile", "l", None, "log file name"]]
+                     ["logfile", "l", "test.log", "log file name"]]
 
     def __init__(self):
         usage.Options.__init__(self)
@@ -71,12 +71,12 @@ def run():
     for module in config['modules']:
         suite.addModule(module)
 
-##     testdir = "_trial_temp"
-##     if os.path.exists(testdir):
-##         import shutil
-##         shutil.rmtree(testdir)
-##     os.mkdir(testdir)
-##     os.chdir(testdir)
+    testdir = "_trial_temp"
+    if os.path.exists(testdir):
+       import shutil
+       shutil.rmtree(testdir)
+    os.mkdir(testdir)
+    os.chdir(testdir)
 
     if config['logfile']:
        from twisted.python import log
