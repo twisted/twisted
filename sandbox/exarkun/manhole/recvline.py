@@ -27,7 +27,7 @@ class RecvLine(insults.TerminalProtocol):
         self.keyHandlers = {
             t.LEFT_ARROW: self.handle_LEFT,
             t.RIGHT_ARROW: self.handle_RIGHT,
-            '\r': self.handle_RETURN,
+            '\n': self.handle_RETURN,
             '\x7f': self.handle_BACKSPACE,
             '\t': self.handle_TAB,
             t.DELETE: self.handle_DELETE,
