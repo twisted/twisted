@@ -271,7 +271,7 @@ class IRCClient(basic.LineReceiver):
     def join(self, channel, key=None):
         if channel[0] not in '&#!+': channel = '#' + channel
         if key:
-            self.sendLine("JOIN %s %s" (channel, key))
+            self.sendLine("JOIN %s %s" % (channel, key))
         else:
             self.sendLine("JOIN %s" % (channel,))
 
