@@ -15,7 +15,7 @@ def renderFailure(fail, request):
 
 
 def doSendPage(self, d, request):
-    page = str(d.toxml())
+    page = str(d.toprettyxml())
     request.setHeader('content-length', str(len(page)))
     request.write(page)
     request.finish()

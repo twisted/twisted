@@ -137,10 +137,10 @@ class Node(object):
         rv = s.getvalue()
         return rv
 
-    def writeprettyxml(self, stream, indent='', addindent=' ', newl='\n', strip=1):
+    def writeprettyxml(self, stream, indent='', addindent=' ', newl='\n', strip=0):
         return self.writexml(stream, indent, addindent, newl, strip)
 
-    def toprettyxml(self, indent='', addindent=' ', newl='\n', strip=1):
+    def toprettyxml(self, indent='', addindent=' ', newl='\n', strip=0):
         return self.toxml(indent, addindent, newl, strip)
 
     def cloneNode(self, deep=0, parent=None):
@@ -477,6 +477,13 @@ class Element(Node):
         ALLOWSINGLETON = ('img', 'br', 'hr', 'base', 'meta', 'link', 'param',
                           'area', 'input', 'col', 'basefont', 'isindex',
                           'frame')
+        BLOCKELEMENTS = ('html', 'head', 'body', 'noscript', 'ins', 'del',
+                         'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'script',
+                         'ul', 'ol', 'dl', 'pre', 'hr', 'blockquote',
+                         'address', 'p', 'div', 'fieldset', 'table', 'tr',
+                         'form', 'object', 'fieldset', 'applet', 'map')
+        FORMATNICELY = ('tr', 'ul', 'ol', 'head')
+
         # this should never be necessary unless people start
         # changing .tagName on the fly(?)
         if not self.preserveCase:
@@ -487,8 +494,11 @@ class Element(Node):
             for ns in nsprefixes.keys():
                 del newprefixes[ns]
         else:
-             newprefixes = {}   
-        begin = [newl, indent, '<']
+             newprefixes = {}
+
+        begin = ['<']
+        if self.tagName in BLOCKELEMENTS:
+            begin = [newl, indent] + begin
         bext = begin.extend
         writeattr = lambda _atr, _val: bext((' ', _atr, '="', escape(_val), '"'))
         if namespace != self.namespace:
@@ -525,8 +535,14 @@ class Element(Node):
             w(">")
             newindent = indent + addindent
             for child in self.childNodes:
+                if self.tagName in BLOCKELEMENTS and \
+                   self.tagName in FORMATNICELY:
+                    w(j((newl, newindent)))
                 child.writexml(stream, newindent, addindent, newl, strip, downprefixes, self.namespace)
-            w(j((newl, indent, "</", self.endTagName, '>')))
+            if self.tagName in BLOCKELEMENTS:
+                w(j((newl, indent)))
+            w(j(("</", self.endTagName, '>')))
+            
         elif self.tagName.lower() not in ALLOWSINGLETON:
             w(j(('></', self.endTagName, '>')))
         else:
