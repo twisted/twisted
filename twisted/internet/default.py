@@ -1,5 +1,5 @@
-# -*- Python -*-
-# $Id: default.py,v 1.72 2003/04/21 15:32:15 itamarst Exp $
+# -*- test-case-name: twisted.test.test_internet -*-
+# $Id: default.py,v 1.73 2003/05/01 12:34:40 glyph Exp $
 #
 # Twisted, the Framework of Your Internet
 # Copyright (C) 2001 Matthew W. Lefkowitz
@@ -456,6 +456,8 @@ class SelectReactor(PosixReactorBase):
                 else:
                     # OK, I really don't know what's going on.  Blow up.
                     raise
+        _drdw = self._doWriteOrRead
+        _logrun = log.callWithLogger
         for selectables, method, dict in ((r, "doRead", reads),
                                           (w,"doWrite", writes)):
             hkm = dict.has_key
@@ -464,27 +466,25 @@ class SelectReactor(PosixReactorBase):
                 if not hkm(selectable):
                     continue
                 # This for pausing input when we're not ready for more.
-                log.logOwner.own(selectable)
-                try:
-                    why = getattr(selectable, method)()
-                    handfn = getattr(selectable, 'fileno', None)
-                    if not handfn:
-                        why = _NO_FILENO
-                    elif handfn() == -1:
-                        why = _NO_FILEDESC
-                except:
-                    why = sys.exc_value
-                    log.deferr()
-                if why:
-                    self.removeReader(selectable)
-                    self.removeWriter(selectable)
-                    try:
-                        selectable.connectionLost(failure.Failure(why))
-                    except:
-                        log.deferr()
-                log.logOwner.disown(selectable)
+                _logrun(selectable, _drdw, selectable, method, dict)
 
     doIteration = doSelect
+
+    def _doWriteOrRead(self, selectable, method, dict):
+        try:
+            why = getattr(selectable, method)()
+            handfn = getattr(selectable, 'fileno', None)
+            if not handfn:
+                why = _NO_FILENO
+            elif handfn() == -1:
+                why = _NO_FILEDESC
+        except:
+            why = sys.exc_value
+            log.err()
+        if why:
+            self.removeReader(selectable)
+            self.removeWriter(selectable)
+            selectable.connectionLost(failure.Failure(why))
 
     def addReader(self, reader):
         """Add a FileDescriptor for notification of data available to read.

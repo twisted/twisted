@@ -380,8 +380,8 @@ class TestMetaInterface(unittest.TestCase):
         n = MetaNumber(0)
         myReg = components.AdapterRegistry()
         myReg.registerAdapter(BackwardsAdder, MetaNumber, IMeta)
-        self.assertEquals(context.run({components.AdapterRegistry: myReg},
-                                      IMeta, n).add(2), -2)
+        self.assertEquals(context.call({components.AdapterRegistry: myReg},
+                                       IMeta, n).add(2), -2)
 
     def testRegistryPersistence(self):
         n = MetaNumber(1)

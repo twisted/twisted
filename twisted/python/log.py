@@ -1,3 +1,4 @@
+# -*- test-case-name: twisted.test.test_log -*-
 # Twisted, the Framework of Your Internet
 # Copyright (C) 2001 Matthew W. Lefkowitz
 #
@@ -18,6 +19,7 @@
 twisted.log: Logfile and multi-threaded file support.
 """
 
+# System Imports
 try:
     import cStringIO as StringIO
 except ImportError:
@@ -29,95 +31,61 @@ import threadable
 import traceback
 import failure
 
-def _no_log_output(func, *args, **kw):
-    io = StringIO.StringIO()
-    old = sys.stdout
-    sys.stdout = io
+# Sibling Imports
+
+import context
+
+class ILogContext:
+    """Actually, this interface is just a synoym for the dictionary interface,
+    but it serves as a key for the default information in a log.
+
+    I do not inherit from Interface because the world is a cruel place.
+    """
+
+context.setDefault(ILogContext,
+                   {"isError": False,
+                    "system": "-"})
+
+def callWithContext(ctx, func, *args, **kw):
+    newCtx = context.get(ILogContext).copy()
+    newCtx.update(ctx)
+    return context.call({ILogContext: newCtx}, func, *args, **kw)
+
+def callWithLogger(logger, func, *args, **kw):
+    """
+    Utility method which wraps a function in a try:/except:, logs a failure if
+    one occurrs, and uses the system's logPrefix.
+    """
+    lp = '(buggy logPrefix method)'
     try:
-        result = func(*args, **kw)
-        return result, io.getvalue()
-    finally:
-        sys.stdout = old
-
-
-def _log_output(func, *args, **kw):
-    io = Output()
-    logOwner.own(io)
-    try:
-        result = func(*args, **kw)
-        return result, io.getvalue()
-    finally:
-        logOwner.disown(io)
-
-
-def output(func, *args, **kw):
-    if isinstance(sys.stdout, Log):
-        return _log_output(func, *args, **kw)
-    return _no_log_output(func, *args, **kw)
-
-file_protocol = ['close', 'closed', 'fileno', 'flush', 'mode', 'name', 'read',
-                 'readline', 'readlines', 'seek', 'softspace', 'tell',
-                 'write', 'writelines']
+        lp = logger.logPrefix()
+        callWithContext({"system": lp}, func, *args, **kw)
+    except:
+        err(system=lp)
 
 def write(stuff):
     """Write some data to the log."""
-    logfile.write(str(stuff))
-    logfile.flush()
+    warnings.warn("What the hell is wrong with you?", DeprecationWarning)
+    msg(str(stuff))
 
-def msg(*stuff):
-    """Write some data to the log (a linebreak will be appended)."""
-    if len(stuff) > 1:
-        logfile.write(' '.join(map(str, stuff)) + "\n")
-    else:
-        logfile.write(str(stuff[0]) + "\n")
-    logfile.flush()
-
-
-def indent(s):
-    return '    ' + str(s).replace('\n', '\n    ')
-
-def debug(*stuff):
+def debug(*stuff,**otherstuff):
     """
     Write some data to the log, indented, so it's easier to
     distinguish from 'normal' output.
     """
-    for x in stuff:
-        msg('debug:', indent(x))
+    msg(debug=True, *stuff, **otherstuff)
 
 def showwarning(message, category, filename, lineno, file=None):
-    if file:
-        m = warnings.formatwarning(message, category, filename, lineno)
-        file.write(m)
+##     import pdb
+##     pdb.set_trace()
+    if file is None:
+        msg(warning=message, category=category, filename=filename, lineno=lineno,
+            format="%(filename)s:%(lineno)s: %(category)s: %(warning)s")
     else:
-        err('''\
-WARNING: %s::
-%s
-file: %s; line: %s
-''' % (category, indent(message), filename, lineno))
-
-def logCaller():
-    """Log where the current function was called from.
-
-    Example output::
-
-        load was called from file \"/foo/bar.py\", line 482, in loadConfig
-            config.load(self.serviceParent, *self.configArgs)
-
-    Useful for putting in those deprecated functions when you want to
-    find out what code is still using them.
-    """
-    stack = traceback.extract_stack(limit=3)
-    try:
-        # -1 is me, -2 is my caller, -3 is my caller's caller, which is
-        # what they really want to know about.
-        filename, lineno, func, code = stack[-3]
-    except IndexError:
-        return
-    funcCalled = stack[-2][2]
-    msg('%s was called from file "%s", line %s, in %s\n'
-        '    %s\n' % (funcCalled, filename, lineno, func, code))
+        _oldshowwarning(message, category, filename, lineno, filename)
 
 import warnings
+_oldshowwarning = warnings.showwarning
 warnings.showwarning = showwarning
 
 _keepErrors = 0
@@ -162,60 +130,38 @@ def clearIgnores():
     global _ignoreErrors
     _ignoreErrors = []
 
-def err(stuff):
+def err(_stuff=None,**kw):
     """Write a failure to the log.
     """
-    if isinstance(stuff, failure.Failure):
+    if _stuff is None:
+        _stuff = failure.Failure()
+    if isinstance(_stuff, failure.Failure):
         if _keepErrors:
             if _ignoreErrors:
                 keep = 0
                 for err in _ignoreErrors:
-                    r = stuff.check(err)
+                    r = _stuff.check(err)
                     if r:
                         keep = 0
                         break
                     else:
                         keep = 1
                 if keep:
-                    _keptErrors.append(stuff)
+                    _keptErrors.append(_stuff)
             else:
-                _keptErrors.append(stuff)
-        stuff.printTraceback(file=logerr)
+                _keptErrors.append(_stuff)
+        msg(failure=_stuff, isError=1, **kw)
+    elif isinstance(_stuff, Exception):
+        msg(failure=failure.Failure(_stuff), isError=1, **kw)
     else:
-        logerr.write(str(stuff)+"\n")
+        msg(repr(_stuff), isError=1, **kw)
 
-def deferr():
-    """Write the default failure (the current exception) to the log.
-    """
-    err(failure.Failure())
+deferr = err
 
 class Logger:
     """
     This represents a class which may 'own' a log. Used by subclassing.
     """
-    written = 1
-    def log(self,bytes):
-        if not bytes: return
-        written = self.written
-        pfx = self.__prefix()
-        if bytes[-1]=='\n':
-            self.written = self.written+1
-            bytes = bytes[:-1].replace('\n','\n'+pfx)+'\n'
-        else:
-            bytes = bytes.replace('\n','\n'+pfx)
-        if written:
-            bytes = pfx+bytes
-            self.written = self.written-1
-        # TODO: make this cache everything after the last newline so
-        # that multiple threads using "print x, y" style logging get x
-        # and y on the same line.
-        return bytes
-
-    def __prefix(self):
-        y,mon,d,h,min, i,g,no,daylight = time.localtime(time.time())
-        return ("%0.4d/%0.2d/%0.2d %0.2d:%0.2d %s [%s] " %
-                 (y,mon,d,h,min,time.tzname[daylight], self.logPrefix()))
-
     def logPrefix(self):
         """
         Override this method to insert custom logging behavior.  Its
@@ -225,177 +171,128 @@ class Logger:
         return '-'
 
 
-class Output:
-    """
-    This represents a class which traps output.
-    """
-    def __init__(self):
-        self.io = StringIO.StringIO()
-
-
-    def log(self, bytes):
-        self.io.write(bytes)
-
-
-    def getvalue(self):
-        return self.io.getvalue()
-
-
-class LogOwner:
-    """Allow object to register themselves as owners of the log."""
-
-    def __init__(self):
-        self.owners = []
-        self.defaultOwner = Logger()
-
+class EscapeFromTheMeaninglessConfinesOfCapital:
     def own(self, owner):
-        """Set an object as owner of the log."""
-        if owner is not None:
-            self.owners.append(owner)
-
+        warnings.warn("Foolish capitalist!  Your opulent toilet will be your undoing!!",
+                      DeprecationWarning, stacklevel=2)
     def disown(self, owner):
-        """Remove an object as owner of the log."""
-        if owner is not None:
-            if self.owners:
-                x = self.owners.pop()
-                if x is not owner:
-                    warnings.warn("Bad disown: %r is not %r" % (x, owner))
-            else:
-                warnings.warn("Bad disown: %r, owner stack is empty" % (owner,))
+        warnings.warn("The proletariat is victorious.",
+                      DeprecationWarning, stacklevel=2)
 
-    def owner(self):
-        """Return the owner of the log."""
-        try:
-            return self.owners[-1]
-        except:
-            return self.defaultOwner
+logOwner = EscapeFromTheMeaninglessConfinesOfCapital()
 
-
-class ThreadedLogOwner:
-    """Allow object to register themselves as owners of the log, per thread."""
-
+class LogPublisher:
+    synchronized = ['msg']
     def __init__(self):
-        import thread
-        self.threadId = thread.get_ident
-        self.ownersPerThread = {}
-        self.defaultOwner = Logger()
+        self.observers = []
 
-    def own(self, owner):
-        """Set an object as owner of the log."""
-        if owner is not None:
-            i = self.threadId()
-            self.ownersPerThread.setdefault(i, []).append(owner)
+    def addObserver(self, other):
+        self.observers.append(other)
 
-    def disown(self, owner):
-        """Remove an object as owner of the log."""
-        if owner is not None:
-            i = self.threadId()
-            owners = self.ownersPerThread[i]
-            x = owners.pop()
-            assert x is owner, "Bad disown: %s != %s" % (x, owner)
-            if not owners: del self.ownersPerThread[i]
+    def removeObserver(self, other):
+        self.observers.remove(other)
 
-    def owner(self):
-        """Return the owner of the log."""
-        i = self.threadId()
-        try:
-            return self.ownersPerThread[i][-1]
-        except (KeyError, IndexError):
-            return self.defaultOwner
+    def msg(self, *message, **kw):
+        actualEventDict = (context.get(ILogContext) or {}).copy()
+        actualEventDict.update(kw)
+        actualEventDict['message'] = message
+        actualEventDict['time'] = time.time()
+        for o in self.observers:
+            o(actualEventDict)
 
 
-class Log:
-    """
-    This will create a Log file (intended to be written to with
-    'print', but usable from anywhere that a file is) from a file.
-    """
-
-    def __init__(self, file, ownable):
-        self.file = file
-
-    def __getattr__(self, attr):
-        if attr in file_protocol:
-            return getattr(self.file, attr)
-        else:
-            raise AttributeError, attr
-
-    def __setattr__(self, attr, value):
-        if attr in file_protocol:
-            setattr(self.file, attr, value)
-        else:
-            self.__dict__[attr] = value
-
-    def __getstate__(self):
-        d = self.__dict__.copy()
-        d['file'] = d['file'].name
-        return d
-
-    def __setstate__(self, state):
-        self.__dict__ = state
-        self.file = open(state['file'], 'a') # XXX - open() shouldn't be here
-
-    def write(self,bytes):
-        if not bytes:
-            return
-        logger = logOwner.owner()
-        if logger:
-            bytes = logger.log(bytes)
-        if not bytes:
-            return
-        self.file.write(bytes)
-        self.file.flush()
-
-    def writelines(self, lines):
-        for line in lines:
-            self.write(line)
-
-
-# Make sure we have some basic logging setup.  This only works in cpython.
-try:
-    logOwner
-except NameError:
-    logOwner = LogOwner()
-
-
-def _threaded_msg(*stuff):
-    loglock.acquire()
-    real_msg(*stuff)
-    loglock.release()
+theLogPublisher = LogPublisher()
+addObserver = theLogPublisher.addObserver
+removeObserver = theLogPublisher.removeObserver
+msg = theLogPublisher.msg
 
 def initThreads():
-    import thread
-    global logOwner, real_msg, msg, loglock
-    oldLogOwner = logOwner
-    logOwner = ThreadedLogOwner()
-    logOwner.ownersPerThread[logOwner.threadId()] = oldLogOwner.owners
-    real_msg = msg
-    msg = _threaded_msg
-    loglock = thread.allocate_lock()
+    global msg
+    # after the log publisher is synchronized, grab its method again so we get
+    # the hooked version
+    msg = theLogPublisher.msg
 
+threadable.synchronize(LogPublisher)
 threadable.whenThreaded(initThreads)
 
-def startLogging(file, setStdout=1):
-    """Initialize logging to a specified file."""
-    global logfile
-    global logerr
-    logerr = logfile = Log(file, logOwner)
-    msg("Log opened.")
-    if setStdout:
-        sys.stdout = sys.stderr = logfile
+class FileLogObserver:
+    def __init__(self, f):
+        self.write = f.write
+        self.flush = f.flush
 
-class NullFile:
-    def write(self, data):
+    def _emit(self, eventDict):
+        edm = eventDict['message']
+        if not edm:
+            if eventDict['isError'] and eventDict.has_key('failure'):
+                text = eventDict['failure'].getTraceback()
+            elif eventDict.has_key('format'):
+                text = eventDict['format'] % eventDict
+        else:
+            text = ' '.join(map(str, edm))
+        y,mon,d,h,min, iigg,nnoo,rree,daylight = time.localtime(eventDict['time'])
+        self.write("%0.4d/%0.2d/%0.2d %0.2d:%0.2d %s [%s] %s\n" %
+                   (y, mon, d, h, min, time.tzname[daylight],
+                    eventDict['system'], text.replace("\n","\n\t")))
+        self.flush()                    # hoorj!
+
+    def start(self):
+        addObserver(self._emit)
+
+    def stop(self):
+        removeObserver(self._emit)
+
+file_protocol = ['close', 'closed', 'fileno', 'flush', 'mode', 'name', 'read',
+                 'readline', 'readlines', 'seek', 'softspace', 'tell',
+                 'write', 'writelines']
+
+class StdioOnnaStick:
+    closed = 0
+    softspace = 0
+    mode = 'wb'
+    name = '<stdio (log)>'
+    def __init__(self, isError=0):
+        self.isError = isError
+
+    def close(self):
         pass
+
+    def fileno(self):
+        return -1
 
     def flush(self):
         pass
+
+    def read(self):
+        raise IOError("can't read from the log!")
+
+    readline = read
+    readlines = read
+    seek = read
+    tell = read
+
+    def write(self, data):
+        msg(data, printed=True, isError=self.isError)
+
+    def writelines(self, lines):
+        for line in lines:
+            msg(line, printed=True, isError=self.isError)
+
+# Make sure we have some basic logging setup.  This only works in cpython.
+def startLogging(file, setStdout=1):
+    """Initialize logging to a specified file."""
+    flo = FileLogObserver(file)
+    flo.start()
+    msg("Log opened.")
+    if setStdout:
+        sys.stdout = logfile
+        sys.stderr = logerr
 
 # Prevent logfile from being erased on reload.  This only works in cpython.
 try:
     logfile
 except NameError:
-    logfile = NullFile()
-    logerr = sys.stderr
+    logfile = StdioOnnaStick(0)
+    logerr = StdioOnnaStick(1)
 
 def discardLogs():
     """Throw away all logs.
@@ -404,4 +301,4 @@ def discardLogs():
     logfile = Log(NullFile(), logOwner)
 
 
-__all__ = ["logOwner", "Log", "Logger", "startLogging", "msg", "write"]
+__all__ = ["Log", "Logger", "startLogging", "msg", "write"]

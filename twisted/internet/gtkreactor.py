@@ -124,9 +124,7 @@ class GtkReactor(default.PosixReactorBase):
         self.simulate()
         gtk.mainloop()
 
-    def callback(self, source, condition):
-        log.logOwner.own(source)
-
+    def _readAndWrite(self, source, condition):
         # note: gtk-1.2's gtk_input_add presents an API in terms of gdk
         # constants like INPUT_READ and INPUT_WRITE. Internally, it will add
         # POLL_HUP and POLL_ERR to the poll() events, but if they happen it
@@ -136,40 +134,29 @@ class GtkReactor(default.PosixReactorBase):
 
         # The g_io_add_watch() API is more suited to this task. I don't think
         # pygtk exposes it, though.
-        
         why = None
-        #if condition & POLL_DISCONNECTED and \
-        #       not (condition & gtk._gobject.IO_IN):
-        #    why = main.CONNECTION_LOST
-        if 0: pass
-        else:
-            try:
-                didRead = None
-                if condition & gtk.GDK.INPUT_READ:
-                    why = source.doRead()
-                    didRead = source.doRead
-                if not why and condition & gtk.GDK.INPUT_WRITE:
-                    # if doRead caused connectionLost, don't call doWrite
-                    # if doRead is doWrite, don't call it again.
-                    if not source.disconnected and source.doWrite != didRead:
-                        why = source.doWrite()
-#                if not source.fileno() == fd:
-#                    why = main.ConnectionFdescWentAway('Filedescriptor went away')
-            except:
-                why = sys.exc_value
-                log.msg('Error In %s' % source)
-                log.deferr()
+        try:
+            didRead = None
+            if condition & gtk.GDK.INPUT_READ:
+                why = source.doRead()
+                didRead = source.doRead
+            if not why and condition & gtk.GDK.INPUT_WRITE:
+                # if doRead caused connectionLost, don't call doWrite
+                # if doRead is doWrite, don't call it again.
+                if not source.disconnected and source.doWrite != didRead:
+                    why = source.doWrite()
+        except:
+            why = sys.exc_value
+            log.msg('Error In %s' % source)
+            log.deferr()
 
         if why:
             self.removeReader(source)
             self.removeWriter(source)
-            try:
-                source.connectionLost(failure.Failure(why))
-            except:
-                log.deferr()
+            source.connectionLost(failure.Failure(why))
 
-        log.logOwner.disown(source)
-        
+    def callback(self, source, condition):
+        log.callWithLogger(source, self._readAndWrite, source, condition)
         self.simulate() # fire Twisted timers
         return 1 # 1=don't auto-remove the source
 

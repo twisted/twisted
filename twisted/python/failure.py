@@ -292,6 +292,10 @@ class Failure:
         self.printBriefTraceback(file=io)
         return io.getvalue()
 
+    def getTraceback(self):
+        io = StringIO()
+        self.printTraceback(file=io)
+        return io.getvalue()
 
     def printTraceback(self, file=None):
         """Emulate Python's standard error reporting mechanism.

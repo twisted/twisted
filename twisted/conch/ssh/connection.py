@@ -240,9 +240,8 @@ class SSHConnection(service.SSHService):
         """
         if not self.channelsToRemoteChannel.has_key(channel):
             return
-        log.logOwner.own(self.transport.transport)
-        log.msg('sending request for channel %s, request %s'%(channel.id, requestType))
-        log.logOwner.disown(self.transport.transport)
+        log.msg('sending request for channel %s, request %s' % (channel.id, requestType),
+                system=self.transport.transport.logPrefix())
         self.transport.sendPacket(MSG_CHANNEL_REQUEST, struct.pack('>L', 
                                     self.channelsToRemoteChannel[channel])
                                   + common.NS(requestType)+chr(wantReply)

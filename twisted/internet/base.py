@@ -238,12 +238,9 @@ class ReactorBase:
         """
         selectables = self.removeAll()
         for reader in selectables:
-            log.logOwner.own(reader)
-            try:
-                reader.connectionLost(failure.Failure(main.CONNECTION_LOST))
-            except:
-                log.deferr()
-            log.logOwner.disown(reader)
+            log.callWithLogger(reader,
+                               reader.connectionLost,
+                               failure.Failure(main.CONNECTION_LOST))
 
 
     def iterate(self, delay=0):
@@ -382,7 +379,7 @@ class ReactorBase:
         """
         if not self.threadpool:
             self._initThreadPool()
-        self.threadpool.dispatch(log.logOwner.owner(), callable, *args, **kwargs)
+        self.threadpool.callInThread(callable, *args, **kwargs)
 
     def suggestThreadPoolSize(self, size):
         """See twisted.internet.interfaces.IReactorThreads.suggestThreadPoolSize.

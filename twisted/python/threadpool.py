@@ -1,3 +1,4 @@
+# -*- test-case-name: twisted.test.test_threadpool -*-
 # Twisted, the Framework of Your Internet
 # Copyright (C) 2001 Matthew W. Lefkowitz
 # 
@@ -30,7 +31,7 @@ import copy
 import sys
 
 # Twisted Imports
-from twisted.python import log, runtime
+from twisted.python import log, runtime, context
 
 WorkerStop = None
 
@@ -95,12 +96,14 @@ class ThreadPool:
 
     def dispatch(self, owner, func, *args, **kw):
         """Dispatch a function to be a run in a thread.
-        
-        owner must be a loggable object.
         """
-        assert isinstance(owner, log.Logger), "owner isn't logger"
-        if self.joined: return
-        o=(owner,func,args,kw)
+        self.callInThread(func,*args,**kw)
+
+    def callInThread(self, func, *args, **kw):
+        if self.joined:
+            return
+        ctx = context.theContextTracker.currentContext().contexts[-1]
+        o = (ctx, func, args, kw)
         self.q.put(o)
         if self.started and not self.waiters:
             self._startSomeWorkers()
@@ -118,7 +121,7 @@ class ThreadPool:
         
         The callback function will be called in the thread - make sure it is
         thread-safe."""
-        self.dispatch(owner, self._runWithCallback, callback, errback, func, args, kw)
+        self.callInThread(self._runWithCallback, callback, errback, func, args, kw)
 
     def _worker(self):
         ct = threading.currentThread()
@@ -130,13 +133,11 @@ class ThreadPool:
             self.waiters.remove(ct)
             if o == WorkerStop: break
             self.working[ct] = ct
-            owner, function, args, kwargs = o
-            log.logOwner.own(owner)
+            ctx, function, args, kwargs = o
             try:
-                apply(function, args, kwargs)
+                context.call(ctx, function, *args, **kwargs)
             except:
-                log.deferr()
-            log.logOwner.disown(owner)
+                context.call(ctx, log.deferr)
             del self.working[ct]
         self.threads.remove(ct)
         self.workers = self.workers-1

@@ -150,9 +150,7 @@ class Gtk2Reactor(default.PosixReactorBase):
         self.simulate()
         gtk.main()
 
-    def callback(self, source, condition):
-        log.logOwner.own(source)
-
+    def _doReadOrWrite(self, source, condition):
         why = None
         if condition & POLL_DISCONNECTED and \
                not (condition & gtk._gobject.IO_IN):
@@ -168,8 +166,6 @@ class Gtk2Reactor(default.PosixReactorBase):
                     # if doRead is doWrite, don't call it again.
                     if not source.disconnected and source.doWrite != didRead:
                         why = source.doWrite()
-#                if not source.fileno() == fd:
-#                    why = main.ConnectionFdescWentAway('Filedescriptor went away')
             except:
                 why = sys.exc_value
                 log.msg('Error In %s' % source)
@@ -178,13 +174,11 @@ class Gtk2Reactor(default.PosixReactorBase):
         if why:
             self.removeReader(source)
             self.removeWriter(source)
-            try:
-                source.connectionLost(failure.Failure(why))
-            except:
-                log.deferr()
+            source.connectionLost(failure.Failure(why))
 
-        log.logOwner.disown(source)
-        
+
+    def callback(self, source, condition):
+        log.callWithLogger(source, self._doReadOrWrite, source, condition)
         self.simulate() # fire Twisted timers
         return 1 # 1=don't auto-remove the source
 

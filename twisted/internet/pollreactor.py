@@ -139,37 +139,32 @@ class PollReactor(default.PosixReactorBase):
                 return
             else:
                 raise
-
+        _drdw = self._doReadOrWrite
         for fd, event in l:
-            why = None
             selectable = selectables[fd]
-            log.logOwner.own(selectable)
-
-            if event & POLL_DISCONNECTED and not (event & POLLIN):
-                why = main.CONNECTION_LOST
-            else:
-                try:
-                    if event & POLLIN:
-                        why = selectable.doRead()
-                    if not why and event & POLLOUT:
-                        why = selectable.doWrite()
-                    if not selectable.fileno() == fd:
-                        why = main.ConnectionFdescWentAway('Filedescriptor went away')
-                except:
-                    log.deferr()
-                    why = sys.exc_value
-
-            if why:
-                self.removeReader(selectable)
-                self.removeWriter(selectable)
-                try:
-                    selectable.connectionLost(failure.Failure(why))
-                except:
-                    log.deferr()
-
-            log.logOwner.disown(selectable)
+            log.callWithLogger(selectable, _drdw, selectable, fd, event, POLLIN, POLLOUT, log)
 
     doIteration = doPoll
+
+    def _doReadOrWrite(self, selectable, fd, event, POLLIN, POLLOUT, log):
+        why = None
+        if event & POLL_DISCONNECTED and not (event & POLLIN):
+            why = main.CONNECTION_LOST
+        else:
+            try:
+                if event & POLLIN:
+                    why = selectable.doRead()
+                if not why and event & POLLOUT:
+                    why = selectable.doWrite()
+                if not selectable.fileno() == fd:
+                    why = main.ConnectionFdescWentAway('Filedescriptor went away')
+            except:
+                log.deferr()
+                why = sys.exc_value
+        if why:
+            self.removeReader(selectable)
+            self.removeWriter(selectable)
+            selectable.connectionLost(failure.Failure(why))
 
 
 def install():

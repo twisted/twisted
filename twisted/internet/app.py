@@ -50,6 +50,8 @@ from twisted.python.reflect import Accessor
 from twisted.python.util import OrderedDict
 from twisted.python.compat import StringTypes
 
+from twisted.python import context
+
 # Sibling Imports
 import main, defer, error
 
@@ -376,7 +378,7 @@ class Application(log.Logger, styles.Versioned,
         a = authorizer or authorizer_
         if a:
             self._authorizer = a
-            self._authorizer.setApplication(self)
+            self._authorizer.setServiceCollection(self)
         if platform.getType() == "posix":
             if uid is None:
                 uid = os.getuid()
@@ -785,13 +787,15 @@ class Application(log.Logger, styles.Versioned,
             self.save("shutdown")
 
     _boundPorts = 0
+
     def bindPorts(self):
+        log.callWithLogger(self, self._doBindPorts)
+
+    def _doBindPorts(self):
         from twisted.internet import reactor
         self._listenerDict= {}
         self._boundPorts = 1
         if not self.running:
-            log.logOwner.own(self)
-
             for filename, factory, backlog, mode in self.unixPorts:
                 try:
                     self._listenerDict[filename] = reactor.listenUNIX(filename, factory, backlog, mode)
@@ -836,7 +840,6 @@ class Application(log.Logger, styles.Versioned,
             for service in self.services.values():
                 service.startService()
             self.running = 1
-            log.logOwner.disown(self)
 
     def run(self, save=1, installSignalHandlers=1):
         """run(save=1, installSignalHandlers=1)
@@ -853,11 +856,9 @@ class Application(log.Logger, styles.Versioned,
         reactor.addSystemEventTrigger('before', 'shutdown', self._beforeShutDown)
         reactor.addSystemEventTrigger('after', 'shutdown', self._afterShutDown)
         global theApplication
-        log.logOwner.own(self)
         theApplication = self
         main.running = 1 # just in case
-        reactor.run(installSignalHandlers=installSignalHandlers)
-        log.logOwner.disown(self)
+        log.callWithLogger(self, reactor.run, installSignalHandlers=installSignalHandlers)
 
 
 #
