@@ -594,8 +594,7 @@ def _setUpTestdir():
     os.chdir(testdir)
 
 
-def _setUpDebugging(config, suite):
-    suite.reporter.debugger = 1
+def _getDebugger():
     dbg = pdb.Pdb()
     try:
         rcFile = open("../.pdbrc")
@@ -603,15 +602,11 @@ def _setUpDebugging(config, suite):
         hasattr(sys, 'exc_clear') and sys.exc_clear()
     else:
         dbg.rcLines.extend(rcFile.readlines())
-    if config['until-failure']:
-        call_until_failure(suite.reporter,
-                           dbg.run,
-                           "suite.run(config['random'])",
-                           globals(), locals())
-    else:
-        dbg.run("suite.run(config['random'])",
-                globals(), locals())
+    return dbg
 
+def _setUpDebugging(config, suite):
+    suite.reporter.debugger = 1
+    _getDebugger().run("suite.run(config['random'])", globals(), locals())
 
 def _doProfilingRun(config, suite):
     if config['until-failure']:
@@ -636,27 +631,39 @@ def _doProfilingRun(config, suite):
 ##     stats.strip_dirs()
 ##     stats.print_stats()
 
-
-def call_until_failure(suite, callable, *args, **kwargs):
+def call_until_failure(f, *args, **kwargs):
     count = 1
     print "Test Pass %d" % count
-    callable(*args, **kwargs)
+    suite = f(*args, **kwargs)
     while itrial.ITestStats(suite).allPassed:
         count += 1
         print "Test Pass %d" % count
-        callable(*args, **kwargs)
+        suite = f(*args, **kwargs)
+    return suite
 
 
-def reallyRun(config, suite):
+def reallyRun(config):
+    if config['until-failure']:
+        if not config['debug']:
+            def _doRun(config):
+                suite = _getSuite(config)
+                suite.run(config['random'])
+                return suite
+            return call_until_failure(_doRun, config)
+        else:
+            def _doRun(config):
+                suite = _getSuite(config)
+                _getDebugger().run("suite.run(config['random'])", globals(), locals())
+                return suite
+            return call_until_failure(_doRun, config)
+
+    suite = _getSuite(config)
     if config['debug']:
         _setUpDebugging(config, suite)
     elif config['profile']:
         _doProfilingRun(config, suite)
     else:
-        if config['until-failure']:
-            call_until_failure(suite, suite.run, config['random'])
-        else:
-            suite.run(config['random'])
+        suite.run(config['random'])
     return suite
 
 
@@ -676,11 +683,10 @@ def run():
     _setUpAdapters()
 
     _initialDebugSetup(config)
-    suite = _getSuite(config)
     _setUpTestdir()
     _setUpLogging(config)
-    
-    reallyRun(config, suite)
+
+    suite = reallyRun(config)
 
     if config.tracer:
         sys.settrace(None)
