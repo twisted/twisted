@@ -22,7 +22,7 @@ Package installer for Twisted
 Copyright (C) 2001 Matthew W. Lefkowitz
 All rights reserved, see LICENSE for details.
 
-$Id: setup.py,v 1.130 2003/07/31 22:29:33 moonfallen Exp $
+$Id: setup.py,v 1.131 2003/08/12 19:58:42 moonfallen Exp $
 """
 
 import distutils, os, sys, string
@@ -314,10 +314,6 @@ for pathname, filenames in [(wovenPath, wovenFiles),
     setup_args['data_files'].extend(
         [(pathname, [os.path.join(pathname, filename)])
             for filename in filenames])
-
-win32doc='doc/win32doc.zip'
-if os.path.exists(win32doc):
-    setup_args['data_files'].append(('TwistedDocs', [win32doc]))
 
 # always define WIN32 under Windows
 if os.name == 'nt':
