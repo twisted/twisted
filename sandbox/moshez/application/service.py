@@ -155,12 +155,8 @@ class Process:
     processName = None
 
     def __init__(self, uid=None, gid=None):
-            if uid is None:
-                uid = os.getuid()
-            self.uid = uid
-            if gid is None:
-                gid = os.getgid()
-            self.gid = gid
+        self.uid = uid or 0
+        self.gid = gid or 0
     
 
 def Application(name, uid=None, gid=None):
@@ -170,6 +166,5 @@ def Application(name, uid=None, gid=None):
     ret.setComponent(IServiceCollection, service)
     ret.setComponent(IService, service)
     ret.setComponent(sob.IPersistable, sob.Persistant(ret, name))
-    if runtime.platformType == "posix":
-        ret.setComponent(IProcess, Process(uid, gid))
+    ret.setComponent(IProcess, Process(uid, gid))
     return ret

@@ -152,14 +152,11 @@ def setupEnvironment(config):
 
 def startApplication(config, application):
     process = service.IProcess(application, None)
-    if process is not None and not config['originalname']:
+    if not config['originalname']:
         launchWithName(process.processName)
     setupEnvironment(config)
     service.IService(application).privilegedStartService()
-    if process is not None:
-        shedPrivileges(config['euid'], process.uid, process.gid)
-    else:
-        log.err("No process information! Not shedding privileges...")
+    shedPrivileges(config['euid'], process.uid, process.gid)
     service.IService(application).startService()
     if not config['no_save']:
         apprun.scheduleSave(application)
