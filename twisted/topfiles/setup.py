@@ -91,10 +91,8 @@ desktop environments, and your toaster.
 """,
 
     # build stuff
-    packages=dist.getPackages('twisted',
-                              ignore=dist.twisted_subprojects),
-    data_files=dist.getDataFiles('twisted',
-                                 ignore=dist.twisted_subprojects),
+    packages=dist.getPackages('twisted', ignore=dist.twisted_subprojects),
+    data_files=dist.getDataFiles('twisted', ignore=dist.twisted_subprojects),
     detectExtensions=detectExtensions,
     scripts= [
         'bin/manhole', 'bin/mktap', 'bin/twistd',

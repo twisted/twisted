@@ -42,20 +42,14 @@ class Options(usage.Options):
         ['sfname', None, None,
          "Your username on sourceforge."],
         ]
+    optParameters += [[x+'-version', None, None, x+" version"]
+                        for x in dist.twisted_subprojects]
 
     optFlags = [
         ['nopermanent', None,
          "Don't do anything permanent: finalize tags, upload tarballs, etc."]]
 
     def postOptions(self):
-        ## assertions ##
-        if self['base-version'] is None:
-            raise usage.UsageError("--base-version is required!")
-
-        ## set up some convenience ##
-
-        # BRANCH, CHECKOUT, MUNGE (cough), COMMIT, TAG, EXPORT,
-        # TARBALL, RELEASE, FINALIZE
 
         self['wipurl'] = '%s/branches/wip-%s' % (repourl,
                                                  self['base-version'])
@@ -74,6 +68,8 @@ class Options(usage.Options):
 
             # This code expresses the high-level workflow of the
             # release procedure.
+            # BRANCH, CHECKOUT, MUNGE (cough), COMMIT, TAG, EXPORT,
+            # TARBALL, RELEASE, FINALIZE
 
             commands += [
                 copyTrunkToWIP,
@@ -238,7 +234,9 @@ def makeMakeBall(proj):
     def makeBall(opts):
         ver = opts['base-version']
         tdir = "Twisted-%s" % (ver,)
-        projver = '0.1.0'
+        projver = opts[proj+'-version']
+        if not projver:
+            raise "NEED --%s-version!" % (proj,)
         projdir = 'Twisted%s-%s' % (proj.capitalize(), projver,)
         createSubprojectDirectory(proj, projver)
         sh('''
