@@ -841,17 +841,22 @@ class Gadget(resource.Resource):
     def getWidget(self, path, request):
         return self.widgets.get(path)
 
+    def pageFactory(self, *obj):
+        #This is a nasty backwards-compatibility hack.
+        if hasattr(self, "page"):
+            return self.page(*obj)
+
     def getChild(self, path, request):
         if path == '':
             # ZOOP!
             if isinstance(self, Widget):
-                return self.page(self)
+                return self.pageFactory(self)
         widget = self.getWidget(path, request)
         if widget:
             if isinstance(widget, resource.Resource):
                 return widget
             else:
-                p = self.page(widget)
+                p = self.pageFactory(widget)
                 p.isLeaf = getattr(widget,'isLeaf',0)
                 return p
         elif path in self.files:
@@ -860,7 +865,7 @@ class Gadget(resource.Resource):
                 prefix = os.path.abspath(os.path.dirname(prefix))
             return static.File(os.path.join(prefix, path))
         elif path == '__reload__':
-            return self.page(Reloader(map(reflect.namedModule, [self.__module__] + self.modules)))
+            return self.pageFactory(Reloader(map(reflect.namedModule, [self.__module__] + self.modules)))
         else:
             return error.NoResource()
 
