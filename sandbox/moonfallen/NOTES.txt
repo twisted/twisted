@@ -1,0 +1,194 @@
+<MFen> hmm
+<MFen> needs some work
+<exarkun> how close does it come to working?
+<MFen> i get this
+<MFen>  File "win32serviceutil.pyo", line 670, in SvcRun   File "__service__.pyo", line 44, in SvcDoRun   File "twisted\application\service.pyo", line 293, in loadApplication   File "twisted\persisted\sob.pyo", line 182, in load   File "imputil.pyo", line 103, in _import_hook   File "<string>", line 52, in _import_top_module   File "imputil.pyo", line 216, in import_top   File "imputil.pyo", line 271, in _import_one   File "<string>", line 128, in _process_result   F
+<MFen> ile "atop\__init__.pyo", line 10, in ?   File "atop\regadapt.pyo", line 30, in justDoIt   File "twisted\python\plugin.pyo", line 305, in getPlugIns   File "twisted\python\plugin.pyo", line 191, in getPluginFileList  exceptions.IOError Couldn't find a plugins file!  
+<exarkun> ahh
+<MFen> i've been mostly working with tacs so far
+<MFen> i need to figure out how to automatically add the mktap plugin parts
+<radix> MFen: have you tap2ntsvc-ed anything that uses plugins?
+<MFen> however
+<radix> MFen: those aren't tap plugins
+<radix> well, rather
+<MFen> the fact that mktap quotient has side effects worries me
+<radix> atop isn't trying to get tap plugins
+<MFen> hmm, ok
+<radix> it's trying to get plugins that are used elsewhere in the system
+<radix> not that it matters; the important bit is that you need to support inclusion of the plugins.tml
+<MFen> is this something that tap2deb understands?
+<radix> MFen: well, tap2deb assumes that the python package is installed already
+<itamar> tap2deb doesn't package python source code
+<MFen> the plugins.tml has to be in sys.path, is that correct?
+<radix> MFen: no
+<radix> MFen: it has to be in a top-level python package
+<MFen> um
+<radix> MFen: which means it has to be in a directory inside a directory in sys.path as long as it has an __init__.*
+<MFen> i hope it doesn't have to be in the same python package that i'm running, because i can't stick it into the exe
+<itamar> i.e. inside folder /foo/bar where /foo is in sys.path and there's a /foo/bar/__init__.py
+<MFen> ok
+<MFen> so if i sys.path.insert(0, sibpath(sys.executable, '')) and make a foobar/{__init__.py,plugins.tml}
+<MFen> it should work?
+<radix> MFen: hrm, something like that
+<exarkun> MFen: while that would work, fixing it at a higher level might be nicer
+<itamar> ooh, an email from Pavel
+<radix> MFen: just so you know, btw, quotient has three top-level packages and they all have plugins.tml files :)
+<MFen> oh good grief
+<radix> oh wait, only two of them have plugins.tml
+<MFen> there's no way in hell i'm going to be able to figure this all out programmatically
+<exarkun> MFen: If you can find all the plugins.tml files at tap2ntsvc time, then you *know* what files getPlugIns() should be examining
+<itamar> there ought to be code in twisted.python.plugins that returns list of plugisn files
+<itamar> may need a bit refactoring
+<exarkun> MFen: you don't have to monkey the filesystem at all
+<exarkun> itamar: There is.
+<radix> itamar: i think that's already how it works
+<radix> in fact, i think i'm the one that refactored it to be so!!
+<radix> because I am a genius
+<MFen> so.. in order to get the list
+<MFen> i have to basically start the application
+<radix> eh
+<radix> you don't want to use that function to do what exarkun said
+<radix> because you will get all the plugins.tml everywhere on the system
+<radix> you should search all the top-level packages that are being packaged and grab their plugins.tmls
+<exarkun> no!
+<exarkun> wrong!
+<radix> what
+<exarkun> you want to do both.
+<radix> exarkun: why?
+<exarkun> unless you want to utterly cripple the plugin system and make it completely worthless.
+<exarkun> radix: repeat after me
+<exarkun> radix: "plugin"
+<itamar> yes!
+<radix> exarkun: please explain coherently
+<exarkun> radix: "plug"
+<exarkun> radix: "in"
+<itamar> however, that still won't help with packaging thosepackages
+<exarkun> radix: "pluuuuuuggg iiiinnnnn"
+<MFen> it doesn't matter. i can't search anything.  as it is, you have to manually inject modules to be packaged, and after that point it's out of my hands. if py2exe can't figure it out, i can't either
+<itamar> it's Zombie Jean-Paul
+<radix> MFen: you have to specify all modules, not just packages?
+<exarkun> MFen: so you can't package plugins.tml?
+<radix> oh, you use py2exe for figuring out what modules to take?
+<MFen> radix: no.  for example, with quotient, all it seems to need is -i atop
+<radix> or rather, i guess you just use py2exe :)
+<radix> MFen: that's a py2exe parameter, or a tap2ntsvc parameter?
+<MFen> tap2ntsvc, but it gets passed on to py2exe inchanged
+<MFen> un
+<radix> MFen: right
+<radix> MFen: so look in the packages that are passed to -i for plugins.tml files
+<radix> ?
+<MFen> and do what with them? that's the question
+<radix> MFen: well, make sure getPlugins will search them at runtime :)
+<MFen> loading a plugin implies loading a bunch of modules
+<MFen> i have to include those modules somehow
+<radix> MFen: those are already in the packages that py2exe grabbed
+<radix> MFen: at least, that's what you can assume
+<radix> reasonably
+<MFen> i don't know that i can
+<radix> MFen: why not?
+<MFen> py2exe grabs whatever the script depends on
+<radix> MFen: well it's up to the user to make sure all their modules are included
+<MFen> essentially, that's win32 stuff, some twisted stuff and whatever the -i requires
+<radix> same as if they were using py2exe itself
+<radix> of course, if you want to parse the .tml file yourself and make sure the modules it references are included, that would be nice
+<radix> :)
+<MFen> yucky
+<MFen> well that would be a minimum
+<radix> but i wouldn't bother
+<radix> ok! heh
+<exarkun> MFen: Can't you pass it to modulefinder?
+<radix> so you're trying to be nicer than py2exe is :)
+<exarkun> It's just Python source
+<radix> modulefinder finds modules that are in strings?
+<MFen> modulefinder isn't that smart
+<exarkun> modulefinder sucks
+<radix> .tml just does register('module.name')
+<exarkun> just rewrite it w/ AST
+<MFen> AST?
+<exarkun> radix: often.
+<exarkun> radix: sometimes not.
+<radix> there's no reason that should reasonably include the module
+<exarkun> MFen: compiler.compile(file("foo.tml"))
+<exarkun> MFen: then walk the tree and look for imports
+<exarkun> it shouldn't be very hard
+<radix> ??
+<radix> the .tml file doesn't actually do imports!
+<exarkun> radix: it is a python source file
+<exarkun> radix: it does whatever it bloody wants
+<radix> exarkun: the whole _point_ of the .tml mechanism is to avoid imports
+<exarkun> no it isn't
+<exarkun> the point is to avoid _some_ imports
+<radix> exarkun: so you need better support than that
+<radix> most
+<radix> look at twisted/plugins.tml
+<exarkun> ok, you're talking about different modules than I am
+<exarkun> in this case, just load it
+<radix> how many imports do you see there?
+<exarkun> it *tells* you what modules it wants
+<exarkun> it couldn't possibly be any easier
+<radix> yes.
+<MFen> hell, it'd be easier to just walk the filesystem looking for .py and include all of it
+<radix> you'll have to actually have special support for the .tml, not using basic introspection
+<radix> MFen: heh
+<exarkun> hardly special
+<exarkun> just load it and look .module attributes
+<radix> that's support that is specific to the twisted plugin system :)
+<radix> i.e., "special"
+<exarkun> ok
+<radix> so
+<radix> why does he need to call getPlugins at package-time?
+<exarkun> So he knows what modules to include
+<radix> sorry, "loadPlugin"
+<radix> s
+<radix> exarkun: oh, you mean, passing the list of plugins.tml files that we've found explicitly
+<exarkun> yes
+<MFen> ok, so i load the plugin, *implement modulefinder*, and use my new modulefinder to collect all the .py that the plugin needs
+<radix> MFen: nah
+<radix> MFen: it's trivial
+<radix> it's nothing like modulefinder
+<radix> hrm
+<MFen> if it's so trivial why doesn't modulefinder do it?
+<radix> MFen: modulefinder doesn't know about twisted :)
+<exarkun> it only applies to .tml files
+<MFen> it has nothing to do with .tml files
+<radix> actually, loadPlugins isn't quite sufficient....
+<radix> MFen: yes, it does.
+<MFen> at some point in the future, the runtime needs a bunch of modules that aren't directly referenced by the script
+<radix> you know which modules to include by looking at the .tml files
+<MFen> no! you don't. you only know at best which modules the .tml file loads directly
+<MFen> what about all the modules that get loaded indirectly
+<radix> MFen: this is what we have been talking about
+<radix> MFen: it will be easy to write support for .tml files to *know which files they load indirectly*
+<radix> well, apart from the fact that loadPlugins requiresa  "pluginType" argument :-(
+<radix> and that there's no catch-all
+<exarkun> Yes there is
+<radix> unless you want to implement an object that has a special __eq__
+<radix> that always returns True
+<MFen> ok, i don't want to know about what pluginType means.. i want to know why you think a plugin can ever know what modules it loads indirectly
+<radix> MFen: because plugins.tml tells you
+<radix> register("Lore Slides",
+<radix>          "twisted.lore.slides",
+<radix>          description="Lore for slides",
+<radix>          type="lore",
+<radix>          tapname="lore-slides")
+<radix> see the second argument?
+<MFen> that's not what i mean
+<exarkun> MFen: just import it
+<exarkun> MFen: and use modulefinder on it
+<MFen> i mean the files that twisted.lore.slides imports
+<MFen> exarkun: you'd think that would work. in fact, it doesn't.  py2exe does load the scripts it's finding modules on, and it still doesn't find stuff like that
+<radix> wait, wait
+<MFen> it's not looking for import opcodes or anything smart like that, it's doing something much weirder
+<radix> MFen: py2exe takes arguments for this, doesn't it?
+<MFen> yes
+<radix> MFen: you will pass "twisted.lore.slides" to py2exe as a module to require
+<MFen> hmm
+<MFen> all right, now look at nevow/plugins.tml
+<exarkun> Right, that's why I was talking about walking the AST.
+<radix> hurrk
+<itamar> evil
+<radix> well
+<radix> this is what I suggested before, I'll suggest it again
+<itamar> personally I'd just rely oh passing lists of package names to package
+<radix> forget the whole thing and let people worry about what modules they want to include themselves :)
+<radix> and just make sure the plugins.tml files are there

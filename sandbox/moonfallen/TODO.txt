@@ -1,2 +1,5 @@
 1. "run as" parameter
 2. Startup type parameter
+3. Handle apps loading plugins better
+4. What happens when an app already does its own logging using twisted.log?
+
