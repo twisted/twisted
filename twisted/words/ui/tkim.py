@@ -158,6 +158,7 @@ class Conversation(Toplevel):
     def messageReceived(self, message):
         self.out.insert(END,"\n%s <%s> %s" % (timeheader(), self.target, message))
         self.out.see(END)
+        self.deiconify()
 
     def changeName(self, newName):
         self.out.insert(END,"\n%s %s changed name to %s." % (timeheader(), self.target, newName))
@@ -186,10 +187,10 @@ class ContactList(Toplevel):
         myim.add_command(label="Start Conversation...",command=lambda i=self.im:StartConversation(i))
 #        myim.add_command(label="__reload__",command=self.reload)
 
-        sb=Scrollbar()
+        sb=Scrollbar(self)
         self.list=tkutil.CList(self,["Gateway","Username","Status"],height=2,yscrollcommand=sb.set)
         self.list.grid(column=0,row=0,sticky=N+E+S+W)
-        sb.grid(column=4,row=0,sticky=N+S)
+        sb.grid(column=1,row=0,sticky=N+S)
         sb.config(command=self.list.yview)
         
         f=Frame(self)
@@ -206,6 +207,7 @@ class ContactList(Toplevel):
         self.protocol("WM_DELETE_WINDOW",self.close)
         tkutil.grid_setexpand(self)
         self.columnconfigure(0,weight=1)
+        self.columnconfigure(1,weight=0)
         self.rowconfigure(1,weight=0)
     
     def close(self):
@@ -358,14 +360,19 @@ class GroupSession(Toplevel):
 
     def runExtra(self,f):
         i=self.input.get("1.0",END)[:-1]
-        s=f(self.im,self.gateway,self.name,i,list(self.userlist.get(0,END)))
+        items = self.userlist.curselection()
+        try:
+            items = map(string.atoi, items)
+        except ValueError: pass
+        items = map(lambda i,d=self.userlist.get: d(i), items)
+        s=f(self.im,self.gateway,self.name,i,items)
         self.input.delete("1.0",END)
         self.input.insert(END,s)        
 
     def receiveGroupMembers(self, members):
-        members.sort()
         for m in members:
             self.userlist.insert(END,m)
+        self._sortlist()
 
     def receiveGroupMessage(self, member, message):
         tags=[]
@@ -373,12 +380,14 @@ class GroupSession(Toplevel):
             tags.append("hilite")
         self.out.insert(END, "\n<%s> %s" % (member, message),tuple(tags))
         self.out.see(END)
+        self.deiconify()
 
     def memberJoined(self, member):
         self.out.insert(END, "\n%s joined!" % member)
         self.out.see(END)
         self.userlist.insert(END,member)
         self._sortlist()
+        self.deiconify()
 
     def memberLeft(self, member):
         self.out.insert(END, "\n%s left!" % member)
@@ -387,6 +396,7 @@ class GroupSession(Toplevel):
         if member in users:
             i=users.index(member)
             self.userlist.delete(i)
+        self.deiconify()
 
     def changeMemberName(self, member, newName):
         users=list(self.userlist.get(0,END))

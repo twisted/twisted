@@ -977,7 +977,7 @@ class TOCClient(protocol.Protocol):
             s=s+"p %s\n"%p
         for d in deny:
             s=s+"d %s\n"%d
-#        s="{\n"+s+"\n}"
+        #s="{\n"+s+"\n}"
         self.sendFlap(2,"toc_set_config %s"%quote(s))
     def add_buddy(self,buddies):
         s=""
@@ -1006,6 +1006,15 @@ class TOCClient(protocol.Protocol):
             self._permitlist=[]
             self._denylist=[]
         self.sendFlap(2,"toc_add_permit"+s)
+    def del_permit(self,users):
+        if type(users)==type(""): users=[users]
+        p=self._permitlist[:]
+        for u in users:
+            u=normalize(u)
+            if u in p:
+                p.remove(u)
+        self.add_permit([])
+        self.add_permit(p)
     def add_deny(self,users):
         if type(users)==type(""): users=[users]
         s=""
@@ -1021,6 +1030,16 @@ class TOCClient(protocol.Protocol):
             self._permitlist=[]
             self._denylist=[]
         self.sendFlap(2,"toc_add_deny"+s)
+    def del_deny(self,users):
+        if type(users)==type(""): users=[users]
+        d=self._denylist[:]
+        for u in users:
+            u=normalize(u)
+            if u in d:
+                d.remove(u)
+        self.add_deny([])
+        if d:
+            self.add_deny(d)
     def signon(self):
         """
         called to finish the setup, and signon to the network
@@ -1042,6 +1061,13 @@ class TOCClient(protocol.Protocol):
         idletime := the seconds that the user has been away, or 0 if they're back
         """
         self.sendFlap(2,"toc_set_idle %s" % int(idletime))
+    def evil(self,user,anon=0):
+        """
+        warn a user
+        user := the user to warn
+        anon := if true, an anonymous warning
+        """
+        self.sendFlap(2,"toc_evil %s %s"%(normalize(user), (not anon and "anon") or "norm"))
     def away(self,message=''):
         """
         change away state
@@ -1092,7 +1118,7 @@ class TOCClient(protocol.Protocol):
         else:
             users=""
             for u in usernames:
-                users=users+usernames+" "
+                users=users+u+" "
             users=users[:-1]
         self.sendFlap(2,"toc_chat_invite %s %s %s" % (int(roomid),quote(message),users))
     def chat_accept(self,roomid):

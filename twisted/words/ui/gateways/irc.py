@@ -183,10 +183,15 @@ def setNick(im,gateway,group,currenttext,currentusers):
     gateway.setNick(currenttext)
     return ""
 
+def sendIM(im,gateway,group,text,users):
+    for u in users:
+        im.conversationWith(gateway,u)
+    return text
+
 groupExtras=[
     ["Send Action",sendAction],
-    ["Set Nick",setNick]
-]
+    ["Set Nick",setNick],
+    ["Send IM",sendIM]
 
 conversationExtras=[]
 

@@ -64,9 +64,17 @@ class TOCGateway(gateway.Gateway,toc.TOCClient):
         self.im.detachGateway(self)
 
     def connectionLost(self):
-        self.im.connectionLost(self,"Connection lost.")
-        self.im.detachGateway(self)
+        if self.im:
+            self.im.connectionLost(self,"Connection lost.")
+            self.im.detachGateway(self)
 
+    def hearError(self,code,args):
+        if code in [toc.BAD_ACCOUNT,toc.BAD_NICKNAME,toc.SERVICE_UNAVAILABLE,
+                    toc.BAD_NICKNAME,toc.SERVICE_TEMP_UNAVAILABLE,
+                    toc.WARNING_TOO_HIGH,toc.CONNECTING_TOO_QUICK,
+                    toc.UNKNOWN_SIGNON]:
+            self.im.connectionLost(self,toc.STD_MESSAGE[code]%args+".")
+            self.im.detachGateway(self)
     def loseConnection(self):
         self.transport.loseConnection()
         
@@ -82,13 +90,16 @@ class TOCGateway(gateway.Gateway,toc.TOCClient):
                 self.add_buddy([u])
                 users.append((u,"Offline"))
                 self._currentusers.append(u)
-        self.add_deny([])
+        if permit:
+            self.add_permit(permit)
+        if deny:
+            self.add_deny(deny)
         self.signon()
         self.receiveContactList(users)
         self._savedmode=mode
         self._savedlist=buddylist or {}
-        self._savedpermit=permit
-        self._saveddeny=deny
+        #self._savedpermit=permit
+        #self._saveddeny=deny
         
     def updateName(self,user):
         for u in self._currentusers:
@@ -139,7 +150,7 @@ class TOCGateway(gateway.Gateway,toc.TOCClient):
         del self._roomid[roomid]
     
     def writeNewConfig(self):
-        self.set_config(self._savedmode,self._savedlist,self._savedpermit,self._saveddeny)
+        self.set_config(self._savedmode,self._savedlist,self._permitlist,self._denylist)
 
     def addContact(self,contact):
         self.add_buddy([contact])
@@ -198,8 +209,47 @@ class TOCGateway(gateway.Gateway,toc.TOCClient):
         if not id: return
         self.chat_say(id,message)
 
-groupExtras=[]
+def warnUser(im,gateway,user,text):
+    gateway.evil(user)
+    return text
 
-conversationExtras=[]
+def warnUserAnonymously(im,gateway,user,text):
+    gateway.evil(user,1)
+    return text
+
+def blockUser(im,gateway,user,text):
+    gateway.add_deny([user])
+    gateway.writeNewConfig()
+    return text
+
+def unBlockUser(im,gateway,user,text):
+    gateway.del_deny([user])
+    gateway.writeNewConfig()
+    return text
+
+def chatInvite(im,gateway,group,text,users):
+    users=string.split(text,",")
+    for k in gateway._roomid.keys():
+        if gateway._roomid[k]==group:
+            id=k
+    gateway.chat_invite(id,users,"Join me in this buddy chat.")
+    return ""
+
+def sendIM(im,gateway,group,text,users):
+    for u in users:
+        im.conversationWith(gateway,u)
+    return text
+
+groupExtras=[
+    ["Send Chat Invitation",chatInvite],
+    ["Send IM",sendIM]
+]
+
+conversationExtras=[
+    ["Warn",warnUser],
+    ["Warn Anonymously",warnUserAnonymously],
+    ["Block",blockUser],
+    ["Unblock",unBlockUser]
+]
 
 contactListExtras=[]
