@@ -230,11 +230,16 @@ class Loopback(unittest.TestCase):
         serverTransport.clearBuffer()
         clientTransport.clearBuffer()
 
+        # An insults API for this would be nice.
+        left = "\x1b[D"
+        insert = "\x1b[2~"
+        backspace = "\x7f"
+
         # Hack cough grunk stfu
         self.objs = locals()
         self.__dict__.update(locals())
 
-    def testLineEditing(self):
+    def testSimple(self):
         exec ''
         locals().update(self.objs)
         telnetClient.write("first line")
@@ -247,12 +252,11 @@ class Loopback(unittest.TestCase):
             ">>> first line\n" +
             "\n" * (HEIGHT - 2))
 
-        # An insults API for this would be nice.
-        left = "\x1b[D"
-        insert = "\x1b[2~"
-        backspace = "\x7f"
+    def testLeftArrow(self):
+        exec ''
+        locals().update(self.objs)
 
-        telnetClient.write(left * 4 + "xxxx\n")
+        telnetClient.write('first line' + left * 4 + "xxxx\n")
 
         clientTransport.clearBuffer()
         serverTransport.clearBuffer()
@@ -264,7 +268,10 @@ class Loopback(unittest.TestCase):
             ">>>\n" +
             "\n" * (HEIGHT - 4))
 
-        # Try backspacing over some characters
+    def testBackspace(self):
+        exec ''
+        locals().update(self.objs)
+
         telnetClient.write("second line" + backspace * 4 + "xxxx\n")
 
         clientTransport.clearBuffer()
@@ -272,14 +279,15 @@ class Loopback(unittest.TestCase):
 
         self.assertEquals(
             str(recvlineClient),
-            ">>> first xxxx\n" +
-            "first xxxx\n" +
             ">>> second xxxx\n" +
             "second xxxx\n" +
             ">>>\n" +
-            "\n" * (HEIGHT - 6))
+            "\n" * (HEIGHT - 4))
 
-        # Try switching to insert mode
+    def testInsert(self):
+        exec ''
+        locals().update(self.objs)
+
         telnetClient.write("third ine" + left * 3 + insert + "l\n")
 
         clientTransport.clearBuffer()
@@ -287,30 +295,23 @@ class Loopback(unittest.TestCase):
 
         self.assertEquals(
             str(recvlineClient),
-            ">>> first xxxx\n" +
-            "first xxxx\n" +
-            ">>> second xxxx\n" +
-            "second xxxx\n" +
             ">>> third line\n" +
             "third line\n" +
             ">>>\n" +
-            "\n" * (HEIGHT - 8))
+            "\n" * (HEIGHT - 4))
 
-        # Try switching back out of insert mode
-        telnetClient.write("fourth xine" + left * 4 + insert + "l\n")
+    def testTypeover(self):
+        exec ''
+        locals().update(self.objs)
+
+        telnetClient.write("fourth xine" + left * 4 + insert * 2 + "l\n")
 
         clientTransport.clearBuffer()
         serverTransport.clearBuffer()
 
         self.assertEquals(
             str(recvlineClient),
-            ">>> first xxxx\n" +
-            "first xxxx\n" +
-            ">>> second xxxx\n" +
-            "second xxxx\n" +
-            ">>> third line\n" +
-            "third line\n" +
             ">>> fourth line\n" +
             "fourth line\n" +
             ">>>\n" +
-            "\n" * (HEIGHT - 10))
+            "\n" * (HEIGHT - 4))
