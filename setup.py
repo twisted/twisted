@@ -22,7 +22,7 @@ Package installer for Twisted
 Copyright (C) 2001 Matthew W. Lefkowitz
 All rights reserved, see LICENSE for details.
 
-$Id: setup.py,v 1.86 2003/01/05 22:44:47 warner Exp $
+$Id: setup.py,v 1.87 2003/01/06 10:38:57 jml Exp $
 """
 
 import distutils, os, sys, string
@@ -221,6 +221,7 @@ http://starship.python.net/crew/mhammond/win32/Downloads.html
         "twisted.spread.ui",
         "twisted.tap",
         "twisted.test",
+        "twisted.trial",
         "twisted.web",
         "twisted.web.woven",
         "twisted.words",
@@ -232,7 +233,7 @@ http://starship.python.net/crew/mhammond/win32/Downloads.html
         'bin/coil', 'bin/tapconvert', 'bin/websetroot',
         'bin/generatelore', 'bin/html2latex', 'bin/hlint',
         'bin/tkmktap', 'bin/conch', 'bin/ckeygen', 'bin/tktwistd',
-        'bin/tkconch', 'twisted-post-install.py',
+        'bin/tkconch', 'twisted-post-install.py', 'bin/trial'
     ],
     'cmdclass': {
         'install_scripts': install_scripts_twisted,
