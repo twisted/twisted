@@ -36,6 +36,11 @@ BOOL
     );
 #endif
 
+typedef struct {
+    int size;
+    char buffer[0];
+} AddrBuffer;
+
 LPFN_CONNECTEX gConnectEx;
 LPFN_ACCEPTEX gAcceptEx;
 
@@ -49,6 +54,9 @@ typedef struct {
 //    PyObject *cur_ops;
     HANDLE iocp;
 } iocpcore;
+
+void CALLBACK dummy_completion(DWORD err, DWORD bytes, OVERLAPPED *ov, DWORD flags) {
+}
 
 static void
 iocpcore_dealloc(iocpcore* self)
@@ -165,9 +173,11 @@ static PyObject *iocpcore_WriteFile(iocpcore* self, PyObject *args) {
     }
     if(len <= 0 || len > buflen) {
         PyErr_SetString(PyExc_ValueError, "Invalid length specified");
+        return NULL;
     }
     if(!PyCallable_Check(object)) {
         PyErr_SetString(PyExc_TypeError, "Callback must be callable");
+        return NULL;
     }
     ov = PyMem_Malloc(sizeof(MyOVERLAPPED));
     if(!ov) {
@@ -212,9 +222,11 @@ static PyObject *iocpcore_ReadFile(iocpcore* self, PyObject *args) {
     }
     if(len <= 0 || len > buflen) {
         PyErr_SetString(PyExc_ValueError, "Invalid length specified");
+        return NULL;
     }
     if(!PyCallable_Check(object)) {
         PyErr_SetString(PyExc_TypeError, "Callback must be callable");
+        return NULL;
     }
     ov = PyMem_Malloc(sizeof(MyOVERLAPPED));
     if(!ov) {
@@ -244,15 +256,63 @@ static PyObject *iocpcore_ReadFile(iocpcore* self, PyObject *args) {
     return Py_BuildValue("ll", err, bytes);
 }
 
-static PyObject *iocpcore_WSARecv(iocpcore* self, PyObject *args) {
+// rape'n'paste from socketmodule.c
+static PyObject *parsesockaddr(struct sockaddr *addr, int addrlen)
+{
+    if (addrlen == 0) {
+        /* No address -- may be recvfrom() from known socket */
+        Py_INCREF(Py_None);
+        return Py_None;
+    }
+
+    switch (addr->sa_family) {
+    case AF_INET:
+    {
+        struct sockaddr_in *a = (struct sockaddr_in *)addr;
+        char *s;
+        s = inet_ntoa(a->sin_addr);
+        PyObject *ret = NULL;
+        if (s) {
+            ret = Py_BuildValue("si", s, ntohs(a->sin_port));
+        } else {
+            PyErr_SetString(PyExc_ValueError, "Invalid AF_INET address");
+        }
+        return ret;
+    }
+    default:
+        /* If we don't know the address family, don't raise an
+           exception -- return it as a tuple. */
+        return Py_BuildValue("is#",
+                     addr->sa_family,
+                     addr->sa_data,
+                     sizeof(addr->sa_data));
+
+    }
+}
+
+static PyObject *iocpcore_interpretAB(iocpcore* self, PyObject *args) {
+    char *buf;
+    int len;
+    if(!PyArg_ParseTuple(args, "t#", &buf, &len)) {
+        return NULL;
+    }
+    return parsesockaddr((struct sockaddr *)buf, len);
+}
+
+static PyObject *iocpcore_WSARecvFrom(iocpcore* self, PyObject *args) {
     SOCKET handle;
     char *buf;
-    int buflen, res, len = -1;
+    int buflen, res, len = -1, ablen;
     DWORD bytes, err, flags;
     PyObject *object;
     MyOVERLAPPED *ov;
     WSABUF wbuf;
-    if(!PyArg_ParseTuple(args, "lw#O|ll", &handle, &buf, &buflen, &object, &len, &flags)) {
+    AddrBuffer *ab;
+    if(!PyArg_ParseTuple(args, "lw#Ow#|ll", &handle, &buf, &buflen, &object, &ab, &ablen, &len, &flags)) {
+        return NULL;
+    }
+    if(ablen < sizeof(int)+sizeof(struct sockaddr)) {
+        PyErr_SetString(PyExc_ValueError, "Address buffer too small");
         return NULL;
     }
     if(len == -1) {
@@ -260,9 +320,11 @@ static PyObject *iocpcore_WSARecv(iocpcore* self, PyObject *args) {
     }
     if(len <= 0 || len > buflen) {
         PyErr_SetString(PyExc_ValueError, "Invalid length specified");
+        return NULL;
     }
     if(!PyCallable_Check(object)) {
         PyErr_SetString(PyExc_TypeError, "Callback must be callable");
+        return NULL;
     }
     ov = PyMem_Malloc(sizeof(MyOVERLAPPED));
     if(!ov) {
@@ -276,109 +338,13 @@ static PyObject *iocpcore_WSARecv(iocpcore* self, PyObject *args) {
     wbuf.buf = buf;
     CreateIoCompletionPort((HANDLE)handle, self->iocp, 0, 1);
     Py_BEGIN_ALLOW_THREADS;
-    res = WSARecv(handle, &wbuf, 1, &bytes, &flags, (OVERLAPPED *)ov, NULL);
+    res = WSARecvFrom(handle, &wbuf, 1, &bytes, &flags, (struct sockaddr *)ab->buffer, &ab->size, (OVERLAPPED *)ov, NULL);
     Py_END_ALLOW_THREADS;
     err = GetLastError();
     if(res == SOCKET_ERROR && err != ERROR_IO_PENDING) {
         return PyErr_SetFromWindowsErr(err);
     }
     return Py_BuildValue("ll", err, bytes);
-}
-
-static PyObject *iocpcore_WSASend(iocpcore* self, PyObject *args) {
-    SOCKET handle;
-    char *buf;
-    int buflen, res, len = -1;
-    DWORD bytes, err, flags;
-    PyObject *object;
-    MyOVERLAPPED *ov;
-    WSABUF wbuf;
-    if(!PyArg_ParseTuple(args, "lt#O|ll", &handle, &buf, &buflen, &object, &len, &flags)) {
-        return NULL;
-    }
-    if(len == -1) {
-        len = buflen;
-    }
-    if(len <= 0 || len > buflen) {
-        PyErr_SetString(PyExc_ValueError, "Invalid length specified");
-    }
-    if(!PyCallable_Check(object)) {
-        PyErr_SetString(PyExc_TypeError, "Callback must be callable");
-    }
-    ov = PyMem_Malloc(sizeof(MyOVERLAPPED));
-    if(!ov) {
-        PyErr_NoMemory();
-        return NULL;
-    }
-    memset(ov, 0, sizeof(MyOVERLAPPED));
-    Py_INCREF(object);
-    ov->callback = object;
-    wbuf.len = len;
-    wbuf.buf = buf;
-    CreateIoCompletionPort((HANDLE)handle, self->iocp, 0, 1);
-    Py_BEGIN_ALLOW_THREADS;
-    res = WSASend(handle, &wbuf, 1, &bytes, flags, (OVERLAPPED *)ov, NULL);
-    Py_END_ALLOW_THREADS;
-    err = GetLastError();
-    if(res == SOCKET_ERROR && err != ERROR_IO_PENDING) {
-        return PyErr_SetFromWindowsErr(err);
-    }
-    return Py_BuildValue("ll", err, bytes);
-}
-
-static PyObject *iocpcore_getsockinfo(iocpcore* self, PyObject *args) {
-    SOCKET handle;
-    WSAPROTOCOL_INFO pinfo;
-    int size = sizeof(pinfo), res;
-    if(!PyArg_ParseTuple(args, "l", &handle)) {
-        return NULL;
-    }
-    res = getsockopt(handle, SOL_SOCKET, SO_PROTOCOL_INFO, (char *)&pinfo, &size);
-    if(res == SOCKET_ERROR) {
-        return PyErr_SetFromWindowsErr(0);
-    }
-    return Py_BuildValue("iiii", pinfo.iMaxSockAddr, pinfo.iAddressFamily, pinfo.iSocketType, pinfo.iProtocol);
-}
-
-static PyObject *iocpcore_AcceptEx(iocpcore* self, PyObject *args) {
-    SOCKET handle, acc_sock;
-    char *buf;
-    int buflen, res;
-    DWORD bytes, err;
-    PyObject *object;
-    MyOVERLAPPED *ov;
-    if(!PyArg_ParseTuple(args, "llOw#", &handle, &acc_sock, &object, &buf, &buflen)) {
-        return NULL;
-    }
-    if(!PyCallable_Check(object)) {
-        PyErr_SetString(PyExc_TypeError, "Callback must be callable");
-    }
-    ov = PyMem_Malloc(sizeof(MyOVERLAPPED));
-    if(!ov) {
-        PyErr_NoMemory();
-        return NULL;
-    }
-    memset(ov, 0, sizeof(MyOVERLAPPED));
-    Py_INCREF(object);
-    ov->callback = object;
-    CreateIoCompletionPort((HANDLE)handle, self->iocp, 0, 1);
-#ifdef SPEW
-    printf("calling AcceptEx(%d, %d, 0x%p, %d, %d, %d, 0x%p, 0x%p)\n", handle, acc_sock, buf, 0, buflen/2, buflen/2, &bytes, ov);
-#endif
-    Py_BEGIN_ALLOW_THREADS;
-    res = gAcceptEx(handle, acc_sock, buf, 0, buflen/2, buflen/2, &bytes, (OVERLAPPED *)ov);
-    Py_END_ALLOW_THREADS;
-    err = WSAGetLastError();
-#ifdef SPEW
-    printf("    ae returned %d, err %d\n", res, err);
-#endif
-    if(!res && err != ERROR_IO_PENDING) {
-        return PyErr_SetFromWindowsErr(err);
-    }
-    if(res) {
-        err = 0;
-    }
-    return Py_BuildValue("ll", err, 0);
 }
 
 // yay, rape'n'paste of getsockaddrarg from socketmodule.c. "I couldn't understand what it does, so I removed it!"
@@ -421,6 +387,109 @@ static int makesockaddr(int sock_family, PyObject *args, struct sockaddr **addr_
     }
 }
 
+static PyObject *iocpcore_WSASendTo(iocpcore* self, PyObject *args) {
+    SOCKET handle;
+    char *buf;
+    int buflen, res, len = -1, addrlen, family;
+    DWORD bytes, err, flags;
+    PyObject *object, *address;
+    MyOVERLAPPED *ov;
+    WSABUF wbuf;
+    struct sockaddr *addr;
+    if(!PyArg_ParseTuple(args, "lit#OO|ll", &handle, &family, &buf, &buflen, &object, &address, &len, &flags)) {
+        return NULL;
+    }
+    if(len == -1) {
+        len = buflen;
+    }
+    if(len <= 0 || len > buflen) {
+        PyErr_SetString(PyExc_ValueError, "Invalid length specified");
+        return NULL;
+    }
+    if(!makesockaddr(family, address, &addr, &addrlen)) {
+        return NULL;
+    }
+    if(!PyCallable_Check(object)) {
+        PyErr_SetString(PyExc_TypeError, "Callback must be callable");
+        return NULL;
+    }
+    ov = PyMem_Malloc(sizeof(MyOVERLAPPED));
+    if(!ov) {
+        PyErr_NoMemory();
+        return NULL;
+    }
+    memset(ov, 0, sizeof(MyOVERLAPPED));
+    Py_INCREF(object);
+    ov->callback = object;
+    wbuf.len = len;
+    wbuf.buf = buf;
+    CreateIoCompletionPort((HANDLE)handle, self->iocp, 0, 1);
+    Py_BEGIN_ALLOW_THREADS;
+    res = WSASendTo(handle, &wbuf, 1, &bytes, flags, addr, addrlen, (OVERLAPPED *)ov, NULL);
+    Py_END_ALLOW_THREADS;
+    err = GetLastError();
+    if(res == SOCKET_ERROR && err != ERROR_IO_PENDING) {
+        return PyErr_SetFromWindowsErr(err);
+    }
+    return Py_BuildValue("ll", err, bytes);
+}
+
+static PyObject *iocpcore_getsockinfo(iocpcore* self, PyObject *args) {
+    SOCKET handle;
+    WSAPROTOCOL_INFO pinfo;
+    int size = sizeof(pinfo), res;
+    if(!PyArg_ParseTuple(args, "l", &handle)) {
+        return NULL;
+    }
+    res = getsockopt(handle, SOL_SOCKET, SO_PROTOCOL_INFO, (char *)&pinfo, &size);
+    if(res == SOCKET_ERROR) {
+        return PyErr_SetFromWindowsErr(0);
+    }
+    return Py_BuildValue("iiii", pinfo.iMaxSockAddr, pinfo.iAddressFamily, pinfo.iSocketType, pinfo.iProtocol);
+}
+
+static PyObject *iocpcore_AcceptEx(iocpcore* self, PyObject *args) {
+    SOCKET handle, acc_sock;
+    char *buf;
+    int buflen, res;
+    DWORD bytes, err;
+    PyObject *object;
+    MyOVERLAPPED *ov;
+    if(!PyArg_ParseTuple(args, "llOw#", &handle, &acc_sock, &object, &buf, &buflen)) {
+        return NULL;
+    }
+    if(!PyCallable_Check(object)) {
+        PyErr_SetString(PyExc_TypeError, "Callback must be callable");
+        return NULL;
+    }
+    ov = PyMem_Malloc(sizeof(MyOVERLAPPED));
+    if(!ov) {
+        PyErr_NoMemory();
+        return NULL;
+    }
+    memset(ov, 0, sizeof(MyOVERLAPPED));
+    Py_INCREF(object);
+    ov->callback = object;
+    CreateIoCompletionPort((HANDLE)handle, self->iocp, 0, 1);
+#ifdef SPEW
+    printf("calling AcceptEx(%d, %d, 0x%p, %d, %d, %d, 0x%p, 0x%p)\n", handle, acc_sock, buf, 0, buflen/2, buflen/2, &bytes, ov);
+#endif
+    Py_BEGIN_ALLOW_THREADS;
+    res = gAcceptEx(handle, acc_sock, buf, 0, buflen/2, buflen/2, &bytes, (OVERLAPPED *)ov);
+    Py_END_ALLOW_THREADS;
+    err = WSAGetLastError();
+#ifdef SPEW
+    printf("    ae returned %d, err %d\n", res, err);
+#endif
+    if(!res && err != ERROR_IO_PENDING) {
+        return PyErr_SetFromWindowsErr(err);
+    }
+    if(res) {
+        err = 0;
+    }
+    return Py_BuildValue("ll", err, 0);
+}
+
 static PyObject *iocpcore_ConnectEx(iocpcore* self, PyObject *args) {
     SOCKET handle;
     int res, addrlen, family;
@@ -436,6 +505,7 @@ static PyObject *iocpcore_ConnectEx(iocpcore* self, PyObject *args) {
     }
     if(!PyCallable_Check(object)) {
         PyErr_SetString(PyExc_TypeError, "Callback must be callable");
+        return NULL;
     }
     ov = PyMem_Malloc(sizeof(MyOVERLAPPED));
     if(!ov) {
@@ -476,6 +546,7 @@ static PyObject *iocpcore_PostQueuedCompletionStatus(iocpcore* self, PyObject *a
     }
     if(!PyCallable_Check(object)) {
         PyErr_SetString(PyExc_TypeError, "Callback must be callable");
+        return NULL;
     }
     ov = PyMem_Malloc(sizeof(MyOVERLAPPED));
     if(!ov) {
@@ -520,16 +591,18 @@ static PyMethodDef iocpcore_methods[] = {
      "Issue an overlapped WriteFile operation"},
     {"issueReadFile", (PyCFunction)iocpcore_ReadFile, METH_VARARGS,
      "Issue an overlapped ReadFile operation"},
-//    {"issueWSARecv", (PyCFunction)iocpcore_WSARecv, METH_VARARGS,
-//     "Issue an overlapped WSARecv operation"},
-//    {"issueWSASend", (PyCFunction)iocpcore_WSASend, METH_VARARGS,
-//     "Issue an overlapped WSASend operation"},
+    {"interpretAB", (PyCFunction)iocpcore_interpretAB, METH_VARARGS,
+     "Interpret address buffer as returned by WSARecvFrom"},
+    {"issueWSARecvFrom", (PyCFunction)iocpcore_WSARecvFrom, METH_VARARGS,
+     "Issue an overlapped WSARecvFrom operation"},
+    {"issueWSASendTo", (PyCFunction)iocpcore_WSASendTo, METH_VARARGS,
+     "Issue an overlapped WSASendTo operation"},
     {"issueAcceptEx", (PyCFunction)iocpcore_AcceptEx, METH_VARARGS,
      "Issue an overlapped AcceptEx operation"},
     {"issueConnectEx", (PyCFunction)iocpcore_ConnectEx, METH_VARARGS,
      "Issue an overlapped ConnectEx operation"},
     {"issuePostQueuedCompletionStatus", (PyCFunction)iocpcore_PostQueuedCompletionStatus, METH_VARARGS,
-     "Issue an overlapped ConnectEx operation"},
+     "Issue an overlapped PQCS operation"},
     {"getsockinfo", (PyCFunction)iocpcore_getsockinfo, METH_VARARGS,
      "Given a socket handle, retrieve its protocol info"},
     {"AllocateReadBuffer", (PyCFunction)iocpcore_AllocateReadBuffer, METH_VARARGS,

@@ -108,24 +108,50 @@ class WriteFileOp(OverlappedOp):
             self.cleanUp()
             raise
 
-# BROKEN STUFF
-"""
-class WSARecvOp(OverlappedOp):
-    def initiateOp(self, handle, buffer):
-        self.buffer = buffer # save a reference so that things don't blow up
-        self.handle = handle
-        (ret, bytes) = self.reactor.issueWSARecv(handle, buffer, self.ovDone)
-        # TODO: need try-except block to at least cleanup self.handle/self.buffer and unregisterFile
-        # also, errback if this ReadFile call throws up (perhaps call ovDone ourselves to automate cleanup?)
+class WSARecvFromOp(OverlappedOp):
+    def ovDone(self, ret, bytes):
+        if iocpdebug.debug:
+            print "WSARecvFromOp.ovDone(%(ret)s, %(bytes)s)" % locals()
+        if not self.handleError(ret, bytes):
+            a = self.reactor.interpretAB(self.ab)
+            self.callback((bytes, {"addr": a}))
+        self.cleanUp()
 
-class WSASendOp(OverlappedOp):
+    def cleanUp(self):
+        OverlappedOp.cleanUp(self)
+        del self.ab
+
     def initiateOp(self, handle, buffer):
         self.buffer = buffer # save a reference so that things don't blow up
+        self.ab = self.reactor.AllocateReadBuffer(32)
         self.handle = handle
-        (ret, bytes) = self.reactor.WSASend(handle, buffer, self.ovDone)
-        # TODO: need try-except block to at least cleanup self.handle/self.buffer and unregisterFile
-        # also, errback if this ReadFile call throws up (perhaps call ovDone ourselves to automate cleanup?)
-"""
+        try:
+#            print "in WSARecvFromOp.initiateOp, calling issueWSARecvFromOp with (%(handle)r)" % locals()
+            (ret, bytes) = self.reactor.issueWSARecvFrom(handle, buffer, self.ovDone, self.ab)
+#            print "in WSARecvFromOp.initiateOp, issueWSARecvFromOp returned (%(ret)s, %(bytes)s), handle %(handle)s" % locals()
+        except Exception:
+            self.cleanUp()
+            raise
+
+class WSASendToOp(OverlappedOp):
+    def ovDone(self, ret, bytes):
+        if iocpdebug.debug:
+            print "WSASendToOp.ovDone(%(ret)s, %(bytes)s)" % locals()
+        if not self.handleError(ret, bytes):
+            self.callback(bytes)
+        self.cleanUp()
+
+    def initiateOp(self, handle, buffer, addr):
+        self.buffer = buffer # save a reference so that things don't blow up
+        self.handle = handle
+        try:
+            max_addr, family, type, protocol = self.reactor.getsockinfo(self.handle)
+#            print "in WSASendToOp.initiateOp, calling issueWSASendToOp with (%(handle)r)" % locals()
+            (ret, bytes) = self.reactor.issueWSASendTo(handle, family, buffer, self.ovDone, addr)
+#            print "in WSASendToOp.initiateOp, issueWSASendToOp returned (%(ret)s, %(bytes)s), handle %(handle)s" % locals()
+        except Exception:
+            self.cleanUp()
+            raise
 
 class AcceptExOp(OverlappedOp):
     acc_sock = None

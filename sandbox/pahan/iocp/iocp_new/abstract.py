@@ -30,8 +30,6 @@ class RWHandle(log.Logger, styles.Ephemeral):
     # XXX: specify read_op/write_op kwargs in a class attribute?
     read_op = ReadFileOp
     write_op = WriteFileOp
-    # XXX: we don't care about emulating existing producer/consumer crap,
-    # let itamar and other smarties fix the stuff first
     def __init__(self):
         from twisted.internet import reactor
         self.reactor = reactor
@@ -53,13 +51,13 @@ class RWHandle(log.Logger, styles.Ephemeral):
         for i in self.bufferEvents[event].copy():
             i(*a, **kw)
 
-    def write(self, buffer, **kw):
+    def write(self, buffer, *args, **kw):
         if iocpdebug.debug:
             print "RWHandle.write(buffer of len %s, %s" % (len(buffer), kw)
             print "    len(self.writebuf) %s, self.offset %s, self.writing %s" % \
             (len(self.writebuf), self.offset, self.writing)
         if not self.dead:
-            self.writebuf.append((buffer, kw))
+            self.writebuf.append((buffer, args, kw))
             self.writeBufferedSize += len(buffer)
             if self.writeBufferedSize >= self.bufferSize: # what's the proper semantics for this?
                 self.callBufferHandlers(event = "buffer full")
@@ -67,13 +65,15 @@ class RWHandle(log.Logger, styles.Ephemeral):
                 self.writing = 1
                 self.startWriting()
 
-    def writeSequence(self, iovec, **kw):
-        self.write("".join(iovec), **kw)
+    # XXX: this is actually broken -- UDP has to provide its own writeSequence
+    def writeSequence(self, iovec, *args, **kw):
+        for i in iovec:
+            self.write(i, *args, **kw)
 
     def startWriting(self):
         b = buffer(self.writebuf[0][0], self.offset)
         op = self.write_op()
-        op.initiateOp(self.handle, b, **self.writebuf[0][1])
+        op.initiateOp(self.handle, b, *self.writebuf[0][1], **self.writebuf[0][2])
         op.addCallback(self.writeDone)
         op.addErrback(self.writeErr)
 

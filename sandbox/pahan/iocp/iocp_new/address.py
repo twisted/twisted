@@ -14,3 +14,8 @@ def getHost(addr, family, type, protocol = 0):
     """return something to pose as hostname"""
     if family == AF_INET:
         return addr[0]
+
+def getShortProtoName(family, type, protocol = 0):
+    if (family, type) == (AF_INET, SOCK_DGRAM):
+        return "UDP"
+
