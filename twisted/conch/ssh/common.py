@@ -79,16 +79,16 @@ getMP_py = getMP
 MP_py = MP
 _MPpow_py = _MPpow
 
-try:
-    import tgmp
-    getMP = tgmp.getMP
-    MP = tgmp.MP
-    _MPpow = tgmp._MPpow
-    pyPow = pow
-    def tgmpPow(x, y, z = None):
-        if not z:
-            return pyPow(x, y) # tgmp.pow only does 3 args
-        return apply(tgmp.pow, map(long, (x,y,z)))
-    __builtins__['pow'] = tgmpPow # this is probably evil
-except ImportError:
-    pass
+#try:
+#    import tgmp
+#    getMP = tgmp.getMP
+#    MP = tgmp.MP
+#    _MPpow = tgmp._MPpow
+#    pyPow = pow
+#    def tgmpPow(x, y, z = None):
+#        if not z:
+#            return pyPow(x, y) # tgmp.pow only does 3 args
+#        return apply(tgmp.pow, map(long, (x,y,z)))
+#    __builtins__['pow'] = tgmpPow # this is probably evil
+#except ImportError:
+#    pass
