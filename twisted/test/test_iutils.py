@@ -19,7 +19,7 @@
 Test running processes.
 """
 
-from twisted.trial import unittest
+from twisted.trial import unittest, util
 
 import gzip, os, popen2, time, sys
 
@@ -41,6 +41,26 @@ class UtilsTestCase(unittest.TestCase):
         while self.output is None:
             reactor.iterate()
         self.assertEquals(self.output, "hello world\n")
+
+    def testOutputWithError(self):
+        exe = sys.executable
+        sx = r'import sys; sys.stderr.write("hello world\n")'
+        res1 = []
+        # make sure stderr raises an error normally
+        d = utils.getProcessOutput(exe, ['-c', sx], errortoo=0)
+        d.addBoth(res1.append)
+        while len(res1) == 0:
+            reactor.iterate()
+        self.failUnless(isinstance(res1.pop().value, IOError))
+        # make sure the error can be turned off
+        res2 = []
+        d = utils.getProcessOutput(exe, ['-c', sx], errortoo=1)
+        d.addBoth(res2.append)
+        while len(res2) == 0:
+            reactor.iterate()
+        actual = res2[0]
+        expected = 'hello world\n'
+        self.assertEquals(actual, expected)
 
     def testValue(self):
         exe = sys.executable

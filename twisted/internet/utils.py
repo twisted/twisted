@@ -36,14 +36,21 @@ def _callProtocolWithDeferred(protocol, executable, args, env, path, reactor):
 
 class _BackRelay(protocol.ProcessProtocol):
 
-    def __init__(self, deferred):
+    def __init__(self, deferred, errortoo=0):
         self.deferred = deferred
         self.s = StringIO.StringIO()
+        if errortoo:
+            self.errReceived = self.errReceivedIsGood
+        else:
+            self.errReceived = self.errReceivedIsBad
 
-    def errReceived(self, text):
+    def errReceivedIsBad(self, text):
         self.deferred.errback(failure.Failure(IOError("got stderr")))
         self.deferred = None
         self.transport.loseConnection()
+
+    def errReceivedIsGood(self, text):
+        self.s.write(text)
 
     def outReceived(self, text):
         self.s.write(text)
@@ -53,7 +60,8 @@ class _BackRelay(protocol.ProcessProtocol):
             self.deferred.callback(self.s.getvalue())
 
 
-def getProcessOutput(executable, args=(), env={}, path='.', reactor=reactor):
+def getProcessOutput(executable, args=(), env={}, path='.', reactor=reactor,
+                     errortoo=0):
     """Spawn a process and return its output as a deferred returning a string.
 
     @param executable: The file name to run and get the output of - the
@@ -70,9 +78,12 @@ def getProcessOutput(executable, args=(), env={}, path='.', reactor=reactor):
                  current directory.
 
     @param reactor: the reactor to use - defaults to the default reactor
+    @param errortoo: if 1, capture stderr too
     """
-    return _callProtocolWithDeferred(_BackRelay, executable, args, env, path,
-                                    reactor)
+    return _callProtocolWithDeferred(lambda d: 
+                                        _BackRelay(d, errortoo=errortoo),
+                                     executable, args, env, path,
+                                     reactor)
 
 
 class _ValueGetter(protocol.ProcessProtocol):
@@ -249,3 +260,4 @@ class SRVConnector:
     def connectionLost(self, reason):
         self.factory.clientConnectionLost(self, reason)
         self.factory.doStop()
+
