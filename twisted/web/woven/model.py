@@ -15,7 +15,7 @@
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
-__version__ = "$Revision: 1.51 $"[11:-2]
+__version__ = "$Revision: 1.52 $"[11:-2]
 
 import types
 import weakref
@@ -82,7 +82,7 @@ class Model:
         """
         Add a view for the model to keep track of.
         """
-        if view not in self.views:
+        if view not in [ref() for ref in self.views]:
             self.views.append(weakref.ref(view))
 
     def addSubview(self, name, subview):
