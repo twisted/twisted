@@ -319,8 +319,7 @@ class TestInternet(unittest.TestCase):
         c.connectUNIX('./hello.skt', factory)
         s.privilegedStartService()
         s.startService()
-        while factory.line is None:
-            reactor.iterate(0.1)
+        util.spinWhile(lambda :factory.line is None)
         s.stopService()
         self.assertEqual(factory.line, 'lalala')
     testUNIX = suppressOldApp(testUNIX)
@@ -343,8 +342,7 @@ class TestInternet(unittest.TestCase):
         factory.protocol = Foo
         factory.line = None
         c.connectTCP('localhost', num, factory)
-        while factory.line is None:
-            reactor.iterate(0.1)
+        util.spinWhile(lambda :factory.line is None)
         s.stopService()
         self.assertEqual(factory.line, 'lalala')
     testTCP = suppressOldApp(testTCP)
@@ -500,8 +498,7 @@ class TestInternet2(unittest.TestCase):
         factory.protocol = Foo
         factory.line = None
         internet.TCPClient('localhost', num, factory).setServiceParent(s)
-        while factory.line is None:
-            reactor.iterate(0.1)
+        util.spinWhile(lambda :factory.line is None)
         self.assertEqual(factory.line, 'lalala')
 
     def testUDP(self):
@@ -513,14 +510,12 @@ class TestInternet2(unittest.TestCase):
         num = t._port.getHost().port
         l = []
         defer.maybeDeferred(t.stopService).addCallback(l.append)
-        while not l:
-            reactor.iterate(0.1)
+        util.spinWhile(lambda :not l)
         t = internet.TCPServer(num, p)
         t.startService()
         l = []
         defer.maybeDeferred(t.stopService).addCallback(l.append)
-        while not l:
-            reactor.iterate(0.1)
+        util.spinWhile(lambda :not l)
 
     def testPrivileged(self):
         factory = protocol.ServerFactory()
@@ -538,8 +533,7 @@ class TestInternet2(unittest.TestCase):
         factory.protocol = Foo
         factory.line = None
         internet.TCPClient('localhost', num, factory).startService()
-        while factory.line is None:
-            reactor.iterate(0.1)
+        util.spinWhile(lambda :factory.line is None)
         self.assertEqual(factory.line, 'lalala')
 
     def testConnectionGettingRefused(self):
@@ -554,8 +548,7 @@ class TestInternet2(unittest.TestCase):
         factory.clientConnectionFailed = lambda *args: l.append(None)
         c = internet.TCPClient('localhost', num, factory)
         c.startService()
-        while not l:
-            reactor.iterate(0.1)
+        util.spinWhile(lambda :not l)
         self.assertEqual(l, [None])
 
     def testUNIX(self):
@@ -576,24 +569,20 @@ class TestInternet2(unittest.TestCase):
         factory.protocol = Foo
         factory.line = None
         internet.UNIXClient('echo.skt', factory).setServiceParent(s)
-        while factory.line is None:
-            reactor.iterate(0.1)
+        util.spinWhile(lambda :factory.line is None)
         self.assertEqual(factory.line, 'lalala')
         d = s.stopService()
         l = []
         d.addCallback(l.append)
-        while not l:
-            reactor.iterate(0.1)
+        util.spinWhile(lambda :not l)
         factory.line = None
         s.startService()
-        while factory.line is None:
-            reactor.iterate(0.1)
+        util.spinWhile(lambda :factory.line is None)
         self.assertEqual(factory.line, 'lalala')
         d = s.stopService()
         l = []
         d.addCallback(l.append)
-        while not l:
-            reactor.iterate(0.1)
+        util.spinWhile(lambda :not l)
 
     def testVolatile(self):
         if not interfaces.IReactorUNIX(reactor, None):
@@ -630,43 +619,30 @@ class TestInternet2(unittest.TestCase):
         l = []
         factory.clientConnectionFailed = lambda *args: l.append(None)
         reactor.connectUNIX('echo.skt', factory)
-        while not l:
-            reactor.iterate(0.1)
+        util.spinWhile(lambda :not l)
         self.assertEqual(l, [None])
 
     def testTimer(self):
-        timeout = 30
         l = []
         t = internet.TimerService(1, l.append, "hello")
         t.startService()
-        while not l:
-            reactor.iterate(0.1)
-            timeout -= 1
-            self.failIf(timeout == 0)
+        util.spinWhile(lambda :not l, timeout=30)
         t.stopService()
         self.failIf(t.running)
         self.assertEqual(l, ["hello"])
         l.pop()
 
         # restart the same TimerService
-        timeout = 30
         t.startService()
-        while not l:
-            reactor.iterate(0.1)
-            timeout -= 1
-            self.failIf(timeout == 0)
+        util.spinWhile(lambda :not l, timeout=30)
+
         t.stopService()
         self.failIf(t.running)
         self.assertEqual(l, ["hello"])
         l.pop()
-
-        timeout = 30
         t = internet.TimerService(0.01, l.append, "hello")
         t.startService()
-        while len(l)<10:
-            reactor.iterate(0.1)
-            timeout -= 1
-            self.failIf(timeout == 0)
+        util.spinWhile(lambda :len(l) < 10, timeout=30)
         t.stopService()
         self.assertEqual(l, ["hello"]*10)
 
@@ -682,12 +658,8 @@ class TestInternet2(unittest.TestCase):
 
     def testBrokenTimer(self):
         t = internet.TimerService(1, lambda: 1 / 0)
-        timeout = 30
         t.startService()
-        while t._loop.running:
-            reactor.iterate(0.1)
-            timeout -= 1
-            self.failIf(timeout == 0)
+        util.spinWhile(lambda :t._loop.running, timeout=30)
         t.stopService()
         self.assertEquals([ZeroDivisionError],
                           [o.value.__class__ for o in log.flushErrors(ZeroDivisionError)])
