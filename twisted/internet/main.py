@@ -56,16 +56,16 @@ class DummyResolver:
     An implementation of a synchronous resolver, from Python's socket stuff.
     This may be ill-placed.
     """
-    def resolve(self, name, callback, errback=None, type=1, timeout=10):
+    def resolve(self, deferred, name, type=1, timeout=10):
         if type != 1:
-            errback()
+            deferred.errback("type not supportded")
             return
         try:
             address = socket.gethostbyname(name)
         except socket.error:
-            errback()
+            deferred.errback("address not found")
         else:
-            callback(address)
+            deferred.callback(address)
 
 reads = {}
 writes = {}

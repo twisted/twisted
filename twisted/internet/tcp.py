@@ -49,7 +49,7 @@ elif os.name != 'java':
 # Twisted Imports
 from twisted.protocols import protocol
 from twisted.persisted import styles
-from twisted.python import log
+from twisted.python import log, defer
 
 # Sibling Imports
 import abstract
@@ -184,9 +184,11 @@ class Client(Connection):
         if abstract.isIPAddress(self.addr[0]):
             self._setRealAddress(self.addr[0])
         else:
-            main.resolver.resolve(self.addr[0],
-                                  self._setRealAddress,
-                                  self.failIfNotConnected)
+            deferred = defer.Deferred()
+            main.resolver.resolve(deferred, self.addr[0])
+            deferred.addCallback(self._setRealAddress)
+            deferred.addErrback(self.failIfNotConnected)
+            deferred.arm()
 
     def _setRealAddress(self, address):
         # print 'real address:',repr(address),repr(self.addr)

@@ -176,9 +176,9 @@ class Resolver:
         self.boss = boss or DNSBoss()
         self.next = 0
 
-    def resolve(self, name, callback, errback=None, type=1, timeout=10):
-        query = SentQuery(name, type, callback, errback, self.boss, 
-                          self.nameservers)
+    def resolve(self, deferred, name, type=1, timeout=10):
+        query = SentQuery(name, type, deferred.callback, deferred.errback, 
+                          self.boss, self.nameservers)
         main.addTimeout(query.timeOut, timeout)
 
 

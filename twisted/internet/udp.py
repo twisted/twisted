@@ -31,7 +31,7 @@ else:
 # Twisted Imports
 from twisted.protocols import protocol
 from twisted.persisted import styles
-from twisted.python import log
+from twisted.python import log, defer
 
 # Sibling Imports
 import abstract, main
@@ -65,8 +65,11 @@ class Connection(abstract.FileDescriptor,
             self.realAddress = self.remote[0]
         else:
             self.realAddress = None
-            main.resolver.resolve(self.remote[0], self.setRealAddress,
-                                                  self.connectionLost)
+            deferred = defer.Deferred()
+            main.resolver.resolve(deferred, self.remote[0])
+            deferred.addCallback(self.setRealAddress)
+            deferred.addErrback(self.connectionLost)
+            deferred.arm()
 
             
     def setRealAddress(self, address):

@@ -37,11 +37,11 @@ class Resolver:
     def __init__(self, file='/etc/hosts'):
         self.file = file
 
-    def resolve(self, name, callback, errback=None, type=1, timeout=10):
+    def resolve(self, deferred, name, type=1, timeout=10):
         if type != 1:
-            errback()
+            errback("type not supported")
         res = searchFileFor(self.file, name)
         if res is not None:
-            callback(res)
+            deferred.callback(res)
         else:
-            errback()
+            deferred.errback("address not found")
