@@ -70,6 +70,24 @@ class PostfixTCPMapServerTestCase:
 
         for input, expected_output in self.chat:
             protocol.lineReceived(input)
+            self.runReactor(1)
+            self.assertEquals(output.getvalue(), expected_output)
+            output.truncate(0)
+        protocol.setTimeout(None)
+
+    def testDeferredChat(self):
+        factory = postfix.PostfixTCPMapDeferringDictServerFactory(self.data)
+        output = StringIOWithoutClosing()
+        transport = internet.protocol.FileWrapper(output)
+
+        protocol = postfix.PostfixTCPMapServer()
+        protocol.service = factory
+        protocol.factory = factory
+        protocol.makeConnection(transport)
+
+        for input, expected_output in self.chat:
+            protocol.lineReceived(input)
+            self.runReactor(1)
             self.assertEquals(output.getvalue(), expected_output)
             output.truncate(0)
         protocol.setTimeout(None)

@@ -22,7 +22,8 @@
 # Twisted imports
 from twisted.protocols import basic
 from twisted.protocols import policies
-from twisted.internet import protocol
+from twisted.internet import protocol, defer, reactor
+from twisted.python import log
 import UserDict
 import urllib
 
@@ -39,8 +40,8 @@ class PostfixTCPMapServer(basic.LineReceiver, policies.TimeoutMixin):
     """Postfix mail transport agent TCP map protocol implementation.
 
     Receive requests for data matching given key via lineReceived,
-    asks it's factory for the data with dictionary-style access, and
-    returns the data to the requester.
+    asks it's factory for the data with self.factory.get(key), and
+    returns the data to the requester. None means no entry found.
 
     You can use postfix's postmap to test the map service::
 
@@ -75,9 +76,15 @@ class PostfixTCPMapServer(basic.LineReceiver, policies.TimeoutMixin):
                 f(*params)
 
     def do_get(self, key):
-        try:
-            value = self.factory[key]
-        except KeyError, e:
+        d = defer.maybeDeferred(self.factory.get, key)
+        d.addCallbacks(self._cbGot, self._cbNot)
+        d.addErrback(log.err)
+
+    def _cbNot(self, fail):
+        self.sendCode(400, fail.getErrorMessage())
+
+    def _cbGot(self, value):
+        if value is None:
             self.sendCode(500)
         else:
             self.sendCode(200, quote(value))
@@ -91,6 +98,21 @@ class PostfixTCPMapDictServerFactory(protocol.ServerFactory,
     """An in-memory dictionary factory for PostfixTCPMapServer."""
 
     protocol = PostfixTCPMapServer
+
+class PostfixTCPMapDeferringDictServerFactory(protocol.ServerFactory):
+    """An in-memory dictionary factory for PostfixTCPMapServer."""
+
+    protocol = PostfixTCPMapServer
+
+    def __init__(self, data=None):
+        self.data = {}
+        if data is not None:
+            self.data.update(data)
+
+    def get(self, key):
+        d = defer.Deferred()
+        reactor.callLater(0, d.callback, self.data.get(key))
+        return d
 
 if __name__ == '__main__':
     """Test app for PostfixTCPMapServer. Call with parameters
