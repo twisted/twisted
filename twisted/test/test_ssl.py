@@ -4,12 +4,12 @@
 
 from __future__ import nested_scopes
 from twisted.trial import unittest
-from twisted.internet import protocol, reactor, interfaces
+from twisted.internet import protocol, reactor, interfaces, defer
 from twisted.protocols import basic
 from twisted.python import util, components
 
 try:
-    from OpenSSL import SSL
+    from OpenSSL import SSL, crypto
     from twisted.internet import ssl
     from ssl_helpers import ClientTLSContext
 except ImportError:
@@ -241,6 +241,105 @@ class BufferingTestCase(unittest.TestCase):
             reactor.iterate()
         
         self.assertEquals(client.buffer, ["+OK <some crap>\r\n"])
+
+def generateCertificateObjects(organization, organizationalUnit):
+    pkey = crypto.PKey()
+    pkey.generate_key(crypto.TYPE_RSA, 512)
+    req = crypto.X509Req()
+    subject = req.get_subject()
+    subject.O = organization
+    subject.OU = organizationalUnit
+    req.set_pubkey(pkey)
+    req.sign(pkey, "md5")
+
+    # Here comes the actual certificate
+    cert = crypto.X509()
+    cert.set_serial_number(1)
+    cert.gmtime_adj_notBefore(0)
+    cert.gmtime_adj_notAfter(365 * 5 * 86400) # expires after 5 years
+    cert.set_issuer(req.get_subject())
+    cert.set_subject(req.get_subject())
+    cert.set_pubkey(req.get_pubkey())
+    cert.sign(pkey, "md5")
+
+    return pkey, req, cert
+
+def generateCertificateFiles(basename, organization, organizationalUnit):
+    pkey, req, cert = generateCertificateObjects(organization, organizationalUnit)
+
+    for ext, obj, dumpFunc in [
+        ('key', pkey, crypto.dump_privatekey),
+        ('req', req, crypto.dump_certificate_request),
+        ('cert', cert, crypto.dump_certificate)]:
+        fName = os.extsep.join((basename, ext))
+        fObj = file(fName, 'w')
+        fObj.write(dumpFunc(crypto.FILETYPE_PEM, obj))
+        fObj.close()
+
+class ImmediatelyDisconnectingProtocol(protocol.Protocol):
+    def connectionMade(self):
+        # Twisted's SSL support is terribly broken.
+        reactor.callLater(0.1, self.transport.loseConnection)
+
+    def connectionLost(self, reason):
+        self.factory.connectionDisconnected.callback(None)
+
+class CertificateVerificationCallback(unittest.TestCase):
+    def testVerificationCallback(self):
+        from twisted.internet.ssl import DefaultOpenSSLContextFactory
+        from twisted.internet.ssl import ClientContextFactory
+
+        self.calls = {}
+        def serverCallback(*args):
+            self.calls['server'] = args
+            return True
+
+        def clientCallback(*args):
+            self.calls['client'] = args
+            return True
+
+        # Make a fake certificate for the server
+        self.serverBase = self.mktemp()
+        generateCertificateFiles(self.serverBase, "twisted.test.test_ssl", "testVerificationCallback, server")
+        serverCtxFactory = DefaultOpenSSLContextFactory(
+            os.extsep.join((self.serverBase, 'key')),
+            os.extsep.join((self.serverBase, 'cert')),
+            verifyCallback=serverCallback)
+
+        # Now do the same thing for the client
+        self.clientBase = self.mktemp()
+        generateCertificateFiles(self.clientBase, "twisted.test.test_ssl", "testVerificationCallback, client")
+        clientCtxFactory = DefaultOpenSSLContextFactory(
+            os.extsep.join((self.clientBase, 'key')),
+            os.extsep.join((self.clientBase, 'cert')),
+            verifyCallback=clientCallback)
+
+        # Set up a server, connect to it with a client, which should work since our verifiers
+        # allow anything, then disconnect.
+        serverProtocolFactory = protocol.ServerFactory()
+        serverProtocolFactory.protocol = protocol.Protocol
+        self.serverPort = serverPort = reactor.listenSSL(0, serverProtocolFactory, serverCtxFactory)
+
+        clientProtocolFactory = protocol.ClientFactory()
+        clientProtocolFactory.protocol = ImmediatelyDisconnectingProtocol
+        clientProtocolFactory.connectionDisconnected = defer.Deferred()
+        clientConnector = reactor.connectSSL('127.0.0.1', serverPort.getHost().port, clientProtocolFactory, clientCtxFactory)
+
+        # Go go go go
+        return clientProtocolFactory.connectionDisconnected.addCallback(
+            self._cbVerificationCallback)
+
+    def _cbVerificationCallback(self, ignoredResult):
+        self.assertEquals(len(self.calls), 2)
+        self.assertEquals(
+            crypto.dump_certificate(crypto.FILETYPE_PEM, self.calls['client'][1]),
+            file(os.extsep.join((self.serverBase, 'cert'))).read())
+        self.assertEquals(
+            crypto.dump_certificate(crypto.FILETYPE_PEM, self.calls['server'][1]),
+            file(os.extsep.join((self.clientBase, 'cert'))).read())
+
+
+        return self.serverPort.stopListening()
 
 if SSL is None:
     for case in (BufferingTestCase, TLSTestCase, SpammyTLSTestCase, StolenTCPTestCase):
