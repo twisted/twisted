@@ -26,6 +26,7 @@ class Widget(View):
     """
     tagName = None
     def __init__(self, model, submodel = None):
+        self.errorFactory = Error
         self.attributes = {}
         View.__init__(self, model)
         self.become = None
@@ -127,7 +128,7 @@ class Widget(View):
         return self.attributes[item]
 
     def setError(self, message):
-        self.become = Error(self.model, message)
+        self.become = self.errorFactory(self.model, message)
 
     def initialize(self):
         pass
@@ -164,15 +165,11 @@ class Image(Text):
 
 
 class Error(Widget):
-    tagName = 'div'
+    tagName = 'span'
     def __init__(self, model, message=""):
         Widget.__init__(self, model)
         self['style'] = 'color: red'
         self.add(Text(message))
-    
-    def add(self, item):
-        item.error = None
-        self.children.append(item)
 
 
 class Div(Widget):
