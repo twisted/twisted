@@ -24,7 +24,7 @@ Maintainer: U{Itamar Shtull-Trauring<mailto:twisted@itamarst.org>}
 
 import socket # needed only for sync-dns
 
-import warnings
+import warnings, sys
 from time import time
 from bisect import insort
 try:
@@ -362,7 +362,7 @@ class ReactorBase:
         """See twisted.internet.interfaces.IReactorTime.callLater.
         """
         assert callable(f), "%s is not callable" % f
-        assert seconds >= 0, "%s is not greater than or equal to 0 seconds" % (seconds,)
+        assert sys.maxint >= seconds >= 0, "%s is not greater than or equal to 0 seconds" % (seconds,)
         tple = DelayedCall(time() + seconds, f, args, kw, self._pendingTimedCalls.remove, self._resetCallLater)
         insort(self._pendingTimedCalls, tple)
         return tple
