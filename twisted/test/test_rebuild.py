@@ -103,6 +103,8 @@ class RebuildTestCase(unittest.TestCase):
         rebuild.rebuild(crash_test_dummy, 0)
         newComponent = x.getComponent(crash_test_dummy.IX)
 
+        newComponent.method()
+
         self.assertEquals(newComponent.__class__, crash_test_dummy.XA)
 
 
