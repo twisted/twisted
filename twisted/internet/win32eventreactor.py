@@ -362,7 +362,11 @@ class Process(abstract.FileDescriptor):
         exitCode = win32process.GetExitCodeProcess(self.hProcess)
         self.reactor.removeEvent(self.hProcess)
         abstract.FileDescriptor.connectionLost(self, reason)
-        self.protocol.processEnded(failure.Failure(error.ProcessEnded(exitCode)))
+        if exitCode == 0:
+            err = error.ProcessDone()
+        else:
+            err = error.ProcessTerminated(exitCode)
+        self.protocol.processEnded(failure.Failure(err))
     
     def doWrite(self):
         """Runs in thread."""
