@@ -1,7 +1,7 @@
 # DOMWidgets
 
 import urllib
-from xml.dom.minidom import parseString
+from twisted.web.microdom import parseString
 
 from twisted.python.mvc import View, Model
 from twisted.python import domhelpers, log
@@ -105,7 +105,7 @@ class Widget(View):
         if self.tagName and str(node.tagName) != self.tagName:
             node = document.createElement(self.tagName)
         else:
-            node = self.cleanNode(node)
+            node = self.cleanNode(node).cloneNode()
         for key, value in self.attributes.items():
             node.setAttribute(key, value)
         for item in self.children:
@@ -127,8 +127,13 @@ class Widget(View):
     def __getitem__(self, item):
         return self.attributes[item]
 
-    def setError(self, message):
-        self.become = self.errorFactory(self.model, message)
+    def setError(self, request, message):
+        become = self.errorFactory(self.model, message)
+        become.add(self)
+        oldNode = self.node
+        newNode = become.generateDOM(request, self.node)
+        oldNode.parentNode.replaceChild(newNode, oldNode)
+        return newNode
 
     def initialize(self):
         pass
@@ -168,8 +173,12 @@ class Error(Widget):
     tagName = 'span'
     def __init__(self, model, message=""):
         Widget.__init__(self, model)
+        self.message = message
+    
+    def generateDOM(self, request, node):
         self['style'] = 'color: red'
-        self.add(Text(message))
+        self.add(Text(" " + self.message))
+        return Widget.generateDOM(self, request, node)
 
 
 class Div(Widget):

@@ -43,7 +43,7 @@ def clearNode(node):
     """
     if node.hasChildNodes():
         while len(node.childNodes):
-            node.removeChild(node.lastChild)
+            node.removeChild(node.lastChild())
 
 def locateNodes(nodeList, key, value):
     """

@@ -70,7 +70,7 @@ This test node will be replaced
 
 from cStringIO import StringIO
 import string, os, sys, stat, types
-from xml.dom import minidom
+from twisted.web import microdom as minidom
 
 from twisted.python import components
 from twisted.web import resource
@@ -332,7 +332,8 @@ class DOMTemplate(Resource, View):
         if newnode is not oldnode:
             if hasattr(self.d, 'importNode'):
                 newnode = self.d.importNode(newnode, 1)
-            oldnode.parentNode.replaceChild(newnode, oldnode)
+            if oldnode.parentNode:
+                oldnode.parentNode.replaceChild(newnode, oldnode)
         return newnode
     
     def getNodeController(self, request, node):

@@ -51,18 +51,22 @@ class Node:
         return rv
     def toprettyxml(self, indent='\t', newl='\n'):
         return self.toxml(indent, newl)
-    def cloneNode(self, deep):
+    def cloneNode(self, deep=0):
         if deep:
             return copy.deepcopy(self)
         else:
             return copy.copy(self)
 
+    def hasChildNodes(self):
+        return 1
+    
     def appendChild(self, child):
         self.childNodes.append(child)
         child.parentNode = self
     def removeChild(self, child):
-        self.childNodes.remove(child)
-        child.parentNode = None
+        if child in self.childNodes:
+            self.childNodes.remove(child)
+            child.parentNode = None
     def replaceChild(self, newChild, oldChild):
         if newChild.parentNode:
             newChild.parentNode.removeChild(newChild)
@@ -70,6 +74,14 @@ class Node:
         self.childNodes[self.childNodes.index(oldChild)] = newChild
         oldChild.parentNode = None
         newChild.parentNode = self
+
+    def lastChild(self):
+        return self.childNodes[-1]
+    
+    def firstChild(self):
+        if len(self.childNodes):
+            return self.childNodes[0]
+        return None
 
 class _tee:
     def __init__(self, f):
@@ -101,6 +113,9 @@ class Document(Node, Accessor):
     # of dubious utility (?)
     def createElement(self, name):
         return Element(name)
+    
+    def createTextNode(self, text):
+        return Text(text)
 
 class EntityReference(Node):
     def __init__(self, eref, parentNode=None):
@@ -140,10 +155,19 @@ class Element(Node):
                 self.attributes[k] = v.replace('&quot;', '"')
         self.nodeName = self.tagName = tagName
 
+    def hasAttributes(self):
+        return 1
+    
     def getAttribute(self, name):
-        return self.attributes[name]
+        return self.attributes.get(name, None)
+        
     def setAttribute(self, name, attr):
         self.attributes[name] = attr
+
+    def removeAttribute(self, name):
+        if self.attributes.has_key(name):
+            del self.attributes[name]
+
     def hasAttribute(self, name):
         return self.attributes.has_key(name)
 
@@ -226,7 +250,10 @@ class MicroDOMParser(XMLParser):
         if not self.elementstack:
             self.documents.append(el)
 
+
 def parse(readable):
+    if not hasattr(readable, "read"):
+        readable = open(readable)
     mdp = MicroDOMParser()
     mdp.filename = getattr(readable, "name", "<xmlfile />")
     mdp.makeConnection(None)

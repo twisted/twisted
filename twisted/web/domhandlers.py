@@ -80,6 +80,7 @@ class InputHandler(Controller):
         if data != self.view.getData():
             exec "self.model." + self.submodel + " = " + `data`
             self.model.notify({self.submodel: data})
+            self.view.generateDOM(request, node)
 
 class SingleValue(InputHandler):
     def getInput(self, request):
