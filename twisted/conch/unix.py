@@ -1,19 +1,19 @@
 # Twisted, the Framework of Your Internet
-# Copyright (C) 2001-2002 Matthew W. Lefkowitz
-# 
+# Copyright (C) 2001-2004 Matthew W. Lefkowitz
+#
 # This library is free software; you can redistribute it and/or
 # modify it under the terms of version 2.1 of the GNU Lesser General Public
 # License as published by the Free Software Foundation.
-# 
+#
 # This library is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
 # Lesser General Public License for more details.
-# 
+#
 # You should have received a copy of the GNU Lesser General Public
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
-# 
+#
 
 from twisted.cred import portal
 from twisted.python import components, log
@@ -100,8 +100,10 @@ class UnixConchUser(ConchUser):
         os.setegid(gid)
         os.seteuid(uid)
         try:
-            if not hasattr(f,'__iter__'):
-                f = [(f, args, kw)]
+            f = iter(f)
+        except TypeError:
+            f = [(f, args, kw)]
+        try:
             for i in f:
                 func = i[0]
                 args = len(i)>1 and i[1] or ()
@@ -362,8 +364,8 @@ class UnixSFTPFile:
         return self.server.avatar._runAsUser(os.close, self.fd)
 
     def readChunk(self, offset, length):
-        return self.server.avatar._runAsUser([(os.lseek, (self.fd, offset, 0)),
-                                       (os.read, (self.fd, length))])
+        return self.server.avatar._runAsUser([ (os.lseek, (self.fd, offset, 0)),
+                                               (os.read, (self.fd, length)) ])
 
     def writeChunk(self, offset, data):
         return self.server.avatar._runAsUser([(os.lseek, (self.fd, offset, 0)),

@@ -18,14 +18,13 @@
 
 #""" Implementation module for the `conch` command.
 #"""
-
+from twisted.conch.client import connect, default, options
 from twisted.conch.error import ConchError
-from twisted.conch.ssh import transport, userauth, connection, common, keys
+from twisted.conch.ssh import userauth, connection, common
 from twisted.conch.ssh import session, forwarding, channel, agent
 from twisted.internet import reactor, stdio, defer, protocol
 from twisted.internet.error import CannotListenError
-from twisted.python import usage, log, util
-from twisted.spread import banana
+from twisted.python import log, usage
 
 import os, sys, getpass, struct, tty, fcntl, base64, signal, stat, errno
 
@@ -34,41 +33,28 @@ try:
 except ImportError:
     import pickle
 
-class GeneralOptions(usage.Options):
-    synopsis = """Usage:    conch [options] host [command]
- """
+class ClientOptions(options.ConchOptions):
+    
+    synopsis = """Usage:   conch [options] host [command]
+"""
+    
+    optParameters = options.ConchOptions.optParameters + \
+                    [['escape', 'e', '~'],
+                      ['localforward', 'L', None, 'listen-port:host:port   Forward local port to remote address'],
+                      ['remoteforward', 'R', None, 'listen-port:host:port   Forward remote port to local address'],
+                     ]
 
-    optParameters = [['user', 'l', None, 'Log in using this user name.'],
-                    ['identity', 'i', None],
-                    ['escape', 'e', '~'],
-                    ['cipher', 'c', None],
-                    ['macs', 'm', None],
-                    ['port', 'p', None, 'Connect to this port.  Server must be on the same port.'],
-                    ['localforward', 'L', None, 'listen-port:host:port   Forward local port to remote address'],
-                    ['remoteforward', 'R', None, 'listen-port:host:port   Forward remote port to local address'],
-                    ['option', 'o', None, 'Ignored OpenSSH options'],
-                    ]
+    optFlags = options.ConchOptions.optFlags + \
+                [['null', 'n', 'Redirect input from /dev/null.'],
+                 ['fork', 'f', 'Fork to background after authentication.'],
+                 ['tty', 't', 'Tty; allocate a tty even if command is given.'],
+                 ['notty', 'T', 'Do not allocate a tty.'],
+                 ['noshell', 'N', 'Do not execute a shell or command.'],
+                 ['subsystem', 's', 'Invoke command (mandatory) as SSH2 subsystem.'],
+                ]
 
-    optFlags = [['null', 'n', 'Redirect input from /dev/null.'],
-                ['fork', 'f', 'Fork to background after authentication.'],
-                ['tty', 't', 'Tty; allocate a tty even if command is given.'],
-                ['notty', 'T', 'Do not allocate a tty.'],
-                ['version', 'V', 'Display version number only.'],
-                ['compress', 'C', 'Enable compression.'],
-                ['noshell', 'N', 'Do not execute a shell or command.'],
-                ['subsystem', 's', 'Invoke command (mandatory) as SSH2 subsystem.'],
-                ['log', 'v', 'Log to stderr'],
-                ['nocache', 'I', 'Do not use an already existing connection if it exists.'],
-                ['nox11', 'x', 'Disable X11 connection forwarding (default)'],
-                ['agent', 'A', 'Enable authentication agent forwarding.']]
-
-    identitys = []
     localForwards = []
     remoteForwards = []
-
-    def opt_identity(self, i):
-        """Identity for public-key authentication"""
-        self.identitys.append(i)
 
     def opt_escape(self, esc):
         "Set escape character; ``none'' = disable"
@@ -80,20 +66,6 @@ class GeneralOptions(usage.Options):
             self['escape'] = esc
         else:
             sys.exit("Bad escape character '%s'." % esc)
-
-    def opt_cipher(self, cipher):
-        "Select encryption algorithm"
-        if cipher in SSHClientTransport.supportedCiphers:
-            SSHClientTransport.supportedCiphers = [cipher]
-        else:
-            sys.exit("Unknown cipher type '%s'" % cipher)
-
-    def opt_macs(self, mac):
-        "Specify MAC algorithms"
-        if mac in SSHClientTransport.supportedMACs:
-            SSHClientTransport.supportedMACs = [mac]
-        else:
-            sys.exit("Unknown mac type '%s'" % mac)
 
     def opt_localforward(self, f):
         "Forward local port to remote address (lport:host:port)"
@@ -108,10 +80,6 @@ class GeneralOptions(usage.Options):
         remotePort = int(remotePort)
         connPort = int(connPort)
         self.remoteForwards.append((remotePort, (connHost, connPort)))
-
-    def opt_compress(self):
-        "Enable compression"
-        SSHClientTransport.supportedCompressions[0:1] = ['zlib']
 
     def parseArgs(self, host, *command):
         self['host'] = host
@@ -138,7 +106,7 @@ def run():
                 args[i:i+2] = [] # suck on it scp
         except ValueError:
             pass
-    options = GeneralOptions()
+    options = ClientOptions()
     try:
         options.parseOptions(args)
     except usage.UsageError, u:
@@ -189,29 +157,20 @@ def doConnect():
         options['port'] = 22
     else:
         options['port'] = int(options['port'])
-    filename = os.path.expanduser("~/.conch-%(user)s-%(host)s-%(port)s" % options)
-    pidfile = filename + '.pid'
-    if not options['nocache'] and os.path.exists(filename) and os.path.exists(pidfile):
-        try:
-            pid = int(open(pidfile).read())
-        except ValueError:
-            log.msg('pid file %s contains non-numeric' % pidfile)
-        else:
-            try:
-                os.kill(pid, 0)
-            except OSError, why:
-                if why[0] == errno.ESRCH:
-                    # pid doesn't exist
-                    log.msg('removing stale pidfile %s' % pidfile)
-                    os.remove(pidfile)
-                    os.unlink(filename)
-                else:
-                    log.msg("can't check PID %i from file %s: %s" %
-                            (pid, pidfile, why[1]))
-            else:
-                reactor.connectUNIX(filename, SSHUnixClientFactory(), timeout=2)
-                return
-    reactor.connectTCP(options['host'], options['port'], SSHClientFactory())
+    host = options['host']
+    port = options['port']
+    vhk = default.verifyHostKey
+    uao = default.SSHUserAuthClient(options['user'], options, SSHConnection())
+    connect.connect(host, port, options, vhk, uao).addErrback(_ebExit)
+
+def _ebExit(f):
+    global exitStatus
+    if hasattr(f.value, 'value'):
+        s = f.value.value
+    else:
+        s = str(f)
+    exitStatus = "conch: exiting with error %s" % f
+    reactor.stop()
 
 def onConnect():
 #    if keyAgent and options['agent']:
@@ -242,512 +201,13 @@ def onConnect():
                 if e.errno != errno.EBADF:
                     raise
 
-    if isinstance(conn, SSHConnection) and not options['nocache']:
-        filename = os.path.expanduser("~/.conch-%(user)s-%(host)s-%(port)s" % options)
-        pidfile = filename + ".pid"
-        if not os.path.exists(pidfile) and os.path.exists(filename):
-            # dead server, unlink the socket
-            os.unlink(filename)
-        try:
-            reactor.listenUNIX(filename, SSHUnixServerFactory(), mode = 0600)
-        except CannotListenError:
-            pass # we'll just not listen, not a big deal
-        else:
-            pid = os.getpid()
-            open(filename+'.pid','w').write(str(pid))
-
 def stopConnection():
     if options.remoteForwards:
         for remotePort, hostport in options.remoteForwards:
             log.msg('cancelling %s:%s' % (remotePort, hostport))
             conn.cancelRemoteForwarding(remotePort)
-    if isinstance(conn, SSHConnection) and not options['nocache']:
-        filename = os.path.expanduser("~/.conch-%(user)s-%(host)s-%(port)s.pid" % options)
-        if os.path.exists(filename):
-            os.remove(filename)
     reactor.stop()
 
-class SSHUnixClientFactory(protocol.ClientFactory):
-    noisy = 1
-
-    def clientConnectionLost(self, connector, reason):
-        stopConnection()
-
-    def clientConnectionFailed(self, connector, reason):
-        os.unlink(connector.transport.addr)
-        reactor.connectTCP(options['host'], options['port'], SSHClientFactory())
-
-    def startedConnecting(self, connector):
-        fd = connector.transport.fileno()
-        stats = os.fstat(fd)
-        filestats = os.stat(connector.transport.addr)
-        if stat.S_IMODE(filestats[0]) != 0600:
-            log.msg("socket mode is not 0600: %s" % oct(stat.S_IMODE(stats[0])))
-        elif filestats[4] != os.getuid():
-            log.msg("socket not owned by us: %s" % stats[4])
-        elif filestats[5] != os.getgid():
-            log.msg("socket not owned by our group: %s" % stats[5])
-        # XXX reenable this when i can fix it for cygwin
-        #elif filestats[-3:] != stats[-3:]:
-        #    log.msg("socket doesn't have same create times")
-        else:
-            log.msg('conecting OK')
-            return
-        connector.stopConnecting()
-
-    def buildProtocol(self, addr):
-        return SSHUnixClientProtocol()
-
-class SSHUnixServerFactory(protocol.Factory):
-
-    def buildProtocol(self, addr):
-        return SSHUnixServerProtocol()
-
-class SSHUnixClientProtocol(banana.Banana):
-    knownDialects = ['none']
-
-    def __init__(self):
-        banana.Banana.__init__(self)
-        self.channelQueue = []
-        self.channels = {}
-        self.deferredQueue = []
-        self.deferreds = {}
-
-    def connectionReady(self):
-        global conn
-        conn = self
-        onConnect()
-
-    def expressionReceived(self, lst):
-        vocabName = lst[0]
-        fn = "client_%s" % vocabName
-        func = getattr(self, fn)
-        func(lst[1:])
-
-    def sendMessage(self, vocabName, *tup):
-        self.sendEncoded([vocabName] + list(tup))
-
-    def returnDeferred(self):
-        d = defer.Deferred()
-        self.deferredQueue.append(d)
-        return d
-
-    def moveDeferred(self, dn):
-        self.deferreds[dn] = self.deferredQueue.pop(0)
-
-    def requestRemoteForwarding(self, remotePort, hostport):
-        self.sendMessage('requestRemoteForwarding', remotePort, hostport)
-
-    def cancelRemoteForwarding(self, remotePort):
-        self.sendMessage('cancelRemoteForwarding', remotePort)
-
-    def sendGlobalRequest(self, request, data, wantReply = 0):
-        self.sendMessage('sendGlobalRequest', request, data, wantReply)
-        if wantReply:
-            return self.returnDeferred()
-
-    def openChannel(self, channel, extra = ''):
-        self.channelQueue.append(channel)
-        channel.conn = self
-        self.sendMessage('openChannel', channel.name,
-                                        channel.localWindowSize,
-                                        channel.localMaxPacket, extra)
-
-    def sendRequest(self, channel, requestType, data, wantReply = 0):
-        self.sendMessage('sendRequest', channel.id, requestType, data, wantReply)
-        if wantReply:
-            self.returnDeferred()
-
-    def adjustWindow(self, channel, bytesToAdd):
-        self.sendMessage('adjustWindow', channel.id, bytesToAdd)
-
-    def sendData(self, channel, data):
-        self.sendMessage('sendData', channel.id, data)
-
-    def sendExtendedData(self, channel, dataType, data):
-        self.sendMessage('sendExtendedData', channel.id, data)
-
-    def sendEOF(self, channel):
-        self.sendMessage('sendEOF', channel.id)
-
-    def sendClose(self, channel):
-        self.sendMessage('sendClose', channel.id)
-
-    def client_returnDeferred(self, lst):
-        deferredID = lst[0]
-        self.deferreds[deferredID] = self.deferredQueue.pop(0)
-
-    def client_callbackDeferred(self, lst):
-        deferredID, result = lst
-        d = self.deferreds[deferredID]
-        del self.deferreds[deferredID]
-        d.callback(pickle.loads(result))
-
-    def client_errbackDeferred(self, lst):
-        deferredID, result = lst
-        d = self.deferreds[deferredID]
-        del self.deferreds[deferredID]
-        d.errback(pickle.loads(result))
-
-    def client_channelID(self, lst):
-        channelID = lst[0]
-        self.channels[channelID] = self.channelQueue.pop(0)
-        self.channels[channelID].id = channelID
-
-    def client_channelOpen(self, lst):
-        channelID, remoteWindow, remoteMax, specificData = lst
-        channel = self.channels[channelID]
-        channel.remoteWindowLeft = remoteWindow
-        channel.remoteMaxPacket = remoteMax
-        channel.channelOpen(specificData)
-
-    def client_openFailed(self, lst):
-        channelID, reason = lst
-        self.channels[channelID].openFailed(pickle.loads(reason))
-        del self.channels[channelID]
-
-    def client_addWindowBytes(self, lst):
-        channelID, bytes = lst
-        self.channels[channelID].addWindowBytes(bytes)
-
-#    def client_requestReceived(self, lst):
-#        channelID, requestType, data = lst
-#        d = self.channels[channelID].requestReceived(requestType, data)
-#        assert not isintance(d, defer.Deferred)
-#        self.sendMessage("requestResponse", channelID, requestType, d)
-
-    def client_dataReceived(self, lst):
-        channelID, data = lst
-        self.channels[channelID].dataReceived(data)
-
-    def client_extReceived(self, lst):
-        channelID, dataType, data = lst
-        self.channels[channelID].extReceived(dataType, data)
-
-    def client_eofReceived(self, lst):
-        channelID = lst[0]
-        self.channels[channelID].eofReceived()
-
-    def client_closed(self, lst):
-        channelID = lst[0]
-        self.channels[channelID].closed()
-        del self.channels[channelID]
-
-class SSHUnixServerProtocol(banana.Banana):
-    def __init__(self):
-        banana.Banana.__init__(self, 0)
-        self.deferredID = 0
-
-    def expressionReceived(self, lst):
-        vocabName = lst[0]
-        fn = "server_%s" % vocabName
-        func = getattr(self, fn)
-        func(lst[1:])
-
-    def sendMessage(self, vocabName, *tup):
-        self.sendEncoded([vocabName] + list(tup))
-
-    def returnDeferred(self, d):
-        di = self.deferredID
-        self.deferredID += 1
-        d.addCallback(self._cbDeferred, di)
-        d.addErrback(self._ebDeferred, di)
-        self.sendMessage('returnDeferred', di)
-
-    def _cbDeferred(self, result, di):
-        self.sendMessage('callbackDeferred', di, result)
-
-    def _ebDeferred(self, reason, di):
-        self.sendMessage('errbackDeferred', di, pickle.dumps(reason))
-
-    def haveChannel(self, channelID):
-        return conn.channels.has_key(channelID)
-
-    def getChannel(self, channelID):
-        channel = conn.channels[channelID]
-        if not isinstance(channel, SSHUnixChannel):
-            raise ConchError('nice try bub')
-        return channel
-
-    def server_requestRemoteForwarding(self, lst):
-        remotePort, hostport = lst
-        hostport = tuple(hostport)
-        conn.requestRemoteForwarding(remotePort, hostport)
-
-    def server_cancelRemoteForwarding(self, lst):
-        [remotePort] = lst
-        conn.cancelRemoteForwarding(remotePort)
-
-    def server_sendGlobalRequest(self, lst):
-        requestName, data, wantReply = lst
-        d = conn.sendGlobalRequest(requestName, data, wantReply)
-        if wantReply:
-            self.returnDeferred(d)
-
-    def server_openChannel(self, lst):
-        name, windowSize, maxPacket, extra = lst
-        channel = SSHUnixChannel(self, name, windowSize, maxPacket)
-        conn.openChannel(channel, extra)
-        self.sendMessage('channelID', channel.id)
-
-    def server_sendRequest(self, lst):
-        cn, requestType, data, wantReply = lst
-        if not self.haveChannel(cn): return
-        channel = self.getChannel(cn)
-        d = conn.sendRequest(channel, requestType, data, wantReply)
-        if wantReply:
-            self.returnDeferred(d)
-
-    def server_adjustWindow(self, lst):
-        cn, bytesToAdd = lst
-        if not self.haveChannel(cn): return
-        channel = self.getChannel(cn)
-        conn.adjustWindow(channel, bytesToAdd)
-
-    def server_sendData(self, lst):
-        cn, data = lst
-        if not self.haveChannel(cn): return
-        channel = self.getChannel(cn)
-        conn.sendData(channel, data)
-
-    def server_sendExtended(self, lst):
-        cn, dataType, data = lst
-        if not self.haveChannel(cn): return
-        channel = self.getChannel(cn)
-        conn.sendExtendedData(channel, dataType, data)
-
-    def server_sendEOF(self, lst):
-        (cn, ) = lst
-        if not self.haveChannel(cn): return
-        channel = self.getChannel(cn)
-        conn.sendEOF(channel)
-
-    def server_sendClose(self, lst):
-        (cn, ) = lst
-        if not self.haveChannel(cn): return
-        channel = self.getChannel(cn)
-        conn.sendClose(channel)
-
-class SSHUnixChannel(channel.SSHChannel):
-    def __init__(self, unix, name, windowSize, maxPacket):
-        channel.SSHChannel.__init__(self, windowSize, maxPacket, conn = conn)
-        self.unix = unix
-        self.name = name
-
-    def channelOpen(self, specificData):
-        self.unix.sendMessage('channelOpen', self.id, self.remoteWindowLeft,
-                                             self.remoteMaxPacket, specificData)
-
-    def openFailed(self, reason):
-        self.unix.sendMessage('openFailed', self.id, pickle.dumps(reason))
-
-    def addWindowBytes(self, bytes):
-        self.unix.sendMessage('addWindowBytes', self.id, bytes)
-
-    def dataReceived(self, data):
-        self.unix.sendMessage('dataReceived', self.id, data)
-
-    def extReceived(self, dataType, data):
-        self.unix.sendMessage('extReceived', self.id, dataType, data)
-
-    def eofReceived(self):
-        self.unix.sendMessage('eofReceived', self.id)
-
-    def closed(self):
-        self.unix.sendMessage('closed', self.id)
-        if len(conn.channels) == 1 and not (options['noshell'] and not options['nocache']): # just us left
-            stopConnection()
-
-class SSHClientFactory(protocol.ClientFactory):
-#    noisy = 1
-
-#    def stopFactory(self):
-        #stopConnection()
-
-    def buildProtocol(self, addr):
-        return SSHClientTransport()
-
-class SSHClientTransport(transport.SSHClientTransport):
-
-    def receiveError(self, code, desc):
-        global exitStatus
-        exitStatus = 'conch:\tRemote side disconnected with error code %i\nconch:\treason: %s' % (code, desc)
-
-    def sendDisconnect(self, code, reason):
-        global exitStatus
-        exitStatus = 'conch:\tSending disconnect with error code %i\nconch:\treason: %s' % (code, reason)
-        transport.SSHClientTransport.sendDisconnect(self, code, reason)
-        if conn:
-            stopConnection()
-        else:
-            reactor.stop()
-
-    def receiveDebug(self, alwaysDisplay, message, lang):
-        global options
-        if alwaysDisplay or options['log']:
-            log.msg('Received Debug Message: %s' % message)
-
-    def verifyHostKey(self, pubKey, fingerprint):
-        goodKey = self.isInKnownHosts(options['host'], pubKey)
-        if goodKey == 1: # good key
-            return defer.succeed(1)
-        elif goodKey == 2: # AAHHHHH changed
-            return defer.fail(ConchError('changed host key'))
-        else:
-            oldout, oldin = sys.stdout, sys.stdin
-            sys.stdin = sys.stdout = open('/dev/tty','r+')
-            if options['host'] == self.transport.getPeer()[1]:
-                host = options['host']
-                khHost = options['host']
-            else:
-                host = '%s (%s)' % (options['host'],
-                                    self.transport.getPeer()[1])
-                khHost = '%s,%s' % (options['host'],
-                                    self.transport.getPeer()[1])
-            keyType = common.getNS(pubKey)[0]
-            print """The authenticity of host '%s' can't be extablished.
-%s key fingerprint is %s.""" % (host,
-                                {'ssh-dss':'DSA', 'ssh-rsa':'RSA'}[keyType],
-                                fingerprint)
-            ans = raw_input('Are you sure you want to continue connecting (yes/no)? ')
-            while ans.lower() not in ('yes', 'no'):
-                ans = raw_input("Please type 'yes' or 'no': ")
-            sys.stdout,sys.stdin=oldout,oldin
-            if ans == 'no':
-                print 'Host key verification failed.'
-                return defer.fail(ConchError('bad host key'))
-            print "Warning: Permanently added '%s' (%s) to the list of known hosts." % (khHost, {'ssh-dss':'DSA', 'ssh-rsa':'RSA'}[keyType])
-            known_hosts = open(os.path.expanduser('~/.ssh/known_hosts'), 'a')
-            encodedKey = base64.encodestring(pubKey).replace('\n', '')
-            known_hosts.write('\n%s %s %s' % (khHost, keyType, encodedKey))
-            known_hosts.close()
-            return defer.succeed(1)
-
-    def isInKnownHosts(self, host, pubKey):
-        """checks to see if host is in the known_hosts file for the user.
-        returns 0 if it isn't, 1 if it is and is the same, 2 if it's changed.
-        """
-        keyType = common.getNS(pubKey)[0]
-        retVal = 0
-        if not os.path.exists(os.path.expanduser('~/.ssh/')):
-            print 'Creating ~/.ssh directory...'
-            os.mkdir(os.path.expanduser('~/.ssh'))
-        try:
-            known_hosts = open(os.path.expanduser('~/.ssh/known_hosts'))
-        except IOError:
-            return 0
-        for line in known_hosts.xreadlines():
-            split = line.split()
-            if len(split) != 3: # old 4-field known_hosts entry (ssh1?)
-                continue
-            hosts, hostKeyType, encodedKey = split
-            if not host in hosts.split(','): # incorrect host
-                continue
-            if not hostKeyType == keyType: # incorrect type of key
-                continue
-            try:
-                decodedKey = base64.decodestring(encodedKey)
-            except:
-                continue
-            if decodedKey == pubKey:
-                return 1
-            else:
-                retVal = 2
-        return retVal
-
-    def connectionSecure(self):
-        self.requestService(SSHUserAuthClient(options['user'], SSHConnection()))
-
-class SSHUserAuthClient(userauth.SSHUserAuthClient):
-    usedFiles = []
-
-    def serviceStarted(self):
-        if 'SSH_AUTH_SOCK' in os.environ:
-            log.msg('using agent')
-            cc = protocol.ClientCreator(reactor, SSHAgentClient)
-            d = cc.connectUNIX(os.environ['SSH_AUTH_SOCK'])
-            d.addCallback(self._setAgent)
-            d.addErrback(self._ebSetAgent)
-        else:
-            userauth.SSHUserAuthClient.serviceStarted(self)
-
-    def _setAgent(self, a):
-        global keyAgent
-        keyAgent = a
-        d = keyAgent.getPublicKeys()
-        d.addBoth(self._ebSetAgent)
-        return d
-
-    def _ebSetAgent(self, f):
-        userauth.SSHUserAuthClient.serviceStarted(self)
-
-    def getPassword(self, prompt = None):
-        if not prompt:
-            prompt = "%s@%s's password: " % (self.user, options['host'])
-        try:
-            oldout, oldin = sys.stdout, sys.stdin
-            sys.stdin = sys.stdout = open('/dev/tty','r+')
-            p=getpass.getpass(prompt)
-            sys.stdout,sys.stdin=oldout,oldin
-            return defer.succeed(p)
-        except KeyboardInterrupt, e:
-            print
-            reactor.stop()
-            return defer.fail(ConchError('PEBKAC'))
-
-    def getPublicKey(self):
-        global keyAgent
-        if keyAgent:
-            blob = keyAgent.getPublicKey()
-            if blob:
-                return blob
-        files = [x for x in options.identitys if x not in self.usedFiles]
-        log.msg(str(options.identitys))
-        log.msg(str(files))
-        if not files:
-            return None
-        file = files[0]
-        log.msg(file)
-        self.usedFiles.append(file)
-        file = os.path.expanduser(file)
-        file += '.pub'
-        if not os.path.exists(file):
-            return self.getPublicKey() # try again
-        try:
-            return keys.getPublicKeyString(file)
-        except:
-            return self.getPublicKey() # try again
-
-    def signData(self, publicKey, signData):
-        if not self.usedFiles: # agent key
-            return keyAgent.signData(publicKey, signData)
-        else:
-            return userauth.SSHUserAuthClient.signData(self, publicKey, signData)
-
-    def getPrivateKey(self):
-        file = os.path.expanduser(self.usedFiles[-1])
-        if not os.path.exists(file):
-            return None
-        try:
-            return defer.succeed(keys.getPrivateKeyObject(file))
-        except keys.BadKeyError, e:
-            if e.args[0] == 'encrypted key with no passphrase':
-                for i in range(3):
-                    prompt = "Enter passphrase for key '%s': " % \
-                           self.usedFiles[-1]
-                    oldout, oldin = sys.stdout, sys.stdin
-                    sys.stdin = sys.stdout = open('/dev/tty','r+')
-                    p=getpass.getpass(prompt)
-                    sys.stdout,sys.stdin=oldout,oldin
-                    try:
-                        return defer.succeed(keys.getPrivateKeyObject(file, passphrase = p))
-                    except keys.BadKeyError:
-                        pass
-                return defer.fail(ConchError('bad password'))
-            raise
-        except KeyboardError:
-            print
-            reactor.stop()
 
 class SSHConnection(connection.SSHConnection):
     def serviceStarted(self):
@@ -757,6 +217,9 @@ class SSHConnection(connection.SSHConnection):
         if keyAgent:
             keyAgent.transport.loseConnection()
         onConnect()
+
+    def serviceStopped(self):
+        stopConnection()
 
     def requestRemoteForwarding(self, remotePort, hostport):
         data = forwarding.packGlobal_tcpip_forward(('0.0.0.0', remotePort))
@@ -801,6 +264,7 @@ class SSHSession(channel.SSHChannel):
         #global globalSession
         #globalSession = self
         # turn off local echo
+        log.msg('session %s open' % self.id)
         if options['agent']:
             d = self.conn.sendRequest(self, 'auth-agent-req@openssh.com', '', wantReply=1)
             d.addBoth(lambda x:log.msg(x))
@@ -847,8 +311,8 @@ class SSHSession(channel.SSHChannel):
                 self.conn.sendRequest(self, 'pty-req', ptyReqData)
                 signal.signal(signal.SIGWINCH, self._windowResized)
             self.conn.sendRequest(self, 'shell', '')
-            if hasattr(self.conn.transport, 'transport'):
-                self.conn.transport.transport.setTcpNoDelay(1)
+            #if hasattr(conn.transport, 'transport'):
+            #    conn.transport.transport.setTcpNoDelay(1)
 
     def handleInput(self, char):
         #log.msg('handling %s' % repr(char))

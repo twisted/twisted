@@ -45,7 +45,7 @@ except IOError, e:
 else:
     lines = fp.readlines()
     fp.close()
-
+print fn
 preamble = None
 if lines and lines[0][:2] == '#!':
     preamble = lines.pop(0)

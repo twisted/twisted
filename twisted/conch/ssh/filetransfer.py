@@ -15,7 +15,7 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 #
 
-import struct
+import struct, errno
 
 from twisted.internet import defer, protocol
 from twisted.python import failure, log
