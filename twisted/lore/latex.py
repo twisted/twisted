@@ -30,6 +30,7 @@ class LatexSpitter(XMLParser):
     escaping = 1
     baseLevel = 0
     raw = 0
+    hyphenateDots = 0
 
     def __init__(self, writer, currDir='.'):
         self.writer = writer
@@ -51,6 +52,10 @@ class LatexSpitter(XMLParser):
             data = data.replace('\n', ' ')
         if self.escaping:
             data = escapingRE.sub(r'\\\1{}',data.replace('\\', '$\\backslash$'))
+        if self.hyphenateDots:
+            # Add hyphenation points at dots (except not for leading dots)
+            data = data[:1] + data[1:].replace('.', '.\\textrm{\\-}')
+
         self.writer(data)
 
     def gotEntityReference(self, entityRef):
@@ -99,10 +104,10 @@ class LatexSpitter(XMLParser):
         self.writer(self.mapEnd_pre)
 
     def start_code(self, _, _1):
-        self.escaping = 0
+        self.hyphenateDots = 1
 
     def end_code(self, _):
-        self.escaping = 1
+        self.hyphenateDots = 0
 
     def start_a(self, _, attrs):
         if attrs.get('class') == "py-listing":
@@ -183,8 +188,8 @@ class LatexSpitter(XMLParser):
 
     mapStart_p = '\n\n'
 
-    mapStart_code = '\\verb@'
-    mapEnd_code = '@'
+    mapStart_code = '\\texttt{'
+    mapEnd_code = '}'
 
     mapStart_pre = '\\begin{verbatim}'
     mapEnd_pre = '\\end{verbatim}'
