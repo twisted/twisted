@@ -1,3 +1,8 @@
+2002-04-10  Chris Armstrong  <carmstro@twistedmatrix.com>
+
+	* twisted/reality: Gone. This is now in a completely separate plugin
+	package.
+	
 2002-04-09  Itamar Shtull-Trauring  <itamarst@twistedmatrix.com>
 
         * win32 process support seems to *finally* be working correctly. Many

@@ -19,6 +19,9 @@
 ### Twisted Preamble
 # This makes sure that users don't have to set up their environment
 # specially in order to run these programs from bin/.
+
+from __future__ import nested_scopes
+
 import sys,os,string
 
 if string.find(os.path.abspath(sys.argv[0]),'Twisted') != -1:
@@ -40,8 +43,8 @@ class Options(usage.Options):
                      ['version', 'v', None, "The version of this release."],
                      ['release', 'r', os.path.expanduser('~/Releases'), "The directory where your Twisted release archive is."]]
     
-    optFlags = [['docs', 'd', "Make a Documentation tarball (must have HappyDoc)."],
-                ['onlydocs', 'D', "*ONLY* make the docs (that is, don't generate the regular Twisted distribution). Twisted-$VERSION must already exist."],
+    optFlags = [['nodocs', 'n', "Don't make a Documentation tarball."],
+                ['onlydocs', 'D', "*ONLY* make the docs (that is, don't generate the regular Twisted distribution). Twisted-$VERSION and TwistedDocs-$VERSION must already exist."],
                 ['dontrelease', 'R', "Useful if you want to customize a release before putting it in your Release directory."]]
 
 
@@ -63,50 +66,120 @@ def main():
 
     makeDist(opts)
                
-    if opts.opts['docs']:
+    if not opts.opts['nodocs']:
         makeDocs(opts)
+
+    makeBalls(opts)
 
     if not opts.opts['dontrelease']:
         release(opts)
 
 
+
+
 def makeDist(opts):
     ver = opts.opts['version']
-    destDir = "Twisted-%s" % ver
     source = opts.opts['source']
+
+    print "MAKING DIST"
     
-    if os.path.exists(destDir):
-        print destDir,"exists already!"
+    if os.path.exists("Twisted-%s" % ver):
+        print "Twisted-%s" % ver,"exists already!"
         sys.exit(2)
 
-    print "Copying %s to %s..." % (source, destDir)
-    shutil.copytree(source, destDir)
+    print "Copying %s to %s..." % (source, "Twisted-%s" % ver)
+    shutil.copytree(source, "Twisted-%s" % ver)
 
 
     #shwack the crap
     print "Stripping *~, *.pyc, *.rpl, *.tap..."
     for x in ['*~', '*.pyc', '*.rpl', '*.tap', '.cvsignore', '.#*']:
-        os.system('find %s -name "%s" | xargs rm -f' % (destDir, x))
+        os.system('find Twisted-%s -name "%s" | xargs rm -f' % (ver, x))
 
     print "Stripping 'CVS' directories..."
-    os.system('find %s -name CVS | xargs rm -rf' % destDir)
+    os.system('find Twisted-%s -name CVS | xargs rm -rf' % ver)
 
-    #tarballs
-    print "Making dist tarball..."
-    os.system('tar czf Twisted-%s.tar.gz %s' % (ver, destDir))
 
-    print "Making the dist bz2ball"
-    os.system('tar cjf Twisted-%s.tar.bz2 %s' % (ver, destDir))
+def makeDocs(opts):
+    print "MAKING DOCS"
+    ver = opts.opts['version']
+    if not os.path.exists('Twisted-%s' % ver):
+        print "Twisted-%s doesn't exist!" % ver
+        sys.exit(2)
+        
+    print "HappyDoc, here we come..."
+    os.system('happydoc --author="Glyph Lefkowitz <glyph@twistedmatrix.com>" '
+              '--no_comments -t "Twisted Documentation" Twisted-%s > /dev/null' % ver)
 
-    print "Making dist zipfile..."
-    os.system('zip -r Twisted-%s.zip %s' % (ver, destDir))
+
+
+    
+
+
+def makeBalls(opts):
+    ver = opts.opts['version']
+    doc = 1
+    print "MAKING BALLS"
+
+    if not os.path.exists('Twisted-%s' % ver):
+        print "Couldn't find Twisted-%s" % ver
+        return
+
+
+    print "Moving out the documentation.."
+    os.system('mv Twisted-%s/doc TwistedDocs-%s' % ((ver,)*2))
+
+
+    ##
+    # NoDocs
+    ##
+    print "Tarring up dist!"
+    map(lambda x: os.system(x % ((ver,)*2)),
+        ['tar czf Twisted_NoDocs-%s.tar.gz Twisted-%s',
+         'tar cjf Twisted_NoDocs-%s.tar.bz2 Twisted-%s',
+         'zip -r Twisted_NoDocs-%s.zip Twisted-%s > /dev/null'])
+
+
+    if not os.path.exists('doc'):#we didn't do the docs
+        print "Not doing documentation."
+        return
+    
+    print "Creating TwistedDocs"
+    os.system('mv doc/* TwistedDocs-%s/api' % ver)
+    os.system('rmdir doc')
+
+    ##
+    # TwistedDocs
+    ##
+    print "Tarring up documentation!"
+    map(lambda x: os.system(x % ((ver,)*2)),
+        ['tar czf TwistedDocs-%s.tar.gz TwistedDocs-%s',
+         'tar cjf TwistedDocs-%s.tar.bz2 TwistedDocs-%s',
+         'zip -r TwistedDocs-%s.zip TwistedDocs-%s > /dev/null'])
+    
+    
+    print "putting documentation back"
+    os.system('mkdir Twisted-%s/doc; mv TwistedDocs-%s/* Twisted-%s/doc' % ((ver,)*3))
+
+
+    ##
+    # Fullball
+    ##
+    print "Making Full Tarballs!"
+    map(lambda x: os.system(x % ((ver,)*2)),
+        ['tar czf Twisted-%s.tar.gz Twisted-%s',
+         'tar cjf Twisted-%s.tar.bz2 Twisted-%s',
+         'zip -r Twisted-%s.zip Twisted-%s > /dev/null'])
+    
 
 
 
 def release(opts):
     rel = opts.opts['release']
     ver = opts.opts['version']
-    print "Putting it in %s..." % rel
+
+    print "RELEASING"
+
     if not os.path.exists(rel):
         print "Creating", rel
         os.mkdir(rel)
@@ -115,36 +188,26 @@ def release(opts):
         print "creating %s/old" % rel
         os.mkdir("%s/old" % rel)
 
+    print "Copying the NoDocs-Balls!"
     os.system('mv %s/*.tar.gz %s/*.zip %s/old' % ((rel,)*3))
-    shutil.copy('Twisted-%s.tar.gz' % ver, rel)
-    shutil.copy('Twisted-%s.zip' % ver, rel)
 
-    print "Trying to copy the docs, don't mind if this gives errors:"
-    shutil.copy('TwistedDocs-%s.tar.gz' % ver, rel)
-    shutil.copy('TwistedDocs-%s.zip' % ver, rel)
-    print "Done copying docs. Any more errors aren't expected ;-)"
+    map(lambda x: shutil.copy(x % ver, rel),
+        ['Twisted_NoDocs-%s.tar.gz',
+         'Twisted_NoDocs-%s.tar.bz2',
+         'Twisted_NoDocs-%s.zip'])
 
+    print "Copying the Docs-Balls!"
+    map(lambda x: shutil.copy(x % ver, rel),
+        ['TwistedDocs-%s.tar.gz',
+         'TwistedDocs-%s.tar.bz2',
+         'TwistedDocs-%s.zip'])
 
-def makeDocs(opts):
-    print "Making Docs!"
-    ver = opts.opts['version']
-    rel = opts.opts['release']
-    if not os.path.exists('Twisted-%s' % ver):
-        print "Twisted-%s doesn't exist!" % ver
-        sys.exit(2)
-    os.system('happydoc --author="Glyph Lefkowitz <glyph@twistedmatrix.com>" --no_comments -t "Twisted Documentation" Twisted-%s' % ver)
-    os.system('mv doc/* Twisted-%s/doc/api' % ver)
+    print "Copying the Full-Balls!"
+    map(lambda x: shutil.copy(x % ver, rel),
+        ['Twisted-%s.tar.gz',
+         'Twisted-%s.tar.bz2',
+         'Twisted-%s.zip'])
 
-    os.chdir('Twisted-%s/' % ver)
-    #<yuck>
-    os.system('mv doc TwistedDocs-%s' % ver)
-    os.system('tar czf TwistedDocs-%s.tar.gz TwistedDocs-%s' % ((ver,)*2))
-    os.system('zip -r TwistedDocs-%s.zip TwistedDocs-%s' % ((ver,)*2))
-    os.system('mv TwistedDocs-%s doc' % ver)
-    os.system('mv TwistedDocs-* ../')
-    #</yuck>
-    os.chdir('..')
-    
 
 if __name__=='__main__':
     main()
