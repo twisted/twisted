@@ -182,6 +182,7 @@ class Gtk2Reactor(default.PosixReactorBase):
                     # if doRead is doWrite, don't call it again.
                     if not source.disconnected and source.doWrite != didRead:
                         why = source.doWrite()
+                        didRead = source.doWrite # if failed it was in write
             except:
                 why = sys.exc_info()[1]
                 log.msg('Error In %s' % source)
