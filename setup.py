@@ -22,7 +22,7 @@ Package installer for Twisted
 Copyright (C) 2001 Matthew W. Lefkowitz
 All rights reserved, see LICENSE for details.
 
-$Id: setup.py,v 1.110 2003/04/29 18:03:25 moshez Exp $
+$Id: setup.py,v 1.111 2003/05/05 02:13:29 spiv Exp $
 """
 
 import distutils, os, sys, string
@@ -158,7 +158,7 @@ class build_ext_twisted(build_ext):
             self.announce("The C reactor is unavailable on this system (this is fine, don't worry about it, everything will still work).")
 
         # The portmap module (for inetd)
-        if self._check_header("rpc/pmap_clnt.h"):
+        if self._check_header("rpc/rpc.h"):
             exts.append( Extension("twisted.runner.portmap",
                                     ["twisted/runner/portmap.c"],
                                     define_macros=define_macros) )
