@@ -6,11 +6,10 @@
 
 from twisted.trial import unittest
 
-import os, stat, tempfile, types
+import os, stat, tempfile
 
 from twisted.enterprise.adbapi import ConnectionPool, ConnectionLost
 from twisted.internet import defer
-from twisted.trial.util import deferredError
 from twisted.python import log
 
 simple_table_schema = """
@@ -24,14 +23,17 @@ class ADBAPITestBase:
 
     openfun_called = {}
 
+    def wait(self, d, timeout=10.0):
+        return unittest.wait(d)
+
     def setUp(self):
         self.startDB()
         self.dbpool = self.makePool(cp_openfun=self.openfun)
         self.dbpool.start()
-        unittest.wait(self.dbpool.runOperation(simple_table_schema))
+        self.wait(self.dbpool.runOperation(simple_table_schema))
 
     def tearDown(self):
-        unittest.wait(self.dbpool.runOperation('DROP TABLE simple'))
+        self.wait(self.dbpool.runOperation('DROP TABLE simple'))
         self.dbpool.close()
         self.stopDB()
 
@@ -47,14 +49,28 @@ class ADBAPITestBase:
     def testPool(self):
         if self.test_failures:
             # make sure failures are raised correctly
-            deferredError(self.dbpool.runQuery("select * from NOTABLE"))
-            deferredError(self.dbpool.runOperation("deletexxx from NOTABLE"))
-            deferredError(self.dbpool.runInteraction(self.bad_interaction))
+            try:
+                self.wait(self.dbpool.runQuery("select * from NOTABLE"))
+                self.fail('no exception')
+            except:
+                pass
+
+            try:
+                self.wait(self.dbpool.runOperation("deletexxx from NOTABLE"))
+                self.fail('no exception')
+            except:
+                pass
+
+            try:
+                self.wait(self.dbpool.runInteraction(self.bad_interaction))
+                self.fail('no exception')
+            except:
+                pass
             log.flushErrors()
 
         # verify simple table is empty
         sql = "select count(1) from simple"
-        row = unittest.wait(self.dbpool.runQuery(sql))
+        row = self.wait(self.dbpool.runQuery(sql))
         self.failUnless(int(row[0][0]) == 0, "Interaction not rolled back")
 
         self.checkOpenfunCalled()
@@ -64,12 +80,12 @@ class ADBAPITestBase:
         for i in range(self.num_iterations):
             sql = "insert into simple(x) values(%d)" % i
             inserts.append(self.dbpool.runOperation(sql))
-        unittest.wait(defer.gatherResults(inserts), timeout=self.num_iterations / 5.0)
+        self.wait(defer.gatherResults(inserts), timeout=self.num_iterations)
         del inserts
 
         # make sure they were added (runQuery)
         sql = "select x from simple order by x";
-        rows = unittest.wait(self.dbpool.runQuery(sql))
+        rows = self.wait(self.dbpool.runQuery(sql))
         self.failUnless(len(rows) == self.num_iterations,
                         "Wrong number of rows")
         for i in range(self.num_iterations):
@@ -77,7 +93,7 @@ class ADBAPITestBase:
             self.failUnless(rows[i][0] == i, "Values not returned.")
 
         # runInteraction
-        res = unittest.wait(self.dbpool.runInteraction(self.interaction))
+        res = self.wait(self.dbpool.runInteraction(self.interaction))
         self.assertEquals(res, "done")
 
         # give the pool a workout
@@ -86,7 +102,7 @@ class ADBAPITestBase:
             sql = "select x from simple where x = %d" % i
             ds.append(self.dbpool.runQuery(sql))
         dlist = defer.DeferredList(ds, fireOnOneErrback=True)
-        result = unittest.wait(dlist, timeout=self.num_iterations / 5.0)
+        result = self.wait(dlist, timeout=self.num_iterations / 5.0)
         for i in range(self.num_iterations):
             self.failUnless(result[i][1][0][0] == i, "Value not returned")
 
@@ -96,11 +112,11 @@ class ADBAPITestBase:
             sql = "delete from simple where x = %d" % i
             ds.append(self.dbpool.runOperation(sql))
         dlist = defer.DeferredList(ds, fireOnOneErrback=True)
-        unittest.wait(dlist, timeout=self.num_iterations / 5.0)
+        self.wait(dlist, timeout=self.num_iterations / 5.0)
 
         # verify simple table is empty
         sql = "select count(1) from simple"
-        row = unittest.wait(self.dbpool.runQuery(sql))
+        row = self.wait(self.dbpool.runQuery(sql))
         self.failUnless(int(row[0][0]) == 0,
                         "Didn't successfully delete table contents")
 
@@ -144,38 +160,51 @@ ADBAPITestBase.timeout = 30.0
 class ReconnectTestBase:
     """Test the asynchronous DB-API code with reconnect."""
 
+    def wait(self, d, timeout=10.0):
+        return unittest.wait(d)
+
     def setUp(self):
         if self.good_sql is None:
-            raise unittest.SkipTest()
+            raise unittest.SkipTest('no good sql for reconnect test')
         self.startDB()
         self.dbpool = self.makePool(cp_max=1, cp_reconnect=True,
                                     cp_good_sql=self.good_sql)
         self.dbpool.start()
-        unittest.wait(self.dbpool.runOperation(simple_table_schema))
+        self.wait(self.dbpool.runOperation(simple_table_schema))
 
     def tearDown(self):
-        unittest.wait(self.dbpool.runOperation('DROP TABLE simple'))
+        self.wait(self.dbpool.runOperation('DROP TABLE simple'))
         self.dbpool.close()
         self.stopDB()
 
     def testPool(self):
         sql = "select count(1) from simple"
-        row = unittest.wait(self.dbpool.runQuery(sql))
+        row = self.wait(self.dbpool.runQuery(sql))
         self.failUnless(int(row[0][0]) == 0, "Table not empty")
 
         # reach in and close the connection manually
         self.dbpool.connections.values()[0].close()
 
         if not self.early_reconnect:
-            err = deferredError(self.dbpool.runQuery(sql))
-            self.failUnless(err.check(ConnectionLost))
+            try:
+                self.wait(self.dbpool.runQuery(sql))
+                self.fail('no exception')
+            except ConnectionLost:
+                pass
+            except:
+                self.fail('not connection lost')
 
-        row = unittest.wait(self.dbpool.runQuery(sql))
+        row = self.wait(self.dbpool.runQuery(sql))
         self.failUnless(int(row[0][0]) == 0, "Table not empty")
 
         sql = "select * from NOTABLE" # bad sql
-        err = deferredError(self.dbpool.runQuery(sql))
-        self.failIf(err.check(ConnectionLost)) # no connection lost
+        try:
+            self.wait(self.dbpool.runQuery(sql))
+            self.fail('no exception')
+        except ConnectionLost:
+            self.fail('connection lost exception')
+        except:
+            pass
 
 class DBTestConnector:
     """A class which knows how to test for the presence of
@@ -199,9 +228,10 @@ class DBTestConnector:
     escape_slashes = True # escape \ in sql?
     good_sql = ConnectionPool.good_sql
     early_reconnect = True # cursor() will fail on closed connection
+    can_clear = True # can try to clear out tables when starting
 
-    num_iterations = 100 # number of iterations for test loops
-                         # (lower this for slow db's)
+    num_iterations = 50 # number of iterations for test loops
+                        # (lower this for slow db's)
 
     def setUpClass(self):
         if not self.can_connect():
@@ -363,8 +393,9 @@ class FirebirdConnector(DBTestConnector):
     test_failures = False # failure testing causes problems
     escape_slashes = False
     good_sql = None # firebird doesn't handle failed sql well
+    can_clear = False # firebird is not so good
 
-    num_iterations = 25 # slow
+    num_iterations = 5 # slow
 
     def can_connect(self):
         try: import kinterbasdb

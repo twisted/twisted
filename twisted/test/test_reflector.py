@@ -98,6 +98,9 @@ class ReflectorTestBase:
 
     count = 100 # a parameter used for running iterative tests
 
+    def wait(self, d, timeout=10.0):
+        return unittest.wait(d)
+
     def randomizeRow(self, row):
         return randomizeRow(row, self.nulls_ok, self.trailing_spaces_ok)
 
@@ -117,13 +120,13 @@ class ReflectorTestBase:
         values = self.randomizeRow(row)
 
         # save it
-        unittest.wait(self.reflector.insertRow(row))
+        self.wait(self.reflector.insertRow(row))
 
         # now load it back in
         whereClause = [("key_string", EQUAL, "first")]
         d = self.reflector.loadObjectsFrom(tableName, whereClause=whereClause)
         d.addCallback(self.gotData)
-        unittest.wait(d)
+        self.wait(d)
 
         # make sure it came back as what we saved
         self.failUnless(len(self.data) == 1, "no row")
@@ -141,12 +144,12 @@ class ReflectorTestBase:
             child_values[i] = values
             inserts.append(self.reflector.insertRow(row))
             row = None
-        unittest.wait(defer.gatherResults(inserts), timeout=self.num_iterations / 5.0)
+        self.wait(defer.gatherResults(inserts), timeout=self.num_iterations)
         del inserts
 
         d = self.reflector.loadObjectsFrom(childTableName, parentRow=parent)
         d.addCallback(self.gotData)
-        unittest.wait(d)
+        self.wait(d)
 
         self.failUnless(len(self.data) == self.num_iterations,
                         "no rows on query")
@@ -160,7 +163,7 @@ class ReflectorTestBase:
         # to the parentRow.
         d = self.reflector.loadObjectsFrom(childTableName, parentRow=parent)
         d.addCallback(self.gotData)
-        unittest.wait(d)
+        self.wait(d)
 
         self.failUnless(len(self.data) == self.num_iterations,
                         "no rows on query")
@@ -169,14 +172,14 @@ class ReflectorTestBase:
 
         # now change the parent
         values = self.randomizeRow(parent)
-        unittest.wait(self.reflector.updateRow(parent))
+        self.wait(self.reflector.updateRow(parent))
         parent = None
 
         # now load it back in
         whereClause = [("key_string", EQUAL, "first")]
         d = self.reflector.loadObjectsFrom(tableName, whereClause=whereClause)
         d.addCallback(self.gotData)
-        unittest.wait(d)
+        self.wait(d)
 
         # make sure it came back as what we saved
         self.failUnless(len(self.data) == 1, "no row")
@@ -193,13 +196,13 @@ class ReflectorTestBase:
             row = TestRow()
             row.assignKeyAttr("key_string", "bulk%d"%i)
             test_values[row.key_string] = self.randomizeRow(row)
-            unittest.wait(self.reflector.insertRow(row))
+            self.wait(self.reflector.insertRow(row))
             row = None
 
         # now load them all back in
         d = self.reflector.loadObjectsFrom("testTable")
         d.addCallback(self.gotData)
-        unittest.wait(d)
+        self.wait(d, 100.0)
 
         # make sure they are the same
         self.failUnless(len(self.data) == self.num_iterations + 1,
@@ -211,13 +214,13 @@ class ReflectorTestBase:
         # now change them all
         for row in self.data:
             test_values[row.key_string] = self.randomizeRow(row)
-            unittest.wait(self.reflector.updateRow(row))
+            self.wait(self.reflector.updateRow(row))
         self.data = None
 
         # load'em back
         d = self.reflector.loadObjectsFrom("testTable")
         d.addCallback(self.gotData)
-        unittest.wait(d)
+        self.wait(d)
 
         # make sure they are the same
         self.failUnless(len(self.data) == self.num_iterations + 1,
@@ -228,13 +231,13 @@ class ReflectorTestBase:
 
         # now delete them
         for row in self.data:
-            unittest.wait(self.reflector.deleteRow(row))
+            self.wait(self.reflector.deleteRow(row))
         self.data = None
 
         # load'em back
         d = self.reflector.loadObjectsFrom("testTable")
         d.addCallback(self.gotData)
-        unittest.wait(d)
+        self.wait(d)
 
         self.failUnless(len(self.data) == 0, "rows were not deleted")
 
@@ -244,10 +247,10 @@ class ReflectorTestBase:
         values = self.randomizeRow(row)
 
         # save it
-        unittest.wait(self.reflector.insertRow(row))
+        self.wait(self.reflector.insertRow(row))
 
         # delete it
-        unittest.wait(self.reflector.deleteRow(row))
+        self.wait(self.reflector.deleteRow(row))
 
     def gotData(self, data):
         self.data = data
@@ -275,15 +278,27 @@ class SQLReflectorTestBase(ReflectorTestBase):
         self.startDB()
         self.dbpool = self.makePool()
         self.dbpool.start()
-        unittest.wait(self.dbpool.runOperation(main_table_schema))
-        unittest.wait(self.dbpool.runOperation(child_table_schema))
+
+        if self.can_clear:
+            try:
+                self.wait(self.dbpool.runOperation('DROP TABLE testTable'))
+            except:
+                pass
+
+            try:
+                self.wait(self.dbpool.runOperation('DROP TABLE childTable'))
+            except:
+                pass
+
+        self.wait(self.dbpool.runOperation(main_table_schema))
+        self.wait(self.dbpool.runOperation(child_table_schema))
         reflectorClass = self.escape_slashes and SQLReflector \
                          or NoSlashSQLReflector
         return reflectorClass(self.dbpool, [TestRow, ChildRow])
 
     def destroyReflector(self):
-        unittest.wait(self.dbpool.runOperation('DROP TABLE testTable'))
-        unittest.wait(self.dbpool.runOperation('DROP TABLE childTable'))
+        self.wait(self.dbpool.runOperation('DROP TABLE testTable'))
+        self.wait(self.dbpool.runOperation('DROP TABLE childTable'))
         self.dbpool.close()
         self.stopDB()
 
