@@ -16,7 +16,7 @@
 
 """PB interop server."""
 
-from twisted.spread import pb
+from twisted.spread import pb, jelly, flavors
 from twisted.internet import app
 
 
@@ -68,6 +68,11 @@ class Interop(pb.Root):
     def remote_self(self, obj):
         if obj != self:
             raise ValueError, "%r != %r" % (obj, self)
+
+    def remote_copy(self, x):
+        o = flavors.Copyable()
+        o.x = x
+        return o
 
 
 if __name__ == '__main__':
