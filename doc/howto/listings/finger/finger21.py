@@ -216,8 +216,6 @@ class IPerspectiveFinger(components.Interface):
     def remote_getUsers(self):
         """return a user's status"""
 
-# need to write a little script to test this PB shit
-
 class PerspectiveFingerFromService(pb.Root):
 
     __implements__ = pb.Root.__implements__, IPerspectiveFinger
