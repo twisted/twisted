@@ -1,3 +1,5 @@
+# -*- test-case-name: twisted.test.test_trial -*-
+#
 # Twisted, the Framework of Your Internet
 # Copyright (C) 2001-2002 Matthew W. Lefkowitz
 #

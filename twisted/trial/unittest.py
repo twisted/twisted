@@ -1,3 +1,5 @@
+# -*- test-case-name: twisted.test.test_trial -*-
+
 """
 Twisted Test Framework
 """
