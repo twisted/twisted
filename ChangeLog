@@ -2,6 +2,12 @@
 
 	* .: Releasing Twisted 0.17.2.
 
+2002-04-18  Chris Armstrong  <carmstro@twistedmatrix.com>
+
+	* twisted/news: A news server and NNTP protocol support courtesy of
+	exarkun. Another step towards Twisted implementations of EVERYTHING
+	IN THE WORLD!
+
 2002-04-17  Glyph Lefkowitz  <glyph@twistedmatrix.com>
 
 	* twisted/spread/pb.py: Errors during jelly serialization used to

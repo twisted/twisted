@@ -1,4 +1,4 @@
-## Twisted Modules List                                   -*- Python -*-
+## Twisted Modules List
 
 ## Coil modules
 
@@ -7,10 +7,10 @@ register("Twisted Words",
          description="A chat and collaboration system.",
          type='coil')
 
-register("Words Tendril",
-         "twisted.coil.plugins.tendril",
-         description="A Tendril connecting a Words service to an IRC network.",
-         type='coil')
+register("Twisted News",
+         "twisted.tap.news",
+         description="News",
+         type='tap')
 
 register("Twisted Web",
          "twisted.coil.plugins.web",
@@ -111,13 +111,3 @@ register("Twisted Coil Automated TAP builder",
          "twisted.tap.coil",
          description="automated TAP building",
          type="tap")
-         
-## View modules that need to be loaded on startup so they can
-## call twisted.python.components.registerAdapter
-
-register("Blog Post web view adapter",
-	"twisted.web.blog.BlogPostResourceAdapter",
-	description="A blog post which can be viewed/edited ttw, via ftp, etc",
-	type="view")
-
-
