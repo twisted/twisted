@@ -26,41 +26,6 @@ class _TerminalNode(object):
             if distance(o.position, center) < radius:
                 yield o
 
-def fmt(left, front, bottom):
-    return ' '.join((left and 'left' or 'right',
-                     front and 'front' or 'back',
-                     bottom and 'bottom' or 'top'))
-
-def determinant(a, b, c):
-    return (a[0] * b[1] * c[2] -
-            a[0] * b[2] * c[1] +
-            a[1] * b[2] * c[0] -
-            a[1] * b[0] * c[2] +
-            a[2] * b[0] * c[1] -
-            a[2] * b[1] * c[0])
-
-def between(c, p1, p2):
-    # Return True if point c is between planes p1 and p2
-    A1 = (det(p1[0], p1[1], p1[2]),
-          det((1, 1, 1), p1[1], p1[2]),
-          det(p1[0], (1, 1, 1), p1[2])
-          det(p1[0], p1[1], (1, 1, 1)))
-
-    A2 = (det(p2[0], p2[1], p2[2]),
-          det((1, 1, 1), p2[1], p2[2]),
-          det(p2[0], (1, 1, 1), p2[2])
-          det(p2[0], p2[1], (1, 1, 1)))
-
-    n = A1[1] * c[0] + A1[2] * c[1] + A1[3] * c[2] + A1[0]
-    m = A2[1] * c[0] + A2[2] * c[1] + A2[3] * c[2] + A2[0]
-
-    return (n > 0) == (m > 0)
-
-def inPrism(c, (w1, x1, y1, z1), (w2, x2, y2, z2)):
-    return (between(c, (w1, x1, y1), (w2, x2, y2)) and
-            between(c, (w1, w2, z2), (x1, x2, y2)) and
-            between(c, (w1, x1, x2), (z1, y1, y2)))
-
 class OctTree(object):
     def __init__(self, center, width, depth, height, n=0):
         self.center = center

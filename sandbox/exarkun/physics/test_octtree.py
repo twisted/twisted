@@ -10,6 +10,64 @@ class Thingy:
     def __init__(self, x=0, y=0, z=0):
         self.position = (x, y, z)
 
+class UtilTestCase(unittest.TestCase):
+    def testBetween(self):
+        self.failUnless(
+            octtree.between(
+                (0, 0, 0),
+                ((-1, -1, 0), (-1, 1, 0), (-1, 0, 1)),
+                (( 1, -1, 0), ( 1, 1, 0), ( 1, 0, 1))))
+
+        self.failIf(
+            octtree.between(
+                (-2, 0, 0),
+                ((-1, -1, 0), (-1, 1, 0), (-1, 0, 1)),
+                (( 1, -1, 0), ( 1, 1, 0), ( 1, 0, 1))))
+
+        self.failIf(
+            octtree.between(
+                (2, 0, 0),
+                ((-1, -1, 0), (-1, 1, 0), (-1, 0, 1)),
+                (( 1, -1, 0), ( 1, 1, 0), (1, 0, 1))))
+
+        self.failUnless(
+            octtree.between(
+                (5, 5, 5),
+                ((-1, -1, 4), (1, -1, 4), (0, 1, 4)),
+                ((-1, -1, 6), (1, -1, 6), (0, 1, 6))))
+
+        import pdb; pdb.Pdb().set_trace()
+        self.failIf(
+            octtree.between(
+                (5, 5, 3),
+                ((-1, -1, 4), (1, -1, 4), (0, 1, 4)),
+                ((-1, -1, 6), (1, -1, 6), (0, 1, 6))))
+
+        self.failIf(
+            octtree.between(
+                (5, 5, 7),
+                ((-1, -1, 4), (1, -1, 4), (0, 1, 4)),
+                ((-1, -1, 6), (1, -1, 6), (0, 1, 6))))
+
+        self.failUnless(
+            octtree.between(
+                (0, -5, 0),
+                ((-1, -4, 0), (1, -4, 0), (0, -4, 1)),
+                ((-1, -6, 0), (1, -6, 0), (0, -6, 1))))
+
+        self.failIf(
+            octtree.between(
+                (0, -3, 0),
+                ((-1, -4, 0), (1, -4, 0), (0, -4, 1)),
+                ((-1, -6, 0), (1, -6, 0), (0, -6, 1))))
+
+        self.failIf(
+            octtree.between(
+                (0, -7, 0),
+                ((-1, -4, 0), (1, -4, 0), (0, -4, 1)),
+                ((-1, -6, 0), (1, -6, 0), (0, -6, 1))))
+
+
 class OctTreeTest(unittest.TestCase):
     def testTrivialSearch(self):
         o1 = Thingy(x=5, y=5, z=5)
