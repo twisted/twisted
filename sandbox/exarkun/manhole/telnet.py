@@ -482,7 +482,7 @@ class Telnet(protocol.Protocol):
         d = state.him.onResult
         state.him.onResult = None
         d.callback(True)
-        self.enableRemote(option)
+        assert self.enableRemote(option), "enableRemote must return True in this context"
 
     def will_yes_false(self, state, option):
         # He is unilaterally offering to enable an already-enabled option.
@@ -551,7 +551,7 @@ class Telnet(protocol.Protocol):
         d = state.us.onResult
         state.us.onResult = None
         d.callback(True)
-        self.enableRemote(option)
+        assert self.enableRemote(option), "enableRemote must return True in this context"
 
     def do_yes_false(self, state, option):
         # Peer is unilaterally requesting us to enable an already-enabled option.
@@ -723,8 +723,8 @@ class TelnetBootstrapProtocol(TelnetProtocol, ProtocolTransportMixin):
 
 __all__ = [
     # Exceptions
-    'TelnetError', 'NegotiationError', 'AlreadyNegotiating',
-    'AlreadyEnabled', 'AlreadyDisabled',
+    'TelnetError', 'NegotiationError', 'OptionRefused',
+    'AlreadyNegotiating', 'AlreadyEnabled', 'AlreadyDisabled',
 
     # Interfaces
     'ITelnetProtocol', 'ITelnetTransport',

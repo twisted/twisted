@@ -207,6 +207,12 @@ class TelnetTestCase(unittest.TestCase):
             self.assertEquals(h.bytes, ''.join(L).replace(cmd, ''))
             self.assertEquals(h.subcmd, [telnet.SE] + list('hello'))
 
+    def _enabledHelper(self, o, eL=[], eR=[], dL=[], dR=[]):
+        self.assertEquals(o.enabledLocal, eL)
+        self.assertEquals(o.enabledRemote, eR)
+        self.assertEquals(o.disabledLocal, dL)
+        self.assertEquals(o.disabledRemote, dR)
+
     def testRefuseWill(self):
         # Try to enable an option.  The server should refuse to enable it.
         cmd = telnet.IAC + telnet.WILL + '\x12'
@@ -216,6 +222,7 @@ class TelnetTestCase(unittest.TestCase):
 
         self.assertEquals(self.p.protocol.bytes, bytes.replace(cmd, ''))
         self.assertEquals(self.t.value(), telnet.IAC + telnet.DONT + '\x12')
+        self._enabledHelper(self.p.protocol)
 
     def testRefuseDo(self):
         # Try to enable an option.  The server should refuse to enable it.
@@ -226,6 +233,7 @@ class TelnetTestCase(unittest.TestCase):
 
         self.assertEquals(self.p.protocol.bytes, bytes.replace(cmd, ''))
         self.assertEquals(self.t.value(), telnet.IAC + telnet.WONT + '\x12')
+        self._enabledHelper(self.p.protocol)
 
     def testAcceptDo(self):
         # Try to enable an option.  The option is in our allowEnable
@@ -238,10 +246,7 @@ class TelnetTestCase(unittest.TestCase):
         self.p.dataReceived(bytes)
 
         self.assertEquals(self.t.value(), telnet.IAC + telnet.WILL + '\x19')
-        self.assertEquals(h.enabledLocal, ['\x19'])
-        self.assertEquals(h.enabledRemote, [])
-        self.assertEquals(h.disabledLocal, [])
-        self.assertEquals(h.disabledRemote, [])
+        self._enabledHelper(h, eL=['\x19'])
 
     def testAcceptWill(self):
         # Same as testAcceptDo, but reversed.
@@ -253,10 +258,7 @@ class TelnetTestCase(unittest.TestCase):
         self.p.dataReceived(bytes)
 
         self.assertEquals(self.t.value(), telnet.IAC + telnet.DO + '\x91')
-        self.assertEquals(h.enabledLocal, [])
-        self.assertEquals(h.enabledRemote, ['\x91'])
-        self.assertEquals(h.disabledLocal, [])
-        self.assertEquals(h.disabledRemote, [])
+        self._enabledHelper(h, eR=['\x91'])
 
     def testAcceptWont(self):
         # Try to disable an option.  The server must allow any option to
@@ -276,12 +278,7 @@ class TelnetTestCase(unittest.TestCase):
         self.assertEquals(self.p.protocol.bytes, bytes.replace(cmd, ''))
         self.assertEquals(self.t.value(), telnet.IAC + telnet.DONT + '\x29')
         self.assertEquals(s.him.state, 'no')
-
-        h = self.p.protocol
-        self.assertEquals(h.enabledLocal, [])
-        self.assertEquals(h.enabledRemote, [])
-        self.assertEquals(h.disabledLocal, [])
-        self.assertEquals(h.disabledRemote, ['\x29'])
+        self._enabledHelper(self.p.protocol, dR=['\x29'])
 
     def testAcceptDont(self):
         # Try to disable an option.  The server must allow any option to
@@ -301,12 +298,7 @@ class TelnetTestCase(unittest.TestCase):
         self.assertEquals(self.p.protocol.bytes, bytes.replace(cmd, ''))
         self.assertEquals(self.t.value(), telnet.IAC + telnet.WONT + '\x29')
         self.assertEquals(s.us.state, 'no')
-
-        h = self.p.protocol
-        self.assertEquals(h.enabledLocal, [])
-        self.assertEquals(h.enabledRemote, [])
-        self.assertEquals(h.disabledLocal, ['\x29'])
-        self.assertEquals(h.disabledRemote, [])
+        self._enabledHelper(self.p.protocol, dL=['\x29'])
 
     def testIgnoreWont(self):
         # Try to disable an option.  The option is already disabled.  The
@@ -318,6 +310,7 @@ class TelnetTestCase(unittest.TestCase):
 
         self.assertEquals(self.p.protocol.bytes, bytes.replace(cmd, ''))
         self.assertEquals(self.t.value(), '')
+        self._enabledHelper(self.p.protocol)
 
     def testIgnoreDont(self):
         # Try to disable an option.  The option is already disabled.  The
@@ -330,6 +323,7 @@ class TelnetTestCase(unittest.TestCase):
 
         self.assertEquals(self.p.protocol.bytes, bytes.replace(cmd, ''))
         self.assertEquals(self.t.value(), '')
+        self._enabledHelper(self.p.protocol)
 
     def testIgnoreWill(self):
         # Try to enable an option.  The option is already enabled.  The
@@ -348,6 +342,7 @@ class TelnetTestCase(unittest.TestCase):
 
         self.assertEquals(self.p.protocol.bytes, bytes.replace(cmd, ''))
         self.assertEquals(self.t.value(), '')
+        self._enabledHelper(self.p.protocol)
 
     def testIgnoreDo(self):
         # Try to enable an option.  The option is already enabled.  The
@@ -366,6 +361,7 @@ class TelnetTestCase(unittest.TestCase):
 
         self.assertEquals(self.p.protocol.bytes, bytes.replace(cmd, ''))
         self.assertEquals(self.t.value(), '')
+        self._enabledHelper(self.p.protocol)
 
     def testAcceptedEnableRequest(self):
         # Try to enable an option through the user-level API.  This
@@ -382,10 +378,7 @@ class TelnetTestCase(unittest.TestCase):
         self.p.dataReceived(telnet.IAC + telnet.WILL + '\x42')
 
         self.assertEquals(util.wait(d), True)
-        self.assertEquals(self.p.protocol.enabledRemote, ['\x42'])
-        self.assertEquals(self.p.protocol.enabledLocal, [])
-        self.assertEquals(self.p.protocol.disabledRemote, [])
-        self.assertEquals(self.p.protocol.disabledLocal, [])
+        self._enabledHelper(h, eR=['\x42'])
 
     def testRefusedEnableRequest(self):
         # Try to enable an option through the user-level API.  This
@@ -399,10 +392,7 @@ class TelnetTestCase(unittest.TestCase):
         self.p.dataReceived(telnet.IAC + telnet.WONT + '\x42')
 
         self.assertRaises(telnet.OptionRefused, util.wait, d)
-        self.assertEquals(self.p.protocol.enabledLocal, [])
-        self.assertEquals(self.p.protocol.disabledLocal, [])
-        self.assertEquals(self.p.protocol.enabledRemote, [])
-        self.assertEquals(self.p.protocol.disabledRemote, [])
+        self._enabledHelper(self.p.protocol)
 
     def testAcceptedDisableRequest(self):
         # Try to disable an option through the user-level API.  This
@@ -419,10 +409,7 @@ class TelnetTestCase(unittest.TestCase):
         self.p.dataReceived(telnet.IAC + telnet.WONT + '\x42')
 
         self.assertEquals(util.wait(d), True)
-        self.assertEquals(self.p.protocol.enabledLocal, [])
-        self.assertEquals(self.p.protocol.enabledRemote, [])
-        self.assertEquals(self.p.protocol.disabledRemote, ['\x42'])
-        self.assertEquals(self.p.protocol.disabledLocal, [])
+        self._enabledHelper(self.p.protocol, dR=['\x42'])
 
     def testNegotiationBlocksFurtherNegotiation(self):
         # Try to disable an option, then immediately try to enable it, then
@@ -436,10 +423,15 @@ class TelnetTestCase(unittest.TestCase):
         self.assertRaises(telnet.AlreadyNegotiating, util.wait, self.p.do('\x24'))
         self.assertRaises(telnet.AlreadyNegotiating, util.wait, self.p.dont('\x24'))
         self.p.dataReceived(telnet.IAC + telnet.WONT + '\x24')
+        self._enabledHelper(self.p.protocol, dR=['\x24'])
+
+        # Make sure we allow this
+        self.p.protocol.remoteEnableable = ('\x24',)
 
         d = self.p.do('\x24')
         self.p.dataReceived(telnet.IAC + telnet.WILL + '\x24')
         self.assertEquals(util.wait(d), True)
+        self._enabledHelper(self.p.protocol, eR=['\x24'], dR=['\x24'])
 
     def testSuperfluousDisableRequestRaises(self):
         # Try to disable a disabled option.  Make sure it fails properly.
