@@ -254,10 +254,22 @@ pre-compute some results instead of sending all the raw data over the wire.
 Or you could replace references to a local object on the sender's side with
 markers before sending, then upon receipt replace those markers with
 references to a receiver-side proxy that could perform the same operations
-against a local cache of data. Whatever <code>getStateToCopy</code> returns
-from the sending object will be serialized and sent over the wire;
-<code>setCopyableState</code> gets whatever comes over the wire and is
-responsible for setting up the state of the object it lives in.</p>
+against a local cache of data.</p>
+
+<p>Another good use for <code>getStateToCopy</code> is to implement
+<q>local-only</q> attributes: data that is only accessible by the local
+process, not to any remote users. For example, a <code>.password</code>
+attribute could be removed from the object state before sending to a remote
+system. Combined with the fact that <code>Copyable</code> objects return
+unchanged from a round trip, this could be used to build a
+challenge-response system (in fact PB does this with
+<code>pb.Referenceable</code> objects to implement authorization as
+described <a href="pb-cred.html">here</a>).</p>
+
+<p>Whatever <code>getStateToCopy</code> returns from the sending object will
+be serialized and sent over the wire; <code>setCopyableState</code> gets
+whatever comes over the wire and is responsible for setting up the state of
+the object it lives in.</p>
 
 
 <a href="listings/pb/copy2_classes.py" class="py-listing">copy2_classes.py</a>
