@@ -20,15 +20,16 @@ class CompatibilityWrapper(OptionParser):
 
 class HijackOptions(type):
     def __new__(klass, name, bases, attrs):
-        print name, bases, attrs
         opts = {}
         klass.snagFlags(attrs.get('optFlags', ()), opts)
         klass.snagParams(attrs.get('optParameters', ()), opts)
         klass.snagCallbacks(attrs, opts)
         opts = klass.condense(opts)
-        print [(o._short_opts, o._long_opts) for o in opts]
         parser = CompatibilityWrapper(attrs.get('synopsis'), opts)
-        return type.__new__(klass, name, (), {'parser': parser})
+        newAttrs = {'parser': parser}
+        if '__init__' in attrs:
+            newAttrs['__init__'] = attrs['__init__']
+        return type.__new__(klass, name, (), newAttrs)
 
     def __call__(self):
         return self.parser
@@ -62,18 +63,22 @@ class HijackOptions(type):
     snagParams = staticmethod(snagParams)
 
     def snagCallbacks(attrs, opts):
+        def wrap(attrs, name, passValue):
+            def wrapped(option, opt, value, parser):
+                if passValue:
+                    return attrs[name](parser, value)
+                else:
+                    return attrs[name](parser)
+            return wrapped
         for name in attrs:
             if name.startswith('opt_'):
-                if attrs[name].func_code.co_argcount == 1:
-                    wrap = lambda option, opt, value, parser: attrs[name](parser)
-                else:
-                    wrap = lambda option, opt, value, parser: attrs[name](parser, value)
+                f = wrap(attrs, name, attrs[name].func_code.co_argcount != 1)
                 name = name[4:]
                 if len(name) == 1:
                     name = '-' + name
                 else:
                     name = '--' + name
-                o = Option(name, action="callback", callback=wrap)
+                o = Option(name, action="callback", callback=f)
                 opts.setdefault(name, []).append(o)
     snagCallbacks = staticmethod(snagCallbacks)
 
@@ -90,11 +95,17 @@ class HijackOptions(type):
                     finalOpts[-1].help = o.help
                 if o.dest is not None:
                     finalOpts[-1].dest = o.dest
+                finalOpts[-1]._short_opts.extend(o._short_opts)
+                finalOpts[-1]._long_opts.extend(o._long_opts)
+
         return finalOpts
     condense = staticmethod(condense)
 
 class Options(object):
     __metaclass__ = HijackOptions
+    
+    def __init__(self):
+        pass
 
 from twisted.python import usage
 usage.Options = Options
