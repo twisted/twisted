@@ -112,9 +112,8 @@ from twisted.internet import reactor, defer
 
 class Getter:
     def gotResults(self, x):
-        """The Deferred mechanism provides a clear mechanism to
-           signal error conditions to calling code.  In this 
-           example, even numbers are bad.
+        """The Deferred mechanism provides a mechanism to signal error
+           conditions.  In this case, even numbers are bad.
         """
         if x % 2:
             self.d.callback(x*3)
@@ -125,10 +124,9 @@ class Getter:
         return "<p>Result: %s</p>" % r
 
     def getData(self, x):
-        """The Deferred mechanism allows for chained callbacks,
-           first.  In this sexample, the output of gotResults,
-           if it is not an error, proceeds to _toHTML next before
-           it is sent to printData.
+        """The Deferred mechanism allows for chained callbacks.
+           In this example, the output of gotResults is first
+           passed through _toHTML on its way to printData.
         """
         self.d = defer.Deferred()
         reactor.callLater(2, self.gotResults, x)
