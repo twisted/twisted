@@ -62,7 +62,10 @@ def encrypt(passphrase, data):
 
 def quieterWarning():
     import warnings
-    warnings.warn("twisted.internet.app is deprecated, use twisted.application instead.", DeprecationWarning, stacklevel=4)
+    # if you're using app.run(), just switch to using reactor,
+    # otherwise switch to twisted.application (see application
+    # howto for details).
+    warnings.warn("twisted.internet.app is deprecated, use twisted.application or the reactor instead.", DeprecationWarning, stacklevel=4)
     global quieterWarning
     quieterWarning = lambda: None
 
