@@ -1,7 +1,10 @@
 
-import unittest
+from pyunit import unittest
 from types import *
 from twisted.internet import main, passport
+
+
+EXCLUDE_FROM_BIGSUITE="Incapable test author."
 
 class ForeignObject:
     "A strange object which shouldn't rightly be accepted by anything."
@@ -10,7 +13,7 @@ class ForeignObject:
         self.desc = s
         self.__setattr__ = self.x__setattr__
 
-    def x__setattr__(self, key, value):        
+    def x__setattr__(self, key, value):
         raise TypeError, "I am read-only."
 
     def __repr__(self):
@@ -37,7 +40,7 @@ class AppForServiceTest(Stubby, main.Application):
     def __init__(self, name, *a, **kw):
         self.name = name
         self.services = {}
-    
+
 class ServiceTestCase(unittest.TestCase):
     App = AppForServiceTest
     def setUp(self):
@@ -47,18 +50,18 @@ class ServiceTestCase(unittest.TestCase):
         app = self.App("test app for service-test")
         passport.Service("test service")
         passport.Service("test service", app)
-        
+
     def testConstruction_serviceName(self):
         """serviceName is frequently used as a key, thus it is expected
         to be hashable."""
-        
+
         self.assertRaises(TypeError, passport.Service,
                           ForeignObject("Not a Name"))
-        
+
     def testConstruction_application(self):
         """application, if provided, should look at least vaugely like
         an application."""
-        
+
         self.assertRaises(TypeError, passport.Service,
                           "test service",
                           ForeignObject("Not an Application"))
@@ -70,7 +73,7 @@ class ServiceTestCase(unittest.TestCase):
 
     def testsetApplication_invalid(self):
         "setApplication should not accept bogus argument."
-        
+
         self.assertRaises(TypeError, self.service.setApplication,
                           ForeignObject("Not an Application"))
 
@@ -100,7 +103,7 @@ class ServiceTestCase(unittest.TestCase):
         self.service.addPerspective(p)
         q = self.service.getPerspectiveNamed(pname)
         self.assertEqual(pname, q.getPerspectiveName())
-        self.assertEqual(p,q)        
+        self.assertEqual(p,q)
 
     def testaddPerspective_invalid(self):
         self.assertRaises(TypeError, self.service.addPerspective,
@@ -141,19 +144,19 @@ class IdentityForPerspectiveTest(Stubby, passport.Identity):
         self.name = name
         self.application = app
         self.keyring = {}
-        
+
 class PerspectiveTestCase(unittest.TestCase):
     App = AppForPerspectiveTest
     Service = ServiceForPerspectiveTest
     Identity = IdentityForPerspectiveTest
-    
+
     def setUp(self):
         self.app = self.App("app for perspective-test")
         self.service = self.Service("service for perspective-test",
                                     self.app)
         self.perspective = passport.Perspective("test perspective",
                                                 self.service)
-                                                
+
 
     def testConstruction(self):
         passport.Perspective("test perspective", self.service)
@@ -273,11 +276,11 @@ class IdentityTestCase(unittest.TestCase):
     App = AppForIdentityTest
     Service = ServiceForIdentityTest
     Perspective = PerspectiveForIdentityTest
-    
+
     def setUp(self):
         self.app = self.App("app for identity-test")
         self.ident = passport.Identity("test identity", self.app)
-        
+
     def testConstruction(self):
         passport.Identity("test name", self.app)
 
@@ -292,14 +295,14 @@ class IdentityTestCase(unittest.TestCase):
     def test_addKeyForPerspective(self):
         service = self.Service("one", self.app)
         perspective = self.Perspective("two", service)
-        
+
         self.ident.addKeyForPerspective(perspective)
         self.assert_(("one", "two") in self.ident.getAllKeys())
 
     def test_getPerspectiveForKey(self):
         service = self.Service("one", self.app)
         perspective = self.Perspective("two", service)
-        
+
         self.ident.addKeyForPerspective(perspective)
         p = self.ident.getPerspectiveForKey("one","two")
         self.assert_(p is perspective)
@@ -310,7 +313,7 @@ class IdentityTestCase(unittest.TestCase):
 
     def test_getAllKeys(self):
         self.assert_(len(self.ident.getAllKeys()) == 0)
-        
+
         service = self.Service("one", self.app)
 
         for n in ("p1","p2","p3"):
@@ -320,10 +323,10 @@ class IdentityTestCase(unittest.TestCase):
         keys = self.ident.getAllKeys()
 
         self.assertEqual(keys, 3)
-        
+
         for n in ("p1","p2","p3"):
             self.assert_(("one", n) in keys)
-        
+
     def test_removeKey(self):
         self.ident.addKeyByString("one", "two")
         self.ident.removeKey("one", "two")
@@ -353,11 +356,11 @@ class IdentityTestCase(unittest.TestCase):
         self.ident.setPassword("passphrase")
         self.assert_(self.ident.verifyPlainPassword("passphrase"))
         self.assert_(not self.ident.verifyPlainPassword("wrongphrase"))
-        
+
 
 class AuthorizerTestCase(unittest.TestCase):
     """XXX - TestCase for passport.DefaultAuthorizer not yet written."""
     pass
-    
+
 if __name__ == "__main__":
     unittest.main()

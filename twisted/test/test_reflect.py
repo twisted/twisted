@@ -32,8 +32,8 @@ class SettableTest(unittest.TestCase):
 
     def testSet(self):
         self.setter(a=1, b=2)
-        assert self.setter.a == 1
-        assert self.setter.b == 2
+        self.failUnlessEqual(self.setter.a, 1)
+        self.failUnlessEqual(self.setter.b, 2)
 
 
 class AccessorTest(unittest.TestCase):
@@ -51,12 +51,12 @@ class AccessorTest(unittest.TestCase):
 
     def testSet(self):
         self.tester.x = 1
-        assert self.tester.x == 1
-        assert self.tester.y == 1
+        self.failUnlessEqual(self.tester.x, 1)
+        self.failUnlessEqual(self.tester.y, 1)
 
     def testGet(self):
-        assert self.tester.z == 1
-        assert self.tester.q == 1
+        self.failUnlessEqual(self.tester.z, 1)
+        self.failUnlessEqual(self.tester.q, 1)
 
 class PromiseTest(unittest.TestCase):
     def setUp(self):
@@ -71,19 +71,22 @@ class PromiseTest(unittest.TestCase):
         self.obj = reflect.Promise()
 
     def testSingle(self):
-        print 'Promise: single'
+        """Promise: single"""
         self.obj.a(0)
         self.obj.__become__(self.slowObj)
-        assert self.obj.results == [("a", 0)]
+        self.failUnlessEqual(self.obj.results, [("a", 0)])
+
     def testDouble(self):
-        print 'Promise: double'
+        """Promise: double"""
         meth = self.obj.a
         meth("alpha")
         meth("beta")
         self.obj.__become__(self.slowObj)
-        assert self.obj.results == [("a", "alpha"), ("a", "beta")]
+        self.failUnlessEqual(self.obj.results,
+                             [("a", "alpha"), ("a", "beta")])
+
     def testMixed(self):
-        print 'Promise: mixed'
+        """Promise: mixed"""
         a = self.obj.a
         b = self.obj.b
         b(1)
@@ -91,7 +94,9 @@ class PromiseTest(unittest.TestCase):
         b(3)
         self.obj.a(4)
         self.obj.__become__(self.slowObj)
-        assert self.obj.results == [("b", 1), ("a", 2), ("b", 3), ("a", 4)]
+        self.failUnlessEqual(self.obj.results,
+                             [("b", 1), ("a", 2), ("b", 3), ("a", 4)])
+
     def tearDown(self):
         del self.obj
         del self.slowObj
