@@ -408,7 +408,18 @@ service migration can provide a way to test software updates on a live
 system before enacting them as well as a way to minimize user-visible system
 downtime.</p>
 
-<p></p>
+<p>Translucent migration can also provide a means of a very rapid test/edit/test
+cycle.  While the author strongly believes that unit tests are a sounder
+overall approach to writing robust, correct software, he recognizes that
+one of Python's many strengths is the ability of a programmer to get rapid
+feedback to code changes; the test/edit/test cycle is sometimes very useful
+in this area.  Similar to the <code>reload</code> built-in, migration can
+provide a way to move changes into a running application very easily.  Unlike
+<code>reload</code>, though, migration provides a very robust error handling
+capability.  Changes which would cause an entirely application to abort
+abnormally if loaded with <code>reload</code> have absolutely no effect on
+a migration, relieving the programmer of the need to recover from a mistake
+by restarting an application.</p>
 
 <h2>Footnotes</h2>
 
