@@ -44,7 +44,7 @@ class TestLoader(unittest.TestLoader):
         self.load_errors = []
         self.excluded_tests = []
 
-    def loadTestsFromMyPackage(self):
+    def loadTestsFromMyPackage(self, file=None):
         """Loads everything named test_*.py in this directory.
 
         A test module may exclude itself from the suite by assigning
@@ -52,8 +52,11 @@ class TestLoader(unittest.TestLoader):
         """
 
         testpath = path.dirname(path.abspath(__file__))
-
-        test_files = glob.glob(testpath + '/test_*.py')
+        if file is None:
+            test_files = glob.glob(testpath + '/test_*.py')
+        else:
+            test_files = [path.abspath(file)]
+        
         test_mNames = map(lambda fp: path.splitext(path.basename(fp))[0],
                          test_files)
 

@@ -18,7 +18,7 @@
 
 
 """
-Usage: python RunTests.py [-t] [-v] [-q] [<reactor>]
+Usage: python RunTests.py [-t] [-v] [-q] [--file <python file>] [<reactor>]
 
 Run a python GUI which starts up a UnitTestRunner for the Twisted
 test-suite.
@@ -27,12 +27,13 @@ Flags:
  -t -- always use text-mode (otherwise try GUI first)
  -v -- text-mode will be more verbose
  -q -- text-mode won't will be quieter (doesn't print progress dots)
+ --file -- path to a python file containing test cases
 """
 
 ### Twisted Preamble
 # This makes sure that users don't have to set up their environment
 # specially in order to run these programs from bin/.
-import sys,os,string
+import sys,os,string, getopt
 
 if string.find(os.path.abspath(sys.argv[0]),'Twisted') != -1:
     sys.path.append(os.path.dirname(
@@ -48,20 +49,27 @@ class TestProgram:
         if argv is None:
             argv = ["runtests"]
 
-        if '-t' in argv:
+        opts, args = getopt.getopt(argv[1:], "tvq", ["file="])
+        if ('-t', '') in opts:
             text_mode = 'always'
         else:
             text_mode = 0
 
-        if '-v' in argv:
+        if ('-v', '') in opts:
             self.verbosity = 2
-        elif '-q' in argv:
+        elif ('-q', '') in opts:
             self.verbosity = 0
         else:
             self.verbosity = 1
 
-        if (len(argv) > 1) and argv[-1][0] != "-":
-            reactor = argv[-1]
+        for k, v in opts:
+            if k == '--file':
+                self.file = v
+            else:
+                self.file = None
+        
+        if args:
+            reactor = args[-1]
         else:
             reactor = "default"
         self._installReactor(reactor)
@@ -104,7 +112,7 @@ class TestProgram:
         from twisted.test import test_all
 
         loader = test_all.TestLoader()
-        test = loader.loadTestsFromMyPackage()
+        test = loader.loadTestsFromMyPackage(self.file)
 
         runner = unittest.TextTestRunner(verbosity = self.verbosity)
         result = runner.run(test)
