@@ -222,6 +222,7 @@ class Deferred:
 
         The timeout counts down from when this method is called.
         """
+        from twisted.internet import reactor
         reactor.callLater(seconds, 
                           lambda s=self, f=timeoutFunc: s.called or f(s))
 
@@ -264,5 +265,3 @@ FAILURE = 0
 
 __all__ = ["Deferred", "DeferredList", "succeed", "fail", "FAILURE", "SUCCESS"]
 
-# Workaround circular import issues
-import reactor
