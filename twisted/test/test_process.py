@@ -83,23 +83,25 @@ class Accumulator(protocol.ProcessProtocol):
     closed = 0
     
     def connectionMade(self):
-        print "connection made"
+        # print "connection made"
         self.outF = cStringIO.StringIO()
         self.errF = cStringIO.StringIO()
 
     def dataReceived(self, d):
-        print "data", repr(d)
+        # print "data", repr(d)
         self.outF.write(d)
 
     def errReceived(self, d):
-        print "err", repr(d)
+        # print "err", repr(d)
         self.errF.write(d)
 
     def connectionLost(self):
-        print "out closed"
+        # print "out closed"
+        pass
 
     def errConnectionLost(self):
-        print "err closed"
+        # print "err closed"
+        pass
     
     def processEnded(self):
         self.closed = 1
@@ -115,7 +117,8 @@ class PosixProcessTestCase(unittest.TestCase):
 	p = Accumulator()
         reactor.spawnProcess(p, cmd, [cmd, "-c"], {}, "/tmp")
         p.transport.write(s)
-        p.transport.loseConnection()
+        # p.transport.loseConnection()
+        p.transport.closeStdin()
 
         while not p.closed:
             reactor.iterate()
