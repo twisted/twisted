@@ -356,7 +356,7 @@ class Service(pb.Service, styles.Versioned, coil.Configurable):
     persistenceVersion = 2
 
     def upgradeToVersion1(self):
-        from twisted.internet.main import theApplication
+        from twisted.internet.app import theApplication
         styles.requireUpgrade(theApplication)
         pb.Service.__init__(self, 'twisted.words', theApplication)
 

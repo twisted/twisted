@@ -1,7 +1,7 @@
 
 from pyunit import unittest
 from types import *
-from twisted.internet import main, passport
+from twisted.internet import app, passport
 
 
 EXCLUDE_FROM_BIGSUITE="Incapable test author."
@@ -36,7 +36,7 @@ class Stubby:
 
 # Service
 
-class AppForServiceTest(Stubby, main.Application):
+class AppForServiceTest(Stubby, app.Application):
     def __init__(self, name, *a, **kw):
         self.name = name
         self.services = {}
@@ -67,9 +67,9 @@ class ServiceTestCase(unittest.TestCase):
                           ForeignObject("Not an Application"))
 
     def testsetApplication(self):
-        app = self.App("test app for service-test")
-        self.service.setApplication(app)
-        self.assert_(self.service.application is app)
+        appl = self.App("test app for service-test")
+        self.service.setApplication(appl)
+        self.assert_(self.service.application is appl)
 
     def testsetApplication_invalid(self):
         "setApplication should not accept bogus argument."
@@ -80,9 +80,9 @@ class ServiceTestCase(unittest.TestCase):
     def testsetApplication_again(self):
         "setApplication should bail if already set."
 
-        app = self.App("test app for service-test")
+        app1 = self.App("test app for service-test")
         app2 = self.App("another app?")
-        self.service.setApplication(app)
+        self.service.setApplication(app1)
         self.assertRaises(AssertationError, self.service.setApplication,
                           app2)
 
@@ -127,21 +127,21 @@ class ServiceTestCase(unittest.TestCase):
 
 # Perspectives
 
-class AppForPerspectiveTest(Stubby, main.Application):
+class AppForPerspectiveTest(Stubby, app.Application):
     def __init__(self, name, *a, **kw):
         self.name = name
         self.authorizer = "Stub depth exceeded"
 
 class ServiceForPerspectiveTest(Stubby, passport.Service):
-    def __init__(self, name, app):
+    def __init__(self, name, appl):
         self.serviceName = name
-        self.application = app
+        self.application = appl
         self.perspectives = {}
 
 class IdentityForPerspectiveTest(Stubby, passport.Identity):
-    def __init__(self, name, app=None):
+    def __init__(self, name, appl=None):
         self.name = name
-        self.application = app
+        self.application = appl
         self.keyring = {}
 
 class PerspectiveTestCase(unittest.TestCase):
@@ -244,15 +244,15 @@ class FunctionsTestCase(unittest.TestCase):
 
 # Identity
 
-class AppForIdentityTest(Stubby, main.Application):
+class AppForIdentityTest(Stubby, app.Application):
     def __init__(self, name, *a, **kw):
         self.name = name
         self.authorizer = "Stub depth exceeded"
 
 class ServiceForIdentityTest(Stubby, passport.Service):
-    def __init__(self, name, app):
+    def __init__(self, name, appl):
         self.serviceName = name
-        self.application = app
+        self.application = appl
         self.perspectives = {}
 
     def getServiceName(self):

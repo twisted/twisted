@@ -33,6 +33,45 @@ class Group(pb.RemoteCache):
 pb.setCopierForClass("twisted.words.service.Group", Group)
 
 
+class AccountManager(gtk.GtkWindow):
+    def __init__(self, imgui, *args, **kw):
+        apply(gtk.GtkWindow.__init__, (self,)+args, kw)
+        self.imgui = imgui
+        self.accounts = []
+        vbox = gtk.GtkVBox(gtk.FALSE, 5)
+        vbox.set_border_width(5)
+        self.add(vbox)
+        titles = [
+            'Username', 'Online', 'Auto-Login', 'Gateway'
+            ]
+        clist = gtk.GtkCList(len(titles), titles)
+        clist.signal_connect("select_row", self.rowSelected)
+        clist.set_shadow_type(gtk.SHADOW_OUT)
+        scrolled = gtk.GtkScrolledWindow(None, None)
+        scrolled.set_policy(gtk.POLICY_AUTOMATIC, gtk.POLICY_ALWAYS)
+        vbox.pack_start(scrolled, gtk.TRUE, gtk.TRUE, 0)
+        scrolled.add(clist)
+        hb = gtk.GtkHBox(gtk.FALSE, 0)
+        vbox.pack_start(hb, gtk.FALSE, gtk.TRUE, 0)
+        addB = gtk.GtkButton("Add")
+        modifyB = gtk.GtkButton("Modify")
+        loginB = gtk.GtkButton("Logon")
+        deleteB = gtk.GtkButton("Delete")
+        map(hb.add, [addB, modifyB, loginB, deleteB])
+        self.imgui.im.connect(self.event_attach, "attach")
+        self.imgui.im.connect(self.event_detach, "detach")
+        self.signal_connect('destroy', gtk.mainquit, None)
+
+
+    def rowSelected(self, clist, row, column, event, data):
+        print 'hi'
+        
+    def event_attach(self, gateway):
+        print 'i attached to', gateway
+
+    def event_detach(self, gateway):
+        print 'i detached from', gateway
+
 class AddContact(gtkutil.GetString):
     def __init__(self, im):
         gtkutil.GetString.__init__(self, im, "Add Contact")
@@ -83,6 +122,8 @@ class Conversation(gtk.GtkWindow):
 
     def removeFromList(self, win, evt):
         del self.im.conversations[self.contact]
+
+
 
 class GroupSession(gtk.GtkWindow):
     def __init__(self, groupName, im):
@@ -286,24 +327,10 @@ class ContactList(gtk.GtkWindow):
 im.Conversation=Conversation
 im.ContactList=ContactList
 
-class OurConnected:
-    loginWindow = None
-    b = None
-    def __init__(self):
-        pass
-
-    def __call__(self, perspective):
-        self.b.name = self.loginWindow.username.get_text()
-        self.loginWindow.hide()
-        self.b.connected(perspective)
 
 def main():
-    b = im.InstanceMessenger()
-    our_connected = OurConnected()
-    lw = gtkutil.Login(our_connected, b,
-                       initialHostname='twistedmatrix.com',
-                       initialService="twisted.words")
-    lw.show_all()
-    our_connected.loginWindow = lw
-    our_connected.b = b
+    imgui = im.InstanceMessengerGUI(im.InstanceMessenger(),
+                                    Conversation, ContactList, GroupSession, None)
+    am = AccountManager(imgui, gtk.WINDOW_TOPLEVEL)
+    am.show_all()
     gtk.mainloop()

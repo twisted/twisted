@@ -40,6 +40,7 @@ class AtLeastImportTestCase(unittest.TestCase):
         """
         from twisted.internet import tcp
         from twisted.internet import main
+        from twisted.internet import app
         # from twisted.internet import ssl
         from twisted.internet import stdio
         from twisted.internet import abstract

@@ -35,7 +35,7 @@ Options:
      -y --python      read an application from within a Python file
      -g --plugin      read config.tac from a plugin package, as with -y
 
-This reads an twisted.internet.main.Application out of a file and runs it.
+This reads an twisted.internet.app.Application out of a file and runs it.
 """
 
 ### Twisted Preamble
@@ -59,7 +59,7 @@ import imp
 
 class ServerOptions(usage.Options):
     synopsis = "Usage: twistd [options]"
-    longdesc = "This reads an twisted.internet.main.Application out of a file and runs it."
+    longdesc = "This reads an twisted.internet.app.Application out of a file and runs it."
 
     optFlags = [['nodaemon','n',"don't daemonize"],
                 ['profile','p',"run profiler"],

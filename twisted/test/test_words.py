@@ -18,11 +18,11 @@
 from pyunit import unittest
 
 from twisted.words import service
-from twisted.internet import main
+from twisted.internet import app
 
 class WordsTestCase(unittest.TestCase):
     def testWords(self):
-        a = main.Application("testwords")
+        a = app.Application("testwords")
         s = service.Service('twisted.words',a)
         s.createParticipant("glyph")
         s.createParticipant("sean")

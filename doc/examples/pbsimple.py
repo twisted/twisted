@@ -16,12 +16,12 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
 from twisted.spread import pb
-from twisted.internet import main
+from twisted.internet import app
 class Echoer(pb.Root):
     def remote_echo(self, st):
         print 'echoing:', st
         return st
 if __name__ == '__main__':
-    app = main.Application("pbsimple")
-    app.listenTCP(8789, pb.BrokerFactory(Echoer()))
-    app.run()
+    appl = app.Application("pbsimple")
+    appl.listenTCP(8789, pb.BrokerFactory(Echoer()))
+    appl.run()

@@ -20,7 +20,6 @@ Test cases for twisted.smtp module.
 """
 
 from pyunit import unittest
-from twisted.internet import main
 import twisted.protocols.protocol, twisted.protocols.smtp
 from twisted import protocols
 from twisted.protocols import loopback

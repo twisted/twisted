@@ -25,7 +25,7 @@ class Echoer:
 
 
 def main():
-    from twisted.internet.main import Application
+    from twisted.internet.app import Application
     from twisted.web import server
     app = Application("xmlrpc")
     r = xmlrpc.PB(Echoer())

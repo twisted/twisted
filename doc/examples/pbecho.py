@@ -16,7 +16,7 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
 from twisted.spread import pb
-from twisted.internet import main
+from twisted.internet import app
 class SimplePerspective(pb.Perspective):
     def perspective_echo(self, text):
         print 'echoing',text
@@ -28,7 +28,7 @@ class SimpleService(pb.Service):
         return p
 if __name__ == '__main__':
     import pbecho
-    app = main.Application("pbecho")
-    pbecho.SimpleService("pbecho",app).getPerspectiveNamed("guest").makeIdentity("guest")
-    app.listenTCP(pb.portno, pb.BrokerFactory(pb.AuthRoot(app)))
-    app.save("start")
+    appl = app.Application("pbecho")
+    pbecho.SimpleService("pbecho",appl).getPerspectiveNamed("guest").makeIdentity("guest")
+    appl.listenTCP(pb.portno, pb.BrokerFactory(pb.AuthRoot(appl)))
+    appl.save("start")

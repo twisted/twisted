@@ -35,8 +35,8 @@ class EchoDisplay(widgets.Presentation):
         return [d]
 if __name__ == "__main__":
     from twisted.web import server
-    from twisted.internet import main
-    a = main.Application("pbweb")
+    from twisted.internet import app
+    a = app.Application("pbweb")
     gdgt = widgets.Gadget()
     gdgt.widgets['index'] = EchoDisplay()
     a.listenTCP(8080, server.Site(gdgt))

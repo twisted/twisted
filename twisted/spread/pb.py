@@ -1424,15 +1424,6 @@ class BrokerFactory(protocol.Factory, styles.Versioned, coil.Configurable):
     def __init__(self, objectToBroker):
         self.objectToBroker = objectToBroker
 
-## Due to a spelling error in a previous release, persistenceVersion=1 objects
-## may still have persistenceVersion=None, so this could cause a
-## double-upgrade.
-##    def upgradeToVersion1(self):
-##        del self.services
-##        from twisted.internet.main import theApplication
-##        self.__init__(theApplication)
-
-
     configTypes = {'objectToBroker': Root}
     configName = 'PB Broker Factory'
 

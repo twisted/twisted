@@ -74,7 +74,7 @@ class Reality(delay.Delayed,
 
     def upgradeToVersion1(self):
         print 'Upgrading Twisted Reality instance.'
-        from twisted.internet.main import theApplication
+        from twisted.internet.app import theApplication
         styles.requireUpgrade(theApplication)
         pb.Service.__init__(self, 'twisted.reality', theApplication)
         self.addPlayersAsIdentities()

@@ -96,7 +96,7 @@ class Handler(threading.Thread):
 # This builds a .tap file
 
 if __name__ == '__main__':
-    from twisted.internet.main import Application
+    from twisted.internet.app import Application
     factory = Factory()
     factory.protocol = Echo
     app = Application("echo")

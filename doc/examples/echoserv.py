@@ -36,7 +36,7 @@ if __name__ == '__main__':
     # (If we just used Echo, then it would be __main__.Echo when it attempted
     # to unpickle)
     import echoserv
-    from twisted.internet.main import Application
+    from twisted.internet.app import Application
     factory = Factory()
     factory.protocol = echoserv.Echo
     app = Application("echo")

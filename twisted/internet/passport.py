@@ -45,7 +45,7 @@ class Service:
     def __init__(self, serviceName, application=None):
         """Create me, attached to the given application.
 
-        Arguments: application, a twisted.internet.main.Application instance.
+        Arguments: application, a twisted.internet.app.Application instance.
         """
         self.serviceName = serviceName
         self.perspectives = {}

@@ -28,7 +28,7 @@ sys.path.append('.')
 ### end of preamble
 
 from twisted.protocols import telnet
-from twisted.internet import main, tcp, passport
+from twisted.internet import app, tcp, passport
 from twisted.python import usage
 from twisted.spread import pb
 from twisted.manhole import service
@@ -117,7 +117,7 @@ except usage.error, ue:
     sys.exit()
 
 if not options.append:
-    a = main.Application(options.args[0], int(options.uid), int(options.gid))
+    a = app.Application(options.args[0], int(options.uid), int(options.gid))
 else:
     a = cPickle.load(open(options.append))
 
