@@ -927,7 +927,7 @@ class Gadget(resource.Resource):
 
     def render(self, request):
         #Redirect to view this entity as a collection.
-        request.setResponseCode(http.TEMPORARY_REDIRECT)
+        request.setResponseCode(http.FOUND)
         # TODO who says it's not https?
         request.setHeader("location","http%s://%s%s/" % (
             request.isSecure() and 's' or '',
@@ -1043,8 +1043,7 @@ class Reloader(Presentation):
         self.modules = modules
 
     def reload(self, request):
-        request.setHeader("location", "..")
-        request.setResponseCode(http.TEMPORARY_REDIRECT)
+        request.redirect("..")
         x = []
         write = x.append
         for module in self.modules:

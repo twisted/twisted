@@ -145,8 +145,7 @@ class AppConfiguratorPage(widgets.Presentation):
 
                     if obj is None:
                         # no such subobject
-                        request.setResponseCode(http.TEMPORARY_REDIRECT)
-                        request.setHeader('location', request.prePathURL())
+                        request.redirect(request.prePathURL())
                         return ['Redirecting...']
         else:
             obj = self.app

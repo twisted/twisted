@@ -65,8 +65,7 @@ def addSlash(request):
         (string.split(request.uri,'?')[0]))
 
 def redirectTo(URL, request):
-    request.setHeader("location", URL)
-    request.setResponseCode(http.TEMPORARY_REDIRECT)
+    request.redirect(URL)
     return """
 <html>
     <head>

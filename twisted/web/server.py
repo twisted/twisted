@@ -428,9 +428,8 @@ class Site(http.HTTPFactory):
     def render(self, request):
         """Redirect because a Site is always a directory.
         """
-        request.setHeader("location",request.prePathURL() + '/')
-        request.setResponseCode(http.TEMPORARY_REDIRECT)
-        return 'redirect!'
+        request.redirect(request.prePathURL() + '/')
+        request.finish()
 
     def getChildWithDefault(self, pathEl, request):
         """Emulate a resource's getChild method.
