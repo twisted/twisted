@@ -18,7 +18,7 @@
 
 from __future__ import nested_scopes
 
-__version__ = '$Revision: 1.35 $'[11:-2]
+__version__ = '$Revision: 1.36 $'[11:-2]
 
 import os, sys
 from UserDict import UserDict
@@ -327,24 +327,6 @@ def raises(exception, f, *args, **kwargs):
     except exception:
         return 1
     return 0
-
-class Inf(int):
-    pos = 1
-    def __new__(self, value=0):
-        return int.__new__(self, value)
-    def __cmp__(self, other):
-        if isinstance(other, Inf) and self.pos == other.pos:
-            return 0
-        return self.pos
-    def __rcmp__(self, other):
-        if isinstance(other, Inf) and self.pos == other.pos:
-            return 0
-        return -self.pos
-    def __neg__(self):
-        i = Inf()
-        i.pos = -i.pos
-        return i
-Infinity = Inf()
 
 __all__ = [
     "uniquify", "padTo", "getPluginDirs", "addPluginDir", "sibpath",
