@@ -283,12 +283,6 @@ class ReactorBase:
     def callInThread(self, callable, *args, **kwargs):
         apply(threads.callInThread, (callable,) + args, kwargs)
 
-    def callMultipleInThread(self, tupleList):
-        threads.callMultipleInThread(tupleList) 
-
-    def deferToThread(self, callable, *args, **kwargs):
-        return apply(threads.deferToThread, (callable,) + args, kwargs)
-
     def suggestThreadPoolSize(self, size):
         threads.suggestThreadPoolSize(size)
 

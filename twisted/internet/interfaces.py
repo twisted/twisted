@@ -159,17 +159,6 @@ class IReactorThreads(Interface):
         """Run the callable object in a separate thread.
         """
 
-    def callMultipleInThread(self, tupleList):
-        """Run a list of functions in the same thread.
-
-        tupleList should be a list of (function, argsList, kwargsDict) tuples.
-        """
-
-    def deferToThread(self, callable, *args, **kwargs):
-        """Run callable object in a separate thread and return result
-        as Deferred.
-        """
-
     def suggestThreadPoolSize(self, size):
         """Suggest the size of the thread pool.
         """
