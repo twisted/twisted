@@ -458,7 +458,8 @@ class Port(abstract.FileDescriptor):
         """
         self.disconnecting = 1
         self.stopReading()
-        task.schedule(self.connectionLost)
+        if self.connected:
+            task.schedule(self.connectionLost)
 
     def connectionLost(self):
         """Cleans up my socket.
