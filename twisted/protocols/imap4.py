@@ -2619,7 +2619,7 @@ class IMAP4Client(basic.LineReceiver):
                         raise IllegalServerResponse, line
         return ids
 
-    def fetchUID(self, messages):
+    def fetchUID(self, messages, uid=0):
         """Retrieve the unique identifier for one or more messages
 
         This command is allowed in the Selected state.
@@ -2627,12 +2627,16 @@ class IMAP4Client(basic.LineReceiver):
         @type messages: C{MessageSet} or C{str}
         @param messages: A message sequence set
 
+        @type uid: C{bool}
+        @param uid: Indicates whether the message sequence set is of message
+        numbers or of unique message IDs.
+
         @rtype: C{Deferred}
         @return: A deferred whose callback is invoked with a dict mapping
         message sequence numbers to unique message identifiers, or whose
         errback is invoked if there is an error.
         """
-        d = self._fetch(messages, useUID=0, uid=1)
+        d = self._fetch(messages, useUID=uid, uid=1)
         d.addCallback(self.__cbFetch)
         return d
 
