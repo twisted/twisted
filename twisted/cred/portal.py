@@ -21,9 +21,20 @@ from twisted.internet.defer import maybeDeferred
 from twisted.python import failure, reflect, components
 from twisted.cred import error
 
+
 class IRealm(components.Interface):
+
     def requestAvatar(self, avatarId, mind, *interfaces):
-        pass
+        """Return avatar implementing one of the given interfaces.
+
+        Return a deferred which will fire a tuple of (interface,
+        avatarAspect, logout), or the tuple itself.  The interface
+        will be one of the interfaces passed in the 'interfaces'
+        argument.  The 'avatarAspect' will implement that interface.
+        The 'logout' object is a callable which will detach the mind
+        from the avatar.
+        """
+
 
 class Portal:
     def __init__(self, realm, checkers=()):
