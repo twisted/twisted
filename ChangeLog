@@ -1,3 +1,7 @@
+2002-04-01  Chris Armstrong  <carmstro@twistedmatrix.com>
+
+	* .: Releasing Twisted 0.16.0.
+	
 2002-03-29  Itamar Shtull-Trauring  <itamarst@twistedmatrix.com>
 
         * Added Qt event loop support, written by Sirtaj Singh Kang and

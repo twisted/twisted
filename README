@@ -8,8 +8,9 @@ biology"
 For information on what's new in Twisted 0.16.0, see the ChangeLog file
 that comes with the distribution, or http://twistedmatrix.com/ChangeLog.txt.
 
-NOTE: There has been an extra-special addition to this release: The new
-TwistedMatrix License Server. Please see doc/howto/register.html for more
+=== NOTE ===
+    There has been an extra-special addition to this release: The new
+TwistedMatrix licensing scheme. PLEASE see doc/howto/register.html for more
 information.
 
 
