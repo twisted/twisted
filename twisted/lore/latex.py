@@ -61,18 +61,14 @@ class LatexSpitter:
         if not hasattr(node, 'tagName'):
             self.writeNodeData(node)
             return
-        m = getattr(self, 'visitNode_'+node.tagName, self.visitNodeDefault)
-        m(node)
+        getattr(self, 'visitNode_'+node.tagName, self.visitNodeDefault)(node)
 
     def visitNodeDefault(self, node):
-        s = getattr(self, 'mapStart_'+node.tagName, None)
-        if s:
-            self.writer(s)
+        s = getattr(self, 'mapStart_'+node.tagName, None) or ''
+        self.writer(s)
         for child in node.childNodes:
             self.visitNode(child)
-        s = getattr(self, 'mapEnd_'+node.tagName, None)
-        if s:
-            self.writer(s)
+        s = getattr(self, 'mapEnd_'+node.tagName, None) or ''
 
     def visitNode_pre(self, node):
         self.writer('\\begin{verbatim}\n')
@@ -105,8 +101,7 @@ class LatexSpitter:
         os.system("pngtopnm %s | pnmtops > %s" % (src, target))
 
     def visitNodeHeader(self, node):
-        level = int(node.tagName[1])-2
-        level += self.baseLevel
+        level = (int(node.tagName[1])-2)+self.baseLevel
         self.writer('\n\n\\'+level*'sub'+'section{')
         self.visitNodeDefault(node)
         self.writer('}\n')
