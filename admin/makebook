@@ -5,6 +5,7 @@ cp admin/book.tex doc/howto
 cd doc/howto
 latex book.tex
 latex book.tex
+latex book.tex
 dvips -o book.ps book.dvi
 ps2pdf13 book.ps book.pdf
 rm *.eps *.tex *.aux *.log book.dvi book.toc
