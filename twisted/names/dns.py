@@ -259,8 +259,8 @@ class SimpleDomain:
         if type == dns.A:
             message.answers.append(dns.RR(name, type=dns.A, cls=dns.IN, 
                                           data=self.ip))
-        message.ns.append(NS('ns.'+self.name, type=dns.NS, cls=dns.IN, 
-                                      data=self.name))
+        message.ns.append(NS(self.name, type=dns.NS, cls=dns.IN, 
+                                      data='ns.'+self.name))
         message.add.append(dns.RR('ns.'+self.name, type=dns.A, cls=dns.IN, 
                                   data=self.ip))
          
