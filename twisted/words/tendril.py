@@ -1,5 +1,5 @@
 # -*- Python -*-
-# $Id: tendril.py,v 1.15 2002/04/12 19:02:29 acapnotic Exp $
+# $Id: tendril.py,v 1.16 2002/05/26 06:48:36 acapnotic Exp $
 # Twisted, the Framework of Your Internet
 # Copyright (C) 2001 Matthew W. Lefkowitz
 #
@@ -18,9 +18,9 @@
 
 from twisted import copyright
 from twisted.cred import authorizer
-from twisted.internet import tcp
+from twisted.internet import protocol, tcp
 from twisted.persisted import styles
-from twisted.protocols import irc, protocol
+from twisted.protocols import irc
 from twisted.python import log, reflect
 from twisted.words import service
 
@@ -39,141 +39,7 @@ _LOGALL = False
 # XXX FIXME -- This will need to be fixed to work asynchronously in order to
 # support multiple-server twisted.words and database access to accounts
 
-class Tendril(tcp.Connector, reflect.Accessor):
-    transport = None
-    host = None
-    portno = None
-    _readyToStart = False
 
-    networkSuffix = None
-    nickname = None
-
-    _theseThings = ('host', 'portno', 'networkSuffix', 'nickname')
-
-    def __init__(self, host, portno, protocolFactory, timeout=30):
-        tcp.Connector.__init__(self, host, portno, protocolFactory, timeout)
-        if self.host and self.portno:
-            self._readyToStart = True
-
-    def set_host(self, host):
-        """Set which host I connect to.
-
-        If I am currently connected to a host with a different name, I
-        will disconnect and switch to the new one.
-        """
-        oldhost = self.host
-        self.reallySet('host', host)
-
-        if (not oldhost) and (self.host and self.portno):
-            self._readyToStart = True
-        elif (oldhost != self.host) and self.transport \
-             and self.transport.connected:
-            self.transport.loseConnection()
-
-    def set_portno(self, portno):
-        """Set the port I connect to.
-
-        If I am currently connected to a different port, I will
-        disconnect and switch to the new one.
-        """
-        oldport = self.portno
-        self.reallySet('portno', portno)
-
-        if (not oldport) and (self.host and self.portno):
-            self._readyToStart = True
-        elif (oldport != self.portno) and self.transport \
-             and self.transport.connected:
-            self.transport.loseConnection()
-
-    def set_groupList(self, groupList):
-        if self.protocol:
-            oldlist = self.protocol.groupList
-            if groupList != oldlist:
-                newgroups = filter(lambda g, ol=oldlist: g not in ol,
-                                   groupList)
-                deadgroups = filter(lambda o, gl=groupList: o not in gl,
-                                    oldlist)
-
-            self.protocol.groupList[:] = groupList
-            for group in newgroups:
-                self.protocol.join(groupToChannelName(group))
-            for group in deadgroups:
-                self.protocol.part(groupToChannelName(group))
-
-    # Lets say you can't change this.
-    #
-    ##  def set_wordsService(self, wService):
-    ##      if self.protocol:
-    ##          if wService != self.protocol.wordsService:
-    ##              self.protocol.detach()
-    ##      self.reallySet('wordsService', wService)
-
-    def set_nickname(self, nick):
-        if self.protocol:
-            oldnick = self.protocol.nickname
-            if (oldnick != nick) and (self.transport and
-                                      self.transport.connected):
-                self.protocol.setNick(nick)
-        self.reallySet('nickname', nick)
-
-    def set_helptext(self, helptext):
-        if isinstance(helptext, types.StringType):
-            helptext = string.split(helptext, '\n')
-        if self.protocol:
-            self.protocol.helptext = helptext
-        self.reallySet('helptext', helptext)
-
-    def set_errorGroup(self, errorGroup):
-        if self.protocol:
-            oldgroup = self.protocol.errorGroup
-            if oldgroup != errorGroup:
-                self.protocol.joinGroup(errorGroup)
-                self.protocol.errorGroup = errorGroup
-                self.protocol.leaveGroup(oldgroup)
-
-    def get_errorGroup(self):
-        if self.protocol:
-            return self.protocol.errorGroup
-        else:
-            return TendrilClient.errorGroup
-
-    def startConnecting(self):
-        if not self._readyToStart:
-            # XXX: Should some Deferred action go on here or something?
-            raise RuntimeError("Insufficiently configured to start connecting."
-                               "  (host: %s port: %s)" % (repr(self.host),
-                                                          repr(self.portno)))
-
-        if not self.protocol or ((self.nickname != self.protocol.nickname) or
-                              (self.networkSuffix != self.protocol.networkSuffix)):
-            self.protocol = self.factory.buildProtocol((self.host, self.portno))
-
-        # Ermm.
-        ## self.protocol.__dict__.update(self.getConfiguration())
-        for k in self._theseThings:
-            setattr(self.protocol, k, getattr(self, k))
-
-        self.transport = self.transportFactory(self.host, self.portno,
-                                               self.protocol, self.timeout,
-                                               connector=self)
-
-    def __getstate__(self):
-        state = self.__dict__.copy()
-        if state.has_key('protocol'):
-            del state['protocol']
-        if state.has_key('transport'):
-            del state['transport']
-        return state
-
-class TendrilFactory(protocol.Factory):
-    """I build Tendril connectors for a words service.
-    """
-
-    def __init__(self, service):
-        self.wordsService = service
-
-    def buildProtocol(self, unused):
-        return TendrilClient(self.wordsService)
 
 class ProxiedParticipant(wordsService.WordsClientInterface,
                          styles.Ephemeral):
@@ -212,7 +78,7 @@ class TendrilClient(irc.IRCClient, wordsService.WordsClientInterface):
 
     realname = 'Tendril'
     versionName = 'Tendril'
-    versionNum = '$Revision: 1.15 $'[11:-2]
+    versionNum = '$Revision: 1.16 $'[11:-2]
     versionEnv = copyright.longversion
 
     helptext = (
@@ -908,6 +774,92 @@ class TendrilClient(irc.IRCClient, wordsService.WordsClientInterface):
 
         if priority in ('info', 'NOTICE', 'ERROR'):
             self.groupMessage(self.errorGroup, message)
+
+
+class TendrilFactory(protocol.ClientFactory, reflect.Accessor):
+    """I build Tendril clients for a words service.
+    """
+
+    _activeInstance = None
+
+    networkSuffix = None
+    nickname = None
+
+    clientClass = TendrilClient
+
+    _theseThings = ('networkSuffix', 'nickname')
+
+    def __init__(self, service):
+        """Initialize this factory with a words service."""
+        self.reallySet('wordsService', service)
+
+    def buildProtocol(self, addr):
+        if self._activeInstance:
+            log.msg("Warning: building a new %s protocol while %s is still active."
+                    % (self.clientClass, self._activeInstance))
+
+        self._activeInstance = self.clientClass(self.wordsService)
+
+        # Ermm.
+        ## self.protocol.__dict__.update(self.getConfiguration())
+        for k in self._theseThings:
+            setattr(self._activeInstance, k, getattr(self, k))
+
+        return self._activeInstance
+
+    def __getstate__(self):
+        state = self.__dict__.copy()
+        try:
+            del state["_activeInstance"]
+        except KeyError:
+            pass
+
+    def set_wordsService(self, service):
+        raise TypeError, "%s.wordsService is a read-only attribute." % (repr(self),)
+
+    def set_groupList(self, groupList):
+        if self._activeInstance:
+            oldlist = self._activeInstance.groupList
+            if groupList != oldlist:
+                newgroups = filter(lambda g, ol=oldlist: g not in ol,
+                                   groupList)
+                deadgroups = filter(lambda o, gl=groupList: o not in gl,
+                                    oldlist)
+
+            self._activeInstance.groupList[:] = groupList
+            for group in newgroups:
+                self._activeInstance.join(groupToChannelName(group))
+            for group in deadgroups:
+                self._activeInstance.part(groupToChannelName(group))
+
+    def set_nickname(self, nick):
+        if self._activeInstance:
+            oldnick = self._activeInstance.nickname
+            if (oldnick != nick) and self._activeInstance.connected:
+                self._activeInstance.setNick(nick)
+        self.reallySet('nickname', nick)
+
+    def set_errorGroup(self, errorGroup):
+        if self._activeInstance:
+            oldgroup = self._activeInstance.errorGroup
+            if oldgroup != errorGroup:
+                self._activeInstance.joinGroup(errorGroup)
+                self._activeInstance.errorGroup = errorGroup
+                self._activeInstance.leaveGroup(oldgroup)
+
+    def get_errorGroup(self):
+        if self._activeInstance:
+            return self._activeInstance.errorGroup
+        else:
+            return TendrilClient.errorGroup
+
+    def set_helptext(self, helptext):
+        if isinstance(helptext, types.StringType):
+            helptext = string.split(helptext, '\n')
+        if self._activeInstance:
+            self._activeInstance.helptext = helptext
+        self.reallySet('helptext', helptext)
+
 
 
 def channelToGroupName(channelName):

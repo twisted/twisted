@@ -56,7 +56,7 @@ class WordsConfigurator(coil.Configurator):
         return ircservice.IRCGateway(self.instance)
 
     def makeTendril(self):
-        return tendril.Tendril(None, None, tendril.TendrilFactory(self.instance))
+        return tendril.TendrilFactory(self)
 
     def config_serviceName(self, name):
         raise coil.InvalidConfiguration("You can't change a Service's name.")

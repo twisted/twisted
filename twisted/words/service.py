@@ -17,7 +17,6 @@
 
 
 # System Imports
-import string
 import types
 
 # Twisted Imports

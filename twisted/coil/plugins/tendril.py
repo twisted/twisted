@@ -1,5 +1,5 @@
 # -*- Python -*-
-# $Id: tendril.py,v 1.2 2002/04/19 01:44:35 acapnotic Exp $
+# $Id: tendril.py,v 1.3 2002/05/26 06:48:37 acapnotic Exp $
 
 # Copyright (C) 2001, 2002 Matthew W. Lefkowitz
 #
@@ -26,11 +26,9 @@ import types
 class TendrilConfigurator(coil.Configurator):
 
     configName = "IRC Tendril from Twisted Words"
-    configurableClass = tendril.Tendril
+    configurableClass = tendril.TendrilFactory
 
     configTypes = {
-        'host': (types.StringType, "Host", "The host this Tendril will connect to."),
-        'portno': (types.IntType, "Port", "The port on the host to connect to."),
 #        'groupList': types.ListType,
         'nickname': (types.StringType, "Nick",
                      "The nickname this Tendril will sign on to IRC with."),
