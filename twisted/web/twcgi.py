@@ -207,7 +207,7 @@ class CGIProcessProtocol(protocol.ProcessProtocol, pb.Viewable):
         if self.handling_headers:
             text = self.headertext + output
             headerEnds = []
-            for delimiter in '\n\n','\r\n\r\n','\r\r':
+            for delimiter in '\n\n','\r\n\r\n','\r\r', '\n\r\n':
                 headerend = string.find(text,delimiter)
                 if headerend != -1:
                     headerEnds.append((headerend, delimiter))
