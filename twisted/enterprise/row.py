@@ -271,7 +271,7 @@ class DBReflector(adbapi.Augmentation):
         for (stubClass, tableName, keyColumns) in self.stubs:
             # log.msg( "retrieving class %s for table %s" %(repr(stubClass), tableName))
             if not issubclass(stubClass, RowObject):
-                raise DBError("Stub class must be derived from RowClass")
+                raise DBError("Stub class (%s) is not derived from RowObject" % str(stubClass))
 
             self._populateRowClass(transaction, stubClass, tableName, keyColumns)
         self.populated = 1
