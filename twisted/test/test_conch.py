@@ -833,8 +833,6 @@ class SSHTransportTestCase(unittest.TestCase):
     def testOurServerOurClient(self):
         """test the SSH server against the SSH client
         """
-        if os.name != 'posix':
-            raise unittest.SkipTest("cannot run on non-posix") # why?
         global theTest
         theTest = self
         realm = ConchTestRealm()
@@ -874,8 +872,6 @@ class SSHTransportTestCase(unittest.TestCase):
     def testOurServerOpenSSHClient(self):
         """test the SSH server against the OpenSSH client
         """
-        if os.name != 'posix':
-            raise unittest.SkipTest("cannot run on non-posix")
         cmdline = ('ssh -2 -l testuser -p %i '
                    '-oUserKnownHostsFile=kh_test '
                    '-oPasswordAuthentication=no '
