@@ -181,7 +181,13 @@ class LatexSpitter(BaseLatexSpitter):
             self.writer('\\caption{%s}' 
                         % latexEscape(node.getAttribute('title')))
         self.writer('\\end{center}\\end{table}\n')
-         
+
+    def visitNode_span_footnote(self, node):
+        self.writer('\\footnote{')
+        spitter = FootnoteLatexSpitter(self.writer, self.currDir, self.filename)
+        spitter.visitNodeDefault(node)
+        self.writer('}')
+
     visitNode_h2 = visitNode_h3 = visitNode_h4 = visitNodeHeader
 
     start_title = '\\title{'
@@ -214,9 +220,6 @@ class LatexSpitter(BaseLatexSpitter):
     start_q = "``"
     end_q = "''"
 
-    start_span_footnote = '\\footnote{'
-    end_span_footnote = '}'
-
     start_div_note = '\\begin{quotation}\\textbf{Note:}'
     end_div_note = '\\end{quotation}'
 
@@ -242,6 +245,20 @@ class HeadingLatexSpitter(BaseLatexSpitter):
 
     writeNodeData = LatexSpitter.writeNodeData.im_func
     
+
+class FootnoteLatexSpitter(LatexSpitter):
+    """For multi-paragraph footnotes, this avoids having an empty leading
+    paragraph."""
+
+    start_p = ''
+
+    def visitNode_span_footnote(self, node):
+        self.visitNodeDefault(node)
+
+    def visitNode_p(self, node):
+        self.visitNodeDefault(node)
+        self.start_p = LatexSpitter.start_p
+
 
 def processFile(spitter, fin):
     dom = microdom.parse(fin).documentElement
