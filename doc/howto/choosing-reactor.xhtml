@@ -28,7 +28,6 @@
     <ul>
       <li><a href="#creactor">cReactor for Unix</a></li>
       <li><a href="#kqueue">KQueue for FreeBSD</a></li>
-      <li><a href="#java">Java</a></li>
       <li><a href="#win32">Win32</a></li>
       <li><a href="#cfreactor">Mac OS X</a></li>
     </ul>
@@ -71,7 +70,6 @@
     <tr><th>poll()</th><td>Y</td><td>Y</td><td>Y</td><td>Y</td><td>Y</td><td>Y</td><td>Unix</td></tr>
     <tr><th>Win32</th><td>Y</td><td>Y</td><td>Y</td><td>Y</td><td>Y</td><td>Y</td><td>Win32</td></tr>
     <tr><th>cfreactor</th><td>Y</td><td>Y</td><td>Y</td><td>Y</td><td>Y</td><td>Y</td><td>OS X</td></tr>
-    <tr><th>Java</th><td>Y</td><td>N</td><td>N</td><td>Y</td><td>N</td><td>Y</td><td>Java 1.1+</td></tr>
     <tr><th>GTK+</th><td>Y</td><td>Y</td><td>Y</td><td>Y</td><td>Y (Unix only)</td><td>Y</td><td>Unix, Win32</td></tr>
     <tr><th>Qt</th><td>Y</td><td>Y</td><td>Y</td><td>Y</td><td>Y (Unix only)</td><td>Y</td><td>Unix, Win32</td></tr>
     <tr><th>kqueue</th><td>Y</td><td>Y</td><td>Y</td><td>Y</td><td>Y</td><td>Y</td><td>FreeBSD</td></tr>
@@ -132,16 +130,6 @@ from twisted.internet import kqreactor
 kqreactor.install()
 </pre>
 
-    <h3>Java</h3><a name="java" />
-
-    <p>The Java Reactor allows Twisted to run under
-    <a href="http://www.jython.org/">Jython</a>.  It does not
-    currently support AWT or Swing integration.</p>
-
-<pre class="python">
-from twisted.internet import javareactor
-javareactor.install()
-</pre>
 
    <h3>Win32</h3><a name="win32" />
 
@@ -214,10 +202,11 @@ root.withdraw()
 
 # Install the Reactor support
 tksupport.install(root)
-</pre>
 
-    <p>An example Twisted application that uses Tk can be found in
-    <code class="py-filename">twisted/words/ui/tkim.py</code>.</p>
+# at this point build Tk app as usual using the root object,
+# and start the program with "reactor.run()", and stop it
+# with "reactor.stop()".
+</pre>
 
     <h3>wxPython</h3><a name="wxpython" />
 
