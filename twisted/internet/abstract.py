@@ -97,16 +97,29 @@ class FileDescriptor(log.Logger):
     def write(self, data):
         """Reliably write some data.
 
-        This adds data to be written the next time this file descriptor is
-        ready for writing.  If necessary, it will wake up the I/O thread to add
-        this FileDescriptor for writing, that the write will happen as soon as
-        possible.
+        If there is no buffered data this tries to write this data immediately,
+        otherwise this adds data to be written the next time this file descriptor is
+        ready for writing.
         """
         assert type(data) == types.StringType, "Data must be a string."
         if not self.connected:
             return
         if data:
-            self.unsent = self.unsent + data
+            if not self.unsent:
+                l = self.writeSomeData(data)
+                if l == len(data):
+                    # all data was sent, our work here is done
+                    return
+                elif l > 0:
+                    # some data was sent
+                    self.unsent = data[l:]
+                else:
+                    # either no data was sent, or we were disconnected.
+                    # if we were disconnected we still continue, so that
+                    # the event loop can figure it out later on.
+                    self.unsent = data
+            else:
+                self.unsent = self.unsent + data
             if self.producer is not None:
                 if len(self.unsent) > self.bufferSize:
                     self.producerPaused = 1
