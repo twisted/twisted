@@ -27,7 +27,7 @@ from cStringIO import StringIO
 from microdom import escape
 
 def PRE(text):
-    "Wrap <pre> tags around some text and escape it with web.escapehtml."
+    "Wrap <pre> tags around some text and HTML-escape it."
     return "<pre>"+escape(text)+"</pre>"
 
 def UL(lst):
