@@ -145,7 +145,7 @@ class PropertyAccessor(object):
     override specifics in subclasses without clobbering __setattr__
     and __getattr__, or using non-2.1 compatible code.
 
-    There is are incompatibilities with the 2.1 version - accessor
+    There is are incompatibilities with Accessor - accessor
     methods added after class creation will *not* be detected. OTOH,
     this method is probably way faster.
 
@@ -155,7 +155,7 @@ class PropertyAccessor(object):
     would override the getter method.
     """
     # addendum to above:
-    # The behaviour of OriginalAccessor is wrong IMHO, and I've found bugs
+    # The behaviour of Accessor is wrong IMHO, and I've found bugs
     # caused by it.
     #  -- itamar
 
@@ -168,7 +168,7 @@ class PropertyAccessor(object):
         del self.__dict__[k]
 
 
-class OriginalAccessor:
+class Accessor:
     """
     Extending this class will give you explicit accessor methods; a
     method called C{set_foo}, for example, is the same as an if statement
@@ -218,27 +218,8 @@ class OriginalAccessor:
         """
         del self.__dict__[k]
 
-
-# on 2.2, use the PropertyAccessor, on 2.1 use OriginalAccessor
-if sys.version_info[:2] >= (2, 2):
-    # for now, I'm leaving the new version disabled, as:
-    #  1. it causes marmalade to barf - apprently marmalade doesn't like new-style
-    #     classes or something
-    #  2. it causes errors in observable
-    # plus I had to fix some bugs in tendril - I think the OriginalAccessor is
-    # rather broken, and the problem is dealing with the fact that the new
-    # version's behaviour is different (albeit non-broken).
-    #
-    # To enable property-based accessor in 2.2, uncomment next 2 lines and
-    # delete the 3rd.
-
-    #del OriginalAccessor
-    #Accessor = PropertyAccessor
-    Accessor = OriginalAccessor
-else:
-    del AccessorType
-    del PropertyAccessor
-    Accessor = OriginalAccessor
+# just in case
+OriginalAccessor = Accessor
 
 
 class Summer(Accessor):
