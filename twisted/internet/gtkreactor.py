@@ -169,9 +169,12 @@ class PortableGtkReactor(default.SelectReactor):
         """
         global _simtag
         if _simtag is not None:
-            gtk.idle_remove(_simtag)
+            gtk.timeout_remove(_simtag)
         self.iterate()
-        _simtag = gtk.idle_add(self.simulate)
+        timeout = min(self.timeout(), 0.1)
+        if timeout is None:
+            timeout = 0.1
+        _simtag = gtk.timeout_add(timeout * 1010, self.simulate) # grumble
 
 
 def install():
