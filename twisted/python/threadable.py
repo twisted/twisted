@@ -279,30 +279,6 @@ def registerAsIOThread():
         ioThread = thread.get_ident()
 
 
-class ThreadAttr:
-    """Stores a different set of attributes for each thread."""
-    
-    def __init__(self, threads=None, default=None):
-        self.__dict__['_threads'] = threads or {}
-        self.__dict__['_default'] = default
-
-    def __get(self):
-        import threading
-        try:
-            return self._threads[threading.currentThread()]
-        except KeyError:
-            return self._default
-
-    def __getattr__(self, key):
-        return getattr(self.__get(), key)
-
-    def __setattr__(self, key, val):
-        return setattr(self.__get(), key)
-
-    def __delattr__(self, key):
-        return delattr(self.__get(), key)
-
-
 synchronize(_ThreadedWaiter)
 init(0)
 
