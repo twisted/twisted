@@ -18,7 +18,7 @@
 from twisted.trial import unittest
 
 # system imports
-import os, tempfile, shutil, time
+import os, shutil, time
 
 # twisted imports
 from twisted.python import logfile
@@ -28,7 +28,7 @@ class LogFileTestCase(unittest.TestCase):
     """Test the rotating log file."""
     
     def setUp(self):
-        self.dir = tempfile.mktemp()
+        self.dir = self.mktemp()
         os.makedirs(self.dir)
         self.name = "test.log"
         self.path = os.path.join(self.dir, self.name)
@@ -188,7 +188,7 @@ class DailyLogFileTestCase(unittest.TestCase):
     """Test the rotating log file."""
     
     def setUp(self):
-        self.dir = tempfile.mktemp()
+        self.dir = self.mktemp()
         os.makedirs(self.dir)
         self.name = "testdaily.log"
         self.path = os.path.join(self.dir, self.name)

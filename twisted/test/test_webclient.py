@@ -18,7 +18,7 @@ from twisted.trial import unittest
 from twisted.web import server, static, client, error, util
 from twisted.internet import reactor
 
-import os, tempfile
+import os
 
 
 class WebClientTestCase(unittest.TestCase):
@@ -49,7 +49,7 @@ class WebClientTestCase(unittest.TestCase):
                           "0123456789")
 
     def testDownloadPage(self):
-        name = tempfile.mktemp()
+        name = self.mktemp()
         r = unittest.deferredResult(client.downloadPage(self.getURL("file"), name))
         self.assertEquals(open(name, "rb").read(), "0123456789")
 
@@ -62,7 +62,7 @@ class WebClientTestCase(unittest.TestCase):
                           "0123456789")
 
     def testPartial(self):
-        name = tempfile.mktemp()
+        name = self.mktemp()
         f = open(name, "wb")
         f.write("abcd")
         f.close()

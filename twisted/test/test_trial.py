@@ -17,7 +17,7 @@
 
 from __future__ import nested_scopes
 
-__version__ = "$Revision: 1.15 $"[11:-2]
+__version__ = "$Revision: 1.16 $"[11:-2]
 
 from twisted.python import reflect
 from twisted.trial import unittest, reporter, util, runner
@@ -325,7 +325,9 @@ class TestTests(unittest.TestCase):
 class UtilityTestCase(unittest.TestCase):
     def testMktmp(self):
         tmp = self.mktemp()
+        tmp1 = self.mktemp()
         exp = os.path.join('twisted.test.test_trial', 'UtilityTestCase', 'testMktmp')
+        self.failIfEqual(tmp, tmp1)
         self.failUnless(os.path.exists(exp))
         self.failUnless(os.path.isdir(exp))
 

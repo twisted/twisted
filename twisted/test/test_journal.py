@@ -5,7 +5,7 @@ from twisted.trial import unittest
 from twisted.persisted.journal.base import ICommand, MemoryJournal, serviceCommand, ServiceWrapperCommand, command, Wrappable
 from twisted.persisted.journal.picklelog import DirDBMLog
 
-import tempfile, shutil, os.path
+import shutil, os.path
 
 
 
@@ -89,8 +89,8 @@ class Service:
 class JournalTestCase(unittest.TestCase):
 
     def setUp(self):
-        self.logpath = tempfile.mktemp()
-        self.journalpath = tempfile.mktemp()
+        self.logpath = self.mktemp()
+        self.journalpath = self.mktemp()
         self.svc = Service(self.logpath, self.journalpath)
 
     def tearDown(self):

@@ -43,7 +43,7 @@ import runner, util, reporter
 from twisted.trial.util import deferredResult, deferredError
 
 # system imports
-import sys, os, glob, types
+import sys, os, glob, types, errno
 try:
     import gc # not available in jython
 except ImportError:
@@ -128,12 +128,36 @@ class TestCase:
         if abs(first - second) > tolerance:
             raise FailTest, (msg or "%s ~== %s" % (first, second))
     
+    # mktemp helper to increment a counter
+    def _mktGetCounter(self, base):
+        if getattr(self, "_mktCounters", None) is None:
+            self._mktCounters = {}
+        if base not in self._mktCounters:
+            self._mktCounters[base] = 2
+            return 1
+        n = self._mktCounters[base]
+        self._mktCounters[base] += 1
+        return n
+
     # Utility method for creating temporary names
     def mktemp(self):
         cls = self.__class__
         base = os.path.join(cls.__module__, cls.__name__, self.caseMethodName)
-        os.makedirs(base)
-        return os.path.join(base, str(len(os.listdir(base)) + 1))
+        try:
+            os.makedirs(base)
+        except OSError, e:
+            code = e[0]
+            if code == errno.EEXIST:
+                pass
+            else:
+                raise
+        pid = os.getpid()
+        while 1:
+            num = self._mktGetCounter(base)
+            name = os.path.join(base, "%s.%s" % (pid, num))
+            if not os.path.exists(name):
+                break
+        return name
 
 # components.registerAdapter(runner.TestClassRunner, TestCase, runner.ITestRunner)
 

@@ -20,7 +20,6 @@ import md5
 import shutil
 import smtplib
 import pickle
-import tempfile
 import StringIO
 import rfc822
 
@@ -190,7 +189,7 @@ class MailServiceTestCase(unittest.TestCase):
 
 class MaildirTestCase(unittest.TestCase):
     def setUp(self):
-        self.d = tempfile.mktemp()
+        self.d = self.mktemp()
         mail.maildir.initializeMaildir(self.d)
     
     def tearDown(self):
@@ -256,7 +255,7 @@ class MaildirTestCase(unittest.TestCase):
 
 class MaildirDirdbmDomainTestCase(unittest.TestCase):
     def setUp(self):
-        self.P = tempfile.mktemp()
+        self.P = self.mktemp()
         self.S = mail.mail.MailService('test.mail')
         self.D = mail.maildir.MaildirDirdbmDomain(self.S, self.P)
     
@@ -318,7 +317,7 @@ class ServiceDomainTestCase(unittest.TestCase):
         self.D.protocolName = 'TEST'
         self.D.host = 'hostname'
         
-        self.tmpdir = tempfile.mktemp()
+        self.tmpdir = self.mktemp()
         domain = mail.maildir.MaildirDirdbmDomain(self.S, self.tmpdir)
         domain.addUser('user', 'password')
         self.S.domains['test.domain'] = domain
@@ -378,7 +377,7 @@ class ServiceDomainTestCase(unittest.TestCase):
     
 class VirtualPOP3TestCase(unittest.TestCase):
     def setUp(self):
-        self.tmpdir = tempfile.mktemp()
+        self.tmpdir = self.mktemp()
         self.S = mail.mail.MailService('test.mail')
         self.D = mail.maildir.MaildirDirdbmDomain(self.S, self.tmpdir)
         self.D.addUser('user', 'password')
@@ -503,7 +502,7 @@ class TestRelayer(mail.relay.RelayerMixin, EmptyInit):
 
 class RelayerTestCase(unittest.TestCase):
     def setUp(self):
-        self.tmpdir = tempfile.mktemp()
+        self.tmpdir = self.mktemp()
         os.mkdir(self.tmpdir)
         self.messageFiles = []
         for i in range(10):
@@ -594,7 +593,7 @@ class ManagedRelayerTestCase(unittest.TestCase):
 class DirectoryQueueTestCase(unittest.TestCase):
     def setUp(self):
         # This is almost a test case itself.
-        self.tmpdir = tempfile.mktemp()
+        self.tmpdir = self.mktemp()
         os.mkdir(self.tmpdir)
         self.queue = mail.relaymanager.Queue(self.tmpdir)
         for m in range(25):

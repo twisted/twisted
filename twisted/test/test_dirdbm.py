@@ -21,12 +21,12 @@ Test cases for dirdbm module.
 
 from twisted.trial import unittest
 from twisted.persisted import dirdbm
-import os, tempfile, shutil, glob
+import os, shutil, glob
 
 class DirDbmTestCase(unittest.TestCase):
 
     def setUp(self):
-        self.path = tempfile.mktemp()
+        self.path = self.mktemp()
         self.dbm = dirdbm.open(self.path)
         self.items = (('abc', 'foo'), ('/lalal', '\000\001'), ('\000\012', 'baz'))
 
@@ -81,7 +81,7 @@ class DirDbmTestCase(unittest.TestCase):
         assert values == dbvalues, ".values() output didn't match: %s != %s" % (repr(values), repr(dbvalues))
         assert items == dbitems, "items() didn't match: %s != %s" % (repr(items), repr(dbitems))
         
-        copyPath = tempfile.mktemp()
+        copyPath = self.mktemp()
         d2 = d.copyTo(copyPath)
         
         copykeys = list(d.keys())
@@ -151,7 +151,7 @@ class DirDbmTestCase(unittest.TestCase):
 class ShelfTestCase(DirDbmTestCase):
 
     def setUp(self):
-        self.path = tempfile.mktemp()
+        self.path = self.mktemp()
         self.dbm = dirdbm.Shelf(self.path)
         self.items = (('abc', 'foo'), ('/lalal', '\000\001'), ('\000\012', 'baz'),
                       ('int', 12), ('float', 12.0), ('tuple', (None, 12)))

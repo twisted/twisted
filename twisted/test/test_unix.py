@@ -19,7 +19,7 @@ from twisted.python import components
 from twisted.protocols import loopback
 from twisted.trial import unittest
 import test_smtp
-import stat, os, tempfile
+import stat, os
 
 class TestClientFactory(protocol.ClientFactory):
     def startedConnecting(self, c):
@@ -42,7 +42,7 @@ class UnixSocketTestCase(test_smtp.LoopbackSMTPTestCase):
         loopback.loopbackUNIX(client, server)
 
     def testDumber(self):
-        filename = tempfile.mktemp()
+        filename = self.mktemp()
         l = reactor.listenUNIX(filename, Factory())
         reactor.connectUNIX(filename, TestClientFactory())
         for i in xrange(100):
@@ -50,7 +50,7 @@ class UnixSocketTestCase(test_smtp.LoopbackSMTPTestCase):
         l.stopListening()
 
     def testMode(self):
-        filename = tempfile.mktemp()
+        filename = self.mktemp()
         l = reactor.listenUNIX(filename, Factory(), mode = 0600)
         self.assertEquals(stat.S_IMODE(os.stat(filename)[0]), 0600)
         reactor.connectUNIX(filename, TestClientFactory())
@@ -71,8 +71,8 @@ class ServerProto(protocol.DatagramProtocol):
 class DatagramUnixSocketTestCase(unittest.TestCase):
     """Test datagram UNIX sockets."""
     def testExchange(self):
-        clientaddr = tempfile.mktemp()
-        serveraddr = tempfile.mktemp()
+        clientaddr = self.mktemp()
+        serveraddr = self.mktemp()
         sp = ServerProto()
         cp = ClientProto()
         s = reactor.listenUNIXDatagram(serveraddr, sp)
@@ -97,7 +97,7 @@ class DatagramUnixSocketTestCase(unittest.TestCase):
         self.failUnlessEqual("hi back", cp.gotback)
 
     def testCannotListen(self):
-        addr = tempfile.mktemp()
+        addr = self.mktemp()
         p = ServerProto()
         s = reactor.listenUNIXDatagram(addr, p)
         self.failUnlessRaises(error.CannotListenError, reactor.listenUNIXDatagram, addr, p)
