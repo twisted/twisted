@@ -161,24 +161,8 @@ class Win32Reactor(default.PosixReactorBase):
 
         canDoMoreWrites = 0
         for fd in writes.keys():
-            log.logOwner.own(fd)
-            closed = 0
-            try:
-                closed = fd.doWrite()
-            except:
-                closed = sys.exc_info()[1]
-                log.deferr()
-
-            if closed:
-                self.removeReader(fd)
-                self.removeWriter(fd)
-                try:
-                    fd.connectionLost(failure.Failure(closed))
-                except:
-                    log.deferr()
-            elif closed is None:
+            if log.callWithLogger(fd, self._runWrite, fd):
                 canDoMoreWrites = 1
-            log.logOwner.disown(fd)
 
         if canDoMoreWrites:
             timeout = 0
@@ -195,7 +179,27 @@ class Win32Reactor(default.PosixReactorBase):
         elif val >= WAIT_OBJECT_0 and val < WAIT_OBJECT_0 + len(handles):
             fd, action = events[handles[val - WAIT_OBJECT_0]]
             closed = 0
-            log.logOwner.own(fd)
+            log.callWithLogger(fd, self._runAction, action, fd)
+
+    def _runWrite(self, fd):
+        closed = 0
+        try:
+            closed = fd.doWrite()
+        except:
+            closed = sys.exc_info()[1]
+            log.deferr()
+
+        if closed:
+            self.removeReader(fd)
+            self.removeWriter(fd)
+            try:
+                fd.connectionLost(failure.Failure(closed))
+            except:
+                log.deferr()
+        elif closed is None:
+            return 1
+
+    def _runAction(self, action, fd):
             try:
                 closed = action()
             except:
@@ -209,8 +213,6 @@ class Win32Reactor(default.PosixReactorBase):
                     fd.connectionLost(failure.Failure(closed))
                 except:
                     log.deferr()
-
-            log.logOwner.disown(fd)
 
     doIteration = doWaitForMultipleEvents
 
