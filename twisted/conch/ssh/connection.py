@@ -383,7 +383,9 @@ class SSHSessionProtocol(protocol.Protocol, protocol.ProcessProtocol):
     def connectionLost(self, reason = None):
         self.session.loseConnection()
 
-    processEnded = connectionLost
+    def processEnded(self, reason = None):
+        if reason: self.session.conn.sendRequest(self.session, 'exit-status', struct.pack('!L', reason.exitCode))
+        self.session.loseConnection()
 
 class SSHSessionClient:
 
