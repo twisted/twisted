@@ -3,6 +3,7 @@ Twisted Test Framework
 """
 
 # twisted imports
+from twisted.python.compat import *
 from twisted.python import reflect, log, failure, components
 from twisted.internet import interfaces
 
@@ -52,7 +53,8 @@ class TestCase:
         except exception:
             return
         except:
-            raise FailTest, '%s raised instead of %s' % (sys.exc_info()[0], exception.__name__)
+            raise FailTest, '%s raised instead of %s' % (sys.exc_info()[0],
+                                                         exception.__name__)
         else:
             raise FailTest, '%s not raised' % exception.__name__
 
@@ -136,7 +138,8 @@ class TestSuite:
         except ImportError, e:
             self.couldNotImport[packageName] = e
             return
-        modGlob = os.path.join(os.path.dirname(package.__file__), self.moduleGlob)
+        modGlob = os.path.join(os.path.dirname(package.__file__),
+                               self.moduleGlob)
         modules = map(reflect.filenameToModuleName, glob.glob(modGlob))
         for module in modules:
             self.addModule(module)
@@ -147,7 +150,7 @@ class TestSuite:
             failingExceptionType = AssertionError
         else:
             failingExceptionType = FailTest
-            
+
         try:
             testCase.setUp()
             method(testCase)
@@ -231,7 +234,7 @@ class TestSuite:
             r = random.Random(seed)
             r.shuffle(testClasses)
             output.writeln('Running tests shuffled with seed %d' % seed)
-        
+
         ## Run all the single-method tests we want to run.
         for testClass, methodName in self.testMethods:
             testCase  = testClass()
@@ -285,14 +288,31 @@ def format_exception(eType, eValue, tb, limit=None):
     return l
 
 class Reporter:
+    """I report results from a run of a test suite.
+
+    @ivar errors: Tests which have encountered an error.
+    @type errors: List of (testClass, method, exc_info) tuples.
+    @ivar failures: Tests which have failed.
+    @type failures: List of (testClass, method, exc_info) tuples.
+    @ivar skips: Tests which have been skipped.
+    @type skips: List of (testClass, method, exc_info) tuples.
+    @ivar imports: Import errors encountered while assembling the test suite.
+    @type imports: List of (moduleName, exception) tuples.
+    @ivar numTests: The number of tests I have reports for.
+    @type numTests: int
+    @ivar expectedTests: The number of tests I expect to run.
+    @type expectedTests: int
+    @ivar debugger: Run the debugger when encountering a failing test.
+    @type debugger: bool
+    """
     def __init__(self):
         self.errors = []
         self.failures = []
-        self.imports = []
         self.skips = []
+        self.imports = []
         self.numTests = 0
         self.expectedTests = 0
-        self.debugger = 0
+        self.debugger = False
 
     def start(self, expectedTests):
         self.expectedTests = expectedTests
@@ -443,24 +463,24 @@ class VerboseTextReporter(TextReporter):
     def __init__(self, stream=sys.stdout):
         TextReporter.__init__(self, stream)
 
-    def reportStart(self, testCase, method):
-        self.write('%s (%s) ... ', method.__name__, reflect.qual(testCase))
+    def reportStart(self, testClass, method):
+        self.write('%s (%s) ... ', method.__name__, reflect.qual(testClass))
 
-    def reportSuccess(self, testCase, method):
+    def reportSuccess(self, testClass, method):
         self.writeln('[OK]')
-        Reporter.reportSuccess(self, testCase, method)
+        Reporter.reportSuccess(self, testClass, method)
 
-    def reportFailure(self, testCase, method, exc_info):
+    def reportFailure(self, testClass, method, exc_info):
         self.writeln('[FAIL]')
-        Reporter.reportFailure(self, testCase, method, exc_info)
+        Reporter.reportFailure(self, testClass, method, exc_info)
 
-    def reportError(self, testCase, method, exc_info):
+    def reportError(self, testClass, method, exc_info):
         self.writeln('[ERROR]')
-        Reporter.reportError(self, testCase, method, exc_info)
+        Reporter.reportError(self, testClass, method, exc_info)
 
-    def reportSkip(self, testCase, method, exc_info):
+    def reportSkip(self, testClass, method, exc_info):
         self.writeln('[SKIPPED]')
-        Reporter.reportSkip(self, testCase, method, exc_info)
+        Reporter.reportSkip(self, testClass, method, exc_info)
 
 class TreeReporter(TextReporter):
     columns = 79
@@ -479,13 +499,13 @@ class TreeReporter(TextReporter):
         self.lastModule = None
         self.lastClass = None
 
-    def reportStart(self, testCase, method):
-        if testCase.__module__ != self.lastModule:
-            self.writeln(testCase.__module__)
-            self.lastModule = testCase.__module__
-        if testCase != self.lastClass:
-            self.writeln('  %s' % testCase.__name__)
-            self.lastClass = testCase
+    def reportStart(self, testClass, method):
+        if testClass.__module__ != self.lastModule:
+            self.writeln(testClass.__module__)
+            self.lastModule = testClass.__module__
+        if testClass != self.lastClass:
+            self.writeln('  %s' % testClass.__name__)
+            self.lastClass = testClass
 
         docstr = inspect.getdoc(method)
         if docstr:
@@ -506,21 +526,21 @@ class TreeReporter(TextReporter):
         self.write(spaces)
         self.writeln(self.color(message, color))
 
-    def reportSuccess(self, testCase, method):
+    def reportSuccess(self, testClass, method):
         self.endLine('[OK]', self.GREEN)
-        Reporter.reportSuccess(self, testCase, method)
+        Reporter.reportSuccess(self, testClass, method)
 
-    def reportFailure(self, testCase, method, exc_info):
+    def reportFailure(self, testClass, method, exc_info):
         self.endLine('[FAIL]', self.RED)
-        Reporter.reportFailure(self, testCase, method, exc_info)
+        Reporter.reportFailure(self, testClass, method, exc_info)
 
-    def reportError(self, testCase, method, exc_info):
+    def reportError(self, testClass, method, exc_info):
         self.endLine('[ERROR]', self.RED)
-        Reporter.reportError(self, testCase, method, exc_info)
+        Reporter.reportError(self, testClass, method, exc_info)
 
-    def reportSkip(self, testCase, method, exc_info):
+    def reportSkip(self, testClass, method, exc_info):
         self.endLine('[SKIPPED]', self.BLUE)
-        Reporter.reportSkip(self, testCase, method, exc_info)
+        Reporter.reportSkip(self, testClass, method, exc_info)
 
 
 def _getDeferredResult(d, timeout=None):
