@@ -37,6 +37,32 @@ from twisted.internet import defer
 import base
 
 
+class OrderedDict:
+    """Store keys in order they were inserted in."""
+
+    def __init__(self):
+        self.keys = []
+        self.map = {}
+
+    def __setitem__(self, key, value):
+        if self.map.has_key(key):
+            self.keys[self.map[key]] = value
+        else:
+            self.keys.append(key)
+            self.map[key] = len(self.keys) - 1
+
+    def __delitem__(self, key):
+        i = self.map[key]
+        del self.keys[i:i+1]
+        del self.map[key]
+
+    def has_key(self, key):
+        return self.map.has_key(key)
+
+    def keys(self):
+        return self.keys
+
+
 class RowJournal(base.Journal):
     """Journal that stores data 'snapshot' in using twisted.enterprise.row.
 
@@ -47,9 +73,9 @@ class RowJournal(base.Journal):
 
     def __init__(self, log, journaledService, reflector):
         self.reflector = reflector
-        self.dirtyRows = {}
-        self.insertedRows = {}
-        self.deletedRows = {}
+        self.dirtyRows = OrderedDict()
+        self.insertedRows = OrderedDict()
+        self.deletedRows = OrderedDict()
         self.syncing = 0
         base.Journal.__init__(self, log, journaledService)
     
