@@ -26,30 +26,37 @@ from __future__ import nested_scopes
     any other return value with exceptions wrapped using failure.Failure
     An example program...
 
-    from __future__ import generators
-    import flow
-    def producer():
-        lst = flow.Generator([1,2,3])
-        nam = flow.Generator(['one','two','three'])
-        while 1:
-            yield lst; yield nam
-            if lst.stop or nam.stop: 
-                return
-            yield (lst.result, nam.result)
-
-    def consumer():
-        title = flow.Generator(['Title'])
-        yield title
-        print title.getResult()
-        lst = flow.Generator(producer())
-        try:
+        from __future__ import generators
+        import flow
+        def producer():
+            lst = flow.Generator([1,2,3])
+            nam = flow.Generator(['one','two','three'])
             while 1:
-                yield lst
-                print lst.getResult()
-        except flow.StopIteration: pass
+                yield lst; yield nam
+                if lst.stop or nam.stop: 
+                    return
+                yield (lst.result, nam.result)
+    
+        def consumer():
+            title = flow.Generator(['Title'])
+            yield title
+            print title.getResult()
+            lst = flow.Generator(producer())
+            try:
+                while 1:
+                    yield lst
+                    print lst.getResult()
+            except flow.StopIteration: pass
+    
+        flow.Flow(consumer()).execute()
 
-    flow.Flow(consumer()).execute()
+    produces the output:
 
+        Title
+        (1, 'one')
+        (2, 'two')
+        (3, 'three')
+        
 """
 from twisted.python import failure
 from twisted.python.compat import StopIteration, iter
