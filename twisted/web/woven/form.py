@@ -162,7 +162,11 @@ class FormFillerWidget(widgets.Widget):
         return div
 
     def input_date(self, request, content, arg):
-        year, month, day = getValues(request, arg)
+        date = getValues(request, arg)
+        if date == None:
+            year, month, day = "", "", ""
+        else:
+            year, month, day = date
         div = content.div()
         div.text("Year: ")
         div.input(type="text", size="4", maxlength="4", name=arg.name, value=str(year))

@@ -181,6 +181,7 @@ class Boolean(Argument):
             return 0
         return 1
 
+
 def positiveInt(x):
     x = int(x)
     if x <= 0: raise ValueError
@@ -189,10 +190,19 @@ def positiveInt(x):
 class Date(Argument):
     """A date."""
 
-    defaultDefault = (1970, 1, 1)
+    defaultDefault = None
 
+    def __init__(self, name, allowNone=1, default=None, shortDesc=None, longDesc=None, hints=()):
+        Argument.__init__(self, name, default, shortDesc, longDesc, hints)
+        self.allowNone = allowNone
+        if not allowNone:
+            self.defaultDefault = (1970, 1, 1)
+    
     def coerce(self, args):
         """Return tuple of ints (year, month, day)."""
+        if tuple(args) == ("", "", "") and self.allowNone:
+            return None
+        
         try:
             year, month, day = map(positiveInt, args)
         except ValueError:
