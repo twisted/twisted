@@ -491,7 +491,7 @@ class IRCChatter(irc.IRC, service.WordsClientInterface):
                 text = string.join(m['normal'], ' ')
 
             ## 'bot' handling
-            if name == 'ContactServ':
+            if string.lower(name) == 'contactserv':
                 # crude contacts interface
                 cmds = string.split(text, ' ', 1)
                 if cmds[0] == 'add':
@@ -518,7 +518,7 @@ class IRCChatter(irc.IRC, service.WordsClientInterface):
                                      ":%s" % (e,))
         else:
 
-            if name == 'NickServ':
+            if string.lower(name) == 'nickserv':
                 self.logInAs(self.pendingLogin, text)
             else:
                 self.receiveDirectMessage("NickServ", "You haven't logged in yet.")
