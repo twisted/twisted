@@ -22,6 +22,7 @@ import string
 import socket
 import types
 import warnings
+from cStringIO import StringIO
 
 # Twisted Imports
 from twisted.internet import interfaces
@@ -32,6 +33,12 @@ from twisted.cred.authorizer import DefaultAuthorizer
 
 # Sibling Imports
 import main, defer, error
+
+def encrypt(passphrase, data):
+    from Crypto.Cipher import RC5
+    if len(data) % 8:
+        data = data + (' ' * (8 - len(data) % 8))
+    return RC5.new(passphrase).encrypt(data)
 
 
 class _SSLlistener:
@@ -432,7 +439,7 @@ class Application(log.Logger, styles.Versioned, marmalade.DOMJellyable,
 
     persistStyle = "pickle"
 
-    def save(self, tag=None, filename=None):
+    def save(self, tag=None, filename=None, passphrase=None):
         """Save a pickle of this application to a file in the current directory.
         """
         if self.persistStyle == "xml":
@@ -452,6 +459,8 @@ class Application(log.Logger, styles.Versioned, marmalade.DOMJellyable,
             finalname = filename
             filename = finalname + "-2"
         else:
+            if passphrase:
+                ext = 'e' + ext
             if tag:
                 filename = "%s-%s-2.%s" % (self.name, tag, ext)
                 finalname = "%s-%s.%s" % (self.name, tag, ext)
@@ -459,10 +468,21 @@ class Application(log.Logger, styles.Versioned, marmalade.DOMJellyable,
                 filename = "%s-2.%s" % (self.name, ext)
                 finalname = "%s.%s" % (self.name, ext)
         log.msg("Saving "+self.name+" application to "+finalname+"...")
-        f = open(filename, 'wb')
-        dumpFunc(self, f)
-        f.flush()
-        f.close()
+        
+        if passphrase is None:
+            f = open(filename, 'wb')
+            dumpFunc(self, f)
+            f.flush()
+            f.close()
+        else:
+            f = StringIO()
+            dumpFunc(self, f)
+            s = encrypt(passphrase, f.getvalue())
+            f = open(filename, 'wb')
+            f.write(s)
+            f.flush()
+            f.close()
+
         if platform.getType() == "win32":
             if os.path.isfile(finalname):
                 os.remove(finalname)

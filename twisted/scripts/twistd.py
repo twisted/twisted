@@ -22,7 +22,8 @@ from twisted.python import logfile
 util.addPluginDir()
 
 # System Imports
-from cPickle import load
+from cPickle import load, loads
+from cStringIO import StringIO
 import traceback
 import imp
 import sys, os
@@ -51,7 +52,8 @@ class ServerOptions(usage.Options):
                                   "(This option has no effect unless the server is running as root, "
                                   "in which case it means not to shed all privileges after binding "
                                   "ports, retaining the option to regain privileges in cases such as "
-                                  "spawning processes.  Use with caution.)"]]
+                                  "spawning processes.  Use with caution.)"],
+                ['encrypted', 'e', "The specified tap/aos/xml file is encrypted."]]
 
     optParameters = [['logfile','l', None,
                    "log to a specified file, - for stdout"],
@@ -90,6 +92,11 @@ class ServerOptions(usage.Options):
     opt_g = opt_plugin
 
 
+def decrypt(passphrase, data):
+    from Crypto.Cipher import RC5
+    return RC5.new(passphrase).decrypt(data)
+
+
 def run():
     # make default be "--help"
     if len(sys.argv) == 1:
@@ -114,6 +121,10 @@ def run():
     if platformType != 'posix' or config.opts['debug']:
         # only posix can fork, and debugging requires nodaemon
         config.opts['nodaemon'] = 1
+
+    if config.opts['encrypted']:
+        import getpass
+        passphrase = getpass.getpass('Passphrase: ')
 
     # Twisted Imports
     from twisted.python import log
@@ -213,42 +224,65 @@ def run():
     log.msg('reactor class: %s' % reactor.__class__)
 
     #Application creation/unserializing
-
     if config.opts['python']:
-        pyfile = os.path.abspath(config.opts['python'])
-        log.msg("Loading %s..." % pyfile)
-        dict = {'__file__': pyfile}
-        execfile(pyfile, dict, dict)
-        try:
-            application = dict['application']
-        except KeyError:
-            log.msg("Error - python file %s must set a variable named 'application', an instance of twisted.internet.app.Application. No such variable was found!" % repr(pyfile))
-            sys.exit()
-
+        def decode(file, data):
+            log.msg('Loading %s...' % (file,))
+            d = {'__file__': pyfile}
+            exec data in d, d
+            try:
+                return d['application']
+            except KeyError:
+                log.msg("Error - python file %s must set a variable named 'application', an instance of twisted.internet.app.Application. No such variable was found!" % (repr(file),))
+                sys.exit()
+        file = os.path.abspath(config.opts['python'])
+        mode = 'r'
     elif config.opts['xml']:
-        from twisted.persisted.marmalade import unjellyFromXML
-        log.msg('<Loading file="%s" />' % config.opts['xml'])
-        sys.modules['__main__'] = EverythingEphemeral()
-        application = unjellyFromXML(open(config.opts['xml'], 'rb'))
-        sys.modules['__main__'] = mainMod
-        styles.doUpgrade()
-
+        def decode(file, data):
+            from twisted.persisted.marmalade import unjellyFromXML
+            log.msg('<Loading file="%s" />' % (file,))
+            sys.modules['__main__'] = EverythingEphemeral()
+            application = unjellyFromXML(StringIO(data))
+            application.persistStyle = 'xml'
+            sys.modules['__main__'] = mainMod
+            styles.doUpgrade()
+            return application
+        file = config.opts['xml']
+        mode = 'r'
     elif config.opts['source']:
-        from twisted.persisted.aot import unjellyFromSource
-        log.msg("Loading %s..." % config.opts['source'])
-        sys.modules['__main__'] = EverythingEphemeral()
-        application = unjellyFromSource(open(config.opts['source'], 'r'))
-        application.persistStyle = "aot"
-        sys.modules['__main__'] = mainMod
-        styles.doUpgrade()
-
+        def decode(file, data):
+            from twisted.persisted.aot import unjellyFromSource
+            log.msg("Loading %s..." % (file,))
+            sys.modules['__main__'] = EverythingEphemeral()
+            application = unjellyFromSource(StringIO(data))
+            application.persistStyle = 'aot'
+            sys.modules['__main__'] = mainMod
+            styles.doUpgrade()
+            return application
+        file = config.opts['source']
+        mode = 'r'
     else:
-        log.msg("Loading %s..." % config.opts['file'])
-        sys.modules['__main__'] = EverythingEphemeral()
-        application = load(open(config.opts['file'],'rb'))
-        sys.modules['__main__'] = mainMod
-        styles.doUpgrade()
+        def decode(file, data):
+            log.msg("Loading %s..." % (file,))
+            sys.modules['__main__'] = EverythingEphemeral()
+            application = loads(data)
+            sys.modules['__main__'] = mainMod
+            styles.doUpgrade()
+            return application
+        file = config.opts['file']
+        mode = 'rb'
 
+    if config.opts['encrypted']:
+        data = open(file, 'rb').read()
+        data = decrypt(passphrase, data)
+        try:
+            application = decode(file, data)
+        except:
+            # Too bad about this.
+            log.msg("Error loading Application - perhaps you used the wrong passphrase?")
+            raise
+    else:
+        data = open(file, mode).read()
+        application = decode(file, data)
 
 
     # Load any view plugins which have been registered in plugins.tml file

@@ -68,3 +68,13 @@ def sibpath(path, sibling):
     resource files.
     """
     return os.path.join(os.path.dirname(os.path.abspath(path)), sibling)
+
+
+def getPassword(prompt = ''):
+    import getpass
+    while 1:
+        p = getpass.getpass(prompt)
+        while p != getpass.getpass('Verify: '):
+            print "Passwords don't match, starting over"
+            p = getpass.getpass(prompt)
+        return p

@@ -15,14 +15,14 @@
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 #
-# $Id: mktap.py,v 1.18 2002/09/06 04:58:00 acapnotic Exp $
+# $Id: mktap.py,v 1.19 2002/09/08 02:23:11 exarkun Exp $
 
 """ Implementation module for the `mktap` command.
 """
 
 from twisted.protocols import telnet
 from twisted.internet import app
-from twisted.python import usage
+from twisted.python import usage, util
 from twisted.spread import pb
 
 import sys, traceback, os, cPickle, glob, string
@@ -69,7 +69,8 @@ class GeneralOptions(usage.Options):
                   ['append', 'a', None, "An existing .tap file to append the plugin to, rather than creating a new one."],
                   ['type', 't', 'pickle', "The output format to use; this can be 'pickle', 'xml', or 'source'."]]
     optFlags = [['xml', 'x', "DEPRECATED: same as --type=xml"],
-                ['source', 's', "DEPRECATED: same as --type=source"]]
+                ['source', 's', "DEPRECATED: same as --type=source"],
+                ['encrypted', 'e', "Encrypt file before writing"]]
 
     subCommands = [
         [x, None, (lambda obj = y: obj.load().Options()), getattr(y, 'description', '')] for (x, y) in tapLookup.items()
@@ -147,7 +148,14 @@ def run():
                        'source': 'aot',
                        'pickle': 'pickle'}
                        [options['type']])
-    a.save()
+    if options['encrypted']:
+        try:
+            import Crypto
+            a.save(passphrase=util.getPassword("Encryption passphrase: "))
+        except ImportError:
+            print "The --encrypt flag requires the PyCrypto module, no file written."
+    else:
+        a.save()
 
 # Make it script-callable for testing purposes
 if __name__ == "__main__":
