@@ -1,5 +1,6 @@
 from twisted.spread import pb
 from twisted.python import log
+from twisted.python import authenticator
 
 import string
 from cStringIO import StringIO
@@ -64,8 +65,10 @@ class Perspective(pb.Perspective):
 class Service(pb.Service):
     # By default, "guest"/"guest" will work as login and password, though you
     # must implement something to retrieve a perspective.
-    def __init__(self):
+    def __init__(self, userdict={"admin":"admin"}):
         pb.Service.__init__(self)
+        authenticator.Authenticator.__init__(self, userdict, 0)
+        
         self.namespace = {}
 
     def __getstate__(self):
