@@ -43,7 +43,7 @@ Test coverage needs to be better.
 <http://www.irchelp.org/irchelp/rfc/ctcpspec.html>}
 """
 
-__version__ = '$Revision: 1.91 $'[11:-2]
+__version__ = '$Revision: 1.92 $'[11:-2]
 
 from twisted.internet import reactor, protocol
 from twisted.persisted import styles
@@ -1286,14 +1286,14 @@ class IRCClient(basic.LineReceiver):
         basic.LineReceiver.dataReceived(self, data.replace('\r', ''))
 
     def lineReceived(self, line):
-      line = lowDequote(line)
-      try:
-          prefix, command, params = parsemsg(line)
-          if numeric_to_symbolic.has_key(command):
-              command = numeric_to_symbolic[command]
-          self.handleCommand(command, prefix, params)
-      except IRCBadMessage:
-          self.badMessage(line, *sys.exc_info())
+        line = lowDequote(line)
+        try:
+            prefix, command, params = parsemsg(line)
+            if numeric_to_symbolic.has_key(command):
+                command = numeric_to_symbolic[command]
+            self.handleCommand(command, prefix, params)
+        except IRCBadMessage:
+            self.badMessage(line, *sys.exc_info())
 
 
     def handleCommand(self, command, prefix, params):
