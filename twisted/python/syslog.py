@@ -18,33 +18,35 @@ syslog = __import__('syslog')
 import sys
 import log
 
-class SyslogLogger:
-
+class SyslogObserver:
     def __init__(self, prefix):
-        self.prefix = prefix
+        syslog.openlog(prefix)
 
-    def write(self, data):
-        if not data or data=='\n':
-            return
-        logger = log.logOwner.owner()
-        if logger:
-            data = logger.log(data)
-        data = data.split('\n')
-        if not data[-1]:
-            data.pop()
-        for line in data:
-            syslog.syslog("[%s] %s" % (self.prefix, line))
+    def emit(self, eventDict):
+        edm = eventDict['message']
+        if not edm:
+            if eventDict['isError'] and eventDict.has_key('failure'):
+                text = eventDict['failure'].getTraceback()
+            elif eventDict.has_key('format'):
+                text = eventDict['format'] % eventDict
+            else:
+                # we don't know how to log this
+                return
+        else:
+            text = ' '.join(map(str, edm))
 
-    def writelines(self, lines):
+        lines = text.split('\n')
+        while lines[-1:] == ['']:
+            lines.pop()
+
+        firstLine = 1
         for line in lines:
-            self.write(line)
+            if firstLine:
+                firstLine=0
+            else:
+                line = '\t%s' % line
+            syslog.syslog('[%s] %s' % (eventDict['system'], line))
 
-    def close(self):
-        pass
-
-    def flush(self):
-        pass
-
-
-def startLogging(prefix='Twisted'):
-    sys.stdout = sys.stderr = log.logfile = SyslogLogger(prefix)
+def startLogging(prefix='Twisted', setStdout=1):
+    obs = SyslogObserver(prefix)
+    log.startLoggingWithObserver(obs.emit, setStdout=setStdout)

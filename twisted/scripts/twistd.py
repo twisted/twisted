@@ -282,11 +282,11 @@ directory, or use my --pidfile and --logfile parameters to avoid clashes.
             print 'daemons cannot log to stdout'
             os._exit(1)
         logFile = sys.stdout
-    elif config['nodaemon'] and not config['logfile']:
-        logFile = sys.stdout
     elif config['syslog']:
         from twisted.python import syslog
         syslog.startLogging(config['prefix'])
+    elif config['nodaemon'] and not config['logfile']:
+        logFile = sys.stdout
     else:
         logPath = os.path.abspath(config['logfile'] or 'twistd.log')
         logFile = logfile.LogFile(os.path.basename(logPath), os.path.dirname(logPath))

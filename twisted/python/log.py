@@ -235,7 +235,7 @@ class FileLogObserver:
         self.write = f.write
         self.flush = f.flush
 
-    def _emit(self, eventDict):
+    def emit(self, eventDict):
         edm = eventDict['message']
         if not edm:
             if eventDict['isError'] and eventDict.has_key('failure'):
@@ -255,11 +255,11 @@ class FileLogObserver:
 
     def start(self):
         """Start observing log events."""
-        addObserver(self._emit)
+        addObserver(self.emit)
 
     def stop(self):
         """Stop observing log events."""
-        removeObserver(self._emit)
+        removeObserver(self.emit)
 
 
 class StdioOnnaStick:
@@ -309,8 +309,14 @@ except NameError:
     _oldshowwarning = None
 
 
-def startLogging(file, setStdout=1):
-    """Initialize logging to a specified file. If setStdout is true 
+def startLogging(file, *a, **kw):
+    """Initialize logging to a specified file.
+    """
+    flo = FileLogObserver(file)
+    startLoggingWithObserver(flo.emit, *a, **kw)
+
+def startLoggingWithObserver(observer, setStdout=1):
+    """Initialize logging to a specified observer. If setStdout is true 
        (defaults to yes), also redirect sys.stdout and sys.stderr 
        to the specified file.
     """
@@ -321,8 +327,7 @@ def startLogging(file, setStdout=1):
     if defaultObserver:
         defaultObserver.stop()
         defaultObserver = None
-    flo = FileLogObserver(file)
-    flo.start()
+    addObserver(observer)
     msg("Log opened.")
     if setStdout:
         sys.stdout = logfile
