@@ -22,7 +22,7 @@ Package installer for Twisted
 Copyright (C) 2001 Matthew W. Lefkowitz
 All rights reserved, see LICENSE for details.
 
-$Id: setup.py,v 1.35 2002/04/11 21:48:19 glyph Exp $
+$Id: setup.py,v 1.36 2002/04/26 05:08:41 carmstro Exp $
 """
 
 import distutils, os, sys, string
@@ -153,10 +153,11 @@ class install_data_twisted(install_data):
 ### Call setup()
 #############################################################################
 
+ver = string.replace(copyright.version, '-', '_') #RM doesn't like '-'
 setup_args = {
     'name': "Twisted",
-    'version': copyright.version,
-    'description': "Twisted %s is a framework to build frameworks" % (copyright.version,),
+    'version': ver
+    'description': "Twisted %s is a framework to build frameworks" % ver,
     'author': "Twisted Matrix Laboratories",
     'author_email': "twisted-python@twistedmatrix.com",
     'maintainer': "Glyph Lefkowitz",
@@ -232,14 +233,12 @@ setup_args['data_files'] = [(imPath, [os.path.join(imPath, 'instancemessenger.gl
 
 # for building C banana...
 
-def extpath(path):
-    return os.path.join(os.path.dirname(os.path.abspath(sys.argv[0])), path)
 if os.name == 'nt':
     define_macros = [("WIN32", "1")]
 else:
     define_macros = []
 setup_args['ext_modules'] = [
-    Extension("twisted.spread.cBanana", [extpath("twisted/spread/cBanana.c")],
+    Extension("twisted.spread.cBanana", ["twisted/spread/cBanana.c"],
               define_macros=define_macros),
     ]
 
