@@ -93,10 +93,33 @@ class Connection(tcp.Connection):
     
     writeBlockedOnRead = 0
     readBlockedOnWrite= 0
-
+    sslShutdown = 0
+    
     def getPeerCertificate(self):
         """Return the certificate for the peer."""
         return self.socket.get_peer_certificate()
+
+    def _postLoseConnection(self):
+        """Gets called after loseConnection(), after buffered data is sent.
+
+        We close the SSL transport layer, and if the other side hasn't
+        closed it yet we start reading, waiting for a ZeroReturnError
+        which will indicate the SSL shutdown has completed.
+        """
+        try:
+            done = self.socket.shutdown()
+            self.sslShutdown = 1
+        except SSL.Error:
+            return CONNECTION_LOST
+        if done:
+            return CONNECTION_DONE
+        else:
+            # we wait for other side to close SSL connection -
+            # this will be signaled by SSL.ZeroReturnError when reading
+            # from the socket
+            self.stopWriting()
+            self.startReading()
+            return None # don't close socket just yet
     
     def doRead(self):
         """See tcp.Connection.doRead for details.
@@ -106,6 +129,15 @@ class Connection(tcp.Connection):
             return self.doWrite()
         try:
             return tcp.Connection.doRead(self)
+        except SSL.ZeroReturnError:
+            # close SSL layer, since other side has done so, if we haven't
+            if not self.sslShutdown:
+                try:
+                    self.socket.shutdown()
+                    self.sslShutdown = 1
+                except SSL.Error:
+                    pass
+            return main.CONNECTION_DONE
         except SSL.WantReadError:
             return
         except SSL.WantWriteError:
@@ -139,17 +171,12 @@ class Connection(tcp.Connection):
             return main.CONNECTION_LOST
 
     def _closeSocket(self):
-        log.msg("closing socket")
-        # do the SSL shutdown exchange, before we close the underlying socket
-        try:
-            self.socket.shutdown()
-        except SSL.Error:
-            pass
+        """Called to close our socket."""
         try:
             self.socket.sock_shutdown(2)
-            self.socket.close()
         except socket.error:
             pass
+
 
 
 class Client(Connection, tcp.TCPClient):

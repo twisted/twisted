@@ -113,9 +113,17 @@ class FileDescriptor(log.Logger):
             elif self.disconnecting:
                 # But if I was previously asked to let the connection die, do
                 # so.
-                return main.CONNECTION_DONE
+                return self._postLoseConnection()
         return result
 
+    def _postLoseConnection(self):
+        """Called after a loseConnection(), when all data has been written.
+
+        Whatever this returns is then returned by doWrite.
+        """
+        # default implementation, telling reactor we're finished
+        return main.CONNECTION_DONE
+    
     def write(self, data):
         """Reliably write some data.
 
