@@ -271,7 +271,7 @@ class ChunkingTestCase(unittest.TestCase):
 
 
 
-class HeaderTestCase(unittest.TestCase):
+class ParsingTestCase(unittest.TestCase):
 
     def runRequest(self, httpRequest, requestClass):
         httpRequest = httpRequest.replace("\n", "\r\n")
@@ -322,3 +322,18 @@ Cookie: rabbit="eat carrot"; ninja=secret
 
         self.runRequest(httpRequest, MyRequest)
 
+    def testGET(self):
+        httpRequest = '''\
+GET /?key=value&multiple=two+words&multiple=more%20words&empty= HTTP/1.0
+
+'''
+        testcase = self
+        class MyRequest(http.Request):
+            def process(self):
+                testcase.assertEquals(self.args["key"], ["value"])
+                testcase.assertEquals(self.args["empty"], [""])
+                testcase.assertEquals(self.args["multiple"], ["two words", "more words"])
+                testcase.didRequest = 1
+                self.finish()
+                
+        self.runRequest(httpRequest, MyRequest)

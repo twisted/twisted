@@ -36,6 +36,7 @@ import socket
 import math
 import time
 import calendar
+import cgi
 
 # sibling imports
 import basic
@@ -436,14 +437,7 @@ class Request:
                 log.msg("May ignore parts of this invalid URI: %s"
                         % repr(self.uri))
             self.path, argstring = x[0], x[1]
-            # parse the argument string
-            for kvp in argstring.split('&'):
-                keyval = map(urllib.unquote, kvp.split('='))
-                if len(keyval) != 2:
-                    continue
-                key, value = keyval
-                arg = self.args[key] = self.args.get(key, [])
-                arg.append(value)
+            self.args = cgi.parse_qs(argstring, 1)
 
         # cache the client and server information, we'll need this later to be
         # serialized and sent with the request so CGIs will work remotely
