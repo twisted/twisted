@@ -43,9 +43,6 @@ from twisted.protocols.sux import XMLParser, ParseError
 from twisted.python import reflect
 from twisted.python.reflect import Accessor
 
-# Sibling imports
-import html
-
 # create NodeList class
 from types import ListType as NodeList
 from types import StringType
@@ -61,6 +58,24 @@ def getElementsByTagName(iNode, name):
             matches.append(c)
         slice=c.childNodes+slice
     return matches
+
+def unescape(text):
+    "Perform the exact opposite of 'escape'."
+    for s, h in [('&', '&amp;'), #order is important
+                 ('<', '&lt;'),
+                 ('>', '&gt;'),
+                 ('"', '&quot;')]:
+        text = text.replace(h, s)
+    return text
+
+def escape(text):
+    "Escape a few HTML special chars with HTML entities."
+    for s, h in [('&', '&amp;'), #order is important
+                 ('<', '&lt;'),
+                 ('>', '&gt;'),
+                 ('"', '&quot;')]:
+        text = text.replace(s,h)
+    return text
 
 class MismatchedTags(Exception):
 
@@ -233,7 +248,7 @@ class Text(CharacterData):
             v = str(self.nodeValue)
             if strip:
                 v = ' '.join(v.split())
-            val = html.escape(v)
+            val = escape(v)
         stream.write(val)
 
     def __repr__(self):
@@ -310,7 +325,7 @@ class Element(Node):
             w(attr)
             w("=")
             w('"')
-            w(html.escape(val))
+            w(escape(val))
             w('"')
         if self.childNodes or self.tagName.lower() in ('a', 'li', 'div', 'span', 'title'):
             w(">")
@@ -353,7 +368,7 @@ class Element(Node):
 def _unescapeDict(d):
     dd = {}
     for k, v in d.items():
-        dd[k] = html.unescape(v)
+        dd[k] = unescape(v)
     return dd
 
 class MicroDOMParser(XMLParser):

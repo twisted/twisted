@@ -24,24 +24,7 @@ from twisted.web import resource
 import traceback, string
 
 from cStringIO import StringIO
-
-def unescape(text):
-    "Perform the exact opposite of 'escape'."
-    for s, h in [('&', '&amp;'), #order is important
-                 ('<', '&lt;'),
-                 ('>', '&gt;'),
-                 ('"', '&quot;')]:
-        text = text.replace(h, s)
-    return text
-
-def escape(text):
-    "Escape a few HTML special chars with HTML entities."
-    for s, h in [('&', '&amp;'), #order is important
-                 ('<', '&lt;'),
-                 ('>', '&gt;'),
-                 ('"', '&quot;')]:
-        text = text.replace(s,h)
-    return text
+from microdom import escape, unescape
 
 def PRE(text):
     "Wrap <pre> tags around some text and escape it with web.escape."
