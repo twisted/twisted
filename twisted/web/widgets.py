@@ -18,6 +18,9 @@ from server import NOT_DONE_YET
 
 FORGET_IT = 99 
 
+def listify(x):
+    return [x]
+
 class Widget:
     def display(self, request):
         raise NotImplementedError("twisted.web.widgets.Widget.display")
@@ -44,6 +47,7 @@ class Presentation(Widget):
     template = '''
     hello %%%%world%%%%
     '''
+    world = "You didn't assign to the 'template' attribute."
     def __init__(self, template=None, filename=None):
         if filename:
             self.template = open(filename).read()
@@ -63,6 +67,9 @@ class Presentation(Widget):
 
     def addVariables(self, namespace, request):
         self.addClassVars(namespace, self.__class__)
+
+    def formatTraceback(self, traceback):
+        return [html.PRE(traceback)]
 
     def display(self, request):
         tm = []
@@ -288,6 +295,9 @@ class RenderSession:
         for i in xrange(len(result)):
             if isinstance(result[i], defer.Deferred):
                 self._addDeferred(result[i], position+i)
+        # print 'CALLBACK:',self.lst, position, result
+        if not isinstance(result, types.ListType):
+            result = [result]
         self.lst[position:position+1] = result
         assert self.position <= position
         self.keepRendering()
@@ -312,7 +322,7 @@ class RenderSession:
             elif isinstance(item, defer.Deferred):
                 return
             else:
-                self.request.write("RENDERING UNKNOWN: %s" % str(item))
+                self.request.write("RENDERING UNKNOWN: %s" % html.PRE(repr(item)))
             self.position = self.position + 1
             if self.position == len(self.lst):
                 self.lst = None

@@ -15,27 +15,21 @@
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
-from twisted.spread import pb
-from twisted.internet import tcp, main
+# This example program is cited in the Twisted paper for IPC10.
 
+from twisted.spread import pb
+from twisted.internet import main
 def success(message):
     print "Message received:",message
     main.shutDown()
-
 def failure(error):
     print "Failure...",error
     main.shutDown()
-
 def connected(perspective):
     perspective.echo("hello world",
                      pbcallback=success,
                      pberrback=failure)
     print "connected."
-
-# run a client
-pb.connect(connected, failure,
-           "localhost", pb.portno,
-           "guest", "guest",
-           "pbecho", "any")
-
+pb.connect(connected, failure,   "localhost", pb.portno,
+           "guest", "guest",     "pbecho", "guest", 30)
 main.run()

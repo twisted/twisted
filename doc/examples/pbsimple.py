@@ -15,6 +15,8 @@
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
+# This example program is cited in the Twisted paper for IPC10.
+
 from twisted.spread import pb
 from twisted.internet import main
 class Echoer(pb.Root):
@@ -22,8 +24,6 @@ class Echoer(pb.Root):
         print 'echoing:', st
         return st
 if __name__ == '__main__':
-    import pbsimple
     app = main.Application("pbsimple")
-    ef =  pb.BrokerFactory(Echoer())
-    app.listenOn(8789, ef)
+    app.listenOn(8789, pb.BrokerFactory(Echoer()))
     app.run()

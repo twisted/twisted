@@ -15,28 +15,20 @@
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
+# This example program is cited in the Twisted paper for IPC10.
+
 from twisted.spread import pb
-from twisted.internet import tcp, main
-
-def success(message):
-    print "Message received:",message
-    main.shutDown()
-
-def failure(error):
-    print "Failure...",error
-    main.shutDown()
-
-def connected(perspective):
-    perspective.echo("hello world",
-                     pbcallback=success,
-                     pberrback=failure)
-    print "connected."
-
-# run a client
-pb.connect(connected, failure,
-           "localhost", pb.portno,
-           "guest", "guest",
-           "pbecho", "any",
-           None)
-
-main.run()
+from twisted.internet import main
+class SimplePerspective(pb.Perspective):
+    def perspective_echo(self, text):
+        print 'echoing',text
+        return text
+class SimpleService(pb.Service):
+    def getPerspectiveNamed(self, name):
+        return SimplePerspective(name, self)
+if __name__ == '__main__':
+    import pbecho
+    app = main.Application("pbecho")
+    pbecho.SimpleService("pbecho",app).getPerspectiveNamed("guest").makeIdentity("guest")
+    app.listenOn(pb.portno, pb.BrokerFactory(pb.AuthRoot(app)))
+    app.save("start")
