@@ -40,5 +40,6 @@ if not conf['message']:
     os.system('/usr/bin/sensible-editor ChangeLog.tmp')
 if not conf['message'] and open('ChangeLog.tmp').read() == entry+so_far:
     print "changelog not modified, not saving"
+    os.remove('ChangeLog.tmp')
 else:
     os.rename('ChangeLog.tmp', 'ChangeLog')
