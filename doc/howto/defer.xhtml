@@ -8,7 +8,67 @@
 </head>
 
 <body>
+
 <h1>Using Deferreds</h1>
+
+<h2>Introduction</h2>
+
+<p>
+Twisted is a framework that allows programmers to develop <a
+href="async.xhtml">asynchronous</a> networked programs. <code
+class="API">twisted.internet.defer.Deferred</code> objects are one of the key
+concepts that you should understand in order to develop asynchronous code that
+uses the Twisted framework: they are a signal to the event loop that a result
+is pending.
+</p>
+
+<p>
+This HOWTO first describes the problem that Deferreds solve: that of managing
+tasks that are waiting for data without blocking. It then illustrates the
+difference between blocking Python code, and non-blocking code which returns a
+Deferred; describes Deferreds in more details; describes the details of the
+class interfaces; and finally describes DeferredList.
+</p>
+
+<h2>The Problem that Deferreds Solve</h2>
+
+<p>
+Deferreds are designed to enable Twisted programs to wait for data without
+hanging until that data arrives.
+</p>
+
+<p>
+Many computing tasks take some time to complete, and there are two reasons
+why a task might take some time:
+</p>
+
+<ol>
+<li>it is computationally intensive (for example factorising large numbers)
+and requires a certain amount of CPU time to calculate the answer; or</li>
+<li>it is not computationally intensive but has to wait for data to be
+available to produce a result.</li>
+</ol>
+
+<p>
+It is the second class of problem &mdash; non-computationally intensive tasks
+that involve an appreciable delay &mdash; that Deferreds are designed to help solve.
+Functions that wait on hard drive access, database access,
+and network access all fall into this class, although the time delay varies.
+</p>
+
+<p>
+The basic idea behind Deferreds, and other solutions to this problem, is to keep the CPU active as much as possible.
+If one task is waiting on data, rather than have the CPU (and the program!)
+idle waiting for that data (a process normally called &quot;blocking&quot;), the program performs other operations in the
+meantime, and waits for some signal that data is ready to be processed before
+returning to that process.
+</p>
+
+<p>
+In Twisted, a function signals to the main event loop that it is waiting by
+returning a Deferred. When that data is available, the event loop activates
+the callbacks on that Deferred to process the data.
+</p>
 
 <h2>The Context</h2>
 
