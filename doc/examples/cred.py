@@ -140,6 +140,8 @@ class ServerFactory(protocol.ServerFactory):
         return p
 
 class Realm:
+    __implements__ = portal.IRealm
+
     def requestAvatar(self, avatarId, mind, *interfaces):
         if IProtocolUser in interfaces:
             if avatarId == checkers.ANONYMOUS:
