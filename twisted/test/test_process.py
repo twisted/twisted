@@ -91,19 +91,30 @@ class EchoProtocol(protocol.ProcessProtocol):
         self.finished = 1
 
 class SignalProtocol(protocol.ProcessProtocol):
-    def __init__(self, sig):
+    def __init__(self, sig, testcase):
         self.signal = sig
         self.going = 1
-
+        self.testcase = testcase
+        
     def outReceived(self, data):
         self.transport.signalProcess(self.signal)
 
     def processEnded(self, reason):
         self.going = 0
         reason.trap(error.ProcessTerminated)
-        assert reason.value.exitCode == None
-        assert reason.value.signal == getattr(signal,'SIG'+self.signal)
-        assert os.WTERMSIG(reason.value.status) == getattr(signal,'SIG'+self.signal), '%s %s' % (self.signal, os.WTERMSIG(reason.value.status))
+        v = reason.value
+        self.testcase.assertEquals(v.exitCode, None,
+                                   "SIG%s: exitCode is %s, not None" % \
+                                   (self.signal, v.exitCode))
+        self.testcase.assertEquals(v.signal,
+                                   getattr(signal,'SIG'+self.signal),
+                                   "SIG%s: .signal was %s, wanted %s" % \
+                                   (self.signal, v.signal,
+                                    getattr(signal,'SIG'+self.signal)))
+        self.testcase.assertEquals(os.WTERMSIG(v.status),
+                                   getattr(signal,'SIG'+self.signal),
+                                   'SIG%s: %s' % (self.signal,
+                                                  os.WTERMSIG(v.status)))
 
 class ProcessTestCase(unittest.TestCase):
     """Test running a process."""
@@ -383,13 +394,13 @@ class PosixProcessTestCase(unittest.TestCase):
         signals = ('HUP', 'INT', 'KILL')
         protocols = []
         for sig in signals:
-            p = SignalProtocol(sig)
+            p = SignalProtocol(sig, self)
             reactor.spawnProcess(p, exe, [exe, "-u", scriptPath, sig],
                                  usePTY=self.usePTY)
             protocols.append(p)
 
         while reduce(lambda a,b:a+b,[p.going for p in protocols]):
-            reactor.iterate()
+            reactor.iterate(0.01)
 
 class PosixProcessTestCasePTY(PosixProcessTestCase):
     """Just like PosixProcessTestCase, but use ptys instead of pipes."""
