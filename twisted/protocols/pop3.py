@@ -36,26 +36,33 @@ class POP3(basic.LineReceiver):
         self.successResponse(self.magic)
 
     def successResponse(self, message=''):
-        self.transport.write('+OK %s\r\n' % message)
+        self.sendLine('+OK ' + str(message))
 
     def failResponse(self, message=''):
-        self.transport.write('-ERR %s\r\n' % message)
+        self.sendLine('-ERR ' + str(message))
 
     def lineReceived(self, line):
         try:
             return apply(self.processCommand, tuple(string.split(line)))
         except (ValueError, AttributeError, POP3Error, TypeError), e:
             self.failResponse('bad protocol or server: %s: %s' % (e.__class__.__name__, e))
-
+    
     def processCommand(self, command, *args):
         command = string.upper(command)
         if self.mbox is None and command != 'APOP':
             raise POP3Error("not authenticated yet: cannot do %s" % command)
-        return apply(getattr(self, 'do_'+command), args)
+        f = getattr(self, 'do_' + command, None)
+        if f:
+            return apply(getattr(self, 'do_'+command), args)
+        raise POP3Error("Unknown protocol command: " + command)
 
     def do_APOP(self, user, digest):
         self.mbox = self.authenticateUserAPOP(user, digest)
         self.successResponse()
+
+    def do_STAT(self):
+        print self.mbox.listMessages()
+        self.successResponse('%d 0' % reduce(operator.add, self.mbox.listMessages(), 0))
 
     def do_LIST(self, i=None):
         messages = self.mbox.listMessages()
@@ -64,17 +71,17 @@ class POP3(basic.LineReceiver):
         i = 1
         for message in messages:
             if message:
-                self.transport.write('%d %d\r\n' % (i, message))
+                self.sendLine('%d %d' % (i, message))
             i = i+1
-        self.transport.write('.\r\n')
+        self.sendLine('.')
 
     def do_UIDL(self, i=None):
         messages = self.mbox.listMessages()
         self.successResponse()
         for i in range(len(messages)):
             if messages[i]:
-                self.transport.write('%d %s\r\n' % (i+1, self.mbox.getUidl(i)))
-        self.transport.write('.\r\n')
+                self.sendLine('%d %s' % (i+1, self.mbox.getUidl(i)))
+        self.sendLine('.')
 
     def getMessageFile(self, i):
         i = int(i)-1
@@ -103,9 +110,9 @@ class POP3(basic.LineReceiver):
                 line = line[:-1]
             if line[:1] == '.':
                 line = '.'+line
-            self.transport.write(line[:size]+'\r\n')
+            self.sendLine(line[:size])
             size = size-len(line[:size])
-
+        self.sendLine('.')
 
     def do_RETR(self, i):
         resp, fp = self.getMessageFile(i)
@@ -120,8 +127,8 @@ class POP3(basic.LineReceiver):
                 line = line[:-1]
             if line[:1] == '.':
                 line = '.'+line
-            self.transport.write(line+'\r\n')
-        self.transport.write('.\r\n')
+            self.sendLine(line)
+        self.sendLine('.')
 
     def do_DELE(self, i):
         i = int(i)-1
@@ -167,12 +174,12 @@ class POP3Client(basic.LineReceiver):
     welcomeRe = re.compile('<(.*)>')
 
     def sendShort(self, command, params):
-        self.transport.write('%s %s\r\n' % (command, params))
+        self.sendLine('%s %s' % (command, params))
         self.command = command
         self.mode = SHORT
 
     def sendLong(self, command, params):
-        self.transport.write('%s %s\r\n' % (command, params))
+        self.sendLine('%s %s' % (command, params))
         self.command = command
         self.mode = FIRST_LONG
 
