@@ -1,5 +1,6 @@
+# -*- test-case-name: twisted.test.test_asn1 -*-
 
-from record import Record, Integer
+from record import RecordMixin as Record, Integer
 
 universalTypeTags = {
     'INTEGER': 2,
@@ -17,16 +18,17 @@ universalTypeTags = {
 
 
 class Identifier(Record):
-    __metaclass__ = DynamicFormatType
-
     UNIVERSAL = 0
     APPLICATION = 1
     CONTEXT_SPECIFIC = 2
     PRIVATE = 3
 
-
     def __format__():
-        def state_primitive(self):
+        def get(self):
+            yield ('tagNumber', Integer(5))
+            yield ('primitiveTag', Integer(1))
+            yield ('classType', Integer(2))
+
             if self.tagNumber == 63:
                 # High-tag-number form
                 byteArray = [255]
@@ -39,15 +41,6 @@ class Identifier(Record):
                     accum <<= 8
                     accum |= byte
                 self.tagNumber = accum
-
-        def get(self):
-            yield ('tagNumber', Integer(5))
-            yield ('primitiveTag', Integer(1))
-            yield ('classType', Integer(2))
-
-            if self.primitiveTag:
-                for next in state_primitive(self):
-                    yield next
         return get,
     __format__ = property(*__format__())
 
