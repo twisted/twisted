@@ -1044,7 +1044,11 @@ class IMAP4Client(basic.LineReceiver):
             elif L.find('READ-WRITE') != -1:
                 self.modeChanged(1)
             elif L.find('FETCH') != -1:
-                flags.update(self.__cbFetch(([L], None), ('FLAGS',)))
+                for (mId, fetched) in self.__cbFetch(([L], None)).items():
+                    sum = []
+                    for f in fetched.get('FLAGS', []):
+                        sum.extend(f)
+                    flags.setdefault(mId, []).extend(sum)
             else:
                 log.msg('Unhandled unsolicited response: ' + repr(L))
         if flags:
@@ -1602,7 +1606,7 @@ class IMAP4Client(basic.LineReceiver):
         if there is an error.
         """
         d = self._fetch(messages, useUID=0, uid=1)
-        d.addCallback(self.__cbFetch, lookFor=('UID',))
+        d.addCallback(self.__cbFetch)
         return d
 
     def fetchFlags(self, messages, uid=0):
@@ -1623,7 +1627,7 @@ class IMAP4Client(basic.LineReceiver):
         there is an error.
         """
         d = self._fetch(messages, useUID=uid, flags=1)
-        d.addCallback(self.__cbFetch, lookFor=('FLAGS',))
+        d.addCallback(self.__cbFetch)
         return d
 
     def fetchInternalDate(self, messages, uid=0):
@@ -1644,7 +1648,7 @@ class IMAP4Client(basic.LineReceiver):
         if there is an error.
         """
         d = self._fetch(messages, useUID=uid, internaldate=1)
-        d.addCallback(self.__cbFetch, lookFor=('INTERNALDATE',))
+        d.addCallback(self.__cbFetch)
         return d
 
     def fetchEnvelope(self, messages, uid=0):
@@ -1665,7 +1669,7 @@ class IMAP4Client(basic.LineReceiver):
         if there is an error.
         """
         d = self._fetch(messages, useUID=uid, envelope=1)
-        d.addCallback(self.__cbFetch, lookFor=('ENVELOPE',))
+        d.addCallback(self.__cbFetch)
         return d
 
     def fetchBodyStructure(self, messages, uid=0):
@@ -1686,7 +1690,7 @@ class IMAP4Client(basic.LineReceiver):
         if there is an error.
         """
         d = self._fetch(messages, useUID=uid, bodystructure=1)
-        d.addCallback(self.__cbFetch, lookFor=('BODYSTRUCTURE',))
+        d.addCallback(self.__cbFetch)
         return d
 
     def fetchSimplifiedBody(self, messages, uid=0):
@@ -1707,7 +1711,7 @@ class IMAP4Client(basic.LineReceiver):
         if there is an error.
         """
         d = self._fetch(messages, useUID=uid, body=1)
-        d.addCallback(self.__cbFetch, lookFor=('BODY',))
+        d.addCallback(self.__cbFetch)
         return d
 
     def fetchMessage(self, messages, uid=0):
@@ -1728,7 +1732,7 @@ class IMAP4Client(basic.LineReceiver):
         if there is an error.
         """
         d = self._fetch(messages, useUID=uid, rfc822=1)
-        d.addCallback(self.__cbFetch, lookFor=('RFC822',))
+        d.addCallback(self.__cbFetch)
         return d
 
     def fetchHeaders(self, messages, uid=0):
@@ -1749,7 +1753,7 @@ class IMAP4Client(basic.LineReceiver):
         invoked if there is an error.
         """
         d = self._fetch(messages, useUID=uid, rfc822header=1)
-        d.addCallback(self.__cbFetch, lookFor=('RFC822.HEADER',))
+        d.addCallback(self.__cbFetch)
         return d
 
     def fetchBody(self, messages, uid=0):
@@ -1770,7 +1774,7 @@ class IMAP4Client(basic.LineReceiver):
         is an error.
         """
         d = self._fetch(messages, useUID=uid, rfc822text=1)
-        d.addCallback(self.__cbFetch, lookFor=('RFC822.TEXT',))
+        d.addCallback(self.__cbFetch)
         return d
 
     def fetchSize(self, messages, uid=0):
@@ -1791,7 +1795,7 @@ class IMAP4Client(basic.LineReceiver):
         an error.
         """
         d = self._fetch(message, useUID=uid, rfc822size=1)
-        d.addCallback(self.__cbFetch, lookFor=('RFC822.SIZE',))
+        d.addCallback(self.__cbFetch)
         return d
 
     def fetchFull(self, messages, uid=0):
@@ -1819,13 +1823,7 @@ class IMAP4Client(basic.LineReceiver):
             messages, useUID=uid, flags=1, internaldate=1,
             rfc822size=1, envelope=1, body=1
         )
-        d.addCallback(
-            self.__cbFetch,
-            lookFor=(
-                'FLAGS', 'INTERNALDATE', 'RFC822.SIZE',
-                'ENVELOPE', 'BODY'
-            )
-        )
+        d.addCallback(self.__cbFetch)
         return d
 
     def fetchAll(self, messages, uid=0):
@@ -1852,12 +1850,7 @@ class IMAP4Client(basic.LineReceiver):
             messages, useUID=uid, flags=1, internaldate=1,
             rfc822size=1, envelope=1
         )
-        d.addCallback(
-            self.__cbFetch,
-            lookFor=(
-                'FLAGS', 'INTERNALDATE', 'RFC822.SIZE', 'ENVELOPE'
-            )
-        )
+        d.addCallback(self.__cbFetch)
         return d
 
     def fetchFast(self, messages, uid=0):
@@ -1883,20 +1876,12 @@ class IMAP4Client(basic.LineReceiver):
         d = self._fetch(
             messages, useUID=uid, flags=1, internaldate=1, rfc822size=1
         )
-        d.addCallback(
-            self.__cbFetch,
-            lookFor=(
-                'FLAGS', 'INTERNALDATE', 'RFC822.SIZE'
-            )
-        )
+        d.addCallback(self.__cbFetch)
         return d
 
-    def __cbFetch(self, (lines, last), lookFor):
-        # Oh, f*ck f*ck f*ck f*ck
-        lookFor = lookFor + ('UID',)
-
+    def __cbFetch(self, (lines, last)):
         flags = {}
-        print '__cbFetch((%r, %r), %r)' % (lines, last, lookFor)
+        print '__cbFetch((%r, %r))' % (lines, last)
         for line in lines:
             parts = line.split(None, 2)
             if len(parts) == 3:
@@ -1909,10 +1894,11 @@ class IMAP4Client(basic.LineReceiver):
                         data = parseNestedParens(parts[2])
                         while len(data) == 1 and isinstance(data, types.ListType):
                             data = data[0]
-                        if data[0] in lookFor:
-                            flags.setdefault(id, []).extend(data[1])
-                        else:
-                            print '(1)Ignoring ', data
+                        while data:
+                            if len(data) < 2:
+                                raise IllegalServerResponse, "Not enough arguments", data
+                            flags.setdefault(id, {}).setdefault(data[0], []).append(data[1])
+                            del data[:2]
                 else:
                     print '(2)Ignoring ', parts
             else:
