@@ -244,8 +244,8 @@ class Loopback(unittest.TestCase):
 
         self.assertEquals(
             str(recvlineClient),
-            ">>> first line" + (recvlineClient.fill * (WIDTH - 14)) + "\n" +
-            "\n".join([recvlineClient.fill * WIDTH for i in xrange(HEIGHT - 1)]))
+            ">>> first line\n" +
+            "\n" * (HEIGHT - 2))
 
         # An insults API for this would be nice.
         telnetClient.write("\x1b[D\x1b[D\x1b[D\x1b[Dxxxx\n")
@@ -255,7 +255,14 @@ class Loopback(unittest.TestCase):
 
         self.assertEquals(
             str(recvlineClient),
-            ">>> first xxxx" + (recvlineClient.fill * (WIDTH - 14)) + "\n" +
-            "first xxxx" + (recvlineClient.fill * (WIDTH - 10)) + "\n" +
-            ">>> " + (recvlineClient.fill * (WIDTH - 4)) + "\n" +
-            "\n".join([recvlineClient.fill * WIDTH for i in xrange(HEIGHT - 3)]))
+            ">>> first xxxx\n" +
+            "first xxxx\n" +
+            ">>>\n" +
+            "\n" * (HEIGHT - 4))
+
+        # Try backspacing over some characters
+        telnetClient.write('\b\b\b\b')
+
+        clientTransport.clearBuffer()
+        serverTransport.clearBuffer()
+

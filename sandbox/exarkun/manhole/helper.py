@@ -220,4 +220,4 @@ class TerminalBuffer(protocol.Protocol):
         self.eraseDisplay()
 
     def __str__(self):
-        return '\n'.join([''.join([ch for (ch, attr) in L]) for L in self.lines])
+        return '\n'.join([''.join([ch for (ch, attr) in L]).rstrip() for L in self.lines])

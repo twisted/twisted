@@ -19,7 +19,7 @@ class BufferTestCase(unittest.TestCase):
         self.assertEquals(self.term.width, WIDTH)
         self.assertEquals(self.term.height, HEIGHT)
         self.assertEquals(str(self.term),
-                          '\n'.join([' ' * WIDTH for i in xrange(HEIGHT)]))
+                          '\n' * (HEIGHT - 1))
         self.assertEquals(self.term.reportCursorPosition(), (0, 0))
 
     def testCursorDown(self):
@@ -69,8 +69,8 @@ class BufferTestCase(unittest.TestCase):
         self.term.write(s)
         self.assertEquals(
             str(self.term),
-            s + (self.term.fill * (WIDTH - len(s))) + '\n' +
-            '\n'.join([self.term.fill * WIDTH for i in xrange(HEIGHT - 1)]))
+            s + '\n' +
+            '\n' * (HEIGHT - 2))
 
     def testOvertype(self):
         s = "hello, world."
@@ -80,8 +80,8 @@ class BufferTestCase(unittest.TestCase):
         self.term.write("H")
         self.assertEquals(
             str(self.term),
-            ("H" + s[1:]) + (self.term.fill * (WIDTH - len(s))) + '\n' +
-            '\n'.join([self.term.fill * WIDTH for i in xrange(HEIGHT - 1)]))
+            ("H" + s[1:]) + '\n' +
+            '\n' * (HEIGHT - 2))
 
     def testInsert(self):
         s = "ello, world."
@@ -90,8 +90,8 @@ class BufferTestCase(unittest.TestCase):
         self.term.write("H")
         self.assertEquals(
             str(self.term),
-            ("H" + s) + (self.term.fill * (WIDTH - len(s) - 1)) + '\n' +
-            '\n'.join([self.term.fill * WIDTH for i in xrange(HEIGHT - 1)]))
+            ("H" + s) + '\n' +
+            '\n' * (HEIGHT - 2))
 
     def testWritingInTheMiddle(self):
         s = "Hello, world."
@@ -100,9 +100,9 @@ class BufferTestCase(unittest.TestCase):
         self.term.write(s)
         self.assertEquals(
             str(self.term),
-            '\n'.join([self.term.fill * WIDTH for i in xrange(5)]) + '\n' +
-            (self.term.fill * 5) + s + (self.term.fill * (WIDTH - 5 - len(s))) + '\n' +
-            '\n'.join([self.term.fill * WIDTH for i in xrange(HEIGHT - 6)]))
+            '\n' * 5 +
+            (self.term.fill * 5) + s + '\n' +
+            '\n' * (HEIGHT - 7))
 
     def testWritingWrappedAtEndOfLine(self):
         s = "Hello, world."
@@ -110,9 +110,9 @@ class BufferTestCase(unittest.TestCase):
         self.term.write(s)
         self.assertEquals(
             str(self.term),
-            (self.term.fill * (WIDTH - 5) + s[:5]) + '\n' +
-            s[5:] + (self.term.fill * (WIDTH - len(s[5:]))) + '\n' +
-            '\n'.join([self.term.fill * WIDTH for i in xrange(HEIGHT - 2)]))
+            s[:5].rjust(WIDTH) + '\n' +
+            s[5:] + '\n' +
+            '\n' * (HEIGHT - 3))
 
     def testIndex(self):
         self.term.index()
@@ -240,10 +240,10 @@ class BufferTestCase(unittest.TestCase):
 
         self.assertEquals(
             str(self.term),
-            s1 + (self.term.fill * (WIDTH - len(s1))) + '\n' +
-            (self.term.fill * WIDTH) + '\n' +
-            s3 + (self.term.fill * (WIDTH - len(s3))) + '\n' +
-            '\n'.join([self.term.fill * WIDTH for i in xrange(HEIGHT - 3)]))
+            s1 + '\n' +
+            '\n' +
+            s3 + '\n' +
+            '\n' * (HEIGHT - 4))
 
     def testEraseToLineEnd(self):
         s = 'Hello, world.'
@@ -252,8 +252,8 @@ class BufferTestCase(unittest.TestCase):
         self.term.eraseToLineEnd()
         self.assertEquals(
             str(self.term),
-            s[:-5] + (self.term.fill * (WIDTH - (len(s) - 5))) + '\n' +
-            '\n'.join([self.term.fill * WIDTH for i in xrange(HEIGHT - 1)]))
+            s[:-5] + '\n' +
+            '\n' * (HEIGHT - 2))
 
     def testEraseToLineBeginning(self):
         s = 'Hello, world.'
@@ -262,8 +262,8 @@ class BufferTestCase(unittest.TestCase):
         self.term.eraseToLineBeginning()
         self.assertEquals(
             str(self.term),
-            (self.term.fill * (len(s) - 4)) + s[-4:] + (self.term.fill * (WIDTH - len(s))) + '\n' +
-            '\n'.join([self.term.fill * WIDTH for i in xrange(HEIGHT - 1)]))
+            s[-4:].rjust(len(s)) + '\n' +
+            '\n' * (HEIGHT - 2))
 
     def testEraseDisplay(self):
         self.term.write('Hello world\n')
@@ -272,7 +272,7 @@ class BufferTestCase(unittest.TestCase):
 
         self.assertEquals(
             str(self.term),
-            '\n'.join([self.term.fill * WIDTH for i in xrange(HEIGHT)]))
+            '\n' * (HEIGHT - 1))
 
     def testEraseToDisplayEnd(self):
         s1 = "Hello world"
@@ -283,9 +283,9 @@ class BufferTestCase(unittest.TestCase):
 
         self.assertEquals(
             str(self.term),
-            s1 + (self.term.fill * (WIDTH - len(s1))) + '\n' +
-            s2[:5] + (self.term.fill * (WIDTH - 5)) + '\n' +
-            '\n'.join([self.term.fill * WIDTH for i in xrange(HEIGHT - 2)]))
+            s1 + '\n' +
+            s2[:5] + '\n' +
+            '\n' * (HEIGHT - 3))
 
     def testEraseToDisplayBeginning(self):
         s1 = "Hello world"
@@ -296,9 +296,9 @@ class BufferTestCase(unittest.TestCase):
 
         self.assertEquals(
             str(self.term),
-            self.term.fill * WIDTH + '\n' +
-            (self.term.fill * 6) + s2[6:] + (self.term.fill * (WIDTH - len(s2))) + '\n' +
-            '\n'.join([self.term.fill * WIDTH for i in xrange(HEIGHT - 2)]))
+            '\n' +
+            s2[6:].rjust(len(s2)) + '\n' +
+            '\n' * (HEIGHT - 3))
 
     def testLineInsertion(self):
         s1 = "Hello world"
@@ -309,10 +309,10 @@ class BufferTestCase(unittest.TestCase):
 
         self.assertEquals(
             str(self.term),
-            s1 + (self.term.fill * (WIDTH - len(s1))) + '\n' +
-            self.term.fill * WIDTH + '\n' +
-            s2 + (self.term.fill * (WIDTH - len(s2))) + '\n' +
-            '\n'.join([self.term.fill * WIDTH for i in xrange(HEIGHT - 3)]))
+            s1 + '\n' +
+            '\n' +
+            s2 + '\n' +
+            '\n' * (HEIGHT - 4))
 
     def testLineDeletion(self):
         s1 = "Hello world"
@@ -324,6 +324,6 @@ class BufferTestCase(unittest.TestCase):
 
         self.assertEquals(
             str(self.term),
-            s1 + (self.term.fill * (WIDTH - len(s1))) + '\n' +
-            s3 + (self.term.fill * (WIDTH - len(s3))) + '\n' +
-            '\n'.join([self.term.fill * WIDTH for i in xrange(HEIGHT - 2)]))
+            s1 + '\n' +
+            s3 + '\n' +
+            '\n' * (HEIGHT - 3))
