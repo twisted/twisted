@@ -26,6 +26,8 @@ else:
 from twisted.cred import identity
 from twisted.internet import defer
 
+import error
+
 class ConchIdentity(identity.Identity):
 
     clients = {}    
@@ -54,7 +56,7 @@ class OpenSSHConchIdentity(ConchIdentity):
     def validatePublicKey(self, pubKeyString):
         home = os.path.expanduser('~%s/.ssh/' % self.name)
         if home[0] == '~': # couldn't expand
-            return defer.fail('not valid user')
+            return defer.fail(error.ConchError('not valid user'))
         for file in ['authorized_keys', 'authorized_keys2']:
             if os.path.exists(home+file):
                 lines = open(home+file).readlines()
@@ -62,19 +64,19 @@ class OpenSSHConchIdentity(ConchIdentity):
                     if base64.decodestring(l.split()[1])==pubKeyString:
                         return defer.succeed('')
         #print 'not valid key'
-        return defer.fail('not valid key')
+        return defer.fail(error.ConchError('not valid key'))
 
     def verifyPlainPassword(self, password):
         if pwd:
             try:
                 cryptedPass = pwd.getpwnam(self.name)[1] # password
             except KeyError: # no such user
-                return defer.fail('')
+                return defer.fail(error.ConchError('no such user'))
             else:
                 if cryptedPass in ['*', 'x']: # shadow, fail for now
-                    return defer.fail('')
+                    return defer.fail(error.ConchError('cant read shadow'))
                 ourCryptedPass = crypt.crypt(password, cryptedPass[:2])
                 if ourCryptedPass == cryptedPass:
                     return defer.succeed('')
-                return defer.fail('')
-        return defer.fail('') # can't do password auth with out this now
+                return defer.fail(error.ConchError('bad password'))
+        return defer.fail(error.ConchError('cannot do password auth')) # can't do password auth with out this now

@@ -26,6 +26,7 @@ from Crypto.Hash import HMAC
 from Crypto.PublicKey import RSA
 
 # twisted imports
+from twisted.conch import error
 from twisted.internet import protocol
 from twisted.python import log
 
@@ -225,7 +226,7 @@ class SSHTransportBase(protocol.Protocol):
         
     # client methods
     def receiveError(self, reasonCode, description):
-        raise 'Got remote error, code %s\nreason: %s' % (reasonCode, description)
+        raise error.ConchError('Got remote error, code %s\nreason: %s' % (reasonCode, description))
 
     def receiveUnimplemented(self, seqnum):
         log.msg('other side unimplemented packet #%s' % seqnum)
@@ -296,7 +297,7 @@ class SSHServerTransport(SSHTransportBase):
             self.g, self.p = self.factory.getDHPrime(self.ideal)
             self.sendPacket(MSG_KEX_DH_GEX_GROUP, MP(self.p)+MP(self.g))
         else:
-            raise self.kexAlg
+            raise ConchError('bad kexalg: %s' % self.kexAlg)
 
     def ssh_KEX_DH_GEX_REQUEST(self, packet):
         self.min, self.ideal, self.max = struct.unpack('>3L', packet)

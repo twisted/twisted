@@ -15,6 +15,7 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 # 
 import os.path, base64
+from twisted.conch import error
 from twisted.internet import app, defer
 from twisted.python import failure, log
 from common import NS, getNS, MP
@@ -34,10 +35,11 @@ class SSHUserAuthServer(service.SSHService):
         return d
 
     def _cbTryAuth(self, identity, kind, data):
+        log.msg('%s trying auth %s with identity' % (identity.name, kind))
         f = getattr(self,'auth_%s'%kind, None)
         if f:
             return f(identity, data)
-        raise 'bad key' # this should make it err back
+        raise error.ConchError('bad auth for %s' % kind) # this should make it err back
 
     def ssh_USERAUTH_REQUEST(self, packet):
         user, nextService, method, rest = getNS(packet, 3)
@@ -60,28 +62,36 @@ class SSHUserAuthServer(service.SSHService):
             self.transport.sendPacket(MSG_USERAUTH_FAILURE, NS(','.join(self.supportedAuthentications))+'\xff')
 
     def _ebBadAuth(self, foo):
+        if isinstance(foo, failure.Failure):
+            foo.trap(error.ConchError)
+        elif foo == "unauthorized":
+            pass
+        else:
+            raise foo
         if self.method != 'none': # ignore 'none' as a method
             log.msg('%s failed auth %s' % (self.user, self.method))
-            #print 'potential reason: %s' % foo
+            log.msg('potential reason: %s' % foo)
+            #print foo
         self.transport.sendPacket(MSG_USERAUTH_FAILURE, NS(','.join(self.supportedAuthentications))+'\x00')
-        #return foo # this will be a failure to continue in errs
 
     def auth_publickey(self, ident, packet):
         hasSig = ord(packet[0])
         self.hasSigType = hasSig # protocol impl.s differ in this
         algName, blob, rest = getNS(packet[1:], 2)
         if hasSig:
+            #print 'has sig'
             d = ident.validatePublicKey(blob)
             d.addCallback(self._cbToVerifySig, ident, blob, getNS(rest)[0])
             return d
         else:
+            #print 'does not have sig'
             d = ident.validatePublicKey(blob)
             d.addCallback(self._cbValidateKey, packet[1:])
             return d
 
     def _cbToVerifySig(self, foo, ident, blob, signature):
         if not self.verifySignatureFor(ident, blob, signature):
-            raise 'bad sig' # this kicks it into errback mode
+            raise error.ConchError('bad sig') # this kicks it into errback mode
 
     def _cbValidateKey(self, foo, packet):
         self.transport.sendPacket(MSG_USERAUTH_PK_OK, packet)
@@ -102,12 +112,6 @@ class SSHUserAuthServer(service.SSHService):
     def areDone(self):
         return len(self.authenticatedWith)>0
         
-#    def isValidKeyFor(self, user, pubKey):
-#        raise NotImplementedError
-#
-#    def verifyPasswordFor(self, user, password):
-#        raise NotImplementedError
-#        # this is just a stub for now
 
 class SSHUserAuthClient(service.SSHService):
     name = 'ssh-userauth'
@@ -161,8 +165,8 @@ class SSHUserAuthClient(service.SSHService):
             self.askForAuth('password', '\xff'+NS(op)+NS(np))
 
     def auth_publickey(self):
-        if self.getPublicKey():
-            publicKey = self.getPublicKey()
+        publicKey = self.getPublicKey()
+        if publicKey:
             self.lastPublicKey = publicKey
             self.triedPublicKeys.append(publicKey)
             keyType = getNS('publicKey')[0]
@@ -180,11 +184,11 @@ class SSHUserAuthClient(service.SSHService):
 
     def getPublicKey(self):
         # XXX try to get public key
-        return
+        raise NotImplementedError
 
     def getPrivateKey(self):
         # XXX try to get the private key
-        return None
+        raise NotImplementedError
 
     def getPassword(self, prompt = None):
         if not prompt:

@@ -77,6 +77,3 @@ class OpenSSHFactory(SSHFactory):
         return ks
     def getPrimes(self):
         return primes.parseModuliFile(self.dataRoot+'/moduli')
-
-
-
