@@ -41,7 +41,7 @@ Description: Event-based framework for internet applications
  This package contains the architectures specific files for python2.1-twisted
 
 Package: python2.2-twisted
-Architecture: any
+Architecture: all
 Depends: python2.2, python2.2-twisted-bin
 Recommends: python2.2-xml
 Suggests: python2.2-pyopenssl, twisted-doc

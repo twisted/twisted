@@ -1,3 +1,9 @@
+twisted (0.19.0-2) unstable; urgency=low
+
+  * Gagh, make python2.2-twisted any, not all. 
+
+ -- Moshe Zadka <moshez@debian.org>  Wed, 31 Jul 2002 02:25:23 -0500
+
 twisted (0.19.0-1) unstable; urgency=low
 
   * New upstream release
