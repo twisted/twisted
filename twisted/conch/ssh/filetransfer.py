@@ -23,13 +23,15 @@ from common import NS, getNS
 
 
 class FileTransferBase(protocol.Protocol):
-    
+
     versions = (3, )
+
+    packetTypes = {}
 
     def __init__(self):
         self.buf = ''
         otherVersion = None # this gets set
-    
+
     def sendPacket(self, kind, data):
         self.transport.write(struct.pack('!LB', len(data)+1, kind) + data)
 
@@ -49,7 +51,8 @@ class FileTransferBase(protocol.Protocol):
                 log.msg('not implemented: %s' % packetType)
                 log.msg(repr(data[4:]))
                 reqId = struct.unpack('!L', data[:4])[0]
-                self._sendStatus(reqId, FX_OP_UNSUPPORTED, "don't understand %s" % packetType)
+                self._sendStatus(reqId, FX_OP_UNSUPPORTED,
+                                 "don't understand %s" % packetType)
                 #XXX not implemented
                 continue
             try:
@@ -60,7 +63,7 @@ class FileTransferBase(protocol.Protocol):
 
     def _parseAttributes(self, data):
         flags = struct.unpack('!L', data[:4])[0]
-        attrs = {} 
+        attrs = {}
         data = data[4:]
         if flags & FILEXFER_ATTR_SIZE == FILEXFER_ATTR_SIZE:
             size = struct.unpack('!Q', data[:8])[0]
@@ -70,7 +73,7 @@ class FileTransferBase(protocol.Protocol):
             uid, gid = struct.unpack('!2L', data[:8])
             attrs['uid'] = uid
             attrs['gid'] = gid
-            data = data[8:]   
+            data = data[8:]
         if flags & FILEXFER_ATTR_PERMISSIONS == FILEXFER_ATTR_PERMISSIONS:
             perms = struct.unpack('!L', data[:4])[0]
             attrs['permissions'] = perms
@@ -84,8 +87,8 @@ class FileTransferBase(protocol.Protocol):
             extended_count = struct.unpack('!L', data[4:])[0]
             data = data[4:]
             for i in xrange(extended_count):
-                extended_type, data = common.getNS(data)
-                extended_data, data = common.getNS(data)
+                extended_type, data = getNS(data)
+                extended_data, data = getNS(data)
                 attrs['ext_%s' % extended_type] = extended_data
         return attrs, data
 
@@ -107,8 +110,8 @@ class FileTransferBase(protocol.Protocol):
         extended = []
         for k in attrs:
             if k.startswith('ext_'):
-                ext_type = common.NS(k[4:])
-                ext_data = common.NS(attrs[k])
+                ext_type = NS(k[4:])
+                ext_data = NS(attrs[k])
                 extended.append(ext_type+ext_data)
         if extended:
             data += struct.pack('!L', len(extended))
@@ -280,7 +283,8 @@ class FileTransferServer(FileTransferBase):
             data += NS(filename)
             data += NS(longname)
             data += self._packAttributes(attrs)
-        self.sendPacket(FXP_NAME, struct.pack('!2L', requestId, len(result))+data)
+        self.sendPacket(FXP_NAME,
+                        struct.pack('!2L', requestId, len(result))+data)
 
     def packet_STAT(self, data, followLinks = 1):
         requestId, data = struct.unpack('!L', data[:4])[0], data[4:]
@@ -357,7 +361,7 @@ class FileTransferServer(FileTransferBase):
         d = defer.maybeDeferred(self.realPath, path)
         d.addCallback(self._cbReadLink, requestId) # same return format
         d.addErrback(self._ebStatus, requestId, 'realpath failed')
-        
+
     def _cbStatus(self, result, requestId, msg = "request succeeded"):
         self._sendStatus(requestId, FX_OK, msg)
 
@@ -443,9 +447,9 @@ class FileTransferServer(FileTransferBase):
 
     def _absPath(self, path):
         uid, gid = self.avatar.getUserGroupId()
-        home = pwd.getpwuid(uid)[5] 
+        home = pwd.getpwuid(uid)[5]
         return os.path.abspath(os.path.join(home, path))
-        
+
     def gotVersion(self, otherVersion, extData):
         """
         Called when the client sends their version info.
@@ -469,7 +473,7 @@ class FileTransferServer(FileTransferBase):
 
         flags is a integer of the flags to open the file with, ORed together.
         The flags and their values are listed at the bottom of this file.
-        
+
         attrs is a list of attributes to open the file with.  It is a
         dictionary, consisting of 0 or more keys.  The possible keys are:
             size: the size of the file in bytes
@@ -478,7 +482,7 @@ class FileTransferServer(FileTransferBase):
             permissions: the permissions of the file with as an integer.
             the bit representation of this field is defined by POSIX.
             atime: the access time of the file as seconds since the epoch.
-            mtime: the modification time of the file as seconds since the epoch.
+            mtime: modification time of the file as seconds since the epoch.
             ext_*: extended attributes.  The server is not required to
             understand this, but it may.
 
@@ -525,11 +529,11 @@ class FileTransferServer(FileTransferBase):
         """
         Close the file represented by the opaqueId.
 
-        This method returns nothing if the close succeeds immediatly, or a 
+        This method returns nothing if the close succeeds immediatly, or a
         Deferred that is called back when the close succeeds.
         """
         return self._runAsUser(os.close, opaqueId)
-    
+
     def readFile(self, opaqueId, offset, length):
         """
         Read from the file represented by the opaqueId.
@@ -550,7 +554,7 @@ class FileTransferServer(FileTransferBase):
     def writeFile(self, opaqueId, offset, data):
         """
         Write to the file represented by the opaqueId
-        
+
         offset is an integer that is the index to start from in the file.
         data is a string that is the data to write.
 
@@ -600,7 +604,7 @@ class FileTransferServer(FileTransferBase):
         path = self._absPath(path)
         return self._runAsUser([(os.mkdir, path),
                                 (self._setAttrs, path, attrs)])
-    
+
     def removeDirectory(self, path):
         """
         Remove a directory (non-recursively)
@@ -729,10 +733,10 @@ class FileTransferServer(FileTransferBase):
         Set the attributes for the path.
 
         path is the path to set attributes for as a string.
-        attrs is a idctionary in the same format as the attrs argument to
+        attrs is a dictionary in the same format as the attrs argument to
         openFile.
-        
-        This method returns when the attributes are set or a Deferred that is 
+
+        This method returns when the attributes are set or a Deferred that is
         called back when they are.
         """
         path = self._absPath(path)
@@ -748,7 +752,7 @@ class FileTransferServer(FileTransferBase):
         This method returns when the attributes are set or a Deferred that is
         called back when they are.
         """
-        raise NotImplementedError 
+        raise NotImplementedError
 
     def readLink(self, path):
         """
@@ -840,7 +844,7 @@ def _lsLine(name, s):
     l += sz.rjust(8)
     l += ' '
     sixmo = 60 * 60 * 24 * 7 * 26
-    if s.st_mtime + sixmo < time.time(): # last endited more than 6mo ago
+    if s.st_mtime + sixmo < time.time(): # last edited more than 6mo ago
         l += time.strftime("%b %2d  %Y ", time.localtime(s.st_mtime))
     else:
         l += time.strftime("%b %2d %H:%S ", time.localtime(s.st_mtime))
@@ -905,11 +909,10 @@ FX_NO_CONNECTION               = 6
 FX_CONNECTION_LOST             = 7
 FX_OP_UNSUPPORTED              = 8
 
-import filetransfer
-packetTypes = {}
-for name in dir(filetransfer):
+# initialize FileTransferBase.packetTypes:
+g = globals()
+for name in g.keys():
     if name.startswith('FXP_'):
-        value = getattr(filetransfer, name)
-        packetTypes[value] = name[4:]
-FileTransferBase.packetTypes = packetTypes
-
+        value = g[name]
+        FileTransferBase.packetTypes[value] = name[4:]
+del g, name, value
