@@ -19,6 +19,9 @@ def interpret():
         else:
             sys.stdout.write(">>> ")
         line = sys.stdin.readline()
+        if not line:
+            sys.stdout.write("\n")
+            return
         parser.dataReceived(line)
         if l:
             value = l.pop()
