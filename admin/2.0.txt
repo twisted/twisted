@@ -1,5 +1,20 @@
-* non-core packages are broken.
-They try to build cBanana. Need to separate knowledge of Extension modules!
+* Extension module configuration for sub-packages.
 
-* Try to minimize knowledge or transfer of state between
-release-twisted transactions.
+  The idea is to have EXTENSIONS.cfg in each subpackage; it would have
+  python code that constructs a list of Extensions in 'extensions',
+  perhaps conditionally. This is not working because it seems that
+  it'd require deep changes to zpkgtools.
+
+* docs. I'm thinking we should move them into twisted/*/doc, as we
+  seem to be going that way for other stuff, and it would make
+  packaging in zpkg easier. bin/ too.
+
+* unit tests for zpkg usage...? I want to make sure stuff like
+  extensions get build, and docs get included, but exarkun hates
+  non-specific tests.
+
+* Get twistedsumo including z.i
+
+* finish refactoring/rewriting release-twisted to support releasing of
+  all of our packages
+
