@@ -223,10 +223,10 @@ class DNSClientFactory(protocol.ClientFactory):
         return p
 
 
-def createResolver():
+def createResolver(servers = None):
     import resolve, cache, hosts
     if platform.getType() == 'posix':
-        theResolver = Resolver('/etc/resolv.conf')
+        theResolver = Resolver('/etc/resolv.conf', servers)
         hostResolver = hosts.Resolver()
     else:
         theResolver = ThreadedResolver()
@@ -236,7 +236,10 @@ def createResolver():
 try:
     theResolver
 except NameError:
-    theResolver = createResolver()
+    try:
+        theResolver = createResolver()
+    except ValueError:
+        theResolver = createResolver(servers=[('127.0.0.1', 53)])
 
     for (k, v) in common.typeToMethod.items():
         exec "%s = getattr(theResolver, %r)" % (v, v)
