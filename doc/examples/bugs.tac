@@ -1,4 +1,4 @@
-#!python
+# -*- Python -*-
 
 from twisted.internet import main
 from twisted.spread import pb
