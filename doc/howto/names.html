@@ -31,8 +31,11 @@ scope of this howto and will not be covered.
 
 <p>To configure Names to act as the authority for
 <code>example-domain.com</code>, we first create a 
-<a href="listings/names/example-domain.com">zone file</a> for this domain. 
-Next, run the command <code class="shell">mktap dns --pyzone
+zone file for this domain.</p>
+
+<a href="listings/names/example-domain.com" class="py-listing">zone file</a>
+	
+<p>Next, run the command <code class="shell">mktap dns --pyzone
 example-domain.com</code>, and then (as above) <code class="shell">twistd -f
 dns.tap</code>.  Now try querying the domain locally (again, with dig):
 <code class="shell">dig -t any example-domain.com @127.0.0.1</code>.

@@ -1,19 +1,29 @@
 
 zone = [
     SOA(
-        'example-domain.com',           # For whom we are the authority
+        # For whom we are the authority
+        'example-domain.com',
 
-        mname = "ns1.example-domain.com",  # This nameserver's name
-        rname = "root.example-domain.com", # Mailbox of individual who handles this
+        # This nameserver's name
+        mname = "ns1.example-domain.com",
+        
+        # Mailbox of individual who handles this
+        rname = "root.example-domain.com",
 
-        serial = 2003010601,        # Unique serial identifying this SOA data
-        refresh = "1H",             # Time interval before zone should be 
+        # Unique serial identifying this SOA data
+        serial = 2003010601,        
 
-        retry = "1H",               # Interval before failed refresh should be
+        # Time interval before zone should be refreshed
+        refresh = "1H",             
 
-        expire = "1H",              # Upper limit on time interval before
+        # Interval before failed refresh should be retried
+        retry = "1H",               
 
-        minimum = "1H"              # Minimum TTL
+        # Upper limit on time interval before expiry
+        expire = "1H",              
+
+        # Minimum TTL
+        minimum = "1H"              
     ),
 
     A('example-domain.com', '127.0.0.1'),
