@@ -67,4 +67,6 @@ theScheduler = Scheduler()
 def schedule(task):
     theScheduler.addTask(task)
 
-
+def doAllTasks():
+    while theScheduler.tasks:
+        theScheduler.runUntilCurrent()
