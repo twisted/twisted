@@ -65,9 +65,12 @@ class TerminalSessionTransport:
         self.avatar = avatar
         self.chainedProtocol = self.protocolFactory()
 
+        session = self.proto.session
         self.proto.makeConnection(_Ugg(write=self.chainedProtocol.dataReceived,
+                                       loseConnection=lambda: avatar.conn.sendClose(session),
                                        name="SSH Proto Transport"))
         self.chainedProtocol.makeConnection(_Ugg(write=self.proto.write,
+                                                 loseConnection=self.proto.loseConnection,
                                                  name="Chained Proto Transport"))
 
         self.chainedProtocol.terminalSize(width, height)
