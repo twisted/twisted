@@ -35,7 +35,8 @@ be based on, and specify views which will be responsible for
 formatting the model data as HTML. Using widgets defined in
 twisted.web.woven.widgets, and higher-level widgets that you define
 yourself for an application-specific purpose, python data structures
-such as strings, integers, lists, dicts, and custom subclasses of woven.model.Model, can be adapted implicitly or
+such as strings, integers, lists, dicts, and custom subclasses of
+woven.model.Model, can be adapted implicitly or
 explicitly to subclasses of woven.view.View (such as subclasses of
 woven.widgets.Widget) for display in HTML.
 </p>
@@ -48,7 +49,9 @@ involves breaking up program logic into three separate domains:
 Model objects, whose job it is to contain/produce data; View objects, whose
 job it is to present this data to the user; and Controller objects,
 whose job it is to handle events such as <q>user input from a form</q> and
-<q>fetch URL</q> and update the model with the user's desired changes. When the controller finishes updating the model, it tells the model to notify all views that the model has changed so they may rerender themselves accordingly.
+<q>fetch URL</q> and update the model with the user's desired changes. When the
+controller finishes updating the model, it tells the model to notify all views
+that the model has changed so they may rerender themselves accordingly.
 </p>
 
 <p>
@@ -58,23 +61,44 @@ the interface and component registry,  to loosely couple the interacting objects
 
 <h3>Hello World with Page</h3>
 
-<p>Let's start with the canonical Hello World example. We will use an instance of woven.page.Page as our IResource implementor. IResource describes the interface objects are required to implement in order to publish themselves over the web in twisted.web. We will be instanciating a Page instance in an .rpy script. An rpy is like a CGI script -- each time you visit the script, it is executed. However, an rpy script is merely responsible for instanciating a Resource object to handle the request and assigning it to a variable named "resource". This Resource object will then be called upon to render the request.
+<p>Let's start with the canonical Hello World example. We will use an instance
+of woven.page.Page as our IResource implementor. IResource describes the
+interface objects are required to implement in order to publish themselves over
+the web in twisted.web. We will be instanciating a Page instance in an .rpy
+script. An rpy is like a CGI script -- each time you visit the script, it is
+executed. However, an rpy script is merely responsible for instanciating a
+Resource object to handle the request and assigning it to a variable named
+"resource". This Resource object will then be called upon to render the
+request.
 </p>
 
 <a href="listings/HelloWorld/HelloWorld.rpy" class="py-listing">Listing 1: HelloWorld.rpy: Hello World Resource Script</a>
 
 <p>
-Next, let's take a look at the HTML template woven will look up to render this request into HTML. Woven defines three special attributes, model=, view=, and controller=, which it uses to decide which python code to invoke while rendering the page. 
+Next, let's take a look at the HTML template woven will look up to render this
+request into HTML. Woven defines three special attributes, model=, view=, and
+controller=, which it uses to decide which python code to invoke while
+rendering the page. 
 </p>
 
 <a href="listings/HelloWorld/HelloWorld.html" class="html-listing">Listing 2: HelloWorld.xhtml: Hello World Web Template</a>
 
 <p>
-In the template, we have simply indicated that woven should replace certain nodes with the results of rendering a widget on the current model. The syntax model="." indicates that woven should use the current model no matter what its name, similar to filesystem syntax. Since we aren't explicitly stating WHICH view widget should render the model with a view= attribute, an IView adapter is looked up from the global registry implicitly. In this case, the model is a string, so an instance of widgets.Text is constructed which converts the python string into a DOM text node and inserts it into the DOM.
+In the template, we have simply indicated that woven should replace certain
+nodes with the results of rendering a widget on the current model. The syntax
+model="." indicates that woven should use the current model no matter what its
+name, similar to filesystem syntax. Since we aren't explicitly stating
+<em>which</em> view widget should render the model with a view= attribute, an
+IView adapter is looked up from the global registry implicitly. In this case,
+the model is a string, so an instance of widgets.Text is constructed which
+converts the python string into a DOM text node and inserts it into the DOM.
 </p>
 
 <p>
-Next, let's look at an example of rendering a page with a more complicated model. We're going to make several pieces of data available to the template under different names. We will refer to these pieces of data as "Submodels", since they are contained in a Model instance.
+Next, let's look at an example of rendering a page with a more complicated
+model. We're going to make several pieces of data available to the template
+under different names. We will refer to these pieces of data as "Submodels",
+since they are contained in a Model instance.
 </p>
 
 <p>
@@ -82,15 +106,28 @@ Next, let's look at an example of rendering a page with a more complicated model
 </p>
 
 <p>
-We need a place to gather all the Model data together so the View has access to it. woven.model.AttributeModel is a good container to place other models in, and to do so we simply call setSubmodel. Notice that setSubmodel takes a key and a value, the name the submodel will be available as to the template, and the actual submodel data.
+We need a place to gather all the Model data together so the View has access to
+it. woven.model.AttributeModel is a good container to place other models in,
+and to do so we simply call setSubmodel. Notice that setSubmodel takes a key
+and a value, the name the submodel will be available as to the template, and
+the actual submodel data.
 </p>
 
 <p>
-Woven comes with various widgets which are registered as IView implementors for the basic python types (strings, lists, and dictionaries) which are very useful. Most of the time, you can simply prepare the data for rendering by converting it into strings and lists using an rpy or custom Model subclass, and then referencing these strings and lists in your template.
+Woven comes with various widgets which are registered as IView implementors for
+the basic python types (strings, lists, and dictionaries) which are very
+useful. Most of the time, you can simply prepare the data for rendering by
+converting it into strings and lists using an rpy or custom Model subclass, and
+then referencing these strings and lists in your template.
 </p>
 
 <p>
-This time, in our HTML template, we're going to have to be a little more explicit when specifying view widgets to render the model data. It's generally a good idea to always explicitly state the name of the view widget you want to handle a node; but it's convenient that you don't have to, for example if you're rendering a custom model/view pair where it doesn't make sense to use any other view widgets to render a given model instance.
+This time, in our HTML template, we're going to have to be a little more
+explicit when specifying view widgets to render the model data. It's generally
+a good idea to always explicitly state the name of the view widget you want to
+handle a node; but it's convenient that you don't have to, for example if
+you're rendering a custom model/view pair where it doesn't make sense to use
+any other view widgets to render a given model instance.
 </p>
 
 <p>
@@ -98,16 +135,25 @@ This time, in our HTML template, we're going to have to be a little more explici
 </p>
 
 <p>
-As you can see from the template, the List widget requires specially tagged nodes inside of it's node in order to operate properly. These nodes are called "pattern" nodes, and each widget can choose to require certain patterns, or look for certain optional patterns, during the course of rendering itself. In the list widget's case, it looks for the pattern "listItem" and makes one copy of it for each element in the list it is rendering. There are two ways to specify a patten node: 
+As you can see from the template, the List widget requires specially tagged
+nodes inside of it's node in order to operate properly. These nodes are called
+"pattern" nodes, and each widget can choose to require certain patterns, or
+look for certain optional patterns, during the course of rendering itself. In
+the list widget's case, it looks for the pattern "listItem" and makes one copy
+of it for each element in the list it is rendering. There are two ways to
+specify a patten node: 
 <ul>
     <li>By putting a pattern="patternName" attribute on a node</li>
     <li>By putting a patternName + 'Of'="modelName" attribute on a node</li>
 </ul>
-This is easier to show by example than to explain; look at the template for an example of the second usage.
+This is easier to show by example than to explain; look at the template for an
+example of the second usage.
 </p>
 
 <p>
-Look at the documentation for each individual widget to see what patterns a Widget supports. The List widget is particularly useful; it supports the following patterns:
+Look at the documentation for each individual widget to see what patterns a
+Widget supports. The List widget is particularly useful; it supports the
+following patterns:
 </p>
 
 <ul>
@@ -118,17 +164,33 @@ Look at the documentation for each individual widget to see what patterns a Widg
 </ul>
 
 <p>
-Notice a few things about this template. First, we are explicitly stating the view widget we wish to render each node with a view= attribute. All these view widgets are defined in woven/widgets.py, the default woven widgets library. You can also create your own widget libraries for your views, as well as defining subwidget names on more complicated views that are only valid within that views's HTML node. Procedures for doing so will be described in later HOWTOs.
+Notice a few things about this template. First, we are explicitly stating the
+view widget we wish to render each node with a <code>view=</code> attribute.
+All these view widgets are defined in <code>woven/widgets.py</code>, the
+default woven widgets library. You can also create your own widget libraries
+for your views, as well as defining subwidget names on more complicated views
+that are only valid within that views's HTML node. Procedures for doing so will
+be described in later HOWTOs.
 </p>
 
 <p>
-You now know how to create a woven HTML template, and how to populate this template with data in the form of simple python data types. However, often you will wish to render a dynamic data source, such as a database, or a complex data source such as a python object. One way to render this data over the web is to create a class which implements IModel, the interface woven uses to expose data to view widgets.
+You now know how to create a woven HTML template, and how to populate this
+template with data in the form of simple python data types. However, often you
+will wish to render a dynamic data source, such as a database, or a complex
+data source such as a python object. One way to render this data over the web
+is to create a class which implements IModel, the interface woven uses to
+expose data to view widgets.
 </p>
 
 <h3>Implementing IModel</h3>
 
 <p>
-The IModel interface is documented in twisted.web.woven.interfaces. It describes the interfaces Models must implement in order to play well with the rest of the woven MVC framework. If you are inheriting from twisted.web.woven.model.Model, most of these interfaces will be implemented for you. The interfaces that we will be most interested in implementing are those that are designed to be overridden for customization, getData and setData.
+The IModel interface is documented in twisted.web.woven.interfaces. It
+describes the interfaces Models must implement in order to play well with the
+rest of the woven MVC framework. If you are inheriting from
+twisted.web.woven.model.Model, most of these interfaces will be implemented for
+you. The interfaces that we will be most interested in implementing are those
+that are designed to be overridden for customization, getData and setData.
 </p>
 
 <p>
@@ -136,11 +198,17 @@ The IModel interface is documented in twisted.web.woven.interfaces. It describes
 </p>
 
 <p>
-We have created a simple Model which wraps a quoter that was created in a previous HOWTO. The constructor stores the filename and creates a new FortuneQuoter instance.
+We have created a simple Model which wraps a quoter that was created in a
+previous HOWTO. The constructor stores the filename and creates a new
+FortuneQuoter instance.
 </p>
 
 <p>
-Implementing getData is as simple as delegating to our FortuneQuoter instance. getQuote returns a string. In the template, we will specify that the Text widget should render the data returned by the quote model, so the quote shows up in the template. But first, we need to get an instance of MQuote into the model namespace, using an rpy:
+Implementing getData is as simple as delegating to our FortuneQuoter instance.
+getQuote returns a string. In the template, we will specify that the Text
+widget should render the data returned by the quote model, so the quote shows
+up in the template. But first, we need to get an instance of MQuote into the
+model namespace, using an rpy:
 </p>
 
 <p>
@@ -148,7 +216,11 @@ Implementing getData is as simple as delegating to our FortuneQuoter instance. g
 </p>
 
 <p>
-This time, instead of using an instance of AttributeModel as our main model namespace, we have chosen to simply use a dictionary. Since a dictionary doesn't implement IModel, an attribute lookup occurs which wraps the dictionary in an instance of DictionaryModel, which does implement IModel. Then all of the dictionary keys will be available as submodel names.
+This time, instead of using an instance of AttributeModel as our main model
+namespace, we have chosen to simply use a dictionary. Since a dictionary
+doesn't implement IModel, an attribute lookup occurs which wraps the dictionary
+in an instance of DictionaryModel, which does implement IModel. Then all of the
+dictionary keys will be available as submodel names.
 </p>
 
 <p>
@@ -156,11 +228,17 @@ This time, instead of using an instance of AttributeModel as our main model name
 </p>
 
 <p>
-Woven templates are designed to minimize the amount of logic contained in the HTML template. A woven template is a collection of HTML nodes that are tagged with various strings which woven uses to locate python components that are then responsible for producing the final output. In this case, we joined the output of our Model subclass' getData (a string) with the Text widget (which knows how to render strings into DOM)
+Woven templates are designed to minimize the amount of logic contained in the
+HTML template. A woven template is a collection of HTML nodes that are tagged
+with various strings which woven uses to locate python components that are then
+responsible for producing the final output. In this case, we joined the output
+of our Model subclass' getData (a string) with the Text widget (which knows how
+to render strings into DOM)
 </p>
 
 <p>
-The same theory is used for input handling by Controllers. In the template, we have placed the following input node:
+The same theory is used for input handling by Controllers. In the template, we
+have placed the following input node:
 </p>
 
 <pre>
@@ -168,18 +246,29 @@ The same theory is used for input handling by Controllers. In the template, we h
 </pre>
 
 <p>
-When woven encounters this node, it will look up the submodel name "quote", and will get an instance of MQuote. It will then look up the controller name "Anything". Anything is an InputHandler (a specialized type of controller designed to handle web request input) defined in twisted.web.woven.input. Similarly to woven.widgets, woven.input is used as a default controller namespace when searching for controller names.
+When woven encounters this node, it will look up the submodel name "quote", and
+will get an instance of MQuote. It will then look up the controller name
+"Anything". Anything is an InputHandler (a specialized type of controller
+designed to handle web request input) defined in twisted.web.woven.input.
+Similarly to woven.widgets, woven.input is used as a default controller
+namespace when searching for controller names.
 </p>
 
 <p>
-The Anything InputHandler looks in the request arguments for data with the same name as it's model name. In this case, the model name is "quote", and the input node also has the name "quote". When the form is submitted, the value of the text field will be available in the request arguments as "quote", and the Anything InputHandler will find it. The Anything InputHandler then immediately calls model.setData(value) since it does no input validation.
+The Anything InputHandler looks in the request arguments for data with the same
+name as it's model name. In this case, the model name is "quote", and the input
+node also has the name "quote". When the form is submitted, the value of the
+text field will be available in the request arguments as "quote", and the
+Anything InputHandler will find it. The Anything InputHandler then immediately
+calls model.setData(value) since it does no input validation.
 </p>
 
 <pre>
 Under construction.
 </pre>
 <p>
-Next up: Implementing custom view logic with wvupdate, and creating and using reusable Widget and InputHandler subclasses with wvfactory and wcfactory
+Next up: Implementing custom view logic with wvupdate, and creating and using
+reusable Widget and InputHandler subclasses with wvfactory and wcfactory
 </p>
 
 </body>
