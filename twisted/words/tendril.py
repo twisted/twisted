@@ -15,6 +15,7 @@
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
+from twisted import copyright
 from twisted.internet import passport
 from twisted.persisted import styles
 from twisted.protocols import irc
@@ -51,9 +52,6 @@ class ProxiedParticipant(wordsService.WordsClientInterface,
         self.tendril.msgFromWords(self.nickname,
                                   sender, message)
 
-    # XXX: Do I need to do anything to ensure that I will do 'detatched'
-    # when pickled?
-
 
 class TendrilClient(irc.IRCClient, wordsService.WordsClientInterface):
     """I connect to the IRC server and broker traffic.
@@ -75,8 +73,8 @@ class TendrilClient(irc.IRCClient, wordsService.WordsClientInterface):
 
     realname = 'Tendril'
     versionName = 'Tendril'
-    versionNum = '$Revision: 1.3 $'
-    versionEnv = 'Twisted'
+    versionNum = '$Revision: 1.4 $'[11:-2]
+    versionEnv = copyright.longversion
 
     helptext = (
         "Hi, I'm a Tendril bridge between here and %(service)s.",
@@ -131,13 +129,13 @@ class TendrilClient(irc.IRCClient, wordsService.WordsClientInterface):
 
         self.attachToWords()
 
-        self.perspective.joinGroup(self.errorGroup)
-
-        for group in self.groupList:
-            self.perspective.joinGroup(group)
+        self.joinGroup(self.errorGroup)
 
 
     def attachToWords(self):
+        """Get my perspective on the Words service; attach as a client.
+        """
+
         try:
             self.perspective = (
                 self.service.getPerspectiveNamed(self.perspectiveName))
@@ -155,29 +153,37 @@ class TendrilClient(irc.IRCClient, wordsService.WordsClientInterface):
             return
 
         try:
-            self.perspective.attached(self, None)
+            self.attach()
         except passport.Unauthorized:
             if self.perspective.client:
                 log.msg("%s is attached to my perspective: "
                         "kicking it off." % (self.perspective.client,))
                 self.perspective.detached(self.perspective.client, None)
-                self.perspective.attached(self, None)
+                self.attach()
             else:
                 raise
 
-    def signedOn(self):
-        self.log("Welcomed by IRC server.", 'info')
-        for group in self.groupList:
-            self.join(groupToChannelName(group))
+    def __getstate__(self):
+        dct = self.__dict__.copy()
+        # Don't save my imaginary friends.
+        dct["participants"] = {}
+        return dct
+
+
+    ### Protocol-level methods
 
     def connectionLost(self):
+        """When I lose a connection, log out all my IRC participants.
+        """
         self.log("%s: Connection lost." % (self.transport,), 'info')
         for nick in self.participants.keys()[:]:
             self.logoutParticipant(nick)
 
+
+    ### Protocol LineReceiver-level methods
+
     def lineReceived(self, line):
-        if _LOGALL:
-            self.log(line, 'dump')
+        self.log(line, 'dump')
 
         try:
             irc.IRCClient.lineReceived(self, line)
@@ -187,13 +193,181 @@ class TendrilClient(irc.IRCClient, wordsService.WordsClientInterface):
             s = string.join(s,'')
             self.log(s, 'ERROR')
 
-    def __getstate__(self):
-        dct = self.__dict__.copy()
-        # Don't save my imaginary friends.
-        dct["participants"] = {}
-        return dct
+
+    def sendLine(self, line):
+        """Send a line through my transport, unless my transport isn't up.
+        """
+        if (not self.transport) or (not self.transport.connected):
+            return
+
+        self.log(line, 'dump')
+        irc.IRCClient.sendLine(self, line)
+
+
+    ### Protocol IRCClient server->client methods
+
+    def irc_JOIN(self, prefix, params):
+        """Join IRC user to the corresponding group.
+        """
+        nick = string.split(prefix,'!')[0]
+        groupName = channelToGroupName(params[0])
+        if nick == self.nickname:
+            self.joinGroup(groupName)
+        else:
+            self._getParticipant(nick).joinGroup(groupName)
+
+    def irc_NICK(self, prefix, params):
+        """When an IRC user changes their nickname
+
+        this does *not* change the name of their perspectivee, just my
+        nickname->perspective and client->nickname mappings.
+        """
+        old_nick = string.split(prefix,'!')[0]
+        new_nick = params[0]
+        if old_nick == self.nickname:
+            self.nickname = new_nick
+        else:
+            self.changeParticipantNick(old_nick, new_nick)
+
+    def irc_PART(self, prefix, params):
+        """Parting IRC members leave the correspoding group.
+        """
+        nick = string.split(prefix,'!')[0]
+        channel = params[0]
+        groupName = channelToGroupName(channel)
+        if nick == self.nickname:
+            self.groupMessage(groupName, "I've left %s" % (channel,))
+            self.leaveGroup(groupName)
+            self.evacuateGroup(groupName)
+            return
+
+        participant = self._getParticipant(nick)
+        try:
+            participant.leaveGroup(groupName)
+        except wordsService.NotInGroupError:
+            pass
+
+        if not participant.groups:
+            self.logoutParticipant(nick)
+
+    def irc_QUIT(self, prefix, params):
+        """When a user quits IRC, log out their participant.
+        """
+        nick = string.split(prefix,'!')[0]
+        if nick == self.nickname:
+            self.detach()
+        else:
+            self.logoutParticipant(nick)
+
+    def irc_KICK(self, prefix, params):
+        """Kicked?  Who?  Not me, I hope.
+        """
+        nick = string.split(prefix,'!')[0]
+        channel = params[0]
+        kicked = params[1]
+        group = channelToGroupName(channel)
+        if string.lower(kicked) == string.lower(self.nickname):
+            # Yikes!
+            if self.participants.has_key(nick):
+                wordsname = " (%s)" % (self._getParticipant(nick).name,)
+            else:
+                wordsname = ''
+            if len(params) > 2:
+                reason = '  "%s"' % (params[2],)
+            else:
+                reason = ''
+
+            self.groupMessage(group, '%s%s kicked me off!%s'
+                              % (prefix, wordsname, reason))
+            self.log("I've been kicked from %s: %s %s"
+                     % (channel, prefix, params), 'NOTICE')
+            self.evacuateGroup(group)
+
+        else:
+            try:
+                self._getParticipant(nick).leaveGroup(group)
+            except wordsService.NotInGroupError:
+                pass
+
+    def irc_INVITE(self, prefix, params):
+        """Accept an invitation, if it's in my groupList.
+        """
+        group = channelToGroupName(params[1])
+        if group in self.groupList:
+            self.log("I'm accepting the invitation to join %s from %s."
+                     % (group, prefix), 'NOTICE')
+            self.join(groupToChannelName(group))
+
+    def irc_TOPIC(self, prefix, params):
+        """Announce the new topic.
+        """
+        # XXX: words groups *do* have topics, but they're currently
+        # not used.  Should we use them?
+        nick = string.split(prefix,'!')[0]
+        channel = params[0]
+        topic = params[1]
+        self.groupMessage(channelToGroupName(channel),
+                          "%s has just decreed the topic to be: %s"
+                          % (self._getParticipant(nick).name,
+                             topic))
+
+    def irc_ERR_BANNEDFROMCHAN(self, prefix, params):
+        """When I can't get on a channel, report it.
+        """
+        self.log("Join failed: %s %s" % (prefix, params), 'NOTICE')
+
+    irc_ERR_CHANNELISFULL = \
+                          irc_ERR_UNAVAILRESOURCE = \
+                          irc_ERR_INVITEONLYCHAN =\
+                          irc_ERR_NOSUCHCHANNEL = \
+                          irc_ERR_BADCHANNELKEY = irc_ERR_BANNEDFROMCHAN
+
+    def irc_ERR_NOTREGISTERED(self, prefix, params):
+        self.log("Got ERR_NOTREGISTERED, re-running connectionMade().",
+                 'NOTICE')
+        self.connectionMade()
+
+
+    ### Client-To-Client-Protocol methods
+
+    def ctcpQuery_DCC(self, user, channel, data):
+        """Accept DCC handshakes, for passing on to others.
+        """
+        nick = string.split(user,"!")[0]
+
+        # We're pretty lenient about what we pass on, but the existance
+        # of at least four parameters (type, arg, host, port) is really
+        # required.
+        if len(string.split(data)) < 4:
+            self.ctcpMakeReply(nick, [('ERRMSG',
+                                       'DCC %s :Malformed DCC request.'
+                                       % (data))])
+            return
+
+        dcc_text = irc.dccDescribe(data)
+
+        self.notice(nick, "Got your DCC %s"
+                    % (irc.dccDescribe(data),))
+
+        pName = self._getParticipant(nick).name
+        self.dcc_sessions[pName] = (user, dcc_text, data)
+
+        self.notice(nick, "If I should pass it on to another user, "
+                    "/msg %s DCC PASSTO theirNick" % (self.nickname,))
+
+
+    ### IRCClient client event methods
+
+    def signedOn(self):
+        """Join my groupList once I've signed on.
+        """
+        self.log("Welcomed by IRC server.", 'info')
+        for group in self.groupList:
+            self.join(groupToChannelName(group))
 
     def privmsg(self, user, channel, message):
+        """Dispatch privmsg as a groupMessage or a command, as appropriate.
+        """
         nick = string.split(user,'!')[0]
         if nick == self.nickname:
             return
@@ -215,12 +389,14 @@ class TendrilClient(irc.IRCClient, wordsService.WordsClientInterface):
             # The message isn't to me, so it must be to a group.
             group = channelToGroupName(channel)
             try:
-                self.getParticipant(nick).groupMessage(group, message)
+                self._getParticipant(nick).groupMessage(group, message)
             except wordsService.NotInGroupError:
-                self.getParticipant(nick).joinGroup(group)
-                self.getParticipant(nick).groupMessage(group, message)
+                self._getParticipant(nick).joinGroup(group)
+                self._getParticipant(nick).groupMessage(group, message)
 
     def noticed(self, user, channel, message):
+        """Pass channel notices on to the group.
+        """
         nick = string.split(user,'!')[0]
         if nick == self.nickname:
             return
@@ -234,23 +410,31 @@ class TendrilClient(irc.IRCClient, wordsService.WordsClientInterface):
             # The message isn't to me, so it must be to a group.
             group = channelToGroupName(channel)
             try:
-                self.getParticipant(nick).groupMessage(group, message)
+                self._getParticipant(nick).groupMessage(group, message)
             except wordsService.NotInGroupError:
-                self.getParticipant(nick).joinGroup(group)
-                self.getParticipant(nick).groupMessage(group, message)
+                self._getParticipant(nick).joinGroup(group)
+                self._getParticipant(nick).groupMessage(group, message)
 
     def action(self, user, channel, message):
-        # XXX: Words needs 'emote' or something.
+        """Speak about a participant in third-person.
+
+        XXX: Words needs 'emote'!
+        """
         group = channelToGroupName(channel)
         nick = string.split(user,'!',1)[0]
-        self.perspective.groupMessage(group, '* %s%s %s' %
-                                      (nick, self.networkSuffix, message))
+        self.groupMessage(group, '* %s%s %s' %
+                          (nick, self.networkSuffix, message))
+
+
+    ### Bot event methods
 
     def bot_msg(self, sender, params):
+        """Pass along a message as a directMessage to a words Participant
+        """
         (nick, message) = string.split(params, ' ', 1)
         sender = string.split(sender, '!', 1)[0]
         try:
-            self.getParticipant(sender).directMessage(nick, message)
+            self._getParticipant(sender).directMessage(nick, message)
         except wordsService.WordsError, e:
             self.notice(sender, "msg to %s failed: %s" % (nick, e))
 
@@ -283,164 +467,90 @@ class TendrilClient(irc.IRCClient, wordsService.WordsClientInterface):
                         "`/msg %s help` for help."
                         % (cmd, self.nickname))
 
-    def irc_JOIN(self, prefix, params):
-        nick = string.split(prefix,'!')[0]
-        if nick == self.nickname:
-            return
-        channel = params[0]
-        self.getParticipant(nick).joinGroup(channelToGroupName(channel))
-
-    def irc_NICK(self, prefix, params):
-        """When an IRC user changes their nickname
-
-        this does *not* change the name of their perspectivee, just my
-        nickname->perspective and client->nickname mappings.
-        """
-        old_nick = string.split(prefix,'!')[0]
-        new_nick = params[0]
-        if old_nick == self.nickname:
-            self.nickname = new_nick
-        else:
-            self.changeParticipantNick(old_nick, new_nick)
-
-    def irc_PART(self, prefix, params):
-        nick = string.split(prefix,'!')[0]
-        if nick == self.nickname:
-            return
-        channel = params[0]
-
-        self.getParticipant(nick).leaveGroup(channelToGroupName(channel))
-
-        if not self.getParticipant(nick).groups:
-            self.logoutParticipant(nick)
-
-    def irc_QUIT(self, prefix, params):
-        nick = string.split(prefix,'!')[0]
-        if nick == self.nickname:
-            return
-        self.logoutParticipant(nick)
-
-    def irc_KICK(self, prefix, params):
-        nick = string.split(prefix,'!')[0]
-        channel = params[0]
-        kicked = params[1]
-        if string.lower(kicked) == string.lower(self.nickname):
-            # Yikes!
-            self.log("I've been kicked from %s: %s %s"
-                     % (channel, prefix, params), 'NOTICE')
-        else:
-            group = channelToGroupName(channel)
-            self.getParticipant(nick).leaveGroup(group)
-
-    def irc_INVITE(self, prefix, params):
-        group = channelToGroupName(params[1])
-        if group in self.groupList:
-            self.log("I'm accepting the invitation to join %s from %s."
-                     % (group, prefix), 'NOTICE')
-            self.join(groupToChannelName(group))
-
-    def irc_ERR_BANNEDFROMCHAN(self, prefix, params):
-        self.log("Join failed: %s %s" % (prefix, params), 'NOTICE')
-
-    irc_ERR_CHANNELISFULL = \
-                          irc_ERR_UNAVAILRESOURCE = \
-                          irc_ERR_INVITEONLYCHAN =\
-                          irc_ERR_NOSUCHCHANNEL = \
-                          irc_ERR_BADCHANNELKEY = irc_ERR_BANNEDFROMCHAN
-
-    def irc_ERR_NOTREGISTERED(self, prefix, params):
-        self.log("Got ERR_NOTREGISTERED, re-running connectionMade().",
-                 'NOTICE')
-        self.connectionMade()
-
-    def ctcpQuery_DCC(self, user, channel, data):
-        nick = string.split(user,"!")[0]
-
-        # We're pretty lenient about what we pass on, but the existance
-        # of at least four parameters (type, arg, host, port) is really
-        # required.
-        if len(string.split(data)) < 4:
-            self.ctcpMakeReply(nick, [('ERRMSG',
-                                       'DCC %s :Malformed DCC request.'
-                                       % (data))])
-            return
-
-        dcc_text = irc.dccDescribe(data)
-
-        self.notice(nick, "Got your DCC %s"
-                    % (irc.dccDescribe(data),))
-
-        pName = self.getParticipant(nick).name
-        self.dcc_sessions[pName] = (user, dcc_text, data)
-
-        self.notice(nick, "If I should pass it on to another user, "
-                    "/msg %s DCC PASSTO theirNick" % (self.nickname,))
-
     def bot_DCC(self, user, params):
+        """Commands for brokering DCC handshakes.
+
+        DCC -- I'll tell you if I'm holding a DCC request from you.
+
+        DCC PASSTO nick -- give the DCC request you gave me to this nick.
+
+        DCC FORGET -- forget any DCC requests you offered to me.
+        """
         nick = string.split(user,"!")[0]
-        pName = self.getParticipant(nick).name
+        pName = self._getParticipant(nick).name
+
+        if not params:
+            # Do I have a DCC from you?
+            if self.dcc_sessions.has_key(pName):
+                dcc_text = self.dcc_sessions[pName][1]
+                self.notice(nick,
+                            "I have an offer from you for DCC %s"
+                            % (dcc_text,))
+            else:
+                self.notice(nick, "I have no DCC offer from you.")
+            return
 
         params = string.split(params)
-        if len(params) <= 1:
-            pass
-        else:
+
+        if (params[0] == 'PASSTO') and (len(params) > 1):
             (cmd, dst) = params[:2]
             cmd = string.upper(cmd)
-            if cmd == 'PASSTO':
-                if self.dcc_sessions.has_key(pName):
-                    (origUser,dcc_text,orig_data)=self.dcc_sessions[pName]
-                    if dcc_text:
-                        dcc_text = " for " + dcc_text
-                    else:
-                        dcc_text = ''
-
-                    ctcpMsg = irc.ctcpStringify([('DCC',orig_data)])
-                    try:
-                        self.getParticipant(nick).directMessage(dst,
-                                                                ctcpMsg)
-                    except wordsService.WordsError, e:
-                        self.notice(nick, "DCC offer to %s failed: %s"
-                                    % (dst, e))
-                    else:
-                        self.notice(nick, "DCC offer%s extended to %s."
-                                    % (dcc_text, dst))
-                        del self.dcc_sessions[pName]
-
+            if self.dcc_sessions.has_key(pName):
+                (origUser, dcc_text, orig_data)=self.dcc_sessions[pName]
+                if dcc_text:
+                    dcc_text = " for " + dcc_text
                 else:
-                    self.notice(nick, "I don't have an active DCC"
-                                " handshake from you.")
-                return
+                    dcc_text = ''
 
-            elif cmd == "FORGET":
-                if self.dcc_sessions.has_key(pName):
+                ctcpMsg = irc.ctcpStringify([('DCC',orig_data)])
+                try:
+                    self._getParticipant(nick).directMessage(dst,
+                                                            ctcpMsg)
+                except wordsService.WordsError, e:
+                    self.notice(nick, "DCC offer to %s failed: %s"
+                                % (dst, e))
+                else:
+                    self.notice(nick, "DCC offer%s extended to %s."
+                                % (dcc_text, dst))
                     del self.dcc_sessions[pName]
-                self.notice(nick, "I have now forgotten any DCC offers"
-                            " from you.")
-                return
 
-        # endif len > 1
-        pass
+            else:
+                self.notice(nick, "I don't have an active DCC"
+                            " handshake from you.")
 
-    # Words.Group --> IRC
+        elif params[0] == 'FORGET':
+            if self.dcc_sessions.has_key(pName):
+                del self.dcc_sessions[pName]
+            self.notice(nick, "I have now forgotten any DCC offers"
+                        " from you.")
+        else:
+            self.notice(nick,
+                        "Valid DCC commands are: "
+                        "DCC, DCC PASSTO <nick>, DCC FORGET")
+        return
 
-    def sendLine(self, line):
-        if (not self.transport) or (not self.transport.connected):
-            return
-        if _LOGALL:
-            self.log(line, 'dump')
-        irc.IRCClient.sendLine(self, line)
+    ### WordsClient methods
+    ##      Words.Group --> IRC
 
     def memberJoined(self, member, group):
-        if self.isThisMine(member):
+        """Tell the IRC Channel when someone joins the Words group.
+        """
+        if (group == self.errorGroup) or self.isThisMine(member):
             return
         self.say(groupToChannelName(group), "%s joined." % (member,))
 
     def memberLeft(self, member, group):
-        if self.isThisMine(member):
+        """Tell the IRC Channel when someone leaves the Words group.
+        """
+        if (group == self.errorGroup) or self.isThisMine(member):
             return
         self.say(groupToChannelName(group), "%s left." % (member,))
 
     def receiveGroupMessage(self, sender, group, message):
+        """Pass a message from the Words group on to IRC.
+
+        Or, if it's in our errorGroup, recognize some debugging commands.
+        """
         if not (group == self.errorGroup):
             if not self.isThisMine(sender):
                 self.say(groupToChannelName(group),
@@ -454,16 +564,61 @@ class TendrilClient(irc.IRCClient, wordsService.WordsClientInterface):
                 s = map(str, self.perspective.groups)
                 s = string.join(s, ", ")
             elif message == "transport":
-                s = "%s connected: %s" % (self.transport,
-                                          getattr(self.transport,
-                                                  "connected"))
+                s = "%s connected: %s" %\
+                    (self.transport, getattr(self.transport, "connected"))
             else:
-                return
-            self.perspective.groupMessage(group, s)
+                s = None
 
-    # Words.Participant --> IRC
+            if s:
+                self.groupMessage(group, s)
+
+
+    ### My methods as a Participant
+    ### (Shortcuts for self.perspective.foo())
+
+    def joinGroup(self, groupName):
+        return self.perspective.joinGroup(groupName)
+
+    def leaveGroup(self, groupName):
+        return self.perspective.leaveGroup(groupName)
+
+    def groupMessage(self, groupName, message):
+        return self.perspective.groupMessage(groupName, message)
+
+    def directMessage(self, recipientName, message):
+        return self.perspective.directMessage(recipientName, message)
+
+    ### My methods as a bogus perspective broker
+    ### (Since I grab my perspective directly from the service, it hasn't
+    ###  been issued by a Perspective Broker.)
+
+    def attach(self):
+        self.perspective.attached(self, None)
+
+    def detach(self):
+        """Pull everyone off Words, sign off, cut the IRC connection.
+        """
+        if not (self is getattr(self.perspective,'client')):
+            # Not attached.
+            return
+
+        for g in self.perspective.groups:
+            self.leaveGroup(g.name)
+        for nick in self.participants.keys()[:]:
+            self.logoutParticipant(nick)
+        self.perspective.detached(self, None)
+        if self.transport and getattr(self.transport, 'connected'):
+            self.transport.loseConnection()
+
+    ### Participant event methods
+    ##      Words.Participant --> IRC
+
     def msgFromWords(self, toNick, sender, message):
-        if message[0] == irc.X_DELIM:
+        """Deliver a directMessage as a privmsg over IRC.
+        """
+        if message[0] != irc.X_DELIM:
+            self.msg(toNick, '<%s> %s' % (sender, message))
+        else:
             # If there is a CTCP delimeter at the beginning of the
             # message, let's leave it there to accomidate not-so-
             # tolerant clients.
@@ -480,30 +635,44 @@ class TendrilClient(irc.IRCClient, wordsService.WordsClientInterface):
             self.msg(toNick, 'The following %s is from %s'
                      % (desc, sender))
             self.msg(toNick, '%s' % (message,))
-        else:
-            self.msg(toNick, '<%s> %s' % (sender, message))
+
 
     # IRC Participant Management
-    def getParticipant(self, nick):
+
+    def evacuateGroup(self, groupName):
+        """Pull all of my Participants out of this group.
+        """
+        # XXX: This marks another place where we get a little
+        # overly cozy with the words service.
+        group = self.service.getGroup(groupName)
+
+        allMyMembers = map(lambda m: m[0], self.participants.values())
+        groupMembers = filter(lambda m, a=allMyMembers: m in a,
+                              group.members)
+
+        for m in groupMembers:
+            m.leaveGroup(groupName)
+
+    def _getParticipant(self, nick):
         """Get a Perspective (words.service.Participant) for a IRC user.
 
         And if I don't have one around, I'll make one.
         """
         if not self.participants.has_key(nick):
-            self.newParticipant(nick)
+            self._newParticipant(nick)
 
         return self.participants[nick][0]
 
-    def getClient(self, nick):
+    def _getClient(self, nick):
         if not self.participants.has_key(nick):
-            self.newParticipant(nick)
+            self._newParticipant(nick)
         return self.participants[nick][1]
 
     # TODO: let IRC users authorize themselves and then give them a
     # *real* perspective (one attached to their identity) instead
     # of one of my @networkSuffix-Nobody perspectives.
 
-    def newParticipant(self, nick):
+    def _newParticipant(self, nick):
         try:
             p = self.service.getPerspectiveNamed(nick +
                                                  self.networkSuffix)
@@ -537,6 +706,10 @@ class TendrilClient(irc.IRCClient, wordsService.WordsClientInterface):
         (p, c) = self.participants[nick]
         p.detached(c, None)
         c.tendril = None
+        # XXX: This must change if we ever start giving people 'real'
+        #    perspectives!
+        if not p.identityName:
+            del self.service.participants[p.name]
         del self.participants[nick]
 
     def isThisMine(self, sender):
@@ -550,12 +723,19 @@ class TendrilClient(irc.IRCClient, wordsService.WordsClientInterface):
                 return 1
         return 0
 
+
+    ### Utility
+
     def log(self, message, priority=None):
         """I need to give Twisted a prioritized logging facility one of these days.
         """
-        log.msg(message)
+        if _LOGALL:
+            log.msg(message)
+        elif not (priority in ('dump',)):
+            log.msg(message)
+
         if priority in ('info', 'NOTICE', 'ERROR'):
-            self.perspective.groupMessage(self.errorGroup, message)
+            self.groupMessage(self.errorGroup, message)
 
 
 def channelToGroupName(channelName):

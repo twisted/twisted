@@ -75,7 +75,7 @@ class DummyGroup:
 
     def sendMessage(self, sender, message):
         if self.name == 'TendrilErrors':
-            print sender, message
+            pass
         self.messages.append((sender.name, message))
         for member in self.members:
             member.receiveGroupMessage(sender, self, message)
@@ -117,6 +117,8 @@ class StringIOWithoutClosing(StringIO.StringIO):
     def getvalue(self):
         return StringIO.StringIO.getvalue(self)[self.zeroAt:]
 
+    def getAll(self):
+        return StringIO.StringIO.getvalue(self)
 
 
 class TendrilTest(unittest.TestCase):
@@ -131,6 +133,7 @@ class TendrilTest(unittest.TestCase):
         self.tendril.makeConnection(self.transport)
 
         self.tendril.signedOn()
+        self.tendril.joinGroup('tendriltest')
 
         self.group = self.service.getGroup('tendriltest')
         self.participant = self.service.addParticipant('TheParticipant')
@@ -179,7 +182,7 @@ class TendrilTest(unittest.TestCase):
         self.participant.groupMessage('tendriltest', "Greetings!")
         output = self.file.getvalue()
 
-        self.failUnlessEqual(expected_output, output)
+        self.failUnlessEqual(expected_output, output, self.file.getAll())
 
     def test_participantToNick(self):
         """Testing words directMessage -> IRC user
@@ -196,5 +199,5 @@ class TendrilTest(unittest.TestCase):
 
         self.failUnlessEqual(expected_output, output)
 
-#if __name__ == '__main__':
-#    unittest.main()
+if __name__ == '__main__':
+    unittest.main()
