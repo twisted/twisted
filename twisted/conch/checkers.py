@@ -90,8 +90,10 @@ class SSHPublicKeyDatabase:
                 if keys.verifySignature(pubKey, credentials.signature,
                                         credentials.sigData):
                     return credentials.username
-            except:
-                pass
+            except: # any error should be treated as a failed login
+                f = failure.Failure()
+                log.err()
+                return f
         return failure.Failure(UnauthorizedLogin())
 
     def checkKey(self, credentials):
