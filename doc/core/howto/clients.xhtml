@@ -11,10 +11,11 @@
     <h1>Writing Clients</h1>
     
     <h2>Overview</h2>
+
     <p>Twisted is a framework designed to be very flexible, and let you write
-    powerful clients.  The cost of this flexibility is a few layers in the way
-    to writing your client. This document covers creating clients that can
-    be used for TCP, SSL and Unix sockets, UDP is covered <a href="udp.xhtml">in
+    powerful clients. The cost of this flexibility is a few layers in the way
+    to writing your client. This document covers creating clients that can be
+    used for TCP, SSL and Unix sockets, UDP is covered <a href="udp.xhtml">in
     a different document</a>.</p>
     
     <p>At the base, the place where you actually implement the protocol parsing
@@ -28,10 +29,11 @@
     
     <p>The persistent configuration is kept in a Factory class, which usually
     inherits from <code
-	    class="API">twisted.internet.protocol.ClientFactory</code>. The
-    default factory class just instantiate the Protocol, and then sets on it an
-    attribute called <code>factory</code> which points to itself. This let the
-    Protocol access, and possibly modify, the persistent configuration.</p>
+    class="API">twisted.internet.protocol.ClientFactory</code>. The default
+    factory class just instantiate the Protocol, and then sets on it an
+    attribute called <code>factory</code> which points to itself. This let
+    the Protocol access, and possibly modify, the persistent
+    configuration.</p>
     
     <h2>Protocol</h2>
     
@@ -41,11 +43,12 @@
     rather responds to events as they arrive from the network.</p>
     
     <p>Here is a simple example:</p>
+
     <pre class="python">
 from twisted.internet.protocol import Protocol
 from sys import stdout
+
 class Echo(Protocol):
-    
     def dataReceived(self, data):
         stdout.write(data)
     </pre>
@@ -54,10 +57,11 @@ class Echo(Protocol):
     output whatever it reads from the connection.  There are many events it
     does not respond to.  Here is an example of a Protocol responding to
     another event.</p>
+
     <pre class="python">
 from twisted.internet.protocol import Protocol
+
 class WelcomeMessage(Protocol):
-    
     def connectionMade(self):
         self.transport.write("Hello server, I am the client!\r\n")
         self.transport.loseConnection()
@@ -66,54 +70,54 @@ class WelcomeMessage(Protocol):
     <p>This protocol connects to the server, sends it a welcome message, and
     then terminates the connection.</p>
     
-    <p>The connectionMade event is usually where set up of the Protocol object
-    happens, as well as any initial greetings (as in the WelcomeMessage
-    protocol above).  Any tearing down of Protocol-specific objects is done in
-    connectionLost.</p>
+    <p>The connectionMade event is usually where set up of the Protocol
+    object happens, as well as any initial greetings (as in the
+    WelcomeMessage protocol above). Any tearing down of Protocol-specific
+    objects is done in connectionLost.</p>
 
-	<h2>Simple, single-use clients</h2>
+    <h2>Simple, single-use clients</h2>
 
-	<p>In many cases, the protocl only needs to connect to the server
-	once, and the code just wants to get a connected instance of the
-	protocol. In those cases <code
-	class="API">twisted.internet.protocol.ClientCreator</code>
-	provides the appropriate API.</p>
+    <p>In many cases, the protocl only needs to connect to the server once,
+    and the code just wants to get a connected instance of the protocol. In
+    those cases <code
+    class="API">twisted.internet.protocol.ClientCreator</code> provides the
+    appropriate API.</p>
 
-	<pre class="python">
+    <pre class="python">
 from twisted.internet import reactor
 from twisted.internet.protocol import Protocol, ClientCreator
 
 class Greeter(Protocol):
-
     def sendMessage(self, msg):
-	    self.transport.write("MESSAGE %s\n" % msg)
+        self.transport.write("MESSAGE %s\n" % msg)
 
 def gotProtocol(p):
     p.sendMessage("Hello")
-	reactor.callLater(1, p.sendMessage, "This is sent in a second")
-	reactor.callLater(2, p.transport.loseConnection)
+    reactor.callLater(1, p.sendMessage, "This is sent in a second")
+    reactor.callLater(2, p.transport.loseConnection)
 
 c = ClientCreator(reactor, Greeter)
 c.connectTCP("localhost", 1234).addCallback(gotProtocol)
-	</pre>
+    </pre>
 		
     <h2>ClientFactory</h2>
-    <p>We use reactor.connect* and a ClientFactory.
-    The ClientFactory is in charge of creating the Protocol, and also receives
-    events relating to the connection state.  This allows it to do things like
-    reconnect on the event of a connection error.  Here is an example of a
-    simple ClientFactory that uses the Echo protocol (above) and also prints
-    what state the connection is in.</p>
+
+    <p>We use reactor.connect* and a ClientFactory. The ClientFactory is in
+    charge of creating the Protocol, and also receives events relating to the
+    connection state. This allows it to do things like reconnect on the event
+    of a connection error. Here is an example of a simple ClientFactory that
+    uses the Echo protocol (above) and also prints what state the connection
+    is in.</p>
+
     <pre class="python">
 from twisted.internet.protocol import Protocol, ClientFactory
 from sys import stdout
-class Echo(Protocol):
 
+class Echo(Protocol):
     def dataReceived(self, data):
         stdout.write(data)
 
 class EchoClientFactory(ClientFactory):
-    
     def startedConnecting(self, connector):
         print 'Started to connect.'
     
@@ -128,7 +132,9 @@ class EchoClientFactory(ClientFactory):
         print 'Connection failed. Reason:', reason
     </pre>
     
-    <p>To connect this EchoClientFactory to a server, you could use this code:</p>
+    <p>To connect this EchoClientFactory to a server, you could use this
+    code:</p>
+
     <pre class="python">
 from twisted.internet import reactor
 reactor.connectTCP(host, port, EchoClientFactory())
@@ -143,23 +149,26 @@ reactor.run()
     is called when a connection was made and then disconnected.</p>
     
     <h3>Reconnection</h3>
+
     <p>Many times, the connection of a client will be lost unintentionally due
     to network errors. One way to reconnect after a disconnection would be to
     call <code class="python">connector.connect()</code> when the
     connection is lost:
     </p>
+
     <pre class="python">
 from twisted.internet.protocol import ClientFactory
+
 class EchoClientFactory(ClientFactory):
-    
     def clientConnectionLost(self, connector, reason):
         connector.connect()
     </pre>
-    <p>The connector passed as the first
-    argument is the interface between a connection and a protocol.  When the
-    connection fails and the factory receives the clientConnectionLost event,
-    the factory can call <code class="python">connector.connect()</code> to
-    start the connection over again from scratch.</p>
+
+    <p>The connector passed as the first argument is the interface between a
+    connection and a protocol. When the connection fails and the factory
+    receives the clientConnectionLost event, the factory can call <code
+    class="python">connector.connect()</code> to start the connection over
+    again from scratch.</p>
 
     <p>
     However, most programs that want this functionality should implement <code
@@ -176,30 +185,29 @@ class EchoClientFactory(ClientFactory):
     <pre class="python">
 from twisted.internet.protocol import Protocol, ReconnectingClientFactory
 from sys import stdout
+
 class Echo(Protocol):
-                                                                                                                                                            
     def dataReceived(self, data):
         stdout.write(data)
-                                                                                                                                                            
+
 class EchoClientFactory(ReconnectingClientFactory):
-                                                                                                                                                            
     def startedConnecting(self, connector):
         print 'Started to connect.'
-                                                                                                                                                            
+
     def buildProtocol(self, addr):
         print 'Connected.'
         print 'Resetting reconnection delay'
         self.resetDelay()
         return Echo()
-                                                                                                                                                            
+
     def clientConnectionLost(self, connector, reason):
         print 'Lost connection.  Reason:', reason
         ReconnectingClientFactory.clientConnectionLost(self, connector, reason)
-                                                                                                                                                            
+
     def clientConnectionFailed(self, connector, reason):
         print 'Connection failed. Reason:', reason
-        ReconnectingClientFactory.clientConnectionFailed(self,
-                connector, reason)
+        ReconnectingClientFactory.clientConnectionFailed(self, connector,
+                                                         reason)
 </pre>
 
     <h2>A Higher-Level Example: ircLogBot</h2>
@@ -209,12 +217,13 @@ class EchoClientFactory(ReconnectingClientFactory):
     <p>The clients so far have been fairly simple.  A more complicated
     example comes with Twisted Words in the doc/examples directory.</p>
     
-    <a href="../../words/examples/ircLogBot.py" class="py-listing" skipLines="15">ircLogBot.py</a>
+    <a href="../../words/examples/ircLogBot.py" class="py-listing"
+    skipLines="24">ircLogBot.py</a>
     
     <p>ircLogBot.py connects to an IRC server, joins a channel, and logs all
-    traffic on it to a file.  It demonstrates some of the connection-level logic
-    of reconnecting on a lost connection, as well as storing persistent data in
-    the Factory.</p>
+    traffic on it to a file. It demonstrates some of the connection-level
+    logic of reconnecting on a lost connection, as well as storing persistent
+    data in the Factory.</p>
     
     <h3>Persistent Data in the Factory</h3>
 
@@ -226,8 +235,9 @@ class EchoClientFactory(ReconnectingClientFactory):
     <pre class="python">
 from twisted.internet import protocol
 from twisted.protocols import irc
+
 class LogBot(irc.IRCClient):
-    
+
     def connectionMade(self):
         irc.IRCClient.connectionMade(self)
         self.logger = MessageLogger(open(self.factory.filename, "a"))
@@ -248,9 +258,9 @@ class LogBotFactory(protocol.ClientFactory):
     </pre>
     
     <p>When the protocol is created, it gets a reference to the factory as
-    self.factory.  It can then access attributes of the factory in its logic.
-    In the case of LogBot, it opens the file and connects to the channel stored
-    in the factory.</p>
+    self.factory. It can then access attributes of the factory in its logic.
+    In the case of LogBot, it opens the file and connects to the channel
+    stored in the factory.</p>
     
   </body>
 </html>

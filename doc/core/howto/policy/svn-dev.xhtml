@@ -133,13 +133,13 @@ release.</p>
 
 <h2>Building docs</h2>
 
-<p>Twisted documentation (not including the automatically-generated API
-docs) is in <a href="http://twistedmatrix.com/projects/lore">Lore
-Format</a>. These <code>.xhtml</code> files are translated into
-<code>.html</code> files by the <q>bin/lore</q> script, which can check the
-files for syntax problems (hlint), process multiple files at once, insert
-the files into a template before processing, and can also translate the
-files into LaTeX or PostScript instead.</p>
+<p>Twisted documentation (not including the automatically-generated API docs)
+is in <a href="http://twistedmatrix.com/projects/lore">Lore Format</a>. These
+<code>.xhtml</code> files are translated into <code>.html</code> files by the
+<q>bin/lore/lore</q> script, which can check the files for syntax problems
+(hlint), process multiple files at once, insert the files into a template
+before processing, and can also translate the files into LaTeX or PostScript
+instead.</p>
 
 <p>To generate the full documentation set, run the
 <code>admin/process-docs</code> shell script. This will create processed
@@ -155,7 +155,7 @@ done in <code>admin/process-docs</code>, such as the following. Note that
 the index file will be placed in <code>doc/howto/index.html</code>.</p>
 
 <pre class="shell">
-./bin/lore -p --config template=doc/howto/template.tpl doc/howto/*.xhtml
+./bin/lore/lore -p --config template=doc/howto/template.tpl doc/howto/*.xhtml
 </pre>
 
 <p>To run hlint over a single Lore document, such as
@@ -163,28 +163,29 @@ the index file will be placed in <code>doc/howto/index.html</code>.</p>
 because the HTML conversion may bail without a useful explanation if it sees
 mismatched tags.</p>
 
-<pre class="shell">./bin/lore -n --output lint doc/howto/policy/svn-dev.xhtml</pre>
+<pre class="shell">./bin/lore/lore -n --output lint doc/howto/policy/svn-dev.xhtml</pre>
 
 <p>To convert it to HTML (including markup, interpolation of examples,
 footnote processing, etc), do the following. The results will be placed in
 <code>doc/howto/policy/svn-dev.html</code>:</p>
 
 <pre class="shell">
-./bin/lore -p --config template=doc/howto/template.tpl doc/howto/policy/svn-dev.xhtml
+./bin/lore/lore -p --config template=doc/howto/template.tpl \
+   doc/howto/policy/svn-dev.xhtml
 </pre>
 
 <p>Note that hyperlinks to other documents may not be quite right unless you
-include a <q>-l</q> argument to <code>bin/lore</code>. Links in the .xhtml
-file are to .xhtml targets: when the .xhtml is turned into .html, the link
-targets are supposed to be turned into .html also. In addition to this,
+include a <q>-l</q> argument to <code>bin/lore/lore</code>. Links in the
+.xhtml file are to .xhtml targets: when the .xhtml is turned into .html, the
+link targets are supposed to be turned into .html also. In addition to this,
 Lore markup of the form &lt;code class=&quot;API&quot;&gt; is supposed to
 turn into a link to the corresponding API reference page. These links will
 probably be wrong unless the correct base URL is provided to Lore.</p>
 
 <h2>Emacs</h2>
 
-<p>Check out the TwistedEmacs module (TODO this is not true: which lives in
-the same Subversion repository, just do <q>cvs checkout TwistedEmacs</q>
+<p>Check out the TwistedEmacs module, which lives in the same Subversion
+repository (TODO this is not true), just do <q>cvs checkout TwistedEmacs</q>
 instead of <q>cvs checkout Twisted</q>). <code>twisted-dev.el</code> has
 several utility functions which make it easier to grep for methods, run test
 cases, process Lore documents, etc.</p>

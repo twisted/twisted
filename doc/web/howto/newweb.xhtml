@@ -17,13 +17,13 @@ This lowest level is designed to have multiple implementations. The implementati
 <h3>Standard HTTP server (<code>http.py</code>)</h3>
 The standard low-level HTTP server infrastructure is comprised of three layers: the <code>http.HTTPFactory</code>, <code>http.HTTPChannel</code>, and <code>http.ChannelRequest</code>. 
 
-<h4><code>HTTPFactory</code></h4>
+<p><code><strong>HTTPFactory</strong></code></p>
 This object doesn't have much on it -- it's a protocol ServerFactory that creates a <code>HTTPChannel</code> object for each incoming request. It also holds some variables to fiddle with: <code>timeOut</code> and <code>maxPipeline</code>. The user-level server.Site object is a subclass of this. (TODO: I don't think server.Site shouldn't inherit from this, as it means you can't have a Site on a CGI easily...)
 
-<h4><code>HTTPChannel</code></h4>
+<p><code><strong>HTTPChannel</strong></code></p>
 This object handles the very lowest level parsing: it separates the incoming stream into multiple requests, and creates a ChannelRequest to do the parsing of that request. Its implementation is closely tied to the implementation of ChannelRequest -- there is no well-defined interface.
 
-<h4><code>HTTPChannelRequest</code></h4>
+<p><code><strong>HTTPChannelRequest</strong></code></p>
 The <code>HTTPChannelRequest</code> object is a object encompassing the state and parsing functions for one HTTP request. It is responsible for all the low-level connection oriented behavior of the HTTP request. Thus, it takes care of keep-alive, de-chunking, etc., and only passes the non-connection headers up to the next level. It has a well-defined interface (<code>iweb.IChanRequest</code>). See <code>iweb.IChanRequestCallbacks</code> for the methods it requires on the Request object. (TODO: how do you tell it what Request object to use?)
 
 <h3>CGI server (<code>cgichannel.py</code>)</h3>
@@ -32,7 +32,7 @@ This server mode can only handle a single request per process. But, other than t
 <h2>Slightly higher low-level web (<code>http.py</code>)</h2>
 <h3><code>Request</code></h3>
 The <code>http.Request</code> object implements the somewhat higher-level protocol bits without dictating any policy about how to process requests. If you wanted a different resource-traversal API than the standard server, you should be able to subclass this object yourself and implement whatever you want without excessive trouble. The <code>server.Request</code> object is the standard subclass of this.
-<P />
+<p />
 TODO: fix up interface on this object.
 
 <h2>Header object (<code>http_header.py</code>)</h2>

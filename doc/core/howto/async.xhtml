@@ -4,7 +4,7 @@
 
 <html xmlns="http://www.w3.org/1999/xhtml">
 
-<head><title>Asynchronous Programming</title></head>
+<head><title>Asynchronous Programming with Twisted</title></head>
 <body>
 
 <h1>Asynchronous Programming with Twisted</h1>
@@ -78,8 +78,9 @@ non-blocking calls.</p>
 <p>When dealing with many connections in one thread, the scheduling is the
 responsibility of the application, not the operating system, and is usually
 implemented by calling a registered function when each connection is ready to
-for reading or writing -- commonly known as <b>asynchronous</b>,
-<b>event-driven</b> or <b>callback-based</b> programming.</p>
+for reading or writing -- commonly known as <strong>asynchronous</strong>,
+<strong>event-driven</strong> or <strong>callback-based</strong>
+programming.</p>
 
 <p>In this model, the earlier email sending function would work something
 like this:</p>
