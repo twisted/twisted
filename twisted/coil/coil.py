@@ -224,6 +224,8 @@ class Configurator:
 
     def __init__(self, instance):
         """Initialize this configurator with the instance it will be configuring."""
+        if not isinstance(instance, self.configurableClass):
+            raise TypeError, "%s is not a %s" % (instance, self.configurableClass)
         self.instance = instance
 
     def getType(self, name):
