@@ -82,9 +82,9 @@ def run():
 
     save_to_file(os.path.join('.build', directory, 'debian', 'default'), 
     '''\
-pidfile=/var/run/%(deb_file)s.pid \
-rundir=/var/lib/%(deb_file)s/ \
-file=/etc/%(tap_file)s \
+pidfile=/var/run/%(deb_file)s.pid
+rundir=/var/lib/%(deb_file)s/
+file=/etc/%(tap_file)s
 logfile=/var/log/%(deb_file)s.log
  ''' % vars())
 
