@@ -874,11 +874,16 @@ class MyRealm:
         assert interface == pb.IPerspective
         assert mind == "BRAINS!"
         self.p.loggedIn = 1
-        return pb.IPerspective, self.p, self.p.logout
+        return pb.IPerspective, pb.AsReferenceable(self.p, "perspective"), self.p.logout
 
-class MyPerspective(pb.Referenceable):
+class MyPerspective(pb.Perspective):
 
-    def remote_getViewPoint(self):
+    __implements__ = pb.IPerspective,
+
+    def __init__(self):
+        pass
+    
+    def perspective_getViewPoint(self):
         return MyView()
 
     def logout(self):
@@ -919,3 +924,12 @@ class NewCredTestCase(unittest.TestCase):
         reactor.iterate()
         reactor.iterate()
         self.assertEquals(self.realm.p.loggedOut, 1)
+
+    def testView(self):
+        factory = pb.PBClientFactory()
+        d = factory.login(credentials.UsernamePassword("user", "pass"), "BRAINS!")
+        reactor.connectTCP("127.0.0.1", self.portno, factory)
+        p = dR(d)
+        v = dR(p.callRemote("getViewPoint"))
+        self.assertEquals(dR(v.callRemote("check")), 1)
+        factory.disconnect()
