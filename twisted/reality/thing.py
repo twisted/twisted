@@ -726,15 +726,6 @@ class Thing(observable.Publisher,
         return None
 
 
-    def login(self):
-        """Thing.login() -> self
-        
-        This returns the object that the user will actually log in to; override
-        this to implement a 'factory' login object, to produce guests and
-        suchlike.
-        """
-        return self
-
     ambient_ = None
 
     def getVerb(self, verbstring, preposition):

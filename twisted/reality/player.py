@@ -86,7 +86,17 @@ class Player(thing.Thing, pb.Perspective):
     def perspective_execute(self, st):
         self.execute(st)
 
-    def attached(self, i):
+    def attached(self, remoteIntelligence, identity):
+        """A user-interface has been attached to this player.
+
+        This equates to a message saying that they're logged in.  It takes one
+        argument, the interface.  This will be signature-compatible with
+        RemoteIntelligence.  This is an implementation of::
+
+            twisted.internet.passport.Perspective.attached(reference, identity)
+
+        and therefore follows those rules.
+        """
         if hasattr(self, 'intelligence'):
             log.msg("player duplicate: [%s]" % self.name)
             raise authenticator.Unauthorized("Already logged in from another location.")
@@ -94,7 +104,8 @@ class Player(thing.Thing, pb.Perspective):
         if hasattr(self, 'oldlocation'):
             self.location = self.oldlocation
             del self.oldlocation
-        self.intelligence = LocalIntelligence(i)
+        self.intelligence = LocalIntelligence(remoteIntelligence)
+        return self
 
     def detached(self, i):
         log.msg("player logout: [%s]" % self.name)

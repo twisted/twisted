@@ -48,7 +48,7 @@ class Participant(pb.Perspective):
         self.client = None
         self.info = ""
 
-    def attached(self, client):
+    def attached(self, client, identity):
         if ((self.client is not None)
             and self.client.__class__ != styles.Ephemeral):
             print self.client

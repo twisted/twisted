@@ -22,7 +22,7 @@ Package installer for Twisted
 Copyright (c) 2001 by Twisted Matrix Laboratories
 All rights reserved, see LICENSE for details.
 
-$Id: setup.py,v 1.6 2001/08/18 10:34:58 moshez Exp $
+$Id: setup.py,v 1.7 2001/08/19 05:15:23 glyph Exp $
 """
 
 import distutils, os, sys
@@ -51,26 +51,26 @@ with mail, web, DNS, netnews, IRC, RDBMSs, desktop environments, and
 your toaster. 
 """,
     'packages': [
-        'twisted',
-        'twisted.internet',
-        'twisted.persisted',
-        'twisted.pim',
-        'twisted.protocols',
-        'twisted.python',
-        'twisted.reality',
-        'twisted.reality.ui',
-        'twisted.spread',
-        'twisted.spread.ui',
-        'twisted.words',
-        'twisted.words.ui',
-        'twisted.words.ui.gateways',
-        'twisted.test',
-        'twisted.web',
-        'twisted.tap',
-        'twisted.mail',
-        'twisted.enterprise',
-        'twisted.manhole',
-        'twisted.manhole.ui',
+        "twisted",
+        "twisted.enterprise",
+        "twisted.internet",
+        "twisted.mail",
+        "twisted.manhole",
+        "twisted.manhole.ui",
+        "twisted.persisted",
+        "twisted.pim",
+        "twisted.protocols",
+        "twisted.python",
+        "twisted.reality",
+        "twisted.reality.ui",
+        "twisted.spread",
+        "twisted.spread.ui",
+        "twisted.tap",
+        "twisted.test",
+        "twisted.web",
+        "twisted.words",
+        "twisted.words.ui",
+        "twisted.words.ui.gateways",
     ],
 }
 

@@ -120,10 +120,16 @@ class Client(Connection):
         """
         if host == 'unix':
             # "port" in this case is really a filename
-            mode = os.stat(port)[0]
-            assert (mode & stat.S_IFSOCK), "that's not a socket"
-            assert (mode & stat.S_IROTH), "that's not readable"
-            assert (mode & stat.S_IWOTH), "that's not writable"
+            try:
+                mode = os.stat(port)[0]
+            except OSError, ose:
+                protocol.connectionFailed()  # no such file or directory
+                return
+            if not (mode & (stat.S_IFSOCK |  # that's not a socket
+                            stat.S_IROTH  |  # that's not readable
+                            stat.S_IWOTH  )):# that's not writable
+                protocol.connectionFailed()
+                return
             # success.
             self.addr = port
             # we are using unix sockets

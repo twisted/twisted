@@ -20,7 +20,7 @@ Perspective Broker
 
     "This isn't a professional opinion, but it's probably got enough internet
     to kill you." --glyph
-    
+
  Introduction
 
   This is a broker for proxies for and copies of objects.  It provides a
@@ -45,9 +45,9 @@ import types
 import new
 
 # Twisted Imports
-from twisted.python import authenticator, log
+from twisted.python import authenticator, log, defer
 from twisted.protocols import protocol
-from twisted.internet import passport
+from twisted.internet import passport, tcp
 from twisted.persisted import styles
 
 # Sibling Imports
@@ -74,7 +74,7 @@ class Error(Exception):
 
 class Serializable:
     """(internal) An object that can be passed remotely.
-    
+
     This is a style of object which can be serialized by Perspective Broker.
     Objects which wish to be referenced or copied remotely have to subclass
     Serializable.  However, clients of Perspective Broker will probably not
@@ -92,11 +92,19 @@ class Serializable:
     """
 
     def remoteSerialize(self, broker):
+        """Return a list of strings & numbers which represents this object remotely.
+        """
         raise NotImplementedError()
 
     def processUniqueID(self):
+        """Return an ID which uniquely represents this object for this process.
+
+        By default, this uses the 'id' builtin, but can be overridden to
+        indicate that two values are identity-equivalent (such as proxies
+        for the same object).
+        """
         return id(self)
-    
+
 class Message:
     """This is a translucent reference to a remote message.
     """
@@ -122,20 +130,22 @@ def noOperation(*args, **kw):
 PB_CONNECTION_LOST = 'Connection Lost'
 
 def printTraceback(tb):
+    """Print a traceback (string) to the standard log.
+    """
     log.msg('Perspective Broker Traceback:' )
     log.msg(tb)
 
 class Perspective(passport.Perspective):
     """A perspective on a service.
-    
+
     per*spec*tive, n. : The relationship of aspects of a subject to each other
     and to a whole: 'a perspective of history'; 'a need to view the problem in
     the proper perspective'.
-    
+
     A service represents a collection of state, plus a collection of
     perspectives.  Perspectives are the way that networked clients have a
     'view' onto an object, or collection of objects on the server.
-    
+
     Although you may have a service onto which there is only one perspective,
     the common case is that a Perspective will be analagous to (or the same as)
     a "user"; if you are creating a PB-enabled service, your User (or
@@ -151,14 +161,15 @@ class Perspective(passport.Perspective):
     def remoteMessageReceived(self, broker, message, args, kw):
         """This method is called when a network message is received.
 
-        I will call
-        self.perspective_%(message)s(*broker.unserialize(args),
-                                     **broker.unserialize(kw))
+        I will call::
+
+            self.perspective_%(message)s(*broker.unserialize(args),
+                                         **broker.unserialize(kw))
 
         to handle the method; subclasses of Perspective are expected to
         implement methods of this naming convention.
         """
-        
+
         args = broker.unserialize(args, self)
         kw = broker.unserialize(kw, self)
         method = getattr(self, "perspective_%s" % message)
@@ -168,23 +179,6 @@ class Perspective(passport.Perspective):
             raise TypeError("%s didn't accept %s and %s" % (method, args, kw))
         return broker.serialize(state, self, method, args, kw)
 
-    def attached(self, reference):
-        """Called when a remote reference is 'attached' to me.
-
-        After being authenticated and sent to the peer who requested me, I will
-        receive this message, telling me that this reference is now attached to
-        me.
-        """
-        log.msg('attached [%s]' % str(self.__class__))
-
-    def detached(self, reference):
-        """Called when a broker is 'detached' from me.
-
-        When a peer disconnects, this is called in order to indicate that the
-        reference associated with that peer is no longer attached to this
-        perspective.
-        """
-        log.msg('detached [%s]' % str(self.__class__))
 
 class Service(passport.Service):
     """A service for Perspective Broker.
@@ -250,12 +244,11 @@ class IdentityWrapper(Referenced):
         self.identity = identity
         self.broker = broker
 
-    def remote_attach(self, perspectiveName, remoteRef):
+    def remote_attach(self, serviceName, perspectiveName, remoteRef):
         """Attach the remote reference to a requested perspective.
         """
-        perspective = self.identity.getKey(perspectiveName).getPerspective()
-        print "*** ATTACHING TO PERSPECTIVE: %s" % repr(perspective) 
-        perspective.attached(remoteRef)
+        perspective = self.identity.getKey(serviceName, perspectiveName).getPerspective()
+        perspective = perspective.attached(remoteRef, self.identity)
         # Make sure that when connectionLost happens, this perspective will be
         # tracked in order that 'detached' will be called.
         self.broker.perspectives.append((perspective, remoteRef))
@@ -899,7 +892,7 @@ class Broker(banana.Banana):
 
     def proto_didNotUnderstand(self, command):
         """Respond to stock 'didNotUnderstand' message.
-        
+
         Log the command that was not understood and continue. (Note: this will
         probably be changed to close the connection or raise an exception in
         the future.)
@@ -928,14 +921,17 @@ class Broker(banana.Banana):
         self.sendCall("challenge", self.challenge)
 
     def noIdentityForLogin(self, error):
+        """(internal) Callback for when login identity is not available.
+        """
         log.msg("pb closing connection: %s" % error)
+        self.sendCall("not_logged_in", "unauthorized")
         self.transport.loseConnection()
 
     def proto_password(self, password):
         """Receive a password, and authenticate using it.
 
-        This will use the provided authenticator to authenticate, using the
-        previously-sent challenge and previously-received username.
+        This will use the main Application's authorizer to authenticate, using
+        the previously-sent challenge and previously-received username.
         """
         if self.loginIdentity.verifyPassword(self.challenge, password):
             # the password has been verified!  Let's continue.
@@ -1406,3 +1402,12 @@ class BrokerFactory(protocol.Factory):
         return proto
 
 
+
+def connect(host, port, username, password, service, perspective, object,
+            callback, errback):
+    """Utility function to connect to a specific PB service.
+
+    This is so that scripts can easily invoke specific functionality on a PB
+    server.
+    """
+    b = Broker()

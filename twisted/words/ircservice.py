@@ -160,6 +160,8 @@ class IRCChatter(irc.IRC):
                           nickname, ":this username is invalid")
 
     def logInAs(self, participant, password):
+        """Spawn appropriate callbacks to log in as this participant.
+        """
         self.pendingLogin = participant
         self.pendingPassword = password
         req = participant.getIdentityRequest()
@@ -170,14 +172,14 @@ class IRCChatter(irc.IRC):
         """Successfully logged in.
         """
         if ident.verifyPlainPassword(self.pendingPassword):
-            self.pendingLogin.attached(self)
+            self.pendingLogin.attached(self, ident)
             self.participant = self.pendingLogin
             self.receiveDirectMessage("*login*", "Authentication accepted.  Thank you.")
         else:
             self.notLoggedIn("unauthorized")
         del self.pendingLogin
         del self.pendingPassword
-            
+
     def notLoggedIn(self, message):
         """Login failed.
         """

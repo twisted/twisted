@@ -228,7 +228,7 @@ class Login(Toplevel):
         broker = pb.Broker()
         self.m = MainWindow()
         self.m.withdraw()
-         # he's a hack, he's a hack
+        # he's a hack, he's a hack
         broker.requestIdentity(username, password,
                                callback=self.gotIdentity,
                                errback=self.m.tryAgain)

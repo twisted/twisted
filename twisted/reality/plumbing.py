@@ -65,10 +65,26 @@ class Hose(telnet.Telnet):
         return "Pending"
 
     def loggedIn(self, identity):
+        """The player's identity has been retrieved.  Now, check their password.
+        """
         if identity.verifyPlainPassword(self.pw):
-            k = identity.getKey(self.factory.reality.getServiceName())
-            p = k.getPerspective()
-            p.attached(self)
+            # The identity checks out.
+            characters = []
+            # XXX REFACTOR: Hmm.  Is this next bit common behavior?
+            for k in identity.getAllKeys():
+                svc = k.getService()
+                if svc is self.factory.reality:
+                    characters.append(k.getPerspective())
+            lc = len(characters)
+            if lc == 1:
+                p = characters[0]
+            elif lc > 1:
+                p = characters[0]
+                self.transport.write("TODO: character selection menu\r\n")
+            else:
+                raise passport.Unauthorized("that identity has no TR characters")
+
+            p.attached(self, identity)
             self.player = p
             self.transport.write("Hello "+self.player.name+", welcome to Reality!\r\n"+
                                  telnet.IAC+telnet.WONT+telnet.ECHO)

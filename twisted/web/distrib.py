@@ -110,10 +110,10 @@ class ResourceSubscription(resource.Resource):
             self.render(request)
         self.pending = []
 
-    def notConnected(self):
+    def notConnected(self, msg):
         """I can't connect to a publisher; I'll now reply to all pending requests.
         """
-        log.msg( "could not connect to distributed web service." )
+        log.msg( "could not connect to distributed web service: %s" % msg)
         self.waiting = 0
         self.publisher = None
         for request in self.pending:

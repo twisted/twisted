@@ -45,14 +45,19 @@ class Key:
         self.identity = identity
         self.perspective = perspective
 
+    def getService(self):
+        """Get the service that I am a key to.
+        """
+        svc = self.identity.application.getService(self.service)
+        return svc
+
     def getPerspective(self):
         """Get the perspective that I am a key to.
 
         This should only be done _after_ authentication!  I retrieve
         identity.application[service][perspective].
         """
-        app = self.identity.application
-        svc = app.getService(self.service)
+        svc = self.getService()
         psp = svc.getPerspectiveNamed(self.perspective)
         return psp
 
@@ -110,6 +115,11 @@ class Service:
         """
         return self.serviceName
 
+    def getServiceType(self):
+        """Get a string describing the type of this service.
+        """
+        return self.serviceType or str(self.__class__)
+
 
 class Perspective:
     """I am an Identity's view onto a service.
@@ -156,6 +166,32 @@ class Perspective:
         return (self.service.application.authorizer.
                 getIdentityRequest(self.identityName))
 
+    def attached(self, reference, identity):
+        """Called when a remote reference is 'attached' to me.
+
+        After being authorized, a remote actor can attach to me
+        through its identity.  This call will be made when that happens, and
+        the return value of this method will be used as the _actual_
+        perspective to which I am attached.
+
+        Note that the symmetric call, detached, will be made on whatever
+        this method returns, _not_ on me.  Therefore, by default I return
+        'self'.
+        """
+        log.msg('attached [%s]' % str(self.__class__))
+        return self
+
+    def detached(self, reference, identity):
+        """Called when a broker is 'detached' from me.
+
+        See 'attached'.
+
+        When a remote actor disconnects (or times out, for example, with
+        HTTP), this is called in order to indicate that the reference
+        associated with that peer is no longer attached to this perspective.
+        """
+        log.msg('detached [%s]' % str(self.__class__))
+
 
 def respond(challenge, password):
     """Respond to a challenge.
@@ -173,7 +209,11 @@ def respond(challenge, password):
 
 class Identity:
     """An identity, with different methods for verification.
-    
+
+    An identity represents a user's permissions with a particular
+    application.  It is a username, a password, and a collection of
+    Perspective/Service name pairs, each of which is a perspective that this
+    identity is allowed to access.
     """
     hashedPassword = None
 
@@ -187,15 +227,16 @@ class Identity:
         self.application = application
         self.keyring = {}
 
-    def getKey(self, serviceName):
+    def getKey(self, serviceName, perspectiveName):
         """Get a key from my keyring.
 
         If that key does not exist, raise Unauthorized.  This will return an
         instance of a Key.
         """
-        if not self.keyring.has_key(serviceName):
-            raise Unauthorized("You have no key for %s." % serviceName)
-        return self.keyring[serviceName]
+        k = (serviceName, perspectiveName)
+        if not self.keyring.has_key(k):
+            raise Unauthorized("You have no key for %s." % k)
+        return self.keyring[k]
 
     def addKeyFor(self, perspective):
         """Add a key for the given perspective.
@@ -203,15 +244,23 @@ class Identity:
         perspectiveName = perspective.getPerspectiveName()
         serviceName = perspective.service.getServiceName()
         self.setKey(serviceName, perspectiveName)
-    
+
     def setKey(self, serviceName, perspectiveName):
         """Set a key on my keyring.
 
         This key will give me a token to access to some service in the future.
         """
-        self.keyring[serviceName] = Key(serviceName, perspectiveName, self)
+        self.keyring[(serviceName, perspectiveName)] = Key(
+            serviceName, perspectiveName, self)
 
-    def removeKey(self, serviceName):
+    def getAllKeys(self):
+        """Returns a list of all services and perspectives this identity can connect to.
+
+        This returns a sequence of keys.
+        """
+        return self.keyring.values()
+
+    def removeKey(self, serviceName, perspectiveName):
         """Remove a key from my keyring.
 
         If this key is not present, raise Unauthorized.
@@ -264,6 +313,8 @@ class Identity:
         md.update(plaintext)
         userPass = md.digest()
         return (userPass == self.hashedPassword)
+
+    # TODO: service discovery through listing of self.keyring.
 
 
 

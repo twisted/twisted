@@ -60,7 +60,7 @@ class IOPump:
         self.server = server
         self.clientIO = clientIO
         self.serverIO = serverIO
-        
+
     def pump(self):
         """Move data back and forth.
 
@@ -98,7 +98,7 @@ def connectedServerAndClient():
     s = svr.buildProtocol(('127.0.0.1',))
     c.requestIdentity("guest", "guest")
     s.copyTags = {}
-    
+
     cio = StringIO()
     sio = StringIO()
     c.makeConnection(protocol.FileWrapper(cio))
@@ -108,7 +108,7 @@ def connectedServerAndClient():
     while pump.pump():
         pass
     return c, s, pump
-    
+
 class SimpleRemote(pb.Referenced):
     def remote_thunk(self, arg):
         self.arg = arg
@@ -139,7 +139,7 @@ class SimpleLocalCopy:
         return 1
 
 pb.setCopierForClass(str(SimpleCopy), SimpleLocalCopy)
-    
+
 
 class NestedCopy(pb.Referenced):
     def remote_getCopy(self):
@@ -157,7 +157,7 @@ class NestedComplicatedCache(pb.Referenced):
 
     def remote_getCache(self):
         return self.c
-    
+
 
 class VeryVeryComplicatedCached(pb.Cached):
     def __init__(self):
@@ -213,18 +213,18 @@ pb.setCopierForClass(str(SimpleCache), SimpleLocalCache)
 class NestedCache(pb.Referenced):
     def __init__(self):
         self.x = SimpleCache()
-        
+
     def remote_getCache(self):
         return [self.x,self.x]
-    
+
     def remote_putCache(self, cache):
         return (self.x is cache)
-        
+
 
 class Observable(pb.Referenced):
     def __init__(self):
         self.observers = []
-        
+
     def remote_observe(self, obs):
         self.observers.append(obs)
 
@@ -247,7 +247,7 @@ class Observer(pb.Referenced):
 
 class BrokerTestCase(unittest.TestCase):
     thunkResult = None
-    
+
     def thunkErrorBad(self, error):
         assert 0, "This should cause a return value, not %s" % error
 
@@ -262,7 +262,7 @@ class BrokerTestCase(unittest.TestCase):
 
     def testReference(self):
         c, s, pump = connectedServerAndClient()
-        
+
         class X(pb.Referenced):
             def remote_catch(self,arg):
                 self.caught = arg
@@ -334,7 +334,7 @@ class BrokerTestCase(unittest.TestCase):
         pump.pump()
         assert b.obj is not None, "didn't notify"
         assert b.obj == 1, 'notified too much'
-        
+
 
     def testRefcount(self):
         c, s, pump = connectedServerAndClient()
@@ -422,7 +422,7 @@ class BrokerTestCase(unittest.TestCase):
         pump.pump()
         ident = c.remoteForName("identity")
         accum = []
-        ident.attach("test", None, pbcallback=accum.append)
+        ident.attach("test", "any", None, pbcallback=accum.append)
         pump.pump() # send call
         pump.pump() # get response
         test = accum.pop() # okay, this should be our perspective...

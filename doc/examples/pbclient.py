@@ -34,11 +34,10 @@ def connected(perspective):
     perspective.echo("hello world",
                      pbcallback=success,
                      pberrback=failure)
-    
     print "connected."
 
 def preConnected(identity):
-    identity.attach("pbecho", None,
+    identity.attach("pbecho", "any", None,
                     pbcallback=connected,
                     pberrback=failure)
 

@@ -63,10 +63,9 @@ class Reality(delay.Delayed,
         """Get a perspective from a named player.
 
         This will dispatch to an appropriate player by locating the named
-        player and calling their 'login' method.  (This is to facilitate guest
-        logins.)
+        player.
         """
-        return self[playerName].login()
+        return self[playerName]
 
     def _addThing(self,thing):
         """(internal) add a thing to this reality
