@@ -1,5 +1,5 @@
 # -*- Python -*-
-# $Id: usage.py,v 1.46 2003/08/04 08:26:15 davep Exp $
+# $Id: usage.py,v 1.47 2003/08/04 10:38:06 moshez Exp $
 # Twisted, the Framework of Your Internet
 # Copyright (C) 2001 Matthew W. Lefkowitz
 #
@@ -144,19 +144,6 @@ class Options(UserDict.UserDict):
         #This is required because UserDicts aren't hashable by default
         #(They define __cmp__ but no __hash__)
         return id(self)
-
-    def __getattr__(self, attr):
-        """
-        I make sure that old style 'optObj.option' access still works.
-        """
-        if attr == 'data':
-            raise AttributeError('Options instance has no attribute data: You probably forgot to call Options.__init__ from your subclass.')
-        #XXX GET RID OF ME!
-        if self.opts.has_key(attr):
-            log.msg("optionObject.option is deprecated! Use new-style optionObject['option'] instead! (This is only a warning) (%s, %s)" % (attr, self.opts[attr]))
-            return self.opts[attr]
-        else:
-            raise AttributeError("%s instance has no attribute '%s'" % (self.__class__, attr))
 
     def opt_help(self):
         """Display this help and exit."""
