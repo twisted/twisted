@@ -117,6 +117,7 @@ class UDPTestCase(unittest.TestCase):
         client.transport.write("world")
         reactor.iterate()
         reactor.iterate()
+        reactor.iterate()
         self.assertEquals(client.packets, ["hello"])
         self.assertEquals(server.packets, [("world", ("127.0.0.1", client.transport.getHost()[2]))])
         port1.stopListening(); port2.stopListening()
