@@ -553,8 +553,13 @@ class IMAP4Server(basic.LineReceiver):
         self.sendBadResponse(tag, 'SEARCH failed: ' + str(failure))
 
     def select_FETCH(self, tag, args):
+        parts = args.split(None, 1)
+        if len(parts) != 2:
+            raise IllegalClientResponse, args
+        messages, args = parts
+        messages = parseIdList(messages)
         query = parseNestedParens(args)
-        d = self.mbox.fetch(query)
+        d = self.mbox.fetch(messages, query)
         if isinstance(d, defer.Deferred):
             d.addCallbacks(
                 self._cbFetch,
@@ -1573,6 +1578,28 @@ class IMAP4Client(basic.LineReceiver):
         d = self.sendCommand('FETCH', cmd)
         return d
 
+class IllegalIdentifierError(IMAP4Exception): pass
+
+def parseIdList(s):
+    res = []
+    parts = s.split(',')
+    for p in parts:
+        if ':' in p:
+            low, high = p.split(':', 1)
+            try:
+                low = int(low)
+                high = int(high) + 1
+            except ValueError:
+                raise IllegalIdentifierError, p
+            else:
+                res.extend(range(low, high))
+        else:
+            try:
+                res.append(int(p))
+            except ValueError:
+                raise IllegalIdentifierError, p
+    return res
+
 class IllegalQueryError(IMAP4Exception): pass
 
 _SIMPLE_BOOL = (
@@ -2061,10 +2088,9 @@ class IMailbox(components.Interface):
     def expunge(self):
         """Remove all messages flagged \\Deleted.
         
-        @rtype: C{Deferred}
-        @return: A deferred whose callback is invoked with a list of
-        message sequence numbers which were deleted and whose errback is
-        invoked if there is an error.
+        @rtype: C{list} or C{Deferred}
+        @return: The list of message sequence numbers which were deleted,
+        or a C{Deferred} whose callback will be invoked with such a list.
         """
 
     def search(self, query):
@@ -2073,8 +2099,24 @@ class IMailbox(components.Interface):
         @type query: C{list}
         @param query: The search criteria
         
-        @rtype: C{Deferred}
-        @return: A deferred whose callback is invoked with a list of
-        message sequence numbers which match the search criteria and whose
-        errback is invoked if there is an error.
+        @rtype: C{list} or C{Deferred}
+        @return: A list of message sequence numbers which match the search
+        criteria or a C{Deferred} whose callback will be invoked with such a
+        list.
+        """
+
+    def fetch(self, messages, parts):
+        """Retrieve one or more portions of one or more messages.
+        
+        @type messages: sequence of C{int}
+        @param messages: The identifiers of messages to retrieve information
+        about
+        
+        @type parts: C{list}
+        @param parts: The message portions to retrieve.
+
+        @rtype: C{dict} or C{Deferred}
+        @return: A dict mapping 2-tuples of message identifier and message
+        portions to strings representing that portion of that message, or a
+        C{Deferred} whose callback will be invoked with such a dict.
         """

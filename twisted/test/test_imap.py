@@ -86,6 +86,8 @@ class IMAP4HelperTestCase(unittest.TestCase):
 
     def testParenParser(self):
         cases = [
+            '(BODY.PEEK[HEADER.FIELDS.NOT ("subject" "bcc" "cc")] {100})',
+
             '(FLAGS (\Seen) INTERNALDATE "17-Jul-1996 02:44:25 -0700"'
             'RFC822.SIZE 4286 ENVELOPE ("Wed, 17 Jul 1996 02:23:25 -0700 (PDT)" '
             '"IMAP4rev1 WG mtg summary and minutes" '
@@ -100,6 +102,8 @@ class IMAP4HelperTestCase(unittest.TestCase):
         ]
         
         answers = [
+            ['BODY.PEEK', ['HEADER.FIELDS.NOT', ['subject', 'bcc', 'cc']], '{100}'],
+
             ['FLAGS', [r'\Seen'], 'INTERNALDATE',
             '17-Jul-1996 02:44:25 -0700', 'RFC822.SIZE', '4286', 'ENVELOPE',
             ['Wed, 17 Jul 1996 02:23:25 -0700 (PDT)', 
@@ -159,7 +163,34 @@ class IMAP4HelperTestCase(unittest.TestCase):
         
         for (query, expected) in zip(inputs, outputs):
             self.assertEquals(query, expected)
+    
+    def testIdListParser(self):
+        inputs = [
+            '1',
+            '1,2',
+            '1,3,5',
+            '1:10',
+            '1:10,11',
+            '1:5,10:20',
+            '1,5:10',
+            '1,5:10,15:20',
+            '1:10,15,20:25',
+        ]
         
+        outputs = [
+            [1],
+            [1, 2],
+            [1, 3, 5],
+            range(1, 11),
+            range(1, 12),
+            range(1, 6) + range(10, 21),
+            [1] + range(5, 11),
+            [1] + range(5, 11) + range(15, 21),
+            range(1, 11) + [15] + range(20, 26),
+        ]
+        
+        for (input, expected) in zip(inputs, outputs):
+            self.assertEquals(imap4.parseIdList(input), expected)
 
 class SimpleMailbox:
     flags = ('\\Flag1', 'Flag2', '\\AnotherSysFlag', 'LastFlag')
@@ -217,7 +248,7 @@ class SimpleMailbox:
         for i in delete:
             self.messages.remove(i)
         return [i[3] for i in delete]
-
+    
 class SimpleServer(imap4.IMAP4Server):
     def authenticateLogin(self, username, password):
         if username == 'testuser' and password == 'password-test':
