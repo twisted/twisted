@@ -42,6 +42,7 @@ import copy_reg
 #Can someone tell me why?
 import __builtin__ 
 
+
 def getValueElement(node):
     """Get the one child element of a given element.
 
@@ -56,7 +57,6 @@ def getValueElement(node):
             else:
                 raise ValueError("Only one value node allowed per instance!")
     return valueNode
-
 
 
 class DOMJellyable:
@@ -285,7 +285,7 @@ class DOMJellier:
         elif objType is types.ModuleType:
             node = self.document.createElement("module")
             node.setAttribute("name", obj.__name__)
-        elif objType is types.ClassType:
+        elif objType in (types.ClassType, type):
             node = self.document.createElement("class")
             node.setAttribute("name", qual(obj))
         elif objType is types.UnicodeType:
@@ -332,7 +332,7 @@ class DOMJellier:
                     n2 = self.jellyToNode(v)
                     node.appendChild(n)
                     node.appendChild(n2)
-            elif objType is types.InstanceType:
+            elif objType is types.InstanceType or hasattr(objType, "__module__"):
                 className = qual(obj.__class__)
                 node.tagName = "instance"
                 node.setAttribute("class", className)
@@ -362,18 +362,21 @@ class DOMJellier:
         self.document.appendChild(node)
         return self.document
 
+
 def jellyToDOM(object):
-    """Convert an Object into an xml.dom.minidom.Document.
+    """Convert an Object into an twisted.web.microdom.Document.
     """
     dj = DOMJellier()
     document = dj.jelly(object)
     return document
 
+
 def unjellyFromDOM(document):
-    """Convert an xml.dom.minidom.Document into a Python object.
+    """Convert an twisted.web.microdom.Document into a Python object.
     """
     du = DOMUnjellier()
     return du.unjelly(document)
+
 
 def jellyToXML(object, file=None):
     """jellyToXML(object, [file]) -> None | string
