@@ -20,8 +20,8 @@ from epydoc.cli import cli
 modnames = []
 def addMod(arg, path, files):
     for fn in files:
-        file = os.path.join(path, fn)
-        if file[-3:] == '.py' and not file.count("__init__") and not file.count('/test/'):
+        file = os.path.join(path, fn).replace('/__init__', '')
+        if file[-3:] == '.py' and not file.count('/test/'):
             try:
                 modName = file[2:-3].replace('/','.')
                 print 'pre-loading', modName
