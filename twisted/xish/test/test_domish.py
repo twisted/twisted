@@ -122,6 +122,8 @@ class DomishStreamTestCase(unittest.TestCase):
         self.match_list = matches
     
     def testSuxStream(self):
+        if domish.SuxElementStream is None:
+            raise unittest.SkipTest, "Skipping SuxElementStream test, since twisted.web is not available."
         # Setup the stream
         self.setupStream(domish.SuxElementStream(),
                          [query1_root, query1_elem1])
