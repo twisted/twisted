@@ -246,6 +246,16 @@ is this: it <em>is</em> firing -- but it's an error, not a success, and you
 have forgotten to add an <a href="glossary.html#errback">errback</a>, so
 nothing happens.  Always add errbacks!</p>
 
+<p>The reason this happens is that unhandled errors in Deferreds get printed
+when the Deferred is garbage collected. Make sure your Deferred is garbage
+collected by deleting all references to it when you are done with it, e.g.
+after <code class="python">callback()</code> is called.</p> 
+
+
+<h3>My exceptions and tracebacks aren't getting printed!</h3>
+
+<p>See previous question.</p>
+
 
 <h3>I get <q>exceptions.ValueError: signal only works in main thread</q> when I
 try to run my Twisted program!  What's wrong?</h3>
