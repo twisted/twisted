@@ -56,6 +56,6 @@ class TestIssues(unittest.TestCase):
         self.failUnlessEqual(i.states[-1].fixer, fixer, "I have the wrong fixer")
         i.setState(issue.InTransfer(fixer, fixer2))
         i.setState(issue.InConversation(fixer2))
-        t = task.Task(fixer, "set fire to customer")
+        t = r.buildTask(fixer, "set fire to customer")
         t.addDependentIssue(i)
 

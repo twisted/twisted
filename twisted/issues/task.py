@@ -1,6 +1,5 @@
 # -*- test-case-name: twisted.test.test_issues -*-
 
-
 from twisted.issues.issue import PendingTaskCompletion
 from twisted.issues import common
 
@@ -13,7 +12,7 @@ MINOR = 2
 TRIVIAL = 1
 
 class Task(common.Commentable):
-    def __init__(self, submitter, description):
+    def __init__(self, submitter, description, taskNumber):
         
         """A non-trivial commitment of some resource, usually developer time.
         Tasks have estimates, completion %'s, categories, dependent issues,
@@ -31,6 +30,7 @@ class Task(common.Commentable):
         self.dependentTasks = []
         self.fixers = []
         self.setPriority(NORMAL)
+        self.number = taskNumber
 
     def assignTo(self, fixer):
         """Assign this task to a new fixer.

@@ -1,8 +1,14 @@
 
+# System Imports
+import time
 import string
+
+# Twisted Imports
 from twisted.issues.repo import IIssueNotifier, CouldNotTranscribe
 from twisted.words.service import WordsClient
+from twisted.issues.task import Task
 
+# Sibling Imports
 import issue
 
 class IssueBotNotifier:
@@ -110,18 +116,38 @@ class IssueBot(WordsClient):
 
     # issuebot methods
 
+    def getMyIssue(self, issuePerson, message):
+        if not message:
+            if len(issuePerson.currentlyFixing) == 1:
+                return issuePerson.currentlyFixing.values()[0]
+            else:
+                issuePerson.notifyText(
+                    "YOU MUST SPECIFY ONE OF THE FOLLOWING ISSUES: %s"
+                    % ' '.join(issuePerson.currentlyFixing.keys()))
+        else:
+            return issuePerson.currentlyFixing[int(message)]
+
     def issue_done(self, issuePerson, message):
         """I (a fixer) have finished resolving an issue.  Mark it as done.
         """
-        if not message:
-            if len(issuePerson.currentlyFixing) == 1:
-                i = issuePerson.currentlyFixing.values()[0]
-                i.setState(issue.FixerClosed())
-            else:
-                issuePerson.notifyText("YOU MUST SPECIFY ONE OF THE FOLLOWING ISSUES: %s"
-                                       % ' '.join(issuePerson.currentlyFixing.keys()))
+        i = self.getMyIssue(issuePerson, message) # XXX maybe this should be global?
+        if i:
+            i.setState(issue.FixerClosed())
+
+    def issue_transfer(self, issuePerson, message):
+        l = message.split(" ", 1)
+        if len(l) == 2:
+            issuenum, personName = l
         else:
-            issuePerson.currentlyFixing[int(message)].setState(issue.FixerClosed())
+            issuenum = ''
+            personName = message
+        i = self.getMyIssue(issuePerson, issuenum)
+        if i:
+            otherPerson = self.voiceToPerson[personName]
+            i.setState(issue.InTransfer(issuePerson, otherPerson))
+
+    def issue_accept(self, issuePerson, message):
+        pass
 
     def issue_complain(self, issuePerson, message):
         """Complain about an issue.
@@ -138,13 +164,61 @@ class IssueBot(WordsClient):
         q.addListeningFixer(issuePerson)
         issuePerson.notifyText("YOU ARE NOW LISTENING ON %r."% message)
 
+    ## Comments
+
+    def _loadIssueAnd(self, issueNumber, issuePerson, callback, *args, **kw):
+        self.repository.loadIssue(int(issueNumber)).addCallbacks(
+            callback,self._ebLoadIssue, callbackArgs=(issuePerson,)+args,
+            callbackKeywords=kw, errbackArgs=(issueNumber,issuePerson))
+    def _ebLoadIssue(self, failure, issueNumber, issuePerson):
+        issuePerson.notifyText("no such issue: #%s" % issueNumber)
+
+    def issue_comment(self, issuePerson, message):
+        number, comment = message.split(" ", 1)
+        self._loadIssueAnd(number, issuePerson, self._cbCommentIssue, comment)
+
+    def _cbCommentIssue(self, issue, issuePerson, comment):
+        issue.addComment(issuePerson, comment)
+        issuePerson.notifyText("Added comment.")
+
+    def issue_showlogs(self, issuePerson, message):
+        i = self.repository.issues[int(message)] # XXX cheating
+        for state in i.states:
+            if hasattr(state, 'transcript'):
+                for tim, vname, message, metadata in state.transcript.chat:
+                    issuePerson.notifyText("%s <%s> %s" % (tim, vname, message))
+
+    def issue_list(self, issuePerson, message):
+        q = self.repository.getQueue(message)
+        now = time.time()
+        for issue in q.issues:
+            t = issue.comments[0][2] # time
+            minutes = int((now - t) / (60)) % 60
+            hours = int((now - t) / (60 * 60))
+            issuePerson.notifyText("#%s - %0.2d:%0.2d - %s - %s" % (
+                issue.number, hours, minutes,
+                issue.getFinder().perspectiveName,
+                issue.comments[0][1]
+                ))
+
     def issue_next(self, issuePerson, message):
+        if message:
+            qname = message
+        else:
+            qname = 'default'
         r = self.repository
-        q = r.getQueue(message)
+        q = r.getQueue(qname)
         q.respondToNextIssue(issuePerson)
         issuePerson.notifyText("YOU HAVE RESPONDED TO AN ISSUE.")
 
+    def issue_needstask(self, issuePerson, message):
+        number, taskcomment
+        self._loadIssueAnd(number, issuePerson, self._cbNeedsTask, taskcomment)
 
+    def _cbNeedsTask(self, issue, issuePerson, taskcomment):
+        t = self.repository.buildTask(issuePerson, taskcomment)
+        t.addDependentIssue(issue)
+        issuePerson.notifyText("ADDED")
 
 def createBot():
     return IssueBot()

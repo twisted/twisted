@@ -3,6 +3,7 @@
 from twisted.spread import pb
 from twisted.internet import defer
 from twisted.issues.issue import Issue, IssueQueue, InQueue
+from twisted.issues.task import Task
 from twisted.python.components import Interface
 
 class IssueException(Exception):
@@ -130,6 +131,7 @@ class IssueRepository(pb.Service):
         pb.Service.__init__(self, serviceName, application)
         self.currentIssueNumber = 0
         self.issues = {}                # issueNumber: issue
+        self.tasks = {}                # taskNumber: task
         self.queues = {}                # name: queue
         self.buildQueue("default")
 
@@ -147,6 +149,12 @@ class IssueRepository(pb.Service):
         self.issues[n] = issue
         return issue
 
+    def buildTask(self, issuePerson, description):
+        n = self.getIssueNumber()
+        t = Task(issuePerson, description, n)
+        self.tasks[n] = t
+        return t
+
     def queueIssue(self, issueFinder, description, queueName="default"):
         """Insert a new issue into an existing queue. Raises KeyError if queue
         does not exist."""
@@ -157,6 +165,7 @@ class IssueRepository(pb.Service):
         self.currentIssueNumber = self.currentIssueNumber + 1
         return self.currentIssueNumber
 
+
     def loadIssue(self, issueNumber):
         """Load an issue from this repository.
         """
@@ -166,3 +175,14 @@ class IssueRepository(pb.Service):
             return defer.fail()
         else:
             return defer.succeed(issue)
+
+
+    def loadTask(self, taskNumber):
+        """Load an issue from this repository.
+        """
+        try:
+            task = self.tasks[taskNumber]
+        except KeyError:
+            return defer.fail()
+        else:
+            return defer.succeed(task)

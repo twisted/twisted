@@ -30,9 +30,7 @@ class IssueQueue:
     def respondToNextIssue(self, fixer):
         """Respond to the next issue in the queue.
         """
-        i = self.issues[-1]
-        s = InConversation(fixer)
-        i.setState(s)
+        self.issues[0].setState(InConversation(fixer))
     
 class Issue(common.Commentable):
     """A thing that can be worked on; the base component of pretty much
@@ -125,6 +123,16 @@ class InTransfer(IssueState):
     def __init__(self, fixer1, fixer2):
         self.fixer1 = fixer1
         self.fixer2 = fixer2
+
+    def entered(self):
+        self.fixer2.notifyText("THERE IS AN ISSUE WAITING FOR YOU: #%s" %
+                               self.issue.number)
+        # self.fixer2.inTransfer[self.issue.number] = self.issue
+
+    def exited(self):
+        self.fixer1.notifyText("ISSUE #%s HAS BEEN REDEEMED" %
+                               self.issue.number)
+        # del self.fixer2.inTransfer[self.issue.number]
 
     def getStatusMessage(self):
         return "being transferred to %s" % (self.fixer2.perspectiveName)

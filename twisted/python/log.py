@@ -337,5 +337,18 @@ def startLogging(file):
     logfile = sys.stdout = sys.stderr = Log(file, logOwner)
     msg("Log opened.")
 
+class NullFile:
+    def write(self, data):
+        pass
+
+    def flush(self):
+        pass
+
+def discardLogs():
+    """Throw away all logs.
+    """
+    global logfile
+    logfile = Log(NullFile(), logOwner)
+
 
 __all__ = ["logOwner", "Log", "Logger", "startLogging", "msg", "write"]
