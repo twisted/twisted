@@ -17,6 +17,7 @@
 
 from pyunit import unittest
 from twisted.manhole import service
+from twisted.internet import app
 
 class DummyManholeClient:
     zero = 0
@@ -35,8 +36,12 @@ class DummyManholeClient:
     def getMessages(self):
         return self.messages[self.zero:]
 
-class DummyApp:
+class DummyApp(app.Application):
     name = 'None'
+    
+    def __init__(self):
+        pass
+    
     def addService(self, serv):
         pass
 
