@@ -23,6 +23,7 @@ import struct
 
 from twisted.python import components, reflect
 from twisted.world import structfile
+from twisted.python.compat import True, False
 
 class ITypeMapper(components.Interface):
     """

@@ -21,6 +21,7 @@ import sys
 from struct import pack
 
 from twisted.python import reflect
+from twisted.python.compat import True, False
 
 from twisted.world import hashless
 from twisted.world.util import Backwards
