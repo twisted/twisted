@@ -38,7 +38,7 @@ def loadApplication(config, passphrase):
                                config['source'] or config['file'])
     if config['python']:
         style = 'python'
-    if config['xml']:
+    elif config['xml']:
         style = 'xml'
     elif config['source']:
         style = 'source'
@@ -205,7 +205,7 @@ def loadPersisted(filename, kind, passphrase):
     if kind == 'python':
         return sob.loadValueFromFile(filename, 'application', passphrase)
     else:
-        return sob.load(fiename, kind, passphrase)
+        return sob.load(filename, kind, passphrase)
 
 def guessType(filename):
     ext = os.path.splitext(filename)[1]
@@ -217,6 +217,6 @@ def guessType(filename):
         '.etap': 'pickle',
         '.tas': 'source',
         '.etas': 'source',
-        '.tax': 'xml'
+        '.tax': 'xml',
         '.etax': 'xml'
     }[ext]
