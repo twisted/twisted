@@ -195,8 +195,8 @@ def makeBallCore(opts):
     ver = opts['base-version']
     tdir = "Twisted-%s" % (ver,)
     if not os.path.exists('Twisted.exp'):
-        raise DirectoryDoesntExist("MakeBalls: Twisted.exp doesn't exist"
-                                   % tdir)
+        raise DirectoryDoesntExist("MakeBalls: Twisted.exp doesn't exist")
+
 
     os.makedirs(os.path.join(tdir, 'twisted'))
     os.makedirs(os.path.join(tdir, 'bin'))
@@ -212,6 +212,25 @@ def makeBallCore(opts):
     ln -s `pwd`/Twisted.exp/doc/core %(tdir)s/doc
     ln -s `pwd`/Twisted.exp/bin/* %(tdir)s/bin
     rm -f %(tdir)s/bin/{%(twisted_subprojects)s}
+    ''' % locals())
+
+    sh('tar cjhf %(tdir)s.tar.bz2 %(tdir)s' % locals())
+
+def makeBallSumo(opts):
+    ver = opts['base-version']
+    tdir = "TwistedSumo-%s" % (ver,)
+    if not os.path.exists('Twisted.exp'):
+        raise DirectoryDoesntExist("MakeBalls: Twisted.exp doesn't exist")
+                                  
+
+    os.makedirs(tdir)
+    sh('''
+    ln -s `pwd`/Twisted.exp/bin %(tdir)s/
+    ln -s `pwd`/Twisted.exp/twisted %(tdir)s/
+    ln -s `pwd`/Twisted.exp/doc %(tdir)s/
+    ln -s `pwd`/Twisted.exp/README %(tdir)s/
+    ln -s `pwd`/Twisted.exp/LICENSE %(tdir)s/
+    ln -s `pwd`/Twisted.exp/setup.py %(tdir)s/
     ''' % locals())
 
     sh('tar cjhf %(tdir)s.tar.bz2 %(tdir)s' % locals())
