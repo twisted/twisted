@@ -85,7 +85,7 @@ class SSHUnixClientFactory(protocol.ClientFactory):
 class SSHUnixServerFactory(protocol.Factory):
     def __init__(self, conn):
         self.conn = conn
-        
+
     def buildProtocol(self, addr):
         return SSHUnixServerProtocol(self.conn)
 
@@ -252,6 +252,12 @@ class SSHUnixServerProtocol(SSHUnixProtocol):
         SSHUnixProtocol.__init__(self)
         self.isClient = 0
         self.conn = conn
+
+    def connectionLost(self, reason):
+        for channel in self.conn.channels.values():
+            if isinstance(channel, SSHUnixChannel) and channel.unix == self:
+                log.msg('forcibly closing %s' % channel)
+                self.conn.sendClose(channel)
 
     def haveChannel(self, channelID):
         return self.conn.channels.has_key(channelID)
