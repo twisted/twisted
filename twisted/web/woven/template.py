@@ -122,6 +122,12 @@ class NodeNodeMutator(NodeMutator):
         return self.data
 
 
+class NoneNodeMutator(NodeMutator):
+    def generate(self, request, node):
+        child = self.d.createTextNode("None")
+        node.parentNode.replaceChild(child, node)
+
+
 class StringNodeMutator(NodeMutator):
     """A StringNodeMutator replaces the node that is passed in to generate
     with the string it adapts.
@@ -159,6 +165,7 @@ class WebWidgetNodeMutator(NodeMutator):
 
 
 components.registerAdapter(NodeNodeMutator, minidom.Node, INodeMutator)        
+components.registerAdapter(NoneNodeMutator, type(None), INodeMutator)        
 components.registerAdapter(StringNodeMutator, type(""), INodeMutator)        
 components.registerAdapter(WebWidgetNodeMutator, widgets.Widget, INodeMutator)        
 

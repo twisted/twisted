@@ -50,5 +50,6 @@ class WController(mvc.Controller, resource.Resource):
 
 def registerControllerForModel(controller, model):
     components.registerAdapter(controller, model, mvc.IController)
-    components.registerAdapter(controller, model, resource.IResource)
+    if components.implements(controller, resource.IResource):
+        components.registerAdapter(controller, model, resource.IResource)
 

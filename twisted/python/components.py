@@ -151,6 +151,7 @@ def getAdapterClassWithInheritance(klass, interfaceClass, default):
                 return adapterClass
     else:
         return adapterClass
+    return default
 
 
 def getAdapter(obj, interfaceClass, default,

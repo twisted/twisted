@@ -44,7 +44,7 @@ class DefaultWidget(widgets.Widget):
 
 
 class WView(template.DOMTemplate):
-    def getNodeController(self, request, node):
+    def getNodeController(self, request, node, model):
         controllerName = node.getAttribute('controller')
         
         # Look up an InputHandler
@@ -60,15 +60,26 @@ class WView(template.DOMTemplate):
             if controllerFactory is None:
                 nodeText = node.toxml()
                 raise NotImplementedError, "You specified controller name %s on a node, but no factory_%s method was found in %s." % (controllerName, controllerName, namespaces + [input])
+        else:
+            # If no "controller" attribute was specified on the node, see if 
+            # there is a IController adapter registerred for the model.
+            controllerFactory = components.getAdapterClassWithInheritance(
+                                model.__class__, 
+                                mvc.IController, 
+                                controllerFactory)
         return controllerFactory(self.model)
     
-    def getNodeView(self, request, node):     
+    def getNodeView(self, request, node, model):
         view = None   
         viewName = node.getAttribute('view')
 
         # Look up either a widget factory, or a dom-mutating method
         if viewName:
-            viewMethod = getattr(self, 'factory_' + viewName, None)
+            namespaces = [self]
+            for namespace in namespaces:
+                viewMethod = getattr(namespace, 'factory_' + viewName, None)
+                if viewMethod is not None:
+                    break
             if viewMethod is None:
                 view = getattr(widgets, viewName, None)
                 if view is not None:
@@ -79,18 +90,23 @@ class WView(template.DOMTemplate):
                 nodeText = node.toxml()
                 raise NotImplementedError, "You specified view name %s on a node, but no factory_%s method was found in %s or %s." % (viewName, viewName, self, widgets)
         else:
-            view = node
+            # If no "view" attribute was specified on the node, see if there
+            # is a IView adapter registerred for the model.
+            view = components.getAdapterClassWithInheritance(
+                                model.__class__, 
+                                mvc.IView, 
+                                None)
+            if view is not None:
+                view = view(self.model)
+            else:
+                view = node
         return view
 
     def handleNode(self, request, node):
         if not hasattr(node, 'getAttribute'): # text node?
             return node
-
-        id = node.getAttribute('model')
         
-        controller = self.getNodeController(request, node)
-        result = self.getNodeView(request, node)
-
+        id = node.getAttribute('model')
         submodel_prefix = node.getAttribute("_submodel_prefix")
         if submodel_prefix and id:
             submodel = "/".join([submodel_prefix, id])
@@ -100,7 +116,17 @@ class WView(template.DOMTemplate):
             submodel = submodel_prefix
         else:
             submodel = ""
-
+        
+        if submodel:
+            modelGetter = DefaultWidget(self.model)
+            modelGetter.setSubmodel(submodel)
+            model = modelGetter.getData()
+        else:
+            model = None
+        
+        controller = self.getNodeController(request, node, model)
+        result = self.getNodeView(request, node, model)
+        
         controller.setView(result)
         if not getattr(controller, 'submodel', None):
             controller.setSubmodel(submodel)
@@ -115,7 +141,7 @@ class WView(template.DOMTemplate):
         success, data = controller.handle(request)
         if success is not None:
             self.handlerResults[success].append((controller, data, node))
-
+        
         returnNode = self.dispatchResult(request, node, result)
         if not isinstance(returnNode, defer.Deferred):
             self.recurseChildren(request, returnNode)
