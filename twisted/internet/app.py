@@ -39,6 +39,7 @@ from twisted.python.runtime import platform
 from twisted.cred.authorizer import DefaultAuthorizer
 from twisted.python.reflect import Accessor
 from twisted.python.util import OrderedDict
+from twisted.python.compat import StringTypes
 
 # Sibling Imports
 import main, defer, error
@@ -404,7 +405,7 @@ class Application(log.Logger, styles.Versioned,
         toRemove = []
         for t in self.tcpPorts:
             port, factory, backlog, interface = t
-            if isinstance(port, types.StringTypes):
+            if isinstance(port, StringTypes):
                 self.unixPorts.append((port, factory, backlog))
                 toRemove.append(t)
         for t in toRemove:

@@ -16,7 +16,9 @@
 # USA
 #
 from __future__ import nested_scopes
-""" Flow ... asynchronous data flows
+
+""" 
+Flow ... asynchronous data flows
 
     This module provides a mechanism for using async data flows through
     the use of generators.  While this module does not use generators in
@@ -33,10 +35,13 @@ from __future__ import nested_scopes
             lst = flow.wrap([1,2,3])
             nam = flow.wrap(['one','two','three'])
             while 1:
-                yield lst; yield nam
+                # these are flow.Iterable
+                yield lst
+                yield nam
                 if lst.stop or nam.stop:
                     return
                 yield flow.Cooperate()
+                # this is a result
                 yield (lst.result, nam.result)
         
         def consumer():
@@ -60,25 +65,32 @@ from __future__ import nested_scopes
         (3, 'three')
         
 """
+
+import time, types
 from twisted.python.failure import Failure
-from twisted.python.compat import StopIteration, iter
-import types
+from twisted.python.compat import StopIteration, iter, isinstance
+from twisted.internet import defer, reactor
 
 def wrap(obj, *trap):
     """ Wraps various objects for use within a flow """
     if isinstance(obj, Stage):
         return obj
-    if type(obj) is types.ClassType:
-        obj = obj()
-    try:
-        obj = iter(obj)
-        return Iterable(iter(obj),trap)
-    except TypeError: pass
-    if callable(obj):
-        return Callable(obj, trap)
-    if hasattr(obj, 'addBoth'):
+
+    if isinstance(obj, defer.Deferred):
         return DeferredWrapper(obj)
-    assert 0, "cannot find an appropriate wrapper"
+
+    try:
+        # this is going to pass for 'foo', is that good?
+        return Iterable(iter(obj), *trap)
+    except TypeError: 
+        # iteration over non-sequence 
+        pass
+
+    if callable(obj):
+        # who would use this?
+        return Callable(obj, *trap)
+
+    raise ValueError, "A wrapper is not available for %r" % (obj,)
 
 class Instruction:
     """ Has special meaning when yielded in a flow """
@@ -133,24 +145,32 @@ class Stage(Instruction):
                      // handle iterable.result
 
     """      
-    def __init__(self, *trap):
+    def __init__(self, *trap, **kwargs):
         self._ready = 0
         self._trap = trap
+        self.chunked = kwargs.get('chunked', 0)
         self.stop   = 0
         self.result = None
+    
     def __iter__(self):
         return self
+
     def isFailure(self):
         """ return a boolean value if the result is a Failure """ 
         return isinstance(self.result, Failure)
+
     def next(self):
         """ return the current result, raising failures if specified """
-        if self.stop: raise StopIteration()
+        if self.stop:
+            raise StopIteration()
         assert self._ready, "must yield flow stage before calling next()"
         self._ready = 0
         if self.isFailure(): 
+            # this raises an exception or returns an exception
+            # is that right?
             return self.result.trap(*self._trap)
         return self.result
+
     def _yield(self):
         """ executed during a yield statement by previous stage
 
@@ -162,6 +182,7 @@ class Stage(Instruction):
         """
         self._ready = 1
         self.result = None
+
 
 class Wrapper(Stage):
     """ Basic wrapper for callable objects
@@ -185,6 +206,7 @@ class Wrapper(Stage):
         self._callable   = callable
         self._next_stage = None
         self._stop_next  = 0
+
     def _yield_next(self, result):
         """ Fetch the next value from the underlying callable """
         if isinstance(result, Instruction):
@@ -193,11 +215,11 @@ class Wrapper(Stage):
                 return Continue
             return result
         # this blows the non-deferred depenency...
-        from twisted.internet import defer
         if isinstance(result, defer.Deferred):
             self._next_stage = DeferredWrapper(result)
             return Continue
         self.result = result
+
     def _yield(self):
         """ executed during a yield statement """
         Stage._yield(self)
@@ -208,7 +230,8 @@ class Wrapper(Stage):
             next = self._next_stage
             if next:
                 result = next._yield()
-                if result: return result
+                if result: 
+                    return result
                 self._next_stage = None 
             try:
                 ret = self._yield_next(self._callable())
@@ -218,6 +241,8 @@ class Wrapper(Stage):
             except StopIteration:
                 self.stop = 1
             except Failure, fail:
+                # failure.trap() success
+                # returns exceptions, not failures!
                 self.result = fail
                 self._stop_next = 1
             except:
@@ -259,6 +284,7 @@ class Merge(Stage):
             self._queue.append(wrap(stage))
         self._cooperate = None
         self._timeout = None
+
     def _yield(self):
         Stage._yield(self)
         while self._queue:
@@ -297,6 +323,7 @@ class Block(Stage):
     def __init__(self, stage):
         Stage.__init__(self)
         self._stage = wrap(stage)
+
     def next(self):
         """ fetch the next value from the Stage flow """
         stage = self._stage
@@ -304,8 +331,7 @@ class Block(Stage):
             result = stage._yield()
             if result:
                 if isinstance(result, Cooperate):
-                    from time import sleep
-                    sleep(result.timeout)
+                    time.sleep(result.timeout)
                     continue
                 raise TypeError("Invalid stage result")
             return stage.next()
@@ -330,13 +356,15 @@ class DeferredWrapper(Stage):
         the deferred has finished
     """
     def __init__(self, deferred, *trap):
-        Stage.__init__(self, trap)
+        Stage.__init__(self, *trap)
         deferred.addBoth(self._callback)
         self._cooperate = CooperateDeferred(deferred)
         self._result    = None
         self._stop_next = 0
+
     def _callback(self, res):
         self._result = res
+
     def _yield(self):
         Stage._yield(self)
         if self.stop or self._stop_next:
@@ -379,8 +407,8 @@ class Threaded(Stage):
             self._append = self._buffer.extend
         else:
             self._append = self._buffer.append
-        from twisted.internet.reactor import callInThread
-        callInThread(self._process)
+        reactor.callInThread(self._process)
+
     def _process(self):
         """ pull values from the iterable and add them to the buffer """
         try:
@@ -391,10 +419,12 @@ class Threaded(Stage):
             try:
                 while 1:
                     self._append(self._iterable.next())
-            except StopIteration: pass
+            except StopIteration:
+                pass
             except: 
                 self._buffer.append(Failure())
         self._stop = 1
+
     def _yield(self):
         """ update locals from the buffer, or return Cooperate """
         Stage._yield(self)
@@ -406,8 +436,6 @@ class Threaded(Stage):
             return
         return self._cooperate
 
-
-from twisted.internet import defer
 class Deferred(defer.Deferred):
     """ wraps up a Stage with a Deferred interface
  
@@ -424,6 +452,7 @@ class Deferred(defer.Deferred):
             reactor.iterate()
 
     """
+
     def __init__(self, stage, failureAsResult = 0):
         """initialize a DeferredFlow
         @param stage:           a flow stage, iterator or generator
@@ -436,8 +465,8 @@ class Deferred(defer.Deferred):
         self.failureAsResult = failureAsResult
         self._results = []
         self._stage = wrap(stage)
-        from twisted.internet import reactor
         reactor.callLater(0, self._execute)
+
     def _execute(self, dummy = None):
         cmd = self._stage
         while 1:
@@ -451,7 +480,6 @@ class Deferred(defer.Deferred):
                     if isinstance(result, CooperateDeferred):
                         result.deferred.addBoth(self._execute)
                     else:
-                        from twisted.internet import reactor
                         reactor.callLater(result.timeout, self._execute)
                     return
                 raise TypeError("Invalid stage result")
@@ -469,32 +497,39 @@ class Deferred(defer.Deferred):
 
 class QueryIterator:
     """ Converts a database query into a result iterator """
-    def __init__(self, pool, sql, fetchmany = 0, fetchall=0):
-        self.curs    = None
-        self.sql     = sql
-        self.pool    = pool
+
+    def __init__(self, pool, sql, fetchmany=0, fetchall=0):
+        self.curs = None
+        self.sql = sql
+        self.pool = pool
         if fetchmany: 
             self.next = self.next_fetchmany
             self.chunked = 1
         if fetchall:
             self.next = self.next_fetchall
             self.chunked = 1  
+
     def __iter__(self):
         conn = self.pool.connect()
         self.curs = conn.cursor()
         self.curs.execute(self.sql)
         return self
+
     def next_fetchall(self):
         if self.curs:
             ret = self.curs.fetchall()
             self.curs = None
             return ret
         raise StopIteration
+    
     def next_fetchmany(self):
         ret = self.curs.fetchmany()
-        if not ret: raise StopIteration
+        if not ret:
+            raise StopIteration
         return ret
+
     def next(self):
         ret = self.curs.fetchone()
-        if not ret: raise StopIteration
+        if not ret: 
+            raise StopIteration
         return ret

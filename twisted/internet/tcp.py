@@ -70,6 +70,7 @@ from twisted.internet.error import CannotListenError
 
 # Compatability
 from twisted.python.compat import *
+from twisted.python.compat import StringTypes
 
 # Sibling Imports
 import abstract
@@ -507,7 +508,7 @@ class Port(base.BasePort):
 class Connector(base.BaseConnector):
     def __init__(self, host, port, factory, timeout, bindAddress, reactor=None):
         self.host = host
-        if isinstance(port, types.StringTypes):
+        if isinstance(port, StringTypes):
             try:
                 port = socket.getservbyname(port, 'tcp')
             except socket.error, e:

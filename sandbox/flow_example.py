@@ -144,7 +144,9 @@ class FlowResource(resource.Resource):
         flow.Deferred(render(req))
         return server.NOT_DONE_YET
 
-root = FlowResource()
-site = server.Site(root)
-reactor.listenTCP(8081,site)
-reactor.run()
+if __name__=='__main__':
+    print "visit http://localhost:8081/ to view the example"
+    root = FlowResource()
+    site = server.Site(root)
+    reactor.listenTCP(8081,site)
+    reactor.run()

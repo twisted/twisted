@@ -30,6 +30,7 @@ from twisted.internet import defer
 from twisted.internet.defer import maybeDeferred
 from twisted.python import log, components, util, failure
 from twisted.python.compat import *
+from twisted.python.compat import StringTypes
 from twisted.cred import identity, error, perspective
 
 import base64, binascii, operator, re, string, time, types, rfc822, random
@@ -2303,7 +2304,7 @@ def collapseNestedLists(items):
     for i in items:
         if i is None:
             pieces.extend([' ', 'NIL'])
-        elif isinstance(i, types.StringTypes):
+        elif isinstance(i, StringTypes):
             if '\n' in i or '\r' in i:
                 i = '\r\n'.join(i.splitlines()) + '\r\n'
                 pieces.extend([' ', '{', str(len(i)), '}', IMAP4Server.delimiter, i])

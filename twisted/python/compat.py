@@ -69,12 +69,10 @@ else:
     dict = dict
 
 
-# This actually injects StringTypes into types!
-# is this proper twisted.compat behavior??
 try:
-    types.StringTypes
+    StringTypes = types.StringTypes
 except AttributeError:
-    types.StringTypes = (types.StringType, types.UnicodeType)
+    StringTypes = (types.StringType, types.UnicodeType)
 
 try:
     bool = bool
@@ -216,7 +214,7 @@ except ImportError:
             raise ValueError, "unsupported address family"
 
 try:
-    assert isinstance('foo', types.StringTypes)
+    assert isinstance('foo', StringTypes)
 except TypeError:
     def isinstance(object, class_or_type_or_tuple):
         if type(class_or_type_or_tuple) == types.TupleType:
@@ -226,12 +224,12 @@ except TypeError:
             return 0
         else:
             return __builtin__.isinstance(object, class_or_type_or_tuple)
-    assert isinstance('foo', types.StringTypes)
+    assert isinstance('foo', StringTypes)
 else:
     isinstance = isinstance
 
 __all__ = ['dict', 'inet_pton', 'inet_ntop', 'isinstance', 
-           'True', 'False', 'bool', 'StopIteration', 'iter']
+           'True', 'False', 'bool', 'StopIteration', 'iter', 'StringTypes']
 
 #if __name__ == '__main__':
 #    print repr(inet_pton(socket.AF_INET, '1.2.3.4'))

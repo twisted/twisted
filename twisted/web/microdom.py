@@ -42,11 +42,11 @@ from cStringIO import StringIO
 from twisted.protocols.sux import XMLParser, ParseError
 from twisted.python import reflect
 from twisted.python.reflect import Accessor
-from twisted.python.compat import isinstance
+from twisted.python.compat import isinstance, StringTypes
 
 # create NodeList class
 from types import ListType as NodeList
-from types import StringTypes, UnicodeType
+from types import UnicodeType
 import sys
 dictsAreNotSequences=0
 try:

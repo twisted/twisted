@@ -21,6 +21,7 @@
 from twisted.protocols import basic
 from twisted.internet import protocol, defer, reactor
 from twisted.python import log, components
+from twisted.python.compat import isinstance, StringTypes
 
 # System imports
 import time, string, re, base64, types
@@ -69,9 +70,9 @@ class Address:
 
     tstring = re.compile(r'''( # A string of
                           (?:"[^"]*" # quoted string
-			  |\\. # backslash-escaped characted
-			  |''' + atom + r''' # atom character
-			  )+|.) # or any single character''',re.X)
+                          |\\. # backslash-escaped characted
+                          |''' + atom + r''' # atom character
+                          )+|.) # or any single character''',re.X)
     atomre = re.compile(atom) # match any one atom character
 
     def __init__(self, addr):
@@ -152,17 +153,17 @@ class User:
         self.dest = Address(destination)
         self.helo = helo
         self.protocol = protocol
-	if type(orig) in types.StringTypes:
-	    self.orig = Address(orig)
-	else:
+        if isinstance(orig, StringTypes):
+            self.orig = Address(orig)
+        else:
             self.orig = orig
 
     def __getstate__(self):
-	"""Helper for pickle.
+        """Helper for pickle.
 
         protocol isn't picklabe, but we want User to be, so skip it in
         the pickle.
-	"""
+        """
         return { 'dest' : self.dest,
                  'helo' : self.helo,
                  'protocol' : None,
@@ -172,15 +173,15 @@ class User:
         return str(self.dest)
 
     def __getattr__(self,attr):
-	attrmap = { 'name' : 'local', 'domain' : 'domain' }
-	if attr in attrmap:
-	    warnings.warn("User.%s is deprecated, use User.dest.%s instead" %
-		(attr, attrmap[attr]), category=DeprecationWarning,
-		stacklevel=2)
-	    return getattr(self.dest, attrmap[attr])
-	else:
-	    raise AttributeError, ("'%s' object has no attribute '%s'" %
-		(type(self).__name__, attr))
+        attrmap = { 'name' : 'local', 'domain' : 'domain' }
+        if attr in attrmap:
+            warnings.warn("User.%s is deprecated, use User.dest.%s instead" %
+                (attr, attrmap[attr]), category=DeprecationWarning,
+                stacklevel=2)
+            return getattr(self.dest, attrmap[attr])
+        else:
+            raise AttributeError, ("'%s' object has no attribute '%s'" %
+                (type(self).__name__, attr))
 
 class IMessage(components.Interface):
     """Interface definition for messages that can be sent via SMTP."""
@@ -285,13 +286,13 @@ class SMTP(basic.LineReceiver):
 
     mail_re = re.compile(r'''\s*FROM:\s*(?P<path><> # Empty <>
                          |<''' + qstring + r'''> # <addr>
-			 |''' + qstring + r''' # addr
-			 )\s*(\s(?P<opts>.*))? # Optional WS + ESMTP options
-			 $''',re.I|re.X)
+                         |''' + qstring + r''' # addr
+                         )\s*(\s(?P<opts>.*))? # Optional WS + ESMTP options
+                         $''',re.I|re.X)
     rcpt_re = re.compile(r'\s*TO:\s*(?P<path><' + qstring + r'''> # <addr>
                          |''' + qstring + r''' # addr
-			 )\s*(\s(?P<opts>.*))? # Optional WS + ESMTP options
-			 $''',re.I|re.X)
+                         )\s*(\s(?P<opts>.*))? # Optional WS + ESMTP options
+                         $''',re.I|re.X)
 
     def do_MAIL(self, rest):
         if self.__from:

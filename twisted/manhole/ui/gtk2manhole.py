@@ -5,7 +5,7 @@
 # Note: Because GTK 2.x Python bindings are only available for Python 2.2,
 # this code may use Python 2.2-isms.
 
-__version__ = '$Revision: 1.5 $'[11:-2]
+__version__ = '$Revision: 1.6 $'[11:-2]
 
 from twisted import copyright
 from twisted.internet import reactor
@@ -14,6 +14,7 @@ from twisted.spread import pb
 from twisted.spread.ui import gtk2util
 
 from twisted.manhole.service import IManholeClient
+from twisted.python.compat import isinstance, StringTypes
 
 # The pygtk.require for version 2.0 has already been done by the reactor.
 import gtk
@@ -242,7 +243,7 @@ class ManholeClient(components.Adapter, pb.Referenceable):
 
     def remote_console(self, messages):
         for kind, content in messages:
-            if isinstance(content, types.StringTypes):
+            if isinstance(content, StringTypes):
                 self.original.output.append(content, kind)
             elif (kind == "exception") and isinstance(content, failure.Failure):
                 content.printTraceback(_Notafile(self.original.output,

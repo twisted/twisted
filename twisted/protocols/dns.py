@@ -186,7 +186,7 @@ class Name:
     __implements__ = (IEncodable,)
 
     def __init__(self, name=''):
-        assert isinstance(name, types.StringTypes)
+        assert isinstance(name, compat.StringTypes)
         self.name = name
 
     def encode(self, strio, compDict=None):
