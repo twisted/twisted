@@ -1,328 +1,280 @@
-<?xml version="1.0"?>
-<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
-    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html><head><title>Woven</title></head><body>
 
-<html xmlns="http://www.w3.org/1999/xhtml">
-  <head>
-    <title>Developing Componentized Web Applications using Woven, the Web Object Visualization Environment</title>
-  </head>
+<h1>Woven</h1>
 
-  <body>
-    <h1>Developing Componentized Web Applications using Woven, the Web Object Visualization Environment</h1>
+<p>Woven is a Web Application Framework for building highly interactive web applications, written in Python. It separates HTML Templates from page-generation logic written in Python, and uses the Model View Controller (MVC) pattern to create dynamic HTML on the fly. Woven is higher level framework that depends on the Twisted Web package of the Twisted Framework.</p>
 
+<h2>Twisted Overview</h2>
 
-<h2>Introduction</h2>
+  <p>Twisted is a framework written in Python for building network applications. A core design feature of Twisted is its asynchronous networking nature. Because of the high overhead and locking requirements of threads, Twisted chooses to instead use the highly efficient network event notification mechanisms provided by the OS in the form of the C <code>poll()</code> or <code>select()</code> calls. Twisted uses the Reactor pattern, which is an event-loop style of programming which facilitates asynchronous programming.</p>
 
-<p>
-DOMTemplate solves the problem of separating logic from
-presentation, and allows the template manipulation logic to be expressed in
-Python code form using the DOM API. However, the DOM API is too low
-level and it quickly becomes tedious to use to build complicated HTML
-structures.
-</p>
+<p>Asynchronous programming requires breaking your program into smaller function chunks that trigger an operation which may potentially take a long time (for example, a network request) and return. In order to continue the flow of your code when the operation has completed, you must register a <q>callback function</q> which will be called with the resulting data when it is ready. Twisted includes a generalized callback handling mechanism, Deferred, discussed in <a href="http://www.twistedmatrix.com/documents/historic/2003/pycon/deferex/deferex.html">the Deferred execution paper</a>.</p>
 
-<p>
-Twisted's solution is to provide a Model-View-Controller based
-component framework, which allows you to construct complex HTML
-<q>Views</q> out of many small interacting components, or 
-<code class="API" base="twisted.web">woven.widgets</code>.
-</p>
+<p>However, since writing Woven applications already involves breaking your functions into small, reusable Model-View-Controller components, Woven is able to handle the asynchronous nature of Twisted for you. By writing Models which provide data, potentially asynchronously, and Views which render data when it is ready, you are doing all that is required to act as a good citizen within the Twisted framework.</p>
 
-<p>
-Instead of manipulating DOM objects which represent low-level HTML
-Nodes, you construct and compose the model data that your page will
-be based on, and specify views which will be responsible for
-formatting the model data as HTML. Using widgets defined in
-twisted.web.woven.widgets, and higher-level widgets that you define
-yourself for an application-specific purpose, python data structures
-such as strings, integers, lists, dicts, and custom subclasses of
-<code class="API" base="twisted.web">woven.model.Model</code>, can be adapted
-implicitly or explicitly to subclasses of 
-<code class="API" base="twisted.web">woven.view.View</code> (such as subclasses
-of <code class="API" base="twisted.web">woven.widgets.Widget</code>) for
-display in HTML.
-</p>
+<h2>Twisted Web Object Publishing and Woven</h2>
 
-<h2>Model-View-Controller</h2>
+  <p>Twisted includes a Web Server that handles HTTP requests and returns dynamic pages. It is useful when used in conjunction with Apache for serving static files such as Images. Apache can be set up to forward a specific URL via <code>ProxyPass</code> to the Twisted Web server. Twisted Web uses the concept of Object Publishing, similar to Zope, where there is a root Python Object below which alll other Objects representing URLs are located.</p>
 
-<p>
-Model View Controller is a development strategy which
-involves breaking up program logic into three separate domains:
-Model objects, whose job it is to contain/produce data; View objects, whose
-job it is to present this data to the user; and Controller objects,
-whose job it is to handle events such as <q>user input from a form</q> and
-<q>fetch URL</q> and update the model with the user's desired changes. When the
-controller finishes updating the model, it tells the model to notify all views
-that the model has changed so they may rerender themselves accordingly.
-</p>
+<p>When a request comes in to Twisted Web, Twisted Web splits the URL into
+segments and begins looking for Objects below the root by calling getChild
+tail-recursively. For example, if the URL
+<code>http://example.com/foo/bar/baz</code> is requested, Twisted splits this
+into the list of path segments <code class="python">['foo', 'bar',
+'baz']</code>. It then calls <code class="python">root.getChild('foo')</code>, calls <code class="python">getChild('bar')</code> on the result, calls <code class="python">getChild('baz')</code> on the second result, and finally calls <code class="python">render(request)</code> on the result of the final <code class="python">getChild</code> call.</p>
 
-<p>
-Woven's implementation of MVC uses 
-<code class="API" base="twisted.web">twisted.python.components</code>, 
-the interface and component registry, to loosely couple the interacting objects.
-</p>
+<p>For more details about Twisted Web, see <a href="web-overview.html">Overview
+of Twisted Web</a>.</p>
 
-<h2>Hello World with Page</h2>
+<h2>Smalltalk Model-View-Controller Overview</h2>
 
-<p>Let's start with the canonical Hello World example. We will use an instance
-of <code class="API" base="twisted.web">woven.page.Page</code> as our 
-<code class="API" base="twisted.web.resource">IResource</code> implementor. 
-<code class="API" base="twisted.web.resource">IResource</code> describes the
-interface that objects are required to implement in order to publish themselves
-over the web in twisted.web. We will be instanciating a 
-<code class="API" base="twisted.web">Page</code> instance in an .rpy
-script. An rpy is like a CGI script -- each time you visit the script, it is
-executed. However, an rpy script is merely responsible for instanciating a
-<code class="API" base="twisted.web.resource">Resource</code> object to handle
-the request and assigning it to a variable named
-<q>resource</q>. This 
-<code class="API" base="twisted.web.resource">Resource</code> object will then
-be called upon to render the request.
-</p>
+  <p>Originally developed for Smalltalk, the MVC design pattern is a flexible mechanism for creating both GUI and web application user interfaces. The primary advantage of the MVC pattern is separation of business logic from presentation details and provides a <em>loose coupling</em> between an application's Model (state) and View (presentation). All of this makes code reuse easier and enables a division of labor between application design and user interface design, albeit at the expense of a little extra work.</p>
 
-<a href="listings/HelloWorld/HelloWorld.rpy" class="py-listing">Listing 1: HelloWorld.rpy: Hello World Resource Script</a>
+<p>A <q>Model</q> is an object that represents or encapsulates an application's business logic or state. The model contains both data and business logic code, but does not contain presentation or rendering code.</p>
 
-<p>
-Next, let's take a look at the HTML template woven will look up to render this
-request into HTML. Woven defines three special attributes, <code>model=</code>,
-<code>view=</code>, and <code>controller=</code>, which it uses to decide which
-python code to invoke while rendering the page. 
-</p>
+<p>A <q>View</q> is an object that contains presentation or rendering code, but does not contain business logic code.</p>
 
-<a href="listings/HelloWorld/HelloWorld.html" class="html-listing">Listing 2: HelloWorld.xhtml: Hello World Web Template</a>
+<p>Finally, a <q>Controller</q> is a dispatcher object that mediates flow between the Model and the View. In traditional Smalltalk MVC, the Controller is responsible for polling the Mouse and Keyboard and converting the user's actions (Click a button, for example) into high-level events (Change the Model data from 0 to 1, and redraw a View which represents this Model to the user).</p>
 
-<p>
-In the template, we have simply indicated that woven should replace certain
-nodes with the results of rendering a widget on the current model. The syntax
-<code>model="."</code> indicates that woven should use the current model no
-matter what its
-name, similar to filesystem syntax. Since we aren't explicitly stating
-<em>which</em> view widget should render the model with a <code>view=</code>
-attribute, an
-<code class="API" base="twisted.web.woven.interfaces">IView</code> adapter is
-looked up from the global registry implicitly. In this case,
-the model is a string, so an instance of 
-<code class="API" base="twisted.web.woven">widgets.Text</code> is constructed
-which converts the python string into a DOM text node and inserts it into the
-DOM.
-</p>
+<h2>Woven Model-View-Controller Overview</h2>
 
-<p>
-Next, let's look at an example of rendering a page with a more complicated
-model. We're going to make several pieces of data available to the template
-under different names. We will refer to these pieces of data as
-<q>Submodels</q>, since they are contained in a 
-<code class="API" base="twisted.web.woven.model">Model</code> instance.
-</p>
+  <p>In Woven, a Model is a python object that holds the data that will eventually be rendered by a view object into a portion of an HTML page. Woven Models may be any Python object; Woven accomplishes this using <q><code>IModel</code> Adapters</q>:Components. Since different Python objects may act as <q>Containers</q> using different semantics, <code>IModel</code> adapters are required to allow Woven to address all Container objects uniformly. For example, Dictionaries are indexed using string keys. Lists are indexed using integer keys. Objects provide references to other objects using dot syntax (<code>foo.bar</code>), not square bracket syntax (<code>foo['bar']</code>). <code>IModel</code> Adapters are provided for all the basic Python types, Dictionaries, Lists, Integers, Floats, Strings, and Instances, and work behind the scenes to provide Model data to your Pages.</p>
 
-<p>
-<a href="listings/HelloWorld/HelloWorld2.rpy" class="py-listing">Listing 3: HelloWorld2.rpy: Setting up submodels with a resource script</a>
-</p>
+<p>In Woven, a View is comprised of a Page object and many Widget objects. A Page object loads a template file (an XHTML file) that contains references to Widget objects (python objects that replace specific portions of the DOM created from the XHTML file). A single XHTML template references one Page object, but many Widget objects.</p>
 
-<p>
-We need a place to gather all the Model data together so the View has access to
-it. <code class="API" base="twisted.web">woven.model.AttributeModel</code> is a
-good container to place other models in,
-and to do so we simply call setSubmodel. Notice that setSubmodel takes a key
-and a value, the name the submodel will be available as to the template, and
-the actual submodel data.
-</p>
+<p>Widgets come in two flavors: local and global. Local Widgets are specific to only one template file, because the logic they perform is very specific, while global Widgets are general enough to replace placeholder content in many template files. Local Widgets are defined on the Page class, by defining a method with the prefix <code>wvupdate_</code>. Global Widgets are defined as subclasses of the Widget class.</p>
 
-<p>
-Woven comes with various widgets which are registered as 
-<code class="API" base="twisted.web.woven.interfaces">IView</code> implementors
-for
-the basic python types (strings, lists, and dictionaries) which are very
-useful. Most of the time, you can simply prepare the data for rendering by
-converting it into strings and lists using an rpy or custom Model subclass, and
-then referencing these strings and lists in your template.
-</p>
+<p>In Woven, Page objects act as the default Controller object, similar to Servlets in Struts. ((please explain further?)) Since the Web is Request-Response and not event-driven like a Smalltalk application, the most basic event to be handled from the user is <q>URL Requested</q>. The root Page object contains logic for locating the correct Page object to handle the request. Once this object is located, it handles the <q>url requested</q> event by rendering itself into HTML. Thus, the Page object acts as both the main View and Controller for this event.</p>
 
-<p>
-This time, in our HTML template, we're going to have to be a little more
-explicit when specifying view widgets to render the model data. It's generally
-a good idea to always explicitly state the name of the view widget you want to
-handle a node; but it's convenient that you don't have to, for example if
-you're rendering a custom model/view pair where it doesn't make sense to use
-any other view widgets to render a given model instance.
-</p>
+<p>However, unlike Struts, Woven also supports more Smalltalk-like Controller programming. With a Controller, it is possible to register a Python event handling function which will be called when a specific JavaScript event occurs in the Browser. These events are relayed to the server out-of-band (without causing the main page to refresh) and can be handled asynchronously. Thus, it is possible to program Web Applications which act more like traditional Smalltalk Desktop Applications.</p>
 
-<p>
-<a href="listings/HelloWorld/HelloWorld2.html" class="html-listing">Listing 4: HelloWorld2.html: Explicitly stating view widget names in the template</a>
-</p>
+<p>Often in Woven, it is convenient for a single object to have both the View and Controller responsibilities, though this is not strictly necessary. It is only useful to split out the Controller logic from the View if the request argument handling is general enough to be reusable across multiple pages.</p>
 
-<p>
-As you can see from the template, the 
-<code class="API" base="twisted.web.woven.widgets">List</code> widget requires
-specially tagged
-nodes inside of it's node in order to operate properly. These nodes are called
-<q>pattern</q> nodes, and each widget can choose to require certain patterns, or
-look for certain optional patterns, during the course of rendering itself. In
-the list widget's case, it looks for the pattern <q>listItem</q> and makes one
-copy of it for each element in the list it is rendering. There are two ways to
-specify a patten node: 
-<ul>
-    <li>By putting a <code>pattern="patternName"</code> attribute on a node</li>
-    <li>By putting a <code>patternName + 'Of'="modelName"</code> attribute on a
-        node</li>
-</ul>
-This is easier to show by example than to explain; look at the template for an
-example of the second usage.
-</p>
-
-<p>
-Look at the documentation for each individual widget to see what patterns a
-<code class="API" base="twisted.web.woven.widgets">Widget</code> supports. The 
-<code class="API" base="twisted.web.woven.widgets">List</code> widget is
-particularly useful; it supports the following patterns:
-</p>
+<h2>Overview of Woven Main Concepts</h2>
 
 <ul>
-    <li>listItem</li>
-    <li>listHeader</li>
-    <li>listFooter</li>
-    <li>emptyList</li>
+    <li><a href="#templates">XHTML Templates</a> must be valid XHTML documents.
+    They provide a skeleton html page with placeholder content. Any element on
+    the page which is destined for dynamic content must include special
+    attributes to specify the name of model and view, like this: <code>&lt;tag
+    model="aModel" view="aView"&gt;placeholder text&lt;/tag&gt;</code></li>
+    
+    <li><a href="#models">Model</a> objects provide data for display in a web page.</li>
+    
+    <li><a href="#views">View</a> objects are given a DOM node created from the HTML template and model data, and are responsible for inserting the data into the node using the DOM api.</li>
+    
+    <li><a href="#controllers">Controller</a> objects accept input from the request and update the Model objects with the new input.</li>
+
+    <li><a href="#pages">Page</a> objects tie a model tree to a template, and provide view and controller factories to the template. This is the entry point of a web page built using Woven.</li>
+
+    <li><a href="#rendering">Rendering</a> occurs when a web browser visits a Page. Woven recurses the template looking for nodes to handle, connects the correct Model object to a View and a Controller, and invokes them to render the node.</li>
+
+    <li><a href="#furtherconcepts">Further Concepts</a> contains links to pages with more in depth information about Woven components.</li>
+
 </ul>
 
-<p>
-Notice a few things about this template. First, we are explicitly stating the
-view widget we wish to render each node with a <code>view=</code> attribute.
-All these view widgets are defined in <code>woven/widgets.py</code>, the
-default woven widgets library. You can also create your own widget libraries
-for your views, as well as defining subwidget names on more complicated views
-that are only valid within that views's HTML node. Procedures for doing so will
-be described in later HOWTOs.
-</p>
+<h2>In Depth Pages about Woven components</h2>
 
-<p>
-You now know how to create a woven HTML template, and how to populate this
-template with data in the form of simple python data types. However, often you
-will wish to render a dynamic data source, such as a database, or a complex
-data source such as a python object. One way to render this data over the web
-is to create a class which implements 
-<code class="API" base="twisted.web.woven.model">IModel</code>, the interface
-woven uses to expose data to view widgets.
-</p>
+<ul>
+  <li><a href="web-overview.html">Twisted Web</a></li>
+  <li><a href="modelindepth.html">Model</a></li>
+  <li><a href="viewindepth.html">View</a></li>
+  <li><a href="controller.html">Controller</a></li>
+  <li><a href="pageindepth.html">Page</a></li>
+  <li><a href="livepage.html">LivePage</a></li>
+  <li><a href="formindepth.html">Form</a></li>
+  <li><a href="guardindepth.html">Guard</a></li>
+</ul>
 
-<h2>Implementing IModel</h2>
+<img title="Overview of the Woven rendering process" src="../img/woven_overview.png" />
 
-<p>
-The <code class="API" base="twisted.web.woven.model">IModel</code> interface is
-documented in <code class="API">twisted.web.woven.interfaces</code>. It
-describes the interfaces Models must implement in order to play well with the
-rest of the woven MVC framework. If you are inheriting from
-<code class="API">twisted.web.woven.model.Model</code>, most of these
-interfaces will be implemented for you. The interfaces that we will be most
-interested in implementing are those that are designed to be overridden for
-customization, 
-<code class="API" base="twisted.web.woven.interfaces.IModel">getData</code> and
-<code class="API" base="twisted.web.woven.interfaces.IModel">setData</code>.
-</p>
+<h2>Templates</h2><a name="templates" />
 
-<p>
-<a href="listings/TwistedQuotes/wovenquotes.py" class="py-listing">Listing 5: wovenquotes.py: Implementing IModel to provide custom Model behavior</a>
-</p>
+  <p>Templates in Woven are XHTML documents, marked up with four special woven attributes:</p>
 
-<p>
-We have created a simple Model which wraps a quoter that was created in a
-previous HOWTO. The constructor stores the filename and creates a new
-FortuneQuoter instance.
-</p>
+<ul>
+    
+  <li><code>model=</code> indicates which model object will be associated with this node.</li>
 
-<p>
-Implementing 
-<code class="API" base="twisted.web.woven.interfaces.IModel">getData</code> 
-is as simple as delegating to our FortuneQuoter instance.
-<code>getQuote</code> returns a string. In the template, we will specify that
-the <code class="API" base="twisted.web.woven.widgets">Text</code>
-widget should render the data returned by the quote model, so the quote shows
-up in the template. But first, we need to get an instance of MQuote into the
-model namespace, using an rpy:
-</p>
+  <li><code>view=</code> indicates which view object will be associated with this node.</li>
 
-<p>
-<a href="listings/TwistedQuotes/wovenquotes.rpy" class="py-listing">Listing 6: wovenquotes.rpy: Tying together a custom Model subclass and an html template with an rpy</a>
-</p>
+  <li><code>controller=</code> indicates which controller object will be associated with this node.</li>
 
-<p>
-This time, instead of using an instance of AttributeModel as our main model
-namespace, we have chosen to simply use a dictionary. Since a dictionary
-doesn't implement 
-<code class="API" base="twisted.web.woven.interfaces">IModel</code>, an
-attribute lookup occurs which wraps the dictionary in an instance of 
-<code class="API" base="twisted.web.woven.model">DictionaryModel</code>, which
-does implement 
-<code class="API" base="twisted.web.woven.interfaces">IModel</code>. Then all
-of the dictionary keys will be available as submodel names.
-</p>
+  <li><code>pattern=</code> marks a node so it may be located by the View code, without the view knowing where the pattern= node is located or what style the pattern node contains.</li>
+</ul>
 
-<p>
-<a href="listings/TwistedQuotes/WovenQuotes.xhtml" class="html-listing">Listing 7: WovenQuotes.xhtml: WovenQuotes Template</a>
-</p>
-
-<p>
-Woven templates are designed to minimize the amount of logic contained in the
-HTML template. A woven template is a collection of HTML nodes that are tagged
-with various strings which woven uses to locate python components that are then
-responsible for producing the final output. In this case, we joined the output
-of our <code class="API" base="twisted.web.woven.model">Model</code> subclass' 
-<code class="API" base="twisted.web.woven.interfaces.IModel">getData</code> (a
-string) with the <code class="API" base="twisted.web.woven.widgets">Text</code> 
-widget (which knows how to render strings into DOM).
-</p>
-
-<p>
-The same theory is used for input handling by 
-<code class="API" base="twisted.web.woven.controller">Controllers</code>. In
-the template, we
-have placed the following input node:
-</p>
+<h3>HTML Template example</h3>
 
 <pre>
-&lt;input type="text" name="quote" model="quote" controller="Anything" /&gt;
+  &lt;html&gt;
+    &lt;body&gt;
+      &lt;h3 model="name" view="Text" /&gt;
+      &lt;div model="stuff" view="List"&gt;
+        &lt;span pattern="listItem" view="Text" /&gt;
+      &lt;/div&gt;
+    &lt;/body&gt;
+  &lt;/html&gt;
 </pre>
 
-<p>
-When woven encounters this node, it will look up the submodel name
-<q>quote</q>, and will get an instance of MQuote. It will then look up the
-controller name
-<q><code>Anything</code></q>. 
-<code class="API" base="twisted.web.woven.input">Anything</code> is an 
-<code class="API" base="twisted.web.woven.input">InputHandler</code> (a
-specialized type of controller
-designed to handle web request input) defined in 
-<code class="API"> twisted.web.woven.input</code>.
-Similarly to <code class="API" base="twisted.web">woven.widgets</code>, 
-<code class="API" base="twisted.web">woven.input</code> is used as a default
-controller namespace when searching for controller names.
-</p>
+<h2>Models</h2><a name="models" />
 
-<p>
-The <code class="API" base="twisted.web.woven.input">Anything</code> 
-<code class="API" base="twisted.web.woven.input">InputHandler</code> looks in
-the request arguments for data with the same
-name as its model name. In this case, the model name is <q>quote</q>, and the
-input node also has the name <q>quote</q>. When the form is submitted, the
-value of the text field will be available in the request arguments as
-<q>quote</q>, and the
-<code class="API" base="twisted.web.woven.input">Anything</code> 
-<code class="API" base="twisted.web.woven.input">InputHandler</code> will find
-it. The 
-<code class="API" base="twisted.web.woven.input">Anything</code> 
-<code class="API" base="twisted.web.woven.input">InputHandler</code> then
-immediately
-calls <code>model.setData(value)</code> since it does no input validation.
-</p>
+  <p>Model objects are arranged in a tree. Each Woven page has a model tree with exactly one root. All data required for display by a Woven page is made available through named sub-models below this root.</p>
 
-<pre>
-Under construction.
+  <p>Any Python object may be used as a Woven model.</p>
+
+<p>An example of a model tree built using simple python data structures, Dictionaries, Lists, and Strings:</p>
+
+<pre class="python">
+    model = {
+      'name': 'Welcome to Woven',
+      'stuff': [
+        'Foo',
+        'Bar',
+        'Baz'
+      ]
+    }
 </pre>
-<p>
-Next up: Implementing custom view logic with wvupdate, and creating and using
-reusable <code class="API" base="twisted.web.woven.widgets">Widget</code> and 
-<code class="API" base="twisted.web.woven.input">InputHandler</code> subclasses
-with wvfactory and wcfactory.
-</p>
 
-</body>
-</html>
+<p>Each model in this tree has a submodel path which we can use to refer to it.</p>
+
+<ul>
+<li>The main dictionary is named <code>/</code></li>
+
+<li>The name string is named <code>/name</code></li>
+
+<li>The stuff list is named <code>/stuff</code></li>
+
+<li>The first element of the stuff list is named <code>/stuff/0</code></li>
+
+<li>The second element of the stuff list is named <code>/stuff/1</code></li>
+
+<li>The third element of the stuff list is named <code>/stuff/2</code></li>
+
+</ul>
+
+<h2>Views</h2><a name="views" />
+
+  <p>View objects are constructed each time a <code>view=</code> directive is encountered.</p>
+
+  <p>If <code>view="Text"</code> is specified on a <code>Node</code>, an instance of the <code>Text</code> class will be constructed to handle the node.</p>
+
+<p>An example View widget which simply inserts the model data into the DOM as a text node:</p>
+
+<pre class="python">
+class Text(view.View):
+    def generate(self, request, node, model):
+        data = str(model.getData())
+        newTextNode = request.d.createTextNode(data)
+        node.appendChild(newTextNode)
+        return node
+</pre>
+
+<p>The node that is returned from the generate method replaces the template node in the final HTML output.</p>
+
+<div class="note">In the above case, the same node that was passed in was returned, after being changed (<q>mutated</q>).</div>
+
+<p>The <code>View</code> object should return a DOM node that has been populated with the given model data.</p>
+
+<h2>Controllers</h2><a name="controllers" />
+
+  <p>Controllers are responsible for accepting input from the user and making appropriate changes to the model.</p>
+
+  <p>They are also responsible for ensuring that the data submitted by the user is valid before changing the model.</p>
+
+  <p>Very few applications need the flexibility of separate Controller objects. Often, is is more convenient and clear to place the Controller logic in the View, where the View can make sure it has the latest data before rendering itself.</p>
+
+<p>An example of a Controller which verifies the user's input before committing it to the Model:</p>
+
+<pre class="python">
+class NewName:
+    def handle(self, request):
+        newName = request.args.get("newname", None)
+        if newName is None:
+          ## The user did not submit the form; do not do anything.
+          return
+        if newName == "":
+          self.view.setError("Sorry, you didn't enter a name.")
+        else:
+          self.model.setData(newName)
+          ## Tell the model that we are done making changes to it, 
+          ## and Views that rely upon this model should rerender.
+          self.model.notify({'request': request})
+</pre>
+
+<h2>Pages</h2><a name="pages" />
+
+  <p>Pages are the entry point into a Woven application. The Page object accepts a request to render a web page from <code>twisted.web</code> and drives the page rendering process by parsing the template, locating Model objects in the tree, and invoking Controller and View objects.</p>
+
+<p>Page is a subclass of Resource, the <code>twisted.web</code> class representing an individual URL. Resource instances can be hooked up to the twisted.web HTTP server in several ways. The simplest way to hook up a Resource to a web URL is to start a static twisted.web server, which will serve files out of the given directory:</p>
+
+<pre class="shell">
+% mktap web --path /Users/dsp/Sites
+% twistd -nf web.tap
+</pre>
+
+<p>If you visit the URL <code>http://localhost:8080/</code>, you will see the
+contents of the directory you specified. To create a URL which will be served by
+an instance of <code>Page</code>, create a Python script. In this script,
+instantiate a <code>Page</code> instance, passing it a <code>Model</code> and a
+<code>Template</code>, and assign it to a variable named
+<code>resource</code>:</p>
+
+<pre class="python">
+from twisted.web.woven import page
+
+model = {'name': 'Welcome to Woven', 
+                'stuff': ['Foo', 'Bar', 'Baz']}
+  
+template = """&lt;html&gt;
+  &lt;body&gt;
+      &lt;h3 model="name" view="Text" /&gt;
+      &lt;div model="stuff" view="List"&gt;
+        &lt;p pattern="listItem" view="Text" /&gt;
+      &lt;/div&gt;
+    &lt;/body&gt;
+  &lt;/html&gt;
+"""
+
+  resource = page.Page(model, template=template)
+</pre>
+
+<p>Name this script <code>test.rpy</code> and place it in the directory served by <code>twisted.web</code>. Then visit the URL <code>http://localhost:8080/test.rpy</code> with your web browser, and you should see a page with the HTML-formatted model data.</p>
+
+<h3>Page rendering process</h3><a name="rendering" />
+
+  <p>When Woven renders a page, it first constructs a DOM (Document Object Model) which represents the template in memory using Python objects.</p>
+
+  <p>Woven then traverses the DOM, depth first, looking for nodes with woven directives (nodes with <code>model=</code>, <code>view=</code>, or <code>controller=</code> attributes).</p>
+
+  <p>When a directive node is encountered, Woven locates/constructs Model, View, and Controller objects to handle this node.</p>
+
+  <p>The Controller is then triggered by calling handle. The controller may take any action required of it to update the Model data, or may do nothing.</p>
+
+  <p>The View is then rendered by calling generate. The View object is passed a DOM node and a reference to the Model. The view then manipulates the DOM node, placing the Model data in it.</p>
+
+  <p>The DOM returned from the View is then traversed, looking for directives to handle.</p>
+
+  <p>When the entire DOM has been traversed and mutated, the DOM is converted to HTML and sent to the browser.</p>
+
+<img title="Example of Woven expanding the template (before processing)" src="../img/woven_before.png" />
+<img title="Example of Woven expanding the template (after processing)" src="../img/woven_after.png" />
+
+<h2>Further Reading</h2><a name="furtherconcepts" />
+
+<p><a href="web-overview.html">Twisted Web</a> is the Object-publishing web server woven uses to glue HTTP requests to Page rendering.</p>
+
+<p><a href="pageindepth.html">Page</a> objects are the IResource implementors in the Woven framework. They represent URL segments and drive the Woven template rendering process. They also contain convenient methods for specifying Page trees.</p>
+
+<p><a href="modelindepth.html">Model</a> objects provide data to Woven pages. Woven includes IModel adapters for the basic Python types and makes it easy for you to write your own Model classes and IModel adapters for your already-existing classes.</p>
+
+<p><a href="viewindepth.html">View</a> objects insert Model data into the DOM provided by the Template. They use DOM syntax for HTML generation, and have convenient syntax for locating and copying <code>pattern=</code> nodes abstractly.</p>
+
+<p><a href="controllerindepth.html">Controller</a> objects accept input from the request and update the Model data. Controller objects are optional; often your Page or View instances can contain the controller logic and still make sense. Controllers are for cases which are general enough to warrant validation and commit logic.</p>
+
+<p><a href="livepage.html">LivePage</a> objects allow you to build DHTML behaviors into your Woven pages using pure server-side Python.  It includes code for asynchronously forwarding client-side JavaScript events to the server without refreshing the page, and sending JavaScript to a page from the server after it has already been loaded.</p>
+
+<p><a href="formindepth.html">Form</a> is a woven module that makes it easy to create HTML forms from existing Python methods which take keyword arguments. It also supports basic input validation.</p>
+
+<p><a href="guardindepth.html">Guard</a> is a woven module that allows you to wrap your Page instances with login pages, to prevent unauthorized users from accessing them.</p>
+
+</body></html>
