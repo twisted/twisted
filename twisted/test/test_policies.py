@@ -328,12 +328,11 @@ class TestTimeout(unittest.TestCase):
 
         for i in range(10):
             reactor.iterate()
-            self.assert_(not p.timedOut)
+        self.failIf(p.timedOut)
 
         time.sleep(3.5)
-        for i in range(10):
-            reactor.iterate()
-            self.assert_(p.timedOut)
+        reactor.iterate()
+        self.failUnless(p.timedOut)
 
     def testNoTimeout(self):
         p = TimeoutTester()
@@ -342,7 +341,7 @@ class TestTimeout(unittest.TestCase):
 
         for i in range(10):
             reactor.iterate()
-            self.assert_(not p.timedOut)
+        self.failIf(p.timedOut)
 
         time.sleep(2)
         p.dataReceived('hello there')
@@ -350,9 +349,41 @@ class TestTimeout(unittest.TestCase):
 
         for i in range(10):
             reactor.iterate()
-            self.assert_(not p.timedOut)
+        self.failIf(p.timedOut)
 
         time.sleep(2)
         for i in range(10):
             reactor.iterate()
-            self.assert_(p.timedOut)
+        self.failUnless(p.timedOut)
+
+    def testResetTimeout(self):
+        p = TimeoutTester()
+        p.timeOut = None
+        s = StringIOWithoutClosing()
+        p.makeConnection(protocol.FileWrapper(s))
+        
+        p.resetTimeout(1)
+        self.assertEquals(p.timeOut, 1)
+        
+        for i in range(10):
+            reactor.iterate()
+        self.failIf(p.timedOut)
+
+        time.sleep(1.1)
+        reactor.iterate()
+        self.failUnless(p.timedOut)
+        p.connectionLost()
+    
+    def testCancelTimeout(self):
+        p = TimeoutTester()
+        p.timeOut = 5
+        s = StringIOWithoutClosing()
+        p.makeConnection(protocol.FileWrapper(s))
+        
+        p.resetTimeout(None)
+        self.assertEquals(p.timeOut, None)
+        
+        for i in range(10):
+            reactor.iterate()
+        self.failIf(p.timedOut)
+        p.connectionLost()
