@@ -3,6 +3,9 @@
 	* Releasing Twisted 0.99.0rc8, with a fix to tap2deb and 
 	slightly updated options documentation.
 
+	* Releasing Twisted 0.99.0rc9 with fixes to release-twisted
+	and doc/howto/options.html.
+
 2002-08-16  Christopher Armstrong  <radix@twistedmatrix.com>
 
 	* Releasing Twisted 0.99.0rc6, with some fixes to setup.py
