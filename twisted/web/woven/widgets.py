@@ -393,7 +393,7 @@ class Input(Widget):
 
     def generateDOM(self, request, node):
         mVal = self.getData()
-        if mVal:
+        if not self.attributes.has_key('value'):
             self['value'] = str(mVal)
         return Widget.generateDOM(self, request, node)
 
@@ -433,8 +433,20 @@ class Select(Input):
 
 class Option(Input):
     tagName = 'option'
+    def initialize(self):
+        self.text = ''
+
+    def setText(self, text):
+        """
+        Set the text to be displayed within the select menu.
+        """
+        self.text = text
+
+    def setValue(self, value):
+        self['value'] = str(value)
+
     def generateDOM(self, request, node):
-        self.add(Text(self.getData()))
+        self.add(Text(self.text or self.getData()))
         return Input.generateDOM(self, request, node)
 
 class Anchor(Widget):
