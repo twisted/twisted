@@ -13,8 +13,10 @@
 # You should have received a copy of the GNU Lesser General Public
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
-import pureldap
-import pureber
+
+"""LDAP protocol client"""
+
+from twisted.protocols import pureldap, pureber
 
 from twisted.python import mutablestring
 
@@ -100,12 +102,12 @@ class LDAPClient(protocol.Protocol):
         
 
 class LDAPOperation:
-    def __init__(self, ldapclient):
-        self.ldapclient=ldapclient
+    def __init__(self, client):
+        self.client=client
 
 class LDAPSearch(LDAPOperation):
     def __init__(self,
-                 ldapclient,
+                 client,
                  baseObject='',
                  scope=pureldap.LDAP_SCOPE_wholeSubtree,
                  derefAliases=pureldap.LDAP_DEREF_neverDerefAliases,
@@ -115,7 +117,7 @@ class LDAPSearch(LDAPOperation):
                  filter=pureldap.LDAPFilterMatchAll,
                  attributes=[],
                  ):
-        LDAPOperation.__init__(self, ldapclient)
+        LDAPOperation.__init__(self, client)
         r=pureldap.LDAPSearchRequest(baseObject=baseObject,
                                      scope=scope,
                                      derefAliases=derefAliases,
@@ -124,7 +126,7 @@ class LDAPSearch(LDAPOperation):
                                      typesOnly=typesOnly,
                                      filter=filter,
                                      attributes=attributes)
-        self.ldapclient.queue(r, self.handle_msg)
+        self.client.queue(r, self.handle_msg)
 
     def handle_msg(self, msg):
         if isinstance(msg, pureldap.LDAPSearchResultDone):
@@ -151,7 +153,7 @@ class LDAPSearch(LDAPOperation):
 
 class LDAPModifyAttributes(LDAPOperation):
     def __init__(self,
-                 ldapclient,
+                 client,
                  object,
                  modification):
         """
@@ -162,10 +164,10 @@ class LDAPModifyAttributes(LDAPOperation):
         modification is a list of LDAPModifications
         """
 
-        LDAPOperation.__init__(self, ldapclient)
+        LDAPOperation.__init__(self, client)
         r=pureldap.LDAPModifyRequest(object=object,
                                      modification=modification)
-        self.ldapclient.queue(r, self.handle_msg)
+        self.client.queue(r, self.handle_msg)
 
     def handle_msg(self, msg):
         assert isinstance(msg, pureldap.LDAPModifyResponse)
@@ -187,7 +189,7 @@ class LDAPModifyAttributes(LDAPOperation):
 
 class LDAPDeleteAttributes(LDAPModifyAttributes):
     def __init__(self,
-                 ldapclient,
+                 client,
                  object,
                  vals):
         """
@@ -204,5 +206,5 @@ class LDAPDeleteAttributes(LDAPModifyAttributes):
         values. """
 
         mod = pureldap.LDAPModification_delete(vals=vals)
-        LDAPModifyAttributes.__init__(self, ldapclient,
+        LDAPModifyAttributes.__init__(self, client,
                                       object, [mod])

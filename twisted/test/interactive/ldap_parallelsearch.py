@@ -14,18 +14,22 @@
 # You should have received a copy of the GNU Lesser General Public
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
-from twisted.protocols import ldap, pureber
+from twisted.protocols.ldap import ldapclient
+from twisted.protocols import pureber
 from twisted.internet import tcp
 import twisted.internet.main
 
-class LDAPSearchAndPrint(ldap.LDAPSearch):
-    def __init__(self, ldapclient, prefix):
-        ldap.LDAPSearch.__init__(self, ldapclient,
-                                 baseObject='dc=example, dc=com')
+CONNECTIONS=5
+SEARCHES=10
+
+class LDAPSearchAndPrint(ldapclient.LDAPSearch):
+    def __init__(self, client, prefix):
+        ldapclient.LDAPSearch.__init__(self, client,
+                                       baseObject='dc=example, dc=com')
         self.prefix=prefix
 
     def handle_success(self):
-        self.ldapclient.search_done(self.prefix)
+        self.client.search_done(self.prefix)
 
     def handle_entry(self, objectName, attributes):
         print "%s: %s %s"%(self.prefix, objectName,
@@ -36,10 +40,13 @@ class LDAPSearchAndPrint(ldap.LDAPSearch):
 
     def handle_fail(self, resultCode, errorMessage):
         print "%s: fail: %d: %s"%(self.prefix, resultCode, errorMessage or "Unknown error")
-        self.ldapclient.search_done(self.prefix)
+        self.client.search_done(self.prefix)
 
-class SearchALot(ldap.LDAPClient):
-    clients = map(str, xrange(0,20))
+class SearchALot(ldapclient.LDAPClient):
+    def __init__(self, callback, prefix):
+        self.clients = map(lambda x, prefix=prefix: prefix+x, map(str, xrange(0,SEARCHES)))
+        self.callback = callback
+        self.prefix = prefix
     
     def connectionMade(self):
         self.bind()
@@ -51,10 +58,22 @@ class SearchALot(ldap.LDAPClient):
     def search_done(self, prefix):
         self.clients.remove(prefix)
         if self.clients==[]:
-            twisted.internet.main.shutDown()
+            self.callback(self)
+
+
+
+conns = []
+
+def callback(searchalot):
+    conns.remove(searchalot)
+    if not conns:
+        twisted.internet.main.shutDown()
 
 def main():
-    tcp.Client("localhost", 389, SearchALot())
+    for x in xrange(0,CONNECTIONS):
+        s=SearchALot(callback, str(x)+'.')
+        conns.append(s)
+        tcp.Client("localhost", 389, s)
     twisted.internet.main.run()
 
 if __name__ == "__main__":
