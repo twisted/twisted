@@ -26,6 +26,10 @@ import socket # needed only for sync-dns
 import warnings
 from time import time
 from bisect import insort
+try:
+    import fcntl
+except ImportError:
+    fcntl = None
 
 from twisted.internet.interfaces import IReactorCore, IReactorTime, IReactorUNIX, IReactorThreads
 from twisted.internet.interfaces import IReactorTCP, IReactorUDP, IReactorSSL
@@ -533,6 +537,9 @@ class BasePort(abstract.FileDescriptor):
     def createInternetSocket(self):
         s = socket.socket(self.addressFamily, self.socketType)
         s.setblocking(0)
+        if fcntl and hasattr(fcntl, 'FD_CLOEXEC'):
+            old = fcntl.fcntl(s.fileno(), fcntl.F_GETFD)
+            fcntl.fcntl(s.fileno(), fcntl.F_SETFD, old | fcntl.FD_CLOEXEC)
         return s
 
 

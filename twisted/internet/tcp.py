@@ -34,6 +34,10 @@ import sys
 import select
 import operator
 import warnings
+try:
+    import fcntl
+except ImportError:
+    fcntl = None
 
 if os.name == 'nt':
     EPERM       = 10001
@@ -205,6 +209,9 @@ class BaseClient(Connection):
         """
         s = socket.socket(self.addressFamily, self.socketType)
         s.setblocking(0)
+        if fcntl and hasattr(fcntl, 'FD_CLOEXEC'):
+            old = fcntl.fcntl(s.fileno(), fcntl.F_GETFD)
+            fcntl.fcntl(s.fileno(), fcntl.F_SETFD, old | fcntl.FD_CLOEXEC)
         return s
 
 

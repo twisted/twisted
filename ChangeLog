@@ -1,3 +1,9 @@
+2003-02-24  Brian Warner  <warner@lothar.com>
+
+	* twisted/internet/tcp.py, base.py: set FD_CLOEXEC on all new
+	sockets (if available), so they will be closed when spawnProcess
+	does its fork-and-exec.
+
 2003-02-23  Kevin Turner  <acapnotic@twistedmatrix.com>
 
 	* twisted/scripts/manhole.py: 1.4 manhole now defaults to using a
