@@ -267,10 +267,9 @@ class LoopbackRelay(loopback.LoopbackRelay):
     def stopProducing(self):
         self.loseConnection()
 
-    def halfCloseConnection(self, read=False, write=False):
+    def loseWriteConnection(self):
         # HACK.
-        if write:
-            self.loseConnection()
+        self.loseConnection()
 
 class TestRequest(http.Request):
     def __init__(self, *args, **kwargs):

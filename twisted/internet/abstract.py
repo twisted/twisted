@@ -148,10 +148,6 @@ class FileDescriptor(log.Logger, styles.Ephemeral):
         # override in subclasses
         pass
     
-    def _closeReadConnection(self):
-        # override in subclasses
-        pass
-
     def writeConnectionLost(self, reason):
         # in current code should never be called
         self.connectionLost(reason)
@@ -215,14 +211,9 @@ class FileDescriptor(log.Logger, styles.Ephemeral):
                 self.startWriting()
                 self.disconnecting = 1
 
-    def halfCloseConnection(self, read=False, write=False):
-        if read and write:
-            self.loseConnection()
-        elif read:
-            self._closeReadConnection()
-        elif write:
-            self._writeDisconnecting = True
-            self.startWriting()
+    def loseWriteConnection(self):
+        self._writeDisconnecting = True
+        self.startWriting()
     
     def stopReading(self):
         """Stop waiting for read availability.

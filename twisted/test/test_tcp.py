@@ -12,6 +12,7 @@ from zope.interface import implements
 from twisted.trial import unittest, util
 from twisted.trial.util import spinWhile, spinUntil
 from twisted.trial.unittest import assert_
+from  twisted.python import log
 
 from twisted.internet import protocol, reactor, defer
 from twisted.internet import error
@@ -797,7 +798,6 @@ class HalfCloseTestCase(PortCleanerUpper):
         self.ports.append(p)
         spinUntil(lambda :p.connected)
 
-        # XXX we don't test server side yet since we don't do it yet
         d = protocol.ClientCreator(reactor, MyHCProtocol).connectTCP(
             p.getHost().host, p.getHost().port)
         self.client = util.wait(d)
@@ -826,7 +826,7 @@ class HalfCloseTestCase(PortCleanerUpper):
         t.write("hello")
         spinUntil(lambda :len(t._tempDataBuffer) == 0)
 
-        t.halfCloseConnection(write=True)
+        t.loseWriteConnection()
         spinUntil(lambda :t._writeDisconnected)
 
         self.assertEquals(client.closed, False)
@@ -845,27 +845,9 @@ class HalfCloseTestCase(PortCleanerUpper):
         self.assertEquals(f.protocol.closed, False)
         self.assertEquals(f.protocol.readHalfClosed, True)
 
-    def testCloseReadCloser(self):
-        client = self.client
-        f = self.f
-        client.transport.write("hello")
-
-        spinUntil(lambda :f.protocol.data == "hello")
-
-        f.protocol.transport.halfCloseConnection(read=True)
-
-        spinUntil(lambda :f.protocol.readHalfClosed)
-
-        client.transport.write(" world")
-        start = time.time()
-        spinWhile(lambda : time.time() - start < 0.5)
-
-        self.assertEquals(f.protocol.readHalfClosed, True)
-        self.assertEquals(f.protocol.data, "hello")
-
     def testWriteCloseNotification(self):
         f = self.f
-        f.protocol.transport.halfCloseConnection(write=True)
+        f.protocol.transport.loseWriteConnection()
 
         spinUntil(lambda :f.protocol.writeHalfClosed)
         spinUntil(lambda :self.client.readHalfClosed)
@@ -899,12 +881,46 @@ class HalfClose2TestCase(unittest.TestCase):
         f = self.f
         client.transport.write("hello")
         w = client.transport.write
-        client.transport.halfCloseConnection(write=True)
+        client.transport.loseWriteConnection()
         reactor.iterate()
         reactor.iterate()
         reactor.iterate()
         self.assertEquals(f.protocol.data, "hello")
         self.assertEquals(f.protocol.closed, True)
+
+
+class HalfClose3TestCase(PortCleanerUpper):
+    """Test half-closing connections where notification code has bugs."""
+
+    def setUp(self):
+        PortCleanerUpper.setUp(self)
+        self.f = f = MyHCFactory()
+        self.p = p = reactor.listenTCP(0, f, interface="127.0.0.1")
+        self.ports.append(p)
+        spinUntil(lambda :p.connected)
+
+        d = protocol.ClientCreator(reactor, MyHCProtocol).connectTCP(
+            p.getHost().host, p.getHost().port)
+        self.client = util.wait(d)
+        self.assertEquals(self.client.transport.connected, 1)
+
+    def aBug(self, *args):
+        raise RuntimeError, "ONO I AM BUGGY CODE"
+    
+    def testReadNotificationRaises(self):
+        self.f.protocol.readConnectionLost = self.aBug
+        self.client.transport.loseWriteConnection()
+        spinUntil(lambda :self.f.protocol.closed)
+        # XXX client won't be closed?! why isn't server sending RST?
+        # or maybe it is and we have a bug here.
+        self.client.transport.loseConnection()
+        log.flushErrors(RuntimeError)
+    
+    def testWriteNotificationRaises(self):
+        self.client.writeConnectionLost = self.aBug
+        self.client.transport.loseWriteConnection()
+        spinUntil(lambda :self.client.closed)
+        log.flushErrors(RuntimeError)
 
 
 try:

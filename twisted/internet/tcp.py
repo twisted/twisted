@@ -226,19 +226,6 @@ class _TLSMixin:
         
         return result
 
-    def _closeReadConnection(self):
-        # Keeps further reads from being received.
-        if not hasattr(self.socket, 'set_shutdown'):
-            raise NotImplemented("Cannot halfCloseConnection(read=True),"
-                   "because your pyOpenSSL doesn't support set_shutdown.  "
-                   "Please upgrade to ver 0.XX.")
-
-        self.socket.set_shutdown(SSL.RECEIVED_SHUTDOWN)
-        self.socket.sock_shutdown(0)
-        p = interfaces.IHalfCloseableProtocol(self.protocol, None)
-        if p:
-            p.readConnectionLost()
-
     def startReading(self):
         self._userWantRead = True
         if not self.readBlockedOnWrite:
@@ -383,31 +370,26 @@ class Connection(abstract.FileDescriptor):
             self.socket.close()
         except socket.error:
             pass
-
-    def _closeReadConnection(self):
-        if platformType == "win32":
-            # win32 will send a RST if there's anything in read buffer when
-            # we do the shutdown(), or if any data appears afterwards, so
-            # we need to handler this specially.
-            # http://msdn.microsoft.com/library/en-us/winsock/winsock/shutdown_2.asp
-            # Basicaly we should pretend to close it but really just continue
-            # reading and discarding data. TLS will need the same sort of code.
-            raise NotImplementedError, "XXX this is currently not supported on Windows."
-        self.socket.shutdown(0)
-        p = interfaces.IHalfCloseableProtocol(self.protocol, None)
-        if p:
-            p.readConnectionLost()
     
     def _closeWriteConnection(self):
         self.socket.shutdown(1)
         p = interfaces.IHalfCloseableProtocol(self.protocol, None)
         if p:
-            p.writeConnectionLost()
+            try:
+                p.writeConnectionLost()
+            except:
+                f = failure.Failure()
+                log.err()
+                self.connectionLost(f)                
 
     def readConnectionLost(self, reason):
         p = interfaces.IHalfCloseableProtocol(self.protocol, None)
         if p:
-            p.readConnectionLost()
+            try:
+                p.readConnectionLost()
+            except:
+                log.err()
+                self.connectionLost(failure.Failure())
         else:
             self.connectionLost(reason)
     

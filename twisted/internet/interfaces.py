@@ -973,12 +973,8 @@ class ITransport(Interface):
 class ITCPTransport(ITransport):
     """A TCP based transport."""
 
-    def halfCloseConnection(self, read=False, write=False):
-        """Half-close the TCP connection.
-
-        This can close either read side or write side of the
-        connection. Only write closes are visible to the other side of
-        the connection.
+    def loseWriteConnection(self):
+        """Half-close the write side of a TCP connection.
         
         If the protocol this is attached to implements
         IHalfCloseableProtocol, it will get notified when the

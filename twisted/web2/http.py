@@ -301,7 +301,7 @@ class Request(object):
     def _finished(self, x):
         """We are finished writing data."""
         # log request
-        log.msg(type=iweb.IRequest, object=self)
+        log.msg(interface=iweb.IRequest, request=self)
         self.chanRequest.finish()
 
     def _error(self, reason):
@@ -972,9 +972,6 @@ class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin, object):
         1)  Finish writing any buffered data, then close our write side.
         
             While doing so, read and discard any incoming data.
-            (On linux we could call halfCloseConnection(read=True)
-            instead, but on other OSes I think that'll also cause the RST
-            we're trying to avoid.)
         2)  When that happens (writeConnectionLost called), wait up to 20
             seconds for the remote end to close their write side (our read
             side).
@@ -985,7 +982,7 @@ class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin, object):
         """
         
         # Close write half
-        self.transport.halfCloseConnection(write=True)
+        self.transport.loseWriteConnection()
         
         # Throw out any incoming data
         self.dataReceived = self.lineReceived = lambda *args: None
