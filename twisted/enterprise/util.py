@@ -25,6 +25,7 @@ dbTypeMap = {
     "bigint": NOQUOTE,
     "bool": USEQUOTE,
     "boolean": USEQUOTE,
+    "bytea": USEQUOTE,
     "date": USEQUOTE,
     "int2": NOQUOTE,
     "int4": NOQUOTE,
@@ -60,6 +61,7 @@ def quote(value, typeCode, string_escaper=adbapi.safe):
     """
     q = dbTypeMap.get(typeCode, None)
     if q is None:
+
         raise DBError("Type %s not known" % typeCode)
     if value is None:
         return 'null'
@@ -71,7 +73,19 @@ def quote(value, typeCode, string_escaper=adbapi.safe):
                 value = '1'
             else:
                 value = '0'
-        if type(value) is not types.StringType:
+        if typeCode == "bytea":
+            l = ["'"]
+            for c in value:
+                i = ord(c)
+                if i == 92:
+                    l.append(c); l.append(c)
+                elif 32 <= i <= 126:
+                    l.append(c)
+                else:
+                    l.append("\%03o" % i)
+            l.append("'")
+            return "".join(l)
+        if not isinstance(value, types.StringType):
             value = str(value)
         return "'%s'" % string_escaper(value)
 

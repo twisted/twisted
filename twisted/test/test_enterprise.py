@@ -20,6 +20,8 @@ import os
 
 from twisted.enterprise.row import RowObject
 from twisted.enterprise.xmlreflector import XMLReflector
+from twisted.enterprise import util
+
 
 tableName = "testTable"
 childTableName = "childTable"
@@ -122,8 +124,15 @@ class EnterpriseTestCase(unittest.TestCase):
 
     def gotData(self, data):
         self.data = data
-    
 
 
-    
+class QuotingTestCase(unittest.TestCase):
+
+    def testQuoting(self):
+        for value, typ, expected in [
+            (12, "integer", "12"),
+            ("foo'd", "text", "'foo''d'"),
+            ("\x00abc\\s\xFF", "bytea", "'\\000abc\\\\s\\377'"),
+            ]:
+            self.assertEquals(util.quote(value, typ), expected)
 
