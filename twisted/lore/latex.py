@@ -202,7 +202,7 @@ class SectionLatexSpitter(LatexSpitter):
         self.visitNodeDefault(node)
         self.writer('\\label{%s}}\n' % self.filename)
 
-    mapStart_title = mapEnd_title = mapEnd_body = mapStart_body = \
+    mapStart_title = mapEnd_title = mapEnd_body = mapStart_body = None
     mapStart_html = None
 
 
