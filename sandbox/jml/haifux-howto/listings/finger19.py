@@ -124,13 +124,13 @@ class IIRCClientFactory(components.Interface):
 
 class IRCClientFactoryFromService(protocol.ClientFactory):
 
-   __implements__ = IIRCClientFactory,
+    __implements__ = IIRCClientFactory,
 
-   protocol = IRCReplyBot
-   nickname = None
+    protocol = IRCReplyBot
+    nickname = None
 
-   def __init__(self, service):
-       self.service = service
+    def __init__(self, service):
+        self.service = service
 
     def getUser(self, user):
         return self.service.getUser()
@@ -140,7 +140,7 @@ components.registerAdapter(IRCClientFactoryFromService, IFingerService)
 class UserStatusTree(resource.Resource):
 
     def __init__(self, service):
-        resource.Resource.__init__(self):
+        resource.Resource.__init__(self)
         self.putChild('RPC2.0', UserStatusXR(self.service))
         self.service = service
 
@@ -163,7 +163,7 @@ components.registerAdapter(UserStatusTree, IFingerService)
 class UserStatus(resource.Resource):
 
     def __init__(self, user, service):
-        resource.Resource.__init__(self):
+        resource.Resource.__init__(self)
         self.user = user
         self.service = service
 

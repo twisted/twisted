@@ -125,13 +125,13 @@ class IIRCClientFactory(components.Interface):
 
 class IRCClientFactoryFromService(protocol.ClientFactory):
 
-   __implements__ = IIRCClientFactory,
+    __implements__ = IIRCClientFactory,
 
-   protocol = IRCReplyBot
-   nickname = None
+    protocol = IRCReplyBot
+    nickname = None
 
-   def __init__(self, service):
-       self.service = service
+    def __init__(self, service):
+        self.service = service
 
     def getUser(self, user):
         return self.service.getUser()

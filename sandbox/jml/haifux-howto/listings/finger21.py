@@ -38,10 +38,10 @@ class FingerProtocol(basic.LineReceiver):
 class IFingerFactory(components.Interface):
 
     def getUser(self, user):
-        """Return a deferred returning a string""""
+        """Return a deferred returning a string"""
 
     def buildProtocol(self, addr):
-        """Return a protocol returning a string""""
+        """Return a protocol returning a string"""
 
 
 class FingerFactoryFromService(protocol.ServerFactory):
@@ -126,13 +126,13 @@ class IIRCClientFactory(components.Interface):
 
 class IRCClientFactoryFromService(protocol.ClientFactory):
 
-   __implements__ = IIRCClientFactory,
+    __implements__ = IIRCClientFactory,
 
-   protocol = IRCReplyBot
-   nickname = None
+    protocol = IRCReplyBot
+    nickname = None
 
-   def __init__(self, service):
-       self.service = service
+    def __init__(self, service):
+        self.service = service
 
     def getUser(self, user):
         return self.service.getUser()
@@ -257,4 +257,4 @@ application.listenTCP(80, server.Site(resource.IResource(f)))
 i = IIRCClientFactory(f)
 i.nickname = 'fingerbot'
 application.connectTCP('irc.freenode.org', 6667, i)
-application.listenTCP(8889, pb.BrokerFactory(IPerspectiveFinger(f))
+application.listenTCP(8889, pb.BrokerFactory(IPerspectiveFinger(f)))

@@ -48,14 +48,14 @@ class IRCReplyBot(irc.IRCClient):
 class UserStatusTree(resource.Resource):
 
     def __init__(self, service):
-        resource.Resource.__init__(self):
+        resource.Resource.__init__(self)
         self.service = service
 
     def render(self, request):
         d = self.service.getUsers()
         def formatUsers(users):
-            l = ["<li><a href="%s">%s</a></li> % (user, user)
-                for user in users]
+            l = ['<li><a href="%s">%s</a></li>' % (user, user)
+                 for user in users]
             return '<ul>'+''.join(l)+'</ul>'
         d.addCallback(formatUsers)
         d.addCallback(request.write)
@@ -69,7 +69,7 @@ class UserStatusTree(resource.Resource):
 class UserStatus(resource.Resource):
 
     def __init__(self, user, service):
-        resource.Resource.__init__(self):
+        resource.Resource.__init__(self)
         self.user = user
         self.service = service
 
