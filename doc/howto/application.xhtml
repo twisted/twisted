@@ -170,7 +170,7 @@ f = protocol.ServerFactory()
 f.protocol = wire.Echo
 
 # Create the (sole) service
-i = internet.TCPService(7, f)
+i = internet.TCPServer(7, f)
 
 # Tie the service to the application
 i.setServiceParent(s)
