@@ -24,6 +24,7 @@ class Options(usage.Options):
     optFlags = [
         ["tracebacks", "T", "Allow tracebacks to be sent over the network"],
     ]
+    zsh_actions = {"user" : "_users"}
 
     def opt_password(self, password):
         """Required.  '-' will prompt or read a password from stdin.

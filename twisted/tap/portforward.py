@@ -17,6 +17,7 @@ class Options(usage.Options):
           ["host", "h", "localhost","Set the host."],
           ["dest_port", "d", 6665,"Set the destination port."],
     ]
+    zsh_actions = {"host" : "_hosts"}
 
 def makeService(config):
     f = portforward.ProxyFactory(config['host'], int(config['dest_port']))

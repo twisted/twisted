@@ -85,6 +85,7 @@ class Options(usage.Options):
         ["datadir",    "d", "news.db",       "Root data storage path"],
         ["mailhost",   "m", "localhost",     "Host of SMTP server to use"]
     ]
+    zsh_actions = {"datadir" : "_dirs", "mailhost" : "_hosts"}
 
     def __init__(self):
         usage.Options.__init__(self)

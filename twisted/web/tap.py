@@ -21,7 +21,7 @@ class Options(usage.Options):
     optParameters = [["port", "p", "8080","Port to start the server on."],
                      ["logfile", "l", None, "Path to web CLF (Combined Log Format) log file."],
                      ["https", None, None, "Port to listen on for Secure HTTP."],
-                     ["certificate", "c", "server.pem", "SSL certificate to use for HTTPS."],
+                     ["certificate", "c", "server.pem", "SSL certificate to use for HTTPS. "],
                      ["privkey", "k", "server.pem", "SSL certificate to use for HTTPS."],
                      ]
     optFlags = [["personal", "",
@@ -31,6 +31,8 @@ class Options(usage.Options):
                 ["notracebacks", "n", "Display tracebacks in broken web pages. " +
                  "Displaying tracebacks to users may be security risk!"],
 ]
+    zsh_actions = {"logfile" : "_files -g '*.log'", "certificate" : "_files -g '*.pem'",
+                   "privkey" : "_files -g '*.pem'"}
 
 
     longdesc = """\

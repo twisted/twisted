@@ -31,6 +31,8 @@ class Options(usage.Options):
                       "Port to run the Words service on."],
                      ["web", "w", "8080",
                       "Port to run the web interface on."]]
+    zsh_actions = {"irchost" : "_hosts", "wordshost" : "_hosts",
+                   "webhost" : "_hosts", "user" : "_users"}
     bots = None
     def opt_bot(self, option):
         """Specify a bot-plugin to load; this should be in the format

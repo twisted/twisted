@@ -48,6 +48,8 @@ class ConchOptions(usage.Options):
                    #    " ".join(???),
                    }
     #zsh_actionDescr = {"logfile":"log file name", "random":"random seed"}
+    # user, host, or user@host completion similar to zsh's ssh completion
+    zsh_extras = ['1:host | user@host:{_ssh;if compset -P "*@"; then _wanted hosts expl "remote host name" _ssh_hosts && ret=0 elif compset -S "@*"; then _wanted users expl "login name" _ssh_users -S "" && ret=0 else if (( $+opt_args[-l] )); then tmp=() else tmp=( "users:login name:_ssh_users -qS@" ) fi; _alternative "hosts:remote host name:_ssh_hosts" "$tmp[@]" && ret=0 fi}']
 
     def __init__(self, *args, **kw):
         usage.Options.__init__(self, *args, **kw)

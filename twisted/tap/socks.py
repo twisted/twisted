@@ -17,6 +17,7 @@ class Options(usage.Options):
     optParameters = [["interface", "i", "127.0.0.1", "local interface to which we listen"],
                   ["port", "p", 1080, "Port on which to listen"],
                   ["log", "l", None, "file to log connection data to"]]
+    zsh_actions = {"log" : "_files -g '*.log'"}
 
     longdesc = "Makes a SOCKSv4 server."
 

@@ -40,6 +40,7 @@ class Options(usage.Options):
     #zsh_mutuallyExclusive = [("foo", "bar"), ("bar", "baz")]
     #zsh_actions = {"foo":'_files -g "*.foo"', "bar":"(one two three)"}
     #zsh_actionDescr = {"logfile":"log file name", "random":"random seed"}
+    zsh_extras = ["*:files:_files"]
 
     def __init__(self, *args, **kw):
         usage.Options.__init__(self, *args, **kw)

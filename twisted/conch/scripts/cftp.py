@@ -26,8 +26,7 @@ class ClientOptions(options.ConchOptions):
          cftp [options] [user@]host[:file [localfile]]
 """
     
-    optParameters = options.ConchOptions.optParameters + \
-                    [
+    optParameters = [
                     ['buffersize', 'B', 32768, 'Size of the buffer to use for sending/receiving.'],
                     ['batchfile', 'b', None, 'File to read commands from, or \'-\' for stdin.'],
                     ['requests', 'R', 5, 'Number of requests to make before waiting for a reply.'],
@@ -37,6 +36,7 @@ class ClientOptions(options.ConchOptions):
     #zsh_mutuallyExclusive = [("foo", "bar"), ("bar", "baz")]
     #zsh_actions = {"foo":'_files -g "*.foo"', "bar":"(one two three)"}
     #zsh_actionDescr = {"logfile":"log file name", "random":"random seed"}
+    zsh_extras = ['2::localfile:{if [[ $words[1] == *:* ]]; then; _files; fi}']
 
     def parseArgs(self, host, localPath=None):
         self['remotePath'] = ''

@@ -207,6 +207,7 @@ class GeneralOptions(usage.Options):
 #                   "macs":"(%s)" % " ".join(SSHClientTransport.supportedMACs)}
     zsh_actionDescr = {"localforward":"listen-port:host:port",
                        "remoteforward":"listen-port:host:port"}
+    zsh_extras = ["1:host | user@host: ", "*:command: "]
 
     identitys = []
     localForwards = []

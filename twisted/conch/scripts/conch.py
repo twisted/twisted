@@ -41,6 +41,7 @@ class ClientOptions(options.ConchOptions):
     #zsh_actions = {"foo":'_files -g "*.foo"', "bar":"(one two three)"}
     zsh_actionDescr = {"localforward":"listen-port:host:port",
                        "remoteforward":"listen-port:host:port"}
+    zsh_extras = ["*:command: "]
 
     localForwards = []
     remoteForwards = []

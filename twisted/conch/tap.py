@@ -28,6 +28,7 @@ class Options(usage.Options):
          ["moduli", "", None, "directory to look for moduli in "
                               "(if different from --data)"]
     ]
+    zsh_actions = {"data" : "_dirs", "moduli" : "_dirs"}
 
 
 def makeService(config):

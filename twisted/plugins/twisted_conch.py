@@ -12,7 +12,7 @@ TwistedSSH = _tapHelper(
 TwistedManhole = _tapHelper(
     "Twisted Manhole (new)",
     "twisted.conch.manhole_tap",
-    ("An interactive remove debugger service accessible via telnet "
+    ("An interactive remote debugger service accessible via telnet "
      "and ssh and providing syntax coloring and basic line editing "
      "functionality."),
     "manhole")

@@ -40,6 +40,7 @@ class Options(usage.Options):
         ["esmtp", "E", "Use RFC 1425/1869 SMTP extensions"],
         ["disable-anonymous", None, "Disallow non-authenticated SMTP connections"],
     ]
+    zsh_actions = {"hostname" : "_hosts"}
 
     longdesc = "This creates a mail.tap file that can be used by twistd."
 

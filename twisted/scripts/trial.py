@@ -103,10 +103,11 @@ class Options(usage.Options):
 
     #zsh_altArgDescr = {"foo":"use this description for foo instead"}
     #zsh_multiUse = ["foo", "bar"]
-    #zsh_mutuallyExclusive = [("foo", "bar"), ("bar", "baz")]
+    zsh_mutuallyExclusive = [("verbose", "bwverbose")]
     zsh_actions = {"reactor":"(%s)" % " ".join(app.reactorTypes.keys())}
     zsh_actionDescr = {"logfile":"log file name",
                        "random":"random seed"}
+    zsh_extras = ["*:file|module|package|TestCase|testMethod:_files -g '*.py'"]
 
     fallbackReporter = reporter.TreeReporter
     defaultReporter = None
