@@ -1,0 +1,29 @@
+#!/usr/bin/env python
+
+"""
+Usage: malyon map.rpl
+
+A simple script to start the 'inheritance' game.  (this presupposes
+the existance of a map-file 'inheritance.rpl')
+"""
+
+### Twisted Preamble
+# This makes sure that users don't have to set up their environment
+# specially in order to run these programs from bin/.
+import sys,os,string
+
+if string.find(os.path.abspath(sys.argv[0]),'Twisted') != -1:
+    sys.path.append(os.path.dirname(
+            os.path.dirname(os.path.abspath(sys.argv[0])))) 
+### end of preamble
+
+import cPickle
+r = cPickle.load(open(sys.argv[1]))
+
+from twisted.ui.text import ConsoleIntelligence
+ci = ConsoleIntelligence()
+
+r.protagonist.intelligence = ci
+
+ci.run_input()
+

@@ -1,0 +1,15 @@
+# Twisted.Web Embedded Python File
+
+request.write("""
+
+<HTML>
+    <HEAD><TITLE> Welcome To Twisted Python </title></head>
+
+    <BODY>
+    This is a demonstration of embedded python in a webserver.
+    </body>
+</html>
+""")
+
+
+

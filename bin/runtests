@@ -1,0 +1,30 @@
+#!/usr/bin/env python
+
+"""
+Usage: python RunTests.py
+
+Run a python GUI which starts up a UnitTestRunner for the Twisted
+test-suite.
+"""
+try:
+    import Tkinter
+except ImportError:
+    Tkinter = None
+### Twisted Preamble
+# This makes sure that users don't have to set up their environment
+# specially in order to run these programs from bin/.
+import sys,os,string
+
+if string.find(os.path.abspath(sys.argv[0]),'Twisted') != -1:
+    sys.path.append(os.path.dirname(
+        os.path.dirname(os.path.abspath(sys.argv[0])))) 
+### end of preamble
+
+if Tkinter is not None:
+    from pyunit import unittestgui
+    unittestgui.main('twisted.test.test_all.testSuite')
+else:
+    from pyunit import unittest
+    import test_twisted.test_all
+    runner = unittest.TextTestRunner()
+    runner.run(twisted.test.test_all.testSuite())

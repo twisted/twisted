@@ -1,0 +1,51 @@
+#!/usr/bin/env python
+
+"""
+Usage: gnusto mapName pickleName sourceName
+
+Takes the twisted.reality generated python source in a map ("mapName")
+and generates a pickle ("pickleName") as well as a source representation
+of it ("sourceName", which should be identical to the code in "mapName"
+unless manual changes were made to the source).
+"""
+
+### Twisted Preamble
+# This makes sure that users don't have to set up their environment
+# specially in order to run these programs from bin/.
+import sys,os,string
+
+if string.find(os.path.abspath(sys.argv[0]),'Twisted') != -1:
+    sys.path.append(os.path.dirname(
+        os.path.dirname(os.path.abspath(sys.argv[0])))) 
+### end of preamble
+
+print "initializing...",
+sys.stdout.flush()
+from twisted.reality import thing
+print "done."
+mapName, pickleName, sourceName = sys.argv[1:]
+print "loading %s..."%mapName,
+sys.stdout.flush()
+execfile(mapName)
+print "done."
+print "resolving %s..."%mapName,
+sys.stdout.flush()
+result.resolveAll()
+print "done."
+print "pickling to %s..." % pickleName,
+sys.stdout.flush()
+f = open(pickleName,'wb')
+from cPickle import dump
+# from pickle import dump
+dump(result,f)
+f.flush()
+f.close()
+del f
+print "done."
+print "sourcing to %s..." % sourceName,
+sys.stdout.flush()
+f = open(sourceName, 'wb')
+result.printSource(f.write)
+f.flush()
+f.close()
+print "done."

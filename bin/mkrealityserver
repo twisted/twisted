@@ -1,0 +1,48 @@
+#!/usr/bin/env python
+
+"""
+Usage: mkrealityserver map.rpl map.spl
+
+This will create a server set file, 'pump.spl' (suitable for usage
+with Serve.py), from the given Twisted Reality map pickle.
+"""
+
+### Twisted Preamble
+# This makes sure that users don't have to set up their environment
+# specially in order to run these programs from bin/.
+import sys,os,string
+
+if string.find(os.path.abspath(sys.argv[0]),'Twisted') != -1:
+    sys.path.append(os.path.dirname(
+        os.path.dirname(os.path.abspath(sys.argv[0])))) 
+### end of preamble
+
+from cPickle import load
+from twisted.reality import plumbing, reality
+from twisted.internet import tcp, main
+from twisted.web import server
+
+mapname, setName = sys.argv[1:]
+
+print 'Loading %s...'%mapname,
+sys.stdout.flush()
+reality._default = load(open(mapname,'rb'))
+print 'Loaded.'
+
+spigot = plumbing.Spigot(reality._default)
+site = server.Site(plumbing.Web(reality._default))
+
+app = main.Application("reality")
+app.addPort(tcp.Port(8080, site))
+app.addPort(tcp.Port(4040, spigot))
+
+from cPickle import dump
+print "Saving %s..."%setName,
+sys.stdout.flush()
+f = open(setName,'wb')
+dump(app, f, 1)
+f.flush()
+f.close()
+print "Done."
+
+

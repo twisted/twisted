@@ -1,0 +1,38 @@
+(This assumes that Twisted-*/bin is in your PATH.)
+
+    % runtests
+       (See our unit tests pass!! If you see a red bar after clicking
+       'start' here in a release version of this software, PLEASE
+       contact me at glyph@twistedmatrix.com)
+
+    % mkwebserver [--static <dirname>]
+
+        (w/o static it's a demo, w/ static it is a fast and simple
+        server)
+        (recommended <dirname> is "static", to serve the included static html)
+
+        % twistd -f web.spl
+
+        % mozilla http://localhost:8080/
+
+    % mktelnetserver 8023 admin password
+
+        % twistd -f telnet.spl
+
+        % telnet localhost 8023
+	Trying 127.0.0.1...
+	Connected to helix.twistedmatrix.com.
+	Escape character is '^]'.
+	
+	twisted.protocols.telnet.ShellFactory
+	Twisted 0.9.0
+	username: admin
+	password: *****
+	print dir()
+	['__builtins__']
+
+(If you want to stop a server started during this process, just
+    % kill `cat twistd.pid`)
+
+(This file should also be the interactive precheckin test list, in
+addition to making sure your bar is green on the unit tests.)
