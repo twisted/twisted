@@ -520,7 +520,7 @@ class SMTP(basic.LineReceiver, policies.TimeoutMixin):
         self._helo = (rest, host)
         self._from = None
         self._to = []
-        self.sendCode(250, '%s Hello %s, nice to meet you' % (self.host, peer))
+        self.sendCode(250, '%s Hello %s, nice to meet you' % (self.host, host))
 
     def do_QUIT(self, rest):
         self.sendCode(221, 'See you later')
