@@ -1137,7 +1137,7 @@ class FTPFileListProtocol(basic.LineReceiver):
     fileLinePattern = re.compile(
         r'^(?P<filetype>.)(?P<perms>.{9})\s+\d*\s*'
         r'(?P<owner>\S+)\s+(?P<group>\S+)\s+(?P<size>\d+)\s+'
-        r'(?P<date>.*)\s+(?P<filename>.*)\r?$'
+        r'(?P<date>... .. ..:..)\s+(?P<filename>.*?)\r?$'
     )
     delimiter = '\n'
 
