@@ -19,10 +19,16 @@ class LoopTestCase(unittest.TestCase):
         lc = task.LoopingCall(foo, "a", "b", d="d")
         d = lc.start(0.1)
         reactor.callLater(1, lc.stop)
-        result = unittest.deferredResult(d)
+        d.addCallback(self._testBasicFunction, lc, L)
+        return d
+
+    def _testBasicFunction(self, result, lc, L):
         self.assertIdentical(lc, result)
-        
-        self.failUnless(9 <= len(L) <= 11)
+
+        # this test will fail if the test process is delayed by more than
+        # about .1 seconds
+        self.failUnless(9 <= len(L) <= 11,
+                        "got %d iterations, not 10" % len(L))
         
         for (a, b, c, d) in L:
             self.assertEquals(a, "a")
@@ -36,7 +42,15 @@ class LoopTestCase(unittest.TestCase):
         
         lc = task.LoopingCall(foo, "bar")
         d = lc.start(0.1)
-        err = unittest.deferredError(d)
+        d.addCallbacks(self._testFailure_nofailure,
+                       self._testFailure_yesfailure)
+        return d
+    def _testFailure_nofailure(self, res):
+        # NOTE: this branch does not work. I think it's a trial bug. Replace
+        # the 'raise TestException' above with a 'return 12' and this test
+        # will hang.
+        self.fail("test did not raise an exception when it was supposed to")
+    def _testFailure_yesfailure(self, err):
         err.trap(TestException)
 
     def testDelayedStart(self):
