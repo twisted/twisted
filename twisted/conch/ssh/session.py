@@ -96,7 +96,7 @@ class SSHSession(channel.SSHChannel):
     def request_exec(self, data):
         command = common.getNS(data)[0]
         user = self.conn.transport.authenticatedUser
-        uid, gid = user.getUserGroupID()
+        uid, gid = user.getUserGroupId()
         homeDir = user.getHomeDir()
         shell = user.getShell() or '/bin/sh'
         command = [shell, '-c', command]
@@ -110,7 +110,7 @@ class SSHSession(channel.SSHChannel):
             self.client = SSHSessionClient()
             pty = reactor.spawnProcess(SSHSessionProtocol(self, self.client), \
                     shell, command, self.environ, homeDir,
-                    uid, gid, usePTY = self.ptyTuple)
+                    uid, gid, usePTY = self.ptyTuple or 1)
         except OSError, e:
             log.msg('failed to exec %s' % command)
             log.msg('reason:')
@@ -122,7 +122,8 @@ class SSHSession(channel.SSHChannel):
                 if self.modes:
                     self.setModes()
             else:
-                tty.setraw(pty.fileno())
+                import tty
+                tty.setraw(pty.fileno(), tty.TCSANOW)
             self.conn.transport.transport.setTcpNoDelay(1)
             if self.buf:
                 self.client.dataReceived(self.buf)
@@ -256,7 +257,9 @@ class SSHSessionProtocol(protocol.Protocol, protocol.ProcessProtocol):
         self.session.loseConnection()
 
     def processEnded(self, reason = None):
-        if reason and hasattr(reason.value, 'exitCode'): self.session.conn.sendRequest(self.session, 'exit-status', struct.pack('!L', reason.value.exitCode))
+        if reason and hasattr(reason.value, 'exitCode'): 
+            log.msg('exitCode: %s' % repr(reason.value.exitCode))
+            self.session.conn.sendRequest(self.session, 'exit-status', struct.pack('!L', reason.value.exitCode))
         self.session.loseConnection()
 
 class SSHSessionClient(protocol.Protocol):
