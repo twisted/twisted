@@ -1,3 +1,9 @@
+2003-03-31  Kevin Turner  <acapnotic@twistedmatrix.com>
+
+	* twisted/trial/remote.py: machine-readable trial output to allow
+	for the test runner and the results Reporter to be in seperate
+	processes.
+
 2003-03-15  Jp Calderone  <exarkun@twistedmatrix.com>
 
 	* twisted/internet/app.py: Renamed "factory" argument to
@@ -10,20 +16,20 @@
 
 2003-03-11  Bob Ippolito <bob@redivi.com>
 
-	* twisted/internet/: Replaced apply() in non-deprecated 
-	twisted.internet modules with Direct Function Calls per 
+	* twisted/internet/: Replaced apply() in non-deprecated
+	twisted.internet modules with Direct Function Calls per
 	recommendation from PEP 290.
-	
-	* twisted/web/client.py: HTTPPageGetter will now write 
+
+	* twisted/web/client.py: HTTPPageGetter will now write
 	self.factory.postdata to the transport after the headers if the
 	attribute is present and is not None.  The factories, getPage and
-	downloadPage now accept keyword arguments for method, postdata, 
+	downloadPage now accept keyword arguments for method, postdata,
 	and headers.  A Content-Length header will be automatically provided
 	for the given postdata if one isn't already present.  Note that
 	postdata is passed through raw; it is the user's responsibility to
 	provide a Content-Type header and preformatted postdata.  This change
 	should be backwards compatible.
-	
+
 2003-03-05  Itamar Shtull-Trauring  <itamar@itamarst.org>
 
 	* twisted/internet/: reactor.run() now accepts a keyword

@@ -28,12 +28,13 @@ class Options(usage.Options):
                 ["text", "t", "Text mode (ignored)"],
                 ["verbose", "v", "Verbose output"],
                 ["bwverbose", "o", "Colorless verbose output"],
+                ["jelly", "j", "Jelly (machine-readable) output"],
                 ["summary", "s", "summary output"],
                 ["debug", "b", "Run tests in the Python debugger"]]
     optParameters = [["reactor", "r", None,
                       "The Twisted reactor to install before running the tests (looked up as a module contained in twisted.internet)"],
                      ["logfile", "l", "test.log", "log file name"],
-                     ["random", "z", None, 
+                     ["random", "z", None,
                       "Run tests in random order using the specified seed"]]
 
     def __init__(self):
@@ -68,7 +69,7 @@ class Options(usage.Options):
     opt_p = opt_package
     opt_c = opt_testcase
     opt_M = opt_method
-    
+
     opt_f = opt_file
 
     def postOptions(self):
@@ -111,7 +112,7 @@ def run():
             suite.addTestClass(case)
     for testmethod in config['methods']:
         suite.addMethod(testmethod)
-    
+
     testdir = "_trial_temp"
     if os.path.exists(testdir):
        import shutil
@@ -129,6 +130,9 @@ def run():
         reporter = unittest.VerboseTextReporter(sys.stdout)
     elif config['summary']:
         reporter = unittest.MinimalReporter(sys.stdout)
+    elif config['jelly']:
+        import twisted.trial.remote
+        reporter = twisted.trial.remote.JellyReporter(sys.stdout)
     else:
         reporter = unittest.TextReporter(sys.stdout)
 

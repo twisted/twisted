@@ -2,6 +2,8 @@
 Twisted Test Framework
 """
 
+from __future__ import nested_scopes
+
 # twisted imports
 from twisted.python.compat import *
 from twisted.python import reflect, log, failure, components
@@ -542,6 +544,7 @@ class TreeReporter(TextReporter):
         self.endLine('[SKIPPED]', self.BLUE)
         Reporter.reportSkip(self, testClass, method, exc_info)
 
+    
 
 def _getDeferredResult(d, timeout=None):
     from twisted.internet import reactor
