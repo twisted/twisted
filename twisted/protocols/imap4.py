@@ -2426,6 +2426,8 @@ class IMAP4Client(basic.LineReceiver):
         """
         cmd = 'SELECT'
         args = mailbox.encode('imap4-utf-7')
+        if _needsQuote(args):
+            args = _quote(args)
         resp = ('FLAGS', 'EXISTS', 'RECENT', 'UNSEEN', 'PERMANENTFLAGS', 'UIDVALIDITY')
         d = self.sendCommand(Command(cmd, args, wantResponse=resp))
         d.addCallback(self.__cbSelect, 1)
@@ -2464,6 +2466,8 @@ class IMAP4Client(basic.LineReceiver):
         """
         cmd = 'EXAMINE'
         args = mailbox.encode('imap4-utf-7')
+        if _needsQuote(args):
+            args = _quote(args)
         resp = ('FLAGS', 'EXISTS', 'RECENT', 'UNSEEN', 'PERMANENTFLAGS', 'UIDVALIDITY')
         d = self.sendCommand(Command(cmd, args, wantResponse=resp))
         d.addCallback(self.__cbSelect, 0)
