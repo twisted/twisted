@@ -34,7 +34,6 @@ from twisted.python import log, reflect
 # System Imports
 
 import errno
-import operator
 import os
 import random
 import re
@@ -402,7 +401,7 @@ class IRCClient(basic.LineReceiver):
     def irc_JOIN(self, prefix, params):
         nick = string.split(prefix,'!')[0]
         if nick == self.nickname:
-            self.joined(params[-1]) 
+            self.joined(params[-1])
 
     def irc_PING(self, prefix, params):
         self.sendLine("PONG %s" % params[-1])
@@ -492,7 +491,7 @@ class IRCClient(basic.LineReceiver):
         if not self.fingerReply:
             return
 
-        if operator.isCallable(self.fingerReply):
+        if callable(self.fingerReply):
             reply = self.fingerReply()
         else:
             reply = str(self.fingerReply)

@@ -231,7 +231,7 @@ class Participant(pb.Perspective, styles.Versioned):
 
     def stopTranscribing(self, voiceName):
         del self.loggedNames[voiceName]
-        
+
     def changeStatus(self, newStatus):
         self.status = newStatus
         for contact in self.reverseContacts:
@@ -295,12 +295,12 @@ class Participant(pb.Perspective, styles.Versioned):
             raise NotInGroupError(groupName)
 
     def getGroupMetadata(self, groupName):
-        if self.client:        
+        if self.client:
             for group in self.groups:
                 if group.name == groupName:
                     self.client.callRemote('setGroupMetadata', group.metadata, group.name)
 
-    def receiveDirectMessage(self, sender, message, metadata):        
+    def receiveDirectMessage(self, sender, message, metadata):
         if self.client:
             # is this wrong?
             # nick = self.policy.getNameFor(sender)
@@ -332,8 +332,8 @@ class Participant(pb.Perspective, styles.Versioned):
         recipient.receiveDirectMessage(self, message, metadata or {})
         if self.loggedNames.has_key(recipientName):
             self.loggedNames[recipientName].logMessage(self.name, message, metadata)
-            
-        
+
+
     def groupMessage(self, groupName, message, metadata=None):
         for group in self.groups:
             if group.name == groupName:
@@ -434,7 +434,7 @@ class Service(pb.Service, styles.Versioned):
     """
 
     perspectiveClass = Participant
-    
+
     def __init__(self, name, parent=None, auth=None):
         pb.Service.__init__(self, name, parent, auth)
         self.groups = {}
