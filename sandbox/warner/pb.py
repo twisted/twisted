@@ -471,6 +471,10 @@ class ScopedSlicer(slicer.BaseSlicer):
     same list will not be serialized twice within this scope, but it will
     not survive outside it."""
 
+    def __init__(self, obj):
+        slicer.BaseSlicer.__init__(self, obj)
+        self.references = {}
+
     def registerReference(self, refid, obj):
         # keep references here, not in the actual PBRootSlicer
         self.references[id(obj)] = refid
