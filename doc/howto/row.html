@@ -39,8 +39,8 @@ are:</p>
 <ul>
   <li>rowColumns - list of the column names and types in the table with
   the correct case</li>
-  <li>rowKeyColumns - list of key columns in form: [(columnName,
-  typeName)]</li>
+  <li>rowKeyColumns - list of key columns in form: <code>[(columnName,
+  typeName)]</code></li>
   <li>rowTableName - the name of the database table</li>
 </ul>
 
@@ -48,8 +48,8 @@ are:</p>
 
 <ul>
   <li>rowForeignKeys - list of foreign keys to other database tables
-  in the form: [(tableName, [(columnName, columnType)], containerMethodName,
-  autoLoad]</li>
+   in the form: <code>[(tableName, [(childColumnName, childColumnType), ...], 
+   [(parentColumnName, parentColumnType), ...], containerMethodName, autoLoad]</code></li>
   <li>rowFactoryMethod - a method that creates instances of this
   class</li>
 </ul>
