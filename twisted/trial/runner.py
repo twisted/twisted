@@ -743,7 +743,6 @@ class TestMethod(MethodInfoBase, JanitorAndReporterMixin):
                         for error in um.errors:
                             if error.check(KeyboardInterrupt):
                                 error.raiseException()
-                            self._eb(error)
                         else:
                             reporter.upDownError(um)
             finally:
