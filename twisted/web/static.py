@@ -117,7 +117,11 @@ class File(resource.Resource, styles.Versioned):
 
     ### Versioning
 
-    persistenceVersion = 2
+    persistenceVersion = 3
+
+    def upgradeToVersion3(self):
+        if not hasattr(self, 'allowExt'):
+            self.allowExt = 0
 
     def upgradeToVersion2(self):
         self.defaultType = "text/html"
@@ -127,7 +131,7 @@ class File(resource.Resource, styles.Versioned):
             self.indexNames = [self.indexName]
             del self.indexName
 
-    def __init__(self, path, defaultType="text/html"):
+    def __init__(self, path, defaultType="text/html", allowExt=0):
         """Create a file with the given path.
         """
         resource.Resource.__init__(self)
@@ -140,6 +144,7 @@ class File(resource.Resource, styles.Versioned):
         if self.encoding is not None:
             p, ext = os.path.splitext(p)
         self.defaultType = defaultType
+        self.allowExt = allowExt
         self.type = self.contentTypes.get(string.lower(ext), defaultType)
 
 
@@ -150,11 +155,13 @@ class File(resource.Resource, styles.Versioned):
             return error.NoResource("Invalid request URL.")
         if path == '':
             for path in self.indexNames:
+                ##
                 # This next step is so urls like
                 #     /foo/bar/baz/
                 # will be represented (internally) as
                 #     ['foo','bar','baz','index.qux']
                 # So that request.childLink() will work correctly.
+                ##
                 if os.path.exists(os.path.join(self.path, path)):
                     request.prepath[-1] = path
                     break
@@ -163,13 +170,27 @@ class File(resource.Resource, styles.Versioned):
                     return widgets.WidgetPage(DirectoryListing(self.path))
                 else:
                     return error.NoResource("File not found.")
+
+        ##
+        # If we're told to, allow requests for 'foo' to return
+        # 'foo.bar'.
+        ##
+        if self.allowExt:
+            for fn in os.listdir(self.path):
+                if os.path.splitext(fn)[0]==path:
+                    log.msg('    Returning %s' % fn)
+                    return File(os.path.join(self.path, fn), self.defaultType, self.allowExt)
+
         newpath = os.path.join(self.path, path)
+        if not os.path.exists(newpath):
+            return error.NoResource("File not found.")
+
         # forgive me, oh lord, for I know not what I do
         p, ext = os.path.splitext(newpath)
         processor = self.processors.get(ext)
         if processor:
             return processor(newpath)
-        f = File(newpath, self.defaultType)
+        f = File(newpath, self.defaultType, self.allowExt)
         f.processors = self.processors
         f.indexNames = self.indexNames[:]
         return f

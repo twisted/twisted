@@ -87,13 +87,20 @@ twisted.web.test in it."""
     opt_s = opt_static
 
     def opt_mime_type(self, defaultType):
+        """Specify the default mime-type for static files."""
         if not isinstance(self.opts['root'], static.File):
-            print "You can only use --static_mime after --static."
+            print "You can only use --mime_type after --static."
             sys.exit(2)
         self.opts['root'].defaultType = defaultType
-
     opt_m = opt_mime_type
 
+
+    def opt_allow_ignore_ext(self):
+        """Specify wether or not a request for 'foo' should return 'foo.ext'"""
+        if not isinstance(self.opts['root'], static.File):
+            print "You can only use --allow_ignore_ext after --static."
+            sys.exit(2)
+        self.opts['root'].allowExt = 1
 
 
 def updateApplication(app, config):
