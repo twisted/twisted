@@ -250,6 +250,12 @@ class Dummy:
 
     def receivedHeader(*spam):
         return None
+    
+    def validateTo(self, user):
+        return user
+    
+    def validateFrom(self, helo, origin):
+        return origin
 
 class DummySMTP(Dummy, smtp.SMTP):
     pass

@@ -485,6 +485,7 @@ class SMTP(basic.LineReceiver):
     
     timeout = 600
     host = DNSNAME
+    delivery = None
 
     def __init__(self):
         self.mode = COMMAND
