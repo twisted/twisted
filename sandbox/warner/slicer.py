@@ -213,7 +213,8 @@ UnsafeSlicerTable.update({
     types.MethodType: MethodSlicer,
     types.FunctionType: FunctionSlicer,
     #types.TypeType: NewstyleClassSlicer,
-    # ???: NewstyleInstanceSlicer,
+    # ???: NewstyleInstanceSlicer,  # pickle uses obj.__reduce__ to help
+    # http://docs.python.org/lib/node68.html
     })
 
 

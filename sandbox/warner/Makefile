@@ -10,6 +10,8 @@ test:
 	../../bin/trial -v $(TEST)
 test2:
 	python -Wignore ../../bin/trial -o $(TEST)
+test-emacs:
+	../../bin/trial -o $(TEST)
 
 clean:
 	rm -f *~ *.pyc *.html
