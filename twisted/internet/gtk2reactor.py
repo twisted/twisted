@@ -83,6 +83,10 @@ class Gtk2Reactor(default.PosixReactorBase):
             self.__iteration = gtk.main_iteration
             self.__crash = gtk.main_quit
             self.__run = gtk.main
+
+    def initThreads(self):
+        gobject.threads_init()
+        default.PosixReactorBase.initThreads(self)
     
     # The input_add function in pygtk1 checks for objects with a
     # 'fileno' method and, if present, uses the result of that method
