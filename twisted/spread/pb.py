@@ -83,6 +83,12 @@ class ProtocolError(Exception):
     This error is raised when an invalid protocol statement is received.
     """
 
+class DeadReferenceError(ProtocolError):
+    """
+    This error is raised when a method is called on a dead reference (one whose
+    broker has been disconnected).
+    """
+
 class Error(Exception):
     """
     This error can be raised to generate known error conditions.
@@ -736,7 +742,7 @@ class Broker(banana.Banana):
             answerRequired = kw['pbanswer']
             del kw['pbanswer']
         if self.disconnected:
-            raise ProtocolError("Calling Stale Broker")
+            raise DeadReferenceError("Calling Stale Broker")
         try:
             netArgs = self.serialize(args, perspective=perspective, method=message)
             netKw = self.serialize(kw, perspective=perspective, method=message)
