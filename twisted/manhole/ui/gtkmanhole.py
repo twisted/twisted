@@ -74,6 +74,7 @@ class Interaction(gtk.GtkWindow):
         vb.pack_start(vp, 1,1,0)
 
         self.add(vb)
+        self.input.grab_focus()
         self.signal_connect('destroy', sys.exit, None)
         self.history = []
         self.histpos = 0
