@@ -237,7 +237,7 @@ class TestSuite(Timed):
 \tWHOOP! WHOOP! DANGER WILL ROBINSON! DANGER! WHOOP! WHOOP!
 \tcaught exception in TestSuite! \n\n\t\tTRIAL IS BROKEN!\n\n
 \t%s""" % ('\n\t'.join(f.getTraceback().split('\n')),)
-                    raise RuntimeError, "\n%s\n%s\n\n%s\n" % \
+                    print "\n%s\n%s\n\n%s\n" % \
                           (annoyingBorder, trialIsBroken, annoyingBorder)
 
             for name, exc in self.couldNotImport.iteritems():
