@@ -112,6 +112,7 @@ class TestSuite:
         for testClass in testClasses:
             testCase = testClass()
             for method in self.testClasses[testClass]:
+                output.reportStart(testClass, method)
                 ok = 0
                 try:
                     testCase.setUp()
@@ -193,6 +194,9 @@ class Reporter:
 
     def reportImportError(self, name):
         self.imports.append(name)
+
+    def reportStart(self, testClass, method):
+        pass
 
     def reportSkip(self, testClass, method, exc_info):
         self.skips.append((testClass, method, exc_info))
@@ -304,18 +308,21 @@ class VerboseTextReporter(TextReporter):
     def __init__(self, stream=sys.stdout):
         TextReporter.__init__(self, stream)
 
+    def reportStart(self, testCase, method):
+        self.write('%s (%s) ... ', method.__name__, reflect.qual(testCase))
+
     def reportSuccess(self, testCase, method):
-        self.writeln('%s (%s) ... [OK]', method.__name__, reflect.qual(testCase))
+        self.writeln('[OK]')
         Reporter.reportSuccess(self, testCase, method)
 
     def reportFailure(self, testCase, method, exc_info):
-        self.writeln('%s (%s) ... [FAIL]', method.__name__, reflect.qual(testCase))
+        self.writeln('[FAIL]')
         Reporter.reportFailure(self, testCase, method, exc_info)
 
     def reportError(self, testCase, method, exc_info):
-        self.writeln('%s (%s) ... [ERROR]', method.__name__, reflect.qual(testCase))
+        self.writeln('[ERROR]')
         Reporter.reportError(self, testCase, method, exc_info)
 
     def reportSkip(self, testCase, method, exc_info):
-        self.writeln('%s (%s) ... [SKIPPED]', method.__name__, reflect.qual(testCase))
+        self.writeln('[SKIPPED]')
         Reporter.reportError(self, testCase, method, exc_info)
