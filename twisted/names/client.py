@@ -106,6 +106,10 @@ class Resolver(common.ResolverBase):
         d['connections'] = []
         d['_parseCall'] = None
         return d
+    
+    def __setstate__(self, state):
+        self.__dict__.update(state)
+        self.maybeParseConfig()
 
     def maybeParseConfig(self):
         if self.resolv is not None:
