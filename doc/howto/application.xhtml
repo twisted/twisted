@@ -51,7 +51,7 @@ object directly. This object is <code>Componentized</code> --
 it has different, orthogonal, aspects. Access to this aspects
 is done by using <em>interfaces</em>. Interfaces, for our purposes,
 are just callables which return different aspects of the 
-<code>Application</code>.<p>
+<code>Application</code>.</p>
 
 <p>There are four interfaces supported, three of which are defined in
 <code>twisted.application.service</code>:</p>
@@ -174,7 +174,7 @@ i = internet.TCPService(7, f)
 
 # Tie the service to the application
 i.setServiceParent(s)
-</p>
+</pre>
  
 <p>TAC files are run with <code>twistd -y</code> or
 <code>twistd --python</code>. The <code>twistd</code> manpage
