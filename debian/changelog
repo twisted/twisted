@@ -1,3 +1,16 @@
+twisted (0.15.5-1) unstable; urgency=low
+
+  * New upstream release 
+
+ -- Moshe Zadka <moshez@debian.org>  Fri,  8 Mar 2002 07:14:16 +0200
+
+twisted (0.15.4-1) unstable; urgency=low
+
+  * New upstream version
+  * Better DNS support
+
+ -- Moshe Zadka <moshez@debian.org>  Tue,  5 Mar 2002 13:54:37 +0200
+
 twisted (0.15.3-1) unstable; urgency=low
 
   * New upstream release
