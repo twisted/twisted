@@ -206,6 +206,7 @@ def spinWhile(f, timeout=4.0, msg="f did not return false before timeout"):
 def _wait(d, timeout=None):
     from twisted.trial import unittest, itrial
     from twisted.internet import reactor
+    import sys
 
     def _dbg(msg):
         log.msg(iface=itrial.ITrialDebug, timeout=msg)
@@ -217,27 +218,29 @@ def _wait(d, timeout=None):
     resultSet = []
     d.addBoth(resultSet.append)
 
-    # TODO: refactor following to use spinWhile
-
     if itimeout.duration is None:
         while not resultSet:
+            print "resultSet: %r" % (resultSet,)
             reactor.iterate(0.01)
     else:
         end += float(itimeout.duration)
         while not resultSet:
+            print "resultSet: %r" % (resultSet,)
             if itimeout.duration >= 0.0 and time.time() > end:
                 raise itimeout.excClass, itimeout.excArg
             reactor.iterate(0.01)
 
     r = resultSet[0]
     if isinstance(r, failure.Failure):
-        r.raiseException()
+        raise r.value.__class__, r.getTraceback()
+        
     Janitor.do_logErrCheck()
     return r
 
+
 DEFAULT_TIMEOUT = 4.0 # sec
 
-def wait(d, timeout=DEFAULT_TIMEOUT):
+def wait(d, timeout=DEFAULT_TIMEOUT, reraise=True):
     """Waits (spins the reactor) for a Deferred to arrive, then returns
     or throws an exception, based on the result. The difference
     between this and deferredResult is that it actually throws the
@@ -331,7 +334,7 @@ def suppressWarnings(f, *warningz):
 
 
 def classesToTestWithTrial(*cls):
-    from twisted.trial import itrial 
+    from twisted.trial import itrial
     for c in cls:
         zi.directlyProvides(c, itrial.IPyUnitTCFactory)
         #zi.directlyProvides(c, itrial.ITestCaseFactory)
