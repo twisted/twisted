@@ -47,6 +47,8 @@ class ChangeChecker:
         self.gotMD5(None)
 
     def page(self, p):
+        if p is None:
+            return self.gotMD5(None)
         m = md5.new()
         m.update(p)
         self.gotMD5(m.digest())
