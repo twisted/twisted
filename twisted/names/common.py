@@ -94,6 +94,9 @@ class ResolverBase:
     def lookupText(self, name, timeout = 10):
         return self._lookup(name, dns.IN, dns.TXT, timeout)
 
+    def lookupResponsibility(self, name, timeout = 10):
+        return self._lookup(name, dns.IN, dns.RP, timeout)
+
     def lookupAFSDatabase(self, name, timeout = 10):
         return self._lookup(name, dns.IN, dns.AFSDB, timeout)
 
@@ -123,6 +126,7 @@ typeToMethod = {
     dns.MX:    'lookupMailExchange',
     dns.TXT:   'lookupText',
     
+    dns.RP:    'lookupResponsibility',
     dns.AFSDB: 'lookupAFSDatabase',
     dns.SRV:   'lookupService',
     

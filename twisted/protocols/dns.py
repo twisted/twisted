@@ -43,8 +43,8 @@ QUERY_TYPES = {
     9:  'MR',    10: 'NULL',  11: 'WKS',  12:  'PTR',
     13: 'HINFO', 14: 'MINFO', 15: 'MX',   16:  'TXT',
 
-    18: 'AFSDB', 
-    # 17 through 32?  Eh, I'll get to 'em.
+    17: 'RP',    18: 'AFSDB', 
+    # 19 through 32?  Eh, I'll get to 'em.
 
     33: 'SRV',
 
@@ -563,7 +563,7 @@ class Record_SRV:                # EXPERIMENTAL
     
     def __str__(self):
         return '<SRV prio=%d weight=%d %s:%d>' % (
-            self.priority, self.weight, self.target, self.port
+            self.priority, self.weight, str(self.target), self.port
         )
 
 
@@ -595,7 +595,40 @@ class Record_AFSDB:
     
     
     def __str__(self):
-        return '<AFSB subtype=%d %s>' % (self.subtype, self.hostname)
+        return '<AFSB subtype=%d %s>' % (self.subtype, self(self.hostname))
+
+
+class Record_RP:
+    __implements__ = (IEncodable,)
+    TYPE = RP
+    
+    def __init__(self, mbox = '', txt = ''):
+        self.mbox = Name(mbox)
+        self.txt = Name(txt)
+    
+    
+    def encode(self, strio, compDict = None):
+        self.mbox.encode(strio, compDict)
+        self.txt.encode(strio, compDict)
+    
+    
+    def decode(self, strio):
+        self.mbox = Name()
+        self.txt = Name()
+        self.mbox.decode(strio)
+        self.txt.decode(strio)
+
+
+    def __eq__(self, other):
+        if isinstance(other, Record_RP):
+            return (str(self.mbox) == str(other.mbox) and 
+                    str(self.txt) == str(other.txt))
+        return 0
+    
+    
+    def __str__(self):
+        return '<RP mbox=%s txt=%s>' % (str(self.mbox), str(self.txt))
+    __repr__ = __str__
 
 
 class Record_HINFO:
