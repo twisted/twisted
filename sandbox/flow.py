@@ -41,218 +41,202 @@ except:
        else:
            return lst.__iter__()
 
-class YieldIteration(Exception):
+class PauseFlow(Exception):
    '''
-      This exception can be used as a signal from an
-      iterator returned from an IFlowFunction; the Flow
-      object could then reschedule itself in the event
-      queue so that other operations can proceed.   In
-      this case, the iterator's next() will just be 
-      called at a later time.
-   '''
+      This exception can be used as a signal from a stage in the 
+      flow to the flow controller.  It can occur in either the
+      __call__ of the stage, or in the next() method of any
+      iterator returned.   The result of this signal is that
+      the entire flow mechanism is paused and recheduled in the
+      main loop so that other operations in the reactor can
+      proceed.   In any case, the function will be called again
+      (or the iterator's next method tried) once the flow as 
+      resumed.
+  '''
 
-
-initialState = "__initial__"
-failureState = "__failure__"
-
-class IFlowFunction:
+def FlowStage(callable, onFinish = None, isIterable = None,
+              isDynamic = None, stopValue = None, onFailure = None):
     ''' 
-       This is an interface for a function (with attributes) 
-       which participates in a given Flow.  It is typical to 
-       implement this using a function given attributes.  Every
-       attribute may be missing to provide minimal behavior.
+       This function constructs a FlowStage tuple which is used inside
+       the Flow mechanism to track state, etc.  If an argument is provided,
+       then it is used; otherwise the callable is searched for the same
+       attribute, else, the default is used.
 
-       isIterable   This is true if the function returns an 
-                    iterable object; in 2.1 this is either a
-                    list or array or something with a next()
-                    function.  In short, this means that for
-                    each application of the function, 0..M
-                    subordinate calls will be made.  
+       onFinish     This function attribute, if present, will be called
+                    after all subordinate flows have been finished.  It 
+                    can be used as an end-of-list indicator.
 
-       nextState    If the next state of the function is fixed,
-                    then this attribute can be set.  In this 
-                    case, the return value from the function 
-                    call can just be the value, rather than 
-                    a (state, value) tuple.
+       isIterable   This is true if the function returns an iterable 
+                    object; in 2.1 this is either a list or array or 
+                    something with a next() function.  In short, this 
+                    means that for each application of the function, 
+                    0..M subordinate calls will be made.  
 
-                    If nextState is not provided and if isIterable
-                    is true, then each call to next() in the 
-                    iteration must be a (state,value) tuple.
+       isDynamic    If this is true, then the return value of each call
+                    is a (nextFlow, nextValue) pair, where nextFlow
+                    is a Flow object (see below).
 
        stopValue    This is a value which will stop recursion,
                     it defaults to None when not provided.
 
-       Note: if none of these attributes are provided, then the
-       function is expected to return a tuple with two items,
-       a (state, value) or None to stop the flow.
-    '''
-    def __call__(self, data):
-        '''
-            When the function is invoked, it is passed a single 
-            argument, the data for the call.  To stop further
-            interaction within the Flow, this function should just
-            return None.  Otherwise, the return value depends upon
-            the various attributes of the function.
-        '''
-        pass
-    def onFinish(self):
-        '''
-            This function attribute, if present, will be called after
-            all subordinate flows have finished.  It can be used for
-            an 'end-list' indicator, etc.
-        '''
-        pass
-    def onFailure(self, state, data, failure):
-        '''
-            This function attribute, if present, will be called when
-            ever an error occurs in processing any of the children, 
-            This callable is applied with the state, and data of 
-            the failing call.  Either None, or a (state, value) 
-            tuple should be returned from this function; if a tuple 
-            is returned, then processing continues from where it left 
-            off; perhaps visiting more children in the iteration (if any).
-        '''
-        pass
+       onFailure    This is a callable attribute, that, if present
+                    will be executed when ever an error occurs processing
+                    any of the children.  This callable is applied with
+                    the an stack of IFlowFunction, and the current data
+                    value.  The onFinish function can remedy the problem
+                    by returning a valid value, or can cancel recursion
+                    by returning None.   onFinish problems are propigated
+                    up the flow stack if left unhandled.
 
+       The callable itself must take one argument, a 'data' value which
+       is the result of previous evaluation in the Flow.  Unless isDynamic
+       or isIterable, the return value of the callable should be a single
+       value, or None to stop further processing.
+    '''
+    def noop(*args): pass
+    if onFinish   is None: onFinish   = getattr(callable, 'onFinish', noop)
+    if isIterable is None: isIterable = getattr(callable, 'isIterable', 0)
+    if isDynamic  is None: isDynamic  = getattr(callable, 'isDynamic', 0)
+    if stopValue  is None: stopValue  = getattr(callable, 'stopValue', None)
+    if onFailure  is None: onFailure  = getattr(callable, 'onFailure', noop)
+    return (callable, onFinish, isIterable, isDynamic, stopValue, onFailure)
+
+class FlowStageLink:
+    '''A simple singly-linked list'''
+    def __init__(self,stage):
+        self.stage = stage
+        self.next  = None
+
+(_STACK_FINISH, _STACK_ITERATOR, _STACK_DYNAMIC, _STACK_STAGE) = range(4)
 class Flow:
     '''
-       This is a state machine driven data consumer.
+       This is a state machine driven data consumer.  Flow stages are
+       used to run data from a producer, such as a database query, 
+       through various filter functions until the data is eventually 
+       consumed and None is returned.
 
-       Flow objects are used to run data from a producer, 
-       such as a database query, through various filter functions 
-       until the data is eventually consumed and None is returned.
-
-       As data is introduced into the Flow using the 'run' 
-       method, the Flow looks up the appropriate handler, and 
-       calls it with the data provided.  If the callee wishes
-       processing to continue, it responds with a (state,data)
-       tuple, which is then used iteratively.  To stop the 
-       flow, the callee simply returns None (the default).
-
-       To have any effect, the Flow must have one or more 
-       handlers which have been registered for each state.
-       Only one handler is active for a given state at any
-       time, thus this object uses the mapping key/value
-       synax for handlers.
+       As data is introduced into the Flow using the 'run' method, the 
+       Flow looks up the appropriate handler, and calls it with the data 
+       provided from the previous stage.  If the callee wishes processing 
+       to continue, it responds with a value (which is interpreted 
+       accodring to the isDynamic and isIterable flags).  To stop the
+       flow, the callee simply returns None.
    '''
-    def __init__(self, *bases):
+    def __init__(self):
         '''
-           Initializes a Flow object, optionally using
-           one or more subordinate flow objects for 
-           default behavior.  The stack is used when the
-           currently executing object wants to be notified
-           that all children have finished processing. 
+           Initializes a Flow object.  Processing starts at initialStage
+           and then proceeds recursively.  Note that the stages are 
+           implemented as a singly-linked list, where each link is
+           an array containing a FlowStage, and the next link.
         '''
-        self.states       = {}
-        self.bases        = bases or []
-        self.stack        = []
+        self.stageHead    = None
+        self.stageTail    = None
+        self.callStack    = None
         self.waitInterval = 0
     #     
-    def register(self, func, state = initialState,
-                 nextState = None, isIterable = 0, 
-                 onFinish = None, onFailure = None,
-                 stopValue = None):
+    def addStage(self, callable, onFinish = None, isIterable = None,
+                 isDynamic = None, stopValue = None, onFailure = None):
         '''
-            This allows the registration of callback functions
-            which are applied whenever an appropriate event of
-            a given state is encountered.  Each callback item,
-            run, start, and finish can either be a function
-            or it can be a tuple with function first, and the
-            default final state second.   If a final state is
-            provided, then the function can just return a value.
-            Otherwise, if the final state is None or not provided,
-            then the function must return a tuple.
+            This appends an additional stage to the singly-linked
+            list, starting with stageHead.
         '''
-        isIterable = getattr(func,'isIterable',isIterable)
-        nextState  = getattr(func,'nextState',nextState)
-        onFinish   = getattr(func,'onFinish',onFinish)
-        onFailure  = getattr(func,'onFailure',onFailure)
-        stopValue  = getattr(func,'stopValue',stopValue)
-        tpl = (func, nextState, isIterable, onFinish, onFailure, stopValue)
-        self.states[state] = tpl
-    #
-    def __setitem__(self,key,val): 
-        self.register(key,val)
-    #
-    def _lookup(self,state):
-        '''
-           Searches for the appropriate handler in the
-           current flow, scouring through 'base' flows
-           if they are provided.
-        '''
-        func = self.states.get(state,None)
-        if not func:
-            for base in self.bases:
-                func  = base.states.get(state,None)
-                if func: break
-        if func: return func
-        errmsg = "\nstate '%s' not found for:%s"
-        raise KeyError(errmsg % (state, str(self)))
-    #
-    def run(self, data = None, state=initialState):
+        stage = FlowStage(callable, onFinish, isIterable,
+                          isDynamic, stopValue, onFailure)
+        link = FlowStageLink(stage)
+        if not self.stageHead:
+            self.stageHead = link
+            self.stageTail = link
+        else:
+            self.stageTail.next = link
+            self.stageTail = link
+
+    def run(self, data = None, linktail = None):
         '''
            This executes the current flow, given empty
            starting data and the default initial state.
         '''
-        trace("running flow")
-        stack = self.stack
-        if not(stack): 
-            stack.append((state, data, None, None, None))
+        assert not linktail, "not implemented"
+        stack = self.callStack
+        if not stack:
+            self.callStack = stack = []
+            link = self.stageHead
+            stack.append((_STACK_STAGE, (link, data)))
         while stack:
-            (state, data, finish, itr, stop) = stack[-1]
-            if finish:
-                finish()
+            (kind, param) = stack[-1]
+            if _STACK_FINISH == kind:
+                param()
                 stack.pop()
                 continue
-            elif itr:
-                trace("-> iterator")
+            if _STACK_DYNAMIC == kind:
+                (flow, data, linknext) = param
+                ret = flow.run(data, linknext)
+                if ret: return ret  # paused
+                stack.pop()
+                continue         
+            if _STACK_ITERATOR == kind:
+                (iterator, stop, linknext) = param
                 try:
-                    data = itr.next()
-                    if data is stop: continue
-                    if not state:
-                        (state, data) = data
-                        if data is stop: continue
+                    data = iterator.next()
+                    if data is stop: 
+                        continue
+                    param = (linknext, data)
                 except StopIteration:
-                    trace("-> stop")
                     stack.pop()
                     continue
-                except YieldIteration:
-                    trace("-> yield")
+                except PauseFlow:
                     from twisted.internet import reactor
                     reactor.callLater(self.waitInterval, self.run)
-                    return
-            else:
-                stack.pop()
-            tpl = self._lookup(state)
-            (func, state, isIterable, finish, failure, stop) = tpl
-            if finish: stack.append((state, None, finish, None, stop))
+                    return 1
+            (link, data) = param
+            (func, finish, isIterable, isDynamic, stop, failure) = link.stage
+            if _STACK_STAGE == kind: stack.pop()
+            if finish: stack.append((_STACK_FINISH,finish))
             data = func(data)
-            trace("-> item")
+            if data is stop: continue
+            if isDynamic:
+               (data, flow) = data
+               stack.append((_STACK_DYNAMIC,(flow, data, link.next )))
+               continue
             if isIterable:
-                if data:
-                    data = iter(data)
-                    self.stack.append((state, None, None,data, stop))
-            else:
-                if data is stop: continue
-                if not state:
-                    (state, data) = data
-                    if data is stop: continue
-                stack.append((state, data, None, None, stop))
-        trace("end flow")
+                 iterator = iter(data)
+                 param = (iterator, stop, link.next)
+                 stack.append((_STACK_ITERATOR,param))
+                 continue
+            stack.append((_STACK_STAGE,(link.next,data)))
     #
-    def __str__(self,indlvl=0):
-        indent = "\n" + "    " * indlvl
-        indent2 = indent + "        "
-        return "%sFlow: %s%s%s%s%s" % (
-                  indent,repr(self),indent2, 
-                  indent2.join(self.states.keys()),indent,
-                  "".join(map(lambda a: a.__str__(indlvl+1), self.bases)))
+    def __call__(self, data):
+        self.run(data)
+
+def testFlow():
+    '''
+        Test basic Flow operation
+    '''
+  
+    def dataSource(data):  
+        return [1, 1+data, 1+data*2]
+    def addOne(data): return  data+1
+    def printResult(data): print data
+    def finished(): print "done"
+    
+    sf = Flow()
+    sf.addStage(dataSource, isIterable = 1, onFinish=finished)
+    sf.addStage(addOne)
+    sf.addStage(printResult)
+    sf.run(3)
+
+    def dynfnc(data):
+        if data < 3:
+           return (data, sf)
+    cf = Flow()
+    cf.addStage(dynfnc, isDynamic = 1)
+    cf.run(2)
+    cf.run(4)
 
 class _TunnelIterator:
     '''
        This is an iterator which tunnels output from an iterator
        executed in a thread to the main thread.   Note, unlike
-       regular iterators, this one throws a YieldIteration exception
+       regular iterators, this one throws a PauseFlow exception
        which must be handled by calling reactor.callLater so that
        the producer threads can have a chance to send events to 
        the main thread.
@@ -302,7 +286,7 @@ class _TunnelIterator:
             raise StopIteration
         if self.failure:
             raise self.failure
-        raise YieldIteration
+        raise PauseFlow
 
 class FlowIterator:
     '''
@@ -345,8 +329,8 @@ def testFlowIterator():
     def printResult(x): print x
     f = Flow()
     f.waitInterval = 1
-    f.register(CountIterator(),nextState='print',onFinish=printDone)
-    f.register(printResult,'print')
+    f.addStage(CountIterator(),onFinish=printDone)
+    f.addStage(printResult)
     f.run(5)
 
 
@@ -374,75 +358,20 @@ class FlowQueryIterator(FlowIterator):
 
 def testFlowConnect():
     from twisted.enterprise.adbapi import ConnectionPool
-    pool = ConnectionPool("mx.ODBC.EasySoft","PSICustomerProto")
+    pool = ConnectionPool("mx.ODBC.EasySoft","<somedsn>")
     def printResult(x): print x
     def printDone(): print "done"
+    sql = "<somequery>"
     f = Flow()
-    sql = "SELECT caption from vw_date"
-    f.register(FlowQueryIterator(pool,sql),nextState='print')
-    f.register(printResult,'print')
+    f.waitInterval = 1
+    f.addStage(FlowQueryIterator(pool,sql),onFinish=printDone)
+    f.addStage(printResult)
     f.run()
-
-def testFlow():
-    '''
-        A very boring unit test for the Flow object
-    '''
-
-    def addOne(data):
-        return "multiplyTwo", data+1
-    def multiplyTwo(data):
-        if data > 10:
-            return "printResult", data*2
-        else:
-            return "addOne", data*2
-    def printResult(data):
-        print data
-    
-    f = Flow()
-    f.register(addOne)
-    f.register(addOne,"addOne")
-    f.register(multiplyTwo, "multiplyTwo")
-    f.register(printResult,"printResult")
-    
-    f.run(1)
-    f.run(5)
-    f.run(11)
-    
-    def forkBegin(data):
-        return [("printResult", data+1), ("printResult",data+2)]
-    fFork = Flow(f)
-    fFork.register(forkBegin, isIterable=1)
-    
-    fFork.run(1)
-    fFork.run(5)
-    fFork.run(11)
-    
-    def printHTML(data):
-        print "<li>%s</li>" % data
-    def startList(data):  
-        print "<ul>"
-        return ['1','2','3']
-    def finishList(): print "</ul>"
-    
-    fHTML = Flow(f)
-    fHTML.register(printHTML, "printResult")
-    fHTML.register(startList,isIterable=1,
-                   nextState="printResult", onFinish=finishList)
-    fHTML.run()
-
-def testBadFlow():
-    print "This should raise an exception"
-    def foo(data):
-        return "flarbis", data / 99
-    bad = Flow()
-    bad.register(foo)
-    bad.run(5)
 
 if '__main__' == __name__:
     from twisted.internet import reactor
     testFlow()
-    # testFlowConnect()
     testFlowIterator()
+    #testFlowConnect()
     reactor.callLater(10,reactor.stop)
     reactor.run()
-    testBadFlow()
