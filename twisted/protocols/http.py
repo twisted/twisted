@@ -582,7 +582,7 @@ class Request:
         return self.host
 
     def getClientIP(self):
-        if self.client[0] == 'INET':
+        if self.client[0] in ('INET', 'SSL'):
             return self.client[1]
         else:
             return None
@@ -614,7 +614,7 @@ class Request:
         return self.password
 
     def getClient(self):
-        if self.client[0] != 'INET':
+        if self.client[0] not in ('INET', 'SSL'):
             return None
         host = self.client[1]
         try:
