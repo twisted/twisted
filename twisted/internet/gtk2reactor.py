@@ -81,7 +81,7 @@ class Gtk2Reactor(default.PosixReactorBase):
     # gtk_input_add(). We use g_io_add_watch() here in case pygtk fixes this
     # bug.
     def input_add(self, source, condition, callback):
-	if hasattr(source, 'fileno'):
+        if hasattr(source, 'fileno'):
             # handle python objects
             def wrapper(source, condition, real_s=source, real_cb=callback):
                 return real_cb(real_s, condition)
@@ -93,7 +93,6 @@ class Gtk2Reactor(default.PosixReactorBase):
     def addReader(self, reader):
         if not hasReader(reader):
             reads[reader] = self.input_add(reader, INFLAGS, self.callback)
-        self.simulate()
 
     def addWriter(self, writer):
         if not hasWriter(writer):
