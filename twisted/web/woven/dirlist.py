@@ -49,7 +49,7 @@ class DirectoryLister(page.Page):
         }
 
     body { border: 0; padding: 0; margin: 0; background-color: #efefef; }
-    h1 {padding: 0.1em; background-color: grey; color: white; border-bottom: thin white dashed;}
+    h1 {padding: 0.1em; background-color: #777; color: white; border-bottom: thin white dashed;}
 
     </style>
     </head>
