@@ -23,7 +23,6 @@ Maintainer: U{Moshe Zadka<mailto:moshez@twistedmatrix.com>}
 
 
 # TODO
-# * Write tests
 # * Move to twisted.persisted
 import os, md5, sys
 import cPickle as pickle
