@@ -8,6 +8,7 @@ from twisted.python.reflect import qual
 from twisted.spread import interfaces
 from twisted.spread.jelly import *
 from twisted.spread.jelly import _Jellier
+from twisted.spread import pb
 
 def monkeyJelly(self, obj):
     jobj = interfaces.IJellyable(obj, default=None)
@@ -97,3 +98,7 @@ vars(_Jellier)['jelly'] = monkeyJelly
 vars(SecurityOptions)['isModuleAllowed'] = lambda self, klass: True
 vars(SecurityOptions)['isClassAllowed'] = lambda self, klass: True
 vars(SecurityOptions)['isTypeAllowed'] = lambda self, klass: True
+
+class FileDescriptorAwareBroker(pb.Broker):
+    def fileDescriptorsReceived(self, descriptors):
+        self.descriptors.extend(descriptors)

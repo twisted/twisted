@@ -1,6 +1,7 @@
 
 import socket
 
+from twisted.python import log
 from twisted.python import reflect
 from twisted.python import components
 from twisted.spread import interfaces as ispread
@@ -8,6 +9,9 @@ from twisted.spread import jelly
 from twisted.internet import interfaces as iinternet
 from twisted.internet import defer
 
+#
+# Reactor jelly!
+#
 class ReactorJellier(components.Adapter):
     __implements__ = (ispread.IJellyable,)
 
@@ -24,13 +28,51 @@ def ReactorUnjellier(unjellier, jellyList):
 
 jelly.setUnjellyableForClass('twisted.internet.reactor', ReactorUnjellier)
 
+#
+# File descriptor jelly!
+#
+class ISocketStorage(components.Interface):
+    def put(self, socket):
+        """Stash a socket for later retrieval.
+
+        @rtype: C{int}
+        @return: An opaque handle which can be used
+        later to retrieve the given socket.
+        """
+
+    def get(self, uid):
+        """Retrieve a previously stored socket.
+
+        @rtype: C{socket}
+        @return: The socket associated with the given
+        uid.  Subsequent calls of this function with
+        the same uid will fail.
+        """
+
+class SocketStorage(components.Adapter):
+    __implements__ = (ISocketStorage,)
+
+    def __init__(self, original):
+        components.Adapter.__init__(self, original)
+        self.skts = {}
+
+    def put(self, socket):
+        self.skts[socket.fileno()] = socket
+        return socket.fileno()
+
+    def get(self, uid):
+        return self.skts.pop(uid)
+
+components.registerAdapter(SocketStorage, jelly._Jellier, ISocketStorage)
+
 class FileDescriptorJellier(components.Adapter):
     __implements__ = (ispread.IJellyable,)
 
     def getStateFor(self, jellier):
         state = self.original.__dict__.copy()
-        del state['socket']
-        state['fileno'] = self.original.fileno()
+        state['socketHandle'] = ISocketStorage(jellier).put(state.pop('socket'))
+        jellier.invoker.serializingPerspective.dConnection.transport.sendFileDescriptors([state['fileno']()])
+        del state['fileno']
         return state
 
     def jellyFor(self, jellier):
@@ -44,18 +86,19 @@ class FileDescriptorJellier(components.Adapter):
 
 components.registerAdapter(FileDescriptorJellier, iinternet.IFileDescriptor, ispread.IJellyable)
 
-def socketInMyPocket(instance, attribute, fileno, addressFamily, socketType):
-    d = defer.Deferred()
-    def magic():
-        skt = socket.fromfd(fileno, addressFamily, socketType)
-        setattr(instance, attribute, skt)
-        instance.fileno = skt.fileno
-        instance.startReading()
-        instance.startWriting()
-        d.callback(True)
-    from twisted.internet import reactor
-    reactor.callLater(0, magic)
-    return d
+def handleToFileDescriptor(handle):
+    return defer.succeed(handle)
+
+def handleToSocket(handle, addressFamily, socketType):
+    return handleToFileDescriptor(handle
+        ).addCallback(socket.fromfd, addressFamily, socketType
+        )
+
+def socketInMyPocket(skt, instance, attribute):
+    setattr(instance, attribute, skt)
+    instance.fileno = skt.fileno
+    instance.startReading()
+    # instance.startWriting()
 
 class _DummyClass:
     pass
@@ -65,9 +108,13 @@ def FileDescriptorUnjellier(unjellier, jellyList):
     inst = _DummyClass()
     inst.__class__ = klass
     state = unjellier.unjelly(jellyList[1])
-    fileno = state.pop('fileno')
+    socketHandle = state.pop('socketHandle')
     inst.__dict__ = state
-    socketInMyPocket(inst, 'socket', fileno, klass.addressFamily, klass.socketType)
+    print state
+    handleToSocket(socketHandle, klass.addressFamily, klass.socketType
+        ).addCallback(socketInMyPocket, inst, 'socket'
+        ).addErrback(log.err
+        )
     return inst
 
 portBase = 'twisted.internet.%s.Port'
