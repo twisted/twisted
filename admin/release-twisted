@@ -551,8 +551,10 @@ class InstallDebs(Transaction):
         target = self.target
         for file in ('Packages.gz', 'Sources.gz', 'override'):
             if os.path.isfile('%(target)s/%(file)s' % vars()):
+                sh('rm -f %(target)s/%(file)s.old' % vars())
                 sh('mv %(target)s/%(file)s %(target)s/%(file)s.old' % vars())
             if os.path.isfile('%(target)s/woody/%(file)s' % vars()):
+                sh('rm -f %(target)s/woody/%(file)s.old' % vars())
                 sh('mv %(target)s/woody/%(file)s %(target)s/woody/%(file)s.old' % vars())
         for file in os.listdir('%(rel)s/debian-%(ver)s/' % vars()):
             if file == 'woody':
@@ -567,6 +569,7 @@ class InstallDebs(Transaction):
         for dir in (target, target+'/woody'):
             for file in glob.glob('%(dir)s/*.old' % vars()):
                 new = os.path.splitext(file)[0]
+                sh('mv %(target)s/%(file)s %(target)s/%(new)s' % vars())
                 sh('mv %(target)s/%(file)s %(target)s/%(new)s' % vars())
             sh('rm -f %(dir)s/*%(ver)s*' % vars())
 
