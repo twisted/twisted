@@ -755,6 +755,9 @@ class MXTestCase(unittest.TestCase):
         self.assertEqual(str(againMX.exchange), str(nextMX.exchange))
 
 class LiveFireExercise(unittest.TestCase):
+    if interfaces.IReactorUDP(reactor, default=None) is None:
+        skip = "UDP support is required to determining MX records"
+
     def setUp(self):
         setUpDNS(self)
         self.tmpdirs = [
