@@ -125,6 +125,9 @@ class LoaderSource(LoaderCommon):
 
 class LoaderTap(LoaderCommon):
 
+    def read(self):
+        self.data = open(self.filename, 'rb').read()
+
     def decode(self):
         sys.modules['__main__'] = EverythingEphemeral()
         application = pickle.load(StringIO.StringIO(self.data))
