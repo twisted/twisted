@@ -3,7 +3,7 @@
 
 from __future__ import nested_scopes
 
-__version__ = "$Revision: 1.8 $"[11:-2]
+__version__ = "$Revision: 1.9 $"[11:-2]
 
 import random
 import time
@@ -100,7 +100,7 @@ class GuardSession(components.Componentized):
     def checkExpired(self):
         # If I haven't been touched in 15 minutes:
         if time.time() - self.lastModified > self.lifetime / 2:
-            if self.site.sessions.has_key(self.uid):
+            if self.guard.sessions.has_key(self.uid):
                 self.expire()
             else:
                 log.msg("no session to expire: %s" % self.uid)
@@ -108,6 +108,16 @@ class GuardSession(components.Componentized):
             log.msg("session given the will to live for %s more seconds" % self.lifetime)
             self.checkExpiredID = reactor.callLater(self.lifetime,
                                                     self.checkExpired)
+    def __getstate__(self):
+        d = self.__dict__.copy()
+        if d.has_key('checkExpiredID'):
+            del d['checkExpiredID']
+        return d
+
+    def __setstate__(self, d):
+        self.__dict__.update(d)
+        self.touch()
+        self.checkExpired()
 
 INIT_SESSION = 'session-init'
 
@@ -117,10 +127,12 @@ def _setSession(wrap, req, cook):
 
 class SessionWrapper(Resource):
 
-    def __init__(self, rsrc):
+    def __init__(self, rsrc, cookieKey=None):
         Resource.__init__(self)
         self.resource = rsrc
-        self.cookieKey = "woven_session_" + _sessionCookie()
+        if cookieKey is None:
+            cookieKey = "woven_session_" + _sessionCookie()
+        self.cookieKey = cookieKey
         self.sessions = {}
 
     def getChild(self, path, request):
