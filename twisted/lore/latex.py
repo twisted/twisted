@@ -51,6 +51,7 @@ class LatexSpitter(XMLParser):
             data = data.replace('\n', ' ')
             # ...and collapse consecutive spaces to a single space.
             data = normalizeRE.sub(' ', data)
+            data = data.replace('_', '\_')
         self.writer(data)
 
     def gotEntityReference(self, entityRef):
