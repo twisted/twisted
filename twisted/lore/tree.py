@@ -184,6 +184,17 @@ def footnotes(document):
     body.childNodes.append(header)
     body.childNodes.append(footnoteElement)
 
+def notes(document):
+    notes = domhelpers.findElementsWithAttribute(document, "class", "note")
+
+    if not notes:
+        return
+
+    notePrefix = microdom.parseString('<strong>Note: </strong>').documentElement
+    for note in notes:
+        note.childNodes.insert(0, notePrefix)
+
+
 def munge(document, template, linkrel, d, fullpath, ext, cache):
     addMtime(template, fullpath)
     fixAPI(document, cache)
@@ -193,6 +204,7 @@ def munge(document, template, linkrel, d, fullpath, ext, cache):
     fixLinks(document, ext)
     putInToC(document, generateToC(document))
     footnotes(document)
+    notes(document)
 
     # the title
     domhelpers.findNodesNamed(template, "title")[0].childNodes.extend(

@@ -326,16 +326,17 @@ inherits from pb.Root, which inherits from pb.Referenceable. It is that
 Referenceable class that makes the object eligible to be available for
 remote method calls <a name="F1"><a href="#f1" >[1]</a></a>. If you have an
 object that is Referenceable, then any client that manages to get a
-reference to it can invoke any <code>remote_*</code> methods they please. Note: the
-<em>only</em> thing they can do is invoke those methods. In particular, they
-cannot access attributes. From a security point of view, you control what
-they can do by limiting what the <code>remote_*</code> methods can do. Also note: the
-other classes like Referenceable allow access to other methods, in
-particular <code>perspective_*</code> and <code>view_*</code> may be accessed. Don't write
-local-only methods with these names, because then remote callers will be
-able to do more than you intended. Also also note: the other classes like
-pb.Copyable <em>do</em> allow access to attributes, but you control which ones
-they can see.</p>
+reference to it can invoke any <code>remote_*</code> methods they please.</p>
+
+<div class="note">The <em>only</em> thing they can do is invoke those methods.
+In particular, they cannot access attributes. From a security point of view,
+you control what they can do by limiting what the <code>remote_*</code> methods
+can do. Also note: the other classes like Referenceable allow access to other
+methods, in particular <code>perspective_*</code> and <code>view_*</code> may
+be accessed.  Don't write local-only methods with these names, because then
+remote callers will be able to do more than you intended. Also also note: the
+other classes like pb.Copyable <em>do</em> allow access to attributes, but you
+control which ones they can see.</div>
 
 <p>You don't have to be a pb.Root to be remotely callable, but you do have
 to be pb.Referenceable. (Objects that inherit from pb.Referenceable but not
@@ -563,16 +564,16 @@ references to the objects get transferred over the wire.</p>
   contains the Perspective which provided the reference to the original
   pb.Viewable object.</li>
 
-<p>[[[[ Footnote [h4]: When a <code>perspective_*</code> method returns a pb.Viewable
+  <div class="note">When a <code>perspective_*</code> method returns a pb.Viewable
  object, an intermediate object called a ViewPoint is created, and the
  client gets a RemoteReference to that ViewPoint instead. The ViewPoint
  remembers which Perspective it came from. Running .callRemote() on the
  reference of the ViewPoint results in a <code>view_*</code> method being invoked on
- the pb.Viewable object. ]]]]</p>
+ the pb.Viewable object.</div>
 
-<p>[[[[ Footnote [h4]: Note that it is possible to have both <code>perspective_*</code>
+<div class="note">It is possible to have both <code>perspective_*</code>
 methods and <code>view_*</code> methods in the same class. See the docstring for
-spread.flavors.ViewPoint for details. ]]]]</p>
+spread.flavors.ViewPoint for details.</div>
 
   <p>This is useful to let the object know which client is calling the
   method. This will make more sense after you've read through the pb.cred
