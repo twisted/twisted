@@ -23,6 +23,7 @@ import sys, os
 from cStringIO import StringIO
 
 from twisted.trial import unittest
+dR = unittest.deferredResult
 
 from twisted.spread import pb, util
 from twisted.internet import protocol, main
@@ -758,4 +759,80 @@ class SpreadUtilTestCase(unittest.TestCase):
         m = o.remoteMethod("add1")
         self.assertEquals(m(3), 4)
 
-testCases = [BrokerTestCase, DisconnectionTestCase, SpreadUtilTestCase]
+
+class ConnectionTestCase(unittest.TestCase):
+
+    def setUp(self):
+        c = pb.Broker()
+        auth = authorizer.DefaultAuthorizer()
+        appl = Application("pb-test")
+        auth.setServiceCollection(appl)
+        ident = identity.Identity("guest", authorizer=auth)
+        ident.setPassword("guest")
+        svc = DummyService("test", appl, authorizer=auth)
+        ident.addKeyForPerspective(svc.getPerspectiveNamed("any"))
+        auth.addIdentity(ident)
+        self.svr = pb.BrokerFactory(pb.AuthRoot(auth))
+        self.port = reactor.listenTCP(0, self.svr, interface="127.0.0.1")
+        self.portno = self.port.getHost()[-1]
+
+    def tearDown(self):
+        self.port.stopListening()
+        reactor.iterate(); reactor.iterate();
+
+    def _checkRootObject(self, root):
+        challenge = dR(root.callRemote("username", "guest"))
+        self.assertEquals(len(challenge), 2)
+        self.assert_(isinstance(challenge[1], pb.RemoteReference))
+    
+    # tests for deprecated APIs:
+    def testGetObjectAt(self):
+        root = dR(pb.getObjectAt("127.0.0.1", self.portno))
+        self._checkRootObject(root)
+        root.broker.transport.loseConnection()
+                       
+    def testConnect(self):
+        p = dR(pb.connect("127.0.0.1", self.portno, "guest", "guest", "test",
+                          perspectiveName="any"))
+        self.assert_(isinstance(p, pb.RemoteReference))
+        p.broker.transport.loseConnection()
+
+    def testIdentityConnector(self):
+        iConnector = pb.IdentityConnector("127.0.0.1", self.portno, "guest", "guest")
+        p1 = dR(iConnector.requestService("test", perspectiveName="any"))
+        p2 = dR(iConnector.requestService("test", perspectiveName="any"))
+        self.assert_(isinstance(p1, pb.RemoteReference))
+        self.assert_(isinstance(p2, pb.RemoteReference))
+        iConnector.disconnect()
+    
+    # tests for new, shiny API:
+    def testGoodGetObject(self):
+        # we test getting both before and after connection
+        factory = pb.ClientBroker()
+        d = factory.getRootObject()
+        reactor.connectTCP("127.0.0.1", self.portno, factory)
+        root = dR(d)
+        self._checkRootObject(root)
+        root = dR(factory.getRootObject())
+        self._checkRootObject(root)
+        root.broker.transport.loseConnection()
+    
+    def testGoodPerspective(self):
+        # we test getting both before and after connection
+        factory = pb.ClientBroker()
+        d = factory.getPerspective("guest", "guest", "test", perspectiveName="any")
+        reactor.connectTCP("127.0.0.1", self.portno, factory)
+        p = dR(d)
+        self.assert_(isinstance(p, pb.RemoteReference))
+        d = factory.getPerspective("guest", "guest", "test", perspectiveName="any")
+        p = dR(d)
+        self.assert_(isinstance(p, pb.RemoteReference))
+        p.broker.transport.loseConnection()
+    
+    def testGoodFailedConnect(self):
+        factory = pb.ClientBroker()
+        d = factory.getPerspective("guest", "guest", "test", perspectiveName="any")
+        reactor.connectTCP("127.0.0.1", 69, factory)
+        f = unittest.deferredError(d)
+        from twisted.internet import error
+        f.trap(error.ConnectError)

@@ -52,7 +52,7 @@ applied when serializing arguments.
 # Future Imports
 from __future__ import nested_scopes
 
-__version__ = "$Revision: 1.131 $"[11:-2]
+__version__ = "$Revision: 1.132 $"[11:-2]
 
 
 # System Imports
@@ -427,7 +427,8 @@ class Broker(banana.Banana):
 
     version = 6
     username = None
-
+    factory = None
+    
     def __init__(self, isClient=1, security=globalSecurity):
         banana.Banana.__init__(self, isClient)
         self.disconnected = 0
@@ -535,7 +536,9 @@ class Broker(banana.Banana):
             except:
                 log.deferr()
         self.connects = None
-
+        if self.factory: # in tests we won't have factory
+            self.factory.clientConnectionMade(self)
+    
     def connectionFailed(self):
         for notifier in self.failures:
             try:
@@ -977,6 +980,9 @@ class BrokerFactory(protocol.Factory, styles.Versioned):
                               self.objectToBroker.rootObject(proto))
         return proto
 
+    def clientConnectionMade(self, protocol):
+        pass
+
 
 ### AUTH STUFF
 
@@ -1138,6 +1144,10 @@ class BrokerClientFactory(protocol.ClientFactory):
 
     def clientConnectionFailed(self, connector, reason):
         self.protocol.connectionFailed()
+
+    def clientConnectionMade(self, protocol):
+        pass
+
 
 def getObjectRetriever():
     """Get a factory which retreives a root object from its client
@@ -1372,3 +1382,68 @@ class IdentityConnector:
              return
          else:
              self._identityWrapper.broker.transport.loseConnection()
+
+
+class ClientBroker(protocol.ClientFactory):
+    """Client factory for PB brokers.
+
+    This is the new shiny API everyone should use. Work in progress.
+    """
+
+    protocol = Broker
+    
+    def __init__(self):
+        self._reset()
+    
+    def _reset(self):
+        self.perspectiveRequests = [] # list of (deferred, args)
+        self.rootObjectRequests = [] # list of deferred
+        self._broker = None
+        self._root = None
+    
+    def _failAll(self, reason):
+        deferreds = self.rootObjectRequests + [i[0] for i in self.perspectiveRequests]
+        self._reset()
+        for d in deferreds:
+            d.errback(reason)
+        
+    def clientConnectionFailed(self, connector, reason):
+        self._failAll(reason)
+        
+    def clientConnectionLost(self, connector, reason):
+        self._failAll(reason)
+
+    def clientConnectionMade(self, broker):
+        self._broker = broker
+        self._root = broker.remoteForName("root")
+        ds = self.rootObjectRequests
+        self.rootObjectRequests = []
+        for d in ds:
+            d.callback(self._root)
+    
+    def getRootObject(self):
+        """Get root object of remote PB server."""
+        if self._broker:
+           return defer.succeed(self._root)
+        d = defer.Deferred()
+        self.rootObjectRequests.append(d)
+        return d
+    
+    def getPerspective(self, username, password, serviceName,
+                       perspectiveName=None, client=None):
+        """Get perspective from remote PB server."""
+        d = self.getRootObject()
+        d.addCallback(self._cbAuthIdentity, username, password)
+        d.addCallback(self._cbGetPerspective, serviceName, perspectiveName, client)
+        return d
+    
+    def _cbAuthIdentity(self, authServRef, username, password):
+        return authServRef.callRemote('username', username).addCallback(
+            self._cbRespondToChallenge, password)
+
+    def _cbRespondToChallenge(self, (challenge, challenger), password):
+        return challenger.callRemote("respond", identity.respond(challenge, password))
+
+    def _cbGetPerspective(self, identityWrapper, serviceName, perspectiveName, client):
+        return identityWrapper.callRemote(
+            "attach", serviceName, perspectiveName, client)
