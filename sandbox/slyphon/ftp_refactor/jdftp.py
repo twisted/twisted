@@ -1,4 +1,5 @@
-#!/usr/bin/env python2.3
+# originally written by phed and spiv
+# complete and total rewrite by slyphon (Jonathan D. Simms)
 
 # System Imports
 import os
@@ -6,7 +7,7 @@ import time
 import string
 import types
 import re
-import StringIO
+from cStringIO import StringIO
 from math import floor
 
 # Twisted Imports
@@ -28,13 +29,22 @@ from twisted.cred import credentials
 #-------------------------------------------------------------------------------
 # TODO:
 #
-# ADD:     Make sure client-DTP connecting is from same IP as client-PI
+# ADD:     Need to make DTPCommand return a deferred so if client hasn't connectd
+#          their DTP, the command will just wait to execute
 #
 # TEST:    when client-PI connects and opens DTP then client-PI quits 
 #          make sure DTP connection quits and closes and cannot be
 #          reconnected to
 #
+# Ask:     How do i handle errors so that the whole server doesn't crash on
+#          exception?
+#
 #-------------------------------------------------------------------------------
+
+# constants
+
+PASV = 1
+ACTV = 2
 
 # response codes
 
@@ -120,7 +130,7 @@ RESPONSES = {
     ENTERING_PASV_MODE:                 '227 Entering Passive Mode %s',
     ENTERING_EPSV_MODE:                 '229 Entering Extended Passive Mode (|||%s|).', # where is epsv defined in the rfc's?
     USR_LOGGED_IN_PROCEED:              '230 User logged in, proceed',
-    GUEST_LOGGED_IN_PROCEED:            '230 Guest login ok, access restrictions apply.',
+    GUEST_LOGGED_IN_PROCEED:            '230 Anonymous login ok, access restrictions apply.',
     REQ_FILE_ACTN_COMPLETED_OK:         '250 Requested File Action Completed OK', #i.e. CWD completed ok
     PWD_REPLY:                          '257 "%s" is current directory.',
 
@@ -152,7 +162,7 @@ RESPONSES = {
     FILENAME_NOT_ALLOWED:               '553 requested action not taken, file name not allowed'
 }
 
-# -- Utility functions --
+# -- Utility Functions --
 
 def decodeHostPort(line):
     """Decode an FTP response specifying a host and port.
@@ -167,7 +177,8 @@ def decodeHostPort(line):
     port = (int(e)<<8) + int(f)
     return host, port
 
-# -- Custom Exceptions
+        
+# -- Custom Exceptions --
 
 class FileNotFoundException(Exception):
     pass
@@ -202,6 +213,15 @@ class DTPFactoryBogusHostException(Exception):
     DTP connection for attempts to connect'''
     pass
 
+class PathBelowTLDException(Exception):
+    pass
+
+# -- DTP Protocol --
+
+class DTPFileSender(object):
+    def __init__(self):
+        self.fsender = basic.FileSender()
+
 class DTP(protocol.Protocol):
     debug = True
 
@@ -232,7 +252,16 @@ class DTP(protocol.Protocol):
         self.factory.dtpPort.stopListening()
         return self.factory.pi.cleanupDTP()
 
+    def sendFile(self, fp):
+        self.fp = fp
+        s = basic.FileSender()
+        s.beginFileTransfer(fp, self.transport).addCallback(self.finishedSendingFile).addErrback(log.err) 
+    
+    def finishedSendingFile(self, lastbyte):
+        self.fp.close()
+        del self.fp
 
+                
 class ActvDTPFactory(protocol.ClientFactory):
     pass
 
@@ -257,6 +286,7 @@ class PasvDTPFactory(protocol.ServerFactory):
         self.instance = p
         return p
 
+# -- FTP-PI (Protocol Interpreter) --
 
 class FTP(basic.LineReceiver):      
     # FTP is a bit of a misonmer, as this is the PI - Protocol Interpreter
@@ -266,6 +296,7 @@ class FTP(basic.LineReceiver):
     user        = None      # the username of the client connected 
     peerHost    = None      # the (type,ip,port) of the client
     debug       = True      # turn on extra logging
+    dtpTxfrMode = ACTV      # PASV or ACTV, default ACTV
 
     DEBUG_AUTO_ANON_LOGIN = True
     
@@ -282,11 +313,8 @@ class FTP(basic.LineReceiver):
         # if we have a DTP protocol instance running and
         # we lose connection to the client's PI, kill the 
         # DTP connection and close the port
-        if self.dtpFactory and hasattr(self.dtpFactory, 'dtpPort'):
-            if hasattr(self.dtpFactory, 'instance'):
-                self.dtpFactory.instance.transport.loseConnection()
-            self.dtpFactory.dtpPort.stopListening()
-            self.cleanupDTP()
+        if hasattr(self.dtpFactory, 'instance') and self.dtpFactory.instance:
+            self.dtpFactory.instance.cleanup()
 
     def lineReceived(self, line):
         "Process the input from the client"
@@ -332,13 +360,24 @@ class FTP(basic.LineReceiver):
                 log.msg(RESPONSES[key] + '\r\n')
             self.transport.write(RESPONSES[key] + '\r\n')
 
-    def createPassiveDTP(self):
+    def _createActiveDTP(self):
+        raise NotImplementedError()
+
+    def _createPassiveDTP(self):
         """creates a dtp listening on self.dtp.dtpPort for connections"""
+        # TODO: figure out what happens if there's an existing ACTV 
+        #       DTP connection and the client calls PASV
+        self.dtpTxfrMode = PASV     # ensure state is correct
         if not self.dtpFactory:
             self.dtpFactory = PasvDTPFactory()
             self.dtpFactory.pi = self
             self.dtpFactory.peerHost = self.transport.getPeer()[1]
             self.dtpFactory.dtpPort = reactor.listenTCP(0, self.dtpFactory)   
+
+    def createDTP(self):
+        if self.dtpTxfrMode != ACTV:
+            return self._createPassiveDTP()
+        return self._createActiveDTP()
 
     def cleanupDTP(self):
         """called when DTP connection exits"""
@@ -346,6 +385,16 @@ class FTP(basic.LineReceiver):
             if hasattr(self.dtpFactory,'instance'):
                 del self.dtpFactory.instance
             self.dtpFactory = None
+
+    def _doDTPCommand(self, command, args=None):
+        '''causes the DTP to commence with an action'''
+        #TODO: this needs to return a deferred!!!
+        if not self.dtpFactory:
+            self.createDTP()
+        func = getattr(self.dtpFactory.instance, command)
+        if args:
+            return func(args)
+        return func()
 
     def ftp_USER(self, params):
         """Get the login name, and reset the session
@@ -425,6 +474,9 @@ class FTP(basic.LineReceiver):
     def _cbAnonLogin(self, (interface, avatar, logout)):
         '''anonymous login'''
         assert interface is IFTPShell
+        peer = self.transport.getPeer()
+        if self.debug:
+            log.msg("Anonymous login from %s:%s" % (peer[1], peer[2]))
         self.shell = avatar
         self.logout = logout
         self.reply(GUEST_LOGGED_IN_PROCEED)
@@ -453,10 +505,8 @@ class FTP(basic.LineReceiver):
         if params == "-aL": params = '' # bug in gFTP 2.0.15
 
         sioObj = self.shell.list(params)    # returns a StringIO object
-        size = len(sioObj.getvalue())     # filesize == length of string value
-        self.queuedFile = QueuedFile(sioObj, size) 
         self.reply(FILE_STATUS_OK_OPEN_DATA_CNX)
-        self.setAction('LIST')
+        self._doDTPCommand('sendFile', sioObj)
  
     def ftp_PWD(self, params):
         """ Print working directory command
@@ -478,8 +528,8 @@ class FTP(basic.LineReceiver):
         if not self.shell:      
             self.reply(NOT_LOGGED_IN)
             return
-
-        self.createPassiveDTP()
+        self.dtpTxfrMode = PASV
+        self.createDTP()
         # Use the ip from the PI-connection
         sockname = self.transport.getHost()
         localip = string.replace(sockname[1], '.', ',')
@@ -490,9 +540,15 @@ class FTP(basic.LineReceiver):
         if self.debug:
             self.reply(ENTERING_PASV_MODE, "%s,%s" % (localip, lport))
             return
-
         self.reply(ENTERING_PASV_MODE, "%s,%s,%s" % (localip, lp1, lp2))
 
+    def ftp_CWD(self, params):
+        try:
+            self.shell.cwd(params)
+        except FileNotFoundException, e:
+            self.reply(FILE_NOT_FOUND, e)
+        else:
+            self.reply(REQ_FILE_ACTN_COMPLETED_OK)
 
 
 class FTPFactory(protocol.Factory):
@@ -511,7 +567,8 @@ class FTPFactory(protocol.Factory):
         pi.portal = self.portal
         return pi
 
-   
+# -- Cred Objects --
+
 class IFTPShell(components.Interface):
     """An abstraction of the shell commands used by the FTP protocol
     for a given user account
@@ -624,43 +681,96 @@ class IFTPShell(components.Interface):
         """
         pass
 
+
 class FTPAnonymousShell(object):
     __implements__ = (IFTPShell,)
-    wd   = None     # working directory
-    tld  = None     # top level directory
-    user = None     # user name
 
-    def buildFullPath(self, rpath):
-        """Build a new path, from a relative path based on the current wd
-        This routine is not fully tested, and I fear that it can be
-        exploited by building clever paths
-        """
-        npath = os.path.normpath(rpath)
-#        if npath == '':
-#            npath = '/'
-        if not os.path.isabs(npath):
-            npath = os.path.normpath(self.wd + '/' + npath)
-#        npath = self.tld + npath
-        return os.path.normpath(npath) # finalize path appending 
+    user = None         # user name
+    clientwdList = []   # list of elements in the client working directory
+    tldList = []        # list of elements in the client top level directory
+    debug = True
+
+    # basically, i'm thinking of the paths as a list of path elements
+    #
+    # some terminology:
+    # client absolute path = an absolute path minus the tld
+    # server absolute path = a full absolute path on the filesystem
+    # client relative path = a path relative to the client's working directory
+
+    def _pathToElementList(self, path):
+        # cleanup backslashes and multiple foreslashes
+        path = re.sub(r'[\\]{2,}?', '/', path)
+        path = re.sub(r'[/]{2,}?','/', path)
+
+        # list of items in the requested path
+        return path.split('/')          
+
+    def _getclientwd(self):
+        return '/' + os.sep.join(self.clientwdList)
+
+    def _setclientwd(self, path):
+        self.clientwdList = self._pathToElementList(path)
+        if self.debug:
+            log.msg("clientwd elements: %s" % self.clientwdList)
+
+    clientwd = property(_getclientwd, _setclientwd)
+
+    def _getTld(self):
+        return os.sep.join(self.tldList)
+
+    def _setTld(self, path):
+        self.tldList = self._pathToElementList(path)
+        if self.debug:
+            log.msg("tld elements: %s" % self.tldList)
+
+    tld = property(_getTld, _setTld)
+
+    def _getClientNormAbsPathList(self, path):
+        '''converts a client path into a 
+        normalized client-absolute list of path elements'''
+        reqpathlist = self._pathToElementList(path)
+
+        # TODO: this has to check for the leading '/'
+        if reqpathlist[0] == '':                        # if this is a client absolute path
+            del reqpathlist[0]                          # remove the ''
+        else:                                           # if this is a client relative path
+            reqpathlist = clientwdlist + reqpathlist    # put clientwd path items in front of the requested path list
+ 
+        rqCliAbsPath = []                           # the requested client-absolute path 
+        while len(reqpathlist) != 0:                # while there are still elements to pop
+            elem = reqpathlist.pop()
+            if elem == '..':
+                if len(rqCliAbsPath) == 0:          # if we're already at the tld
+                    raise RequestBelowTLDException()
+                else:
+                    rqCliAbsPath.pop()              # pop the last element off the rqCliAbsPath list
+            elif elem == '.':                       # ignore current directory '.'
+                continue
+            else:
+                rqCliAbsPath.append(elem)           # add element to the list
+
+        return rqCliAbsPath
+
+    def _getClientNormAbsPath(self, path):
+        '''converts a clent path into a normalized client-absolute path string'''
+        pass
 
     def pwd(self):
-        return self.wd
+        return self.clientwd
 
     def cwd(self, path):
-        wd = os.path.normpath(path)
-        if not os.path.isabs(wd):
-            wd = os.path.normpath(self.wd + '/' + wd)
-        wd = string.replace(wd, '\\','/')
-        while string.find(wd, '//') > -1:
-            wd = string.replace(wd, '//','/')
-        # '..', '\\', and '//' is there just to prevent stop hacking :P
-        if (not os.path.isdir(self.tld + wd)) or (string.find(wd, '..') > 0) or \
-            (string.find(wd, '\\') > 0) or (string.find(wd, '//') > 0): 
-            # TODO: test this exception
-            raise FileNotFoundException(path)
+        # that's requested-server-absolute-path-list of elements
+        rqCliAbsPathList = self._getClientNormAbsPathList(path)
+        rqSrvAbsPathList = self.tldList + rqCliAbsPathList
+
+        # convert rqSrvAbsPathList into a path we can hand to os.path.isdir 
+        # and test to see that it exists
+        rqSrvAbsPath = os.sep.join(rqSrvAbsPathList)
+        if os.path.isdir(rqSrvAbsPath):
+            # it it exists, update the client's working directory
+            self.clientwdList = rqCliAbsPathList
         else:
-            wd = string.replace(wd, '\\','/')
-            self.wd = wd
+            raise FileNotFoundException("%s doesn't exist" % rqSrvAbsPath)
 
     def cdup(self):
         self.cwd('..')
@@ -715,8 +825,9 @@ class FTPAnonymousShell(object):
             else:
                 diracc = '-'    
             s = s + diracc+"r-xr-xr-x    1 twisted twisted %11d" % fsize+' '+mtime+' '+ts+'\r\n'
-
-        return StringIO(s)
+        sio = StringIO(s)
+        sio.seek(0)         # rewind the file position to the beginning
+        return sio
 
     def nlist(self, path):
         pass
