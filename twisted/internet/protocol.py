@@ -498,4 +498,5 @@ class FileWrapper:
 
 
 __all__ = ["Factory", "ClientFactory", "ReconnectingClientFactory",
-           "Protocol", "ProcessProtocol", "FileWrapper", "ServerFactory"]
+           "Protocol", "ProcessProtocol", "FileWrapper", "ServerFactory",
+           "DatagramProtocol", "ConnectedDatagramProtocol", "ClientCreator"]
