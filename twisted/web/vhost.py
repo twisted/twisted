@@ -97,7 +97,7 @@ class NameVirtualHost(resource.Resource):
             return self.default or error.NoResource()
         else:
             host = string.split(string.lower(hostHeader),':')[0]
-        return self.hosts.get(host, error.NoResource("host %s not in vhost map" % repr(host)))
+        return self.hosts.get(host, self.default or error.NoResource("host %s not in vhost map" % repr(host)))
 
     def render(self, request):
         """Implementation of resource.Resource's render method.
