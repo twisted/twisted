@@ -3,7 +3,7 @@
 
 from __future__ import nested_scopes
 
-__version__ = "$Revision: 1.18 $"[11:-2]
+__version__ = "$Revision: 1.19 $"[11:-2]
 
 import random
 import time
@@ -355,7 +355,8 @@ class UsernamePasswordWrapper(Resource):
         else:
             r = s.resourceForPortal(self.portal)
             if r:
-                return r[0]
+                ## Delegate our getChild to the resource our portal says is the right one.
+                return r[0].getChildWithDefault(path, request)
             else:
                 return tapestry._ChildJuggler(
                     self.portal.login(Anonymous(), None, IResource
