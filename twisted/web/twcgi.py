@@ -22,6 +22,7 @@
 import string
 import os
 import sys
+import urllib
 
 # Twisted Imports
 from twisted.protocols import http
@@ -97,9 +98,14 @@ class CGIScript(resource.Resource):
 
         qindex = string.find(request.uri, '?')
         if qindex != -1:
-            env['QUERY_STRING'] = request.uri[qindex+1:]
+            qs = env['QUERY_STRING'] = request.uri[qindex+1:]
+            if '=' in qs:
+                qargs = []
+            else:
+                qargs = [urllib.unquote(x) for x in qs.split('+')]
         else:
             env['QUERY_STRING'] = ''
+            qargs = []
 
         # Propogate HTTP headers
         for title, header in request.getAllHeaders().items():
@@ -112,12 +118,12 @@ class CGIScript(resource.Resource):
             if not env.has_key(key):
                 env[key] = value
         # And they're off!
-        self.runProcess(env, request)
+        self.runProcess(env, request, qargs)
         return NOT_DONE_YET
 
-    def runProcess(self, env, request):
+    def runProcess(self, env, request, qargs=[]):
         p = CGIProcessProtocol(request)
-        reactor.spawnProcess(p, self.filename, [self.filename], env, os.path.dirname(self.filename))
+        reactor.spawnProcess(p, self.filename, [self.filename]+qargs, env, os.path.dirname(self.filename))
 
 
 class FilteredScript(CGIScript):
