@@ -393,7 +393,7 @@ class GenerateDocs(Transaction):
         except:
             sh('mv %s/doc/api/index.html gendocs.index.html' % tdir)
         sh('rm -rf %s/doc/api/*' % tdir)
-        sh('mv gendocs.index.html %s/doc/api/' % tdir)
+        sh('mv gendocs.index.html %s/doc/api/index.html' % tdir)
             
         #then swhack the results of generate-domdocs
         sh('rm -f %s/doc/howto/*.xhtml' % tdir)
