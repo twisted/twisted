@@ -141,18 +141,17 @@ def initThreads():
     # rid of it.
     try:
         main.removeDelayed(theScheduler)
-    except NameError:
+    except (NameError, ValueError):
         pass
     
     theScheduler = ThreadedScheduler()
     schedule = theScheduler.addTask
     main.addDelayed(theScheduler)
 
-
-threadable.whenThreaded(initThreads)
 theScheduler = Scheduler()
-
 schedule = theScheduler.addTask
+threadable.whenThreaded(initThreads)
+
 
 def doAllTasks():
     """Run all tasks in the scheduler.
