@@ -56,6 +56,13 @@ class ThreadPool:
     workers = 0
     
     def __init__(self, minthreads=5, maxthreads=20):
+        """Create a new threadpool.
+
+        @param minthreads: minimum number of threads in the pool
+
+        @param maxthreads: maximum number of threads in the pool
+        """
+
         assert minthreads <= maxthreads, 'minimum is greater than maximum'
         self.q = Queue.Queue(0)
         self.min = minthreads
@@ -70,10 +77,10 @@ class ThreadPool:
     def start(self):
         """Start the threadpool.
         """
-        self.workers = self.min
+        self.workers = min(max(self.min, self.q.qsize()), self.max)
         self.joined = 0
         self.started = 1
-        for i in range(self.min):
+        for i in range(self.workers):
             name = "PoolThread-%s-%s" % (id(self), i)
             threading.Thread(target=self._worker, name=name).start()
 

@@ -1,3 +1,9 @@
+2003-07-27  Dave Peticolas  <dave@krondo.com>
+
+	* twisted/test/test_threadpool.py: test existing work
+
+	* twisted/python/threadpool.py: check for existing work in start()
+
 2003-07-25  Jp Calderone  <exarkun@twistedmatrix.com>
 
 	* twisted/protocols/imap4.py: The fetch method of the IMailbox

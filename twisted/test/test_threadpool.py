@@ -71,5 +71,13 @@ class ThreadPoolTestCase(unittest.TestCase):
         self.assertEquals(c.index, 1000)
         tp.stop()
 
+    def testExistingWork(self):
+        done = []
+        def work(): done.append(1)
+        tp = threadpool.ThreadPool(0, 1)
+        tp.callInThread(work) # before start()
+        tp.start()
+        while not done: pass
+        tp.stop()
 
 testCases = [ThreadPoolTestCase]
