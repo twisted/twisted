@@ -14,7 +14,7 @@
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 #
-# $Id: conch.py,v 1.64 2004/03/10 03:22:45 z3p Exp $
+# $Id: conch.py,v 1.65 2004/03/11 00:29:14 z3p Exp $
 
 #""" Implementation module for the `conch` command.
 #"""
@@ -767,20 +767,21 @@ class SSHSession(channel.SSHChannel):
             d = self.conn.sendRequest(self, 'auth-agent-req@openssh.com', '', wantReply=1)
             d.addBoth(lambda x:log.msg(x))
         if options['noshell']: return
-        self.escapeMode = 1
-        fd = 0 #sys.stdin.fileno()
-        try:
-            new = tty.tcgetattr(fd)
-        except:
-            log.msg('not a typewriter!')
-        else:
-            new[3] = new[3] & ~tty.ICANON & ~tty.ECHO
-            new[6][tty.VMIN] = 1
-            new[6][tty.VTIME] = 0
-            tty.tcsetattr(fd, tty.TCSANOW, new)
-            tty.setraw(fd)
+        if (options['command'] and options['tty']) or not options['notty']:
+            fd = 0 #sys.stdin.fileno()
+            try:
+                new = tty.tcgetattr(fd)
+            except:
+                log.msg('not a typewriter!')
+            else:
+                new[3] = new[3] & ~tty.ICANON & ~tty.ECHO
+                new[6][tty.VMIN] = 1
+                new[6][tty.VTIME] = 0
+                tty.tcsetattr(fd, tty.TCSANOW, new)
+                tty.setraw(fd)
         c = session.SSHSessionClient()
-        if options['escape']:
+        if options['escape'] and not options['notty']:
+            self.escapeMode = 1
             c.dataReceived = self.handleInput
         else:
             c.dataReceived = self.write
