@@ -173,7 +173,6 @@ class Marmaladeable(marmalade.DOMJellyable):
                     i = i + 1
 
     def gotSequenceItem(self, seqitem, num):
-        print "seq item", seqitem, num
         self.sequence[num] = seqitem
 
 
