@@ -86,7 +86,7 @@ class ADBAPITestBase:
             sql = "select x from simple where x = %d" % i
             ds.append(self.dbpool.runQuery(sql))
         dlist = defer.DeferredList(ds, fireOnOneErrback=True)
-        result = unittest.wait(dlist)
+        result = unittest.wait(dlist, timeout=self.num_iterations / 5.0)
         for i in range(self.num_iterations):
             self.failUnless(result[i][1][0][0] == i, "Value not returned")
 
@@ -96,7 +96,7 @@ class ADBAPITestBase:
             sql = "delete from simple where x = %d" % i
             ds.append(self.dbpool.runOperation(sql))
         dlist = defer.DeferredList(ds, fireOnOneErrback=True)
-        unittest.wait(dlist)
+        unittest.wait(dlist, timeout=self.num_iterations / 5.0)
 
         # verify simple table is empty
         sql = "select count(1) from simple"

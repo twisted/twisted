@@ -141,7 +141,7 @@ class ReflectorTestBase:
             child_values[i] = values
             inserts.append(self.reflector.insertRow(row))
             row = None
-        unittest.wait(defer.gatherResults(inserts))
+        unittest.wait(defer.gatherResults(inserts), timeout=self.num_iterations / 5.0)
         del inserts
 
         d = self.reflector.loadObjectsFrom(childTableName, parentRow=parent)
@@ -252,6 +252,7 @@ class ReflectorTestBase:
     def gotData(self, data):
         self.data = data
 
+ReflectorTestBase.timeout = 30.0
 
 class XMLReflectorTestCase(ReflectorTestBase, unittest.TestCase):
     """Test cases for the XML reflector. """
