@@ -68,10 +68,11 @@ class InputOutputWindow:
         self.currentlyVisible = 0
 
     def hide(self):
-        self.win.remove(self.widget)
-        self.currentlyVisible = 0
-        self.win.disconnect(self.connectid)
-        self.win.destroy()
+        if self.currentlyVisible:
+            self.win.remove(self.widget)
+            self.currentlyVisible = 0
+            self.win.disconnect(self.connectid)
+            self.win.destroy()
 
 
     def handle_key_press_event(self, entry, event):
