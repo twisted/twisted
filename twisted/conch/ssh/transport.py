@@ -56,7 +56,7 @@ class SSHTransportBase(protocol.Protocol):
     supportedKeyExchanges = ('diffie-hellman-group-exchange-sha1',
                              'diffie-hellman-group1-sha1')
     supportedPublicKeys = ('ssh-rsa', 'ssh-dss')
-    supportedCompressions = ('none', 'zlib', 'none')
+    supportedCompressions = ('zlib', 'none')
     supportedLanguages = ()
 
     gotVersion = 0

@@ -45,6 +45,8 @@ class SSHFactory(protocol.Factory):
     def buildProtocol(self, addr):
         t = transport.SSHServerTransport()
         t.supportedPublicKeys = self.privateKeys.keys()
+        if not self.primes:
+            t.supportedKeyExchanges.remove('diffie-hellman-group-exchange-sha1')
         t.factory = self
         return t
 
@@ -84,5 +86,8 @@ class OpenSSHFactory(SSHFactory):
                     log.msg('bad private key file %s' % file)
         return ks
     def getPrimes(self):
-        return primes.parseModuliFile(self.dataRoot+'/moduli')
+        try:
+            return primes.parseModuliFile(self.dataRoot+'/moduli')
+        except IOError:
+            return None
 
