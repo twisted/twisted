@@ -560,7 +560,7 @@ class MSNNotificationClient(MSNEventBase):
 
     def checkMessage(self, message):
         """ hook used for detecting specific notification messages """
-        cTypes = map(str.lstrip, message.getHeader('Content-Type').split(';'))
+        cTypes = [s.lstrip() for s in message.getHeader('Content-Type').split(';')]
         if 'text/x-msmsgsprofile' in cTypes:
             self.gotProfile(message)
             return 0
@@ -1248,7 +1248,7 @@ class MSNSwitchboardClient(MSNEventBase):
 
     def checkMessage(self, message):
         """ hook for detecting any notification type messages (e.g. file transfer) """
-        cTypes = map(str.lstrip, message.getHeader('Content-Type').split(';'))
+        cTypes = [s.lstrip() for s in message.getHeader('Content-Type').split(';')]
         if self._checkTyping(message, cTypes): return 0
         if 'text/x-msmsgsinvite' in cTypes:
             # header like info is sent as part of the message body.
