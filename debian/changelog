@@ -4,9 +4,12 @@ twisted (0.18.0-1) unstable; urgency=low
   * Lots of debian changes:
     * building python2.1-twisted, python2.2-twisted
     * python-twisted depends on python2.1-twisted
-    * menu support for t-im and manhole enabled 
+    * menu support for t-im and manhole enabled
+  * Removed debelper
+    * Added debian/scripts/ directory with helper scripts
+    * This will (hopefully) mean support python2.3 will be easy 
 
- -- Moshe Zadka <moshez@debian.org>  Thu, 23 May 2002 19:18:21 +0300
+ -- Moshe Zadka <moshez@debian.org>  Tue, 28 May 2002 12:35:35 +0300
 
 twisted (0.17.3-1) unstable; urgency=low
 
