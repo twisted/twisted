@@ -295,15 +295,21 @@ class Adapter:
             So before you inherit,
             be sure to declare it
         Adapter, not PyObject*
+
+    @cvar temporaryAdapter: If this is True, the adapter will not be
+          persisted on the Componentized.
+    @cvar multiComponent: If this adapter is persistent, should it be
+          automatically registered for all appropriate interfaces.
+    @cvar stackable: If this is True, when 
+          componentized.getComponent(MyInterface) is called, the adapter
+          instance will be stacked.
     """
 
     # These attributes are used with Componentized.
 
     temporaryAdapter = 0
-    # should this adapter be ephemeral?
     multiComponent = 1
-    # If this adapter is persistent, should it be automatically registered for
-    # all appropriate interfaces when it is loaded?
+    stackable = 0
 
     def __init__(self, original):
         """Set my 'original' attribute to be the object I am adapting.
@@ -355,13 +361,18 @@ class Componentized(styles.Versioned):
         """Utility method that calls addComponent.  I take an adapter class and
         instantiate it with myself as the first argument.
 
-        Returns the adapter instantiated.
+        @param stack: Whether to stack the adapter.
+
+        @return: The adapter instantiated.
         """
         adapt = adapterClass(self)
         self.addComponent(adapt, ignoreClass, registry, stack)
         return adapt
 
     def setComponent(self, interfaceClass, component, stack=False):
+        """
+        @param stack: Whether to stack the adapter.
+        """
         self._insertAdapter(interfaceClass, component, stack)
 
     def addComponent(self, component, ignoreClass=0, registry=None, stack=0):
@@ -377,6 +388,9 @@ class Componentized(styles.Versioned):
         Otherwise, an 'appropriate' interface is one for which its class has
         been registered as an adapter for my class according to the rules of
         getComponent.
+
+
+        @param stack: Whether to stack the adapter.
 
         @return: the list of appropriate interfaces
         """

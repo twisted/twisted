@@ -1,3 +1,11 @@
+2003-05-24  Christopher Armstrong  <radix@twistedmatrix.com>
+
+	* twisted/python/components.py, twisted/test/test_components.py:
+	Allow multiple adapters for a single interface to be stacked onto
+	a single Componentized (if asked for). Also implement `isuper', an
+	analog to the Python built-in `super', for accessing the last 
+	adapter on the stack for a particular interface.
+
 2003-05-24  Brian Warner  <warner@lothar.com>
 
 	* twisted/scripts/trial.py (Options.opt_testmodule): ignore
