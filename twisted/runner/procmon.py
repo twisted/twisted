@@ -63,7 +63,8 @@ The following attributes on the monitor can be set to configure behaviour
 import os, time
 from signal import SIGTERM, SIGKILL
 from twisted.python import log
-from twisted.internet import app, protocol, reactor, process
+from twisted.internet import protocol, reactor, process
+from twisted.application import service
 from twisted.protocols import basic
 
 class DummyTransport:
@@ -103,7 +104,7 @@ class LoggingProtocol(protocol.ProcessProtocol):
         self.service.connectionLost(self.name)
 
 
-class ProcessMonitor(app.ApplicationService):
+class ProcessMonitor(service.Service):
 
     threshold = 1
     active = 0
@@ -111,8 +112,7 @@ class ProcessMonitor(app.ApplicationService):
     consistency = None
     consistencyDelay = 60
 
-    def __init__(self, *args, **kw):
-        app.ApplicationService.__init__(self, *args, **kw)
+    def __init__(self):
         self.processes = {}
         self.protocols = {}
         self.delay = {}
@@ -120,7 +120,7 @@ class ProcessMonitor(app.ApplicationService):
         self.murder = {}
 
     def __getstate__(self):
-        dct = app.ApplicationService.__getstate__(self)
+        dct = service.Service.__getstate__(self)
         for k in ('active', 'consistency'):
             if dct.has_key(k):
                 del dct[k]
@@ -154,6 +154,7 @@ class ProcessMonitor(app.ApplicationService):
         self.stopProcess(name)
 
     def startService(self):
+        service.Service.startService(self)
         self.active = 1
         for name in self.processes.keys():
             reactor.callLater(0, self.startProcess, name)
@@ -161,6 +162,7 @@ class ProcessMonitor(app.ApplicationService):
                                              self._checkConsistency)
 
     def stopService(self):
+        service.Service.stopService(self)
         self.active = 0
         for name in self.processes.keys():
             self.stopProcess(name)
@@ -228,8 +230,7 @@ class ProcessMonitor(app.ApplicationService):
                 + '>')
 
 def main():
-    application = app.Application('monitor')
-    mon = ProcessMonitor('monitor', application)
+    mon = ProcessMonitor()
     mon.addProcess('foo', ['/bin/sh', '-c', 'sleep 2;echo hello'])
     mon.addProcess('qux', ['/bin/sh', '-c', 'sleep 2;printf pilim'])
     mon.addProcess('bar', ['/bin/sh', '-c', 'echo goodbye'])
@@ -238,7 +239,9 @@ def main():
     reactor.callLater(30, lambda mon=mon:
                           os.kill(mon.protocols['baz'].transport.pid, SIGTERM))
     reactor.callLater(60, mon.restartAll)
-    application.run(save=0)
+    mon.startService()
+    reactor.addSystemEventTrigger('before', 'shutdown', mon.stopService)
+    reactor.run()
 
 if __name__ == '__main__':
    main()
