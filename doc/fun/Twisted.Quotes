@@ -3417,8 +3417,13 @@ private message from dash: wuh oh, drewp is on to us
 <dash> moshez: now that you mention it
 <dash> most of my jobs lately have come from irc
 %
+[re: porting the rewrite of jelly to Scheme]
+<radix> So is it still really mutaty?
+<glyph> It's so mutaty you're going to be using 'set' with *two* exclamation points
+%
 <jml> you ever heard about cosmic conflicts between the forces of order and
  the forces of chaos? Well, Canberra is like Order winning, stomping over the
  frail corpse of chaos, and all spontenaity, surprise and flexibility
  disappearing from the world.
 %
+
