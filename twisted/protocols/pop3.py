@@ -29,6 +29,7 @@ import string
 import operator
 import md5
 
+from twisted.copyright import longversion
 from twisted.protocols import basic
 from twisted.internet import protocol
 from twisted.internet import defer
@@ -111,6 +112,8 @@ class POP3(basic.LineReceiver):
     _userIs = None
     _onLogout = None
     highest = 0
+
+    AUTH_CMDS = ['CAPA', 'USER', 'PASS', 'APOP', 'RPOP', 'QUIT']
     
     # A reference to the newcred Portal instance we will authenticate
     # through.
@@ -142,12 +145,26 @@ class POP3(basic.LineReceiver):
     
     def processCommand(self, command, *args):
         command = string.upper(command)
-        if self.mbox is None and command not in ('APOP', 'USER', 'PASS', 'RPOP', 'QUIT'):
+        if self.mbox is None and command not in self.AUTH_CMDS:
             raise POP3Error("not authenticated yet: cannot do %s" % command)
         f = getattr(self, 'do_' + command, None)
         if f:
             return f(*args)
         raise POP3Error("Unknown protocol command: " + command)
+
+    def getVersionString(self):
+        return longversion
+
+    def listCapabilities(self):
+        return [
+            "TOP",
+            "USER",
+            "UIDL",
+            "IMPLEMENTATION " + self.getVersionString(),
+        ]
+
+    def do_CAPA(self):
+        map(self.sendLine, self.listCapabilities())
 
     def do_APOP(self, user, digest):
         d = defer.maybeDeferred(self.authenticateUserAPOP, user, digest)
