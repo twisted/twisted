@@ -77,7 +77,7 @@ class LatexSpitter:
         
         # Automatically fully-qualify the first (and only the first) mention of
         # APIs, i.e turn "pb.Root" into "twisted.spread.pb.Root".
-        if node.getAttribute('class') == 'API':
+        if node.getAttribute('class') == 'API' and not self.filename.startswith('glossary'):
             base = node.getAttribute('base', '')
             if base:
                 base += '.'
@@ -144,13 +144,13 @@ class LatexSpitter:
     def visitNode_a_href(self, node):
         href = node.getAttribute('href')
         externalhref = None
+        external = 0
         if href.startswith('http://') or href.startswith('https://'):
-            externalhref = 1
+            external = 1
             # If the text of the link is the url already, don't bother
             # repeating the url.
-            if node.childNodes[0].data == href:
-                return
-            externalhref = '\\footnote{%s}' % latexEscape(href)
+            if node.childNodes[0].data != href:
+                externalhref = '\\footnote{%s}' % latexEscape(href)
         
         self.visitNodeDefault(node)
         ref = None
@@ -158,7 +158,7 @@ class LatexSpitter:
             ref = self.filename + 'HASH' + href[1:]
         elif href.find('#') != 1 and not href.startswith('http:'):
             ref = href.replace('#', 'HASH')
-        elif not externalhref:
+        elif not external:
             ref = href
         if ref:
             self.writer(' (page \\pageref{%s})' % ref)
@@ -224,8 +224,8 @@ class LatexSpitter:
     mapStart_ol = '\\begin{enumerate}\n'
     mapEnd_ol = '\\end{enumerate}\n'
 
-    mapStart_li = mapStart_ul = '\\item '
-    mapEnd_li = mapEnd_ul = '\n'
+    mapStart_li = '\\item '
+    mapEnd_li = '\n'
 
     mapStart_dt = '\\item['
     mapEnd_dt = ']'
