@@ -673,7 +673,7 @@ From: <sip:exarkun@intarweb.us:50609>\r
 Call-ID: 94E7E5DAF39111D791C6000393764646@intarweb.us\r
 CSeq: 9899 REGISTER\r
 Contact: sip:exarkun@127.0.0.1:5632\r
-Expires: 3599\r
+Expires: 3600\r
 Content-Length: 0\r
 \r
 """
@@ -700,6 +700,8 @@ class FakeRegistry(sip.InMemoryRegistry):
     def getRegistrationInfo(self, uri):
         return sip.InMemoryRegistry.getRegistrationInfo(self, uri).addCallback(self._cbReg)
 
+    def registerAddress(self, domainURL, logicalURL, physicalURL):
+        return sip.InMemoryRegistry.registerAddress(self, domainURL, logicalURL, physicalURL).addCallback(self._cbReg)
 
 class AuthorizationTestCase(unittest.TestCase):
     def setUp(self):
