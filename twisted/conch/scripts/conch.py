@@ -132,7 +132,7 @@ def handleError():
     raise
 
 def doConnect():
-    log.deferr = handleError # HACK
+#    log.deferr = handleError # HACK
     if '@' in options['host']:
         options['user'], options['host'] = options['host'].split('@',1)
     if not options.identitys:
