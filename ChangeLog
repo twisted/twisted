@@ -1,6 +1,7 @@
 2002-08-16  Christopher Armstrong  <radix@twistedmatrix.com>
 
 	* Releasing Twisted 0.99.0rc6, with some fixes to setup.py
+	* Releasing Twisted 0.99.0rc7, __init__.py fixes.
 
 2002-08-15  Christopher Armstrong  <radix@twistedmatrix.com>
 
