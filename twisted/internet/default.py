@@ -164,8 +164,6 @@ class PosixReactorBase(ReactorBase):
     def listenUDP(self, port, protocol, interface='', maxPacketSize=8192):
         """Connects a given L{DatagramProtocol} to the given numeric UDP port.
 
-        EXPERIMENTAL.
-
         @returns: object conforming to L{IListeningPort}.
         """
         p = udp.Port(port, protocol, interface, maxPacketSize, self)
@@ -194,17 +192,6 @@ class PosixReactorBase(ReactorBase):
         @returns: object conforming to IListeningPort.
         """
         p = udp.MulticastPort(port, protocol, interface, maxPacketSize, self, listenMultiple)
-        p.startListening()
-        return p
-
-    def connectMulticast(self, remotehost, remoteport, protocol, localport=0,
-                         interface='', maxPacketSize=8192):
-        """Connects a ConnectedDatagramProtocol instance to a UDP port.
-
-        EXPERIMENTAL.
-        """
-        warnings.warn("use listenMulticast and then transport.connect().", DeprecationWarning, stacklevel=2)
-        p = udp.ConnectedMulticastPort((remotehost, remoteport), localport, protocol, interface, maxPacketSize, self)
         p.startListening()
         return p
 
