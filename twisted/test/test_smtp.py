@@ -16,7 +16,7 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
 """
-Test cases for twisted.smtp module.
+Test cases for twisted.protocols.smtp module.
 """
 
 from twisted.trial import unittest
@@ -102,6 +102,9 @@ Someone set up us the bomb!\015
         protocol.lineReceived('QUIT')
         if self.mbox != self.factory.domains['baz.com'].messages:
             raise AssertionError(self.factory.domains['baz.com'].messages)
+
+        # protocol.transport.loseConnection()
+        # reactor.iterate()
         protocol.timeoutID.cancel()
 
 mail = '''\
@@ -110,15 +113,10 @@ Subject: hello
 Goodbye
 '''
 
-class MySMTPClient(protocols.smtp.SMTPClient):
-
+class MyClient:
     def __init__(self):
-        protocols.smtp.SMTPClient.__init__(self, 'foo.baz')
         self.mail = 'moshez@foo.bar', ['moshez@foo.bar'], mail
 
-    def lineReceived(self, line):
-        protocols.smtp.SMTPClient.lineReceived(self, line)
-    
     def getMailFrom(self):
         return self.mail[0]
 
@@ -131,13 +129,21 @@ class MySMTPClient(protocols.smtp.SMTPClient):
     def sentMail(self, code, resp, numOk, addresses, log):
         self.mail = None, None, None
 
+class MySMTPClient(MyClient, smtp.SMTPClient):
+    def __init__(self):
+        smtp.SMTPClient.__init__(self, 'foo.baz')
+        MyClient.__init__(self)
 
+class MyESMTPClient(MyClient, smtp.ESMTPClient):
+    def __init__(self, secret = ''):
+        smtp.ESMTPClient.__init__(self, secret, 'foo.baz')
+        MyClient.__init__(self)
 
-class LoopbackSMTPTestCase(unittest.TestCase):
-
+class LoopbackMixin:
     def loopback(self, server, client):
         loopback.loopbackTCP(server, client)
 
+class LoopbackTestCase(LoopbackMixin):
     def testMessages(self):
         factory = smtp.SMTPFactory()
         factory.domains = {}
@@ -146,54 +152,57 @@ class LoopbackSMTPTestCase(unittest.TestCase):
         protocol =  DomainSMTP()
         protocol.service = factory
         protocol.factory = factory
-        clientProtocol = MySMTPClient()
+        clientProtocol = self.clientClass()
         self.loopback(protocol, clientProtocol)
-        protocol.timeoutID.cancel()
+        # protocol.timeoutID.cancel()
+
+class LoopbackSMTPTestCase(LoopbackTestCase, unittest.TestCase):
+    clientClass = MySMTPClient
+
+class LoopbackESMTPTestCase(LoopbackTestCase, unittest.TestCase):
+    clientClass = MyESMTPClient
 
 
 class FakeSMTPServer(protocols.basic.LineReceiver):
 
-    clientData = '''\
-220 hello
-250 nice to meet you
-250 great
-250 great
-354 go on, lad
-'''
+    clientData = [
+        '220 hello', '250 nice to meet you',
+        '250 great', '250 great', '354 go on, lad'
+    ]
 
     def connectionMade(self):
-        self.buffer = ''
-        for line in string.split(self.clientData, '\n'):
-            self.transport.write(line + '\r\n')
-
+        self.buffer = []
+        self.clientData = self.clientData[:]
+        self.clientData.reverse()
+        self.sendLine(self.clientData.pop())
+    
     def lineReceived(self, line):
-        self.buffer = self.buffer + line + '\r\n'
+        self.buffer.append(line)
         if line == "QUIT":
             self.transport.write("221 see ya around\r\n")
             self.transport.loseConnection()
-        if line == ".":
+        elif line == ".":
             self.transport.write("250 gotcha\r\n")
+        elif line == "RSET":
+            self.transport.loseConnection()
+
+        if self.clientData:
+            self.sendLine(self.clientData.pop())
 
         
-class SMTPClientTestCase(unittest.TestCase):
+class SMTPClientTestCase(unittest.TestCase, LoopbackMixin):
 
-    expected_output='''\
-HELO foo.baz\r
-MAIL FROM:<moshez@foo.bar>\r
-RCPT TO:<moshez@foo.bar>\r
-DATA\r
-Subject: hello\r
-\r
-Goodbye\r
-.\r
-QUIT\r
-'''
+    expected_output = [
+        'HELO foo.baz', 'MAIL FROM:<moshez@foo.bar>',
+        'RCPT TO:<moshez@foo.bar>', 'DATA',
+        'Subject: hello', '', 'Goodbye', '.', 'RSET'
+    ]
 
-    def xxxtestMessages(self):
+    def testMessages(self):
         # this test is disabled temporarily
         client = MySMTPClient()
         server = FakeSMTPServer()
-        loopback.loopbackTCP(server, client)
+        self.loopback(server, client)
         self.assertEquals(server.buffer, self.expected_output)
 
 class DummySMTPMessage:
@@ -217,8 +226,7 @@ class DummySMTPMessage:
         deferred.callback("saved")
         return deferred
 
-class DummySMTP(smtp.SMTP):
-
+class Dummy:
     def connectionMade(self):
         smtp.SMTP.connectionMade(self)
         self.message = None
@@ -229,7 +237,15 @@ class DummySMTP(smtp.SMTP):
     def receivedHeader(*spam):
         return None
 
-class AnotherSMTPTestCase(unittest.TestCase):
+class DummySMTP(Dummy, smtp.SMTP):
+    pass
+
+class DummyESMTP(Dummy, smtp.ESMTP):
+    pass
+
+class AnotherTestCase:
+    serverClass = None
+    clientClass = None
 
     messages = [ ('foo.com', 'moshez@foo.com', ['moshez@bar.com'],
                   'moshez@foo.com', ['moshez@bar.com'], '''\
@@ -276,7 +292,7 @@ To: foo
 
     def testBuffer(self):
         output = StringIOWithoutClosing()
-        a = DummySMTP()
+        a = self.serverClass()
         class fooFactory:
             domain = 'foo.com'
 
@@ -303,4 +319,59 @@ To: foo
                 if not re.match(resp, data):
                     raise AssertionError, (resp, data)
                 self.assertEquals(a.message, msgdata)
+        # a.transport.loseConnection()
+        # reactor.iterate()
         a.timeoutID.cancel()
+
+class AnotherESMTPTestCase(AnotherTestCase, unittest.TestCase):
+    serverClass = DummyESMTP
+    clientClass = MyESMTPClient
+
+class AnotherSMTPTestCase(AnotherTestCase, unittest.TestCase):
+    serverClass = DummySMTP
+    clientClass = MySMTPClient
+
+
+# XXX - These need to be moved
+from twisted.protocols import imap4
+
+from twisted.internet.app import _AbstractServiceCollection
+from twisted.cred.perspective import Perspective
+from twisted.cred import authorizer
+from twisted.cred import service
+
+class DummyService(service.Service):
+    def __init__(self, authorizer):
+        service.Service.__init__(self, 'DummyService', authorizer=authorizer)
+
+class AuthTestCase(unittest.TestCase, LoopbackMixin):
+    def testAuth(self):
+        class factory:
+            domain = 'foo.com'
+        server = DummyESMTP()
+        server.factory = factory()
+        client = MyESMTPClient()
+
+        # rape-and-paste from test_imap4
+        # cred sucks cred sucks cred sucks cred sucks cred sucks cred sucks
+        services = _AbstractServiceCollection()
+        auth = authorizer.DefaultAuthorizer(services)
+        service = DummyService(auth)
+        services.addService(service)
+        ident = imap4.CramMD5Identity('testuser', auth)
+        ident.setPassword('secret')
+        a = Perspective('testuser')
+        service.addPerspective(a)
+        ident.addKeyForPerspective(a)
+        auth.addIdentity(ident)
+
+        sAuth = imap4.CramMD5ServerAuthenticator('test-domain.com', auth)
+        cAuth = imap4.CramMD5ClientAuthenticator('testuser')
+
+        server.registerChallenger(sAuth)
+        client.registerAuthenticator(cAuth)
+        
+        self.loopback(server, client)
+
+        # We could do with some asserts here, but just getting to here
+        # with no exceptions is an almost-good test of the code.

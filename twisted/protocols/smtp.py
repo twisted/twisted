@@ -22,13 +22,18 @@
 # Twisted imports
 from twisted.protocols import basic
 from twisted.internet import protocol, defer, reactor
-from twisted.python import log, components, util
+from twisted.python import log, components, util, reflect
 
 # System imports
 import time, string, re, base64, types, socket, os, random
 import MimeWriter, tempfile, rfc822
 import warnings
-from cStringIO import StringIO
+import binascii
+
+try:
+    from cStringIO import StringIO
+except ImportError:
+    from StringIO import StringIO
 
 SUCCESS = dict(map(None, range(200, 300), []))
 
@@ -162,7 +167,7 @@ def quoteaddr(addr):
     else:
         return '<%s>' % str(res[1])
 
-COMMAND, DATA = range(2)
+COMMAND, DATA, AUTH = 'COMMAND', 'DATA', 'AUTH'
 
 class NDeferred:
 
@@ -349,6 +354,7 @@ class SMTP(basic.LineReceiver):
         self.__to = []
 
     def timedout(self):
+        self.timeoutID = None
         self.sendCode(421, '%s Timeout. Try talking faster next time!' %
                       self.host)
         self.transport.loseConnection()
@@ -378,19 +384,18 @@ class SMTP(basic.LineReceiver):
             self.timeoutID.cancel()
             self.timeoutID = reactor.callLater(self.timeout, self.timedout)
 
-        if self.mode is DATA:
-            return self.dataLineReceived(line)
-        if line:
-            command = string.split(line, None, 1)[0]
-        else:
-            command = ''
-        method = getattr(self, 'do_'+string.upper(command), None)
+        return getattr(self, 'state_' + self.mode)(line)
+    
+    def state_COMMAND(self, line):
+        command = line.split(None, 1)[0]
+        method = self.lookupMethod(command)
         if method is None:
             method = self.do_UNKNOWN
-        else:
-            line = line[len(command):]
-        return method(string.strip(line))
+        method(line[len(command):].strip())
 
+    def lookupMethod(self, command):
+        return getattr(self, 'do_' + command.upper(), None)
+        
     def lineLengthExceeded(self, line):
         if self.mode is DATA:
             for message in self.__messages:
@@ -577,6 +582,8 @@ class SMTP(basic.LineReceiver):
                 del self.__messages
             except AttributeError:
                 pass
+        if self.timeout:
+            self.timeoutID.cancel()
 
     def do_RSET(self, rest):
         self.__from = None
@@ -630,6 +637,7 @@ class SMTP(basic.LineReceiver):
             self.datafailed = e
             for message in self.__messages:
                 message.connectionLost()
+    state_DATA = dataLineReceived
 
     def _messageHandled(self, _):
         self.sendCode(250, 'Delivery in progress')
@@ -712,7 +720,7 @@ class SMTPClient(basic.LineReceiver):
         if line[3:4] == '-':
             # continuation
             return
-
+        
         if self.code in self._expected:
             why = self._okresponse(self.code,'\n'.join(self.resp))
             self.lastfailed = 0
@@ -769,7 +777,7 @@ class SMTPClient(basic.LineReceiver):
     def smtpState_toOrData(self, code, resp):
         if self.lastAddress is not None:
             self.toAddressesResult.append((self.lastAddress, code, resp))
-            if 200 <= code <= 299:
+            if code in SUCCESS:
                 self.successAddresses.append(self.lastAddress)
         if not self.toAddresses:
             if self.successAddresses:
@@ -813,7 +821,7 @@ class SMTPClient(basic.LineReceiver):
         self.toAddressesResult = []
         self._from = None
         self.sendLine('RSET')
-        self._exected = xrange(200,300)
+        self._exected = SUCCESS
         self._okresponse = self.smtpState_from
         
     # IProducer interface
@@ -877,6 +885,141 @@ class SMTPClient(basic.LineReceiver):
         """
         raise NotImplementedError
 
+class ESMTPClient(SMTPClient):
+    heloFallback = 1
+    requireAuthentication = 0
+
+    def __init__(self, secret, *args, **kw):
+        SMTPClient.__init__(self, *args, **kw)
+        self.authenticators = {}
+        self.secret = secret
+
+    def registerAuthenticator(self, auth):
+        self.authenticators[auth.getName().upper()] = auth
+
+    def connectionMade(self):
+        self._expected = [220]
+        self._okresponse = self.esmtpState_ehlo
+        self._failresponse = self.smtpConnectionFailed
+    
+    def esmtpState_ehlo(self, code, resp):
+        self.sendLine('EHLO ' + self.identity)
+        self._expected = SUCCESS
+        self._okresponse = self.esmtpState_auth
+        if self.heloFallback:
+            self._failresponse = self.smtpState_helo
+
+    def esmtpState_auth(self, code, resp):
+        items = resp.splitlines()
+        for e in items:
+            e = e.split(None, 1)
+            if e[0] == 'AUTH' and len(e) > 1:
+                schemes = e[1].split()
+                for s in schemes:
+                    s = s.upper()
+                    if s in self.authenticators:
+                        self.sendLine('AUTH %s' + s)
+                        self._expected = [334]
+                        self._okresponse = self.esmtpState_challenge
+                        self._authinfo = self.authenticators[s]
+                        return
+        if self.requireAuthentication:
+            self.sendLine('QUIT')
+            self._expected = xrange(0, 1000)
+            self._okresponse = self.smtpState_disconnect
+        else:
+            self.smtpState_from(code, resp)
+
+    def esmtpState_challenge(self, code, resp):
+        auth = self._authinfo
+        del self._authinfo
+        self._authResponse(auth, resp)
+    
+    def _authResponse(self, auth, challenge):
+        try:
+            challenge = base64.decodestring(challenge)
+        except binascii.Error, e:
+            print 'woop', e, challenge
+            # Illegal challenge, give up, then quit
+            self.sendLine('*')
+            self._okresponse = self.smtpState_disconnect
+            self._failresponse = self.smtpState_disconnect
+        else:
+            resp = auth.challengeResponse(self.secret, challenge)
+            self.sendLine(base64.encodestring(resp))
+            self._okresponse = self.smtpState_from
+            self._failresponse = self.smtpState_disconnect
+
+class ESMTP(SMTP):
+    def __init__(self):
+        SMTP.__init__(self)
+        self.challengers = {}
+        self.authenticated = False
+        self.extArgs = {}
+
+    def registerChallenger(self, chal):
+        self.challengers[chal.getName().upper()] = chal
+        self.extArgs.setdefault('AUTH', []).append(chal.getName().upper())
+
+    def lookupMethod(self, command):
+        m = SMTP.lookupMethod(self, command)
+        if m is None:
+            m = getattr(self, 'ext_' + command.upper(), None)
+        return m
+
+    def do_EHLO(self, rest):
+        extensions = reflect.prefixedMethodNames(self.__class__, 'ext_')
+        peer = self.transport.getPeer()[1]
+        self.__helo = (rest, peer)
+        self.__from = None
+        self.__to = []
+        self.sendCode(
+            250,
+            '%s\n%s Hello %s, nice to meet you' % (
+                '\n'.join([
+                    '%s %s' % (e, ' '.join(self.extArgs.get(e, []))) for e in extensions
+                ]),
+                self.host, peer
+            )
+        )
+    
+    def ext_AUTH(self, rest):
+        if self.authenticated:
+            self.sendCode(503, 'Already authenticated')
+            return
+
+        parts = rest.split(None, 1)
+        chal = self.challengers.get(parts[0].upper())
+
+        if not chal:
+            self.sendCode(504, 'Unrecognized authentication type')
+            return
+        
+        challenge = chal.generateChallenge()
+        coded = base64.encodestring(challenge)[:-1]
+        self.sendCode(334, coded)
+        self.state = AUTH
+        self._authinfo = chal, challenge
+
+    def state_AUTH(self, rest):
+        chal, challenge = self._authinfo
+        del self._authinfo
+        self.state = COMMAND
+        
+        if rest == '*':
+            self.sendCode(501, 'Authentication aborted')
+            return
+
+        d = defer.maybeDeferred(None, chal.authenticateResponse, challenge, rest)
+        d.addCallbacks(
+            lambda result: (
+                self.sendCode(235, 'Authentication successful.'),
+                setattr(self, 'authenticated', 1)
+            ), lambda failure: (
+                self.sendCode(535, 'Authentication failed')
+            )
+        )
+
 
 class SMTPSender(SMTPClient):
     """Utility class for sending emails easily - use with SMTPSenderFactory."""
@@ -898,11 +1041,11 @@ class SMTPSender(SMTPClient):
 
     def sentMail(self, code, resp, numOk, addresses, log):
         self.factory.sendFinished = 1
-        if code not in xrange(200,300):
+        if code not in SUCCESS:
             # Failure
             errlog = []
             for addr, acode, aresp in addresses:
-                if code not in xrange(200,300):
+                if code not in SUCCESS:
                     errlog.append("%s: %03d %s" % (addr, acode, aresp))
             if numOk:
                 errlog.append(str(log))
