@@ -60,6 +60,10 @@ class TagChecker:
         for node in domhelpers.findNodes(dom, matcher):
             self._reportError(filename, node.parentNode, 'contains quote')
 
+    def check_styleattr(self, dom, filename):
+        for node in domhelpers.findElementsWithAttribute(dom, 'style'):
+            self._reportError(filename, node, 'explicit style')
+
     def check_align(self, dom, filename):
         for node in domhelpers.findElementsWithAttribute(dom, 'align'):
             self._reportError(filename, node, 'explicit alignment')
