@@ -1,4 +1,4 @@
-from twisted.internet import defer
+from twisted.internet import defer, protocol
 from twisted.protocols import basic
 from twisted.python import log
 basic.DEBUG = True
@@ -80,7 +80,7 @@ class StupidRPC(basic.NetstringReceiver):
 ##
 
 AUTH_SUCCESS = 'Authentication Successful'
-AUTH_FAILURE = 'Aunthentication Failure'
+AUTH_FAILURE = 'Authentication Failure'
 
 from twisted.cred import credentials
 from twisted.python import components
@@ -100,6 +100,7 @@ class AuthServer(StupidRPC):
 
 
     def remote_auth(self, name, password):
+        print "trying to login with ", repr(name), repr(password)
         d = self.factory.portal.login(
             credentials.UsernamePassword(name, password),
             None,
@@ -109,12 +110,14 @@ class AuthServer(StupidRPC):
     remote_auth.sig = (str, str)
 
     def _cbGotRoot(self, root):
+        print "HELLO CBGOTROOT"
         self.root = root
         root.proto = self
         self.sendSuccess(AUTH_SUCCESS)
 
     def _ebNoRoot(self, f):
-        log.err()
+        print "HELLOEBNOROOT"
+        log.err(f)
         self.sendFailure(AUTH_FAILURE)
 
 ##
@@ -126,24 +129,35 @@ def ipify(ipstr):
     assert ipstr.count('.') == 3
     return ipstr
 
-class CapServer(StupidRPC):
+class CapServer:
 
     def remote_bindPort(self, interface, portno):
         print "HEY!", interface
-        self.sendSuccess("<3")
+        self.proto.sendSuccess("<3")
     remote_bindPort.sig = (ipify, int)
 
 
-def main():
-    import sys
-    from twisted.internet import protocol, reactor
+def makeAuthFactory(rootFactory, checker):
+    """
+    Convenience.
+    """
+    from twisted.cred import portal
     f = protocol.Factory()
     f.protocol = AuthServer
     class Realm:
-        def requestAvatar(self, *args):
-            return CapServer()
+        def requestAvatar(self, name, mind, iface):
+            assert iface is IStupid, iface
+            return rootFactory()
     f.portal = portal.Portal(Realm())
-    reactor.listenTCP(1025, f)
+    f.portal.registerChecker(checker)
+    return f
+
+def main():
+    import sys
+    from twisted.internet import reactor
+    from twisted.cred import checkers
+    reactor.listenTCP(1025,makeAuthFactory(CapServer,
+                           checkers.InMemoryUsernamePasswordDatabaseDontUse(radix='secret')))
 
     log.startLogging(sys.stdout)
     reactor.run()
