@@ -143,31 +143,10 @@ def _upgradeRegistry(registry):
                           app.theApplication)
 
 
-def loadMimeTypes(files = ['/etc/mime.types', os.path.expanduser('~/.mime.types')]):
-    """Read MIME types from a list of a standard mime.types formatted files
-    
-    @type files: C{str} C{list}
-    @rtype: C{dict}
-    @return: A C{dict} whose keys are file extensions and whose values
-    are MIME types
-    """
-    d = {}
-    for f in files:
-        try:
-            f = file(f)
-        except IOError:
-            pass
-        else:
-            lines = [l.strip() for l in f.readlines()]
-            f.close()
-            for L in lines:
-                if not L.startswith('#'):
-                    vals = L.split(None, 1)
-                    if len(vals) == 2:
-                        type, exts = vals
-                        for ext in exts.split():
-                            d[ext] = type
-    return d
+def loadMimeTypes():
+    """Ugg, does this even need to exist anymore?  Stupid stdlib"""
+    import mimetypes
+    return mimetypes.types_map
 
 
 class File(resource.Resource, styles.Versioned):
