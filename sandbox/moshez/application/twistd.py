@@ -155,7 +155,6 @@ def startApplication(config, application):
     if not config['originalname']:
         launchWithName(process.processName)
     setupEnvironment(config)
-    from twisted.internet import reactor
     service.IService(application).privilegedStartService()
     shedPrivileges(config['euid'], process.uid, process.gid)
     app.startApplication(application, not config['no_save'])
@@ -171,7 +170,8 @@ def runApp(config):
                  config['nodaemon'])
     app.initialLog()
     checkPID(config['pidfile'])
-    startApplication(config, app.getApplication(config, passphrase))
+    application = app.getApplication(config, passphrase)
+    startApplication(config, application)
     app.runReactorWithLogging(config, oldstdout, oldstderr)
     removePID(config['pidfile'])
     if config['report-profile']:

@@ -17,6 +17,7 @@
 from twisted.python import components
 from twisted.application import internet, service
 from twisted.persisted import sob
+import warnings
 
 class IOldApplication(components.Interface):
 

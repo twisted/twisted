@@ -15,6 +15,7 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 from twisted.python import usage
 from twisted.application import app
+import sys
 
 class ConvertOptions(usage.Options):
     synopsis = "Usage: tapconvert [options]"
@@ -33,9 +34,9 @@ class ConvertOptions(usage.Options):
         if self['in'] is None:
             self.opt_help()
             raise usage.UsageError("You must specify the input filename.")
-        if options["typein"] == "guess":
+        if self["typein"] == "guess":
             try:
-                options["typein"] = app.guessType(options["in"])
+                self["typein"] = app.guessType(self["in"])
             except KeyError:
                 raise usage.UsageError("Could not guess type for '%s'" %
                                        options["typein"])

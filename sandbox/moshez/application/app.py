@@ -13,11 +13,11 @@
 # You should have received a copy of the GNU Lesser General Public
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
-from twisted.python import runtime, log, usage
-from twisted.persisted import styles, sob
+from twisted.python import runtime, log, usage, reflect, failure, util
+from twisted.persisted import sob
 from twisted.application import compat, service
 from twisted import copyright
-import sys, os, pdb, profile, getpass, md5, traceback
+import sys, os, pdb, profile, getpass, traceback, signal
 
 reactorTypes = {
     'gtk': 'twisted.internet.gtkreactor',
@@ -225,15 +225,15 @@ def loadOrCreate(name, filename, procname, uid, gid):
             a = compat.convert(a)
     else:
         a = service.Application(name, uid, gid)
-    if options['appname']:
-        service.IProcess(a).processName = options['appname']
+    if procname:
+        service.IProcess(a).processName = procname
     return a
 
 def convertStyle(filein, typein, passphrase, fileout, typeout, encrypt):
-    a = app.loadPersisted(filein, typein, passphrase)
+    a = loadPersisted(filein, typein, passphrase)
     if sob.IPersistable(a, None) is None: # we have an old-style application
         a = compat.convert(a)
-    app.saveApplication(a, typeout, encrypt, fileout)
+    saveApplication(a, typeout, encrypt, fileout)
 
 def startApplication(application, save):
     from twisted.internet import reactor

@@ -60,7 +60,7 @@ class Service:
 
     def setServiceParent(self, parent):
         if self.parent is not None:
-            self.unsetParent()
+            self.disownServiceParent()
         self.parent = parent
         self.parent.addService(self)
 
