@@ -54,7 +54,7 @@ class TkMkAppFrame(Tkinter.Frame):
         appFrame = Tkinter.Frame(self)
 
         f = Tkinter.Frame(appFrame)
-        listLabel = Tkinter.Label(f, text='TAp Type')
+        listLabel = Tkinter.Label(f, text='TAp Format')
         self.typeList = Tkinter.Listbox(f, background='white')
         self.typeList['height'] = 3
         for t in ('pickle', 'xml', 'source'):
@@ -66,7 +66,7 @@ class TkMkAppFrame(Tkinter.Frame):
         f.pack(side=Tkinter.LEFT, anchor=Tkinter.N)
 
         f = Tkinter.Frame(appFrame)
-        tapLabel = Tkinter.Label(f, text='TAp filename')
+        tapLabel = Tkinter.Label(f, text='TAp Filename')
         tapButton = Tkinter.Button(f, text="Choose", command=self.pickTapFile)
         self.tapfile = Tkinter.Entry(f, background='white')
 
@@ -159,9 +159,8 @@ class TkMkAppFrame(Tkinter.Frame):
     def copyOptions(self):
         # Snarf the data out of the widgets and place them into the Options
         # instance.
-        for (opt, var) in self.optFrame.optFlags + self.optFrame.optParameters:
-            self.options[opt] = var.get()
-
+        extra = self.optFrame.updateConfig(self.options)
+    
         self.options['filename'] = self.tapfile.get()
         self.options['passphrase'] = self.passphrase.get()
 
@@ -171,8 +170,18 @@ class TkMkAppFrame(Tkinter.Frame):
         self.options['uid'] = int(self.uid.get())
         self.options['gid'] = int(self.gid.get())
         
-        self.options['type'] = self.typeList.curselection()[0]
+        try:
+            self.options['type'] = self.typeList.curselection()[0]
+        except IndexError:
+            raise usage.UsageError("Select a TAp Format")
         self.options['help'] = 0
+        
+        if extra:
+            try:
+                # XXX - this is wrong.  It needs to respect quotes, etc.
+                self.options.parseArgs(extra.split())
+            except TypeError:
+                raise usage.UsageError("Wrong number of extra arguments")
 
 
     def createApplication(self):
@@ -180,7 +189,11 @@ class TkMkAppFrame(Tkinter.Frame):
             tkMessageBox.showerror(message="Select an Application first")
             return
 
-        self.copyOptions()
+        try:
+            self.copyOptions()
+        except usage.UsageError, e:
+            tkMessageBox.showerror(message=str(e))
+            return
 
         if self.options['append'] and os.path.exists(self.options['filename']):
             a = twistd.loadApplication(self.options, None)
@@ -209,7 +222,7 @@ class TkMkAppFrame(Tkinter.Frame):
 
 
     def destroy(self):
-        reactor.stop()
+        reactor.crash()
         Tkinter.Frame.destroy(self)
 
 
@@ -217,6 +230,7 @@ class TkConfigFrame(Tkinter.Frame):
     optFrame = None
     paramFrame = None
     commandFrame = None
+    extraFrame = None
 
     subCmdFrame = None
     previousCommand = None
@@ -232,6 +246,13 @@ class TkConfigFrame(Tkinter.Frame):
         self.setupOptFlags()
         self.setupOptParameters()
         self.setupSubCommands()
+        self.setupExtra()
+
+
+    def updateConfig(self, options):
+        for (opt, var) in self.optFlags + self.optParameters:
+            options[opt] = var.get()
+        return self.extra.get()
 
 
     def setupOptFlags(self):
@@ -317,6 +338,15 @@ class TkConfigFrame(Tkinter.Frame):
             f.grid(row=1, column=3)
 
 
+    def setupExtra(self):
+        f = Tkinter.Frame(self)
+        l = Tkinter.Label(f, text='Extra Options')
+        self.extra = Tkinter.Entry(f, background='white')
+        l.pack()
+        self.extra.pack()
+        f.grid(row=2)
+
+
     def pollSubCommands(self):
         s = self.cmdList.curselection()
         if len(s):
@@ -328,8 +358,8 @@ class TkConfigFrame(Tkinter.Frame):
                     self.subOptFrame = TkConfigFrame(self.commandFrame, self.optMap[s])
                     self.subOptFrame.pack()
         self.subCmdPoll = reactor.callLater(0.1, self.pollSubCommands)
-
-
+    
+    
 class TkAppMenu(Tkinter.Menu):
     def __init__(self, master, create, callback, items):
         Tkinter.Menu.__init__(self, master)
@@ -339,7 +369,7 @@ class TkAppMenu(Tkinter.Menu):
         
         cmdMenu.add_command(label='Create', command=create)
         cmdMenu.add_separator()
-        cmdMenu.add_command(label='Quit', command=reactor.stop)
+        cmdMenu.add_command(label='Quit', command=reactor.crash)
 
         tapMenu = Tkinter.Menu(self)
         self.add_cascade(label="Applications", menu=tapMenu)
