@@ -1,4 +1,4 @@
-2003-08-07  Donovan Preston  <dp@twistedmatrix.com>
+2003-08-08  Donovan Preston  <dp@twistedmatrix.com>
 
 	* Added getAllPatterns API to Widget, which returns all nodes
 	which have the given pattern name.
