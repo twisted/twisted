@@ -192,7 +192,11 @@ class IMAP4Server(basic.LineReceiver):
             self._pendingLiteral = None
             rest.seek(0, 0)
             callback(rest)
-            self.setLineMode(passon.lstrip('\r\n'))
+            # XXX: here lies an lstrip sacrificed for the sake of 2.2.0
+            stripped = passon
+            while stripped and stripped[0] in '\r\n':
+                stripped = stripped[1:]
+            self.setLineMode(stripped)
 
     def lineReceived(self, line):
         # print 'S: ' + line.replace('\r', '\\r')
@@ -929,7 +933,11 @@ class IMAP4Client(basic.LineReceiver):
             self._pendingSize = None
             rest.seek(0, 0)
             self._parts.append(rest.read())
-            self.setLineMode(passon.lstrip('\r\n'))
+            # XXX: another ex- lstrip, dropped for 2.2.0 compatibility
+            stripped = passon
+            while stripped and stripped[0] in '\r\n':
+                stripped = stripped[1:]
+            self.setLineMode(stripped)
 
     def lineReceived(self, line):
         # print 'C: ' + line

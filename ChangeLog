@@ -1,3 +1,8 @@
+2003-06-03  Brian Warner  <warner@lothar.com>
+
+	* twisted/protocols/imap4.py (IMAP4Client.rawDataReceived,
+	IMAP4Server.rawDataReceived): 2.2.0 compatiblity: no lstrip(arg)
+
 2003-05-30  Brian Warner  <warner@lothar.com>
 
 	* twisted/conch/ssh/keys.py (signData_dsa): Force DSS signature
