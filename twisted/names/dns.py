@@ -179,3 +179,24 @@ class Resolver:
         query = SentQuery(name, type, callback, errback, self.boss, 
                           self.nameservers)
         main.theTimeouts.later(query.timeOut, timeout)
+
+
+class ResolveConfResolver(Resolver):
+
+    def __init__(self, file="/etc/resolve.conf", boss=None):
+        Resolver.__init__(self, [], boss)
+        self.file = file
+        self._setNameServers()
+       
+    def __setstate__(self, dct):
+        self.__dict__.update(dct)
+        self._setNameServers()
+
+    def _setNameServers(self):
+        fp = open(self.file)
+        lines = fp.readlines()
+        fp.close()
+        self.nameservers = []
+        for line in map(string.split, lines):
+            if line[0] == 'nameserver':
+                self.nameservers.append(line)
