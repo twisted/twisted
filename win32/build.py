@@ -39,10 +39,11 @@ class BuildOptions(usage.Options):
 
         self['pythonprefix']=sysconfig.get_config_var('prefix')
 
-        staticpylib='%s/libs/libpython22.a' % self['pythonprefix']
+        staticpylib='%s/libs/libpython%d%d.a' % ((self['pythonprefix'],
+                                                 ) + sys.version_info[:2])
         if not os.path.exists(staticpylib):
-            err("libpython22.a must be present to build Twisted.\n" +
-                "See http://sebsauvage.net/python/mingw.html\n")
+            err("%s must be present to build Twisted.\n" +
+                "See http://sebsauvage.net/python/mingw.html\n" % staticpylib)
             successcheck=0
             
         # try to find twisted in parents of the current directory first.
@@ -103,8 +104,12 @@ def run(argv=sys.argv):
     del sys.modules['twisted']
     from twisted.copyright import version
 
-    twisteddist='Twisted-%s.win32-py2.2.exe' %  version
-    twisteddistnodocs='Twisted_%s-%s.win32-py2.2.exe' % ('NoDocs', version)
+    majorminor=sys.version_info[:2]
+
+    twisteddist='Twisted-%s.win32-py%d.%d.exe' %  ((version,) + majorminor)
+    twisteddistnodocs='Twisted_%s-%s.win32-py%d.%d.exe' % (('NoDocs',
+                                                            version
+                                                            ) + majorminor)
 
     shpath=os.environ['PATH']
     os.environ['PATH']='%s;%s' % (shpath,
@@ -130,9 +135,7 @@ def run(argv=sys.argv):
         os.unlink('doc/win32doc.zip')
     except EnvironmentError:
         pass
-    python('setup.py clean -q --all')
-    python('setup.py build -q --compiler=mingw32')
-    python('setup.py bdist_wininst -q --install-script=twisted_postinstall.py')
+    python('setup.py -q clean --all build --compiler=mingw32 bdist_wininst -q --install-script=twisted_postinstall.py')
     os.rename('dist/%s' % twisteddist, 'dist/%s' % twisteddistnodocs)
 
     # second run - docs, please
@@ -146,7 +149,7 @@ def run(argv=sys.argv):
     infozip('-q win32doc.zip vision/*.xhtml')
     infozip('-rq win32doc.zip api/ -x "*CVS*" "*.cvsignore" "*README"')
     os.chdir('..')
-    python('setup.py bdist_wininst -q --install-script=twisted_postinstall.py')
+    python('setup.py -q clean --all build --compiler=mingw32 bdist_wininst -q --install-script=twisted_postinstall.py')
     if options['upload']:
         scp('dist/%s dist/%s shell.sf.net:/home/groups/t/tw/twisted/htdocs' %
             (twisteddistnodocs, twisteddist))
