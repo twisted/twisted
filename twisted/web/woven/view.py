@@ -78,7 +78,8 @@ class WView(template.DOMTemplate):
             # If no "controller" attribute was specified on the node, see if 
             # there is a IController adapter registerred for the model.
             model = self.getNodeModel(submodel)
-            controllerFactory = components.getAdapterClassWithInheritance(
+            if hasattr(model, '__class__'):
+                controllerFactory = components.getAdapterClassWithInheritance(
                                 model.__class__, 
                                 mvc.IController, 
                                 controllerFactory)
@@ -108,7 +109,8 @@ class WView(template.DOMTemplate):
             # If no "view" attribute was specified on the node, see if there
             # is a IView adapter registerred for the model.
             model = self.getNodeModel(submodel)
-            view = components.getAdapterClassWithInheritance(
+            if hasattr(model, '__class__'):
+                view = components.getAdapterClassWithInheritance(
                                 model.__class__, 
                                 mvc.IView, 
                                 None)
