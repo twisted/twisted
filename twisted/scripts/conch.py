@@ -14,7 +14,7 @@
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 #
-# $Id: conch.py,v 1.57 2003/06/25 05:54:28 z3p Exp $
+# $Id: conch.py,v 1.58 2003/08/08 14:30:40 z3p Exp $
 
 #""" Implementation module for the `conch` command.
 #"""
@@ -569,6 +569,9 @@ class SSHClientTransport(transport.SSHClientTransport):
         """
         keyType = common.getNS(pubKey)[0]
         retVal = 0
+        if not os.path.exists(os.path.expanduser('~/.ssh/')):
+            print 'Creating ~/.ssh directory...'
+            os.mkdir(os.path.expanduser('~/.ssh'))
         try:
             known_hosts = open(os.path.expanduser('~/.ssh/known_hosts'))
         except IOError:
