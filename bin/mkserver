@@ -31,16 +31,20 @@ except:
 def getModule(type):
     try:
         mod = __import__("twisted.util.mk%sserver" % type, globals(), locals(), type)
-	return mod
+        return mod
     except ImportError:
         traceback.print_exc()
         print "Please select one of 'telnet', 'irc', 'reality', 'web', 'toc'."
         sys.exit()
 
 if command == "--help":
-    mod = getModule(sys.argv[2])
-    print mod.usage_message
-    sys.exit()
+    if len(sys.argv) > 2:
+        mod = getModule(sys.argv[2])
+        print mod.usage_message
+        sys.exit()
+    else: 
+        print __doc__
+	sys.exit()
 else: 
     mod = getModule(command)
 try:
