@@ -487,16 +487,6 @@ int select_links(const char *path, const char *name, int type) {
 	return type == DT_LNK;
 }
 
-#if defined(__FreeBSD__)
-/* FreeBSD doesn't want a const on this. */
-int select_all(struct dirent* ent) {
-#else
-int select_all(const struct dirent* ent) {
-#endif
-	return 1;
-}
-
-
 static PyObject *
 dir_list(PyObject *self, PyObject *args, select_func select) {
 	int ret;
@@ -510,7 +500,7 @@ dir_list(PyObject *self, PyObject *args, select_func select) {
 	if (!PyArg_ParseTuple(args, "s", &path))
 		return NULL;
 	
-	ret = scandir(path, &ents, select_all, NULL);
+	ret = scandir(path, &ents, NULL, NULL);
 	if (ret == -1) {
 		PyErr_SetFromErrno(PyDirObject_Error);
 		return NULL;
