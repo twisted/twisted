@@ -102,3 +102,11 @@ class _Dereference(NotKnown):
         NotKnown.__init__(self)
         self.id = id
 
+
+class _Defer(NotKnown):
+    def __init__(self, d):
+        NotKnown.__init__(self)
+        self.deferred = d
+
+    def __setitem__(self, n, obj):
+        self.deferred.callback(obj)

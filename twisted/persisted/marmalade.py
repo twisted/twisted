@@ -24,7 +24,7 @@ identical.
 """
 
 from twisted.python.reflect import namedModule, namedClass, namedObject
-from twisted.persisted.crefutil import NotKnown, _Tuple, _InstanceMethod, _DictKeyAndValue, _Dereference
+from twisted.persisted.crefutil import NotKnown, _Tuple, _InstanceMethod, _DictKeyAndValue, _Dereference, _Defer
 
 from xml.dom.minidom import Text, Element, Node, Document, parse, parseString, CDATASection
 
@@ -39,26 +39,77 @@ import types
 import pickle
 
 def getValueElement(node):
+    """Get the one child element of a given element.
+
+    If there is more than one child element, raises ValueError.  Otherwise,
+    returns the value element.
+    """
     valueNode = None
     for subnode in node.childNodes:
         if isinstance(subnode, Element):
             if valueNode is None:
                 valueNode = subnode
             else:
-                raise "Only one value node allowed per instance!"
+                raise ValueError("Only one value node allowed per instance!")
     return valueNode
+
+
+class DOMJellyable:
+
+    jellyDOMVersion = 1
+
+    def jellyToDOM(self, jellier, element):
+        element.setAttribute("marmalade:version", str(self.jellyDOMVersion))
+        method = getattr(self, "jellyToDOM_%s" % self.jellyDOMVersion, None)
+        if method:
+            method(jellier, element)
+        else:
+            element.addChild(jellier.jellyToNode(self.__dict__))
+
+    def unjellyFromDOM(self, unjellier, element):
+        pDOMVersion = element.getAttribute("marmalade:version") or "0"
+        method = getattr(self, "unjellyFromDOM_%s" % pDOMVersion, None)
+        if method:
+            method(unjellier, element)
+        else:
+            state = self.unjellyNode(getValueElement(node))
+            if hasattr(self.__class__, "__setstate__"):
+                self.__setstate__(state)
+            else:
+                self.__dict__ = state
+
 
 
 class DOMUnjellier:
     def __init__(self):
         self.references = {}
 
+    def unjellyLater(self, node):
+        """Unjelly a node, later.
+        """
+        from twisted.internet.defer import Deferred
+        d = Deferred()
+        self.unjellyInto(_Defer(d), 0, node)
+        return d
+
     def unjellyInto(self, obj, loc, node):
+        """Utility method for unjellying one object into another.
+
+        This automates the handling of backreferences.
+        """
         o = self.unjellyNode(node)
         if isinstance(o, NotKnown):
             o.addDependant(obj, loc)
         obj[loc] = o
         return o
+
+    def unjellyAttribute(self, instance, attrName, valueNode):
+        """Utility method for unjellying into instances of attributes.
+
+        Use this rather than unjellyNode unless you like surprising bugs!
+        Alternatively, you can use unjellyInto on your instance's __dict__.
+        """
+        self.unjellyInto(instance.__dict__, attrName, valueNode)
         
     def unjellyNode(self, node):
         if node.tagName == "None":
@@ -126,16 +177,19 @@ class DOMUnjellier:
                     keyMode = not keyMode
             retval = d
         elif node.tagName == "instance":
-            # XXX TODO: fromNode or similar
             className = node.getAttribute("class")
             clasz = namedClass(className)
-            state = self.unjellyNode(getValueElement(node))
-            if hasattr(clasz, "__setstate__"):
-                inst = instance(clasz, {})
-                inst.__setstate__(state)
+            if issubclass(clasz, DOMJellyable):
+                retval = instance(clasz, {})
+                retval.unjellyFromDOM(self, node)
             else:
-                inst = instance(clasz, state)
-            retval = inst
+                state = self.unjellyNode(getValueElement(node))
+                if hasattr(clasz, "__setstate__"):
+                    inst = instance(clasz, {})
+                    inst.__setstate__(state)
+                else:
+                    inst = instance(clasz, state)
+                retval = inst
         elif node.tagName == "reference":
             refkey = node.getAttribute("key")
             retval = self.references.get(refkey)
@@ -176,25 +230,25 @@ class DOMJellier:
         """
         objType = type(obj)
         if objType is types.NoneType:
-            node = Element("None")
+            node = self.document.createElement("None")
         elif objType is types.StringType:
-            node = Element("string")
+            node = self.document.createElement("string")
             node.setAttribute("value", obj.replace("\n", "\\n").replace("\t", "\\t"))
             # node.appendChild(CDATASection(obj))
         elif objType is types.IntType:
-            node = Element("int")
+            node = self.document.createElement("int")
             node.setAttribute("value", str(obj))
         elif objType is types.LongType:
-            node = Element("longint")
+            node = self.document.createElement("longint")
             s = str(obj)
             if s[-1] == 'L':
                 s = s[:-1]
             node.setAttribute("value", s)
         elif objType is types.FloatType:
-            node = Element("float")
+            node = self.document.createElement("float")
             node.setAttribute("value", repr(obj))
         elif objType is types.MethodType:
-            node = Element("method")
+            node = self.document.createElement("method")
             node.setAttribute("name", obj.im_func.__name__)
             node.setAttribute("class", str(obj.im_class))
             # TODO: make methods 'prefer' not to jelly the object internally,
@@ -202,18 +256,18 @@ class DOMJellier:
             # by a method.
             node.appendChild(self.jellyToNode(obj.im_self))
         elif objType is types.ModuleType:
-            node = Element("module")
+            node = self.document.createElement("module")
             node.setAttribute("name", obj.__name__)
         elif objType is types.ClassType:
-            node = Element("class")
+            node = self.document.createElement("class")
             node.setAttribute("name", str(obj))
         elif objType is types.UnicodeType:
-            node = Element("unicode")
+            node = self.document.createElement("unicode")
             obj = obj.encode('raw_unicode_escape')
             s = obj.replace("\n", "\\n").replace("\t", "\\t")
             node.setAttribute("value", s)
         elif objType is types.FunctionType:
-            node = Element("function")
+            node = self.document.createElement("function")
             node.setAttribute("name", str(pickle.whichmodule(obj, obj.__name__)) + '.' + obj.__name__)
         else:
             if self.prepared.has_key(id(obj)):
@@ -226,10 +280,10 @@ class DOMJellier:
                     self._ref_id = self._ref_id + 1
                     key = str(self._ref_id)
                     oldNode.setAttribute("reference", key)
-                node = Element("reference")
+                node = self.document.createElement("reference")
                 node.setAttribute("key", key)
                 return node
-            node = Element("UNNAMED")
+            node = self.document.createElement("UNNAMED")
             self.prepareElement(node, obj)
             if objType is types.ListType:
                 node.tagName = "list"
@@ -251,13 +305,15 @@ class DOMJellier:
                 className = str(obj.__class__)
                 node.tagName = "instance"
                 node.setAttribute("class", className)
-                # XXX TODO: obj.mutateNode or similar
-                if hasattr(obj, "__getstate__"):
-                    state = obj.__getstate__()
+                if isinstance(obj, DOMJellyable):
+                    obj.jellyToDOM(self, node)
                 else:
-                    state = obj.__dict__
-                n = self.jellyToNode(state)
-                node.appendChild(n)
+                    if hasattr(obj, "__getstate__"):
+                        state = obj.__getstate__()
+                    else:
+                        state = obj.__dict__
+                    n = self.jellyToNode(state)
+                    node.appendChild(n)
             else:
                 raise "Unsupported type: %s" % objType.__name__
         return node

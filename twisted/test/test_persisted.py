@@ -110,12 +110,89 @@ class B:
         pass
 
 
+class Marmaladeable(marmalade.DOMJellyable):
+
+    jellyDOMVersion = 1
+
+    def __init__(self, integer, instance, name, sequence):
+        self.integer = integer
+        self.instance = instance
+        self.sequence = sequence
+        self.name = name
+
+    def jellyToDOM_1(self, jellier, element):
+        element.setAttribute("integer", str(self.integer))
+        element.setAttribute("instance", str(self.instance.__class__)) # not l33t enough
+        element.setAttribute("name", str(self.name))
+        # oops forgot self.sequence
+
+    def unjellyFromDOM_1(self, unjellier, element):
+        from twisted.python.reflect import namedClass
+        self.integer = int(element.getAttribute("integer"))
+        self.instance = namedClass(element.getAttribute("instance"))()
+        self.name = element.getAttribute("name")
+        # just give us any ol' list
+        self.sequence = [self.instance, self.instance]
+
+    def jellyToDOM_2(self, jellier, element):
+        element.setAttribute("integer", str(self.integer))
+        element.setAttribute("name", str(self.name))
+        # element.setAttribute("instance", str(self.instance.__class__)) # not l33t enough
+        instanceNode = jellier.jellyToNode(self.instance) # l33ter!
+        instanceNode.setAttribute("parent:role", "instance")
+        element.appendChild(instanceNode)
+        i = 0
+        for seqel in self.sequence:
+            seqNode = jellier.jellyToNode(seqel)
+            seqNode.setAttribute("parent:role", "sequence:%d" % i)
+            element.appendChild(seqNode)
+            i = i + 1
+
+    def unjellyFromDOM_2(self, unjellier, element):
+        self.integer = int(element.getAttribute("integer"))
+        self.name = element.getAttribute("name")
+
+        # Note to people reading this as an example: if you don't use
+        # "unjellyInto", and instead use "unjellyFromNode", it will appear to
+        # work.  _however_, it will also have some really surprising results
+        # when you have references in your application; i.e. you will get
+        # _Dereference instances in places where you thought you should have
+        # references to back-referenced data.  I am working on making this
+        # simpler.
+        from xml.dom.minidom import Element
+        self.sequence = []
+        i = 0
+        for node in element.childNodes:
+            if isinstance(node, Element):
+                if node.getAttribute("parent:role") == 'instance':
+                    unjellier.unjellyAttribute(self, "instance", node)
+                else:
+                    self.sequence.append(None)
+                    # TODO: MUST BE FIXED!!! calling .arm() in situations like
+                    # this makes _no_ sense
+                    unjellier.unjellyLater(node).addCallback(self.gotSequenceItem, i).arm()
+                    i = i + 1
+
+    def gotSequenceItem(self, seqitem, num):
+        self.sequence[num] = seqitem
 
 
 def funktion():
     pass
 
 class MarmaladeTestCase(unittest.TestCase):
+
+    def testMarmaladeable(self):
+        m = Marmaladeable(1, B(), "testing", [1, 2, 3])
+        s = marmalade.jellyToXML(m)
+        u = marmalade.unjellyFromXML(s)
+        assert u.sequence == [u.instance, u.instance]
+        u.sequence.append(u.instance)
+        u.jellyDOMVersion = 2
+        s2 = marmalade.jellyToXML(u)
+        u2 = marmalade.unjellyFromXML(s2)
+        self.assertEquals( u2.sequence,  [u2.instance, u2.instance, u2.instance])
+
     def testMethodSelfIdentity(self):
         a = A()
         b = B()
