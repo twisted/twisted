@@ -101,7 +101,7 @@ class DirectoryLister(page.Page):
         files = []; dirs = []
 
         for path in directory:
-            url = urllib.quote(path, "/:")
+            url = urllib.quote(path, "/")
             if os.path.isdir(os.path.join(self.path, path)):
                 url = url + '/'
                 dirs.append({'link':{"text": path + "/", "href":url},
