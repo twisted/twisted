@@ -78,6 +78,17 @@ class WebClientTestCase(unittest.TestCase):
         f = unittest.deferredError(client.getPage(self.getURL("nosuchfile")))
         f.trap(error.Error)
 
+    def testFactoryInfo(self):
+        host, port, url = client._parse(self.getURL('file'))
+        factory = client.HTTPClientFactory(host, url)
+        reactor.connectTCP(host, port, factory)
+        unittest.deferredResult(factory.deferred)
+        self.assertEquals(factory.status, '200')
+        self.assert_(factory.version.startswith('HTTP/'))
+        self.assertEquals(factory.message, 'OK')
+        self.assertEquals(factory.response_headers['content-length'][0], '10')
+        
+
     def testRedirect(self):
         self.assertEquals(unittest.deferredResult(client.getPage(self.getURL("redirect"))),
                           "0123456789")

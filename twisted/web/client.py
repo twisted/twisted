@@ -54,6 +54,7 @@ class HTTPPageGetter(http.HTTPClient):
 
     def handleStatus(self, version, status, message):
         self.version, self.status, self.message = version, status, message
+        self.factory.gotStatus(version, status, message)
 
     def handleEndHeaders(self):
         self.factory.gotHeaders(self.headers)
@@ -129,11 +130,31 @@ class HTTPPageDownloader(HTTPPageGetter):
 
 
 class HTTPClientFactory(protocol.ClientFactory):
-    """Download a given URL."""
+    """Download a given URL.
+
+    @type deferred: Deferred
+    @ivar deferred: A Deferred that will fire when the content has
+          been retrieved. Once this is fired, the ivars `status', `version',
+          and `message' will be set.
+
+    @type status: str
+    @ivar status: The status of the response.
+
+    @type version: str
+    @ivar version: The version of the response.
+
+    @type message: str
+    @ivar message: The text message returned with the status.
+
+    @type response_headers: dict
+    @ivar response_headers: The headers that were specified in the
+          response from the server.
+    """
 
     protocol = HTTPPageGetter
 
-    def __init__(self, host, url, method='GET', postdata=None, headers=None, agent="Twisted PageGetter", timeout=0):
+    def __init__(self, host, url, method='GET', postdata=None, headers=None,
+                 agent="Twisted PageGetter", timeout=0):
         self.timeout = timeout
         self.agent = agent
         self.url = url
@@ -156,6 +177,7 @@ class HTTPClientFactory(protocol.ClientFactory):
 
         self.waiting = 1
         self.deferred = defer.Deferred()
+        self.response_headers = None
 
     def buildProtocol(self, addr):
         p = protocol.ClientFactory.buildProtocol(self, addr)
@@ -164,13 +186,17 @@ class HTTPClientFactory(protocol.ClientFactory):
         return p
 
     def gotHeaders(self, headers):
+        self.response_headers = headers
         if headers.has_key('set-cookie'):
             for cookie in headers['set-cookie']:
                 cookparts = cookie.split(';')
                 for cook in cookparts:
                     cook.lstrip()
-                    k, v = cook.split('=')
+                    k, v = cook.split('=', 1)
                     self.cookies[k.lstrip()] = v.lstrip()
+
+    def gotStatus(self, version, status, message):
+        self.version, self.status, self.message = version, status, message
 
     def page(self, page):
         if self.waiting:
