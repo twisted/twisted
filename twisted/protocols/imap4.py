@@ -210,7 +210,7 @@ class IMAP4Server(basic.LineReceiver):
         else:
             # XXX - This is rude.
             self.transport.loseConnection()
-            raise IllegalClientResponse(line)
+            # raise IllegalClientResponse(line)
 
         cmd = cmd.upper()
         self.dispatchCommand(tag, cmd, rest)
