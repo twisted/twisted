@@ -55,13 +55,24 @@ class WizardThing:
         self.gw_pathtoicon.set_position(len(ico))
         self.gw_icondisplay.set_from_file(ico)
 
+        # treeview tedia
         store = gtk.ListStore(gobject.TYPE_STRING, gobject.TYPE_STRING)
         self.gw_datalist.set_model(store)
-        TVC=gtk.TreeViewColumn
-        CRT=gtk.CellRendererText
-        self.gw_datalist.append_column(TVC("Source File", CRT(), text=1))
-        self.gw_datalist.append_column(TVC("Install Destination",
-                                       CRT(), text=1))
+        TVC = gtk.TreeViewColumn
+        CRT = gtk.CellRendererText
+        renderer0 = CRT()
+        renderer1 = CRT()
+        tvc0 = TVC("Source File", renderer0, text=0)
+        tvc1 = TVC("Install Destination", renderer1, text=1)
+        dct = {(renderer0, 'xalign'): 1.0,
+               (renderer0, 'editable'): True,
+               (renderer1, 'editable'): True,
+               (tvc0, 'max-width'): 200,
+               }
+        for o,p in dct: o.set_property(p, dct[(o,p)])
+        self.gw_datalist.append_column(tvc0)
+        self.gw_datalist.append_column(tvc1)
+        
 
     def on_ntsvcwizard_destroy(self, widget):
         log.msg("Goodbye.")
@@ -77,8 +88,10 @@ class WizardThing:
 
     def on_notebook1_switch_page(self, widget, data, pagenum):
         PAGES = 5
-        self.gw_backbtn.set_sensitive((pagenum in range(1, PAGES)))
-        self.gw_nextbtn.set_sensitive((pagenum in range(0, PAGES-1)))
+        has_back = (pagenum in range(1, PAGES))
+        has_next = (pagenum in range(0, PAGES-1))
+        self.gw_backbtn.set_sensitive(has_back)
+        self.gw_nextbtn.set_sensitive(has_next)
 
     def on_browsefortap_clicked(self, widget):
         dlg = CreateFileDialog(1, None,
@@ -113,7 +126,7 @@ class WizardThing:
             for p in pns:
                 pth = path(p)
                 tup = (pth, path('/') / pth.basename())
-                datafiles.append(tup)  # FIXME - both columns display same
+                iter = datafiles.append(tup)
 
     def setNewValues(self):
         cf = self.gw_pathtotap.get_text()
