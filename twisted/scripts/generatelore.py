@@ -78,7 +78,7 @@ class Options(usage.Options):
                      ["ext", "e", ".xhtml",
                       "The extension of output files (and thus what links are "
                       "munged to)"],
-                     ["baseurl", "u", '%s'
+                     ["baseurl", "u", '%s',
                       "The URL that API-ref links are to use, with %s for "
                       "the module or class"]]
 
