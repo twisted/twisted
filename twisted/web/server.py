@@ -29,11 +29,8 @@ import socket
 import traceback
 import types
 import operator
-import os
-import sys
 import urllib
 import cgi
-import cPickle
 import copy
 import time
 import calendar
@@ -43,7 +40,7 @@ NOT_DONE_YET = 1
 
 # Twisted Imports
 from twisted.spread import pb
-from twisted.internet import tcp, passport, main
+from twisted.internet import passport, main
 from twisted.protocols import http, protocol
 from twisted.python import log, reflect, roots
 from twisted import copyright
@@ -170,7 +167,8 @@ class Request(pb.Copyable, http.HTTP):
         self.args = {}
         self.stack = []
         self.headers = {}
-
+        self.cookies = []
+        
         self.method, self.uri = command, path
         self.clientproto = version
         self.content = content
@@ -337,6 +335,8 @@ class Request(pb.Copyable, http.HTTP):
                 self.sendStatus(self.code, message)
                 for name, value in self.headers.items():
                     self.sendHeader(name, value)
+                for cookie in self.cookies:
+                    self.sendHeader("Set-Cookie", cookie)
                 self.endHeaders()
             
             # if this is a "HEAD" request, we shouldn't return any data
@@ -360,6 +360,32 @@ class Request(pb.Copyable, http.HTTP):
         """
         self.finish()
 
+    def addCookie(self, k, v, expires=None, domain=None, path=None, max_age=None, comment=None, secure=None):
+        """Set an outgoing HTTP cookie.
+        
+        In general, you should consider using sessions instead of cookies,
+        see self.getSession and the Session class for details.
+        """
+        cookie = '%s=%s' % (k, v)
+        if expires != None:
+            cookie = cookie +"; Expires=%s" % expires
+        if domain != None:
+            cookie = cookie +"; Domain=%s" % domain
+        if path != None:
+            cookie = cookie +"; Path=%s" % path
+        if max_age != None:
+            cookie = cookie +"; Max-Age=%s" % max_age
+        if comment != None:
+            cookie = cookie +"; Comment=%s" % comment
+        if secure:
+            cookie = cookie +"; Secure"
+        self.cookies.append(cookie)
+    
+    def view_addCookie(self, k, v, **kwargs):
+        """Remote version of addCookie; same interface.
+        """
+        apply(self.addCookie, (k, v), kwargs)
+    
     def setHeader(self, k, v):
         """Set an outgoing HTTP header.
         """
@@ -418,8 +444,7 @@ class Request(pb.Copyable, http.HTTP):
             # if it still hasn't been set, fix it up.
             if not self.session:
                 self.session = self.site.makeSession()
-                self.setHeader('Set-Cookie',
-                               '%s=%s' % (cookiename, self.session.uid))
+                self.addCookie(cookiename, self.session.uid)
         self.session.touch()
         return self.session
 
