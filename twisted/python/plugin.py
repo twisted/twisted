@@ -19,7 +19,9 @@ from __future__ import nested_scopes
 # System Imports
 import sys
 import os
+import errno
 
+# Twisted imports
 from twisted.python import log
 
 # Sibling Imports
@@ -83,20 +85,33 @@ def getPluginFileList(debugInspection=0, showProgress=0):
                 log.msg('Recursing through %s' % d)
             loaded[d] = 1
 
-        for plugindir in os.listdir(d):
-            if seenNames.has_key(plugindir):
-                continue
-            seenNames[plugindir] = 1
-            plugindir = os.sep.join((d, plugindir))
-            if showProgress:
-                log.logfile.write('+')
-                log.logfile.flush()
-            tmlname = os.sep.join((plugindir, "plugins.tml"))
-            if debugInspection:
-                log.msg(tmlname)
-            if os.path.exists(tmlname):
-                found = 1
-                result.append(tmlname)
+        try:
+            paths = os.listdir(d)
+        except OSError, (err, s):
+            # Permission denied, carry on
+            if err == errno.EACCES:
+                if showProgress:
+                    log.logfile.write('x')
+                    log.logfile.flush()
+                if debugInspection:
+                    log.msg('Permission denied on ' + d)
+            else:
+                raise
+        else:
+            for plugindir in paths:
+                if seenNames.has_key(plugindir):
+                    continue
+                seenNames[plugindir] = 1
+                plugindir = os.sep.join((d, plugindir))
+                if showProgress:
+                    log.logfile.write('+')
+                    log.logfile.flush()
+                tmlname = os.sep.join((plugindir, "plugins.tml"))
+                if debugInspection:
+                    log.msg(tmlname)
+                if os.path.exists(tmlname):
+                    found = 1
+                    result.append(tmlname)
 
     if not found:
         raise IOError("Couldn't find a plugins file!")
