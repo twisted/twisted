@@ -14,9 +14,9 @@
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 #
-# $Id: conch.py,v 1.26 2002/12/11 15:48:20 z3p Exp $
+# $Id: conch.py,v 1.27 2002/12/22 01:45:31 z3p Exp $
 
-#""" Implementation module for the `ssh` command.
+#""" Implementation module for the `conch` command.
 #"""
 
 from twisted.conch.ssh import transport, userauth, connection, common, keys
@@ -286,7 +286,10 @@ class SSHUserAuthClient(userauth.SSHUserAuthClient):
         file += '.pub'
         if not os.path.exists(file):
             return
-        return keys.getPublicKeyString(file) 
+        try:
+            return keys.getPublicKeyString(file) 
+        except:
+            return self.getPublicKey() # try again
     
     def getPrivateKey(self):
         file = os.path.expanduser(self.usedFiles[-1])

@@ -139,7 +139,6 @@ def makePrivateKeyString(obj, passphrase = None):
         ba = md5.new(passphrase + iv).digest()
         bb = md5.new(ba + passphrase + iv).digest()
         encKey = (ba + bb)[:24]
-        objData = [objData]
     asn1Data = asn1.pack([objData])
     if passphrase:
         padLen = 8 - (len(asn1Data) % 8)
