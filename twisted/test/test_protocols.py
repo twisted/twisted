@@ -1,16 +1,16 @@
 
 # Twisted, the Framework of Your Internet
 # Copyright (C) 2001 Matthew W. Lefkowitz
-# 
+#
 # This library is free software; you can redistribute it and/or
 # modify it under the terms of version 2.1 of the GNU Lesser General Public
 # License as published by the Free Software Foundation.
-# 
+#
 # This library is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
 # Lesser General Public License for more details.
-# 
+#
 # You should have received a copy of the GNU Lesser General Public
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
@@ -82,9 +82,7 @@ a'''
             for i in range(len(self.buffer)/packet_size + 1):
                 s = self.buffer[i*packet_size:(i+1)*packet_size]
                 a.dataReceived(s)
-            if a.received != self.output:
-                print a.received
-                raise AssertionError
+            self.failUnlessEqual(self.output, a.received)
 
 class TestNetstring(basic.NetstringReceiver):
 
@@ -95,13 +93,13 @@ class TestNetstring(basic.NetstringReceiver):
         self.received.append(s)
 
 class TestSafeNetstring(basic.SafeNetstringReceiver):
-    
+
     MAX_LENGTH = 50
     closed = 0
-    
+
     def stringReceived(self, s):
         pass
-    
+
     def connectionLost(self):
         self.closed = 1
 
@@ -112,14 +110,14 @@ class NetstringReceiverTestCase(unittest.TestCase):
 
     illegal_strings = ['9999999999999999999999', 'abc', '4:abcde',
                        '51:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaab,',]
-    
+
     def testBuffer(self):
         for packet_size in range(1, 10):
             t = StringIOWithoutClosing()
             a = TestNetstring()
             a.makeConnection(protocol.FileWrapper(t))
             for s in self.strings:
-                a.sendString(s) 
+                a.sendString(s)
             out = t.getvalue()
             for i in range(len(out)/packet_size + 1):
                 s = out[i*packet_size:(i+1)*packet_size]
@@ -127,15 +125,15 @@ class NetstringReceiverTestCase(unittest.TestCase):
                     a.dataReceived(s)
             if a.received != self.strings:
                 raise AssertionError(a.received)
-    
+
     def getSafeNS(self):
         t = StringIOWithoutClosing()
         a = TestSafeNetstring()
         a.makeConnection(protocol.FileWrapper(t))
         return a
-    
+
     def testSafe(self):
-        for s in self.illegal_strings:            
+        for s in self.illegal_strings:
             r = self.getSafeNS()
             r.dataReceived(s)
             if not r.brokenPeer:
@@ -218,9 +216,9 @@ class SMTPTestCase(unittest.TestCase):
 From: Moshe
 To: Moshe
 
-Hi, 
+Hi,
 how are you?
-'''),            
+'''),
                  ('foo.com', 'tttt@rrr.com', ['uuu@ooo', 'yyy@eee'], '''\
 Subject: pass
 
@@ -274,7 +272,7 @@ How are you, friend?
 
     def getMessage(self, i):
         return StringIO.StringIO(self.messages[i])
-    
+
     def getUidl(self, i):
         return str(i)
 
@@ -321,13 +319,10 @@ QUIT''', '\n')
 ##        o = ObjectAccumulator()
 ##        o.makeConnection(protocol.FileWrapper(t))
 ##        o.sendObject(self.object)
-##        output = t.getvalue()  
+##        output = t.getvalue()
 ##        o.dataReceived(output)
 ##        if o.objects[0] != self.object:
 ##             raise AssertionError(o.objects[0])
 
 testCases = [LineReceiverTestCase, NetstringReceiverTestCase, HTTPTestCase,
              SMTPTestCase, POP3TestCase]
-
-
-

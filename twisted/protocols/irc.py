@@ -1,16 +1,16 @@
 
 # Twisted, the Framework of Your Internet
 # Copyright (C) 2001 Matthew W. Lefkowitz
-# 
+#
 # This library is free software; you can redistribute it and/or
 # modify it under the terms of version 2.1 of the GNU Lesser General Public
 # License as published by the Free Software Foundation.
-# 
+#
 # This library is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
 # Lesser General Public License for more details.
-# 
+#
 # You should have received a copy of the GNU Lesser General Public
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
@@ -19,10 +19,17 @@
 """
 
 from twisted.protocols import basic, protocol
-from twisted.python import log
+from twisted.python import log, reflect
+from twisted.spread import pb
+import operator
+import random
+import re
 import string
+import sys
+import time
+import traceback
 
-class IRCParseError(ValueError):
+class IRCBadMessage(Exception):
     pass
 
 def parsemsg(s):
@@ -73,25 +80,29 @@ class IRC(protocol.Protocol):
         self.sendLine(line)
 
         if len(parameter_list) > 15:
-            warn("Message has %d parameters (RFC allows 15):\n%s" %
-                 len(parameter_list), line)
+            log.msg("Message has %d parameters (RFC allows 15):\n%s" %
+                    (len(parameter_list), line))
 
     def dataReceived(self, data):
-        """ This hack is to support mIRC, which sends LF only, even though the
-        RFC says CRLF.  (Also, the flexibility of LineReceiver to turn "line
-        mode" on and off was not required.)
+        """This hack is to support mIRC, which sends LF only,
+        even though the RFC says CRLF.  (Also, the flexibility
+        of LineReceiver to turn "line mode" on and off was not
+        required.)
         """
         self.buffer = self.buffer + data
-        lines = string.split(self.buffer, "\n") # get the lines
-        self.buffer = lines.pop() # pop the last element (we're not sure it's a line)
+        lines = string.split(self.buffer, LF)
+        # Put the (possibly empty) element after the last LF back in the
+        # buffer
+        self.buffer = lines.pop()
+
         for line in lines:
             if len(line) <= 2:
                 # This is a blank line, at best.
                 continue
-            if line[-1] == "\r":
+            if line[-1] == CR:
                 line = line[:-1]
             prefix, command, params = parsemsg(line)
-            # MIRC is a big pile of doo-doo
+            # mIRC is a big pile of doo-doo
             command = string.upper(command)
             log.msg( "%s %s %s" % (prefix, command, params))
             method = getattr(self, "irc_%s" % command, None)
@@ -100,7 +111,49 @@ class IRC(protocol.Protocol):
             else:
                 self.irc_unknown(prefix, command, params)
 
-class IRCClient(basic.LineReceiver):
+
+class IRCClient(basic.LineReceiver, log.Logger):
+    """I am a faceless IRC client.
+
+    TODO: Add flood protection/rate limiting for my CTCP replies.
+    """
+
+    classDccPbRequest = None
+
+    ### Responses to various CTCP queries.
+
+    userinfo = None
+    # fingerReply is a callable returning a string, or a str()able object.
+    fingerReply = None
+    versionName = None
+    versionNum = None
+    versionEnv = None
+
+    sourceHost = "twistedmatrix.com"
+    sourceDir = "/downloads"
+    sourceFiles = None
+
+    ### Interface level client->user output methods
+    ###
+    ### You'll want to override these.
+
+    def privmsg(self, user, channel, message):
+        """Called when I have a message from a user to me or a channel.
+        """
+        pass
+
+    def action(self, user, channel, data):
+        """Called when I see a user perform an ACTION on a channel.
+        """
+        pass
+
+    def pong(self, user, secs):
+        """Called with the results of a CTCP PING query.
+        """
+        pass
+
+    ### user input commands, client->server
+    ### Your client will want to invoke these.
 
     def join(self, channel):
         self.sendLine("JOIN #%s" % channel)
@@ -124,6 +177,35 @@ class IRCClient(basic.LineReceiver):
         self.nickname = nickname
         self.sendLine("NICK %s" % nickname)
 
+    ### user input commands, client->client
+
+    _pings = None
+    _MAX_PINGRING = 12
+
+    def ping(self, user):
+        if self._pings is None:
+            self._pings = {}
+
+        key = []
+        for i in xrange(12):
+            key.append(random.choice(xrange(33,91)))
+        key = string.join(map(chr, key),'')
+        self._pings[key] = time.time()
+        self.ctcpMakeQuery(user, (['PING', key]))
+
+        if len(self._pings) > self._MAX_PINGRING:
+            # Remove some of the oldest entries.
+            byValue = map(lambda a: (a[-1], a[0]),
+                          self._pings.items())
+            byValue.sort()
+            excess = self._MAX_PINGRING - len(self._pings)
+            for i in xrange(excess):
+                del self._pings[byValue[i][1]]
+
+    ### server->client messages
+    ### You might want to fiddle with these,
+    ### but it is safe to leave them alone.
+
     def irc_443(self, prefix, params):
         self.setNick(self.nickname+'_')
 
@@ -137,27 +219,391 @@ class IRCClient(basic.LineReceiver):
         user = prefix
         channel = params[0]
         message = params[-1]
-        if message[0]=="\001":
-            if message[1:5]=="PING":
-                self.notice(string.split(user,"!")[0],"\001PING "+message[6:])
+
+        if message[0]==X_DELIM:
+            m = ctcpExtract(message)
+            if m['extended']:
+                self.ctcpQuery(user, channel, m['extended'])
+
+            if not m['normal']:
                 return
+
+            message = string.join(m['normal'], ' ')
+
         self.privmsg(user, channel, message)
 
-    irc_NOTICE = irc_PRIVMSG
+    def irc_NOTICE(self, prefix, params):
+        user = prefix
+        channel = params[0]
+        message = params[-1]
 
-    def privmsg(self, user, channel, message):
-        pass
+        if message[0]==X_DELIM:
+            m = ctcpExtract(message)
+            if m['extended']:
+                self.ctcpReply(user, channel, m['extended'])
+
+            if not m['normal']:
+                return
+
+            message = string.join(m['normal'], ' ')
+
+        self.privmsg(user, channel, message)
 
     def irc_unknown(self, prefix, command, params):
         pass
 
-    def lineReceived(self, line):
-        prefix, command, params = parsemsg(line)
-        method = getattr(self, "irc_%s" % command, None)
-        if method is not None:
-            method(prefix, params)
+
+    ### Receiving a CTCP query from another party
+    ### It is safe to leave these alone.
+
+    def ctcpQuery(self, user, channel, messages):
+        for m in messages:
+            method = getattr(self, "ctcpQuery_%s" % m[0], None)
+            if method:
+                method(user, channel, m[1])
+            else:
+                self.ctcpUnknownQuery(user, channel, m[0], m[1])
+
+    def ctcpQuery_ACTION(self, channel, user, data):
+        self.action(user, channel, data)
+
+    def ctcpQuery_PING(self, channel, user, data):
+        nick = string.split(user,"!")[0]
+        self.ctcpMakeReply(nick, [("PING", data)])
+
+    def ctcpQuery_FINGER(self, user, channel, data):
+        if data is not None:
+            self.quirkyMessage("Why did %s send '%s' with a FINGER query?"
+                               % (user, data))
+        if not self.fingerReply:
+            return
+
+        if operator.isCallable(self.fingerReply):
+            reply = self.fingerReply()
         else:
-            self.irc_unknown(prefix, command, params)
+            reply = str(self.fingerReply)
+
+        nick = string.split(user,"!")[0]
+        self.ctcpMakeReply(nick, [('FINGER', reply)])
+
+    def ctcpQuery_VERSION(self, user, channel, data):
+        if data is not None:
+            self.quirkyMessage("Why did %s send '%s' with a VERSION query?"
+                               % (user, data))
+
+        if self.versionName:
+            nick = string.split(user,"!")[0]
+            self.ctcpMakeReply(nick, [('VERSION', '%s:%s:%s' %
+                                       (self.versionName,
+                                        self.versionNum,
+                                        self.versionEnv))])
+
+    def ctcpQuery_SOURCE(self, user, channel, data):
+        if data is not None:
+            self.quirkyMessage("Why did %s send '%s' with a SOURCE query?"
+                               % (user, data))
+        if self.sourceHost:
+            nick = string.split(user,"!")[0]
+            self.ctcpMakeReply(nick, [('SOURCE', "%s:%s:%s" %
+                                       (self.sourceHost,
+                                        self.sourceDir,
+                                        string.join(self.sourceFiles, ' ')
+                                        )),
+                                      ('SOURCE', None)
+                                      ])
+
+    def ctcpQuery_USERINFO(self, user, channel, data):
+        if data is not None:
+            self.quirkyMessage("Why did %s send '%s' with a USERINFO query?"
+                               % (user, data))
+        if self.userinfo:
+            nick = string.split(user,"!")[0]
+            self.ctcpMakeReply(nick, [('USERINFO', self.userinfo)])
+
+    def ctcpQuery_CLIENTINFO(self, user, channel, data):
+        """A master index of what CTCP tags this client knows.
+
+        If no arguments are provided, respond with a list of known tags.
+        If an argument is provided, provide human-readable help on
+        the usage of that tag.
+        """
+
+        nick = string.split(user,"!")[0]
+        if not data:
+            # XXX: prefixedMethodNames gets methods from my *class*,
+            # but it's entirely possible that this *instance* has more
+            # methods.
+            names = reflect.prefixedMethodNames(self.__class__,
+                                                'ctcpQuery_')
+
+            self.ctcpMakeReply(nick, [('CLIENTINFO',
+                                       string.join(names, ' '))])
+        else:
+            args = string.split(data)
+            method = getattr(self, args[0], None)
+            if not method:
+                self.ctcpMakeReply(nick, [('ERRMSG',
+                                           "CLIENTINFO %s :"
+                                           "Unknown query '%s'"
+                                           % (data, args[0]))])
+                return
+            doc = getattr(method, '__doc__', '')
+            self.ctcpMakeReply(nick, [('CLIENTINFO', doc)])
+
+
+    def ctcpQuery_ERRMSG(self, user, channel, data):
+        # Yeah, this seems strange, but that's what the spec says to do
+        # when faced with an ERRMSG query (not a reply).
+        nick = string.split(user,"!")[0]
+        self.ctcpMakeReply(nick, [('ERRMSG',
+                                   "%s :No error has occoured." % data)])
+
+    def ctcpQuery_TIME(self, user, channel, data):
+        if data is not None:
+            self.quirkyMessage("Why did %s send '%s' with a TIME query?"
+                               % (user, data))
+        nick = string.split(user,"!")[0]
+        self.ctcpMakeReply(nick,
+                           [('TIME', ':%s' %
+                             time.asctime(time.localtime(time.time())))])
+
+    def ctcpQuery_DCC(self, user, channel, data):
+        data = string.split(data)
+        if len(data) < 4:
+            raise IRCBadMessage, "malformed DCC request: %s" % (data,)
+
+        (dcctype, arg, address, port) = data
+
+        if dcctype == 'SEND':
+            if len(data) >= 5:
+                size = data[4]
+            else:
+                size = -1
+            filename = arg
+            raise NotImplementedError, "XXX: DCC SEND not implemented."
+        elif dcctype == 'CHAT':
+            raise NotImplementedError, "XXX: DCC CHAT not implemented."
+        elif dcctype == 'PB':
+            b = self.classDccPbRequest(user, channel, arg)
+            pb.getObjectAt(address, port, b.callback, b.errback)
+        else:
+            nick = string.split(user,"!")[0]
+            self.ctcpMakeReply(nick, [('ERRMSG',
+                                       "DCC %s :Unknown DCC type '%s'"
+                                       % (data, dcctype))])
+            self.quirkyMessage("%s offered unknown DCC type %s"
+                               % (user, dcctype))
+
+    #def ctcpQuery_SED(self, user, data):
+    #    """Simple Encryption Doodoo
+    #
+    #    Feel free to implement this, but no specification is available.
+    #    """
+    #    raise NotImplementedError
+
+    def ctcpUnknownQuery(self, user, channel, tag, data):
+        nick = string.split(user,"!")[0]
+        self.ctcpMakeReply(nick, [('ERRMSG',
+                                   "%s %s: Unknown query '%s'"
+                                   % (tag, data, tag))])
+
+        self.log("Unknown CTCP query from %s: %s %s\n"
+                 % (user, tag, data))
+
+    def ctcpMakeReply(self, user, messages):
+        self.notice(user, ctcpStringify(messages))
+
+    ### client CTCP query commands
+
+    def ctcpMakeQuery(self, user, messages):
+        self.msg(user, ctcpStringify(messages))
+
+    ### Receiving a response to a CTCP query (presumably to one we made)
+    ### You may want to add methods here, or override UnknownReply.
+
+    def ctcpReply(self, user, channel, messages):
+        for m in messages:
+            method = getattr(self, "ctcpReply_%s" % m[0], None)
+            if method:
+                method(user, channel, m[1])
+            else:
+                self.ctcpUnknownReply(user, channel, m[0], m[1])
+
+    def ctcpReply_PING(self, user, channel, data):
+        if not self._pings.has_key(data):
+            raise IRCBadMessage,\
+                  "Bogus PING response from %s: %s" % (user, data)
+
+        t0 = self._pings[data]
+        self.pong(user, time.time() - t0)
+
+    def ctcpUnknownReply(self, user, channel, tag, data):
+        """Called when a fitting ctcpReply_ method is not found.
+
+        XXX: If the client makes arbitrary CTCP queries,
+        this method should probably show the responses to
+        them instead of treating them as anomolies.
+        """
+        self.log("Unknown CTCP reply from %s: %s %s\n"
+                 % (user, tag, data))
+
+    ### Error handlers
+    ### You may override these with something more appropriate to your UI.
+
+    def badMessage(self, line, excType, excValue, tb):
+        """When I get a message that's so broken I can't use it.
+        """
+        self.log(line)
+        self.log(traceback.format_exception(excType, excValue, tb))
+
+    def quirkyMessage(self, s):
+        self.log(s + '\n')
+
+    ### Protocool methods
+
+    def lineReceived(self, line):
+        line = lowDequote(line)
+        try:
+            prefix, command, params = parsemsg(line)
+            method = getattr(self, "irc_%s" % command, None)
+            if method is not None:
+                method(prefix, params)
+            else:
+                self.irc_unknown(prefix, command, params)
+        except IRCBadMessage:
+            apply(self.badMessage, (line,) + sys.exc_info())
+
+    def sendLine(self, line):
+        basic.LineReceiver.sendLine(self, lowQuote(line))
+
+
+# CTCP constants and helper functions
+
+NUL = chr(0)
+CR = chr(015)
+NL = chr(012)
+LF = NL
+
+X_DELIM = chr(001)
+SPC = chr(040)
+
+def ctcpExtract(message):
+    """Extract CTCP data from a string.
+
+    Returns a dictionary with two items:
+        'extended': a list of CTCP (tag, data) tuples
+        'normal': a list of strings which were not inside a CTCP delimeter
+    """
+
+    extended_messages = []
+    normal_messages = []
+    retval = {'extended': extended_messages,
+              'normal': normal_messages }
+
+    messages = string.split(message, X_DELIM)
+    odd = 0
+
+    # X1 extended data X2 nomal data X3 extended data X4 normal...
+    while messages:
+        if odd:
+            extended_messages.append(messages.pop(0))
+        else:
+            normal_messages.append(messages.pop(0))
+        odd = not odd
+
+    extended_messages[:] = filter(None, extended_messages)
+    normal_messages[:] = filter(None, normal_messages)
+
+    extended_messages[:] = map(ctcpDequote, extended_messages)
+    for i in xrange(len(extended_messages)):
+        m = string.split(extended_messages[i], SPC, 1)
+        tag = m[0]
+        if len(m) > 1:
+            data = m[1]
+        else:
+            data = None
+
+        extended_messages[i] = (tag, data)
+
+    return retval
+
+# CTCP escaping
+
+M_QUOTE= chr(020)
+
+mQuoteTable = {
+    NUL: M_QUOTE + '0',
+    NL: M_QUOTE + 'n',
+    CR: M_QUOTE + 'r',
+    M_QUOTE: M_QUOTE + M_QUOTE
+    }
+
+mDequoteTable = {}
+for k, v in mQuoteTable.items():
+    mDequoteTable[v[-1]] = k
+
+mEscape_re = re.compile('%s.' % (re.escape(M_QUOTE),), re.DOTALL)
+
+def lowQuote(s):
+    for c in (M_QUOTE, NUL, NL, CR):
+        s = string.replace(s, c, mQuoteTable[c])
+    return s
+
+def lowDequote(s):
+    def sub(matchobj, mDequoteTable=mDequoteTable):
+        s = matchobj.group()[1]
+        try:
+            s = mDequoteTable[s]
+        except KeyError:
+            s = s
+        return s
+
+    return mEscape_re.sub(sub, s)
+
+X_QUOTE = chr(0134)
+
+xQuoteTable = {
+    X_DELIM: X_QUOTE + 'a',
+    X_QUOTE: X_QUOTE + X_QUOTE
+    }
+
+xDequoteTable = {}
+
+for k, v in xQuoteTable.items():
+    xDequoteTable[v[-1]] = k
+
+xEscape_re = re.compile('%s.' % (re.escape(X_QUOTE),), re.DOTALL)
+
+def ctcpQuote(s):
+    for c in (X_QUOTE, X_DELIM):
+        s = string.replace(s, c, xQuoteTable[c])
+    return s
+
+def ctcpDequote(s):
+    def sub(matchobj, xDequoteTable=xDequoteTable):
+        s = matchobj.group()[1]
+        try:
+            s = xDequoteTable[s]
+        except KeyError:
+            s = s
+        return s
+
+    return xEscape_re.sub(sub, s)
+
+def ctcpStringify(messages):
+    coded_messages = []
+    for (tag, data) in messages:
+        if data:
+            m = "%s %s" % (tag, data)
+        else:
+            m = tag
+        m = ctcpQuote(m)
+        m = "%s%s%s" % (X_DELIM, m, X_DELIM)
+        coded_messages.append(m)
+
+    line = string.join(coded_messages, '')
+    return line
+
 
 # Constants (from RFC 2812)
 RPL_WELCOME = '001'

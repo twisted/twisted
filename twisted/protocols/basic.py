@@ -1,16 +1,16 @@
 
 # Twisted, the Framework of Your Internet
 # Copyright (C) 2001 Matthew W. Lefkowitz
-# 
+#
 # This library is free software; you can redistribute it and/or
 # modify it under the terms of version 2.1 of the GNU Lesser General Public
 # License as published by the Free Software Foundation.
-# 
+#
 # This library is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
 # Lesser General Public License for more details.
-# 
+#
 # You should have received a copy of the GNU Lesser General Public
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
@@ -36,9 +36,9 @@ class NetstringParseError(ValueError):
 
 class NetstringReceiver(protocol.Protocol):
     """This uses djb's Netstrings protocol to break up the input into strings.
-    
-    Each string makes a callback to stringReceived, with a single argument of
-    that string.
+
+    Each string makes a callback to stringReceived, with a single
+    argument of that string.
     """
     mode = LENGTH
     length = 0
@@ -80,8 +80,8 @@ class NetstringReceiver(protocol.Protocol):
             self.length = self.length * (10**len(m.group(1))) + long(m.group(1))
         if m.group(2):
             self.__buffer = ''
-            self.mode = DATA 
-        
+            self.mode = DATA
+
     def dataReceived(self, data):
         self.__data = data
         while self.__data:
@@ -100,15 +100,15 @@ class NetstringReceiver(protocol.Protocol):
 
 class SafeNetstringReceiver(NetstringReceiver):
     """A NetstringReceiver that behaves in a safe manner:
-    
-    1) Messages are limited in size, useful if you don't want someone sending
-       you a 500MB netstring.
+
+    1) Messages are limited in size, useful if you don't want someone
+       sending you a 500MB netstring.
     2) The connection is lost if an illegal message is received.
     """
-    
+
     MAX_LENGTH = 99999
     brokenPeer = 0
-        
+
     def doLength(self):
         try:
             NetstringReceiver.doLength(self)
@@ -116,7 +116,7 @@ class SafeNetstringReceiver(NetstringReceiver):
             raise NetstringParseError("netstring was too long")
         if self.length > self.MAX_LENGTH:
             raise NetstringParseError("netstring was too long")
-    
+
     def dataReceived(self, data):
         try:
             NetstringReceiver.dataReceived(self, data)
@@ -127,17 +127,18 @@ class SafeNetstringReceiver(NetstringReceiver):
 
 class LineReceiver(protocol.Protocol):
     """A protocol which has a mode where it receives lines, and a mode where it receives raw data.
-    
-    Each line that's received becomes a callback to lineReceived.  Each chunk
-    of raw data becomes a callback to rawDataReceived.
 
-    This is useful for line-oriented protocols such as IRC, HTTP, POP, etc.
+    Each line that's received becomes a callback to lineReceived.  Each
+    chunk of raw data becomes a callback to rawDataReceived.
+
+    This is useful for line-oriented protocols such as IRC, HTTP, POP,
+    etc.
     """
     line_mode = 1
     __buffer = ''
     delimiter = '\r\n'
     MAX_LENGTH = 16384
-    
+
     def dataReceived(self, data):
         """Protocol.dataReceived.
         Translates bytes into lines, and calls lineReceived (or
@@ -146,7 +147,7 @@ class LineReceiver(protocol.Protocol):
         self.__buffer = self.__buffer+data
         while self.line_mode:
             try:
-                line, self.__buffer = string.split(self.__buffer, 
+                line, self.__buffer = string.split(self.__buffer,
                                                    self.delimiter, 1)
             except ValueError:
                 if len(self.__buffer) > self.MAX_LENGTH:
@@ -165,17 +166,19 @@ class LineReceiver(protocol.Protocol):
 
     def setLineMode(self, extra=''):
         """Sets the line-mode of this receiver.
-        If you are calling this from a rawDataReceived callback, you can pass
-        in extra unhandled data, and that data will be parsed for lines.
-        Further data received will be sent to lineReceived rather than
-        rawDataReceived.
+
+        If you are calling this from a rawDataReceived callback,
+        you can pass in extra unhandled data, and that data will
+        be parsed for lines.  Further data received will be sent
+        to lineReceived rather than rawDataReceived.
         """
         self.line_mode = 1
         return self.dataReceived(extra)
 
     def setRawMode(self):
         """Sets the raw mode of this receiver.
-        Further data received will be sent to rawDataReceived rather than lineReceived.
+        Further data received will be sent to rawDataReceived rather
+        than lineReceived.
         """
         self.line_mode = 0
 
@@ -197,10 +200,10 @@ class LineReceiver(protocol.Protocol):
 
 class Int32StringReceiver(protocol.Protocol):
     """A receiver for int32-prefixed strings.
-    
-    This class is somewhat deprecated, but necessary for backwards
-    compatibility for previous Gloop versions.  It publishes the same interface
-    as NetstringReceiver.
+
+    This class is somewhat deprecated, but necessary for
+    backwards compatibility for previous Gloop versions.
+    It publishes the same interface as NetstringReceiver.
     """
 
     recvd = ""
@@ -227,15 +230,15 @@ class Int32StringReceiver(protocol.Protocol):
 
 class StatefulStringProtocol:
     """A stateful string protocol.
-    
+
     This is a mixin for string protocols (Int32StringReceiver,
     NetstringReceiver) which translates stringReceived into a callback
     (prefixed with 'proto_') depending on state."""
-    
+
     state = 'init'
     def stringReceived(self,string):
         """Choose a protocol phase function and call it.
-        
+
         Call back to the appropriate protocol phase; this begins with
         the function proto_init and moves on to proto_* depending on
         what each proto_* function returns.  (For example, if
@@ -251,4 +254,3 @@ class StatefulStringProtocol:
             self.state = statehandler(string)
             if self.state == 'done':
                 self.transport.loseConnection()
-
