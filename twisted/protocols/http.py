@@ -269,7 +269,7 @@ def stringToDatetime(dateString):
 
 def toChunk(data):
     """Convert string to a chunk."""
-    return "%x\r\n%s\r\n" % (len(data), data)
+    return ("%x\r\n" % len(data), data, "\r\n")
 
 def fromChunk(data):
     """Convert chunk to string.
@@ -680,7 +680,8 @@ class Request:
         self.sentLength = self.sentLength + len(data)
         if data:
             if self.chunked:
-                self.transport.write(toChunk(data))
+                for s in toChunk(data):
+                    self.transport.write(s)
             else:
                 self.transport.write(data)
 

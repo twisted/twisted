@@ -1,3 +1,9 @@
+2004-03-23  Andrew Bennetts <spiv@twistedmatrix.com>
+
+	* twisted.protocols.http: Small optimisation to HTTP implementation.
+	This changes return value of toChunk to a tuple of strings, rather
+	than one string.
+
 2004-4-3  Paul Swartz <z3p@twistedmatrix.com>
 
 	* twisted.python.lockfile: added lockfile support, based on
