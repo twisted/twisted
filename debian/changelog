@@ -1,4 +1,4 @@
-twisted (0.10.1-1) unstable; urgency=low
+twisted (0.10.0-1) unstable; urgency=low
 
   * New upstream release
   * Added twisted.tap and twisted.mail to distribution
