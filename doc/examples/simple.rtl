@@ -7,7 +7,7 @@ from twisted.web.resource import Resource
 
 class ExampleResource(Resource):
 
-    def render(self, request):
+    def render_GET(self, request):
         """\
 <HTML>
     <HEAD><TITLE> Welcome To Twisted Python </title></head>

@@ -25,7 +25,7 @@ urlTemplate = 'http://www.livejournal.com/users/%s/rss'
 
 class LJSyndicatingResource(resourcelib.Resource):
 
-    def render(self, request):
+    def render_GET(self, request):
         url = urlTemplate % request.args['user'][0]
         client.getPage(url).addCallback(
         microdom.parseString).addCallback(

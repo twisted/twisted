@@ -8,7 +8,7 @@ class SimpleResource(resource.Resource):
     def getChild(self, path, request):
         return self
 
-    def render(self, request):
+    def render_GET(self, request):
         auth = request.getComponent(simpleguard.Authenticated)
         if auth:
             return "hello my friend "+auth.name

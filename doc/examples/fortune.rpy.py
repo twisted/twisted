@@ -5,7 +5,7 @@ from twisted.python import util
 
 class FortuneResource(Resource):
 
-    def render(self, request):
+    def render_GET(self, request):
         request.write("<pre>\n")
         deferred = utils.getProcessOutput("/usr/games/fortune")
         deferred.addCallback(lambda s:

@@ -3,7 +3,7 @@ from twisted.web.resource import Resource
 
 class ReportResource(Resource):
 
-    def render(self, request):
+    def render_GET(self, request):
         path = request.path
         _, host, port = request.getHost()
         url = request.prePathURL()

@@ -8,7 +8,7 @@ class SimpleResource(resource.Resource):
     def getChild(self, path, request):
         return self
 
-    def render(self, request):
+    def render_GET(self, request):
         name = request.getComponent(simpleguard.Authenticated).name
         return "hello my friend "+name
 
@@ -17,7 +17,7 @@ class HaHa(resource.Resource):
     def getChild(self, path, request):
         return self
 
-    def render(self, request):
+    def render_GET(self, request):
         return """I don't know you!<br />
         <a href='perspective-init'>login</a>
         """
