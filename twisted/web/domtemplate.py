@@ -271,7 +271,7 @@ class DOMTemplate(Resource):
         if not node: return
         if type(node.childNodes) == type(""): return
         if node.hasChildNodes():
-        for child in node.childNodes:
+            for child in node.childNodes:
                 self.handleNode(request, child)
 
     def callback(self, result, request, node):
