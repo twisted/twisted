@@ -60,8 +60,7 @@ def basicWebTest():
     killit()
 
 def staticWebTest():
-    message("Running Static Web Test")
-    cmd("mktap web --https=8443 -k doc/examples/server.pem -c doc/examples/server.pem --path %s/../static" % twistedBinDir)
+    cmd("mktap web --path %s/../static" % twistedBinDir)
     twistdf("web")
     message("You should see an 'it worked' page now.",
             "(depending on your browser, you may need to reload)")
@@ -70,10 +69,12 @@ def staticWebTest():
     browse("http://localhost:8080/test.cgi")
     message("This is RPY test output.")
     browse("http://localhost:8080/test.rpy")
-    message("This is SSL test output.")
-    browse("https://localhost:8443/")
     killit()
 
+def sslWebTest():
+    message("Running SSL Web Test")
+    cmd("mktap web --https=8443 -k doc/examples/server.pem -c doc/examples/server.pem --path %s/../static" % twistedBinDir)
+    browse("https://localhost:8443/")
 
 def distWebTest():
     message("Running Distributed Web Test")

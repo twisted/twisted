@@ -51,7 +51,7 @@ class ServerOptions(usage.Options):
                                   "ports, retaining the option to regain privileges in cases such as "
                                   "spawning processes.  Use with caution.)"]]
 
-    optStrings = [['logfile','l', None,
+    optParameters = [['logfile','l', None,
                    "log to a specified file, - for stdout"],
                   ['file','f','twistd.tap',
                    "read the given .tap file"],
