@@ -181,6 +181,7 @@ class IRCChatter(irc.IRC):
         #>> :benford.openprojects.net 315 glyph glyph :End of /WHO list.
         if not params:
             self.sendLine(":%s 315 :/WHO not supported.")
+            return
         name = params[0]
         if name[0] == '#':
             channame = name[1:]
