@@ -18,7 +18,7 @@ from __future__ import nested_scopes
 
 import os, tempfile
 from twisted.web import domhelpers, microdom
-import latex, tree
+import latex, tree, default
 
 class MathLatexSpitter(latex.LatexSpitter):
 
@@ -70,6 +70,9 @@ def doFile(fn, docsdir, ext, url, templ, linkrel=''):
 class ProcessingFunctionFactory:
 
     def generate_html(self, d):
+        n = default.htmlDefault.copy()
+        n.update(d)
+        d = n
         if d['ext'] == "None":
             ext = ""
         else:
