@@ -303,7 +303,13 @@ class LatexSpitter(BaseLatexSpitter):
     start_sup = '$^{'
     end_sup = '}$'
 
-    start_html = '\\documentclass{article}\n'
+    start_html = '''\\documentclass{article}
+    \\newcommand{\\loreref}[1]{%
+    \\ifthenelse{\\value{page}=\\pageref{#1}}%
+               { (this page)}%
+               { (page \\pageref{#1})}%
+    }'''
+
     start_body = '\\begin{document}\n\\maketitle\n'
     end_body = '\\end{document}'
 
