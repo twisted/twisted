@@ -33,6 +33,7 @@ import utils
 import interfaces
 
 from twisted.python import components, failure
+from twisted.python import reflect
 from twisted.python import log
 from twisted.internet import defer
 
@@ -190,12 +191,13 @@ class Widget(view.View):
         """
         Do your part, prevent infinite recursion!
         """
-        if node.attributes.has_key('model'):
-            del node.attributes['model']
-        if node.attributes.has_key('view'):
-            del node.attributes['view']
-        if node.attributes.has_key('controller'):
-            del node.attributes['controller']
+        if not DEBUG:
+            if node.attributes.has_key('model'):
+                del node.attributes['model']
+            if node.attributes.has_key('view'):
+                del node.attributes['view']
+            if node.attributes.has_key('controller'):
+                del node.attributes['controller']
         return node
 
     def generate(self, request, node):
@@ -214,6 +216,8 @@ class Widget(view.View):
         # generateDOM should always get a reference to the
         # templateNode from the original HTML
         result = self.generateDOM(request, self.templateNode or node)
+        if DEBUG:
+            result.attributes['woven_class'] = reflect.qual(self.__class__)
         return result
 
     def setDataCallback(self, result, request, node):
@@ -430,7 +434,13 @@ class Widget(view.View):
             elif clone.attributes.has_key(name + 'Of'):
                 del clone.attributes[name + 'Of']
             slot.parentNode = parentNode
+            if DEBUG:
+                clone.attributes['ofPattern'] = name + 'Of'
+                clone.attributes['nameOf'] = self.submodel.split('/')[-1]
             return clone
+        if DEBUG:
+            slot.attributes['ofPattern'] = name + 'Of'
+            slot.attributes['nameOf'] = self.submodel.split('/')[-1]
         return slot
 
     def addUpdateMethod(self, updateMethod):
@@ -1021,6 +1031,16 @@ class DeferredWidget(Widget):
             return view.setDataCallback(result, request, node)
         else:
             return Widget.setDataCallback(self, result, request, node)
+
+
+class Break(Widget):
+    """Break into pdb when this widget is rendered. Mildly
+    useful for debugging template structure, model stacks,
+    etc.
+    """
+    def setUp(self, request, node, data):
+        import pdb; pdb.set_trace()
+
 
 view.registerViewForModel(Text, model.StringModel)
 view.registerViewForModel(List, model.ListModel)
