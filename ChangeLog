@@ -1,3 +1,13 @@
+2003-04-11  Jp Calderone  <exarkun@twistedmatrix.com>
+
+	* twisted/internet/defer.py: Added new, experimental function,
+	"maybeDeferred".  API is subject to change.
+
+2003-04-11  Jp Calderone  <exarkun@twistedmatrix.com>
+
+	* twisted/scripts/mktap.py: Sped up --debug and --progress by
+	introducing a two-pass option parser.
+
 2003-04-11  Brian Warner  <warner@lothar.com>
 
 	* twisted/internet/gtk2reactor.py: major fixes. Use different

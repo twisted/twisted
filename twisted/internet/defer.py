@@ -81,6 +81,8 @@ def maybeDeferred(deferred, func, *args, **kw):
     
     If C{deferred} is C{None}, a new C{Deferred} is instantiated and used
     instead.  This C{Deferred} is returned.
+    
+    API Stability: Unstable
     """
     if deferred is None:
         deferred = Deferred()

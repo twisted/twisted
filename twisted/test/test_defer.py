@@ -188,7 +188,34 @@ class DeferredTestCase(unittest.TestCase):
         self.assertEquals(len(l), 1)
         # get rid of error
         dl[1].addErrback(lambda e: 1)
-
+    
+    def testMaybeDeferred(self):
+        S, E = [], []
+        d = defer.maybeDeferred(None, (lambda x: x + 5), 10)
+        d.addCallbacks(S.append, E.append)
+        self.assertEquals(E, [])
+        self.assertEquals(S, [15])
+        
+        S, E = [], []
+        try:
+            '10' + 5
+        except TypeError, e:
+            expected = str(e)
+        d = defer.maybeDeferred(None, (lambda x: x + 5), '10')
+        d.addCallbacks(S.append, E.append)
+        self.assertEquals(S, [])
+        self.assertEquals(len(E), 1)
+        self.assertEquals(str(E[0].value), expected)
+        
+        d = defer.Deferred()
+        reactor.callLater(0.2, d.callback, 'Success')
+        r = unittest.deferredResult(defer.maybeDeferred(None, lambda: d))
+        self.assertEquals(r, 'Success')
+        
+        d = defer.Deferred()
+        reactor.callLater(0.2, d.errback, failure.Failure(RuntimeError()))
+        r = unittest.deferredError(defer.maybeDeferred(None, lambda: d))
+        r.trap(RuntimeError)
 
 class DeferredTestCaseII(unittest.TestCase):
     def setUp(self):
