@@ -173,8 +173,8 @@ Could not copy file %s because: %s" % (o['conffile'], e.strerr))
             out = file(outname, 'w+')
             script.writeScript(out)
             out.write(r'''[Run]
-Filename: "{app}\%(svc)s.exe"; Parameters: "-remove"
-Filename: "{app}\%(svc)s.exe"; Parameters: "-install"
+Filename: "{app}\%(svc)s.exe"; Parameters: "-remove"; StatusMsg: "Installing %(name)s service"
+Filename: "{app}\%(svc)s.exe"; Parameters: "-install"; StatusMsg: "Installing %(name)s service"
 [UninstallRun]
 Filename: "{sys}\net.exe"; Parameters: "%(name)s stop"
 Filename: "{app}\%(svc)s.exe"; Parameters: "-remove"
