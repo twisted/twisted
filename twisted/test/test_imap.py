@@ -1437,7 +1437,7 @@ class NewFetchTestCase(unittest.TestCase, IMAP4HelperMixin):
         self.msgObj = FakeyMessage({}, (), '', 'Yea whatever', 91825, None)
         self.expected = {91825: 
             {'BODY': 
-                [None, None, [], None, None, '7BIT',
+                [None, None, [], None, None, None,
                     '12', '1'
                 ]
             }
