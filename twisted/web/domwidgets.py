@@ -50,6 +50,8 @@ def _getModel(self):
         #assert adapted is not None, "No IModel adapter registered for %s" % currentModel
         adapted.parent = parentModel
         adapted.name = element
+        if isinstance(currentModel, defer.Deferred):
+            return adapted
         currentModel = adapted
     return adapted
 
@@ -145,7 +147,11 @@ class Widget(mvc.View):
         return self.generateDOM(request, node)
     
     def callback(self, result, request, node):
-        setattr(self.model, self.submodel, result)
+        self.setData(result)
+        data = self.getData()
+        if isinstance(data, defer.Deferred):
+            data.addCallback(self.callback, request, node)
+            return data
         self.setUp(request, node, result)
         return self.generateDOM(request, node)
     
