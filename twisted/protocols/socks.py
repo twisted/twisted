@@ -19,7 +19,7 @@ Implementation of the SOCKSv4 protocol.
 """
 
 # twisted imports
-from twisted.internet import reactor, protocol
+from twisted.internet import reactor, protocol, defer
 from twisted.python import log
 
 # python imports
@@ -98,19 +98,26 @@ class SOCKSv4(protocol.Protocol):
                 self.makeReply(91)
                 return
             if code==1: # CONNECT
-                d = protocol.ClientCreator(reactor, SOCKSv4Outgoing, self).connectTCP(server,port)
+                d = self.connectClass(server, port, SOCKSv4Outgoing, self)
                 d.addErrback(lambda result, self=self: self.makeReply(91))
             elif code==2: # BIND
-                self.serv = reactor.listenTCP(0, SOCKSv4IncomingFactory(self, socket.gethostbyname(server)))
-                kind, ourip, ourport = self.serv.getHost()
-                self.makeReply(90, 0, ourport, ourip)
+                ip = socket.gethostbyname(server)
+                d = self.listenClass(0, SOCKSv4IncomingFactory, self, ip)
+                d.addCallback(lambda (h, p), s=self: self.makeReply(90, 0, p, h))
             else:
                 raise RuntimeError, "Bad Connect Code: %s" % code
-            assert self.buf=="","hmm, still stuff in buffer... '%s'"
+            assert self.buf=="","hmm, still stuff in buffer... %s" % repr(self.buf)
 
     def authorize(self,code,server,port,user):
         log.msg("code %s connection to %s:%s (user %s) authorized" % (code,server,port,user))
         return 1
+
+    def connectClass(self, host, port, klass, *args):
+        return protocol.ClientCreator(reactor, klass, *args).connectTCP(host,port)
+
+    def listenClass(self, port, klass, *args):
+        serv = reactor.listenTCP(port, klass(*args))
+        return defer.succeed(serv.getHost()[1:])
 
     def makeReply(self,reply,version=0,port=0,ip="0.0.0.0"):
         self.transport.write(struct.pack("!BBH",version,reply,port)+socket.inet_aton(ip))
