@@ -392,7 +392,6 @@ class Port(abstract.FileDescriptor):
         self.fileno = self.socket.fileno
         self.numberAccepts = 100
         self.startReading()
-        self.factory.startFactory()
     
     def approveConnection(self, sock, addr):
         """Check that this is a connection we are willing to accept.
