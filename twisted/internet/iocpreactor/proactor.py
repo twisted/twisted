@@ -5,7 +5,7 @@
 from twisted.internet import defer, base, main
 from twisted.internet.interfaces import IReactorTCP, IReactorUDP, IReactorArbitrary
 from twisted.python import threadable, log
-from zope.interface import implements
+from zope.interface import implements, implementsOnly
 
 import tcp, udp
 from _iocp import iocpcore
@@ -14,7 +14,7 @@ class Proactor(iocpcore, base.ReactorBase):
     # TODO: IReactorArbitrary, IReactorUDP, IReactorMulticast,
     # IReactorSSL (or leave it until exarkun finishes TLS)
     # IReactorProcess, IReactorCore (cleanup)
-    implements(IReactorTCP, IReactorUDP, IReactorArbitrary)
+    implementsOnly(IReactorTCP, IReactorUDP, IReactorArbitrary)
     handles = None
     iocp = None
 
