@@ -14,16 +14,11 @@
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
-from flow import *
-import unittest
+from twisted.python.flow import *
+from twisted.trial import unittest
 
 class FlowTests(unittest.TestCase):
-    def setUp(self):
-        from twisted.internet import reactor
-        reactor.callLater(5,reactor.stop)
-        #reactor.run()
-
-    def testFlow(self):
+    def skip_testFlow(self):
         '''
            primary tests of the Flow construct
         '''
@@ -89,6 +84,3 @@ class FlowTests(unittest.TestCase):
         f.addBranch(FlowQueryIterator(pool,sql),onFinish=printDone)
         f.addFunction(printResult)
         f.execute()
-
-if '__main__' == __name__:
-    unittest.main()

@@ -58,6 +58,26 @@ except NameError:
     False = not True
 
 try:
+   StopIteration = StopIteration
+   iter = iter
+except:
+   StopIteration = IndexError
+   class _ListIterator:
+       def __init__(self,lst):
+           self.idx = 0
+           if getattr(lst,'keys',None): lst = lst.keys()
+           self.lst = lst
+       def next(self):
+           idx = self.idx
+           self.idx += 1
+           return self.lst[idx]
+   def iter(lst): 
+       if hasattr(lst,'__iter__'):
+           return lst.__iter__()
+       else:
+           return _ListIterator(lst)
+
+try:
     from socket import inet_pton, inet_ntop
 except ImportError:
     def inet_pton(af, addr):
@@ -106,7 +126,8 @@ except TypeError:
 else:
     isinstance = isinstance
 
-__all__ = ['dict', 'inet_pton', 'inet_ntop', 'isinstance', 'True', 'False', 'bool']
+__all__ = ['dict', 'inet_pton', 'inet_ntop', 'isinstance', 
+           'True', 'False', 'bool', 'StopIteration', 'iter']
 
 #if __name__ == '__main__':
 #    print repr(inet_pton(socket.AF_INET, '1.2.3.4'))

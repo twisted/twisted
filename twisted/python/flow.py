@@ -15,6 +15,9 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307
 # USA
 #
+#
+# Changelog:
+#   3/13/2003  Clark C. Evans    Initial Stable Version
 
 """ A resumable execution flow mechanism.
 
@@ -23,7 +26,7 @@
     to allow the handler to return (for example, if must block), but 
     saving the handler's state so it can be resumed later. 
 """
-
+from compat import StopIteration, iter
 from __future__ import nested_scopes
 
 class Flow:
@@ -460,25 +463,4 @@ class FlowQueryIterator(FlowIterator):
             self.curs.close()
             raise StopIteration
         return res
-
-# support iterators for 2.1
-try:
-   StopIteration = StopIteration
-   iter = iter
-except:
-   StopIteration = IndexError
-   class _ListIterator:
-       def __init__(self,lst):
-           self.idx = 0
-           if getattr(lst,'keys',None): lst = lst.keys()
-           self.lst = lst
-       def next(self):
-           idx = self.idx
-           self.idx += 1
-           return self.lst[idx]
-   def iter(lst): 
-       if hasattr(lst,'__iter__'):
-           return lst.__iter__()
-       else:
-           return _ListIterator(lst)
 
