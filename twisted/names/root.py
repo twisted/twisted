@@ -107,6 +107,8 @@ def extractAuthority(msg, cache):
     # print 'Records for', soFar, ':', records
     # print 'NS for', soFar, ':', nameservers
 
+    if not nameservers:
+        return None, nameservers
     if not records:
         raise IOError("No records")
     for r in records:
@@ -135,7 +137,7 @@ def discoverAuthority(host, roots, cache=None, p=None):
     soFar = ''
     for part in parts:
         soFar = part + '.' + soFar
-        
+        # print '///////',  soFar, authority, p
         msg = flow.wrap(lookupNameservers(soFar, authority, p))
         yield msg
         msg = msg.next()
@@ -143,6 +145,7 @@ def discoverAuthority(host, roots, cache=None, p=None):
         newAuth, nameservers = extractAuthority(msg, cache)
 
         if newAuth is not None:
+            # print "newAuth is not None"
             authority = newAuth
         else:
             if nameservers:
@@ -152,17 +155,18 @@ def discoverAuthority(host, roots, cache=None, p=None):
                 yield authority
                 authority = authority.next()
                 # print 'Discovered to be', authority, 'for', r
-            else:
-                # print 'Doing address lookup for', soFar, 'at', authority
-                msg = flow.wrap(lookupAddress(soFar, authority, p))
-                yield msg
-                msg = msg.next()
-                records = msg.answers + msg.authority + msg.additional
-                addresses = [r for r in records if r.type == dns.A]
-                if addresses:
-                    authority = addresses[0].payload.dottedQuad()
-                else:
-                    raise IOError("Resolution error")
+##            else:
+##                # print 'Doing address lookup for', soFar, 'at', authority
+##                msg = flow.wrap(lookupAddress(soFar, authority, p))
+##                yield msg
+##                msg = msg.next()
+##                records = msg.answers + msg.authority + msg.additional
+##                addresses = [r for r in records if r.type == dns.A]
+##                if addresses:
+##                    authority = addresses[0].payload.dottedQuad()
+##                else:
+##                    raise IOError("Resolution error")
+    # print "Yielding authority", authority
     yield authority
 
 def makePlaceholder(deferred, name):
@@ -218,3 +222,4 @@ if __name__ == '__main__':
         d.addCallbacks(log.msg, log.err).addBoth(lambda _: reactor.stop())
         from twisted.internet import reactor
         reactor.run()
+
