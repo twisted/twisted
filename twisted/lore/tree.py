@@ -186,10 +186,6 @@ def footnotes(document):
 
 def notes(document):
     notes = domhelpers.findElementsWithAttribute(document, "class", "note")
-
-    if not notes:
-        return
-
     notePrefix = microdom.parseString('<strong>Note: </strong>').documentElement
     for note in notes:
         note.childNodes.insert(0, notePrefix)
