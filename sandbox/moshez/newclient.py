@@ -1,7 +1,7 @@
 """
 Example usage:
 o = opener()
-o.open("http://www.yahoo.com/").addCallback(readData).addCallback(util.println)
+o.open("http://www.yahoo.com/").addCallback(read).addCallback(util.println)
 o.open("http://www.yahoo.com/").addCallback(download(sys.stdout.write))
 d = o.open("http://www.yahoo.com/")
 d.addCallback(download(file("yahoo.html", 'wb'))
@@ -230,7 +230,7 @@ class ProxyHandler(BaseHandler):
 def opener():
     return Opener(ProxyHandler(), BaseHTTPHandler(), HTTPRedirect())
 
-def gatherResults(response):
+def read(response):
     d, l = defer.Deferred(), []
     response.setHandler(
         dataReceived=l.append,
