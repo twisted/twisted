@@ -544,8 +544,11 @@ class Process(styles.Ephemeral):
         self.closeStdout()
     def write(self,data):
         """Call this to write to standard input on this process.
+        
+        NOTE: This will silently lose data if there is no standard input.
         """
-        self.pipes[0].write(data)
+        if self.pipes.has_key(0):
+            self.pipes[0].write(data)
 
     def signalProcess(self, signalID):
         if signalID in ('HUP', 'STOP', 'INT', 'KILL', 'TERM'):
