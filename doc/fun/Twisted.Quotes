@@ -2619,6 +2619,8 @@ under. very interesting. want some pictures? :)
 <mjs> spiv: yeah I starting to notice... but I am sure it will become more fervent when we have a Lisp twisted implementation. =)
 <dash> mjs: when that happens, i will become more powerful than you can possibly imagine
 %
+<teratorn> as a general rule, you should never associate popularity with correctness
+%
 <dopey> fd0: what in particular about the environment is significant ?
 <fd0> dopey: some env-variables
 %
