@@ -120,7 +120,6 @@ class QTReactor(default.PosixReactorBase):
             reads[reader] = TwistedSocketNotifier(self, reader, QSocketNotifier.Read)
 
     def addWriter(self, writer):
-        print "addWriter", writer, hasWriter(writer)
         if not hasWriter(writer):
             writes[writer] = TwistedSocketNotifier(self, writer, QSocketNotifier.Write)
 
