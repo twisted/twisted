@@ -31,7 +31,7 @@ class IterableCounter:
     def next(self):
         self.i += 1
         if self.i >= self.lim:
-            raise StopIteration
+            raise compat.StopIteration
         return self.i
         
 class CopmatTestCase(unittest.TestCase):
