@@ -186,15 +186,13 @@ class ReactorBase:
         """
         selectables = self.removeAll()
         for reader in selectables:
+            log.logOwner.own(reader)
             try:
-                log.logOwner.own(reader)
-                try:
-                    reader.connectionLost(failure.Failure(main.CONNECTION_LOST))
-                finally:
-                    log.logOwner.disown(reader)
-                    raise
+                reader.connectionLost(failure.Failure(main.CONNECTION_LOST))
             except:
                 log.deferr()
+            log.logOwner.disown(reader)
+
 
     def iterate(self, delay=0):
         """See twisted.internet.interfaces.IReactorCore.iterate.
