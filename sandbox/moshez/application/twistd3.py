@@ -89,7 +89,7 @@ def removePID(pidfile):
         log.msg("Failed to unlink PID file:")
         log.deferr()
 
-def startLogging(logfilename, syslog, prefix, nodaemon):
+def startLogging(logfilename, sysLog, prefix, nodaemon):
     if logfilename == '-':
         if not nodaemon:
             print 'daemons cannot log to stdout'
@@ -97,7 +97,7 @@ def startLogging(logfilename, syslog, prefix, nodaemon):
         logFile = sys.stdout
     elif nodaemon and not logfilename:
         logFile = sys.stdout
-    elif syslog:
+    elif sysLog:
         syslog.startLogging(prefix)
     else:
         logPath = os.path.abspath(logfilename or 'twistd.log')
@@ -107,7 +107,7 @@ def startLogging(logfilename, syslog, prefix, nodaemon):
             from twisted.internet import reactor
             reactor.callLater(0, logFile.rotate)
         signal.signal(signal.SIGUSR1, rotateLog)
-    if not syslog:
+    if not sysLog:
         log.startLogging(logFile)
     sys.stdout.flush()
 
