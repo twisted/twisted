@@ -20,6 +20,6 @@ if ext == ".py":
 elif ext == '.html':
     if os.path.dirname(filename) in ["doc/man", "doc/howto",
                                      "doc/specifications"]:
-        n = os.system("./bin/lore -olint %s" % filename)
+        n = os.system("./bin/lore -n -olint %s" % filename)
         if n:
             sys.exit(1)
