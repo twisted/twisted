@@ -1,0 +1,5 @@
+*.pyc
+*.pyd
+.*.swp
+build
+_trial_temp
