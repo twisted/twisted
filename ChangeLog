@@ -1,3 +1,8 @@
+2003-11-01  Paul Swartz  <z3p@twistedmatrix.com>
+
+	* twisted/conch/ssh/common.py: use GMPy for faster math if it's
+	available
+
 2003-10-24  Christopher Armstrong  <radix@twistedmatrix.com>
 
 	* .: Releasing Twisted 1.1.0 final. Same codebase as rc2.

@@ -78,17 +78,29 @@ def ffs(c, s):
 getMP_py = getMP
 MP_py = MP
 _MPpow_py = _MPpow
+pyPow = pow
 
-#try:
-#    import tgmp
-#    getMP = tgmp.getMP
-#    MP = tgmp.MP
-#    _MPpow = tgmp._MPpow
-#    pyPow = pow
-#    def tgmpPow(x, y, z = None):
-#        if not z:
-#            return pyPow(x, y) # tgmp.pow only does 3 args
-#        return apply(tgmp.pow, map(long, (x,y,z)))
-#    __builtins__['pow'] = tgmpPow # this is probably evil
-#except ImportError:
-#    pass
+def _fastgetMP(i):
+    l = struct.unpack('!L', i[:4])[0]
+    n = i[4:l+4][::-1]
+    return long(gmpy.mpz(n, 256)), i[4+l:]
+
+def _fastMP(i):
+    i2 = gmpy.mpz(i).binary()[::-1]
+    return struct.pack('!L', len(i2)) + i2
+
+def _fastMPpow(x, y, z=None):
+    r = pow(gmpy.mpz(x),y,z).binary()[::-1]
+    return struct.pack('!L', len(r)) + r
+
+def _fastpow(x, y, z=None):
+    return pyPow(gmpy.mpz(x), y, z)
+
+try:
+    import gmpy
+    getMP = _fastgetMP
+    MP = _fastMP
+    _MPpow = _fastMPpow
+    __builtins__['pow'] = _fastpow # this is probably evil
+except ImportError:
+    pass
