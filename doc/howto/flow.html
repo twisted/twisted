@@ -602,6 +602,10 @@ from twisted.flow.threads import QueryIterator, Threaded
 dbpool = adbapi.ConnectionPool("SomeDriver",host='localhost', 
              db='Database',user='User',passwd='Password')
 
+# # I test with...
+# from pyPgSQL import PgSQL
+# dbpool = PgSQL
+
 sql = """
   (SELECT 'one')
 UNION ALL
@@ -609,10 +613,12 @@ UNION ALL
 UNION ALL
   (SELECT 'three')
 """
-
 def consumer():
+    print "executing"
     query = Threaded(QueryIterator(dbpool, sql))
+    print "yielding"
     yield query
+    print "done yeilding"
     for row in query:
         print "Processed result : ", row
         yield query
@@ -624,14 +630,6 @@ def finish(result):
 f = flow.Deferred(consumer())
 f.addBoth(finish)
 reactor.run()
-
-# prints
-# Processed result :  ('one',)
-# Processed result :  ('two',)
-# Processed result :  ('three',)
-# Deferred Complete:  []
 </pre>
-
-
 </body>
 </html>
