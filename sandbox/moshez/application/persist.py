@@ -14,6 +14,11 @@
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 #
+
+# TODO
+# * Add docstrings
+# * Write tests
+# * Move to twisted.persisted
 import os, md5
 import cPickle as pickle
 import cStringIO as StringIO
@@ -120,6 +125,7 @@ class _EverythingEphemeral(styles.Ephemeral):
                 log.msg("Warning!  Loading from __main__: %s" % key)
                 return styles.Ephemeral()
 
+
 def load(filename, style, passphrase=None):
     mode = 'r'
     if style=='source'
@@ -127,10 +133,10 @@ def load(filename, style, passphrase=None):
     elif style=='xml':
         from twisted.persisted.aot import unjellyFromSource as load
     else:
-        from cPickle import load
-        mode = 'rb'
+        load, mode = pickle.load, 'rb'
     if passphrase:
-        fp = StringIO.StringIO(_decrypt(open(filename, 'rb').read()))
+        fp = StringIO.StringIO(_decrypt(open(filename, 'rb').read(),
+                                        passphrase))
     else:
         fp = open(filename, mode)
     mainMod = sys.modules['__main__']
@@ -141,6 +147,9 @@ def load(filename, style, passphrase=None):
     sys.modules['__main__'] = mainMod
     styles.doUpgrade()
     ee.initRun = 0
+    persistable = IPersistable(value, None)
+    if persistable is not None:
+        persistable.setStyle(style)
     return value
 
 
@@ -156,3 +165,5 @@ def loadValueFromFile(filename, variable, passphrase=None):
     exec data in d, d
     value = d['variable']
     return value
+
+__all__ = ['loadValueFromFile', 'load', 'Persistant', 'IPersistable']
