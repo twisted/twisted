@@ -372,6 +372,13 @@ def shedPrivileges(euid, uid, gid):
         else:
             log.msg('set uid/gid %s/%s' % (uid, gid))
 
+def getPassphrase(needed):
+    if needed:
+        import getpass
+        return getpass.getpass('Passphrase: ')
+    else:
+        return None
+
 # Install a reactor immediately.  The application will not load properly
 # unless this is done FIRST; otherwise the first 'reactor' import would
 # trigger an automatic installation of the default reactor.
@@ -380,15 +387,11 @@ def shedPrivileges(euid, uid, gid):
 # reactor None to bypass this and use whatever reactor is currently in use.
 def runApp(config):
     global initRun
+    passphrase = getPassphrase(config['encrypted'])
     installReactor(config['reactor'])
     if runtime.platformType != 'posix' or config['debug']:
         # only posix can fork, and debugging requires nodaemon
         config['nodaemon'] = 1
-    if config['encrypted']:
-        import getpass
-        passphrase = getpass.getpass('Passphrase: ')
-    else:
-        passphrase = None
     checkPID(config['pidfile'], config['quiet'])
     startLogging(config['logfile'], config['syslog'], config['prefix'],
                  config['nodaemon'])
@@ -489,4 +492,3 @@ def run():
 
 if __name__ == '__main__':
     run()
-
