@@ -621,20 +621,28 @@ initdir(void)
 				 (PyObject *) &PyDirObjectIterator_Type) < 0)
 		return;
 	
-	os = PyImport_ImportModule("os");
-	path = PyObject_GetAttrString(os, "path");
-	sep = PyObject_GetAttrString(path, "sep");
+	if (!(os = PyImport_ImportModule("os")))
+		return;
+
+	if (!(path = PyObject_GetAttrString(os, "path")))
+		return;
+
+	if (!(sep = PyObject_GetAttrString(path, "sep")))
+		return;
+		
+	if (!(pathsep = PyString_AsString(sep)))
+		return;
 	Py_INCREF(sep);
-	pathsep = PyString_AsString(sep);
 	ospathsep = pathsep[0];
-	
 	
 	cur = PyObject_GetAttrString(os, "curdir");
 	par = PyObject_GetAttrString(os, "pardir");
 
+	if (!(curdir = PyString_AsString(cur)))
+		return;
 	Py_INCREF(cur);
-	curdir = PyString_AsString(cur);
 	
+	if (!(pardir = PyString_AsString(par)))
+		return;
 	Py_INCREF(par);
-	pardir = PyString_AsString(par);
 }
