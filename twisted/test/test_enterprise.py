@@ -17,16 +17,21 @@
 from twisted.trial import unittest
 
 import os
+import random
 
 from twisted.trial.util import deferredResult
 from twisted.enterprise.row import RowObject
+from twisted.enterprise.reflector import *
 from twisted.enterprise.xmlreflector import XMLReflector
 from twisted.enterprise.sqlreflector import SQLReflector
 from twisted.enterprise.adbapi import ConnectionPool
 from twisted.enterprise import util
 
 try: import gadfly
-except: pass
+except: gadfly = None
+
+try: import sqlite
+except: sqlite = None
 
 tableName = "testTable"
 childTableName = "childTable"
@@ -75,6 +80,32 @@ CREATE TABLE childTable (
 )
 """
 
+def randomizeRow(row, nullsOK=1):
+    values = {}
+    for name, type in row.rowColumns:
+        if util.getKeyColumn(row, name):
+            values[name] = getattr(row, name)
+            continue
+        elif nullsOK and random.randint(0, 9) == 0:
+            value = None # null
+        elif type == 'int':
+            value = random.randint(-10000, 10000)
+        else:
+            if random.randint(0, 9) == 0:
+                value = ''
+            else:
+                value = ''.join(map(lambda i:chr(random.randrange(32,127)),
+                                    xrange(random.randint(1, 500))))
+        setattr(row, name, value)
+        values[name] = value
+    return values
+
+def rowMatches(row, values):
+    for name, type in row.rowColumns:
+        if getattr(row, name) != values[name]:
+            return
+    return 1
+
 class ReflectorTestCase:
     """Base class for testing reflectors.
 
@@ -87,81 +118,90 @@ class ReflectorTestCase:
     afterwards.
     """
 
+    count = 100 # a parameter used for running iterative tests
+    nullsOK = 1 # we can put nulls into the db
+
     def setUp(self):
         self.reflector = self.createReflector()
 
     def tearDown(self):
-        if self.reflector: self.destroyReflector()
+        self.destroyReflector()
 
     def destroyReflector(self):
         pass
 
     def testReflector(self):
-        if not self.reflector: return
-
         # create one row to work with
-        newRow = TestRow()
-        newRow.assignKeyAttr("key_string", "first")
-        newRow.col2 = 1
-        newRow.another_column = "another"
-        newRow.Column4 = "foo"
-        newRow.column_5_ = 444
-        self.data = None
+        row = TestRow()
+        row.assignKeyAttr("key_string", "first")
+        values = randomizeRow(row, self.nullsOK)
 
-        deferredResult(self.reflector.insertRow(newRow))
+        # save it
+        deferredResult(self.reflector.insertRow(row))
+        row = None # drop the reference so it is no longer cached
+
+        # now load it back in
+        whereClause = [("key_string", EQUAL, "first")]
+        d = self.reflector.loadObjectsFrom(tableName, whereClause=whereClause)
+        d.addCallback(self.gotData)
+        deferredResult(d)
+
+        # make sure it came back as what we saved
+        self.failUnless(len(self.data) == 1, "no row")
+        parent = self.data[0]
+        self.failUnless(rowMatches(parent, values), "no match")
 
         # create some child rows
-        for i in range(0, 10):
+        child_values = {}
+        for i in range(0, self.count):
             row = ChildRow()
             row.assignKeyAttr("childId", i)
-            row.foo = "foo foo "
-            row.test_key = "first"
-            row.stuff = "d"
-            row.gogogo = 101
-            row.data = "some data"
+            values = randomizeRow(row, self.nullsOK)
+            values['test_key'] = row.test_key = "first"
+            child_values[i] = values
             deferredResult(self.reflector.insertRow(row))
             row = None
 
-        d = self.reflector.loadObjectsFrom(childTableName,
-                                           parentRow=newRow)
+        d = self.reflector.loadObjectsFrom(childTableName, parentRow=parent)
         d.addCallback(self.gotData)
         deferredResult(d)
 
-        self.failUnless(len(self.data) > 0, "no rows on query")
-        self.failUnless(len(newRow.childRows) == 10,
-                        "did not load child rows: %d" % len(newRow.childRows))
+        self.failUnless(len(self.data) == self.count, "no rows on query")
+        self.failUnless(len(parent.childRows) == self.count,
+                        "did not load child rows: %d" % len(parent.childRows))
+        for child in parent.childRows:
+            self.failUnless(rowMatches(child, child_values[child.childId]),
+                            "child %d does not match" % child.childId)
 
         # loading these objects a second time should not re-add them
         # to the parentRow.
-        d = self.reflector.loadObjectsFrom(childTableName,
-                                           parentRow=newRow)
+        d = self.reflector.loadObjectsFrom(childTableName, parentRow=parent)
         d.addCallback(self.gotData)
         deferredResult(d)
 
-        self.failUnless(len(self.data) > 0, "no rows on query")
-        self.failUnless(len(newRow.childRows) == 10,
-                        "child rows added twice!: %d" % len(newRow.childRows))
+        self.failUnless(len(self.data) == self.count, "no rows on query")
+        self.failUnless(len(parent.childRows) == self.count,
+                        "child rows added twice!: %d" % len(parent.childRows))
 
         # test update FIXME: make some changes to row
-        deferredResult(self.reflector.updateRow(newRow))
+        deferredResult(self.reflector.updateRow(parent))
 
         # test bulk
-        num = 10
-        for i in range(0, num):
-            newRow = TestRow()
-            newRow.assignKeyAttr("key_string", "bulk%d"%i)
-            newRow.col2 = 4
-            newRow.another_column = "another"
-            newRow.Column4 = "444"
-            newRow.column_5_ = 1
-            deferredResult(self.reflector.insertRow(newRow))
-            newRow = None
+        for i in range(0, self.count):
+            row = TestRow()
+            row.assignKeyAttr("key_string", "bulk%d"%i)
+            row.col2 = 4
+            row.another_column = "another"
+            row.Column4 = "444"
+            row.column_5_ = 1
+            deferredResult(self.reflector.insertRow(row))
+            row = None
 
         d = self.reflector.loadObjectsFrom("testTable")
         d.addCallback(self.gotData)
         deferredResult(d)
 
-        assert len(self.data) == num + 1, "query did not get rows"
+        assert len(self.data) == self.count + 1, "query did not get rows"
 
         for row in self.data:
             deferredResult(self.reflector.updateRow(row))
@@ -177,6 +217,7 @@ class XMLReflectorTestCase(ReflectorTestCase, unittest.TestCase):
     """Test cases for the XML reflector.
     """
 
+    count = 10 # xmlreflector is slow
     DB = "./xmlDB"
 
     def createReflector(self):
@@ -187,13 +228,15 @@ class SQLReflectorTestCase(ReflectorTestCase):
     """Test cases for the SQL reflector.
     """
 
+    DB_NAME = "test"
+    reflectorClass = SQLReflector
+
     def createReflector(self):
-        if not self.installed(): return None
         self.startDB()
         self.dbpool = self.makePool()
         deferredResult(self.dbpool.runOperation(main_table_schema))
         deferredResult(self.dbpool.runOperation(child_table_schema))
-        return SQLReflector(self.dbpool, [TestRow, ChildRow])
+        return self.reflectorClass(self.dbpool, [TestRow, ChildRow])
 
     def destroyReflector(self):
         self.dbpool.close()
@@ -219,17 +262,19 @@ class GadflyPool(ConnectionPool):
         del self.connection
 
 
-class GadflyReflectorTestCase(SQLReflectorTestCase, unittest.TestCase):
+class NoSlashSQLReflector(SQLReflector):
+    def escape_string(self, text):
+        return text.replace("'", "''")
+
+
+class GadflyTestCase(SQLReflectorTestCase, unittest.TestCase):
     """Test cases for the SQL reflector using Gadfly.
     """
 
-    DB_NAME = "gadfly"
+    count = 10 # gadfly is slow
+    nullsOK = 0
     DB_DIR = "./gadflyDB"
-
-    def installed(self):
-        try: gadfly
-        except: return 0
-        return 1
+    reflectorClass = NoSlashSQLReflector
 
     def startDB(self):
         if not os.path.exists(self.DB_DIR): os.mkdir(self.DB_DIR)
@@ -246,6 +291,22 @@ class GadflyReflectorTestCase(SQLReflectorTestCase, unittest.TestCase):
         return GadflyPool(self.DB_NAME, self.DB_DIR)
 
 
+class SQLiteTestCase(SQLReflectorTestCase, unittest.TestCase):
+    """Test cases for the SQL reflector using SQLite.
+    """
+
+    DB_DIR = "./sqliteDB"
+    reflectorClass = NoSlashSQLReflector
+
+    def startDB(self):
+        if not os.path.exists(self.DB_DIR): os.mkdir(self.DB_DIR)
+        self.database = os.path.join(self.DB_DIR, self.DB_NAME)
+        if os.path.exists(self.database): os.unlink(self.database)
+
+    def makePool(self):
+        return ConnectionPool('sqlite', database=self.database)
+
+
 class QuotingTestCase(unittest.TestCase):
 
     def testQuoting(self):
@@ -255,3 +316,7 @@ class QuotingTestCase(unittest.TestCase):
             ("\x00abc\\s\xFF", "bytea", "'\\\\000abc\\\\\\\\s\\377'"),
             ]:
             self.assertEquals(util.quote(value, typ), expected)
+
+
+if gadfly is None: GadflyTestCase.skip = 1
+if sqlite is None: SQLiteTestCase.skip = 1
