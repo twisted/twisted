@@ -20,7 +20,6 @@ Architecture: all
 Depends: python2.2, python2.2-twisted-bin
 Suggests: python2.2-pyopenssl, twisted-doc, python2.2-twisted-conch
 Replaces: python2.1-twisted
-Provides: twisted
 Recommends: python2.2-tk
 Conflicts: twisted (<< 0.99.0)
 Description: Event-based framework for internet applications
@@ -46,6 +45,8 @@ Architecture: all
 Depends: python2.3, python2.3-twisted-bin
 Suggests: python2.3-pyopenssl, twisted-doc, python2.3-twisted-conch
 Recommends: python2.3-tk
+Conflicts: python2.2-twisted (<= 1.0.7-1)
+Provides: twisted
 Description: Event-based framework for internet applications
  It includes a web server, a telnet server, a multiplayer RPG engine, a 
  generic client and server for remote object access, and APIs for creating 
@@ -97,7 +98,7 @@ Description: The Twisted SSH Implementation (for Python 2.2)
 Package: python2.3-twisted-conch
 Architecture: all
 Depends: python2.3, python2.3-twisted, python2.3-crypto
-Conflicts: python2.3-twisted (<= 1.0.0-2)
+Conflicts: python2.3-twisted (<= 1.0.0-2), python2.2-twisted (<= 1.0.7-1)
 Description: The Twisted SSH Implementation (for Python 2.3)
  A client/server implementation of the SSH protocol, using the
  twisted framework
