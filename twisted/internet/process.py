@@ -544,7 +544,7 @@ class Process(styles.Ephemeral):
         self.pipes[0].write(data)
 
     def signalProcess(self, signalID):
-        if signalID in ('HUP', 'STOP', 'INT', 'KILL'):
+        if signalID in ('HUP', 'STOP', 'INT', 'KILL', 'TERM'):
             signalID = getattr(signal, 'SIG'+signalID)
         if self.pid is None:
             raise ProcessExitedAlready
