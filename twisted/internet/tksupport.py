@@ -1,4 +1,3 @@
-
 # Twisted, the Framework of Your Internet
 # Copyright (C) 2001 Matthew W. Lefkowitz
 # 
@@ -20,19 +19,37 @@
 API Stability: semi-stable
 
 Maintainer: U{Itamar Shtull-Trauring<mailto:twisted@itamarst.org>}
+
+To use, do::
+
+    | tksupport.install(reactor, rootWidget)
+
+and then run your reactor as usual - do *not* call Tk's mainloop(),
+use Twisted's regular mechanism for running the event loop.
+
+Note that the Twisted event loop will not stop when the root widget
+is destroyed - you'll need to stop it yourself.
 """
 
-# Sibling Imports
-# XXX TODO: actually watch file descriptors on UNIX, using IO timeouts...
+# system imports
+import Tkinter
 
-def _doReactorIter(delay, reactor, widget):
-    reactor.iterate()
-    widget.after(delay, _doReactorIter, delay, reactor, widget)
+# twisted imports
+from twisted.python import log
 
-def install(widget, delay = 6):
-    from twisted.internet import reactor
-    reactor.startRunning() # I only support PosixReactorBase subclasses anyway
-    widget.after(delay, _doReactorIter, delay, reactor, widget)
+
+def _guiUpdate(reactor, widget):
+    try:
+        widget.update() # do all pending GUI events
+    except Tkinter.TclError:
+        log.deferr()
+        return
+    reactor.callLater(0.01, _guiUpdate, reactor, widget)
+
+
+def install(reactor, widget):
+    """Install a Tkinter.Tk() object into the reactor."""
+    _guiUpdate(reactor, widget)
 
 
 __all__ = ["install"]
