@@ -328,7 +328,7 @@ def doSelect(timeout,
             disown(selectable)
 
 
-def iterate():
+def iterate(timeout=0.):
     """Do one iteration of the main loop.
 
     I will run any simulated (delayed) code, and process any pending I/O.
@@ -337,7 +337,7 @@ def iterate():
     """
     for delayed in delayeds:
         delayed.runUntilCurrent()
-    doSelect(0)
+    doSelect(timeout)
     threadable.dispatcher.work()
 
 def run():
