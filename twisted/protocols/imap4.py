@@ -593,7 +593,7 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
         name = self._parseMbox(args)
         try:
             self.account.subscribe(name)
-        except MailboxError, m:
+        except MailboxException, m:
             self.sendNegativeResponse(tag, str(m))
         else:
             self.sendPositiveResponse(tag, 'Subscribed')
@@ -603,7 +603,7 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
         name = self._parseMbox(args)
         try:
             self.account.unsubscribe(name)
-        except MailboxError, m:
+        except MailboxException, m:
             self.sendNegativeResponse(tag, str(m))
         else:
             self.sendPositiveResponse(tag, 'Unsubscribed')
@@ -3118,7 +3118,7 @@ class MemoryAccount(perspective.Perspective):
     def unsubscribe(self, name):
         name = name.upper()
         if name not in self.subscriptions:
-            raise MailboxError, "Not currently subscribed to " + name
+            raise MailboxException, "Not currently subscribed to " + name
         self.subscriptions.remove(name)
 
     def listMailboxes(self, ref, wildcard):
