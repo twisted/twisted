@@ -47,7 +47,7 @@ class ServerOptions(usage.Options):
 
     optFlags = [['nodaemon','n',  "don't daemonize"],
                 ['savestats', None, "save the Stats object rather than the text output of the profiler."],
-                ['debug', 'b',    "run the application in the Python Debugger (implies nodaemon), sending SIGINT will drop into debugger"],
+                ['debug', 'b',    "run the application in the Python Debugger (implies nodaemon), sending SIGUSR1 will drop into debugger"],
                 ['quiet','q',     "be a little more quiet"],
                 ['no_save','o',   "do not save state on shutdown"],
                 ['syslog', None,   "Log to syslog, not to file"],
