@@ -94,9 +94,12 @@ class ConnectionPool(pb.Referenceable):
     def _runQuery(self, args, kw):
         conn = self.connect()
         curs = conn.cursor()
-        apply(curs.execute, args, kw)
-        result = curs.fetchall()
-        curs.close()
+        try:
+            apply(curs.execute, args, kw)
+            result = curs.fetchall()
+            curs.close()
+        finally:
+            conn.rollback()
         return result
 
     def _runOperation(self, args, kw):
