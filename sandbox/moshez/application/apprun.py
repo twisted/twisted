@@ -86,18 +86,17 @@ def createApplicationDecoder(config):
 def loadApplication(config, passphrase):
     filename, decode, mode = createApplicationDecoder(config)
     if config['encrypted']:
-        data = open(filename, 'rb').read()
+        mode = 'rb'
+    data = open(filename, mode).read()
+    if config['encrypted']:
         data = persist.decrypt(passphrase, data)
-        try:
-            return decode(filename, data)
-        except:
-            # Too bad about this.
+    try:
+        return decode(filename, data)
+    except:
+        if config['encrypt']:
             log.msg("Error loading Application - "
                     "perhaps you used the wrong passphrase?")
-            raise
-    else:
-        data = open(filename, mode).read()
-        return decode(filename, data)
+        raise
 
 def installReactor(reactor):
     if reactor:
