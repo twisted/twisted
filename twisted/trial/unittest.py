@@ -301,7 +301,7 @@ from twisted.python import reflect, log, failure, components
 from twisted.internet import defer
 import twisted.python.util
 
-from twisted.trial.util import deferredResult, deferredError
+from twisted.trial.util import deferredResult, deferredError, wait
 from twisted.trial import util, itrial
 
 import zope.interface as zi
