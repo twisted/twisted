@@ -28,6 +28,7 @@ if string.find(os.path.abspath(sys.argv[0]),'Twisted') != -1:
 ### end of preamble
 
 from twisted.python import usage, util, runtime
+from twisted.lumberjack import logfile
 
 util.addPluginDir()
 
@@ -137,7 +138,16 @@ if config.logfile == '-':
 elif config.nodaemon and not config.logfile:
     logFile = sys.stdout
 else:
-    logFile = open(config.logfile or 'twistd.log','ab+')
+    logPath = os.path.abspath(config.logfile or 'twistd.log')
+    logFile = logfile.LogFile(os.path.basename(logPath), os.path.dirname(logPath))
+    
+    # rotate logs on SIGUSR1
+    if os.name == "posix":
+        import signal
+        def rotateLog(signal, frame, logFile=logFile):
+            logFile.rotate()
+        signal.signal(signal.SIGUSR1, rotateLog)
+
 
 oldstdin = sys.stdin
 oldstdout = sys.stdout
