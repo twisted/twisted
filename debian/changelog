@@ -1,3 +1,14 @@
+twisted (1.0.1alpha1-1) unstable; urgency=low
+
+  * Semi dummy entry, to remind me stuff I need to write:
+  * Split out conch
+    * This allows us to have conch properly depend on python-crypto
+  * Documentation improvements
+    * Installing xhtml versions of everything, including man pages
+    * Distributing ps and pdf versions of book
+
+ -- Moshe Zadka <moshez@debian.org>  Fri,  8 Nov 2002 17:11:59 -0600
+
 twisted (1.0.0-2) unstable; urgency=low
 
   * Put api docs in api/ (Closes: #167196) 

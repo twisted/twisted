@@ -99,6 +99,7 @@ Description: Event-based framework for internet applications
 Package: twisted-doc
 Architecture: all
 Suggests: twisted
+Recommends: www-browser | postscript-viewer | pdf-viewer
 Description: The official documentation of Twisted.
  This contains various HOWTOs, overviews and automatically generated
  API documentation.
