@@ -48,22 +48,13 @@ class Violation(Exception):
     indicates that the incoming token stream has violated a constraint
     imposed by the recipient. The current Unslicer is abandoned and the
     error is propagated upwards to the enclosing Unslicer parent by
-    providing an UnbananaFailure object to the parent's .receiveChild
-    method. All remaining tokens for the current Unslicer are to be dropped.
+    providing an BananaFailure object to the parent's .receiveChild method.
+    All remaining tokens for the current Unslicer are to be dropped.
     """
 
-    """.failure: when a child raises a Violation, the parent's
-    .receiveChild() will get a UnbananaFailure() that wraps it. If the
-    parent wants to propagate the failure up towards the root, it should
-    take that UbF and raise a Violation(failure=ubf). This tells the
-    unbanana code to use the original UbF instead of creating a nest of
-    Violation/UbFs as deep as the current serialization stack.
-    """
+    """.where: this string describes which node of the object graph was
+    being handled when the exception took place."""
     where = None
-
-    def __init__(self, *args, **kwargs):
-        Exception.__init__(self, *args)
-        self.failure = kwargs.get("failure", None)
 
     def setLocation(self, where):
         if self.where is None:
@@ -91,20 +82,13 @@ class BananaError(Exception):
         else:
             return "BananaError: %s" % (self.args,)
 
-class UnbananaFailure(Failure):
-    """This subclass of Failure adds a .where attribute which records the
-    object-graph pathname where the problem occurred. It indicates a
-    recoverable failure (one which will cause the containing sub-tree to be
-    discarded but which does not require the connection be dropped).
-    """
+class BananaFailure(Failure):
+    """This is a marker subclass of Failure, to let Unslicer.receiveChild
+    distinguish between an unserialized Failure instance and a a failure in
+    a child Unslicer"""
+    pass
 
-    def __init__(self, exc, where):
-        self.where = where
-        Failure.__init__(self, exc)
 
-    def __str__(self):
-        return "[UnbananaFailure in %s: %s]" % (self.where,
-                                                self.getBriefTraceback())
 
 class ISlicer(Interface):
     """I know how to slice objects into tokens."""
@@ -163,14 +147,21 @@ This attribute is read when each child Slicer is started.""")
         up the transmit logic. If it raises any other exception, the
         connection will be dropped."""
 
-    def childAborted(v):
+    def childAborted(f):
         """Notify the Slicer that one of its child slicers (as produced by
-        its .slice iterator) emitted an ABORT token, terminating their token
-        stream. The corresponding Unslicer (receiving this token stream)
-        will get an UnbananaFailure and is likely to ignore any remaining
-        tokens from us, so it may be reasonable to emit an ABORT of our own
-        here.
-        """
+        its .slice iterator) has caused an error. If the slicer got started,
+        it has now emitted an ABORT token and terminated its token stream.
+        If it did not get started (usually because the child object was
+        unserializable), there has not yet been any trace of the object in
+        the token stream.
+
+        The corresponding Unslicer (receiving this token stream) will get an
+        BananaFailure and is likely to ignore any remaining tokens from us,
+        so it may be reasonable for the parent Slicer to give up as well.
+
+        If the Slicer wishes to abandon their own sequence, it should simply
+        return the failure object passed in. If it wants to absorb the
+        error, it should return None."""
 
     def slicerForObject(obj):
         """Get a new Slicer for some child object. Slicers usually delegate
@@ -209,7 +200,7 @@ class IUnslicer(Interface):
     
     # start/receiveChild/receiveClose/finish may raise a Violation
     # exception, which tells the protocol that this object is contaminated
-    # and should be abandoned. An UnbananaFailure will be passed to its
+    # and should be abandoned. An BananaFailure will be passed to its
     # parent.
 
     # Note, however, that it is not valid to both call abandonUnslicer *and*
@@ -274,15 +265,21 @@ class IUnslicer(Interface):
     def receiveChild(childobject):
         """'childobject' is being handed to this unslicer. It may be a
         primitive type (number or string), or a composite type produced by
-        another Unslicer. It might be an UnbananaFailure if something went
+        another Unslicer. It might be an BananaFailure if something went
         wrong, in which case it may be appropriate to do
         self.protocol.abandonUnslicer(failure, self). It might also be a
         Deferred, in which case you should add a callback that will fill in
         the appropriate object later."""
 
+    def reportViolation(bf):
+        """You have received an error instead of a child object. If you wish
+        to give up and propagate the error upwards, return the BananaFailure
+        object you were just given. To absorb the error and keep going with
+        your sequence, return None."""
+
     def receiveClose(self):
         """Called when the Close token is received. Should return the object
-        just created, or an UnbananaFailure if something went wrong. If
+        just created, or an BananaFailure if something went wrong. If
         necessary, unbanana.setObject should be called, then the Deferred
         created in start() should be fired with the new object."""
 
@@ -290,7 +287,7 @@ class IUnslicer(Interface):
         """Called when the unslicer is popped off the stack. This is called
         even if the pop is because of an exception. The unslicer should
         perform cleanup, including firing the Deferred with an
-        UnbananaFailure if the object it is creating could not be created.
+        BananaFailure if the object it is creating could not be created.
 
         TODO: can receiveClose and finish be merged? Or should the child
         object be returned from finish() instead of receiveClose?

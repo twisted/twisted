@@ -12,7 +12,7 @@ from twisted.internet import defer, protocol, reactor
 
 import slicer, schema, tokens, banana, flavors
 from tokens import BananaError, Violation, ISlicer
-from slicer import UnbananaFailure, BaseUnslicer, ReferenceSlicer
+from slicer import BaseUnslicer, ReferenceSlicer
 ScopedSlicer = slicer.ScopedSlicer
 from flavors import getRemoteInterfaces, getRemoteInterfaceNames
 from flavors import Copyable, RemoteCopy, registerRemoteCopy
@@ -204,7 +204,6 @@ class DecRefUnslicer(BaseUnslicer):
             raise BananaError("stop talking already!")
 
     def receiveChild(self, token):
-        self.propagateUnbananaFailures(token)
         # TODO: log but otherwise ignore
         self.refID = token
 
@@ -256,24 +255,24 @@ class CallUnslicer(BaseUnslicer):
                 unslicer.setConstraint(self.argConstraint)
         return unslicer
 
+    def reportViolation(self, f):
+        # if the Violation was raised after we know the reqID, we can send
+        # back an Error.
+        #print "CallUnslicer.reportViolation"
+        if self.stage > 0:
+            self.broker.sendError(f, self.reqID)
+        return f # give up our sequence
+
     def receiveChild(self, token):
         #print "CallUnslicer.receiveChild [s%d]" % self.stage, repr(token)
         # TODO: if possible, return an error to the other side
         if self.stage == 0:
             # we don't yet know which reqID to send any failure to
-            self.propagateUnbananaFailures(token)
             self.reqID = token
             self.stage += 1
             assert not self.broker.activeLocalCalls.get(self.reqID)
             self.broker.activeLocalCalls[self.reqID] = self
             return
-
-        if isinstance(token, UnbananaFailure):
-            #print "CallUnslicer.receiveChild got UnbananaFailure"
-            # error-back the request
-            #self.broker.sendError(token, self.reqID)
-            # now start ignoring the rest of the request
-            raise Violation(failure=token)
 
         if self.stage == 1:
             # this might raise an exception if objID is invalid
@@ -332,14 +331,6 @@ class CallUnslicer(BaseUnslicer):
         self.broker.doCall(self.reqID, self.obj, self.methodname,
                            self.args, self.methodSchema)
 
-    def reportViolation(self, f):
-        # if the Violation was raised after we know the reqID, we can send
-        # back an Error.
-        #print "CallUnslicer.reportViolation"
-        if self.stage > 0:
-            self.broker.sendError(f, self.reqID)
-        return f
-
     def describe(self):
         if self.stage == 0:
             return "<methodcall>"
@@ -396,7 +387,6 @@ class AnswerUnslicer(BaseUnslicer):
         return unslicer
 
     def receiveChild(self, token):
-        self.propagateUnbananaFailures(token)
         if self.request == None:
             reqID = token
             # may raise BananaError for bad reqIDs
@@ -411,10 +401,15 @@ class AnswerUnslicer(BaseUnslicer):
         # the broker it was an error
         if self.request != None:
             self.broker.gotError(self.request, f)
-        return f
+        return f # give up our sequence
 
     def receiveClose(self):
         self.broker.gotAnswer(self.request, self.results)
+
+    def describe(self):
+        if self.request:
+            return "Answer(req=%s)" % self.request.reqID
+        return "Answer(req=?)"
 
 class ErrorUnslicer(BaseUnslicer):
     request = None
@@ -437,13 +432,13 @@ class ErrorUnslicer(BaseUnslicer):
             unslicer.setConstraint(self.fConstraint)
         return unslicer
 
+    def reportViolation(self, f):
+        # a failure while receiving the failure. A bit daft, really.
+        if self.request != None:
+            self.broker.gotError(self.request, f)
+        return f # give up our sequence
+
     def receiveChild(self, token):
-        if isinstance(token, UnbananaFailure):
-            # a failure while receiving the failure. A bit daft, really.
-            if self.request != None:
-                self.broker.gotError(self.request, token)
-            self.abort(token)
-            return
         if self.request == None:
             reqID = token
             # may raise BananaError for bad reqIDs
@@ -550,11 +545,13 @@ class PBRootUnslicer(slicer.RootUnslicer):
             child.broker = self.broker
         return child
 
+    def reportViolation(self, f):
+        if self.logViolations:
+            print "hey, something failed:", f
+        return None # absorb the failure
+
     def receiveChild(self, obj):
-        if self.logViolations and isinstance(obj, UnbananaFailure):
-            print "hey, something failed:", obj
-
-
+        pass
 
 class AnswerSlicer(ScopedSlicer):
     opentype = ('answer',)
@@ -779,10 +776,8 @@ class Broker(banana.Banana):
         try:
             self.send(DecRefSlicer(clid))
         except:
-            print "failure during freeRemoteReference"
-            f = failure.Failure()
-            print f.getTraceback()
-            raise
+            log.msg("failure during freeRemoteReference")
+            log.err()
 
     def remoteReferenceForName(self, name, interfaces):
         return URLRemoteReference(self, name, interfaces)

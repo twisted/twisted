@@ -236,7 +236,6 @@ class RemoteCopyUnslicer(slicer.BaseUnslicer):
         return unslicer
 
     def receiveChild(self, obj):
-        self.propagateUnbananaFailures(obj)
         if self.attrname == None:
             attrname = obj
             if self.d.has_key(attrname):
@@ -366,8 +365,6 @@ class ReferenceUnslicer(slicer.BaseUnslicer):
         return unslicer
 
     def receiveChild(self, token):
-        self.propagateUnbananaFailures(token)
-
         if self.clid is None:
             self.clid = token
         else:
@@ -405,7 +402,6 @@ class YourReferenceUnslicer(slicer.LeafUnslicer):
             raise BananaError("your-reference ID must be an INT or STRING")
 
     def receiveChild(self, token):
-        self.propagateUnbananaFailures(token)
         self.clid = token
 
     def receiveClose(self):

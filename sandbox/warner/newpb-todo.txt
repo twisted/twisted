@@ -40,6 +40,11 @@ receiving side:
  top.doOpen
  top.start
 plus all of these when discardCount != 0
+OPENOPEN
+
+send-side uses:
+ f = top.reportViolation(f)
+receive-side should use it too (instead of f.raiseException)
 
 ** add connection-shutdown checking?
 

@@ -16,7 +16,7 @@ de = unittest.deferredError
 
 import schema, pb, flavors, tokens
 from tokens import BananaError, Violation, INT, STRING, OPEN
-from slicer import UnbananaFailure
+from slicer import BananaFailure
 
 class TestBroker(pb.Broker):
     def gotAnswer(self, req, results):
@@ -136,7 +136,9 @@ class TestAnswer(unittest.TestCase):
         # this does not yet errback the request
         self.failIf(self.broker.answers)
         # it gets errbacked when banana reports the violation
-        u.reportViolation(UnbananaFailure(Violation("icky"), "here"))
+        v = Violation("icky")
+        v.setLocation("here")
+        u.reportViolation(BananaFailure(v))
         self.failUnlessEqual(len(self.broker.answers), 1)
         err = self.broker.answers[0]
         self.failIf(err[0])
@@ -381,7 +383,8 @@ class TestCall(unittest.TestCase, TargetMixin):
         f = unittest.deferredError(d, 2)
         # TODO: once CopyableFailure is done, this comparison should be less
         # stringish. Also, should it be a RuntimeError or a Violation?
-        self.failUnless(f.check(RuntimeError))
+        self.failUnless(f.check(RuntimeError),
+                        "wrong exception type: %s" % f)
         self.failUnless("remote_add() got an unexpected keyword argument 'c'"
                         in f.value.args[0])
 

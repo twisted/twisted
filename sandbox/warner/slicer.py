@@ -4,14 +4,13 @@ import types
 from pickle import whichmodule  # used by FunctionSlicer
 from new import instance, instancemethod
 
-from twisted.python.failure import Failure
 from twisted.python.components import registerAdapter
 from zope.interface import implements
 from twisted.internet.defer import Deferred
 from twisted.python import log, reflect
 
 import tokens
-from tokens import Violation, BananaError, tokenNames, UnbananaFailure
+from tokens import Violation, BananaError, BananaFailure, tokenNames
 import schema
 
 def getInstanceState(inst):
@@ -51,8 +50,8 @@ class BaseSlicer:
             yield t
     def sliceBody(self, streamable, banana):
         raise NotImplementedError
-    def childAborted(self, v):
-        raise v
+    def childAborted(self, f):
+        return f
 
     def describe(self):
         return "??"
@@ -270,10 +269,11 @@ class RootSlicer:
         self.streamable = True
         return self.producingDeferred
 
-    def childAborted(self, v):
+    def childAborted(self, f):
         assert self.objectSentDeferred
-        self.objectSentDeferred.errback(v)
+        self.objectSentDeferred.errback(f)
         self.objectSentDeferred = None
+        return None
 
     def send(self, obj):
         # obj can also be a Slicer, say, a CallSlicer. We return a Deferred
@@ -391,19 +391,15 @@ class BaseUnslicer:
     def receiveChild(self, obj):
         pass
 
+    def reportViolation(self, why):
+        return why
+
     def receiveClose(self):
         raise NotImplementedError
 
-    def reportViolation(self, why):
-        """If this unslicer raises a Violation, this method is given a
-        chance to do some cleanup or error-reporting. 'why' is the
-        UnbananaFailure that wraps the Violation: this method may modify it
-        or return a different one.
-        """
-        return why
-
     def finish(self):
         pass
+
 
     def setObject(self, counter, obj):
         """To pass references to previously-sent objects, the [OPEN,
@@ -422,13 +418,6 @@ class BaseUnslicer:
         """'None' means 'ask our parent instead'.
         """
         return None
-
-    def propagateUnbananaFailures(self, obj):
-        """Call this from receiveChild() if you want to deal with failures
-        in your children by reporting a failure to your parent.
-        """
-        if isinstance(obj, UnbananaFailure):
-            raise Violation(failure=obj)
 
     def explode(self, failure):
         """If something goes wrong in a Deferred callback, it may be too
@@ -486,7 +475,6 @@ class UnicodeUnslicer(LeafUnslicer):
             self.constraint.checkToken(typebyte, size)
 
     def receiveChild(self, obj):
-        self.propagateUnbananaFailures(obj)
         if self.string != None:
             raise BananaError("already received a string")
         self.string = unicode(obj, "UTF-8")
@@ -548,13 +536,11 @@ class ListUnslicer(BaseUnslicer):
     def receiveChild(self, obj):
         if self.debug:
             print "%s[%d].receiveChild(%s)" % (self, self.count, obj)
-        self.propagateUnbananaFailures(obj)
         # obj could be a primitive type, a Deferred, or a complex type like
         # those returned from an InstanceUnslicer. However, the individual
         # object has already been through the schema validation process. The
         # only remaining question is whether the larger schema will accept
-        # it. It could also be an UnbananaFailure (if the subobject were
-        # aborted or if it violated the schema).
+        # it.
         if self.maxLength != None and len(self.list) >= self.maxLength:
             # this is redundant
             # (if it were a non-primitive one, it would be caught in doOpen)
@@ -626,7 +612,6 @@ class TupleUnslicer(BaseUnslicer):
             self.checkComplete()
 
     def receiveChild(self, obj):
-        self.propagateUnbananaFailures(obj)
         if isinstance(obj, Deferred):
             obj.addCallback(self.update, len(self.list))
             obj.addErrback(self.explode)
@@ -714,7 +699,6 @@ class DictUnslicer(BaseUnslicer):
         self.d[key] = value
 
     def receiveChild(self, obj):
-        self.propagateUnbananaFailures(obj)
         if self.gettingKey:
             self.receiveKey(obj)
         else:
@@ -772,7 +756,6 @@ class VocabUnslicer(LeafUnslicer):
                 raise BananaError("VocabUnslicer only accepts STRING values")
 
     def receiveChild(self, token):
-        self.propagateUnbananaFailures(token)
         if self.key is None:
             if self.d.has_key(token):
                 raise BananaError("duplicate key '%s'" % token)
@@ -790,30 +773,6 @@ class VocabUnslicer(LeafUnslicer):
         else:
             return "<vocabdict>"
 
-
-class BrokenDictUnslicer(DictUnslicer):
-    dieInFinish = 0
-
-    def receiveKey(self, key):
-        if key == "die":
-            raise Violation("aaagh")
-        if key == "please_die_in_finish":
-            self.dieInFinish = 1
-        DictUnslicer.receiveKey(self, key)
-
-    def receiveValue(self, value):
-        if value == "die":
-            raise Violation("aaaaaaaaargh")
-        DictUnslicer.receiveValue(self, value)
-
-    def receiveClose(self):
-        if self.dieInFinish:
-            raise Violation("dead in receiveClose()")
-        DictUnslicer.receiveClose(self)
-
-class ReallyBrokenDictUnslicer(DictUnslicer):
-    def start(self, count):
-        raise Violation("dead in start")
 
 
 class Dummy:
@@ -855,7 +814,6 @@ class InstanceUnslicer(BaseUnslicer):
                 raise BananaError("InstanceUnslicer keys must be STRINGs")
 
     def receiveChild(self, obj):
-        self.propagateUnbananaFailures(obj)
         if self.classname is None:
             self.classname = obj
             self.attrname = None
@@ -910,7 +868,6 @@ class ReferenceUnslicer(LeafUnslicer):
             raise BananaError("ReferenceUnslicer only accepts INTs")
 
     def receiveChild(self, num):
-        self.propagateUnbananaFailures(num)
         if self.finished:
             raise BananaError("ReferenceUnslicer only accepts one int")
         self.obj = self.protocol.getObject(num)
@@ -933,7 +890,6 @@ class ModuleUnslicer(LeafUnslicer):
             raise BananaError("ModuleUnslicer only accepts strings")
 
     def receiveChild(self, name):
-        self.propagateUnbananaFailures(name)
         if self.finished:
             raise BananaError("ModuleUnslicer only accepts one string")
         self.finished = True
@@ -954,7 +910,6 @@ class ClassUnslicer(LeafUnslicer):
             raise BananaError("ClassUnslicer only accepts strings")
 
     def receiveChild(self, name):
-        self.propagateUnbananaFailures(name)
         if self.finished:
             raise BananaError("ClassUnslicer only accepts one string")
         self.finished = True
@@ -1002,7 +957,6 @@ class MethodUnslicer(BaseUnslicer):
         return unslicer
 
     def receiveChild(self, obj):
-        self.propagateUnbananaFailures(obj)
         if self.state == 0:
             self.im_func = obj
             self.state = 1
@@ -1042,7 +996,6 @@ class FunctionUnslicer(LeafUnslicer):
             raise BananaError("FunctionUnslicer only accepts strings")
 
     def receiveChild(self, name):
-        self.propagateUnbananaFailures(name)
         if self.finished:
             raise BananaError("FunctionUnslicer only accepts one string")
         self.finished = True
@@ -1075,7 +1028,6 @@ class BooleanUnslicer(LeafUnslicer):
             raise BananaError("BooleanUnslicer only accepts one token")
 
     def receiveChild(self, obj):
-        self.propagateUnbananaFailures(obj)
         assert type(obj) == int
         if self.constraint:
             if self.constraint.value != None:
@@ -1098,9 +1050,6 @@ UnslicerRegistry = {
     ('reference',): ReferenceUnslicer,
     ('none',): NoneUnslicer,
     ('boolean',): BooleanUnslicer,
-    # for testing
-    ('dict1',): BrokenDictUnslicer,
-    ('dict2',): ReallyBrokenDictUnslicer,
     }
         
 UnsafeUnslicerRegistry = UnslicerRegistry.copy()
@@ -1119,6 +1068,7 @@ class RootUnslicer(BaseUnslicer):
     # openRegistry is used for everything at lower levels
     openRegistry = UnslicerRegistry
     constraint = None
+    openCount = None
 
     def __init__(self):
         self.objects = {}
@@ -1199,6 +1149,9 @@ class RootUnslicer(BaseUnslicer):
 
     def receiveClose(self):
         raise BananaError("top-level should never receive CLOSE tokens")
+
+    def reportViolation(self, why):
+        return self.protocol.reportViolation(why)
 
     def describe(self):
         return "root"

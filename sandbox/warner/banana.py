@@ -9,7 +9,7 @@ from twisted.python import log
 import slicer, tokens
 from tokens import SIZE_LIMIT, STRING, LIST, INT, NEG, \
      LONGINT, LONGNEG, VOCAB, FLOAT, OPEN, CLOSE, ABORT, ERROR, \
-     BananaError, UnbananaFailure, Violation
+     BananaError, BananaFailure, Violation
 
 def int2b128(integer, stream):
     if integer == 0:
@@ -160,69 +160,39 @@ class Banana(protocol.Protocol):
                         slicer = self.newSlicerFor(obj)
                         self.pushSlicer(slicer, obj)
                     except Violation, v:
-                        if self.debugSend:
-                            print " violation in newSlicerFor"
-                            print Failure()
-                        v.setLocation(self.describeSend())
-                        # no child tokens have been sent yet, the Slicer has
-                        # not yet been pushed. Inform the parent
-                        topSlicer = self.slicerStack[-1][0]
-                        # .childAborted might re-raise the exception, which
-                        # is handled below where it can propogate all the
-                        # way up to the root
-                        topSlicer.childAborted(v)
+                        # pushSlicer is arranged such that the pushing of
+                        # the Slicer and the sending of the OPEN happen
+                        # together: either both occur or neither occur. In
+                        # addition, there is nothing past the OPEN/push
+                        # which can cause an exception.
 
-                        # the parent wants to forge ahead
+                        # Therefore, if an exception was raised, we know
+                        # that the OPEN has not been sent (so we don't have
+                        # to send an ABORT), and that the new Unslicer has
+                        # not been pushed (so we don't have to pop one from
+                        # the stack)
+
+                        f = BananaFailure()
+                        if self.debugSend:
+                            print " violation in newSlicerFor:", f
+
+                        self.handleSendViolation(f,
+                                                 doPop=False, sendAbort=False)
 
             except StopIteration:
                 if self.debugSend: print "StopIteration"
                 self.popSlicer()
-            except Violation, v1:
+
+            except Violation, v:
                 # Violations that occur because of Constraints are caught
                 # before the Slicer is pushed. A Violation that is caught
-                # here was either raised inside .next() or re-raised by
-                # .childAborted(). Either case indicates that the Slicer
-                # should be abandoned.
+                # here was raised inside .next(), or .streamable wasn't
+                # obeyed. The Slicer should now be abandoned.
+                if self.debugSend: print " violation in .next:", v
 
-                # the parent .childAborted might re-raise the Violation, so
-                # we have to loop this until someone stops complaining
-                v1.setLocation(self.describeSend())
-                v = v1
-                if self.debugSend: print " violation in loop:", v
+                f = BananaFailure()
+                self.handleSendViolation(f, doPop=True, sendAbort=True)
 
-                while True:
-                    # should we send an ABORT? Only if an OPEN has been
-                    # sent, which happens in pushSlicer (if at all).
-                    lastOpenID = self.slicerStack[-1][2]
-                    if lastOpenID is not None:
-                        self.sendAbort()
-
-                    # should we pop the Slicer? yes
-                    self.popSlicer()
-                    if not self.slicerStack:
-                        if self.debugSend: print "RootSlicer died!"
-                        raise BananaError("Hey! You killed the RootSlicer!")
-
-                    # now inform the parent. If they also give up, we will
-                    # loop, popping more Slicers off the stack until the
-                    # RootSlicer ignores the error
-
-                    # The Violation is tagged with a location the first time
-                    # it is handled. Later Slicers have the option of
-                    # re-raising it (which means it will retain that
-                    # original location description) or creating a new
-                    # Violation (in which case they are responsible for
-                    # describing it).
-                    topSlicer = self.slicerStack[-1][0]
-                    try:
-                        if self.debugSend:
-                            print "  notifying parent", topSlicer
-                        topSlicer.childAborted(v)
-                    except Violation, v2:
-                        v = v2 # not sure this is necessary
-                        continue
-                    else:
-                        break
             except:
                 print "exception in produce"
                 self.sendFailed(Failure())
@@ -236,6 +206,51 @@ class Banana(protocol.Protocol):
 
         assert self.slicerStack # should never be empty
 
+    def handleSendViolation(self, f, doPop, sendAbort):
+        f.value.setLocation(self.describeSend())
+
+        while True:
+            top = self.slicerStack[-1][0]
+
+            if self.debugSend:
+                print " handleSendViolation.loop, top=%s" % top
+
+            # should we send an ABORT? Only if an OPEN has been sent, which
+            # happens in pushSlicer (if at all).
+            if sendAbort:
+                lastOpenID = self.slicerStack[-1][2]
+                if lastOpenID is not None:
+                    if self.debugSend:
+                        print "  sending ABORT(%s)" % lastOpenID
+                    self.sendAbort()
+
+            # should we pop the Slicer? yes
+            if doPop:
+                if self.debugSend: print "  popping %s" % top
+                self.popSlicer()
+                if not self.slicerStack:
+                    if self.debugSend: print "RootSlicer died!"
+                    raise BananaError("Hey! You killed the RootSlicer!")
+                top = self.slicerStack[-1][0]
+
+            # now inform the parent. If they also give up, we will
+            # loop, popping more Slicers off the stack until the
+            # RootSlicer ignores the error
+            
+            if self.debugSend:
+                print "  notifying parent", top
+            f = top.childAborted(f)
+
+            if f:
+                doPop = True
+                sendAbort = True
+                continue
+            else:
+                break
+        
+
+        # the parent wants to forge ahead
+        
     def newSlicerFor(self, obj):
         if tokens.ISlicer.providedBy(obj):
             return obj
@@ -415,7 +430,6 @@ class Banana(protocol.Protocol):
     unslicerClass = slicer.RootUnslicer
     debugReceive = False
     logViolations = False
-    logDiscardCount = False
     logReceiveErrors = True
 
     def initReceive(self):
@@ -461,18 +475,6 @@ class Banana(protocol.Protocol):
         # OPEN(vocab) sequence.
         self.incomingVocabulary = vocabDict
 
-    def checkToken(self, typebyte, size):
-        # the purpose here is to limit the memory consumed by the body of a
-        # STRING, OPEN, LONGINT, or LONGNEG token (i.e., the size of a
-        # primitive type). If the sender wants to feed us more data than we
-        # want to accept, the checkToken() method should raise a Violation.
-        # This will never be called with ABORT or CLOSE types.
-        top = self.receiveStack[-1]
-        if self.inOpen:
-            top.openerCheckToken(typebyte, size, self.opentype)
-        else:
-            top.checkToken(typebyte, size) # might raise Violation
-
     def dataReceived(self, chunk):
         try:
             self.handleData(chunk)
@@ -482,12 +484,12 @@ class Banana(protocol.Protocol):
             self.sendError(str(e))
             if self.logReceiveErrors:
                 log.err()
-            self.transport.loseConnection(Failure())
+            self.transport.loseConnection(BananaFailure())
         except:
             # don't reveal the reason, just hang up
             if self.logReceiveErrors:
                 log.err()
-            self.transport.loseConnection(Failure())
+            self.transport.loseConnection(BananaFailure())
 
 
     def handleData(self, chunk):
@@ -502,7 +504,6 @@ class Banana(protocol.Protocol):
             chunk = chunk[self.skipBytes:]
             self.skipBytes = 0
         buffer = self.buffer + chunk
-        gotItem = self.handleToken
 
         # Loop through the available input data, extracting one token per
         # pass.
@@ -537,17 +538,31 @@ class Banana(protocol.Protocol):
             else:
                 header = 0
 
-            # rejected is set as soon as a violation is detected. The
-            # appropriate UnbananaFailure will be delivered to the parent
-            # unslicer at the same time, so rejected is also a flag that
-            # indicates further violation-checking should be skipped. Don't
-            # deliver multiple UnbananaFailures.
+            # rejected is set as soon as a violation is detected. It
+            # indicates that this single token will be rejected.
 
             rejected = False
             if self.discardCount:
                 rejected = True
-                self.inOpen = False
 
+            wasInOpen = self.inOpen
+            if typebyte == OPEN:
+                if self.inOpen:
+                    raise BananaError("OPEN token followed by OPEN")
+                self.inOpen = True
+                # the inOpen flag is set as soon as the OPEN token is
+                # witnessed (even it it gets rejected later), because it
+                # means that there is a new sequence starting that must be
+                # handled somehow (either discarded or given to a new
+                # Unslicer).
+
+                # The inOpen flag is cleared when the Index Phase ends.
+                # There are two possibilities: 1) a new Unslicer is pushed,
+                # and tokens are delivered to it normally. 2) a Violation
+                # was raised, and the tokens must be discarded
+                # (self.discardCount++). *any* True->False transition of
+                # self.inOpen must be accompanied by exactly one increment
+                # of self.discardCount
 
             # determine if this token will be accepted, and if so, how large
             # it is allowed to be (for STRING and LONGINT/LONGNEG)
@@ -558,17 +573,28 @@ class Banana(protocol.Protocol):
                 # example, a list of integers would reject STRING, VOCAB,
                 # and OPEN because none of those will produce integers. If
                 # the unslicer's .checkToken rejects the tokentype, its
-                # .receiveChild will immediately get an UnbananaFailure
+                # .receiveChild will immediately get an Failure
                 try:
-                    self.checkToken(typebyte, header)
+                    # the purpose here is to limit the memory consumed by
+                    # the body of a STRING, OPEN, LONGINT, or LONGNEG token
+                    # (i.e., the size of a primitive type). If the sender
+                    # wants to feed us more data than we want to accept, the
+                    # checkToken() method should raise a Violation. This
+                    # will never be called with ABORT or CLOSE types.
+                    top = self.receiveStack[-1]
+                    if wasInOpen:
+                        top.openerCheckToken(typebyte, header, self.opentype)
+                    else:
+                        top.checkToken(typebyte, header)
                 except Violation, v:
                     rejected = True
-                    if typebyte == OPEN or self.inOpen:
-                        # need to discard the rest of this new sequence
-                        self.discardCount += 1
-                        if self.logDiscardCount:
-                            print "discardCount+++++ now", self.discardCount
-                    gotItem(UnbananaFailure(v, self.describeReceive()))
+                    f = BananaFailure()
+                    if wasInOpen:
+                        methname = "openerCheckToken"
+                    else:
+                        methname = "checkToken"
+                    self.handleViolation(f, methname, inOpen=self.inOpen)
+                    self.inOpen = False
 
             if typebyte == ERROR and header > SIZE_LIMIT:
                 # someone is trying to spam us with an ERROR token. Drop
@@ -593,7 +619,67 @@ class Banana(protocol.Protocol):
             # note that if rejected==True, the object is dropped instead of
             # being passed up to the current Unslicer
 
-            if typebyte == LIST:
+            if typebyte == OPEN:
+                buffer = rest
+                self.inboundOpenCount = header
+                if rejected:
+                    if self.inOpen:
+                        # we are discarding everything at the old level, so
+                        # discard everything in the new level too
+                        self.discardCount += 1
+                        if self.debugReceive:
+                            print "discardCount++ (OPEN), now %d" \
+                                  % self.discardCount
+                    else:
+                        # the checkToken handleViolation has already started
+                        # discarding this new sequence, we don't have to
+                        pass
+                else:
+                    self.inOpen = True
+                    self.opentype = []
+                continue
+
+            elif typebyte == CLOSE:
+                buffer = rest
+                count = header
+                if self.discardCount:
+                    self.discardCount -= 1
+                    if self.debugReceive:
+                        print "discardCount-- (CLOSE), now %d" \
+                              % self.discardCount
+                else:
+                    self.handleClose(count)
+                continue
+
+            elif typebyte == ABORT:
+                buffer = rest
+                count = header
+                # TODO: this isn't really a Violation, but we need something
+                # to describe it. It does behave identically to what happens
+                # when receiveChild raises a Violation. The .handleViolation
+                # will pop the now-useless Unslicer and start discarding
+                # tokens just as if the Unslicer had made the decision.
+                try:
+                    # slightly silly way to do it, but nice and uniform
+                    raise Violation("ABORT received")
+                except Violation:
+                    f = BananaFailure()
+                    self.handleViolation(f, "receive-abort")
+                continue
+
+            elif typebyte == ERROR:
+                strlen = header
+                if len(rest) >= strlen:
+                    # the whole string is available
+                    buffer = rest[strlen:]
+                    obj = rest[:strlen]
+                    # handleError must drop the connection
+                    self.handleError(obj)
+                    return
+                else:
+                    return # there is more to come
+
+            elif typebyte == LIST:
                 raise BananaError("oldbanana peer detected, " +
                                   "compatibility code not yet written")
                 #listStack.append((header, []))
@@ -611,7 +697,7 @@ class Banana(protocol.Protocol):
                     if rejected:
                         # drop all we have and note how much more should be
                         # dropped
-                        if self.logDiscardCount:
+                        if self.debugReceive:
                             print "DROPPED some string bits"
                         self.skipBytes = strlen - len(rest)
                         self.buffer = ""
@@ -657,58 +743,6 @@ class Banana(protocol.Protocol):
                     # bytes. We don't bother skipping anything.
                     return
 
-            elif typebyte == OPEN:
-                buffer = rest
-                self.inboundOpenCount = header
-                if rejected:
-                    # either 1) we are discarding everything, or 2) we
-                    # rejected the OPEN token. In either case, discard
-                    # everything until the matching CLOSE token.
-                    self.discardCount += 1
-                    if self.logDiscardCount:
-                        print "discardCount++ now", self.discardCount
-                else:
-                    if self.inOpen:
-                        raise BananaError("OPEN token followed by OPEN")
-                    self.inOpen = True
-                    self.opentype = []
-                continue
-
-            elif typebyte == CLOSE:
-                buffer = rest
-                count = header
-                if self.discardCount:
-                    self.discardCount -= 1
-                    if self.logDiscardCount:
-                        print "discardCount-- now", self.discardCount
-                else:
-                    self.handleClose(count)
-                continue
-
-            elif typebyte == ABORT:
-                buffer = rest
-                count = header
-                # TODO: this isn't really a Violation, but we need something
-                # to describe it. It does behave identically to what happens
-                # when receiveChild raises a Violation. The .handleViolation
-                # will pop the now-useless Unslicer and start discarding
-                # tokens just as if the Unslicer had made the decision.
-                v = Violation("ABORT received")
-                self.handleViolation(v, "receive-abort", True)
-                continue
-
-            elif typebyte == ERROR:
-                strlen = header
-                if len(rest) >= strlen:
-                    # the whole string is available
-                    buffer = rest[strlen:]
-                    obj = rest[:strlen]
-                    # handleError must drop the connection
-                    self.handleError(obj)
-                    return
-                else:
-                    return # there is more to come
-
             else:
                 raise BananaError("Invalid Type Byte 0x%x" % ord(typebyte))
 
@@ -719,15 +753,14 @@ class Banana(protocol.Protocol):
                     # .inOpen, or leave .inOpen true and append the object
                     # to .indexOpen
                 else:
-                    gotItem(obj)
+                    self.handleToken(obj)
             else:
-                if self.logDiscardCount:
-                    print "DROP", obj
+                if self.debugReceive:
+                    print "DROP", type(obj), obj
                 pass # drop the object
 
-            #while listStack and (len(listStack[-1][1]) == listStack[-1][0]):
-            #    item = listStack.pop()[1]
-            #    gotItem(item)
+            # while loop ends here
+
         self.buffer = ''
 
 
@@ -750,11 +783,9 @@ class Banana(protocol.Protocol):
         except Violation, v:
             # must discard the rest of the child object. There is no new
             # unslicer pushed yet, so we don't use abandonUnslicer
-            self.discardCount += 1
-            if self.logDiscardCount:
-                print "discardCount++++ now", self.discardCount
             self.inOpen = False
-            self.handleViolation(v, "doOpen", False)
+            f = BananaFailure()
+            self.handleViolation(f, "doOpen", inOpen=True)
             return
 
         assert tokens.IUnslicer.providedBy(child), "child is %s" % child
@@ -769,7 +800,9 @@ class Banana(protocol.Protocol):
         except Violation, v:
             # the child is now on top, so use abandonUnslicer to discard the
             # rest of the child
-            self.handleViolation(v, "start", True)
+            f = BananaFailure()
+            # notifies the new child
+            self.handleViolation(f, "start")
 
     def handleToken(self, token):
         top = self.receiveStack[-1]
@@ -777,20 +810,17 @@ class Banana(protocol.Protocol):
         try:
             top.receiveChild(token)
         except Violation, v:
-            # this is how the child says "I've been contaminated". If they
-            # want to handle bad input better, they should deal with
-            # whatever they get (and they have the ability to restrict that
-            # earlier, with checkToken and doOpen). At this point we have to
-            # give up on them.
-            self.handleViolation(v, "receiveChild", True)
+            # this is how the child says "I've been contaminated". We don't
+            # pop them automatically: if they want that, they should return
+            # back the failure in their reportViolation method.
+            f = BananaFailure()
+            self.handleViolation(f, "receiveChild")
 
     def handleClose(self, closeCount):
         if self.debugReceive:
             print "handleClose(%d)" % closeCount
         if self.receiveStack[-1].openCount != closeCount:
-            print "LOST SYNC"
-            self.printStack()
-            raise BananaError("lost sync, got CLOSE(%d) but expecting %d" \
+            raise BananaError("lost sync, got CLOSE(%d) but expecting %s" \
                               % (closeCount, self.receiveStack[-1].openCount))
 
         child = self.receiveStack[-1] # don't pop yet: describe() needs it
@@ -799,9 +829,10 @@ class Banana(protocol.Protocol):
             obj = child.receiveClose()
         except Violation, v:
             # the child is contaminated. However, they're finished, so we
-            # don't have to discard anything. Just give an UnbananaFailure
-            # to the parent instead of the object they would have returned.
-            self.handleViolation(v, "receiveClose", True, discard=False)
+            # don't have to discard anything. Just give an Failure to the
+            # parent instead of the object they would have returned.
+            f = BananaFailure()
+            self.handleViolation(f, "receiveClose", inClose=True)
             return
 
         if self.debugReceive: print "receiveClose returned", obj
@@ -823,49 +854,59 @@ class Banana(protocol.Protocol):
             # TODO: it would be more useful if the UF could also point to
             # the completing object (the one which raised Violation).
 
-            self.handleViolation(v, "finish", True, discard=False)
+            f = BananaFailure()
+            self.handleViolation(f, "finish", inClose=True)
             return
 
         self.receiveStack.pop()
 
-        # now deliver the object (or the UbF) to the parent)
+        # now deliver the object to the parent
         self.handleToken(obj)
 
-    def handleViolation(self, v, methname, doPop, discard=True):
+    def handleViolation(self, f, methname, inOpen=False, inClose=False):
         """An Unslicer has decided to give up, or we have given up on it
         (because we received an ABORT token). 
         """
 
-        if v.failure:
-            # this is a nested failure. Use the UnbananaFailure inside
-            f = v.failure
-            assert isinstance(f, UnbananaFailure)
-        else:
-            where = self.describeReceive()
-            f = UnbananaFailure(v, where)
-            if self.logViolations:
-                log.msg("Violation in %s at %s" % (methname, where))
-                log.err()
-        top = self.receiveStack[-1]
-        f = top.reportViolation(f)
-        assert isinstance(f, UnbananaFailure)
+        where = self.describeReceive()
+        f.value.setLocation(where)
 
-        if doPop:
+        if self.debugReceive:
+            print " handleViolation-%s (inOpen=%s, inClose=%s): %s" \
+                  % (methname, inOpen, inClose, f)
+
+        assert isinstance(f, BananaFailure)
+
+        if self.logViolations:
+            log.msg("Violation in %s at %s" % (methname, where))
+            log.err(f)
+
+        if inOpen:
             if self.debugReceive:
-                print "## abandonUnslicer called"
-                print "##  while decoding '%s'" % f.where
-                print "## current stack leading up to abandonUnslicer:"
-                import traceback
-                traceback.print_stack()
-                print "## exception that triggered abandonUnslicer:"
-                print f
+                print "  discardCount++ (inOpen), now %d" % self.discardCount
+            self.discardCount += 1
+
+        while True:
+            # tell the parent that their child is dead. This is useful for
+            # things like PB, which may want to errback the current request.
+            if self.debugReceive:
+                print " reportViolation to %s" % self.receiveStack[-1]
+            f = self.receiveStack[-1].reportViolation(f)
+            if not f:
+                # they absorbed the failure
+                break
+
+            # the old top wants to propagate it upwards
+            if self.debugReceive:
+                print "  popping %s" % self.receiveStack[-1]
+            if not inClose:
+                if self.debugReceive:
+                    print "  discardCount++ (pop, not inClose), now %d" \
+                          % self.discardCount
+                self.discardCount += 1
+            inClose = False
 
             old = self.receiveStack.pop()
-            if discard:
-                # throw out everything until matching CLOSE
-                self.discardCount += 1
-                if self.logDiscardCount:
-                    print "discardCount+++ now", self.discardCount
 
             try:
                 # TODO: if handleClose encountered a Violation in .finish,
@@ -875,13 +916,14 @@ class Banana(protocol.Protocol):
                 pass # they've already failed once
 
             if not self.receiveStack:
-                # Oh my god, you killed the RootUnslicer! You bastard!
                 # now there's nobody left to create new Unslicers, so we
                 # must drop the connection
-                raise BananaError("we abandoned the RootUnslicer!")
+                why = "Oh my god, you killed the RootUnslicer! " + \
+                      "You bastard!!"
+                raise BananaError(why)
 
-        # and give the UnbananaFailure to the (new) parent
-        self.handleToken(f)
+            # now we loop until someone absorbs the failure
+
 
     def handleError(self, msg):
         log.msg("got banana ERROR from remote side: %s" % msg)
@@ -905,6 +947,8 @@ class Banana(protocol.Protocol):
         """
         raise NotImplementedError
 
+    def reportViolation(self, why):
+        return why
 
 class StorageBanana(Banana):
     # this is "unsafe", in that it will do import() and create instances of

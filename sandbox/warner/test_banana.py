@@ -10,7 +10,7 @@ from twisted.internet import reactor, defer
 from banana import BananaError
 from tokens import ISlicer, Violation
 import slicer, schema, tokens, debug
-from slicer import UnbananaFailure
+from slicer import BananaFailure
 
 import StringIO, types, sys
 
@@ -60,7 +60,6 @@ def bERROR(str):
 class TokenBanana(debug.TokenStorageBanana):
     """this Banana formats tokens as strings, numbers, and ('OPEN',) tuples
     instead of bytes. Used for testing purposes."""
-    logReceiveErrors = False
 
     def testSlice(self, obj):
         assert len(self.slicerStack) == 1
@@ -96,36 +95,52 @@ class UnbananaTestMixin:
                                        slicer.StorageRootUnslicer))
             
     def do(self, tokens):
+        self.banana.object = None
+        self.banana.violation = None
+        self.banana.transport.disconnectReason = None
         self.failUnless(len(self.banana.receiveStack) == 1)
         self.failUnless(isinstance(self.banana.receiveStack[0],
                                    slicer.StorageRootUnslicer))
         obj = self.banana.processTokens(tokens)
         return obj
 
-    def failIfUnbananaFailure(self, res):
-        if isinstance(res, UnbananaFailure):
-            # something went wrong
-            print "There was a failure while Unbananaing '%s':" % res.where
-            print res.getTraceback()
-            self.fail("UnbananaFailure")
+    def shouldFail(self, tokens):
+        obj = self.do(tokens)
+        self.failUnless(obj is None, "object was produced: %s" % obj)
+        self.failUnless(self.banana.violation, "didn't fail, ret=%s" % obj)
+        self.failIf(self.banana.transport.disconnectReason,
+                    "connection was dropped: %s" % \
+                    self.banana.transport.disconnectReason)
+        return self.banana.violation
 
     def shouldDropConnection(self, tokens):
-        ret = self.do(tokens)
+        self.banana.logReceiveErrors = False
+        obj = self.do(tokens)
+        self.failUnless(obj is None, "object was produced: %s" % obj)
+        self.failIf(self.banana.violation)
         f = self.banana.transport.disconnectReason
-        if not f:
-            self.fail("didn't fail, ret=%s" % ret)
-        if not isinstance(f, failure.Failure):
+        self.failUnless(f, "didn't fail, ret=%s" % obj)
+        if not isinstance(f, BananaFailure):
             self.fail("disconnectReason wasn't a Failure:", f)
         if not f.check(BananaError):
             self.fail("wrong exception type: %s" % f)
         self.hangup = True # to stop the tearDown check
         return f
 
-    def checkUnbananaFailure(self, res, where, failtype=None):
-        self.failUnless(isinstance(res, UnbananaFailure))
+
+    def failIfBananaFailure(self, res):
+        if isinstance(res, BananaFailure):
+            # something went wrong
+            print "There was a failure while Unbananaing '%s':" % res.where
+            print res.getTraceback()
+            self.fail("BananaFailure")
+
+    def checkBananaFailure(self, res, where, failtype=None):
+        print res
+        self.failUnless(isinstance(res, BananaFailure))
         if failtype:
             self.failUnless(res.failure,
-                            "No Failure object in UnbananaFailure")
+                            "No Failure object in BananaFailure")
             if not res.check(failtype):
                 print "Wrong exception (wanted '%s'):" % failtype
                 print res.getTraceback()
@@ -134,9 +149,14 @@ class UnbananaTestMixin:
         self.banana.object = None # to stop the tearDown check TODO ??
 
 class TestBanana(debug.LoggingStorageBanana):
-    logReceiveErrors = False
     #doLog = "rx"
-    pass
+
+    def receivedObject(self, obj):
+        self.object = obj
+
+    def reportViolation(self, why):
+        self.violation = why
+
 
 class TestTransport(StringIO.StringIO):
     disconnectReason = None
@@ -159,23 +179,49 @@ class TestBananaMixin:
     def clearOutput(self):
         self.banana.transport = TestTransport()
 
-    def decode(self, str):
+    def decode(self, stream):
         self.banana.object = None
-        self.banana.dataReceived(str)
-        obj = self.banana.object
-        self.banana.object = None
+        self.banana.violation = None
+        self.banana.dataReceived(stream)
+        return self.banana.object
+
+    def shouldDecode(self, stream):
+        obj = self.decode(stream)
+        self.failIf(self.banana.violation)
+        self.failIf(self.banana.transport.disconnectReason)
+        self.failUnlessEqual(len(self.banana.receiveStack), 1)
         return obj
 
     def shouldFail(self, stream):
-        self.makeBanana()
         obj = self.decode(stream)
+        self.failUnless(obj is None,
+                        "obj was '%s', not None" % (obj,))
+        self.failIf(self.banana.transport.disconnectReason,
+                    "connection was dropped")
+        self.failUnlessEqual(len(self.banana.receiveStack), 1)
+        f = self.banana.violation
+        if not f:
+            self.fail("didn't fail, ret=%s" % obj)
+        if not isinstance(f, BananaFailure):
+            self.fail("violation wasn't a BananaFailure: %s" % f)
+        if not f.check(Violation):
+            self.fail("wrong exception type: %s" % f)
+        return f
+
+    def shouldDropConnection(self, stream):
+        self.banana.logReceiveErrors = False # trial hooks log.err
+        obj = self.decode(stream)
+        self.failUnless(obj is None)
+        # the receiveStack is allowed to be non-empty here, since we've
+        # dropped the connection anyway
         f = self.banana.transport.disconnectReason
         if not f:
             self.fail("didn't fail, ret=%s" % ret)
-        if not isinstance(f, failure.Failure):
+        if not isinstance(f, BananaFailure):
             self.fail("disconnectReason wasn't a Failure:", f)
         if not f.check(BananaError):
             self.fail("wrong exception type: %s" % f)
+        self.makeBanana() # need a new one, we squished the last one
         return f
 
     def wantEqual(self, got, wanted):
@@ -186,12 +232,10 @@ class TestBananaMixin:
             self.fail("did not get expected string")
 
     def loop(self, obj):
-        return self.decode(self.encode(obj))
+        return self.shouldDecode(self.encode(obj))
+
     def looptest(self, obj):
         obj2 = self.loop(obj)
-        if isinstance(obj2, UnbananaFailure):
-            print obj2.getTraceback()
-            self.fail("UnbananaFailure at %s" % obj2.where)
         self.failUnlessEqual(obj2, obj)
         self.failUnlessEqual(type(obj2), type(obj))
 
@@ -200,8 +244,39 @@ def join(*args):
 
 
 
+class BrokenDictUnslicer(slicer.DictUnslicer):
+    dieInFinish = 0
+
+    def receiveKey(self, key):
+        if key == "die":
+            raise Violation("aaagh")
+        if key == "please_die_in_finish":
+            self.dieInFinish = 1
+        slicer.DictUnslicer.receiveKey(self, key)
+
+    def receiveValue(self, value):
+        if value == "die":
+            raise Violation("aaaaaaaaargh")
+        slicer.DictUnslicer.receiveValue(self, value)
+
+    def receiveClose(self):
+        if self.dieInFinish:
+            raise Violation("dead in receiveClose()")
+        slicer.DictUnslicer.receiveClose(self)
+
+class ReallyBrokenDictUnslicer(slicer.DictUnslicer):
+    def start(self, count):
+        raise Violation("dead in start")
+
+
 class DecodeTest(UnbananaTestMixin, unittest.TestCase):
-        
+    def setUp(self):
+        UnbananaTestMixin.setUp(self)
+        self.banana.logReceiveErrors = False
+        self.banana.rootUnslicer.topRegistry.update(
+            { ('dict1',): BrokenDictUnslicer,
+              ('dict2',): ReallyBrokenDictUnslicer, })
+
     def test_simple_list(self):
         "simple list"
         res = self.do([tOPEN(0),'list',1,2,3,"a","b",tCLOSE(0)])
@@ -209,33 +284,46 @@ class DecodeTest(UnbananaTestMixin, unittest.TestCase):
 
     def test_aborted_list(self):
         "aborted list"
-        res = self.do([tOPEN(0),'list', 1, tABORT, tCLOSE(0)])
-        self.checkUnbananaFailure(res, "root.[1]")
+        f = self.shouldFail([tOPEN(0),'list', 1, tABORT, tCLOSE(0)])
+        self.failUnless(isinstance(f, BananaFailure))
+        self.failUnless(f.check(Violation))
+        self.failUnlessEqual(f.value.where, "root.[1]")
+        self.failUnlessEqual(f.value.args[0], "ABORT received")
 
     def test_aborted_list2(self):
         "aborted list2"
-        res = self.do([tOPEN(0),'list', 1, tABORT,
-                       tOPEN(1),'list', 2, 3, tCLOSE(1),
-                       tCLOSE(0)])
-        self.checkUnbananaFailure(res, "root.[1]")
+        f = self.shouldFail([tOPEN(0),'list', 1, tABORT,
+                             tOPEN(1),'list', 2, 3, tCLOSE(1),
+                             tCLOSE(0)])
+        self.failUnless(isinstance(f, BananaFailure))
+        self.failUnless(f.check(Violation))
+        self.failUnlessEqual(f.value.where, "root.[1]")
+        self.failUnlessEqual(f.value.args[0], "ABORT received")
 
     def test_aborted_list3(self):
         "aborted list3"
-        res = self.do([tOPEN(0),'list', 1, 
-                        tOPEN(1),'list', 2, 3, 4,
-                         tOPEN(2),'list', 5, 6, tABORT, tCLOSE(2),
-                        tCLOSE(1),
-                       tCLOSE(0)])
-        self.checkUnbananaFailure(res, "root.[1].[3].[2]")
+        f = self.shouldFail([tOPEN(0),'list', 1, 
+                              tOPEN(1),'list', 2, 3, 4,
+                               tOPEN(2),'list', 5, 6, tABORT, tCLOSE(2),
+                              tCLOSE(1),
+                             tCLOSE(0)])
+        self.failUnless(isinstance(f, BananaFailure))
+        self.failUnless(f.check(Violation))
+        self.failUnlessEqual(f.value.where, "root.[1].[3].[2]")
+        self.failUnlessEqual(f.value.args[0], "ABORT received")
 
     def test_nested_list(self):
         "nested list"
-        res = self.do([tOPEN(0),'list',1,2,tOPEN(1),'list',3,4,tCLOSE(1),tCLOSE(0)])
+        res = self.do([tOPEN(0),'list',1,2,
+                        tOPEN(1),'list',3,4,tCLOSE(1),
+                       tCLOSE(0)])
         self.failUnlessEqual(res, [1,2,[3,4]])
 
     def test_list_with_tuple(self):
         "list with tuple"
-        res = self.do([tOPEN(0),'list',1,2,tOPEN(1),'tuple',3,4,tCLOSE(1),tCLOSE(0)])
+        res = self.do([tOPEN(0),'list',1,2,
+                        tOPEN(1),'tuple',3,4,tCLOSE(1),
+                       tCLOSE(0)])
         self.failUnlessEqual(res, [1,2,(3,4)])
 
     def test_dict(self):
@@ -245,7 +333,9 @@ class DecodeTest(UnbananaTestMixin, unittest.TestCase):
         
     def test_dict_with_duplicate_keys(self):
         "dict with duplicate keys"
-        f = self.shouldDropConnection([tOPEN(0),'dict',"a",1,"a",2,tCLOSE(0)])
+        f = self.shouldDropConnection([tOPEN(0),'dict',
+                                       "a",1,"a",2,
+                                       tCLOSE(0)])
         self.failUnlessEqual(f.value.where, "root.{}")
         self.failUnlessEqual(f.value.args[0], "duplicate key 'a'")
 
@@ -318,7 +408,7 @@ class DecodeTest(UnbananaTestMixin, unittest.TestCase):
                         tOPEN(1),'list', 1, 2, tCLOSE(1),
                         tOPEN(2),'reference', 1, tCLOSE(2),
                        tCLOSE(0)])
-        self.failIfUnbananaFailure(res)
+        self.failIfBananaFailure(res)
         self.failUnlessEqual(res, [[1,2], [1,2]])
         self.failUnlessIdentical(res[0], res[1])
 
@@ -327,7 +417,7 @@ class DecodeTest(UnbananaTestMixin, unittest.TestCase):
                        tOPEN(1),'list', 1, 2, tCLOSE(1),
                        tOPEN(2),'reference', 0, tCLOSE(2),
                        tCLOSE(0)])
-        self.failIfUnbananaFailure(res)
+        self.failIfBananaFailure(res)
         wanted = [[1,2]]
         wanted.append(wanted)
         self.failUnlessEqual(res, wanted)
@@ -338,7 +428,7 @@ class DecodeTest(UnbananaTestMixin, unittest.TestCase):
                         tOPEN(1),'tuple', 1, 2, tCLOSE(1),
                         tOPEN(2),'reference', 1, tCLOSE(2),
                        tCLOSE(0)])
-        self.failIfUnbananaFailure(res)
+        self.failIfBananaFailure(res)
         wanted = [(1,2)]
         wanted.append(wanted[0])
         self.failUnlessEqual(res, wanted)
@@ -349,7 +439,7 @@ class DecodeTest(UnbananaTestMixin, unittest.TestCase):
                         tOPEN(1),'dict', "a", 1, tCLOSE(1),
                         tOPEN(2),'reference', 1, tCLOSE(2),
                        tCLOSE(0)])
-        self.failIfUnbananaFailure(res)
+        self.failIfBananaFailure(res)
         wanted = [{"a":1}]
         wanted.append(wanted[0])
         self.failUnlessEqual(res, wanted)
@@ -363,7 +453,7 @@ class DecodeTest(UnbananaTestMixin, unittest.TestCase):
                         tOPEN(1),'reference', 0, tCLOSE(1),
                         7,
                        tCLOSE(0)])
-        self.failIfUnbananaFailure(res)
+        self.failIfBananaFailure(res)
         wanted = [5,6]
         wanted.append(wanted)
         wanted.append(7)
@@ -384,7 +474,7 @@ class DecodeTest(UnbananaTestMixin, unittest.TestCase):
                          tCLOSE(2),
                         tCLOSE(1),
                        tCLOSE(0)])
-        self.failIfUnbananaFailure(res)
+        self.failIfBananaFailure(res)
         wanted = ([],)
         wanted[0].append((wanted,))
         self.failUnlessEqual(res, wanted)
@@ -397,53 +487,65 @@ class DecodeTest(UnbananaTestMixin, unittest.TestCase):
         
     def test_failed_dict1(self):
         # dies during open because of bad opentype
-        res = self.do([tOPEN(0),'list', 1,
-                        tOPEN(1),"bad",
-                         "a", 2,
-                         "b", 3,
-                        tCLOSE(1),
-                       tCLOSE(0)])
-        self.checkUnbananaFailure(res, "root.[1]")
+        f = self.shouldFail([tOPEN(0),'list', 1,
+                              tOPEN(1),"bad",
+                               "a", 2,
+                               "b", 3,
+                              tCLOSE(1),
+                             tCLOSE(0)])
+        self.failUnless(isinstance(f, BananaFailure))
+        self.failUnless(f.check(Violation))
+        self.failUnlessEqual(f.value.where, "root.[1]")
+        self.failUnlessEqual(f.value.args[0], "unknown OPEN type ('bad',)")
 
     def test_failed_dict2(self):
         # dies during start
-        res = self.do([tOPEN(0),'list', 1,
-                       tOPEN(1),'dict2', "a", 2, "b", 3, tCLOSE(1),
-                       tCLOSE(0)])
-        self.checkUnbananaFailure(res, "root.[1].{}")
-        #"dead in start"
+        f = self.shouldFail([tOPEN(0),'list', 1,
+                             tOPEN(1),'dict2', "a", 2, "b", 3, tCLOSE(1),
+                             tCLOSE(0)])
+        self.failUnless(isinstance(f, BananaFailure))
+        self.failUnless(f.check(Violation))
+        self.failUnlessEqual(f.value.where, "root.[1].{}")
+        self.failUnlessEqual(f.value.args[0], "dead in start")
 
     def test_failed_dict3(self):
         # dies during key
-        res = self.do([tOPEN(0),'list', 1,
-                       tOPEN(1),'dict1', "a", 2, "die", tCLOSE(1),
-                       tCLOSE(0)])
-        self.checkUnbananaFailure(res, "root.[1].{}")
-        #"aaaaaaaaargh"
+        f = self.shouldFail([tOPEN(0),'list', 1,
+                             tOPEN(1),'dict1', "a", 2, "die", tCLOSE(1),
+                             tCLOSE(0)])
+        self.failUnless(isinstance(f, BananaFailure))
+        self.failUnless(f.check(Violation))
+        self.failUnlessEqual(f.value.where, "root.[1].{}")
+        self.failUnlessEqual(f.value.args[0], "aaagh")
+
         res = self.do([tOPEN(2),'list', 3, 4, tCLOSE(2)])
         self.failUnlessEqual(res, [3,4])
 
     def test_failed_dict4(self):
         # dies during value
-        res = self.do([tOPEN(0),'list', 1,
-                        tOPEN(1),'dict1',
-                         "a", 2,
-                         "b", "die",
-                        tCLOSE(1),
-                       tCLOSE(0)])
-        self.checkUnbananaFailure(res, "root.[1].{}[b]")
-        # "aaaaaaaaargh"
+        f = self.shouldFail([tOPEN(0),'list', 1,
+                              tOPEN(1),'dict1',
+                               "a", 2,
+                               "b", "die",
+                              tCLOSE(1),
+                             tCLOSE(0)])
+        self.failUnless(isinstance(f, BananaFailure))
+        self.failUnless(f.check(Violation))
+        self.failUnlessEqual(f.value.where, "root.[1].{}[b]")
+        self.failUnlessEqual(f.value.args[0], "aaaaaaaaargh")
         
     def test_failed_dict5(self):
         # dies during finish
-        res = self.do([tOPEN(0),'list', 1,
-                        tOPEN(1),'dict1',
-                         "a", 2,
-                         "please_die_in_finish", 3,
-                        tCLOSE(1),
-                       tCLOSE(0)])
-        self.checkUnbananaFailure(res, "root.[1].{}")
-        # "dead in receiveClose()"
+        f = self.shouldFail([tOPEN(0),'list', 1,
+                              tOPEN(1),'dict1',
+                               "a", 2,
+                               "please_die_in_finish", 3,
+                              tCLOSE(1),
+                             tCLOSE(0)])
+        self.failUnless(isinstance(f, BananaFailure))
+        self.failUnless(f.check(Violation))
+        self.failUnlessEqual(f.value.where, "root.[1].{}")
+        self.failUnlessEqual(f.value.args[0], "dead in receiveClose()")
 
 class Bar:
     def __cmp__(self, them):
@@ -608,7 +710,7 @@ class ErrorfulSlicer(slicer.BaseSlicer):
             raise Violation("next failed")
         if obj == "deferred-good":
             d = defer.Deferred()
-            reactor.callLater(1, d.callback, None)
+            reactor.callLater(0.3, d.callback, None)
             return d
         if obj == "deferred-bad":
             d = defer.Deferred()
@@ -624,8 +726,9 @@ class ErrorfulSlicer(slicer.BaseSlicer):
 
     def childAborted(self, v):
         self.childDied = True
-        if not self.ignoreChildDeath:
-            raise v
+        if self.ignoreChildDeath:
+            return None
+        return v
 
     def describe(self):
         return "ErrorfulSlicer[%d]" % self.counter
@@ -703,7 +806,7 @@ class EncodeFailureTest(unittest.TestCase):
         self.failUnlessEqual(e.value.args, ("parent not streamable",))
 
     def test4(self):
-        # .newSlicerFor (no ISlicer adapter), parent re-raises
+        # .newSlicerFor (no ISlicer adapter), parent propagates upwards
         s = ErrorfulSlicer("newSlicerFor", False)
         d = self.send(s)
         e = self.waitForError(d)
@@ -735,20 +838,81 @@ class EncodeFailureTest(unittest.TestCase):
 #  top.start
 # plus all of these when discardCount != 0
 
+class ErrorfulUnslicer(slicer.BaseUnslicer):
+    debug = False
+
+    def start(self, count):
+        self.mode = self.protocol.mode
+        self.ignoreChildDeath = self.protocol.ignoreChildDeath
+        if self.debug:
+            print "ErrorfulUnslicer.start, mode=%s" % self.mode
+        self.list = []
+
+    def openerCheckToken(self, typebyte, size, opentype):
+        if self.debug: print "ErrorfulUnslicer.openerCheckToken"
+        if self.mode == "openerCheckToken":
+            raise Violation("boom")
+        else:
+            return slicer.BaseUnslicer.openerCheckToken(self, typebyte,
+                                                        size, opentype)
+    def checkToken(self, typebyte, size):
+        if self.mode == "checkToken":
+            raise Violation("boom")
+        else:
+            return slicer.BaseUnslicer.checkToken(self, typebyte, size)
+
+    def receiveChild(self, obj):
+        if self.debug: print "ErrorfulUnslicer.receiveChild", obj
+        self.list.append(obj)
+
+    def reportViolation(self, why):
+        if self.ignoreChildDeath:
+            return None
+        return why
+        
+    def receiveClose(self):
+        if self.debug: print "ErrorfulUnslicer.receiveClose"
+        if self.protocol.mode == "receiveClose":
+            raise Violation("boom")
+        else:
+            return self.list
+
+    def describe(self):
+        return "errorful"
+
 class DecodeFailureTest(TestBananaMixin, unittest.TestCase):
+    listStream = join(bOPEN("errorful", 0), bINT(1), bINT(2), bCLOSE(0))
+    nestedStream = join(bOPEN("errorful", 0), bINT(1),
+                        bOPEN("list", 1), bINT(2), bINT(3), bCLOSE(1),
+                        bCLOSE(0))
+
+    def setUp(self):
+        TestBananaMixin.setUp(self)
+        self.banana.rootUnslicer.topRegistry[('errorful',)] = ErrorfulUnslicer
+        self.banana.ignoreChildDeath = False
 
     def testSuccess1(self):
-        s = join(bOPEN("list",0), bINT(1), bINT(2), bCLOSE(0))
-        o = self.decode(s)
+        self.banana.mode = "success"
+        o = self.shouldDecode(self.listStream)
         self.failUnlessEqual(o, [1,2])
 
     def testLongHeader(self):
-        raise unittest.SkipTest("not ready yet")
         # would be a string but the header is too long
         s = "\x01" * 66 + "\x82" + "stupidly long string"
-        o = self.decode(s)
+        f = self.shouldDropConnection(s)
+        self.failUnlessEqual(f.value.args[0],
+                             "token prefix is limited to 64 bytes")
+
+    def testCheckToken1(self):
+        # violation raised in top.openerCheckToken
+        self.banana.mode = "openerCheckToken"
+        f = self.shouldFail(self.nestedStream)
+        self.failUnlessEqual(f.value.where, "root.errorful")
+        self.failUnlessEqual(f.value.args[0], "boom")
+
 
 class FailedInstanceTests(unittest.TestCase):
+    # TODO: inherit from UnbananaTestMixin
     def setUp(self):
         self.banana = TokenBanana()
         # turn off the "unsafe" extensions
@@ -770,13 +934,14 @@ class FailedInstanceTests(unittest.TestCase):
         self.failUnlessEqual(encoded, [])
        
     def test_get_instance(self):
+        raise unittest.SkipTest("should inherit from UnbananaTestMixin")
         tokens = [tOPEN(0),'instance', "test_banana.Foo", "a", 1,
                   "b", tOPEN(1),'list', 2, 3, tCLOSE(1),
                   "c", tOPEN(2),'instance', "Bar", "d", 4, tCLOSE(2),
                   tCLOSE(0)]
         # this will fail
-        res = self.decode(tokens)
-        self.failUnless(isinstance(res, UnbananaFailure))
+        res = self.shouldFail(tokens)
+        print res # TODO
 
 class ByteStream(TestBananaMixin, unittest.TestCase):
 
@@ -829,7 +994,7 @@ class InboundByteStream(TestBananaMixin, unittest.TestCase):
     def check(self, obj, stream):
         # use a new Banana for each check
         self.makeBanana()
-        obj2 = self.decode(stream)
+        obj2 = self.shouldDecode(stream)
         self.failUnlessEqual(obj, obj2)
 
     def testInt(self):
@@ -853,11 +1018,11 @@ class InboundByteStream(TestBananaMixin, unittest.TestCase):
         self.check("", "\x00\x00\x82")
         self.check("", "\x00" * 64 + "\x82")
 
-        f = self.shouldFail("\x00" * 65)
+        f = self.shouldDropConnection("\x00" * 65)
         self.failUnlessEqual(f.value.where, "root")
         self.failUnlessEqual(f.value.args[0],
                              "token prefix is limited to 64 bytes")
-        f = self.shouldFail("\x00" * 65 + "\x82")
+        f = self.shouldDropConnection("\x00" * 65 + "\x82")
         self.failUnlessEqual(f.value.where, "root")
         self.failUnlessEqual(f.value.args[0],
                              "token prefix is limited to 64 bytes")
@@ -907,28 +1072,25 @@ class InboundByteStream(TestBananaMixin, unittest.TestCase):
 
 class InboundByteStream2(TestBananaMixin, unittest.TestCase):
 
-    def decode2(self, string, constraint=None, childConstraint=None):
+    def setConstraints(self, constraint, childConstraint):
         if constraint:
             constraint = schema.makeConstraint(constraint)
+        self.banana.receiveStack[-1].constraint = constraint
+
         if childConstraint:
             childConstraint = schema.makeConstraint(childConstraint)
-        banana = TestBanana()
-        banana.receiveStack[-1].constraint = constraint
-        banana.receiveStack[-1].childConstraint = childConstraint
-        banana.object = None
-        banana.dataReceived(string)
-        self.failUnlessEqual(len(banana.receiveStack), 1)
-        return banana.object
-    def conform2(self, stream, obj, constraint, childConstraint=None):
-        obj2 = self.decode2(stream, constraint, childConstraint)
-        if isinstance(obj2, UnbananaFailure):
-            print "failure", obj2
+        self.banana.receiveStack[-1].childConstraint = childConstraint
+
+    def conform2(self, stream, obj, constraint=None, childConstraint=None):
+        self.setConstraints(constraint, childConstraint)
+        obj2 = self.shouldDecode(stream)
         self.failUnlessEqual(obj, obj2)
-    def violate2(self, stream, where, constraint, childConstraint=None):
-        obj2 = self.decode2(stream, constraint, childConstraint)
-        self.failUnless(isinstance(obj2, slicer.UnbananaFailure),
-                        "unslicer failed to fail")
-        self.failUnlessEqual(obj2.where, where)
+
+    def violate2(self, stream, where, constraint=None, childConstraint=None):
+        self.setConstraints(constraint, childConstraint)
+        f = self.shouldFail(stream)
+        self.failUnlessEqual(f.value.where, where)
+        self.failUnlessEqual(len(self.banana.receiveStack), 1)
 
     def testConstrainedInt(self):
         pass # TODO: after implementing new LONGINT token
@@ -1116,10 +1278,13 @@ class InboundByteStream2(TestBananaMixin, unittest.TestCase):
 
         # booleans have ints, not strings. To do otherwise is a protocol
         # error, not a schema Violation. 
-        f = self.shouldFail(join(bOPEN("boolean",1), bSTR("vrai"), bCLOSE(1)))
+        f = self.shouldDropConnection(join(bOPEN("boolean",1),
+                                            bSTR("vrai"),
+                                           bCLOSE(1)))
         self.failUnlessEqual(f.value.args[0],
                              "BooleanUnslicer only accepts an INT token")
 
+        # but true/false is a constraint, and is reported with Violation
         self.violate2(self.TRUE(),
                       "root.<bool>",
                       schema.BooleanConstraint(False))
@@ -1209,14 +1374,14 @@ class ThereAndBackAgain(TestBananaMixin, unittest.TestCase):
         self.assertIdentical(x[0], x[1])
         self.assertIdentical(x[0][0], x)
         s = self.encode(x)
-        z = self.decode(s)
+        z = self.shouldDecode(s)
         self.assertIdentical(z[0], z[1])
         self.assertIdentical(z[0][0], z)
 
     def testUnicode(self):
         if hasattr(types, 'UnicodeType'):
             x = [unicode('blah')]
-            y = self.decode(self.encode(x))
+            y = self.loop(x)
             self.assertEquals(x, y)
             self.assertEquals(type(x[0]), type(y[0]))
 
@@ -1224,8 +1389,7 @@ class ThereAndBackAgain(TestBananaMixin, unittest.TestCase):
         reref = []
         toplevelTuple = ({'list': reref}, reref)
         reref.append(toplevelTuple)
-        s = self.encode(toplevelTuple)
-        z = self.decode(s)
+        z = self.loop(toplevelTuple)
         self.assertIdentical(z[0]['list'], z[1])
         self.assertIdentical(z[0]['list'][0], z)
 
@@ -1234,8 +1398,7 @@ class ThereAndBackAgain(TestBananaMixin, unittest.TestCase):
         t = (a,)
         t2 = (t,)
         a.append(t2)
-        s = self.encode(t)
-        z = self.decode(s)
+        z = self.loop(t)
         self.assertIdentical(z[0][0][0], z)
 
 
@@ -1281,7 +1444,7 @@ class VocabTest2(TestBananaMixin, unittest.TestCase):
 
         self.banana.setOutgoingVocabulary(vdict)
         self.failUnlessEqual(self.banana.outgoingVocabulary, self.invdict)
-        self.decode(self.banana.transport.getvalue())
+        self.shouldDecode(self.banana.transport.getvalue())
         self.failUnlessEqual(self.banana.incomingVocabulary, vdict)
         self.clearOutput()
         s = self.encode([({'a':1},)])
