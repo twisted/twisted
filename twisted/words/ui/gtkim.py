@@ -8,7 +8,7 @@ ingtkernet.install()
 # Twisted Imports
 from twisted.spread import pb
 from twisted.spread.ui import gtkutil
-from twisted.words.ui.im import InstanceMessenger
+from twisted.words.ui import im
 class Group(pb.Cache):
     """A local cache of a group.
     """
@@ -266,11 +266,16 @@ class ContactList(gtk.GtkWindow):
             row = self.list.append(r)
         self.list.set_row_data(row, intern(contact))
 
-        
+im.Conversation=Conversation
+im.ContactList=ContactList
+def our_connected(perspective):
+    b.name=lw.username.get_text()
+    lw.hide()
+    b.connected(perspective)
 def main():
-    global lw
-    b = InstanceMessenger()
-    lw = gtkutil.Login(b.connected, b,
+    global lw,b
+    b = im.InstanceMessenger()
+    lw = gtkutil.Login(our_connected, b,
                        initialPassword="guest",
                        initialService="twisted.words")
     lw.show_all()

@@ -14,5 +14,9 @@ if string.find(os.path.abspath(sys.argv[0]),'Twisted') != -1:
         os.path.dirname(os.path.abspath(sys.argv[0]))))
 ### end of preamble
 
-from twisted.words.ui import gtkim
-gtkim.main()
+try:
+    from twisted.words.ui import gtkim
+    gtkim.main()
+except ImportError: # oh dear, no gtk, revert to tkinter
+    from twisted.words.ui import tkim
+    tkim.main()
