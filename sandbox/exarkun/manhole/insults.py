@@ -277,19 +277,12 @@ G2 = 'G2'
 G3 = 'G3'
 
 # Character attributes
-UNDERLINE = 'UNDERLINE'
-REVERSE_VIDEO = 'REVERSE_VIDEO'
-BLINK = 'BLINK'
-BOLD = 'BOLD'
-NORMAL = 'NORMAL'
 
-_graphicRendition = {}
-_revGraphicRendition = {}
-for (sym, lit) in ((NORMAL, '0'), (BOLD, '1'), (UNDERLINE, '4'),
-                   (BLINK, '5'), (REVERSE_VIDEO, '7')):
-    _graphicRendition[sym] = lit
-    _revGraphicRendition[lit] = sym
-
+NORMAL = 0
+BOLD = 1
+UNDERLINE = 4
+BLINK = 5
+REVERSE_VIDEO = 7
 
 class Vector:
     def __init__(self, x, y):
@@ -545,10 +538,9 @@ class ServerProtocol(protocol.Protocol):
         self.write('\x1bO')
 
     def selectGraphicRendition(self, *attributes):
-        # XXX Rewrite this as a dict lookup
         attrs = []
         for a in attributes:
-            attrs.append(_graphicRendition.get(a, a))
+            attrs.append(a)
         self.write('\x1b[%sm' % (';'.join(attrs),))
 
     def horizontalTabulationSet(self):
@@ -878,7 +870,11 @@ class ClientProtocol(protocol.Protocol):
             else:
                 attrs = []
                 for a in buf.split(';'):
-                    attrs.append(_revGraphicRendition.get(a, a))
+                    try:
+                        a = int(a)
+                    except ValueError:
+                        pass
+                    attrs.append(a)
                 handler.selectGraphicRendition(*attrs)
 
     controlSequenceParser = ControlSequenceParser()

@@ -5,11 +5,19 @@ import text
 import insults
 import helper
 
-class Serialization(unittest.TestCase):
-    def testTrivial(self):
-        a = text.attributes
-        attrs = helper.CharacterAttribute()
-        output = a.normal['Hello, world.']
+A = text.attributes
 
-        self.assertEquals(text.flatten(output, attrs), 'Hello, world.')
+class Serialization(unittest.TestCase):
+    def setUp(self):
+        self.attrs = helper.CharacterAttribute()
+
+    def testTrivial(self):
+        self.assertEquals(
+            text.flatten(A.normal['Hello, world.'], self.attrs),
+            'Hello, world.')
+
+    def testBold(self):
+        self.assertEquals(
+            text.flatten(A.bold['Hello, world.'], self.attrs),
+            '\x1b[1mHello, world.')
 

@@ -49,7 +49,7 @@ class _NormalAttr(_Attribute):
 
 class _OtherAttr(_Attribute):
     def __init__(self, attrname, attrvalue):
-        self.attrname = attrname.lower()
+        self.attrname = attrname
         self.attrvalue = attrvalue
         self.children = []
 
@@ -70,7 +70,7 @@ class _OtherAttr(_Attribute):
             a = helper.CharacterAttribute()
             setattr(a, self.attrname, True)
             setattr(attrs, self.attrname, True)
-            write(a.toVT102())
+            write(a.toVT102(only=False))
 
         super(_OtherAttr, self).serialize(write, attrs)
 
@@ -116,7 +116,7 @@ class CharacterAttributes(object):
         if name == 'normal':
             return _NormalAttr()
         try:
-            return _OtherAttr(self.attrs[name], True)
+            return _OtherAttr(name, True)
         except KeyError:
             raise AttributeError(name)
 

@@ -21,6 +21,8 @@ class CharacterAttribute:
         self.foreground = foreground
         self.background = background
 
+        # print 'Made', vars(self)
+
     def __eq__(self, other):
         return vars(self) == vars(other)
 
@@ -31,7 +33,7 @@ class CharacterAttribute:
         # Spit out a vt102 control sequence that will set up
         # all the attributes set here.  Except charset.
         attrs = []
-        if not only:
+        if only:
             attrs.append(0)
         if self.bold:
             attrs.append(insults.BOLD)
