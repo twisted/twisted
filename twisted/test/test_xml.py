@@ -1,6 +1,23 @@
 # -*- test-case-name: twisted.test.test_xml -*-
+#
+# Twisted, the Framework of Your Internet
+# Copyright (C) 2001-2002 Matthew W. Lefkowitz
+# 
+# This library is free software; you can redistribute it and/or
+# modify it under the terms of version 2.1 of the GNU Lesser General Public
+# License as published by the Free Software Foundation.
+# 
+# This library is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+# Lesser General Public License for more details.
+# 
+# You should have received a copy of the GNU Lesser General Public
+# License along with this library; if not, write to the Free Software
+# Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+# 
 
-# Some woefully inadequate testcases for our XML stuff.
+"""Some fairly inadequate testcases for Twisted XML support."""
 
 from twisted.trial.unittest import TestCase
 
@@ -126,3 +143,50 @@ class MicroDOMTest(TestCase):
         for n in nodes:
             self.assert_(isinstance(n, microdom.Element))
             self.assertEquals(n.nodeName, "b")
+
+    def testAttributes(self):
+        s = '<foo a="b" />'
+        node = microdom.parseString(s).documentElement
+        
+        self.assertEquals(node.getAttribute("a"), "b")
+        self.assertEquals(node.getAttribute("c"), None)
+        self.assert_(node.hasAttribute("a"))
+        self.assert_(not node.hasAttribute("c"))
+        a = node.getAttributeNode("a")
+        self.assertEquals(a.value, "b")
+        
+        node.setAttribute("foo", "bar")
+        self.assertEquals(node.getAttribute("foo"), "bar")
+
+    def testChildren(self):
+        s = "<foo><bar /><baz /><bax>foo</bax></foo>"
+        d = microdom.parseString(s).documentElement
+        self.assertEquals([n.nodeName for n in d.childNodes], ["bar", "baz", "bax"])
+        self.assertEquals(d.lastChild().nodeName, "bax")
+        self.assertEquals(d.firstChild().nodeName, "bar")
+        self.assert_(d.hasChildNodes())
+        self.assert_(not d.firstChild().hasChildNodes())
+
+    def testMutate(self):
+        s = "<foo />"
+        d = microdom.parseString(s).documentElement
+
+        d.appendChild(d.cloneNode())
+        d.setAttribute("a", "b")
+        child = d.childNodes[0]
+        self.assertEquals(child.getAttribute("a"), None)
+        self.assertEquals(child.nodeName, "foo")
+        
+        d.insertBefore(microdom.Element("bar"), child)
+        self.assertEquals(d.childNodes[0].nodeName, "bar")
+        self.assertEquals(d.childNodes[1], child)
+        for n in d.childNodes:
+            self.assertEquals(n.parentNode, d)
+        
+        d.removeChild(child)
+        self.assertEquals(len(d.childNodes), 1)
+        self.assertEquals(d.childNodes[0].nodeName, "bar")
+
+        t = microdom.Text("foo")
+        d.replaceChild(t, d.firstChild())
+        self.assertEquals(d.firstChild(), t)
