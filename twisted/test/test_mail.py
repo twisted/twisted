@@ -750,7 +750,7 @@ class MXTestCase(unittest.TestCase):
         self.assertEqual(str(againMX.exchange), str(nextMX.exchange))
 
 class LineSendingProtocol(basic.LineReceiver):
-    listConn = True
+    lostConn = True
 
     def __init__(self, lines):
         self.lines = lines[:]
