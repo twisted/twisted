@@ -382,7 +382,7 @@ class FlowTest(unittest.TestCase):
         self.assertEquals('testing', unittest.deferredResult(client.factory.d))
 
     def testThreaded(self):
-        #self.fail("This test freezes and consumes 100% CPU.")
+        self.fail("This test freezes and consumes 100% CPU.")
         class CountIterator:
             def __init__(self, count):
                 self.count = count
@@ -398,5 +398,7 @@ class FlowTest(unittest.TestCase):
                 return val
         result = [5,4,3,2,1]
         d = flow.Deferred(flow.Threaded(CountIterator(5)))
+        from time import sleep
+        sleep(3)
         self.assertEquals(result, unittest.deferredResult(d))
 
