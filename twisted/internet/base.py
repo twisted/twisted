@@ -134,10 +134,9 @@ class DelayedCall(styles.Ephemeral):
                     func = func.func_code # func_code's repr sometimes has more useful info
         except:
             func = reflect.safe_repr(self.func)
-        return "<DelayedCall %s [%ss] called=%s cancelled=%s %s%s\n%s>" % (
+        return "<DelayedCall %s [%ss] called=%s cancelled=%s %s%s>" % (
             id(self), self.time - seconds(), self.called, self.cancelled, func,
-            reflect.safe_repr(self.args), ''.join(getattr(self, 'creator', '')))
-
+            reflect.safe_repr(self.args))
 
 components.backwardsCompatImplements(DelayedCall)
 
@@ -426,6 +425,8 @@ class ReactorBase:
                     e += "".join(call.creator).rstrip().replace("\n","\n C:")
                     e += "\n"
                     log.msg(e)
+
+
 
     # IReactorThreads
 

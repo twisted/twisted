@@ -14,7 +14,6 @@ from twisted.trial import unittest
 from twisted.python import failure, threadable
 from twisted.internet import defer, reactor, protocol
 from time import sleep
-from twisted.trial.util import wait
 threadable.init()
 
 class slowlist:
@@ -304,7 +303,7 @@ class FlowTest(unittest.TestCase):
     def testDeferred(self):
         lhs = ['Title', (1,'one'),(2,'two'),(3,'three')]
         d = flow.Deferred(consumer())
-        self.assertEquals(lhs, wait(d))
+        self.assertEquals(lhs, unittest.deferredResult(d))
 
     def testBuildList(self):
         src = flow.wrap([1,2,3])
@@ -313,18 +312,18 @@ class FlowTest(unittest.TestCase):
 
     def testDeferredFailure(self):
         d = flow.Deferred(badgen())
-        return unittest.assertFailure(d, ZeroDivisionError)
+        unittest.deferredError(d).trap(ZeroDivisionError)
 
     def testDeferredTrap(self):
         d = flow.Deferred(badgen(), ZeroDivisionError)
-        r = wait(d)
+        r = unittest.deferredResult(d)
         self.assertEqual(r, ['x',ZeroDivisionError])
 
     def testZipFailure(self):
         lhs = [(1,'a'),(2,'b'),(3,'c')]
         mrg = flow.Zip([1,2,flow.Cooperate(),3],badgen())
         d = flow.Deferred(mrg)
-        return unittest.assertFailure(d, ZeroDivisionError)
+        unittest.deferredError(d).trap(ZeroDivisionError)
 
     def testDeferredWrapper(self):
         from twisted.internet import defer
@@ -332,7 +331,7 @@ class FlowTest(unittest.TestCase):
         a = defer.Deferred()
         reactor.callLater(0, lambda: a.callback("test"))
         b = flow.Merge(a, slowlist([1,2,flow.Cooperate(),3]))
-        rhs = wait(flow.Deferred(b))
+        rhs = unittest.deferredResult(flow.Deferred(b))
         self.assertEquals(rhs, [1, 2, 'test', 3])
 
     def testDeferredWrapperImmediate(self):
@@ -347,7 +346,7 @@ class FlowTest(unittest.TestCase):
         d = defer.Deferred()
         f = lambda: d.errback(flow.Failure(IOError()))
         reactor.callLater(0, f)
-        return unittest.assertFailure(d, IOError)
+        unittest.deferredError(d).trap(IOError)
 
     def testCallback(self):
         cb = flow.Callback()
@@ -355,7 +354,7 @@ class FlowTest(unittest.TestCase):
         for x in range(9):
             cb.result(x)
         cb.finish()
-        rhs = wait(d)
+        rhs = unittest.deferredResult(d)
         self.assertEquals([range(9)],rhs)
 
     def testCallbackFailure(self):
@@ -364,7 +363,7 @@ class FlowTest(unittest.TestCase):
         for x in range(3):
             cb.result(x)
         cb.errback(flow.Failure(IOError()))
-        return unittest.assertFailure(d, IOError)
+        unittest.deferredError(d).trap(IOError)
 
     def testConcurrentCallback(self):
         ca = flow.Callback()
@@ -379,7 +378,7 @@ class FlowTest(unittest.TestCase):
         ca.finish()
         cb.result(5)
         cb.finish()
-        rhs = wait(d)
+        rhs = unittest.deferredResult(d)
         self.assertEquals([('a',1),('b',2),('a',3),('a',4),('b',5)],rhs)
 
     def testProtocolLocalhost(self):
@@ -392,7 +391,7 @@ class FlowTest(unittest.TestCase):
         client.protocol = flow.makeProtocol(echoClient)
         client.d = defer.Deferred()
         reactor.connectTCP("127.0.0.1", port.getHost().port, client)
-        self.assertEquals('testing', wait(client.d))
+        self.assertEquals('testing', unittest.deferredResult(client.d))
 
     testProtocolLocalhost.skip = "XXX freezes, fixme"
     
@@ -404,26 +403,26 @@ class FlowTest(unittest.TestCase):
         client.factory = protocol.ClientFactory()
         client.factory.d = defer.Deferred()
         loopback.loopback(server, client)
-        self.assertEquals('testing', wait(client.factory.d))
+        self.assertEquals('testing', unittest.deferredResult(client.factory.d))
 
     def testThreaded(self):
         expect = [5,4,3,2,1]
         d = flow.Deferred(Threaded(CountIterator(5)))
-        self.assertEquals(expect, wait(d))
+        self.assertEquals(expect, unittest.deferredResult(d))
 
     def testThreadedError(self):
         # is this the expected behaviour?
         def iterator():
             yield 1
             raise ValueError
-        d = flow.Deferred(Threaded(iterator()))
-        return unittest.assertFailure(d, ValueError)
+        f = unittest.deferredError(flow.Deferred(Threaded(iterator())))
+        f.trap(ValueError)
 
     def testThreadedSleep(self):
         expect = [5,4,3,2,1]
         d = flow.Deferred(Threaded(CountIterator(5)))
         sleep(.5)
-        self.assertEquals(expect, wait(d))
+        self.assertEquals(expect, unittest.deferredResult(d))
 
     def testQueryIterator(self):
         try:
@@ -445,7 +444,7 @@ class FlowTest(unittest.TestCase):
           (SELECT 'three')
         """
         d = flow.Deferred(Threaded(QueryIterator(dbpool, sql)))
-        self.assertEquals(expect, wait(d))
+        self.assertEquals(expect, unittest.deferredResult(d))
 
     def testThreadedImmediate(self):
         """
@@ -475,4 +474,4 @@ class FlowTest(unittest.TestCase):
             if f.stop:
                 reactor.callLater(0, d.callback, result)
         reactor.callLater(0, process)
-        self.assertEquals(expect, wait(d))
+        self.assertEquals(expect, unittest.deferredResult(d))
