@@ -649,7 +649,13 @@ class TestInternet2(unittest.TestCase):
         self.assertEqual(l, ["hello"]*10)
 
     def testEverythingThere(self):
-        for tran in 'Generic TCP UNIX SSL UDP UNIXDatagram Multicast'.split():
+        trans = 'TCP UNIX SSL UDP UNIXDatagram Multicast'.split()
+        for tran in trans[:]:
+            if not components.implements(reactor, getattr(interfaces, "IReactor"+tran)):
+                trans.remove(tran)
+        if components.implements(reactor, interfaces.IReactorArbitrary):
+            trans.insert(0, "Generic")
+        for tran in trans:
             for side in 'Server Client'.split():
                 self.assert_(hasattr(internet, tran+side))
                 method = getattr(internet, tran+side).method
