@@ -224,7 +224,10 @@ IS=2
 
 
 def fullFuncName(func):
-    return (str(pickle.whichmodule(func, func.__name__)) + '.' + func.__name__)
+    qualName = (str(pickle.whichmodule(func, func.__name__)) + '.' + func.__name__)
+    if namedObject(qualName) is not func:
+        raise Exception("Couldn't find %s as %s." % (func, qualName))
+    return qualName
 
 def qual(clazz):
     return str(clazz)

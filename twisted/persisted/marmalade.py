@@ -289,7 +289,10 @@ class DOMJellier:
             obj = obj.encode('raw_unicode_escape')
             s = obj.replace("\n", "\\n").replace("\t", "\\t")
             node.setAttribute("value", s)
-        elif objType is types.FunctionType:
+        elif objType in (types.FunctionType, types.BuiltinFunctionType):
+            # TODO: beat pickle at its own game, and do BuiltinFunctionType
+            # separately, looking for __self__ attribute and unpickling methods
+            # of C objects when possible.
             node = self.document.createElement("function")
             node.setAttribute("name", fullFuncName(obj))
         else:
