@@ -162,7 +162,7 @@ else:
     try:
         application = dict['application']
     except KeyError:
-        log.msg('Python file %s did not produce an application.' % repr(pyfile))
+        log.msg("Error - python file %s must set a variable named 'application', an instance of twisted.internet.app.Application. No such variable was found!" % repr(pyfile))
         sys.exit()
 
 print "Loaded."
