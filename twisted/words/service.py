@@ -132,7 +132,7 @@ class Group(pb.Cached):
                 'remote':  pb.Proxy(participant, self)}
 
     def addMember(self, participant):
-        if member in self.members:
+        if participant in self.members:
             return
         for member in self.members:
             member.memberJoined(participant, self)
