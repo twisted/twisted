@@ -175,27 +175,31 @@ def exportTemp(opts):
     sh('svn export %s Twisted.exp' % (opts['temptagurl'],))
 
 
+def lore(ver, docdir):
+    sh("./bin/lore/lore -p --config template=doc/core/howto/template.tpl "
+       "--config ext=.html --config version=%(ver)s -l ../howto/ "
+       "%(docdir)s/*.xhtml" % {'ver': ver, 'docdir': docdir})
+
+
 def makeDocsCore(opts):
     ver = opts['base-version']
     tdir = 'Twisted.exp'
-
-    if not os.path.exists(tdir):
-        raise DirectoryDoesntExist("GenerateDocs: %s doesn't exist!" % tdir)
 
     os.chdir(tdir)
 
     for docdir in ['howto', 'howto/tutorial', 'howto/policy',
                    'specifications', 'vision']:
-        sh("./bin/lore/lore -p --config template=doc/core/howto/template.tpl "
-           "--config ext=.html --config version=%(ver)s -l ../howto/ "
-           "doc/core/%(docdir)s/*.xhtml" % locals())
+        lore(ver, os.path.join('doc/core', docdir))
 
     #shwack the crap
     sh('find . -name "*.pyc" | xargs rm -f')
 
 
+def makeDocsConch(opts):
+    os.chdir("Twisted.exp")
+    lore(opts['base-version'], 'doc/conch/howto')
 
-def makeTwistedCore(opts):
+def makeBallCore(opts):
     ver = opts['base-version']
     tdir = "Twisted-%s" % (ver,)
     if not os.path.exists('Twisted.exp'):
@@ -207,7 +211,6 @@ def makeTwistedCore(opts):
 
     excludes = []
     for subProjectContainer in ['twisted', 'doc', 'bin']:
-        
         excludes += ['--exclude %s/%s/%s' % (tdir, subProjectContainer, x)
                     for x in dist.twisted_subprojects]
     excludes.append('--exclude %s/README' % (tdir,))
@@ -218,6 +221,26 @@ def makeTwistedCore(opts):
       tarcust -s "s,doc/core,doc," -s "s,twisted/topfiles/,,"|
         bzip2 > %(tdir)s.tar.bz2
     ''' % locals())
+
+
+def createSubprojectDirectory(proj, version):
+    sdir = 'Twisted%s-%s' % (proj.capitalize(), version)
+    os.mkdir(sdir)
+    os.mkdir(sdir+'/twisted')
+    sh('''
+    cp -a Twisted.exp/twisted/conch %(sdir)s/twisted/
+    cp -a Twisted.exp/doc/conch %(sdir)s/doc/
+    cp -a Twisted.exp/bin/conch %(sdir)s/bin/
+    mv %(sdir)s/twisted/conch/topfiles/* %(sdir)s
+    rm -rf %(sdir)s/twisted/conch/topfiles
+    ''' % locals())
+    
+
+def makeBallConch(opts):
+    ver = opts['base-version']
+    tdir = "Twisted-%s" % (ver,)
+    createSubprojectDirectory('conch', '0.1.0')
+
 
 def makeBalls(opts):
     ver = opts['base-version']
