@@ -42,6 +42,15 @@ def pause():
     print "Hit enter to continue."
     raw_input()
 
+def GUITest():
+    examplesDir = twistedBinDir+'/../doc/examples'
+    os.environ['PYTHONPATH'] = '%s:%s' % (os.environ.get('PYTHONPATH') or '',
+                                          examplesDir)
+    message("Running Qt app.")
+    scmd("python %s/qtdemo.py" % examplesDir)
+    message("Running wxPython app.")
+    scmd("python %s/wxdemo.py" % examplesDir)
+    
 def basicWebTest():
     message("Running Basic Web Test")
     cmd("mktap web")
@@ -205,6 +214,7 @@ All your dependents are belong to us
 
 def runAllTests():
     message("Starting test.")
+    GUITest()
     basicWebTest()
     staticWebTest()
     distWebTest()
