@@ -38,6 +38,9 @@ def _nmin(a, b):
         return a
     return min(a, b)
 
+
+
+
 class ReactorBase:
     """Default base class for Reactors.
     """
@@ -299,3 +302,65 @@ class ReactorBase:
                 theThreadPool.q.put(threadpool.WorkerStop)
             else:
                 theThreadPool._startSomeWorkers()
+
+
+    # backwards compatibility
+
+    def clientUNIX(self, address, protocol, timeout=30):
+        """Deprecated - use connectUNIX instead.
+        """
+        import warnings
+        warnings.warn("clientUNIX is deprecated - use connectUNIX instead.",
+                      category=DeprecationWarning, stacklevel=2)
+        f = BCFactory(protocol)
+        self.connectUNIX(address, f, timeout)
+
+
+    def clientTCP(self, host, port, protocol, timeout=30):
+        """Deprecated - use connectTCP instead.
+        """
+        import warnings
+        warnings.warn("clientTCP is deprecated - use connectTCP instead.",
+                      category=DeprecationWarning, stacklevel=2)
+        f = BCFactory(protocol)
+        self.connectTCP(host, port, f, timeout)
+        return f
+
+    def clientSSL(self, host, port, protocol, contextFactory, timeout=30):
+        """Deprecated - use connectSSL instead.
+        """
+        import warnings
+        warnings.warn("clientSSL is deprecated - use connectSSL instead.",
+                      category=DeprecationWarning, stacklevel=2)
+        f = BCFactory(protocol)
+        self.connectSSL(host, port, f, contextFactory, timeout)
+    
+
+
+
+from protocol import ClientFactory
+
+class BCFactory(ClientFactory):
+    """Factory for backwards compatability with old clientXXX APIs."""
+
+    def __init__(self, protocol):
+        self.protocol = protocol
+        self.connector = None
+
+    def startedConnecting(self, connector):
+        self.connector = connector
+
+    def loseConnection(self):
+        if self.connector:
+            self.connector.stopConnecting()
+        elif self.protocol:
+            self.protocol.transport.loseConnection()
+
+    def buildProtocol(self, addr):
+        self.connector = None
+        return self.protocol
+
+    def clientConnectionFailed(self, connector, reason):
+        self.connector = None
+        self.protocol.connectionFailed()
+        self.protocol = None

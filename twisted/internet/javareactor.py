@@ -21,7 +21,7 @@
 # Twisted Imports
 from twisted.internet import protocol
 from twisted.persisted import styles
-from twisted.python import timeoutqueue, log
+from twisted.python import timeoutqueue, log, failure
 
 # Java Imports
 from java.net import Socket, ServerSocket, SocketException, InetAddress
@@ -68,6 +68,8 @@ class JConnection(abstract.FileDescriptor,
         if self.producer:
             self.producer.resumeProducing()
 
+    factory = None # if this attribute is set then we're a client connection
+    
     def connectionLost(self, arg=None):
         if not self.disconnected:
             self.disconnected = 1
@@ -75,6 +77,10 @@ class JConnection(abstract.FileDescriptor,
             self.skt.shutdownOutput()
             self.skt.close()
             self.protocol.connectionLost(arg)
+            if self.factory:
+                self.factory.clientConnectionLost(self.jport, arg)
+            else:
+                self.protocol.connectionLost(arg)
             abstract.FileDescriptor.connectionLost(self, arg)
 
     def loseConnection(self):
@@ -146,7 +152,7 @@ class WriteBlocker(Blocker):
             data = self.fdes.writeQ.get()
         if data is None:
             self.stop()
-            return (self.fdes.connectionLost, None)
+            return (self.fdes.connectionLost, failure.Failure())
         elif data == BEGIN_CONSUMING:
             self.consuming = 1
         elif data == END_CONSUMING:
@@ -158,7 +164,7 @@ class WriteBlocker(Blocker):
                 self.fdes.ostream.flush()
             except SocketException:
                 self.stop()
-                return (self.fdes.connectionLost, None)
+                return (self.fdes.connectionLost, failure.Failure())
 
 
 class ReadBlocker(Blocker):
@@ -173,10 +179,10 @@ class ReadBlocker(Blocker):
             l = self.fdes.istream.read(bytes)
         except SocketException:
             self.stop()
-            return (self.fdes.connectionLost, 0)
+            return (self.fdes.connectionLost, failure.Failure())
         if l == -1:
             self.stop()
-            return (self.fdes.connectionLost, 0)
+            return (self.fdes.connectionLost, failure.Failure())
         return (self.fdes.protocol.dataReceived, bytes[:l].tostring())
 
 
@@ -196,18 +202,22 @@ class AcceptBlocker(Blocker):
                     self.svr.sskt.close()
                     return
 
+    def blockerFinished(self, ignore):
+        self.svr.blockerFinished(ignore)
+
 
 class JReactor(ReactorBase):
     """Fakes multiplexing using multiple threads and an action queue."""
 
     def __init__(self):
         ReactorBase.__init__(self)
-        self.readers = []
-        self.writers = []
         self.q = timeoutqueue.TimeoutQueue()
 
     def installWaker(self):
         pass
+
+    def removeAll(self):
+        return []
 
     def wakeUp(self):
         self.q.put(lambda x: x, None)
@@ -243,12 +253,87 @@ class JReactor(ReactorBase):
         jp.startListening()
         return jp
 
+    def connectTCP(self, host, port, factory, timeout=30, bindAddress=None):
+        jc = JavaConnector(self, host, port, factory)
+        jc.connect()
+        return jc
+
     def wakeUp(self):
         self.q.put((doNothing, None))
 
 
 def doNothing(arg):
     pass
+
+
+class ConnectBlocker(Blocker):
+
+    def __init__(self, svr, q):
+        Blocker.__init__(self, q)
+        self.svr = svr
+        self.blockedyet = 0
+
+    def block(self):
+        if self.blockedyet:
+            return
+        self.blockedyet = 1
+        while 1:
+            try:
+                skt = Socket(self.svr.host, self.svr.port)
+                return (self.svr.gotSocket, skt)
+            except (java.io.InterruptedIOException, java.io.IOException):
+                if not self.svr.isConnecting:
+                    return
+
+    def blockerFinished(self, ignore):
+        self.svr.blockerFinished(ignore)
+
+
+class JavaConnector:
+    __implements__ = interfaces.IConnector
+
+    def __init__(self, reactor, host, port, factory):
+        self.reactor = reactor
+        self.host = host
+        self.port = port
+        self.factory = factory
+        self.currentTransport = None
+
+    def connect(self):
+        self.isConnecting = 1
+        self.factory.doStart()
+        ConnectBlocker(self, self.reactor.q).start()
+        log.msg("%s starting on %s"%(self.factory.__class__, self.port))
+
+    def stopConnecting(self):
+        self.isConnecting = 0
+
+    def blockerFinished(self, ignore):
+        """Called when ConnectBlocker is finished."""
+        # self.factory.doStop()
+        print 'connect blocker finished'
+
+    def disconnect(self):
+        if not self.currentTransport:
+            self.stopConnecting()
+        else:
+            self.currentTransport.loseConnection()
+
+    def getDestination(self):
+        return ("INET", self.host, self.port)
+
+    # java sockets stuff
+
+    def gotSocket(self, skt):
+        protocol = self.factory.buildProtocol(None)
+        transport = JConnection(skt, protocol, self)
+        transport.factory = self.factory
+        # make read and write blockers
+        protocol.makeConnection(transport)
+        wb = WriteBlocker(transport, self.reactor.q)
+        wb.start()
+        transport.writeBlocker = wb
+        ReadBlocker(transport, self.reactor.q).start()
 
 
 class JavaPort:

@@ -1,5 +1,5 @@
 # -*- Python -*-
-# $Id: default.py,v 1.32 2002/08/27 10:56:13 glyph Exp $
+# $Id: default.py,v 1.33 2002/08/28 05:00:51 glyph Exp $
 #
 # Twisted, the Framework of Your Internet
 # Copyright (C) 2001 Matthew W. Lefkowitz
@@ -178,30 +178,6 @@ class SSLConnector(BaseConnector):
         return ('SSL', self.host, self.port)
 
 
-class BCFactory(protocol.ClientFactory):
-    """Factory for backwards compatability with old clientXXX APIs."""
-
-    def __init__(self, protocol):
-        self.protocol = protocol
-        self.connector = None
-
-    def startedConnecting(self, connector):
-        self.connector = connector
-
-    def loseConnection(self):
-        if self.connector:
-            self.connector.stopConnecting()
-        elif self.protocol:
-            self.protocol.transport.loseConnection()
-
-    def buildProtocol(self, addr):
-        self.connector = None
-        return self.protocol
-
-    def clientConnectionFailed(self, connector, reason):
-        self.connector = None
-        self.protocol.connectionFailed()
-        self.protocol = None
 
 
 
@@ -302,15 +278,6 @@ class PosixReactorBase(ReactorBase):
         c.connect()
         return c
     
-    def clientUNIX(self, address, protocol, timeout=30):
-        """Deprecated - use connectUNIX instead.
-        """
-        import warnings
-        warnings.warn("clientUNIX is deprecated - use connectUNIX instead.",
-                      category=DeprecationWarning, stacklevel=2)
-        f = BCFactory(protocol)
-        self.connectUNIX(address, f, timeout)
-
     def listenUNIX(self, address, factory, backlog=5):
         """Listen on a UNIX socket.
         """
@@ -333,17 +300,6 @@ class PosixReactorBase(ReactorBase):
         c.connect()
         return c
     
-    def clientTCP(self, host, port, protocol, timeout=30):
-        """Deprecated - use connectTCP instead.
-        """
-        import warnings
-        warnings.warn("clientTCP is deprecated - use connectTCP instead.",
-                      category=DeprecationWarning, stacklevel=2)
-        f = BCFactory(protocol)
-        self.connectTCP(host, port, f, timeout)
-        return f
-
-
     # IReactorSSL (sometimes, not implemented)
 
     def connectSSL(self, host, port, factory, contextFactory, timeout=30, bindAddress=None):
@@ -352,15 +308,6 @@ class PosixReactorBase(ReactorBase):
         c = SSLConnector(self, host, port, factory, contextFactory, timeout, bindAddress)
         c.connect()
         return c
-    
-    def clientSSL(self, host, port, protocol, contextFactory, timeout=30):
-        """Deprecated - use connectSSL instead.
-        """
-        import warnings
-        warnings.warn("clientSSL is deprecated - use connectSSL instead.",
-                      category=DeprecationWarning, stacklevel=2)
-        f = BCFactory(protocol)
-        self.connectSSL(host, port, f, contextFactory, timeout)
     
     def listenSSL(self, port, factory, contextFactory, backlog=5, interface=''):
         p = ssl.Port(port, factory, contextFactory, backlog, interface)
