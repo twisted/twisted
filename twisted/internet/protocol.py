@@ -300,6 +300,8 @@ class BaseProtocol:
         send any greeting or initial message, do it here.
         """
 
+connectionDone=failure.Failure(error.ConnectionDone())
+connectionDone.cleanFailure()
 
 class Protocol(BaseProtocol):
 
@@ -317,7 +319,7 @@ class Protocol(BaseProtocol):
             differing chunk sizes, down to one byte at a time.
         """
 
-    def connectionLost(self, reason=failure.Failure(error.ConnectionDone())):
+    def connectionLost(self, reason=connectionDone):
         """Called when the connection is shut down.
 
         Clear any circular references here, and any external references
