@@ -3,8 +3,9 @@
 # Copyright (c) 2001-2004 Twisted Matrix Laboratories.
 # See LICENSE for details.
 #
+from __future__ import generators
 
-import sys, time, pdb, string, types, itertools
+import sys, time, pdb, string, types
 import traceback, sets, os.path as osp, warnings
 
 from twisted.python import reflect, failure, log
@@ -173,7 +174,6 @@ class TestCaseStats(TestStatsBase):
 
 
 def formatError(tm, tbformat=None):
-    import itertools
 
     ret = [DOUBLE_SEPARATOR,
            '%s: %s (%s)\n' % (WORDS[tm.status], tm.name,
@@ -183,7 +183,7 @@ def formatError(tm, tbformat=None):
 
     if tm.status not in (SUCCESS, SKIP, UNEXPECTED_SUCCESS):
         return "%s\n\n%s" % ('\n'.join(ret), itrial.IFormattedFailure(tm.errors + tm.failures))
-##         for error in itertools.chain(tm.errors, tm.failures):
+##         for error in util.iterchain(tm.errors, tm.failures):
 ##             if error is None:
 ##                 continue
 ##             elif isinstance(error, failure.Failure):
@@ -280,7 +280,7 @@ class Reporter(object):
     def endTest(self, method):
         method = itrial.ITestMethod(method)
         if self.realtime:
-            for err in itertools.chain(method.errors, method.failures):
+            for err in util.iterchain(method.errors, method.failures):
                 err.printTraceback(sys.stdout)
 
 ##         if method.status in (FAILURE, ERROR, EXPECTED_FAILURE):
