@@ -70,7 +70,8 @@ class SignalStateManager:
 
     def restore(self):
         for signum, handler in self._store.iteritems():
-            signal.signal(signum, handler)
+            if handler is not None:
+                signal.signal(signum, handler)
 
     def clear(self):
         self._store = {}
