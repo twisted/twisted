@@ -155,7 +155,6 @@ class PosixReactorBase(ReactorBase):
         ReactorBase.__init__(self)
         if self.usingThreads or platformType == "posix":
             self.installWaker()
-        threadable.whenThreaded(threadable.registerAsIOThread)
         
     def _handleSignals(self):
         """Install the signal handlers for the Twisted event loop."""
@@ -202,10 +201,6 @@ class PosixReactorBase(ReactorBase):
         self.startRunning(installSignalHandlers=installSignalHandlers)
         self.mainLoop()
 
-    def iterate(self, delay=0):
-        threadable.registerAsIOThread()
-        ReactorBase.iterate(self, delay)
-        
     def mainLoop(self):
         while self.running:
             try:
