@@ -1760,7 +1760,7 @@ class FTPClient(basic.LineReceiver):
         """
         cmds = [FTPCommand(command, public=1) for command in commands]
         cmdsDeferred = DeferredList([cmd.deferred for cmd in cmds], 
-                                    fireOnOneErrback=True)
+                                    fireOnOneErrback=True, consumeErrors=True)
 
         if self.passive:
             # Hack: use a mutable object to sneak a variable out of the 
@@ -1822,7 +1822,7 @@ class FTPClient(basic.LineReceiver):
             cmdsDeferred.addErrback(lambda e, pc=portCmd: pc.fail(e) or e)
 
             results = [cmdsDeferred, portCmd.deferred, portCmd.transferDeferred]
-            d = DeferredList(results, fireOnOneErrback=1)
+            d = DeferredList(results, fireOnOneErrback=1, consumeErrors=1)
                               
         for cmd in cmds:
             self.queueCommand(cmd)
