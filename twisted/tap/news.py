@@ -72,6 +72,6 @@ def updateApplication(app, config):
 
     app.listenTCP(
         int(config['port']),
-        news.NNTPFactory(db),
+        news.UsenetServerFactory(db, config['servers']),
         interface = config['interface']
     )

@@ -36,11 +36,11 @@ NNTP protocol support.
     A control protocol
 """
 
-from twisted.internet import protocol
+from twisted.internet import protocol, reactor
 from twisted.protocols import basic
 from twisted.python import log
 
-import string, random, socket
+import string, random, socket, time
 
 def parseRange(text):
     articles = text.split('-')
@@ -84,6 +84,8 @@ class NNTPError(Exception):
 
 
 class NNTPClient(basic.LineReceiver):
+    MAX_COMMAND_LENGTH = 510
+
     def __init__(self):
         self.currentGroup = None
         
@@ -291,10 +293,10 @@ class NNTPClient(basic.LineReceiver):
         One invocation of this function may result in multiple invocations
         of gotNewNews()/getNewNewsFailed().
         """
-        date, time = time.strftime('%y%m%d %H%M%S', date).split()
-        line = 'NEWNEWS %%s %s %s %s' % (date, time, distributions)
+        date, timeStr = time.strftime('%y%m%d %H%M%S', time.gmtime(date)).split()
+        line = 'NEWNEWS %%s %s %s %s' % (date, timeStr, distributions)
         groupPart = ''
-        while len(line) + len(groupPart) + len(groups[-1]) + 1 < NNTPClient.MAX_COMMAND_LENGTH:
+        while len(groups) and len(line) + len(groupPart) + len(groups[-1]) + 1 < NNTPClient.MAX_COMMAND_LENGTH:
             group = groups.pop()
             groupPart = groupPart + ',' + group
         
@@ -312,8 +314,8 @@ class NNTPClient(basic.LineReceiver):
         restricted to the given distributions.  gotNewGroups() is called
         on success, getNewGroupsFailed() on failure.
         """
-        date, time = time.strftime('%y%m%d %H%M%S', date).split()
-        self.sendLine('NEWGROUPS %s %s %s' % (date, time, distributions))
+        date, timeStr = time.strftime('%y%m%d %H%M%S', time.gmtime(date)).split()
+        self.sendLine('NEWGROUPS %s %s %s' % (date, timeStr, distributions))
         self._newState(self._stateNewGroups, self.getNewGroupsFailed)
 
 
@@ -349,11 +351,12 @@ class NNTPClient(basic.LineReceiver):
         setStreamFailed() on failure.
         """ 
         self.sendLine('MODE STREAM')
-        self._newState(None, self.setStreamFailed, self._handleMode)
+        self._newState(None, self.setStreamFailed, self._headerMode)
 
 
     def quit(self):
         self.sendLine('QUIT')
+        self.transport.loseConnection()
 
 
     def _newState(self, method, error, responseHandler = None):
@@ -1011,68 +1014,38 @@ class UsenetClientProtocol(NNTPClient):
 
     def connectionMade(self):
         NNTPClient.connectionMade(self)
+        log.msg("Initiating update with remote host: " + str(self.transport.getPeer()))
         self.setStream()
         self.fetchNewNews(self.groups, self.date, '')
 
 
+    def articleExists(self, exists, article):
+        if exists:
+            self.fetchArticle(article)
+        else:
+            self.count = self.count - 1
+            self.disregard = self.disregard + 1
+
+
     def gotNewNews(self, news):
+        self.disregard = 0
         self.count = len(news)
+        log.msg("Transfering " + str(self.count) + " articles from remote host: " + str(self.transport.getPeer()))
         for i in news:
-            self.fetchArticle(i)
+            self.storage.articleExistsRequest(i).addCallback(self.articleExists, i)
+
+
+    def getNewNewsFailed(self, reason):
+        log.msg("Updated failed (" + reason + ") with remote host: " + str(self.transport.getPeer()))
+        self.quit()
 
 
     def gotArticle(self, article):
         self.storage.postRequest(article)
         self.count = self.count - 1
         if not self.count:
-            self.factory.updateChecks(self.transport.getPeerName())
+            log.msg("Completed update with remote host: " + str(self.transport.getPeer()))
+            if self.disregard:
+                log.msg("Disregarded %d articles." % (self.disregard,))
+            self.factory.updateChecks(self.transport.getPeer())
             self.quit()
-
-
-class UsenetClientFactory(protocol.ClientFactory):
-    def __init__(self, groups, storage):
-        self.lastChecks = {}
-        self.groups = groups
-        self.storage = storage
-
-
-    def clientConnectionLost(self, connector, reason):
-        print 'Connection lost: ', reason
-
-
-    def clientConnectionFailed(self, connector, reason):
-        print 'Connection failed: ', reason
-    
-    
-    def updateChecks(self, addr):
-        self.lastChecks[addr] = time.gmtime()
-
-
-    def buildProtocol(self, addr):
-        last = self.lastChecks.setdefault(addr, time.gmtime() - (60 * 60 * 24 * 7))
-        p = UsenetClientProtocol(self.groups, last, self.storage)
-        p.factory = self
-        return p
-
-
-class UsenetServer(NNTPServer):
-    """
-    An NNTP server that will fetch messages from other NNTP servers
-    and attempt to forward locally posted messages to them.
-    """
-    
-    def __init__(self, remote = None):
-        NNTPServer.__init__(self)
-        self.remoteHosts = remote or []
-        self.clientFactory = None
-
-        # Ask for new messages every half hour for now
-        self._updateCall = reactor.callLater(60 * 30, self._syncWithRemotes)
-    
-    
-    def syncWithRemotes(self):
-        if self.clientFactory is None:
-            self.clientFactory = UsenetClientFactory(self.remoteHosts, self.factory.backend)
-
-        for remote in self.remoteHosts:
-            reactor.connectTCP(remote, 119, self.clientFactory)
