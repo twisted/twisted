@@ -21,10 +21,7 @@ This module is unstable.
 Maintainer: U{Paul Swartz<mailto:z3p@twistedmatrix.com>}
 """
 
-
-from __future__ import nested_scopes    # BAD!  This creates 2.1+ dependency
-# doesn't matter because we depend on 2.1 anyways
-
+from __future__ import nested_scopes
 
 from twisted.internet import reactor, main, defer, protocol
 from twisted.python import log
@@ -716,7 +713,7 @@ class BOSConnection(SNACBased):
             self.requestCallbacks[snac[4]] = d
             d.addCallback(self._cbRequestSSI, (revision, groups, permit, deny, permitMode, visibility))
             return d
-        return groups[0].users,permit,deny,permitMode,visibility,timestamp,revision)
+        return (groups[0].users,permit,deny,permitMode,visibility,timestamp,revision)
 
     def activateSSI(self):
         """
@@ -741,7 +738,7 @@ class BOSConnection(SNACBased):
             buddyID = item.group.findIDFor(item)
         return self.sendSNAC(0x13,0x08, item.oscarRep(groupID, buddyID))
 
-    def modifyItemSSI(self, item, groupID = None, buddyID = None)
+    def modifyItemSSI(self, item, groupID = None, buddyID = None):
         if not groupID:
             groupID = item.group.group.findIDFor(item.group)
         if not buddyID:
