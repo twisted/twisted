@@ -106,4 +106,9 @@ class StandardIO(abstract.FileDescriptor):
     def connectionLost(self, reason):
         """The connection was lost.
         """
-        self.protocol.connectionLost(reason)
+        try:
+            self.protocol.connectionLost(reason)
+        except TypeError:
+            import warnings
+            warnings.warn("Protocol.connectionLost() should take a 'reason' argument")
+            self.protocol.connectionLost()
