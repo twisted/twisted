@@ -52,7 +52,8 @@ def runApp(config):
     app.startApplication(application, not config['no_save'])
     app.startApplication(internet.TimerService(0.1, lambda:None), 0)
     app.runReactorWithLogging(config, oldstdout, oldstderr)
-    app.reportProfile(config['report-profile'], application.processName)
+    app.reportProfile(config['report-profile'],
+                      service.IProcess(application).processName)
     log.msg("Server Shut Down.")
 
 
