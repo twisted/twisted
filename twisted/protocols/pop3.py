@@ -186,6 +186,7 @@ class POP3(basic.LineOnlyReceiver, policies.TimeoutMixin):
             "TOP",
             "USER",
             "UIDL",
+            "PIPELINE",
             "CELERITY",
             "AUSPEX",
             "POTENCE",
