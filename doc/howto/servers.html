@@ -31,13 +31,11 @@ sets on it an attribute called <code>factory</code> which points to
 itself. This lets every <code>Protocol</code> access, and possibly
 modify, the persistent configuration.</p>
 
-<p>It is frequently needed to serve the same thing on two or more
-different ports or network addresses. This is why the Factory does
-not listen to connections, and in fact does not know anything about
-the network. This is the job of a Port class. Usually, the class
-twisted.internet.tcp.Port will be used, but there are several
-alternatives like twisted.internet.udp.Port and
-twisted.internet.ssl.Port.</p>
+<p>It is frequently needed to serve the same thing on two or more different
+ports or network addresses. This is why the Factory does not listen to
+connections, and in fact does not know anything about the network.  See <code
+class="API">twisted.internet.interfaces.IReactorTCP.listenTCP</code>, and the
+other <code>IReactor*.listen*</code> APIs for more information.</p>
 
 <p>Because of this multi-faceted aspect to writing servers, it is
 useful to have some place where all this things are bound together
@@ -309,29 +307,6 @@ app.run()
 </pre>
 
 <p>And that's it!</p>
-
-<h2>Ports</h2>
-
-<p>While more ports can be written, it is a less frequent operation
-and so will not be discussed here. If there is a need to write
-another Port, follow the example in
-<code class="API">twisted.internet.tcp.Port.</code></p>
-
-<p>Most code uses <code class="API">twisted.internet.tcp.Port</code>s. These
-are initialized with a factory and a port number:</p>
-
-<pre class="python">
-from twisted.internet.tcp import Port
-from twisted.internet.protocols.protocol import Factory
-from twisted.internet.protocols.basic import Echo
-
-factory = Factory()
-factory.protocol = Echo
-port = Port(7, factory)
-</pre>
-
-<p>Usually, code will not need to handle <code>Port</code>s
-directly.</p>
 
 <h2><code class="API">twisted.tap</code></h2>
 
