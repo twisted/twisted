@@ -1,9 +1,3 @@
-2002-12-30  Brian Warner  <warner@lothar.com>
-
-	* pyunit/unittest.py (TestCase.__call__): clean the reactor between
-	tests: cancel any leftover reactor.callLater() timers. This helps
-	to keep deferred failures isolated to the test that caused them.
-
 2002-12-30  Paul Swartz  <z3p@twistedmatrix.com>
 
 	* twisted/conch/*: added docstrings to most conch classes and functions
