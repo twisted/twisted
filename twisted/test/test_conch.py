@@ -487,7 +487,8 @@ class SSHTransportTestCase(unittest.TestCase):
         cmdline = ('ssh -v -l testuser -p %i '
                    '-oUserKnownHostsFile=kh_test '
                    '-oPasswordAuthentication=no '
-                   '-oStrictHostKeyChecking=no '
+                   # Always use the RSA key, since that's the one in kh_test.
+                   '-oHostKeyAlgorithms=ssh-rsa '
                    '-i dsa_test '
                    'localhost '
                    'echo hello')
