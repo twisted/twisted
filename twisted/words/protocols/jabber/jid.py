@@ -1,4 +1,4 @@
-# -*- test-case-name: twisted.test.test_jabberjid -*-
+# -*- test-case-name: twisted.words.test.test_jabberjid -*-
 #
 # Copyright (c) 2001-2004 Twisted Matrix Laboratories.
 # See LICENSE for details.
