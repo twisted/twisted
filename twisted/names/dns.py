@@ -122,7 +122,6 @@ class SentQuery:
         self.done = 0
         self.boss = boss
         for nameserver in nameservers:
-            print "nameserver is", nameserver
             self.ids.append(boss.queryUDP((nameserver, 53), name, 
                                           self.getAnswer, type=type))
 
@@ -208,3 +207,61 @@ class ResolveConfResolver(Resolver):
         for line in map(string.split, lines):
             if line[0] == 'nameserver':
                 self.nameservers.append(line[1])
+
+
+class DNSServerMixin:
+
+    def processQuery(self, message):
+        self.factory.boss.getAnswers(self, message)
+
+
+class DNS(DNSServerMixin, dns.DNS):
+    pass
+
+
+class DNSOnTCP(DNSServerMixin, dns.DNSOnTCP):
+    pass
+
+
+class SimpleDomain:
+
+    def __init__(self, name, ip):
+        self.name = name
+        self.ip = string.join(map(chr, map(int, string.split(ip, '.'))), '')
+
+    def getAnswer(self, name, type):
+        #MX's will probably need their own RR subclass.
+        #Need to read protocol reference - Moshe
+        #if type == dns.MX:
+        #    return dns.RR(name, type=dns.MX, cls=dns.IN, data=self.name)
+        if type == dns.A:
+            return dns.RR(name, type=dns.A, cls=dns.IN, data=self.ip)
+
+
+class DNSServerBoss(DNSBoss):
+
+    protocols = (DNS, DNSOnTCP)
+
+    def __init__(self):
+        DNSBoss.__init__(self)
+        self.domains = {}
+
+    def addDomain(self, name, domain):
+        self.domains[name] = domain
+
+    def getAnswers(self, protocol, message):
+        message.answer = 1
+        message.rCode = dns.OK
+        for query in message.queries:
+            if query.cls!=dns.IN:
+                continue # internet
+            name = query.name.name
+            while name and not self.domains.has_key(name):
+                name = string.split(name, '.', 1)[1]
+            if not name:
+                continue
+            message.answers.append(self.domains[name].getAnswer(query.name.name,
+                                                                query.type))
+            print message.answers
+        protocol.writeMessage(message)
+        protocol.transport.loseConnection()
