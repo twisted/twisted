@@ -77,35 +77,63 @@ class ProcessTestCase(unittest.TestCase):
         self.assertEquals(p.stages, [1, 2, 3, 4])
 
 
-##class PosixProcessTestCase(unittest.TestCase):
-##    """Test running processes."""
+class Accumulator(protocol.ProcessProtocol):
+    """Accumulate data from a process."""
     
-##    def testProcess(self):
-##        f = cStringIO.StringIO()
-##        if os.path.exists('/bin/gzip'): cmd = '/bin/gzip'
-##        elif os.path.exists('/usr/bin/gzip'): cmd = '/usr/bin/gzip'
-##        else: raise "gzip not found in /bin or /usr/bin"
-##        p = process.Process(cmd, [cmd, "-"], {}, "/tmp")
-##        p.handleChunk = f.write
-##        p.write(s)
-##        p.closeStdin()
-##        while hasattr(p, 'writer'):
-##            main.iterate()
-##        f.seek(0, 0)
-##        gf = gzip.GzipFile(fileobj=f)
-##        self.assertEquals(gf.read(), s)
+    closed = 0
     
-##    def testStderr(self):
-##        # we assume there is no file named ZZXXX..., both in . and in /tmp
-##        if not os.path.exists('/bin/ls'): raise "/bin/ls not found"
-##        err = popen2.popen3("/bin/ls ZZXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX")[2].read()
-##        f = cStringIO.StringIO()
-##        p = process.Process('/bin/ls', ["/bin/ls", "ZZXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"], {}, "/tmp")
-##        p.handleError = f.write
-##        p.closeStdin()
-##        while hasattr(p, 'writer'):
-##            main.iterate()
-##        self.assertEquals(err, f.getvalue())
+    def connectionMade(self):
+        print "connection made"
+        self.outF = cStringIO.StringIO()
+        self.errF = cStringIO.StringIO()
+
+    def dataReceived(self, d):
+        print "data", repr(d)
+        self.outF.write(d)
+
+    def errReceived(self, d):
+        print "err", repr(d)
+        self.errF.write(d)
+
+    def connectionLost(self):
+        print "out closed"
+
+    def errConnectionLost(self):
+        print "err closed"
+    
+    def processEnded(self):
+        self.closed = 1
+
+
+class PosixProcessTestCase(unittest.TestCase):
+    """Test running processes."""
+    
+    def testProcess(self):
+        if os.path.exists('/bin/gzip'): cmd = '/bin/gzip'
+        elif os.path.exists('/usr/bin/gzip'): cmd = '/usr/bin/gzip'
+        else: raise "gzip not found in /bin or /usr/bin"
+	p = Accumulator()
+        reactor.spawnProcess(p, cmd, [cmd, "-c"], {}, "/tmp")
+        p.transport.write(s)
+        p.transport.loseConnection()
+
+        while not p.closed:
+            reactor.iterate()
+        f = p.outF
+        f.seek(0, 0)
+        gf = gzip.GzipFile(fileobj=f)
+        self.assertEquals(gf.read(), s)
+    
+    def testStderr(self):
+        # we assume there is no file named ZZXXX..., both in . and in /tmp
+        if not os.path.exists('/bin/ls'): raise "/bin/ls not found"
+        err = popen2.popen3("/bin/ls ZZXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX")[2].read()
+	p = Accumulator()
+        reactor.spawnProcess(p, '/bin/ls', ["/bin/ls", "ZZXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"], {}, "/tmp")
+        p.transport.loseConnection()
+        while not p.closed:
+            reactor.iterate()
+        self.assertEquals(err, p.errF.getvalue())
     
 ##    # XXX
 ##    # Python popen has issues on Unix, this is probably not really a Twisted bug
@@ -120,30 +148,33 @@ class ProcessTestCase(unittest.TestCase):
 ##    #        f.close()
 
 
-##class Win32ProcessTestCase(unittest.TestCase):
-##    """Test process programs that are packaged with twisted."""
+class Win32ProcessTestCase(unittest.TestCase):
+    """Test process programs that are packaged with twisted."""
     
-##    def testStdinReader(self):
-##        import win32api
-##        pyExe = win32api.GetModuleFileName(0)
-##        errF = cStringIO.StringIO()
-##        outF = cStringIO.StringIO()
-##        scriptPath = util.sibpath(__file__, "process_stdinreader.py")
-##        p = process.Process(pyExe, [pyExe, "-u", scriptPath], None, None)
-##        p.handleError = errF.write
-##        p.handleChunk = outF.write
-##        main.iterate()
+    def testStdinReader(self):
+        import win32api
+        pyExe = win32api.GetModuleFileName(0)
+        errF = cStringIO.StringIO()
+        outF = cStringIO.StringIO()
+        scriptPath = util.sibpath(__file__, "process_stdinreader.py")
+        p = protocol.ProcessProtocol()
+        p.closed = 0
+        p.dataReceived = outF.write
+        p.errReceived = errF.write
+        def ended(p=p): p.closed = 1
+        p.processEnded = ended
+        reactor.spawnProcess(p, pyExe, [pyExe, "-u", scriptPath], None, None)
+        reactor.iterate()
         
-##        p.write("hello, world")
-##        p.closeStdin()
-##        while not p.closed:
-##            main.iterate()
-##        self.assertEquals(errF.getvalue(), "err\nerr\n")
-##        self.assertEquals(outF.getvalue(), "out\nhello, world\nout\n")
+        p.transport.write("hello, world")
+        p.transport.loseConnection()
+        while not p.closed:
+            reactor.iterate()
+        self.assertEquals(errF.getvalue(), "err\nerr\n")
+        self.assertEquals(outF.getvalue(), "out\nhello, world\nout\n")
 
 
-##if runtime.platform.getType() != 'posix':
-##    del PosixProcessTestCase
-##elif runtime.platform.getType() != 'win32':
-##    del Win32ProcessTestCase
-
+if runtime.platform.getType() != 'posix':
+    del PosixProcessTestCase
+if runtime.platform.getType() != 'win32':
+    del Win32ProcessTestCase
