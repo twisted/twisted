@@ -1,4 +1,4 @@
-# -*- test-case-name: twisted.test.test_hashless -*-
+# -*- test-case-name: twisted.test.test_hashless -*-
 #
 # Twisted, the Framework of Your Internet
 # Copyright (C) 2001-2002 Matthew W. Lefkowitz
