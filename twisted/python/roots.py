@@ -17,13 +17,16 @@
 """Twisted Python Roots: an abstract hierarchy representation for Twisted.
 """
 
+# System imports
 import types
+
 
 class NotSupportedError(NotImplementedError):
     """
     An exception meaning that the tree-manipulation operation
     you're attempting to perform is not supported.
     """
+
 
 class Request:
     """I am an abstract representation of a request for an entity.
@@ -45,6 +48,7 @@ class Request:
         """
         raise NotImplementedError("%s.finish" % str(self.__class__))
 
+
 class Entity:
     """I am a terminal object in a hierarchy, with no children.
 
@@ -62,16 +66,21 @@ class Entity:
         """
         raise NotImplementedError("%s.render" % str(self.__class__))
 
+
 class Collection:
     """I represent a static collection of entities.
 
     I contain methods designed to represent collections that can be dynamically
     created.
     """
-    def __init__(self):
+    
+    def __init__(self, entities=None):
         """Initialize me.
         """
-        self.entities = {}
+        if entities is not None:
+            self.entities = entities
+        else:
+            self.entities = {}
 
     def getStaticEntity(self, name):
         """Get an entity that was added to me using putEntity.
@@ -175,7 +184,10 @@ class ConstraintViolation(Exception):
     """An exception raised when a constraint is violated.
     """
 
+
 class Constrained(Collection):
+    """A collection that has constraints on its names and/or entities."""
+    
     def nameConstraint(self, name):
         """A method that determines whether an entity may be added to me with a given name.
 
@@ -209,14 +221,17 @@ class Constrained(Collection):
             raise ConstraintViolation("Name constraint violated.")
 
 
-
 class Locked(Constrained):
+    """A collection that can be locked from adding entities."""
+    
     locked = 0
+    
     def lock(self):
         self.locked = 1
 
     def entityConstraint(self, entity):
         return not self.locked
+
 
 class Homogenous(Constrained):
     """A homogenous collection of entities.
