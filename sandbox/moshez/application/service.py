@@ -15,6 +15,7 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 #
 from twisted.python import components
+from twisted.internet import defer
 from twisted.persisted import sob
 
 class IService(components.Interface):
@@ -116,8 +117,10 @@ class MultiService(Service):
 
     def stopService(self):
         Service.stopService(self)
+        l = []
         for service in self:
-            service.stopService()
+            l.append(defer.maybeDeferred(service.stopService))
+        return defer.DeferredList(l)
 
     def getService(self, idx):
         return self.services[idx]
