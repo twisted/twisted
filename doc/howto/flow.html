@@ -341,11 +341,9 @@ def Consumer(producer):
             else:
                 yield result
             yield producer
-    except flow.Failure, fail:
-        # pass other failures up the stack
-        fail.trap(AssertionError)
-        # handle non-trapped error
-        yield str(fail.value)
+    except AssertionError, err:
+        # handle assertion error
+        yield str(err)
 
 print list(flow.Block(Consumer(Producer(IOError("trap")))))
 print list(flow.Block(Consumer(Producer(AssertionError("notrap")))))
