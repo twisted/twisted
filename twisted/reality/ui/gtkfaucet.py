@@ -32,10 +32,9 @@ def dontgo(*ev):
     return gtk.TRUE
 
 class ResponseWindow(gtk.GtkWindow):
-    def __init__(self,question,default,callifok,callifcancel):
+    def __init__(self,question,default,callback):
         gtk.GtkWindow.__init__(self)
-        self.callifok=callifok
-        self.callifcancel=callifcancel
+        self.callback =callback
         self.text=gtk.GtkText()
         self.set_title(question)
         self.text.set_editable(gtk.TRUE)
@@ -64,13 +63,11 @@ class ResponseWindow(gtk.GtkWindow):
 
 
     def callok(self,*ev):
-        if self.callifok is not None:
-            self.callifok(gtktextget(self.text))
+        self.callback.ok(gtktextget(self.text))
         self.destroy()
 
     def callcancel(self,*ev):
-        if self.callifcancel is not None:
-            self.callifcancel()
+        self.callback.cancel()
         self.destroy()
 
     
@@ -317,6 +314,8 @@ class GameWindow(gtk.GtkWindow, pb.Referenced):
     def remote_seeNoExits(self):
         self.exits=[]
         self.reexit()
+
+    remote_request = ResponseWindow
         
     def reitem(self):
         txt=self.itembox
