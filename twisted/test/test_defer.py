@@ -182,9 +182,12 @@ class DeferredTestCase(unittest.TestCase):
         self.assertEquals(l, [[1, 2]])
         # test failing list of deferreds
         l = []
-        defer.gatherResults([defer.succeed(1), defer.fail(ValueError)]).addCallback(l.append)
+        dl = [defer.succeed(1), defer.fail(ValueError)]
+        defer.gatherResults(dl).addCallback(l.append)
         self.assert_(isinstance(l[0], failure.Failure))
         self.assertEquals(len(l), 1)
+        # get rid of error
+        dl[1].addErrback(lambda e: 1)
 
 
 class DeferredTestCaseII(unittest.TestCase):
