@@ -30,8 +30,6 @@ def parse(data):
         t = ord(data[0])
         assert (t & 0xc0) == 0, 'not a universal value: 0x%02x' % t
         #assert t & 0x20, 'not a constructed value: 0x%02x' % t
-        if t & 0x20:
-            t = t & ~0x20
         l = ord(data[1])
         assert data != 0x80, "shouldn't be an indefinite length"
         if l & 0x80: # long form
@@ -51,7 +49,30 @@ def parse(data):
     if len(things) == 1:
         return things[0]
     return things
-            
+
+def pack(data):
+    ret = ''
+    for part in data:
+        if type(part) in (type(()), type([])):
+            partData = pack(part)
+            partType = SEQUENCE|0x20
+        elif type(part) in (type(1), type(1L)):
+            partData = number.long_to_bytes(part)
+            if ord(partData[0])&(0x80):
+                partData = '\x00' + partData
+            partType = INTEGER
+        else:
+            raise 'unknown type %s' % type(part)
+
+        ret += chr(partType)
+        if len(partData) > 127:
+            l = number.long_to_bytes(len(partData))
+            ret += chr(len(l)|0x80) + l
+        else:
+            ret += chr(len(partData))
+        ret += partData
+    return ret
+
 INTEGER = 0x02
 SEQUENCE = 0x10
 
