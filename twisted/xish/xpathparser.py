@@ -197,15 +197,17 @@ def wrap_error_reporter(parser, rule):
         print parser._scanner
 
 
-from twisted.xish import xpath
+from twisted.xish.xpath import _Location, IndexValue, CompareValue, AttribValue, LiteralValue, Function
 
 
 import string, re
 
 class XPathParserScanner(Scanner):
     patterns = [
-        ('"\\(\\)"', re.compile('\\(\\)')),
-        ('"\\@"', re.compile('\\@')),
+        ('"\\)"', re.compile('\\)')),
+        ('","', re.compile(',')),
+        ('"\\("', re.compile('\\(')),
+        ('"@"', re.compile('@')),
         ('"\\]"', re.compile('\\]')),
         ('"\\["', re.compile('\\[')),
         ('"/"', re.compile('/')),
@@ -213,6 +215,7 @@ class XPathParserScanner(Scanner):
         ('INDEX', re.compile('[0-9]+')),
         ('WILDCARD', re.compile('\\*')),
         ('IDENTIFIER', re.compile('[a-zA-Z][a-zA-Z0-9_\\-]*')),
+        ('ATTRIBUTE', re.compile('\\@[a-zA-Z][a-zA-Z0-9_\\-]*')),
         ('FUNCNAME', re.compile('[a-zA-Z][a-zA-Z0-9_]*')),
         ('CMP_EQ', re.compile('\\=')),
         ('CMP_NE', re.compile('\\!\\=')),
@@ -224,7 +227,7 @@ class XPathParserScanner(Scanner):
         Scanner.__init__(self,None,['\\s+'],str)
 
 class XPathParser(Parser):
-    def EXPRESSION(self):
+    def XPATH(self):
         PATH = self.PATH()
         result = PATH; current = result
         while self._peek('END', '"/"') == '"/"':
@@ -235,7 +238,7 @@ class XPathParser(Parser):
 
     def PATH(self):
         self._scan('"/"')
-        result = xpath._Location()
+        result = _Location()
         _token_ = self._peek('IDENTIFIER', 'WILDCARD')
         if _token_ == 'IDENTIFIER':
             IDENTIFIER = self._scan('IDENTIFIER')
@@ -251,33 +254,45 @@ class XPathParser(Parser):
         return result
 
     def PREDICATE(self):
-        _token_ = self._peek('"\\@"', 'INDEX', 'FUNCNAME')
-        if _token_ == '"\\@"':
-            self._scan('"\\@"')
-            ATTRIB_PREDICATE = self.ATTRIB_PREDICATE()
-            return ATTRIB_PREDICATE
-        elif _token_ == 'INDEX':
+        _token_ = self._peek('INDEX', '"@"', 'FUNCNAME', 'STR_DQ', 'STR_SQ')
+        if _token_ != 'INDEX':
+            EXPR = self.EXPR()
+            return EXPR
+        else:# == 'INDEX'
             INDEX = self._scan('INDEX')
-            return xpath._SpecificChild(INDEX)
-        else:# == 'FUNCNAME'
-            FUNCTION_PREDICATE = self.FUNCTION_PREDICATE()
-            return FUNCTION_PREDICATE
+            return IndexValue(INDEX)
 
-    def ATTRIB_PREDICATE(self):
-        IDENTIFIER = self._scan('IDENTIFIER')
-        result = xpath._AttribExists(IDENTIFIER)
+    def EXPR(self):
+        VALUE = self.VALUE()
+        e = VALUE
         if self._peek('CMP_EQ', 'CMP_NE', '"\\]"') != '"\\]"':
             CMP = self.CMP()
-            STR = self.STR()
-            result = xpath._AttribValue(IDENTIFIER, CMP, STR[1:len(STR)-1])
-        return result
+            VALUE = self.VALUE()
+            e = CompareValue(e, CMP, VALUE)
+        return e
 
-    def FUNCTION_PREDICATE(self):
-        FUNCNAME = self._scan('FUNCNAME')
-        self._scan('"\\(\\)"')
-        CMP = self.CMP()
-        STR = self.STR()
-        return xpath._functionFactory(FUNCNAME, CMP, STR[1:len(STR)-1] )
+    def VALUE(self):
+        _token_ = self._peek('"@"', 'FUNCNAME', 'STR_DQ', 'STR_SQ')
+        if _token_ == '"@"':
+            self._scan('"@"')
+            IDENTIFIER = self._scan('IDENTIFIER')
+            return AttribValue(IDENTIFIER)
+        elif _token_ == 'FUNCNAME':
+            FUNCNAME = self._scan('FUNCNAME')
+            f = Function(FUNCNAME); args = []
+            self._scan('"\\("')
+            if self._peek('","', '"\\)"', '"@"', 'FUNCNAME', 'STR_DQ', 'STR_SQ') not in ['","', '"\\)"']:
+                VALUE = self.VALUE()
+                args.append(VALUE)
+                while self._peek('","', '"\\)"') == '","':
+                    self._scan('","')
+                    VALUE = self.VALUE()
+                    args.append(VALUE)
+            self._scan('"\\)"')
+            f.setParams(*args); return f
+        else:# in ['STR_DQ', 'STR_SQ']
+            STR = self.STR()
+            return LiteralValue(STR[1:len(STR)-1])
 
     def CMP(self):
         _token_ = self._peek('CMP_EQ', 'CMP_NE')

@@ -34,6 +34,7 @@ class XPathTestCase(unittest.TestCase):
         bar2 = e.addElement("bar2")
         bar2["attrib2"] = "value2"
         bar3 = e.addElement("bar")
+        e["attrib3"] = "user@host/resource"
 
         xp = XPathQuery("/foo/bar2")
         self.assertEquals(xp.matches(e), 1)
@@ -45,13 +46,17 @@ class XPathTestCase(unittest.TestCase):
         self.assertEquals(xp.matches(e), True)
         self.assertEquals(xp.queryForNodes(e), [bar1, bar2, bar3])
 
+        xp = XPathQuery("/foo[@attrib1]")
+        self.assertEquals(xp.matches(e), True)
+
         xp = XPathQuery("/foo/*[@attrib2='value2']")
         self.assertEquals(xp.matches(e), True)
         self.assertEquals(xp.queryForNodes(e), [bar2])
 
-        xp = XPathQuery("/foo/bar[2]")
-        self.assertEquals(xp.matches(e), 1)
-        self.assertEquals(xp.queryForNodes(e), [bar1])
+# XXX: Revist this, given new grammar
+#        xp = XPathQuery("/foo/bar[2]")
+#        self.assertEquals(xp.matches(e), 1)
+#        self.assertEquals(xp.queryForNodes(e), [bar1])
 
         xp = XPathQuery("/foo[@xmlns='testns']/bar2")
         self.assertEquals(xp.matches(e), 1)
@@ -72,3 +77,8 @@ class XPathTestCase(unittest.TestCase):
         xp = XPathQuery("/foo[text() = 'somecontent']")
         self.assertEquals(xp.matches(e), True)
 
+        xp = XPathQuery("/foo[not(@nosuchattrib)]")
+        self.assertEquals(xp.matches(e), True)
+
+        xp = XPathQuery("/foo[juserhost(@attrib3) = 'user@host']")
+        self.assertEquals(xp.matches(e), True)

@@ -197,7 +197,7 @@ def wrap_error_reporter(parser, rule):
         print parser._scanner
 
 
-from twisted.xish import xpath
+from twisted.xish.xpath import _Location, IndexValue, CompareValue, AttribValue, LiteralValue, Function
 
 %%
 parser XPathParser:
@@ -205,6 +205,7 @@ parser XPathParser:
         token INDEX:        "[0-9]+"
         token WILDCARD:     "\*"
         token IDENTIFIER:   "[a-zA-Z][a-zA-Z0-9_\-]*"
+        token ATTRIBUTE:    "\@[a-zA-Z][a-zA-Z0-9_\-]*"
         token FUNCNAME:     "[a-zA-Z][a-zA-Z0-9_]*"
         token CMP_EQ:       "\="
         token CMP_NE:       "\!\="
@@ -212,26 +213,31 @@ parser XPathParser:
         token STR_SQ:       "'([^']|(\\'))*?'"
         token END:          "$"
 
-        rule EXPRESSION:    PATH {{ result = PATH; current = result }}
+        rule XPATH:    PATH {{ result = PATH; current = result }}
                           ( PATH {{ current.childLocation = PATH; current = current.childLocation }} ) * END
                           {{ return  result }}
 
-        rule PATH:          "/" {{ result = xpath._Location() }}
+        rule PATH:          "/" {{ result = _Location() }}
                              ( IDENTIFIER {{ result.elementName = IDENTIFIER }} | WILDCARD {{ result.elementName = None }} )
                              ( "\[" PREDICATE {{ result.predicates.append(PREDICATE) }} "\]")*
                             {{ return result }}
 
-        rule PREDICATE: ( "\@" ATTRIB_PREDICATE {{ return ATTRIB_PREDICATE }} | 
-                          INDEX {{ return xpath._SpecificChild(INDEX) }} |
-                          FUNCTION_PREDICATE {{ return FUNCTION_PREDICATE }} )
+        rule PREDICATE:  EXPR  {{ return EXPR }} | 
+                         INDEX {{ return IndexValue(INDEX) }}
 
-        rule ATTRIB_PREDICATE: IDENTIFIER {{ result = xpath._AttribExists(IDENTIFIER) }}
-                               [CMP STR   {{ result = xpath._AttribValue(IDENTIFIER, CMP, STR[1:len(STR)-1]) }} ] 
-                                          {{ return result }}
+        rule EXPR:       VALUE            {{ e = VALUE }}
+                           [ CMP VALUE  {{ e = CompareValue(e, CMP, VALUE) }} ]  
+                                          {{ return e }}
 
-        rule FUNCTION_PREDICATE: FUNCNAME "\(\)" CMP STR 
-                                 {{ return xpath._functionFactory(FUNCNAME, CMP, STR[1:len(STR)-1] ) }}
-
+        rule VALUE:      "@" IDENTIFIER   {{ return AttribValue(IDENTIFIER) }} | 
+                         FUNCNAME         {{ f = Function(FUNCNAME); args = [] }}
+                           "\("[ VALUE      {{ args.append(VALUE) }} 
+                             (
+                               "," VALUE     {{ args.append(VALUE) }} 
+                             )*   
+                           ] "\)"           {{ f.setParams(*args); return f }} | 
+                         STR              {{ return LiteralValue(STR[1:len(STR)-1]) }}
+        
         rule CMP: (CMP_EQ  {{ return CMP_EQ }} | CMP_NE {{ return CMP_NE }})
         rule STR: (STR_DQ  {{ return STR_DQ }} | STR_SQ {{ return STR_SQ }})
 

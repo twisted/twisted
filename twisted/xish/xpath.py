@@ -25,25 +25,84 @@ def _isStr(s):
     """ Internal method to determine if an object is a string """
     return isinstance(s, type('')) or isinstance(s, type(u''))
 
-def _functionFactory(fname, comparator, value):
+class LiteralValue(str):
+    def value(self, elem):
+        return self
+    
+class IndexValue:
+    def __init__(self, index):
+        self.index = int(index) - 1
+
+    def value(self, elem):
+        return elem.children[self.index]
+
+class AttribValue:
+    def __init__(self, attribname):        
+        self.attribname = attribname
+        if self.attribname == "xmlns":
+            self.value = self.value_ns
+
+    def value_ns(self, elem):
+        return elem.uri 
+
+    def value(self, elem):
+        if self.attribname in elem.attributes:
+            return elem.attributes[self.attribname]
+        else:
+            return None
+
+class CompareValue:
+    def __init__(self, lhs, op, rhs):
+        self.lhs = lhs
+        self.rhs = rhs
+        if op == "=":
+            self.value = self._compareEqual
+        else:
+            self.value = self._compareNotEqual
+
+    def _compareEqual(self, elem):
+        return self.lhs.value(elem) == self.rhs.value(elem)
+
+    def _compareNotEqual(self, elem):
+        return self.lhs.value(elem) != self.rhs.value(elem)
+
+def Function(fname):
     """ Internal method which selects the function object """
-    klassname = "_%sFunction" % fname
-    c = globals()[klassname](comparator, value)
+    klassname = "_%s_Function" % fname
+    c = globals()[klassname]()
     return c
 
-class _textFunction:
-    def __init__(self, comparator = None, value = None):
-        if comparator == "=":
-            self.matches = self.isEqual
-        else:
-            self.matches = self.isNotEqual
-        self.value = value
+class _not_Function:
+    def __init__(self):
+        self.baseValue = None
 
-    def isEqual(self, elem):
-        return str(elem) == self.value
+    def setParams(self, baseValue):
+        self.baseValue = baseValue
+        
+    def value(self, elem):
+        return not self.baseValue.value(elem)
 
-    def isNotEqual(self, elem):
-        return str(elem) != self.value        
+class _text_Function:
+    def setParams(self):
+        pass
+    
+    def value(self, elem):
+        return str(elem)
+
+class _juserhost_Function:
+    def setParams(self, sourceValue):
+        self.sourceValue = sourceValue
+        
+    def value(self, elem):
+        from twisted.protocols.jabber import jid
+        try:
+            user, host, resource = jid.parse(self.sourceValue.value(elem))
+            if user:
+                return "%s@%s" % (user, host)
+            else:
+                return None
+        except jid.InvalidFormat:
+            return None
 
 class _Location:
     def __init__(self):
@@ -56,7 +115,7 @@ class _Location:
             return 0
                 
         for p in self.predicates:
-            if not p.matches(elem):
+            if not p.value(elem):
                 return 0
 
         return 1
@@ -105,60 +164,10 @@ class _Location:
             for c in elem.children:
                 if _isStr(c): resultlist.append(c)
 
-class _SpecificChild:
-    def __init__(self, index):
-        self.index = int(index) - 1
-
-    def matches(self, elem):
-        if elem.parent != None:
-           try:
-               ndx = elem.parent.children.index(elem)
-               return ndx == self.index 
-           except:
-               return False
-        else:
-            return False
-
-class _AttribExists:
-    def __init__(self, attribName):
-        self.attribName = attribName
-
-    def matches(self, elem):
-        assert self.attribName != "xmlns"
-        return elem.hasAttrib(self.attribName)
-
-class _AttribValue:
-    def __init__(self, attribName, cmp, value):
-        self.attribName = attribName
-        self.value = value
-        if cmp == "!=":
-            if self.attribName == "xmlns":
-                self.__dict__["matches"] = self.NSIsNotEqual
-            else:
-                self.__dict__["matches"] = self.isNotEqual
-        else:
-            if self.attribName == "xmlns":
-                self.__dict__["matches"] = self.NSIsEqual
-            else:
-                self.__dict__["matches"] = self.isEqual
-
-    def NSIsNotEqual(self, elem):
-         return elem.uri == self.value
-
-    def NSIsEqual(self, elem):
-         return elem.uri == self.value
-    
-    def isNotEqual(self, elem):
-         return elem.compareAttribute(self.attribName, self.value) == 0
-
-    def isEqual(self, elem):
-         return elem.compareAttribute(self.attribName, self.value) == 1
-
-
 class XPathQuery:
     def __init__(self, queryStr):
         from twisted.xish.xpathparser import parse
-        self.baseLocation = parse('EXPRESSION', queryStr)
+        self.baseLocation = parse('XPATH', queryStr)
 
     def matches(self, elem):
         return self.baseLocation.matches(elem)
