@@ -1,3 +1,4 @@
+# -*- test-case-name: twisted.test.test_dns -*-
 # Twisted, the Framework of Your Internet
 # Copyright (C) 2001 Matthew W. Lefkowitz
 #
@@ -590,6 +591,10 @@ class Record_NULL:                   # EXPERIMENTAL
     
     def decode(self, strio, length = None):
         raise NotImplementedError, "Cannot encode or decode NULL records"
+
+
+    def __hash__(self):
+        return hash(self.payload)
     
     
 class Record_WKS:                    # OBSOLETE
