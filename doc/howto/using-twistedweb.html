@@ -463,5 +463,169 @@ resource = myresource.MyResource()
 
 <img src="../img/twisted_2.gif" />
 
+<h2>Advanced Configuration</h2>
+
+<p>Non-trivial configurations of Twisted Web are achieved with Python
+configuration files. This is a Python snippet which builds up a variable
+called application. Usually, the <code>listenTCP</code> method will
+be used to make the application listen on a TCP port (80, in case direct
+web serving is desired), with the listener being a
+<code class="API">twisted.web.server.Site</code>.</p>
+
+<p>The <code>Site</code> will wrap a <code>Resource</code> object -- the
+root.</p>
+
+<pre class="python">
+from twisted.internet import app
+from twisted.web import static, server
+
+root = static.File("/var/www/htdocs")
+application = app.Application('web')
+application.listenTCP(80, server.Site(root))
+</pre>
+
+<p>Most advanced configurations will be in the form of tweaking the
+root resource object.</p>
+
+<h3>Adding Children</h3>
+
+<p>Usually, the root's children will be based on the filesystem's contents.
+It is possible to override the filesystem by explicit <code>putChild</code>
+methods.</p>
+
+<p>Here are two examples. The first one adds a <code>/doc</code> child
+to serve the documentation of the installed packages, while the second
+one adds a <code>cgi-bin</code> directory for CGI scripts.</p>
+
+<pre class="python">
+from twisted.internet import app
+from twisted.web import static, server
+
+root = static.File("/var/www/htdocs")
+root.putChild("doc", static.File("/usr/share/doc"))
+application = app.Application('web')
+application.listenTCP(80, server.Site(root))
+</pre>
+
+<pre class="python">
+from twisted.internet import app
+from twisted.web import static, server, twcgi
+
+root = static.File("/var/www/htdocs")
+root.putChild("cgi-bin", twcgi.CGIDirectory("/var/www/cgi-bin"))
+application = app.Application('web')
+application.listenTCP(80, server.Site(root))
+</pre>
+
+<h3>Modifying File Resources</h3>
+
+<p><code>File</code> resources, be they root object or children thereof,
+have two important attributes that often need to be modified:
+<code>indices</code> and <code>processors</code>. <code>indices</code>
+determines which files are treated as <q>index files</q> -- served
+up when a directory is rendered. <code>processors</code> determine how
+certain file extensions are treated.</p>
+
+<p>Here is an example for both, creating a site where all <code>.rpy</code>
+extensions are Resource Scripts, and which renders directories by
+searching for a <code>index.rpy</code> file.</p>
+
+<pre class="python">
+from twisted.internet import app
+from twisted.web import static, server, script
+
+root = static.File("/var/www/htdocs")
+root.indices=['index.rpy']
+root.processors = {'.rpy': script.ResourceScript}
+application = app.Application('web')
+application.listenTCP(80, server.Site(root))
+</pre>
+
+<p><code>File</code> objects also have a method called <code>ignoreExt</code>.
+This method can be used to give extension-less URLs to users, so that
+implementation is hidden. Here is an example:</p>
+
+<pre class="python">
+from twisted.internet import app
+from twisted.web import static, server, script
+
+root = static.File("/var/www/htdocs")
+root.ignoreExt(".rpy")
+root.processors = {'.rpy': script.ResourceScript}
+application = app.Application('web')
+application.listenTCP(80, server.Site(root))
+</pre>
+
+<p>Now, a URL such as <code>/foo</code> might be served from a Resource
+Script called <code>foo.rpy</code>, if no file by the name of <code>foo</code>
+exists.</p>
+
+<h3>Virtual Hosts</h3>
+
+<p>Virtual hosting is done via a special resource, that should be
+used as the root resource -- <code>NameVirtualHost</code>.
+<code>NameVirtualHost</code> has an attribute named <code>default</code>,
+which holds the default website. If a different root for some other
+name is desired, the <code>addHost</code> method should be called.</p>
+
+<pre class="python">
+from twisted.internet import app
+from twisted.web import static, server, vhost
+
+root = vhost.NameVirtualHost()
+
+# Add a default -- htdocs
+root.default=static.File("/var/www/htdocs")
+
+# Add a simple virtual host -- foo.com
+root.addHost("foo.com", static.File("/var/www/foo"))
+
+# Add a simple virtual host -- bar.com
+root.addHost("bar.com", static.File("/var/www/bar"))
+
+# The "baz" people want to use Resource Scripts in their web site
+baz = static.File("/var/www/baz")
+baz.processors = {'.rpy': ResourceScript}
+baz.ignoreExt('.rpy')
+root.addHost('baz', baz)
+
+application = app.Application('web')
+application.listenTCP(80, server.Site(root))
+</pre>
+
+<h3>Advanced Techniques</h3>
+
+<p>Since the configuration is a Python snippet, it is possible to
+use the full power of Python. Here are some simple examples:</p>
+
+<pre class="python">
+# No need for configuration of virtual hosts -- just make sure
+# a directory /var/vhosts/&lt;vhost name&gt; exists:
+from twisted.web import vhost, static, server
+from twisted.internet import app
+
+root = vhost.NameVirtualHost()
+root.default = static.File("/var/www/htdocs")
+for dir in os.listdir("/var/vhosts"):
+    root.addHost(dir, static.File(os.path.join("/var/vhosts", dir)))
+
+application = app.Application('web')
+application.listenTCP(80, server.Site(root))
+</pre>
+
+<pre class="python">
+# Determine ports we listen on based on a file with numbers:
+from twisted.web import vhost, static, server
+from twisted.internet import app
+
+root = static.File("/var/www/htdocs")
+
+site = server.Site(root)
+application = app.Application('web')
+
+for num in map(int, open("/etc/web/ports").read().split()):
+    application.listenTCP(num, server.Site(root))
+</pre>
+
 </body>
 </html>
