@@ -265,7 +265,7 @@ class FormErrorModel(FormDisplayModel):
             self.err = err
             self.desc = "Please try again"
 
-    def wmfactory_description(self):
+    def wmfactory_description(self, request):
         return str(self.desc)
 
 
