@@ -1,3 +1,8 @@
+2003-05-21  Christopher Armstrong  <radix@twistedmatrix.com>
+
+	* bin/coil: removed. Coil isn't being maintained, pending a total
+	rewrite.
+
 2003-05-20  Brian Warner  <warner@lothar.com>
 
 	* twisted/python/reflect.py (namedAny): re-raise ImportErrors that
