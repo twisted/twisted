@@ -1,11 +1,17 @@
 #!/usr/bin/make -f
 
-versions=$(shell grep '^Build-Depends:' debian/control | sed -e 's/^Build-Depends: //' -e 's/,//g' -e  's/-dev//g' -e 's/python//g' -e 's/fortune-mod//')
+versions=$(subst -dev,,\
+           $(subst python,,\
+             $(filter python%-dev,\
+               $(shell sed -n '/^Build-Depends/s/,//gp' debian/control))))
 
 DOC=usr/share/doc
 
 DEFAULT=2.2
 DEFAULTPACKAGE=python$(DEFAULT)-twisted
+
+foo:
+	echo $(versions)
 
 indeppackages=twisted python-twisted python-twisted-conch twisted-doc \
          twisted-quotes \
