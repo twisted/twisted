@@ -1,5 +1,7 @@
 from __future__ import nested_scopes
 
+from types import ClassType
+
 from twisted.web import server
 from twisted.web import util as webutil
 from twisted.web.woven import interfaces
@@ -153,12 +155,13 @@ class GetFunction:
     def __call__(self, request, node, model, viewName):
         """Get a name from my namespace.
         """
+        from twisted.web.woven import widgets
         if viewName == "None":
-            from twisted.web.woven import widgets
             return widgets.DefaultWidget(model)
     
         vc = getattr(self.namespace, viewName, None)
-        if vc:
+        # don't call modules and random crap in the namespace, only widgets
+        if vc and isinstance(vc, (type, ClassType)) and issubclass(vc, widgets.Widget):
             return vc(model)
 
 
