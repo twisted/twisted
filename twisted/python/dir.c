@@ -481,7 +481,12 @@ int select_links(const char *path, const char *name, int type) {
 	return type == DT_LNK;
 }
 
+#if defined(__FreeBSD__)
+/* FreeBSD doesn't want a const on this. */
+int select_all(struct dirent* ent) {
+#else
 int select_all(const struct dirent* ent) {
+#endif
 	return 1;
 }
 
