@@ -5,13 +5,18 @@ from twisted.trial import unittest, util
 from twisted.test import proto_helpers
 
 class TestProtocol:
-    enableable = ()
+    localEnableable = ()
+    remoteEnableable = ()
+
     def __init__(self):
         self.bytes = ''
         self.subcmd = ''
         self.calls = []
-        self.enabled = []
-        self.disabled = []
+
+        self.enabledLocal = []
+        self.enabledRemote = []
+        self.disabledLocal = []
+        self.disabledRemote = []
 
     def makeConnection(self, transport):
         d = transport.negotiationMap = {}
@@ -30,14 +35,23 @@ class TestProtocol:
     def neg_TEST_COMMAND(self, payload):
         self.subcmd = payload
 
-    def allowEnable(self, option):
-        return option in self.enableable
+    def enableLocal(self, option):
+        if option in self.localEnableable:
+            self.enabledLocal.append(option)
+            return True
+        return False
 
-    def enable(self, option):
-        self.enabled.append(option)
+    def disableLocal(self, option):
+        self.disabledLocal.append(option)
 
-    def disable(self, option):
-        self.disabled.append(option)
+    def enableRemote(self, option):
+        if option in self.remoteEnableable:
+            self.enabledRemote.append(option)
+            return True
+        return False
+
+    def disableRemote(self, option):
+        self.disabledRemote.append(option)
 
 class TelnetTestCase(unittest.TestCase):
     def setUp(self):
@@ -213,6 +227,26 @@ class TelnetTestCase(unittest.TestCase):
         self.assertEquals(self.p.protocol.bytes, bytes.replace(cmd, ''))
         self.assertEquals(self.t.value(), telnet.IAC + telnet.WONT + '\x12')
 
+    def testAcceptDo(self):
+        # Try to enable an option.  The option is in our allowEnable
+        # list, so we will allow it to be enabled.
+        cmd = telnet.IAC + telnet.DO + '\x19'
+        bytes = 'padding' + cmd + 'trailer'
+
+        h = self.p.protocol
+        h.localEnableable = ('\x19',)
+        self.p.dataReceived(bytes)
+
+        self.assertEquals(self.t.value(), telnet.IAC + telnet.WILL + '\x19')
+        self.assertEquals(h.enabledLocal, ['\x19'])
+        self.assertEquals(h.enabledRemote, [])
+        self.assertEquals(h.disabledLocal, [])
+        self.assertEquals(h.disabledRemote, [])
+
+    def testAcceptWill(self):
+        # Same as testAcceptDo, but reversed.
+        pass
+
     def testAcceptWont(self):
         # Try to disable an option.  The server must allow any option to
         # be disabled at any time.  Make sure it disables it and sends
@@ -322,8 +356,13 @@ class TelnetTestCase(unittest.TestCase):
         self.p.dataReceived(telnet.IAC + telnet.WILL + '\x42')
 
         self.assertEquals(util.wait(d), True)
-        self.assertEquals(self.p.protocol.enabled, ['\x42'])
-        self.assertEquals(self.p.protocol.disabled, [])
+
+        # None of these should be called, because the notification
+        # came through the Deferred.
+        self.assertEquals(self.p.protocol.enabledRemote, [])
+        self.assertEquals(self.p.protocol.enabledLocal, [])
+        self.assertEquals(self.p.protocol.disabledRemote, [])
+        self.assertEquals(self.p.protocol.disabledLocal, [])
 
     def testRefusedEnableRequest(self):
         # Try to enable an option through the user-level API.  This
@@ -337,8 +376,13 @@ class TelnetTestCase(unittest.TestCase):
         self.p.dataReceived(telnet.IAC + telnet.WONT + '\x42')
 
         self.assertEquals(util.wait(d), False)
-        self.assertEquals(self.p.protocol.enabled, [])
-        self.assertEquals(self.p.protocol.disabled, [])
+
+        # None of these should be called, because the notification
+        # came through the Deferred.
+        self.assertEquals(self.p.protocol.enabledLocal, [])
+        self.assertEquals(self.p.protocol.disabledLocal, [])
+        self.assertEquals(self.p.protocol.enabledRemote, [])
+        self.assertEquals(self.p.protocol.disabledRemote, [])
 
     def testAcceptedDisableRequest(self):
         # Try to enable an option through the user-level API.  This
@@ -355,8 +399,13 @@ class TelnetTestCase(unittest.TestCase):
         self.p.dataReceived(telnet.IAC + telnet.WONT + '\x42')
 
         self.assertEquals(util.wait(d), True)
-        self.assertEquals(self.p.protocol.enabled, [])
-        self.assertEquals(self.p.protocol.disabled, ['\x42'])
+
+        # None of these should be called, because the notification
+        # came through the Deferred.
+        self.assertEquals(self.p.protocol.enabledLocal, [])
+        self.assertEquals(self.p.protocol.enabledRemote, [])
+        self.assertEquals(self.p.protocol.disabledRemote, [])
+        self.assertEquals(self.p.protocol.disabledLocal, [])
 
     def testNegotiationBlocksFurtherNegotiation(self):
         # Try to enable an option, then immediately try to enable it, then

@@ -99,34 +99,98 @@ class ITelnetProtocol(iinternet.IProtocol):
         """A subnegotiation command was received but not understood.
         """
 
-    def allowEnable(self, option):
-        """Indicate whether or not the given option can be enabled.
+    def enableLocal(self, option):
+        """Enable the given option locally.
 
-        This will never be called with a currently enabled option.
+        This should enable the given option on this side of the
+        telnet connection and return True.  If False is returned,
+        the option will be treated as still disabled and the peer
+        will be notified.
+
+        This is only called when option negotiation is initiated remotely.
         """
 
-    def enable(self, option):
-        """Enable the given option.
+    def enableRemote(self, option):
+        """Indicate whether the peer should be allowed to enable this option.
 
-        This will only be called after allowEnable(option) returns True.
+        Returns True if the peer should be allowed to enable this option,
+        False otherwise.
+
+        This is only called when option negotiation is initiated remotely.
         """
 
-    def disable(self, option):
-        """Disable the given option.
+    def disableLocal(self, option):
+        """Disable the given option locally.
+
+        Unlike enableLocal, this method cannot fail.  The option must be
+        disabled.
+
+        This is only called when option negotiation is initiated remotely.
+        """
+
+    def disableRemote(self, option):
+        """Indicate that the peer has disabled this option.
+
+        This is only called when option negotiation is initiated remotely.
         """
 
 class ITelnetTransport(iinternet.ITransport):
     def do(self, option):
-        pass
+        """Indicate a desire for the peer to begin performing the given option.
+
+        Returns a Deferred that fires with True when the peer begins performing
+        the option, or False when the peer refuses to perform it.  If the peer
+        is already performing the given option, the Deferred will fail with
+        C{AlreadyEnabled}.  If a negotiation regarding this option is already
+        in progress, the Deferred will fail with C{AlreadyNegotiating}.
+
+        Note: It is currently possible that this Deferred will never fire,
+        if the peer never responds, or if the peer believes the option to
+        already be enabled.
+        """
 
     def dont(self, option):
-        pass
+        """Indicate a desire for the peer to cease performing the given option.
+
+        Returns a Deferred that fires with True when the peer ceases performing
+        the option.  If the peer is not performing the given option, the
+        Deferred will fail with C{AlreadyDisabled}.  If negotiation regarding
+        this option is already in progress, the Deferred will fail with
+        C{AlreadyNegotiating}.
+
+        Note: It is currently possible that this Deferred will never fire,
+        if the peer never responds, or if the peer believes the option to
+        already be disabled.
+        """
 
     def will(self, option):
-        pass
+        """Indicate our willingness to begin performing this option locally.
+
+        Returns a Deferred that fires with True when the peer agrees to allow
+        us to begin performing this option, or False if the peer refuses to
+        allow us to begin performing it.  If the option is already enabled
+        locally, the Deferred will fail with C{AlreadyEnabled}.  If negotiation
+        regarding this option is already in progress, the Deferred will fail with
+        C{AlreadyNegotiating}.
+
+        Note: It is currently possible that this Deferred will never fire,
+        if the peer never responds, or if the peer believes the option to
+        already be disabled.
+        """
 
     def wont(self, option):
-        pass
+        """Indicate that we will stop performing the given option.
+
+        Returns a Deferred that fires with True when the peer acknowledges
+        we have stopped performing this option.  If the option is already
+        disabled locally, the Deferred will fail with C{AlreadyDisabled}.
+        If negotiation regarding this option is already in progress,
+        the Deferred will fail with C{AlreadyNegotiation}.
+
+        Note: It is currently possible that this Deferred will never fire,
+        if the peer never responds, or if the peer believes the option to
+        already be disabled.
+        """
 
     def requestNegotiation(self, about, bytes):
         """Send a subnegotiation request.
@@ -163,14 +227,19 @@ class TelnetProtocol(protocol.Protocol):
     def unhandledSubnegotiation(self, command, bytes):
         pass
 
-    def allowEnable(self, option):
-        return False
-
-    def enable(self, option):
+    def enableLocal(self, option):
         pass
 
-    def disable(self, option):
+    def enableRemote(self, option):
         pass
+
+    def disableLocal(self, option):
+        pass
+
+    def disableRemote(self, option):
+        pass
+
+
 
 class Telnet(protocol.Protocol):
     """
@@ -405,8 +474,7 @@ class Telnet(protocol.Protocol):
 
     def will_no_false(self, state, option):
         # He is unilaterally offering to enable an option.
-        if self.allowEnable(option):
-            self.enable(option)
+        if self.enableRemote(option):
             state.him.state = 'yes'
             self._do(option)
         else:
@@ -419,7 +487,6 @@ class Telnet(protocol.Protocol):
         d = state.him.onResult
         state.him.onResult = None
         d.callback(True)
-        self.enable(option)
 
     def will_yes_false(self, state, option):
         # He is unilaterally offering to enable an already-enabled option.
@@ -454,14 +521,13 @@ class Telnet(protocol.Protocol):
     def wont_yes_false(self, state, option):
         # Peer is unilaterally demanding that an option be disabled.
         state.him.state = 'no'
-        self.disable(option)
+        self.disableRemote(option)
         self._dont(option)
 
     def wont_yes_true(self, state, option):
         # Peer agreed to disable an option at our request.
         state.him.state = 'no'
         state.him.negotiating = False
-        self.disable(option)
         d = state.him.onResult
         state.him.onResult = None
         d.callback(True)
@@ -475,9 +541,8 @@ class Telnet(protocol.Protocol):
 
     def do_no_false(self, state, option):
         # Peer is unilaterally requesting that we enable an option.
-        if self.allowEnable(option):
+        if self.enableLocal(option):
             state.us.state = 'yes'
-            self.enable(option)
             self._will(option)
         else:
             self._wont(option)
@@ -521,7 +586,7 @@ class Telnet(protocol.Protocol):
     def dont_yes_false(self, state, option):
         # Peer is unilaterally demanding we disable an option.
         state.us.state = 'no'
-        self.disable(option)
+        self.disableLocal(option)
         self._wont(option)
 
     def dont_yes_true(self, state, option):
@@ -535,14 +600,17 @@ class Telnet(protocol.Protocol):
     dontMap = {('no', False): dont_no_false,   ('no', True): dont_no_true,
                ('yes', False): dont_yes_false, ('yes', True): dont_yes_true}
 
-    def allowEnable(self, option):
-        return False
+    def enableLocal(self, option):
+        return self.protocol.enableLocal(option)
 
-    def enable(self, option):
-        pass
+    def enableRemote(self, option):
+        return self.protocol.enableRemote(option)
 
-    def disable(self, option):
-        pass
+    def disableLocal(self, option):
+        return self.protocol.disableLocal(option)
+
+    def disableRemote(self, option):
+        return self.protocol.disableRemote(option)
 
 class ProtocolTransportMixin:
     def write(self, bytes):
@@ -591,16 +659,17 @@ class TelnetTransport(Telnet, ProtocolTransportMixin):
         p = self.protocol = self.protocolFactory(*self.protocolArgs, **self.protocolKwArgs)
         p.makeConnection(self)
 
-    def allowEnable(self, option):
-        return self.protocol.allowEnable(option)
+    def enableLocal(self, option):
+        return self.protocol.enableLocal(option)
 
-    def enable(self, option):
-        Telnet.enable(self, option)
-        self.protocol.enable(option)
+    def enableRemote(self, option):
+        return self.protocol.enableRemote(option)
 
-    def disable(self, option):
-        Telnet.disable(self, option)
-        self.protocol.disable(option)
+    def disableLocal(self, option):
+        return self.protocol.disableLocal(option)
+
+    def disableRemote(self, option):
+        return self.protocol.disableRemote(option)
 
     def unhandledSubnegotiation(self, command, bytes):
         self.protocol.unhandledSubnegotiation(command, bytes)
@@ -635,9 +704,6 @@ class TelnetBootstrapProtocol(TelnetProtocol, ProtocolTransportMixin):
         self.protocol = self.protocolFactory(*self.protocolArgs, **self.protocolKwArgs)
         self.protocol.makeConnection(self)
 
-    def allowEnable(self, opt):
-        return False
-
     def enable(self, opt):
         if opt == LINEMODE:
             self.transport.requestNegotiation(LINEMODE, MODE + chr(TRAPSIG))
@@ -645,9 +711,6 @@ class TelnetBootstrapProtocol(TelnetProtocol, ProtocolTransportMixin):
             pass
         else:
             pass
-
-    def disable(self, opt):
-        pass
 
     def telnet_NAWS(self, bytes):
         if len(bytes) == 4:
