@@ -11,6 +11,8 @@ API Stability: Unstable
 @author: U{Jp Calderone<mailto:exarkun@twistedmatrix.com>}
 """
 
+from __future__ import generators
+
 import struct
 
 from twisted.internet import defer
