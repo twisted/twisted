@@ -21,6 +21,22 @@ def scrollify(widget):
 def defocusify(widget):
     widget.unset_flags(gtk.CAN_FOCUS)
 
+class GetString(gtk.GtkWindow):
+    def __init__(self, im, desc):
+        gtk.GtkWindow.__init__(self, gtk.WINDOW_TOPLEVEL)
+        self.set_title(desc)
+        self.im = im
+        button = gtkutil.cbutton(desc, self.clicked)
+        self.entry = gtk.GtkEntry()
+        hb = gtk.GtkHBox()
+        hb.add(self.entry)
+        hb.add(button)
+        self.add(hb)   
+        self.show_all()
+
+    def clicked(self, btn):
+        raise NotImplementedError
+
 
 class Login(gtk.GtkWindow):
     def __init__(self, callback,
