@@ -33,6 +33,9 @@ class Redirect(resource.Resource):
     def render(self, request):
         return redirectTo(self.url, request)
 
+    def getChild(self, name, request):
+        return self
+
 
 stylesheet = """
 <style type="text/css">

@@ -3,7 +3,7 @@
 
 from __future__ import nested_scopes
 
-__version__ = "$Revision: 1.9 $"[11:-2]
+__version__ = "$Revision: 1.10 $"[11:-2]
 
 import random
 import time
@@ -221,7 +221,7 @@ class PerspectiveWrapper(Resource):
     login functionality requires a session to be established.
     """
     
-    def __init__(self, service, noAuthResource, authResourceFactory):
+    def __init__(self, service, noAuthResource, authResourceFactory, callback=None):
         """Create a PerspectiveWrapper.
         
         @type service: C{twisted.cred.service.Service}
@@ -243,6 +243,7 @@ class PerspectiveWrapper(Resource):
         self.service = service
         self.noAuthResource = noAuthResource
         self.authResourceFactory = authResourceFactory
+        self.callback = callback
 
     def getChild(self, path, request):
         s = request.getSession()
@@ -268,7 +269,9 @@ class PerspectiveWrapper(Resource):
                 idfr.addErrback(loginFailure)
                 return idfr
                 
-            return form.FormProcessor(loginSignature.method(loginMethod))
+            return form.FormProcessor(
+                loginSignature.method(loginMethod), 
+                callback=self.callback)
         else:
             sc = s.clientForService(self.service)
             if sc:
