@@ -16,9 +16,9 @@
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
-"""Heirarchial Token Bucket traffic shaping.
+"""Hierarchical Token Bucket traffic shaping.
 
-Patterened after U{Martin Devera's Hierarchical Token Bucket traffic
+Patterned after U{Martin Devera's Hierarchical Token Bucket traffic
 shaper for the Linux kernel<http://luxik.cdi.cz/~devik/qos/htb/>}.
 
 @seealso: U{HTB Linux queuing discipline manual - user guide
@@ -30,7 +30,7 @@ shaper for the Linux kernel<http://luxik.cdi.cz/~devik/qos/htb/>}.
 
 from __future__ import nested_scopes
 
-__version__ = '$Revision: 1.1 $'[11:-2]
+__version__ = '$Revision: 1.2 $'[11:-2]
 
 from twisted.python.components import Interface
 
