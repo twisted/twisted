@@ -109,14 +109,16 @@ class LoopbackClientFactory(protocol.ClientFactory):
         self.disconnected = 1
 
 
-def loopbackTCP(server, client, port=0):
+def loopbackTCP(server, client, port=0, noisy=True):
     """Run session between server and client protocol instances over TCP."""
     from twisted.internet import reactor
     f = protocol.Factory()
+    f.noisy = noisy
     f.buildProtocol = lambda addr, p=server: p
     serverPort = reactor.listenTCP(port, f, interface='127.0.0.1')
     reactor.iterate()
     clientF = LoopbackClientFactory(client)
+    clientF.noisy = noisy
     reactor.connectTCP('127.0.0.1', serverPort.getHost().port, clientF)
     
     while not clientF.disconnected:
@@ -126,15 +128,17 @@ def loopbackTCP(server, client, port=0):
     reactor.iterate()
 
 
-def loopbackUNIX(server, client):
+def loopbackUNIX(server, client, noisy=True):
     """Run session between server and client protocol instances over UNIX socket."""
     path = tempfile.mktemp()
     from twisted.internet import reactor
     f = protocol.Factory()
+    f.noisy = noisy
     f.buildProtocol = lambda addr, p=server: p
     serverPort = reactor.listenUNIX(path, f)
     reactor.iterate()
     clientF = LoopbackClientFactory(client)
+    clientF.noisy = noisy
     reactor.connectUNIX(path, clientF)
     
     while not clientF.disconnected:
