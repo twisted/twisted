@@ -51,13 +51,13 @@ an example::
 
 #EOF
 
-As you can see, you define optFlags as a list of paramaters (with
-both long and short names) that are either on or off.  optStrings
-are paramaters with string values, with their default value as
+As you can see, you define optFlags as a list of parameters (with
+both long and short names) that are either on or off.  optParameters
+are parameters with string values, with their default value as
 the third parameter in the list.  If you want to handle your own
 options, define a method named opt_paramname that takes (self,
-option) as paramaters. option will be whatever immediately follows
-the paramater on the command line. A few example command lines
+option) as arguments. option will be whatever immediately follows
+the parameter on the command line. A few example command lines
 that will work:
 
 # XXX - Where'd the examples go?
@@ -133,7 +133,7 @@ class Options:
         try:
             apply(self.parseArgs,args)
         except TypeError:
-            raise error, "wrong number of arguments."
+            raise UsageError("wrong number of arguments.")
 
         for opt, arg in opts:
             if opt[1] == '-':
@@ -266,7 +266,7 @@ class Options:
             method = getattr(self, 'opt_'+name)
             reqArgs = method.im_func.func_code.co_argcount
             if reqArgs > 2:
-                raise error, 'invalid Option function for %s' % name
+                raise UsageError('invalid Option function for %s' % name)
             if reqArgs == 2:
                 # argName = method.im_func.func_code.co_varnames[1]
                 takesArg = 1

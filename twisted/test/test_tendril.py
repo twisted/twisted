@@ -22,7 +22,7 @@ import StringIO
 
 tendril._LOGALL = 0
 
-class noOpper:
+class NoOpper:
     def __getattr__(self, key):
         return self
 
@@ -33,7 +33,7 @@ class DummyPerspective:
     def __init__(self, name, service):
         self.name = name
         self.service = service
-        self.client = noOpper()
+        self.client = NoOpper()
         self.dmessages = []
 
     def receiveGroupMessage(self, sender, group, message):

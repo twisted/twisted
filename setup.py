@@ -22,7 +22,7 @@ Package installer for Twisted
 Copyright (c) 2001 by Twisted Matrix Laboratories
 All rights reserved, see LICENSE for details.
 
-$Id: setup.py,v 1.17 2002/03/14 04:09:59 itamarst Exp $
+$Id: setup.py,v 1.18 2002/03/16 22:54:53 carmstro Exp $
 """
 
 import distutils, os, sys
@@ -99,7 +99,7 @@ if os.name == 'posix':
 # this is evil.
 from distutils.command.install_data import install_data
 
-class my_install_data(install_data):
+class MyInstallData(install_data):
     def finalize_options (self):
         self.set_undefined_options('install',
             ('install_lib', 'install_dir'),
@@ -110,7 +110,7 @@ class my_install_data(install_data):
 imPath = os.path.join('twisted', 'im')
 setup_args['data_files'] = [(imPath, [os.path.join(imPath, 'instancemessenger.glade')]),
                             ('twisted', [os.path.join('twisted', 'plugins.tml')])]
-setup_args['cmdclass']=  {'install_data': my_install_data}
+setup_args['cmdclass']=  {'install_data': MyInstallData}
 
 #'"
 # for building C banana...

@@ -22,7 +22,7 @@ import resource
 
 from twisted.protocols import http
 
-class error(Exception):
+class Error(Exception):
     def __init__(self, code, message = None):
         message = message or http.responses.get(code)
         Exception.__init__(self, code, message)

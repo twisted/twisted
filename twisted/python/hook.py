@@ -59,7 +59,7 @@ import reflect
 
 ### Public Interface
 
-class error(Exception):
+class HookError(Exception):
     "An error which will fire when an invariant is violated."
 
 def addPre(klass, name, func):
@@ -149,12 +149,12 @@ def _removeHook(klass, name, phase, func):
     "(private) removes a hook from a method on a class"
     phaselistname = phase(klass, name)
     if not hasattr(klass, ORIG(klass,name)):
-        raise error("no hooks present!")
+        raise HookError("no hooks present!")
 
     phaselist = getattr(klass, phase(klass, name))
     try: phaselist.remove(func)
     except ValueError:
-        raise error("hook %s not found in removal list for %s"%
+        raise HookError("hook %s not found in removal list for %s"%
                     (name,klass))
 
     if not getattr(klass, PRE(klass,name)) and not getattr(klass, POST(klass, name)):
@@ -182,7 +182,7 @@ def _dehook(klass, name):
     "(private) causes a certain method name no longer to be hooked on a class"
 
     if not hasattr(klass, ORIG(klass, name)):
-        raise error("Cannot unhook!")
+        raise HookError("Cannot unhook!")
     setattr(klass, name, getattr(klass, ORIG(klass,name)))
     delattr(klass, PRE(klass,name))
     delattr(klass, POST(klass,name))

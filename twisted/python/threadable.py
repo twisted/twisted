@@ -28,7 +28,7 @@ import sys
 # sibling imports
 import hook
 
-class error(Exception): pass
+class ThreadableError(Exception): pass
 
 class _Waiter:
     def __init__(self):
@@ -88,7 +88,7 @@ class _Waiter:
     
     def unwait_all(self):
         for k in self.conditions.keys():
-            self.unwait(k, error("Shut Down."), 0)
+            self.unwait(k, ThreadableError("Shut Down."), 0)
     
 
 class _ThreadedWaiter(_Waiter):

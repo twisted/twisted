@@ -56,7 +56,7 @@ module.
     </p>
 
     <p>
-<code class="API">adbapi</code> will do blocking database operations
+<code class="API">enterprise.adbapi</code> will do blocking database operations
 in seperate threads, which trigger callbacks in the originating thread
 when they complete. In the meantime, the original thread can continue
 doing normal work, like servicing other requests.
@@ -66,7 +66,7 @@ doing normal work, like servicing other requests.
     <p>
 Rather than creating a database connection directly, use the <code
 class="API">adbapi.ConnectionPool</code> class to manage a connections
-for you. This allows <code class="API">adbapi</code> to use multiple
+for you. This allows <code class="API">enterprise.adbapi</code> to use multiple
 connections, one per thread. This is easy:
     </p>
 
@@ -161,7 +161,7 @@ Suggestions to improve this document are welcomed.
     <address><a href="mailto:andrew (at) puzzling (dot) org">Andrew</a></address>
 
 <!-- hhmts start -->
-Last modified: Tue Mar 12 22:04:52 EST 2002
+Last modified: Sat Mar 16 06:29:01 EST 2002
 <!-- hhmts end -->
   </body>
 </html>

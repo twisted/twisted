@@ -31,9 +31,6 @@ import copy
 # Twisted Imports
 from twisted.python import log
 
-class error(Exception):
-    pass
-
 WorkerStop = None
 
 # initialize threading
