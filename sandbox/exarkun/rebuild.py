@@ -1,6 +1,7 @@
 # -*- test-case-name: test_rebuild -*-
 
 from twisted.python import components
+from twisted.python import reflect
 
 class IRebuildable(components.Interface):
     def rebuild(self, memo):
@@ -13,16 +14,9 @@ def latest(klass):
 def rebuild(obj):
     return IRebuildable(obj).rebuild({})
 
-def ImmutableObjectAdapter(original, memo):
-    return original
-
-class ListAdapter(components.Adapter):
+class ImmutableObjectAdapter(components.Adapter):
     def rebuild(self, memo):
-        if id(original) in memo:
-            return memo[id(original)]
-        r = [IRebuildable(e).rebuild(memo) for e in original]
-        memo[id(original)] = r
-        return r
+        return self.original
 
 class _foo:
     pass
@@ -32,31 +26,49 @@ class _Cache(components.Adapter):
         memo[id(original)] = result
         return result
 
+class ListAdapter(_Cache):
+    def rebuild(self, memo):
+        o = self.original
+        if id(o) in memo:
+            return memo[id(o)]
+        return self.cret(memo, o, [IRebuildable(e).rebuild(memo) for e in o])
+
+class DictAdapter(_Cache):
+    def rebuild(self, memo):
+        o = self.original
+        if id(o) in memo:
+            return memo[id(o)]
+        d = {}
+        for (k, v) in d.iteritems():
+            d[IRebuildable(k).rebuild(memo)] = IRebuildable(v).rebuild(memo)
+        return self.cret(memo, o, d)
+
 class ClassicClassAdapter(_Cache):
     def rebuild(self, memo):
-        if id(original) in memo:
-            return memo[id(original)]
-        d = original.__dict__.copy()
-        for k in d.keys():
-            d[k] = IRebuildable(d[k]).rebuild(memo)
+        o = self.original
+        if id(o) in memo:
+            return memo[id(o)]
+        d = IRebuildable(o.__dict__).rebuild(memo)
         f = _foo()
-        f.__class__ = latest(original.__class__)
+        f.__class__ = latest(o.__class__)
         f.__dict__ = d
-        return self.cret(memo, original, f)
+        return self.cret(memo, o, f)
 
 class BoundMethodAdapter(_Cache):
     def rebuild(self, memo):
-        if id(original) in memo:
-            return memo[id(original)]
-        klass = latest(original.im_class)
-        self = original.im_self
-        name = original.im_func.func_name
-        return self.cret(memo, original, getattr(IRebuildable(self).rebuild(memo), name))
+        o = self.original
+        if id(o) in memo:
+            return memo[id(o)]
+        klass = latest(o.im_class)
+        self = o.im_self
+        name = o.im_func.func_name
+        return self.cret(memo, o, getattr(IRebuildable(self).rebuild(memo), name))
 
 class UnboundMethodAdapter(_Cache):
     def rebuild(self, memo):
-        if id(original) in memo:
-            return memo[id(original)]
-        klass = latest(original.im_class)
-        name = original.im_func.func_name
-        return self.cret(memo, original, getattr(latest, name))
+        o = self.original
+        if id(o) in memo:
+            return memo[id(o)]
+        klass = latest(o.im_class)
+        name = o.im_func.func_name
+        return self.cret(memo, o, getattr(latest, name))

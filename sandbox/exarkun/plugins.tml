@@ -1,12 +1,12 @@
-from twisted.python.util import sibpath
-
+from twisted.python.components import registerAdapter
+from twisted.python.reflect import namedAny
 csvpath = 'components.csv'
 
 for zow in [
     [x.strip() for x in l.split(',')] for l in file(csvpath).read().strip().split('\n')
     ]:
-    print zow
     adapter, original, interface = zow
+    registerAdapter(*map(namedAny, zow))
     description = "Automated adapter registration: %s(%s) => %s" % (
         interface, original, adapter
         )
