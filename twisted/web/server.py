@@ -280,7 +280,7 @@ class Request(pb.Copyable, http.Request):
             # if it still hasn't been set, fix it up.
             if not self.session:
                 self.session = self.site.makeSession()
-                self.addCookie(cookiename, self.session.uid)
+                self.addCookie(cookiename, self.session.uid, path='/')
         self.session.touch()
         if sessionInterface:
             if self.session.sessionNamespaces.has_key(sessionInterface):
