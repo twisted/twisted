@@ -350,17 +350,21 @@ class DOMTemplate(Resource, View):
             viewName = node.getAttribute('class')
 
         # Look up either a widget factory, or a dom-mutating method
+        defaultViewMethod = None
         view = DefaultWidget(self.model)
         viewMethod = self.templateMethods.getMethodForNode(node)
         if viewMethod:
             log.msg("getTemplateMethods is deprecated. Please switch from using class or id to using the view attribute, and prefix your methods with factory_*.")
         else:
             viewMethod = view.generate
+            defaultViewMethod = viewMethod
             if viewName:
-                viewMethod = getattr(self, 'factory_' + viewName, None)
-                if viewMethod is None:
-                    view = getattr(domwidgets, viewName, DefaultWidget)(self.model)
-                    viewMethod = view.generate
+                viewMethod = getattr(self, 'factory_' + viewName, defaultViewMethod)
+                if viewMethod is defaultViewMethod:
+                    widget = getattr(domwidgets, viewName, None)
+                    if widget is not None:
+                        view = widget(self.model)
+                        viewMethod = view.generate
                 else:
                     # Check to see if the viewMethod returns a widget. (Use IWidget instead?)
                     maybeWidget = viewMethod(request, node)
@@ -370,7 +374,14 @@ class DOMTemplate(Resource, View):
                     else:
                         result = maybeWidget
                         viewMethod = None
-
+        
+        if viewName and viewMethod is defaultViewMethod:
+            del defaultViewMethod
+            del viewMethod
+            del view
+            del result
+            nodeText = node.toxml()
+            raise NotImplementedError, "You specified view name %s on a node, but no factory_%s method was found." % (viewName, viewName)
         return view, viewMethod, result
 
     def handleNode(self, request, node):
