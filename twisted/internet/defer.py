@@ -400,16 +400,19 @@ class DeferredList(Deferred):
         return result
 
 
-def _parseDListResult(l):
+def _parseDListResult(l, fireOnOneErrback=0):
     results = []
     for success, value in l:
         if success:
             results.append(value)
         else:
-            return failure.Failure(Exception(l))
+            if fireOnOneErrback:
+                value.trap()
+            else:
+                return failure.Failure(Exception(l))
     return results
 
-def gatherResults(deferredList):
+def gatherResults(deferredList, fireOnOneErrback=0):
     """Returns list with result of given Deferreds.
 
     This builds on C{DeferredList} but is useful since you don't
@@ -417,8 +420,8 @@ def gatherResults(deferredList):
 
     @type deferredList:  C{list} of L{Deferred}s
     """
-    d = DeferredList(deferredList)
-    d.addCallback(_parseDListResult)
+    d = DeferredList(deferredList, fireOnOneErrback=fireOnOneErrback)
+    d.addCallback(_parseDListResult, fireOnOneErrback)
     return d
 
 # Constants for use with DeferredList
