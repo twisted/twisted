@@ -565,8 +565,8 @@ class InstallDebs(Transaction):
         for dir in (target, target+'/woody'):
             for file in glob.glob('%(dir)s/*.old' % vars()):
                 new = os.path.splitext(file)[0]
-                sh('mv %(target)s/%(file)s %(target)s/%(new)s' % vars())
-                sh('mv %(target)s/%(file)s %(target)s/%(new)s' % vars())
+                sh('mv %(file)s %(new)s' % vars())
+                sh('mv %(file)s %(new)s' % vars())
             sh('rm -f %(dir)s/*%(ver)s*' % vars())
 
 
