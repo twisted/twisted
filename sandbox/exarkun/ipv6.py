@@ -1,12 +1,13 @@
 
 import socket
-
-from twisted.internet import tcp, default, protocol
-from twisted.python.compat import inet_pton
+from twisted.internet import tcp
+from twisted.internet import default
+from twisted.internet import protocol
+from twisted.internet import reactor
 
 def isIPv6Address(ip):
     try:
-        inet_pton(socket.AF_INET6, ip)
+        socket.inet_pton(socket.AF_INET6, ip)
     except:
         return 0
     return 1
