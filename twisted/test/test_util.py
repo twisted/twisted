@@ -37,12 +37,12 @@ class UtilTestCase(unittest.TestCase):
         
         self.exceptions = [None]
         self.calls = 0
-        self.assertEquals(util.uninterruptably(f, 1, 2), 3)
+        self.assertEquals(util.untilConcludes(f, 1, 2), 3)
         self.assertEquals(self.calls, 1)
         
         self.exceptions = [None, OSError, IOError]
         self.calls = 0
-        self.assertEquals(util.uninterruptably(f, 2, 3), 5)
+        self.assertEquals(util.untilConcludes(f, 2, 3), 5)
         self.assertEquals(self.calls, 3)
 
 class OrderedDictTest(unittest.TestCase):

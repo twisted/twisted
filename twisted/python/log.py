@@ -257,8 +257,9 @@ class FileLogObserver:
         timeStr = time.strftime(self.timeFormat, time.localtime(eventDict['time']))
         fmtDict = {'system': eventDict['system'], 'text': text.replace("\n", "\n\t")}
         msgStr = " [%(system)s] %(text)s\n" % fmtDict
-        self.write(timeStr + msgStr)
-        self.flush()                    # hoorj!
+
+        util.untilConcludes(self.write, timeStr + msgStr)
+        util.untilConcludes(self.flush)  # Hoorj!
 
     def start(self):
         """Start observing log events."""

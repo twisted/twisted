@@ -683,7 +683,7 @@ that package.
     return
 
 
-def uninterruptably(f, *a, **kw):
+def untilConcludes(f, *a, **kw):
     while True:
         try:
             return f(*a, **kw)
