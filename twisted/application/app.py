@@ -117,8 +117,6 @@ def runReactorWithLogging(config, oldstdout, oldstderr):
             else:
                 runWithProfiler(reactor, config)
         elif config['debug']:
-            defer.Deferred.debug = True
-            failure.startDebugMode()
             sys.stdout = oldstdout
             sys.stderr = oldstderr
             if runtime.platformType == 'posix':
@@ -191,9 +189,6 @@ class ServerOptions(usage.Options):
     optFlags = [['savestats', None,
                  "save the Stats object rather than the text output of "
                  "the profiler."],
-                ['debug', 'b',
-                 "run the application in the Python Debugger "
-                 "(implies nodaemon), sending SIGUSR2 will drop into debugger"],
                 ['no_save','o',   "do not save state on shutdown"],
                 ['encrypted', 'e',
                  "The specified tap/aos/xml file is encrypted."],
@@ -224,6 +219,21 @@ class ServerOptions(usage.Options):
                       'other profiling options.  This will only take effect '
                       'if the application to be run has an application '
                       'name.']]
+
+    def __init__(self, *a, **kw):
+        self['debug'] = False
+        usage.Options.__init__(self, *a, **kw)
+
+    def opt_debug(self):
+        """
+        run the application in the Python Debugger (implies nodaemon),
+        sending SIGUSR2 will drop into debugger
+        """
+        from twisted.internet import defer
+        defer.Deferred.debug = True
+        failure.startDebugMode()
+        self['debug'] = True
+    opt_b = opt_debug
 
     def opt_spew(self):
         """Print an insanely verbose log of everything that happens.  Useful
