@@ -94,6 +94,7 @@ class Deferred:
     called = 0
     default = 0
     paused = 0
+    timeoutCall = None
 
     def __init__(self):
         self.callbacks = []
@@ -210,6 +211,11 @@ class Deferred:
         self.called = isError + 1
         self.isError = isError
         self.result = result
+        if self.timeoutCall:
+            try:
+                self.timeoutCall.cancel()
+            except:
+                pass
         self._runCallbacks()
 
 
@@ -256,14 +262,20 @@ class Deferred:
     def setTimeout(self, seconds, timeoutFunc=timeout):
         """Set a timeout function to be triggered if I am not called.
 
-        timeoutFunc will receive the Deferred as its only argument.  The
-        default timeoutFunc will call the errback with a TimeoutError.
-
-        The timeout counts down from when this method is called.
+        @param seconds: How long to wait (from now) before firing the
+        timeoutFunc.
+        
+        @param timeoutFunc: will receive the Deferred as its only
+        argument.  The default timeoutFunc will call the errback with
+        a L{TimeoutError}.
         """
+
+        assert not self.timeoutCall, "Don't call setTimeout twice on the same Deferred."
+        
         from twisted.internet import reactor
-        reactor.callLater(seconds,
-                          lambda s=self, f=timeoutFunc: s.called or f(s))
+        self.timeoutCall = reactor.callLater(seconds,
+                                             lambda s=self, f=timeoutFunc: s.called or f(s))
+        return self.timeoutCall
 
     armAndErrback = errback
     armAndCallback = callback
