@@ -18,7 +18,7 @@ class _AbstractClient(service.Service):
 
     def stopService(self):
         service.Service.stopService(self)
-        self._connection.stopListening()
+        #self._connection.stopConnecting()
 
     def getConnection(self):
         return getattr(reactor, self.method)(*self.args, **self.kwargs)
