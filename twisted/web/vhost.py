@@ -120,8 +120,9 @@ class _HostResource(resource.Resource):
         else:
             host, port = path, 80
         request.setHost(host, port)
-        request.prepath = []
+        prefixLen = 3+request.isSecure()+4+len(path)+len(request.prepath[-3])
         request.path = '/'+'/'.join(request.postpath)
+        request.uri = request.uri[prefixLen:]
         return request.site.getResourceFor(request)
 
 
