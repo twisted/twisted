@@ -21,6 +21,7 @@ Requires win32all.
 
 from win32com.shell import shell
 import pythoncom
+import os
 
 
 def open(filename):
@@ -56,7 +57,8 @@ class Shortcut:
             pythoncom.CLSCTX_INPROC_SERVER, shell.IID_IShellLink
         )
         data = map(None, 
-                   [path, arguments, description, workingdir, iconpath], 
+                   [os.path.abspath(path), arguments, description,
+                    os.path.abspath(workingdir), os.path.abspath(iconpath)], 
                    ("SetPath", "SetArguments", "SetDescription",
                    "SetWorkingDirectory") )
         for value, function in data:
