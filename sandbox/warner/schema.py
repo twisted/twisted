@@ -162,3 +162,141 @@ Decrement a reference incremented by 'remote' command:
 
 
 """
+
+
+"""
+primitive constraints:
+   types.StringType: string with maxLength=1k
+   String(maxLength=1000): string with arbitrary maxLength
+   types.BooleanType: boolean
+   types.IntType: integer with abs(num) < 2**32 ?
+   types.LongType: integer with abs(num) < 2**10000
+   Int(maxValue=2**32): integer with arbitrary maxValue
+   types.FloatType: number
+   Number(maxValue=2**32): float or integer with maxValue
+   interface: instance which implements (or adapts to) the Interface
+   class: instance of the class or a subclass
+   # unicode? types? none?
+
+container constraints:
+   TupleOf(constraint1, constraint2..): fixed size, per-element constraint
+   ListOf(constraint, maxLength=30): all elements obey constraint
+   DictOf(keyconstraint, valueconstraint): keys and values obey constraints
+   AttributeDict(*attrTuples, ignoreUnknown=False):
+    attrTuples are (name, constraint)
+    ignoreUnknown=True means that received attribute names which aren't
+     listed in attrTuples should be ignored instead of raising an
+     UnknownAttrName exception
+
+composite constraints:
+   tuple: alternatives: must obey one of the different constraints
+
+modifiers:
+   Shared(constraint, refLimit=None): object may be referenced multiple times
+     within the serialization domain (question: which domain?). All
+     constraints default to refLimit=1, and a MultiplyReferenced exception
+     is raised as soon as the reference count goes above the limit.
+     refLimit=None means no limit is enforced.
+   Optional(name, constraint, default=None): key is not required. If not
+            provided and default is None, key/attribute will not be created
+            Only valid inside DictOf and AttributeDict.
+   
+
+"""
+
+class Constraint:
+    """
+    Each __schema__ attribute is turned into an instance of this class, and
+    is eventually given to the unserializer (the 'Unslicer') to enforce as
+    the tokens are arriving off the wire.
+    """
+    pass
+
+class StringConstraint(Constraint):
+    def __init__(self, maxLength=1000):
+        self.maxLength = maxLength
+class BooleanConstraint(Constraint):
+    pass
+class IntegerConstraint(Constraint):
+    def __init__(self, maxValue=2**32):
+        self.maxValue = maxValue
+class NumberConstraint(Constraint):
+    def __init__(self, maxIntValue=2**32):
+        self.maxIntValue = maxIntValue
+class InterfaceConstraint(Constraint):
+    def __init__(self, interface):
+        self.interface = interface
+class ClassConstraint(Constraint):
+    def __init__(self, klass):
+        self.klass = klass
+class PolyConstraint(Constraint):
+    def __init__(self, alternatives):
+        self.alternatives = alternatives
+
+class TupleConstraint(Constraint):
+    def __init__(self, *elemConstraints):
+        self.constraints = elemConstraints
+TupleOf = TupleConstraint
+
+class ListConstraint(Constraint):
+    """The object must be a list of objects, with a given maximum length. To
+    accept lists of any length, use maxLength=None (but you will get a
+    UnboundedSchema warning). All member objects must obey the given
+    constraint."""
+    def __init__(self, constraint, maxLength=30):
+        self.constraint = constraint
+        self.maxLength = maxLength
+ListOf = ListConstraint
+
+class DictConstraint(Constraint):
+    def __init__(self, keyconstraint, valueconstraint):
+        self.keyconstraint = keyconstraint
+        self.valueconstraint = valueconstraint
+DictOf = DictConstraint
+
+class AttributeDictConstraint(Constraint):
+    def __init__(self, *attrTuples, ignoreUnknown=False):
+        self.keys = {}
+        for name, constraint in attrTuples:
+            assert name not in self.keys.keys()
+            self.keys[name] = makeConstraint(constraint)
+        self.ignoreUnknown = ignoreUnknown
+
+class Shared(Constraint):
+    def __init__(self, constraint, refLimit=None):
+        self.constraint = makeConstraint(constraint)
+        self.refLimit = refLimit
+
+class Optional(Constraint):
+    def __init__(self, constraint, default):
+        self.constraint = makeConstraint(constraint)
+        self.default = default
+
+
+
+def makeConstraint(t):
+    if isinstance(t, Constraint):
+        return t
+    map = {
+        types.StringType: StringConstraint(),
+        types.BooleanType: BooleanConstraint(),
+        types.IntType: IntegerConstraint()
+        types.LongType: IntegerConstraint(maxValue=2**10000)
+        types.FloatType: NumberConstraint()
+        }
+    c = map.get(t, None)
+    if c:
+        return c
+    try:
+        if issubclass(t, components.Interface):
+            return InterfaceConstraint(t)
+    except NameError:
+        pass # if t is not a class, issubclass raises an exception
+    if isinstance(t, types.ClassType):
+        return ClassConstraint(t)
+
+    # alternatives
+    if type(t) == types.TupleType:
+        return PolyConstraint(t)
+
+    raise UnknownSchemaType
