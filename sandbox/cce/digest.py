@@ -8,7 +8,7 @@ import md5, time, random
 
 class DigestAuthentication(Resource):
     """ Simple implementation of RFC 2617 - HTTP Digest Authentication """
-    def __init__(self, realm, userfunc, authpage = None):
+    def __init__(self, realm, userfunc, authpage = None, errpage = None):
         """
             parent is the page that the getChild request is forwarded to
             realm is a globally unique URI, like tag:clarkevans.com,2004:bing
@@ -22,26 +22,27 @@ class DigestAuthentication(Resource):
         self.__realm    = realm
         self.__authpage = authpage or \
             ErrorPage(401,'Authentication Required','Please Authenticate')
+        self.__errpage  = errpage  or \
+            ErrorPage(400,'Bad Authentication','Bad Authentication')
 
-    def sendAuthenticateResponse(self, request):
+    def sendAuthenticateResponse(self, request, stale = ''):
         nonce = md5.md5(str(time.time() + random.random())).hexdigest()
         opaque = md5.md5(str(time.time() + random.random())).hexdigest()
-        request.setHeader("WWW-Authenticate", ('Digest realm="%s",qop='
-          '"auth",nonce="%s",opaque="%s"') % (self.__realm,nonce,opaque))
+        if stale: stale = 'stale="true", '
+        request.setHeader("WWW-Authenticate",('Digest realm="%s", qop="auth"'
+         ', nonce="%s", opaque="%s"%s') % (self.__realm,nonce,opaque,stale))
         self.__nonce[nonce] = 0
         request.setResponseCode(401)
         return self.__authpage
            
-    def didAuthenticate(self, request):
+    def testAuthorization(self, request):
         method = request.method
         auth = request.getHeader('Authorization')
         if not auth:
-            print "no auth"
-            return
-        print "\n", auth
+            return self.sendAuthenticateResponse(request)
         (authtype, auth) = auth.split(" ", 1)
         if 'Digest' != authtype:
-            return
+            return self._errpage
         amap = {}
         for itm in auth.split(", "):
             (k,v) = [s.strip() for s in itm.split("=",1)]
@@ -52,30 +53,30 @@ class DigestAuthentication(Resource):
             seqno    = amap['nc']
             uri      = amap['uri']
             cnonce   = amap['cnonce']
+            if uri != request.uri:
+               return self._errpage
         except:
             return
         ha1 = self.__userfunc(self.__realm,username)
         if not ha1:
-            return
+            return self.sendAuthenticateResponse(request)
         ha2 = md5.md5('%s:%s' % (method,uri)).hexdigest()
         chk = "%s:%s:%s:%s:%s:%s" % (ha1,nonce,seqno,cnonce,'auth',ha2)
         if amap['response'] != md5.md5(chk).hexdigest():
             if nonce in self.__nonce:
                 del self.__nonce[nonce]
-            print "bad password"
-            return
-        if int(seqno) < self.__nonce.get(nonce,0):
+            return self.sendAuthenticateResponse(request)
+        if seqno <= self.__nonce.get(nonce,'00000000'):
             if nonce in self.__nonce:
                 del self.__nonce[nonce]
-            print "bad sequence"
-            return
-        self.__nonce[nonce] = int(seqno)
-        return True
+            return self.sendAuthenticateResponse(request,stale=True)
+        self.__nonce[nonce] = seqno
+        return None # all is well
 
     def getChildWithDefault(self,path,request):
-        if self.didAuthenticate(request):
-            return Resource.getChildWithDefault(self,path,request)
-        return self.sendAuthenticateResponse(request)
+        epage = self.testAuthorization(request)
+        if epage: return epage
+        return Resource.getChildWithDefault(self,path,request)
 
 _authbody = "<html><body>Authentication Required</body></html>"
 
