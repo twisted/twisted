@@ -293,6 +293,10 @@ class StorableListTypeMapper(ObjectTypeMapper):
         else:
             return ObjectTypeMapper.highToLow(self, db, obj)
 
+    def null(self):
+        return []
+
+
 class StorableDictionaryTypeMapper(ObjectTypeMapper):
     def __init__(self, keyClass, valueClass):
         from twisted.world.compound import StorableDictionaryStore
@@ -336,6 +340,37 @@ class StorableDictionaryTypeMapper(ObjectTypeMapper):
             raise AttributeError("You're putting something that looks nothing "
                                  "at all like a dict (%s) into a slot that can "
                                  "only hold dicts." % repr(obj))
+
+    def null(self):
+        return {}
+
+
+class EnumTypeMapper(AbstractTypeMapper):
+    """Map from a list of values given to the contstructor to an integer
+    in the database. Uninitialized values get the first item of the
+    enumeration as a default value.
+    """
+    def __init__(self, *values):
+        assert len(values), "At least one value required in an Enumeration."
+        self.values = list(values)
+
+    def getLowColumns(self, name):
+        return ((int, name), )
+
+    def lowToHigh(self, db, tup):
+        return self.values[tup[0]]
+
+    def highToLow(self, db, obj):
+        return (self.values.index(obj), )
+    
+    def getPhysicalSize(self):
+        return 4
+
+    def toTuple(self):
+        return ('enum', self.original)
+
+    def null(self):
+        return self.values[0]
 
 
 class TypeMapperMapper(AbstractTypeMapper):

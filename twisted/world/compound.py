@@ -460,3 +460,5 @@ class FloatList(StorableList):
 from twisted.world.typemap import getMapper
 from twisted.world.typemap import StorableListTypeMapper as ListOf
 from twisted.world.typemap import StorableDictionaryTypeMapper as DictOf
+from twisted.world.typemap import EnumTypeMapper as Enum
+
