@@ -1,7 +1,51 @@
-import gtk
+import gtk, sys
 
 from twisted.words.ui import gtkim
 from twisted.spread.ui import gtkutil
 
 class Interaction(gtk.GtkWindow):
-    
+    def __init__(self):
+        gtk.GtkWindow(self, gtk.WINDOW_TOPLEVEL)
+	self.set_title("Manhole Interaction")
+
+	vb = gtk.GtkVBox()
+	
+	self.output = gtk.GtkText()
+	gtkim.defocusify(self.output)
+	vb.pack_start(gtkim.scrolltxt(self.output), 1,1,0)
+
+        self.input = gtk.GtkText()
+	self.input.set_editable(gtk.TRUE)
+	vb.pack_start(gtkim.scrolltxt(self.input), 1,1,0)
+
+        self.send = gtkim.cbutton("Send", self.sendMessage)
+
+        self.add(vb)
+	self.signal_connect('destroy', sys.exit, None)
+
+    def messageReceived(self, message):
+        t = self.output
+        t.set_point(t.get_length())
+        t.freeze()
+        t.insert(message)
+        a = t.get_vadjustment()
+        t.thaw()
+        a.set_value(a.upper - a.page_size)
+        self.input.grab_focus()
+
+    def sendMessage(self):
+        self.perspective.do(self.input.get_text(), pbcallback=self.messageReceived)
+
+    def connected(self, perspective):
+        self.name = lw.username.get_text()
+        lw.hide()
+        self.perspective = perspective
+        self.show_all()
+
+def main():
+    global lw
+    i = Interaction()
+    lw = gtkutil.Login(i.connected, initialUser="admin", 
+                       initialPassword="admin", initialService="manhole")
+    lw.show_all()
+    gtk.mainloop()
