@@ -17,12 +17,6 @@ class RecvLineHandler:
         # Indicates the current cursor position.
         self.lineBufferIndex = 0
 
-        # Hmm, state sucks.  Oh well.
-        # For now we will just take over the whole terminal.
-        self.proto.eraseDisplay()
-        self.proto.cursorPosition(0, self.height)
-        self.setInsertMode()
-
         # A map of keyIDs to bound instance methods.
         self.keyHandlers = {
             proto.LEFT_ARROW: self.handle_LEFT,
@@ -30,6 +24,15 @@ class RecvLineHandler:
             '\r': self.handle_RETURN,
             '\x7f': self.handle_BACKSPACE,
             '\x04': self.handle_DELETE}
+
+        self.initializeScreen()
+
+    def initializeScreen(self):
+        # Hmm, state sucks.  Oh well.
+        # For now we will just take over the whole terminal.
+        self.proto.eraseDisplay()
+        self.proto.cursorPosition(0, self.height)
+        self.setInsertMode()
 
     def setInsertMode(self):
         self.mode = 'insert'

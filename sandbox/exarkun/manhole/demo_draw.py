@@ -16,9 +16,9 @@ class DrawHandler(insults.TerminalListener):
 
     def keystrokeReceived(self, keyID):
         if keyID == self.proto.UP_ARROW:
-            self.proto.cursorDown()
-        elif keyID == self.proto.DOWN_ARROW:
             self.proto.cursorUp()
+        elif keyID == self.proto.DOWN_ARROW:
+            self.proto.cursorDown()
         elif keyID == self.proto.LEFT_ARROW:
             self.proto.cursorBackward()
         elif keyID == self.proto.RIGHT_ARROW:

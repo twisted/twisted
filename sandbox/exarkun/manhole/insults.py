@@ -48,16 +48,12 @@ class TerminalListener:
         pass
 
 class ITerminal(components.Interface):
-    def cursorDown(self, n=1):
-        """Move the cursor down n lines.
-
-        Note that "down" means "towards the top of the screen".
-        """
-
     def cursorUp(self, n=1):
         """Move the cursor up n lines.
+        """
 
-        Note that "up" means "towards the bottom of the screen".
+    def cursorDown(self, n=1):
+        """Move the cursor down n lines.
         """
 
     def cursorForward(self, n=1):
@@ -364,10 +360,10 @@ class ServerProtocol(protocol.Protocol):
     controlSequenceParser = ControlSequenceParser()
 
     # ITerminal
-    def cursorDown(self, n=1):
+    def cursorUp(self, n=1):
         self.write('\x1b[%dA' % (n,))
 
-    def cursorUp(self, n=1):
+    def cursorDown(self, n=1):
         self.write('\x1b[%dB' % (n,))
 
     def cursorForward(self, n=1):
@@ -502,3 +498,15 @@ class ServerProtocol(protocol.Protocol):
 
     def deleteLine(self, n=1):
         self.write('\x1b[%dM' % (n,))
+
+    def setScrollRegion(self, first=None, last=None):
+        if first is not None:
+            first = '%d' % (first,)
+        else:
+            first = ''
+        if last is not None:
+            last = '%d' % (last,)
+        else:
+            last = ''
+        self.write('\x1b[%s;%sr' % (first, last))
+
