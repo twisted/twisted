@@ -35,17 +35,17 @@ class Options(usage.Options):
         """set the port to listen on
         """
         try:
-            self.opts['portno'] = int(opt)
+            self['port'] = int(opt)
         except ValueError:
             raise usage.error("Invalid argument to 'port'!")
     opt_p = opt_port
 
 def updateApplication(app, config):
     t = telnet.ShellFactory()
-    t.username = config.opts['username']
-    t.password = config.opts['password']
+    t.username = config['username']
+    t.password = config['password']
     try:
-        portno = config.opts['portno']
+        portno = config['port']
     except KeyError:
         portno = 4040
     app.listenTCP(portno, t)

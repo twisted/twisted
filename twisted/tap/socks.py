@@ -39,6 +39,6 @@ def updateApplication(app, config):
         print "  This may allow intruders to access your local network"
         print "  if you run this on a firewall."
         print
-    t = socks.SOCKSv4Factory(config.opts['log'])
-    portno = int(config.opts['port'])
-    app.listenTCP(portno, t, interface=config.opts['interface'])
+    t = socks.SOCKSv4Factory(config['log'])
+    portno = int(config['port'])
+    app.listenTCP(portno, t, interface=config['interface'])

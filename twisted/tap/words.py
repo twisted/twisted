@@ -78,6 +78,6 @@ def updateApplication(app, config):
         for username, pw in config.users:
             svc.createPerspective(username).makeIdentity(pw)
 
-    app.listenTCP(int(config.opts['port']), bkr, interface=config['wordshost'])
-    app.listenTCP(int(config.opts['irc']), irc, interface=config['irchost'])
-    app.listenTCP(int(config.opts['web']), adm, interface=config['webhost'])
+    app.listenTCP(int(config['port']), bkr, interface=config['wordshost'])
+    app.listenTCP(int(config['irc']), irc, interface=config['irchost'])
+    app.listenTCP(int(config['web']), adm, interface=config['webhost'])

@@ -31,7 +31,7 @@ class Options(usage.Options):
     optParameters = [["user", "u", "admin", "Name of user to allow to log in"]]
     def opt_port(self, opt):
         try:
-            self.opts['portno'] = int(opt)
+            self['port'] = int(opt)
         except ValueError:
             raise usage.error("Invalid argument to 'port'!")
 
@@ -42,9 +42,9 @@ class Options(usage.Options):
         # confirm it.  Otherwise, I use the first line from standard
         # input, stripping off a trailing newline if there is one.
         if password in ('', '-'):
-            self.opts['password'] = util.getPassword(confirm=1)
+            self['password'] = util.getPassword(confirm=1)
         else:
-            self.opts['password'] = password
+            self['password'] = password
 
     def postOptions(self):
         if not self.opts.has_key('password'):
@@ -58,10 +58,10 @@ def updateApplication(app, config):
     auth = authorizer.DefaultAuthorizer(app)
     svc = service.Service("twisted.manhole", serviceParent=app,
                           authorizer=auth)
-    p = svc.createPerspective(config.opts['user'])
-    p.makeIdentity(config.opts['password'])
+    p = svc.createPerspective(config['user'])
+    p.makeIdentity(config['password'])
     try:
-        portno = config.opts['portno']
+        portno = config['port']
     except KeyError:
         portno = pb.portno
     app.listenTCP(portno, pb.BrokerFactory(pb.AuthRoot(auth)))

@@ -50,13 +50,13 @@ class Options(usage.Options):
 
     def opt_auth(self, authName):
         authObj = reflect.namedClass(authName)
-        self.opts['auth'] = authObj()
+        self['auth'] = authObj()
 
 def updateApplication(app, config):
     t = factory.OpenSSHFactory()
-    t.authorizer = config.opts.has_key('auth') and config.opts['auth'] or authorizer.OpenSSHConchAuthorizer()
+    t.authorizer = config.has_key('auth') and config['auth'] or authorizer.OpenSSHConchAuthorizer()
     t.authorizer.setApplication(app)
-    t.dataRoot = config.opts['data']
-    t.moduliRoot = config.opts['moduli'] or config.opts['data']
-    portno = int(config.opts['port'])
-    app.listenTCP(portno, t, interface=config.opts['interface'])
+    t.dataRoot = config['data']
+    t.moduliRoot = config['moduli'] or config['data']
+    portno = int(config['port'])
+    app.listenTCP(portno, t, interface=config['interface'])
