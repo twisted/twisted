@@ -1011,6 +1011,9 @@ class ProcessAliasTestCase(test_process.SignalMixin, unittest.TestCase):
         'After a blank line',
         'Last line'
     ]
+    
+    def tearDown(self):
+        reactor.iterate()
 
     def testProcessAlias(self):
         path = util.sibpath(__file__, 'process.alias.sh')
