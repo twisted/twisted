@@ -32,11 +32,19 @@ from twisted.python.compat import *
 
 import binascii, operator, re, string, types, rfc822
 
+def maybeDeferred(obj, cb, eb, cbArgs, ebArgs):
+    if isinstance(obj, defer.Deferred):
+        obj.addCallbacks(cb, eb, callbackArgs=cbArgs, errbackArgs=ebArgs)
+    else:
+        cb(obj, *cbArgs)
+
 class IMAP4Exception(Exception):
     def __init__(self, *args):
         Exception.__init__(self, *args)
 
 class IllegalClientResponse(IMAP4Exception): pass
+
+class IllegalOperation(IMAP4Exception): pass
 
 class IMAP4Server(basic.LineReceiver):
 
@@ -116,6 +124,10 @@ class IMAP4Server(basic.LineReceiver):
         if f:
             try:
                 f(tag, rest)
+            except IllegalClientResponse, e:
+                self.sendBadResponse(tag, 'Illegal syntax')
+            except IllegalOperation, e:
+                self.sendNegativeResponse(tag, str(e))
             except Exception, e:
                 self.sendBadResponse(tag, 'Server error: ' + str(e))
                 log.deferr()
@@ -223,10 +235,7 @@ class IMAP4Server(basic.LineReceiver):
             self.sendBadResponse(tag, 'Wrong number of arguments')
         else:
             d = self.authenticateLogin(*args)
-            if isinstance(d, defer.Deferred):
-                d.addCallbacks(self._cbLogin, self._ebLogin, callbackArgs=(tag,), errbackArgs=(tag,))
-            else:
-                self._cbLogin(d, tag)
+            maybeDeferred(d, self._cbLogin, self._ebLogin, (tag,), (tag,))
 
     def authenticateLogin(self, user, passwd):
         """Lookup the account associated with the given parameters
@@ -254,7 +263,6 @@ class IMAP4Server(basic.LineReceiver):
     
     def _ebLogin(self, failure, tag):
         self.sendBadResponse(tag, 'Server error: ' + str(failure.value))
-    
     
     def auth_SELECT(self, tag, args):
         mbox = self.account.select(args)
@@ -386,11 +394,10 @@ class IMAP4Server(basic.LineReceiver):
         except MailboxException, e:
             self.sendNegativeResponse(tag, str(e))
         else:
-            if isinstance(d, defer.Deferred):
-                d.addCallback(self._cbStatus, tag, mailbox)
-                d.addErrback(self._ebStatus, tag, mailbox)
-            else:
-                self._cbStatus(d, tag)
+            maybeDeferred(
+                d, self._cbStatus, self._ebStatus,
+                (tag, mailbox), (tag, mailbox)
+            )
     select_STATUS = auth_STATUS
 
     def _cbStatus(self, status, tag, box):
@@ -446,7 +453,7 @@ class IMAP4Server(basic.LineReceiver):
         self.sendPositiveResponse(tag, 'APPEND complete')
     
     def _ebAppend(self, failure, tag):
-        self.sendBadResponse(tag, 'APPEND failed: ' + str(failure))
+        self.sendBadResponse(tag, 'APPEND failed: ' + str(failure.value))
     
     def select_CHECK(self, tag, args):
         d = self.checkpoint()
@@ -464,7 +471,7 @@ class IMAP4Server(basic.LineReceiver):
         self.sendPositiveResponse(tag, 'CHECK completed')
     
     def _ebCheck(self, failure, tag):
-        self.sendBadResponse(tag, 'CHECK failed: ' + str(failure))
+        self.sendBadResponse(tag, 'CHECK failed: ' + str(failure.value))
     
     def checkpoint(self):
         """Called when the client issues a CHECK command.
@@ -479,15 +486,7 @@ class IMAP4Server(basic.LineReceiver):
     def select_CLOSE(self, tag, args):
         if self.mbox.isWriteable():
             d = self.mbox.expunge()
-            if isinstance(d, defer.Deferred):
-                d.addCallbacks(
-                    self._cbClose,
-                    self._ebClose,
-                    callbackArgs=(tag,),
-                    errbackArgs=(tag,)
-                )
-            else:
-                self._cbClose(d, tag)
+            maybeDeferred(d, self._cbClose, self._ebClose, (tag,), (tag,))
         else:
             self.sendPositiveResponse(tag, 'CLOSE completed')
             self.account.release(self.mbox)
@@ -501,20 +500,12 @@ class IMAP4Server(basic.LineReceiver):
         self.state = 'auth'
 
     def _ebClose(self, failure, tag):
-        self.sendBadResponse(tag, 'CLOSE failed: ' + str(failure))
+        self.sendBadResponse(tag, 'CLOSE failed: ' + str(failure.value))
     
     def select_EXPUNGE(self, tag, args):
         if self.mbox.isWriteable():
             d = self.mbox.expunge()
-            if isinstance(d, defer.Deferred):
-                d.addCallbacks(
-                    self._cbExpunge,
-                    self._ebExpunge,
-                    callbackArgs=(tag,),
-                    errbackArgs=(tag,)
-                )
-            else:
-                self._cbExpunge(d, tag)
+            maybeDeferred(d, self._cbExpunge, self._ebExpunge, (tag,), (tag,))
         else:
             self.sendPositiveResponse(tag, 'CLOSE completed')
             self.account.release(self.mbox)
@@ -530,20 +521,12 @@ class IMAP4Server(basic.LineReceiver):
         self.state = 'auth'
 
     def _ebExpunge(self, failure, tag):
-        self.sendBadResponse(tag, 'EXPUNGE failed: ' + str(failure))
+        self.sendBadResponse(tag, 'EXPUNGE failed: ' + str(failure.value))
     
     def select_SEARCH(self, tag, args):
         query = parseNestedParens(args)
         d = self.mbox.search(query)
-        if isinstance(d, defer.Deferred):
-            d.addCallbacks(
-                self._cbSearch,
-                self._ebSearch,
-                callbackArgs=(tag,),
-                errbackArgs=(tag,)
-            )
-        else:
-            self._cbSearch(d, tag)
+        maybeDeferred(d, self._cbSearch, self._ebSearch, (tag,), (tag,))
     
     def _cbSearch(self, result, tag):
         ids = ' '.join([str(i) for i in result])
@@ -551,7 +534,7 @@ class IMAP4Server(basic.LineReceiver):
         self.sendPositiveResponse(tag, 'SEARCH completed')
     
     def _ebSearch(self, failure, tag):
-        self.sendBadResponse(tag, 'SEARCH failed: ' + str(failure))
+        self.sendBadResponse(tag, 'SEARCH failed: ' + str(failure.value))
 
     def select_FETCH(self, tag, args):
         parts = args.split(None, 1)
@@ -561,15 +544,7 @@ class IMAP4Server(basic.LineReceiver):
         messages = parseIdList(messages)
         query = parseNestedParens(args)
         d = self.mbox.fetch(messages, query)
-        if isinstance(d, defer.Deferred):
-            d.addCallbacks(
-                self._cbFetch,
-                self._ebFetch,
-                callbackArgs=(tag,),
-                errbackArgs=(tag,)
-            )
-        else:
-            self._cbFetch(d, tag)
+        maybeDeferred(d, self._cbFetch, self._ebFetch, (tag,), (tag,))
     
     def _cbFetch(self, results, tag):
         for ((mId, part), value) in results.items():
@@ -579,8 +554,39 @@ class IMAP4Server(basic.LineReceiver):
         self.sendPositiveResponse(tag, 'FETCH completed')
 
     def _ebFetch(self, failure, tag):
-        self.sendBadResponse(tag, 'FETCH failed: ' + str(failure))
+        self.sendBadResponse(tag, 'FETCH failed: ' + str(failure.value))
 
+    def select_STORE(self, tag, args):
+        parts = parseNestedParens(args)
+        if 2 >= len(parts) >= 3:
+            messages = parseIdList(parts[0])
+            mode = parts[1].upper()
+            if len(parts) == 3:
+                flags = parts[2]
+            else:
+                flags = ()
+        else:
+            raise IllegalClientResponse, args
+        
+        silent = mode.endswith('SILENT')
+        if mode.startswith('+'):
+            mode = 1
+        elif mode.startswith('-'):
+            mode = -1
+        else:
+            mode = 0
+        
+        d = self.mbox.store(messages, flags, mode)
+        maybeDeferred(d, self._cbStore, self._ebStore, (tag, silent), (tag,))
+
+    def _cbStore(self, result, tag, silent):
+        if not silent:
+            for (k, v) in result.items():
+                self.sendUntaggedResponse('%d (%s)' % (k, ' '.join(v)))
+        self.sendPositiveResponse(tag, 'STORE completed')
+
+    def _ebStore(self, failure, tag):
+        self.sendBadResponse(tag, 'Server error: ' + str(failure.value))
 
 class UnhandledResponse(IMAP4Exception): pass
 
@@ -1582,6 +1588,77 @@ class IMAP4Client(basic.LineReceiver):
         cmd = ' '.join([s.upper() for s in terms.keys()])
         d = self.sendCommand('FETCH', cmd)
         return d
+    
+    def setFlags(self, messages, flags, silent=1):
+        """Set the flags for one or more messages.
+        
+        This command is allowed in the Selected state.
+        
+        @type messages: C{str}
+        @param messages: A message sequence set
+        
+        @type flags: Any iterable of C{str}
+        @param flags: The flags to set
+        
+        @type silent: C{bool}
+        @param silent: If true, cause the server to supress its verbose
+        response.
+        
+        @rtype: C{Deferred}
+        @return: A deferred whose callback is invoked with a list of the
+        the server's responses (C{[]} if C{silent} is true) or whose
+        errback is invoked if there is an error.
+        """
+        return self._store(messages, silent and 'FLAGS.SILENT' or 'FLAGS', flags)
+
+    def addFlags(self, messages, flags, silent=1):
+        """Add to the set flags for one or more messages.
+        
+        This command is allowed in the Selected state.
+        
+        @type messages: C{str}
+        @param messages: A message sequence set
+        
+        @type flags: Any iterable of C{str}
+        @param flags: The flags to set
+        
+        @type silent: C{bool}
+        @param silent: If true, cause the server to supress its verbose
+        response.
+        
+        @rtype: C{Deferred}
+        @return: A deferred whose callback is invoked with a list of the
+        the server's responses (C{[]} if C{silent} is true) or whose
+        errback is invoked if there is an error.
+        """
+        return self._store(messages, silent and '+FLAGS.SILENT' or '+FLAGS', flags)
+           
+    def removeFlags(self, messages, flags, silent=1):
+        """Remove from the set flags for one or more messages.
+        
+        This command is allowed in the Selected state.
+        
+        @type messages: C{str}
+        @param messages: A message sequence set
+        
+        @type flags: Any iterable of C{str}
+        @param flags: The flags to set
+        
+        @type silent: C{bool}
+        @param silent: If true, cause the server to supress its verbose
+        response.
+        
+        @rtype: C{Deferred}
+        @return: A deferred whose callback is invoked with a list of the
+        the server's responses (C{[]} if C{silent} is true) or whose
+        errback is invoked if there is an error.
+        """
+        return self._store(messages, silent and '-FLAGS.SILENT' or '-FLAGS', flags)
+
+    def _store(self, messages, cmd, flags):
+        d = self.sendCommand('STORE', ' '.join((messages, cmd, '(%s)' % ' '.join(flags))))
+        d.addCallback(self._cbStore)
+        return d
 
 class IllegalIdentifierError(IMAP4Exception): pass
 
@@ -1616,7 +1693,7 @@ _NO_QUOTES = (
     'LARGER', 'SMALLER', 'UID'
 )
 
-def Query(**kwarg):
+def Query(sorted=0, **kwarg):
     """Create a query string
     
     Among the accepted keywords are:
@@ -1710,13 +1787,20 @@ def Query(**kwarg):
         
         unseen      : If set to a true value, search for messages not
                       flagged with \\Seen
+    
+    @type sorted: C{bool}
+    @param sorted: If true, the output will be sorted, alphabetically.
+    The standard does not require it, but it makes testing this function
+    easier.  The default is zero, and this should be acceptable for any
+    application.
 
     @rtype: C{str}
     @return: The formatted query string
     """
     cmd = []
-    keys = kwarg.keys() # Not strictly necessary - but useful
-    keys.sort()
+    keys = kwarg.keys()
+    if sorted:
+        keys.sort()
     for k in keys:
         v = kwarg[k]
         k = k.upper()
@@ -1930,6 +2014,10 @@ class NoSuchMailbox(MailboxException):
     def __str__(self):
         return 'No mailbox named %s exists' % self.args
 
+class ReadOnlyMailbox(MailboxException):
+    def __str__(self):
+        return 'Mailbox open in read-only state'
+
 class Account:
     mboxType = None
 
@@ -2115,6 +2203,9 @@ class IMailbox(components.Interface):
         @rtype: C{Deferred}
         @return: A deferred whose callback is invoked if the message
         is added successfully and whose errback is invoked otherwise.
+        
+        @raise ReadOnlyMailbox: Raised if this Mailbox is not open for
+        read-write.
         """
 
     def expunge(self):
@@ -2123,6 +2214,9 @@ class IMailbox(components.Interface):
         @rtype: C{list} or C{Deferred}
         @return: The list of message sequence numbers which were deleted,
         or a C{Deferred} whose callback will be invoked with such a list.
+        
+        @raise ReadOnlyMailbox: Raised if this Mailbox is not open for
+        read-write.
         """
 
     def search(self, query):
@@ -2148,7 +2242,32 @@ class IMailbox(components.Interface):
         @param parts: The message portions to retrieve.
 
         @rtype: C{dict} or C{Deferred}
-        @return: A dict mapping 2-tuples of message identifier and message
+        @return: A C{dict} mapping 2-C{tuples} of message identifier and message
         portions to strings representing that portion of that message, or a
-        C{Deferred} whose callback will be invoked with such a dict.
+        C{Deferred} whose callback will be invoked with such a C{dict}.
+        """
+
+    def store(self, messages, flags, mode):
+        """Set the flags of one or more messages.
+        
+        @type messages: sequence of C{int}
+        @param messages: The identifiers of the messages to set the flags of.
+        
+        @type flags: sequence of C{str}
+        @param flags: The flags to set, unset, or add.
+        
+        @type mode: -1, 0, or 1
+        @param mode: If mode is -1, these flags should be removed from the
+        specified messages.  If mode is 1, these flags should be added to
+        the specified messages.  If mode is 0, all existing flags should be
+        cleared and these flags should be added.
+        
+        @rtype: C{dict} or C{Deferred}
+        @return: A C{dict} mapping message identifiers to sequences of C{str}
+        representing the flags set on the message after this operation has
+        been performed, or a C{Deferred} whose callback will be invoked with
+        such a C{dict}.
+        
+        @raise ReadOnlyMailbox: Raised if this mailbox is not open for
+        read-write.
         """

@@ -149,7 +149,7 @@ class IMAP4HelperTestCase(unittest.TestCase):
     def testQueryBuilder(self):
         inputs = [
             imap4.Query(flagged=1),
-            imap4.Query(unflagged=1, deleted=1),
+            imap4.Query(sorted=1, unflagged=1, deleted=1),
             imap4.Or(imap4.Query(flagged=1), imap4.Query(deleted=1)),
             imap4.Query(before='today'),
             imap4.Or(
@@ -160,9 +160,9 @@ class IMAP4HelperTestCase(unittest.TestCase):
             imap4.Or(
                 imap4.Not(
                     imap4.Or(
-                        imap4.Query(since='yesterday', smaller=1000),
-                        imap4.Query(before='tuesday', larger=10000),
-                        imap4.Query(unseen=1, deleted=1, before='today'),
+                        imap4.Query(sorted=1, since='yesterday', smaller=1000),
+                        imap4.Query(sorted=1, before='tuesday', larger=10000),
+                        imap4.Query(sorted=1, unseen=1, deleted=1, before='today'),
                         imap4.Not(
                             imap4.Query(subject='spam')
                         ),
