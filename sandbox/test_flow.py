@@ -115,7 +115,7 @@ class FlowTest(unittest.TestCase):
 
     def testProducer(self):
         lhs = [(1,'one'),(2,'two'),(3,'three')]
-        rhs = list(flow.wrap(producer()))
+        rhs = list(flow.Block(producer()))
         self.assertEqual(lhs,rhs)
 
     def testConsumer(self):

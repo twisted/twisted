@@ -131,9 +131,6 @@ class Stage(Instruction):
         self.stop   = 0
         self.result = None
     def __iter__(self):
-        """ if yield has not been called on the iterator, then block """
-        if not self._ready:
-            return Block(self)
         return self
     def isFailure(self):
         """ return a boolean value if the result is a Failure """ 
@@ -270,8 +267,6 @@ class Block(Stage):
     def __init__(self, stage):
         Stage.__init__(self)
         self._stage = wrap(stage)
-    def __iter__(self):
-        return self
     def next(self):
         """ fetch the next value from the Stage flow """
         stage = self._stage
