@@ -8,7 +8,7 @@ BLACK = (0, 0, 0)
 WHITE = (255, 255, 255)
 
 # Get a configuration
-from sol_trunc import config, width as WIDTH, height as HEIGHT
+from moon import config, width as WIDTH, height as HEIGHT
 
 # PyGame's clock sucks nuts
 class Clock:
@@ -19,7 +19,7 @@ class Clock:
 
 def main():
     pygame.init()
-    image = pygame.image.load("circle.bmp")
+    image = pygame.image.load("circle.png")
 
     space = point.Space()
 
@@ -28,7 +28,7 @@ def main():
         b = (point.Body(space, mass, pos, vel), image.get_rect())
         bodies.append(b)
 
-    perFrame = 100
+    perFrame = 1
     size = width, height = 800, 600
     screen = pygame.display.set_mode(size)
     clock = Clock()
@@ -39,7 +39,7 @@ def main():
             if evt.type == pygame.QUIT:
                 raise SystemExit("Ran %d iterations" % (count * perFrame,))
 
-        # clock.tick(60)
+        clock.tick(60)
         for x in xrange(perFrame):
             space.update()
 

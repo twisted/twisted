@@ -70,3 +70,4 @@ class BodyTest(unittest.TestCase):
         self.space._updatePosition()
         self.assertEquals(x.position, (8, 0, 2))
         self.assertEquals(y.position, (0, 2, 8))
+
