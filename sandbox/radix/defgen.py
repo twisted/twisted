@@ -19,7 +19,7 @@ class waitForDeferred:
             yield thing
             thing = thing.getResult()
             print thing #the result! hoorj!
-        thingummy = deferredGenerator(thingummy)
+        thingummy = deferGenerator(thingummy)
 
     waitForDeferred returns something that you should immediately yield;
     when your generator is resumed, calling thing.getResult() will either
@@ -54,7 +54,7 @@ class waitForDeferred:
     Deferred.
     """
     def __init__(self, d):
-        assert isinstance(d, Deferred)
+        assert isinstance(d, Deferred), "You must give waitForDeferred a Deferred. You gave me %r." % (d,)
         self.d = d
 
     def getResult(self):
