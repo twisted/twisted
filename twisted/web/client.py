@@ -73,12 +73,16 @@ class HTTPPageGetter(http.HTTPClient):
         if not l:
             self.handleStatusDefault()
         host, port, url = _parse(l[0])
-        if len(l) >= 5 and l[:5] == 'http:':
-            self.factory.host = host
-            self.factory.port = port
-        else:
-            self.factory.host, self.factory.port = self.transport.addr
+        self.factory.host = host
         self.factory.url = url
+
+        # XXX I have _no idea_ what this code that dp wrote was trying
+        # to do, but it's terribly wrong -- radix
+##        if if len(l) >= 5 and l[:5] == 'http:':
+##            self.factory.host = host
+##            self.factory.port = port
+##        else:
+##            self.factory.host, self.factory.port = self.transport.addr
         reactor.connectTCP(self.factory.host, self.factory.port, self.factory)
         self.quietLoss = 1
         self.transport.loseConnection()
