@@ -776,7 +776,7 @@ class SenderProtocol(Protocol):
         
     def connectionLost(self, reason):
         if reason.check(error.ConnectionDone):
-            self.deferred.callback(reason)
+            self.deferred.callback('connection done')
         else:
             self.deferred.errback(reason)
 

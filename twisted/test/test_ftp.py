@@ -336,7 +336,6 @@ class FTPPassiveClientAndServerTests(FTPClientAndServerTests):
     def testStor(self):
         FTPClientAndServerTests.testStor(self)
 
-    testStor.todo = "This relied on horribly broken behavior of Deferreds in FTP, and in light of the state of the rest of the FTP code I think it's fair to turn this into a todo.  XXX SPIV FIXME"
 
 class FTPFileListingTests(unittest.TestCase):
     def testOneLine(self):
