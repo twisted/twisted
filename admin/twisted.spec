@@ -1,5 +1,5 @@
 %define name     Twisted
-%define version  1.0.4alpha2
+%define version  1.0.4rc1
 %define release  1tummy
 %define prefix   %{_prefix}
 
