@@ -108,16 +108,23 @@ class Widget(view.View):
         I have a model; however since I am a widget I am only responsible
         for a portion of that model. This method returns the portion I am
         responsible for.
+
+        The return value of this may be a Deferred; if it is, then
+        L{setData} will be called once the result is available.
         """
         currentModel = self._getMyModel()
         if currentModel is None:
             return None
         if hasattr(currentModel, 'getData'):
             return currentModel.getData()
-        # Must have been set to a simple type
+        # Must have been set to a simple type, or a Deferred...
         return currentModel
 
     def setData(self, data):
+        """
+        If the return value of L{getData} is a Deferred, I am called
+        when the result of the Deferred is available.
+        """
         currentModel = self._getMyModel()
         if currentModel is None:
             raise NotImplementedError, "Can't set the data when there's no model to set it on."
@@ -167,8 +174,10 @@ class Widget(view.View):
     def generate(self, request, node):
         data = self.getData()
         if isinstance(data, defer.Deferred):
-            data.addCallback(self.setDataCallback, request, node)
-            data.addErrback(utils.renderFailure, request)
+            data.addCallbacks(callback=self.setDataCallback,
+                              callbackArgs=(request, node),
+                              errback=utils.renderFailure,
+                              errbackArgs=(request,))
             return data
         self.setUp(request, node, data)
         # generateDOM should always get a reference to the
@@ -180,8 +189,14 @@ class Widget(view.View):
         self.setData(result)
         data = self.getData()
         if isinstance(data, defer.Deferred):
-            data.addCallback(self.setDataCallback, request, node)
-            data.addErrback(utils.renderFailure, request)
+            import warnings
+            warnings.warn("%r has returned a Deferred multiple times for the "
+                          "same request; this is a potential infinite loop."
+                          % self.getData)
+            data.addCallbacks(callback=self.setDataCallback,
+                              callbackArgs=(request, node),
+                              errback=utils.renderFailure,
+                              errbackArgs=(request,))
             return data
         self.setUp(request, node, data)
         # generateDOM should always get a reference to the

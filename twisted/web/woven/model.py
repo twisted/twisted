@@ -115,6 +115,12 @@ class Model:
         Override me if you don't want 'traversing'-style lookup, but
         would rather like to look up a model based on the entire model
         name specified.
+
+        If you override me to return Deferreds, make sure I look up
+        values in a cache (created by L{setSubmodel}) before doing a
+        regular Deferred lookup.
+
+        XXX: Move bits of this docstring to interfaces.py
         """
         submodelList = submodelName.split('/')
         
@@ -138,7 +144,9 @@ class Model:
     
     def getSubmodel(self, name):
         """
-        Get the submodel `name' of this model.
+        Get the submodel `name' of this model. If I ever return a
+        Deferred, then I ought to check for cached values (created by
+        L{setSubmodel}) before doing a regular Deferred lookup.
         """
         if name and name[0] != '_' and name not in self.protected_names:
             if hasattr(self, name):
@@ -146,6 +154,12 @@ class Model:
             raise AttributeError, "The submodel %s was requested from the model %s, but does not exist" % (name, self)
 
     def setSubmodel(self, name, value):
+        """
+        Set a submodel on this model. If getSubmodel or lookupSubmodel
+        ever return a Deferred, I ought to set this in a place that
+        lookupSubmodel/getSubmodel know about, so they can use it as a
+        cache.
+        """
         if name[0] != '_' and name not in self.protected_names:
             setattr(self, name, value)
 

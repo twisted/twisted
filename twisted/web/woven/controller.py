@@ -22,13 +22,11 @@ from twisted.web.woven import interfaces
 
 class Controller(resource.Resource):
     """
-    A Controller which translates commands the user executed on the
-    view into explicit manipulations of the model. This is where the
-    business logic lives.
+    A Controller which handles to events from the user. Such events
+    are `web request', `form submit', etc.
 
-    This passes responsibility on to the view class registered for the
-    model. You can override render to perform more advanced template
-    lookup logic.
+    I should be the IResource implementor for your Models (and
+    L{registerControllerForModel} makes this so).
     """
     
     __implements__ = (interfaces.IController, resource.IResource)
@@ -48,6 +46,12 @@ class Controller(resource.Resource):
         pass
 
     def render(self, request):
+        """
+        This passes responsibility on to the view class registered for
+        the model. You can override me to perform more advanced
+        template lookup logic.
+        """
+
         self.setUp(request)
         self.view = components.getAdapter(self.model, interfaces.IView, None)
         self.view.setController(self)
