@@ -26,9 +26,6 @@ check if object *provides* an interface. Using the Zope3 API directly is thus
 strongly recommended.
 
 TODO: make zope.interface run in 2.2
-
-XXXX Probably going to have to move persistence back into AdapterRegistry
-and special case it in Interface.__call__...
 """
 
 # twisted imports
@@ -55,7 +52,7 @@ class _Nothing:
 def getRegistry(r):
     return theAdapterRegistry
 
-class CannotAdapt(NotImplementedError):
+class CannotAdapt(NotImplementedError, TypeError):
     """
     Can't adapt some object to some Interface.
     """
@@ -91,6 +88,31 @@ class MetaInterface(interface.InterfaceClass):
                 if _adapterPersistence.has_key(pkey):
                     return _adapterPersistence[pkey]
 
+            if persist:
+                # we need to recreate the whole z.i.i.Interface.__call__
+                # code path here, cause we should only persist stuff
+                # that isn't coming from __conform__. Sigh.
+                conform = getattr(adaptable, '__conform__', None)
+                if conform is not None:
+                    try:
+                        adapter = conform(self)
+                    except TypeError:
+                        if sys.exc_info()[2].tb_next is not None:
+                            raise CannotAdapt
+                    else:
+                        if adapter is not None:
+                            return adapter
+                adapter = self.__adapt__(adaptable)
+                if adapter == None:
+                    if default == _Nothing:
+                        raise CannotAdapt
+                    else:
+                        return default
+                _adapterPersistence[(id(adaptable), self)] = adapter
+                # make sure as long as adapter is alive the original object is alive
+                _adapterOrigPersistence[_Wrapper(adaptable)] = adapter
+                return adapter
+            
             try:
                 if default == _Nothing:
                     adapter = interface.InterfaceClass.__call__(self, adaptable)
@@ -104,10 +126,6 @@ class MetaInterface(interface.InterfaceClass):
             if adapter == default:
                 if hasattr(self, '__instadapt__'):
                     adapter = self.__instadapt__(adaptable, default)
-            if persist:
-                _adapterPersistence[(id(adaptable), self)] = adapter
-                # make sure as long as adapter is alive the original object is alive
-                _adapterOrigPersistence[_Wrapper(adaptable)] = adapter
             return adapter
         
         return __call__
@@ -265,7 +283,7 @@ class AdapterRegistry(ZopeAdapterRegistry):
 theAdapterRegistry = AdapterRegistry()
 # XXX may need to change to raise correct exceptions
 def _hook(iface, ob):
-    return theAdapterRegistry.getAdapter(ob, iface, default=None)
+    return theAdapterRegistry.getAdapter(ob, iface, default=None, persist=False)
 interface.adapter_hooks.append(_hook)
 registerAdapter = theAdapterRegistry.registerAdapter
 getAdapterClass = theAdapterRegistry.getAdapterClass
