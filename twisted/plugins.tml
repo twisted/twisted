@@ -139,12 +139,6 @@ register("Twisted News Automated TAP Builder",
          type='tap',
          tapname="news")
 
-register("Twisted Issues TAP Builder",
-         "twisted.issues.issuetap",
-	 description="Bug reporting/tracking service.",
-         type="tap",
-         tapname="issues")
-
 # Bot Plugins
 
 register("Bot-Creating Bot",
