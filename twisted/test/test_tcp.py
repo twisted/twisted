@@ -63,3 +63,5 @@ class LoopbackTestCase(unittest.TestCase):
 
         while not client.failed:
             reactor.iterate()
+            if client.closed:
+                raise ValueError, "connectionLost called instead of connectionFailed"
