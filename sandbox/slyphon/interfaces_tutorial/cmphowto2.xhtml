@@ -1,0 +1,199 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 3.2//EN">
+
+<html>
+<head>
+  <title>Components Phase 2 - Why</title>
+</head>
+
+<body>
+  <h1>Components Phase 2 - Why</h1>
+
+  <p>This tutorial's purpose is two-fold. It's designed to be a
+  logical next-step to the Component Architecture howto, and will
+  build on the basic concepts presented there. As a side-benefit,
+  this tutorial will cover the important parts of the new (to
+  Twisted) zope.interfaces API, and will hopefully bring everyone
+  up-to-speed on how to make use of this new, powerful tool.</p>
+
+  <p>I remember after reading the <a href=
+  "components.html">components howto</a> feeling as though I'd been
+  exposed to a new and powerul way of thinking about objects, but a
+  bit lost as to how to put that thinking to practical use. I'd
+  drunk the kool-aid, and it tasted good, but the positive effects
+  hadn't kicked in yet. About a month later, I started working on a
+  small project and it dawned on me that the problem I was trying
+  to solve was <em>perfect</em> for interfaces and adapters. I want
+  to try and share that epiphany with you and help you to make use
+  of this wonderfully powerful philosophy. I'm assuming that you've
+  read Donovan Preston's components howto, as I will be expanding
+  on the principles introduced there.</p>
+
+  <h2>What makes components so cool?</h2>
+
+  <p>Components are cool because they allow you to not care about
+  what type of object you've been handed, they allow you to
+  generalize your code so that it doesn't get bogged down with
+  implementation-specific details. If you've ever been in a
+  situation where you thought, <em>"Wow, I really need isinstance()
+  here, but everyone in #python is telling me that sucks..."</em> you could
+  have made good use of a component architecture. The conceptual
+  item that allows you to do this is an <code class="API" base=
+  "twisted.python.components">Interface</code>.</p>
+
+<strong>XXX: insert a brief introduction to what an interface is here</strong>
+
+  <h2>A simple example</h2>
+
+  <p>This first example is a chunk of runnable code to show you
+  what it's possible to do with the component architecture.</p>
+  <pre class="python">
+#!/usr/bin/env python
+
+import os, os.path, types
+
+from twisted.python.util import sibpath
+
+from twisted.python import components
+import zope.interface as zi
+
+# the interface we'll be adapting instances to
+
+class IFilePath(components.Interface):
+    def getPath():
+        """i return a string that represents a file path"""
+
+
+# here are some adapters to IFilePath
+
+class ModulePath(components.Adapter):
+    zi.implements(IFilePath)
+    def getPath(self):
+        return os.path.abspath(self.original.__file__)
+
+class ListPath(components.Adapter):
+    zi.implements(IFilePath)
+    def getPath(self):
+        return os.path.join(*self.original)
+
+class StringPath(components.Adapter):
+    zi.implements(IFilePath)
+    def getPath(self):
+        return os.path.basename(self.original)
+
+
+class KlassPath(components.Adapter):
+    zi.implements(IFilePath)
+    def getPath(self):
+        return os.path.abspath(__import__(self.original.__module__).__file__)
+
+
+# here is where we hook together all the pieces
+
+for _adapter, _original, _interface in [ ( ModulePath, types.ModuleType, IFilePath ),
+                                         ( ListPath,   types.ListType,   IFilePath ),
+                                         ( StringPath, types.StringType, IFilePath ),
+                                         ( KlassPath,  types.ClassType,  IFilePath ) ]:
+
+    components.registerAdapter(_adapter, _original, _interface)
+
+
+def main():
+    aString = "/foo/bar/baz"
+    aList = ['path', 'to', 'knowhere']
+    aModule = __import__('twisted')
+    aKlass = StringPath
+
+    # if you've ever been in a situation where you were just *dying* to use isinstance()
+    # you actually wanted interfaces and adapters
+
+
+    # XXX: write this part out and make what's happening _very explicit_
+    for original in [aString, aList, aModule, aKlass]:
+        adapterToIFilePath = IFilePath(original)
+        adapterToIFilePath.getPath() 
+
+if __name__ == '__main__':
+    main()
+
+</pre>
+
+<h3>Explanation</h3>
+
+<p>Okay, now there's a fair amount of stuff going on here, so lemme begin at
+the beginning.</p>
+
+<p>First we define our interface. An interface represents the public API that
+we want to be able to use. Notice that in the zope interface sytle, interfaces do not
+use <code>self</code> in their function definitions. This is because zope thinks that
+interfaces should how you <strong>use</strong> interfaces, rather than their implementation
+details (and, one could argue that self is an implementation detail of the Python
+langugage). Our interface is dead-simple and only defines one method,
+<code>get path</code>. Interface definitions are an ideal place to put docstrings,
+as your public interfaces are likely to remain more stable than your classes.</p>
+
+<p>Next we have our adapters. These are classes that by definition, have the following
+<code>__init__</code> method defined.</p>
+
+<pre class="python">
+class Adapter:
+    def __init__(self, original):
+        self.original = original
+</pre>
+
+<p><em>to be technically accurate, an adapter doesn't have to be a class, but I'll cover
+that later</em></p>
+
+<p>Pretty simple, huh? The Adapter simply "wraps" the instance of the class it is
+adapting, and performs whatever "middle steps" are necessary to get that original
+instance to provide the interface desired. So, how does one define what interfaces
+a given adapter class is going to be adapting to? We use the
+<code>zope.interfaces.implements</code> method. Now this next sentence is very
+important:</p>
+
+<quote>
+<em>"An adapter class <strong>implements</strong> an interface. <strong>Instances</strong> of that
+class <strong>provide</strong> that interface.</em>
+</quote>
+
+<p>It is important to know the difference between <em>implements</em> and <em>provides</em>
+because the zope interfaces API authors use these words to mean specific, and wholly different
+things. If you don't totally understand the distinction right now, don't worry, just try to store
+that in the back of your mind as we move forward.</p>
+
+<p>By declaring that a class implements an interface, we are indicating to the component
+architecture what that adapter is capable of. Now, the last vital step is to tie this
+all together, the adapters, the original interfaces (class types that will be adapted), and
+the interfaces to which those classes will be adapted. We do that by using
+<code>twisted.python.components.registerAdapter</code>. When we call <code>registerAdapter</code>
+in line XXX we are saying to the component architecture:</p>
+
+<quote><em>"When we request
+that instance <code>aList</code> of <code>types.ListType</code> be adapted to the interface
+<code>IFilePath</code>, pass <code>aList</code> to the callable <code>ListPath</code> and return
+the result.</em>
+</quote>
+
+<p>So, in our <code>main</code> method, we can see what it looks like to "wrap" or "adapt"
+an instance to an interface. The line <code>adapterToIFilePath = IFilePath(original)</code>
+is where the adaptation happens. <code>adapterToIFilePath.getPath()</code> is actually calling
+the method <code>getPath</code> on the proper adapter instance.</p>
+
+<p>When you run the program, you'll see the following output:</p>
+
+<pre>
+baz
+path/to/knowhere
+/home/slyphon/Projects/Twisted/working/twisted/__init__.pyc
+/home/slyphon/Projects/Twisted/trunk/sandbox/slyphon/interfaces_tutorial/simple_interface.py
+</pre>
+
+<p>You have just witnessed the awesome power of adapters...umm...on a very small scale. At the
+time we call <code>IFilePath(original).getPath()</code> on the object, we don't care <em>what type that
+object is an instance of!</em> As long as we have defined an adapter class to act as an interpreter
+between the original object's interface and the desired interface, we know that the adapted object
+will do what we want it to do!</p>
+
+<p>Ladies and gentlemen, this is <strong>true</strong> polymorphism!</p>
+
+</body>
+</html>
