@@ -135,7 +135,8 @@ class PerlScript(twcgi.FilteredScript):
     filter = '/usr/bin/perl' # Points to the perl parser
 
 resource = static.File("/perlsite") # Points to the perl website
-resource.processors = {".pl": PerlScript} # Files that end with .pl will be processed by PerlScript
+resource.processors = {".pl": PerlScript} # Files that end with .pl will be
+                                          # processed by PerlScript
 resource.indexNames = ['index.pl']
 </pre>
 
