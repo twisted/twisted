@@ -113,8 +113,9 @@ def main():
 		 'tag': tag,
          'upver': updateVersions}
 
-    sys.path.insert(0, os.path.abspath('Twisted'))
     
+    sys.path.insert(0, os.path.abspath('Twisted'))
+    print "going to do", opts['commands']
     for command in opts['commands']:
         d[command](opts)
 
