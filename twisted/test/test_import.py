@@ -77,8 +77,6 @@ class AtLeastImportTestCase(unittest.TestCase):
         from twisted.python import threadpool
         from twisted.python import usage
         from twisted.python import otp
-        from twisted.python import dir
-    
     
     def test_protocols(self):
         """Test importing protocols
