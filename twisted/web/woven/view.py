@@ -18,7 +18,7 @@
 
 from __future__ import nested_scopes
 
-__version__ = "$Revision: 1.75 $"[11:-2]
+__version__ = "$Revision: 1.76 $"[11:-2]
 
 # Sibling imports
 import interfaces
@@ -68,9 +68,6 @@ def filterStack(stack):
         if it is not None:
             returnVal.append(it)
     return returnVal
-
-
-NO_DATA_YET = 2
 
 
 def viewFactory(viewClass):
