@@ -6,6 +6,7 @@ from twisted.internet import tcp
 import struct
 import string
 import socket
+import time
 
 class SOCKSv4Outgoing(protocol.Protocol):
     def __init__(self,socks):
@@ -79,7 +80,7 @@ class SOCKSv4(protocol.Protocol):
 
     def authorize(self,code,server,port,user):
         print "code %s connection to %s:%s (user %s)"%(code,server,port,user)
-        return 1
+        return port!=80
 
     def makeReply(self,reply,version=4,port=0,ip="0.0.0.0"):
         self.transport.write(struct.pack("!BBH",version,reply,port)+socket.inet_aton(ip))
@@ -91,16 +92,22 @@ class SOCKSv4(protocol.Protocol):
 
     def log(self,proto,data):
         if not self.logging: return
-        foo,host,port=proto.transport.getPeer()
+        foo,ourhost,ourport=self.transport.getPeer()
+        foo,theirhost,theirport=self.otherConn.transport.getPeer()
         f=open(self.logging,"a")
-        f.write("%s\t%s:%s\n"%((proto==self and '>' or '<'),host,port))
+        f.write("%s\t%s:%d %s %s:%d\n"%(time.ctime(),
+                                        ourhost,ourport,
+                                        (proto==self and '<' or '>'),
+                                        theirhost,theirport))
         while data:
             p,data=data[:16],data[16:]
             f.write(string.join(map(lambda x:'%02X'%ord(x),p),' ')+' ')
+            f.write((16-len(p))*3*' ')
             for c in p:
                 if len(repr(c))>3: f.write('.')
                 else: out=f.write(c)
             f.write('\n')
+        f.write('\n')
         f.close()
 
     def _approveConnection(self,skt,addr):
