@@ -95,7 +95,5 @@ class DNSServerFactory(protocol.ServerFactory):
         print repr(message.toStr())
         try:
             protocol.writeMessage(message)
-            print 'tcp'
         except TypeError:
-            protocol.writeMessage(address, message)
-            print 'udp'
+            protocol.writeMessage(message, address)
