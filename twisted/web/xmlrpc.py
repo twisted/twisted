@@ -127,6 +127,7 @@ class XMLRPC(resource.Resource):
         except:
             f = Fault(self.FAILURE, "can't serialize output")
             s = xmlrpclib.dumps(f, methodresponse=1)
+        request.setHeader("content-length", str(len(s)))
         request.write(s)
         request.finish()
 
