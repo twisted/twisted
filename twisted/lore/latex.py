@@ -1,19 +1,19 @@
 # Twisted, the Framework of Your Internet
 # Copyright (C) 2001-2002 Matthew W. Lefkowitz
-# 
+#
 # This library is free software; you can redistribute it and/or
 # modify it under the terms of version 2.1 of the GNU Lesser General Public
 # License as published by the Free Software Foundation.
-# 
+#
 # This library is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
 # Lesser General Public License for more details.
-# 
+#
 # You should have received a copy of the GNU Lesser General Public
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
-# 
+#
 
 from twisted.web import microdom, domhelpers
 from twisted.python import text
@@ -141,7 +141,7 @@ class LatexSpitter(BaseLatexSpitter):
         os.system('gzip %s_hacked.dia' % (src,))
         os.system('mv %s_hacked.dia.gz %s_hacked.dia' % (src,src))
         # Let's pretend we never saw that.
-        
+
         # Silly dia needs an X server, even though it doesn't display anything.
         # If this is a problem for you, try using Xvfb.
         os.system("dia %s_hacked.dia -n -e %s" % (src, target))
@@ -167,7 +167,7 @@ class LatexSpitter(BaseLatexSpitter):
         if caption == fileName:
             caption = 'Source listing'
         self.writer('\parbox[b]{\linewidth}{\\begin{center}%s --- '
-                    '\\begin{em}%s\\end{em}\\end{center}}' 
+                    '\\begin{em}%s\\end{em}\\end{center}}'
                     % (latexEscape(caption), latexEscape(fileName)))
 
     def visitNode_a_href(self, node):
@@ -198,7 +198,7 @@ class LatexSpitter(BaseLatexSpitter):
         self.visitNodeDefault(node)
 
     def visitNode_table(self, node):
-        rows = [[col for col in row.childNodes 
+        rows = [[col for col in row.childNodes
                      if getattr(col, 'tagName', None) in ('th', 'td')]
             for row in node.childNodes if getattr(row, 'tagName', None)=='tr']
         numCols = 1+max([len(row) for row in rows])
@@ -216,7 +216,7 @@ class LatexSpitter(BaseLatexSpitter):
                 self.writer('\\hline\n')
         self.writer('\\end{tabular}\n')
         if node.hasAttribute('title'):
-            self.writer('\\caption{%s}' 
+            self.writer('\\caption{%s}'
                         % latexEscape(node.getAttribute('title')))
         self.writer('\\end{center}\\end{table}\n')
 
@@ -281,7 +281,7 @@ class SectionLatexSpitter(LatexSpitter):
         self.visitNodeDefault(node)
         self.writer('\\label{%s}}\n' % os.path.basename(self.filename))
 
-    end_title = end_body = start_body = start_html = None
+    end_title = end_body = start_body = start_html = ''
 
 
 class ChapterLatexSpitter(SectionLatexSpitter):
@@ -294,7 +294,7 @@ class HeadingLatexSpitter(BaseLatexSpitter):
     end_q = "''"
 
     writeNodeData = LatexSpitter.writeNodeData.im_func
-    
+
 
 class FootnoteLatexSpitter(LatexSpitter):
     """For multi-paragraph footnotes, this avoids having an empty leading
@@ -323,7 +323,7 @@ class BookLatexSpitter(LatexSpitter):
             return self.visitNodeDefault(node)
         node.tagName += '_'+node.getAttribute('rel')
         self.visitNode(node)
-       
+
     def visitNode_link_author(self, node):
         self.writer('\\author{%s}\n' % node.getAttribute('text'))
 
@@ -338,7 +338,7 @@ class BookLatexSpitter(LatexSpitter):
 \usepackage{graphicx}
 \usepackage{times,mathptmx}
 '''
-    
+
     start_body = r'''\begin{document}
 \maketitle
 \tableofcontents
@@ -367,12 +367,12 @@ class BookLatexSpitter(LatexSpitter):
         self.writer('\\chapter{')
         self.visitNodeDefault(node)
         self.writer('}\n')
-        
+
     def visitNode_a_sect(self, node):
         base,ext=os.path.splitext(node.getAttribute('href'))
         self.writer('\\input{%s}\n' % base)
-        
-        
+
+
 
 def processFile(spitter, fin):
     dom = microdom.parse(fin).documentElement
