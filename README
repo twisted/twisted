@@ -7,7 +7,8 @@ is provided which will install Twisted and each subproject for
 you. Run the command "python setup.py --help" for more information.
 Twisted Sumo also includes Zope Interface, a dependency of Twisted and
 most of its subprojects, in a file named ZopeInterface-*.tgz in the
-root directory.
+root directory.  Twisted requires at Zope Interface 3.0.1 or
+higher. It can also work with ZopeX3 version 3.0.0c1 or higher.
 
 For information about the Twisted split that happened before 2.0, see
 http://twistedmatrix.com/products/splitfaq
