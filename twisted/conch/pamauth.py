@@ -27,11 +27,13 @@ from twisted.internet import threads, defer
 import sys, time, getpass, threading, os
 
 def pamAuthenticateThread(service, user, conv):
-    def _conv(p, items):
+    def _conv(p, items, foo):
+        print 'called conv'
         try:
             d = conv(items)
         except:
             import traceback
+            print 'FOOOFOFOFOSDFOSDF'
             traceback.print_exc()
             return
         ev = threading.Event()
@@ -43,6 +45,7 @@ def pamAuthenticateThread(service, user, conv):
             ev.set()
         reactor.callFromThread(d.addCallbacks, cb, eb)
         ev.wait()
+        print 'ASDASDASDASD'
         done = ev.r
         if done[0]:
             return done[1]
@@ -50,7 +53,9 @@ def pamAuthenticateThread(service, user, conv):
             raise done[1].type, done[1].value
 
     pam = PAM.pam()
-    pam.start(service, user, _conv)
+    pam.start(service)
+    pam.set_item(PAM.PAM_USER, user)
+    pam.set_item(PAM.PAM_CONV, _conv)
     gid = os.getegid()
     uid = os.geteuid()
     os.setegid(0)

@@ -230,9 +230,13 @@ class SSHUserAuthClient(service.SSHService):
                                   NS(self.instance.name) + NS(kind) + extraData)
     def tryAuth(self, kind):
         kind = kind.replace('-', '_')
+        log.msg('trying to auth with %s' % kind)
         f= getattr(self,'auth_%s'%kind, None)
         if f:
             return f()
+
+    def _ebAuth(self, ignored, *args):
+        self.tryAuth('none', '')
         
     def ssh_USERAUTH_SUCCESS(self, packet):
         self.transport.setService(self.instance)
@@ -275,25 +279,31 @@ class SSHUserAuthClient(service.SSHService):
                 # this will fail, we'll move on
                 return
             d.addCallback(self._cbSignedData)
-            d.addErrback(self._ebSignedData)
+            d.addErrback(self._ebAuth)
         elif self.lastAuth == 'password':
             prompt, language, rest = getNS(packet, 2)
             self._oldPass = self._newPass = None
-            self.getPassword('Old Password: ').addCallbacks(self._setOldPass, self._errPass)
-            self.getPassword(prompt).addCallbacks(self._setNewPass, self._errPass)
+            self.getPassword('Old Password: ').addCallbacks(self._setOldPass, self._ebAuth)
+            self.getPassword(prompt).addCallbacks(self._setNewPass, self._ebAuth)
         elif self.lastAuth == 'keyboard-interactive':
-            # can't handle this in the client, so just try something else
-            self.askForAuth('none', '')
-            #return self.ssh_USERAUTH_INFO_RESPONSE(packet)
+            name, instruction, lang, data = getNS(packet, 3)
+            numPrompts = struct.unpack('!L', data[:4])[0]
+            data = data[4:]
+            prompts = []
+            for i in range(numPrompts):
+                prompt, data = getNS(data)
+                echo = bool(ord(data[0]))
+                data = data[1:]
+                prompts.append((prompt, echo))
+            d = self.getGenericAnswers(name, instruction, prompts)
+            d.addCallback(self._cbGenericAnswers)
+            d.addErrback(self._ebAuth)
 
     def _cbSignedData(self, signedData):
         publicKey = self.lastPublicKey
         keyType =  getNS(publicKey)[0]
         self.askForAuth('publickey', '\xff' + NS(keyType) + NS(publicKey) + \
                         NS(signedData))
-
-    def _ebSignedData(self, ignored):
-        self.askForAuth('none', '')
 
     def _setOldPass(self, op):
         if self._newPass:
@@ -311,8 +321,11 @@ class SSHUserAuthClient(service.SSHService):
         else:
             self._newPass = np
 
-    def _errPass(self, reason):
-        self.askForAuth('none', '')
+    def _cbGenericAnswers(self, responses):
+        data = struct.pack('!L', len(responses))
+        for r in responses:
+            data += NS(r.encode('UTF8'))
+        self.transport.sendPacket(MSG_USERAUTH_INFO_RESPONSE, data)
 
     def auth_publickey(self):
         publicKey = self.getPublicKey()
@@ -327,13 +340,18 @@ class SSHUserAuthClient(service.SSHService):
         else:
             return 0
 
-    def auth_password(self):
+    def authdont_password(self):
         d = self.getPassword()
         if d:
             d.addCallbacks(self._cbPassword, self._errPass)
             return 1
         else: # returned None, don't do password auth
             return 0
+
+    def auth_keyboard_interactive(self):
+        log.msg('authing with keyboard-interactive')
+        self.askForAuth('keyboard-interactive', NS('') + NS(''))
+        return 1
 
     def _cbPassword(self, password):
         self.askForAuth('password', '\x00'+NS(password))
@@ -385,6 +403,19 @@ class SSHUserAuthClient(service.SSHService):
         """
         raise NotImplementedError
 
+    def getGenericAnswers(self, name, instruction, prompts):
+        """
+        Returns a C{Deferred} with the responses to the promopts.
+
+        name is the name of the authentication currently
+        in progress.
+        instruction describes what the authentication wants.
+        prompts is a list of (prompt, echo) pairs.
+            prompt is the prompt to display.
+            echo is a C{bool}.  If False, do not display what the
+            user types for this prompt.
+        """
+        raise NotImplementedError
 MSG_USERAUTH_REQUEST          = 50
 MSG_USERAUTH_FAILURE          = 51
 MSG_USERAUTH_SUCCESS          = 52

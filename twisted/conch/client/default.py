@@ -186,3 +186,20 @@ class SSHUserAuthClient(userauth.SSHUserAuthClient):
             print
             reactor.stop()
 
+    def getGenericAnswers(self, name, instruction, prompts):
+        responses = []
+        try:
+            oldout, oldin = sys.stdout, sys.stdin
+            sys.stdin = sys.stdout = open('/dev/tty','r+')
+            if name:
+                print name
+            if instruction:
+                print instruction
+            for prompt, echo in prompts:
+                if echo:
+                    responses.append(raw_input(prompt))
+                else:
+                    responses.append(getpass.getpass(prompt))
+        finally: 
+            sys.stdout,sys.stdin=oldout,oldin
+        return defer.succeed(responses)

@@ -33,7 +33,7 @@ class ConchOptions(usage.Options):
     optFlags = [['version', 'V', 'Display version number only.'],
                 ['compress', 'C', 'Enable compression.'],
                 ['log', 'v', 'Log to stderr'],
-                ['nocache', 'I', 'Do not use an already existing connection if it exists.'],
+                ['nocache', 'I', 'Do not allow connection sharing over this connection.'],
                 ['nox11', 'x', 'Disable X11 connection forwarding (default)'],
                 ['agent', 'A', 'Enable authentication agent forwarding.'],
                 ['noagent', 'a', 'Disable authentication agent forwarding (default.'],

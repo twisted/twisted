@@ -15,7 +15,7 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 #
 """
-Implements the key agent protocol.
+Implements the old SSHv1 key agent protocol.
 
 This module is unstable.
 
@@ -23,7 +23,6 @@ Maintainer: U{Paul Swartz<mailto:z3p@twistedmatrix.com>}
 """
 
 import struct
-from channel import SSHChannel
 from common import NS, getNS
 from twisted.conch.error import ConchError
 from twisted.internet import defer, protocol
@@ -103,7 +102,6 @@ class SSHAgentServer(protocol.Protocol):
 
     def __init__(self):
         self.buf = '' 
-        self.keys = {} # public blob -> (private object, comment)
 
     def dataReceived(self, data):
         self.buf += data
