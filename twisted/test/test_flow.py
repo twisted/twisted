@@ -17,6 +17,7 @@
 # Author: Clark C. Evans
 #
 from twisted.flow import flow
+from twisted.flow.threads import Threaded
 from twisted.trial import unittest
 from twisted.python import failure
 from twisted.internet import defer, reactor, protocol
@@ -298,6 +299,14 @@ class FlowTest(unittest.TestCase):
         rhs = list(flow.Block(mrg))
         self.assertEqual(lhs,rhs)
 
+    def testLineBreak(self):
+        lhs = [ "Hello World", "Happy Days Are Here" ]
+        rhs = ["Hello ","World\nHappy", flow.Cooperate(), 
+               " Days"," Are Here\n"]
+        mrg = flow.LineBreak(slowlist(rhs), delimiter='\n')
+        rhs = list(flow.Block(mrg))
+        self.assertEqual(lhs,rhs)
+
     def testDeferred(self):
         lhs = ['Title', (1,'one'),(2,'two'),(3,'three')]
         d = flow.Deferred(consumer())
@@ -397,12 +406,12 @@ class FlowTest(unittest.TestCase):
 
     def testThreaded(self):
         expect = [5,4,3,2,1]
-        d = flow.Deferred(flow.Threaded(CountIterator(5)))
+        d = flow.Deferred(Threaded(CountIterator(5)))
         self.assertEquals(expect, unittest.deferredResult(d))
 
     def testThreadedSleep(self):
         expect = [5,4,3,2,1]
-        d = flow.Deferred(flow.Threaded(CountIterator(5)))
+        d = flow.Deferred(Threaded(CountIterator(5)))
         sleep(.5)
         self.assertEquals(expect, unittest.deferredResult(d))
         
@@ -414,7 +423,7 @@ class FlowTest(unittest.TestCase):
         """
         expect = [5,4,3,2,1]
         result = []
-        f = flow.Threaded(CountIterator(5))
+        f = Threaded(CountIterator(5))
         def callback():
             result.extend(f.results)
             f.results = []

@@ -118,4 +118,3 @@ from twisted.flow.pipe import *
 from twisted.flow.wrap import wrap
 from twisted.flow.controller import Deferred, Block
 from twisted.flow.protocol import makeProtocol, Protocol
-from twisted.flow.threads import Threaded, QueryIterator
