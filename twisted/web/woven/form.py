@@ -239,9 +239,9 @@ class FormProcessor(resource.Resource):
     mangle_boolean = mangle_single
 
     def mangle_flags(self, args):
-        if arg is None:
+        if args is None:
             return []
-        return arg
+        return args
 
 from twisted.python.formmethod import FormMethod
 
