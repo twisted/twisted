@@ -103,7 +103,7 @@ def deferredError(d, timeout=None):
     if isinstance(result, failure.Failure):
         return result
     else:
-        raise unittest.FailTest, "Deferred did not fail: %r" % result
+        raise unittest.FailTest, "Deferred did not fail: %r" % (result,)
 
 
 def extract_tb(tb, limit=None):
