@@ -293,9 +293,9 @@ class Form(StreamWidget):
       |  class HelloForm(widgets.Form):
       |      formFields = [
       |          ['string', 'Who to greet?', 'whoToGreet', 'World'],
-      |          ['menu', 'How to greet?', 'how', ['cheerfully', 'with a smile',
-      |                                            'sullenly', 'without enthusiasm',
-      |                                            'spontaneously', 'on the spur of the moment']]]
+      |          ['menu', 'How to greet?', 'how', [('cheerfully', 'with a smile'),
+      |                                            ('sullenly', 'without enthusiasm'),
+      |                                            ('spontaneously', 'on the spur of the moment')]]]
       |      def process(self, write, request, submit, whoToGreet, how):
       |          write('The web wakes up and %s says, \"Hello, %s!\"' % (how, whoToGreet))
 
