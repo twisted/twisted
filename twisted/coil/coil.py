@@ -29,34 +29,8 @@ import sys
 import os
 
 # Twisted Imports
-from twisted.python.util import uniquify, getPluginDirs
-from twisted.python import log
-
-
-def getAllBases(inClass):
-    """Get all super-classes of a given class.
-
-    Recursively determine the entire hierarchy above a certain class, and
-    return it as a list.
-    """
-    # in older versions of jython list() doesn't return a copy
-    classes = list(inClass.__bases__)[:]
-    for base in inClass.__bases__:
-        classes.extend(getAllBases(base))
-    return uniquify(classes)
-
-
-def getClass(name):
-    """Turn a fully-qualified class name into a class.
-
-    This assumes that the class has already been imported and will raise an
-    undefined exception if it has not.
-    """
-    name = string.split(name, '.')
-    obj = sys.modules[name[0]]
-    for n in name[1:]:
-        obj = getattr(obj, n)
-    return obj
+from twisted.python.util import getPluginDirs
+from twisted.python import log, reflect
 
 
 class ClassHierarchy:
@@ -86,7 +60,7 @@ class ClassHierarchy:
             return ()
         superClasses, subClasses = self.classes[className]
         if asClasses:
-            return tuple(map(getClass, subClasses))
+            return tuple(map(reflect.namedClass, subClasses))
         else:
             return tuple(subClasses)
 
@@ -104,7 +78,7 @@ class ClassHierarchy:
             className = classOrString
         superClasses, subClasses = self.classes[className]
         if asClasses:
-            return tuple(map(getClass, superClasses))
+            return tuple(map(reflect.namedClass, superClasses))
         else:
             return tuple(superClasses)
 
@@ -117,7 +91,7 @@ class ClassHierarchy:
         else:
             superClasses, subClasses = [], []
             self.classes[className] = superClasses, subClasses
-        for base in getAllBases(inClass):
+        for base in reflect.allYourBase(inClass):
             baseName = str(base)
             if baseName not in superClasses:
                 self.registerClass(base)
