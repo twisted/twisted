@@ -105,6 +105,11 @@ class InterfacesTestCase(unittest.TestCase):
               [(2, (3, (4,)), (1, 5)), [2, 3, 4, 1, 5]],
               [(), []],
               )
+
+    def testModules(self):
+        self.assertEquals(components.Interface.__module__, "twisted.python.components")
+        self.assertEquals(IAdder.__module__, "twisted.test.test_components")
+    
     def testTupleTrees(self):
         for tree, result in self.tuples:
             self.assertEquals(components.tupleTreeToList(tree), result)

@@ -141,7 +141,9 @@ def fixClassImplements(klass):
         return
     if hasattr(klass, "__implements__") and isinstance(klass.__implements__, (tuple, MetaInterface)):
         warnings.warn("Please use implements(), not __implements__ for class %s" % klass, DeprecationWarning, stacklevel=3)
-        declarations.classImplementsOnly(klass, *tupleTreeToList(klass.__implements__))
+        iList = tupleTreeToList(klass.__implements__)
+        if iList:
+            declarations.classImplementsOnly(klass, *iList)
         _fixedClasses[klass] = 1
 
 ALLOW_DUPLICATES = 0
@@ -214,6 +216,12 @@ class MetaInterface(interface.InterfaceClass):
                  __module__=None):
         self.__attrs = {}
         if attrs is not None:
+            if __module__ == None and attrs.has_key('__module__'):
+                __module__ = attrs['__module__']
+                del attrs['__module__']
+            if __doc__ == None and attrs.has_key('__doc__'):
+                __doc__ = attrs['__doc__']
+                del attrs['__doc__']
             if attrs.has_key("__adapt__"):
                 warnings.warn("Please don't use __adapt__ on Interface subclasses", DeprecationWarning, stacklevel=2)
                 self.__instadapt__ = attrs["__adapt__"]
@@ -294,7 +302,8 @@ class MetaInterface(interface.InterfaceClass):
         registry.register([self], to, '', using)
 
     def __getattr__(self, attr):
-        warnings.warn("Don't get attributes off Interface, use .queryDescriptionFor() etc. instead", DeprecationWarning)
+        warnings.warn("Don't get attributes off Interface, use .queryDescriptionFor() etc. instead",
+                      DeprecationWarning, stacklevel=3)
         if self.__attrs.has_key(attr):
             return self.__attrs[attr]
         result = self.queryDescriptionFor(attr)
