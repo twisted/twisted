@@ -39,6 +39,8 @@ TODO:
 
 from __future__ import nested_scopes
 from twisted.internet.protocol import Protocol, FileWrapper
+from twisted.python.reflect import prefixedMethodNames
+from twisted.python.compat import dict
 
 import string
 
@@ -47,6 +49,31 @@ lenientIdentChars = identChars + ';+#'
 
 def nop(*args, **kw):
     "Do nothing."
+
+
+def unionlist(*args):
+    l = []
+    for x in args: 
+        l.extend(x)
+    d = dict([(x, 1) for x in l])
+    return d.keys()
+    
+    
+def zipfndict(*args, **kw):
+    default = kw.get('default', nop)
+    d = {}
+    for key in unionlist(*[fndict.keys() for fndict in args]):
+        d[key] = tuple([x.get(key, default) for x in args])
+    return d
+
+        
+def prefixedMethodClassDict(clazz, prefix):
+    return dict([(name, getattr(clazz, prefix + name)) for name in prefixedMethodNames(clazz, prefix)])
+
+
+def prefixedMethodObjDict(obj, prefix):
+    return dict([(name, getattr(obj, prefix + name)) for name in prefixedMethodNames(obj.__class__, prefix)])
+
     
 class ParseError(Exception):
 
@@ -59,7 +86,6 @@ class ParseError(Exception):
     def __str__(self):
        return "%s:%s:%s: %s" % (self.filename, self.line, self.col,
                                 self.message)
-
 
 class XMLParser(Protocol):
 
@@ -81,23 +107,43 @@ class XMLParser(Protocol):
     def _parseError(self, message):
         raise ParseError(*((self.filename,)+self.saveMark()+(message,)))
 
+    def _buildStateTable(self):
+        '''Return a dictionary of begin, do, end state function tuples'''
+        # _buildStateTable leaves something to be desired
+        # but it does what it does.. probably slowly, 
+        # so I'm doing some evil caching so it doesn't get called
+        # more than once per class.
+        stateTable = getattr(self.__class__, '__stateTable', None)
+        if stateTable is None:
+            stateTable = self.__class__.__stateTable = zipfndict(*[prefixedMethodObjDict(self, prefix) for prefix in ('begin_', 'do_', 'end_')])
+        return stateTable
+        
+    def _decode(self, data):
+        if 'UTF-16' in self.encodings or 'UCS-2' in self.encodings:
+            assert not len(data) & 1, 'UTF-16 must come in pairs for now'
+        for encoding in self.encodings:
+            data = unicode(data, encoding)
+        return data
+
     def dataReceived(self, data):
+        stateTable = self._buildStateTable()
         if not self.state:
+            # all UTF-16 starts with this string
             if data.startswith('\xff\xfe'):
                 self.encodings.append('UTF-16')
             self.state = 'begin'
         if self.encodings:
-            if 'UTF-16' in self.encodings or 'UCS-2' in self.encodings:
-                assert not len(data) & 1, 'UTF-16 must come in pairs for now'
-            for encoding in self.encodings:
-                data = unicode(data, encoding)
-        curState = self.state
-        stateFn = getattr(self, 'do_' + curState)
+            data = self._decode(data)
+        # bring state, lineno, colno into local scope 
         lineno, colno = self.lineno, self.colno
+        curState = self.state
+        # replace saveMark with a nested scope function
         _saveMark = self.saveMark
         def saveMark():
             return (lineno, colno)
         self.saveMark = saveMark
+        # fetch functions from the stateTable
+        beginFn, doFn, endFn = stateTable[curState]
         try:
             for byte in data:
                 # do newline stuff
@@ -106,15 +152,17 @@ class XMLParser(Protocol):
                     colno = 0
                 else:
                     colno += 1
-                newState = stateFn(byte)
+                newState = doFn(byte)
                 if newState is not None and newState != curState:
-                    getattr(self, "end_" + curState, nop)()
-                    getattr(self, "begin_" + newState, nop)(byte)
+                    # this is the endFn from the previous state
+                    endFn()
                     curState = newState
-                    stateFn = getattr(self, "do_" + curState)
+                    beginFn, doFn, endFn = stateTable[curState]
+                    beginFn(byte)
         finally:
             self.saveMark = _saveMark
             self.lineno, self.colno = lineno, colno
+        # state doesn't make sense if there's an exception..
         self.state = curState
 
     # state methods
