@@ -15,7 +15,7 @@
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 #
-# $Id: mktap.py,v 1.33 2003/04/11 16:56:18 exarkun Exp $
+# $Id: mktap.py,v 1.34 2003/04/27 04:09:15 itamarst Exp $
 
 """ Implementation module for the `mktap` command.
 """
@@ -25,7 +25,11 @@ from twisted.internet import app
 from twisted.python import usage, util
 from twisted.spread import pb
 
-import sys, traceback, os, cPickle, glob, operator
+import sys, traceback, os, glob, operator
+try:
+    import cPickle
+except ImportError:
+    import pickle as cPickle
 try:
     import pwd
 except ImportError:
