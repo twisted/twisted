@@ -227,8 +227,9 @@ class DemoRemoteReporter:
         print ("%.2f %.2f %.2f %.2f %.2f " % times), " ".join(map(str, args))
 
 
-from twisted.internet import app
-class _Demo(app.ApplicationService):
+from twisted.application import service
+
+class _Demo(service.Service):
     """Demonstrate trial.remote by spawning trial in a subprocess
     and displaying results.  Wrapped in an ApplicationService so I can
     use twistd --debug on it.
@@ -252,9 +253,7 @@ class _Demo(app.ApplicationService):
 def demo():
     """Make a .tap which will demonstrate trial.remote."""
     from twisted.trial import remote
-    myApp = app.Application("tdemo")
-    remote._Demo("trialDemo", myApp)
+    myApp = service.Application("tdemo")
+    remote._Demo().setServiceParent(myApp)
     myApp.save()
     print "demo saved to tdemo.tap"
-
-
