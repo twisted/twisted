@@ -204,7 +204,7 @@ class Augmentation:
         """worker method to load objects from a table.
         """
         if not rowClass.populated:
-            row._populateRowClass(transaction, self, rowClass, tableName, keyColumns)
+            raise row.DBError("unpopulated Row Class")
 
         # get the data from the table
         sql = """SELECT * FROM %s WHERE %s""" % (tableName, whereClause)

@@ -69,23 +69,20 @@ def selected(room):
     print "\ngot Room:", room
     main.shutDown()
 
-def test(stuff):
-    global newRoom
-    print "stuff:",stuff
+def runTests(stuff):
     manager.loadObjectsFrom("rooms", [("room_id", "int4")], RoomRow).addCallback(gotRooms).arm()
     qRoom = RoomRow( room_id=11)
     qRoom.selectRow().addCallback(selected).arm()
     
-dbpool = adbapi.ConnectionPool("pyPgSQL.PgSQL", "crue:5432", database="sean-test")
+dbpool = adbapi.ConnectionPool("pyPgSQL.PgSQL", "localhost:5432", database="sean")
 manager = adbapi.Augmentation(dbpool)
 newRoom = None
 
 # Create Twisted application object
 application = main.Application("testApp")
 
-row.populateRowClass(manager, RoomRow, "rooms", [("room_id", "int4")]).addCallback(test).arm()
+stubs = [ (RoomRow, "rooms", [("room_id","int4")]) ]
+reflector = row.DBReflector(manager, stubs)
+reflector.populate().addCallback(runTests).arm()
 
 application.run()
-
-
-    

@@ -1,11 +1,10 @@
 
-
 class DBError(Exception):
     pass
 
 class RowObject:
     """I represent a row in a table in a relational database. My class is "populated"
-    by the buildRowClass method of this module. After I am populated, instances of me
+    by a DBReflector object. After I am populated, instances of me
     are able to interact with a particular database table.
 
     You should use a class derived from this class for each database table.
@@ -42,7 +41,7 @@ class RowObject:
                 raise DBError(" wrong key argument: <%s>" % key)
         # set the key attributes
         self.__dict__.update(kw)             
-    
+
     def updateRow(self):
         """update my contents to the database.
         """
@@ -127,134 +126,170 @@ class RowObject:
     def setSync(self):
         self.insync = 1
 
-def populateRowClass(aug, rowClass, tableName, keyColumns):
-    return aug.runInteraction(_populateRowClass, aug, rowClass, tableName, keyColumns)
-                   
-def _populateRowClass(transaction, aug, rowClass, tableName, keyColumns):
-    """construct all the SQL for database operations on <tableName> and
-    populate the class <rowClass> with that info.
-    NOTE: works with Postgresql for now...
-    NOTE: 26 - 29 are system column types that you shouldn't use...
+
+class DBReflector:
+    """I am a class able to interrogate a relational database to extract
+    system schema information and build RowObject class objects that can
+    interact with specific tables.
+
+    I manage the construction of these class in a deferred manner. When
+    all the specified classes are constructed, the "ready" method is
+    called.
+
+    <stubs> is a set of definitions of classes to construct:
+       [ (StubClass, databaseTableName, KeyColumns) ]
+
+    StubClass is a user-defined class that the constructed class will be
+    constructed from. It should be derived from RowObject
+       
+    """
+
+    def __init__(self, augmentation, stubs):
+        self.aug = augmentation
+        self.stubs = stubs
+
+    def populate(self):
+        """This actually runs the population of the classes. It returns
+        a deferred that applications can use to tell when the process
+        is complete.
+        """
+        return self.aug.runInteraction(self.constructClasses)
     
-    """
-    if rowClass.tableName and rowClass.tableName != tableName:
-        raise ("ERROR: class %s has already had SQL generated for table %s." % (repr(rowClass), tableName) )
+    def constructClasses(self, transaction):
+        """Used to construct the row classes in a single interaction.
+        """
+        for (stubClass, tableName, keyColumns) in self.stubs:
+            print "Constructing class %s for table %s" %(repr(stubClass), tableName)
+            if not issubclass(stubClass, RowObject):
+                raise DBError("Stub class must be derived from RowClass")
 
-    sql = """SELECT pg_attribute.attname, pg_type.typname, pg_attribute.atttypid
-    FROM pg_class, pg_attribute, pg_type
-    WHERE pg_class.oid = pg_attribute.attrelid
-    AND pg_attribute.atttypid = pg_type.oid
-    AND pg_class.relname = '%s'
-    AND pg_attribute.atttypid not in (26,27,28,29)""" % tableName
+            self._populateRowClass(transaction, self.aug, stubClass, tableName, keyColumns)
 
-    # get the columns for the table
-    transaction.execute(sql)
-    columns = transaction.fetchall()
+    def _populateRowClass(self, transaction, aug, rowClass, tableName, keyColumns):
+        """construct all the SQL for database operations on <tableName> and
+        populate the class <rowClass> with that info.
+        NOTE: works with Postgresql for now...
+        NOTE: 26 - 29 are system column types that you shouldn't use...
 
-    # populate rowClass data
-    rowClass.tableName = tableName
-    rowClass.columns = columns
-    rowClass.keyColumns = keyColumns
-    rowClass.augmentation = aug
+        """
+        if rowClass.tableName and rowClass.tableName != tableName:
+            raise ("ERROR: class %s has already had SQL generated for table %s." % (repr(rowClass), tableName) )
 
-    rowClass.selectSQL = buildSelectSQL(rowClass, tableName, columns, keyColumns)
-    rowClass.updateSQL = buildUpdateSQL(rowClass, tableName, columns, keyColumns)
-    rowClass.insertSQL = buildInsertSQL(tableName, columns)
-    rowClass.deleteSQL = buildDeleteSQL(tableName, keyColumns)
-    rowClass.populated = 1
-    return rowClass
+        sql = """SELECT pg_attribute.attname, pg_type.typname, pg_attribute.atttypid
+        FROM pg_class, pg_attribute, pg_type
+        WHERE pg_class.oid = pg_attribute.attrelid
+        AND pg_attribute.atttypid = pg_type.oid
+        AND pg_class.relname = '%s'
+        AND pg_attribute.atttypid not in (26,27,28,29)""" % tableName
 
-def buildSelectSQL(rowClass, tableName, columns, keyColumns):
-    """build the SQL to select a single row from the database
-    for a rowObject.
-    """
-    sql = "SELECT "
-    # build select columns
-    first = 1        
-    for column, type, typeid in columns:
-        if getKeyColumn(rowClass, column):
-            continue
-        if not first:
-            sql = sql + ", "
-        sql = sql + "  %s" % (column)
-        first = 0
+        # get the columns for the table
+        transaction.execute(sql)
+        columns = transaction.fetchall()
 
-    sql = sql + " FROM %s WHERE " % tableName
-    
-    # build where clause
-    first = 1
-    for keyColumn, type in keyColumns:
-        if not first:
-            sql = sql + " AND "
-        sql = sql + "   %s = %s " % (keyColumn, quote("%s", type) )
-        first = 0
-    print "Generated SQL:", sql
-    return sql
+        # populate rowClass data
+        rowClass.tableName = tableName
+        rowClass.columns = columns
+        rowClass.keyColumns = keyColumns
+        rowClass.augmentation = aug
 
-def buildUpdateSQL(rowClass, tableName, columns, keyColumns):
-    """build the SQL to update objects to the database. This
-    return SQL that is used to contruct a rowObject class.
-    """
-    sql = "UPDATE %s SET" % tableName
-    # build update attributes
-    first = 1        
-    for column, type, typeid in columns:
-        if getKeyColumn(rowClass, column):
-            continue
-        if not first:
-            sql = sql + ", "
-        sql = sql + "  %s = %s" % (column, quote("%s", type))
-        first = 0
+        rowClass.selectSQL = self.buildSelectSQL(rowClass, tableName, columns, keyColumns)
+        rowClass.updateSQL = self.buildUpdateSQL(rowClass, tableName, columns, keyColumns)
+        rowClass.insertSQL = self.buildInsertSQL(tableName, columns)
+        rowClass.deleteSQL = self.buildDeleteSQL(tableName, keyColumns)
+        rowClass.populated = 1
+        return rowClass
 
-    # build where clause
-    first = 1
-    sql = sql + "  WHERE "
-    for keyColumn, type in keyColumns:
-        if not first:
-            sql = sql + " AND "
-        sql = sql + "   %s = %s " % (keyColumn, quote("%s", type) )
-        first = 0
-    #print "Generated SQL:", sql
-    return sql
+    def buildSelectSQL(self, rowClass, tableName, columns, keyColumns):
+        """build the SQL to select a single row from the database
+        for a rowObject.
+        """
+        sql = "SELECT "
+        # build select columns
+        first = 1        
+        for column, type, typeid in columns:
+            if getKeyColumn(rowClass, column):
+                continue
+            if not first:
+                sql = sql + ", "
+            sql = sql + "  %s" % (column)
+            first = 0
 
-def buildInsertSQL(tableName, columns):
-    """Build SQL to insert a new row into the table.
-    """
-    sql = "INSERT INTO %s (" % tableName
-    # build column list
-    first = 1
-    for column, type, typeid in columns:
-        if not first:
-            sql = sql + ", "
-        sql = sql + column
-        first = 0
+        sql = sql + " FROM %s WHERE " % tableName
 
-    sql = sql + " ) VALUES ("
+        # build where clause
+        first = 1
+        for keyColumn, type in keyColumns:
+            if not first:
+                sql = sql + " AND "
+            sql = sql + "   %s = %s " % (keyColumn, quote("%s", type) )
+            first = 0
+        print "Generated SQL:", sql
+        return sql
 
-    # build values list
-    first = 1
-    for column, type, typeid in columns:
-        if not first:
-            sql = sql + ", "
-        sql = sql + quote("%s", type)
-        first = 0
+    def buildUpdateSQL(self, rowClass, tableName, columns, keyColumns):
+        """build the SQL to update objects to the database. This
+        return SQL that is used to contruct a rowObject class.
+        """
+        sql = "UPDATE %s SET" % tableName
+        # build update attributes
+        first = 1        
+        for column, type, typeid in columns:
+            if getKeyColumn(rowClass, column):
+                continue
+            if not first:
+                sql = sql + ", "
+            sql = sql + "  %s = %s" % (column, quote("%s", type))
+            first = 0
 
-    sql = sql + ")"
-    return sql
+        # build where clause
+        first = 1
+        sql = sql + "  WHERE "
+        for keyColumn, type in keyColumns:
+            if not first:
+                sql = sql + " AND "
+            sql = sql + "   %s = %s " % (keyColumn, quote("%s", type) )
+            first = 0
+        #print "Generated SQL:", sql
+        return sql
 
-def buildDeleteSQL(tableName, keyColumns):
-    """Build the SQL to delete a row from the table.
-    """
-    sql = "DELETE FROM %s " % tableName
-    # build where clause
-    first = 1
-    sql = sql + "  WHERE "
-    for keyColumn, type in keyColumns:
-        if not first:
-            sql = sql + " AND "
-        sql = sql + "   %s = %s " % (keyColumn, quote("%s", type) )
-        first = 0
-    return sql
+    def buildInsertSQL(self, tableName, columns):
+        """Build SQL to insert a new row into the table.
+        """
+        sql = "INSERT INTO %s (" % tableName
+        # build column list
+        first = 1
+        for column, type, typeid in columns:
+            if not first:
+                sql = sql + ", "
+            sql = sql + column
+            first = 0
+
+        sql = sql + " ) VALUES ("
+
+        # build values list
+        first = 1
+        for column, type, typeid in columns:
+            if not first:
+                sql = sql + ", "
+            sql = sql + quote("%s", type)
+            first = 0
+
+        sql = sql + ")"
+        return sql
+
+    def buildDeleteSQL(self, tableName, keyColumns):
+        """Build the SQL to delete a row from the table.
+        """
+        sql = "DELETE FROM %s " % tableName
+        # build where clause
+        first = 1
+        sql = sql + "  WHERE "
+        for keyColumn, type in keyColumns:
+            if not first:
+                sql = sql + " AND "
+            sql = sql + "   %s = %s " % (keyColumn, quote("%s", type) )
+            first = 0
+        return sql
 
 
 NOQUOTE = 1
