@@ -32,7 +32,7 @@ TODO:
    Currently binary only. Ignores TYPE
 
  * Missing commands
-   HELP, REST, ...
+   HELP, REST, STAT, ...
 
  * Print out directory-specific messages
    As in READMEs etc
@@ -46,11 +46,9 @@ TODO:
    The paths are done by os.path; but I should have something more generic
    (twisted.python.path anyone?)
 
- * Configuration
-   All config is now through BOLD_CASE_CONSTANTS(tm)
-
  * Etc
-   Documentation, Logging, Procedural content, Localization...
+   Documentation, Logging, Procedural content, Localization, Telnet PI,
+   stop LIST from blocking...
 
 DOCS:
 
@@ -165,7 +163,7 @@ class DTP(protocol.Protocol):
         self.pi.queuedfile = None # just incase
         self.transport.loseConnection()
 
-    def makeGetTransport(self):
+    def makeTransport(self):
         transport = self.transport
         transport.finish = self.finishGet
         return transport
@@ -179,7 +177,7 @@ class DTP(protocol.Protocol):
         "Send the given file to the peer"
         self.file = open(queuedfile, "rb")
         self.filesize = os.path.getsize(queuedfile)
-        dtp = sendFileTransfer(self.file, self.filesize, self.makeGetTransport())
+        dtp = sendFileTransfer(self.file, self.filesize, self.makeTransport())
         dtp.resumeProducing()
 
     #
@@ -192,6 +190,7 @@ class DTP(protocol.Protocol):
             self.pi.reply('fileok')
             self.pi.queuedfile = None
         self.action = None
+        self.pi.dtpPort.loseConnection()
 
     def dataReceived(self, data):
         if (self.action == 'STOR') and (self.file):
@@ -290,15 +289,15 @@ class FTP(protocol.Protocol, protocol.Factory):
         if params=='':
             return 1
         self.user = params.split()[0]
-        if self.factory.config.anonymous and self.user == self.factory.config.useranonymous:
+        if self.factory.anonymous and self.user == self.factory.useranonymous:
             self.reply('guest')
-            self.root = self.factory.config.root
+            self.root = self.factory.root
             self.wd = '/'
         else:
             # TODO:
             # Add support for home-dir
             self.reply('user', self.user)
-            self.root = self.factory.config.root
+            self.root = self.factory.root
             self.wd = '/'
         # Flush settings
         self.passwd = None
@@ -311,7 +310,7 @@ class FTP(protocol.Protocol, protocol.Factory):
             self.reply('nouser')
             return
         self.passwd = params
-        if self.user == self.factory.config.useranonymous:
+        if self.user == self.factory.useranonymous:
             self.reply('guestok')
         else:
             # Authing follows
@@ -389,16 +388,11 @@ class FTP(protocol.Protocol, protocol.Factory):
             self.dtp = None
         self.dtp = self.buildProtocol(self.peerport)
         self.dtpPort = tcp.Client(self.peerhost, self.peerport, self.dtp)
-        self.dtp.transport = self.dtpPort
-        self.dtp.pi = self
 
     def buildProtocol(self,addr):
         p = DTP()
         p.factory = self
         p.pi = self
-        p.transport = self.dtpPort
-        if self.dtpPort:
-            p.DTPLoseConnection = self.dtpPort.loseConnection
         self.dtp = p
         return p
 
@@ -419,7 +413,7 @@ class FTP(protocol.Protocol, protocol.Factory):
         if peerport < 1024:
             self.reply('notimpl')
             return
-        if not self.factory.config.thirdparty:
+        if not self.factory.thirdparty:
             sockname = self.transport.getPeer()
             if not (peerhost == sockname[1]):
                 self.reply('notimpl')
@@ -557,7 +551,7 @@ class FTP(protocol.Protocol, protocol.Factory):
         if self.checkauth():
             return
         if self.dtp.transport.connected:
-            self.dtp.loseConnection()
+            self.dtp.finishGet() # not 100 % perfect on uploads
         self.reply('abort')
 
     def processLine(self, line):
@@ -596,9 +590,11 @@ class FTP(protocol.Protocol, protocol.Factory):
                   
 class ShellFactory(protocol.Factory):
     command = ''
-    done = None
-    parent = None
     userdict = {}
+    anonymous = 0
+    thirdpart = 0
+    root = '/usr/bin/local'
+    useranonymous = 'anonymous'
  
     def buildProtocol(self, addr):
         p=FTP()
