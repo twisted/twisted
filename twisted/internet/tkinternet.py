@@ -27,6 +27,7 @@ from twisted.python import threadable
 
 # Sibling Imports
 import main
+import task
 
 _root = None
 _condition = None
@@ -68,7 +69,7 @@ def waiter():
     waiterthread = thread.get_ident()
     while 1:
         # Do the select, see if there's any input waiting...
-        select.select(main.reads.keys(), main.writes.keys(), [], 0)
+        select.select(main.reads.keys(), main.writes.keys(), [])
         if stopped:
             return
         # Wait for the main thread to be done before select()ing again
@@ -84,6 +85,7 @@ def install(widget):
     import threading # Oh no, Mr. Bill.
     main.installWaker()
     # Replace them with versions that do wakeUp.
+    task.schedule = wakeTaskSchedule
     main.addReader = wakeAddReader
     main.addWriter = wakeAddWriter
     main.addDelayed = wakeAddDelayed
@@ -96,6 +98,12 @@ def install(widget):
 
 # capture the old functions from main
 from main import addReader, addWriter, addDelayed
+# and task
+from task import schedule
+
+def wakeTaskSchedule(function, *args, **kw):
+    apply(schedule, (function,)+args, kw)
+    main.waker.wakeUp()
 
 def wakeAddReader(reader):
     addReader(reader)
