@@ -12,7 +12,7 @@ sys.path.insert(0, os.curdir)
 
 
 from twisted.python import log
-log.startLogging(open("/tmp/process.log", "w"))
+log.startLogging(sys.stderr)
 
 from twisted.internet import protocol, reactor, stdio
 
