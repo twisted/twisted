@@ -235,3 +235,10 @@ class ConditionalTest(unittest.TestCase):
         self.failUnlessEqual(httpHeader(result, "ETag"), "MatchingTag")
         self.failUnlessEqual(httpCode(result), http.NOT_MODIFIED)
         self.failUnlessEqual(httpBody(result), "")
+
+from twisted.web import google
+class GoogleTestCase(unittest.TestCase):
+    def testCheckGoogle(self):
+        d = google.checkGoogle('site:www.twistedmatrix.com twisted')
+        r = unittest.deferredResult(d)
+        self.assertEquals(r, 'http://twistedmatrix.com/')

@@ -82,6 +82,9 @@ def checkGoogle(words):
     @returns: a Deferred which will callback with a URL or errback with a
         Failure.
     """
+    raise RuntimeError, \
+      "Use of the Google search engine in this way is a violation of the \
+      "Google terms of service."
     factory = GoogleCheckerFactory(words)
     reactor.connectTCP('www.google.com', 80, factory)
     return factory.deferred
