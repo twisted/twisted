@@ -48,7 +48,10 @@ class SSHListenForwardingChannel(channel.SSHChannel):
 
     def channelOpen(self, specificData):
         log.msg('opened forwarding channel %s' % self.id)
-        self.write('') # send the buffer
+        if len(self.client.buf)>1:
+            b = self.client.buf[1:]
+            self.client.buf = ''
+            self.write(b)
 
     def openFailed(self, reason):
         self.closed()
@@ -114,9 +117,13 @@ class SSHForwardingClient(protocol.Protocol):
 
     def __init__(self, channel):
         self.channel = channel
+        self.buf = '\000'
 
     def dataReceived(self, data):
-        self.channel.write(data)
+        if self.buf:
+            self.buf += data
+        else:
+            self.channel.write(data)
 
     def connectionLost(self, reason):
         if self.channel:
