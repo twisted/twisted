@@ -314,6 +314,11 @@ class Request(pb.Copyable, http.HTTP):
                 for name, value in self.headers.items():
                     self.sendHeader(name, value)
                 self.endHeaders()
+            
+            # if this is a "HEAD" request, we shouldn't return any data
+            if self.method == "HEAD":
+                self.write = lambda data: None
+        
         self.transport.write(data)
 
     def view_write(self, issuer, data):
