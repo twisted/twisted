@@ -16,162 +16,215 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
 """I am an interactive calendar for twisted.web.
+Use /<password> to access the protected features of calendar, posting and deleting events.
 """
 
 import calendar
 import time
-from twisted.web import html 
+import string
+from twisted.web import widgets,error
+from twisted.python import log
 
-class Calendar(html.Interface):
-    isLeaf=1
-    def __init__(self,user="",password=""):
-        html.Interface.__init__(self)
-        self.events={}
-        self.ids=[]
-        self.user=user
-        self.password=password
-
-    def makeDay(self,d,m,y):
-        if not self.events.has_key(y):
-            self.events[y]={m:{d:[]}}
-        else:
-            if not self.events[y].has_key(m):
-                self.events[y][m]={d:[]}
-            else:
-                if not self.events[y][m].has_key(d):
-                    self.events[y][m][d]=[]
-
-    def getDay(self,d,m,y):
-        if not self.events.has_key(y):
-            return []
-        if not self.events[y].has_key(m):
-            return []
-        if not self.events[y][m].has_key(d):
-            return []
-        return self.events[y][m][d]
-
-    def authorize(self,request):
-        a=request.args
-        if self.user and not a.has_key("user"): return ""
-        if self.user and a["user"][0]!=self.user: return ""
-        if self.password and not a.has_key("pass"): return ""
-        if self.password and a["pass"][0]!=self.password: return ""
-        c=""
-        if self.user:c=c+"user="+self.user
-        if self.password and c: c=c+"&"
-        if self.password: c=c+"pass="+self.password
-        if c: c="&"+c
-        return c
-
-    def setArgs(self,request):
-        request.path=self._getpath(request)
-        curtime=time.localtime(time.time())
-        self.curmonth=curtime[1]
-        self.curyear=curtime[0]
-        if request.args.has_key("month"):
-            self.month=int(request.args["month"][0])
-        else:
-            self.month=self.curmonth
-        if request.args.has_key("year"):
-            self.year=int(request.args["year"][0])
-        else:
-            self.year=self.curyear
-        self.day=curtime[2]
-        self.auth=self.authorize(request)
-
-    def pagetitle(self,request):
-        self.setArgs(request)
-        return html.Interface.pagetitle(self,request)
-
-    def content(self,request):
-        if request.args.has_key("action"):
-            if request.args["action"][0]=="post" and self.auth:
-                return self.handlePost(request)
-            elif request.args["action"][0]=="event":
-                return self.handleEvent(request)
-            elif request.args["action"][0]=="add" and self.auth:
-                self.handleAdd(request)
-            elif request.args["action"][0]=="del" and self.auth:
-                self.handleDel(request)
-            elif request.args["action"][0]=="pickle" and self.auth:
-                import cPickle
-                return html.PRE(cPickle.dumps(self.ids))
-            elif request.args["action"][0]=="load" and self.auth():
-                import cPickle
-                self.ids=cPickle.loads(request.args["data"][0])
-                for id in self.ids:
-                    self.makeDay(id.d,id.m,id.y)
-                    self.events[id.y][id.m][id.d].append(id)
-        c="""<table border=0 cellpadding=2>
-<tr>"""
-        for d in calendar.day_name:
-            c=c+"<td><center>&nbsp;%s&nbsp;</center></td>"%d
-        c=c+"</tr>\n"
-        days=calendar.monthcalendar(self.year,self.month)
-        for week in days:
-            c=c+"<tr>"
+class CalendarWidget(widgets.StreamWidget):
+    def __init__(self,year,month,getday):
+        self.month=month
+        self.year=year
+        self.getday=getday
+    def stream(self,write,request):
+        write('''<table border=0 cellpadding=2>
+<tr>''')
+        for day in calendar.day_name:
+            write("<td><center><b>&nbsp;%s&nbsp;</b></center></td>"%day)
+        write('''</tr>
+''')
+        cal=calendar.monthcalendar(self.year,self.month)
+        for week in cal:
+            write('''<tr>
+''')
             for day in week:
-                ev=self.getDay(day,self.month,self.year)
-                if day==self.day and self.month==self.curmonth and self.year==self.curyear:
-                    day="<b>%s</b>"%day
+                write("<td><center>")
                 if day:
-                    c=c+"<td><center>%s"%day
-                    for e in ev:
-                        c=c+"""<br><a href="%s?action=event&id=%s%s">%s</a>"""%(request.path,e.id,self.auth,e.short)
-                    c=c+"</center></td>"
-                else:
-                    c=c+"<td></td>"
-            c=c+"</tr>\n"
-        c=c+"</table>"
-        c=self.box(request,"%s %s"%(calendar.month_name[self.month],self.year),c)
-        if self.auth:
-            c=c+'<a href="%s?action=post%s">Post an Event</a>'%(request.path,self.auth)
+                    write(str(day))
+                inf=self.getday(request,day,self.month,self.year)
+                if inf:
+                    write("<BR>"+inf)
+                write("</center></td>")
+            write('''</tr>
+''')
+        write("</table>")
+
+class PostForm(widgets.Form):
+    formGen=widgets.Form.formGen
+    formGen['intmenu']=widgets.htmlFor_menu
+    
+    formFields = [
+        ["intmenu","Day","day",map(str,range(1,32))],
+        ["menu","Month","month",calendar.month_name[1:]],
+        ["int","Year","year",str(time.localtime(time.time())[0])],
+        ["string","Title","title",""],
+        ["text","Data","data",""]
+    ]
+
+    formParse = {
+        'int':int,
+        'intmenu':int
+    }
+
+    def __init__(self,page):
+        self.page=page
+
+    def process(self,write,request,day,month,year,title,data):
+#        day=kw['day']
+#        month=kw['month']
+#        year=kw['year']
+#        title=kw['title']
+#        data=kw['data']
+        month=calendar.month_name.index(month)
+        self.page.setDay(day,month,year,title,data)
+        return [self.page.backToCalendar(request)]
+        
+class CalendarPage(widgets.Page):
+    isLeaf = 1
+    
+    template = '''<HTML>
+<HEAD>
+<TITLE>%%%%title(request)%%%%</TITLE>
+</HEAD>
+<BODY>
+%%%%displayPage(request)%%%%
+%%%%displayAuth(request)%%%%
+</BODY>
+</HTML>'''
+
+    def __init__(self,password=None):
+        widgets.Page.__init__(self)
+        self.password=password
+        self.events={}
+
+    def setDate(self,request):
+        curtime=time.localtime(time.time())
+        if request.args.has_key("m"):
+            self.month=int(request.args['m'][0])
+        else:
+            self.month=curtime[1]
+        if request.args.has_key("y"):
+            self.year=int(request.args['y'][0])
+        else:
+            self.year=curtime[0]
+        request.auth=0
+        if request.postpath:
+            if self.password:
+                if request.postpath[0]==self.password:
+                    request.auth=1
+                    del request.postpath[0]
+            else:
+                request.auth=1
+        if request.postpath:
+            try:
+                if int(request.postpath[0])<=12 and int(request.postpath[0])>=1:
+                    self.month=int(request.postpath[0])
+                    del request.postpath[0]
+                    if request.postpath:
+                        self.year=int(request.postpath[0])
+                        if self.year==0:
+                            self.year=2000
+                        elif self.year<100:
+                            self.year=1900+self.year
+                        del request.postpath[0]
+#                elif
+            except ValueError: pass
+
+    def title(self,request):
+        self.setDate(request)
+        return calendar.month_name[self.month]+" "+str(self.year)
+
+    def displayPage(self,request):
+        #self.setDate(request)
+        if not request.postpath:
+            return self.displayCalendar(request)
+        else:
+            if request.postpath[0]=="event":
+                year,month,day,ind=map(int,request.postpath[1:])
+                return self.events[year][month][day][ind]
+            elif request.auth and self.displayAuth(request):
+                return ""
+            else:
+                return error.NoResource(string.join(request.postpath,"/")).render(request)
+
+    def displayCalendar(self,request):
+        return CalendarWidget(self.year,self.month,self.getDay)
+
+    def backToCalendar(self,request):
+        url="/"+string.join(request.prepath,"/")
+        if request.auth:
+            return """<a href="%s">Back To the Calendar</a>"""%(url+"/"+self.password)
+        else:
+            return """<a href="%s">Back To the Calendar</a>"""%url
+
+    def displayAuth(self,request):
+        if request.auth:
+            if request.postpath and request.postpath[0]=="post":
+                return PostForm(self)
+            elif request.postpath and request.postpath[0]=="event":
+                return """<a href="%s/%s/%s/%s/%s">Delete</a>""" % (
+                    request.sibLink("%s/delete"%self.password), request.postpath[1], request.postpath[2],
+                    request.postpath[3], request.postpath[4])+"<br>"+self.backToCalendar(request)
+            elif request.postpath and request.postpath[0]=="delete":
+                year,month,day,ind=map(int,request.postpath[1:5])
+                try:
+                    del self.events[year][month][day][ind]
+                except IndexError:
+                    pass
+                return self.backToCalendar(request)
+            else:
+                return """<a href="%s/post">Post an Event</a>"""%(self.password)
+        else:
+            if request.postpath and request.postpath[0]=="event":
+                return self.backToCalendar(request)
+            return ""
+
+    def getDay(self,request,day,month,year):
+        if not self.events.has_key(year):
+            return
+        if not self.events[year].has_key(month):
+            return
+        if not self.events[year][month].has_key(day):
+            return
+        c=""
+        for event in self.events[year][month][day]:
+            c=c+"""<a href="%s/event/%s/%s/%s/%s">%s</a><br>""" % (
+                request.path,
+                year, month, day, self.events[year][month][day].index(event),
+                event.title)
         return c
+        
 
-    def handlePost(self,request):
-        return self.form(request,[["hidden","","action","add"],
-                            ["hidden","","user",self.user],
-                            ["hidden","","pass",self.password],
-                            ["menu","Day","d",map(str,range(1,32))],
-                            ["menu","Month","m",calendar.month_name[1:]],
-                            ["string","Year","y",str(self.curyear)],
-                            ["string","Title","title",""],
-                            ["text","Data","data",""]])
+    def setDay(self,day,month,year,title,data):
+        self.makeDay(day,month,year)
+        self.events[year][month][day].append(EventWidget(day,month,year,title,data))
+        log.msg(str(self.events))
 
-    def handleAdd(self,request):
-        items=["d","m","y","title","data"]
-        if reduce(lambda x,y:x and y,map(request.args.has_key,items)):
-            d=int(request.args["d"][0])
-            m=int(calendar.month_name.index(request.args["m"][0]))
-            y=int(request.args["y"][0])
-            self.makeDay(d,m,y)
-            e=CalendarEvent(len(self.ids),request.args["title"][0],request.args["data"][0],d,m,y)
-            self.events[y][m][d].append(e)
-            self.ids.append(e)
-    
-    def handleDel(self,request):
-        id=int(request.args["id"][0])
-        e=self.ids[id]
-        for event in self.ids[id+1:]:
-            event.id=event.id-1
-        del self.ids[id]
-        self.events[e.y][e.m][e.d].remove(e) 
-    
-    def handleEvent(self,request):
-        e=self.ids[int(request.args["id"][0])]
-        parts= [["Date","%s %s, %s"%(calendar.month_name[e.m],e.d,e.y)],
-                ["Title",e.short],
-                ["Data",e.long]]
-        c="<b>Date:</b> %s %s, %s<br>"%(calendar.month_name[e.m],e.d,e.y)
-        c=c+e.long+"<br>"
-        c=c+"""<a href="%s?action=del&id=%s%s">Delete</a>"""%(request.path,e.id,self.auth)
-        return self.box(request,e.short,c)
+    def makeDay(self,day,month,year):
+        if not self.events.has_key(year):
+            self.events[year]={}
+        if not self.events[year].has_key(month):
+            self.events[year][month]={}
+        if not self.events[year][month].has_key(day):
+            self.events[year][month][day]=[]
+#        if not type(self.events[year][month][day])==type([]):
+#            self.events[year][month][day]=[]
 
-class CalendarEvent:
-    def __init__(self,id,short,long,d,m,y):
-        self.id=id
-        self.short=short
-        self.long=long
-        self.d=d
-        self.m=m
-        self.y=y
+class EventWidget(widgets.Widget):
+    def __init__(self,day,month,year,title,data):
+        self.day=day
+        self.month=month
+        self.year=year
+        self.title=title
+        self.data=data
+
+    def display(self,request):
+        c="<b>Date:</b> %s %s, %s<br>\n"%(calendar.month_name[self.month],
+                                              self.day, self.year)
+        c=c+"<b>Title:</b> %s<br>\n"%self.title
+        c=c+"<b>Data:</b> %s<br>\n"%self.data
+        return [c]
