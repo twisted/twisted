@@ -409,7 +409,7 @@ class DualFunctionTestCase(unittest.TestCase):
         s.truncate(0)
         
         p.lineReceived("LIST 1")
-        self.assertEquals(s.getvalue(), "+OK 44\r\n")
+        self.assertEquals(s.getvalue(), "+OK 1 44\r\n")
         s.truncate(0)
         
         p.lineReceived("LIST")

@@ -368,8 +368,13 @@ class POP3(basic.LineOnlyReceiver, policies.TimeoutMixin):
             self.transport.writeSequence(lines)
             self.sendLine('.')
         else:
-            msg = self.mbox.listMessages(int(i) - 1)
-            self.successResponse(str(msg))
+            try:
+                i = int(i)
+            except ValueError:
+                self.failResponse("Invalid message-number: %r" % (i,))
+            else:
+                msg = self.mbox.listMessages(i - 1)
+                self.successResponse('%d %d' % (i, msg))
 
     def do_UIDL(self, i=None):
         if i is None:
