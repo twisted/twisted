@@ -18,7 +18,7 @@
 """
    State-machine driven data consumer
 """
-
+def trace(str): pass
 from types import TupleType
 #from __future__ import generators
 
@@ -189,6 +189,7 @@ class Flow:
            This executes the current flow, given empty
            starting data and the default initial state.
         '''
+        trace("running flow")
         stack = self.stack
         if not(stack): 
             stack.append((state, data, None, None, None))
@@ -199,6 +200,7 @@ class Flow:
                 stack.pop()
                 continue
             elif itr:
+                trace("-> iterator")
                 try:
                     data = itr.next()
                     if data is stop: continue
@@ -206,9 +208,11 @@ class Flow:
                         (state, data) = data
                         if data is stop: continue
                 except StopIteration:
+                    trace("-> stop")
                     stack.pop()
                     continue
                 except YieldIteration:
+                    trace("-> yield")
                     from twisted.internet import reactor
                     reactor.callLater(self.waitInterval, self.run)
                     return
@@ -218,6 +222,7 @@ class Flow:
             (func, state, isIterable, finish, failure, stop) = tpl
             if finish: stack.append((state, None, finish, None, stop))
             data = func(data)
+            trace("-> item")
             if isIterable or getattr(func,'isIterable',0):
                 if data:
                     data = iter(data)
@@ -228,6 +233,7 @@ class Flow:
                     (state, data) = data
                     if data is stop: continue
                 stack.append((state, data, None, None, stop))
+        trace("end flow")
     #
     def __str__(self,indlvl=0):
         indent = "\n" + "    " * indlvl
@@ -291,13 +297,13 @@ class _TunnelIterator:
         self.isFinished = 1
     #
     def next(self):
+        if self.buff:
+           return self.buff.pop(0)
         if self.isFinished:  
             raise StopIteration
         if self.failure:
             raise self.failure
-        if not self.buff:
-            raise YieldIteration
-        return self.buff.pop(0)  
+        raise YieldIteration
 
 class FlowIterator:
     '''
@@ -325,33 +331,37 @@ class FlowIterator:
 from twisted.enterprise.adbapi import ConnectionPool
 class _FlowQueryIterator(FlowIterator):
     def __init__(self, pool, sql, data):
-        FlowIterator.__init__(self)
+        FlowIterator.__init__(self,data)
         self._tunnel.append = self._tunnel.buff.extend
-        conn = self.connect()
-        curs = conn.cursor()
-        if data: curs.execute(sql % data) 
-        else: curs.execute(sql)
+        conn = pool.connect()
+        self.curs = conn.cursor()
+        if data: self.curs.execute(sql % data) 
+        else: self.curs.execute(sql)
     def next(self):
-        def next(self):
-            res = self.curs.fetchmany()
-            if not(res): raise StopIteration
-            return res
+        res = self.curs.fetchmany()
+        if not(res): 
+            self.curs.close()
+            raise StopIteration
+        return res
 
 class FlowQueryBuilder:
+    isIterable = 1
     def __init__(self, pool, sql):
         self.pool = pool
         self.sql  = sql
     def __call__(self, data):
         return _FlowQueryIterator(self.pool, self.sql, data)
- 
+
+from twisted.enterprise.adbapi import ConnectionPool 
 def testFlowConnect():
-    pool = FlowConnectionPool("mx.ODBC.EasySoft","SomeDSN")
+    pool = ConnectionPool("mx.ODBC.EasySoft","SomeDSN")
     def printResult(x): print x
     def printDone(): print "done"
     f = Flow()
-    f.register(FlowQueryBuilder(pool,"SELECT "),nextState='print')
+    sql = "SOME-QUERY"
+    f.register(FlowQueryBuilder(pool,sql),nextState='print')
     f.register(printResult,'print')
-
+    f.run()
 
 def testFlowIterator():
     class CountIterator(FlowIterator):
@@ -368,9 +378,9 @@ def testFlowIterator():
     def printDone(): print "done"
     def printResult(x): print x
     f = Flow()
+    f.waitInterval = 1
     f.register(CountIterator,nextState='print',onFinish=printDone)
     f.register(printResult,'print')
-    f.waitInterval = 1
     f.run(5)
 
 def testFlow():
@@ -431,8 +441,7 @@ def testFlow():
 
 if '__main__' == __name__:
     from twisted.internet import reactor
+    #testFlowConnect()
     testFlowIterator()
-#    testFlowConnect()
-#    testFlowThreadUsingGenerator()
     reactor.run()
     testFlow()
