@@ -69,7 +69,7 @@ This test node will be replaced
 """
 
 from cStringIO import StringIO
-import string, os, stat
+import string, os, stat, types
 from xml.dom import minidom
 
 from twisted.web.resource import Resource
@@ -257,7 +257,7 @@ class DOMTemplate(Resource):
             result.arm()
             # Got to wait until the callback comes in
             return None
-        elif isinstance(result, str):
+        elif isinstance(result, types.StringType):
             return self.processString(request, string, node)
 
     def recurseChildren(self, request, node):
