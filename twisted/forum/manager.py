@@ -110,7 +110,7 @@ CREATE TABLE forum_permissions
         return d
 
     def getPerspectiveRequest(self, name):
-        return self.runQuery("SELECT * FROM forum_perspectives WHERE user_name = '%s'" % name, self._finishPerspective, self._errorPerspective)
+        return self.runQuery("SELECT * FROM forum_perspectives WHERE user_name = '%s'" % adbapi.safe(name), self._finishPerspective, self._errorPerspective)
 
     def _finishPerspective(self, result):
         identity_name, user_name, signature = result[0]
@@ -135,14 +135,13 @@ CREATE TABLE forum_permissions
         sql = """INSERT INTO forum_perspectives
                  (identity_name, user_name, signature)
                  VALUES
-                 ('%s', '%s', '%s')""" % (username, username, signature)
+                 ('%s', '%s', '%s')""" % (adbapi.safe(username), adbapi.safe(username), adbapi.safe(signature) )
         trans.execute(sql)
         trans.execute("SELECT forum_id FROM forums WHERE default_access = 1")
         forum_ids = trans.fetchall()
         for forum_id, in forum_ids:
             toExec = ("INSERT INTO forum_permissions VALUES ('%s', %s, 1, 1)"
-                          % (username, forum_id))
-            print toExec
+                          % (adbapi.safe(username), forum_id))
             trans.execute(toExec)
 
     def createUser(self, username, signature):
@@ -155,7 +154,7 @@ CREATE TABLE forum_permissions
         sql = """INSERT INTO forums
                (name, description, default_access)
                VALUES
-               ('%s', '%s', %d)""" % (name, description, int(default_access))
+               ('%s', '%s', %d)""" % (adbapi.safe(name), adbapi.safe(description), int(default_access))
         trans.execute(sql)
 
         trans.execute("SELECT forum_id FROM forums WHERE name = '%s'" % name)
@@ -183,28 +182,18 @@ CREATE TABLE forum_permissions
                  DELETE FROM forum_permissions WHERE forum_id = %d""" % (forum_id, forum_id, forum_id)
         self.runOperation(sql)
 
-
-    def checkPermission(self, forum_id, user_name, callback, errback):
-        """Get the permission level for the user for the forum.
-        """
-        sql = """SELECT read_access
-                 FROM forum_permissions
-                 WHERE forum_id = %d
-                 AND user_name = '%s'""" % ( forum_id, user_name)
-        self.runQuery(sql, callback, errrback)
-
     def _messagePoster(self, trans, forum_id, user_name, thread_id, parent_id, previous_id, subject, body):
         trans.execute("""SELECT post_access
                          FROM forum_permissions
                          WHERE forum_id = %d
-                         AND user_name = '%s'""" % ( forum_id, user_name))
+                         AND user_name = '%s'""" % ( forum_id, adbapi.safe(user_name)) )
         result = trans.fetchall()
         if result:
             trans.execute("""INSERT INTO posts
             (forum_id, parent_id, thread_id, previous_id, subject, user_name, posted, body)
             VALUES
             (%d, %d, %d, %d, '%s', '%s', now(), '%s')""" %
-            (forum_id, parent_id, thread_id, previous_id, subject, user_name, body))
+            (forum_id, parent_id, thread_id, previous_id, adbapi.safe(subject), adbapi.safe(user_name), adbapi.safe(body)) )
             return "Posted successfully!"
         else:
             return "You don't have permission to post to this forum!"
@@ -226,7 +215,7 @@ CREATE TABLE forum_permissions
                     (SELECT count(*) FROM posts WHERE posts.forum_id = forums.forum_id)
                  FROM forums, forum_permissions
                  WHERE forums.forum_id = forum_permissions.forum_id
-                 AND   forum_permissions.user_name = '%s'""" % user_name
+                 AND   forum_permissions.user_name = '%s'""" % adbapi.safe(user_name)
         return self.runQuery(sql, callbackIn, errbackIn)        
     
     def getTopMessages(self, forum_id, user_name, callbackIn, errbackIn):
@@ -239,7 +228,7 @@ CREATE TABLE forum_permissions
                WHERE p.forum_id = %d
                AND   p.forum_id = f.forum_id
                AND   f.user_name = '%s'
-               AND   p.thread_id = 0""" % (forum_id, user_name)
+               AND   p.thread_id = 0""" % (forum_id, adbapi.safe(user_name) )
         
         return self.runQuery(sql, callbackIn, errbackIn)        
                    
@@ -252,7 +241,7 @@ CREATE TABLE forum_permissions
                WHERE  p.forum_id  = %d
                AND    p.forum_id = f.forum_id
                AND    f.user_name = '%s'
-               AND   (p.thread_id = %d OR p.post_id = %d)""" % (forum_id, user_name, thread_id, thread_id)
+               AND   (p.thread_id = %d OR p.post_id = %d)""" % (forum_id, adbapi.safe(user_name), thread_id, thread_id)
 
         return self.runQuery(sql, callbackIn, errbackIn)        
 
@@ -265,7 +254,7 @@ CREATE TABLE forum_permissions
                WHERE p.forum_id  = %d
                AND   p.forum_id = f.forum_id
                AND   f.user_name = '%s'
-               AND   (p.thread_id = %d OR p.post_id = %d)""" % (forum_id, user_name, thread_id, thread_id)
+               AND   (p.thread_id = %d OR p.post_id = %d)""" % (forum_id, adbapi.safe(user_name), thread_id, thread_id)
 
         return self.runQuery(sql, callbackIn, errbackIn)        
         

@@ -1,12 +1,14 @@
 DELETE FROM twisted_services;
+DELETE FROM twisted_identities;
+DELETE FROM twisted_perspectives;
+
+
 INSERT INTO twisted_services VALUES ('twisted.words');
 INSERT INTO twisted_services VALUES ('twisted.web');
 INSERT INTO twisted_services VALUES ('twisted.metrics');
 INSERT INTO twisted_services VALUES ('twisted.dbauth');
 INSERT INTO twisted_services VALUES ('twisted.forum');
 
-
-DELETE FROM twisted_identities;
 INSERT INTO twisted_identities VALUES ('testAccount1', 'Gh3JHJBzJcaScd3wyUS8cg=='); -- password is "pass"
 INSERT INTO twisted_identities VALUES ('testAccount2', 'Gh3JHJBzJcaScd3wyUS8cg=='); -- password is "pass"
 INSERT INTO twisted_identities VALUES ('testAccount3', 'Gh3JHJBzJcaScd3wyUS8cg=='); -- password is "pass"
@@ -16,7 +18,6 @@ INSERT INTO twisted_identities VALUES ('localMachine', 'Gh3JHJBzJcaScd3wyUS8cg==
 INSERT INTO twisted_identities VALUES ('remoteMachine','Gh3JHJBzJcaScd3wyUS8cg=='); -- password is "pass"
 INSERT INTO twisted_identities VALUES ('admin',        'Gh3JHJBzJcaScd3wyUS8cg=='); -- password is "pass"
 
-DELETE FROM twisted_perspectives;
 INSERT INTO twisted_perspectives VALUES ('testAccount1', 'testUser1', 'twisted.words', NULL);
 INSERT INTO twisted_perspectives VALUES ('testAccount1', 'another1', 'twisted.words', NULL);
 INSERT INTO twisted_perspectives VALUES ('testAccount1', 'another2', 'twisted.words', NULL);

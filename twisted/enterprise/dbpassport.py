@@ -39,12 +39,13 @@ class DatabaseAuthorizer(passport.Authorizer, adbapi.Augmentation):
         """
         print "Creating identity", identity
         passwd = base64.encodestring(identity.hashedPassword)
-        usernm = identity.name
-        createIdentity = "INSERT INTO twisted_identities VALUES ('%s', '%s')" % (usernm, passwd)
+        username = identity.name
+        createIdentity = "INSERT INTO twisted_identities VALUES ('%s', '%s')" % (adbapi.safe(username), adbapi.safe(passwd) )
         s = [createIdentity]
         for (svcname, pname), one in identity.keyring.items():
             # note, we don't actually know perspective type at this point...
-            s.append("INSERT INTO twisted_perspectives VALUES ('%s', '%s', '%s', NULL)" % (usernm, pname, svcname))
+            s.append("INSERT INTO twisted_perspectives VALUES ('%s', '%s', '%s', NULL)" %
+                     (adbapi.safe(username), adbapi.safe(pname), adbapi.safe(svcname)) )
         sql = string.join(s, '; \n')
         return self.runOperation(sql).addCallbacks(callback, errback)
 
@@ -63,7 +64,7 @@ class DatabaseAuthorizer(passport.Authorizer, adbapi.Augmentation):
                  twisted_perspectives
         WHERE    twisted_identities.identity_name = twisted_perspectives.identity_name
         AND      twisted_identities.identity_name = '%s'
-        """ % name
+        """ % adbapi.safe(name)
         return self.runQuery(sql, self.gotIdentityData, self.gotIdentityError)
 
     def gotIdentityData(self, identData):
@@ -100,7 +101,7 @@ class DatabaseAuthorizer(passport.Authorizer, adbapi.Augmentation):
         """
         sql="""SELECT identity_name, perspective_name, service_name
                FROM twisted_perspectives
-               WHERE identity_name = '%s'""" % identity_name
+               WHERE identity_name = '%s'""" % adbapi.safe(identity_name)
         return self.runQuery(sql, callbackIn, errbackIn)                             
 
     def getServices(self, callbackIn, errbackIn):
@@ -113,13 +114,14 @@ class DatabaseAuthorizer(passport.Authorizer, adbapi.Augmentation):
         """Create an empty identity (no perspectives). Used by web admin interface.
         """
         passwd = base64.encodestring(hashedPassword)
-        sql = "INSERT INTO twisted_identities VALUES ('%s', '%s')" % (identityName, passwd)
+        sql = "INSERT INTO twisted_identities VALUES ('%s', '%s')" % (adbapi.safe(identityName), adbapi.safe(passwd))
         return self.runOperation(sql).addCallbacks(callback, errback)
 
     def addPerspective(self, identityName, perspectiveName, serviceName, callback=None, errback=None):
         """Add a perspective by name to an identity.
         """
-        sql = "INSERT INTO twisted_perspectives VALUES ('%s', '%s', '%s', NULL)" % (identityName, perspectiveName, serviceName)
+        sql = "INSERT INTO twisted_perspectives VALUES ('%s', '%s', '%s', NULL)" %\
+                (adbapi.safe(identityName), adbapi.safe(perspectiveName), adbapi.safe(serviceName))
         return self.runOperation(sql).addCallbacks(callback, errback)
 
 
@@ -127,7 +129,8 @@ class DatabaseAuthorizer(passport.Authorizer, adbapi.Augmentation):
         """Delete an identity
         """
         sql = """DELETE FROM twisted_identities WHERE identity_name = '%s';
-                 DELETE FROM twisted_perspectives WHERE identity_name = '%s'""" % (identityName, identityName)
+                 DELETE FROM twisted_perspectives WHERE identity_name = '%s'""" %\
+                     (adbapi.safe(identityName), adbapi.safe(identityName) )
         return self.runOperation(sql).addCallbacks(callback, errback)
 
     def removePerspective(self, identityName, perspectiveName, callback=None, errback=None):
@@ -135,14 +138,16 @@ class DatabaseAuthorizer(passport.Authorizer, adbapi.Augmentation):
         """
         sql = """DELETE FROM twisted_perspectives
                  WHERE identity_name = '%s'
-                 AND perspective_name = '%s'""" % (identityName, perspectiveName)
+                 AND perspective_name = '%s'""" %\
+                   (adbapi.safe(identityName), adbapi.safe(perspectiveName))
         return self.runOperation(sql).addCallbacks(callback, errback)
 
     def changePassword(self, identityName, hashedPassword, callback=None, errback=None):
         passwd = base64.encodestring(hashedPassword)        
         sql = """UPDATE twisted_identities
                  SET password = '%s'
-                 WHERE identity_name = '%s'""" % ( passwd,identityName)
+                 WHERE identity_name = '%s'""" %\
+                   (adbapi.safe(passwd), adbapi.safe(identityName) )
         return self.runOperation(sql).addCallbacks(callback, errback)
         
         

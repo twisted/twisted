@@ -80,7 +80,7 @@ class MetricsDB(adbapi.Augmentation):
         """
         sql = """SELECT source_name, source_name, hostname, server_type, shard
                from metrics_sources
-               WHERE source_name = '%s'""" % (source_name)
+               WHERE source_name = '%s'""" % (adbapi.safe(source_name) )
         return self.runQuery(sql, callbackIn, errbackIn)
 
     def insertMetricsItem(self, source_name, item_name, item_value):
@@ -89,7 +89,7 @@ class MetricsDB(adbapi.Augmentation):
         sql = "INSERT INTO metrics_items\
                (source_name, item_name, item_value, collected)\
                VALUES\
-               ('%s', '%s', %d, now())" % (source_name, item_name, item_value)
+               ('%s', '%s', %d, now())" % (adbapi.safe(source_name), adbapi.safe(item_name), item_value)
 
         return self.runOperation(sql)
 
@@ -99,7 +99,7 @@ class MetricsDB(adbapi.Augmentation):
         sql = "INSERT INTO metrics_events\
                (source_name, event_name, event_time)\
                VALUES\
-               ('%s', '%s', now())" % (source_name, event_name)
+               ('%s', '%s', now())" % (adbapi.safe(source_name), adbapi.safe(event_name) )
 
         return self.runOperation(sql)
 
@@ -109,7 +109,7 @@ class MetricsDB(adbapi.Augmentation):
         sql = "SELECT item_value, collected\
                FROM metrics_items\
                WHERE source_name = '%s'\
-               AND item_name = '%s'" % (source_name, name)
+               AND item_name = '%s'" % (adbapi.safe(source_name), adbapi.safe(name) )
         
         # use a defered
         return self.runQuery(sql, callbackIn, errbackIn)

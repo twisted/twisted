@@ -128,11 +128,17 @@ class ConnectionPool(pb.Referenceable):
         except:
             print 'Exception in SQL interaction!  rolling back...'
             trans._connection.rollback()
+            traceback.print_exc()            
             raise
         else:
             trans._cursor.close()
             trans._connection.commit()
 
+    def close(self):
+        print "Closing connections:"
+        for connection in self.connections.values():
+            print "closing: ", connection
+            connection.close()
             
 class Augmentation:
     '''A class which augments a database connector with some functionality.
@@ -190,3 +196,10 @@ class Augmentation:
         apply(self.dbpool.interaction, (interaction,d.callback,d.errback,)+args, kw)
         return d
 
+
+### Utility functions
+
+def safe(text):
+    """Make a string safe to include in an SQL statement
+    """
+    return text.replace("'", "''")
