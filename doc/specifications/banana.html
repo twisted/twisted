@@ -63,7 +63,7 @@
     </dl>
 
     <p>
-      Large integers do not need to be are intended for arbitary length integers. Regular integers types (positive and negative) are limited to 32-bit values.
+      Large integers are intended for arbitary length integers. Regular integers types (positive and negative) are limited to 32-bit values.
     </p>
 
     <h3>Examples</h3>
@@ -79,7 +79,7 @@
       <dd><code>0x1 0x83</code></dd>
       <dt>1.5</dt>
       <dd><code>0x84 0x3f 0xf8 0x0 0x0 0x0 0x0 0x0 0x0</code></dd>
-      <dt>hello</dt>
+      <dt>"hello"</dt>
       <dd><code>0x5 0x82 0x68 0x65 0x6c 0x6c 0x6f</code></dd>
       <dt>[]</dt>
       <dd><code>0x0 0x80</code></dd>
@@ -87,7 +87,7 @@
       <dd><code>0x2 0x80 0x1 0x81 0x17 0x81</code></dd>
       <dt>123456789123456789</dt>
       <dd><code>0x15 0x3e 0x41 0x66 0x3a 0x69 0x26 0x5b 0x1 0x85</code></dd>
-      <dt>[1, ['hello']]</dt>
+      <dt>[1, ["hello"]]</dt>
       <dd><code>0x2 0x80 0x1 0x81 0x1 0x80 0x5 0x82 0x68 0x65 0x6c 0x6c 0x6f</code></dd>
     </dl>
 
@@ -101,22 +101,23 @@
     </p>
 
     <p>
-      A profile is specified by a unique string. This specification defines two profiles - "none" and "pb".
-      The "none" profile is the standard profile that should be supported by all Banana implementations.
+      A profile is specified by a unique string. This specification defines two profiles
+      - <code>"none"</code> and <code>"pb"</code>. The <code>"none"</code> profile is the standard
+      profile that should be supported by all Banana implementations.
       Additional profiles may be added in the future.
     </p>
     
-    <h3>The "none" Profile</h3>
+    <h3>The <code>"none"</code> Profile</h3>
 
     <p>
-      The "none" profile is identical to the delimiter types listed above. It is highly recommended
-      that all Banana clients and servers support the "none" profile.
+      The <code>"none"</code> profile is identical to the delimiter types listed above. It is highly recommended
+      that all Banana clients and servers support the <code>"none"</code> profile.
     </p>
 
-    <h3>The "pb" Profile</h3>
+    <h3>The <code>"pb"</code> Profile</h3>
 
     <p>
-      The "pb" profile is intended for use with the Perspective Broker protocol, that runs on top
+      The <code>"pb"</code> profile is intended for use with the Perspective Broker protocol, that runs on top
       of Banana. Basically, it converts commonly used PB strings into shorter versions, thus
       minimizing bandwidth usage. It does this by adding an additional delimiter byte, 0x87.
       This byte should not be prefixed by a length. It should be followed by a single byte, which
@@ -166,7 +167,7 @@
 
     <p>
       Upon connection, the server will send the client a list of string elements, signifying
-      the profiles it supports. It is recommended that "none" be included in this list. The client
+      the profiles it supports. It is recommended that <code>"none"</code> be included in this list. The client
       then sends the server a string from this list, telling the server which profile it wants to
       use. At this point the whole session will use this profile.
     </p>
