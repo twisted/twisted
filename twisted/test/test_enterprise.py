@@ -39,6 +39,9 @@ except: sqlite = None
 try: from pyPgSQL import PgSQL
 except: PgSQL = None
 
+try: import MySQLdb
+except: MySQLdb = None
+
 tableName = "testTable"
 childTableName = "childTable"
 
@@ -86,7 +89,7 @@ CREATE TABLE childTable (
 )
 """
 
-def randomizeRow(row, nullsOK=1):
+def randomizeRow(row, nullsOK=1, trailingSpacesOK=1):
     values = {}
     for name, type in row.rowColumns:
         if util.getKeyColumn(row, name):
@@ -102,6 +105,8 @@ def randomizeRow(row, nullsOK=1):
             else:
                 value = ''.join(map(lambda i:chr(random.randrange(32,127)),
                                     xrange(random.randint(1, 64))))
+            if not trailingSpacesOK:
+                value = value.rstrip()
         setattr(row, name, value)
         values[name] = value
     return values
@@ -109,6 +114,8 @@ def randomizeRow(row, nullsOK=1):
 def rowMatches(row, values):
     for name, type in row.rowColumns:
         if getattr(row, name) != values[name]:
+            print ("Mismatch on column %s: |%s| (row) |%s| (values)" %
+                   (name, getattr(row, name), values[name]))
             return
     return 1
 
@@ -126,6 +133,10 @@ class ReflectorTestCase:
 
     count = 100 # a parameter used for running iterative tests
     nullsOK = 1 # we can put nulls into the db
+    trailingSpacesOK = 1 # we can put strings with trailing spaces into the db
+
+    def randomizeRow(self, row):
+        return randomizeRow(row, self.nullsOK, self.trailingSpacesOK)
 
     def setUp(self):
         self.reflector = self.createReflector()
@@ -140,7 +151,7 @@ class ReflectorTestCase:
         # create one row to work with
         row = TestRow()
         row.assignKeyAttr("key_string", "first")
-        values = randomizeRow(row, self.nullsOK)
+        values = self.randomizeRow(row)
 
         # save it
         deferredResult(self.reflector.insertRow(row))
@@ -162,7 +173,7 @@ class ReflectorTestCase:
         for i in range(0, self.count):
             row = ChildRow()
             row.assignKeyAttr("childId", i)
-            values = randomizeRow(row, self.nullsOK)
+            values = self.randomizeRow(row)
             values['test_key'] = row.test_key = "first"
             child_values[i] = values
             deferredResult(self.reflector.insertRow(row))
@@ -189,31 +200,76 @@ class ReflectorTestCase:
         self.failUnless(len(parent.childRows) == self.count,
                         "child rows added twice!: %d" % len(parent.childRows))
 
-        # test update FIXME: make some changes to row
+        # now change the parent
+        values = self.randomizeRow(parent)
         deferredResult(self.reflector.updateRow(parent))
+        parent = None
 
-        # test bulk
+        # now load it back in
+        whereClause = [("key_string", EQUAL, "first")]
+        d = self.reflector.loadObjectsFrom(tableName, whereClause=whereClause)
+        d.addCallback(self.gotData)
+        deferredResult(d)
+
+        # make sure it came back as what we saved
+        self.failUnless(len(self.data) == 1, "no row")
+        parent = self.data[0]
+        self.failUnless(rowMatches(parent, values), "no match")
+
+        # save parent
+        test_values = {}
+        test_values[parent.key_string] = values
+        parent = None
+
+        # save some more test rows
         for i in range(0, self.count):
             row = TestRow()
             row.assignKeyAttr("key_string", "bulk%d"%i)
-            row.col2 = 4
-            row.another_column = "another"
-            row.Column4 = "444"
-            row.column_5_ = 1
+            test_values[row.key_string] = self.randomizeRow(row)
             deferredResult(self.reflector.insertRow(row))
             row = None
 
+        # now load them all back in
         d = self.reflector.loadObjectsFrom("testTable")
         d.addCallback(self.gotData)
         deferredResult(d)
 
-        assert len(self.data) == self.count + 1, "query did not get rows"
-
+        # make sure they are the same
+        self.failUnless(len(self.data) == self.count + 1,
+                        "query did not get rows")
         for row in self.data:
-            deferredResult(self.reflector.updateRow(row))
+            self.failUnless(rowMatches(row, test_values[row.key_string]),
+                            "child %s does not match" % row.key_string)
 
+        # now change them all
+        for row in self.data:
+            test_values[row.key_string] = self.randomizeRow(row)
+            deferredResult(self.reflector.updateRow(row))
+        self.data = None
+
+        # load'em back
+        d = self.reflector.loadObjectsFrom("testTable")
+        d.addCallback(self.gotData)
+        deferredResult(d)
+
+        # make sure they are the same
+        self.failUnless(len(self.data) == self.count + 1,
+                        "query did not get rows")
+        for row in self.data:
+            self.failUnless(rowMatches(row, test_values[row.key_string]),
+                            "child %s does not match" % row.key_string)
+
+        # now delete them
         for row in self.data:
             deferredResult(self.reflector.deleteRow(row))
+        self.data = None
+
+        # load'em back
+        d = self.reflector.loadObjectsFrom("testTable")
+        d.addCallback(self.gotData)
+        deferredResult(d)
+
+        self.failUnless(len(self.data) == 0, "rows were not deleted")
 
     def gotData(self, data):
         self.data = data
@@ -232,6 +288,10 @@ class XMLReflectorTestCase(ReflectorTestCase, unittest.TestCase):
 
 class SQLReflectorTestCase(ReflectorTestCase):
     """Test cases for the SQL reflector.
+
+    To enable this test for databases which use a central, system database,
+    you must create a database named DB_NAME with a user DB_USER and password
+    DB_PASS with full access rights to the database DB_NAME.
     """
 
     DB_NAME = "twisted_test"
@@ -327,6 +387,17 @@ class PostgresTestCase(SQLReflectorTestCase, unittest.TestCase):
                               user=self.DB_USER, password=self.DB_PASS)
 
 
+class MySQLTestCase(SQLReflectorTestCase, unittest.TestCase):
+    """Test cases for the SQL reflector using MySQL.
+    """
+
+    trailingSpacesOK = 0
+
+    def makePool(self):
+        return ConnectionPool('MySQLdb', db=self.DB_NAME,
+                              user=self.DB_USER, passwd=self.DB_PASS)
+
+
 class QuotingTestCase(unittest.TestCase):
 
     def testQuoting(self):
@@ -344,9 +415,19 @@ if sqlite is None: SQLiteTestCase.skip = 1
 if PgSQL is None: PostgresTestCase.skip = 1
 else:
     try:
-        conn = PgSQL.connect(database=SQLReflectorTestCase.DB_NAME,
+        conn = PgSQL.connect(database=PostgresTestCase.DB_NAME,
                              user=PostgresTestCase.DB_USER,
                              password=PostgresTestCase.DB_PASS)
         conn.close()
     except:
         PostgresTestCase.skip = 1
+
+if MySQLdb is None: MySQLTestCase.skip = 1
+else:
+    try:
+        conn = MySQLdb.connect(db=MySQLTestCase.DB_NAME,
+                               user=MySQLTestCase.DB_USER,
+                               passwd=MySQLTestCase.DB_PASS)
+        conn.close()
+    except:
+        MySQLTestCase.skip = 1
