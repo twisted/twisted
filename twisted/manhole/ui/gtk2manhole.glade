@@ -13,6 +13,11 @@
   <property name="default_height">320</property>
   <property name="resizable">True</property>
   <property name="destroy_with_parent">False</property>
+  <property name="decorated">True</property>
+  <property name="skip_taskbar_hint">False</property>
+  <property name="skip_pager_hint">False</property>
+  <property name="type_hint">GDK_WINDOW_TYPE_HINT_NORMAL</property>
+  <property name="gravity">GDK_GRAVITY_NORTH_WEST</property>
   <signal name="delete_event" handler="_on_manholeWindow_delete_event" last_modification_time="Mon, 27 Jan 2003 05:14:26 GMT"/>
 
   <child>
@@ -171,7 +176,7 @@
 	    <widget class="GtkScrolledWindow" id="scrolledwindow1">
 	      <property name="visible">True</property>
 	      <property name="can_focus">True</property>
-	      <property name="hscrollbar_policy">GTK_POLICY_ALWAYS</property>
+	      <property name="hscrollbar_policy">GTK_POLICY_AUTOMATIC</property>
 	      <property name="vscrollbar_policy">GTK_POLICY_ALWAYS</property>
 	      <property name="shadow_type">GTK_SHADOW_NONE</property>
 	      <property name="window_placement">GTK_CORNER_TOP_LEFT</property>
@@ -181,6 +186,8 @@
 		  <property name="visible">True</property>
 		  <property name="can_focus">True</property>
 		  <property name="editable">False</property>
+		  <property name="overwrite">False</property>
+		  <property name="accepts_tab">True</property>
 		  <property name="justification">GTK_JUSTIFY_LEFT</property>
 		  <property name="wrap_mode">GTK_WRAP_WORD</property>
 		  <property name="cursor_visible">True</property>
@@ -204,7 +211,7 @@
 	    <widget class="GtkScrolledWindow" id="scrolledwindow2">
 	      <property name="visible">True</property>
 	      <property name="can_focus">True</property>
-	      <property name="hscrollbar_policy">GTK_POLICY_ALWAYS</property>
+	      <property name="hscrollbar_policy">GTK_POLICY_AUTOMATIC</property>
 	      <property name="vscrollbar_policy">GTK_POLICY_ALWAYS</property>
 	      <property name="shadow_type">GTK_SHADOW_NONE</property>
 	      <property name="window_placement">GTK_CORNER_TOP_LEFT</property>
@@ -213,7 +220,10 @@
 		<widget class="GtkTextView" id="input">
 		  <property name="visible">True</property>
 		  <property name="can_focus">True</property>
+		  <property name="has_focus">True</property>
 		  <property name="editable">True</property>
+		  <property name="overwrite">False</property>
+		  <property name="accepts_tab">True</property>
 		  <property name="justification">GTK_JUSTIFY_LEFT</property>
 		  <property name="wrap_mode">GTK_WRAP_NONE</property>
 		  <property name="cursor_visible">True</property>

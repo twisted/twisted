@@ -27,7 +27,6 @@ import code, types, inspect
 
 # TODO:
 #  Make wrap-mode a run-time option.
-#  Command history.
 #  Explorer.
 #  Code doesn't cleanly handle opening a second connection.  Fix that.
 #  Make some acknowledgement of when a command has completed, even if
@@ -73,7 +72,7 @@ class ManholeWindow(components.Componentized, gtk2util.GladeKeeper):
         peer = perspective.broker.transport.getPeer()
         self.output.append("Connected to %s\n" % (peer,), "local")
         perspective.notifyOnDisconnect(self._cbDisconnected)
-        self._manholeWindow.set_title("Manhole - %s:%s" % (peer[1], peer[2]))
+        self._manholeWindow.set_title("Manhole - %s" % (peer))
         return perspective
 
     def _ebLogin(self, reason):
@@ -168,70 +167,44 @@ class ConsoleOutput:
         self._willScroll = None
         return False
 
-class History(object):
-    _hist = None
-    active = False
-    __debug = False
+class History:
+    def __init__(self, maxhist=10000):
+        self.ringbuffer = ['']
+        self.maxhist = maxhist
+        self.histCursor = 0
 
-    def __init__(self):
-        from sets import Set
-        self._hist = []
-        self._set = Set()
-        self._idx = 0
+    def append(self, htext):
+        self.ringbuffer.insert(-1, htext)
+        if len(self.ringbuffer) > self.maxhist:
+            self.ringbuffer.pop(0)
+        self.histCursor = len(self.ringbuffer) - 1
+        self.ringbuffer[-1] = ''
 
-    def add(self, text):
-        self._hist.insert(0, text)
-    
-    _state = property(lambda self: '_hist: %r, _idx: %s, active: %r' % (repr(self._hist), self._idx, self.active))
+    def move(self, prevnext=1):
+        '''
+        Return next/previous item in the history, stopping at top/bottom.
+        '''
+        hcpn = self.histCursor + prevnext
+        if hcpn >= 0 and hcpn < len(self.ringbuffer):
+            self.histCursor = hcpn
+            return self.ringbuffer[hcpn]
+        else:
+            return None
 
-    def _incr(self):
-        if self._idx + 1 < len(self._hist):   
-            if self.__debug:
-                log.msg(history='incrementing _idx: %s' % self._idx)
-            self._idx += 1                 
-        
-    def _decr(self):
-        if self._idx > 0:
-            self._idx -= 1
-        log.msg(history='_idx: %s' % self._idx)
-        
+    def histup(self, textbuffer):
+        if self.histCursor == len(self.ringbuffer) - 1:
+            si, ei = textbuffer.get_start_iter(), textbuffer.get_end_iter()
+            self.ringbuffer[-1] = textbuffer.get_text(si,ei)
+        newtext = self.move(-1)
+        if newtext is None:
+            return
+        textbuffer.set_text(newtext)
 
-    def prev(self):
-        log.msg(history=self._state)
-        h = None
-
-        if self.active:
-            self._incr()
-
-        try:
-            h = self._hist[self._idx]            
-        except IndexError:
-            log.msg('index error raised')
-            pass
-
-        if not self.active:
-            self._incr()
-
-        log.msg(history='_idx: %s' % self._idx)
-        self.active = True
-        return h
-
-    def next(self):
-        log.msg(history=self._state)
-        h = None
-
-        self._decr()
-
-        try:
-            h = self._hist[self._idx]
-        except IndexError:
-            pass
-
-        return h
-            
-    def reset(self):
-        self._idx = 0
-        self.active = False
+    def histdown(self, textbuffer):
+        newtext = self.move(1)
+        if newtext is None:
+            return
+        textbuffer.set_text(newtext)
 
 
 class ConsoleInput:
@@ -261,11 +234,12 @@ class ConsoleInput:
             ksym = '_'.join(mods + [ksym])
 
         if ksym:
-            getattr(self, 'key_%s' % ksym, lambda *a, **kw: None)(entry, event)
+            rvalue = getattr(
+                self, 'key_%s' % ksym, lambda *a, **kw: None)(entry, event)
 
         if self.__debug:
             print ksym
-        return False
+        return rvalue
 
     def getText(self):
         buffer = self.textView.get_buffer()
@@ -295,53 +269,38 @@ class ConsoleInput:
             if c is not None:
                 self.sendMessage()
                 # Don't insert Return as a newline in the buffer.
-                self.history.add(text)
-                self.history.reset()
+                self.history.append(text)
                 self.clear()
-                entry.emit_stop_by_name("key_press_event")
+                # entry.emit_stop_by_name("key_press_event")
+                return True
             else:
                 # not a complete code block
-                pass
-
-        return False
-    
-    def key_ctrl_p(self, entry, event):
-        log.msg(input='C-p key event')
-
-        hist = self.history.prev()
-        text = self.getText()
-
-        print "hist: %s, text: %s" % (hist, text)
-
-        self.setText(hist)
+                return False
 
         return False
 
-    def key_ctrl_n(self, entry, event):
-        log.msg(input='C-n key event')
-
-        text = self.getText()
-
-        if not self.history.active and text: 
-            # it is stupid for someone to hit history-next when they're not in history mode
-            return False
-        
-        hist = self.history.next()
-
-        # for right now history-next will lose the currently edited buffer
-        self.clear()
-        self.setText(hist)
-        
+    def key_Up(self, entry, event):
+        # if I'm at the top, previous history item.
+        textbuffer = self.textView.get_buffer()
+        if textbuffer.get_iter_at_mark(textbuffer.get_insert()).get_line() == 0:
+            self.history.histup(textbuffer)
+            return True
         return False
+
+    def key_Down(self, entry, event):
+        textbuffer = self.textView.get_buffer()
+        if textbuffer.get_iter_at_mark(textbuffer.get_insert()).get_line() == (
+            textbuffer.get_line_count() - 1):
+            self.history.histdown(textbuffer)
+            return True
+        return False
+
+    key_ctrl_p = key_Up
+    key_ctrl_n = key_Down
 
     def key_ctrl_shift_F9(self, entry, event):
         if self.__debug:
             import pdb; pdb.set_trace() 
-        
-    def key_ctrl_shift_F5(self, entry, event):
-        if self.__debug:
-            log.msg(self.history._state)
-            
 
     def clear(self):
         buffer = self.textView.get_buffer()
@@ -351,6 +310,7 @@ class ConsoleInput:
         buffer = self.textView.get_buffer()
         iter1, iter2 = buffer.get_bounds()
         text = buffer.get_text(iter1, iter2, False)
+        self.toplevel.output.append(pythonify(text), 'command')
         # TODO: Componentize better!
         try:
             return self.toplevel.getComponent(IManholeClient).do(text)
@@ -358,6 +318,14 @@ class ConsoleInput:
             self.toplevel.output.append("Not connected, command not sent.\n",
                                         "exception")
 
+
+def pythonify(text):
+    '''
+    Make some text appear as though it was typed in at a Python prompt.
+    '''
+    lines = text.split('\n')
+    lines[0] = '>>> ' + lines[0]
+    return '\n... '.join(lines) + '\n'
 
 class _Notafile:
     """Curry to make failure.printTraceback work with the output widget."""
