@@ -69,11 +69,10 @@ def fakeOut(modname):
         prevmod = nm
         print mp
 
-if not os.environ.get("DISPLAY"):
-    fakeOut("gnome.ui")
-    fakeOut("pygtk")
-    fakeOut("gtk")
-    fakeOut("wxPython.wx")
+fakeOut("gnome.ui")
+fakeOut("pygtk")
+fakeOut("gtk")
+fakeOut("wxPython.wx")
 
 # initial twisted
 from twisted.python import reflect
