@@ -73,7 +73,7 @@ class AccessorType(type22):
     """Metaclass that generates properties automatically.
 
     This is for Python 2.2 and up.
-    
+
     Using this metaclass for your class will give you explicit accessor
     methods; a method called set_foo, will automatically create a property
     'foo' that uses set_foo as a setter method. Same for get_foo and del_foo.
@@ -83,14 +83,14 @@ class AccessorType(type22):
     automatically become properties. Likewise, class attributes will only
     be used if they are present upon class creation, and no getter function
     was set - if a getter is present, the class attribute will be ignored.
-    
+
     This is a 2.2-only alternative to the Accessor mixin - just set in your
     class definition::
 
         __metaclass__ = AccessorType
-    
+
     """
-    
+
     def __init__(self, name, bases, dict):
         type.__init__(self, name, bases, dict)
         accessors = {}
@@ -135,7 +135,7 @@ class PropertyAccessor(object):
     Extending this class will give you explicit accessor methods; a
     method called set_foo, for example, is the same as an if statement
     in __setattr__ looking for 'foo'.  Same for get_foo and del_foo.
-    
+
     There are also reallyDel and reallySet methods, so you can
     override specifics in subclasses without clobbering __setattr__
     and __getattr__, or using non-2.1 compatible code.
@@ -153,7 +153,7 @@ class PropertyAccessor(object):
     # The behaviour of OriginalAccessor is wrong IMHO, and I've found bugs
     # caused by it.
     #  -- itamar
-    
+
     __metaclass__ = AccessorType
 
     def reallySet(self, k, v):
@@ -169,7 +169,7 @@ class OriginalAccessor:
     method called C{set_foo}, for example, is the same as an if statement
     in L{__setattr__} looking for C{'foo'}.  Same for C{get_foo} and
     C{del_foo}.  There are also L{reallyDel} and L{reallySet} methods,
-    so you can override specifics in subclasses without clobbering 
+    so you can override specifics in subclasses without clobbering
     L{__setattr__} and L{__getattr__}.
 
     This implementation is for Python 2.1.
@@ -230,7 +230,7 @@ if sys.version_info[:2] >= (2, 2):
     #
     # To enable property-based accessor in 2.2, uncomment next 2 lines and
     # delete the 3rd.
-    
+
     #del OriginalAccessor
     #Accessor = PropertyAccessor
     Accessor = OriginalAccessor
@@ -330,9 +330,9 @@ def getArgumentCount(obj, default=None):
         if typ is InstanceType: method = obj.__call__
         return method.im_func.func_code.co_argcount - 1
     except:
-        if default is not None: return default 
-        raise 
-     
+        if default is not None: return default
+        raise
+
 
 def funcinfo(function):
     """
@@ -345,7 +345,7 @@ def funcinfo(function):
     defaults=function.func_defaults
 
     out = []
-    
+
     out.append('The function %s accepts %s arguments' % (name ,argc))
     if defaults:
         required=argc-len(defaults)
@@ -418,6 +418,24 @@ def namedObject(name):
     return getattr(module, classSplit[-1])
 
 namedClass = namedObject # backwards compat
+
+def namedAny(name):
+    """Get a fully named package, module, module-global object, or attribute.
+    """
+    names = name.split('.')
+    topLevelPackage = None
+    moduleNames = names[:]
+    while not topLevelPackage:
+        try:
+            topLevelPackage = __import__('.'.join(moduleNames))
+        except ImportError:
+            moduleNames.pop()
+    
+    obj = topLevelPackage
+    for n in names[1:]:
+        obj = getattr(obj, n)
+        
+    return obj
 
 def _reclass(clazz):
     clazz = getattr(namedModule(clazz.__module__),clazz.__name__)
@@ -552,7 +570,7 @@ def accumulateMethods(obj, dict, prefix='', curClass=None):
             and (len(optName))):
             dict[optName] = getattr(obj, name)
 
-def accumulateClassDict(classObj, attr, dict, baseClass=None):
+def accumulateClassDict(classObj, attr, adict, baseClass=None):
     """Accumulate all attributes of a given name in a class heirarchy into a single dictionary.
 
     Assuming all class attributes of this name are dictionaries.
@@ -583,9 +601,9 @@ def accumulateClassDict(classObj, attr, dict, baseClass=None):
     {\"taste\": \"bland\", \"colour\": \"green\", \"vegan\": 1}
     """
     for base in classObj.__bases__:
-        accumulateClassDict(base, attr, dict)
+        accumulateClassDict(base, attr, adict)
     if baseClass is None or baseClass in classObj.__bases__:
-        dict.update(getattr(classObj, attr, {}))
+        adict.update(getattr(classObj, attr, {}))
 
 def accumulateClassList(classObj, attr, listObj, baseClass=None):
     """Accumulate all attributes of a given name in a class heirarchy into a single list.

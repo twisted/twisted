@@ -84,7 +84,7 @@ class AccessorTest(unittest.TestCase):
         self.tester.x = 1
         self.failUnlessEqual(self.tester.x, 1)
         self.failUnlessEqual(self.tester.y, 1)
-    
+
     def testGet(self):
         self.failUnlessEqual(self.tester.z, 1)
         self.failUnlessEqual(self.tester.q, 1)
@@ -145,10 +145,36 @@ class PromiseTest(unittest.TestCase):
 
 class LookupsTestCase(unittest.TestCase):
     """Test lookup methods."""
-    
+
     def testClassLookup(self):
         self.assertEquals(reflect.namedClass("twisted.python.reflect.Summer"), reflect.Summer)
-    
+
     def testModuleLookup(self):
         self.assertEquals(reflect.namedModule("twisted.python.reflect"), reflect)
 
+class LookupsTestCaseII(unittest.TestCase):
+    def testPackageLookup(self):
+        import twisted.python
+        self.failUnlessIdentical(reflect.namedAny("twisted.python"),
+                                 twisted.python)
+
+    def testModuleLookup(self):
+        self.failUnlessIdentical(reflect.namedAny("twisted.python.reflect"),
+                                 reflect)
+
+    def testClassLookup(self):
+        self.failUnlessIdentical(reflect.namedAny("twisted.python."
+                                                  "reflect.Summer"),
+                                 reflect.Summer)
+
+    def testAttributeLookup(self):
+        # Why does Identical break down here?
+        self.failUnlessEqual(reflect.namedAny("twisted.python."
+                                              "reflect.Summer.reallySet"),
+                             reflect.Summer.reallySet)
+
+    def testSecondAttributeLookup(self):
+        self.failUnlessIdentical(reflect.namedAny("twisted.python."
+                                                  "reflect.Summer."
+                                                  "reallySet.__doc__"),
+                                 reflect.Summer.reallySet.__doc__)
