@@ -33,8 +33,13 @@ import profile
 import os
 import sys
 
+fname = sys.argv[1]
 sys.path.append(os.path.dirname(sys.argv[1]))
 
-app = cPickle.load(open(sys.argv[1]))
-#profile.run('app.run()')
-pdb.run('app.run()')
+if fname[-3:] == 'tac':
+    a = {}
+    pdb.run('execfile(fname, a, a); a["application"].run()')
+else:
+    app = cPickle.load(open(sys.argv[1]))
+    #profile.run('app.run()')
+    pdb.run('app.run()')
