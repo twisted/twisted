@@ -159,7 +159,7 @@ def main(options=None):
 
             # RPC has extra options, so extract that
             try:
-                name, rpcVersions = service.name.split('rpc')
+                name, rpcVersions = service.name.split('/')
             except ValueError:
                 log.msg('Bad RPC service/version: ' + service.name)
                 continue
