@@ -157,6 +157,9 @@ class TestFailureFormatting(common.RegistryBaseMixin, unittest.TestCase):
     def testImportError(self):
         self.failIfImportErrors = False
         # Add a module that fails to import
+        if modname in sys.modules:
+            # Previous tests might leave this hanging around in Python < 2.4.
+            del sys.modules[modname]
         self.suite.addModule('twisted.trial.test.importErrors')
         self.suite.run()
 
