@@ -1,3 +1,18 @@
+2002-12-13  Dave Peticolas  <dave@krondo.com>
+
+	* twisted/test/test_ftp.py: give client time to start up (fixes
+	one test for gtk/gtk2 reactors)
+
+	* twisted/protocols/ftp.py: ftp client in passive mode should not
+	close data until both command and protocol are finished. (fixes
+	one test in gtk/gtk2 reactors)
+
+	* twisted/internet/gtkreactor.py: remove redundant code
+
+	* twisted/internet/gtk2reactor.py: remove redundant code
+
+	* twisted/internet/abstract.py: fix spelling in documentation
+
 2002-12-12  Dave Peticolas  <dave@krondo.com>
 
 	* twisted/test/test_jelly.py: test class serialization
