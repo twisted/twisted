@@ -69,6 +69,7 @@ class LatexSpitter:
         for child in node.childNodes:
             self.visitNode(child)
         s = getattr(self, 'mapEnd_'+node.tagName, None) or ''
+        self.writer(s)
 
     def visitNode_pre(self, node):
         self.writer('\\begin{verbatim}\n')
