@@ -155,11 +155,10 @@ def suppressWarnings(f, *warningz):
     for warning in warningz:
         warnings.filterwarnings('ignore', *warning)
     try:
-        ret = f(*args, **kwargs)
+        return f(*args, **kwargs)
     finally:
         for warning in warningz:
             warnings.filterwarnings('default', *warning)
-            return ret
 """ % (f.func_name,) in locals()
         return locals()[f.func_name]
     return enclosingScope(warnings, warningz)
