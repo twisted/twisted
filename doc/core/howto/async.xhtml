@@ -12,24 +12,72 @@
 
 <h2>Introduction</h2>
 
+<h3>Waiting for answers</h3>
+
+<p>A fundamental feature of network programming is that of waiting for data.
+Imagine you have a function which sends an email summarising some information.
+This function needs to connect to a remote server, wait for the remote server
+to reply, check that the remote server can process the email, wait for the
+reply, send the email, wait for the confirmation, and then disconnect.</p>
+
+<p>Any one of these steps may take a long period of time. Your program might
+use the simplest of all possible models, in which it actually sits and waits
+for data to be sent and received, but in this case it has some very obvious
+and basic limitations: it can't send many emails at once; and in fact it can't
+do anything else while it is sending an email.</p>
+
+<p>Hence, all but the simplest network programs avoid this model. You can use
+one of several different models to allow your program to keep doing whatever
+tasks it has on hand while it is waiting for something to happen before a
+particular task can continue.</p>
+
+<h3>Not waiting on data</h3>
+
 <p>There are many ways to write network programs.  The main ones are:</p>
 
 <ol>
-    <li>Handle each connection in a separate process</li>
-    <li>Handle each connection in a separate thread<span class="footnote">There
+    <li>handle each connection in a separate operating system process, in
+    which case the operating system will take care of letting other processes
+    run while one is waiting;</li>
+    <li>handle each connection in a separate thread<span class="footnote">There
     are variations on this method, such
     as a limited-size pool of threads servicing all connections, which are
-    essentially just optimizations of the same idea.</span></li>
-    <li>Use non-blocking system calls to handle all connections
+    essentially just optimizations of the same idea.</span> in which the
+    threading framework takes care of letting other threads run while one is
+    waiting; or</li>
+    <li>use non-blocking system calls to handle all connections
         in one thread.</li>
 </ol>
 
-<p>When dealing with many connections in one thread, the
-scheduling is the responsibility of the application, not the
-operating system, and is usually implemented by calling a
-registered function when each connection is ready to for
-reading or writing -- commonly known as asynchronous, event-driven or
-callback-based programming.</p>
+<h3>Non-blocking calls</h3>
+
+<p>The normal model when using the Twisted framework is the third model:
+non-blocking calls.</p>
+
+<p>When dealing with many connections in one thread, the scheduling is the
+responsibility of the application, not the operating system, and is usually
+implemented by calling a registered function when each connection is ready to
+for reading or writing -- commonly known as <b>asynchronous</b>,
+<b>event-driven</b> or <b>callback-based</b> programming.</p>
+
+<p>In this model, the earlier email sending function would work something
+like this:</p>
+
+<ol>
+<li>it calls a connection function to connect to the remote server;</li>
+<li>the connection function returns immediately, with the implication that the notify
+the email sending library will be called when the connect has been made; and
+<li>once the connection is made, the connect mechanism notifies the email
+sending function that the connection is ready.</li>
+</ol>
+
+<p>What advantage does the above sequence have over our original blocking
+sequence? The advantage is that while the email sending function can't do the
+next part of its job until the connection is open, the rest of the program can
+do other tasks, like begin the opening sequence for other email connections.
+Hence, the entire program is not waiting for the connection.</p>
+
+<h3>Advantages of asynchrony</h3>
 
 <p>Multi-threaded programming is tricky, even with high level
 abstractions, and Python's 
