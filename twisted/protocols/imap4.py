@@ -2219,12 +2219,14 @@ class IMAP4Client(basic.LineReceiver):
         message.seek(0, 2)
         L = message.tell()
         message.seek(0, 0)
-        fmt = '%s (%s)%s%s {%d}'
+        fmt = '%s (%s)%s {%d}'
         if date:
-            date = '"%s"' % date
+            date = ' "%s"' % date
+        else:
+            date = ''
         cmd = fmt % (
             mailbox.encode('imap4-utf-7'), ' '.join(flags),
-            date and ' ' or '', date, L
+            date, L
         )
         continuation = defer.Deferred()
         continuation.addCallback(self.__cbContinueAppend, message)
