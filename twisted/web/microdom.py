@@ -321,8 +321,8 @@ class Text(CharacterData):
             if strip:
                 v = ' '.join(v.split())
             val = escape(v)
-            if isinstance(val, UnicodeType):
-                val = val.encode('utf8')
+        if isinstance(val, UnicodeType):
+            val = val.encode('utf8')
         stream.write(val)
 
     def __repr__(self):
