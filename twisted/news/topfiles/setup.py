@@ -17,8 +17,8 @@ if __name__ == '__main__':
         license="MIT",
         long_description="""\
 Twisted News is an NNTP protocol (Usenet) programming library. The
-library library contains server and client protocol implementations. A
-simple NNTP server is also provided.
+library contains server and client protocol implementations. A simple
+NNTP server is also provided.
 """,
     )
 
