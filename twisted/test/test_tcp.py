@@ -857,12 +857,11 @@ class HalfCloseTestCase(PortCleanerUpper):
         spinUntil(lambda :f.protocol.readHalfClosed)
 
         client.transport.write(" world")
-        spinWhile(lambda :client.transport._tempDataBuffer)
+        start = time.time()
+        spinWhile(lambda : time.time() - start < 0.5)
 
         self.assertEquals(f.protocol.readHalfClosed, True)
         self.assertEquals(f.protocol.data, "hello")
-
-    testCloseReadCloser.todo = 'this test is likely sensitive to transport buffering algorithm'
 
     def testWriteCloseNotification(self):
         f = self.f
