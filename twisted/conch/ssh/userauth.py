@@ -108,6 +108,9 @@ class SSHUserAuthServer(service.SSHService):
         self.transport.sendPacket(MSG_USERAUTH_SUCCESS, '')
         self.transport.avatar = avatar
         self.transport.logoutFunction = logout
+        if self.cancelLoginTimeout:
+            self.cancelLoginTimeout.cancel()
+            self.cancelLoginTimeout = None
         self.transport.setService(self.transport.factory.services[self.nextService]())
 
     def _ebMaybeBadAuth(self, reason):

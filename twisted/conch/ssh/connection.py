@@ -94,6 +94,8 @@ class SSHConnection(service.SSHService):
                     channel.localMaxPacket)+channel.specificData)
             channel.channelOpen('')
         except Exception, e:
+            log.msg('channel open failed')
+            log.deferr()
             if isinstance(e, error.ConchError):
                 reason, textualInfo = c.data, c.value
             else:

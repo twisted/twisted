@@ -1,8 +1,8 @@
 #!/usr/bin/env python
-from twisted.cred import portal, authorizer, checkers
-from twisted.conch import identity, error
+from twisted.cred import portal, checkers
+from twisted.conch import error, realm
 from twisted.conch.checkers import SSHPublicKeyDatabase
-from twisted.conch.ssh import factory, userauth, connection, channel, keys
+from twisted.conch.ssh import factory, userauth, connection, keys, session
 from twisted.internet import reactor, protocol, defer
 from twisted.python import log
 import sys
@@ -10,20 +10,20 @@ log.startLogging(sys.stderr)
 
 """Example of running another protocol over an SSH channel.
 log in with username "user" and password "password".
-Alternatively, put a public key in ./id_dsa.pub and the user may be
-authenticated with that.
 """
 
-class SSHAvatar:
+class ExampleAvatar(realm.ConchUser):
 
     def __init__(self, username):
+        realm.ConchUser.__init__(self)
         self.username = username
+        self.channelLookup.update({'session':session.SSHSession})
 
-class SSHRealm:
+class ExampleRealm:
     __implements__ = portal.IRealm,
 
     def requestAvatar(self, avatarId, mind, *interfaces):
-        return interfaces[0], SSHAvatar(avatarId), lambda x: None
+        return interfaces[0], ExampleAvatar(avatarId), lambda: None
 
 class EchoProtocol(protocol.Protocol):
     """this is our example protocol that we will run over SSH
@@ -33,6 +33,7 @@ class EchoProtocol(protocol.Protocol):
             data = '\r\n'
         elif data == '\x03': #^C
             self.transport.loseConnection()
+            return
         self.transport.write(data)
 
 publicKey = 'ssh-rsa AAAAB3NzaC1yc2EAAAABIwAAAGEArzJx8OYOnJmzf4tfBEvLi8DVPrJ3/c9k2I/Az64fxjHf9imyRJbixtQhlH9lfNjUIx+4LmrJH5QNRsFporcHDKOTwTTYLh5KmRpslkYHRivcJSkbh/C+BR3utDS555mV'
@@ -55,38 +56,51 @@ class InMemoryPublicKeyChecker(SSHPublicKeyDatabase):
 
     def checkKey(self, credentials):
         return credentials.username == 'user' and \
-            keys.getPublicKeyString(publicKey) == credentials.blob
+            keys.getPublicKeyString(data=publicKey) == credentials.blob
 
-class Authorizer(authorizer.Authorizer):
-    def getIdentityRequest(self, name):
-        return defer.succeed(Identity(name, self))
+def wrapProtocol(p):
+    return _DummyTransport(p)
 
-class SSHConnection(connection.SSHConnection):
-    def gotGlobalRequest(self, *args):
-        return 0
-    def getChannel(self, channelType, windowSize, maxPacket, data):
-        if channelType == 'session':
-            return SSHSession(
-                    remoteWindow=windowSize, 
-                    remoteMaxPacket=maxPacket,
-                    conn=self)
-        return 0
+class _DummyTransport:
 
-class SSHSession(channel.SSHChannel):
-    def channelOpen(self, data): pass
-    def request_pty_req(self, data):
-        # ignore, but this gets send for shell requests
-        return 1
-    def request_shell(self, data):
-        self.client = EchoProtocol()
-        self.client.makeConnection(self)
-        self.dataReceived = self.client.dataReceived
-        return 1
+    def __init__(self, proto):
+        self.proto = proto
+
+    def dataReceived(self, data):
+        self.proto.transport.write(data)
+
+    def write(self, data):
+        self.proto.dataReceived(data)
+
+    def writeSequence(self, seq):
+        self.write(''.join(seq))
+
     def loseConnection(self):
-        self.client.connectionLost()
-        channel.SSHChannel.loseConnection(self)
+        self.proto.connectionLost(protocol.connectionDone)
 
-class SSHFactory(factory.SSHFactory):
+class ExampleSession:
+    
+    def __init__(self, avatar):
+        """
+        We don't use it, but the adapter is passed the avatar as its first
+        argument.
+        """
+
+    def getPty(self, term, windowSize, attrs):
+        pass
+    
+    def execCommand(self, proto, cmd):
+        raise Exception("no executing commands")
+
+    def openShell(self, trans):
+        ep = EchoProtocol()
+        ep.makeConnection(trans)
+        trans.makeConnection(wrapProtocol(ep))
+
+from twisted.python import components
+components.registerAdapter(ExampleSession, ExampleAvatar, session.ISession)
+
+class ExampleFactory(factory.SSHFactory):
     publicKeys = {
         'ssh-rsa': keys.getPublicKeyString(data=publicKey)
     }
@@ -95,16 +109,16 @@ class SSHFactory(factory.SSHFactory):
     }
     services = {
         'ssh-userauth': userauth.SSHUserAuthServer,
-        'ssh-connection': SSHConnection
+        'ssh-connection': connection.SSHConnection
     }
     
 
-portal = portal.Portal(SSHRealm())
+portal = portal.Portal(ExampleRealm())
 passwdDB = checkers.InMemoryUsernamePasswordDatabaseDontUse()
 passwdDB.addUser('user', 'password')
 portal.registerChecker(passwdDB)
 portal.registerChecker(InMemoryPublicKeyChecker())
-SSHFactory.portal = portal
+ExampleFactory.portal = portal
 
-reactor.listenTCP(5022, SSHFactory())
+reactor.listenTCP(5022, ExampleFactory())
 reactor.run()

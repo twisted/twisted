@@ -548,6 +548,7 @@ class SSHClientTransport(transport.SSHClientTransport):
         global exitStatus
         exitStatus = 'conch:\tSending disconnect with error code %i\nconch:\treason: %s' % (code, reason)
         transport.SSHClientTransport.sendDisconnect(self, code, reason)
+        reactor.stop()
 
     def receiveDebug(self, alwaysDisplay, message, lang):
         global options

@@ -47,7 +47,7 @@ class ISession(components.Interface):
         proto should be a ProcessProtocol instance.
         """
 
-    def execCommand(self, proto, command, *args):
+    def execCommand(self, proto, command):
         """
         Execute a command.
 
@@ -96,15 +96,12 @@ class SSHSession(channel.SSHChannel):
             return 1
 
     def request_exec(self, data):
-        l = []
-        while data:
-            f,data = common.getNS(data)
-            l.append(f)
+        f,data = common.getNS(data)
         try:
             self.client = SSHSessionProcessProtocol(self)
-            self.session.execCommand(self.client, *l)
+            self.session.execCommand(self.client, f)
         except:
-            log.msg('error executing command: %s' % l)
+            log.msg('error executing command: %s' % f)
             log.deferr()
             return 0
         else:
@@ -201,11 +198,11 @@ class SSHSessionForUnixConchUser:
         proto.transport.write = self._writeHack
         self.avatar.conn.transport.transport.setTcpNoDelay(1)
 
-    def execCommand(self, proto, cmd, *args):
+    def execCommand(self, proto, cmd):
         uid, gid = self.avatar.getUserGroupId()
         homeDir = self.avatar.getHomeDir()
         shell = self.avatar.getShell() or '/bin/sh'
-        command = (shell, '-c', cmd) + args
+        command = (shell, '-c', cmd)
         peer = self.avatar.conn.transport.transport.getPeer()
         host = self.avatar.conn.transport.transport.getHost()
         self.environ['SSH_CLIENT'] = '%s %s %s' % (peer.host, peer.port, host.port)
@@ -299,6 +296,8 @@ def wrapProtocol(inst):
         return inst
 
 class SSHSessionProcessProtocol(protocol.ProcessProtocol):
+
+#    __implements__ = I
     def __init__(self, session):
         self.session = session
 
@@ -322,6 +321,16 @@ class SSHSessionProcessProtocol(protocol.ProcessProtocol):
             self.session.conn.sendRequest(self.session, 'exit-status', struct.pack('!L', reason.value.exitCode))
         self.session.loseConnection()
 
+    # transport stuff (we are also a transport!)
+
+    def write(self, data):
+        self.session.write(data)
+
+    def writeSequence(self, seq):
+        self.session.write(''.join(seq))
+
+    def loseConnection(self):
+        self.session.loseConnection()
 class SSHSessionClient(protocol.Protocol):
 
     def dataReceived(self, data):
