@@ -1,0 +1,26 @@
+#!/usr/bin/python
+import pwd, os, time, sys
+
+email = os.environ.get('TWISTED_EMAIL', os.environ['USER']+'@twistedmatrix.com')
+name = os.environ.get('TWISTED_NAME', 
+                      pwd.getpwuid(os.getuid())[4].split(',')[0])
+date = '-'.join(map(str, time.gmtime()[:3]))
+
+files = ' '.join(sys.argv[1:])
+if files:
+    files = files+':'
+
+entry = '''\
+%(date)s  %(name)s <%(email)s>
+
+	* %(files)s
+
+''' % vars()
+
+so_far = open("ChangeLog").read()
+open('ChangeLog.tmp', 'w').write(entry+so_far)
+os.system('/usr/bin/sensible-editor ChangeLog.tmp')
+if open('ChangeLog.tmp').read() == entry+so_far:
+    print "changelog not modified, not saving"
+else:
+    os.rename('ChangeLog.tmp', 'ChangeLog')
