@@ -9,7 +9,7 @@ API Stability: Unstable
 @author: U{Jp Calderone<mailto:exarkun@twistedmatrix.com>}
 """
 
-import tty, sys, termios
+import os, tty, sys, termios
 
 from twisted.internet import reactor, stdio, protocol, defer
 from twisted.python import failure, reflect, log
@@ -66,7 +66,6 @@ def runWithProtocol(klass):
         reactor.run()
     finally:
         termios.tcsetattr(fd, termios.TCSANOW, oldSettings)
-        import os
         os.write(0, "\r\x1bc\r")
 
 def main(argv=None):
