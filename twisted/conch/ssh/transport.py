@@ -417,6 +417,11 @@ class SSHServerTransport(SSHTransportBase):
 
 class SSHClientTransport(SSHTransportBase):
     isClient = 1
+
+    def connectionMade(self):
+        SSHTransportBase.connectionMade(self)
+        self._gotNewKeys = 0
+
     def ssh_KEXINIT(self, packet):
         self.serverKexInitPayload = chr(MSG_KEXINIT)+packet
         cookie = packet[: 16]
@@ -472,6 +477,7 @@ class SSHClientTransport(SSHTransportBase):
             self.sendPacket(MSG_KEX_DH_GEX_INIT, MP(self.DHpubKey))
 
     def _continueGEX_GROUP(self, ignored, pubKey, f, signature):
+        log.msg('continuing gex group')
         serverKey = keys.getPublicKeyObject(data = pubKey)
         sharedSecret = _MPpow(f, self.x, DH_PRIME)
         h = sha.new()
@@ -499,6 +505,7 @@ class SSHClientTransport(SSHTransportBase):
         d.addErrback(lambda x, self=self: self.sendDisconnect(DISCONNECT_KEY_EXCHANGE_FAILED, 'bad host key'))
 
     def _continueGEX_REPLY(self, ignored, pubKey, f, signature):
+        log.msg('continuing gex reply %s'%ignored)
         serverKey = keys.getPublicKeyObject(data = pubKey)
         sharedSecret = _MPpow(f, self.x, self.p)
         h = sha.new()
@@ -530,6 +537,8 @@ class SSHClientTransport(SSHTransportBase):
         integKeySC = self._getKey('F', sharedSecret, exchangeHash)
         self.nextEncryptions.setKeys(initIVCS, encKeyCS, initIVSC, encKeySC, integKeyCS, integKeySC)
         self.sendPacket(MSG_NEWKEYS, '')
+        if self._gotNewKeys:
+            self.ssh_NEWKEYS('')
 
     def _getKey(self, c, sharedSecret, exchangeHash):
         k1 = sha.new(sharedSecret+exchangeHash+c+self.sessionID).digest()
@@ -538,7 +547,8 @@ class SSHClientTransport(SSHTransportBase):
 
     def ssh_NEWKEYS(self, packet):
         if not hasattr(self.nextEncryptions, 'outCip'):
-            return # ignore this message if we aren't really set up
+            self._gotNewKeys = 1
+            return
         self.currentEncryptions = self.nextEncryptions
         if self.outgoingCompressionType == 'zlib':
             self.outgoingCompression = zlib.compressobj(6)

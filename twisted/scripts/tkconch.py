@@ -14,17 +14,33 @@
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 #
-# $Id: conch.py,v 1.29 2002/12/27 23:56:00 z3p Exp $
+# $Id: tkconch.py,v 1.1 2002/12/27 23:56:00 z3p Exp $
 
-#""" Implementation module for the `conch` command.
-#"""
+""" Implementation module for the `tkconch` command.
+"""
 
+from __future__ import nested_scopes
+
+import Tkinter, tkFont, string
+from twisted.conch import tkvt100
 from twisted.conch.ssh import transport, userauth, connection, common, keys
 from twisted.conch.ssh import session, forwarding
-from twisted.internet import reactor, stdio, defer, protocol
+from twisted.internet import reactor, defer, protocol, tksupport
 from twisted.python import usage, log
 
-import os, sys, getpass, struct, tty, fcntl, base64, signal
+import os, sys, getpass, struct, base64, signal
+
+colorKeys = (
+    'b', 'r', 'g', 'y', 'l', 'm', 'c', 'w',
+    'B', 'R', 'G', 'Y', 'L', 'M', 'C', 'W'
+)
+
+colorMap = {
+    'b': '#000000', 'r': '#c40000', 'g': '#00c400', 'y': '#c4c400',
+    'l': '#000080', 'm': '#c400c4', 'c': '#00c4c4', 'w': '#c4c4c4',
+    'B': '#626262', 'R': '#ff0000', 'G': '#00ff00', 'Y': '#ffff00',
+    'L': '#0000ff', 'M': '#ff00ff', 'C': '#00ffff', 'W': '#ffffff',
+}
 
 class GeneralOptions(usage.Options):
     synopsis = """Usage:    ssh [options] host [command]
@@ -102,9 +118,38 @@ class GeneralOptions(usage.Options):
 # Rest of code in "run"
 options = None
 exitStatus = 0
+frame = None
+
+def deferredAskFrame(question, echo):
+    if frame.callback:
+        raise "can't ask 2 questions at once!"
+    d = defer.Deferred()
+    resp = []
+    def gotChar(ch, resp=resp):
+        if not ch: return
+        if ch=='\x03': # C-c
+            reactor.stop()
+        if ch=='\r':
+            frame.write('\r\n')
+            stresp = ''.join(resp)
+            del resp
+            frame.callback = None
+            d.callback(stresp)
+            return
+        elif 32 <= ord(ch) < 127:
+            resp.append(ch)
+            if echo:
+                frame.write(ch)
+        elif ord(ch) == 8 and resp: # BS
+            frame.write('\x08 \x08')
+            resp.pop()
+    frame.callback = gotChar
+    frame.write(question)
+    frame.canvas.focus_force()
+    return d
 
 def run():
-    global options
+    global options, frame
     args = sys.argv[1:]
     if '-l' in args: # cvs is an idiot
         i = args.index('-l')
@@ -139,16 +184,12 @@ def run():
     port = int(options['port'] or 22)
     log.msg((host,port))
     reactor.connectTCP(host, port, SSHClientFactory())
-    fd = sys.stdin.fileno()
-    try:
-        old = tty.tcgetattr(fd)
-    except:
-        old = None
-    try:
-        reactor.run()
-    finally:
-        if old:
-            tty.tcsetattr(fd, tty.TCSADRAIN, old)
+    root = Tkinter.Tk()
+    frame = tkvt100.VT100Frame(root, callback=None)
+    root.geometry('%dx%d'%(tkvt100.fontWidth*frame.width+3, tkvt100.fontHeight*frame.height+3))
+    frame.pack(side = Tkinter.TOP)
+    tksupport.install(root)
+    reactor.run()
     sys.exit(exitStatus)
 
 def handleError():
@@ -185,14 +226,16 @@ class SSHClientTransport(transport.SSHClientTransport):
             log.msg('Received Debug Message: %s' % message)
 
     def verifyHostKey(self, pubKey, fingerprint):
+        #d = defer.Deferred()
+        #d.addCallback(lambda x:defer.succeed(1))
+        #d.callback(2)
+        #return d
         goodKey = self.isInKnownHosts(options['host'], pubKey)
         if goodKey == 1: # good key
-            return defer.succeed(1) 
+            return defer.succeed(1)
         elif goodKey == 2: # AAHHHHH changed
-            return defer.fail(error.ConchError('changed host key'))
+            return defer.fail(error.ConchError('bad host key'))
         else:
-            oldout, oldin = sys.stdout, sys.stdin
-            sys.stdin = sys.stdout = open('/dev/tty','r+')
             if options['host'] == self.transport.getPeer()[1]:
                 host = options['host']
                 khHost = options['host']
@@ -202,23 +245,29 @@ class SSHClientTransport(transport.SSHClientTransport):
                 khHost = '%s,%s' % (options['host'], 
                                     self.transport.getPeer()[1])
             keyType = common.getNS(pubKey)[0]
-            print """The authenticity of host '%s' can't be extablished.
+            ques = """The authenticity of host '%s' can't be extablished.\r
 %s key fingerprint is %s.""" % (host, 
                                 {'ssh-dss':'DSA', 'ssh-rsa':'RSA'}[keyType], 
                                 fingerprint) 
-            ans = raw_input('Are you sure you want to continue connecting (yes/no)? ')
-            while ans.lower() not in ('yes', 'no'):
-                ans = raw_input("Please type 'yes' or 'no': ")
-            sys.stdout,sys.stdin=oldout,oldin
-            if ans == 'no':
-                print 'Host key verification failed.'
-                return defer.fail(error.ConchError('bad host key'))
-            print "Warning: Permanently added '%s' (%s) to the list of known hosts." % (khHost, {'ssh-dss':'DSA', 'ssh-rsa':'RSA'}[keyType])
+            ques+='\r\nAre you sure you want to continue connecting (yes/no)? '
+            return deferredAskFrame(ques, 1).addCallback(self._cbVerifyHostKey, pubKey, khHost, keyType)
+
+    def _cbVerifyHostKey(self, ans, pubKey, khHost, keyType):
+        if ans.lower() not in ('yes', 'no'):
+            return deferredAskFrame("Please type  'yes' or 'no': ",1).addCallback(self._cbVerifyHostKey, pubKey, khHost, keyType)
+        if ans.lower() == 'no':
+            frame.write('Host key verification failed.\r\n')
+            raise error.ConchError('bad host key')
+        try:
+            frame.write("Warning: Permanently added '%s' (%s) to the list of known hosts.\r\n" % (khHost, {'ssh-dss':'DSA', 'ssh-rsa':'RSA'}[keyType]))
             known_hosts = open(os.path.expanduser('~/.ssh/known_hosts'), 'a')
+            print os.path.expanduser('~/.ssh/known_hosts')
             encodedKey = base64.encodestring(pubKey).replace('\n', '')
             known_hosts.write('\n%s %s %s' % (khHost, keyType, encodedKey))
             known_hosts.close()
-            return defer.succeed(1)
+        except:
+            log.deferr()
+            raise error.ConchError 
 
     def isInKnownHosts(self, host, pubKey):
         """checks to see if host is in the known_hosts file for the user.
@@ -250,6 +299,7 @@ class SSHClientTransport(transport.SSHClientTransport):
         return retVal
 
     def connectionSecure(self):
+        print 'connection secure'
         if options['user']:
             user = options['user']
         else:
@@ -260,20 +310,9 @@ class SSHUserAuthClient(userauth.SSHUserAuthClient):
     usedFiles = []
 
     def getPassword(self, prompt = None):
-#        self.passDeferred = defer.Deferred()
         if not prompt:
             prompt = "%s@%s's password: " % (self.user, options['host'])
-        #return self.passDeferred
-        oldout, oldin = sys.stdout, sys.stdin
-        sys.stdin = sys.stdout = open('/dev/tty','r+')
-        p=getpass.getpass(prompt)
-        sys.stdout,sys.stdin=oldout,oldin
-        return defer.succeed(p)
-       
-    def gotPassword(self, q, password):
-        d = self.passDeferred
-        del self.passDeferred
-        d.callback(password)
+        return deferredAskFrame(prompt,0) 
 
     def getPublicKey(self):
         files = [x for x in options.identitys if x not in self.usedFiles]
@@ -299,19 +338,19 @@ class SSHUserAuthClient(userauth.SSHUserAuthClient):
             return defer.succeed(keys.getPrivateKeyObject(file))
         except keys.BadKeyError, e:
             if e.args[0] == 'encrypted key with no password':
-                for i in range(3):
-                    prompt = "Enter passphrase for key '%s': " % \
-                           self.usedFiles[-1]
-                    oldout, oldin = sys.stdout, sys.stdin
-                    sys.stdin = sys.stdout = open('/dev/tty','r+')
-                    p=getpass.getpass(prompt)
-                    sys.stdout,sys.stdin=oldout,oldin
-                    try:
-                        return defer.succeed(keys.getPrivateKeyObject(file, password = p))
-                    except keys.BadKeyError:
-                        pass
-                return defer.fail(error.ConchError('bad password'))
-            raise
+                prompt = "Enter passphrase for key '%s': " % \
+                       self.usedFiles[-1]
+                return deferredAskFrame(prompt, 0).addCallback(self._cbGetPrivateKey, 0)
+    def _cbGetPrivateKey(self, ans, count):
+        file = os.path.expanduser(self.usedFiles[-1])
+        try:
+            return keys.getPrivateKeyObject(file, password = ans)
+        except keys.BadKeyError:
+            if count == 2:
+                raise
+            prompt = "Enter passphrase for key '%s': " % \
+                   self.usedFiles[-1]
+            return deferredAskFrame(prompt, 0).addCallback(self._cbGetPrivateKey, count+1)
 
 class SSHConnection(connection.SSHConnection):
     def serviceStarted(self):
@@ -341,41 +380,31 @@ class SSHSession(connection.SSHChannel):
         #globalSession = self
         # turn off local echo
         self.escapeMode = 1
-        fd = 0 #sys.stdin.fileno()
-        try:
-            new = tty.tcgetattr(fd)
-        except:
-            log.msg('not a typewriter!') 
-        else:
-            new[3] = new[3] & ~tty.ICANON & ~tty.ECHO
-            new[6][tty.VMIN] = 1
-            new[6][tty.VTIME] = 0
-            tty.tcsetattr(fd, tty.TCSANOW, new)
-            tty.setraw(fd)
         c = session.SSHSessionClient()
         if options['escape']:
             c.dataReceived = self.handleInput
         else:
             c.dataReceived = self.write
         c.connectionLost = self.sendEOF
-        stdio.StandardIO(c)
+        frame.callback = c.dataReceived
+        frame.canvas.focus_force()
         if options['subsystem']:
             self.conn.sendRequest(self, 'subsystem', \
                 common.NS(options['command']))
         elif options['command']:
             if options['tty']:
-                term = os.environ['TERM']
-                winsz = fcntl.ioctl(fd, tty.TIOCGWINSZ, '12345678')
-                winSize = struct.unpack('4H', winsz)
+                term = os.environ.get('TERM', 'xterm')
+                #winsz = fcntl.ioctl(fd, tty.TIOCGWINSZ, '12345678')
+                winSize = (25,80,0,0) #struct.unpack('4H', winsz)
                 ptyReqData = session.packRequest_pty_req(term, winSize, '')
                 self.conn.sendRequest(self, 'pty-req', ptyReqData)                
             self.conn.sendRequest(self, 'exec', \
                 common.NS(options['command']))
         else:
             if not options['notty']:
-                term = os.environ['TERM']
-                winsz = fcntl.ioctl(fd, tty.TIOCGWINSZ, '12345678')
-                winSize = struct.unpack('4H', winsz)
+                term = os.environ.get('TERM', 'xterm')
+                #winsz = fcntl.ioctl(fd, tty.TIOCGWINSZ, '12345678')
+                winSize = (25,80,0,0) #struct.unpack('4H', winsz)
                 ptyReqData = session.packRequest_pty_req(term, winSize, '')
                 self.conn.sendRequest(self, 'pty-req', ptyReqData)
             self.conn.sendRequest(self, 'shell', '')
@@ -408,9 +437,7 @@ class SSHSession(connection.SSHChannel):
             self.write(char)
 
     def dataReceived(self, data):
-        sys.stdout.write(data)
-        sys.stdout.flush()
-        #sys.stdout.flush()
+        frame.write(data)
 
     def extReceived(self, t, data):
         if t==connection.EXTENDED_DATA_STDERR:
@@ -434,3 +461,6 @@ class SSHSession(connection.SSHChannel):
 
     def sendEOF(self):
         self.conn.sendEOF(self)
+
+if __name__=="__main__":
+    run()

@@ -235,8 +235,8 @@ class SSHUserAuthClient(service.SSHService):
                 self.askForAuth('publickey', '\xff'+NS('')+NS('')+NS(''))
                 # this should fail, we'll move on
                 return
-            d.addCallback(self._cbGetPrivateKey)
-            d.addErrback(self._ebGetPrivateKey)
+            d.addCallback(self._cbPK_OK)
+            d.addErrback(self._ebPK_OK)
         elif self.lastAuth == 'password':
             prompt, language, rest = getNS(packet, 2)
             self._oldPass = self._newPass = None
@@ -245,7 +245,7 @@ class SSHUserAuthClient(service.SSHService):
         elif self.lastAuth == 'keyboard-interactive':
             return self.ssh_USERAUTH_INFO_RESPONSE(packet)
 
-    def _cbGetPrivateKey(self, privateKey):
+    def _cbPK_OK(self, privateKey):
         publicKey = self.lastPublicKey
         keyType =  keys.objectType(privateKey)
         b = NS(self.transport.sessionID) + chr(MSG_USERAUTH_REQUEST) + \
@@ -254,7 +254,7 @@ class SSHUserAuthClient(service.SSHService):
         self.askForAuth('publickey', '\xff' + NS(keyType) + NS(publicKey) + \
                         NS(keys.signData(privateKey, b)))
 
-    def _ebGetPrivateKey(self, failure):
+    def _ebPK_OK(self, failure):
         self.askForAuth('publickey', '\xff'+NS('')+NS('')+NS(''))
 
     def _setOldPass(self, op):
