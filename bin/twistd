@@ -17,7 +17,7 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
 
-"""
+usage_message = """
 Usage: twistd [options]
 Options:
      -q --quiet       be a little more quiet
@@ -77,7 +77,11 @@ class ServerOptions(usage.Options):
     def opt_plugin(self, pkgname):
         """read config.tac from a plugin package, as with -y
         """
-        fname = imp.find_module(pkgname)[1]
+        try:
+            fname = imp.find_module(pkgname)[1]
+        except ImportError:
+            print "Error: Package %s not found. Is it in your ~/TwistedPlugins directory?" % pkgname
+            sys.exit()
         self.python = os.path.join(fname, 'config.tac')
 
     opt_g = opt_plugin
@@ -86,7 +90,7 @@ try:
     config = ServerOptions()
     config.parseOptions()
 except usage.error, ue:
-    print __doc__
+    print usage_message
     print "%s: %s" % (sys.argv[0], ue)
     os._exit(1)
 
