@@ -76,7 +76,7 @@ class IRCProto(basesupport.AbstractClientMixin, irc.IRCClient):
         try:
             print 'connection made on irc service!?', self
             if self.account.password:
-                self.sendLine("PASS :%s" % account.password)
+                self.sendLine("PASS :%s" % self.account.password)
             self.setNick(self.account.nickname)
             self.sendLine("USER %s foo bar :GTK-IM user"%self.nickname)
             for channel in self.account.channels:
