@@ -2,7 +2,7 @@
 
 from __future__ import nested_scopes
 
-__version__ = "$Revision: 1.3 $"[11:-2]
+__version__ = "$Revision: 1.4 $"[11:-2]
 
 from twisted.python.compat import *
 from twisted.trial import unittest
@@ -48,8 +48,11 @@ class RemoteReporter:
     def remote_start(self, expectedTests, times=None):
         self.expectedTests = expectedTests
 
-    def remote_reportError(self, testClass, methodName, failure, times=None):
-        self.errors.append((testClass, methodName, failure))
+    def remote_reportResults(self, testClass, methodName, resultType,
+                             results, times=None):
+        assert resultType == unittest.ERROR
+        if resultType == unittest.ERROR:
+            self.errors.append((testClass, methodName, results))
 
     def remote_reportImportError(self, name, failure, times=None):
         self.importErrors.append((name, failure))
@@ -79,7 +82,9 @@ class TestJellyReporter(unittest.TestCase):
         try:
             monkey / 0
         except Exception:
-            self.reporter.reportError("aTestClass", "aMethod", sys.exc_info())
+            self.reporter.reportResults("aTestClass", "aMethod",
+                                        unittest.ERROR,
+                                        sys.exc_info())
 
 
 class TestRemoteReporter(unittest.TestCase):
@@ -110,8 +115,9 @@ class LoopbackTests(unittest.TestCase):
             monkey / 0
         except Exception:
             self.sendReporter._runHook = lambda : (
-                self.sendReporter.reportError("aTestClass", "aMethod",
-                                              sys.exc_info()))            
+                self.sendReporter.reportResults("aTestClass", "aMethod",
+                                                unittest.ERROR,
+                                                sys.exc_info()))            
         loopback.loopback(self.sendReporter, self.decoder)
         self.failUnlessEqual(len(self.reporter.errors), 1)
         self.failUnlessEqual(self.reporter.errors[0][:2], ("aTestClass",

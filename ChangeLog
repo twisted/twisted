@@ -1,3 +1,10 @@
+2003-04-06  Brian Warner  <warner@lothar.com>
+
+	* twisted/trial/{unittest.py,remote.py}, twisted/test/test_trial.py:
+	Collapse most reportFoo methods into a single reportResults() that
+	takes a resultType parameter. This anticipates the addition of .todo
+	test-case flags that will add two more resultTypes.
+
 2003-04-04  Kevin Turner  <acapnotic@twistedmatrix.com>
 
 	* twisted/scripts/trial.py: Now takes whatever you throw at it on

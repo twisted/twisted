@@ -32,7 +32,7 @@ from twisted.internet import protocol
 from twisted.python import components, failure
 from twisted.spread import banana, jelly
 
-import os
+import os, types
 
 class OneWayBanana(banana.Banana):
     # There can be no negotiation on a one-way stream, so only offer one
@@ -51,7 +51,7 @@ class JellyReporter(unittest.Reporter):
 
     This reporting format is machine-readable.  It might make more sense
     to proxy to a pb.Referenceable Reporter, but then it would need a
-    two-way connection and a reactor running to manage the protocol I'm
+    two-way connection and a reactor running to manage the protocol. I'm
     not sure if we want to do that.
 
     Decode this stream with L{DecodeReport}.
@@ -75,7 +75,7 @@ class JellyReporter(unittest.Reporter):
         if self.doSendTimes:
             sexp = jelly.jelly((methodName, args, os.times()))
         else:
-            sexp = jelly.jelly((methodName, args))            
+            sexp = jelly.jelly((methodName, args))
         self.banana.sendEncoded(sexp)
 
 
@@ -101,34 +101,27 @@ class JellyReporter(unittest.Reporter):
     def connectionLost(self, reason):
         pass
 
-## Fun with dynamic method creation.  For each of Reporter's methods, make
-## a JellyReporter version that sends the message to the jelly stream.
-# (Should this have used t.p.hook?  I'm not convinced that would be
-# any cleaner.)
-import new
-for methodName in ("start", "stop",
-                   "reportStart", "reportSkip",
-                   "reportFailure", "reportError", "reportSuccess"):
-    reporterMethod = getattr(JellyReporter, methodName)
-    if methodName in ('reportSkip','reportFailure','reportError'):
-        # These methods have a exc_info -> Failure transformation.
-        def replacement(self, testClass, method, exc_info):
-            typ, val, tb = exc_info
-            f = failure.Failure(val, typ, tb)
-            self.jellyMethodCall(methodName, testClass, method, f)
-            return reporterMethod(self, testClass, method, exc_info)
-    else:
-        def replacement(self, *args):
-            self.jellyMethodCall(methodName, *args)
-            return reporterMethod(self, *args)
-    replacement = new.function(replacement.func_code,
-                               {'failure': failure,
-                                'reporterMethod': reporterMethod,
-                                'methodName': methodName},
-                               methodName)
-    setattr(JellyReporter, methodName, replacement)
-del reporterMethod
-del methodName
+    def start(self, *args):
+        self.jellyMethodCall("start", *args)
+        unittest.Reporter.start(self, *args)
+        
+    def stop(self, *args):
+        self.jellyMethodCall("stop", *args)
+        unittest.Reporter.stop(self, *args)
+        
+    def reportStart(self, *args):
+        self.jellyMethodCall("reportStart", *args)
+        unittest.Reporter.reportStart(self, *args)
+        
+    def reportResults(self, testClass, method, resultType, results=None):
+        jresults = results
+        if type(jresults) == types.TupleType:
+            typ, val, tb = jresults
+            jresults = failure.Failure(val, typ, tb)
+        self.jellyMethodCall("reportResults", testClass, method, resultType,
+                             jresults)
+        unittest.Reporter.reportResults(self, testClass, method, resultType,
+                                        results)
 
 class NullTransport:
     """Transport to /dev/null."""
@@ -154,16 +147,8 @@ class IRemoteReporter(components.Interface):
     def remote_reportStart(self, testClass, method, times=None):
         pass
 
-    def remote_reportSkip(self, testClass, method, aFailure, times=None):
-        pass
-
-    def remote_reportFailure(self, testClass, method, aFailure, times=None):
-        pass
-
-    def remote_reportError(self, testClass, method, aFailure, times=None):
-        pass
-
-    def remote_reportSuccess(self, testClass, method, times=None):
+    def remote_reportResults(self, testClass, method, resultType, results,
+                             times=None):
         pass
 
     def remote_stop(self, times=None):
@@ -210,16 +195,8 @@ class DemoRemoteReporter:
     def remote_reportStart(self, testClass, method, times=None):
         self.printTimeStamped(times, "startTest", method)
 
-    def remote_reportSkip(self, testClass, method, aFailure, times=None):
-        pass
-
-    def remote_reportFailure(self, testClass, method, aFailure, times=None):
-        pass
-
-    def remote_reportError(self, testClass, method, aFailure, times=None):
-        pass
-
-    def remote_reportSuccess(self, testClass, method, times=None):
+    def remote_reportResults(self, testClass, method, resultType, results,
+                             times=None):
         pass
 
     def remote_stop(self, times=None):

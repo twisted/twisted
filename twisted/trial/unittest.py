@@ -36,6 +36,9 @@ class FailTest(AssertionError):
 # in your tests, you probably want to leave this false.
 ASSERTION_IS_ERROR = 0
 
+# test results, passed as resultType to Reporter.reportResults()
+SKIP, FAILURE, ERROR, SUCCESS = "skip", "failure", "error", "success"
+
 class TestCase:
     def setUp(self):
         pass
@@ -170,7 +173,7 @@ class TestSuite:
             testCase.setUp()
             method(testCase)
         except failingExceptionType, e:
-            output.reportFailure(testClass, method, sys.exc_info())
+            output.reportResults(testClass, method, FAILURE, sys.exc_info())
         except KeyboardInterrupt:
             raise
         except SkipTest, r:
@@ -178,11 +181,11 @@ class TestSuite:
             if len(r.args) > 0:
                 reason = r.args[0]
             if reason:
-                output.reportSkip(testClass, method, reason)
+                output.reportResults(testClass, method, SKIP, reason)
             else:
-                output.reportSkip(testClass, method, sys.exc_info())
+                output.reportResults(testClass, method, SKIP, sys.exc_info())
         except:
-            output.reportError(testClass, method, sys.exc_info())
+            output.reportResults(testClass, method, ERROR, sys.exc_info())
         else:
             ok = 1
 
@@ -190,13 +193,15 @@ class TestSuite:
             testCase.tearDown()
         except failingExceptionType, e:
             if ok:
-                output.reportFailure(testClass, method, sys.exc_info())
+                output.reportResults(testClass, method, FAILURE,
+                                     sys.exc_info())
             ok = 0
         except KeyboardInterrupt:
             raise
         except:
             if ok:
-                output.reportError(testClass, method, sys.exc_info())
+                output.reportResults(testClass, method, ERROR,
+                                     sys.exc_info())
             ok = 0
 
         try:
@@ -221,13 +226,15 @@ class TestSuite:
                     reactor.threadpool = None
         except failingExceptionType, e:
             if ok:
-                output.reportFailure(testClass, method, sys.exc_info())
+                output.reportResults(testClass, method, FAILURE,
+                                     sys.exc_info())
             ok = 0
         except KeyboardInterrupt:
             raise
         except:
             if ok:
-                output.reportError(testClass, method, sys.exc_info())
+                output.reportResults(testClass, method, ERROR,
+                                     sys.exc_info())
             ok = 0
 
         # garbage collect now, to make sure any Deferreds with pending
@@ -238,10 +245,10 @@ class TestSuite:
 
         for e in log.flushErrors():
             ok = 0
-            output.reportError(testClass, method, e)
+            output.reportResults(testClass, method, ERROR, e)
 
         if ok:
-            output.reportSuccess(testClass, method)
+            output.reportResults(testClass, method, SUCCESS)
 
     def run(self, output, seed = None):
         output.start(self.numTests)
@@ -345,30 +352,22 @@ class Reporter:
     def reportStart(self, testClass, method):
         pass
 
-    def reportSkip(self, testClass, method, exc_info):
-        self.skips.append((testClass, method, exc_info))
+    def reportResults(self, testClass, method, resultType, results=None):
         self.numTests += 1
-
-    def reportFailure(self, testClass, method, exc_info):
-        if self.debugger:
-            if isinstance(exc_info, failure.Failure):
-                raise TypeError, "Failure, not Exception -- you lose."
+        if resultType == SKIP:
+            self.skips.append((testClass, method, results))
+        elif resultType == FAILURE or resultType == ERROR:
+            if self.debugger:
+                if isinstance(results, failure.Failure):
+                    raise TypeError, "Failure, not Exception -- you lose."
+                else:
+                    pdb.post_mortem(results[2])
+            if resultType == FAILURE:
+                self.failures.append((testClass, method, results))
             else:
-                pdb.post_mortem(exc_info[2])
-        self.failures.append((testClass, method, exc_info))
-        self.numTests += 1
-
-    def reportError(self, testClass, method, exc_info):
-        if self.debugger:
-            if isinstance(exc_info, failure.Failure):
-                raise TypeError, "Failure, not Exception -- you lose."
-            else:
-                pdb.post_mortem(exc_info[2])
-        self.errors.append((testClass, method, exc_info))
-        self.numTests += 1
-
-    def reportSuccess(self, testClass, method):
-        self.numTests += 1
+                self.errors.append((testClass, method, results))
+        elif resultType == SUCCESS:
+            pass
 
     def getRunningTime(self):
         if hasattr(self, 'stopTime'):
@@ -403,21 +402,10 @@ class TextReporter(Reporter):
         self.stream = stream
         Reporter.__init__(self)
 
-    def reportFailure(self, testClass, method, exc_info):
-        self.write('F')
-        Reporter.reportFailure(self, testClass, method, exc_info)
-
-    def reportError(self, testClass, method, exc_info):
-        self.write('E')
-        Reporter.reportError(self, testClass, method, exc_info)
-
-    def reportSkip(self, testClass, method, exc_info):
-        self.write('S')
-        Reporter.reportSkip(self, testClass, method, exc_info)
-
-    def reportSuccess(self, testClass, method):
-        self.write('.')
-        Reporter.reportSuccess(self, testClass, method)
+    def reportResults(self, testClass, method, resultType, results=None):
+        letters = {FAILURE: 'F', ERROR: 'E', SKIP: 'S', SUCCESS: '.'}
+        self.write(letters[resultType])
+        Reporter.reportResults(self, testClass, method, resultType, results)
 
     def _formatError(self, flavor, (testClass, method, error)):
         if isinstance(error, failure.Failure):
@@ -489,21 +477,11 @@ class VerboseTextReporter(TextReporter):
     def reportStart(self, testClass, method):
         self.write('%s (%s) ... ', method.__name__, reflect.qual(testClass))
 
-    def reportSuccess(self, testClass, method):
-        self.writeln('[OK]')
-        Reporter.reportSuccess(self, testClass, method)
-
-    def reportFailure(self, testClass, method, exc_info):
-        self.writeln('[FAIL]')
-        Reporter.reportFailure(self, testClass, method, exc_info)
-
-    def reportError(self, testClass, method, exc_info):
-        self.writeln('[ERROR]')
-        Reporter.reportError(self, testClass, method, exc_info)
-
-    def reportSkip(self, testClass, method, exc_info):
-        self.writeln('[SKIPPED]')
-        Reporter.reportSkip(self, testClass, method, exc_info)
+    def reportResults(self, testClass, method, resultType, results=None):
+        words = {FAILURE: '[FAIL]', ERROR: '[ERROR]', SKIP: '[SKIPPED]',
+                 SUCCESS: '[OK]'}
+        self.writeln(words[resultType])
+        Reporter.reportResults(self, testClass, method, resultType, results)
 
 class TreeReporter(TextReporter):
     columns = 79
@@ -548,21 +526,13 @@ class TreeReporter(TextReporter):
         self.write(spaces)
         self.writeln(self.color(message, color))
 
-    def reportSuccess(self, testClass, method):
-        self.endLine('[OK]', self.GREEN)
-        Reporter.reportSuccess(self, testClass, method)
-
-    def reportFailure(self, testClass, method, exc_info):
-        self.endLine('[FAIL]', self.RED)
-        Reporter.reportFailure(self, testClass, method, exc_info)
-
-    def reportError(self, testClass, method, exc_info):
-        self.endLine('[ERROR]', self.RED)
-        Reporter.reportError(self, testClass, method, exc_info)
-
-    def reportSkip(self, testClass, method, exc_info):
-        self.endLine('[SKIPPED]', self.BLUE)
-        Reporter.reportSkip(self, testClass, method, exc_info)
+    def reportResults(self, testClass, method, resultType, results=None):
+        words = {FAILURE: ('[FAIL]', self.RED),
+                 ERROR: ('[ERROR]', self.RED),
+                 SKIP: ('[SKIPPED]', self.BLUE),
+                 SUCCESS: ('[OK]', self.GREEN)}
+        self.endLine(words[resultType][0], words[resultType][1])
+        Reporter.reportResults(self, testClass, method, resultType, results)
 
 
 
