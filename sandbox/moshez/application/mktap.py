@@ -58,14 +58,11 @@ def makeService(mod, s, options):
         ser = mod.makeService(options)
     ser.setServiceParent(s)
 
-def makeApplication(options):
-    mod = options.tapLookup[options.subCommand].load()
-    a = app.loadOrCreate(options.subCommand, options['append'],
-                         options['appname'],
-                         *getid(options['uid'], options['gid']))
-    makeService(mod, service.IServiceCollection(a), options.subOptions)
-    app.saveApplication(a,
-                    options['type'], options['encrypted'], options['append'])
+def makeApplication(module, name, append, procname, type, encrypted, options,
+                    uid, gid):
+    a = app.loadOrCreate(name, append, procname, uid, gid)
+    makeService(module, service.IServiceCollection(a), options)
+    app.saveApplication(a, type, encrypted, append)
 
 class FirstPassOptions(usage.Options):
     synopsis = """Usage:    mktap [options] <command> [command options] """
@@ -156,4 +153,8 @@ def run():
         sys.exit(2)
     except KeyboardInterrupt:
         sys.exit(1)
-    makeApplication(options)
+    makeApplication(options.tapLookup[options.subCommand].load(),
+                    options.subCommand, options['append'], options['appname'],
+                    options['type'],
+                    options['encrypted'], options.subOptions,
+                    *getid(options['uid'], options['gid']))
