@@ -25,18 +25,20 @@ them. </p>
 
     <h3>Which parts of Twisted 1.0 are stable?</h3>
 
-    <p>In general, any module marked as such can be considered stable. In
-    Twisted 1.0, <b>only twisted.internet is stable</b>, other than:</p>
+    <p>Only modules explictily marked as such can be considered stable. Semi-stable
+    modules may change, but not in a large way and some sort of backwards-compatibily
+    will probably be provided. If no comment about API stability is present, assume
+    the module is unstable.</p>
+
+    <p>In Twisted 1.0, <b>most of twisted.internet is completely stable</b>, other than:
     
     <ol>
     <li>UDP support</li>
-    <li>twisted.internet.ptypro - probably be merged into IReactorProcess APIs.</li>
     <li>twisted.internet.win32eventreactor - will be replaced with win32support in future.</li>
     </ol>
-
-    <p>In addition, most of the modules in twisted.spread, twisted.python, twisted.web 
-    will probably have backwards compatibility provided if their APIs change, since they
-    are widely used.</p>
+    
+    But as always, the only accurate way of knowing a module's stability is reading
+    the module's docstrings.</p>
 
     <h3>Twisted really needs documentation for cred/PB/etc.</h3>
 
