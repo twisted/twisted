@@ -20,22 +20,22 @@ import random
 
 from pyunit import unittest
 
-from twisted.python import mvc
+from twisted.web.woven import model, view, controller, interfaces
 from twisted.python import components
 
 # simple pickled string storage to test persistence
 persisted_model = ""
 
-class MyModel(mvc.Model):
+class MyModel(model.Model):
     def __init__(self, foo, random=None):
         # I hate having to explicitly initialize the super
-        mvc.Model.__init__(self)
+        model.Model.__init__(self)
         self.foo=foo
         self.random=random
 
-class MyView(mvc.View):        
+class MyView(view.View):        
     def __init__(self, model):
-        mvc.View.__init__(self, model)
+        view.View.__init__(self, model)
         self.model.addView(self)
         # pretend self.foo is what the user now sees on their screen
         self.foo = self.model.foo
@@ -62,9 +62,9 @@ class MyView(mvc.View):
         return self.controller.doRandom()
 
 # Register MyView as the view for instances of type MyModel
-components.registerAdapter(MyView, MyModel, mvc.IView)
+components.registerAdapter(MyView, MyModel, interfaces.IView)
 
-class MyController(mvc.Controller):
+class MyController(controller.Controller):
     def setFoo(self, newValue):
         self.model.foo = newValue
         self.model.notify({'foo': newValue})
@@ -87,7 +87,7 @@ class MyController(mvc.Controller):
         persisted_model = dumps(self.model)
 
 # Register MyController as the controller for instances of type MyModel
-components.registerAdapter(MyController, MyModel, mvc.IController)
+components.registerAdapter(MyController, MyModel, interfaces.IController)
 
 class MVCTestCase(unittest.TestCase):
     """Test MVC."""
@@ -95,7 +95,7 @@ class MVCTestCase(unittest.TestCase):
         self.model = MyModel("foo")
 
     def getView(self):
-        return components.getAdapter(self.model, mvc.IView, None)
+        return components.getAdapter(self.model, interfaces.IView, None)
 
     def testViewConstruction(self):
         view = self.getView()
