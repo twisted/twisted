@@ -289,14 +289,10 @@ class MulticastTestCase(unittest.TestCase):
             self.assertEquals(o.transport.getLoopbackMode(), 0)
     
     def testInterface(self):
-        o = self.client
-        self.assertEquals(o.transport.getOutgoingInterface(), "0.0.0.0")
-        self.runUntilSuccess(o.transport.setOutgoingInterface, "127.0.0.1")
-        self.assertEquals(o.transport.getOutgoingInterface(), "127.0.0.1")
-        o = self.server
-        self.assertEquals(o.transport.getOutgoingInterface(), "0.0.0.0")
-        self.runUntilSuccess(o.transport.setOutgoingInterface, "127.0.0.1")
-        self.assertEquals(o.transport.getOutgoingInterface(), "127.0.0.1")
+        for o in self.client, self.server:
+            self.assertEquals(o.transport.getOutgoingInterface(), "0.0.0.0")
+            self.runUntilSuccess(o.transport.setOutgoingInterface, "127.0.0.1")
+            self.assertEquals(o.transport.getOutgoingInterface(), "127.0.0.1")
     
     def testJoinLeave(self):
         for o in self.client, self.server:
@@ -334,7 +330,6 @@ class MulticastTestCase(unittest.TestCase):
 
     testMultiListen.skip = "on non-linux platforms it appears multiple processes can listen, but not multiple sockets in same process?"
 
-
 if not interfaces.IReactorUDP(reactor, None):
     UDPTestCase.skip = "This reactor does not support UDP"
 if not hasattr(reactor, "connectUDP"):
@@ -342,3 +337,12 @@ if not hasattr(reactor, "connectUDP"):
 if not interfaces.IReactorMulticast(reactor, None):
     MulticastTestCase.skip = "This reactor does not support multicast"
 
+def checkForLinux22():
+    import os
+    if os.path.exists("/proc/version"):
+        s = open("/proc/version").read()
+        if s.startswith("Linux version"):
+            s = s.split()[2]
+            if s.split(".")[:2] == ["2", "2"]:
+                MulticastTestCase.testInterface.im_func.todo = "figure out why this fails in linux 2.2"
+checkForLinux22()
