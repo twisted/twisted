@@ -19,6 +19,7 @@
 from pyunit import unittest
 
 from twisted.internet import protocol, reactor
+from twisted.internet.error import CannotListenError
 
 
 class ClosingFactory(protocol.ServerFactory):
@@ -157,3 +158,23 @@ class FactoryTestCase(unittest.TestCase):
         reactor.iterate()
         reactor.iterate()
         self.assertEquals((f.started, f.stopped), (1, 1))
+
+class CannotBindTestCase (unittest.TestCase):
+    """Tests for correct behavior when a reactor cannot bind to the required TCP port."""
+
+    def testCannotBind(self):
+        f = MyFactory()
+
+        # listen on port 9990
+        p1 = reactor.listenTCP(9990, f, interface='127.0.0.1')
+        assert p1.getHost() == ("INET", "127.0.0.1", 9990,)
+                                
+        # Now the reactor will have bound port 9995.
+
+        try:
+            p2 = reactor.listenTCP(9990, f, interface='127.0.0.1')
+            self.fail("startListening() should have raised an exception, and it didn't.")
+        except CannotListenError, le:
+            # print "good work!  You raised: ", le
+            pass
+

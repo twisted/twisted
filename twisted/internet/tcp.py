@@ -27,6 +27,7 @@ import os
 import stat
 import types
 import copy
+import exceptions
 import socket
 import sys
 import string
@@ -54,6 +55,7 @@ from twisted.internet import protocol
 from twisted.persisted import styles
 from twisted.python import log
 from twisted.python.runtime import platform
+from twisted.internet.error import CannotListenError
 from twisted.internet.interfaces import IConnector
 from twisted.internet import defer
 # Sibling Imports
@@ -404,13 +406,19 @@ class Port(abstract.FileDescriptor):
         if type(self.port) == types.StringType:
             skt = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
             skt.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-            skt.bind(self.port)
+            try:
+                skt.bind(self.port)
+            except socket.error, le:
+                raise CannotListenError, (self.interface, self.port, le,)
             # Make the socket readable and writable to the world.
             os.chmod(self.port, 0666)
             self.unixsocket = 1
         else:
             skt = self.createInternetSocket()
-            skt.bind((self.interface, self.port))
+            try:
+                skt.bind((self.interface, self.port))
+            except socket.error, le:
+                raise CannotListenError, (self.interface, self.port, le,)
         skt.setblocking(0)
         skt.listen(self.backlog)
         self.connected = 1

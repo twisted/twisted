@@ -45,7 +45,15 @@ class IConnector(Interface):
 
 class IReactorTCP(Interface):
     def listenTCP(self, port, factory, backlog=5, interface=''):
-        """Connects a given protocol factory to the given numeric TCP/IP port.
+       """Connects a given protocol factory to the given numeric TCP/IP port.
+
+        Return:
+
+          an object that satisfies the IListeningPort interface
+
+        Throws:
+
+          a CannotListenError, as defined in twisted.internet.error, if it cannot listen on this port (e.g., it cannot bind to the required port number)
         """
 
     def clientTCP(self, host, port, protocol, timeout=30):
@@ -356,6 +364,10 @@ class IListeningPort(Interface):
 
     def startListening(self):
         """Start listening on this port.
+
+        Throws:
+
+          a CannotListenError, as defined in twisted.internet.error, if it cannot listen on this port (e.g., it is a TCP port and it cannot bind to the required port number)
         """
 
     def stopListening(self):
