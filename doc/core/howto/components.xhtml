@@ -429,7 +429,7 @@ class MyThing(pb.Root):
     implements(IMyInterface)
 </pre>
 
-<pre class="python-interpretor">
+<pre class="python-interpreter">
 &gt;&gt;&gt; from twisted.spread.flavors import IPBRoot
 &gt;&gt;&gt; IPBRoot.implementedBy(MyThing)
 True
@@ -450,7 +450,7 @@ class MyThing(pb.Root):
     implementsOnly(IMyInterface)
 </pre>
 
-<pre class="python-interpretor">
+<pre class="python-interpreter">
 &gt;&gt;&gt; from twisted.spread.flavors import IPBRoot
 &gt;&gt;&gt; IPBRoot.implementedBy(MyThing)
 False
