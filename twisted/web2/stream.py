@@ -471,7 +471,8 @@ class ProducerStream:
     
     def __init__(self, length=None):
         self.buffer = []
-
+        self.length = length
+        
     # IByteStream implementation
     def read(self):
         if self.buffer:

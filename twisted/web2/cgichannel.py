@@ -1,8 +1,148 @@
 import time, sys
 from twisted.internet import protocol
-from twisted.internet import reactor, stdio
+from twisted.internet import reactor
 from twisted.web2 import http, http_headers, server, responsecode
 import os
+
+
+# Move this to twisted core soonish
+from twisted.internet import process, error, interfaces, fdesc
+from twisted.python import log
+from zope.interface import implements
+class StdIOThatDoesntSuckAsBad(object):
+    implements(interfaces.ITransport, interfaces.IProducer, interfaces.IConsumer)
+    _reader = None
+    _writer = None
+    disconnected = False
+
+    def __init__(self, proto, stdin=0, stdout=1):
+        self.protocol = proto
+        
+        fdesc.setNonBlocking(stdin)
+        fdesc.setNonBlocking(stdout)
+        self._reader=process.ProcessReader(reactor, self, 'read', stdin)
+        self._reader.proto=self
+        self._reader.startReading()
+        self._writer=process.ProcessWriter(reactor, self, 'write', stdout)
+        self._writer.proto=self
+        self._writer.startReading()
+        self.protocol.makeConnection(self)
+
+    # ITransport
+    def loseWriteConnection(self):
+        if self._writer is not None:
+            self._writer.loseConnection()
+        
+    def write(self, data):
+        if self._writer is not None:
+            self._writer.write(data)
+            
+    def writeSequence(self, data):
+        if self._writer is not None:
+            self._writer.writeSequence(data)
+            
+    def loseConnection(self):
+        self.disconnecting = True
+        
+        if self._writer is not None:
+            self._writer.loseConnection()
+        if self._reader is not None:
+            # Don't loseConnection, because we don't want to SIGPIPE it.
+            self._reader.stopReading()
+        
+    def getPeer(self):
+        return 'i wonder what goes here'
+    
+    def getHost(self):
+        return 'i wonder what goes here'
+
+
+    # Callbacks from process.ProcessReader/ProcessWriter
+    def childDataReceived(self, fd, data):
+        self.protocol.dataReceived(data)
+
+    def childConnectionLost(self, fd, reason):
+        if self.disconnected:
+            return
+        
+        if reason.value.__class__ == error.ConnectionDone:
+            # Normal close
+            if fd == 'read':
+                self._readConnectionLost(reason)
+            else:
+                self._writeConnectionLost(reason)
+        else:
+            self.connectionLost(reason)
+
+    def connectionLost(self, reason):
+        self.disconnected = True
+        
+        # Make sure to cleanup the other half
+        _reader = self._reader
+        _writer = self._writer
+        protocol = self.protocol
+        self._reader = self._writer = None
+        self.protocol = None
+        
+        if _writer is not None and not _writer.disconnected:
+            _writer.connectionLost(reason)
+        
+        if _reader is not None and not _reader.disconnected:
+            _reader.connectionLost(reason)
+        
+        try:
+            protocol.connectionLost(reason)
+        except:
+            log.err()
+        
+    def _writeConnectionLost(self, reason):
+        self._writer=None
+        if self.disconnecting:
+            self.connectionLost(reason)
+            return
+        
+        p = interfaces.IHalfCloseableProtocol(self.protocol, None)
+        if p:
+            try:
+                p.writeConnectionLost()
+            except:
+                log.err()
+                self.connectionLost(failure.Failure())
+
+    def _readConnectionLost(self, reason):
+        self._reader=None
+        p = interfaces.IHalfCloseableProtocol(self.protocol, None)
+        if p:
+            try:
+                p.readConnectionLost()
+            except:
+                log.err()
+                self.connectionLost(failure.Failure())
+        else:
+            self.connectionLost(reason)
+
+    # IConsumer
+    def registerProducer(self, producer, streaming):
+        if self._writer is None:
+            producer.stopProducing()
+        else:
+            self._writer.registerProducer(producer, streaming)
+            
+    def unregisterProducer(self):
+        if self._writer is not None:
+            self._writer.unregisterProducer()
+
+    # IProducer
+    def stopProducing(self):
+        self.loseConnection()
+
+    def pauseProducing(self):
+        if self._reader is not None:
+            self._reader.pauseProducing()
+
+    def resumeProducing(self):
+        if self._reader is not None:
+            self._reader.resumeProducing()
 
 class CGIChannelRequest(protocol.Protocol):
     finished = False
@@ -41,15 +181,17 @@ class CGIChannelRequest(protocol.Protocol):
             if name.startswith('HTTP_'):
                 name = name[5:].replace('_', '-')
             elif name == 'CONTENT_LENGTH':
-                name = 'Content-Length'
+                pass
             elif name == 'CONTENT_TYPE':
                 name = 'Content-Type'
-            headers.setRawHeaders(name, val)
+            headers.setRawHeaders(name, (val,))
             
+        self._dataRemaining = int(vars.get('CONTENT_LENGTH', '0'))
+        headers.setHeader('Content-Length', self._dataRemaining)
+        
         self.request = server.Request(self, vars['REQUEST_METHOD'], uri, http_vers[1:2], headers, site=site, prepathuri=vars['SCRIPT_NAME'])
 
-        self._dataRemaining = int(vars.get('CONTENT_LENGTH', '0'))
-            
+        
     def writeIntermediateResponse(self, code, headers=None):
         """Ignore, CGI doesn't support."""
         pass
@@ -66,7 +208,7 @@ class CGIChannelRequest(protocol.Protocol):
         l.append('\n')
         self.transport.writeSequence(l)
 
-    def writeData(self, data):
+    def write(self, data):
         self.transport.write(data)
     
     def finish(self):
@@ -74,12 +216,10 @@ class CGIChannelRequest(protocol.Protocol):
             warnings.warn("Warning! request.finish called twice.", stacklevel=2)
             return
         self.finished = True
-#        self.transport.loseConnection()
-        self.transport.closeStdin()
+        self.transport.loseConnection()
 
     def abortConnection(self, closeWrite=True):
-#        self.transport.loseConnection()
-        self.transport.closeStdin()
+        self.transport.loseConnection()
     
     def registerProducer(self, producer, streaming):
         self.transport.registerProducer(producer, streaming)
@@ -101,6 +241,7 @@ class CGIChannelRequest(protocol.Protocol):
             self.request.handleContentComplete()
 
     def connectionMade(self):
+        self.request.process()
         if self._dataRemaining == 0:
             self.request.handleContentComplete()
         
@@ -111,7 +252,7 @@ class CGIChannelRequest(protocol.Protocol):
 def startCGI(site):
     """Call this as the last thing in your CGI python script in order to
     hook up your site object with the incoming request."""
-    stdio.StandardIO(CGIChannnelRequest(os.environ, site))
+    StdIOThatDoesntSuckAsBad(CGIChannelRequest(os.environ, site))
     reactor.run()
 
 if __name__ == '__main__':
@@ -120,6 +261,6 @@ if __name__ == '__main__':
 #    sys.settrace(util.spewer)
     signal.signal(signal.SIGQUIT, lambda *args: pdb.set_trace())
     
-    from twisted.web2 import static
-    site = server.Site(static.Data('foobar', 'text/plain'))
-    startCGI(site)
+    from twisted.web2 import demo
+    res = demo.Test()
+    startCGI(server.Site(res))

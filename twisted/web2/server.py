@@ -234,7 +234,7 @@ class Request(http.Request):
             # been processed
             prepath = map(unquote, self._initialprepath[1:].split('/'))
             
-            if self.postpath[:len(prepath)] == prepath:
+            if path[:len(prepath)] == prepath:
                 self.prepath = prepath
                 self.postpath = path[len(prepath):]
             else:
@@ -301,7 +301,7 @@ class Request(http.Request):
         newctx.remember(tuple(self.postpath), iweb.IRemainingSegments)
 
         if not path:
-            return newctx
+            return defer.succeed(newctx)
 
         return defer.maybeDeferred(
             res.locateChild, newctx, path
