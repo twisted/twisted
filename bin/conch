@@ -28,4 +28,4 @@ sys.path.insert(0, os.curdir)
 
 
 from twisted.scripts.conch import run
-run()
+sys.exit(run())
