@@ -66,7 +66,7 @@ class Options(usage.Options):
     def postOptions(self):
         if self['random'] is not None:
             try:
-                self['random'] = int(self['random'])
+                self['random'] = long(self['random'])
             except ValueError:
                 raise usage.UsageError("Argument to --random must be a positive integer")
             else:
@@ -74,7 +74,7 @@ class Options(usage.Options):
                     raise usage.UsageError("Argument to --random must be a positive integer")
                 elif self['random'] == 0:
                     import time
-                    self['random'] = int(time.time() * 100)
+                    self['random'] = long(time.time() * 100)
 
 def run():
     if len(sys.argv) == 1:
