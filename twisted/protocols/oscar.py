@@ -971,6 +971,12 @@ class OSCARService(SNACBased):
         self.bos = bos
         self.d = d
 
+    def connectionLost(self, reason):
+        for k,v in self.bos.services.items():
+            if v == self:
+                del self.bos.services[k]
+                return
+
     def clientReady(self):
         SNACBased.clientReady(self)
         if self.d:
