@@ -372,8 +372,9 @@ class SmartHostSMTPRelayingManager:
             self.mxcalc.getMX(domain
             ).addCallback(lambda mx: str(mx.exchange),
             ).addCallback(self._cbExchange, self.PORT, factory
-            ).addErrback(self._ebExchange, factory, domain)
-    
+            ).addErrback(self._ebExchange, factory, domain
+            )
+
     def _cbExchange(self, address, port, factory):
         from twisted.internet import reactor
         reactor.connectTCP(address, port, factory)
@@ -450,15 +451,17 @@ class MXCalculator:
     def getMX(self, domain):
         return self.resolver.lookupMailExchange(domain
         ).addCallback(self._filterRecords
-        ).addCallback(self._cbMX)
+        ).addCallback(self._cbMX, domain
+        ).addErrback(self._ebMX, domain
+        )
 
     def _filterRecords(self, records):
         answers = records[0]
         return [a.payload for a in answers]
 
-    def _cbMX(self, answers):
+    def _cbMX(self, answers, domain):
         if not answers:
-            raise IOError("No MX found")
+            raise IOError("No MX found for %r" % (domain,))
         for answer in answers:
             if answer not in self.badMXs:
                 return answer
@@ -467,3 +470,8 @@ class MXCalculator:
                 del self.badMXs[answer]
                 return answer
         return answer[0]
+
+    def _ebMX(self, failure, domain):
+        failure.trap(IOError)
+        log.msg("MX lookup failed; attempting to use hostname (%s) directly" % (domain,))
+        return self.resolver.lookupAddress(domain)
