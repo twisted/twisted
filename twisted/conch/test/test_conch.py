@@ -15,7 +15,7 @@ except:
     Crypto = None
 
 from twisted.test.test_process import SignalMixin
-from test_ssh import ConchTestRealm, ConchTestPublicKeyChecker
+from test_ssh import ConchTestRealm
 
 class Echo(protocol.Protocol):
     def connectionMade(self):
@@ -100,7 +100,7 @@ if Crypto:
 
     from test_keys import publicRSA_openssh, privateRSA_openssh
     from test_keys import publicDSA_openssh, privateDSA_openssh
-    from test_ssh import ConchTestServerFactory
+    from test_ssh import ConchTestServerFactory, ConchTestPublicKeyChecker
 
 
     class SSHTestConnectionForUnix(connection.SSHConnection):
