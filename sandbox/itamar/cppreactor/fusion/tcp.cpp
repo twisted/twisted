@@ -75,6 +75,11 @@ void Twisted::deleteDeallocate(const char* buf, size_t buflen, void* extra) {
 
 BOOST_PYTHON_MODULE(tcp)
 {
+    class_<Producer, boost::noncopyable>("Producer", no_init)
+	.def("resumeProducing", &Producer::resumeProducing)
+	.def("pauseProducing", &Producer::pauseProducing)
+	.def("stopProducing", &Producer::stopProducing)
+	;
     class_<TCPTransport>("TCPTransportMixin", init<object>())
 	.def("initProtocol", &TCPTransport::initProtocol)
 	.def("doRead", &TCPTransport::doRead)

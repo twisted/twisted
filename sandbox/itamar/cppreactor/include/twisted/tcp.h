@@ -20,6 +20,14 @@ namespace Twisted
 
     class Protocol;     // forward definition
 
+    class Producer
+    {
+    public:
+	virtual void resumeProducing() {}
+	virtual void pauseProducing() {}
+	virtual void stopProducing() {}
+    };
+
     // The resulting Python class should be wrapped in to the transports
     // in twisted.internet.tcp.
     class TCPTransport
@@ -49,6 +57,10 @@ namespace Twisted
 		   deallocateFunc dealloc=NULL, void* extra=NULL);
 
 	void loseConnection() { self.attr("loseConnection")(); }
+	void registerProducer(Producer* producer, bool push) {
+	    self.attr("registerProducer")(producer, push);
+	}
+	void unregisterProducer() { self.attr("unregisterProducer"); }
     };
 
     class Protocol
