@@ -1,16 +1,15 @@
-Twisted 0.16.0
+Twisted 0.17.0	
 
 Quote of the Release:
 
-<skreech> WTF. The sf.net skill profile does not have a skill for "molecular
-biology"
+<Jii> "internet with python" spells twisted
 
-For information on what's new in Twisted 0.16.0, see the ChangeLog file
+For information on what's new in Twisted 0.17.0, see the ChangeLog file
 that comes with the distribution, or http://twistedmatrix.com/ChangeLog.txt.
 
 NOTE:
 
-  There has been a special addition to the 0.16 release series: The Twisted
+  There has been a special addition to the 0.17 release series: The Twisted
   Matrix Laboratories license registration service. PLEASE see
   doc/howto/register.html for more information.
 
@@ -50,9 +49,9 @@ What can I do with it?
 
   To install Twisted, just make sure the Twisted-$VERSION/twisted directory
   is in the "PYTHONPATH" environment variable. For example, if you extracted
-  Twisted-0.16.0.tar.gz to /home/bob/, then you would have something like:
+  Twisted-0.17.0.tar.gz to /home/bob/, then you would have something like:
 
-    export PYTHONPATH=$PYTHONPATH:/home/bob/Twisted-0.16.0/
+    export PYTHONPATH=$PYTHONPATH:/home/bob/Twisted-0.17.0/
   
   in your ~/.bash_profile, ~/.zshrc, ~/.cshrc, etc. If you use Windows NT,
   2k, or XP, then set your environment variables by right-clicking on My
