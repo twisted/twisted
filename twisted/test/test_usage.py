@@ -73,6 +73,76 @@ class ParseCorrectnessTest(unittest.TestCase):
         self.failUnlessEqual(self.nice.opts['myflag'], "PONY!")
         self.failUnlessEqual(self.nice.opts['myparam'], "Tofu WITH A PONY!")
 
+class InquisitionOptions(usage.Options):
+    optFlags = [
+        ('expect', 'e'),
+        ]
+    optParameters = [
+        ('torture-device', 't',
+         'comfy-chair',
+         'set preferred torture device'),
+        ]
+
+class HolyQuestOptions(usage.Options):
+    optFlags = [('horseback', 'h',
+                 'use a horse'),
+                ('for-grail', 'g'),
+                ]
+
+class SubCommandOptions(usage.Options):
+    optFlags = [('europian-swallow', None,
+                 'set default swallow type to Europian'),
+                ]
+    subCommands = [
+        ('inquisition', 'inquest', InquisitionOptions, 'Perform an inquisition'),
+        ('holyquest', 'quest', HolyQuestOptions, 'Embark upon a holy quest'),
+        ]
+
+class SubCommandTest(unittest.TestCase):
+
+    def test_simpleSubcommand(self):
+        o=SubCommandOptions()
+        o.parseOptions(['--europian-swallow', 'inquisition'])
+        self.failUnlessEqual(o['europian-swallow'], True)
+        self.failUnlessEqual(o.subCommand, 'inquisition')
+        self.failUnless(isinstance(o.subOptions, InquisitionOptions))
+        self.failUnlessEqual(o.subOptions['expect'], False)
+        self.failUnlessEqual(o.subOptions['torture-device'], 'comfy-chair')
+
+    def test_subcommandWithFlagsAndOptions(self):
+        o=SubCommandOptions()
+        o.parseOptions(['inquisition', '--expect', '--torture-device=feather'])
+        self.failUnlessEqual(o['europian-swallow'], False)
+        self.failUnlessEqual(o.subCommand, 'inquisition')
+        self.failUnless(isinstance(o.subOptions, InquisitionOptions))
+        self.failUnlessEqual(o.subOptions['expect'], True)
+        self.failUnlessEqual(o.subOptions['torture-device'], 'feather')
+
+    def test_subcommandAliasWithFlagsAndOptions(self):
+        o=SubCommandOptions()
+        o.parseOptions(['inquest', '--expect', '--torture-device=feather'])
+        self.failUnlessEqual(o['europian-swallow'], False)
+        self.failUnlessEqual(o.subCommand, 'inquisition')
+        self.failUnless(isinstance(o.subOptions, InquisitionOptions))
+        self.failUnlessEqual(o.subOptions['expect'], True)
+        self.failUnlessEqual(o.subOptions['torture-device'], 'feather')
+
+    def test_anotherSubcommandWithFlagsAndOptions(self):
+        o=SubCommandOptions()
+        o.parseOptions(['holyquest', '--for-grail'])
+        self.failUnlessEqual(o['europian-swallow'], False)
+        self.failUnlessEqual(o.subCommand, 'holyquest')
+        self.failUnless(isinstance(o.subOptions, HolyQuestOptions))
+        self.failUnlessEqual(o.subOptions['horseback'], False)
+        self.failUnlessEqual(o.subOptions['for-grail'], True)
+
+    def test_noSubcommand(self):
+        o=SubCommandOptions()
+        o.parseOptions(['--europian-swallow'])
+        self.failUnlessEqual(o['europian-swallow'], True)
+        self.failUnlessEqual(o.subCommand, None)
+        self.failIf(hasattr(o, 'subOptions'))
+
 class HelpStringTest(unittest.TestCase):
     def setUp(self):
         """Instantiate a well-behaved Options class.
