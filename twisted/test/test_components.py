@@ -200,6 +200,16 @@ class BComp(AComp):
 class CComp(BComp):
     pass
 
+class IStacker(components.Interface):
+    pass
+
+class DComp(components.Componentized):
+    __implements__ = IStacker,
+
+class Stacker(components.Adapter):
+    __implements__ = IStacker,
+
+
 class ITest(components.Interface):
     pass
 class ITest2(components.Interface):
@@ -257,7 +267,15 @@ class ComponentizedTestCase(unittest.TestCase):
         assert co4 == None
         assert co1 is co3
 
-
+    def testAdapterStack(self):
+        c = CComp()
+        a = Stacker(c)
+        c.addComponent(a, ignoreClass=1)
+        self.assertEqual(IStacker(c), a)
+        a2 = Stacker(c)
+        c.addComponent(a2, ignoreClass=1, stack=1)
+        self.assertEqual(IStacker(c), a2)
+        self.assertEqual(components.isuper(IStacker, a2), a)
 
 class AdapterTestCase(unittest.TestCase):
     """Test adapters."""

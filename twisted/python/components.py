@@ -317,6 +317,17 @@ class Adapter:
         """
         return self.original.getComponent(interface, registry=None, default=default)
 
+
+def isuper(iface, adapter):
+    assert isinstance(adapter.original, Componentized)
+    adapters = adapter.original._adapterCache.get(reflect.qual(iface), [])
+    i = adapters.index(adapter)
+    if i == 0:
+        if implements(adapter.original, iface):
+            return adapter.original
+        raise NotImplementError, "End of the line"
+    return adapters[i - 1]
+
 class Componentized(styles.Versioned):
     """I am a mixin to allow you to be adapted in various ways persistently.
 
@@ -329,7 +340,7 @@ class Componentized(styles.Versioned):
     is specific to Twisted.
     """
 
-    persistenceVersion = 1
+    persistenceVersion = 2
 
     def __init__(self):
         self._adapterCache = {}
@@ -340,20 +351,20 @@ class Componentized(styles.Versioned):
     def setAdapter(self, interfaceClass, adapterClass):
         self.setComponent(interfaceClass, adapterClass(self))
 
-    def addAdapter(self, adapterClass, ignoreClass=0, registry=None):
+    def addAdapter(self, adapterClass, ignoreClass=0, registry=None, stack=0):
         """Utility method that calls addComponent.  I take an adapter class and
         instantiate it with myself as the first argument.
 
         Returns the adapter instantiated.
         """
         adapt = adapterClass(self)
-        self.addComponent(adapt, ignoreClass, registry)
+        self.addComponent(adapt, ignoreClass, registry, stack)
         return adapt
 
-    def setComponent(self, interfaceClass, component):
-        self._adapterCache[reflect.qual(interfaceClass)] = component
+    def setComponent(self, interfaceClass, component, stack=False):
+        self._insertAdapter(interfaceClass, component, stack)
 
-    def addComponent(self, component, ignoreClass=0, registry=None):
+    def addComponent(self, component, ignoreClass=0, registry=None, stack=0):
         """
         Add a component to me, for all appropriate interfaces.
 
@@ -373,16 +384,28 @@ class Componentized(styles.Versioned):
             if (ignoreClass or
                 (self.locateAdapterClass(self.__class__, iface, None, registry)
                  == component.__class__)):
-                self._adapterCache[reflect.qual(iface)] = component
+                self._insertAdapter(iface, component, stack)
 
-
+    def _insertAdapter(self, iface, adapter, stack):
+        iface = reflect.qual(iface)
+        if stack:
+            assert adapter not in self._adapterCache.get(iface, [])
+            self._adapterCache.setdefault(iface, []).append(adapter)
+        else:
+            assert len(self._adapterCache.get(iface, [])) <= 1, "This may be meaningful in the future, but not now!"
+            self._adapterCache[iface] = [adapter]
+        
     def unsetComponent(self, interfaceClass):
         """Remove my component specified by the given interface class."""
-        del self._adapterCache[reflect.qual(interfaceClass)]
+        k = reflect.qual(interfaceClass)
+        assert self._adapterCache[k]
+        del self._adapterCache[k][-1]
+        if not self._adapterCache[k]:
+            del self._adapterCache[k]
 
     def removeComponent(self, component):
         """
-        Remove the given component from me entirely, for all interfaces which
+        Remove the given component from me entirely, for all interfaces for which
         it has been registered.
 
         @return: a list of the interfaces that were removed.
@@ -394,8 +417,13 @@ class Componentized(styles.Versioned):
             return [component]
         l = []
         for k, v in self._adapterCache.items():
-            if v is component:
-                del self._adapterCache[k]
+            try:
+                self._adapterCache[k].remove(component)
+            except ValueError:
+                pass
+            else:
+                if not self._adapterCache[k]:
+                    del self._adapterCache[k]
                 l.append(reflect.namedObject(k))
         return l
 
@@ -418,22 +446,23 @@ class Componentized(styles.Versioned):
         registry = getRegistry(registry)
         k = reflect.qual(interface)
         if self._adapterCache.has_key(k):
-            return self._adapterCache[k]
+            return self._adapterCache[k][-1]
         elif implements(self, interface):
             return self
         else:
             adapter = registry.getAdapter(self, interface, default,
                                           lambda k, ik, d:
                                           self.locateAdapterClass(k, ik, d, registry))
-            if adapter is not None and adapter is not _Nothing and not (
-                hasattr(adapter, "temporaryAdapter") and
-                adapter.temporaryAdapter):
-                self._adapterCache[k] = adapter
-                if (hasattr(adapter, "multiComponent") and
-                    adapter.multiComponent and
-                    hasattr(adapter, '__implements__')):
-                    self.addComponent(adapter)
+            if adapter not in (None, _Nothing) and not getattr(adapter, "temporaryAdapter", 1):
+                stackable = getattr(adapter, "stackableAdapter", 0)
+                self._insertAdapter(interface, adapter, stackable)
+                if getattr(adapter, "multiComponent", 0) and hasattr(adapter, '__implements__'):
+                   self.addComponent(adapter)
             return adapter
+
+    def upgradeToVersion2(self):
+        for (k, v) in self._adapterCache.items():
+            self._adapterCache[k] = [v]
 
     def upgradeToVersion1(self):
         # To let Componentized instances interact correctly with
