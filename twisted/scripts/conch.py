@@ -14,7 +14,7 @@
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 #
-# $Id: conch.py,v 1.53 2003/04/19 03:22:48 acapnotic Exp $
+# $Id: conch.py,v 1.54 2003/04/19 03:24:41 acapnotic Exp $
 
 #""" Implementation module for the `conch` command.
 #"""
@@ -596,7 +596,11 @@ class SSHUserAuthClient(userauth.SSHUserAuthClient):
         if not prompt:
             prompt = "%s@%s's password: " % (self.user, options['host'])
         try:
-            return defer.succeed(util.getPassword(prompt))
+            oldout, oldin = sys.stdout, sys.stdin
+            sys.stdin = sys.stdout = open('/dev/tty','r+')
+            p=getpass.getpass(prompt)
+            sys.stdout,sys.stdin=oldout,oldin
+            return defer.succeed(p)
         except KeyboardInterrupt, e:
             print
             reactor.stop()
@@ -631,7 +635,10 @@ class SSHUserAuthClient(userauth.SSHUserAuthClient):
                 for i in range(3):
                     prompt = "Enter passphrase for key '%s': " % \
                            self.usedFiles[-1]
-                    p = util.getPassword(prompt)
+                    oldout, oldin = sys.stdout, sys.stdin
+                    sys.stdin = sys.stdout = open('/dev/tty','r+')
+                    p=getpass.getpass(prompt)
+                    sys.stdout,sys.stdin=oldout,oldin
                     try:
                         return defer.succeed(keys.getPrivateKeyObject(file, password = p))
                     except keys.BadKeyError:
