@@ -41,7 +41,7 @@ class SimpleAvatar(pb.Avatar):
 	self.name = name
     def perspective_greet(self):
 	self.greetings += 1
-	return "&lt;%d>hello %s" % (self.greetings, self.name)
+	return "&lt;%d&gt;hello %s" % (self.greetings, self.name)
 
 class CachingRealm:
     __implements__ = portal.IRealm,
@@ -75,7 +75,7 @@ class Greeter:
     greetings = 0
     def hello(self):
 	self.greetings += 1
-	return "&lt;%d>hello" % (self.greetings, self.name)
+	return "&lt;%d&gt;hello" % (self.greetings, self.name)
 
 class SimpleAvatar(pb.Avatar):
     greetings = 0
@@ -118,7 +118,7 @@ class SimpleAvatar(pb.Avatar):
 	self.connections -= 1
     def perspective_greet(self):
 	self.greetings += 1
-	return "&lt;%d>hello %s" % (self.greetings, self.name)
+	return "&lt;%d&gt;hello %s" % (self.greetings, self.name)
 
 class CachingRealm:
     __implements__ = portal.IRealm,
@@ -151,7 +151,7 @@ class SimpleAvatar(pb.Avatar):
 	self.connections -= 1
     def perspective_greet(self):
 	self.greetings += 1
-	return "&lt;%d>hello %s" % (self.greetings, self.name)
+	return "&lt;%d&gt;hello %s" % (self.greetings, self.name)
 
 class CachingRealm:
     __implements__ = portal.IRealm,
@@ -166,7 +166,7 @@ class CachingRealm:
 	    p = self.avatars[avatarId]
 	else: 
 	    p = self.avatars[avatarId] = SimpleAvatar(avatarId)
-	if p.connections >= max:
+	if p.connections >= self.max:
             raise ValueError("too many connections")
         p.connect()
         return pb.IPerspective, p, p.disconnect
