@@ -38,7 +38,6 @@ class Space(object):
 
     def _updateVelocity(self, sum=N.sum, add=N.add, _M=_MASS, _P=_POSITION, _V=_VELOCITY, NewAxis=N.NewAxis):
         # Adjust velocities for gravitational effects
-        accel = self._accel
 
         # XXX This loop can probably be pushed into numeric, but I'm not sure
         # how yet.
@@ -46,7 +45,6 @@ class Space(object):
             mass = a[_M]
             if not mass:
                 continue
-            accel[:] = 0
 
             deltas = self.contents[:,_P] - a[_P]
             deltas2 = deltas * deltas
