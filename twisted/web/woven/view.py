@@ -18,7 +18,7 @@
 
 from __future__ import nested_scopes
 
-__version__ = "$Revision: 1.87 $"[11:-2]
+__version__ = "$Revision: 1.88 $"[11:-2]
 
 # Sibling imports
 import interfaces
@@ -104,6 +104,7 @@ class View:
     setupStacks = 1
     livePage = 0
     doneCallback = None
+    templateNode = None
     def __init__(self, m, templateFile=None, templateDirectory=None, template=None, controller=None, doneCallback=None, modelStack=None, viewStack=None, controllerStack=None):
         """
         A view must be told what its model is, and may be told what its
@@ -290,26 +291,34 @@ class View:
         return result
 
     def modelChanged(self, changed):
-        """Dispatch changed messages to any update_* methods which
-        may have been defined, then pass the update notification on
-        to the controller.
+        """Rerender this view, because our model has changed.
         """
-        for name in changed.keys():
-            handler = getattr(self, 'update_' + name, None)
-            if handler:
-                handler(changed[name])
+        # arg. this needs to go away.
+        request = changed.get('request', None)
+        oldNode = self.node
+        #import pdb; pdb.set_trace()
+        newNode = self.generate(request, oldNode)
+        returnNode = self.dispatchResult(request, oldNode, newNode)
+        self.handleNewNode(request, returnNode)
+        self.handleOutstanding(request)
+        self.controller.domChanged(request, self, returnNode)
 
     def generate(self, request, node):
         """Allow a view to be used like a widget. Will look up the template
         file and return it in place of the incoming node.
         """
-        return self.lookupTemplate(request).childNodes[0]
+        newNode = self.lookupTemplate(request).childNodes[0]
+        newNode.setAttribute('id', 'woven_id_%s' % id(self))
+        self.node = newNode
+        return newNode
 
     def setController(self, controller):
         self.controller = controller
         self.controllerStack = (controller, self.controllerStack)
 
     def setNode(self, node):
+        if self.templateNode == None:
+            self.templateNode = node
         self.node = node
 
     def setSubmodel(self, name):
