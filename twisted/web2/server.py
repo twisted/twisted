@@ -111,7 +111,7 @@ class Request(http.Request):
 
         requestContext = context.RequestContext(tag=self)
         
-        self.deferredContext = self._getChild(requestContext, site.getRootResource(), self.postpath)
+        self.deferredContext = self._getChild(requestContext, self.site.getRootResource(), self.postpath)
         self.deferredContext.addErrback(self._processingFailed, requestContext)
         
     def handleContentChunk(self, data):
@@ -140,7 +140,7 @@ class Request(http.Request):
         ).addErrback(
             self._processingFailed, newctx
         ).addCallback(
-            self.handleSegment, path, newctx
+            self._handleSegment, path, newctx
         )
         
     def _handleSegment(self, result, path, pageContext):
@@ -239,7 +239,7 @@ class Request(http.Request):
             raise TypeError("html is not a string")
         return
     
-        def notifyFinish(self):
+    def notifyFinish(self):
         """Notify when finishing the request
 
         @return: A deferred. The deferred will be triggered when the
