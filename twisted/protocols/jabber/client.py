@@ -148,7 +148,7 @@ class BasicAuthenticator(xmlstream.ConnectAuthenticator):
         if iq["type"] == "result":
             self.xmlstream.dispatch(self.xmlstream, xmlstream.STREAM_AUTHD_EVENT)
         else:
-            self.xmlstream.streamError(None)
+            self.xmlstream.dispatch(iq, self.AUTH_FAILED_EVENT)
 
     def registerAccount(self, username = None, password = None):
         if username:
