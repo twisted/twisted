@@ -108,7 +108,7 @@ class Resolver(common.ResolverBase):
 
     def pickServer(self):
         """
-        Return the address of a namserver.
+        Return the address of a nameserver.
         
         TODO: Weight servers for response time so faster ones can be
         preferred.
