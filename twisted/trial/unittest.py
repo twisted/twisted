@@ -37,7 +37,9 @@ class FailTest(AssertionError):
 ASSERTION_IS_ERROR = 0
 
 # test results, passed as resultType to Reporter.reportResults()
-SKIP, FAILURE, ERROR, SUCCESS = "skip", "failure", "error", "success"
+SKIP, EXPECTED_FAILURE, FAILURE, ERROR, UNEXPECTED_SUCCESS, SUCCESS = \
+      "skip", "expected failure", "failure", "error", "unexpected success", \
+      "success"
 
 class TestCase:
     def setUp(self):
@@ -165,6 +167,8 @@ class TestSuite:
         else:
             failingExceptionType = FailTest
 
+        todo = getattr(method, "todo", getattr(testCase, "todo", None))
+            
         try:
             if getattr(method, "skip", None):
                 raise SkipTest, method.skip
@@ -173,7 +177,12 @@ class TestSuite:
             testCase.setUp()
             method(testCase)
         except failingExceptionType, e:
-            output.reportResults(testClass, method, FAILURE, sys.exc_info())
+            if todo:
+                output.reportResults(testClass, method, EXPECTED_FAILURE,
+                                     sys.exc_info())
+            else:
+                output.reportResults(testClass, method, FAILURE,
+                                     sys.exc_info())
         except KeyboardInterrupt:
             raise
         except SkipTest, r:
@@ -185,7 +194,12 @@ class TestSuite:
             else:
                 output.reportResults(testClass, method, SKIP, sys.exc_info())
         except:
-            output.reportResults(testClass, method, ERROR, sys.exc_info())
+            if todo:
+                output.reportResults(testClass, method, EXPECTED_FAILURE,
+                                     sys.exc_info())
+            else:
+                output.reportResults(testClass, method, ERROR,
+                                     sys.exc_info())
         else:
             ok = 1
 
@@ -193,15 +207,23 @@ class TestSuite:
             testCase.tearDown()
         except failingExceptionType, e:
             if ok:
-                output.reportResults(testClass, method, FAILURE,
-                                     sys.exc_info())
+                if todo:
+                    output.reportResults(testClass, method, EXPECTED_FAILURE,
+                                         sys.exc_info())
+                else:
+                    output.reportResults(testClass, method, FAILURE,
+                                         sys.exc_info())
             ok = 0
         except KeyboardInterrupt:
             raise
         except:
             if ok:
-                output.reportResults(testClass, method, ERROR,
-                                     sys.exc_info())
+                if todo:
+                    output.reportResults(testClass, method, EXPECTED_FAILURE,
+                                         sys.exc_info())
+                else:
+                    output.reportResults(testClass, method, ERROR,
+                                         sys.exc_info())
             ok = 0
 
         try:
@@ -226,15 +248,23 @@ class TestSuite:
                     reactor.threadpool = None
         except failingExceptionType, e:
             if ok:
-                output.reportResults(testClass, method, FAILURE,
-                                     sys.exc_info())
+                if todo:
+                    output.reportResults(testClass, method, EXPECTED_FAILURE,
+                                         sys.exc_info())
+                else:
+                    output.reportResults(testClass, method, FAILURE,
+                                         sys.exc_info())
             ok = 0
         except KeyboardInterrupt:
             raise
         except:
             if ok:
-                output.reportResults(testClass, method, ERROR,
-                                     sys.exc_info())
+                if todo:
+                    output.reportResults(testClass, method, EXPECTED_FAILURE,
+                                         sys.exc_info())
+                else:
+                    output.reportResults(testClass, method, ERROR,
+                                         sys.exc_info())
             ok = 0
 
         # garbage collect now, to make sure any Deferreds with pending
@@ -244,11 +274,20 @@ class TestSuite:
             gc.collect()
 
         for e in log.flushErrors():
+            if ok:
+                if todo:
+                    output.reportResults(testClass, method, EXPECTED_FAILURE,
+                                         e)
+                else:
+                    output.reportResults(testClass, method, ERROR, e)
             ok = 0
-            output.reportResults(testClass, method, ERROR, e)
 
         if ok:
-            output.reportResults(testClass, method, SUCCESS)
+            if todo:
+                output.reportResults(testClass, method, UNEXPECTED_SUCCESS,
+                                     todo)
+            else:
+                output.reportResults(testClass, method, SUCCESS)
 
     def run(self, output, seed = None):
         output.start(self.numTests)
@@ -318,14 +357,22 @@ def format_exception(eType, eValue, tb, limit=None):
 class Reporter:
     """I report results from a run of a test suite.
 
+    In all lists below, 'Results' are either a twisted.python.failure.Failure
+    object, an exc_info tuple, or a string.
+    
     @ivar errors: Tests which have encountered an error.
-    @type errors: List of (testClass, method, exc_info) tuples.
+    @type errors: List of (testClass, method, Results) tuples.
     @ivar failures: Tests which have failed.
-    @type failures: List of (testClass, method, exc_info) tuples.
+    @type failures: List of (testClass, method, Results) tuples.
     @ivar skips: Tests which have been skipped.
-    @type skips: List of (testClass, method, exc_info) tuples.
+    @type skips: List of (testClass, method, Results) tuples.
+    @ivar expectedFailures: Tests which failed but are marked as 'todo'
+    @type expectedFailures: List of (testClass, method, Results) tuples.
+    @ivar unexpectedSuccesses: Tests which passed but are marked as 'todo'
+    @type unexpectedSuccesses: List of (testClass, method, Results) tuples.
     @ivar imports: Import errors encountered while assembling the test suite.
     @type imports: List of (moduleName, exception) tuples.
+
     @ivar numTests: The number of tests I have reports for.
     @type numTests: int
     @ivar expectedTests: The number of tests I expect to run.
@@ -337,6 +384,8 @@ class Reporter:
         self.errors = []
         self.failures = []
         self.skips = []
+        self.expectedFailures = []
+        self.unexpectedSuccesses = []
         self.imports = []
         self.numTests = 0
         self.expectedTests = 0
@@ -353,22 +402,29 @@ class Reporter:
         pass
 
     def reportResults(self, testClass, method, resultType, results=None):
+        tup = (testClass, method, results)
         self.numTests += 1
-        if resultType == SKIP:
-            self.skips.append((testClass, method, results))
-        elif resultType == FAILURE or resultType == ERROR:
+        if resultType in (FAILURE, ERROR, EXPECTED_FAILURE):
             if self.debugger:
                 if isinstance(results, failure.Failure):
                     raise TypeError, "Failure, not Exception -- you lose."
                 else:
                     pdb.post_mortem(results[2])
-            if resultType == FAILURE:
-                self.failures.append((testClass, method, results))
-            else:
-                self.errors.append((testClass, method, results))
+        if resultType == SKIP:
+            self.skips.append(tup)
+        elif resultType == FAILURE:
+            self.failures.append(tup)
+        elif resultType == EXPECTED_FAILURE:
+            self.expectedFailures.append(tup)
+        elif resultType == ERROR:
+                self.errors.append(tup)
+        elif resultType == UNEXPECTED_SUCCESS:
+            self.unexpectedSuccesses.append(tup)
         elif resultType == SUCCESS:
-            pass
-
+            pass # SUCCESS COUNTS FOR NOTHING!
+        else:
+            raise ValueError, "bad value for resultType: %s" % resultType
+        
     def getRunningTime(self):
         if hasattr(self, 'stopTime'):
             return self.stopTime - self.startTime
@@ -403,8 +459,10 @@ class TextReporter(Reporter):
         Reporter.__init__(self)
 
     def reportResults(self, testClass, method, resultType, results=None):
-        letters = {FAILURE: 'F', ERROR: 'E', SKIP: 'S', SUCCESS: '.'}
-        self.write(letters[resultType])
+        letters = {SKIP: 'S', EXPECTED_FAILURE: 'T',
+                   FAILURE: 'F', ERROR: 'E',
+                   UNEXPECTED_SUCCESS: '!', SUCCESS: '.'}
+        self.write(letters.get(resultType, '?'))
         Reporter.reportResults(self, testClass, method, resultType, results)
 
     def _formatError(self, flavor, (testClass, method, error)):
@@ -443,8 +501,16 @@ class TextReporter(Reporter):
             summaries.append('errors=%d' % len(self.errors))
         if self.skips:
             summaries.append('skips=%d' % len(self.skips))
+        if self.expectedFailures:
+            summaries.append('expectedFailures=%d' % \
+                             len(self.expectedFailures))
+        if self.unexpectedSuccesses:
+            summaries.append('unexpectedSuccesses=%d' % \
+                             len(self.unexpectedSuccesses))
         summary = (summaries and ' ('+', '.join(summaries)+')') or ''
         if self.failures or self.errors:
+            # maybe include self.unexpectedSuccesses here
+            # do *not* include self.expectedFailures.. that's the whole point
             status = 'FAILED'
         else:
             status = 'OK'
@@ -453,12 +519,16 @@ class TextReporter(Reporter):
     def stop(self):
         Reporter.stop(self)
         self.writeln()
+        for error in self.skips:
+            self.write(self._formatError('SKIPPED', error))
+        for error in self.expectedFailures:
+            self.write(self._formatError('EXPECTED FAILURE', error))
+        for error in self.unexpectedSuccesses:
+            self.write(self._formatError('UNEXPECTED SUCCESS', error))
         for error in self.failures:
             self.write(self._formatError('FAILURE', error))
         for error in self.errors:
             self.write(self._formatError('ERROR', error))
-        for error in self.skips:
-            self.write(self._formatError('SKIPPED', error))
         self.writeln(self.SEPARATOR)
         self.writeln('Ran %d tests in %.3fs', self.numTests, self.getRunningTime())
         self.writeln()
@@ -480,7 +550,7 @@ class VerboseTextReporter(TextReporter):
     def reportResults(self, testClass, method, resultType, results=None):
         words = {FAILURE: '[FAIL]', ERROR: '[ERROR]', SKIP: '[SKIPPED]',
                  SUCCESS: '[OK]'}
-        self.writeln(words[resultType])
+        self.writeln(words.get(resultType, "[??]"))
         Reporter.reportResults(self, testClass, method, resultType, results)
 
 class TreeReporter(TextReporter):
@@ -527,11 +597,14 @@ class TreeReporter(TextReporter):
         self.writeln(self.color(message, color))
 
     def reportResults(self, testClass, method, resultType, results=None):
-        words = {FAILURE: ('[FAIL]', self.RED),
+        words = {SKIP: ('[SKIPPED]', self.BLUE),
+                 EXPECTED_FAILURE: ('[TODO]', self.BLUE),
+                 FAILURE: ('[FAIL]', self.RED),
                  ERROR: ('[ERROR]', self.RED),
-                 SKIP: ('[SKIPPED]', self.BLUE),
+                 UNEXPECTED_SUCCESS: ('[SUCCESS!?!]', self.RED),
                  SUCCESS: ('[OK]', self.GREEN)}
-        self.endLine(words[resultType][0], words[resultType][1])
+        text = words.get(resultType, ('[??]', self.BLUE))
+        self.endLine(text[0], text[1])
         Reporter.reportResults(self, testClass, method, resultType, results)
 
 

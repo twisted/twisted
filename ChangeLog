@@ -4,6 +4,9 @@
 	Collapse most reportFoo methods into a single reportResults() that
 	takes a resultType parameter. This anticipates the addition of .todo
 	test-case flags that will add two more resultTypes.
+	* twisted/trial/unittest.py: Add .todo flags: creates EXPECTED_FAILURE
+	and UNEXPECTED_SUCCESS resultTypes. Like .skip, the .todo can be
+	added either to the TestCase object or as a method attribute.
 
 2003-04-04  Kevin Turner  <acapnotic@twistedmatrix.com>
 
