@@ -4,7 +4,7 @@ height = 600
 from math import pi, cos, sin
 
 d = 200
-n = 4
+n = 6
 v = 0.0777 * (n ** 0.5)
 m = 1e12 / n
 k = (2 * pi) / 1
