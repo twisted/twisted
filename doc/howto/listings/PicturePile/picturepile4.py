@@ -75,7 +75,8 @@ class ImageSizer(input.Anything):
 class ImageDisplay(page.Page):
 
     templateFile="image-display.html"
-
+    templateDirectory = os.path.split(os.path.abspath(__file__))[0]
+    
     def initialize(self, *args, **kwargs):
         self.image = kwargs['image']
 
