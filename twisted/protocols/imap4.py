@@ -2890,12 +2890,12 @@ class IAccount(components.Interface):
         """
     
 class MemoryAccount(perspective.Perspective):
-    __implements__ = (IAccount,)
+    __implements__ = (perspective.Perspective.__implements__, IAccount)
 
     mailboxes = None
     subscriptions = None
     top_id = 0
-
+    
     def __init__(self, name):
         perspective.Perspective.__init__(self, name, name)
         self.mailboxes = {}
@@ -2996,6 +2996,7 @@ class MemoryAccount(perspective.Perspective):
         ref = self._inferiorNames(ref.upper())
         wildcard = wildcardToRegexp(wildcard, '/')
         return [(i, self.mailboxes[i]) for i in ref if wildcard.match(i)]
+    
 
 class IMailbox(components.Interface):
     def getUIDValidity(self):
