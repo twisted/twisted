@@ -175,7 +175,7 @@ install-indep-stamp: install-base-stamp
 	done
 
 	install -m 644 debian/python-twisted.README.Debian \
-	               debian/python-twisted/${DOC}/README.Debian
+	               debian/python-twisted/${DOC}/python-twisted/README.Debian
 
 	install -d $(gamesdir)
 	install -m 644 doc/fun/Twisted.Quotes $(gamesdir)/twisted-quotes
