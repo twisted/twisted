@@ -1214,7 +1214,7 @@ class ESMTP(SMTP):
 
         try:
             uncoded = base64.decodestring(rest)
-        except TypeError:
+        except binascii.Error, e:
             self.challenger.abort()
         else:
             self.challenger.setResponse(uncoded)
@@ -1457,20 +1457,26 @@ def xtext_encode(s):
             r.append(ch)
     return (''.join(r), len(s))
 
-def xtext_decode(s):
-    r = []
-    i = 0
-    while i < len(s):
-        if s[i] == '+':
-            try:
-                r.append(chr(int(s[i + 1:i + 3], 16)))
-            except ValueError:
-                r.append(s[i:i + 3])
-            i += 3
-        else:
-            r.append(s[i])
-            i += 1
-    return (''.join(r), len(s))
+try:
+    from twisted.protocols._c_urlarg import unquote as _helper_unquote
+except ImportError:
+    def xtext_decode(s):
+        r = []
+        i = 0
+        while i < len(s):
+            if s[i] == '+':
+                try:
+                    r.append(chr(int(s[i + 1:i + 3], 16)))
+                except ValueError:
+                    r.append(s[i:i + 3])
+                i += 3
+            else:
+                r.append(s[i])
+                i += 1
+        return (''.join(r), len(s))
+else:
+    def xtext_decode(s):
+        return (_helper_unquote(s, '+'), len(s))
 
 class xtextStreamReader(codecs.StreamReader):
     def decode(self, s, errors='strict'):
