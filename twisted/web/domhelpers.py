@@ -191,6 +191,26 @@ def findNodes(parent, matcher, accum=None):
         findNodes(child, matcher, accum)
     return accum
 
+
+def findNodesShallow(parent, matcher, accum=None):
+    if accum is None:
+        accum = []
+    if not parent.hasChildNodes():
+        return accum
+    for child in parent.childNodes:
+        if matcher(child):
+            accum.append(child)
+        else:
+            findNodes(child, matcher, accum)
+    return accum
+
+
+def findElementsWithAttributeShallow(parent, attribute):
+    return findNodesShallow(parent,
+        lambda n: isinstance(n, microdom.Element) and
+            n.hasAttribute(attribute))
+
+
 def findElements(parent, matcher):
     return findNodes(
         parent,
