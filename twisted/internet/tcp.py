@@ -58,7 +58,6 @@ from twisted.persisted import styles
 from twisted.python import log, failure, reflect
 from twisted.python.runtime import platform
 from twisted.internet.error import CannotListenError
-from twisted.internet.interfaces import IConnector
 from twisted.internet import defer
 
 # Sibling Imports
