@@ -430,6 +430,9 @@ class Gadget(resource.Resource):
     def putWidget(self, path, widget):
         self.widgets[path] = widget
 
+    def addFile(self, path):
+        self.files.append(path)
+
     def getWidget(self, path, request):
         return self.widgets.get(path)
 

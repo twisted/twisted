@@ -167,7 +167,7 @@ class ResourceGuard(resource.Resource):
 
     def render(self, request):
         session = request.getSession()
-        resKey = string.join(['AUTH',self.serviceName]+request.prepath, '_')
+        resKey = string.join(['AUTH',self.serviceName], '_')
         if hasattr(session, resKey):
             self.reallyRender(request)
             return NOT_DONE_YET
