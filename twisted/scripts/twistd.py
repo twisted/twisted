@@ -49,6 +49,7 @@ class ServerOptions(usage.Options):
                 ['debug', 'b',    "run the application in the Python Debugger (implies nodaemon), sending SIGINT will drop into debugger"],
                 ['quiet','q',     "be a little more quiet"],
                 ['no_save','o',   "do not save state on shutdown"],
+                ['syslog', None,   "do not save state on shutdown"],
                 ['euid', '',     "Set only effective user-id rather than real user-id. "
                                   "(This option has no effect unless the server is running as root, "
                                   "in which case it means not to shed all privileges after binding "
@@ -60,6 +61,8 @@ class ServerOptions(usage.Options):
                    "log to a specified file, - for stdout"],
                   ['file','f','twistd.tap',
                    "read the given .tap file"],
+                  ['prefix', None,'twisted',
+                   "use the given prefix when syslogging"],
                   ['python','y', None,
                    "read an application from within a Python file"],
                   ['xml', 'x', None,
@@ -265,6 +268,9 @@ def runApp(config):
         logFile = sys.stdout
     elif config['nodaemon'] and not config['logfile']:
         logFile = sys.stdout
+    elif config['syslog']:
+        from twisted.python import syslog
+        syslog.startLogging(config['prefix'])
     else:
         logPath = os.path.abspath(config['logfile'] or 'twistd.log')
         logFile = logfile.LogFile(os.path.basename(logPath), os.path.dirname(logPath))
@@ -281,7 +287,8 @@ def runApp(config):
     oldstdin = sys.stdin
     oldstdout = sys.stdout
     oldstderr = sys.stderr
-    log.startLogging(logFile)
+    if not config['syslog']:
+        log.startLogging(logFile)
     sys.stdout.flush()
     log.msg("twistd %s (%s %s) starting up" % (copyright.version,
                                                sys.executable,
