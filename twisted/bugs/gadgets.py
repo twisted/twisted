@@ -118,20 +118,20 @@ class ViewBug(widgets.Widget):
     def display(self, request):
         self.bug_id = int(request.args.get('bug_id',[0])[0])
         db = self.database
-        return [db.getBug(self.bug_id).addCallback(self._cbBug), 
+        return [db.getBug(self.bug_id).addCallback(self._cbBug), "\n<hr>\n",
                 db.getBugComments(self.bug_id).addCallback(self._cbComments)]
     
     def _cbBug(self, result):
         l = []
-        desc = result[0][13]
+        desc = result[0][12]
         email = cgi.escape(result[0][2], 1)
-        result = map(cgi.escape, result[0])
+        result = map(cgi.escape, map(str, result[0]))
         l.append('<h3>%s</h3>\n' % result[11])
         l.append('<p>\n<b>Submitted by <a href="mailto:%s">%s</a> on %s</b><br>\n' % (email, result[1], result[4]))
         l.append('<b>Last modified:</b> %s<br>\n' % result[5])
-        l.append('<b>Version:<b> %s<br>\n'% result[6])
+        l.append('<b>Version:</b> %s<br>\n'% result[6])
         l.append('<b>OS:</b> %s<br>\n' % result[7])
-        l.append('<b>Type:<b> %s<br>\n' % result[8])
+        l.append('<b>Type:</b> %s<br>\n' % result[8])
         l.append('<b>Status:</b> %s<br>\n</p>\n' % result[9])
         l.append('<b>Assigned to:</b> %s<br>\n</p>\n' % result[3])
         l.append('<pre>\n%s\n</pre>' % desc)
