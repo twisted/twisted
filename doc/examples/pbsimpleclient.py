@@ -17,20 +17,14 @@
 
 from twisted.spread import pb
 from twisted.internet import reactor
-
-def gotObject(object):
-    print "got object:",object
-    object.callRemote("echo", "hello network").addCallback(gotEcho)
-
-def gotEcho(echo):
-    print 'server echoed:',echo
-    reactor.stop()
-
-def gotNoObject(reason):
-    print "no object:",reason
-    reactor.stop()
+from twisted.python import util
 
 factory = pb.PBClientFactory()
 reactor.connectTCP("localhost", 8789, factory)
-factory.getRootObject().addCallbacks(gotObject, gotNoObject)
+d = factory.getRootObject()
+d.addCallback(lambda object: object.callRemote("echo", "hello network"))
+d.addCallback(lambda echo: 'server echoed: '+echo)
+d.addErrback(lambda reason: 'error: '+str(reason.value))
+d.addCallback(util.println)
+d.addCallback(lambda _: reactor.stop())
 reactor.run()
