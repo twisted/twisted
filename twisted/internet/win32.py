@@ -186,7 +186,21 @@ def doWaitForMultipleEvents(timeout,
 
 
 class Process(abstract.FileDescriptor):
-    """A process that integrates with the Twisted event loop."""
+    """A process that integrates with the Twisted event loop.
+    
+    If your subprocess is a python program, you need to:
+    
+     - Run python.exe with the '-u' command line option.
+    
+     - If you don't want Windows messing with data passed over
+       stdin/out/err, set the pipes to be in binary mode::
+    
+        import os, sys, mscvrt
+        msvcrt.setmode(sys.stdin.fileno(), os.O_BINARY)
+        msvcrt.setmode(sys.stdout.fileno(), os.O_BINARY)
+        msvcrt.setmode(sys.stderr.fileno(), os.O_BINARY)
+    
+    """
     
     buffer = ''
     
