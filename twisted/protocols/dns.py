@@ -836,7 +836,7 @@ class Record_HINFO:
     
     
     def __hash__(self):
-        return hash((self.os.lower(), self.cpu.lower())
+        return hash((self.os.lower(), self.cpu.lower()))
 
 
     def __str__(self):
