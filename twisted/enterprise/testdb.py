@@ -6,7 +6,7 @@ import time
 class DbManagerTestCase(unittest.TestCase):
     def setUp(self):
         self.manager = dbserver.DbManager(
-            service =  "sybase",
+            service =  "postgres",
             server =   "max",
             database = "twisted",
             username = "twisted",
@@ -33,7 +33,7 @@ class DbManagerTestCase(unittest.TestCase):
 class DbServiceTestCase(unittest.TestCase):
     def setUp(self):
         self.manager = dbserver.DbManager(
-            service =  "sybase",
+            service =  "postgres",
             server =   "max",
             database = "twisted",
             username = "twisted",

@@ -41,12 +41,13 @@ class DbManager:
         self.connected = 0
         self.driver = None
 
-        ## Load the correct driver
+        ## Load the correct driver. Currently supported drivers are "sybase" and "postgres"
         if service == "sybase":
             import Sybase
             self.driver = Sybase
         elif service == "postgres":
-            print "Postgres not implemented yet...."
+	    import PoPy
+	    self.driver = PoPy
         else:
             print "ERROR: Uknown database service"
     
@@ -128,11 +129,35 @@ class DbConnection(threading.Thread):
         DbConnection.connectionID = DbConnection.connectionID + 1
 
     def connect(self):
+        """Connection details vary by the database driver being used.
+	"""
+	if self.manager.service == "sybase":
+	    return self.connectSybase()
+        elif self.manager.service == "postgres":
+            return self.connectPostgres()
+        else:
+	    return 0
+
+    def connectSybase(self):
         try:
-            self.connection = self.manager.driver.connect(self.manager.server, self.manager.username, self.manager.password, database=self.manager.database)
+            self.connection = self.manager.driver.connect(
+		self.manager.server, 
+		self.manager.username, 
+		self.manager.password, 
+		database=self.manager.database
+		)
         except self.manager.driver.InternalError, e:
-            print "unable to connect to database!"
+            print "unable to connect to database: %s" % repr(e)
             return 0
+	self.running = 1
+	return 1
+
+    def connectPostgres(self):
+        try:
+            self.connection = self.manager.driver.connect( 'user=twisted dbname=twisted' )
+	except self.manager.driver.DatabaseError, e:
+            print "unable to connect to database: %s" % repr(e)
+	    return 0
         self.running = 1
         return 1
         
@@ -156,7 +181,11 @@ class DbConnection(threading.Thread):
                     text = text +  "    %s: %s\n" % (k, self.error[k])
                 request.status = 0
                 print text
-                
+	    except self.manager.driver.DatabaseError, e:
+                print "SQL ERROR: %s" % e
+		self.error = e
+		request.status = 0
+
             self.manager.addResult(request)
                 
     def close(self):
