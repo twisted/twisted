@@ -10,6 +10,11 @@ from twisted.manhole.ui import gtk2manhole
 from twisted.python.components import Adapter, Interface, registerAdapter
 from twisted.python import log
 
+# the glade file uses stock icons, which requires gnome to be installed
+import gnome
+version = "$Revision: 1.2 $"[11:-2]
+gnome.init("gladereactor Inspector", version)
+
 class ConsoleOutput(gtk2manhole.ConsoleOutput):
     def _captureLocalLog(self):
         self.fobs = log.FileLogObserver(gtk2manhole._Notafile(self, "log"))
