@@ -46,18 +46,18 @@ def threadSafeScheduler():
     reactor.callFromThread(notThreadSafe, 3) # will run 'notThreadSafe(3)' in the event loop
 </pre>
 
-<h2>Running code in threads</h2>
+    <h2>Running code in threads</h2>
 
-<p>
-Sometimes we may want to run methods in threads - for example, in order to access blocking
-APIs. Twisted provides methods for doing so using the IReactorThreads API
-(<code class="API">twisted.internet.interfaces.IReactorThreads</code>). Additional utility
-functions are provided in <code class="API">twisted.internet.threads</code>. Basically,
-these methods allow you to queue methods to be run by a thread pool.
-</p>
+    <p>Sometimes we may want to run methods in threads - for
+    example, in order to access blocking APIs. Twisted provides
+    methods for doing so using the IReactorThreads API (<code
+    class="API">twisted.internet.interfaces.IReactorThreads</code>).
+    Additional utility functions are provided in <code
+    class="API">twisted.internet.threads</code>. Basically, these
+    methods allow you to queue methods to be run by a thread
+    pool.</p>
 
-<p>For example, to run a method in a thread we can do:</p>
-
+    <p>For example, to run a method in a thread we can do:</p>
 <pre class="python">
 from twisted.internet import reactor
 
@@ -70,9 +70,8 @@ def aSillyBlockingMethod(x):
 reactor.callInThread(aSillyBlockingMethod, "2 seconds have passed")
 </pre>
 
-<p>For functions whose results we wish to get, we can have the result returned as a
-Deferred:</p>
-
+    <p>For functions whose results we wish to get, we can have the
+    result returned as a Deferred:</p>
 <pre class="python">
 from twisted.internet import threads
 

@@ -1,66 +1,83 @@
-<html>
-<head>
-<title>Twisted 1.0</title>
-</head>
-<body>
+<?xml version="1.0"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
 
-<h1>Getting to 1.0</h1>
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <title>Twisted 1.0</title>
+  </head>
 
-<h2>Introduction</h2>
+  <body>
+    <h1>Getting to 1.0</h1>
 
-<p>Twisted 1.0 is not going to be stable. What is going to be stable are
-specific APIs, namely twisted.internet. Other parts of Twisted are still too
-immature to be considered stable, and will be worked on in later versions.</p>
+    <h2>Introduction</h2>
 
-<p>The goal of this release, then, is to have 
-<code class="python">twisted.internet</code> in a state where it is a suitable
-replacement for asyncore/Medusa. That means it should be stable API-wise, have
-as many tests as we can possibly write for it, and be well documented.</p>
+    <p>Twisted 1.0 is not going to be stable. What is going to be
+    stable are specific APIs, namely twisted.internet. Other parts
+    of Twisted are still too immature to be considered stable, and
+    will be worked on in later versions.</p>
 
-<h2>Process</h2>
+    <p>The goal of this release, then, is to have <code
+    class="python">twisted.internet</code> in a state where it is a
+    suitable replacement for asyncore/Medusa. That means it should
+    be stable API-wise, have as many tests as we can possibly write
+    for it, and be well documented.</p>
 
-<p>We will, as soon as the <code class="python">twisted.internet</code> APIs
-are stable, switch to version 0.99.0. At this point, our goal is to document,
-write tests and fix bugs in <code class="python">twisted.internet</code> - all
-changes must API compatible from this point onwards.</p>
+    <h2>Process</h2>
 
-<p>Changes to other parts of Twisted are acceptable, as long as they follow
-are usual policies.</p>
+    <p>We will, as soon as the <code
+    class="python">twisted.internet</code> APIs are stable, switch
+    to version 0.99.0. At this point, our goal is to document,
+    write tests and fix bugs in <code
+    class="python">twisted.internet</code> - all changes must API
+    compatible from this point onwards.</p>
 
-<p>1.0 will be released when we feel that the level of bugs is sufficiently
-low, and the amount of documentation and unit tests is sufficiently high.</p>
+    <p>Changes to other parts of Twisted are acceptable, as long as
+    they follow are usual policies.</p>
 
-<h2>Requirements for 0.99</h2>
+    <p>1.0 will be released when we feel that the level of bugs is
+    sufficiently low, and the amount of documentation and unit
+    tests is sufficiently high.</p>
 
-<ul>
-<li>Clean up connectors.</li>
-<li>New UDP API.</li>
-<li>Make necessary changes to Application - whatever changes
-    glyph wanted to make with authorizers and services.</li>
-<li>Finalize Deferred APIs.</li>
-<li>Low-level socket APIs - people want to turn off Nagle's algorithm and set other
-    settings on sockets that are currently not supported. we need to formalize a
-    method for this.</li>
-<li>Support binding client sockets to specific interfaces.</li>
-</ul>
+    <h2>Requirements for 0.99</h2>
 
-<p>I don't think we need to mark all modules for API stability level. I think 
-we only need to mark modules that *are* stable, if they're not stable, 
-"semi-stable" isn't useful, since we may yet think of some major changes that 
-will make it less stable.</p>
+    <ul>
+      <li>Clean up connectors.</li>
 
-<p>So, another requirement is marking all modules whose API is stable as such,
-the rest of the modules can be left unmarked.</p>
+      <li>New UDP API.</li>
 
-<h2>Requirements for 1.0</h2>
+      <li>Make necessary changes to Application - whatever changes
+      glyph wanted to make with authorizers and services.</li>
 
-<p>These are non-API-related changes that need to be made before 1.0 is 
-released.
-</p>
+      <li>Finalize Deferred APIs.</li>
 
-<ul>
-<li>Move all bin/ scripts to twisted/scripts.</li>
-</ul>
+      <li>Low-level socket APIs - people want to turn off Nagle's
+      algorithm and set other settings on sockets that are
+      currently not supported. we need to formalize a method for
+      this.</li>
 
-</body>
+      <li>Support binding client sockets to specific
+      interfaces.</li>
+    </ul>
+
+    <p>I don't think we need to mark all modules for API stability
+    level. I think we only need to mark modules that *are* stable,
+    if they're not stable, "semi-stable" isn't useful, since we may
+    yet think of some major changes that will make it less
+    stable.</p>
+
+    <p>So, another requirement is marking all modules whose API is
+    stable as such, the rest of the modules can be left
+    unmarked.</p>
+
+    <h2>Requirements for 1.0</h2>
+
+    <p>These are non-API-related changes that need to be made
+    before 1.0 is released.</p>
+
+    <ul>
+      <li>Move all bin/ scripts to twisted/scripts.</li>
+    </ul>
+  </body>
 </html>
+

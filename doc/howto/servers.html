@@ -31,9 +31,10 @@
     <code>Protocol</code>.</p>
 
     <p>The persistent configuration is kept in a Factory class,
-    which usually inherits from <code class="API">twisted.internet.protocol.Factory</code>.
-    The default factory class just instantiates each Protocol, and
-    then sets on it an attribute called <code>factory</code> which
+    which usually inherits from <code
+    class="API">twisted.internet.protocol.Factory</code>. The
+    default factory class just instantiates each Protocol, and then
+    sets on it an attribute called <code>factory</code> which
     points to itself. This lets every <code>Protocol</code> access,
     and possibly modify, the persistent configuration.</p>
 
@@ -220,10 +221,10 @@ class Answer(LineReceiver):
     <h2>Factories</h2>
 
     <p>As mentioned before, usually the class <code
-    class="API">twisted.internet.protocol.Protocol</code>
-    works, and there is no need to override it. However, sometimes
-    there can be factory-specific configuration of the protocols,
-    or other considerations. In those cases, there is a need to
+    class="API">twisted.internet.protocol.Protocol</code> works,
+    and there is no need to override it. However, sometimes there
+    can be factory-specific configuration of the protocols, or
+    other considerations. In those cases, there is a need to
     subclass <code>Factory</code>.</p>
 
     <p>For a factory which simply instantiates instances of a

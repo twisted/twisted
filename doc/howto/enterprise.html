@@ -142,11 +142,11 @@
     failure).</p>
 
     <p>Also worth noting is that this example assumes that dbmodule
-    uses the "qmarks" paramstyle (see the DB-API specification).  If
-    your dbmodule uses a different paramstyle (e.g. pyformat) then use
-    that.  Twisted doesn't attempt to offer any sort of magic
-    paramater munging -- <code class="python">runQuery(query, params,
-    ...)</code> maps directly onto <code
+    uses the "qmarks" paramstyle (see the DB-API specification). If
+    your dbmodule uses a different paramstyle (e.g. pyformat) then
+    use that. Twisted doesn't attempt to offer any sort of magic
+    paramater munging -- <code class="python">runQuery(query,
+    params, ...)</code> maps directly onto <code
     class="python">cursor.execute(query, params, ...)</code>.</p>
 
     <h2>And that's it!</h2>
@@ -155,7 +155,6 @@
     Twisted. You probably should read the adbapi module's
     documentation to get an idea of the other functions it has, but
     hopefully this document presents the core ideas.</p>
-
     <hr />
 
     <address>

@@ -58,14 +58,15 @@
         API on to other main loops which it does not necessarily
         control.</td>
 
-        <td>Connectors for SSL.  UDP refactor.</td>
+        <td>Connectors for SSL. UDP refactor.</td>
 
         <td>Improved Jython support, and support for Java 1.4's
-        nbio, C optimization of the regular mainloop, refactor of app.connectTCP so
-          Connector doesn't touch reactor implementation.</td>
+        nbio, C optimization of the regular mainloop, refactor of
+        app.connectTCP so Connector doesn't touch reactor
+        implementation.</td>
 
         <td>None known.</td>
-        
+
         <td>1.0</td>
       </tr>
 
@@ -79,12 +80,13 @@
 
         <td>Improved handling of FTP</td>
 
-        <td>A readline-style input line for telnet, curses-over-telnet, ssh
-          protocol implementation</td>
+        <td>A readline-style input line for telnet,
+        curses-over-telnet, ssh protocol implementation</td>
 
         <td>None that I can think of.</td>
-        
-        <td>Individual modules by 1.0; probably the whole package will never be.</td>
+
+        <td>Individual modules by 1.0; probably the whole package
+        will never be.</td>
       </tr>
 
       <tr class="notdone">
@@ -116,8 +118,8 @@
 
         <td>ZPT integration</td>
 
-        <td>Probably some templating things will be changed around in future
-          releases.</td>
+        <td>Probably some templating things will be changed around
+        in future releases.</td>
 
         <td>1.0, mostly</td>
       </tr>
@@ -138,9 +140,7 @@
         <td>Since it's not really being used, I'm not concerned
         about breakages.</td>
 
-        <td>
-          1.4
-        </td>
+        <td>1.4</td>
       </tr>
 
       <tr class="done">
@@ -166,7 +166,8 @@
 
         <td>An authentication abstraction.</td>
 
-        <td>API cleanup.  Removal of dependence of twisted.internet.</td>
+        <td>API cleanup. Removal of dependence of
+        twisted.internet.</td>
 
         <td>More authentication back-ends.</td>
 
@@ -202,15 +203,15 @@
 
         <td>Individual and group chat server for Twisted.</td>
 
-        <td>Multiple servers rebroadcasting messages.  Moderation
-          facilities.</td>
+        <td>Multiple servers rebroadcasting messages. Moderation
+        facilities.</td>
 
         <td>Lots of bots that do cool things on the server side.
         Total IRCD compatibility with respect to Hybrid
         Services-style bots.</td>
 
-        <td>PB wire protocol will break and there will be a near-total rewrite,
-          moving to refpath-style protocol.</td>
+        <td>PB wire protocol will break and there will be a
+        near-total rewrite, moving to refpath-style protocol.</td>
 
         <td>1.4</td>
       </tr>
@@ -241,22 +242,23 @@
 
         <td>Twisted's remote object protocol support.</td>
 
-        <td>An RFC cementing the wire-level
-          protocol. pb.setFactoryForClass(className, factory)
-          function which will allow for use of persistentLoad-style objects in
-          PB (ones where the component state is given to the constructor,
-          rather than the initializer). Perspective.observe() and other methods
-          to automate automatically unsubscribing for events on
-          logout. Standardized way of per-object protocol versioning.  </td>
+        <td>An RFC cementing the wire-level protocol.
+        pb.setFactoryForClass(className, factory) function which
+        will allow for use of persistentLoad-style objects in PB
+        (ones where the component state is given to the
+        constructor, rather than the initializer).
+        Perspective.observe() and other methods to automate
+        automatically unsubscribing for events on logout.
+        Standardized way of per-object protocol versioning.</td>
 
         <td>Persistent stateless references. Full implementations
-          of PB for more languages. ASCII version of the 'banana'
-          level protocol for debugging and easier protocol
-          implementation.</td>
+        of PB for more languages. ASCII version of the 'banana'
+        level protocol for debugging and easier protocol
+        implementation.</td>
 
-        <td>Object-level protocols may have a small breakage as we move to a
-          different model for locating services, but it should be possible to avoid
-          this.</td>
+        <td>Object-level protocols may have a small breakage as we
+        move to a different model for locating services, but it
+        should be possible to avoid this.</td>
 
         <td>1.1</td>
       </tr>
@@ -272,9 +274,10 @@
 
         <td>None I can think of.</td>
 
-        <td>This isn't really a package that external developers use.  It may
-          be best to destroy this package and move tap modules into their
-          appropriate packages rather than aggregating them here.</td>
+        <td>This isn't really a package that external developers
+        use. It may be best to destroy this package and move tap
+        modules into their appropriate packages rather than
+        aggregating them here.</td>
 
         <td>n/a</td>
       </tr>
@@ -315,6 +318,7 @@
         integration with twisted.words and twisted.mail.</td>
 
         <td>None I can think of.</td>
+
         <td>n/a</td>
       </tr>
 
@@ -331,6 +335,7 @@
         bug-buddy...)</td>
 
         <td>None I can think of.</td>
+
         <td>n/a</td>
       </tr>
 
@@ -355,6 +360,7 @@
         <td>If I started typing here, I would never stop.</td>
 
         <td>Pretty much everything, I'd imagine.</td>
+
         <td>n/a</td>
       </tr>
     </table>
