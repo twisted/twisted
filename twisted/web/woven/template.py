@@ -65,6 +65,8 @@ A short example::
    |         return newNode
 """
 
+import warnings
+
 from cStringIO import StringIO
 import string, os, sys, stat, types
 from twisted.web import microdom
@@ -117,7 +119,7 @@ class NodeNodeMutator(NodeMutator):
             if parent:
                 parent.replaceChild(self.data, node)
             else:
-                print "WARNING: There was no parent for node %s; node not mutated" % node
+                warnings.warn("Warning: There was no parent for node %s; node not mutated." % node)
         return self.data
 
 
