@@ -36,12 +36,6 @@ def setDone(message):
     gotResponse = 1
     return message
 
-def getPayload(message):
-    global gotResponse
-    gotResponse = 1
-    return [answer.payload for answer in message.answers]
-
-
 class NoFileAuthority(common.ResolverBase):
     def __init__(self, soa, records):
         common.ResolverBase.__init__(self)
