@@ -28,7 +28,7 @@ import struct, os
 from twisted.internet import protocol, reactor
 from twisted.python import log
 
-import common, channel
+import common, channel, filetransfer
 
 class SSHSession(channel.SSHChannel):
 
@@ -171,6 +171,11 @@ class SSHSession(channel.SSHChannel):
         pyshell.loggedIn() # since we've logged in by the time we make it here
         self.receiveEOF = self.loseConnection
         return pyshell
+    
+    def subsystem_sftp(self):
+        ft=filetransfer.FileTransferServer(self.conn.transport.authenticatedUser)
+        ft.makeConnection(self)
+        return ft
 
     def setModes(self):
         import tty, ttymodes
