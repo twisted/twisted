@@ -166,7 +166,7 @@ class IReactorUNIX(Interface):
         @returns: an L{IConnector}.
         """
 
-    def listenUNIX(address, factory, backlog=5):
+    def listenUNIX(self, address, factory, backlog=5):
         """Listen on a UNIX socket.
 
         @param address: a path to a unix socket on the filesystem.
