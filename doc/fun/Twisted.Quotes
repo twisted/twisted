@@ -3538,3 +3538,7 @@ private message from dash: wuh oh, drewp is on to us
 <moshez> glyph: I don't care about actual people
 <moshez> glyph: I care about not screwing up Debian
 %
+<arno> what are the main things to change going from [bsddb] 3.3 to 4.1?
+<icepick> moving around when you open transactions
+<arno> sounds like money laundering strategies...
+%
