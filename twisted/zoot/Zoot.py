@@ -16,16 +16,20 @@
 
 """Zooko's implementation of Gnutella."""
 
-from twisted.protocols.gnutella import GnutellaTalker
-
-from twisted.python import usage        # twisted command-line processing
+from twisted.internet.app import Application
+from twisted.protocols import gnutella
 
 from twisted.zoot.AFactory import AFactory
-from twisted.zoot.Zoot import Zoot
 
-class Options(usage.Options):
-    optParameters = [["port", "p", 3653, "Port number to listen on for Gnutella protocol."],]
+class Zoot:
+    def __init__(self):
+        pass
 
-def updateApplication(app, config):
-    f = AFactory(GnutellaTalker, Zoot())
-    app.listenTCP(int(config["port"]), f)
+class ZootFactory(AFactory):
+
+    protocol = gnutella.GnutellaTalker
+
+    def __init__(self, zoot):
+        AFactory.__init__(self)
+        self.application = zoot
+

@@ -14,18 +14,18 @@
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
-"""Zooko's implementation of Gnutella."""
+"""slightly extended variation on basic Factory"""
 
-from twisted.protocols.gnutella import GnutellaTalker
+from twisted.internet.protocol import Factory, Protocol
+from twisted.internet.app import Application
 
-from twisted.python import usage        # twisted command-line processing
+class AFactory(Factory):
+    def __init__(self, protocol, appobject=None):
+        self.protocol = protocol
+        self.application = appobject
 
-from twisted.zoot.AFactory import AFactory
-from twisted.zoot.Zoot import Zoot
+    def buildProtocol(self, addr):
+        p = Factory.buildProtocol(self, addr)
+        p.application = self.application
+        return p
 
-class Options(usage.Options):
-    optParameters = [["port", "p", 3653, "Port number to listen on for Gnutella protocol."],]
-
-def updateApplication(app, config):
-    f = AFactory(GnutellaTalker, Zoot())
-    app.listenTCP(int(config["port"]), f)

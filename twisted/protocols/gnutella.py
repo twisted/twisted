@@ -101,8 +101,8 @@ class GnutellaTalker(LineReceiver):
         assert (ttl > 0) and (ttl <= 256), "ttl must be > 0 and <= 256." + " -- " + "ttl: %s" % str(ttl)
         self.transport.write(struct.pack(HEADERENCODING, (self._nextDescriptorId(), 0, ttl, 0, 0,)))
 
-        # xxxxk
-        # xxx
+    def sendPong(self, xxx):
+        pass
 
     # METHODS OF INTEREST TO SUBCLASSES
     def pingReceived(self, descriptorId, ttl, hops):
