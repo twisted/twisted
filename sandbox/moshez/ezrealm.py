@@ -15,6 +15,13 @@ class _NullAvatar:
         pass
 _nullAvatar = _NullAvatar()
 
+class AvatarAdapter(components.Adapter):
+    __implements__ = IAvatar
+    def connected(self, mind):
+        pass
+    def logout(self, mind):
+        pass
+
 class IAvatarFactory(components.Interface):
     def loadAvatar(self, avatarId):
         pass
@@ -156,3 +163,19 @@ class PersistentFactory:
 #
 # Use: Realm(IAvatarFactory(MaildirDirdbmDomain(service, root, postmaster))
 # Discussion: should Realm cast to IAvatarFactory?
+#
+# --------------------------------------------
+# Example: (based on sandbox/glyph/dynademo/login.py
+#
+# class _LoggedInAvatar(AvatarAdapter):
+#     def logout(self, mind):
+#         self.original.logout()
+# components.registerAdapter(_LoggedInAvatar, LoggedIn, IAvatar)
+# 
+# class MyFactory:
+#     __implements__ = IAvatarFactory
+#     def requestAvatar(self, avatarId)
+#         if avatarId:
+#             return LoggedIn(avatarId)
+#         else:
+#             return BasePage()
