@@ -22,7 +22,7 @@ Package installer for Twisted
 Copyright (C) 2001 Matthew W. Lefkowitz
 All rights reserved, see LICENSE for details.
 
-$Id: setup.py,v 1.106 2003/03/21 22:11:51 etrepum Exp $
+$Id: setup.py,v 1.107 2003/03/30 07:59:31 moshez Exp $
 """
 
 import distutils, os, sys, string
@@ -275,6 +275,7 @@ imPath = os.path.join('twisted', 'im')
 pbuiPath = os.path.join('twisted','spread','ui')
 manuiPath = os.path.join('twisted','manhole','ui')
 testPath = os.path.join("twisted", 'test')
+lorePath = os.path.join("twisted", 'lore')
 
 setup_args['data_files']=[
     (imPath, [os.path.join(imPath, 'instancemessenger.glade')]),
@@ -282,6 +283,7 @@ setup_args['data_files']=[
     (manuiPath, [os.path.join(manuiPath, 'gtk2manhole.glade')]),
     (testPath, [os.path.join(testPath, "server.pem")]),
     (testPath, [os.path.join(testPath, "rfc822.message")]),
+    (lorePath, [os.path.join(lorePath, "template.mgp")]),
     ('twisted', [os.path.join('twisted', 'plugins.tml')]),
     ]
 
