@@ -19,7 +19,7 @@ class Perspective(pb.Perspective):
                 traceback.print_exc(file=io)
                 return io.getvalue()
         try:
-            val = eval(code, self.factory.namespace)
+            val = eval(code)
         except:
             io = StringIO.StringIO()
             traceback.print_exc(file=io)
