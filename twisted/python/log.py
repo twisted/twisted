@@ -18,9 +18,12 @@
 twisted.log: Logfile and multi-threaded file support.
 """
 
+try:
+    import cStringIO as StringIO
+except ImportError:
+    import StringIO
 
 import sys
-import cStringIO as StringIO
 import time
 import threadable
 import traceback

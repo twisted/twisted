@@ -253,7 +253,7 @@ class PicklingTestCase(unittest.TestCase):
         self.assertEquals(o(), 4)
         self.assertEquals(type(o), type(obj.getX))
     
-    def testcStringIO(self):
+    def testStringIO(self):
         f = StringIO.StringIO()
         f.write("abc")
         pickl = pickle.dumps(f)

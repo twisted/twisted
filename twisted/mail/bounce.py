@@ -16,8 +16,12 @@
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
-import cStringIO, rfc822, string, time, os
+import rfc822, string, time, os
 
+try:
+    import cStringIO as StringIO
+except ImportError:
+    import StringIO
 
 def generateBounce(message, failedFrom, failedTo, transcript=''):
     if not transcript:
@@ -26,7 +30,7 @@ I'm sorry, the following address has permanent errors: %(failedTo)s.
 I've given up, and I will not retry the message again.
 ''' % vars()
     boundary = "%s_%s_%s" % (time.time(), os.getpid(), 'XXXXX')
-    fp = cStringIO.StringIO()
+    fp = StringIO.StringIO()
     failedAddress = rfc822.AddressList(failedTo)[0][1]
     failedDomain = string.split(failedAddress, '@', 1)[1]
     fp.write('From: postmaster@'+failedDomain+'\n')

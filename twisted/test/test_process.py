@@ -22,7 +22,12 @@ from __future__ import nested_scopes
 
 from twisted.trial import unittest
 
-import cStringIO, gzip, os, popen2, time, sys
+import gzip, os, popen2, time, sys
+
+try:
+    import cStringIO as StringIO
+except ImportError:
+    import StringIO
 
 # Twisted Imports
 from twisted.internet import reactor, protocol, error
@@ -284,8 +289,8 @@ class Accumulator(protocol.ProcessProtocol):
 
     def connectionMade(self):
         # print "connection made"
-        self.outF = cStringIO.StringIO()
-        self.errF = cStringIO.StringIO()
+        self.outF = StringIO.StringIO()
+        self.errF = StringIO.StringIO()
 
     def outReceived(self, d):
         # print "data", repr(d)

@@ -19,7 +19,11 @@
 from __future__ import nested_scopes
 
 from twisted.web import microdom
-import cStringIO
+
+try:
+    import cStringIO as StringIO
+except ImportError:
+    import StringIO
 
 class NodeLookupError(Exception): pass
 
@@ -232,7 +236,7 @@ def writeNodeData(node, oldio):
 
 
 def getNodeText(node):
-    oldio = cStringIO.StringIO()
+    oldio = StringIO.StringIO()
     writeNodeData(node, oldio)
     return oldio.getvalue()
 

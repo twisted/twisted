@@ -22,9 +22,13 @@ Different styles of persisted objects.
 
 # System Imports
 import types
-import cStringIO
 import copy_reg
 import copy
+
+try:
+    import cStringIO as StringIO
+except ImportError:
+    import StringIO
 
 # Twisted Imports
 from twisted.python import log
@@ -96,17 +100,17 @@ copy_reg.pickle(types.ModuleType,
                 unpickleModule)
 
 def pickleStringO(stringo):
-    'support function for copy_reg to pickle cStringIO.OutputTypes'
+    'support function for copy_reg to pickle StringIO.OutputTypes'
     return unpickleStringO, (stringo.getvalue(), stringo.tell())
 
 def unpickleStringO(val, sek):
-    x = cStringIO.StringIO()
+    x = StringIO.StringIO()
     x.write(val)
     x.seek(sek)
     return x
 
-if hasattr(cStringIO, 'OutputType'):
-    copy_reg.pickle(cStringIO.OutputType,
+if hasattr(StringIO, 'OutputType'):
+    copy_reg.pickle(StringIO.OutputType,
                 pickleStringO,
                 unpickleStringO)
 
@@ -114,13 +118,13 @@ def pickleStringI(stringi):
     return unpickleStringI, (stringi.getvalue(), stringi.tell())
 
 def unpickleStringI(val, sek):
-    x = cStringIO.StringIO(val)
+    x = StringIO.StringIO(val)
     x.seek(sek)
     return x
 
 
-if hasattr(cStringIO, 'InputType'):
-    copy_reg.pickle(cStringIO.InputType,
+if hasattr(StringIO, 'InputType'):
+    copy_reg.pickle(StringIO.InputType,
                 pickleStringI,
                 unpickleStringI)
 

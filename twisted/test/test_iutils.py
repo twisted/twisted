@@ -21,7 +21,7 @@ Test running processes.
 
 from twisted.trial import unittest
 
-import cStringIO, gzip, os, popen2, time, sys
+import gzip, os, popen2, time, sys
 
 # Twisted Imports
 from twisted.internet import reactor, utils

@@ -22,10 +22,12 @@ infrastructure.
 
 # System Imports
 
+try:
+    import cStringIO as StringIO
+except ImportError:
+    import StringIO
+
 import base64
-import cStringIO
-StringIO = cStringIO
-del cStringIO
 import string
 import socket
 import types
@@ -80,7 +82,7 @@ class UnsupportedMethod(Exception):
     allowedMethods = ()
 
     def __init__(self, allowedMethods, *args):
-        apply(Exception.__init__, [self, allowedMethods] + args)
+        Exception.__init__(self, allowedMethods, *args)
 
         if not operator.isSequenceType(allowedMethods):
             why = "but my first argument is not a sequence."
@@ -268,7 +270,7 @@ class Request(pb.Copyable, http.Request, components.Componentized):
     def view_addCookie(self, issuer, k, v, **kwargs):
         """Remote version of addCookie; same interface.
         """
-        apply(self.addCookie, (k, v), kwargs)
+        self.addCookie(k, v, **kwargs)
 
     def view_setHeader(self, issuer, k, v):
         """Remote version of setHeader; same interface.

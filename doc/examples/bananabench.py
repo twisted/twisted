@@ -14,10 +14,13 @@
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
-import cStringIO
 import sys
 import time
-
+try:
+    import cStringIO as StringIO
+except ImportError:
+    import StringIO
+    
 # Twisted Imports
 from twisted.spread import banana
 from twisted.internet import protocol
@@ -27,7 +30,7 @@ iterationCount = 10000
 class BananaBench:
     r = range( iterationCount )
     def setUp(self, encClass):
-        self.io = cStringIO.StringIO()
+        self.io = StringIO.StringIO()
         self.enc = encClass()
         self.enc.makeConnection(protocol.FileWrapper(self.io))
         self.enc._selectDialect("none")

@@ -17,7 +17,11 @@
 
 from twisted.trial import unittest
 
-import cStringIO
+try:
+    import cStringIO as StringIO
+except ImportError:
+    import StringIO
+
 import sys
 # Twisted Imports
 from twisted.spread import banana
@@ -28,7 +32,7 @@ class MathTestCase(unittest.TestCase):
     def testInt2b128(self):
         funkylist = range(0,100) + range(1000,1100) + range(1000000,1000100) + [1024 **10l]
         for i in funkylist:
-            x = cStringIO.StringIO()
+            x = StringIO.StringIO()
             banana.int2b128(i, x.write)
             v = x.getvalue()
             y = banana.b1282int(v)
@@ -39,7 +43,7 @@ class BananaTestCase(unittest.TestCase):
     encClass = banana.Pynana
     
     def setUp(self):
-        self.io = cStringIO.StringIO()
+        self.io = StringIO.StringIO()
         self.enc = self.encClass()
         self.enc.makeConnection(protocol.FileWrapper(self.io))
         self.enc._selectDialect("none")

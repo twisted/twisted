@@ -19,7 +19,11 @@
 
 from twisted.internet import protocol, reactor, defer
 from twisted.python import failure
-import cStringIO
+
+try:
+    import cStringIO as StringIO
+except ImportError:
+    import StringIO
 
 
 def _callProtocolWithDeferred(protocol, executable, args, env, path, reactor):
@@ -33,7 +37,7 @@ class _BackRelay(protocol.ProcessProtocol):
 
     def __init__(self, deferred):
         self.deferred = deferred
-        self.s = cStringIO.StringIO()
+        self.s = StringIO.StringIO()
 
     def errReceived(self, text):
         self.deferred.errback(failure.Failure(IOError("got stderr")))

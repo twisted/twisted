@@ -28,16 +28,21 @@ from __future__ import nested_scopes
 import sys
 import os
 import types
-import cStringIO
 import string
 import pickle
 import new
+
 try:
     from pydoc import TextRepr
     _textRepr = TextRepr()
     _safe_repr = _textRepr.repr
 except:
     _safe_repr = repr
+
+try:
+    import cStringIO as StringIO
+except ImportError:
+    import StringIO
 
 # Sibling Imports
 import failure
@@ -53,7 +58,7 @@ class Settable:
     some attributes; for example, C{X()(y=z,a=b)}.
     """
     def __init__(self, **kw):
-        apply(self,(),kw)
+        self(**kw)
 
     def __call__(self,**kw):
         for key,val in kw.items():
@@ -290,7 +295,7 @@ class Promise:
 
     def __become__(self, new_self):
         for c in self.calls:
-            apply(getattr(new_self, c[0]), c[1])
+            getattr(new_self, c[0])(*c[1])
         self.__class__ = new_self.__class__
         self.__dict__ = new_self.__dict__
 
@@ -462,7 +467,7 @@ def safe_repr(obj):
     try:
         return _safe_repr(obj)
     except:
-        io = cStringIO.StringIO()
+        io = StringIO.StringIO()
         failure.Failure().printTraceback(file=io)
         return "exception in repr!\n"+ io.getvalue()
 

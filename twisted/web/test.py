@@ -26,10 +26,10 @@ from twisted.python import log
 import widgets
 
 # System Imports
-import cStringIO
-StringIO = cStringIO
-del cStringIO
-
+try:
+    import cStringIO as StringIO
+except ImportError:
+    import StringIO
 
 class FunkyForm(widgets.Form):
     formFields = [

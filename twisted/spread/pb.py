@@ -52,12 +52,16 @@ applied when serializing arguments.
 # Future Imports
 from __future__ import nested_scopes
 
-__version__ = "$Revision: 1.121 $"[11:-2]
+__version__ = "$Revision: 1.122 $"[11:-2]
 
 
 # System Imports
+try:
+    import cStringIO as StringIO
+except ImportError:
+    import StringIO
+    
 import traceback
-import cStringIO
 import string
 import sys
 import types
@@ -211,7 +215,7 @@ class Perspective(perspective.Perspective):
         kw = broker.unserialize(kw, self)
         method = getattr(self, "perspective_%s" % message)
         try:
-            state = apply(method, args, kw)
+            state = method(*args, **kw)
         except TypeError:
             log.msg("%s didn't accept %s and %s" % (method, args, kw))
             raise
@@ -392,7 +396,7 @@ class CopyableFailure(failure.Failure, Copyable):
         else:
             state['value'] = str(self.value) # Exception instance
         state['type'] = str(self.type) # Exception class
-        io = cStringIO.StringIO()
+        io = StringIO.StringIO()
         self.printTraceback(io)
         state['traceback'] = io.getvalue()
         return state
@@ -461,7 +465,7 @@ class Broker(banana.Banana):
             methodName = "proto_%s" % command
             method = getattr(self, methodName, None)
             if method:
-                apply(method, sexp[1:])
+                method(*sexp[1:])
             else:
                 self.sendCall("didNotUnderstand", command)
         else:

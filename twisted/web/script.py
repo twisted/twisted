@@ -23,12 +23,13 @@ import resource
 import html
 import error
 
+try:
+    import cStringIO as StringIO
+except ImportError:
+    import StringIO
 
 from twisted.protocols import http
 from twisted import copyright
-import cStringIO
-StringIO = cStringIO
-del cStringIO
 import traceback
 import os
 import resource
