@@ -17,7 +17,7 @@ class DirTestCase(unittest.TestCase):
         shutil.rmtree('dirent')
 
     def testDir(self):
-        L = [e.name for e in self.d]
+        L = [e[0] for e in self.d]
         L.sort()
         self.assertEquals(L[:2], ['.', '..'])
         self.assertEquals(L[2:], map(str, range(10)))
@@ -26,7 +26,7 @@ class DirTestCase(unittest.TestCase):
         d = self.d
         list(d)
         d.rewind()
-        L = [e.name for e in d]
+        L = [e[0] for e in d]
         L.sort()
         self.assertEquals(L[:2], ['.', '..'])
         self.assertEquals(L[2:], map(str, range(10)))
@@ -66,7 +66,7 @@ class DirTestCase(unittest.TestCase):
 
     def testScan(self):
         d = self.d
-        L = list(d.scan(lambda d: d.name.startswith('5')))
+        L = list(d.scan(lambda d: d[0].startswith('5')))
         self.assertEquals(len(L), 1)
-        self.assertEquals(L[0].name, '5')
+        self.assertEquals(L[0][0], '5')
 
