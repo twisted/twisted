@@ -27,6 +27,7 @@ class Options(usage.Options):
     optFlags = [["help", "h"],
                 ["text", "t", "Text mode (ignored)"],
                 ["verbose", "v", "Verbose output"],
+                ["summary", "s", "summary output"],
                 ["debug", "b", "Run tests in the Python debugger"]]
     optParameters = [["reactor", "r", None,
                       "The Twisted reactor to install before running the tests (looked up as a module contained in twisted.internet)"],
@@ -100,6 +101,8 @@ def run():
 
     if config['verbose']:
         reporter = unittest.TreeReporter(sys.stdout)
+    elif config['summary']:
+        reporter = unittest.MinimalReporter(sys.stdout)
     else:
         reporter = unittest.TextReporter(sys.stdout)
 

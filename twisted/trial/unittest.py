@@ -248,6 +248,19 @@ class Reporter:
     def stop(self):
         self.stopTime = time.time()
 
+class MinimalReporter(Reporter):
+
+    def __init__(self, fp):
+        Reporter.__init__(self)
+        self.fp = fp
+
+    def stop(self):
+        Reporter.stop(self) 
+        t =  (self.getRunningTime(), self.expectedTests, self.numTests,
+               len(self.imports), len(self.errors), len(self.failures),
+               len(self.skips))
+        self.fp.write(' '.join(map(str,t))+'\n')
+
 class TextReporter(Reporter):
     SEPARATOR = '-' * 79
     DOUBLE_SEPARATOR = '=' * 79

@@ -1,3 +1,7 @@
+2003-1-18  Moshe Zadka <moshez@twistedmatrix.com>
+
+	* twisted/trial/unittest.py twisted/scripts/trial.py: adding --summary
+
 2003-01-15  Christopher Armstrong  <radix@twistedmatrix.com>
 
 	* .: Releasing 1.0.2alpha3.
