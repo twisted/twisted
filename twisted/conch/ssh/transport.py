@@ -654,3 +654,4 @@ import transport
 for v in dir(transport):
     if v[:4]=='MSG_':
         messages[getattr(transport,v)] = v # doesn't handle doubles
+

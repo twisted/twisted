@@ -16,6 +16,7 @@
 # 
 import os
 import base64
+import binascii
 try:
     import pwd
 except:
@@ -61,8 +62,11 @@ class OpenSSHConchIdentity(ConchIdentity):
             if os.path.exists(home+file):
                 lines = open(home+file).readlines()
                 for l in lines:
-                    if base64.decodestring(l.split()[1])==pubKeyString:
-                        return defer.succeed('')
+                    try:
+                        if base64.decodestring(l.split()[1])==pubKeyString:
+                            return defer.succeed('')
+                    except binascii.Error:
+                        pass # we caught an ssh1 key
         return defer.fail(error.ConchError('not valid key'))
 
     def verifyPlainPassword(self, password):
@@ -79,3 +83,5 @@ class OpenSSHConchIdentity(ConchIdentity):
                     return defer.succeed('')
                 return defer.fail(error.ConchError('bad password'))
         return defer.fail(error.ConchError('cannot do password auth')) # can't do password auth with out this now
+
+

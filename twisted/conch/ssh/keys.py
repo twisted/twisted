@@ -158,3 +158,4 @@ def printKey(obj):
                 log.msg('\t'+o)
 
 ID_SHA1 = '\x30\x21\x30\x09\x06\x05\x2b\x0e\x03\x02\x1a\x05\x00\x04\x14'
+

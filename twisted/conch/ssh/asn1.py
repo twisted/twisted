@@ -48,3 +48,4 @@ def parse(data):
             
 INTEGER = 0x02
 SEQUENCE = 0x10
+

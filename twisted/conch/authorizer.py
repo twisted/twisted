@@ -33,3 +33,5 @@ class OpenSSHConchAuthorizer(authorizer.DefaultAuthorizer):
                 log.msg('adding %s for %s' % (self.identityClass, name))
                 self.addIdentity(self.identityClass(name, self))
             return defer.succeed(self.identities[name])
+
+

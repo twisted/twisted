@@ -61,3 +61,4 @@ def ffs(c, s):
     """
     for i in c:
         if i in s: return i
+

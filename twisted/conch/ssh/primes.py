@@ -37,3 +37,4 @@ def getDHPrimeOfBits(primes, bits):
     keys.sort(lambda x,y,b=bits:cmp(abs(x-b),abs(y-b)))
     realBits = keys[0]
     return random.choice(primes[realBits])
+

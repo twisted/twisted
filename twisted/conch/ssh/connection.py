@@ -104,7 +104,11 @@ class SSHConnection(service.SSHService):
         channel.closed()
         del self.localToRemoteChannel[localChannel]
         del self.channels[localChannel]
-        del self.channelsToRemoteChannel[channel]
+        try:
+            del self.channelsToRemoteChannel[channel]
+        except KeyError:
+            pass # we'd already closed this end
+
 
     def ssh_CHANNEL_REQUEST(self, packet):
         localChannel = struct.unpack('>L', packet[:4])[0]
@@ -280,8 +284,7 @@ class SSHSession(SSHChannel):
         shell = '/bin/sh' # fix this
         try:
             self.client = SSHSessionClient()
-            ptypro.Process(shell, [shell], self.environ, '/tmp', SSHSessionProtocol(self, self.client)) # fix this too
-            #reactor.spawnProcess(SSHSessionProtocol(self), shell, ['-'], self.environ)
+            ptypro.Process(shell, ["-"], self.environ, '/tmp', SSHSessionProtocol(self, self.client)) # fix this too
         except OSError, ImportError:
             log.msg('failed to get pty')
             return 0
@@ -409,3 +412,4 @@ for v in dir(connection):
         messages[getattr(connection,v)] = v # doesn't handle doubles
 
 SSHConnection.protocolMessages = messages
+
