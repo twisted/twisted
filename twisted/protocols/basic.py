@@ -25,6 +25,7 @@ Maintainer: U{Itamar Shtull-Trauring<mailto:twisted@itamarst.org>}
 import string
 import re
 import struct
+import time
 
 # Twisted imports
 from twisted.internet import protocol
@@ -324,30 +325,36 @@ class StatefulStringProtocol:
 class TimeoutMixin:
     """Mixin for protocols which wish to timeout connections
     
-    @cvar timeOut: The number of seconds after which to timeout the connection
+    @cvar timeOut: The number of seconds after which to timeout the connection.
     """
     timeOut = None
 
+    __timeoutCall = None
+    __lastReceived = None
+
     def connectionMade(self):
-        self.resetTimeout(self.timeOut)
+        if self.timeOut is not None:
+            self.__lastReceived = time.time()
+            self.__timeoutCall = reactor.callLater(self.timeOut, self.__timedOut)
     
     def connectionLost(self, reason):
-        self.resetTimeout(None)
-    
-    def resetTimeout(self, N):
-        """Cancel the current timeout and schedule a new one
-        
-        @type N: C{int} or C{NoneType}
-        @param N: The number of seconds in the future to schedule the timeout.
-        If C{N} is C{None}, the timeout will be cancelled and not rescheduled.
-        """
-        if self.__timeoutCall is not None:
+        if self.__timeoutCall:
             self.__timeoutCall.cancel()
-            if N is None:
-                self.__timeoutCall = None
-            else:
-                self.__timeoutCall = reactor.callLater(N, self.timeoutConnection)
-    
+            self.__timeoutCall = None
+
+    def dataReceived(self, data):
+        self.__lastReceived = time.time()
+
+    def __timedOut(self):
+        self.__timeoutCall = None
+
+        now = time.time()
+        if now - self.__lastReceived() > self.timeOut:
+            self.timeoutConnection()
+        else:
+            when = self.__lastReceived - now + self.timeOut
+            self.__timeoutCall = reactor.callLater(when, self.__timedOut)
+
     def timeoutConnection(self):
         """Called when the connection times out.
         
