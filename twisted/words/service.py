@@ -101,6 +101,7 @@ warnings.warn("twisted.words will be undergoing a rewrite at some point in the f
 
 # System Imports
 import types, time
+from zope.interface import implements
 
 # Twisted Imports
 from twisted.spread import pb
@@ -216,7 +217,7 @@ class IWordsClient(components.Interface):
         """
 
 class WordsClient:
-    __implements__ = IWordsClient
+    implements(IWordsClient)
     """A stubbed version of L{IWordsClient}.
 
     Useful for partial implementations.
@@ -231,6 +232,7 @@ class WordsClient:
     def memberJoined(self, member, group): pass
     def memberLeft(self, member, group): pass
 
+components.backwardsCompatImplements(WordsClient)
 
 class Transcript:
     """I am a transcript of a conversation between multiple parties.
@@ -251,7 +253,7 @@ class IWordsPolicy(components.Interface):
         """ Get a Participant, given a name."""
 
 class NormalPolicy:
-    __implements__ = IWordsPolicy
+    implements(IWordsPolicy)
 
     def __init__(self, participant):
         self.participant = participant
@@ -260,6 +262,8 @@ class NormalPolicy:
 
     def lookUpParticipant(self, nick):
         return self.participant.service.getPerspectiveNamed(nick)
+
+components.backwardsCompatImplements(NormalPolicy)
 
 class Participant(pb.Perspective, styles.Versioned):
     def __init__(self, name):
