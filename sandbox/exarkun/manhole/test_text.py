@@ -67,3 +67,23 @@ class Serialization(unittest.TestCase):
                 A.normal[A.bg.red['Hello, '], A.bg.green['world!']],
                 self.attrs),
             '\x1b[41mHello, \x1b[42mworld!')
+
+    def testComplexStructure(self):
+        output = A.normal[
+            A.bold[
+                A.bg.cyan[
+                    A.fg.red[
+                        "Foreground Red, Background Cyan, Bold",
+                        A.blink[
+                            "Blinking"],
+                        -A.bold[
+                            "Foreground Red, Background Cyan, normal"]],
+                    A.fg.green[
+                        "Foreground Green, Background Cyan, Bold"]]]]
+
+        self.assertEquals(
+            text.flatten(output, self.attrs),
+            "\x1b[1;31;46mForeground Red, Background Cyan, Bold"
+            "\x1b[5mBlinking"
+            "\x1b[0;31;46mForeground Red, Background Cyan, normal"
+            "\x1b[1;32;46mForeground Green, Background Cyan, Bold")
