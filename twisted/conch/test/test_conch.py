@@ -15,7 +15,7 @@ except:
     Crypto = None
 
 from twisted.test.test_process import SignalMixin
-from test_ssh import ConchTestRealm
+from test_ssh import ConchTestRealm, _LogTimeFormatMixin
 
 class Echo(protocol.Protocol):
     def connectionMade(self):
@@ -195,13 +195,14 @@ from twisted.conch.scripts.%s import run
 run()""" % mod]
     return start + list(args)
 
-class CmdLineClientTestBase(SignalMixin):
+class CmdLineClientTestBase(SignalMixin, _LogTimeFormatMixin):
 
     if not Crypto:
         skip = "can't run w/o PyCrypto"
 
     def setUpClass(self):
         SignalMixin.setUpClass(self)
+        _LogTimeFormatMixin.setUpClass(self)
         open('rsa_test','w').write(privateRSA_openssh)
         open('rsa_test.pub','w').write(publicRSA_openssh)
         open('dsa_test.pub','w').write(publicDSA_openssh)
@@ -212,6 +213,7 @@ class CmdLineClientTestBase(SignalMixin):
 
     def tearDownClass(self):
         SignalMixin.tearDownClass(self)
+        _LogTimeFormatMixin.tearDownClass(self)
         for f in ['rsa_test','rsa_test.pub','dsa_test','dsa_test.pub', 'kh_test']:
             os.remove(f)
 

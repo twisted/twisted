@@ -225,6 +225,16 @@ class SuperEchoTransport:
         self.proto.errConnectionLost()
         self.proto.processEnded(failure.Failure(ProcessTerminated(0, None, None)))
 
+class _LogTimeFormatMixin:
+
+    def setUpClass(self):
+        from twisted.python import log
+        self._oldTimeFormat = log.FileLogObserver.timeFormat
+        log.FileLogObserver.timeFormat = '%Y/%m/%d %H:%M:%S %Z'
+
+    def tearDownClass(self):
+        log.FileLogObserver.timeFormat = self._oldTimeFormat
+
 if Crypto: # stuff that needs PyCrypto to even import
     from twisted.conch import checkers
     from twisted.conch.ssh import channel, connection, factory, keys
