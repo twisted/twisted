@@ -81,7 +81,7 @@ class ManholeInterpreter(code.InteractiveInterpreter):
                 obj.addCallbacks(self._cbDisplayDeferred, self._ebDisplayDeferred,
                                  callbackArgs=(k,), errbackArgs=(k,))
                 self.write("<Deferred #%d>" % (k,))
-        else:
+        elif obj is not None:
             self.write(repr(obj))
 
     def _cbDisplayDeferred(self, result, k):
