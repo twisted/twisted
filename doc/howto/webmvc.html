@@ -20,7 +20,7 @@ DOMTemplate solves the problem of separating logic from presentation, and allows
     <h2>Twisted's Solution</h2>
 
 <p>
-Twisted's soluton is to provide a Model-View-Controller based component framework, which allows you to construct complex HTML "Views" out of many small interacting components, or "DOMWidgets".
+Twisted's solution is to provide a Model-View-Controller based component framework, which allows you to construct complex HTML "Views" out of many small interacting components, or "DOMWidgets".
 </p>
 
 <p>
@@ -31,7 +31,7 @@ and higher-level widgets that you define yourself for an application-specific pu
     <h3>Model-View-Controller</h3>
 
 <p>
-Model View Controller is simply a development strategy which involves breaking up your program logic into three seperate domains: Model objects, whose job it is to contain data; View objects, whose job it is to present this data to the user; and Controller objects, whose job it is to interpret the input the user provides and update the model and view with the user's desired changes.
+Model View Controller is simply a development strategy which involves breaking up your program logic into three separate domains: Model objects, whose job it is to contain data; View objects, whose job it is to present this data to the user; and Controller objects, whose job it is to interpret the input the user provides and update the model and view with the user's desired changes.
 </p>
 
 <p>
@@ -42,9 +42,9 @@ Twisted's implementation of MVC is deliberately simple, and is defined in twiste
 from twisted.python import mvc
 from twisted.python import components
 
-MFoo(mvc.Model): pass
-VFoo(mvc.View): pass
-CFoo(mvc.Controller): pass
+class MFoo(mvc.Model): pass
+class VFoo(mvc.View): pass
+class CFoo(mvc.Controller): pass
 
 # Register VFoo as a View for MFoo
 components.registerAdapter(VFoo, MFoo, mvc.IView)
@@ -85,14 +85,14 @@ wmvc.registerControllerForModel(CExample, MExample)
 </pre>
 
 <p>
-While using Twisted's WebMVC you will be using all this boilerplate code for every page on your web site. It may seem excessive at first, but it has several advantages. By defining a complete MVC triad to represent a web page, you give your page three seperate namespaces for your web page's components; by following the MVC division of labor properly you make it easier to locate and isolate a piece of code based on what it does; and by componentizing your logic your code becomes far easier to reuse in other parts of your application, speeding development time.
+While using Twisted's WebMVC you will be using all this boilerplate code for every page on your web site. It may seem excessive at first, but it has several advantages. By defining a complete MVC triad to represent a web page, you give your page three separate namespaces for your web page's components; by following the MVC division of labor properly you make it easier to locate and isolate a piece of code based on what it does; and by componentizing your logic your code becomes far easier to reuse in other parts of your application, speeding development time.
 </p>
 
 <p>
 Now, let's take a look at an actual application written in WebMVC. Here is a template that a designer has provided for the quote page on our site:
 </p>
 
-<a href="listings/TwistedQuotes/WebQuotes.xhtml" class="html-listing">Listing 1: WebQuotes.html: Twisted Quotes Web Template</a>
+<a href="listings/TwistedQuotes/WebMVCQuotes.xhtml" class="html-listing">Listing 1: WebMVCQuotes.html: Twisted Quotes Web Template</a>
 
 <p>
 Notice that we have placed "class" and "id" attributes on those elements that we are interested in operating on. When DOMTemplate is iterating the template looking for nodes to operate on, any node with a class or id will be looked for in both the view and controller. If a node has the class or id "foo" the method factory_foo will be looked for in the view and controller.
@@ -111,15 +111,15 @@ So, to bring our template to life, we first override setUp to prepare the view f
 </p>
 
 <p>
-A DOMWidget's main responsibility is implementing generateDOM, which should return a DOM node heirarchy suitable for inserting into the tree. In this case, we take advantage of the higher level Widgets API and rely on domwidgets.Widget.generateDOM to do the work for us.
+A DOMWidget's main responsibility is implementing generateDOM, which should return a DOM node hierarchy suitable for inserting into the tree. In this case, we take advantage of the higher level Widgets API and rely on domwidgets.Widget.generateDOM to do the work for us.
 </p>
 
 <p>
-Finally, we provide a factory_newQuote method on the controller which returns a custom InputHandler subclass. There are a few methods handlers may override to deal with data, but in this case we override "check", which decides if the input the user enterred was valid, and "commit", which applies the user's input. For check, we simply see if the user entered anything at all; for commit, we append the newly entered quote to the end of the quotefile.
+Finally, we provide a factory_newQuote method on the controller which returns a custom InputHandler subclass. There are a few methods handlers may override to deal with data, but in this case we override "check", which decides if the input the user entered was valid, and "commit", which applies the user's input. For check, we simply see if the user entered anything at all; for commit, we append the newly entered quote to the end of the quotefile.
 </p>
 
 <p>
-This is only the beginning of what can be done with Twisted's WebMVC modules. With a little extra work put into componentizing your logic into seperate domains, I think you will find that you will be creating more and more complex web sites with ease in no time.
+This is only the beginning of what can be done with Twisted's WebMVC modules. With a little extra work put into componentizing your logic into separate domains, I think you will find that you will be creating more and more complex web sites with ease in no time.
 </p>
 
 </body>
