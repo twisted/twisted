@@ -1,5 +1,9 @@
 2002-12-04  Dave Peticolas  <dave@krondo.com>
 
+	* twisted/test/test_policies.py: Take the start time timestamp
+	immediately before creating the ThrottlingFactory, since the
+	factory starts timing when it is created.
+
 	* admin/runtests: Add a 'gtk2' test type to use the gtk2reactor
 	for the test suite.
 

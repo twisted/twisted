@@ -106,6 +106,10 @@ class ThrottlingTestCase(unittest.TestCase):
     def testWriteLimit(self):
         server = Server()
         c1, c2 = SimpleProtocol(), SimpleProtocol()
+
+        # The throttling factory starts checking bandwidth immediately
+        now = time.time()
+
         tServer = policies.ThrottlingFactory(server, writeLimit=10)
         port = reactor.listenTCP(62346, tServer)
         reactor.iterate(); reactor.iterate()
@@ -127,18 +131,17 @@ class ThrottlingTestCase(unittest.TestCase):
         self.assertEquals(c2.buffer, "abcdefghij")
         self.assertEquals(tServer.writtenThisSecond, 20)
         
-        # at this point server should've written 20 bytes, 10 bytes above the limit
-        # so writing should be paused around 1 second from now, and resumed a
-        # second after that
-        now = time.time()
-        
+        # at this point server should've written 20 bytes, 10 bytes
+        # above the limit so writing should be paused around 1 second
+        # from 'now', and resumed a second after that
+
         for p in tServer.protocols.keys():
             self.assert_(not hasattr(p.wrappedProtocol, "paused"))
             self.assert_(not hasattr(p.wrappedProtocol, "resume"))
             
         while not hasattr(p.wrappedProtocol, "paused"):
             reactor.iterate()
-        
+
         self.assertEquals(tServer.writtenThisSecond, 0)
 
         for p in tServer.protocols.keys():
@@ -151,7 +154,8 @@ class ThrottlingTestCase(unittest.TestCase):
 
         for p in tServer.protocols.keys():
             self.assert_(hasattr(p.wrappedProtocol, "resume"))
-            self.assert_(abs(p.wrappedProtocol.resume - p.wrappedProtocol.paused - 1.0) < 0.1)
+            self.assert_(abs(p.wrappedProtocol.resume -
+                             p.wrappedProtocol.paused - 1.0) < 0.1)
 
         c1.transport.loseConnection()
         c2.transport.loseConnection()
@@ -161,6 +165,7 @@ class ThrottlingTestCase(unittest.TestCase):
     def testReadLimit(self):
         server = Server()
         c1, c2 = SimpleProtocol(), SimpleProtocol()
+        now = time.time()
         tServer = policies.ThrottlingFactory(server, readLimit=10)
         port = reactor.listenTCP(62347, tServer)
         reactor.iterate(); reactor.iterate()
@@ -178,7 +183,6 @@ class ThrottlingTestCase(unittest.TestCase):
         
         # we wrote 20 bytes, so after one second it should stop reading
         # and then a second later start reading again
-        now = time.time()
         while time.time() - now < 1.05:
             reactor.iterate()
         self.assertEquals(tServer.readThisSecond, 0)
