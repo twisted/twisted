@@ -16,9 +16,9 @@
 # 
 
 from cStringIO import StringIO
-import os, re
+import os, re, cgi
 from twisted.python import text
-from twisted.web import domhelpers
+from twisted.web import domhelpers, microdom
 import latex, tree
 
 class DocbookSpitter(latex.BaseLatexSpitter):
@@ -35,21 +35,30 @@ class DocbookSpitter(latex.BaseLatexSpitter):
     def visitNodeHeader(self, node):
         level = int(node.tagName[1])
         difference, self.currentLevel = level-self.currentLevel, level
-        if not difference:
+        self.writer('<section>'*difference+'</section>'*-difference)
+        if difference<=0:
             self.writer('</section>\n<section>')
-        self.writer('<section>'*difference+'</section>'*-difference+'<title>')
+        self.writer('<title>')
         self.visitNodeDefault(node)
 
     def visitNode_a_listing(self, node):
         fileName = os.path.join(self.currDir, node.getAttribute('href'))
         self.writer('<programlisting>\n')
-        self.writer(open(fileName).read())
+        self.writer(cgi.escape(open(fileName).read()))
         self.writer('</programlisting>\n')
 
     def visitNode_a_href(self, node):
         self.visitNodeDefault(node)
 
     def visitNode_a_name(self, node):
+        self.visitNodeDefault(node)
+
+    def visitNode_li(self, node):
+        for child in node.childNodes:
+            if getattr(child, 'tagName', None) != 'p':
+                new = microdom.Element('p')
+                new.childNodes = [child]
+                node.replaceChild(new, child)
         self.visitNodeDefault(node)
 
     visitNode_h2 = visitNode_h3 = visitNode_h4 = visitNodeHeader
@@ -60,8 +69,8 @@ class DocbookSpitter(latex.BaseLatexSpitter):
     start_span_footnote, end_span_footnote = '<footnote><para>', '</para></footnote>'
     start_q = end_q = '"'
     start_pre, end_pre = '<programlisting>', '</programlisting>'
-    start_div_note, end_div_note = '<note><para>', '</para></note>'
-    start_li, end_li = '<listitem><para>', '</para></listitem>'
+    start_div_note, end_div_note = '<note>', '</note>'
+    start_li, end_li = '<listitem>', '</listitem>'
     start_ul, end_ul = '<itemizedlist>', '</itemizedlist>'
     start_ol, end_ol = '<orderedlist>', '</orderedlist>'
     start_dl, end_dl = '<variablelist>', '</variablelist>'
