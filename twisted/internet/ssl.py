@@ -185,7 +185,10 @@ class Connection(tcp.Connection):
         try:
             self.socket.sock_shutdown(2)
         except socket.error:
-            pass
+            try:
+                self.socket.close()
+            except socket.error:
+                log.deferr()
 
 
 
