@@ -1,29 +1,49 @@
 #!/usr/bin/python
 
-from twisted.protocols.sux import XMLParser
-import os
+from twisted.lore import tree
+from twisted.web import domhelpers
+from twisted.python import reflect
 
-class TagChecker(XMLParser):
+class TagChecker:
 
     def __init__(self, allowed):
         self.allowed = allowed
 
-    def gotText(self, _):
-        pass
+    def check(self, dom, filename):
+        for method in reflect.prefixedMethods(self, 'check_'):
+            method(dom, filename)
 
-    gotEntityReference = gotText
+    def _report_error(self, filename, element, error):
+        t = (filename,)+element._markpos+(error,)
+        print ("%s:%s:%s: %s" % t)
 
-    def gotTagStart(self, name, attributes):
-        if not self.allowed(name):
-            col, line = self.saveMark()
-            print '%s:%s:%s: unsupported tag <%s>' % (self.fileName, col, line, 
-                                                      name)
+    def check_disallowedElements(self, dom, filename):
+        def m(node, self=self):
+            return not self.allowed(node.tagName)
+        for element in domhelpers.findElements(dom, m):
+            self._report_error(filename, element,
+                               'unrecommended tag %s' % element.tagName)
 
-    def gotTagEnd(self, name):
-        if not self.allowed(name):
-            col, line = self.saveMark()
-            print '%s:%s:%s: unsupported tag </%s>' % (self.fileName, col, line,
-                                                       name)
+    def check_codeClass(self, dom, filename):
+        classes = ['shell', 'API']
+        def matcher(element, classes=classes):
+            if element.tagName != 'code':
+                return 0
+            if not element.hasAttribute('class'):
+                return 0
+            if element.getAttribute('class') in classes:
+                return 0
+            return 1
+        for element in domhelpers.findElements(dom, matcher):
+            self._report_error(filename, element,
+                               'unkown class %s' %element.getAttribute('class'))
+
+#    def check_quote(self, dom, filename):
+#        def matcher(node):
+#            return ('"' in getattr(node, 'data', '') and
+#                    node.parentNode.tagName not in ('code', 'pre'))
+#        for node in domhelpers.findNodes(dom, matcher):
+#            self._reportError(
 
 def main():
     import sys
@@ -35,11 +55,10 @@ def main():
         allowed[tag] = None
     checker = TagChecker(allowed.has_key)
     for file in sys.argv[1:]:
-        f = open(file)
-        checker.makeConnection(None)
-        checker.fileName = file
-        checker.dataReceived(f.read())
-        checker.connectionLost()
+        dom = tree.parseFileAndReport(file)
+        if not dom:
+            continue
+        checker.check(dom, file)
 
 if __name__ == '__main__':
    main()
