@@ -25,6 +25,7 @@ from twisted.internet import protocol
 iterationCount = 10000
 
 class BananaBench:
+    r = range( iterationCount )
     def setUp(self, encClass):
         self.io = cStringIO.StringIO()
         self.enc = encClass()
@@ -41,7 +42,7 @@ class BananaBench:
 
     def testEncode(self, value):
         starttime = time.time()
-        for i in xrange( iterationCount ):
+        for i in self.r:
             self.enc.sendEncoded(value)
             self.io.truncate(0)
         endtime = time.time()
@@ -52,7 +53,7 @@ class BananaBench:
         self.enc.sendEncoded(value)
         encoded = self.io.getvalue()
         starttime = time.time()
-        for i in xrange( iterationCount ):
+        for i in self.r:
             self.enc.dataReceived(encoded)
         endtime = time.time()
         print '    Decode took %s seconds' % (endtime - starttime)
