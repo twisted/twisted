@@ -7,10 +7,10 @@ case "$1" in
 		dpkg --listfiles $NAME | grep '\.py$' | \
 		     xargs /usr/bin/python@VERSION@ -c 'import py_compile,sys
 for file in sys.argv[1:]:
-    py_compile.compile(sys.argv[1])'
+    py_compile.compile(file)'
 		dpkg --listfiles $NAME | grep '\.py$' | \
 		     xargs /usr/bin/python@VERSION@ -O -c 'import py_compile,sys
 for file in sys.argv[1:]:
-    py_compile.compile(sys.argv[1])'
+    py_compile.compile(file)'
         ;;
 esac
