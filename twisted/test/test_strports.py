@@ -63,3 +63,8 @@ class ParserTestCase(unittest.TestCase):
         self.assertEqual(strports.parse(r'unix:address=foo=bar', self.f),
                          ('UNIX', ('foo=bar', self.f),
                                  {'mode':0666, 'backlog':5}))
+
+    def testNonstandardDefault(self):
+        self.assertEqual(strports.parse('filename', self.f, 'unix'),
+                         ('UNIX', ('filename', self.f),
+                                 {'mode':0666, 'backlog':5}))
