@@ -135,6 +135,12 @@ class ClientHello(Handshake):
 class ServerHello(ClientHello):
     handshakeType = HS_CT_SERVER_HELLO
 
+class Certificate(Handshake):
+    handshakeType = HS_CT_CERTIFICATE
+
+    def handshake_encode(self):
+        pass
+
 import sys
 sys.path.append('../../pahan/statefulprotocol')
 from stateful import StatefulProtocol
@@ -252,6 +258,9 @@ class TLSServerProtocol(RecordProtocol):
         return m, bytes
     rt_Handshake.byteCount = 4
 
+    def rt_Alert(self, data):
+        print 'Alert!', data
+
     def hs_HelloRequest(self, data):
         logbytes("HelloRequest", data)
         print 'whaaaat'
@@ -302,6 +311,9 @@ class TLSServer(TLSServerProtocol):
         cm = sp.getCompressionMethods()
         h = ServerHello((3, 1), Random(rbytes=random), sessionID, cs, cm)
         self.send(h)
+        c = Certificate()
+        self.send(c)
+        
 
 if __name__ == '__main__':
     from twisted.internet import ssl
