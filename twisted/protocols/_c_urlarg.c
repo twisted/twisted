@@ -56,13 +56,13 @@ static PyObject *unquote(PyObject *self, PyObject *args)
 {
     unsigned char *s, *r;
     unsigned char quotedchar, quotedchartmp = 0, tmp;
-    int state = STATE_INITIAL;
+    int state = STATE_INITIAL, length;
     PyObject *output, *str;
-    if (!PyArg_ParseTuple(args, "s:unquote", &s)) {
+    if (!PyArg_ParseTuple(args, "s#:unquote", &s, &length)) {
         return NULL;
     }
     // output = cStringIO()
-    output = PycStringIO->NewOutput(strlen(s));
+    output = PycStringIO->NewOutput(length);
     if (output == NULL) {
         return NULL;
     }
@@ -72,32 +72,32 @@ static PyObject *unquote(PyObject *self, PyObject *args)
         case STATE_INITIAL:
             if (*s == '%') {
                 state = STATE_PERCENT;
-                break;
+            } else {
+                r = s - 1;
+                while (*(++r) != '%' && *r);
+                OUTPUTCHAR(s, r-s);
+                s = r-1;
             }
-            r = s - 1;
-            while (*(++r) != '%' && *r);
-            OUTPUTCHAR(s, r-s);
-            s = r-1;
             break;
         case STATE_PERCENT:
             if ((quotedchartmp = ishexdigit(*s)) != NOT_HEXDIGIT) {
                 tmp = *s;
                 state = STATE_HEXDIGIT;
-                break;
+            } else {
+                state = STATE_INITIAL;
+                OUTPUTCHAR("%", 1);
+                s--;
             }
-            state = STATE_INITIAL;
-            OUTPUTCHAR("%", 1);
-            s--;
             break;
         case STATE_HEXDIGIT:
             state = STATE_INITIAL;
             if ((quotedchar = ishexdigit(*s)) != NOT_HEXDIGIT) {
                 quotedchar |= (quotedchartmp << 4);
                 OUTPUTCHAR(&quotedchar, 1);
-                break;
+            } else {
+                OUTPUTCHAR("%", 1);
+                s -= 2;
             }
-            OUTPUTCHAR("%", 1);
-            s -= 2;
             break;
         }
     }
