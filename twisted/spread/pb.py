@@ -67,7 +67,7 @@ applied when serializing arguments.
 @author: U{Glyph Lefkowitz<mailto:glyph@twistedmatrix.com>}
 """
 
-__version__ = "$Revision: 1.156 $"[11:-2]
+__version__ = "$Revision: 1.157 $"[11:-2]
 
 
 # System Imports
@@ -500,7 +500,7 @@ class Broker(banana.Banana):
     version = 6
     username = None
     factory = None
-    
+
     def __init__(self, isClient=1, security=globalSecurity):
         banana.Banana.__init__(self, isClient)
         self.disconnected = 0
@@ -532,7 +532,7 @@ class Broker(banana.Banana):
         # Dictionary mapping (remote) LUIDs to (locally cached) objects.
         self.locallyCachedObjects = {}
         self.waitingForAnswers = {}
-        
+
     def resumeProducing(self):
         """Called when the consumer attached to me runs out of buffer.
         """
@@ -609,7 +609,7 @@ class Broker(banana.Banana):
         self.connects = None
         if self.factory: # in tests we won't have factory
             self.factory.clientConnectionMade(self)
-    
+
     def connectionFailed(self):
         # XXX should never get called anymore? check!
         for notifier in self.failures:
@@ -640,7 +640,7 @@ class Broker(banana.Banana):
             try:
                 cacheable.stoppedObserving(perspective, RemoteCacheObserver(self, cacheable, perspective))
             except:
-                log.deferr()        
+                log.deferr()
         # Loop on a copy to prevent notifiers to mixup
         # the list by calling dontNotifyOnDisconnect
         for notifier in self.disconnects[:]:
@@ -1056,7 +1056,7 @@ class BrokerFactory(protocol.Factory, styles.Versioned):
 
 class AuthRoot(Root):
     """DEPRECATED.
-    
+
     I provide AuthServs as root objects to Brokers for a BrokerFactory.
     """
 
@@ -1071,7 +1071,7 @@ class AuthRoot(Root):
 
 class _Detacher:
     """DEPRECATED."""
-    
+
     def __init__(self, perspective, remoteRef, identity, broker):
         self.perspective = perspective
         self.remoteRef = remoteRef
@@ -1167,7 +1167,7 @@ class AuthServ(Referenceable):
             challenge = ident.challenge()
             return challenge, AuthChallenger(ident, self, challenge)
 
-    
+
 class _ObjectRetrieval:
     """DEPRECATED.
 
@@ -1192,7 +1192,7 @@ class _ObjectRetrieval:
             del self.broker
             self.deferred.errback(error.ConnectionLost())
             del self.deferred
-            
+
 
     def connectionMade(self):
         assert not self.term, "How did this get called?"
@@ -1213,7 +1213,7 @@ class _ObjectRetrieval:
 class BrokerClientFactory(protocol.ClientFactory):
     noisy = 0
     unsafeTracebacks = 0
-    
+
     def __init__(self, protocol):
         warnings.warn("This is deprecated. Use PBClientFactory.", DeprecationWarning, 2)
         if not isinstance(protocol,Broker): raise TypeError, "protocol is not an instance of Broker"
@@ -1276,7 +1276,7 @@ def getObjectAtSSL(host, port, timeout=None, contextFactory=None):
 
     @param timeout: a value in milliseconds to wait before failing by
       default. (OPTIONAL)
-    
+
     @param contextFactory: A factory object for producing SSL.Context
       objects.  (OPTIONAL)
 
@@ -1373,7 +1373,7 @@ def _cbLogInResponded(identity, d, client, serviceName, perspectiveName):
 
 class IdentityConnector:
      """DEPRECATED.
-     
+
      I support connecting to multiple Perspective Broker services that are
      in a service tree.
      """
@@ -1489,7 +1489,7 @@ from twisted.cred.credentials import ICredentials, IUsernameHashedPassword
 
 def respond(challenge, password):
     """Respond to a challenge.
-    
+
     This is useful for challenge/response authentication.
     """
     m = md5.new()
@@ -1520,24 +1520,24 @@ class PBClientFactory(protocol.ClientFactory):
 
     protocol = Broker
     unsafeTracebacks = 0
-    
+
     def __init__(self):
         self._reset()
-    
+
     def _reset(self):
         self.rootObjectRequests = [] # list of deferred
         self._broker = None
         self._root = None
-    
+
     def _failAll(self, reason):
         deferreds = self.rootObjectRequests
         self._reset()
         for d in deferreds:
             d.errback(reason)
-        
+
     def clientConnectionFailed(self, connector, reason):
         self._failAll(reason)
-        
+
     def clientConnectionLost(self, connector, reason, reconnecting=0):
         """Reconnecting subclasses should call with reconnecting=1."""
         if reconnecting:
@@ -1555,7 +1555,7 @@ class PBClientFactory(protocol.ClientFactory):
         self.rootObjectRequests = []
         for d in ds:
             d.callback(self._root)
-    
+
     def getRootObject(self):
         """Get root object of remote PB server.
 
@@ -1566,13 +1566,13 @@ class PBClientFactory(protocol.ClientFactory):
         d = defer.Deferred()
         self.rootObjectRequests.append(d)
         return d
-    
+
     def getPerspective(self, username, password, serviceName,
                        perspectiveName=None, client=None):
         """Get perspective from remote PB server.
 
         New systems should use login() instead.
-        
+
         @return Deferred of RemoteReference to the perspective.
         """
         warnings.warn("Update your backend to use PBServerFactory, and then use login().",
@@ -1583,7 +1583,7 @@ class PBClientFactory(protocol.ClientFactory):
         d.addCallback(self._cbAuthIdentity, username, password)
         d.addCallback(self._cbGetPerspective, serviceName, perspectiveName, client)
         return d
-    
+
     def _cbAuthIdentity(self, authServRef, username, password):
         return authServRef.callRemote('username', username).addCallback(
             self._cbRespondToChallenge, password)
@@ -1638,10 +1638,10 @@ class PBServerFactory(protocol.ServerFactory):
     """
 
     unsafeTracebacks = 0
-    
+
     # object broker factory
     protocol = Broker
-    
+
     def __init__(self, root, unsafeTracebacks=False):
         self.root = IPBRoot(root)
         self.unsafeTracebacks = unsafeTracebacks
@@ -1660,31 +1660,31 @@ class PBServerFactory(protocol.ServerFactory):
 
 class IUsernameMD5Password(ICredentials):
     """I encapsulate a username and a hashed password.
-    
+
     This credential is used for username/password over
     PB. CredentialCheckers which check this kind of credential must
     store the passwords in plaintext form or as a MD5 digest.
-    
+
     @type username: C{str} or C{Deferred}
     @ivar username: The username associated with these credentials.
     """
-    
+
     def checkPassword(self, password):
         """Validate these credentials against the correct password.
-        
+
         @param password: The correct, plaintext password against which to
         @check.
-        
+
         @return: a deferred which becomes, or a boolean indicating if the
         password matches.
         """
 
     def checkMD5Password(self, password):
         """Validate these credentials against the correct MD5 digest of password.
-        
+
         @param password: The correct, plaintext password against which to
         @check.
-        
+
         @return: a deferred which becomes, or a boolean indicating if the
         password matches.
         """
@@ -1696,7 +1696,7 @@ class _PortalRoot:
     """Root object, used to login to portal."""
 
     __implements__ = IPBRoot,
-    
+
     def __init__(self, portal):
         self.portal = portal
 
@@ -1712,7 +1712,7 @@ class _PortalWrapper(Referenceable):
     def __init__(self, portal, broker):
         self.portal = portal
         self.broker = broker
-    
+
     def remote_login(self, username):
         """Start of username/password login."""
         c = challenge()
@@ -1722,13 +1722,13 @@ class _PortalWrapper(Referenceable):
 class _PortalAuthChallenger(Referenceable):
     """Called with response to password challenge."""
 
-    __implements__ = IUsernameHashedPassword, IUsernameMD5Password
-    
+    __implements__ = (Referenceable.__implements__, IUsernameHashedPassword, IUsernameMD5Password)
+
     def __init__(self, portalWrapper, username, challenge):
         self.portalWrapper = portalWrapper
         self.username = username
         self.challenge = challenge
-    
+
     def remote_respond(self, response, mind):
         self.response = response
         d = self.portalWrapper.portal.login(self, mind, IPerspective)
@@ -1738,7 +1738,7 @@ class _PortalAuthChallenger(Referenceable):
     def _loggedIn(self, (interface, perspective, logout)):
         self.portalWrapper.broker.notifyOnDisconnect(logout)
         return AsReferenceable(perspective, "perspective")
-    
+
     # IUsernameHashedPassword:
     def checkPassword(self, password):
         return self.checkMD5Password(md5.md5(password).digest())
