@@ -160,19 +160,6 @@ changes in trial v2.0:
     - Please report any bugs you find with this feature to the twisted-python
       mailing list
 
-  B{Experimental support for doctests}
-  ------------------------------------
-    - The trial script now supports a --doctest=[module] option. The argument
-      is a fully-qualified module name, and trial will use a modified version
-      of DocTestSuite to run the doctests it finds.
-    - My support for doctests is broken when using Python 2.4-alpha3,
-      hopefully, i'll get this fixed by the time the first major-release
-      comes out.
-    - Note: you cannot use C{.skip} or C{.todo} attributes with doctests, all tests
-      will be reported as pass/fail
-    - Please report any bugs you find with this feature to the twisted-python
-      mailing list
-
   B{expectedAssertions} is no longer supported
   --------------------------------------------
     - it was just too difficult to make radix's clever deferred-doublecheck
@@ -196,7 +183,8 @@ Trial's 'special' attributes:
 
   3. Tests that return deferreds may alter the default timeout period of 4.0
      seconds by adding a method attribute C{.timeout} which is the number of
-     seconds as a float that trial should wait for a result.
+     seconds as a float that trial should wait for a result. To turn off the
+     timeout for a given test (which is not recommended), set timeout = None.
 
 
 Non-obvious rules
@@ -286,11 +274,6 @@ Non-obvious rules
            # a specific reason to restrict adapters here, it should
            # probably be used.
   
-       The reason that the implementation does not follow the above advice is that there
-       is a bug in either zope.interface or twisted.python.components that causes an
-       infinite recursion when one attempts to adapt an t.p.c.interface using a zi
-       interfaces' __call__ method.
-  
     7. A known issue is that sometimes if you press C-c during a test run, trial will
        not exit. This usually caused by using reactor threads. The only sure-fire way to
        stop trial in this case is to instead try C-\ which sends a SIGQUIT to the running
@@ -328,8 +311,6 @@ class FailTest(AssertionError):
     """Raised to indicate the current test has failed to pass."""
 
 #------------------------------------------------------------------------------
-# DO NOT RELY ON THIS! IT IS DEPRECATED AND WILL BE REMOVED IN FUTURE RELEASES!
-#
 # Set this to True if you want to disambiguate between test failures and
 # other assertions.  If you are in the habit of using the "assert" statement
 # in your tests, you probably want to leave this false.

@@ -30,7 +30,7 @@ from twisted.application import app
 from twisted.python import usage, reflect, failure, log, plugin
 from twisted.python.util import spewer
 from twisted.spread import jelly
-from twisted.trial import runner, util, itrial, registerAdapter, remote, adapters
+from twisted.trial import runner, util, itrial, registerAdapter, remote, adapters, reporter
 from twisted.trial.itrial import ITrialDebug 
 
 import zope.interface as zi
@@ -72,6 +72,9 @@ class _DebugLogObserver(object):
 class PluginError(Exception):
     pass
 
+class PluginWarning(Warning):
+    pass
+
 
 class Options(usage.Options):
     synopsis = """%s [options] [[file|package|module|TestCase|testmethod]...]
@@ -103,6 +106,7 @@ class Options(usage.Options):
                       "a string passed to the reporter's 'args' kwarg"]]
 
 
+    fallbackReporter = reporter.VerboseTextReporter
     defaultReporter = None
 
     def __init__(self):
@@ -137,14 +141,13 @@ class Options(usage.Options):
                 # find the default
                 d = getattr(p, 'default', None)
                 if d is not None:
-                    self.default = qual
+                    self.defaultReporter = qual
 
-            if self.default is None:
+            if self.defaultReporter is None:
                 raise PluginError, "no default reporter specified"
                     
         finally:
             sys.stdout, sys.stderr = self.origout, self.origerr
-        return self
 
 
     def getReporter(self):
@@ -158,7 +161,12 @@ class Options(usage.Options):
                 nany = reflect.namedAny(qual)
                 log.msg(iface=ITrialDebug, reporter="reporter option: %s, returning %r" % (opt, nany))
                 return nany
-        return reflect.namedAny(self.defaultReporter)
+        else:
+            warnings.warn("""Your twisted plugins are broken for some reason.
+Please tell slyphon you saw this message!
+Using default: TextReporter""", PluginWarning)
+            return self.fallbackReporter
+            
 
 
     def opt_reactor(self, reactorName):
