@@ -25,6 +25,8 @@ TODO: add log that logs to a file.
 from twisted.spread import banana
 from twisted.persisted import dirdbm
 from twisted.internet import defer
+from twisted.python.components import backwardsCompatImplements
+from zope.interface import implements
 
 # sibling imports
 import base
@@ -33,7 +35,7 @@ import base
 class DirDBMLog:
     """Log pickles to DirDBM directory."""
 
-    __implements__ = base.ICommandLog
+    implements(base.ICommandLog)
 
     def __init__(self, logPath):
         self.db = dirdbm.Shelf(logPath)
@@ -59,3 +61,5 @@ class DirDBMLog:
             result.append(self.db[str(i)])
         return result
 
+
+backwardsCompatImplements(DirDBMLog)
