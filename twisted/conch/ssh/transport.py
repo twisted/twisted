@@ -22,6 +22,8 @@ This module is unstable.
 Maintainer: U{Paul Swartz<mailto:z3p@twistedmatrix.com>}
 """
 
+from __future__ import nested_scopes
+
 # base library imports
 import struct
 import md5
@@ -50,8 +52,10 @@ class SSHTransportBase(protocol.Protocol):
     comment = ''
     ourVersionString = ('SSH-'+protocolVersion+'-'+version+' '+comment).strip()
 
-    supportedCiphers = ['aes256-cbc', 'aes192-cbc', 'aes128-cbc', 'cast128-cbc', 
-                        'blowfish', 'idea-cbc', '3des-cbc']
+    supportedCiphers = ['aes256-ctr', 'aes256-cbc', 'aes192-ctr', 'aes192-cbc', 
+                        'aes128-ctr', 'aes128-cbc', 'cast128-ctr', 
+                        'cast128-cbc', 'blowfish-ctr', 'blowfish', 'idea-ctr',
+                        'idea-cbc', '3des-ctr', '3des-cbc']
     supportedMACs = ['hmac-sha1', 'hmac-md5']
     supportedKeyExchanges = ['diffie-hellman-group-exchange-sha1', 
                              'diffie-hellman-group1-sha1']
@@ -602,14 +606,21 @@ class SSHClientTransport(SSHTransportBase):
 
 class SSHCiphers:
     cipherMap = {
-        '3des-cbc':('DES3', 24), 
-        'blowfish-cbc':('Blowfish', 16), 
-        'aes256-cbc':('AES', 32), 
-        'aes192-cbc':('AES', 24), 
-        'aes128-cbc':('AES', 16), 
-        'arcfour':('ARC4', 16), 
-        'idea-cbc':('IDEA', 16), 
-        'cast128-cbc':('CAST', 16), 
+        '3des-cbc':('DES3', 24, 0), 
+        'blowfish-cbc':('Blowfish', 16,0 ), 
+        'aes256-cbc':('AES', 32, 0), 
+        'aes192-cbc':('AES', 24, 0), 
+        'aes128-cbc':('AES', 16, 0), 
+        'arcfour':('ARC4', 16, 0), 
+        'idea-cbc':('IDEA', 16, 0), 
+        'cast128-cbc':('CAST', 16, 0), 
+        'aes128-ctr':('AES', 16, 1),
+        'aes192-ctr':('AES', 24, 1),
+        'aes256-ctr':('AES', 32, 1),
+        '3des-ctr':('DES3', 24, 1),
+        'blowfish-ctr':('Blowfish', 16, 1),
+        'idea-ctr':('IDEA', 16, 1),
+        'cast128-ctr':('CAST', 16, 1),
         'none':(None, None), 
      }
     macMap = {
@@ -634,10 +645,22 @@ class SSHCiphers:
         self.verify_digest_size = self.inMAC[2]
 
     def _getCipher(self, cip, iv, key):
-        modName, keySize = self.cipherMap[cip]
+        modName, keySize, counterMode = self.cipherMap[cip]
         if not modName: return # no cipher
         mod = __import__('Crypto.Cipher.%s'%modName, {}, {}, 'x')
-        return mod.new(key[: keySize], mod.MODE_CBC, iv[: mod.block_size])
+        if counterMode:
+            def counter(bs = mod.block_size,
+                        initialCounter=getMP('\xff\xff\xff\xff'+iv)[0]%(2L**keySize)):
+                ret = MP(initialCounter)[4:]
+                if len(ret) < bs:
+                    ret = '\x00'*(bs-len(ret)) + ret
+                initialCounter+=1
+                if initialCounter==2L**keySize:
+                    initialCounter = 0
+                return ret
+            return mod.new(key[:keySize], mod.MODE_CTR, iv[:mod.block_size], counter=counter)
+        else:
+            return mod.new(key[: keySize], mod.MODE_CBC, iv[: mod.block_size])
 
     def _getMAC(self, mac, key):
         modName = self.macMap[mac]
