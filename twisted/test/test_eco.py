@@ -12,3 +12,6 @@ class EcoTestCase(unittest.TestCase):
         assert eco.eval("[let [[x 1] [y 2]] [+ x y]]") == 3
         assert eco.eval('''[if [eq [+ 3 3] 0] [foo 1 2 3]
                             [list 1 2 3]]''') == [1, [2, [3, []]]]
+        assert eco.eval('''[let [[x [cons 1 2]]] [and [eq x [cons 1 2]] [not [is x [cons 1 2]]]]]''')
+        assert not eco.eval('''[]''')
+        assert eco.eval('''[let [[x [list 1 2]]] [and [eq [car x] 1] [eq [cdr x] [cons 2 []]] [eq [cadr x] 2]]]''')

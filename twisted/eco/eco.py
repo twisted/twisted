@@ -41,6 +41,8 @@ def lisp_map(fun, list):
     else:
         return []
 
+func_map = lisp_map
+
 def lisp_reduce(fun, list):
     if not list:
         raise TypeError("Cannot pass empty list")
@@ -49,37 +51,56 @@ def lisp_reduce(fun, list):
     else:
         return reduce_1(fun, cddr(list), fun(car(list), cadr(list)))
 
+func_reduce = lisp_reduce
+
 def lisp_reduce_1(fun, list, prevResult):
     if list:
         return reduce_1(fun, cdr(list), fun(prevResult, car(list)))
     else:
         return prevResult
 
-def car(exp, env=None):
-    return exp[0]
+def car(x):
+    return x[0]
+func_car = car
 
-def cdr(exp, env=None):
-    return exp[1]
+def cdr(x):
+    return x[1]
+func_cdr = cdr
 
-def cadr(exp, env=None):
-    return exp[1][0]
+def cadr(x):
+    return x[1][0]
+func_cadr = cadr
 
-def caddr(exp, env=None):
-    return exp[1][1][0]
+def caddr(x):
+    return x[1][1][0]
+func_caddr = caddr
 
-def cddr(exp, env=None):
-    return exp[1][1]
+def cddr(x):
+    return x[1][1]
+func_cddr = cddr
 
-def func_eq(exp):
-    return exp[0] == exp[1]
+def func_eq(a, b):
+    return a == b
 
-def func_add(exp):
+def func_is(a, b):
+    return a is b
+
+def func_add(*exp):
     return reduce(operator.add, exp)
 
-def func_cons(exp):
-    return exp
+def func_and(*exp):
+    return reduce(operator.__and__, exp)
 
-def func_list(exp):
+def func_or(*exp):
+    return reduce(operator.__or__, exp)
+
+def func_not(a):
+    return not a
+
+def func_cons(car, cdr):
+    return [car, cdr]
+
+def func_list(*exp):
     head = lispList = []
     for val in exp:
         newLispList = []
@@ -99,18 +120,22 @@ def eval_apply(exp, env):
         args = cdr(args)
     funkyDict = {"+": func_add, "-": func_subtract}
     fname = 'func_'+car(exp).string
-    return (globals().get(fname) or funkyDict.get(car(exp).string))(evaledList)
+    return apply((globals().get(fname) or funkyDict.get(car(exp).string)), evaledList)
 
 def evalExp(exp, env):
     if isinstance(exp, sexpy.Atom):
         return lookup(exp, env)
     elif isinstance(exp, types.ListType):
+        if exp == []:
+            return exp
         n = exp[0].string
         special_form = globals().get("eval_" + n)
         if special_form:
             return special_form(cdr(exp), env)
         else:
-            # function = funkyDict.get(n) or globals().get('func_'+n)
+            # macro = globals().get("macro_" + n)
+            # if macro:
+            #   return evalExp(macroexpand(macro), env)
             return eval_apply(exp, env)
     else:
         return exp
@@ -133,5 +158,8 @@ def eval_let(exp, env):
         exp = cdr(exp)
     return rv
 
+#def eval_function(exp, env):
+#    return lookup_function(car(exp))
+    
 #def eval_def(exp, env):
     
