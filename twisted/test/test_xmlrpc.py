@@ -38,6 +38,7 @@ class Test(XMLRPC):
 
     FAILURE = 666
     NOT_FOUND = 23
+    SESSION_EXPIRED = 42
 
     # the doc string is part of the test
     def xmlrpc_add(self, a, b):
@@ -78,6 +79,15 @@ class Test(XMLRPC):
     def xmlrpc_dict(self, map, key):
         return map[key]
 
+    def _getFunction(self, functionPath):
+        try:
+            return XMLRPC._getFunction(self, functionPath)
+        except xmlrpc.NoSuchFunction:
+            if functionPath.startswith("SESSION"):
+                raise xmlrpc.Fault(self.SESSION_EXPIRED, "Session non-existant/expired.")
+            else:
+                raise
+
     xmlrpc_dict.help = 'Help for dict.'
 
 
@@ -112,7 +122,7 @@ class XMLRPCTestCase(unittest.TestCase):
     def testErrors(self):
         for code, methodName in [(666, "fail"), (666, "deferFail"),
                                  (12, "fault"), (23, "noSuchMethod"),
-                                 (17, "deferFault")]:
+                                 (17, "deferFault"), (42, "SESSION_TEST")]:
             l = []
             d = self.proxy().callRemote(methodName).addErrback(l.append)
             while not l:

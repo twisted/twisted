@@ -27,7 +27,7 @@ Maintainer: U{Itamar Shtull-Trauring<mailto:twisted@itamarst.org>}
 """
 from __future__ import nested_scopes
 
-__version__ = "$Revision: 1.31 $"[11:-2]
+__version__ = "$Revision: 1.32 $"[11:-2]
 
 # System Imports
 import xmlrpclib
@@ -51,7 +51,7 @@ Boolean = xmlrpclib.Boolean
 DateTime = xmlrpclib.DateTime
 
 
-class NoSuchFunction(Exception):
+class NoSuchFunction(Fault):
     """There is no function by the given name."""
     pass
 
@@ -123,11 +123,8 @@ class XMLRPC(resource.Resource):
         args, functionPath = xmlrpclib.loads(request.content.read())
         try:
             function = self._getFunction(functionPath)
-        except NoSuchFunction:
-            self._cbRender(
-                Fault(self.NOT_FOUND, "no such function %s" % functionPath),
-                request
-            )
+        except Fault, f:
+            self._cbRender(f, request)
         else:
             request.setHeader("content-type", "text/xml")
             defer.maybeDeferred(function, *args).addErrback(
@@ -172,14 +169,16 @@ class XMLRPC(resource.Resource):
         if functionPath.find(self.separator) != -1:
             prefix, functionPath = functionPath.split(self.separator, 1)
             handler = self.getSubHandler(prefix)
-            if handler is None: raise NoSuchFunction
+            if handler is None: raise NoSuchFunction(self.NOT_FOUND, "no such subHandler %s" % prefix)
             return handler._getFunction(functionPath)
 
         f = getattr(self, "xmlrpc_%s" % functionPath, None)
-        if f and callable(f):
-            return f
+        if not f:
+            raise NoSuchFunction(self.NOT_FOUND, "function %s not found" % functionPath)
+        elif not callable(f):
+            raise NoSuchFunction(self.NOT_FOUND, "function %s not callable" % functionPath)
         else:
-            raise NoSuchFunction
+            return f
 
     def _listFunctions(self):
         """Return a list of the names of all xmlrpc methods."""
