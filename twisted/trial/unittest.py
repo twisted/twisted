@@ -2,14 +2,19 @@
 Twisted Test Framework
 """
 
+# twisted imports
 from twisted.python import reflect, log, failure, components
 from twisted.internet import interfaces
-import sys, time, string, traceback, types, os, glob
+
+# system imports
+import sys, time, string, traceback, types, os, glob, pdb
 
 log.startKeepingErrors()
 
+
 class SkipTest(Exception):
     pass
+
 
 class TestCase:
     def setUp(self):
@@ -63,6 +68,7 @@ def isTestClass(testClass):
 def isTestCase(testCase):
     return isinstance(testCase, TestCase)
 
+
 class TestSuite:
     methodPrefix = 'test'
     moduleGlob = 'test_*.py'
@@ -71,7 +77,7 @@ class TestSuite:
         self.testClasses = {}
         self.numTests = 0
         self.couldNotImport = {}
-
+    
     def getMethods(self, klass, prefix):
         testMethodNames = [ name for name in dir(klass)
                             if name[:len(prefix)] == prefix ]
@@ -199,7 +205,8 @@ class Reporter:
         self.skips = []
         self.numTests = 0
         self.expectedTests = 0
-
+        self.debugger = 0
+    
     def start(self, expectedTests):
         self.expectedTests = expectedTests
         self.startTime = time.time()
@@ -215,10 +222,14 @@ class Reporter:
         self.numTests += 1
 
     def reportFailure(self, testClass, method, exc_info):
+        if self.debugger:
+            pdb.post_mortem(exc_info[2])
         self.failures.append((testClass, method, exc_info))
         self.numTests += 1
 
     def reportError(self, testClass, method, exc_info):
+        if self.debugger:
+            pdb.post_mortem(exc_info[2])
         self.errors.append((testClass, method, exc_info))
         self.numTests += 1
 

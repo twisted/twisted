@@ -104,6 +104,7 @@ def run():
         reporter = unittest.TextReporter(sys.stdout)
 
     if config['debug']:
+        reporter.debugger = 1
         import pdb
         pdb.run("suite.run(reporter)", globals(), locals())
     else:
