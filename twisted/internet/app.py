@@ -71,6 +71,7 @@ class _SSLlistener:
         self.app.listenSSL(self.port, self.fac, self.ctx, self.backlog, self.interface)
 
 class _AbstractServiceCollection:
+    __implements__ = (interfaces.IServiceCollection, )
 
     def __init__(self):
         """Create an abstract service collection.

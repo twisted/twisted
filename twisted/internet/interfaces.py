@@ -621,3 +621,8 @@ class IProcessTransport(ITransport):
 
     def loseConnection(self):
         """Close stdin, stderr and stdout."""
+
+
+class IServiceCollection(Interface):
+    """An object which provides access to a collection of services."""
+    pass
