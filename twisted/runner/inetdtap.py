@@ -167,6 +167,5 @@ def makeService(config):
         if protocol == 'tcp':
             internet.TCPServer(service.port, factory).setServiceParent(s)
         elif protocol == 'udp':
-            continue
             raise RuntimeError("not supporting UDP")
     return s
