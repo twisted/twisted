@@ -14,12 +14,12 @@
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 #
-# $Id: ckeygen.py,v 1.1 2002/12/22 01:45:31 z3p Exp $
+# $Id: ckeygen.py,v 1.2 2002/12/26 20:24:20 z3p Exp $
 
 #""" Implementation module for the `ckeygen` command.
 #"""
 
-from twisted.conch.ssh import keys
+from twisted.conch.ssh import keys, common
 from twisted.python import log, usage
 
 import sys, os, getpass, md5, socket
@@ -78,13 +78,13 @@ def handleError():
 def generateRSAkey(options):
     from Crypto.PublicKey import RSA
     print 'Generating public/private rsa key pair.'
-    key = RSA.generate(int(options['bits']), open('/dev/random').read)
+    key = RSA.generate(int(options['bits']), common.entropy.get_bytes)
     _saveKey(key, options)
 
 def generateDSAkey(options):
     from Crypto.PublicKey import DSA
     print 'Generating public/private dsa key pair.'
-    key = DSA.generate(int(options['bits']), open('/dev/random').read)
+    key = DSA.generate(int(options['bits']), common.entropy.get_bytes)
     _saveKey(key, options)
 
 def printFingerprint(options):
