@@ -18,7 +18,7 @@ of XML editor here). Here, we will not cover the specifics of writing XML
 documents, except for a very broad overview.</p>
 
 <p>XML documents contain elements, which are delimited by an opening tag
-which looks like <code>&lt;tag-name attribute="value"&gt; and ends with
+which looks like <code>&lt;tag-name attribute="value"&gt;</code> and ends with
 a closing tag, which looks like <code>&lt;/tag-name&gt;</code>. If an
 elements happen to contain nothing, it can be shortened to
 <code>&lt;tag-name /&gt;</code>. Elements can contain other elements, or
@@ -36,7 +36,7 @@ header) element, which contains the exact same content as the
 
 <p>Thus, a fairly minimal Lore document might look like:</p>
 
-<pre class="html-listing">
+<pre>
 &lt;html&gt;
 &lt;head&gt;&lt;title&gt;Title&lt;/title&gt;&lt;/head&gt;
 &lt;body&gt;&lt;h1&gt;Title&lt;/h1&gt;&lt;/body&gt;
@@ -92,7 +92,7 @@ header) element, which contains the exact same content as the
 
 <p><code>ol</code>, <code>ul</code>: A list. It can be enumerated or
    bulleted. Inside a list, the element <code>li</code> (for a list element)
-   is valid.</code></p>
+   is valid.</p>
 
 <p><code>h2</code>, <code>h3</code>: Second- and third-level section
    headings.</p>
@@ -126,8 +126,8 @@ header) element, which contains the exact same content as the
 </dl></p>
 
 <p><code>pre</code>: Preformatted text, usually for file listings. It can
-be used with the <code>html-listing</code> and <code>py-listing</code>
-classes to indicate how to syntax color. Other possible classes are
+be used with the <code>py-listing</code>
+class to indicate Python syntax coloring. Other possible classes are
 <code>shell</code> (to indicate a shell-transcript) or
 <code>python-interpreter</code> (to indicate an interactive interpreter
 transcript).</p>
@@ -156,16 +156,16 @@ from the main text.</p>
 
 <p>One of Lore's output formats is XHTML. Lore itself is very markup-light,
 but the output XHTML is much more markup intensive. Part of the auto-generated
-markup is directed by a special template.<p>
+markup is directed by a special template.</p>
 
 <p>The output of Lore is inserted into template in the following way:</p>
 
 <ul>
 <li>The title is appended into each element with class <code>title</code>.</li>
 <li>The body is inserted into the first element that has class
-    <code>body</code>.
+    <code>body</code>.</li>
 <li>The table of contents is inserted into the first element that has class
-    <code>toc</code>. 
+    <code>toc</code>.</li>
 </ul>
 
 <p>In particular, most of the header is not tempered with -- so it is
