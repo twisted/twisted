@@ -137,11 +137,23 @@ class Proxy:
         self.header = header
 
     def _cbGotResult(self, result):
-        return SOAPpy.parseSOAPRPC(result).Result
+        result = SOAPpy.parseSOAPRPC(result)
+        if hasattr(result, 'Result'):
+            return result.Result
+        elif len(result) == 1:
+            ## SOAPpy 0.11.6 wraps the return results in a containing structure.
+            ## This check added to make Proxy behaviour emulate SOAPProxy, which
+            ## flattens the structure by default.
+            ## This behaviour is OK because even singleton lists are wrapped in
+            ## another singleton structType, which is almost always useless.
+            return result[0]
+        else:
+            return result
         
     def callRemote(self, method, *args, **kwargs):
         payload = SOAPpy.buildSOAP(args=args, kw=kwargs, method=method,
                                    header=self.header, namespace=self.namespace)
         return client.getPage(self.url, postdata=payload, method="POST",
-                              headers={'content-type': 'text/xml'}
+                              headers={'content-type': 'text/xml',
+                                       'SOAPAction': method}
                               ).addCallback(self._cbGotResult)
