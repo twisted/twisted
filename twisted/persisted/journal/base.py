@@ -97,7 +97,7 @@ class MemoryJournal(Journal):
 class ICommand(Interface):
     """A serializable command which interacts with a journaled service."""
 
-    def execute(self, journaledService):
+    def execute(self, journaledService, runTime):
         """Run the command."""
 
 

@@ -19,11 +19,11 @@
 
 You're going to need the following table in your database::
 
-    | CREATE TABLE loginfo
+    | CREATE TABLE journalinfo
     | (
-    |   latestIndex int
+    |   commandIndex int
     | );
-    | INSERT INTO loginfo VALUES (0);
+    | INSERT INTO journalinfo VALUES (0);
 
 """
 
