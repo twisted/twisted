@@ -107,7 +107,7 @@ ftp_reply = {
 
 
 
-class sendFileTransfer:
+class SendFileTransfer:
     "Producer, server to client"
     
     request = None
@@ -212,7 +212,7 @@ class DTP(protocol.Protocol):
         "Send the given file to the peer"
         self.file = open(queuedfile, "rb")
         self.filesize = os.path.getsize(queuedfile)
-        producer = sendFileTransfer(self.file, self.filesize, self.makeRETRTransport())
+        producer = SendFileTransfer(self.file, self.filesize, self.makeRETRTransport())
         producer.resumeProducing()
 
     #
