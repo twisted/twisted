@@ -19,10 +19,10 @@
 """
 Package installer for Twisted
 
-Copyright (c) 2001 by Twisted Matrix Laboratories
+Copyright (C) 2001 Matthew W. Lefkowitz
 All rights reserved, see LICENSE for details.
 
-$Id: setup.py,v 1.28 2002/03/29 10:15:38 itamarst Exp $
+$Id: setup.py,v 1.29 2002/04/02 04:31:11 glyph Exp $
 """
 
 import distutils, os, sys, string
