@@ -250,6 +250,12 @@ class GroupConversation(InputOutputWindow):
         self.output.insert_defaults("> %s joined <\n" % member)
         self.refreshMemberList()
 
+    def memberChangedNick(self, member, newnick):
+        self.members.remove(member)
+        self.members.append(newnick)
+        self.output.insert_defaults("> %s becomes %s <\n" % (member, newnick))
+        self.refreshMemberList()
+
     def memberLeft(self, member):
         self.members.remove(member)
         self.output.insert_defaults("> %s left <\n" % member)

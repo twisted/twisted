@@ -181,6 +181,22 @@ class IRCProto(basesupport.AbstractClientMixin, irc.IRCClient):
         else:
             print '*** WARNING: ingroups had no such key %s' % nickname
 
+    def irc_NICK(self, prefix, params):
+        fromNick = string.split(prefix, "!")[0]
+        toNick = params[0]
+        if not self._ingroups.has_key(fromNick):
+            print "%s changed nick to %s. But she's not in any groups!?" % (fromNick, toNick)
+            return
+        for group in self._ingroups[fromNick]:
+            self.getGroupConversation(group).memberChangedNick(fromNick, toNick)
+        self._ingroups[toNick] = self._ingroups[fromNick]
+        del self._ingroups[fromNick]
+        
+        
+
+    def irc_unknown(self, prefix, command, params):
+        print "unknown message from IRCserver. prefix: %s, command: %s, params: %s" % (prefix, command, params)
+
     # GTKIM calls
     def joinGroup(self,name):
         self.join(name)

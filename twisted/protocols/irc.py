@@ -430,6 +430,10 @@ class IRCClient(basic.LineReceiver):
 
         self.noticed(user, channel, message)
 
+    def irc_NICK(self, prefix, params):
+        nick = string.split(prefix,'!',0)[0]
+        if nick == self.nickname: self.nickname = params[0]
+
     def irc_unknown(self, prefix, command, params):
         pass
 
