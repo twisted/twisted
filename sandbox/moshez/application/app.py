@@ -38,8 +38,3 @@ class Application(service.MultiService, components.Componentized):
 
     def __repr__(self):
         return "<%s app>" % repr(self.name)
-
-    def scheduleSave(self):
-        from twisted.internet import reactor
-        p = sob.IPersistable(self)
-        reactor.addSystemEventTrigger('after', 'shutdown', p.save, 'shutdown')
