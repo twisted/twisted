@@ -1,5 +1,10 @@
 2003-9-18  Moshe Zadka <moshez@twistedmatrix.com>
 
+	* twisted/application/strports.py twisted/test/test_strports.py: 
+	New API/mini-language for defining ports
+
+2003-9-18  Moshe Zadka <moshez@twistedmatrix.com>
+
 	* twisted/web/spider.py: removed, it was unmaintained.
 
 2003-09-19  Christopher Armstrong  <radix@twistedmatrix.com>
