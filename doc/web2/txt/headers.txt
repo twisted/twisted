@@ -1,0 +1,100 @@
+Known headers
+-------------
+These headers are defined in RFC2616_, and, for their official definitions, refer to that document. This document descibes how they appear after being parsed by web2. 
+
+Entity headers:
+
+ - Allow: list of case-sensitive method strings
+     e.g. ``['GET', 'HEAD', 'POST']``
+ - Content-Encoding: list of string content-encodings
+     e.g. ``['gzip']``
+ - Content-Language: list of string content languages
+     e.g. ``['en', 'mi']``
+ - Content-Location: url string
+     e.g. ``"http://foo.bar.com/"``
+ - Content-MD5: (decoded base64) string, should be 16 bytes
+     e.g. ``'8Al:\x1d\x9aO\xf2m\x91\xa0X\xbe\xe3{\xc8'``
+ - Content-Range: tuple of (rangetype, start, end, realLength)
+     e.g. ``('bytes', 0, 499, 1234)``
+ - Content-Type: MimeType
+     e.g. MimeType('text', 'html', [('charset','iso-8859-4')])
+ - Expires: seconds since Epoch
+     e.g. 1000000000
+ - Last-Modified: seconds since Epoch
+     e.g. 1000000000
+
+Request headers (client to server):
+
+ - Accept: dictionary of MimeType_ -> float 0.0 to 1.0
+     e.g. ``{MimeType('text', 'html'): 1.0, MimeType('image', 'jpg'): 0.4}``
+ - Accept-Charset: dict of string charset -> float 0.0 to 1.0
+     e.g. ``{'utf-8': 1.0, 'iso-8859-1': 0.9, '*': 0.7}``
+ - Accept-Encoding: dict of string encoding -> float 0.0 to 1.0
+     e.g. ``{'deflate': 1.0, 'gzip': 1.0, identity: 0.0001}``
+ - Accept-Language: dict of string language -> float 0.0 to 1.0
+     e.g. ``{'en-us': 1.0, 'en': 0.5}``
+ - Authorization: TODO
+ - From: string. Useless, and unused, header.
+     e.g. ``"email@a.b.c"``. 
+ - Host: string. Use request.host instead of accessing this header directly.
+     e.g. ``"twistedmatrix.com"``. 
+ - If-Match: list of ('*' or ETag instance)
+     e.g. ``['*']`` or ``[ETag("foo", weak=True), ETag("bar")]``
+ - If-Modified-Since: seconds since Epoch.
+ - If-None-Match: list of ('*' or ETag instance)
+ - If-Range: Etag instance or seconds since Epoch
+     e.g. ``1000000000`` or ``ETag("foo")``
+ - If-Unmodified-Since: seconds since Epoch
+     e.g. ``1000000000``
+ - Max-Forwards: integer
+ - Proxy-Authorization: TODO
+ - Range: tuple (rangetype, [(int start or None, int end or None)*])
+     e.g. ``('bytes', [(0, 1), (5, None)])``
+ - Referer: string
+     e.g. ``"http://twistedmatrix.com/bugs/"``
+ - User-Agent: string
+     e.g. ``"MyBrowser/5500.2 (Amiga; U; PPC) Awesomeness/2300.1"``
+
+Response headers:
+
+ - Accept-Ranges: list of range type strings
+     e.g. ['bytes']
+ - Age: seconds
+     e.g. 500
+ - ETag: ETag instance
+     e.g. ETag("asdf")
+ - Location: url string
+     e.g. 
+ - Proxy-Authenticate: TODO
+ - Retry-After: integer seconds since Epoch
+ - Server: string
+ - Set-Cookie: list of Cookie instances
+ - Set-Cookie2: list of Cookie instances
+ - Vary: list of string header names
+ - WWW-Authenticate: TODO
+
+General headers:
+
+ - Cache-Control: TODO
+ - Date: seconds since Epoch 
+     e.g. ``1112321588``, from ``time.time()``
+ - Pragma: TODO
+ - Via: TODO
+ - Warning: TODO
+
+Lower level HTTP headers, used only by framework:
+
+ - Connection: TODO
+ - Content-Length: integer length
+ - Expect: dictionary of expect feature->tuple (value, (param, paramvalue)*).
+     e.g. {'100-continue': (None)}
+ - Transfer-Encoding: list of string transfer-encodings
+ - TE: dictionary of string TE->int qvalue
+ - Trailer: TODO
+ - Upgrade: TODO
+
+Classes
+-------
+blahblah
+
+.. _RFC 2616: http://www.faqs.org/rfcs/rfc2616.html

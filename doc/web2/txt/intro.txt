@@ -16,11 +16,11 @@ Twisted.web2 is not a templating framework. It provides mechanisms for locating 
 
 Twisted.web2 is in general fairly speedy. However, keep in mind that it is a python program, and, while it is empirically "fast enough", it cannot match Apache in static file serving speed. <insert actual measurements here>
 
-Basics
-------
-This tutorial should be readable by people who do not have much Twisted experience yet, but, you should know Python, and HTML, before starting.
+Introduction
+------------
+This tutorial should be readable by people who do not have much Twisted experience yet, but, you should know Python, and HTML, before starting. While it is hopefully redundant to say this, you also ought to have installed twisted, and twisted.web2.
 
-While it is hopefully redundant to say this, you ought to have installed twisted, and twisted.web2 before starting this tutorial.
+When you have finished this tutorial, you should be able to write some simple resources and publish them with twisted.web2. 
 
 Simple application
 ------------------
@@ -104,7 +104,7 @@ Here a few new concepts have been introduced:
 
 - `static.File`_ lets you serve a file off the disk. With this, you get a lot of functionality: automatic Content-Type setting from the file extension, last-modified and etag calculation, and the ability to hook in custom processors for certain file types. There is also the ability to generate directory listings, although that currently only works if Nevow is installed.
 
-- `http.Response`_ takes three arguments: the response code, the output headers, and the output stream. The response code should be one of the standard HTTP response codes. You can use constants defined in the responsecode module, or just hardcode the integer. The headers argument should be a dict of name and parsed value. The generation of the actual string sent to the client is left up to the server. The appropriate values to use for parsed value for all the standard headers is documented <<<<SOMEWHERE>>>>. Finally, the output stream. So far, we've just been giving a string for this, but it is much more powerful. See the `stream module`_ for more details.
+- `http.Response`_ takes three arguments: the response code, the output headers, and the output stream. For more information, see `Resource APIs`_.
 
 As an aside for those who know a bit about HTTP, note that just by setting the Last-Modified and ETag response headers, you enable automatic precondition checks which support the If-Modified-Since, If-Unmodified-Since, If-Match, and If-None-Match input headers. This allows the client to request that the resource only be sent if it has changed since the last time the client downloaded it, saving bandwidth. Also, the Range and If-Range headers are supported on every resource, allowing partial downloads, and the required "Server" and "Date" headers are added to the output for you, unless you specify them.
 
@@ -112,6 +112,7 @@ As an aside for those who know a bit about HTTP, note that just by setting the L
 .. _Twisted: http://twistedmatrix.com/
 .. _RFC 2616: http://www.faqs.org/rfcs/rfc2616.html
 .. _Resource Traversal: xyzzy
+.. _Resource APIs: resource-apis.txt
 .. _static.File: apidocs
 .. _http.Response: apidocs
 .. _stream module: apidocs
