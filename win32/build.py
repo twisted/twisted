@@ -63,7 +63,7 @@ class BuildOptions(usage.Options):
                 self["twistedhome"])
             successcheck=0
         if not self['netpbmbin']:
-            netpbmbin='%s/usr/local/netpbm/bin' % self['cyghome']
+            netpbmbin='%s/bin' % self['cyghome']
             self['netpbmbin']=netpbmbin
         pngtopnm=os.path.join(self['netpbmbin'], 'pngtopnm.exe')
         if not os.path.isfile(pngtopnm):
