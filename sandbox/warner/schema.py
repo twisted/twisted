@@ -504,6 +504,63 @@ class AttributeDictConstraint(Constraint):
             raise Violation("object is missing required keys: %s" % \
                             ",".join(allkeys))
 
+class MethodArgumentsConstraint(Constraint):
+    """This is a constraint for the argument list for a remotely-invokable
+    method. It gets to require, deny, or impose further constraints upon a
+    set of named arguments.
+
+    This constraint is created by using keyword arguments with the same
+    names as the target method's arguments. Two special names are used:
+
+    __ignoreUnknown__: if True, unexpected argument names are silently
+    dropped. (note that this makes the schema unbounded)
+
+    __acceptUnknown__: if True, unexpected argument names are always
+    accepted without a constraint (which also makes this schema unbounded)
+
+    The remotely-accesible object's .getMethodSchema() method may return one
+    of these objects.
+    """
+
+    taster = {} # this should not be used as a top-level constraint
+    opentypes = [] # overkill
+    ignoreUnknown = False
+    acceptUnknown = False
+
+    def __init__(self, **kwargs):
+        if kwargs.has_key("__ignoreUnknown__"):
+            self.ignoreUnknown = kwargs["__ignoreUnknown__"]
+            del kwargs["__ignoreUnknown__"]
+        if kwargs.has_key("__acceptUnknown__"):
+            self.acceptUnknown = kwargs["__acceptUnknown__"]
+            del kwargs["__acceptUnknown__"]
+        # build up a list of required arguments for later checking
+        self.args = {}
+        self.required = []
+        for argname, constraint in self.args:
+            if not isinstance(constraint, Optional):
+                self.required.append(argname)
+            self.args[argname] = makeConstraint(constraint)
+
+    def getArgConstraint(self, argname):
+        if self.args.has_key(argname):
+            c = self.args[argname]
+            if isinstance(c, Optional):
+                c = c.constraint
+            return (True, c)
+        # what do we do with unknown arguments?
+        if self.ignoreUnknown:
+            return (False, None)
+        if self.acceptUnknown:
+            return (True, None)
+        raise Violation("unknown argument '%s'" % argname)
+
+    def checkArgs(self, argdict):
+        for argname in self.required:
+            if not argdict.has_key(argname):
+                raise Violation("missing required argument '%s'" % argname)
+
+
 #TODO
 class Shared(Constraint):
     def __init__(self, constraint, refLimit=None):
@@ -522,7 +579,7 @@ class Shared(Constraint):
         seen.append(self)
         return self.constraint.maxDepth(seen)
 
-#TODO
+#TODO: might be better implemented with a .optional flag
 class Optional(Constraint):
     def __init__(self, constraint, default):
         self.constraint = makeConstraint(constraint)
