@@ -145,7 +145,10 @@ class FileMessageTestCase(unittest.TestCase):
             pass
 
     def testFinalName(self):
-        self.assertEquals(unittest.deferredResult(self.fp.eomReceived()), self.final)
+        return self.fp.eomReceived().addCallback(self._cbFinalName)
+    
+    def _cbFinalName(self, result):
+        self.assertEquals(result, self.final)
         self.failUnless(self.f.closed)
         self.failIf(os.path.exists(self.name))
 
@@ -222,8 +225,8 @@ class MaildirAppendStringTestCase(unittest.TestCase):
         mbox = mail.maildir.MaildirMailbox(self.d)
         mbox.AppendFactory = FailingMaildirMailboxAppendMessageTask
         for i in xrange(1, 11):
-            self.assertEquals(\
-                unittest.deferredResult(mbox.appendMessage("X" * i)),
+            self.assertEquals(
+                unittest.wait(mbox.appendMessage("X" * i)),
                 None)
         self.assertEquals(len(mbox.listMessages()),
                           10)
@@ -257,9 +260,9 @@ class MaildirAppendFileTestCase(unittest.TestCase):
             temp = tempfile.TemporaryFile()
             temp.write("X" * i)
             temp.seek(0,0)
-            self.assertEquals(unittest.deferredResult(\
-                mbox.appendMessage(temp)),
-                              None)
+            self.assertEquals(
+                unittest.wait(mbox.appendMessage(temp)),
+                None)
             temp.close()
         self.assertEquals(len(mbox.listMessages()),
                           10)
@@ -417,28 +420,24 @@ class ServiceDomainTestCase(unittest.TestCase):
 
     def testValidateTo(self):
         user = smtp.User('user@test.domain', 'helo', None, 'wherever@whatever')
-        self.failUnless(
-            callable(unittest.deferredResult(
-                defer.maybeDeferred(self.D.validateTo, user)
-            ))
-        )
-        user = smtp.User('resu@test.domain', 'helo', None, 'wherever@whatever')
-        self.assertEquals(
-            unittest.deferredResult(
-                self.D.validateTo(user).addErrback(
-                    lambda f: f.trap(smtp.SMTPBadRcpt)
-                )
-            ), smtp.SMTPBadRcpt
-        )
+        return defer.maybeDeferred(self.D.validateTo, user
+            ).addCallback(self._cbValidateTo
+            )
+    
+    def _cbValidateTo(self, result):
+        self.failUnless(callable(result))
 
+    def testValidateToBadUsername(self):
+        user = smtp.User('resu@test.domain', 'helo', None, 'wherever@whatever')
+        return unittest.assertFailure(
+            defer.maybeDeferred(self.D.validateTo, user),
+            smtp.SMTPBadRcpt)
+
+    def testValidateToBadDomain(self):
         user = smtp.User('user@domain.test', 'helo', None, 'wherever@whatever')
-        self.assertEquals(
-            unittest.deferredResult(
-                self.D.validateTo(user).addErrback(
-                    lambda f: f.trap(smtp.SMTPBadRcpt)
-                )
-            ), smtp.SMTPBadRcpt
-        )
+        return unittest.assertFailure(
+            defer.maybeDeferred(self.D.validateTo, user),
+            smtp.SMTPBadRcpt)
 
     def testValidateFrom(self):
         helo = ('hostname', '127.0.0.1')
@@ -474,64 +473,49 @@ class VirtualPOP3TestCase(unittest.TestCase):
         shutil.rmtree(self.tmpdir)
 
     def testAuthenticateAPOP(self):
-        result = unittest.deferredResult(
-            self.P.authenticateUserAPOP(
-                'user',
-                md5.new(self.P.magic + 'password').hexdigest()
+        resp = md5.new(self.P.magic + 'password').hexdigest()
+        return self.P.authenticateUserAPOP('user', resp
+            ).addCallback(self._cbAuthenticateAPOP
             )
-        )
 
+    def _cbAuthenticateAPOP(self, result):
         self.assertEquals(len(result), 3)
         self.assertEquals(result[0], pop3.IMailbox)
         self.failUnless(pop3.IMailbox.providedBy(result[1]))
         result[2]()
 
-        self.assertEquals(
-            unittest.deferredResult(
-                self.P.authenticateUserAPOP(
-                    'resu',
-                    md5.new(self.P.magic + 'password').hexdigest()
-                ).addErrback(lambda f: f.trap(cred.error.UnauthorizedLogin))
-            ), cred.error.UnauthorizedLogin
-        )
+    def testAuthenticateIncorrectUserAPOP(self):
+        resp = md5.new(self.P.magic + 'password').hexdigest()
+        return unittest.assertFailure(
+            self.P.authenticateUserAPOP('resu', resp),
+            cred.error.UnauthorizedLogin)
 
-        self.assertEquals(
-            unittest.deferredResult(
-                self.P.authenticateUserAPOP(
-                    'user',
-                    md5.new('wrong digest').hexdigest()
-                ).addErrback(lambda f: f.trap(cred.error.UnauthorizedLogin))
-            ), cred.error.UnauthorizedLogin
-        )
+    def testAuthenticateIncorrectResponseAPOP(self):
+        resp = md5.new('wrong digest').hexdigest()
+        return unittest.assertFailure(
+            self.P.authenticateUserAPOP('user', resp),
+            cred.error.UnauthorizedLogin)
 
     def testAuthenticatePASS(self):
-        result = unittest.deferredResult(
-            self.P.authenticateUserPASS(
-                'user',
-                'password'
+        return self.P.authenticateUserPASS('user', 'password'
+            ).addCallback(self._cbAuthenticatePASS
             )
-        )
-
+    
+    def _cbAuthenticatePASS(self, result):
         self.assertEquals(len(result), 3)
         self.assertEquals(result[0], pop3.IMailbox)
         self.failUnless(pop3.IMailbox.providedBy(result[1]))
         result[2]()
 
-        self.assertEquals(
-            unittest.deferredResult(
-                self.P.authenticateUserPASS(
-                    'resu', 'password'
-                ).addErrback(lambda f: f.trap(cred.error.UnauthorizedLogin))
-            ), cred.error.UnauthorizedLogin
-        )
+    def testAuthenticateBadUserPASS(self):
+        return unittest.assertFailure(
+            self.P.authenticateUserPASS('resu', 'password'),
+            cred.error.UnauthorizedLogin)
 
-        self.assertEquals(
-            unittest.deferredResult(
-                self.P.authenticateUserPASS(
-                    'user', 'wrong password'
-                ).addErrback(lambda f: f.trap(cred.error.UnauthorizedLogin))
-            ), cred.error.UnauthorizedLogin
-        )
+    def testAuthenticateBadPasswordPASS(self):
+        return unittest.assertFailure(
+            self.P.authenticateUserPASS('user', 'wrong password'),
+            cred.error.UnauthorizedLogin)
 
 class empty(smtp.User):
     def __init__(self):
@@ -781,47 +765,54 @@ class MXTestCase(unittest.TestCase):
 
     def testSimpleSuccess(self):
         self.auth.addresses['test.domain'] = ['the.email.test.domain']
+        return self.mx.getMX('test.domain').addCallback(self._cbSimpleSuccess)
 
-        mx = unittest.deferredResult(self.mx.getMX('test.domain'))
+    def _cbSimpleSuccess(self, mx):
         self.assertEquals(mx.preference, 0)
         self.assertEquals(str(mx.exchange), 'the.email.test.domain')
 
     def testSimpleFailure(self):
         self.mx.fallbackToDomain = False
-        self.assertEquals(
-            unittest.deferredError(self.mx.getMX('test.domain')).type,
-            IOError
-        )
+        return unittest.assertFailure(self.mx.getMX('test.domain'), IOError)
 
     def testSimpleFailureWithFallback(self):
-        self.assertEquals(
-            unittest.deferredError(self.mx.getMX('test.domain')).type,
-            DNSLookupError
-        )
+        return unittest.assertFailure(self.mx.getMX('test.domain'), DNSLookupError)
 
     def testManyRecords(self):
         self.auth.addresses['test.domain'] = [
             'mx1.test.domain', 'mx2.test.domain', 'mx3.test.domain'
         ]
-
-        mx = unittest.deferredResult(self.mx.getMX('test.domain'))
+        return self.mx.getMX('test.domain'
+            ).addCallback(self._cbManyRecordsSuccessfulLookup
+            )
+    
+    def _cbManyRecordsSuccessfulLookup(self, mx):
         self.failUnless(str(mx.exchange).split('.', 1)[0] in ('mx1', 'mx2', 'mx3'))
-
         self.mx.markBad(str(mx.exchange))
-
-        nextMX = unittest.deferredResult(self.mx.getMX('test.domain'))
+        return self.mx.getMX('test.domain'
+            ).addCallback(self._cbManyRecordsDifferentResult, mx
+            )
+    
+    def _cbManyRecordsDifferentResult(self, nextMX, mx):
         self.assertNotEqual(str(mx.exchange), str(nextMX.exchange))
-
         self.mx.markBad(str(nextMX.exchange))
 
-        lastMX = unittest.deferredResult(self.mx.getMX('test.domain'))
+        return self.mx.getMX('test.domain'
+            ).addCallback(self._cbManyRecordsLastResult, mx, nextMX
+            )
+    
+    def _cbManyRecordsLastResult(self, lastMX, mx, nextMX):
         self.assertNotEqual(str(mx.exchange), str(lastMX.exchange))
         self.assertNotEqual(str(nextMX.exchange), str(lastMX.exchange))
 
         self.mx.markBad(str(lastMX.exchange))
         self.mx.markGood(str(nextMX.exchange))
-
-        againMX = unittest.deferredResult(self.mx.getMX('test.domain'))
+        
+        return self.mx.getMX('test.domain'
+            ).addCallback(self._cbManyRecordsRepeatSpecificResult, nextMX
+            )
+    
+    def _cbManyRecordsRepeatSpecificResult(self, againMX, nextMX):
         self.assertEqual(str(againMX.exchange), str(nextMX.exchange))
 
 class LiveFireExercise(unittest.TestCase):
@@ -1055,8 +1046,9 @@ class AliasTestCase(unittest.TestCase):
 
         for L in self.lines:
             msg.lineReceived(L)
-        unittest.deferredResult(msg.eomReceived())
+        return msg.eomReceived().addCallback(self._cbMultiWrapper, msgs)
 
+    def _cbMultiWrapper(self, ignored, msgs):
         for m in msgs:
             self.failUnless(m.eom)
             self.failIf(m.lost)
@@ -1069,8 +1061,9 @@ class AliasTestCase(unittest.TestCase):
 
         for l in self.lines:
             m.lineReceived(l)
-        unittest.deferredResult(m.eomReceived())
+        return m.eomReceived().addCallback(self._cbTestFileAlias, tmpfile)
 
+    def _cbTestFileAlias(self, ignored, tmpfile):
         lines = file(tmpfile).readlines()
         self.assertEquals([L[:-1] for L in lines], self.lines)
 
@@ -1102,8 +1095,9 @@ class ProcessAliasTestCase(test_process.SignalMixin, unittest.TestCase):
 
         for l in self.lines:
             m.lineReceived(l)
-        unittest.deferredResult(m.eomReceived())
+        return m.eomReceived().addCallback(self._cbProcessAlias)
 
+    def _cbProcessAlias(self, ignored):
         lines = file('process.alias.out').readlines()
         self.assertEquals([L[:-1] for L in lines], self.lines)
 
