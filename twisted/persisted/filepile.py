@@ -29,6 +29,8 @@ def unique():
 try:
     from os import symlink
     from os import readlink
+    from os import remove as rmlink
+    from os import rename as mvlink
 except:
     def symlink(value, filename):
         newlinkname = filename+"."+unique()+'.newlink'
@@ -47,6 +49,17 @@ except:
 
     def readlink(filename):
         return open(os.path.join(filename,'symlink'),'rb').read()
+
+    def rmlink(filename):
+        shutil.rmtree(filename)
+
+    def mvlink(src, dest):
+        try:
+            shutil.rmtree(dest)
+        except:
+            pass
+        os.rename(src,dest)
+
 
 from os import makedirs
 
@@ -602,5 +615,4 @@ class DecimalSorter:
     def comparePathFragments(self, path1, path2):
         result = LenientIntCompare()(path1, path2)
         return result
-
 
