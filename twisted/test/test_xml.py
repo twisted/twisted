@@ -208,11 +208,12 @@ class MicroDOMTest(TestCase):
                           [root, root.lastChild().firstChild()])
 
     def testDoctype(self):
-        s = '''<?xml version="1.0"?>
-        <!DOCTYPE foo PUBLIC "baz" "http://www.example.com/example.dtd">
-        <foo />'''
+        s = ('<?xml version="1.0"?>'
+        '<!DOCTYPE foo PUBLIC "baz" "http://www.example.com/example.dtd">'
+        '<foo />')
         d = microdom.parseString(s)
         self.assertEquals(d.doctype, 'foo PUBLIC "baz" "http://www.example.com/example.dtd"')
+        self.assertEquals(d.toxml(), s)
 
     samples = [("<foo/>", "<foo />"),
                ("<foo A='b'>x</foo>", '<foo A="b">x</foo>'),
