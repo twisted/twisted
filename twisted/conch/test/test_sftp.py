@@ -1,3 +1,7 @@
+# -*- test-case-name: twisted.conch.test.test_sftp -*-
+# Copyright (c) 2001-2004 Twisted Matrix Laboratories.
+# See LICENSE file for details.
+
 from twisted.trial import unittest, util
 try:
     from twisted.conch import unix
