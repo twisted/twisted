@@ -1,4 +1,5 @@
-
+# -*- Python -*-
+# $Id: usage.py,v 1.18 2002/04/19 23:56:46 acapnotic Exp $
 # Twisted, the Framework of Your Internet
 # Copyright (C) 2001 Matthew W. Lefkowitz
 #
@@ -101,7 +102,6 @@ class Options:
         self.__dispatch = {}
         self.opts = {}
 
-
         collectors = [
             self._gather_flags,
             self._gather_parameters,
@@ -151,11 +151,6 @@ class Options:
         except getopt.error, e:
             raise UsageError, e
 
-        try:
-            apply(self.parseArgs,args)
-        except TypeError:
-            raise UsageError("wrong number of arguments.")
-
         for opt, arg in opts:
             if opt[1] == '-':
                 opt = opt[2:]
@@ -170,6 +165,10 @@ class Options:
 
         self.postOptions()
 
+        try:
+            apply(self.parseArgs,args)
+        except TypeError:
+            raise UsageError("wrong number of arguments.")
 
     def postOptions(self):
         """I am called after the options are parsed.
