@@ -1,0 +1,162 @@
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head><title>Extending the Lore Documentation System</title></head>
+
+<body>
+<h1>Extending the Lore Documentation System</h1>
+
+<h2>Overview</h2>
+
+<p>The <a href="lore.html">Lore Documentation System</a>, out of the box, is
+specialized for documenting Twisted.  Its markup includes CSS classes for
+Python, HTML, filenames, and other Twisted-focused categories.  But don't
+think this means Lore can't be used for other documentation tasks!  Lore is
+designed to allow extensions, giving any Python programmer the ability to
+customize Lore for documenting almost anything.</p>
+
+<p>There are several reasons why you would want to extend Lore.  You may want
+to attach file formats Lore does not understand to your documentation.  You
+may want to create callouts that have special meanings to the reader, to give a
+memorable appearance to text such as, <q>WARNING: This software was written by
+  a frothing madman!</q>  You may want to create color-coding for a different
+programming language, or you may find that Lore does not provide you with
+enough structure to mark your document up completely.  All of these situations
+can be solved by creating an extension.</p>
+
+<h2>Inputs and Outputs</h2>
+
+<p>Lore works by reading the HTML source of your document, and producing
+whatever output the user specifies on the command line.  If the HTML document
+is well-formed XML that meets a certain minimum standard, Lore will be able to
+to produce some output.  Most Lore extensions will be written to redefine the
+<em>input</em>, not the output.  The default input is "lore", and it is the
+only one Lore comes with.  When you write your extension, you will come up
+with a new name for your input, telling Lore what rules to use to process the
+file.</p>
+
+<p>Lore can produce XHTML, LaTeX, and DocBook document formats, which can be
+displayed directly if you have a user agent capable of viewing them, or
+processed into a third form such as PostScript or PDF.  Another output is
+called <q>lint</q>, after the static-checking utility for C, and is used for
+the same reason: to statically check input files for problems.  The
+<q>lint</q> output is just a stream of error messages, not a formatted
+document.  For the first example, the only output we will be concerned with is
+LaTeX.</p>
+
+<h3>Creating New Inputs</h3>
+<p>Create a new input to tell Lore that your document is marked up differently
+from a vanilla Lore document.  This gives you the power to define a new tag 
+class, for example:</p>
+<pre class="html">
+&lt;p&gt;The Frabjulon &lt;span class="productname"&gt;Limpet 2000&lt;/span&gt;
+is the &lt;span class="marketinglie"&gt;industry-leading&lt;/span&gt; aquatic 
+mollusc counter, bar none.&lt;/p&gt;
+</pre>
+
+<p>The above HTML is an instance of a new input to Lore, which we will call
+MyHTML, to differentiate it from the subset of XHTML Lore recognizes by
+default.  We want it to have the following markup:</p>
+<ul>
+  <li>A <code>productname</code> class for the &lt;span&gt; tag, which
+  produces underlined text</li>
+  <li>A <code>marketinglie</code> class for &lt;span&gt; tag, which
+  produces larger type, bold text</li>
+</ul>
+<p>Note that I chose class names that are valid Python identifiers.  You will
+see why shortly.  To get these two effects in Lore's HTML output, all we have
+to do is create a cascading stylesheet (CSS), and use it in the Lore XHTML
+Template.  However, we also want these effects to work in LaTeX, and we want
+the output of lint to produce no warnings when it sees lines with these 2
+classes.  To make LaTeX and lint work, we start by creating a plugin.</p>
+
+<a href="listings/lore/plugins.tml" class="py-listing">
+  Listing 1: The Plugin File</a>
+
+<p>Name this file <code class="py-filename">plugins.tml</code>, and put it in a
+new package directory named <code class="py-filename">myhtml</code>.
+Also create an <code class="py-filename">__init__.py</code> file in
+  your new package.  Note that <em>the __init__ file can be empty, but it must
+    exist.</em> The combination of plugin file and __init__ file
+causes the new package to be treated like a Twisted plugin, one that Lore
+knows how to make use of.  The first three arguments to <code
+  class="py-identifier">register()</code> are the human-readable name, module
+name, and description of your plugin.  The <code
+  class="py-identifier">type</code> parameter makes this plugin visible to the
+Lore system (rather than some other part of Twisted).  The <code
+  class="py-identifier">tapname</code> parameter is an arbitrary filename with
+no extension; by convention you should use the lowercase version of your first
+argument (the human-readable name).  Users of your extension will pass this
+argument to lore with the <code class="shell">--input</code> parameter on the
+command line.  (For more details on plugins, read <a
+  href="plugin.html">Writing a New Plug-In for Twisted</a>.)</p>
+
+<p>Let's look at that module name more closely: <code
+  class="python">myhtml.factory</code>.  We will be creating this file next,
+in the package named <code class="py-filename">myhtml</code>.  The purpose of
+the factory module is to tell Lore how to process your input.</p>
+
+<a href="listings/lore/factory.py-1" class="py-listing">Listing 2: The Input
+  Factory</a>
+
+<p>In Listing 2, we create a subclass of ProcessingFunctionFactory.  This
+class provides a hook for you, a class variable named <code
+  class="py-identifier">latexSpitters</code>.  This variable tells Lore
+what new class will be generating LaTeX from your input format.  We redefine
+<code class="py-identifier">latexSpitters</code> to <code
+  class="py-identifier">MyLatexSpitter</code> in the subclass because this
+class knows what to do with the new input we have already defined.</p>
+
+<p>Now let's actually write some code to generate the LaTeX.  Doing this
+requires at least a familiarity with the LaTeX language.  Search Google for
+<q>latex tutorial</q> and you will find any number of useful LaTeX
+resources.</p>
+
+<a href="listings/lore/spitters.py" class="py-listing">Listing 3:
+  spitters.py</a>
+
+<p>The method <code class="py-identifier">visitNode_span_productname</code> is
+our handler for &lt;span&gt; tags with the <code>class="productname"</code>
+identifier.  Lore knows to try methods <code
+  class="py-identifier">visitNode_span_*</code> and <code
+  class="py-identifier">visitNode_div_*</code> whenever it encounters a new
+class in one of these tags.</p>
+
+<p>Now let's see what Lore does with these new classes with the following
+input file:</p>
+
+<a href="listings/lore/1st_example.html" class="html-listing">Listing 4:
+  1st_example.html</a>
+
+<p>Run lore and pdflatex on the input:</p>
+
+<pre class="shell">
+$ lore --input myhtml --output latex 1st_example.html 
+[########################################] (*Done*)
+
+$ pdflatex 1st_example.tex
+[ . . . latex output omitted for brevity . . . ]
+Output written on 1st_example.pdf (1 page, 22260 bytes).
+Transcript written on 1st_example.log.
+</pre>
+
+<p>And here's what the rendered PDF looks like:</p>
+
+<p><img src="../img/myhtml-output.png"/></p>
+
+<h3>Creating New Outputs</h3>
+<p><div class="doit">write some stuff</div></p>
+
+<h2>Other Uses for Lore Extensions</h2>
+<p><div class="doit">write some stuff</div></p>
+
+<h3>Color-Code Programming Languages</h3>
+<p><div class="doit">write some stuff</div></p>
+
+<h3>Add New Structural Elements</h3>
+<p><div class="doit">write some stuff</div></p>
+
+<h3>Support New File Formats</h3>
+<p><div class="doit">write some stuff</div></p>
+
+
+</body>
+</html>

@@ -1,0 +1,9 @@
+from twisted.lore import default
+from spitters import MyLatexSpitter
+
+class MyProcessingFunctionFactory(default.ProcessingFunctionFactory):
+    latexSpitters={None: MyLatexSpitter,
+                   }
+
+# initialize the global variable factory with an instance of your new factory
+factory=MyProcessingFunctionFactory()

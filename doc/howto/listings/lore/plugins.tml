@@ -1,0 +1,2 @@
+register('MyHTML', "myhtml.factory", description="My Lore Plugin",
+         type="lore", tapname="myhtml")
