@@ -248,21 +248,21 @@ class BaseClient(Connection):
                 self.failIfNotConnected(error.getConnectError(e))
                 return
 
-        try:
-            self.socket.connect(self.realAddress)
-        except socket.error, se:
-            if se.args[0] == EISCONN:
+        connectResult = self.socket.connect_ex(self.realAddress)
+        if connectResult:
+            if connectResult == EISCONN:
                 pass
             # on Windows EINVAL means sometimes that we should keep trying:
             # http://msdn.microsoft.com/library/default.asp?url=/library/en-us/winsock/winsock/connect_2.asp
-            elif ((se.args[0] in (EWOULDBLOCK, EINPROGRESS, EALREADY)) or
-                  (se.args[0] == EINVAL and platform.getType() == "win32")):
+            elif ((connectResult in (EWOULDBLOCK, EINPROGRESS, EALREADY)) or
+                  (connectResult == EINVAL and platform.getType() == "win32")):
                 self.startReading()
                 self.startWriting()
                 return
             else:
-                self.failIfNotConnected(error.getConnectError(se))
+                self.failIfNotConnected(error.getConnectError((connectResult, os.strerror(connectResult))))
                 return
+        
         # If I have reached this point without raising or returning, that means
         # that the socket is connected.
         del self.doWrite
