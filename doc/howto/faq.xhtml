@@ -426,7 +426,7 @@ patches.</p>
 <h3>I have a patch. How do I maximize the chances the Twisted developers
 will include it?</h3>
 
-<p>Use unified diff. Either use <code class="shell">cvs diff -u</code>
+<p>Use unified diff. Either use <code class="shell">svn diff</code>
 or, better yet, make a clean checkout and use <code class="shell">diff
 -urN</code> between them. Make sure your patch applies cleanly. In
 your post to the mailing list, make sure it is inlined and without any
@@ -474,12 +474,14 @@ standard description</a>. For a more comprehensive explanation, see
 <h3>There's a bug in Twisted. Where do I report it?</h3>
 
 <p>Unless it is a show-stopper bug, we usually won't fix it if it's already
-fixed in <a href="http://twistedmatrix.com/developers/cvs">CVS</a>, so you
-would do well to look there. Then send any pertinent information about the
-bug (hopefully as much information needed to reproduce it: OS, CVS versions
-of any important files, Python version, code you wrote or things you did
-to trigger the bug, etc.) to the <a href="http://twistedmatrix.com/cgi-bin/mailman/listinfo/twisted-python">mailing list</a>. If no one answers immediately, you should add it to the 
-<a href="http://twistedmatrix.com/bugs/">bug tracker</a>.</p>
+fixed in <a href="http://twistedmatrix.com/developers/cvs">Subversion</a>, so
+you would do well to look there. Then send any pertinent information about the
+bug (hopefully as much information needed to reproduce it: OS, Subversion
+versions of any important files, Python version, code you wrote or things you
+did to trigger the bug, etc.) to the <a
+href="http://twistedmatrix.com/cgi-bin/mailman/listinfo/twisted-python">mailing
+list</a>. If no one answers immediately, you should add it to the <a
+href="http://twistedmatrix.com/bugs/">bug tracker</a>.</p>
 
 <h3>Where do I go for help?</h3>
 
@@ -493,6 +495,6 @@ the Twisted team hangs out</a></p>
 you have a question about a part of Twisted, it's usually better to
 e-mail the mailing list. However, the preferred e-mail addresses for
 all Twisted developers are listed in the file <q>CREDITS</q> in the
-CVS repository.</p>
+Subversion repository.</p>
 </body>
 </html>
