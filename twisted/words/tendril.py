@@ -1,5 +1,5 @@
 # -*- Python -*-
-# $Id: tendril.py,v 1.21 2002/08/30 22:51:19 acapnotic Exp $
+# $Id: tendril.py,v 1.22 2002/08/31 00:19:55 acapnotic Exp $
 # Twisted, the Framework of Your Internet
 # Copyright (C) 2001 Matthew W. Lefkowitz
 #
@@ -16,6 +16,20 @@
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
+"""
+How to start a tendril:
+from twisted.internet import reactor as R
+from twisted.internet.app import theApplication as A
+from twisted.words import tendril as T
+
+w = A.services['twisted.words']
+f = T.TendrilFactory(w)
+# Maybe do some customization of f here, i.e.
+## f.nickname = 'PartyLink'
+## f.groupList = ['this', 'that', 'other']
+R.connectTCP(irchost, 6667, f)
+"""
+
 from twisted import copyright
 from twisted.cred import authorizer, error
 from twisted.internet import defer, protocol
@@ -23,6 +37,7 @@ from twisted.persisted import styles
 from twisted.protocols import irc
 from twisted.python import log, reflect
 from twisted.words import service
+from twisted.spread.util import LocalAsyncForwarder
 
 wordsService = service
 del service
@@ -38,6 +53,117 @@ _LOGALL = False
 
 # XXX FIXME -- This will need to be fixed to work asynchronously in order to
 # support multiple-server twisted.words and database access to accounts
+
+
+class TendrilFactory(protocol.ClientFactory, reflect.Accessor):
+    """I build Tendril clients for a words service.
+
+    All of a tendril's configurable state is stored here with me.
+    """
+
+    wordsService = None
+    wordsclient = None
+
+    networkSuffix = None
+    nickname = None
+    perspectiveName = None
+
+    protocol = None # will be set to TendrilIRC as soon as it's defined.
+    _groupList = ['tendril_test']
+    errorGroup = 'TendrilErrors'
+
+    helptext = (
+        "Hi, I'm a Tendril bridge between here and %(service)s.",
+        "You can send a private message to someone like this:",
+        "/msg %(myNick)s msg theirNick Hi there!",
+        )
+
+    def __init__(self, service):
+        """Initialize this factory with a words service."""
+        self.reallySet('wordsService', service)
+
+    def startFactory(self):
+        self.wordsclient = TendrilWords(
+            service=self.wordsService, ircFactory=self,
+            nickname=self.nickname, perspectiveName=self.perspectiveName,
+            networkSuffix=self.networkSuffix, groupList=self.groupList,
+            errorGroup=self.errorGroup)
+
+    def buildProtocol(self, addr):
+        if self.wordsclient.irc:
+            log.msg("Warning: building a new %s protocol while %s is still active."
+                    % (self.protocol, self.wordsclient.irc))
+
+        proto = protocol.ClientFactory.buildProtocol(self, addr)
+        self.wordsclient.setIrc(proto)
+
+        # Ermm.
+        ## self.protocol.__dict__.update(self.getConfiguration())
+        for k in ('nickname', 'helptext'):
+            setattr(proto, k, getattr(self, k))
+
+        return proto
+
+    def __getstate__(self):
+        state = self.__dict__.copy()
+        try:
+            del state["wordsclient"]
+        except KeyError:
+            pass
+        return state
+
+    def set_wordsService(self, service):
+        raise TypeError, "%s.wordsService is a read-only attribute." % (repr(self),)
+
+    def set_groupList(self, groupList):
+        if self.wordsclient:
+            oldlist = self.wordsclient.groupList
+            if groupList != oldlist:
+                newgroups = filter(lambda g, ol=oldlist: g not in ol,
+                                   groupList)
+                deadgroups = filter(lambda o, gl=groupList: o not in gl,
+                                    oldlist)
+
+                self.wordsclient.groupList[:] = groupList
+                if self.wordsclient.irc:
+                    for group in newgroups:
+                        self.wordsclient.irc.join(groupToChannelName(group))
+                    for group in deadgroups:
+                        self.wordsclient.irc.part(groupToChannelName(group))
+        self._groupList = groupList
+
+    def get_groupList(self):
+        if self.wordsclient:
+            return self.wordsclient.groupList
+        else:
+            return self._groupList
+
+    def set_nickname(self, nick):
+        if self.wordsclient and self.wordsclient.irc:
+            self.wordsclient.irc.setNick(nick)
+        self.reallySet('nickname', nick)
+
+    def set_errorGroup(self, errorGroup):
+        if self.wordsclient:
+            oldgroup = self.wordsclient.errorGroup
+            if oldgroup != errorGroup:
+                self.wordsclient.joinGroup(errorGroup)
+                self.wordsclient.errorGroup = errorGroup
+                self.wordsclient.leaveGroup(oldgroup)
+        self._errorGroup = errorGroup
+
+    def get_errorGroup(self):
+        if self.wordsclient:
+            return self.wordsclient.errorGroup
+        else:
+            return self._errorGroup
+
+    def set_helptext(self, helptext):
+        if isinstance(helptext, types.StringType):
+            helptext = string.split(helptext, '\n')
+        if self.wordsclient and self.wordsclient.irc:
+            self.wordsclient.irc.helptext = helptext
+        self.reallySet('helptext', helptext)
 
 
 class ProxiedParticipant(wordsService.WordsClient,
@@ -61,12 +187,6 @@ class ProxiedParticipant(wordsService.WordsClient,
         self.tendril.msgFromWords(self.nickname,
                                   sender, message, metadata)
 
-    def callRemote(self, methodName, *a, **kw):
-        #XXX: HACK
-        method = getattr(self, methodName)
-        d = defer.Deferred()
-        d.callback(method(*a, **kw))
-        return d
 
 class TendrilIRC(irc.IRCClient, styles.Ephemeral):
     """I connect to the IRC server and broker traffic.
@@ -74,25 +194,23 @@ class TendrilIRC(irc.IRCClient, styles.Ephemeral):
 
     realname = 'Tendril'
     versionName = 'Tendril'
-    versionNum = '$Revision: 1.21 $'[11:-2]
+    versionNum = '$Revision: 1.22 $'[11:-2]
     versionEnv = copyright.longversion
 
-    helptext = (
-        "Hi, I'm a Tendril bridge between here and %(service)s.",
-        "You can send a private message to someone like this:",
-        "/msg %(myNick)s msg theirNick Hi there!",
-        )
+    helptext = TendrilFactory.helptext
 
+    words = None
+    
     def __init__(self):
         """Create a new Tendril IRC client."""
         self.dcc_sessions = {}
 
     ### Protocol-level methods
 
-    def connectionLost(self):
+    def connectionLost(self, reason):
         """When I lose a connection, log out all my IRC participants.
         """
-        self.log("%s: Connection lost." % (self.transport,), 'info')
+        self.log("%s: Connection lost: %s" % (self.transport, reason), 'info')
         self.words.ircConnectionLost()
 
     ### Protocol LineReceiver-level methods
@@ -187,7 +305,7 @@ class TendrilIRC(irc.IRCClient, styles.Ephemeral):
             self.words.evacuateGroup(group)
 
         else:
-            self.words.ircPartParticipant(kicked, groupName)
+            self.words.ircPartParticipant(kicked, group)
 
     def irc_INVITE(self, prefix, params):
         """Accept an invitation, if it's in my groupList.
@@ -206,10 +324,10 @@ class TendrilIRC(irc.IRCClient, styles.Ephemeral):
         nick = string.split(prefix,'!')[0]
         channel = params[0]
         topic = params[1]
-        self.groupMessage(channelToGroupName(channel),
-                          "%s has just decreed the topic to be: %s"
-                          % (self.words._getParticipant(nick).name,
-                             topic))
+        self.words.groupMessage(channelToGroupName(channel),
+                                "%s has just decreed the topic to be: %s"
+                                % (self.words._getParticipant(nick).name,
+                                   topic))
 
     def irc_ERR_BANNEDFROMCHAN(self, prefix, params):
         """When I can't get on a channel, report it.
@@ -249,7 +367,7 @@ class TendrilIRC(irc.IRCClient, styles.Ephemeral):
         self.notice(nick, "Got your DCC %s"
                     % (irc.dccDescribe(data),))
 
-        pName = self._getParticipant(nick).name
+        pName = self.words._getParticipant(nick).name
         self.dcc_sessions[pName] = (user, dcc_text, data)
 
         self.notice(nick, "If I should pass it on to another user, "
@@ -365,7 +483,7 @@ class TendrilIRC(irc.IRCClient, styles.Ephemeral):
         DCC FORGET -- forget any DCC requests you offered to me.
         """
         nick = string.split(user,"!")[0]
-        pName = self._getParticipant(nick).name
+        pName = self.words._getParticipant(nick).name
 
         if not params:
             # Do I have a DCC from you?
@@ -392,8 +510,8 @@ class TendrilIRC(irc.IRCClient, styles.Ephemeral):
 
                 ctcpMsg = irc.ctcpStringify([('DCC',orig_data)])
                 try:
-                    self._getParticipant(nick).directMessage(dst,
-                                                            ctcpMsg)
+                    self.words._getParticipant(nick).directMessage(dst,
+                                                                   ctcpMsg)
                 except wordsService.WordsError, e:
                     self.notice(nick, "DCC offer to %s failed: %s"
                                 % (dst, e))
@@ -431,6 +549,7 @@ class TendrilIRC(irc.IRCClient, styles.Ephemeral):
         if priority in ('info', 'NOTICE', 'ERROR'):
             self.words.groupMessage(self.words.errorGroup, message)
 
+TendrilFactory.protocol = TendrilIRC
 
 class TendrilWords(wordsService.WordsClient):
     nickname = 'tl'
@@ -491,38 +610,44 @@ class TendrilWords(wordsService.WordsClient):
         self.irc.realname =  'Tendril to %s' % (self.service.serviceName,)
         self.irc.words = self
 
+    def setupBot(self, perspective):
+        self.perspective = perspective
+        self.joinGroup(self.errorGroup)
+        
     def attachToWords(self):
         """Get my perspective on the Words service; attach as a client.
         """
 
-        try:
-            self.perspective = (
-                self.service.getPerspectiveNamed(self.perspectiveName))
-        except wordsService.UserNonexistantError:
-            self.perspective = (
-                self.service.createParticipant(self.perspectiveName))
-            if not self.perspective:
-                raise RuntimeError, ("service %s won't give me my "
-                                     "perspective named %s"
-                                     % (self.service,
-                                        self.perspectiveName))
+        self.service.addBot(self.perspectiveName, self)
 
-        if self.perspective.client is self:
-            log.msg("I seem to be already attached.")
-            return
+        # XXX: Decide how much of this code belongs in words..Service.addBot
+#         try:
+#             self.perspective = (
+#                 self.service.getPerspectiveNamed(self.perspectiveName))
+#         except wordsService.UserNonexistantError:
+#             self.perspective = (
+#                 self.service.createParticipant(self.perspectiveName))
+#             if not self.perspective:
+#                 raise RuntimeError, ("service %s won't give me my "
+#                                      "perspective named %s"
+#                                      % (self.service,
+#                                         self.perspectiveName))
 
-        try:
-            self.attach()
-        except error.Unauthorized:
-            if self.perspective.client:
-                log.msg("%s is attached to my perspective: "
-                        "kicking it off." % (self.perspective.client,))
-                self.perspective.detached(self.perspective.client, None)
-                self.attach()
-            else:
-                raise
+#         if self.perspective.client is self:
+#             log.msg("I seem to be already attached.")
+#             return
 
-        self.joinGroup(self.errorGroup)
+#         try:
+#             self.attach()
+#         except error.Unauthorized:
+#             if self.perspective.client:
+#                 log.msg("%s is attached to my perspective: "
+#                         "kicking it off." % (self.perspective.client,))
+#                 self.perspective.detached(self.perspective.client, None)
+#                 self.attach()
+#             else:
+#                 raise
+
 
 
     ### WordsClient methods
@@ -641,13 +766,6 @@ class TendrilWords(wordsService.WordsClient):
             self.transport.loseConnection()
 
 
-    def callRemote(self, methodName, *a, **kw):
-        #XXX: HACK
-        method = getattr(self, methodName)
-        d = defer.Deferred()
-        d.callback(method(*a, **kw))
-        return d
-
     ### Participant event methods
     ##      Words.Participant --> IRC
 
@@ -742,8 +860,7 @@ class TendrilWords(wordsService.WordsClient):
 
     def _newParticipant(self, nick):
         try:
-            p = self.service.getPerspectiveNamed(nick +
-                                                 self.networkSuffix)
+            p = self.service.getPerspectiveNamed(nick + self.networkSuffix)
         except wordsService.UserNonexistantError:
             p = self.service.createParticipant(nick + self.networkSuffix)
             if not p:
@@ -753,7 +870,9 @@ class TendrilWords(wordsService.WordsClient):
                                               (nick, self.networkSuffix))
 
         c = ProxiedParticipant(self, nick)
-        p.attached(c, None)
+        p.attached(LocalAsyncForwarder(c, wordsService.IWordsClient, 1),
+                   None)
+        # p.attached(c, None)
 
         self.participants[nick] = [p, c]
 
@@ -792,112 +911,6 @@ class TendrilWords(wordsService.WordsClient):
         return 0
 
 
-class TendrilFactory(protocol.ClientFactory, reflect.Accessor):
-    """I build Tendril clients for a words service.
-    """
-
-    wordsclient = None
-
-    networkSuffix = None
-    nickname = None
-    perspectiveName = None
-
-    protocol = TendrilIRC
-    _groupList = ['tendril_test']
-    errorGroup = 'TendrilErrors'
-
-    helptext = (
-        "Hi, I'm a Tendril bridge between here and %(service)s.",
-        "You can send a private message to someone like this:",
-        "/msg %(myNick)s msg theirNick Hi there!",
-        )
-
-    def __init__(self, service):
-        """Initialize this factory with a words service."""
-        self.reallySet('wordsService', service)
-
-    def startFactory(self):
-        self.wordsclient = TendrilWords(
-            service=self.wordsService, ircFactory=self,
-            nickname=self.nickname, perspectiveName=self.perspectiveName,
-            networkSuffix=self.networkSuffix, groupList=self.groupList,
-            errorGroup=self.errorGroup)
-
-    def buildProtocol(self, addr):
-        if self.wordsclient.irc:
-            log.msg("Warning: building a new %s protocol while %s is still active."
-                    % (self.protocol, self.wordsclient.irc))
-
-        proto = protocol.ClientFactory.buildProtocol(self, addr)
-        self.wordsclient.setIrc(proto)
-
-        # Ermm.
-        ## self.protocol.__dict__.update(self.getConfiguration())
-        for k in ('nickname', 'helptext'):
-            setattr(proto, k, getattr(self, k))
-
-        return proto
-
-    def __getstate__(self):
-        state = self.__dict__.copy()
-        try:
-            del state["wordsclient"]
-        except KeyError:
-            pass
-        return state
-
-    def set_wordsService(self, service):
-        raise TypeError, "%s.wordsService is a read-only attribute." % (repr(self),)
-
-    def set_groupList(self, groupList):
-        if self.wordsclient:
-            oldlist = self.wordsclient.groupList
-            if groupList != oldlist:
-                newgroups = filter(lambda g, ol=oldlist: g not in ol,
-                                   groupList)
-                deadgroups = filter(lambda o, gl=groupList: o not in gl,
-                                    oldlist)
-
-            self.wordsclient.groupList[:] = groupList
-            for group in newgroups:
-                self.wordsclient.join(groupToChannelName(group))
-            for group in deadgroups:
-                self.wordsclient.part(groupToChannelName(group))
-        self._groupList = groupList
-
-    def get_groupList(self):
-        if self.wordsclient:
-            return self.wordsclient.groupList
-        else:
-            return self._groupList
-
-    def set_nickname(self, nick):
-        if self.wordsclient and self.wordsclient.irc:
-            oldnick = self.wordsclient.irc.nickname
-            self.wordsclient.irc.setNick(nick)
-        self.reallySet('nickname', nick)
-
-    def set_errorGroup(self, errorGroup):
-        if self.wordsclient:
-            oldgroup = self.wordsclient.errorGroup
-            if oldgroup != errorGroup:
-                self._activeInstance.joinGroup(errorGroup)
-                self._activeInstance.errorGroup = errorGroup
-                self._activeInstance.leaveGroup(oldgroup)
-        self._errorGroup = errorGroup
-
-    def get_errorGroup(self):
-        if self.wordsclient:
-            return self.wordsclient.errorGroup
-        else:
-            return self._errorGroup
-
-    def set_helptext(self, helptext):
-        if isinstance(helptext, types.StringType):
-            helptext = string.split(helptext, '\n')
-        if self.wordsclient and self.wordsclient.irc:
-            self.wordsclient.irc.helptext = helptext
-        self.reallySet('helptext', helptext)
 
 
 def channelToGroupName(channelName):
