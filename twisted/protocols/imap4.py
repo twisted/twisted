@@ -1078,6 +1078,11 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
             raise IllegalMailboxEncoding(name)
 
     def _selectWork(self, tag, name, rw, cmdName):
+        if self.mbox:
+            self.mbox.removeListener(self)
+            self.mbox = None
+            self.state = 'auth'
+    
         name = self._parseMbox(name)
         defer.maybeDeferred(
             self.account.select, self._parseMbox(name), rw
@@ -1097,7 +1102,6 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
             self.sendNegativeResponse(tag, 'Mailbox cannot be selected')
             return
 
-        self.state = 'select'
         flags = mbox.getFlags()
         self.sendUntaggedResponse(str(mbox.getMessageCount()) + ' EXISTS')
         self.sendUntaggedResponse(str(mbox.getRecentCount()) + ' RECENT')
@@ -1105,11 +1109,10 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
         self.sendPositiveResponse(None, '[UIDVALIDITY %d]' % mbox.getUIDValidity())
 
         s = mbox.isWriteable() and 'READ-WRITE' or 'READ-ONLY'
-        if self.mbox:
-            self.mbox.removeListener(self)
-        self.mbox = mbox
-        self.mbox.addListener(self)
+        mbox.addListener(self)
         self.sendPositiveResponse(tag, '[%s] %s successful' % (s, cmdName))
+        self.state = 'select'
+        self.mbox = mbox
 
     auth_SELECT = ( _selectWork, arg_astring, 1, 'SELECT' )
     select_SELECT = auth_SELECT
