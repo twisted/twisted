@@ -146,7 +146,64 @@ def doTrace(request):
     import stream
     response.stream = stream.MemoryStream(txt)
     return response
-                    
+
+def getEntireStream(stream):
+    data = StringIO.StringIO()
+    
+    def _getData():
+        return defer.maybeDeferred(stream.read).addCallback(_gotData)
+
+    def _gotData(result):
+        if result is None:
+            data.reset()
+            return data
+        else:
+            data.write(result)
+            return _getData()
+        
+    return _getData()
+    
+def parsePOSTData(request):
+    def _gotURLEncodedData(data):
+        print "_gotURLEncodedData"
+        request.args.update(cgi.parse_qs(data.read(), 1))
+        
+    def _gotMultipartData(data):
+        print "_gotMultipartData"
+        try:
+            data.reset()
+            import pdb; pdb.set_trace()
+            d=cgi.parse_multipart(data, dict(ctype.params))
+            data.reset()
+            print "_gotMultipartData:",d, dict(ctype.params), data.read()
+            request.args.update(d)
+        except KeyError, e:
+            if e.args[0] == 'content-disposition':
+                # Parse_multipart can't cope with missing
+                # content-dispostion headers in multipart/form-data
+                # parts, so we catch the exception and tell the client
+                # it was a bad request.
+                raise HTTPError(responsecode.BAD_REQUEST)
+            raise
+
+    if request.stream.length == 0:
+        return defer.succeed(None)
+    
+    parser = None
+    ctype = request.headers.getHeader('content-type')
+    if ctype is None:
+        return defer.succeed(None)
+    
+    if ctype.mediaType == 'application' and ctype.mediaSubtype == 'x-www-form-urlencoded':
+        parser = _gotURLEncodedData
+    elif ctype.mediaType == 'multipart' and ctype.mediaSubtype == 'form-data':
+        parser = _gotMultipartData
+        
+    if parser:
+        return getEntireStream(request.stream).addCallback(parser)
+    return defer.succeed(None)
+
+
 class Request(http.Request):
     implements(iweb.IRequest)
     
@@ -220,7 +277,7 @@ class Request(http.Request):
             self._processingFailed(failure.Failure(), requestContext)
             return
 
-        
+
         deferredContext = self._getChild(requestContext,
                                               self.site.getRootResource(),
                                               self.postpath)
@@ -337,7 +394,7 @@ class Request(http.Request):
                 return f(self, response)
             else:
                 return response
-        
+
         response = iweb.IResponse(result)
         if response:
             d = defer.succeed(response)

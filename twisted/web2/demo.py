@@ -28,8 +28,20 @@ demo can be put back in using more up-to-date Twisted APIs.
             return self, ()
         if name == 'file':
             return static.File('/'), segments[1:]
+        if name == 'foo':
+            return Foo(), segments[1:]
         return None, ()
 
+from twisted.web2 import resource, stream, http
+from twisted.internet import reactor
+class Foo(resource.Resource):
+    def render(self, ctx):
+        s=stream.ProducerStream()
+        s.write("Hello")
+        reactor.callLater(0.5, s.finish)
+        return http.Response(200, stream=s)
+    
+    
 if __name__ == '__builtin__':
     # Running from twistd -y
     from twisted.application import service, strports

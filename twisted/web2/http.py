@@ -586,7 +586,9 @@ class HTTPChannelRequest:
 
     def setConnectionParams(self, connHeaders):
         # Figure out persistent connection stuff
-        if self.version >= (1,1):
+        if not self.channel.allowPersistentConnections:
+            pass
+        elif self.version >= (1,1):
             self.persistent = not 'close' in connHeaders.getHeader('connection', ())
         elif 'keep-alive' in connHeaders.getHeader('connection', ()):
             self.persistent = PERSIST_NO_PIPELINE
@@ -842,6 +844,9 @@ class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin, object):
     # maximum length of headers (10KiB)
     maxHeaderLength = 10240
 
+    # Allow persistent connections?
+    allowPersistentConnections = True
+    
     # ChannelRequest
     chanRequestFactory = HTTPChannelRequest
     requestFactory = Request
@@ -861,6 +866,7 @@ class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin, object):
 
     def connectionMade(self):
         self.setTimeout(self.inputTimeOut)
+        self.factory.outstandingRequests+=1
     
     def lineReceived(self, line):
         if self._first_line:
@@ -1019,13 +1025,26 @@ class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin, object):
             self.transport.loseConnection()
         
     def connectionLost(self, reason):
+        self.factory.outstandingRequests-=1
+
         self.readConnectionLost()
         self.setTimeout(None)
+        
         # Tell all requests to abort.
         for request in self.requests:
             if request is not None:
                 request.connectionLost(reason)
 
+class OverloadedServerProtocol(protocol.Protocol):
+    def connectionMade(self):
+        self.transport.write("HTTP/1.0 503 Service Unavailable\r\n"
+                             "Content-Type: text/html\r\n"
+                             "Connection: close\r\n\r\n"
+                             "<html><head><title>503 Service Unavailable</title></head>"
+                             "<body><h1>Service Unavailable</h1>"
+                             "The server is currently overloaded, "
+                             "please try again later.</body></html>")
+        self.transport.loseConnection()
 
 class HTTPFactory(protocol.ServerFactory):
     """Factory for HTTP server."""
@@ -1033,18 +1052,23 @@ class HTTPFactory(protocol.ServerFactory):
     protocol = HTTPChannel
     
     protocolArgs = None
+
+    outstandingRequests = 0
     
-    def __init__(self, **kwargs):
+    def __init__(self, maxRequests=600, **kwargs):
+        self.maxRequests=maxRequests
         self.protocolArgs = kwargs
 
     def buildProtocol(self, addr):
+        if self.outstandingRequests >= self.maxRequests:
+            return OverloadedServerProtocol()
+        
         p = protocol.ServerFactory.buildProtocol(self, addr)
-
+        
         for arg,value in self.protocolArgs.iteritems():
             setattr(p, arg, value)
         return p
     
-
 
 # import cgi
 # import tempfile

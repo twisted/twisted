@@ -119,13 +119,10 @@ class Resource(object):
 class PostableResource(Resource):
     def http_POST(self, ctx):
         """Reads and parses the incoming body data then calls render."""
-        request = iweb.IRequest(ctx)
-        while repeatALot:
-            request.stream.read()
-            FIXME
+        return server.parsePOSTData(iweb.IRequest(ctx)).addCallback(
+            lambda res: self.render(ctx))
         
-        return self.render(self, ctx)
-    
+        
 class LeafResource(Resource):
     def __init__(self):
         self.postpath = []

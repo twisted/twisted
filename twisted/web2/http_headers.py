@@ -362,12 +362,18 @@ def addDefaultEncoding(encodings):
 
 
 def parseContentType(header):
+    # Case folding is disabled for this header, because of use of
+    # Content-Type: multipart/form-data; boundary=CaSeFuLsTuFf
+    # So, we need to explicitly .lower() the type/subtype and arg keys.
+    
     type,args = parseArgs(header)
     
     if len(type) != 3 or type[1] != Token('/'):
         raise ValueError, "MIME Type "+str(type)+" invalid."
-
-    return MimeType(type[0], type[2], tuple(args))
+    
+    args = [(kv[0].lower(), kv[1]) for kv in args]
+        
+    return MimeType(type[0].lower(), type[2].lower(), tuple(args))
 
 def parseContentMD5(header):
     try:
@@ -1098,7 +1104,6 @@ class Headers:
         """Return an iterator of key,value pairs of all headers
         contained in this object, as strings. The keys are capitalized
         in canonical capitalization."""
-        
         for k,v in self._raw_headers.iteritems():
             if v is _RecalcNeeded:
                 v = self._toRaw(k)
@@ -1230,7 +1235,7 @@ parser_entity_headers = {
     'Content-Location':(last,), # TODO: URI object?
     'Content-MD5':(last, parseContentMD5),
     'Content-Range':(last, parseContentRange),
-    'Content-Type':(tokenize, parseContentType),
+    'Content-Type':(lambda str:tokenize(str, foldCase=False), parseContentType),
     'Expires':(last, parseExpires),
     'Last-Modified':(last, parseDateTime),
     }

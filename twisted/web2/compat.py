@@ -44,18 +44,17 @@ class HeaderAdapter(UserDict.DictMixin):
     def has_key(self, name):
         return self._headers.hasHeader(name)
 
-class OldRequestAdapter(components.Componentized):
+def makeOldRequestAdapter(original):
+    # Cache the adapter. Replace this with a more better generalized
+    # mechanism when one becomes available.
+    if not hasattr(original, '_oldRequest'):
+        original._oldRequest = OldRequestAdapter(original)
+    return original._oldRequest
+
+class OldRequestAdapter(components.Componentized, object):
     """Adapt old requests to new request
     """
-
     implements(iweb.IOldRequest)
-    
-    def __new__(claz, original):
-        # Cache the adapter. Replace this with a more better generalized
-        # mechanism when one becomes available.
-        if not hasattr(original, '_oldRequest'):
-            original._oldRequest = object.__new__(claz, original)
-        return original._oldRequest
     
     def _getFrom(where, name):
         def _get(self):
@@ -67,7 +66,9 @@ class OldRequestAdapter(components.Componentized):
             return getattr(getattr(self, where), name)
         def _set(self, new):
             setattr(getattr(self, where), name, new)
-        return property(_get, _set)
+        def _del(self):
+            delattr(getattr(self, where), name)
+        return property(_get, _set, _del)
 
     def _getHeaders(where):
         def _get(self):
@@ -89,7 +90,7 @@ class OldRequestAdapter(components.Componentized):
     # cookies = # Do I need this?
     # received_cookies = # Do I need this?
     content = StringIO() #### FIXME
-    args = {} #### FIXME
+    args = _getsetFrom('request', 'args')
     # stack = # WTF is stack?
     prepath = _getsetFrom('request', 'prepath')
     postpath = _getsetFrom('request', 'postpath')
@@ -101,8 +102,6 @@ class OldRequestAdapter(components.Componentized):
         self.request = request
         self.response = http.Response(stream=stream.ProducerStream())
 
-    def _getData(self):
-        return defer.succeed(None)
     def registerProducer(self, producer, streaming):
         self.response.stream.registerProducer(producer, streaming)
         
@@ -131,24 +130,14 @@ class OldRequestAdapter(components.Componentized):
         self.response.code = code
 
     def setLastModified(self, when):
-        # FIXME
+        # Never returns CACHED -- can it and still be compliant?
         when = long(math.ceil(when))
         self.response.headers.setHeader('Last-Modified', when)
-        try:
-            self.original.checkPreconditions()
-        except http.HTTPError, err:
-            self.original.code = err.response.code
-            return old_http.CACHED
         return None
 
     def setETag(self, etag):
-        # FIXME
         self.original.out_headers.setRawHeaders('ETag', etag)
-        try:
-            self.original.checkPreconditions()
-        except http.HTTPError, err:
-            self.original.code = err.responsecode
-            return old_http.CACHED
+        return None
 
     def getAllHeaders(self):
         return dict(self.request.headers.iteritems())
@@ -213,7 +202,7 @@ class OldRequestAdapter(components.Componentized):
 
     def redirect(self, url):
         """Utility function that does a redirect.
-
+        
         The request should have finish() called after this.
         """
         self.setResponseCode(responsecode.FOUND)
@@ -258,30 +247,40 @@ class OldResourceAdapter(object):
     implements(iweb.IResource)
     
     def __init__(self, original):
+        # Can't use self.__original= because of __setattr__.
         self.__dict__['_OldResourceAdapter__original']=original
         
     def locateChild(self, ctx, segments):
+        import server
+        request = iweb.IRequest(ctx)
+        if request.method == "POST":
+            return server.parsePOSTData(request).addCallback(
+                lambda x: self.__original.locateChild(ctx, segments))
         return self.__original.locateChild(ctx, segments)
     
     def renderHTTP(self, ctx):
-        oldRequest = iweb.IOldRequest(ctx)
-        return oldRequest._getData().addCallback(self._processForm, ctx).addCallback(self._reallyRender, ctx)
+        import server
+        request = iweb.IRequest(ctx)
+        if request.method == "POST":
+            return server.parsePOSTData(request).addCallback(
+                self.__reallyRender, ctx)
+        
+        return self.__reallyRender(None, ctx)
 
-    def _processForm(self, ignored, ctx):
-        # Do form processing of request content
-        pass
-
-    def _finish(self, data, ctx):
+    def __finish(self, data, ctx):
         oldRequest = iweb.IOldRequest(ctx)
         oldRequest.write(data)
         oldRequest.finish()
         return oldRequest.response
 
-    def _reallyRender(self, ignored, ctx):
-        return defer.maybeDeferred(self.__original.renderHTTP, ctx).addCallback(self._finish, ctx)
+    def __reallyRender(self, ignored, ctx):
+        return defer.maybeDeferred(self.__original.renderHTTP, ctx).addCallback(self.__finish, ctx)
 
     def __getattr__(self, name):
         return getattr(self.__original, name)
 
-    def __setattr__(self, name):
-        return setattr(self.__original, name)
+    def __setattr__(self, name, value):
+        setattr(self.__original, name, value)
+
+    def __delattr__(self, name):
+        delattr(self.__original, name)

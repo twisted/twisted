@@ -6,7 +6,7 @@
 """
 
 # System Imports
-import os, time
+import os, time, stat
 
 # Sibling Imports
 from twisted.web2 import http_headers, resource
@@ -211,7 +211,7 @@ class File(resource.Resource):
                                                           self.defaultType)
 
         if not self.fp.exists():
-            return renderer.FourOhFour()
+            return response.NOT_FOUND
 
         if self.fp.isdir():
             return self.redirectWithSlash(request)
@@ -231,6 +231,10 @@ class File(resource.Resource):
                 raise
 
         st = os.fstat(f.fileno())
+        
+        # Be sure it's a regular file.
+        if not stat.S_ISREG(st.st_mode):
+            return responsecode.FORBIDDEN
         
         #for content-length
         size = st.st_size
