@@ -339,7 +339,7 @@ import flow
 
 def prn(x): 
     print x
-d = flow.Flow([1,2,flow.Cooperate(1),3])
+d = flow.Deferred([1,2,flow.Cooperate(1),3])
 d.addCallback(prn)
 reactor.callLater(2, reactor.stop)
 reactor.run()
@@ -375,7 +375,7 @@ class Count(flow.ThreadedIterator):
         print "producing", val
         return val
 
-d = flow.Flow(Count(5))
+d = flow.Deferred(Count(5))
 def prn(x):
     print "results", x
 d.addCallback(prn)
@@ -426,7 +426,7 @@ def consumer():
 from twisted.internet import reactor
 def finish(result): 
     print "Deferred Complete : ", result
-f = flow.Flow(consumer())
+f = flow.Deferred(consumer())
 f.addBoth(finish)
 reactor.callLater(1,reactor.stop)
 reactor.run()
