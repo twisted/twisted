@@ -269,8 +269,10 @@ class File(resource.Resource, styles.Versioned):
                 for fn in os.listdir(self.path):
                     if os.path.splitext(fn)[0]==path:
                         log.msg('    Returning %s' % fn)
-                        newpath = os.path.join(self.path, fn)
-                childPath = os.path.join(self.path, path)
+                        childPath = os.path.join(self.path, fn)
+                        break
+                else:
+                    childPath = os.path.join(self.path, path)
 
         if not os.path.exists(childPath):
             # Before failing ask index.foo if it knows about this child
