@@ -67,21 +67,18 @@ def fontifyPython(document):
         return (n.nodeName == 'pre' and n.hasAttribute('class') and
                 n.getAttribute('class') == 'python')
     for node in domhelpers.findElements(document, matcher):
-        newio = cStringIO.StringIO()
-        # write the python code to a buffer
-        oldio = cStringIO.StringIO()
-        domhelpers.writeNodeData(node, oldio)
-        oiv = oldio.getvalue()
-        oivs = oiv.strip() + '\n'
-        oldio = cStringIO.StringIO()
-        oldio.write(oivs)
-        oldio.seek(0)
-        htmlizer.filter(oldio, newio)
-        newio.seek(0)
-        newdom = microdom.parse(newio)
-        newel = newdom.documentElement
-        newel.setAttribute("class", "python")
-        node.parentNode.replaceChild(newel, node)
+        fontifyPythonNode(node)
+
+def fontifyPythonNode(node):
+    oldio = cStringIO.StringIO()
+    domhelpers.writeNodeData(node, oldio)
+    oldio = cStringIO.StringIO(oldio.getvalue().strip()+'\n')
+    newio = cStringIO.StringIO()
+    htmlizer.filter(oldio, newio)
+    newio.seek(0)
+    newel = microdom.parse(newio).documentElement
+    newel.setAttribute("class", "python")
+    node.parentNode.replaceChild(newel, node)
 
 
 def addPyListings(document, d):
@@ -97,7 +94,7 @@ def addPyListings(document, d):
                 '%s'
                 '<div class="py-caption">%s - '
                 '<span class="py-filename">%s</span></div></div>' % (
-            val, domhelpers.getNodeText(node), node.getAttribute("href")))
+            val, domhelpers.getNodeText(node), fn))
         newnode = microdom.parseString(text).documentElement
         node.parentNode.replaceChild(newnode, node)
 
@@ -112,8 +109,7 @@ def addHTMLListings(document, d):
                 '<pre class="htmlsource">%s</pre>'
                 '<div class="py-caption">%s - '
                 '<span class="py-filename">%s</span></div></div>' % (
-                        val, domhelpers.getNodeText(node),
-                             node.getAttribute('href')))
+                        val, domhelpers.getNodeText(node), fn))
         newnode = microdom.parseString(text).documentElement
         node.parentNode.replaceChild(newnode, node)
 
