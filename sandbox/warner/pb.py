@@ -2,6 +2,7 @@
 
 from twisted.spread.pb import PBClientFactory
 from twisted.internet import protocol
+from twisted.python import log
 
 class ReconnectingPBClientFactory(PBClientFactory,
                                   protocol.ReconnectingClientFactory):
@@ -70,7 +71,7 @@ class ReconnectingPBClientFactory(PBClientFactory,
 
     def failedToGetPerspective(self, why):
         self.stopTrying() # logging in harder won't help
-        return why
+        log.err(why)
 
     def login(self, credentials, client=None):
         self.credentials = credentials
