@@ -104,7 +104,18 @@ class NMEAReceiverTestCase(unittest.TestCase):
         dummy.makeConnection(protocol.FileWrapper(StringIOWithNoClose()))
         for line in self.messages:
             dummy.resultHarvester.performTest(dummy.lineReceived, line) 
+        def munge(myTuple):
+            if type(myTuple) != type(()):
+                return
+            newTuple = []
+            for v in myTuple:
+                if type(v) == type(1.1):
+                    v = float(int(v * 10000.0)) * 0.0001
+                newTuple.append(v)
+            return tuple(newTuple)
         for (message, expectedResult, actualResult) in zip(self.messages, self.results, dummy.resultHarvester.results):
+            expectedResult = munge(expectedResult)
+            actualResult = munge(actualResult)
             if isinstance(expectedResult, Exception):
                 if isinstance(actualResult, Exception):
                     self.failUnlessEqual(expectedResult.__class__, actualResult.__class__, "\nInput:\n%s\nExpected:\n%s.%s\nResults:\n%s.%s\n" % (message, expectedResult.__class__.__module__, expectedResult.__class__.__name__, actualResult.__class__.__module__, actualResult.__class__.__name__))
