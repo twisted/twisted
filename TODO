@@ -17,6 +17,7 @@ this file directly.
     Specifically weak documentation subsections include:
       * How to write a complex service for PB
       * Identities/Perspectives/Services (Passport & how to use it)
+      * Document "how to schedule" (deferred, timeouts and so on)
 
 001 [[Glyph]] Asynchronous Authentication Service.  PB (and similiar) servers
     ought to be able to defer their authentication at least to another PB
@@ -35,7 +36,8 @@ this file directly.
 004 [[Moshe Zadka]] Relaying for Twisted.Mail.  Twisted.Mail really ought to be
     a complete sendmail/pop3d/imapd replacement, but currently it's lacking a
     few things.  Those things should be added; relaying is at the top of the
-    list but there are other tasks too.
+    list but there are other tasks too. Relaying depends on properly doing
+    the DNS stuff (030)
 
 005 *{Glyph Lefkowitz}* Twisted.Internet for Jython.  Although Java lacks the
     select() call, JDK 1.4 *does* have an API for doing asynchronous I/O.  Even
@@ -145,7 +147,11 @@ this file directly.
 029 DCC and CTCP parsing for IRCGateway, to allow interactions with clients on
     other protocols. (This depends on 008)
 
-030 Acceptance tests for DNS code.
+030 [[Moshe Zadka]]
+    Completely rewrite and generate acceptance tests for DNS code. This should
+    be done via: a) moving everything to deferred b) making sure we can deal
+    with bad DNS servers on the resolver list c) having the acceptance test
+    use host(1)
 
 031 Abstract notion of "a group of people", at a higher level than a chat
     group.
