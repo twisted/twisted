@@ -15,12 +15,12 @@
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 #
-# $Id: conch.py,v 1.11 2002/11/25 22:14:03 z3p Exp $
+# $Id: conch.py,v 1.12 2002/11/28 14:46:13 z3p Exp $
 
 #""" Implementation module for the `ssh` command.
 #"""
 
-from twisted.conch.ssh import transport, userauth, connection, common, keys
+from twisted.conch.ssh import transport, userauth, connection, common, keys, session
 from twisted.internet import reactor, stdio, defer, protocol
 from twisted.python import usage, log
 
@@ -107,6 +107,12 @@ class SSHClientFactory(protocol.ClientFactory):
         return SSHClientTransport()
 
 class SSHClientTransport(transport.SSHClientTransport):
+
+    def receiveDebug(self, alwaysDisplay, message, lang):
+        global options
+        if alwaysDisplay or options['log']:
+            log.msg('Received Debug Message: %s' % message)
+
     def verifyHostKey(self, pubKey, fingerprint):
         goodKey = self.isInKnownHosts(options['host'], pubKey)
         if goodKey == 1: # good key
@@ -192,8 +198,7 @@ class SSHUserAuthClient(userauth.SSHUserAuthClient):
         p=getpass.getpass(prompt)
         sys.stdout,sys.stdin=oldout,oldin
         return defer.succeed(p)
-        
-
+       
     def gotPassword(self, q, password):
         d = self.passDeferred
         del self.passDeferred
@@ -213,7 +218,7 @@ class SSHUserAuthClient(userauth.SSHUserAuthClient):
         return keys.getPublicKeyString(file) 
     
     def getPrivateKey(self):
-# doesn't handle encryption
+        # doesn't handle encryption
         file = os.path.expanduser(self.usedFiles[-1])
         if not os.path.exists(file):
             return None
@@ -221,16 +226,17 @@ class SSHUserAuthClient(userauth.SSHUserAuthClient):
 
 class SSHConnection(connection.SSHConnection):
     def serviceStarted(self):
-# port forwarding will go here
+        # port forwarding will go here
         if not options['notty']:
             self.openChannel(SSHSession())
 
-class SSHSession(connection.SSHChannel):
+class SSHSession(session.SSHChannel):
+
     name = 'session'
     
     def channelOpen(self, foo):
-        global session
-        session = self
+        #global globalSession
+        #globalSession = self
         # turn off local echo
         fd = sys.stdin.fileno()
         try:
@@ -243,11 +249,10 @@ class SSHSession(connection.SSHChannel):
             new[6][tty.VTIME] = 0
             tty.tcsetattr(fd, tty.TCSANOW, new)
             tty.setraw(fd)
-        c = connection.SSHSessionClient()
+        c = session.SSHSessionClient()
         c.dataReceived = self.write
         c.connectionLost = self.sendEOF
         stdio.StandardIO(c)
-        term = os.environ['TERM']
         if options['subsystem']:
             self.conn.sendRequest(self, 'subsystem', \
                 common.NS(options['command']))
@@ -255,11 +260,11 @@ class SSHSession(connection.SSHChannel):
             self.conn.sendRequest(self, 'exec', \
                 common.NS(options['command']))
         else:
+            term = os.environ['TERM']
             winsz = fcntl.ioctl(fd, tty.TIOCGWINSZ, '12345678')
-            rows, columns, xpixels, ypixels = struct.unpack('4H', winsz)
-            self.conn.sendRequest(self, 'pty-req', common.NS(term) + \
-                struct.pack('>4L', columns, rows, xpixels, ypixels) + \
-                common.NS(''))
+            winSize = struct.unpack('4H', winsz)
+            ptyReqData = session.packRequest_pty_req(term, winSize, '')
+            self.conn.sendRequest(self, 'pty-req', ptyReqData)
             self.conn.sendRequest(self, 'shell', '')
 
     def dataReceived(self, data):
