@@ -874,7 +874,7 @@ class MyRealm:
         assert interface == pb.IPerspective
         assert mind == "BRAINS!"
         self.p.loggedIn = 1
-        return pb.IPerspective, pb.AsReferenceable(self.p, "perspective"), self.p.logout
+        return pb.IPerspective, self.p, self.p.logout
 
 class MyPerspective(pb.Perspective):
 

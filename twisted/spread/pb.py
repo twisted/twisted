@@ -52,7 +52,7 @@ applied when serializing arguments.
 # Future Imports
 from __future__ import nested_scopes
 
-__version__ = "$Revision: 1.136 $"[11:-2]
+__version__ = "$Revision: 1.137 $"[11:-2]
 
 
 # System Imports
@@ -1582,8 +1582,12 @@ class IUsernameMD5Password(ICredentials):
 class IPerspective(Interface):
     """A perspective object.
 
-    This will typically be a Referenceable which is a PB-specific wrapper
-    around an avatar.
+    This is a Perspective Broker specific wrapper for an avatar. That
+    is to say, a PB-published view on to the business logic for the
+    system's concept of a 'user'.
+    
+    Expected to have methods beginning with 'perspective_' that will
+    be published remotely.
     """
 
 
@@ -1618,7 +1622,7 @@ class _PortalAuthChallenger(Referenceable):
 
     def _loggedIn(self, (interface, perspective, logout)):
         self.portalWrapper.broker.notifyOnDisconnect(logout)
-        return perspective
+        return AsReferenceable(perspective, "perspective")
     
     # IUsernameHashedPassword:
     def checkPassword(self, password):
