@@ -160,7 +160,6 @@ class TestCaseStats(TestStatsBase):
 
 
 def formatError(tm, tbformat=None):
-
     ret = [DOUBLE_SEPARATOR,
            '%s: %s (%s)\n' % (WORDS[tm.status], tm.name,
                               reflect.qual(tm.klass))]
@@ -176,14 +175,15 @@ def formatError(tm, tbformat=None):
     
 
 def formatImportError(name, error):
+    ret = [DOUBLE_SEPARATOR, '\nIMPORT ERROR:\n\n']
     if isinstance(error, failure.Failure):
-        what = error.getBriefTraceback()
+        what = itrial.IFormattedFailure(error)
     elif type(error) == types.TupleType:
         what = error.args[0]
     else:
         what = "%s\n" % error
-    ret = "Could not import %s: %s\n" % (name, what)
-    return ret
+    ret.append("Could not import %s: \n%s\n" % (name, what))
+    return ''.join(ret)
 
 
 class BrokenTestCaseWarning(Warning):
