@@ -49,7 +49,7 @@ class Resolver:
 
     def __init__(self, resolv = None, servers = None, timeout = 10):
         """
-        @type servers: C{list} of C{str} or C{None}
+        @type servers: C{list} of C{(str, int)} or C{None}
         @param servers: If not None, interpreted as a list of addresses of
         domain name servers to attempt to use for this lookup.  Addresses
         should be in dotted-quad form.  If specified, overrides C{resolv}.
@@ -91,7 +91,7 @@ class Resolver:
         for l in lines:
             l = l.strip()
             if l.startswith('nameserver'):
-                self.servers.append(l.split()[1])
+                self.servers.append((l.split()[1], dns.PORT))
                 #log.msg("Resolver added %s to server list" % (self.servers[-1],))
 
 
@@ -144,8 +144,9 @@ class Resolver:
         @rtype: C{Deferred}
         """
         if not len(self.connections):
+            host, port = self.pickServer()
             from twisted.internet import reactor
-            reactor.connectTCP(self.pickServer(), dns.PORT, self.factory)
+            reactor.connectTCP(host, port, self.factory)
             self.pending.append((defer.Deferred(), queries, timeout))
             return self.pending[-1][0]
         else:
