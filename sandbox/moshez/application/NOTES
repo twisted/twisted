@@ -1,7 +1,15 @@
-* Inter-dependencies are kept to a minimum:
-  * [python/persisted dependencies aren't counted]
-  * service doesn't depend on anything
-  * internet depends on service and twisted.internet
-  * compat depends on on internet [and service]
-  * apprun depends on twisted.internet and twisted.persisted
-  * twistd3/twistw depend on twisted.internet and apprun
+* Movement
+  * test_* will go into twisted/test
+  * twistd/mktap will go into twisted/scripts
+  * Everythin else will go into twisted/application
+* Changes
+  * twisted/internet/app.py will give a DeprecationWarning
+  * twisted/internet/app/ApplictionService will have a privilegedStartService
+    method which does nothing
+
+* Future
+  * t.i.app.ApplicationService will become an alias for 
+    t.application.service.Service
+  * t.i.app.Application will lose all methods [including __init__!] except
+    for upgrade*
+  * Eventually, twisted/internet/app.py will be removed
