@@ -544,12 +544,8 @@ class Site(protocol.Factory):
         stopping when it hits an element where isLeaf is true.
         """
         request.site = self
-        # The following is useful in twisted.web.guard.  It is useful to know
-        # when you are on a distributed web server so that you can set a
-        # different session-cookie than for the main site, so it uses sitepath
-        # as a unique key for what physical server it's on.  I don't know if
-        # this is really robust enough to deal with things like mod_rewrite
-        # though.  -glyph
+        # XXX: This seems like it might be useful but all the places it's
+        # actually been used have been eliminated.
         request.sitepath = copy.copy(request.prepath)
         return self.resource.getChildForRequest(request)
 

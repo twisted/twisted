@@ -67,7 +67,7 @@ class AuthForm(widgets.Form):
                 traceback.print_exc()
             else:
                 # TODO: fix this...
-                resKey = string.join(['AUTH',self.reqauth.serviceName]+request.sitepath, '_')
+                resKey = string.join(['AUTH',self.reqauth.serviceName], '_')
                 sess = request.getSession()
                 setattr(sess, resKey, perspective)
                 if self.sessionPerspective:
@@ -134,7 +134,7 @@ class WidgetGuard(widgets.Widget):
 
     def display(self, request):
         session = request.getSession()
-        resKey = string.join(['AUTH',self.serviceName]+request.sitepath, '_')
+        resKey = string.join(['AUTH',self.serviceName], '_')
         if hasattr(session, resKey):
             return self.wid.display(request)
         else:
