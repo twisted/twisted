@@ -10,13 +10,18 @@ from twisted.python import usage
 class MyOptions(usage.Options):
     optFlags = [["unsigned", "u"]]
     optParameters = [["tapfile", "t", "twistd.tap"],
-                  ["maintainer", "m", ""],
+                  ["maintainer", "m", "", "The maintainer's name and email in a specific format: "
+                   "'John Doe <johndoe@example.com>'"],
                   ["protocol", "p", ""],
                   ["description", "e", ""],
                   ["long_description", "l", ""],
                   ["set-version", "V", "1.0"],
                   ["debfile", "d", None],
-                  ["type", "y", "tap", "type of configuration: 'tap', 'xml, 'source' or 'python'"]]
+                  ["type", "y", "tap", "type of configuration: 'tap', 'xml, 'source' or 'python' for .tac files"]]
+
+    def postOptions(self):
+        if not self["maintainer"]:
+            raise usage.UsageError, "maintainer must be specified."
 
 
 type_dict = {
