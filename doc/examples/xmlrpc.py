@@ -15,12 +15,14 @@
 
 from twisted.web import xmlrpc
 from twisted.python import defer
+import xmlrpclib
 
 
 class Echoer(xmlrpc.XMLRPC):
     """An example object to be published.
     
-    Has two methods accessable by XML-RPC, 'echo' and 'hello'.
+    Has five methods accessable by XML-RPC, 'echo', 'hello', 'defer',
+    'defer_fail' and 'fail.
     """
     
     def _getFunction(self, functionPath):
@@ -38,15 +40,21 @@ class Echoer(xmlrpc.XMLRPC):
         """Return all passed args."""
         return args
     
-    def xmlrpc_hello(self, *args):
+    def xmlrpc_hello(self):
         """Return 'hello, world'."""
         return 'hello, world!'
     
-    def xmlrpc_defer(self, *args):
+    def xmlrpc_defer(self):
+        """Show how xmlrpc methods can return Deferred."""
         return defer.succeed("hello")
     
-    def xmlrpc_defer_fail(self, *args):
+    def xmlrpc_defer_fail(self):
+        """Show how xmlrpc methods can return failed Deferred."""
         return defer.fail(12)
+
+    def xmlrpc_fail(self):
+        """Show how we can return a failure code."""
+        return xmlrpclib.Fault(7, "Out of cheese.")
 
 
 def main():

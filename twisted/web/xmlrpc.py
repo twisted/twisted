@@ -27,7 +27,12 @@ import xmlrpclib
 # Sibling Imports
 from twisted.web import resource, server
 from twisted.python import log, defer
-from twisted.internet import task
+
+
+# Error codes for Twisted, if they conflict with yours then
+# modify them at runtime.
+NOT_FOUND = 8001
+FAILURE = 8002
 
 
 class NoSuchFunction(Exception):
@@ -55,20 +60,20 @@ class XMLRPC(resource.Resource):
         try:
             function = self._getFunction(functionPath)
         except NoSuchFunction:
-            result = xmlrpclib.Fault(1, "no such function")
+            result = xmlrpclib.Fault(NOT_FOUND, "no such function %s" % functionPath)
         else:
             try:
                 result = apply(function, args)
             except:
                 log.deferr()
-                result = xmlrpclib.Fault(2, "error")
+                result = xmlrpclib.Fault(FAILURE, "error")
         
         request.setHeader("content-type", "text/xml")
         if isinstance(result, defer.Deferred):
             responder = Result(self, request)
             self.requests[responder] = 1
             result.addCallbacks(responder.gotResult, responder.gotFailure)
-            task.schedule(result.arm)
+            result.arm()
             return server.NOT_DONE_YET
         else:
             if not isinstance(result, xmlrpclib.Fault):
@@ -78,10 +83,11 @@ class XMLRPC(resource.Resource):
     def _getFunction(self, functionPath):
         """Given a string, return a function, or raise NoSuchFunction.
         
-        This function will be called, and should return the result of the call
-        or a Deferred.
+        This returned function will be called, and should return the result
+        of the call, a Deferred, or a xmlrpclib.Fault instance.
         
-        Override in subclasses.
+        Override in subclasses - see doc/examples/xmlrpc.py for a nice
+        default policy.
         """
         raise NotImplementedError, "implement in subclass"
 
@@ -99,7 +105,7 @@ class Result:
 
     def gotFailure(self, error):
         """Callback for when request failed."""
-        self.finish(xmlrpclib.Fault(2, "error"))
+        self.finish(xmlrpclib.Fault(FAILURE, "error"))
 
     def finish(self, result):
         self.request.write(xmlrpclib.dumps(result, methodresponse=1))
