@@ -240,14 +240,10 @@ def loadPlugins(plugInType, fileList, debugInspection=None, showProgress=None):
     for (index, tmlFile) in zip(range(len(fileList)), fileList):
         showProgress(progress)
         debugInspection("Loading from " + tmlFile)
-        try:
-            pname = os.path.split(os.path.abspath(tmlFile))[-2]
-            dropin = DropIn(pname)
-            ns = {'register': dropin.register}
-            execfile(tmlFile, ns)
-        except:
-            debugInspection(sys.exc_info())
-            continue
+        pname = os.path.split(os.path.abspath(tmlFile))[-2]
+        dropin = DropIn(pname)
+        ns = {'register': dropin.register}
+        execfile(tmlFile, ns)
 
         ldp = len(dropin.plugins) or 1.0
         incr = increments * (1.0 / ldp)
