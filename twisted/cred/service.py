@@ -50,7 +50,7 @@ class Service(app.ApplicationService):
     I represent a set of abstractions which users may interact with over a
     specified protocol.
 
-    (See Also: twisted.spread.pb.Service)
+    @see: L{twisted.spread.pb.Service}
     """
 
     __implements__ = IService

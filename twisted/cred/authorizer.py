@@ -39,7 +39,7 @@ class Authorizer(Accessor):
     @type identityClass:          L{identity.Identity}
     @cvar identityClass:          The type of Identity that is created
                                   and managed by this authorizer.
-    @type serviceCollection:      L{_AbstractServiceCollection}
+    @type serviceCollection:      L{_AbstractServiceCollection<twisted.internet.app._AbstractServiceCollection>}
     @ivar serviceCollection:      The set of services that are using
                                   this authorizer.
     """
@@ -70,8 +70,8 @@ class Authorizer(Accessor):
     def addIdentity(self, identity):
         """Create an identity and make a callback when it has been created.
 
-        @raises L{DuplicateIdentity<error.DuplicateIdentity>}:
-            There is already an identity by this name.
+        @raises error.DuplicateIdentity: There is already an identity by
+            this name.
         """
         raise NotImplementedError()
 
