@@ -16,6 +16,7 @@
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 #
+
 """Mapping classes that use object identification 
 rather than hash/equality properties.
 """
@@ -24,7 +25,9 @@ from __future__ import generators
 from weakref import ref
 import UserDict
 
+
 class HashlessDictionary(UserDict.IterableUserDict):
+
     def __getitem__(self, key):
         return self.data[id(key)][1]
 
@@ -94,6 +97,7 @@ class HashlessDictionary(UserDict.IterableUserDict):
 
     def keys(self):
         return list(self.iterkeys())
+
 
 class HashlessWeakValueDictionary(HashlessDictionary):
     """Mapping class that references values weakly and keys by id.
