@@ -3788,7 +3788,7 @@ class _FetchParser:
                 base += '.FIELDS'
                 if self.negate:
                     base += '.NOT'
-                base += '(%s)' % (' '.join(self.fields),)
+                base += ' (%s)' % (' '.join(self.fields),)
             if self.part:
                 base = '.'.join(map(str, self.part)) + '.'
             return base
