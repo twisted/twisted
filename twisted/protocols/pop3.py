@@ -21,6 +21,7 @@
 from twisted.protocols import basic
 import os, time, string, operator, stat, md5, binascii
 from twisted.internet import protocol
+from twisted.python import components
 
 class POP3Error(Exception):
     pass
@@ -196,6 +197,26 @@ class POP3(basic.LineReceiver):
         """
         return Mailbox()
 
+
+class IMailbox(components.Interface):
+    
+    def listMessages(self):
+        """"""
+
+    def getMessage(self, index):
+        """"""
+    
+    def getUidl(self, index):
+        """"""
+    
+    def deleteMessage(self, index):
+        """"""
+    
+    def undeleteMessage(self, index):
+        """"""
+    
+    def sync(self):
+        """"""
 
 class Mailbox:
 

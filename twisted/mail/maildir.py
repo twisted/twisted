@@ -22,6 +22,7 @@ import stat, os, socket, time, md5, string
 from twisted.protocols import pop3, smtp
 from twisted.persisted import dirdbm
 from twisted.mail import mail
+from twisted.internet import defer
 
 
 _n = 0
@@ -67,13 +68,13 @@ class AbstractMaildirDomain:
         """
         return None
 
-    def exists(self, user, success, failure):
+    def exists(self, user):
         """Check for existence of user in the domain
         """
         if self.userDirectory(user.dest.local) is not None:
-            success(user)
+            return defer.succeed(user)
         else:
-            failure(user)
+            return defer.succeed(None)
 
     def startMessage(self, user):
         """Save a message for a given user

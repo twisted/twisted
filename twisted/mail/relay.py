@@ -19,6 +19,7 @@
 
 from twisted.protocols import smtp
 from twisted.mail import mail
+from twisted.internet import defer
 
 import os, time
 
@@ -34,15 +35,14 @@ class DomainQueuer:
     def __init__(self, service):
         self.service = service
 
-    def exists(self, user, success, failure):
+    def exists(self, user):
         """Check whether we will relay
 
         Call overridable willRelay method
         """
         if self.willRelay(user.protocol):
-            success(user)
-        else:
-            failure(user)
+            return defer.succeed(user)
+        return defer.succeed(None)
 
     def willRelay(self, protocol):
         """Check whether we agree to relay

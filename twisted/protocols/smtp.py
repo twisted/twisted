@@ -336,15 +336,20 @@ class SMTP(basic.LineReceiver):
             self.sendCode(553, str(e))
             return
             
-        self.validateTo(user, self._toValid, self._toInvalid)
+        self.validateTo(user).addCallbacks(self._cbValidate, self._ebValidate)
 
-    def _toValid(self, to, code=250, msg='Address recognized'):
-        self.__to.append(to)
-        self.sendCode(code, msg)
+    def _cbValidate(self, to, code=250, msg='Address recognized'):
+        if to is not None:
+            self.__to.append(to)
+            self.sendCode(code, msg)
+        else:
+            self.sendCode(550, 'Cannot receive for specified address')
 
-    def _toInvalid(self, to, code=550,
-                   msg='Cannot receive for specified address'):
-        self.sendCode(code, msg)
+    def _ebValidate(self, failure):
+        self.sendCode(
+            451,
+            'Requested action aborted: local error in processing'
+        )
 
     def do_DATA(self, rest):
         if self.__from is None or not self.__to:  
@@ -443,8 +448,8 @@ class SMTP(basic.LineReceiver):
             return
         success(origin)
 
-    def validateTo(self, user, success, failure):
-        success(user)
+    def validateTo(self, user):
+        return defer.succeed(user)
 
     def startMessage(self, recipients):
         return []

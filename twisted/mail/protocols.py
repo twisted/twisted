@@ -27,11 +27,10 @@ import string
 class DomainSMTP(smtp.SMTP):
     """SMTP server that uses twisted.mail service's domains."""
     
-    def validateTo(self, user, success, failure):
+    def validateTo(self, user):
         if not self.service.domains.has_key(user.dest.domain):
-            failure(user)
-            return
-        self.service.domains[user.dest.domain].exists(user, success, failure)
+            return defer.succeed(None)
+        return  self.service.domains[user.dest.domain].exists(user)
 
     def startMessage(self, users):
         ret = []

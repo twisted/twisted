@@ -56,11 +56,10 @@ class DummyDomain:
        for name in names:
            self.messages[name] = []
 
-   def exists(self, user, success, failure):
+   def exists(self, user):
        if self.messages.has_key(user.dest.local):
-           success(user)
-       else:
-           failure(user)
+           return defer.succeed(user)
+       return defer.succeed(None)
 
    def startMessage(self, user):
        return DummyMessage(self, user)

@@ -57,10 +57,10 @@ class BounceDomain:
 
     This can be used to block off certain domains.
     """
-    def exists(self, user, success, failure):
+    def exists(self, user):
         """No user exists in a BounceDomain -- always return 0
         """
-        failure(user)
+        return defer.succeed(None)
     
     def authenticateUserAPOP(self, user, digest):
         return None
