@@ -41,13 +41,13 @@ class _ReferenceableProducerWrapper(pb.Referenceable):
     def __init__(self, producer):
         self.producer = producer
 
-    def remote_resumeProducing(self, issuer):
+    def remote_resumeProducing(self):
         self.producer.resumeProducing()
 
-    def remote_pauseProducing(self, issuer):
+    def remote_pauseProducing(self):
         self.producer.pauseProducing()
 
-    def remote_stopProducing(self, issuer):
+    def remote_stopProducing(self):
         self.producer.stopProducing()
 
 
