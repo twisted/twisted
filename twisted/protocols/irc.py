@@ -810,12 +810,15 @@ class DccSendProtocol(protocol.Protocol, styles.Ephemeral):
     blocksize = 1024
     file = None
     bytesSent = 0
+    completed = 0
+    connected = 0
 
     def __init__(self, file):
         if type(file) is types.StringType:
             self.file = open(file, 'r')
 
     def connectionMade(self):
+        self.connected = 1
         self.sendBlock()
 
     def dataReceived(self, data):
@@ -845,8 +848,10 @@ class DccSendProtocol(protocol.Protocol, styles.Ephemeral):
         else:
             # Nothing more to send, transfer complete.
             self.transport.loseConnection()
+            self.completed = 1
 
     def connectionLost(self, reason):
+        self.connected = 0
         if hasattr(self.file, "close"):
             self.file.close()
 
