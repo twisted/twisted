@@ -36,6 +36,11 @@
 
 2003-12-03  Jp Calderone  <exarkun@twistedmatrix.com>
 
+	* twisted/protocols/imap4.py: Added support for the
+	IDLE command (RFC 2177).
+
+2003-12-03  Jp Calderone  <exarkun@twistedmatrix.com>
+
 	* twisted/python/log.py: Added exception handling to
 	log publishing code.  Observers which raise exceptions
 	will now be removed from the observer list.
