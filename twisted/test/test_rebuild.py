@@ -21,7 +21,6 @@ from twisted.trial import unittest
 from twisted.python import rebuild
 
 import crash_test_dummy
-from twisted.web import server
 f = crash_test_dummy.foo
 
 if sys.version_info >= (2, 2, 0):
@@ -87,8 +86,6 @@ class RebuildTestCase(unittest.TestCase):
         x.do()
         self.failUnlessIdentical(x.__class__, crash_test_dummy.X)
 
-        # Just for kicks?
-        rebuild.rebuild(server, doLog=False)
         self.failUnlessIdentical(f, crash_test_dummy.foo)
 
     def testComponentInteraction(self):

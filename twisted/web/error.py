@@ -20,7 +20,7 @@
 #t.w imports
 import resource
 
-from twisted.protocols import http
+from twisted.web import http
 
 class Error(Exception):
     def __init__(self, code, message = None, response = None):

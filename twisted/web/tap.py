@@ -21,7 +21,7 @@
 import string, os
 
 # Twisted Imports
-from twisted.web import server, static, twcgi, script, test, distrib, trp
+from twisted.web import server, static, twcgi, script, demo, distrib, trp
 from twisted.internet import interfaces
 from twisted.python import usage, reflect
 from twisted.spread import pb
@@ -48,7 +48,7 @@ class Options(usage.Options):
     longdesc = """\
 This creates a web.tap file that can be used by twistd.  If you specify
 no arguments, it will be a demo webserver that has the Test class from
-twisted.web.test in it."""
+twisted.web.demo in it."""
 
     def __init__(self):
         usage.Options.__init__(self)
@@ -163,7 +163,7 @@ def makeService(config):
             config['root'].indexNames = config['indexes']
     else:
         # This really ought to be web.Admin or something
-        root = test.Test()
+        root = demo.Test()
 
     if isinstance(root, static.File):
         root.registry.setComponent(interfaces.IServiceCollection, s)

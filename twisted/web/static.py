@@ -1,4 +1,4 @@
-# -*- test-case-name: twisted.test.test_web -*-
+# -*- test-case-name: twisted.web.test.test_web -*-
 # Twisted, the Framework of Your Internet
 # Copyright (C) 2001 Matthew W. Lefkowitz
 #
@@ -31,13 +31,13 @@ del cStringIO
 import urllib
 
 # Sibling Imports
-import server
-import error
-import resource
+from twisted.web import server
+from twisted.web import error
+from twisted.web import resource
 from twisted.web.util import redirectTo
 
 # Twisted Imports
-from twisted.protocols import http
+from twisted.web import http
 from twisted.python import threadable, log, components, failure, filepath
 from twisted.internet import abstract, interfaces, defer
 from twisted.spread import pb

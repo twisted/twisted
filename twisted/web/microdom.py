@@ -1,4 +1,4 @@
-# -*- test-case-name: twisted.test.test_xml -*-
+# -*- test-case-name: twisted.web.test.test_xml -*-
 #
 # Twisted, the Framework of Your Internet
 # Copyright (C) 2001-2002 Matthew W. Lefkowitz
@@ -39,7 +39,7 @@ import copy, re
 from cStringIO import StringIO
 
 # Twisted Imports
-from twisted.protocols.sux import XMLParser, ParseError
+from twisted.web.sux import XMLParser, ParseError
 from twisted.python import reflect
 from twisted.python.util import InsensitiveDict
 

@@ -1,4 +1,4 @@
-# -*- test-case-name: twisted.test.test_xmlrpc -*-
+# -*- test-case-name: twisted.web.test.test_xmlrpc -*-
 #
 # Twisted, the Framework of Your Internet
 # Copyright (C) 2001 Matthew W. Lefkowitz
@@ -37,7 +37,7 @@ import urlparse
 from twisted.web import resource, server
 from twisted.internet import defer, protocol, reactor
 from twisted.python import log, reflect
-from twisted.protocols import http
+from twisted.web import http
 
 # These are deprecated, use the class level definitions
 NOT_FOUND = 8001

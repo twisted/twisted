@@ -28,12 +28,12 @@ try:
 except ImportError:
     import StringIO
 
-from twisted.protocols import http
+from twisted.web import http
 from twisted import copyright
 import traceback
 import os
-import resource
-import static
+from twisted.web import resource
+from twisted.web import static
 
 rpyNoResource = """<p>You forgot to assign to the variable "resource" in your script. For example:</p>
 <pre>

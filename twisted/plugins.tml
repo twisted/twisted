@@ -5,7 +5,7 @@
 # TAP Builder modules
 
 register("Twisted Web",
-         "twisted.tap.web",
+         "twisted.web.tap",
          description="""
          A general-purpose web server which can serve from a
 	 filesystem or application resource.

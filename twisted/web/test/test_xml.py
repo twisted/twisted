@@ -23,7 +23,7 @@ from __future__ import nested_scopes
 
 from twisted.trial.unittest import TestCase
 
-from twisted.protocols import sux
+from twisted.web import sux
 
 from twisted.web import microdom
 

@@ -16,8 +16,8 @@
 
 from twisted.trial import unittest
 from twisted.web import server, resource, microdom, domhelpers
-from twisted.protocols import http
-from twisted.test import test_web
+from twisted.web import http
+from twisted.web.test import test_web
 from twisted.internet import reactor, defer, address
 
 from twisted.web.woven import template, model, view, controller, widgets, input, page, guard

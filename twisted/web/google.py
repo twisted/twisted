@@ -18,7 +18,7 @@
 """
 import urllib
 from twisted.internet import protocol, reactor, defer
-from twisted.protocols import http
+from twisted.web import http
 
 class GoogleChecker(http.HTTPClient):
 

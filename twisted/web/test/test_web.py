@@ -18,7 +18,8 @@ import string, random, copy
 
 from twisted.web import server, resource, util
 from twisted.internet import defer, interfaces
-from twisted.protocols import http, loopback
+from twisted.web import http
+from twisted.protocols import loopback
 from twisted.python import log, reflect
 from twisted.internet.address import IPv4Address
 

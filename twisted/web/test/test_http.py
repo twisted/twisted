@@ -20,7 +20,8 @@
 from __future__ import nested_scopes
 
 from twisted.trial import unittest
-from twisted.protocols import http, loopback
+from twisted.web import http
+from twisted.protocols import loopback
 from twisted.internet import protocol
 from twisted.test.test_protocols import StringIOWithoutClosing
 import string, random, urllib, cgi

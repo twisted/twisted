@@ -81,23 +81,8 @@ class AtLeastImportTestCase(unittest.TestCase):
         """
         from twisted.protocols import basic
         from twisted.protocols import ftp
-        from twisted.protocols import http
         from twisted.protocols import telnet
         from twisted.protocols import policies
-    
-    def test_web(self):
-        """Test importing web
-        """
-        from twisted.web import server
-        from twisted.web import html
-        from twisted.web import twcgi
-        from twisted.web import widgets
-        from twisted.web import script
-        from twisted.web import static
-        from twisted.web import test
-        from twisted.web import vhost
-        from twisted.web import guard
-        from twisted.web import error
     
     def test_enterprise(self):
         from twisted.enterprise import adbapi

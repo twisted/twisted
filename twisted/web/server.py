@@ -1,4 +1,4 @@
-# -*- test-case-name: twisted.test.test_web -*-
+# -*- test-case-name: twisted.web.test.test_web -*-
 
 # Twisted, the Framework of Your Internet
 # Copyright (C) 2001 Matthew W. Lefkowitz
@@ -48,7 +48,7 @@ NOT_DONE_YET = 1
 # Twisted Imports
 from twisted.spread import pb
 from twisted.internet import reactor, protocol, defer
-from twisted.protocols import http
+from twisted.web import http
 from twisted.python import log, reflect, roots, failure, components
 from twisted import copyright
 from twisted.cred import util

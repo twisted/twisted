@@ -263,6 +263,8 @@ desktop environments, and your toaster.
         "twisted.test",
         "twisted.trial",
         "twisted.web",
+        "twisted.web.test",
+        "twisted.web.scripts",
         "twisted.web.woven",
         "twisted.words",
         "twisted.words.protocols",

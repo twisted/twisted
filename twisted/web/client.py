@@ -1,4 +1,4 @@
-# -*- test-case-name: twisted.test.test_webclient -*-
+# -*- test-case-name: twisted.web.test.test_webclient -*-
 
 # Twisted, the Framework of Your Internet
 # Copyright (C) 2001-2002 Matthew W. Lefkowitz
@@ -24,7 +24,7 @@ API Stability: unstable
 
 import urlparse, os, types
 
-from twisted.protocols import http
+from twisted.web import http
 from twisted.internet import defer, protocol, reactor
 from twisted.python import failure
 from twisted.python.util import InsensitiveDict
