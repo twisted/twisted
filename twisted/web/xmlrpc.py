@@ -56,7 +56,8 @@ class XMLRPC(resource.Resource):
         del self.requests[request]
     
     def render(self, request):
-        args, functionPath = xmlrpclib.loads(request.content)
+        request.content.seek(0, 0)
+        args, functionPath = xmlrpclib.loads(request.content.read())
         try:
             function = self._getFunction(functionPath)
         except NoSuchFunction:
@@ -94,7 +95,7 @@ class XMLRPC(resource.Resource):
         if f and callable(f):
             return f
         else:
-            raise xmlrpc.NoSuchFunction
+            raise NoSuchFunction
 
 
 class Result:
