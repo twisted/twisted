@@ -1,6 +1,11 @@
 # -*- test-case-name: twisted.test.test_trial -*-
 # Copyright (c) 2001-2004 Twisted Matrix Laboratories.
 # See LICENSE for details.
+#
+# Author: Jonathan Simms <slyphon@twistedmatrix.com>
+#         and countless contributors
+#
+from __future__ import generators
 
 import traceback, warnings, new, inspect, types, time, signal
 from twisted.python import components, failure, util, log, reflect
@@ -399,4 +404,14 @@ class TrialLogObserver(object):
         if self in log.theLogPublisher.observers:
             log.removeObserver(self)
 
+
+# -- backwards compatibility code for 2.2 ---
+
+try:
+    from itertools import chain as iterchain
+except ImportError:
+    def iterchain(*iterables):
+        for it in iterables:
+            for element in it:
+                yield element
 

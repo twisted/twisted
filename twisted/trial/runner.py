@@ -53,7 +53,7 @@ from __future__ import generators
 
 
 import os, glob, types, warnings, time, sys, gc, cPickle as pickle, signal
-import os.path as osp, itertools, fnmatch, random
+import os.path as osp, fnmatch, random
 from os.path import join as opj
 
 import doctest
@@ -698,7 +698,7 @@ class TestMethod(MethodInfoBase):
         #       should probably allow for more complex specifications. Perhaps I will define a 
         #       Todo object that will allow for greater flexibility/complexity.
         # 
-        for f in itertools.chain(self.failures, self.errors):
+        for f in util.iterchain(self.failures, self.errors):
             if not itrial.ITodo(self.todo).isExpected(f):
                 return ERROR
         return EXPECTED_FAILURE
