@@ -682,6 +682,9 @@ class lmx:
     def __setitem__(self, key, val):
         self.node.setAttribute(key, val)
 
+    def __getitem__(self, key):
+        return self.node.getAttribute(key)
+
     def text(self, txt, raw=0):
         nn = Text(txt, raw=raw)
         self.node.appendChild(nn)
@@ -692,5 +695,7 @@ class lmx:
         self.node.appendChild(newNode)
         xf = lmx(newNode)
         for k, v in kw.items():
+            if k[0] == '_':
+                k = k[1:]
             xf[k]=v
         return xf
