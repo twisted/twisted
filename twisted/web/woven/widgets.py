@@ -21,7 +21,7 @@ from __future__ import nested_scopes
 
 import urllib
 import warnings
-from twisted.web.microdom import parseString
+from twisted.web.microdom import parseString, Element, Node
 from twisted.web import domhelpers
 
 
@@ -828,7 +828,29 @@ class RawText(Widget):
         self.node = domhelpers.RawText(self.getData())
         return self.node
 
+from types import StringType
+
+class Link(Widget):
+    """A utility class for generating <a href='foo'>bar</a> tags.
+    """
+
+    def setUp(self, request, node, data):
+        # TODO: we ought to support Deferreds here for both text and href!
+        if isinstance(data, StringType):
+            node.tagName = 'a'
+            node.setAttribute("href", data)
+        else:
+            txt = data.getSubmodel("text").getData()
+            if not isinstance(txt, Node):
+                txt = document.createTextNode(txt)
+            lnk = data.getSubmodel("href").getData()
+            self['href'] = lnk
+            node.tagName = 'a'
+            domhelpers.clearNode(node)
+            node.appendChild(txt)
+
 
 view.registerViewForModel(Text, model.StringModel)
 view.registerViewForModel(List, model.ListModel)
 view.registerViewForModel(KeyedList, model.DictionaryModel)
+view.registerViewForModel(Link, model.Link)

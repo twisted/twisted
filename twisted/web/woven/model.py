@@ -15,7 +15,7 @@
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
-__version__ = "$Revision: 1.31 $"[11:-2]
+__version__ = "$Revision: 1.32 $"[11:-2]
 
 import types
 import weakref
@@ -408,6 +408,12 @@ class DeferredWrapper(Wrapper):
             self.__class__ = new.__class__
             self.__dict__ = new.__dict__
             self.views, self.subviews = views, subviews
+
+class Link(AttributeModel):
+    def __init__(self, href, text):
+        AttributeModel.__init__(self)
+        self.href = href
+        self.text = text
 
 try:
     components.registerAdapter(StringModel, types.StringType, interfaces.IModel)
