@@ -7,7 +7,9 @@ style "Input" = "codefont" {
 }
 
 style "Console" = "codefont" {
-    # pass
+    # XXX: We should include a bg[NORMAL] line here, but doing so 
+    # messes things up as it doesn't seem to set the color of the
+    # backdrop.
 }
 
 style "Console_stdout" = "Console" {
@@ -32,3 +34,25 @@ style "Console_command" = "Console" {
 
 widget "Manhole.*.Input" style "Input"
 widget "Manhole.*.Console" style "Console"
+
+style "BoldCompressed" {
+    font = "-urw-nimbus sans l-bold-r-condensed-*-*-120-*-*-p-*-iso8859-1"
+}
+
+style "Compressed" {
+    font = "-urw-nimbus sans l-regular-r-condensed-*-*-120-*-*-p-*-iso8859-1"
+}
+
+style "AttributeName" = "Compressed" {
+    fg[NORMAL] = { 0.0, 0.3, 0.0 }
+}
+
+style "AttributeValue" = "Compressed" {
+    fg[NORMAL] = { 0.0, 0.4, 0.6 }
+}
+
+widget "*.attribute_category" style "BoldCompressed"
+widget "*.attribute_name" style "AttributeName"
+widget "*.attribute_value" style "AttributeValue"
+
+
