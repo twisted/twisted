@@ -135,7 +135,6 @@ class SSHConnection(service.SSHService):
         channel.dataReceived(data)
 
     def ssh_CHANNEL_EXTENDED_DATA(self, packet):
-        log.msg('extended data here')
         localChannel, typeCode = struct.unpack('>2L', packet[: 8])
         data = common.getNS(packet[8:])[0]
         self.channels[localChannel].extReceived(typeCode, data)
@@ -204,8 +203,9 @@ class SSHConnection(service.SSHService):
         self.localChannelID+=1
 
     def sendRequest(self, channel, requestType, data, wantReply = 0):
+        log.logOwner.own(self.transport.transport)
         log.msg('sending request for channel %s, request %s'%(channel.id, requestType))
-
+        log.logOwner.disown(self.transport.transport)
         self.transport.sendPacket(MSG_CHANNEL_REQUEST, struct.pack('>L', 
                                     self.channelsToRemoteChannel[channel])
                                   + common.NS(requestType)+chr(wantReply)
@@ -348,7 +348,9 @@ class SSHChannel:
     def addWindowBytes(self, bytes):
         self.remoteWindowLeft = self.remoteWindowLeft+bytes
         if self.buf:
-            self.write('')
+            b = self.buf
+            self.buf = ''
+            self.write(b)
 
     def requestReceived(self, requestType, data):
         foo = requestType.replace('-', '_')
@@ -373,8 +375,8 @@ class SSHChannel:
     # transport stuff
     def write(self, data):
         if self.buf:
-            data+=self.buf
-            self.buf = ''
+            self.buf += data
+            return
         if len(data) > self.remoteWindowLeft:
             data, self.buf = data[: self.remoteWindowLeft],  \
                             data[self.remoteWindowLeft:]
