@@ -28,7 +28,7 @@ import urllib
 from twisted.protocols import http
 from twisted.internet import reactor, protocol
 from twisted.spread import pb
-from twisted.python import log
+from twisted.python import log, filepath
 
 # Sibling Imports
 import server
@@ -38,25 +38,23 @@ import resource
 import static
 from server import NOT_DONE_YET
 
-class CGIDirectory(resource.Resource):
+class CGIDirectory(resource.Resource, filepath.FilePath):
     def __init__(self, pathname):
         resource.Resource.__init__(self)
-        self.path = pathname
+        filepath.FilePath.__init__(self, pathname)
 
     def getChild(self, path, request):
-        if static.isDangerous(path):
-            return static.dangerousPathError
-
-        fn = os.path.join(self.path, path)
-
-        if os.path.isdir(fn):
-            return CGIDirectory(fn)
-        if os.path.exists(fn):
-            return CGIScript(fn)
+        fnp = self.child(path)
+        if not fnp.exists():
+            return static.File.childNotFound
+        elif fnp.isdir():
+            return CGIDirectory(fnp.path)
+        else:
+            return CGIScript(fnp.path)
         return error.NoResource()
 
     def render(self, request):
-        return error.NoResource().render(request)
+        return static.File.childNotFound.render(request)
 
 class CGIScript(resource.Resource):
     """I represent a CGI script.

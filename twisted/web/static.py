@@ -24,6 +24,7 @@ from __future__ import nested_scopes
 import os, stat, string
 import cStringIO
 import traceback
+import warnings
 import types
 StringIO = cStringIO
 del cStringIO
@@ -38,7 +39,7 @@ from twisted.web.util import redirectTo
 
 # Twisted Imports
 from twisted.protocols import http
-from twisted.python import threadable, log, components, failure
+from twisted.python import threadable, log, components, failure, filepath
 from twisted.internet import abstract, interfaces, defer
 from twisted.spread import pb
 from twisted.persisted import styles
@@ -188,7 +189,7 @@ def loadMimeTypes(mimetype_locations=['/etc/mime.types']):
     return contentTypes
 
 
-class File(resource.Resource, styles.Versioned):
+class File(resource.Resource, styles.Versioned, filepath.FilePath):
     """
     File is a resource that represents a plain non-interpreted file
     (although it can look for an extension like .rpy or .cgi and hand the
@@ -256,29 +257,26 @@ class File(resource.Resource, styles.Versioned):
         """Create a file with the given path.
         """
         resource.Resource.__init__(self)
-        self.path = path
+        filepath.FilePath.__init__(self, path)
         # Remove the dots from the path to split
-        p = os.path.abspath(path)
-        p, ext = os.path.splitext(p)
-        self.encoding = self.contentEncodings.get(string.lower(ext))
-        # if there was an encoding, get the next suffix
-        if self.encoding is not None:
-            p, ext = os.path.splitext(p)
+        p, ext = self.splitext()
+        ext = ext.lower()
+        if self.contentEncodings.has_key(ext):
+            self.encoding = enc = self.contentEncodings[ext]
+            ext = os.path.splitext(p)[1].lower()
+        else:
+            self.encoding = None
         self.defaultType = defaultType
-        if ignoredExts in (0, 1):
-            import warnings
+        if ignoredExts in (0, 1) or allowExt:
             warnings.warn("ignoredExts should receive a list, not a boolean")
-        if (ignoredExts == 1) or (ignoredExts == 0) or (ignoredExts == () and allowExt):
-            self.ignoredExts = ['*']
+            if ignoredExts or allowExt:
+                self.ignoredExts = ['*']
+            else:
+                self.ignoredExts = []
         else:
-            self.ignoredExts = list(ignoredExts)
-
-        if not registry:
-            self.registry = Registry()
-        else:
-            self.registry = registry
-
-        self.type = self.contentTypes.get(string.lower(ext), defaultType)
+            self.ignoredExts = ignoredExts
+        self.registry = registry or Registry()
+        self.type = self.contentTypes.get(ext, defaultType)
 
     def ignoreExt(self, ext):
         """Ignore the given extension.
@@ -289,72 +287,51 @@ class File(resource.Resource, styles.Versioned):
 
     childNotFound = error.NoResource("File not found.")
 
+    def directoryListing(self):
+        return widgets.WidgetPage(DirectoryListing(self.path,
+                                                   self.listNames()))
+
     def getChild(self, path, request):
         """See twisted.web.Resource.getChild.
         """
-        if not os.path.isdir(self.path):
+        self.restat()
+        
+        if not self.isdir():
             return self.childNotFound
 
-        if isDangerous(path):
-            return dangerousPathError
+        if path:
+            fpath = self.child(path)
+        else:
+            fpath = self.childSearchPreauth(*self.indexNames)
+            if fpath is None:
+                return self.directoryListing()
 
-        if path == '':
-            for indexName in self.indexNames:
-                if os.path.exists(os.path.join(self.path, indexName)):
-                    path = indexName
-                    break
-            else:
-                return widgets.WidgetPage(DirectoryListing(self.path,
-                                                           self.listNames()))
+        if not fpath.exists():
+            return self.childNotFound
 
-        childPath = os.path.join(self.path, path)
-
-        if not os.path.exists(childPath):
-            for ignoredExt in self.ignoredExts:
-                newChildPath = os.path.join(self.path, path+ignoredExt)
-                if os.path.exists(newChildPath):
-                    childPath = newChildPath
-                    break
-                elif ignoredExt == '*':
-                    for fn in os.listdir(self.path):
-                        if os.path.splitext(fn)[0]==path:
-                            log.msg('    Returning %s' % fn)
-                            childPath = os.path.join(self.path, fn)
-                            break
-            else:
-                return self.childNotFound
-
-        # forgive me, oh lord, for I know not what I do
-        p, ext = os.path.splitext(childPath)
-        processor = self.processors.get(ext)
+        processor = self.processors.get(fpath.splitext()[1])
         if processor:
-            return resource.IResource(processor(childPath, self.registry))
-
-        f = self.createSimilarFile(childPath)
-        f.processors = self.processors
-        f.indexNames = self.indexNames[:]
-        return f
+            return resource.IResource(processor(fpath.path, self.registry))
+        return self.createSimilarFile(fpath.path)
 
     # methods to allow subclasses to e.g. decrypt files on the fly:
     def openForReading(self):
         """Open a file and return it."""
-        return open(self.path, "rb")
+        return self.open()
 
     def getFileSize(self):
         """Return file size."""
-        return os.path.getsize(self.path)
+        return self.getsize()
 
 
     def render(self, request):
         """You know what you doing."""
+        self.restat()
 
-        if not os.path.exists(self.path):
+        if not self.exists():
             return error.NoResource("File not found.").render(request)
 
-        mode, ino, dev, nlink, uid, gid, size, atime, mtime, ctime =\
-              os.stat(self.path)
-
-        if os.path.isdir(self.path): # stat.S_ISDIR(mode) (see above)
+        if self.isdir():
             return self.redirect(request)
 
         #for content-length
@@ -376,7 +353,7 @@ class File(resource.Resource, styles.Versioned):
             else:
                 raise
 
-        if request.setLastModified(mtime) is http.CACHED:
+        if request.setLastModified(self.getmtime()) is http.CACHED:
             return ''
 
         try:
@@ -418,8 +395,9 @@ class File(resource.Resource, styles.Versioned):
         return redirectTo(addSlash(request), request)
 
     def listNames(self):
-        if not os.path.isdir(self.path): return []
-        directory = os.listdir(self.path)
+        if not self.isdir():
+            return []
+        directory = self.listdir()
         directory.sort()
         return directory
 
@@ -427,6 +405,7 @@ class File(resource.Resource, styles.Versioned):
         return map(lambda fileName, self=self: self.createSimilarFile(os.path.join(self.path, fileName)), self.listNames())
 
     def createPickleChild(self, name, child):
+        # XXX WTF Is this crap!?!!?!? whoever added it, please remove it -glyph
         if not os.path.isdir(self.path):
             resource.Resource.putChild(self, name, child)
         # xxx use a file-extension-to-save-function dictionary instead
@@ -443,7 +422,11 @@ class File(resource.Resource, styles.Versioned):
         fl.close()
 
     def createSimilarFile(self, path):
-        return self.__class__(path, self.defaultType, self.ignoredExts, self.registry)
+        f = self.__class__(path, self.defaultType, self.ignoredExts, self.registry)
+        # refactoring by steps, here - constructor should almost certainly take these
+        f.processors = self.processors
+        f.indexNames = self.indexNames[:]
+        return f
 
 
 class DirectoryListing(widgets.StreamWidget):
