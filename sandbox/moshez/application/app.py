@@ -39,24 +39,6 @@ class Application(service.MultiService, components.Componentized):
     def __repr__(self):
         return "<%s app>" % repr(self.name)
 
-    def setEUID(self):
-        try:
-            os.setegid(self.gid)
-            os.seteuid(self.uid)
-        except (AttributeError, OSError):
-            pass
-        else:
-            log.msg('set euid/egid %s/%s' % (self.uid, self.gid))
-
-    def setUID(self):
-        try:
-            os.setgid(self.gid)
-            os.setuid(self.uid)
-        except (AttributeError, OSError):
-            pass
-        else:
-            log.msg('set uid/gid %s/%s' % (self.uid, self.gid))
-
     def scheduleSave(self):
         from twisted.internet import reactor
         p = persist.IPersistable(self)

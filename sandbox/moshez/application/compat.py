@@ -154,6 +154,24 @@ class ServiceNetwork:
         log.callWithLogger(self, reactor.run,
                            installSignalHandlers=installSignalHandlers)
 
+    def setEUID(self):
+        try:
+            os.setegid(self.app.gid)
+            os.seteuid(self.app.uid)
+        except (AttributeError, OSError):
+            pass
+        else:
+            log.msg('set euid/egid %s/%s' % (self.app.uid, self.app.gid))
+
+    def setUID(self):
+        try:
+            os.setgid(self.app.gid)
+            os.setuid(self.app.uid)
+        except (AttributeError, OSError):
+            pass
+        else:
+            log.msg('set uid/gid %s/%s' % (self.app.uid, self.app.gid))
+
     def __getattr__(self, name):
         return getattr(self.app, name)
 
