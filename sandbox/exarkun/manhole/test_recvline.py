@@ -309,10 +309,20 @@ class TestSession(TerminalSession):
 
 components.registerAdapter(TestSession, TerminalUser, session.ISession)
 
-class _SSHMixin:
+class _BaseMixin:
+    WIDTH = 80
+    HEIGHT = 24
+
+    def _test(self, s, lines):
+        self._testwrite(s)
+        self._emptyBuffers()
+        self.assertEquals(
+            str(self.recvlineClient),
+            '\n'.join(lines) +
+            '\n' * (self.HEIGHT - len(lines)))
+
+class _SSHMixin(_BaseMixin):
     def setUp(self):
-        HEIGHT = 24
-        WIDTH = 80
         u, p = 'testuser', 'testpass'
         sshFactory = ConchFactory([checkers.InMemoryUsernamePasswordDatabaseDontUse(**{u: p})])
         sshFactory.startFactory()
@@ -330,7 +340,6 @@ class _SSHMixin:
         sshClient.makeConnection(clientTransport)
         sshServer.makeConnection(serverTransport)
 
-        self.HEIGHT = HEIGHT
         self.recvlineClient = recvlineClient
         self.sshClient = sshClient
         self.sshServer = sshServer
@@ -339,26 +348,16 @@ class _SSHMixin:
 
         self._emptyBuffers()
 
+    def _testwrite(self, bytes):
+        self.sshClient.write(s)
+
     def _emptyBuffers(self):
         while self.serverTransport.buffer or self.clientTransport.buffer:
             log.callWithContext({'system': 'serverTransport'}, self.serverTransport.clearBuffer)
             log.callWithContext({'system': 'clientTransport'}, self.clientTransport.clearBuffer)
 
-    def _test(self, s, lines):
-        self.sshClient.write(s)
-
-        self._emptyBuffers()
-
-        self.assertEquals(
-            str(self.recvlineClient),
-            '\n'.join(lines) +
-            '\n' * (self.HEIGHT - len(lines)))
-
-class _TelnetMixin:
+class _TelnetMixin(_BaseMixin):
     def setUp(self):
-        WIDTH = 80
-        HEIGHT = 24
-
         recvlineServer = self.serverProtocol()
         insultsServer = insults.ServerProtocol(lambda: recvlineServer)
         telnetServer = telnet.TelnetTransport(lambda: insultsServer)
@@ -375,22 +374,17 @@ class _TelnetMixin:
         serverTransport.clearBuffer()
         clientTransport.clearBuffer()
 
-        self.HEIGHT = HEIGHT
         self.recvlineClient = recvlineClient
         self.telnetClient = telnetClient
         self.clientTransport = clientTransport
         self.serverTransport = serverTransport
 
-    def _test(self, s, lines):
-        self.telnetClient.write(s)
+    def _testwrite(self, bytes):
+        self.telnetClient.write(bytes)
 
+    def _emptyBuffers(self):
         self.clientTransport.clearBuffer()
         self.serverTransport.clearBuffer()
-
-        self.assertEquals(
-            str(self.recvlineClient),
-            '\n'.join(lines) +
-            '\n' * (self.HEIGHT - len(lines)))
 
 class RecvlineLoopbackMixin:
     serverProtocol = EchoServer
