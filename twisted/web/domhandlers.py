@@ -81,7 +81,7 @@ class SingleValue(InputHandler):
 
 SingleValueInputHandler = SingleValue
 
-class Anything(SingleValueInputHandler):
+class Anything(SingleValue):
     """
     Handle anything except for None
     """
@@ -92,7 +92,7 @@ class Anything(SingleValueInputHandler):
 
 AnythingInputHandler = Anything
 
-class Integer(SingleValueInputHandler):
+class Integer(SingleValue):
     """
     Only allow a single integer
     """
@@ -110,7 +110,7 @@ class Integer(SingleValueInputHandler):
 
 IntHandler = Integer
 
-class Float(SingleValueInputHandler):
+class Float(SingleValue):
     """
     Only allow a single float
     """
@@ -134,7 +134,7 @@ class List(InputHandler):
 
 ListHandler = List
 
-class NewObject(SingleValueInputHandler):
+class NewObject(SingleValue):
     """
     Check to see if the name the user entered is valid.
     If it is, create the object. If not, tell the user why.
