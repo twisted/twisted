@@ -228,4 +228,4 @@ class Augmentation:
 def safe(text):
     """Make a string safe to include in an SQL statement
     """
-    return text.replace("'", "''")
+    return text.replace("'", "''").replace("\\", "\\\\")
