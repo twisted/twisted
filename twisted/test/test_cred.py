@@ -20,7 +20,7 @@ Tests for twisted.cred.
 """
 
 import sys
-from pyunit import unittest
+from twisted.trial import unittest
 from types import *
 from twisted.internet import app
 from twisted.cred import authorizer, identity, perspective, service, util

@@ -17,7 +17,7 @@
 """Test cases for bounce message generation
 """
 
-from pyunit import unittest
+from twisted.trial import unittest
 from twisted.mail import bounce
 import rfc822, cStringIO
 

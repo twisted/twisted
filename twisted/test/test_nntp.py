@@ -15,7 +15,7 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 import os, string, shutil
 
-from pyunit import unittest
+from twisted.trial import unittest
 from twisted.news import news, database
 from twisted.protocols import nntp, loopback
 from twisted.internet import reactor, protocol

@@ -18,7 +18,7 @@
 
 import random
 
-from pyunit import unittest
+from twisted.trial import unittest
 
 from twisted.web.woven import model, view, controller, interfaces
 from twisted.python import components

@@ -15,7 +15,7 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 #
 
-from pyunit import unittest
+from twisted.trial import unittest
 from twisted.popsicle import mailsicle, freezer
 import gc
 

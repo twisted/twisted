@@ -20,7 +20,7 @@
 Test cases for defer module.
 """
 
-from pyunit import unittest
+from twisted.trial import unittest
 from twisted.internet import reactor, defer
 from twisted.python import failure
 

@@ -19,7 +19,7 @@
 Test cases for twisted.smtp module.
 """
 
-from pyunit import unittest
+from twisted.trial import unittest
 import twisted.internet.protocol, twisted.protocols.smtp
 from twisted import protocols
 from twisted import internet

@@ -18,7 +18,7 @@
 Test cases for twisted.protocols package.
 """
 
-from pyunit import unittest
+from twisted.trial import unittest
 from twisted.protocols import basic, wire
 from twisted.internet import reactor, protocol
 

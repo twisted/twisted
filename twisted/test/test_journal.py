@@ -1,6 +1,6 @@
 """Testing for twisted.persisted.journal."""
 
-from pyunit import unittest
+from twisted.trial import unittest
 
 from twisted.persisted.journal.base import ICommand, MemoryJournal, serviceCommand, ServiceWrapperCommand, command, Wrappable
 from twisted.persisted.journal.picklelog import DirDBMLog

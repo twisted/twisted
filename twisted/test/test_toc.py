@@ -15,7 +15,7 @@
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
-from pyunit import unittest
+from twisted.trial import unittest
 
 from twisted.protocols import toc
 from twisted.internet import protocol, main

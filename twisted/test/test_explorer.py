@@ -19,7 +19,7 @@
 Test cases for explorer
 """
 
-from pyunit import unittest
+from twisted.trial import unittest
 
 from twisted.manhole import explorer
 

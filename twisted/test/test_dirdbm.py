@@ -19,7 +19,7 @@
 Test cases for dirdbm module.
 """
 
-from pyunit import unittest
+from twisted.trial import unittest
 from twisted.persisted import dirdbm
 import os, tempfile, shutil, glob
 

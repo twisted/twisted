@@ -22,7 +22,7 @@ import sys, os
 
 from cStringIO import StringIO
 
-from pyunit import unittest
+from twisted.trial import unittest
 
 from twisted.spread import pb, util
 from twisted.internet import protocol, main

@@ -19,7 +19,7 @@
 Test running processes.
 """
 
-from pyunit import unittest
+from twisted.trial import unittest
 
 import cStringIO, gzip, os, popen2, time, sys
 

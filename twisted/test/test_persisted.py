@@ -16,7 +16,7 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
 # System Imports
-from pyunit import unittest
+from twisted.trial import unittest
 import cPickle
 import cStringIO
 

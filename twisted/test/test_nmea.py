@@ -18,7 +18,7 @@
 
 import StringIO
 
-from pyunit import unittest
+from twisted.trial import unittest
 from twisted.internet import reactor, protocol
 from twisted.python import reflect
 

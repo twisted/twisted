@@ -19,7 +19,7 @@
 Tests for twisted.protocols.dns.
 """
 
-from pyunit import unittest
+from twisted.trial import unittest
 from StringIO import StringIO
 
 from twisted.protocols import dns

@@ -20,7 +20,7 @@ Test cases for twisted.reflect module.
 """
 
 # Twisted Imports
-from pyunit import unittest
+from twisted.trial import unittest
 from twisted.python import reflect
 from twisted.python import reference
 

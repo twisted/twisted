@@ -18,7 +18,7 @@
 Test cases for formmethod module.
 """
 
-from pyunit import unittest
+from twisted.trial import unittest
 
 from twisted.python import formmethod
 

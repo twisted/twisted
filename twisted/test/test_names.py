@@ -20,7 +20,7 @@
 Test cases for twisted.names.
 """
 import sys, socket, operator
-from pyunit import unittest
+from twisted.trial import unittest
 
 from twisted.internet import reactor, protocol, defer
 from twisted.names import client, server, common, authority
@@ -120,7 +120,7 @@ reverse_domain = NoFileAuthority(
 )
 
 
-class ServerDNSTestCase(unittest.DeferredTestCase):
+class ServerDNSTestCase(unittest.TestCase):
     """Test cases for DNS server and client."""
     
     def setUp(self):

@@ -1,7 +1,7 @@
 """Test win32 shortcut script
 """
 
-from pyunit import unittest
+from twisted.trial import unittest
 
 import os
 if os.name == 'nt':

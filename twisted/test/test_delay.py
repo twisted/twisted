@@ -20,7 +20,7 @@
 Test cases for delay module.
 """
 
-from pyunit import unittest
+from twisted.trial import unittest
 from twisted.python import delay
 
 class Looper:

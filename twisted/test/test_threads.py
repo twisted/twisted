@@ -16,7 +16,7 @@
 
 """Test methods in twisted.internet.threads and reactor thread APIs."""
 
-from pyunit import unittest
+from twisted.trial import unittest
 
 from twisted.internet import threads, reactor
 from twisted.python import threadable, failure
@@ -104,5 +104,3 @@ class ThreadsTestCase(unittest.TestCase):
         self.assert_( isinstance(error, failure.Failure) )
         self.assertEquals(error.type, TypeError)
         self.gotResult = 1
-
-

@@ -21,7 +21,7 @@ Test cases for timeoutqueue module.
 """
 import threading, time
 
-from pyunit import unittest
+from twisted.trial import unittest
 from twisted.python import timeoutqueue
 
 

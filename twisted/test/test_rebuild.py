@@ -18,7 +18,7 @@
 
 import sys
 
-from pyunit import unittest
+from twisted.trial import unittest
 from twisted.python import rebuild
 
 import crash_test_dummy

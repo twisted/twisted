@@ -19,7 +19,7 @@
 Test cases for twisted.protocols.pop3 module.
 """
 
-from pyunit import unittest
+from twisted.trial import unittest
 from twisted import mail
 import twisted.mail.protocols
 import twisted.protocols.pop3

@@ -20,7 +20,7 @@
 Test cases for failure module.
 """
 
-from pyunit import unittest
+from twisted.trial import unittest
 import StringIO
 
 from twisted.python import failure

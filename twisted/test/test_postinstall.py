@@ -1,7 +1,7 @@
 """Test win32 postinstall script
 """
 
-from pyunit import unittest
+from twisted.trial import unittest
 
 import os
 

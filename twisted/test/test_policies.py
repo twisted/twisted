@@ -17,7 +17,7 @@
 
 """Test code for policies."""
 
-from pyunit import unittest
+from twisted.trial import unittest
 
 import time
 

@@ -19,7 +19,7 @@
 """
 
 import types
-from pyunit import unittest
+from twisted.trial import unittest
 from twisted.spread import jelly
 #from twisted import sexpy
 

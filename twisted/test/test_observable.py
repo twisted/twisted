@@ -23,7 +23,7 @@ Test cases for twisted.observable module.
 from operator import setitem
 
 # Twisted Imports
-from pyunit import unittest
+from twisted.trial import unittest
 from twisted.python import observable
 
 class DummyEvent:

@@ -15,7 +15,7 @@
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
-from pyunit import unittest
+from twisted.trial import unittest
 
 
 import traceback
@@ -63,8 +63,7 @@ class SimpleService(pb.Service):
 
 
 class PBFailureTest(unittest.TestCase):
-    def __init__(self, methodName='runTest'):
-        unittest.TestCase.__init__(self, methodName)
+    def __init__(self):
         self.total = 0
 
 

@@ -16,7 +16,7 @@
 
 """Test cases for Twisted component architecture."""
 
-from pyunit import unittest
+from twisted.trial import unittest
 
 from twisted.python import components
 

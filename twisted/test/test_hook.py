@@ -20,7 +20,7 @@ Test cases for twisted.hook module.
 """
 
 from twisted.python import hook
-from pyunit import unittest
+from twisted.trial import unittest
 
 class BaseClass:
     """

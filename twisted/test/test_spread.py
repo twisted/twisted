@@ -1,5 +1,5 @@
 
-from pyunit import unittest
+from twisted.trial import unittest
 
 from twisted.spread.util import LocalAsyncForwarder
 from twisted.python.components import Interface

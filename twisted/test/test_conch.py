@@ -21,7 +21,7 @@ from twisted.conch.ssh import keys, transport, factory, userauth, connection, co
 from twisted.cred import authorizer
 from twisted.internet import reactor, defer, app, protocol
 from twisted.python import log
-from pyunit import unittest
+from twisted.trial import unittest
 from Crypto.PublicKey import RSA, DSA
 
 publicRSA = "ssh-rsa AAAAB3NzaC1yc2EAAAABIwAAAGEArzJx8OYOnJmzf4tfBEvLi8DVPrJ3/c9k2I/Az64fxjHf9imyRJbixtQhlH9lfNjUIx+4LmrJH5QNRsFporcHDKOTwTTYLh5KmRpslkYHRivcJSkbh/C+BR3utDS555mV comment"

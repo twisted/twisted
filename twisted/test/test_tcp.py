@@ -19,7 +19,7 @@ from __future__ import nested_scopes
 """Generic TCP tests."""
 
 import socket
-from pyunit import unittest
+from twisted.trial import unittest
 
 from twisted.internet import protocol, reactor
 from twisted.internet import error
