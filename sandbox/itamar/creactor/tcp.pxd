@@ -23,7 +23,6 @@ cdef public class _CMixin [object TwistedTransport, type TwistedTransportType]:
     cdef int _c_socketfd
 
     cdef void setReadBuffer(self, char* buffer, size_t buflen)
-    cdef void cwrite(self, Buffer b)
 
 
 cdef class CProtocol:

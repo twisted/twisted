@@ -65,9 +65,6 @@ cdef public class _CMixin [object TwistedTransport, type TwistedTransportType]:
     cdef void setReadBuffer(self, char* buffer, size_t buflen):
         self._c_buffer = buffer
         self._c_buflen = buflen
-
-    cdef void cwrite(self, Buffer b):
-        self.write(b)
     
     def doRead(self):
         """doRead for tcp.Connection that knows about cProtocol."""
@@ -92,11 +89,17 @@ cdef public class _CMixin [object TwistedTransport, type TwistedTransportType]:
             return Connection.doRead(self)
 
 
+# C API for talking to transports, will be published in .h file
 cdef public void tt_setReadBuffer(_CMixin transport, char* buffer, size_t buflen):
     transport.setReadBuffer(buffer, buflen)
 
 cdef public void tt_write(_CMixin transport, void (*deallocator)(void*), char* buffer, size_t buflen):
     cdef Buffer b
+    pytransport = transport
     b = Buffer()
     b.init(deallocator, buffer, buflen)
-    transport.cwrite(b)
+    transport.write(b)
+
+cdef public void tt_loseConnection(_CMixin transport):
+    pytransport = transport
+    transport.loseConnection()
