@@ -199,9 +199,13 @@ def getPlugIns(interface, module=twisted.plugins):
     allDropins = getCache(module)
     for dropin in allDropins.itervalues():
         for plugin in dropin.plugins:
-            adapted = interface(plugin, None)
-            if adapted is not None:
-                yield adapted
+            try:
+                adapted = interface(plugin, None)
+            except:
+                log.err()
+            else:
+                if adapted is not None:
+                    yield adapted
 
 
 __all__ = ['getPlugIns']

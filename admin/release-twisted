@@ -290,7 +290,7 @@ def createSubprojectDirectory(proj, version):
     cp `pwd`/Twisted.exp/twisted/%(proj)s/topfiles/setup.py %(sdir)s/
     cp `pwd`/Twisted.exp/twisted/%(proj)s/topfiles/README %(sdir)s/
     """ % locals())
-    if os.path.exists('Twisted.exp/twisted/plugins/twisted_%s.py'):
+    if os.path.exists('Twisted.exp/twisted/plugins/twisted_%s.py' % (proj,)):
         sh("ln -s `pwd`/Twisted.exp/twisted/plugins/twisted_%(proj)s.py "
            "%(sdir)s/twisted/plugins" % locals())
     
