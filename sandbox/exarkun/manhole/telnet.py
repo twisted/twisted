@@ -661,7 +661,12 @@ class TelnetTransport(Telnet, ProtocolTransportMixin):
     def connectionMade(self):
         if self.protocolFactory is not None:
             self.protocol = self.protocolFactory(*self.protocolArgs, **self.protocolKwArgs)
-            self.protocol.factory = self.factory
+            try:
+                factory = self.factory
+            except AttributeError:
+                pass
+            else:
+                self.protocol.factory = factory
             self.protocol.makeConnection(self)
 
     def enableLocal(self, option):
