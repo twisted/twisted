@@ -32,6 +32,7 @@ from twisted.protocols import http
 from twisted.python import log
 from twisted.persisted import styles
 from twisted.web.woven import page
+from twisted.internet import address
 
 # Sibling Imports
 import resource
@@ -57,6 +58,12 @@ class _ReferenceableProducerWrapper(pb.Referenceable):
 
 class Request(pb.RemoteCopy, server.Request):
     def setCopyableState(self, state):
+        for k in 'host', 'client':
+            tup = state[k]
+            addrdesc = {'INET': 'TCP', 'UNIX': 'UNIX'}[tup[0]]
+            addr = {'TCP': lambda: address.IPv4Address(addrdesc, tup[1], tup[2], _bwHack='INET'),
+                        'UNIX': lambda: address.UNIXAddress(tup[1])}[addrdesc]()
+            state[k] = addr
         pb.RemoteCopy.setCopyableState(self, state)
         # Emulate the local request interface --
         self.content = cStringIO.StringIO(self.content_data)

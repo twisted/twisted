@@ -117,6 +117,11 @@ class Request(pb.Copyable, http.Request, components.Componentized):
         self.content.seek(0, 0)
         x['content_data'] = self.content.read()
         x['remote'] = pb.ViewPoint(issuer, self)
+
+        # Address objects aren't jellyable
+        x['host'] = tuple(x['host'])
+        x['client'] = tuple(x['client'])
+
         return x
 
     # HTML generation helpers
