@@ -201,8 +201,11 @@ class Componentized:
         return getAdapterClassWithInheritance(klass, interfaceClass, default)
 
     def setAdapter(self, interfaceClass, adapterClass):
-        self._adapterCache[interfaceClass] = adapterClass()
-        
+        self._adapterCache[interfaceClass] = adapterClass(self)
+
+    def removeComponent(self, interfaceClass):
+        del self._adapterCache[interfaceClass]
+
     def getComponent(self, interface):
         """Create or retrieve an adapter for the given interface.
 
