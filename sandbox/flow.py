@@ -81,14 +81,10 @@ def wrap(obj, *trap):
 
     try:
         # this is going to pass for 'foo', is that good?
-        return Iterable(iter(obj), *trap)
+        return Iterable(iter(obj).next, *trap)
     except TypeError: 
         # iteration over non-sequence 
         pass
-
-    if callable(obj):
-        # who would use this?
-        return Callable(obj, *trap)
 
     raise ValueError, "A wrapper is not available for %r" % (obj,)
 
@@ -166,8 +162,6 @@ class Stage(Instruction):
         assert self._ready, "must yield flow stage before calling next()"
         self._ready = 0
         if self.isFailure(): 
-            # this raises an exception or returns an exception
-            # is that right?
             return self.result.trap(*self._trap)
         return self.result
 
@@ -183,9 +177,8 @@ class Stage(Instruction):
         self._ready = 1
         self.result = None
 
-
-class Wrapper(Stage):
-    """ Basic wrapper for callable objects
+class Iterable(Stage):
+    """ Wrapper for iterable objects, pass in a next() function
 
         This wraps functions (or bound methods).    Execution starts with
         the initial function.   If the return value is a Stage, then 
@@ -214,7 +207,6 @@ class Wrapper(Stage):
                 self._next_stage = result
                 return Continue
             return result
-        # this blows the non-deferred depenency...
         if isinstance(result, defer.Deferred):
             self._next_stage = DeferredWrapper(result)
             return Continue
@@ -241,33 +233,12 @@ class Wrapper(Stage):
             except StopIteration:
                 self.stop = 1
             except Failure, fail:
-                # failure.trap() success
-                # returns exceptions, not failures!
                 self.result = fail
                 self._stop_next = 1
             except:
                 self.result = Failure()
                 self._stop_next = 1
             return
-
-class Callable(Wrapper):
-    """ Implements a state machine, via callable functions or methods
-
-        This wraps functions (or bound methods).  Execution is the same
-        as in the Wrapper, only that callable return values are treated
-        differently... they signal the next function to be executed.
-    """
-    def _yield_next(self, result):
-        """ Fetch the next value from the underlying callable """
-        if callable(result):
-            self._callable = result
-            return Continue
-        return Wrapper._yield_next(self, result)
-
-class Iterable(Wrapper):
-    """ Wraps iterables (generator/iterator) for use in a flow """      
-    def __init__(self, iterable, *trap):
-        Wrapper.__init__(self, iterable.next, *trap)
 
 class Merge(Stage):
     """ Merges two or more Stages results into a single stream

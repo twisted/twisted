@@ -107,26 +107,6 @@ class badgen:
     def next(self):
         return self.state()
 
-class Count:
-    def __init__(self, count):
-        self.start = 0
-        self.count = count
-    def initial(self):
-        if not self.start:
-            self.start = 1
-            return "Initial"
-        return self.body
-    def body(self):
-        if self.count > 0:
-            self.count -= 1
-            return self.count
-        return self.final
-    def final(self):
-        if self.start:
-            self.start = 0
-            return "Final"         
-        raise flow.StopIteration
-
 class FlowTest(unittest.TestCase):
     def testBasic(self):
         lhs = [1,2,3]
@@ -148,11 +128,6 @@ class FlowTest(unittest.TestCase):
         mrg = flow.Merge([1,2,flow.Cooperate(),3],['a','b','c'])
         rhs = list(flow.Block(mrg))
         self.assertEqual(lhs,rhs)
-
-    def testCallable(self):
-        lhs = ['Initial',3,2,1,0,'Final']
-        rhs = list(flow.Block(flow.wrap(Count(4).initial)))
-        self.assertEqual(lhs, rhs)
 
     def testDeferred(self):
         lhs = ['Title', (1,'one'),(2,'two'),(3,'three')]
