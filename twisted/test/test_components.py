@@ -446,4 +446,20 @@ class TestZIBC(unittest.TestCase):
             a = 3
         self.assertEquals(IFoo.a, 3)
 
-    testAttributes.todo = "Fix this itamar!"
+
+from zope import interface as zinterface
+
+class IZope(zinterface.Interface):
+    pass
+
+class Zopeable:
+    pass
+
+
+class TestZope(unittest.TestCase):
+
+    def testAdapter(self):
+        a = lambda o: id(o)
+        components.registerAdapter(a, Zopeable, IZope)
+        x = Zopeable()
+        self.assertEquals(id(x), IZope(x))

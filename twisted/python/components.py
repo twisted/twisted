@@ -93,6 +93,7 @@ class MetaInterface(interface.InterfaceClass):
 
     def __init__(self, name, bases=(), attrs=None, __doc__=None,
                  __module__=None):
+        self.__attrs = {}
         if attrs is not None:
             if attrs.has_key("__adapt__"):
                 warnings.warn("Please don't use __adapt__ on Interface subclasses", DeprecationWarning, stacklevel=2)
@@ -100,6 +101,8 @@ class MetaInterface(interface.InterfaceClass):
                 del attrs["__adapt__"]
             for k, v in attrs.items():
                 if not isinstance(v, types.FunctionType) and not isinstance(v, interface.Attribute):
+                    warnings.warn("Please only use functions and zope.interface.Attributes as Interface class attributes", DeprecationWarning, stacklevel=2)
+                    self.__attrs[k] = v
                     attrs[k] = interface.Attribute(repr(v))
         # BEHOLD A GREAT EVIL SHALL COME UPON THEE
         if __module__ == None:
@@ -173,10 +176,12 @@ class MetaInterface(interface.InterfaceClass):
 
     def __getattr__(self, attr):
         warnings.warn("Don't get attributes off Interface, use .queryDescriptionFor() etc. instead", DeprecationWarning)
+        if self.__attrs.has_key(attr):
+            return self.__attrs[attr]
         result = self.queryDescriptionFor(attr)
-        if result == None:
-            raise AttributeError, attr
-        return result
+        if result != None:
+            return result
+        raise AttributeError, attr
 
 
 Interface = MetaInterface("Interface", __module__="twisted.python.components")
@@ -271,7 +276,7 @@ def registerAdapter(adapterFactory, origInterface, *interfaceClasses):
     global ALLOW_DUPLICATES
 
     # deal with class->interface adapters:
-    if not issubclass(origInterface, Interface):
+    if not isinstance(origInterface, interface.InterfaceClass):
         # fix up __implements__ if it's old style
         fixClassImplements(origInterface)
         origInterface = declarations.implementedBy(origInterface)
@@ -289,7 +294,7 @@ def getAdapterFactory(fromInterface, toInterface, default):
     """
     fixClassImplements(fromInterface)
     self = _theAdapterRegistry
-    if not issubclass(fromInterface, Interface):
+    if not isinstance(fromInterface, interface.InterfaceClass):
         fromInterface = declarations.implementedBy(fromInterface)
     factory = self.lookup1(fromInterface, toInterface)
     if factory == None:
