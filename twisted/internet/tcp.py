@@ -295,9 +295,12 @@ class BaseClient(Connection):
         else:
             reactor.callLater(0, self.failIfNotConnected, error)
 
-    def startTLS(self, ctx):
+    def startTLS(self, ctx, client=1):
         holder = Connection.startTLS(self, ctx)
-        self.socket.set_connect_state()
+        if client:
+            self.socket.set_connect_state()
+        else:
+            self.socket.set_accept_state()
         return holder
 
     def stopConnecting(self):
@@ -469,9 +472,12 @@ class Server(Connection):
         """
         return self.repstr
 
-    def startTLS(self, ctx):
+    def startTLS(self, ctx, server=1):
         holder = Connection.startTLS(self, ctx)
-        self.socket.set_accept_state()
+        if server:
+            self.socket.set_accept_state()
+        else:
+            self.socket.set_connect_state()
         return holder
 
     def getHost(self):
