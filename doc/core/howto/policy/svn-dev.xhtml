@@ -3,12 +3,13 @@
     "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
 
 <html xmlns="http://www.w3.org/1999/xhtml">
-  <head>
-    <title>Working from Twisted's Subversion repository</title>
-  </head>
 
-  <body>
-    <h1>Working from Twisted's Subversion repository</h1>
+<head>
+<title>Working from Twisted's Subversion repository</title>
+</head>
+
+<body>
+<h1>Working from Twisted's Subversion repository</h1>
 
 <p>If you're going to be doing development on Twisted itself, or if you want
 to take advantage of bleeding-edge features (or bug fixes) that are not yet
@@ -27,19 +28,22 @@ data you need to check out a copy of the Twisted tree is available on the <a
 href="http://twistedmatrix.com/developers/cvs">pserver page</a>, and is as
 follows:</p>
 
-<pre class="shell">$ svn co svn://svn.twistedmatrix.com/svn/Twisted/trunk Twisted</pre>
+<pre class="shell">
+$ svn co svn://svn.twistedmatrix.com/svn/Twisted/trunk Twisted
+</pre>
 
 <h2>Alternate tree names</h2>
 
-<p>By using <code>svn co svn://svn.twistedmatrix.com/svn/Twisted/trunk otherdir</code>, you can put the
-workspace tree in a directory other than <q>Twisted</q>. I do this (with a
-name like <q>Twisted-Subversion</q>) to remind myself that this tree comes
-from Subversion and not from a released version (like <q>Twisted-1.0.5</q>).
-This practice can cause a few problems, because there are a few places in the
-Twisted tree that need to know where the tree starts, so they can add it to
-<code>sys.path</code> without requiring the user manually set their
-PYTHONPATH. These functions walk the current directory up to the root, looking
-for a directory named <q>Twisted</q> (sometimes exactly that, sometimes with a
+<p>By using <code>svn co svn://svn.twistedmatrix.com/svn/Twisted/trunk
+otherdir</code>, you can put the workspace tree in a directory other than
+<q>Twisted</q>. I do this (with a name like <q>Twisted-Subversion</q>) to
+remind myself that this tree comes from Subversion and not from a released
+version (like <q>Twisted-1.0.5</q>). This practice can cause a few problems,
+because there are a few places in the Twisted tree that need to know where
+the tree starts, so they can add it to <code>sys.path</code> without
+requiring the user manually set their PYTHONPATH. These functions walk the
+current directory up to the root, looking for a directory named
+<q>Twisted</q> (sometimes exactly that, sometimes with a
 <code>.startswith</code> test). Generally these are test scripts or other
 administrative tools which expect to be launched from somewhere inside the
 tree (but not necessarily from the top).</p>
@@ -130,11 +134,12 @@ release.</p>
 <h2>Building docs</h2>
 
 <p>Twisted documentation (not including the automatically-generated API
-docs) is in <a href="http://twistedmatrix.com/projects/lore">Lore Format</a>. These <code>.xhtml</code>
-files are translated into <code>.html</code> files by the <q>bin/lore</q>
-script, which can check the files for syntax problems (hlint), process
-multiple files at once, insert the files into a template before processing,
-and can also translate the files into LaTeX or PostScript instead.</p>
+docs) is in <a href="http://twistedmatrix.com/projects/lore">Lore
+Format</a>. These <code>.xhtml</code> files are translated into
+<code>.html</code> files by the <q>bin/lore</q> script, which can check the
+files for syntax problems (hlint), process multiple files at once, insert
+the files into a template before processing, and can also translate the
+files into LaTeX or PostScript instead.</p>
 
 <p>To generate the full documentation set, run the
 <code>admin/process-docs</code> shell script. This will create processed
@@ -149,7 +154,9 @@ twistedmatrix.com build machine.</p>
 done in <code>admin/process-docs</code>, such as the following. Note that
 the index file will be placed in <code>doc/howto/index.html</code>.</p>
 
-<pre class="shell">./bin/lore -p --config template=doc/howto/template.tpl doc/howto/*.xhtml</pre>
+<pre class="shell">
+./bin/lore -p --config template=doc/howto/template.tpl doc/howto/*.xhtml
+</pre>
 
 <p>To run hlint over a single Lore document, such as
 <code>doc/howto/policy/svn-dev.xhtml</code>, do the following. This is useful
@@ -162,7 +169,9 @@ mismatched tags.</p>
 footnote processing, etc), do the following. The results will be placed in
 <code>doc/howto/policy/svn-dev.html</code>:</p>
 
-<pre class="shell">./bin/lore -p --config template=doc/howto/template.tpl doc/howto/policy/svn-dev.xhtml</pre>
+<pre class="shell">
+./bin/lore -p --config template=doc/howto/template.tpl doc/howto/policy/svn-dev.xhtml
+</pre>
 
 <p>Note that hyperlinks to other documents may not be quite right unless you
 include a <q>-l</q> argument to <code>bin/lore</code>. Links in the .xhtml
@@ -174,11 +183,11 @@ probably be wrong unless the correct base URL is provided to Lore.</p>
 
 <h2>Emacs</h2>
 
-<p>Check out the TwistedEmacs module (TODO this is not true: which lives in the same Subversion
-repository, just do <q>cvs checkout TwistedEmacs</q> instead of <q>cvs
-checkout Twisted</q>). <code>twisted-dev.el</code> has several utility
-functions which make it easier to grep for methods, run test cases, process
-Lore documents, etc.</p>
+<p>Check out the TwistedEmacs module (TODO this is not true: which lives in
+the same Subversion repository, just do <q>cvs checkout TwistedEmacs</q>
+instead of <q>cvs checkout Twisted</q>). <code>twisted-dev.el</code> has
+several utility functions which make it easier to grep for methods, run test
+cases, process Lore documents, etc.</p>
 
 
 <h2>Building Debian packages</h2>
@@ -190,10 +199,7 @@ and requires that <q>admin/process-docs</q> be run first. The .debs created
 will have a version number based upon whatever is at the top of
 <code>debian/changelog</code>, which is generally only updated when an
 official release is made, so be careful that you don't create
-confusingly-numbered package files. </p>
+confusingly-numbered package files.</p>
 
-
-
-  </body>
+</body>
 </html>
-
