@@ -62,6 +62,7 @@ from twisted.web2 import stream
 from twisted.web2 import http
 from twisted.web2 import responsecode
 
+
 class TestResource(resource.Resource):
     responseCode = 200
     responseText = 'This is a fake resource.'
@@ -87,77 +88,56 @@ class TestResource(resource.Resource):
 
 
 
-class _TestingWebTests(unittest.TestCase):
-    def setUp(self):
-        self.root = TestResource()
-        self.site = server.Site(self.root)
-        
-    def chanrequest(self, *args, **kw):
-        return TestChanRequest(self.site, *args, **kw)
-
-    def headers(self):
-        return http_headers.Headers({
-            'Content-Length': 0
-            })
-
-    def test_thatOurTestHarnessWorks(self):
-        cr = self.chanrequest('GET', '', 'http://test-server/',
-                              headers=self.headers())
-        def _gotResponse((code, headers, data)):
-            from twisted.web2 import responsecode
-            self.assertEquals(code, 200)
-            self.assertEquals(headers.getHeader('content-length'), 24)
-            self.assertEquals(data, 'This is a fake resource.')
-        cr.deferredFinish.addCallback(_gotResponse)
-        cr.request.process()
-        return cr
-
-class _TestingBetterWebTests(unittest.TestCase):
-    """
-    This is also sub-optimal, but closer to what we want to do
-    for testing resource lookup and rendering.
-    """
+class BaseCase(unittest.TestCase):
+    method = 'GET'
+    version = (1, 1)
     
-    rootResource = TestResource()
-    resourceTests = [
-        ('GET', 'http://host/', 200, 'This is a fake resource.'),
-        ('GET', 'http://host/', 200, 'This is a valid child resource.'),
-        ('GET', 'http://host/', responsecode.NOT_FOUND),
-        ]
+    def chanrequest(self, root, uri, headers, method, version, prepath):
+        site = server.Site(root)
+        return TestChanRequest(site, method, prepath, uri, headers, version)
 
-    def doTest(self, method, uri,
-               expected_code, expected_data=None, expected_headers=None):
-        # Set up our initial conditions
-        prepath = ''
-        site = server.Site(self.rootResource)
-        headers = http_headers.Headers({'content-length': 0})
-        version = (1, 1)
-        # Create our channel request
-        cr = TestChanRequest(site, method, prepath, uri, headers, version)
-        # When we get a response, we run our tests
+    def getResponseFor(self, root, uri, headers={},
+                       method=None, version=None, prepath=''):
+        headers = http_headers.Headers(headers)
+        if not headers.hasHeader('content-length'):
+            headers.setHeader('content-length', 0)
+        if method is None:
+            method = self.method
+        if version is None:
+            version = self.version
+        cr = self.chanrequest(root, uri, headers, method, version, prepath)
+        cr.request.process()
+        return cr.deferredFinish
+
+    def assertResponse(self, request_data, expected_response):
+        d = self.getResponseFor(*request_data)
         def _gotResponse((code, headers, data)):
+            expected_code, expected_headers, expected_data = expected_response
             self.assertEquals(code, expected_code)
             if expected_data is not None:
                 self.assertEquals(data, expected_data)
-                self.assertEquals(headers.getHeader('content-length'),
-                                  len(expected_data))
-            if expected_headers is not None:
-                for key, value in expected_headers.iteritems():
-                    self.assertEquals(headers.getHeader(key), value)
-        # Don't call us, we'll call you
-        cr.deferredFinish.addCallback(_gotResponse)
-        cr.request.process()
-        return cr
-        
-    def test_runTests(self):
-        for test_args in self.resourceTests:
-            self.doTest(*test_args)
-            
-        
-if __name__ == '__main__':
-    tc = _TestingWebTests()
-    tc.setUp()
-    tc.test_thatOurTestHarnessWorks()
-    from twisted.internet import reactor
-    reactor.run()
-    
+            for key, value in expected_headers.iteritems():
+                self.assertEquals(headers.getHeader(key), value)
+        d.addCallback(_gotResponse)
+        util.wait(d)
+
+
+
+class SampleWebTest(BaseCase):
+    root = TestResource()
+
+    def test_root(self):
+        self.assertResponse(
+            (self.root, 'http://host/'),
+            (200, {}, 'This is a fake resource.'))
+
+    def test_validChild(self):
+        self.assertResponse(
+            (self.root, 'http://host/validChild'),
+            (200, {}, 'This is a valid child resource.'))
+
+    def test_invalidChild(self):
+        self.assertResponse(
+            (self.root, 'http://host/invalidChild'),
+            (404, {}, None))
+
