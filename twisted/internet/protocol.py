@@ -605,9 +605,11 @@ class FileWrapper:
             self.handleException()
 
     def getPeer(self):
+        # XXX: According to ITransport, this should return an IAddress!
         return 'file', 'file'
 
     def getHost(self):
+        # XXX: According to ITransport, this should return an IAddress!
         return 'file'
 
     def handleException(self):
