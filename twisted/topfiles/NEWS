@@ -5,24 +5,60 @@ Major new features
  - Replaced home-grown components system with zope.interface.
  - Split Twisted into multiple pieces.
  - Relicensed: Now under the MIT license, rather than LGPL.
+ - Python 2.4 compatibility fixes
+ - Major efficiency improvements in TCP buffering algorithm.
+ - Major efficiency improvements in reactor.callLater/DelayedCall.
+ - Half-close support for TCP/SSL. (loseWriteConnection).
+
  - twisted.conch's SSH, telnet, and terminal emulation, greatly improved.
  - Tons of bugfixes in twisted.mail's IMAP4, POP3, and SMTP protocols.
- - 
 
-Core changes
-------------
+
+Miscellaneous fixes/features
+----------------------------
+ - Removed some functions that were deprecated since Twisted 1.0.
+ - Better debugging support. Control-C will break you into PDB.
+ - More correct daemonization in twistd.
+ - twisted.python.log: do not close the log because of invalid format string.
+ - Disabled automatic import of cBanana. 
+ - Boolean support for twisted.persisted.marmalade.
+ - Refactor of plugin and application HOWTO documentation
+ - Async HOWTO expanded muchly.
+
+twisted.trial
+-------------
+ - Rewritten, a bunch of bugs fixed, a few more added.
+
+twisted.internet
+----------------
  - Multi-listen UDP multicast support
- - gtk2reactor can optionally use glib instead of gtk
- - Increased default accept backlog from 5 to 50.
- - Workarounds for winsock strangeness
- - Removed some functions that were deprecated since Twisted 1.0
- - 
+ - gtk2reactor can optionally use glib event loop instead of gtk
+ - Add utils.getProcessOutputAndValue to get stdout/err/value.
+ - protocol.ClientCreator has a connectSSL.
+ - Default DNS resolver is now non-blocking.
+ - gtk2reactor notifies gobject to initialize thread support
+ - Increased default TCP accept backlog from 5 to 50.
+ - Make buffering large amounts of TCP data work on Windows.
+ - Fixed SSL disconnect to not wait for remote host. Fixes issue with firefox.
+ - Many Process bugfixes
+ - Fix registering a streaming producer on a transport.
+ - Separate state for Deferred finalization so that GC-loops preventing
+   finalization don't occur.
+ - Close client sockets explicitly after failed connections.
+
+twisted.protocols
+-----------------
+ - Portforward doesn't start reading from a client until a connection is made.
+ - Bugfixes in twisted.protocols.loopback
+ - Improve speed of twisted.protocols.LineReceiver.
+ - LineReceiver implements IProducer. (stop/pause/resumeProducing)
 
 twisted.enterprise
 ------------------
  - Add "new connection" callback to adbapi.ConnectionPool to allow for
    custom db connection setup (cp_openfun)
- - Adbapi automatic reconnection support
+ - adbapi.ConnectionPool automatic reconnection support
+ - Don't log exceptions extraneously
 
 twisted.conch
 -------------
@@ -32,6 +68,7 @@ twisted.conch
   - Unix login improvements, PAM support
   - Add "cftp" -- Conch SFTP.
   - Deferred retrieval of public keys is supported
+  - PAM support for client and server
   - Bugfixes: 
 	- fix conch failing to exit, and hangs.
 	- Remote->Local forwarding
@@ -105,6 +142,8 @@ twisted.words
 twisted.xish
 ------------
  - Some bugfixes
+
+
 
 1.3.0 (May 14, 2004):
 
