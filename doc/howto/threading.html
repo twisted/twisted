@@ -54,7 +54,7 @@ def threadSafeScheduler():
     class="API">twisted.internet.interfaces.IReactorThreads</code>).
     Additional utility functions are provided in <code
     class="API">twisted.internet.threads</code>. Basically, these
-    methods allow you to queue methods to be run by a thread
+    methods allow us to queue methods to be run by a thread
     pool.</p>
 
     <p>For example, to run a method in a thread we can do:</p>
@@ -70,8 +70,14 @@ def aSillyBlockingMethod(x):
 reactor.callInThread(aSillyBlockingMethod, "2 seconds have passed")
 </pre>
 
-    <p>If you have multiple methods that you'd like to run sequentially
-    within a thread, we can do:</p>
+    <h2>Utility Methods</h2>
+
+    <p>The utility methods are not part of the <code
+    class="API">twisted.internet.reactor</code> APIs, but are implemented
+    in <code class="API">twisted.internet.threads</code>.</p>
+
+    <p>If we have multiple methods to run sequentially within a thread,
+    we can do:</p>
 
 <pre class="python">
 from twisted.internet import threads
@@ -86,7 +92,7 @@ def aSillyBlockingMethodTwo(x):
 
 # run both methods sequentially in a thread
 commands = [(aSillyBlockingMethodOne, ["Calling First"], {})]
-commands = commands.append((aSillyBlockingMethodTwo, ["And the second"], {}))
+commands.append((aSillyBlockingMethodTwo, ["And the second"], {}))
 threads.callMultipleInThread(commands)
 </pre>
 
