@@ -219,6 +219,7 @@ class IRCChatter(irc.IRC, service.WordsClientInterface):
             self.sendMessage('NOTICE', ":Authentication accepted.  "
                              "Thank you.", prefix='NickServ!services@%s'
                              % (self.servicename,))
+            self.sendMessage('376', ':No /MOTD.',prefix=self.servicename)
         else:
             self.notLoggedIn("unauthorized")
         del self.pendingLogin
