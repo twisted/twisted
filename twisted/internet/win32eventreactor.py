@@ -61,7 +61,7 @@ import win32gui
 # Twisted imports
 from twisted.internet import abstract, posixbase, main, error
 from twisted.python import log, threadable, failure, components
-from twisted.internet.interfaces import IReactorFDSet
+from twisted.internet.interfaces import IReactorFDSet, IReactorProcess
 
 # System imports
 import os
