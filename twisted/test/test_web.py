@@ -239,6 +239,7 @@ class ConditionalTest(unittest.TestCase):
 from twisted.web import google
 class GoogleTestCase(unittest.TestCase):
     def testCheckGoogle(self):
+        raise unittest.SkipTest("no violation of google ToS")
         d = google.checkGoogle('site:www.twistedmatrix.com twisted')
         r = unittest.deferredResult(d)
         self.assertEquals(r, 'http://twistedmatrix.com/')
