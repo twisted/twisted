@@ -35,7 +35,8 @@ class StatefulProtocol(protocol.Protocol):
     _sful_buffer = None
     _sful_offset = 0
 
-    def connectionMade(self):
+    def makeConnection(self, transport):
+        protocol.Protocol.makeConnection(self, transport)
         self._sful_buffer = StringIO()
         self._sful_state = self.getInitialState()
 

@@ -5,7 +5,6 @@ import struct
 
 class TestInt32(MyInt32StringReceiver):
     def connectionMade(self):
-        MyInt32StringReceiver.connectionMade(self)
         self.received = []
 
     def stringReceived(self, s):
