@@ -4,8 +4,9 @@ twisted (1.0.1alpha1-1) unstable; urgency=low
   * Split out conch
     * This allows us to have conch properly depend on python-crypto
   * Documentation improvements
-    * Installing xhtml versions of everything, including man pages
+    * Installing xhtml versions of everything
     * Distributing ps and pdf versions of book
+    * doc-base support
 
  -- Moshe Zadka <moshez@debian.org>  Fri,  8 Nov 2002 17:11:59 -0600
 
