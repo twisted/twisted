@@ -181,9 +181,7 @@ being used, and the body is empty.</p>
   
 </ul>
 
-<p>TODO: add a token to re-set the list of abbreviated strings. This should
-basically contain a dictionary that replaces the previous VOCAB mapping. Add
-TRUE, FALSE, and NONE tokens.</p>
+<p>TODO: Add TRUE, FALSE, and NONE tokens.</p>
 
 
 <h2>Object graph serialization</h2>
@@ -215,7 +213,7 @@ control over the serialization process.</p>
 <p>The serialization context is stored in a <q>Banana</q> object (names are
 still being decided). This holds a stack of Banana Slicers, one per object
 currently being serialized (i.e. one per node in the path from the root
-object to the one currently being serialized).</p>
+object to the object currently being serialized).</p>
 
 <p>For example, suppose a class instance is being serialized, and this class
 chose to use a dictionary to hold its instance state. That dictionary holds
@@ -223,7 +221,7 @@ a list of numbers in one of its values. The Banana Stack would hold the root
 slicer, an InstanceSlicer, a DictSlicer, and finally a ListSlicer.</p>
 
 <p>(note: it might be possible to move the functionality of the Banana
-object entirely into the <q>root slice</q>). </p>
+object entirely into the <q>root slice</q> (<q>root slicer</q>?)). </p>
 
 <p>Upon unserialization, the <q>Unbanana</q> object holds this context. A
 stack of <q>Unslicer</q> objects handle incoming tokens. The <q>Unbanana</q>
@@ -397,7 +395,255 @@ return None (to continue the index phase), raise a Violation (which causes
 an UnbananaFailure to be passed to the current top unslicer), or raise
 another exception (which causes the connection to be abandoned).</p>
 
+<h3>Unslicer Lifecycle</h3>
 
+<p>Each Unslicer handles a single <q>OPEN sequence</q>, which starts with an
+OPEN token and ends with a CLOSE token (or an ABORT token).</p>
+
+
+<h4>Creation</h4>
+
+<p>Acceptance of the OPEN token simply sets a flag to indicate that we are
+in the Index Phase. (The OPEN token might not be accepted: it is submitted
+to checkToken for approval first, as described below). During the Index
+Phase, all tokens are appended to the current <code>opentype</code> list and
+handed as a tuple to the top-most Unslicer's <code>doOpen</code> method.
+This method can do one of the following things:</p>
+
+<ul>
+  <li>Return a new Unslicer object. It does this when there are enough index
+  tokens to specify a new Unslicer. The new child is pushed on top of the
+  Unslicer stack (Banana.receiveStack) and initialized by calling the
+  <code>start</code> method described below. This ends the Index Phase.</li>
+
+  <li>Return None. This indicates that more index tokens are required. The
+  Banana protocol object simply remains in the Index Phase and continues to
+  accumulate index tokens.</li>
+
+  <li>Raise a Violation</li>
+  <li>Raise some other exception</li>
+</ul>
+
+<p>When a new Unslicer object is pushed on the top of the stack, it has its
+<code>.start</code> method called, in which it has an opportunity to create
+whatever internal state is necessary to record the incoming content tokens.
+Each created object will have a separate Unslicer instance. (TODO: could
+optimize with singleton Unslicer objects, using start/finish methods to do
+cleanup). The start method can run normally, or raise a Violation exception,
+or some other exception.</p>
+
+<p>This Unslicer is responsible for all incoming tokens until either 1: it
+pushes a new one on the stack, or 2: it receives a CLOSE token.</p>
+
+
+<h4>checkToken</h4>
+
+<p>Each token starts with a length sequence, up to 64 bytes which are turned
+into an integer. This is followed by a single type byte, distinguished from
+the length bytes by having the high bit set (the type byte is always 0x80 or
+greater). When the typebyte is received, the topmost Unslicer is asked about
+its suitability by calling the <code>.checkToken</code> method. (note that
+CLOSE and ABORT tokens are always legal, and are not submitted to
+checkToken). This method is expected to do one of the following:</p>
+
+<ul>
+  <li>Return an integer called <code>sizelimit</code>. If the token body is
+  larger than sizelimit, the token will be rejected. This is used for
+  STRING, LONGINT, and LONGNEG tokens.</li>
+
+  <li>Raise a <code>Violation</code> exception to reject the token. This
+  will cause the remainder of the current OPEN sequence to be discarded (all
+  tokens through the matching CLOSE token). Unslicers should raise this if
+  their constraints will not accept the incoming object: for example a
+  constraint which is expecting a series of integers can accept
+  INT/NEG/LONGINT/LONGNEG tokens and reject OPEN/STRING/VOCAB/FLOAT tokens.
+  The topmost Unslicer (the same one which raised Violation) will receive
+  (through its <code>.receiveChild</code> method) an UnbananaFailure object
+  which encapsulates the reason for the rejection </li>
+
+  <li>Raise some other exception</li>
+</ul>
+
+<p>If the token sequence is in the <q>index phase</q> (i.e. it is just after
+an OPEN token and a new Unslicer has not yet been pushed), then instead of
+<code>.checkToken</code> the top unslicer is sent
+<code>.openerCheckToken</code>. This method behaves just like checkToken,
+but in addition to the type byte it is also given the opentype list (which
+is built out of all the index tokens received during this index phase).</p>
+
+<h4>receiveChild</h4>
+
+<p>If the type byte is accepted, and the size limit is obeyed, then the rest
+of the token is read and a finished (primitive) object is created: a string,
+number, boolean, or None. This object is handed to the topmost Unslicer's
+<code>.receiveChild</code> method, where again it is has a few options:</p>
+
+<ul>
+  <li>Run normally: if the object is acceptable, it should append or record
+  it somehow.</li>
+  <li>Raise Violation, just like checkToken.</li>
+  <li>Raise some other exception</li>
+
+  <li>invoke <code>self.abort</code>, which does
+  <code>protocol.abandonUnslicer</code></li>
+</ul>
+
+<p>If the child is handed an UnbananaFailure object, and it wishes to pass
+it upwards to its parent, then <code>self.abort</code> is the appropriate
+thing to do. Raising an exception will accomplish the same thing, but with a
+new UnbananaFailure that describes the exception raised here instead of the
+one raised by a child object. It is bad to both call <code>abort</code> and
+raise an exception.</p>
+
+<h4>Finishing</h4>
+
+<p>When the CLOSE token arrives, the Unslicer will have its
+<code>.receiveClose</code> method called. This is expected to do:</p>
+
+<ul>
+  <li>Return an object: this object is the finished result of the
+  deserialization process. It will be passed to <code>.receiveChild</code>
+  of the parent Unslicer.</li>
+
+  <li>Return a Deferred: this indicates that the object cannot be created
+  yet (tuples that contain references to an enclosing tuple, for example).
+  The Deferred will be fired (with the object) when it completes.</li>
+
+  <li>Raise Violation</li>
+  <li>Raise some other exception</li>
+</ul>
+
+<p>After receiveClose has finished, the child is told to clean up by calling
+its <code>.finish</code> method. This can complete normally or raise a
+Violation, BananaError, or something else.</p>
+
+<p>Then, the old top-most Unslicer is popped from the stack and discarded.
+Its parent is now the new top-most Unslicer, and the newly-unserialized
+object is given to it with the <code>.receiveChild</code> method. Note that
+this method is used to deliver both primitive objects (from raw tokens)
+<em>and</em> composite objects (from other Unslicers).</p>
+
+
+<h3>Error Handling</h3>
+
+<p>Schemas are enforced by Constraint objects which are given an opportunity
+to pass judgement on each incoming token. When they do not like something
+they are given, they respond by raising a <code>Violation</code> exception.
+The Violation exception is sometimes created with an argument that describes
+the reason for the rejection, but frequently it is just a bare exception.
+Most Violations are raised by the <code>checkOpentype</code> and
+<code>checkObject</code> methods of the various classes in
+<code>schema.py</code>.</p>
+
+<p>Exceptions which occur in an Unslicer (whether Violations or something
+more serious) can be confined to a single sub-tree of the object graph. The
+object being deserialized (and all of its children) is abandoned, and all
+remaining tokens for that object are discarded. However, the parent object
+(to which the abandoned object would have been given) gets to decide what
+happens next: it can either fail itself, or absorb the failure (much like an
+exception handler can choose to re-raise the exception or eat it).</p>
+
+<p>Confinable exceptions are wrapped in an <code>UnbananaFailure</code>
+object. The UnbananaFailure behaves like a regular
+<code>twisted.python.failure.Failure</code> object, except that it has an
+attribute named <code>.where</code> which indicate the object-graph pathname
+where the problem occurred. The UnbananaFailure is passed up the Unslicer
+stack in lieu of an actual object. Most Unslicers have code in their
+<code>receiveChild</code> methods to detect an UnbananaFailure and trigger
+an abort, which causes all further tokens of the sub-tree to be discarded.
+The connection is not dropped. Unslicers which partition their children's
+sub-graphs (like the PBRootUnslicer, for which each child is a separate
+operation) can simply ignore the UnbananaFailure, or respond to it by
+sending an error message to the other end.</p>
+
+<p>Other exceptions may occur during deserialization. Unrecognized opentypes
+will probably cause a KeyError when the opener attempts to map them to an
+Unserializer class. Coding erors could cause unexpected exceptions. If these
+occur in the context of an Unslicer, they are wrapped in UnbananaFailures
+and handled just like Violations. The only difference is that non-Violations
+are always logged with <code>log.err</code> (including a traceback), whereas
+Violations are passed through the Banana.logViolation method which may or
+may not log it (and will probably not include a traceback).</p>
+
+<p>Exceptions which occur outside of an Unslicer indicate coding errors or
+severe protocol violations and cause the connection to be dropped. The
+exception is logged on the local side with <code>log.err</code>, but the
+remote end will not be given any reason for the disconnection. Protocol
+violations are indicated with a BananaError exception.</p>
+
+<p>The Banana object can also choose to respond to Violations by terminating
+the connection. For example, the <code>.hangupOnLengthViolation</code> flag
+causes string-too-long violations to be raised directly instead of being
+handled, which will cause the connection to be dropped (as it occurs in the
+dataReceived method).</p>
+
+
+<h3>Example</h3>
+
+<p>The serialized form of <code class="python">["foo",(1,2)]</code> is the
+following token sequence: OPEN STRING(list) STRING(foo) OPEN STRING(tuple)
+INT(1) INT(2) CLOSE CLOSE. In practice, the STRING(list) would really be
+something like VOCAB(7), likewise the STRING(tuple) might be VOCAB(8). Here
+we walk through how this sequence is processed.</p>
+
+<p>The initial Unslicer stack consists of the single RootUnslicer
+<code>rootun</code>.</p>
+
+<pre>
+OPEN
+  rootun.checkToken(OPEN) : must not raise Violation
+  enter index phase
+
+VOCAB(7)  (equivalent to STRING(list))
+  rootun.openerCheckToken(VOCAB, ()) : must not raise Violation
+  VOCAB token is looked up in .incomingVocabulary, turned into "list"
+  rootun.doOpen(("list",)) : looks in UnslicerRegistry, returns ListUnslicer
+  exit index phase
+  the ListUnslicer is pushed on the stack
+  listun.start()
+
+STRING(foo)
+  listun.checkToken(STRING) : must return None or 3 or greater
+  string is assembled
+  listun.receiveChild("foo") : appends to list
+
+OPEN
+  listun.checkToken(OPEN) : must not raise Violation
+  enter index phase
+
+VOCAB(8)  (equivalent to STRING(tuple))
+  listun.openerCheckToken(VOCAB, ()) : must not raise Violation
+  VOCAB token is looked up, turned into "tuple"
+  listun.doOpen(("tuple",)) : delegates through:
+                                 BaseUnslicer.open
+                                 self.opener (usually the RootUnslicer)
+                                 self.opener.open(("tuple",))
+                              returns TupleUnslicer
+  exit index phase
+  TupleUnslicer is pushed on the stack
+  tupleun.start()
+
+INT(1)
+  tupleun.checkToken(INT) : must not raise Violation
+  integer is assembled
+  tupleun.receiveChild(1) : appends to list
+
+INT(2)
+  tupleun.checkToken(INT) : must not raise Violation
+  integer is assembled
+  tupleun.receiveChild(2) : appends to list
+
+CLOSE
+  tupleun.receiveClose() : creates and returns the tuple (1,2)
+                           (could also return a Deferred)
+  TupleUnslicer is popped from the stack and discarded
+  listun.receiveChild((1,2))
+
+CLOSE
+  listun.receiveClose() : creates and returns the list ["foo", (1,2)]
+  ListUnslicer is popped from the stack and discarded
+  rootun.receiveChild(["foo", (1,2)])
+</pre>
 
 
 <h2>Other Issues</h2>
@@ -662,6 +908,10 @@ invoked by their receipt is well-understood and there is no way to cause
 unsafe behavior during unserialization. Resource consumption attacks are
 mitigated by Constraints imposed by the receiving schema.</p>
 
+<p>Note that the OPEN(dict) slicer is implemented with code that sorts the
+list of keys before serializing them. It does this to provide deterministic
+behavior and make testing easier.</p>
+
 <table border="" width="">
   <TR><TD>IntType, LongType (small+)</TD><TD>INT(value)</TD></TR>
   <TR><TD>IntType, LongType (small-)</TD><TD>NEG(value)</TD></TR>
@@ -671,13 +921,13 @@ mitigated by Constraints imposed by the receiving schema.</p>
   <TR><TD>StringType</TD><TD>STRING(value)</TD></TR>
   <TR><TD>StringType (tokenized)</TD><TD>VOCAB(tokennum)</TD></TR>
   <TR><TD>UnicodeType</TD>
-      <TD>OPEN(unicode) STRING(str.encode('UTF-8') CLOSE</TD></TR>
+      <TD>OPEN(unicode) STRING(str.encode('UTF-8')) CLOSE</TD></TR>
   <TR><TD>ListType</TD><TD>OPEN(list) elem.. CLOSE</TD></TR>
   <TR><TD>TupleType</TD><TD>OPEN(tuple) elem.. CLOSE</TD></TR>
   <TR><TD>DictType, DictionaryType</TD>
       <TD>OPEN(dict) (key,value).. CLOSE</TD></TR>
   <TR><TD>NoneType</TD><TD>OPEN(none) CLOSE</TD></TR>
-  <TR><TD>BooleanType</TD><TD>OPEN(boolean) INT(1/0) CLOSE</TD></TR>
+  <TR><TD>BooleanType</TD><TD>OPEN(boolean) INT(0/1) CLOSE</TD></TR>
 </table>
 
 <h3>Extended (unsafe) Python Types</h3>
@@ -697,7 +947,8 @@ disk and reading it back at startup time is one example.</p>
 <table border="" width="">
   <TR><TD colspan="2">Extended (unsafe) Python Types</TD></TR>
 
-  <TR><TD>InstanceType</TD><TD>OPEN(instance) (attr,value).. CLOSE</TD></TR>
+  <TR><TD>InstanceType</TD><TD>OPEN(instance) STRING(reflect.qual(class))
+    (attr,value).. CLOSE</TD></TR>
   <TR><TD>ModuleType</TD><TD>OPEN(module) STRING(__name__) CLOSE</TD></TR>
   <TR><TD>ClassType</TD>
       <TD>OPEN(class) STRING(reflect.qual(class)) CLOSE</TD></TR>
@@ -737,12 +988,10 @@ Perspective Broker.</p>
         (this could be folded into 'call' with only 2 bytes of overhead)
       </TD></TR>
 
-  <TR><TD>method response (good)</TD>
+  <TR><TD>method response (success)</TD>
       <TD>OPEN(answer) INT(request-id) value CLOSE</TD></TR>
   <TR><TD>method response (exception)</TD>
       <TD>OPEN(error) INT(request-id) value CLOSE</TD></TR>
-
-  <TR><TD></TD><TD>OPEN()  CLOSE</TD></TR>
   
 </table>
 
@@ -810,11 +1059,15 @@ either.</p>
 
 <p>The following sequences are internal.</p>
 
+<p>The OPEN(vocab) sequence is used to update the forward compression
+token-to-string table used by the VOCAB token. It is followed by a series of
+number/string pairs. All numbers that appear in VOCAB tokens must be
+associated with a string by appearing in the most recent OPEN(vocab)
+sequence.</p>
+
 <table border="" width="">
   <TR><TD colspan="2">internal types</TD></TR>
   <TR><TD>vocab dict</TD><TD>OPEN(vocab) (num,string).. CLOSE</TD></TR>
-  <TR><TD>ordered dictionary</TD>
-      <TD>OPEN(dict) (key,value).. CLOSE</TD></TR>
 </table>
 
 </body> </html>
