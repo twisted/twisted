@@ -114,20 +114,6 @@ class FileAuthority(common.ResolverBase):
             
             return defer.succeed((results, authority, additional))
         except KeyError:
-            # Attempt to locate a suitable wildcard record
-            newName = name
-            while not self.records.get('*.' + newName.lower(), ()) and len(newName.split('.')) > 1:
-                newName = '.'.join(newName.split('.')[1:])
-
-            if self.records.has_key('*.'+newName):
-                for rec in self.records['*.'+newName]:
-                    if rec.TYPE == dns.A or rec.TYPE == dns.CNAME:
-                        results.append(
-                            dns.RRHeader(name, rec.TYPE, dns.IN, rec.ttl or default_ttl, rec, auth=True)
-                        )
-                
-                return defer.succeed((results, (), ()))
-
             if name.lower().endswith(self.soa[0].lower()):
                 # We are the authority and we didn't find it.  Goodbye.
                 return defer.fail(failure.Failure(dns.AuthoritativeDomainError(name)))

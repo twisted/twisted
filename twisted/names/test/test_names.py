@@ -66,16 +66,6 @@ my_soa = dns.Record_SOA(
     retry = 100,
     )
 
-wildcard_soa = dns.Record_SOA(
-    mname = 'wildcard-domain.com',
-    rname = 'postmaster.wildcard-domain.com',
-    serial = 140,
-    refresh = 12345,
-    minimum = 42,
-    expire = 424242,
-    retry = 42,
-)
-
 test_domain_com = NoFileAuthority(
     soa = ('test-domain.com', soa_record),
     records = {
@@ -143,26 +133,12 @@ my_domain_com = NoFileAuthority(
         }
     )
 
-wildcard_domain_com = NoFileAuthority(
-    soa = ('wildcard-domain.com', wildcard_soa),
-    records = {
-        '*.wildcard-domain.com': [
-            wildcard_soa,
-            dns.Record_A('1.2.3.4', ttl='1S'),
-            ],
-        '*.cname.wildcard-domain.com': [
-            wildcard_soa,
-            dns.Record_CNAME('foo.wildcard-domain.com', ttl='1S')
-            ]
-        }
-    )
-
 class ServerDNSTestCase(unittest.TestCase):
     """Test cases for DNS server and client."""
 
     def setUp(self):
         self.factory = server.DNSServerFactory([
-            test_domain_com, reverse_domain, my_domain_com, wildcard_domain_com
+            test_domain_com, reverse_domain, my_domain_com
         ], verbose=2)
 
         p = dns.DNSDatagramProtocol(self.factory)
@@ -225,21 +201,6 @@ class ServerDNSTestCase(unittest.TestCase):
         self.namesTest(
             self.resolver.lookupAddress('host-two.test-domain.com'),
             [dns.Record_A('255.255.255.254', ttl=19283784), dns.Record_A('0.0.0.0', ttl=19283784)]
-        )
-
-    def testWildcardAddressRecord(self):
-        """Test DNS 'A' record with wildcards"""
-
-        self.namesTest(
-            self.resolver.lookupAddress('foo.wildcard-domain.com'),
-            [dns.Record_A('1.2.3.4', ttl=1)]
-        )
-
-    def testWildcardCNAME(self):
-        """Test DNS 'CNAME' record with wildcards"""
-        self.namesTest(
-            self.resolver.lookupAddress('bar.cname.wildcard-domain.com'),
-            [dns.Record_CNAME('foo.wildcard-domain.com', ttl=1)]
         )
 
     def testAuthority(self):
