@@ -89,7 +89,7 @@ class DNSServerFactory(protocol.ServerFactory):
                 if a.records.has_key(str(q.name).lower()):
                     for r in a.records[str(q.name).lower()]:
                         if q.type == r.TYPE or q.type == dns.ALL_RECORDS:
-                            answers.append(dns.RRHeader(str(q.name), q.type, q.cls, 10))
+                            answers.append(dns.RRHeader(str(q.name), r.TYPE, q.cls, 10))
                             answers[-1].payload = r
         if len(answers):
             message.answers = answers
