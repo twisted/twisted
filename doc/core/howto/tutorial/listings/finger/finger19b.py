@@ -35,7 +35,7 @@ class FingerProtocol(basic.LineReceiver):
         d = self.factory.getUser(user)
         d.addErrback(catchError)
         def writeValue(value):
-            self.transport.write(value+'\n')
+            self.transport.write(value+'\r\n')
             self.transport.loseConnection()
         d.addCallback(writeValue)
 
