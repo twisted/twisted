@@ -24,6 +24,11 @@ import copy
 import socket
 import traceback
 
+if os.name == 'nt':
+    EWOULDBLOCK = 10035
+else:
+    from errno import EWOULDBLOCK
+
 # Twisted Imports
 from twisted.protocols import protocol
 from twisted.persisted import styles
@@ -31,6 +36,85 @@ from twisted.python import log
 
 # Sibling Imports
 import abstract
+from main import CONNECTION_LOST, CONNECTION_DONE
+
+
+class Connection(abstract.FileDescriptor,
+                 protocol.Transport,
+                 styles.Ephemeral):
+    """This is a UDP virtual connection
+
+    This transport connects to a given host/port over UDP. By nature
+    of UDP, only outgoing communications are allowed.  If a connection
+    is initiated by a packet arriving at a UDP port, it is up to the
+    port to call dataReceived with that packet.  By default, once data
+    is written once to the connection, it is lost.
+    """
+
+    keepConnection = 0
+
+    def __init__(self, skt, protocol, remote, local, sessionno):
+        self.socket = skt
+        self.fileno = skt.fileno
+        self.remote = remote
+        self.protocol = protocol
+        self.local = local
+        self.sessionno = sessionno
+        self.connected = 1
+        self.logstr = "%s,%s,%s (UDP)" % (self.protocol.__class__.__name__, sessionno, self.remote[0])
+
+    def write(self,data):
+        res = abstract.FileDescriptor.write(self,data)
+        if not self.keepConnection:
+            self.loseConnection()
+        return res
+
+    def writeSomeData(self, data):
+        """Connection.writeSomeData(data) -> #of bytes written | CONNECTION_LOST
+        This writes as much data as possible to the socket and returns either
+        the number of bytes read (which is positive) or a connection error code
+        (which is negative)
+        """
+        if len(data) > 0:
+            try:
+                return self.socket.sendto(data, self.remote)
+            except socket.error, se:
+                if se.args[0] == EWOULDBLOCK:
+                    return 0
+                return CONNECTION_LOST
+        else:
+            return 0
+
+    def connectionLost(self):
+        """See abstract.FileDescriptor.connectionLost().
+        """
+        protocol = self.protocol
+        del self.protocol
+        abstract.FileDescriptor.connectionLost(self)
+        self.socket.close()
+        del self.socket
+        del self.fileno
+        protocol.connectionLost()
+
+    def logPrefix(self):
+        """Return the prefix to log with when I own the logging thread.
+        """
+        return self.logstr
+
+    def getPeer(self):
+        """
+        Returns a tuple of ('INET_UDP', hostname, port), indicating
+        the connected client's address
+        """
+        return ('INET_UDP',)+self.remote
+
+    def getHost(self):
+        """
+        Returns a tuple of ('INET_UDP', hostname, port), indicating
+        the servers address
+        """
+        return ('INET_UDP',)+self.socket.getsockname()
+
 
 class Port(abstract.FileDescriptor):
     """I am a UDP server port, listening for packets.
@@ -38,13 +122,17 @@ class Port(abstract.FileDescriptor):
     When a packet is received, I will call my factory's packetReceived
     with the packet and an address.
     """
-    
-    def __init__(self, port, factory, maxPacketSize=8192):
+
+    sessionno = 0
+
+    def __init__(self, port, factory, interface='', maxPacketSize=8192):
         """Initialize with a numeric port to listen on.
         """
         self.port = port
         self.factory = factory
         self.maxPacketSize = maxPacketSize
+        self.interface = interface
+        self.setLogStr()
 
     def __repr__(self):
         return "<%s on %s>" % (self.factory.__class__, self.port)
@@ -75,21 +163,37 @@ class Port(abstract.FileDescriptor):
         """
         log.msg("%s starting on %s"%(self.factory.__class__, self.port))
         skt = self.createInternetSocket()
-        skt.bind( ('',self.port) )
+        skt.bind( (self.interface ,self.port) )
         self.connected = 1
         self.socket = skt
         self.fileno = self.socket.fileno
         self.startReading()
 
+    def createConnection(self, addr):
+        """Creates a virtual connection over UDP"""
+        try:
+            protocol = self.factory.buildProtocol(addr)
+            s = self.sessionno
+            self.sessionno = s+1
+            transport = Connection(self.socket.dup(), protocol, addr, self, s)
+            protocol.makeConnection(transport, self)
+        except:
+            traceback.print_exc(file=log.logfile)
+        return transport
+
     def doRead(self):
         """Called when my socket is ready for reading.
-        
-        This gets a packet and calls the factory's packetReceived
-        method to handle it.
+
+        This reads a packet, calls self.protocol() to handle it.
         """
         try:
             data, addr = self.socket.recvfrom(self.maxPacketSize)
-            self.factory.packetReceived(data, addr, self)
+            transport = self.createConnection(addr)
+            # Ugly patch needed because logically control passes here
+            # from the port to the transport.
+            self.logstr = transport.logPrefix()
+            transport.protocol.dataReceived(data)
+            self.setLogStr()
         except:
             traceback.print_exc(file=log.logfile)
 
@@ -119,7 +223,10 @@ class Port(abstract.FileDescriptor):
         del self.socket
         del self.fileno
 
+    def setLogStr(self):
+        self.logstr = str(self.factory.__class__) + " (UDP)"
+
     def logPrefix(self):
         """Returns the name of my class, to prefix log entries with.
         """
-        return str(self.factory.__class__)
+        return self.logstr

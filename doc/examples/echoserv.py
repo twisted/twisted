@@ -16,6 +16,7 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
 from twisted.protocols.protocol import Protocol, Factory
+from twisted.internet import udp
 
 ### Protocol Implementation
 
@@ -40,4 +41,6 @@ if __name__ == '__main__':
     factory.protocol = echoserv.Echo
     app = Application("echo")
     app.listenOn(8000,factory)
+    p = udp.Port(8000,factory)
+    app.addPort(p)
     app.save("start")
