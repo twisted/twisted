@@ -143,9 +143,10 @@ class TextReporter(Reporter):
         if isinstance(error, failure.Failure):
             tb = error.getBriefTraceback()
         elif isinstance(error, types.TupleType):
-            d = {'plain': traceback,
-                 'emacs': util}
-            tb = ''.join(d[self.tbformat].format_exception(*error))
+            d = { "plain": util.plain_format_exception,
+                  "emacs": util.emacs_format_exception }
+            f = d[self.tbformat]
+            tb = ''.join(f(*error))
         else:
             tb = "%s\n" % error
 
