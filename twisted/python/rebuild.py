@@ -30,6 +30,7 @@ import log
 
 lastRebuild = time.time()
 
+
 class Sensitive:
 
     """A utility mixin that's sensitive to rebuilds.
@@ -84,16 +85,37 @@ def latestFunction(oldFunc):
         return oldFunc
     return getattr(module, oldFunc.__name__)
 
-def latestClass(oldClass):
-    """Get the latest version of a class.
-    """
-    module = __import__(oldClass.__module__, {}, {}, 'nothing')
-    newClass = getattr(module, oldClass.__name__)
-    newBases = []
-    for base in newClass.__bases__:
-        newBases.append(latestClass(base))
-    newClass.__bases__ = tuple(newBases)
-    return newClass
+
+if sys.version_info >= (2, 2, 0):
+    # We have 'object'
+    def latestClass(oldClass):
+        """Get the latest version of a class.
+        """
+        module = __import__(oldClass.__module__, {}, {}, 'nothing')
+        newClass = getattr(module, oldClass.__name__)
+        newBases = []
+        for base in newClass.__bases__:
+            newBases.append(latestClass(base))
+        
+        try:
+            # This makes old-style stuff work
+            newClass.__bases__ = tuple(newBases)
+            return newClass
+        except TypeError:
+            ctor = getattr(newClass, '__metaclass__', type)
+            return ctor(newClass.__name__, tuple(newBases), dict(newClass.__dict__))
+else:
+    def latestClass(oldClass):
+        """Get the latest version of a class.
+        """
+        module = __import__(oldClass.__module__, {}, {}, 'nothing')
+        newClass = getattr(module, oldClass.__name__)
+        newBases = []
+        for base in newClass.__bases__:
+            newBases.append(latestClass(base))
+        newClass.__bases__ = tuple(newBases)
+        return newClass
+
 
 def updateInstance(self):
     """Updates an instance to be current
