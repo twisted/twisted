@@ -134,7 +134,7 @@ class DNSQueryTimeoutError(defer.TimeoutError):
 
 def str2time(s):
     suffixes = (
-        ('M', 60), ('H', 60 * 60), ('D', 60 * 60 * 24),
+        ('S', 1), ('M', 60), ('H', 60 * 60), ('D', 60 * 60 * 24),
         ('W', 60 * 60 * 24 * 7), ('Y', 60 * 60 * 24 * 365)
     )
     if isinstance(s, types.StringType):
