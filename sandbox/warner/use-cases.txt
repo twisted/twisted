@@ -1,3 +1,6 @@
+This file contains a collection of pb wishlist items, things it would be nice
+to have in newpb.
+
 
 * Log in, specifying desired interfaces
 
