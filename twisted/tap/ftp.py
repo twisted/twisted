@@ -50,7 +50,6 @@ def addUser(factory, username, password):
     else:
         factory.userdict[username]["passwd"] = password
 
-
 def getPorts(app, config):
     t = ftp.FTPFactory()
     # setting the config
@@ -65,7 +64,7 @@ def getPorts(app, config):
     addUser(t, "twisted", "twisted")
 
     try:
-        portno = config.portno
+        portno = int(config.port)
     except AttributeError:
         portno = 2121
     return [(portno, t)]
