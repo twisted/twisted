@@ -45,12 +45,13 @@ What's new in 0.12.0?
 
   Added XML-RPC web resource, and fixed a few issues in twisted.web.
 
-  Major speed improvement to twisted on jython.
+  Major speed improvement to twisted on jython, and some speed improvements to
+  threaded twisted.
 
   Updates to twisted.python.usage.
 
   Beginning to revitalize twisted.enterprise: in this release,
-  twisted.enterprise.adbapi, and asynchronous wrapper for python's DB-API 2.0.
+  twisted.enterprise.adbapi, an asynchronous wrapper for python's DB-API 2.0.
 
 What can I do with it?
 
