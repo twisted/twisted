@@ -1,3 +1,15 @@
+2002-09-21  Glyph Lefkowitz  <glyph@twistedmatrix.com>
+
+	* twisted/web/static.py, twisted/web/script.py: Previously, it was
+	not possible to use the same xmlmvc application (directory full of
+	files and all) to interface to separate instances in the same
+	server, without a considerable amount of hassle.  We have
+	introduced a new "Registry" object which is passed to all .rpy and
+	.epy scripts as "registry" in the namespace.  This is a
+	componentized, so it can be used to associate different components
+	for the same interface for different File instances which
+	represent the same underlying directory.
+
 2002-09-20  Glyph Lefkowitz  <glyph@twistedmatrix.com>
 
 	* twisted/web/microdom.py: You can now specify tags that the
