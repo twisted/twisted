@@ -97,7 +97,7 @@ class TestNetstring(basic.NetstringReceiver):
 
 class NetstringReceiverTestCase(unittest.TestCase):
 
-    strings = ['hello', 'world', 'how', 'are', 'you123', ':today']
+    strings = ['hello', 'world', 'how', 'are', 'you123', ':today', "a"*515]
 
     def testBuffer(self):
         for packet_size in range(1, 10):
