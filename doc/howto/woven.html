@@ -12,7 +12,7 @@
 
 <p>
 DOMTemplate solves the problem of separating logic from
-presentation, and allows the templating logic to be expressed in
+presentation, and allows the template manipulation logic to be expressed in
 Python code form using the DOM API. However, the DOM API is too low
 level and it quickly becomes tedious to use to build complicated HTML
 structures.
@@ -30,9 +30,14 @@ component framework, which allows you to construct complex HTML
 
 <p>
 Instead of manipulating DOM objects which represent low-level HTML
-Nodes, you construct and compose views using widgets defined in
+Nodes, you construct and compose the model data that your page will
+be based on, and specify views which will be responsible for
+formatting the model data as HTML. Using widgets defined in
 twisted.web.woven.widgets, and higher-level widgets that you define
-yourself for an application-specific purpose.
+yourself for an application-specific purpose, python data structures
+such as strings, integers, lists, dicts, and custom subclasses of woven.model.Model, can be adapted implicitly or
+explicitly to subclasses of woven.view.View (such as subclasses of
+woven.widgets.Widget) for display in HTML.
 </p>
 
     <h3>Model-View-Controller</h3>
@@ -47,146 +52,81 @@ whose job it is to handle events such as <q>user input from a form</q> and
 </p>
 
 <p>
-Woven's implementation of MVC takes advantage of
-twisted.python.components, the interface and component registry, in
-order to loosely couple the interacting objects.
+Woven's implementation of MVC uses twisted.python.components, 
+the interface and component registry,  to loosely couple the interacting objects.
 </p>
 
-    <h3>View and Controller</h3>
+<h3>Hello World with Page</h3>
 
-<p>
-twisted.web defines IResource, the interface that Resource objects
-must implement in order to support publishing themselves on the
-web. View and Controller both support this interface, giving you an
-easy and powerful way to handle incoming web requests and generate
-template-driven web pages.
-</p>
-
-<p>
-View is a subclass of DOMTemplate, and much of Woven is based upon
-the semantics DOMTemplate uses to transform an input XHTML template
-into the final page which the user sees.
-</p>
-
-<p>
-Here is an example MVC triad for the web:
+<p>Let's start with the canonical Hello World example. We will use an instance of woven.page.Page as our IResource implementor. IResource describes the interface objects are required to implement in order to publish themselves over the web in twisted.web. We will be instanciating a Page instance in an .rpy script. An rpy is like a CGI script -- each time you visit the script, it is executed. However, an rpy script is merely responsible for instanciating a Resource object to handle the request and assigning it to a variable named "resource".
 </p>
 
 <pre class="python">
-from twisted.web.woven import model, view, controller
+from twisted.web.woven import page
 
-
-class MExample(model.WModel):
-    pass
-class VExample(view.WView):
-    templateFile = 'Example.xhtml'
-class CExample(controller.WController):
-    pass
-
-
-# Register VExample as a View for MExample
-view.registerViewForModel(VExample, MExample)
-# Register CExample as a Controller for MExample
-controller.registerControllerForModel(CExample, MExample)
+resource = page.Page("Hello, world!", templateFile = "HelloWorld.html")
 </pre>
 
 <p>
-Although it is not always necessary to define a complete MVC
-triad, I recommend doing so initially even if your class bodies are
-simply 'pass'. This will get you used to thinking about MVC objects as
-a complete triad of cooperating objects, and make it easy to add
-functionality to your triad later.
+Next, let's take a look at the HTML template woven will look up to render this request into HTML. Woven defines three special attributes, model=, view=, and controller=, which it uses to decide which python code to invoke while rendering the page. In the template below, we have simply indicated that woven should replace certain nodes with the results of rendering a widget on the current model. The syntax model="." indicates that woven should use the current model no matter what it's name, similar to filesystem syntax. Since we aren't explicitly stating WHICH view widget should render the model with a view= attribute, an IView adapter is looked up from the global registry implicitly.
+</p>
+
+<a href="listings/HelloWorld/HelloWorld.html" class="html-listing">Listing 1: HelloWorld.xhtml: Hello World Web Template</a>
+
+<p>
+Next, let's look at an example of rendering a page with a more complicated model. First, we need a place to gather all the Model data together so the View has access to it. The base woven.model.Model is a good container to place other models in, and doing so is as simple as calling setSubmodel. Notice that setSubmodel takes a key and a value, the name the submodel will be available as, and the actual submodel data.
 </p>
 
 <p>
-While using Twisted's Woven you will be using all this boilerplate
-code for every page on your web site. It may seem excessive at first,
-but it has several advantages. By defining a complete MVC triad to
-represent a web page, you give your page three separate namespaces for
-your web page's components; by following the MVC division of labor
-properly you make it easier to locate and isolate a piece of code
-based on what it does; and by componentizing your logic your code
-becomes far easier to reuse in other parts of your application,
-speeding development time.
+Woven comes with various widgets which are registered as IView implementors for the basic python types (strings, lists, and dictionaries) which are very useful. Most of the time, you can simply prepare the data for rendering by converting it into strings and lists in a Model subclass, and then referencing these strings and lists in your template. Here is an example of using an rpy to set up some model data:
 </p>
 
 <p>
-Now, let's take a look at an actual application written in
-Woven. Here is a template that a designer has provided for the quote
-page on our site:
-</p>
-
-<a href="listings/TwistedQuotes/WovenQuotes.xhtml" class="html-listing">Listing 1: WovenQuotes.html: Twisted Quotes Web Template</a>
-
-<p>
-Notice that we have placed <q>model</q>, <q>view</q> and <q>controller</q>
-attributes on those elements that we are interested in operating
-on. When DOMTemplate is iterating the template looking for nodes to
-operate on, any node with these attributes will be looked for in both
-the view and controller. If a node has view attribute of <code>foo</code> the
-method <code>factory_foo</code> will be looked for in the view, and if a node has a
-controller attribute of <q>bar</q> the method <code>factory_bar</code> will be looked
-for in the controller.
+<a href="listings/HelloWorld/HelloWorld2.rpy" class="py-listing">Listing 2: HelloWorld2.rpy: Setting up submodels</a>
 </p>
 
 <p>
-These factory methods will be called with the request object and
-current node object as parameters. In the WView subclass, a view
-factory is expected to return a Widget subclass; there are many
-widgets in twisted.web.woven.widgets that can be composed into larger
-widgets which are specific to your application. A controller factory,
-usually only relevant on an INPUT node, is expected to return an
-InputHandler subclass; these are defined in twisted.web.woven.input.
+This time, in our HTML template, we're going to have to be a little more explicit when specifying view widgets to render the model data. It's generally a good idea to always explicitly state the name of the view widget you want to handle a node; but it's convenient that you don't have to, for example if you're rendering a custom model/view pair where it doesn't make sense to use any other view widgets to render a model.
 </p>
 
 <p>
-<a href="listings/TwistedQuotes/wovenquotes.py" class="py-listing">Listing 2: wovenquotes.py: Twisted Quotes Woven module</a>
+<a href="listings/HelloWorld/HelloWorld2.html" class="py-listing">Listing 3: HelloWorld2.html: Explicitly stating view widget names in the template</a>
 </p>
 
 <p>
-So, to bring our template to life, we first override setUp to
-prepare the view for rendering. We then add <code>factory_quote</code> and
-<code>factory_title</code> methods on our view subclass. In the case of title we
-can simply return a domwidgets.Text instance. Since this factory was
-called in response to a node with the model attribute set to <q>title</q>,
-when the node is rendered it will use the <q>title</q> attribute of the
-model as it's data. For our quote factory, we have implemented a
-custom widget. This makes our logic componentized and reusable. The
-same QuoteWidget could potentially be used to render multiple
-different pieces of data.
+As you can see from the template, the List widget requires specially tagged nodes inside of it's node in order to operate properly. These nodes are called "pattern" nodes, and each widget can choose to require certain patterns, or look for certain optional patterns, during the course of rendering itself. In the list widget's case, it looks for the pattern "listItem" and makes one copy of it for each element in the list it is rendering. There are two ways to specify a patten node; one, by putting a pattern= attribute on a node, and two by putting a patternName + 'Of'="modelName" attribute on a node. This is easier to show by example than to explain; look at the template for an example of the second usage.
 </p>
 
 <p>
-A DOMWidget's main responsibility is implementing setUp, which
-should set up the widget in preperation for conversion to DOM and
-insertion into the tree. In this case, we take advantage of the higher
-level Widgets API and simply add a Text widget to ourself. When the
-widget is turned into DOM, the text widget will know how to create a
-DOM text node, and insert it into the tree.
+Look at the documentation for each individual widget to see what patterns a Widget supports. The List widget is particularly useful; it supports the following patterns:
+</p>
+
+<ul>
+    <li>listItem</li>
+    <li>listHeader</li>
+    <li>listFooter</li>
+    <li>emptyList</li>
+</ul>
+
+<p>
+Notice a few things about this template. First, we are explicitly stating the view widget we wish to render each node with a view= attribute. All these view widgets are defined in woven/widgets.py, the default woven widgets library. You can also create your own widget libraries for your views, as well as defining subwidget names on more complicated views that are only valid within that views's HTML node.
 </p>
 
 <p>
-Finally, we provide a <code>factory_newQuote</code> method on the controller
-which returns a custom InputHandler subclass. There are a few methods
-handlers may override to deal with data, but in this case we override
-<q>check</q>, which decides if the input the user entered was valid, and
-<q>commit</q>, which applies the user's input. For check, we simply see if
-the user entered anything at all; for commit, we append the newly
-entered quote to the end of the quotefile.
+You now know how to create a woven HTML template, and how to populate this template with data in the form of simple python data types. However, often you will wish to render a dynamic data source, such as a database, or a complex data source such as a python object. One way to render this data over the web is to create a class which implements IModel, the interface woven uses to expose data to view widgets.
+</p>
+
+<h3>Implementing IModel</h3>
+
+<p>
+The IModel interface is documented in twisted.web.woven.interfaces. It describes the interfaces Models must implement in order to play well with the rest of the woven MVC framework. If you are inheriting from twisted.web.woven.model.Model, most of these interfaces will be implemented for you. The interfaces that we will be most interested in implementing are those that are designed to be overridden for customization, getData and setData.
 </p>
 
 <p>
-Now, you just need a Resource Script to handle the web request.
+Let's create a simple Model which wraps a quoter that was created in a previous HOWTO. The constructor stores the filename and creates a new FortuneQuoter instance.
 </p>
 
-<p>
-<a href="listings/TwistedQuotes/wovenquotes.rpy" class="py-listing">Listing 3: wovenquotes.rpy: Twisted Quotes Woven Resource script</a>
-</p>
-
-<p>
-More complicated things can be done with woven, but they are currently not
-covered in this HOWTO.
-</p>
+<pre>under construction...</pre>
 
 </body>
 </html>
