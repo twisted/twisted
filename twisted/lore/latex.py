@@ -31,7 +31,7 @@ entities = { 'amp': '&', 'gt': '>', 'lt': '<', 'quot': '"',
 
 def getLatexText(node, writer, filter=lambda x:x):
     if isinstance(node, microdom.EntityReference):
-        writer(entities.get(node.data, ''))
+        writer(entities.get(node.data[1:-1], ''))
         return
     if hasattr(node, 'data'):
         writer(filter(node.data))
