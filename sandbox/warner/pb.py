@@ -160,7 +160,6 @@ class RemoteReference(object):
 
         d.addErrback(req.fail)
 
-
         # the remote end could send back an error response for many reasons:
         #  bad method name
         #  bad argument types (violated their schema)
@@ -175,51 +174,8 @@ class RemoteReference(object):
 
         return req.deferred
 
-class ReferenceUnslicer(BaseUnslicer):
-    refID = None
-    interfaces = []
-    wantInterfaceList = False
-    ilistConstraint = schema.ListOf(schema.TupleOf(str, int))
+registerAdapter(flavors.YourReferenceSlicer, RemoteReference, ISlicer)
 
-    def checkToken(self, typebyte, size):
-        if self.refID == None:
-            if typebyte != tokens.INT:
-                raise BananaError("reference ID must be an INT")
-        else:
-            if self.wantInterfaceList:
-                self.ilistConstraint.checkToken(typebyte, size)
-            else:
-                raise BananaError("interface list on non-initial receipt")
-
-    def doOpen(self, opentype):
-        # only for the interface list
-        self.ilistConstraint.checkOpentype(opentype)
-        unslicer = self.open(opentype)
-        if unslicer:
-            unslicer.setConstraint(self.ilistConstraint)
-        return unslicer
-
-    def receiveChild(self, token):
-        self.propagateUnbananaFailures(token)
-        # TODO: if possible, return an error to the other side
-
-        if self.refID == None:
-            self.refID = token
-            # do we want an interface list? Only if this is the first time
-            # this reference has been received
-            if not self.broker.remoteReferences.has_key(self.refID):
-                self.wantInterfaceList = True
-        else:
-            # must be the interface list
-            assert self.wantInterfaceList
-            assert type(token) == type([]) # TODO: perhaps a dict instead
-            self.interfaces = token
-
-    def receiveClose(self):
-        if self.refID == None:
-            raise BananaError("sequence ended too early")
-        return self.broker.registerRemoteReference(self.refID,
-                                                   self.interfaces)
 
 class DecRefUnslicer(BaseUnslicer):
     refID = None
@@ -260,8 +216,8 @@ class CallUnslicer(BaseUnslicer):
             if typebyte != tokens.INT:
                 raise BananaError("request ID must be an INT")
         elif self.stage == 1:
-            if typebyte != tokens.INT:
-                raise BananaError("object ID must be an INT")
+            if typebyte not in (tokens.INT, tokens.STRING, tokens.VOCAB):
+                raise BananaError("object ID must be an INT or STRING")
         elif self.stage == 2:
             if typebyte not in (tokens.STRING, tokens.VOCAB):
                 raise BananaError("method name must be a STRING")
@@ -294,7 +250,7 @@ class CallUnslicer(BaseUnslicer):
             self.broker.activeLocalCalls[self.reqID] = self
         elif self.stage == 1:
             # this might raise an exception if objID is invalid
-            self.obj = self.broker.getObj(token)
+            self.obj = self.broker.getReferenceable(token)
             self.stage += 1
         elif self.stage == 2:
             # validate the methodname, get the schema. This may raise an
@@ -473,7 +429,6 @@ class ErrorUnslicer(BaseUnslicer):
         self.broker.gotError(self.request, self.failure)
 
 PBTopRegistry = {
-    ("remote",): ReferenceUnslicer,
     ("decref",): DecRefUnslicer,
     ("call",): CallUnslicer,
     ("answer",): AnswerUnslicer,
@@ -482,7 +437,8 @@ PBTopRegistry = {
 
 PBOpenRegistry = slicer.UnslicerRegistry.copy()
 PBOpenRegistry.update({
-    ('remote',): ReferenceUnslicer,
+    ('my-reference',): flavors.ReferenceUnslicer,
+    ('your-reference',): flavors.YourReferenceUnslicer,
     # ('copyable', classname) is handled inline, through the CopyableRegistry
     })
 
@@ -491,7 +447,7 @@ class PBRootUnslicer(slicer.RootUnslicer):
     topRegistry = PBTopRegistry
     # openRegistry defines what objects are allowed at the second level and
     # below
-    openRegistry = slicer.UnslicerRegistry
+    openRegistry = PBOpenRegistry
     logViolations = False
 
     def checkToken(self, typebyte, size):
@@ -534,12 +490,14 @@ class PBRootUnslicer(slicer.RootUnslicer):
                     factory = flavors.CopyableRegistry[classname]
                     if tokens.IUnslicer.implementedBy(factory):
                         child = factory()
+                        child.broker = self.broker
                         return child
                     if flavors.IRemoteCopy.implementedBy(factory):
                         if factory.nonCyclic:
                             child = flavors.NonCyclicRemoteCopyUnslicer(factory)
                         else:
                             child = flavors.RemoteCopyUnslicer(factory)
+                        child.broker = self.broker
                         return child
                     why = "RemoteCopy class '%s' has weird factory %s" \
                                     % (classname, factory)
@@ -554,6 +512,7 @@ class PBRootUnslicer(slicer.RootUnslicer):
             child = opener()
         except KeyError:
             raise Violation("unknown OPEN type '%s'" % (opentype,))
+        child.broker = self.broker
         return child
 
     def doOpen(self, opentype):
@@ -686,45 +645,109 @@ class Broker(banana.BaseBanana):
     def initBroker(self):
         self.rootSlicer.broker = self
         self.rootUnslicer.broker = self
-        self.remoteReferences = weakref.WeakValueDictionary()
 
-        self.currentRequestID = 0
-        self.waitingForAnswers = {}
-
+        # sending side uses these
         self.currentLocalID = 0
+        self.clids = {} # maps from puid to clid
         self.localObjects = {} # things which are available to our peer.
                                # These are reference counted and removed
                                # when the last decref message is received.
-        self.activeLocalCalls = {}
+        # receiving side uses these
+        self.remoteReferences = weakref.WeakValueDictionary() # clid to RR
+
+        # sending side uses these
+        self.currentRequestID = 0
+        self.waitingForAnswers = {} # we wait for the other side to answer
+        # receiving side uses these
+        self.activeLocalCalls = {} # the other side wants an answer from us
 
     def connectionLost(self, why):
         self.abandonAllRequests(why)
         banana.BaseBanana.connectionLost(self, why)
 
-    def newLocalID(self):
-        """Generate a new LUID.
-        """
-        self.currentLocalID = self.currentLocalID + 1
-        return self.currentLocalID
+    # Referenceable handling, methods for the sending-side (the side that
+    # holds the original Referenceable)
 
-    def putObj(self, obj):
-        # TODO: give duplicates the same objID
-        objID = self.newLocalID()
-        self.localObjects[objID] = obj
-        return objID
+    def getCLID(self, puid, obj):
+        # returns (clid, firstTime)
+        clid = self.clids.get(puid, None)
+        if clid is None:
+            self.currentLocalID = self.currentLocalID + 1
+            clid = self.currentLocalID
+            self.clids[puid] = clid
+            self.localObjects[clid] = obj
+            return clid, True
+        return clid, False
 
-    def getObj(self, objID):
-        """objID is a number which refers to a object that the remote end is
-        allowed to invoke methods upon.
+    def getReferenceable(self, clid):
+        """clid is the connection-local ID of the Referenceable the other
+        end is trying to invoke or point to. If it is a number, they want an
+        implicitly-created per-connection object that we sent to them at
+        some point in the past. If it is a string, they want an object that
+        was registered with our Factory.
         """
-        obj = self.localObjects[objID]
-        # obj = tokens.IReferenceable(obj)
-        #assert isinstance(obj, pb.Referenceable)
-        # obj needs .getMethodSchema, which needs .getArgConstraint
+
+        obj = None
+        if type(clid) == int:
+            obj = self.localObjects[clid]
+            # obj = tokens.IReferenceable(obj)
+            # assert isinstance(obj, pb.Referenceable)
+            # obj needs .getMethodSchema, which needs .getArgConstraint
+        elif type(clid) == str:
+            if self.factory:
+                obj = self.factory.getReferenceable(clid)
         return obj
 
-    # RemoteReference.callRemote, gotAnswer, and gotError are run on the
-    # calling side
+    def decref(self, clid):
+        # invoked when the other side sends us a decref message
+        puid = self.localObjects[clid].processUniqueID()
+        del self.clids[puid]
+        del self.localObjects[clid]
+
+    # Referenceable handling, methods for the receiving-side (the side that
+    # holds the derived RemoteReference)
+
+    def registerRemoteReference(self, clid, interfaceNames=[]):
+        """The far end holds a Referenceable and has just sent us a
+        reference to it (expressed as a small integer). If this is a new
+        reference, they will give us an interface list too. Obtain a
+        RemoteReference object (creating it if necessary) to give to the
+        local recipient. There is exactly one RemoteReference object for
+        each clid. We hold a weakref to the RemoteReference so we can
+        provide the same object later but so we can detect when the Broker
+        is the only thing left that knows about it.
+
+        The sender remembers that we hold a reference to their object. When
+        our RemoteReference goes away, its __del__ method will tell us to
+        send a decref message so they can possibly free their object.
+        """
+
+        for i in interfaceNames:
+            assert type(i) == str
+        obj = self.remoteReferences.get(clid)
+        if not obj:
+            obj = RemoteReference(self, clid, interfaceNames)
+            self.remoteReferences[clid] = obj  # WeakValueDictionary
+        return obj
+
+    def freeRemoteReference(self, clid):
+        # this is called by RemoteReference.__del__
+
+        # the WeakValueDictionary means we don't have to explicitly remove it
+        #del self.remoteReferences[clid]
+
+        try:
+            self.send(DecRefSlicer(clid))
+        except:
+            print "failure during freeRemoteReference"
+            f = failure.Failure()
+            print f.getTraceback()
+            raise
+
+
+    # remote-method-invocation methods, calling side (RemoteReference):
+    # RemoteReference.callRemote, gotAnswer, gotError
+
     def newRequestID(self):
         self.currentRequestID = self.currentRequestID + 1
         return self.currentRequestID
@@ -749,24 +772,17 @@ class Broker(banana.BaseBanana):
             req.fail(why)
         self.waitingForAnswers = {}
 
-    # decref is also invoked on the calling side (the pb.Referenceable
-    # holder) when the other side sends us a decref message
-    def decref(self, refID):
-        del self.localObjects[refID]
 
+    # remote-method-invocation methods, target-side (Referenceable):
+    # doCall, callFinished, sendError
 
-    # doCall, callFinished, sendError are run on the target side
     def doCall(self, reqID, obj, methodname, args, methodSchema):
         try:
             meth = getattr(obj, "remote_%s" % methodname)
             res = meth(**args)
         except:
-            # TODO: implement CopyableFailure and FailureConstraint
-            #f = failure.CopyableFailure()
+            # TODO: implement FailureConstraint
             f = failure.Failure()
-            #print "doCall failure", f
-            #msg = f.getErrorMessage() + f.getBriefTraceback()
-            #msg = "ooga booga"
             self.sendError(f, reqID)
         else:
             if not isinstance(res, defer.Deferred):
@@ -796,43 +812,3 @@ class Broker(banana.BaseBanana):
         assert self.activeLocalCalls[reqID]
         self.send(ErrorSlicer(reqID, f))
         del self.activeLocalCalls[reqID]
-
-    # registerRemoteReference and freeRemoteReference are also run on the
-    # target side (the side that has the RemoteReference)
-
-    def registerRemoteReference(self, refID, interfaceNames=[]):
-        """The far end holds a Referenceable and has just sent us a
-        reference to it (expressed as a small integer). If this is a new
-        reference, they will give us an interface list too. Obtain a
-        RemoteReference object (creating it if necessary) to give to the
-        local recipient. There is exactly one RemoteReference object for
-        each refID. We hold a weakref to the RemoteReference so we can
-        provide the same object later but so we can detect when the Broker
-        is the only thing left that knows about it.
-
-        The sender remembers that we hold a reference to their object. When
-        our RemoteReference goes away, its __del__ method will tell us to
-        send a decref message so they can possibly free their object.
-        """
-
-        for i in interfaceNames:
-            assert type(i) == str
-        obj = self.remoteReferences.get(refID)
-        if not obj:
-            obj = RemoteReference(self, refID, interfaceNames)
-            self.remoteReferences[refID] = obj
-        return obj
-
-    def freeRemoteReference(self, refID):
-        # this is called by RemoteReference.__del__
-
-        # the WeakValueDictionary means we don't have to explicitly remove it
-        #del self.remoteReferences[refID]
-
-        try:
-            self.send(DecRefSlicer(refID))
-        except:
-            print "failure during freeRemoteReference"
-            f = failure.Failure()
-            print f.getTraceback()
-            raise

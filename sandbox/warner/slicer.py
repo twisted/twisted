@@ -1134,7 +1134,9 @@ class RootUnslicer(BaseUnslicer):
 
     def __init__(self):
         self.objects = {}
-        maxLength = reduce(max, [len(k[0]) for k in self.openRegistry.keys()])
+        maxLength = reduce(max,
+                           [len(k[0]) for k in (self.openRegistry.keys() +
+                                                self.topRegistry.keys()) ])
         self.maxIndexLength = maxLength
 
     def start(self, count):

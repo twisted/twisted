@@ -299,6 +299,7 @@ def registerRemoteCopy(typename, factory):
 class Referenceable(object):
     refschema = None
     # TODO: this wants to be in an adapter, not a base class
+
     def getSchema(self):
         # create and return a RemoteReferenceSchema for us
         if not self.refschema:
@@ -307,19 +308,23 @@ class Referenceable(object):
                 for iface in getRemoteInterfaces(self)])
             self.refschema = schema.RemoteReferenceSchema(interfaces)
         return self.refschema
+    def processUniqueID(self):
+        return id(self)
+
+# TODO: rather than subclassing Referenceable, ReferenceableSlicer should be
+# used for anything which provides any RemoteInterface
 
 class ReferenceableSlicer(slicer.BaseSlicer):
     """I handle pb.Referenceable objects (things with remotely invokable
     methods, which are copied by reference).
     """
-    opentype = ('remote',)
+    opentype = ('my-reference',)
 
-    def sliceBody(self, streamable, banana):
+    def sliceBody(self, streamable, broker):
         puid = self.obj.processUniqueID()
-        firstTime = self.broker.luids.has_key(puid)
-        luid = self.broker.registerReference(self.obj)
-        yield luid
-        if not firstTime:
+        clid, firstTime = broker.getCLID(puid, self.obj)
+        yield clid
+        if firstTime:
             # this is the first time the Referenceable has crossed this
             # wire. In addition to the luid, send the interface list to the
             # far end.
@@ -327,3 +332,74 @@ class ReferenceableSlicer(slicer.BaseSlicer):
             # TODO: maybe create the RemoteReferenceSchema now
             # obj.getSchema()
 registerAdapter(ReferenceableSlicer, Referenceable, ISlicer)
+
+class ReferenceUnslicer(slicer.BaseUnslicer):
+    clid = None
+    interfaces = []
+    ilistConstraint = schema.ListOf(str)
+
+    def checkToken(self, typebyte, size):
+        if self.clid is None:
+            if typebyte != tokens.INT:
+                raise BananaError("reference ID must be an INT")
+        else:
+            self.ilistConstraint.checkToken(typebyte, size)
+
+    def doOpen(self, opentype):
+        # only for the interface list
+        self.ilistConstraint.checkOpentype(opentype)
+        unslicer = self.open(opentype)
+        if unslicer:
+            unslicer.setConstraint(self.ilistConstraint)
+        return unslicer
+
+    def receiveChild(self, token):
+        self.propagateUnbananaFailures(token)
+
+        if self.clid is None:
+            self.clid = token
+        else:
+            # must be the interface list
+            assert type(token) == type([]) # TODO: perhaps a dict instead
+            self.interfaces = token
+
+    def receiveClose(self):
+        if self.clid is None:
+            raise BananaError("sequence ended too early")
+        return self.broker.registerRemoteReference(self.clid,
+                                                   self.interfaces)
+
+
+
+class YourReferenceSlicer(slicer.BaseSlicer):
+    """I handle pb.RemoteReference objects (being sent back home to the
+    original pb.Referenceable-holder)
+    """
+    opentype = ('your-reference',)
+
+    def sliceBody(self, streamable, broker):
+        assert self.obj.broker == broker # only send to home broker
+        yield self.obj.refID
+# the registerAdapter() is performed in pb.py, since RemoteReference lives
+# there
+
+class YourReferenceUnslicer(slicer.LeafUnslicer):
+    clid = None
+
+    def checkToken(self, typebyte, size):
+        if typebyte != tokens.INT:
+            raise BananaError("your-reference ID must be an INT")
+
+    def receiveChild(self, token):
+        self.propagateUnbananaFailures(token)
+        self.clid = token
+
+    def receiveClose(self):
+        if self.clid is None:
+            raise BananaError("sequence ended too early")
+        # broker.getReferenceable will accept a string, but we do not yet
+        # allow URLs in your-reference sequences (only in call sequences).
+        obj = self.broker.getReferenceable(self.clid)
+        if not obj:
+            raise Violation("unknown clid '%s'" % self.clid)
+        return obj

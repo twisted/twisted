@@ -33,7 +33,7 @@ class TestReferenceUnslicer(unittest.TestCase):
         self.broker = TestBroker()
 
     def newUnslicer(self):
-        unslicer = pb.ReferenceUnslicer()
+        unslicer = flavors.ReferenceUnslicer()
         unslicer.broker = self.broker
         unslicer.opener = self.broker.rootUnslicer
         return unslicer
@@ -48,7 +48,6 @@ class TestReferenceUnslicer(unittest.TestCase):
         u = self.newUnslicer()
         u.checkToken(INT, 0)
         u.receiveChild(12)
-        self.failUnless(u.wantInterfaceList)
         rr1 = u.receiveClose()
         rr2 = self.broker.remoteReferences.get(12)
         self.failUnless(rr2)
@@ -61,7 +60,6 @@ class TestReferenceUnslicer(unittest.TestCase):
         u = self.newUnslicer()
         u.checkToken(INT, 0)
         u.receiveChild(12)
-        self.failUnless(u.wantInterfaceList)
         u.checkToken(OPEN, 9999)
         # pretend we did a u.doOpen("list") here
         interfaceNames = ["IFoo", "IBar"]
@@ -225,22 +223,25 @@ class TargetMixin:
         self.callingTransport.protocol = self.callingBroker
 
     def setupTarget(self, target):
-        objID = self.targetBroker.putObj(target)
-        rr = self.callingBroker.registerRemoteReference(objID)
+        puid = target.processUniqueID()
+        clid, firstTime = self.targetBroker.getCLID(puid, target)
+        rr = self.callingBroker.registerRemoteReference(clid)
         return rr, target
 
     def setupTarget2(self, target):
         # with interfaces
-        objID = self.targetBroker.putObj(target)
+        puid = target.processUniqueID()
+        clid, firstTime = self.targetBroker.getCLID(puid, target)
         ilist = pb.getRemoteInterfaceNames(target)
-        rr = self.callingBroker.registerRemoteReference(objID, ilist)
+        rr = self.callingBroker.registerRemoteReference(clid, ilist)
         return rr, target
 
     def setupTarget3(self, target, senderInterfaceNames):
         # with mismatched interfaces
-        objID = self.targetBroker.putObj(target)
-        f = self.callingBroker.registerRemoteReference
-        rr = f(objID, senderInterfaceNames)
+        puid = target.processUniqueID()
+        clid, firstTime = self.targetBroker.getCLID(puid, target)
+        rRR = self.callingBroker.registerRemoteReference
+        rr = rRR(clid, senderInterfaceNames)
         return rr, target
 
 
@@ -411,10 +412,6 @@ class TestCall(unittest.TestCase, TargetMixin):
         self.failUnless(str(f).find("Violation, INT token rejected by StringConstraint in inbound method results") != -1)
 
 
-# test how a Referenceable gets transformed into a RemoteReference as it
-# crosses the wire, then verify that it gets transformed back into the
-# original Referenceable when it comes back
-
 
 class MyCopyable1(pb.Copyable):
     # the getTypeToCopy name will be the fully-qualified class name, which
@@ -469,20 +466,25 @@ components.registerAdapter(MyCopyable3Slicer, MyCopyable3, tokens.ISlicer)
 pb.registerRemoteCopy("MyCopyable3name", MyRemoteCopy3Unslicer)
 
 
-class CopyableHelperTarget(pb.Referenceable):
+class HelperTarget(pb.Referenceable):
     def remote_store(self, obj):
         self.obj = obj
         return True
+    def remote_echo(self, obj):
+        self.obj = obj
+        return obj
 
 class TestCopyable(unittest.TestCase, TargetMixin):
 
-    def send(self, arg):
+    def setUp(self):
         self.setupBrokers()
         if 0:
             print
             self.callingBroker.doLog = "TX"
             self.targetBroker.doLog = " rx"
-        rr, target = self.setupTarget(CopyableHelperTarget())
+
+    def send(self, arg):
+        rr, target = self.setupTarget(HelperTarget())
         d = rr.callRemote("store", obj=arg)
         self.failUnless(dr(d))
         return target.obj
@@ -491,7 +493,8 @@ class TestCopyable(unittest.TestCase, TargetMixin):
         res = self.send(1)
         self.failUnlessEqual(res, 1)
 
-    def testFailure(self):
+    def testFailure1(self):
+        self.callingBroker.unsafeTracebacks = True
         try:
             raise RuntimeError("message here")
         except:
@@ -506,6 +509,23 @@ class TestCopyable(unittest.TestCase, TargetMixin):
         self.failUnlessEqual(f.stack, [])
         # there should be a traceback
         self.failUnless(f.traceback.find("raise RuntimeError") != -1)
+
+    def testFailure2(self):
+        self.callingBroker.unsafeTracebacks = False
+        try:
+            raise RuntimeError("message here")
+        except:
+            f0 = failure.Failure()
+        f = self.send(f0)
+        #print "CopiedFailure is:", f
+        #print f.__dict__
+        self.failUnlessEqual(f.type, "exceptions.RuntimeError")
+        self.failUnlessEqual(f.value, "message here")
+        self.failUnlessEqual(f.frames, [])
+        self.failUnlessEqual(f.tb, None)
+        self.failUnlessEqual(f.stack, [])
+        # there should not be a traceback
+        self.failUnlessEqual(f.traceback, "Traceback unavailable\n")
         
     def testCopy1(self):
         obj = MyCopyable1() # just copies the dict
@@ -535,4 +555,44 @@ class TestCopyable(unittest.TestCase, TargetMixin):
         self.failUnlessEqual(res.e, 2)
         self.failUnlessEqual(res.f, "yes")
         self.failIf(hasattr(res, "a"))
-        
+
+
+# test how a Referenceable gets transformed into a RemoteReference as it
+# crosses the wire, then verify that it gets transformed back into the
+# original Referenceable when it comes back
+
+
+class TestReferenceable(unittest.TestCase, TargetMixin):
+
+    def setUp(self):
+        self.setupBrokers()
+        if 0:
+            print
+            self.callingBroker.doLog = "TX"
+            self.targetBroker.doLog = " rx"
+
+    def send(self, arg):
+        rr, target = self.setupTarget(HelperTarget())
+        d = rr.callRemote("store", obj=arg)
+        self.failUnless(dr(d))
+        return target.obj
+
+    def echo(self, arg):
+        rr, target = self.setupTarget(HelperTarget())
+        d = rr.callRemote("echo", obj=arg)
+        res = dr(d)
+        return res
+
+    def testRef1(self):
+        r = Target()
+        res = self.send(r)
+        self.failUnless(isinstance(res, pb.RemoteReference))
+        self.failUnlessEqual(res.broker, self.targetBroker)
+        self.failUnless(self.callingBroker.getReferenceable(res.refID) is r)
+        self.failUnlessEqual(res.interfaceNames, ['IMyTarget'])
+
+    def testRef2(self):
+        r = Target()
+        res = self.echo(r)
+        self.failUnlessIdentical(res, r)
+
