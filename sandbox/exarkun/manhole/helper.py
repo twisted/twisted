@@ -4,8 +4,12 @@ from twisted.internet import protocol
 import insults
 
 class CharacterAttribute:
-    def __init__(self, charset):
+    def __init__(self, charset, bold, underline, blink, reverseVideo):
         self.charset = charset
+        self.bold = bold
+        self.underline = underline
+        self.blink = blink
+        self.reverseVideo = reverseVideo
 
 # XXX - need to support scroll regions and scroll history
 class TerminalBuffer(protocol.Protocol):
@@ -25,7 +29,7 @@ class TerminalBuffer(protocol.Protocol):
             self.insertAtCursor(b)
 
     def _currentCharacterAttributes(self):
-        return CharacterAttribute(self.activeCharset)
+        return CharacterAttribute(self.activeCharset, **self.graphicRendition)
 
     def insertAtCursor(self, b):
         if b == '\r':
@@ -141,12 +145,24 @@ class TerminalBuffer(protocol.Protocol):
             self.activeCharset = oldActiveCharset
         self.insertAtCursor = insertAtCursor
 
-    def selectGraphicsRendition(self, *attributes):
-        self._updateCharacterAttributes(attributes)
-
-    def _updateCharacterAttributes(self, attrs):
-        for a in attrs:
-            print 'setting attr', a
+    def selectGraphicRendition(self, *attributes):
+        for a in attributes:
+            if a == insults.NORMAL:
+                self.graphicRendition = {
+                    'bold': False,
+                    'underline': False,
+                    'blink': False,
+                    'reverseVideo': False}
+            elif a == insults.BOLD:
+                self.graphicRendition['bold'] = True
+            elif a == insults.UNDERLINE:
+                self.graphicRendition['underline'] = True
+            elif a == insults.BLINK:
+                self.graphicRendition['blink'] = True
+            elif a == insults.REVERSE_VIDEO:
+                self.graphicRendition['reverseVideo'] = True
+            else:
+                log.msg("Unknown graphic rendition attribute: " + repr(a))
 
     def eraseLine(self):
         self.lines[self.y] = self._emptyLine(self.width)
@@ -191,12 +207,17 @@ class TerminalBuffer(protocol.Protocol):
         self.modes = {}
         self.numericKeypad = 'app'
         self.activeCharset = insults.G0
-        self.eraseDisplay()
+        self.graphicRendition = {
+            'bold': False,
+            'underline': False,
+            'blink': False,
+            'reverseVideo': False}
         self.charsets = {
             insults.G0: insults.CS_US,
             insults.G1: insults.CS_US,
             insults.G2: insults.CS_ALTERNATE,
             insults.G3: insults.CS_ALTERNATE_SPECIAL}
+        self.eraseDisplay()
 
     def __str__(self):
         return '\n'.join([''.join([ch for (ch, attr) in L]) for L in self.lines])

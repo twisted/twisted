@@ -3,6 +3,7 @@ from helper import TerminalBuffer
 from insults import ServerProtocol, ClientProtocol
 from insults import G0, G1, G2, G3
 from insults import IRM
+from insults import NORMAL, BOLD, UNDERLINE, BLINK, REVERSE_VIDEO
 
 from twisted.trial import unittest
 
@@ -191,7 +192,40 @@ class BufferTestCase(unittest.TestCase):
             g = g == G0 and G1 or G0
             h += 1
 
-class Loopback(unittest.TestCase):
-    def setUp(self):
-        self.server = ServerProtocol()
-        self.client = ClientProtocol(TerminalBuffer)
+    def testGraphicsRendition(self):
+        self.term.selectGraphicRendition(BOLD, UNDERLINE, BLINK, REVERSE_VIDEO)
+        self.term.write('W')
+        self.term.selectGraphicRendition(NORMAL)
+        self.term.write('X')
+        self.term.selectGraphicRendition(BLINK)
+        self.term.write('Y')
+        self.term.selectGraphicRendition(BOLD)
+        self.term.write('Z')
+
+        ch = self.term.getCharacter(0, 0)
+        self.assertEquals(ch[0], 'W')
+        self.failUnless(ch[1].bold)
+        self.failUnless(ch[1].underline)
+        self.failUnless(ch[1].blink)
+        self.failUnless(ch[1].reverseVideo)
+
+        ch = self.term.getCharacter(1, 0)
+        self.assertEquals(ch[0], 'X')
+        self.failIf(ch[1].bold)
+        self.failIf(ch[1].underline)
+        self.failIf(ch[1].blink)
+        self.failIf(ch[1].reverseVideo)
+
+        ch = self.term.getCharacter(2, 0)
+        self.assertEquals(ch[0], 'Y')
+        self.failUnless(ch[1].blink)
+        self.failIf(ch[1].bold)
+        self.failIf(ch[1].underline)
+        self.failIf(ch[1].reverseVideo)
+
+        ch = self.term.getCharacter(3, 0)
+        self.assertEquals(ch[0], 'Z')
+        self.failUnless(ch[1].blink)
+        self.failUnless(ch[1].bold)
+        self.failIf(ch[1].underline)
+        self.failIf(ch[1].reverseVideo)

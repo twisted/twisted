@@ -277,6 +277,14 @@ BLINK = 'BLINK'
 BOLD = 'BOLD'
 NORMAL = 'NORMAL'
 
+_graphicRendition = {}
+_revGraphicRendition = {}
+for (sym, lit) in ((NORMAL, '0'), (BOLD, '1'), (UNDERLINE, '4'),
+                   (BLINK, '5'), (REVERSE_VIDEO, '7')):
+    _graphicRendition[sym] = lit
+    _revGraphicRendition[lit] = sym
+
+
 class Vector:
     def __init__(self, x, y):
         self.x = x
@@ -534,16 +542,7 @@ class ServerProtocol(protocol.Protocol):
         # XXX Rewrite this as a dict lookup
         attrs = []
         for a in attributes:
-            if a == UNDERLINE:
-                attrs.append('4')
-            elif a == REVERSE_VIDEO:
-                attrs.append('7')
-            elif a == BLINK:
-                attrs.append('5')
-            elif a == BOLD:
-                attrs.append('1')
-            elif a == NORMAL:
-                attrs.append('0')
+            attrs.append(_graphicRendition.get(a, a))
         self.write('\x1b[%sm' % (';'.join(attrs),))
 
     def horizontalTabulationSet(self):
@@ -866,6 +865,15 @@ class ClientProtocol(protocol.Protocol):
                 proto.transport.write('\x1b[%d;%dR' % (x + 1, y + 1))
             else:
                 handler.unhandledControlSequence('\x1b[' + buf + 'n')
+
+        def m(self, proto, handler, buf):
+            if not buf:
+                handler.selectGraphicRendition(NORMAL)
+            else:
+                attrs = []
+                for a in buf.split(';'):
+                    attrs.append(_revGraphicRendition.get(a, a))
+                handler.selectGraphicRendition(*attrs)
 
     controlSequenceParser = ControlSequenceParser()
 
