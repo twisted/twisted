@@ -17,7 +17,7 @@
 
 from __future__ import nested_scopes
 
-__version__ = "$Revision: 1.64 $"[11:-2]
+__version__ = "$Revision: 1.65 $"[11:-2]
 
 # Sibling imports
 import interfaces
@@ -344,7 +344,7 @@ class View:
         else:
             m = None
         self.modelStack = (m, self.modelStack)
-        if m:
+        if m is not None:
 #            print "M NAME", m.name
 #             if parent is not m:
 #                 m.parent = parent
