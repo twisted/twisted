@@ -17,7 +17,7 @@
 
 from __future__ import nested_scopes
 
-__version__ = "$Revision: 1.39 $"[11:-2]
+__version__ = "$Revision: 1.40 $"[11:-2]
 
 import os
 import cgi
@@ -52,6 +52,7 @@ class Controller(resource.Resource):
 
     __implements__ = (interfaces.IController, resource.IResource)
     setupStacks = 1
+    addSlash = 1 # Should this controller add a slash to the url automatically?
     controllerLibraries = []
     viewFactory = None
     templateDirectory = ""
@@ -157,7 +158,7 @@ class Controller(resource.Resource):
         DOM. gatheredControllers will render the page to the browser
         when it is done.
         """
-        if not request.prepath[-1] == '':
+        if not request.prepath[-1] == '' and self.addSlash:
             return redirectTo(addSlash(request), request)
         # Handle any inputhandlers that were passed in to the controller first
         for ih in self._inputhandlers:
