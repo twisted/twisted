@@ -24,7 +24,6 @@
 API Stability: Unstable
 """
 
-
 import time
 import string
 import operator
@@ -331,9 +330,10 @@ class Mailbox:
         raise ValueError
     def deleteMessage(self, i):
         raise ValueError
+    def undeleteMessage(self, i):
+        pass
     def sync(self):
         pass
-
 
 NONE, SHORT, FIRST_LONG, LONG = range(4)
 
