@@ -250,10 +250,11 @@ class WebClientTestCase(unittest.TestCase):
 
 class WebClientSSLTestCase(WebClientTestCase):
     def _listen(self, site):
+        from twisted import test
         return reactor.listenSSL(0, site,
                                  contextFactory=ssl.DefaultOpenSSLContextFactory(
-            sibpath(__file__, 'server.pem'),
-            sibpath(__file__, 'server.pem'),
+            sibpath(test.__file__, 'server.pem'),
+            sibpath(test.__file__, 'server.pem'),
             ),
                                  interface="127.0.0.1")
 
@@ -285,10 +286,11 @@ class WebClientRedirectBetweenSSLandPlainText(unittest.TestCase):
         plainSite = server.Site(plainRoot, timeout=None)
         tlsSite = server.Site(tlsRoot, timeout=None)
 
+        from twisted import test
         self.tlsPort = reactor.listenSSL(0, tlsSite,
                                          contextFactory=ssl.DefaultOpenSSLContextFactory(
-            sibpath(__file__, 'server.pem'),
-            sibpath(__file__, 'server.pem'),
+            sibpath(test.__file__, 'server.pem'),
+            sibpath(test.__file__, 'server.pem'),
             ),
                                          interface="127.0.0.1")
         self.plainPort = reactor.listenTCP(0, plainSite, interface="127.0.0.1")
