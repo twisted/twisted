@@ -354,7 +354,7 @@ class Process(abstract.FileDescriptor, styles.Ephemeral):
             if self.lostProcess:
                 try:
                     if self.status != -1:
-                        exitCode = self.status >> 8
+                        exitCode = os.WEXITSTATUS(self.status)
                     else:
                         exitCode = None # wonder when this happens
                     if exitCode:
