@@ -97,27 +97,29 @@ def inet_pton(af, addr):
 def inet_ntop(af, addr):
     if af == socket.AF_INET:
         return socket.inet_ntoa(addr)
-    elif af == getattr(socket, 'AF_INET6', 'AF_INET6'):
+    elif af == socket.AF_INET6:
         if len(addr) != 16:
             raise ValueError("address length incorrect")
         parts = struct.unpack('!8H', addr)
-        bestBase = -1
-        curBase = -1
+        curBase = bestBase = None
         for i in range(8):
-            if parts[i] == 0:
-                if curBase == -1:
-                    curBase, curLen = i, 1
-                else:
-                    curLen += 1
+            if not parts[i]:
+                if curBase is None:
+                    curBase = i
+                    curLen = 0
+                curLen += 1
             else:
-                if curBase != -1:
-                    if bestBase == -1 or curLen > bestLen:
-                        bestBase, bestLen = curBase, curLen
-                    curBase = -1
-        if curBase != -1 and (bestBase == -1 or curLen > bestLen):
-            bestBase, bestLen = curBase, curLen
+                if curBase is not None:
+                    if bestBase is None or curLen > bestLen:
+                        bestBase = curBase
+                        bestLen = curLen
+                    curBase = None
+        if curBase is not None and (bestBase is None or curLen > bestLen):
+            bestBase = curBase
+            bestLen = curLen
         parts = [hex(x)[2:] for x in parts]
-        if bestBase != -1:
+        print parts
+        if bestBase is not None:
             parts[bestBase:bestBase + bestLen] = ['']
         if parts[0] == '':
             parts.insert(0, '')
