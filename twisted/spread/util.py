@@ -188,7 +188,9 @@ class FilePager(Pager):
 ### Utility paging stuff.
 from twisted.spread import pb
 class CallbackPageCollector(pb.Referenceable):
-
+    """I receive pages from the peer. You may instantiate a Pager with a
+    remote reference to me. I will call the callback with a list of pages
+    once they are all received."""
     def __init__(self, callback):
         self.pages = []
         self.callback = callback
