@@ -39,7 +39,6 @@ class PortCollection(coil.ConfigCollection):
     entityType = protocol.IFactory
 
     def __init__(self, app, ptype):
-#        self.ports = getattr(app, '%sPorts' % ptype)
         self.app = app
         self.mod = reflect.namedModule('twisted.internet.'+ptype)
         self.ptype = ptype
@@ -48,17 +47,13 @@ class PortCollection(coil.ConfigCollection):
     def listStaticEntities(self):
         ret = []
         for port in getattr(self.app, '%sPorts' % self.ptype):
-            print 'adding', str(port[0]), port[1]
             ret.append((str(port[0]), port[1]))
         return ret
 
     def getStaticEntity(self, name):
         idx = int(name)
-        #for port in self.ports:
         for port in getattr(self.app, '%sPorts' % self.ptype):
-            print "?", port[0]
             if port[0] == idx:
-                print "ret",port[1]
                 return port[1]
         raise KeyError, "No such entity %s" % (name,)
 
