@@ -47,9 +47,10 @@ class LDAPClient(protocol.Protocol):
     def connectionLost(self):
         """Called when TCP connection has been lost"""
 
-    def queue(self, op, handler):
+    def queue(self, op, handler=None):
         msg=pureldap.LDAPMessage(op)
         assert not self.onwire.has_key(msg.id)
+        assert op.needs_answer or not handler
         if op.needs_answer:
             self.onwire[msg.id]=handler
         self.transport.write(str(msg))
@@ -59,7 +60,7 @@ class LDAPClient(protocol.Protocol):
         handler=self.onwire[msg.id]
 
         # Return true to mark request as fully handled
-        if handler(msg.value):
+        if handler==None or handler(msg.value):
             del self.onwire[msg.id]
 
 
