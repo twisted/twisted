@@ -208,6 +208,7 @@ class TestOurServerCmdLineClient(test_process.SignalMixin, SFTPTestBase):
                 'testRemoveFile', 'testRemoveFile get failed')
         self._failUnlessFilesEqual('sftp_test/testRenameFile',
                 'testRenameFile', 'testRenameFile get failed')
+        self.failIf(self._getCmdResult('cd sftp_test'))
         os.remove('testRemoveFile')
         os.remove('testRenameFile')
 
