@@ -41,12 +41,12 @@ class TagChecker:
                                'unrecommended tag %s' % element.tagName)
 
     def check_codeClass(self, dom, filename):
-        def matcher(element, classes=classes):
+        def matcher(element, self=self):
             if element.tagName != 'code':
                 return 0
             if not element.hasAttribute('class'):
                 return 0
-            if element.getAttribute('class') in classes:
+            if self.allowedCodeClasses(element.getAttribute('class')):
                 return 0
             return 1
         for element in domhelpers.findElements(dom, matcher):
