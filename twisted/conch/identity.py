@@ -95,13 +95,7 @@ class OpenSSHConchIdentity(ConchIdentity):
             return defer.fail(error.ConchError('not valid user'))
         for file in ['authorized_keys', 'authorized_keys2']:
             if os.path.exists(home+file):
-                gid = os.getegid()
-                uid = os.geteuid()
-                os.setegid(0)
-                os.seteuid(0)
                 lines = open(home+file).readlines()
-                os.setegid(gid)
-                os.seteuid(uid)
                 for l in lines:
                     try:
                         if base64.decodestring(l.split()[1])==pubKeyString:
