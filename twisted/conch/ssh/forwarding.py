@@ -144,7 +144,7 @@ def unpackOpen_direct_tcpip(data):
     """Unpack the data to a usable format.
     """
     connHost, rest = common.getNS(data)
-    connPort = int(struct.unpack('>L', rest[:4])[0])
+    connPort, = int(struct.unpack('>L', rest[:4])[0])
     origHost, rest = common.getNS(rest[4:])
     origPort = int(struct.unpack('>L', rest[:4])[0])
     return (connHost, connPort), (origHost, origPort)

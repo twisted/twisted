@@ -482,7 +482,7 @@ def _lsLine(name, s):
     # other
     if mode&stat.S_IROTH:perms[7] = 'r'
     if mode&stat.S_IWOTH:perms[8] = 'w'
-    if mode&stat.S_IXOTH:perms[9] = 'w'
+    if mode&stat.S_IXOTH:perms[9] = 'x'
     # suid/sgid
     if mode&stat.S_ISUID:
         if perms[3] == 'x': perms[3] = 's'

@@ -225,7 +225,7 @@ class SSHUserAuthClient(service.SSHService):
             return f()
 
     def _ebAuth(self, ignored, *args):
-        self.tryAuth('none', '')
+        self.tryAuth('none')
         
     def ssh_USERAUTH_SUCCESS(self, packet):
         self.transport.setService(self.instance)
@@ -293,6 +293,11 @@ class SSHUserAuthClient(service.SSHService):
         keyType =  getNS(publicKey)[0]
         self.askForAuth('publickey', '\xff' + NS(keyType) + NS(publicKey) + \
                         NS(signedData))
+
+
+
+
+
 
     def _setOldPass(self, op):
         if self._newPass:
@@ -368,7 +373,8 @@ class SSHUserAuthClient(service.SSHService):
 
         @rtype: C{str}/C{None}
         """
-        raise NotImplementedError
+        return None
+        #raise NotImplementedError
 
 
     def getPrivateKey(self):
@@ -379,7 +385,7 @@ class SSHUserAuthClient(service.SSHService):
 
         @rtype: C{Deferred}
         """
-        raise NotImplementedError
+        return defer.fail(NotImplementedError())
 
     def getPassword(self, prompt = None):
         """
@@ -390,7 +396,7 @@ class SSHUserAuthClient(service.SSHService):
         @type prompt: C{str}/C{None}
         @rtype: C{Deferred}
         """
-        raise NotImplementedError
+        return defer.fail(NotImplementedError())
 
     def getGenericAnswers(self, name, instruction, prompts):
         """
@@ -404,7 +410,8 @@ class SSHUserAuthClient(service.SSHService):
             echo is a C{bool}.  If False, do not display what the
             user types for this prompt.
         """
-        raise NotImplementedError
+        return defer.fail(NotImplementedError())
+
 MSG_USERAUTH_REQUEST          = 50
 MSG_USERAUTH_FAILURE          = 51
 MSG_USERAUTH_SUCCESS          = 52

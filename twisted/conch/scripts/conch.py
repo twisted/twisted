@@ -10,18 +10,12 @@
 #"""
 from twisted.conch.client import agent, connect, default, options
 from twisted.conch.error import ConchError
-from twisted.conch.ssh import userauth, connection, common, transport
+from twisted.conch.ssh import connection, common
 from twisted.conch.ssh import session, forwarding, channel
-from twisted.internet import reactor, stdio, defer, protocol
-from twisted.internet.error import CannotListenError
+from twisted.internet import reactor, stdio, defer
 from twisted.python import log, usage
 
 import os, sys, getpass, struct, tty, fcntl, base64, signal, stat, errno
-
-try:
-    import cPickle as pickle
-except ImportError:
-    import pickle
 
 class ClientOptions(options.ConchOptions):
     

@@ -90,6 +90,8 @@ class SSHUserAuthClient(userauth.SSHUserAuthClient):
         self.keyAgent = None
         self.options = options
         self.usedFiles = []
+        if not options.identitys:
+            options.identitys = ['~/.ssh/id_rsa', '~/.ssh/id_dsa']
 
     def serviceStarted(self):
         if 'SSH_AUTH_SOCK' in os.environ and not self.options['noagent']:

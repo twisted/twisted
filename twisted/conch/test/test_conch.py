@@ -303,7 +303,7 @@ class ConchTestPublicKeyChecker(checkers.SSHPublicKeyDatabase):
     def checkKey(self, credentials):
         global theTest
         theTest.assertEquals(credentials.username, 'testuser', 'bad username')
-        theTest.assertEquals(credentials.blob, keys.getPublicKeyString('dsa_test.pub'), 'bad public key')
+        theTest.assertEquals(credentials.blob, keys.getPublicKeyString(data=publicDSA_openssh))
         return 1
 
 class ConchTestPasswordChecker:

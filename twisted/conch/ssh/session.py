@@ -25,10 +25,10 @@ class SSHSession(channel.SSHChannel):
         channel.SSHChannel.__init__(self, *args, **kw)
         self.buf = ''
         self.client = None
-        self.session = ISession(self.avatar)
+        self.session = None
 
     def request_subsystem(self, data):
-        subsystem = common.getNS(data)[0]
+        subsystem, ignored= common.getNS(data)
         log.msg('asking for subsystem "%s"' % subsystem)
         client = self.avatar.lookupSubsystem(subsystem, data)
         if client:
@@ -68,6 +68,7 @@ class SSHSession(channel.SSHChannel):
             return 1
 
     def request_pty_req(self, data):
+        self.session = ISession(self.avatar)
         term, windowSize, modes = parseRequest_pty_req(data)
         log.msg('pty request: %s %s' % (term, windowSize))
         try:
@@ -105,10 +106,12 @@ class SSHSession(channel.SSHChannel):
             log.msg('weird extended data: %s'%dataType)
 
     def eofReceived(self):
-        self.session.eofReceived()
+        if self.session:
+            self.session.eofReceived()
 
     def closed(self):
-        self.session.closed()
+        if self.session:
+            self.session.closed()
 
     #def closeReceived(self):
     #    self.loseConnection() # don't know what to do with this
@@ -211,9 +214,9 @@ def parseRequest_pty_req(data):
     """
     term, rest = common.getNS(data)
     cols, rows, xpixel, ypixel = struct.unpack('>4L', rest[: 16])
-    modes = common.getNS(rest[16:])[0]
+    modes, ignored= common.getNS(rest[16:])
     winSize = (rows, cols, xpixel, ypixel)
-    modes = [(ord(modes[i]), struct.unpack('>L', modes[i+1: i+5])[0])for i in range(0, len(modes)-1, 5)]
+    modes = [(ord(modes[i]), struct.unpack('>L', modes[i+1: i+5])[0]) for i in range(0, len(modes)-1, 5)]
     return term, winSize, modes
 
 def packRequest_pty_req(term, (rows, cols, xpixel, ypixel), modes):

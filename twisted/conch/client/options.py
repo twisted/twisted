@@ -33,8 +33,10 @@ class ConchOptions(usage.Options):
                 ['reconnect', 'r', 'Reconnect to the server if the connection is lost.'],
                ]
 
-    identitys = []
-    conns = None
+    def __init__(self, *args, **kw):
+        usage.Options.__init__(self, *args, **kw)
+        self.identitys = [] 
+        self.conns = None
 
     def opt_identity(self, i):
         """Identity for public-key authentication"""

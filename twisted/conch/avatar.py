@@ -2,7 +2,7 @@
 from interfaces import IConchUser
 from error import ConchError
 from ssh.connection import OPEN_UNKNOWN_CHANNEL_TYPE
-from twisted.python import components
+from twisted.python import components, log
 from zope import interface
 
 class ConchUser:
@@ -22,6 +22,7 @@ class ConchUser:
                          data=data, avatar=self)
 
     def lookupSubsystem(self, subsystem, data):
+        log.msg(repr(self.subsystemLookup))
         klass = self.subsystemLookup.get(subsystem, None)
         if not klass:
             return False

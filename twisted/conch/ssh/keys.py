@@ -166,6 +166,8 @@ def getPrivateKeyObject(filename = None, data = '', passphrase = ''):
         return getPrivateKeyObject_lsh(data, passphrase)
     elif data[0].startswith('-----'): # openssh key
         return getPrivateKeyObject_openssh(data, passphrase)
+    elif data[0].startswith('ssh-'): # agent v3 private key
+        return getPrivateKeyObject_agentv3(data, passphrase)
     else:
         raise BadKeyError('unknown private key type')
 
@@ -215,12 +217,34 @@ def getPrivateKeyObject_openssh(data, passphrase):
         p, q, g, y, x = decodedKey[1: 6]
         return DSA.construct((y, g, p, q, x))
 
+def getPrivateKeyObject_agentv3(data, passphrase):
+    if passphrase:
+        raise BadKeyError("agent v3 key should not be encrypted")
+    keyType, data = common.getNS(data)
+    if keyType == 'ssh-dss':
+        p, data = common.getMP(data)
+        q, data = common.getMP(data)
+        g, data = common.getMP(data)
+        y, data = common.getMP(data)
+        x, data = common.getMP(data)
+        return DSA.construct((y,g,p,q,x))
+    elif keyType == 'ssh-rsa':
+        e, data = common.getMP(data)
+        d, data = common.getMP(data)
+        n, data = common.getMP(data)
+        u, data = common.getMP(data)
+        p, data = common.getMP(data)
+        q, data = common.getMP(data)
+        return RSA.construct((n,e,d,p,q,u))
+    else:
+        raise BadKeyError("unknown key type %s" % keyType)
+
 def makePrivateKeyString(obj, passphrase = None, kind = 'openssh'):
     """
     Return an OpenSSH-style private key for a
     C{Crypto.PublicKey.pubkey.pubkey} object.  If passphrase is given, encrypt
     the private key with it.
-    kind is one of ('openssh', 'lsh')
+    kind is one of ('openssh', 'lsh', 'agentv3')
 
     @type obj:          C{Crypto.PublicKey.pubkey.pubkey}
     @type passphrase:   C{str}/C{None}
@@ -231,11 +255,14 @@ def makePrivateKeyString(obj, passphrase = None, kind = 'openssh'):
         return makePrivateKeyString_lsh(obj, passphrase)
     elif kind == 'openssh':
         return makePrivateKeyString_openssh(obj, passphrase)
+    elif kind == 'agentv3':
+        return makePrivateKeyString_agentv3(obj, passphrase)
     else:
         raise BadKeyError('bad kind %s' % kind)
 
 def makePrivateKeyString_lsh(obj, passphrase):
-    #assert not passphrase
+    if passphrase:
+        raise BadKeyError("cannot encrypt to lsh format")
     keyType = objectType(obj)
     if keyType == 'ssh-rsa':
         p,q=obj.p,obj.q
@@ -296,6 +323,18 @@ def makePrivateKeyString_openssh(obj, passphrase):
         keyData += '-----END DSA PRIVATE KEY-----'
     return keyData
 
+def makePrivateKeyString_agentv3(obj, passphrase):
+    if passphrase:
+        raise BadKeyError("cannot encrypt to agent v3 format")
+    keyType = objectType(obj)
+    if keyType == 'ssh-rsa':
+        values = (obj.e, obj.d, obj.n, obj.u, obj.p, obj.q)
+    elif keyType == 'ssh-dss':
+        values = (obj.p, obj.q, obj.g, obj.y, obj.x)
+    return common.NS(keytype) + ''.join(map(common.MP, values))
+    
+
+    
 def makePublicKeyBlob(obj):
     keyType = objectType(obj) 
     if keyType == 'ssh-rsa':

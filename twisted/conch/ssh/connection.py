@@ -111,9 +111,7 @@ class SSHConnection(service.SSHService):
         channel = self.channels[localChannel]
         del self.channels[localChannel]
         channel.conn = self
-        reason = error.ConchError(reasonDesc)
-        reason.desc = reasonDesc
-        reason.code = reasonCode
+        reason = error.ConchError(reasonDesc, reasonCode)
         log.callWithLogger(channel, channel.openFailed, reason)
 
     def ssh_CHANNEL_WINDOW_ADJUST(self, packet):
