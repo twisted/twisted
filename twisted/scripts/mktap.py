@@ -149,7 +149,7 @@ def run():
     try:
         options.parseOptions(sys.argv[1:])
     except usage.UsageError, e:
-        print "%s\n%s" % (options, e)
+        print e
         sys.exit(2)
     except KeyboardInterrupt:
         sys.exit(1)
