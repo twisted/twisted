@@ -84,36 +84,6 @@ from twisted.web.server import NOT_DONE_YET
 STOP_RENDERING = 1
 RESTART_RENDERING = 2
 
-class MethodLookup:
-    def __init__(self):
-        self._byid = {}
-        self._byclass = {}
-        self._bytag = {}
-
-    def register(self, method=None, **kwargs):
-        if not method:
-           raise ValueError, "You must specify a method to register."
-        if kwargs.has_key('id'):
-            self._byid[kwargs['id']]=method
-        if kwargs.has_key('class'):
-            self._byclass[kwargs['class']]=method
-        if kwargs.has_key('tag'):
-            self._bytag[kwargs['tag']]=method
-
-    def getMethodForNode(self, node):
-        if not node.hasAttributes(): return
-        id = node.getAttribute("id")
-        if id:
-            if self._byid.has_key(id):
-                return self._byid[id]
-        klass = node.getAttribute("class")
-        if klass:
-            if self._byclass.has_key(klass):
-                return self._byclass[klass]
-        if self._bytag.has_key(str(node.nodeName)):
-            return self._bytag[str(node.nodeName)]
-        return None
-
 
 def renderFailure(ignored, request):
     f = failure.Failure()
@@ -137,31 +107,8 @@ class DOMTemplate(Resource, View):
         if self.controller is None:
             self.controller = self
         self.model = model
-        self.templateMethods = MethodLookup()
-        self.setTemplateMethods( self.getTemplateMethods() )
         
         self.outstandingCallbacks = 0
-
-    def setTemplateMethods(self, tm):
-        for m in tm:
-            self.templateMethods.register(**m)
-
-    def getTemplateMethods(self):
-        """
-        Override this to return a list of dictionaries specifying
-        the tag attributes to associate with a method.
-        
-        e.g. to call the 'foo' method each time a tag with the class
-        'bar' is encountered, use a dictionary like this:
-        
-        {'class': 'bar', 'method': self.foo}
-        
-        To call the "destroy" method each time the tag, class, or id
-        "blink" is encountered, use a dictionary like this:
-        
-        {'class': 'blink', 'id': 'blink', 'tag': 'blink', 'method': self.destroy}
-        """
-        return []
         
     def render(self, request):
         self.handlerResults = {1: [], 0: []}
@@ -340,28 +287,24 @@ class DOMTemplate(Resource, View):
         # Look up either a widget factory, or a dom-mutating method
         defaultViewMethod = None
         view = DefaultWidget(self.model)
-        viewMethod = self.templateMethods.getMethodForNode(node)
-        if viewMethod:
-            log.msg("getTemplateMethods is deprecated. Please switch from using class or id to using the view attribute, and prefix your methods with factory_*.")
-        else:
-            viewMethod = view.generate
-            defaultViewMethod = viewMethod
-            if viewName:
-                viewMethod = getattr(self, 'factory_' + viewName, defaultViewMethod)
-                if viewMethod is defaultViewMethod:
-                    widget = getattr(domwidgets, viewName, None)
-                    if widget is not None:
-                        view = widget(self.model)
-                        viewMethod = view.generate
+        viewMethod = view.generate
+        defaultViewMethod = viewMethod
+        if viewName:
+            viewMethod = getattr(self, 'factory_' + viewName, defaultViewMethod)
+            if viewMethod is defaultViewMethod:
+                widget = getattr(domwidgets, viewName, None)
+                if widget is not None:
+                    view = widget(self.model)
+                    viewMethod = view.generate
+            else:
+                # Check to see if the viewMethod returns a widget. (Use IWidget instead?)
+                maybeWidget = viewMethod(request, node)
+                if isinstance(maybeWidget, domwidgets.Widget):
+                    view = maybeWidget
+                    viewMethod = view.generate
                 else:
-                    # Check to see if the viewMethod returns a widget. (Use IWidget instead?)
-                    maybeWidget = viewMethod(request, node)
-                    if isinstance(maybeWidget, domwidgets.Widget):
-                        view = maybeWidget
-                        viewMethod = view.generate
-                    else:
-                        result = maybeWidget
-                        viewMethod = None
+                    result = maybeWidget
+                    viewMethod = None
         
         if viewName and viewMethod is defaultViewMethod:
             del defaultViewMethod
