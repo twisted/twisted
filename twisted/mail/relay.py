@@ -1,4 +1,4 @@
-
+# -*- test-case-name: twisted.test.test_mail -*-
 # Twisted, the Framework of Your Internet
 # Copyright (C) 2001 Matthew W. Lefkowitz
 # 
@@ -20,6 +20,7 @@
 from twisted.protocols import smtp
 from twisted.mail import mail
 from twisted.internet import defer
+from twisted.python import log
 
 import os
 
@@ -41,7 +42,12 @@ class DomainQueuer:
         Call overridable willRelay method
         """
         if self.willRelay(user.protocol):
-            return user
+            # The most cursor form of verification of the addresses
+            orig = filter(None, str(user.orig).split('@', 1))
+            dest = filter(None, str(user.dest).split('@', 1))
+            if len(orig) == 2 and len(dest) == 2:
+                log.msg('Succeeding with ' + str(user.orig) + ' ' + str(user.dest))
+                return user
         raise smtp.SMTPBadRcpt(user)
     
     def willRelay(self, protocol):
@@ -58,6 +64,7 @@ class DomainQueuer:
         queue = self.service.queue
         envelopeFile, smtpMessage = queue.createNewMessage()
         try:
+            log.msg('Queueing mail %r -> %r' % (str(user.orig), str(user.dest)))
             pickle.dump([str(user.orig), str(user.dest)], envelopeFile)
         finally:
             envelopeFile.close()
