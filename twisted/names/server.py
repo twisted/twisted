@@ -93,7 +93,7 @@ class DNSServerFactory(protocol.ServerFactory):
         if clients is not None:
             resolvers.extend(clients)
 
-        self.canRecurse = bool(clients)
+        self.canRecurse = not not clients
         self.resolver = resolve.ResolverChain(resolvers)
         self.verbose = verbose
         if caches:

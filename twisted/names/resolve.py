@@ -46,6 +46,6 @@ class ResolverChain(common.ResolverBase):
         d = self.resolvers[0]._lookup(name, cls, type, timeout)
         for r in self.resolvers[1:]:
             d = d.addErrback(
-                lambda f, r=r, n=name, t=timeout: r._lookup(name, cls, type, timeout)
+                lambda f, r=r, n=name, c=cls, t=type, i=timeout: r._lookup(n, c, t, i)
             )
         return d
