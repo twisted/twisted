@@ -29,7 +29,8 @@ __all__ = ['install']
 import sys
 
 # hints for py2app
-import _CarbonEvt
+import Carbon.CarbonEvt
+import Carbon.CF
 import traceback
 
 import cfsupport as cf
