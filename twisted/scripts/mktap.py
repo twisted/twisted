@@ -15,7 +15,7 @@
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 #
-# $Id: mktap.py,v 1.25 2003/02/14 16:40:40 exarkun Exp $
+# $Id: mktap.py,v 1.26 2003/02/21 19:29:26 exarkun Exp $
 
 """ Implementation module for the `mktap` command.
 """
@@ -158,7 +158,7 @@ def run():
         sys.exit(1)
 
     if options['appname']:
-        app.processName = options['appname']
+        a.processName = options['appname']
 
     # backwards compatible interface
     if hasattr(mod, "getPorts"):
