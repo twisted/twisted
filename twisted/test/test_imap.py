@@ -447,7 +447,7 @@ class IMAP4ServerTestCase(IMAP4HelperMixin, unittest.TestCase):
         mbox = SimpleServer.theAccount.mailboxes['TEST-MAILBOX']
         self.assertEquals(self.server.mbox, mbox)
         self.assertEquals(self.selectedArgs, {
-            'EXISTS': 9, 'RECENT': 3, 'UID': 42,
+            'EXISTS': 9, 'RECENT': 3, 'UIDVALIDITY': 42,
             'FLAGS': ('\\Flag1', 'Flag2', '\\AnotherSysFlag', 'LastFlag'),
             'READ-WRITE': 1
         })
@@ -473,7 +473,7 @@ class IMAP4ServerTestCase(IMAP4HelperMixin, unittest.TestCase):
         mbox = SimpleServer.theAccount.mailboxes['TEST-MAILBOX']
         self.assertEquals(self.server.mbox, mbox)
         self.assertEquals(self.examinedArgs, {
-            'EXISTS': 9, 'RECENT': 3, 'UID': 42,
+            'EXISTS': 9, 'RECENT': 3, 'UIDVALIDITY': 42,
             'FLAGS': ('\\Flag1', 'Flag2', '\\AnotherSysFlag', 'LastFlag'),
             'READ-WRITE': 0
         })
