@@ -89,8 +89,8 @@ class SSHClientTransport(transport.SSHClientTransport):
                 try:
                     reactor.listenUNIX(filename, unix.SSHUnixServerFactory(service), mode=0600, wantPID=1)
                 except Exception, e:
-                    log.deferr()
-                    pass
+                    log.msg('error trying to listen on %s' % filename)
+                    log.err(e)
 
     def connectionSecure(self):
         if not self.factory.d: return
