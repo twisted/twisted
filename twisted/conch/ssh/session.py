@@ -201,6 +201,7 @@ class SSHSession(connection.SSHChannel):
             self.buf += data
             return
         if hasattr(self, 'pty'):
+            import tty
             attr = tty.tcgetattr(self.pty.fileno())[3]
             if not attr & tty.ECHO and attr & tty.ICANON: # no echo
                 self.conn.transport.sendIgnore('\x00' * (8+len(data)))
