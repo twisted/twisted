@@ -28,6 +28,10 @@ try:
 except ImportError:
     pass # a warning will be generated at runtime
 
+if 'file_created' not in dir(__builtins__):
+    def noop(foo):
+        pass
+    file_created=directory_created=noop
 
 
 def getProgramsMenuPath():
@@ -39,8 +43,7 @@ def getProgramsMenuPath():
     keyname='SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Explorer\\Shell Folders'
     hShellFolders=win32api.RegOpenKeyEx(win32con.HKEY_LOCAL_MACHINE, 
                                         keyname, 0, win32con.KEY_READ)
-    common_start_menu=win32api.RegQueryValueEx(hShellFolders, 'Common Start Menu')[0]
-    return os.path.join(common_start_menu, "Programs")
+    return win32api.RegQueryValueEx(hShellFolders, 'Common Programs')[0]
 
 def getShell32DLLPath():
     """getShell32DLLPath() -> String|None
