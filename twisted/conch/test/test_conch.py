@@ -108,7 +108,13 @@ class ConchTestForwardingPort(protocol.Protocol):
         # forwarding-only clients don't die on their own
         self.proto.transport.write('\x03')
         self.proto.transport.loseConnection()
-        reactor.callLater(0, os.kill, self.proto.transport.pid, signal.SIGKILL)
+        reactor.callLater(0, self.reallyDie)
+
+    def reallyDie(self):
+        try:
+            self.proto.transport.signalProcess('KILL')
+        except error.ProcessExitedAlready:
+            pass
 
 from test_keys import publicRSA_openssh, privateRSA_openssh
 from test_keys import publicDSA_openssh, privateDSA_openssh
@@ -292,7 +298,7 @@ class OpenSSHClientTestCase(CmdLineClientTestBase, unittest.TestCase):
 
         # cleanup
         if not p.done:
-            os.kill(p.transport.pid, signal.SIGTERM)
+            p.transport.signalProcess('KILL')
             util.spinWhile(lambda: not p.done)
 
 class CmdLineClientTestCase(CmdLineClientTestBase, unittest.TestCase):
@@ -318,7 +324,7 @@ class CmdLineClientTestCase(CmdLineClientTestBase, unittest.TestCase):
         
         # cleanup
         if not p.done:
-            os.kill(p.transport.pid, signal.SIGTERM)
+            p.transport.signalProcess('KILL')
             util.spinWhile(lambda: not p.done)
 
 class UnixClientTestCase(CmdLineClientTestBase, unittest.TestCase):
@@ -356,7 +362,7 @@ class UnixClientTestCase(CmdLineClientTestBase, unittest.TestCase):
 
         # cleanup
         if not p.done:
-            os.kill(p.transport.pid, signal.SIGTERM)
+            p.transport.signalProcess('KILL')
             util.spinWhile(lambda: not p.done)
         conn.transport.transport.loseConnection()
         reactor.iterate()

@@ -18,7 +18,7 @@ except ImportError:
     Crypto = None
 
 from twisted.cred import portal
-from twisted.internet import reactor, protocol, interfaces, defer
+from twisted.internet import reactor, protocol, interfaces, defer, error
 from twisted.internet.utils import getProcessOutputAndValue
 from twisted.python import log, failure
 from twisted.test import test_process
@@ -129,8 +129,8 @@ class TestOurServerCmdLineClient(test_process.SignalMixin, CFTPClientTestBase):
         CFTPClientTestBase.tearDownClass(self)
         self.stopServer()
         try:
-            os.kill(self.processProtocol.transport.pid, 9)
-        except:
+            self.processProtocol.transport.signalProcess('KILL')
+        except error.ProcessExitedAlready:
             pass
         reactor.iterate(0.1)
         reactor.iterate(0.1)
