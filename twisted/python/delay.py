@@ -22,8 +22,8 @@ twisted.delay: Support for delayed and execution of events.
 
 This is the standard for delayed method calls in twisted python, and is
 designed to interoperate with other portions of the codebase.  It works with
-twisted.reality and twisted.net; see the documentation for
-twisted.reality.Reality and twisted.net.Selector for details.
+twisted.reality and twisted.internet; see the documentation for
+twisted.reality.Reality and twisted.internet for details.
 """
 
 # System Imports
