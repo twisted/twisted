@@ -132,6 +132,7 @@ class Options(usage.Options):
     optFlags = [["fast", "f"], ["good", "g"], ["cheap", "c"]]
     optParameters = [["user", "u", None]]
 
+config = Options()
 try:
     config.parseOptions() # When given no argument, parses sys.argv[1:]
 except usage.UsageError, errortext:
@@ -177,10 +178,16 @@ class CheckoutOptions(usage.Options):
     optParameters = [['module', 'm', None], ['tag', 'r', None]]
 
 class Options(usage.Options):
-    subCommands = [['import', None, ImportOptions],
-                   ['checkout', None, CheckoutOptions]]
+    subCommands = [['import', None, ImportOptions, "Do an Import"],
+                   ['checkout', None, CheckoutOptions, "Do a Checkout"]]
     
     optParameters = [['compression', 'z', 0], ['repository', 'r', None]]
+
+config = Options(); config.parseOptions()
+if config.subCommand == 'import':
+    doImport(config.subOptions)
+elif config.subCommand == 'checkout':
+    doCheckout(config.subOptions)
 </pre>
     
     <p>The <code>subCommands</code> attribute of <code>Options</code>
