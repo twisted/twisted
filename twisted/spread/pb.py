@@ -45,9 +45,6 @@ although the protocol is compatible on the binary level. When we
 switch to pluggable credentials this will introduce another change,
 although the current change will still be supported.
 
-TODO: Allow PBServerFactory to accept and adapt to IPBRoot or somesuch
-so portals aren't required.
-
 
 Introduction
 ============
@@ -67,7 +64,7 @@ applied when serializing arguments.
 @author: U{Glyph Lefkowitz<mailto:glyph@twistedmatrix.com>}
 """
 
-__version__ = "$Revision: 1.143 $"[11:-2]
+__version__ = "$Revision: 1.144 $"[11:-2]
 
 
 # System Imports
@@ -84,8 +81,9 @@ import warnings
 from twisted.python import log, failure
 from twisted.internet import reactor, defer, protocol, error
 from twisted.cred import authorizer, service, perspective, identity
+from twisted.cred.portal import Portal
 from twisted.persisted import styles
-from twisted.python.components import Interface
+from twisted.python.components import Interface, registerAdapter
 
 # Sibling Imports
 from twisted.spread.interfaces import IJellyable, IUnjellyable
@@ -1571,17 +1569,21 @@ class PBServerFactory(protocol.ServerFactory):
     Login is done using a Portal object, whose realm is expected to return
     avatars implementing IPerspective. The credential checkers in the portal
     should accept IUsernameHashedPassword or IUsernameMD5Password.
+
+    Alternatively, any object implementing or adaptable to IPBRoot can
+    be used instead of a portal to provide the root object of the PB
+    server.
     """
 
-    def __init__(self, portal):
-        self.portal = portal
+    def __init__(self, root):
+        self.root = IPBRoot(root)
 
     def buildProtocol(self, addr):
         """Return a Broker attached to me (as the service provider).
         """
         proto = Broker(0)
         proto.factory = self
-        proto.setNameForLocal("root", _PortalWrapper(self.portal, proto))
+        proto.setNameForLocal("root", self.root.rootObject(proto))
         return proto
 
     def clientConnectionMade(self, protocol):
@@ -1636,13 +1638,34 @@ class IPerspective(Interface):
     """
 
 
-class _PortalWrapper(Referenceable):
+class IPBRoot(Interface):
+    """Factory for root Referenceable objects for PB servers."""
+
+    def rootObject(self, broker):
+        """Return root Referenceable for broker."""
+
+
+class _PortalRoot:
     """Root object, used to login to portal."""
+
+    __implements__ = IPBRoot,
+    
+    def __init__(self, portal):
+        self.portal = portal
+
+    def rootObject(self, broker):
+        return _PortalWrapper(self.portal, broker)
+
+registerAdapter(_PortalRoot, Portal, IPBRoot)
+
+
+class _PortalWrapper(Referenceable):
+    """Root Referenceable object, used to login to portal."""
 
     def __init__(self, portal, broker):
         self.portal = portal
         self.broker = broker
-
+    
     def remote_login(self, username):
         """Start of username/password login."""
         c = challenge()
