@@ -207,5 +207,50 @@ pages for <code>generatelore</code> and <code>html2latex</code>. For
 source format documentation, see <a href="doc-standard.html">the documentation
 standard description</a>.</p>
 
+<h2><code>twistd</code> won't load my <code>.tap</code> file!</h2>
+
+<p>When the pickled application state cannot be loaded for some reason, it
+is common to get a rather opaque error like so:</p>
+
+<pre class="shell">
+% twistd -f test2.tap 
+
+Failed to load application: global name 'initRun' is not defined
+</pre>
+
+<p>To load a <code>.tap</code> file, as with any unpickling operation, all
+the classes used by all the objects inside it must be accessible at the time
+of the reload. This may require the PYTHONPATH variable to have the same
+directories as were available when the application was first pickled.</p>
+
+<p>A common problem occurs in single-file programs which define a few
+classes, then create instances of those classes for use in a server of some
+sort. If the class is used directly, the name of the class will be recorded
+in the <code>.tap</code> file as something like
+<code>__main__.MyProtocol</code>. When the application is reloaded, it will
+look for the class definition in <code>__main__</code>, which probably won't
+have it. The unpickling routines need to know the module name, and therefore
+the source file, from which the class definition can be loaded.</p>
+
+<p>The way to fix this is to import the class from the same source file that
+defines it: if your source file is called <code>myprogram.py</code> and
+defines a class called <code>MyProtocol</code>, you will need to do a
+<code>from myprogram import MyProtocol</code> before (and in the same
+namespace as) the code that references the MyProtocol class. This makes it
+important to write the module cleanly: doing an <code>import
+myprogram</code> should only define classes, and should not cause any other
+subroutines to get run. All the code that builds the Application and saves
+it out to a <code>.tap</code> file must be inside an <code>if __name__ ==
+'__main__'</code> clause to make sure it is not run twice (or more).</p>
+
+<p>When you import the class from the module using an <q>external</q> name,
+that name will be recorded in the pickled <code>.tap</code> file. When the
+<code>.tap</code> is reloaded by <code>twistd</code>, it will look for
+<code>myprogram.py</code> to provide the definition of
+<code>MyProtocol</code>.</p>
+
+<p>For a short example of this technique, take a look at <a
+href="../examples/echoserv.py">doc/examples/echoserv.py</a></p>
+
 </body>
 </html>
