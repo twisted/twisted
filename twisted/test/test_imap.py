@@ -1434,7 +1434,11 @@ class NewFetchTestCase(unittest.TestCase, IMAP4HelperMixin):
             return self.client.fetchSimplifiedBody(self.messages, uid=uid)
         
         self.messages = '21'
-        self.msgObj = FakeyMessage({}, (), '', 'Yea whatever', 91825, None)
+        self.msgObj = FakeyMessage({}, (), '', 'Yea whatever', 91825,
+            FakeyMessage({'content-type': 'image/jpg'}, (), '',
+                'Body Body Body', None, None
+            )
+        )
         self.expected = {91825: 
             {'BODY': 
                 [None, None, [], None, None, None,
@@ -1447,6 +1451,54 @@ class NewFetchTestCase(unittest.TestCase, IMAP4HelperMixin):
     
     def testFetchSimplifiedBodyUID(self):
         self.testFetchSimplifiedBody(1)
+
+    def testFetchSimplifiedBodyText(self, uid=0):
+        def fetch():
+            return self.client.fetchSimplifiedBody(self.messages, uid=uid)
+        
+        self.messages = '21'
+        self.msgObj = FakeyMessage({'content-type': 'text/plain'},
+            (), '', 'Yea whatever', 91825, None)
+        self.expected = {91825: 
+            {'BODY': 
+                ['text', 'plain', [], None, None, None,
+                    '12', '1'
+                ]
+            }
+        }
+
+        self._fetchWork(fetch, uid)
+    
+    def testFetchSimplifiedBodyTextUID(self):
+        self.testFetchSimplifiedBodyText(1)
+
+    def testFetchSimplifiedBodyRFC822(self, uid=0):
+        def fetch():
+            return self.client.fetchSimplifiedBody(self.messages, uid=uid)
+        
+        self.messages = '21'
+        self.msgObj = FakeyMessage({'content-type': 'message/rfc822'},
+            (), '', 'Yea whatever', 91825, 
+            FakeyMessage({'content-type': 'image/jpg'}, (), '',
+                'Body Body Body', None, None
+            )
+        )
+        self.expected = {91825: 
+            {'BODY': 
+                ['message', 'rfc822', [], None, None, None,
+                    '12', [None, None, [[None, None, None]],
+                    [[None, None, None]], None, None, None,
+                    None, None, None], ['image', 'jpg', [],
+                    None, None, None, '14'], '1'
+                ]
+            }
+        }
+
+        self._fetchWork(fetch, uid)
+    
+    def testFetchSimplifiedBodyRFC822UID(self):
+        self.testFetchSimplifiedBodyRFC822(1)
+     
 
 class FetchSearchStoreCopyTestCase(unittest.TestCase, IMAP4HelperMixin):
     def setUp(self):

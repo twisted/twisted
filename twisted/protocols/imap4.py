@@ -1289,7 +1289,10 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
         except StopIteration:
             self.sendPositiveResponse(tag, 'FETCH completed')
         else:
-            self._sendMessageFetchResponse(msgId, msg, query, uid)
+            try:
+                self._sendMessageFetchResponse(msgId, msg, query, uid)
+            except:
+                log.err()
             from twisted.internet import reactor
             reactor.callLater(0, self._consumeMessageIterable, results, tag, query, uid)
 
@@ -3691,7 +3694,7 @@ def getBodyStructure(msg, extended=False):
         contained = msg.getSubPart(0)
         result.append(getEnvelope(contained))
         result.append(getBodyStructure(contained, False))
-        result.append(getLineCount(contained))
+        result.append(str(getLineCount(contained)))
 
     if not extended:
         return result
