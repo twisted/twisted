@@ -37,6 +37,7 @@ class SSHSession(SSHChannel):
     environ = {}
 
     def request_subsystem(self, data):
+        return 0
         subsystem = common.getNS(data)[0]
         f = getattr(self, 'subsystem_%s'%subsystem, None)
         if f:
