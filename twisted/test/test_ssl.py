@@ -199,11 +199,13 @@ class SingleLineServerProtocol(protocol.Protocol):
     def connectionMade(self):
         self.transport.identifier = 'SERVER'
         self.transport.write("+OK <some crap>\r\n")
-
+        self.transport.getPeerCertificate()
+        
 class RecordingClientProtocol(protocol.Protocol):
     def connectionMade(self):
         self.transport.identifier = 'CLIENT'
         self.buffer = []
+        self.transport.getPeerCertificate()
     
     def dataReceived(self, data):
         self.factory.buffer.append(data)

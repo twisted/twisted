@@ -86,7 +86,10 @@ class _TLSMixin:
     writeBlockedOnRead = 0
     readBlockedOnWrite = 0
     sslShutdown = 0
-        
+
+    def getPeerCertificate(self):
+        return self.socket.get_peer_certificate()
+    
     def doRead(self):
         if self.writeBlockedOnRead:
             self.writeBlockedOnRead = 0
