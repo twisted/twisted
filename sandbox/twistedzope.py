@@ -1,16 +1,12 @@
 """Run the Zope3 Publisher using Twisted's HTTP server."""
 
-from cStringIO import StringIO
+import string
 
 from Zope.Publisher.Publish import publish
 from Zope.Publisher.HTTP.HTTPRequest import HTTPRequest
 from Zope.Publisher.HTTP.HTTPResponse import HTTPResponse
-from Zope.Publisher.HTTP.BrowserPayload import BrowserRequestPayload
-from Zope.Publisher.HTTP.BrowserPayload import BrowserResponsePayload
-from Zope.Publisher.DefaultPublication import DefaultPublication
 
-from twisted.protocols import protocol
-from twisted.web import server
+from twisted.protocols import protocol, http
 
 
 rename_headers = {
@@ -20,7 +16,7 @@ rename_headers = {
     }
 
 
-class ZopeHTTPRequest(server.Request):
+class ZopeHTTPRequest(http.Request):
     
     # methods for HTTPResponse
     def setResponseStatus(self, status, reason):
@@ -30,17 +26,20 @@ class ZopeHTTPRequest(server.Request):
         for k, v in d.items():
             self.setHeader(k, v)
     
-    # is this OK?
-    appendResponseHeaders = setResponseHeaders
+    def appendResponseHeaders(self, l):
+        for i in l:
+            k, v = string.split(i, ': ', 2)
+            self.setHeader(k, v)
     
-    
-    
+        
     def process(self):
-        factory = self.factory
+        factory = self.channel.factory
         env = self.create_environment()
-        instream = StringIO(self.content)
-        resp = HTTPResponse(factory.response_payload, self, self)
-        req = HTTPRequest(factory.request_payload, resp, instream, env)
+        self.content.seek(0, 0)
+        req = HTTPRequest(self.content, self, env)
+        req.setPublication(factory.publication)
+        response = req.getResponse()
+        response.setHeaderOutput(self)
         publish(req)
         self.finish()
     
@@ -83,27 +82,28 @@ class HTTPFactory(protocol.ServerFactory):
     def buildProtocol(self, addr):
         """Generate a request attached to this site.
         """
-        r = ZopeHTTPRequest()
-        r.factory = self
-        return r
+        h = http.HTTPChannel()
+        h.requestFactory = ZopeHTTPRequest
+        h.factory = self
+        return h
     
     def __init__(self, publication):
         self.publication = publication
-        self.request_payload = BrowserRequestPayload(publication)
-        self.response_payload = BrowserResponsePayload()
 
 
 if __name__ == '__main__':
-    
+
+    from Zope.Publisher.DefaultPublication import DefaultPublication
+   
     class tested_object:
         """An example object to be published."""
         tries = 0
     
-        def __call__(self, URL, REQUEST):
+        def __call__(self, REQUEST):
             self.tries += 1
-            result = 'URL invoked: %s\n' % URL
+            result = ""
             result += "Number of times: %d\n" % self.tries
-            for key in REQUEST.form.keys():
+            for key in REQUEST.keys():
                 result += "%r = %r\n" % (key, REQUEST.get(key))
             return result
         
