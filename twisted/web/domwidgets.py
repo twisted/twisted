@@ -351,9 +351,12 @@ class List(Widget):
     tagName = None
     def generateDOM(self, request, node):
         node = Widget.generateDOM(self, request, node)
+        listHeader = domhelpers.getIfExists(node, 'listHeader')
         # xxx with this implementation all elements of the list must use the same view widget
         listItem = domhelpers.get(node, 'listItem')
         domhelpers.clearNode(node)
+        if not listHeader is None:
+            node.appendChild(listHeader)
         submodel = self.submodel
         data = self.getData()
         for itemNum in range(len(data)):
