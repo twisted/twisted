@@ -18,7 +18,7 @@
 
 from twisted.spread import pb
 from twisted.internet import defer
-from twisted.issues.issue import Issue, IssueQueue, InQueue
+from twisted.issues.issue import Issue, IssueQueue, InQueue, PendingFixerAnalysis
 from twisted.issues.task import Task
 from twisted.python.components import Interface
 
@@ -161,6 +161,8 @@ class IssueRepository(pb.Service):
         self.queues[name] = q
         return q
 
+    # Some utility methods for initial state information.
+
     def buildIssue(self, issueFinder, description, initialState):
         n = self.getIssueNumber()
         issue = Issue(issueFinder, description, initialState, n)
@@ -178,7 +180,13 @@ class IssueRepository(pb.Service):
         does not exist."""
         
         return self.buildIssue(issueFinder, description, InQueue(self.queues[queueName]))
-    
+
+    def reportBug(self, issueFinder, description):
+        """A traditional 'report bug' interface, with *no required fields*.
+        The quickest way to get an issue into the system.
+        """
+        return self.buildIssue(issueFinder, description, PendingFixerAnalysis())
+
     def getIssueNumber(self):
         self.currentIssueNumber = self.currentIssueNumber + 1
         return self.currentIssueNumber

@@ -3,6 +3,6 @@
 import webrepo
 reload(webrepo)
 import twisted
-resource = webrepo.MIssueRepository(
+resource = twisted.web.woven.view.View( webrepo.MIssueRepository(
     registry.getComponent(twisted.issues.repo.IssueRepository)
-    )
+    ), "webrepo_template.html")

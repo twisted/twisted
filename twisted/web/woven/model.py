@@ -224,6 +224,43 @@ class ListModel(Model):
         return "<%s instance at 0x%x: wrapped data: %s>" % (myLongName,
                                                             id(self), self.orig)
 
+
+class StringModel(Model):
+    
+    """ I wrap a Python string and allow it to interact with the Woven models
+    and submodels.  """
+    
+    __implements__ = interfaces.IModel
+    
+    parent = None
+    name = None
+    def __init__(self, orig):
+        self.orig = orig
+
+    def getSubmodel(self, name):
+        orig = self.orig
+        return adaptToIModel(orig[int(name)], self, name)
+    
+    def setSubmodel(self, name, value):
+        raise ValueError("Strings are immutable.")
+
+    def __getitem__(self, name):
+        return self.getSubmodel(name)
+    
+    def __setitem__(self, name, value):
+        self.setSubmodel(name, value)
+    
+    def getData(self):
+        return self.orig
+    
+    def setData(self, data):
+        setattr(self.parent, self.name, data)
+
+    def __repr__(self):
+        myLongName = reflect.qual(self.__class__)
+        return "<%s instance at 0x%x: wrapped data: %r>" % (myLongName, id(self), self.orig)
+
+
 # pyPgSQL returns "PgResultSet" instances instead of lists, which look, act
 # and breathe just like lists. pyPgSQL really shouldn't do this, but this works
 try:
@@ -335,10 +372,10 @@ class UnsafeObjectWrapper(ObjectWrapper):
 from twisted.internet import defer
 
 try:
+    components.registerAdapter(StringModel, types.StringType, interfaces.IModel)
     components.registerAdapter(ListModel, types.ListType, interfaces.IModel)
-    components.registerAdapter(DictionaryModel, types.DictionaryType, interfaces.IModel)
-    components.registerAdapter(Wrapper, types.StringType, interfaces.IModel)
     components.registerAdapter(ListModel, types.TupleType, interfaces.IModel)
+    components.registerAdapter(DictionaryModel, types.DictionaryType, interfaces.IModel)
     components.registerAdapter(Wrapper, defer.Deferred, interfaces.IModel)
 except ValueError:
     # The adapters were already registered

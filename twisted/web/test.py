@@ -48,6 +48,13 @@ class FunkyForm(widgets.Form):
         'Get Funky', 'Get *VERY* Funky'
         ]
 
+    def process(self, write, request, submit,
+                checkn, checkone, checktwo, desc, mnu, title):
+        write( "I got some values." )
+        for value in checkn, checkone, checktwo, desc, mnu, title:
+            write( "value" )
+            write(str(value))
+
 
 class Test(widgets.Gadget, widgets.Presentation):
     """I am a trivial example of a 'web application'.

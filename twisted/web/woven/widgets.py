@@ -666,3 +666,11 @@ class RawText(Widget):
         self.node = domhelpers.RawText(self.getData())
         return self.node
 
+
+class StringDefault(Widget):
+    def setUp(self, request, node, data):
+        self.add(Text(data))
+
+view.registerViewForModel(Text, model.StringModel)
+view.registerViewForModel(List, model.ListModel)
+view.registerViewForModel(KeyedList, model.DictionaryModel)

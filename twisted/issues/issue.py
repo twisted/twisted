@@ -203,6 +203,13 @@ class PendingFinderConfirmation(IssueState):
     resolution from the Finder.
     """
 
+
+class PendingFixerAnalysis(IssueState):
+    """The state of an issue which has not yet been identified as requiring a
+    task or information.
+    """
+
+
 class FixerClosed(IssueState):
     """The state of an issue which has been closed by a fixer as needing no
     further attention, but has not been confirmed explicitly by the finder of

@@ -7,10 +7,15 @@
 <body>
 <h1>Issue Repository Issues Listing</h1>
 
-<div model="issuelist" view="List">
+<div model="issuelist"  >
 <h1 class="listHeader">Here's a list header.  Hooray!</h1>
 <h2 class="emptyList">(no issues in repository)</h2>
-<h2 class="listItem"></h2>
+
+<div class="listItem">Issue #<span style="color: orange" model="number"  />
+<div model="description"   />
+<div model="status"  />
+</div>
+
 <p class="listFooter">Thank you for using Twisted Issues.</p>
 </div>
 
