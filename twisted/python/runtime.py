@@ -16,7 +16,9 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
 # System imports
-import os, sys
+import os
+import sys
+import time
 
 def shortPythonVersion():
     hv = sys.hexversion
@@ -25,18 +27,27 @@ def shortPythonVersion():
     teeny = (hv & 0x0000ff00L) >> 8
     return "%s.%s.%s" % (major,minor,teeny)
 
+knownPlatforms = {
+    'nt': 'win32',
+    'posix': 'posix',
+    'java': 'java',
+    'org.python.modules.os': 'java',
+    }
+
+_timeFunctions = {
+    'win32': time.clock,
+    }
+
 class Platform:
     """Gives us information about the platform we're running on"""
-    
-    def __init__(self):
-        if os.name == 'nt':
-            self.type = 'win32'
-        elif os.name == 'posix':
-            self.type = 'posix'
-        elif os.name in ('java', 'org.python.modules.os'):
-            self.type = 'java'
-        else:
-            self.type = None
+
+    type = knownPlatforms.get(os.name)
+    seconds = staticmethod(_timeFunctions.get(type, time.time))
+
+    def __init__(self, name=None):
+        if name is not None:
+            self.type = knownPlatforms.get(name)
+            self.seconds = _timeFunctions.get(self.type, time.time)
     
     def isKnown(self):
         """Do we know about this platform?"""
@@ -66,3 +77,4 @@ class Platform:
 
 platform = Platform()
 platformType = platform.getType()
+seconds = platform.seconds
