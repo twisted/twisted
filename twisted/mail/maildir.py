@@ -26,17 +26,20 @@ class AbstractMaildirDomain:
         self.root = root
 
     def userDirectory(self, user):
-        """alwyas returns None.
+        """Get the maildir directory for a given user
+
+        Override to specify where to save mails for users.
+        Return None for non-existing users.
         """
         return None
 
     def exists(self, name, domain):
-        """ UNDOCUMENTED
+        """Check for existence of user in the domain
         """
         return self.userDirectory(name) is not None
 
     def saveMessage(self, origin, name, message, domain):
-        """ UNDOCUMENTED
+        """Save a message for a given user
         """
         dir = os.path.join(self.userDirectory(name), 'inbox')
         fname = _generateMaildirName() 
@@ -50,11 +53,11 @@ class AbstractMaildirDomain:
 
 
 class MaildirMailbox(pop3.Mailbox):
-    """ UNDOCUMENTED
+    """Implement the POP3 mailbox semantics for a Maildir mailbox
     """
 
     def __init__(self, path):
-        """ UNDOCUMENTED
+        """Initialize with name of the Maildir mailbox
         """
         self.path = path
         self.list = []
@@ -63,7 +66,7 @@ class MaildirMailbox(pop3.Mailbox):
                 self.list.append(os.path.join(path, name, file))
 
     def listMessages(self):
-        """ UNDOCUMENTED
+        """Return a list of lengths of all files in new/ and cur/
         """
         ret = []
         for mess in self.list:
@@ -74,23 +77,31 @@ class MaildirMailbox(pop3.Mailbox):
         return ret
 
     def getMessage(self, i):
-        """ UNDOCUMENTED
+        """Return an open file-pointer to a message
         """
         return open(self.list[i])
 
     def getUidl(self, i):
-        """ UNDOCUMENTED
+        """Return a unique identifier for a message
+
+        This is done using the basename of the filename.
+        It is globally unique because this is how Maildirs are designed.
         """
         return os.path.basename(self.list[i])
 
     def deleteMessage(self, i):
-        """ UNDOCUMENTED
+        """Delete a message
+
+        This only moves a message to the del/ subdirectory,
+        so it can be undeleted by an administrator.
         """
         os.rename(self.list[i], 
                   os.path.join(self.path,'del',os.path.basename(self.list[i])))
         self.list[i] = 0
 
     def getSubFolders(self):
+        """ UNDOCUMENTED
+        """
         dirs = []
         for dir in os.path.listdir(self.path):
             if dir not in ['cur', 'new', 'del']:
@@ -99,18 +110,32 @@ class MaildirMailbox(pop3.Mailbox):
 
 
 class MaildirDirdbmDomain(AbstractMaildirDomain):
-    """ UNDOCUMENTED
+    """A Maildir Domain where membership is checked by a dirdbm file
     """
 
     def __init__(self, root, postmaster=0):
-        """ UNDOCUMENTED
+        """Initialize
+
+        The first argument is where the Domain directory is rooted.
+        The second is whether non-existing addresses are simply
+        forwarded to postmaster instead of outright bounce
+
+        The directory structure of a MailddirDirdbmDomain is:
+
+        /passwd <-- a dirdbm file
+        /USER/inbox/{cur,new,del} <-- each user has these three directories
         """
         AbstractMaildirDomain.__init__(self, root)
         self.dbm = dirdbm.open(os.path.join(root, 'passwd'))
         self.postmaster = postmaster
 
     def userDirectory(self, name):
-        """ UNDOCUMENTED
+        """Get the directory for a user
+
+        If the user exists in the dirdbm file, return the directory
+        os.path.join(root, name, 'inbox'), creating it if necessary.
+        Otherwise, returns postmaster's mailbox instead if bounces
+        go to postmaster, otherwise return None
         """
         if not self.dbm.has_key(name):
             if not self.postmaster:
@@ -126,7 +151,10 @@ class MaildirDirdbmDomain(AbstractMaildirDomain):
         return dir
 
     def authenticateUserAPOP(self, user, magic, digest, domain):
-        """ UNDOCUMENTED
+        """Return Mailbox to valid APOP authentications
+
+        Check the credentials, returning None if they are invalid
+        or a MaildirMailbox if they are valid.
         """
         if not self.dbm.has_key(user):
             return None
@@ -136,6 +164,8 @@ class MaildirDirdbmDomain(AbstractMaildirDomain):
             return MaildirMailbox(os.path.join(self.root, user, 'inbox'))
 
     def getUserFolder(self, user, password, folder):
+        """ UNDOCUMENTED
+        """
         if self.dbm.get(user) != password:
             return None
         return MaildirMailbox(os.path.join(self.root, user, folder))
