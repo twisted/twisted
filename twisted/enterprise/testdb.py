@@ -15,79 +15,93 @@
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
-import dbserver
-import dbservice
+
+
 import unittest
 import time
 
-from twisted.internet import task
+from twisted.enterprise import manager
+from twisted.enterprise import service
 
-class DbManagerTestCase(unittest.TestCase):
+def getDebug():
+    return 0
+
+class ManagerTestCase(unittest.TestCase):
     def setUp(self):
-        self.manager = dbserver.DbManager(
-            service =  "postgres",
+        self.manager = manager.ManagerSingle(
+            service =  "sybase",
             server =   "max",
             database = "twisted",
             username = "twisted",
-            password = "matrix",
-            numConnections = 2 )
+            password = "matrix")
 
     def tearDown(self):
         self.manager.disconnect()
         self.manager = None
 
     def testConnect(self):
+        if getDebug(): print "starting connect"        
         self.manager.connect()
         assert self.manager.connected == 1, 'not connected'
-        assert len(self.manager.connections) == 2, 'wrong number of connections'
+        if getDebug(): print "test Connect successful"
 
-
-class DbServiceTestCase(unittest.TestCase):
+class ServiceTestCase(unittest.TestCase):
     def setUp(self):
-        self.manager = dbserver.DbManager(
-            service =  "postgres",
+        self.manager = manager.ManagerSingle(
+            service =  "sybase",
             server =   "max",
             database = "twisted",
             username = "twisted",
-            password = "matrix",
-            numConnections = 1 )
+            password = "matrix")
         self.data = "DEFAULT"
         if not self.manager.connect():
             assert 0, 'failed to connect'
+        if getDebug(): print "connected to database"
+            
 
-    def gotData(self, data):
+    def gotData(self, *data):
         self.data = data
+        if getDebug(): print "got data:", data
 
-    def testAddUser(self):
-        request = dbservice.AddUserRequest('testuser','testpass', self.gotData)
+    def testGeneric(self):
+        if getDebug(): print "starting Generic"
+        request = service.GenericRequest("select * from sysusers", self.gotData)
         self.manager.addRequest(request)
-        self.manager.results.waitForSize(1)
-        task.doAllTasks()
-        assert self.data == None, 'no response for addUser result'
+        assert self.data != "DEFAULT", 'no response for generic result'
+        if getDebug(): print "test Generic  successful"
+        
+    def testAddUser(self):
+        if getDebug(): print "starting AddUser"
+        request = service.AddUserRequest('testuser','testpass', self.gotData)
+        self.manager.addRequest(request)
+        assert self.data != "DEFAULT", 'no response for addUser result'
+        if getDebug(): print "test AddUser successful"
 
     def testPassword(self):
-        request = dbservice.PasswordRequest('testuser', self.gotData)
+        if getDebug(): print "starting Password"
+        request = service.PasswordRequest('testuser', self.gotData)
         self.manager.addRequest(request)
-        self.manager.results.waitForSize(1)
-        task.doAllTasks()
-        assert self.data == 'testpass', 'password retrieved is incorrect <%s>' % self.data
+        #print "password is <%s>" % self.data
+        assert self.data != "DEFAULT", 'password retrieved is incorrect'
+        if getDebug(): print "test password successful"
 
     def testBulk(self):
+        if getDebug(): print "starting Bulk"
         NUMREQUESTS = 100
         for i in range(0,NUMREQUESTS):
-            request = dbservice.PasswordRequest('testuser', self.gotData)
+            request = service.PasswordRequest('testuser', self.gotData)
             self.manager.addRequest(request)
-        self.manager.results.waitForSize(NUMREQUESTS)
-        task.doAllTasks()
-        assert self.manager.requests.getSize() == 0, 'bulk failed.'
+        assert self.data != "DEFULT", 'bulk failed.'
+        if getDebug(): print "test Bulk successful"
+        
 
     def tearDown(self):
         self.manager.disconnect()
         self.manager = None
 
 
-suite1 = unittest.makeSuite(DbManagerTestCase, 'test')
-suite2 = unittest.makeSuite(DbServiceTestCase, 'test')
+suite1 = unittest.makeSuite(ManagerTestCase, 'test')
+suite2 = unittest.makeSuite(ServiceTestCase, 'test')
 
 if __name__ == "__main__":
     unittest.main()

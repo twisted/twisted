@@ -17,9 +17,9 @@
 from twisted.spread import pb
 from twisted.python import delay, authenticator
 import string
-import dbserver
+from twisted.enterprise import manager
 
-class DbService(pb.Service):
+class Service(pb.Service):
     """
     This service manages users that request to interact with the database.
 
@@ -29,7 +29,7 @@ class DbService(pb.Service):
     create table accounts
     (
         name      char(24),
-        password  char(24),
+        passwd    char(24),
         accountid int
     );
 
@@ -46,6 +46,7 @@ class DbService(pb.Service):
         print "Starting db service"
         self.manager.connect()
 
+
 class DbUser(pb.Perspective):
     """A User that wants to interact with the database.
     """
@@ -55,50 +56,53 @@ class DbUser(pb.Perspective):
         self.service.manager.addRequest(newRequest)
 
 
-class GenericRequest(dbserver.DbRequest):
+class GenericRequest(manager.Request):
     """Generic sql execution request.
     """
     def __init__(self, sql, callback):
-        dbserver.DbRequest.__init__(self, callback)
+        manager.Request.__init__(self, callback)
         self.sql = sql
 
     def execute(self, connection):
         c = connection.cursor()
         c.execute(self.sql)
         self.results = c.fetchall()
+        c.close()
+        #print "Fetchall :", c.fetchall()
         self.status = 1
 
-class AddUserRequest(dbserver.DbRequest):
+class AddUserRequest(manager.Request):
     """DbRequest to add a user to the accounts table
     """
     def __init__(self, name, password, callback):
-        dbserver.DbRequest.__init__(self, callback)
+        manager.Request.__init__(self, callback)
         self.name = name
         self.password = password
 
     def execute(self, connection):
          c = connection.cursor()
-         c.execute("insert into accounts (name, password, accountid) values ('%s', '%s', 0)" % (self.name, self.password) )
+         c.execute("insert into accounts (name, passwd, accountid) values ('%s', '%s', 0)" % (self.name, self.password) )
          c.fetchall()
-         c.execute("commit")
-         c.fetchall()
+         c.close()
+         connection.commit()
          self.status = 1
 
-class PasswordRequest(dbserver.DbRequest):
+class PasswordRequest(manager.Request):
     """DbRequest to look up the password for a user in the accounts table.
     """
     def __init__(self, name, callback):
-        dbserver.DbRequest.__init__(self, callback)
+        manager.Request.__init__(self, callback)
         self.name = name
 
     def execute(self, connection):
         c = connection.cursor()
-        c.execute("select password from accounts where name = '%s'" % self.name)
-        row = c.fetchone()
+        c.execute("select passwd from accounts where name = '%s'" % self.name)
+        row = c.fetchall()
         if not row:
             # username not found.
             self.status = 0
             return None
         self.results = row[0]
+        c.close()
         self.status = 1
 

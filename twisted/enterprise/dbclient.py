@@ -1,4 +1,3 @@
-
 # Twisted, the Framework of Your Internet
 # Copyright (C) 2001 Matthew W. Lefkowitz
 # 
@@ -17,18 +16,24 @@
 
 from twisted.internet import tcp, main
 from twisted.spread import pb
-
+import time
+import sys
 
 class clientCollector(pb.Referenced):
 
     def __init__(self, player):
         self.player = player
         self.count = 0
+        self.start = time.time()        
 
-    def remote_gotData(self, data):
-        print "Got some data:" , self.count
+    def remote_gotData(self, *data):
+        #print "Got some data:" , self.count
         self.player.request("select * from accounts", self)
         self.count = self.count + 1
+        if self.count == 400:
+            now = time.time()
+            print "Started at %f finished at %f took %f" % ( self.start, now, now - self.start)
+            main.shutDown()
 
 class DbClient:
 
@@ -39,9 +44,10 @@ class DbClient:
         self.player = None
         self.count = 0
 
+
     def doLogin(self):
         self.client = pb.Broker()
-        tcp.Client(self.host, 27777, self.client)
+        tcp.Client(self.host, 8787, self.client)
 
         self.client.requestIdentity("twisted",  # username
                                     "matrix",  # password
@@ -52,7 +58,8 @@ class DbClient:
         print "Could not connect.", arg
 
     def preConnected(self, identity):
-        identity.attach("twisted.enterprise.db", None, pbcallback=self.gotConnection, pberrback=self.couldntConnect)
+        print "preConnected."
+        identity.attach("twisted.enterprise.db","twisted",  None, pbcallback=self.gotConnection, pberrback=self.couldntConnect)
 
     def gotConnection(self, player):
         print 'connected:', player
