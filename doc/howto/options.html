@@ -48,19 +48,24 @@ from twisted.python import usage
 <pre class="python">
 class Options(usage.Options):
 
-    optFlags = [["fast", "f"], ["safe", "s"]]
+    optFlags = [["fast", "f", "Act quickly"], ["safe", "s", "Act safely"]]
 </pre>
-    <p><code>optFlags</code> should be a list of 2-lists. The first
-    element is the long name, and will be used on the command line
-    as <code>--fast</code>. The second one is the short name, and
-    will be used on the command line as <code>-f</code>. The long
-    name also determines the name of the key that will be set on
-    the Options instance. Its value will be 1 if the option was seen, 0
-    otherwise. Here is an example for usage:</p>
+    <p><code>optFlags</code> should be a list of 3-lists. The first element
+    is the long name, and will be used on the command line as
+    <code>--fast</code>. The second one is the short name, and will be used
+    on the command line as <code>-f</code>. The last element is a
+    description of the flag and will be used to generate the usage
+    information text.  The long name also determines the name of the key
+    that will be set on the Options instance. Its value will be 1 if the
+    option was seen, 0 otherwise. Here is an example for usage:</p>
 <pre class="python">
 class Options(usage.Options):
 
-    optFlags = [["fast", "f"], ["good", "g"], ["cheap", "c"]]
+    optFlags = [
+        ["fast", "f", "Act quickly"],
+        ["good", "g", "Act well"],
+        ["cheap", "c", "Act cheaply"]
+    ]
 
 command_line = ["-g", "--fast"]
 
@@ -102,17 +107,24 @@ print
 <pre class="python">
 class BaseOptions(usage.Options):
 
-    optFlags = [["quiet", "q"]]
+    optFlags = [["quiet", "q"], None]
 
 class SpecificOptions(BaseOptions):
 
-    optFlags = [["fast", "f"], ["good", "g"], ["cheap", "c"]]
+    optFlags = [
+        ["fast", "f", None], ["good", "g", None], ["cheap", "c", None]
+    ]
 </pre>
     <p>Is the same as: </p>
 <pre class="python">
 class SpecificOptions(BaseOptions):
 
-    optFlags = [["quiet", "q"], ["fast", "f"], ["good", "g"], ["cheap", "c"]]
+    optFlags = [
+        ["quiet", "q", "Silence output"],
+        ["fast", "f", "Run quickly"],
+        ["good", "g", "Don't validate input"],
+        ["cheap", "c", "Use cheap resources"]
+    ]
 </pre>
 
     <h2>Parameters</h2>
@@ -129,8 +141,12 @@ from twisted.python import usage
 
 class Options(usage.Options):
 
-    optFlags = [["fast", "f"], ["good", "g"], ["cheap", "c"]]
-    optParameters = [["user", "u", None]]
+    optFlags = [
+        ["fast", "f", "Run quickly"],
+        ["good", "g", "Don't validate input"],
+        ["cheap", "c", "Use cheap resources"]
+    ]
+    optParameters = [["user", "u", None, "The user name"]]
 
 config = Options()
 try:
@@ -171,17 +187,22 @@ print
 from twisted.python import usage
 
 class ImportOptions(usage.Options):
-    optParameters = [['module', 'm', None], ['vendor', 'v', None],
-                     ['release', 'r', None]]
+    optParameters = [
+        ['module', 'm', None, None], ['vendor', 'v', None, None],
+        ['release', 'r', None]
+    ]
 
 class CheckoutOptions(usage.Options):
-    optParameters = [['module', 'm', None], ['tag', 'r', None]]
+    optParameters = [['module', 'm', None, None], ['tag', 'r', None, None]]
 
 class Options(usage.Options):
     subCommands = [['import', None, ImportOptions, "Do an Import"],
                    ['checkout', None, CheckoutOptions, "Do a Checkout"]]
     
-    optParameters = [['compression', 'z', 0], ['repository', 'r', None]]
+    optParameters = [
+        ['compression', 'z', 0, 'Use compression'],
+        ['repository', 'r', None, 'Specify an alternate repository']
+    ]
 
 config = Options(); config.parseOptions()
 if config.subCommand == 'import':
@@ -270,7 +291,7 @@ from twisted.python import usage
 
 class Options(usage.Options):
 
-    optParameters = [["max_differences", "d", 1]]
+    optParameters = [["max_differences", "d", 1, None]]
 
     def parseArgs(self, origin, changed):
         self['origin'] = origin
@@ -294,7 +315,11 @@ from twisted.python import usage
 
 class Options(usage.Options):
 
-    optFlags = [["fast", "f"], ["good", "g"], ["cheap", "c"]]
+    optFlags = [
+        ["fast", "f", "Run quickly"],
+        ["good", "g", "Don't validate input"],
+        ["cheap", "c", "Use cheap resources"]
+    ]
 
     def postOptions(self):
         if self['fast'] and self['good'] and self['cheap']:
