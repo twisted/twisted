@@ -12,9 +12,14 @@ namespace Twisted {
     {
     public:
 	virtual ~Deallocator() {}
-	virtual void dealloc(void* buf) = 0;
+	virtual void dealloc(char* buf) = 0;
     };
     
+    class DeleteDeallocator : public Deallocator
+    {
+	virtual void dealloc(char* buf) { delete[] buf; }
+    };
+
     inline object import(char* module)
     {
 	PyObject* m = PyImport_ImportModule(module);

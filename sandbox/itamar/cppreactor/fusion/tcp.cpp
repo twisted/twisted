@@ -86,7 +86,7 @@ static PyObject* Buffer_str(DeallocBuffer* self)
 
 static void Buffer_dealloc(DeallocBuffer* self)
 {
-    self->b_dealloc->dealloc(self->b_ptr);
+    self->b_dealloc->dealloc(reinterpret_cast<char*>(self->b_ptr));
     self->ob_type->tp_free((PyObject*)self);
 }
 
