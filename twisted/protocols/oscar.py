@@ -35,13 +35,21 @@ def readTLVs(data,count=None):
         return dict
     return dict,data
 
-
 def encryptPasswordMD5(password,key):
     m=md5.new()
     m.update(key)
     m.update(password)
     m.update("AOL Instant Messenger (SM)")
     return m.digest()
+
+def encryptPasswordICQ(password):
+    key=[0xF3,0x26,0x81,0xC4,0x39,0x86,0xDB,0x92,0x71,0xA3,0xB9,0xE6,0x53,0x7A,0x95,0x7C]
+    bytes=map(ord,password)
+    r=""
+    for i in range(len(bytes)):
+        r=r+chr(bytes[i]^key[i%len(key)])
+    return r
+
 
 class OscarConnection(protocol.Protocol):
     def connectionMade(self):
@@ -53,6 +61,7 @@ class OscarConnection(protocol.Protocol):
     def connectionLost(self):
         print "Connection Lost!"
         self.stopKeepAlive()
+
     def connectionFailed(self):
         print "Connection Failed!"
         self.stopKeepAlive()
@@ -102,6 +111,7 @@ class OscarConnection(protocol.Protocol):
             self.stopper.stop()
             self.stopper=None
 
+
 class SNACBased(OscarConnection):
     def __init__(self,cookie):
         self.cookie=cookie
@@ -143,6 +153,7 @@ class SNACBased(OscarConnection):
         return "Data"
 
     def oscar_unknown(self,snac): print "unknown",snac
+
 
 class BOSConnection(SNACBased):
     def __init__(self,username,cookie):
@@ -361,6 +372,7 @@ class BOSConnection(SNACBased):
                              TLV(3,'text/x-aolrtf; charset="us-ascii"')+
                              TLV(4,self.awayMessage)+
                              TLV(5,CAP_CHAT+CAP_IMAGE)) # capabilities here
+
     def online(self):
         if self.onlineFlag: return
         self.sendSNAC(0x01,0x02,"\x00\x01\x00\x03\x01\x10\x04\x7b\x00\x13\x00\x01\x01\x10\x04\x7b\x00\x02\x00\x01\x01\x01\x04\x7b\x00\x03\x00\x01\x01\x10\x04\x7b\x00\x04\x00\x01\x01\x10\x04\x7b\x00\x06\x00\x01\x01\x10\x04\x7b\x00\x08\x00\x01\x01\x04\x00\x01\x00\x09\x00\x01\x01\x10\x04\x7b\x00\x0a\x00\x01\x01\x10\x04\x7b\x00\x0b\x00\x01\x01\x00\x00\x01\x00\x0c\x00\x01\x01\x04\x00\x01")
@@ -393,7 +405,6 @@ class BOSConnection(SNACBased):
                              "\000\000\000\000"+
                              reply+
                              "\000\004\000\000")
-
 
     def joinChat(self,room):
         if not self.chatService:
@@ -556,6 +567,52 @@ class BOSConnection(SNACBased):
     def imageGotMessage(self,user,message):
         self.gotMessage(user,message)
     
+
+class ICQConnection(SNACBased):
+    def __init__(self,uin,cookie):
+        SNACBased.__init__(cookie)
+        self.uin=uin
+
+    def oscar_01_03(self,snac):
+        self.sendSNAC(0x01,0x17,'\x00\x01\x00\x03\x00\x13\x00\x02\x00\x02\x00\x01\x00\x03\x00\x01\x00\x15\x00\x01\x00\x04\x00\x01\x00\x06\x00\x01\x00\x09\x00\x01\x00\x0A\x00\x01\x00\x0B\x00\x01')
+
+    def oscar_01_07(self,snac):
+        self.sendSNAC(0x01,0x08,"\x00\x01\x00\x02\x00\x03\x00\x04\x00\x05")
+        self.sendSNAC(0x01,0x0E,"")
+        self.sendSNAC(0x13,0x02,"")
+        self.sendSNAC(0x13,0x05,"\x3C\x5C\x36\x28\x00\x04")
+        self.sendSNAC(0x02,0x02,"")
+        self.sendSNAC(0x03,0x02,"")
+        self.sendSNAC(0x04,0x04,"")
+        self.sendSNAC(0x09,0x02,"")
+
+    def oscar_01_0F(self,snac): pass
+
+    def oscar_01_18(self,snac):
+        self.sendSNAC(0x01,0x06,"")
+
+    def oscar_02_03(self,snac): pass
+
+    def oscar_04_05(self,snac): pass
+
+    def oscar_09_03(self,snac): pass
+
+    def oscar_13_03(self,snac): pass
+
+    def oscar_13_0F(self,snac):
+        self.sendSNAC(0x13,0x07,"")
+        self.sendSNAC(0x02,0x04,"\x00\x00")
+        self.sendSNAC(0x04,0x02,"\x00\x00\x00\x00\x00\x03\x1F\x40\x03\xE7\x03\xE7\x00\x00\x00\x00")
+        self.sendSNAC(0x01,0x1E,
+                      TLV(0x06,"\x20\x03\x00\x00")+
+                      TLV(0x08,"\x00\x00")+
+                      TLV(0x0C,"\x42\x2C\x69\x25\x00\x00\x23\x56\x02\x00\x08\x64\x92\x40\x3C\x00\x00\x00\x50\x00\x00\x00\x03\x3C\x5C\x69\xFD\x3C\x5C\x69\x8F\x3C\x5Cv69\x8F\x00\x00"))
+        self.sendSNAC(0x01,0x02,"\x00\x01\x00\x03\x01\x10\x04\x7B\x00\x13\x00\x02\x01\x10\x04\x7B\x00\x02\x00\x01\x01\x01\x04\x7B\x00\x03\x00\x01\x01\x10\x04\x7B\x00\x15\x00\x01\x01\x10\x04\x7B\x00\x04\x00\x01\x01\x10\x04\x7B\x00\x06\x00\x01\x01\x10\x04\x7B\x00\x09\x00\x01\x01\x10\x04\x7B\x00\x0A\x00\x01\x01\x10\x04\x7B\x00\x0B\x00\x01\x01\x10\x04\x7B")
+        self.sendSNAC(0x15,0x02,"\x00\x01\x00\x0A\x08\x00\x0E\x87\xE8\x08\x3C\x00\x02\x00")
+
+    def oscaR_15_02(self,snac): pass
+
+
 class ChatService(SNACBased):
     def __init__(self,bos,cookie):
         SNACBased.__init__(self,cookie)
@@ -610,6 +667,7 @@ class ChatService(SNACBased):
     def sendMessage(self,room,message):
         self.room(room).sendMessage(message)
         
+
 class ChatRoomConnection(SNACBased):
     def __init__(self,bos,room,cookie):
         SNACBased.__init__(self,cookie)
@@ -660,6 +718,7 @@ class ChatRoomConnection(SNACBased):
                       "\x46\x30\x38\x30\x44\x00\x63\x00\x00\x03\x00\x01\x00\x00\x00\x06\x00\x00\x00\x05"+
                       struct.pack("!H",len(tlvs))+
                       tlvs)
+
        
 class DirectConnection(protocol.Protocol):
     def __init__(self,bos):
@@ -667,6 +726,7 @@ class DirectConnection(protocol.Protocol):
         self.buf=''
         self.buffered=1
         self.mode="Message"
+
     def sendMessage(self,message,pad=""):
         t="ODC2"
         t=t+struct.pack("!H",0x4c+len(pad))
@@ -678,6 +738,7 @@ class DirectConnection(protocol.Protocol):
         t=t+"\000"*(32-len(self.bos.screenName))
         t=t+message
         self.transport.write(t)
+
     def dataReceived(self,data):
         self.buf=self.buf+data
         if len(self.buf)<6: return
@@ -696,23 +757,45 @@ class DirectConnection(protocol.Protocol):
         if message:
             self.bos.imageGotMessage(user,message)
 
+
 class DirectConnectionServer(protocol.Factory):
     def __init__(self,bos):
         self.protocol=lambda x,bos=bos:DirectConnection(bos)
 
+
 class OscarAuthenticator(OscarConnection):
     BOSClass = BOSConnection
-    def __init__(self,username,password,callback=None):
+    def __init__(self,username,password,callback=None,icq=0):
         self.username=username
         self.password=password
         self.callback=callback
+        self.icq=icq # icq mode
+        if icq and self.BOSClass==BOSConnection:
+            self.BOSClass=ICQConnection
 
     def oscar_(self,flap):
-        self.sendFlap(FLAP_CHANNEL_NEW_CONNECTION,"\000\000\000\001")
-        self.sendFlap(FLAP_CHANNEL_DATA,
-                      SNAC(0x17,0x06,0,
-                           TLV(TLV_USERNAME,self.username)))
-        self.state="Key"
+        if not self.icq:
+            self.sendFlap(FLAP_CHANNEL_NEW_CONNECTION,"\000\000\000\001")
+            self.sendFlap(FLAP_CHANNEL_DATA,
+                          SNAC(0x17,0x06,0,
+                               TLV(TLV_USERNAME,self.username)))
+            self.state="Key"
+        else:
+            encpass=encryptPasswordICQ(self.password)
+            self.sendFlap(FLAP_CHANNEL_NEW_CONNECTION,
+                          '\000\000\000\001'+
+                          TLV(0x01,self.username)+
+                          TLV(0x02,encpass)+
+                          TLV(0x03,'ICQ Inc. - Product of ICQ (TM).2001b.5.15.1.3638.85')+
+                          TLV(0x16,"\x01\x0a")+
+                          TLV(0x17,"\x00\x05")+
+                          TLV(0x18,"\x00\x12")+
+                          TLV(0x19,"\000\001")+
+                          TLV(0x1a,"\x0eK")+
+                          TLV(0x14,"\x00\x00\x00U")+
+                          TLV(0x0f,"en")+
+                          TLV(0x0e,"us"))
+            self.state="Cookie"
 
     def oscar_Key(self,data):
         snac=readSNAC(data[1])
@@ -736,6 +819,9 @@ class OscarAuthenticator(OscarConnection):
 
     def oscar_Cookie(self,data):
         snac=readSNAC(data[1])
+        if self.icq:
+            i=snac[5].find("\000")
+            snac[5]=snac[5][i:]
         tlvs=readTLVs(snac[5])
         if tlvs.has_key(6):
             self.cookie=tlvs[6]
@@ -744,7 +830,7 @@ class OscarAuthenticator(OscarConnection):
             if self.callback: self.callback(bos)
             tcp.Client(server,int(port),bos)
             self.transport.loseConnection()
-        else:
+        elif tlvs.has_key(8):
             errorcode=tlvs[8]
             errorurl=tlvs[4]
             if errorcode=='\000\030':
@@ -753,6 +839,8 @@ class OscarAuthenticator(OscarConnection):
                 error="Invalid Username or Password."
             else: error=errorcode
             self.error(error,errorurl)
+        else:
+            print tlvs
         return "None"
 
     def oscar_None(self,data): pass
@@ -794,7 +882,7 @@ CAP_SEND_FILE = '\011F\023CL\177\021\321\202"DEST\000\000'
 CAP_GAMES = '\011F\023GL\177\021\321\202"DEST\000\000'
 CAP_SEND_LIST = '\011F\023KL\177\021\321\202"DEST\000\000'
 
-if __name__=="__main__":
-    from twisted.internet import main
-    tcp.Client("login.oscar.aol.com",5190,OscarAuthenticator("chiap3nis","bnla"))
-    main.run()
+#if __name__=="__main__":
+#    from twisted.internet import main
+#    tcp.Client("login.icq.com",6290,OscarAuthenticator("149456654","moomoo",icq=1))
+#    main.run()

@@ -36,11 +36,13 @@ import StringIO
 
 SIGNON,DATA,ERROR,SIGNOFF,KEEP_ALIVE=range(1,6)
 PERMITALL,DENYALL,PERMITSOME,DENYSOME=range(1,5)
+
 def quote(s):
     rep=['\\','$','{','}','[',']','(',')','"']
     for r in rep:
         s=string.replace(s,r,"\\"+r)
     return "\""+s+"\""
+
 def unquote(s):
     if s=="": return ""
     if s[0]!='"': return s
@@ -56,11 +58,13 @@ def unquote(s):
     s=r(s,"\\)",")")
     s=r(s,"\\\"","\"")
     return s
+
 def unquotebeg(s):
     for i in range(1,len(s)):
         if s[i]=='"' and s[i-1]!='\\':
             q=unquote(s[:i+1])
             return [q,s[i+2:]]
+
 def unroast(pw):
     roaststring="Tic/Toc"
     pw=string.lower(pw[2:])
@@ -74,6 +78,7 @@ def unroast(pw):
         count=(count+1)%len(roaststring)
         r=r+chr(value^xor)
     return r
+
 def roast(pw):
     # contributed by jemfinch on #python
     key="Tic/Toc"
@@ -84,6 +89,7 @@ def roast(pw):
         ro=ro+'%02x'%(c^ord(key[i%len(key)]))
         i=i+1
     return string.lower(ro)
+
 def checksum(b):
     return 0xdeadbeef # do it like gaim does, since the checksum
                       # formula doesn't work
@@ -114,6 +120,7 @@ def checksum(b):
 ##    check1=check1 & 0xff
 ##    checksum=(long(check0)*0x1000000)+(long(check1)*0x10000)
 ##    return checksum
+
 def checksum_file(f):
     return 0xdeadbeef # do it like gaim does, since the checksum
                       # formula doesn't work
@@ -148,15 +155,20 @@ def checksum_file(f):
 ##    check1=check1 & 0xff
 ##    checksum=(long(check0)*0x1000000)+(long(check1)*0x10000)
 ##    return checksum
+
 def normalize(s):
     s=string.lower(s)
     s=string.replace(s," ","")
     return s
+
+
 class TOCParseError(ValueError):
     pass
 
+
 class TOC(protocol.Protocol):
     users={}
+
     def connectionMade(self):
         # initialization of protocol
         self._buf=""
@@ -176,8 +188,10 @@ class TOC(protocol.Protocol):
         self.userclass=" O" 
         self.away=""
         self.saved=None
+
     def _debug(self,data):
         print data
+
     def connectionLost(self):
         self._debug("dropped connection from %s" % self.username)
         try:
@@ -192,6 +206,7 @@ class TOC(protocol.Protocol):
         if self.saved:
             self.factory.savedusers[self.username]=self.saved
         self.updateUsers()
+
     def sendFlap(self,type,data):
         """
         send a FLAP to the client
@@ -207,6 +222,7 @@ class TOC(protocol.Protocol):
         if self._ourseqnum>(256L**4):
             self._ourseqnum=0
         self.transport.write(send)
+
     def dataReceived(self,data):
         self._buf=self._buf+data
         try:
@@ -215,6 +231,7 @@ class TOC(protocol.Protocol):
             return
         self._mode=func()
         if self._onlyflaps and self.isFlap(): self.dataReceived("")
+
     def isFlap(self):
         """
         tests to see if a flap is actually on the buffer
@@ -226,6 +243,7 @@ class TOC(protocol.Protocol):
         if type not in range(1,6): return 0
         if len(self._buf)<6+length: return 0
         return 1
+
     def readFlap(self):
         """
         read the first FLAP off self._buf, raising errors if it isn't in the right form.
@@ -243,6 +261,7 @@ class TOC(protocol.Protocol):
             data=data[:-1]
         self._debug([type,data])
         return [type,data]
+
     #def modeWeb(self):
     #    try:
     #        line,rest=string.split(self._buf,"\n",1)
@@ -259,6 +278,7 @@ class TOC(protocol.Protocol):
     #        self.transport.write("Content-Length: %s\n\n"%len(text))
     #        self.transport.write(text)
     #        self.loseConnection()
+
     def modeFlapon(self):
         #if self._buf[:3]=="GET": self.modeWeb() # TODO: get this working
         if len(self._buf)<10: return "Flapon" # not enough bytes
@@ -268,6 +288,7 @@ class TOC(protocol.Protocol):
         self.sendFlap(SIGNON,"\000\000\000\001")
         self._onlyflaps=1
         return "Signon"
+
     def modeSignon(self):
         flap=self.readFlap()
         if flap==None:
@@ -283,6 +304,7 @@ class TOC(protocol.Protocol):
             self.saved=SavedUser()
             self.saved.nick=self.username
         return "TocSignon"
+
     def modeTocSignon(self):
         flap=self.readFlap()
         if flap==None:
@@ -302,36 +324,35 @@ class TOC(protocol.Protocol):
         self.sendFlap(DATA,"CONFIG:%s"%self.saved.config)
         # sending user configuration goes here
         return "Connected"
-    
-    
+   
     def authorize(self,server,port,username,password):
-        #raise NotImplementedError # TODO actually authorize users
         if self.saved.password=="":
             self.saved.password=password
             return 1
         else:
-            return self.saved.password==password# use this for testing
-    
-    
+            return self.saved.password==password
+
     def modeConnected(self):
         flap=self.readFlap()
         while flap!=None:
             if flap[0] not in [DATA,KEEP_ALIVE]: raise TOCParseError
             flapdata=string.split(flap[1]," ",1)
-            tocname=flapdata[0]
+            tocname=flapdata[0][4:]
             if len(flapdata)==2:
                 data=flapdata[1]
             else:
                 data=""
-            func=getattr(self,tocname,None)
+            func=getattr(self,"toc_"+tocname,None)
             if func!=None:
                 func(data)
             else:
                 self.toc_unknown(tocname,data)
             flap=self.readFlap()
         return "Connected"
+
     def toc_unknown(self,tocname,data):
         self._debug("unknown! %s %s" % (tocname,data))  
+
     def toc_init_done(self,data):
         """
         called when all the setup is done.
@@ -341,6 +362,7 @@ class TOC(protocol.Protocol):
         self.signontime=int(time.time())
         self.factory.users[self.username]=self
         self.updateUsers()
+
     def toc_add_permit(self,data):
         """
         adds users to the permit list.  if the list is null, then set the mode to DENYALL
@@ -355,6 +377,7 @@ class TOC(protocol.Protocol):
             users=string.split(data," ")
             map(self.permitlist.append,users)
         self.updateUsers()
+
     def toc_add_deny(self,data):
         """
         adds users to the deny list.  if the list is null, then set the mode to PERMITALL
@@ -369,6 +392,7 @@ class TOC(protocol.Protocol):
             users=string.split(data," ")
             map(self.denylist.append,users)
         self.updateUsers()
+
     def toc_evil(self,data):
         """
         warns a user.
@@ -387,6 +411,7 @@ class TOC(protocol.Protocol):
             self.sendError(CANT_WARN,username)
             return
         self.factory.users[username].evilFrom(user)
+
     def toc_add_buddy(self,data):
         """
         adds users to the buddy list
@@ -404,6 +429,7 @@ class TOC(protocol.Protocol):
                 pass
             else:
                 self.buddyUpdate(buddy)
+
     def toc_remove_buddy(self,data):
         """
         removes users from the buddy list
@@ -415,6 +441,7 @@ class TOC(protocol.Protocol):
             try:
                 self.buddylist.remove(normalize(buddy))
             except: pass
+
     def toc_send_im(self,data):
         """
         incoming instant message
@@ -435,6 +462,7 @@ class TOC(protocol.Protocol):
             self.sendError(NOT_AVAILABLE,username)
             return
         user.hearWhisper(self,data,auto)
+
     def toc_set_info(self,data):
         """
         set the users information, retrivable with toc_get_info
@@ -443,6 +471,7 @@ class TOC(protocol.Protocol):
         """
         info=unquote(data)
         self._userinfo=info
+
     def toc_set_idle(self,data):
         """
         set/unset idle
@@ -452,6 +481,7 @@ class TOC(protocol.Protocol):
         seconds=int(data)
         self.idletime=time.time()-seconds # time when they started being idle
         self.updateUsers()
+
     def toc_set_away(self,data):
         """
         set/unset away message
@@ -469,6 +499,7 @@ class TOC(protocol.Protocol):
             self.updateUsers()
         else:
             raise TOCParseError
+
     def toc_chat_join(self,data):
         """
         joins the chat room.
@@ -477,6 +508,7 @@ class TOC(protocol.Protocol):
         """
         exchange,name=string.split(data," ",1)
         self.factory.getChatroom(int(exchange),unquote(name)).join(self)
+
     def toc_chat_invite(self,data):
         """
         invite others to the room.
@@ -491,6 +523,7 @@ class TOC(protocol.Protocol):
             room=self.factory.chatroom[id]
             bud=self.factory.users[b]
             bud.chatInvite(room,self,message)
+
     def toc_chat_accept(self,data):
         """
         accept an invitation.
@@ -499,6 +532,7 @@ class TOC(protocol.Protocol):
         """
         id=int(data)
         self.factory.chatroom[id].join(self)
+
     def toc_chat_send(self,data):
         """
         send a message to the chat room.
@@ -509,12 +543,14 @@ class TOC(protocol.Protocol):
         id=int(id)
         message=unquote(message)
         self.factory.chatroom[id].say(self,message)
+
     def toc_chat_whisper(self,data):
         id,user,message=string.split(data," ",2)
         id=int(id)
         room=self.factory.chatroom[id]
         message=unquote(message)
         self.factory.users[user].chatWhisper(room,self,message)
+
     def toc_chat_leave(self,data):
         """
         leave the room.
@@ -523,6 +559,7 @@ class TOC(protocol.Protocol):
         """
         id=int(data)
         self.factory.chatroom[id].leave(self)
+
     def toc_set_config(self,data):
         """
         set the saved config.  this gets send when you log in.
@@ -530,6 +567,7 @@ class TOC(protocol.Protocol):
         toc_set_config <config>
         """
         self.saved.config=unquote(data)
+
     def toc_get_info(self,data):
         """
         get the user info for a user
@@ -540,6 +578,7 @@ class TOC(protocol.Protocol):
             self.sendError(901,data)
             return
         self.sendFlap(2,"GOTO_URL:TIC:info/%s"%data)
+
     def toc_format_nickname(self,data):
         """
         change the format of your nickname.
@@ -553,6 +592,7 @@ class TOC(protocol.Protocol):
             self.sendFlap(2,"ADMIN_NICK_STATUS:0")
         else:
             self.sendError(BAD_INPUT)
+
     def toc_change_passwd(self,data):
         orig,data=unquotebeg(data)
         new=unquote(data)
@@ -561,6 +601,7 @@ class TOC(protocol.Protocol):
             self.sendFlap(2,"ADMIN_PASSWD_STATUS:0")
         else:
             self.sendError(BAD_INPUT)
+
     def sendError(self,code,*varargs):
         """
         send an error to the user.  listing of error messages is below.
@@ -569,6 +610,7 @@ class TOC(protocol.Protocol):
         for v in varargs:
             send=send+":"+v
         self.sendFlap(DATA,send)
+
     def updateUsers(self):
         """
         Update the users who have us on their buddylist.
@@ -577,6 +619,7 @@ class TOC(protocol.Protocol):
         for user in self.factory.users.values():
             if self.username in user.buddylist and self.canContact(user):
                 user.buddyUpdate(self)
+
     def getStatus(self,user):
         if self.canContact(user):
             if self in self.factory.users.values():ol='T'
@@ -587,6 +630,7 @@ class TOC(protocol.Protocol):
             return (self.saved.nick,ol,self.saved.evilness,self.signontime,idle,self.userclass)
         else:
             return (self.saved.nick,'F',0,0,0,self.userclass)
+
     def canContact(self,user):
         if self.permitmode==PERMITALL: return 1
         elif self.permitmode==DENYALL: return 0
@@ -598,6 +642,7 @@ class TOC(protocol.Protocol):
             else: return 1
         else:
             assert 0,"bad permitmode %s" % self.permitmode
+
     def buddyUpdate(self,user):
         """
         Update the buddy.  Called from updateUsers()
@@ -610,6 +655,7 @@ class TOC(protocol.Protocol):
             send="UPDATE_BUDDY:%s:%s:%s:%s:%s:%s"%status
             self.sendFlap(DATA,send)
             self._laststatus[user]=status
+
     def hearWhisper(self,user,data,auto=0):
         """
         Called when you get an IM.  If auto=1, it's an autoreply from an away message.
@@ -619,6 +665,7 @@ class TOC(protocol.Protocol):
         else: auto='F'
         send="IM_IN:%s:%s:%s"%(user.saved.nick,auto,data)
         self.sendFlap(DATA,send)
+
     def evilFrom(self,user):
         if user=="":
             percent=0.03
@@ -627,6 +674,7 @@ class TOC(protocol.Protocol):
         self.saved.evilness=self.saved.evilness+int((100-self.saved.evilness)*percent)
         self.sendFlap(2,"EVILED:%s:%s"%(self.saved.evilness,user))
         self.updateUsers()
+
     def chatJoin(self,room):
         self.sendFlap(2,"CHAT_JOIN:%s:%s"%(room.id,room.name))
         f="CHAT_UPDATE_BUDDY:%s:T"%room.id
@@ -635,23 +683,30 @@ class TOC(protocol.Protocol):
                 u.chatUserUpdate(room,self)
             f=f+":"+u.saved.nick
         self.sendFlap(2,f)
+
     def chatInvite(self,room,user,message):
         if not self.canContact(user): return
         self.sendFlap(2,"CHAT_INVITE:%s:%s:%s:%s"%(room.name,room.id,user.saved.nick,message))
+
     def chatUserUpdate(self,room,user):
         if user in room.users:
             inroom='T'
         else:
             inroom='F'
         self.sendFlap(2,"CHAT_UPDATE_BUDDY:%s:%s:%s"%(room.id,inroom,user.saved.nick))
+
     def chatMessage(self,room,user,message):
         if not self.canContact(user): return
         self.sendFlap(2,"CHAT_IN:%s:%s:F:%s"%(room.id,user.saved.nick,message))
+
     def chatWhisper(self,room,user,message):
         if not self.canContact(user): return
         self.sendFlap(2,"CHAT_IN:%s:%s:T:%s"%(room.id,user.saved.nick,message))
+
     def chatLeave(self,room):
         self.sendFlap(2,"CHAT_LEFT:%s"%(room.id))
+
+
 class Chatroom:
     def __init__(self,fac,exchange,name,id):
         self.exchange=exchange
@@ -659,11 +714,13 @@ class Chatroom:
         self.id=id
         self.factory=fac
         self.users=[]
+
     def join(self,user):
         if user in self.users:
             return 
         self.users.append(user)
         user.chatJoin(self)
+
     def leave(self,user):
         if user not in self.users:
             raise TOCParseError
@@ -673,25 +730,32 @@ class Chatroom:
             u.chatUserUpdate(self,user)
         if len(self.users)==0:
             self.factory.remChatroom(self)
+
     def say(self,user,message):
         for u in self.users:
             u.chatMessage(self,user,message)
+
+
 class SavedUser:
     def __init__(self):
         self.config=""
         self.nick=""
         self.password=""
         self.evilness=0
+
+
 class TOCFactory(protocol.Factory):
     def __init__(self):
         self.users={}
         self.savedusers={}
         self.chatroom={}
         self.chatroomid=0
+
     def buildProtocol(self,addr):
         p=TOC()
         p.factory=self
         return p
+
     def getChatroom(self,exchange,name):
         for i in self.chatroom.values():
             if normalize(i.name)==normalize(name):
@@ -699,6 +763,7 @@ class TOCFactory(protocol.Factory):
         self.chatroom[self.chatroomid]=Chatroom(self,exchange,name,self.chatroomid)
         self.chatroomid=self.chatroomid+1
         return self.chatroom[self.chatroomid-1]
+
     def remChatroom(self,room):
         id=room.id
         del self.chatroom[id]
@@ -717,6 +782,7 @@ MAXARGS["CHAT_INVITE"]=3
 MAXARGS["CHAT_LEFT"]=0
 MAXARGS["ADMIN_NICK_STATUS"]=0
 MAXARGS["ADMIN_PASSWD_STATUS"]=0
+
 
 class TOCClient(protocol.Protocol):
     def __init__(self,username,password,authhost="login.oscar.aol.com",authport=5190):
@@ -737,8 +803,10 @@ class TOCClient(protocol.Protocol):
         self._cookies={} # for file transfers
         self._buf='' # current data buffer
         self._awaymessage=''
+
     def _debug(self,data):
         print data
+
     def sendFlap(self,type,data):
         if type==DATA:
             data=data+"\000"
@@ -751,6 +819,7 @@ class TOCClient(protocol.Protocol):
             self._ourseqnum=0
         self._debug(data)
         self.transport.write(s)
+
     def isFlap(self):
         """
         tests to see if a flap is actually on the buffer
@@ -762,6 +831,7 @@ class TOCClient(protocol.Protocol):
         if type not in range(1,6): return 0
         if len(self._buf)<6+length: return 0
         return 1
+
     def readFlap(self):
         if self._buf=='': return None
         if self._buf[0]!="*":
@@ -774,18 +844,22 @@ class TOCClient(protocol.Protocol):
         if data and data[-1]=="\000":
             data=data[:-1]
         return [type,data]
+
     def connectionMade(self):
         self._debug("connection made! %s" % self.transport)
         self.transport.write("FLAPON\r\n\r\n")
+
     def connectionLost(self):
         self._debug("connection lost!")
         self._online=0
+
     def dataReceived(self,data):
         self._buf=self._buf+data
         while self.isFlap():
             flap=self.readFlap()
             func=getattr(self,"mode%s"%self._mode)
             func(flap)
+
     def modeSendNick(self,flap):
         if flap!=[1,"\000\000\000\001"]: raise TOCParseError
         s="\000\000\000\001\000\001"+struct.pack("!H",len(self.username))+self.username
@@ -794,6 +868,7 @@ class TOCClient(protocol.Protocol):
             self._authport,self.username,roast(self._password))
         self.sendFlap(2,s)
         self._mode="Data"
+
     def modeData(self,flap):
         if not flap[1]:
             return
@@ -817,19 +892,23 @@ class TOCClient(protocol.Protocol):
             self.tocUNKNOWN(command,l)
             return
         func(l)
+
     def tocUNKNOWN(self,command,data):
         pass
+
     def tocSIGN_ON(self,data):
         if data!=("TOC1.0",): raise TOCParseError
         self._debug("Whee, signed on!")
         if self._buddies: self.add_buddy(self._buddies)
         self._online=1
         self.onLine()
+
     def tocNICK(self,data):
         """
         NICK:<format of nickname>
         """
         self.username=data[0]
+
     def tocCONFIG(self,data):
         """
         CONFIG:<config>
@@ -863,6 +942,7 @@ class TOCClient(protocol.Protocol):
                 elif code=='m':
                     mode=int(data)
         self.gotConfig(mode,buddylist,permit,deny)
+
     def tocIM_IN(self,data):
         """
         IM_IN:<user>:<autoreply T|F>:message
@@ -871,6 +951,7 @@ class TOCClient(protocol.Protocol):
         autoreply=(data[1]=='T')
         message=data[2]
         self.hearMessage(user,message,autoreply)
+
     def tocUPDATE_BUDDY(self,data):
         """
         UPDATE_BUDDY:<username>:<online T|F>:<warning level>:<signon time>:<idle time (minutes)>:<user class>
@@ -883,17 +964,20 @@ class TOCClient(protocol.Protocol):
         if data[5][-1]=='U':
             data[5]=data[5][:-1]
         self.updateBuddy(data[0],online,int(data[2]),int(data[3]),int(data[4]),data[5],away)
+
     def tocERROR(self,data):
         """
         ERROR:<error code>:<misc. data>
         """
         code,args=data[0],data[1:]
         self.hearError(int(code),args)
+
     def tocEVILED(self,data):
         """
         EVILED:<current warning level>:<user who warned us>
         """
         self.hearWarning(data[0],data[1])
+
     def tocCHAT_JOIN(self,data):
         """
         CHAT_JOIN:<room id>:<room name>
@@ -901,6 +985,7 @@ class TOCClient(protocol.Protocol):
         #self.chatJoined(int(data[0]),data[1])
         self._roomnames[int(data[0])]=data[1]
         self._receivedchatmembers[int(data[0])]=0
+
     def tocCHAT_UPDATE_BUDDY(self,data):
         """
         CHAT_UPDATE_BUDDY:<room id>:<in room? T/F>:<user 1>:<user 2>...
@@ -913,6 +998,7 @@ class TOCClient(protocol.Protocol):
         else:
             self._receivedchatmembers[roomid]=1
             self.chatJoined(roomid,self._roomnames[roomid],list(data[2:]))
+
     def tocCHAT_IN(self,data):
         """
         CHAT_IN:<room id>:<username>:<whisper T/F>:<message>
@@ -923,11 +1009,13 @@ class TOCClient(protocol.Protocol):
             self.chatHearWhisper(int(data[0]),data[1],data[3])
         else:
             self.chatHearMessage(int(data[0]),data[1],data[3])
+
     def tocCHAT_INVITE(self,data):
         """
         CHAT_INVITE:<room name>:<room id>:<username>:<message>
         """
         self.chatInvited(int(data[1]),data[0],data[2],data[3])
+
     def tocCHAT_LEFT(self,data):
         """
         CHAT_LEFT:<room id>
@@ -981,6 +1069,7 @@ class TOCClient(protocol.Protocol):
         called when we are first online
         """
         pass
+
     def gotConfig(self,mode,buddylist,permit,deny):
         """
         called when we get a configuration from the server
@@ -990,6 +1079,7 @@ class TOCClient(protocol.Protocol):
         deny := deny list
         """
         pass
+
     def hearError(self,code,args):
         """
         called when an error is received
@@ -997,6 +1087,7 @@ class TOCClient(protocol.Protocol):
         args := misc. arguments (username, etc.)
         """
         pass
+
     def hearWarning(self,newamount,username):
         """
         called when we get warned
@@ -1004,6 +1095,7 @@ class TOCClient(protocol.Protocol):
         username := the user who warned us, or '' if it's anonymous
         """
         pass
+
     def hearMessage(self,username,message,autoreply):
         """
         called when you receive an IM
@@ -1012,6 +1104,7 @@ class TOCClient(protocol.Protocol):
         autoreply := true if the message is an autoreply from an away message
         """
         pass
+
     def updateBuddy(self,username,online,evilness,signontime,idletime,userclass,away):
         """
         called when a buddy changes state
@@ -1024,6 +1117,7 @@ class TOCClient(protocol.Protocol):
         userclass := the class of the user (generally " O")
         """
         pass
+
     def chatJoined(self,roomid,roomname,users):
         """
         we just joined a chat room
@@ -1032,6 +1126,7 @@ class TOCClient(protocol.Protocol):
         users := a list of the users already in the room
         """
         pass
+
     def chatUpdate(self,roomid,username,inroom):
         """
         a user has joined the room
@@ -1040,6 +1135,7 @@ class TOCClient(protocol.Protocol):
         inroom := true if the user is in the room
         """
         pass
+
     def chatHearMessage(self,roomid,username,message):
         """
         a message was sent to the room
@@ -1048,6 +1144,7 @@ class TOCClient(protocol.Protocol):
         message := the message
         """
         pass
+
     def chatHearWhisper(self,roomid,username,message):
         """
         someone whispered to us in a chatroom
@@ -1056,6 +1153,7 @@ class TOCClient(protocol.Protocol):
         message := the message
         """
         pass
+
     def chatInvited(self,roomid,roomname,username,message):
         """
         we were invited to a chat room
@@ -1065,12 +1163,14 @@ class TOCClient(protocol.Protocol):
         message := the invite message
         """
         pass
+
     def chatLeft(self,roomid):
         """
         we left the room
         roomid := the AIM id for the room
         """
         pass
+
     def rvousProposal(self,type,cookie,user,vip,port,**kw):
         """
         we were asked for a rondevouz
@@ -1082,6 +1182,7 @@ class TOCClient(protocol.Protocol):
         kw := misc. args
         """
         pass #self.rvous_accept(cookie)
+
     def receiveBytes(self,user,file,chunk,sofar,total):
         """
         we received part of a file from a file transfer
@@ -1091,11 +1192,13 @@ class TOCClient(protocol.Protocol):
         total := the total amount of data
         """
         pass #print user,file,sofar,total
+
     def isaway(self):
         """
         return our away status
         """
         return len(self._awaymessage)>0
+
     def set_config(self,mode,buddylist,permit,deny):
         """
         set the server configuration
@@ -1115,18 +1218,21 @@ class TOCClient(protocol.Protocol):
             s=s+"d %s\n"%d
         #s="{\n"+s+"\n}"
         self.sendFlap(2,"toc_set_config %s"%quote(s))
+
     def add_buddy(self,buddies):
         s=""
         if type(buddies)==type(""): buddies=[buddies]
         for b in buddies:
             s=s+" "+normalize(b)
         self.sendFlap(2,"toc_add_buddy%s"%s)
+
     def del_buddy(self,buddies):
         s=""
         if type(buddies)==type(""): buddies=[buddies]
         for b in buddies:
             s=s+" "+b
         self.sendFlap(2,"toc_remove_buddy%s"%s)
+
     def add_permit(self,users):
         if type(users)==type(""): users=[users]
         s=""
@@ -1142,6 +1248,7 @@ class TOCClient(protocol.Protocol):
             self._permitlist=[]
             self._denylist=[]
         self.sendFlap(2,"toc_add_permit"+s)
+
     def del_permit(self,users):
         if type(users)==type(""): users=[users]
         p=self._permitlist[:]
@@ -1151,6 +1258,7 @@ class TOCClient(protocol.Protocol):
                 p.remove(u)
         self.add_permit([])
         self.add_permit(p)
+
     def add_deny(self,users):
         if type(users)==type(""): users=[users]
         s=""
@@ -1166,6 +1274,7 @@ class TOCClient(protocol.Protocol):
             self._permitlist=[]
             self._denylist=[]
         self.sendFlap(2,"toc_add_deny"+s)
+
     def del_deny(self,users):
         if type(users)==type(""): users=[users]
         d=self._denylist[:]
@@ -1176,6 +1285,7 @@ class TOCClient(protocol.Protocol):
         self.add_deny([])
         if d:
             self.add_deny(d)
+
     def signon(self):
         """
         called to finish the setup, and signon to the network
@@ -1193,12 +1303,14 @@ class TOCClient(protocol.Protocol):
         if autoreply: a=" auto"
         else: a=''
         self.sendFlap(2,"toc_send_im %s %s%s"%(normalize(user),quote(message),a))
+
     def idle(self,idletime=0):
         """
         change idle state
         idletime := the seconds that the user has been away, or 0 if they're back
         """
         self.sendFlap(2,"toc_set_idle %s" % int(idletime))
+
     def evil(self,user,anon=0):
         """
         warn a user
@@ -1206,6 +1318,7 @@ class TOCClient(protocol.Protocol):
         anon := if true, an anonymous warning
         """
         self.sendFlap(2,"toc_evil %s %s"%(normalize(user), (not anon and "anon") or "norm"))
+
     def away(self,message=''):
         """
         change away state
@@ -1215,6 +1328,7 @@ class TOCClient(protocol.Protocol):
         if message: 
             message=' '+quote(message)
         self.sendFlap(2,"toc_set_away%s"%message)
+
     def chat_join(self,exchange,roomname):
         """
         join a chat room
@@ -1223,6 +1337,7 @@ class TOCClient(protocol.Protocol):
         """
         roomname=string.replace(roomname," ","")
         self.sendFlap(2,"toc_chat_join %s %s"%(int(exchange),roomname))
+
     def chat_say(self,roomid,message):
         """
         send a message to a chatroom
@@ -1230,6 +1345,7 @@ class TOCClient(protocol.Protocol):
         message := the message to send
         """
         self.sendFlap(2,"toc_chat_send %s %s"%(int(roomid),quote(message)))
+
     def chat_whisper(self,roomid,user,message):
         """
         whisper to another user in a chatroom
@@ -1238,12 +1354,14 @@ class TOCClient(protocol.Protocol):
         message := the message to send
         """
         self.sendFlap(2,"toc_chat_whisper %s %s %s"%(int(roomid),normalize(user),quote(message)))
+
     def chat_leave(self,roomid):
         """
         leave a chat room.
         roomid := the AIM id for the room
         """
         self.sendFlap(2,"toc_chat_leave %s" % int(roomid))
+
     def chat_invite(self,roomid,usernames,message):
         """
         invite a user[s] to the chat room
@@ -1259,6 +1377,7 @@ class TOCClient(protocol.Protocol):
                 users=users+u+" "
             users=users[:-1]
         self.sendFlap(2,"toc_chat_invite %s %s %s" % (int(roomid),quote(message),users))
+
     def chat_accept(self,roomid):
         """
         accept an invite to a chat room
@@ -1279,6 +1398,7 @@ class TOCClient(protocol.Protocol):
                                                        cookie,uuid))
         del self._cookies[cookie]
 
+
 class SendFileTransfer(protocol.Protocol):
     header_fmt="!4s2H8s6H10I32s3c69s16s2H64s"
 
@@ -1289,6 +1409,7 @@ class SendFileTransfer(protocol.Protocol):
         self.filename=filename
         self.hdr=[0,0,0]
         self.sofar=0
+
     def dataReceived(self,data):
         if not self.hdr[2]==0x202:
             self.hdr=list(struct.unpack(self.header_fmt,data[:256]))
@@ -1318,6 +1439,7 @@ class SendFileTransfer(protocol.Protocol):
             self.sofar=0
             if self.hdr[7]==0:
                 self.transport.loseConnection()
+
         
 class GetFileTransfer(protocol.Protocol):
     header_fmt="!4s 2H 8s 6H 10I 32s 3c 69s 16s 2H 64s"
@@ -1326,6 +1448,7 @@ class GetFileTransfer(protocol.Protocol):
         self.cookie=cookie
         self.dir=dir
         self.buf=""
+
     def connectionMade(self):
         def func(f,path,names):
             names.sort(lambda x,y:cmp(string.lower(x),string.lower(y)))
@@ -1393,14 +1516,18 @@ class GetFileTransfer(protocol.Protocol):
             else:
                 print "don't understand 0x%04x"%hdr[2]
                 print hdr
+
     def resumeProducing(self):
         data=self.file.read(4096)
         print len(data)
         if not data:
             self.transport.unregisterProducer()
         self.transport.write(data)
+
     def pauseProducing(self): pass
+
     def stopProducing(self): del self.file
+
 # UUIDs
 SEND_FILE_UID = "09461343-4C7F-11D1-8222-444553540000"
 GET_FILE_UID  = "09461348-4C7F-11D1-8222-444553540000"

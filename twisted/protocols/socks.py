@@ -36,20 +36,20 @@ class SOCKSv4Outgoing(protocol.Protocol):
     
     def __init__(self,socks):
         self.socks=socks
-    
+
     def connectionMade(self):
         self.socks.makeReply(90)
         self.socks.otherConn=self
-    
+
     def connectionFailed(self):
         self.socks.makeReply(91)
-    
+
     def connectionLost(self):
         self.socks.transport.loseConnection()
-    
+
     def dataReceived(self,data):
         self.socks.write(data)
-    
+
     def write(self,data):
         self.socks.log(self,data)
         self.transport.write(data)
@@ -135,7 +135,7 @@ class SOCKSv4(protocol.Protocol):
         f=open(self.logging,"a")
         f.write("%s\t%s:%d %s %s:%d\n"%(time.ctime(),
                                         ourhost,ourport,
-                                        (proto==self and '<' or '>'),
+                                        ((proto==self and '<') or '>'),
                                         theirhost,theirport))
         while data:
             p,data=data[:16],data[16:]
