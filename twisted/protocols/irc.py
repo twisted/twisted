@@ -71,8 +71,8 @@ def parsemsg(s):
         raise IRCBadMessage("Empty line.")
     if s[0] == ':':
         prefix, s = string.split(s[1:], ' ', 1)
-    if string.find(s,':') != -1:
-        s, trailing = string.split(s, ':', 1)
+    if string.find(s,' :') != -1:
+        s, trailing = string.split(s, ' :', 1)
         args = string.split(s)
         args.append(trailing)
     else:
