@@ -229,7 +229,6 @@ desktop environments, and your toaster.
         "twisted.enterprise",
         "twisted.flow",
         "twisted.flow.test",
-        "twisted.im",
         "twisted.internet",
         "twisted.internet.iocpreactor",
         "twisted.internet.serialport",
