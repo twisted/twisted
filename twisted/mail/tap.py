@@ -21,7 +21,7 @@
 import string, os
 
 # Twisted Imports
-from twisted.mail import mail, maildir, relay, relaymanager
+import mail, maildir, relay, relaymanager
 from twisted.protocols import pop3, smtp
 from twisted.python import usage, delay
 

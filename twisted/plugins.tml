@@ -67,8 +67,9 @@ register("Twisted FTP",
          type="tap")
 
 register("Twisted Mail",
-         "twisted.tap.mail",
+         "twisted.mail.tap",
          description="An email service.",
+         tapname="mail",
          type="tap")
 
 register("Twisted Manhole",
