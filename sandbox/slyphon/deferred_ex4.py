@@ -34,9 +34,10 @@ def failAtHandlingResult(result):
 def doThisNoMatterWhat(arg):
     Counter.num += 1
     print "both %s" % (Counter.num,)
-    print "got argument %r" % (arg,)
-    print "doing something very important"
-    return "something important done"
+    print "\tgot argument %r" % (arg,)
+    print "\tdoing something very important"
+    return arg                          # we pass the argument we received to the next phase here
+
 
 
 def nonDeferredExample(result):
@@ -60,7 +61,9 @@ def nonDeferredExample(result):
         pass
 
 
-    if not isinstance(result, failure.Failure): # ---- this is equivalent to addBoth(doThisNoMatterWhat)
+    # ---- this is equivalent to addBoth(doThisNoMatterWhat)
+
+    if not isinstance(result, failure.Failure): 
         try:
             result = doThisNoMatterWhat(result)
         except:
@@ -81,9 +84,6 @@ def nonDeferredExample(result):
             result = failure.Failure()
 
 
-
-
-
 def deferredExample():
     d = defer.Deferred()
     d.addCallback(handleResult)
@@ -99,4 +99,3 @@ if __name__ == '__main__':
     print "\n-------------------------------------------------\n"
     Counter.num = 0
     deferredExample()
-

@@ -8,6 +8,9 @@ now comes the more nuanced addCallbacks, which allows us to make a
 yes/no (branching) decision based on whether the result at a given point is
 a failure or not.
 
+here, we return the failure from noDecisionPassthru, the errback argument to
+the first addCallbacks method invocation, and see what happens
+
 """
 
 class Counter(object):
@@ -46,6 +49,11 @@ def noDecision(result):
     print "\t*doh*! a failure! quick! damage control!"
     return "damage control successful!"
     
+def noDecisionPassthru(result):
+    Counter.num += 1
+    print "no decision %s" % (Counter.num,)
+    print "\t*doh*! a failure! don't know what to do, returning failure!"
+    return result
     
 
 def nonDeferredExample(result):
@@ -68,7 +76,7 @@ def nonDeferredExample(result):
             result = failure.Failure()
     else:                                       # ---- errback
         try:
-            result = noDecision(result)
+            result = noDecisionPassthru(result)
         except:
             result = failure.Failure()
 
@@ -117,10 +125,10 @@ def nonDeferredExample(result):
 def deferredExample():
     d = defer.Deferred()
     d.addCallback(failAtHandlingResult)
-    d.addCallbacks(yesDecision, noDecision) # noDecision will be called
+    d.addCallbacks(yesDecision, noDecisionPassthru) # noDecisionPassthru will be called
     d.addCallback(handleResult) # - A -
-    d.addCallbacks(yesDecision, noDecision) # yesDecision will be called
-    d.addCallback(handleResult)  
+    d.addCallbacks(yesDecision, noDecision) # noDecision will be called
+    d.addCallback(handleResult) # - B - 
     d.addErrback(handleFailure)
 
     d.callback("success")
