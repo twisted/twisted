@@ -29,7 +29,7 @@ from twisted.python.compat import *
 import unittest
 
 from twisted.internet import protocol
-from twisted.python import components, failure
+from twisted.python import components, failure, reflect
 from twisted.spread import banana, jelly
 
 import os, types
@@ -109,16 +109,19 @@ class JellyReporter(unittest.Reporter):
         self.jellyMethodCall("stop", *args)
         unittest.Reporter.stop(self, *args)
         
-    def reportStart(self, *args):
-        self.jellyMethodCall("reportStart", *args)
-        unittest.Reporter.reportStart(self, *args)
+    def reportStart(self, testClass, method):
+        self.jellyMethodCall("reportStart",
+                             reflect.qual(testClass), method.__name__)
+        unittest.Reporter.reportStart(self, testClass, method)
         
     def reportResults(self, testClass, method, resultType, results=None):
         jresults = results
         if type(jresults) == types.TupleType:
             typ, val, tb = jresults
             jresults = failure.Failure(val, typ, tb)
-        self.jellyMethodCall("reportResults", testClass, method, resultType,
+        self.jellyMethodCall("reportResults",
+                             reflect.qual(testClass), method.__name__,
+                             resultType,
                              jresults)
         unittest.Reporter.reportResults(self, testClass, method, resultType,
                                         results)
@@ -136,7 +139,7 @@ class IRemoteReporter(components.Interface):
     """
 
     # TODO: Figure out where 'times' belongs in this interface.
-    #    Is it a seperate method?  Is it an extra argument on every method?
+    #    Is it a separate method?  Is it an extra argument on every method?
     
     def remote_start(self, expectedTests, times=None):
         pass
@@ -157,13 +160,14 @@ class IRemoteReporter(components.Interface):
 class DecodeReport(banana.Banana):
     def __init__(self, reporter):
         self.reporter = reporter
+        self.taster = jelly.DummySecurityOptions()
 
         banana.Banana.__init__(self)
         self.transport = NullTransport()
         self.connectionMade()
 
     def expressionReceived(self, lst):
-        lst = jelly.unjelly(lst)
+        lst = jelly.unjelly(lst, self.taster)
         methodName, args = lst[:2]
         if len(lst) > 2:
             times = lst[2]
