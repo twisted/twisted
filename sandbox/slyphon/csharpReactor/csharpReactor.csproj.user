@@ -1,7 +1,7 @@
 <VisualStudioProject>
     <CSHARP>
         <Build>
-            <Settings ReferencePath = "" >
+            <Settings ReferencePath = "C:\Program Files\dotnet-local\;C:\Program Files\dotnet-local\NUnit 2.2\bin\" >
                 <Config
                     Name = "Debug"
                     EnableASPDebugging = "false"
@@ -10,10 +10,10 @@
                     EnableSQLServerDebugging = "false"
                     RemoteDebugEnabled = "false"
                     RemoteDebugMachine = ""
-                    StartAction = "Project"
-                    StartArguments = ""
+                    StartAction = "Program"
+                    StartArguments = "..\..\..\csharpReactor.nunit"
                     StartPage = ""
-                    StartProgram = ""
+                    StartProgram = "C:\Program Files\dotnet-local\NUnit 2.2\bin\nunit-console.exe"
                     StartURL = ""
                     StartWorkingDirectory = ""
                     StartWithIE = "true"

@@ -15,7 +15,7 @@
                 DefaultHTMLPageLayout = "Grid"
                 DefaultTargetSchema = "IE50"
                 DelaySign = "false"
-                OutputType = "Exe"
+                OutputType = "Library"
                 RootNamespace = "csharpReactor"
                 StartupObject = ""
             >
@@ -72,6 +72,16 @@
                     AssemblyName = "System.Xml"
                     HintPath = "..\..\..\..\..\..\..\..\..\WINDOWS\Microsoft.NET\Framework\v1.0.3705\System.XML.dll"
                 />
+                <Reference
+                    Name = "nmock"
+                    AssemblyName = "nmock"
+                    HintPath = "..\..\..\..\..\..\..\..\..\Program Files\dotnet-local\nmock.dll"
+                />
+                <Reference
+                    Name = "nunit.framework"
+                    AssemblyName = "nunit.framework"
+                    HintPath = "..\..\..\..\..\..\..\..\..\Program Files\dotnet-local\NUnit 2.2\bin\nunit.framework.dll"
+                />
             </References>
         </Build>
         <Files>
@@ -94,6 +104,10 @@
                     RelPath = "Connector.cs"
                     SubType = "Code"
                     BuildAction = "Compile"
+                />
+                <File
+                    RelPath = "csharpReactor.nunit"
+                    BuildAction = "None"
                 />
                 <File
                     RelPath = "Factory.cs"
@@ -122,12 +136,8 @@
                 />
                 <File
                     RelPath = "TestReactor.cs"
-                    BuildAction = "Compile"
-                />
-                <File
-                    RelPath = "TestTwistedServer.cs"
                     SubType = "Code"
-                    BuildAction = "None"
+                    BuildAction = "Compile"
                 />
                 <File
                     RelPath = "Transport.cs"

@@ -1,107 +1,165 @@
 using System;
 using System.Net;
 using System.Net.Sockets;
+using csharpReactor.interfaces;
 
 namespace csharpReactor {
-	public class Server : ITransport {
-		protected Socket _sock;
-		protected IProtocol _proto;
-		protected IAddress _client;
-		protected IPort _server;
-		protected double _sessionNum;
-		protected bool _connected = false;
+  public class Server : ITransport {
+    protected Socket _sock;
+    protected IProtocol _protocol;
+    protected IAddress _client;
+    protected IPort _server;
+    protected double _sessionNum;
+    protected bool _connected = false;
+    
+    public Socket socket {
+      get { return this._sock; }
+    }
+    
+    public IProtocol protocol {
+      get { return this._protocol; }
+    }
+    
+    public IAddress client {
+      get { return this._client; }
+    }
 
-		public Server(Socket sock, IProtocol p, IAddress client, IPort server, double sessionNum) {
-			this._sock = sock;
-			this._proto = p;
-			this._client = client;
-			this._server = server;
-			this._sessionNum = sessionNum;
-			// TODO: figure out logging code at some point and put default logstr here
-			startReading();
-			this._connected = true;
-		}
+    public IPort server { 
+      get { return this._server; }
+    }
 
-		public void startReading() {
+    public double sessionNum {
+      get { return this._sessionNum; }
+    }
 
-		}
-	}
+    public bool connected {
+      get { return this._connected; }
+    }
 
-	public class Port : IFileDescriptor, IPort {
-		public static AddressFamily addressFamily = AddressFamily.InterNetwork;
-		public static SocketType socketType = SocketType.Stream;
-		public static ProtocolType protocolType = ProtocolType.Tcp;
-		protected IPEndPoint localEndPoint;
-		protected IFactory factory;
-		protected int backlog;
-		protected Socket socket; // the listening socket
-		protected Address address;
-		protected bool connected = false;
-		protected int numberAccepts = 100;
-		protected double sessionNum = 0;
-		protected IReactor reactor;
+    public Server(Socket sock, IProtocol p, IAddress client, IPort server, double sessionNum) {
+      this._sock = sock;
+      this._protocol = p;
+      this._client = client;
+      this._server = server;
+      this._sessionNum = sessionNum;
+      // TODO: figure out logging code at some point and put default logstr here
+      startReading();
+      this._connected = true;
+    }
+
+    public void startReading() {
+
+    }
+  }
 
 
-		/// <summary>
-		/// I am a TCP server port, listening for connections
-		/// </summary>
-		/// <param name="localEndPoint">the local end point to bind to</param>
-		/// <param name="factory">the IFactory object I will use to create protocol instances with</param>
-		/// <param name="backlog">number of backlogged connections to keep queued</param>
-		/// <param name="reactor"></param>
-		public Port(IPEndPoint localEndPoint, IFactory factory, int backlog, IReactor reactor) { // not sure how to handle "interface" on win32
-			this.localEndPoint = localEndPoint;
-			this.factory = factory;
-			this.backlog = backlog;
-			this.reactor = reactor;
-			this.address = new Address(protocolType, localEndPoint);
-		}
+  public class Port : IFileDescriptor, IPort {
+    public static AddressFamily addressFamily = AddressFamily.InterNetwork;
+    public static SocketType socketType = SocketType.Stream;
+    public static ProtocolType protocolType = ProtocolType.Tcp;
+    protected IPEndPoint _localEndPoint;
+    protected IFactory _factory;
+    protected int _backlog;
+    protected Socket _socket; // the listening socket
+    protected IAddress _address;
+    protected bool _connected = false;
+    protected int _numberAccepts = 100;
+    protected double _sessionNum = 0;
+    protected IReactor _reactor;
 
-		/// <summary>
-		/// called when my socket is ready for reading!
-		/// accept a connection and sets up the protocol
-		/// </summary>
-		public void doRead() {
-			Socket s = this.socket.Accept();
-			IProtocol p = this.factory.buildProtocol(new Address(s));
-			if (p == null) {
-				s.Close(); // reject the connection attempt
-			} else {
-				this.sessionNum++; // XXX: Should probably be concerned about rollover
-				ITransport transport = new Server(s, p, new Address(s), (IPort)this, this.sessionNum);
-				p.makeConnection(transport);
-			}
-		}
+    // -- Property Definitions --------------
 
-		/// <summary>
-		/// return a socket suitable for Select()ing on
-		/// </summary>
-		public Socket selectableSocket {
-			get { return this.socket; }
-		}
+    public IPEndPoint localEndPoint {
+      get { return this._localEndPoint; }
+    }
 
-		public Socket createInternetSocket() {
-			Socket s = new Socket(addressFamily, socketType, protocolType);
-			s.Blocking = false;
-			this.socket = s;
-			return s;
-		}
+    public IFactory factory {
+      get { return this._factory; }
+			set { this._factory = value; }
+    }
+
+    public int backlog {
+      get { return this._backlog; }
+      set { this._backlog = value; }
+    }
+
+    /// <summary>
+    /// return a socket suitable for Select()ing on
+    /// </summary>
+    public Socket selectableSocket { // IFileDescriptor
+      get { return this._socket; }
+    }
+
+    public IAddress address {
+      get { return this._address; }
+    }
+
+    public bool connected {
+      get { return this._connected; }
+    }
+
+    public double sessionNum {
+      get { return this._sessionNum; }
+    }
+    
+    public IReactor reactor {
+      get { return this._reactor; }
+    }
+
+
+    /// <summary>
+    /// I am a TCP server port, listening for connections
+    /// </summary>
+    /// <param name="_localEndPoint">the local end point to bind to</param>
+    /// <param name="factory">the IFactory object I will use to create protocol instances with</param>
+    /// <param name="backlog">number of backlogged connections to keep queued</param>
+    /// <param name="reactor"></param>
+    public Port(IPEndPoint localEndPoint, IFactory factory, int backlog, IReactor reactor) { // not sure how to handle "interface" on win32
+      this._localEndPoint = localEndPoint;
+      this._factory = factory;
+      this._backlog = backlog;
+      this._reactor = reactor;
+      this._address = new Address(protocolType, localEndPoint);
+    }
+
+    /// <summary>
+    /// called when my socket is ready for reading!
+    /// accept a connection and sets up the protocol
+    /// </summary>
+    public virtual void doRead() {
+      Socket s = this._socket.Accept();
+      IProtocol p = this._factory.buildProtocol(new Address(s));
+      if (p == null) {
+        s.Close(); // reject the connection attempt
+      } else {
+        this._sessionNum++; // XXX: Should probably be concerned about rollover
+        ITransport transport = new Server(s, p, new Address(s), (IPort)this, this._sessionNum);
+        p.makeConnection(transport);
+      }
+    }
+
+    protected Socket createInternetSocket() {
+      Socket s = new Socket(addressFamily, socketType, protocolType);
+      s.Blocking = false;
+      this._socket = s;
+      return s;
+    }
 		
-		public void startReading() {
-			this.reactor.addReader(this);
-		}
+    public virtual void startReading() {
+      this._reactor.addReader(this);
+    }
 
-		/// <summary>
-		/// Create and bind my socket, and begin listening on it
-		/// </summary>
-		public void startListening() {
-			Socket skt = createInternetSocket();
-			skt.Bind(localEndPoint);
-			this.factory.doStart();
-			skt.Listen(backlog);
-			this.connected = true;
-			this.socket = skt;
-			startReading();
-		}
-	}
+    /// <summary>
+    /// Create and bind my socket, and begin listening on it
+    /// </summary>
+    public virtual void startListening() {
+      Socket skt = createInternetSocket();
+      skt.Bind(_localEndPoint);
+      this._factory.doStart();
+      skt.Listen(_backlog);
+      this._connected = true;
+      this._socket = skt;
+      startReading();
+    }
+  }
 }

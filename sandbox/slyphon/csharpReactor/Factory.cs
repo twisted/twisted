@@ -1,4 +1,5 @@
 using System;
+using csharpReactor.interfaces;
 
 namespace csharpReactor {
 	public class Factory : IFactory {

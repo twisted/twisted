@@ -1,5 +1,6 @@
 using System;
 using System.Net;
+using csharpReactor.interfaces;
 
 namespace csharpReactor {
 	public class Protocol {
