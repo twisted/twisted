@@ -200,6 +200,9 @@ class ConditionalTest(unittest.TestCase):
         for l in ["GET / HTTP/1.1",
                   "Accept: text/html"]:
             self.channel.lineReceived(l)
+    
+    def tearDown(self):
+        self.channel.connectionLost(None)
 
     def test_modified(self):
         """If-Modified-Since cache validator (positive)"""
