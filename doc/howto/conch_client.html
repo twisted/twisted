@@ -114,7 +114,7 @@ class CatChannel(channel.SSHChannel):
     name = 'session'
 
     def channelOpen(self, data):
-        d = self.conn.sendRequest(self, 'exec', commons.NS('cat'),
+        d = self.conn.sendRequest(self, 'exec', common.NS('cat'),
                                   wantReply = 1)
         d.addCallback(self._cbSendRequest)
         self.catData = ''
