@@ -79,4 +79,3 @@ class BotBot(WordsClient):
 
 def createBot():
     return BotBot()
-
