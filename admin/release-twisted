@@ -300,7 +300,7 @@ class Tag(Transaction):
     def doIt(self, opts):
         print "Tag"
         ver = opts['release-version']
-        svntag = opts['svnurl'] + ('tags/release-%s' % ver.replace('.', '_'))
+        svntag = opts['svnurl'] + ('/tags/release-%s' % ver.replace('.', '_'))
         sh('cd %s &&  svn cp . %s' % (opts['root'],
                                       svntag),
            sensitive=1)
