@@ -1,5 +1,5 @@
 # -*- Python -*-
-# $Id: usage.py,v 1.23 2002/08/07 19:19:12 tv Exp $
+# $Id: usage.py,v 1.24 2002/08/08 03:34:29 exarkun Exp $
 # Twisted, the Framework of Your Internet
 # Copyright (C) 2001 Matthew W. Lefkowitz
 #
@@ -46,6 +46,8 @@ error = UsageError
 
 class Options(UserDict.UserDict):
     """
+    An option list parser class
+    
     optFlags and optParameters are lists of available parameters
     which your program can handle. The difference between the two
     is the 'flags' have an on(1) or off(0) state (off by default)
@@ -485,3 +487,43 @@ def docMakeChunks(optList, width=80):
         optChunks.append(string.join(optLines, ''))
 
     return optChunks
+
+
+class DeepOptions(Options):
+    """An option list parser class that can pass suboptions to other Options objects
+    
+    subCommands is a list of 4-tuples of (command name, command shortcut,
+    parser class, documentation).  If the first non-option argument found is
+    one of the given command names, an instance of the given parser class is
+    instantiated and given the remainder of the arguments to parse and
+    self.opts[command] is set to the command name.  For example:
+
+    | subCommands = [
+          ('inquisition', 'inquest', InquisitionOptions, 'Perform an inquisition'),
+          ('holyquest', 'quest', HolyQuestOptions, 'Embark upon a holy quest')
+      ]
+
+    In this case, "holyquest --horseback --for-grail" will cause
+    HolyQuestOptions to be instantiated and asked to parse
+    ['--horseback', '--for-grail']
+    """
+    
+    subCommands = []
+    
+    def parseArgs(self, *args):
+        self.subCommand = None
+        cmd, opts = args[0], args[1:]
+        for (command, short, parser, doc) in self.subCommands:
+            if cmd == command or cmd == short:
+                self.subCommand = parser()
+                self.subCommand.parseOptions(opts)
+                return
+        
+        print str(self)
+
+    def __str__(self):
+        commands = '\n'
+        for (cmd, short, p, doc) in self.subCommands:
+            commands = commands + '%-20s %s\n' % (cmd, doc)
+        
+        return Options.__str__(self) + '\n\nCommands:' + commands
