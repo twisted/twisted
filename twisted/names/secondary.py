@@ -55,8 +55,6 @@ class SecondaryAuthority(common.ResolverBase):
         if self.transferring:
             return
         self.transfering = True
-
-        print 'do a transfer'
         return client.Resolver(servers=[(self.primary, dns.PORT)]
             ).lookupZone(self.domain
             ).addCallback(self._cbZone
@@ -68,7 +66,6 @@ class SecondaryAuthority(common.ResolverBase):
 
     def _cbZone(self, zone):
         ans, _, _ = zone
-        print 'gawt', zone
         self.records = r = {}
         for rec in ans:
             if rec.type == dns.SOA:
@@ -81,11 +78,9 @@ class SecondaryAuthority(common.ResolverBase):
         log.err(failure)
 
     def update(self):
-        print 'uperdate'
         self.transfer().addCallbacks(self._cbTransferred, self._ebTransferred)
 
     def _cbTransferred(self, result):
-        print 'done xferred'
         self.transferring = False
 
     def _ebTransferred(self, failure):
