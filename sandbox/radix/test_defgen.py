@@ -17,7 +17,7 @@ def getOwie():
     return d
 
 class DefGenTests(unittest.TestCase):
-    def _gen(self):
+    def _genWoosh(self):
 
         x = waitForDeferred(getThing())
         yield x
@@ -33,8 +33,16 @@ class DefGenTests(unittest.TestCase):
             self.assertEquals(str(e), 'OMG')
         yield "WOOSH"
         return
-    _gen = deferredGenerator(_gen)
+    _genWoosh = deferredGenerator(_genWoosh)
 
 
-    def testGen(self):
-        self.assertEquals(util.wait(self._gen()), "WOOSH")
+    def testBasics(self):
+        self.assertEquals(util.wait(self._genWoosh()), "WOOSH")
+
+    def _genError(self):
+        yield waitForDeferred(getThing())
+        1/0
+    _genError = deferredGenerator(_genError)
+
+    def testBuggyGen(self):
+        self.assertRaises(ZeroDivisionError, util.wait, self._genError())
