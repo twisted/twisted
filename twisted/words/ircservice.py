@@ -67,10 +67,10 @@ class IRCChatter(irc.IRC):
 
         if (metadata is not None) and (metadata['style'] == 'emote'):
             message = irc.ctcpStringify([('ACTION', message)])
-            
-        self.sendLine(":%s!%s@%s PRIVMSG %s :%s" %
-                      (senderName, senderName, self.servicename,
-                       self.nickname, irc.lowQuote(message)))
+        for line in string.split(message, '\n'):
+            self.sendLine(":%s!%s@%s PRIVMSG %s :%s" %
+                          (senderName, senderName, self.servicename,
+                           self.nickname, line))
 
 
     def receiveGroupMessage(self, sender, group, message, metadata=None):
@@ -78,9 +78,10 @@ class IRCChatter(irc.IRC):
             message = irc.ctcpStringify([('ACTION', message)])
 
         if sender is not self:
-            self.sendLine(":%s!%s@%s PRIVMSG #%s :%s" %
-                          (sender, sender, self.servicename,
-                           group, irc.lowQuote(message)))
+            for line in string.split(message, '\n'):
+                self.sendLine(":%s!%s@%s PRIVMSG #%s :%s" %
+                              (sender, sender, self.servicename,
+                               group, line))
 
     def setGroupMetadata(self, metadata, groupName):
         if metadata.has_key('topic'):
