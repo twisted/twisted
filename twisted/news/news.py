@@ -13,15 +13,23 @@
 # You should have received a copy of the GNU Lesser General Public
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
-from twisted.protocols import protocol
 
-class Factory(protocol.Factory):
+from twisted.protocols import protocol, nntp
+
+class NNTPFactory(protocol.ServerFactory):
+    """A factory for NNTP server protocols."""
+    
+    protocol = nntp.NNTPServer
+    
+    def __init__(self, backend):
+        self.backend = backend
+    
     def buildProtocol(self, connection):
         p = self.protocol(self.backend)
         p.factory = self
         return p
 
-def createNNTPFactory(protocol_handler, backend):
-    factory = Factory()
-    factory.protocol, factory.backend = protocol_handler, backend
-    return factory
+
+# backwards compatability
+
+Factory = NNTPFactory

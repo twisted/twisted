@@ -12,11 +12,6 @@ register("Words Tendril",
          description="A Tendril connecting a Words service to an IRC network.",
          type='coil')
 
-register("Twisted News",
-         "twisted.tap.news",
-         description="News",
-         type='tap')
-
 register("Twisted Web",
          "twisted.coil.plugins.web",
          description="Web servers & services for Twisted",
@@ -134,3 +129,9 @@ register("Twisted Sister: Automated Sister TAP builder",
          description="automated TAP building",
          type="tap",
          tapname="sister")
+
+register("Twisted News Automated TAP Builder",
+         "twisted.tap.news",
+         description="News Server",
+         type='tap',
+         tapname="news")
