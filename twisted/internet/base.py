@@ -24,7 +24,8 @@ Maintainer: U{Itamar Shtull-Trauring<mailto:twisted@itamarst.org>}
 
 import socket # needed only for sync-dns
 
-import warnings, sys
+import sys
+import warnings
 from bisect import insort
 
 try:
@@ -462,7 +463,6 @@ class ReactorBase:
     def clientUNIX(self, address, protocol, timeout=30):
         """Deprecated - use connectUNIX instead.
         """
-        import warnings
         warnings.warn("clientUNIX is deprecated - use connectUNIX instead.",
                       category=DeprecationWarning, stacklevel=2)
         f = BCFactory(protocol)
@@ -472,7 +472,6 @@ class ReactorBase:
     def clientTCP(self, host, port, protocol, timeout=30):
         """Deprecated - use connectTCP instead.
         """
-        import warnings
         warnings.warn("clientTCP is deprecated - use connectTCP instead.",
                       category=DeprecationWarning, stacklevel=2)
         f = BCFactory(protocol)
@@ -482,7 +481,6 @@ class ReactorBase:
     def clientSSL(self, host, port, protocol, contextFactory, timeout=30):
         """Deprecated - use connectSSL instead.
         """
-        import warnings
         warnings.warn("clientSSL is deprecated - use connectSSL instead.",
                       category=DeprecationWarning, stacklevel=2)
         f = BCFactory(protocol)
