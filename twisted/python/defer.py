@@ -97,7 +97,7 @@ class Deferred:
 
         This is to prevent callbacks from being executed sometimes
         synchronously and sometimes asynchronously.  The system
-        expecting a Delayed will explicitly arm the delayed after
+        expecting a Deferred will explicitly arm the delayed after
         it has been returned; at _that_ point, it may fire later.
         """
         if not self.armed:
