@@ -334,7 +334,7 @@ class _SSHMixin(_BaseMixin):
 
         recvlineClient = helper.TerminalBuffer()
         insultsClient = insults.ClientProtocol(lambda: recvlineClient)
-        sshClient = TestTransport(lambda: insultsClient, (), {}, u, p, WIDTH, HEIGHT)
+        sshClient = TestTransport(lambda: insultsClient, (), {}, u, p, self.WIDTH, self.HEIGHT)
         serverTransport = loopback.LoopbackRelay(sshClient)
 
         sshClient.makeConnection(clientTransport)
@@ -349,7 +349,7 @@ class _SSHMixin(_BaseMixin):
         self._emptyBuffers()
 
     def _testwrite(self, bytes):
-        self.sshClient.write(s)
+        self.sshClient.write(bytes)
 
     def _emptyBuffers(self):
         while self.serverTransport.buffer or self.clientTransport.buffer:

@@ -3,7 +3,7 @@ import time
 
 from twisted.trial import unittest
 
-from test_recvline import _TelnetMixin
+from test_recvline import _TelnetMixin, _SSHMixin
 
 import manhole
 
@@ -11,7 +11,7 @@ ctrlc = '\x03'
 ctrlq = '\x04'
 ctrld = '\x1c'
 
-class ManholeLoopback(_TelnetMixin, unittest.TestCase):
+class ManholeLoopbackMixin:
     serverProtocol = manhole.ColoredManhole
 
     def testSimpleExpression(self):
@@ -116,3 +116,10 @@ class ManholeLoopback(_TelnetMixin, unittest.TestCase):
              "<Deferred #0>",
              "Deferred #0 called back: 'Hi!'",
              ">>>"])
+
+class ManholeLoopbackTelnet(_TelnetMixin, unittest.TestCase, ManholeLoopbackMixin):
+    pass
+
+class ManholeLoopbackSSH(_SSHMixin, unittest.TestCase, ManholeLoopbackMixin):
+    pass
+
