@@ -97,6 +97,7 @@ class InterfacesTestCase(unittest.TestCase):
     def testModules(self):
         self.assertEquals(components.Interface.__module__, "twisted.python.components")
         self.assertEquals(IAdder.__module__, "twisted.test.test_components")
+        self.assertEquals(IFoo.__module__, "twisted.test.test_components")
     
     def testTupleTrees(self):
         for tree, result in self.tuples:
