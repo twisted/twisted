@@ -15,7 +15,7 @@ from twisted.python import reflect
 def escape(str):
     return commands.mkarg(str)[1:]
 
-class writeZshCode:
+class zshCodeWriter:
     def __init__(self, cmd_name, optionsClass, file):
         """write the zsh completion code to the given file"""
         self.cmd_name = cmd_name
@@ -31,9 +31,11 @@ class writeZshCode:
 
         self.excludes = self.makeExcludesDict() 
 
+        self.addAdditionalOptions()
+
+    def writeStandardFunction(self)
         self.writeHeader()
 
-        self.addAdditionalOptions()
         self.writeOptParamLines()
         self.writeOptFlagLines()
 
@@ -192,7 +194,6 @@ def excludeString(seq):
 def firstLine(s):
     try:
         i = s.index('\n')
-        print 'found newline'
         return s[:i]
     except ValueError:
         return s
@@ -205,7 +206,8 @@ def makeCompFunctionFiles(out_path):
         m = __import__('%s' % cmd_name, None, None, (class_name))
         o = getattr(m, class_name)
         f = file('%s/_%s' % (out_path, cmd_name), 'w')
-        writeZshCode(cmd_name, o, f)
+        z = zshCodeWriter(cmd_name, o, f)
+        z.writeStandardFunction()
 
 def run():
     if len(sys.argv) != 2:
