@@ -145,7 +145,7 @@ class SentQuery:
         choose one of the IPs at random'''
         answers, cnames, cnameMap = [], [], {}
         for answer in message.answers:
-            if answer.type == 1:
+            if answer.type in (1, 5):
                 cnameMap[answer.name.name] = answer
             if answer.name.name != self.name:
                 continue
@@ -156,9 +156,19 @@ class SentQuery:
                 n = dns.Name()
                 n.decode(answer.strio)
                 cnames.append(n.name)
+        print cnames
         for name in cnames:
-            if cnameMap.has_key(name):
-                answers.append(cnameMap[name])
+            if not cnameMap.has_key(name):
+                continue
+            for i in range(10):
+                answer = cnameMap[name]
+                if answer.type == 1:
+                    answers.append(cnameMap[name])
+                else:
+                    answer.strio.seek(answer.strioOff+2)
+                    n = dns.Name()
+                    n.decode(answer.strio)
+                    name = n.name
         if not answers:
             self.errback("No answers")
             return
