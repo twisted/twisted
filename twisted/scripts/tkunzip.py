@@ -1,3 +1,5 @@
+"""Horribly broken.  Unzipping doesn't work, but compiling does."""
+
 from __future__ import generators
 
 import sys
@@ -8,7 +10,7 @@ import Tkinter
 from Tkinter import *
 # twisted
 from twisted.internet import tksupport, reactor, defer
-from twisted.python import failure, log, zipstream, util, usage
+from twisted.python import failure, log, zipstream, util, usage, log
 # local
 import os.path
 
@@ -113,35 +115,40 @@ class Progressor:
         self.iterator=iterator
         return self
     
-    def updateBar(self):
+    def updateBar(self, deferred):
         b=self.bar
         try:
             b.updateProgress(b.max - self.remaining)
         except TclError:
             self.stopping=1
+        except:
+            deferred.errback(failure.Failure())
 
     def processAll(self, root):
         assert self.bar and self.iterator, "must setBar and setIterator"
         self.root=root
         root.title(self.title)
         d=defer.Deferred()
+        d.addErrback(log.err)
         reactor.callLater(0.1, self.processOne, d)
         return d
 
     def processOne(self, deferred):
         if self.stopping:
-            return deferred.callback(self.root)
+            deferred.callback(self.root)
+            return
         
         try:
             self.remaining=self.iterator.next()
         except StopIteration:
-            self.stopping=1
-            
+            self.stopping=1            
         except:
             deferred.errback(failure.Failure())
         
         if self.remaining%10==0:
-            reactor.callLater(0, self.updateBar)
+            reactor.callLater(0, self.updateBar, deferred)
+        if self.remaining%100==0:
+            log.msg(self.remaining)
         reactor.callLater(0, self.processOne, deferred)
 
 def compiler(path):
@@ -177,6 +184,8 @@ def countPysRecursive(path):
     return countl[0]
 
 def run(argv=sys.argv):
+    log.startLogging(file(r'c:\tkunzip.log', 'w'))
+
     opt=TksetupOptions()
     try:
         opt.parseOptions(argv[1:])
@@ -186,8 +195,8 @@ def run(argv=sys.argv):
         sys.exit(1)
     
     root=Tkinter.Tk()
-    root.title('One Moment.')
     root.withdraw()
+    root.title('One Moment.')
     root.protocol('WM_DELETE_WINDOW', reactor.stop)
     tksupport.install(root)
     
@@ -195,18 +204,18 @@ def run(argv=sys.argv):
     prog.pack()
 
     # callback immediately
-    d=defer.succeed(root)
+    d=defer.succeed(root).addErrback(log.err)
 
-    def deiconify(deferred):
+    def deiconify(root):
         root.deiconify()
         return root
 
-    d.addCallback(deiconify).addErrback(util.println)
+    d.addCallback(deiconify)
     
     if opt['zipfile']:
         uz=Progressor('Unzipping...')
-        uz.setBar(prog, zipstream.countZipFileChunks(opt['zipfile'],
-                                                     4096))
+        max=zipstream.countZipFileChunks(opt['zipfile'], 4096)
+        uz.setBar(prog, max)
         uz.setIterator(zipstream.unzipIterChunky(opt['zipfile'],
                                                  opt['ziptargetdir']))
         d.addCallback(uz.processAll)
@@ -217,7 +226,10 @@ def run(argv=sys.argv):
         comp.setIterator(compiler(opt['compiledir']))
         d.addCallback(comp.processAll)
 
-    d.addCallback(lambda _: reactor.stop())
+    def stop(ignore):
+        reactor.stop()
+        root.destroy()
+    d.addCallback(stop)
 
     reactor.run()
 

@@ -18,6 +18,7 @@
 
 import sys
 import os.path
+join=os.path.join
 from distutils import sysconfig
 import twisted.copyright
 from twisted.python import runtime, zipstream, usage
@@ -25,20 +26,24 @@ from twisted.scripts import tkunzip
 import compileall
 
 def run(argv=sys.argv):
-    join=os.path.join
     sitepackages=join(sysconfig.get_config_var('BINLIBDEST'),
                       "site-packages")
     install(sitepackages)
 
 
 def install(sitepackages):
-    # FIXME - make this asynch
-    join=os.path.join
-    td=join(sitepackages, 'twisteddoc.zip')
-    if os.path.isfile(td):
-        tkunzip.run(['tkunzip', '--zipfile', td,
-                     '--ziptargetdir', join(sitepackages, 'TwistedDocs'),
-                     '--compiledir', join(sitepackages, 'twisted')])
+    args=['tkunzip']
+    doczip=join(sitepackages, 'twisteddoc.zip')
+    docdir=join(sitepackages, 'TwistedDocs')
+#    if os.path.isfile(doczip):
+#        args.extend(['--zipfile', doczip, '--ziptargetdir', docdir])
+    args.extend(['--compiledir', join(sitepackages, 'twisted')])
+    tkunzip.run(args)
+
+    if os.path.isfile(doczip):
+        tkunzip.run(['tkunzip', '--zipfile', doczip, '--ziptargetdir', docdir])
+
+  
 
 if __name__=='__main__':
     run()

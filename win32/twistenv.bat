@@ -2,7 +2,7 @@
 rem Pass me the location of Python (e.g. c:\python22)
 
 set PATHEXT=%PATHEXT%;.py
-set PATH=%1\scripts;%PATH%
+set PATH=%1;%PATH%
 set PATH
 echo -:- -:- -:- -:- -:--:- -:- -:- -:- -:--:- -:- -:- -:- -:-
 echo Commands available in twisted: twistd mktap manhole tapconvert ckeygen trial coil lore websetroot

@@ -3,6 +3,7 @@ all: ../main.aap
     @for p in ['py2.2', 'py2.3']:
     @  for d in ['withdocs', 'nodocs']:
         :execute ../main.aap PyVersion=$p DoDocs=$d
+    :print * Done with build.
 
 ../main.aap: main.aap
     :copy main.aap ..

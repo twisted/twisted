@@ -5,3 +5,5 @@ dist
 MANIFEST
 test.log
 py*.iss
+aapdir
+main.aap
