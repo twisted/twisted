@@ -76,15 +76,15 @@ def _tokenize(description):
     description = iter(description)
     for n in description:
         if n in ops:
-            yield STRING, current
-            yield OP, n
+            yield _STRING, current
+            yield _OP, n
             current = ''
             ops = nextOps[n]
         elif n=='\\':
             current += description.next()
         else:
             current += n
-    yield STRING, current
+    yield _STRING, current
 
 def _parse(description):
     args, kw = [], {}
@@ -95,9 +95,9 @@ def _parse(description):
             kw[sofar[0]] = sofar[1]
     sofar = ()
     for (type, value) in _tokenize(description):
-        if type is STRING:
-            so_far += (value,)
-        elif type is OP and value==':':
+        if type is _STRING:
+            sofar += (value,)
+        elif value==':':
             add(sofar)
             sofar = ()
     add(sofar)
