@@ -16,10 +16,8 @@ def setup(**kw):
 
         dE = kw['detectExtensions']
         del kw['detectExtensions']
-        def my_build_ext(d):
-            bet = build_ext_twisted(d)
-            bet.detectExtensions = types.MethodType(dE, bet, build_ext_twisted)
-            return bet
+        class my_build_ext(build_ext_twisted):
+            detectExtensions = dE
         kw.setdefault('cmdclass', {})['build_ext'] = my_build_ext
     return core.setup(**kw)
 
@@ -53,7 +51,6 @@ def getDataFiles(dname, ignore=None):
                 subdirectories.remove(exname)
         for ig in ignore:
             if ig in subdirectories:
-                print "skipping", ig
                 subdirectories.remove(ig)
         for filename in _filterNames(filenames):
             resultfiles.append(filename)

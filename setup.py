@@ -106,8 +106,6 @@ desktop environments, and your toaster.
         'bin/tkmktap', 'bin/trial',
     ],
 )
-print setup_args['packages']
-print setup_args['data_files']
 
 if hasattr(distutils.dist.DistributionMetadata, 'get_keywords'):
     setup_args['keywords'] = "internet www tcp framework games"
