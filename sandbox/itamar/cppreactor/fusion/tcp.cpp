@@ -1,19 +1,13 @@
 #include <unistd.h>
 #include <errno.h>
 #include <boost/python.hpp> 
-#include <boost/python/lvalue_from_pytype.hpp>
 using namespace boost::python;
 #include "twisted/tcp.h"
+#include "twisted/util.h"
 using namespace Twisted;
 
-static object import(char* module)
-{
-    PyObject* m = PyImport_ImportModule(module);
-    return extract<object>(m);
-}
 
 static object None = import("__builtin__").attr("None");
-
 
 Twisted::TCPTransport::TCPTransport(object self)
 {

@@ -1,3 +1,4 @@
+#!/usr/bin/python
 import sys, os
 from os.path import join
 from distutils.core import setup
@@ -14,6 +15,9 @@ setup(
   packages=["fusion"],
   ext_modules=[ 
     Extension("fusion.tcp", [join("fusion", "tcp.cpp")],
+              libraries=["boost_python"],
+              include_dirs=["include"]),
+    Extension("fusion.udp", [join("fusion", "udp.cpp")],
               libraries=["boost_python"],
               include_dirs=["include"]),
     ],

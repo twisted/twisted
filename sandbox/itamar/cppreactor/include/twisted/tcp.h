@@ -4,31 +4,14 @@ using namespace boost::python;
 #include <boost/python/call_method.hpp> 
 using namespace boost::python;
 #include "Python.h"
+#include "twisted/util.h"
 
 #ifndef TWISTED_TCP_H
 #define TWISTED_TCP_H
 
-// not in Python.h, alas
-typedef struct {
-        PyObject_HEAD
-        PyObject *b_base;
-        void *b_ptr;
-        int b_size;
-        int b_readonly;
-        long b_hash;
-} PyBufferObject;
-
 
 namespace Twisted
 {
-
-    class Deallocator
-    {
-    public:
-	virtual ~Deallocator() {}
-	virtual void dealloc(void* buf) = 0;
-    };
-
     class Protocol;     // forward definition
 
     // The resulting Python class should be wrapped in to the transports
