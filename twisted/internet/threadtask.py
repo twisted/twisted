@@ -3,6 +3,8 @@
 This lets threads execute non-thread safe code by adding it to the
 scheduler. This module should not be used by non-threaded modules,
 instead they should use twisted.internet.task.
+
+Tasks added to this scheduler will *not* be stored persistently.
 """
 
 # twisted import
@@ -17,6 +19,11 @@ class Scheduler:
     def __init__(self):
         self.threadTasks = {}
 
+    def __getstate__(self):
+        dict = copy.copy(self.__dict__)
+        dict['threadTasks'] = {}
+        return dict
+    
     def addTask(self, function, args=[], kwargs={}):
         hadNoTasks = (self.threadTasks == {})
         thread = reflect.currentThread()
