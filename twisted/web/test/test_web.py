@@ -355,11 +355,11 @@ class RememberURLTest(unittest.TestCase):
         self.d = d
 
     def testSimple(self):
-        for url in ['/foo/', '/foo/bar', '/foo/bar/baz', 'foo/bar/']:
+        for url in ['/foo/', '/foo/bar', '/foo/bar/baz', '/foo/bar/']:
             request = server.Request(self.d, 1)
             request.setHost('example.com', 81)
             request.gotLength(0)
-            request.requestReceived('GET', '/foo/bar/baz', 'HTTP/1.0')
+            request.requestReceived('GET', url, 'HTTP/1.0')
             self.assertEqual(request.getRootURL(), "http://example.com/foo")
 
 
