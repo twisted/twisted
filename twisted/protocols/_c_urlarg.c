@@ -18,10 +18,6 @@
  */
 /* _c_urlarg.c */
 
-#include <stdlib.h>
-#include <string.h>
-#include <stdio.h> /* debugging */
-
 #ifdef __cplusplus
 extern "C" {
 #endif
