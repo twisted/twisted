@@ -653,8 +653,10 @@ class PTYProcess(abstract.FileDescriptor, styles.Ephemeral):
                     except OSError:
                         pass
                     else:
-                        fcntl.ioctl(fd, termios.TIOCNOTTY, '')
-                        os.close(fd)
+                        try:
+                            fcntl.ioctl(fd, termios.TIOCNOTTY, '')
+                        finally:
+                            os.close(fd)
                     
                 os.setsid()
                 
