@@ -1,3 +1,4 @@
+# -*- test-case-name: twisted.test.test_trial -*-
 #
 # Twisted, the Framework of Your Internet
 # Copyright (C) 2001-2003 Matthew W. Lefkowitz
@@ -15,7 +16,6 @@
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 #
-# -*- test-case-name: twisted.test.test_trial -*-
  
 
 """
@@ -48,8 +48,6 @@ try:
     import gc # not available in jython
 except ImportError:
     gc = None
-
-log.startKeepingErrors()
 
 
 class SkipTest(Exception):
@@ -275,6 +273,7 @@ class TestSuite:
         tests = self.tests
         tests.sort(lambda x,y: cmp(str(x), str(y)))
 
+        log.startKeepingErrors()
         r = None
         if seed is not None:
             import random
@@ -289,10 +288,3 @@ class TestSuite:
             output.reportImportError(name, exc)
 
         output.stop()
-
-
-
-
-# Local Variables:
-# test-case-name: "twisted.test.test_trial"
-# End:
