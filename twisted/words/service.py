@@ -227,17 +227,19 @@ class Participant(pb.Perspective, styles.Versioned):
         raise NotInGroupError(name)
 
     def getGroupMembers(self, groupName):
-        for group in self.groups:
-            if group.name == groupName:
-                self.client.callRemote('receiveGroupMembers', map(lambda m: m.name,
-                                                                  group.members),
-                                       group.name)
-        raise NotInGroupError(groupName)
+        if self.client:
+            for group in self.groups:
+                if group.name == groupName:
+                    self.client.callRemote('receiveGroupMembers', map(lambda m: m.name,
+                                                                      group.members),
+                                           group.name)
+            raise NotInGroupError(groupName)
 
     def getGroupMetadata(self, groupName):
-        for group in self.groups:
-            if group.name == groupName:
-                self.client.callRemote('setGroupMetadata', group.metadata, group.name)
+        if self.client:        
+            for group in self.groups:
+                if group.name == groupName:
+                    self.client.callRemote('setGroupMetadata', group.metadata, group.name)
 
     def receiveDirectMessage(self, sender, message, metadata):
         if self.client:
@@ -272,10 +274,12 @@ class Participant(pb.Perspective, styles.Versioned):
                                                 message)
 
     def memberJoined(self, member, group):
-        self.client.callRemote('memberJoined', member.name, group.name)
+        if self.client:
+            self.client.callRemote('memberJoined', member.name, group.name)
 
     def memberLeft(self, member, group):
-        self.client.callRemote('memberLeft', member.name, group.name)
+        if self.client:
+            self.client.callRemote('memberLeft', member.name, group.name)
 
     def directMessage(self, recipientName, message, metadata=None):
         # XXX getPerspectiveNamed is misleading here -- this ought to look up
