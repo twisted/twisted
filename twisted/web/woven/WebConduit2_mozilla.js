@@ -68,7 +68,7 @@ function woven_replaceElement(theId, htmlStr) {
     newNode.innerHTML = htmlStr
     oldNode.parentNode.replaceChild(newNode.firstChild, oldNode)
     //woven_attemptFocus(newNode)
-    //woven_requestNextEvent()
+    woven_requestNextEvent()
     //alert('blah')
 }
 
