@@ -221,3 +221,20 @@ class MicroDOMTest(TestCase):
     def testErrors(self):
         for s in ["<foo>&am</foo>", "<foo", "<f>&</f>", "<() />"]:
             self.assertRaises(Exception, microdom.parseString, s)
+
+    def testCaseInsensitive(self):
+        s = "<foo a='b'><BAx>x</bax></FOO>"
+        out = microdom.parseString(s).documentElement.toxml()
+        self.assertEquals(out, '<foo a="b"><bax>x</bax></foo>')
+
+    def testCloneNode(self):
+        s = '<foo a="b"><bax>x</bax></foo>'
+        node = microdom.parseString(s).documentElement
+        clone = node.cloneNode()
+        self.failIfEquals(node, clone)
+        self.assertEquals(len(node.childNodes), len(clone.childNodes))
+        c1, c2 = node.firstChild(), clone.firstChild()
+        self.failIfEquals(c1, c2)
+        self.assertEquals(len(c1.childNodes), len(c2.childNodes))
+        self.failIfEquals(c1.firstChild(), c2.firstChild())
+        self.assertEquals(s, clone.toxml())
