@@ -487,6 +487,12 @@ class TestConvert(unittest.TestCase):
         s1 = services[0]
         self.assertEqual(s, s1)
 
+class TimerTarget:
+    def __init__(self):
+        self.l = []
+    def append(self, what):
+        self.l.append(what)
+
 class TestInternet2(unittest.TestCase):
 
     def testTCP(self):
@@ -676,11 +682,21 @@ class TestInternet2(unittest.TestCase):
         t.stopService()
         self.assertEqual(l, ["hello"]*10)
 
+    def testPickledTimer(self):
+        target = TimerTarget()
+        t0 = internet.TimerService(1, target.append, "hello")
+        t0.startService()
+        s = pickle.dumps(t0)
+        t0.stopService()
+
+        t = pickle.loads(s)
+        self.failIf(t.running)
+
     def testBrokenTimer(self):
         t = internet.TimerService(1, lambda: 1 / 0)
         timeout = 30
         t.startService()
-        while t.loop.running:
+        while t._loop.running:
             reactor.iterate(0.1)
             timeout -= 1
             self.failIf(timeout == 0)

@@ -140,25 +140,33 @@ class TimerService(_VolatileDataService):
     when it stops.
     """
 
+    volatile = ['_loop']
+
     def __init__(self, step, callable, *args, **kwargs):
         self.step = step
-        from twisted.internet.task import LoopingCall
-        self.loop = LoopingCall(callable, *args, **kwargs)
+        self.call = (callable, args, kwargs)
 
     def startService(self):
         service.Service.startService(self)
-        self.loop.start(self.step, now=True).addErrback(self._failed)
+        from twisted.internet.task import LoopingCall
+        callable, args, kwargs = self.call
+        # we have to make a new LoopingCall each time we're started, because
+        # an active LoopingCall remains active when serialized. If
+        # LoopingCall were a _VolatileDataService, we wouldn't need to do
+        # this.
+        self._loop = LoopingCall(callable, *args, **kwargs)
+        self._loop.start(self.step, now=True).addErrback(self._failed)
 
     def _failed(self, why):
         # make a note that the LoopingCall is no longer looping, so we don't
         # try to shut it down a second time in stopService. I think this
         # should be in LoopingCall. -warner
-        self.loop.running = False
+        self._loop.running = False
         log.err(why)
 
     def stopService(self):
-        if self.loop.running:
-            self.loop.stop()
+        if self._loop.running:
+            self._loop.stop()
         return service.Service.stopService(self)
 
 

@@ -2,7 +2,8 @@
 
 	* twisted/application/internet.py (TimerService): make it possible
 	to restart a stopped TimerService. Threw out a lot of (apparently)
-	unnecessary code in the process.
+	unnecessary code in the process. Make sure it gets pickled in a
+	not-running state too.
 	* twisted/test/test_application.py (TestInternet2.testTimer): test
 	the changes, and update the way the test peeks inside TimerService 
 
