@@ -396,6 +396,12 @@ class Widget(view.View):
                         newNode.appendChild(document.createTextNode(msg))
                         return newNode
                     return default
+                else:
+                    for node in slots:
+                        node.removeAttribute('pattern')
+            else:
+                for node in slots:
+                    node.removeAttribute(name + 'Of')
             self.slots[name] = slots
         slot = slots.pop(0)
         slots.append(slot)
@@ -447,6 +453,7 @@ class DefaultWidget(Widget):
         """
         By default, we just return the node unchanged
         """
+        self.cleanNode(node)
         if self.become:
             become = self.become
             self.become = None
@@ -481,7 +488,7 @@ class Text(Widget):
     """
     A simple Widget that renders some text.
     """
-    def __init__(self, text, raw=0, clear=1, *args, **kwargs):
+    def __init__(self, model, raw=0, clear=1, *args, **kwargs):
         """
         @param text: The text to render.
         @type text: A string or L{model.Model}.
@@ -489,30 +496,23 @@ class Text(Widget):
               a L{domhelpers.RawText} or as a DOM TextNode.
         """
         self.raw = raw
-        self.clear = clear
-        if isinstance(text, model.Model):
-            Widget.__init__(self, text, *args, **kwargs)
-        else:
-            Widget.__init__(self, model.Model(), *args, **kwargs)
-        self.text = text
+        self.clearNode = clear
+        Widget.__init__(self, model, *args, **kwargs)
 
-    def generateDOM(self, request, node):
-        if node and self.clear:
-            domhelpers.clearNode(node)
-        if isinstance(self.text, model.Model):
+    def generate(self, request, node):
+        if self.templateNode is None:
             if self.raw:
-                textNode = domhelpers.RawText(str(self.getData(request)))
+                return domhelpers.RawText(str(self.getData(request)))
             else:
-                textNode = document.createTextNode(str(self.getData(request)))
-            if node is None:
-                return textNode
-            node.appendChild(textNode)
-            return node
+                return document.createTextNode(str(self.getData(request)))
+        return Widget.generate(self, request, node)
+
+    def setUp(self, request, node, data):
+        if self.raw:
+            textNode = domhelpers.RawText(str(data))
         else:
-            if self.raw:
-                return domhelpers.RawText(self.text)
-            else:
-                return document.createTextNode(self.text)
+            textNode = document.createTextNode(str(data))
+        self.appendChild(textNode)
 
 
 class ParagraphText(Widget):
@@ -539,18 +539,9 @@ class Image(Text):
     """
     tagName = 'img'
     border = '0'
-    def generateDOM(self, request, node):
-        #`self.text' is lame, perhaps there should be a DataWidget that Text
-        #and Image both subclass.
-        node.setAttribute('border', self.border)
-        if isinstance(self.text, model.Model):
-            data = self.getData(request)
-        else:
-            data = self.text
-        assert data is not None, "data is None, self.text is %r" % (self.text,)
-        node = Widget.generateDOM(self, request, node)
+    def setUp(self, request, node, data):
+        self.setAttribute('border', self.border)
         node.setAttribute('src', data)
-        return node
 
 
 class Error(Widget):
@@ -583,20 +574,17 @@ class Input(Widget):
         self.submodel = submodel
         self['name'] = submodel
 
-    def generateDOM(self, request, node):
+    def setUp(self, request, node, data):
         if not self.attributes.has_key('name') and not node.getAttribute('name'):
             if self.submodel:
                 id = self.submodel
             else:
                 id = self.attributes.get('id', node.getAttribute('id'))
             self['name'] = id
-        mVal = self.getData(request)
-        if mVal is None:
-            mVal = ''
-        assert mVal is not None
+        if data is None:
+            data = ''
         if not self.attributes.has_key('value'):
-            self['value'] = str(mVal)
-        return Widget.generateDOM(self, request, node)
+            self['value'] = str(data)
 
 
 class CheckBox(Input):
@@ -655,9 +643,8 @@ class Option(Input):
     def setValue(self, value):
         self['value'] = str(value)
 
-    def generateDOM(self, request, node):
-        self.add(Text(self.text or self.getData(request)))
-        return Input.generateDOM(self, request, node)
+    def setUp(self, request, node, data):
+        self.add(Text(self.text or data))
 
 
 class Anchor(Widget):
@@ -681,34 +668,23 @@ class Anchor(Widget):
     def setText(self, text):
         self.text = text
 
-    def generateDOM(self, request, node):
+    def setUp(self, request, node, data):
         href = self.baseHREF
         params = urllib.urlencode(self.parameters)
         if params:
             href = href + '?' + params
-        data = self.getData(request)
         self['href'] = href or str(data) + self.trailingSlash
-        #self['href'] = urllib.quote(self['href'])
         if data is None:
             data = ""
         self.add(Text(self.text or data, self.raw, 0))
-        return Widget.generateDOM(self, request, node)
 
 
 class SubAnchor(Anchor):
-    def generateDOM(self, request, node):
-        href = self.baseHREF
-        params = urllib.urlencode(self.parameters)
-        if params:
-            href = href + '?' + params
-        data = self.getData(request)
-        if not href:
-            href = node.getAttribute('href')
-        self['href'] = href + str(data) + self.trailingSlash
-        if data is None:
-            data = ""
-        self.add(Text(self.text or data, self.raw, 0))
-        return Widget.generateDOM(self, request, node)
+    def initialize(self):
+        warnings.warn(
+            "SubAnchor is deprecated, you might want either Anchor or DirectoryAnchor",
+            DeprecationWarning)
+        Anchor.initialize(self)
 
 
 

@@ -1,3 +1,10 @@
+2003-06-16  Donovan Preston  <dp@twistedmatrix.com>
+
+	* twisted/web/woven/{controller,view,widgets}.py: Cleaned up the
+	output of Woven so it never leaves any woven-specific attributes
+	on the output HTML. Also, id attributes are not set on every
+	node with a View unless you are using LivePage.
+
 2003-06-11  Brian Warner  <warner@lothar.com>
 
 	* doc/howto/cvs-dev.html: add "Working from CVS" hints

@@ -18,7 +18,7 @@
 
 from __future__ import nested_scopes
 
-__version__ = "$Revision: 1.60 $"[11:-2]
+__version__ = "$Revision: 1.61 $"[11:-2]
 
 import os
 import cgi
@@ -336,7 +336,7 @@ class LiveController(Controller):
         scriptOutput.append('top.woven_clientToServerEventComplete()')        
         
         #print "GATHERED JS", scriptOutput
-        
+
         return '''<html>
 <body>
     <script language="javascript">

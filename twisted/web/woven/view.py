@@ -18,7 +18,7 @@
 
 from __future__ import nested_scopes
 
-__version__ = "$Revision: 1.79 $"[11:-2]
+__version__ = "$Revision: 1.80 $"[11:-2]
 
 # Sibling imports
 import interfaces
@@ -103,6 +103,7 @@ class View:
 
     viewLibraries = []
     setupStacks = 1
+    livePage = 0
     doneCallback = None
     def __init__(self, m, templateFile=None, templateDirectory=None, template=None, controller=None, doneCallback=None, modelStack=None, viewStack=None, controllerStack=None):
         """
@@ -514,7 +515,7 @@ class View:
                 view.submodel = submodelName
 
             theId = node.getAttribute("id")
-            if not theId:
+            if self.livePage and not theId:
                 #curId = getattr(request, 'currentId', 0)
                 curId = id(view)
                 theId = "woven_id_" + str(curId)
@@ -653,6 +654,7 @@ class View:
 
 
 class LiveView(View):
+    livePage = 1
     def wvfactory_webConduitGlue(self, request, node, m):
         if request.getHeader("user-agent").count("MSIE"):
             return View(m, templateFile="FlashConduitGlue.html")
