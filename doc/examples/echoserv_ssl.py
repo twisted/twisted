@@ -39,7 +39,7 @@ if __name__ == '__main__':
     log.startLogging(sys.stdout)
     from echoserv_ssl import ServerContextFactory
     factory = Factory()
-    factory.protocol = echoserv.EchoTCP
+    factory.protocol = echoserv.Echo
     app = Application("echo-ssl")
     app.listenSSL(8000, factory, ServerContextFactory())
     app.run(save=0)
