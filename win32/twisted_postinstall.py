@@ -23,6 +23,8 @@ import os.path
 from distutils import sysconfig
 import twisted.copyright
 from twisted.python import runtime
+import zipfile
+
 
 if 'file_created' not in dir(__builtins__):
     def noop(*args, **kwargs):
@@ -115,6 +117,23 @@ echo -:- -:- -:- -:- -:--:- -:- -:- -:- -:--:- -:- -:- -:- -:-
         files_created.append(bat_location)
         print "Done."
 
+        docdir=os.path.join(sysconfig.get_config_var('LIBDEST'),
+                            'site-packages', 'TwistedDocs')
+        doczip=os.path.join(docdir, 'win32doc.zip')
+        if os.path.isfile(doczip):
+            print "Setting up documentation...",
+            # unzip the docball that comes with twisted
+            unzipped=unzip(doczip, docdir)
+            # tell distutils about it so it can be removed during uninstall
+            for name in unzipped:
+                fullname=os.path.join(docdir, name)
+                if os.path.isdir(fullname):
+                    directory_created(fullname)
+                else:
+                    file_created(fullname)
+            print "Done."
+
+            
         print 'Installing Icons for Twisted...',
         sys.stdout.flush()
         menu_path=os.path.join(getProgramsMenuPath(),
@@ -126,6 +145,27 @@ echo -:- -:- -:- -:- -:--:- -:- -:- -:- -:--:- -:- -:- -:- -:-
         except OSError:
             pass
 
+        # doc
+        if os.path.isfile(doczip):
+            html_shortcut_path=os.path.join(menu_path,
+                                            "Manual.lnk")
+            html_path=os.path.join(docdir, 'howto', 'index.xhtml')
+            api_shortcut_path=os.path.join(menu_path,
+                                           "API Documentation.lnk")
+            api_path=os.path.join(docdir, 'api', 'index.html')
+
+            create_shortcut(html_path,
+                            "Manual",
+                            html_shortcut_path
+                            )
+            create_shortcut(api_path,
+                            "API Documentation",
+                            api_shortcut_path
+                            )
+            file_created(html_shortcut_path)
+            file_created(api_shortcut_path)
+            files_created.extend([html_shortcut_path, api_shortcut_path])
+        
         # command prompt
         cp_shortcut_path=os.path.join(menu_path, "Twisted Command Prompt.lnk")
         create_shortcut(os.getenv("ComSpec"),
@@ -191,6 +231,38 @@ echo -:- -:- -:- -:- -:--:- -:- -:- -:- -:--:- -:- -:- -:- -:-
         print "Done."
         print "Post-install successful!"
     return files_created
+
+
+### FIXME
+# unzip belongs in its own module. Prolly in twisted/python/unzip.py
+DIR_BIT=16
+def unzip(filename, directory=".", overwrite=0):
+    """Unzip the file
+    @return: filenames that extracted in a list
+    @param filename: the name of the zip file
+    @param directory: the directory into which the files will be extracted
+    """
+    zf=zipfile.ZipFile(filename, 'r')
+    for entry in zf.namelist():
+        isdir=zf.getinfo(entry).external_attr & DIR_BIT
+        f=os.path.normpath(os.path.join(directory, entry))
+        fdir=os.path.dirname(f)
+        try:
+            os.makedirs(fdir)
+        except OSError, e:
+            if e.args[1]=='File exists':
+                pass
+            else:
+                raise e
+
+        if isdir and not os.path.exists(f):
+            os.mkdir(f)
+        elif (overwrite or not os.path.exists(f)):
+            outfile=file(f, 'wb')
+            outfile.write(zf.read(entry))
+            outfile.close()
+    return zf.namelist()
+
 
 if __name__=='__main__':
     run()

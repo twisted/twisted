@@ -22,7 +22,7 @@ Package installer for Twisted
 Copyright (C) 2001 Matthew W. Lefkowitz
 All rights reserved, see LICENSE for details.
 
-$Id: setup.py,v 1.116 2003/06/02 10:04:06 spiv Exp $
+$Id: setup.py,v 1.117 2003/06/23 06:32:51 moonfallen Exp $
 """
 
 import distutils, os, sys, string
@@ -34,6 +34,7 @@ from distutils.command.install_data import install_data
 from distutils.ccompiler import new_compiler
 from distutils.errors import CompileError
 from distutils.command.build_ext import build_ext
+from distutils import sysconfig
 
 if sys.version_info<(2,2):
     print >>sys.stderr, "You must use at least Python 2.2 for Twisted"
@@ -266,9 +267,6 @@ if sys.platform == 'darwin' and sys.version == BROKEN_CONFIG:
         distutils.sysconfig._config_vars['LDSHARED'] = y
 
 if os.name=='nt':
-    # FIXME - see
-    # http://mail.python.org/pipermail/distutils-sig/2003-January/003147.html
-    # This Workaround: copy the script to Twisted/ at pre-build time.
     setup_args['scripts'].append('win32/twisted_postinstall.py')
 
 if hasattr(distutils.dist.DistributionMetadata, 'get_keywords'):
@@ -303,6 +301,10 @@ for pathname, filenames in [(wovenPath, wovenFiles),
     setup_args['data_files'].extend(
         [(pathname, [os.path.join(pathname, filename)])
             for filename in filenames])
+
+win32doc='doc/win32doc.zip'
+if os.path.exists(win32doc):
+    setup_args['data_files'].append(('TwistedDocs', [win32doc]))
 
 # always define WIN32 under Windows
 if os.name == 'nt':
