@@ -160,6 +160,7 @@ class WebClientTestCase(unittest.TestCase):
         d = client.downloadPage(self.getURL("file"), "unwritable")
         f = unittest.deferredError(d)
         self.failUnless(f.check(IOError))
+        os.chmod("unwritable", 0700)
         os.unlink("unwritable")
 
     def testServerError(self):
