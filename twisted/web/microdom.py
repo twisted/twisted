@@ -238,6 +238,9 @@ class Document(Node):
     def createTextNode(self, text):
         return Text(text)
 
+    def createComment(self, text):
+        return Comment(text)
+
     def getElementsByTagName(self, name):
         if self.documentElement.caseInsensitive:
             return getElementsByTagNameNoCase(self, name)
@@ -294,7 +297,7 @@ class Comment(CharacterData):
     """A comment node."""
 
     def writexml(self, stream, indent='', addindent='', newl='', strip=0):
-        stream.write("<!--%s-->" % self.data)
+        stream.write("<!--%s-->" % self.data.encode('utf8'))
 
     def cloneNode(self, deep=0, parent=None):
         return Comment(self.nodeValue, parent)
