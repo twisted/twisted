@@ -6,7 +6,7 @@ def success(message):
     main.shutDown()
 
 def failure(error):
-    print "Failure..."
+    print "Failure...",error
     main.shutDown()
 
 def disconnected():
@@ -20,17 +20,21 @@ def connected(perspective):
     
     print "connected."
 
+def preConnected(identity):
+    identity.attach("pbecho", None,
+                    pbcallback=connected,
+                    pberrback=failure)
+
 def couldntConnect():
     print "Could not connect."
     main.shutDown()
 
 # run a client
 b = pb.Broker()
-b.requestPerspective("pbecho", # service name
-                     "guest",  # username
-                     "guest",  # password
-                     callback = connected,
-                     errback  = couldntConnect)
+b.requestIdentity("guest",  # username
+                  "guest",  # password
+                  callback = preConnected,
+                  errback  = couldntConnect)
 
 tcp.Client("localhost",pb.portno,b)
 

@@ -198,7 +198,8 @@ class Referenced(Serializable):
         try:
             state = apply(method, args, kw)
         except TypeError:
-            raise TypeError("%s didn't accept %s and %s" % (method, args, kw))
+            print ("%s didn't accept %s and %s" % (method, args, kw))
+            raise
         return broker.serialize(state, self.perspective)
 
     def remoteSerialize(self, broker):
