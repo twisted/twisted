@@ -17,7 +17,7 @@
 
 from __future__ import nested_scopes
 
-__version__ = "$Revision: 1.44 $"[11:-2]
+__version__ = "$Revision: 1.45 $"[11:-2]
 
 import os
 import cgi
@@ -135,7 +135,13 @@ class Controller(resource.Resource):
         Look for a factory method to create the object to handle the
         next segment of the URL. If a wchild_* method is found, it will
         be called to produce the Resource object to handle the next
-        segment of the path.
+        segment of the path. If a wchild_* method is not found,
+        getDynamicChild will be called with the name and request.
+
+        @param name: The name of the child being requested.
+        @type name: string
+        @param request: The HTTP request being handled.
+        @type request: L{twisted.web.server.Request}
         """
         if not name:
             method = "index"
@@ -144,10 +150,24 @@ class Controller(resource.Resource):
         f = getattr(self, "wchild_%s" % method, None)
         if f:
             return f(request)
-        elif name == '':
-            return self
         else:
-            return resource.Resource.getChild(self, name, request)
+            return self.getDynamicChild(name, request)
+
+    def getDynamicChild(self, name, request):
+        """
+        This method is called when getChild cannot find a matching wchild_*
+        method in the Controller. Override me if you wish to have dynamic
+        handling of child pages. Should return a Resource.
+
+        @param name: The name of the child being requested.
+        @type name: string
+        @param request: The HTTP request being handled.
+        @type request: L{twisted.web.server.Request}
+        """
+        resource.Resource.getChild(self, name, request)
+
+    def wchild_index(self, request):
+        return self
 
     def render(self, request):
         """

@@ -1,3 +1,8 @@
+2003-04-14  Jonathan Lange  <jml@ids.org.au>
+	* twisted/web/woven/controller.py (Controller): now, if getChild
+	cannot find the requested child, it will ask getDynamicChild -- a
+	method like getChild, but designed to be overriden by users.
+
 2003-04-13  Bob Ippolito  <bob@redivi.com>
 
 	* twisted/internet/app.py (DependentMultiService): a MultiService
