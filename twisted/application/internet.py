@@ -38,7 +38,7 @@ class _VolatileDataService(service.Service):
 
 class _AbstractServer(_VolatileDataService):
 
-    privileged = 0
+    privileged = 1
     volatile = ['_port']
     method = None
 

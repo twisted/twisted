@@ -36,8 +36,6 @@ class Options(usage.Options):
 def makeService(config):
     port, host, dest_port = (int(config['port']), config['host'],
                                                   int(config['dest_port']))
-    s = internet.TCPServer(port, portforward.ProxyFactory(host, dest_port))
-    if port < 1024:
-        s.privileged = 1
-    return s
+    return internet.TCPServer(port, portforward.ProxyFactory(host, dest_port))
+
 
