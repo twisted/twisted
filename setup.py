@@ -22,7 +22,7 @@ Package installer for Twisted
 Copyright (C) 2001 Matthew W. Lefkowitz
 All rights reserved, see LICENSE for details.
 
-$Id: setup.py,v 1.96 2003/01/27 16:30:44 acapnotic Exp $
+$Id: setup.py,v 1.97 2003/01/29 22:13:53 itamarst Exp $
 """
 
 import distutils, os, sys, string
@@ -204,6 +204,7 @@ http://starship.python.net/crew/mhammond/win32/Downloads.html
         "twisted.enterprise",
         "twisted.im",
         "twisted.internet",
+        "twisted.internet.serialport",
         "twisted.lore",
         "twisted.mail",
         "twisted.manhole",
@@ -214,6 +215,7 @@ http://starship.python.net/crew/mhammond/win32/Downloads.html
         "twisted.persisted.journal",
         "twisted.popsicle",
         "twisted.protocols",
+        "twisted.protocols.gps",
         "twisted.protocols.mice",
         "twisted.python",
         "twisted.runner",
