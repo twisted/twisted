@@ -149,7 +149,7 @@ class Identity:
 
         This key will give me a token to access to some service in the future.
         """
-        return self.keyring[serviceName] = Key(serviceName, perspectiveName, self)
+        self.keyring[serviceName] = Key(serviceName, perspectiveName, self)
 
     def removeKey(self, serviceName):
         """Remove a key from my keyring.
