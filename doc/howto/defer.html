@@ -46,13 +46,17 @@ from twisted.internet import reactor
 class Getter:
     def getData(self, x, callback):
         # this won't block
-        reactor.callLater(4, callback, x * 3)
+        reactor.callLater(2, callback, x * 3)
 
 def printData(d):
     print d
 
 g = Getter()
 g.getData(3, printData)
+
+# startup the event loop, exiting after 4 seconds
+reactor.callLater(4, reactor.stop);
+reactor.run()
 </pre>
 
 <p>There are several things missing in this simple example.  There is no way
@@ -81,7 +85,7 @@ class Getter:
     def getData(self, x):
         # this won't block
         d = defer.Deferred()
-        reactor.callLater(4, d.callback, x * 3)
+        reactor.callLater(2, d.callback, x * 3)
         return d
 
 def printData(d):
@@ -90,6 +94,8 @@ def printData(d):
 g = Getter()
 d = g.getData(3)
 d.addCallback(printData)
+
+reactor.callLater(4, reactor.stop); reactor.run()
 </pre>
 
 <p>As we said, multiple callbacks can be added to a Deferred.  The first
@@ -106,6 +112,10 @@ from twisted.internet import reactor, defer
 
 class Getter:
     def gotResults(self, x):
+        """The Deferred mechanism provides a clear mechanism to
+           signal error conditions to calling code.  In this 
+           example, even numbers are bad.
+        """
         if x % 2:
             self.d.callback(x*3)
         else:
@@ -115,13 +125,15 @@ class Getter:
         return "<p>Result: %s</p>" % r
 
     def getData(self, x):
-        """The Deferred mechanism provides an errback method
-           to handle error conditions.  In this 'example',
-           even numbers are bad.
+        """The Deferred mechanism allows for chained callbacks,
+           first.  In this sexample, the output of gotResults,
+           if it is not an error, proceeds to _toHTML next before
+           it is sent to printData.
         """
         self.d = defer.Deferred()
-        reactor.callLater(4, self.gotResults, x)
-        return self.d.addCallback(self._toHTML)
+        reactor.callLater(2, self.gotResults, x)
+        self.d.addCallback(self._toHTML)
+        return self.d
 
 def printData(d):
     print d
@@ -141,6 +153,8 @@ g = Getter()
 d = g.getData(4)
 d.addCallback(printData)
 d.addErrback(printError)
+
+reactor.callLater(4, reactor.stop); reactor.run()
 </pre>
 
 <h3>Visual Explanation</h3>
