@@ -73,6 +73,8 @@ class Participant(pb.Perspective):
 
     def joinGroup(self, name):
         group = self.service.getGroup(name)
+        if group in self.groups:
+            raise pb.Error("you're already in that group")
         group.addMember(self)
         self.groups.append(group)
 

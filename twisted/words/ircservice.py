@@ -138,11 +138,15 @@ class IRCChatter(irc.IRC):
 
 
     def irc_JOIN(self, prefix, params):
-        channame = params[0][1:]
-        self.participant.joinGroup(channame)
-        self.memberJoined(self.nickname, channame)
-        self.irc_NAMES('', [params[0]])
-        self.irc_TOPIC('', [params[0]])
+        try:
+            channame = params[0][1:]
+            self.participant.joinGroup(channame)
+        except pb.Error:
+            pass
+        else:
+            self.memberJoined(self.nickname, channame)
+            self.irc_NAMES('', [params[0]])
+            self.irc_TOPIC('', [params[0]])
 
     def irc_PART(self, prefix, params):
         #<< PART #java :test
@@ -232,7 +236,8 @@ class IRCChatter(irc.IRC):
         else:
             #<< TOPIC #qdf :test
             #>> :glyph!glyph@adsl-64-123-27-108.dsl.austtx.swbell.net TOPIC #qdf :test
-            raise NotImplementedError("can't change topic yet")
+            #raise NotImplementedError("can't change topic yet")
+            self.receiveDirectMessage("*error*", "topic change not implemented")
 ##            for chatter in channel.chatters:
 ##                chatter.sendLine(":%s!%s TOPIC #%s :%s" % (
 ##                    self.nickname, self.servicename, channame, newTopic))
