@@ -105,7 +105,7 @@ class ADBAPITestBase:
                         "Didn't successfully delete table contents")
 
         self.checkConnect()
-
+    
     def checkConnect(self):
         """Check the connect/disconnect synchronous calls."""
         conn = self.dbpool.connect()
@@ -138,6 +138,8 @@ class ADBAPITestBase:
             transaction.execute("insert into simple(x) values(0)")
 
         transaction.execute("select * from NOTABLE")
+
+ADBAPITestBase.timeout = 30.0
 
 class ReconnectTestBase:
     """Test the asynchronous DB-API code with reconnect."""
