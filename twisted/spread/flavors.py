@@ -36,13 +36,14 @@ import types
 from twisted.python import log
 
 # sibling imports
-from jelly import setUnjellyableForClass, setUnjellyableForClassTree, unjellyableRegistry
+from jelly import setUnjellyableForClass, setUnjellyableForClassTree, setUnjellyableFactoryForClass, unjellyableRegistry
 from jelly import Jellyable, Unjellyable, _Dummy
 from jelly import setInstanceState, getInstanceState
 
 # compatibility
 setCopierForClass = setUnjellyableForClass
 setCopierForClassTree = setUnjellyableForClassTree
+setFactoryForClass = setUnjellyableFactoryForClass
 copyTags = unjellyableRegistry
 
 copy_atom = "copy"

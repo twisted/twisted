@@ -144,11 +144,32 @@ class SimpleLocalCopy(pb.RemoteCopy):
 
 pb.setCopierForClass(str(SimpleCopy), SimpleLocalCopy)
 
+class SimpleFactoryCopy(pb.Copyable):
+    allIDs = {}
+    def __init__(self, id):
+        self.id = id
+        SimpleFactoryCopy.allIDs[id] = self
+
+def createFactoryCopy(state):
+    id = state.get("id", None)
+    if not id:
+        raise "factory copy state has no 'id' member %s" % repr(state)
+    if not SimpleFactoryCopy.allIDs.has_key(id):
+        raise "factory class has no ID: %s" % SimpleFactoryCopy.allIDs
+    inst = SimpleFactoryCopy.allIDs[id]
+    if not inst:
+        raise "factory method found no object with id"
+    return inst
+
+pb.setFactoryForClass(str(SimpleFactoryCopy), createFactoryCopy)
 
 class NestedCopy(pb.Referenceable):
     def remote_getCopy(self):
         return SimpleCopy()
 
+    def remote_getFactory(self, value):
+        return SimpleFactoryCopy(value)
+    
 class SimpleCache(pb.Cacheable):
     def __init___(self):
         self.x = 1
@@ -538,6 +559,21 @@ class BrokerTestCase(unittest.TestCase):
         obj = accum.pop()
         self.assertEquals(obj._wasCleanWhenLoaded, 1) # timestamp's clean, our cache file is up-to-date
 
+    def gotCopy(self, val):
+        self.thunkResult = val.id
+        
+    def testFactoryCopy(self):
+        c, s, pump = connectedServerAndClient()
+        ID = 99
+        obj = NestedCopy()
+        s.setNameForLocal("foo", obj)
+        x = c.remoteForName("foo")
+        x.callRemote('getFactory', ID).addCallbacks(self.gotCopy, self.thunkResultBad)
+        pump.pump()
+        pump.pump()
+        pump.pump()
+        assert self.thunkResult == ID, "ID not correct on factory object %s" % self.thunkResult
+        
 from twisted.spread import publish
 
 class DumbPublishable(publish.Publishable):

@@ -69,6 +69,7 @@ from flavors import RemoteCache
 from flavors import RemoteCacheObserver
 from flavors import copyTags
 from flavors import setCopierForClass, setUnjellyableForClass
+from flavors import setFactoryForClass
 from flavors import setCopierForClassTree
 
 MAX_BROKER_REFS = 1024

@@ -113,6 +113,7 @@ instance_atom = 'instance'          # i
 # errors
 unpersistable_atom = "unpersistable"# u
 unjellyableRegistry = {}
+unjellyableFactoryRegistry = {}
 
 def setUnjellyableForClass(classname, unjellyable):
     """Set which local class will represent a remote type.
@@ -136,6 +137,23 @@ def setUnjellyableForClass(classname, unjellyable):
     unjellyableRegistry[classname] = unjellyable
     globalSecurity.allowTypes(classname)
 
+def setUnjellyableFactoryForClass(classname, copyFactory):
+    """Set the factory to construct a remote instance of a type.
+
+        jellier.setFactoryForClass('module.package.Class', MyFactory)
+
+    Call this at the module level immediately after its class definition. copyFactory
+    should return an instance or subclass of RemoteCopy.
+
+    Similar to setUnjellyableForClass except it uses a factory instead of creating
+    an instance.
+    """
+
+    global unjellyableFactoryRegistry
+    unjellyableFactoryRegistry[classname] = copyFactory
+    globalSecurity.allowTypes(classname)
+        
+    
 def setUnjellyableForClassTree(module, baseClass, prefix=None):
     """Set all classes in a module derived from baseClass as copiers for a corresponding remote class.
 
@@ -440,6 +458,13 @@ class _Unjellier:
             if hasattr(val, 'postUnjelly'):
                 self.postCallbacks.append(inst.postUnjelly)
             return val
+        regFactory = unjellyableFactoryRegistry.get(jelType)
+        if regFactory is not None:
+            state = self.unjelly(obj[1])            
+            inst = regFactory(state)
+            if hasattr(inst, 'postUnjelly'):
+                self.postCallbacks.append(inst.postUnjelly)
+            return inst
         thunk = getattr(self, '_unjelly_%s'%jelType, None)
         if thunk is not None:
             ret = thunk(obj[1:])
