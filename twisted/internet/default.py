@@ -93,9 +93,7 @@ class PosixReactorBase(ReactorBase):
         handler, as the calls we make here could occur between any two
         python bytecode instructions. Deferring processing to the next
         eventloop round prevents us from violating the state constraints
-        of arbitrary classes. Note that a Reactor must be able to accept
-        callLater calls at any time, even interleaved inside it's own
-        methods; it must block SIGCHLD if it is unable to guarantee this.
+        of arbitrary classes.
         """
         self.callFromThread(process.reapAllProcesses)
 

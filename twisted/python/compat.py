@@ -26,7 +26,13 @@ import sys, types, socket, struct, __builtin__, exceptions, UserDict
 if not hasattr(UserDict, 'DictMixin'):
     from twisted.python.pymodules import UserDictExtras
     UserDict.DictMixin = UserDictExtras.DictMixin
-    
+
+try:
+    import heapq
+except ImportError:
+    from twisted.python.pymodules import heapq
+    sys.modules['heapq'] = heapq
+
 if sys.version_info[:3] == (2, 2, 0):
     __builtin__.True = (1 == 1)
     __builtin__.False = (1 == 0)
