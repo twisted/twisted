@@ -466,6 +466,44 @@ static PyObject *iocpcore_ConnectEx(iocpcore* self, PyObject *args) {
     return Py_BuildValue("ll", err, 0);
 }
 
+static PyObject *iocpcore_PostQueuedCompletionStatus(iocpcore* self, PyObject *args) {
+    int res;
+    DWORD err;
+    PyObject *object;
+    MyOVERLAPPED *ov;
+    if(!PyArg_ParseTuple(args, "O", &object)) {
+        return NULL;
+    }
+    if(!PyCallable_Check(object)) {
+        PyErr_SetString(PyExc_TypeError, "Callback must be callable");
+    }
+    ov = PyMem_Malloc(sizeof(MyOVERLAPPED));
+    if(!ov) {
+        PyErr_NoMemory();
+        return NULL;
+    }
+    memset(ov, 0, sizeof(MyOVERLAPPED));
+    Py_INCREF(object);
+    ov->callback = object;
+#ifdef SPEW
+    printf("calling PostQueuedCompletionStatus(0x%p)\n", ov);
+#endif
+    Py_BEGIN_ALLOW_THREADS;
+    res = PostQueuedCompletionStatus(self->iocp, 0, 0, (OVERLAPPED *)ov);
+    Py_END_ALLOW_THREADS;
+    err = WSAGetLastError();
+#ifdef SPEW
+    printf("    pqcs returned %d, err %d\n", res, err);
+#endif
+    if(!res && err != ERROR_IO_PENDING) {
+        return PyErr_SetFromWindowsErr(err);
+    }
+    if(res) {
+        err = 0;
+    }
+    return Py_BuildValue("ll", err, 0);
+}
+
 PyObject *iocpcore_AllocateReadBuffer(PyObject *self, PyObject *args)
 {
     int bufSize;
@@ -489,6 +527,8 @@ static PyMethodDef iocpcore_methods[] = {
     {"issueAcceptEx", (PyCFunction)iocpcore_AcceptEx, METH_VARARGS,
      "Issue an overlapped AcceptEx operation"},
     {"issueConnectEx", (PyCFunction)iocpcore_ConnectEx, METH_VARARGS,
+     "Issue an overlapped ConnectEx operation"},
+    {"issuePostQueuedCompletionStatus", (PyCFunction)iocpcore_PostQueuedCompletionStatus, METH_VARARGS,
      "Issue an overlapped ConnectEx operation"},
     {"getsockinfo", (PyCFunction)iocpcore_getsockinfo, METH_VARARGS,
      "Given a socket handle, retrieve its protocol info"},
