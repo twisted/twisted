@@ -20,6 +20,8 @@ def deferredGreenlet(func):
         return d
     return replacement
 
+class CalledFromMain(Exception):
+    pass
 
 def blockOn(d):
     """
@@ -27,8 +29,9 @@ def blockOn(d):
     XXX: If the result is a failure, raise its exception.
     """
     g = greenlet.getcurrent()
+    if g is greenlet.main:
+        raise CalledFromMain("You cannot call blockOn from the main greenlet.")
     def cb(r):
-        print "blockOnCB", r
         g.switch(r)
     d.addBoth(cb)
     return greenlet.main.switch()
@@ -53,111 +56,10 @@ class GreenletWrapper(object):
         original = getattr(wrappee, name)
         if callable(original):
             def wrapper(*a, **kw):
-                assert greenlet.getcurrent() is not greenlet.main
                 result = original(*a, **kw)
-                if isinstance(result, defer.Deferred):   
-                    return greenlet.greenlet(blockOn).switch(result)
+                if isinstance(result, defer.Deferred):
+                    return blockOn(result)
                 return result
             return wrapper
         return original
 
-class Asynchronous(object):
-    def syncResult(self, v):
-        return v
-
-    def asyncResult(self, n, v):
-        from twisted.internet import reactor
-        d = defer.Deferred()
-        reactor.callLater(n, d.callback, v)
-        return d
-    
-    def syncException(self):
-        1/0
-    
-    def asyncException(self, n):
-        from twisted.internet import reactor
-        def fail():
-            try:
-                1/0
-            except:
-                d.errback()
-        d = defer.Deferred()
-        reactor.callLater(n, fail)
-        return d
-
-def TEST():
-    """
-    Show off deferredGreenlet and blockOn.
-    """
-    from twisted.internet import reactor
-
-    FINISHED = []
-
-    import time
-    #let's make sure we're not blocking anywhere
-    def timer():
-        print "time!", time.time()
-        reactor.callLater(0.5, timer)
-    reactor.callLater(0, timer)
-
-    def getDeferred():
-        d = defer.Deferred()
-        reactor.callLater(3, d.callback, 'goofledorf')
-        print "blocking on", d
-        r = blockOn(d)
-        print "got", r, "from blocking on", d
-        return r
-
-    getDeferred = deferredGreenlet(getDeferred)
-
-
-    # below is our 'legacy' Twisted code that only knows about
-    # Deferreds, not crazy stackless stuff.
-
-    print "getDeferred is", getDeferred
-    d = getDeferred()
-    print "d is", d
-
-    def _cbJunk(r):
-        print "RESULT", r
-        FINISHED.append(None)
-        if len(FINISHED) == 2:
-            reactor.stop()
-
-    d.addCallback(_cbJunk)
-    print "kicking it off!"
-    
-    # And here is some code that doesn't want to be bothered with stupid
-    # trivialities like calling blockOn.
-    def magic():
-        o = GreenletWrapper(Asynchronous())
-        print o.syncResult(3), o.asyncResult(0.1, 4)
-        assert o.syncResult(3) == 3
-        assert o.asyncResult(0.1, 4) == 4
-        try:
-            o.syncException()
-        except ZeroDivisionError:
-            pass
-        else:
-            assert False
-        
-        try:
-            o.asyncException(0.1)
-        except ZeroDivisionError:
-            pass
-        else:
-            assert False
-        print '4 magic tests passed'
-
-    def f(result):
-        print 'great, bye'
-        FINISHED.append(None)
-        if len(FINISHED) == 2:
-            reactor.stop()
-    deferredGreenlet(magic)().addCallback(f)
-    
-    reactor.run()
-    
-
-if __name__ == '__main__':
-    TEST()
