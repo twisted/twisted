@@ -14,9 +14,14 @@
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
+from __future__ import nested_scopes
 from twisted.trial import unittest
 from twisted.internet import protocol, reactor
-from twisted.internet import ssl
+try:
+    import OpenSSL
+    from twisted.internet import ssl
+except ImportError:
+    OpenSSL = None
 import os
 import test_tcp
 
@@ -39,5 +44,5 @@ class ProperlyCloseFilesTestCase(test_tcp.ProperlyCloseFilesTestCase):
         
         self.totalConnections = 0
 
-    def testProperlyCloseFiles(self):
-        raise unittest.SkipTest, "OpenSSL does not work"
+if not OpenSSL:
+    del ProperlyCloseFilesTestCase
