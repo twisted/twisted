@@ -48,6 +48,120 @@
 	* twisted/scripts/twistd.py: Added ability to chroot. Moved directory
 	change to after loading of application.
 
+2002-9-19  Moshe Zadka <moshez@twistedmatrix.com>
+
+	* twisted/*: changed print to log.msg
+
+	* bin/* twisted/scripts/*.py: move code from bin/ to modules
+
+	* twisted/inetd/*.py: inetd server in twisted
+
+	* twisted/protocols/sux.py twisted/web/microdom.py: XML parsing
+
+	* twisted/conch/*.py: better logging and protocol support
+
+	* twisted/cred/*.py: deprecation fixes
+
+	* twisted/internet/app.py: add encryption
+
+	* twisted/internet/base.py: fix deprecation, add DelayedCall,
+	move to connect*  from client*
+
+	* twisted/internet/error.py: errno mapping works on more platforms, 
+	AlreadyCalled, AlreadyCancelled errors
+
+	* twisted/internet/gtkreactor.py: try requiring gtk1.2, timeout->idle
+
+	* twisted/internet/interfaces.py: added IDelayedCall IProcessTransports
+ 
+	* twisted/internet/javareactor.py: using failure, better dealing with 
+	connection losing, new connect* API
+
+	* twisted/internet/process.py: dealing better with ending
+
+	* twisted/internet/protocol.py: factories have a "noisy" attribute,
+	added ReconnectingClientFactory BaseProtocol
+
+	* twisted/internet/ptypro.py: fixed traceback
+
+	* twisted/internet/reactor.py: better guessing of default
+
+	* twisted/internet/tcp.py: failure
+ 
+	* twisted/internet/win32eventreactor.py: update to new API, support GUI
+
+	* twisted/manhole/service.py: fix deprecation
+ 
+	* twisted/news/database.py: fix to be 2.1 compat., generating 
+	message-id, bytes, lines, date headers, improved storage
+
+	* twisted/news/news.py: UsenetClientFactory, UsenetServerFactory
+
+	* twisted/persisted/marmalade.py: use twisted.web.microdom
+
+	* twisted/protocols/ftp.py: dito, data port uses new client API
+
+	* twisted/protocols/http.py: StringTransport instead of StringIO
+
+	* twisted/protocols/irc.py: stricter parsing, avoid flooding
+ 
+	* twisted/protocols/loopback.py: new reactor API, loopback over UNIX
+	sockets
+
+	* twisted/protocols/nntp.py: more lenient parsing, more protocol support
+
+	* twisted/protocols/oscar.py: new reactor API
+ 
+	* twisted/python/components.py: fix setAdapter add removeComponent
+ 
+	* twisted/python/failure.py: cleanFailure
+
+	* twisted/python/log.py: can now log multiple strings in one go
+
+	* twisted/python/logfile.py: fixed rotation
+
+	* twisted/python/rebuild.py: better 2.2 support
+
+	* twisted/python/util.py: getPassword
+
+	* twisted/scripts/mktap.py: better --help, --type, encryption
+
+	* twisted/spread/*.py: removed deprecation warnings
+
+	* twisted/spread/util.py: improved Pager
+
+	* twisted/tap/news.py: works saner now
+
+	* twisted/tap/ssh.py: can specify authorizer
+ 
+	* twisted/tap/words.py: can bind services to specific interfaces
+
+	* twisted/web/distrib.py: now works on java too
+
+	* twisted/web/domtemplate.py: improved cache
+
+	* twisted/web/error.py: ForbiddenResource
+
+	* twisted/web/html.py: lower-case tags
+
+	* twisted/web/server.py: use components
+
+	* twisted/web/static.py: added .flac, .ogg, properly 404/403,
+	lower-case tags
+
+	* twisted/web/twcgi.py: fixed for new process API
+
+	* twisted/web/widgets.py: lower-case tags
+
+	* twisted/web/xmlrpc.py: new abstraction for long running xml-rpc
+	commands, add __all__
+
+	* twisted/words/ircservice.py: new connectionLost API
+
+	* twisted/words/service.py: refactoring and error handling
+ 
+	* twisted/words/tendril.py: lots of fixes, it works now
+
 2002-09-17  Donovan Preston  <dp@twistedmatrix.com>
 
 	* Added better error reporting to WebMVC. To do this, I had to
