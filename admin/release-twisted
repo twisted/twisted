@@ -36,9 +36,18 @@ from twisted.python import usage
 import string, os, shutil
 
 class Options(usage.Options):
-    optParameters = [['version', 'v', None, "The version of this release."],
-                     ['release', 'r', os.path.expanduser('~/Releases'), "The directory where your Twisted release archive is (only relevant for --rel)."],
-                     ['cvsroot', 'c', '/cvs', 'The CVSROOT to export from. (only revelant for --exp).']]
+    optParameters = [['version', 'v', None,
+                      "The version of this release."],
+
+                     ['oldver', 'o', None,
+                      "The previous version to replace with the new version (only works with --upver)"],
+
+                     ['release', 'r', os.path.expanduser('~/Releases'),
+                      "The directory where your Twisted release archive is (only relevant for --rel)."],
+
+                     ['cvsroot', 'c', '/cvs', "The CVSROOT to export from. (only revelant for --exp)."],
+
+                     ['root', 'r', 'Twisted.CVS', "The directory that your CVS checkout is."]]
 
 
     longdesc = "Specify -v and all steps to execute; if no steps are given, default is '--exp --dist --docs --balls --rel'"
@@ -46,6 +55,15 @@ class Options(usage.Options):
     def __init__(self):
         usage.Options.__init__(self)
         self['commands'] = []
+
+    def opt_upver(self):
+        self['commands'].append('upver')
+
+    def opt_tag(self):
+        """`cvs tag -c <version>'s a CVS checkout.
+        Reqs: A `Twisted' directory."""
+        print "tooty"
+        self['commands'].append('tag')
 
     def opt_exp(self):
         """Exports Twisted from cvsroot as given with -c.
@@ -65,7 +83,7 @@ class Options(usage.Options):
     def opt_balls(self):
         """Creates tarballs.
         Reqs: Twisted-$ver exists."""
-        self['commands'].append('ball')
+        self['commands'].append('balls')
 
     def opt_rel(self):
         """Copies tarballs to ~/Releases.
@@ -85,13 +103,6 @@ def main():
         print "Please specify a version."
         sys.exit(2)
 
-    from twisted import copyright
-    if opts['version'] != copyright.version:
-        print '''Error: the version you passed in is not the same as copyright.version:
-        -v %s, copyright.version %s''' % (opts['version'], copyright.version)
-        print "Please make sure you've updated the README, the ChangeLog, and copyright.py!"
-        sys.exit(2)
-
     if not opts['commands']:
         opts['commands'] = ['exp', 'dist', 'docs', 'balls', 'rel']
 
@@ -99,16 +110,55 @@ def main():
          'docs': makeDocs,
          'dist': copyDist,
          'rel': release,
-         'balls': makeBalls}
+         'balls': makeBalls,
+		 'tag': tag,
+         'upver': updateVersions}
 
     for command in opts['commands']:
         d[command](opts)
 
+debug = 1
+
+def sh(command):
+    if debug:
+        if raw_input("%r ??" % command)[0].lower() != 'n':
+            os.system(command)
+        
+def replaceInFile(filename, oldstr, newstr):
+    sh("sed -e 's/%s/%s/' < %s > %s.new" % (oldstr, newstr, filename, filename))
+    sh('mv %s.new %s' % (filename,  filename))
+
+def updateVersions(opts):
+    print "updateVersions"
+    oldver = opts['oldver']
+    newver = opts['version']
+    r = opts['root']
+    os.chdir(r)
+    files = ('README', 'doc/howto/installing-twisted.html', 'twisted/copyright.py')
+    for file in files:
+        replaceInFile(file, oldver, newver)
+    sh('cvs commit %s' % ' '.join(files))
+    os.chdir('..')
+
+def tag(opts):
+    print "tag"
+    ver = opts['version']
+    os.chdir(opts['root'])
+    sh('cvs tag -c release-%s' % ver.replace('.', '_'))
+    os.chdir('..')
 
 def exportCVS(opts):
     root = opts['cvsroot']
     ver = opts['version']
-    os.system('cvs -d%s export -r release-%s Twisted' % (root, ver.replace('.', '_')))
+    sh('cvs -d%s export -r release-%s Twisted' % (root, ver.replace('.', '_')))
+
+    sys.path.insert(0, os.path.abspath('Twisted'))
+    from twisted import copyright
+    if opts['version'] != copyright.version:
+        print '''Error: the version you passed in is not the same as copyright.version:
+        -v %s, copyright.version %s''' % (opts['version'], copyright.version)
+        print "Please make sure you've updated the README, the ChangeLog, and copyright.py!"
+        sys.exit(2)
 
 def copyDist(opts):
     ver = opts['version']
@@ -133,19 +183,19 @@ def makeDocs(opts):
         sys.exit(2)
         
     print "makeDocs: HappyDoc."
-    os.system('happydoc --author="Glyph Lefkowitz <glyph@twistedmatrix.com>" '
+    sh('happydoc --author="Glyph Lefkowitz <glyph@twistedmatrix.com>" '
               '--no_comments -t "Twisted Documentation" %s > /dev/null' % tdir)
 
     print "makeDocs: generate-domdocs."
     os.chdir("%s" % tdir)
-    os.system('./admin/generate-domdocs -v %s' % ver)
-    os.system('./admin/generate-domdocs -v %s --docsdir doc/specifications' % ver)
+    sh('./admin/generate-domdocs -v %s' % ver)
+    sh('./admin/generate-domdocs -v %s --docsdir doc/specifications' % ver)
     os.chdir("..")
     
     #shwack the crap
     print "copyDist: Stripping *.pyc, .cvsignore"
     for x in ['*.pyc', '.cvsignore']:
-        os.system('find %s -name "%s" | xargs rm -f' % (tdir, x))
+        sh('find %s -name "%s" | xargs rm -f' % (tdir, x))
 
 
 
@@ -161,9 +211,9 @@ def makeBalls(opts):
     # NoDocs
     ##
     print "makeBalls: Moving out the documentation for NoDocs."
-    os.system('mv %s/doc TwistedDocs-%s' % (tdir, ver))
+    sh('mv %s/doc TwistedDocs-%s' % (tdir, ver))
     print "makeBalls: Twisted_NoDocs."
-    map(lambda x: os.system(x % (ver, tdir)),
+    map(lambda x: sh(x % (ver, tdir)),
         ['tar czf   Twisted_NoDocs-%s.tar.gz  %s',
          'tar cjf   Twisted_NoDocs-%s.tar.bz2 %s',
          'zip -9 -r Twisted_NoDocs-%s.zip     %s > /dev/null'])
@@ -177,10 +227,10 @@ def makeBalls(opts):
     # TwistedDocs
     ##
     print "makeBalls: TwistedDocs"
-    os.system('mv doc/* TwistedDocs-%s/api' % ver)
-    os.system('rmdir doc')
+    sh('mv doc/* TwistedDocs-%s/api' % ver)
+    sh('rmdir doc')
 
-    map(lambda x: os.system(x % ((ver,)*2)),
+    map(lambda x: sh(x % ((ver,)*2)),
         ['tar czf   TwistedDocs-%s.tar.gz  TwistedDocs-%s',
          'tar cjf   TwistedDocs-%s.tar.bz2 TwistedDocs-%s',
          'zip -9 -r TwistedDocs-%s.zip     TwistedDocs-%s > /dev/null'])
@@ -190,8 +240,8 @@ def makeBalls(opts):
     # Fullball
     ##
     print "makeBalls: Twisted"
-    os.system('mkdir %s/doc; mv TwistedDocs-%s/* %s/doc' % (tdir, ver, tdir))
-    map(lambda x: os.system(x % (tdir, tdir)),
+    sh('mkdir %s/doc; mv TwistedDocs-%s/* %s/doc' % (tdir, ver, tdir))
+    map(lambda x: sh(x % (tdir, tdir)),
         ['tar czf   %s.tar.gz  %s',
          'tar cjf   %s.tar.bz2 %s',
          'zip -9 -r %s.zip     %s > /dev/null'])
@@ -213,7 +263,7 @@ def release(opts):
         os.mkdir("%s/old" % rel)
 
     print "release: Moving old releases to %s/old" % rel
-    os.system('mv %s/*.tar.gz %s/*.zip %s/old' % ((rel,)*3))
+    sh('mv %s/*.tar.gz %s/*.zip %s/old' % ((rel,)*3))
 
     print "release: Copying Twisted_NoDocs."
     map(lambda x: shutil.copy(x % ver, rel),
