@@ -182,16 +182,22 @@ class DNSServerFactory(protocol.ServerFactory):
     def handleInverseQuery(self, message, protocol, address):
         message.rCode = dns.ENOTIMP
         self.sendReply(protocol, message, address)
+        if self.verbose:
+            log.msg("Inverse query from %r" % (address,))
 
 
     def handleStatus(self, message, protocol, address):
         message.rCode = dns.ENOTIMP
         self.sendReply(protocol, message, address)
+        if self.verbose:
+            log.msg("Status request from %r" % (address,))
 
 
     def handleOther(self, message, protocol, address):
         message.rCode = dns.ENOTIMP
         self.sendReply(protocol, message, address)
+        if self.verbose:
+            log.msg("Unknown op code (%d) from %r" % (message.opCode, address))
 
 
     def messageReceived(self, message, protocol, address = None):
