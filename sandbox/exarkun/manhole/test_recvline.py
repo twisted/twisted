@@ -1,7 +1,9 @@
 
+import sys, os
+
 import insults, recvline
 
-from twisted.python import log
+from twisted.python import log, reflect
 from twisted.internet import defer
 from twisted.trial import unittest
 from twisted.test.proto_helpers import StringTransport
@@ -388,6 +390,40 @@ class _TelnetMixin(_BaseMixin):
         self.clientTransport.clearBuffer()
         self.serverTransport.clearBuffer()
 
+import demo_stdio
+
+class _StdioMixin(_BaseMixin):
+    def setUp(self):
+        from twisted.internet import reactor
+        recvlineClient = helper.TerminalBuffer()
+        insultsClient = insults.ClientProtocol(lambda: recvlineClient)
+        processClient = demo_stdio.TerminalProcessProtocol(insultsClient)
+
+        exe = sys.executable
+        module = demo_stdio.__file__
+        args = ["python2.3", module, reflect.qual(self.serverProtocol)]
+        env = {"PYTHONPATH": os.environ.get("PYTHONPATH", "")}
+        clientTransport = reactor.spawnProcess(processClient, exe, args, env=env)
+
+        if processClient.onConnection is not None:
+            unittest.deferredResult(processClient.onConnection)
+
+        self.recvlineClient = recvlineClient
+        self.processClient = processClient
+        self.clientTransport = clientTransport
+
+    def tearDown(self):
+        self.clientTransport.signalProcess("KILL")
+
+    def _testwrite(self, bytes):
+        self.processClient.write(bytes)
+
+    def _emptyBuffers(self):
+        # Duuh... I dunno
+        from twisted.internet import reactor
+        for i in range(100):
+            reactor.iterate(0.01)
+
 class RecvlineLoopbackMixin:
     serverProtocol = EchoServer
 
@@ -458,6 +494,9 @@ class RecvlineLoopbackTelnet(_TelnetMixin, unittest.TestCase, RecvlineLoopbackMi
 class RecvlineLoopbackSSH(_SSHMixin, unittest.TestCase, RecvlineLoopbackMixin):
     pass
 
+class RecvlineLoopbackStdio(_StdioMixin, unittest.TestCase, RecvlineLoopbackMixin):
+    pass
+
 class HistoricRecvlineLoopbackMixin:
     serverProtocol = EchoServer
 
@@ -481,4 +520,7 @@ class HistoricRecvlineLoopbackTelnet(_TelnetMixin, unittest.TestCase, HistoricRe
     pass
 
 class HistoricRecvlineLoopbackSSH(_SSHMixin, unittest.TestCase, HistoricRecvlineLoopbackMixin):
+    pass
+
+class HistoricRecvlineLoopbackStdio(_StdioMixin, unittest.TestCase, HistoricRecvlineLoopbackMixin):
     pass
