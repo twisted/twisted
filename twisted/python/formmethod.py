@@ -284,7 +284,7 @@ class Submit(Choice):
         self.reset = reset
 
     def coerce(self, value):
-        if self.allowNone and value == None:
+        if self.allowNone and not value:
             return None
         else:
             return Choice.coerce(self, value)
