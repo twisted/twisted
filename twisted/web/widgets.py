@@ -426,6 +426,12 @@ class Form(StreamWidget):
         self.format(form, write, request)
 
 
+class DataWidget(Widget):
+    def __init__(self, data):
+        self.data = data
+    def display(self, request):
+        return [self.data]
+
 class Time(Widget):
     def display(self, request):
         return [time.ctime(time.time())]
