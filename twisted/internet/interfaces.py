@@ -1036,8 +1036,9 @@ class IUDPTransport(Interface):
     def write(self, packet, addr=None):
         """Write packet to given address.
 
-        @param addr: a tuple of (host, port). For connected transports must
+        @param addr: a tuple of (ip, port). For connected transports must
                      be the address the transport is connected to, or None.
+                     In non-connected mode this is mandatory.
         @raise L{MessageLengthError<twisted.internet.error.MessageLengthError>},
                L{ConnectInProgressError<twisted.internet.error.ConnectInProgressError>}
         """

@@ -30,6 +30,7 @@ import os
 import socket
 import operator
 import struct
+import warnings
 
 from twisted.python.runtime import platformType
 if platformType == 'win32':
@@ -128,7 +129,7 @@ class Port(base.BasePort):
     def write(self, datagram, addr=None):
         """Write a datagram.
 
-        @param addr: should be a tuple (host, port), can be None in connected mode.
+        @param addr: should be a tuple (ip, port), can be None in connected mode.
         """
         if self._connected:
             if self._connectedAddr == None:
@@ -148,6 +149,8 @@ class Port(base.BasePort):
                     raise
         else:
             assert addr != None
+            if not addr[0].replace(".", "").isdigit():
+                warnings.warn("Please only pass IPs to write(), not hostnames", DeprecationWarning, stacklevel=2)
             try:
                 return self.socket.sendto(datagram, addr)
             except socket.error, se:

@@ -59,7 +59,9 @@ reactor.run()
 
     <p>The protocol's <code class="python">transport</code> attribute will implement the
     <code class="API">twisted.internet.interfaces.IUDPTransport</code>
-    interface.</p>
+    interface. Notice that the <code class="python">host</code> argument should be an IP,
+    not a hostname. If you only have the hostname use <code class="python">reactor.resolve()</code>
+    to resolve the address (see <code class="API">twisted.internet.interfaces.IReactorCore.resolve</code>).</p>
 
 
     <h2>Connected UDP</h2>
