@@ -17,24 +17,27 @@
 """A thread pool that is integrated with the Twisted event loop."""
 
 # Sibling Import
-import task
+import task, main
 
 # Twisted Import
-from twisted.python import threadpool, threadable
+from twisted.python import threadpool, threadable, log
 
+if not threadable.threaded:
+    print 'warning! importing twisted.internet.threadtask in single-threaded mode'
 
 class ThreadDispatcher(threadpool.ThreadPool):
     """A thread pool that is integrated with the Twisted event loop.
-    
+
     The difference from ThreadPool is that callbacks are run in the main IO
     event loop thread, and are thus inherently thread-safe.
-    
+
     You probably want your instance to be shutdown when Twisted is shut down:
-    
+
         from twisted.internet import main
-        tpool = TwistedThreads()
+        from twisted.internet import threadtask
+        tpool = ThreadDispatcher()
         main.addShutdown(tpool.stop)
-    
+
     """
     
     def __init__(self, *args, **kwargs):
@@ -54,7 +57,17 @@ class ThreadDispatcher(threadpool.ThreadPool):
         
         The callback function will be called in the main event loop thread.
         """
+        self.dispatchApply(owner, callback, errback, func, args, kw)
+
+    def dispatchApply(self, owner, callback, errback, func, args, kw):
         self.dispatch(owner, self._runWithCallback, callback, errback, func, args, kw)
 
+
+theDispatcher = ThreadDispatcher()
+def dispatchApply(callback, errback, func, args, kw):
+    theDispatcher.dispatchApply(log.logOwner.owner(), callback, errback, func, args, kw)
+def dispatch(callback, errback, func, *args, **kw):
+    dispatchApply(callback, errback, func, args, kw)
+main.addShutdown(theDispatcher.stop)
 
 threadable.synchronize(ThreadDispatcher)

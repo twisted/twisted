@@ -21,11 +21,6 @@ Test cases for twisted.reality module.
 
 from pyunit import unittest
 
-# Hackery to allow this to run whether or not twisted.threadable has
-# been previously initialized
-from twisted.python import threadable
-# /Hackery
-
 from twisted import reality
 
 class ContainmentTestCase(unittest.TestCase):

@@ -138,18 +138,21 @@ class Summer(Accessor):
         Accessor.reallySet(self,k,v)
 
 class Promise:    
-    """ I represent an object not yet available. Methods called on me
-    will be queued and sent as soon as the object becomes available.
-    Typically my __become__ method is registered as a callback with
+    """I represent an object not yet available.
+
+    Methods called on me will be queued and sent as soon as the object becomes
+    available.  Typically my __become__ method is registered as a callback with
     some event that will return my new identity.
     """
     def __init__(self):
         self.calls = []
+
     def __become__(self, new_self):
         for c in self.calls:
             apply(getattr(new_self, c[0]), c[1])
         self.__class__ = new_self.__class__
         self.__dict__ = new_self.__dict__
+
     def __getattr__(self, key):
         return QueueMethod(key, self.calls)
 

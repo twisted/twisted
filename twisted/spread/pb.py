@@ -18,8 +18,8 @@
 """
 Perspective Broker
 
-    "This isn't a professional opinion, but it's probably got enough
-    internet to kill you." --glyph
+    \"This isn\'t a professional opinion, but it's probably got enough
+    internet to kill you.\" --glyph
 
  Introduction
 
@@ -83,7 +83,7 @@ class Serializable:
     Broker will probably not want to directly subclass Serializable; the
     Flavors of transferable objects are listed below.
 
-    What it means to be "serializable" is that an object can be
+    What it means to be \"Serializable\" is that an object can be
     passed to or returned from a remote method.  Certain basic types
     (dictionaries, lists, tuples, numbers, strings) are serializable by
     default; however, classes need to choose a specific serialization
@@ -873,48 +873,38 @@ class _NetUnjellier(jelly._Unjellier):
         """
         global copyTags
         inst = copyTags[rest[0]]()
-        self._reference(inst)
-        return jelly._Promise(self, inst, "copy", rest), inst
-
-    def _postunjelly_copy(self, rest, inst):
         state = self.unjelly(rest[1])
         inst.setCopyableState(state)
+        return inst
 
     def _unjelly_cache(self, rest):
         global copyTags
         luid = rest[0]
         cNotProxy = copyTags[rest[1]]()
         cProxy = RemoteCacheProxy(self.broker, cNotProxy, luid)
-        self._reference(cProxy)
         self.broker.cacheLocally(luid, cNotProxy)
-        return jelly._Promise(self, cNotProxy, "cache", rest), cProxy
-
-    def _postunjelly_cache(self, rest, inst):
         state = self.unjelly(rest[2])
-        inst.setCopyableState(state)
+        cNotProxy.setCopyableState(state)
+        return cProxy
 
     def _unjelly_cached(self, rest):
         luid = rest[0]
         cNotProxy = self.broker.cachedLocallyAs(luid)
         cProxy = RemoteCacheProxy(self.broker, cNotProxy, luid)
-        self._reference(cProxy)
-        return jelly._FalsePromise(), cProxy
+        return cProxy
 
     def _unjelly_lcache(self, rest):
         luid = rest[0]
         obj = self.broker.remotelyCachedForLUID(luid)
-        self._reference(obj)
-        return jelly._FalsePromise(), obj
+        return obj
 
     def _unjelly_remote(self, rest):
         obj = RemoteReference(self.broker.getPerspective(), self.broker, rest[0], 1)
-        self._reference(obj)
-        return jelly._FalsePromise(), obj
+        return obj
 
     def _unjelly_local(self, rest):
         obj = self.broker.localObjectForID(rest[0])
-        self._reference(obj)
-        return jelly._FalsePromise(), obj
+        return obj
 
 
 class Broker(banana.Banana):

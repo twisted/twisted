@@ -197,11 +197,33 @@ def foo2bar(f):
         separate, external bindings package and make your twisted code depend
         on it.
       </p>
+      <h3>Recommendations</h3>
+      <p>
+        These things aren't necessarily standardizeable (in that code can't be
+        easily checked for compliance) but are a good idea to keep in mind
+        while working on Twisted.
+      </p>
+      <p>
+        If you're going to work on a fragment of the Twisted codebase, please
+        consider finding a way that you would *use* such a fragment in daily
+        life.  I use the Twisted Web server on the main TML website, and aside
+        from being good PR, this encourages you to actively maintain and
+        improve your code, as the little everyday issues with using it become
+        apparent.
+      </p>
+      <p>
+        Twisted is a <strong>big</strong> codebase!  If you're refactoring
+        something, please make sure to recursively grep for the names of
+        functions you're changing.  You may be surprised to learn where
+        something is called.  Especially if you are moving or renaming a
+        function, class, method, or module, make sure that it won't instantly
+        break other code.
+      </p>
     <hr>
     <address><a href="mailto:glyph@helix.twistedmatrix.com">Glyph Lefkowitz</a></address>
 <!-- Created: Thu Apr 26 07:53:26 CDT 2001 -->
 <!-- hhmts start -->
-Last modified: Thu Sep  6 02:59:43 CDT 2001
+Last modified: Mon Oct 22 15:19:00 CDT 2001
 <!-- hhmts end -->
   </body>
 </html>

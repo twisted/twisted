@@ -235,7 +235,8 @@ def init(with_threads):
     global threadingmodule, threadmodule
     if threaded == with_threads:
         return
-    assert threaded is None
+    if threaded is not None:
+        raise AssertionError("You may not initialize the 'threadable' module twice.")
     threaded = with_threads
     if threaded:
         Waiter = _ThreadedWaiter

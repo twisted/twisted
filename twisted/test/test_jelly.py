@@ -26,18 +26,26 @@ class A:
     """
     dummy class
     """
+    def amethod(self):
+        pass
 
+def afunc(self):
+    pass
 
 class B:
     """
     dummy class
     """
+    def bmethod(self):
+        pass
 
 
 class C:
     """
     dummy class
     """
+    def cmethod(self):
+        pass
 
 
 class SimpleJellyTest:
@@ -76,6 +84,17 @@ class JellyTestCase(unittest.TestCase):
         z = jelly.unjelly(s)
         assert z[0] is z[1]
         assert z[0][0] is z
+
+    def testStressReferences(self):
+        reref = []
+        toplevelTuple = ({'list': reref}, reref)
+        reref.append(toplevelTuple)
+        s = jelly.jelly(toplevelTuple)
+        print s
+        z = jelly.unjelly(s)
+        assert z[0]['list'] is z[1]
+        assert z[0]['list'][0] is z
+
 
     def testPersistentStorage(self):
         perst = [{}, 1]
@@ -116,6 +135,22 @@ class JellyTestCase(unittest.TestCase):
         except jelly.InsecureJelly:
             # OK, works
             pass
+
+    def testLotsaTypes(self):
+        """
+        test for all types currently supported in jelly
+        """
+        a = A()
+        # instance
+        jelly.unjelly(jelly.jelly(a))
+        a = A()
+        jelly.unjelly(jelly.jelly(a.amethod)) # method
+        jelly.unjelly(jelly.jelly(afunc)) # function
+        jelly.unjelly(jelly.jelly([1,2,3])) # list
+        jelly.unjelly(jelly.jelly('test')) # string
+        jelly.unjelly(jelly.jelly(50.3)) # float
+        jelly.unjelly(jelly.jelly((1, 2, 3))) # tuple
+        # TODO: More thorough testing here.
 
     def testClassSecurity(self):
         """

@@ -15,7 +15,19 @@
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
-import os
+import os, sys
+
+def addPluginDir():
+    import twisted
+
+    systemPlugins = os.path.join(os.path.dirname(os.path.dirname(
+                            os.path.abspath(twisted.__file__))), 'plugins')
+    userPlugins = os.path.expanduser("~/TwistedPlugins")
+    confPlugins = os.path.expanduser('~/.twisted')
+    # Removed by Moshe's request
+    # currentPlugins = os.path.abspath("TwistedPlugins")
+    allPlugins = [systemPlugins, userPlugins, confPlugins] #, currentPlugins]
+    sys.path.extend(allPlugins)
 
 def sibpath(path, sibling):
     """Return the path to a sibling of a file in the filesystem.

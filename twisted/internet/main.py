@@ -540,18 +540,6 @@ def installWaker():
 if threadable.threaded and platform.getType() != 'java':
     installWaker()
 
-def addPluginDir():
-    import twisted
-
-    systemPlugins = os.path.join(os.path.dirname(os.path.dirname(
-                            os.path.abspath(twisted.__file__))), 'plugins')
-    userPlugins = os.path.expanduser("~/TwistedPlugins")
-    confPlugins = os.path.expanduser('~/.twisted')
-    # Removed by Moshe's request
-    # currentPlugins = os.path.abspath("TwistedPlugins")
-    allPlugins = [systemPlugins, userPlugins, confPlugins] #, currentPlugins]
-    sys.path.extend(allPlugins)
-
 
 # Sibling Import
 import process

@@ -33,7 +33,7 @@ import sentence
 import source
 
 # Twisted Imports
-from twisted.python import threadable, observable, reflect
+from twisted.python import observable, reflect
 from twisted.protocols import protocol
 from twisted.persisted import styles
 # backward compatibility
@@ -106,15 +106,6 @@ class Thing(observable.Publisher,
     is unspecified, the reality of this object will be set to the
     value of the module-global '_default'.
     """
-
-    # This is a list of synchronized method names.
-    synchronized = [
-        'execute',
-        'set_location',
-        'set_name',
-        'set_displayName',
-        'set_reality',
-        ]
 
     # Version: this is independant of the twisted reality version; it
     # is important so that the pickles can be re-read and frobbed as
@@ -1485,14 +1476,6 @@ class Thing(observable.Publisher,
 
         dct['description'] = d
 
-        # Since this class is synchronized, it may have allocated a
-        # lock.  It's certainly not necessary to keep track of that.
-
-        if dct.has_key('_threadable_lock'):
-            del dct['_threadable_lock']
-
-        # whew.  let's just pretend like THAT didn't happen.
-
         # oh by the way, this is more for human readability than
         # anything.  since you can end up with [...] lists and what
         # have you.
@@ -1520,5 +1503,4 @@ class Thing(observable.Publisher,
 
 # End of Thing
 
-threadable.synchronize(Thing)
 observable.registerWhenMethods(Thing)

@@ -35,17 +35,27 @@ except:
     instancemethod = PyMethod
 
 None_atom = "None"                  # N
+# code
 class_atom = "class"                # c
-dereference_atom = 'dereference'    # D
-dictionary_atom = "dictionary"      # d
-function_atom = "function"          # f
-instance_atom = 'instance'          # i
-list_atom = 'list'                  # l
 module_atom = "module"              # m
+function_atom = "function"          # f
+
+# references
+dereference_atom = 'dereference'    # D
 persistent_atom = 'persistent'      # p
 reference_atom = 'reference'        # r
-# sexp_atom = 'sexp'                  # s
+
+# mutable collections
+dictionary_atom = "dictionary"      # d
+list_atom = 'list'                  # l
+
+# immutable collections
+#   (assignment to __dict__ and __class__ still might go away!)
 tuple_atom = "tuple"                # t
+instance_atom = 'instance'          # i
+
+
+# errors
 unpersistable_atom = "unpersistable"# u
 
 typeNames = {
@@ -61,6 +71,7 @@ typeNames = {
     types.FunctionType: "function",
     types.ModuleType: "module",
     types.InstanceType: "instance",
+    types.MethodType: "instance_method",
     types.NoneType: "None",
     }
 
@@ -340,218 +351,134 @@ class _Jellier:
         sxp.append(reason)
         return sxp
             
-
-class _FalsePromise:
-    """(internal)
-    this is a no-op promise for immutable objects"""
+class NotKnown:
     def __init__(self):
-        """(internal)
-        do nothing
-        """
+        self.dependants = []
 
-    def keep(self):
-        """Do nothing, return false.
-        """
-        return 0
+    def addDependant(self, mutableObject, key):
+        self.dependants.append( (mutableObject, key) )
 
-class _Promise:
-    """(internal)
-    This is a function which is used to aid in the unserialization of
-    self-referential immutable objects.
-    """
-    def __init__(self, unjellier, preobj, type, rest):
-        """Initialize.
-        """
-        
-        self.unjellier = unjellier
-        self.preobj = preobj
-        self.type = type
-        self.rest = rest
-    
-    kept = 0
-    
-    def keep(self):
-        """Actually do the work, but only once.
+    def resolveDependants(self, newObject):
+        for mut, key in self.dependants:
+            mut[key] = newObject
+            if isinstance(newObject, NotKnown):
+                newObject.addDependant(mut, key)
 
-        If I did any work, return true, otherwise return false.
-        """
-        if not self.kept:
-            kept = 1
-            method = getattr(self.unjellier, "_postunjelly_%s" % self.type)
-            method(self.rest, self.preobj)
-            return 1
-        return 0
+    def __hash__(self):
+        assert 0, "I am not to be used as a dictionary key."
 
 
-class _ExternalPromise:
-    ### I don't know how to do this elegantly.
-    def __init__(self, method, arg, unjellier):
-        self.unjellier = unjellier
-        self.method = method
-        self.arg = arg
+class _Tuple(NotKnown):
+    def __init__(self, l):
+        NotKnown.__init__(self)
+        self.l = l
+        self.locs = []
+        for idx in xrange(len(l)):
+            if isinstance(l[idx], NotKnown):
+                self.locs.append(idx)
+                l[idx].addDependant(self, idx)
 
-    kept = 0
-    def keep(self):
-        if not self.kept:
-            self.kept = 1
-            self.method(self.arg, self.unjellier)
-            del self.method
-            return 1
-        return 0
-    
+    def __setitem__(self, n, obj):
+        self.l[n] = obj
+        if not isinstance(obj, NotKnown):
+            self.locs.remove(n)
+            if not self.locs:
+                self.resolveDependants(tuple(self.l))
+
+class _Dereference(NotKnown):
+    def __init__(self, id):
+        NotKnown.__init__(self)
+        self.id = id
+
 class _Unjellier:
-    """(internal) I represent the state of a serialization call.
-    """
     def __init__(self, taster, persistentLoad):
-        """(internal) initialize.
-        """
-        self._references = {}
         self.taster = taster
         self.persistentLoad = persistentLoad
-
-    def _unjelly(self, obj):
-        """(internal)
-        Unserialize a single object.  This may be deeply recursive.
-        """
-        if isinstance(obj, types.ListType):
-            typ = str(obj[0])
-            if not self.taster.isTypeAllowed(typ):
-                raise InsecureJelly("type not allowed: %s" % repr(typ))
-            rest = obj[1:]
-            method = getattr(self, "_unjelly_%s" % typ)
-            return method(rest)
-        else:
-            return _FalsePromise(), obj
+        self.references = {}
 
     def unjelly(self, obj):
-        """(internal)
-        Unserialize a single object and keep any promise it makes (e.g. fully
-        unserialize it, even if it's mutable)
-        """
-        promise, obj = self._unjelly(obj)
-        promise.keep()
-        return obj
+        return self._unjelly(obj)
 
-    def _unjelly_None(self, rest):
-        """(internal)
-        Return `None'.
-        """
-        self._reference(None)
-        return _FalsePromise(), None
+    def _unjelly(self, obj):
+        if type(obj) is not types.ListType:
+            return obj
+        jelType = obj[0]
+        if not self.taster.isTypeAllowed(jelType):
+            raise InsecureJelly(jelType)
+        thunk = getattr(self, '_unjelly_%s'%jelType)
+        ret = thunk(obj[1:])
+        return ret
 
-    def _unjelly_persistent(self, rest):
-        """(internal)
+    def _unjelly_None(self, exp):
+        return None
 
-        WARNING!  This source code for this method may cause your eyeballs to
-        melt.
-        """
-        if self.persistentLoad:
-            pid = rest[0]
-            pload = self.persistentLoad(rest[0],self)
-            # normally it should return instances!  PersistentStore is only
-            # called with instances.
-            if type(pload) is not types.InstanceType:
-                # eyeball meltation in progress
-                assert ((type(pload) == types.TupleType)
-                        and (len(pload) == 2)
-                        and (isinstance(pload[0], _ExternalPromise))), "tricky pload done wrong!"
-                self._reference(pload[1])
-                return pload
-            return _FalsePromise(), pload
+    def unjellyInto(self, obj, loc, jel):
+        o = self._unjelly(jel)
+        if isinstance(o, NotKnown):
+            o.addDependant(obj, loc)
+        obj[loc] = o
+        return o
+
+    def _unjelly_dereference(self, lst):
+        refid = lst[0]
+        x = self.references.get(refid)
+        if x is not None:
+            return x
+        der = _Dereference(refid)
+        self.references[refid] = der
+        return der
+
+    def _unjelly_reference(self, lst):
+        refid = lst[0]
+        exp = lst[1]
+        o = self._unjelly(exp)
+        ref = self.references.get(refid)
+        if (ref is None):
+            self.references[refid] = o
+        elif isinstance(ref, NotKnown):
+            ref.resolveDependants(o)
+            self.references[refid] = o
         else:
-            return _FalsePromise(), Unpersistable("persistent callback not found")
-            
+            assert 0, "Multiple references with same ID!"
+        return o
+
+    def _unjelly_tuple(self, lst):
+        l = range(len(lst))
+        finished = 1
+        for elem in l:
+            if isinstance(self.unjellyInto(l, elem, lst[elem]), NotKnown):
+                finished = 0
+        if finished:
+            return tuple(l)
+        else:
+            return _Tuple(l)
+
+    def _unjelly_list(self, lst):
+        l = range(len(lst))
+        for elem in l:
+            self.unjellyInto(l, elem, lst[elem])
+        return l
+
+    def _unjelly_dictionary(self, lst):
+        d = {}
+        for k, v in lst:
+            key = self._unjelly(k)
+            if isinstance(key, NotKnown):
+                raise "dictionary keys restricted until further notice"
+            self.unjellyInto(d, key, v)
+        return d
+
+
     def _unjelly_module(self, rest):
-        """(internal)
-        Unjelly a module.
-        """
         moduleName = rest[0]
         if type(moduleName) != types.StringType:
             raise InsecureJelly("Attempted to unjelly a module with a non-string name.")
         if not self.taster.isModuleAllowed(moduleName):
             raise InsecureJelly("Attempted to unjelly module named %s" % repr(moduleName))
-        mod = __import__(moduleName,{},{},"x")
-        self._reference(mod)
-        return _FalsePromise(), mod
-
-    def _unjelly_list(self, rest):
-        """(internal)
-        make a list.
-        """
-        lst = []
-        self._reference(lst)
-        return _Promise(self, lst, 'list', rest), lst
-    
-    def _postunjelly_list(self, rest, lst):
-        """(internal)
-        check it twice.
-        """
-        for item in rest:
-            obj = self.unjelly(item)
-            lst.append(obj)
-
-    _refid = None
-    
-    def _reference(self, obj):
-        """(internal)
-        Cache a reference so it may be referred to later in the stream.
-        """
-        if self._refid is not None:
-            self._references[self._refid] = obj
-            del self._refid
-        
-    def _setReference(self, refid):
-        """(internal)
-        Set the `_refid' attribute; this gets called before a call to
-        _reference in order to indicate that the next unserialized object
-        *will* be referred to later in the stream.
-        """
-        self._refid = refid
-        
-    def _unjelly_reference(self, rest):
-        """(internal)
-        Unserialize a reference (see _setReference and _reference calls)
-        """
-        refid = rest[0]
-        assert type(refid) == types.IntType, "reference IDs must be integers."
-        self._setReference(refid)
-        return self._unjelly(rest[1])
-
-    def _unjelly_dereference(self, rest):
-        """(internal)
-        Unserialize a reference to a previous element in the stream, made with
-        _unjelly_reference.
-        """
-        refid = rest[0]
-        return _FalsePromise(), self._references[refid]
-
-    def _unjelly_instance(self, rest):
-        """(internal)
-        Unjelly an instance.
-        """
-        inst = _Dummy()
-        self._reference(inst)
-        clz = self.unjelly(rest[0])
-        if type(clz) is not types.ClassType:
-            raise InsecureJelly("Instance found with non-class class.")
-        inst.__class__ = clz
-        return _Promise(self, inst, "instance", rest), inst
-    
-    def _postunjelly_instance(self, rest, inst):
-        """(internal)
-        Populate an instance.
-        """
-        clz = inst.__class__
-        state = self.unjelly(rest[1])
-        if hasattr(clz, "__setstate__"):
-            inst.__setstate__(state)
-        else:
-            inst.__dict__ = state
+        mod = __import__(moduleName, {}, {},"x")
+        return mod
 
     def _unjelly_class(self, rest):
-        """(internal)
-        unjelly a class.
-        """
         mod = self.unjelly(rest[0])
         if type(mod) is not types.ModuleType:
             raise InsecureJelly("class has a non-module module")
@@ -561,35 +488,44 @@ class _Unjellier:
             raise InsecureJelly("class %s unjellied to something that isn't a class: %s" % (repr(name), repr(klaus)))
         if not self.taster.isClassAllowed(klaus):
             raise InsecureJelly("class not allowed: %s" % str(klaus))
-        self._reference(klaus)
-        return _FalsePromise(), klaus
+        return klaus
 
+    def _unjelly_function(self, rest):
+        module = self.unjelly(rest[1])
+        if type(module) is not types.ModuleType:
+            raise InsecureJelly("function references a non-module module")
+        function = getattr(module, rest[0])
+        return function
 
-    def _unjelly_dictionary(self, rest):
-        """(internal)
-        unjelly a dictionary
-        """
-        dict = {}
-        self._reference(dict)
-        return _Promise(self, dict, "dictionary", rest), dict
+    def _unjelly_persistent(self, rest):
+        if self.persistentLoad:
+            pid = rest[0]
+            pload = self.persistentLoad(rest[0],self)
+            return pload
+        else:
+            return Unpersistable("persistent callback not found")
 
+    def _unjelly_instance(self, rest):
+        inst = _Dummy()
+        clz = self.unjelly(rest[0])
+        if type(clz) is not types.ClassType:
+            raise InsecureJelly("Instance found with non-class class.")
+        state = self.unjelly(rest[1])
+        if hasattr(clz, "__setstate__"):
+            inst.__setstate__(state)
+        else:
+            inst.__dict__ = state
+        return inst
 
-    def _postunjelly_dictionary(self, rest, dict):
-        """(internal)
-        populate a dictionary
-        """
-        for kvp in rest:
-            key = self.unjelly(kvp[0])
-            val = self.unjelly(kvp[1])
-            dict[key] = val
-
+    def _unjelly_unpersistable(self, rest):
+        return Unpersistable(rest[0])
 
     def _unjelly_method(self, rest):
         ''' (internal) unjelly a method
         '''
         im_name = rest[0]
-        promise, im_self = self._unjelly(rest[1])
-        im_class = self.unjelly(rest[2])
+        im_self = self._unjelly(rest[1])
+        im_class = self._unjelly(rest[2])
         if im_class.__dict__.has_key(im_name):
             if im_self is None:
                 im = getattr(im_class, im_name)
@@ -598,59 +534,9 @@ class _Unjellier:
                                     im_self,
                                     im_class)
         else:
-            # perhaps, getattr(im_self, im_name) ... 
             raise 'instance method changed'
-        self._reference(im)
-        promise.keep()
-        return _FalsePromise(), im
+        return im
 
-    def _unjelly_function(self, rest):
-        """(internal)
-        Unserialize a function.
-        """
-        module = self.unjelly(rest[1])
-        if type(module) is not types.ModuleType:
-            raise InsecureJelly("function references a non-module module")
-        function = getattr(module, rest[0])
-        self._reference(function)
-        return _FalsePromise(), function
-
-    def _unjelly_tuple(self, rest):
-        """(internal)
-        Unserialize a tuple.
-        """
-        pretup = []
-        promises = []
-        # collect everything I need to build the tuple
-        for item in rest:
-            
-            # don't keep any of these promises yet -- the idea here is that we
-            # want to be able to support circular references of immutable
-            # objects; the only way to do that is to NOT actually unserialize
-            # the bits which may cause a circular reference (mutable objects
-            # contained within the immutable ones) until they've been
-            # pre-unserialized.
-            
-            promise, unj = self._unjelly(item)
-            pretup.append(unj)
-            promises.append(promise)
-        # convert it to a tuple
-        tup = tuple(pretup)
-        # give it a persistent ID if it needs one
-        self._reference(tup)
-        for promise in promises:
-            promise.keep()
-        return _FalsePromise(), tup
-
-
-    def _unjelly_unpersistable(self, rest):
-        """(internal)
-        Return an instance of an Unpersistable which indicates why this
-        couldn't be persisted.
-        """
-        unpr = Unpersistable(rest[0])
-        self._reference(unpr)
-        return _FalsePromise(), unpr
 
 class _Dummy:
     """(Internal)

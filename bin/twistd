@@ -49,35 +49,14 @@ if string.find(os.path.abspath(sys.argv[0]),'Twisted') != -1:
         os.path.dirname(os.path.abspath(sys.argv[0]))))
 ### end of preamble
 
+from twisted.python import usage, util
+
+util.addPluginDir()
+
 # System Imports
 from cPickle import load
 import traceback
-
-# Twisted Imports
-from twisted import copyright
-from twisted.python import usage, threadable, log, runtime
-from twisted.internet import main
-from twisted.persisted import styles
-
-main.addPluginDir()
-
-# Load the servers.
-# This will fix up accidental function definitions in evaluation spaces
-# and the like.
-initRun = 0
-mainMod = sys.modules['__main__']
-
-class EverythingEphemeral(styles.Ephemeral):
-    def __getattr__(self, key):
-        try:
-            return getattr(mainMod, key)
-        except AttributeError:
-            if initRun:
-                raise
-            else:
-                print "Warning!  Loading from __main__: %s" % key
-                return styles.Ephemeral()
-
+import imp
 
 class ServerOptions(usage.Options):
     optFlags = [['nodaemon','n'],
@@ -92,8 +71,8 @@ class ServerOptions(usage.Options):
                   ['rundir','d','.']]
 
     def opt_plugin(self, pkgname):
-        pkg = __import__(pkgname)
-        self.python = os.path.join(os.path.dirname(os.path.abspath(pkg.__file__)), 'config.tac')
+        fname = imp.find_module(pkgname)[1]
+        self.python = os.path.join(fname, 'config.tac')
 
     opt_g = opt_plugin
 
@@ -109,7 +88,33 @@ if os.name != 'java':
     # java can't chdir
     os.chdir(config.rundir)
 sys.path.append(config.rundir)
+from twisted.python import threadable
 threadable.init(config.threaded)
+
+# Twisted Imports
+# (It's important that these come *after* the threadable init.)
+from twisted import copyright
+from twisted.python import usage, log, runtime
+from twisted.internet import main
+from twisted.persisted import styles
+class EverythingEphemeral(styles.Ephemeral):
+    def __getattr__(self, key):
+        try:
+            return getattr(mainMod, key)
+        except AttributeError:
+            if initRun:
+                raise
+            else:
+                print "Warning!  Loading from __main__: %s" % key
+                return styles.Ephemeral()
+
+
+# Load the servers.
+# This will fix up accidental function definitions in evaluation spaces
+# and the like.
+initRun = 0
+mainMod = sys.modules['__main__']
+
 
 if os.path.exists(config.pidfile):
     try:

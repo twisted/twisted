@@ -32,7 +32,7 @@ if os.name == 'posix':
         import FCNTL
 
 from twisted.persisted import styles
-from twisted.python import log, threadable
+from twisted.python import log
 
 # Sibling Imports
 import abstract, main

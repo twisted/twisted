@@ -71,6 +71,7 @@ class Options(usage.Options):
     def __init__(self):
         self.domains = {}
         self.last_domain = None
+        usage.Options.__init__(self)
 
     def opt_domain(self, domain):
         name, path = string.split(domain, '=')

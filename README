@@ -2,11 +2,7 @@ Twisted 0.12.0
 
 Quote of the Release:
 
-  <gt3> holy snickers, its so foggy outside
-  <gt3> my gf just got a kick ass job
-  <gt3> im jealous
-  <gt3> but i dont care i'd rather code
-        -- poetry night on #python
+  <Acapnotic> something's wrong, none of the tests failed
 
 What is this?
 
@@ -37,21 +33,24 @@ What is this?
 
 What's new in 0.12.0?
 
-  A major refactor to Twisted's threading and logging infrastructure.
-  
-  Merged internet.threadtask into internet.task.
-  
-  Made a new twisted.internet.threadtask - a threadpool subclass that
-  integrates with twisted's event loop. twisted.python.timeoutqueue implements
-  a Queue subclass that lets you wait with a timeout until it has data.
-  
-  Many fixes to words, twisted's IM client.
+  Unified the twisted.internet main loop approach to thread dispatching.  This
+  involved merging internet.threadtask into internet.task, and making a new
+  threadtask - a threadpool subclass that integrates with twisted's event loop.
+
+  Many minor refactorings.  This included cleanup to move generic 'thread
+  ownership' code to 'log ownership' where it really belongs.
+
+  Many major bugfixes, most notably to twisted.spread and Instance Messenger,
+  twisted's IM client.
 
   Added XML-RPC web resource, and fixed a few issues in twisted.web.
-  
+
   Major speed improvement to twisted on jython.
-  
+
   Updates to twisted.python.usage.
+
+  Beginning to revitalize twisted.enterprise: in this release,
+  twisted.enterprise.adbapi, and asynchronous wrapper for python's DB-API 2.0.
 
 What can I do with it?
 

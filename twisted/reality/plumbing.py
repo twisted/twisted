@@ -24,7 +24,7 @@ from cStringIO import StringIO
 
 from twisted.reality import player
 from twisted.protocols import telnet, protocol, http
-from twisted.python import threadable, log
+from twisted.python import log
 from twisted.internet import tcp
 from twisted.web import resource, html
 from twisted import copyright

@@ -115,7 +115,7 @@ def htmlFor_password(write, name, value):
 def htmlFor_text(write, name, value):
     write('<TEXTAREA COLS="60" ROWS="10" NAME="%s" WRAP="virtual">%s</textarea>' % (name, value))
 def htmlFor_menu(write, name, value):
-    "Value of the format (NAME, [OPTION, OPTION, OPTION])"
+    "Value of the format [OPTION, OPTION, OPTION]"
     write('<SELECT NAME="%s">\n' % name)
     for item in value:
         write("<OPTION>\n%s\n" % item)
@@ -346,7 +346,8 @@ class Page(resource.Resource, Presentation):
         Presentation.__init__(self)
 
     def render(self, request):
-        RenderSession(self.display(request), request)
+        displayed = self.display(request)
+        RenderSession(displayed, request)
         return NOT_DONE_YET
 
 
@@ -403,7 +404,8 @@ class WidgetPage(Page):
             self.stylesheet = widget.stylesheet
 
     def render(self, request):
-        RenderSession(self.display(request), request)
+        displayed = self.display(request)
+        RenderSession(displayed, request)
         return NOT_DONE_YET
 
 class Gadget(resource.Resource):

@@ -25,7 +25,7 @@ import time
 
 
 # Twisted Imports
-from twisted.python import threadable, reflect, log, rebuild
+from twisted.python import reflect, log, rebuild
 from twisted.spread import pb
 from twisted.persisted import styles
 from twisted.internet import passport
@@ -734,4 +734,3 @@ one of it's synonyms."""
         else:
             self.hears("There doesn't seem to be "+sentence.aan(dstring)+"\""+dstring+"\" in this reality...")
 
-threadable.synchronize(Author)

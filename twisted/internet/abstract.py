@@ -20,7 +20,7 @@
 import types, string
 
 # Twisted Imports
-from twisted.python import threadable, log
+from twisted.python import log
 
 # Sibling Imports
 import interfaces

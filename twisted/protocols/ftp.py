@@ -69,7 +69,6 @@ from twisted.internet import abstract, tcp
 from twisted.internet.interfaces import IProducer
 from twisted.protocols import basic
 from twisted.protocols import protocol
-from twisted.python import threadable
 
 # the replies from the ftp server
 # a 3-digit number identifies the meaning
@@ -137,9 +136,6 @@ class sendFileTransfer:
         self.request.finish()
         self.request = None
 
-    synchronized = ['resumeProducing', 'stopProducing']
-
-threadable.synchronize(sendFileTransfer)
 
 class DTP(protocol.Protocol):
     """A Client/Server-independent implementation of the DTP-protocol.
