@@ -2,8 +2,10 @@
 #include <windows.h>
 #include "structmember.h"
 
-PyObject *gConnectionLost;
-PyObject *gFailure;
+typedef struct {
+    OVERLAPPED ov;
+    PyObject *callback;
+} MyOVERLAPPED;
 
 typedef struct {
     PyObject_HEAD
@@ -148,10 +150,10 @@ iocpcore_setlast(iocpcore *self, PyObject *value, void *closure)
 
 static PyObject *iocpcore_doIteration(iocpcore* self, PyObject *args) {
     long timeout;
-    PyObject *failure = NULL, *tm, *handle, *deferred, *ret;
+    PyObject *tm, *ret, *object;
     DWORD bytes;
     ULONG_PTR key;
-    OVERLAPPED *ov;
+    MyOVERLAPPED *ov;
     int res, err;
     if(!PyArg_ParseTuple(args, "O", &tm)) {
         return NULL;
@@ -162,8 +164,11 @@ static PyObject *iocpcore_doIteration(iocpcore* self, PyObject *args) {
         timeout = (int)(PyFloat_AsDouble(tm) * 1000);
     } else {
         PyErr_SetString(PyExc_TypeError, "Wrong type for timeout parameter");
+        return NULL;
     }
-    res = GetQueuedCompletionStatus(self->iocp, &bytes, &key, &ov, timeout);
+    Py_BEGIN_ALLOW_THREADS;
+    res = GetQueuedCompletionStatus(self->iocp, &bytes, &key, (OVERLAPPED**)&ov, timeout);
+    Py_END_ALLOW_THREADS;
     if(!res) {
         err = GetLastError();
         if(!ov) {
@@ -172,38 +177,60 @@ static PyObject *iocpcore_doIteration(iocpcore* self, PyObject *args) {
             } else {
                 return Py_BuildValue("");
             }
-        } else {
-            // omg kids don't try this at home
-            if(!bytes) {
-                PyErr_SetString(gConnectionLost, "Connection lost");
-            } else {
-                PyErr_SetFromWindowsErr(err);
-            }
-            failure = PyObject_CallFunction(gFailure, NULL);
-            if(!failure) { // I've no idea what happens ifFailure() raises an exception
-                return NULL;
-            }
-            PyErr_Clear();
         }
     }
     // At this point, ov is non-NULL
-    handle = PyInt_FromLong((long)ov); // XXX: treating pointer as a long
-    deferred = PyDict_GetItem(self->cur_ops, handle);
-    Py_DECREF(handle);
-    if(deferred == NULL) {
-        Py_XDECREF(failure);
-        PyErr_SetFormat(PyExc_RuntimeError, "Spurious completion message with ov=%p", ov);
+    // steal its reference, then clobber it to death! I mean free it!
+    object = ov->callback;
+    if(object) {
+        ret = PyObject_CallFunction(object, "%i", bytes);
+        if(!ret) {
+            return NULL;
+        }
+        Py_DECREF(ret);
+        Py_DECREF(object);
+    }
+    free(ov);
+    return Py_BuildValue("");
+}
+
+static PyObject *iocpcore_WriteFile(iocpcore* self, PyObject *args) {
+    HANDLE handle;
+    char *buf;
+    int buflen, res, len = -1, temp;
+    PyObject *object;
+    MyOVERLAPPED *ov;
+    // TODO: should probably accept the offset arguments
+    if(!PyArg_ParseTuple(args, "it#O|i", &handle, &buf, &buflen, &object, &len)) {
         return NULL;
     }
-    if(failure) {
-        ret = PyObject_CallMethod(deferred, "errback", "O", failure);
-        if(!ret) {
-            Py_DECREF(failure);
+    if(len == -1) {
+        len = buflen;
+    }
+    if(len <= 0 || len > buflen) {
+        PyErr_SetString(PyExc_ValueError, "Invalid length specified");
+    }
+    if(!PyCallable_Check(object)) {
+        PyErr_SetString(PyExc_TypeError, "Callback must be callable");
+    }
+    ov = malloc(sizeof(MyOVERLAPPED));
+    if(!ov) {
+        PyErr_NoMemory();
+        return NULL;
+    }
+    memset(ov, 0, sizeof(MyOVERLAPPED));
+    Py_INCREF(object);
+    ov->object = object;
+    Py_BEGIN_ALLOW_THREADS;
+    res = WriteFile(handle, buf, len, &temp, ov);
+    Py_END_ALLOW_THREADS;
 }
 
 static PyMethodDef iocpcore_methods[] = {
     {"doIteration", (PyCFunction)iocpcore_doIteration, METH_VARARGS,
      "Perform one event loop iteration"},
+    {"WriteFile", (PyCFunction)iocpcore_WriteFile, METH_VARARGS,
+     "Issue an overlapped WriteFile operation"},
     {NULL}
 };
 
@@ -262,7 +289,7 @@ static PyMethodDef module_methods[] = {
 PyMODINIT_FUNC
 initiocpcore(void) 
 {
-    PyObject *m, *main, *dict;
+    PyObject *m;
     if(PyType_Ready(&iocpcoreType) < 0) {
         return;
     }
@@ -276,23 +303,5 @@ initiocpcore(void)
 
     Py_INCREF(&iocpcoreType);
     PyModule_AddObject(m, "iocpcore", (PyObject *)&iocpcoreType);
-
-    m = PyImport_ImportModule("twisted.internet.error");
-    if(!m) {
-        return;
-    }
-    gConnectionLost = PyObject_GetAttrString(m, "ConnectionLost");
-    if(!gConnectionLost) {
-        return;
-    }
-
-    m = PyImport_ImportModule("twisted.python.failure");
-    if(!m) {
-        return;
-    }
-    gFailure = PyObject_GetAttrString(m, "Failure");
-    if(!gFailure) {
-        return;
-    }
 }
 

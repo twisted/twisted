@@ -1,40 +1,26 @@
-Following IReactorTCP:
-default.connectTCP:
-    instantiate tcp.Connector
-    call its connect method
-tcp.Connector.connect:
-    self.transport = self._makeTransport (which is tcp.Client for TCP)
-    call factory.startedConnecting(self)
-ClientFactory.startedConnecting:
-    noop
-tcp.Client.__init__:
-    call BaseClient.createInternetSocket
-    call BaseClient._finishInit
-tcp.BaseClient.createInternetSocket:
-    make a socket, set it to nonblocking
-tcp.BaseClient._finishInit:
-    
-abstract.FileDescriptor provides read/write notifications and writes buffered data
-(yuck, producer/consumer stuff as well)
+Yay! I am writing a bunch of C code.
+type iocpcore provides doIteration (for PosixReactorBase)
+and a bunch of operation-scheduling methods that return deferreds
 
-Reactor notifies by calling overlapped.object.do_<completionkey>
-Drop win32all and write my own wrapper?
-Design decision: call recursive read in abstract.IoHandle or in each IoHandle
-subclass? Latter, for now.
+performance optimization: reuse overlapped structs (probably worthless)
 
-Write buffering:
-None? Issue write
-Some string? concat+append (this sucks)
+My overlapped struct is bigger by a sizeof(PyObject *) and refers to
+the Deferred. The struct is malloc'ed when operation is issued
+and free'ed when GetQueuedCompletionResult returns it.
+If GetQueuedCompletionStatus never returns it, doIteration was not called
+enough times.
+Upon reactor.stop, CancelIo all handles, then loop through GQCS ignoring
+results.
 
-Write complete? Adjust index, issue another write if data left, otherwise set buffer to None
+Need to keep track of all pending operations, saving ov pointer, deferred
+reference and handle pointer. (dict of op->None)
+--------------------------------------
 
-Invariant! dataBuffer = None implies offset = 0
+Need:
+specify operation as a class attribute for things such as IoHandle and Socket
 
-disregard for now:
-    buffer is empty list:
-        start writing the string
-    buffer is non-empty:
-        add to buffer
-if buffer is None, schedule write
-if not, append to buffer
+be able to track handles for pending operations and, on reactor.stop,
+CancelIo them and drain the completion queue
 
+A bunch of wrappers that live at least as long as requests, handle
+deferred dispatch (argh same as it is now)
