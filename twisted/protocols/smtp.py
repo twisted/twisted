@@ -201,7 +201,13 @@ def rfc822date(timeinfo=None,local=1):
         timeinfo[0], timeinfo[3], timeinfo[4], timeinfo[5],
         tzhr, tzmin)
 
-def messageid(uniq=None):
+def idGenerator():
+    i = 0
+    while True:
+        yield i
+        i += 1
+
+def messageid(uniq=None, N=idGenerator().next):
     """Return a globally unique random string in RFC 2822 Message-ID format
 
     <datetime.pid.random@host.dom.ain>
@@ -216,7 +222,7 @@ def messageid(uniq=None):
     else:
         uniq = '.' + uniq
 
-    return '<%s.%s.%s%s@%s>' % (datetime, pid, rand, uniq, DNSNAME)
+    return '<%s.%s.%s%s.%s@%s>' % (datetime, pid, rand, uniq, N(), DNSNAME)
 
 def quoteaddr(addr):
     """Turn an email address, possibly with realname part etc, into
