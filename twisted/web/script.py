@@ -58,7 +58,7 @@ class PythonScript(resource.Resource):
         except IOError, e:
             if e.errno == 2: #file not found
                 request.setResponseCode(http.NOT_FOUND)
-                request.write(error.NoResource().render(request))
+                request.write(error.NoResource("File not found.").render(request))
         except:
             io = StringIO.StringIO()
             traceback.print_exc(file=io)

@@ -96,7 +96,7 @@ class Resource(roots.Homogenous):
         However, if the resource returned by 'bar' has isLeaf set to true, then
         the getChild call will never be made on it.
         """
-        return error.NoResource()
+        return error.NoResource("No such child resource.")
 
     def getChildWithDefault(self, path, request):
         """(internal) Retrieve a static or dynamically generated child resource from me.

@@ -143,7 +143,7 @@ class File(resource.Resource, styles.Versioned):
         """See twisted.web.Resource.getChild.
         """
         if path == '..':
-            return error.NoResource()
+            return error.NoResource("Invalid request URL.")
         if path == '':
             for path in self.indexNames:
                 # This next step is so urls like
@@ -177,7 +177,7 @@ class File(resource.Resource, styles.Versioned):
             mode, ino, dev, nlink, uid, gid, size, atime, mtime, ctime =\
                   os.stat(self.path)
         except OSError:
-            return error.NoResource().render(request)
+            return error.NoResource("Unable to access file.").render(request)
         if stat.S_ISDIR(mode):
             # tack a '/' on to the response if it's a directory.
             request.setHeader("location","http://%s%s/" % (
