@@ -24,10 +24,8 @@ Maintainer: U{Itamar Shtull-Trauring<mailto:twisted@itamarst.org>}
 """
 
 # System imports
-import string
 import re
 import struct
-import time
 
 # Twisted imports
 from twisted.internet import protocol
