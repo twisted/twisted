@@ -306,7 +306,7 @@ class Element(Node):
             w('"')
             w(html.escape(val))
             w('"')
-        if self.childNodes or self.tagName.lower() in ('a', 'li', 'div', 'span'):
+        if self.childNodes or self.tagName.lower() in ('a', 'li', 'div', 'span', 'title'):
             w(">")
             for child in self.childNodes:
                 child.writexml(stream, indent+addindent, addindent, newl, strip)
