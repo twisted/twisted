@@ -1,6 +1,0 @@
-
-register("Twisted Application Pickle Loader",
-         "twisted.application.loaders",
-         description="Builtin Application loaders",
-         type="apploader",
-         loaderFactories=["TAPLoader", "TAXLoader", "TASLoader"])

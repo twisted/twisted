@@ -1,9 +1,0 @@
-Right now, an exception in a callback function is not handled properly.
-
-Profiling
-
-Documentation
-
-Testing
-
-

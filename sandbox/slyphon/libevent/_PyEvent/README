@@ -1,8 +1,0 @@
-This was written by Martin Murray <murrayma@citi.umich.edu>
-It's still very rough.
-
-Installation with standard Python Build routines should work:
-
-python setup.py install
-
-

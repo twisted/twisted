@@ -1,3 +1,0 @@
-What heuristics, if any, should be used for resetting (or not resetting)
-the buffer at the end of dataReceiver?
-Timeouts on waiting for a message!

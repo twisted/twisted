@@ -1,5 +1,0 @@
-#!/bin/sh
-set -e
-export PYTHONPATH="$HOME/src/nevow/stable:$HOME/src/mechanize/ClientCookie-0.4.19:$HOME/src/mechanize/ClientForm-0.1.16:$HOME/src/mechanize/pullparser-0.0.5b:$HOME/src/mechanize/mechanize-0.0.8a"
-
-trial "${@:-test}"
