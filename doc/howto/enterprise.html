@@ -93,51 +93,34 @@ dbpool = adbapi.ConnectionPool("dbmodule", 'mydb', 'andrew', 'password')
       passed as extra arguments to <code base="twisted.enterprise"
       class="API">adbapi.ConnectionPool</code>'s constructor.
       Keyword parameters work as well.</li>
-
-      <li>You may also control the size of the connection pool with
-      the keyword parameters <code>cp_min</code> and
-      <code>cp_max</code>.  The default minimum and maximum values
-      are 3 and 5.</li>
     </ul>
 
-    <p>So, now you need to be able to dispatch queries to your
-    ConnectionPool. We do this by subclassing <code base="twisted.enterprise"
-    class="API">adbapi.Augmentation</code>. Here's an example:</p>
-<pre class="python">
-class AgeDatabase(adbapi.Augmentation): 
-    """A simple example that can retrieve an age from the database""" 
-    def getAge(self, name): 
-        # Define the query 
-        sql = """SELECT Age FROM People WHERE name = ?""" 
-        # Run the query, and return a Deferred to the caller to add 
-        # callbacks to. 
-        return self.runQuery(sql, name) 
- 
- 
-def gotAge(resultlist, name): 
-    """Callback for handling the result of the query""" 
-    age = resultlist[0][0]          # First field of first record 
-    print "%s is %d years old" % (name, age) 
- 
-db = AgeDatabase(dbpool) 
- 
-# These will *not* block.  Hooray! 
-db.getAge("Andrew").addCallbacks(gotAge, db.operationError, 
-                                 callbackArgs=("Andrew",))
-db.getAge("Glyph").addCallbacks(gotAge, db.operationError, 
-                                callbackArgs=("Glyph",))
+   <p>Now we can do a database query:</p>
 
-# Of course, nothing will happen until the reactor is started
-from twisted.internet import reactor
-reactor.run()
+<pre class="python">
+# equivalent of cursor.execute(statement), return cursor.fetchall():
+def getAges():
+    return dbpool.runQuery("SELECT age FROM users")
+
+def printResult(l):
+    print l
+
+getAges().addCallback(printResult)
 </pre>
 
     <p>This is straightforward, except perhaps for the return value
-    of <code>getAge</code>. It returns a <code
+    of <code>getAges</code>. It returns a <code
     class="API">twisted.internet.defer.Deferred</code>, which allows
     arbitrary callbacks to be called upon completion (or upon
     failure).  More documentation on Deferred is available <a
     href="defer.html">here</a>.</p>
+
+    <p>In addition to <code>runQuery</code>, there is also <code>runOperation</code>,
+    and <code>runInteraction</code> that gets called with a callable (e.g. a function).
+    The function will be called in the thread with a <code class="API">twisted.enterprise.adbapi.Transaction</code>,
+    which basically mimics a DB-API cursor. In all cases a database transaction will be 
+    commited after your database usage is finished, unless an exception is raised in
+    which case it will be rollbacked.</p>
 
     <p>Also worth noting is that this example assumes that dbmodule
     uses the <q>qmarks</q> paramstyle (see the DB-API specification). If
