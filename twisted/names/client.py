@@ -146,10 +146,16 @@ class Resolver(common.ResolverBase):
                 servers.append(resolver)
                 log.msg("Resolver added %r to server list" % (resolver,))
             elif L.startswith('domain'):
-                self.domain = L.split()[1]
+                try:
+                    self.domain = L.split()[1]
+                except IndexError:
+                    self.domain = ''
                 self.search = None
             elif L.startswith('search'):
-                self.search = L.split()[1:]
+                try:
+                    self.search = L.split()[1:]
+                except IndexError:
+                    self.search = ''
                 self.domain = None
         self.dynServers = servers
 
