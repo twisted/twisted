@@ -34,7 +34,8 @@ class Options(usage.Options):
                 ["jelly", "j", "Jelly (machine-readable) output"],
                 ["summary", "s", "summary output"],
                 ["debug", "b", "Run tests in the Python debugger"],
-                ["profile", None, "Run tests under the Python profiler"]]
+                ["profile", None, "Run tests under the Python profiler"],
+                ["recurse", "R", "Search packages recursively"]]
     optParameters = [["reactor", "r", None,
                       "The Twisted reactor to install before running the tests (looked up as a module contained in twisted.internet)"],
                      ["logfile", "l", "test.log", "log file name"],
@@ -163,8 +164,12 @@ def run():
         os._exit(1)
 
     suite = unittest.TestSuite()
-    for package in config['packages']:
-        suite.addPackage(package)
+    if config['recurse']:
+        for package in config['packages']:
+            suite.addPackageRecursive(package)
+    else:
+        for package in config['packages']:
+            suite.addPackage(package)
     for module in config['modules']:
         suite.addModule(module)
     for testcase in config['testcases']:

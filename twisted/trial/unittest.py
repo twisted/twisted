@@ -267,6 +267,24 @@ class TestSuite:
         for module in modules:
             self.addModule(module)
 
+    def _packageRecurse(self, arg, dirname, names):
+        import fnmatch
+        OPJ = os.path.join
+        testModuleNames = fnmatch.filter(names, self.moduleGlob)
+        testModules = [ reflect.filenameToModuleName(OPJ(dirname, name))
+                        for name in testModuleNames ]
+        for module in testModules:
+            self.addModule(module)
+
+    def addPackageRecursive(self, package):
+        if type(package) is types.StringType:
+            try:
+                package = reflect.namedModule(package)
+            except ImportError, e:
+                self.couldNotImport[package] = e
+                return
+        packageDir = os.path.dirname(package.__file__)
+        os.path.walk(packageDir, self._packageRecurse, None)
 
     def run(self, output, seed = None):
         output.start(self.numTests)
