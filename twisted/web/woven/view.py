@@ -262,7 +262,7 @@ class View(template.DOMTemplate):
                     if view is None:
                         view = widgets.Widget(self.model)
                     view.setupMethods.append(setupMethod)
-        elif model is not self.model:
+        elif node.getAttribute("model") and model is not self.model:
             # If no "view" attribute was specified on the node, see if there
             # is a IView adapter registerred for the model.
             # First, see if the model is Componentized.
