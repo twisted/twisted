@@ -2608,3 +2608,10 @@ under. very interesting. want some pictures? :)
 <glyph> bruce_: GPL can't force you to write code under non-MIT/BSD licenses
 <exarkun> GPL+mindflayer can though
 %
+<zen-@ircnet> which the ratio simplicity/expressivitiy of python?
+<moshez> 2.49866397309784
+<moshez> approximately
+<tigrux> moshez ?
+<moshez> tigrux: well, it's for Python2.2
+<moshez> I haven't had time to modify my calculations for the CVS version
+%
