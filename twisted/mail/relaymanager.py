@@ -13,7 +13,7 @@ accepting mail for a small set of domains.
 The classes here are meant to facilitate support for such a configuration
 for the twisted.mail SMTP server
 '''
-from twisted.python import delay
+from twisted.python import delay, log
 from twisted.mail import relay
 import os
 
@@ -65,7 +65,7 @@ class SmartHostSMTPRelayingManager:
     Someone should press .checkState periodically
     '''
 
-    def __init__(self, directory, smartHostIP, maxConnections=1, 
+    def __init__(self, directory, smartHostAddr, maxConnections=1, 
                  maxMessagesPerConnection=10):
         '''initialize
 
@@ -80,8 +80,7 @@ class SmartHostSMTPRelayingManager:
         self.directory = directory
 	self.maxConnections = maxConnections
 	self.maxMessagesPerConnection = maxMessagesPerConnection
-	self.smartHostIP = smartHostIP
-	self.delayed = delayed
+	self.smartHostAddr = smartHostAddr
 	self.managed = {}
 	self.relayingMessages = {}
 	self.readDirectory()
@@ -96,7 +95,9 @@ class SmartHostSMTPRelayingManager:
 	self.messages[message] = 1
 	del self.relayingMessages[message]
 
-    notifyFailure = notifySuccess
+    def notifyFailure(self, relay, message):
+        log.log("could not relay "+message)
+        self.notifySuccess(relay, message)
 
     def notifyDone(self, relay):
         '''a relay finished
@@ -137,6 +138,7 @@ class SmartHostSMTPRelayingManager:
         synchronize with the state of the world, and maybe launch
         a new relay
         '''
+        log.msg("waking up")
 	self.readDirectory() 
 	if self.messages:
 	    return
@@ -150,7 +152,7 @@ class SmartHostSMTPRelayingManager:
 	    toRelay.append(os.path.join(self.directory, message))
         protocol = SMTPManagedRelayer(toRelay, self)
 	self.managed[protocol] = nextMessages
-	transport = tcp.Client(smartHostIP, 25, protocol)
+	transport = tcp.Client(smartHostAddr[0], smartHostAddr[1], protocol)
 
 
 # It's difficult to pickle methods
@@ -159,12 +161,12 @@ def checkState(manager):
     '''cause a manager to check the state'''
     manager.checkState()
 
-def attachManagerToDelay(manager, delayed, time=60):
+def attachManagerToDelayed(manager, delayed, time=60):
     '''attach a a manager to a Delayed
 
     manager should be an SMTPRelayManager, delayed should be a 
     twisted.python.Delayed and time should be an integer in second,
     specifying time between checking the state
     '''
-    loop = delay.Loop(delayed, time, checkState, manager)
-    loop.loop()
+    loop = delay.Looping(time, checkState, delayed)
+    loop.delayed._later(loop.loop,loop.ticks,(manager,))
