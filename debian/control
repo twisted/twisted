@@ -10,7 +10,7 @@ Provides: twisted
 Architecture: all
 Depends: python2.1-twisted, python-gtk
 Description: Event-based framework for internet applications. (dummy package)
- This is a dummy package that depends on the twisted librry for the
+ This is a dummy package that depends on the twisted library for the
  default version of Python.
  .
  It replaces the "twisted" package, which was non-policy compliant.
