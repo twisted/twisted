@@ -41,6 +41,18 @@ The arguments to addProcess are:
 Note that args are passed to the system call, not to the shell. If running
 the shell is desired, the common idiom is to use
 .addProcess("name", ['/bin/sh', '-c', shell_script])
+
+removeProcess takes just the name argument. If the process is started, it
+kills it, and will never restart it.
+
+The following attributes on the monitor can be set to configure behaviour
+- threshold -- how long a process has to live before the death is considered
+               instant (default 1, measured in seconds)
+- killTime -- how long a process being killed has to get its affairs in
+              order before it gets killed with an unmaskable signal
+              (default 5, measured in seconds)
+- consistencyDelay -- time between consistency checks
+                      (default 60, measured in seconds)
 """
 
 import os, time
