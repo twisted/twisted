@@ -141,6 +141,15 @@ If you want icons to appear in the Start menu, you must:
 #            file_created(twistd_shortcut_path)
 #            files_created.append(twistd_shortcut_path)
 
+            # tkconch
+            shortcut=Shortcut(os.path.join(exec_dir, "pythonw.exe"),
+                              os.path.join(scripts_dir, "tkconch.py"),
+                              workingdir="C:\\")
+            conch_shortcut_path=os.path.join(menu_path, "TkConch (ssh).lnk")
+            shortcut.save(conch_shortcut_path)
+            file_created(conch_shortcut_path)
+            files_created.append(conch_shortcut_path)
+
             # uninstall
             remove_exe=os.path.join(python_dir, "RemoveTwisted.exe")
             remove_log=os.path.join(python_dir, "Twisted-wininst.log")
