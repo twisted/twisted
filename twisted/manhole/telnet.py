@@ -38,11 +38,6 @@ class Shell(telnet.Telnet):
     def checkUserAndPass(self, username, password):
         return ((self.factory.username == username) and (password == self.factory.password))
 
-    def flush(self):
-        """Try to flush; I might not be able to though.
-        """
-        self.transport.doWrite()
-
     def write(self, data):
         """Write some data to the transport.
         """
