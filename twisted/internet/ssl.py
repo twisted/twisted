@@ -254,7 +254,7 @@ class Port(tcp.Port):
     def doRead(self):
         """Called when my socket is ready for reading.
 
-        This accepts a connection and callse self.protocol() to handle the
+        This accepts a connection and calls self.protocol() to handle the
         wire-level protocol.
         """
         try:
