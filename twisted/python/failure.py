@@ -263,18 +263,21 @@ class Failure:
         c['frames'] = [
             [
                 v[0], v[1], v[2],
-                [(j[0], repr(j[1])) for j in v[3]], 
+                [(j[0], repr(j[1])) for j in v[3]],
                 [(j[0], repr(j[1])) for j in v[4]]
             ] for v in self.frames
         ]
 
-        c['stack'] = [
-            [
-                v[0], v[1], v[2],
-                [(j[0], repr(j[1])) for j in v[3]], 
-                [(j[0], repr(j[1])) for j in v[4]]
-            ] for v in self.stack
-        ]
+        if self.stack is not None:
+            # XXX: This is a band-aid.  I can't figure out where these
+            # (failure.stack is None) instances are coming from.
+            c['stack'] = [
+                [
+                    v[0], v[1], v[2],
+                    [(j[0], repr(j[1])) for j in v[3]],
+                    [(j[0], repr(j[1])) for j in v[4]]
+                ] for v in self.stack
+            ]
 
         c['pickled'] = 1
         return c
