@@ -40,6 +40,13 @@ class TestService(unittest.TestCase):
         self.failUnlessEqual(list(p), [s])
         self.failUnlessEqual(s.parent, p)
 
+    def testApplicationAsParent(self):
+        s = service.Service()
+        p = service.Application("")
+        s.setServiceParent(p)
+        self.failUnlessEqual(list(service.IServiceCollection(p)), [s])
+        self.failUnlessEqual(s.parent, service.IServiceCollection(p))
+
     def testNamedChild(self):
         s = service.Service()
         p = service.MultiService()

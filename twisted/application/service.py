@@ -111,6 +111,7 @@ class Service:
     def setServiceParent(self, parent):
         if self.parent is not None:
             self.disownServiceParent()
+        parent = IServiceCollection(parent, parent)
         self.parent = parent
         self.parent.addService(self)
 
