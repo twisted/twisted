@@ -197,11 +197,11 @@ def debugSignalHandler(*args):
     pdb.set_trace()
 
 
-def installReactor(reactor)
+def installReactor(reactor):
     if reactor:
         reflect.namedModule(reactorTypes[reactor]).install()
 
-def checkPID(pidfile, quiet)
+def checkPID(pidfile, quiet):
     if os.path.exists(pidfile):
         try:
             pid = int(open(pidfile).read())
@@ -227,7 +227,7 @@ different application entirely. To start a new one, either run it in some other
 directory, or use my --pidfile and --logfile parameters to avoid clashes.
 """ %  pid)
 
-def removePID(pidfile)
+def removePID(pidfile):
     try:
         os.unlink(pidfile)
     except OSError, e:
@@ -240,8 +240,8 @@ def removePID(pidfile)
         log.msg("Failed to unlink PID file:")
         log.deferr()
 
-def startLogging(logfile, syslog, prefix, nodaemon):
-    if logfile == '-':
+def startLogging(logfilename, syslog, prefix, nodaemon):
+    if logfilename == '-':
         if not nodaemon:
             print 'daemons cannot log to stdout'
             os._exit(1)
@@ -251,7 +251,7 @@ def startLogging(logfile, syslog, prefix, nodaemon):
     elif syslog:
         syslog.startLogging(prefix)
     else:
-        logPath = os.path.abspath(logfile or 'twistd.log')
+        logPath = os.path.abspath(logfilename or 'twistd.log')
         logFile = logfile.LogFile(os.path.basename(logPath),
                                   os.path.dirname(logPath))
         def rotateLog(signal, frame, logFile=logFile):
@@ -329,7 +329,7 @@ def getPassphrase(needed):
     else:
         return None
 
-def getApplication(config, passphrase)
+def getApplication(config, passphrase):
     global initRun
     initRun = 0
     try:
@@ -342,6 +342,7 @@ def getApplication(config, passphrase)
         sys.exit('\n' + s + '\n')
     log.msg("Loaded.")
     initRun = 1
+    return application
 
 def launchWithName(name):
     if name and name != sys.argv[0]:
@@ -359,7 +360,7 @@ def setupEnvironment(config):
         daemonize()
     open(config['pidfile'],'wb').write(str(os.getpid()))
 
-def startApplication(config, application)
+def startApplication(config, application):
     if not config['originalname']:
         launchWithName(application.processName)
     setupEnvironment(config)
@@ -382,7 +383,7 @@ def reportProfile(report_profile, name):
 def runApp(config):
     passphrase = getPassphrase(config['encrypted'])
     installReactor(config['reactor'])
-    config['nodaemon'] = config['nodaemon'] and not config['debug']:
+    config['nodaemon'] = config['nodaemon'] and not config['debug']
     oldstdout = sys.stdout
     oldstderr = sys.stderr
     startLogging(config['logfile'], config['syslog'], config['prefix'],
