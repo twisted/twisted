@@ -475,6 +475,14 @@ class TestFixedClasses(unittest.TestCase):
         gc.collect()
         self.failUnlessEqual(len(lst.list), 0)
 
+    def testDictOf(self):
+        sd = compound.StorableDictionary(self.db, str, int)
+        self.failUnlessEqual(len(sd), 0)
+        sd['hello'] = 1
+        self.failUnlessEqual(len(sd), 1)
+        self.failUnless(sd.has_key('hello'))
+
+
     def testStringList(self):
         L = Strings()
         L.strings = []

@@ -54,8 +54,12 @@ class ITypeMapper(components.Interface):
         """
 
     def toTuple(self):
-        """convert this typemapper to a tuple which both globally identifies it
-        and provides a simple serialization for it.
+        """Convert this typemapper to a tuple which both globally identifies it
+        and provides a simple serialization for it.  """
+
+    def null(self):
+        """Return a 'null' object that will fit into this column, such as None,
+        0, '', etc.
         """
 
 
@@ -92,6 +96,9 @@ class NoneTypeMapper(AbstractTypeMapper):
     def toTuple(self):
         return ('None',)
 
+    def null(self):
+        return None
+
 components.registerAdapter(NoneTypeMapper, NoneType, ITypeMapper)
 
 class TypeTypeMapper(AbstractTypeMapper):
@@ -110,6 +117,14 @@ class TypeTypeMapper(AbstractTypeMapper):
 
     def toTuple(self):
         return (self.original.__name__,)
+
+    def null(self):
+        if self.original is int:
+            return 0
+        elif self.original is float:
+            return 0.0
+        elif self.original is bool:
+            return False
 
 # components.registerAdapter(TypeTypeMapper, type, ITypeMapper)
 
@@ -157,6 +172,9 @@ class Varchar(AbstractTypeMapper):
             length = len(obj)
         return oid, genhash, length, data
 
+    def null(self):
+        return ''
+
 class TupleTypeMapper(AbstractTypeMapper):
     def getPhysicalSize(self):
         i = 0
@@ -196,7 +214,12 @@ class TupleTypeMapper(AbstractTypeMapper):
             x.extend(getMapper(t).highToLow(db,o))
         return tuple(x)
 
-        
+    def null(self):
+        nl = []
+        for t in self.original:
+            nl.append(getMapper(t).null())
+        return tuple(nl)
+
 _db_nil = (0, 0)
 
 class ObjectTypeMapper(AbstractTypeMapper):
@@ -233,6 +256,9 @@ class ObjectTypeMapper(AbstractTypeMapper):
         assert isinstance(obj, Storable), "%s not Storable" % obj
         oid, genhash = db._insert(obj, False)
         return oid, genhash
+
+    def null(self):
+        return None
 
 
 class StorableListTypeMapper(ObjectTypeMapper):
@@ -284,6 +310,9 @@ class TypeMapperMapper(AbstractTypeMapper):
 
     def lowToHigh(self, db, tup):
         return db.keyToMapper(tup[0])
+
+    def null(self):
+        return NoneTypeMapper()
 
 class TypeMapperRegistry:
     def __init__(self, d):

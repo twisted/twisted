@@ -18,6 +18,9 @@
 #
 
 from __future__ import generators
+
+import sys
+
 from twisted.world.storable import Storable, ref
 from twisted.world.allocator import Allocation, FragmentFile
 from twisted.world.structfile import StructuredFile
@@ -26,17 +29,23 @@ from twisted.world.typemap import TypeMapperMapper
 ##     """
 ##     """
 
+# hack, hack
+from twisted.python.compat import *
+
 class StorableList(Allocation):
     __schema__ = {
         'typeMapper': TypeMapperMapper,
         'fragdata': None,
     }
 
+    initialPad = 10
+
 ##     __metaclass__ = MetaStorableList
 
     def __init__(self, db, typeMapper):
         self.typeMapper = typeMapper
-        Allocation.__init__(self, db, typeMapper.getPhysicalSize() * 10)
+        Allocation.__init__(self, db,
+                            typeMapper.getPhysicalSize() * self.initialPad)
 
     def updateFragData(self):
         #print self.allocBegin, self.allocLength, self.fragfile
@@ -215,6 +224,88 @@ class StorableList(Allocation):
         l = list(self)
         l.sort()
         self[:] = l
+
+class _Nothing:
+    """
+    this can stop torg
+    """
+
+class StorableDictionaryStore(StorableList):
+    __schema__ = StorableList.__schema__.copy()
+    __schema__.update({
+        "keyValueCount": int
+        })
+    
+    def __init__(self, db, keyType, valueType):
+        typeMapper = getMapper((bool, keyType, valueType))
+        StorableList.__init__(self, db, typeMapper)
+        self[:] = [typeMapper.null()] * self.initialPad
+
+    def computePosition(self, inKeyHash, offset):
+        return ((inKeyHash + offset) % StorableList.__len__(self))
+
+    def _embiggen(self):
+        # this requires allocating a new arena to copy stuff into, but hanging
+        # on to the old arena so that we can read the data out of it.  It has
+        # completely different semantics than StorableList.expand().
+        raise NotImplementedError("StorableDictionary._embiggen")
+ 
+    def getHash(self, inKey):
+        return hash(inKey)
+
+    def getDictItem(self, inKey, default=_Nothing):
+        h = self.getHash(inKey)
+        for i in xrange(len(self)):
+            pos = self.computePosition(h,i)
+            rowUsed, rowKey, rowValue = self[pos]
+            if not rowUsed:
+                if default is _Nothing:
+                    raise KeyError("No such key in persistent dict %s" % inKey)
+                else:
+                    return default
+            if rowKey == inKey:
+                return rowValue
+
+    def setDictItem(self, inKey, inValue):
+        h = self.getHash(inKey)
+        for i in xrange(len(self)):
+            pos = self.computePosition(h,i)
+            rowUsed, rowKey, rowValue = self[pos]
+            if (not rowUsed) or (inKey == rowKey):
+                StorableList.__setitem__(self, pos, (True, inKey, inValue))
+                if inKey != rowKey:
+                    self.keyValueCount += 1
+                break
+        else:
+            # oh god let's hope that we never actually get _here_
+            self._embiggen()
+            self[inKey] = inValue
+
+from twisted.python.components import Adapter
+
+_otherNothing = _Nothing()
+
+class StorableDictionaryFacade(Adapter):
+    def __setitem__(self, key, value):
+        self.original.setDictItem(key, value)
+
+    def __getitem__(self, key, default=_Nothing):
+        return self.original.getDictItem(key, default)
+
+    get = __getitem__
+
+    def __len__(self):
+        return self.original.keyValueCount
+
+    def has_key(self, key):
+        return (self.original.getDictItem(key, _otherNothing)
+                is not _otherNothing)
+
+def StorableDictionary(db, keyType, valueType):
+    stor = StorableDictionaryStore(db, keyType, valueType)
+    return StorableDictionaryFacade(stor)
+
+### These are all deprecated.
 
 class StrList(StorableList):
     dataType = str
