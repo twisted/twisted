@@ -79,6 +79,27 @@ DONT =          chr(254)  # Indicates the demand that the
                           # to perform, the indicated option.
 IAC =           chr(255)  # Data Byte 255.
 
+class ITelnetListener(components.Interface):
+    def connectionMade(self):
+        pass
+
+    def dataReceived(self, bytes):
+        """Some data arrived.
+        """
+
+    def connectionLost(self, reason):
+        pass
+
+class TelnetListener:
+    def connectionMade(self):
+        pass
+
+    def dataReceived(self, data):
+        pass
+
+    def connectionLost(self, reason):
+        pass
+
 class Telnet(protocol.Protocol):
     # One of a lot of things
     state = 'data'
@@ -282,21 +303,36 @@ class Telnet(protocol.Protocol):
             state.stateq = False
 
     def telnet_WILL(self, option):
-        self._dowill(option, HIM, HIMQ)
+        self._dowill(option, 'him')
 
     def telnet_WONT(self, option):
-        self._dontwont(option, HIM, HIMQ)
+        self._dontwont(option, 'him')
 
     def telnet_DO(self, option):
-        self._dowill(option, US, USQ)
+        self._dowill(option, 'us')
 
     def telnet_DONT(self, option):
-        self._dontwont(option, US, USQ)
+        self._dontwont(option, 'us')
 
-US = 0
-USQ = 1
-HIM = 2
-HIMQ = 3
+class Telnet2(Telnet):
+    handler = None
+    handlerFactory = TelnetListener
+
+    def __init__(self, *a, **kw):
+        Telnet.__init__(self)
+        self.handlerArgs = a
+        self.handlerKwArgs = kw
+
+    def connectionMade(self):
+        self.handler = self.handlerFactory(self, *self.handlerArgs, **self.handlerKwArgs)
+        self.handler.connectionMade()
+
+    def applicationByteReceived(self, byte):
+        self.handler.dataReceived(bytes)
+
+    def connectionLost(self, reason):
+        self.handler.connectionLost(reason)
+        del self.handler
 
 class TelnetBootstrapProtocol(telnet.Telnet):
     protocol = None
