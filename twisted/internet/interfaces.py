@@ -1109,3 +1109,12 @@ class IMulticastTransport(Interface):
 
     def leaveGroup(self, addr, interface=""):
         """Leave multicast group, return Deferred of success."""
+
+
+class IReactorCleanup(Interface):
+    """Provide methods for cleaning reactor state. Used primarily by test frameworks"""
+
+    def cleanup(self):
+        """Resets the reactor state to as pristine a condition as is possible,
+        @return: a sequence of objects that represent dirty reactor state.
+        """

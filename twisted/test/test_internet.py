@@ -275,6 +275,8 @@ class InterfaceTestCase(unittest.TestCase):
             calls.append('f3')
         
         reactor.callLater(0, f1)
+        reactor.printoutallreaders()
+        import pdb; pdb.Pdb().set_trace() 
         self.assertEquals(calls, [])
         reactor.iterate()
         self.assertEquals(calls, ['f1'])
