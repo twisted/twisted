@@ -18,8 +18,8 @@
 """
 twisted.threadpool: a pool of threads to which we dispatch tasks.
 
-If you want integration with Twisted's event loop then use
-twisted.internet.threadtask instead.
+In most cases you can just use reactor.callInThread and friends
+instead of creating a thread pool directly.
 """
 
 # System Imports
