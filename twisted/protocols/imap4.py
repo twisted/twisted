@@ -423,7 +423,7 @@ class IMailboxListener(components.Interface):
 
         @type newFlags: C{dict}
         @param newFlags: A mapping of message identifiers to tuples of flags
-        new set on that message.
+        now set on that message.
         """
 
     def newMessages(self, exists, recent):
