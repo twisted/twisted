@@ -13,7 +13,7 @@ import time
 # make sure thread pool is shutdown
 import atexit
 #atexit.register(reactor.suggestThreadPoolSize, 0)
-
+import sys
 
 class Counter:    
     index = 0
