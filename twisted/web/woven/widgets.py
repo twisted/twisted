@@ -452,6 +452,17 @@ class DefaultWidget(Widget):
         pass
 
 
+class Attributes(Widget):
+    """Set attributes on a node.
+
+    Assumes model is a dictionary of attributes.
+    """
+
+    def setUp(self, request, node, data):
+        for k, v in data.items():
+            self[k] = v
+
+
 class Text(Widget):
     """
     A simple Widget that renders some text.
