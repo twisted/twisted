@@ -529,6 +529,9 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
         self.transport.loseConnection()
         if self.mbox:
             self.mbox.removeListener(self)
+            cmbx = ICloseableMailbox(self.mbox, default=None)
+            if cmbx is not None:
+                cmbx.close().addErrback(log.err)
             self.mbox = None
 
     def rawDataReceived(self, data):
@@ -1081,6 +1084,9 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
     def _selectWork(self, tag, name, rw, cmdName):
         if self.mbox:
             self.mbox.removeListener(self)
+            cmbx = ICloseableMailbox(self.mbox, default=None)
+            if cmbx is not None:
+                cmbx.close().addErrback(log.err)
             self.mbox = None
             self.state = 'auth'
 
@@ -1341,15 +1347,19 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
         return None
 
     def do_CLOSE(self, tag):
+        d = None
         if self.mbox.isWriteable():
-            maybeDeferred(self.mbox.expunge).addCallbacks(
-                self.__cbClose, self.__ebClose, (tag,), None, (tag,), None
-            )
+            d = maybeDeferred(self.mbox.expunge)
+        cmbx = ICloseableMailbox(self.mbox, default=None)
+        if cmbx is not None:
+            if d is not None:
+                d.addCallback(lambda result: cmbx.close())
+            else:
+                d = maybeDeferred(cmbx.close)
+        if d is not None:
+            d.addCallbacks(self.__cbClose, self.__ebClose, (tag,), None, (tag,), None)
         else:
-            self.sendPositiveResponse(tag, 'CLOSE completed')
-            self.mbox.removeListener(self)
-            self.mbox = None
-            self.state = 'auth'
+            self.__cbClose(None, tag)
 
     select_CLOSE = (do_CLOSE,)
 
@@ -4635,6 +4645,20 @@ class IMailbox(IMailboxInfo):
 
         @raise ReadOnlyMailbox: Raised if this mailbox is not open for
         read-write.
+        """
+
+class ICloseableMailbox(components.Interface):
+    """A supplementary interface for mailboxes which require cleanup on close.
+
+    Implementing this interface is optional.  If it is implemented, the protocol
+    code will call the close method defined whenever a mailbox is closed.
+    """
+    def close(self):
+        """Close this mailbox.
+
+        @return: A C{Deferred} which fires when this mailbox
+        has been closed, or None if the mailbox can be closed
+        immediately.
         """
 
 def _formatHeaders(headers):

@@ -672,10 +672,13 @@ class IMAP4HelperTestCase(unittest.TestCase):
                 "len(%r) = %r != %r" % (input, L, expected))
 
 class SimpleMailbox:
+    __implements__ = imap4.IMailboxInfo, imap4.IMailbox, imap4.ICloseableMailbox
+
     flags = ('\\Flag1', 'Flag2', '\\AnotherSysFlag', 'LastFlag')
     messages = []
     mUID = 0
     rw = 1
+    closed = False
 
     def __init__(self):
         self.listeners = []
@@ -736,6 +739,9 @@ class SimpleMailbox:
         for i in delete:
             self.messages.remove(i)
         return [i[3] for i in delete]
+
+    def close(self):
+        self.closed = True
 
 class Account(imap4.MemoryAccount):
     def _emptyMailbox(self, name, id):
@@ -1308,6 +1314,7 @@ class IMAP4ServerTestCase(IMAP4HelperMixin, unittest.TestCase):
 
         self.assertEquals(len(m.messages), 1)
         self.assertEquals(m.messages[0], ('Message 2', ('AnotherFlag',), None, 1))
+        self.failUnless(m.closed)
 
     def testExpunge(self):
         m = SimpleMailbox()
@@ -2189,7 +2196,7 @@ class CopyWorkerTestCase(unittest.TestCase):
         # It is complex.  It needs to be tested directly!
         # Perhaps it should be refactored, simplified, or split up into
         # not-so-private components, but that is a task for another day.
-        
+
         # Ha ha! Addendum!  Soon it will be split up, and this test will
         # be re-written to just use the default adapter for IMailbox to
         # IMessageCopier and call .copy on that adapter.
@@ -2236,15 +2243,15 @@ class CopyWorkerTestCase(unittest.TestCase):
 
     def testMessageCopier(self):
         s = imap4.IMAP4Server()
-        
+
         # See above comment
         f = s._IMAP4Server__cbCopy
-        
+
         m = MessageCopierMailbox()
         msgs = [object() for i in range(1, 11)]
         d = f([im for im in zip(range(1, 11), msgs)], 'tag', m)
         r = unittest.deferredResult(d)
-        
+
         self.assertEquals(r, zip([1] * 10, range(1, 11)))
         for (orig, new) in zip(msgs, m.msgs):
             self.assertIdentical(orig, new)
