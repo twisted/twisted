@@ -55,9 +55,12 @@ elif os.name != 'java':
 # Twisted Imports
 from twisted.internet import protocol, defer, base
 from twisted.persisted import styles
-from twisted.python import log, failure, reflect, compat
+from twisted.python import log, failure, reflect
 from twisted.python.runtime import platform
 from twisted.internet.error import CannotListenError
+
+# Compatability
+from twisted.python.compat import *
 
 # Sibling Imports
 import abstract
@@ -483,7 +486,7 @@ class Port(base.BasePort):
 class Connector(base.BaseConnector):
     def __init__(self, host, port, factory, timeout, bindAddress, reactor=None):
         self.host = host
-        if [1 for x in (types.StringType, types.UnicodeType) if isinstance(port, x)]:
+        if isinstance(port, types.StringTypes):
             try:
                 port = socket.getservbyname(port, 'tcp')
             except socket.error, e:
