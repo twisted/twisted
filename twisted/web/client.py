@@ -42,6 +42,9 @@ class HTTPPageGetter(http.HTTPClient):
         m = getattr(self, 'handleStatus_'+self.status, self.handleStatusDefault)
         m()
 
+    def handleStatus_200(self):
+        self.factory.gotHeaders(self.headers)
+
     handleStatus_200 = lambda *args: None
 
     def handleStatusDefault(self):
@@ -99,6 +102,9 @@ class HTTPClientFactory(protocol.ClientFactory):
         self.agent=agent
         self.waiting = 1
         self.deferred = defer.Deferred()
+
+    def gotHeaders(self, headers):
+        pass
 
     def page(self, page):
         if self.waiting:
