@@ -37,6 +37,7 @@ from zope.interface import Interface, Attribute, implements
 from twisted.internet.defer import Deferred
 from twisted.internet import interfaces as ti_interfaces, defer, reactor, protocol, error
 from twisted.python import components
+from twisted.python.failure import Failure
 
 try:
     import mmap
@@ -49,9 +50,12 @@ class IStream(Interface):
     
     def read():
         """Read some data.
+
         Returns some object representing the data.
         If there is no more data available, returns None.
         Can also return a Deferred resulting in one of the above.
+
+        Errors may be indicated by exception or by a Deferred of a Failure.
         """
         
     def close():
@@ -65,10 +69,12 @@ class IByteStream(IStream):
     
     def read():
         """Read some data.
+        
         Returns an object conforming to the buffer interface, or
         if there is no more data available, returns None.
         Can also return a Deferred resulting in one of the above.
 
+        Errors may be indicated by exception or by a Deferred of a Failure.
         """
     def split(point):
         """Split this stream into two, at byte position 'point'.
@@ -351,16 +357,25 @@ class _StreamPuller:
         self.result = Deferred()
 
     def run(self):
+        # self.result may be del'd in _read()
+        result = self.result
         self._read()
-        return self.result
+        return result
     
     def _read(self):
-        result = self.stream.read()
+        try:
+            result = self.stream.read()
+        except:
+            self._gotError(Failure())
+            return
         if isinstance(result, Deferred):
-            # FIXME: what about errback?
-            result.addCallback(self._gotData)
+            result.addCallbacks(self._gotData, self._gotError)
         else:
             self._gotData(result)
+
+    def _gotError(self, failure):
+        self.result.errback(failure)
+        del self.result
     
     def _gotData(self, data):
         if data is None:
@@ -519,6 +534,7 @@ class ProducerStream:
     implements(IByteStream, ti_interfaces.IConsumer)
     length = None
     closed = False
+    failed = False
     producer = None
     producerPaused = False
     deferred = None
@@ -535,6 +551,10 @@ class ProducerStream:
             return self.buffer.pop(0)
         elif self.closed:
             self.length = 0
+            if self.failed:
+                f = self.failure
+                del self.failure
+                return defer.fail(f)
             return None
         else:
             deferred = self.deferred = Deferred()
@@ -549,6 +569,7 @@ class ProducerStream:
         return fallbackSplit(self, point)
     
     def close(self):
+        """Called by reader of stream when it is done reading."""
         self.buffer=[]
         self.closed = True
         if self.producer is not None:
@@ -572,15 +593,28 @@ class ProducerStream:
                 self.producer.pauseProducing()
                 self.producerPaused = True
 
-    def finish(self):
+    def finish(self, failure=None):
+        """Called by producer when it is done.
+
+        If the optional failure argument is passed a Failure instance,
+        the stream will return it as errback on next Deferred.
+        """
         self.closed = True
         if not self.buffer:
             self.length = 0
         if self.deferred is not None:
             deferred = self.deferred
             self.deferred = None
-            deferred.callback(None)
-
+            if failure is not None:
+                self.failed = True
+                deferred.errback(failure)
+            else:
+                deferred.callback(None)
+        else:
+            if failure is not None:
+               self.failed = True
+               self.failure = failure
+    
     def registerProducer(self, producer, streaming):
         if self.producer is not None:
             raise RuntimeError("Cannot register producer %s, because producer %s was never unregistered." % (producer, self.producer))

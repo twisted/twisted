@@ -291,6 +291,42 @@ class AdapterTestCase(unittest.TestCase):
             assertEquals(s.read(), None)
 
 
+class PullStreamTestCase(unittest.TestCase):
+
+    def test_pull(self):
+        l = []
+        s = TestStreamer(['abcd', defer.succeed('efgh'), 'ijkl'])
+        return pullStream(s, l.append).addCallback(
+            lambda _: assertEquals(l, ["abcd", "efgh", "ijkl"]))
+        
+    def test_pullFailure(self):
+        l = []
+        s = TestStreamer(['abcd', defer.fail(RuntimeError()), 'ijkl'])
+        def test(result):
+            result.trap(RuntimeError)
+            assertEquals(l, ["abcd"])
+        return pullStream(s, l.append).addErrback(test)
+    
+    def test_pullException(self):
+        class Failer:
+            def read(self): raise RuntimeError
+        return pullStream(Failer(), lambda _: None).addErrback(lambda _: _.trap(RuntimeError))
+
+
+class ProducerStreamTestCase(unittest.TestCase):
+
+    def test_failfinish(self):
+        p = stream.ProducerStream()
+        p.write("hello")
+        p.finish(RuntimeError())
+        assertEquals(p.read(), "hello")
+        d = p.read()
+        l = []
+        d.addErrback(lambda _: (l.append(1), _.trap(RuntimeError))).addCallback(
+            lambda _: assertEquals(l, [1]))
+        return d
+
+
 from twisted.web2.stream import *
 class CompoundStreamTest:
     """
@@ -357,5 +393,5 @@ class CompoundStreamTest:
 __doctests__ = ['twisted.web2.test.test_stream.CompoundStreamTest']
 # TODO: 
 # CompoundStreamTest
-# ProducerStreamTest
+# more tests for ProducerStreamTest
 # StreamProducerTest
