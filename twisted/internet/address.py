@@ -29,6 +29,13 @@ class IPv4Address(object):
     @ivar port: An integer representing the port number.
     """
 
+    # _bwHack is given to old users who think we are a tuple. They expected
+    # addr[0] to define the socket type rather than the address family, so
+    # the value comes from a different namespace than the new .type value:
+    
+    #  type = map[_bwHack]
+    # map = { 'SSL': 'TCP', 'INET': 'TCP', 'INET_UDP': 'UDP' }
+
     __implements__ = IAddress,
     
     def __init__(self, type, host, port, _bwHack = None):
