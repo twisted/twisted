@@ -296,7 +296,7 @@ class Group(pb.Cacheable):
 
     def __getstate__(self):
         state = self.__dict__.copy()
-        state.['members'] = []
+        state['members'] = []
         return state
 
     def getStateToCopyFor(self, participant):
