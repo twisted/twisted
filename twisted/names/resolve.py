@@ -40,7 +40,7 @@ class FailureHandler:
 
     def __call__(self, failure):
         # AuthoritativeDomainErrors should halt resolution attempts
-        failure.trap(dns.DomainError, defer.TimeoutError)
+        failure.trap(dns.DomainError, defer.TimeoutError, NotImplementedError)
         return self.resolver(self.query, self.timeout)
 
 

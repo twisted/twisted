@@ -34,8 +34,7 @@ class ResolverBase:
         try:
             return self.typeToMethod[query.type](str(query.name), timeout)
         except KeyError, e:
-            log.deferr()
-            return defer.fail(failure.Failure(ValueError(dns.ENOTIMP)))
+            return defer.fail(failure.Failure(NotImplementedError(str(self.__class__) + " " + str(query.type))))
 
     def _lookup(self, name, cls, type, timeout):
         raise NotImplementedError("ResolverBase._lookup")
@@ -43,8 +42,11 @@ class ResolverBase:
     def lookupAddress(self, name, timeout = 10):
         return self._lookup(name, dns.IN, dns.A, timeout)
 
-    def lookupAddress6(self, name, timeout = 10):
+    def lookupIPV6Address(self, name, timeout = 10):
         return self._lookup(name, dns.IN, dns.AAAA, timeout)
+
+    def lookupAddress6(self, name, timeout = 10):
+        return self._lookup(name, dns.IN, dns.A6, timeout)
 
     def lookupMailExchange(self, name, timeout = 10):
         return self._lookup(name, dns.IN, dns.MX, timeout)
@@ -109,7 +111,8 @@ class ResolverBase:
 
 typeToMethod = {
     dns.A:     'lookupAddress',
-    dns.AAAA:  'lookupAddress6',
+    dns.AAAA:  'lookupIPV6Address',
+    dns.A6:    'lookupAddress6',
     dns.NS:    'lookupNameservers',
     dns.CNAME: 'lookupCanonicalName',
     dns.SOA:   'lookupAuthority',

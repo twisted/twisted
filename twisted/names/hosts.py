@@ -54,7 +54,7 @@ class Resolver:
 
     def _lookup(self, name, cls, type, timeout):
         if cls != dns.IN or type != dns.A:
-            raise NotImplementedError, (type, cls)
+            return defer.fail(failure.Failure(NotImplementedError(type, cls)))
         return self.lookupAddress(
             name, timeout
         )

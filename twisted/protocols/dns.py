@@ -28,6 +28,7 @@ Future Plans: Get rid of some toplevels, maybe.  Put in a better
 
 # System imports
 import StringIO, struct, random, types, socket
+from math import ceil
 
 # Twisted imports
 from twisted.internet import protocol, defer, error
@@ -47,7 +48,9 @@ QUERY_TYPES = {
     
     28: 'AAAA',
 
-    33: 'SRV'
+    33: 'SRV',
+    
+    38: 'A6'
 }
 
 # "Extended" queries (Hey, half of these are deprecated, good job)
@@ -393,10 +396,6 @@ class SimpleRecord:
 
     def __str__(self):
         return '<%s %s>' % (QUERY_TYPES[self.TYPE], self.name)
-    
-    
-    def xfrString(self):
-        return '%s %s' % (QUERY_TYPES[self.TYPE], self.name)
 
 
 # Kinds of RRs - oh my!
@@ -431,9 +430,8 @@ class Record_A:
     TYPE = A
     address = None
 
-    def __init__(self, address = 0):
-        if isinstance(address, types.StringType):
-            address = socket.inet_aton(address)
+    def __init__(self, address = '0.0.0.0'):
+        address = socket.inet_aton(address)
         self.address = address
 
 
@@ -453,10 +451,6 @@ class Record_A:
 
     def __str__(self):
         return '<A %s>' % (socket.inet_ntoa(self.address),)
-
-
-    def xfrString(self):
-        return 'A %s' % (socket.inet_ntoa(self.address),)
 
 
 class Record_SOA:
@@ -509,13 +503,6 @@ class Record_SOA:
         )
     
     
-    def xfrString(self):
-        return 'SOA %s %s %d %d %d %d %d' % (
-            self.mname, self.rname, self.serial, self.refresh,
-            self.retry, self.expire, self.minimum
-        )
-
-
 class Record_NULL:                   # EXPERIMENTAL
     __implements__ = (IEncodable,)
     TYPE = NULL
@@ -532,32 +519,25 @@ class Record_NULL:                   # EXPERIMENTAL
         raise NotImplementedError, "Cannot encode or decode NULL records"
     
     
-    def xfrString(self):
-        raise NotImplementederror, "Cannot XFR NULL records"
-
-
 class Record_WKS:                    # OBSOLETE
     __implements__ = (IEncodable,)
     TYPE = WKS
 
-    def __init__(self, address = 0, protocol = 0, map = ''):
-        self.address, self.protocol, self.map = address, protocol, map
+    def __init__(self, address = '0.0.0.0', protocol = 0, map = ''):
+        self.address = socket.inet_aton(address)
+        self.protocol, self.map = protocol, map
 
 
     def encode(self, strio, compDict = None):
-        strio.write(
-            struct.pack(
-                '!LB',
-                self.address, self.protocol
-            ) + self.map
-        )
+        strio.write(self.address)
+        strio.write(struct.pack('!B', self.protocol))
+        strio.write(self.map)
     
     
     def decode(self, strio, length = None):
-        L = struct.calcsize('!LB')
-        r = struct.unpack('!LB', readPrecisely(strio, L))
-        self.address, self.protocol = r
-        self.map = readPrecisely(strio, length - L)
+        self.address = readPrecisely(strio, 4)
+        self.protocol = struct.unpack('!B', readPrecisely(strio, 1))[0]
+        self.map = readPrecisely(strio, length - 5)
 
 
     def __eq__(self, other):
@@ -569,51 +549,75 @@ class Record_WKS:                    # OBSOLETE
 
 
     def __str__(self):
-        return '<WKS addr=%s proto=%d>' % (self.address, self.protocol)
-    
-    
-    def xfrString(self):
-        r = []
-        for i in range(len(self.map)):
-            for j in range(8):
-                if self.map[i] & (1 << j):
-                    r.append(i * 8 + j)
-        return 'WKS %s %d %s' % (
-            socket.inet_ntoa(self.address), self.protocol,
-            ' '.join(map(str, r))
+        return '<WKS addr=%s proto=%d>' % (
+            socket.inet_ntoa(self.address), self.protocol
         )
-
-
+    
+    
 class Record_AAAA:               # OBSOLETE (or headed there)
     __implements__ = (IEncodable,)
     TYPE = AAAA
     
-    def __init__(self, address = 0):
-        if isinstance(address, types.StringType):
-            address = socket.inet_pton(socket.AF_INET6, address)
-        self.address = address
-    
-    
+    def __init__(self, address = '::'):
+        self.address = socket.inet_pton(socket.AF_INET6, address)
+
+
     def encode(self, strio, compDict = None):
         strio.write(self.address)
-    
-    
+
+
     def decode(self, strio, length = None):
         self.address = readPrecisely(strio, 16)
-    
-    
+
+
     def __eq__(self, other):
         if isinstance(other, Record_AAAA):
             return other.address == self.address
         return 0
+
+
+    def __str__(self):
+        return '<AAAA %s>' % (socket.inet_ntop(socket.AF_INET6, self.address),)
+
+
+class Record_A6:
+    __implements__ = (IEncodable,)
+    TYPE = A6
+    
+    def __init__(self, prefix = 0, address = '::', name = ''):
+        self.prefix = prefix
+        self.bytes = int(ceil(self.prefix / 8.0))
+        self.address = socket.inet_pton(socket.AF_INET6, address)
+        self.name = Name(name)
+    
+    
+    def encode(self, strio, compDict = None):
+        strio.write(struct.pack('!B', self.prefix))
+        strio.write(self.address[:self.bytes])
+        # This may not be compressed
+        self.name.encode(strio, None)
+    
+    
+    def decode(self, strio, length = None):
+        self.prefix = struct.unpack('!B', readPrecisely(strio, 1))[0]
+        self.bytes = int(ceil(self.prefix / 8.0))
+        self.address = readPrecisely(strio, self.bytes)
+        self.name.decode(strio)
+    
+    
+    def __eq__(self, other):
+        if isinstance(other, Record_A6):
+            return (self.prefix == other.prefix and
+                    self.address[:self.bytes] == other.address[:self.bytes] and
+                    self.name == other.name)
+        return 0
     
     
     def __str__(self):
-        return '<AAAA %s>' % (socket.inet_ntop(socket.AF_INET6, self.address),)
-    
-    
-    def xfrString(self):
-        return 'AAAA %s' % (socket.inet_ntop(socket.AF_INET6, self.address),)
+        return '<A6 %s/%d %s>' % (
+            socket.inet_ntop(socket.AF_INET6, self.address),
+            self.prefix, self.name
+        )
 
 
 class Record_SRV:                # EXPERIMENTAL
@@ -654,13 +658,6 @@ class Record_SRV:                # EXPERIMENTAL
         )
     
     
-    def xfrString(self):
-        return 'SRV %d %d %d %s' % (
-            self.priority, self.weight,
-            self.port, self.target
-        )
-
-
 class Record_AFSDB:
     __implements__ = (IEncodable,)
     TYPE = AFSDB
@@ -692,10 +689,6 @@ class Record_AFSDB:
         return '<AFSB subtype=%d %s>' % (self.subtype, self.hostname)
     
     
-    def xfrString(self):
-        return 'AFSB %d %s' % (self.subtype, self.hostname)
-
-
 class Record_RP:
     __implements__ = (IEncodable,)
     TYPE = RP
@@ -728,10 +721,6 @@ class Record_RP:
         return '<RP mbox=%s txt=%s>' % (self.mbox, self.txt)
     
     
-    def xfrString(self):
-        return 'RP %s %s' % (self.mbox, self.txt)
-
-
 class Record_HINFO:
     __implements__ = (IEncodable,)
     TYPE = HINFO
@@ -763,10 +752,6 @@ class Record_HINFO:
         return '<HINFO cpu=%s os=%s>' % (self.cpu, self.os)
     
     
-    def xfrString(self):
-        return 'HINFO %s %s' % (self.cpu, self.os)
-
-
 class Record_MINFO:                 # EXPERIMENTAL
     __implements__ = (IEncodable,)
     TYPE = MINFO
@@ -800,10 +785,6 @@ class Record_MINFO:                 # EXPERIMENTAL
         return '<MINFO responsibility=%s errors=%s>' % (self.rmailbx, self.emailbx)
 
 
-    def xfrString(self):
-        return 'MINFO %s %s' % (self.rmailbx, self.emailbx)
-
-
 class Record_MX:
     __implements__ = (IEncodable,)
     TYPE = MX
@@ -834,10 +815,6 @@ class Record_MX:
         return '<MX %d %s>' % (self.preference, self.exchange)
     
     
-    def xfrString(self):
-        return 'MX %d %s' % (self.preference, self.exchange)
-
-
 # Oh god, Record_TXT how I hate thee.
 class Record_TXT:
     __implements__ = (IEncodable,)
@@ -877,10 +854,6 @@ class Record_TXT:
         return '<TXT %r>' % self.data
     
     
-    def xfrString(self):
-        return 'TXT ' + ' '.join(map(repr, self.data))
-
-
 class Message:
     headerFmt = "!H2B4H"
     headerSize = struct.calcsize( headerFmt )

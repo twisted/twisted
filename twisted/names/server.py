@@ -121,6 +121,7 @@ class DNSServerFactory(protocol.ServerFactory):
             message.rCode = dns.ENAME
         else:
             message.rCode = dns.ESERVER
+            print 'HEY IT IS A FAILURE'
             failure.printTraceback()
         self.sendReply(protocol, message, address)
         if self.verbose:

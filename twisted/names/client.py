@@ -127,8 +127,6 @@ class Resolver(common.ResolverBase):
     
     def messageReceived(self, protocol, message, address = None):
         log.msg("Unexpected message received from %r" % (address,))
-        import pprint
-        pprint.pprint(message.__dict__)
 
 
     def queryUDP(self, queries, timeout = None):

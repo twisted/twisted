@@ -78,13 +78,18 @@ test_domain_com = NoFileAuthority(
             dns.Record_CNAME('canonical.name.com'),
             dns.Record_MB('mailbox.test-domain.com'),
             dns.Record_MG('mail.group.someplace'),
-            dns.Record_TXT('A First piece of Text', 'a SecoNd piece'),
+            dns.Record_TXT('A First piece of Text', 'a SecoNd piece')
+        ] + (IPV6 and [
+            dns.Record_A6(128, 'ABCD::4321', 'some.computer.com'),
+            dns.Record_A6(16, '0069::0', 'some.network.tld'),
+            dns.Record_A6(112, '5634:1294:AFCB:56AC:48EF:34C3:01FF:0', 'tra.la.la.net')
+        ] or []) + [
             dns.Record_TXT('Some more text, haha!  Yes.  \0  Still here?'),
             dns.Record_MR('mail.redirect.or.whatever'),
             dns.Record_MINFO(rmailbx='r mail box', emailbx='e mail box'),
             dns.Record_AFSDB(subtype=1, hostname='afsdb.test-domain.com'),
             dns.Record_RP(mbox='whatever.i.dunno', txt='some.more.text'),
-            dns.Record_WKS(0x12EF4303, socket.IPPROTO_TCP, '\x12\x01\x16\xfe\xc1\x00\x01'),
+            dns.Record_WKS('12.54.78.12', socket.IPPROTO_TCP, '\x12\x01\x16\xfe\xc1\x00\x01'),
         ] + (IPV6 and [dns.Record_AAAA('AF43:5634:1294:AFCB:56AC:48EF:34C3:01FF')] or []),
         'http.tcp.test-domain.com': [
             dns.Record_SRV(257, 16383, 43690, 'some.other.place.fool')
@@ -295,7 +300,7 @@ class ServerDNSTestCase(unittest.DeferredTestCase):
         """Test DNS 'WKS' record queries"""
         self.namesTest(
             self.resolver.lookupWellKnownServices('test-domain.com'),
-            [dns.Record_WKS(0x12EF4303, socket.IPPROTO_TCP, '\x12\x01\x16\xfe\xc1\x00\x01')]
+            [dns.Record_WKS('12.54.78.12', socket.IPPROTO_TCP, '\x12\x01\x16\xfe\xc1\x00\x01')]
         )
 
 
@@ -303,9 +308,19 @@ class ServerDNSTestCase(unittest.DeferredTestCase):
         def testAAAA(self):
             """Test DNS 'AAAA' record queries (IPv6)"""
             self.namesTest(
-                self.resolver.lookupAddress6('test-domain.com'),
+                self.resolver.lookupIPV6Address('test-domain.com'),
                 [dns.Record_AAAA('AF43:5634:1294:AFCB:56AC:48EF:34C3:01FF')]
             )
+        
+        def testA6(self):
+            """Test DNS 'A6' record queries (IPv6)"""
+            self.namesTest(
+                self.resolver.lookupAddress6('test-domain.com'),
+                [dns.Record_A6(128, 'ABCD::4321', 'some.computer.com'),
+                 dns.Record_A6(16, '0069::0', 'some.network.tld'),
+                 dns.Record_A6(112, '5634:1294:AFCB:56AC:48EF:34C3:01FF:0', 'tra.la.la.net')]
+             )
+
 
 
     def testZoneTransfer(self):
