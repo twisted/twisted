@@ -196,6 +196,23 @@ class SentQuery:
             ret.append(answer[1])
         self.callback(ret)
 
+    def processAnswer_33(self, message):
+        '''looking for SRV
+
+        order answers in in increasing priority'''
+        answers = []
+        for answer in message.answers:
+            priority, weight, port = struct.unpack("!HHH", answer.data[:6])
+            answer.strio.seek(answer.strioOff+6)
+            n = dns.Name()
+            n.decode(answer.strio)
+            answers.append((priority, weight, port, n.name))
+        answers.sort()
+        ret = []
+        for answer in answers:
+            ret.append(answer)
+        self.callback(ret)
+
     def timeOut(self):
         if not self.done:
             self.removeAll()
@@ -260,8 +277,19 @@ class DNSOnTCP(DNSServerMixin, dns.DNSOnTCP):
 
 from cStringIO import StringIO
 
-class MX(dns.RR):
+class SRV(dns.RR):
+    def encode(self, strio, compDict=None):
+        self.name.encode(strio, compDict)
+        s = StringIO()       
+        s.write(struct.pack('!H', self.data[0])) # priority
+        s.write(struct.pack('!H', self.data[1])) # weight
+        s.write(struct.pack('!H', self.data[2])) # port
+        dns.Name(self.data[3]).encode(s, compDict)
+        strio.write(struct.pack(self.fmt, self.type, self.cls,
+                                self.ttl, len(s.getvalue())))
+        strio.write(s.getvalue())
 
+class MX(dns.RR):
     def encode(self, strio, compDict=None):
         self.name.encode(strio, compDict)
         s = StringIO()       
