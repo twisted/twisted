@@ -19,38 +19,19 @@ WEBBROWSER='galeon -n' IRCCLIENT=epic4 admin/accepttests -b
  * ChangeLog: Add an entry: * .: Releasing Twisted <version>
  * README: add a new Quote of the Release
 
- * --- All the way from here to the SF hell is supposed to be automated ---
- * The other things here are done by release-twisted's upver functionality:
-   * README: update all mentions of last version 
-     number (use your editor's search function, there are several of them)
-   * doc/howto/installing-twisted.html
-   * twisted/copyright.py: Update the version number.
-   * cvs commit README doc/howto/installing-twisted.html ChangeLog twisted/copyright.py
-
-
- * After ensuring we're really ready to dist:
- * When going from one RC to the next (or to final release):
-   * cvs co -r release-X_X_XrcN
-   * cvs up -A <files-that-you-want-to-merge>
-   * cvs tag -c release-X_X_XrcN+1
-
- * When doing an `rc1':
-   * `cvs tag release-X_X_Xrc1'.
-
- * switch to a new tmp directory and `cvs export release-X_X_X'.
-
- * Alright, we're ready to pack it up!
- * from one directory above "Twisted" CVS module, run './Twisted/admin/release-twisted -v <version>'
-   * note that <version> must match the version number in 
-     twisted/copyright.py; I made the mistake of forgetting to update 
-     copyright once and this will prevent that :-)
-   * There are a number of options available for 'release-twisted', use them 
-     if desired
+ * If you are working from a CVS version of Twisted which you want to release:
+   * make sure it is named "Twisted.CVS", and in the directory immediately
+     above it there is nothing else (that can be done via symlinks)
+   * run
+./Twisted.CVS/admin/release-twisted -v <version> --release=/twisted/Releases --upver --tag --export --dist --docs --balls --rel --deb --debi
+ * If you want to release the latest CVS version of Twisted, have a
+   reasonably checkout of Twisted in $SOMEWHERE, and in an empty directory
+   do
+$SOMEWHERE/admin/release-twisted -v <version> --checkout --release=/twisted/Releases --upver --tag --export --dist --docs --balls --rel --deb --debi
 
  * run 'md5sums ~/Releases/Twisted*', and 'gpg --clearsign' the output. update 
    /products/download/twisted-<ver>-md5sums.txt on the website.
 
- 
  * run "apt-get update;apt-get upgrade"
 
  * restart the main Twisted server
@@ -70,6 +51,7 @@ su pb; cd ~/Working; kill `cat twistd.pid`; /twisted/Twisted/bin/twistd -f manho
 cd /var/www/WebSite
 ./generate.sh
 
+ * For final versions only
  * Alright, now for the hell that is sourceforge release-procedure:
    * lftp upload.sf.net
    * cd incoming; lcd /twisted/Releases; put *.zip *.gz *.bzip2
