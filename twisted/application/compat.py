@@ -374,6 +374,8 @@ def convert(oldApp):
         s = _NewService(s)
         s.disownServiceParent()
         s.setServiceParent(c)
+        c.addService(s)
     return ret
+
 
 __all__ = ['IOldApplication', 'convert']
