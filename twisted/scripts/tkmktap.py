@@ -197,9 +197,14 @@ class TkMkAppFrame(Tkinter.Frame):
             tkMessageBox.showerror(message=str(e))
             return
 
-        if self.options['append'] and os.path.exists(self.options['filename']):
+        exists = os.path.exists(self.options['filename'])
+        if self.options['append'] and exists:
             a = twistd.loadApplication(self.options, None)
         else:
+            if exists:
+                overwrite = tkMessageBox.askyesno(title='File Exists', message='Overwrite?')
+                if not overwrite:
+                    return
             a = app.Application(self.coil.name, self.options['uid'], self.options['gid'])
 
         try:
@@ -217,7 +222,6 @@ class TkMkAppFrame(Tkinter.Frame):
                 tkMessageBox.showerror(title="Usage Error", message=f.getvalue(), parent=self)
             else:
                 filename = self.options['filename']
-                print repr(filename)
                 if not filename:
                     filename = self.coil.name
                 tkMessageBox.showinfo(message="Wrote " + filename)
