@@ -1,7 +1,27 @@
-2003-06-03  Brian Warner  <warner@lothar.com>
+2003-06-03  Jp Calderone    <exarkun@twistedmatrix.com>
 
-	* twisted/protocols/imap4.py (IMAP4Client.rawDataReceived,
-	IMAP4Server.rawDataReceived): 2.2.0 compatiblity: no lstrip(arg)
+	* twisted/__init__.py twisted/internet/app.py
+	* twisted/internet/unix.py twisted/internet/tcp.py
+	* twisted/manhole/ui/gtk2manhole.py twisted/protocols/dns.py
+	* twisted/protocols/smtp.py twisted/protocols/sux.py
+	* twisted/protocols/imap4.py twisted/protocols/sip.py
+	* twisted/protocols/htb.py twisted/protocols/pcp.py
+	* twisted/python/formmethod.py twisted/python/reflect.py
+	* twisted/python/util.py twisted/python/components.py
+	* twisted/spread/jelly.py twisted/spread/newjelly.py
+	* twisted/test/test_components.py twisted/test/test_rebuild.py
+	* twisted/test/test_trial.py twisted/test/test_world.py
+	* twisted/test/test_setup.py twisted/test/test_newjelly.py
+	* twisted/test/test_compat.py twisted/test/test_pcp.py
+	* twisted/test/test_log.py twisted/web/microdom.py
+	* twisted/web/woven/page.py twisted/popsicle/mailsicle.py
+	* twisted/trial/remote.py twisted/trial/unittest.py
+	* twisted/world/allocator.py twisted/world/compound.py
+	* twisted/world/database.py twisted/world/storable.py
+	* twisted/world/structfile.py twisted/world/typemap.py:
+
+	Remove direct usage of twisted.python.compat; Modify __builtin__
+	module to include forward-compatibility hacks.
 
 2003-05-30  Brian Warner  <warner@lothar.com>
 
