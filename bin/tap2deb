@@ -236,6 +236,7 @@ install-stamp: build-stamp
 	# Add here commands to install the package into debian/tmp.
 	cp %(tap_file)s debian/tmp/etc/
 	cp debian/init.d debian/tmp/etc/init.d/%(deb_file)s
+	cp debian/default debian/tmp/etc/default/%(deb_file)s
 	cp debian/copyright debian/tmp/usr/share/doc/%(deb_file)s/
 	cp debian/README.Debian debian/tmp/usr/share/doc/%(deb_file)s/
 	touch install-stamp
