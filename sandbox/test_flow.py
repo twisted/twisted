@@ -110,7 +110,7 @@ class badgen:
 class FlowTest(unittest.TestCase):
     def testBasic(self):
         lhs = [1,2,3]
-        rhs = list(flow.Block([1,2,3]))
+        rhs = list(flow.Block([1,2,flow.Cooperate(),3]))
         self.assertEqual(lhs,rhs)
 
     def testProducer(self):
@@ -126,6 +126,12 @@ class FlowTest(unittest.TestCase):
     def testMerge(self):
         lhs = [1,'a',2,'b','c',3]
         mrg = flow.Merge([1,2,flow.Cooperate(),3],['a','b','c'])
+        rhs = list(flow.Block(mrg))
+        self.assertEqual(lhs,rhs)
+
+    def testZip(self):
+        lhs = [(1,'a'),(2,'b'),(3,'c')]
+        mrg = flow.Zip([1,2,flow.Cooperate(),3],['a','b','c'])
         rhs = list(flow.Block(mrg))
         self.assertEqual(lhs,rhs)
 

@@ -239,6 +239,39 @@ class Iterable(Stage):
                 self._stop_next = 1
             return
 
+class Zip(Stage):
+    """ Zips two or more stages into a stream of N tuples
+
+        [1, Cooperate(), 2] + [3, 4] => [ (1, 3), (2, 4) ]
+
+    """
+    def __init__(self, *stages):
+        Stage.__init__(self)
+        self._stage  = []
+        for stage in stages:
+            self._stage.append(wrap(stage))
+        self._result = []
+        self._index  = 0
+
+    def _yield(self):
+        Stage._yield(self)
+        while self._index < len(self._stage):
+            idx = self._index
+            curr = self._stage[idx]
+            result = curr._yield()
+            if result:
+                if isinstance(result, Cooperate):
+                    return result
+                raise TypeError("Unsupported flow instruction")
+            self._result.append(curr.result)
+            if curr.stop:
+                self.stop = 1
+            self._index += 1
+        if not self.stop:
+            self.result = tuple(self._result)
+        self._index = 0
+        self._result = []
+
 class Merge(Stage):
     """ Merges two or more Stages results into a single stream
 
@@ -246,6 +279,9 @@ class Merge(Stage):
         stage, all while maintaining the ability to pause during Cooperate.
         Note that while this code may be deterministic, applications of
         this module should not depend upon a particular order.
+
+        [1, Cooperate(), 2] + [3, 4] => [1, 3, 4, 2 ]
+
     """
     def __init__(self, *stages):
         Stage.__init__(self)
@@ -289,10 +325,14 @@ class Block(Stage):
         This is largely helpful for testing or within a threaded
         environment.  It converts other stages into one which 
         does not emit cooperate events.
+
+        [1,2, Cooperate(), 3] => [1,2,3]
+
     """
-    def __init__(self, stage):
+    def __init__(self, stage, block=time.sleep):
         Stage.__init__(self)
         self._stage = wrap(stage)
+        self.block = block
 
     def next(self):
         """ fetch the next value from the Stage flow """
@@ -301,9 +341,9 @@ class Block(Stage):
             result = stage._yield()
             if result:
                 if isinstance(result, Cooperate):
-                    time.sleep(result.timeout)
+                    self.block(result.timeout)
                     continue
-                raise TypeError("Invalid stage result")
+                raise TypeError("Unsupported flow instruction")
             return stage.next()
 
 class CooperateDeferred(Cooperate):
@@ -452,7 +492,7 @@ class Deferred(defer.Deferred):
                     else:
                         reactor.callLater(result.timeout, self._execute)
                     return
-                raise TypeError("Invalid stage result")
+                raise TypeError("Unsupported flow instruction")
             if not self.failureAsResult: 
                 if cmd.isFailure():
                     self.errback(cmd.result)
