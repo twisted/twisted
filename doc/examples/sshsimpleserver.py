@@ -15,7 +15,7 @@ log in with username "user" and password "password".
 class ExampleAvatar(avatar.ConchUser):
 
     def __init__(self, username):
-        realm.ConchUser.__init__(self)
+        avatar.ConchUser.__init__(self)
         self.username = username
         self.channelLookup.update({'session':session.SSHSession})
 
@@ -100,5 +100,6 @@ portal.registerChecker(passwdDB)
 portal.registerChecker(InMemoryPublicKeyChecker())
 ExampleFactory.portal = portal
 
-reactor.listenTCP(5022, ExampleFactory())
-reactor.run()
+if __name__ == '__main__':
+    reactor.listenTCP(5022, ExampleFactory())
+    reactor.run()
