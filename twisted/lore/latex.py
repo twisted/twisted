@@ -15,7 +15,7 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 # 
 
-from twisted.web import microdom
+from twisted.web import microdom, domhelpers
 import os, re
 from cStringIO import StringIO
 
