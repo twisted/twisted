@@ -49,11 +49,11 @@ class IConnector(Interface):
 
 
 class IResolverSimple(Interface):
-    def getHostByName(self, name, timeout = 10):
+    def getHostByName(self, name, timeout = (1, 3, 11, 45)):
         """Resolve the domain name C{name} into an IP address.
 
         @type name: C{str}
-        @type timeout: C{int}
+        @type timeout: C{tuple}
         @rtype: L{twisted.internet.defer.Deferred}
         @return: The callback of the Deferred that is returned will be
         passed a string that represents the IP address of the specified

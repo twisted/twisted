@@ -235,7 +235,7 @@ class ReactorBase:
     def removeAll(self):
         raise NotImplementedError
 
-    def resolve(self, name, timeout = 10):
+    def resolve(self, name, timeout = (1, 3, 11, 45)):
         """Return a Deferred that will resolve a hostname.
         """
         if not name:
@@ -248,6 +248,8 @@ class ReactorBase:
         return self.resolver.getHostByName(name, timeout)
 
     def _internalResolve(self, name, timeout):
+        # XXX timeout really shouldn't be ignored here, *especially* since
+        # socket.gethostbyname could block for a very, very, very long time.
         try:
             address = socket.gethostbyname(name)
         except socket.error:
