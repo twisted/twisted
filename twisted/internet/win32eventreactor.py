@@ -308,6 +308,10 @@ class Process(abstract.FileDescriptor):
         threading.Thread(target=self.doWrite).start()
         threading.Thread(target=self.doReadOut).start()
         threading.Thread(target=self.doReadErr).start()
+
+    def signalProcess(self, signalID):
+        if signalID in ("INT", "TERM", "KILL"):
+            win32process.TerminateProcess(self.hProcess, 1)
     
     def write(self, data):
         """Write data to the process' stdin."""
