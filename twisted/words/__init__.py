@@ -20,8 +20,3 @@
 Twisted Words: a Twisted Chat service.
 
 """
-
-import service
-import ircservice
-import webwords
-import ui
