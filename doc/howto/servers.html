@@ -123,7 +123,7 @@ class Echo(Protocol):
     earlier</p>
 <pre class="python">
 from twisted.internet.protocol import Protocol, Factory
-from twisted.internet.app import Application
+from twisted.internet import reactor
 
 class QOTD(Protocol):
 
@@ -134,10 +134,10 @@ class QOTD(Protocol):
 # Next lines are magic:
 factory = Factory()
 factory.protocol = QOTD
-app = Application("QOTD")
+
 # 8007 is the port you want to run under. Choose something &gt;1024
-app.listenTCP(8007, factory)
-app.run()
+reactor.listenTCP(8007, factory)
+reactor.run()
 </pre>
 
     <p>Don't worry about the last 6 magic lines -- you will
@@ -282,7 +282,7 @@ class LogfileFactory(Factory):
     example.</p>
 <pre class="python">
 from twisted.internet.protocol import Factory, Protocol
-from twisted.internet.app import Application
+from twisted.internet import reactor
 
 class QOTD(Protocol):
 
@@ -291,15 +291,15 @@ class QOTD(Protocol):
         self.transport.loseConnection()
 
 
-def makeQOTDFactory(quote=None):
-    factory = Factory()
-    factory.protocol = QOTD
-    factory.quote = quote or 'An apple a day keeps the doctor away'
-    return factory
+class QOTDFactory(Factory):
 
-app = Application("QOTD-with-factory")
-app.listenTCP(8007, makeQOTDFactory("configurable quote"))
-app.run()
+    protocol = QOTD
+
+    def __init__(self, quote=None):
+        self.quote = quote or 'An apple a day keeps the doctor away'
+
+reactor.listenTCP(8007, QOTDFactory("configurable quote"))
+reactor.run()
 </pre>
 
     <p>And that's it!</p>
