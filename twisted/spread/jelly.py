@@ -90,7 +90,6 @@ unpersistable_atom = "unpersistable"# u
 
 typeNames = {
     types.StringType: "string",
-    types.UnicodeType: "unicode",
     types.IntType: "int",
     types.LongType: "long",
     types.FloatType: "float",
@@ -207,9 +206,6 @@ class _Jellier:
 
         This just happens to be the string itself.
         """
-        return st
-
-    def _jelly_unicode(self, st):
         return st
     
     def _jelly_int(self, nt):

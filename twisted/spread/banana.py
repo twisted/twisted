@@ -50,7 +50,6 @@ SYMBOL   = chr(0x83)
 NEG      = chr(0x84)
 VOCAB    = chr(0x85)
 FLOAT    = chr(0x86)
-UNICODE  = chr(0x87)
 
 HIGH_BIT_SET = chr(0x80)
 
@@ -92,7 +91,7 @@ class Banana(protocol.Protocol, styles.Ephemeral):
                 num = b1282int(num)
                 listStack.append((num, []))
                 buffer = rest
-            elif typebyte == STRING or typebyte == UNICODE:
+            elif typebyte == STRING:
                 num = b1282int(num)
                 if num > 640 * 1024: # 640k is all you'll ever need :-)
                     raise Exception("Security precaution: Length identifier too long.")
@@ -221,10 +220,6 @@ class Banana(protocol.Protocol, styles.Ephemeral):
                 int2b128(len(obj), write)
                 write(STRING)
                 write(obj)
-        elif isinstance(obj, types.UnicodeType):
-            int2b128(len(obj), write)
-            write(UNICODE)
-            write(obj)            
         else:
             assert 0, "could not send object: %s" % repr(obj)
 
