@@ -25,6 +25,9 @@ efficient, but it's good for easy debugging.
 
 DirDBMs are *not* thread-safe, they should only be accessed by one thread at
 a time.
+
+No files should be placed in the working directory of a DirDBM save those
+created by the DirDBM itself!
 """
 
 
