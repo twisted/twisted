@@ -157,8 +157,6 @@ from twisted.internet import gtkreactor
 gtkreactor.install()
 </pre>
 
-    <h2>Non-Reactor GUI Integration</h2>
-
     <h3><a name="qt">Qt</a></h3>
 
     <p>An example Twisted application that uses Qt can be found in
@@ -168,17 +166,11 @@ gtkreactor.install()
 from qt import QApplication
 app = QApplication([])
 
-from twisted.internet import qtsupport, reactor
-
-# make sure QT quits when twisted is stopped
-reactor.addSystemEventTrigger('after', 'shutdown', app.quit )
-
-# install QT support
-qtsupport.install(app)
-
-# run reactor
-reactor.run()
+from twisted.internet import qtreactor
+qtreactor.install(app)
 </pre>
+
+    <h2>Non-Reactor GUI Integration</h2>
 
     <h3><a name="tkinter">Tkinter</a></h3>
 
