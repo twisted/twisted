@@ -897,7 +897,7 @@ class IMAP4Client(basic.LineReceiver):
         self.context = contextFactory
         
         self._tag = None
-        self._parts = []
+        self._parts = None
 
     def registerAuthenticator(self, auth):
         """Register a new form of authentication
@@ -933,33 +933,32 @@ class IMAP4Client(basic.LineReceiver):
 
     def lineReceived(self, line):
         # print 'C: ' + line
-        lastPart = line.rfind(' ')
-        if lastPart != -1:
-            lastPart = line[lastPart + 1:]
-            if lastPart.startswith('{') and lastPart.endswith('}'):
-                # It's a literal a-comin' in
-                try:
-                    octets = int(lastPart[1:-1])
-                except ValueError:
-                    raise IllegalServerResponse(line)
-                self._tag, parts = line.split(None, 1)
-                self._setupForLiteral(parts, octets)
-                return
+        if self._parts is None:
+            lastPart = line.rfind(' ')
+            if lastPart != -1:
+                lastPart = line[lastPart + 1:]
+                if lastPart.startswith('{') and lastPart.endswith('}'):
+                    # It's a literal a-comin' in
+                    try:
+                        octets = int(lastPart[1:-1])
+                    except ValueError:
+                        raise IllegalServerResponse(line)
+                    self._tag, parts = line.split(None, 1)
+                    self._setupForLiteral(parts, octets)
+                    return
+                else:
+                    # It isn't a literal at all
+                    self._regularDispatch(line)
             else:
-                # It isn't a literal at all
                 self._regularDispatch(line)
         else:
-            if self._parts:
-                # If an expression is in progress, no tag is required here
-                # Since we didn't find a literal indicator, this expression
-                # is done.
-                self._parts.append(line)
-                tag, rest = self._tag, ''.join(self._parts)
-                self._tag, self._parts = None, []
-                self.dispatchCommand(tag, rest)
-            else:
-                # Otherwise, this line stands alone!
-                self._regularDispatch(line)
+            # If an expression is in progress, no tag is required here
+            # Since we didn't find a literal indicator, this expression
+            # is done.
+            self._parts.append(line)
+            tag, rest = self._tag, ''.join(self._parts)
+            self._tag = self._parts = None
+            self.dispatchCommand(tag, rest)
 
     def _regularDispatch(self, line):
         parts = line.split(None, 1)
