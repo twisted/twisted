@@ -51,7 +51,7 @@ class UserStatusTree(resource.Resource):
         resource.Resource.__init__(self)
         self.service = service
 
-    def render(self, request):
+    def render_GET(self, request):
         d = self.service.getUsers()
         def formatUsers(users):
             l = ['<li><a href="%s">%s</a></li>' % (user, user)
@@ -75,7 +75,7 @@ class UserStatus(resource.Resource):
         self.user = user
         self.service = service
 
-    def render(self, request):
+    def render_GET(self, request):
         d = self.service.getUser(self.user)
         d.addCallback(cgi.escape)
         d.addCallback(lambda m:
