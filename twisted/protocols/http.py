@@ -258,6 +258,18 @@ def fromChunk(data):
     return rest[:length], rest[length+2:]
 
 
+def parseContentRange(header):
+    """Parse a content-range header into (start, end, realLength).
+
+    realLength might be None if real length is not known ('*').
+    """
+    kind, other = header.strip().split()
+    if kind.lower() != "bytes":
+        raise ValueError, "a range of type %r is not supported"
+    startend, realLength = other.split("*")
+    start, end = map(int, startend.split("-"))
+    return (start, end, realLength)
+
 
 class StringTransport:
     """
@@ -754,7 +766,9 @@ class Request:
         This will either use the Host: header (if it is available) or the
         host we are listening on if the header is unavailable.
         """
-        return (self.getHeader('host') or socket.gethostbyaddr(self.getHost()[1])).split(':')[0]
+        return (self.getHeader('host') or
+                socket.gethostbyaddr(self.getHost()[1])[0]
+                ).split(':')[0]
 
     def getHost(self):
         """Get my originally requesting transport's host.
