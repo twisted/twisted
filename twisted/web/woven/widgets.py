@@ -912,26 +912,26 @@ class ExpandMacro(Widget):
     
     In the Page that is being rendered, place the ExpandMacro widget
     on the node you want replaced with the Macro, and provide nodes
-    tagged with fill-slot= attributes which will fill slots in the Macro:
+    tagged with fill-slot= attributes which will fill slots in the Macro::
     
-    def wvfactory_myMacro(self, request, node, model):
-        return ExpandMacro(
-            model,
-            macroFile="MyMacro.html",
-            macroName="main")
-    
-    <div view="myMacro">
-        <span fill-slot="greeting">Hello</span>
-        <span fill-slot="greetee">World</span>
-    </div>
+        def wvfactory_myMacro(self, request, node, model):
+            return ExpandMacro(
+                model,
+                macroFile="MyMacro.html",
+                macroName="main")
+        
+        <div view="myMacro">
+            <span fill-slot="greeting">Hello</span>
+            <span fill-slot="greetee">World</span>
+        </div>
     
     Then, in your Macro template file ("MyMacro.html" in the above
     example) designate a node as the macro node, and nodes
-    inside that as the slot nodes:
+    inside that as the slot nodes::
     
-    <div macro="main">
-        <h3><span slot="greeting" />, <span slot="greetee" />!</h3>
-    </div>
+        <div macro="main">
+            <h3><span slot="greeting" />, <span slot="greetee" />!</h3>
+        </div>
     """
     def __init__(self, model, macroFile="", macroFileDirectory="", macroName="", **kwargs):
         self.macroFile=macroFile

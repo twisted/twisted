@@ -28,7 +28,7 @@ from twisted.python.reflect import qual
 from twisted.web import domhelpers
 from twisted.web.woven import template, controller, utils
 
-__version__ = "$Revision: 1.30 $"[11:-2]
+__version__ = "$Revision: 1.31 $"[11:-2]
 
 controllerFactory = controller.controllerFactory
 
@@ -281,24 +281,24 @@ class DictAggregator(Anything):
     Also for use gathering a dict of arguments to pass to a parent's
     aggregateValid if no commit function is passed.
     
-    Usage example:
-    <form controller="theForm" action="">
-        <input controller="Integer" 
-            view="InputText" model="anInteger" />
-        <input controller="Anything" 
-            view="InputText" model="aString" />
-        <input type="submit" />
-    </form>
-    
-    def theCommitFunction(anInteger=None, aString=None):
-        '''Note how the keyword arguments match up with the leaf model
-        names above
-        '''
-        print "Yay", anInteger, aString
-    
-    class CMyController(controller.Controller):
-        def wcfactory_theForm(self, request, node, m):
-            return input.FormAggregator(m, commit=theCommitFunction)
+    Usage example::
+        <form controller="theForm" action="">
+            <input controller="Integer" 
+                view="InputText" model="anInteger" />
+            <input controller="Anything" 
+                view="InputText" model="aString" />
+            <input type="submit" />
+        </form>
+        
+        def theCommitFunction(anInteger=None, aString=None):
+            '''Note how the keyword arguments match up with the leaf model
+            names above
+            '''
+            print "Yay", anInteger, aString
+        
+        class CMyController(controller.Controller):
+            def wcfactory_theForm(self, request, node, m):
+                return input.FormAggregator(m, commit=theCommitFunction)
     """
     def aggregateValid(self, request, inputhandler, data):
         """Aggregate valid input from inputhandlers below us until
