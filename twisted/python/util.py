@@ -18,7 +18,7 @@
 
 from __future__ import nested_scopes, generators
 
-__version__ = '$Revision: 1.45 $'[11:-2]
+__version__ = '$Revision: 1.46 $'[11:-2]
 
 import os
 import sys
@@ -376,7 +376,7 @@ def makeStatBar(width, maxPosition, doneChar = '=', undoneChar = '-', currentCha
     return statBar
 
 def spewer(frame, s, ignored):
-    """A trace function for sys.settrace that prints every method call."""
+    """A trace function for sys.settrace that prints every function or method call."""
     from twisted.python import reflect
     if frame.f_locals.has_key('self'):
         se = frame.f_locals['self']
@@ -387,6 +387,11 @@ def spewer(frame, s, ignored):
         print 'method %s of %s at %s' % (
             frame.f_code.co_name, k, id(se)
         )
+    else:
+        print 'function %s in %s, line %s' % (
+            frame.f_code.co_name,
+            frame.f_code.co_filename,
+            frame.f_lineno)
 
 def searchupwards(start, files=[], dirs=[]):
     """Walk upwards from start, looking for a directory containing
