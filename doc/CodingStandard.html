@@ -75,7 +75,49 @@
     <p>
       Docstrings should be triple-quoted.
     </p>
+    <p>
+      Docstrings should be written in StructuredText format; more documentation
+      is available on the <a href="http://happydoc.sourceforge.net">HappyDoc
+      website</a>.
+    </p>
+    <p>
+      Additionally, to accommodate emacs users:
+      
+    <ul>
+      <li>Single quotes of the type of the docstring's triple-quote should be
+      escaped.  This will prevent font-lock from accidentally fontifying large
+      portions of the file as a string.
 
+      <li>Code examples in docstrings should be prefixed by the | character.
+      This will prevent IM-Python from 
+
+    </ul>
+  </p>
+    <p>
+    For example,
+    <pre>
+def foo2bar(f):
+    """I am a function to convert foos to bars.
+
+    I should be used when you have a foo but you want a bar; note that this is a
+    non-destructive operation.  If I can\'t convert the foo to a bar I will raise a
+    FooException().
+
+    For example::
+
+      |  import wombat
+      |  def sample(something):
+      |      f = something.getFoo()
+      |      f.doFooThing()
+      |      b = wombat.foo2bar(f)
+      |      b.doBarThing()
+      |      return b
+
+    """
+    # Optionally, actual code can go here.
+</pre>
+  </p>
+    
     <h3>Classes</h3>
     <p>
       Classes are to be named in mixed case, with the first letter capitalized;
@@ -115,7 +157,7 @@
     <address><a href="mailto:glyph@helix.twistedmatrix.com">Glyph Lefkowitz</a></address>
 <!-- Created: Thu Apr 26 07:53:26 CDT 2001 -->
 <!-- hhmts start -->
-Last modified: Mon May 14 05:26:05 CDT 2001
+Last modified: Tue Aug 28 17:13:54 CDT 2001
 <!-- hhmts end -->
   </body>
 </html>
