@@ -1,5 +1,5 @@
 # -*- test-case-name: twisted.test.test_explorer -*-
-# $Id: explorer.py,v 1.4 2003/02/12 13:11:55 acapnotic Exp $
+# $Id: explorer.py,v 1.5 2003/02/12 13:15:32 acapnotic Exp $
 # Twisted, the Framework of Your Internet
 # Copyright (C) 2001 Matthew W. Lefkowitz
 #
@@ -23,7 +23,7 @@ manhole.coil.Configurables.  Someone should investigate this further. (TODO)
 """
 
 # System Imports
-import new, string, sys, types
+import inspect, new, string, sys, types
 import UserDict
 
 # Twisted Imports
