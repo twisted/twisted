@@ -19,7 +19,7 @@
 """
 
 #t.w imports
-import resource
+from twisted.web import resource
 
 import traceback, string
 
