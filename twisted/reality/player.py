@@ -21,6 +21,8 @@ import string
 import cPickle
 import os
 import traceback
+import time
+
 
 # Twisted Imports
 from twisted.python import threadable, reflect, log, authenticator, rebuild
@@ -340,16 +342,25 @@ def discover(name,x,y,z,
     return matrix
 
 
+def persist_log(author, reality, filename, time):
+    log.msg("%s persisted %s to %s.rp at %s" % (author, reality.name, filename, asctime(gmtime(time))))
+
 
 class Author(Player):
+
+    wizbit = 1
+
     def __init__(self,*args,**kw):
         apply(Player.__init__,(self,)+args,kw)
         self.code_space={'self':self,
-                         'Thing':thing.Thing
+                         'Thing':thing.Thing,
+                         'log_dig':None,
+                         'log_create':None,
+                         'log_persist':persist_log,
+                         'trashcan':None,
                          #'__builtins__':None
                          }
 
-    wizbit = 1
 
     def ability_adduser(self, sentence):
         """adduser (name)
@@ -559,13 +570,13 @@ your character has."""
         for x in dict.keys():
             self.hears(x)
 
-
     def ability_persist(self, sentence):
         """persist {mapname}
 
         This will create a file called mapname.rp, containing the
         saved state of the current game."""
-
+        if self.code_space.has_key('log_persist') and self.code_space['log_persist'] is not None:
+            self.code_space['log_persist'](self.name, self.reality, sentence.directString(),time.time())
         file=open(sentence.directString()+'.rp','wb')
         cPickle.dump(self.reality,file)
         file.flush()
@@ -624,7 +635,10 @@ Undig is the opposite of dig, in that it will close off the exit in the given di
         direction = sentence.directString()
         otherPlace = self.place.findExit(direction)
         self.place.disconnectExit(direction)
-        otherPlace.destroy()
+        if self.code_space.has_key('trashcan') and self.code_space['trashcan']  is not None:
+            otherPlace.location = self.code_space['trashcan']
+        else:
+            otherPlace.destroy()
 
     def ability_tunnel(self, sentence):
         """untunnel {direction} to {room}
@@ -666,7 +680,6 @@ Dig creates a new room (and an exit to that room from the current room, and
 back again) in the direction specified. See also "undig" to totally undo this
 process, or "tunnel" and "barricade" to edit or create new exits for your
 new room."""
-
         direction=sentence.directString()
         try:
             name = sentence.indirectString('to')
@@ -676,11 +689,16 @@ new room."""
         r = room.Room(name,self.reality)
         p.connectExit(direction, r)
         r.connectExit(geometry.reverse(direction),p)
+        if self.code_space.has_key('log_dig') and self.code_space['log_dig'] is not None:
+            self.code_space['log_dig'](self.name, r,time.time())
+
 
     def ability_create(self,sentence):
         """create {name}
 
 Creates a new Thing with the name you provide. See also "destroy"."""
+        if self.code_space.has_key('log_create') and self.code_space['log_create'] is not None:
+            self.code_space['log_create'](self.name,obj,time.time())
         obj = thing.Thing(sentence.directString())
         obj.location = self
         self.hears("*poof* ",obj.nounPhrase," was created.")
@@ -688,10 +706,16 @@ Creates a new Thing with the name you provide. See also "destroy"."""
     def ability_destroy(self, sentence):
         """destroy {name}
 
-Destroys the named Thing. See also "create"."""
+Destroys the named Thing, unless Author has 'trashcan' set, in which
+case the object is relocated to the specified trashcan. See also
+"create"."""
         obj = sentence.directObject()
-        obj.destroy()
-        self.hears("*foop* ",obj.nounPhrase," was destroyed.")
+        if self.code_space.has_key('trashcan') and self.code_space['trashcan']  is not None:
+            obj.location = self.code_space['trashcan']
+            self.hears("*kchunk* ",obj.nounPhrase," was trashcanned.")
+        else:
+            obj.destroy()
+            self.hears("*foop* ",obj.nounPhrase," was destroyed.")
 
     def ability_locate(self, sentence):
         """locate {Thing}
