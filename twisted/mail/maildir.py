@@ -114,9 +114,8 @@ class AbstractMaildirDomain:
         """Check for existence of user in the domain
         """
         if self.userDirectory(user.dest.local) is not None:
-            return defer.succeed(user)
-        else:
-            return defer.fail(smtp.SMTPBadRcpt(user))
+            return user
+        raise smtp.SMTPBadRcpt(user)
 
     def startMessage(self, user):
         """Save a message for a given user
@@ -143,7 +142,9 @@ class MaildirMailbox(pop3.Mailbox):
         initializeMaildir(path)
         for name in ('cur', 'new'):
             for file in os.listdir(os.path.join(path, name)):
-                self.list.append(os.path.join(path, name, file))
+                self.list.append((file, os.path.join(path, name, file)))
+        self.list.sort()
+        self.list = [e[1] for e in self.list]
 
     def listMessages(self, i=None):
         """Return a list of lengths of all files in new/ and cur/
