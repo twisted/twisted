@@ -407,6 +407,7 @@ class _Deferred(Stage):
         callbacks.  If not called, then this returns an Instruction
         which will let the reactor execute other operations, such
         as the producer for this deferred.
+
     """
     class Instruction(CallLater):
         def __init__(self, deferred):
@@ -600,7 +601,8 @@ class Map(Stage):
 class Zip(Map):
     """ Zips two or more stages into a stream of N tuples
 
-        Zip([1, Cooperate(), 2],[3, 4]) => [ (1, 3), (2, 4) ]
+            source = flow.Zip([1,flow.Cooperate(),2,3],["one","two"])
+            printFlow(source)
 
     """
     def __init__(self, *stages):
@@ -669,12 +671,9 @@ class Concurrent(Stage):
 class Merge(Stage):
     """ Merges two or more Stages results into a single stream
 
-        This Stage can be used for merging two stages into a single
-        stage, all while maintaining the ability to pause during Cooperate.
-        Note that while this code may be deterministic, applications of
-        this module should not depend upon a particular order.   In
-        particular, Cooperate events may be ignored or delayed if one
-        of the other stages has data available.
+            source = flow.Zip([1,flow.Cooperate(),2,3],["one","two"])
+            printFlow(source)
+
     """
     def __init__(self, *stages):
         Stage.__init__(self)
@@ -702,24 +701,11 @@ class Callback(Stage):
         results of which can be obtained by yielding the Callback and
         then calling next().   For example:
 
-            # 'pull' consumer
-            def printer(source): 
-                yield source
-                for data in source:
-                    print data
-                    yield source
-                print "done"
-           
-            # glue, convert push to pull 
-            cb = flow.Callback()
-            d = flow.Deferred(printer(cb))
-            d.addCallback(lambda _: reactor.stop())
-
-            # 'push' producer
-            reactor.callLater(0, lambda: cb.result("one"))
-            reactor.callLater(.5, lambda: cb.result("two"))
-            reactor.callLater(1, lambda: cb.finish())
-            reactor.run()
+            source = flow.Callback()
+            reactor.callLater(0, lambda: source.result("one"))
+            reactor.callLater(.5, lambda: source.result("two"))
+            reactor.callLater(1, lambda: source.finish())
+            printFlow(source)
 
     """
     class Instruction(CallLater):
@@ -771,6 +757,21 @@ class Threaded(Stage):
         If the iterable happens to have a chunked attribute, and
         that attribute is true, then this wrapper will assume that
         data arrives in chunks via a sequence instead of by values.
+
+            def runInThread(cnt):
+                while cnt > 0:
+                   from time import sleep
+                   sleep(.1)
+                   yield cnt
+                   cnt -= 1
+            
+            def howdy():
+                print "howdy"
+            
+            source = flow.Threaded(runInThread(8))
+            reactor.callLater(.3,howdy)
+            printFlow(source)
+            
     """
     class Instruction(CallLater):
         def __init__(self):
