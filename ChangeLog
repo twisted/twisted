@@ -4,6 +4,10 @@
 	(MultiService.removeService): inverse of addService
 	(ApplicationService.disownServiceParent): inverse of setServiceParent
 
+2002-9-27  Moshe Zadka <moshez@twistedmatrix.com>
+
+	* .: Releasing 0.99.2
+
 2002-09-26  Glyph Lefkowitz  <glyph@twistedmatrix.com>
 
 	* twisted/web/microdom.py: Better string formatting of XML
