@@ -89,12 +89,21 @@ class Integer(Argument):
     """
     defaultDefault = 0
     def coerce(self, val):
-        return int(val)
+        try:
+            return int(val)
+        except ValueError:
+            raise InputError, "Invalid integer: %s" % val
 
 
 class Float(Argument):
+    
+    defaultDefault = 0.0
+
     def coerce(self, val):
-        return float(val)
+        try:
+            return float(val)
+        except ValueError:
+            raise InputError, "Invalid float: %s" % val
 
 
 class Choice(Argument):
@@ -191,28 +200,3 @@ class FormMethod:
     def call(self,*args,**kw):
         return self.callable(*args,**kw)
 
-
-def test():
-    def funky(title, checkone, checktwo, checkn, mnu, desc):
-        pass
-    msf = MethodSignature(String("title"),
-                          Boolean("checkone"),
-                          Boolean("checktwo"),
-                          Flags("checkn", ["zero", 0, "Count Zero",
-                                           "one", 1, "Count One",
-                                           "two", 2, "Count Two"],
-                                ["one"],
-                                # hints=[WebCheckGroup(style="color: orange"),
-                                # GtkCheckGroup(border="3")]
-                                  ),
-                          Choice("mnu",
-                                 [['IDENTIFIER', 'Sphere', 'Some Innocuous String'],
-                                  ['TEST_FORM', 'Cube', 'Just another silly string.'],
-                                  ['CONEHEADS', 'Cone', 'Hoo ha.']],
-                                 # hints=[WebMenu()]
-                                 ))
-    m = msf.method(funky)
-
-
-if __name__ == '__main__':
-    test()
