@@ -220,6 +220,7 @@ desktop environments, and your toaster.
         "twisted",
         "twisted.application",
         "twisted.conch",
+        "twisted.conch.openssh_compat",
         "twisted.conch.ssh",
         "twisted.conch.ui",
         "twisted.conch.insults",
