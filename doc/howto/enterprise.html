@@ -87,6 +87,11 @@ dbpool = adbapi.ConnectionPool("dbmodule", 'mydb', 'andrew', 'password')
       passed as extra arguments to <code
       class="API">adbapi.ConnectionPool</code>'s constructor.
       Keyword parameters work as well.</li>
+
+      <li>You may also control the size of the connection pool with
+      the keyword parameters <code>cp_min</code> and
+      <code>cp_max</code>.  The default minimum and maximum values
+      are 3 and 5.</li>
     </ul>
 
     <p>So, now you need to be able to dispatch queries to your
@@ -119,9 +124,10 @@ db.getAge("Glyph").addCallbacks(gotAge, db.operationError,
 
     <p>This is straightforward, except perhaps for the return value
     of <code>getAge</code>. It returns a <code
-    class="API">twisted.python.defer.Deferred</code>, which allows
+    class="API">twisted.internet.defer.Deferred</code>, which allows
     arbitrary callbacks to be called upon completion (or upon
-    failure).</p>
+    failure).  More documentation on Deferred is available <a
+    href="defer.html">here</a>.</p>
 
     <p>Also worth noting is that this example assumes that dbmodule
     uses the "qmarks" paramstyle (see the DB-API specification). If
