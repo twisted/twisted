@@ -290,6 +290,23 @@ seems to catch it!  How do I exit my program?</h3>
 reactor.</p>
 
 
+<h3>How do I find out the IP address of the other end of my connection?</h3>
+
+<p>The <code>.transport</code> object (which implements the <code class="API"
+base="twisted.internet.interfaces">ITransport</code> interface) offers a pair
+of methods named <code class="API"
+base="twisted.internet.interfaces.ITransport">getPeer</code> and <code
+class="API" base="twisted.internet.interfaces.ITransport">getHost</code>.
+<code>getPeer</code> will give you a tuple that describes the address of the
+system at the other end of the connection. For example:</p>
+
+<pre class="python">
+class MyProtocol(protocol.Protocol):
+    def connectionMade(self):
+        print "connection from", self.transport.getPeer()
+</pre>
+
+
 <h2>Web</h2>
 
 <h3>Is the Twisted web server a toy?</h3>

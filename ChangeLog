@@ -1,3 +1,7 @@
+2004-02-13  Brian Warner  <warner@lothar.com>
+
+	* doc/howto/faq.xhtml: add entry on transport.getPeer()
+
 2004-01-31  Christopher Armstrong  <radix@twistedmatrix.com>
 
 	* .: Releasing Twisted 1.1.2alpha2 (problem with Debian packaging).
