@@ -1,5 +1,0 @@
-?package(python@VERSION@-twisted-conch):\
-needs=x11\
-section="Apps/Net"\
-title="Twisted SSH Client (@VERSION@)"\
-command="/usr/bin/tkconch@VERSION@"
