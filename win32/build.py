@@ -65,8 +65,9 @@ class BuildOptions(usage.Options):
         if not self['netpbmbin']:
             netpbmbin='%s/usr/local/netpbm/bin' % self['cyghome']
             self['netpbmbin']=netpbmbin
-        if not os.path.isdir(netpbmbin):
-            err('netpbm must be installed at %s.\n' % netpbmbin)
+        pngtopnm=os.path.join(self['netpbmbin'], 'pngtopnm.exe')
+        if not os.path.isfile(pngtopnm):
+            err('netpbm must be installed at %s.\n' % self['netpbmbin'])
             successcheck=0
             
         # FIXME - check if distutils has --post-install
