@@ -2,16 +2,16 @@
 
 # Twisted, the Framework of Your Internet
 # Copyright (C) 2001 Matthew W. Lefkowitz
-# 
+#
 # This library is free software; you can redistribute it and/or
 # modify it under the terms of version 2.1 of the GNU Lesser General Public
 # License as published by the Free Software Foundation.
-# 
+#
 # This library is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
 # Lesser General Public License for more details.
-# 
+#
 # You should have received a copy of the GNU Lesser General Public
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
@@ -22,7 +22,7 @@ Package installer for Twisted
 Copyright (C) 2001 Matthew W. Lefkowitz
 All rights reserved, see LICENSE for details.
 
-$Id: setup.py,v 1.92 2003/01/18 07:36:35 moonfallen Exp $
+$Id: setup.py,v 1.93 2003/01/27 08:14:38 acapnotic Exp $
 """
 
 import distutils, os, sys, string
@@ -118,7 +118,7 @@ class build_ext_twisted(build_ext):
             define_macros = [("WIN32", 1)]
         else:
             define_macros = []
-        
+
         # Extension modules to build.
         exts = [
             Extension("twisted.spread.cBanana",
@@ -184,7 +184,7 @@ setup_args = {
 Twisted is a framework to build frameworks. It is expected that one day
 the project will expanded to the point that the framework will seamlessly
 integrate with mail, web, DNS, netnews, IRC, RDBMSs, desktop environments,
-and your toaster. 
+and your toaster.
 
 !!! NOTE !!!
 If you are not using ActiveState Python, please download and install
@@ -257,9 +257,15 @@ if hasattr(distutils.dist.DistributionMetadata, 'get_platforms'):
     setup_args['platforms'] = "win32 posix"
 
 imPath = os.path.join('twisted', 'im')
-setup_args['data_files']=[(imPath, [os.path.join(imPath, 'instancemessenger.glade')]),
-                          ('twisted', [os.path.join('twisted', 'plugins.tml')]),
-                          ]
+pbuiPath = os.path.join('twisted','spread','ui')
+manuiPath = os.path.join('twisted','manhole','ui')
+
+setup_args['data_files']=[
+    (imPath, [os.path.join(imPath, 'instancemessenger.glade')]),
+    (pbuiPath, [os.path.join(pbuiPath, 'gtk2util.glade')]),
+    (manuiPath, [os.path.join(manuiPath, 'manhole2.glade')]),
+    ('twisted', [os.path.join('twisted', 'plugins.tml')]),
+    ]
 
 # always define WIN32 under Windows
 if os.name == 'nt':

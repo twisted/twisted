@@ -18,7 +18,7 @@
 # twisted imports
 from twisted import copyright
 from twisted.spread import pb
-from twisted.python import log
+from twisted.python import log, components
 
 # sibling imports
 import explorer
@@ -74,7 +74,7 @@ class FakeStdIO:
                 block_begin = i
 
 
-class ManholeClientInterface:
+class IManholeClient(components.Interface):
     def console(self, list_of_messages):
         """Takes a list of (type, message) pairs to display.
 
@@ -111,7 +111,7 @@ def runInConsole(command, console, globalNS=None, localNS=None,
     Returns the command's return value.
 
     The console is called with a list of (type, message) pairs for
-    display, see ManholeClientInterface.console.
+    display, see L{IManholeClient.console}.
     """
     output = []
     fakeout = FakeStdIO("stdout", output)
