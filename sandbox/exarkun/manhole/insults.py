@@ -26,12 +26,6 @@ class ITerminalProtocol(components.Interface):
         called.  This method may not be called for real terminals.
         """
 
-    def setMode(self, modes):
-        pass
-
-    def resetMode(self, modes):
-        pass
-
     def unhandledControlSequence(self, seq):
         """Called when an unsupported control sequence is received.
         """
@@ -54,12 +48,6 @@ class TerminalProtocol(object):
         pass
 
     def terminalSize(self, width, height):
-        pass
-
-    def setMode(self, modes):
-        pass
-
-    def resetModes(self, modes):
         pass
 
     def unhandledControlSequence(self, seq):
