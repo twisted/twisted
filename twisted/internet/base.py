@@ -264,16 +264,19 @@ class ReactorBase:
     def sigInt(self, *args):
         """Handle a SIGINT interrupt.
         """
+        log.msg("Received SIGINT, shutting down.")
         self.callLater(0, self.stop)
 
     def sigBreak(self, *args):
         """Handle a SIGBREAK interrupt.
         """
+        log.msg("Received SIGBREAK, shutting down.")
         self.callLater(0, self.stop)
 
     def sigTerm(self, *args):
         """Handle a SIGTERM interrupt.
         """
+        log.msg("Received SIGTERM, shutting down.")
         self.callLater(0, self.stop)
 
     def disconnectAll(self):

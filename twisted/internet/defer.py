@@ -98,7 +98,7 @@ def execute(callable, *args, **kw):
 
 def maybeDeferred(f, *args, **kw):
     """Invoke a function that may or may not return a deferred.
-    
+
     Call the given function with the given arguments.  If the returned
     object is a C{Deferred}, return it.  If the returned object is a C{Failure},
     wrap it with C{fail} and return it.  Otherwise, wrap it in C{succeed} and
@@ -107,10 +107,10 @@ def maybeDeferred(f, *args, **kw):
 
     @type f: Any callable
     @param f: The callable to invoke
-    
+
     @param args: The arguments to pass to C{f}
     @param kw: The keyword arguments to pass to C{f}
-    
+
     @rtype: C{Deferred}
     @return: The result of the function call, wrapped in a C{Deferred} if
     necessary.
@@ -437,7 +437,7 @@ class DeferredList(Deferred):
         @param fireOnOneErrback: (keyword param) a flag indicating that
                             only one errback needs to be fired for me to call
                             my errback
-        @param consumeErrors: (keyword param) a flag indicating that any errors 
+        @param consumeErrors: (keyword param) a flag indicating that any errors
                             raised in the original deferreds should be
                             consumed by this DeferredList.  This is useful to
                             prevent spurious warnings being logged.
@@ -486,7 +486,7 @@ class DeferredList(Deferred):
                 self.errback(failure.Failure((result, index)))
             elif self.finishedCount == len(self.resultList):
                 self.callback(self.resultList)
-        
+
         if succeeded == FAILURE and self.consumeErrors:
             result = None
 

@@ -16,7 +16,7 @@
 # 
 from twisted.trial import unittest
 
-from twisted.internet import protocol, reactor, error, defer, interfaces
+from twisted.internet import protocol, reactor, error, defer, interfaces, address
 from twisted.python import failure, components
 
 
@@ -60,7 +60,7 @@ class GoodClient(Server):
 
 
 class OldConnectedUDPTestCase(unittest.TestCase):
-
+        
     def testStartStop(self):
         client = Client()
         port2 = reactor.connectUDP("127.0.0.1", 8888, client)
@@ -128,6 +128,14 @@ class OldConnectedUDPTestCase(unittest.TestCase):
 
 class UDPTestCase(unittest.TestCase):
 
+    def testOldAddress(self):
+        server = Server()
+        p = reactor.listenUDP(0, server, interface="127.0.0.1")
+        reactor.iterate()
+        addr = p.getHost()
+        self.assertEquals(addr, ('INET_UDP', addr.host, addr.port))
+        p.stopListening()
+    
     def testStartStop(self):
         server = Server()
         port1 = reactor.listenUDP(0, server, interface="127.0.0.1")
@@ -160,7 +168,7 @@ class UDPTestCase(unittest.TestCase):
         reactor.iterate()
         reactor.iterate()
         reactor.iterate()
-        self.assertEquals(server.transport.getHost(), ('INET_UDP', '127.0.0.1', n))
+        self.assertEquals(server.transport.getHost(), address.IPv4Address('UDP', '127.0.0.1', n))
         server2 = Server()
         self.assertRaises(error.CannotListenError, reactor.listenUDP, n, server2, interface='127.0.0.1')
         port.stopListening()
@@ -183,18 +191,19 @@ class UDPTestCase(unittest.TestCase):
         port2 = reactor.listenUDP(0, client, interface="127.0.0.1")
         reactor.iterate()
         reactor.iterate()
-        d = client.transport.connect("127.0.0.1", server.transport.getHost()[2])
-        self.assertEquals(unittest.deferredResult(d),
-                          tuple(server.transport.getHost()[1:]))
-        server.transport.write("hello", client.transport.getHost()[1:])
+        d = client.transport.connect("127.0.0.1", server.transport.getHost().port)
+        serverAddress = server.transport.getHost()
+        self.assertEquals(unittest.deferredResult(d), (serverAddress.host, serverAddress.port))
+        clientAddr = client.transport.getHost()
+        server.transport.write("hello", (clientAddr.host, clientAddr.port))
         client.transport.write("a")
         client.transport.write("b", None)
-        client.transport.write("c", server.transport.getHost()[1:])
+        client.transport.write("c", (serverAddress.host, serverAddress.port))
         reactor.iterate()
         reactor.iterate()
         reactor.iterate()
-        self.assertEquals(client.packets, [("hello", ("127.0.0.1", server.transport.getHost()[2]))])
-        addr = ("127.0.0.1", client.transport.getHost()[2])
+        self.assertEquals(client.packets, [("hello", ("127.0.0.1", server.transport.getHost().port))])
+        addr = ("127.0.0.1", client.transport.getHost().port)
         self.assertEquals(server.packets, [("a", addr), ("b", addr), ("c", addr)])
         port1.stopListening(); port2.stopListening()
         reactor.iterate(); reactor.iterate()
@@ -214,8 +223,6 @@ class UDPTestCase(unittest.TestCase):
         server.transport.write("c", ("127.0.0.1", 80))
         server.transport.write("d", ("127.0.0.1", 80))
         server.transport.write("e", ("127.0.0.1", 80))
-        server.transport.write("toserver", port2.getHost()[1:])
-        server.transport.write("toclient", port.getHost()[1:])
         reactor.iterate(); reactor.iterate()
         self.assertEquals(client.refused, 1)
         port.stopListening()

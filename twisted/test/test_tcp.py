@@ -23,6 +23,7 @@ from twisted.trial import unittest
 
 from twisted.internet import protocol, reactor, defer
 from twisted.internet import error
+from twisted.internet.address import IPv4Address
 
 
 class ClosingProtocol(protocol.Protocol):
@@ -587,6 +588,68 @@ class ProperlyCloseFilesTestCase(unittest.TestCase):
 
     def tearDown(self):
         self.listener.stopListening()
+
+
+class AProtocol(protocol.Protocol):
+
+    def connectionMade(self):
+        reactor.callLater(0.1, self.transport.loseConnection)
+        self.factory.testcase.assertEquals(self.transport.getHost(),
+                          IPv4Address("TCP", self.transport.getHost().host, self.transport.getHost().port))
+        self.factory.testcase.assertEquals(self.transport.getPeer(),
+                          IPv4Address("TCP", self.transport.getPeer().host, self.transport.getPeer().port))
+        self.factory.testcase.assertEquals(self.transport.getPeer(), self.factory.ipv4addr)
+        self.factory.testcase.ran = 1
+
+class AClientFactory(protocol.ClientFactory):
+
+    def __init__(self, testcase, ipv4addr):
+        self.testcase = testcase
+        self.ipv4addr = ipv4addr
+
+    def buildProtocol(self, addr):
+        self.testcase.assertEquals(addr, self.ipv4addr)
+        self.testcase.assertEquals(addr, ('INET', self.ipv4addr.host, self.ipv4addr.port))
+        p = AProtocol()
+        p.factory = self
+        return p
+        
+class AServerFactory(protocol.ServerFactory):
+
+    def __init__(self, testcase, ipv4addr):
+        self.testcase = testcase
+        self.ipv4addr = ipv4addr
+    
+    def buildProtocol(self, addr):
+        self.testcase.assertEquals(addr, self.ipv4addr)
+        self.testcase.assertEquals(addr, (self.ipv4addr.host, self.ipv4addr.port))
+        p = AProtocol()
+        p.factory = self
+        return p
+
+class AddressTestCase(unittest.TestCase):
+
+    def getFreePort(self):
+        """Get an empty port."""
+        p = reactor.listenTCP(0, protocol.ServerFactory())
+        reactor.iterate(); reactor.iterate()
+        port = p.getHost().port
+        p.stopListening()
+        reactor.iterate(); reactor.iterate()
+        return port
+    
+    def testBuildProtocol(self):
+        portno = self.getFreePort()
+        p = reactor.listenTCP(0, AServerFactory(self, IPv4Address('TCP', '127.0.0.1', portno)))
+        reactor.iterate()
+        reactor.connectTCP("127.0.0.1", p.getHost().port,
+                           AClientFactory(self, IPv4Address("TCP", "127.0.0.1", p.getHost().port)),
+                           bindAddress=("127.0.0.1", portno))
+        self.runReactor(0.4, True)
+        p.stopListening()
+        self.assert_(hasattr(self, "ran"))
+        del self.ran
+
 
 try:
     import resource

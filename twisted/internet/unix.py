@@ -31,24 +31,26 @@ if not hasattr(socket, 'AF_UNIX'):
     raise ImportError, "UNIX sockets not supported on this platform"
 
 # Twisted imports
-from twisted.internet import base, tcp, udp, error, interfaces, protocol
+from twisted.internet import base, tcp, udp, error, interfaces, protocol, address
 from twisted.internet.error import CannotListenError
 from twisted.python import log, reflect, failure
+
 
 class Server(tcp.Server):
     def __init__(self, sock, protocol, client, server, sessionno):
         tcp.Server.__init__(self, sock, protocol, (client, None), server, sessionno)
 
     def getHost(self):
-        return ('UNIX', repr(self.socket.getsockname()))
+        return address.UNIXAddress(self.socket.getsockname())
 
     def getPeer(self):
-        return ('UNIX', repr(self.hostname))
+        return address.UNIXAddress(self.hostname)
+
 
 class Port(tcp.Port):
     addressFamily = socket.AF_UNIX
     socketType = socket.SOCK_STREAM
-    
+
     transport = Server
 
     def __init__(self, fileName, factory, backlog=5, mode=0666, reactor=None):
@@ -57,6 +59,10 @@ class Port(tcp.Port):
 
     def __repr__(self):
         return '<%s on %r>' % (self.factory.__class__, self.port)
+
+    def _buildAddr(self, name):
+        assert not name
+        return None
 
     def startListening(self):
         """Create and bind my socket, and begin listening on it.
@@ -89,18 +95,18 @@ class Port(tcp.Port):
         os.unlink(self.port)
 
     def getHost(self):
-        """Returns a tuple of ('UNIX', fileName)
+        """Returns a UNIXAddress.
 
         This indicates the server's address.
         """
-        return ('UNIX', repr(self.socket.getsockname()))
+        return address.UNIXAddress(self.socket.getsockname())
 
 
 class Client(tcp.BaseClient):
     """A client for Unix sockets."""
     addressFamily = socket.AF_UNIX
     socketType = socket.SOCK_STREAM
-    
+
     def __init__(self, filename, connector, reactor=None):
         self.connector = connector
         self.realAddress = self.addr = filename
@@ -108,10 +114,10 @@ class Client(tcp.BaseClient):
                          None, reactor)
 
     def getPeer(self):
-        return ('UNIX', repr(self.addr))
+        return address.UNIXAddress(self.addr)
 
     def getHost(self):
-        return ('UNIX', )
+        return address.UNIXAddress(None)
 
 
 class Connector(base.BaseConnector):
@@ -123,7 +129,8 @@ class Connector(base.BaseConnector):
         return Client(self.address, self, self.reactor)
 
     def getDestination(self):
-        return ('UNIX', self.address)
+        return address.UNIXAddress(self.address)
+
 
 class DatagramPort(udp.Port):
     """Datagram UNIX port, listening for packets."""
@@ -191,11 +198,8 @@ class DatagramPort(udp.Port):
         self.logstr = reflect.qual(self.protocol.__class__) + " (UDP)"
 
     def getHost(self):
-        """
-        Returns a tuple of ('UNIX_DGRAM', address), indicating
-        the servers address
-        """
-        return ('UNIX_DGRAM',repr(self.socket.getsockname()))
+        return address.UNIXAddress(self.socket.getsockname())
+
 
 class ConnectedDatagramPort(DatagramPort):
     """A connected datagram UNIX socket."""
@@ -260,9 +264,4 @@ class ConnectedDatagramPort(DatagramPort):
                 raise
 
     def getPeer(self):
-        """
-        Returns a tuple of ('UNIX_DGRAM', address), indicating
-        the remote address.
-        """
-        return ('UNIX_DGRAM', repr(self.remoteaddr))
-
+        return address.UNIXAddress(self.remoteaddr)

@@ -52,7 +52,8 @@ import tcp, main, interfaces
 
 # Twisted imports
 from twisted.python import log
-from twisted.internet import base
+from twisted.internet import base, address
+
 
 class ContextFactory:
     """A factory for SSL context objects, for server SSL connections."""
@@ -112,18 +113,13 @@ class Client(tcp.Client):
         tcp.Client.__init__(self, host, port, bindAddress, connector, reactor)
 
     def getHost(self):
-        """Returns a tuple of ('SSL', hostname, port).
-
-        This indicates the address from which I am connecting.
-        """
-        return ('SSL',)+self.socket.getsockname()
+        """Returns the address from which I am connecting."""
+        h, p = self.socket.getsockname()
+        return address.IPv4Address('TCP', h, p, 'SSL')
 
     def getPeer(self):
-        """Returns a tuple of ('SSL', hostname, port).
-
-        This indicates the address that I am connected to.
-        """
-        return ('SSL',)+self.addr
+        """Returns the address that I am connected."""
+        return address.IPv4Address('TCP', self.addr[0], self.addr[1], 'SSL')
 
     def _connectDone(self):
         self.startTLS(self.ctxFactory)
@@ -135,18 +131,14 @@ class Server(tcp.Server):
     """I am an SSL server.
     """
     def getHost(self):
-        """Returns a tuple of ('SSL', hostname, port).
-
-        This indicates the servers address.
-        """
-        return ('SSL',)+self.socket.getsockname()
+        """Return server's address."""
+        h, p = self.socket.getsockname()
+        return address.IPv4Address('TCP', h, p, 'SSL')
 
     def getPeer(self):
-        """
-        Returns a tuple of ('SSL', hostname, port), indicating the connected
-        client's address.
-        """
-        return ('SSL',)+self.client
+        """Return address of peer."""
+        h, p = self.client
+        return address.IPv4Address('TCP', h, p, 'SSL')
 
 
 class Port(tcp.Port):
@@ -182,7 +174,8 @@ class Connector(base.BaseConnector):
         return Client(self.host, self.port, self.bindAddress, self.contextFactory, self, self.reactor)
 
     def getDestination(self):
-        return ('SSL', self.host, self.port)
+        return address.IPv4Address('TCP', self.host, self.port, 'SSL')
+ 
 
 __all__ = ["ContextFactory", "DefaultOpenSSLContextFactory", "ClientContextFactory"]
 

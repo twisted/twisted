@@ -43,7 +43,7 @@ elif platformType != 'java':
     from errno import EWOULDBLOCK, EINTR, EMSGSIZE, ECONNREFUSED, EAGAIN
 
 # Twisted Imports
-from twisted.internet import protocol, base, defer
+from twisted.internet import protocol, base, defer, address
 from twisted.persisted import styles
 from twisted.python import log, reflect
 
@@ -220,10 +220,11 @@ class Port(base.BasePort):
 
     def getHost(self):
         """
-        Returns a tuple of ('INET_UDP', hostname, port), indicating
-        the servers address
+        Returns an IPv4Address.
+
+        This indicates the address from which I am connecting.
         """
-        return ('INET_UDP',)+self.socket.getsockname()
+        return address.IPv4Address('UDP', *(self.socket.getsockname() + ('INET_UDP',)))
 
 
 class ConnectedPort(Port):
@@ -295,7 +296,7 @@ class ConnectedPort(Port):
         Returns a tuple of ('INET_UDP', hostname, port), indicating
         the remote address.
         """
-        return ('INET_UDP', self.remotehost, self.remoteport)
+        return address.IPv4Address('UDP', self.remotehost, self.remoteport, 'INET_UDP')
 
 
 class MulticastMixin:

@@ -70,7 +70,7 @@ elif os.name != 'java':
 from errno import EAGAIN
 
 # Twisted Imports
-from twisted.internet import protocol, defer, base
+from twisted.internet import protocol, defer, base, address
 from twisted.persisted import styles
 from twisted.python import log, failure, reflect
 from twisted.python.runtime import platform, platformType
@@ -469,18 +469,18 @@ class Client(BaseClient):
         self._finishInit(whenDone, skt, err, reactor)
 
     def getHost(self):
-        """Returns a tuple of ('INET', hostname, port).
+        """Returns an IPv4Address.
 
         This indicates the address from which I am connecting.
         """
-        return ('INET',)+self.socket.getsockname()
+        return address.IPv4Address('TCP', *(self.socket.getsockname() + ('INET',)))
 
     def getPeer(self):
-        """Returns a tuple of ('INET', hostname, port).
+        """Returns an IPv4Address.
 
         This indicates the address that I am connected to.
         """
-        return ('INET',)+self.addr
+        return address.IPv4Address('TCP', *(self.addr + ('INET',)))
 
     def __repr__(self):
         s = '<%s to %s at %x>' % (self.__class__, self.addr, id(self))
@@ -525,19 +525,18 @@ class Server(Connection):
         return holder
 
     def getHost(self):
-        """Returns a tuple of ('INET', hostname, port).
+        """Returns an IPv4Address.
 
-        This indicates the servers address.
+        This indicates the server's address.
         """
-        return ('INET',)+self.socket.getsockname()
+        return address.IPv4Address('TCP', *(self.socket.getsockname() + ('INET',)))
 
     def getPeer(self):
-        """
-        Returns a tuple of ('INET', hostname, port), indicating the connected
-        client's address.
-        """
-        return ('INET',)+self.client
+        """Returns an IPv4Address.
 
+        This indicates the client's address.
+        """
+        return address.IPv4Address('TCP', *(self.client + ('INET',)))
 
 class Port(base.BasePort):
     """I am a TCP server port, listening for connections.
@@ -596,6 +595,9 @@ class Port(base.BasePort):
         self.numberAccepts = 100
         self.startReading()
 
+    def _buildAddr(self, (host, port)):
+        return address._ServerFactoryIPv4Address('TCP', host, port)
+    
     def doRead(self):
         """Called when my socket is ready for reading.
 
@@ -624,7 +626,7 @@ class Port(base.BasePort):
                         continue
                     raise
 
-                protocol = self.factory.buildProtocol(addr)
+                protocol = self.factory.buildProtocol(self._buildAddr(addr))
                 if protocol is None:
                     skt.close()
                     continue
@@ -684,11 +686,11 @@ class Port(base.BasePort):
         return reflect.qual(self.factory.__class__)
 
     def getHost(self):
-        """Returns a tuple of ('INET', hostname, port).
+        """Returns an IPv4Address.
 
         This indicates the server's address.
         """
-        return ('INET',)+self.socket.getsockname()
+        return address.IPv4Address('TCP', *(self.socket.getsockname() + ('INET',)))
 
 
 class Connector(base.BaseConnector):
@@ -707,4 +709,4 @@ class Connector(base.BaseConnector):
         return Client(self.host, self.port, self.bindAddress, self, self.reactor)
 
     def getDestination(self):
-        return ('INET', self.host, self.port)
+        return address.IPv4Address('TCP', self.host, self.port, 'INET')

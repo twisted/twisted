@@ -93,6 +93,8 @@ class Factory:
         factory.
 
         Override this method to alter how Protocol instances get created.
+
+        @param addr: an object implementing L{twisted.internet.interfaces.IAddress}
         """
         p = self.protocol()
         p.factory = self
@@ -202,7 +204,7 @@ class ReconnectingClientFactory(ClientFactory):
     maxRetries = None
     _callID = None
     connector = None
-    
+
     continueTrying = 1
 
     def clientConnectionFailed(self, connector, reason):
@@ -242,7 +244,7 @@ class ReconnectingClientFactory(ClientFactory):
 
         log.msg("%s will retry in %d seconds" % (connector, self.delay,))
         from twisted.internet import reactor
-        
+
         def reconnector():
             self._callID = None
             connector.connect()

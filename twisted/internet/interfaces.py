@@ -25,6 +25,13 @@ Maintainer: U{Itamar Shtull-Trauring<mailto:twisted@itamarst.org>}
 from twisted.python.components import Interface
 
 
+class IAddress(Interface):
+    """An address, e.g. a TCP (host, port).
+
+    Default implementations are in twisted.internet.address.
+    """
+
+
 ### Reactor Interfaces
 
 class IConnector(Interface):
@@ -49,10 +56,7 @@ class IConnector(Interface):
     def getDestination(self):
         """Return destination this will try to connect to.
 
-        This can be one of:
-          1. TCP -- ('INET', host, port)
-          2. UNIX -- ('UNIX', address)
-          3. SSL -- ('SSL', host, port)
+        This will be an IAddress implementing object.
         """
 
 
@@ -168,7 +172,6 @@ class IReactorArbitrary(Interface):
         will be started connecting.
         """
 
-
 class IReactorTCP(Interface):
 
     def listenTCP(self, port, factory, backlog=5, interface=''):
@@ -208,7 +211,6 @@ class IReactorTCP(Interface):
            various callbacks on the factory when a connection is made,
            failed, or lost - see L{ClientFactory<twisted.internet.protocol.ServerFactory>} docs for details.
         """
-
 
 class IReactorSSL(Interface):
 
@@ -678,9 +680,7 @@ class IListeningPort(Interface):
     def getHost(self):
         """Get the host that this port is listening for.
 
-        @returns: a tuple of C{(proto_type, ...)}, where proto_type will be
-                  a string such as 'INET', 'SSL', 'UNIX'.  The rest of the
-                  tuple will be identifying information about the port.
+        @returns: a IAddress.
         """
 
 
@@ -901,11 +901,7 @@ class ITransport(Interface):
         """
 
     def getPeer(self):
-        '''Return a tuple of (TYPE, ...).
-
-        This indicates the other end of the connection.  TYPE indicates
-        what sort of connection this is: "INET", "UNIX", or something
-        else.
+        '''Return an L{IAddress}.
 
         Treat this method with caution.  It is the unfortunate
         result of the CGI and Jabber standards, but should not
@@ -916,7 +912,7 @@ class ITransport(Interface):
 
     def getHost(self):
         """
-        Similar to getPeer, but returns a tuple describing this side of the
+        Similar to getPeer, but returns an address describing this side of the
         connection.
         """
 
@@ -944,10 +940,11 @@ class ITCPTransport(ITransport):
         to allow detection of lost peers in a non-infinite amount of time."""
 
     def getHost(self):
-        """Returns tuple ('INET', host, port)."""
+        """Returns IPv4Address."""
 
     def getPeer(self):
-        """Returns tuple ('INET', host, port)."""
+        """Returns IPv4Address."""
+
 
 class ITLSTransport(ITCPTransport):
     """A TCP transport that supports switching to TLS midstream.
@@ -1038,7 +1035,7 @@ class IUDPTransport(Interface):
         """
     
     def getHost(self):
-        """Return ('INET_UDP', interface, port) we are listening on."""
+        """Returns UNIXAddress."""
 
 
 class IUDPConnectedTransport(Interface):
@@ -1048,7 +1045,7 @@ class IUDPConnectedTransport(Interface):
         """Write packet to address we are connected to."""
 
     def getHost(self):
-        """Return ('INET_UDP', interface, port) we are listening on."""
+        """Returns UNIXAddress."""
 
 
 class IUNIXDatagramTransport(Interface):
@@ -1058,7 +1055,7 @@ class IUNIXDatagramTransport(Interface):
         """Write packet to given address."""
 
     def getHost(self):
-        """Return ('UNIX_DGRAM', address) we are listening on."""
+        """Returns UNIXAddress."""
 
 
 class IUNIXDatagramConnectedTransport(Interface):
@@ -1068,10 +1065,10 @@ class IUNIXDatagramConnectedTransport(Interface):
         """Write packet to address we are connected to."""
 
     def getHost(self):
-        """Return ('UNIX_DGRAM', address) we are listening on."""
+        """Returns UNIXAddress."""
 
     def getPeer(self):
-        """Return ('UNIX_DGRAM', address) we are connected to."""
+        """Returns UNIXAddress."""
 
 
 class IMulticastTransport(Interface):

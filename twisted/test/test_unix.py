@@ -14,26 +14,41 @@
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
-from twisted.internet import interfaces, reactor, protocol, error
+from twisted.internet import interfaces, reactor, protocol, error, address
 from twisted.python import components
 from twisted.protocols import loopback
 from twisted.trial import unittest
 import test_smtp
 import stat, os
 
+
+class CancelProtocol(protocol.Protocol):
+
+    def connectionMade(self):
+        reactor.callLater(0.1, self.transport.loseConnection)
+
+
 class TestClientFactory(protocol.ClientFactory):
-    def startedConnecting(self, c):
-        h = hasattr(c.transport, "socket") # have to split it up b/c transport
-                                           # disappears on stopConnecting
-                                            
-        c.stopConnecting()
-        assert h
+
+    def __init__(self, testcase, name):
+        self.testcase = testcase
+        self.name = name
+    
     def buildProtocol(self, addr):
+        self.testcase.assertEquals(address.UNIXAddress(self.name), addr)
         return protocol.Protocol()
 
+
 class Factory(protocol.Factory):
+
+    def __init__(self, testcase, name):
+        self.testcase = testcase
+        self.name = name
+
     def buildProtocol(self, addr):
-        return protocol.Protocol()
+        self.testcase.assertEquals(None, addr)
+        return CancelProtocol()
+
 
 class UnixSocketTestCase(test_smtp.LoopbackSMTPTestCase):
     """Test unix sockets."""
@@ -43,19 +58,17 @@ class UnixSocketTestCase(test_smtp.LoopbackSMTPTestCase):
 
     def testDumber(self):
         filename = self.mktemp()
-        l = reactor.listenUNIX(filename, Factory())
-        reactor.connectUNIX(filename, TestClientFactory())
-        for i in xrange(100):
-            reactor.iterate()
+        l = reactor.listenUNIX(filename, Factory(self, filename))
+        reactor.connectUNIX(filename, TestClientFactory(self, filename))
+        self.runReactor(0.2, True)
         l.stopListening()
 
     def testMode(self):
         filename = self.mktemp()
-        l = reactor.listenUNIX(filename, Factory(), mode = 0600)
+        l = reactor.listenUNIX(filename, Factory(self, filename), mode = 0600)
         self.assertEquals(stat.S_IMODE(os.stat(filename)[0]), 0600)
-        reactor.connectUNIX(filename, TestClientFactory())
-        for i in xrange(100):
-            reactor.iterate()
+        reactor.connectUNIX(filename, TestClientFactory(self, filename))
+        self.runReactor(0.2, True)
         l.stopListening()
 
 class ClientProto(protocol.ConnectedDatagramProtocol):
