@@ -111,9 +111,9 @@ class ResourceScriptWrapper(resource.Resource):
         res = ResourceScript(self.path, self.registry)
         return res.render(request)
 
-    def getChild(self, path, request):
+    def getChildWithDefault(self, path, request):
         res = ResourceScript(self.path, self.registry)
-        return res.getChild(path, request)
+        return res.getChildWithDefault(path, request)
 
 
 
