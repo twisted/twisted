@@ -28,7 +28,7 @@ from twisted.cred import error, portal, checkers, credentials
 from twisted.python import log
 
 import jdftp as ftp
-from jdftp import PasvDTPFactory
+from jdftp import DTPFactory
 from twisted.protocols.ftp import FTPClient
 
 
@@ -84,35 +84,85 @@ class IOPump:
         else:
             return 0
 
-def connectedServerAndClient():
-    """Returns a 3-tuple: (client, server, pump)
-    """
-    svr = ftp.FTPFactory()
-    port = portal.Portal(ftp.FTPRealm())
-    port.registerChecker(checkers.AllowAnonymousAccess(), credentials.IAnonymous)
-    svr.portal = port
-    s = svr.buildProtocol(('127.0.0.1',))
-    class Foo(basic.LineReceiver):
-        def connectionMade(self):
-            self.f = self.factory   # to save typing in pdb :-)
-        def lineReceived(self,line):
-            self.factory.lines.append(line)
-    cf = protocol.ClientFactory()
-    cf.protocol = Foo
-    cf.lines = []
-    c = cf.buildProtocol(('127.0.0.1',))
-    cio = StringIO()
-    sio = StringIO()
-    c.makeConnection(protocol.FileWrapper(cio))
-    s.makeConnection(protocol.FileWrapper(sio))
-    pump = IOPump(c, s, cio, sio)
-    return c, s, pump
 
+class ConnectedServerAndClient(object):
+    dc   = None
+    dp   = None
+    ds   = None
+    c    = None
+    s    = None
+    pump = None
+    def __init__(self):
+        """Returns a 3-tuple: (client, server, pump)
+        """
+        self.createPIClientAndServer()
+
+    def createPIClientAndServer(self):
+        svr = ftp.FTPFactory()
+        svr.timeOut = None
+        svr.dtpTimeout = None
+        port = portal.Portal(ftp.FTPRealm())
+        port.registerChecker(checkers.AllowAnonymousAccess(), credentials.IAnonymous)
+        svr.portal = port
+        s = svr.buildProtocol(('127.0.0.1',))
+        class Foo(basic.LineReceiver):
+            def connectionMade(self):
+                self.f = self.factory   # to save typing in pdb :-)
+            def lineReceived(self,line):
+                self.factory.lines.append(line)
+        cf = protocol.ClientFactory()
+        cf.protocol = Foo
+        cf.lines = []
+        c = cf.buildProtocol(('127.0.0.1',))
+        cio = StringIO()
+        sio = StringIO()
+        c.makeConnection(protocol.FileWrapper(cio))
+        s.makeConnection(protocol.FileWrapper(sio))
+        pump = IOPump(c, s, cio, sio)
+        self.c, self.s, self.pump = c, s, pump
+
+    def connectDTPClient(self):
+        self.dtpFactory = DTPFactory
+        self.dtpFactory.debug = False
+        self.dtpFactory.peerCheck = False
+        svr = self.dtpFactory(self, )
+        dtps = svr.buildProtocol(('127.0.0.1',))
+        class _(basic.LineReceiver):
+            def connectionMade(self):
+                self.f = self.factory   # to save typing in pdb :-)
+            def lineReceived(self,line):
+                self.factory.lines.append(line)
+        dtpcf = protocol.ClientFactory()
+        dtpcf.protocol = _
+        dtpcf.lines = []
+        dtpc = dtpcf.buildProtocol(('127.0.0.1',))
+        cio = StringIO()
+        sio = StringIO()
+        dtpc.makeConnection(protocol.FileWrapper(cio))
+        dtps.makeConnection(protocol.FileWrapper(sio))
+        pump = IOPump(dtpc, dtps, cio, sio)
+        self.dc, self.ds, self.dp = dtpc, dtps, pump
+
+    def getCSPumpTuple(self):
+        return (self.c, self.s, self.pump)
+
+    def getDtpCSPumpTuple(self):
+        if not self.dc:
+            self.connectDTPClient()
+        return (self.dc, self.ds, self.dp)
 
 
 class JDFtpTests(unittest.TestCase):
+    def setUp(self):
+        self.X = ConnectedServerAndClient()
+
+    def tearDown(self):
+        delayeds = reactor.getDelayedCalls()
+        for d in delayeds:
+            d.cancel()
+
     def testAnonymousLogin(self):
-        c, s, pump =  connectedServerAndClient()
+        c, s, pump = self.X.getCSPumpTuple()
         pump.flush()
         self.assertEquals(c.f.lines[-1], ftp.RESPONSE[ftp.WELCOME_MSG])
         c.sendLine('USER anonymous')
@@ -122,24 +172,28 @@ class JDFtpTests(unittest.TestCase):
         pump.flush()
         self.assertEquals(c.f.lines[-1], ftp.RESPONSE[ftp.GUEST_LOGGED_IN_PROCEED], c.f.lines)
 
+
     def doAnonymousLogin(self,c,s,pump):
+        c, s, pump = self.X.getCSPumpTuple()
         pump.flush()
         c.sendLine('USER anonymous')
         pump.flush()
         c.sendLine('PASS w00t@twistedmatrix.com')
         pump.flush()
 
+
     def testPWDOnLogin(self):
-        c, s, pump =  connectedServerAndClient()
+        c, s, pump = self.X.getCSPumpTuple()
         self.doAnonymousLogin(c,s,pump)
         c.sendLine('PWD')
         pump.flush()
         self.assertEquals(c.f.lines[-1], '257 "/" is current directory.')
 
+
     def testCWD(self):
         import warnings
         warnings.warn("""This test is VERY FRAGILE! in fact, its so fragile it won't run on any other computer but mine""")
-        c, s, pump =  connectedServerAndClient()
+        c, s, pump = self.X.getCSPumpTuple()
         send = c.sendLine
         flush = pump.flush
 
@@ -163,8 +217,9 @@ class JDFtpTests(unittest.TestCase):
         send('PWD'); flush()
         send('CWD ../../../'); flush()
 
+
     def testCDUP(self):
-        c, s, pump =  connectedServerAndClient()
+        c, s, pump = self.X.getCSPumpTuple()
         send = c.sendLine
         flush = pump.flush
 
@@ -186,46 +241,26 @@ class JDFtpTests(unittest.TestCase):
         send('PWD'); flush()
         self.assertEquals(c.f.lines[-1], '257 "/" is current directory.')
 
-    def connectDTPClient(self, piServer):    
-        piServer.dtpFactory = PasvDTPFactory
-        piServer.dtpFactory.debug = False
-        piServer.dtpFactory.peerCheck = False
-        svr = piServer.dtpFactory()
-        dtps = svr.buildProtocol(('127.0.0.1',))
-        class _(basic.LineReceiver):
-            def connectionMade(self):
-                self.f = self.factory   # to save typing in pdb :-)
-            def lineReceived(self,line):
-                self.factory.lines.append(line)
-        dtpcf = protocol.ClientFactory()
-        dtpcf.protocol = _
-        dtpcf.lines = []
-        dtpc = dtpcf.buildProtocol(('127.0.0.1',))
-        cio = StringIO()
-        sio = StringIO()
-        dtpc.makeConnection(protocol.FileWrapper(cio))
-        dtps.makeConnection(protocol.FileWrapper(sio))
-        pump = IOPump(dtpc, dtps, cio, sio)
-        return dtpc, dtps, pump
 
     def testPASV(self):
         # TODO: need to figure out how to test this over TCP connection
         pass
 
     def testRETR(self):
-        pc, ps, ppump =  connectedServerAndClient()
-        self.doAnonymousLogin(pc,ps,ppump)
-        dc, ds, dpump = self.connectDTPClient(ps)
+        c, s, p = self.X.getCSPumpTuple()
+        self.doAnonymousLogin(c,s,p)
+        dc, ds, dpump = self.X.getDtpCSPumpTuple()
         
         pc.sendLine('PASV'); ppump.flush()
 
         ds.sendLine('boo!'); dpump.flush()
         print dc.f.lines[-1]
 
+#    testRETR.skip = 'skip it'
 
 
     def testWelcomeMessage(self):
-        c, s, pump =  connectedServerAndClient()
+        c, s, pump = self.X.getCSPumpTuple()
         pump.flush()
         self.assertEquals(c.f.lines[-1], ftp.RESPONSE[ftp.WELCOME_MSG])
 
