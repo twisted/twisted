@@ -48,6 +48,7 @@ def fixAPI(document, url):
         newref = url % (base+node.childNodes[0].nodeValue)
         node2 = document.createElement("a")
         node2.setAttribute("href", newref)
+        node2.setAttribute("title", base+node.childNodes[0].nodeValue)
         node2.childNodes = node.childNodes
         node.childNodes = [node2]
 
