@@ -347,7 +347,7 @@ class Application(log.Logger, styles.Versioned, roots.Locked):
                 try:
                     port.startListening()
                 except socket.error, msg:
-                    log.msg('error on port %s: %s' % (port.port, msg[1]))
+                    log.msg('error on port %s: %s' % (port.port, msg))
                     return
             for connector in self.connectors:
                 connector.startConnecting()
