@@ -191,13 +191,14 @@ class Resolver(common.ResolverBase):
         """
         if timeout is None:
             timeout = self.timeout
+
         address = self.pickServer()
-        if address is not None:
-            d = self.protocol.query(address, queries, timeout[0])
-        else:
-            d = defer.fail()
-        d.addErrback(self._reissue, address, queries, timeout[1:])
-        return d
+        if address is None:
+            return defer.fail(IOError("No domain name servers available"))
+
+        return self.protocol.query(address, queries, timeout[0]
+        ).addErrback(self._reissue, address, queries, timeout[1:]
+        )
 
 
     def _reissue(self, reason, address, query, timeout):
@@ -212,6 +213,7 @@ class Resolver(common.ResolverBase):
         except:
             pass
         return failure.Failure(defer.TimeoutError(query))
+
 
     def queryTCP(self, queries, timeout = 10):
         """
@@ -228,7 +230,7 @@ class Resolver(common.ResolverBase):
         if not len(self.connections):
             address = self.pickServer()
             if address is None:
-                return defer.fail()
+                return defer.fail(IOError("No domain name servers available"))
             host, port = address
             from twisted.internet import reactor
             reactor.connectTCP(host, port, self.factory)
@@ -250,7 +252,7 @@ class Resolver(common.ResolverBase):
             [dns.Query(name, type, cls)], timeout
         ).addCallback(self.filterAnswers)
     
-    
+
     # This one doesn't ever belong on UDP
     def lookupZone(self, name, timeout = 10):
         return self.queryTCP(
