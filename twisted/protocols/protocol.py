@@ -221,13 +221,18 @@ class Transport:
 class FileWrapper(Transport):
     """A wrapper around a file-like object to make it behave as a Transport.
     """
+    closed = 0
     def __init__(self, file):
         self.file = file
 
     def write(self, data):
-        self.file.write(data)
+        try:
+            self.file.write(data)
+        except:
+            self.handleException()
 
     def loseConnection(self):
+        self.closed = 1
         try:
             self.file.close()
         except (IOError, OSError):

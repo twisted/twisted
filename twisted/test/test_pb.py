@@ -341,6 +341,22 @@ class BrokerTestCase(unittest.TestCase):
     def refcountResult(self, result):
         self.nestedRemote = result
 
+    def testTooManyRefs(self):
+        l = []
+        e = []
+        c, s, pump = connectedServerAndClient()
+        foo = NestedRemote()
+        s.setNameForLocal("foo", foo)
+        x = c.remoteForName("foo")
+        for igno in xrange(pb.MAX_BROKER_REFS + 10):
+            if s.transport.closed or c.transport.closed:
+                break
+            x.callRemote("getSimple").addCallbacks(l.append, e.append)
+            pump.pump()
+        expected = (pb.MAX_BROKER_REFS - 1)
+        assert s.transport.closed, "transport was not closed"
+        assert len(l) == expected, "expected %s got %s" % (expected, len(l))
+
     def testCopy(self):
         c, s, pump = connectedServerAndClient()
         foo = NestedCopy()

@@ -71,6 +71,8 @@ from flavors import copyTags
 from flavors import setCopierForClass, setUnjellyableForClass
 from flavors import setCopierForClassTree
 
+MAX_BROKER_REFS = 1024
+
 portno = 8787
 
 
@@ -531,6 +533,8 @@ class Broker(banana.Banana):
             return
         return lob.object
 
+    maxBrokerRefsViolations = 0
+
     def registerReference(self, object):
         """Get an ID for a local object.
 
@@ -542,6 +546,16 @@ class Broker(banana.Banana):
         puid = object.processUniqueID()
         luid = self.luids.get(puid)
         if luid is None:
+            # print len(self.localObjects)
+            if len(self.localObjects) > MAX_BROKER_REFS:
+                # print 'EXCEEDED'
+                self.maxBrokerRefsViolations = self.maxBrokerRefsViolations + 1
+                if self.maxBrokerRefsViolations > 3:
+                    self.transport.loseConnection()
+                    raise Error("Maximum PB reference count exceeded.  "
+                                "Goodbye.")
+                raise Error("Maximum PB reference count exceeded.")
+
             luid = self.newLocalID()
             self.localObjects[luid] = Local(object)
             self.luids[puid] = luid
@@ -587,6 +601,15 @@ class Broker(banana.Banana):
         XXX"""
         puid = instance.processUniqueID()
         luid = self.newLocalID()
+        if len(self.remotelyCachedObjects) > MAX_BROKER_REFS:
+            # print 'EXCEEDED'
+            self.maxBrokerRefsViolations = self.maxBrokerRefsViolations + 1
+            if self.maxBrokerRefsViolations > 3:
+                self.transport.loseConnection()
+                raise Error("Maximum PB cache count exceeded.  "
+                            "Goodbye.")
+            raise Error("Maximum PB cache count exceeded.")
+
         self.remotelyCachedLUIDs[puid] = luid
         # This table may not be necessary -- for now, it's to make sure that no
         # monkey business happens with id(instance)
