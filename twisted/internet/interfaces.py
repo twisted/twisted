@@ -567,25 +567,29 @@ class IReactorFDSet(Interface):
     def addReader(self, reader):
         """I add reader to the set of file descriptors to get read events for.
 
-        @param reader: An IReadDescriptor that will be checked for read events
+        @param reader: An L{IReadDescriptor} that will be checked for read events
             until it is removed from the reactor with L{removeReader}.
-        @retval: C{None}.
+        @returns: C{None}.
         """
 
     def addWriter(self, writer):
         """I add writer to the set of file descriptors to get write events for.
 
-        @param writer: An IWriteDescriptor that will be checked for read events
+        @param writer: An L{IWriteDescriptor} that will be checked for read events
             until it is removed from the reactor with L{removeWriter}.
-        @retval: C{None}.
+        @returns: C{None}.
         """
 
     def removeReader(self, reader):
-        """Removes an IReadDescriptor added with L{addReader}.
+        """Removes an L{IReadDescriptor} added with L{addReader}.
+
+        @returns: C{None}.
         """
 
     def removeWriter(self, writer):
-        """Removes an IWriteDescriptor added with L{addWriter}.
+        """Removes an L{IWriteDescriptor} added with L{addWriter}.
+
+        @returns: C{None}.
         """
 
 
