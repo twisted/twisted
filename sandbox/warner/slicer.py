@@ -3,6 +3,7 @@
 import types
 from pickle import whichmodule  # used by FunctionSlicer
 from new import instance, instancemethod
+import sets # python-2.3 and later
 
 from twisted.python.components import registerAdapter
 from zope.interface import implements
@@ -98,6 +99,19 @@ registerAdapter(ListSlicer, list, tokens.ISlicer)
 class TupleSlicer(ListSlicer):
     opentype = ("tuple",)
 registerAdapter(TupleSlicer, tuple, tokens.ISlicer)
+
+class SetSlicer(ListSlicer):
+    opentype = ("set",)
+    trackReferences = True
+
+    def sliceBody(self, streamable, banana):
+        for i in self.obj:
+            yield i
+registerAdapter(SetSlicer, sets.Set, tokens.ISlicer)
+
+class ImmutableSetSlicer(SetSlicer):
+    opentype = ("immutable-set",)
+registerAdapter(ImmutableSetSlicer, sets.ImmutableSet, tokens.ISlicer)
 
 class DictSlicer(BaseSlicer):
     opentype = ('dict',)
@@ -658,6 +672,14 @@ class TupleUnslicer(BaseUnslicer):
     def describe(self):
         return "[%d]" % len(self.list)
 
+class SetUnslicer(ListUnslicer):
+    def receiveClose(self):
+        return sets.Set(self.list)
+
+class ImmutableSetUnslicer(ListUnslicer):
+    def receiveClose(self):
+        return sets.ImmutableSet(self.list)
+
 
 class DictUnslicer(BaseUnslicer):
     gettingKey = True
@@ -1067,6 +1089,8 @@ UnslicerRegistry = {
     ('reference',): ReferenceUnslicer,
     ('none',): NoneUnslicer,
     ('boolean',): BooleanUnslicer,
+    ('set',): SetUnslicer,
+    ('immutable-set',): ImmutableSetUnslicer,
     }
         
 UnsafeUnslicerRegistry = UnslicerRegistry.copy()

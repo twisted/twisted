@@ -13,6 +13,7 @@ import slicer, schema, tokens, debug
 from slicer import BananaFailure
 
 import StringIO, types, sys
+import sets # python-2.3 and newer
 
 #log.startLogging(sys.stderr)
 
@@ -1535,6 +1536,9 @@ class ThereAndBackAgain(TestBananaMixin, unittest.TestCase):
         self.looptest([1,2])
     def test_tuple(self):
         self.looptest((1,2))
+    def test_set(self):
+        self.looptest(sets.Set([1,2]))
+        self.looptest(sets.ImmutableSet([1,2]))
     def test_bool(self):
         self.looptest(True)
         self.looptest(False)
