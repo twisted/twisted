@@ -41,9 +41,8 @@ from twisted.internet.protocol import Protocol, FileWrapper
 
 import string
 
-identChars = string.letters + string.digits + '.-_:'
-lenientIdentChars = identChars + ';+#'
-whitespace = string.whitespace
+identChars = '.-_:'
+lenientIdentChars = identChars + ';+#' 
 
 def nop(*args, **kw):
     "Do nothing."
@@ -101,7 +100,7 @@ class XMLParser(Protocol):
     # state methods
 
     def do_begin(self, byte):
-        if byte in whitespace:
+        if byte.isspace():
             return
         if byte != '<':
             if self.beExtremelyLenient:
@@ -125,11 +124,11 @@ class XMLParser(Protocol):
             return 'bodydata'
 
     def do_tagstart(self, byte):
-        if byte in identChars:
+        if byte.isalnum() or byte in identChars:
             self.tagName += byte
             if self.tagName == '!--':
                 return 'comment'
-        elif byte in whitespace:
+        elif byte.isspace():
             if self.tagName:
                 if self.endtag:
                     # properly strict thing to do here is probably to only
@@ -197,14 +196,14 @@ class XMLParser(Protocol):
         self.cdatabuf = ''
 
     def do_attrs(self, byte):
-        if byte in identChars:
+        if byte.isalnum() or byte in identChars:
             # XXX FIXME really handle !DOCTYPE at some point
             if self.tagName == '!DOCTYPE':
                 return 'doctype'
             if self.tagName[0] in '!?':
                 return 'waitforgt'
             return 'attrname'
-        elif byte in whitespace:
+        elif byte.isspace():
             return
         elif byte == '>':
             self.gotTagStart(self.tagName, self.tagAttributes)
@@ -238,17 +237,17 @@ class XMLParser(Protocol):
         self._attrname_termtag = 0
 
     def do_attrname(self, byte):
-        if byte in identChars:
+        if byte.isalnum() or byte in identChars:
             self.attrname += byte
             return
         elif byte == '=':
             return 'beforeattrval'
-        elif byte in whitespace:
+        elif byte.isspace():
             return 'beforeeq'
         elif self.beExtremelyLenient:
             if byte in '"\'':
                 return 'attrval'
-            if byte in lenientIdentChars:
+            if byte in lenientIdentChars or byte.isalnum():
                 self.attrname += byte
                 return
             if byte == '/':
@@ -266,10 +265,10 @@ class XMLParser(Protocol):
     def do_beforeattrval(self, byte):
         if byte in '"\'':
             return 'attrval'
-        elif byte in whitespace:
+        elif byte.isspace():
             return
         elif self.beExtremelyLenient:
-            if byte in lenientIdentChars:
+            if byte in lenientIdentChars or byte.isalnum():
                 return 'messyattr'
             if byte == '>':
                 self.attrval = 'True'
@@ -291,10 +290,10 @@ class XMLParser(Protocol):
     def do_beforeeq(self, byte):
         if byte == '=':
             return 'beforeattrval'
-        elif byte in whitespace:
+        elif byte.isspace():
             return
         elif self.beExtremelyLenient:
-            if byte in identChars:
+            if byte.isalnum() or byte in identChars:
                 self.attrval = 'True'
                 self.tagAttributes[self.attrname] = self.attrval
                 return 'attrname'
@@ -327,7 +326,7 @@ class XMLParser(Protocol):
         self.attrval = byte
 
     def do_messyattr(self, byte):
-        if byte in whitespace:
+        if byte.isspace():
             return 'attrs'
         elif byte == '>':
             endTag = 0
@@ -378,7 +377,7 @@ class XMLParser(Protocol):
         self.erefbuf = ''
 
     def do_entityref(self, byte):
-        if byte in whitespace:
+        if byte.isspace():
             if self.beExtremelyLenient:
                 self.erefbuf = "amp"
                 return 'bodydata'
