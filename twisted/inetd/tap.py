@@ -105,7 +105,7 @@ def updateApplication(app, config):
 
         if service.program == 'internal':
             # Internal services can use a standard ServerFactory
-            if not internalProtocols.has_key(service.name):
+            if not inetd.internalProtocols.has_key(service.name):
                 log.msg('Unknown internal service: ' + service.name)
                 continue
             factory = ServerFactory()
