@@ -224,7 +224,7 @@ def rebuild(module, doLog=1):
         if mod == module or mod is None:
             continue
 
-        if not hasattr(mod, '__dict__'):
+        if not hasattr(mod, '__file__'):
             # It's a builtin module; nothing to replace here.
             continue
         changed = 0
