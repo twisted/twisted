@@ -655,8 +655,9 @@ class PTYProcess(abstract.FileDescriptor, styles.Ephemeral):
                     else:
                         try:
                             fcntl.ioctl(fd, termios.TIOCNOTTY, '')
-                        finally:
-                            os.close(fd)
+                        except:
+                            pass
+                        os.close(fd)
                     
                 os.setsid()
                 
