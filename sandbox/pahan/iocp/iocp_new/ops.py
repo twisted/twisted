@@ -166,7 +166,7 @@ class AcceptExOp(OverlappedOp):
             # stab me in the eye with a fork (workaround similar to the one in ConnectExOp.ovDone)
             except socket.error, se:
                 self.errback(internet.error.UserError())
-                self.cleanUp
+                self.cleanUp()
                 return
 #            print "AcceptExOp.ovDone callbacking with self.acc_sock %s, peername %s" % \
 #                    (self.acc_sock._sock, self.acc_sock.getpeername())

@@ -92,17 +92,17 @@ class RWHandle(log.Logger, styles.Ephemeral):
     def startReading(self):
         if not self.reading:
             self.reading = 1
-        op = self.read_op()
-        op.initiateOp(self.handle, self.readbuf)
-        op.addCallback(self.readDone)
-        op.addErrback(self.readErr)
+            op = self.read_op()
+            op.initiateOp(self.handle, self.readbuf)
+            op.addCallback(self.readDone)
+            op.addErrback(self.readErr)
 
     def readDone(self, (bytes, kw)):
         # XXX: got to pass a buffer to dataReceived to avoid copying, but most of the stuff expects that
         # to support str methods. Perhaps write a perverse C extension for this, but copying IS necessary
         # if protocol wants to store this string. I wish this was C++! No, wait, I don't.
         if iocpdebug.debug:
-            print "RwHandle.readDone(%s, (%s, %s))" % (self, bytes, kw)
+            print "RWHandle.readDone(%s, (%s, %s))" % (self, bytes, kw)
             print "    self.reading is", self.reading
         self.dataReceived(self.readbuf[:bytes], **kw)
         if self.reading:
@@ -113,7 +113,7 @@ class RWHandle(log.Logger, styles.Ephemeral):
     
     def readErr(self, err):
         if iocpdebug.debug:
-            print "RwHandle.readErr(%s, %s)" % (self, err)
+            print "RWHandle.readErr(%s, %s)" % (self, err)
         if isinstance(err, error.NonFatalException):
             self.startReading() # delay or just fail?
         else:
@@ -121,7 +121,7 @@ class RWHandle(log.Logger, styles.Ephemeral):
 
     def writeErr(self, err):
         if iocpdebug.debug:
-            print "RwHandle.writeErr(%s, %s)" % (self, err)
+            print "RWHandle.writeErr(%s, %s)" % (self, err)
             import traceback
             traceback.print_stack()
         if isinstance(err, error.NonFatalException):
@@ -195,6 +195,9 @@ class RWHandle(log.Logger, styles.Ephemeral):
 
     def loseConnection(self):
         raise NotImplementedError
+
+    def logPrefix(self):
+        return self.logstr
 
 class ConnectedSocket(RWHandle):
 #    read_op = WSARecvOp
