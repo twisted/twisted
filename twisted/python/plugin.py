@@ -234,7 +234,8 @@ def loadPlugins(plugInType, fileList, debugInspection=None, showProgress=None):
             debugInspection(sys.exc_info())
             continue
 
-        incr = increments * (1.0 / len(dropin.plugins))
+        ldp = len(dropin.plugins) or 1.0
+        incr = increments * (1.0 / ldp)
         for plugin in dropin.plugins:
             if plugInType == plugin.type:
                 result.append(plugin)
