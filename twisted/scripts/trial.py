@@ -28,7 +28,8 @@ class Options(usage.Options):
                 ["text", "t", "Text mode (ignored)"],
                 ["verbose", "v", "Verbose output"]]
     optParameters = [["reactor", "r", None,
-                      "The Twisted reactor to install before running the tests (looked up as a module contained in twisted.internet)"]]
+                      "The Twisted reactor to install before running the tests (looked up as a module contained in twisted.internet)"],
+                     ["logfile", "l", None, "log file name"]]
 
     def __init__(self):
         usage.Options.__init__(self)
@@ -69,6 +70,10 @@ def run():
         suite.addPackage(package)
     for module in config['modules']:
         suite.addModule(module)
+
+    if config['logfile']:
+       from twisted.python import log
+       log.startLogging(open(config['logfile'], 'a'), 0)
 
     if config['verbose']:
         suite.run(unittest.VerboseTextReporter(sys.stdout))

@@ -8,6 +8,9 @@
 
 2003-1-8  Moshe Zadka <moshez@twistedmatrix.com>
 
+	* doc/man/trial.1 twisted/scripts/trial.py: Add -l/--logfile argument
+	to allow giving a log file.
+
 	* twisted/trial/unittest.py: add SkipTest exception, which tests can
 	raise in their various test* method to skip a test which is not
 	excpected to pass.

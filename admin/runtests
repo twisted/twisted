@@ -29,6 +29,7 @@ from twisted.scripts import trial
 
 # People shouldn't really be passing -p to runtests; it's explicitly for twisted.test
 sys.argv.extend(['-p', 'twisted.test'])
+sys.argv.extend(['-l', 'test.log'])
 
 trial.run()
 
