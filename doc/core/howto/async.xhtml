@@ -64,11 +64,12 @@ for reading or writing -- commonly known as <b>asynchronous</b>,
 like this:</p>
 
 <ol>
-<li>it calls a connection function to connect to the remote server;</li>
-<li>the connection function returns immediately, with the implication that the notify
-the email sending library will be called when the connect has been made; and
-<li>once the connection is made, the connect mechanism notifies the email
-sending function that the connection is ready.</li>
+  <li>it calls a connection function to connect to the remote server;</li>
+  <li>the connection function returns immediately, with the implication that
+  the notify the email sending library will be called when the connect has
+  been made; and</li>
+  <li>once the connection is made, the connect mechanism notifies the email
+  sending function that the connection is ready.</li>
 </ol>
 
 <p>What advantage does the above sequence have over our original blocking
