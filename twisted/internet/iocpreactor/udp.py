@@ -22,6 +22,7 @@ class Port(log.Logger, styles.Ephemeral, object):
     read_op_class = WSARecvFromOp
     write_op_class = WSASendToOp
     reading = False
+    disconnected = property(lambda self: self.state == "disconnected")
 
     def __init__(self, bindAddress, proto, maxPacketSize=8192):
         assert isinstance(proto, protocol.DatagramProtocol)
