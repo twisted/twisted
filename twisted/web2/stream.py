@@ -301,7 +301,7 @@ class CompoundStream:
         
         if isinstance(result, Deferred):
             self.deferred = result
-            result.addCallback(self._gotRead, sendfile).addErrback(self._gotFailure)
+            result.addCallbacks(self._gotRead, self._gotFailure, (sendfile,))
             return result
         
         return self._gotRead(result, sendfile)
@@ -313,6 +313,7 @@ class CompoundStream:
         return f
     
     def _gotRead(self, result, sendfile):
+        self.deferred = None
         if result is None:
             del self.buckets[0]
             # Next bucket
@@ -320,7 +321,6 @@ class CompoundStream:
         
         if self.length is not None:
             self.length -= len(result)
-        self.deferred = None
         return result
     
     def split(self, point):
