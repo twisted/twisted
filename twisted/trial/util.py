@@ -53,12 +53,15 @@ def isTestClass(testClass):
 def isTestCase(testCase):
     return isinstance(testCase, unittest.TestCase)
 
+def _append(result, lst):
+    lst.append(result)
+
 def _getDeferredResult(d, timeout=None):
     from twisted.internet import reactor
     if timeout is not None:
         d.setTimeout(timeout)
     resultSet = []
-    d.addCallbacks(resultSet.append, resultSet.append)
+    d.addBoth(_append, resultSet)
     while not resultSet:
         reactor.iterate()
     return resultSet[0]
