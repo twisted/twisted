@@ -15,8 +15,8 @@ class Options(usage.Options):
      ["qotr", "q", None, "Quote of the release"],
     ]
     optFlags = [
-      ["head", "h", "Start from HEAD"],
-      ["dry-run", "n", "Do nothing"],
+     ["head", "h", "Start from HEAD"],
+     ["dry-run", "n", "Do nothing"],
     ]
     def opt_update(self, file):
         self.updates = self.updates+(file,)
@@ -110,11 +110,11 @@ def run(config):
     old = strtag(*version)
     tag = calcnext(version, config['type'])
     print "next version is", tag
-    if do:
-        os.chdir("Twisted.CVS")
     if config.updates:
-        system("cvs up -A %s" % ' '.join(config.updates), do)
-    system("./admin/release-twisted -o %s -V %s --upver" % (old, tag), do)
+        system("cd Twisted.CVS && cvs up -A %s" % ' '.join(config.updates), do)
+    system("Twisted.CVS/admin/release-twisted -o %s -V %s --upver" %
+                                                               (old, tag),
+           do)
     setqotr(config['qotr'], do)
 
 def main():
