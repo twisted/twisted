@@ -69,7 +69,7 @@ This test node will be replaced
 """
 
 from cStringIO import StringIO
-import string, os, stat, types
+import string, os, sys, stat, types
 from xml.dom import minidom
 
 from twisted.python import components
@@ -145,6 +145,7 @@ class DOMTemplate(Resource, View):
     
     isLeaf = 1
     templateFile = ''
+    templateDirectory = ''
     template = ''
     _cachedTemplate = None
     __implements__ = (Resource.__implements__, View.__implements__)
@@ -212,27 +213,36 @@ class DOMTemplate(Resource, View):
         as the template. The first time the template is used it is cached
         for speed.
         """
-        # look up an object named by our template data member
-        templateRef = request.pathRef().locate(self.templateFile)
-        # Build a reference to the template on disk
-        basePath = templateRef.parentRef().getObject().path
-        templatePath = os.path.join(basePath, self.templateFile)
+        if not self.templateDirectory:
+            self.templateDirectory = os.path.split(sys.modules[self.__module__].__file__)[0]
+        # First see if templateDirectory + templateFile is a file
+        templatePath = os.path.join(self.templateDirectory, self.templateFile)
+        if not os.path.exists(templatePath):
+            templatePath = None
+        if not templatePath:
+            # If not, use acquisition to look for the name above this object
+            # look up an object named by our template data member
+            templateRef = request.pathRef().locate(self.templateFile)
+            # Build a reference to the template on disk
+            self.templateDirectory = templateRef.parentRef().getObject().path
+            templatePath = os.path.join(self.templateDirectory, self.templateFile)
         # Check to see if there is an already compiled copy of it
         templateName = os.path.splitext(self.templateFile)[0]
         compiledTemplateName = templateName + '.pxp'
-        compiledTemplatePath = os.path.join(basePath, compiledTemplateName)
+        compiledTemplatePath = os.path.join(self.templateDirectory, compiledTemplateName)
         # No? Compile and save it
         if (not os.path.exists(compiledTemplatePath) or 
         os.stat(compiledTemplatePath)[stat.ST_MTIME] < os.stat(templatePath)[stat.ST_MTIME]):
             compiledTemplate = minidom.parse(templatePath)
-            parent = templateRef.parentRef().getObject()
-            parent.putChild(compiledTemplateName, compiledTemplate)
+            from cPickle import dump
+            dump(compiledTemplate, open(compiledTemplateName, 'wb'), 1)
+#            parent = templateRef.parentRef().getObject()
+#            parent.savePickleChild(compiledTemplateName, compiledTemplate)
         else:
-            from cPickle import Unpickler
-            unp = Unpickler(open(compiledTemplatePath))
-            compiledTemplate = unp.load()
+            from cPickle import load
+            compiledTemplate = load(open(compiledTemplatePath))
         return compiledTemplate
-    
+
     def setUp(self, request, document):
         pass
 
@@ -392,13 +402,14 @@ class DOMTemplate(Resource, View):
         view, viewMethod, result = self.getNodeView(request, node)
 
         controller.setView(view)
-        controller.setSubmodel(id)
+        if not getattr(controller, 'submodel', None):
+            controller.setSubmodel(id)
         # xxx refactor this into a widget interface and check to see if the object implements IWidget
         # the view may be a deferred; this is why this check is required
         if hasattr(view, 'setController'):
             view.setController(controller)
             view.setNode(node)
-            if id:
+            if id and not getattr(view, 'submodel', None):
                 view.setSubmodel(id)
         
         success, data = controller.handle(request)
@@ -445,7 +456,8 @@ class DOMTemplate(Resource, View):
         process = {}
         for controller, data, node in successes:
             process[str(node.getAttribute('name'))] = data
-            del request.args[node.getAttribute('name')]
+            if request.args.has_key(node.getAttribute('name')):
+                del request.args[node.getAttribute('name')]
             controller.commit(request, node, data)
         return process
 
