@@ -22,10 +22,10 @@ Package installer for Twisted
 Copyright (c) 2001 by Twisted Matrix Laboratories
 All rights reserved, see LICENSE for details.
 
-$Id: setup.py,v 1.20 2002/03/18 23:33:46 jh Exp $
+$Id: setup.py,v 1.21 2002/03/18 23:36:57 jh Exp $
 """
 
-import distutils, os, sys
+import distutils, os, sys, string
 from glob import glob
 
 from distutils.core import setup, Extension
