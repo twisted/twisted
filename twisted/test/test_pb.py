@@ -51,7 +51,7 @@ class DummyService(pb.Service):
         """
         # Note: I don't need to go back and forth between identity and
         # perspective here, so I _never_ need to specify identityName.
-        p = DummyPerspective("any")
+        p = DummyPerspective(user)
         p.setService(self)
         return p
 
@@ -772,6 +772,10 @@ class ConnectionTestCase(unittest.TestCase):
         svc = DummyService("test", appl, authorizer=auth)
         ident.addKeyForPerspective(svc.getPerspectiveNamed("any"))
         auth.addIdentity(ident)
+        ident2 = identity.Identity("foo", authorizer=auth)
+        ident2.setPassword("foo")
+        ident2.addKeyForPerspective(svc.getPerspectiveNamed("foo"))
+        auth.addIdentity(ident2)
         self.svr = pb.BrokerFactory(pb.AuthRoot(auth))
         self.port = reactor.listenTCP(0, self.svr, interface="127.0.0.1")
         self.portno = self.port.getHost()[-1]
@@ -804,7 +808,7 @@ class ConnectionTestCase(unittest.TestCase):
         self.assert_(isinstance(p1, pb.RemoteReference))
         self.assert_(isinstance(p2, pb.RemoteReference))
         iConnector.disconnect()
-    
+
     # tests for new, shiny API:
     def testGoodGetObject(self):
         # we test getting both before and after connection
@@ -846,3 +850,11 @@ class ConnectionTestCase(unittest.TestCase):
         factory.disconnect()
         reactor.iterate(); reactor.iterate(); reactor.iterate()
         self.assertRaises(pb.DeadReferenceError, p.callRemote, "getDummyViewPoint")
+
+    def testEmptyPerspective(self):
+        factory = pb.PBClientFactory()
+        d = factory.getPerspective("foo", "foo", "test")
+        reactor.connectTCP("127.0.0.1", self.portno, factory)
+        p = dR(d)
+        self.assert_(isinstance(p, pb.RemoteReference))
+        p.broker.transport.loseConnection()

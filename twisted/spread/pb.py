@@ -52,7 +52,7 @@ applied when serializing arguments.
 # Future Imports
 from __future__ import nested_scopes
 
-__version__ = "$Revision: 1.134 $"[11:-2]
+__version__ = "$Revision: 1.135 $"[11:-2]
 
 
 # System Imports
@@ -1457,6 +1457,8 @@ class PBClientFactory(protocol.ClientFactory):
 
         @return Deferred of RemoteReference to the perspective.
         """
+        if perspectiveName == None:
+            perspectiveName = username
         d = self.getRootObject()
         d.addCallback(self._cbAuthIdentity, username, password)
         d.addCallback(self._cbGetPerspective, serviceName, perspectiveName, client)
