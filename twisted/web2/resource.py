@@ -8,14 +8,12 @@
 
 
 # System Imports
-from twisted.internet import defer
-from twisted.python import roots, components, reflect
+from twisted.python import components
 from zope.interface import implements
 
-from twisted.web2 import iweb,http
-from twisted.web2.iweb import IResource
+from twisted.web2 import iweb
 
-class Resource:
+class Resource(object):
     """I define a web-accessible resource.
 
     I serve 2 main purposes; one is to provide a standard representation for
@@ -27,43 +25,32 @@ class Resource:
     
     server = None
 
-    def __init__(self):
-        """Initialize.
-        """
-        self.children = {}
-
     # Concrete HTTP interface
 
     def locateChild(self, request, segments):
-        r = self.children.get(segments[0], None)
-        
-        if r:
-            return r, segments[1:]
-
-        w = getattr(self, 'child_%s'%segments[0], None)
+        """Return a tuple of (child, segments) representing the Resource
+        below this after consuming the segments which are not returned.
+        """
+        w = getattr(self, 'child_%s' % (segments[0], ), None)
         
         if w:
-            if components.implements(w, iweb.IResource):
-                return w, segments[1:]
+            r = iweb.IResource(w, None)
+            if r:
+                return r, segments[1:]
             return w(request), segments[1:]
 
-        r = self.getDynamicChild(segments[0], request)
-        if r:
-            return r, segments[1:]
+        factory = getattr(self, 'childFactory', None)
+        if factory is not None:
+            r = factory(request, segments[0])
+            if r:
+                return r, segments[1:]
      
-        return error.NoResource(message = segments), []
-
-    def getDynamicChild(self, path, request):
-        return None
+        return None, []
 
     def child_(self, request):
-        """
-            I'm how requests for '' get handled :)
+        """I'm how requests for '' (urls ending in /) get handled :)
         """
         return self
-
-    def renderError(self, request):
-        return None
         
     def putChild(self, path, child):
         """Register a static child.
@@ -72,8 +59,7 @@ class Resource:
         intended to have the root of a folder, e.g. /foo/, you want
         path to be ''.
         """
-        self.children[path] = child
-        child.server = self.server
+        setattr(self, 'child_%s' % (path, ), child)
 
     def render(self, request):
         """Render a given resource. See L{IResource}'s render method.
@@ -99,13 +85,13 @@ class Resource:
             raise UnsupportedMethod(getattr(self, 'allowedMethods', ()))
         return m(request)
 
-    def render_HEAD(self, request):
-        """Default handling of HEAD method.
-        
-        I just return self.render_GET(request). When method is HEAD,
-        the framework will handle this correctly.
-        """
-        return self.render_GET(request)
+    render_HEAD = property(lambda self: getattr(self, 'render_GET', None), doc="""\
+By default render_HEAD just renders the whole body (by calling render_GET),
+calculates the body size, and eats the body (does not send it to the client).
+
+Override this if you want to handle it differently.
+""")
+ 
 components.backwardsCompatImplements(Resource)
 
 class LeafResource(Resource):
@@ -119,8 +105,3 @@ class LeafResource(Resource):
         return self, ()
 
 components.backwardsCompatImplements(LeafResource)
-#t.w imports
-#This is ugly, I know, but since error.py directly access resource.Resource
-#during import-time (it subclasses it), the Resource class must be defined
-#by the time error is imported.
-import error

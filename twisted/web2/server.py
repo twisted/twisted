@@ -9,7 +9,6 @@ infrastructure.
 """
 
 # System Imports
-
 try:
     import cStringIO as StringIO
 except ImportError:
