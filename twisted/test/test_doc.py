@@ -5,7 +5,6 @@ from os import path
 from twisted.python import reflect
 
 import twisted
-import setup
 
 def errorInFile(f, line=17, name=''):
     """Return a filename formatted so emacs will recognize it as an error point
@@ -18,10 +17,14 @@ def errorInFile(f, line=17, name=''):
 
 class DocCoverage(unittest.TestCase):
     def setUp(self):
-        assert (path.dirname(setup.__file__) ==
-                path.dirname(path.dirname(twisted.__file__))
-                ), "%s is not Twisted setup.py" % (setup,)
-        self.packageNames = setup.setup_args['packages']
+        remove = len(os.path.dirname(os.path.dirname(twisted.__file__)))+1
+        def visit(dirlist, directory, files):
+            if '__init__.py' in files:
+                d = directory[remove:].replace('/','.')
+                dirlist.append(d)
+        self.packageNames = []
+        os.path.walk(os.path.dirname(twisted.__file__),
+                     visit, self.packageNames)
 
     def testModules(self):
         """Looking for docstrings in all modules."""
@@ -81,7 +84,6 @@ class DocCoverage(unittest.TestCase):
             else:
                 if not inspect.getdoc(package):
                     docless.append(package.__file__.replace('.pyc','.py'))
-        del package
         self.failIf(docless, "No docstrings for package files\n"
                     "%s" % ('\n'.join(map(errorInFile, docless),)))
 
