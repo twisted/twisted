@@ -18,7 +18,7 @@
 
 from __future__ import nested_scopes, generators
 
-__version__ = '$Revision: 1.44 $'[11:-2]
+__version__ = '$Revision: 1.45 $'[11:-2]
 
 import os
 import sys
@@ -175,11 +175,22 @@ class OrderedDict(UserDict):
         UserDict.__delitem__(self, key)
         self._order.remove(key)
 
+    def iteritems(self):
+        for item in self._order:
+            yield (item, self[item])
+
     def items(self):
-        return [(item, self[item]) for item in self._order]
+        return list(self.iteritems())
+
+    def itervalues(self):
+        for item in self._order:
+            yield self[item]
 
     def values(self):
-        return [self[item] for item in self._order]
+        return list(self.itervalues())
+
+    def iterkeys(self):
+        return iter(self._order)
 
     def keys(self):
         return list(self._order)
