@@ -21,7 +21,7 @@
 
 from twisted.python import usage
 from twisted.trial import unittest
-import sys
+import sys, os
 
 class Options(usage.Options):
     optFlags = [["help", "h"], ["text", "t", "Text mode (ignored)"], ["verbose", "v", "Verbose output"]]
