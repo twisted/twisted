@@ -35,8 +35,8 @@ from twisted.python import log
 from twisted.mail import relay
 from twisted.mail import bounce
 from twisted.internet import protocol
-from twisted.internet import app
 from twisted.protocols import smtp
+from twisted.application import internet
 
 import rfc822
 import os
@@ -411,30 +411,11 @@ class SmartHostSMTPRelayingManager:
 class SmartHostESMTPRelayingManager(SmartHostSMTPRelayingManager):
     factory = ESMTPManagedRelayerFactory
 
-class RelayStateHelper(app.ApplicationService):
-    """A helper to poke SmartHostSMTPRelayingManager.checkState()"""
+def _checkState(manager):
+    manager.checkState()
 
-    loopCall = None
-
-    def __init__(self, manager, delay, *args, **kw):
-        app.ApplicationService.__init__(self, *args, **kw)
-        self.manager = manager
-        self.delay = delay
-    
-    def startService(self):
-        self.loop()
-    
-    def loop(self):
-        from twisted.internet import reactor
-        self.loopCall = reactor.callLater(self.delay, self.loop)
-        self.manager.checkState()
-    
-    def stopService(self):
-        if self.loopCall is not None:
-            self.loopCall.cancel()
-            self.loopCall = None
-
-
+def RelayStateHelper(manager, delay):
+    return internet.TimerService(delay, _checkState, manager)
 
 class MXCalculator:
     timeOutBadMX = 60 * 60 # One hour

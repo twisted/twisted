@@ -31,6 +31,7 @@ from twisted.python import usage
 from twisted.python import components
 
 from twisted.cred import checkers
+from twisted.application import internet
 
 
 class Options(usage.Options):
@@ -56,7 +57,7 @@ class Options(usage.Options):
 
     def __init__(self):
         usage.Options.__init__(self)
-        self.service = mail.MailService("twisted.mail")
+        self.service = mail.MailService()
         self.last_domain = None
 
     def opt_passwordfile(self, filename):
@@ -155,10 +156,7 @@ class AliasUpdater:
     def __call__(self, new):
         self.domain.setAliasGroup(alias.loadAliasFile(self.domains, new))
 
-def updateApplication(app, config):
-
-    config.service.setServiceParent(app)
-
+def makeService(config):
     if config['esmtp']:
         rmType = relaymanager.SmartHostESMTPRelayingManager
         smtpFactory = config.service.getESMTPFactory
@@ -179,7 +177,8 @@ def updateApplication(app, config):
             manager.fArgs += (None, None)
         manager.fArgs += (config['hostname'],)
         
-        helper = relaymanager.RelayStateHelper(manager, 1, 'RelayStateHelper', app)
+        helper = relaymanager.RelayStateHelper(manager, 1)
+        helper.setServiceParent(config.service)
         config.service.domains.setDefaultDomain(default)
 
     ctx = None
@@ -188,13 +187,12 @@ def updateApplication(app, config):
         ctx = SSLContextFactory(config['certificate'])
 
     if config['pop3']:
-        app.listenTCP(config['pop3'], config.service.getPOP3Factory())
+        s = internet.TCPServer(config['pop3'], config.service.getPOP3Factory())
+        s.setServiceParent(config.service)
     if config['pop3s']:
-        app.listenSSL(
-            config['pop3s'],
-            config.service.getPOP3Factory(),
-            ctx,
-        )
+        s = internet.SSLServer(config['pop3s'],
+                               config.service.getPOP3Factory(), ctx)
+        s.setServiceParent(config.service)
     if config['smtp']:
         f = smtpFactory()
         f.context = ctx
@@ -203,4 +201,6 @@ def updateApplication(app, config):
             f.fArgs = (f.domain,)
         if config['esmtp']:
             f.fArgs = (None, None) + f.fArgs
-        app.listenTCP(config['smtp'], f)
+        s = internet.TCPServer(config['smtp'], f)
+        s.setServiceParent(config.service)
+    return config.service

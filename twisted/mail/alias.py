@@ -205,11 +205,12 @@ class MessageWrapper:
         self.protocol = protocol
         self.completion = defer.Deferred()
         self.protocol.onEnd = self.completion
-        self.completion.addBoth(self._processEnded)
+        self.completion.addCallback(self._processEnded)
     
-    def _processEnded(self, result):
+    def _processEnded(self, result, err=0):
         self.done = True
-        return result
+        if err:
+            raise result.value
     
     def lineReceived(self, line):
         if self.done:

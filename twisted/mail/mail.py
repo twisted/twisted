@@ -22,7 +22,7 @@
 from twisted.protocols import smtp
 from twisted.python import components
 from twisted.internet import defer
-from twisted.internet import app
+from twisted.application import service, internet
 from twisted.python import util
 from twisted.python import log
 
@@ -224,7 +224,7 @@ class FileMessage:
         self.fp.close()
         os.remove(self.name)
 
-class MailService(app.MultiService):
+class MailService(service.MultiService):
     """An email service."""
 
     queue = None
@@ -233,18 +233,14 @@ class MailService(app.MultiService):
     aliases = None
     smtpPortal = None
 
-    def __init__(self, name):
-        """
-        @type name: C{str}
-        @param name: This service's name
-        """
-        app.MultiService.__init__(self, name)
-
+    def __init__(self):
+        service.MultiService.__init__(self)
         # Domains and portals for "client" protocols - POP3, IMAP4, etc
         self.domains = DomainWithDefaultDict({}, BounceDomain())
         self.portals = {}
 
-        self.monitor = FileMonitoringService('AliasMonitor', self)
+        self.monitor = FileMonitoringService()
+        self.monitor.setServiceParent(self)
         self.smtpPortal = cred.portal.Portal(self)
 
     def getPOP3Factory(self):
@@ -281,25 +277,26 @@ class MailService(app.MultiService):
         return self.portals['']
 
 
-class FileMonitoringService(app.ApplicationService):
-    _monitorCall = None
+class FileMonitoringService(internet.TimerService):
     
-    def __init__(self, serviceName=None, serviceParent=None):
-        if serviceName is None:
-            serviceName = self.__class__.__name__
-        app.ApplicationService.__init__(self, serviceName, serviceParent)
+    def __init__(self):
         self.files = []
         self.intervals = iter(util.IntervalDifferential([], 60))
 
     def startService(self):
+        service.Service.startService(self)
+        self._setupMonitor()
+
+    def _setupMonitor(self):
         from twisted.internet import reactor
         t, self.index = self.intervals.next()
-        self._monitorCall = reactor.callLater(t, self._monitor)
+        self._call = reactor.callLater(t, self._monitor)
     
     def stopService(self):
-        if self._monitorCall:
-            self._monitorCall.cancel()
-            self._monitorCall = None
+        service.Service.stopService(self)
+        if self._call:
+            self._call.cancel()
+            self._call = None
     
     def monitorFile(self, name, callback, interval=10):
         try:
@@ -317,7 +314,7 @@ class FileMonitoringService(app.ApplicationService):
                 break
      
     def _monitor(self):
-        self._monitorCall = None
+        self._call = None
         if self.index is not None:
             name, callback, mtime = self.files[self.index][1:]
             try:
@@ -328,6 +325,4 @@ class FileMonitoringService(app.ApplicationService):
                 log.msg("%s changed, notifying listener" % (name,))
                 self.files[self.index][3] = now
                 callback(name)
-        t, self.index = self.intervals.next()
-        from twisted.internet import reactor
-        self._monitorCall = reactor.callLater(t, self._monitor)
+        self._setupMonitor()
