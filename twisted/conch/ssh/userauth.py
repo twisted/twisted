@@ -229,6 +229,7 @@ class SSHUserAuthClient(service.SSHService):
         self.transport.sendPacket(MSG_USERAUTH_REQUEST, NS(self.user) + \
                                   NS(self.instance.name) + NS(kind) + extraData)
     def tryAuth(self, kind):
+        kind = kind.replace('-', '_')
         f= getattr(self,'auth_%s'%kind, None)
         if f:
             return f()

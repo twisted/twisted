@@ -80,6 +80,11 @@ class SSHClientTransport(transport.SSHClientTransport):
 
     def setService(self, service):
         transport.SSHClientTransport.setService(self, service)
+        if service.name != 'ssh-userauth':
+            if not self.factory.d: return
+            d = self.factory.d
+            self.factory.d = None
+            d.callback(None)
         if service.name == 'ssh-connection':
             # listen for UNIX
             if not self.factory.options['nocache']:
@@ -93,10 +98,6 @@ class SSHClientTransport(transport.SSHClientTransport):
                     log.err(e)
 
     def connectionSecure(self):
-        if not self.factory.d: return
-        d = self.factory.d
-        self.factory.d = None
-        d.callback(None)
         self.requestService(self.factory.userAuthObject)
 
 
