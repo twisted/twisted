@@ -102,7 +102,12 @@ class provides a hook for you, a class variable named
 what new class will be generating LaTeX from your input format.  We redefine
 <code>latexSpitters</code> to <code>MyLatexSpitter</code> in the subclass
 because this
-class knows what to do with the new input we have already defined.</p>
+class knows what to do with the new input we have already defined.  Last, you
+must define the module-level variable <code
+    class="py-identifier">factory</code>.  It should an instance with the same
+interface as <code class="py-identifier">ProcessingFunctionFactory</code>
+(e.g. an instance of a subclass, in this case, <code
+    class="py-identifier">MyProcessingFunctionFactory</code>).</p>
 
 <p>Now let's actually write some code to generate the LaTeX.  Doing this
 requires at least a familiarity with the LaTeX language.  Search Google for
@@ -116,7 +121,8 @@ resources.</p>
 our handler for &lt;span&gt; tags with the <code>class="productname"</code>
 identifier.  Lore knows to try methods <code>visitNode_span_*</code> and
 <code>visitNode_div_*</code> whenever it encounters a new
-class in one of these tags.</p>
+class in one of these tags.  This is why the class names have to be valid
+python identifiers.</p>
 
 <p>Now let's see what Lore does with these new classes with the following
 input file:</p>
@@ -139,6 +145,33 @@ Transcript written on 1st_example.log.
 <p>And here's what the rendered PDF looks like:</p>
 
 <p><img src="../img/myhtml-output.png"/></p>
+
+<p>What happens when we run lore on this file using the lint output?</p>
+
+<pre class="shell">
+$ lore --input myhtml --output lint 1st_example.html
+1st_example.html:7:47: unknown class productnameexample)
+1st_example.html:8:38: unknown class marketinglie
+[########################################] (*Done*)
+</pre>
+
+<p>Lint reports these classes as errors, even though our spitter knows how to
+process them.  To fix this problem, we must add to <code
+    class="py-filename">factory.py</code>.</p>
+
+<a href="listings/lore/factory.py-2" class="py-listing">Listing 5: Input
+    Factory with Lint Support</a>
+
+<p>The method <code class="py-identifier">getLintChecker</code> is called by
+Lore to produce the lint output.  This modification adds our classes to the
+list of classes lint ignores:</p>
+
+<pre class="shell">
+$ lore --input myhtml --output lint 1st_example.html
+[########################################] (*Done*)
+</pre>
+
+<p>Hooray!</p>
 
 <h3>Creating New Outputs</h3>
 <p><div class="doit">write some stuff</div></p>
