@@ -194,7 +194,7 @@ class Options(usage.Options):
 
 
     def opt_testmodule(self, filename):
-        "Module to find a test case for"
+        "Module to grep for test cases (-*- test-case-name)"
         # only look at the first two lines of the file. Try to behave as
         # much like emacs local-variables scanner as is sensible
 
