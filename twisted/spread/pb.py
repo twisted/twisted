@@ -48,7 +48,7 @@ import types
 
 # Twisted Imports
 from twisted.python import log, failure
-from twisted.internet import reactor, defer, protocol
+from twisted.internet import reactor, defer, protocol, error
 from twisted.cred import authorizer, service, perspective, identity
 from twisted.persisted import styles
 
@@ -1082,7 +1082,7 @@ class _ObjectRetrieval:
         if not self.term:
             self.term = 1
             del self.broker
-            self.deferred.armAndErrback("connection lost")
+            self.deferred.armAndErrback(error.ConnectionLost())
 
     def connectionMade(self):
         assert not self.term, "How did this get called?"
@@ -1095,7 +1095,7 @@ class _ObjectRetrieval:
         if not self.term:
             self.term = 1
             del self.broker
-            self.deferred.armAndErrback("connection failed")
+            self.deferred.armAndErrback(error.ConnectionError(string="Connection failed"))
 
 
 class BrokerClientFactory(protocol.ClientFactory):
