@@ -201,7 +201,7 @@ stop_internal(cReactor *reactor)
 {
     /* Change state and fire system event. */
     reactor->state = CREACTOR_STATE_STOPPING;
-    fireSystemEvent_internal(reactor, CREACTOR_EVENT_TYPE_SHUTDOWN);
+    fireSystemEvent_internal(reactor, "shutdown");
 }
 
 
@@ -412,7 +412,7 @@ iterate_internal_init(cReactor *reactor)
     reactor->state = CREACTOR_STATE_RUNNING;
 
     /* Fire the the startup system event. */
-    fireSystemEvent_internal(reactor, CREACTOR_EVENT_TYPE_STARTUP);
+    fireSystemEvent_internal(reactor, "startup");
 
     return 0;
 }
@@ -783,8 +783,7 @@ cReactor_New(void)
     reactor->timed_methods = NULL;
 
     /* Event triggers and the deferred list. */
-    memset(reactor->event_triggers, 0x00, sizeof(reactor->event_triggers));
-    reactor->defer_list = PyList_New(0);
+    reactor->event_triggers = NULL;
 
     /* List of transports */
     reactor->transports         = NULL;
@@ -804,7 +803,6 @@ cReactor_New(void)
 
     /* Attempt to initialize it. */
     if (   (! reactor->attr_dict)
-        || (! reactor->defer_list)
         || (cReactor_init(reactor) < 0))
     {
         Py_DECREF((PyObject *)reactor);
@@ -819,7 +817,6 @@ static void
 cReactor_dealloc(PyObject *self)
 {
     cReactor *reactor;
-    int t, p;
     cReactorTransport *transport;
     cReactorTransport *target;
 
@@ -831,17 +828,8 @@ cReactor_dealloc(PyObject *self)
     cReactorUtil_DestroyDelayedCalls(reactor);
     reactor->timed_methods = NULL;
 
-    for (t = 0; t < CREACTOR_NUM_EVENT_TYPES; ++t)
-    {
-        for (p = 0; p < CREACTOR_NUM_EVENT_PHASES; ++p)
-        {
-            cReactorUtil_DestroyMethods(reactor->event_triggers[t][p]);
-            reactor->event_triggers[t][p] = NULL;
-        }
-    }
-
-    Py_XDECREF(reactor->defer_list);
-    reactor->defer_list = NULL;
+    cSystemEvent_FreeTriggers(reactor->event_triggers);
+    reactor->event_triggers = NULL;
 
     transport = reactor->transports;
     while (transport)
@@ -873,6 +861,8 @@ cReactor_getattr(PyObject *self, char *attr_name)
     {
         return obj;
     }
+    /* Py_FindMethod raises an exception if it does not find the mthod */
+    PyErr_Clear();
 
     /* Now check the attribute dictionary. */
     obj = PyDict_GetItemString(reactor->attr_dict, attr_name);
