@@ -151,7 +151,7 @@ class Resource(coil.ConfigCollection):
         this class's responsability to write the results to
         request.write(data), then call request.finish().
         """
-        raise NotImplementedError("%s.render called" % reflect.qual(self.__class__.__name__))
+        raise NotImplementedError("%s.render called" % reflect.qual(self.__class__))
 
 
 #t.w imports
