@@ -14,7 +14,7 @@
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 #
-# $Id: conch.py,v 1.30 2002/12/30 21:38:47 z3p Exp $
+# $Id: conch.py,v 1.31 2002/12/30 21:44:57 z3p Exp $
 
 #""" Implementation module for the `conch` command.
 #"""
@@ -149,7 +149,8 @@ def run():
     finally:
         if old:
             tty.tcsetattr(fd, tty.TCSADRAIN, old)
-    print 'Connection to %s closed.' % options['host']
+    if sys.stdout.isatty():
+        print 'Connection to %s closed.' % options['host']
     sys.exit(exitStatus)
 
 def handleError():
