@@ -52,19 +52,12 @@ The Official Twisted is built with native Python 2.2 (latest), not the
 Cygwin version of Python, however it is built with the help of Cygwin
 packages.
 
+* A-A-P ***
+This is what actually does the building.
+
 * winreg ***
 You need this little module:
-http://www.rutherfurd.net/python/winreg/
-
-* Distutils ***
-To build Twisted with documentation, shortcuts, etc., you will need
-the CVS version of distutils (as of this writing, 2003.07.06).  The
-information for downloading distutils is at:
-
-http://www.python.org/sigs/distutils-sig/cvs.html
-
-Alternately, you can get Python 2.3, but the official win32 build is
-done with Python 2.2 and CVS distutils.
+http://www.rutherfurd.net/python/winreg/   # FIXME -- make aap fetch it
 
 * Cygwin ***
 You will need Cygwin, with the gcc-mingw package installed.  Get
@@ -78,26 +71,8 @@ uses some utilities within Twisted.  The "bare minimum" install
 described above will suffice.
 
 
-* Epydoc ***
-Epydoc 2.0 is used to build the API documentation.  Find this tool at: 
-http://sourceforge.net/project/showfiles.php?group_id=32455
-
-* Netpbm ***
-Finally, you will need to install the netpbm package to build the
-documentation.  The URL for this Cygwin package, which is *not* in the
-official Cygwin, is:
-
-http://matsu-www.is.titech.ac.jp/~sohda/cygwin/dist/packages/netpbm/
-
-I just download netpbm-*.tar.bz2 and extract with the following
-commands at a Cygwin prompt:
-$ cd /
-$ tar xvfj /path/to/netpbm-*.tar.bz2
-
-This will drop the binaries in usr/bin/.
-
 * Issue the build command ***
 
-$ python win32/build.py
+$ aap -f win32/build.aap
 
-The two distributable files will be in dist/ when this is done.
+The four distributable files will be in dist/ when this is done.
