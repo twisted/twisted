@@ -168,9 +168,8 @@ class TestSuite:
     def run(self, output):
         output.start(self.numTests)
         testClasses = self.testClasses.keys()
-##         testClasses.sort(lambda x,y: cmp((x.__module__, x.__name__),
-##                                          (y.__module__, y.__name__)))
-        testClasses.sort(lambda x,y: cmp(x.__name__, y.__name__))
+        testClasses.sort(lambda x,y: cmp((x.__module__, x.__name__),
+                                         (y.__module__, y.__name__)))
         for testClass in testClasses:
             testCase = testClass()
             for method in self.testClasses[testClass]:
