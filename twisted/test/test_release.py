@@ -5,36 +5,6 @@ from twisted.internet import reactor
 from twisted.python import release, log
 
 
-class HappyTransaction(release.Transaction):
-    def doIt(self, stuff):
-        stuff.append(':-)')
-
-class SadTransaction(release.Transaction):
-    def doIt(self, stuff):
-        raise release.CommandFailed(stuff)
-    def undoIt(self, l, failure):
-        l.append(failure.check(release.CommandFailed))
-
-
-class TransactionTest(unittest.TestCase):
-    def testHappy(self):
-        l = ["hoo"]
-        HappyTransaction().run(l)
-        A.assertEquals(l, ["hoo", ":-)"])
-
-    def testSad(self):
-        l = []
-        A.assertRaises(release._TransactionFailed,
-                       SadTransaction().run, l)
-        A.assertEquals(l, [release.CommandFailed])
-
-    def testMultiple(self):
-        l = []
-        release.runTransactions([HappyTransaction, SadTransaction, HappyTransaction], l)
-        A.assertEquals(l, [":-)", release.CommandFailed])
-
-
-
 class UtilityTest(unittest.TestCase):
     def testChdir(self):
         cwd = os.getcwd()
