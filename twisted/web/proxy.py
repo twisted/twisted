@@ -102,7 +102,7 @@ class ProxyClientFactory(protocol.ClientFactory):
 
 
 class ProxyRequest(http.Request):
-    """Used by Proxy to impelement a simple web proxy."""
+    """Used by Proxy to implement a simple web proxy."""
 
     protocols = {'http': ProxyClientFactory}
     ports = {'http': 80}
