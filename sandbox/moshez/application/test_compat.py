@@ -79,6 +79,14 @@ class TestInternet(unittest.TestCase):
         c.connectUDP(None, None, None)
         c.connectUNIX(None, None)
 
+    def testUnlistenersCallable(self):
+        s = service.MultiService()
+        c = compat.IOldApplication(s)
+        self.assert_(callable(c.unlistenTCP))
+        self.assert_(callable(c.unlistenUNIX))
+        self.assert_(callable(c.unlistenUDP))
+        self.assert_(callable(c.unlistenSSL))
+
     def testServices(self):
         s = service.MultiService()
         c = compat.IOldApplication(s)
