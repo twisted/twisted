@@ -14,7 +14,9 @@
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 # 
-"""wxPython support for Twisted.
+"""Old method of wxPython support for Twisted.
+
+twisted.internet.wxreactor is probably a better choice.
 
 To use::
 
@@ -34,6 +36,7 @@ Maintainer: U{Itamar Shtull-Trauring<mailto:twisted@itamarst.org>}
 """
 
 import warnings
+warnings.warn("wxsupport is not fully functional on Windows, wxreactor is better.")
 
 # wxPython imports
 from wxPython.wx import wxApp
@@ -65,8 +68,6 @@ class wxRunner:
 
 def install(app):
     """Install the wxPython support, given a wxApp instance"""
-    if platformType == "win32":
-        warnings.warn("Be advised wxsupport is not fully functional on Windows.")
     runner = wxRunner(app)
     reactor.callLater(0.02, runner.run)
 
