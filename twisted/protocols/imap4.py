@@ -645,7 +645,7 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
             size = parts[1]
         elif len(parts) == 3:
             if parts[1].startswith('(') and parts[1].endswith(')'):
-                flags = tuple(parseNestedList(parts[1]))
+                flags = tuple(parseNestedParens(parts[1]))
                 date = rfc822.formatdate()
             else:
                 flags = ()
