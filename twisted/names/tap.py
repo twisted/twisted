@@ -28,7 +28,6 @@ class Options(usage.Options):
     optFlags = [
         ["cache",       "c", "Enable record caching"],
         ["recursive",   "r", "Perform recursive lookups"],
-        ["iterative",   "I", "Perform lookups using the root servers"],
         ["verbose",     "v", "Log verbosely"],
     ]
 
@@ -73,9 +72,7 @@ class Options(usage.Options):
     def postOptions(self):
         if self['resolv-conf']:
             self['recursive'] = True
-        if self['iterative'] and self['recursive']:
-            raise usage.UsageError("--iterative and --recursive are mutually exclusive.")
-        
+
         self.svcs = []
         self.zones = []
         for f in self.zonefiles:
