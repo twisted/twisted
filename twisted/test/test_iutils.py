@@ -17,7 +17,7 @@ from twisted.internet import reactor, utils, interfaces
 from twisted.python import components
 
 
-class UtilsTestCase(unittest.TestCase, SignalMixin):
+class UtilsTestCase(SignalMixin, unittest.TestCase):
     """Test running a process."""
     
     output = None
