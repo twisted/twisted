@@ -41,7 +41,7 @@ class ContextFactory:
 class DefaultOpenSSLContextFactory(ContextFactory):
 
     def __init__(self, privateKeyFileName, certificateFileName,
-                 sslmethod=SSL.SSLv23_METHOD):
+                 sslmethod=SSL.SSLv3_METHOD):
         self.privateKeyFileName = privateKeyFileName
         self.certificateFileName = certificateFileName
         self.sslmethod = sslmethod
@@ -72,7 +72,7 @@ class ClientContextFactory(ContextFactory):
     """A sample context factory for SSL clients."""
     
     def getContext(self):
-        return SSL.Context(SSL.SSLv23_METHOD)
+        return SSL.Context(SSL.SSLv3_METHOD)
 
 
 class Connection(tcp.Connection):
@@ -126,6 +126,7 @@ class Connection(tcp.Connection):
             return main.CONNECTION_LOST
 
     def _closeSocket(self):
+        print "closing socket"
         # do the SSL shutdown exchange, before we close the underlying socket
         try:
             self.socket.shutdown()
@@ -217,12 +218,13 @@ class Port(tcp.Port):
         """
         try:
             try:
-                skt,addr = self.socket.accept()
+                skt, addr = self.socket.accept()
             except socket.error, e:
                 if e.args[0] == tcp.EWOULDBLOCK:
                     return
                 raise
             except SSL.Error:
+                log.deferr()
                 return
             protocol = self.factory.buildProtocol(addr)
             if protocol is None:
