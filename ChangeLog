@@ -1,5 +1,7 @@
 2003-01-08  Dave Peticolas  <dave@krondo.com>
 
+	* twisted/test/test_smtp.py: cleanup timers after test
+
 	* twisted/trial/unittest.py: keep errors that are logged and
 	submit them as test failures when tests are finished.
 

@@ -99,6 +99,7 @@ Someone set up us the bomb!\015
         protocol.lineReceived('QUIT')
         if self.mbox != self.factory.domains['baz.com'].messages:
             raise AssertionError(self.factory.domains['baz.com'].messages)
+        protocol.timeoutID.cancel()
 
 mail = '''\
 Subject: hello
@@ -133,7 +134,7 @@ class LoopbackSMTPTestCase(unittest.TestCase):
 
     def loopback(self, server, client):
         loopback.loopbackTCP(server, client)
-        
+
     def testMessages(self):
         factory = smtp.SMTPFactory()
         factory.domains = {}
@@ -144,6 +145,7 @@ class LoopbackSMTPTestCase(unittest.TestCase):
         protocol.factory = factory
         clientProtocol = MySMTPClient()
         self.loopback(protocol, clientProtocol)
+        protocol.timeoutID.cancel()
 
 
 class FakeSMTPServer(protocols.basic.LineReceiver):
@@ -266,7 +268,7 @@ To: foo
         data.append(('DATA\r\n','354.*\r\n',
                      msg, ('250.*\r\n',
                            (helo_, realfrom, realto, msg))))
-                                                       
+
 
     def testBuffer(self):
         output = StringIOWithoutClosing()
@@ -297,5 +299,4 @@ To: foo
                 if not re.match(resp, data):
                     raise AssertionError, (resp, data)
                 self.assertEquals(a.message, msgdata)
-
-
+        a.timeoutID.cancel()
