@@ -185,11 +185,11 @@ class ReverseProxyResource(resource.Resource):
     def render(self, request):
         request.received_headers['host'] = self.host
         request.content.seek(0, 0)
-	qs = urlparse.urlparse(request.uri)[4]
-	if qs:
-	    rest = self.path + '?' + qs
-	else:
-	    rest = self.path
+        qs = urlparse.urlparse(request.uri)[4]
+        if qs:
+            rest = self.path + '?' + qs
+        else:
+            rest = self.path
         clientFactory = ProxyClientFactory(request.method, rest, 
                                      request.clientproto, 
                                      request.getAllHeaders(),
