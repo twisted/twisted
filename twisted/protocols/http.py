@@ -83,7 +83,7 @@ responses = {
     OK: "OK!",
     CREATED: "Created.",
     ACCEPTED: "Accepted.",
-    NON_AUTHORITATIVE_INFORMATION: "Non-Authorotative information",
+    NON_AUTHORITATIVE_INFORMATION: "Non-Authoritative information",
     NO_CONTENT: "No content.",
     RESET_CONTENT: "Reset Content.",
     PARTIAL_CONTENT: "Partial content.",
