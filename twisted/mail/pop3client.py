@@ -171,7 +171,7 @@ class POP3Client(basic.LineOnlyReceiver):
             d.append(self.waiting)
             self.waiting = None
         if self._blockedQueue is not None:
-            d.extend([d for (d, f, a) in self._blockedQueue])
+            d.extend([deferred for (deferred, f, a) in self._blockedQueue])
             self._blockedQueue = None
         for w in d:
             w.errback(reason)
