@@ -31,7 +31,6 @@ from reflect import namedModule
 
 try:
     from twisted.python.dir import listDirectories
-    print 'Using dir'
 except ImportError:
     listDirectories = os.listdir
 
