@@ -74,7 +74,9 @@ class IReactorTCP(Interface):
 
           * bindAddress: a (host, port) tuple of local address to bind to, or None.
 
-        Returns an object implementing IConnector.
+        Returns an object implementing IConnector. This connector will call various
+        callbacks on the factory when a connection is made, failed, or lost - see
+        ClientFactory docs for details.
         """
 
 
