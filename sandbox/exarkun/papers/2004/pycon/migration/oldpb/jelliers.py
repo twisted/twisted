@@ -71,7 +71,7 @@ class FileDescriptorJellier(components.Adapter):
     def getStateFor(self, jellier):
         state = self.original.__dict__.copy()
         state['socketHandle'] = ISocketStorage(jellier).put(state.pop('socket'))
-        jellier.invoker.serializingPerspective.dConnection.transport.sendFileDescriptors([state['fileno']()])
+        jellier.invoker.serializingPerspective.dChannel.transport.sendFileDescriptors([state['fileno']()])
         del state['fileno']
         return state
 

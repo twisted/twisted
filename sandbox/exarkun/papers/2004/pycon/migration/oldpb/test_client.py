@@ -33,13 +33,15 @@ class ClientFactory(protocol.ClientFactory):
         self.onConnect.callback(p)
         return p
 
-def cbGetServer(port, avatar, proto):
+def cbGetServer(port, avatar, proto, sname):
     print 'Server acheived!'
-    print port, avatar, proto
+    print sname, port, avatar, proto
+    return avatar.callRemote('gotServer', sname)
 
 def cbServerList(lst, avatar, proto):
-    return avatar.callRemote('getServer', lst.pop()
-        ).addCallback(cbGetServer, avatar, proto
+    sname = lst.pop()
+    return avatar.callRemote('getServer', sname,
+        ).addCallback(cbGetServer, avatar, proto, sname
         ).addErrback(log.err
         )
 

@@ -91,8 +91,8 @@ class MigrationServer(pb.Avatar):
         return self.transition[name]
 
     def perspective_gotServer(self, name):
-        server.transport.socket.close()
-        del self.transition[name]
+        server = self.transition.pop(name)
+        server.socket.close()
         if not self.servers and not self.transition:
             from twisted.internet import reactor
             reactor.stop()
