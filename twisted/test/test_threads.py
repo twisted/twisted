@@ -176,7 +176,7 @@ class DeferredResultTestCase(unittest.TestCase):
         # alas, this test appears to flunk the default reactor too
         
         def nothing(): pass
-        reactor.callLater(1, reactor.stop)
+        reactor.callLater(1, reactor.crash)
         reactor.callInThread(nothing)
         reactor.run()
         def raiseError(): raise TypeError

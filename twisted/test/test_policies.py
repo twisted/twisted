@@ -87,7 +87,7 @@ class SimpleSenderProtocol(SimpleProtocol):
             if not self.finished:
                 self.fail()
             else:
-                reactor.stop()
+                reactor.crash()
         if not self.disconnected:
             self.transport.write('foo')
             reactor.callLater(1, self.writeSomething)
