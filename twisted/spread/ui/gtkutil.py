@@ -102,6 +102,8 @@ class Login(gtk.GtkWindow):
             ]
         self.logstat = gtk.GtkLabel("Protocol PB-%s" % pb.Broker.version)
         self.okbutton = cbutton("Log In", self.login)
+        self.okbutton["can_default"] = 1
+        self.okbutton["receives_default"] = 1
 
         okbtnbx = gtk.GtkHButtonBox()
         okbtnbx.add(self.okbutton)
@@ -124,6 +126,8 @@ class Login(gtk.GtkWindow):
         vbox.add(self.logstat)
         vbox.add(okbtnbx)
         self.add(vbox)
+        self.username.grab_focus()
+        self.okbutton.grab_default()
         for fld in self.username, self.password, self.hostname, self.service, self.perspective:
             fld.signal_connect('activate',self.login)
             fld.signal_connect('focus_in_event',selectAll)
