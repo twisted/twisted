@@ -1,5 +1,5 @@
 # -*- Python -*-
-# $Id: usage.py,v 1.22 2002/07/11 19:02:07 carmstro Exp $
+# $Id: usage.py,v 1.23 2002/08/07 19:19:12 tv Exp $
 # Twisted, the Framework of Your Internet
 # Copyright (C) 2001 Matthew W. Lefkowitz
 #
@@ -150,13 +150,15 @@ class Options(UserDict.UserDict):
                 opt = opt[2:]
             else:
                 opt = opt[1:]
-            opt = string.replace(opt, "-", "_")
 
-            if not self.synonyms.has_key(opt):
-                raise UsageError, "No such option '%s'" % (opt,)
+            optMangled = opt
+            if not self.synonyms.has_key(optMangled):
+                optMangled = string.replace(opt, "-", "_")
+                if not self.synonyms.has_key(optMangled):
+                    raise UsageError, "No such option '%s'" % (opt,)
 
-            opt = self.synonyms[opt]
-            self.__dispatch[opt](opt, arg)
+            optMangled = self.synonyms[optMangled]
+            self.__dispatch[optMangled](opt, arg)
 
 
 
@@ -290,15 +292,16 @@ class Options(UserDict.UserDict):
             else:
                 takesArg = 0
 
+            prettyName = string.replace(name, '_', '-')
             doc = getattr(method, '__doc__', None)
             if doc:
                 ## Only use the first line.
                 #docs[name] = string.split(doc, '\n')[0]
-                docs[name] = doc
+                docs[prettyName] = doc
             else:
-                docs[name] = None
+                docs[prettyName] = None
 
-            synonyms[name] = name
+            synonyms[prettyName] = prettyName
 
             # A little slight-of-hand here makes dispatching much easier
             # in parseOptions, as it makes all option-methods have the
@@ -310,7 +313,7 @@ class Options(UserDict.UserDict):
                 # with a value when it shouldn't be.
                 fn = lambda self, name, value=None, m=method: m()
 
-            dispatch[name] = new.instancemethod(fn, self, self.__class__)
+            dispatch[prettyName] = new.instancemethod(fn, self, self.__class__)
 
             if len(name) == 1:
                 shortOpt = shortOpt + name
@@ -318,8 +321,8 @@ class Options(UserDict.UserDict):
                     shortOpt = shortOpt + ':'
             else:
                 if takesArg:
-                    name = name + '='
-                longOpt.append(name)
+                    prettyName = prettyName + '='
+                longOpt.append(prettyName)
 
         reverse_dct = {}
         # Map synonyms
