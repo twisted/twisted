@@ -147,7 +147,8 @@ class SendFileTransfer:
 
     def stopProducing(self):
         self.request.unregisterProducer()
-        reactor.callLater(0, self.request.finish)
+        #reactor.callLater(0, self.request.finish)
+        self.request.finish()
         self.request = None
 
 
@@ -274,7 +275,8 @@ class DTP(protocol.Protocol):
         self.action = 'RETR'
         self.file = StringIO.StringIO(s)
         self.filesize = len(s)
-        reactor.callLater(0.1, self.executeAction)
+        #reactor.callLater(0.1, self.executeAction)
+        self.executeAction()
 
     #
     #   'NLST'
