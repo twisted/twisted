@@ -42,7 +42,7 @@ try:
 except:
     defaultRoot = None
 
-defaultOptions = '--upver --tag --export --dist --docs --balls --rel --deb' # --debi'
+defaultOptions = '--upver --tag --exp --dist --docs --balls --rel --deb' # --debi'
 
 
 
