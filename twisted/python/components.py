@@ -133,7 +133,7 @@ def backwardsCompatImplements(klass):
     expect the old API.
 
        class YourClass:
-           implements(IFoo) # correct zope way
+           zope.interface.implements(IFoo) # correct zope way
 
        backwardsCompatImplements(YourClass) # add __implements__
        ----
