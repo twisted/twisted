@@ -4,6 +4,13 @@
 	and Process docs. Moved Manhole from "Administrators" section to
 	"Developers" section.
 
+2002-10-10  Moshe Zadka <moshez@twistedmatrix.com>
+
+	* .: Releasing 0.99.4
+
+  2002-10-07  Itamar Shtull-Trauring  <itamarst@twistedmatrix.com>
+  
+  	* .: Release 0.99.4rc1
 2002-10-07  Itamar Shtull-Trauring  <itamarst@twistedmatrix.com>
 
 	* .: Release 0.99.4rc1
