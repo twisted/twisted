@@ -13,7 +13,7 @@ from twisted.cred import portal
 from twisted.cred.credentials import IUsernamePassword
 from twisted.internet import reactor, defer, protocol, error
 from twisted.python import log, failure, runtime
-from twisted.trial import unittest, util
+from twisted.trial import unittest
 from Crypto.PublicKey import RSA, DSA
 
 publicRSA_openssh = "ssh-rsa AAAAB3NzaC1yc2EAAAABIwAAAGEArzJx8OYOnJmzf4tfBEvLi8DVPrJ3/c9k2I/Az64fxjHf9imyRJbixtQhlH9lfNjUIx+4LmrJH5QNRsFporcHDKOTwTTYLh5KmRpslkYHRivcJSkbh/C+BR3utDS555mV comment"

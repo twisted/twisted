@@ -20,14 +20,14 @@ class EventTest(unittest.TestCase):
         event.dispatch()
 
     def __signal_cb(self, ev, sig, evtype, arg):
-        if evtype == event.SIGNAL:
+        if evtype == event.EV_SIGNAL:
             ev.delete()
-        elif evtype == event.TIMEOUT:
+        elif evtype == event.EV_TIMEOUT:
             os.kill(os.getpid(), signal.SIGUSR1)
     
     def test_signal(self):
         event.add(event.event(self.__signal_cb, handle=signal.SIGUSR1,
-                              evtype=event.SIGNAL))
+                              evtype=event.EV_SIGNAL))
         event.add(event.event(self.__signal_cb), 2)
         event.dispatch()
 
@@ -38,7 +38,7 @@ class EventTest(unittest.TestCase):
     def test_read(self):
         pipe = os.pipe()
         event.add(event.event(self.__read_cb, handle=pipe[0],
-                              evtype=event.READ))
+                              evtype=event.EV_READ))
         os.write(pipe[1], 'hi niels')
         event.dispatch()
 
