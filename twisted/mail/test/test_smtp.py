@@ -7,14 +7,15 @@
 Test cases for twisted.mail.smtp module.
 """
 
+import time
 from zope.interface import implements
 
-from twisted.trial import unittest, util
+from twisted.trial import unittest, util, assertions
 from twisted import protocols
 from twisted import internet
 from twisted.protocols import loopback
 from twisted.mail import smtp
-from twisted.internet import defer, protocol, reactor, interfaces
+from twisted.internet import defer, protocol, reactor, interfaces, address
 from twisted.test.test_protocols import StringIOWithoutClosing
 from twisted.python import components
 
@@ -37,7 +38,7 @@ import re
 try:
     from cStringIO import StringIO
 except ImportError:
-    import StringIO
+    from StringIO import StringIO
 
 def spameater(*spam, **eggs):
     return None
@@ -481,3 +482,37 @@ class EmptyLineTestCase(unittest.TestCase):
         self.assertEquals(len(out), 2)
         self.failUnless(out[0].startswith('220'))
         self.assertEquals(out[1], "500 Error: bad syntax")
+
+class TimeoutTestCase(unittest.TestCase, LoopbackMixin):
+    def _timeoutTest(self, onDone, clientFactory):
+        before = time.time()
+
+        client = clientFactory.buildProtocol(
+            address.IPv4Address('TCP', 'example.net', 25))
+        server = protocol.Protocol()
+
+        self.loopback(client, server)
+        after = time.time()
+        self.failIf(after - before > 1.0)
+
+        return assertions.assertFailure(
+            onDone, smtp.SMTPTimeoutError)
+
+
+    def testSMTPClient(self):
+        onDone = defer.Deferred()
+        clientFactory = smtp.SMTPSenderFactory(
+            'source@address', 'recipient@address',
+            StringIO("Message body"), onDone,
+            retries=0, timeout=0.5)
+        return self._timeoutTest(onDone, clientFactory)
+
+
+    def testESMTPClient(self):
+        onDone = defer.Deferred()
+        clientFactory = smtp.ESMTPSenderFactory(
+            'username', 'password',
+            'source@address', 'recipient@address',
+            StringIO("Message body"), onDone,
+            retries=0, timeout=0.5)
+        return self._timeoutTest(onDone, clientFactory)

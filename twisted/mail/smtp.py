@@ -219,6 +219,14 @@ class SMTPConnectError(SMTPClientError):
     def __init__(self, code, resp, log=None, addresses=None, isFatal=True, retry=True):
         SMTPClientError.__init__(self, code, resp, log, addresses, isFatal, retry)
 
+class SMTPTimeoutError(SMTPClientError):
+    """Failed to receive a response from the server in the expected time period.
+
+    This is considered a fatal error.  A retry will be made.
+    """
+    def __init__(self, code, resp, log=None, addresses=None, isFatal=True, retry=True):
+        SMTPClientError.__init__(self, code, resp, log, addresses, isFatal, retry)
+
 class SMTPProtocolError(SMTPClientError):
     """The server sent a mangled response.
 
@@ -535,7 +543,7 @@ class SMTP(basic.LineReceiver, policies.TimeoutMixin):
         peer = self.transport.getPeer()
         try:
             host = peer.host
-        except AttributeError: # not a UPV4Address
+        except AttributeError: # not an IPv4Address
             host = str(peer)
         self._helo = (None, host)
         self.sendCode(220, self.greeting())
@@ -929,11 +937,15 @@ class SMTPFactory(protocol.ServerFactory):
         p.host = self.domain
         return p
 
-class SMTPClient(basic.LineReceiver):
+class SMTPClient(basic.LineReceiver, policies.TimeoutMixin):
     """SMTP client for sending emails."""
 
     # If enabled then log SMTP client server communication
     debug = True
+
+    # Number of seconds to wait before timing out a connection.  If
+    # None, perform no timeout checking.
+    timeout = None
 
     def __init__(self, identity, logsize=10):
         self.identity = identity or ''
@@ -952,11 +964,26 @@ class SMTPClient(basic.LineReceiver):
         basic.LineReceiver.sendLine(self,line)
 
     def connectionMade(self):
+        self.setTimeout(self.timeout)
+
         self._expected = [ 220 ]
         self._okresponse = self.smtpState_helo
         self._failresponse = self.smtpConnectionFailed
 
+    def connectionLost(self, reason=protocol.connectionDone):
+        """We are no longer connected"""
+        self.setTimeout(None)
+        self.mailFile = None
+
+    def timeoutConnection(self):
+        self.sendError(
+            SMTPTimeoutError(-1,
+                             "Timeout waiting for SMTP server response",
+                             self.log))
+
     def lineReceived(self, line):
+        self.resetTimeout()
+
         # Log lineReceived only if you are in debug mode for performance
         if self.debug:
             self.log.append('<<< ' + line)
@@ -1075,10 +1102,6 @@ class SMTPClient(basic.LineReceiver):
             line = '.'
         self.sendLine(line)
     ##
-
-    def connectionLost(self, reason=protocol.connectionDone):
-        """We are no longer connected"""
-        self.mailFile = None
 
     # these methods should be overriden in subclasses
     def getMailFrom(self):
@@ -1201,9 +1224,8 @@ class ESMTPClient(SMTPClient):
         self.authenticators.append(auth)
 
     def connectionMade(self):
-        self._expected = [220]
+        SMTPClient.connectionMade(self)
         self._okresponse = self.esmtpState_ehlo
-        self._failresponse = self.smtpConnectionFailed
 
     def esmtpState_ehlo(self, code, resp):
         self._expected = SUCCESS
@@ -1465,16 +1487,16 @@ class SenderMixin:
 
         #  Do not retry to connect to SMTP Server if:
         #   1. No more retries left (This allows the correct error to be returned to the errorback)
-        #   2. The error is of base type SMTPClientError and retry is false
+        #   2. retry is false
         #   3. The error code is not in the 4xx range (Communication Errors)
 
-        if isinstance(exc, SMTPClientError):
-            if self.factory.retries >= 0 or (not exc.retry and not (exc.code >= 400 and exc.code < 500)):
-                self.factory.sendFinished = 1
-                self.factory.result.errback(exc)
+        if (self.factory.retries >= 0 or
+            (not exc.retry and not (exc.code >= 400 and exc.code < 500))):
+            self.factory.sendFinished = 1
+            self.factory.result.errback(exc)
 
     def sentMail(self, code, resp, numOk, addresses, log):
-        # Do not retry the SMTP Server responsed to the request
+        # Do not retry, the SMTP server acknowledged the request
         self.factory.sendFinished = 1
         if code not in SUCCESS:
             errlog = []
@@ -1502,7 +1524,8 @@ class SMTPSenderFactory(protocol.ClientFactory):
     domain = DNSNAME
     protocol = SMTPSender
 
-    def __init__(self, fromEmail, toEmail, file, deferred, retries=5):
+    def __init__(self, fromEmail, toEmail, file, deferred, retries=5,
+                 timeout=None):
         """
         @param fromEmail: The RFC 2821 address from which to send this
         message.
@@ -1517,7 +1540,12 @@ class SMTPSenderFactory(protocol.ClientFactory):
 
         @param retries: The number of times to retry delivery of this
         message.
+
+        @param timeout: Period, in seconds, for which to wait for
+        server responses, or None to wait forever.
         """
+        assert isinstance(retries, (int, long))
+
         if isinstance(toEmail, types.StringTypes):
             toEmail = [toEmail]
         self.fromEmail = Address(fromEmail)
@@ -1528,8 +1556,8 @@ class SMTPSenderFactory(protocol.ClientFactory):
         self.result.addBoth(self._removeDeferred)
         self.sendFinished = 0
 
-        assert isinstance(retries, (int, long))
         self.retries = -retries
+        self.timeout = timeout
 
     def _removeDeferred(self, argh):
         del self.result
@@ -1557,6 +1585,7 @@ class SMTPSenderFactory(protocol.ClientFactory):
     def buildProtocol(self, addr):
         p = self.protocol(self.domain, self.nEmails*2+2)
         p.factory = self
+        p.timeout = self.timeout
         return p
 
 
@@ -1667,10 +1696,13 @@ class ESMTPSenderFactory(SMTPSenderFactory):
 
     protocol = ESMTPSender
 
-    def __init__(self, username, password, fromEmail, toEmail, file, deferred, retries=5, contextFactory=None,
-                 heloFallback=False, requireAuthentication=True, requireTransportSecurity=True):
+    def __init__(self, username, password, fromEmail, toEmail, file,
+                 deferred, retries=5, timeout=None,
+                 contextFactory=None, heloFallback=False,
+                 requireAuthentication=True,
+                 requireTransportSecurity=True):
 
-        SMTPSenderFactory.__init__(self, fromEmail, toEmail, file, deferred, retries)
+        SMTPSenderFactory.__init__(self, fromEmail, toEmail, file, deferred, retries, timeout)
         self.username = username
         self.password = password
         self._contextFactory = contextFactory
@@ -1684,6 +1716,7 @@ class ESMTPSenderFactory(SMTPSenderFactory):
         p.requireAuthentication = self._requireAuthentication
         p.requireTransportSecurity = self._requireTransportSecurity
         p.factory = self
+        p.timeout = self.timeout
         return p
 
 def sendmail(smtphost, from_addr, to_addrs, msg):
