@@ -42,6 +42,10 @@ Options:
                 password to connect to the database
         -c, --connections
                 number of connections (threads) to spawn
+        -h, --host
+                host to connect to (postgres only)
+        -t, --port
+                port to connect to (postgres only)
             --pbusername
                 username to allow connections to this service with
             --pbpassword
@@ -60,6 +64,8 @@ class Options(usage.Options):
                   ["database","d","twisted"],
                   ["username","u","twisted"],
                   ["password","p","matrix"],
+                  ["host", "h", "localhost"],
+                  ["port", "t", "5432"],
                   ["connections","c","2"],
                   ["pbusername","","twisted"],
                   ["pbpassword","","matrix"],
@@ -73,7 +79,9 @@ def getPorts(app, config):
         server   = config.server,
         database = config.database,
         username = config.username,
-        password = config.password
+        password = config.password,
+        host     = config.host,
+        port     = config.port
         )
     svc = service.Service(mgr, app, ["userRequests"])
     
