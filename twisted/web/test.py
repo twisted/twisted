@@ -16,6 +16,8 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
 """I am a test application for twisted.web.
+
+FIXME -- move into twisted.test or doc/examples?
 """
 
 from twisted.python import log
