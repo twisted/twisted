@@ -26,6 +26,9 @@ API Stability: unstable
 
 Maintainer: U{Moshe Zadka<mailto:moshez@twistedmatrix.com>}
 """
+
+import os
+
 from twisted.python import components
 from twisted.internet import defer
 from twisted.persisted import sob
