@@ -139,6 +139,17 @@ class Document(Node, Accessor):
     def createTextNode(self, text):
         return Text(text)
 
+    def getElementsByTagName(self, name):
+        childNodes = self.childNodes[:]
+        gathered = []
+        while childNodes:
+            node = childNodes.pop(0)
+            if node.childNodes:
+                childNodes.extend(node.childNodes)
+            if node.nodeName == name:
+                gathered.append(node)
+        return gathered
+
 
 class EntityReference(Node):
 

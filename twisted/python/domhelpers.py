@@ -108,6 +108,31 @@ def superAppendAttribute(node, key, value):
         for child in node.childNodes:
             superAppendAttribute(child, key, value)
 
+def getElementsByTagName(iNode, name):
+    childNodes = iNode.childNodes[:]
+    gathered = []
+    while childNodes:
+        node = childNodes.pop(0)
+        if node.childNodes:
+            childNodes.extend(node.childNodes)
+        if node.nodeName == name:
+            gathered.append(node)
+    print "gathered", gathered
+    return gathered
+
+def gatherTextNodes(iNode):
+    childNodes = iNode.childNodes[:]
+    gathered = []
+    while childNodes:
+        node = childNodes.pop(0)
+        if node.childNodes:
+            childNodes.extend(node.childNodes)
+        if hasattr(node, 'nodeValue'):
+            gathered.append(node.nodeValue)
+    print "text", gathered
+    return ''.join(gathered)
+
+
 class RawText(microdom.Text):
     """This is an evil and horrible speed hack. Basically, if you have a big
     chunk of XML that you want to insert into the DOM, but you don't want
