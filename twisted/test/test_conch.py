@@ -837,7 +837,7 @@ class SSHTestConnectionForUnix(connection.SSHConnection):
         self.spawn = (p, exe, cmds)
 
     def serviceStarted(self):
-        reactor.spawnProcess(*self.spawn)
+        reactor.callLater(0,reactor.spawnProcess, env=None, *self.spawn)
 
 class SSHTransportTestCase(unittest.TestCase):
 
@@ -1011,7 +1011,7 @@ class SSHTransportTestCase(unittest.TestCase):
             self.fail('test took too long')
         #env = {'PYTHONPATH':':'.join(sys.path)}
         timeout = reactor.callLater(10, _failTest)
-        reactor.spawnProcess(p, exe, cmds)
+        reactor.spawnProcess(p, exe, cmds, env=None)
         # wait for process to finish
         while not p.done:
             reactor.iterate(0.1)
