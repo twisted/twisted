@@ -193,7 +193,7 @@ class TestCase:
     def runReactor(self, times, seconds=0):
         """
         I iterate the reactor for you. `times' can be either an
-        explicit number of iterations, or, if `seconds' is True, the
+        explicit number of iterations, or, if `seconds' is non-zero, the
         number of seconds to run the reactor.
 
         You probably want to use expectedAssertions with this.
