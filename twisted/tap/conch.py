@@ -34,11 +34,13 @@
 I am a support module for making SSH servers with mktap.
 """
 
-from twisted.conch import identity, authorizer, checkers, realm
+from twisted.conch import checkers, realm
 from twisted.conch.ssh import factory
 from twisted.cred import portal
 from twisted.python import reflect, usage
+from twisted.application import internet
 import sys
+
 
 class Options(usage.Options):
     synopsis = "Usage: mktap conch [-i <interface>] [-p <port>] [-d <dir>] "
@@ -49,7 +51,8 @@ class Options(usage.Options):
 
     longdesc = "Makes a Conch SSH server.."
 
-def updateApplication(app, config):
+
+def makeService(config):
     t = factory.OpenSSHFactory()
     t.portal = portal.Portal(realm.UnixSSHRealm())
     t.portal.registerChecker(checkers.UNIXPasswordDatabase())
@@ -59,4 +62,4 @@ def updateApplication(app, config):
     t.dataRoot = config['data']
     t.moduliRoot = config['moduli'] or config['data']
     portno = int(config['port'])
-    app.listenTCP(portno, t, interface=config['interface'])
+    return internet.TCPServer(portno, t, interface=config['interface'])
