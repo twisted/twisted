@@ -106,9 +106,6 @@ class XPathTest(unittest.TestCase):
         xp = XPathQuery("/foo[not(@nosuchattrib)]")
         self.assertEquals(xp.matches(self.e), True)
 
-        xp = XPathQuery("/foo[juserhost(@attrib3) = 'user@host']")
-        self.assertEquals(xp.matches(self.e), True)
-
         xp = XPathQuery("//gar")
         self.assertEquals(xp.matches(self.e), True)
         self.assertEquals(xp.queryForNodes(self.e), [self.gar1, self.gar2])

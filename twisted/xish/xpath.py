@@ -77,21 +77,6 @@ class _text_Function:
     def value(self, elem):
         return str(elem)
 
-class _juserhost_Function:
-    def setParams(self, sourceValue):
-        self.sourceValue = sourceValue
-        
-    def value(self, elem):
-        from twisted.words.protocols.jabber import jid
-        try:
-            user, host, resource = jid.parse(self.sourceValue.value(elem))
-            if user:
-                return "%s@%s" % (user, host)
-            else:
-                return None
-        except jid.InvalidFormat:
-            return None
-
 class _Location:
     def __init__(self):
         self.predicates = []
