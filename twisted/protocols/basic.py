@@ -139,9 +139,7 @@ class LineOnlyReceiver(protocol.Protocol):
     
     def dataReceived(self, data):
         """Translates bytes into lines, and calls lineReceived."""
-        lines  = data.split(self.delimiter)
-        if self._buffer:
-            lines[0] = self._buffer + lines[0]
+        lines  = (self._buffer+data).split(self.delimiter)
         self._buffer = lines[-1]
         for line in lines[:-1]:
             if self.transport.disconnecting:
