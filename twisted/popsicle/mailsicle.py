@@ -286,7 +286,10 @@ class Mailsicle(repos.DirectoryRepository):
     def loadOIDList(self, s):
         l = []
         for descript, oid in parseOIDList(s):
-            l.append(self.loadNow(oid))
+            if oid:
+                l.append(self.loadNow(oid))
+            else:
+                l.append(None)
         return l
 
     def makeOIDList(self,l):
@@ -480,6 +483,8 @@ class MailsicleService(service.Service):
         freezer.clean()
 
     def createPerspective(self, name):
+        if self.perspectives.has_key(name):
+            return self.perspectives[name]
         p = self.perspectiveClass(name)
         p.setService(self)
         freezer.register(p, self.msicle)
