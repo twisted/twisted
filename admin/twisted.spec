@@ -1,7 +1,7 @@
-%define name    Twisted
-%define version 1.0.3
-%define release 1tummy
-%define prefix  %{_prefix}
+%define name     Twisted
+%define version  1.0.4alpha1
+%define release  1tummy
+%define prefix   %{_prefix}
 
 %{expand:%%define py_ver %(python -V 2>&1| awk '{print $2}')}
 %{expand:%%define py_libver %(python -V 2>&1| awk '{print $2}'|cut -d. -f1-2)}

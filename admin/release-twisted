@@ -293,7 +293,7 @@ class UpdateVersion(Transaction):
         newver = opts['release-version']
 
         r = opts['root']
-        self.files = ('README', 'doc/howto/installing-twisted.html', 'twisted/copyright.py')
+        self.files = ('README', 'doc/howto/installing-twisted.html', 'twisted/copyright.py', 'admin/twisted.spec')
         for file in self.files:
             replaceInFile(os.path.join(r, file), oldver, newver)
         sh('cd %s &&  cvs -q diff || true' % (r))
