@@ -143,7 +143,7 @@ static PyObject *iocpcore_doIteration(iocpcore* self, PyObject *args) {
             err = 0;
         }
 #ifdef SPEW
-        printf("calling callback with err %d, bytes %d\n", err, bytes);
+        printf("calling callback with err %d, bytes %ld\n", err, bytes);
 #endif
         ret = PyObject_CallFunction(object, "ll", err, bytes);
         if(!ret) {
@@ -189,14 +189,14 @@ static PyObject *iocpcore_WriteFile(iocpcore* self, PyObject *args) {
     ov->callback = object;
     CreateIoCompletionPort(handle, self->iocp, 0, 1);
 #ifdef SPEW
-    printf("calling WriteFile(%d, 0x%p, %d, 0x%p, 0x%p)\n", handle, buf, len, &bytes, ov);
+    printf("calling WriteFile(%p, 0x%p, %d, 0x%p, 0x%p)\n", handle, buf, len, &bytes, ov);
 #endif
     Py_BEGIN_ALLOW_THREADS;
     res = WriteFile(handle, buf, len, &bytes, (OVERLAPPED *)ov);
     Py_END_ALLOW_THREADS;
     err = GetLastError();
 #ifdef SPEW
-    printf("    wf returned %d, err %d\n", res, err);
+    printf("    wf returned %d, err %ld\n", res, err);
 #endif
     if(!res && err != ERROR_IO_PENDING) {
         return PyErr_SetFromWindowsErr(err);
@@ -238,14 +238,14 @@ static PyObject *iocpcore_ReadFile(iocpcore* self, PyObject *args) {
     ov->callback = object;
     CreateIoCompletionPort(handle, self->iocp, 0, 1);
 #ifdef SPEW
-    printf("calling ReadFile(%d, 0x%p, %d, 0x%p, 0x%p)\n", handle, buf, len, &bytes, ov);
+    printf("calling ReadFile(%p, 0x%p, %d, 0x%p, 0x%p)\n", handle, buf, len, &bytes, ov);
 #endif
     Py_BEGIN_ALLOW_THREADS;
     res = ReadFile(handle, buf, len, &bytes, (OVERLAPPED *)ov);
     Py_END_ALLOW_THREADS;
     err = GetLastError();
 #ifdef SPEW
-    printf("    rf returned %d, err %d\n", res, err);
+    printf("    rf returned %d, err %ld\n", res, err);
 #endif
     if(!res && err != ERROR_IO_PENDING) {
         return PyErr_SetFromWindowsErr(err);
@@ -303,7 +303,7 @@ static PyObject *iocpcore_WSARecvFrom(iocpcore* self, PyObject *args) {
     SOCKET handle;
     char *buf;
     int buflen, res, len = -1, ablen;
-    DWORD bytes, err, flags;
+    DWORD bytes = 0, err, flags = 0;
     PyObject *object;
     MyOVERLAPPED *ov;
     WSABUF wbuf;
@@ -336,14 +336,20 @@ static PyObject *iocpcore_WSARecvFrom(iocpcore* self, PyObject *args) {
     ov->callback = object;
     wbuf.len = len;
     wbuf.buf = buf;
+    ab->size = ablen;
     CreateIoCompletionPort((HANDLE)handle, self->iocp, 0, 1);
 #ifdef SPEW
-    printf("calling WSARecvFrom(%d, 0x%p, %d, 0x%p, 0x%p, 0x%p, 0x%p, 0x%p, 0x%p)\n", handle, &wbuf, 1, &bytes, &flags, (struct sockaddr *)ab->buffer, &ab->size, ov, dummy_completion);
+    printf("calling WSARecvFrom(%d, 0x%p, %d, 0x%p, 0x%p, 0x%p, 0x%p, 0x%p, 0x%p)\n", handle, &wbuf, 1, &bytes, &flags, (struct sockaddr *)ab->buffer, &ab->size, ov, NULL);
+    printf("Deref,  WSARecvFrom(%d, 0x%p, %d, %ld,   %ld,   0x%p, %d,   0x%p, 0x%p)\n", handle, &wbuf, 1, bytes, flags, (struct sockaddr *)ab->buffer, ab->size, ov, NULL);
+    printf("wbuf.len is %lu\n", wbuf.len);
 #endif
     Py_BEGIN_ALLOW_THREADS;
-    res = WSARecvFrom(handle, &wbuf, 1, &bytes, &flags, (struct sockaddr *)ab->buffer, &ab->size, (OVERLAPPED *)ov, dummy_completion);
+    res = WSARecvFrom(handle, &wbuf, 1, &bytes, &flags, (struct sockaddr *)ab->buffer, &ab->size, (OVERLAPPED *)ov, NULL);
     Py_END_ALLOW_THREADS;
     err = GetLastError();
+#ifdef SPEW
+    printf("    rf returned %d, err %ld\n", res, err);
+#endif
     if(res == SOCKET_ERROR && err != ERROR_IO_PENDING) {
         return PyErr_SetFromWindowsErr(err);
     }
@@ -394,7 +400,7 @@ static PyObject *iocpcore_WSASendTo(iocpcore* self, PyObject *args) {
     SOCKET handle;
     char *buf;
     int buflen, res, len = -1, addrlen, family;
-    DWORD bytes, err, flags;
+    DWORD bytes, err, flags = 0;
     PyObject *object, *address;
     MyOVERLAPPED *ov;
     WSABUF wbuf;
@@ -428,14 +434,14 @@ static PyObject *iocpcore_WSASendTo(iocpcore* self, PyObject *args) {
     wbuf.buf = buf;
     CreateIoCompletionPort((HANDLE)handle, self->iocp, 0, 1);
 #ifdef SPEW
-    printf("calling WSASendTo(%d, 0x%p, %d, 0x%p, %d, 0x%p, %d, 0x%p, 0x%p)\n", handle, &wbuf, 1, &bytes, flags, addr, addrlen, ov, dummy_completion);
+    printf("calling WSASendTo(%d, 0x%p, %d, 0x%p, %ld, 0x%p, %d, 0x%p, 0x%p)\n", handle, &wbuf, 1, &bytes, flags, addr, addrlen, ov, NULL);
 #endif
     Py_BEGIN_ALLOW_THREADS;
-    res = WSASendTo(handle, &wbuf, 1, &bytes, flags, addr, addrlen, (OVERLAPPED *)ov, dummy_completion);
+    res = WSASendTo(handle, &wbuf, 1, &bytes, flags, addr, addrlen, (OVERLAPPED *)ov, NULL);
     Py_END_ALLOW_THREADS;
     err = GetLastError();
 #ifdef SPEW
-    printf("    st returned %d, err %d\n", res, err);
+    printf("    st returned %d, err %ld\n", res, err);
 #endif
     if(res == SOCKET_ERROR && err != ERROR_IO_PENDING) {
         return PyErr_SetFromWindowsErr(err);
@@ -488,7 +494,7 @@ static PyObject *iocpcore_AcceptEx(iocpcore* self, PyObject *args) {
     Py_END_ALLOW_THREADS;
     err = WSAGetLastError();
 #ifdef SPEW
-    printf("    ae returned %d, err %d\n", res, err);
+    printf("    ae returned %d, err %ld\n", res, err);
 #endif
     if(!res && err != ERROR_IO_PENDING) {
         return PyErr_SetFromWindowsErr(err);
@@ -534,7 +540,7 @@ static PyObject *iocpcore_ConnectEx(iocpcore* self, PyObject *args) {
     PyMem_Free(addr);
     err = WSAGetLastError();
 #ifdef SPEW
-    printf("    ce returned %d, err %d\n", res, err);
+    printf("    ce returned %d, err %ld\n", res, err);
 #endif
     if(!res && err != ERROR_IO_PENDING) {
         return PyErr_SetFromWindowsErr(err);
@@ -573,7 +579,7 @@ static PyObject *iocpcore_PostQueuedCompletionStatus(iocpcore* self, PyObject *a
     Py_END_ALLOW_THREADS;
     err = WSAGetLastError();
 #ifdef SPEW
-    printf("    pqcs returned %d, err %d\n", res, err);
+    printf("    pqcs returned %d, err %ld\n", res, err);
 #endif
     if(!res && err != ERROR_IO_PENDING) {
         return PyErr_SetFromWindowsErr(err);

@@ -133,6 +133,9 @@ class DatagramPort(RWHandle):
         try:
             skt = socket.socket(self.af, self.type, self.proto)
             skt.bind(self.addr)
+            print "Bound to", self.addr
+            print "sockname", skt.getsockname()
+            print "socket", skt.fileno()
         except socket.error, le:
             raise error.CannotListenError, (self.addr, le)
         self.connected = 1
@@ -148,17 +151,8 @@ class DatagramPort(RWHandle):
 
     def loseConnection(self):
         self.stopWorking(main.CONNECTION_DONE)
-        if self.connected:
-            from twisted.internet import reactor
-            reactor.callLater(0, self.handleDead)
 
-    def stopListening(self):
-        if self.connected:
-            result = self.d = defer.Deferred()
-        else:
-            result = None
-        self.loseConnection()
-        return result
+    stopListening = loseConnection
     
     def handleDead(self, reason):
         log.msg('(Port %s Closed)' % address.getPort(self.addr, self.af, self.type, self.proto))
@@ -169,10 +163,6 @@ class DatagramPort(RWHandle):
         self.connected = 0
         self.socket.close()
         del self.socket
-        del self.handle
-        if hasattr(self, "d"):
-            self.d.callback(None)
-            del self.d
 
     def getHost(self):
         return address.getFull(self.socket.getsockname(), self.af, self.type, self.proto)
@@ -192,12 +182,13 @@ class ConnectedDatagramPort(DatagramPort):
     def startListening(self):
         self._bindSocket()
         self.realAddress = None
-        d = defer.maybeDeferred(self.prepareAddress())
+        d = defer.maybeDeferred(self.prepareAddress)
         d.addCallback(self.setRealAddress).addErrback(self.connectionFailed)
 
     def setRealAddress(self, addr):
         self.realAddress = addr
-        self.socket.connect((self.addr))
+        print "connected to", addr
+        self.socket.connect((addr))
         self._connectToProtocol()
     
     def connectionFailed(self, reason):

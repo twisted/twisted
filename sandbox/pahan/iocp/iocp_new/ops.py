@@ -123,7 +123,7 @@ class WSARecvFromOp(OverlappedOp):
 
     def initiateOp(self, handle, buffer):
         self.buffer = buffer # save a reference so that things don't blow up
-        self.ab = self.reactor.AllocateReadBuffer(32)
+        self.ab = self.reactor.AllocateReadBuffer(1024)
         self.handle = handle
         try:
 #            print "in WSARecvFromOp.initiateOp, calling issueWSARecvFromOp with (%(handle)r)" % locals()

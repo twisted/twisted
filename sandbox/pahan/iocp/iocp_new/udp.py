@@ -19,10 +19,10 @@ class ConnectedPort(server.ConnectedDatagramPort):
     proto = 0
 
     def _filterRealAddress(self, host):
-        return (host, self.addr[1])
+        return (host, self.remoteaddr[1])
 
     def prepareAddress(self):
-        host, port = self.addr
+        host, port = self.remoteaddr
 #        if iocpdebug.debug:
 #            print "connecting to (%s, %s)" % (host, port)
         if isinstance(port, types.StringTypes):
@@ -30,9 +30,9 @@ class ConnectedPort(server.ConnectedDatagramPort):
                 port = socket.getservbyname(port, 'tcp')
             except socket.error, e:
                 return defer.fail(ServiceNameUnknownError(string=str(e)))
-        self.addr = (host, port)
+        self.remoteaddr = (host, port)
         if isIPAddress(host):
-            return self.addr
+            return self.remoteaddr
         else:
             from twisted.internet import reactor
             return reactor.resolve(host).addCallback(self._filterRealAddress)

@@ -93,6 +93,7 @@ class RWHandle(log.Logger, styles.Ephemeral):
         if not self.reading:
             self.reading = 1
             op = self.read_op()
+            print "initiating op", self.handle
             op.initiateOp(self.handle, self.readbuf)
             op.addCallback(self.readDone)
             op.addErrback(self.readErr)
