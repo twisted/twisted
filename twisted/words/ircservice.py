@@ -65,15 +65,19 @@ class IRCChatter(irc.IRC):
         #>> :glyph_!glyph@adsl-64-123-27-108.dsl.austtx.swbell.net PRIVMSG glyph_ :hello
         #>> :glyph!glyph@adsl-64-123-27-108.dsl.austtx.swbell.net PRIVMSG glyph_ :hello
 
-        self.sendLine(":%s!%s@%s PRIVMSG %s :%s" %
-                      (senderName, senderName, self.servicename,
-                       self.nickname, message))
+        lines = string.split(message, '\n')
+        for line in lines:
+            self.sendLine(":%s!%s@%s PRIVMSG %s :%s" %
+                          (senderName, senderName, self.servicename,
+                           self.nickname, line))
 
 
     def receiveGroupMessage(self, sender, group, message):
         if sender is not self:
-            self.sendLine(":%s!%s@%s PRIVMSG #%s :%s" %
-                          (sender, sender, self.servicename, group, message))
+            lines = string.split(message, '\n')
+            for line in lines:
+                self.sendLine(":%s!%s@%s PRIVMSG #%s :%s" %
+                              (sender, sender, self.servicename, group, line))
 
     def setGroupMetadata(self, metadata, groupName):
         if metadata.has_key('topic'):
