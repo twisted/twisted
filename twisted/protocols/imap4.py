@@ -1309,7 +1309,7 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
                 response.extend(('INTERNALDATE', msg.getInternalDate()))
             elif part.type == 'rfc822header':
                 hdrs = msg.getHeaders((), True)
-                hdrs = [': '.join((k, v)) for (k. v) in hdrs.iteritems()]
+                hdrs = [': '.join((k, v)) for (k, v) in hdrs.iteritems()]
                 hdrs = '\r\n'.join(hdrs)
                 response.extend(('RFC822.HEADER', hdrs + '\r\n\r\n'))
             elif part.type == 'rfc822text':
@@ -1318,7 +1318,7 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
                 response.extend(('RFC822.SIZE', str(msg.getSize())))
             elif part.type == 'rfc822':
                 hdrs = msg.getHeaders((), True)
-                hdrs = [': '.join((k, v)) for (k. v) in hdrs.iteritems()]
+                hdrs = [': '.join((k, v)) for (k, v) in hdrs.iteritems()]
                 hdrs.append('')
                 hdrs = '\r\n'.join(hdrs)
                 response.extend(('RFC822', hdrs + '\r\n' + msg.getBodyFile().read()))
@@ -1337,7 +1337,7 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
                 if part.header:
                     if not part.header.fields:
                         hdrs = msg.getHeaders((), True)
-                        hdrs = [': '.join((k, v)) for (k. v) in hdrs.iteritems()]
+                        hdrs = [': '.join((k, v)) for (k, v) in hdrs.iteritems()]
                         hdrs = '\r\n'.join(hdrs)
                         response.extend((str(part), hdrs + '\r\n\r\n'))
                     else:
@@ -1350,13 +1350,13 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
                     response.extend((str(part), subMsg.getBodyFile()))
                 elif part.mime:
                     hdrs = msg.getHeaders((), True)
-                    hdrs = [': '.join((k, v)) for (k. v) in hdrs.iteritems()]
+                    hdrs = [': '.join((k, v)) for (k, v) in hdrs.iteritems()]
                     hdrs = '\r\n'.join(hdrs)
                     response.extend((str(part), hdrs + '\r\n\r\n'))
                 else:
                     # Simplified body request
                     hdrs = msg.getHeaders((), True)
-                    hdrs = [': '.join((k, v)) for (k. v) in hdrs.iteritems()]
+                    hdrs = [': '.join((k, v)) for (k, v) in hdrs.iteritems()]
                     hdrs.append('')
                     hdrs = '\r\n'.join(hdrs)
                     response.extend((str(part), hdrs + '\r\n' + subMsg.getBodyFile().read()))
