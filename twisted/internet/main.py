@@ -253,7 +253,9 @@ def run(installSignalHandlers=1):
     global running
     running = 1
     threadable.registerAsIOThread()
-    
+
+    callDuringShutdown(disconnectAll)
+
     if installSignalHandlers:
         handleSignals()
     
@@ -290,7 +292,6 @@ def run(installSignalHandlers=1):
                 callback()
             except:
                 log.deferr()
-        disconnectAll()
 
 
 def disconnectAll():
