@@ -88,8 +88,8 @@ class TestSuite:
         if type(module) is types.StringType:
             try:
                 module = reflect.namedModule(module)
-            except ImportError:
-                self.couldNotImport[module] = None
+            except (ImportError, Warning), e:
+                self.couldNotImport[module] = e
                 return
         names = dir(module)
         for name in names:
@@ -100,8 +100,8 @@ class TestSuite:
     def addPackage(self, packageName):
         try:
             package = reflect.namedModule(packageName)
-        except ImportError:
-            self.couldNotImport[packageName] = None
+        except ImportError, e:
+            self.couldNotImport[packageName] = e
             return
         modGlob = os.path.join(os.path.dirname(package.__file__), self.moduleGlob)
         modules = map(reflect.filenameToModuleName, glob.glob(modGlob))
@@ -180,8 +180,8 @@ class TestSuite:
             for method in self.testClasses[testClass]:
                 output.reportStart(testClass, method)
                 self.runOneTest(testClass, testCase, method, output)
-        for name in self.couldNotImport.keys():
-            output.reportImportError(name)
+        for name, exc in self.couldNotImport.items():
+            output.reportImportError(name, exc)
 
         output.stop()
 
@@ -198,8 +198,8 @@ class Reporter:
         self.expectedTests = expectedTests
         self.startTime = time.time()
 
-    def reportImportError(self, name):
-        self.imports.append(name)
+    def reportImportError(self, name, exc):
+        self.imports.append((name, exc))
 
     def reportStart(self, testClass, method):
         pass
@@ -311,8 +311,9 @@ class TextReporter(Reporter):
         self.writeln(self._statusReport())
         if self.imports:
             self.writeln()
-            for name in self.imports:
-                self.writeln('Could not import %s' % name)
+            for name, exc in self.imports:
+                self.writeln('Could not import %s: %s: %s' 
+                             % (name, exc.__class__.__name__, exc))
             self.writeln()
 
 class VerboseTextReporter(TextReporter):
