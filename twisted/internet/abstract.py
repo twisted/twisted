@@ -31,7 +31,6 @@ from twisted.persisted import styles
 # Sibling Imports
 import interfaces
 
-
 class FileDescriptor(log.Logger, styles.Ephemeral):
     """An object which can be operated on by select().
 
@@ -202,9 +201,6 @@ class FileDescriptor(log.Logger, styles.Ephemeral):
 
     def startReading(self):
         """Start waiting for read availability.
-
-        Call this to remove this selectable notified whenever it is ready for
-        reading.
         """
         self.reactor.addReader(self)
 
