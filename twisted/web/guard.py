@@ -80,7 +80,7 @@ class AuthForm(widgets.Form):
 
     def gotPerspective(self, perspective, request, ident):
         # TODO: fix this...
-        resKey = string.join(['AUTH',self.reqauth.serviceName], '_')
+        resKey = string.join(['AUTH',self.reqauth.service.serviceName], '_')
         sess = request.getSession()
         setattr(sess, resKey, perspective)
         if self.sessionPerspective:
@@ -100,7 +100,7 @@ class AuthForm(widgets.Form):
 
     def gotIdentity(self, ident, password, request, perspectiveName):
         if ident.verifyPlainPassword(password):
-            ret = ident.requestPerspectiveForKey(self.reqauth.serviceName,
+            ret = ident.requestPerspectiveForKey(self.reqauth.service.serviceName,
                                                   perspectiveName).addCallbacks(
                 self.gotPerspective, self.didntGetPerspective,
                 callbackArgs=(request,ident),
@@ -122,7 +122,7 @@ class AuthForm(widgets.Form):
         # must be done before page is displayed so cookie can get set!
         request.getSession()
         # this site must be tagged with an application.
-        idrq = request.site.app.authorizer.getIdentityRequest(username)
+        idrq = self.reqauth.service.application.authorizer.getIdentityRequest(username)
         idrq.needsHeader = 1
         idrq.addCallbacks(self.gotIdentity, self.didntGetIdentity,
                           callbackArgs=(password,request,perspective or username),
@@ -147,11 +147,11 @@ class AuthPage(widgets.Page):
 
 class WidgetGuard(widgets.Widget):
     
-    def __init__(self, wid, serviceName,
+    def __init__(self, wid, service,
                  sessionIdentity=None,
                  sessionPerspective=None):
         self.wid = wid
-        self.serviceName = serviceName
+        self.service = service
         self.sessionPerspective = sessionPerspective
         self.sessionIdentity = sessionIdentity
 
@@ -160,7 +160,7 @@ class WidgetGuard(widgets.Widget):
 
     def display(self, request):
         session = request.getSession()
-        resKey = string.join(['AUTH',self.serviceName], '_')
+        resKey = string.join(['AUTH',self.service.serviceName], '_')
         if hasattr(session, resKey):
             return self.wid.display(request)
         else:
@@ -170,30 +170,24 @@ class WidgetGuard(widgets.Widget):
 
 class ResourceGuard(resource.Resource):
     isLeaf = 1
-    def __init__(self, res, serviceName, sessionIdentity=None, sessionPerspective=None):
+    def __init__(self, res, service, sessionIdentity=None, sessionPerspective=None):
         self.res = res
-        self.serviceName = serviceName
+        self.service = service
         self.sessionPerspective = sessionPerspective
         self.sessionIdentity = sessionIdentity
 
     def reallyRender(self, request):
         # it's authenticated already...
-        try:
-            res = self.res.getChildForRequest(request)
-            val = res.render(request)
-            if val != NOT_DONE_YET:
-                request.write(val)
-                request.finish()
-        except:
-            io = StringIO()
-            traceback.print_exc(file=io)
-            request.write(html.PRE(io.getvalue()))
+        res = self.res.getChildForRequest(request)
+        val = res.render(request)
+        if val != NOT_DONE_YET:
+            request.write(val)
             request.finish()
         return widgets.FORGET_IT
 
     def render(self, request):
         session = request.getSession()
-        resKey = string.join(['AUTH',self.serviceName], '_')
+        resKey = string.join(['AUTH',self.service.serviceName], '_')
         if hasattr(session, resKey):
             self.reallyRender(request)
             return NOT_DONE_YET

@@ -26,7 +26,6 @@ if platform.getType() != 'java':
     import select, signal
     from errno import EINTR
 
-import traceback
 import sys
 import socket
 CONNECTION_LOST = -1
@@ -165,7 +164,7 @@ def doSelect(timeout,
                 if not handfn or handfn() == -1:
                     why = CONNECTION_LOST
             except:
-                traceback.print_exc(file=log.logfile)
+                log.deferr()
                 why = CONNECTION_LOST
             if why:
                 removeReader(selectable)
@@ -173,7 +172,7 @@ def doSelect(timeout,
                 try:
                     selectable.connectionLost()
                 except:
-                    traceback.print_exc(file=log.logfile)
+                    log.deferr()
             log.logOwner.disown(selectable)
 
 
@@ -228,14 +227,14 @@ def run(installSignalHandlers=1):
             log.msg('shutting down after select() loop interruption')
             if running:
                 log.msg('Warning!  Shutdown not called properly!')
-                traceback.print_exc(file=log.logfile)
+                log.deferr()
                 shutDown()
             if platform.getType() =='win32':
                 log.msg("(Logging traceback for WinXX exception info)")
-                traceback.print_exc(file=log.logfile)
+                log.deferr()
         except:
             log.msg("Unexpected error in Selector.run.")
-            traceback.print_exc(file=log.logfile)
+            log.deferr()
             shutDown()
             raise
         else:
@@ -248,14 +247,14 @@ def run(installSignalHandlers=1):
             try:
                 reader.connectionLost()
             except:
-                traceback.print_exc(file=log.logfile)
+                log.deferr()
             log.logOwner.disown(reader)
         # TODO: implement shutdown callbacks for gtk & tk
         for callback in shutdowns:
             try:
                 callback()
             except:
-                traceback.print_exc(file=log.logfile)
+                log.deferr()
 
 def addShutdown(function):
     """Add a function to be called at shutdown.
@@ -264,7 +263,7 @@ def addShutdown(function):
 
 def addDelayed(delayed):
     """Add an object implementing the IDelayed interface to the event loop.
-    
+
     See twisted.python.delay.IDelayed for more details.
     """
     delayeds.append(delayed)

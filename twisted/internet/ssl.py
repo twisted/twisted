@@ -23,7 +23,6 @@ SSL connections require a ContextFactory so they can create SSL contexts.
 # System imports
 from OpenSSL import SSL
 import socket
-import traceback
 
 # sibling imports
 import tcp, main
@@ -145,7 +144,7 @@ class Port(tcp.Port):
             transport = self.transport(skt, protocol, addr, self, s)
             protocol.makeConnection(transport, self)
         except:
-            traceback.print_exc(file=log.logfile)
+            log.deferr()
 
 
 class Connector(tcp.Connector):

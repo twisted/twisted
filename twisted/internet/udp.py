@@ -22,7 +22,6 @@
 import os
 import copy
 import socket
-import traceback
 
 if os.name == 'nt':
     EWOULDBLOCK = 10035
@@ -205,7 +204,7 @@ class Port(abstract.FileDescriptor):
             transport.protocol.dataReceived(data)
             self.setLogStr()
         except:
-            traceback.print_exc(file=log.logfile)
+            log.deferr()
 
     def doWrite(self):
         """Raises an AssertionError.

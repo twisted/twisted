@@ -18,16 +18,11 @@
 """A task scheduler that is integrated with the main event loop.
 """
 
-# System Imports
-
-import traceback
-
 # Twisted Imports
 
 from twisted.python import threadable
 from twisted.python import log
 from twisted.python import delay
-from twisted.python import defer
 from twisted.python import failure
 
 class ThreadedScheduler:
@@ -195,7 +190,7 @@ class Task:
                 apply(func, args, kw)
             except:
                 log.msg( 'Exception in Task' )
-                failure.Failure().printTraceback()
+                log.deferr()
                 return 0
             else:
                 self.progress = self.progress + 1

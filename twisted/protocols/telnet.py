@@ -20,13 +20,13 @@
 
 
 # System Imports
-import string, copy, traceback, sys
+import string, copy, sys
 from cStringIO import StringIO
 
 
 # Twisted Imports
 from twisted import copyright
-from twisted.python import log
+from twisted.python import log, failure
 
 # Sibling Imports
 import protocol
@@ -294,7 +294,8 @@ class Shell(Telnet):
                 code = compile(cmd, fn, 'single')
             except:
                 io = StringIO()
-                traceback.print_exc(file=self)
+                failure.Failure().printTraceback(file=self)
+                log.deferr()
                 self.write('\r\n')
                 return "Command"
         try:
@@ -310,9 +311,8 @@ class Shell(Telnet):
             self.transport.write('\r\n')
         except:
             io = StringIO()
-            traceback.print_exc(file=self)
+            failure.Failure.printTraceback(file=self)
             self.transport.write('\r\n')
-
         return "Command"
 
 

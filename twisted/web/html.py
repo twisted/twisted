@@ -64,16 +64,6 @@ def output(func, *args, **kw):
         return apply(func, args, kw)
     except:
         io = StringIO()
-        io.write("Calling:\n\t")
-        io.write(repr(func))
-        io.write("\nWith:\n\t")
-        io.write(repr(args))
-        io.write("\n\t")
-        io.write(repr(kw))
-        io.write("\n\n")
-
-        traceback.print_exc(file=io)
-
         return PRE(io.getvalue())
 
 

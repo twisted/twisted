@@ -16,7 +16,8 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
 """This is a web-sever which integrates with the twisted.internet
-infrastructure.  """
+infrastructure.
+"""
 
 # System Imports
 

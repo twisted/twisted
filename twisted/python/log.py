@@ -26,6 +26,7 @@ import string
 import cStringIO
 import time
 import threadable
+import failure
 
 
 StringIO = cStringIO
@@ -78,7 +79,17 @@ def msg(stuff):
     logfile.write(str(stuff) + os.linesep)
     logfile.flush()
 
-
+def err(stuff):
+    """Write a failure to the log.
+    """
+    if isinstance(stuff, failure.Failure):
+        stuff.printTraceback(file=logfile)
+    else:
+        msg(stuff)
+def deferr():
+    """Write the default failure (the current exception) to the log.
+    """
+    err(failure.Failure())
 
 class Logger:
     """

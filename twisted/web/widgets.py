@@ -6,11 +6,11 @@ import re
 from cStringIO import StringIO
 
 # Twisted Imports
-from twisted.python import defer, rebuild, reflect, failure
+from twisted.python import defer, rebuild, reflect, failure, log
 from twisted.protocols import http
 
 # Sibling Imports
-import html, resource, static, error
+import html, resource, error
 from server import NOT_DONE_YET
 
 """A twisted web component framework.
@@ -75,13 +75,12 @@ htmlReprTypes = {types.DictType: htmlDict,
 def formatFailure(myFailure):
     if not isinstance(myFailure, failure.Failure):
         return html.PRE(str(myFailure))
-    myFailure.printBriefTraceback()
     io = StringIO()
     w = io.write
     w("<table>")
-    w('<th colspan="3">Traceback<br>%s: %s</th>' % (myFailure.type, myFailure.value))
+    w('<th align="left" colspan="3"><font color="red">%s: %s</font></th>' % (myFailure.type, myFailure.value))
     line = 0
-    for method, filename, lineno, localVars, globalVars in myFailure.frames[1:]:
+    for method, filename, lineno, localVars, globalVars in myFailure.frames:
         # Cheat to make tracebacks shorter.
         if filename == '<string>':
             continue
@@ -122,6 +121,10 @@ def formatFailure(myFailure):
 class Widget:
     """A component of a web page.
     """
+    title = None
+    def getTitle(self, request):
+        return self.title or str(self.__class__)
+
     def display(self, request):
         """Implement me to represent your widget.
 
@@ -137,7 +140,7 @@ class StreamWidget(Widget):
     def stream(self, write, request):
         """Call 'write' multiple times with a string argument to represent this widget.
         """
-        raise NotImplementedError("twisted.web.widgets.StringWidget.stream")
+        raise NotImplementedError("%s.stream" % self.__class__)
 
     def display(self, request):
         """Produce a list containing a single string.
@@ -229,7 +232,7 @@ class Presentation(Widget):
                     x = eval(elem, namespace, namespace)
                 except:
                     io = StringIO()
-                    io.write("Traceback evaluating code in %s: %s\n\n" % (str(self.__class__), elem))
+                    log.deferr()
                     tm.append(formatFailure(failure.Failure()))
                 else:
                     if isinstance(x, types.ListType):
@@ -528,6 +531,19 @@ class Form(StreamWidget):
                  (args.has_key('__formid__') and # if I distinguish myself from others, the request must too
                   args['__formid__'][0] == fid))) # I am in fact the same
 
+    def tryAgain(self, err, req):
+        """Utility method for re-drawing the form with an error message.
+
+        This is handy in forms that process Deferred results.  Normally you can
+        just raise a FormInputError() and this will happen by default.
+        
+        """
+        l = []
+        w = l.append
+        w(self.formatError(err))
+        self.format(self.getFormFields(req), w, req)
+        return l
+    
     def stream(self, write, request):
         """Render the results of displaying or processing the form.
         """
@@ -785,9 +801,11 @@ class WidgetPage(Page):
     def __init__(self, widget):
         Page.__init__(self)
         self.widget = widget
-        self.title = getattr(widget, 'title', None) or str(widget.__class__)
         if hasattr(widget, 'stylesheet'):
             self.stylesheet = widget.stylesheet
+
+    def prePresent(self, request):
+        self.title = self.widget.getTitle(request)
 
     def render(self, request):
         displayed = self.display(request)
@@ -944,3 +962,5 @@ class Sidebar(StreamWidget):
                       '</font></a></td></tr>'
                        % (sectionColor, sectionColor, request.sibLink(link), sectionTextColor, name))
         write("</table>")
+
+import static

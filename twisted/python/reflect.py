@@ -25,10 +25,10 @@ metaclasses somehow, but I don't understand them, so nyah :-)
 import sys
 import types
 import cStringIO
-import traceback
 
 # Sibling Imports
 import reference
+import failure
 
 class Settable:
     """
@@ -282,7 +282,7 @@ def safe_repr(obj):
         return repr(obj)
     except:
         io = cStringIO.StringIO()
-        traceback.print_exc(file=io)
+        failure.printTraceback(file=io)
         return "exception in repr!\n"+ io.getvalue()
 
 

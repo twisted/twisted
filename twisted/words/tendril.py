@@ -71,7 +71,7 @@ class TendrilClient(irc.IRCClient, wordsService.WordsClientInterface):
 
     realname = 'Tendril'
     versionName = 'Tendril'
-    versionNum = '$Revision: 1.10 $'[11:-2]
+    versionNum = '$Revision: 1.11 $'[11:-2]
     versionEnv = copyright.longversion
 
     helptext = (
@@ -185,10 +185,7 @@ class TendrilClient(irc.IRCClient, wordsService.WordsClientInterface):
         try:
             irc.IRCClient.lineReceived(self, line)
         except:
-            s = apply(traceback.format_exception, sys.exc_info())
-            s.append("The offending input line was:\n%s" % (line,))
-            s = string.join(s,'')
-            self.log(s, 'ERROR')
+            log.deferr()
 
 
     def sendLine(self, line):

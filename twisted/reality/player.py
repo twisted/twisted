@@ -111,6 +111,10 @@ class Player(styles.Versioned, thing.Thing, pb.Perspective):
 
         and therefore follows those rules.
         """
+        if not hasattr(remoteIntelligence, 'seeName'): # web sessions may be attached too.
+            log.msg("web viewer login: [%s]")
+            return self
+            
         if hasattr(self, 'intelligence'):
             log.msg("player duplicate: [%s]" % self.name)
             raise passport.Unauthorized("Already logged in from another location.")
@@ -122,10 +126,13 @@ class Player(styles.Versioned, thing.Thing, pb.Perspective):
         return self
 
     def detached(self, remoteIntelligence, identity):
-        log.msg("player logout: [%s]" % self.name)
-        del self.intelligence
-        self.oldlocation = self.location
-        self.location = None
+        if self.intelligence and remoteIntelligence == self.intelligence.remote:
+            log.msg("player logout: [%s]" % self.name)
+            del self.intelligence
+            self.oldlocation = self.location
+            self.location = None
+        else:
+            log.msg("web viewer logout: [%s]" % self.name)
 
     ### Basic Abilities
 

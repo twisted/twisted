@@ -32,6 +32,7 @@ import server
 import error
 import resource
 import html
+import widgets
 
 # Twisted Imports
 from twisted.protocols import http
@@ -57,27 +58,20 @@ class Data(resource.Resource):
             return ''
         return self.data
 
-class DirectoryListing(html.Interface):
+class DirectoryListing(widgets.StreamWidget):
     def __init__(self, pathname):
-        html.Interface.__init__(self)
         self.path = pathname
 
-    def directoryContents(self):
-        io = StringIO.StringIO()
-        io.write("<UL>\n")
+    def getTitle(self, request):
+        return "Directory Listing For %s" % request.path
+
+    def stream(self, write, request):
+        write("<UL>\n")
         directory = os.listdir(self.path)
         directory.sort()
         for path in directory:
-            io.write('<LI><A HREF="%s">%s</a>' % (path,path))
-        io.write("</UL>\n")
-        return io.getvalue()
-
-    def pagetitle(self, request):
-        return "Directory Listing For %s" % request.path
-    def content(self, request):
-        return "<CENTER>"+self.runBox(request, "Directory Contents",
-                                      self.directoryContents)+"</CENTER>"
-
+            write('<LI><A HREF="%s">%s</a>' % (path,path))
+        write("</UL>\n")
 
 class File(resource.Resource, coil.Configurable):
     """
@@ -186,7 +180,7 @@ class File(resource.Resource, coil.Configurable):
             if os.path.exists(os.path.join(self.path,self.indexName)):
                 request.prepath[-1] = self.indexName
             else:
-                return DirectoryListing(self.path)
+                return widgets.WidgetPage(DirectoryListing(self.path))
         newpath = os.path.join(self.path, path)
         # forgive me, oh lord, for I know not what I do
         p, ext = os.path.splitext(newpath)

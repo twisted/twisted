@@ -1,15 +1,15 @@
 # Twisted, the Framework of Your Internet
 # Copyright (C) 2001 Matthew W. Lefkowitz
-# 
+#
 # This library is free software; you can redistribute it and/or
 # modify it under the terms of version 2.1 of the GNU Lesser General Public
 # License as published by the Free Software Foundation.
-# 
+#
 # This library is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
 # Lesser General Public License for more details.
-# 
+#
 # You should have received a copy of the GNU Lesser General Public
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
@@ -37,14 +37,13 @@ class ForumDB(adbapi.Augmentation):
        - get all the threads in a forum
        - get all the posts in a thread
        - get details of a message
-       
 
-    This class operates asynchronously (like everything in twisted). The query methods
-    (getTopMessages and getThreadMessages) take callback and errback methods which will
-    be called when the query has finished.
+
+    This class operates asynchronously. The query methods (getTopMessages and
+    getThreadMessages) return Deferreds which will be called when the query has
+    finished.
 
     This class caches the names of the forums in the database.
-       
     """
 
     schema = """
@@ -94,36 +93,29 @@ CREATE TABLE forum_permissions
     post_access       integer,
     CONSTRAINT perm_key PRIMARY KEY (user_name, forum_id)
 );
-    
+
     """
 
     def __init__(self, dbpool):
         adbapi.Augmentation.__init__(self, dbpool)
-        self.forums = {}        
+        self.forums = {}
         d = self.cacheForums()
-        d.arm() #NOTE: must arm it as this is during initialization        
+        d.arm() #NOTE: must arm it as this is during initialization
 
     def cacheForums(self):
         # load all forums
         sql = "SELECT forum_id, name from forums"
-        d = self.runQuery(sql, self.gotForums, self.gotError)
-        return d
+        return self.runQuery(sql).addCallback(self.gotForums)
 
     def loadPerspective(self, name):
-        return self.runQuery("SELECT * FROM forum_perspectives WHERE user_name = '%s'" % adbapi.safe(name), self._finishPerspective, self._errorPerspective)
+        return self.runQuery("SELECT * FROM forum_perspectives WHERE user_name = '%s'" % adbapi.safe(name)).addCallback(self._finishPerspective)
 
     def _finishPerspective(self, result):
         if len(result) == 0:
-            return defer.fail("Perspective not found.")
+            raise KeyError("Perspective not found.")
         identity_name, user_name, signature = result[0]
         return service.ForumUser(identity_name, user_name, signature)
 
-    def _errorPerspective(self, error):
-        print "Error generating forum perspective! %s" % error
-
-    def gotError(self, error):
-        print "ERROR: couldn't load forums."
-        
     def gotForums(self, data):
         for (id, name) in data:
             self.forums[id] = name
@@ -131,8 +123,8 @@ CREATE TABLE forum_permissions
     def getForumByID(self, id):
         """Get the name of a forum by it's ID.
         """
-        return self.forums.get(id, "ERROR - no Forum for this ID")
-     
+        return self.forums.get(id, "(No Forum for this ID!)")
+
     def _userCreator(self, trans, username, signature):
         sql = """INSERT INTO forum_perspectives
                  (identity_name, user_name, signature)
@@ -162,14 +154,14 @@ CREATE TABLE forum_permissions
         trans.execute("SELECT forum_id FROM forums WHERE name = '%s'" % name)
         rows = trans.fetchall()
         forum_id = int(rows[0][0])
-        
+
         if default_access:
             # setup permissions if required
             sql = "INSERT INTO forum_permissions (SELECT user_name, %d, 1, 1 FROM forum_perspectives);" % forum_id
             trans.execute(sql)
-            
+
         self.cacheForums()
-        
+
     def createForum(self, name, description, default_access):
         """Create a new forum with this name.
         """
@@ -208,8 +200,8 @@ CREATE TABLE forum_permissions
     def newMessage(self, forum_id, user_name, subject, body):
         """Post a new message - start a new thread."""
         return self.postMessage(forum_id, user_name, 0, 0, 0, subject, body)
-        
-    def getForums(self, user_name, callbackIn, errbackIn):
+
+    def getForums(self, user_name):
         """Gets the list of forums and the number of msgs in each one. Only shows forums
         the user has access to.
         """
@@ -218,9 +210,9 @@ CREATE TABLE forum_permissions
                  FROM forums, forum_permissions
                  WHERE forums.forum_id = forum_permissions.forum_id
                  AND   forum_permissions.user_name = '%s'""" % adbapi.safe(user_name)
-        return self.runQuery(sql, callbackIn, errbackIn)        
-    
-    def getTopMessages(self, forum_id, user_name, callbackIn, errbackIn):
+        return self.runQuery(sql)
+
+    def getTopMessages(self, forum_id, user_name):
         """Get the top-level messages in the forum - those that begin threads. This returns
         a set of the columns (id, subject, post date, username, # replies) for the forum
         """
@@ -231,10 +223,9 @@ CREATE TABLE forum_permissions
                AND   p.forum_id = f.forum_id
                AND   f.user_name = '%s'
                AND   p.thread_id = 0""" % (forum_id, adbapi.safe(user_name) )
-        
-        return self.runQuery(sql, callbackIn, errbackIn)        
-                   
-    def getThreadMessages(self, forum_id, thread_id, user_name, callbackIn, errbackIn):
+        return self.runQuery(sql)
+
+    def getThreadMessages(self, forum_id, thread_id, user_name):
         """Get the messages in a thread in a forum. This returns a set of columns
         (id, parent_id, subject, post_date, username)
         """
@@ -245,9 +236,9 @@ CREATE TABLE forum_permissions
                AND    f.user_name = '%s'
                AND   (p.thread_id = %d OR p.post_id = %d)""" % (forum_id, adbapi.safe(user_name), thread_id, thread_id)
 
-        return self.runQuery(sql, callbackIn, errbackIn)        
+        return self.runQuery(sql)
 
-    def getFullMessages(self, forum_id, thread_id, user_name, callbackIn, errbackIn):
+    def getFullMessages(self, forum_id, thread_id, user_name):
         """Get the messages in a thread in a forum. This returns a set of columns
         (id, parent_id, subject, post_date, username, body)
         """
@@ -258,14 +249,14 @@ CREATE TABLE forum_permissions
                AND   f.user_name = '%s'
                AND   (p.thread_id = %d OR p.post_id = %d)""" % (forum_id, adbapi.safe(user_name), thread_id, thread_id)
 
-        return self.runQuery(sql, callbackIn, errbackIn)        
-        
-    def getMessage(self, post_id, callbackIn, errbackIn):
+        return self.runQuery(sql)
+
+    def getMessage(self, post_id):
         """Get the details of a single message.
         """
         sql = """SELECT post_id, parent_id, forum_id, thread_id, subject, posted, user_name, body
                FROM posts
                WHERE posts.post_id = %d""" % (post_id)
 
-        return self.runQuery(sql, callbackIn, errbackIn)
-        
+        return self.runQuery(sql)
+

@@ -119,10 +119,8 @@ class HistoryGadget(widgets.Gadget, widgets.StreamWidget):
     def display(self, request):
         self.sname = request.args.get('sname',[0])[0]
         self.vname = request.args.get('vname',[0])[0]
-        
         print "Getting history for variable %s on host: %s" % (self.vname, self.sname)
-        d = self.service.manager.getHistory(self.sname, self.vname, self.onHistoryData, self.onHistoryError)
-        return [d]
+        return [self.service.manager.getHistory(self.sname, self.vname).addCallbacks(self.onHistoryData)]
 
     def onHistoryData(self, data):
         l = []
@@ -143,8 +141,3 @@ class HistoryGadget(widgets.Gadget, widgets.StreamWidget):
         l.extend( '</table><br>' )
         l.extend( '<hr> <i> Twisted Metrics </i>' )        
         return l
-
-    def onHistoryError(self, error):
-        print error
-        return "ERROR: " + repr(error)
-

@@ -1,8 +1,5 @@
-
 """Posting board that uses a relation database to store msgs.
 """
-
-
 
 from twisted.spread import pb
 from twisted.enterprise import adbapi
@@ -37,7 +34,7 @@ class ForumService(pb.Service):
         self.usersOnline = 0
         global theService
         theService = self
-        
+
     def loadPerspective(self, name):
         return self.manager.loadPerspective(name)
 

@@ -130,8 +130,7 @@ class ThreadPool:
             try:
                 apply(function, args, kwargs)
             except:
-                log.msg('Thread raised an exception.')
-                traceback.print_exc(file=log.logfile)
+                log.deferr()
             log.logOwner.disown(owner)
             del self.working[ct]
         self.threads.remove(ct)

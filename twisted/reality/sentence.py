@@ -260,8 +260,6 @@ class Sentence:
             self.stringioize(string+'"')
         except:
             pass
-            # import traceback
-            # traceback.print_exc()
         self.reset()
         
     def next(self):

@@ -40,8 +40,7 @@ class IdentitiesGadget(widgets.Gadget, widgets.StreamWidget):
     def display(self, request):
         """Display the list of identities
         """
-        d = self.authorizer.getIdentities(self.gotIdentities, self.gotError)
-        return [d]
+        return [self.authorizer.getIdentities().addCallback(self.gotIdentities)]
 
     def gotIdentities(self, data):
         l = []
@@ -62,13 +61,8 @@ class IdentitiesGadget(widgets.Gadget, widgets.StreamWidget):
         l.append("<br>[<a href='/newIdentity/'>Create an Identity</a>]<br> ")
         l.append( '<hr> <i> Twisted DB Authentication </i>' )        
         return l
-            
 
-    def gotError(self, error):
-        print error
-        return "ERROR:" + repr(error)
-
-class PerspectivesGadget(widgets.Gadget, widgets.StreamWidget):
+class PerspectivesGadget(widgets.Gadget, widgets.Widget):
     title = " "
     def __init__(self, authorizer):
         widgets.Gadget.__init__(self)
@@ -78,19 +72,18 @@ class PerspectivesGadget(widgets.Gadget, widgets.StreamWidget):
         """Display the intro list of forums. This is only called if there is no URI.
         """
         self.identityName = request.args.get('identityName',[0])[0]                
-        d = self.authorizer.getPerspectives(self.identityName, self.gotPerspectives, self.gotError)
-        return [d]
+        return [self.authorizer.getPerspectives(self.identityName).addCallback(self.gotPerspectives)]
 
     def gotPerspectives(self, data):
-
         l = []
-        l.append( '<h3> Perspectives for Identity: %s </h3>' % self.identityName )
-        l.append( '<table cellpadding=4 cellspacing=1 border=0 width="95%">')
-        l.append( '<tr bgcolor="#ff9900">' )
-        l.append( '<td COLOR="#000000"><b> Perspective Name </b> </td>' )
-        l.append( '<td COLOR="#000000"><b> Service </b> </td>' )
-        l.append( '<td COLOR="#000000"><b> Actions </b> </td>' )                          
-        l.append( '</tr>\n' )
+        l.append('''
+        <h3> Perspectives for Identity: %s </h3>
+        <table cellpadding=4 cellspacing=1 border=0 width="95%">
+        <tr bgcolor="#ff9900">
+        <td COLOR="#000000"><b> Perspective Name </b> </td>
+        <td COLOR="#000000"><b> Service </b> </td>
+        <td COLOR="#000000"><b> Actions </b> </td>
+        </tr>\n''' % self.identityName)
 
         for (iname, pname, sname) in data:
             l.append( "<tr> <td>%s</td> <td> %s </td>" % (pname, sname) )
@@ -98,14 +91,10 @@ class PerspectivesGadget(widgets.Gadget, widgets.StreamWidget):
             
         l.append("</table>")
         l.append("<br>[<a href='/newPerspective/?identityName=%s'>Add a Perspective</a>] " % self.identityName)
-        l.append("[<a href='/password/?identityName=%s'>Change Password</a>]<br> " % self.identityName)                
-        l.append( '<hr> <i> Twisted DB Authentication </i>' )        
+        l.append("[<a href='/password/?identityName=%s'>Change Password</a>]<br> " % self.identityName)
+        l.append( '<hr> <i> Twisted DB Authentication </i>' )
         return l
         
-    def gotError(self, error):
-        print error
-        return "ERROR:" + repr(error)
-
 class NewIdentityForm(widgets.Gadget, widgets.Form):
     title = "Create a New Identity:"
 
@@ -143,8 +132,8 @@ class NewPerspectiveForm(widgets.Gadget, widgets.Form):
     def display(self, request):
         self.identityName = request.args.get('identityName',[0])[0]
         self.request = request
-        d = self.authorizer.getServices(self.onServices, self.onServicesError)
-        return ["<h3> Add Perspective for Identity '%s'" % self.identityName, d]
+        return ["<h3> Add Perspective for Identity '%s'" % self.identityName,
+                self.authorizer.getServices().addCallback(self.onServices)]
 
     def onServices(self, data):
         menuList = []
@@ -159,9 +148,6 @@ class NewPerspectiveForm(widgets.Gadget, widgets.Form):
         
         return widgets.Form.display(self, self.request)
 
-    def onServicesError(self, err):
-        print "ERROR:", err
-    
     def process(self, write, request, submit, name, service, identityName):
         self.authorizer.addPerspective(self.identityName, name, service)
         

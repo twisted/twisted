@@ -18,6 +18,7 @@
 
 # System Imports
 import types, os, copy, string, cStringIO
+import pwd
 
 # Twisted Imports
 from twisted.spread import pb
@@ -32,6 +33,7 @@ import server
 import error
 import html
 import static
+import widgets
 from server import NOT_DONE_YET
 
 class Request(pb.RemoteCopy, server.Request):
@@ -60,9 +62,9 @@ class Issue:
     def failed(self, expt):
         self.request.write(
             error.ErrorPage(http.INTERNAL_SERVER_ERROR,
-                      "Server Connection Lost",
-                      "Connection to distributed server lost:" +
-                      html.PRE(expt)).
+                            "Server Connection Lost",
+                            "Connection to distributed server lost:" +
+                            html.PRE(expt)).
             render(self.request))
         self.request.finish()
 
@@ -160,14 +162,12 @@ class ResourcePublisher(pb.Root, styles.Versioned):
         return res.render(request)
 
 
-class UserDirectory(html.Interface):
+class UserDirectory(widgets.Gadget, widgets.StreamWidget):
     userDirName = 'public_html'
     userSocketName = '.twistd-web-pb'
 
-    def listUsers(self, req):
-        import pwd
-        x = cStringIO.StringIO()
-        x.write('<UL>\n')
+    def stream(self, write, request):
+        write('<UL>\n')
         for user in pwd.getpwall():
             pw_name, pw_passwd, pw_uid, pw_gid, pw_gecos, pw_dir, pw_shell \
                      = user
@@ -176,26 +176,14 @@ class UserDirectory(html.Interface):
                 realname = pw_name
             fmtStr = '<LI><A HREF="%s/">%s (%s)</a>\n'
             if os.path.exists(os.path.join(pw_dir, self.userDirName)):
-                x.write(fmtStr% (req.childLink(pw_name),realname,'file'))
+                write(fmtStr% (pw_name,realname,'file'))
             twistdsock = os.path.join(pw_dir, self.userSocketName)
             if os.path.exists(twistdsock):
                 linknm = '%s.twistd' % pw_name
-                x.write(fmtStr% (req.childLink(linknm),realname,'twistd'))
-        x.write('</UL>\n')
-        return x.getvalue()
+                write(fmtStr% (linknm,realname,'twistd'))
+        write('</UL>\n')
 
-    def content(self, req):
-        return "<CENTER>" + self.runBox(
-            req,
-            "Users with Homepages",
-            self.listUsers, req) + "</CENTER>"
-
-    def getChild(self, chnam, request):
-        if chnam == '':
-            return error.ErrorPage(http.NOT_FOUND,
-                             "Bad URL",
-                             "The empty string is not a valid user.")
-        import pwd
+    def getWidget(self, chnam, request):
         td = '.twistd'
 
         if chnam[-len(td):] == td:
@@ -204,7 +192,6 @@ class UserDirectory(html.Interface):
         else:
             username = chnam
             sub = 0
-
         try:
             pw_name, pw_passwd, pw_uid, pw_gid, pw_gecos, pw_dir, pw_shell \
                      = pwd.getpwnam(username)

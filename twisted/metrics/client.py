@@ -65,22 +65,17 @@ class MetricsClientComponent:
 
     def createCounterVariable(self, name, frequency):
         if self.counterVariables.has_key(name):
-            print "ERROR: counter %s already exists" % name
-            return
+            raise KeyError("counter %s already exists" % name)
         self.counterVariables[name] = (0, frequency, time.time())
 
     def createStateVariable(self, name, callback, frequency):
         if self.stateVariables.has_key(name):
-            print "ERROR: counter %s already exists" % name
-            return
+            raise KeyError("counter %s already exists" % name)
         self.stateVariables[name] = (callback, frequency, time.time())
 
     def incrementCounterVariable(self, name):
-        if  self.counterVariables.has_key(name):
-            (value, frequency, last) = self.counterVariables[name]
-            self.counterVariables[name] = (value+1, frequency, last)
-        else:
-            print "ERROR: no counter %s" % name
+        (value, frequency, last) = self.counterVariables[name]
+        self.counterVariables[name] = (value+1, frequency, last)
 
     def recordMetricsItem(self, name, value, when):
         print "recorded %s value %d" % (name, value)

@@ -1055,14 +1055,14 @@ class Broker(banana.Banana):
             try:
                 notifier()
             except:
-                print_excFullStack(file=log.logfile)
+                log.deferr()
 
     def connectionFailed(self):
         for notifier in self.failures:
             try:
                 notifier()
             except:
-                print_excFullStack(file=log.logfile)
+                log.deferr()
 
     def connectionLost(self):
         """The connection was lost.
@@ -1331,13 +1331,13 @@ class Broker(banana.Banana):
             if answerRequired:
                 self._sendError(str(e), requestID)
         except:
-            io = cStringIO.StringIO()
-            traceback.print_exc(file=io)
             if answerRequired:
+                io = cStringIO.StringIO()
+                failure.Failure().printBriefTraceback(file=io)
                 self._sendError(io.getvalue(), requestID)
             else:
                 log.msg("Client Ignored PB Traceback:")
-                log.msg(io.getvalue())
+                log.deferr()
         else:
             if answerRequired:
                 if isinstance(netResult, defer.Deferred):

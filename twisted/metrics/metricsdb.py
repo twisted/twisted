@@ -61,27 +61,27 @@ class MetricsDB(adbapi.Augmentation):
     
     """
 
-    def getAllSources(self, callbackIn, errbackIn):
+    def getAllSources(self):
         """Loads all the known metrics sources.
         """
         sql = """SELECT identity_name, hostname, server_group, server_type
                  FROM metrics_perspectives"""
-        return self.runQuery(sql, callbackIn, errbackIn)
+        return self.runQuery(sql)
 
-    def getAllVariables(self, callbackIn, errbackIn):
+    def getAllVariables(self):
         """Loads all metrics variables.
         """
         sql = """SELECT variable_name, threshold FROM metrics_variables"""
-        return self.runQuery(sql, callbackIn, errbackIn)
+        return self.runQuery(sql)
         
-    def getSourceInfo(self, source_name, callbackIn, errbackIn):
+    def getSourceInfo(self, source_name):
         """This gets the information for a metrics source by it's name. The info will be used
         to verify the connecting source.
         """
         sql = """SELECT source_name, source_name, hostname, server_type, shard
                from metrics_sources
                WHERE source_name = '%s'""" % (adbapi.safe(source_name) )
-        return self.runQuery(sql, callbackIn, errbackIn)
+        return self.runQuery(sql)
 
     def insertMetricsItem(self, source_name, item_name, item_value):
         """Inserts a value for metrics item into the database.
@@ -103,7 +103,7 @@ class MetricsDB(adbapi.Augmentation):
 
         return self.runOperation(sql)
 
-    def getHistory(self, source_name, name, callbackIn, errbackIn):
+    def getHistory(self, source_name, name):
         """Get the history of values for this item from this source
         """        
         sql = "SELECT item_value, collected\
@@ -112,5 +112,5 @@ class MetricsDB(adbapi.Augmentation):
                AND item_name = '%s'" % (adbapi.safe(source_name), adbapi.safe(name) )
         
         # use a defered
-        return self.runQuery(sql, callbackIn, errbackIn)
+        return self.runQuery(sql)
 

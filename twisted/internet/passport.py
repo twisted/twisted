@@ -321,9 +321,7 @@ class Identity:
         try:
             check = self.keyring[(serviceName, perspectiveName)]
         except KeyError, ke:
-            d = defer.Deferred()
-            d.errback(ke)
-            return d
+            return defer.fail(failure.Failure())
         return self.application.getServiceNamed(serviceName).getPerspectiveRequest(perspectiveName)
 
     def getAllKeys(self):

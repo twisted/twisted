@@ -76,8 +76,7 @@ class _Waiter:
             del self.callbacks[key]
             return 1
         except:
-            print "Exception occurred during callback:"
-            traceback.print_exc(file=sys.stdout)
+            log.deferr()
             del self.callbacks[key]
             return 2
 
@@ -281,3 +280,5 @@ def registerAsIOThread():
 
 synchronize(_ThreadedWaiter)
 init(0)
+
+import log

@@ -29,7 +29,6 @@ twisted.reality.Reality and twisted.internet for details.
 # System Imports
 import os
 import sys
-import traceback
 import copy
 
 if os.name != 'java':
@@ -298,8 +297,7 @@ class Delayed(rebuild.Sensitive):
             try:
                 apply(pop[FUNC], pop[ARGS])
             except:
-                log.msg( 'Exception in delayed function.' )
-                traceback.print_exc(file=log.logfile)
+                log.deferr()
 
     def runEverything(self):
         """Run all currently-pending callbacks.
@@ -310,8 +308,7 @@ class Delayed(rebuild.Sensitive):
             try:
                 apply(func,args)
             except:
-                log.msg('Exception in delayed function [all].')
-                traceback.print_exc(file=log.logfile)
+                log.deferr()
 
     def runloop(self):
         """Runs until the is_running flag is false.

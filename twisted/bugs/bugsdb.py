@@ -102,17 +102,17 @@ class BugsDatabase(adbapi.Augmentation):
                  VALUES (%s, %s, %s, %s)"""
         return self.runOperation(sql, bug_id, name, email, comment)
     
-    def getAllBugs(self, callbackIn, errbackIn):
+    def getAllBugs(self):
         """Returns a set of columns for all bugs."""
         sql = """SELECT ALL * FROM bugs_items"""
-        return self.runQuery(sql, callbackIn, errbackIn)
+        return self.runQuery(sql)
     
-    def getBugComments(self, bug_id, callbackIn, errbackIn):
+    def getBugComments(self, bug_id):
         sql = """SELECT post_id, submittor_name, submittor_email, comment FROM bugs_comments
                  WHERE bug_id = %d ORDER BY post_id""" % bug_id
-        return self.runQuery(sql, callbackIn, errbackIn)
+        return self.runQuery(sql)
     
     def updateBugStatus(self, bug_id, assigned, status):
         sql = """UPDATE bugs_items SET assigned = %s, status = %s, date_modified = now()
                  WHERE bug_id = %s"""
-        return self.runOperation(sql, (assigned, status, bug_id))
+        return self.runOperation(sql, assigned, status, bug_id)

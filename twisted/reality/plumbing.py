@@ -26,7 +26,7 @@ from twisted.reality import player
 from twisted.protocols import telnet, protocol, http
 from twisted.python import log
 from twisted.internet import tcp
-from twisted.web import resource, html
+from twisted.web import resource, html, widgets, guard
 from twisted import copyright
 
 portno  = 8889
@@ -194,169 +194,80 @@ class Spigot(protocol.Factory):
         """
         self.reality = world
 
-class Placer(resource.Resource):
-    """A callback to place() an object through the web.
-    """
-    def __init__(self, thing):
-        """Initialize, with the thing to be moved.
-        """
-        resource.Resource.__init__(self)
-        self.thing = thing
-        
-    def render(self, request):
-        """Render a redirect to place the item.
-        """
-        request.setHeader("Location","http://%s/%s" % (request.getHeader("host"), string.join(request.prepath[:-2],'/')))
-        request.code = http.MOVED_PERMANENTLY
-        return "NO CONTENT"
-
-
-class WebThing(html.Interface):
+class ThingWidget(widgets.StreamWidget):
     """A web-based interface to a twisted.reality.thing.Thing.
     """
     def __init__(self, thing):
         """Initialize with a particular thing.
         """
-        html.Interface.__init__(self)
         self.thing = thing
 
-    def pagetitle(self,request):
+    def getTitle(self, request):
         """Return a page title formatting the request.
         """
         session = request.getSession()
-        return "Twisted Reality: %s" % self.thing.shortName(
-            session.truser)
+        return "Twisted Reality: %s" % self.thing.shortName(session.truser)
 
-    def descBox(self, request):
-        """Display the description in a box.
-        """
-        player = request.getSession().truser
-        x = StringIO()
-        x.write(self.thing.descriptionTo(player))
-        x.write('<br><A HREF="%s?action=moveMe">Move Me Here</a>' %
-                (self._getpath(request)))
-        return x.getvalue()
-
-    def itemsBox(self, request):
-        """Display the items in a box.
-        """
-        player = request.getSession().truser
-        x = StringIO()
-        w = x.write
-        w("<UL>")
-        for thing in self.thing.getThings(player):
-            w('<LI><A HREF="%s">%s</A>' % (
-                thing.thing_id,
-                thing.presentPhrase(player)))
-        w("</UL>")
-        return x.getvalue()
-
-    def exitsBox(self, request):
-        """Display the exits in a box.
-        """
-        player = request.getSession().truser
-        x = StringIO()
-        w = x.write
-        w("<UL>")
-        for direc in self.thing.exits:
-            dest = self.thing.findExit(direc)
-            w("<LI>")
-            w(direc)
-            w(": ")
-            w('<A HREF="%s">' % dest.thing_id)
-            w(dest.shortName(player))
-            w('</A>')
-        w("</UL>")
-        return x.getvalue()
-
-
-    def thingInfo(self, request):
-        """Display boxes continaing description, items, and exits.
-        """
-        a = self.runBox(request, "Description",
-                        self.descBox, request)
-        b = self.runBox(request, "Items",
-                        self.itemsBox, request)
-        c = self.runBox(request, "Exits",
-                        self.exitsBox, request)
-        return ("<table><tr><td colspan=2>%(a)s</td></tr>"
-                "<tr><td>%(b)s</td><td>%(c)s</td></tr></table>" % locals())
-
-    def content(self, request):
+    def stream(self, write, request):
         """Display representation of a Thing (or move a Thing and redirect, depending on URI).
         """
         player = request.getSession().truser
         if request.args.has_key("action"):
             # cheating...
-            request.setHeader("Location","http://%s%s" % (
-                request.getHeader("host"), self._getpath(request)))
-            request.code = http.MOVED_PERMANENTLY
+            # request.setHeader("refresh","0; URL=%s" % (request.prePathURL()))
             player.location = self.thing
-            return "NO CONTENT"
+            log.msg("Eep?")
+            write("I have an action key! %s, %s" % (player.location, self.thing))
+            # write("Redirecting...")
+        write("<table><tr><td colspan=2>")
+        write(self.thing.descriptionTo(player))
+        write('<br><A HREF="%s?action=moveMe">Move Me Here</a>' %
+              (request.prePathURL()))
+        write("</td></tr><tr><td><ul>")
+        for thing in self.thing.getThings(player):
+            write('<LI><A HREF="%s">%s</A>' % (
+                thing.thing_id,
+                thing.presentPhrase(player)))
+        if self.thing in player.locations:
+            write('<hr><li><A HREF="%s">You are here.</a>' % (player.thing_id))
+        write("</ul></td><td>")
+        write("<UL>")
+        for direc in self.thing.exits:
+            dest = self.thing.findExit(direc)
+            write("<LI>")
+            write(direc)
+            write(": ")
+            write('<A HREF="%s">' % dest.thing_id)
+            write(dest.shortName(player))
+            write('</A>')
+        write("</UL>")
+        write("</td></tr></table>")
 
-        return self.runBox(request,
-                           self.thing.shortName(player),
-                           self.thingInfo, request)
+class Web(guard.ResourceGuard):
+    def __init__(self, reality):
+        guard.ResourceGuard.__init__(self, _Web(reality), reality, 'realIdent', 'truser')
 
-
-class Web(html.Interface):
+class _Web(widgets.Gadget, widgets.StreamWidget):
     """A web interface to a twisted.reality.reality.Reality.
     """
     def __init__(self, in_reality):
         """Initialize with a reality.
         """
-        html.Interface.__init__(self)
+        widgets.Gadget.__init__(self)
         self.reality = in_reality
 
-    def getChild(self, name, request):
+    def getWidget(self, name, request):
         """Get a Thing from this reality.
         """
-        if name == '':
-            return self
-        return WebThing(self.reality.getThingById(int(name)))
+        return ThingWidget(self.reality.getThingById(int(name)))
 
-    def listStuff(self, request):
+    def stream(self, write, request):
         """List all availble Things and there IDs
         """
         player = request.getSession().truser
-        x = StringIO()
-        x.write('<UL>\n')
+        write('<UL>\n')
         for thing in self.reality.objects():
             np = thing.nounPhrase(player)
-            x.write('<LI><A HREF="%s">%s</a>\n'% (str(thing.thing_id),np))
-        x.write('</UL>\n')
-        return x.getvalue()
+            write('<LI><A HREF="%s">%s</a>\n'% (str(thing.thing_id),np))
+        write('</UL>\n')
 
-    def loginForm(self, request):
-        """Display a login form for a character.
-        """
-        return self.form(request,
-                         [['string', "Character Name", "UserName", ""],
-                          ['password', "Password", "Password", ""]])
-
-    def content(self, request):
-        """Display content depending on URI.
-        """
-        session = request.getSession()
-        if hasattr(session, 'truser'):
-            return self.runBox(request, "Twisted Reality",
-                               self.listStuff, request)
-        else:
-            if not request.args:
-                return self.runBox(request, "Log In Please", self.loginForm, request)
-            else:
-                # TODO: This class still uses old-skool auth!  I would have
-                # fixed it already, but I think that this should wait until we
-                # have a generalized web-site authentication answer. --glyph
-                u = request.args["UserName"][0]
-                p = request.args["Password"][0]
-                r = self.reality
-                player = r.get(u,None)
-                if ((player is not None) and
-                    (md5.new(p).digest() == player.password)):
-                    session.truser = player
-                    return self.runBox(request, "Twisted Reality",
-                                       self.listStuff, request)
-                else:
-                    return self.runBox(request, "Login Incorrect.",
-                                       self.loginForm, request)

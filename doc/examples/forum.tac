@@ -9,7 +9,7 @@ from twisted.forum import gadgets, service
 
 
 # Connect to a database.
-dbpool = adbapi.ConnectionPool("pyPgSQL.PgSQL", "localhost:5432", database="sean")
+dbpool = adbapi.ConnectionPool("pyPgSQL.PgSQL")
 auth = dbpassport.DatabaseAuthorizer(dbpool)
 
 # Create Twisted application object

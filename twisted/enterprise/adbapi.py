@@ -8,8 +8,6 @@ from twisted.spread import pb
 from twisted.internet import task, threadtask
 from twisted.python import reflect, log, defer
 
-import traceback
-
 class Transaction:
     def __init__(self, pool, connection):
         self._connection = connection
@@ -56,28 +54,13 @@ class ConnectionPool(pb.Referenceable):
             print 'connected'
         return conn
 
-    def _runQuery(self, qstr, eater, chunkSize):
+    def _runQuery(self, args, kw):
         conn = self.connect()
         curs = conn.cursor()
-        try:
-            curs.execute(qstr)
-            if eater is not None:
-                # XXX BROKEN!  Need to close the cursor after the records have
-                # all been fetched.  Also need to actually loop over the full
-                # set of records rather than just getting one chunk.
-                task.schedule(eater, curs.fetchmany(chunkSize))
-                result = None
-            else:
-                result = curs.fetchall()
-                curs.close()
-        except:
-            print 'ERROR: runQuery traceback'
-            # NOTE: dont rollback queries...
-            # conn.rollback()
-            traceback.print_exc()
-            raise
+        apply(curs.execute, args, kw)
+        result = curs.fetchall()
+        curs.close()
         return result
-
 
     def _runOperation(self, args, kw):
         """This is used for non-query operations that don't want "fetch*" to be called
@@ -94,12 +77,11 @@ class ConnectionPool(pb.Referenceable):
             conn.commit()
         except:
             conn.rollback()
-            traceback.print_exc()
             raise
         return result
 
-    def query(self, qstr, callback, errback, eater=None, chunkSize=1):
-        threadtask.dispatch(callback, errback, self._runQuery, qstr, eater, chunkSize)
+    def query(self, callback, errback, *args, **kw):
+        threadtask.dispatch(callback, errback, self._runQuery, args, kw)
 
     def operation(self, callback, errback, *args, **kw):
         threadtask.dispatch(callback, errback, self._runOperation, args, kw)
@@ -144,8 +126,8 @@ class Augmentation:
 
     Conventional usage of me is to write methods that look like
 
-      |  def getSomeData(self, critereon, callbackIn, errbackIn):
-      |      return self.runQuery("SELECT * FROM FOO WHERE BAR LIKE '%%%s%%'" % critereon, callbackIn, errbackIn)
+      |  def getSomeData(self, critereon):
+      |      return self.runQuery("SELECT * FROM FOO WHERE BAR LIKE '%%%s%%'" % critereon).addCallback(self.processResult)
     
     '''
 
@@ -165,8 +147,8 @@ class Augmentation:
     def operationError(self, error):
         """Default callback for database operation failure.
         """
-        # error.print_traceback()
         log.msg("%s Operation Failed: %s" % (str(self.__class__), error))
+        log.err(error)
 
     schema = ''' Insert your SQL database schema here. '''
 
@@ -179,10 +161,9 @@ class Augmentation:
     def schemaNotCreated(self, error):
         log.msg("Schema already exists for %s." % str(self.__class__))
 
-    def runQuery(self, querySQL, callback, errback):
+    def runQuery(self, *args, **kw):
         d = defer.Deferred()
-        d.addCallbacks(callback, errback)
-        self.dbpool.query(querySQL, d.callback, d.errback)
+        apply(self.dbpool.query, (d.callback, d.errback)+args, kw)
         return d
 
     def runOperation(self, *args, **kw):

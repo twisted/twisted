@@ -209,7 +209,7 @@ class JMultiplexor:
                     try:
                         callback()
                     except:
-                        traceback.print_exc(file=log.logfile)
+                        log.deferr()
                 
                 System.exit(0)
 

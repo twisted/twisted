@@ -32,7 +32,6 @@ __all__ = ['install']
 # System Imports
 import gtk
 import sys
-import traceback
 
 # Twisted Imports
 
@@ -87,12 +86,12 @@ def callback(source, condition):
         except:
             why = main.CONNECTION_LOST
             print 'Error In',source,'.',cbName
-            traceback.print_exc(file=sys.stdout)
+            log.deferr()
         if why:
             try:
                 source.connectionLost()
             except:
-                traceback.print_exc(file=sys.stdout)
+                log.deferr()
             removeReader(source)
             removeWriter(source)
             break

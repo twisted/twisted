@@ -54,7 +54,6 @@ class DatabaseAuthorizer(passport.Authorizer, adbapi.Augmentation):
         """This name corresponds to the 'source_name' column of the metrics_sources table.
         Check in that table for a corresponding entry.
         """ 
-        print "getIdentityRequest for ", name
         sql = """
         SELECT   twisted_identities.identity_name,
                  twisted_identities.password,
@@ -65,9 +64,9 @@ class DatabaseAuthorizer(passport.Authorizer, adbapi.Augmentation):
         WHERE    twisted_identities.identity_name = twisted_perspectives.identity_name
         AND      twisted_identities.identity_name = '%s'
         """ % adbapi.safe(name)
-        return self.runQuery(sql, self.gotIdentityData, self.gotIdentityError)
+        return self.runQuery(sql).addCallbacks(self._cbIdentity)
 
-    def gotIdentityData(self, identData):
+    def _cbIdentity(self, identData):
         if len(identData) == 0:
             # no rows! User doesnt exist
             raise KeyError("Identity not found")
@@ -78,37 +77,33 @@ class DatabaseAuthorizer(passport.Authorizer, adbapi.Augmentation):
         i = passport.Identity(realIdentName, self.application)
         i.setAlreadyHashedPassword(hashedPass)
         for ign, ign2, pname, sname in identData:
-            print "Adding Perspective", realIdentName, pname, sname
             i.addKeyByString(sname, pname)
         return i
 
-    def gotIdentityError(self, err):
-        raise Exception("Database Error: "+str(err))
-
     #################### Web Admin Interface Below ##############################
 
-    def getIdentities(self, callbackIn, errbackIn):
+    def getIdentities(self):
         """Get the identies in the db. Used by web admin interface.
         """
         sql="""SELECT identity_name, password, (SELECT count(*)
                                                 FROM twisted_perspectives
                                                 WHERE twisted_perspectives.identity_name = twisted_identities.identity_name)
                FROM twisted_identities"""
-        return self.runQuery(sql, callbackIn, errbackIn)                             
+        return self.runQuery(sql)
 
-    def getPerspectives(self, identity_name, callbackIn, errbackIn):
+    def getPerspectives(self, identity_name):
         """Get the perspectives for an identity. Used by the web admin interface.
         """
         sql="""SELECT identity_name, perspective_name, service_name
                FROM twisted_perspectives
                WHERE identity_name = '%s'""" % adbapi.safe(identity_name)
-        return self.runQuery(sql, callbackIn, errbackIn)                             
+        return self.runQuery(sql)
 
-    def getServices(self, callbackIn, errbackIn):
+    def getServices(self):
         """Get the known services. Used by the web admin interface.
         """
         sql="""SELECT service_name FROM twisted_services"""
-        return self.runQuery(sql, callbackIn, errbackIn)
+        return self.runQuery(sql)
     
     def addEmptyIdentity(self, identityName, hashedPassword, callback=None, errback=None):
         """Create an empty identity (no perspectives). Used by web admin interface.

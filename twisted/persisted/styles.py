@@ -28,7 +28,6 @@ import copy_reg
 import copy
 import string
 import sys
-import traceback
 
 
 try:

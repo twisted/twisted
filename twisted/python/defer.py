@@ -1,4 +1,5 @@
 
+
 # Twisted, the Framework of Your Internet
 # Copyright (C) 2001 Matthew W. Lefkowitz
 #
@@ -17,13 +18,9 @@
 
 
 # System Imports
-import traceback
 import types
+import sys
 from cStringIO import StringIO
-
-# Sibling Imports
-import log
-import failure
 
 class AlreadyArmedError(Exception):
     pass
@@ -35,11 +32,21 @@ def logError(err):
         log.msg(str(err))
     return err
 
+def _sched(m):
+    from twisted.internet import task
+    task.schedule(m)
+
 def succeed(result):
-    return Deferred().callback(result)
+    d = Deferred()
+    d.callback(result)
+    _sched(d.arm)
+    return d
 
 def fail(result):
-    return Deferred().errback(result)
+    d = Deferred()
+    d.errback(result)
+    _sched(d.arm)
+    return d
 
 class Deferred:
     """This is a callback which will be put off until later.
@@ -104,9 +111,6 @@ class Deferred:
     def _runCallbacks(self, result, isError):
         self.called = isError + 1
         if self.armed:
-            if isError:
-                print "Uncaught Deferred Error:"
-                print result
             for item in self.callbacks:
                 callback, args, kw = item[isError]
                 args = args or ()
@@ -115,13 +119,23 @@ class Deferred:
                     # print callback, result, args, kw
                     # print 'defres:',callback,result
                     result = apply(callback, (result,)+tuple(args), kw)
+                    if isinstance(result, Deferred):
+                        print callback, result
+                        raise 'suck iet'
                     if type(result) != types.StringType:
-                        isError = 0
+                        # TODO: make this hack go away; it has something to do
+                        # with PB returning strings from errbacks that are
+                        # actually tracebacks that we still want to handle as
+                        # errors sometimes... can't find exactly where right
+                        # now
+                        if not isinstance(result, failure.Failure):
+                            isError = 0
                 except:
                     result = failure.Failure()
                     isError = 1
         else:
             self.cbResult = result
+
 
     def arm(self):
         #start doing callbacks whenever you're ready, Mr. Deferred.
@@ -132,15 +146,18 @@ class Deferred:
         expecting a Deferred will explicitly arm the delayed after
         it has been returned; at _that_ point, it may fire later.
         """
-
-
         if not self.armed:
             self.armed = 1
             if self.called:
                 #'self.called - 1' is so self.called won't be changed.
                 self._runCallbacks(self.cbResult, self.called - 1)
-        else:
-            log.msg("WARNING: double-arming deferred.")
+##        else:
+##            log.msg("WARNING: double-arming deferred.")
 
 
-__all__ = ["Deferred"]
+__all__ = ["Deferred", "succeed", "fail"]
+
+# Sibling Imports
+import log
+import failure
+

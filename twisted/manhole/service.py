@@ -193,7 +193,7 @@ class Perspective(pb.Perspective):
         ### Aw shucks.  This don't work 'cuz I get unpickled before
         ### my service does.
         ## self.browser.globalNamespace = self.service.namespace
-        self.browser.localNamespace = self.localNamespace
+        ## self.browser.localNamespace = self.localNamespace
 
     def setService(self, service):
         pb.Perspective.setService(self, service)

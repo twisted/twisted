@@ -25,7 +25,7 @@ listeners or connectors are added):
 """
 
 # System imports
-import select, traceback, errno
+import select, errno
 
 # Twisted imports
 from twisted.python import log, threadable
@@ -127,7 +127,7 @@ def doPoll(timeout,
             if not selectable.fileno() == fd:
                 why = main.CONNECTION_LOST
         except:
-            traceback.print_exc(log.logfile)
+            log.deferr()
             why = main.CONNECTION_LOST
         
         if why == main.CONNECTION_LOST:
@@ -136,7 +136,7 @@ def doPoll(timeout,
             try:
                 selectable.connectionLost()
             except:
-                traceback.print_exc(log.logfile)
+                log.deferr()
         
         log.logOwner.disown(selectable)
 

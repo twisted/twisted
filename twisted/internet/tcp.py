@@ -27,7 +27,6 @@ import types
 import copy
 import socket
 import sys
-import traceback
 import string
 
 if os.name == 'nt':
@@ -410,7 +409,7 @@ class Port(abstract.FileDescriptor):
             else:
                 self.numberAccepts = self.numberAccepts+20
         except:
-            traceback.print_exc(file=log.logfile)
+            log.deferr()
 
     def doWrite(self):
         """Raises an AssertionError.

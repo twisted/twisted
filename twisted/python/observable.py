@@ -21,7 +21,6 @@ publisher/subscriber pattern.  """
 # System Imports
 import types
 import sys
-import traceback
 import string
 import copy
 
@@ -165,16 +164,14 @@ class Publisher:
             try:
                 defaultSubscriber(data)
             except:
-                log.msg("Exception in default subscriber")
-                traceback.print_exc(file=log.logfile)
+                log.deferr()
         # Now call all the regular subscribers.
         if not self.subscribers: return
         for subscriber in self.subscribers.get(channel,()):
             try:
                 subscriber(self, channel, data)
             except:
-                log.msg( "Exception in 'publish'" )
-                traceback.print_exc(file=log.logfile)
+                log.deferr()
 
 class WhenMethodSubscription:
     """

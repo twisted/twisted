@@ -29,7 +29,7 @@ import copy
 from twisted.internet import passport
 from twisted.spread import pb
 from twisted.enterprise import adbapi
-from twisted.python import defer
+from twisted.python import defer, log
 
 import metricsdb
 
@@ -51,33 +51,26 @@ class MetricsManagerService(pb.Service):
     def loadVariables(self):
         """Load all the metrics variables from the db.
         """
-        d = self.manager.getAllVariables(self.gotVariables, self.sourceError)
-        d.arm() ## NOTE: does this need to be done?!?
-        return d
+        return self.manager.getAllVariables().addCallback(self.gotVariables)
 
     def loadSources(self):
         """Load all the metrics sources from the db.
         """
-        print "Loading metrics sources:"        
-        d =  self.manager.getAllSources(self.gotSources, self.sourceError)
-        d.arm()
-        return d
+        log.msg("Loading metrics sources:")
+        return self.manager.getAllSources().addCallback(self.gotSources)
 
     def gotVariables(self, data):
         for (name, threshold) in data:
             print "Loaded variables: (%s) threashold = %d"  % (name, threshold)
             self.variables[name] = threshold
         self.loadSources()
-        
+
     def gotSources(self, data):
         for (name, host, server_group, server_type) in data:
             print "Loaded source: (%s) %s %s" % (name, host, server_group)
             self.sources[name] = MetricsSource(name, host, server_group, server_type, self.variables, self)
         print "Loaded all metrics sources"
             
-    def sourceError(self, error):
-        print "ERROR loading sources", repr(error)
-
     def createPerspective(self, name):
         """Create a perspective from self.perspectiveClass and add it to this service.
         """
@@ -88,11 +81,8 @@ class MetricsManagerService(pb.Service):
 
     def insertMetricsItem(self, sourceName, name, value):
         # make a local copy
-        if self.sources.has_key(sourceName):
-            source = self.sources[sourceName]
-            source.cache(name, value, time.asctime())
-        else:
-            print "ERROR: unknown source", sourceName
+        source = self.sources[sourceName]
+        source.cache(name, value, time.asctime())
         # push to the database
         self.manager.insertMetricsItem(sourceName, name, value)
 
@@ -152,11 +142,8 @@ class MetricsSource:
             return "--"
 
     def cache(self, name, value, when):
-        if self.variables.has_key(name):
-            self.variables[name] = value
-            self.checkAlertStatus()
-        else:
-            print "ERROR: unknown variable ", name
+        self.variables[name] = value
+        self.checkAlertStatus()
 
     def checkAlertStatus(self):
         self.alert = 0
@@ -166,5 +153,4 @@ class MetricsSource:
             if value > self.service.variables[name]:
                 self.alert = 1
                 self.alertString = "%s is at %s (%s)" %  (name, value, self.service.variables[name])
-                
-                
+

@@ -1,6 +1,9 @@
 
 # Sibling Imports
 import widgets
+from twisted.python import failure
+
+from cStringIO import StringIO
 
 def requestSessionPerspective(session, serviceName):
     if hasattr(session, 'identity'):
@@ -45,11 +48,14 @@ class SessionPerspectiveMixin(widgets.WidgetMixin):
         """
         self.service = service
 
-    def gotPerspective(self, resultPerspective, request):
+    def _cbPerspective(self, resultPerspective, request):
         sess = request.getSession()
         resultPerspective.attached(sess,sess.identity)
         _Detacher(sess, sess.identity, resultPerspective)
         sess.perspectives[self.service.serviceName] = resultPerspective
+        return self.displayMixedWidget(request)
+
+    def _ebPerspective(self, fail, request):
         return self.displayMixedWidget(request)
 
     def display(self, request):
@@ -61,7 +67,8 @@ class SessionPerspectiveMixin(widgets.WidgetMixin):
                 return self.displayMixedWidget(request)
             else:
                 return [sess.identity.requestPerspectiveForService(self.service.serviceName)\
-                        .addCallback(self.gotPerspective,request)]
+                        .addCallbacks(self._cbPerspective,self._ebPerspective,
+                                      callbackArgs=(request,),errbackArgs=(request,))]
         else:
             return self.displayMixedWidget(request)
                                                               
@@ -86,23 +93,31 @@ class LogInForm(widgets.Form):
         # this site must be tagged with an application.
         idrq = request.site.app.authorizer.getIdentityRequest(identityName)
         idrq.needsHeader = 1
-        idrq.addCallbacks(self.gotIdentity, self.didntGetIdentity,
-                          callbackArgs=(password, request),
+        idrq.addCallbacks(self._cbIdentity, self._ebIdentity,
+                          callbackArgs=(identityName, password, request),
                           errbackArgs=(request,))
         return [idrq]
 
-    def gotIdentity(self, ident, password, request):
+    def _cbIdentity(self, ident, identityName, password, request):
         if ident.verifyPlainPassword(password):
             session = request.getSession()
             session.identity = ident
             session.perspectives = {}
-            return ["OKAY OKAY!"]
+            r = ["Logged in as %s." % repr(identityName)]
+            w = r.append
+            self.format(self.getFormFields(request), w, request)
+            return r
         else:
-            return self.didntGetPerspective("no such identity", request)
+            return self._ebIdentity(
+                failure.Failure(
+                KeyError(
+                "Invalid login.")), request)
 
-    def didntGetIdentity(self, unauth, request):
-        io = StringIO()
-        io.write(self.formatError("Login incorrect."))
-        self.format(self.getFormFields(request), io.write, request)
-        return io.getvalue()
+    def _ebIdentity(self, fail, request):
+        fail.trap(KeyError)
+        l = []
+        w = l.append
+        w(self.formatError(fail.getErrorMessage()))
+        self.format(self.getFormFields(request), w, request)
+        return l
 

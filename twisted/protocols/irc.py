@@ -30,6 +30,9 @@ from twisted.internet import tcp
 from twisted.persisted import styles
 from twisted.protocols import basic, protocol
 from twisted.python import log, reflect
+
+# System Imports
+
 import errno
 import operator
 import os
@@ -42,8 +45,8 @@ import struct
 import sys
 import time
 import tempfile
-import traceback
 import types
+import traceback
 
 from os import path
 
@@ -141,8 +144,7 @@ class IRC(protocol.Protocol):
                 else:
                     self.irc_unknown(prefix, command, params)
             except:
-                sl = apply(traceback.format_exception, sys.exc_info())
-                log.msg(string.join(sl, ''))
+                log.deferr()
 
     def irc_unknown(self, prefix, command, params):
         """Implement me!"""
