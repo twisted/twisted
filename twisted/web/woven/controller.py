@@ -18,7 +18,7 @@
 
 from __future__ import nested_scopes
 
-__version__ = "$Revision: 1.56 $"[11:-2]
+__version__ = "$Revision: 1.57 $"[11:-2]
 
 import os
 import cgi
@@ -314,8 +314,8 @@ class LiveController(Controller):
         print "clientToServerEvent", eventTarget
         target = self.view.subviews[eventTarget]
         print "target, parent", target, target.parent
-        target.parent = self.view
-        target.controller._parent = self
+        #target.parent = self.view
+        #target.controller._parent = self
 
         ## From the time we call onEvent until it returns, we want all
         ## calls to IWovenLivePage.sendScript to be appended to this
