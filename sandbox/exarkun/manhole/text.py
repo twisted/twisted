@@ -16,7 +16,7 @@ class _Attribute(object):
             if isinstance(ch, str):
                 write(ch)
             else:
-                ch.serialize(write, attrset)
+                ch.serialize(write, attrs)
 
 class _ColorAttr(_Attribute):
     def __init__(self, color, ground):
