@@ -48,7 +48,7 @@ from __future__ import nested_scopes
                     print lst.getResult()
             except flow.StopIteration: pass
     
-        for x in flow.Flow(consumer()):
+        for x in flow.Iterator(consumer()):
             print x
     
     produces the output:
@@ -73,135 +73,161 @@ class Cooperate:
     def __init__(self, timeout = 0):
         self.timeout = timeout
 
-class FlowCommand: 
-    """ Objects given special meaning when returned from yield """
-    pass
+class Command: 
+    """ Flow control commands which are returned with a yield statement
 
-class Wrap(FlowCommand):
-    """ Wraps a generator or other iterator for use in a flow 
+        After a Command has been subject to a yield, and control has
+        returned to the caller, the object will have two attributes:
 
-        Creates a nested generation stage (a producer) which can provide
-        zero or more values to the current stage (the consumer).  After 
-        a yield of this object when control has returned to the caller,
-        this object will have two attributes:
-
-            stop    This is true if the underlying generator has not 
-                    been started (a yield is needed) or if the underlying
-                    generator has raised StopIteration
+            stop    This is true if the underlying generator has 
+                    finished execution (raised a StopIteration or returned)
 
             result  This is the result of the generator if it is active, 
                     the result may be a fail.Failure object if an 
                     exception was thrown in the nested generator.
     """      
-    def __init__(self, iterable):
-        try:
-            self._next  = iter(iterable).next
-        except TypeError:
-            iterable = iterable()
-            self._next = iter(iterable).next
+    def __init__(self):
         self.result = None
-        self.stop   = 1
+        self.stop   = 0
     def isFailure(self):
         """ return a boolean value if the result is a Failure """ 
-        if self.stop: raise StopIteration()
         return isinstance(self.result, failure.Failure)
     def getResult(self):
         """ return the result, or re-throw an exception on Failure """
-        if self.isFailure():
-            raise (self.result.value or self.result.type)
+        if self.stop: raise StopIteration()
+        if self.isFailure(): 
+            self.result.trap()
         return self.result
-    def _generate(self):
-        """ update the active and result member variables """ 
+    def _next(self):
+        """ execute one iteration
+
+            This method is private within the scope of the flow
+            module, it is used by one stage in the flow to ask
+            for the next stage to produce.   If a value is 
+            returned, then it shall be passed all the way up
+            the call chain (useful for Cooperate) without 
+            changing the execution path.
+        """
+        pass
+
+class Wrap(Command):
+    """ Wraps a generator or other iterator for use in a flow 
+
+        Creates a nested generation stage (a producer) which can provide
+        zero or more values to the current stage (the consumer).
+    """      
+    def __init__(self, iterable):
+        Command.__init__(self)
         try:
-            self.result = self._next()
-            self.stop = 0
-        except StopIteration:
-            self.stop = 1
-            self.result = None
-        except Cooperate, coop:
-            self.stop = 0
-            self.result = coop
-        except failure.Failure, fail:
-            self.stop = 1
-            self.result = failure
-        except:
-            self.stop = 1
-            self.result = failure.Failure()
+            self._wrapped_next = iter(iterable).next
+        except TypeError:
+            iterable = iterable()
+            self._wrapped_next = iter(iterable).next
+        self._next_stage  = None
+        self._stop_next = 0
+    def _next(self):
+        """ See Command._next()
 
-class Flow:
-    """ A flow contruct, created with a top-level generator/iterator
+            To fetch the next value, the Wrap command first checks to 
+            see if there is a next stage which must be processed first.  
+            If so, it does that.   Note that the next stage does not need
+            to be remembered, as the current stage will yield the same 
+            object again if requires further processing.
 
-        The iterable provided to this flow is the top-level consumer
-        object.  From within the consumer, multiple 'yield' calls can
-        be made returning either Cooperate or Generate.  If a Generate
-        object is returned, then it becomes the current context and
-        the process is continued.  Communication from the producer 
-        back to the consumer is done by yield of a non FlowItem.
+            After this, it calles the wrapped generator's next method,
+            and process the result.   If the result is a Command, then
+            this is queued for execution.  Otherwise, either Cooperate
+            object is returned, or None is returned indicating that
+            a result was produced.
+        """
+        self.result = None
+        if self._stop_next or self.stop:
+            self.stop = 1
+            return
+        while 1:
+            next = self._next_stage
+            if next:
+                result = next._next()
+                if result: return result
+                self._next_stage = None 
+            try:
+                result = self._wrapped_next()
+                if isinstance(result, Command):
+                    self._next_stage = result
+                    continue
+                if isinstance(result, Cooperate):
+                    return result
+                self.result = result
+            except Cooperate, coop: 
+                return coop
+            except StopIteration:
+                self.stop = 1
+            except failure.Failure, fail:
+                self.result = fail
+                self._stop_next = 1
+            except:
+                self.result = failure.Failure()
+                self._stop_next = 1
+            return
 
-        This object effectively groups N flows 
+class Merge(Command):
+     """ Merges two or more Commands into a single stream """
+     pass
+
+class Iterator:
+    """ Converts a Command into an Iterator
+
+        This converts a Command into the Iterator interface for 
+        use in situation where blocking for the next value is
+        acceptable.   Basically, it wraps any iterator/generator
+        as a Command object, and then eats any Cooperate results.
+
+        This is largely helpful for testing or within a threaded
+        environment.
+
     """
-    def __init__(self, iterable, failureAsResult = 0 ):
+    def __init__(self, command, failureAsResult = 0, shouldBlock = 1 ):
         """initialize a Flow
-        @param iterable:        top level iterator / generator
+        @param command:         top level iterator or command
         @param failureAsResult  if true, then failures will be added to 
                                 the result list provided to the callback,
                                 otherwise the first failure results in 
                                 the errback being called with the failure.
         """
-        self._results = []
-        self._stack   = [Wrap(iterable)]
+        self.shouldBlock           = shouldBlock
         self.failureAsResult = failureAsResult
+        if not isinstance(command, Command):
+            command = Wrap(command)
+        self._command = command
     def __iter__(self):
         return self
-    def _addResult(self, result):
-        """ private called as top-level results are added"""
-        if not self.failureAsResult:
-            if isinstance(result, failure.Failure):
-                result.trap()
-        self._results.append(result)
-    def _execute(self):
-        """ private execute, execute flow till a Cooperate is found """
-        while self._stack:
-            head = self._stack[-1]
-            head._generate()
-            if head.stop:
-                self._stack.pop()
-                if head.result is not None:
-                    if self._addResult(head.result):
-                        return
-            else:
-                result = head.result
-                if isinstance(result, Cooperate):
-                    return result.timeout
-                if isinstance(result, FlowCommand):
-                    self._stack.append(result)
-                else:
-                    if len(self._stack) > 1:
-                        self._stack.pop()
-                    else:
-                        if self._addResult(result):
-                            return
     def next(self):
-        """ return the next result """
-        if self._results:
-            return self._results.pop(0)
-        if not self._stack:
-            raise StopIteration
-        self._execute()
-        return self.next()    
+        """ fetch the next value from the Command flow """
+        cmd = self._command
+        if cmd.stop: raise StopIteration
+        result = cmd._next()
+        if result:
+            if isinstance(result, Cooperate):
+                if self.shouldBlock:
+                    from time import sleep
+                    sleep(result.timeout)
+                else:
+                    return result
+            raise TypeError("Invalid command result")
+        if self.failureAsResult: 
+            return cmd.result
+        else:
+            return cmd.getResult()
 
 from twisted.internet import defer
-class DeferredFlow(Flow, defer.Deferred):
-    """ a version of Flow using Twisted's reactor and Deferreds
+class Deferred(defer.Deferred):
+    """ wraps up a Command with a Deferred interface
  
-        In this version, a call to execute isn't required.  Instead,
-        the iterable is scheduled right away using the reactor.  And,
-        the Cooperate is implemented through the reactor's callLater.
- 
-        Since more than one (possibly failing) result could be returned,
-        this uses the same semantics as DeferredList
+        In this version, the results of the Command are used to 
+        construct a list of results and then sent to deferred.  Further,
+        in this version Cooperate is implemented via reactor's callLater.
     """
-    def __init__(self, iterable, failureAsResult = 0, delay = 0 ):
+    def __init__(self, command, failureAsResult = 0, delay = 0 ):
         """initialize a DeferredFlow
         @param iterable:        top level iterator / generator
         @param delay:           delay when scheduling reactor.callLater
@@ -210,33 +236,39 @@ class DeferredFlow(Flow, defer.Deferred):
                                 otherwise the first failure results in 
                                 the errback being called with the failure.
         """
-        from twisted.internet import reactor
         defer.Deferred.__init__(self)
-        Flow.__init__(self,iterable,failureAsResult)
+        self.failureAsResult = failureAsResult
+        self._results = []
+        if not isinstance(command, Command):
+            command = Wrap(command)
+        self._command = command
+        from twisted.internet import reactor
         reactor.callLater(delay, self._execute)
-    def execute(self): 
-        raise TypeError("Deferred Flow is auto-executing") 
-    def _addResult(self, result):
-        """ by default, call the errback and exit on first failure """
-        if not self.failureAsResult:
-            if isinstance(result, failure.Failure):
-                self.errback(result)
-                return 1
-        self._results.append(result)
     def _execute(self):
-        timeout = Flow._execute(self)
-        if timeout is None:
-            if not self.called:
-                self.callback(self._results)
-        else:
-            from twisted.internet import reactor
-            reactor.callLater(timeout, self._execute)
- 
+        cmd = self._command
+        while 1:
+            result = cmd._next()
+            if cmd.stop:
+                if not self.called:
+                    self.callback(self._results)
+                return
+            if result:
+                if isinstance(result, Cooperate):
+                    from twisted.internet import reactor
+                    reactor.callLater(result.timeout, self._execute)
+                    return
+                raise TypeError("Invalid command result")
+            if not self.failureAsResult: 
+                if cmd.isFailure():
+                    self.errback(cmd.result)
+                    return
+            self._results.append(cmd.result)
+        
 #
 # The following is a thread package which really is othogonal to
-# Flow.  Flow does not depend on it, and it does not depend on Flow.
+# flow.  Flow does not depend on it, but it does depend on flow.Cooperate
 # Although, if you are trying to bring the output of a thread into
-# a Flow, it is exactly what you want.   The QueryIterator is 
+# a flow, it is exactly what you want.   The QueryIterator is 
 # just an obvious application of the ThreadedIterator.
 #
 

@@ -120,22 +120,22 @@ def toList(it):
 class FlowTest(unittest.TestCase):
     def testBasic(self):
         lhs = [1,2,3]
-        rhs = toList(flow.Flow([1,2,3]))
+        rhs = toList(flow.Iterator([1,2,3]))
         self.assertEqual(lhs,rhs)
 
     def testProducer(self):
         lhs = [(1,'one'),(2,'two'),(3,'three')]
-        rhs = toList(flow.Flow(producer()))
+        rhs = toList(flow.Iterator(producer()))
         self.assertEqual(lhs,rhs)
 
     def testConsumer(self):
         lhs = ['Title',(1,'one'),(2,'two'),(3,'three')]
-        rhs = toList(flow.Flow(consumer()))
+        rhs = toList(flow.Iterator(consumer()))
         self.assertEqual(lhs,rhs)
 
     def testDeferred(self):
         lhs = ['Title', (1,'one'),(2,'two'),(3,'three')]
-        d = flow.DeferredFlow(consumer())
+        d = flow.Deferred(consumer())
         self.assertEquals(lhs, unittest.deferredResult(d))
 
     def testFailure(self):
@@ -145,7 +145,7 @@ class FlowTest(unittest.TestCase):
         #
         #    Failure(ZeroDivisionError)
         #
-        d = flow.DeferredFlow(badgen())
+        d = flow.Deferred(badgen())
         r = unittest.deferredError(d) 
         self.failUnless(isinstance(r, failure.Failure))
         self.failUnless(isinstance(r.value, ZeroDivisionError))
@@ -158,7 +158,7 @@ class FlowTest(unittest.TestCase):
         #
         #   ['x',Failure(ZeroDivisionError)]
         #
-        d = flow.DeferredFlow(badgen(), failureAsResult = 1)
+        d = flow.Deferred(badgen(), failureAsResult = 1)
         r = unittest.deferredResult(d)
         self.assertEqual(len(r),2)   
         self.assertEqual(r[0],'x')   
@@ -178,5 +178,5 @@ class FlowTest(unittest.TestCase):
                     raise flow.StopIteration
                 self.count -= 1
                 return val
-        d = flow.DeferredFlow(CountIterator(5))
+        d = flow.Deferred(CountIterator(5))
         self.assertEquals(unittest.deferredResult(d),[5,4,3,2,1])

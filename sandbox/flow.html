@@ -222,7 +222,7 @@ def Consumer():
         if 2 != result:
             yield result
 
-dump(flow.Flow(Consumer))
+dump(flow.Iterator(Consumer))
 </pre>
 
 <p>Alternatively, the wrapper has to member variables, <code>stop</code>
@@ -262,8 +262,8 @@ def AnotherConsumer():
         yield producer
         yield producer.getResult()
 
-one = flow.Flow(Consumer())
-two = flow.Flow(AnotherConsumer())
+one = flow.Iterator(Consumer())
+two = flow.Iterator(AnotherConsumer())
 print one.next()
 print two.next()
 print one.next()
