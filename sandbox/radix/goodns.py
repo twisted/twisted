@@ -221,4 +221,8 @@ for fname,func in globals().items():
             continue
         func.__doc__ = globalParameters
 
-del func, fname
+del func
+del fname
+del globalParameters
+del D_NS
+del D_CNAME
