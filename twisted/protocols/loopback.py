@@ -28,12 +28,13 @@ from twisted.python import hook, failure
 
 class LoopbackRelay:
 
-    __implements__ = interfaces.ITransport
+    __implements__ = interfaces.ITransport, interfaces.IConsumer
     
     buffer = ''
     shouldLose = 0
     disconnecting = 0
-    
+    producer = None
+
     def __init__(self, target, logFile=None):
         self.target = target
         self.logFile = logFile
@@ -47,6 +48,8 @@ class LoopbackRelay:
         self.write("".join(iovec))
 
     def clearBuffer(self):
+        if self.producer:
+            self.producer.resumeProducing()
         if self.buffer:
             if self.logFile:
                 self.logFile.write("loopback receiving %s\n" % repr(self.buffer))
@@ -64,11 +67,16 @@ class LoopbackRelay:
 
     def getPeer(self):
         return 'loopback'
-
+    
+    def registerProducer(self, producer, streaming):
+        self.producer = producer
+    
+    def unregisterProducer(self):
+        self.producer = None
 
 def loopback(server, client, logFile=None):
     """Run session between server and client.
-    """
+     """
     from twisted.internet import reactor
     serverToClient = LoopbackRelay(client, logFile)
     clientToServer = LoopbackRelay(server, logFile)
