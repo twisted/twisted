@@ -1,3 +1,5 @@
+# -*- test-case-name: persisted -*-
+
 # Twisted, the Framework of Your Internet
 # Copyright (C) 2001 Matthew W. Lefkowitz
 #
@@ -30,11 +32,15 @@ except:
 class NotKnown:
     def __init__(self):
         self.dependants = []
+        self.resolved = 0
 
     def addDependant(self, mutableObject, key):
+        assert not self.resolved
         self.dependants.append( (mutableObject, key) )
 
     def resolveDependants(self, newObject):
+        self.resolved = 1
+        self.resolvedObject = newObject
         for mut, key in self.dependants:
             mut[key] = newObject
             if isinstance(newObject, NotKnown):

@@ -265,6 +265,7 @@ class AOTUnjellier:
     def __init__(self):
         self.references = {}
         self.stack = []
+        self.afterUnjelly = []
 
     ##
     # unjelly helpers (copied pretty much directly from marmalade XXX refactor)
@@ -286,6 +287,14 @@ class AOTUnjellier:
             o.addDependant(obj, loc)
         return o
 
+    def callAfter(self, callable, result):
+        if isinstance(result, crefutil.NotKnown):
+            l = [None]
+            result.addDependant(l, 1)
+        else:
+            l = [result]
+        self.afterUnjelly.append((callable, l))
+
     def unjellyAttribute(self, instance, attrName, ao):
         #XXX this is unused????
         """Utility method for unjellying into instances of attributes.
@@ -294,7 +303,6 @@ class AOTUnjellier:
         Alternatively, you can use unjellyInto on your instance's __dict__.
         """
         self.unjellyInto(instance.__dict__, attrName, ao)
-
 
     def unjellyAO(self, ao):
         """Unjelly an Abstract Object and everything it contains.
@@ -332,7 +340,7 @@ class AOTUnjellier:
                 state = self.unjellyAO(ao.state)
                 if hasattr(klass, "__setstate__"):
                     inst = new.instance(klass, {})
-                    inst.__setstate__(state)
+                    self.callAfter(inst.__setstate__, state)
                 else:
                     inst = new.instance(klass, state)
                 return inst
@@ -408,6 +416,8 @@ class AOTUnjellier:
         try:
             l = [None]
             self.unjellyInto(l, 0, ao)
+            for callable, v in self.afterUnjelly:
+                callable(v[0])
             return l[0]
         except:
             print "Error jellying object! Stacktrace follows::"
