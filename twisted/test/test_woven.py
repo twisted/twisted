@@ -44,6 +44,10 @@ class WovenTC(unittest.TestCase):
         outputNum += 1
         self.d = microdom.parseString(self.output)
     
+    def tearDown(self):
+        import os
+        os.remove("wovenTestOutput%s.html" % outputNum)
+
     def prerender(self):
         pass
 
