@@ -35,12 +35,27 @@ from twisted.internet import defer
 from twisted.trial import unittest
 from twisted.python import util
 from twisted.python import components
+from twisted.python.util import sibpath
 
 from twisted import cred
 import twisted.cred.error
 import twisted.cred.checkers
 import twisted.cred.credentials
 import twisted.cred.portal
+
+from test_ssl import ClientTLSContext
+
+class ServerTLSContext:
+    isClient = 0
+    
+    def __init__(self, filename = sibpath(__file__, 'server.pem')):
+        self.filename = filename
+
+    def getContext(self):
+        ctx = SSL.Context(SSL.TLSv1_METHOD)
+        ctx.use_certificate_file(self.filename)
+        ctx.use_privatekey_file(self.filename)
+        return ctx
 
 def strip(f):
     return lambda result, f=f: f()
@@ -384,8 +399,8 @@ class SimpleServer(imap4.IMAP4Server):
         raise cred.error.UnauthorizedLogin()
 
 class SimpleClient(imap4.IMAP4Client):
-    def __init__(self, deferred):
-        imap4.IMAP4Client.__init__(self)
+    def __init__(self, deferred, contextFactory = None):
+        imap4.IMAP4Client.__init__(self, contextFactory)
         self.deferred = deferred
         self.events = []
 
@@ -405,10 +420,13 @@ class SimpleClient(imap4.IMAP4Client):
         self.transport.loseConnection()
 
 class IMAP4HelperMixin:
+    serverCTX = None
+    clientCTX = None
+
     def setUp(self):
         d = defer.Deferred()
-        self.server = SimpleServer()
-        self.client = SimpleClient(d)
+        self.server = SimpleServer(contextFactory=self.serverCTX)
+        self.client = SimpleClient(d, contextFactory=self.clientCTX)
         self.connected = d
 
         SimpleMailbox.messages = []
@@ -433,6 +451,36 @@ class IMAP4HelperMixin:
     
     def loopback(self):
         loopback.loopback(self.server, self.client)
+
+class TLSTestCase(IMAP4HelperMixin, unittest.TestCase):
+    serverCTX = ServerTLSContext()
+    clientCTX = ClientTLSContext()
+    
+    def testAPileOfThings(self):
+        SimpleServer.theAccount.addMailbox('inbox')
+        called = []
+        def login():
+            called.append(None)
+            return self.client.login('testuser', 'password-test')
+        def list():
+            called.append(None)
+            return self.client.list('inbox', '%')
+        def status():
+            called.append(None)
+            return self.client.status('inbox', 'UIDNEXT')
+        def examine():
+            called.append(None)
+            return self.client.examine('inbox')
+        def logout():
+            called.append(None)
+            return self.client.logout()
+        
+        methods = [login, list, status, examine, logout]
+        map(self.connected.addCallback, map(strip, methods))
+        self.connected.addCallbacks(self._cbStopClient, self._ebGeneral)
+        self.loopback()
+        
+        self.assertEquals(len(called), len(methods))
 
 class IMAP4ServerTestCase(IMAP4HelperMixin, unittest.TestCase):
     def testCapability(self):
