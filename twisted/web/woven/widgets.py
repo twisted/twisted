@@ -154,6 +154,14 @@ class Widget(view.View):
         """
         self._children.append(item)
 
+    def appendChild(self, item):
+        """
+        Add `item' to the children of the resultant DOM Node of this widget.
+
+        @type item: A DOM node or L{Widget}.
+        """
+        self._children.append(item)
+
     def insert(self, index, item):
         """
         Insert `item' at `index' in the children list of the resultant DOM Node
@@ -326,12 +334,16 @@ class Widget(view.View):
         assert value is not None
         self.attributes[item] = value
 
+    setAttribute = __setitem__
+
     def __getitem__(self, item):
         """
         Convenience syntax for getting an attribute from the resultant DOM Node
         of this widget.
         """
         return self.attributes[item]
+
+    getAttribute = __getitem__
 
     def setError(self, request, message):
         """
@@ -882,6 +894,64 @@ class Link(Widget):
             node.tagName = 'a'
             domhelpers.clearNode(node)
             node.appendChild(txt)
+
+
+class ExpandMacro(Widget):
+    """A Macro expansion widget modeled after the METAL expander
+    in ZPT/TAL/METAL. Usage:
+    
+    In the Page that is being rendered, place the ExpandMacro widget
+    on the node you want replaced with the Macro, and provide nodes
+    tagged with fill-slot= attributes which will fill slots in the Macro:
+    
+    def wvfactory_myMacro(self, request, node, model):
+        return ExpandMacro(
+            model,
+            macroFile="MyMacro.html",
+            macroName="main")
+    
+    <div view="myMacro">
+        <span fill-slot="greeting">Hello</span>
+        <span fill-slot="greetee">World</span>
+    </div>
+    
+    Then, in your Macro template file ("MyMacro.html" in the above
+    example) designate a node as the macro node, and nodes
+    inside that as the slot nodes:
+    
+    <div macro="main">
+        <h3><span slot="greeting" />, <span slot="greetee" />!</h3>
+    </div>
+    """
+    def __init__(self, model, macroFile="", macroFileDirectory="", macroName="", **kwargs):
+        self.macroFile=macroFile
+        self.macroFileDirectory=macroFileDirectory
+        self.macroName=macroName
+        widgets.Widget.__init__(self, model, **kwargs)
+
+    def generate(self, request, node):
+        templ = view.View(
+            self.model,
+            templateFile=self.macroFile, 
+            templateDirectory=self.macroFileDirectory).lookupTemplate(request)
+
+        ## We are going to return the macro node from the metatemplate,
+        ## after replacing any slot= nodes in it with fill-slot= nodes from `node'
+        macrolist = domhelpers.locateNodes(templ.childNodes, "macro", self.macroName)
+        assert len(macrolist) == 1, ("No macro or more than "
+            "one macro named %s found." % self.macroName)
+
+        macro = macrolist[0]
+        slots = domhelpers.findElementsWithAttributeShallow(macro, "slot")
+        for slot in slots:
+            slotName = slot.getAttribute("slot")
+            fillerlist = domhelpers.locateNodes(node.childNodes, "fill-slot", slotName)
+            assert len(fillerlist) <= 1, "More than one fill-slot found with name %s" % slotName
+            if len(fillerlist):
+                filler = fillerlist[0]
+                slot.parentNode.replaceChild(filler, slot)
+
+        return macro
 
 
 view.registerViewForModel(Text, model.StringModel)
