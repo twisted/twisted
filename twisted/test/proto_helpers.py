@@ -15,6 +15,11 @@
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
+try:
+    from cStringIO import StringIO
+except ImportError:
+    from StringIO import StringIO
+
 from twisted.protocols import basic
 
 class LineSendingProtocol(basic.LineReceiver):
@@ -46,3 +51,32 @@ class FakeDatagramTransport:
 
     def write(self, packet, addr=noAddr):
         self.written.append((packet, addr))
+
+class StringTransport:
+    disconnecting = 0
+
+    def __init__(self):
+        self.clear()
+
+    def clear(self):
+        self.io = StringIO()
+
+    def value(self):
+        return self.io.getvalue()
+
+    def write(self, data):
+        self.io.write(data)
+
+    def writeSequence(self, data):
+        self.io.write(''.join(data))
+
+    def loseConnection(self):
+        pass
+
+    def getPeer(self):
+        return ('StringIO', repr(self.io))
+
+    def getHost(self):
+        return ('StringIO', repr(self.io))
+
+

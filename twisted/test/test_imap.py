@@ -46,6 +46,8 @@ import twisted.cred.checkers
 import twisted.cred.credentials
 import twisted.cred.portal
 
+from twisted.test.proto_helpers import StringTransport
+
 try:
     from ssl_helpers import ClientTLSContext, ServerTLSContext
 except ImportError:
@@ -1576,34 +1578,6 @@ class UnsolicitedResponseTestCase(IMAP4HelperMixin, unittest.TestCase):
 
         E = self.client.events
         self.assertEquals(E, [['newMessages', 20, None], ['newMessages', None, 10]])
-
-class StringTransport:
-    disconnecting = 0
-
-    def __init__(self):
-        self.clear()
-
-    def clear(self):
-        self.io = StringIO()
-
-    def value(self):
-        return self.io.getvalue()
-
-    def write(self, data):
-        self.io.write(data)
-
-    def writeSequence(self, data):
-        self.io.write(''.join(data))
-
-    def loseConnection(self):
-        pass
-
-    def getPeer(self):
-        return ('StringIO', repr(self.io))
-
-    def getHost(self):
-        return ('StringIO', repr(self.io))
-
 
 class HandCraftedTestCase(unittest.TestCase):
     def testTrailingLiteral(self):
