@@ -1,3 +1,7 @@
+2003-09-28  Christopher Armstrong  <radix@twistedmatrix.com>
+
+	* .: Releasing Twisted 1.0.8alpha3.
+
 2003-09-27  Cory Dodt <corydodt@yahoo.com>
 
 	* win32/main.aap win32/pyx.x-foo.iss.template win32/README.win32:
