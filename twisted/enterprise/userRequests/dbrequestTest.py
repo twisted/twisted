@@ -1,7 +1,7 @@
 from twisted.enterprise import requests
 from twisted.enterprise import service
 
-class TestRequest(requetss.Request):
+class TestRequest(requests.Request):
     """Generic sql execution request.
     """
     def __init__(self, sql, args, callback, errback):
@@ -22,4 +22,4 @@ class TestRequest(requetss.Request):
 
 
 def loadRequests(service):
-    service.registerRequest("test", TestRequest)
+    service.registerRequestClass("test", TestRequest)
