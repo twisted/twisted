@@ -29,8 +29,30 @@ cdef class CProtocol:
         """Override in subclasses."""
 
 
+cdef class Buffer:
+    """Allow passing char*s into Python code."""
+
+    cdef init(self, void (*deallocator)(void*), char* buffer, int buflen):
+        self.dealloc = deallocator
+        self.buffer = buffer
+        self.buflen = buflen
+
+    cdef __dealloc__(self):
+        self.dealloc(self.buffer)
+
+    cdef __getreadbuffer__(self, int segment, void **ptrptr):
+        if (segment == 0):
+            ptrptr[0] = self.buffer
+            return self.buflen
+
+    cdef __getsegcount__(self, int *lenp):
+        if lenp != NULL:
+            lenp[0] = self.buflen
+        return 1
+
+
 # see tcp.pxd for definition of the attributes
-cdef class _CMixin:
+cdef public class _CMixin [object TwistedTransport, type TwistedTransportType]:
 
     def __init__(self):
         """Call after tcp.Connection.__init__ is called."""
@@ -43,6 +65,9 @@ cdef class _CMixin:
     cdef void setReadBuffer(self, char* buffer, size_t buflen):
         self._c_buffer = buffer
         self._c_buflen = buflen
+
+    cdef void cwrite(self, Buffer b):
+        self.write(b)
     
     def doRead(self):
         """doRead for tcp.Connection that knows about cProtocol."""
@@ -65,3 +90,13 @@ cdef class _CMixin:
                     return main.CONNECTION_LOST
         else:
             return Connection.doRead(self)
+
+
+cdef public void tt_setReadBuffer(_CMixin transport, char* buffer, size_t buflen):
+    transport.setReadBuffer(buffer, buflen)
+
+cdef public void tt_write(_CMixin transport, void (*deallocator)(void*), char* buffer, size_t buflen):
+    cdef Buffer b
+    b = Buffer()
+    b.init(deallocator, buffer, buflen)
+    transport.cwrite(b)
