@@ -293,9 +293,15 @@ class Connection(abstract.FileDescriptor):
 
     def _closeReadConnection(self):
         self.socket.shutdown(0)
+        p = interfaces.IHalfCloseableProtocol(self.protocol, None)
+        if p:
+            p.readConnectionLost()
     
     def _closeWriteConnection(self):
         self.socket.shutdown(1)
+        p = interfaces.IHalfCloseableProtocol(self.protocol, None)
+        if p:
+            p.writeConnectionLost()
 
     def readConnectionLost(self, reason):
         p = interfaces.IHalfCloseableProtocol(self.protocol, None)

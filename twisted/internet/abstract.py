@@ -220,6 +220,7 @@ class FileDescriptor(log.Logger, styles.Ephemeral):
             self._closeReadConnection()
         elif write:
             self._writeDisconnecting = True
+            self.startWriting()
     
     def stopReading(self):
         """Stop waiting for read availability.

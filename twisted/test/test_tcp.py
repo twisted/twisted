@@ -710,9 +710,13 @@ class MyHCProtocol(MyProtocol):
     implements(IHalfCloseableProtocol)
     
     readHalfClosed = False
-
+    writeHalfClosed = False
+    
     def readConnectionLost(self):
         self.readHalfClosed = True
+
+    def writeConnectionLost(self):
+        self.writeHalfClosed = True
 
 
 class MyHCFactory(protocol.ServerFactory):
@@ -735,7 +739,7 @@ class HalfCloseTestCase(unittest.TestCase):
         reactor.iterate()
         reactor.iterate()
         # XXX we don't test server side yet since we don't do it yet
-        d = protocol.ClientCreator(reactor, MyProtocol).connectTCP(
+        d = protocol.ClientCreator(reactor, MyHCProtocol).connectTCP(
             p.getHost().host, p.getHost().port)
         self.client = unittest.deferredResult(d)
 
@@ -765,15 +769,20 @@ class HalfCloseTestCase(unittest.TestCase):
         client.transport.halfCloseConnection(write=True)
         reactor.iterate()
         reactor.iterate()
+        reactor.iterate()
+        self.assertEquals(client.closed, False)
+        self.assertEquals(client.writeHalfClosed, True)
+        self.assertEquals(client.readHalfClosed, False)
+        self.assertEquals(f.protocol.readHalfClosed, True)
         client.transport.write(" world")
         w("lalala fooled you")
         reactor.iterate()
         reactor.iterate()
         reactor.iterate()
         self.assertEquals(f.protocol.data, "hello")
-        self.assertEquals(f.protocol.closed, 0)
+        self.assertEquals(f.protocol.closed, False)
         self.assertEquals(f.protocol.readHalfClosed, True)
-    
+        
     def testCloseReadCloser(self):
         # this test is likely sensitive to transport buffering algorithm
         client = self.client
@@ -788,7 +797,17 @@ class HalfCloseTestCase(unittest.TestCase):
         reactor.iterate()
         reactor.iterate()
         self.assertEquals(f.protocol.data, "hello")
+        self.assertEquals(f.protocol.readHalfClosed, True)
 
+    def testWriteCloseNotification(self):
+        f = self.f
+        f.protocol.transport.halfCloseConnection(write=True)
+        reactor.iterate()
+        reactor.iterate()
+        reactor.iterate()
+        self.assertEquals(f.protocol.writeHalfClosed, True)
+        self.assertEquals(f.protocol.readHalfClosed, False)
+        self.assertEquals(self.client.readHalfClosed, True)
 
 class HalfClose2TestCase(unittest.TestCase):
 
