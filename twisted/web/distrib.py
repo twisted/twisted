@@ -31,6 +31,7 @@ from twisted.spread import pb
 from twisted.protocols import http
 from twisted.python import log
 from twisted.persisted import styles
+from twisted.web.woven import page
 
 # Sibling Imports
 import resource
@@ -38,7 +39,6 @@ import server
 import error
 import html
 import static
-import widgets
 from server import NOT_DONE_YET
 
 class _ReferenceableProducerWrapper(pb.Referenceable):
@@ -194,36 +194,91 @@ class ResourcePublisher(pb.Root, styles.Versioned):
         log.msg( request )
         return res.render(request)
 
-
-class UserDirectory(widgets.Gadget, widgets.StreamWidget):
+class UserDirectory(page.Page):
     userDirName = 'public_html'
     userSocketName = '.twistd-web-pb'
 
-    def stream(self, write, request):
-        write('<UL>\n')
+    template = """
+<html>
+    <head>
+    <title>twisted.web.distrib.UserDirectory</title>
+    <style>
+    
+    a
+    {
+        font-family: Lucida, Verdana, Helvetica, Arial, sans-serif;
+        color: #369;
+        text-decoration: none;
+    }
+
+    th
+    {
+        font-family: Lucida, Verdana, Helvetica, Arial, sans-serif;
+        font-weight: bold;
+        text-decoration: none;
+        text-align: left;
+    }
+
+    pre, code
+    {
+        font-family: "Courier New", Courier, monospace;
+    }
+
+    p, body, td, ol, ul, menu, blockquote, div
+    {
+        font-family: Lucida, Verdana, Helvetica, Arial, sans-serif;
+        color: #000;
+    }
+    
+    </style>
+    <base view="Attributes" model="base" />
+    </head>
+
+    <body>
+    <h1>twisted.web.distrib.UserDirectory</h1>
+
+    <ul view="List" model="directory">
+            <li pattern="listItem"><a view="Link" /> </li>
+    </ul>
+</body>
+</html>
+    """
+
+    def wmfactory_base(self, request):
+        return {'href':request.prePathURL()}
+
+    def wmfactory_directory(self, request):
+        m = []
         for user in pwd.getpwall():
             pw_name, pw_passwd, pw_uid, pw_gid, pw_gecos, pw_dir, pw_shell \
                      = user
             realname = string.split(pw_gecos,',')[0]
             if not realname:
                 realname = pw_name
-            fmtStr = '<LI><A HREF="%s/">%s (%s)</a>\n'
             if os.path.exists(os.path.join(pw_dir, self.userDirName)):
-                write(fmtStr% (pw_name,realname,'file'))
+                m.append({
+                        'href':'%s/'%pw_name,
+                        'text':'%s (file)'%realname
+                })
             twistdsock = os.path.join(pw_dir, self.userSocketName)
             if os.path.exists(twistdsock):
                 linknm = '%s.twistd' % pw_name
-                write(fmtStr% (linknm,realname,'twistd'))
-        write('</UL>\n')
+                m.append({
+                        'href':'%s/'%linknm,
+                        'text':'%s (twistd)'%realname})
+        return m
 
-    def getWidget(self, chnam, request):
+    def getChild(self, name, request):
+        if name == '':
+            return self
+
         td = '.twistd'
 
-        if chnam[-len(td):] == td:
-            username = chnam[:-len(td)]
+        if name[-len(td):] == td:
+            username = name[:-len(td)]
             sub = 1
         else:
-            username = chnam
+            username = name
             sub = 0
         try:
             pw_name, pw_passwd, pw_uid, pw_gid, pw_gecos, pw_dir, pw_shell \
@@ -233,7 +288,6 @@ class UserDirectory(widgets.Gadget, widgets.StreamWidget):
         if sub:
             twistdsock = os.path.join(pw_dir, self.userSocketName)
             rs = ResourceSubscription('unix',twistdsock)
-            self.putChild(chnam, rs)
             return rs
         else:
             return static.File(os.path.join(pw_dir, self.userDirName))

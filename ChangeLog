@@ -1,5 +1,10 @@
 2003-09-18  Stephen Thorne  <stephen@thorne.id.au>
 
+	* twisted/web/distrib.py: Removed dependancy on twisted.web.widgets, and
+    instead using woven.
+
+2003-09-18  Stephen Thorne  <stephen@thorne.id.au>
+
 	* doc/howto/woven-reference.html: Added this new documentation file.
 	* doc/howto/index.html: Added woven-reference to index
 	* admin/: Added woven-reference.tex to book.tex

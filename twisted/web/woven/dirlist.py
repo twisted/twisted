@@ -7,6 +7,7 @@ from twisted.web.microdom import lmx
 from twisted.web.domhelpers import RawText
 
 from twisted.python.filepath import FilePath
+# from twisted.web.static import File
 
 class DirectoryLister(page.Page):
     template = '''
@@ -35,37 +36,71 @@ class DirectoryLister(page.Page):
     <body>
     <h1 model="header"> </h1>
 
-    <table class="listing" view="listing">
+    <table view="List" model="listing">
+        <tr pattern="listHeader">
+            <th>Filename</th>
+            <th>Content type</th>
+            <th>Content encoding</th>
+        </tr>
+        <tr class="even" pattern="listItem">
+            <td><a model="link" view="Link" /></td>
+            <td model="type" view="Text"></td>
+            <td model="content" view="Text"></td>
+        </tr>
+        <tr class="even" pattern="listItem">
+            <td><a model="link" view="Link" /></td>
+            <td model="type" view="Text"></td>
+            <td model="content" view="Text"></td>
+        </tr>
     </table>
     
     </body>
     </html>
     '''
 
-    def __init__(self, fp):
-        self.fp = fp
+    def __init__(self, pathname, dirs=None,
+                 contentTypes=File.contentTypes,
+                 contentEncodings=File.contentEncodings,
+                 defaultType='text/html'):
+        self.contentTypes = contentTypes
+        self.contentEncodings = contentEncodings
+        self.defaultType = defaultType
+        # dirs allows usage of the File to specify what gets listed
+        self.dirs = dirs
+        self.path = pathname
         page.Page.__init__(self)
 
-    def wvupdate_listing(self, request, node, model):
-        l = lmx('div')
-        ev = True
-        for p in self.fp.listdir():
-            r = l.tr(_class=ev and "even" or "odd")
-            x = self.fp.preauthChild(p)
-            if x.isdir():
-                c = 'D'
-            elif x.islink():
-                c = 'L'
-            else:
-                c = 'F'
-            r.td(_class="icon").text(c)
-            r.td().a(href=p).text(p)
-            ev = not ev
-        node.appendChild(RawText(l.node.toxml()))
+    def wmfactory_listing(self, request):
+        if self.dirs is None:
+            directory = os.listdir(self.path)
+            directory.sort()
+        else:
+            directory = self.dirs
+
+        model = {}
+
+        for path in directory:
+            url = urllib.quote(path, "/:")
+            if os.path.isdir(os.path.join(self.path, path)):
+                url = url + '/'
+                model.append({'link':url,'type':'[Directory]','encoding':''})
+
+        for path in directory:
+            url = urllib.quote(path, "/:")
+            if not os.path.isdir(os.path.join(self.path, path)):
+                model.append({
+                         'link': path,
+                         'type': '[%s]'%mimetype,
+                         'encoding': (encoding and '[%s]' % encoding or '')})
+
 
     def wmfactory_header(self, request):
         return "Directory listing for %s" % request.uri
 
-from twisted.web.static import File
-File._directoryLister = DirectoryLister
+    def __repr__(self):  
+        return '<DirectoryLister of %r>' % self.path
+        
+    __str__ = __repr__
+
+# File._directoryLister = DirectoryLister
 

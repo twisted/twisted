@@ -25,6 +25,7 @@ from twisted.web import server, static, twcgi, script, test, distrib, trp
 from twisted.internet import interfaces
 from twisted.python import usage, reflect
 from twisted.spread import pb
+from twisted.web.woven import dirlist
 
 import sys
 
