@@ -61,7 +61,11 @@ def getDataFiles(dname, ignore=None):
                                        for filename in resultfiles]))
     return result
 
-def getPackages(dname, pkgname=None, results=None, ignore=None):
+def getPackages(dname, pkgname=None, results=None, ignore=None, parent=None):
+    parent = parent or ""
+    prefix = []
+    if parent:
+        prefix = [parent]
     bname = os.path.basename(dname)
     ignore = ignore or []
     if bname in ignore:
@@ -73,10 +77,11 @@ def getPackages(dname, pkgname=None, results=None, ignore=None):
     subfiles = os.listdir(dname)
     abssubfiles = [os.path.join(dname, x) for x in subfiles]
     if '__init__.py' in subfiles:
-        results.append(pkgname + [bname])
+        results.append(prefix + pkgname + [bname])
         for subdir in filter(os.path.isdir, abssubfiles):
             getPackages(subdir, pkgname=pkgname + [bname],
-                        results=results, ignore=ignore)
+                        results=results, ignore=ignore,
+                        parent=parent)
     res = ['.'.join(result) for result in results]
     return res
 

@@ -14,6 +14,8 @@ except NameError:
 
 def dict(**kw): return kw
 
+dotdot = os.path.normpath(util.sibpath(__file__, '..'))
+
 ver = copyright.version.replace('-', '_') #RPM doesn't like '-'
 setup_args = dict(
     # metadata
@@ -29,8 +31,8 @@ setup_args = dict(
     long_description="Twisted conch is a ssh implementation.",
 
     # build stuff
-    packages=['twisted.' + x for x in dist.getPackages(os.path.normpath(util.sibpath(__file__, '..')))],
-    data_files=dist.getDataFiles(os.path.normpath(util.sibpath(__file__, '..'))),
+    packages=dist.getPackages(dotdot, parent="twisted"),
+    data_files=dist.getDataFiles(dotdot),
 )
 print os.path.normpath(util.sibpath(__file__, '..'))
 print setup_args['packages']
