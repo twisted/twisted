@@ -22,7 +22,19 @@ from twisted.python import log, components
 
 from twisted.cred import error
 from twisted.cred import portal
+from twisted.cred import checkers
 from twisted.cred import credentials
+
+#-------------------------------------------------------------------------------
+# TODO:
+#
+# ADD:     Make sure client-DTP connecting is from same IP as client-PI
+#
+# TEST:    when client-PI connects and opens DTP then client-PI quits 
+#          make sure DTP connection quits and closes and cannot be
+#          reconnected to
+#
+#-------------------------------------------------------------------------------
 
 # response codes
 
@@ -105,7 +117,7 @@ RESPONSES = {
     DATA_CNX_OPEN_NO_XFR_IN_PROGRESS:   '225 data connection open, no transfer in progress',
     CLOSING_DATA_CNX:                   '226 Abort successful',
     TXFR_COMPLETE_OK:                   '226 Transfer Complete.',
-    ENTERING_PASV_MODE:                 '227 Entering Passive Mode',
+    ENTERING_PASV_MODE:                 '227 Entering Passive Mode %s',
     ENTERING_EPSV_MODE:                 '229 Entering Extended Passive Mode (|||%s|).', # where is epsv defined in the rfc's?
     USR_LOGGED_IN_PROCEED:              '230 User logged in, proceed',
     GUEST_LOGGED_IN_PROCEED:            '230 Guest login ok, access restrictions apply.',
@@ -182,32 +194,99 @@ class OperationFailedException(Exception):
 class BogusSyntaxException(Exception):
     pass
 
-
-
-class DTP(protocol.Protocol):
+class DTPFactoryException(Exception):
     pass
 
+class DTPFactoryBogusHostException(Exception):
+    '''thrown when a host other than the one we opened this 
+    DTP connection for attempts to connect'''
+    pass
 
-class DTPFactory(protocol.Factory):
+class DTP(protocol.Protocol):
+    debug = True
+
+    def connectionMade(self):
+        """Will start an transfer, if one is queued up, 
+        when the client connects"""
+        peer = self.transport.getPeer()
+        if self.debug:
+            log.msg('got a DTP connection %s:%s' % (peer[1],peer[2]))
+        # make sure someone isn't doing something sneaky
+        if self.debug:
+            log.msg("DTP ip matches PI ip? %s" % str(peer[1] == self.factory.pi.peerHost[1]))
+        # TODO: test this 
+        if peer[1] != self.factory.pi.peerHost[1]:
+            # DANGER Will Robinson! Bailing!
+            self.cleanup()      
+
+    def connectionLost(self, reason):
+        print 'lost DTP connection %s, oh well!' % reason
+        # makes sure connection is closed and factory shuts down 
+        # when client disconnects
+        if self.debug:
+            print "running self.transport.loseConnection()"
+        self.cleanup()
+
+    def cleanup(self):
+        self.transport.loseConnection()   
+        self.factory.dtpPort.stopListening()
+        return self.factory.pi.cleanupDTP()
+
+
+class ActvDTPFactory(protocol.ClientFactory):
+    pass
+
+class PasvDTPFactory(protocol.ServerFactory):
     protocol = DTP
     pi = None
+    dtpPort = None
+    peerHost = None
+    instance = None
 
     def buildProtocol(self, addr):
-        p = protocol.Factory.buildProtocol(self, addr)      # like in __init__ of a base-class
+        # we need to make sure that this factory only creates one
+        # instance of the DTP protocol, and that it accepts connections
+        # only from the host we're opening the connection for
+        if self.instance:
+            # if we've already created an instance, just ignore
+            # any further requests to create more
+            return 
+        p = protocol.ServerFactory.buildProtocol(self, addr)      # like in __init__ of a base-class
         p.factory = self
+        p.pi = self.pi
+        self.instance = p
         return p
 
 
-class FTP(basic.LineReceiver):      # FTP is a bit of a misonmer, as this is the PI - Protocol Interpreter
-    portal  = None
-    shell   = None      # the avatar
-    dtp     = None      # the DTP instance this PI will use
+class FTP(basic.LineReceiver):      
+    # FTP is a bit of a misonmer, as this is the PI - Protocol Interpreter
+    portal      = None
+    shell       = None      # the avatar
+    dtpFactory  = None      # generates a single DTP for this session
+    user        = None      # the username of the client connected 
+    peerHost    = None      # the (type,ip,port) of the client
+    debug       = True      # turn on extra logging
+
+    DEBUG_AUTO_ANON_LOGIN = True
     
     def connectionMade(self):
         self.reply(WELCOME_MSG)
+        self.peerHost = self.transport.getPeer()
+        if self.debug and self.DEBUG_AUTO_ANON_LOGIN:
+            self.ftp_USER('anonymous')
+            self.ftp_PASS('f@d.com')
+            self.ftp_PASV('')
 
     def connectionLost(self, reason):
-        print "Oops! lost connection %s" % reason
+        log.msg("Oops! lost connection\n %s" % reason)
+        # if we have a DTP protocol instance running and
+        # we lose connection to the client's PI, kill the 
+        # DTP connection and close the port
+        if self.dtpFactory and hasattr(self.dtpFactory, 'dtpPort'):
+            if hasattr(self.dtpFactory, 'instance'):
+                self.dtpFactory.instance.transport.loseConnection()
+            self.dtpFactory.dtpPort.stopListening()
+            self.cleanupDTP()
 
     def lineReceived(self, line):
         "Process the input from the client"
@@ -252,10 +331,114 @@ class FTP(basic.LineReceiver):      # FTP is a bit of a misonmer, as this is the
             if self.debug:
                 log.msg(RESPONSES[key] + '\r\n')
             self.transport.write(RESPONSES[key] + '\r\n')
-#        return self.shell != None   # Why is this here ???
 
     def createPassiveDTP(self):
-        self.dtp = self.dtpFactory.buildProtocol()
+        """creates a dtp listening on self.dtp.dtpPort for connections"""
+        if not self.dtpFactory:
+            self.dtpFactory = PasvDTPFactory()
+            self.dtpFactory.pi = self
+            self.dtpFactory.peerHost = self.transport.getPeer()[1]
+            self.dtpFactory.dtpPort = reactor.listenTCP(0, self.dtpFactory)   
+
+    def cleanupDTP(self):
+        """called when DTP connection exits"""
+        if hasattr(self,'dtpFactory'): 
+            if hasattr(self.dtpFactory,'instance'):
+                del self.dtpFactory.instance
+            self.dtpFactory = None
+
+    def ftp_USER(self, params):
+        """Get the login name, and reset the session
+        PASS is expected to follow
+
+        from the rfc:
+            The argument field is a Telnet string identifying the user.
+            The user identification is that which is required by the
+            server for access to its file system.  This command will
+            normally be the first command transmitted by the user after
+            the control connections are made
+
+            This has the effect of flushing any user, password, and account
+            information already supplied and beginning the login sequence
+            again.  All transfer parameters are unchanged and any file transfer
+            in progress is completed under the old access control parameters.
+        """
+        if params=='':
+            raise BogusSyntaxException('no parameters')
+        self.user = string.split(params)[0]
+        if self.debug:
+            log.msg('ftp_USER params: %s' % params)
+        if self.factory.allowAnonymous and self.user == self.factory.userAnonymous:
+            self.reply(GUEST_NAME_OK_NEED_EMAIL)
+        else:
+            self.reply(USR_NAME_OK_NEED_PASS, self.user)
+        self.type = 'A'
+
+    def ftp_PASS(self, params):
+        """Authorize the USER and the submitted password
+
+        from the rfc:
+            The argument field is a Telnet string specifying the user's
+            password.  This command must be immediately preceded by the
+            user name command, and, for some sites, completes the user's
+            identification for access control.
+        """
+
+        # the difference between an Anon login and a User login is 
+        # the avatar that will be returned to the callback
+        if not self.user:
+            self.reply(BAD_CMD_SEQ, 'USER required before PASS')
+            return
+
+        if self.debug:
+            log.msg('ftp_PASS params: %s' % params)
+
+        # parse password
+        self.passwd = params.split()[0] 
+
+        # if this is an anonymous login
+        if self.factory.allowAnonymous and self.user == self.factory.userAnonymous:
+            self.passwd = params
+            if self.portal:
+                self.portal.login(
+                        credentials.Anonymous(), 
+                        None, 
+                        IFTPShell
+                    ).addCallbacks(self._cbAnonLogin, self._ebLogin
+                    )
+            else:
+                # if cred has been set up correctly, this shouldn't happen
+                self.reply(AUTH_FAILURE, 'internal server error')
+
+        # otherwise this is a user login
+        else:
+            if self.portal:
+                self.portal.login(
+                        credentials.UsernamePassword(self.user, self.passwd),
+                        None,
+                        IFTPShell
+                    ).addCallbacks(self._cbLogin, self.ebLogin
+                    )
+            else:
+                self.reply(AUTH_FAILURE, 'internal server error')
+
+    def _cbAnonLogin(self, (interface, avatar, logout)):
+        '''anonymous login'''
+        assert interface is IFTPShell
+        self.shell = avatar
+        self.logout = logout
+        self.reply(GUEST_LOGGED_IN_PROCEED)
+
+    def _cbLogin(self, (interface, avatar, logout)):
+        '''authorized user login'''
+        assert interface is IFTPShell
+        self.shell = avatar
+        self.logout = logout
+        self.reply(USR_LOGGED_IN_PROCEED)
+
+    def _ebLogin(self, failure):
+        failure.trap(error.UnauthorizedLogin)
+        self.reply(AUTH_FAILURE, '')
 
     def ftp_LIST(self, params):
         """ This command causes a list to be sent from the server to the
@@ -281,7 +464,6 @@ class FTP(basic.LineReceiver):      # FTP is a bit of a misonmer, as this is the
         # TODO: should print the TLD-RELATIVE working directory
         self.reply(PWD_REPLY, self.shell.pwd())
 
-
     def ftp_PASV(self, params):
         """Request for a passive connection
 
@@ -297,25 +479,27 @@ class FTP(basic.LineReceiver):      # FTP is a bit of a misonmer, as this is the
             self.reply(NOT_LOGGED_IN)
             return
 
-        #self.createPassiveServer()
-        # Use the ip from the pi-connection
+        self.createPassiveDTP()
+        # Use the ip from the PI-connection
         sockname = self.transport.getHost()
         localip = string.replace(sockname[1], '.', ',')
-        lport = self.dtpPort.socket.getsockname()[1]
-
-        # what's with the / 256 ?
+        lport = self.dtpFactory.dtpPort.socket.getsockname()[1]
+        # convert port into two 8-byte values
         lp1 = lport / 256                           
         lp2, lp1 = str(lport - lp1*256), str(lp1)
+        if self.debug:
+            self.reply(ENTERING_PASV_MODE, "%s,%s" % (localip, lport))
+            return
 
-        # TODO: replace with RESPONSE code
-        self.transport.write('227 Entering Passive Mode ('+localip+
-                             ','+lp1+','+lp2+')\r\n')
+        self.reply(ENTERING_PASV_MODE, "%s,%s,%s" % (localip, lp1, lp2))
 
 
 
 class FTPFactory(protocol.Factory):
     protocol = FTP
-
+    allowAnonymous = True
+    userAnonymous = 'anonymous'
+    
     def __init__(self, portal=None):
         self.portal = portal
         import warnings
@@ -325,8 +509,6 @@ class FTPFactory(protocol.Factory):
         pi = protocol.Factory.buildProtocol(self, addr)
         pi.protocol = self.protocol
         pi.portal = self.portal
-        pi.dtpFactory = DTPFactory
-        pi.dtpFactory.pi = pi
         return pi
 
    
@@ -538,50 +720,6 @@ class FTPAnonymousShell(object):
 
     def nlist(self, path):
         pass
-
-
-#from newftp import FTP, FTPFactory, IFTPShell, FTPAnonymousShell
-
-
-class FTPRealm:
-    __implements__ = (portal.IRealm,)
-
-    def requestAvatar(self, avatarId, mind, *interfaces):
-        if IFTPShell in interfaces:
-            if avatarId == checkers.ANONYMOUS:
-                avatar = FTPAnonymousShell()
-                avatar.tld = os.path.abspath(".")
-                avatar.wd = avatar.tld
-                avatar.user = 'anonymous'
-                avatar.logout = None
-            return IFTPShell, avatar, avatar.logout
-        raise NotImplementedError("Only IFTPShell interface is supported by this realm")
-
-
-def main():
-    # Construct the application
-    application = service.Application("ftpserver")
-
-    # Get the IServiceCollection interface
-    myService = service.IServiceCollection(application)
-
-    # Create the protocol factory
-    ftpFactory = FTPFactory()
-    p = portal.Portal(FTPRealm())
-    p.registerChecker(checkers.AllowAnonymousAccess(), credentials.IAnonymous)
-
-    ftpFactory.portal = p
-    ftpFactory.root = '/home/jonathan'
-    ftpFactory.protocol = FTP
-
-    from twisted.internet import reactor
-    reactor.listenTCP(2121, ftpFactory)
-    reactor.run
-
-
-if __name__ == "__main__":
-   main() 
-
 
 
 
