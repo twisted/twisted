@@ -161,6 +161,8 @@ class ConnectedSocket(log.Logger, styles.Ephemeral, object):
     def startWriting(self):
         self.writing = True
         b = buffer(self.writebuf[0], self.offset)
+#        ll = map(len, self.writebuf)
+#        log.msg("buffer lengths are", ll, "total", sum(ll))
         try:
             self.write_op.initiateOp(self.socket.fileno(), b)
         except WindowsError, we:
