@@ -109,18 +109,25 @@ class ServerParserTestCase(unittest.TestCase):
         p.lineReceived('123, 456')
         self.assertEquals(L[0], '123, 456 : USERID : SYS : USER')
 
+if struct.pack('=L', 1)[0] == '\x01':
+    _addr1 = '0100007F'
+    _addr2 = '04030201'
+else:
+    _addr1 = '7F000001'
+    _addr2 = '01020304'
+
 class ProcMixinTestCase(unittest.TestCase):
-    line = ('4: 0100007F:0019 04030201:02FA 0A 00000000:00000000 '
+    line = ('4: %s:0019 %s:02FA 0A 00000000:00000000 '
             '00:00000000 00000000     0        0 10927 1 f72a5b80 '
-            '3000 0 0 2 -1')
+            '3000 0 0 2 -1') % (_addr1, _addr2)
 
     def testDottedQuadFromHexString(self):
         p = ident.ProcServerMixin()
-        self.assertEquals(p.dottedQuadFromHexString('0100007F'), '127.0.0.1')
+        self.assertEquals(p.dottedQuadFromHexString(_addr1), '127.0.0.1')
 
     def testUnpackAddress(self):
         p = ident.ProcServerMixin()
-        self.assertEquals(p.unpackAddress('0100007F:0277'), ('127.0.0.1', 631))
+        self.assertEquals(p.unpackAddress(_addr1 + ':0277'), ('127.0.0.1', 631))
 
     def testLineParser(self):
         p = ident.ProcServerMixin()
