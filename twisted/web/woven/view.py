@@ -29,7 +29,7 @@ NO_DATA_YET = 2
 
 class View(template.DOMTemplate):
 
-    __implements__ = template.DOMTemplate.__implements__, interfaces.IView
+    __implements__ = (template.DOMTemplate.__implements__, interfaces.IView)
 
     def __init__(self, model):
         """
@@ -283,8 +283,9 @@ def registerViewForModel(view, model):
     Registers `view' as an adapter of `model' for L{interfaces.IView}.
     """
     components.registerAdapter(view, model, interfaces.IView)
-    if components.implements(view, resource.IResource):
-        components.registerAdapter(view, model, resource.IResource)
+#     adapter = components.getAdapter(model, resource.IResource, None)
+#     if adapter is None and components.implements(view, resource.IResource):
+#         components.registerAdapter(view, model, resource.IResource)
 
 
 
