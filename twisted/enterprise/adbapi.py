@@ -24,6 +24,10 @@ from twisted.python import reflect, log, failure
 
 
 class Transaction:
+    """
+    I am a lightweight wrapper for a database 'cursor' object.  I relay
+    attribute access to the DB cursor.
+    """
 
     def __init__(self, pool, connection):
         self._connection = connection
@@ -69,6 +73,31 @@ class ConnectionPool(pb.Referenceable):
         from twisted.internet import reactor
         self.shutdownID = reactor.addSystemEventTrigger('during', 'shutdown', self.finalClose)
 
+    def runInteraction(self, interaction, *args, **kw):
+        """Interact with the database and return the result.
+
+        The 'interaction' is a callable object which will be executed in a
+        pooled thread.  It will be passed an L{Transaction} object as an
+        argument (whose interface is identical to that of the database cursor
+        for your DB-API module of choice), and its results will be returned as
+        a Deferred.  If running the method raises an exception, the transaction
+        will be rolled back.  If the method returns a value, the transaction
+        will be committed.
+
+        @param interaction: a callable object whose first argument is
+            L{adbapi.Transaction}.
+        @param *args,**kw: additional arguments to be passed to 'interaction'
+
+        @return: a Deferred which will fire the return value of
+        'interaction(Transaction(...))', or a Failure.
+        """
+
+        d = defer.Deferred()
+        apply(self.interaction, (interaction,d.callback,d.errback,)+args, kw)
+        return d
+
+
+
     def __getstate__(self):
         return {'dbapiName': self.dbapiName,
                 'connargs': self.connargs,
@@ -102,9 +131,6 @@ class ConnectionPool(pb.Referenceable):
             conn.rollback()
 
     def _runOperation(self, args, kw):
-        """This is used for non-query operations that don't want "fetch*" to be called
-        """
-
         conn = self.connect()
         curs = conn.cursor()
 
@@ -131,18 +157,6 @@ class ConnectionPool(pb.Referenceable):
         self._runOperation(args, kw)
 
     def interaction(self, interaction, callback, errback, *args, **kw):
-        """Interact with the database.
-
-        The callable object presented here will be executed in a pooled thread.
-        'callback' will be made in the main thread upon success and 'errback'
-        will be called upon failure.  If 'callback' is called, that means that
-        the transaction was committed; if 'errback', it was rolled back.  This
-        does not apply in databases which do not support transactions.
-
-        @param interaction: a callable object whose first argument is
-            L{adbapi.Transaction}.
-        @param *args,**kw: additional arguments to be passed to 'interaction'
-        """
         apply(threads.deferToThread,
               (self._runInteraction, interaction) + args, kw).addCallbacks(
             callback, errback)
@@ -150,11 +164,6 @@ class ConnectionPool(pb.Referenceable):
     def runOperation(self, *args, **kw):
         d = defer.Deferred()
         apply(self.operation, (d.callback,d.errback)+args, kw)
-        return d
-
-    def runInteraction(self, interaction, *args, **kw):
-        d = defer.Deferred()
-        apply(self.interaction, (interaction,d.callback,d.errback,)+args, kw)
         return d
 
     def _runInteraction(self, interaction, *args, **kw):
