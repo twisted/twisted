@@ -13,16 +13,15 @@ block.
 Remember to call nodelay(1) in curses, to make getch() non-blocking.
 """
 
-import curses, time, traceback, sys, select
+# System Imports
+import curses, time, traceback, sys
 import curses.wrapper
 
-# twisted imports
+# Twisted imports
 from twisted.internet import reactor
 from twisted.internet.protocol import ClientFactory
 from twisted.protocols.irc import IRCClient
 from twisted.python import log
-
-log.logfile = log.NullFile()
 
 class TextTooLongError(Exception):
     pass
@@ -31,15 +30,14 @@ class CursesStdIO:
     """fake fd to be registered as a reader with the twisted reactor.
        Curses classes needing input should extend this"""
 
-    def __init__(self):
-        pass
-
     def fileno(self):
         """ We want to select on FD 0 """
         return 0
 
     def doRead(self):
         """called when input is ready"""
+
+    def logPrefix(self): return 'CursesClient'
 
 
 class IRC(IRCClient):
@@ -175,7 +173,7 @@ if __name__ == '__main__':
     screen = Screen(stdscr)   # create Screen object
     stdscr.refresh()
     ircFactory = IRCFactory(screen)
-    reactor.addReader(screen) # add sceen object as a reader with twisted reactor
+    reactor.addReader(screen) # add sceen object as a reader with the reactor
     reactor.connectTCP("irc.freenode.net",6667,ircFactory) # connect to IRC
     reactor.run() # have fun!
     screen.close()
