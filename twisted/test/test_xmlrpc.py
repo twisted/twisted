@@ -18,14 +18,22 @@
 # 
 
 """Test XML-RPC support."""
+try:
+    import xmlrpclib
+except ImportError:
+    xmlrpclib = None
+    class XMLRPC: pass
+else:
+    from twisted.web import xmlrpc
+    from twisted.web.xmlrpc import XMLRPC
 
 from twisted.trial import unittest
-from twisted.web import xmlrpc, server
+from twisted.web import server
 from twisted.internet import reactor, defer
 from twisted.python import log
 
 
-class Test(xmlrpc.XMLRPC):
+class Test(XMLRPC):
 
     def xmlrpc_add(self, a, b):
         return a + b
@@ -39,7 +47,10 @@ class Test(xmlrpc.XMLRPC):
     def xmlrpc_fail(self):
         raise RuntimeError
 
-    
+    def xmlrpc_fault(self):
+        return xmlrpc.Fault(12)
+
+
 class XMLRPCTestCase(unittest.TestCase):
 
     def setUp(self):
@@ -61,10 +72,14 @@ class XMLRPCTestCase(unittest.TestCase):
         self.assertEquals(unittest.deferredResult(x), "a")
 
     def testErrors(self):
-        for methodName in "fail", "deferFail", "noSuchMethod":
+        for methodName in "fail", "deferFail", "fault", "noSuchMethod":
             l = []
             d = self.proxy().callRemote("fail").addErrback(l.append)
             while not l:
                 reactor.iterate()
             l[0].trap(xmlrpc.Fault)
         log.flushErrors(RuntimeError)
+
+
+if not xmlrpclib:
+    del XMLRPCTestCase
