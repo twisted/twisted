@@ -1293,9 +1293,11 @@ class ESMTP(SMTP):
                     ).addErrback(self._ebAuthenticated
                     )
 
-class SMTPSender(SMTPClient):
-    """Utility class for sending emails easily - use with SMTPSenderFactory."""
-
+class SenderMixin:
+    """Utility class for sending emails easily.
+    
+    Use with SMTPSenderFactory or ESMTPSenderFactory.
+    """
     done = 0
 
     def getMailFrom(self):
@@ -1325,6 +1327,10 @@ class SMTPSender(SMTPClient):
             self.factory.result.errback(exc)
         else:
             self.factory.result.callback((numOk, addresses))
+
+
+class SMTPSender(SMTPClient, SenderMixin):
+    pass
 
 
 class SMTPSenderFactory(protocol.ClientFactory):
@@ -1424,7 +1430,7 @@ class PLAINAuthenticator:
            return "%s\0%s" % (self.user, secret)
 
 
-class ESMTPSender(ESMTPClient):
+class ESMTPSender(ESMTPClient, SenderMixin):
 
     requireAuthentication = True
     requireTransportSecurity = True
