@@ -23,6 +23,7 @@ if runtime.platformType != 'posix':
 
 from twisted.python import log, syslog
 from twisted.application import app, service
+from twisted import copyright
 import os, errno, signal
 
 class ServerOptions(app.ServerOptions):
