@@ -375,6 +375,9 @@ class IReactorProcess(Interface):
                        (Not available on all systems.)
 
         @see: L{twisted.internet.protocol.ProcessProtocol}
+
+        @raise OSError: Raised with errno EAGAIN or ENOMEM if there are
+        insufficient system resources to create a new process.
         """
 
 class IReactorTime(Interface):
