@@ -30,6 +30,9 @@ class TagChecker:
             method(dom, filename)
 
     def _reportError(self, filename, element, error):
+        hlint = element.hasAttribute('hlint') and element.getAttribute('hlint')
+        if hlint == 'off':
+            return
         pos = getattr(element, '_markpos', None) or (0, 0)
         t = (filename,)+pos+(error,)
         print ("%s:%s:%s: %s" % t)
