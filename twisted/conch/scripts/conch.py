@@ -95,8 +95,8 @@ def run():
     try:
         options.parseOptions(args)
     except usage.UsageError, u:
-        options.opt_help()
         print 'ERROR: %s' % u
+        options.opt_help()
         sys.exit(1)
     if options['log']:
         realout = sys.stdout
