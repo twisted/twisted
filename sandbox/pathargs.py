@@ -25,9 +25,6 @@ class PathArgs(Resource):
         each key will be an array, optionally split further
         with a comma.
     """
-    def __init__(self,eat=[]):
-        Resource.__init__(self)
-        self.eat = eat
     def getChildPathArgs(self,path,request):
         pair = path.split(':')
         if 2 == len(pair):
@@ -36,10 +33,6 @@ class PathArgs(Resource):
             if not lst: request.pathargs[key] = lst
             lst.append(val)
             return self
-        for x in self.eat:
-            if x == path:
-                request.root += "%s/" % path
-                return self
     def getChild(self,path,request):
         ret = self.getChildPathArgs(path,request)
         if not ret: 
@@ -61,8 +54,11 @@ def test():
         def isLeaf(self):
             return true
         def render(self, req):
-            req.setHeader('Content-type','text/plain')
-            resp = 'uri: %s \nargs: %s\npathargs: %s\n'
+            req.setHeader('Content-type','text/html')
+            resp = """
+                <html><body><pre>uri: %s \nargs: %s\npathargs: %s
+                </pre></body></html>
+            """
             return resp % ( req.uri, req.args, req.pathargs )
 
     root = PathArgs()
