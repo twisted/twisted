@@ -283,15 +283,46 @@ class Address:
             addr = str(addr)
         self.addrstr = addr
 
-        name, address = rfc822.parseaddr(addr)
-        parts = address.split('@', 1)
-        self.local = parts[0]
-        if len(parts) == 1:
+        # Tokenize
+        atl = filter(None,self.tstring.split(addr))
+
+        local = []
+        domain = []
+
+        while atl:
+            if atl[0] == '<':
+                if atl[-1] != '>':
+                    raise AddressError, "Unbalanced <>"
+                atl = atl[1:-1]
+            elif atl[0] == '@':
+                atl = atl[1:]  
+                if not local:  
+                    # Source route
+                    while atl and atl[0] != ':':
+                        # remove it
+                        atl = atl[1:]
+                    if not atl:
+                        raise AddressError, "Malformed source route"
+                    atl = atl[1:] # remove :
+                elif domain:
+                    raise AddressError, "Too many @"
+                else:
+                    # Now in domain
+                    domain = ['']  
+            elif len(atl[0]) == 1 and not self.atomre.match(atl[0]) and atl[0] !=  '.':
+                raise AddressError, "Parse error at " + atl[0]
+            else:
+                if not domain:
+                    local.append(atl[0])
+                else:
+                    domain.append(atl[0])
+                atl = atl[1:]
+               
+        self.local = ''.join(local)
+        self.domain = ''.join(domain)
+        if self.domain == '':
             self.domain = DNSNAME
-        else:
-            self.domain = parts[1]
-
-
+        
     dequotebs = re.compile(r'\\(.)')
 
     def dequote(self,addr):
