@@ -26,6 +26,7 @@ import win32api, win32con
 from runtime import platform
 
 
+# XXX can this use python's builtin _winreg?
 def getProgramsMenuPath():
     """Get the path to the Programs menu.
     
