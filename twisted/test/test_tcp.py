@@ -747,7 +747,7 @@ class LargeBufferTestCase(PortCleanerUpper):
         while 1:
             rxlen = clientF.len
             try:
-                spinUntil(lambda :f.done and clientF.done)
+                spinUntil(lambda :f.done and clientF.done, timeout=30)
             except defer.TimeoutError:
                 if clientF.len == rxlen:
                     raise
