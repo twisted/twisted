@@ -193,7 +193,7 @@ class Request(pb.Copyable, http.Request, components.Componentized):
                 self.setHeader('Allow', allowedMethods)
                 s = ('''Your browser approached me (at %(URI)s) with'''
                      ''' the method "%(method)s".  I only allow'''
-                     ''' the method%(plural)s %(allowed) here.''' % {
+                     ''' the method%(plural)s %(allowed)s here.''' % {
                     'URI': self.uri,
                     'method': self.method,
                     'plural': ((len(allowedMethods) > 1) and 's') or '',
