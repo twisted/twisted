@@ -177,16 +177,16 @@ if register.LICENSE_ORG:
     log.msg("organization: %s" % register.LICENSE_ORG)
 
 if platformType == 'java':
-    from twisted.internet import jnternet
-    jnternet.install()
+    from twisted.internet import javareactor
+    javareactor.install()
 else:
     reactorTypes = {
-        'gtk': 'twisted.internet.ingtkernet',
+        'gtk': 'twisted.internet.gtkreactor',
         'default': 'twisted.internet.default',
-        'win32': 'twisted.internet.win32',
-        'win': 'twisted.internet.win32',
-        'poll': 'twisted.internet.poll',
-        'qt': 'twisted.internet.qternet'
+        'win32': 'twisted.internet.win32eventreactor',
+        'win': 'twisted.internet.win32eventreactor',
+        'poll': 'twisted.internet.pollreactor',
+        'qt': 'twisted.internet.qtreactor'
         }
     from twisted.python.reflect import namedModule
     namedModule(reactorTypes[config['reactor']]).install()

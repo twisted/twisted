@@ -22,7 +22,8 @@ Fetch a URL's contents.
 import sys, urlparse
 from qt import *
 
-from twisted.internet  import qternet
+from twisted.internet  import qtreactor
+qtreactor.install()
 from twisted.protocols import http
 
 
@@ -87,7 +88,7 @@ class TwistzillaWindow(QMainWindow):
         reactor.clientTCP(host, port, client)
  
 def main(args):
-    reactor = qternet.install()
+    from twisted.internet import reactor
     app = reactor.qApp
 
     win = TwistzillaWindow()

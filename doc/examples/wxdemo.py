@@ -17,11 +17,9 @@
 
 from wxPython.wx import *
 
-from twisted.internet import main, wxinternet, default
+from twisted.internet import main, wxsupport, default
 from twisted.python.delay import Delayed
-
-reactor = default.SelectReactor()
-reactor.install()
+default.install()
 
 # set up so that "hello, world" is printed once a second
 def helloWorld():
@@ -54,7 +52,7 @@ class MyFrame(wxFrame):
         main.shutDown()
 
 
-class MyApp(wxinternet.twixApp):
+class MyApp(wxsupport.twixApp):
 
     def OnInit(self):
         frame = MyFrame(NULL, -1, "Hello, world")
@@ -65,7 +63,7 @@ class MyApp(wxinternet.twixApp):
 
 def demo():
     app = MyApp(0)
-    wxinternet.install(app)
+    wxsupport.install(app)
     main.run()
 
 
