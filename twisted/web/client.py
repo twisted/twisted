@@ -85,7 +85,7 @@ class HTTPPageGetter(http.HTTPClient):
         url = l[0]
         if self.followRedirect:
             scheme, host, port, path = \
-                _parse(url, defaultPort=self.transport.addr[1])
+                _parse(url, defaultPort=self.transport.getPeer().port)
             self.factory.setURL(url)
     
             if self.factory.scheme == 'https':
