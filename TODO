@@ -115,3 +115,6 @@ this file directly.
 024 [[Glyph Lefkowitz]] Refactor twisted.internet so that there is a
     single defined API for connecting protocols to their transports.
     (listenTCP, listenSSL, connectTCP, connectSSL, etc)
+
+025 Jelly needs to handle floats and longs correctly, using the appropriate
+    types for struct.pack.
