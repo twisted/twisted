@@ -23,7 +23,6 @@ This is used by twisted.web.
 # system imports
 import string
 from cStringIO import StringIO
-import rfc822
 import tempfile
 import base64
 import cgi
@@ -33,7 +32,7 @@ import time
 import calendar
 
 # sibling imports
-import protocol, basic
+import basic
 
 # twisted imports
 from twisted.internet import interfaces
@@ -194,7 +193,7 @@ def toChunk(data):
 
 def fromChunk(data):
     """Convert chunk to string."""
-    raise UnimplementedError
+    raise NotImplementedError
 
 
 class HTTPClient(basic.LineReceiver):
@@ -545,17 +544,6 @@ class Request:
         """
         return self.host
 
-    def prePathURL(self):
-        inet, addr, port = self.getHost()
-        if port == 80:
-            hostport = ''
-        else:
-            hostport = ':%d' % port
-        return urllib.quote('http://%s%s/%s' % (
-            string.split(self.getHeader("host"), ':', 1)[0],
-            hostport,
-            string.join(self.prepath, '/')), "/:")
-
     def getClientIP(self):
         if self.client[0] == 'INET':
             return self.client[1]
@@ -594,7 +582,7 @@ class Request:
         host = self.client[1]
         try:
             name, names, addresses = socket.gethostbyaddr(host)
-        except socket.error, msg:
+        except socket.error:
             return host
         names.insert(0, name)
         for name in names:
@@ -642,7 +630,7 @@ class HTTPChannel(basic.LineReceiver):
             if len(parts)<3:
                 parts.append('HTTP/0.9') # isn't backwards compat great!
             if len(parts) != 3:
-                self._sendError(405, 'Bad command')
+                self.transport.write("HTTP/1.1 400 Bad Request\r\n\r\n")
                 self.transport.loseConnection()
                 return
             command, request, version = parts

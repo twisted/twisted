@@ -27,7 +27,6 @@ StringIO = cStringIO
 del cStringIO
 import string
 import socket
-import traceback
 import types
 import operator
 import urllib
@@ -35,7 +34,6 @@ import cgi
 import copy
 import time
 
-import calendar
 
 #some useful constants
 NOT_DONE_YET = 1
@@ -50,7 +48,6 @@ from twisted.cred import util
 
 # Sibling Imports
 import error
-import resource
 
 
 # backwards compatability
@@ -287,6 +284,17 @@ class Request(pb.Copyable, http.Request):
                 self.addCookie(cookiename, self.session.uid)
         self.session.touch()
         return self.session
+
+    def prePathURL(self):
+        inet, addr, port = self.getHost()
+        if port == 80:
+            hostport = ''
+        else:
+            hostport = ':%d' % port
+        return urllib.quote('http://%s%s/%s' % (
+            string.split(self.getHeader("host"), ':', 1)[0],
+            hostport,
+            string.join(self.prepath, '/')), "/:")
 
     def pathRef(self):
         return refpath.PathReferenceAcquisitionContext(self.prepath, self.site.resource)
