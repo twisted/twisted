@@ -13,6 +13,7 @@
 # You should have received a copy of the GNU Lesser General Public
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+from __future__ import  nested_scopes
 
 from twisted.trial import unittest
 from twisted.protocols import ftp, loopback
@@ -30,7 +31,7 @@ from twisted.test.test_protocols import StringIOWithoutClosing
 
 from twisted.python import log
 
-class BufferProtocol(Protocol):
+class BufferingProtocol(Protocol):
     def __init__(self):
         self.buf = StringIO()
     def dataReceived(self, data):
@@ -100,17 +101,31 @@ class FTPServerTests(unittest.TestCase):
         """
         self.serverFactory = ftp.FTPFactory()
         self.serverFactory.noisy = 0
-        import test_ftp         # Myself
-        serverPath = os.path.dirname(test_ftp.__file__)
+        serverPath = os.path.abspath('.') #
         self.serverFactory.root = serverPath
 
-        self.serverPort = reactor.listenTCP(0, self.serverFactory)
+        self.serverPort = reactor.listenTCP(0, self.serverFactory, interface='127.0.0.1')
         self.ftp_port = self.serverPort.getHost()[2]
+        open('ftp_crap', 'w').write('HELLO hello HELLO\n\n\n')
+        try:
+            os.remove('HelloThere')
+        except Exception, e:
+            pass
+        
 
     def tearDown(self):
         self.serverPort.stopListening()
         # Make sure the port really is closed, to avoid "address already in use"
         # errors.
+        try:
+            del self.result
+        except:
+            pass
+        try:
+            del self.error
+        except:
+            pass
+
         reactor.iterate()
 
 
@@ -121,7 +136,7 @@ class FTPClientAndServerTests(FTPServerTests):
     def errback(self, failure):
         try:
             self.fail('Errback called: ' + str(failure))
-        except self.failureException, e:
+        except Exception, e:
             self.error = sys.exc_info()
             raise
 
@@ -129,9 +144,6 @@ class FTPClientAndServerTests(FTPServerTests):
         self.result = result
 
     def testLongFileListings(self):
-        if hasattr(self, 'result'):
-            del self.result
-
         # Connect
         client = ftp.FTPClient(passive=self.passive)
         factory = ClientFactory()
@@ -156,14 +168,12 @@ class FTPClientAndServerTests(FTPServerTests):
         if error:
             raise error[0], error[1], error[2]
 
-        # Check that the listing contains this file (test_ftp.py)
+        # Check that the listing contains this file (ftp_crap)
         filenames = map(lambda file: file['filename'], fileList.files)
-        self.failUnless('test_ftp.py' in filenames,
-                        'test_ftp.py not in file listing')
+        self.failUnless('ftp_crap' in filenames,
+                        'ftp_crap not in file listing')
 
     def testShortFileListings(self):
-        if hasattr(self, 'result'):
-            del self.result
 
         # Connect
         client = ftp.FTPClient(passive=self.passive)
@@ -173,7 +183,7 @@ class FTPClientAndServerTests(FTPServerTests):
         reactor.connectTCP('localhost', self.ftp_port, factory)
 
         # Issue the command and set the callbacks
-        p = BufferProtocol()
+        p = BufferingProtocol()
         d = client.nlst('.', p)
         d.addCallbacks(self.callback, self.errback)
 
@@ -189,15 +199,12 @@ class FTPClientAndServerTests(FTPServerTests):
         if error:
             raise error[0], error[1], error[2]
 
-        # Check that the listing contains this file (test_ftp.py)
+        # Check that the listing contains this file (ftp_crap)
         filenames = p.buf.getvalue().split('\r\n')
-        self.failUnless('test_ftp.py' in filenames,
-                        'test_ftp.py not in file listing')
+        self.failUnless('ftp_crap' in filenames,
+                        'ftp_crap not in file listing')
 
     def testRetr(self):
-        if hasattr(self, 'result'):
-            del self.result
-
         # Connect
         client = ftp.FTPClient(passive=self.passive)
         factory = ClientFactory()
@@ -205,12 +212,11 @@ class FTPClientAndServerTests(FTPServerTests):
         factory.buildProtocol = lambda s, c=client: c
         reactor.connectTCP('localhost', self.ftp_port, factory)
 
-        # Download this module's file (test_ftp.py/.pyc/.pyo)
-        import test_ftp
-        thisFile = test_ftp.__file__
+        # download ftp_crap
+        
 
-        proto = BufferProtocol()
-        d = client.retr(os.path.basename(thisFile), proto)
+        proto = BufferingProtocol()
+        d = client.retr(os.path.basename('ftp_crap'), proto)
         d.addCallbacks(self.callback, self.errback)
 
         # Wait for a result
@@ -229,9 +235,45 @@ class FTPClientAndServerTests(FTPServerTests):
         self.failUnless(type(self.result) == types.ListType,
                         'callback result is wrong type: ' + str(self.result))
         data = proto.buf.getvalue()
-        self.failUnless(data == open(thisFile, "rb").read(),
+        self.failUnless(data == open('ftp_crap', "rb").read(),
                         'RETRieved file does not match original')
 
+
+    def testStor(self):
+        # Connect
+        client = ftp.FTPClient(passive=self.passive)
+        client.debug = 1
+        factory = ClientFactory()
+        factory.noisy = 0
+        factory.buildProtocol = lambda s, c=client: c
+        reactor.connectTCP('localhost', self.ftp_port, factory)
+
+        expectedContent = "Hello\n"*4
+        
+        def gotResult(c):
+            c.write(expectedContent)
+            c.finish()
+
+        def gotErr(f):
+            self.errback(f)
+
+        t = client.storeFile("HelloThere")
+        t[0].addCallbacks(gotResult, gotErr)
+        t[1].addCallbacks(self.callback, self.errback)
+
+        # Wait for a result
+        id = reactor.callLater(5, self.errback, "timed out") # timeout so we don't freeze
+        while not hasattr(self, 'result') and not hasattr(self, 'error'):
+            reactor.iterate()
+        try:
+            id.cancel()
+        except ValueError: pass
+
+        error = getattr(self, 'error', None)
+        if error:
+            raise error[0], error[1], error[2]
+
+        self.assertEquals(open('HelloThere').read(), expectedContent)
 
     def testBadLogin(self):
         client = ftp.FTPClient(passive=self.passive, username='badperson')
@@ -244,7 +286,7 @@ class FTPClientAndServerTests(FTPServerTests):
             try:
                 self.fail('Got this file listing when login should have failed: ' +
                           str(result))
-            except self.failureException, e:
+            except Exception, e:
                 self.callbackException = sys.exc_info()
                 raise
 
