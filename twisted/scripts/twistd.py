@@ -217,7 +217,7 @@ def run():
     if config.opts['python']:
         pyfile = os.path.abspath(config.opts['python'])
         log.msg("Loading %s..." % pyfile)
-        dict = {'__file__': pyfile}
+        dict = {'__file__': pyfile, '__name__': pyfile}
         execfile(pyfile, dict, dict)
         try:
             application = dict['application']
