@@ -7,16 +7,26 @@ try:
     from twisted.conch import unix
 except ImportError:
     unix = None
-from twisted.conch import avatar
-from twisted.conch.ssh import filetransfer
-from twisted.protocols import loopback
-from twisted.internet import defer, reactor
-from twisted.python import components, log
 
-import os, os.path
+from twisted.cred import portal
+from twisted.conch import avatar
+from twisted.conch.scripts import cftp
+from twisted.conch.ssh import filetransfer, session
+from twisted.protocols import loopback
+from twisted.internet import defer, reactor, protocol
+from twisted.python import components, log
+from twisted.test import test_process
+
+import test_conch
+import sys, os, os.path, time
 
 class FileTransferTestAvatar(avatar.ConchUser): 
 
+    def __init__(self):
+        avatar.ConchUser.__init__(self)
+        self.channelLookup['session'] = session.SSHSession
+        self.subsystemLookup['sftp'] = filetransfer.FileTransferServer
+            
     def _runAsUser(self, f, *args, **kw):
         try:
             f = iter(f)
@@ -31,6 +41,35 @@ class FileTransferTestAvatar(avatar.ConchUser):
 
     def getHomeDir(self):
         return os.path.join(os.getcwd(), 'sftp_test')
+
+class SFTPTestProcess(protocol.ProcessProtocol):
+
+    def __init__(self):
+        self.clearBuffer()
+        self.connected = 0
+
+    def connectionMade(self):
+        self.connected = 1
+        
+    def clearBuffer(self):
+        self.buffer = ''
+
+    def outReceived(self, data):
+        log.msg('got %s' % data)
+        self.buffer += data
+
+    def errReceived(self, data):
+        log.msg('err: %s' % data)
+
+    def connectionLost(self, reason):
+        self.connected = 0
+    def getBuffer(self):
+        return self.buffer
+
+class ConchSessionForTestAvatar:
+
+    def __init__(self, avatar):
+        self.avatar = avatar
 if unix:
     class FileTransferForTestAvatar(unix.SFTPServerForUnixConchUser):
 
@@ -44,7 +83,41 @@ if unix:
 
     components.registerAdapter(FileTransferForTestAvatar, FileTransferTestAvatar, filetransfer.ISFTPServer)
 
-class TestOurServerOurClient(unittest.TestCase):
+class FileTransferTestRealm:
+
+    def requestAvatar(sefl, avatarID, mind, *interfaces):
+        a = FileTransferTestAvatar()
+        return interfaces[0], a, lambda: None
+
+class SFTPTestBase(unittest.TestCase):
+
+    def setUp(self):
+        os.mkdir('sftp_test')
+        os.mkdir('sftp_test/testDirectory')
+
+        f=file('sftp_test/testfile1','w')
+        f.write('a'*10+'b'*10)
+        f.write(file('/dev/urandom').read(1024*128)) # random data
+        os.chmod('sftp_test/testfile1', 0644)
+        file('sftp_test/testRemoveFile', 'w').write('a')
+        file('sftp_test/testRenameFile', 'w').write('a')
+
+
+    def tearDown(self):
+        for f in ['testfile1', 'testRemoveFile', 'testRenameFile', 
+                  'testRenamedFile', 'testLink', 'testfile2']:
+            try:
+                os.remove('sftp_test/' + f)
+            except OSError:
+                pass
+        for d in ['sftp_test/testDirectory', 'sftp_test/testMakeDirectory', 
+                'sftp_test']:
+            try:
+                os.rmdir(d)
+            except:
+                pass
+       
+class TestOurServerOurClient(SFTPTestBase):
 
     def setUp(self):
         self.avatar = FileTransferTestAvatar()
@@ -67,21 +140,8 @@ class TestOurServerOurClient(unittest.TestCase):
 
         self._emptyBuffers()
 
-        os.mkdir('sftp_test')
+        SFTPTestBase.setUp(self)
 
-        file('sftp_test/testfile1','w').write('a'*10+'b'*10)
-        file('sftp_test/testRemoveFile', 'w').write('a')
-        file('sftp_test/testRenameFile', 'w').write('a')
-
-    def tearDown(self):
-        for f in ['testfile1', 'testRemoveFile', 'testRenameFile', 
-                  'testRenamedFile', 'testLink']:
-            try:
-                os.remove('sftp_test/' + f)
-            except OSError:
-                pass
-        os.rmdir('sftp_test')
-    
     def _emptyBuffers(self):
         while self.serverTransport.buffer or self.clientTransport.buffer:
             self.serverTransport.clearBuffer()
@@ -100,7 +160,7 @@ class TestOurServerOurClient(unittest.TestCase):
                 filetransfer.FXF_WRITE, {})
         openFile = self._waitWithBuffer(d)
         self.failUnlessEqual(filetransfer.ISFTPFile(openFile), openFile)
-        bytes = self._waitWithBuffer(openFile.readChunk(0, 30))
+        bytes = self._waitWithBuffer(openFile.readChunk(0, 20))
         self.failUnlessEqual(bytes, 'a'*10 + 'b'*10)
         self._waitWithBuffer(openFile.writeChunk(20, 'c'*10))
         bytes = self._waitWithBuffer(openFile.readChunk(0, 30))
@@ -158,8 +218,8 @@ class TestOurServerOurClient(unittest.TestCase):
                     break
             files.append(f[0])
         files.sort()
-        self.failUnlessEqual(files, ['testRemoveFile', 'testRenameFile', 
-                'testfile1']) 
+        self.failUnlessEqual(files, ['testDirectory', 'testRemoveFile', 
+                'testRenameFile', 'testfile1']) 
         d = openDir.close()
         result = self._waitWithBuffer(d)
 
@@ -181,6 +241,158 @@ class TestOurServerOurClient(unittest.TestCase):
         d = self.client.extendedRequest('testBadRequest', '')
         self.failUnlessRaises(NotImplementedError, self._waitWithBuffer, d)
 
+class TestOurServerCmdLineClient(test_process.SignalMixin, SFTPTestBase):
+
+    def setUpClass(self):
+        test_process.SignalMixin.setUpClass(self)
+
+        open('dsa_test.pub','w').write(test_conch.publicDSA_openssh)
+        open('dsa_test','w').write(test_conch.privateDSA_openssh)
+        os.chmod('dsa_test', 33152)
+        open('kh_test','w').write('localhost '+test_conch.publicRSA_openssh)
+        
+        cmd = ('%s %s -p %i -l testuser ' 
+               '--known-hosts kh_test '
+               '--user-authentications publickey '
+               '--host-key-algorithms ssh-rsa '
+               '-K direct '
+               '-i dsa_test '
+               '-a --nocache '
+               '-v '
+               'localhost')
+        test_conch.theTest = self
+        realm = FileTransferTestRealm()
+        p = portal.Portal(realm)
+        p.registerChecker(test_conch.ConchTestPublicKeyChecker())
+        fac = test_conch.SSHTestFactory()
+        fac.portal = p
+        self.fac = fac
+        self.server = reactor.listenTCP(0, fac, interface="127.0.0.1")
+        port = self.server.getHost().port
+        import twisted
+        exe = sys.executable
+        twisted_path = os.path.dirname(twisted.__file__)
+        cftp_path = os.path.abspath("%s/../bin/conch/cftp" % twisted_path)
+        cmds = (cmd % (exe, cftp_path, port))
+        self.processProtocol = SFTPTestProcess()
+        reactor.spawnProcess(self.processProtocol, exe, cmds.split(), env=None)
+        timeout = time.time() + 5
+        while (not self.processProtocol.buffer) and (time.time() < timeout):
+            reactor.iterate(0.1)
+        if time.time() > timeout:
+            raise RuntimeError("timeout")
+        else:
+            self.processProtocol.clearBuffer()
+            fac.proto.expectedLoseConnection = 1
+
+    def tearDownClass(self):
+        test_process.SignalMixin.tearDownClass(self)
+        for f in ['dsa_test.pub', 'dsa_test', 'kh_test']:
+            try:
+                os.remove(f)
+            except:
+                pass
+        self.processProtocol.transport.write('exit\n')
+        reactor.iterate(0.1)
+        reactor.iterate(0.1)
+        exitRes = self.processProtocol.buffer
+        if exitRes:
+            raise RuntimeError('got error on exit: %s' % exitRes)
+            try:
+                os.kill(self.processProtocol.transport.pid, 9)
+            except:
+                pass
+
+    def _getCmdResult(self, cmd):
+        self.processProtocol.clearBuffer()
+        self.processProtocol.transport.write(cmd+'\n')
+        timeout = time.time() + 5
+        while (not 'cftp> ' in self.processProtocol.buffer) and (time.time() < timeout):
+            reactor.iterate(0.1)
+        self.failIf(time.time() > timeout, "timeout")
+        if self.processProtocol.buffer.startswith('cftp> '):
+            self.processProtocol.buffer = self.processProtocol.buffer[6:]
+        return self.processProtocol.buffer[:-6].strip()
+
+    def testCdPwd(self):
+        homeDir = os.path.join(os.getcwd(), 'sftp_test')
+        pwdRes = self._getCmdResult('pwd')
+        lpwdRes = self._getCmdResult('lpwd')
+        cdRes = self._getCmdResult('cd testDirectory')
+        self._getCmdResult('cd ..')
+        pwd2Res = self._getCmdResult('pwd')
+        self.failUnlessEqual(pwdRes, homeDir)
+        self.failUnlessEqual(lpwdRes, os.getcwd())
+        self.failUnlessEqual(cdRes, '')
+        self.failUnlessEqual(pwd2Res, pwdRes)
+
+    def testChAttrs(self):
+       lsRes = self._getCmdResult('ls -l testfile1')
+       self.failUnless(lsRes.startswith('-rw-r--r--'), lsRes)
+       self.failIf(self._getCmdResult('chmod 0 testfile1'))
+       lsRes = self._getCmdResult('ls -l testfile1')
+       self.failUnless(lsRes.startswith('----------'), lsRes)
+       self.failIf(self._getCmdResult('chmod 644 testfile1'))
+       log.flushErrors()
+       # XXX test chgrp/own
+
+    def testList(self):
+        lsRes = self._getCmdResult('ls').split('\n')
+        self.failUnlessEqual(lsRes, ['testDirectory', 'testRemoveFile', \
+                'testRenameFile', 'testfile1'])
+        lsRes = self._getCmdResult('ls *File').split('\n')
+        self.failUnlessEqual(lsRes, ['testRemoveFile', 'testRenameFile'])
+        lsRes = self._getCmdResult('ls -l testDirectory')
+        self.failIf(lsRes)
+        # XXX test lls in a way that doesn't depend on local semantics
+
+    def testHelp(self):
+        helpRes = self._getCmdResult('?')
+        self.failUnlessEqual(helpRes, cftp.StdioClient(None).cmd_HELP('').strip())
+
+    def testGet(self):
+        getRes = self._getCmdResult('get testfile1 sftp_test/testfile2')
+        f1 = file('sftp_test/testfile1').read()
+        f2 = file('sftp_test/testfile2').read()
+        self.failUnlessEqual(f1, f2, "get failed")
+        log.msg(repr(getRes))
+        # XXX assert something about getRes
+        self.failIf(self._getCmdResult('rm testfile2'))
+        self.failIf(os.path.exists('sftp_test/testfile2'))
+
+    def testPut(self):
+        putRes = self._getCmdResult('put sftp_test/testfile1 testfile2')
+        f1 = file('sftp_test/testfile1').read()
+        f2 = file('sftp_test/testfile2').read()
+        self.failUnlessEqual(f1, f2, "get failed")
+        # XXX assert something about putRes
+        self.failIf(self._getCmdResult('rm testfile2'))
+        self.failIf(os.path.exists('sftp_test/testfile2'))
+        
+    def testLink(self):
+        linkRes = self._getCmdResult('ln testlink testfile1')
+        self.failIf(linkRes)
+        lslRes = self._getCmdResult('ls -l testlink')
+        log.flushErrors()
+        self.failUnless(lslRes.startswith('l'), 'link failed')
+        self.failIf(self._getCmdResult('rm testlink'))
+
+    def testDirectory(self):
+        self.failIf(self._getCmdResult('mkdir testMakeDirectory'))
+        lslRes = self._getCmdResult('ls -l testMakeDirector?')
+        self.failUnless(lslRes.startswith('d'), lslRes)
+        self.failIf(self._getCmdResult('rmdir testMakeDirectory'))
+        self.failIf(self._getCmdResult('lmkdir sftp_test/testLocalDirectory'))
+        self.failIf(self._getCmdResult('rmdir testLocalDirectory'))
+
+    def testRename(self):
+        self.failIf(self._getCmdResult('rename testfile1 testfile2'))
+        lsRes = self._getCmdResult('ls testfile?').split('\n')
+        self.failUnlessEqual(lsRes, ['testfile2'])
+        self.failIf(self._getCmdResult('rename testfile2 testfile1'))
+
+       
 if not unix:
     TestOurServerOurClient.skip = "don't run on non-posix"
+    TestOurServerCmdLineClient.skip = "don't run on non-posix"
 
