@@ -187,3 +187,6 @@ class Body(object):
         self.mass = mass
         self.position = position
         self.velocity = velocity
+
+    def __repr__(self):
+        return 'Body(mass=%s, position=%s, velocity=%s)' % (self.mass, self.position, self.velocity)

@@ -1,10 +1,10 @@
 # Port of Game-Skel4.py from Soya 0.5 or 0.6 to Soya 0.7
 # By Vito, vito_gameskel4port@perilith.com
 
-import os
-import soya, soya.sphere
+import os, math
+import soya, soya.widget, soya.sphere, soyasdlconst as const
 
-import point, vis, moon as config
+import point, vis, sol as config
 
 def makeSystem():
     s = point.Space()
@@ -15,27 +15,53 @@ def makeSystem():
     s.bodies = bodies
     return s
 
+class Controller:
+    handlers = {
+        const.KEYDOWN: 'KEYDOWN'}
+
+    def iterate(self):
+        for evt in soya.process_event():
+            getattr(self, 'evt_' + self.handlers.get(evt[0], 'default'))(evt)
+
+    def evt_default(self, evt):
+        pass
+
+    keydownHandlers = {
+        const.K_q: 'QUIT',
+        const.K_ESCAPE: 'QUIT'}
+
+    def evt_KEYDOWN(self, evt):
+        getattr(self, 'keydown_' + self.keydownHandlers.get(evt[1], 'default'))(evt)
+
+    def keydown_default(self, evt):
+        pass
+
+    def keydown_QUIT(self, evt):
+        soya.IDLER.stop()
+
 class Level(soya.World):
     pass
 
 class System(soya.World):
-    def __init__(self, parent, light, space):
+    def __init__(self, control, parent, space):
         soya.World.__init__(self, parent)
 
+        self.control = control
         self.space = space
 
-        self.star = space.bodies[0]
-        sunsphere = soya.sphere.Sphere(self)
-        sunsphere.scale(1.0, 1.0, 1.0)
-        self.bodies = [Body(self, self.star, light), Body(self, self.star, sunsphere)]
+        biggest = max([o.mass for o in space.bodies])
+        smallest = min([o.mass for o in space.bodies])
 
-        for b in space.bodies[1:]:
+        self.bodies = []
+        for i, b in enumerate(space.bodies):
             bodysphere = soya.sphere.Sphere(self)
-            bodysphere.scale(0.3, 0.3, 0.3)
+            bodysphere.scale(15, 1, 15)
             self.bodies.append(Body(self, b, bodysphere))
 
     def advance_time(self, proportion):
+        self.control.iterate()
         self.space.update()
+        soya.World.advance_time(self, proportion)
 
 class Body(soya.World):
     def __init__(self, parent, body, volume):
@@ -43,17 +69,14 @@ class Body(soya.World):
 
         self.body = body
         self.volume = volume
-        self.volume.scale(0.1, 0.1, 0.1)
 
     def begin_round(self):
-        p = [c / 1000 for c in self.body.position]
-        self.volume.set_xyz(*p)
+        self.set_xyz(*[p / 10000000000000.0 for p in self.body.position])
+        print self.position()
         soya.World.begin_round(self)
-        print p
 
 def main():
-    soya.init("vis3d.py", 640, 480, 0, 0)
-    soya.path.append(os.path.join(os.getcwd(), "vis3d-data"))
+    soya.init("vis3d.py", 800, 600, 0, 0)
 
     s = makeSystem()
 
@@ -61,13 +84,29 @@ def main():
     level = Level(scene)
 
     light = soya.Light(scene)
-    light.set_xyz(1, 1, 1)
+    light.set_xyz(0, 105, 0)
 
     camera = soya.Camera(scene)
-    camera.set_xyz(0, 0, 4.0)
-    soya.set_root_widget(camera)
+    control = Controller()
+    system = System(control, level, s)
 
-    system = System(level, light, s)
+    camera.fov = 180
+
+    camera.front = -100
+    camera.back = 100
+
+    camera.left = 100
+    camera.right = -100
+
+    camera.top = 100
+    camera.bottom = -100
+
+    camera.set_xyz(0, 102, 0)
+    camera.look_at(soya.Point(scene, 0, 99, 0))
+
+    soya.set_root_widget(soya.widget.Group())
+    soya.root_widget.add(camera)
+    soya.root_widget.add(soya.widget.FPSLabel())
 
     soya.Idler(scene).idle()
 
