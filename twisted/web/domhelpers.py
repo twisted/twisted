@@ -158,7 +158,7 @@ For example::
         node = childNodes.pop(0)
         if node.childNodes:
             [childNodes.insert(0, ch_node) for ch_node in node.childNodes]
-        if hasattr(node, 'nodeValue'):
+        if hasattr(node, 'nodeValue') and node.nodeValue is not None:
             gathered.append(node.nodeValue)
     gathered.reverse()
     return ''.join(gathered)

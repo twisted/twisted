@@ -80,6 +80,19 @@ class DomHelpersTest(TestCase):
         expected='abdgheicfj'
         assert actual==expected, 'expected %s, got %s' % (expected, actual)
 
+        doc4_xml='''<html>
+  <head>
+  </head>
+  <body>
+    stuff
+  </body>
+</html>
+'''
+        doc4=microdom.parseString(doc4_xml)
+        actual=domhelpers.gatherTextNodes(doc4)
+        expected='\n    stuff\n  '
+        assert actual==expected, 'expected %s, got %s' % (expected, actual)
+
     def test_clearNode(self):
         doc1=microdom.parseString('<a><b><c><d/></c></b></a>')
         a_node=doc1.documentElement
