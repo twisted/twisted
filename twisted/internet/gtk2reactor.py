@@ -35,7 +35,7 @@ __all__ = ['install']
 # System Imports
 import sys, time
 try:
-    if hasattr(sys, 'frozen'):
+    if not hasattr(sys, 'frozen'):
         # Don't want to check this for py2exe
         import pygtk
         pygtk.require('2.0')
