@@ -222,25 +222,22 @@ class Request(pb.Copyable, http.HTTP):
             self.postpath = string.split(self.path[1:], '/')
             resrc = self.site.getResourceFor(self)
 
-            if hasattr(resrc, "processArgs"):
-                self.args = resrc.processArgs(self)
-            else:
-                # Argument processing
-                args = self.args
-                if self.method == "POST":
-                    mfd = 'multipart/form-data'
-                    key, pdict = cgi.parse_header(self.getHeader('content-type'))
-                    if key == 'application/x-www-form-urlencoded':
-                        args.update(
-                            cgi.parse_qs(self.content))
-
-                    elif key == mfd:
-                        args.update(
-                            cgi.parse_multipart(StringIO.StringIO(self.content),
-                                                pdict))
-                    else:
-                        pass #raise 'bad content-type'
-
+            # Argument processing
+            args = self.args
+            if self.method == "POST":
+                mfd = 'multipart/form-data'
+                key, pdict = cgi.parse_header(self.getHeader('content-type'))
+                if key == 'application/x-www-form-urlencoded':
+                    args.update(
+                        cgi.parse_qs(self.content))
+                    
+                elif key == mfd:
+                    args.update(
+                        cgi.parse_multipart(StringIO.StringIO(self.content),
+                                            pdict))
+                else:
+                    pass #raise 'bad content-type'
+                
             # Resource renderring
             body = resrc.render(self)
             if body == NOT_DONE_YET:

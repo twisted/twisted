@@ -263,7 +263,12 @@ class Application(log.Logger, styles.Versioned):
         return "*%s*" % self.name
 
     def run(self, save=1, installSignalHandlers=1):
-        """Run this application, running the main loop if necessary.
+        """run(save=1, installSignalHandlers=1)
+        Run this application, running the main loop if necessary.
+        If 'save' is true, then when this Application is shut down, it
+        will be persisted to a pickle.
+        'installSignalHandlers' is passed through to main.run(), the
+        function that starts the mainloop.
         """
         global resolver
         if not self.running:

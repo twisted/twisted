@@ -40,6 +40,8 @@ If you believe the LICENSE file or the Twisted Matrix Labs software you have
 received is not legally licensed and/or may be counterfeit, please e-mail
 Twisted Matrix Labs at piracy@twistedmatrix.com.
 
+Continuing unregistered...
+
 """)
         sys.stderr.flush()
     else:
