@@ -231,7 +231,7 @@ class FileDescriptor(log.Logger, styles.Ephemeral):
         FileDescriptor provides some infrastructure for producer methods.
         """
         if self.producer is not None:
-            raise RuntimeError("cannot register two producers")
+            raise RuntimeError("Cannot register producer %s, because producer %s was never unregistered." % (producer, self.producer))
         self.producer = producer
         self.streamingProducer = streaming
         if not streaming:
