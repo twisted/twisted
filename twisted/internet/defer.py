@@ -376,9 +376,9 @@ class Deferred:
         """
         if (self.called and
             isinstance(self.result, failure.Failure)):
-            log.msg("Unhandled error in Deferred:")
+            log.msg("Unhandled error in Deferred:", isError=True)
             if self.debug:
-                log.msg("(debug: " + self._debugInfo() + ")")
+                log.msg("(debug: " + self._debugInfo() + ")", isError=True)
             log.err(self.result)
 
 

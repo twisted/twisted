@@ -414,8 +414,8 @@ class LogTestCase(unittest.TestCase):
 ##        d.callback(1)
 ##        del d
         c2 = [e for e in c if e["isError"]]
-        self.assertEquals(len(c2), 1)
-        c2[0]["failure"].trap(ZeroDivisionError)
+        self.assertEquals(len(c2), 2)
+        c2[1]["failure"].trap(ZeroDivisionError)
         log.flushErrors(ZeroDivisionError)
 
 
