@@ -67,13 +67,14 @@ class UnintelligentProtocol(basic.LineReceiver):
         "last thing ever",
     ]
     
+    
     def connectionMade(self):
         for l in self.pretext:
             self.sendLine(l)
 
     def lineReceived(self, line):
         if line == "READY":
-            self.transport.startTLS(ClientTLSContext())
+            self.transport.startTLS(ClientTLSContext(), self.factory.client)
             for l in self.posttext:
                 self.sendLine(l)
             self.transport.loseConnection()
@@ -101,7 +102,7 @@ class LineCollector(basic.LineReceiver):
                     privateKeyFileName=certPath,
                     certificateFileName=certPath,
                 )
-                self.transport.startTLS(ctx)
+                self.transport.startTLS(ctx, self.factory.server)
             else:
                 self.setRawMode()
     
@@ -116,10 +117,12 @@ class TLSTestCase(unittest.TestCase):
     def testTLS(self):
         cf = protocol.ClientFactory()
         cf.protocol = UnintelligentProtocol
-        
+        cf.client = 1
+
         sf = protocol.ServerFactory()
         sf.protocol = lambda: LineCollector(1)
         sf.done = 0
+        sf.server = 1
 
         port = reactor.listenTCP(0, sf)
         portNo = port.getHost()[2]
@@ -140,10 +143,12 @@ class TLSTestCase(unittest.TestCase):
     def testUnTLS(self):
         cf = protocol.ClientFactory()
         cf.protocol = UnintelligentProtocol
-        
+        cf.client = 1
+
         sf = protocol.ServerFactory()
         sf.protocol = lambda: LineCollector(0)
         sf.done = 0
+        sf.server = 1
 
         port = reactor.listenTCP(0, sf)
         portNo = port.getHost()[2]
@@ -161,3 +166,29 @@ class TLSTestCase(unittest.TestCase):
             UnintelligentProtocol.pretext
         )
         self.failUnless(sf.rawdata, "No encrypted bytes received")
+
+    def testBackwardsTLS(self):
+        cf = protocol.ClientFactory()
+        cf.protocol = lambda: LineCollector(1)
+        cf.server = 0
+        cf.done = 0
+
+        sf = protocol.ServerFactory()
+        sf.protocol = UnintelligentProtocol
+        sf.client = 0
+
+        port = reactor.listenTCP(0, sf)
+        portNo = port.getHost()[2]
+        
+        reactor.connectTCP('0.0.0.0', portNo, cf)
+        
+        i = 0
+        while i < 2000 and not cf.done:
+            reactor.iterate(0.01)
+            i += 1
+        
+        self.failUnless(cf.done, "Never finished reading all lines")
+        self.assertEquals(
+            cf.lines,
+            UnintelligentProtocol.pretext + UnintelligentProtocol.posttext
+        )
