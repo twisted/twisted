@@ -4,10 +4,9 @@ baseurl=http://twistedmatrix.com/documents/TwistedDocs/TwistedDocs-$1/api/%s.htm
 templ=doc/howto/template.tpl
 ./bin/lore -p --input man --output lore --config ext=-man.html doc/man/*.1
 for doc in doc/man doc/howto doc/specifications; do
-  ./bin/lore --output lint -p $doc/*.html
-  ./bin/lore -p --config template=$templ --config baseurl=$baseurl \
-                     -l ../howto/ $doc/*.html
-  ./bin/lore -p --output latex --config section $doc/*.html
+  for command in "--output lint" "--config template=$templ --config baseurl=$baseurl -l ../howto" "--output latex --config section"; do
+     ./bin/lore -p $command $doc/*.html
+  done
 done
 cp admin/book.tex doc/howto
 cd doc/howto
