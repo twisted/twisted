@@ -160,6 +160,19 @@ class FormFillerWidget(widgets.Widget):
         if arg.reset:
             div.input(type="reset")
         return div
+
+    def input_date(self, request, content, arg):
+        year, month, day = getValues(request, arg)
+        div = content.div()
+        div.text("Year: ")
+        div.input(type="text", size="4", maxlength="4", name=arg.name, value=str(year))
+        div.br()
+        div.text("Month: ")
+        div.input(type="text", size="2", maxlength="2", name=arg.name, value=str(month))
+        div.br()
+        div.text("Day: ")
+        div.input(type="text", size="2", maxlength="2", name=arg.name, value=str(day))
+        return div
     
     def createInput(self, request, shell, arg):
         name = arg.__class__.__name__.lower()

@@ -22,6 +22,8 @@ This module contains support for descriptive method signatures that can be used
 to format methods.  Currently this is only used by woven.
 """
 
+import calendar
+
 
 class InputError(Exception):
     """
@@ -178,6 +180,35 @@ class Boolean(Argument):
         if lInVal in ('no', 'n', 'f', 'false'):
             return 0
         return 1
+
+def positiveInt(x):
+    x = int(x)
+    if x <= 0: raise ValueError
+    return x
+
+class Date(Argument):
+    """A date."""
+
+    defaultDefault = (1970, 1, 1)
+    
+    def coerce(self, args):
+        """Return tuple of ints (year, month, day)."""
+        try:
+            year, month, day = map(positiveInt, args)
+        except ValueError:
+            raise InputError, "Invalid date values."
+        if (month, day) == (2, 29):
+            if not calendar.isleap(year):
+                raise InputError, "%d was not a leap year." % year
+            else:
+                return year, month, day
+        try:
+            mdays = calendar.mdays[month]
+        except IndexError:
+            raise InputError, "Invalid date."
+        if day > mdays:
+            raise InputError, "Invalid date."
+        return year, month, day
 
 
 class Submit(Choice):
