@@ -365,6 +365,13 @@ class BERDecoderContext:
     def inherit(self):
         return self.inherit_context or self
 
+    def __repr__(self):
+        return "<"+self.__class__.__name__ \
+               +" identities="+repr(self.Identities) \
+               +" fallback="+repr(self.fallback) \
+               +" inherit="+repr(self.inherit) \
+               +">"
+
 def ber2object(context, m):
     """ber2object(mutablestring) -> berobject
     Modifies mutablestring to remove decoded part.
