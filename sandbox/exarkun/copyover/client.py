@@ -10,8 +10,6 @@ try:
 except ImportError:
     import StringIO
 
-import fdpass
-
 from twisted.internet import reactor
 from twisted.internet import defer
 from twisted.spread import pb
