@@ -159,7 +159,7 @@ class ThrottlingFactory(WrappingFactory):
     """
 
     protocol = ThrottlingProtocol
-    
+
     def __init__(self, wrappedFactory, maxConnectionCount=sys.maxint, readLimit=None, writeLimit=None):
         WrappingFactory.__init__(self, wrappedFactory)
         self.connectionCount = 0
@@ -168,11 +168,11 @@ class ThrottlingFactory(WrappingFactory):
         self.writeLimit = writeLimit # max bytes we should write per second
         self.readThisSecond = 0
         self.writtenThisSecond = 0
-        if readLimit is not None:
-            self.checkReadBandwidth()
-        if  writeLimit is not None:
-            self.checkWriteBandwidth()
-    
+        self.unthrottleReadsID = None
+        self.checkReadBandwidthID = None
+        self.unthrottleWritesID = None
+        self.checkWriteBandwidthID = None
+
     def registerWritten(self, length):
         """Called by protocol to tell us more bytes were written."""
         self.writtenThisSecond += length
@@ -186,18 +186,20 @@ class ThrottlingFactory(WrappingFactory):
         if self.readThisSecond > self.readLimit:
             self.throttleReads()
             throttleTime = (float(self.readThisSecond) / self.readLimit) - 1.0
-            reactor.callLater(throttleTime, self.unthrottleReads)
+            self.unthrottleReadsID = reactor.callLater(throttleTime,
+                                                       self.unthrottleReads)
         self.readThisSecond = 0
-        reactor.callLater(1, self.checkReadBandwidth)
+        self.checkReadBandwidthID = reactor.callLater(1, self.checkReadBandwidth)
 
     def checkWriteBandwidth(self):
         if self.writtenThisSecond > self.writeLimit:
             self.throttleWrites()
             throttleTime = (float(self.writtenThisSecond) / self.writeLimit) - 1.0
-            reactor.callLater(throttleTime, self.unthrottleWrites)
+            self.unthrottleWritesID = reactor.callLater(throttleTime,
+                                                        self.unthrottleWrites)
         # reset for next round    
         self.writtenThisSecond = 0
-        reactor.callLater(1, self.checkWriteBandwidth)
+        self.checkWriteBandwidthID = reactor.callLater(1, self.checkWriteBandwidth)
 
     def throttleReads(self):
         """Throttle reads on all protocols."""
@@ -207,6 +209,7 @@ class ThrottlingFactory(WrappingFactory):
 
     def unthrottleReads(self):
         """Stop throttling reads on all protocols."""
+        self.unthrottleReadsID = None
         log.msg("Stopped throttling reads on %s" % self)
         for p in self.protocols.keys():
             p.unthrottleReads()
@@ -219,11 +222,18 @@ class ThrottlingFactory(WrappingFactory):
 
     def unthrottleWrites(self):
         """Stop throttling writes on all protocols."""
+        self.unthrottleWritesID = None
         log.msg("Stopped throttling writes on %s" % self)
         for p in self.protocols.keys():
             p.unthrottleWrites()
 
     def buildProtocol(self, addr):
+        if self.connectionCount == 0:
+            if self.readLimit is not None:
+                self.checkReadBandwidth()
+            if self.writeLimit is not None:
+                self.checkWriteBandwidth()
+
         if self.connectionCount < self.maxConnectionCount:
             self.connectionCount += 1
             return WrappingFactory.buildProtocol(self, addr)
@@ -234,7 +244,15 @@ class ThrottlingFactory(WrappingFactory):
     def unregisterProtocol(self, p):
         WrappingFactory.unregisterProtocol(self, p)
         self.connectionCount -= 1
-
+        if self.connectionCount == 0:
+            if self.unthrottleReadsID is not None:
+                self.unthrottleReadsID.cancel()
+            if self.checkReadBandwidthID is not None:
+                self.checkReadBandwidthID.cancel()
+            if self.unthrottleWritesID is not None:
+                self.unthrottleWritesID.cancel()
+            if self.checkWriteBandwidthID is not None:
+                self.checkWriteBandwidthID.cancel()
 
 class SpewingProtocol(ProtocolWrapper):
     def dataReceived(self, data):
