@@ -1,10 +1,15 @@
-## Twisted Modules List
+## Twisted Modules List                                   -*- Python -*-
 
 ## Coil modules
 
 register("Twisted Words",
          "twisted.coil.plugins.words",
          description="A chat and collaboration system.",
+         type='coil')
+
+register("Words Tendril",
+         "twisted.coil.plugins.tendril",
+         description="A Tendril connecting a Words service to an IRC network.",
          type='coil')
 
 register("Twisted Web",
