@@ -18,7 +18,12 @@ import os, md5
 import cPickle as pickle
 import cStringIO as StringIO
 from twisted.python import components, log, runtime
+from twisted.persisted import styles
 
+# Note:
+# These encrypt/decrypt functions only work for data formats
+# which are immune to having spaces tucked at the end.
+# All data formats which persist saves hold that condition.
 def encrypt(passphrase, data):
     from Crypto.Cipher import AES as cipher
     leftover = len(data) % cipher.block_size
@@ -102,3 +107,41 @@ class Persistant:
             os.remove(finalname)
         os.rename(filename, finalname)
         log.msg("Saved.")
+
+
+class _EverythingEphemeral(styles.Ephemeral):
+
+    initRun = 0
+
+    def __getattr__(self, key):
+        try:
+            return getattr(mainMod, key)
+        except AttributeError:
+            if self.initRun:
+                raise
+            else:
+                log.msg("Warning!  Loading from __main__: %s" % key)
+                return styles.Ephemeral()
+
+def load(filename, style, passphrase=None):
+    mode = 'r'
+    if style=='source'
+        from twisted.persisted.marmalade import unjellyFromXML as load
+    elif style=='xml':
+        from twisted.persisted.aot import unjellyFromSource as load
+    else:
+        from cPickle import load
+        mode = 'rb'
+    if passphrase:
+        fp = StringIO.StringIO(open(filename, 'rb').read())
+    else:
+        fp = open(filename, mode)
+    mainMod = sys.modules['__main__']
+    ee = _EverythingEphemeral()
+    sys.modules['__main__'] = ee
+    ee.initRun = 1
+    value = load(fp)
+    sys.modules['__main__'] = mainMod
+    styles.doUpgrade()
+    ee.initRun = 0
+    return value

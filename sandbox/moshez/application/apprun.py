@@ -33,67 +33,35 @@ reactorTypes = {
     }
 
 
-class EverythingEphemeral(styles.Ephemeral):
-    def __getattr__(self, key):
-        try:
-            return getattr(mainMod, key)
-        except AttributeError:
-            if initRun:
-                raise
-            else:
-                log.msg("Warning!  Loading from __main__: %s" % key)
-                return styles.Ephemeral()
-
-def createApplicationDecoder(config):
-    mode = 'r'
-    filename = os.path.abspath(config['python'] or config['xml'] or
-                               config['source'] or config['file'])
-    if config['python']:
-        def decode(filename, data):
-            d = {'__file__': filename}
-            exec data in d, d
-            try:
-                return d['application']
-            except KeyError:
-                raise RuntimeError(
-                        "Error - python file %r must set a variable named "
-                        "'application', which implements the Application "
-                        "protocol. No such variable was found!" % filename)
+def loadTAC(filename, passphrase):
+    if passphrase:
+        mode = 'rb'
     else:
-        if config['xml']:
-            from twisted.persisted.marmalade import unjellyFromXML as load
-        elif config['source']:
-            from twisted.persisted.aot import unjellyFromSource as load
-        else:
-            from cPickle import load
-            mode = 'rb'
-        mainMod = sys.modules['__main__']
-        def decode(filename, data):
-            sys.modules['__main__'] = EverythingEphemeral()
-            application = load(StringIO.StringIO(data))
-            sys.modules['__main__'] = mainMod
-            styles.doUpgrade()
-            return application
-    return filename, decode, mode
-
+        mode = 'r'
+    data = open(filename, mode).read()
+    if passphrase:
+        data = persist.decrypt(passphrase, data)
+    d = {'__file__': filename}
+    exec data in d, d
+    application = d['application']
+    return application
 
 def loadApplication(config, passphrase):
-    filename, decode, mode = createApplicationDecoder(config)
-    if config['encrypted']:
-        mode = 'rb'
-    data = open(filename, mode).read()
-    if config['encrypted']:
-        data = persist.decrypt(passphrase, data)
-    try:
-        log.msg("Loading %s..." % (filename,))
-        d = decode(filename, data)
-        log.msg("Loaded.")
-        return d
-    except:
-        if config['encrypt']:
-            log.msg("Error loading Application - "
-                    "perhaps you used the wrong passphrase?")
-        raise
+    filename = os.path.abspath(config['python'] or config['xml'] or
+                               config['source'] or config['file'])
+    log.msg("Loading %s..." % (filename,))
+    if config['python']:
+        application = loadTAC(filename, passphrase):
+    else:
+        if config['xml']:
+            style = 'xml'
+        elif config['source']:
+            style = 'source'
+        elif config['file']:
+            style = 'pickle'
+        application = persist.load(filename, style, passphrase)
+    log.msg("Loaded.")
+    return application
 
 def installReactor(reactor):
     if reactor:
