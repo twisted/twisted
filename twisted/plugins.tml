@@ -33,7 +33,7 @@ register("Twisted Manhole",
          "twisted.conch.manhole_tap",
          description="An interactive remote debugger service.",
          type="tap",
-         name="newmanhole")
+         tapname="newmanhole")
 
 register("Twisted Port-Forwarding",
          "twisted.tap.portforward",
