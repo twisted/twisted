@@ -71,8 +71,6 @@ class ReactorBase:
     def callFromThread(self, callable, *args, **kw):
         """See twisted.internet.interfaces.IReactorCore.callFromThread.
         """
-        # apply(task.schedule, (callable,)+ args, kw)
-        #print self, 'calling "from thread"', callable, args, kw
         if threadable.isInIOThread():
             #print self, ' not in a thread'
             apply(self.callLater, (0, callable)+ args, kw)

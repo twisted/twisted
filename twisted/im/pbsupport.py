@@ -167,7 +167,7 @@ class TwistedWordsClient(pb.Referenceable, basesupport.AbstractClientMixin):
 
     def connected(self, perspective):
         print 'Connected Words Client!', perspective
-        self.chat.registerAccountClient(self)
+        self.registerAsAccountClient()
         self.perspective = perspective
         self.chat.getContactsList()
 

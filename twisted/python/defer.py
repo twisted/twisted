@@ -32,8 +32,8 @@ def logError(err):
     return err
 
 def _sched(m):
-    from twisted.internet import task
-    task.schedule(m)
+    from twisted.internet import reactor
+    reactor.callLater(0, m)
 
 def succeed(result):
     d = Deferred()

@@ -23,7 +23,6 @@ import time, struct
 
 # twisted import
 from twisted.protocols import protocol
-from twisted.internet import task
 
 
 class Echo(protocol.Protocol):
@@ -43,16 +42,19 @@ class Discard(protocol.Protocol):
 
 class Chargen(protocol.Protocol):
     """Generate repeating noise (RFC 864)"""
-    
+    noise = "abcdefghijklmnopqrstuvwxyz"
+
     def connectionMade(self):
-        self.makeData()
-    
-    def makeData(self):
-        self.transport.write("twistedzombies")
-        # schedule this function to be called
-        t = task.Task()
-        t.addWork(self.makeData)
-        task.schedule(t)
+        self.transport.registerProducer(self, 0)
+
+    def resumeProducing(self):
+        self.transport.write(self.noise)
+
+    def pauseProducing(self):
+        pass
+
+    def stopProducing(self):
+        pass
 
 
 class QOTD(protocol.Protocol):

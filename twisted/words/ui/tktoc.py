@@ -16,7 +16,7 @@
 
 from Tkinter import Tk,mainloop
 from twisted.spread.ui import tkutil
-from twisted.internet import tkinternet
+from twisted.internet import tksupport
 from twisted.words.ui import im2,tkim
 from twisted.words.ui.gateways import toc 
 from twisted.internet import reactor
@@ -40,7 +40,7 @@ def main():
     global im
     root=Tk()
     root.withdraw()
-    tkinternet.install(root)
+    tksupport.install(root)
     im=im2.InstanceMessenger()
     im.logging=1
     tkutil.GenericLogin(our_callback,[["Username","my_screen_name"],
@@ -48,6 +48,5 @@ def main():
                                       ["Server","toc.oscar.aol.com"],
                                       ["Port","9898"]])
     mainloop()
-    tkinternet.stop()
 
 if __name__=="__main__":main()

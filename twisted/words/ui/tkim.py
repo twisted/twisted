@@ -16,7 +16,7 @@
 from Tkinter import *
 import tkFileDialog
 import SimpleDialog
-from twisted.internet import tkinternet
+from twisted.internet import tksupport
 from twisted.spread.ui import tkutil, tktree
 from twisted.words.ui import im, gateways
 #from twisted.protocols import telnet
@@ -316,13 +316,6 @@ class ContactList(Toplevel):
     def close(self):
         self.tk.quit()
         self.destroy()
-
-    def reload(self):
-        m=sys.modules
-        for k,v in m.items():
-            if k not in ['twisted.internet.main','twisted.internet.tkinternet'] and v and k[:8]=='twisted.':
-                reload(v)
-                print 'reloaded %s'%k
 
     def addContact(self):
         AddContact(self.im)
@@ -918,7 +911,7 @@ def main():
     global imclient
     root=Tk()
     root.withdraw()
-    tkinternet.install(root)
+    tksupport.install(root)
     imclient=im.InstanceMessengerGUI(im.InstanceMessenger(),
             Conversation, ContactList, GroupSession, ErrorWindow)
 #    im.logging=1

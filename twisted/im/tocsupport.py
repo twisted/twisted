@@ -134,7 +134,7 @@ class TOCProto(basesupport.AbstractClientMixin, toc.TOCClient):
             print 'reregistering...?', data
             self.name=data[0]
             # self.accountName = "%s (TOC)"%data[0]
-            self.chat.registerAccountClient(self)
+            self.registerAsAccountClient()
 
     ### Error Messages
     def hearError(self, code, args):

@@ -7,7 +7,7 @@ from Zope.Publisher.HTTP.HTTPRequest import HTTPRequest
 from Zope.Publisher.HTTP.HTTPResponse import HTTPResponse
 
 from twisted.protocols import protocol, http
-from twisted.internet import task, threadtask, main
+from twisted.internet import reactor, threadtask, main
 from twisted.python import log
 
 
@@ -21,7 +21,7 @@ rename_headers = {
 class ZopeHTTPRequest(log.Logger, http.Request):
     
     def write(self, data):
-        task.schedule(http.Request.write, self, data)
+        reactor.callFromThread(http.Request.write, self, data)
     
     # methods for HTTPResponse
     def setResponseStatus(self, status, reason):

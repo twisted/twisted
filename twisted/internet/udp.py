@@ -34,7 +34,7 @@ from twisted.persisted import styles
 from twisted.python import log, defer
 
 # Sibling Imports
-import abstract, main, task
+import abstract, main
 
 
 class Connection(abstract.FileDescriptor,
@@ -215,7 +215,8 @@ class Port(abstract.FileDescriptor):
         """
         self.stopReading()
         if self.connected:
-            task.schedule(self.connectionLost)
+            from twisted.internet import reactor
+            reactor.callLater(0, self.connectionLost)
 
     def connectionLost(self):
         """Cleans up my socket.

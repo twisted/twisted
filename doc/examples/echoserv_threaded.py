@@ -25,10 +25,10 @@
 # import twisted.python.threadable and call threadable.init().  This prepares
 # Twisted to be used with threads.
 #
-# When you want to call a non thread-safe operation, you don't call it, but
-# instead you add the operation to the twisted.internet.task scheduler. The
-# main thread running the event loop will then read these tasks from the
-# scheduler and execute them.
+# When you want to call a non thread-safe operation, you don't call it
+# directly, but schedule it with twisted.internet.reactor.callFromThread. The
+# main thread running the event loop will then read these callble objects from
+# the scheduler and execute them.
 #
 # The following example server has a thread for each connections that does the
 # actual processing of the protocol, in this case echoing back all received
@@ -43,7 +43,7 @@ from twisted.python import threadable
 threadable.init()
 
 from twisted.protocols.protocol import Protocol, Factory
-from twisted.internet import task
+from twisted.internet import reactor
 
 ### Protocol Implementation
 
@@ -64,7 +64,7 @@ class Echo(Protocol):
         """Schedule data to be written in a thread-safe manner"""
         # instead of doing self.transport.write(data), which is not
         # thread safe, we do:
-        task.schedule(self.transport.write, data)
+        reactor.callFromThread(self.transport.write, data)
 
     def connectionLost(self):
         # tell thread to shutdown

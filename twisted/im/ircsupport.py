@@ -83,7 +83,7 @@ class IRCProto(basesupport.AbstractClientMixin, irc.IRCClient):
                 self.joinGroup(channel)
             self.account._isOnline=1
             print 'uh, registering irc acct'
-            self.chat.registerAccountClient(self)
+            self.registerAsAccountClient()
             self.chat.getContactsList()
         except:
             import traceback

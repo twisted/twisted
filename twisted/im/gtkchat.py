@@ -21,33 +21,6 @@ import gtk
 
 from twisted.im.gtkcommon import GLADE_FILE, autoConnectMethods, InputOutputWindow, openGlade
 
-##class GroupJoinWindow:
-##    def __init__(self, chatui):
-##        self.xml = openGlade(GLADE_FILE, root="JoinGroupWindow")
-##        self.widget = self.xml.get_widget("JoinGroupWindow")
-##        autoConnectMethods(self)
-##        om = self.xml.get_widget("AccountSelector")
-##        m = gtk.GtkMenu()
-##        om.set_menu(m)
-##        activ = 0
-##        for acct in chatui.onlineAccounts:
-##            print 'adding account to menu:',acct.accountName
-##            i = gtk.GtkMenuItem(acct.accountName)
-##            m.append(i)
-##            i.connect('activate', self.on_AccountSelectorMenu_activate, acct)
-##        if chatui.onlineAccounts:
-##            self.currentAccount = chatui.onlineAccounts[0]
-##        self.widget.show_all()
-
-##    def on_AccountSelectorMenu_activate(self, m, acct):
-##        self.currentAccount = acct
-
-##    def on_GroupJoinButton_clicked(self, b):
-##        name = self.xml.get_widget("GroupNameEntry").get_text()
-##        self.currentAccount.joinGroup(name)
-##        self.widget.destroy()
-
-
 class ContactsList:
     def __init__(self, chatui):
         self.xml = openGlade(GLADE_FILE, root="ContactsWidget")
