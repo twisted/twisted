@@ -13,6 +13,7 @@ Maintainer: U{Glyph Lefkowitz<mailto:glyph@twistedmatrix.com>}
 
 from __future__ import nested_scopes, generators
 import traceback
+import warnings
 
 # Twisted imports
 from twisted.python import log, failure
@@ -107,7 +108,6 @@ def maybeDeferred(f, *args, **kw):
     """
     deferred = None
     if isinstance(f, Deferred) or f is None:
-        import warnings
         warnings.warn("First argument to maybeDeferred() should no longer be a Deferred or None.  Just pass the function and the arguments.", DeprecationWarning, stacklevel=2)
         deferred = f or Deferred()
         f = args[0]
@@ -187,6 +187,10 @@ class Deferred:
             self.callbacks[-1] = cbs
         else:
             self.callbacks.append(cbs)
+        if asDefaults:
+            # what the heck is this crappy argument for?
+            warnings.warn("The 'asDefaults' argument will be going away soon. Has anyone ever actually used it?", DeprecationWarning, stacklevel=2)
+                
         self.default = asDefaults
         if self.called:
             self._runCallbacks()
@@ -344,7 +348,7 @@ class Deferred:
     def arm(self):
         """This method is deprecated.
         """
-        pass
+        warnings.warn("Deferred.arm is deprecated, and does nothing. You should stop calling it.", DeprecationWarning, stacklevel=2)
 
     def setTimeout(self, seconds, timeoutFunc=timeout, *args, **kw):
         """Set a timeout function to be triggered if I am not called.
@@ -372,10 +376,17 @@ class Deferred:
             lambda: self.called or timeoutFunc(self, *args, **kw))
         return self.timeoutCall
 
-    armAndErrback = errback
-    armAndCallback = callback
-    armAndChain = chainDeferred
+    def armAndErrback(self, fail=None):
+        warnings.warn("Deferred.armAndErrback is deprecated. You should be calling .errback instead.", DeprecationWarning, stacklevel=2)
+        return self.errback(fail)
 
+    def armAndCallback(self, result):
+        warnings.warn("Deferred.armAndErrback is deprecated. You should be calling .callback instead.", DeprecationWarning, stacklevel=2)
+        return self.callback(result)
+
+    def armAndChain(self, d):
+        warnings.warn("Deferred.armAndChain is deprecated. You should be calling .chainDeferred instead.", DeprecationWarning, stacklevel=2)
+        return self.chainDeferred(d)
 
     def __str__(self):
         cname = self.__class__.__name__
@@ -456,7 +467,6 @@ class DeferredList(Deferred):
 
     def addDeferred(self, deferred):
         """DEPRECATED"""
-        import warnings
         warnings.warn('DeferredList.addDeferred is deprecated.',
                       DeprecationWarning, stacklevel=2)
         self.resultList.append(None)
