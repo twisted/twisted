@@ -166,3 +166,7 @@ class TestFailureFormatting(common.RegistryBaseMixin, unittest.TestCase):
         
         common.stringComparison(expect, output)
 
+        # Clean up garbage left in sys.modules.  Without this, this test fails
+        # when run a second time.
+        del sys.modules['twisted.trial.test.importErrors']
+
