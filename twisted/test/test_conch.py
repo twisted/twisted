@@ -192,6 +192,7 @@ class SSHTestClient(SSHTestBase, transport.SSHClientTransport):
         self.requestService(SSHTestClientAuth('testuser',SSHTestConnection()))
 
 class SSHTestClientFactory(protocol.ClientFactory):
+    noisy = 0
 
     def buildProtocol(self, addr):
         self.client = SSHTestClient()
@@ -207,13 +208,14 @@ class SSHTestConnection:
     name = 'ssh-connection'
 
     def serviceStarted(self):
-        #self.transport.expectedLostConnection = 1
+        self.transport.expectedLoseConnection = 1
         if not hasattr(self.transport, 'factory'):
             # make the client end the connection
             global theTest
             reactor.crash()
 
 class SSHTestFactory(factory.SSHFactory):
+    noisy = 0
 
     services = {
         'ssh-userauth':SSHTestServerAuth,
