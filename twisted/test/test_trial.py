@@ -319,5 +319,28 @@ class UtilityTestCase(unittest.TestCase):
         self.failUnless(os.path.exists(exp))
         self.failUnless(os.path.isdir(exp))
 
-        
 
+# this class is here to demonstrate a use case in trial. It will always
+# fail, therefore it is turned off. The way it fails is enlightening,
+# however.
+
+if False:
+    class DemoTest(unittest.TestCase):
+        def setUp(self):
+            self.finished = False
+
+        def go(self):
+            if True:
+                raise RuntimeError("something blew up")
+            self.finished = True
+
+        def testHiddenException(self):
+            import time
+            from twisted.internet import reactor
+            reactor.callLater(0.5, self.go)
+            timeout = time.time() + 2
+            while not (self.finished or time.time() > timeout):
+                reactor.iterate(0.1)
+            # note that this assertion fails, but the RuntimeError which is
+            # the root cause is not displayed
+            self.failUnless(self.finished)
