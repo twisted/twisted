@@ -197,13 +197,14 @@ class Logger:
     def log(self,bytes):
         if not bytes: return
         written = self.written
+        pfx = self.__prefix()
         if bytes[-1]=='\n':
             self.written = self.written+1
-            bytes = string.replace(bytes[:-1],'\n','\n'+self.__prefix())+'\n'
+            bytes = bytes[:-1].replace('\n','\n'+pfx)+'\n'
         else:
-            bytes = string.replace(bytes,'\n','\n'+self.__prefix())
+            bytes = bytes.replace('\n','\n'+pfx)
         if written:
-            bytes = self.__prefix()+bytes
+            bytes = pfx+bytes
             self.written = self.written-1
         # TODO: make this cache everything after the last newline so
         # that multiple threads using "print x, y" style logging get x
