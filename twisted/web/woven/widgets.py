@@ -297,9 +297,10 @@ class Widget(view.View):
         # shot in the dark: this seems to make *my* code work.  probably will
         # break if returnNode returns a Deferred, as it's supposed to be able
         # to do -glyph
-        self.viewStack.push(self)
-        self.controller.controllerStack.push(self.controller)
+#        self.viewStack.push(self)
+#        self.controller.controllerStack.push(self.controller)
         self.handleNewNode(request, returnNode)
+        self.handleOutstanding(request)
         self.controller.domChanged(request, returnNode)
 
     def __setitem__(self, item, value):

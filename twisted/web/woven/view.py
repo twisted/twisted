@@ -17,25 +17,52 @@
 
 from __future__ import nested_scopes
 
-__version__ = "$Revision: 1.57 $"[11:-2]
+__version__ = "$Revision: 1.58 $"[11:-2]
 
 # Sibling imports
 import interfaces
 import template
 import utils
 import controller
-from utils import doSendPage, Stack
+from utils import doSendPage
 import model
 
 # Twisted imports
 from twisted.internet import defer
 from twisted.python import components
 from twisted.python import log
-from twisted.web import resource, microdom
+from twisted.web import resource, microdom, html
+from twisted.web.server import NOT_DONE_YET
 
 
+import os
+import sys
+import stat
 import warnings
 import types
+
+
+def peek(stack):
+    if stack is None:
+        return None
+    it = None
+    while it is None and stack is not None:
+        it, stack = stack
+    return it
+
+
+def poke(stack, new):
+    it, stack = stack
+    return (new, stack)
+
+
+def filterStack(stack):
+    returnVal = []
+    while stack is not None:
+        it, stack = stack
+        if it is not None:
+            returnVal.append(it)
+    return returnVal
 
 
 NO_DATA_YET = 2
@@ -48,15 +75,18 @@ def viewMethod(viewClass):
     return lambda self, request, node, model: viewClass(model)
 
 
-class View(template.DOMTemplate):
+class View:
 
-    __implements__ = (template.DOMTemplate.__implements__, interfaces.IView)
+    __implements__ = (resource.IResource, interfaces.IView)
     # wvfactory_xxx method signature: request, node, model; returns Widget
     # wvupdate_xxx method signature: request, widget, data; mutates widget 
     #    based on data (not necessarily an IModel; 
     #    has been unwrapped at this point)
 
     wantsAllNotifications = 0
+    templateFile = ''
+    templateDirectory = ''
+    template = ''
 
     viewLibraries = []
     setupStacks = 1
@@ -73,27 +103,41 @@ class View(template.DOMTemplate):
         self.controller = None
         self.subviews = {}
         if self.setupStacks:
-            self.model.modelStack = Stack([self.model])
-            self.setupViewStack()
+            self.modelStack = None
+            self.viewStack = None
+            self.controllerStack = None
             if doneCallback is None:
                 self.doneCallback = doSendPage
             else:
                 self.doneCallback = doneCallback
+        if templateFile:
+            self.templateFile = templateFile
+
+        self.outstandingCallbacks = 0
+        self.outstandingNodes = []
+        self.failed = 0
         self.setupMethods = []
-        template.DOMTemplate.__init__(self, templateFile=templateFile)
+
+    def setupAllStacks(self):
+        self.modelStack = (self.model, None)
+        self.controllerStack = (self.controller, None)
+        self.setupViewStack()
+        
+    def setUp(self, request, d):
+        pass
 
     def setupViewStack(self):
-        self.viewStack = Stack([])
+        self.viewStack = None
         if widgets not in self.viewLibraries:
             self.viewLibraries.append(widgets)
         for library in self.viewLibraries:
             self.importViewLibrary(library)
-        self.viewStack.push(self)
+        self.viewStack = (self, self.viewStack)
 
     def importViewLibrary(self, namespace):
         if not hasattr(namespace, 'getSubview'):
             namespace.getSubview = utils.createGetFunction(namespace)
-        self.viewStack.push(namespace)
+        self.viewStack = (namespace, self.viewStack)
         return self
 
     def render(self, request, doneCallback=None):
@@ -105,11 +149,134 @@ class View(template.DOMTemplate):
             self.doneCallback = doneCallback
         else:
             self.doneCallback = doSendPage
-        return template.DOMTemplate.render(self, request)
+        self.setupAllStacks()
+        template = self.getTemplate(request)
+        if template:
+            self.d = microdom.parseString(template)
+        else:
+            if not self.templateFile:
+                raise AttributeError, "%s does not define self.templateFile to operate on" % self.__class__
+            self.d = self.lookupTemplate(request)
+        request.d = self.d
+        self.handleDocument(request, self.d)
+        return NOT_DONE_YET
+
+    def getTemplate(self, request):
+        """
+        Override this if you want to have your subclass look up its template
+        using a different method.
+        """
+        return self.template
+
+    def lookupTemplate(self, request):
+        """
+        Use acquisition to look up the template named by self.templateFile,
+        located anywhere above this object in the heirarchy, and use it
+        as the template. The first time the template is used it is cached
+        for speed.
+        """
+        if self.template:
+            return microdom.parseString(self.template)
+        if not self.templateDirectory:
+            mod = sys.modules[self.__module__]
+            if hasattr(mod, '__file__'):
+                self.templateDirectory = os.path.split(mod.__file__)[0]
+        # First see if templateDirectory + templateFile is a file
+        templatePath = os.path.join(self.templateDirectory, self.templateFile)
+        if not os.path.exists(templatePath):
+            templatePath = None
+        if not templatePath:
+            # If not, use acquisition to look for the name above this object
+            # look up an object named by our template data member
+            templateRef = request.pathRef().locate(self.templateFile)
+            # Build a reference to the template on disk
+            self.templateDirectory = templateRef.parentRef().getObject().path
+            templatePath = os.path.join(self.templateDirectory, self.templateFile)
+        # Check to see if there is an already compiled copy of it
+        templateName = os.path.splitext(self.templateFile)[0]
+        compiledTemplateName = '.' + templateName + '.pxp'
+        compiledTemplatePath = os.path.join(self.templateDirectory, compiledTemplateName)
+        # No? Compile and save it
+        if (not os.path.exists(compiledTemplatePath) or
+        os.stat(compiledTemplatePath)[stat.ST_MTIME] < os.stat(templatePath)[stat.ST_MTIME]):
+            compiledTemplate = microdom.parse(templatePath)
+            from cPickle import dump
+            dump(compiledTemplate, open(compiledTemplatePath, 'wb'), 1)
+#            parent = templateRef.parentRef().getObject()
+#            parent.savePickleChild(compiledTemplatePath, compiledTemplate)
+        else:
+            from cPickle import load
+            compiledTemplate = load(open(compiledTemplatePath, "rb"))
+        return compiledTemplate
+
+    def handleDocument(self, request, document):
+        """Handle the root node, and send the page if there are no
+        outstanding callbacks when it returns.
+        """
+        try:
+            request.d = document
+            self.setUp(request, document)
+            # Don't let outstandingCallbacks get to 0 until the
+            # entire tree has been recursed
+            # If you don't do this, and any callback has already
+            # completed by the time the dispatchResultCallback
+            # is added in dispachResult, then sendPage will be
+            # called prematurely within dispatchResultCallback
+            # resulting in much gnashing of teeth.
+            self.outstandingNodes = document.childNodes[:] + [1]
+
+            self.outstandingCallbacks += 1
+            self.handleOutstanding(request)
+            self.outstandingCallbacks -= 1
+            if not self.outstandingCallbacks:
+                return self.sendPage(request)
+        except:
+            self.renderFailure(None, request)
+
+    def handleOutstanding(self, request):
+        while self.outstandingNodes:
+            node = self.outstandingNodes.pop(0)
+            if node is 1:
+                self.modelStack = self.modelStack[1]
+                self.viewStack = self.viewStack[1]
+                if self.controllerStack is not None:
+                    self.controllerStack = self.controllerStack[1]
+            if (hasattr(node, 'getAttribute') and 
+            (node.getAttribute('model') or node.getAttribute('view') or node.getAttribute('controller'))):
+                self.outstandingNodes.insert(0, 1)
+                self.handleNode(request, node)
+            else:
+                if hasattr(node, 'childNodes') and node.childNodes:
+                    self.recurseChildren(request, node)
+        
+    def recurseChildren(self, request, node):
+        """If this node has children, handle them.
+        """
+        self.outstandingNodes = node.childNodes + self.outstandingNodes
+
+    def dispatchResult(self, request, node, result):
+        """Check a given result from handling a node and look up a NodeMutator
+        adapter which will convert the result into a node and insert it
+        into the DOM tree. Return the new node.
+        """
+        if not isinstance(result, defer.Deferred):
+            adapter = components.getAdapter(result, template.INodeMutator, None, components.getAdapterClassWithInheritance)
+            if adapter is None:
+                raise NotImplementedError(
+                    "Your factory method returned %s, but there is no "
+                    "INodeMutator adapter registerred for %s." %
+                    (result, getattr(result, "__class__",
+                                     None) or type(result)))
+            result = adapter.generate(request, node)
+        if isinstance(result, defer.Deferred):
+            self.outstandingCallbacks += 1
+            result.addCallback(self.dispatchResultCallback, request, node)
+            result.addErrback(self.renderFailure, request)
+            # Got to wait until the callback comes in
+        return result
 
     def modelChanged(self, changed):
-        """
-        Dispatch changed messages to any update_* methods which
+        """Dispatch changed messages to any update_* methods which
         may have been defined, then pass the update notification on
         to the controller.
         """
@@ -122,10 +289,11 @@ class View(template.DOMTemplate):
         """Allow a view to be used like a widget. Will look up the template
         file and return it in place of the incoming node.
         """
-        return self.lookupTemplate(request)
+        return self.lookupTemplate(request).childNodes[0]
 
     def setController(self, controller):
         self.controller = controller
+        self.controllerStack = (controller, self.controllerStack)
 
     def setNode(self, node):
         self.node = node
@@ -142,9 +310,11 @@ class View(template.DOMTemplate):
         parent = None
         if submodel:
             if submodel == '.':
-                m = self.model.modelStack.peek()
+                m = peek(self.modelStack)
             else:
-                for parent in self.model.modelStack:
+                modelStack = self.modelStack
+                while modelStack is not None:
+                    parent, modelStack = modelStack
                     if parent is None:
                         continue
                     m = parent.lookupSubmodel(submodel)
@@ -155,10 +325,10 @@ class View(template.DOMTemplate):
                     raise Exception("Node had a model=%s "
                                   "attribute, but the submodel was not "
                                   "found in %s." % (submodel,
-                                  filter(lambda x: x, self.model.modelStack.stack)))
+                                  filterStack(self.modelStack)))
         else:
             m = None
-        self.model.modelStack.push(m)
+        self.modelStack = (m, self.modelStack)
         if m:
 #            print "M NAME", m.name
 #             if parent is not m:
@@ -168,7 +338,7 @@ class View(template.DOMTemplate):
             return m
         #print `submodel`, self.getTopOfModelStack()
         if submodel:
-            return self.model.modelStack.peek()
+            return peek(self.modelStack)
         return None
 
     def getNodeController(self, request, node, submodel, model):
@@ -181,14 +351,16 @@ class View(template.DOMTemplate):
         controller = None
 
         if model is None:
-            model = self.model.modelStack.peek()
+            model = peek(self.modelStack)
 
         # Look up a controller factory.
         if controllerName:
             if not node.hasAttribute('name'):
                 warnings.warn("POTENTIAL ERROR: %s had a controller, but not a "
                               "'name' attribute." % node)
-            for namespace in self.controller.controllerStack:
+            controllerStack = self.controllerStack
+            while controllerStack is not None:
+                namespace, controllerStack = controllerStack
                 if namespace is None:
                     continue
                 controller = namespace.getSubcontroller(request, node, model, controllerName)
@@ -199,7 +371,7 @@ class View(template.DOMTemplate):
                                           "a node, but no wcfactory_%s method "
                                           "was found in %s." % (controllerName,
                                         controllerName,
-                                        filter(lambda x: x, self.controller.controllerStack.stack)
+                                        filterStack(self.controllerStack)
                                         ))
         elif node.getAttribute("model"):
             # If no "controller" attribute was specified on the node, see if
@@ -251,11 +423,13 @@ class View(template.DOMTemplate):
         viewName = node.getAttribute('view')
 
         if model is None:
-            model = self.model.modelStack.peek()
+            model = peek(self.modelStack)
 
         # Look up a view factory.
         if viewName:
-            for namespace in self.viewStack:
+            viewStack = self.viewStack
+            while viewStack is not None:
+                namespace, viewStack = viewStack
                 if namespace is None:
                     continue
                 try:
@@ -278,7 +452,7 @@ class View(template.DOMTemplate):
                     "wvfactory_%s method was found in %s.  (Or maybe they were"
                     "found but they returned None.)" % (
                     viewName, node, viewName,
-                    filter(lambda x: x,self.viewStack.stack)))
+                    filterStack(self.viewStack)))
         elif node.getAttribute("model"):
             # If no "view" attribute was specified on the node, see if there
             # is a IView adapter registerred for the model.
@@ -294,46 +468,24 @@ class View(template.DOMTemplate):
         return view
 
     def handleNode(self, request, node):
-        if not hasattr(node, 'getAttribute'): # text node?
-            return node
-
         submodelName = node.getAttribute('model')
         if submodelName is None:
             submodelName = ""
         model = self.getNodeModel(request, node, submodelName)
-        if isinstance(model, defer.Deferred):
-            model.addCallback(self.handleModelLater,
-                              request, node, submodelName)
-            self.outstandingCallbacks += 1
-        else:
-            self.handleModel(model, request, node, submodelName)
-
-    def handleModelLater(self, model, request, node, submodelName):
-        self.outstandingCallbacks -= 1
-        self.handleModel(model, request, node, submodelName)
-        if not self.outstandingCallbacks:
-            self.sendPage(request)
-        return model
-
-    def handleModel(self, model, request, node, submodelName):
         view = self.getNodeView(request, node, submodelName, model)
         controller = self.getNodeController(request, node, submodelName, model)
         if view or controller:
             if model is None:
-                model = self.model.modelStack.peek()
+                model = peek(self.modelStack)
             if not view or not isinstance(view, View):
-                view = widgets.DefaultWidget(model, viewStack = self.viewStack.clone())
-            else:
-                view.viewStack = self.viewStack.clone()
+                view = widgets.DefaultWidget(model)
+
             if not controller:
-                controller = input.DefaultHandler(model, controllerStack = self.controller.controllerStack.clone())
-            else:
-                controller.controllerStack = self.controller.controllerStack.clone()
-            controller.parent = self.controller.controllerStack.peek()
+                controller = input.DefaultHandler(model)
 
             if not isinstance(view, widgets.DefaultWidget):
                 model.addView(view)
-            submodelList = [x.name for x in self.model.modelStack.stack if x is not None and x.name]
+            submodelList = [x.name for x in filterStack(self.modelStack) if x.name]
             submodelList.reverse()
             submodelName = '/'.join(submodelList)
             if not getattr(view, 'submodel', None):
@@ -341,37 +493,46 @@ class View(template.DOMTemplate):
 
             theId = node.getAttribute("id")
             if not theId:
-                theId = "woven_id_" + str(request.currentId)
-                request.currentId += 1
+                curId = getattr(request, 'currentId', 0)
+                theId = "woven_id_" + str(curId)
+                request.currentId = curId + 1
                 view.setupMethods.append(utils.createSetIdFunction(theId))
                 #print "SET AN ID", theId
             self.subviews[theId] = view
-            view.parent = self.viewStack.peek()
+            view.parent = peek(self.viewStack)
             # If a Widget was constructed directly with a model that so far
             # is not in modelspace, we should put it on the stack so other
             # Widgets below this one can find it.
-            if view.model is not self.model.modelStack.peek():
-                self.model.modelStack.poke(view.model)
+            if view.model is not peek(self.modelStack):
+                self.modelStack = poke(self.modelStack, view.model)
 
-            model.modelStack = self.model.modelStack.clone()
+            cParent = peek(self.controllerStack)
+            if controller._parent is None or cParent != controller:
+                controller._parent = cParent
+
+            self.controllerStack = (controller, self.controllerStack)
+            self.viewStack = (view, self.viewStack)
+
+            view.viewStack = self.viewStack
+            view.controllerStack = self.controllerStack
+            view.modelStack = self.modelStack
 
             view.setController(controller)
             view.setNode(node)
 
             if not getattr(controller, 'submodel', None):
                 controller.setSubmodel(submodelName)
-            # xxx refactor this into a widget interface and check to see if the object implements IWidget
-            # the view may be a deferred; this is why this check is required
+
             controller.setView(view)
-            cParent = self.controller.controllerStack.peek()
-            if controller._parent is None or cParent != controller:
-                controller._parent = cParent
+
             controllerResult = controller.handle(request)
+            controllerResult = (None, None)
         else:
+            self.controllerStack = (controller, self.controllerStack)
+            self.viewStack = (view, self.viewStack)
+
             controllerResult = (None, None)
 
-        self.controller.controllerStack.push(controller)
-        self.viewStack.push(view)
         self.outstandingCallbacks += 1
         self.handleControllerResults(controllerResult, request, node,
                                     controller, view, NO_DATA_YET)
@@ -401,9 +562,9 @@ class View(template.DOMTemplate):
     def handleNewNode(self, request, returnNode):
         if not isinstance(returnNode, defer.Deferred):
             self.recurseChildren(request, returnNode)
-            self.model.modelStack.pop()
-            self.viewStack.pop()
-            self.controller.controllerStack.pop()
+        else:
+            # TODO: Handle deferreds here.
+            pass
 
     def sendPage(self, request):
         """
@@ -425,6 +586,40 @@ class View(template.DOMTemplate):
         self.model.removeView(self)
         for key, value in self.subviews.items():
             value.model.removeView(value)
+
+    def dispatchResultCallback(self, result, request, node):
+        """Deal with a callback from a deferred, dispatching the result
+        and recursing children.
+        """
+        self.outstandingCallbacks -= 1
+        node = self.dispatchResult(request, node, result)
+        self.recurseChildren(request, node)
+        if not self.outstandingCallbacks:
+            return self.sendPage(request)
+
+    def renderFailure(self, failure, request):
+        try:
+            xml = request.d.toxml()
+        except:
+            xml = ""
+#         if not hasattr(request, 'channel'):
+#             log.msg("The request got away from me before I could render an error page.")
+#             log.err(failure)
+#             return failure
+        if not self.failed:
+            self.failed = 1
+            if failure:
+                request.write("<html><head><title>%s: %s</title></head><body>\n" % (html.escape(str(failure.type)), html.escape(str(failure.value))))
+            else:
+                request.write("<html><head><title>Failure!</title></head><body>\n")
+            utils.renderFailure(failure, request)
+            request.write("<h3>Here is the partially processed DOM:</h3>")
+            request.write("\n<pre>\n")
+            request.write(html.escape(xml))
+            request.write("\n</pre>\n")
+            request.write("</body></html>")
+            request.finish()
+        return failure
 
 
 class LiveView(View):

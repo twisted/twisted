@@ -17,7 +17,7 @@
 
 from __future__ import nested_scopes
 
-__version__ = "$Revision: 1.31 $"[11:-2]
+__version__ = "$Revision: 1.32 $"[11:-2]
 
 import os
 import cgi
@@ -71,6 +71,7 @@ class Controller(resource.Resource):
         self._valid = {}
         self._invalid = {}
         self._process = {}
+        self._parent = None
 
     def setupControllerStack(self):
         self.controllerStack = utils.Stack([])

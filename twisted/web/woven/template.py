@@ -113,8 +113,6 @@ class NodeNodeMutator(NodeMutator):
 
     def generate(self, request, node):
         if self.data is not node:
-            if hasattr(request.d, 'importNode'):
-                self.data = request.d.importNode(self.data, 1)
             parent = node.parentNode
             if parent:
                 parent.replaceChild(self.data, node)
