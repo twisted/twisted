@@ -5,7 +5,7 @@
     
     <body>
       <h1>Twisted Coding Standard</h1>
-      <h3>Naming</h3>
+      <h2>Naming</h2>
       <p>
         Try to choose names which are both easy to remember and meaningful.
         Some silliness is OK at the module naming level (see twisted.spread...)
@@ -20,7 +20,7 @@
         and "component" don't really indicate what something does, only that it
         does <b>something</b>.
       </p>
-      <h3>Testing</h3>
+      <h2>Testing</h2>
       <p>
         Unit tests are written using the PyUnit framework.  Many examples are
         in the twisted.test package, and all tests should be integrated through
@@ -30,13 +30,13 @@
         Acceptance tests are all automated by the bin/accepttests script
         currently.  (TODO: real acceptance tests strategy!)
       </p>
-      <h3>Whitespace</h3>
+      <h2>Whitespace</h2>
       <p>
         Indentation is 4 spaces per indent.  Tabs are not allowed.  It is
         preferred that every block appear on a new line, so that control
         structure indentation is always visible.
       </p>
-      <h3>Modules</h3>
+      <h2>Modules</h2>
       <p>
         Modules must be named in all lower-case, preferably short, single
         words.  If a module name contains multiple words, they may be separated
@@ -87,7 +87,7 @@ but instead like this::
           </pre>
         </blockquote>
       </p>
-      <h3>Packages</h3>
+      <h2>Packages</h2>
       <p>
         Package names should follow the same conventions as module names.  All
         modules must be encapsulated in some package.  Nested packages may be
@@ -118,7 +118,7 @@ parent.Foo = Foo
 </pre>
       </p>
       
-      <h3>Docstrings</h3>
+      <h2>Docstrings</h2>
       <p>
         Wherever possible, docstrings should be used to describe the purpose of
         methods, functions, classes, and modules.  In cases where it's
@@ -187,7 +187,7 @@ def foo2bar(f):
         </pre>
       </p>
       
-      <h3>Classes</h3>
+      <h2>Classes</h2>
       <p>
         Classes are to be named in mixed case, with the first letter
         capitalized; each word separated by having its first letter
@@ -209,7 +209,7 @@ def foo2bar(f):
         directly into the user's namespace and not cause confusion.
       </p>
 
-      <h3>Methods</h3>
+      <h2>Methods</h2>
       <p>
         Methods should be in mixed case, with the first letter lower case, each
         word separated by having its first letter capitalized.  For example,
@@ -224,11 +224,11 @@ def foo2bar(f):
         code are therefore expected to have some semantic associated with them.
       </p>
       
-      <h3>Functions</h3>
+      <h2>Functions</h2>
       <p>
         Functions should be named similiarly to methods.
       </p>
-      <h3>Attributes</h3>
+      <h2>Attributes</h2>
       <p>
         Attributes should be named similarly to functions and methods.
         Attributes should be named descriptively; attribute names like
@@ -260,7 +260,7 @@ def foo2bar(f):
           will certainly be removed in a future release.</li>
         </ul>
       </p>
-      <h3>Database</h3>
+      <h2>Database</h2>
       <p>
         Database tables will be named with plural nouns.
       </p>
@@ -277,7 +277,7 @@ def foo2bar(f):
       <p>
         All SQL keywords should be in upper case.
       </p>
-      <h3>C Code</h3>
+      <h2>C Code</h2>
       <p>
         Wherever possible, C code should be optional, and the default python
         implementation should be maintained in tandem with it.  C code should
@@ -292,7 +292,7 @@ def foo2bar(f):
         separate, external bindings package and make your twisted code depend
         on it.
       </p>
-      <h3>Recommendations</h3>
+      <h2>Recommendations</h2>
       <p>
         These things aren't necessarily standardizeable (in that code can't be
         easily checked for compliance) but are a good idea to keep in mind
@@ -314,11 +314,11 @@ def foo2bar(f):
         function, class, method, or module, make sure that it won't instantly
         break other code.
       </p>
-    <hr>
+    <hr />
     <address><a href="mailto:glyph@helix.twistedmatrix.com">Glyph Lefkowitz</a></address>
 <!-- Created: Thu Apr 26 07:53:26 CDT 2001 -->
 <!-- hhmts start -->
-Last modified: Fri Jan 25 18:04:28 CST 2002
+Last modified: Tue Mar 12 22:03:28 EST 2002
 <!-- hhmts end -->
   </body>
 </html>

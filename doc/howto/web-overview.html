@@ -19,7 +19,7 @@ system. There is also the Resource system, which Web Widgets is built on.
     <h2>Twisted Web's Structure</h2>
     <p>
 <table border=0>
-<tr><td><img src="../img/web-overview.png" align="left">
+<tr><td><img src="../img/web-overview.png" align="left" />
 When the Web Server receives a request from a Client, it creates a Request
 object and passes it on to the Resource system. The Resource system dispatches
 to the appropriate Resource object based on what path was requested by the
@@ -36,12 +36,12 @@ server. Each Resource is a 1:1 mapping with a path that is requested: you can
 think of a Resource as a single "page" to be rendered. The interface for making
 Resources is very simple; they must have a method named <code>render</code>
 which takes a single argument, which is the Request object (an instance of
-<code>twisted.web.server.Request</code>). This render method must return a
+<code class="API">twisted.web.server.Request</code>). This render method must return a
 string, which will be returned to the web browser making the
 request. Alternatively, they can return a special constant,
-<code>twisted.web.server.NOT_DONE_YET</code>, which tells the web server not to
-close the connection; you must then use <code>request.write(data)</code> to
-render the page, and call <code>request.finish()</code> whenever you're
+<code class="API">twisted.web.server.NOT_DONE_YET</code>, which tells the web server not to
+close the connection; you must then use <code class="python">request.write(data)</code> to
+render the page, and call <code class="python">request.finish()</code> whenever you're
 done. There is more information about developing software with Resources in the
 <a href="resources.html">Resources, CGIs, Static Content, and Linking</a>
 document.
@@ -55,7 +55,10 @@ nicer for most sorts of web applications. For more information on Widgets, see
 <a href="widgets.html">Introducing Web Widgets</a>.
 </p>
 
-    <hr>
+    <hr />
     <address><a href="mailto:chris@twistedmatrix.com">Christopher Armstrong</a></address>
+<!-- hhmts start -->
+Last modified: Tue Mar 12 22:47:46 EST 2002
+<!-- hhmts end -->
   </body>
 </html>

@@ -610,9 +610,9 @@ usage_message = """
 usage: mktap stupid [OPTIONS]
 
 Options are as follows:
-        --port <#>, -p:         set the port number to <#>.
-        --host <host>, -h:      set the host to <host>
-        --dest_port <#>, -d:    set the destination port to <#>
+        --port &lt;#&gt;, -p:         set the port number to &lt;#&gt;.
+        --host &lt;host&gt;, -h:      set the host to &lt;host&gt;
+        --dest_port &lt;#&gt;, -d:    set the destination port to &lt;#&gt;
 """
 
 class Options(usage.Options):
@@ -642,7 +642,7 @@ Package Manager or the FreeBSD package management systems.
 <BLOCKQUOTE>
 <PRE>
 % mktap --uid 33 --gid 33 web --static /var/www --port 80
-% tap2deb -t web.tap -m 'Moshe Zadka <moshez@debian.org>'
+% tap2deb -t web.tap -m 'Moshe Zadka &lt;moshez@debian.org&gt;'
 % su
 password:
 # dpkg -i .build/twisted-web_1.0_all.deb
@@ -842,7 +842,6 @@ having a <CODE>Protocol</CODE> implementation translate between sequences of
 bytes and specifically named methods (as in the other Twisted
 <CODE>Protocols</CODE>), Perspective Broker defines a direct mapping between
 network messages and quasi-arbitrary method calls.
-</CODE>
 </P>
 
 <H3>Translucent, not Transparent</H3>

@@ -23,7 +23,7 @@ to start the server on localhost:8080. Please read the code (comments) before ge
 
 <h2>The Diagram</h2>
 <p>
-<img src="../img/web-widgets.png">
+<img src="../img/web-widgets.png" />
 </p>
 
 <h2>The Classes</h2> 
@@ -31,22 +31,22 @@ to start the server on localhost:8080. Please read the code (comments) before ge
 
 <p>
 A collection of widgets, like a "directory" of HTML files. You add widgets
-to it with <code>self.putWidget("name", WidgetInstance())</code>. This widget will be
+to it with <code class="python">self.putWidget("name", WidgetInstance())</code>. This widget will be
 rendered inside the Gadget-local page. Also, if you make a Gadget that is also
 a subclass of "Widget", then whenever the "index" (http://foo.com/foo/, "foo"
 being the Gadget/Widget resource) is requested, the object will be rendered as
 a Widget inside of the Gadget-local page factory. The Gadget-local page factory
-is the '<code>pageFactory</code>' attribute of the gadget, which should be a class that
+is the '<code class="python">pageFactory</code>' attribute of the gadget, which should be a class that
 takes a widget in it's constructor, and displays that Widget in some form. So
 in your __init__ method for your Gadget subclass, do 
-<code>self.pageFactory = SomeWidgetPageSubclass</code> (see "WidgetPage" below) (note that it is _not_ an
+<code class="python">self.pageFactory = SomeWidgetPageSubclass</code> (see "WidgetPage" below) (note that it is _not_ an
 instance, but the actual class object).  
 </p>
 
 <h3>Widget</h3>
 <p>
 
-A Widget is simply something that is renderable, through its <code>display()</code>
+A Widget is simply something that is renderable, through its <code class="python">display()</code>
 method. This method is expected to return a list of HTML strings. (it can also
 contain instances of defer.Deferred -- but this is another story).
 </p>
@@ -61,7 +61,7 @@ something like:
 </p>
 
 <p>
-<code>template = ''' &lt;html&gt;&lt;head&gt;&lt;title&gt;%%%%self.title%%%%&lt;/title&gt;&lt;/head&gt; &lt;body&gt;%%%%self.getContent(request)%%%%&lt;/body&gt;&lt;/html&gt; '''</code>
+<code class="python">template = ''' &lt;html&gt;&lt;head&gt;&lt;title&gt;%%%%self.title%%%%&lt;/title&gt;&lt;/head&gt; &lt;body&gt;%%%%self.getContent(request)%%%%&lt;/body&gt;&lt;/html&gt; '''</code>
 </p>
 
 <p>
@@ -75,8 +75,8 @@ As you can see, Python expressions are denoted with surrounding sets of 4
 
 A WidgetPage is a special Page/Presentation combination that allows you to pass
 a Widget object to its constructor. The most common use of this class is for
-subclassing; you should have a subclass that defines a custom '<code>template</code>'
-attribute. WidgetPage stores the widget you pass to it in it's '<code>widget</code>'
+subclassing; you should have a subclass that defines a custom '<code class="python">template</code>'
+attribute. WidgetPage stores the widget you pass to it in it's '<code class="python">widget</code>'
 attribute, so remember that whenever you're making a customized template, use
 <code>%%%%self.widget%%%%</code> to access it (see "Common Pitfalls: WidgetPage" below).
 
@@ -87,13 +87,13 @@ attribute, so remember that whenever you're making a customized template, use
 <h2>WidgetPage</h2>
 
 <p>
-If you have a subclass of <code>widgets.WidgetPage</code> , make sure your template accesses
-the widget it's displaying with the '<code>self.widget</code>' object. For example, if you
+If you have a subclass of <code class="API">widgets.WidgetPage</code> , make sure your template accesses
+the widget it's displaying with the '<code class="python">self.widget</code>' object. For example, if you
 want to get the title from the current widget you're displaying:
 </p>
 
 <p>
-<code>template = '''&lt;html&gt;&lt;head&gt;&lt;title&gt;%%%%self.widget.title%%%%&lt;/title&gt;&lt;/head&gt;&lt;/html&gt;'''</code>
+<code class="python">template = '''&lt;html&gt;&lt;head&gt;&lt;title&gt;%%%%self.widget.title%%%%&lt;/title&gt;&lt;/head&gt;&lt;/html&gt;'''</code>
 </p>
 
 <p>
@@ -101,7 +101,7 @@ instead of:
 </p>
 
 <p>
-<code>template = '''&lt;html&gt;&lt;head&gt;&lt;title&gt;%%%%title%%%%&lt;/title&gt;&lt;/head&gt;&lt;/html&gt;'''</code>
+<code class="python">template = '''&lt;html&gt;&lt;head&gt;&lt;title&gt;%%%%title%%%%&lt;/title&gt;&lt;/head&gt;&lt;/html&gt;'''</code>
 </p>
 
 <h2>Adding Widgets to a Gadget</h2>
@@ -109,12 +109,12 @@ instead of:
 <p>
 
 I had some code like this in one of my Gadgets: 
-<code>self.putWidget("Foo", widgets.TitleBox(MyWidget()))</code>. Later whenever trying to access this widget I
+<code class="python">self.putWidget("Foo", widgets.TitleBox(MyWidget()))</code>. Later whenever trying to access this widget I
 got this traceback:
 </p>
 
 <p>
-<pre>
+<pre class="python">
 Traceback evaluating code in twisted.words.webwords.Page:Traceback (most recent call last): 
   File "/usr/lib/python2.1/site-packages/twisted/web/widgets.py", line 86, in display 
     x = eval(elem, namespace, namespace) 
@@ -126,11 +126,11 @@ AttributeError: TitleBox instance has no attribute 'getHeader'
 <p>
 
 Now remember, widgets that you add to a gadget with putWidget are rendered
-with self.pageFactory like so: <code>self.pageFactory(theChildWidget)</code>. The problem is,
+with self.pageFactory like so: <code class="python">self.pageFactory(theChildWidget)</code>. The problem is,
 theChildWidget in this case was actually TitleBox! and of course, TitleBox
-doesn't follow our template's protocol of having a '<code>getHeader</code>' method. So, the
+doesn't follow our template's protocol of having a '<code class="python">getHeader</code>' method. So, the
 lesson is: do not wrap your real widgets with other widgets when adding to a
-Gadget: do formatting either in a) the template or b) the widget's <code>display()</code>
+Gadget: do formatting either in a) the template or b) the widget's <code class="python">display()</code>
 method.
 </p>
 
@@ -141,7 +141,7 @@ If you ever get this traceback:
 </p>
 
 <p>
-<pre>
+<pre class="python">
 web.Server Traceback 
  
 Traceback (most recent call last): 
@@ -158,9 +158,17 @@ AttributeError: TitleBox instance has no attribute '__len__'
 
 <p>
 It's because you tried to put a widget in the list that display() returns! For
-now, just tack on '.display(request)' to all the widgets you want to return in
+now, just tack on '<code class="python">.display(request)</code>' to all the widgets you want to return in
 that list.
 </p>
+
+<hr />
+
+<address><a href="mailto:carmstro@twistedmatrix.com">Chris Armstrong</a></address>
+
+<!-- hhmts start -->
+Last modified: Tue Mar 12 22:50:39 EST 2002
+<!-- hhmts end -->
 
 </body>
 </html>

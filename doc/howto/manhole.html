@@ -9,34 +9,37 @@
 twisted.manhole service.  It lets you execute arbitrary code on the
 server, thus it is a great administration and debugging tool.  </p>
 
-<h3>Starting the twisted.manhole service</h3>
+<h2>Starting the twisted.manhole service</h2>
 
-<p> Execute the command 'mktap manhole -u [username] -w
-[password]'. This will create a twisted application (.tap) file that
-has a twisted.manhole service which will listen on port 8787. Execute
+<p> Execute the command <code class="shell">mktap manhole -u [username] -w
+[password]</code>. This will create a twisted application (.tap) file that
+has a <code class="API">twisted.manhole</code> service which will listen on port 8787. Execute
 the command 'twistd -f manhole.tap' to actually start the server.
 </p>
 
-<h3>Using manhole</h3>
+<h2>Using manhole</h2>
 <p>
-You can execute the command 'manhole' to start the GTK+ manhole client. This will
-give you a window asking for your username, password, hostname, service, perspective,
-and port #. Type in the username and password you selected above, the hostname that
-the twisted.manhole service was started on (localhost is the default), leave the
-Service the same ('twisted.manhole'), leave Perspective blank, and leave Port #
-as the default of 8787. Click the "Log In" button and you will be greeted with a short
-message in a window with an output area and an input area. You can type arbitrary
+You can execute the command <code class="shell">manhole</code> to start the
+GTK+ manhole client. This will give you a window asking for your username,
+password, hostname, service, perspective, and port #. Type in the username and
+password you selected above, the hostname that the twisted.manhole service was
+started on (localhost is the default), leave the Service the same
+('twisted.manhole'), leave Perspective blank, and leave Port # as the default
+of 8787. Click the "Log In" button and you will be greeted with a short message
+in a window with an output area and an input area. You can type arbitrary
 python code into the input area and get the results in the output area.
 </p>
 
-<h3>Special Commands</h3>
+<h2>Special Commands</h2>
 <p>
-There are a few special commands so far that make debugging Twisted objects really
-nice. These are /browse and /watch. You can /browse any type of object, and it will
-give you some nice information about that object. /watch-ing an object adds hooks
-to the object, allowing you to watch modifications to it in real time. For example:
+There are a few special commands so far that make debugging Twisted objects
+really nice. These are <code>/browse</code> and <code>/watch</code>. You can
+<code>/browse</code> any type of object, and it will give you some nice
+information about that object. <code>/watch</code>-ing an object adds hooks to
+the object, allowing you to watch modifications to it in real time. For
+example:
 </p>
-<pre>
+<pre class="python">
 /browse ["hello", "there"]
 <font color="blue">
   &lt;ObjectLink of ["hello", "there"] type list&gt;:
@@ -113,14 +116,18 @@ x.foo()
 </font>
     </pre>
 <p>
-As you can see, /watch really gives you a lot of power (and a lot of output, too --
-hopefully we'll have a nice GUI display for this in the future). The /browse
-and /watch functionality is brought to you by the twisted.python.explorer module,
+As you can see, <code>/watch</code> really gives you a lot of power (and a lot
+of output, too -- hopefully we'll have a nice GUI display for this in the
+future). The <code>/browse</code> and <code>/watch</code> functionality is
+brought to you by the <code class="API">twisted.python.explorer</code> module,
 which was written largely by Kevin Turner.
 </p>
 
 
-<hr>
-<address><a href="mailto:punck@Fookidla.org">Chris Armstrong</a></address>
+<hr />
+<address><a href="mailto:carmstro@twistedmatrix.com">Chris Armstrong</a></address>
+<!-- hhmts start -->
+Last modified: Tue Mar 12 22:32:48 EST 2002
+<!-- hhmts end -->
 </body>
 </html>
