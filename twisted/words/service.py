@@ -5,7 +5,7 @@ import string
 
 # Twisted Imports
 from twisted.spread import pb
-from twisted.python import authenticator
+from twisted.python import authenticator, log
 from twisted import copyright
 
 # Status "enumeration"
@@ -35,7 +35,7 @@ class Participant(pb.Perspective):
     def attached(self, client):
         if self.client:
             raise authenticator.Unauthorized("duplicate login not permitted.")
-        print "attached: %s" % self.name
+        log.msg("attached: %s" % self.name)
         self.client = client
         client.receiveContactList(map(lambda contact: (contact.name, contact.status),
                                       self.contacts))
@@ -51,11 +51,10 @@ class Participant(pb.Perspective):
             self.client.notifyStatusChanged(contact.name, contact.status)
 
     def detached(self, client):
-        print "detached: %s" % self.name
+        log.msg("detached: %s" % self.name)
         self.client = None
-        if self.groups:
-            for group in self.groups:
-                group.removeMember(self)
+        for group in self.groups[:]:
+            self.leaveGroup(group.name)
         self.changeStatus(OFFLINE)
 
     def addContact(self, contactName):
@@ -164,7 +163,7 @@ class Service(pb.Service):
 
     def addParticipant(self, name, password):
         if not self.participants.has_key(name):
-            print "Created New Participant: %s" % name
+            log.msg("Created New Participant: %s" % name)
             p = Participant(name, password, self)
             self.participants[name] = p
             return p

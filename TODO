@@ -1,0 +1,61 @@
+I attempted to categorize these roughly in order of importance, with easier
+things towards the top.  Items with names in [[brackets]] before them are being
+actively attacked.  Numbering is sequential.
+
+If you want to add an item, or register to be responsable for or help with one
+of these items, please discuss it on the mailing list
+(http://twistedmatrix.com/cgi-bin/mailman/listinfo/twisted-python), don't edit
+this file directly.
+
+--- TO DO:
+
+000 Documentation.  Let's not let this project become Zope.  Anybody with free
+    time, please document API calls, write tutorials, and generally figure out
+    how this stuff works.
+
+001 [[Glyph]] Asynchronous Authentication Service.  PB (and similiar) servers
+    ought to be able to defer their authentication at least to another PB
+    service.  This means that the Authenticator interface has to be revamped to
+    use callbacks instead of return values.
+
+002 [[Matt Walker]] Configuration Application.  Twisted needs an interactive
+    application for exploring and composing the various types of services that
+    are available; mktap is not adequate. (I believe the current plan is to use
+    a GTK GUI, but ideally it would be nice to have several versions of this
+    app at varying levels of complexity, ranging from the hard-core UNIX nerd's
+    GTK app to the light'n'fruity Mac user's web admin page...)
+
+003 Integration of TOC and Words.  twisted.protocols.toc ought to integrate
+    with twisted.words, so that AIM, IRC, and PB clients can all access the
+    same chat "space".
+
+004 Relaying for Twisted.Mail.  Twisted.Mail really ought to be a complete
+    sendmail/pop3d/imapd replacement, but currently it's lacking a few things.
+    Those things should be added; relaying is at the top of the list but there 
+    are other tasks too.
+
+005 Twisted.Internet for Jython.  Although Java lacks the select() call, JDK
+    1.4 *does* have an API for doing asynchronous I/O.  Even previous to that
+    upgrade, it should be possible to fake it by spawning a bunch of threads.
+    I would probably prefer having the bunch-of-threads approach initially
+    since old JVMs are all over the place; however, it would certainly be
+    higher performance to have it actually using an asyncio API; so I'd like to
+    have both eventually.  I would really like to have the Jython Faucet back
+    up and running again.
+
+006 "Enterprise".  Similiar to WebWare's MiddleKit, it would be nice to have a
+    library for object-relational interaction.  Better yet that such
+    interaction could be event-based rather than dependant upon blocking DB
+    APIs.  This is a nastier problem than it sounds like.
+
+007 Web widgetry.  Twisted.Web ought to have a way of assembling pages where
+    bits of the pages can be rendered asynchronously (for example, from pb
+    requests or fetched from other URLs) but the resource author shouldn't have
+    to manually juggle NOT_DONE_YET requests.  twisted.web.lmx might aid with
+    this.  Put more simply: web application pages should be collections of
+    components, not just flat text generators.
+
+008 File Transfer layer for PB.  This would be especially nice for
+    twisted.words; having standard a way to transfer "large" (100MB+) packets
+    across or in tandem with a PB connection without breaking anything would be
+    very good.

@@ -9,19 +9,26 @@ Quote of the Release:
 
 What's new in 0.9.4?
 
-  Minor bugfixes for twisted.python.rebuild and twisted.web.error.
-
   C implementation of computationally intensive code in Banana.dataReceived,
   giving roughly a 50x speedup to packet decoding.  This is the first release
   of Twisted with any C code -- but don't worry!  It will still fall back to
   Python transparently if you don't have the requisite C module.
 
-  Minor enhancements, bugfixes, and cleanups in PB.
+  Minor enhancements, bugfixes, and cleanups in PB; requestPerspective can now
+  optionally pass a client-side reference to act as the client's counterpart on
+  the server (this is a protocol-verion-increment change; the protocol is no
+  longer compatible)
+
+  The IRC service expanded into Twisted.Words, a chat service for PB.
+
+  Moshe Zadka's Twisted.Mail was re-integrated.
+
+  Minor bugfixes for twisted.python.rebuild and twisted.web.error.
 
   Some naming changes.  SPL (Server PickLe) is now TAP (Twisted Application
   Persistence), since it almost always indicates more than one server.
 
-  Twisted.Words, a chat service for PB.
+  Removed 'contrib' directory.
 
 What is this?
 
@@ -80,22 +87,33 @@ Basic Servers
   which you can log into with the username "username" and the password
   "password".  This creates a file called 'telnet.tap'
 
+  A generic chat server::
+
+    % mktap words
+
+  This creates a chat server application, with 2 different interfaces and a web
+  administration port.  Web administration can be conducted on port 8080, the
+  IRC server on 6667, and a PB service on port 8787.
+
+  You'll need to create an account with the web tool before you can log in,
+  even using IRC (a "bot" will ask you for your password upon connection).
+
+  So far the IRC gateway has only been tested with mIRC, XChat, and ircII; I
+  believe that these are relatively diverse clients, but YMMV.
+
+  The "Instance Messenger" client is a GTK front-end to the twisted.words
+  service which communicates with it using PB.  You can invoke it like this::
+
+    % im
+
   A AOL Instant Messanger TOC Server is also available::
     
     % mktap toc -p 5190
 
-  which creates the TOC server, running on port 5190.  To create a user, simply   log in with the username and password you want.  If the name is not already
+  which creates the TOC server, running on port 5190.  To create a user, simply
+  log in with the username and password you want.  If the name is not already
   taken on the server, it is created.  This creates a file called 'toc.tap'
   
-  Finally, a rudimentary IRC server::
-
-    % mktap irc -p 6667
-
-  This creates an IRC server application, listening on port 6667.  (I apologize
-  in advance if this doesn't work with your IRC client; let me know if it
-  doesn't.  IRC seems to be a protocol developed by concensus, not
-  standardization.)
-
 Running Servers
 
   In order to run any of these servers, run this command::
@@ -129,6 +147,11 @@ Running Servers
   multiple resources running with different permissions on the same machine, on
   different local machines, or even over the internet to a remote site.
 
+Additional Servers & Services
+
+  If you are interested in twisted.reality, please see
+  http://twistedmatrix.com/reality.epy.  You'll need a map.
+
 Documentation and Support
 
   As of this release, I realize that Twisted's documentation is rather sparse.
@@ -145,13 +168,10 @@ Documentation and Support
 
 Copyright
 
-  Most of the code in this distribution is (C) Twisted Matrix Laboratories.
-  (Twisted Matrix Laboratories is not a legal entity, but a DBA for Matthew
-  W. Lefkowitz, throughout this archive referred to as "Glyph").  There are 2
-  exceptions to this: the 'pyunit' directory is a derivative work of PyUnit,
-  which can be found at http://pyunit.sourceforge.net; and the contrib/
-  directory, which are user-contributed works that may have additional
-  copyright encumbrances, as noted by those files individually.
+  Most of the code in this distribution is (C) Matthew William Lefkowitz, AKA
+  "Glyph".  There is 1 exception to this: the 'pyunit' directory is a
+  derivative work of PyUnit, which can be found at
+  http://pyunit.sourceforge.net.
 
   Twisted is made available under the GNU Lesser General Public License.  The
   included LICENSE file describes this in detail.
