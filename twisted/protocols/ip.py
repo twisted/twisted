@@ -30,9 +30,9 @@ class IPHeader:
         self.daddr = socket.inet_ntoa(daddr)
         self.version = ihlversion & 0x0F
         self.ihl = ((ihlversion & 0xF0) >> 4) << 2
-        self.fragment_offset = socket.ntohs(frag_off & 0x1FFF)
-        self.dont_fragment = (frag_off & 0x4000 != 0)
-        self.more_fragments = (frag_off & 0x2000 != 0)
+        self.fragment_offset = socket.ntohs(frag_off) & 0x1FFF
+        self.dont_fragment = (frag_off & socket.htons(0x4000) != 0)
+        self.more_fragments = (frag_off & socket.htons(0x2000 != 0))
 
 class IPProtocol(protocol.AbstractDatagramProtocol):
     __implements__ = raw.IRawPacketProtocol
