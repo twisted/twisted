@@ -19,16 +19,14 @@
 """
 Different styles of peristed objects.
 """
-
-import os.path
+# System Imports
 import types
-import cPickle
 import cStringIO
 import copy_reg
 import copy
-import string
-import sys
 
+# Twisted Imports
+from twisted.python import log
 
 try:
     from new import instancemethod
