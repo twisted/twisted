@@ -254,11 +254,13 @@ class ReactorBase:
     def stop(self):
         """See twisted.internet.interfaces.IReactorCore.stop.
         """
+        assert self.running
         self.fireSystemEvent("shutdown")
 
     def crash(self):
         """See twisted.internet.interfaces.IReactorCore.crash.
         """
+        assert self.running
         self.running = 0
 
     def sigInt(self, *args):
