@@ -32,7 +32,8 @@ from math import ceil
 
 # Twisted imports
 from twisted.internet import protocol, defer, error
-from twisted.python import log, util
+from twisted.python.compat import dict
+from twisted.python import log
 
 
 PORT = 53
@@ -58,7 +59,7 @@ EXT_QUERIES = {
     251: 'IXFR',  252: 'AXFR',       253: 'MAILB',
     254: 'MAILA', 255: 'ALL_RECORDS'
 }
-REV_TYPES = util.dict([
+REV_TYPES = dict([
     (v, k) for (k, v) in QUERY_TYPES.items() + EXT_QUERIES.items()
 ])
 for (k, v) in REV_TYPES.items():
@@ -69,7 +70,7 @@ del k, v
 QUERY_CLASSES = {
     1: 'IN',  2: 'CS',  3: 'CH',  4: 'HS',  255: 'ANY'
 }
-REV_CLASSES = util.dict([
+REV_CLASSES = dict([
     (v, k) for (k, v) in QUERY_CLASSES.items()
 ])
 for (k, v) in REV_CLASSES.items():
