@@ -33,7 +33,8 @@ class Options(usage.Options):
                 ["bwverbose", "o", "Colorless verbose output"],
                 ["jelly", "j", "Jelly (machine-readable) output"],
                 ["summary", "s", "summary output"],
-                ["debug", "b", "Run tests in the Python debugger"]]
+                ["debug", "b", "Run tests in the Python debugger"],
+                ["profile", None, "Run tests under the Python profiler"]]
     optParameters = [["reactor", "r", None,
                       "The Twisted reactor to install before running the tests (looked up as a module contained in twisted.internet)"],
                      ["logfile", "l", "test.log", "log file name"],
@@ -199,9 +200,17 @@ def run():
         else:
             dbg.rcLines.extend(rcFile.readlines())
         dbg.run("suite.run(reporter, config['random'])", globals(), locals())
+    elif config['profile']:
+        import profile
+        prof = profile.Profile()
+        try:
+            prof.runcall(suite.run, reporter, config['random'])
+        except SystemExit:
+            pass
+        prof.print_stats()
     else:
         suite.run(reporter, config['random'])
-        sys.exit(not reporter.allPassed())
+    sys.exit(not reporter.allPassed())
 
 if __name__ == '__main__':
     run()
