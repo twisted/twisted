@@ -186,7 +186,7 @@ register("Lore",
          tapname="lore")
 
 register("Math-Lore",
-         "twisted.lore.math",
+         "twisted.lore.lmath",
          description="Lore format with LaTeX formula",
          type="lore",
          tapname="mlore")
