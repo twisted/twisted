@@ -18,5 +18,6 @@ class ChangeChecker(monitor.ChangeChecker):
             print self.url, "changed"
 
 for url in sys.argv[1:]:
-    ChangeChecker(url, 5)
+    checker = ChangeChecker(url, 5)
+    checker.start()
 reactor.run()

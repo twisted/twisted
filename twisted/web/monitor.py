@@ -20,11 +20,23 @@ import md5
 
 class ChangeChecker:
 
+    working = 0
+    call = None
+
     def __init__(self, url, delay=60):
         self.url = url
         self.md5 = None
         self.delay = delay
+
+    def start(self):
+        self.working = 1
         self._getPage()
+
+    def stop(self):
+        if self.call:
+            self.call.cancel()
+            self.call = None
+        self.working = 0
 
     def _getPage(self):
         d = client.getPage(self.url)
@@ -40,12 +52,14 @@ class ChangeChecker:
         self.gotMD5(m.digest())
 
     def gotMD5(self, md5):
+        if not self.working:
+            return
         if md5 != self.md5:
             self.reportChange(self.md5, md5)
             self.md5 = md5
         else:
             self.reportNoChange()
-        reactor.callLater(self.delay, self._getPage)
+        self.call = reactor.callLater(self.delay, self._getPage)
 
     def reportChange(self, old, new):
         """status or content of the web resource has changed"""
