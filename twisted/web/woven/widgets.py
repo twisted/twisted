@@ -212,13 +212,13 @@ class Widget(mvc.View):
         Override this method to set up your Widget prior to generateDOM. This
         is a good place to call methods like L{add}, L{insert}, L{__setitem__}
         and L{__getitem__}.
+        
+        Overriding this method obsoletes overriding generateDOM directly, in
+        most cases.
 
         @type request: L{twisted.web.server.Request}.
         @param node: The DOM node which this Widget is operating on.
         @param data: The Model data this Widget is meant to operate upon.
-        
-        Overriding this method obsoletes overriding generateDOM directly, in
-        most cases.
         """
         pass
     
