@@ -1045,7 +1045,7 @@ class Reloader(Presentation):
         write = x.append
         for module in self.modules:
             rebuild.rebuild(module)
-            write('<li>reloaded %s<br>' % module.__name__)`
+            write('<li>reloaded %s<br>' % module.__name__)
         return x
 
 class Sidebar(StreamWidget):
