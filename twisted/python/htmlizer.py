@@ -44,8 +44,11 @@ class HTMLWriter:
         if type is None:
             self.writer(token)
         else:
-            if type == tokenize.NAME and keyword.kwdict.has_key(token):
-                type = 'keyword'
+            if type == tokenize.NAME:
+                if keyword.kwdict.has_key(token):
+                    type = 'keyword'
+                else:
+                    type = 'identifier'
             else:
                 type = tokenize.tok_name[type].lower()
             self.writer('<span class="py-src-%s">%s</span>' %
