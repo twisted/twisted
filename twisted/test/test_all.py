@@ -1,16 +1,16 @@
 
 # Twisted, the Framework of Your Internet
 # Copyright (C) 2001 Matthew W. Lefkowitz
-# 
+#
 # This library is free software; you can redistribute it and/or
 # modify it under the terms of version 2.1 of the GNU Lesser General Public
 # License as published by the Free Software Foundation.
-# 
+#
 # This library is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
 # Lesser General Public License for more details.
-# 
+#
 # You should have received a copy of the GNU Lesser General Public
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
@@ -39,6 +39,7 @@ import test_words
 import test_persisted
 import test_pureber
 import test_web
+import test_text
 
 from pyunit import unittest
 
@@ -62,6 +63,6 @@ def testSuite():
              test_toc.testCases        + test_smtp.testCases       +
              test_pop3.testCases       + test_words.testCases      +
              test_persisted.testCases  + test_pureber.testCases    +
-             test_web.testCases        + 
+             test_web.testCases        + test_text.testCases       +
              test_import.testCases) # Leave this one at the end.
     return makeBigSuite(cases)

@@ -65,12 +65,13 @@ that will work:
 
 # System Imports
 import string
+import os
 import sys
 import getopt
-import types
 
 # Sibling Imports
 import reflect
+import text
 
 error = getopt.error
 
@@ -88,6 +89,8 @@ class Options:
             options = sys.argv[1:]
         dct = {}
         reflect.addMethodNamesToDict(self.__class__, dct, "opt_")
+        # optDoc = {}
+        # These are strings/lists we will pass to getopt
         shortOpt = ''
         longOpt = []
 
@@ -117,7 +120,16 @@ class Options:
         flagDict = {}
         stringDict = {}
 
-        for long, short in flags:
+        for flag in flags:
+            long, short = flag[:2]
+            # The doc parameter is optional to preserve compatibility.
+            if len(flag) == 2:
+                pass # optDoc[long] = None
+            elif len(flag) == 3:
+                pass # optDoc[long] = flag[3]
+            else:
+                raise ValueError,\
+                      "Too many parameters for flag %s" % (long,)
             setattr(self, long, 0)
             if short:
                 shortOpt = shortOpt + short
@@ -125,7 +137,16 @@ class Options:
             flagDict[short] = long
             flagDict[long] = long
 
-        for long, short, default in strings:
+        for string_ in strings:
+            long, short, default = string_[:3]
+            # The doc parameter is optional to preserve compatibility.
+            if len(string_) == 3:
+                pass # optDoc[long] = None
+            elif len(string_) == 4:
+                pass # optDoc[long] = string_[4]
+            else:
+                raise ValueError,\
+                      "Too many parameters for option string %s" % (long,)
             setattr(self, long, default)
             if short:
                 shortOpt = shortOpt + short + ':'
@@ -184,39 +205,131 @@ class Options:
         pass
 
 
-    def __str__(self):
+    def __str__(self, width=None):
+        if not width:
+            width = int(os.getenv('COLUMNS', '80'))
+
         flags = []
         reflect.accumulateClassList(self.__class__, 'optFlags', flags)
         strings = []
         reflect.accumulateClassList(self.__class__, 'optStrings', strings)
 
-        maxFlagLen = 0
-        for long, short in flags:
-            maxFlagLen = max(len(long), maxFlagLen)
+        # We should have collected these into some sane container
+        # earlier...
+        optDicts = []
+        for flag in flags:
+            long, short = flag[:2]
+            # The doc parameter is optional to preserve compatibility.
+            if len(flag) == 2:
+                doc = None
+            elif len(flag) == 3:
+                doc = flag[2]
+            else:
+                raise ValueError,\
+                      "Too many parameters for flag %s" % (long,)
+            d = {'long': long,
+                 'short': short,
+                 'doc': doc,
+                 'optType': 'flag'}
+            optDicts.append(d)
 
-        flagLines = []
-        for long, short in flags:
-            if short:
-                short = "-%c," % (short,)
-            long = "--%-*s" % (maxFlagLen, long)
-            flagLines.append("  %s %s  " % (short, long))
+        for string_ in strings:
+            long, short, default = string_[:3]
+            # The doc parameter is optional to preserve compatibility.
+            if len(string_) == 3:
+                doc = None
+            elif len(string_) == 4:
+                doc = string_[3]
+            else:
+                raise ValueError,\
+                      "Too many parameters for option string %s" % (long,)
 
-        # colWidth1 = len(flagLines[0])
-        # # We have this much room to print the description.
-        # colWidth2 = 80 - colWidth1
+            d = {'long': long,
+                 'short': short,
+                 'default': default,
+                 'doc': doc,
+                 'optType': 'string'}
+            optDicts.append(d)
 
-        # XXX: add descriptions of flags
+        # XXX: Decide how user-defined opt_Foo methods fit in to this.
 
-        # XXX: now do the same for optStrings
-
-        s = ("Flags:\n%(flagLines)s\n"
-             "Options:\n  -f, --FIXME  optStrings not done yet [default: Eek!]\n"% {
-            'flagLines': string.join(flagLines,'\n')
-            })
+        if optDicts:
+            chunks = docMakeChunks(optDicts, width)
+            s = "Options:\n%s" % (string.join(chunks, ''))
+        else:
+            s = "Options: None\n"
 
         return s
 
-
     #def __repr__(self):
     #    XXX: It'd be cool if we could return a succinct representation
-    #        of which flags and options were set here.
+    #        of which flags and options are set here.
+
+
+def docMakeChunks(optList, width=80):
+    """Makes doc chunks for option declarations.
+
+    Takes a list of dictionaries, each of which may have one or more
+    of the keys "long", "short", "doc", "default", "optType".
+
+    Returns a list of strings.
+    The strings may be multiple lines,
+    all of them end with a newline.
+    """
+
+    # XXX: sanity check to make sure we have a sane combination of keys.
+
+    maxOptLen = 0
+    for opt in optList:
+        optLen = len(opt.get('long', ''))
+        if optLen:
+            if opt.get('optType', None) == "string":
+                # these take up an extra character
+                optLen = optLen + 1
+            maxOptLen = max(len(opt.get('long', '')), maxOptLen)
+
+    colWidth1 = maxOptLen + len("  -s, --  ")
+    colWidth2 = width - colWidth1
+    # XXX - impose some sane minimum limit.
+    # Then if we don't have enough room for the option and the doc
+    # to share one line, they can take turns on alternating lines.
+
+    colFiller1 = " " * colWidth1
+
+    optChunks = []
+    for opt in optList:
+        optLines = []
+        comma = " "
+        short = "%c" % (opt.get('short', None) or " ",)
+
+        if opt.get('long', None):
+            if opt.get("optType", None) == "string":
+                takesString = "="
+            else:
+                takesString = ''
+
+            long = "%-*s%s" % (maxOptLen, opt['long'], takesString)
+            if short != " ":
+                comma = ","
+        else:
+            long = " " * (maxOptLen + len('--'))
+
+        column1 = "  -%c%c --%s  " % (short, comma, long)
+
+        if opt.get('doc', None):
+            if opt.get('default', None):
+                doc = "%s [%s]" % (opt['doc'], opt['default'])
+            else:
+                doc = opt['doc']
+            column2_l = text.wordWrap(doc, colWidth2)
+        else:
+            column2_l = ['']
+
+        optLines.append("%s%s\n" % (column1, column2_l.pop(0)))
+
+        for line in column2_l:
+            optLines.append("%s%s\n" % (colFiller1, line))
+
+        optChunks.append(string.join(optLines, ''))
+
+    return optChunks
