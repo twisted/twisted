@@ -47,7 +47,7 @@ if auto_version:
 
 os.chdir(os.path.dirname(parent))
 if auto_version and old_version:
-	new_version = old_version+'+'+version
+	new_version = old_version.split("-")[0]+'+'+version
 else:
 	new_version = version
 

@@ -331,14 +331,20 @@ def makeDebs(opts):
     sh('tar xzf %s' % tgz)
     sh("ssh -p 9022 localhost "
               "'cd /tmp/%(unique)s;./Twisted-%(ver)s/admin/make-deb -a'"%vars())
-    os.mkdir(os.path.join(rel, 'debian-%s' % ver))
+    if not os.path.isdir(os.path.join(rel, 'debian-%s' % ver)):
+        os.mkdir(os.path.join(rel, 'debian-%s' % ver))
+    sys.stdout.write("Moving files to %s" % os.path.join(rel, 'debian-%s'%ver))
+    sys.stdout.flush()
     for file in glob.glob('/sid-chroot/tmp/%s/*' % unique):
-        sh('mv $(file)s $(rel)s' % vars())
+        sh('cp %(file)s %(rel)s/debian-%(ver)s' % vars())
+        sys.stdout.write(".")
+        sys.stdout.flush()
+    sys.stdout.write("\n")
     os.chdir("%(rel)s/debian-%(ver)s" % vars())
-    sh('tar xzf %(tgz)s admin/override admin/createpackages')
-    sh('mv admin/override .')
-    sh('./admin/createpackages')
-    sh('rm -rf admin')
+    sh('tar xzf %(tgz)s Twisted-%(ver)s/admin' % vars())
+    sh('mv Twisted-%(ver)s/admin/override .' % vars())
+    sh('./Twisted-%(ver)s/admin/createpackages override'% vars())
+    sh('rm -rf Twisted-%(ver)s' % vars())
     sh('rm -rf /sid-chroot/tmp/%s' % unique)
     
 
