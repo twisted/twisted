@@ -153,20 +153,28 @@ class IGroup(Interface):
         """
 
     def setTopic(self, text):
-        pass
+        """Set this Groups topic on the server.
+
+        @type text: string
+        """
 
     def sendGroupMessage(self, text, metadata=None):
         """Send a message to this group.
 
         @type text: string
+
         @type metadata: dict
+        @param metadata: Valid keys for this dictionary include:
+        
+            style: associated with one of:
+                emote: indicates this is an action
         """
 
     def join(self):
         pass
 
     def leave(self):
-        pass
+        """Depart this group"""
 
 
 class IConversation(Interface):
