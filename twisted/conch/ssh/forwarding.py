@@ -104,9 +104,10 @@ class SSHConnectForwardingChannel(channel.SSHChannel):
 
     def closed(self):
         if self.client:
-            log.msg('closing remote forwarding channel %s' % self.id)
+            log.msg('closed remote forwarding channel %s' % self.id)
+            if self.client.channel:
+                self.loseConnection()
             self.client.transport.loseConnection()
-            self.loseConnection()
             del self.client
 
 class SSHForwardingClient(protocol.Protocol):
@@ -120,7 +121,7 @@ class SSHForwardingClient(protocol.Protocol):
     def connectionLost(self, reason):
         if self.channel:
             self.channel.loseConnection()
-            del self.channel
+            self.channel = None
 
 
 def packOpen_direct_tcpip((connHost, connPort), (origHost, origPort)):

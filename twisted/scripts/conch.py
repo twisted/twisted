@@ -14,7 +14,7 @@
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 #
-# $Id: conch.py,v 1.58 2003/08/08 14:30:40 z3p Exp $
+# $Id: conch.py,v 1.59 2003/10/21 01:48:25 z3p Exp $
 
 #""" Implementation module for the `conch` command.
 #"""
@@ -664,8 +664,8 @@ class SSHConnection(connection.SSHConnection):
         conn = self
         onConnect()
 
-    def global_forwarded_tcp(self, windowSize, maxPacket, data):
-        remoteHP, origHP = forwarding.unpackOpen_forwarded_tcp(data)
+    def channel_forwarded_tcpip(self, windowSize, maxPacket, data):
+        remoteHP, origHP = forwarding.unpackOpen_forwarded_tcpip(data)
         if self.remoteForwards.has_key(remoteHP[1]):
             connectHP = self.remoteForwards[remoteHP[1]]
             return SSHConnectForwardingChannel(connectHP,
