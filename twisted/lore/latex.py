@@ -55,7 +55,7 @@ class LatexSpitter(XMLParser):
             data = normalizeRE.sub(' ', data)
         if self.escaping:
             data = escapingRE.sub(r'\\\1', data)
-            # ^ and ~ need to special escapes.
+            # ^ and ~ need special escapes.
             data = data.replace('~', '\\verb@~@').replace('^', '\\^{}')
         self.writer(data)
 
