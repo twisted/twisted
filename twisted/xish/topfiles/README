@@ -1,0 +1,6 @@
+Twisted Xish
+
+Xish was recently split out of Twisted. This needs more work.
+
+Xish depends on twisted.web.sux as a fallback after Expat. It also
+depends on Twisted Words for its jabber.jid module.

@@ -1,4 +1,4 @@
-# -*- test-case-name: twisted.test.test_xishutil -*-
+# -*- test-case-name: twisted.xish.test.test_xishutil -*-
 #
 # Copyright (c) 2001-2004 Twisted Matrix Laboratories.
 # See LICENSE for details.
