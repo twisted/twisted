@@ -304,7 +304,7 @@ def doSelect(timeout,
                                           [], timeout)
             break
         except select.error,se:
-            if se.args[0] == 0:
+            if se.args[0] in (0, 2):
                 # windows does this if it got an empty list
                 if (not reads) and (not writes):
                     return
