@@ -147,43 +147,39 @@ def _upgradeRegistry(registry):
                           app.theApplication)
 
 
-def loadMimeTypes():
-    """Ugg, does this even need to exist anymore?  Stupid stdlib"""
+def loadMimeTypes(mimetype_locations=['/etc/mime.types']):
+    '''
+        Multiple file locations containing mime-types can be passed as a list.
+        The files will be sourced in that order, overriding mime-types from the
+        files sourced beforehand, but only if a new entry explicitly overrides
+        the current entry.
+    '''
     import mimetypes
-    # let's try a few of the usual suspects...
-    contentTypes = {
-        ".css": "text/css",
-        ".exe": "application/x-executable",
-        ".flac": "audio/x-flac",
-        ".gif": "image/gif",
-        ".gtar": "application/x-gtar",
-        ".html": "text/html",
-        ".htm": "text/html",
-        ".java": "text/plain",
-        ".jpeg": "image/jpeg",
-        ".jpg": "image/jpeg",
-        ".lisp": "text/x-lisp",
-        ".mp3":  "audio/mpeg",
-        ".oz": "text/x-oz",
-        ".ogg": "application/x-ogg",
-        ".pdf": "application/x-pdf",
-        ".png": "image/png",
-        ".py": "text/plain",
-        ".swf": "application/x-shockwave-flash",
-        ".tar": "application/x-tar",
-        ".tgz": "application/x-gtar",
-        ".tif": "image/tiff",
-        ".tiff": "image/tiff",
-        ".txt": "text/plain",
-        ".wml": "text/vnd.wap.wml",
-        ".xul": "application/vnd.mozilla.xul+xml",
-        ".zip": "application/x-zip",
-        ".patch": "text/plain",
+    # Grab Python's built-in mimetypes dictionary.
+    contentTypes = mimetypes.types_map
+    # Update Python's semi-erroneous dictionary with a few of the
+    # usual suspects.
+    contentTypes.update(
+        {
+            '.conf':  'text/plain',
+            '.diff':  'text/plain',
+            '.exe':   'application/x-executable',
+            '.flac':  'audio/x-flac',
+            '.java':  'text/plain',
+            '.ogg':   'application/ogg',
+            '.oz':    'text/x-oz',
+            '.swf':   'application/x-shockwave-flash',
+            '.tgz':   'application/x-gtar',
+            '.wml':   'text/vnd.wap.wml',
+            '.xul':   'application/vnd.mozilla.xul+xml',
         }
-    upd = contentTypes.update
-    if os.path.exists("/etc/mime.types"):
-        upd(mimetypes.read_mime_types("/etc/mime.types"))
-
+    )
+    # Users can override these mime-types by loading them out configuration
+    # files (this defaults to ['/etc/mime.types']).
+    for location in mimetype_locations:
+        if os.path.exists(location):
+            contentTypes.update(mimetypes.read_mime_types(location))
+            
     return contentTypes
 
 
