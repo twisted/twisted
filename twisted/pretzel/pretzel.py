@@ -16,11 +16,11 @@
 
 """I am an uber-bot that can do anything and everything."""
 
-class SaltGrain:
-    """I am a very simple SaltGrain implementation that just prints messages
+class UserAgent:
+    """I am a very simple UserAgent implementation that just prints messages
     out."""
-    def __init__(self, breadstick):
-        self.breadstick = breadstick
+    def __init__(self, distributor):
+        self.distributor = distributor
         self.network = "print"
 
     def sendMessage(self, sender, message):
@@ -31,7 +31,7 @@ class SaltGrain:
 
 
 class WordsGrain:
-    """I am a twisted.words salt grain."""
+    """I am a twisted.words UserAgent."""
     def __init__(self, user, password, host, groups):
         self.network = "words"
 
@@ -40,7 +40,7 @@ class WordsGrain:
 
 
 class IRCGrain:
-    """I am an IRC salt grain."""
+    """I am an IRC UserAgent."""
     def __init__(self, user, password, host, port):
         self.network = "irc"
 
@@ -48,28 +48,28 @@ class IRCGrain:
         pass
         
 
-class BreadStick:
-    """I am a pretzel with no salt: I have twisty networks of communication
-    channels.
+class MessageDistributor:
+    """I have twisty networks of communication channels.
     
-    Add Grains of salt (objects with a sendMessage method) to me (with
-    addGrainOfSalt) and I will distribute messages to them.
+    Add UserAgents (objects with a sendMessage method) to me (with
+    addUserAgent) and I will distribute messages to them.
     
     sendMessages to me and I will distribute them.
     """
 
     def __init__(self, features=()):
         self.features = list(features)
+        self.agents = {}
         self.name = "bob"
         
-    def addGrainOfSalt(self, saltGrain):
-        self.grains[saltGrain.network] = saltGrain
+    def addUserAgent(self, agent):
+        self.agents[agent.network] = agent
 
     def addFeature(self, feature):
         self.features.append(feature)
 
     def sendMessage(self, sender, message):
-        """I send a message to everyone on all SaltGrains.
+        """I send a message to all of my agents.
         'sender' is a 2-tuple of (person, network), and 'message'
         is a string
         """
@@ -78,19 +78,19 @@ class BreadStick:
                                           #message to be sent out everywhere,
                                           #then it should return false.
                 break
-        for p in self.grains.keys():
-            self.grains[p].sendMessage(sender, message)
+        for p in self.agents.keys():
+            self.agents[p].sendMessage(sender, message)
 
     def sendPrivMessage(self, sender, sendee, message):
-        """I send a private message to someone on a specific SaltGrain.
+        """I send a private message to a specific UserAgent.
         'sender' and 'sendee' are 2-tuples of (person, network). 'message'
         is a string.
         """
         try:
-            self.grains[sendee[1]].sendPrivMessage(sender, sendee, message)
+            self.agents[sendee[1]].sendPrivMessage(sender, sendee, message)
         except KeyError:
             try:
-                self.grains[sender[1]].sendPrivMessage([self.name, self.name], sender, "That network doesn't exist!")
+                self.agents[sender[1]].sendPrivMessage([self.name, self.name], sender, "That network doesn't exist!")
             except KeyError: #this really shouldn't happen
                 print "gack!"
                 
