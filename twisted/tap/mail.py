@@ -33,7 +33,7 @@ Options:
         -d, --domain <domain>=<path>
                 generate an SMTP/POP3 virtual domain which saves to "path"
 
-        -u, --username <name>=<password>
+        -u, --user <name>=<password>
                 add a user/password to the last specified domains
                 generate an SMTP/POP3 virtual domain which saves to "path"
 
