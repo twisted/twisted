@@ -171,7 +171,7 @@ def main():
     lw = gtkutil.Login(i.connected,
                        initialUser="guest",
                        initialPassword="guest",
-                       initialService="manhole")
+                       initialService="twisted.manhole")
     lw.show_all()
     gtk.mainloop()
 

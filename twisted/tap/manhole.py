@@ -31,7 +31,7 @@ class Options(usage.Options):
 def getPorts(app, config):
     
     bf = pb.BrokerFactory()
-    bf.addService("manhole", service.Service({config.user: config.password}))
+    bf.addService("twisted.manhole", service.Service({config.user: config.password}))
     try:
         portno = config.portno
     except AttributeError:
