@@ -492,6 +492,24 @@ class TestInternet2(unittest.TestCase):
             reactor.iterate(0.1)
         self.assertEqual(factory.line, 'lalala')
 
+    def testUDP(self):
+        p = protocol.DatagramProtocol()
+        t = internet.TCPServer(0, p)
+        t.startService()
+        num = t._port.getHost()[2]
+        d = t.stopService()
+        l = []
+        d.addCallback(l.append)
+        while not l:
+            reactor.iterate(0.1)
+        t = internet.TCPServer(num, p)
+        t.startService()
+        d = t.stopService()
+        l = []
+        d.addCallback(l.append)
+        while not l:
+            reactor.iterate(0.1)
+
     def testPrivileged(self):
         factory = protocol.ServerFactory()
         factory.protocol = wire.Echo
