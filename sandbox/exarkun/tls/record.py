@@ -70,10 +70,10 @@ def extract(bytes, offset, size):
         result = (result << size) + ((mask & ch) >> 8-offset-size)
     return result
 
-def processDecode(i, toproc, bytes):
+def processDecode(toproc, bytes):
     offset = 0
     for (a, t) in toproc:
-        setattr(i, a, extract(bytes, offset, t.bits))
+        a(extract(bytes, offset, t.bits))
         offset += t.bits
 
 def processEncode(result, toproc):
@@ -93,6 +93,11 @@ def processEncode(result, toproc):
     if offset:
         raise ValueError("Non-byte-aligned values in format")
 
+def setattr(self, name):
+    return lambda value: __builtins__['setattr'](self, name, value)
+def callattr(self, name):
+    return lambda value: getattr(self, name)(value)
+
 class RecordMixin:
     FORMAT_SPECIFIERS = {
         Integer(8, False): 'B',
@@ -107,17 +112,22 @@ class RecordMixin:
     def encode(self):
         result = []
         subbytes = []
-        for (attr, type) in self.__format__:
-            if type in self.FORMAT_SPECIFIERS:
+        for (attr, t) in self.__format__:
+            if t in self.FORMAT_SPECIFIERS:
                 processEncode(result, subbytes)
                 subbytes = []
 
-                fmt = self.FORMAT_SPECIFIERS[type]
+                fmt = self.FORMAT_SPECIFIERS[t]
                 result.append(struct.pack('>' + fmt, getattr(self, attr)))
-            elif isinstance(type, Integer):
-                subbytes.append((getattr(self, attr), type))
+            elif isinstance(t, (types.ClassType, types.TypeType)) and issubclass(t, RecordMixin):
+                processEncode(result, subbytes)
+                subbytes = []
+
+                result.append(getattr(self, attr).encode())
+            elif isinstance(t, Integer):
+                subbytes.append((getattr(self, attr), t))
             else:
-                raise NotImplementedError((type, attr))
+                raise NotImplementedError((t, attr))
         if subbytes:
             processEncode(result, subbytes)
         return ''.join(result)
@@ -127,23 +137,28 @@ class RecordMixin:
         i = cls()
         offset = 0
         subbytes = []
-        for (attr, type) in i.__format__:
-            if type in cls.FORMAT_SPECIFIERS:
+        for (attrspec, t) in i.__format__:
+            if isinstance(attrspec, str):
+                attrspec = setattr(i, attrspec)
+            if t in cls.FORMAT_SPECIFIERS:
                 if offset:
                     raise ValueError("Non-byte-aligned values in format")
-                fmt = cls.FORMAT_SPECIFIERS[type]
+                fmt = cls.FORMAT_SPECIFIERS[t]
                 size = struct.calcsize('>' + fmt)
-                setattr(i, attr, struct.unpack('>' + fmt, bytes[:size])[0])
+                attrspec(struct.unpack('>' + fmt, bytes[:size])[0])
                 bytes = bytes[size:]
+            elif isinstance(t, (types.ClassType, types.TypeType)) and issubclass(t, RecordMixin):
+                o, bytes = t.decode(bytes)
+                attrspec(o)
             else:
-                if offset + type.bits < 8:
-                    subbytes.append((attr, type))
-                    offset += type.bits
-                elif (offset + type.bits) % 8 == 0:
-                    subbytes.append((attr, type))
-                    processDecode(i, subbytes, bytes)
-                    bytes = bytes[(offset + type.bits) / 8:]
+                if offset + t.bits < 8:
+                    subbytes.append((attrspec, t))
+                    offset += t.bits
+                elif (offset + t.bits) % 8 == 0:
+                    subbytes.append((attrspec, t))
+                    processDecode(subbytes, bytes)
+                    bytes = bytes[(offset + t.bits) / 8:]
                     subbytes = []
                     offset = 0
-        return i
+        return i, bytes
     decode = classmethod(decode)

@@ -85,7 +85,9 @@ class RecordPacking(unittest.TestCase):
             s = inst.encode()
             msg = "%s encoded to %d bytes, not %d bytes" % (rt.__name__, len(s), rt.EXPECTED_ENCODED_SIZE)
             self.assertEquals(len(s), rt.EXPECTED_ENCODED_SIZE, msg)
-            self.assertEquals(vars(rt.decode(s)), vars(inst))
+            decoded, leftover = rt.decode(s)
+            self.assertEquals(vars(decoded), vars(inst))
+            self.failIf(leftover)
 
 class DynamicFoo(Record):
     def __format__():
@@ -117,6 +119,49 @@ class DynamicFormatGeneration(unittest.TestCase):
                   {'length': 160, 'type': 1, 'a': 10, 'b': 7, 'c': 4, 'd': 12})]
 
         for (bytes, attrs) in tests:
-            i = DynamicFoo.decode(bytes)
+            i, leftover = DynamicFoo.decode(bytes)
             self.assertEquals(vars(i), attrs)
             self.assertEquals(i.encode(), bytes)
+            self.failIf(leftover)
+
+class FirstInnerRecord(Record):
+    __format__ = [('a', Integer(4)),
+                  ('b', Integer(4))]
+
+class SecondInnerRecord(Record):
+    __format__ = [('x', Integer(16)),
+                  ('y', Integer(8)),
+                  ('z', Integer(8))]
+
+class OuterRecord(Record):
+    __format__ = [('a', Integer(32, True)),
+                  ('b', FirstInnerRecord),
+                  ('c', Integer(8)),
+                  ('d', SecondInnerRecord),
+                  ('e', Integer(8))]
+
+class NestedRecords(unittest.TestCase):
+    def testNesting(self):
+        tests = [
+            '\xAB\x12\xCD\x34' # a, Integer(32)
+            '\x10'             # b.a, Integer(4) + b.b, Integer(4)
+            '\x5C'             # c, Integer(8)
+            '\xAB\x65'         # d.x, Integer(16)
+            '\xE3'             # d.y, Integer(8)
+            '\x3E'             # d.z, Integer(8)
+            '\x00',            # e, Integer(8)
+            ]
+
+        for s in tests:
+            i, bytes = OuterRecord.decode(s + "junk trailing bytes")
+            self.assertEquals(i.a, 0xAB12CD34)
+            self.assertEquals(i.b.a, 0x1)
+            self.assertEquals(i.b.b, 0x0)
+            self.assertEquals(i.c, 0x5C)
+            self.assertEquals(i.d.x, 0xAB65)
+            self.assertEquals(i.d.y, 0xE3)
+            self.assertEquals(i.d.z, 0x3E)
+            self.assertEquals(i.e, 0x00)
+            self.assertEquals(bytes, "junk trailing bytes")
+
+            self.assertEquals(i.encode(), s)
