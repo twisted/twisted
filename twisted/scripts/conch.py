@@ -91,6 +91,8 @@ conn = None
 exitStatus = 0
 keyAgent = None
 old = None
+_inRawMode = 0
+_savedRawMode = None
 
 def run():
     global options, old
@@ -275,17 +277,7 @@ class SSHSession(channel.SSHChannel):
             d.addBoth(lambda x:log.msg(x))
         if options['noshell']: return
         if (options['command'] and options['tty']) or not options['notty']:
-            fd = 0 #sys.stdin.fileno()
-            try:
-                new = tty.tcgetattr(fd)
-            except:
-                log.msg('not a typewriter!')
-            else:
-                new[3] = new[3] & ~tty.ICANON & ~tty.ECHO
-                new[6][tty.VMIN] = 1
-                new[6][tty.VTIME] = 0
-                tty.tcsetattr(fd, tty.TCSANOW, new)
-                tty.setraw(fd)
+            _enterRawMode()
         c = session.SSHSessionClient()
         if options['escape'] and not options['notty']:
             self.escapeMode = 1
@@ -294,6 +286,7 @@ class SSHSession(channel.SSHChannel):
             c.dataReceived = self.write
         c.connectionLost = lambda x=None,s=self:s.sendEOF()
         self.stdio = stdio.StandardIO(c)
+        fd = 0
         if options['subsystem']:
             self.conn.sendRequest(self, 'subsystem', \
                 common.NS(options['command']))
@@ -333,8 +326,13 @@ class SSHSession(channel.SSHChannel):
                 stopConnection()
                 return
             elif char == '\x1a': # ^Z, suspend
-                # following line courtesy of Erwin@freenode
-                os.kill(os.getpid(), signal.SIGSTOP)
+                def _():
+                    _leaveRawMode()
+                    sys.stdout.flush()
+                    sys.stdin.flush()
+                    os.kill(os.getpid(), signal.SIGTSTP)
+                    _enterRawMode()
+                reactor.callLater(0, _)
                 return
             elif char == 'R': # rekey connection
                 log.msg('rekeying connection')
@@ -423,6 +421,48 @@ class SSHConnectForwardingChannel(forwarding.SSHConnectForwardingChannel):
         if len(self.conn.channels) == 1 and not (options['noshell'] and not options['nocache']): # just us left
             stopConnection()
 
+def _leaveRawMode():
+    global _inRawMode
+    if not _inRawMode:
+        return
+    fd = sys.stdin.fileno()
+    tty.tcsetattr(fd, tty.TCSANOW, _savedMode)
+    _inRawMode = 0
+
+def _enterRawMode():
+    global _inRawMode, _savedMode
+    if _inRawMode:
+        return
+    fd = sys.stdin.fileno()
+    try:
+        old = tty.tcgetattr(fd)
+        new = old[:]
+    except:
+        log.msg('not a typewriter!')
+    else:
+        # iflage
+        new[0] = new[0] | tty.IGNPAR
+        new[0] = new[0] & ~(tty.ISTRIP | tty.INLCR | tty.IGNCR | tty.ICRNL |
+                            tty.IXON | tty.IXANY | tty.IXOFF)
+        if hasattr(tty, 'IUCLC'):
+            new[0] = new[0] & ~tty.IUCLC
+
+        # lflag
+        new[3] = new[3] & ~(tty.ISIG | tty.ICANON | tty.ECHO | tty.ECHO | 
+                            tty.ECHOE | tty.ECHOK | tty.ECHONL)
+        if hasattr(tty, 'IEXTEN'):
+            new[3] = new[3] & ~tty.IEXTEN
+
+        #oflag
+        new[1] = new[1] & ~tty.OPOST
+
+        new[6][tty.VMIN] = 1
+        new[6][tty.VTIME] = 0
+
+        _savedMode = old
+        tty.tcsetattr(fd, tty.TCSANOW, new)
+        #tty.setraw(fd)
+        _inRawMode = 1
 
 if __name__ == '__main__':
     run()
