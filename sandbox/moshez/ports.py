@@ -28,16 +28,16 @@ def parse(description, factory):
     kw = {}
     for (name, val) in [arg.split('=', 1) for arg in dsplit if '=' in arg]:
         kw[name] = val
-    return dsplit[0].upper(), _funcs[dsplit[0]](factory, *args, **kw)
+    return (dsplit[0].upper(),)+_funcs[dsplit[0]](factory, *args, **kw)
 
 def service(description, factory):
     from twisted.application import internet
-    name, (args, kw) = parse(description, factory)
+    name, args, kw = parse(description, factory)
     return getattr(internet, name+'Server')(*args, **kw)
 
 def listen(description, factory):
     from twisted.internet import reactor
-    name, (args, kw) = parse(description, factory)
+    name, args, kw = parse(description, factory)
     return getattr(reactor, 'listen'+name)(*args, **kw)
 
 def _test():
