@@ -26,4 +26,3 @@ del compat
 # setup version
 from twisted import copyright
 __version__ = copyright.version
-del copyright
