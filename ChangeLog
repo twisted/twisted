@@ -1,3 +1,8 @@
+2003-04-12  Paul Swartz  <z3p@twistedmatrix.com
+
+	* twisted/plugins.tml, twisted/tap/ssh.py, twisted/tap/conch.py: moved
+	the conch server from 'mktap ssh' to 'mktap conch'.
+
 2003-04-12  Brian Warner  <warner@lothar.com>
 
 	* twisted/internet/gtk2reactor.py (Gtk2Reactor.doIteration): don't

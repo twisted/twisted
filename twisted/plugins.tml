@@ -87,9 +87,9 @@ register("Twisted SOCKS",
          description="A SOCKSv4 proxy service.",
          type="tap")
 
-register("Twisted SSH Server",
-         "twisted.tap.ssh",
-         description="An SSHv2 service.",
+register("Twisted Conch Server",
+         "twisted.tap.conch",
+         description="A Conch SSH service.",
          type="tap")
 
 register("Twisted Telnet Shell Server",
