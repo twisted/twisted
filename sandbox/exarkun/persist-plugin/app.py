@@ -155,6 +155,15 @@ class ServerOptions(usage.Options):
     def parseOptions(self, options=None):
         usage.Options.parseOptions(self, options or sys.argv[1:] or ["--help"])
 
+def getLoaders():
+    d = {}
+    for p in plugin.getPlugIns("apploader"):
+        module = p.load()
+        for loader in p.loaderFactories:
+            d[loader] = getattr(module, loader)()
+    return d
+                        
+
 def run(runApp, ServerOptions):
     config = ServerOptions()
     loaders = getLoaders()
