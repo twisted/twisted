@@ -1540,7 +1540,9 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
             elif part.type == 'rfc822size':
                 response.extend(('RFC822.SIZE', str(msg.getSize())))
             elif part.type == 'rfc822':
-                response.extend(('RFC822', _formatHeaders(msg.getHeaders(True)) +'\r\n' + msg.getBodyFile().read()))
+                hdrs = _formatHeaders(msg.getHeaders(True))
+                body = msg.getBodyFile().read()
+                response.extend(('RFC822',  hdrs + '\r\n' + body))
             elif part.type == 'uid':
                 seenUID = True
                 response.extend(('UID', str(msg.getUID())))
