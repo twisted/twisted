@@ -263,9 +263,9 @@ class MessageSet(object):
         return False
 
 class LiteralString:
-    # XXX - This doesn't seem to need to exist - LiteralFile should be enough
-    # Additionally, the client may send any size, meaning they could cause us
-    # to allocate an arbitrary amount of memory.
+
+
+
     def __init__(self, size, defered):
         self.size = size
         self.data = []
@@ -441,6 +441,9 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
     # Command data to be processed when literal data is received
     _pendingLiteral = None
 
+    # Maximum length to accept for a "short" string literal
+    _literalStringLimit = 4096
+
     # IChallengeResponse factories for AUTHENTICATE command
     challengers = None
     
@@ -570,6 +573,10 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
             log.err(failure)
         
     def _stringLiteral(self, size):
+        if size > self._literalStringLimit:
+            raise IllegalClientResponse(
+                "Literal too long! I accept at most %d octets" %
+                (self._literalStringLimit,))
         d = defer.Deferred()
         self._pendingLiteral = LiteralString(size, d)
         self.sendContinuationRequest('Ready for %d octets of text' % size)
