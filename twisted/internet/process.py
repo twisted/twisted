@@ -168,7 +168,7 @@ class ProcessReader(abstract.FileDescriptor):
     def loseConnection(self):
         if self.connected and not self.disconnecting:
             self.disconnecting = 1
-            self.transport.stopReading()
+            self.stopReading()
             self.reactor.callLater(0, self.connectionLost, CONNECTION_DONE)
     
     def connectionLost(self, reason):
