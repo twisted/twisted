@@ -6,7 +6,7 @@ TEST, TEST.
 WEBBROWSER='galeon -n' IRCCLIENT=epic4 admin/accepttests -b
  * make sure distributed web servers are working; test on zaibach.
      * run a --user server on port 3080 
-./bin/mktap web --user -p 3080; ./bintwistd -f web.tap
+./bin/mktap web --user -p 3080; ./bin/twistd -f web.tap
      * check http://twistedmatrix.com:3080/jh.twistd/python/moin.cgi/, carmstro.twistd, z3p.twistd; if distributed web *wasn't* supposed to break this 
        release, scream at twisted.web hackers :-)
      * kill the server:
@@ -17,7 +17,7 @@ kill `cat twistd.pid`
         new --personals, and I never tested new --personals!)
        * kill your regular personal server
        * Run:
-./bin/mktap --personal web;./bin/twistd -f web.tap
+./bin/mktap web --personal;./bin/twistd -f web.tap
        * check http://twistedmatrix.com/<you>.twistd/
        * kill it:
 kill `cat twistd.pid`
