@@ -1120,13 +1120,14 @@ class HTTPFactory(protocol.ServerFactory):
 
     def log(self, request):
         """Log a request's result to the logfile, by default in combined log format."""
-        line = '%s - - %s "%s" %d %s "%s" "%s"\n' % (
-            request.getClientIP(),
-            # request.getUser() or "-", # the remote user is almost never important
-            _logDateTime,
-            '%s %s %s' % (request.method, request.uri, request.clientproto),
-            request.code,
-            request.sentLength or "-",
-            request.getHeader("referer") or "-",
-            request.getHeader("user-agent") or "-")
-        self.logFile.write(line)
+        if hasattr(self, "logFile"):
+            line = '%s - - %s "%s" %d %s "%s" "%s"\n' % (
+                request.getClientIP(),
+                # request.getUser() or "-", # the remote user is almost never important
+                _logDateTime,
+                '%s %s %s' % (request.method, request.uri, request.clientproto),
+                request.code,
+                request.sentLength or "-",
+                request.getHeader("referer") or "-",
+                request.getHeader("user-agent") or "-")
+            self.logFile.write(line)
