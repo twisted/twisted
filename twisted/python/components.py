@@ -179,7 +179,22 @@ def getAdapter(obj, interfaceClass, default,
 class _Nothing:
     pass
 
+class Adapter:
+    """I am the default implementation of an Adapter for some interface.
 
+    This docstring contains a limerick, by popular demand.
+
+    Subclassing made Zope and TR
+    much harder to work with by far.
+        So before you inherit,
+        be sure to declare it
+    Adapter, not PyObject*
+    """
+
+    def __init__(self, original):
+        """Set my 'original' attribute to be the object I am adapting.
+        """
+        self.original = original
 
 class Componentized:
     """I am a mixin to allow you to be adapted in various ways persistently.
