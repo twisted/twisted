@@ -445,6 +445,7 @@ class WriterProtocol(protocol.Protocol):
             print "getHost returned non-INET socket:", us
             self.factory.problem = 1
         self.factory.done = 1
+        
         self.transport.loseConnection()
 
 class ReaderProtocol(protocol.Protocol):
@@ -462,7 +463,7 @@ class WriterClientFactory(protocol.ClientFactory):
         p.factory = self
         self.protocol = p
         return p
-
+    
 class WriteDataTestCase(PortCleanerUpper):
     """Test that connected TCP sockets can actually write data. Try to
     exercise the entire ITransport interface.
@@ -479,7 +480,7 @@ class WriteDataTestCase(PortCleanerUpper):
         clientF = WriterClientFactory()
         reactor.connectTCP("localhost", n, clientF)
         count = 0
-        while not ((count > 10) or (f.done and clientF.done)):
+        while not ((count > 20) or (f.done and clientF.done)):
             reactor.iterate()
             count += 1
         self.failUnless(f.done, "writer didn't finish, it probably died")
@@ -497,7 +498,7 @@ class ConnectionLosingProtocol(protocol.Protocol):
 
 class ProperlyCloseFilesTestCase(unittest.TestCase):
 
-    numberRounds = 512
+    numberRounds = 2048
     
     def setUp(self):
         f = protocol.ServerFactory()
