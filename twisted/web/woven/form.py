@@ -15,7 +15,7 @@ from twisted.internet import defer
 # Sibling Imports
 from twisted.web.woven import model, view, controller, widgets, input, interfaces
 
-from twisted.web.microdom import parseString, lmx
+from twisted.web.microdom import parseString, lmx, Element
 
 
 #other imports
@@ -259,10 +259,10 @@ class FormFillerWidget(widgets.Widget):
         else:
             imeth = getattr(self,"input_"+name)
         if name == "hidden":
-            return (imeth(request, shell, model).node, lmx())
+            return (imeth(request, shell, model).node, shell.tr().td().node)
         elif name == "submit":
             td = shell.tr().td(valign="top", colspan="2")
-            return (imeth(request, td, model).node, lmx())
+            return (imeth(request, td, model).node, shell.tr().td().node)
         else:
             tr = shell.tr()
             tr.td(align="right", valign="top").text(model.getShortDescription()+":")
@@ -364,7 +364,7 @@ class _RequestHack(model.MethodModel):
     def wmfactory_hack(self, request):
         rv = [[str(a), repr(b)] for (a, b)
               in request._outDict.items()]
-        print 'hack', rv
+        #print 'hack', rv
         return rv
 
 class FormProcessor(resource.Resource):
