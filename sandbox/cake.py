@@ -148,6 +148,8 @@ def code_recipe(recipe, indent=''):
     return Compiler(recipe, indent).compile()
 
 def compile_recipe(recipe):
+    if not isinstance(recipe, Recipe):
+        recipe = Recipe(recipe)
     res = []
     codestring, locals = code_recipe(recipe, indent='    ')
     locals['callback'] = res.append
@@ -173,8 +175,10 @@ def preheat(cake):
             callstack.append((prevcake._meth_, cake._args_, cake._kwargs_))
     return callstack
  
-def bake(cake, res):
-    return Recipe(cake)(res)
+def bake(recipe, res):
+    if not isinstance(recipe, Recipe):
+        recipe = Recipe(recipe)
+    return recipe(res)
 
 _SPECIALS = """
     __hash__
@@ -212,5 +216,7 @@ if __name__=='__main__':
     print map(curry(bake, later, 4), cakes)
     print code_recipe(cake5)[0].strip()
     fn = compile_recipe(cake5)
+    fn2 = compile_recipe(cake4)
     print fn([60])
+    print fn2([60])
     print fn([12, 100, 40, 1, 2, 3, 4, 5, 6, 9, 7, 10, 10.1, 10.2, 10.3, 11, 12, 13, 14])
