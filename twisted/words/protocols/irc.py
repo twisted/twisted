@@ -194,39 +194,39 @@ class IRC(protocol.Protocol):
     def irc_unknown(self, prefix, command, params):
         """Implement me!"""
         raise NotImplementedError
-    
+
     # Helper methods
     def privmsg(self, sender, recip, message):
         """Send a message to a channel or user
-        
+
         @type sender: C{str}
         @param sender: Who is sending this message.  Should be of the form
         username!ident@hostmask (unless you know better!).
-        
+
         @type recip: C{str}
         @param recip: The recipient of this message.  If a channel, it
         must start with a channel prefix.
-        
+
         @type message: C{str}
         @param message: The message being sent.
         """
         self.sendLine(":%s PRIVMSG %s :%s" % (sender, recip, message))
-    
+
     def notice(self, sender, recip, message):
         """Send a \"notice\" to a channel or user.
-        
+
         Notices differ from privmsgs in that the RFC claims they are different.
         Robots are supposed to send notices and not respond to them.  Clients
         typically display notices differently from privmsgs.
-        
+
         @type sender: C{str}
         @param sender: Who is sending this message.  Should be of the form
         username!ident@hostmask (unless you know better!).
-        
+
         @type recip: C{str}
         @param recip: The recipient of this message.  If a channel, it
         must start with a channel prefix.
-        
+
         @type message: C{str}
         @param message: The message being sent.
         """
@@ -234,15 +234,15 @@ class IRC(protocol.Protocol):
 
     def action(self, sender, recip, message):
         """Send an action to a channel or user.
-        
+
         @type sender: C{str}
         @param sender: Who is sending this message.  Should be of the form
         username!ident@hostmask (unless you know better!).
-        
+
         @type recip: C{str}
         @param recip: The recipient of this message.  If a channel, it
         must start with a channel prefix.
-        
+
         @type message: C{str}
         @param message: The action being sent.
         """
@@ -250,17 +250,17 @@ class IRC(protocol.Protocol):
 
     def topic(self, user, channel, topic, author=None):
         """Send the topic to a user.
-        
+
         @type user: C{str}
         @param user: The user receiving the topic.  Only their nick name, not
         the full hostmask.
-        
+
         @type channel: C{str}
         @param channel: The channel for which this is the topic.
-        
+
         @type topic: C{str}
         @param topic: The topic string.
-        
+
         @type author: C{str}
         @param author: If the topic is being changed, the full username and hostmask
         of the person changing it.
@@ -273,14 +273,14 @@ class IRC(protocol.Protocol):
 
     def names(self, user, channel, names):
         """Send the names of a channel's participants to a user.
-        
+
         @type user: C{str}
         @param user: The user receiving the topic.  Only their nick name, not
         the full hostmask.
-        
+
         @type channel: C{str}
         @param channel: The channel for which this is the topic.
-        
+
         @type names: C{list} of C{str}
         @param names: The names to send.
         """
@@ -291,28 +291,28 @@ class IRC(protocol.Protocol):
 
     def join(self, who, where):
         """Send a join message.
-        
+
         @type who: C{str}
         @param who: The name of the user joining.  Should be of the form
         username!ident@hostmask (unless you know better!).
-        
+
         @type where: C{str}
         @param where: The channel the user is joining.
         """
         self.sendLine(":%s JOIN %s" % (who, where))
-    
+
     def part(self, who, where):
         """Send a part message.
 
         @type who: C{str}
         @param who: The name of the user joining.  Should be of the form
         username!ident@hostmask (unless you know better!).
-        
+
         @type where: C{str}
         @param where: The channel the user is joining.
         """
         self.sendLine(":%s PART %s" % (who, where))
-        
+
 
 class IRCClient(basic.LineReceiver):
     """Internet Relay Chat client protocol, with sprinkles.
@@ -413,56 +413,56 @@ class IRCClient(basic.LineReceiver):
     ### You'll want to override these.
 
     ### Methods relating to the server itself
-    
+
     def created(self, when):
         """Called with creation date information about the server, usually at logon.
-        
+
         @type when: C{str}
         @param when: A string describing when the server was created, probably.
         """
-    
+
     def yourHost(self, info):
         """Called with daemon information about the server, usually at logon.
-        
+
         @type info: C{str}
         @param when: A string describing what software the server is running, probably.
         """
-    
+
     def myInfo(self, servername, version, umodes, cmodes):
         """Called with information about the server, usually at logon.
-        
+
         @type servername: C{str}
         @param servername: The hostname of this server.
-        
+
         @type version: C{str}
         @param version: A description of what software this server runs.
-        
+
         @type umodes: C{str}
         @param umodes: All the available user modes.
-        
+
         @type cmodes: C{str}
         @param cmodes: All the available channel modes.
         """
-    
+
     def luserClient(self, info):
         """Called with information about the number of connections, usually at logon.
-        
+
         @type info: C{str}
         @param info: A description of the number of clients and servers
         connected to the network, probably.
         """
-    
+
     def bounce(self, info):
         """Called with information about where the client should reconnect.
-        
+
         @type info: C{str}
         @param info: A plaintext description of the address that should be
         connected to.
         """
-    
+
     def isupport(self, options):
         """Called with various information about what the server supports.
-        
+
         @type options: C{list} of C{str}
         @param options: Descriptions of features or limits of the server, possibly
         in the form "NAME=VALUE".
@@ -470,19 +470,19 @@ class IRCClient(basic.LineReceiver):
 
     def luserChannels(self, channels):
         """Called with the number of channels existant on the server.
-        
+
         @type channels: C{int}
         """
 
     def luserOp(self, ops):
         """Called with the number of ops logged on to the server.
-        
+
         @type ops: C{int}
         """
 
     def luserMe(self, info):
         """Called with information about the server connected to.
-        
+
         @type info: C{str}
         @param info: A plaintext string describing the number of users and servers
         connected to this server.
@@ -915,35 +915,35 @@ class IRCClient(basic.LineReceiver):
 
     def irc_RPL_CREATED(self, prefix, params):
         self.created(params[1])
-    
+
     def irc_RPL_YOURHOST(self, prefix, params):
         self.yourHost(params[1])
-    
+
     def irc_RPL_MYINFO(self, prefix, params):
         self.myInfo(*params[1:5])
-    
+
     def irc_RPL_BOUNCE(self, prefix, params):
         # 005 is doubly assigned.  Piece of crap dirty trash protocol.
         if params[-1] == "are available on this server":
             self.isupport(params[1:-1])
         else:
             self.bounce(params[1])
-    
+
     def irc_RPL_LUSERCLIENT(self, prefix, params):
         self.luserClient(params[1])
-    
+
     def irc_RPL_LUSEROP(self, prefix, params):
         try:
             self.luserOp(int(params[1]))
         except ValueError:
             pass
-    
+
     def irc_RPL_LUSERCHANNELS(self, prefix, params):
         try:
             self.luserChannels(int(params[1]))
         except ValueError:
             pass
-    
+
     def irc_RPL_LUSERME(self, prefix, params):
         self.luserMe(params[1])
 
