@@ -24,4 +24,4 @@ Maintainer: U{Andrew Bennetts<spiv@twistedmatrix.com>}
 # Abstract
 # Bybliography
 # Index
-# Sub/super
+# Allow non-web image formats (EPS, specifically)
