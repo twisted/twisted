@@ -66,6 +66,7 @@ import string
 
 # Twisted Imports
 from twisted.internet import abstract, tcp
+from twisted.internet.interfaces import IProducer
 from twisted.protocols import basic
 from twisted.protocols import protocol
 from twisted.python import threadable
@@ -107,9 +108,13 @@ ftp_reply = {
 
 class sendFileTransfer:
     "Producer, server to client"
+    
     request = None
     file = None
     filesize = None
+    
+    __implements__ = (IProducer,)
+    
     def __init__(self, file, filesize, request):
         self.request = request
         self.file = file
