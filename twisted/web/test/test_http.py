@@ -428,3 +428,31 @@ class QueryArgumentsTestCase(unittest.TestCase):
             raise unittest.SkipTest
         self.failUnlessEqual("!@#+b",
             _c_urlarg.unquote("+21+40+23+b", "+"))
+
+class ClientDriver(http.HTTPClient):
+    def handleStatus(self, version, status, message):
+        self.version = version
+        self.status = status
+        self.message = message
+
+class ClientStatusParsing(unittest.TestCase):
+    def testBaseline(self):
+        c = ClientDriver()
+        c.lineReceived('HTTP/1.0 201 foo')
+        self.failUnlessEqual(c.version, 'HTTP/1.0')
+        self.failUnlessEqual(c.status, '201')
+        self.failUnlessEqual(c.message, 'foo')
+
+    def testNoMessage(self):
+        c = ClientDriver()
+        c.lineReceived('HTTP/1.0 201')
+        self.failUnlessEqual(c.version, 'HTTP/1.0')
+        self.failUnlessEqual(c.status, '201')
+        self.failUnlessEqual(c.message, '')
+
+    def testNoMessage_trailingSpace(self):
+        c = ClientDriver()
+        c.lineReceived('HTTP/1.0 201 ')
+        self.failUnlessEqual(c.version, 'HTTP/1.0')
+        self.failUnlessEqual(c.status, '201')
+        self.failUnlessEqual(c.message, '')

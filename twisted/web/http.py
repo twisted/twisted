@@ -327,11 +327,13 @@ class HTTPClient(basic.LineReceiver):
     def lineReceived(self, line):
         if self.firstLine:
             self.firstLine = 0
+            l = line.split(None, 2)
+            version = l[0]
+            status = l[1]
             try:
-                version, status, message = line.split(None, 2)
-            except ValueError:
+                message = l[2]
+            except IndexError:
                 # sometimes there is no message
-                version, status = line.split(None, 1)
                 message = ""
             self.handleStatus(version, status, message)
             return
