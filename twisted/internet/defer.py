@@ -95,7 +95,7 @@ def maybeDeferred(f, *args, **kw):
     if isinstance(f, Deferred) or f is None:
         import warnings
         warnings.warn("First argument to maybeDeferred() should no longer be a Deferred or None.  Just pass the function and the arguments.", DeprecationWarning)
-        deferred = f
+        deferred = f or defer.Deferred()
         f = args[0]
         args = args[1:]
 
