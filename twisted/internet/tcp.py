@@ -281,6 +281,13 @@ class Connection(abstract.FileDescriptor):
     def setTcpNoDelay(self, enabled):
         self.socket.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, enabled)
 
+    def getTcpKeepAlive(self):
+        return operator.truth(self.socket.getsockopt(socket.SOL_SOCKET,
+                                                     socket.SO_KEEPALIVE))
+
+    def setTcpKeepAlive(self, enabled):
+        self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_KEEPALIVE, enabled)
+
 
 class BaseClient(Connection):
     """A base class for client TCP (and similiar) sockets.

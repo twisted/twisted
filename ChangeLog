@@ -1,5 +1,11 @@
 2003-05-21  Brian Warner  <warner@lothar.com>
 
+	* twisted/internet/tcp.py (Connection.getTcpKeepAlive): Add
+	functions to control SO_KEEPALIVE bit on TCP sockets.
+	* twisted/internet/interfaces.py (ITCPTransport): ditto
+	* twisted/test/test_tcp.py (LoopbackTestCase.testTcpKeepAlive):
+	test it
+
 	* doc/howto/test-standard.html: document test-case-name format
 
 	* doc/howto/coding-standard.html: encourage test-case-name tags

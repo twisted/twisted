@@ -337,7 +337,7 @@ class IReactorProcess(Interface):
                      executable's name.
 
         @param env: the environment variables to pass to the processs; a
-                    dictionary of strings.
+                    dictionary of strings. If 'None', use os.environ.
 
         @param path: the path to run the subprocess in - defaults to the
                      current directory.
@@ -870,7 +870,18 @@ class ITCPTransport(ITransport):
     def setTcpNoDelay(self, enabled):
         """Enable/disable TCP_NODELAY.
 
-        Enabling TCP_NODELAY turns off Nagle's algorithm."""
+        Enabling TCP_NODELAY turns off Nagle's algorithm. Small packets are
+        sent sooner, possibly at the expense of overall throughput."""
+
+    def getTcpKeepAlive(self):
+        """Return if SO_KEEPALIVE enabled."""
+
+    def setTcpKeepAlive(self, enabled):
+        """Enable/disable SO_KEEPALIVE.
+
+        Enabling SO_KEEPALIVE sends packets periodically when the connection
+        is otherwise idle, usually once every two hours. They are intended
+        to allow detection of lost peers in a non-infinite amount of time."""
 
     def getHost(self):
         """Returns tuple ('INET', host, port)."""

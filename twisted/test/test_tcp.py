@@ -157,6 +157,31 @@ class LoopbackTestCase(PortCleanerUpper):
         reactor.iterate()
         reactor.iterate()
         clientF.lostReason.trap(error.ConnectionDone)
+
+    def testTcpKeepAlive(self):
+        f = MyServerFactory()
+        port = reactor.listenTCP(0, f, interface="127.0.0.1")
+        self.n = port.getHost()[2]
+        self.ports.append(port)
+        clientF = MyClientFactory()
+        reactor.connectTCP("localhost", self.n, clientF)
+
+        reactor.iterate()
+        reactor.iterate()
+        for p in clientF.protocol, f.protocol:
+            transport = p.transport
+            self.assertEquals(transport.getTcpKeepAlive(), 0)
+            transport.setTcpKeepAlive(1)
+            self.assertEquals(transport.getTcpKeepAlive(), 1)
+            transport.setTcpKeepAlive(0)
+            reactor.iterate()
+            self.assertEquals(transport.getTcpKeepAlive(), 0)
+
+        clientF.protocol.transport.loseConnection()
+        port.stopListening()
+        reactor.iterate()
+        reactor.iterate()
+        clientF.lostReason.trap(error.ConnectionDone)
     
     def testFailing(self):
         clientF = MyClientFactory()
