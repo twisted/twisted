@@ -290,6 +290,7 @@ class Failure:
         self.__dict__ = self.__getstate__()
 
     def getErrorMessage(self):
+        """Get a string of the exception which caused this Failure."""
         if isinstance(self.value, Failure):
             return self.value.getErrorMessage()
         return str(self.value)
