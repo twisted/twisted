@@ -91,16 +91,12 @@ class WView(template.DOMTemplate):
         # Look up either a widget factory, or a dom-mutating method
         if viewName:
             namespaces = [self]
-            print "asdf"
             for namespace in namespaces:
                 viewMethod = getattr(namespace, 'factory_' + viewName, None)
                 if viewMethod is not None:
                     break
-            print "asdf"
             if viewMethod is None:
-                print "here"
                 view = getattr(widgets, viewName, None)
-                print "there"
                 if view is not None:
                     view = view(self.model)
             else:
