@@ -172,7 +172,7 @@ class Client(Connection):
 
     def resolveAddress(self):
         if abstract.isIPAddress(self.addr[0]):
-            self._setRealAddress(self.addr[1])
+            self._setRealAddress(self.addr[0])
         else:
             main.resolver.resolve(self.addr[0],
                                   self._setRealAddress,
