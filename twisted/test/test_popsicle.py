@@ -17,7 +17,7 @@
 
 from twisted.trial import unittest
 from twisted.popsicle import mailsicle, freezer
-import gc
+import gc, shutil
 
 class Dummy:
     name = 'UNNAMED!!!'
@@ -191,3 +191,4 @@ class MailsicleTest(unittest.TestCase):
         ms.queryIndex("person-name","joe").fetch().addCallback(zz.extend)
         self.assertEquals(yy,[])
         self.assertEquals(len(zz),1)
+        shutil.rmtree("BOBJANE_TEST")
