@@ -442,9 +442,10 @@ else:
     lsOut = popen2.popen3("/bin/ls ZZXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX")[2].read()
     # make sure SIGCHLD handler is installed, as it should be on reactor.run().
     # problem is reactor may not have been run when this test runs.
-    import signal
-    from twisted.internet import process
-    signal.signal(signal.SIGCHLD, reactor._handleSigchld)
+    if hasattr(reactor, "_handleSigchld"):
+        import signal
+        from twisted.internet import process
+        signal.signal(signal.SIGCHLD, reactor._handleSigchld)
 
 if runtime.platform.getType() != 'win32':
     del Win32ProcessTestCase

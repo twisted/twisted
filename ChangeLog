@@ -1,5 +1,8 @@
 2003-04-12  Brian Warner  <warner@lothar.com>
 
+	* twisted/test/test_process.py: only install SIGCHLD handler if the
+	reactor offers a hook for it.
+
 	* twisted/test/test_policies.py (ThrottlingTestCase.doIterations):
 	add more iterations to accomodate reactors that do less IO per pass
 
