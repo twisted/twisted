@@ -285,13 +285,13 @@ class File(resource.Resource, styles.Versioned):
     def getChild(self, path, request):
         """See twisted.web.Resource.getChild.
         """
-        if path == '':
-            return self
-
         if path == '..':
             return error.NoResource("Invalid request URL.")
 
-        childPath = os.path.join(self.path, path)
+        if path == '':
+            childPath = self.path
+        else:
+            childPath = os.path.join(self.path, path)
         try:
             mode, ino, dev, nlink, uid, gid, size, atime, mtime, ctime =\
                   os.stat(childPath)
