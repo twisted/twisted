@@ -14,7 +14,7 @@
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 #
-# $Id: conch.py,v 1.61 2003/11/14 04:15:20 z3p Exp $
+# $Id: conch.py,v 1.62 2003/11/19 22:53:06 z3p Exp $
 
 #""" Implementation module for the `conch` command.
 #"""
@@ -695,7 +695,7 @@ class SSHUserAuthClient(userauth.SSHUserAuthClient):
         try:
             return defer.succeed(keys.getPrivateKeyObject(file))
         except keys.BadKeyError, e:
-            if e.args[0] == 'encrypted key with no password':
+            if e.args[0] == 'encrypted key with no passphrase':
                 for i in range(3):
                     prompt = "Enter passphrase for key '%s': " % \
                            self.usedFiles[-1]
@@ -704,7 +704,7 @@ class SSHUserAuthClient(userauth.SSHUserAuthClient):
                     p=getpass.getpass(prompt)
                     sys.stdout,sys.stdin=oldout,oldin
                     try:
-                        return defer.succeed(keys.getPrivateKeyObject(file, password = p))
+                        return defer.succeed(keys.getPrivateKeyObject(file, passphrase = p))
                     except keys.BadKeyError:
                         pass
                 return defer.fail(ConchError('bad password'))
