@@ -17,5 +17,13 @@ tcp.BaseClient._finishInit:
 abstract.FileDescriptor provides read/write notifications and writes buffered data
 (yuck, producer/consumer stuff as well)
 
-Now, one notification (self.operationComplete). TCP crud is on top of that
+Reactor notifies by calling overlapped.object.do_<completionkey>
 Drop win32all and write my own wrapper?
+Design decision: call recursive read in abstract.IoHandle or in each IoHandle
+subclass? Latter, for now.
+
+Write buffering:
+buffer is empty list:
+    start writing the string
+buffer is non-empty:
+    add to buffer

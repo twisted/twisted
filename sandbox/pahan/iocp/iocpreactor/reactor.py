@@ -10,7 +10,7 @@ iocp = CreateIoCompletionPort(INVALID_HANDLE_VALUE, 0, 0, 0) # make concurrency 
 completables = {}
 
 # XXX: perhaps need to inherit from ReactorBase and incur some code duplication
-class IOCPReactor(PosixReactorBase):
+class IOCPProactor(PosixReactorBase):
     __implements__ = (IReactorCore, IReactorTime, IReactorThreads, IReactorPluggableResolver)
 
     def installWaker(self):
@@ -24,8 +24,10 @@ class IOCPReactor(PosixReactorBase):
             timeout = int(timeout * 1000)
         (ret, bytes, key, ov) = GetQueuedCompletionStatus(iocp, timeout)
         o = ov.object
+        print "IOCPReactor got event", ret, bytes, key, ov, ov.object
         m = o.getattr("do_%" % (key,), o.do_unknown)
-        m(ret, bytes, ov)
+        print "... calling", m, "to handle"
+        m(ret, bytes)
 
 class IOCPWaker(log.Logger, styles.Ephemeral):
     def wakeUp(self):
@@ -37,7 +39,7 @@ class IOCPWaker(log.Logger, styles.Ephemeral):
         pass
 
 def install():
-    i = IOCPReactor()
+    i = IOCPProactor()
     from twisted.internet import main
     main.installReactor(i)
 
