@@ -24,8 +24,8 @@ if a class implements interfaces that means its *instances* provide them).
 However, some methods (e.g. implements()) are confusing because they actually
 check if object *provides* an interface. Using the Zope3 API directly is thus
 strongly recommended.
+
 TODO: make zope.interface run in 2.2
-PROBLEMS: getAdapter and IFoo() used to mean same thing? now they don't? CHECK!
 """
 
 # twisted imports
@@ -62,6 +62,15 @@ _adapterPersistence = weakref.WeakValueDictionary()
 _adapterOrigPersistence = weakref.WeakValueDictionary()
 
 class MetaInterface(interface.InterfaceClass):
+
+    def __init__(self, name, bases=(), attrs=None, __doc__=None,
+                 __module__=None):
+        if attrs is not None and attrs.has_key("__adapt__"):
+            warnings.warn("Please don't use __adapt__ on Interface subclasses", DeprecationWarning)
+            self.__instadapt__ = attrs["__adapt__"]
+            del attrs["__adapt__"]
+        return interface.InterfaceClass.__init__(self, name, bases, attrs, __doc__, __module__)
+
     def __call__():
         # Copying evil trick I dinna understand
         def __call__(self, adaptable, default=_Nothing, persist=None, registry=None):
@@ -89,11 +98,15 @@ class MetaInterface(interface.InterfaceClass):
                     raise
                 else:
                     raise CannotAdapt(str(e))
+            if adapter == default:
+                if hasattr(self, '__instadapt__'):
+                    adapter = self.__instadapt__(adaptable, default)
             if persist:
                 _adapterPersistence[(id(adaptable), self)] = adapter
                 # make sure as long as adapter is alive the original object is alive
                 _adapterOrigPersistence[_Wrapper(adaptable)] = adapter
-
+            return adapter
+        
         return __call__
     __call__ = __call__()
     
@@ -206,18 +219,14 @@ class AdapterRegistry(ZopeAdapterRegistry):
     def getAdapterClassWithInheritance(self, klass, interfaceClass, default):
         """Return registered adapter for a given class and interface.
         """
-        # XXX
-        raise NotImplementedError
-        #import warnings
-        #warnings.warn("You almost certainly want to be "
-        #              "using interface->interface adapters. "
-        #              "If you do not, modify your desire.",
-        #              DeprecationWarning, stacklevel=3)
-        adapterClass = self.adapterRegistry.get((klass, interfaceClass), _Nothing)
+        warnings.warn("You almost certainly want to be "
+                      "using interface->interface adapters. "
+                      "If you do not, modify your desire.",
+                      DeprecationWarning, stacklevel=3)
+        adapterClass = self.getAdapterFactory(klass, interfaceClass, _Nothing)
         if adapterClass is _Nothing:
             for baseClass in reflect.allYourBase(klass):
-                adapterClass = self.adapterRegistry.get((baseClass, interfaceClass),
-                                                          _Nothing)
+                adapterClass = self.getAdapterFactory(klass, interfaceClass, _Nothing)
                 if adapterClass is not _Nothing:
                     return adapterClass
         else:
@@ -293,6 +302,7 @@ class Adapter:
         I forward getComponent to self.original if it has it, otherwise I
         simply return default.
         """
+        
         try:
             f = self.original.getComponent
         except AttributeError:
@@ -300,11 +310,15 @@ class Adapter:
         else:
             return f(interface, registry=registry, default=default)
 
+    def __conform__(self, interface):
+        return self.getComponent(interface)
+    
     def isuper(self, iface, adapter):
         """
         Forward isuper to self.original
         """
         return self.original.isuper(iface, adapter)
+
 
 class Componentized(styles.Versioned):
     """I am a mixin to allow you to be adapted in various ways persistently.
@@ -322,7 +336,6 @@ class Componentized(styles.Versioned):
 
     def __init__(self):
         self._adapterCache = {}
-
 
     def locateAdapterClass(self, klass, interfaceClass, default, registry=None):
         return getRegistry(registry).getAdapterClassWithInheritance(klass, interfaceClass, default)
@@ -410,12 +423,8 @@ class Componentized(styles.Versioned):
         k = reflect.qual(interface)
         if self._adapterCache.has_key(k):
             return self._adapterCache[k]
-        elif implements(self, interface):
-            return self
         else:
-            adapter = registry.getAdapter(self, interface, default,
-                                          lambda k, ik, d:
-                                          self.locateAdapterClass(k, ik, d, registry))
+            adapter = interface.__adapt__(self)
             if adapter is not None and adapter is not _Nothing and not (
                 hasattr(adapter, "temporaryAdapter") and
                 adapter.temporaryAdapter):
@@ -426,6 +435,9 @@ class Componentized(styles.Versioned):
                     self.addComponent(adapter)
             return adapter
 
+    def __conform__(self, interface):
+        return self.getComponent(interface)
+    
     def upgradeToVersion1(self):
         # To let Componentized instances interact correctly with
         # rebuild(), we cannot use class objects as dictionary keys.
