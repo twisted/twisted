@@ -1,3 +1,10 @@
+2003-12-26  Itamar Shtull-Trauring  <itamar@itamarst.org>
+
+	* twisted/web/server.py: display of tracebacks on web pages can
+	now be disabled by setting displayTracebacks to False on the Site
+	or by using applicable tap option. Woven does not yet use
+	this attribute.
+
 2003-12-23  Itamar Shtull-Trauring  <itamar@itamarst.org>
 
 	* twisted/web/client.py: if Host header is passed, use that

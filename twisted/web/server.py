@@ -235,10 +235,15 @@ class Request(pb.Copyable, http.Request, components.Componentized):
 
     def processingFailed(self, reason):
         log.err(reason)
-        body = ("<html><head><title>web.Server Traceback (most recent call last)</title></head>"
-                "<body><b>web.Server Traceback (most recent call last):</b>\n\n"
-                "%s\n\n</body></html>\n"
-                % webutil.formatFailure(reason))
+        if self.site.displayTracebacks:
+            body = ("<html><head><title>web.Server Traceback (most recent call last)</title></head>"
+                    "<body><b>web.Server Traceback (most recent call last):</b>\n\n"
+                    "%s\n\n</body></html>\n"
+                    % webutil.formatFailure(reason))
+        else:
+            body = ("<html><head><title>Processing Failed</title></head><body>"
+                  "<b>Processing Failed</b></body></html>")
+
         self.setResponseCode(http.INTERNAL_SERVER_ERROR)
         self.setHeader('content-type',"text/html")
         self.setHeader('content-length', str(len(body)))
@@ -430,7 +435,8 @@ class Site(http.HTTPFactory):
 
     counter = 0
     requestFactory = Request
-
+    displayTracebacks = True
+    
     def __init__(self, resource, logPath=None, timeout=60*60*12):
         """Initialize.
         """

@@ -39,7 +39,11 @@ class Options(usage.Options):
     optFlags = [["personal", "",
                  "Instead of generating a webserver, generate a "
                  "ResourcePublisher which listens on "
-                 "~/%s" % distrib.UserDirectory.userSocketName]]
+                 "~/%s" % distrib.UserDirectory.userSocketName],
+                ["notracebacks", "n", "Display tracebacks in broken web pages. " +
+                 "Displaying tracebacks to users may be security risk!"],
+]
+
 
     longdesc = """\
 This creates a web.tap file that can be used by twistd.  If you specify
@@ -169,6 +173,8 @@ def makeService(config):
     else:
         site = server.Site(root)
 
+    site.displayTracebacks = not config["notracebacks"]
+    
     if config['personal']:
         import pwd,os
 
