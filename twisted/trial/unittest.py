@@ -206,7 +206,10 @@ class TestSuite:
 
         for e in log.flushErrors():
             ok = 0
-            output.reportError(testClass, method, e)
+            if isinstance(e, failure.Failure):
+                output.reportFailure(testClass, method, e)
+            else:
+                output.reportError(testClass, method, e)
 
         if ok:
             output.reportSuccess(testClass, method)
@@ -295,7 +298,7 @@ class Reporter:
 
     def reportFailure(self, testClass, method, exc_info):
         if self.debugger:
-            pdb.post_mortem(exc_info[2])
+            raise TypeError, "Failure, not Exception -- you lose."
         self.failures.append((testClass, method, exc_info))
         self.numTests += 1
 
