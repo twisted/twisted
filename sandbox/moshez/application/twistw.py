@@ -43,30 +43,14 @@ class ServerOptions(apprun.ServerOptions):
 
 
 def startLogging(logfilename):
-    if logfilename == '-':
-        if not nodaemon:
-            print 'daemons cannot log to stdout'
-            os._exit(1)
-        logFile = sys.stdout
-    elif not logfile:
+    if logfilename == '-' or not logfile:
         logFile = sys.stdout
     else:
         logPath = os.path.abspath(logfilename or 'twistd.log')
         logFile = logfile.LogFile(os.path.basename(logPath),
                                   os.path.dirname(logPath))
+    log.startLogging(logFile)
     sys.stdout.flush()
-    log.msg("twistd %s (%s %s) starting up" % (copyright.version,
-                                               sys.executable,
-                                               runtime.shortPythonVersion()))
-
-def setupEnvironment(config):
-    os.chdir(config['rundir'])
-
-def startApplication(config, application):
-    application.privilegedStartService()
-    application.startService()
-    if not config['no_save']:
-        application.scheduleSave()
 
 def runApp(config):
     passphrase = apprun.getPassphrase(config['encrypted'])
@@ -74,9 +58,13 @@ def runApp(config):
     oldstdout = sys.stdout
     oldstderr = sys.stderr
     startLogging(config['logfile'])
-    from twisted.internet import reactor
-    log.msg('reactor class: %s' % reactor.__class__)
-    startApplication(config, apprun.getApplication(config, passphrase))
+    apprun.initialLog()
+    os.chdir(config['rundir'])
+    application = apprun.getApplication(config, passphrase)
+    application.privilegedStartService()
+    application.startService()
+    if not config['no_save']:
+        application.scheduleSave()
     apprun.runReactorWithLogging(config, oldstdout, oldstderr)
     if config['report-profile']:
         apprun.reportProfile(config['report-profile'], application.processName)

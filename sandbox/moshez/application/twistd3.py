@@ -128,9 +128,6 @@ def startLogging(logfilename, syslog, prefix, nodaemon):
     if not syslog:
         log.startLogging(logFile)
     sys.stdout.flush()
-    log.msg("twistd %s (%s %s) starting up" % (copyright.version,
-                                               sys.executable,
-                                               runtime.shortPythonVersion()))
 
 
 def daemonize():
@@ -189,9 +186,8 @@ def runApp(config):
     oldstderr = sys.stderr
     startLogging(config['logfile'], config['syslog'], config['prefix'],
                  config['nodaemon'])
+    apprun.initialLog()
     checkPID(config['pidfile'], config['quiet'])
-    from twisted.internet import reactor
-    log.msg('reactor class: %s' % reactor.__class__)
     startApplication(config, apprun.getApplication(config, passphrase))
     apprun.runReactorWithLogging(config, oldstdout, oldstderr)
     removePID(config['pidfile'])

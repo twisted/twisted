@@ -234,3 +234,10 @@ def run(runApp, ServerOptions):
         print "%s: %s" % (sys.argv[0], ue)
         os._exit(1)
     runApp(config)
+
+def initialLog():
+    from twisted.internet import reactor
+    log.msg("twistd %s (%s %s) starting up" % (copyright.version,
+                                               sys.executable,
+                                               runtime.shortPythonVersion()))
+    log.msg('reactor class: %s' % reactor.__class__)
