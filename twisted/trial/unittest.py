@@ -412,7 +412,8 @@ class TestCase(object):
 
     def runReactor(self, timesOrSeconds, seconds=False):
         """DEPRECATED: just return a deferred from your test method and
-        trial with just do the Right Thing.
+        trial with do the Right Thing. Alternatively, call
+        twisted.trial.util.wait to block until the deferred fires.
         
         I'll iterate the reactor for a while.
         
@@ -426,8 +427,10 @@ class TestCase(object):
         @param seconds: If this is True, `timesOrSeconds' will be
                interpreted as seconds, rather than iterations.
         """
-        warnings.warn("runReactor is deprecated. return a deferred from " +
-                      "your test method, and trial will wait for results",
+        warnings.warn("runReactor is deprecated. return a deferred from "
+                      "your test method, and trial will wait for results."
+                      "Alternatively, call twisted.trial.util.wait to"
+                      "block until the deferred fires.",
                       DeprecationWarning, stacklevel=2)
         from twisted.internet import reactor
 
