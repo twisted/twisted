@@ -16,6 +16,7 @@ class Options(usage.Options):
     ]
     optFlags = [
      ["head", "h", "Start from HEAD"],
+     ["manual-changelog", "c", "Enter changelog entry in editor"],
      ["dry-run", "n", "Do nothing"],
     ]
     def opt_update(self, file):
@@ -112,6 +113,11 @@ def run(config):
     print "next version is", tag
     if config.updates:
         system("cd Twisted.CVS && cvs up -A %s" % ' '.join(config.updates), do)
+    command = "cd Twisted.CVS && ./admin/change"
+    if not config['manual-changelog']:
+        command += " -m 'Releasing Twisted %s'" % tag
+    command += " ."
+    system(command, do)
     system("Twisted.CVS/admin/release-twisted -o %s -V %s --upver" %
                                                                (old, tag),
            do)
