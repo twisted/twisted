@@ -13,11 +13,12 @@
 <h2>Application</h2>
 
 <p>Twisted programs usually work with
-<code class="API">twisted.internet.app.Application</code>.
+<code class="API">twisted.application.service.Application</code>.
 This class usually holds all persistent configuration of
 a running server -- ports to bind to, places where connections
 to must be kept or attempted, periodic actions to do and almost
-everything else.</p>
+everything else. It is the root object in a tree of services implementing
+<code class="API" base="twisted.application.service">IService</code>.</p>
 
 <p>Other HOWTOs describe how to write custom code for
 Applications, but this one describes how to use already written
@@ -57,7 +58,7 @@ several serialization formats.</p>
 
 <h2>mktap and tapconvert</h2>
 
-<p>The <code>mktap(1)</code> utility is the main way to create a TAP
+<p>The <code class="shell">mktap(1)</code> utility is the main way to create a TAP
 (or TAX or TAS) file.  It can be used to create an Application for all
 of the major Twisted server types like web, ftp or IRC. It also
 supports plugins, so when you install a Twisted plugin (that is,
@@ -66,18 +67,18 @@ automatically detect it and use any Twisted Application support in it.
 It can create any of the above Application formats.</p>
 
 <p>In order to see which server types are available, use 
-<code>mktap --help</code>. For a given server, 
-<code>mktap --help &lt;name&gt;</code> shows the possible configuration
-options. <code>mktap</code> supports a number of generic options
+<code class="shell">mktap --help</code>. For a given server, 
+<code class="shell">mktap --help &lt;name&gt;</code> shows the possible configuration
+options. <code class="shell">mktap</code> supports a number of generic options
 to configure the application -- for full details, read the man page.</p>
 
-<p>One important option is <code>--append &lt;filename&gt;</code>.
+<p>One important option is <code class="shell">--append &lt;filename&gt;</code>.
 This is used when there is already a Twisted application serialized
 to which a server should be added. For example, it can be used
 to add a telnet server, which would let you probe and reconfigure
 the application by telnetting into it.</p>
 
-<p>Another useful utility is <code>tapconvert(1)</code>, which converts
+<p>Another useful utility is <code class="shell">tapconvert(1)</code>, which converts
 between all three Application formats.</p>
 
 <h2>twistd</h2>
@@ -86,26 +87,26 @@ between all three Application formats.</p>
 pleasing as it may be, does not actually cause anything to happen.
 For that, we need a program which takes a <q>dead</q> Application and brings
 life to it. For UNIX systems (and, until there are are alternatives,
-for other operating systems too), this program is <code>twistd(1)</code>.
-Strictly speaking, <code>twistd</code> is not necessary -- unserializing
+for other operating systems too), this program is <code class="shell">twistd(1)</code>.
+Strictly speaking, <code class="shell">twistd</code> is not necessary -- unserializing
 the application and calling its <code>.run</code> method could be
-done manually. <code>twistd(1)</code>, however, supplies many options
+done manually. <code class="shell">twistd(1)</code>, however, supplies many options
 which are highly useful for program set up.</p>
 
-<p><code>twistd</code> supports choosing a reactor (for more on
+<p><code class="shell">twistd</code> supports choosing a reactor (for more on
 reactors, see <a href="choosing-reactor.html">Choosing a Reactor</a>), logging
-to a logfile, daemonizing and more. <code>twistd</code> supports all
+to a logfile, daemonizing and more. <code class="shell">twistd</code> supports all
 Applications mentioned above -- and an additional one. Sometimes
 is is convenient to write the code for building a class in straight
 Python. One big source of such Python files is the <code>doc/examples</code>
 directory. When a straight Python file which defines an <code>Application</code>
-object called <code>application</code> is used, use the <code>-y</code>
+object called <code>application</code> is used, use the <code class="shell">-y</code>
 option.</p>
 
-<p>When <code>twistd</code> runs, it records its process id in a
+<p>When <code class="shell">twistd</code> runs, it records its process id in a
 <code>twistd.pid</code> file (this can be configured via a command line
-switch). In order to shutdown the <code>twistd</code> process, kill that
-pid (usually you would do <code>kill `cat twisted.pid`</code>). When the
+switch). In order to shutdown the <code class="shell">twistd</code> process, kill that
+pid (usually you would do <code class="shell">kill `cat twisted.pid`</code>). When the
 process is killed in an orderly fashion it will leave behind the <q>shutdown
 Application</q> which is named the same as the original file with a
 <code>-shutdown</code> added to its base name. This contains the new
@@ -117,7 +118,7 @@ configuration information, as changed in the application.</p>
 
 <p>
 For Twisted-based server application developers who want to deploy on
-Debian, Twisted supplies the <code>tap2deb</code> program. This program
+Debian, Twisted supplies the <code class="shell">tap2deb</code> program. This program
 wraps a Twisted Application file (of any of the supported formats -- Python,
 source, xml or pickle)
 in a Debian package, including correct installation and removal scripts
@@ -128,13 +129,13 @@ on startup and down on shutdown and that it obeys the init levels.
 
 <p>
 For the more savvy Debian users, the
-<code>tap2deb</code> also generates the source package, allowing her
+<code class="shell">tap2deb</code> also generates the source package, allowing her
 to modify and polish things which automated software cannot detect
 (such as dependencies or relationships to virtual packages). In addition,
 the Twisted team itself intends to produce Debian packages for some common
 services, such as web servers and an inetd replacement. Those packages
 will enjoy the best of all worlds -- both the consistency which comes
-from being based on the <code>tap2deb</code> and the delicate manual
+from being based on the <code class="shell">tap2deb</code> and the delicate manual
 tweaking of a Debian maintainer, insuring perfect integration with
 Debian.
 </p>
@@ -143,5 +144,10 @@ Debian.
 Right now, there is a beta Debian archive of a web server available at
 <a href="http://twistedmatrix.com/users/moshez/apt">Moshe's archive</a>.
 </p>
+
+<h2>tap2rpm</h2>
+
+<p><code class="shell">tap2rpm</code> is similar to <code class="shell">tap2deb</code>, except that
+it generates RPMs for Redhat and other related platforms.</p>
 
 </body></html>

@@ -201,19 +201,13 @@ directory named <q>Pictures</q> in our home directory:</p>
 <pre class="python"
 >rootDirectory = os.path.expanduser("~/Pictures")
 site = server.Site(DirectoryListing(directory=rootDirectory))
-application = app.Application("PicturePile") 
-application.listenTCP(8088, site)
+application = service.Application("ImagePool") 
+service.IService(application).addService(internet.TCPServer(8088, site))
 </pre>
 
-<p>And then start the server:</p>
+<p>And then start the server by running the following command-line:
+<code class="shell">twistd -ny picturepile.py</code>.</p>
 
-<pre class="python"
->if __name__ == '__main__': 
-    import sys               
-    from twisted.python import log 
-    log.startLogging(sys.stdout, 0) 
-    application.run() 
-</pre>
 
 <h2>Custom Views</h2>
 
