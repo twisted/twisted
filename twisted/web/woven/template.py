@@ -40,29 +40,29 @@ A DOMTemplate subclass must do two things: indicate which
 template it wants to use, and indicate which elements it is
 interested in.
 
-------------------------------------------------------
+A short example::
 
-class Test(DOMTemplate):
-    template = '''
-<html><head><title>Foo</title></head><body>
-
-<div view="Test">
-This test node will be replaced
-</div>
-
-</body></html>
-'''
-        
-    def factory_test(self, request, node):
-        '''
-        The test method will be called with the request and the
-        DOM node that the test method was associated with.
-        '''
-        # self.d has been bound to the main DOM "document" object 
-        newNode = self.d.createTextNode("Testing, 1,2,3")
-        
-        # Replace the test node with our single new text node
-        return newNode
+   | class Test(DOMTemplate):
+   |     template = '''
+   | <html><head><title>Foo</title></head><body>
+   | 
+   | <div view="Test">
+   | This test node will be replaced
+   | </div>
+   | 
+   | </body></html>
+   | '''
+   |         
+   |     def factory_test(self, request, node):
+   |         '''
+   |         The test method will be called with the request and the
+   |         DOM node that the test method was associated with.
+   |         '''
+   |         # self.d has been bound to the main DOM "document" object 
+   |         newNode = self.d.createTextNode("Testing, 1,2,3")
+   |         
+   |         # Replace the test node with our single new text node
+   |         return newNode
 """
 
 from cStringIO import StringIO

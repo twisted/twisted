@@ -23,7 +23,7 @@ from twisted.web.microdom import parseString
 from twisted.web import widgets
 from twisted.web.woven import model
 
-from twisted.python import components, mvc
+from twisted.python import components, mvc, failure
 from twisted.python import domhelpers, log
 from twisted.internet import defer
 
@@ -73,14 +73,18 @@ def _getModel(self):
 
 
 class Widget(mvc.View):
-    """A Widget wraps an object, its model, for display. The model can be a
-    simple Python object (string, list, etc.) or it can be an instance of MVC.Model.
-    (The former case is for interface purposes, so that the rest of the code does
-    not have to treat simple objects differently from Model instances.)
+    """
+    A Widget wraps an object, its model, for display. The model can be a
+    simple Python object (string, list, etc.) or it can be an instance
+    of MVC.Model.  (The former case is for interface purposes, so that
+    the rest of the code does not have to treat simple objects differently
+    from Model instances.)
+
     If the model is a Model, there are two possibilities:
-        we are being called to enable an operation on the model
-        we are really being called to enable an operation on an attribute of the
-        model, which we will call the submodel
+
+       - we are being called to enable an operation on the model
+       - we are really being called to enable an operation on an attribute
+         of the model, which we will call the submodel
     """
     tagName = None
     def __init__(self, model, submodel = None):
@@ -383,6 +387,7 @@ class List(Widget):
        | </table>
 
     Where blah is the name of a list on the model; eg:                          
+
        | self.model.blah = ['foo', 'bar']
 
     """
