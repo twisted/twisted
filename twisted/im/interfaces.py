@@ -44,8 +44,10 @@ class IAccount(Interface):
         @returntype: boolean
         """
 
-    def logOn(self):
+    def logOn(self, chatui):
         """Go on-line.
+
+        @type chatui: Implementor of C{IChatUI}
 
         @returntype: Deferred L{Client}
         """
