@@ -261,6 +261,7 @@ class InterfaceTestCase(unittest.TestCase):
             time.sleep(0.5)
             reactor.wakeUp()
         start = time.time()
+        reactor.initThreads() # so wakeUp actually works
         t = threading.Thread(target=wake).start()
         reactor.iterate(5)
         self.assertApproximates(time.time(), start + 0.5, 0.5)
