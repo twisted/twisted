@@ -209,7 +209,7 @@ if __name__ == '__main__':
     import dummy
     f = protocol.Factory()
     f.protocol = dummy.Dummy # Note! Not "Dummy"
-    internet.TCPServer(2000, f).setServiceParent(service.IServiceCollect(a))
+    internet.TCPServer(2000, f).setServiceParent(a)
     a.save()
 </pre>
 
