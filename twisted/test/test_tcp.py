@@ -484,12 +484,12 @@ class LocalRemoteAddressTestCase(PortCleanerUpper):
         f2 = MyOtherClientFactory()
         p2 = reactor.connectTCP('127.0.0.1', n, f2)
 
-        spinUntil(lambda :p2.transport.connected)
+        spinUntil(lambda :p2.state == "connected")
 
         self.assertEquals(p1.getHost(), f2.address)
         self.assertEquals(p1.getHost(), f2.protocol.transport.getPeer())
 
-        util.wait(p1.stopListening())
+        util.wait(defer.maybeDeferred(p1.stopListening))
         self.ports.append(p2.transport)
         self.cleanPorts(*self.ports)
         
