@@ -1,3 +1,4 @@
+# -*- test-case-name: twisted.test.test_mail -*-
 # Twisted, the Framework of Your Internet
 # Copyright (C) 2001 Matthew W. Lefkowitz
 # 
@@ -363,13 +364,20 @@ class SmartHostSMTPRelayingManager:
         for (domain, msgs) in exchanges.iteritems():
             factory = self.factory(msgs, self)
             self.managed[factory] = map(os.path.basename, msgs)
-            self.mxcalc.getMX(domain).addCallback(lambda mx: str(mx.exchange)
+            self.mxcalc.getMX(domain
+            ).addCallback(lambda mx: str(mx.exchange),
             ).addCallback(self._cbExchange, self.PORT, factory
-            ).addErrback(log.err)
-
+            ).addErrback(self._ebExchange, factory, domain)
+    
     def _cbExchange(self, address, port, factory):
         from twisted.internet import reactor
         reactor.connectTCP(address, port, factory)
+    
+    def _ebExchange(self, failure, factory, domain):
+        log.err('Error setting up managed relay factory for ' + domain)
+        log.err(failure)
+        map(self.queue.setWaiting, self.managed[factory])
+        del self.managed[factory]
 
 class SmartHostESMTPRelayingManager(SmartHostSMTPRelayingManager):
     factory = ESMTPManagedRelayerFactory
@@ -421,7 +429,7 @@ class MXCalculator:
     def getMX(self, domain):
         return self.resolver.lookupMailExchange(domain
         ).addCallback(self._filterRecords
-        ).addCallbacks(self._cbMX, log.err)
+        ).addCallback(self._cbMX)
 
     def _filterRecords(self, records):
         answers = records[0]
