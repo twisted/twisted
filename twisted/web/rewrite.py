@@ -29,8 +29,10 @@ class RewriterResource(resource.Resource):
 
     def getChild(self, path, request):
         request.postpath.insert(0, path)
+        request.prepath.pop()
         self._rewrite(request)
         path = request.postpath.pop(0)
+        request.prepath.append(path)
         return self.resource.getChildWithDefault(path, request)
 
     def render(self, request):
@@ -41,3 +43,4 @@ class RewriterResource(resource.Resource):
 def tildeToUsers(request):
     if request.postpath and request.postpath[0][:1]=='~':
         request.postpath[:1] = ['users', request.postpath[0][1:]]
+        request.path = '/'+'/'.join(request.prepath+request.postpath)
