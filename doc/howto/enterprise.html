@@ -1,0 +1,165 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+  <head>
+    <title>Introduction to Twisted Enterprise</title>
+  </head>
+
+  <body>
+    <h1>Introduction to Twisted Enterprise</h1>
+
+    <h2>Abstract</h2>
+    <p>
+Twisted is an asynchronous networking framework, but most database API
+implementations unfortunately have blocking interfaces -- for this
+reason, <code class="API">twisted.enterprise.adbapi</code> was
+created. It is a non-blocking interface to the standardized 'dbapi'
+module, which allows you to access a number of different RDBMSes.
+    </p>
+
+    <h2>What you should already know</h2>
+    <p>
+    <ul>
+      <li>Python :-)</li>
+      <li>How to write a simple Twisted Server (see <a href="servers.html">this tutorial</a> to learn how)</li>
+      <li>Familiarity with using database interfaces (see <a href="http://www.python.org/topics/database/DatabaseAPI-2.0.html">the documentation for DBAPI 2.0</a>)</li>
+    </ul>
+    </p>
+    
+    <h2>Quick Overview</h2> 
+    <p>
+Twisted is an asynchronous framework. This means standard database
+modules cannot be used directly, as they typically work something
+like:
+    </p>
+
+    <p>
+    <pre class="python">
+    # Create connection... 
+    db = dbmodule.connect('mydb', 'andrew', 'password') 
+    # ...which blocks for an unknown amount of time 
+ 
+    # Create a cursor 
+    cursor = db.cursor() 
+ 
+    # Do a query... 
+    resultset = cursor.query('SELECT * FROM table WHERE ...') 
+    # ...which could take a long time, perhaps even minutes. 
+    </pre>
+    </p>
+
+    <p>
+Those delays are unacceptable when using an asynchronous framework
+such as Twisted. For this reason, twisted provides <code
+class="API">twisted.enterprise.adbapi</code>, an asynchronous wrapper
+for any 
+<a href="http://www.python.org/topics/database/DatabaseAPI-2.0.html">DB-API 2.0</a>-compliant
+module.
+    </p>
+
+    <p>
+<code class="API">adbapi</code> will do blocking database operations
+in seperate threads, which trigger callbacks in the originating thread
+when they complete. In the meantime, the original thread can continue
+doing normal work, like servicing other requests.
+    </p>
+
+    <h2>How do I use adbapi?</h2>
+    <p>
+Rather than creating a database connection directly, use the <code
+class="API">adbapi.ConnectionPool</code> class to manage a connections
+for you. This allows <code class="API">adbapi</code> to use multiple
+connections, one per thread. This is easy:
+    </p>
+
+    <p>
+    <pre class="python">
+    # Using the "dbmodule" from the previous example, create a ConnectionPool 
+    from twisted.enterprise import adbapi 
+    dbpool = adbapi.ConnectionPool("dbmodule", 'mydb', 'andrew', 'password') 
+    </pre>
+    </p>
+    
+    <p>
+Things to note about doing this: 
+    <ul>
+      <li>There is no need to import dbmodule directly. You just pass
+      the name to <code class="API">adbapi.ConnectionPool</code>'s
+      constructor.</li>
+
+      <li>The parameters you would pass to dbmodule.connect are passed
+      as extra arguments to <code class="API">adbapi.ConnectionPool</code>'s
+      constructor. Keyword parameters work as well. </li>
+    </ul>
+  </p>
+
+    <p>
+So, now you need to be able to dispatch queries to your
+ConnectionPool. We do this by subclassing <code
+class="API">adbapi.Augmentation</code>. Here's an example:
+    </p>
+
+    <p>
+    <pre class="python">
+    class AgeDatabase(adbapi.Augmentation): 
+        """A simple example that can retrieve an age from the database""" 
+        def getAge(self, name): 
+            # Define the query 
+            sql = """SELECT Age FROM People WHERE name = ?""" 
+            # Run the query, and return a Deferred to the caller to add 
+            # callbacks to. 
+            return self.runOperation(sql, name) 
+ 
+ 
+    def gotAge(resultlist, name): 
+        """Callback for handling the result of the query""" 
+        age = resultlist[0][0]          # First field of first record 
+        print "%s is %d years old" % (name, age) 
+ 
+    db = MyDatabase(dbpool) 
+ 
+    # These will *not* block.  Hooray! 
+    db.getAge("Andrew").addCallbacks(gotAge, db.operationError, 
+                                     callbackArgs=name).arm() 
+    db.getAge("Glyph").addCallbacks(gotAge, db.operationError, 
+                                    callbackArgs=name).arm() 
+    </pre>
+    </p>
+
+    <p>
+This is straightforward, except perhaps for the return value of
+<code>getAge</code>. It returns a <code class="API">twisted.python.defer.Deferred</code>,
+which allows arbitrary callbacks to be called upon completion (or upon
+failure).
+    </p>
+
+    <p>
+Also worth noting is that I'm assuming that dbmodule uses the "qmarks"
+paramstyle in my SQL query.
+    </p>
+
+    <h2>And that's it!</h2> 
+    <p>
+That's all you need to know to use a database from within Twisted. You
+probably should read the adbapi module's documentation to get an idea
+of the other functions it has, but hopefully this document presents
+the core ideas.
+    </p>
+
+    <h2>Credits</h2>
+    <p>
+This tutorial was written by Andrew Bennetts (andrew at puzzling dot
+org). I would like to thank the Twisted crew for their fun (and
+useful!) framework, and also dash in #python for explaining the
+database stuff to me in the first place. The final example was
+improved with the aid of suggestion from Glyph.
+    </p>
+
+    <p>
+Suggestions to improve this document are welcomed.
+    </p>
+
+    <hr>
+    <address><a href="mailto:andrew (at) puzzling (dot) org">Andrew</a></address>
+  </body>
+</html>
+
