@@ -22,7 +22,7 @@ Package installer for Twisted
 Copyright (c) 2001 by Twisted Matrix Laboratories
 All rights reserved, see LICENSE for details.
 
-$Id: setup.py,v 1.14 2002/02/24 00:17:56 itamarst Exp $
+$Id: setup.py,v 1.15 2002/02/24 19:01:18 itamarst Exp $
 """
 
 import distutils, os, sys
@@ -106,7 +106,8 @@ class my_install_data(install_data):
         )
 
 imPath = os.path.join('twisted', 'im')
-setup_args['data_files'] = [(imPath, [os.path.join(imPath, 'instancemessenger.glade')])]
+setup_args['data_files'] = [(imPath, [os.path.join(imPath, 'instancemessenger.glade')]),
+                            ('twisted', [os.path.join('twisted', 'plugins.tml')])]
 setup_args['cmdclass']=  {'install_data': my_install_data}
 
 #'"
