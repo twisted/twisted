@@ -117,7 +117,11 @@ def registerAdapter(adapterClass, origClass, interfaceClass):
     __init__ method should accept one parameter, an instance of 'origClass'.
     """
     if adapterRegistry.has_key((origClass, interfaceClass)):
-        raise ValueError, "an adapter was already registered."
+        raise ValueError(
+            "an adapter (%s) was already registered." % (
+                adapterRegistry[(origClass, interfaceClass)]
+            )
+        )
 
     # this may need to be removed
     if not implements(adapterClass, interfaceClass):
