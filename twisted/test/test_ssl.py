@@ -126,10 +126,10 @@ class TLSTestCase(unittest.TestCase):
         sf.done = 0
         sf.server = 1
 
-        port = reactor.listenTCP(0, sf)
+        port = reactor.listenTCP(0, sf, interface="127.0.0.1")
         portNo = port.getHost()[2]
         
-        reactor.connectTCP('0.0.0.0', portNo, cf)
+        reactor.connectTCP('127.0.0.1', portNo, cf)
         
         i = 0
         while i < 5000 and not sf.done:
@@ -152,10 +152,10 @@ class TLSTestCase(unittest.TestCase):
         sf.done = 0
         sf.server = 1
 
-        port = reactor.listenTCP(0, sf)
+        port = reactor.listenTCP(0, sf, interface="127.0.0.1")
         portNo = port.getHost()[2]
         
-        reactor.connectTCP('0.0.0.0', portNo, cf)
+        reactor.connectTCP('127.0.0.1', portNo, cf)
         
         i = 0
         while i < 5000 and not sf.done:
@@ -179,10 +179,10 @@ class TLSTestCase(unittest.TestCase):
         sf.protocol = UnintelligentProtocol
         sf.client = 0
 
-        port = reactor.listenTCP(0, sf)
+        port = reactor.listenTCP(0, sf, interface="127.0.0.1")
         portNo = port.getHost()[2]
         
-        reactor.connectTCP('0.0.0.0', portNo, cf)
+        reactor.connectTCP('127.0.0.1', portNo, cf)
         
         i = 0
         while i < 2000 and not cf.done:
