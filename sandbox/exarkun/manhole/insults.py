@@ -16,7 +16,7 @@ class ITerminalListener(components.Interface):
     def setMode(self, modes):
         pass
 
-    def resetMode(self, moeds):
+    def resetMode(self, modes):
         pass
 
     def unhandledControlSequence(self, seq):
