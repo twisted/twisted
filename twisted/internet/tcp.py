@@ -238,12 +238,13 @@ class Port(abstract.FileDescriptor):
     sessionno = 0
     unixsocket = None
     
-    def __init__(self, port, factory, backlog=5):
+    def __init__(self, port, factory, backlog=5, interface=''):
         """Initialize with a numeric port to listen on.
         """
         self.port = port
 	self.factory = factory
 	self.backlog = backlog
+	self.interface = interface
 
     def __repr__(self):
         return "<%s on %s>" % (self.factory.__class__, self.port)
@@ -288,7 +289,7 @@ class Port(abstract.FileDescriptor):
             self.unixsocket = 1
         else:
             skt = self.createInternetSocket()
-            skt.bind( ('',self.port) )
+            skt.bind( (self.interface, self.port) )
         skt.listen(self.backlog)
         self.connected = 1
         self.socket = skt
