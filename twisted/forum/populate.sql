@@ -1,0 +1,24 @@
+DELETE FROM users;
+INSERT INTO users VALUES (1, 'someguy', 'come get me');
+INSERT INTO users VALUES (2, 'duke', 'come get some');
+
+DELETE FROM posts;
+INSERT INTO posts (parent_id, subject, poster_id, posted, body) VALUES (0, 'testing1', 1, now(), 'This if the body of the message');
+INSERT INTO posts (parent_id, subject, poster_id, posted, body) VALUES (0, 'another msg goes here but it is long', 2, now(), 'This if the body of the message');
+INSERT INTO posts (parent_id, subject, poster_id, posted, body) VALUES (0, 'testing3', 1, now(), 'This if the body of the message');
+INSERT INTO posts (parent_id, subject, poster_id, posted, body) VALUES (0, 'testing4', 1, now(), 'This if the body of the message');
+INSERT INTO posts (parent_id, subject, poster_id, posted, body) VALUES (0, 'stuff', 1, now(), 'This if the body of the message');
+INSERT INTO posts (parent_id, subject, poster_id, posted, body) VALUES (0, 'RE: stuff', 2, now(), 'This if the body of the message');
+INSERT INTO posts (parent_id, subject, poster_id, posted, body) VALUES (0, 'other stuff', 2, now(), 'This if the body of the message');
+INSERT INTO posts (parent_id, subject, poster_id, posted, body) VALUES (0, 'hello!!', 1, now(), 'This if the body of the message');
+INSERT INTO posts (parent_id, subject, poster_id, posted, body) VALUES (0, 'testing9', 1, now(), 'This if the body of the message');
+INSERT INTO posts (parent_id, subject, poster_id, posted, body) VALUES ( 1, 'testing child msg', 2, now(), 'This if the body of the message');
+INSERT INTO posts (parent_id, subject, poster_id, posted, body) VALUES ( 1, 'child msg 2', 1, now(), 'This if the body of the message');
+INSERT INTO posts (parent_id, subject, poster_id, posted, body) VALUES ( 11, 'alksdhk2', 1, now(), 'This if the body of the message');
+INSERT INTO posts (parent_id, subject, poster_id, posted, body) VALUES ( 11, 'here it is!', 2, now(), 'This if the body of the message');
+INSERT INTO posts (parent_id, subject, poster_id, posted, body) VALUES ( 12, 'RE: msg 2', 1, now(), 'This if the body of the message');
+INSERT INTO posts (parent_id, subject, poster_id, posted, body) VALUES ( 5, 'out of order', 2, now(), 'This if the body of the message');
+INSERT INTO posts (parent_id, subject, poster_id, posted, body) VALUES ( 6, 'another one', 1, now(), 'This if the body of the message');
+INSERT INTO posts (parent_id, subject, poster_id, posted, body) VALUES ( 16, 'RE: another one', 1, now(), 'This if the body of the message');
+INSERT INTO posts (parent_id, subject, poster_id, posted, body) VALUES ( 17, 'RE: another one', 1, now(), 'This if the body of the message');
+INSERT INTO posts (parent_id, subject, poster_id, posted, body) VALUES ( 18, 'RE: another one', 1, now(), 'This if the body of the message');
