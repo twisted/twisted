@@ -207,7 +207,7 @@ class InterfaceTestCase(unittest.TestCase):
         self.assertEquals(d, {'a': 1})
         self._called = 1
         self._calledTime = time.time()
-
+    
     def testCallLater(self):
         # add and remove a callback
         def bad():
@@ -420,12 +420,8 @@ class DelayedTestCase(unittest.TestCase):
         # easier to compare.
 
         if l1 != l2:
-            print "\nself.timers:"
-            for i in l1: print " %s" % i
-            print "getDelayedCalls():"
-            for i in l2: print " %s" % i
             self.finished = 1
-            self.fail("self.timers != reactor.getDelayedCalls()")
+            self.assertEquals(l1, l2)
 
     def callback(self, tag):
         del self.timers[tag]
