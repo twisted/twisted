@@ -228,7 +228,7 @@ class Telnet(protocol.Protocol):
         return "Password"
 
     def telnet_Password(self, paswd):
-        """I accept a passwd argument, and check it with the
+        """I accept a password as an argument, and check it with the
         checkUserAndPass method. If the login is successful, I call
         loggedIn()."""
         self.transport.write(IAC+WONT+ECHO+"*****\r\n")
