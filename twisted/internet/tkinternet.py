@@ -52,10 +52,10 @@ class Simulator:
 
 def worker():
     # should be happening in the tk main loop.
+    _condition.acquire()
     main.doSelect(0)
     Simulator().simulate()
     threadable.dispatcher.work()
-    _condition.acquire()
     _condition.notify()
     _condition.release()
 
@@ -69,16 +69,16 @@ def waiter():
     waiterthread = thread.get_ident()
     while 1:
         # Do the select, see if there's any input waiting...
-        # print 'tkinternet: waiting on select'
+        print 'tkinternet: waiting on select'
         select.select(main.reads.keys(), main.writes.keys(), [])
         if stopped:
             return
-        # print 'tkinternet: scheduling event'
-        # Tell the main thread to go boogie when there is...
-        _root.after(0, worker)
-        # print 'tkinternet: waiting for condition'
+        print 'tkinternet: waiting for condition'
         # Wait for the main thread to be done before select()ing again
         _condition.acquire()
+        print 'tkinternet: scheduling event'
+        # Tell the main thread to go boogie when there is...
+        _root.after(0, worker)
         _condition.wait()
         _condition.release()
 

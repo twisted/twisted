@@ -524,7 +524,7 @@ def wakeUp():
 wakerInstalled = 0
 
 def installWaker():
-    global addReader, addWriter, waker, wakerInstalled
+    global addReader, addWriter, waker, wakerInstalled 
     if not wakerInstalled:
         wakerInstalled = 1
         waker = _Waker()

@@ -31,17 +31,21 @@ import traceback
 import string
 
 if os.name == 'nt':
+    EINVAL      = 10022
     EWOULDBLOCK = 10035
     EINPROGRESS = 10036
     EALREADY    = 10037
     ECONNRESET  = 10054
+    EISCONN     = 10056
     ENOTCONN    = 10057
 else:
-    from errno import EALREADY, EINPROGRESS, EWOULDBLOCK, ECONNRESET, ENOTCONN
-    
-# The magical mystery errors (THANK YOU WINDOWS!!)
-EMYSTERY    = 10056
-EINVALIDARG = 10022    
+    from errno import EINVAL
+    from errno import EWOULDBLOCK
+    from errno import EINPROGRESS
+    from errno import EALREADY
+    from errno import ECONNRESET
+    from errno import EISCONN
+    from errno import ENOTCONN
 
 # Twisted Imports
 from twisted.protocols import protocol
@@ -146,6 +150,7 @@ class Client(Connection):
         self.port = port
         Connection.__init__(self, skt, protocol)
         self.doWrite = self.doConnect
+        self.doRead = self.doConnect
         self.resolveAddress()
         self.logstr = self.protocol.__class__.__name__+",client"
 	if timeout is not None:
@@ -179,13 +184,16 @@ class Client(Connection):
         
         Then, call the protocol's makeConnection, and start waiting for data.
         """
+        print 'attempting connect!'
         try:
             self.socket.connect((self.realAddress, self.addr[1]))
         except socket.error, se:
-            if se.args[0] == EMYSTERY:
+            print 'socket error in connect:',se
+            if se.args[0] == EISCONN:
+                pass
+            elif se.args[0] in (EINPROGRESS, EWOULDBLOCK, EALREADY, EINVAL):
                 self.startWriting()
-            elif se.args[0] in (EWOULDBLOCK, EALREADY, EINPROGRESS, EINVALIDARG):
-                self.startWriting()
+                self.startReading()
                 return
             else:
                 print "unknown socket error in connect",se
@@ -195,6 +203,7 @@ class Client(Connection):
         # If I have reached this point without raising or returning, that means
         # that the socket is connected.
         del self.doWrite
+        del self.doRead
         self.connected = 1
         self.startReading()
         self.protocol.makeConnection(self)
