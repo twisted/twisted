@@ -967,8 +967,17 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
 
     def _selectWork(self, tag, name, rw, cmdName):
         name = self._parseMbox(name)
-        mbox = self.account.select(name, rw)
-        
+        defer.maybeDeferred(
+            self.account.select, self._parseMbox(name), rw
+        ).addCallback(self._cbSelectWork, cmdName, tag
+        ).addErrback(self._ebSelectWork, cmdName, tag
+        )
+
+    def _ebSelectWork(self, failure, cmdName, tag):
+        self.sendBadResponse(tag, "%s failed: Server error" % (cmdName,))
+        log.err(failure)
+
+    def _cbSelectWork(self, mbox, cmdName, tag):
         if mbox is None:
             self.sendNegativeResponse(tag, 'No such mailbox')
             return
@@ -981,7 +990,6 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
         self.sendPositiveResponse(None, '[UIDVALIDITY %d]' % mbox.getUIDValidity())
 
         s = mbox.isWriteable() and 'READ-WRITE' or 'READ-ONLY'
-
         if self.mbox:
             self.mbox.removeListener(self)
         self.mbox = mbox
@@ -3243,7 +3251,8 @@ class IAccount(components.Interface):
         
         @rtype: Any object implementing C{IMailbox} or C{Deferred}
         @return: The mailbox object, or a C{Deferred} whose callback will
-        be invoked with the mailbox object.
+        be invoked with the mailbox object.  None may be returned if the
+        specified mailbox may not be selected for any reason.
         """
     
     def delete(self, name):
@@ -3289,7 +3298,8 @@ class IAccount(components.Interface):
         @rtype: C{Deferred} or C{bool}
         @return: A true value if the given mailbox is currently subscribed
         to, a false value otherwise.  A C{Deferred} may also be returned
-        whose callback will be invoked with one of these values.  """
+        whose callback will be invoked with one of these values.
+        """
     
     def subscribe(self, name):
         """Subscribe to a mailbox
@@ -3523,7 +3533,9 @@ class IMailbox(components.Interface):
         """Return status information about this mailbox.
 
         @type names: Any iterable
-        @param names: The status names to return information regarding
+        @param names: The status names to return information regarding.
+        The possible values for each name are: MESSAGES, RECENT, UIDNEXT,
+        UIDVALIDITY, UNSEEN.
 
         @rtype: C{dict} or C{Deferred}
         @return: A dictionary containing status information about the
