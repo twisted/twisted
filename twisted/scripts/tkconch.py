@@ -14,7 +14,7 @@
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 #
-# $Id: tkconch.py,v 1.2 2002/12/28 00:15:09 z3p Exp $
+# $Id: tkconch.py,v 1.3 2002/12/28 15:01:00 z3p Exp $
 
 """ Implementation module for the `tkconch` command.
 """
@@ -22,25 +22,13 @@
 from __future__ import nested_scopes
 
 import Tkinter, tkFont, string
-from twisted.conch import tkvt100
+from twisted.conch.ui import tkvt100
 from twisted.conch.ssh import transport, userauth, connection, common, keys
 from twisted.conch.ssh import session, forwarding
 from twisted.internet import reactor, defer, protocol, tksupport
 from twisted.python import usage, log
 
 import os, sys, getpass, struct, base64, signal
-
-colorKeys = (
-    'b', 'r', 'g', 'y', 'l', 'm', 'c', 'w',
-    'B', 'R', 'G', 'Y', 'L', 'M', 'C', 'W'
-)
-
-colorMap = {
-    'b': '#000000', 'r': '#c40000', 'g': '#00c400', 'y': '#c4c400',
-    'l': '#000080', 'm': '#c400c4', 'c': '#00c4c4', 'w': '#c4c4c4',
-    'B': '#626262', 'R': '#ff0000', 'G': '#00ff00', 'Y': '#ffff00',
-    'L': '#0000ff', 'M': '#ff00ff', 'C': '#00ffff', 'W': '#ffffff',
-}
 
 class GeneralOptions(usage.Options):
     synopsis = """Usage:    ssh [options] host [command]

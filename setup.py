@@ -22,7 +22,7 @@ Package installer for Twisted
 Copyright (C) 2001 Matthew W. Lefkowitz
 All rights reserved, see LICENSE for details.
 
-$Id: setup.py,v 1.83 2002/12/23 05:11:44 moshez Exp $
+$Id: setup.py,v 1.84 2002/12/28 15:00:59 z3p Exp $
 """
 
 import distutils, os, sys, string
@@ -197,6 +197,7 @@ http://starship.python.net/crew/mhammond/win32/Downloads.html
         "twisted.coil.plugins",
         "twisted.conch",
         "twisted.conch.ssh",
+        "twisted.conch.ui",
         "twisted.cred",
         "twisted.enterprise",
         "twisted.im",

@@ -3,6 +3,9 @@
 	* bin/tkconch: initial commit of tkconch, a SSH client using Tkinter
 	as a terminal emulator.
 
+	* twisted/conch/ui: moved ansi.py and tkvt100.py to t.c.ui so they are
+	away from the purely conch stuff.
+
 2002-12-25  Christmas Armstrong  <radix@twistedmatrix.com>
 
 	* .: Releasing 1.0.2alpha1 - Merry Christmas!
