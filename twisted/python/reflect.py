@@ -1,16 +1,16 @@
 
 # Twisted, the Framework of Your Internet
 # Copyright (C) 2001 Matthew W. Lefkowitz
-# 
+#
 # This library is free software; you can redistribute it and/or
 # modify it under the terms of version 2.1 of the GNU Lesser General Public
 # License as published by the Free Software Foundation.
-# 
+#
 # This library is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
 # Lesser General Public License for more details.
-# 
+#
 # You should have received a copy of the GNU Lesser General Public
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
@@ -137,7 +137,7 @@ class Summer(Accessor):
                     Accessor.reallySet(self,y,v)
         Accessor.reallySet(self,k,v)
 
-class Promise:    
+class Promise:
     """I represent an object not yet available.
 
     Methods called on me will be queued and sent as soon as the object becomes
@@ -163,7 +163,7 @@ class QueueMethod:
         self.calls = calls
     def __call__(self, *args):
         self.calls.append((self.name, args))
-    
+
 
 def funcinfo(function):
     """
@@ -317,14 +317,45 @@ def addMethodNamesToDict(classObj, dict, prefix, baseClass=None):
 
 
 def accumulateClassDict(classObj, attr, dict, baseClass=None):
-    """ TODO: Undocumented """
+    """Accumulate all attributes of a given name in a class heirarchy into a single dictionary.
+
+    Assuming all class attributes of this name are dictionaries.
+    If any of the dictionaries being accumulated have the same key, the
+    one highest in the class heirarchy wins.
+    (XXX: If \"higest\" means \"closest to the starting class\".)
+
+    Ex::
+
+    | class Soy:
+    |   properties = {\"taste\": \"bland\"}
+    |
+    | class Plant:
+    |   properties = {\"colour\": \"green\"}
+    |
+    | class Seaweed(Plant):
+    |   pass
+    |
+    | class Lunch(Soy, Seaweed):
+    |   properties = {\"vegan\": 1 }
+    |
+    | dct = {}
+    |
+    | accumulateClassDict(Lunch, \"properties\", dct)
+    |
+    | print dct
+
+    {\"taste\": \"bland\", \"colour\": \"green\", \"vegan\": 1}
+    """
     for base in classObj.__bases__:
         accumulateClassDict(base, attr, dict)
     if baseClass is None or baseClass in classObj.__bases__:
         dict.update(getattr(classObj, attr, {}))
 
 def accumulateClassList(classObj, attr, listObj, baseClass=None):
-    """ TODO: Undocumented """
+    """Accumulate all attributes of a given name in a class heirarchy into a single list.
+
+    Assuming all class attributes of this name are lists.
+    """
     for base in classObj.__bases__:
         accumulateClassList(base, attr, listObj)
     if baseClass is None or baseClass in classObj.__bases__:
