@@ -198,7 +198,11 @@ class OriginalAccessor:
         *actually* set self.k to v without incurring side-effects.
         This is a hook to be overridden by subclasses.
         """
-        self.__dict__[k]=v
+        if k == "__dict__":
+            self.__dict__.clear()
+            self.__dict__.update(v)
+        else:
+            self.__dict__[k]=v
 
     def reallyDel(self, k):
         """
