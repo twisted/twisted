@@ -42,7 +42,7 @@ Test coverage needs to be better.
 <http://www.irchelp.org/irchelp/rfc/ctcpspec.html>}
 """
 
-__version__ = '$Revision: 1.74 $'[11:-2]
+__version__ = '$Revision: 1.75 $'[11:-2]
 
 from twisted.internet import reactor, protocol
 from twisted.persisted import styles
@@ -443,7 +443,8 @@ class IRCClient(basic.LineReceiver):
             self.sendLine(fmt % (message,))
         else:
             lines = split(message, length - len(fmt) - 2)
-            map(lambda line, self=self, fmt=fmt: self.sendLine(fmt % line), lines)
+            map(lambda line, self=self, fmt=fmt: self.sendLine(fmt % line),
+                lines)
 
     def notice(self, user, message):
         self.sendLine("NOTICE %s :%s" % (user, message))
@@ -1835,4 +1836,3 @@ for k, v in symbolic_to_numeric.items():
 # Local Variables:
 # test-case-name: "twisted.test.test_irc"
 # End:
-
