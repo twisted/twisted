@@ -112,3 +112,17 @@ class LogFileTestCase(unittest.TestCase):
         # check getting illegal log readers
         self.assertRaises(ValueError, log.getLog, 2)
         self.assertRaises(TypeError, log.getLog, "1")
+
+        # check that log numbers are higher for older logs
+        log.rotate()
+        self.assertEquals(log.listLogs(), [1, 2])
+        reader = log.getLog(1)
+        reader._file.seek(0)
+        self.assertEquals(reader.readLines(), ["ghi\n"])
+        self.assertEquals(reader.readLines(), [])
+        reader.close()
+        reader = log.getLog(2)
+        self.assertEquals(reader.readLines(), ["abc\n", "def\n"])
+        self.assertEquals(reader.readLines(), [])
+        reader.close()
+        

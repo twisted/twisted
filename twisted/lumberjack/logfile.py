@@ -26,7 +26,7 @@ import os, stat, glob, string
 class LogFile:
     """A log file that can be rotated."""
     
-    def __init__(self, name, directory, rotateLength=100000):
+    def __init__(self, name, directory, rotateLength=1000000):
         self.directory = directory
         self.name = name
         self.path = os.path.join(directory, name)
@@ -90,12 +90,11 @@ class LogFile:
     def rotate(self):
         """Rotate the file and create a new one."""
         logs = self.listLogs()
-        if logs:
-            next = max(self.listLogs()) + 1
-        else:
-            next = 1
+        logs.reverse()
+        for i in logs:
+            os.rename("%s.%d" % (self.path, i), "%s.%d" % (self.path, i + 1))
         self._file.close()
-        os.rename(self.path, "%s.%d" % (self.path, next))
+        os.rename(self.path, "%s.1" % self.path)
         self._openFile()
     
     def getCurrentLog(self):
