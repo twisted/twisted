@@ -2090,6 +2090,10 @@ class FetchSearchStoreTestCase(unittest.TestCase, IMAP4HelperMixin):
         self.server_received_query = query
         self.server_received_uid = uid
         return self.expected
+        
+    def addListener(self, *a, **kw):
+        pass
+    removeListener = addListener
 
     def _searchWork(self, uid):
         def search():

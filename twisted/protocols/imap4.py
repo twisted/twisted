@@ -500,6 +500,7 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
             chal = {}
         self.challengers = chal
         self.ctx = contextFactory
+        self._queuedAsync = []
 
     def capabilities(self):
         cap = {'AUTH': self.challengers.keys()}
@@ -507,6 +508,7 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
             cap['LOGINDISABLED'] = None
             cap['STARTTLS'] = None
         cap['NAMESPACE'] = None
+        cap['IDLE'] = None
         return cap
 
     def connectionMade(self):
@@ -861,13 +863,24 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
     def sendNegativeResponse(self, tag = None, message = ''):
         self._respond('NO', tag, message)
 
-    def sendUntaggedResponse(self, message):
-        self._respond(message, None, None)
+    def sendUntaggedResponse(self, message, async=False):
+        if not async or (self.blocked is None):
+            self._respond(message, None, None)
+        else:
+            self._queuedAsync.append(message)
 
     def sendContinuationRequest(self, msg = 'Ready for additional command text'):
-        self.sendLine('+ ' + msg)
+        if msg:
+            self.sendLine('+ ' + msg)
+        else:
+            self.sendLine('+')
 
     def _respond(self, state, tag, message):
+        if state in ('OK', 'NO', 'BAD') and self._queuedAsync:
+            lines = self._queuedAsync
+            self._queuedAsync = []
+            for msg in lines:
+                self._respond(msg, None, None)
         if not tag:
             tag = '*'
         if message:
@@ -1100,6 +1113,23 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
 
     auth_EXAMINE = ( _selectWork, arg_astring, 0, 'EXAMINE' )
     select_EXAMINE = auth_EXAMINE
+
+
+    def do_IDLE(self, tag):
+        self.sendContinuationRequest(None)
+        self.parseTag = tag
+        self.lastState = self.parseState
+        self.parseState = 'idle'
+
+    def parse_idle(self, *args):
+        self.parseState = self.lastState
+        del self.lastState
+        self.sendPositiveResponse(self.parseTag, "IDLE terminated")
+        del self.parseTag
+
+    select_IDLE = ( do_IDLE, )
+    auth_IDLE = select_IDLE
+
 
     def do_CREATE(self, tag, name):
         name = self._parseMbox(name)
@@ -1547,7 +1577,7 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
                 ).addCallback(lambda _: self.__cbFetch(results, tag, query, uid)
                 ).addErrback(self.__ebSpewMessage
                 )
-    
+
     def __ebSpewMessage(self, failure):
         # This indicates a programming error.
         # There's no reliable way to indicate anything to the client, since we
@@ -1766,19 +1796,20 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
     #
     def modeChanged(self, writeable):
         if writeable:
-            self.sendPositiveResponse(message='[READ-WRITE]')
+            self.sendUntaggedResponse(message='[READ-WRITE]', async=True)
         else:
-            self.sendPositiveResponse(message='[READ-ONLY]')
+            self.sendUntaggedResponse(message='[READ-ONLY]', async=True)
 
     def flagsChanged(self, newFlags):
         for (mId, flags) in newFlags.iteritems():
-            self.sendUntaggedResponse('%d FETCH (FLAGS (%s))' % (mId, ' '.join(flags)))
+            msg = '%d FETCH (FLAGS (%s))' % (mId, ' '.join(flags))
+            self.sendUntaggedResponse(msg, async=True)
 
     def newMessages(self, exists, recent):
         if exists is not None:
-            self.sendUntaggedResponse('%d EXISTS' % exists)
+            self.sendUntaggedResponse('%d EXISTS' % exists, async=True)
         if recent is not None:
-            self.sendUntaggedResponse('%d RECENT' % recent)
+            self.sendUntaggedResponse('%d RECENT' % recent, async=True)
 
 class UnhandledResponse(IMAP4Exception): pass
 
@@ -4314,7 +4345,7 @@ class IMessage(IMessagePart):
 class IMessageFile(components.Interface):
     def open(self):
         """Return an file-like object opened for reading.
-        
+
         Reading from the returned file will return all the bytes
         of which this message consists.
         """
