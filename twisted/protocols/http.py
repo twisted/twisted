@@ -80,23 +80,23 @@ responses = {
     SWITCHING: "Switching Protocols",
 
     # 200
-    OK: "OK!",
-    CREATED: "Created.",
-    ACCEPTED: "Accepted.",
-    NON_AUTHORITATIVE_INFORMATION: "Non-Authoritative information",
-    NO_CONTENT: "No content.",
+    OK: "OK",
+    CREATED: "Created",
+    ACCEPTED: "Accepted",
+    NON_AUTHORITATIVE_INFORMATION: "Non-Authoritative Information",
+    NO_CONTENT: "No Content",
     RESET_CONTENT: "Reset Content.",
-    PARTIAL_CONTENT: "Partial content.",
+    PARTIAL_CONTENT: "Partial Content",
 
     # 300
     MULTIPLE_CHOICE: "Multiple Choices",
     MOVED_PERMANENTLY: "Moved Permanently",
-    FOUND: "Found.",
+    FOUND: "Found",
     SEE_OTHER: "See Other",
-    NOT_MODIFIED: "Not Modified.",
-    USE_PROXY: "Use Proxy.",
+    NOT_MODIFIED: "Not Modified",
+    USE_PROXY: "Use Proxy",
     # 306 not defined??
-    TEMPORARY_REDIRECT: "Temporary Redirect.",
+    TEMPORARY_REDIRECT: "Temporary Redirect",
 
     # 400
     BAD_REQUEST: "Bad Request",
@@ -104,27 +104,27 @@ responses = {
     PAYMENT_REQUIRED: "Payment Required",
     FORBIDDEN: "Forbidden",
     NOT_FOUND: "Not Found",
-    NOT_ALLOWED: "Method not allowed",
+    NOT_ALLOWED: "Method Not Allowed",
     NOT_ACCEPTABLE: "Not Acceptable",
-    PROXY_AUTH_REQUIRED: "Proxy authentication required.",
-    REQUEST_TIMEOUT: "Request Timeout",
+    PROXY_AUTH_REQUIRED: "Proxy Authentication Required",
+    REQUEST_TIMEOUT: "Request Time-out",
     CONFLICT: "Conflict",
     GONE: "Gone",
     LENGTH_REQUIRED: "Length Required",
-    PRECONDITION_FAILED: "Precondition Failed.",
+    PRECONDITION_FAILED: "Precondition Failed",
     REQUEST_ENTITY_TOO_LARGE: "Request Entity Too Large",
     REQUEST_URI_TOO_LONG: "Request-URI Too Long",
     UNSUPPORTED_MEDIA_TYPE: "Unsupported Media Type",
-    REQUESTED_RANGE_NOT_SATISFIABLE: "Requested range not satisfiable.",
-    EXPECTATION_FAILED: "Expectation Failed.",
+    REQUESTED_RANGE_NOT_SATISFIABLE: "Requested Range not satisfiable",
+    EXPECTATION_FAILED: "Expectation Failed",
 
     # 500
     INTERNAL_SERVER_ERROR: "Internal Server Error",
     NOT_IMPLEMENTED: "Not Implemented",
     BAD_GATEWAY: "Bad Gateway",
     SERVICE_UNAVAILABLE: "Service Unavailable",
-    GATEWAY_TIMEOUT: "Gateway Timeout",
-    HTTP_VERSION_NOT_SUPPORTED: "HTTP Version Not Supported",
+    GATEWAY_TIMEOUT: "Gateway Time-out",
+    HTTP_VERSION_NOT_SUPPORTED: "HTTP Version not supported",
 
     NOT_EXTENDED: "Not Extended"}
 
