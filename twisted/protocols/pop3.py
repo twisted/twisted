@@ -317,9 +317,9 @@ class IMailbox(components.Interface):
         @param inedx: The number of the message for which to retrieve the size,
         or None to retrieve the size of all messages.
         
-        @rtype: C{int} or C{list} of C{int}
-        @return: The number of octets in the specified message, or a
-        list of integers representing the number of octets in all the
+        @rtype: C{int} or any iterable of C{int}
+        @return: The number of octets in the specified message, or an
+        iterable of integers representing the number of octets in all the
         messages.
         """
 
@@ -358,7 +358,7 @@ class IMailbox(components.Interface):
         """Undelete any messages possible.
         
         If a message can be deleted it, it should return it its original
-        position in the message list and retain the same UIDL.
+        position in the message sequence and retain the same UIDL.
         """
 
     def sync(self):
