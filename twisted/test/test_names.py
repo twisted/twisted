@@ -178,6 +178,7 @@ class ServerDNSTestCase(unittest.DeferredTestCase):
 
 
     def testMailExchangeRecord(self):
+        """Test DNS 'MX' record queries"""
         global gotResponse
         gotResponse = 0
         r = self.resolver
@@ -190,6 +191,7 @@ class ServerDNSTestCase(unittest.DeferredTestCase):
 
 
     def testNameserver(self):
+        """Test DNS 'NS' record queries"""
         global gotResponse
         gotResponse = 0
         r = self.resolver
@@ -202,6 +204,7 @@ class ServerDNSTestCase(unittest.DeferredTestCase):
 
 
     def testHINFO(self):
+        """Test DNS 'HINFO' record queries"""
         global gotResponse
         gotResponse = 0
         r = self.resolver
@@ -214,6 +217,7 @@ class ServerDNSTestCase(unittest.DeferredTestCase):
 
 
     def testPTR(self):
+        """Test DNS 'PTR' record queries"""
         global gotResponse
         gotResponse = 0
         r = self.resolver
