@@ -32,10 +32,8 @@ class FakeProtocol:
     def __init__(self, responses):
         self.args = []
         self.responses = responses
-    def query(self, *args):
-        if not self.responses:
-            import pdb; pdb.Pdb().set_trace()
-        self.args.append(args)
+    def query(self, *args, **kw):
+        self.args.append((args, kw))
         return defer.succeed(self.responses.pop(0))
 
 class RootResolverTestCase(unittest.TestCase):
@@ -70,8 +68,9 @@ class RootResolverTestCase(unittest.TestCase):
         a = m.answers[0]
         self.assertEquals(a, rr)
 
-        a = self.p.args
+        a, kw = self.p.args
         self.assertEquals(len(a), 2)
+        self.assertEquals(kw, {'timeout': 1})
 
         r = a[0]
         self.assertEquals(len(r), 3)
