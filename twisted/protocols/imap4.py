@@ -3654,8 +3654,26 @@ class IMailbox(components.Interface):
         about
 
         @type parts: C{list}
-        @param parts: The message portions to retrieve.
-
+        @param parts: The message portions to retrieve.  Each element is an
+        instance of a class with a name like \"RFC822Size\" or \"Text\".  A
+        few of these classes have attributes which modify their meaning:
+        
+            Body instances have a boolean peek attribute.  If it is true, this
+            fetch should not implicitly set the \\Seen flag.  They also have a
+            header attribute which is bound to a \"Header\" instance if the
+            query is for message headers.  They also have a partialBegin and a
+            partialLength attribute if this is a partial query.
+            
+            Header instances have a fields attribute that is bound to a list of
+            capitalized strings naming the header fields named in the query.
+            They also have a boolean negate attribute which is True if the listed
+            headers should be excluded from the result.  They also have a part
+            attribute bound to a tuple of integers specifying which part of the
+            message this instance refers to.
+            
+            Text and MIME instances also have a part attribute with the same meaning
+            as that on Header instances.
+            
         @type uid: C{bool}
         @param uid: If true, the IDs specified in the query are UIDs;
         otherwise they are message sequence IDs.
