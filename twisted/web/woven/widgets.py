@@ -513,7 +513,7 @@ class Text(Widget):
                 return document.createTextNode(self.text)
 
 
-class ParagraphText(W.Widget):
+class ParagraphText(Widget):
     """
     Like a normal text widget, but it takes line breaks in the text and
     formats them as HTML paragraphs.
