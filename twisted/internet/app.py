@@ -48,30 +48,6 @@ def encrypt(passphrase, data):
     return cipher.new(md5.new(passphrase).digest()[:16]).encrypt(data)
 
 
-class _SSLlistener:
-    """persistence utility; ignore me
-    """
-    ctx = None
-    fac = None
-    def __init__(self, app, port, interface, backlog):
-        self.app = app
-        self.port = port
-        self.interface = interface
-        self.backlog = backlog
-
-    def setFactory(self, fac):
-        self.fac = fac
-        if self.ctx:
-            self.listen()
-
-    def setContext(self, ctx):
-        self.ctx = ctx
-        if self.fac:
-            self.listen()
-
-    def listen(self):
-        self.app.listenSSL(self.port, self.fac, self.ctx, self.backlog, self.interface)
-
 class _AbstractServiceCollection:
     __implements__ = (interfaces.IServiceCollection, )
 
