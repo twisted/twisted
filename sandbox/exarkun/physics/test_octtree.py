@@ -1,7 +1,6 @@
 from twisted.trial import unittest
 from zope import interface
 
-import numarray
 
 import octtree
 
@@ -16,7 +15,7 @@ class OctTreeTest(unittest.TestCase):
         o2 = Thingy(x=5, y=5, z=6)
         o3 = Thingy(x=5, y=5, z=10)
         # XXX What the heck is center (first arg to OctTree)
-        ot = octtree.OctTree(numarray.array([0,0,0], numarray.Int),
+        ot = octtree.OctTree([0,0,0],
                              20, 20, 20)
         for x in o1, o2, o3:
             ot.add(x)
@@ -33,7 +32,7 @@ class OctTreeTest(unittest.TestCase):
         o2 = Thingy(6,6,6)
         o3 = Thingy(3,3,3)
 
-        ot = octtree.OctTree(None, # XXX
+        ot = octtree.OctTree([0,0,0],
                              20, 20, 20)
 
         ot.iterInCone(point=(4,4,4), length=10, base=5,

@@ -2,8 +2,8 @@
 from zope import interface
 
 class ILocated(interface.Interface):
-    position = interface.Attribute("position",
-                                   __doc__="Three tuple of coordinates of a thing")
+    position = interface.Attribute(
+        "position", __doc__="Three tuple of coordinates of a thing")
 
 def distance(x, y):
     return ((x[0] - y[0]) ** 2 + (x[1] - y[1]) ** 2 + (x[2] - y[2]) ** 2) ** 0.5
