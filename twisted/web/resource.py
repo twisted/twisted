@@ -143,22 +143,6 @@ class Resource(coil.ConfigCollection):
         self.children[path] = child
         child.server = self.server
 
-    def tagMatches(self, request, tags):
-        """Would one of these be my entity tag?
-
-        Returns the matching tag, or a false value if none match.
-
-        That's \"entity tag\" as in the HTTP/1.1 ETag header, \"used
-        for comparing two or more entities from the same requested
-        resource.\"
-        """
-        return defer.succeed(0)
-
-    def wasModifiedSince(self, request, when):
-        """Have I been modified, for such a request, since such a time?
-        """
-        return defer.succeed(1)
-
     def render(self, request):
         """Render a given resource.
 

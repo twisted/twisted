@@ -146,13 +146,6 @@ class Widget:
     def getTitle(self, request):
         return self.title or reflect.qual(self.__class__)
 
-    def wasModifiedSince(self, request, when):
-        """Have I changed for such a request since this time?
-
-        If not, return a false value.
-        """
-        return defer.succeed(1)
-
     def display(self, request):
         """Implement me to represent your widget.
 
@@ -911,9 +904,6 @@ class WidgetPage(Page):
 
     def prePresent(self, request):
         self.title = self.widget.getTitle(request)
-
-    def wasModifiedSince(self, request, when):
-        return self.widget.wasModifiedSince(request, when)
 
     def render(self, request):
         displayed = self.display(request)

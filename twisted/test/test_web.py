@@ -47,19 +47,18 @@ class DummyRequest:
         self.args[name] = [value]
     def setResponseCode(self, code):
         assert not self.written, "Response code cannot be set after data has been written: %s." % string.join(self.written, "@@@@")
+    def setLastModified(self, when):
+        assert not self.written, "Last-Modified cannot be set after data has been written: %s." % string.join(self.written, "@@@@")
+    def setETag(self, tag):
+        assert not self.written, "ETag cannot be set after data has been written: %s." % string.join(self.written, "@@@@")
 
 class SimpleResource(resource.Resource):
     def render(self, request):
-        return "correct"
-
-    def tagMatches(self, request, tags):
-        if 'MatchingTag' in tags:
-            return defer.succeed('MatchingTag')
+        if http.CACHED in (request.setLastModified(10),
+                           request.setETag('MatchingTag')):
+            return ''
         else:
-            return defer.succeed(None)
-
-    def wasModifiedSince(self, request, when):
-        return defer.succeed(10 > when)
+            return "correct"
 
 class SiteTest(unittest.TestCase):
     def testSimplestSite(self):

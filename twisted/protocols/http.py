@@ -31,7 +31,6 @@ import socket
 import math
 import time
 import calendar
-import sys
 
 # sibling imports
 import basic
@@ -142,6 +141,10 @@ RESPONSES = {
     HTTP_VERSION_NOT_SUPPORTED: "HTTP Version not supported",
 
     NOT_EXTENDED: "Not Extended"}
+
+CACHED = """Magic constant returned by http.Request methods to set cache
+validation headers when the request is conditional and the value fails
+the condition."""
 
 # backwards compatability
 responses = RESPONSES
@@ -352,7 +355,7 @@ class Request:
         """Notify the object that it is no longer queued.
 
         We start writing whatever data we have to the transport, etc.
-        
+
         This method is not intended for users.
         """
         if not self.queued:
@@ -399,7 +402,7 @@ class Request:
 
     def handleContentChunk(self, data):
         """Write a chunk of data.
-        
+
         This method is not intended for users.
         """
         self.content.write(data)
@@ -514,6 +517,9 @@ class Request:
         if self.chunked:
             # write last chunk and closing CRLF
             self.transport.write("0\r\n\r\n")
+        elif not self.startedWriting:
+            # write headers
+            self.write('')
 
         # log request
         if hasattr(self.channel, "factory"):
@@ -533,11 +539,15 @@ class Request:
             version = self.clientproto
             if version != "HTTP/0.9":
                 l = []
-                l.append('%s %s %s\r\n' % (version, self.code, self.code_message))
-                # if we don't have a content length, we sent data in chunked mode,
-                # so that we can support pipelining in persistent connections.
-                if version == "HTTP/1.1" and self.headers.get('content-length', None) is None:
-                    l.append("%s: %s\r\n" % ('Transfer-encoding', 'chunked'))
+                l.append('%s %s %s\r\n' % (version, self.code,
+                                           self.code_message))
+                # if we don't have a content length, we send data in
+                # chunked mode, so that we can support pipelining in
+                # persistent connections.
+                if ((version == "HTTP/1.1") and
+                    (self.headers.get('content-length', None) is None)):
+                    l.append("%s: %s\r\n" %
+                             ('Transfer-encoding', 'chunked'))
                     self.chunked = 1
                 if self.lastModified is not None:
                     if self.headers.has_key('last-modified'):
@@ -615,11 +625,22 @@ class Request:
         self.setHeader("location", url)
 
     def setLastModified(self, when):
-        """Set the Last-Modified time for the response to this request.
+        """Set the X{Last-Modified} time for the response to this request.
 
         If I am called more than once, I ignore attempts to set
         Last-Modified earlier, only replacing the Last-Modified time
         if it is to a later value.
+
+        If I am a conditional request, I may modify my response code
+        to L{NOT_MODIFIED} if appropriate for the time given.
+
+        @param when: The last time the resource being returned was
+            modified, in seconds since the epoch.
+        @type when: number
+        @return: If I am a X{If-Modified-Since} conditional request and
+            the time given is not newer than the condition, I return
+            L{http.CACHED<CACHED>} to indicate that you should write no
+            body.  Otherwise, I return a false value.
         """
         # time.time() may be a float, but the HTTP-date strings are
         # only good for whole seconds.
@@ -627,17 +648,44 @@ class Request:
         if (not self.lastModified) or (self.lastModified < when):
             self.lastModified = when
 
-    def setETag(self, etag):
-        """Set an entity tag for the outgoing response.
+        modified_since = self.getHeader('if-modified-since')
+        if modified_since:
+            modified_since = stringToDatetime(modified_since)
+            if modified_since >= when:
+                self.setResponseCode(NOT_MODIFIED)
+                return CACHED
+        return None
 
-        That's \"entity tag\" as in the HTTP/1.1 ETag header, \"used
+    def setETag(self, etag):
+        """Set an X{entity tag} for the outgoing response.
+
+        That's \"entity tag\" as in the HTTP/1.1 X{ETag} header, \"used
         for comparing two or more entities from the same requested
         resource.\"
+
+        If I am a conditional request, I may modify my response code
+        to L{NOT_MODIFIED} or L{PRECONDITION_FAILED}, if appropriate
+        for the tag given.
+
+        @param etag: The entity tag for the resource being returned.
+        @type etag: string
+        @return: If I am a X{If-None-Match} conditional request and
+            the tag matches one in the request, I return
+            L{http.CACHED<CACHED>} to indicate that you should write
+            no body.  Otherwise, I return a false value.
         """
         if etag:
             self.etag = etag
-        # Return the argument so it can be used in a deferred's callback chain.
-        return etag
+
+        tags = self.getHeader("if-none-match")
+        if tags:
+            tags = tags.split()
+            if (etag in tags) or ('*' in tags):
+                self.setResponseCode(((self.method in ("HEAD", "GET"))
+                                      and NOT_MODIFIED)
+                                     or PRECONDITION_FAILED)
+                return CACHED
+        return None
 
     def getAllHeaders(self):
         """Return dictionary of all headers the request received."""
@@ -662,7 +710,7 @@ class Request:
 
     def setHost(self, host, port, ssl=0):
         """Change the host and port the request thinks it's using.
-        
+
         This method is useful for working with reverse HTTP proxies (e.g.
         both Squid and Apache's mod_proxy can do this), when the address
         the HTTP client is using is different than the one we're listening on.

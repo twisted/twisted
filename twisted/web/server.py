@@ -144,126 +144,83 @@ class Request(pb.Copyable, http.Request):
         # Resource Identification
         self.prepath = []
         self.postpath = map(urllib.unquote, string.split(self.path[1:], '/'))
-        resrc = self.site.getResourceFor(self)
-
-        # Conditional requests for cache validation.
-        # XXX: No unit test for this yet!
-        # TODO: Support for other conditonal requests,
-        # If-Range, If-Match, If-Unmodified-Since.
-        tags = self.getHeader("if-none-match")
-        modified_since = self.getHeader('if-modified-since')
-        if tags:
-            tags = tags.split()
-            responseCode = ((self.method in ("HEAD", "GET"))
-                            and http.NOT_MODIFIED) or http.PRECONDITION_FAILED
-            d = resrc.tagMatches(self, tags)
-            d.addCallback(self.setETag)
-            # Inverting callback, because a negative answer from tagMatches
-            # means that the resource *should* be fully rendered.
-            d.addCallback(operator.not_)
-            d.addCallback(self.conditionallyRender, resrc, responseCode)
-            d.addErrback(self.processingFailed)
-        elif modified_since is not None:
-            modified_since = http.stringToDatetime(modified_since)
-            d = resrc.wasModifiedSince(self, modified_since)
-            d.addCallback(self.conditionallyRender, resrc)
-            d.addErrback(self.processingFailed)
-        else:
-            # An unconditional request.
+        try:
+            resrc = self.site.getResourceFor(self)
             self.render(resrc)
-
-
-    def conditionallyRender(self, doRender, resrc,
-                            responseCode=http.NOT_MODIFIED):
-        """Render the resource, maybe.
-
-        doRender is a boolean.
-        responseCode is used if the resource is *not* to be rendered.
-        """
-        if doRender:
-            log.msg("condition passed, rendering %s for %s" % (resrc, self))
-            self.render(resrc)
-        else:
-            log.msg("condition failed, sending %s for %s" % (responseCode,
-                                                             self))
-            self.setResponseCode(responseCode)
-            self.setHeader('content-length', '0')
-            self.write('')
-            self.finish()
-
+        except Exception, e:
+            self.processingFailed(failure.Failure())
 
     def render(self, resrc):
         try:
-            try:
+            body = resrc.render(self)
+        except UnsupportedMethod, e:
+            allowedMethods = e.allowedMethods
+            if (self.method == "HEAD") and ("GET" in allowedMethods):
+                # We must support HEAD (RFC 2616, 5.1.1).  If the
+                # resource doesn't, fake it by giving the resource
+                # a 'GET' request and then return only the headers,
+                # not the body.
+                log.msg("Using GET to fake a HEAD request for %s" %
+                        (resrc,))
+                self.method = "GET"
                 body = resrc.render(self)
-            except UnsupportedMethod, e:
-                allowedMethods = e.allowedMethods
-                if (self.method == "HEAD") and ("GET" in allowedMethods):
-                    # We must support HEAD (RFC 2616, 5.1.1).  If the resource
-                    # doesn't, fake it by giving the resource a 'GET' request
-                    # and then return only the headers -- not the body.
 
-                    log.msg("Using GET to fake a HEAD request for %s" % resrc)
-                    self.method = "GET"
-                    body = resrc.render(self)
-
-                    if body is NOT_DONE_YET:
-                        log.msg("Tried to fake a HEAD request for %s, but "
-                                "it got away from me." % resrc)
-                        # Oh well, I guess we won't include the content length.
-                    else:
-                        self.setHeader('content-length', str(len(body)))
-
-                    self.write('')
-                    self.finish()
-                    return
-
-                if self.method in (supportedMethods):
-                    # We MUST include an Allow header
-                    # (RFC 2616, 10.4.6 and 14.7)
-                    self.setHeader('Allow', allowedMethods)
-                    s = ('''Your browser approached me (at %(URI)s) with'''
-                         ''' the method "%(method)s".  I only allow'''
-                         ''' the method%(plural)s %(allowed) here.''' % {
-                        'URI': self.uri,
-                        'method': self.method,
-                        'plural': ((len(allowedMethods) > 1) and 's') or '',
-                        'allowed': string.join(allowedMethods, ', ')
-                        })
-                    epage = error.ErrorPage(http.NOT_ALLOWED,
-                                            "Method Not Allowed", s)
-                    body = epage.render(self)
+                if body is NOT_DONE_YET:
+                    log.msg("Tried to fake a HEAD request for %s, but "
+                            "it got away from me." % resrc)
+                    # Oh well, I guess we won't include the content length.
                 else:
-                    epage = error.ErrorPage(http.NOT_IMPLEMENTED, "Huh?",
-                                            """I don't know how to treat a"""
-                                            """ %s request."""
-                                            % (self.method))
-                    body = epage.render(self)
-            # end except UnsupportedMethod
-
-            if body == NOT_DONE_YET:
-                return
-            if type(body) is not types.StringType:
-                body = error.ErrorPage(http.INTERNAL_SERVER_ERROR,
-                    "Request did not return a string",
-                    "Request: "+html.PRE(reflect.safe_repr(self))+"<br />"+
-                    "Resource: "+html.PRE(reflect.safe_repr(resrc))+"<br />"+
-                    "Value: "+html.PRE(reflect.safe_repr(body))).render(self)
-
-            if self.method == "HEAD":
-                if len(body) > 0:
-                    # This is a Bad Thing (RFC 2616, 9.4)
-                    log.msg("Warning: HEAD request %s for resource %s is"
-                            " returning a message body.  I think I'll eat it."
-                            % (self, resrc))
                     self.setHeader('content-length', str(len(body)))
+
                 self.write('')
+                self.finish()
+                return
+
+            if self.method in (supportedMethods):
+                # We MUST include an Allow header
+                # (RFC 2616, 10.4.6 and 14.7)
+                self.setHeader('Allow', allowedMethods)
+                s = ('''Your browser approached me (at %(URI)s) with'''
+                     ''' the method "%(method)s".  I only allow'''
+                     ''' the method%(plural)s %(allowed) here.''' % {
+                    'URI': self.uri,
+                    'method': self.method,
+                    'plural': ((len(allowedMethods) > 1) and 's') or '',
+                    'allowed': string.join(allowedMethods, ', ')
+                    })
+                epage = error.ErrorPage(http.NOT_ALLOWED,
+                                        "Method Not Allowed", s)
+                body = epage.render(self)
             else:
+                epage = error.ErrorPage(http.NOT_IMPLEMENTED, "Huh?",
+                                        """I don't know how to treat a"""
+                                        """ %s request."""
+                                        % (self.method))
+                body = epage.render(self)
+        # end except UnsupportedMethod
+
+        if body == NOT_DONE_YET:
+            return
+        if type(body) is not types.StringType:
+            body = error.ErrorPage(http.INTERNAL_SERVER_ERROR,
+                "Request did not return a string",
+                "Request: "+html.PRE(reflect.safe_repr(self))+"<br />"+
+                "Resource: "+html.PRE(reflect.safe_repr(resrc))+"<br />"+
+                "Value: "+html.PRE(reflect.safe_repr(body))).render(self)
+
+        if self.method == "HEAD":
+            if len(body) > 0:
+                # This is a Bad Thing (RFC 2616, 9.4)
+                log.msg("Warning: HEAD request %s for resource %s is"
+                        " returning a message body."
+                        "  I think I'll eat it."
+                        % (self, resrc))
                 self.setHeader('content-length', str(len(body)))
-                self.write(body)
-            self.finish()
-        except Exception, e:
-            self.processingFailed(failure.Failure())
+            self.write('')
+        else:
+            self.setHeader('content-length', str(len(body)))
+            self.write(body)
+        self.finish()
 
     def processingFailed(self, reason):
         import widgets

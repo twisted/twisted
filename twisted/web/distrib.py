@@ -149,20 +149,6 @@ class ResourceSubscription(resource.Resource):
     def booted(self):
         self.notConnected("connection dropped")
 
-    def tagMatches(self, request, tags):
-        if not self.publisher:
-            # easy is better than accurate
-            return defer.succeed(0)
-        else:
-            return self.publisher.callRemote('tagMatches', request, tags)
-
-    def wasModifiedSince(self, request, when):
-        if not self.publisher:
-            # easy is better than accurate
-            return defer.succeed(1)
-        else:
-            return self.publisher.callRemote('wasModifiedSince', request, when)
-
     def render(self, request):
         """Render this request, from my server.
 
@@ -197,14 +183,6 @@ class ResourcePublisher(pb.Root, styles.Versioned):
 
     def getPerspectiveNamed(self, name):
         return self
-
-    def remote_tagMatches(self, request, tags):
-        res = self.site.getResourceFor(request)
-        return res.tagMatches(request, tags)
-
-    def remote_wasModifiedSince(self, request, when):
-        res = self.site.getResourceFor(request)
-        return res.wasModifiedSince(request, when)
 
     def remote_request(self, request):
         res = self.site.getResourceFor(request)

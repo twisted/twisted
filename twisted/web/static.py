@@ -277,7 +277,7 @@ class File(resource.Resource, styles.Versioned):
             #return dirListingPage.render(request)
 
         request.setHeader('accept-ranges','bytes')
-        request.setLastModified(mtime)
+
         if self.type:
             request.setHeader('content-type', self.type)
         if self.encoding:
@@ -291,6 +291,10 @@ class File(resource.Resource, styles.Versioned):
                 return error.ForbiddenResource().render(request)
             else:
                 raise
+
+        if request.setLastModified(mtime) is http.CACHED:
+            return ''
+
         try:
             range = request.getHeader('range')
             if range is not None:
@@ -321,12 +325,6 @@ class File(resource.Resource, styles.Versioned):
         FileTransfer(f, size, request)
         # and make sure the connection doesn't get closed
         return server.NOT_DONE_YET
-
-    def wasModifiedSince(self, request, when):
-        try:
-            return defer.succeed(os.stat(self.path)[stat.ST_MTIME] > when)
-        except OSError:
-            return defer.succeed(1)
 
     def redirect(self, request):
         return redirectTo(addSlash(request), request)
