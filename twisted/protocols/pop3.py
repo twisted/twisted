@@ -43,24 +43,15 @@ import twisted.cred.credentials
 ##
 ## Authentication
 ##
-class IAPOP(cred.credentials.ICredentials):
-    """
-    @ivar magic: The challenge bytes
-    @ivar username: The username
-    @ivar digest: The response bytes
-    """
-    def check(self, password):
-        """Validate against the given password"""
-
 class APOPCredentials:
-    __implements__ = (IAPOP,)
+    __implements__ = (cred.credentials.IUsernamePassword,)
     
     def __init__(self, magic, username, digest):
         self.magic = magic
         self.username = username
         self.digest = digest
     
-    def check(self, password):
+    def checkPassword(self, password):
         seed = self.magic + password
         my_digest = md5.new(seed).hexdigest()
         if my_digest == self.digest:
@@ -275,7 +266,7 @@ class POP3(basic.LineReceiver):
             return self.portal.login(
                 APOPCredentials(self.magic, user, digest),
                 None,
-                None
+                IMailbox
             )
         return defer.fail(cred.error.UnauthorizedLogin())
 
@@ -296,7 +287,7 @@ class POP3(basic.LineReceiver):
             return self.portal.login(
                 cred.credentials.UsernamePassword(user, password),
                 None,
-                None
+                Mailbox
             )
         return defer.fail(cred.error.UnauthorizedLogin())
 

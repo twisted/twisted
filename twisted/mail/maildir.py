@@ -293,18 +293,13 @@ class MaildirDirdbmDomain(AbstractMaildirDomain):
 class DirdbmDatabase:
     __implements__ = (cred.checkers.ICredentialsChecker,)
     
-    credentialInterfaces = (pop3.IAPOP, cred.credentials.IUsernamePassword)
+    credentialInterfaces = (cred.credentials.IUsernamePassword,)
     
     def __init__(self, dbm):
         self.dirdbm = dbm
     
     def requestAvatarId(self, credentials):
-        if components.implements(credentials, cred.credentials.IUsernamePassword):
-            if credentials.username in self.dirdbm:
-                if credentials.password == self.dirdbm[credentials.username]:
-                    return credentials.username
-        elif components.implements(credentials, pop3.IAPOP):
-            if credentials.username in self.dirdbm:
-                if credentials.check(self.dirdbm[credentials.username]):
-                    return credentials.username
-        raise cred.error.UnauthorizedLogin
+        if credentials.username in self.dirdbm:
+            if credentials.checkPassword(self.dirdbm[credentials.username]):
+                return credentials.username
+        raise cred.error.UnauthorizedLogin()
