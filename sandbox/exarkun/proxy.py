@@ -3,7 +3,7 @@
 from twisted.python import usage
 
 def URLDescriptor(s):
-    """URLDescriptor(protocol%state%details)"""
+    """URLDescriptor(protocol,state,details)"""
     descriptors = {
         'unix': UNIXDescriptor,
         'tcp': TCPDescriptor,
@@ -18,7 +18,7 @@ def URLDescriptor(s):
         's': 'listen%s',
     }
 
-    parts = s.split('%', 2)
+    parts = s.split(',', 2)
     if len(parts) != 3:
         raise usage.UsageError, "illegal descriptor"
     if parts[0] not in descriptors:
@@ -36,7 +36,7 @@ def UNIXDescriptor(s, isClient):
 
 def TCPDescriptor(s, isClient):
     """TCPDescriptor(hostname:port)"""
-    s = s.split(':', 1)
+    s = s.split(',', 1)
     if len(s) != 2:
         raise usage.UsageError, "not enough arguments"
     s[1] = int(s[1])
@@ -49,7 +49,7 @@ def SSLDescriptor(s, isClient):
     if isClient:
         raise usage.UsageError, "client ssl not yet supported"
     else:
-        s = s.split('!', 2)
+        s = s.split(',', 2)
         if len(s) != 2:
             raise usage.UsageError, "not enough arguments"
         from twisted.internet.ssl import DefaultOpenSSLContextFactory
