@@ -15,9 +15,75 @@
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
-# System Imports
-import exceptions
 
-class CannotListenError(exceptions.StandardError):
+import errno, socket, types
+
+
+class BindError(Exception):
+    """An error occured binding to an interface."""
+
+
+class CannotListenError(BindError):
     """This gets raised by a call to startListening, when the object cannot start listening."""
     pass
+
+
+
+# connection errors
+
+class ConnectError(Exception):
+    """An error that occured while connecting."""
+
+    def __init__(self, osError=None, string=""):
+        self.osError = osError
+        Exception.__init__(self, string)
+
+
+class UnknownHostError(ConnectError):
+    """Hostname couldn't be looked up."""
+
+
+class NoRouteError(ConnectError):
+    """No route to host."""
+
+
+class ConnectionRefusedError(ConnectError):
+    """Connection was refused by other side."""
+
+
+class TimedOutError(ConnectError):
+    """TCP connection timed out."""
+
+
+class BadFileError(ConnectError):
+    """File used for UNIX socket is no good."""
+
+
+class UserError(ConnectError):
+    """User aborted connection."""
+
+
+class SSLError(ConnectError):
+    """An SSL error occured."""
+
+
+errnoMapping = {
+    errno.ENETUNREACH: NoRouteError,
+    errno.ECONNREFUSED: ConnectionRefusedError,
+    errno.ETIMEDOUT: TimedOutError,
+}
+
+def getConnectError(e):
+    """Given a socket exception, return connection error."""
+    try:
+        number, string = e
+    except ValueError:
+        return ConnectError(string=e)
+    
+    number, string = e
+    if hasattr(socket, 'gaierror') and isinstance(e, socket.gaierror):
+        # only works in 2.2
+        klass = UnknownHostError
+    else:
+        klass = errnoMapping.get(number, ConnectError)
+    return klass(number, string)

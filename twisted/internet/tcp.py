@@ -53,15 +53,17 @@ elif os.name != 'java':
 # Twisted Imports
 from twisted.internet import protocol
 from twisted.persisted import styles
-from twisted.python import log
+from twisted.python import log, failure
 from twisted.python.runtime import platform
 from twisted.internet.error import CannotListenError
 from twisted.internet.interfaces import IConnector
 from twisted.internet import defer
+
 # Sibling Imports
 import abstract
 import main
 import interfaces
+import error
 
 
 class Connection(abstract.FileDescriptor, styles.Ephemeral):
@@ -165,11 +167,14 @@ class BaseClient(Connection):
 
     def stopConnecting(self):
         """Stop attempt to connect."""
-        self.failIfNotConnected("user told us to stop") # XXX
+        self.failIfNotConnected(error.UserError())
     
-    def failIfNotConnected(self, error):
+    def failIfNotConnected(self, err):
+        # XXX workaround for sillines in reactor.resolve()
+        if err == "address not found":
+            err = error.UnknownHostError()
         if (not self.connected) and (not self.disconnected):
-            self.connector.connectionFailed(error)
+            self.connector.connectionFailed(failure.Failure(err))
             self.stopReading()
             self.stopWriting()
             del self.connector
@@ -202,7 +207,7 @@ class BaseClient(Connection):
         if platform.getType() == "win32":
             r, w, e = select.select([], [], [self.fileno()], 0.0)
             if e:
-                self.failIfNotConnected(e) # XXX
+                self.failIfNotConnected(error.getConnectError(e))
                 return
 
         try:
@@ -215,7 +220,7 @@ class BaseClient(Connection):
                 self.startWriting()
                 return
             else:
-                self.failIfNotConnected(se) # XXX
+                self.failIfNotConnected(error.getConnectError(se))
                 return
         # If I have reached this point without raising or returning, that means
         # that the socket is connected.
@@ -232,7 +237,7 @@ class BaseClient(Connection):
     
     def connectionLost(self):
         if not self.connected:
-            self.failIfNotConnected()
+            self.failIfNotConnected(error.ConnectError())
         else:
             Connection.connectionLost(self)
             self.connector.connectionLost()
@@ -271,13 +276,13 @@ class UNIXClient(BaseClient):
         except OSError, ose:
             # no such file or directory
             whenDone = None
-            error = "no such file" # XXX
+            error = error.BadFileError(string="No such file or directory")
         else:
             if not (mode & (stat.S_IFSOCK |  # that's not a socket
                             stat.S_IROTH  |  # that's not readable
                             stat.S_IWOTH )): # that's not writable
                 whenDone = None
-                error = "not socket/not readable/not writable" # XXX
+                err = error.BadFileError(string="File is not socket or unreadable/unwritable")
             else:
                 # success.
                 self.realAddress = self.addr = filename
@@ -285,7 +290,7 @@ class UNIXClient(BaseClient):
                 skt = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
                 whenDone = self.doConnect
 
-        self._finishInit(whenDone, skt, error, reactor)
+        self._finishInit(whenDone, skt, err, reactor)
 
 
 class TCPClient(BaseClient):

@@ -37,7 +37,13 @@ class IConnector(Interface):
         """Return a protocol instance."""
 
     def connectionFailed(self, reason):
-        """The connection attempt has failed."""
+        """The connection attempt has failed.
+
+        Arguments:
+
+         * reason -- a twisted.python.failure.Failure, encapsulating a
+                     twisted.internet.error.ConnectError exception.
+        """
 
     def connectionLost(self):
         """The remote connection has been lost."""
