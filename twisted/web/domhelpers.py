@@ -168,9 +168,9 @@ def findNodes(parent, matcher, accum=None):
         return accum
     for child in parent.childNodes:
         # print child, child.nodeType, child.nodeName
-        findNodes(child, matcher, accum)
         if matcher(child):
             accum.append(child)
+        findNodes(child, matcher, accum)
     return accum
 
 def findElements(parent, matcher):
