@@ -173,13 +173,15 @@ print
 from twisted.python import usage
 
 class ImportOptions(usage.Options):
-    optParameters = [['module', 'm', None], ['vendor', 'v', None], ['release', 'r', None]]
+    optParameters = [['module', 'm', None], ['vendor', 'v', None],
+                     ['release', 'r', None]]
 
 class CheckoutOptions(usage.Options):
     optParameters = [['module', 'm', None], ['tag', 'r', None]]
 
 class Options(usage.Options):
-    subCommands = [['import', None, ImportOptions], ['checkout', None, CheckoutOptions]]
+    subCommands = [['import', None, ImportOptions],
+                   ['checkout', None, CheckoutOptions]]
     
     optParameters = [['compression', 'z', 0], ['repository', 'r', None]]
 </pre>
