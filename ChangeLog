@@ -1,3 +1,8 @@
+2002-03-15  Itamar Shtull-Trauring  <itamarst@twistedmatrix.com>
+
+        * XML-RPC published methods can now return Deferreds, and Twisted
+        will Do The Right Thing.
+
 2002-03-13  Itamar Shtull-Trauring  <itamarst@twistedmatrix.com>
 
         * Refactored coil, the configuration mechanism for Twisted.
