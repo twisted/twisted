@@ -137,7 +137,10 @@ class Text(Widget):
     
     def generateDOM(self, request, node):
         if isinstance(self.text, Model):
-            node.appendChild(document.createTextNode(str(self.getData())))
+            textNode = document.createTextNode(str(self.getData()))
+            if node is None:
+                return textNode
+            node.appendChild(textNode)
             return node
         else:            
             return document.createTextNode(self.text)
@@ -156,6 +159,7 @@ class Image(Text):
 
 
 class Error(Widget):
+    tagName = 'div'
     def __init__(self, model, message=""):
         Widget.__init__(self, model)
         self['style'] = 'color: red'
@@ -164,6 +168,7 @@ class Error(Widget):
     def add(self, item):
         item.error = None
         self.children.append(item)
+
 
 class Div(Widget):
     tagName = 'div'
