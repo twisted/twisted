@@ -59,6 +59,48 @@ class APOPCredentials:
         return False   
 ##
 
+class _HeadersPlusNLines:
+    def __init__(self, f, n):
+        self.f = f
+        self.n = n
+        self.linecount = 0
+        self.headers = 1
+        self.done = 0
+        self.buf = ''
+
+    def read(self, bytes):
+        if self.done:
+            return ''
+        data = self.f.read(bytes)
+        if not data:
+            return data
+        if self.headers:
+            df, sz = data.find('\r\n\r\n'), 4
+            if df == -1:
+                df, sz = data.find('\n\n'), 2
+            if df!=-1:
+                df += sz
+                val = data[:df]
+                data = data[df:]
+                self.linecount = 1
+                self.headers = 0
+        else:
+            val = ''
+        if self.linecount > 0:
+            dsplit = (self.buf+data).split('\n')
+            self.buf = dsplit[-1]
+            for ln in dsplit[:-1]:
+                print 'incr linecount', self.linecount, self.n
+                if self.linecount > self.n:
+                    self.done = 1
+                    return val
+                val += (ln + '\n')
+                self.linecount += 1
+            return val
+        else:
+            return data
+
+
 class POP3Error(Exception):
     pass
 
@@ -194,8 +236,9 @@ class POP3(basic.LineReceiver):
         resp, fp = self.getMessageFile(i)
         if not fp:
             return
-        size = max(int(size), resp)
-        self.successResponse(size)
+        size = int(size)
+        fp = _HeadersPlusNLines(fp, size)
+        self.successResponse("Top of message follows")
         s = basic.FileSender()
         s.beginFileTransfer(fp, self.transport, self.transformChunk
         ).addCallback(self.finishedFileTransfer)
