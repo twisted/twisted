@@ -337,7 +337,11 @@ class Request(pb.Copyable, http.Request, components.Componentized):
 
     def prePathURL(self):
         inet, addr, port = self.getHost()
-        if port == 80:
+        if self.isSecure():
+            default = 443
+        else:
+            default = 80
+        if port == default:
             hostport = ''
         else:
             hostport = ':%d' % port

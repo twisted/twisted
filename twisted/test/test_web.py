@@ -331,10 +331,12 @@ resource = Data('dynamic world','text/plain')
 
 class DummyChannel:
     class Baz:
+        port = 80
+        type = 'TCP'
         def getPeer(self):
             return None
         def getHost(self):
-            return None
+            return self.type, 'example.com', self.port
     transport = Baz()
     site = server.Site(resource.Resource())
 
@@ -349,3 +351,63 @@ class TestRequest(unittest.TestCase):
         request.gotLength(0)
         request.requestReceived('GET', '/foo/bar/', 'HTTP/1.0')
         self.assertEqual(request.childLink('baz'), 'baz')
+
+    def testPrePathURLSimple(self):
+        request = server.Request(DummyChannel(), 1)
+        request.gotLength(0)
+        request.requestReceived('GET', '/foo/bar', 'HTTP/1.0')
+        request.setHost('example.com', 80)
+        self.assertEqual(request.prePathURL(), 'http://example.com/foo/bar')
+
+    def testPrePathURLNonDefault(self):
+        d = DummyChannel()
+        d.transport = DummyChannel.Baz()
+        d.transport.port = 81
+        request = server.Request(d, 1)
+        request.setHost('example.com', 81)
+        request.gotLength(0)
+        request.requestReceived('GET', '/foo/bar', 'HTTP/1.0')
+        self.assertEqual(request.prePathURL(), 'http://example.com:81/foo/bar')
+
+    def testPrePathURLSSLPort(self):
+        d = DummyChannel()
+        d.transport = DummyChannel.Baz()
+        d.transport.port = 443
+        request = server.Request(d, 1)
+        request.setHost('example.com', 443)
+        request.gotLength(0)
+        request.requestReceived('GET', '/foo/bar', 'HTTP/1.0')
+        self.assertEqual(request.prePathURL(), 'http://example.com:443/foo/bar')
+
+    def testPrePathURLSSLPortAndSSL(self):
+        d = DummyChannel()
+        d.transport = DummyChannel.Baz()
+        d.transport.port = 443
+        d.transport.type = 'SSL'
+        request = server.Request(d, 1)
+        request.setHost('example.com', 443)
+        request.gotLength(0)
+        request.requestReceived('GET', '/foo/bar', 'HTTP/1.0')
+        self.assertEqual(request.prePathURL(), 'https://example.com/foo/bar')
+
+    def testPrePathURLHTTPPortAndSSL(self):
+        d = DummyChannel()
+        d.transport = DummyChannel.Baz()
+        d.transport.port = 80
+        d.transport.type = 'SSL'
+        request = server.Request(d, 1)
+        request.setHost('example.com', 80)
+        request.gotLength(0)
+        request.requestReceived('GET', '/foo/bar', 'HTTP/1.0')
+        self.assertEqual(request.prePathURL(), 'https://example.com:80/foo/bar')
+
+    def testPrePathURLSSLNonDefault(self):
+        d = DummyChannel()
+        d.transport = DummyChannel.Baz()
+        d.transport.port = 81
+        d.transport.type = 'SSL'
+        request = server.Request(d, 1)
+        request.setHost('example.com', 81)
+        request.gotLength(0)
+        request.requestReceived('GET', '/foo/bar', 'HTTP/1.0')
+        self.assertEqual(request.prePathURL(), 'https://example.com:81/foo/bar')
