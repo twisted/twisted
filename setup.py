@@ -22,7 +22,7 @@ Package installer for Twisted
 Copyright (C) 2001 Matthew W. Lefkowitz
 All rights reserved, see LICENSE for details.
 
-$Id: setup.py,v 1.140 2003/09/22 02:08:24 exarkun Exp $
+$Id: setup.py,v 1.141 2003/09/22 02:17:45 exarkun Exp $
 """
 
 import distutils, os, sys, string
@@ -133,7 +133,7 @@ class build_ext_twisted(build_ext):
         specified headers are included.
         """
         self.compiler.announce(
-            "checking for %s in struct %s..." % (struct, member), 0)
+            "checking for %s in struct %s..." % (member, struct), 0)
         return self._compile_helper("""\
 %s
 int main(int argc, char **argv)
