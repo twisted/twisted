@@ -162,7 +162,6 @@ class ImageDisplay(page.Page):
         return static.File(self.image)
 </pre>
 
-
 <p>Instead of using 'getDynamicChild', this class uses a 'wchild_' method to
 return the image data when the 'preview' child is requested. 'getDynamicChild'
 is only called if there are no 'wchild_' methods available to handle the
@@ -171,8 +170,8 @@ requested URL.</p>
 <p>Finally, we create a webserver set to start with a directory listing, and
 connect it to a port:</p>
 
-<pre class="python">
-rootDirectory = os.path.expanduser("~/Pictures")
+<pre class="python"
+>rootDirectory = os.path.expanduser("~/Pictures")
 site = server.Site(DirectoryListing(directory=rootDirectory))
 application = app.Application("PicturePile") 
 application.listenTCP(8088, site)
@@ -180,8 +179,8 @@ application.listenTCP(8088, site)
 
 <p>And then start the server:</p>
 
-<pre class="python">
-if __name__ == '__main__': 
+<pre class="python"
+>if __name__ == '__main__': 
     import sys               
     from twisted.python import log 
     log.startLogging(sys.stdout, 0) 
@@ -250,14 +249,13 @@ directory listing. Again, we start with the template:</p>
 an 'adjuster' view on the 'select' tag that looks for the right 'option' tag
 and puts 'selected=1' on it (the default size being 200):</p>
 
-<pre class="python">
-    def wvupdate_adjuster(self, request, widget, data):
+<pre class="python"
+title="DirectoryListing.wvupdate_adjuster, in picturepile3.py."
+>    def wvupdate_adjuster(self, request, widget, data):
         size = request.args.get('thumbnailSize',('200',))[0]
         domhelpers.locateNodes(widget.node.childNodes, 
                                'value', size)[0].setAttribute('selected', '1')
 </pre>
-
-**Figure 2**. DirectoryListing.wvupdate_adjuster, in picturepile3.py
 
 <p>'request.args' is a dictionary, mapping argument names to lists of values
 (since multiple HTTP arguments are possible). In this case, we only care about
@@ -268,8 +266,9 @@ each tree and return all nodes that have the requested key-value pair.</p>
 <p>Next, we modify the 'thumbnail' view to look at the arguments from the
 HTTP request and use that as the size for the images:</p>
 
-<pre class="python">
-    def wvupdate_thumbnail(self, request, node, data):
+<pre class="python"
+title="DirectoryListing.wvupdate_thumbnail, in picturepile3.py"
+>    def wvupdate_thumbnail(self, request, node, data):
         size = request.args.get('thumbnailSize',('200',))[0]
         a = microdom.lmx(node)
         a['href'] = data
@@ -278,8 +277,6 @@ HTTP request and use that as the size for the images:</p>
         else:
             a.add('img', src=(data+'/preview'),width=size,height=size)
 </pre>
-
-**Figure 3**. DirectoryListing.wvupdate_thumbnail, in picturepile3.py
 
 <h2>Sessions</h2>
 
@@ -295,8 +292,9 @@ href= "components.html" >Components</a> documentation. So, we start with an
 interface, and a class that implements it, and registration of our class upon
 Session:</p>
 
-<pre class="python">
-class IPreferences(components.Interface):
+<pre class="python"
+title="From picturepile4.py."
+>class IPreferences(components.Interface):
     pass
 
 class Preferences(components.Adapter):
@@ -305,16 +303,15 @@ class Preferences(components.Adapter):
 components.registerAdapter(Preferences, server.Session, IPreferences)
 </pre>
 
-<p>**Figure 1**. From picturepile4.py.</p>
-
 <p>We're just going to store data on this class, so no methods are defined.</p>
 
 <p>Next, we change our view methods, 'wvupdate_thumbnail' and
 'wvupdate_adjuster', to retrieve their size data from the Preferences object
 stored on the Session, instead of the HTTP request:</p>
 
-<pre class="python">
-    def wvupdate_thumbnail(self, request, node, data):
+<pre class="python"
+title="DirectoryListing.wvupdate_thumbnail and DirectoryListing.wvupdate_adjuster, from picturepile4.py."
+>    def wvupdate_thumbnail(self, request, node, data):
         prefs = request.getSession(IPreferences)
         size = getattr(prefs, 'size','200')
         a = microdom.lmx(node)
@@ -331,8 +328,6 @@ stored on the Session, instead of the HTTP request:</p>
                                'value', size)[0].setAttribute('selected', '1')
 </pre>
 
-<p>**Figure 2**. DirectoryListing.wvupdate_thumbnail and DirectoryListing.wvupdate_adjuster, from picturepile4.py.</p>
-
 <h3>Controllers</h3>
 
 <p>Now we turn to the question of how the data gets into the session in
@@ -342,12 +337,11 @@ desirable at times to separate out input handling, which is what controllers
 are for. So, we add a 'wcfactory_' (short for Woven Controller Factory) method
 to DirectoryListing:</p>
 
-<pre class="python">
-    def wcfactory_adjuster(self, request, node, model):
+<pre class="python"
+title="DirectoryListing.wcfactory_adjuster, from picturepile4.py."
+>    def wcfactory_adjuster(self, request, node, model):
         return ImageSizer(model, name='thumbnailSize')
 </pre>
-
-<p>**Figure 3**. DirectoryListing.wcfactory_adjuster, from picturepile4.py.</p>
 
 <p>ImageSizer is a controller. It checks the input for validity (in this
 case, since it subclasses Anything, it merely ensures the input is non-empty)
@@ -355,14 +349,13 @@ and calls 'handleValid' if the check succeeds; in this case, we retrieve the
 Preferences component from the session, and store the size received from the
 form upon it:</p>
 
-<pre class="python">
-class ImageSizer(input.Anything):
+<pre class="python"
+title="From picturepile4.py."
+>class ImageSizer(input.Anything):
     def handleValid(self, request, data):
         prefs = request.getSession(IPreferences)
         prefs.size = data 
 </pre>
-
-<p>**Figure 4**. From picturepile4.py.</p>
 
 <p>Finally, we must modify the template to use our new controller. Since we
 are concerned with the input from the '&lt;select&gt;' element of the form, we
