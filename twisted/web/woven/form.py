@@ -33,7 +33,7 @@ def registerRenderer(argumentClass, renderer):
 
     
 def getValue(request, argument):
-    """Return value for form inpurt."""
+    """Return value for form input."""
     values = request.args.get(argument.name, None)
     if values:
         try:
@@ -44,7 +44,7 @@ def getValue(request, argument):
 
 
 def getValues(request, argument):
-    """Return values for form inpurt."""
+    """Return values for form input."""
     values = request.args.get(argument.name, None)
     if values:
         try:
@@ -115,7 +115,7 @@ class FormFillerWidget(widgets.Widget):
     def input_checkgroup(self, request, content, arg):
         s = content.div()
         defaults = getValues(request, arg)
-        for tag, value, desc in arg.choices:
+        for tag, value, desc in arg.flags:
             if value in defaults:
                 kw = {'checked' : '1'}
             else:
