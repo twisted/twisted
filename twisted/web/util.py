@@ -118,7 +118,6 @@ class DeferredResource(resource.Resource):
         return DeferredResource(self.d)
 
     def _cbGetChild(self, child, path, request):
-        print "HEY HEY it is MY COOL CB", child, repr(path), request
         return child.getChildWithDefault(path, request)
 
 

@@ -340,6 +340,10 @@ class Request(pb.Copyable, http.Request, components.Componentized):
             hostport,
             string.join(self.prepath, '/')), "/:")
 
+    def URLPath(self):
+        from twisted.python import urlpath
+        return urlpath.URLPath.fromRequest(self)
+
     def rememberRootURL(self):
         """
         Remember the currently-processed part of the URL for later
