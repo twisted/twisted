@@ -4,7 +4,7 @@ import sys, re, os
 tag = re.compile('</?\w+>')
 
 def lower(m):
-	return m.group().lower()
+    return m.group().lower()
 
 s = open(sys.argv[1]).read()
 s=tag.sub(lower, s)
