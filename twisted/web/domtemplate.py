@@ -1,4 +1,73 @@
-# xmltresource.py
+
+# Twisted, the Framework of Your Internet
+# Copyright (C) 2000-2002 Matthew W. Lefkowitz
+# 
+# This library is free software; you can redistribute it and/or
+# modify it under the terms of version 2.1 of the GNU Lesser General Public
+# License as published by the Free Software Foundation.
+# 
+# This library is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+# Lesser General Public License for more details.
+# 
+# You should have received a copy of the GNU Lesser General Public
+# License along with this library; if not, write to the Free Software
+# Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+
+"""
+DOMTemplate
+
+Most templating systems provide commands that you embed 
+in the HTML to repeat elements, include fragments from other 
+files, etc. This works fairly well for simple constructs and people 
+tend to get a false sense of simplicity from this. However, in my 
+experience, as soon as the programmer wants to make the logic 
+even slightly more complicated, the templating system must be 
+bent and abused in ways it was never meant to be used.
+
+The theory behind DOMTemplate is that Python code instead
+of template syntax in the HTML should be used to manipulate
+the structure of the HTML. DOMTemplate uses the DOM, a w3c 
+standard tree-based representation of an HTML document that 
+provides an API that allows you to traverse nodes in the tree, 
+examine their attributes, move, add, and delete them. It is a 
+fairly low level API, meaning it takes quite a bit of code to get 
+a bit done, but it is standard -- learn the DOM once, you can 
+use it from ActionScript, JavaScript, Java, C++, whatever.
+
+A DOMTemplate subclass must do two things: indicate which
+template it wants to use, and indicate which elements it is
+interested in. The template will be looked up using acquisition
+at runtime:
+
+class Test(DOMTemplate):
+	templateFile = "Test.html"
+	
+	def getTemplateMethods(self):
+		return [{'class': 'Test', 'method': self.test}]
+	
+	def test(self, request, node):
+		'''
+		The test method will be called with the request and the
+		DOM node that the test method was associated with.
+		'''
+		# self.d has been bound to the main DOM "document" object 
+		newNode = self.d.createTextNode("Testing, 1,2,3")
+		
+		# Replace the test node's children with our single new text node
+		node.childNodes = [newNode]
+		
+And here's the HTML file to use with the example:
+
+<html><head><title>Foo</title></head><body>
+
+<div class="Test">
+This test text will be replaced
+</div>
+
+</body></html>
+"""
 
 from cStringIO import StringIO
 import string, os, stat
