@@ -102,19 +102,15 @@ class _ThreadedWaiter(_Waiter):
         _Waiter.__init__(self)
 
     def preWait(self, key):
-        import thread
         global ioThread
-        if thread.get_ident() == ioThread:
+        if threadmodule.get_ident() == ioThread:
             return _Waiter.preWait(self, key)
-        import thread
-        import threading
-        cond = self.conditions[key] = threading.Condition()
+        cond = self.conditions[key] = threadingmodule.Condition()
         cond.acquire()
         
     def wait(self, key):
-        import thread
         global ioThread
-        if thread.get_ident() == ioThread:
+        if threadmodule.get_ident() == ioThread:
             return _Waiter.wait(self, key)
         cond = self.conditions[key]
         cond.wait()
@@ -153,8 +149,7 @@ class XLock:
         assert threaded,\
                "Locks may not be allocated in an unthreaded environment!"
         
-        import thread
-        self.block = thread.allocate_lock()
+        self.block = threadmodule.allocate_lock()
         self.count = 0
         self.owner = 0
         
@@ -172,8 +167,7 @@ class XLock:
             self.release()
 
     def acquire(self):
-        import thread
-        current = thread.get_ident()
+        current = threadmodule.get_ident()
         if self.owner == current:
             self.count = self.count + 1
             return 1
@@ -182,8 +176,7 @@ class XLock:
         self.count = 1
 
     def release(self):
-        import thread
-        current = thread.get_ident()
+        current = threadmodule.get_ident()
         if self.owner != current:
             raise "Release of unacquired lock."
         
@@ -239,6 +232,7 @@ def init(with_threads):
     """Initialize threading. Should be run once, at the beginning of program.
     """
     global threaded, _to_be_synched, dispatcher, dispatch, Waiter, dispatchOS
+    global threadingmodule, threadmodule
     if threaded == with_threads:
         return
     assert threaded is None
@@ -249,6 +243,9 @@ def init(with_threads):
         Waiter = _ThreadedWaiter
         apply(synchronize, _to_be_synched)
         _to_be_synched = []
+        import thread, threading
+        threadmodule = thread
+        threadingmodule = threading
     else:
         from twisted.python import worker
         dispatcher = worker.Dispatcher()
@@ -267,8 +264,7 @@ def isInIOThread():
     global threaded
     global ioThread
     if threaded:
-        import thread
-        if (ioThread == thread.get_ident()):
+        if (ioThread == threadmodule.get_ident()):
             return 1
         else:
             return 0
