@@ -3456,7 +3456,19 @@ class MemoryAccount(perspective.Perspective):
         ref = self._inferiorNames(ref.upper())
         wildcard = wildcardToRegexp(wildcard, '/')
         return [(i, self.mailboxes[i]) for i in ref if wildcard.match(i)]
-    
+
+_statusRequestDict = {
+    'MESSAGES': 'getMessageCount',
+    'RECENT': 'getRecentCount',
+    'UIDNEXT': 'getUIDNext',
+    'UIDVALIDITY': 'getUIDValidity',
+    'UNSEEN': 'getUnseenCount'
+}
+def statusRequestHelper(self, mbox, names):
+    r = {}
+    for n in names:
+        r[n] = getattr(mbox, _statusRequestDict[n])()
+    return r
 
 class IMailbox(components.Interface):
     def getUIDValidity(self):
@@ -3531,6 +3543,11 @@ class IMailbox(components.Interface):
 
     def requestStatus(self, names):
         """Return status information about this mailbox.
+
+        Mailboxes which do not intent to do any special processing to
+        generate the return value, C{statusRequestHelper} can be used
+        to build the dictionary by calling the other interface methods
+        which return the data for each name.
 
         @type names: Any iterable
         @param names: The status names to return information regarding.
@@ -3729,5 +3746,5 @@ __all__ = [
     'MismatchedNesting', 'MismatchedQuoting', 'IClientAuthentication',
     'CramMD5ClientAuthenticator', 'MailboxException', 'MailboxCollision',
     'NoSuchMailbox', 'ReadOnlyMailbox', 'IAccount', 'MemoryAccount',
-    'IMailbox'
+    'IMailbox', 'statusRequestHelper',
 ]
