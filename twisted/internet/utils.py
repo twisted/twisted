@@ -90,7 +90,6 @@ def getProcessValue(executable, args=(), env={}, path='.', reactor=reactor):
 
 
 import random
-from twisted.names import client
 from twisted.internet import error, interfaces
 
 class _SRVConnector_ClientFactoryWrapper:
@@ -145,6 +144,7 @@ class SRVConnector:
             if self.domain is None:
                 self.connectionFailed(error.DNSLookupError("Domain is not defined."))
                 return
+            from twisted.names import client
             d = client.theResolver.lookupService('_%s._%s.%s' % (self.service,
                                                                  self.protocol,
                                                                  self.domain))
