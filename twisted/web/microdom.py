@@ -38,7 +38,7 @@ import copy
 from cStringIO import StringIO
 
 # Twisted Imports
-from twisted.protocols.sux import XMLParser, ParseError
+from twisted.protocols.sux import XMLParser, ParseError, HTMLParserTranslator
 from twisted.python import reflect
 from twisted.python.reflect import Accessor
 
@@ -310,17 +310,36 @@ def _unescapeDict(d):
     return dd
 
 class MicroDOMParser(XMLParser):
-    def __init__(self, autoClosedTags=[]):
+
+    # <dash> glyph: a quick scan thru the DTD says BODY, AREA, LINK, IMG, HR,
+    # P, DT, DD, LI, INPUT, OPTION, THEAD, TFOOT, TBODY, COLGROUP, COL, TR, TH,
+    # TD, HEAD, BASE, META, HTML all have optional closing tags
+    
+    soonClosers = 'area link br img hr input option base meta'.split()
+    laterClosers = {'p': ['p'],
+                    'dt': ['dt','dd'],
+                    'dd': ['dt', 'dd'],
+                    'li': ['li'],
+                    'tbody': ['thead', 'tfoot', 'tbody'],
+                    'thead': ['thead', 'tfoot', 'tbody'],
+                    'tfoot': ['thead', 'tfoot', 'tbody'],
+                    'colgroup': ['colgroup'],
+                    'col': ['col'],
+                    'tr': ['tr'],
+                    'td': ['td'],
+                    'th': ['th'],
+                    'head': ['body']
+                    }
+
+
+    def __init__(self, beExtremelyLenient=0, caseInsensitive=1):
         # to parse output from e.g. Mozilla Composer, try
-        # autoClosedTags=["meta", "br", "hr", "img"]
         self.elementstack = []
         self.documents = []
-        self.autoClosedTags = autoClosedTags
-        self._shouldAutoClose = ''
         self._mddoctype = None
-
-    # parser options:
-    caseInsensitive = 1
+        self.beExtremelyLenient = beExtremelyLenient
+        self.caseInsensitive = caseInsensitive
+        # self.indentlevel = 0
 
     def _getparent(self):
         if self.elementstack:
@@ -329,90 +348,137 @@ class MicroDOMParser(XMLParser):
             parent = None
         return parent
 
-    def _autoclose(self):
-        if self._shouldAutoClose:
-            self.gotTagEnd(self._shouldAutoClose)
-
     def gotDoctype(self, doctype):
         self._mddoctype = doctype
 
     def gotTagStart(self, name, attributes):
-        self._autoclose()
+        # print ' '*self.indentlevel, 'start tag',name
+        # self.indentlevel += 1
         parent = self._getparent()
         if self.caseInsensitive:
             name = name.lower()
-        if name in self.autoClosedTags:
-            self._shouldAutoClose = name
+        if (self.beExtremelyLenient and isinstance(parent, Element) and
+            self.laterClosers.has_key(parent.tagName) and
+            name in self.laterClosers[parent.tagName]):
+            self.gotTagEnd(parent.tagName)
+            parent = self._getparent()
         el = Element(name, _unescapeDict(attributes), parent,
                      self.filename, self.saveMark())
         self.elementstack.append(el)
         if parent:
             parent.appendChild(el)
+        if (self.beExtremelyLenient and name in self.soonClosers):
+            self.gotTagEnd(name)
 
     def gotText(self, data):
-        self._autoclose()
         parent = self._getparent()
         te = Text(data, parent)
         if parent:
             parent.appendChild(te)
+        elif self.beExtremelyLenient:
+            self.documents.append(te)
 
     def gotEntityReference(self, entityRef):
-        self._autoclose()
         parent = self._getparent()
         er = EntityReference(entityRef, parent)
         if parent:
             parent.appendChild(er)
+        elif self.beExtremelyLenient:
+            self.documents.append(er)
 
     def gotCData(self, cdata):
-        self._autoclose()
         parent = self._getparent()
         cd = CDATASection(cdata, parent)
         if parent:
             parent.appendChild(cd)
+        elif self.beExtremelyLenient:
+            self.documents.append(cd)
 
     def gotTagEnd(self, name):
         if self.caseInsensitive:
             name = name.lower()
-        if self._shouldAutoClose == name:
-            self._shouldAutoClose = ''
-        else:
-            self._autoclose()
+        # print ' '*self.indentlevel, 'end tag',name
+        # self.indentlevel -= 1
+        if not self.elementstack and self.beExtremelyLenient:
+            return
         el = self.elementstack.pop()
         if el.tagName != name:
-            raise MismatchedTags(*((self.filename, el.tagName, name)+self.saveMark()+el._markpos))
+            if self.beExtremelyLenient:
+                if len(self.elementstack):
+                    lastEl = self.elementstack[0]
+                    for idx in xrange(len(self.elementstack)):
+                        if self.elementstack[-(idx+1)].tagName == name:
+                            break
+                    else:
+                        # this was a garbage close tag; wait for a real one
+                        self.elementstack.append(el)
+                        return
+                    del self.elementstack[-idx+1:]
+                    if not self.elementstack:
+                        self.documents.append(lastEl)
+            else:
+                raise MismatchedTags(*((self.filename, el.tagName, name)
+                                       +self.saveMark()+el._markpos))
         if not self.elementstack:
             self.documents.append(el)
+
+    def connectionLost(self, reason):
+        if self.elementstack:
+            if self.beExtremelyLenient:
+                self.documents.append(self.elementstack[0])
+            else:
+                raise MismatchedTags(*((self.filename, self.elementstack[-1],
+                                        "END_OF_FILE")
+                                       +self.saveMark()
+                                       +self.elementstack[-1]._markpos))
 
 
 def parse(readable, *args, **kwargs):
     if not hasattr(readable, "read"):
         readable = open(readable)
     mdp = MicroDOMParser(*args, **kwargs)
+    if mdp.beExtremelyLenient:
+        mparser = mdp # HTMLParserTranslator(mdp)
+    else:
+        mparser = mdp
     mdp.filename = getattr(readable, "name", "<xmlfile />")
-    mdp.makeConnection(None)
-    r = readable.read(1024)
-    while r:
-        mdp.dataReceived(r)
+    mparser.makeConnection(None)
+    if hasattr(readable,"getvalue"):
+        mparser.dataReceived(readable.getvalue())
+    else:
         r = readable.read(1024)
-    d = mdp.documents[0]
+        while r:
+            mparser.dataReceived(r)
+            r = readable.read(1024)
+    mparser.connectionLost(None)
+    if mdp.beExtremelyLenient:
+        if len(mdp.documents) == 1:
+            d = mdp.documents[0]
+        else:
+            d = None
+            for el in mdp.documents:
+                if isinstance(el, Element):
+                    if d is not None:
+                        d = None
+                        break
+                    d = el
+            if d is None:
+                d = Element("html")
+                d.childNodes[:] = mdp.documents
+    else:
+        d = mdp.documents[0]
     doc = Document(d)
     doc.doctype = mdp._mddoctype
     return doc
 
-def parseString(st):
-    mdp = MicroDOMParser()
-    mdp.makeConnection(None)
-    mdp.dataReceived(st)
-    d = mdp.documents[0]
-    doc = Document(d)
-    doc.doctype = mdp._mddoctype
-    return doc
+def parseString(st, *args, **kw):
+    return parse(StringIO(st), *args, **kw)
 
 
 # Utility
 
 class lmx:
-    def __init__(self, node):
+    def __init__(self, node='div'):
         if isinstance(node, StringType):
             node = Element(node)
         self.node = node

@@ -42,6 +42,7 @@ from twisted.internet.protocol import Protocol, FileWrapper
 import string
 
 identChars = string.letters+string.digits+'.-_:'
+lenientIdentChars = identChars + ';+#'
 
 def nop(*args, **kw):
     "Do nothing."
@@ -63,6 +64,7 @@ class XMLParser(Protocol):
 
     state = None
     filename = "<xml />"
+    beExtremelyLenient = 0
 
     def connectionMade(self):
         self.lineno = 1
@@ -123,6 +125,10 @@ class XMLParser(Protocol):
                 return 'comment'
         elif byte in string.whitespace:
             if self.tagName:
+                if self.endtag:
+                    # properly strict thing to do here is probably to only
+                    # accept whitespace
+                    return 'waitforgt'
                 return 'attrs'
             else:
                 self._parseError("Whitespace before tag-name")
@@ -161,6 +167,12 @@ class XMLParser(Protocol):
         if len(cd) > len(cdb):
             if cd.startswith(cdb):
                 return
+            elif self.beExtremelyLenient:
+                ## WHAT THE CRAP!?  MSWord9 generates HTML that includes these
+                ## bizarre <![if !foo]> <![endif]> chunks, so I've gotta ignore
+                ## 'em as best I can.  this should really be a separate parse
+                ## state but I don't even have any idea what these _are_.
+                return 'waitforgt'
             else:
                 self._parseError("Mal-formed CDATA header")
         if cd == cdb:
@@ -193,6 +205,10 @@ class XMLParser(Protocol):
         elif byte == '>':
             self.gotTagStart(self.tagName, self.tagAttributes)
             return 'bodydata'
+        elif self.beExtremelyLenient:
+            # discard and move on?  Only case I've seen of this so far was:
+            # <foo bar="baz"">
+            return
         self._parseError("Unexpected character: %r" % byte)
 
     def begin_doctype(self, byte):
@@ -213,29 +229,69 @@ class XMLParser(Protocol):
 
     def begin_attrname(self, byte):
         self.attrname = byte
+        self._attrname_termtag = 0
 
     def do_attrname(self, byte):
         if byte in identChars:
             self.attrname += byte
+            return
         elif byte in string.whitespace:
             return 'beforeeq'
         elif byte == '=':
             return 'beforeattrval'
-        else:
-            self._parseError("Invalid attribute name")
+        elif self.beExtremelyLenient:
+            if byte in '"\'':
+                return 'attrval'
+            if byte in lenientIdentChars:
+                self.attrname += byte
+                return
+            if byte == '/':
+                self._attrname_termtag = 1
+                return
+            if byte == '>':
+                self.attrval = 'True'
+                self.tagAttributes[self.attrname] = self.attrval
+                self.gotTagStart(self.tagName, self.tagAttributes)
+                if self._attrname_termtag:
+                    self.gotTagEnd(self.tagName)
+                return 'bodydata'
+        self._parseError("Invalid attribute name: %r %r" % (self.attrname, byte))
 
     def do_beforeattrval(self, byte):
         if byte in string.whitespace:
             return
         elif byte in '"\'':
             return 'attrval'
-        self._parseError("Invalid attribute value")
+        elif self.beExtremelyLenient and byte in lenientIdentChars:
+            return 'messyattr'
+        self._parseError("Invalid intial attribute value: %r" % byte)
+
+    attrname = ''
+    attrval = ''
+
+    def begin_beforeeq(self,byte):
+        self._beforeeq_termtag = 0
 
     def do_beforeeq(self, byte):
         if byte in string.whitespace:
             return
         elif byte == '=':
             return 'beforeattrval'
+        elif self.beExtremelyLenient:
+            if byte in identChars:
+                self.attrval = 'True'
+                self.tagAttributes[self.attrname] = self.attrval
+                return 'attrname'
+            elif byte == '>':
+                self.attrval = 'True'
+                self.tagAttributes[self.attrname] = self.attrval
+                self.gotTagStart(self.tagName, self.tagAttributes)
+                if self._beforeeq_termtag:
+                    self.gotTagEnd(self.tagName)
+                return 'bodydata'
+            elif byte == '/':
+                self._beforeeq_termtag = 1
+                return
         self._parseError("Invalid attribute")
 
     def begin_attrval(self, byte):
@@ -249,6 +305,31 @@ class XMLParser(Protocol):
 
     def end_attrval(self):
         self.tagAttributes[self.attrname] = self.attrval
+        self.attrname = ''
+        self.attrval = ''
+
+    def begin_messyattr(self, byte):
+        self.attrval = byte
+
+    def do_messyattr(self, byte):
+        if byte in string.whitespace:
+            return 'attrs'
+        elif byte == '>':
+            endTag = 0
+            if self.attrval[-1] == '/':
+                endTag = 1
+                self.attrval = self.attrval[:-1]
+            self.tagAttributes[self.attrname]=self.attrval
+            self.gotTagStart(self.tagName, self.tagAttributes)
+            if endTag:
+                self.gotTagEnd(self.tagName)
+            return 'bodydata'
+        else:
+            self.attrval += byte
+
+    def end_messyattr(self):
+        if self.attrval:
+            self.tagAttributes[self.attrname] = self.attrval
 
     def begin_afterslash(self, byte):
         self._after_slash_closed = 0
@@ -283,6 +364,9 @@ class XMLParser(Protocol):
 
     def do_entityref(self, byte):
         if byte in string.whitespace:
+            if self.beExtremelyLenient:
+                self.erefbuf = "amp"
+                return 'bodydata'
             self._parseError("Bad entity reference")
         if byte != ';':
             self.erefbuf += byte
@@ -337,6 +421,62 @@ class XMLParser(Protocol):
 
         Default behaviour is to print.'''
         print 'end', name
+
+from HTMLParser import HTMLParser
+
+import HTMLParser as htmlp
+import re
+htmlp.attrfind = re.compile(
+    r'\s*([a-zA-Z_][-.,:a-zA-Z_0-9]*)(\s*=\s*'
+    r'(\'[^\']*\'|"[^"]*"|[-a-zA-Z0-9./,:;+*%?!&$\(\)_#=~]*))?',
+    re.MULTILINE)
+
+
+class HTMLParserTranslator(HTMLParser):
+    def __init__(self, xmlparser):
+        self.xmlparser = xmlparser
+        xmlparser.saveMark = self.getpos
+        HTMLParser.__init__(self)
+
+    def handle_starttag(self, tag, attrs):
+        d = {}
+        for k, v in attrs:
+            if v is None:
+                v = 'True'
+            d[k] = v
+        self.xmlparser.gotTagStart(tag, d)
+
+    def handle_endtag(self, tag):
+        self.xmlparser.gotTagEnd(tag)
+
+    def handle_charref(self, name):
+        self.xmlparser.gotEntityReference("#"+name)
+
+    def handle_entityref(self, name):
+        self.xmlparser.gotEntityReference(name)
+
+    def handle_data(self, data):
+        self.xmlparser.gotText(data)
+
+    def handle_decl(self, decl):
+        if decl.lower().startswith("doctype"):
+            self.xmlparser.gotDoctype(decl[len('doctype '):])
+
+    def handle_comment(self, comment):
+        self.xmlparser.gotComment(comment)
+
+    def makeConnection(self, other):
+        self.xmlparser.makeConnection(other)
+
+    def dataReceived(self, data):
+        self.feed(data)
+
+    def close(self, reason=None):
+        HTMLParser.close(self)
+        self.xmlparser.connectionLost(reason)
+
+    connectionLost = close
+
 
 if __name__ == '__main__':
     from cStringIO import StringIO
