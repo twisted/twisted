@@ -1,4 +1,4 @@
 #!/bin/sh
-if [ \( "$1" = "upgrade" -o "$1" = "remove" \) -a -L /usr/doc/python-twisted]; then
+if [ \( "$1" = "upgrade" -o "$1" = "remove" \) -a -L /usr/doc/python-twisted ]; then
 	rm -f /usr/doc/python-twisted
 fi

@@ -1,6 +1,6 @@
 #!/bin/sh
 if [ "$1" = "configure" ]; then
-	if [ -d /usr/doc -a ! -e /usr/doc/python-twisted -a -d /usr/share/doc/python-twisted]; then
+	if [ -d /usr/doc -a ! -e /usr/doc/python-twisted -a -d /usr/share/doc/python-twisted ]; then
 		ln -sf ../share/doc/python-twisted /usr/doc/python-twisted
 	fi
 fi

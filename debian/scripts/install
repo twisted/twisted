@@ -14,7 +14,7 @@ gzip -9 $DIR/usr/share/doc/python$1-twisted/*
 install -m 644 debian/copyright $DIR/usr/share/doc/python$1-twisted/
 for file in $DIR/usr/bin/*;
 do
-	sed '1s|.*|#!/usr/bin/python$1|' $file > $file.$$
+	sed '1s|.*|#!/usr/bin/python'$1'|' $file > $file.$$
 	cat $file.$$ > $file''$1;rm $file $file.$$
 done
 chmod +x $DIR/usr/bin/*

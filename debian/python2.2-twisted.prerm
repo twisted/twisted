@@ -3,7 +3,7 @@ if [ \( "$1" = "upgrade" -o "$1" = "remove" \) -a -L /usr/doc/twisted ]; then
 	rm -f /usr/doc/twisted
 fi
 
-NAME=twisted
+NAME=python2.2-twisted
 
 dpkg --listfiles $NAME |
         awk '$0~/\.py$/ {print $0"c\n" $0"o"}' |

@@ -8,6 +8,7 @@ twisted (0.18.0-1) unstable; urgency=low
   * Removed debelper
     * Added debian/scripts/ directory with helper scripts
     * This will (hopefully) mean support python2.3 will be easy 
+  * Upstream fixed tcp client (Closes: #142789)
 
  -- Moshe Zadka <moshez@debian.org>  Tue, 28 May 2002 12:35:35 +0300
 

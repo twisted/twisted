@@ -17,7 +17,7 @@ clean:
 	rm -rf build
 	find . -name "*.pyc" |xargs -r rm
 	# Add here commands to clean up after the build process.
-	rm -rf debian/python*-twisted debian/twisted-doc
+	rm -rf debian/python*-twisted debian/twisted-doc debian/files
 
 
 install: install-stamp
