@@ -45,13 +45,6 @@ Makes a server with ~/public_html and
 Instead of generating a webserver, generate a
 ResourcePublisher which listens on ~/.twistd-web-service
 .TP
-\fB\-m\fR, \fB\--module\fR \fI<modulename:classname>\fR
-modulename is a python module without the .py extension.
-This module does not have to be in the PATH or even
-PYTHONPATH. classname is the name of the class inside
-the module that you want to be the root of the web
-server.
-.TP
 \fB\-s\fR, \fB\--static\fR \fI<path>\fR
 <path> is either a specific file or a directory to be
 set as the root of the web server. Use this if you
