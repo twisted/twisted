@@ -1,20 +1,20 @@
 
 import insults
-from recvline import RecvLineHandler
+import recvline
 
 from twisted.application import service
 
 application = service.Application("Insults RecvLine Demo")
 
-class DemoRecvLineHandler(RecvLineHandler):
+class DemoRecvLineHandler(recvline.HistoricRecvLineHandler):
     def initializeScreen(self):
         self.proto.setMode([insults.SCROLL])
         self.proto.setScrollRegion(self.height - 5, self.height)
-        RecvLineHandler.initializeScreen(self)
+        recvline.HistoricRecvLineHandler.initializeScreen(self)
 
     def lineReceived(self, line):
         self.proto.write(line)
-        self.proto.cursorPosition(0, self.height)
+        self.proto.cursorPosition(0, self.height - 1)
         self.proto.index()
 
 from demolib import makeService

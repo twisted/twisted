@@ -34,7 +34,7 @@ class RecvLineHandler:
         # Hmm, state sucks.  Oh well.
         # For now we will just take over the whole terminal.
         self.proto.eraseDisplay()
-        self.proto.cursorPosition(0, self.height)
+        self.proto.cursorPosition(0, self.height - 1)
         self.setInsertMode()
 
     def setInsertMode(self):
@@ -49,7 +49,7 @@ class RecvLineHandler:
         # XXX - Clear the previous input line, redraw it at the new cursor position
         self.width = width
         self.height = height
-        self.proto.cursorPosition(0, self.height)
+        self.proto.cursorPosition(0, self.height - 1)
 
     def unhandledControlSequence(self, seq):
         print "Don't know about", repr(seq)
@@ -86,11 +86,11 @@ class RecvLineHandler:
 
     def handle_HOME(self):
         self.lineBufferIndex = 0
-        self.proto.cursorPosition(0, self.height)
+        self.proto.cursorPosition(0, self.height - 1)
 
     def handle_END(self):
         self.lineBufferIndex = len(self.lineBuffer)
-        self.proto.cursorPosition(self.lineBufferIndex + 1, self.height)
+        self.proto.cursorPosition(self.lineBufferIndex, self.height - 1)
 
     def handle_BACKSPACE(self):
         if self.lineBufferIndex > 0:
@@ -109,7 +109,7 @@ class RecvLineHandler:
         self.lineBuffer = []
         self.lineBufferIndex = 0
         self.proto.eraseLine()
-        self.proto.cursorPosition(0, self.height)
+        self.proto.cursorPosition(0, self.height - 1)
 
         self.lineReceived(line)
 
@@ -123,10 +123,21 @@ class HistoricRecvLineHandler(RecvLineHandler):
         self.historyLines = []
         self.historyPosition = 0
 
-        self.keyHandlers.update({self.proto.UP_ARROW: self.handle_UP,
-                                 self.proto.DOWN_ARROW: self.handle_DOWN})
+        self.keyHandlers.update({self.proto.UP_ARROW: self.handle_UP})
+#                                 self.proto.DOWN_ARROW: self.handle_DOWN})
 
     def handle_UP(self):
-        if self.lineBuffer:
+        if self.lineBuffer and self.historyPosition == len(self.historyLines):
             self.historyLines.append(self.lineBuffer)
-        
+        if self.historyPosition > 0:
+            self.historyPosition -= 1
+            self.lineBuffer = list(self.historyLines[self.historyPosition])
+            self.proto.eraseLine()
+            self.proto.cursorPosition(0, self.height - 1)
+            self.proto.write(''.join(self.lineBuffer))
+            self.lineBufferIndex = len(self.lineBuffer)
+
+    def handle_ENTER(self):
+        self.historyLines.append(''.join(self.lineBuffer))
+        self.historyPosition = len(self.historyLines)
+        return RecvLineHandler.handle_ENTER(self)
