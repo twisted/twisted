@@ -71,7 +71,7 @@ def checkPID(pidfile):
         except OSError, why:
             if why[0] == errno.ESRCH:
                 # The pid doesnt exists.
-                log.msg('Removing stale pidfile %s' % pidfile)
+                log.msg('Removing stale pidfile %s' % pidfile, isError=True)
                 os.remove(pidfile)
             else:
                 sys.exit("Can't check status of PID %s from pidfile %s: %s" %
@@ -162,6 +162,7 @@ def startApplication(config, application):
 
 
 def runApp(config):
+    checkPID(config['pidfile'])
     passphrase = app.getPassphrase(config['encrypted'])
     app.installReactor(config['reactor'])
     config['nodaemon'] = config['nodaemon'] or config['debug']
@@ -170,7 +171,6 @@ def runApp(config):
     startLogging(config['logfile'], config['syslog'], config['prefix'],
                  config['nodaemon'])
     app.initialLog()
-    checkPID(config['pidfile'])
     application = app.getApplication(config, passphrase)
     startApplication(config, application)
     app.runReactorWithLogging(config, oldstdout, oldstderr)
