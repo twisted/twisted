@@ -338,7 +338,45 @@ class Protocol(BaseProtocol):
         warnings.warn("connectionFailed is deprecated.  See new Client API",
                       category=DeprecationWarning, stacklevel=2)
 
+from twisted.python import components
 
+class ProtocolToConsumerAdapter(components.Adapter):
+    """
+    This class is unstable.
+    """
+    __implements__ = interfaces.IConsumer
+
+    def write(self, data):
+        self.original.dataReceived(data)
+
+    def registerProducer(self, producer, streaming):
+        pass
+
+    def unregisterProducer(self):
+        pass
+
+components.registerAdapter(ProtocolToConsumerAdapter, Protocol, interfaces.IConsumer)
+
+class ConsumerToProtocolAdapter(components.Adapter):
+    """
+    This class is unstable.
+    """
+    __implements__ = interfaces.IProtocol
+
+    def dataReceived(self, data):
+        self.original.write(data)
+
+    def connectionLost(self, reason):
+        pass
+
+    def makeConnection(self, transport):
+        pass
+
+    def connectionMade(self):
+        pass
+
+#XXX - Can't register ConsumerToProtocolAdapter as an adapter for
+#"Consumer", because it doesn't exist - we need Interface adaptation!!
 
 class ProcessProtocol(BaseProtocol):
     """Processes have some additional methods besides receiving data.
