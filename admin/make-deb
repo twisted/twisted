@@ -8,6 +8,7 @@
 #   * when launched into an editor, change the version number at the top
 #     to <whatever>-1
 # * exit
+# * rm ~moshez/public_html/snapshot/*twisted*
 # * cp /sid/home/you/*twisted* ~moshez/public_html/snapshot/
 # * cd ~moshez/public_html/snapshot
 # * ./createpackages
