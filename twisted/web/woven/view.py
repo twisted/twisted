@@ -398,8 +398,6 @@ class View(template.DOMTemplate):
                                 controller, view, success)
             data.addErrback(self.renderFailure, request)
             return data
-        if success is not None:
-            self.handlerResults[success].append((controller, data, node))
 
         returnNode = self.dispatchResult(request, node, view)
         self.handleNewNode(request, returnNode)

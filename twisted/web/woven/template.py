@@ -194,7 +194,6 @@ class DOMTemplate(Resource):
         self.failed = 0
 
     def render(self, request, block=0):
-        self.handlerResults = {1: [], 0: []}
         template = self.getTemplate(request)
         if template:
             self.d = microdom.parseString(template)
