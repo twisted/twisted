@@ -1,3 +1,4 @@
+# -*- test-case-name: twisted.test.test_internet -*-
 # Twisted, the Framework of Your Internet
 # Copyright (C) 2001 Matthew W. Lefkowitz
 #
@@ -118,7 +119,6 @@ class ReactorBase:
     def __init__(self):
         self._eventTriggers = {}
         self._pendingTimedCalls = []
-        self._delayeds = main._delayeds
         self.waker = None
         self.resolver = None
         self.usingThreads = 0
@@ -340,10 +340,9 @@ class ReactorBase:
             t = self._pendingTimedCalls[-1].time - time()
             if t < 0:
                 t = 0
-            mt = _nmin(t, self._delayeds.timeout())
-            return mt
+            return t
         else:
-            return self._delayeds.timeout()
+            return None
 
     def runUntilCurrent(self):
         """Run all pending timed calls.
@@ -363,7 +362,6 @@ class ReactorBase:
                 call.func(*call.args, **call.kw)
             except:
                 log.deferr()
-        self._delayeds.runUntilCurrent()
 
 
     # IReactorThreads
