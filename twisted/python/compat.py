@@ -222,6 +222,7 @@ if sys.version_info[:3] in ((2, 2, 0), (2, 2, 1)):
     def rstrip(s, c=string.whitespace):
         while s and s[-1] in c:
             s = s[:-1]
+        return s
     def strip(s, c=string.whitespace, l=lstrip, r=rstrip):
         return l(r(s, c), c)
     
