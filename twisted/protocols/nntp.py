@@ -82,10 +82,6 @@ class NNTPError(Exception):
 
 
 class NNTPClient(basic.LineReceiver):
-    # State constants
-    ST_INITIAL, ST_GROUP, ST_LIST, ST_ARTICLE, ST_HEAD, ST_BODY, ST_POST, ST_POSTED, \
-    ST_OVERVIEW, ST_SUBSCRIPTIONS, ST_XHDR = range(11)
-
     def __init__(self):
         self.currentGroup = None
         
