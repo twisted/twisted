@@ -36,7 +36,7 @@ stop Twisted::
 """
 
 # system imports
-import Tkinter
+import Tkinter, tkSimpleDialog, tkMessageBox
 
 # twisted imports
 from twisted.python import log
@@ -56,6 +56,24 @@ def install(widget, ms=10, reactor=None):
     if reactor is None:
         from twisted.internet import reactor
     _guiUpdate(reactor, widget, ms/1000.0)
+    
+    installTkFunctions()
 
+
+def installTkFunctions():
+    import twisted.python.util
+    twisted.python.util.getPassword = getPassword
+
+
+def getPassword(prompt = '', confirm = 0):
+    while 1:
+        try1 = tkSimpleDialog.askstring('Password Dialog', prompt, show='*')
+        if not confirm:
+            return try1
+        try2 = tkSimpleDialog.askstring('Password Dialog', 'Confirm Password', show='*')
+        if try1 == try2:
+            return try1
+        else:
+            tkMessageBox.showerror('Password Mismatch', 'Passwords did not match, starting over')
 
 __all__ = ["install"]
