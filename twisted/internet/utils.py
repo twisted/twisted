@@ -249,3 +249,37 @@ class SRVConnector:
     def connectionLost(self, reason):
         self.factory.clientConnectionLost(self, reason)
         self.factory.doStop()
+
+
+class LoopingCall:
+    """Call a function repeatedly."""
+    
+    def __init__(self, f, *a, **kw):
+        self.f = f
+        self.a = a
+        self.kw = kw
+
+    def loop(self, interval):
+        """Start running function every interval seconds."""
+        self.running = True
+        self._loop(time(), 0, interval)
+
+    def stop(self):
+        """Stop running function."""
+        self.running = False
+        if hasattr(self, "call"):
+            self.call.cancel()
+    
+    def _loop(self, starttime, count, interval):
+        if hasattr(self, "call"):
+            del self.call
+        self.f(*self.a, **self.kw)
+        now = time() 
+        while self.running:
+            count += 1
+            fromStart = count * interval
+            fromNow = starttime - now
+            delay = fromNow + fromStart
+            if delay > 0:
+                self.call = reactor.callLater(delay, self._loop, starttime, count, interval)
+                return
