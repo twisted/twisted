@@ -53,10 +53,9 @@ class DigestAuthentication(Resource):
             seqno    = amap['nc']
             uri      = amap['uri']
             cnonce   = amap['cnonce']
-            if uri != request.uri:
-               return self._errpage
+            assert uri == request.uri
         except:
-            return
+            return self._errpage
         ha1 = self.__userfunc(self.__realm,username)
         if not ha1:
             return self.sendAuthenticateResponse(request)
@@ -77,8 +76,6 @@ class DigestAuthentication(Resource):
         epage = self.testAuthorization(request)
         if epage: return epage
         return Resource.getChildWithDefault(self,path,request)
-
-_authbody = "<html><body>Authentication Required</body></html>"
 
 def test():
     from twisted.internet import reactor
