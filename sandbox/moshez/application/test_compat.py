@@ -72,16 +72,32 @@ class TestInternet(unittest.TestCase):
     def testCalling(self):
         s = service.MultiService()
         c = compat.IOldApplication(s)
+        c.listenWith(None)
+        self.assertEqual(s.getService(0).args[0], None)
         c.listenTCP(None, None)
+        self.assertEqual(s.getService(1).args[:2], (None,)*2)
         c.listenSSL(None, None, None)
+        self.assertEqual(s.getService(2).args[:3], (None,)*3)
         c.listenUDP(None, None)
+        self.assertEqual(s.getService(3).args[:2], (None,)*2)
         c.listenUNIX(None, None)
+        self.assertEqual(s.getService(4).args[:2], (None,)*2)
         for ch in s:
             self.assert_(ch.privileged)
+        c.connectWith(None)
+        self.assertEqual(s.getService(5).args[0], None)
         c.connectTCP(None, None, None)
+        self.assertEqual(s.getService(6).args[:3], (None,)*3)
         c.connectSSL(None, None, None, None)
+        self.assertEqual(s.getService(7).args[:4], (None,)*4)
         c.connectUDP(None, None, None)
+        self.assertEqual(s.getService(8).args[:3], (None,)*3)
         c.connectUNIX(None, None)
+        self.assertEqual(s.getService(9).args[:2], (None,)*2)
+        self.assertEqual(len(list(s)), 10)
+        for ch in s:
+            self.failIf(ch.kwargs)
+            self.assertEqual(ch.name, None)
 
     def testUnlistenersCallable(self):
         s = service.MultiService()
@@ -99,6 +115,14 @@ class TestInternet(unittest.TestCase):
         ch.setServiceParent(c)
         self.assertEqual(c.getServiceNamed("lala"), ch)
         ch.disownServiceParent()
+        self.assertEqual(list(s), [])
+
+    def testInterface(self):
+        s = service.MultiService()
+        c = compat.IOldApplication(s)
+        for key in compat.IOldApplication.__dict__.keys():
+            if callable(getattr(compat.IOldApplication, key)):
+                self.assert_(callable(getattr(c, key)))
 
 class Dummy:
     processName = None
