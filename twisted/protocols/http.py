@@ -40,6 +40,7 @@ import math
 import time
 import calendar
 import warnings
+import os
 
 # sibling imports
 import basic
@@ -1001,6 +1002,8 @@ class HTTPFactory(protocol.ServerFactory):
     logPath = None
 
     def __init__(self, logPath=None):
+        if logPath is not None:
+            logPath = os.path.abspath(logPath)
         self.logPath = logPath
 
     def startFactory(self):
