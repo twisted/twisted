@@ -1,0 +1,42 @@
+
+= Log in, specifying desired interfaces =
+
+The server can provide several different interfaces, each of which inherit from
+pb.IPerspective. The client can specify which of these interfaces that it
+desires.
+
+This change requires Jellyable interfaces, which in turn requires being able to
+"register jelliers sanely" (exarkun 2004-05-10).
+
+An example, in oldpb lingo:
+
+  # client
+  factory = PBClientFactory()
+  reactor.connectTCP('localhost', portNum, factory)
+  d = factory.login(creds, mind, IBusiness) # <-- API change
+  d.addCallbacks(connected, disaster)
+
+  # server
+  class IBusiness(pb.IPerspective):
+    def perspective_foo(self, bar):
+      "Does something"
+
+  class Business(pb.Avatar):
+    __implements__ = (IBusinessInterface, pb.Avatar.__implements__)
+    def perspective_foo(self, bar):
+      return bar
+
+  class Finance(pb.Avatar):
+    def perspective_cash(self):
+      """do cash"""
+
+  class BizRealm:
+    __implements__ = portal.IRealm
+    def requestAvatar(self, avatarId, mind, *interfaces):
+      if IBusiness in interfaces:
+        return IBusiness, Business(avatarId, mind), lambda : None
+      elif pb.IPerspective in interfaces:
+        return pb.IPerspective, Finance(avatarId), lambda : None
+      else:
+        raise NotImplementedError
+
