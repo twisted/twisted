@@ -90,6 +90,10 @@ class ContactsListGUI(ContactsList):
         if client.accountName in self.clientsByName.keys():
             del self.clientsByName[client.accountName]
 
+    def contactChangedNick(self, person, newnick):
+        ContactsList.contactChangedNick(self, person, newnick)
+        self.update()
+
     #GUI code
     def buildpane(self):
         buttons = JPanel(FlowLayout(), doublebuffered)
@@ -132,17 +136,18 @@ class ContactsListGUI(ContactsList):
 
 class ConversationWindow(Conversation):
     """A GUI window of a conversation with a specific person"""
-    def __init__(self, person):
+    def __init__(self, person, chatui):
         """ConversationWindow(basesupport.AbstractPerson:person)"""
-        self.person = person
+        Conversation.__init__(self, person, chatui)
         self.mainframe = JFrame("Conversation with "+person.name)
-        self.display = JTextArea("Starting conversation with "+person.name)
-        self.display.setColumns(50)
-        self.display.setRows(10)
+        self.display = JTextArea()
+        self.display.setColumns(100)
+        self.display.setRows(15)
         self.display.setEditable(0)
         self.display.setLineWrap(1)
         self.typepad = JTextField()
         self.buildpane()
+        self.lentext = 0
 
     def buildpane(self):
         buttons = JPanel(doublebuffered)
@@ -163,11 +168,21 @@ class ConversationWindow(Conversation):
         self.mainframe.hide()
 
     def sendText(self, text):
-        self.display.append("\n"+self.person.client.name+": "+text)
-        self.person.sendMessage(text, None)
+        self.displayText("\n"+self.person.client.name+": "+text)
+        Conversation.sendText(self, text)
 
     def showMessage(self, text, metadata=None):
-        self.display.append("\n"+self.person.name+": "+text)
+        self.displayText("\n"+self.person.name+": "+text)
+
+    def contactChangedNick(self, person, newnick):
+        Conversation.contactChangedNick(self, person, newnick)
+        self.mainframe.setTitle("Conversation with "+newnick)
+
+    #GUI code
+    def displayText(self, text):
+        self.lentext = self.lentext + len(text)
+        self.display.append(text)
+        self.display.setCaretPosition(self.lentext)
 
     #actionlisteners
     def hidewindow(self, ae):
@@ -175,65 +190,94 @@ class ConversationWindow(Conversation):
 
     def send(self, ae):
         text = self.typepad.getText()
+        self.typepad.setText("")
         if text != "" and text != None:
             self.sendText(text)
 
 
 class GroupConversationWindow(GroupConversation):
     """A GUI window of a conversation witha  group of people"""
-    def __init__(self, group):
-        """GroupConversationWindow(basesupport.AbstractGroup:group)"""
-        self.group = group
-    
+    def __init__(self, group, chatui):
+        GroupConversation.__init__(self, group, chatui)
+        self.mainframe = JFrame(self.group.name)
+        self.headers = ["Member"]
+        self.memberdata = UneditableTableModel([], self.headers)
+        self.display = JTextArea()
+        self.display.setColumns(100)
+        self.display.setRows(15)
+        self.display.setEditable(0)
+        self.display.setLineWrap(1)
+        self.typepad = JTextField()
+        self.buildpane()
+        self.lentext = 0
+            
     def show(self):
-        """show() : None
-        Displays the GroupConversationWindow"""
-        raise NotImplementedError("Subclasses must implement this method")
+        self.mainframe.pack()
+        self.mainframe.show()
 
     def hide(self):
-        """hide() : None
-        Hides the GroupConversationWindow"""
-        raise NotImplementedError("Subclasses must implement this method")
-    
-    def sendText(self, text):
-        """sendText(string:text) : None|twisted.internet.defer.Deferred
-        Sends text to the group"""
-        raise NotImplementedError("Subclasses must implement this method")
+        self.mainframe.hide()
     
     def showGroupMessage(self, sender, text, metadata=None):
-        """showGroupMessage(string:sender, string:text, [dict:metadata]) : None
-        Displays to the user a message sent to this group from the given sender
-        """
-        raise NotImplementedError("Subclasses must implement this method")
+        self.displayText(sender + ": " + text)
     
     def setGroupMembers(self, members):
-        """setGroupMembers(list{basesupport.AbstractPerson}:members) : None
-        Sets the list of members in the group and displays it to the user"""
-        raise NotImplementedError("Subclasses must implement this method")
-
+        GroupConversation.setGroupMembers(self, members)
+        self.updatelist()
+        
     def setTopic(self, topic, author):
-        """setTopic(string:topic, string:author) : None
-        Displays the topic (from the server) for the group conversation window
-        """
-        raise NotImplementedError("Subclasses must implement this method")
+        topictext = "Topic: " + topic + ", set by " + author
+        self.mainframe.setTitle(self.group.name + ": " + topictext)
+        self.displayText(topictext)
 
     def memberJoined(self, member):
-        """memberJoined(string:member) : None
-        Adds the given member to the list of members in the group conversation
-        and displays this to the user"""
-        raise NotImplementedError("Subclasses must implement this method")
+        GroupConversation.memberJoined(self, member)
+        self.updatelist()
 
     def memberChangedNick(self, oldnick, newnick):
-        """memberChangedNick(string:oldnick, string:newnick) : None
-        Changes the oldnick in the list of members to newnick and displays this
-        change to the user"""
-        raise NotImplementedError("Subclasses must implement this method")
+        GroupConversation.memberChangedNick(self, oldnick, newnick)
+        self.updatelist()
 
     def memberLeft(self, member):
-        """memberLeft(string:member) : None
-        Deletes the given member from the list of members in the group
-        conversation and displays the change to the user"""
-        raise NotImplementedError("Subclasses must implement this method")
+        GroupConversation.memberLeft(self, member)
+        self.updatelist()
+
+    #GUI code
+    def buildpane(self):
+        buttons = JPanel(doublebuffered)
+        buttons.add(actionWidget(JButton("Hide"), self.hidewindow))
+
+        memberpane = JTable(self.memberdata)
+        memberframe = JScrollPane(memberpane)
+
+        chat = JPanel(doublebuffered)
+        chat.setLayout(BoxLayout(chat, BoxLayout.Y_AXIS))
+        chat.add(JScrollPane(self.display))
+        chat.add(actionWidget(self.typepad, self.send))
+        chat.add(buttons)
+
+        mainpane = self.mainframe.getContentPane()
+        mainpane.setLayout(BoxLayout(mainpane, BoxLayout.X_AXIS))
+        mainpane.add(chat)
+        mainpane.add(memberframe)
+        
+    def displayText(self, text):
+        self.lentext = self.lentext + len(text)
+        self.display.append(text)
+        self.display.setCaretPosition(self.lentext)
+
+    def updatelist(self):
+        self.memberdata.setDataVector([self.members], self.headers)
+
+    #actionListener
+    def send(self, ae):
+        text = self.typepad.getText()
+        self.typepad.setText("")
+        if text != "" and text != None:
+            GroupConversation.sendText(self, text)
+
+    def hidewindow(self, ae):
+        self.hide()
 
 class JyChatUI(ChatUI):
     def __init__(self):
@@ -241,11 +285,11 @@ class JyChatUI(ChatUI):
         self.contactsList = ContactsListGUI(self)
 
     def getConversation(self, person, stayHidden=0):
-        return ChatUI._getGroupConversation(self, person, ConversationWindow,
+        return ChatUI.getGroupConversation(self, person, ConversationWindow,
                                             stayHidden)
 
     def getGroupConversation(self, group, stayHidden=0):
-        return ChatUI._getGroupConversation(self, group,
+        return ChatUI.getGroupConversation(self, group,
                                             GroupConversationWindow,
                                             stayHidden)
     
