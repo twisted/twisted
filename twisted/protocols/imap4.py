@@ -2271,7 +2271,7 @@ def collapseNestedLists(items):
             pieces.extend([' ', 'NIL'])
         elif isinstance(i, types.StringTypes):
             if '\n' in i or '\r' in i:
-                pieces.extend([' ', '{%d}' % (len(i),), IMAP4Server.delimiter, i])
+                pieces.extend([' ', '{', str(i), '}', IMAP4Server.delimiter, i])
             elif (not i.startswith('BODY')) and (' ' in i or '\t' in i):
                 pieces.extend([' ', '"%s"' % (i,)])
             else:
