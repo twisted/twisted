@@ -520,8 +520,8 @@ class Text(Widget):
     """
     def __init__(self, model, raw=0, clear=1, *args, **kwargs):
         """
-        @param text: The text to render.
-        @type text: A string or L{model.Model}.
+        @param model: The text to render.
+        @type model: A string or L{model.Model}.
         @param raw: A boolean that specifies whether to render the text as
               a L{domhelpers.RawText} or as a DOM TextNode.
         """
