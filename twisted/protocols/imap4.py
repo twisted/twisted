@@ -26,6 +26,7 @@ API Stability: Semi-stable
 from __future__ import nested_scopes
 
 from twisted.protocols import basic
+from twisted.protocols import policies
 from twisted.internet import defer
 from twisted.internet.defer import maybeDeferred
 from twisted.python import log, components, util, failure
@@ -113,7 +114,7 @@ class IMailboxListener(components.Interface):
         C{None}.
         """
 
-class IMAP4Server(basic.LineReceiver):
+class IMAP4Server(policies.TimeoutMixin, basic.LineReceiver):
     """
     Protocol implementation for an IMAP4rev1 server.
 
@@ -130,6 +131,12 @@ class IMAP4Server(basic.LineReceiver):
 
     # Identifier for this server software
     IDENT = 'Twisted IMAP4rev1 Ready'
+    
+    # Number of seconds before idle timeout
+    # Initially 1 minute.  Raised to 30 minutes after login.
+    timeOut = 60
+
+    POSTAUTH_TIMEOUT = 60 * 30
 
     # Mapping of tags to commands we have received
     tags = None
@@ -155,11 +162,6 @@ class IMAP4Server(basic.LineReceiver):
         self.CAPABILITIES = self.CAPABILITIES.copy()
         self.ctx = contextFactory
 
-    def connectionMade(self):
-        if self.ctx and implements(self.transport, ITLSTransport):
-            self.CAPABILITIES['LOGINDISABLED'] = None
-            self.CAPABILITIES['STARTTLS'] = None
-
     def registerChallenger(self, chal):
         """Register a new form of authentication
 
@@ -174,9 +176,25 @@ class IMAP4Server(basic.LineReceiver):
         self.CAPABILITIES.setdefault('AUTH', []).append(chal.getName().upper())
 
     def connectionMade(self):
+        policies.TimeoutMixin.connectionMade(self)
+
+        if self.ctx and implements(self.transport, ITLSTransport):
+            self.CAPABILITIES['LOGINDISABLED'] = None
+            self.CAPABILITIES['STARTTLS'] = None
+        
         self.tags = {}
         self.state = 'unauth'
         self.sendServerGreeting()
+    
+    def dataReceived(self, data):
+        policies.TimeoutMixin.dataReceived(self, data)
+        basic.LineReceiver.dataReceived(self, data)
+
+    def timeoutConnection(self):
+        self.sendLine('* BYE Autologout; connection idle too long')
+        self.transport.loseConnection()
+        if self.mbox:
+            self.mbox.removeListener(self)
 
     def rawDataReceived(self, data):
         self._pendingSize -= len(data)
@@ -362,6 +380,7 @@ class IMAP4Server(basic.LineReceiver):
         self.sendPositiveResponse(tag, 'Authentication successful')
         self.state = 'auth'
         self.account = result
+        self.setTimeout(self.POSTAUTH_TIMEOUT)
     
     def __ebAuthResp(self, failure, tag):
         self.sendNegativeResponse(tag, 'Authentication failed: ' + str(failure.value))
@@ -412,6 +431,7 @@ class IMAP4Server(basic.LineReceiver):
             self.account = account
             self.sendPositiveResponse(tag, 'LOGIN succeeded')
             self.state = 'auth'
+            self.setTimeout(self.POSTAUTH_TIMEOUT)
 
     def __ebLogin(self, failure, tag):
         self.sendBadResponse(tag, 'Server error: ' + str(failure.value))
