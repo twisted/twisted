@@ -17,7 +17,11 @@
 import os
 import shutil
 
-from twisted.python import dir
+try:
+    from twisted.python import dir
+except ImportError:
+    dir = None
+
 from twisted.trial import unittest
 
 class DirTestCase(unittest.TestCase):
@@ -116,4 +120,8 @@ class FunctionsTestCase(unittest.TestCase):
         expected = filter(os.path.islink, os.listdir('.'))
         expected.sort()        
         self.assertEquals(links, expected)
+
+if dir is None:
+    FunctionsTestCase.skip = "twisted.python.dir module not available"
+    DirTestCase.skip= "twisted.python.dir module not available"
         
