@@ -215,7 +215,7 @@ class Deferred:
         or raises an Exception, processing will continue on the *error*-
         callback chain.
         """
-        self._startRunCallbacks(result, 0)
+        self._startRunCallbacks(result)
 
 
     def errback(self, fail=None):
@@ -237,7 +237,7 @@ class Deferred:
         if not isinstance(fail, failure.Failure):
             fail = failure.Failure(fail)
 
-        self._startRunCallbacks(fail, 1)
+        self._startRunCallbacks(fail)
 
 
     def pause(self):
@@ -255,16 +255,14 @@ class Deferred:
         if self.called:
             self._runCallbacks()
 
-    def _continue(self, result, isError):
+    def _continue(self, result):
         self.result = result
-        self.isError = isError
         self.unpause()
 
-    def _startRunCallbacks(self, result, isError):
+    def _startRunCallbacks(self, result):
         if self.called:
             raise AlreadyCalledError()
-        self.called = isError + 1
-        self.isError = isError
+        self.called = True
         self.result = result
         if self.timeoutCall:
             try:
@@ -282,7 +280,8 @@ class Deferred:
             self.callbacks = []
             while cb:
                 item = cb.pop(0)
-                callback, args, kw = item[self.isError]
+                callback, args, kw = item[
+                    isinstance(self.result, failure.Failure)]
                 args = args or ()
                 kw = kw or {}
                 try:
@@ -297,17 +296,11 @@ class Deferred:
                         # in case something goes wrong.  deferreds really ought
                         # not to return themselves from their callbacks.
                         self.pause()
-                        self.result.addCallbacks(self._continue,
-                                                 self._continue,
-                                                 callbackArgs=(0,),
-                                                 errbackArgs=(1,))
+                        self.result.addBoth(self._continue)
                         break
-                    if not isinstance(self.result, failure.Failure):
-                        self.isError = 0
                 except:
                     self.result = failure.Failure()
-                    self.isError = 1
-        if self.isError and isinstance(self.result, failure.Failure):
+        if isinstance(self.result, failure.Failure):
             self.result.cleanFailure()
 
 
@@ -355,7 +348,6 @@ class Deferred:
         state, print a traceback (if said errback is a Failure).
         """
         if (self.called and
-            self.isError and
             isinstance(self.result, failure.Failure)):
             log.msg("Unhandled error in Deferred:")
             log.err(self.result)
@@ -428,16 +420,10 @@ class DeferredList(Deferred):
 
 
 def _parseDListResult(l, fireOnOneErrback=0):
-    results = []
-    for success, value in l:
-        if success:
-            results.append(value)
-        else:
-            if fireOnOneErrback:
-                value.trap()
-            else:
-                return failure.Failure(Exception(l))
-    return results
+    if __debug__:
+        for success, value in l:
+            assert success
+    return [x[1] for x in l]
 
 def gatherResults(deferredList, fireOnOneErrback=0):
     """Returns list with result of given Deferreds.
@@ -447,8 +433,10 @@ def gatherResults(deferredList, fireOnOneErrback=0):
 
     @type deferredList:  C{list} of L{Deferred}s
     """
-    d = DeferredList(deferredList, fireOnOneErrback=fireOnOneErrback)
-    d.addCallback(_parseDListResult, fireOnOneErrback)
+    if fireOnOneErrback:
+        raise "This function was previously totally, totally broken.  Please fix your code to behave as documented."
+    d = DeferredList(deferredList, fireOnOneErrback=1)
+    d.addCallback(_parseDListResult)
     return d
 
 # Constants for use with DeferredList

@@ -186,7 +186,7 @@ class DeferredTestCase(unittest.TestCase):
         # test failing list of deferreds
         l = []
         dl = [defer.succeed(1), defer.fail(ValueError)]
-        defer.gatherResults(dl).addCallback(l.append)
+        defer.gatherResults(dl).addErrback(l.append)
         self.assert_(isinstance(l[0], failure.Failure))
         self.assertEquals(len(l), 1)
         # get rid of error

@@ -14,10 +14,13 @@ class IUsernamePassword(ICredentials):
     """I encapsulate a username and password.
 
     @ivar username: What do you think?
-
-    @ivar password: If this needs explaining, you need more help than a
-    docstring can give.
     """
+
+    def checkPassword(self, password):
+        """
+        @return: a deferred which becomes, or a boolean indicating if the
+        password matches.
+        """
 
 class IAnonymous(ICredentials):
     """I am an explicitly anonymous request for access.
@@ -32,6 +35,9 @@ class UsernamePassword:
     def __init__(self, username, password):
         self.username = username
         self.password = password
+
+    def checkPassword(self, password):
+        return self.password == password
 
 class Anonymous:
     __implements__ = IAnonymous

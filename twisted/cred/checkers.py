@@ -1,7 +1,7 @@
 # -*- test-case-name: twisted.test.test_newcred -*-
 
 from twisted.internet import defer
-from twisted.python import components
+from twisted.python import components, failure
 from twisted.cred import error, credentials
 
 class ICredentialsChecker(components.Interface):
@@ -48,10 +48,19 @@ class InMemoryUsernamePasswordDatabaseDontUse:
     def addUser(self, username, password):
         self.users[username] = password
 
+    def _cbPasswordMatch(self, matched, username):
+        if matched:
+            return username
+        else:
+            return failure.Failure(error.UnauthorizedLogin())
+
     def requestAvatarId(self, credentials):
-        if (self.users.has_key(credentials.username) and
-            self.users[credentials.username] == credentials.password):
-            return defer.succeed(credentials.username)
+        if self.users.has_key(credentials.username):
+            return defer.maybeDeferred(
+                credentials.checkPassword,
+                self.users[credentials.username]).addCallback(
+                self._cbPasswordMatch, credentials.username)
         else:
             return defer.fail(error.UnauthorizedLogin())
 
+        
