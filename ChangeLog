@@ -1,3 +1,44 @@
+2002-04-17  Donovan Preston <dp@twistedmatrix.com>
+
+	* Major changes to the capabilities of the static web server, in an 
+	attempt to be able to use Twisted instead of Zope at work; my plan is to 
+	capture many of the conveniences of Zope without the implicitness and 
+	complexity that comes with working around implicit behavior when it fails.
+
+	1) .trp and .rpy support in the static web server:
+	Very simple handlers to allow you to easily add Resource objects 
+		dynamically to a running server, by merely changing files on the 
+		filesystem.
+	An .rpy file will be executed, and if a "resource" variable exists upon the
+		execution's completion, it will be returned. 
+	A .trp file (twisted resource pickle) will be unpickled and returned. An
+		object unpickled from a .trp should either implement IResource itself, 
+		or have a registered adapter in twisted.python.components.
+
+	2) Acquisition:
+	As resources are being looked up by repeated calls to getChild, this 
+		change creates instances of 
+		twisted.spread.refpath.PathReferenceAcquisitionContext and puts
+		them in the request as "request.pathRef"
+	Any method that has an instance of the request can then climb up
+		the parent tree using "request.pathRef['parentRef']['parentRef']
+	PathReferenceAcquisitionContext instances can be dereferenced to the
+		actual object using getObject
+	Convenience method: "locate"   returns a PathReference to first place
+		in the parent heirarchy a name is seen
+	Convenience method: "acquire"  somewhat like Zope acquisition;
+		mostly untested, may need fixes
+
+	3) DOM-based templating system:
+	A new templating system that allows python scripts to use the DOM
+		to manipulate the HTML node tree. Loosely based on Enhydra.
+	Subclasses of twisted.web.domtemplate.DOMTemplate can override
+		the templateFile attribute and the getTemplateMethods method;
+		ultimately, while templateFile is being parsed, the methods
+		specified will be called with instances of xml.dom.mindom.Node
+		as the first parameter, allowing the python code to manipulate
+		(see twisted.web.blog for an example) 
+
 2002-04-17  Chris Armstrong  <carmstro@twistedmatrix.com>
 
 	* twisted/web/static.py, twisted/tap/web.py: Added a new feature

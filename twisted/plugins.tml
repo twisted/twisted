@@ -111,3 +111,13 @@ register("Twisted Coil Automated TAP builder",
          "twisted.tap.coil",
          description="automated TAP building",
          type="tap")
+         
+## View modules that need to be loaded on startup so they can
+## call twisted.python.components.registerAdapter
+
+register("Blog Post web view adapter",
+	"twisted.web.blog.BlogPostResourceAdapter",
+	description="A blog post which can be viewed/edited ttw, via ftp, etc",
+	type="view")
+
+

@@ -28,7 +28,7 @@ if string.find(os.path.abspath(sys.argv[0]),'Twisted') != -1:
 ### end of preamble
 
 from twisted import copyright
-from twisted.python import usage, util, runtime, register
+from twisted.python import usage, util, runtime, register, plugin
 from twisted.lumberjack import logfile
 util.addPluginDir()
 
@@ -191,6 +191,16 @@ else:
     except KeyError:
         log.msg("Error - python file %s must set a variable named 'application', an instance of twisted.internet.app.Application. No such variable was found!" % repr(pyfile))
         sys.exit()
+
+# Load any view plugins which have been registered in plugins.tml file
+# This needs to be moved to an event which occurs on web server startup
+# Once glyph is done with the Reactors
+plugins = plugin.getPlugIns('view')
+for plug in plugins:
+    try:
+        plug.load()
+    except Exception, e:
+        print "Loading view %s failed. %s" % (plug, e)
 
 print "Loaded."
 initRun = 1

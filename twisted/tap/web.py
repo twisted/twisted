@@ -21,7 +21,7 @@
 import string, os
 
 # Twisted Imports
-from twisted.web import server, static, twcgi, script, test, distrib
+from twisted.web import server, static, twcgi, script, test, distrib, trp
 from twisted.internet import tcp
 from twisted.python import usage, reflect
 from twisted.spread import pb
@@ -74,8 +74,11 @@ twisted.web.test in it."""
         self.opts['root'] = static.File(os.path.abspath(path))
         self.opts['root'].processors = {
             '.cgi': twcgi.CGIScript,
-            '.php3': twcgi.PHPScript,
-            '.epy': script.PythonScript
+            '.php3': twcgi.PHP3Script,
+            '.php': twcgi.PHPScript,
+            '.epy': script.PythonScript,
+            '.py': script.PyCompiler,
+            '.trp': trp.ResourceUnpickler,
             }
 
     def opt_static(self, path):
@@ -137,4 +140,3 @@ def updateApplication(app, config):
                       pb.BrokerFactory(distrib.ResourcePublisher(site)))
     else:
         app.listenTCP(int(config.opts['port']), site)
-

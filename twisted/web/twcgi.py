@@ -84,7 +84,7 @@ class CGIScript(resource.Resource):
                "SCRIPT_FILENAME":   self.filename,
                "REQUEST_URI":       request.uri,
                "PYTHONPATH" :       python_path
-               }
+        }
 
         client = request.getClient()
         if client is not None:
@@ -133,11 +133,19 @@ class FilteredScript(CGIScript):
     def runProcess(self, env, request):
         CGIProcess(self.filter, [self.filename], env, os.path.dirname(self.filename), request)
 
-class PHPScript(FilteredScript):
+class PHP3Script(FilteredScript):
     """I am a FilteredScript that uses the default PHP3 command on most systems.
     """
     filter = '/usr/bin/php3'
 
+class PHPScript(FilteredScript):
+    """I am a FilteredScript that uses the PHP command on most systems.
+    Sometimes, php wants the path to itself as argv[0]. This is that time.
+    """
+    filter = '/usr/bin/php'
+    def runProcess(self, env, request):
+        CGIProcess(self.filter, [self.filter, self.filename], env, os.path.dirname(self.filename), request)
+ 
 class CGIProcess(process.Process, pb.Viewable):
     handling_headers = 1
     headers_written = 0

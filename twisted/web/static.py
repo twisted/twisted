@@ -37,7 +37,7 @@ import widgets
 
 # Twisted Imports
 from twisted.protocols import http
-from twisted.python import threadable, log
+from twisted.python import threadable, log, components
 from twisted.internet import abstract
 from twisted.spread import pb
 from twisted.persisted import styles
@@ -189,10 +189,19 @@ class File(resource.Resource, styles.Versioned):
         p, ext = os.path.splitext(newpath)
         processor = self.processors.get(ext)
         if processor:
-            return processor(newpath)
+            p = processor(newpath)
+            if components.implements(p, resource.IResource):
+                return p
+            else:
+                adapter = components.getAdapter(p, resource.IResource, None)
+                if not adapter:
+                    raise "%s instance does not implement IResource, and there is no registered adapter." % result.__class__
+                return adapter
+
         f = File(newpath, self.defaultType, self.allowExt)
         f.processors = self.processors
         f.indexNames = self.indexNames[:]
+        
         return f
 
 
@@ -258,8 +267,28 @@ class File(resource.Resource, styles.Versioned):
         # and make sure the connection doesn't get closed
         return server.NOT_DONE_YET
 
+    def listNames(self):
+        if not os.path.isdir(self.path): return []
+        directory = os.listdir(self.path)
+        directory.sort()
+        return directory
+    
+    def listEntities(self):
+        return map(lambda fileName, self=self: File(os.path.join(self.path, fileName)), self.listNames())
 
-
+    def putChild(self, name, child):
+        if not os.path.isdir(self.path):
+            resource.Resource.putChild(self, name, child)
+        # xxx use a file-extension-to-save-function dictionary instead
+        fl = open(os.path.join(self.path, name), 'w')
+        if type(child) == type(""):
+            fl.write(child)
+        else:
+            from pickle import Pickler
+            pk = Pickler(fl)
+            pk.dump(child)
+        fl.close()
+        
 class FileTransfer(pb.Viewable):
     """
     A class to represent the transfer of a file over the network.

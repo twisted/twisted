@@ -14,7 +14,8 @@
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
-from flavors import Referenceable
+from flavors import Referenceable, Viewable
+from copy import copy
 
 ### "Server"-side objects
 
@@ -36,6 +37,47 @@ class PathReferenceContext:
             o = o.getChild(p, self)
         return o
 
+class PathReferenceAcquisitionContext(PathReferenceContext):
+    def __init__(self, path, root, parentRef):
+        PathReferenceContext.__init__(self, path, root)
+        self.metadata['parentRef'] = parentRef
+
+    def __lookup(self, name, acquire=0):
+        obRef = self
+    	ob = self.getObject()
+    	found = 0
+        while not found:
+            if acquire and hasattr(ob, name):
+                retVal = getattr(ob, name)
+                break
+            elif hasattr(ob, 'listNames') and name in ob.listNames():
+                if acquire:
+                    retVal = ob.getChild(name)
+                else:
+                    foundPath = copy(obRef.path)
+                    foundPath.append(name)
+                    retVal = PathReferenceAcquisitionContext(foundPath, obRef.root, obRef)         
+                break
+
+            obRef = obRef['parentRef']
+            ob = obRef.getObject()
+        else:
+            raise AttributeError, "%s not found." % name
+        return retVal
+
+    def locate(self, name):
+        """
+        Get a reference to an object with the given name which is somewhere
+        on the path above us.
+        """
+        return self.__lookup(name)
+        
+    def acquire(self, name):
+        """
+        Look for an attribute or element by name in all of our parents
+        """
+        return self.__lookup(name, acquire=1)
+
 class PathReference:
     def __init__(self):
         self.children = {}
@@ -51,7 +93,7 @@ class PathReferenceDirectory(Referenceable):
         obj = ctx.getObject()
         return apply(getattr(obj, "%s_%s" % (self.prefix, name)), args, kw)
 
-class PathReferenceContextDirectory(Referenceable)
+class PathReferenceContextDirectory(Referenceable):
     def __init__(self, root, prefix="remote"):
         self.root = root
         self.prefix = prefix

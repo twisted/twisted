@@ -76,7 +76,7 @@ def htmlInst(i):
     if hasattr(i, "__html__"):
         s = i.__html__()
     else:
-        s = '<CODE>'+html.escape(repr(i))+'</code>'
+        s = '<code>'+html.escape(repr(i))+'</code>'
     return '''<table bgcolor="#cc7777"><tr><td><b>%s</b> instance</td></tr>
               <tr bgcolor="#ff9999"><td>%s</td></tr>
               </table>
@@ -268,33 +268,33 @@ class Presentation(Widget):
 
 
 def htmlFor_hidden(write, name, value):
-    write('<INPUT TYPE="hidden" NAME="%s" VALUE="%s">' % (name, value))
+    write('<INPUT TYPE="hidden" NAME="%s" VALUE="%s" />' % (name, value))
 
 def htmlFor_file(write, name, value):
-    write('<INPUT SIZE=60 TYPE="file" NAME="%s">' % name)
+    write('<INPUT SIZE="60" TYPE="file" NAME="%s" />' % name)
 
 def htmlFor_string(write, name, value):
-    write('<INPUT SIZE=60 TYPE="text" NAME="%s" VALUE="%s">' % (name, value))
+    write('<INPUT SIZE="60" TYPE="text" NAME="%s" VALUE="%s" />' % (name, value))
 
 def htmlFor_password(write, name, value):
-    write('<INPUT SIZE=60 TYPE="password" NAME=%s>' % name)
+    write('<INPUT SIZE="60" TYPE="password" NAME="%s" />' % name)
 
 def htmlFor_text(write, name, value):
-    write('<TEXTAREA COLS="60" ROWS="10" NAME="%s" WRAP="virtual">%s</textarea>' % (name, value))
+    write('<textarea COLS="60" ROWS="10" NAME="%s" WRAP="virtual">%s</textarea>' % (name, value))
 
 def htmlFor_menu(write, name, value, allowMultiple=False):
     "Value of the format [(optionName, displayName[, selected]), ...]"
 
-    write('  <SELECT NAME="%s"%s>\n' %
+    write('  <select NAME="%s"%s>\n' %
           (name, (allowMultiple and " multiple") or ''))
 
     for v in value:
         optionName, displayName, selected = util.padTo(3, v)
         selected = (selected and " selected") or ''
-        write('    <OPTION VALUE="%s"%s>%s</option>\n' %
+        write('    <option VALUE="%s"%s>%s</option>\n' %
               (optionName, selected, displayName))
     if not value:
-        write('    <OPTION VALUE=""></option>\n')
+        write('    <option VALUE=""></option>\n')
     write("  </select>\n")
 
 def htmlFor_multimenu(write, name, value):
@@ -304,16 +304,16 @@ def htmlFor_multimenu(write, name, value):
 def htmlFor_checkbox(write, name, value):
     "A checkbox."
     if value:
-        value = 'checked'
+        value = 'checked = "1"'
     else:
         value = ''
-    write('<INPUT TYPE="checkbox" NAME="__checkboxes__" VALUE="%s" %s>\n' % (name, value))
+    write('<INPUT TYPE="checkbox" NAME="__checkboxes__" VALUE="%s" %s />\n' % (name, value))
 
 def htmlFor_checkgroup(write, name, value):
     "A check-group."
     for optionName, displayName, checked in value:
-        checked = (checked and 'checked') or ''
-        write('<INPUT TYPE="checkbox" NAME="%s" VALUE="%s" %s>%s<br>\n' % (name, optionName, checked, displayName))
+        checked = (checked and 'checked = "1"') or ''
+        write('<INPUT TYPE="checkbox" NAME="%s" VALUE="%s" %s />%s<br />\n' % (name, optionName, checked, displayName))
 
 class FormInputError(Exception):
     pass
@@ -472,8 +472,8 @@ class Form(StreamWidget):
     def format(self, form, write, request):
         """I display an HTML FORM according to the result of self.getFormFields.
         """
-        write('<FORM ENCTYPE="multipart/form-data" METHOD="post" ACTION="%s">\n'
-              '<TABLE BORDER="0">\n' % (self.actionURI or request.uri))
+        write('<form ENCTYPE="multipart/form-data" METHOD="post" ACTION="%s">\n'
+              '<table BORDER="0">\n' % (self.actionURI or request.uri))
 
         for field in form:
             if len(field) == 5:
@@ -481,22 +481,22 @@ class Form(StreamWidget):
             else:
                 inputType, displayName, inputName, inputValue = field
                 description = ""
-            write('<TR>\n<TD ALIGN="right" VALIGN="top"><B>%s</b></td>\n'
-                  '<TD VALIGN="%s">\n' %
+            write('<tr>\n<td ALIGN="right" VALIGN="top"><B>%s</B></td>\n'
+                  '<td VALIGN="%s">\n' %
                   (displayName, ((inputType == 'text') and 'top') or 'middle'))
             self.formGen[inputType](write, inputName, inputValue)
-            write('\n<br>\n<font size="-1">%s</font></td>\n</tr>\n' % description)
+            write('\n<br />\n<font size="-1">%s</font></td>\n</tr>\n' % description)
 
 
-        write('<TR><TD></TD><TD ALIGN="left"><hr>\n')
+        write('<tr><td></td><td ALIGN="left"><hr />\n')
         for submitName in self.submitNames:
-            write('<INPUT TYPE="submit" NAME="submit" VALUE="%s">\n' % submitName)
+            write('<INPUT TYPE="submit" NAME="submit" VALUE="%s" />\n' % submitName)
         write('</td></tr>\n</table>\n'
-              '<INPUT TYPE="hidden" NAME="__formtype__" VALUE="%s">\n'
+              '<INPUT TYPE="hidden" NAME="__formtype__" VALUE="%s" />\n'
               % (str(self.__class__)))
         fid = self.getFormID()
         if fid:
-            write('<INPUT TYPE="hidden" NAME="__formid__" VALUE="%s">\n' % fid)
+            write('<INPUT TYPE="hidden" NAME="__formid__" VALUE="%s" />\n' % fid)
         write("</form>\n")
 
     def getFormID(self):
@@ -530,7 +530,7 @@ class Form(StreamWidget):
         The remainder of my arguments must be correctly named.  They will each be named after one of the
 
         """
-        write("Submit: %s <br> %s" % (submit, html.PRE(pprint.PrettyPrinter().pformat(kw))))
+        write("<pre>Submit: %s <br /> %s</pre>" % (submit, html.PRE(pprint.PrettyPrinter().pformat(kw))))
 
     def _doProcess(self, form, write, request):
         """(internal) Prepare arguments for self.process.
@@ -580,7 +580,7 @@ class Form(StreamWidget):
 
         By default, this will make the message appear in red, bold italics.
         """
-        return '<FONT COLOR=RED><B><I>%s</i></b></font><br>\n' % error
+        return '<font COLOR=RED><B><I>%s</i></b></font><br />\n' % error
 
     def shouldProcess(self, request):
         args = request.args
