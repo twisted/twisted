@@ -36,6 +36,13 @@ Future Plans:
 Maintainer: U{Itamar Shtull-Trauring<mailto:twisted@itamarst.org>}
 """
 
+# If something goes wrong, most notably an OpenSSL import failure,
+# sys.modules['twisted.internet.ssl'] will be bound to a partially
+# initialized module object.  This is wacko, but we will take advantage
+# of it to publish whether or not SSL is available.
+# See the end of this module for the other half of this solution.
+supported = False
+
 # System imports
 from OpenSSL import SSL
 import socket
@@ -178,3 +185,5 @@ class Connector(base.BaseConnector):
         return ('SSL', self.host, self.port)
 
 __all__ = ["ContextFactory", "DefaultOpenSSLContextFactory", "ClientContextFactory"]
+
+supported = True
