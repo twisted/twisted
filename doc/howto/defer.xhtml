@@ -57,7 +57,8 @@ and network access all fall into this class, although the time delay varies.
 </p>
 
 <p>
-The basic idea behind Deferreds, and other solutions to this problem, is to keep the CPU active as much as possible.
+The basic idea behind Deferreds, and other solutions to this
+problem, is to keep the CPU as active as possible.
 If one task is waiting on data, rather than have the CPU (and the program!)
 idle waiting for that data (a process normally called &quot;blocking&quot;), the program performs other operations in the
 meantime, and waits for some signal that data is ready to be processed before
@@ -66,7 +67,7 @@ returning to that process.
 
 <p>
 In Twisted, a function signals to the calling function that it is waiting by
-returning a Deferred. When that data is available, the program activates
+returning a Deferred. When the data is available, the program activates
 the callbacks on that Deferred to process the data.
 </p>
 
@@ -94,7 +95,7 @@ print g.getData(3)
 
 <h3>Don't Call Us, We'll Call You</h3>
 
-<p>Twisted can not support blocking calls in most of its code, since it is
+<p>Twisted cannot support blocking calls in most of its code, since it is
 single threaded, and event based.  The solution for this issue is to refactor
 the code, so that instead of blocking until data is available, we return
 immediately, and use a callback to notify the requester once the data
@@ -121,7 +122,7 @@ reactor.run()
 
 <p>There are several things missing in this simple example.  There is no way
 to know if the data never comes back; no mechanism for handling errors.  The
-example does not handle a multiple callback functions, nor does it give a
+example does not handle multiple callback functions, nor does it give a
 method to merge arguments before and after execution.  Further, there is no
 way to distinguish between different calls to gotData from different
 producer objects. <code>Deferred</code> solves these problems, by creating 
@@ -399,7 +400,7 @@ for its use.</p>
   <code class="py-prototype">addCallbacks(self, callback[, errback, callbackArgs,
   errbackArgs, errbackKeywords, asDefaults])</code> 
   
-  <p>This is the method with which you will use to interact
+  <p>This is the method you will use to interact
   with Deferred. It adds a pair of callbacks <q>parallel</q> to
   each other (see diagram above) in the list of callbacks
   made when the Deferred is called back to. The signature of
@@ -528,8 +529,8 @@ manually, there is also a convenience method to help you.</p>
 
 <h3>A Brief Interlude: Technical Details</h3>
 
-<p>While deferreds greatly simplify the process of writing asynchronous code by
-providing a standard for registering callbacks, there are some subtle and
+<p>Deferreds greatly simplify the process of writing asynchronous code by
+providing a standard for registering callbacks, but there are some subtle and
 sometimes confusing rules that you need to follow if you are going to use
 them. This mostly applies to people who are writing new systems that use
 Deferreds internally, and not writers of applications that just add callbacks
@@ -588,10 +589,10 @@ In some applications, there are functions that might be either asynchronous or
 synchronous. For example, a user authentication function might be able to
 check in memory whether a user is authenticated, allowing the authentication
 function to return an immediate result, or it may need to wait on
-network data, in which case the programmer will return a Deferred to be fired
+network data, in which case it should return a Deferred to be fired
 when that data arrives. However, a function that wants to check if a user is
-authenticated will then need to be able to deal with immediate results and
-with Deferreds.
+authenticated will then need to accept both immediate results <em> and</em>
+Deferreds.
 </p>
 
 <p>
@@ -712,9 +713,9 @@ def immediateIsValidUser(d, user):
 <h2>DeferredList</h2>
 
 <p>Sometimes you want to be notified after several different events have all
-happened, rather than individually waiting for each one.  For example, you may
+happened, rather than waiting for each one individually.  For example, you may
 want to wait for all the connections in a list to close.  <code
-	class="API">twisted.internet.defer.DeferredList</code> is the way to do
+class="API">twisted.internet.defer.DeferredList</code> is the way to do
 this.</p>
 
 <p>To create a DeferredList from multiple Deferreds, you simply pass a list of
@@ -823,3 +824,4 @@ DeferredList is confusing and usually avoided.</span>.</p>
 
 </body>
 </html>
+
