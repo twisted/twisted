@@ -27,7 +27,7 @@ Description: Event-based framework for internet applications. (dummy package)
 Package: python2.1-twisted
 Architecture: all
 Depends: python2.1, python2.1-twisted-bin
-Suggests: python2.1-pyopenssl, twisted-doc, python2.1-crypto
+Suggests: python2.1-pyopenssl, twisted-doc, python2.1-twisted-conch
 Conflicts: twisted (<= 0.15.5-1)
 Description: Event-based framework for internet applications. (Python 2.1)
  It includes a web server, a telnet server, a multiplayer RPG engine, a 
@@ -51,7 +51,7 @@ Description: Event-based framework for internet applications
 Package: python2.2-twisted
 Architecture: all
 Depends: python2.2, python2.2-twisted-bin
-Suggests: python2.2-pyopenssl, twisted-doc, python2.2-crypto
+Suggests: python2.2-pyopenssl, twisted-doc, python2.2-twisted-conch
 Replaces: python2.1-twisted
 Conflicts: twisted (<< 0.99.0)
 Description: Event-based framework for internet applications.
@@ -75,7 +75,7 @@ Description: Event-based framework for internet applications
 Package: python2.3-twisted
 Architecture: all
 Depends: python2.3, python2.3-twisted-bin
-Suggests: python2.3-pyopenssl, twisted-doc, python2.3-crypto
+Suggests: python2.3-pyopenssl, twisted-doc, python2.3-twisted-conch
 Description: Event-based framework for internet applications.
  It includes a web server, a telnet server, a multiplayer RPG engine, a 
  generic client and server for remote object access, and APIs for creating 
@@ -107,3 +107,38 @@ Depends: fortune-mod
 Description: Quotes from the Twisted development team
  Quotes about programming, politics and anything else. Gathered by the
  Twisted development team from IRC and e-mail.
+
+Package: python2.1-twisted-conch
+Architecture: all
+Depends: python2.1, python2.1-twisted, python2.1-crypto
+Description: The Twisted SSH Implementation (for Python 2.1)
+ A client/server implementation of the SSH protocol, using the
+ twisted framework
+ . 
+ This version is usable with python2.1
+
+Package: python2.2-twisted-conch
+Architecture: all
+Depends: python2.2, python2.2-twisted, python2.2-crypto
+Description: The Twisted SSH Implementation (for Python 2.2)
+ A client/server implementation of the SSH protocol, using the
+ twisted framework
+ . 
+ This version is usable with python2.2
+
+Package: python2.3-twisted-conch
+Architecture: all
+Depends: python2.3, python2.3-twisted, python2.3-crypto
+Description: The Twisted SSH Implementation (for Python 2.3)
+ A client/server implementation of the SSH protocol, using the
+ twisted framework
+ . 
+ This version is usable with python2.3
+
+Package: python-twisted-conch
+Architecture: all
+Depends: python2.2-twisted-conch
+Provides: conch
+Description: The Twisted SSH Implementation (default python version)
+ A client/server implementation of the SSH protocol, using the
+ twisted framework
