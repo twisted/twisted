@@ -30,6 +30,7 @@ from twisted.protocols import pop3
 from twisted.internet import protocol
 from twisted.test.test_protocols import StringIOWithoutClosing
 from twisted.protocols import loopback
+from twisted.python import failure
 import StringIO, string
 
 class MyVirtualPOP3(mail.protocols.VirtualPOP3):
@@ -148,6 +149,7 @@ Someone set up us the bomb!\015
             #print `self.output.getvalue()`
             #print `self.expectedOutput`
             raise AssertionError(self.output.getvalue(), self.expectedOutput)
+        protocol.connectionLost(failure.Failure(Exception()))
 
     def testLoopback(self):
         protocol =  MyVirtualPOP3()
@@ -155,6 +157,7 @@ Someone set up us the bomb!\015
         clientProtocol = MyPOP3Downloader()
         loopback.loopback(protocol, clientProtocol)
         self.failUnlessEqual(clientProtocol.message, self.message)
+        protocol.connectionLost(failure.Failure(Exception()))
 
 
 class DummyPOP3(pop3.POP3):
@@ -213,6 +216,8 @@ QUIT''', '\n')
         self.failUnlessEqual(expected_output, a.getvalue(),
                              "\nExpected:\n%s\nResults:\n%s\n"
                              % (expected_output, a.getvalue()))
+        dummy.connectionLost(failure.Failure(Exception()))
+                             
 
     def testBuffer(self):
         lines = string.split('''\
@@ -231,3 +236,35 @@ QUIT''', '\n')
         lines = ['APOP spiv dummy', 'NOOP', 'QUIT']
         expected_output = '+OK <moshez>\r\n+OK Authentication succeeded\r\n+OK \r\n+OK \r\n'
         self.runTest(lines, expected_output)
+
+
+class CapabilityTestCase(unittest.TestCase):
+    def setUp(self):
+        self.caps = pop3.POP3().listCapabilities()
+        
+        # Protocol-level CAPA response
+        p = pop3.POP3()
+        p.transport = StringIO.StringIO()
+        p.do_CAPA()
+        self.pcaps = p.transport.getvalue().splitlines()
+
+    def testUIDL(self):
+        self.assertIn("UIDL", self.caps)
+        self.assertIn("UIDL", self.pcaps)
+        
+    def testTOP(self):
+        self.assertIn("TOP", self.caps)
+        self.assertIn("TOP", self.pcaps)
+    
+    def testUSER(self):
+        self.assertIn("USER", self.caps)
+        self.assertIn("USER", self.pcaps)
+    
+    def testEXPIRE(self):
+        self.assertIn("EXPIRE %d" % (pop3.POP3.timeOut,), self.caps)
+        self.assertIn("EXPIRE %d" % (pop3.POP3.timeOut,), self.pcaps)
+    
+    def testIMPLEMENTATION(self):
+        self.assertIn("IMPLEMENTATION %s" % (pop3.longversion,), self.caps)
+        self.assertIn("IMPLEMENTATION %s" % (pop3.longversion,), self.pcaps)
+        

@@ -31,6 +31,7 @@ import md5
 
 from twisted.copyright import longversion
 from twisted.protocols import basic
+from twisted.protocols import policies
 from twisted.internet import protocol
 from twisted.internet import defer
 from twisted.internet import interfaces
@@ -104,7 +105,7 @@ class _HeadersPlusNLines:
 class POP3Error(Exception):
     pass
 
-class POP3(basic.LineReceiver):
+class POP3(basic.LineReceiver, policies.TimeoutMixin):
 
     __implements__ = (interfaces.IProducer,)
 
@@ -119,16 +120,23 @@ class POP3(basic.LineReceiver):
     # through.
     portal = None
     
+    # Set this pretty low -- POP3 clients are expected to log in, download
+    # everything, and log out.
+    timeOut = 300
+    
     def connectionMade(self):
         if self.magic is None:
             self.magic = '<%s>' % time.time()
         self.mbox = None
         self.successResponse(self.magic)
+        self.setTimeout(self.timeOut)
         log.msg("New connection from " + str(self.transport.getPeer()))
 
     def connectionLost(self, reason):
         if self._onLogout is not None:
             self._onLogout()
+            self._onLogout = None
+        self.setTimeout(None)
 
     def successResponse(self, message=''):
         self.sendLine('+OK ' + str(message))
@@ -137,6 +145,7 @@ class POP3(basic.LineReceiver):
         self.sendLine('-ERR ' + str(message))
 
     def lineReceived(self, line):
+        self.resetTimeout()
         try:
             return self.processCommand(*line.split())
         except (ValueError, AttributeError, POP3Error, TypeError), e:
@@ -156,12 +165,22 @@ class POP3(basic.LineReceiver):
         return longversion
 
     def listCapabilities(self):
-        return [
+        baseCaps = [
             "TOP",
             "USER",
             "UIDL",
-            # "IMPLEMENTATION " + self.getVersionString(),
         ]
+        
+        extCaps = [
+            ("EXPIRE", lambda: self.timeOut),
+            ("IMPLEMENTATION", self.getVersionString)
+        ]
+        
+        for (c, f) in  extCaps:
+            v = f()
+            if v:
+                baseCaps.append("%s %s" % (c, v))
+        return baseCaps
 
     def do_CAPA(self):
         map(self.sendLine, self.listCapabilities())
