@@ -1,15 +1,15 @@
 # Twisted, the Framework of Your Internet
 # Copyright (C) 2001 Matthew W. Lefkowitz
-# 
+#
 # This library is free software; you can redistribute it and/or
 # modify it under the terms of version 2.1 of the GNU Lesser General Public
 # License as published by the Free Software Foundation.
-# 
+#
 # This library is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
 # Lesser General Public License for more details.
-# 
+#
 # You should have received a copy of the GNU Lesser General Public
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
@@ -21,12 +21,15 @@ import re
 from cStringIO import StringIO
 
 # Twisted Imports
-from twisted.python import defer, rebuild, reflect, failure, log
+from twisted.python import defer, failure, log, rebuild, reflect, util
 from twisted.protocols import http
 
 # Sibling Imports
 import html, resource, error
 from server import NOT_DONE_YET
+
+True = (1==1)
+False = not True
 
 """A twisted web component framework.
 """
@@ -279,14 +282,24 @@ def htmlFor_password(write, name, value):
 def htmlFor_text(write, name, value):
     write('<TEXTAREA COLS="60" ROWS="10" NAME="%s" WRAP="virtual">%s</textarea>' % (name, value))
 
-def htmlFor_menu(write, name, value):
-    "Value of the format [(optionName, displayName), ...]"
-    write('  <SELECT NAME="%s">\n' % name)
-    for optionName, displayName in value:
-        write('    <OPTION VALUE="%s">%s</option>\n' % (optionName, displayName))
+def htmlFor_menu(write, name, value, allowMultiple=False):
+    "Value of the format [(optionName, displayName[, selected]), ...]"
+
+    write('  <SELECT NAME="%s"%s>\n' %
+          (name, (allowMultiple and " multiple") or ''))
+
+    for v in value:
+        optionName, displayName, selected = util.padTo(3, v)
+        selected = (selected and " selected") or ''
+        write('    <OPTION VALUE="%s"%s>%s</option>\n' %
+              (optionName, selected, displayName))
     if not value:
         write('    <OPTION VALUE=""></option>\n')
     write("  </select>\n")
+
+def htmlFor_multimenu(write, name, value):
+    "Value of the format [(optionName, displayName[, selected]), ...]"
+    return htmlFor_menu(write, name, value, True)
 
 def htmlFor_checkbox(write, name, value):
     "A checkbox."
@@ -337,6 +350,7 @@ class Form(StreamWidget):
         'int': htmlFor_string,
         'text': htmlFor_text,
         'menu': htmlFor_menu,
+        'multimenu': htmlFor_multimenu,
         'password': htmlFor_password,
         'checkbox': htmlFor_checkbox,
         'checkgroup': htmlFor_checkgroup
@@ -370,6 +384,8 @@ class Form(StreamWidget):
           * 'text': a longer text field, suitable for entering paragraphs
 
           * 'menu': an HTML SELECT input, a list of choices
+
+          * 'multimenu': an HTML SELECT input allowing multiple choices
 
           * 'checkgroup': a group of checkboxes
 
@@ -441,7 +457,7 @@ class Form(StreamWidget):
                     inputValue.append([optionName, optionDisplayName, checked])
             elif request.args.has_key(inputName):
                 iv = request.args[inputName][0]
-                if inputType == 'menu':
+                if inputType in ['menu', 'multimenu']:
                     if iv in inputValue:
                         inputValue.remove(iv)
                         inputValue.insert(0, iv)
@@ -458,7 +474,7 @@ class Form(StreamWidget):
         """
         write('<FORM ENCTYPE="multipart/form-data" METHOD="post" ACTION="%s">\n'
               '<TABLE BORDER="0">\n' % (self.actionURI or request.uri))
-  
+
         for field in form:
             if len(field) == 5:
                 inputType, displayName, inputName, inputValue, description = field
@@ -471,7 +487,6 @@ class Form(StreamWidget):
             self.formGen[inputType](write, inputName, inputValue)
             write('\n<br>\n<font size="-1">%s</font></td>\n</tr>\n' % description)
 
-                 
 
         write('<TR><TD></TD><TD ALIGN="left"><hr>\n')
         for submitName in self.submitNames:
@@ -532,7 +547,7 @@ class Form(StreamWidget):
                         formData = 0
                 else:
                     formData = 0
-            elif inputType == 'checkgroup':
+            elif inputType in ['checkgroup', 'multimenu']:
                 if args.has_key(inputName):
                     formData = args[inputName]
                     del args[inputName]
@@ -656,7 +671,7 @@ class RenderSession:
 
     class Sentinel:
         pass
-    
+
     def __init__(self, lst, request):
         self.lst = lst
         self.request = request
@@ -905,7 +920,7 @@ class Gadget(resource.Resource):
         Add a static path to this Gadget. This method is obsolete, use
         Gadget.putPath instead.
         """
-        
+
         print "Gadget.addFile() is deprecated."
         self.paths[path] = path
 
@@ -952,7 +967,7 @@ class Gadget(resource.Resource):
             if prefix:
                 prefix = os.path.abspath(os.path.dirname(prefix))
             return static.File(os.path.join(prefix, self.paths[path]))
-        
+
         elif path == '__reload__':
             return self.pageFactory(Reloader(map(reflect.namedModule, [self.__module__] + self.modules)))
         else:
