@@ -83,7 +83,7 @@ pyPow = pow
 def _fastgetMP(i):
     l = struct.unpack('!L', i[:4])[0]
     n = i[4:l+4][::-1]
-    return long(gmpy.mpz(n, 256)), i[4+l:]
+    return long(gmpy.mpz(n+'\x00', 256)), i[4+l:]
 
 def _fastMP(i):
     i2 = gmpy.mpz(i).binary()[::-1]
