@@ -436,10 +436,9 @@ class Site(http.HTTPFactory):
     def buildProtocol(self, addr):
         """Generate a channel attached to this site.
         """
-        channel = http.HTTPChannel()
+        channel = http.HTTPFactory.buildProtocol(self, addr)
         channel.requestFactory = Request
         channel.site = self
-        channel.factory = self
         return channel
 
     isLeaf = 0
