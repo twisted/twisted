@@ -46,7 +46,7 @@ class ThreadPool:
     __inited = 0
     synchronized = ['_startSomeWorkers', 'stop']
     
-    def __init__(self, minthreads=5, maxthreads=20, qlen=1000):
+    def __init__(self, minthreads=5, maxthreads=20, qlen=0):
         assert minthreads <= maxthreads, 'minimum is greater than maximum'
         self.q = Queue.Queue(qlen)
         self.max = maxthreads
