@@ -95,15 +95,10 @@ $ Twisted/admin/runtests
     <p>One deviation from the standard PyUnit documentation: To ensure
     that any variations in test results are due to variations in the
     code or environment and not the test process itself, Twisted ships
-    with its own copy of the PyUnit testing framework.  That just
+    with its own, compatible, testing framework.  That just
     means that when you import the unittest module, you will <code
-    class= "python" >from pyunit import unittest</code> instead of the
+    class= "python" >from twisted.trial import unittest</code> instead of the
     standard <code class="python">import unittest</code>.</p>
-
-    <p>(Now that unittest has been in the Python standard library
-    for several releases, I'm even less convinced of this argument
-    than before, but doesn't add more than a second or two to download
-    time, so I don't worry it too much.)</p>
 
     <p>As long as you have followed the module naming and placement
     conventions, <code class="shell">runtests</code> will be smart
