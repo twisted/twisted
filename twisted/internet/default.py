@@ -1,5 +1,5 @@
 # -*- Python -*-
-# $Id: default.py,v 1.21 2002/07/26 03:57:25 itamarst Exp $
+# $Id: default.py,v 1.22 2002/07/26 12:52:03 glyph Exp $
 #
 # Twisted, the Framework of Your Internet
 # Copyright (C) 2001 Matthew W. Lefkowitz
@@ -166,7 +166,8 @@ class PosixReactorBase(ReactorBase):
         """See twisted.internet.interfaces.IReactorUNIX.clientUNIX
         """
         import warnings
-        warnings.warn("clientUNIX is deprecated - use startConnectUNIX instead.", stacklevel=2)
+        warnings.warn("clientUNIX is deprecated - use startConnectUNIX instead.",
+                      category=DeprecationWarning, stacklevel=2)
         connector = FakeConnector(protocol, self)
         connecting = self.startConnectUNIX(address, connector)
         connector.doTimeout(connecting, timeout)
@@ -197,7 +198,8 @@ class PosixReactorBase(ReactorBase):
         """See twisted.internet.interfaces.IReactorTCP.clientTCP
         """
         import warnings
-        warnings.warn("clientTCP is deprecated - use startConnectTCP instead.", stacklevel=2)
+        warnings.warn("clientTCP is deprecated - use startConnectTCP instead.",
+                      category=DeprecationWarning, stacklevel=2)
         connector = FakeConnector(protocol, self)
         connecting = self.startConnectTCP(host, port, connector)
         connector.doTimeout(connecting, timeout)
@@ -221,7 +223,8 @@ class PosixReactorBase(ReactorBase):
         """See twisted.internet.interfaces.IReactorSSL.clientSSL
         """
         import warnings
-        warnings.warn("clientSSL is deprecated - use startConnectSSL instead.", stacklevel=2)
+        warnings.warn("clientSSL is deprecated - use startConnectSSL instead.",
+                      category=DeprecationWarning, stacklevel=2)
         connector = FakeConnector(protocol, self)
         connecting = self.startConnectSSL(host, port, contextFactory, connector)
         connector.doTimeout(connecting, timeout)
