@@ -59,18 +59,30 @@ class TestNNTPClient(nntp.NNTPClient):
         self.assertEquals(info[0], ALL_GROUPS)
         
         self.fetchGroup('alt.test.nntp')
+    
+    
+    def getAllGroupsFailed(self, error):
+        raise AssertionError("fetchGroups() failed: %s" % (error,))
+
 
     def gotGroup(self, info):
         self.assertEquals(len(info), 6)
         self.assertEquals(info, GROUP)
         
         self.postArticle(string.replace(POST_STRING, '\n', '\r\n'))
+    
+    
+    def getGroupFailed(self, error):
+        raise AssertionError("fetchGroup() failed: %s" % (error,))
+
 
     def postFailed(self, err):
-        raise err
+        raise AssertionError("postArticle() failed: %s" % (error,))
 
-    def postOk(self):
+
+    def postedOk(self):
         self.fetchArticle(1)
+
     
     def gotArticle(self, info):
         origBody = POST_STRING.split('\n\n')[1]
@@ -84,6 +96,10 @@ class TestNNTPClient(nntp.NNTPClient):
         
         # We're done
         self.transport.loseConnection()
+    
+    
+    def getArticleFailed(self, error):
+        raise AssertionError("fetchArticle() failed: %s" % (error,))
 
 
 class NNTPTestCase(unittest.TestCase):

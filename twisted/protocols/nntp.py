@@ -62,6 +62,16 @@ def parseRange(text):
             return None, None
     return l, h
 
+
+def extractCode(line):
+    line = line.split(' ', 1)
+    if len(line) != 2:
+        return None
+    try:
+        return int(line[0]), line[1]
+    except ValueError:
+        return None
+
     
 class NNTPError(Exception):
     def __init__(self, string):
@@ -73,12 +83,20 @@ class NNTPError(Exception):
 
 class NNTPClient(basic.LineReceiver):
     # State constants
-    ST_INITIAL, ST_GROUP, ST_LIST, ST_ARTICLE, ST_HEAD, ST_BODY, ST_POST, ST_POSTED = range(8)
+    ST_INITIAL, ST_GROUP, ST_LIST, ST_ARTICLE, ST_HEAD, ST_BODY, ST_POST, ST_POSTED, \
+    ST_OVERVIEW, ST_SUBSCRIPTIONS, ST_XHDR = range(11)
 
     def __init__(self):
-        self.state = []
-        self.state.append(NNTPClient.ST_INITIAL)
         self.currentGroup = None
+        
+        self._state = []
+        self._error = []
+        self._inputBuffers = []
+        self._responseCodes = []
+        self._responseHandlers = []
+        
+        self._newState(self._statePassive, None, self._headerInitial)
+
 
     def connectionMade(self):
         try:
@@ -88,213 +106,284 @@ class NNTPClient(basic.LineReceiver):
             self.ip = "unknown"
 
 
-    def lineReceived(self, line):
-        if len(self.state):
-            apply(getattr(self, NNTPClient.states[self.state[0]]), (line,))
-        else:
-            self._statePassive(line)
+    def sendLine(self, line):
+        basic.LineReceiver.sendLine(self, line)
 
 
     def gotAllGroups(self, groups):
         "Override for notification when fetchGroups() action is completed"
-        pass
+    
+    
+    def getAllGroupsFailed(self, error):
+        "Override for notification when fetchGroups() action fails"
 
-    def gotGroup(self, info):
+
+    def gotOverview(self, overview):
+        "Override for notification when fetchOverview() action is completed"
+
+
+    def getOverviewFailed(self, error):
+        "Override for notification when fetchOverview() action fails"
+
+
+    def gotSubscriptions(self, subscriptions):
+        "Override for notification when fetchSubscriptions() action is completed"
+
+
+    def getSubscriptionsFailed(self, error):
+        "Override for notification when fetchSubscriptions() action fails"
+
+
+    def gotGroup(self, group):
         "Override for notification when fetchGroup() action is completed"
-        pass
 
-    def gotArticle(self, info):
+
+    def getGroupFailed(self, error):
+        "Override for notification when fetchGroup() action fails"
+
+
+    def gotArticle(self, article):
         "Override for notification when fetchArticle() action is completed"
-        pass
 
-    def gotHead(self, info):
+
+    def getArticleFailed(self, error):
+        "Override for notification when fetchArticle() action fails"
+
+
+    def gotHead(self, head):
         "Override for notification when fetchHead() action is completed"
-        pass
+
+
+    def gotHead(self, error):
+        "Override for notification when fetchHead() action fails"
+
 
     def gotBody(self, info):
         "Override for notification when fetchBody() action is completed"
-        pass
 
-    def postOk(self):
+
+    def getBodyFailed(self, body):
+        "Override for notification when fetchBody() action fails"
+
+
+    def postedOk(self):
         "Override for notification when postArticle() action is successful"
-        pass
+
     
     def postFailed(self, error):
         "Override for notification when postArticle() action fails"
-        pass
+
+
+    def gotXHeader(self, headers):
+        "Override for notification when getXHeader() action is successful"
+    
+    
+    def getXHeaderFailed(self, error):
+        "Override for notification when getXHeader() action fails"
+
 
     def fetchGroups(self):
         log.msg('%s: fetchGroups()' % self.ip)
         self.sendLine('LIST')
-        self.state.append(NNTPClient.ST_LIST)
-        self._groups = None
+        self._newState(self._stateList, self.getAllGroupsFailed)
+
+
+    def fetchOverview(self):
+        log.msg('%s: fetchOverview()' % self.ip)
+        self.sendLine('LIST OVERVIEW.FMT')
+        self._newState(self._stateOverview, self.getOverviewFailed)
+
+
+    def fetchSubscriptions(self):
+        log.msg('%s: fetchSubscriptions()' % self.ip)
+        self.sendLine('LIST SUBSCRIPTIONS')
+        self._newState(self._stateSubscriptions, self.getSubscriptionsFailed)
+
 
     def fetchGroup(self, group):
         log.msg('%s: fetchGroup()' % self.ip)
         self.sendLine('GROUP %s' % group)
-        self.state.append(NNTPClient.ST_GROUP)
+        self._newState(None, self.getGroupFailed, self._headerGroup)
+
 
     def fetchHead(self, index):
         log.msg('%s: fetchHead(%s)' % (self.ip, index))
         self.sendLine('HEAD %d' % index)
-        self.state.append(NNTPClient.ST_HEAD)
-        self._head = None
+        self._newState(self._stateHead, self.getHeadFailed)
+
         
     def fetchBody(self, index):
         log.msg('%s: fetchBody(%s)' % (self.ip, index))
         self.sendLine('BODY %d' % index)
-        self.state.append(NNTPClient.ST_BODY)
-        self._body = None
+        self._newState(self._stateBody, self.getBodyFailed)
+
 
     def fetchArticle(self, index):
         log.msg('%s: fetchArticle(%s)' % (self.ip, index))
         self.sendLine('ARTICLE %d' % index)
-        self.state.append(NNTPClient.ST_ARTICLE)
-        self._article = None
+        self._newState(self._stateArticle, self.getArticleFailed)
+
 
     def postArticle(self, text):
         log.msg('%s: postArticle()')
         self.sendLine('POST')
-        self.state.append(NNTPClient.ST_POST)
+        self._newState(None, self.postFailed, self._headerPost)
         self._postText = text
+
+
+    def fetchXHeader(self, header, low = None, high = None, id = None):
+        log.msg('%s: fetchXHeader()')
+        if message is not None:
+            r = header + ' <%s>' % (id,)
+        elif low is high is None:
+            r = header
+        elif high is None:
+            r = header + ' %d-' % (low,)
+        elif low is None:
+            r = header + ' -%d' % (high,)
+        else:
+            r = header + ' %d-%d' % (low, high)
+        self.sendLine('XHDR ' + r)
+        self._newState(self._stateXHDR, self.getXHeaderFailed)
+
+
+    def _newState(self, method, error, responseHandler = None):
+        self._inputBuffers.append([])
+        self._responseCodes.append(None)
+        self._state.append(method)
+        self._error.append(error)
+        self._responseHandlers.append(responseHandler)
+
+
+    def _endState(self):
+        buf = self._inputBuffers[0]
+        del self._responseCodes[0]
+        del self._inputBuffers[0]
+        del self._state[0]
+        del self._error[0]
+        del self._responseHandlers[0]
+        return buf
+
+
+    def _newLine(self, line, check = 1):
+        if check and line and line[0] == '.':
+            line = '.' + line
+        self._inputBuffers[0].append(line)
+
+
+    def _setResponseCode(self, code):
+        self._responseCodes[0] = code
+    
+    
+    def _getResponseCode(self):
+        return self._responseCodes[0]
+
+
+    def lineReceived(self, line):
+        if not len(self._state):
+            self._statePassive(line)
+        elif self._getResponseCode() is None:
+            code = extractCode(line)
+            if code is None or not (200 <= code[0] < 400):    # An error!
+                self._error[0](line)
+                self._endState()
+            else:
+                self._setResponseCode(code)
+                if self._responseHandlers[0]:
+                    self._responseHandlers[0](code)
+        else:
+            self._state[0](line)
+
 
     def _statePassive(self, line):
         log.msg('Server said: %s' % line)
 
-    def _stateInitial(self, line):
-        l = filter(None, string.split(string.strip(line)))
-        try:
-            status = int(l[0])
-        except ValueError:
-            raise NNTPError('Invalid server response: %s' % l[0])
-        except IndexError:
-            raise NNTPError('Empty server response')
+
+    def _passiveError(self, error):
+        log.err('Passive Error: %s' % (error,))
+
+
+    def _headerInitial(self, (code, message)):
+        if code == 200:
+            self.canPost = 1
         else:
-            if status / 100 != 2:
-                raise NNTPError('Server responded: %s' % line)
-            del self.state[0]
+            self.canPost = 0
+        self._endState()
+
 
     def _stateList(self, line):
-        if self._groups != None:
-            if line == '.':
-                del self.state[0]
-                groups, self._groups = self._groups, None
-                self.gotAllGroups(groups)
-            else:
-                l = filter(None, string.split(string.strip(line)))
-                self._groups.append((l[0], int(l[1]), int(l[2]), l[3]))
-                log.msg('%s: got group: %s' % (self.ip, self._groups[-1]))
+        if line != '.':
+            data = filter(None, line.strip().split())
+            self._newLine((data[0], int(data[1]), int(data[2]), data[3]), 0)
         else:
-            try:
-                x = int(string.split(line)[0])
-                if x / 100 != 2:
-                    del self.state[0]
-                    self.sendLine('501 command parse error')
-                else:
-                    self._groups = []
-            except Exception, e:
-                log.msg('_stateList exception: %s' % e)
-        
-    def _stateGroup(self, line):
-        info = string.split(string.strip(line))
-        if int(info[0]) / 100 != 2:
-            raise NNTPError('Invalid GROUP response: %s' % line)
+            self.gotAllGroups(self._endState())
+
+
+    def _stateOverview(self, line):
+        if line != '.':
+            self._newLine(filter(None, line.strip().split()), 0)
         else:
-            del self.state[0]
-            self.gotGroup(tuple(info[1:]))
+            self.gotOverview(self._endState())
+
+
+    def _stateSubscriptions(self, line):
+        if line != '.':
+            self._newLine(line.strip(), 0)
+        else:
+            self.gotSubscriptions(self._endState())
+
+
+    def _headerGroup(self, (code, line)):
+        self.gotGroup(tuple(line.split()))
+        self._endState()
+
 
     def _stateArticle(self, line):
-        if self._article != None:
-            if line == '.':
-                del self.state[0]
-                article, self._article = self._article, None
-                self.gotArticle(article)
-            else:
-                self._article = self._article + line + '\n'
+        if line != '.':
+            self._newLine(line, 0)
         else:
-            try:
-                x = int(string.split(line)[0])
-                if x / 100 != 2:
-                    del self.state[0]
-                    self.sendLine('501 command parse error')
-                else:
-                    self._article = ''
-            except Exception, e:
-                log.msg('_stateArticle exception: %s' % e)
+            self.gotArticle('\n'.join(self._endState()))
+
 
     def _stateHead(self, line):
-        if self._head != None:
-            if line == '.':
-                del self.state[0]
-                head = self._head
-                self._head = None
-                self.gotHead(head)
-            else:
-                self._head = self._head + line + '\n'
+        if line != '.':
+            self._newLine(line, 0)
         else:
-            try:
-                x = int(string.split(line)[0])
-                if x / 100 != 2:
-                    del self.state[0]
-                    self.sendLine('501 command parse error')
-                else:
-                    self._head = ''
-            except Exception, e:
-                log.msg('_stateHead exception %s' % e)
+            self.gotHead('\n'.join(self._endState()))
+
 
     def _stateBody(self, line):
-        if self._body != None:
-            if line == '.':
-                del self.state[0]
-                body = self._body
-                self._body = None
-                self.gotBody(body)
-            else:
-                self._body = self._body + line + '\n'
+        if line != '.':
+            self._newLine(line, 0)
         else:
-            try:
-                x = int(string.split(line)[0])
-                if x / 100 != 2:
-                    del self.state[0]
-                    self.sendLine('501 command parse error')
-                else:
-                    self._body = ''
-            except Exception, e:
-                log.msg('_stateBody exception %s' % e)
+            self.gotBody('\n'.join(self._endState()))
 
-    def _statePost(self, line):
-        del self.state[0]
-        code = string.split(line)
-        if len(code):
-            code = int(code[0])
-            if code == 340:
-                self.transport.write(self._postText)
-                if self._postText[-2:] != '\r\n':
-                    self.sendLine('\r\n')
-                self.sendLine('.')
-                self.state.append(NNTPClient.ST_POSTED)
-            else:
-                self.postFailed(line)
+
+    def _headerPost(self, (code, message)):
+        if code == 340:
+            self.transport.write(self._postText)
+            if self._postText[-2:] != '\r\n':
+                self.sendLine('\r\n')
+            self.sendLine('.')
+            self._newState(None, self.postFailed, self._headerPosted)
         else:
-            self.postFailed('No response')
+            self.postFailed(line)
+        self._endState()
 
-    def _statePosted(self, line):
-        del self.state[0]
-        code = string.split(line)
-        if len(code):
-            code = int(code[0])
-            if code == 240:
-                self.postOk()
-            else:
-                self.postFailed(line)
 
-    # A function/state for each command we can transmit,
-    # plus the initial state
-    states = (
-        '_stateInitial', '_stateGroup', '_stateList',
-        '_stateArticle', '_stateHead', '_stateBody',
-        '_statePost', '_statePosted'
-    )
+    def _headerPosted(self, (code, message)):
+        if code == 240:
+            self.postedOk()
+        else:
+            self.postFailed('%d %s' % (code, message))
+        self._endState()
+
+
+    def _stateXHDR(self, line):
+        if line != '.':
+            self._newLine(line.split(), 0)
+        else:
+            self._gotXHeader(self._endState())
 
 
 class NNTPServer(NNTPClient):
@@ -334,13 +423,16 @@ class NNTPServer(NNTPClient):
                         self.sendLine('501 command syntax error')
                     except:
                         self.sendLine('503 program fault - command not performed')
+                        raise
                 else:
                     self.sendLine('500 command not recognized')
 
 
-    def do_LIST(self, subcmd = None):
+    def do_LIST(self, subcmd = ''):
+        subcmd = subcmd.strip().lower()
         if subcmd == 'newsgroups':
-            self.sendLine('215 Descriptions in form "group description".')
+            # XXX - this could use a real implementation, eh?
+            self.sendLine('215 Descriptions in form "group description"')
             self.sendLine('.')
         elif subcmd == 'overview.fmt':
             defer = self.factory.backend.overviewRequest()
@@ -350,7 +442,7 @@ class NNTPServer(NNTPClient):
             defer = self.factory.backend.subscriptionRequest()
             defer.addCallbacks(self._gotSubscription, self._errSubscription)
             log.msg('subscriptions')
-        elif subcmd == None:
+        elif subcmd == '':
             defer = self.factory.backend.listRequest()
             defer.addCallbacks(self._gotList, self._errList)
         else:
