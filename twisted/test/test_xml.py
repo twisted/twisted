@@ -138,6 +138,10 @@ alert("I hate you");
         self.assertEquals(microdom.parseString(s, beExtremelyLenient=1).firstChild().toxml(), s)
         s = """<script><![CDATA[lalal]]></script>"""
         self.assertEquals(microdom.parseString(s, beExtremelyLenient=1).firstChild().toxml(), s)
+        s = """<script> // <![CDATA[
+        lalal
+        //]]></script>"""
+        self.assertEquals(microdom.parseString(s, beExtremelyLenient=1).firstChild().toxml(), s)
         
     def testPreserveCase(self):
         s = '<eNcApSuLaTe><sUxor></sUxor><bOrk><w00T>TeXt</W00t></BoRk></EnCaPsUlAtE>'

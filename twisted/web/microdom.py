@@ -35,7 +35,7 @@ Microdom mainly focuses on working with HTML and XHTML.
 from __future__ import nested_scopes
 
 # System Imports
-import copy
+import copy, re
 from cStringIO import StringIO
 
 # Twisted Imports
@@ -621,21 +621,41 @@ class MicroDOMParser(XMLParser):
             return self.elementstack[-1]
         else:
             return None
-        
+
+    COMMENT = re.compile(r"\s*/[/*]\s*")
+    
     def _fixScriptElement(self, el):
+        # this deals with case where there is comment or CDATA inside
+        # <script> tag and we want to do the right thing with it
         if not self.beExtremelyLenient or not len(el.childNodes) == 1:
             return
         c = el.firstChild()
         if isinstance(c, Text):
+            # deal with nasty people who do stuff like:
+            #   <script> // <!--
+            #      x = 1;
+            #   // --></script>
+            # tidy does this, for example.
+            prefix = ""
+            oldvalue = c.value
+            match = self.COMMENT.match(oldvalue)
+            if match:
+                prefix = match.group()
+                oldvalue = oldvalue[len(prefix):]
+            
+            # now see if contents are actual node and comment or CDATA
             try:
-                e = parseString("<a>%s</a>" % c.value).childNodes[0]
+                e = parseString("<a>%s</a>" % oldvalue).childNodes[0]
             except (ParseError, MismatchedTags):
                 return
             if len(e.childNodes) != 1:
                 return
             e = e.firstChild()
             if isinstance(e, (CDATASection, Comment)):
-                el.childNodes = [e]
+                el.childNodes = []
+                if prefix:
+                    el.childNodes.append(Text(prefix))
+                el.childNodes.append(e)
     
     def gotDoctype(self, doctype):
         self._mddoctype = doctype
