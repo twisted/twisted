@@ -47,7 +47,7 @@ def makeContinuation(channel):
     from twisted.internet import reactor
     def continuation(result):
         if hasattr(continuation, 'debug'):
-            print continuation.debug
+            print "Continuation Debug: ", continuation.debug
         reactor.callLater(0, channel.send, result)
     return continuation
 
@@ -103,7 +103,7 @@ def takesContinuation(func):
             r = channel.receive()
             return handleResult(r)
 
-    return doIt
+    #return doIt
 
     # the new.function thing is broken, see
     # http://sourceforge.net/tracker/?group_id=5470&atid=105470&func=detail&aid=692776
@@ -117,6 +117,10 @@ def takesContinuation(func):
     nfsig = (doIt.func_code, globals(), func.__name__)
     if argdef:
         nfsig += (argdef,)
+    else:
+        nfsig += ((),)
+    nfsig += (func.func_closure or doIt.func_closure,)
+    #print "creating with", nfsig, len(nfsig)
     r = new.function(*nfsig)
     return r
 
@@ -134,10 +138,9 @@ def blockOn(cont, deferred):
 blockOn = takesContinuation(blockOn)
 
 
-def sleep(cont, seconds):
-    cont.debug = "SLEEP"
+def sleep(cont, seconds, value=None):
     from twisted.internet import reactor
-    reactor.callLater(seconds, cont)
+    reactor.callLater(seconds, cont, value)
 
 sleep = takesContinuation(sleep)
 
@@ -155,10 +158,7 @@ class Scheduler:
         channel = stackless.channel()
         self.taskletChannels[id(t)] = channel
         try:
-            try:
-                f(*args, **kwargs)
-            except:
-                log.err()
+            f(*args, **kwargs)
         finally:
             del self.taskletChannels[id(t)]
 

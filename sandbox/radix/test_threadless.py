@@ -49,12 +49,25 @@ class StacklessTester(unittest.TestCase):
         self.expectedAssertions = 1
         def waiter():
             now = time.time()
-            print "TIME TIME"
             threadless.sleep(0.2)
-            print "HEY HEY"
             self.assert_(time.time() - now > 0.1)
         threadless.theScheduler.callInTasklet(waiter)
         self.runReactor(1, seconds=True)
+
+
+    def testImmediateReturn(self):
+        """
+        This test probably isn't that useful...
+        """
+        self.expectedAssertions = 1
+        def harness():
+            def immediatelyReturn(cont):
+                cont(1)
+            immediatelyReturn = threadless.takesContinuation(immediatelyReturn)
+            self.assert_(True)
+        threadless.theScheduler.callInTasklet(harness)
+        self.runReactor(5)
+
 
 try:
     import stackless
