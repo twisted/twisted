@@ -1,3 +1,11 @@
+2003-04-22  Bob Ippolito <bob@redivi.com>
+
+	* twisted/python/compat.py: Complete iter implementation with
+	__getitem__ hack for 2.1.  dict now supports the full 2.3 featureset.
+
+	* twisted/test/test_compat.py: Tests for compat module, so we know if
+	it works or not now ;)
+	
 2003-04-22  Andrew Bennetts  <spiv@twistedmatrix.com>
 
 	* twisted/lore/latex.py: Handle cross-references and labels slightly

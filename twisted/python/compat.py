@@ -22,25 +22,57 @@ This is mainly for use of internal Twisted code. We encourage you to use
 the latest version of Python directly from your code, if possible.
 """
 
-import socket, struct, __builtin__
+import types, socket, struct, __builtin__
 
+_dict_doc = (
+    """dict() -> new empty dictionary.
+    dict(mapping) -> new dictionary initialized from a mapping object's
+        (key, value) pairs.
+    dict(seq) -> new dictionary initialized as if via:
+        d = {}
+        for k, v in seq:
+            d[k] = v
+    dict(**kwargs) -> new dictionary initialized with the name=value pairs
+        in the keyword argument list.  For example:  dict(one=1, two=2)
+    """)
 
 # Python 2.1 forward-compatibility hacks
 try:
-    dict = dict
+    _dict = dict
+    d = dict((('a','b'),), c='d')
 except NameError:
-    def dict(args):
+    # Python 2.1
+    def dict(*arg, **kwargs):
         r = {}
-        for (k, v) in args:
+        if arg:
+            assert len(arg) == 1
+            arg = arg[0]
+            if hasattr(arg, 'items'):
+                r.update(arg)
+            else:
+                for k, v in arg:
+                    r[k] = v
+        for k, v in kwargs.items():
             r[k] = v
         return r
+    dict.__doc__ = _dict_doc
+except TypeError:
+    def dict(*arg, **kwargs):
+        d = _dict(*arg)
+        d.update(kwargs)
+        return d
+    dict.__doc__ = _dict_doc
+else:
+    # Python 2.3+
+    dict = dict
 
-import types
+
+# This actually injects StringTypes into types!
+# is this proper twisted.compat behavior??
 try:
     types.StringTypes
 except AttributeError:
     types.StringTypes = (types.StringType, types.UnicodeType)
-
 
 try:
     bool = bool
@@ -58,27 +90,94 @@ except NameError:
     False = not True
 
 try:
-   StopIteration = StopIteration
-   iter = iter
+    StopIteration = StopIteration
+    iter = iter
 except:
-   class StopIteration(Exception): pass
-   class _ListIterator:
-       def __init__(self,lst):
-           self.idx = 0
-           if getattr(lst,'keys',None): lst = lst.keys()
-           self.lst = lst
-       def next(self):
-           idx = self.idx
-           self.idx += 1
-           try:
-               return self.lst[idx]
-           except IndexError: 
-               raise StopIteration
-   def iter(lst): 
-       if hasattr(lst,'__iter__'):
-           return lst.__iter__()
-       else:
-           return _ListIterator(lst)
+    class StopIteration(Exception):
+        """Signal the end from iterator.next()."""
+        pass
+
+    class _SequenceIterator:
+        """
+        Facilitates implicit sequence/dict iterability
+        """
+        def __init__(self, seq):
+            self.idx = 0
+            # dictionary behavior
+            if hasattr(seq, 'keys'):
+                seq = seq.keys()
+            self.seq = seq
+
+        def __iter__(self):
+            return self
+
+        def next(self):
+            idx = self.idx
+            self.idx += 1
+            try:
+                return self.lst[idx]
+            except IndexError: 
+                raise StopIteration
+
+    class _CompatIterator:
+        """
+        Facilitates for x in iter(iterable)
+        """
+        def __init__(self, iterable):
+            self.iterable = iterable
+
+        def next(self):
+            return self.iterable.next()
+
+        def __getitem__(self, index):
+            try:
+                return self.next()
+            except StopIteration, s:
+                raise IndexError, s
+
+    class _CompatSentinelIterator(_CompatIterator):
+        """
+        Facilitates for x in iter(callable, sentinel)
+        """
+        def __init__(self, callable, sentinel):
+            self.callable = callable
+            self.sentinel = sentinel
+
+        def next(self):
+            res = self.iterable()
+            if res == self.sentinel:
+                raise StopIteration
+            return res
+    
+    def _iter(iterable):
+        if isinstance(iterable, _CompatIterator):
+            # already iterable
+            return iterable
+        if not hasattr(iterable, '__iter__'):
+            # implicit iteration, dependent on sequence or dict behavior
+            iterable = _SequenceIterator(lst)
+        return _CompatIterator(iterable.__iter__())
+
+    def _iter_sentinel(callable, sentinel):
+        if not callable(callable):
+            raise TypeError, 'iter(v, w): v must be callable'
+        return _CompatSentinelIterator(callable, sentinel)
+
+    def iter(*args): 
+        """
+        iter(collection) -> iterator
+        iter(callable, sentinel) -> iterator
+
+        Get an iterator from an object.  In the first form, the argument must
+        supply its own iterator, or be a sequence.
+        In the second form, the callable is called until it returns the sentinel.
+        """
+        if len(args) == 1:
+            return _iter(*args)
+        elif len(args) == 2:
+            return _iter_sentinel(*args)
+        raise TypeError, "iter() takes at most 2 arguments (%d given)" % (len(args),)
+
 
 try:
     from socket import inet_pton, inet_ntop
