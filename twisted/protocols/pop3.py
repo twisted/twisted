@@ -53,7 +53,7 @@ class POP3(basic.LineReceiver):
     
     def processCommand(self, command, *args):
         command = string.upper(command)
-        if self.mbox is None and command not in ('APOP', 'USER', 'PASS', 'RPOP'):
+        if self.mbox is None and command not in ('APOP', 'USER', 'PASS', 'RPOP', 'QUIT'):
             raise POP3Error("not authenticated yet: cannot do %s" % command)
         f = getattr(self, 'do_' + command, None)
         if f:
@@ -179,7 +179,8 @@ class POP3(basic.LineReceiver):
         self.failResponse('permission denied, sucker')
 
     def do_QUIT(self):
-        self.mbox.sync()
+        if self.mbox:
+            self.mbox.sync()
         self.successResponse()
         self.transport.loseConnection()
 
