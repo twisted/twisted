@@ -41,4 +41,6 @@ class CheckingPackagesTestCase(unittest.TestCase):
             l.remove(package)
         # special treatment of cReactor
         l.remove('twisted.internet.cReactor')
-        self.failUnlessEqual(l, [])
+        if l != []:
+            print "Make sure you checked out the code with cvs -P option"
+            self.failUnlessEqual(l, [])
