@@ -101,11 +101,13 @@ is dropped, limiting further the scope of those references.</p>
 come back to you. If expect the client to invoke your method with some
 object A that you sent to them earlier, and instead they send you object B
 (that you also sent to them earlier), and you don't check it somehow, then
-you've just opened up a security hole. A better design is to keep such
-objects in a dictionary on the server side, and have the client send you an
-index string instead. Doing it that way makes it obvious that they can send
-you anything they want, and improves the chances that you'll remember to
-implement the right checks.</p>
+you've just opened up a security hole. It may be better to keep such objects
+in a dictionary on the server side, and have the client send you an index
+string instead. Doing it that way makes it obvious that they can send you
+anything they want, and improves the chances that you'll remember to
+implement the right checks. (This is exactly what PB is doing underneath,
+with a per-connection dictionary of <code>Referenceable</code> objects,
+indexed by a number).</p>
 </div>
 
 <p>But now she could sneak into another group. So you might have to have an
@@ -663,6 +665,28 @@ that was attached to the <code>Deferred</code> that
 <code>pb.connect()</code> returned, which brings us back up to the code
 visible in <code>pb6client1.py</code>.</p>
 
+<h2>Viewable</h2>
+
+<p>Once you have <code>Perspective</code> objects to represent users, the
+<code class="API" base="twisted.spread.flavors">Viewable</code> class can
+come into play. This class behaves a lot like <code>Referenceable</code>: it
+turns into a <code>RemoteReference</code> when sent over the wire, and
+certain methods can be invoked by the holder of that reference. However, the
+methods that can be called have names that start with <code>view_</code>
+instead of <code>remote_</code>, and those methods are always called with an
+extra <code>perspective</code> argument:</p>
+
+<pre class="python">
+class Foo(pb.Viewable):
+    def view_doFoo(self, perspective, arg1, arg2):
+        pass
+</pre>
+
+<p>This is useful if you want to let multiple clients share a reference to
+the same object. The <code>view_</code> methods can use the
+<q>perspective</q> argument to figure out which client is calling them. This
+gives them a way to do additional permission checks, do per-user accounting,
+etc.</p>
 
 
 <h2>A Larger Example</h2><a name="bigexample" />
