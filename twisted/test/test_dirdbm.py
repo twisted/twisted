@@ -31,7 +31,7 @@ class DirDbmTestCase(unittest.TestCase):
         self.items = (('abc', 'foo'), ('/lalal', '\000\001'), ('\000\012', 'baz'))
 
     def tearDown(self):
-        shutil.rmtree(self.path)
+        pass #shutil.rmtree(self.path)
     
     def testRebuildInteraction(self):
         from twisted.persisted import dirdbm
@@ -110,8 +110,10 @@ class DirDbmTestCase(unittest.TestCase):
 
     def testModificationTime(self):
         import time
+        before = int(time.time())
         self.dbm["k"] = "v"
-        self.assert_(0 <= time.time() - self.dbm.getModificationTime("k") < 1)
+        after = int(time.time())
+        self.assert_(before <= self.dbm.getModificationTime("k") <= after)
     
     def testRecovery(self):
         """DirDBM: test recovery from directory after a faked crash""" 
