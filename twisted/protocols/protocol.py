@@ -57,8 +57,10 @@ class Factory:
 
         The returned instance will handle input on an incoming server
         connection, and an attribute "factory" pointing to the creating
-        factory.  Override this method to alter how Protocol instances get
-        created.
+        factory. If None is returned, the connection is assumed to have
+        been refused, and the Port will close the connection.
+        
+        Override this method to alter how Protocol instances get created.
         """
         p = self.protocol()
         p.factory = self

@@ -430,6 +430,9 @@ class Port(abstract.FileDescriptor):
                         break
                     raise
                 protocol = self.factory.buildProtocol(addr)
+                if protocol is None:
+                    skt.close()
+                    continue
                 s = self.sessionno
                 self.sessionno = s+1
                 transport = self.transport(skt, protocol, addr, self, s)
