@@ -27,6 +27,8 @@ Maintainer: U{Itamar Shtull-Trauring<mailto:twisted@itamarst.org>}
 """
 from __future__ import nested_scopes
 
+__version__ = "$Revision: 1.31 $"[11:-2]
+
 # System Imports
 import xmlrpclib
 import urlparse
