@@ -77,12 +77,12 @@ class Resolver:
             raise ValueError, "No nameservers specified"
         
         self.timeout = timeout
+        self.factory = DNSClientFactory(self, timeout)
         
         from twisted.internet import reactor
-        self.protocol = dns.DNSClientProtocol(self)
+        self.protocol = dns.DNSClientProtocol(self.factory)
         reactor.listenUDP(0, self.protocol, maxPacketSize=512)
         
-        self.factory = DNSClientFactory(self, timeout)
         self.connections = []
         self.pending = []
 
