@@ -10,26 +10,30 @@
 
     <h2>Goals</h2>
 
-<p>Cred is an authentication system. It allows a protocol to take credentials, such as
-a username/password pair, and login, getting back a business logic object specific to
-that protocol and "user". For example, POP3 might pass username and password and get
-back a mailbox object for the specified email account. Cred is designed to allow
-both the backend implementation of the business logic - the avatar - and the authentication
-database to be decided during deployment. For example, the same POP3 server should
-be able to authenticate against /etc/passwd or an LDAP server without having to know
-anything about how or where mail is stored. 
-</p>
+<p>Cred is an pluggable authentication system for servers. It allows a
+protocol to take credentials, such as a username/password pair, and
+login, getting back a business logic object specific to that protocol
+and "user". For example, POP3 might pass username and password and get
+back a mailbox object for the specified email account. Cred is
+designed to allow both the backend implementation of the business
+logic - called the "avatar" - and the authentication database to be
+decided during deployment. For example, the same POP3 server should be
+able to authenticate against /etc/passwd or an LDAP server without
+having to know anything about how or where mail is stored.  </p>
 
-<p>To sketch out how this works - a realm is in charge of avatars, business logic objects.
-A portal stores a realm, and a number of credential checkers. A protocol stores a reference
-to the portal. Login consists of passing credentials and a request interface (e.g. IMailbox)
-to the portal. The portal passes the credentials to the appropriate credential checker, which
-returns an avatar ID. The ID is passed to the realm, which returns the appropriate avatar.
-For a Portal that has a realm that creates mailbox objects and a credential checker that
-checks /etc/passwd, login consists of passing in a username/password and the IMailbox interface
-to the portal. The portal passes this to the /etc/passwd credential checker, gets back a avatar 
-ID corresponding to an email account, passes that to the realm and gets back a mailbox object for that
-email account.</p>
+<p>To sketch out how this works - a realm is in charge of avatars,
+business logic objects.  A portal stores a realm, and a number of
+credential checkers. A protocol stores a reference to the
+portal. Login consists of passing credentials and a request interface
+(e.g. IMailbox) to the portal. The portal passes the credentials to
+the appropriate credential checker, which returns an avatar ID. The ID
+is passed to the realm, which returns the appropriate avatar.  For a
+Portal that has a realm that creates mailbox objects and a credential
+checker that checks /etc/passwd, login consists of passing in a
+username/password and the IMailbox interface to the portal. The portal
+passes this to the /etc/passwd credential checker, gets back a avatar
+ID corresponding to an email account, passes that to the realm and
+gets back a mailbox object for that email account.</p>
 
     <h2>Cred objects</h2>
     <h3>The Portal</h3>
