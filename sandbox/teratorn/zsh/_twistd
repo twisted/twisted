@@ -1,20 +1,5 @@
 #compdef twistd
 
-# put this file in your $fpath some place, or make a directory for it and add
-# that to your $fpath (place it before you call compinit), such as:
-# for it, and add that to your $fpath as in:
-#
-# fpath=(~/.fpath $fpath)
-#
-# I also like the following zstyles for more verbose completing info
-# 
-# zstyle ':completion:*' verbose yes
-# zstyle ':completion:*:descriptions' format '%B%d%b'
-# zstyle ':completion:*:messages' format '%d'
-# zstyle ':completion:*:warnings' format 'No matches for: %d'
-# zstyle ':completion:*' group-name ''
-
-
 _arguments -S \
   '--savestats[Save the Stats object rather than the text output of the profiler]' \
   '(--encrypted)-e[The specified tap/aos/xml file is encrypted]' \
