@@ -145,6 +145,12 @@ class LineOnlyReceiver(protocol.Protocol):
         lines  = (self._buffer+data).split(self.delimiter)
         self._buffer = lines[-1]
         for line in lines[:-1]:
+            if self.transport.disconnecting:
+                # this is necessary because the transport may be told to lose
+                # the connection by a line within a larger packet, and it is
+                # important to disregard all the lines in that packet following
+                # the one that told it to close.
+                return
             if len(line) > self.MAX_LENGTH:
                 return self.lineLengthExceeded(line)                
             else:

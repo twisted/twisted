@@ -617,7 +617,7 @@ NEXT[SHORT] = NONE
 NEXT[FIRST_LONG] = LONG
 NEXT[LONG] = NONE
 
-class POP3Client(basic.LineReceiver):
+class POP3Client(basic.LineOnlyReceiver):
 
     mode = SHORT
     command = 'WELCOME'
