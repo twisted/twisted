@@ -1,3 +1,4 @@
+# -*- test-case-name: twisted.news.test.test_news -*-
 # Twisted, the Framework of Your Internet
 # Copyright (C) 2001 Matthew W. Lefkowitz
 # 
@@ -38,6 +39,8 @@ from twisted.python import components
 import getpass, pickle, time, socket, md5
 import os
 import StringIO
+from zope.interface import implements
+
 
 ERR_NOGROUP, ERR_NOARTICLE = range(2, 4)  # XXX - put NNTP values here (I guess?)
 
@@ -248,7 +251,7 @@ class PickleStorage:
     real applications.  Consider yourself warned!
     """
 
-    __implements__ = (INewsStorage,)
+    implements(INewsStorage)
 
     sharedDBs = {}
 
@@ -444,6 +447,8 @@ class PickleStorage:
                 self.db['moderators'] = dict(moderators)
                 self.flush()
 
+components.backwardsCompatImplements(PickleStorage)
+
 
 class Group:
     name = None
@@ -463,7 +468,7 @@ class NewsShelf:
     A NewStorage implementation using Twisted's dirdbm persistence module.
     """
     
-    __implements__ = (INewsStorage,)    
+    implements(INewsStorage)    
     
     def __init__(self, mailhost, path):
         self.path = path
@@ -687,13 +692,15 @@ class NewsShelf:
         else:
             return defer.succeed((index, a.getHeader('Message-ID'), StringIO.StringIO(a.body)))
 
+components.backwardsCompatImplements(NewsShelf)
+
 
 class NewsStorageAugmentation:
     """
     A NewsStorage implementation using Twisted's asynchronous DB-API
     """
 
-    __implements__ = (INewsStorage,)
+    implements(INewsStorage)
 
     schema = """
 
@@ -990,6 +997,7 @@ class NewsStorageAugmentation:
             lambda (index, id, body): (index, id, StringIO.StringIO(body))
         )
 
+components.backwardsCompatImplements(NewsStorageAugmentation)
 
 ####
 #### XXX - make these static methods some day
