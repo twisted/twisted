@@ -290,47 +290,15 @@ def _getFPName(fp):
     # stringIO objects have no .name attr
     return getattr(fp, 'name', '<string>')
 
-class IDTPParent(object):
-    """An interface for protocols that wish to use a DTP sub-protocol and
-    factory. 
-
-    @ivar dtpFactory: the dtp factory that creates an instance when needed
-    @ivar dtpInstance: the instance that the factory creates. since only
-        one dtp instance is created, this will be a single object reference
-    @ivar dtpTxfrMode: binary or ascii, right now dtp ignores this and only
-        does binary transfers
-    @ivar dtpPort: value returned from listenTCP or connectTCP
-    @ivar peerHost: the (type,ip,port) of the other server
-    """
-    def finishedFileTransfer(self):
-        """performs cleanup on the dtpInstance once the transfer is complete"""
-        pass
-
-class IDTPFactory(object):
-    """An interface for protocol.Factories 
-
-    @ivar peerCheck: perform checks to make sure the ftp-pi's peer is the same
-        as the dtp's
-    @ivar pi: a reference to this factory's protocol interpreter
-    """
-    def __init__(self, pi, peerHost=None):
-        """Constructor
-        @param pi: this factory's protocol interpreter
-        @param peerHost: if peerCheck is True, this is the tuple that the
-            generated instance will use to perform security checks
-        """
-        pass
-
 class DTP(object, protocol.Protocol):
-    """The Data Transfer Protocol for this FTP-PI instance
-    all dtp_* methods return a deferred
-    """
+    # The Data Transfer Protocol for this FTP-PI instance
+    #   all dtp_* methods return a deferred
     isConnected = False 
     reTransform = re.compile(r'(?<!\r)\n') # says, match an \n that's not immediately preceeded by a \r
 
     def connectionMade(self):
-        """Will start an transfer, if one is queued up, 
-        when the client connects"""
+        # Will start an transfer, if one is queued up, 
+        # when the client connects
         self.pi.setTimeout(None)        # don't timeout as long as we have a connection
         peer = self.transport.getPeer()
         self.isConnected = True
@@ -359,8 +327,8 @@ class DTP(object, protocol.Protocol):
         #return newChunk
 
     def dtp_RETR(self): # RETR = sendFile
-        """sends a file object out the wire
-        """
+        # sends a file object out the wire
+        # 
         filename = _getFPName(self.pi.fp)
 
         log.debug('sendfile sending %s' % filename)
@@ -393,7 +361,6 @@ class DTP(object, protocol.Protocol):
         self.isConnected = False
 
 class DTPFactory(protocol.Factory): 
-    __implements__ = (IDTPFactory,)
     # -- configuration variables --
     peerCheck = True
 
@@ -469,7 +436,6 @@ class FTP(object, basic.LineReceiver, policies.TimeoutMixin):
     @ivar dtpInetPort: dtpPort.getHost()
     @ivar dtpHostPort: cluient (address, port) to connect to on a PORT command
     """
-    __implements__ = (IDTPParent,IProtocol,)
     # FTP is a bit of a misonmer, as this is the PI - Protocol Interpreter
     blockingCommands = ['RETR', 'STOR', 'LIST', 'PORT']
     reTelnetChars = re.compile(r'(\\x[0-9a-f]{2}){1,}')
@@ -548,7 +514,7 @@ class FTP(object, basic.LineReceiver, policies.TimeoutMixin):
         policies.TimeoutMixin.setTimeout(self, seconds)
 
     def reply(self, key, s=''):                                               
-        """format a RESPONSE and send it out over the wire"""
+        # format a RESPONSE and send it out over the wire
         if string.find(RESPONSE[key], '%s') > -1:
             log.debug(RESPONSE[key] % s + ENDLN)
             self.transport.write(RESPONSE[key] % s + ENDLN)
@@ -557,7 +523,7 @@ class FTP(object, basic.LineReceiver, policies.TimeoutMixin):
             self.transport.write(RESPONSE[key] + ENDLN)
 
     def lineReceived(self, line):
-        "Process the input from the client"
+        # Process the input from the client
         self.resetTimeout()
         line = string.strip(line)
         log.debug(repr(line))
@@ -678,8 +644,8 @@ class FTP(object, basic.LineReceiver, policies.TimeoutMixin):
         self.blocked = None                         
         
     def cleanupDTP(self):
-        """call when DTP connection exits
-        """
+        # called when DTP connection exits
+        
         log.debug('cleanupDTP')
 
         dtpPort, self.dtpPort = self.dtpPort, None
@@ -731,7 +697,7 @@ class FTP(object, basic.LineReceiver, policies.TimeoutMixin):
             d.addErrback(self._ebDTP)
 
     def finishedFileTransfer(self, *arg):
-        """called back when a file transfer has been completed by the dtp"""
+        # called back when a file transfer has been completed by the dtp
         log.debug('finishedFileTransfer! cleaning up DTP')
         if self.fp is not None and not self.fp.closed:
             if ((self.dtpCommand == 'RETR' and self.fp.tell() == self.fpsize)
@@ -746,25 +712,24 @@ class FTP(object, basic.LineReceiver, policies.TimeoutMixin):
             self.fp = None
 
     def _cbDTPCommand(self):
-        """called back when any DTP command has completed successfully"""
+        # called back when any DTP command has completed successfully
         log.debug("DTP Command success")
 
     def ftp_USER(self, params):
-        """Get the login name, and reset the session
-        PASS is expected to follow
+        # Get the login name, and reset the session
+        # PASS is expected to follow
+        # 
+        # @note: from the rfc: The argument field is a Telnet string identifying
+        # the user.  The user identification is that which is required by the
+        # server for access to its file system.  This command will normally be
+        # the first command transmitted by the user after the control connections
+        # are made
+        # 
+        # This has the effect of flushing any user, password, and account
+        # information already supplied and beginning the login sequence again.
+        # All transfer parameters are unchanged and any file transfer in progress
+        # is completed under the old access control parameters.
 
-        from the rfc:
-            The argument field is a Telnet string identifying the user.
-            The user identification is that which is required by the
-            server for access to its file system.  This command will
-            normally be the first command transmitted by the user after
-            the control connections are made
-
-            This has the effect of flushing any user, password, and account
-            information already supplied and beginning the login sequence
-            again.  All transfer parameters are unchanged and any file transfer
-            in progress is completed under the old access control parameters.
-        """
         if params=='':
             raise CmdSyntaxError('no parameters')
         self.user = string.split(params)[0]
@@ -778,14 +743,12 @@ class FTP(object, basic.LineReceiver, policies.TimeoutMixin):
     # TODO: need to implement minimal ABOR command
 
     def ftp_PASS(self, params=''):
-        """Authorize the USER and the submitted password
-
-        from the rfc:
-            The argument field is a Telnet string specifying the user's
-            password.  This command must be immediately preceded by the
-            user name command, and, for some sites, completes the user's
-            identification for access control.
-        """
+        # Authorize the USER and the submitted password
+        #
+        # @note: from the rfc: The argument field is a Telnet string specifying
+        # the user's password.  This command must be immediately preceded by the
+        # user name command, and, for some sites, completes the user's
+        # identification for access control.
 
         # the difference between an Anon login and a User login is 
         # the avatar that will be returned to the callback
@@ -826,7 +789,7 @@ class FTP(object, basic.LineReceiver, policies.TimeoutMixin):
                 raise AuthorizationError('internal server error')
 
     def _cbAnonLogin(self, (interface, avatar, logout)):
-        """sets up anonymous login avatar"""
+        # sets up anonymous login avatar
         assert interface is IFTPShell
         peer = self.transport.getPeer()
         #log.debug("Anonymous login from %s:%s" % (peer[1], peer[2]))
@@ -835,7 +798,7 @@ class FTP(object, basic.LineReceiver, policies.TimeoutMixin):
         self.reply(GUEST_LOGGED_IN_PROCEED)
 
     def _cbLogin(self, (interface, avatar, logout)):
-        """sets up authorized user login avatar"""
+        # sets up authorized user login avatar
         assert interface is IFTPShell
         self.shell = avatar
         self.logout = logout
@@ -867,14 +830,13 @@ class FTP(object, basic.LineReceiver, policies.TimeoutMixin):
         self.reply(NAME_SYS_TYPE)
 
     def ftp_LIST(self, params=''):
-        """ This command causes a list to be sent from the server to the
-        passive DTP.  If the pathname specifies a directory or other
-        group of files, the server should transfer a list of files
-        in the specified directory.  If the pathname specifies a
-        file then the server should send current information on the
-        file.  A null argument implies the user's current working or
-        default directory.
-        """
+        # This command causes a list to be sent from the server to the
+        # passive DTP.  If t he pathname specifies a directory or other
+        # group of files, the server should transfer a list of files
+        # in the specified directory.  If the pathname specifies a
+        # file then the server should send current information on the
+        # file.  A null argument implies the user's current working or
+        # default directory.
         log.debug('ftp_LIST: %s' % params)
         if params == "-a": params = ''  # bug in konqueror
         if params == "-aL": params = '' # bug in gFTP 2.0.15
@@ -897,22 +859,20 @@ class FTP(object, basic.LineReceiver, policies.TimeoutMixin):
         self.reply(FILE_STATUS, dtm)
  
     def ftp_PWD(self, params=''):
-        """ Print working directory command
-        """
+        # Print working directory command
         self.reply(PWD_REPLY, self.shell.pwd())
 
     def ftp_PASV(self):
-        """Request for a passive connection
-
-        reply is in format 227 =h1,h2,h3,h4,p1,p2
-
-        from the rfc:
-            This command requests the server-DTP to "listen" on a data
-            port (which is not its default data port) and to wait for a
-            connection rather than initiate one upon receipt of a
-            transfer command.  The response to this command includes the
-            host and port address this server is listening on.
-        """
+        # Request for a passive connection
+        #
+        # reply is in format 227 =h1,h2,h3,h4,p1,p2
+        #
+        # note: from the rfc: This command requests the server-DTP to "listen"
+        # on a data port (which is not its default data port) and to wait for a
+        # connection rather than initiate one upon receipt of a transfer command.
+        # The response to this command includes the host and port address this
+        # server is listening on.
+        #
         # NOTE: Normally, the way DTP related commands work is that they
         # go through the PI processing (what goes on here), and then make
         # the appropriate call to _doDTPCommand. 
@@ -942,12 +902,12 @@ class FTP(object, basic.LineReceiver, policies.TimeoutMixin):
         log.debug("passive port open on: %s:%s" % (localip, lport), level="debug")
 
     def decodeHostPort(self, line):
-        """Decode an FTP response specifying a host and port.
-        
-        see RFC sec. 4.1.2 "PASV"
-
-        @returns: a 2-tuple of (host, port).
-        """
+        # Decode an FTP response specifying a host and port.
+        # 
+        # see RFC sec. 4.1.2 "PASV"
+        #
+        # @returns: a 2-tuple of (host, port).
+         
         #abcdef = re.sub('[^0-9, ]', '', line[4:])
         abcdef = re.sub('[^0-9, ]', '', line)
         a, b, c, d, e, f = map(str.strip, abcdef.split(','))
@@ -1004,13 +964,13 @@ class FTP(object, basic.LineReceiver, policies.TimeoutMixin):
         log.debug("Client Quit")
 
     def ftp_DELE(self, path=''):
-        self.reply(CMD_NOT_IMPLMNTD, 'DELE')
+        self.shell.dele(path)
 
     def ftp_MKD(self, path=''):
-        self.reply(CMD_NOT_IMPLMNTD, 'MKD')
+        self.shell.mkd(path)
 
     def ftp_RMD(self, path=''):
-        self.reply(CMD_NOT_IMPLMNTD, 'RMD')
+        self.shell.rmd(path)
 
     def ftp_STOR(self, path=''):
         if self.dtpTxfrMode is None:
@@ -1042,12 +1002,9 @@ class FTPFactory(protocol.Factory):
     currentInstanceNum = 0
     instances = []
 
-    def __init__(self, portal=None, userAnonymous='anonymous', 
-                       maxProtocolInstances=None):
-        self.portal = portal
-        self.userAnonymous = 'anonymous'
-        self.maxProtocolInstances = maxProtocolInstances
-        reactor._pi = self
+    def __init__(self):
+        pass
+        #reactor._pi = self         # for debugging
 
     def buildProtocol(self, addr):
         log.debug('%s of %s max ftp instances: ' % (self.currentInstanceNum, self.maxProtocolInstances))
@@ -1066,8 +1023,97 @@ class FTPFactory(protocol.Factory):
         # make sure ftp instance's timeouts are set to None
         # to avoid reactor complaints
         [p.setTimeout(None) for p in self.instances if p.timeOut is not None]
-        
-# -- Cred Objects --
+ 
+class IFile(components.Interface):
+    """An interface to a file object or a file-like object
+    
+    most of this documentation taken verbatim from the python standard library documentation
+    section 2.2.8 - File Objects
+
+    @note: (from the stdlib) File objects also offer a number of other interesting attributes. These
+    are not required for file-like objects, but should be implemented if
+    they make sense for the particular object.
+    
+    @ivar closed: bool indicating the current state of the file object.
+    @ivar name: If the file object was created using open(), the name of the
+    file. Otherwise, some string that indicates the source of the file object,
+    of the form "<...>". 
+    """
+
+    def close(self):
+        """closes the file. A closed file cannot be read or written any more."""
+        pass
+    
+    def seek(self, pos, mode = 0):
+        """ Set the file's current position, like stdio's fseek(). The whence
+        argument is optional and defaults to 0  (absolute file positioning);
+        other values are 1 (seek relative to the current position) and 2 (seek
+        relative to the file's end). There is no return value. 
+        """
+        pass
+
+    def tell(self):
+        """ Return the file's current position, like stdio's ftell().
+        """
+        pass
+
+class IReadableFile(IFile):
+    """An interface to a file object or a file-like object opened for reading
+    
+    most of this documentation taken verbatim from the python standard library documentation
+    section 2.2.8 - File Objects
+
+    @note: (from the stdlib) File objects also offer a number of other
+    interesting attributes. These are not required for file-like objects, but
+    should be implemented if they make sense for the particular object.
+    
+    @ivar closed: bool indicating the current state of the file object.
+    @ivar name: If the file object was created using open(), the name of the
+                file. Otherwise, some string that indicates the source of the file object,
+                of the form "<...>". 
+    """
+
+    def getvalue(self):
+        """Retrieve the entire contents of the "file" at any time before
+        the object's close() method is called.
+        """
+        pass
+
+    def read(self, size=-1):
+        """ Read at most size bytes from the file (less if the read hits EOF
+        before obtaining size bytes). If the size  argument is negative or
+        omitted, read all data until EOF is reached. The bytes are returned as
+        a string object. An empty string is returned when EOF is encountered
+        immediately. 
+        """
+        pass
+
+class IWriteableFile(IFile):
+    """An interface to a file object or a file-like object opened for writing 
+    
+    most of this documentation taken verbatim from the python standard library documentation
+    section 2.2.8 - File Objects
+
+    @note: (from the stdlib) File objects also offer a number of other
+    interesting attributes. These are not required for file-like objects, but
+    should be implemented if they make sense for the particular object.
+    
+    @ivar closed: bool indicating the current state of the file object.
+    @ivar name: If the file object was created using open(), the name of the
+                file. Otherwise, some string that indicates the source of the file object,
+                of the form "<...>". 
+    """
+
+    def flush(self):
+        """Flush the internal buffer, like stdio's fflush(). This may be a no-op on some file-like objects.  """
+        pass
+
+    def write(self, s):
+        """ Write a string to the file. There is no return value. Due to
+        buffering, the string may not actually show up in the file until the
+        flush() or close() method is called.
+        """
+        pass
 
 class IFTPShell(components.Interface):
     """An abstraction of the shell commands used by the FTP protocol
@@ -1082,10 +1128,11 @@ class IFTPShell(components.Interface):
         /home/foo/bar/spam.tar.gz the user would specify path /bar/spam.tar.gz in the 
         ftp command, and this function would translate it into /home/foo/bar/spam.tar.gz
 
-        @returns a tuple (cpath, spath) where cpath is the client's top level directory
-        plus path, and spath is cpath in relation to the server's filesystem.
+        @return: a tuple (cpath, spath) where cpath is the client's top level
+        directory plus path, 
 
-        cpath is an illusion, spath is a real file in the filesystem
+        @note: spath is cpath in relation to the server's filesystem. cpath is
+        an illusion, spath is a real file in the filesystem
         """
         pass
 
@@ -1097,13 +1144,11 @@ class IFTPShell(components.Interface):
     def cwd(self, path):
         """Change working directory
 
-        from the rfc:
-            This command allows the user to work with a different
-            directory or dataset for file storage or retrieval without
-            altering his login or accounting information.  Transfer
-            parameters are similarly unchanged.  The argument is a
-            pathname specifying a directory or other system dependent
-            file group designator.
+        @note: from the rfc: This command allows the user to work with a
+        different directory or dataset for file storage or retrieval without
+        altering his login or accounting information.  Transfer parameters are
+        similarly unchanged.  The argument is a pathname specifying a directory
+        or other system dependent file group designator.
 
         @param path: the path you're interested in
         @type path: string
@@ -1156,14 +1201,12 @@ class IFTPShell(components.Interface):
         listing to be sent to the client via the DTP
         
 
-        from the rfc:
-            This command causes a list to be sent from the server to the
-            passive DTP.  If the pathname specifies a directory or other
-            group of files, the server should transfer a list of files
-            in the specified directory.  If the pathname specifies a
-            file then the server should send current information on the
-            file.  A null argument implies the user's current working or
-            default directory.
+        @note: from the rfc: This command causes a list to be sent from the
+        server to the passive DTP.  If the pathname specifies a directory or
+        other group of files, the server should transfer a list of files in the
+        specified directory.  If the pathname specifies a file then the server
+        should send current information on the file.  A null argument implies
+        the user's current working or default directory.
         """
         pass
 
@@ -1212,327 +1255,71 @@ class IFTPShell(components.Interface):
         """
         pass
 
-
-
-import pwd, grp
-
-def _callWithDefault(default, _f, *_a, **_kw):
-    try:
-        return _f(*_a, **_kw)
-    except KeyError:
-        return default
-
-def _memberGIDs(gid):
-    """returns a list of all gid's that are a member of group with id
-    """
-    gr_mem = 3
-    return grp.getgrgid(gid)[gr_mem]
-
-def _testPermissions(uid, gid, spath, mode='r'):
-    """checks to see if uid has proper permissions to access path with mode
-    @param uid: numeric user id
-    @type uid: int
-    @param gid: numeric group id
-    @type gid: int
-    @param spath: the path on the server to test
-    @type spath: string
-    @param mode: 'r' or 'w' (read or write)
-    @type mode: string
-    @returns: a True if the uid can access path
-    @rval: Boolean
-    """
-    import os.path as osp 
-    import stat
-    if mode not in ['r', 'w']:
-        raise ValueError("mode argument must be 'r' or 'w'")
+class IFTPHighLevelShell(components.Interface):
+    '''a slightly higher level version of the FTPShell
+    The FTP shell is intended to mimic a unix shell to some extent. It's a layer on top of the 
+    server filesystem, and you'll need to implement a way to convert paths as the client sees them
+    into paths to resources on the server side. 
     
-    readMasks = {'usr': stat.S_IRUSR, 'grp': stat.S_IRGRP, 'oth': stat.S_IROTH}
-    writeMasks = {'usr': stat.S_IWUSR, 'grp': stat.S_IWGRP, 'oth': stat.S_IWOTH}
-    modes = {'r': readMasks, 'w': writeMasks}
-    log.msg('running _testPermissions')
-    if osp.exists(spath):
-        s = os.lstat(spath)
-        if uid == 0:    # root is superman, can access everything
-            log.msg('uid == root, can do anything!')
-            return True
-        elif modes[mode]['usr'] & s.st_mode > 0 and uid == s.st_uid:
-            log.msg('usr has proper permissions')
-            return True
-        elif ((modes[mode]['grp'] & s.st_mode > 0) and 
-                (gid == s.st_gid or gid in _memberGIDs(gid))):
-            log.msg('grp has proper permissions')
-            return True
-        elif modes[mode]['oth'] & s.st_mode > 0:
-            log.msg('oth has proper permissions')
-            return True
-    return False   
-
-class FTPAnonymousShell(object):
-    """"""
-    __implements__ = (IFTPShell,)
-
-    uid      = None        # uid of anonymous user for shell
-    gid      = None        # gid of anonymous user for shell
-    clientwd = '/'
-    filepath = None
-
-    def __init__(self, user=None, tld=None):
-        """Constructor
-        @param user: the name of the user whose permissions we'll be using
-        @type user: string
+    All requests coming from the protocol are client-relative and denoted using
+    the variable 'cpath', server-relative paths are given the variable 'spath'
+    '''
+    def sendFile(self, cpath):
+        """a request from the client to send a file to this machine
+        @param cpath: a client-relative path
+        @type cpath: string
+        @returns: an C{IWriteableFile} implementor opened for the correct spath
+        @raise AnonUserDeniedError: when an anonymous user tries to execute this command
+        @raise PermissionDeniedError: when the user has insufficient permissions to write a resource to 
+            the indicated cpath
+        @raise OperationFailedError: when an error occurs saving the resource. 
         """
-        self.user     = user        # user name
-        self.tld      = tld
-        self.debug    = True
-
-        # TODO: self.user needs to be set to something!!!
-        if self.user is None:
-            uid = os.getuid()
-            self.user = pwd.getpwuid(os.getuid())[0]
-            self.getUserUIDAndGID()
-        #if self.tld is not None:
-            #self.filepath = python.FilePath(self.tld)
-
-    def getUserUIDAndGID(self):
-        """used to set up permissions checking. finds the uid and gid of 
-        the shell.user. called during __init__
-        """
-        log.msg('getUserUIDAndGID')
-        pw_name, pw_passwd, pw_uid, pw_gid, pw_dir = range(5)
-        try:
-            p = pwd.getpwnam(self.user)
-            self.uid, self.gid = p[pw_uid], p[pw_gid]
-            log.debug("set (uid,gid) for file-permissions checking to (%s,%s)" % (self.uid,self.gid))
-        except KeyError, (e,):
-            log.msg("""
-COULD NOT SET ANONYMOUS UID! Name %s could not be found.
-We will continue using the user %s.
-""" % (self.user, pwd.getpwuid(os.getuid())[pw_name]))
-
-
-    def pwd(self):
-        return self.clientwd
-
-    def myjoin(self, lpath, rpath):
-        """does a dumb join between two path elements, ensuring
-        there is only one '/' between them. pays no attention to the
-        filesystem, unlike os.path.join
-        
-        @param lpath: path element to the left of the '/' in the result
-        @type lpath: string
-        @param rpath: path element to the right of the '/' in the result
-        @type rpath: string
-        """
-        if lpath and lpath[-1] == os.sep:
-            lpath = lpath[:-1]
-        if rpath and rpath[0] == os.sep:
-            rpath = rpath[1:]
-        return "%s%s%s" % (lpath, os.sep, rpath)
-
-    def mapCPathToSPath(self, rpath):
-        if not rpath or rpath[0] != '/':      # if this is not an absolute path
-            # add the clients working directory to the requested path
-            mappedClientPath = self.myjoin(self.clientwd, rpath) 
-        else:
-            mappedClientPath = rpath
-        # next add the client's top level directory to the requested path
-        mappedServerPath = self.myjoin(self.tld, mappedClientPath)
-        ncpath, nspath = os.path.normpath(mappedClientPath), os.path.normpath(mappedServerPath)
-        common = os.path.commonprefix([self.tld, nspath])
-        if common != self.tld:
-            raise PathBelowTLDError('Cannot access below / directory')
-        if not os.path.exists(nspath):
-            raise FileNotFoundError(nspath)
-        return (mappedClientPath, mappedServerPath)
- 
-    def cwd(self, path):
-        cpath, spath = self.mapCPathToSPath(path)
-        log.debug(cpath, spath)
-        if os.path.exists(spath) and os.path.isdir(spath):
-            self.clientwd = cpath
-        else:
-            raise FileNotFoundError(cpath)
-       
-    def cdup(self):
-        self.cwd('..')
-
-    def dele(self, path):
-        raise AnonUserDeniedError()
-        
-    def mkd(self, path):
-        raise AnonUserDeniedError()
-        
-    def rmd(self, path):
-        raise AnonUserDeniedError()
- 
-    def retr(self, path):
-        import os.path as osp
-        cpath, spath = self.mapCPathToSPath(path)
-        if not osp.isfile(spath):
-            raise FileNotFoundError(cpath)
-        #if not _testPermissions(self.uid, self.gid, spath):
-            #raise PermissionDeniedError(cpath)
-        try:
-            return (file(spath, 'rb'), os.path.getsize(spath))
-        except (IOError, OSError), (e,):
-            log.debug(e)
-            raise OperationFailedError('An error occurred %s' % e)
-
-    def stor(self, params):
-        raise AnonUserDeniedError()
-
-    def getUnixLongListString(self, spath):
-        """generates the equivalent output of a unix ls -l path, but
-        using python-native code. 
-
-        @param path: the path to return the listing for
-        @type path: string
-        @attention: this has only been tested on posix systems, I don't
-            know at this point whether or not it will work on win32
-        """
-        import pwd, grp, time
-
-        TYPE, PMSTR, NLINKS, OWN, GRP, SZ, MTIME, NAME = range(8)
-
-        if os.path.isdir(spath):
-            log.debug('list path isdir')
-            dlist = os.listdir(spath)
-            log.debug(dlist)
-            dlist.sort()
-        else:
-            log.debug('list path is not dir')
-            dlist = [spath]
-
-        pstat = None
-        result = []
-        sio = StringIO()
-        maxNameWidth, maxOwnWidth, maxGrpWidth, maxSizeWidth, maxNlinksWidth = 0, 0, 0, 0, 0
-        
-
-        for item in dlist:
-            try:
-                pstat = os.lstat(os.path.join(spath, item))
-
-                # this is exarkun's bit of magic
-                fmt = 'pld----'
-                pmask = lambda mode: ''.join([mode & (256 >> n) and 'rwx'[n % 3] or '-' for n in range(9)])
-                dtype = lambda mode: [fmt[i] for i in range(7) if (mode >> 12) & (1 << i)][0]
-
-                type = dtype(pstat.st_mode)
-                pmstr = pmask(pstat.st_mode)
-                nlinks = str(pstat.st_nlink)
-                owner = _callWithDefault([str(pstat.st_uid)], pwd.getpwuid, pstat.st_uid)[0]
-                group = _callWithDefault([str(pstat.st_gid)], grp.getgrgid, pstat.st_gid)[0]
-                size = str(pstat.st_size)
-                mtime = time.strftime('%b %d %I:%M', time.gmtime(pstat.st_mtime))
-                name = os.path.split(item)[1]
-                unixpms = "%s%s" % (type,pmstr)
-            except (OSError, KeyError), e:
-                log.debug(e)
-                continue
-            if len(name) > maxNameWidth:
-                maxNameWidth = len(name)
-            if len(owner) > maxOwnWidth:
-                maxOwnWidth = len(owner)
-            if len(group) > maxGrpWidth:
-                maxGrpWidth = len(group)
-            if len(size) > maxSizeWidth:
-                maxSizeWidth = len(size)
-            if len(nlinks) > maxNlinksWidth:
-                maxNlinksWidth = len(nlinks)
-            result.append([type, pmstr, nlinks, owner, group, size, mtime, name])
-
-        for r in result:
-            r[OWN]  = r[OWN].ljust(maxOwnWidth)
-            r[GRP]  = r[GRP].ljust(maxGrpWidth)
-            r[SZ]   = r[SZ].rjust(maxSizeWidth)
-            #r[NAME] = r[NAME].ljust(maxNameWidth)
-            r[NLINKS] = r[NLINKS].rjust(maxNlinksWidth)
-            sio.write('%s%s %s %s %s %s %8s %s\n' % tuple(r))
-
-        sio.seek(0)
-        return sio
-       
-    def list(self, path):
-        cpath, spath = self.mapCPathToSPath(path)
-        log.debug('cpath: %s,   spath:%s' % (cpath, spath))
-        #if not _testPermissions(self.uid, self.gid, spath):
-            #raise PermissionDeniedError(cpath)
-        sio = self.getUnixLongListString(spath)
-        return (sio, len(sio.getvalue()))
-
-    def mdtm(self, path):
-        from stat import ST_MTIME
-        cpath, spath = self.mapCPathToSPath(path)
-        if not os.path.isfile(spath):
-            raise FileNotFoundError(spath)
-        try:
-            dtm = time.strftime("%Y%m%d%H%M%S", time.gmtime(os.stat(spath)[ST_MTIME]))
-        except OSError, (e,):
-            log.err(e)
-            raise OperationFailedError(e)
-        else:
-            return dtm
-
-    def size(self, path):
-        """returns the size in bytes of path"""
-        cpath, spath = self.mapCPathToSPath(path)
-        if not os.path.isfile(spath):
-            raise FileNotFoundError(spath)
-        return os.path.getsize(spath)
-   
-    def nlist(self, path):
-        raise CmdNotImplementedError()
-
-class FTPShell(FTPAnonymousShell):
-    def dele(self, path):
         pass
 
-    def mkd(self, path):
-        pass
-
-    def rmd(self, path):
-        pass
-
-    def stor(self, path):
-        cpath, spath = self.mapCPathToSPath(path)
-        if os.access(spath, os.W_OK):
-            try:
-                return file(spath, 'wb')
-            except (IOError, OSError), (e,):
-                log.debug(e)
-                raise OperationFailedError('An error occurred %s' % e)
-        raise PermissionDeniedError('Could not write file %s' % cpath)
-
-
-class FTPRealm:
-    __implements__ = (portal.IRealm,)
-    clientwd = '/'
-    user = 'anonymous'
-    logout = None
-    tld = None          
-
-    def __init__(self, tld=None, logout=None):
-        """constructor
-        @param tld: the top-level (i.e. root) directory on the server
-        @type tld: string
-        @attention: you *must* set tld somewhere before using the avatar!!
-        @param logout: a special logout routine you want to be run when the user
-            logs out (cleanup)
-        @type logout: a function/method object
+    def retrieveFile(self, cpath):
+        """a request that you send the resource at cpath to the client over the DTP 
+        connection
+        @param cpath: a client-relative path, the file to send to the client
+        @type cpath: string
+        @returns: a tuple of a (C{IReadableFile} implementor, size as int)
+        @rtype: tuple
+        @raises FileNotFoundError: when cpath does not represent a valid resource on the server
+        @raise PermissionDeniedError: when the user has insufficient permissions to read the resource at cpath
+        @raises OperationFailedError: when any os-related error occurs when attempting to send the resource
         """
-        self.tld = tld
-        self.logout = logout
+        pass
 
-    def requestAvatar(self, avatarId, mind, *interfaces):
-        if IFTPShell in interfaces:
-            if self.tld is None:
-                raise TLDNotSetInRealmError("you must set FTPRealm's tld to a non-None value before creating avatars!!!")
-            avatar = FTPAnonymousShell(user=self.user, tld=self.tld)
-            avatar.clientwd = self.clientwd
-            avatar.logout = self.logout
-            return IFTPShell, avatar, avatar.logout
-        raise NotImplementedError("Only IFTPShell interface is supported by this realm")
+    def deleteFile(self, cpath):
+        """a request that the server remove a file at cpath
+        @raise AnonUserDeniedError: when an anonymous user tries to execute this command
+        @raise PermissionDeniedError: when the user has insufficient permissions to remove the file at the indicated cpath
+        @raise OperationFailedError: when an error occurs removing the file.
+        """
+        pass
+
+    def makeDirectory(self, cpath):
+        """a request that the server create a directory-type structure at cpath
+        @raise AnonUserDeniedError: when an anonymous user tries to execute this command
+        @raise PermissionDeniedError: when the user has insufficient permissions to create a directory at the indicated cpath
+        @raise OperationFailedError: when an error occurs creating the directory. 
+        """
+        pass
+
+    def removeDirectory(self, cpath):
+        """a request that the server remove a directory-type structure at cpath
+        @raise AnonUserDeniedError: when an anonymous user tries to execute this command
+        @raise PermissionDeniedError: when the user has insufficient permissions to remove a directory at the indicated cpath
+        @raise OperationFailedError: when an error occurs removing a directory.
+        """
+        pass
+
+
+
+
+
+
+
+
 
 
 # --- FTP CLIENT  -------------------------------------------------------------
