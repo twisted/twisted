@@ -468,7 +468,7 @@ class Port(base.BasePort):
         except:
             log.deferr()
 
-    def loseConnection(self):
+    def loseConnection(self, connDone=failure.Failure(main.CONNECTION_DONE)):
         """Stop accepting connections on this port.
 
         This will shut down my socket and call self.connectionLost().
@@ -476,8 +476,7 @@ class Port(base.BasePort):
         self.disconnecting = 1
         self.stopReading()
         if self.connected:
-            self.reactor.callLater(0, self.connectionLost,
-                                   failure.Failure(main.CONNECTION_DONE))
+            self.reactor.callLater(0, self.connectionLost, connDone)
 
     stopListening = loseConnection
 

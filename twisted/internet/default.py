@@ -1,5 +1,5 @@
 # -*- test-case-name: twisted.test.test_internet -*-
-# $Id: default.py,v 1.73 2003/05/01 12:34:40 glyph Exp $
+# $Id: default.py,v 1.74 2003/05/01 16:40:47 itamarst Exp $
 #
 # Twisted, the Framework of Your Internet
 # Copyright (C) 2001 Matthew W. Lefkowitz
@@ -470,7 +470,10 @@ class SelectReactor(PosixReactorBase):
 
     doIteration = doSelect
 
-    def _doWriteOrRead(self, selectable, method, dict):
+    def _doWriteOrRead(self, selectable, method, dict, faildict={
+        error.ConnectionDone: failure.Failure(error.ConnectionDone()),
+        error.ConnectionLost: failure.Failure(error.ConnectionLost())
+        }):
         try:
             why = getattr(selectable, method)()
             handfn = getattr(selectable, 'fileno', None)
@@ -484,7 +487,11 @@ class SelectReactor(PosixReactorBase):
         if why:
             self.removeReader(selectable)
             self.removeWriter(selectable)
-            selectable.connectionLost(failure.Failure(why))
+            f = faildict.get(why.__class__)
+            if f:
+                selectable.connectionLost(f)
+            else:
+                selectable.connectionLost(failure.Failure(why))
 
     def addReader(self, reader):
         """Add a FileDescriptor for notification of data available to read.
