@@ -1209,5 +1209,5 @@ def _cbLogInResponded(identity, d, client, serviceName, perspectiveName):
     if identity:
         identity.callRemote("attach", serviceName, perspectiveName, client).armAndChain(d)
     else:
-        # XXX: Return a recognizable Failure type
-        d.armAndErrback("invalid username or password")
+        from twisted import cred
+        d.armAndErrback(cred.error.Unauthorised("invalid username or password"))
