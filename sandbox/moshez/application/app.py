@@ -232,3 +232,11 @@ def convertStyle(filein, typein, passphrase, fileout, typeout, encrypt):
     if sob.IPersistable(a, None) is None: # we have an old-style application
         a = compat.convert(a)
     app.saveApplication(a, typeout, encrypt, fileout)
+
+def startApplication(application, save):
+    from twisted.internet import reactor
+    service.IService(application).startService()
+    if save:
+        scheduleSave(application)
+    reactor.addSystemEventTrigger('before', 'shutdown',
+                                  service.IService(application).stopService)

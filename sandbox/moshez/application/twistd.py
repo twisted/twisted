@@ -158,11 +158,7 @@ def startApplication(config, application):
     from twisted.internet import reactor
     service.IService(application).privilegedStartService()
     shedPrivileges(config['euid'], process.uid, process.gid)
-    service.IService(application).startService()
-    if not config['no_save']:
-        app.scheduleSave(application)
-    reactor.addSystemEventTrigger('before', 'shutdown',
-                                  service.IService(application).stopService)
+    app.startApplication(application, not config['no_save'])
  
 
 def runApp(config):

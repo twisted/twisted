@@ -51,11 +51,8 @@ def runApp(config):
     application = app.getApplication(config, passphrase)
     from twisted.internet import reactor
     service.IService(application).privilegedStartService()
+    app.startApplication(application, not config['no_save'])
     service.IService(application).startService()
-    if not config['no_save']:
-        app.scheduleSave(application)
-    reactor.addSystemEventTrigger('before', 'shutdown',
-                                  service.IService(application).stopService)
     def callMeAgain():
         reactor.callLater(0.1, callMeAgain)
     reactor.callLater(0.1, callMeAgain)
