@@ -20,6 +20,8 @@
 
 from twisted.python import usage, reflect, failure
 from twisted.trial import unittest, util, reporter as reps
+from twisted.application import app
+
 import sys, os, types, inspect
 import re
 
@@ -39,7 +41,8 @@ class Options(usage.Options):
                 ["recurse", "R", "Search packages recursively"]]
 
     optParameters = [["reactor", "r", None,
-                      "The Twisted reactor to install before running the tests (looked up as a module contained in twisted.internet)"],
+                      "Which reactor to use out of: " + \
+                      ", ".join(app.reactorTypes.keys()) + "."],
                      ["logfile", "l", "test.log", "log file name"],
                      ["random", "z", None,
                       "Run tests in random order using the specified seed"],
@@ -58,9 +61,8 @@ class Options(usage.Options):
 
     def opt_reactor(self, reactorName):
         # this must happen before parseArgs does lots of imports
-        mod = 'twisted.internet.' + reactorName
-        print "Using %s reactor" % mod
-        reflect.namedModule(mod).install()
+        app.installReactor(reactorName)
+        print "Using %s reactor" % app.reactorTypes[reactorName]
         
     def opt_testmodule(self, file):
         "Module to find a test case for"
