@@ -19,6 +19,7 @@
 
 import types 
 from twisted.python import components, reflect, log, context
+from zope.interface import implements
 
 class ITestRunner(components.Interface):
     def getTestClass(self):
@@ -38,7 +39,7 @@ class ITestRunner(components.Interface):
 
 
 class SingletonRunner:
-    __implements__ = (ITestRunner,)
+    implements(ITestRunner)
     def __init__(self, methodName):
         if type(methodName) is types.StringType:
             self.testClass = reflect.namedObject('.'.join(methodName.split('.')[:-1]))
@@ -71,9 +72,11 @@ class SingletonRunner:
         output.reportResults(self.testClass, method, *results)
         testCase.tearDownClass()
 
+components.backwardsCompatImplements(SingletonRunner)
+
 
 class TestClassRunner:
-    __implements__ = (ITestRunner,)
+    implements(ITestRunner)
     methodPrefixes = ('test',)
     
     def __init__(self, testClass, stats=None):
@@ -115,6 +118,9 @@ class TestClassRunner:
                                       method, self.runTest).run()
             output.reportResults(self.testClass, method, *results)
         self.testCase.tearDownClass()
+
+components.backwardsCompatImplements(TestClassRunner)
+
 
 def runTest(method):
     # utility function, used by test_trial to more closely emulate the usual

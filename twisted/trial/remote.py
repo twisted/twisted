@@ -31,6 +31,8 @@ from twisted.python import components, failure, reflect
 from twisted.spread import banana, jelly
 
 import os, types
+from zope.interface import implements
+
 
 class OneWayBanana(banana.Banana):
     # There can be no negotiation on a one-way stream, so only offer one
@@ -198,7 +200,7 @@ class TrialProcessProtocol(DecodeReport, protocol.ProcessProtocol):
         self.log(data)
 
 class DemoRemoteReporter:
-    __implements__ = (IRemoteReporter,)
+    implements(IRemoteReporter)
     
     def remote_start(self, expectedTests, times=None):
         self.startTimes = times
@@ -225,6 +227,8 @@ class DemoRemoteReporter:
 
     def printTimeStamped(self, times, *args):
         print ("%.2f %.2f %.2f %.2f %.2f " % times), " ".join(map(str, args))
+
+components.backwardsCompatImplements(DemoRemoteReporter)
 
 
 from twisted.application import service
