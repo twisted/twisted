@@ -70,16 +70,14 @@ class TagChecker:
                 self._reportError(filename, node, 'hand hacked style')
 
     def check_title(self, dom, filename):
-        nodes = domhelpers.findNodesNamed(dom, 'title')
-        if len(nodes)!=1:
+        title = domhelpers.findNodesNamed(dom, 'title')
+        if len(title)!=1:
             return self._reportError(filename, dom, 'not exactly one title')
-        title = nodes[0]
-        nodes = domhelpers.findNodesNamed(dom, 'h1')
-        if len(nodes)!=1:
+        h1 = domhelpers.findNodesNamed(dom, 'h1')
+        if len(h1)!=1:
             return self._reportError(filename, dom, 'not exactly one h1')
-        h1 = nodes[0]
-        if domhelpers.getNodeText(h1) != domhelpers.getNodeText(title):
-            self._reportError(filename, h1, 'title and h1 text differ')
+        if domhelpers.getNodeText(h1[0]) != domhelpers.getNodeText(title[0]):
+            self._reportError(filename, h1[0], 'title and h1 text differ')
 
     def check_pre(self, dom, filename):
         for node in domhelpers.findNodesNamed(dom, 'pre'):
