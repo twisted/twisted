@@ -307,54 +307,61 @@ class Failure:
         self.printBriefTraceback(file=io)
         return io.getvalue()
 
-    def getTraceback(self):
+    def getTraceback(self, elideFrameworkCode=0, detail='default'):
         io = StringIO()
-        self.printTraceback(file=io)
+        self.printTraceback(file=io, elideFrameworkCode=elideFrameworkCode, detail=detail)
         return io.getvalue()
 
-    def printTraceback(self, file=None):
+    def printTraceback(self, file=None, elideFrameworkCode=0, detail='default'):
         """Emulate Python's standard error reporting mechanism.
         """
         if file is None: file = log.logerr
         w = file.write
-        if self.frames:
-            w( 'Traceback (most recent call last):\n')
-            format_frames(self.stack[-traceupLength:], w)
-            w("%s\n" % (EXCEPTION_CAUGHT_HERE,))
-            format_frames(self.frames, w)
-        else:
-            w("Failure: ")
-        w("%s: %s\n" % (str(self.type), str(self.value)))
-        if isinstance(self.value, Failure):
-            file.write(" (chained Failure)\n")
-            self.value.printTraceback(file)
 
-    def printBriefTraceback(self, file=None):
+        # Preamble
+        if detail == 'verbose':
+            w( '*--- Failure #%d%s---\n' %
+               (self.count,
+                (self.pickled and ' (pickled) ') or ' '))
+        elif detail == 'brief':
+            if self.frames:
+                hasFrames = 'Traceback'
+            else:
+                hasFrames = 'Traceback (failure with no frames)'
+            w("%s: %s: %s\n" % (hasFrames, self.type, self.value))
+        else:
+            w( 'Traceback (most recent call last):\n')
+
+        # Frames, formatted in appropriate style
+        if self.frames:
+            if not elideFrameworkCode:
+                format_frames(self.stack[-traceupLength:], w, detail)
+                w("%s\n" % (EXCEPTION_CAUGHT_HERE,))
+            format_frames(self.frames, w, detail)
+        elif not detail == 'brief':
+            # Yeah, it's not really a traceback, despite looking like one...
+            w("Failure: ")
+
+        # postamble, if any
+        if not detail == 'brief':
+            w("%s: %s\n" % (str(self.type), str(self.value)))
+        # chaining
+        if isinstance(self.value, Failure):
+            # TODO: indentation for chained failures?
+            file.write(" (chained Failure)\n")
+            self.value.printTraceback(file, elideFrameworkCode, detail)
+        if detail == 'verbose':
+            w('*--- End of Failure #%d ---\n' % self.count)
+
+    def printBriefTraceback(self, file=None, elideFrameworkCode=0):
         """Print a traceback as densely as possible.
         """
-        if file is None: file = log.logerr
-        w = file.write
-        w("Traceback: %s, %s\n" % (self.type, self.value))
-        format_frames(self.frames, w, "brief")
-        if isinstance(self.value, Failure):
-            file.write(" (chained Failure)\n")
-            self.value.printBriefTraceback(file)
+        self.printTraceback(file, elideFrameworkCode, detail='brief')
 
-    def printDetailedTraceback(self, file=None):
+    def printDetailedTraceback(self, file=None, elideFrameworkCode=0):
         """Print a traceback with detailed locals and globals information.
         """
-        if file is None: file = log.logerr
-        w = file.write
-        w( '*--- Failure #%d%s---\n' %
-           (self.count,
-            (self.pickled and ' (pickled) ') or ' '))
-        format_frames(self.stack, w, "verbose")
-        w("%s\n" % (EXCEPTION_CAUGHT_HERE,))
-        format_frames(self.frames, w, "verbose")
-        if isinstance(self.value, Failure):
-            w(" (chained Failure)\n")
-            self.value.printDetailedTraceback(file)
-        w('*--- End of Failure #%d ---\n' % self.count)
+        self.printTraceback(file, elideFrameworkCode, detail='verbose')
 
 # slyphon: make post-morteming exceptions tweakable
 
@@ -380,3 +387,38 @@ def startDebugMode():
 
 #rawr stupid non-lazy import python #!*($@*(
 import log
+
+def visualtest():
+    def c():
+        1/0
+
+    def b():
+        c()
+
+    def a():
+        b()
+
+    def _frameworkCode(detailLevel, elideFrameworkCode):
+        try:
+            a()
+        except:
+            Failure().printTraceback(sys.stdout, detail=detailLevel, elideFrameworkCode=elideFrameworkCode)
+
+    def _moreFrameworkCode(*a, **kw):
+        return _frameworkCode(*a, **kw)
+
+    def frameworkCode(*a, **kw):
+        return _moreFrameworkCode(*a, **kw)
+
+    print 'Failure visual test case:'
+    for verbosity in ['brief', 'default', 'verbose']:
+        for truth in True, False:
+            print
+            print '----- next ----'
+            print 'detail: ',verbosity
+            print 'elideFrameworkCode:', truth
+            print
+            frameworkCode(verbosity, truth)
+
+if __name__ == '__main__':
+    visualtest()
