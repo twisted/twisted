@@ -239,7 +239,7 @@ class IRCAccount(basesupport.AbstractAccount):
     gatewayType = "IRC"
     def __init__(self, accountName, autoLogin, username, password, host, port,
                  channels=''):
-        baseaccount.AbstractAccount.__init__(self, accountName, autoLogin,
+        basesupport.AbstractAccount.__init__(self, accountName, autoLogin,
                                              username, password, host, port)
         self.channels = map(string.strip,string.split(channels,','))
         if self.channels == ['']:

@@ -187,7 +187,7 @@ class PBAccount(basesupport.AbstractAccount):
         @param username: The name of your PB Identity.
         @type username: string
         """
-        baseaccount.AbstractAccount.__init__(self, accountName, autoLogin,
+        basesupport.AbstractAccount.__init__(self, accountName, autoLogin,
                                              username, password, host, port)
         self.services = []
         if not services:
