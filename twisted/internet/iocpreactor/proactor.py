@@ -2,7 +2,7 @@
 # See LICENSE for details.
 
 
-from twisted.internet import defer, base, main
+from twisted.internet import defer, base, main, wprocess
 from twisted.internet.interfaces import IReactorTCP, IReactorUDP, IReactorArbitrary
 from twisted.python import threadable, log
 from zope.interface import implements
@@ -92,6 +92,12 @@ class Proactor(iocpcore, base.ReactorBase):
         c = connectorType(*args, **kw)
         c.connect()
         return c
+
+    def spawnProcess(self, processProtocol, executable, args=(),
+                     env={}, path=None):
+        return wprocess.Process(self, processProtocol, executable,
+                                args, env, path)
+
 
 def install():
     from twisted.python import threadable
