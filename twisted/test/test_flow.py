@@ -18,6 +18,7 @@
 #
 
 from __future__ import nested_scopes
+from __future__ import generators
 
 from twisted.flow import flow
 from twisted.flow.threads import Threaded, QueryIterator
@@ -52,12 +53,12 @@ class slowlist:
 _onetwothree = ['one','two',flow.Cooperate(),'three']
 
 class producer:
-    """ iterator version of the following generator... 
+    """ iterator version of the following generator...
 
         def producer():
             lst = flow.wrap(slowlist([1,2,3]))
             nam = flow.wrap(slowlist(_onetwothree))
-            while True: 
+            while True:
                 yield lst
                 yield nam
                 yield (lst.next(),nam.next())
@@ -90,7 +91,7 @@ class consumer:
             for data in prod:
                 yield data
                 yield prod
-    """    
+    """
     def __iter__(self):
         self.title = flow.wrap(['Title'])
         self.lst   = flow.wrap(producer())
@@ -116,7 +117,7 @@ class badgen:
     def badgen():
         yield 'x'
         err =  3/ 0
-    """    
+    """
     def __iter__(self):
         self.next = self.yield_x
         return self
@@ -150,7 +151,7 @@ class buildlist:
     def yield_append(self):
         try:
             self.out.append(self.src.next())
-        except StopIteration: 
+        except StopIteration:
             self.next = self.yield_finish
             return self.out
         return self.src
@@ -172,7 +173,7 @@ class testconcur:
     def __iter__(self):
         self.next = self.yield_both
         return self
-    def yield_both(self): 
+    def yield_both(self):
         self.next = self.yield_result
         return self.both
     def yield_result(self):
@@ -225,7 +226,7 @@ class echoClient:
         # signal that we are done
         self.conn.factory.d.callback(self.conn.next())
         raise StopIteration()
- 
+
 class CountIterator:
     def __init__(self, count):
         self.count = count
@@ -305,7 +306,7 @@ class FlowTest(unittest.TestCase):
 
     def testLineBreak(self):
         lhs = [ "Hello World", "Happy Days Are Here" ]
-        rhs = ["Hello ","World\nHappy", flow.Cooperate(), 
+        rhs = ["Hello ","World\nHappy", flow.Cooperate(),
                " Days"," Are Here\n"]
         mrg = flow.LineBreak(slowlist(rhs), delimiter='\n')
         rhs = list(flow.Block(mrg))
@@ -338,7 +339,7 @@ class FlowTest(unittest.TestCase):
 
     def testDeferredWrapper(self):
         from twisted.internet import defer
-        from twisted.internet import reactor 
+        from twisted.internet import reactor
         a = defer.Deferred()
         reactor.callLater(0, lambda: a.callback("test"))
         b = flow.Merge(a, slowlist([1,2,flow.Cooperate(),3]))
@@ -350,10 +351,10 @@ class FlowTest(unittest.TestCase):
         a = defer.Deferred()
         a.callback("test")
         self.assertEquals(["test"], list(flow.Block(a)))
- 
+
     def testDeferredWrapperFail(self):
         from twisted.internet import defer
-        from twisted.internet import reactor 
+        from twisted.internet import reactor
         d = defer.Deferred()
         f = lambda: d.errback(flow.Failure(IOError()))
         reactor.callLater(0, f)
@@ -426,7 +427,7 @@ class FlowTest(unittest.TestCase):
             raise ValueError
         f = unittest.deferredError(flow.Deferred(Threaded(iterator())))
         f.trap(ValueError)
-    
+
     def testThreadedSleep(self):
         expect = [5,4,3,2,1]
         d = flow.Deferred(Threaded(CountIterator(5)))
@@ -453,16 +454,16 @@ class FlowTest(unittest.TestCase):
           (SELECT 'three')
         """
         d = flow.Deferred(Threaded(QueryIterator(dbpool, sql)))
-        self.assertEquals(expect, unittest.deferredResult(d)) 
-        
+        self.assertEquals(expect, unittest.deferredResult(d))
+
     def testThreadedImmediate(self):
-        """ 
+        """
             The goal of this test is to test the callback mechanism with
-            regard to threads, namely to assure that results can be 
+            regard to threads, namely to assure that results can be
             accumulated before they are needed; and that left-over results
             are immediately made available on the next round (even though
             the producing thread has shut down).  This is a very tough thing
-            to test due to the timing issues.  So it may fail on some 
+            to test due to the timing issues.  So it may fail on some
             platforms, I'm not sure.
         """
         expect = [5,4,3,2,1]
