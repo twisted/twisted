@@ -2,7 +2,12 @@
 """
 
 # System Imports
-import os, sys, fcntl, FCNTL
+import os, sys
+
+if os.name == 'posix':
+    # Inter-process communication and FCNTL fun isn't available on windows.
+    import fcntl
+    import FCNTL
 
 from twisted.persisted import styles
 from twisted.python import log, threadable
