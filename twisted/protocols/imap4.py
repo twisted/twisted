@@ -542,12 +542,12 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
         if self.blocked is not None:
             self.blocked.extend(commands)
 
-    def sendLine(self, line):
-        print 'C:', repr(line)
-        return basic.LineReceiver.sendLine(self, line)
+#    def sendLine(self, line):
+#        print 'C:', repr(line)
+#        return basic.LineReceiver.sendLine(self, line)
 
     def lineReceived(self, line):
-        print 'S:', repr(line)
+#        print 'S:', repr(line)
         self.resetTimeout()
 
         if self.blocked is not None:

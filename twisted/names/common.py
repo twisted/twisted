@@ -116,7 +116,6 @@ class ResolverBase:
         return result
 
 def extractRecord(resolver, name, answers, level = 10):
-    print 'Extract record', name, answers, level
     if not level:
         return None
     if hasattr(socket, 'inet_ntop'):
