@@ -197,32 +197,6 @@ class UserStatusXR(xmlrpc.XMLRPC):
     def xmlrpc_getUser(self, user):
         return self.service.getUser(user)
 
-
-class FingerService(service.Service):
-
-    __implements__ = IFingerService,
-
-    def __init__(self, filename):
-        self.filename = filename
-        self._read()
-
-    def _read(self):
-        self.users = {}
-        for line in file(self.filename):
-            user, status = line.split(':', 1)
-            user = user.strip()
-            status = status.strip()
-            self.users[user] = status
-        self.call = reactor.callLater(30, self._read)
-
-    def getUser(self, user):
-        return defer.succeed(self.users.get(user, "No such user"))
-
-    def getUsers(self):
-        return defer.succeed(self.users.keys())
-
-# Advantages of latest version
-
 class MemoryFingerService(service.Service):
 
     __implements__ = IFingerService, IFingerSetterService
