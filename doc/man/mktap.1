@@ -45,7 +45,7 @@ Makes a server with ~/public_html and
 Instead of generating a webserver, generate a
 ResourcePublisher which listens on ~/.twistd-web-pb
 .TP
-\fB\-s\fR, \fB\--path\fR \fI<path>\fR
+\fB\--path\fR \fI<path>\fR
 <path> is either a specific file or a directory to be
 set as the root of the web server. Use this if you
 have a directory full of HTML, cgi, php3, epy, or rpy files or
@@ -55,12 +55,12 @@ any other files that you want to be served up raw.
 <port> is a number representing which port you want to
 start the server on.
 .TP
-\fB\-p\fR, \fB\--mime_type\fR \fI<mimetype>\fR
+\fB\-m\fR, \fB\--mime_type\fR \fI<mimetype>\fR
 <mimetype> is the default MIME type to use for
 files in a --path web server when none can be determined
 for a particular extension. The default is 'text/html'.
 .TP
-\fB\-p\fR, \fB\--allow_ignore_ext\fR
+\fB\--allow_ignore_ext\fR
 Specify wether or not a request for 'foo' should return 'foo.ext'.
 Default is off.
 .TP
@@ -70,6 +70,15 @@ configuration later.
 .TP
 \fB\-i\fR, \fB\--index\fR \fI<name>\fR
 Use an index name other than "index.html"
+.TP
+\fB--https\fR \fI<port>\fR
+Port to listen on for Secure HTTP.
+.TP
+\fB-c\fR, \fB--certificate\fR \fI<filename>\fR
+SSL certificate to use for HTTPS. [default: server.pem]
+.TP
+\fB-k\fR, \fB--privkey\fR \fI<filename>\fR
+SSL certificate to use for HTTPS. [default: server.pem]
 .PP
 This creates a web.tap file that can be used by twistd. If you
 specify no arguments, it will be a demo webserver that has the Test
