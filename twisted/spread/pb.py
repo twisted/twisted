@@ -1092,6 +1092,13 @@ def connect(host, port, username, password, serviceName,
         client -- XXX the "reference" argument to
                   perspective.Perspective.attached
         timeout -- see twisted.internet.tcp.Client
+
+    Returns:
+
+        A Deferred instance that gets a callback when the final Perspective is
+        connected, and an errback when an error occurs at any stage of
+        connecting.
+
     """
     d = defer.Deferred()
     getObjectAt(host,port,timeout).addCallbacks(
