@@ -52,11 +52,7 @@ class LatexSpitter:
     def writeNodeData(self, node):
         buf = StringIO()
         getLatexText(node, buf.write, latexEscape)
-        text = buf.getvalue()
-        parents = domhelpers.getParents(node.parentNode)[:-1]
-        if not [1 for n in parents if n.tagName in ('pre', 'code')]:
-            text = text.replace('<', '$<$').replace('>', '$>$')
-        self.writer(text)
+        self.writer(buf.getvalue().replace('<', '$<$').replace('>', '$>$'))
 
     def visitNode(self, node):
         if not hasattr(node, 'tagName'):
