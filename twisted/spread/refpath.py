@@ -168,6 +168,14 @@ class PathReferenceAcquisitionContext(PathReferenceContext):
         upPath.extend(relPath)
         return "/".join(upPath)
 
+    def fullURL(self, request):
+        """Return the absolute URL to the resource.
+        """
+        return "http%s://%s/%s" % (
+            request.isSecure() and 's' or '',
+            request.getHeader("host"),
+            '/'.join(self.path))
+        
     def locate(self, name, debug=0):
         """
         Get a reference to an object with the given name which is somewhere
