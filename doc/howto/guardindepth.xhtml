@@ -27,9 +27,10 @@ directly -- all the rest of the code deals with a <code>Portal</code>
 which wraps the realm.</p>
 
 <div class="note">
-You will almost always want to put <code>checkers.AllowAnonymousAccess<code>
+You will almost always want to put <code>checkers.AllowAnonymousAccess</code>
 in the checkers registered for the <code>Portal</code>, otherwise it
-will be impossible to log in.</div>
+will be impossible to log in.
+</div>
 
 <p>The canonical thing is to use
 <code>resource=guard.SessionWrapper(guard.UsernamePasswordWrapper(portal,
@@ -47,7 +48,7 @@ def parentRedirect(_):
 <code>request.getSession</code> automatically returns the Woven session.
 Since it is a <code>Componentized</code>, it is possible to use
 <code>getComponent</code> and <code>setComponent</code> to keep
-state related to a user in the session.</code>
+state related to a user in the session.</p>
 
 <p>For simple cases, the approach described here leads to quite a bit
 of boiler-plate code (about 30 lines or so). If a web application has
