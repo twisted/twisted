@@ -4,10 +4,10 @@ import socket
 
 from twisted.python import log, reflect
 from twisted.persisted import styles
-from twisted.internet import defer, main
+from twisted.internet import defer, main, base
 
 # sibling imports, change to fully-qualified at release (or not, circular imports :(
-from ops import ReadFileOp, WriteFileOp, WSARecvOp, WSASendOp, AcceptExOp
+from ops import ReadFileOp, WriteFileOp, WSARecvOp, WSASendOp, AcceptExOp, ConnectExOp
 from error import GenCannotListenError
 
 class RWHandle(log.Logger, styles.Ephemeral):
@@ -255,3 +255,27 @@ class SocketPort:
         """
         return (self.afPrefix,)+self.socket.getsockname()
 
+class Connector(base.BaseConnector):
+    transport = Socket
+    connect_op = ConnectExOp
+    afPrefix = None
+    addressFamily = None
+    socketType = None
+    def __init__(self, addr, factory, timeout, bindAddress, reactor=None):
+        self.host = host
+        if isinstance(port, types.StringTypes):
+            try:
+                port = socket.getservbyname(port, 'tcp')
+            except socket.error, e:
+                raise error.ServiceNameUnknownError(string=str(e))
+        self.port = port
+        self.bindAddress = bindAddress
+        base.BaseConnector.__init__(self, factory, timeout, reactor)
+
+    def _makeTransport(self):
+        return Client(self.host, self.port, self.bindAddress, self, self.reactor)
+
+    def getDestination(self):
+        return (self.afPrefix,)+self.addr
+
+class SocketConnector(RWHandle):

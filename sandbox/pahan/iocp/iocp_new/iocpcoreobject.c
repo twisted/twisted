@@ -4,6 +4,9 @@
 #include <windows.h>
 #include "structmember.h"
 
+LPFN_CONNECTEX gConnectEx;
+LPFN_ACCEPTEX gAcceptEx;
+
 typedef struct {
     OVERLAPPED ov;
     PyObject *callback;
@@ -45,110 +48,6 @@ iocpcore_new(PyTypeObject *type, PyObject *args, PyObject *kwds)
     }
     return (PyObject *)self;
 }
-
-/*
-static int
-iocpcore_init(iocpcore *self, PyObject *args, PyObject *kwds)
-{
-    PyObject *first=NULL, *last=NULL;
-
-    static char *kwlist[] = {"first", "last", "number", NULL};
-
-    if(! PyArg_ParseTupleAndKeywords(args, kwds, "|OOi", kwlist, 
-                                      &first, &last, 
-                                      &self->number))
-        return -1; 
-
-    if(first) {
-        Py_DECREF(self->first);
-        Py_INCREF(first);
-        self->first = first;
-    }
-
-    if(last) {
-        Py_DECREF(self->last);
-        Py_INCREF(last);
-        self->last = last;
-    }
-
-    return 0;
-}
-*/
-
-/*static PyMemberDef iocpcore_members[] = {
-    {"number", T_INT, offsetof(iocpcore, number), 0,
-     "noddy number"},
-    {NULL}
-};*/
-
-/*
-static PyObject *
-iocpcore_getfirst(iocpcore *self, void *closure)
-{
-    Py_INCREF(self->first);
-    return self->first;
-}
-
-static int
-iocpcore_setfirst(iocpcore *self, PyObject *value, void *closure)
-{
-  if(!value) {
-    PyErr_SetString(PyExc_TypeError, "Cannot delete the first attribute");
-    return -1;
-  }
-  
-  if(! PyString_Check(value)) {
-    PyErr_SetString(PyExc_TypeError, 
-                    "The first attribute value must be a string");
-    return -1;
-  }
-      
-  Py_DECREF(self->first);
-  Py_INCREF(value);
-  self->first = value;    
-
-  return 0;
-}
-
-static PyObject *
-iocpcore_getlast(iocpcore *self, void *closure)
-{
-    Py_INCREF(self->last);
-    return self->last;
-}
-
-static int
-iocpcore_setlast(iocpcore *self, PyObject *value, void *closure)
-{
-  if(!value) {
-    PyErr_SetString(PyExc_TypeError, "Cannot delete the last attribute");
-    return -1;
-  }
-  
-  if(! PyString_Check(value)) {
-    PyErr_SetString(PyExc_TypeError, 
-                    "The last attribute value must be a string");
-    return -1;
-  }
-      
-  Py_DECREF(self->last);
-  Py_INCREF(value);
-  self->last = value;    
-
-  return 0;
-}*/
-
-/*static PyGetSetDef iocpcore_getseters[] = {
-    {"first", 
-     (getter)iocpcore_getfirst, (setter)iocpcore_setfirst,
-     "first name",
-     NULL},
-    {"last", 
-     (getter)iocpcore_getlast, (setter)iocpcore_setlast,
-     "last name",
-     NULL},
-    {NULL}
-};*/
 
 static PyObject *iocpcore_doIteration(iocpcore* self, PyObject *args) {
     long timeout;
@@ -363,21 +262,29 @@ static PyObject *iocpcore_WSASend(iocpcore* self, PyObject *args) {
     return Py_BuildValue("ll", err, bytes);
 }
 
-static PyObject *iocpcore_AcceptEx(iocpcore* self, PyObject *args) {
-    SOCKET handle, list;
-    char *buf;
-    int buflen, res, len = -1;
-    DWORD bytes, err, flags;
-    PyObject *object;
-    MyOVERLAPPED *ov;
-    if(!PyArg_ParseTuple(args, "llt#O|ll", &handle, &list, &buf, &buflen, &object, &len, &flags)) {
+static PyObject *iocpcore_getsockinfo(iocpcore* self, PyObject *args) {
+    SOCKET handle;
+    WSAPROTOCOL_INFO pinfo;
+    int size = sizeof(pinfo), res;
+    if(!PyArg_ParseTuple(args, "l", &handle)) {
         return NULL;
     }
-    if(len == -1) {
-        len = buflen;
+    res = getsockopt(handle, SOL_SOCKET, SO_PROTOCOL_INFO, (char *)&pinfo, &size);
+    if(res == SOCKET_ERROR) {
+        return PyErr_SetFromWindowsErr(0);
     }
-    if(len <= 0 || len > buflen) {
-        PyErr_SetString(PyExc_ValueError, "Invalid length specified");
+    return Py_BuildValue("iiii", pinfo.iMaxSockAddr, pinfo.iAddressFamily, pinfo.iSocketType, pinfo.iProtocol);
+}
+
+static PyObject *iocpcore_AcceptEx(iocpcore* self, PyObject *args) {
+    SOCKET handle, acc_sock;
+    char *buf;
+    int buflen, res;
+    DWORD bytes, err;
+    PyObject *object;
+    MyOVERLAPPED *ov;
+    if(!PyArg_ParseTuple(args, "llOw#", &handle, &acc_sock, &object, &buf, &buflen)) {
+        return NULL;
     }
     if(!PyCallable_Check(object)) {
         PyErr_SetString(PyExc_TypeError, "Callback must be callable");
@@ -392,20 +299,21 @@ static PyObject *iocpcore_AcceptEx(iocpcore* self, PyObject *args) {
     ov->callback = object;
     CreateIoCompletionPort((HANDLE)handle, self->iocp, 0, 1);
     Py_BEGIN_ALLOW_THREADS;
-    // TODO: what the comments in ops.AcceptExOp say
-    res = AcceptEx(handle, list, buf, 0, len/2, len/2, &bytes, (OVERLAPPED *)ov);
+    res = gAcceptEx(handle, acc_sock, buf, 0, buflen/2, buflen/2, &bytes, (OVERLAPPED *)ov);
     Py_END_ALLOW_THREADS;
-    err = GetLastError();
+    err = WSAGetLastError();
     if(!res && err != ERROR_IO_PENDING) {
         return PyErr_SetFromWindowsErr(err);
     }
-    return Py_BuildValue("ll", err, bytes);
+    if(res) {
+        err = 0;
+    }
+    return Py_BuildValue("ll", err, 0);
 }
 
 // yay, rape'n'paste of getsockaddrarg from socketmodule.c. "I couldn't understand what it does, so I removed it!"
-static int makesockaddr(PyObject *args, struct sockaddr **addr_ret, int *len_ret)
+static int makesockaddr(int sock_family, PyObject *args, struct sockaddr **addr_ret, int *len_ret)
 {
-    int sock_family = AF_INET; // FIXME
     switch (sock_family) {
     case AF_INET:
     {
@@ -442,15 +350,15 @@ static int makesockaddr(PyObject *args, struct sockaddr **addr_ret, int *len_ret
 
 static PyObject *iocpcore_ConnectEx(iocpcore* self, PyObject *args) {
     SOCKET handle;
-    int res, addrlen;
+    int res, addrlen, family;
     DWORD err;
     PyObject *object, *address;
     MyOVERLAPPED *ov;
     struct sockaddr *addr;
-    if(!PyArg_ParseTuple(args, "lOOO", &handle, &address, &object)) {
+    if(!PyArg_ParseTuple(args, "liOO", &handle, &family, &address, &object)) {
         return NULL;
     }
-    if(!makesockaddr(address, &addr, &addrlen)) {
+    if(!makesockaddr(family, address, &addr, &addrlen)) {
         return NULL;
     }
     if(!PyCallable_Check(object)) {
@@ -466,12 +374,15 @@ static PyObject *iocpcore_ConnectEx(iocpcore* self, PyObject *args) {
     ov->callback = object;
     CreateIoCompletionPort((HANDLE)handle, self->iocp, 0, 1);
     Py_BEGIN_ALLOW_THREADS;
-    res = ConnectEx(handle, addr, addrlen, NULL, 0, NULL, (OVERLAPPED *)ov);
+    res = gConnectEx(handle, addr, addrlen, NULL, 0, NULL, (OVERLAPPED *)ov);
     Py_END_ALLOW_THREADS;
     PyMem_Free(addr);
-    err = GetLastError();
+    err = WSAGetLastError();
     if(!res && err != ERROR_IO_PENDING) {
         return PyErr_SetFromWindowsErr(err);
+    }
+    if(res) {
+        err = 0;
     }
     return Py_BuildValue("ll", err, 0);
 }
@@ -498,6 +409,10 @@ static PyMethodDef iocpcore_methods[] = {
      "Issue an overlapped WSASend operation"},
     {"issueAcceptEx", (PyCFunction)iocpcore_AcceptEx, METH_VARARGS,
      "Issue an overlapped AcceptEx operation"},
+    {"issueConnectEx", (PyCFunction)iocpcore_ConnectEx, METH_VARARGS,
+     "Issue an overlapped ConnectEx operation"},
+    {"getsockinfo", (PyCFunction)iocpcore_getsockinfo, METH_VARARGS,
+     "Given a socket handle, retrieve its protocol info"},
     {"AllocateReadBuffer", (PyCFunction)iocpcore_AllocateReadBuffer, METH_VARARGS,
      "Allocate a buffer to read into"},
     {NULL}
@@ -559,9 +474,34 @@ PyMODINIT_FUNC
 initiocpcore(void) 
 {
     PyObject *m;
+    GUID guid1 = WSAID_CONNECTEX; // should use one GUID variable, but oh well
+    GUID guid2 = WSAID_ACCEPTEX;
+    DWORD bytes, ret;
+    SOCKET s;
     if(PyType_Ready(&iocpcoreType) < 0) {
         return;
     }
+    m = PyImport_ImportModule("_socket"); // cause WSAStartup to get called
+    if(!m) {
+        return;
+    }
+
+    s = socket(AF_INET, SOCK_STREAM, 0);
+    ret = WSAIoctl(s, SIO_GET_EXTENSION_FUNCTION_POINTER, &guid1, sizeof(GUID),
+                   &gConnectEx, sizeof(gConnectEx), &bytes, NULL, NULL);
+    if(ret == SOCKET_ERROR) {
+        PyErr_SetFromWindowsErr(0);
+        return;
+    }
+    
+    ret = WSAIoctl(s, SIO_GET_EXTENSION_FUNCTION_POINTER, &guid2, sizeof(GUID),
+                   &gAcceptEx, sizeof(gAcceptEx), &bytes, NULL, NULL);
+    if(ret == SOCKET_ERROR) {
+        PyErr_SetFromWindowsErr(0);
+        return;
+    }
+
+    closesocket(s);
 
     m = Py_InitModule3("iocpcore", module_methods,
                        "core functionality for IOCP reactor");
