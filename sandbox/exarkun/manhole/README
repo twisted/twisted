@@ -5,11 +5,10 @@ vt102 or vt102-like terminal.
   demo_insults.py draws a bunch of random crap on the screen.  +, -, *, and
 / change the drawing timings.  There is no key to quit.
 
-  demo_recvline.py is a trivial line editor.  It does not support histories. 
-It does support printable characters, left and right arrow, backspace, and
-C-d for delete (if you can tell me why the delete key doesn't work, I'd love
-to fix it).  Enter will add the line below the prompt (where you probably
-cannot see it).
+  demo_recvline.py is a trivial line editor.  It has very basic history
+support. It supports printable characters, left, right, up, and down arrows,
+backspace, and delete.  Enter will add the line above the prompt in a small
+scroll region.
 
   demo_drawing.py lets you spew random things onto the terminal.  It
 supports all four arrow keys and spacebar to switch between "drawing"
