@@ -2,6 +2,7 @@
 import sys
 import os.path
 import ConfigParser
+import re
 
 from twisted.python import usage
 
@@ -29,12 +30,11 @@ class %(name)s_ServiceControl(win32serviceutil.ServiceFramework):
         from twisted.python.log import startLogging
         startLogging(f)
         
-        from twisted.application import service
+        from twisted.application import service, app
         from twisted.internet import reactor
         
-        svc = service.IService(service.loadApplication(configfile,
-                                                       cftype))
-        svc.startService()
+        a = service.loadApplication(configfile, cftype)
+        app.startApplication(a, 1)
         reactor.run()
 
         
@@ -90,9 +90,22 @@ Type must be one of [%s], not \"%s\"""" % (', '.join(cftypes.values()),
         return "Usage: %s [options] <filename>" % fn
 
     def postOptions(self):
+        if not self['name']:
+            self['name'] = os.path.splitext(self['conffile'])[0]
+            
+        if not isPythonName(self['name']):
+            raise usage.UsageError("""\
+\"%s\" was used for the name, but name must consist only of letters,
+numbers and _.  (Use a different --name argument.)""" % self['name'])
         if not self['display-name']:
             self['display-name'] = "%s run by Twisted" % self['name']
 
+def isPythonName(st):
+    m = re.match('[A-Za-z_][A-Za-z_0-9]*', st)
+    if m:
+        return m.end() == len(st)
+    else:
+        return 0
 
 def ini2dict(configname, section):
     cp = ConfigParser.ConfigParser()
@@ -102,40 +115,15 @@ def ini2dict(configname, section):
         dct[name] = cp.get(section, name)
     return dct
 
-def sanity_check(options):
-    """Verify that the arguments on the command line can be used to
-    instantiate a service, by actually starting one.
-    """
-    from twisted.application import service
-    from twisted.python import util
-
-    dn = util.sibpath(options['conffile'], '')
-    sys.path.insert(0, dn)
-    print "Checking that the service can be started from here . . .",
-    svc = service.IService(service.loadApplication(options['conffile'],
-                                                   options['type']))
-    svc.startService()
-    svc.stopService()
-
-    print "success."
-    
 
 def run(argv = sys.argv):
-#    ini = 'tap2ntsvc.ini'   ## TODO - figure out how to make o.update(ini)
-#                            ## also call opt_type, opt_displayname etc.
-#    inidct = {}
-#    if os.path.isfile(ini):
-#        inidct = ini2dict(ini, 'ntsvc')
     try:
         o = Tap2NtsvcOptions()
-#        o.update(inidct)
         o.parseOptions(argv[1:])
     except usage.UsageError, ue:
         sys.exit("%s\n** %s" % (o, ue))
 
 
-    sanity_check(o)
-    
     try:
         out = file("%ssvc.py" % o['name'], "w")
     except EnvironmentError:
