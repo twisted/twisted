@@ -107,22 +107,12 @@ class ServiceCollection(coil.ConfigCollection):
 
 
 class ConnectorCollection(coil.ConfigCollection):
-
+    # XXX this class is broken right now
     entityType = IConnector
 
     def __init__(self, app):
         coil.ConfigCollection.__init__(self)
         self.app = app
-
-    def listStaticNames(self):
-        n = []
-        for i in xrange(len(self.app.connectors)):
-            c = self.app.connectors[i]
-            n.append("%s:%s,%d" % (c.host, c.portno, i))
-        return n
-
-    def listStaticEntities(self):
-        return map(None, self.listStaticNames(), self.app.connectors[:])
 
     def getStaticEntity(self, name):
         return self.app.connectors[self._getIndexFromName(name)]
@@ -213,5 +203,5 @@ class ApplicationConfig(coil.StaticCollection):
         l.putEntity("udp", PortCollection(self.app, 'udp'))
         l.lock()
         self.putEntity("services", ServiceCollection(self.app))
-        self.putEntity("connectors", ConnectorCollection(self.app))
+        # self.putEntity("connectors", ConnectorCollection(self.app))
         self.lock()
