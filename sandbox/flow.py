@@ -121,72 +121,61 @@ class Flow:
         """            
         return self._append(Branch(callable, onFinish))
     
-    def addMerge(self, callable, start = None, bucket = None, 
-                 passThru = 0, isGlobal = 0, inplace = 0, reduce = 1):
-        """ condences results; in effect many-to-one behavior
+    def addReduce(self, callable, start = None, inplace = 0):
+        """ aggregates results; in effect many-to-one behavior
 
             This stage is the opposite of the Branch stage, it accepts
-            multiple calls and aggregates them.  The registration of
-            this stage has several parameters:
+            multiple calls and aggregates them into a single call.
     
                 callable   the function or operator which will merge the 
                            output; the function has two paramaters, first
                            is the current accumulated value, and second is
                            the value passed via the stream; the output 
-                           depends on the following parameter
+                           depends on the 'inplace' parameter.
     
                 start      the starting value; or, if it is a callable,
                            a function taking no arguments that will be
                            applied to create a starting value
     
-                bucket     the attribute name for the aggregate value,
-                           if left as None, a unique bucket name will 
-                           be used
-   
-                isGlobal   if the attribute should be attached to the
-                           root context (where it will survive for the
-                           life of the flow's execution) 
-
-                passThru   If this is true, then the next stage will be
-                           passed on the data as it arrives from the
-                           previous stage; also the final 'notificaton'
-                           of the next stage will be skipped.  This is 
-                           only useful if the bucket name is provided.
-
                 inplace    If inplace is true, then the result of the 
                            callable will not be used to set the 
-                           accumulated value
- 
-                reduce     By reduce, we mean that incremental data is
-                           not passed on to the subordinate flows.  In
-                           this case, if the update is not inplace, 
-                           the return value of the function gives the 
-                           new aggregate value
-
-                           Otherwise, the callable will be passing on
-                           events to subsequent stages, if inplace is
-                           false, then a tuple is expected; the first 
-                           item in the tuple is the new aggregate, and
-                           the second item is the value for subsequent
-                           processing stages.  
-
-                           Note that passThru and not(reduce) are 
-                           mutually exclusive.
+                           accumulated value, otherwise the result of
+                           the callable becomes the accumulated value
+                           to be used in the next call
     
-            Since reducing to a single list is often useful, the default
-            parameters of this function do exactly that.   Note that this
-            stage uses the most nested Context for holding the accumulation
-            bucket; thus placement of Context stages could be used to 
-            capture intermediate results, etc.
+            Note that the stage uses the most nested Context for holding 
+            the accumulation bucket; thus placement of Context stages 
+            could be used to capture intermediate results, etc.
         """
-        return self._append(Merge(callable, start, bucket, passThru, 
-                                  isGlobal, inplace, reduce))
+        return self._append(Reduce(callable, start, inplace))
 
-    def addMergeToList(self, passThru = 0, isGlobal = 0, bucket=None):
+    def addMergeToList(self):
         """ accumulates events into a list """
-        return self._append( Merge(bucket=bucket, passThru=passThru,
-                                  isGlobal=isGlobal))
+        return self._append(Reduce())
     
+
+    def addFilter(self, callable, stop = None, isGlobal = 0):
+        """ a general filtering callback
+
+            This stage is a general filter, where the callable 
+            function is passed two arguments:
+
+               context    the current context, where the argument
+                          can assign attribute values to keep track
+                          of state between calls (global context if
+                          isGlobal is true
+
+               data       the current data value from the previous
+                          stage
+
+            Unlike addCallable, this operation is called once a 
+            the very end when the context is being flushed (and
+            in this case data is None).  Regardless, the value of
+            the call (if it is not stop) is passed on to the 
+            next stage for further processing.
+        """
+        return self._append(Filter(callable, stop, isGlobal))
+
     def addContext(self, onFlush = None):
         """ adds a nested context, provides for end notification
 
@@ -223,7 +212,7 @@ class Flow:
             self.stageTail = link
         return self
 
-    def execute(self, data = None):
+    def execute(self, data = None, context = None):
         """ executes the current flow
 
             This method creates a new Stack and then begins the execution 
@@ -232,7 +221,7 @@ class Flow:
             information, this is what the Stack is for.
         """
         if self.stageHead:
-            stack = Stack(self.stageHead, data, self.waitInterval)
+            stack = Stack(self.stageHead, data, context, self.waitInterval)
             stack.execute()
 
 class Stage:
@@ -282,47 +271,46 @@ class Branch(Stage):
                 else:
                     ret = self.onFinish()
 
-class Merge(Stage):
+class Reduce(Stage):
     def __init__(self, callable = lambda lst, val: lst.append(val) or lst,
-                       start = lambda: [], bucket = None, passThru = 0, 
-                       isGlobal = 0, inplace = 0, reduce = 1):
-        if not bucket: bucket = "_%d" % id(self)
-        self.bucket      = bucket
-        self.start       = start
-        self.callable    = callable
-        self.reduce      = reduce
-        self.inplace     = inplace
-        self.isGlobal    = isGlobal
-        self.passThru    = passThru
+                       start = lambda: [], inplace = 0):
+        self.bucket   = "_%d" % id(self)
+        self.start    = start
+        self.callable = callable
+        self.inplace  = inplace
         self.withContext = (3 == getArgumentCount(callable, 2))
-        if self.passThru: assert reduce
+    #
+    def __call__(self, flow, data):
+        cntx = flow.context
+        if not hasattr(cntx, self.bucket): 
+            start = self.start
+            if callable(start):
+                startArgs = getArgumentCount(start, 0)
+                if startArgs > 0: start = start(flow.context)
+                else: start = start()
+            cntx.addFlush(flow.nextLinkItem(), self.bucket)
+            setattr(cntx, self.bucket, start)
+        curr = getattr(cntx, self.bucket)
+        if self.withContext: curr = self.callable(cntx, curr, data)
+        else:                curr = self.callable(curr, data)
+        if not self.inplace: setattr(cntx, self.bucket, curr)
+
+class Filter(Stage):
+    def __init__(self, callable, stop = None, isGlobal = 0):
+        self.bucket   = "_%d" % id(self)
+        self.callable    = callable
+        self.stop        = stop
+        self.isGlobal    = isGlobal
     #
     def __call__(self, flow, data):
         if self.isGlobal: cntx = flow.global_context
         else:             cntx = flow.context
-        if not hasattr(cntx, self.bucket):
-             start = self.start
-             if callable(start): start = start()
-             setattr(cntx, self.bucket, start)
-             if not self.passThru:
-                 cntx.addFlush(flow.nextLinkItem(), self.bucket)
-        curr = getattr(cntx, self.bucket)
-        if self.withContext:
-            curr = self.callable(cntx, curr, data)
-        else:
-            curr = self.callable(curr, data)
-        if self.reduce:
-            if not self.inplace:
-                setattr(cntx, self.bucket, curr)
-            if self.passThru:
-                flow.push(data)
-        else:
-            if curr:
-                if not self.inplace:
-                    (save, curr) = curr
-                    setattr(cntx, self.bucket, save)
-                if curr is not None: 
-                    flow.push(curr)
+        if not hasattr(cntx, self.bucket): 
+            cntx.addFlush(flow.currLinkItem(), self.bucket)
+            setattr(cntx, self.bucket, None)
+        curr = self.callable(cntx, curr)
+        if curr is not self.stop:
+            flow.push(curr)
 
 class Context(Stage):
     def __init__(self, onFlush = None):
@@ -358,7 +346,7 @@ class Stack:
         further items back on to the call stack.  Once the stage
         returns, the stack is checked and iteration continues.
     """
-    def __init__(self, flowitem, data = None, waitInterval = 0):
+    def __init__(self, flowitem, data, context, waitInterval):
         """ bootstraps the processing of the flow
 
              flowitem      the very first stage in the process
@@ -371,7 +359,14 @@ class Stack:
         self.context = self.global_context
         self._stack.append((self.context, self.context.onFlush, None))
         self._stack.append((data, flowitem.stage, flowitem.next))
-     
+        if context:
+           for key in context.keys():
+               setattr(self.context, key, context[key])
+ 
+    def currLinkItem(self): 
+        """ returns the current stage in the process """
+        return LinkItem(self._current[1], self._current[2]) 
+ 
     def nextLinkItem(self):
         """ returns the next stage in the process """
         return self._current[2]
@@ -449,9 +444,9 @@ class LinkItem:
          next    next LinkItem in the list
  
     """
-    def __init__(self,stage):
+    def __init__(self, stage, next = None ):
         self.stage = stage
-        self.next  = None
+        self.next  = next
 
 class FlowIterator:
     """

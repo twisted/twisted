@@ -66,7 +66,7 @@ def testFlow():
     a.addBranch(dataSource, finished)
     a.addCallable(addOne)
     a.addCallable(printResult)
-    #a.execute(2)
+    a.execute(2)
 
     class simpleIterator:
         def __init__(self, data): 
@@ -108,17 +108,17 @@ def testFlow():
     c = Flow()
     c.addBranch(simpleIterator)
     c.addCallable(printResult)
-    #c.execute(5)
+    c.execute(5)
 
     import operator
     d = Flow()
     d.addBranch(simpleIterator)
-    d.addMerge(operator.add, 0)
+    d.addReduce(operator.add, 0)
     d.addCallable(printResult)
 
     e = Flow()
     e.addChain(a,d)
-    #e.execute(3)
+    e.execute(3)
 
 if '__main__' == __name__:
     testFlow()
