@@ -166,7 +166,7 @@ class DatabaseAuthorizer(authorizer.Authorizer, adbapi.Augmentation):
     #################### Web Admin Interface Below ##############################
 
     def getIdentities(self):
-        """Get the identies in the db. Used by web admin interface.
+        """Get the identities in the db. Used by web admin interface.
         """
         sql="""SELECT identity_name, password, (SELECT count(*)
                                                 FROM twisted_perspectives
