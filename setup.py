@@ -22,7 +22,7 @@ Package installer for Twisted
 Copyright (c) 2001 by Twisted Matrix Laboratories
 All rights reserved, see LICENSE for details.
 
-$Id: setup.py,v 1.12 2002/02/22 16:50:02 itamarst Exp $
+$Id: setup.py,v 1.13 2002/02/23 21:39:52 itamarst Exp $
 """
 
 import distutils, os, sys
@@ -64,7 +64,7 @@ your toaster.
         "twisted.manhole",
         "twisted.manhole.ui",
         # "twisted.metrics",
-        # "twisted.names",
+        "twisted.names",
         "twisted.persisted",
         "twisted.protocols",
         "twisted.protocols.ldap",
@@ -92,6 +92,9 @@ if os.name == 'posix':
     import glob
     setup_args['scripts'] = ['bin/manhole', 'bin/mktap', 'bin/gnusto', 'bin/twistd', 'bin/im', 'bin/t-im', 'bin/faucet']
 
+imPath = os.path.join('twisted', 'im')
+setup_args['data_files'] = [(imPath, [os.path.join(imPath, 'instancemessenger.glade')])]
+print setup_args['data_files']
 #'"
 # for building C banana...
 
