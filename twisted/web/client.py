@@ -98,11 +98,14 @@ class HTTPPageDownloader(HTTPPageGetter):
 
     transmittingPage = 0
 
-    def handleStatus_200(self):
+    def handleStatus_200(self, partialContent=0):
         HTTPPageGetter.handleStatus_200(self)
         self.transmittingPage = 1
-        self.factory.pageStart()
+        self.factory.pageStart(partialContent)
 
+    def handleStatus_206(self):
+        self.handleStatus_200(partialContent=1)
+    
     def handleResponsePart(self, data):
         if self.transmittingPage:
             self.factory.pagePart(data)
@@ -114,8 +117,7 @@ class HTTPPageDownloader(HTTPPageGetter):
 
 
 class HTTPClientFactory(protocol.ClientFactory):
-
-    headers = {}
+    """Download a given URL."""
 
     protocol = HTTPPageGetter
 
@@ -123,6 +125,8 @@ class HTTPClientFactory(protocol.ClientFactory):
         self.cookies = {}
         if headers is not None:
             self.headers = headers
+        else:
+            self.headers = {}
         if postdata is not None:
             self.headers.setdefault('Content-Length', len(postdata))
         self.postdata = postdata
@@ -162,22 +166,56 @@ class HTTPClientFactory(protocol.ClientFactory):
             self.waiting = 0
             self.deferred.errback(reason)
 
-class HTTPDownloader(HTTPClientFactory):
 
+class HTTPDownloader(HTTPClientFactory):
+    """Download to a file."""
+    
     protocol = HTTPPageDownloader
     value = None
 
-    def __init__(self, host, url, fileName, method='GET', postdata=None, headers=None, agent="Twisted client"):
+    def __init__(self, host, url, fileName, method='GET', postdata=None, headers=None,
+                 agent="Twisted client", supportPartial=0):
+        if supportPartial and os.path.exists(fileName):
+            fileLength = os.path.getsize(fileName)
+            if fileLength:
+                self.requestedPartial = fileLength
+                if headers == None:
+                    headers = {}
+                headers["range"] = "bytes=%d-" % fileLength
+        else:
+            self.requestedPartial = 0
         HTTPClientFactory.__init__(self, host, url, method=method, postdata=postdata, headers=headers, agent=agent)
         self.fileName = fileName
         self.deferred = defer.Deferred()
         self.waiting = 1
         self.file = None
 
-    def pageStart(self):
+    def gotHeaders(self, headers):
+        if self.requestedPartial:
+            contentRange = headers.get("contentRange", None)
+            if not contentRange:
+                # server doesn't support partial requests, oh well
+                self.requestedPartial = 0 
+                return
+            start, end, realLength = http.parseContentRange(header)
+            if start != self.requestedPartial:
+                # server is acting wierdly
+                self.requestedPartial = 0
+    
+    def pageStart(self, partialContent):
+        """Called on page download start.
+
+        @param partialContent: tells us if the download is partial download we requested.
+        """
+        if partialContent and not self.requestedPartial:
+            raise ValueError, "we shouldn't get partial content response if we didn't want it!"
         if self.waiting:
             self.waiting = 0
-            self.file = open(self.fileName, 'wb')
+            if partialContent:
+                self.file = open(self.fileName, 'rb+')
+                self.file.seek(0, 2)
+            else:
+                self.file = open(self.fileName, 'wb')
 
     def pageEnd(self):
         if self.file:
