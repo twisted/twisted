@@ -11,7 +11,10 @@ class OneTimeKey(Protocol):
         self.transport.loseConnection()
 
 def main():
-    # namespaces are weird. See the comment in doc/examples/echoserv.py
+    # namespaces are weird. if we used OneTimeKey directly, it would
+    # pickle the instance as __main__.OneTimeKey, since we run this
+    # module directly. So we reimport this module so the pickle refers
+    # to it by its real name.
     import app3
     from twisted.internet.app import Application
     f = Factory()
