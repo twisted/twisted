@@ -17,13 +17,17 @@
 
 # DOMWidgets
 
-import traceback
 import urllib
 from twisted.web.microdom import parseString
-from twisted.web import widgets
-from twisted.web.woven import model, template
 
-from twisted.python import components, mvc, failure
+
+#sibling imports
+import model
+import template
+import view
+import utils
+
+from twisted.python import components, failure
 from twisted.python import domhelpers, log
 from twisted.internet import defer
 
@@ -36,48 +40,11 @@ DOMWidgets are views which can be composed into bigger views.
 DEBUG = 0
 
 
-def renderFailure(ignored, request):
-    f = failure.Failure()
-    log.err(f)
-    request.write(widgets.formatFailure(f))
-    request.finish()
-
-
-def _getModel(self):
-    if not isinstance(self.model, mvc.Model): # see __class__.doc
-         return self.model
-
-    if self.submodel is None:
-        if hasattr(self.node, 'toxml'):
-            nodeText = self.node.toxml()
-        else:
-            widgetDict = self.__dict__
-        return ""
-        raise NotImplementedError, "No model attribute was specified on the node."
-    submodelList = self.submodel.split('/')
-    currentModel = self.model
-    for element in submodelList:
-        parentModel = currentModel
-        currentModel = currentModel.getSubmodel(element)
-        if currentModel is None:
-            return None
-        adapted = components.getAdapter(currentModel, mvc.IModel, None)
-        if adapted is None:
-            adapted = model.Wrapper(currentModel)
-        #assert adapted is not None, "No IModel adapter registered for %s" % currentModel
-        adapted.parent = parentModel
-        adapted.name = element
-        if isinstance(currentModel, defer.Deferred):
-            return adapted
-        currentModel = adapted
-    return adapted
-
-
-class Widget(mvc.View):
+class Widget(view.View):
     """
     A Widget wraps an object, its model, for display. The model can be a
     simple Python object (string, list, etc.) or it can be an instance
-    of L{mvc.Model}.  (The former case is for interface purposes, so that
+    of L{model.Model}.  (The former case is for interface purposes, so that
     the rest of the code does not have to treat simple objects differently
     from Model instances.)
 
@@ -87,11 +54,13 @@ class Widget(mvc.View):
        - we are really being called to enable an operation on an attribute
          of the model, which we will call the submodel
 
-    @cvar tagName: The tag name of the DOM element that this widget creates. 
-          If this is None, then the original Node will be cloned.
+    @cvar tagName: The tag name of the element that this widget creates. If this
+          is None, then the original Node will be cloned.
     @cvar wantsAllNotifications: Indicate that this widget wants to recieve every
           change notification from the main model, not just notifications that affect
           it's model.
+    @ivar model: If the current model is an L{model.Model}, then the result of
+          model.getData(). Otherwise the original object itself.
     """
 
     wantsAllNotifications = 0
@@ -100,7 +69,7 @@ class Widget(mvc.View):
     def __init__(self, model, submodel = None):
         self.errorFactory = Error
         self.attributes = {}
-        mvc.View.__init__(self, model)
+        view.View.__init__(self, model)
         self.become = None
         self.children = []
         self.node = None
@@ -132,7 +101,7 @@ class Widget(mvc.View):
         """
         self.submodel = submodel
 
-    _getMyModel = _getModel
+    _getMyModel = utils._getModel
 
     def getData(self):
         """
@@ -199,7 +168,7 @@ class Widget(mvc.View):
         data = self.getData()
         if isinstance(data, defer.Deferred):
             data.addCallback(self.setDataCallback, request, node)
-            data.addErrback(renderFailure, request)
+            data.addErrback(utils.renderFailure, request)
             return data
         self.setUp(request, node, data)
         # generateDOM should always get a reference to the
@@ -212,7 +181,7 @@ class Widget(mvc.View):
         data = self.getData()
         if isinstance(data, defer.Deferred):
             data.addCallback(self.setDataCallback, request, node)
-            data.addErrback(renderFailure, request)
+            data.addErrback(utils.renderFailure, request)
             return data
         self.setUp(request, node, data)
         # generateDOM should always get a reference to the
@@ -310,6 +279,14 @@ class Widget(mvc.View):
         """
         self.become = self.errorFactory(self.model, message)
 
+
+class DefaultWidget(Widget):
+    def generate(self, request, node):
+        """
+        By default, we just return the node unchanged
+        """
+        return node
+
 class WidgetNodeMutator(template.NodeMutator):
     """
     XXX: Document
@@ -332,19 +309,19 @@ class Text(Widget):
     def __init__(self, text, raw=0):
         """
         @param text: The text to render.
-        @type text: A string or L{mvc.Model}.
+        @type text: A string or L{model.Model}.
         @ivar raw: A boolean that specifies whether to render the text as
               a L{domhelpers.RawText} or as a DOM TextNode.
         """
         self.raw = raw
-        if isinstance(text, mvc.Model):
+        if isinstance(text, model.Model):
             Widget.__init__(self, text)
         else:
-            Widget.__init__(self, mvc.Model())
+            Widget.__init__(self, model.Model())
         self.text = text
     
     def generateDOM(self, request, node):
-        if isinstance(self.text, mvc.Model):
+        if isinstance(self.text, model.Model):
             if self.raw:
                 textNode = domhelpers.RawText(str(self.getData()))
             else:
@@ -367,7 +344,7 @@ class Image(Text):
     def generateDOM(self, request, node):
         #`self.text' is lame, perhaps there should be a DataWidget that Text
         #and Image both subclass.
-        if isinstance(self.text, mvc.Model):
+        if isinstance(self.text, model.Model):
             data = self.getData()
         else:
             data = self.text
@@ -523,7 +500,6 @@ class List(Widget):
         domhelpers.clearNode(node)
         if not listHeader is None:
             node.appendChild(listHeader)
-        submodel = self.submodel
         data = self.getData()
         if self._has_data(data):
             self._iterateData(node, listItems, self.submodel, data)

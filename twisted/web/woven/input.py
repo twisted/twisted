@@ -20,12 +20,11 @@
 import os
 
 from twisted.internet import defer
-from twisted.python.mvc import Controller
 from twisted.python import log
 
-from twisted.web.woven import template, widgets
+from twisted.web.woven import template, controller, utils
 
-class InputHandler(Controller):
+class InputHandler(controller.Controller):
     """
     An InputHandler is like a controller, but it operates on something
     contained inside of C{self.model} instead of directly on C{self.model}.
@@ -99,7 +98,7 @@ class InputHandler(Controller):
         """
         self.view.setError(request, self.invalidErrorText)
 
-    _getMyModel = widgets._getModel
+    _getMyModel = utils._getModel
     
     def commit(self, request, node, data):
         """
@@ -113,6 +112,14 @@ class InputHandler(Controller):
         if data != self.view.getData():
             model = self._getMyModel()
             model.setData(data)
+
+
+class DefaultHandler(InputHandler):
+    def handle(self, request):
+        """
+        By default, we don't do anything
+        """
+        return (None, None)
 
 
 class SingleValue(InputHandler):

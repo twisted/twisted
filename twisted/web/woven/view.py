@@ -15,43 +15,62 @@
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
-import time
-
 from twisted.web.woven import template
+from twisted.web import resource
+
 from twisted.python import components
-from twisted.python import mvc
 from twisted.python import log
 from twisted.internet import defer
 
-# If no widget/handler was found in the container controller or view, these
-# modules will be searched.
-from twisted.web.woven import input
-from twisted.web.woven import widgets
-
+from twisted.web.woven import interfaces
 
 NO_DATA_YET = 2
 
 
-class DefaultHandler(input.InputHandler):
-    def handle(self, request):
-        """
-        By default, we don't do anything
-        """
-        return (None, None)
+class View(template.DOMTemplate):
 
+    __implements__ = template.DOMTemplate.__implements__, interfaces.IView
 
-class DefaultWidget(widgets.Widget):
-    def generate(self, request, node):
+    def __init__(self, model):
         """
-        By default, we just return the node unchanged
+        A view must be told what its model is, and may be told what its
+        controller is, but can also look up its controller if none specified.
         """
-        return node
+        self.model = model
+        self.controller = self.controllerFactory(model)
+        template.DOMTemplate.__init__(self, model)
 
+    def modelChanged(self, changed):
+        """
+        Dispatch changed messages to any update_* methods which
+        may have been defined, then pass the update notification on
+        to the controller.
+        """
+        for name in changed.keys():
+            handler = getattr(self, 'update_' + name, None)
+            if handler:
+                apply(handler, (changed[name],))
 
-class WView(template.DOMTemplate):
+    def controllerFactory(self, model):
+        """
+        Hook for subclasses to customize the controller that is associated
+        with the model associated with this view.
+        """
+        # TODO: Decide what to do as a default Controller
+        # if you don't need to use one...
+        # Something that ignores all messages?
+        controller = components.getAdapter(model, interfaces.IController, None)
+        if controller:
+            controller.setView(self)
+        return controller
+        
+    def setController(self, controller):
+        self.controller = controller
+
+    
     def getNodeModel(self, submodel):
         if submodel:
-            modelGetter = DefaultWidget(self.model)
+            modelGetter = widgets.DefaultWidget(self.model)
             modelGetter.setSubmodel(submodel)
             model = modelGetter.getData()
         else:
@@ -62,7 +81,7 @@ class WView(template.DOMTemplate):
         controllerName = node.getAttribute('controller')
         
         # Look up an InputHandler
-        controllerFactory = DefaultHandler
+        controllerFactory = input.DefaultHandler
         if controllerName:
             if not node.hasAttribute('name'):
                 log.msg("POTENTIAL ERROR: %s had a controller, but not a 'name' attribute." % node)
@@ -74,7 +93,6 @@ class WView(template.DOMTemplate):
             if controllerFactory is None:
                 controllerFactory = getattr(input, controllerName, None)
             if controllerFactory is None:
-                nodeText = node.toxml()
                 raise NotImplementedError, "You specified controller name %s on a node, but no factory_%s method was found in %s." % (controllerName, controllerName, namespaces + [input])
         else:
             # If no "controller" attribute was specified on the node, see if 
@@ -83,7 +101,7 @@ class WView(template.DOMTemplate):
             if hasattr(model, '__class__'):
                 controllerFactory = components.getAdapterClassWithInheritance(
                                 model.__class__, 
-                                mvc.IController, 
+                                interfaces.IController, 
                                 controllerFactory)
         try:
             return controllerFactory(request, node, self.model)
@@ -102,14 +120,17 @@ class WView(template.DOMTemplate):
                 viewMethod = getattr(namespace, 'factory_' + viewName, None)
                 if viewMethod is not None:
                     break
+
             if viewMethod is None:
                 view = getattr(widgets, viewName, None)
                 if view is not None:
                     view = view(self.model)
+
             else:
                 view = viewMethod(request, node)
+
+
             if view is None:
-                nodeText = node.toxml()
                 raise NotImplementedError, "You specified view name %s on a node, but no factory_%s method was found in %s or %s." % (viewName, viewName, self, widgets)
         else:
             # If no "view" attribute was specified on the node, see if there
@@ -118,7 +139,7 @@ class WView(template.DOMTemplate):
             if hasattr(model, '__class__'):
                 view = components.getAdapterClassWithInheritance(
                                 model.__class__, 
-                                mvc.IView, 
+                                interfaces.IView, 
                                 None)
             if view is not None:
                 view = view(self.model)
@@ -144,10 +165,10 @@ class WView(template.DOMTemplate):
         controller = self.getNodeController(request, node, submodel)
         view = self.getNodeView(request, node, submodel)
         
-        if isinstance(view, mvc.View):
+        if isinstance(view, View):
             controller.setView(view)
         else:
-            controller.setView(DefaultWidget(self.model))
+            controller.setView(widgets.DefaultWidget(self.model))
         if not getattr(controller, 'submodel', None):
             controller.setSubmodel(submodel)
         # xxx refactor this into a widget interface and check to see if the object implements IWidget
@@ -253,10 +274,25 @@ class WView(template.DOMTemplate):
     def handleProcessCallback(self, result, request):
         self.sendPage(request)
 
+#backwards compatibility
+WView = View
+
 
 def registerViewForModel(view, model):
     """
-    Registers `view' as an adapter of `model' for L{mvc.IView}.
+    Registers `view' as an adapter of `model' for L{interfaces.IView}.
     """
-    components.registerAdapter(view, model, mvc.IView)
+    components.registerAdapter(view, model, interfaces.IView)
+    if components.implements(view, resource.IResource):
+        components.registerAdapter(view, model, resource.IResource)
+
+
+
+#sibling imports::
+
+# If no widget/handler was found in the container controller or view, these
+# modules will be searched.
+
+import input
+import widgets
 

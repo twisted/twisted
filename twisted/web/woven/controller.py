@@ -17,22 +17,29 @@
 
 from twisted.python import log
 from twisted.python import components
-from twisted.python import mvc
 from twisted.web import resource
-from twisted.web.woven import template
+from twisted.web.woven import interfaces
 
+class Controller(resource.Resource):
+    """
+    A Controller which translates commands the user executed on the
+    view into explicit manipulations of the model. This is where the
+    business logic lives.
 
-class WController(mvc.Controller, resource.Resource):
+    This passes responsibility on to the view class registered for the
+    model. You can override render to perform more advanced template
+    lookup logic.
     """
-    A simple controller that automatically passes responsibility on to the view
-    class registered for the model. You can override render to perform
-    more advanced template lookup logic.
-    """
-    __implements__ = (mvc.Controller.__implements__, resource.IResource)
     
-    def __init__(self, *args, **kwargs):
-        mvc.Controller.__init__(self, *args, **kwargs)
+    __implements__ = (interfaces.IController, resource.IResource)
+    
+    def __init__(self, *args):
         resource.Resource.__init__(self)
+        self.model = args[-1]
+
+    def setView(self, view):
+        self.view = view
+        
     
     def setUp(self, request):
         """
@@ -42,26 +49,27 @@ class WController(mvc.Controller, resource.Resource):
 
     def render(self, request):
         self.setUp(request)
-        self.view = components.getAdapter(self.model, mvc.IView, None)
+        self.view = components.getAdapter(self.model, interfaces.IView, None)
         self.view.setController(self)
         return self.view.render(request)
 
     def process(self, request, **kwargs):
         log.msg("Processing results: ", kwargs)
 
+WController = Controller
 
 def registerControllerForModel(controller, model):
     """
     Registers `controller' as an adapter of `model' for IController, and
     optionally registers it for IResource, if it implements it.
     
-    @param controller: A class that implements L{mvc.IController}, usually a
-           L{WController} subclass. Optionally it can implement
+    @param controller: A class that implements L{interfaces.IController}, usually a
+           L{Controller} subclass. Optionally it can implement
            L{resource.IResource}.
-    @param model: Any class, but probably a L{twisted.web.woven.model.WModel}
+    @param model: Any class, but probably a L{twisted.web.woven.model.Model}
            subclass.
     """
-    components.registerAdapter(controller, model, mvc.IController)
+    components.registerAdapter(controller, model, interfaces.IController)
     if components.implements(controller, resource.IResource):
         components.registerAdapter(controller, model, resource.IResource)
 

@@ -73,23 +73,17 @@ from twisted.python import components
 from twisted.web import resource
 from twisted.web.resource import Resource
 from twisted.web import widgets # import Widget, Presentation
+from twisted.web.woven import controller, utils, interfaces
+
 from twisted.internet import defer
 from twisted.python import failure
 from twisted.internet import reactor, defer
-from twisted.python.mvc import View, IView, Controller
-from twisted.python import mvc
 from twisted.python import log
 
 from twisted.web.server import NOT_DONE_YET
 STOP_RENDERING = 1
 RESTART_RENDERING = 2
 
-
-def renderFailure(ignored, request):
-    f = failure.Failure()
-    log.err(f)
-    request.write(widgets.formatFailure(f))
-    request.finish()
 
 
 class INodeMutator(components.Interface):
@@ -138,7 +132,7 @@ class StringNodeMutator(NodeMutator):
     def generate(self, request, node):
         if self.data:
             try:
-                child = minidom.parseString(html)
+                child = minidom.parseString(self.data)
             except Exception, e:
                 log.msg("Error parsing return value, probably invalid xml:", e)
                 child = self.d.createTextNode(self.data)
@@ -161,7 +155,7 @@ class WebWidgetNodeMutator(NodeMutator):
         except:
             pr = widgets.Presentation()
             pr.tmpl = displayed
-            strList = pr.display(request)
+            #strList = pr.display(request)
             html = string.join(displayed)
         stringMutator = StringNodeMutator(html)
         return stringMutator.generate(request, node)
@@ -173,7 +167,7 @@ components.registerAdapter(StringNodeMutator, type(""), INodeMutator)
 components.registerAdapter(WebWidgetNodeMutator, widgets.Widget, INodeMutator)        
 
 
-class DOMTemplate(Resource, View):
+class DOMTemplate(Resource):
     """A resource that renders pages using DOM."""
     
     isLeaf = 1
@@ -181,11 +175,10 @@ class DOMTemplate(Resource, View):
     templateDirectory = ''
     template = ''
     _cachedTemplate = None
-    __implements__ = (Resource.__implements__, View.__implements__)
+    __implements__ = (Resource.__implements__)
 
     def __init__(self, model = None):
         Resource.__init__(self)
-        View.__init__(self, model)
         if self.controller is None:
             self.controller = self
         self.model = model
@@ -279,7 +272,7 @@ class DOMTemplate(Resource, View):
             if not self.outstandingCallbacks:
                 return self.sendPage(request)
         except:
-            renderFailure(None, request)
+            utils.renderFailure(None, request)
     
     def dispatchResult(self, request, node, result):
         """
@@ -300,7 +293,7 @@ class DOMTemplate(Resource, View):
         if isinstance(result, defer.Deferred):
             self.outstandingCallbacks += 1
             result.addCallback(self.dispatchResultCallback, request, node)
-            result.addErrback(renderFailure, request)
+            result.addErrback(utils.renderFailure, request)
             # Got to wait until the callback comes in
         return result
 
@@ -340,7 +333,6 @@ class DOMTemplate(Resource, View):
         if viewName:        
             method = getattr(self, "factory_" + viewName, None)
             if not method:
-                nodeText = node.toxml()
                 raise NotImplementedError, "You specified view name %s on a node, but no factory_%s method was found." % (viewName, viewName)
         
             result = method(request, node)
@@ -368,18 +360,18 @@ class DOMTemplate(Resource, View):
 # DOMView is now deprecated since the functionality was merged into domtemplate
 DOMView = DOMTemplate
 
-# DOMController is now renamed woven.controller.WController
-class DOMController(mvc.Controller, Resource):
+# DOMController is now renamed woven.controller.Controller
+class DOMController(controller.Controller, Resource):
     """
     A simple controller that automatically passes responsibility on to the view
     class registered for the model. You can override render to perform
     more advanced template lookup logic.
     """
-    __implements__ = (mvc.Controller.__implements__, resource.IResource)
+    __implements__ = (controller.Controller.__implements__, resource.IResource)
     
     def __init__(self, *args, **kwargs):
-        log.msg("DeprecationWarning: DOMController is deprecated; it has been renamed twisted.web.woven.controller.WController.\n")
-        mvc.Controller.__init__(self, *args, **kwargs)
+        log.msg("DeprecationWarning: DOMController is deprecated; it has been renamed twisted.web.woven.controller.Controller.\n")
+        controller.Controller.__init__(self, *args, **kwargs)
         Resource.__init__(self)
     
     def setUp(self, request):
@@ -387,7 +379,7 @@ class DOMController(mvc.Controller, Resource):
 
     def render(self, request):
         self.setUp(request)
-        self.view = components.getAdapter(self.model, mvc.IView, None)
+        self.view = components.getAdapter(self.model, interfaces.IView, None)
         self.view.setController(self)
         return self.view.render(request)
 
