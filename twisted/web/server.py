@@ -63,17 +63,16 @@ supportedMethods = ('GET', 'HEAD', 'POST')
 class UnsupportedMethod(Exception):
     """Raised by a resource when faced with a strange request method.
 
-    RFC 2616 (HTTP 1.1) gives us two choices when faced with this
-    situtation: If the type of request is know to us, but not allowed
-    for the requested resource, respond with NOT_ALLOWED.  Otherwise,
-    if the request is something we don't know how to deal with in any
-    case, respond with NOT_IMPLEMENTED.
+    RFC 2616 (HTTP 1.1) gives us two choices when faced with this situtation:
+    If the type of request is known to us, but not allowed for the requested
+    resource, respond with NOT_ALLOWED.  Otherwise, if the request is something
+    we don't know how to deal with in any case, respond with NOT_IMPLEMENTED.
 
-    When this exception is raised by a Resource's render method, the
-    server will make the appropriate response.
+    When this exception is raised by a Resource's render method, the server
+    will make the appropriate response.
 
-    This exception's first argument MUST be a sequence of the methods
-    the resource *does* support.
+    This exception's first argument MUST be a sequence of the methods the
+    resource *does* support.
     """
 
     allowedMethods = ()
@@ -140,7 +139,6 @@ class Request(pb.Copyable, http.HTTP):
         del x['server']
         del x['site']
         x['remote'] = pb.ViewPoint(issuer, self)
-        x['_prePathURL'] = self.prePathURL()
         return x
 
     # HTML generation helpers
@@ -204,9 +202,11 @@ class Request(pb.Copyable, http.HTTP):
         # Log the request to a file.
         log.msg( self )
 
-        # cache the client information, we'll need this later to be
-        # pickled and sent with the request so CGIs will work remotely
+        # cache the client and server information, we'll need this later to be
+        # serialized and sent with the request so CGIs will work remotely
+        
         self.client = self.transport.getPeer()
+        self.host = self.transport.getHost()
 
         # set various default headers
         self.setHeader('server', version)
@@ -215,9 +215,6 @@ class Request(pb.Copyable, http.HTTP):
         self.setHeader('connection', 'close')
         try:
             # Resource Identification
-            self.server_port = 80
-            # XXX ^^^^^^^^^^ Obviously it's not always 80.  figure it
-            # out from the URI.
             self.prepath = []
             self.postpath = string.split(self.path[1:], '/')
             resrc = self.site.getResourceFor(self)
@@ -442,11 +439,26 @@ class Request(pb.Copyable, http.HTTP):
         self.session.touch()
         return self.session
 
+    def getRequestHostname(self):
+        """Get the hostname that the user passed in to the request.
+
+        This will either use the Host: header (if it is available) or the 
+        """
+        return string.split(self.getHeader('host') or
+                            socket.gethostbyaddr(self.getHost()[1]),
+                            ':')[0]
+
     def getHost(self):
-        return socket.gethostbyaddr(self.transport.getHost()[1])
+        """Get my originally requesting transport's host.
+
+        Don't rely on the 'transport' attribute, since Request objects may be
+        copied remotely.  For information on this method's return value, see
+        twisted.internet.tcp.Port.
+        """
+        return self.host
 
     def prePathURL(self):
-        inet, addr, port = self.transport.getHost()
+        inet, addr, port = self.getHost()
         if port == 80:
             hostport = ''
         else:

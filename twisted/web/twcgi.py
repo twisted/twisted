@@ -73,13 +73,12 @@ class CGIScript(resource.Resource):
         """
         script_name = "/"+string.join(request.prepath, '/')
         python_path = string.join(sys.path, os.pathsep)
-        serverName = string.split(request.getHeader('host') or
-                                  request.getHost(), ':')[0]
+        serverName = string.split(request.getRequestHostname(), ':')[0]
         env = {"SERVER_SOFTWARE":   server.version,
                "SERVER_NAME":       serverName,
                "GATEWAY_INTERFACE": "CGI/1.1",
                "SERVER_PROTOCOL":   request.clientproto,
-               "SERVER_PORT":       str(request.server_port),
+               "SERVER_PORT":       str(request.getHost()[2]),
                "REQUEST_METHOD":    request.method,
                "SCRIPT_NAME":       script_name, # XXX
                "SCRIPT_FILENAME":   self.filename,
