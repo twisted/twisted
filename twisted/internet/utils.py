@@ -15,14 +15,18 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 # 
 
+"""Utility methods."""
+
 from twisted.internet import protocol, reactor, defer
 import cStringIO
+
 
 def callProtocolWithDeferred(protocol, executable, args=(), env={}, path='.'):
     d = defer.Deferred() 
     p = protocol(d)
     reactor.spawnProcess(p, executable, (executable,)+args, env, path)
     return d
+
 
 class _BackRelay(protocol.ProcessProtocol):
 
@@ -42,6 +46,7 @@ class _BackRelay(protocol.ProcessProtocol):
         if self.deferred is not None:
             self.deferred.callback(self.s.getvalue())
 
+
 def getProcessOutput(executable, args=(), env={}, path='.'):
     """Spawn a process and return its output as a deferred returning a string.
 
@@ -60,6 +65,7 @@ def getProcessOutput(executable, args=(), env={}, path='.'):
     """
     return callProtocolWithDeferred(_BackRelay, executable, args, env, path)
 
+
 class _ValueGetter(protocol.ProcessProtocol):
 
     def __init__(self, deferred):
@@ -68,9 +74,16 @@ class _ValueGetter(protocol.ProcessProtocol):
     def processEnded(self, reason):
         self.deferred.callback(reason.value.exitCode)
 
+
 def getProcessValue(executable, args=(), env={}, path='.'):
+    """Spawn a process and return its exit code as a Deferred."""
     return callProtocolWithDeferred(_ValueGetter, executable, args, env, path)
 
+
 def schedule(f, *args, **kw):
-    """reactor.callLater(0, f, *args, **kw)"""
+    """Run a function in the next iteration of the event loop.
+
+    There will be no wait for the next iteration - it will run immediately
+    after the current iteration is done.
+    """
     reactor.callLater(0, f, *args, **kw)
