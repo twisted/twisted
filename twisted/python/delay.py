@@ -167,7 +167,60 @@ class IDelayed:
         """
 
 
-class Delayed(rebuild.Sensitive):
+
+class Time:
+    """I am a list of events which will happen at particular points in time.
+    """
+    __implements__ = (IDelayed,)
+
+    def __init__(self):
+        self.queue = []
+
+    def runLater(self, seconds, func, *args, **kw):
+        """Run an event a specified number of seconds later.
+        """
+        insort(self.queue, [time() + seconds, func, args, kw])
+
+    def __getstate__(self):
+        """Save state by storing all callback timeouts as differences from the current time.
+        """
+        now = time()
+        newQueue = []
+        for seconds, func, args, kw in self.queue:
+            newQueue.append(seconds - now, func, args, kw)
+        return {'queue': newQueue}
+
+    def timeout(self):
+        """IDelayed.timeout
+        """
+        if self.queue:
+            return max(self.queue[0][0] - time(), 0) # time of first element in queue
+        else:
+            return None
+
+    def runUntilCurrent(self):
+        """IDelayed.runUntilCurrent
+        """
+        now = time()
+        while self.queue and (self.queue[0][0] < now):
+            seconds, func, args, kw = self.queue.pop(0)
+            try:
+                apply(func, args, kw)
+            except:
+                log.deferr()
+
+    def runEverything(self):
+        for seconds, func, args, kw in self.queue[:]:
+            try:
+                apply(func, args, kw)
+            except:
+                log.deferr()
+
+        
+        
+
+
+class LockstepSimulation(rebuild.Sensitive):
     """I am a delayed event queue.
 
     A delayed event scheduler which, in my humble but correct opinion, is much
@@ -181,7 +234,7 @@ class Delayed(rebuild.Sensitive):
     made.
     """
     
-    __implements__ = IDelayed,
+    __implements__ = (IDelayed,)
     
     fudgefactor = 0.01
 
@@ -336,3 +389,5 @@ class Delayed(rebuild.Sensitive):
         """In multithreaded mode, stops threads started by self.threadloop()
         """
         self.is_running=0
+
+Delayed = LockstepSimulation

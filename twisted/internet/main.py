@@ -40,8 +40,7 @@ from twisted.persisted import styles
 
 # Sibling Imports
 
-theTimeouts = delay.Delayed() # A delay for non-peristent delayed actions
-theTimeouts.ticktime = 1
+theTimeouts = delay.Time() # A delay for non-peristent delayed actions
 
 def addTimeout(method, seconds):
     """Add a method which will time out after a given interval.
@@ -49,7 +48,7 @@ def addTimeout(method, seconds):
     The given method will always time out before a server shuts down,
     and will never persist.
     """
-    theTimeouts.later(method, seconds)
+    theTimeouts.runLater(seconds, method)
 
 
 class DummyResolver:
@@ -222,7 +221,18 @@ def run(installSignalHandlers=1):
                         ((timeout is None) or
                          (newTimeout < timeout))):
                         timeout = newTimeout
-                doSelect(timeout)
+
+                # A bit of explanation to clear up the following expression:
+                
+                # If a delayed event processor calls main.shutDown(), then we
+                # don't want the file descriptor list to be polled.  Since
+                # 'running' will be either 1 or 0, if it's 1, the value for
+                # 'timeout' will be used.  If it's 0, the expression will
+                # evaluate to false (0), which causes doSelect to execute with
+                # a timeout of 0, allowing one last gasp for any FDs that want
+                # to be run before the shut-down is complete.
+                
+                doSelect(running and timeout)
         except select.error:
             log.msg('shutting down after select() loop interruption')
             if running:

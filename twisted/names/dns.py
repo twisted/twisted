@@ -179,7 +179,7 @@ class Resolver:
     def resolve(self, name, callback, errback=None, type=1, timeout=10):
         query = SentQuery(name, type, callback, errback, self.boss, 
                           self.nameservers)
-        main.theTimeouts.later(query.timeOut, timeout)
+        main.addTimeout(query.timeOut, timeout)
 
 
 class ResolveConfResolver(Resolver):
