@@ -138,7 +138,7 @@ def createConfigurable(configClass, container, name):
     """
     if not issubclass(configClass, Configurable):
         raise TypeError("Types don't match!")
-    instance = new.instance(configClass)
+    instance = new.instance(configClass, {})
     instance.configInit(container, name)
     return instance
 
