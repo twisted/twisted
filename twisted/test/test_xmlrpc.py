@@ -35,6 +35,9 @@ from twisted.python import log
 
 class Test(XMLRPC):
 
+    FAILURE = 666
+    NOT_FOUND = 23
+    
     def xmlrpc_add(self, a, b):
         return a + b
 
@@ -49,6 +52,9 @@ class Test(XMLRPC):
 
     def xmlrpc_fault(self):
         return xmlrpc.Fault(12, "hello")
+
+    def xmlrpc_deferFault(self):
+        return defer.fail(xmlrpc.Fault(17, "hi"))
 
 
 class XMLRPCTestCase(unittest.TestCase):
@@ -72,12 +78,15 @@ class XMLRPCTestCase(unittest.TestCase):
         self.assertEquals(unittest.deferredResult(x), "a")
 
     def testErrors(self):
-        for methodName in "fail", "deferFail", "fault", "noSuchMethod":
+        for code, methodName in [(666, "fail"), (666, "deferFail"),
+                                 (12, "fault"), (23, "noSuchMethod"),
+                                 (17, "deferFault")]:
             l = []
             d = self.proxy().callRemote(methodName).addErrback(l.append)
             while not l:
                 reactor.iterate()
             l[0].trap(xmlrpc.Fault)
+            self.assertEquals(l[0].value.faultCode, code)
         log.flushErrors(RuntimeError)
 
 
