@@ -203,12 +203,11 @@ def munge(document, template, linkrel, d, fullpath, ext, url):
     footnotes(document)
     notes(document)
 
-    # the title
-    domhelpers.findNodesNamed(template, "title")[0].childNodes.extend(
-        domhelpers.findNodesNamed(document, 'title')[0].childNodes)
-    domhelpers.findElementsWithAttribute(template, "class",
-                                         'title')[0].childNodes.extend(
-        domhelpers.findNodesNamed(document, 'title')[0].childNodes)
+    title = domhelpers.findNodesNamed(document, 'title')[0].childNodes
+    for nodeList in (domhelpers.findNodesNamed(template, "title"),
+                     domhelpers.findElementsWithAttribute(template, "class",
+                                                          'title')):
+        nodeList[0].childNodes.extend(title)
     body = domhelpers.findNodesNamed(document, "body")[0]
     tmplbody = domhelpers.findElementsWithAttribute(template, "class",
                                                               "body")[0]
