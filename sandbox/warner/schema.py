@@ -538,6 +538,9 @@ class Optional(Constraint):
         seen.append(self)
         return self.constraint.maxDepth(seen)
 
+class FailureConstraint(ClassConstraint):
+    def __init__(self):
+        ClassConstraint.__init__(self, Failure)
 
 
 def makeConstraint(t):

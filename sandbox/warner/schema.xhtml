@@ -155,7 +155,6 @@ class RemoteNarf(Remoted):
 ## use it.  we're just screwing around with other syntaxes to see what about PB
 ## might be different.)
 
-"""
 Common banana sequences:
 
 A reference to a remote object.
@@ -179,8 +178,31 @@ Answer to a method call:
 Decrement a reference incremented by 'remote' command:
 ('decref', reference-id)
 
+Broker currently has 9 proto_ methods:
 
-"""
+_version(vnum): accept a version number, compare to ours, reject if different
+
+_didNotUnderstand(command): log command, maybe drop connection
+
+_message(reqID, objID, message, answerRequired, netArgs, netKw):
+_cachemessage (like _message but finds objID with self.cachedLocallyAs instead
+               of self.localObjectForID, used by RemoteCacheMethod and
+               RemoteCacheObserver)
+ look up objID, invoke it with .remoteMessageReceived(message, args),
+ send "answer"(reqID, results)
+
+_answer(reqID, results): look up self.waitingForAnswers[reqID] and fire
+                         callback with results
+
+_error(reqID, failure): lookup waitingForAnswers, fire errback
+
+_decref(objID): dec refcount of self.localObjects[objID]. Sent in
+                RemoteReference.__del__
+
+_decache(objID): dec refcount of self.remotelyCachedObjects[objID]
+
+_uncache(objID): remove obj from self.locallyCachedObjects[objID]
+
 </pre>
 
 

@@ -1,9 +1,10 @@
-all: lint banana.xhtml
+all: lint banana.html
 
-lint: banana.html
+lint: banana.xhtml
 	-lore -n --output lint $<
-banana.xhtml: banana.html
-	lore -p --config template=../../doc/howto/template.tpl $<
+banana.html: banana.xhtml
+	lore -p --config template=../../doc/howto/template.tpl \
+		--config ext=.html $<
 
 test:
 	../../bin/trial -v test_banana test_schema

@@ -93,6 +93,9 @@ class Banana(protocol.Protocol):
                 break
         if child == None:
             raise "nothing to send for obj '%s' (type '%s')" % (obj, type(obj))
+        self.slice2(child, obj)
+
+    def slice2(self, child, obj):
         child.protocol = self
         self.slicerStack.append(child)
         self.doSlice(obj)

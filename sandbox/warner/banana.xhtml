@@ -544,4 +544,168 @@ object to a python function.
 
 </p>
 
+<h2>Common token sequences</h2>
+
+<h3>Base Python Types</h3>
+
+<p>The basic python types are considered <q>safe</q>: the code which is
+invoked by their receipt is well-understood and there is no way to cause
+unsafe behavior during unserialization. Resource consumption attacks are
+mitigated by Constraints imposed by the receiving schema.</p>
+
+<table border="" width="">
+  <TR><TD>IntType, LongType (small+)</TD><TD>INT(value)</TD></TR>
+  <TR><TD>IntType, LongType (small-)</TD><TD>NEG(value)</TD></TR>
+  <TR><TD>IntType, LongType (large+)</TD><TD>LONGINT(value)</TD></TR>
+  <TR><TD>IntType, LongType (large-)</TD><TD>LONGNEG(value)</TD></TR>
+  <TR><TD>FloatType</TD><TD>FLOAT(value)</TD></TR>
+  <TR><TD>StringType</TD><TD>STRING(value)</TD></TR>
+  <TR><TD>StringType (tokenized)</TD><TD>VOCAB(tokennum)</TD></TR>
+  <TR><TD>UnicodeType</TD>
+      <TD>OPEN(unicode) STRING(str.encode('UTF-8') CLOSE</TD></TR>
+  <TR><TD>ListType</TD><TD>OPEN(list) elem.. CLOSE</TD></TR>
+  <TR><TD>TupleType</TD><TD>OPEN(tuple) elem.. CLOSE</TD></TR>
+  <TR><TD>DictType, DictionaryType</TD>
+      <TD>OPEN(dict) (key,value).. CLOSE</TD></TR>
+  <TR><TD>NoneType</TD><TD>OPEN(none) CLOSE</TD></TR>
+  <TR><TD>BooleanType</TD><TD>OPEN(boolean) INT(1/0) CLOSE</TD></TR>
+</table>
+
+<h3>Extended (unsafe) Python Types</h3>
+
+<p>To serialize arbitrary python object graphs (including instances)
+requires that we allow more types in. This begins to get dangerous: with
+complex graphs of inter-dependent objects, instances may need to be used (by
+referencing objects) before they are fully initialized. A schema can be used
+to make assertions about what object types live where, but in general the
+contents of those objects are difficult to constrain.</p>
+
+<p>For this reason, these types should only be used in places where you
+trust the creator of the serialized stream (the same places where you would
+be willing to use the standard Pickle module). Saving application state to
+disk and reading it back at startup time is one example.</p>
+
+<table border="" width="">
+  <TR><TD colspan="2">Extended (unsafe) Python Types</TD></TR>
+
+  <TR><TD>InstanceType</TD><TD>OPEN(instance) (attr,value).. CLOSE</TD></TR>
+  <TR><TD>ModuleType</TD><TD>OPEN(module) STRING(__name__) CLOSE</TD></TR>
+  <TR><TD>ClassType</TD>
+      <TD>OPEN(class) STRING(reflect.qual(class)) CLOSE</TD></TR>
+  <TR><TD>MethodType</TD>
+      <TD>OPEN(method) STRING(__name__) im_self im_class CLOSE</TD></TR>
+  <TR><TD>FunctionType</TD>
+      <TD>OPEN(function) STRING(module.__name__) CLOSE</TD></TR>
+</table>
+
+<h3>PB Sequences</h3>
+
+<p>The following sequences are used to support the RPC mechanisms of
+Perspective Broker.</p>
+
+<table border="" width="">
+  <TR><TD colspan="2">PB (method call) Sequences</TD></TR>
+
+  <TR><TD>pb.Referenceable</TD>
+      <TD>OPEN(remote) INT(ref-id)
+        [InterfaceList]
+        CLOSE</TD></TR>
+
+  <TR><TD>RemoteReference.__del__</TD>
+      <TD>OPEN(decref) INT(refID) CLOSE</TD></TR>
+
+  <TR><TD>pb.Copyable</TD><TD>see InstanceType above</TD></TR>
+
+  <TR><TD>method call</TD>
+      <TD>OPEN(call) INT(request-id) INT(obj-id) STRING(methodname)
+          (STRING(argname),argvalue).. CLOSE</TD></TR>
+
+  <TR><TD>method call++</TD>
+      <TD>OPEN(call2)
+        INT(reqID) INT(objID) STRING(interfacename) INT(interfaceversion)
+        STRING(methodname) (STRING(argname),argvalue)..
+        CLOSE
+        (this could be folded into 'call' with only 2 bytes of overhead)
+      </TD></TR>
+
+  <TR><TD>method response (good)</TD>
+      <TD>OPEN(answer) INT(request-id) value CLOSE</TD></TR>
+  <TR><TD>method response (exception)</TD>
+      <TD>OPEN(error) INT(request-id) value CLOSE</TD></TR>
+
+  <TR><TD></TD><TD>OPEN()  CLOSE</TD></TR>
+  
+</table>
+
+<p>The first time a <code>pb.Referenceable</code> is sent, the second object
+is an InterfaceList, which is a list of tuples of (interfacename,
+versionnum), and therefore constrainable by a schema of
+ListOf(TupleOf(str,int)) with some appropriate maximum-length restrictions.
+This InterfaceList describes all the Interfaces that the corresponding
+<code>pb.Referenceable</code> implements. The receiver uses this list to
+look up local Interfaces (and therefore Schemas) to attach to the
+<code>pb.RemoteReference</code>. This is how method schemas are checked on
+the sender side.</p>
+
+<p>This implies that Interfaces must be registered, just as classes are for
+<code>pb.Copyable</code>. TODO: what happens if an unknown Interface is
+received? TODO: are multiple versions of the same interface allowed? If so,
+how is that specified?</p>
+
+
+<h3>Unhandled types</h3>
+
+<p>The following types are not handled by any slicer, and will raise a
+KeyError if one is referenced by an object being sliced. This technically
+imposes a limit upon the kinds of objects that can be serialized, even by a
+<q>unsafe</q> serializer, but in practice it is not really an issue, as many
+of these objects have no meaning outside the program invocation which
+created them.</p>
+
+<ul>
+  <li>- types that might be nice to have</li>
+  <li>ComplexType</li>
+  <li>SliceType</li>
+  <li>TypeType</li>
+  <li>XRangeType</li>
+
+  <li>- types that aren't really that useful</li>
+  <li>BufferType</li
+  <li>BuiltinFunctionType</li>
+  <li>BuiltinMethodType</li>
+  <li>CodeType</li>
+  <li>DictProxyType</li>
+  <li>EllipsisType</li>
+  <li>NotImplementedType</li>
+  <li>UnboundMethodType</li>
+
+  <li>- types that are meaningless outside the creator</li>
+  <li>TracebackType</li>
+  <li>FileType</li>
+  <li>FrameType</li>
+  <li>GeneratorType</li>
+  <li>LambdaType</li>
+</ul>
+
+<h3>Unhandled (but don't worry about it) types</h3>
+
+<p><code>ObjectType</code> is the root class of all other types. All objects
+are known by some other type in addition to <code>ObjectType</code>, so the
+fact that it is not handled explicitly does not matter.</p>
+
+<p><code>StringTypes</code> is simply a list of <code>StringType</code> and
+<code>UnicodeType</code>, so it does not need to be explicitly handled
+either.</p>
+
+<h3>Internal types</h3>
+
+<p>The following sequences are internal.</p>
+
+<table border="" width="">
+  <TR><TD colspan="2">internal types</TD></TR>
+  <TR><TD>vocab dict</TD><TD>OPEN(vocab) (num,string).. CLOSE</TD></TR>
+  <TR><TD>ordered dictionary</TD>
+      <TD>OPEN(dict) (key,value).. CLOSE</TD></TR>
+</table>
+
 </body> </html>

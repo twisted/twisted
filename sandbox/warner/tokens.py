@@ -1,5 +1,6 @@
 #! /usr/bin/python
 
+from twisted.python.components import Interface
 
 # delimiter characters.
 LIST     = chr(0x80) # old
@@ -65,3 +66,10 @@ class BananaError2(BananaError):
 
     def __str__(self):
         return "BananaError2(in %s): %s" % (self.where, self.why)
+
+class IReferenceable(Interface):
+    # TODO: really?
+    """This object is remotely referenceable. This means it defines some
+    remote_* methods and may have a schema which describes how those methods
+    may be invoked.
+    """
