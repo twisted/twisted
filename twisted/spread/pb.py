@@ -1276,7 +1276,7 @@ class Broker(banana.Banana):
             if answerRequired:
                 if isinstance(netResult, defer.Deferred):
                     args = (requestID,)
-                    netResult.addCallbacks(self._sendAnswer, self._sendError,
+                    netResult.addCallbacks(self._sendAnswer, self._sendFormattedFailure,
                                            callbackArgs=args, errbackArgs=args)
                     # XXX Should this be done somewhere else?
                     netResult.arm()
@@ -1288,6 +1288,9 @@ class Broker(banana.Banana):
         """(internal) Send an answer to a previously sent message.
         """
         self.sendCall("answer", requestID, netResult)
+
+    def _sendFormattedFailure(self, error, requestID):
+        self._sendError(repr(error), requestID)
 
     def proto_answer(self, requestID, netResult):
         """(internal) Got an answer to a previously sent message.
@@ -1572,7 +1575,7 @@ def logIn(authServRef, client, service, username, password, perspectiveName=None
     """
     d = defer.Deferred()
     authServRef.username(username).addCallbacks(_cbLogInRespond, d.armAndErrback,
-                                                callbackArgs=(d, client, service, password, perspectiveName or userName))
+                                                callbackArgs=(d, client, service, password, perspectiveName or username))
     return d
 
 def _cbLogInRespond((challenge, challenger), d, client, service, password, perspectiveName):
