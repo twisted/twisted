@@ -289,29 +289,38 @@ class UserMethodError(Exception):
     """
 
 class UserMethodWrapper(MethodInfoBase):
-   zi.implements(itrial.IUserMethod, itrial.IMethodInfo)
-   def __init__(self, original, janitor):
-       super(UserMethodWrapper, self).__init__(original)
-       self.janitor = janitor
-       self.original = original
-       self.errors = []
+    zi.implements(itrial.IUserMethod, itrial.IMethodInfo)
+    def __init__(self, original, janitor, raiseOnErr=True, timeout=None):
+        super(UserMethodWrapper, self).__init__(original)
+        self.janitor = janitor
+        self.original = original
+        if timeout is None:
+            self.timeout = getattr(self.original, 'timeout', None)
+        else:
+            self.timeout = timeout
+        self.errors = []
+        self.raiseOnErr = raiseOnErr
 
-   def __call__(self, *a, **kw):
-       self.startTime = time.time()
-       try:
-           try:
-               r = self.original(*a, **kw)
-               if isinstance(r, defer.Deferred):
-                   util._wait(r, getattr(self.original, 'timeout', None))
-           finally:
-               self.endTime = time.time()
-       except:
-           self.errors.append(failure.Failure())
-           try:
-               self.janitor.do_logErrCheck()
-           except util.LoggedErrors:
-               self.errors.append(failure.Failure())
-           raise UserMethodError
+    def __call__(self, *a, **kw):
+        self.startTime = time.time()
+        try:
+            try:
+                r = self.original(*a, **kw)
+                if isinstance(r, defer.Deferred):
+                    util._wait(r, self.timeout)
+            finally:
+                self.endTime = time.time()
+        except:
+            self.errorHook(failure.Failure())
+            try:
+                self.janitor.do_logErrCheck()
+            except util.LoggedErrors:
+                self.errors.append(failure.Failure())
+            if self.raiseOnErr:
+                raise UserMethodError
+
+    def errorHook(self, f):
+        self.errors.append(f)
 
 
 class JanitorAndReporterMixin:
@@ -708,11 +717,11 @@ class TestMethod(MethodInfoBase, JanitorAndReporterMixin):
                 reporter.endTest(self)
                 return
 
-            f = None
             try:
                 # capture all a TestMethod run's log events (warner's request)
                 observer = util.TrialLogObserver().install()
 
+                # Run the setUp method
                 setUp = UserMethodWrapper(self.setUp, janitor)
                 try:
                     setUp(tci)
@@ -730,37 +739,24 @@ class TestMethod(MethodInfoBase, JanitorAndReporterMixin):
                  
                 reporter.startTest(self)
 
+                # Run the test method
                 try:
                     sys.stdout = util.StdioProxy(sys.stdout)
                     sys.stderr = util.StdioProxy(sys.stderr)
                    
-                    # --- this is basically the guts of UserMethodWrapper,
-                    #     because I *SUCK* -----
-                    try:
-                        try:
-                            r = self.original(tci)
-                            if isinstance(r, defer.Deferred):
-                                util._wait(r, self.timeout)
-                        finally:
-                            self.endTime = time.time()
-                    except:
-                        f = failure.Failure()
-                        self._eb(f)
-
-                        try:
-                            janitor.do_logErrCheck()
-                        except util.LoggedErrors:
-                            self.errors.append(failure.Failure())
-                    # ------------------------------------------------------
+                    um = UserMethodWrapper(self.original, janitor,
+                            raiseOnErr=False, timeout=self.timeout)
+                    um.errorHook = self._eb
+                    um(tci)
+                    self.errors.extend(um.errors)
 
                 finally:
-                    self.endTime = time.time()
-
                     self.stdout = sys.stdout.getvalue()
                     self.stderr = sys.stderr.getvalue()
                     sys.stdout = sys.stdout.original
                     sys.stderr = sys.stderr.original
 
+                    # Run the tearDown method
                     um = UserMethodWrapper(self.tearDown, janitor)
                     try:
                         um(tci)
@@ -777,7 +773,6 @@ class TestMethod(MethodInfoBase, JanitorAndReporterMixin):
 
         finally:
             self._signalStateMgr.restore()
-
 
     def doCleanup(self):
         """do cleanup after the test run. check log for errors, do reactor
