@@ -37,6 +37,6 @@ if __name__ == "__main__":
     from twisted.internet import app
     a = app.Application("pbweb")
     gdgt = widgets.Gadget()
-    gdgt.widgets['index'] = EchoDisplay()
+    gdgt.widgets.putWidget('index', EchoDisplay())
     a.listenTCP(8080, server.Site(gdgt))
     a.run()
