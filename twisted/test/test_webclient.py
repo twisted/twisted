@@ -54,9 +54,15 @@ class ErrorResource(resource.Resource):
 
     def render(self, request):
         request.setResponseCode(401)
-        request.setHeader("content-length", "0")
+        if request.args.get("showlength"):
+            request.setHeader("content-length", "0")
         return ""
 
+class NoLengthResource(resource.Resource):
+
+    def render(self, request):
+        return "nolength"
+    
 
 class WebClientTestCase(unittest.TestCase):
     def _listen(self, site):
@@ -73,6 +79,7 @@ class WebClientTestCase(unittest.TestCase):
         r.putChild("redirect", util.Redirect("/file"))
         r.putChild("wait", LongTimeTakingResource())
         r.putChild("error", ErrorResource())
+        r.putChild("nolength", NoLengthResource())
         site = server.Site(r, timeout=None)
         self.port = self._listen(site)
         reactor.iterate(); reactor.iterate()
@@ -103,6 +110,9 @@ class WebClientTestCase(unittest.TestCase):
         name = self.mktemp()
         r = unittest.deferredResult(client.downloadPage(self.getURL("file"), name))
         self.assertEquals(open(name, "rb").read(), "0123456789")
+        name = self.mktemp()
+        r = unittest.deferredResult(client.downloadPage(self.getURL("nolength"), name))
+        self.assertEquals(open(name, "rb").read(), "nolength")
 
     def testDownloadPageError1(self):
         class errorfile:
@@ -144,6 +154,9 @@ class WebClientTestCase(unittest.TestCase):
         f = unittest.deferredError(client.getPage(self.getURL("error")))
         f.trap(error.Error)
         self.assertEquals(f.value.args[0], "401")
+        f = unittest.deferredError(client.getPage(self.getURL("error?showlength=1")))
+        f.trap(error.Error)
+        self.assertEquals(f.value.args[0], "401")
 
     def testDownloadServerError(self):
         f = unittest.deferredError(client.downloadPage(self.getURL("nosuchfile"), "nosuchfile"))
@@ -151,6 +164,9 @@ class WebClientTestCase(unittest.TestCase):
         self.assertEquals(f.value.args[0], "404")
         # this is different since content length is 0, and HTTPClient SUCKS
         f = unittest.deferredError(client.downloadPage(self.getURL("error"), "error"))
+        f.trap(error.Error)
+        self.assertEquals(f.value.args[0], "401")
+        f = unittest.deferredError(client.downloadPage(self.getURL("error?showlength=1"), "error"))
         f.trap(error.Error)
         self.assertEquals(f.value.args[0], "401")
         
