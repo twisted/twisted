@@ -299,14 +299,15 @@ class Protocol(BaseProtocol):
     def dataReceived(self, data):
         """Called whenever data is received.
 
-        @param data: a string of indeterminate length.  Please keep in
-        mind that you will probably need to buffer some data, as partial
-        protocol messages may be received!  Use this method to translate
-        to a higher-level message.  Usually, some callback will be made
-        upon the receipt of each complete protocol message.
+        Use this method to translate to a higher-level message.  Usually, some
+        callback will be made upon the receipt of each complete protocol
+        message.
 
-        I recommend that unit tests for protocols call through to this
-        method with differing chunk sizes, down to one byte at a time.
+        @param data: a string of indeterminate length.  Please keep in mind
+        that you will probably need to buffer some data, as partial (or
+        multiple) protocol messages may be received!  I recommend that unit
+        tests for protocols call through to this method with differing chunk
+        sizes, down to one byte at a time.
         """
 
     def connectionLost(self, reason=failure.Failure(error.ConnectionDone())):
