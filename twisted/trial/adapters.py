@@ -180,7 +180,11 @@ def formatFailureTraceback(fail):
     from twisted import trial as hack
     detailLevel = _tbformathack.get(hack.tbformat, 'default')
     elideFrameworkCode = HIDE_TRIAL_INTERNALS
-    return fail.getTraceback(detail=detailLevel, elideFrameworkCode=elideFrameworkCode)
+    result = fail.getTraceback(detail=detailLevel, elideFrameworkCode=elideFrameworkCode)
+    if detailLevel == 'default':
+        # Apparently trial's tests doen't like the 'Traceback:' line.
+        result = '\n'.join(result.split('\n')[1:])
+    return result
 
 def formatMultipleFailureTracebacks(failList):
     if failList:
