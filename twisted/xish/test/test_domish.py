@@ -14,28 +14,6 @@ class DomishTestCase(unittest.TestCase):
         self.assertEquals(domish.escapeToXml(s), "&amp;&lt;&gt;'\"")
         self.assertEquals(domish.escapeToXml(s, 1), "&amp;&lt;&gt;&apos;&quot;")
 
-    def testSerialization(self):
-        e = domish.Element(("testns", "foo"))
-        self.assertEquals(e.toXml(), "<foo/>")
-        self.assertEquals(e.toXml(closeElement = 0), "<foo>")
-
-    def testRawXMLSerialization(self):
-        e = domish.Element(("testns", "foo"))
-        e.addRawXml("<abc123>")
-        # The testcase below should NOT generate valid XML -- that's
-        # the whole point of using the raw XML call -- it's the callers
-        # responsiblity to ensure that the data inserted is valid
-        self.assertEquals(e.toXml(), "<foo><abc123></foo>")
-
-    def testUnicodeSerialization(self):
-        for s in (domish._Serializer, domish._ListSerializer):
-            domish.SerializerClass = s
-            e = domish.Element(("testns", "foo"))
-            e["test"] = u"my value\u0221e"
-            e.addContent(u"A degree symbol...\u00B0")
-            self.assertEquals(e.toXml(),
-                              u"<foo test='my value\u0221e'>A degree symbol...\u00B0</foo>".encode("utf-8"))
-
     def testNamespaceObject(self):
         ns = domish.Namespace("testns")
         self.assertEquals(ns.foo, ("testns", "foo"))
@@ -101,7 +79,7 @@ query2_elem1 = xpath.internQuery("/error[@xmlns='etherx']")
 
 xml3 = """<stream:stream xmlns:stream='etherx'>
              <error/>
-	  </stream:stream>"""
+      </stream:stream>"""
 query3_root = xpath.internQuery("/stream[@xmlns='etherx']")    
 query3_elem1 = xpath.internQuery("/error[not(@xmlns)]")
 
@@ -148,19 +126,19 @@ class DomishStreamTestCase(unittest.TestCase):
         self.assertEquals(self.packet_count, 1)
         self.assertEquals(self.doc_ended, True)
         
-	# Setup the 2nd stream
-	self.setupStream(domish.ExpatElementStream(),
-			 [query2_root, query2_elem1])
+        # Setup the 2nd stream
+        self.setupStream(domish.ExpatElementStream(),
+                 [query2_root, query2_elem1])
 
-	# Run the test
-	self.stream.parse(xml2)
+        # Run the test
+        self.stream.parse(xml2)
 
-	# Setup the 3nd stream
-	self.setupStream(domish.ExpatElementStream(),
-			 [query3_root, query3_elem1])
+        # Setup the 3nd stream
+        self.setupStream(domish.ExpatElementStream(),
+                 [query3_root, query3_elem1])
 
-	# Run the test
-	self.stream.parse(xml3)
+        # Run the test
+        self.stream.parse(xml3)
 
     def testExpatStream(self):
         try: 
@@ -183,14 +161,57 @@ class DomishStreamTestCase(unittest.TestCase):
             # Run the test
             self.stream.parse(xml2)
 
-	    # Setup the 3nd stream
-	    self.setupStream(domish.ExpatElementStream(),
-			     [query3_root, query3_elem1])
+            # Setup the 3nd stream
+            self.setupStream(domish.ExpatElementStream(),
+                     [query3_root, query3_elem1])
 
-	    # Run the test
-	    self.stream.parse(xml3)
+            # Run the test
+            self.stream.parse(xml3)
 
         except ImportError:
             raise unittest.SkipTest, "Skipping ExpatElementStream test, since no expat wrapper is available."
 
+class SerializerTests:
+    def testSerialization(self):
+        e = domish.Element(("testns", "foo"))
+        self.assertEquals(e.toXml(), "<foo/>")
+        self.assertEquals(e.toXml(closeElement = 0), "<foo>")
+
+    def testQualifiedAttributeSerialization(self):
+        e = domish.Element(("testns", "foo"),
+                           attribs = {("testns2", "bar"): "baz"})
+        self.assertEquals(e.toXml({"testns2": "bar"}), "<foo bar:bar='baz'/>")
+
+    def testRawXMLSerialization(self):
+        e = domish.Element(("testns", "foo"))
+        e.addRawXml("<abc123>")
+        # The testcase below should NOT generate valid XML -- that's
+        # the whole point of using the raw XML call -- it's the callers
+        # responsiblity to ensure that the data inserted is valid
+        self.assertEquals(e.toXml(), "<foo><abc123></foo>")
+
+    def testUnicodeSerialization(self):
+        for s in (domish._Serializer, domish._ListSerializer):
+            domish.SerializerClass = s
+            e = domish.Element(("testns", "foo"))
+            e["test"] = u"my value\u0221e"
+            e.addContent(u"A degree symbol...\u00B0")
+            self.assertEquals(e.toXml(),
+                              u"<foo test='my value\u0221e'>A degree symbol...\u00B0</foo>".encode("utf-8"))
+
+class DomishTestSerializer(unittest.TestCase, SerializerTests):
+    def setUpClass(self):
+        self.__serializerClass = domish.SerializerClass
+        domish.SerializerClass = domish._Serializer
+
+    def tearDownClass(self):
+        domish.SerializerClass = self.__serializerClass
+
+class DomishTestListSerializer(unittest.TestCase, SerializerTests):
+    def setUpClass(self):
+        self.__serializerClass = domish.SerializerClass
+        domish.SerializerClass = domish._ListSerializer
+
+    def tearDownClass(self):
+        domish.SerializerClass = self.__serializerClass
 
