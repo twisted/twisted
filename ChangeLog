@@ -1,3 +1,8 @@
+2003-07-17  Dave Peticolas  <dave@krondo.com>
+
+	* doc/howto/components.html: methods in interfaces do have self
+	parameters
+
 2003-07-18  Christopher Armstrong  <radix@twistedmatrix.com>
 
 	* twisted/web/client.py: Added a `timeout' keyword argument to
