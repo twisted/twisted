@@ -242,13 +242,11 @@ class RemoteCopyUnslicer(slicer.BaseUnslicer):
         self.d[name] = value
 
     def receiveClose(self):
-        # TODO: TASTE HERE IF YOU WANT TO LIVE!
-        inst = Dummy()
-        #inst.__classname__ = self.classname
-        setInstanceState(inst, self.d)
-        self.protocol.setObject(self.count, inst)
-        self.deferred.callback(inst)
-        return inst
+        obj = self.factory()
+        obj.setCopyableState(self.d)
+        self.protocol.setObject(self.count, obj)
+        self.deferred.callback(obj)
+        return obj
 
     def describeSelf(self):
         if self.classname == None:
