@@ -32,7 +32,7 @@ class PerspectiveRow(row.RowObject):
     rowColumns     = ["identity_name", "perspective_name", "service_name", "perspective_type"]
     rowKeyColumns  = [("identity_name", "varchar"),("perspective_name","varchar")]
     rowTableName   = "twisted_perspectives"
-    rowForeignKeys = [("twisted_identities", [("identity_name","varchar")],[("identity_name","varchar")])]
+    rowForeignKeys = [("twisted_identities", [("identity_name","varchar")],[("identity_name","varchar")], None, 1)]
 
 class ReflectorAuthorizer(authorizer.Authorizer):
     """An authorizer that uses a given row reflector.
@@ -68,7 +68,7 @@ class ReflectorAuthorizer(authorizer.Authorizer):
         i.rows = [] #keep the rows around for now...
         i.rows.append(irow)
         
-        for prow in irow.container:
+        for prow in irow.childRows:
             i.addKeyByString(prow.service_name, prow.perspective_name)
             i.rows.append(prow) #keep the rows around for now...
             
