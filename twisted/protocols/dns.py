@@ -230,6 +230,7 @@ class DNS(protocol.Protocol):
         message = Message(id, recDes=recursive)
         message.addQuery(name, type, cls)
         self.writeMessage(message)
+        return id
 
 
 class DNSOnTCP(DNS):

@@ -16,7 +16,8 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
 from twisted.protocols import dns, protocol
-from twisted.internet import tcp, udp
+from twisted.internet import tcp, udp, main
+import random, string
 
 DNS, TCP = range(2)
 
@@ -24,7 +25,7 @@ class DNSBoss:
     protocols = (dns.DNS, dns.DNSOnTCP)
     portPackages = (udp, tcp)
 
-    def __init__( self ):
+    def __init__(self):
         self.pending = {}
         self.next = 0
         self.factories = [None, None]
@@ -61,12 +62,12 @@ class DNSBoss:
 
     def startListeningBoth(self, portNum = 0):
         self.startListening(0, portNum)
-        self.startListening( 1, portNum)
+        self.startListening(1, portNum)
 
     def queryUDP(self, addr, name, callback, type=1, cls=1, recursive=1):
         self.startListeningUDP()
         transport = self.ports[0].createConnection(addr)
-        transport.protocol.query(name, callback, type, cls, recursive)
+        return transport.protocol.query(name, callback, type, cls, recursive)
 
     def queryTCP(self, addr, name, callback, type=1, cls=1, recursive=1):
         self.createTCPFactory()
@@ -94,8 +95,60 @@ class DNSBoss:
         self.pending[self.next] = callback
         return self.next
 
+    def removePending(self, id):
+        try:
+            del self.pending[id]
+        except KeyError:
+            pass
+
     def accomplish(self, key, data):
         callback = self.pending.get(key)
         if callback is not None:
             del self.pending[key]
             callback(data)
+
+
+class SentQuery:
+
+    def __init__(self, name, type, callback, errback, boss, nameservers):
+        self.callback = callback
+        self.errback = errback
+        self.ids = []
+        self.done = 0
+        self.boss = boss
+        for nameserver in nameservers:
+            self.ids.append(boss.queryUDP((nameserver, 53), name, 
+                                          self.getAnswer, type=type))
+
+    def getAnswer(self, message):
+        self.done = 1
+        self.removeAll()
+        if not message.answers:
+            errback()
+        else:
+            answer = random.choice(message.answers)
+            self.callback(string.join(map(str, map(ord, answer.data)), "."))
+
+    def timeOut(self):
+        self.done = 1
+        if not self.done:
+            self.removeAll()
+            self.errback()
+
+    def removeAll(self):
+        for id in self.ids:
+            self.boss.removePending(id)
+        self.ids = []
+
+
+class Resolver:
+
+    def __init__(self, nameservers, boss=None):
+        self.nameservers = nameservers
+        self.boss = boss or DNSBoss()
+        self.next = 0
+
+    def resolve(self, name, callback, errback=None, type=1, timeout=10):
+        query = SentQuery(name, type, callback, errback, self.boss, 
+                          self.nameservers)
+        main.theTimeouts.later(query.timeOut, timeout)
