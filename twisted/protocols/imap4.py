@@ -360,7 +360,8 @@ class IMAP4Server(basic.LineReceiver):
 
     def _parseMbox(self, name):
         try:
-            return splitQuoted(name)[0].decode('imap4-utf-7')
+            # XXX - Piece of *crap* 2.1
+            return decoder(splitQuoted(name)[0])[0]
         except:
             raise IllegalMailboxEncoding, name
 
@@ -2129,10 +2130,10 @@ def Not(query):
     """The negation of a query"""
     return '(NOT %s)' % (query,)
 
-class MismatchedNesting(Exception):
+class MismatchedNesting(IMAP4Exception):
     pass
 
-class MismatchedQuoting(Exception):
+class MismatchedQuoting(IMAP4Exception):
     pass
 
 def wildcardToRegexp(wildcard, delim):
@@ -2833,59 +2834,78 @@ class IMailbox(components.Interface):
         """
 
 import codecs
-def imap4_utf_7(name):
-    if name == 'imap4-utf-7':
-        def modified_base64(s):
-            return binascii.b2a_base64(s)[:-1].rstrip('=').replace('/', ',')
-        def modified_unbase64(s):
-            return binascii.a2b_base64(s.replace(',', '/') + '===')
-        def encoder(s):
-            r = []
-            _in = []
-            for c in s:
-                if ord(c) in (range(0x20, 0x25) + range(0x27, 0x7e)):
-                    if _in:
-                        r.extend(['&', modified_base64(''.join(_in)), '-'])
-                        del _in[:]
-                    r.append(c)
-                elif c == '&':
-                    if _in:
-                        r.extend(['&', modified_base64(''.join(_in)), '-'])
-                        del _in[:]
-                    r.append('&-')
-                else:
-                    _in.append(c)
+def modified_base64(s):
+    # XXX - 2.1, grr
+    # return binascii.b2a_base64(s)[:-1].rstrip('=').replace('/', ',')
+    s = binascii.b2a_base64(s)[:-1]
+    while s[-1] == '=':
+        s = s[:-1]
+    return s.replace('/', ',')
+
+def modified_unbase64(s):
+    return binascii.a2b_base64(s.replace(',', '/') + '===')
+
+def encoder(s):
+    r = []
+    _in = []
+    for c in s:
+        if ord(c) in (range(0x20, 0x25) + range(0x27, 0x7e)):
             if _in:
                 r.extend(['&', modified_base64(''.join(_in)), '-'])
-            return (''.join(r), len(s))
+                del _in[:]
+            r.append(c)
+        elif c == '&':
+            if _in:
+                r.extend(['&', modified_base64(''.join(_in)), '-'])
+                del _in[:]
+            r.append('&-')
+        else:
+            _in.append(c)
+    if _in:
+        r.extend(['&', modified_base64(''.join(_in)), '-'])
+    return (''.join(r), len(s))
 
-        def decoder(s):
-            r = []
-            decode = []
-            for c in s:
-                if c == '&' and not decode:
-                    decode.append('&')
-                elif c == '-' and decode:
-                    if len(decode) == 1:
-                        r.append('&')
-                    else:
-                        r.append(modified_unbase64(''.join(decode[1:])))
-                    decode = []
-                elif decode:
-                    decode.append(c)
-                else:
-                    r.append(c)
-            if decode:
+def decoder(s):
+    r = []
+    decode = []
+    for c in s:
+        if c == '&' and not decode:
+            decode.append('&')
+        elif c == '-' and decode:
+            if len(decode) == 1:
+                r.append('&')
+            else:
                 r.append(modified_unbase64(''.join(decode[1:])))
-            return (''.join(r), len(s))
+            decode = []
+        elif decode:
+            decode.append(c)
+        else:
+            r.append(c)
+    if decode:
+        r.append(modified_unbase64(''.join(decode[1:])))
+    return (''.join(r), len(s))
 
-        class StreamReader(codecs.StreamReader):
-            def decode(self, s, errors='strict'):
-                return decoder(s)
+class StreamReader(codecs.StreamReader):
+    def decode(self, s, errors='strict'):
+        return decoder(s)
 
-        class StreamWriter(codecs.StreamWriter):
-            def decode(self, s, errors='strict'):
-                return encoder(s)
+class StreamWriter(codecs.StreamWriter):
+    def decode(self, s, errors='strict'):
+        return encoder(s)
 
+def imap4_utf_7(name):
+    if name == 'imap4-utf-7':
         return (encoder, decoder, StreamReader, StreamWriter)
 codecs.register(imap4_utf_7)
+
+__all__ = [
+    'IMAP4Server', 'IMAP4Client', 'IMAP4Exception', 'IllegalClientResponse',
+    'IllegalOperation', 'IllegalMailboxEncoding', 'IMailboxListener',
+    'UnhandledResponse', 'NegativeResponse', 'NoSupportedAuthentication',
+    'IllegalServerResponse', 'IllegalIdentifierError', 'IllegalQueryError',
+    'MismatchedNesting', 'MismatchedQuoting', 'AuthenticationError',
+    'IServerAuthentication', 'IClientAuthentication',
+    'CramMD5ServerAuthenticator', 'CramMD5ClientAuthenticator',
+    'MailboxException', 'MailboxCollision', 'NoSuchMailbox',
+    'ReadOnlyMailbox', 'IAccount', 'MemoryAccount', 'IMailbox'
+]

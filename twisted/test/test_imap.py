@@ -54,7 +54,8 @@ class IMAP4UTF7TestCase(unittest.TestCase):
 
     def testDecode(self):
         for (input, output) in self.tests:
-            self.assertEquals(input, output.decode('imap4-utf-7'))
+            # XXX - Piece of *crap* 2.1
+            self.assertEquals(input, imap4.decoder(output)[0])
 
 class IMAP4HelperTestCase(unittest.TestCase):
     def testQuotedSplitter(self):
@@ -425,7 +426,7 @@ class IMAP4ServerTestCase(IMAP4HelperMixin, unittest.TestCase):
         def select():
             def selected(args):
                 self.selectedArgs = args
-                self._cbStopClient()
+                self._cbStopClient(None)
             d = self.client.select('test-mailbox')
             d.addCallback(selected)
             return d
