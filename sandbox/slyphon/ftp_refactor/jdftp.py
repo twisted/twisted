@@ -181,6 +181,8 @@ def decodeHostPort(line):
     port = (int(e)<<8) + int(f)
     return host, port
 
+def debugDeferred(self, *_):
+    log.debug(_)
         
 # -- Custom Exceptions --
 
@@ -249,133 +251,65 @@ def _getFPName(fp):
 #        for port in self.ports: port.stopListening()
 
 
+
 class DTP(protocol.Protocol, basic.FileSender):
-    d = None
     fp = None
 
     def connectionMade(self):
         """Will start an transfer, if one is queued up, 
         when the client connects"""
         peer = self.transport.getPeer()
-        if self.debug:
-            log.msg('got a DTP connection %s:%s' % (peer[1],peer[2]))
-        # make sure someone isn't doing something sneaky
-        if self.debug:
-            log.msg("DTP ip matches PI ip? %s" % str(peer[1] == self.factory.pi.peerHost[1]))
+        log.debug('got a DTP connection %s:%s' % (peer[1],peer[2]))
+
         if self.factory.peerCheck and peer[1] != self.factory.pi.peerHost[1]:
             # DANGER Will Robinson! Bailing!
+            log.debug('dtp ip did not match ftp ip')
             self.cleanup()      
-        # runs any commands queued before this protocol's instance existed
-#        d, self.factory.deferred = self.factory.deferred, None
-#        d.callback(None)        
-        self.factory._unblock()
 
-#    def cleanup(self):
-#        self.factory.dtpPort.stopListening()
-#        return self.factory.pi.cleanupDTP()
+        d, self.factory.deferred = self.factory.deferred, defer.Deferred()
+        log.debug('firing dtpFactory deferred')
+        d.callback(None)
 
     def connectionLost(self, reason):
         log.msg('lost DTP connection %s, oh well!' % reason)
-        # makes sure connection is closed and factory shuts down 
-        # when client disconnects
-        if self.debug:
-            print "running self.transport.loseConnection()"
-        self.cleanup()
+        self.factory.stopFactory()
 
-            
-    def sendFile(self, fp):
-        '''queues up a file object for sending out over the wire'''
+    def dtp_RETR(self, fp): # RETR = sendFile
+        '''ssnds a file object out the wire'''
         filename = _getFPName(fp)
         self.fp = fp
 
-        if self.debug:
-            log.msg('sendfile sending %s' % filename)
-#        if not self.factory.blocked: 
-#            self.factory.blocked = []
+        log.debug('sendfile sending %s' % filename)
         return self.beginFileTransfer(self.fp, self.transport) 
 
 
-class ActvDTPFactory(protocol.ClientFactory):
-    pass
-
 class PasvDTPFactory(protocol.ServerFactory):
     # -- configuration variables --
-    debug = True
     peerCheck = True
 
     # -- class variables --
     protocol = DTP
     pi = None
-    dtpPort = None
     peerHost = None
     instance = None
-    blocked  = []       # we start out blocking commands until the user connects
-    deferred = defer.Deferred()
+    deferred = defer.Deferred()     # deferred will fire when instance is connected to
 
     def buildProtocol(self, addr):
-        if self.debug: log.msg('PasvDTPFactory.buildProtocol')
-        if self.instance:
+        if self.instance:   # only create one instance
             return 
         p = protocol.ServerFactory.buildProtocol(self, addr)      # like in __init__ of a base-class
         p.factory = self
-        p.debug = self.debug
         p.pi = self.pi
-        self.instance = p
+        self.pi.dtpInstance = p
         return p
 
-    def doCommand(self, command, *args):
-        if self.blocked is not None:
-            if self.debug: log.msg('dtp blocking (command=%s, args=%s)'% (command, args))
-            self.blocked.append((command, args))
-#            self.deferred.addCallback(self._unblock).addErrback(self._ebDoCommand)
-            return
-        
-        if self.debug: log.msg('dtp running (command=%s, args=%s)'% (command, args))
-        f = getattr(self.instance, command, None)
-        if f:
-            d = defer.maybeDeferred(f, *args)
-            d.addCallback(self._cbFileTransfer
-                ).addErrback(self._ebFileTransfer, _getFPName(self.instance.fp)
-                ) 
-            return
-        raise DTPError('no command %s' % command)
-
-    def _cbFileTransfer(self, _):
-        log.msg('file transfer complete, calling factory._unblock')
-        self._unblock()
-
-    def _ebFileTransfer(self, error):
-        r = error.trap(ClientDisconnectError)
-        if r == ClientDisconnectError:
-            log.msg('_ebFileTransfer trapped failure: %s' % error.getErrorMessage())
-
-    def _ebDoCommand(self, error):
-        r = error.trap(ClientDisconnectError)
-        if r == ClientDisconnectError:
-            log.msg('_ebQueueCommand trapped failure: %s' % error.getErrorMessage())
-
-    def _unblock(self, *_):
-        log.msg('_unblock hit' )
-        commands, self.blocked = self.blocked, None     # de-queue blocked commands
-        while len(commands) > 0 and self.blocked is None:        # while there are no new blocked commands 
-            cmd, args = commands.pop(0)
-            log.msg('_unblock running command %s' % cmd)
-            self.doCommand(cmd, *args)
-        if self.blocked is not None:
-            self.blocked.extend(commands)
-            
-
     def stopFactory(self):
-        if self.dtpPort.connected:
-            if self.debug: log.msg('self.dtpPort.loseConnection()')
-            self.dtpPort.loseConnection()
-#            if self.debug: log.msg('stopFactory: clearing deferreds: %s' % self.deferred.callbacks)
-#            d, self.deferred = self.deferred, None
-#            d.errback(failure.Failure(ClientDisconnectError('client disconnected prematurely')))
         self.pi.cleanupDTP()
 
 
+
 # -- FTP-PI (Protocol Interpreter) --
+
 
 def cleanPath(params):
     # cleanup backslashes and multiple foreslashes
@@ -390,36 +324,32 @@ class FTP(basic.LineReceiver):
     shell       = None      # the avatar
     dtpFactory  = None      # generates a single DTP for this session
     dtpInstance = None      # a DTP protocol instance
+    dtpPort     = None      # the port that the DTPFactory is listening on
     user        = None      # the username of the client connected 
     peerHost    = None      # the (type,ip,port) of the client
     dtpTxfrMode = ACTV      # PASV or ACTV, default ACTV
-    blocked     = None        # a command queue for pipelining 
-    deferred    = None      # used by the command queue
+    blocked     = None      # a command queue for pipelining 
 
-    # this provides one place to turn off all debugging code
-    # but still allows flexibility when debugging
-    if MODULE_DEBUG:
-        debug       = True          # turn on extra logging
-        ANNOYINGLY_VERBOSE = True   # log every line received
-        TESTING     = False         # set by test code to allow testing via IOPump
-        DEBUG_AUTO_ANON_LOGIN = True
-        HUMAN_READABLE_PASV_PORT = True
-    else:
-        debug, ANNOYINGLY_VERBOSE, TESTING, DEBUG_AUTO_ANON_LOGIN, HUMAN_READABLE_PASV_PORT = (False,False,False,False,False)
     
     def connectionMade(self):
-        if self.debug:
-            log.msg('ftp-pi connectionMade')
+        log.debug('ftp-pi connectionMade')
         self.reply(WELCOME_MSG)
         self.peerHost = self.transport.getPeer()
-        if self.debug and self.DEBUG_AUTO_ANON_LOGIN:
-            lr = self.lineReceived
-            lr('USER anonymous')
-            lr('PASS f@d.com')
-            lr('PASV')
-            lr('LIST')
-            lr('RETR .vim/vimrc')
-#            lr('RETR Session.vim')
+        self.__testingautologin()
+
+    def __testingautologin(self):
+        import warnings; warnings.warn('''
+
+            --> DEBUGGING CODE ACTIVE!!! <--
+''')
+        lr = self.lineReceived
+        lr('USER anonymous')
+        lr('PASS f@d.com')
+        lr('PASV')
+        lr('LIST')
+        lr('RETR .vim/vimrc')
+        lr('RETR Session.vim')
+
 
     def connectionLost(self, reason):
         log.msg("Oops! lost connection\n %s" % reason)
@@ -433,52 +363,78 @@ class FTP(basic.LineReceiver):
     def lineReceived(self, line):
         "Process the input from the client"
         line = string.strip(line)
-        if self.debug:
-            log.msg(repr(line))
-
+        log.debug(repr(line))
         line = line.encode('ascii', 'discard') 
         try:
             return self.processCommand(*line.split())
         except BogusSyntaxError, e:
             self.reply(SYNTAX_ERR, string.upper(command))
         except FTPError, e:
-            log.err()
+            log.err(e)
             self.reply(CMD_NOT_IMPLMNTD, e.args[0])
         except (ValueError, AttributeError, TypeError), e:
-            log.err()
+            log.err(e)
 
     # TODO: all DTP commands to be processed here !!!
-    def processCommand(self, command, *args):
+    def processCommand(self, cmd, *args):
         if self.blocked != None:
-            self.blocked.append((method,args))
+            log.debug('FTP is queueing command: %s' % cmd)
+            self.blocked.append((cmd,args))
             return
 
-        command = command.upper()
-        method = getattr(self, "ftp_%s" % command)
+        cmd = cmd.upper()
+        if cmd not in ['USER','PASS'] and not self.shell:
+            log.debug('ftp_%s returning, user not logged in' % cmd)
+            self.reply(NOT_LOGGED_IN)
+            return
+
+        if cmd in ['RETR', 'STOR', 'LIST', 'PORT']:             # if this is a DTP related command
+            if not self.dtpInstance:                            # if no one has connected yet
+                # a bit hackish, but manually blocks this command 
+                # until we've set up the DTP protocol instance
+                assert self.blocked == None
+                self.blocked = [(cmd,args)]   
+                log.debug('during dtp setup, blocked = %s' % self.blocked)
+                return
+        method = getattr(self, "ftp_%s" % cmd, None)      
         if method:
             return method(*args)
-        return FTPError("command not implemented")            
+        log.debug("SOMETHING IS SCREWY")
 
+
+    def _unblock(self, *_):
+        log.debug('_unblock running')
+        commands = self.blocked
+        self.blocked = None
+        while commands and self.blocked is None:
+            cmd, args = commands.pop(0)
+            self.processCommand(cmd, *args)
+        if self.blocked is not None:
+            self.blocked.extend(commands)
+
+    def _ebDtpInstance(self, _):
+        # TODO: add cleanup here if a bogus connection happens or
+        #       if the client disconnects before downloading everything
+        log.debug(_)
 
     def reply(self, key, s = ''):
         if string.find(RESPONSE[key], '%s') > -1:
-            if self.debug:
-                log.msg(RESPONSE[key] % s + ENDLN)
+            log.debug(RESPONSE[key] % s + ENDLN)
             self.transport.write(RESPONSE[key] % s + ENDLN)
         else:
-            if self.debug:
-                log.msg(RESPONSE[key] + ENDLN)
+            log.debug(RESPONSE[key] + ENDLN)
             self.transport.write(RESPONSE[key] + ENDLN)
 
     def _createActiveDTP(self):
-        if self.debug:
-            log.msg('_createActiveDTP')
+        log.debug('_createActiveDTP')
         raise NotImplementedError()
 
     def _createPassiveDTP(self):
-        """creates a dtp listening on self.dtpFactory.dtpPort for connections"""
-        if self.debug:
-            log.msg('_createPassiveDTP')
+        """sets up a DTPFactory listening on an ephemeral port
+        port is stored in self.dtpPort
+        @returns a deferred that will be fired when a connection is made
+        """
+        log.debug('_createPassiveDTP')
         # TODO: figure out what happens if there's an existing ACTV 
         #       DTP connection and the client calls PASV
         self.dtpTxfrMode = PASV     # ensure state is correct
@@ -486,36 +442,53 @@ class FTP(basic.LineReceiver):
             self.dtpFactory = PasvDTPFactory()
             self.dtpFactory.pi = self
             self.dtpFactory.peerHost = self.transport.getPeer()[1]
-            if not self.HUMAN_READABLE_PASV_PORT:
-                port = 0
-            else:
-                port = 2122
-            self.dtpFactory.dtpPort = reactor.listenTCP(port, self.dtpFactory)   
+            self.dtpPort = reactor.listenTCP(0, self.dtpFactory)   
+            return self.dtpFactory.deferred
 
     def _createDTP(self):
-        if self.debug:
-            log.msg('_createDTP')
+        log.debug('_createDTP')
         if self.dtpTxfrMode != ACTV:
-            return self._createPassiveDTP()
-        return self._createActiveDTP()
+            d = self._createPassiveDTP()
+        else: 
+            d = self._createActiveDTP()
+
+        d = self.dtpFactory.deferred        
+        d.addCallback(debugDeferred, 'dtpFactory deferred')
+        d.addCallback(self._unblock)                     # call _unblock when client connects
+        d.addErrback(self._ebDtpInstance)
 
     def cleanupDTP(self):
         """called when DTP connection exits"""
-        if self.debug:
-            log.msg('cleanupDTP')
-        if self.dtpFactory:
-            if self.dtpFactory.dtpPort:
-                if self.debug: log.msg('self.dtpFactory.dtpPort.stopListening()')
-            self.dtpFactory = None
+        log.debug('cleanupDTP')
 
-    def doDTPCommand(self, command, args=None):
-        '''causes the DTP to commence with an action'''
-        if self.debug:
-            log.msg('FTP.doDTPCommand: %s' % command)
-        if not self.dtpFactory:
-            self._createDTP()
-        self.dtpFactory.doCommand(command, args)
-        #d.addCallback(self._dtpCB).addErrback(self._dtpEB)
+        if hasattr(self.dtpPort, 'connected'):
+            self.dtpPort.loseConnection()
+            self.dtpPort.stopListening()
+            self.dtpFactory = None
+            self.dtpInstance = None
+            self.dtpPort = None
+
+    def _doDTPCommand(self, cmd, arg):
+        if self.blocked is None:
+            self.blocked = []
+        try:
+            f = getattr(self.dtpInstance, "dtp_%s" % cmd, None)
+        except AttributeError, e:
+            log.err('SOMETHING IS SCREWY IN _doDTPCommand')
+            raise e
+
+        defer.maybeDeferred(f, arg
+                ).addCallback(self._cbDTPCommand
+                ).addCallback(self._unblock
+                ).addErrback(self._ebDTPCommand)
+
+    def _cbDTPCommand(self, arg):
+        log.debug("DTP Command success: %s" % arg)
+        self.reply(REQ_FILE_ACTN_COMPLETED_OK)
+
+    def _ebDTPCommand(self, arg):
+        log.err("DTP Command failed: %s" % str(arg))
+        arg.printTraceback()
 
     def ftp_USER(self, params):
         """Get the login name, and reset the session
@@ -536,8 +509,7 @@ class FTP(basic.LineReceiver):
         if params=='':
             raise BogusSyntaxError('no parameters')
         self.user = string.split(params)[0]
-        if self.debug:
-            log.msg('ftp_USER params: %s' % params)
+        log.debug('ftp_USER params: %s' % params)
         if self.factory.allowAnonymous and self.user == self.factory.userAnonymous:
             self.reply(GUEST_NAME_OK_NEED_EMAIL)
         else:
@@ -560,8 +532,7 @@ class FTP(basic.LineReceiver):
             self.reply(BAD_CMD_SEQ, 'USER required before PASS')
             return
 
-        if self.debug:
-            log.msg('ftp_PASS params: %s' % params)
+        log.debug('ftp_PASS params: %s' % params)
 
         # parse password
         self.passwd = params.split()[0] 
@@ -596,8 +567,7 @@ class FTP(basic.LineReceiver):
         '''anonymous login'''
         assert interface is IFTPShell
         peer = self.transport.getPeer()
-#        if self.debug:
-#            log.msg("Anonymous login from %s:%s" % (peer[1], peer[2]))
+#       log.debug("Anonymous login from %s:%s" % (peer[1], peer[2]))
         self.shell = avatar
         self.logout = logout
         self.reply(GUEST_LOGGED_IN_PROCEED)
@@ -622,14 +592,13 @@ class FTP(basic.LineReceiver):
         file.  A null argument implies the user's current working or
         default directory.
         """
-        if self.debug:
-            log.msg('ftp_LIST: %s' % params)
+        log.debug('ftp_LIST: %s' % params)
         if params == "-a": params = ''  # bug in konqueror
         if params == "-aL": params = '' # bug in gFTP 2.0.15
 
         sioObj = self.shell.list(cleanPath(params))    # returns a StringIO object
         self.reply(DATA_CNX_ALREADY_OPEN_START_XFR)
-        self.doDTPCommand('sendFile', sioObj)
+        self._doDTPCommand('RETR', sioObj)
  
     def ftp_PWD(self, params):
         """ Print working directory command
@@ -647,28 +616,20 @@ class FTP(basic.LineReceiver):
             transfer command.  The response to this command includes the
             host and port address this server is listening on.
         """
-        if self.debug:
-            log.msg('ftp_PASV') 
-        # if we don't have an avatar for this command 
-        if not self.shell:      
-            if self.debug:
-                log.msg('ftp_PASV returning, user not logged in')
-            self.reply(NOT_LOGGED_IN)
-            return
+        log.debug('ftp_PASV') 
         self.dtpTxfrMode = PASV
-        self._createDTP()
-        if not self.TESTING:
-            # Use the ip from the PI-connection
-            sockname = self.transport.getHost()
-            localip = string.replace(sockname[1], '.', ',')
-            lport = self.dtpFactory.dtpPort.socket.getsockname()[1]
-            # convert port into two 8-byte values
-            lp1 = lport / 256                           
-            lp2, lp1 = str(lport - lp1*256), str(lp1)
-        if self.HUMAN_READABLE_PASV_PORT:
-            self.reply(ENTERING_PASV_MODE, "%s,%s" % (localip, lport))
-            return
+        if not self.dtpFactory:                             # if we haven't set up a DTP port yet
+            try:
+                self._createDTP()
+            except OSError, e:
+                log.msg("CRITICAL BUG!! THIS SHOULD NOT HAVE HAPPENED!!! %s" % e)
+        sockname = self.transport.getHost()             # Use the ip from the PI-connection
+        localip = string.replace(sockname[1], '.', ',')
+        lport = self.dtpPort.socket.getsockname()[1]
+        lp1 = lport / 256                               # convert port into two 8-byte values
+        lp2, lp1 = str(lport - lp1*256), str(lp1)
         self.reply(ENTERING_PASV_MODE, "%s,%s,%s" % (localip, lp1, lp2))
+        log.debug("passive port open on: %s:%s" % (localip, lport), level="debug")
 
     def ftp_CWD(self, params):
         try:
@@ -693,13 +654,12 @@ class FTP(basic.LineReceiver):
     def ftp_RETR(self, param):
         try:
             fp = self.shell.retr(cleanPath(param))
-            self.doDTPCommand('sendFile', fp)
+            self._doDTPCommand('RETR', fp)
         except FileNotFoundError, e:
             self.reply(FILE_NOT_FOUND, e)
         except PathBelowTLDError, e:
             self.reply(PERMISSION_DENIED, e)
-#        else:
-#            self.reply(REQ_FILE_ACTN_COMPLETED_OK)
+        else:
 
         # the dtp will take care of sending REQ_FILE_ACTN_COMPLETED_OK 
         # when it has completed the transfer
