@@ -27,7 +27,7 @@ sys.path.insert(0, os.curdir)
 ### end of preamble
 
 
-import re, os, cStringIO, stat, time
+import re, os, cStringIO, stat, time, cgi
 # syntax highlighting for Python source
 import py2html, PyFontify
 from twisted import copyright
@@ -264,15 +264,7 @@ def addPyListings(document, d):
 def addHTMLListings(document, d):
     for node in findElementsWithAttribute(document, "class", "html-listing"):
         fn = node.getAttribute("href")
-        val = open(os.path.join(d, fn)).read()
-
-        # somebody please let me know if there is a better way to
-        # convert from '<' to &lt;
-        import htmlentitydefs
-        red = {}
-        for key, value in htmlentitydefs.entitydefs.items():
-            red[value]=key
-        val = ''.join([red.has_key(x) and '&%s;' or x for x in val])
+        val = cgi.escape(open(os.path.join(d, fn)).read())
 
         text = ('<div class="py-listing">'
                 '<pre class="htmlsource">%s</pre>'
