@@ -366,7 +366,9 @@ base="twisted.cred.authorizer">DefaultAuthorizer</code>, which is a subclass
 that stores pre-generated Identities in a simple dict (indexed by username).
 The <code>Authorizer</code>'s purpose in life is to implement the
 <code>.getIdentityRequest()</code> method, which takes a user name and
-(eventually) returns the corresponding <code>Identity</code> object.</p>
+(eventually) returns the corresponding <code>Identity</code> object. (To be
+precise, <code>.getIdentityRequest()</code> returns a Deferred, which will
+eventually have its callback run with the <code>Identity</code>).</p>
 
 <p>Each <code>Identity</code> object represents a single user, with a
 username and a password of some sort. Its job is to talk to the
