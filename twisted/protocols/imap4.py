@@ -2785,7 +2785,7 @@ class IMAP4Client(basic.LineReceiver):
         @return: A deferred whose callback is invoked with a dict mapping
         message numbers to date strings, or whose errback is invoked
         if there is an error.  Date strings take the format of
-        \"<day-month-year time timezone\".
+        \"day-month-year time timezone\".
         """
         d = self._fetch(str(messages), useUID=uid, internaldate=1)
         d.addCallback(self.__cbFetch)
