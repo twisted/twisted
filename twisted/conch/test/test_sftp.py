@@ -5,12 +5,12 @@
 from twisted.trial import unittest, util
 try:
     from twisted.conch import unix
+    from twisted.conch.scripts import cftp
 except ImportError:
     unix = None
 
 from twisted.cred import portal
 from twisted.conch import avatar
-from twisted.conch.scripts import cftp
 from twisted.conch.ssh import filetransfer, session
 from twisted.protocols import loopback
 from twisted.internet import defer, reactor, protocol
@@ -461,5 +461,6 @@ exit
 
 if not unix:
     TestOurServerOurClient.skip = "don't run on non-posix"
+    TestOurServerCmdLineClient.skip = "don't run on non-posix"
     TestOurServerCmdLineClient.skip = "don't run on non-posix"
 
