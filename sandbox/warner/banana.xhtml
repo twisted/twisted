@@ -1181,6 +1181,51 @@ generators.</p>
 
 <h2>Common token sequences</h2>
 
+<p>Any given Banana instance has a way to map objects to the Open Index
+tuples needed to represent them, and a similar map from such tuples to
+incoming object factories. These maps give rise to various <q>classes</q> of
+objects, depending upon how widespread any particular object type is. A List
+is a fairly common type of object, something you would expect to find
+implemented in pretty much any high-level language, so you would expect a
+Banana implementation in that language to be capable of accepting an (OPEN,
+'list') sequence. However, a Failure object (found in
+<code>twisted.python.failure</code>, providing an asynchronous-friendly way
+of reporting python exceptions) is both Python- and Twisted- specific. Is it
+reasonable for one program to emit an (OPEN, 'failure') sequence and expect
+another speaker of the generic <q>Banana</q> protocol to understand it?</p>
+
+<p>This level of compatibility is (somewhat arbitrarily) named <q>dialect
+compatibility</q>. The set of acceptable sequences will depend upon many
+things: the language in which the program at each end of the wire is
+implemented, the nature of the higher-level software that is using Banana at
+that moment (PB is one such layer), and application-specific registrations
+that have been performed by the time the sequence is received (the set of
+<code>pb.Copyable</code> sequences that can be received without error will
+depend upon which <code>RemoteCopyable</code> class definitions and
+<code>registerRemoteCopy</code> calls have been made).</p>
+
+<p>Ideally, when two Banana instances first establish a connection, they
+will go through a negotiation phase where they come to an agreement on what
+will be sent across the wire. There are two goals to this negotiation:</p>
+
+<ol>
+  <li>least-surprise: if one side cannot handle a construct which the other
+  side might emit at some point in the future, it would be nice to know
+  about it up front rather than encountering a Violation or
+  connection-dropping BananaError later down the line. This could be
+  described as the <q>strong-typing</q> argument. It is important to note
+  that different arguments (both for and against strong typing) may exist
+  when talking about remote interfaces rather than local ones.</li>
+
+  <li>adapability: if one side cannot handle a newer construct, it may be
+  possible for the other side to back down to some simpler variation without
+  too much loss of data.</li>
+</ol>
+
+<p>Dialect negotiation is a very much still an active area of
+development.</p>
+
+
 <h3>Base Python Types</h3>
 
 <p>The basic python types are considered <q>safe</q>: the code which is

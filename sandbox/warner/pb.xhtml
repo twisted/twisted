@@ -326,7 +326,7 @@ value (or somewhere inside them).</p>
 
   <TR><TD>pb.Copyable</TD><TD>OPEN(copyable) STRING(reflect.qual(class))
   (attr,value).. CLOSE</TD></TR>
-  
+
 </table>
 
 <p>The first time a <code>pb.Referenceable</code> is sent, the second object
@@ -348,6 +348,9 @@ registered for them. On the receiving side, the
 <code>registerRemoteCopy</code> function must be used to register a factory,
 which can be a <code>pb.RemoteCopy</code> subclass or something else which
 implements <code>IRemoteCopy</code>.</p>
+
+<p><code>Failure</code> objects are sent as a <code>pb.Copyable</code> with
+a class name of <q>twisted.python.failure.Failure</q>.</p>
 
 <h2>Implementation notes</h2>
 
