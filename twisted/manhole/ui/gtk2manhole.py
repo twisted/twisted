@@ -1,11 +1,27 @@
 # -*- Python -*-
+# $Id: gtk2manhole.py,v 1.8 2003/06/10 00:08:29 exarkun Exp $
+# Twisted, the Framework of Your Internet
+# Copyright (C) 2001 Matthew W. Lefkowitz
+#
+# This library is free software; you can redistribute it and/or
+# modify it under the terms of version 2.1 of the GNU Lesser General Public
+# License as published by the Free Software Foundation.
+#
+# This library is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+# Lesser General Public License for more details.
+#
+# You should have received a copy of the GNU Lesser General Public
+# License along with this library; if not, write to the Free Software
+# Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
 """Manhole client with a GTK v2.x front-end.
 """
 # Note: Because GTK 2.x Python bindings are only available for Python 2.2,
 # this code may use Python 2.2-isms.
 
-__version__ = '$Revision: 1.7 $'[11:-2]
+__version__ = '$Revision: 1.8 $'[11:-2]
 
 from twisted import copyright
 from twisted.internet import reactor
@@ -242,7 +258,7 @@ class ManholeClient(components.Adapter, pb.Referenceable):
 
     def remote_console(self, messages):
         for kind, content in messages:
-            if isinstance(content, StringTypes):
+            if isinstance(content, types.StringTypes):
                 self.original.output.append(content, kind)
             elif (kind == "exception") and isinstance(content, failure.Failure):
                 content.printTraceback(_Notafile(self.original.output,
