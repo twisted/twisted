@@ -1,13 +1,11 @@
-from twisted.web2.test.test_server import BaseCase
+from twisted.web2.test.test_server import BaseCase, BaseTestResource
 from twisted.web2 import resource
 from twisted.web2 import vhost
 from twisted.web2 import http, responsecode
 from twisted.web2 import iweb
 from twisted.web2 import stream
 
-class HostResource(resource.Resource):
-    addSlash = True
-    
+class HostResource(BaseTestResource):
     def child_bar(self, ctx):
         return self
 
@@ -43,4 +41,10 @@ class TestVhost(BaseCase):
         self.assertResponse(
             (self.root, 'http://is.nested/'),
             (200, {}, 'is.nested'))
-        
+    
+    def testVHostURIRewrite(self):
+        vur = vhost.VHostURIRewrite('http://www.apachesucks.org/', HostResource())
+        self.assertResponse(
+            (vur, 'http://localhost/'),
+            (200, {}, 'www.apachesucks.org'))
+

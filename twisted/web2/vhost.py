@@ -75,30 +75,17 @@ class NameVirtualHost(resource.Resource):
                     host = '.'.join(host.split('.')[1:])
 
         return (self.hosts.get(host, self.default) or responsecode.NOT_FOUND), segments
+
+class VHostURIRewrite(resource.Resource):
+    def __init__(self, uri, resource):
+        self.uri = uri
+        self.host = uri.split('/')[2]
+
+        self.resource = resource
         
+    def locateChild(self, ctx, segments):
+        req = iweb.IRequest(ctx)
+        req.headers.setHeader('host', self.host)
+        req.host = self.host
 
-class VHostMonsterResource(resource.Resource):
-    def locateChild(self, request, segments):
-        if len(segments) < 2:
-            return error.NoResource(), []
-        else:
-            if segments[0] == 'http':
-                request.isSecure = lambda: 0
-            elif segments[0] == 'https':
-                request.isSecure = lambda: 1
-
-            if ':' in segments[1]:
-                host, port = segments[1].split(':', 1)
-                port = int(port)
-            else:
-                host, port = segments[1], 80
-           
-            request.setHost(host, port)
-
-            prefixLen = len('/'+'/'.join(request.prepath)+'/'+'/'.join(segments[:2]))
-            request.path = '/'+'/'.join(segments[2:])
-            request.uri = request.uri[prefixLen:]
-            
-            request.postpath = list(segments[2:])
-
-            return request.site.getResourceFor(request)
+        return self.resource.locateChild(ctx, segments)
