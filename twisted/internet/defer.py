@@ -70,6 +70,8 @@ def execute(callable, *args, **kw):
 def timeout(deferred):
     deferred.errback(failure.Failure(TimeoutError("Callback timed out")))
 
+def passthru(arg):
+    return arg
 
 class Deferred:
     """This is a callback which will be put off until later.
@@ -101,7 +103,7 @@ class Deferred:
         These will be executed when the 'master' callback is run.
         """
         cbs = ((callback, callbackArgs, callbackKeywords),
-               (errback or (lambda x: x), errbackArgs, errbackKeywords))
+               (errback or (passthru), errbackArgs, errbackKeywords))
         if self.default:
             self.callbacks[-1] = cbs
         else:
@@ -124,7 +126,7 @@ class Deferred:
 
         See addCallbacks.
         """
-        return self.addCallbacks(lambda x: x, errback,
+        return self.addCallbacks(passthru, errback,
                                  errbackArgs=args,
                                  errbackKeywords=kw)
 
@@ -197,7 +199,7 @@ class Deferred:
     def _continue(self, result, isError):
         self.result = result
         self.isError = isError
-        self._runCallbacks()
+        self.unpause()
 
     def _startRunCallbacks(self, result, isError):
         if self.called:
@@ -229,7 +231,7 @@ class Deferred:
                         # the way it's supposed to be, but it is useful to know
                         # in case something goes wrong.  deferreds really ought
                         # not to return themselves from their callbacks.
-                        
+                        self.pause()
                         self.result.addCallbacks(self._continue,
                                                  self._continue,
                                                  callbackArgs=(0,),
