@@ -2,7 +2,8 @@
 Twisted Test Framework
 """
 
-from twisted.python import reflect, log, failure
+from twisted.python import reflect, log, failure, components
+from twisted.internet import interfaces
 import sys, time, string, traceback, types, os, glob
 
 log.startKeepingErrors()
@@ -152,10 +153,11 @@ class TestSuite:
                 # this will go live someday: tests should not leave
                 # lingering surprises
                 testCase.fail(msg)
-            if reactor.threadpool:
-                # should we warn here?
-                reactor.threadpool.stop()
-                reactor.threadpool = None
+            if components.implements(reactor, interfaces.IReactorThreads):
+                reactor.suggestThreadPoolSize(0)
+                if hasattr(reactor, 'threadpool'):
+                    reactor.threadpool.stop()
+                    reactor.threadpool = None
         except AssertionError, e:
             if ok:
                 output.reportFailure(testClass, method, sys.exc_info())
