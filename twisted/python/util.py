@@ -369,6 +369,7 @@ def makeStatBar(width, maxPosition, doneChar = '=', undoneChar = '-', currentCha
 def spewer(frame, s, ignored):
     """A trace function for sys.settrace that prints every function or method call."""
     from twisted.python import reflect
+    import sys
     if frame.f_locals.has_key('self'):
         se = frame.f_locals['self']
         if hasattr(se, '__class__'):
@@ -383,6 +384,7 @@ def spewer(frame, s, ignored):
             frame.f_code.co_name,
             frame.f_code.co_filename,
             frame.f_lineno)
+    sys.stdout.flush()
 
 def searchupwards(start, files=[], dirs=[]):
     """Walk upwards from start, looking for a directory containing
