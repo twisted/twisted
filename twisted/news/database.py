@@ -225,11 +225,34 @@ class PickleStorage(NewsStorage):
         return defer.succeed(['alt.test'])
 
     def postRequest(self, message):
+        cleave = string.find(message, '\r\n\r\n')
+        headers, article = message[:cleave], message[cleave + 1:]
+
+        a = Article(headers, article)
+        groups = string.split(a.getHeader('Newsgroups'))
+        xref = []
+
+        for group in groups:
+            if self.db.has_key(group):
+                if len(self.db[group].keys()):
+                    index = max(self.db[group].keys()) + 1
+                else:
+                    index = 1
+                xref.append((group, str(index)))
+                self.db[group][index] = a
+
+        if len(xref) == 0:
+            return defer.fail(None)
+
+        a.putHeader('Xref', '%s %s' % (string.split(socket.gethostname())[0], string.join(map(lambda x: string.join(x, ':'), xref), '')))
+
         self.flush()
         return defer.succeed(None)
-    
+
+
     def overviewRequest(self):
         return defer.succeed(OVERVIEW_FMT)
+
 
     def xoverRequest(self, group, low, high):
         if not self.db.has_key(group):
@@ -240,6 +263,7 @@ class PickleStorage(NewsStorage):
                 r.append([str(i)] + self.db[group][i].overview())
         return defer.succeed(r)
 
+
     def xhdrRequest(self, group, low, high, header):
         if not self.db.has_key(group):
             return defer.succeed([])
@@ -248,6 +272,7 @@ class PickleStorage(NewsStorage):
             if low is None or i >= low and high is None or i <= high:
                 r.append((i, self.db[group][i].getHeader(header)))
         return defer.succeed(r)
+
 
     def listGroupRequest(self, group):
         if self.db.has_key(group):
@@ -268,12 +293,14 @@ class PickleStorage(NewsStorage):
         else:
             return defer.fail(ERR_NOGROUP)
 
+
     def articleExistsRequest(self, id):
         for g in self.db.values():
             for a in g.values():
                 if a.getHeader('Message-ID') == id:
                     return defer.succeed(1)
         return defer.succeed(0)
+
 
     def articleRequest(self, group, index):
         if self.db.has_key(group):
@@ -296,6 +323,7 @@ class PickleStorage(NewsStorage):
         else:
             return defer.fail(ERR_NOGROUP)
 
+
     def bodyRequest(self, group, index):
         if self.db.has_key(group):
             if self.db[group].has_key(index):
@@ -306,8 +334,10 @@ class PickleStorage(NewsStorage):
         else:
             return defer.fail(ERR_NOGROUP)
 
+
     def flush(self):
         pickle.dump(self.db, open(self.datafile, 'w'))
+
 
     def load(self, filename, groups = None):
         if PickleStorage.sharedDBs.has_key(filename):
@@ -463,9 +493,7 @@ class NewsStorageAugmentation(adbapi.Augmentation, NewsStorage):
         sql = """
             SELECT header FROM overview
         """
-        q = self.runQuery(sql)
-        q.addCallback(lambda result: [header[0] for header in result])
-        return q
+        return self.runQuery(sql).addCallback(lambda result: [header[0] for header in result])
 
 
     def xoverRequest(self, group, low, high):
@@ -477,9 +505,7 @@ class NewsStorageAugmentation(adbapi.Augmentation, NewsStorage):
             AND postings.article_index <= %d
         """ % (adbapi.safe(group), low, high)
 
-        q = self.runQuery(sql)
-        q.addCallback(lambda results: [Article(header, None).overview() for (id, header) in results])
-        return q
+        return self.runQuery(sql).addCallback(lambda results: [Article(header, None).overview() for (id, header) in results])
 
 
     def xhdrRequest(self, group, low, high, header):
@@ -491,9 +517,11 @@ class NewsStorageAugmentation(adbapi.Augmentation, NewsStorage):
             AND postings.article_index <= %d
         """ % (adbapi.safe(group), low, high)
 
-        q = self.runQuery(sql)
-        q.addCallback(lambda results: [(index, Article(header, None).getHeader(header)) for (index, header) in results])
-        return q
+        return self.runQuery(sql).addCallback(
+            lambda results: [
+                (i, Article(h, None).getHeader(h)) for (i, h) in results
+            ]
+        )
 
 
     def listGroupRequest(self, group):
@@ -503,9 +531,9 @@ class NewsStorageAugmentation(adbapi.Augmentation, NewsStorage):
             AND groups.name = '%s'
         """ % (adbapi.safe(group),)
         
-        q = self.runQuery(sql)
-        q.addCallback(lambda results: (group, [res[0] for res in results]))
-        return q
+        return self.runQuery(sql).addCallback(
+            lambda results: (group, [res[0] for res in results])
+        )
 
 
     def groupRequest(self, group):
@@ -516,8 +544,9 @@ class NewsStorageAugmentation(adbapi.Augmentation, NewsStorage):
             WHERE groups.name = '%s' AND postings.group_id = groups.group_id
         """ % (adbapi.safe(group),)
         
-        q = self.runQuery(sql)
-        q.addCallback(lambda results: tuple(results[0]))
+        return self.runQuery(sql).addCallback(
+            lambda results: tuple(results[0])
+        )
 
 
     def articleExistsRequest(self, id):
@@ -526,11 +555,11 @@ class NewsStorageAugmentation(adbapi.Augmentation, NewsStorage):
             WHERE message_id = '%s'
         """ % (id,)
         
-        q = self.runQuery(sql)
-        q.addCallback(lambda result: bool(result[0][0]))
-        return q
+        return self.runQuery(sql).addCallback(
+            lambda result: bool(result[0][0])
+        )
 
-    
+
     def articleRequest(self, group, index):
         sql = """
             SELECT articles.header, articles.body FROM groups,postings,articles
@@ -538,9 +567,9 @@ class NewsStorageAugmentation(adbapi.Augmentation, NewsStorage):
             AND postings.article_index = %d
         """ % (adbapi.safe(group), index)
         
-        q = self.runQuery(sql)
-        q.addCallback(lambda result: result[0][0] + '\r\n' + result[0][1])
-        return q
+        return self.runQuery(sql).addCallback(
+            lambda result: result[0][0] + '\r\n' + result[0][1]
+        )
 
 
     def headRequest(self, group, index):
@@ -550,9 +579,7 @@ class NewsStorageAugmentation(adbapi.Augmentation, NewsStorage):
             AND postings.article_index = %d
         """ % (adbapi.safe(group), index)
         
-        q = self.runQuery(sql)
-        q.addCallback(lambda result: result[0][0])
-        return q
+        return self.runQuery(sql).addCallback(lambda result: result[0][0])
 
 
     def bodyRequest(self, group, index):
@@ -562,6 +589,4 @@ class NewsStorageAugmentation(adbapi.Augmentation, NewsStorage):
             AND postings.article_index = %d
         """ % (adbapi.safe(group), index)
         
-        q = self.runQuery(sql)
-        q.addCallback(lambda result: result[0][0])
-        return q
+        return self.runQuery(sql).addCallback(lambda result: result[0][0])
