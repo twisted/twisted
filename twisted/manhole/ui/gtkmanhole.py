@@ -173,17 +173,20 @@ class OutputConsole(gtk.GtkText):
                     % (element[0]))
                 self.set_rc_style()
                 style = self.get_style()
+                # XXX: You'd think we'd use style.bg instead of 'None'
+                # here, but that doesn't seem to match the color of
+                # the backdrop.
                 self.insert(style.font, style.fg[gtk.STATE_NORMAL],
                             None, s)
-            l = self.get_length()
-            diff = self.maxBufSz - l
-            if diff < 0:
-                diff = - diff
-                self.delete_text(0,diff)
-            a = self.get_vadjustment()
-            a.set_value(a.upper - a.page_size)
         finally:
             self.thaw()
+        l = self.get_length()
+        diff = self.maxBufSz - l
+        if diff < 0:
+            diff = - diff
+            self.delete_text(0,diff)
+        a = self.get_vadjustment()
+        a.set_value(a.upper - a.page_size)
 
 class InputText(gtk.GtkText):
     linemode = 0
@@ -225,7 +228,7 @@ class InputText(gtk.GtkText):
             # if l is 0, this coredumps gtk ;-)
             if not l:
                 self.emit_stop_by_name("key_press_event")
-                return
+                return True
             lpos = findBeginningOfLineWithPoint(self)
             pt = entry.get_point()
             isShift = event.state & gtk.GDK.SHIFT_MASK
@@ -248,6 +251,7 @@ class InputText(gtk.GtkText):
 
         if stopSignal:
             self.emit_stop_by_name("key_press_event")
+            return True
 
     def sendMessage(self, unused_data=None):
         text = self.get_chars(0,-1)
