@@ -1,3 +1,13 @@
+2004-01-18  Christopher Armstrong  <radix@twistedmatrix.com>
+
+	* twisted/web/resource.py: The default render method of Resource
+	now supports delegating to methods of the form "render_*" where
+	"*" is the HTTP method that was used to make the
+	request. Examples: request_GET, request_HEAD, request_CONNECT, and
+	so on. This won't break any existing code - when people want to
+	use the better API, they can stop overriding 'render' and instead
+	override individual render_* methods.
+
 2004-01-13  Itamar Shtull-Trauring  <itamar@itamarst.org>
 
 	* twisted/web/soap.py: Beginning of client SOAP support.

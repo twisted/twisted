@@ -76,6 +76,7 @@ class ResourceTestCase(unittest.TestCase):
         r = resource.Resource()
         self.failUnlessEqual([], r.listEntities())
         
+
 class SimpleResource(resource.Resource):
     def render(self, request):
         if http.CACHED in (request.setLastModified(10),
@@ -91,6 +92,7 @@ class SiteTest(unittest.TestCase):
         sres1.putChild("",sres2)
         site = server.Site(sres1)
         assert site.getResourceFor(DummyRequest([''])) is sres2, "Got the wrong resource."
+
 
 # Conditional requests:
 # If-None-Match, If-Modified-Since
@@ -359,7 +361,52 @@ class RememberURLTest(unittest.TestCase):
             request.gotLength(0)
             request.requestReceived('GET', '/foo/bar/baz', 'HTTP/1.0')
             self.assertEqual(request.getRootURL(), "http://example.com/foo")
-        
+
+
+class NewRenderResource(resource.Resource):
+    def render_GET(self, request):
+        return "hi hi"
+
+    def render_HEH(self, request):
+        return "ho ho"
+
+
+class NewRenderTestCase(unittest.TestCase):
+    def _getReq(self):
+        d = DummyChannel()
+        d.site.resource.putChild('newrender', NewRenderResource())
+        d.transport = DummyChannel.Baz()
+        d.transport.port = 81
+        request = server.Request(d, 1)
+        request.setHost('example.com', 81)
+        request.gotLength(0)
+        return request
+
+    def testGoodMethods(self):
+        req = self._getReq()
+        req.requestReceived('GET', '/newrender', 'HTTP/1.0')
+        self.assertEquals(req.transport.getvalue().splitlines()[-1], 'hi hi')
+
+        req = self._getReq()
+        req.requestReceived('HEH', '/newrender', 'HTTP/1.0')
+        self.assertEquals(req.transport.getvalue().splitlines()[-1], 'ho ho')
+
+    def testBadMethods(self):
+        req = self._getReq()
+        req.requestReceived('CONNECT', '/newrender', 'HTTP/1.0')
+        self.assertEquals(req.code, 501)
+
+        req = self._getReq()
+        req.requestReceived('hlalauguG', '/newrender', 'HTTP/1.0')
+        self.assertEquals(req.code, 501)
+
+    def testImplicitHead(self):
+        req = self._getReq()
+        req.requestReceived('HEAD', '/newrender', 'HTTP/1.0')
+        self.assertEquals(req.code, 200)
+        self.assertNotIn('hi hi', req.transport.getvalue())
+
+
 class SDResource(resource.Resource):
     def __init__(self,default):  self.default=default
     def getChildWithDefault(self,name,request):

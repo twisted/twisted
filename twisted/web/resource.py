@@ -186,8 +186,17 @@ class Resource:
         this class's responsibility to write the results to
         request.write(data), then call request.finish().
         """
-        raise NotImplementedError("%s.render called" %
-                                  reflect.qual(self.__class__))
+
+        m = getattr(self, 'render_' + request.method, None)
+        if not m:
+            from twisted.web.server import UnsupportedMethod
+            raise UnsupportedMethod("%s doesn't support %s" %
+                                    (reflect.qual(self.__class__), request.method))
+        return m(request)
+
+    def render_HEAD(self, request):
+        return self.render_GET(request)
+        
 
 
 #t.w imports
