@@ -247,7 +247,8 @@ class Handshake:
 
     def encode(self):
         body = self.handshake_encode()
-        high = (len(body) >> 8) & 0xffff
+        assert len(body) < 2 ** 24
+        high = len(body) >> 8
         low = len(body) & 0xff
         return struct.pack('>BHB', self.handshakeType, high, low) + body
     
@@ -261,9 +262,9 @@ class ClientHello(Handshake):
         return struct.pack('>I', self.gmt_unix_time) + self.bytes
 
 import sys
-sys.path.append('../../pahan')
-from implicitstate import ImplicitStateProtocol
-class TLSClient(ImplicitStateProtocol):
+sys.path.append('../../pahan/statefulprotocol')
+from stateful import StatefulProtocol
+class TLSClient(StatefulProtocol):
     currentReadState = None
     currentWriteState = None
     
@@ -288,13 +289,15 @@ class TLSClient(ImplicitStateProtocol):
     def send(self, record):
         self.write(TLSPlaintext(record.CONTENT_TYPE, record.encode()))
 
+    def getInitialState(self):
+        return self.state_RecordType, 1
+
     def dataReceived(self, data):
         print 'Received', repr(data)
-        ImplicitStateProtocol.dataReceived(self, data)
+        StatefulProtocol.dataReceived(self, data)
 
     def connectionMade(self):
         self.send(ClientHello('x' * 28))
-        self.implicit_state = (self.state_RecordType, 1)
 
     def state_RecordType(self, data):
         method, length = self.CONTENT_TYPE_MAP[data]
