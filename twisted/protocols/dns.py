@@ -1069,15 +1069,9 @@ class DNSDatagramProtocol(protocol.DatagramProtocol):
         self.resends = {}
         self.transport = None
 
-#    def writeMessage(self, message, address):
-#        from twisted.internet import reactor
-#        # Hmm.  Let the system pick a random port?
-#        # Or do it ourself?  For now, let's let the system do it.
-#        reactor.listenUDP(0, self, maxPacketSize=512)
-#        self.transport.write(message.toStr(), address)
-
     def writeMessage(self, message, address):
         if not self.transport:
+            # XXX transport might not get created automatically, use callLater?
             from twisted.internet import reactor
             reactor.listenUDP(0, self, maxPacketSize=512)
         self.transport.write(message.toStr(), address)
