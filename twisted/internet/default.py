@@ -1,5 +1,5 @@
 # -*- Python -*-
-# $Id: default.py,v 1.61 2003/01/30 21:19:31 exarkun Exp $
+# $Id: default.py,v 1.62 2003/01/31 22:58:26 exarkun Exp $
 #
 # Twisted, the Framework of Your Internet
 # Copyright (C) 2001 Matthew W. Lefkowitz
@@ -35,8 +35,7 @@ from twisted.internet.interfaces import IReactorCore, IReactorTime, IReactorUNIX
 from twisted.internet.interfaces import IReactorTCP, IReactorUDP, IReactorSSL, IReactorArbitrary
 from twisted.internet.interfaces import IReactorProcess, IReactorFDSet, IReactorMulticast
 from twisted.internet import main, error, protocol, interfaces
-from twisted.internet import unix, tcp, udp, task, defer
-
+from twisted.internet import tcp, udp, task, defer
 
 from twisted.python import log, threadable, failure
 from twisted.persisted import styles
@@ -49,6 +48,12 @@ try:
     sslEnabled = 1
 except:
     sslEnabled = 0
+
+try:
+    from twisted.internet import unix
+    unixEnabled = 1
+except:
+    unixEnabled = 0
 
 from main import CONNECTION_LOST
 
@@ -69,12 +74,13 @@ if platform.getType() == "win32":
 class PosixReactorBase(ReactorBase):
     """A basis for reactors that use file descriptors.
     """
-    __implements__ = (ReactorBase.__implements__, IReactorUNIX,
-                      IReactorArbitrary, IReactorTCP, IReactorUDP,
-                      IReactorMulticast) # IReactorProcess
+    __implements__ = (ReactorBase.__implements__, IReactorArbitrary,
+                      IReactorTCP, IReactorUDP, IReactorMulticast) # IReactorProcess
 
     if sslEnabled:
         __implements__ = __implements__ + (IReactorSSL,)
+    if unixEnabled:
+        __implements__ = __implements__ + (IReactorUNIX,)
 
     def __init__(self, installSignalHandlers=1):
         ReactorBase.__init__(self)

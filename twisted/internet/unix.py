@@ -24,6 +24,9 @@ Maintainer: U{Itamar Shtull-Trauring<mailto:twisted@itamarst.org>}
 # System imports
 import os, stat, socket
 
+if not hasattr(socket, 'AF_UNIX'):
+    raise ImportError, "UNIX sockets not supported on this platform"
+
 # Python imports
 from twisted.internet import base, tcp, error
 from twisted.python import log
