@@ -17,15 +17,16 @@
 """NNTP protocol support.
 
   The following protocol commands are currently understood:
-    LIST        LISTGROUP    NEWSGROUPS    XOVER    XHDR
-    POST        GROUP        ARTICLE       STAT     HEAD
-    BODY        NEXT         LAST          MODE     QUIT
-    HELP
+    LIST        LISTGROUP    NEWSGROUPS    XOVER        XHDR
+    POST        GROUP        ARTICLE       STAT         HEAD
+    BODY        NEXT         MODE STREAM   MODE READER  SLAVE
+    LAST        QUIT         HELP          IHAVE        XPATH
+    XINDEX      XROVER
     
   The following protocol commands require implementation:
-                IHAVE        NEWNEWS       SLAVE    CHECK
-    MODE STREAM TAKETHIS     XGTITLE       XINDEX   XPAT
-    XPATH       XROVER       XTHREAD       AUTHINFO NEWGROUPS
+                             NEWNEWS                CHECK
+                TAKETHIS     XGTITLE                XPAT
+                             XTHREAD       AUTHINFO NEWGROUPS
 
 
   Other desired features:
@@ -299,11 +300,13 @@ class NNTPServer(NNTPClient):
     COMMANDS = [
         'LIST', 'GROUP', 'ARTICLE', 'STAT', 'NEWSGROUPS',
         'MODE', 'LISTGROUP', 'XOVER', 'XHDR', 'HEAD', 'BODY',
-        'NEXT', 'LAST', 'POST', 'QUIT'
+        'NEXT', 'LAST', 'POST', 'QUIT', 'IHAVE', 'HELP',
+        'SLAVE', 'XPATH', 'XINDEX', 'XROVER'
     ]
 
     def __init__(self):
         NNTPClient.__init__(self)
+        self.servingSlave = 0
 
     def connectionMade(self):
         try:
@@ -356,8 +359,10 @@ class NNTPServer(NNTPClient):
             self.sendLine('%s %d %d %s' % i)
         self.sendLine('.')
 
-    def _errList(self, error):
-        self.sendLine('%s' % str(error))
+
+    def _errList(self, failure):
+        self.sendLine('503 program fault - command not performed')
+
 
     def _gotSubscription(self, parts):
         self.sendLine('215 information follows')
@@ -365,8 +370,9 @@ class NNTPServer(NNTPClient):
             self.sendLine(i)
         self.sendLine('.')
 
-    def _errSubscription(self):
+    def _errSubscription(self, failure):
         self.sendLine('503 program error, function not performed')
+
 
     def _gotOverview(self, parts):
         self.sendLine('215 Order of fields in overview database.')
@@ -374,7 +380,8 @@ class NNTPServer(NNTPClient):
             self.sendLine(i + ':')
         self.sendLine('.')
 
-    def _errOverview(self):
+
+    def _errOverview(self, failure):
         self.sendLine('503 program error, function not performed')
 
 
@@ -391,6 +398,7 @@ class NNTPServer(NNTPClient):
         defer = self.factory.backend.listGroupRequest(group)
         defer.addCallbacks(self._gotListGroup, self._errListGroup)
 
+
     def _gotListGroup(self, parts):
         group, articles = parts
         self.currentGroup = group
@@ -404,7 +412,8 @@ class NNTPServer(NNTPClient):
             self.sendLine('%d' % i)
         self.sendLine('.')
 
-    def _errListGroup(self):
+
+    def _errListGroup(self, failure):
         self.sendLine('502 no permission')
 
 
@@ -423,17 +432,19 @@ class NNTPServer(NNTPClient):
             defer = self.factory.backend.xoverRequest(self.currentGroup, l, h)
             defer.addCallbacks(self._gotXOver, self._errXOver)
 
+
     def _gotXOver(self, parts):
         self.sendLine('224 Overview information follows')
         for i in parts:
             self.sendLine(string.join(i, '\t'))
         self.sendLine('.')
 
-    def _errXOver(self, error):
+
+    def _errXOver(self, failure):
         self.sendLine('420 No article(s) selected')
 
 
-    def do_XHDR(self, parts):
+    def xhdrWork(self, parts):
         if self.currentGroup is None:
             self.sendLine('412 No news group currently selected')
         else:
@@ -454,8 +465,14 @@ class NNTPServer(NNTPClient):
             if l is h is None:
                 self.sendLine('430 no such article')
             else:
-                defer = self.factory.backend.xhdrRequest(self.currentGroup, l, h, header)
-                defer.addCallbacks(self._gotXHDR, self._errXHDR)
+                return self.factory.backend.xhdrRequest(self.currentGroup, l, h, header)
+
+
+    def do_XHDR(self, parts):
+        d = self.xhdrWork(parts)
+        if d:
+            d.addCallbacks(self._gotXHDR, self._errXHDR)
+
 
     def _gotXHDR(self, parts):
         self.sendLine('221 Header follows')
@@ -463,8 +480,25 @@ class NNTPServer(NNTPClient):
             self.sendLine('%d %s' % i)
         self.sendLine('.')
 
-    def _errXHDR(self):
+    def _errXHDR(self, failure):
         self.sendLine('502 no permission')
+
+
+    def do_XROVER(self, parts):
+        d = self.xhdrWork(parts)
+        if d:
+            d.addCallbacks(self._gotXROVER, self._errXROVER)
+    
+    
+    def _gotXROVER(self, parts):
+        self.sendLine('224 Overview information follows')
+        for i in parts:
+            self.sendLine('%d %s' % i)
+        self.sendLine('.')
+
+
+    def _errXROVER(self, failure):
+        self._errXHDR(failure)
 
 
     def do_POST(self, parts):
@@ -485,16 +519,19 @@ class NNTPServer(NNTPClient):
                 line = '.' + line
             self.message = self.message + line + '\r\n'
 
+
     def _gotPost(self, parts):
         self.sendLine('240 article posted ok')
+        
     
-    def _errPost(self, parts):
+    def _errPost(self, failure):
         self.sendLine('441 posting failed')
 
 
     def do_GROUP(self, parts):
         defer = self.factory.backend.groupRequest(parts[0])
         defer.addCallbacks(self._gotGroup, self._errGroup)
+
     
     def _gotGroup(self, parts):
         name, num, high, low, flags = parts
@@ -502,7 +539,8 @@ class NNTPServer(NNTPClient):
         self.currentIndex = low
         self.sendLine('211 %d %d %d %s group selected' % (num, low, high, name))
     
-    def _errGroup(self, group):
+    
+    def _errGroup(self, failure):
         self.sendLine('411 no such group')
 
 
@@ -517,6 +555,7 @@ class NNTPServer(NNTPClient):
             i = self.currentIndex
         defer = self.factory.backend.articleRequest(self.currentGroup, i)
         defer.addCallbacks(self._gotArticle, self._errArticle)
+
 
     def _gotArticle(self, parts):
         index, id, article = parts
@@ -537,12 +576,14 @@ class NNTPServer(NNTPClient):
         defer = self.factory.backend.articleRequest(self.currentGroup, i)
         defer.addCallbacks(self._gotStat, self._errStat)
     
+    
     def _gotStat(self, parts):
         index, id, article = parts
         self.currentIndex = index
         self.sendLine('223 %d %s article retreived - request text separately' % (index, id))
 
-    def _errStat(self, parts):
+
+    def _errStat(self, failure):
         self.sendLine('423 bad article number')
 
 
@@ -554,6 +595,7 @@ class NNTPServer(NNTPClient):
         defer = self.factory.backend.headRequest(self.currentGroup, i)
         defer.addCallbacks(self._gotHead, self._errHead)
     
+    
     def _gotHead(self, parts):
         index, id, head = parts
         self.currentIndex = index
@@ -561,7 +603,8 @@ class NNTPServer(NNTPClient):
         self.transport.write(head + '\r\n')
         self.sendLine('.')
     
-    def _errHead(self, head):
+    
+    def _errHead(self, failure):
         self.sendLine('423 no such article number in this group')
 
 
@@ -573,6 +616,7 @@ class NNTPServer(NNTPClient):
         defer = self.factory.backend.bodyRequest(self.currentGroup, i)
         defer.addCallbacks(self._gotBody, self._errBody)
 
+
     def _gotBody(self, parts):
         index, id, body = parts
         self.currentIndex = index
@@ -580,7 +624,8 @@ class NNTPServer(NNTPClient):
         self.transport.write(body.replace('\r\n..', '\r\n.') + '\r\n')
         self.sendLine('.')
 
-    def _errBody(self, body):
+
+    def _errBody(self, failure):
         self.sendLine('423 no such article number in this group')
 
 
@@ -591,6 +636,7 @@ class NNTPServer(NNTPClient):
         defer = self.factory.backend.articleRequest(self.currentGroup, i)
         defer.addCallbacks(self._gotStat, self._errStat)
 
+
     def do_LAST(self, parts):
         i = self.currentIndex - 1
         defer = self.factory.backend.articleRequest(self.currentGroup, i)
@@ -598,7 +644,18 @@ class NNTPServer(NNTPClient):
 
 
     def do_MODE(self, parts):
-        self.sendLine('200 Hello, you can post')
+        if len(parts) != 1:
+            self.sendLine('501 command syntax error')
+        else:
+            cmd = parts[0].strip().upper()
+            if cmd == 'READER':
+                self.servingSlave = 0
+                self.sendLine('200 Hello, you can post')
+            elif cmd == 'STREAM':
+                self.sendLine('500 Command not understood')
+            else:
+                # This is not a mistake
+                self.sendLine('500 Command not understood')
 
 
     def do_QUIT(self, parts):
@@ -612,6 +669,28 @@ class NNTPServer(NNTPClient):
         self.sendLine('.')
     
     
+    def do_SLAVE(self, parts):
+        self.sendLine('202 slave status noted')
+        self.servingeSlave = 1
+
+
+    def do_XPATH(self, parts):
+        # XPATH is a silly thing to have.  No client has the right to ask
+        # for this piece of information from me, and so that is what I'll
+        # tell them.
+        self.sendLine('502 access restriction or permission denied')
+
+
+    def do_XINDEX(self, parts):
+        # XINDEX is another silly command.  The RFC suggests it be relegated
+        # to the history books, and who am I to disagree?
+        self.sendLine('502 access restriction or permission denied')
+
+
+    def do_XROVER(self, parts):
+        self.do_XHDR(self, ('References',) + parts)
+
+
     def do_IHAVE(self, parts):
         if len(parts) != 1:
             self.sendLine('501 command syntax error')
@@ -646,5 +725,5 @@ class NNTPServer(NNTPClient):
         self.sendLine('235 article transferred ok')
     
     
-    def _errIHAVE(self, error):
+    def _errIHAVE(self, failure):
         self.sendLine('436 transfer failed - try again later')
