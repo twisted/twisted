@@ -138,7 +138,7 @@ class NewsStorage:
         Returns a deferred whose callback will be passed the a list of
         headers describing this server's overview format.
         """
-        raise NotImplementedError
+        return defer.succeed(OVERVIEW_FMT)
 
 
     def xoverRequest(self, group, low, high):
@@ -304,10 +304,6 @@ class PickleStorage(NewsStorage):
         return defer.succeed(None)
 
 
-    def overviewRequest(self):
-        return defer.succeed(OVERVIEW_FMT)
-
-
     def xoverRequest(self, group, low, high):
         if not self.db.has_key(group):
             return defer.succeed([])
@@ -431,9 +427,11 @@ class NewsShelf(NewsStorage):
     A NewStorage implementation using Twisted's dirdbm persistence module.
     """
     
-    def __init__(self, path):
-        self.dbm = dirdbm.Shelf(path)
+    def __init__(self, mailhost, path):
         self.path = path
+        self.mailhost = mailhost
+
+        self.dbm = dirdbm.Shelf(path)
         if not len(self.dbm.keys()):
             self.initialize()
 
@@ -492,7 +490,7 @@ class NewsShelf(NewsStorage):
         print 'To is ', moderator
         article.putHeader('To', moderator)
         return smtp.sendEmail(
-            'localhost',
+            self.mailhost,
             'twisted-news@' + socket.gethostname(),
             moderator,
             article.body,
@@ -534,10 +532,6 @@ class NewsShelf(NewsStorage):
         return defer.succeed(None)
 
 
-    def overviewRequest(self):
-        return defer.succeed(OVERVIEW_FMT)
-    
-    
     def xoverRequest(self, group, low, high):
         if not self.dbm['groups'].has_key(group):
             return defer.succeed([])

@@ -13,15 +13,15 @@
 # You should have received a copy of the GNU Lesser General Public
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
-import os, string
+import os, string, shutil
 
 from pyunit import unittest
 from twisted.news import news, database
 from twisted.protocols import nntp, loopback
 from twisted.internet import reactor, protocol
 
-ALL_GROUPS = ('alt.test.nntp', 0, 0, 'y')
-GROUP = ('0', '0', '0', 'alt.test.nntp', 'group', 'selected')
+ALL_GROUPS = ('alt.test.nntp', 0, 1, 'y'),
+GROUP = ('0', '1', '0', 'alt.test.nntp', 'group', 'selected')
 
 POST_STRING = """Path: not-for-mail
 From: <exarkun@somehost.domain.com>
@@ -55,8 +55,8 @@ class TestNNTPClient(nntp.NNTPClient):
         self.fetchGroups()
     
     def gotAllGroups(self, info):
-        self.assertEquals(len(info), 1)
-        self.assertEquals(info[0], ALL_GROUPS)
+        self.assertEquals(len(info), len(ALL_GROUPS))
+        self.assertEquals(info[0], ALL_GROUPS[0])
         
         self.fetchGroup('alt.test.nntp')
     
@@ -104,11 +104,10 @@ class TestNNTPClient(nntp.NNTPClient):
 
 class NNTPTestCase(unittest.TestCase):
     def setUp(self):
-        f = 'news.pickle'
-        g = ['alt.test.nntp']
         self.server = nntp.NNTPServer()
         self.server.factory = self
-        self.backend = database.PickleStorage(f, g)
+        self.backend = database.NewsShelf(None, 'news.db')
+        self.backend.addGroup('alt.test.nntp', 'y')
 
         self.client = TestNNTPClient()
 
@@ -125,4 +124,4 @@ class NNTPTestCase(unittest.TestCase):
 
     def tearDown(self):
         # Clean up the pickle file
-        os.remove('news.pickle')
+        shutil.rmtree('news.db')

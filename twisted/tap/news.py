@@ -86,14 +86,15 @@ class PickleOptions(usage.Options):
 class Options(usage.Options):
     synopsis = "Usage: mktap news [options]"
     
-#    groups = None
-#    servers = None
-#    subscriptions = None
+    groups = None
+    servers = None
+    subscriptions = None
 
     optParameters = [
         ["port",       "p", "119",           "Listen port"],
         ["interface",  "i", "",              "Interface to which to bind"],
-        ["datadir",    "d", "news.db",       "Root data storage path"]
+        ["datadir",    "d", "news.db",       "Root data storage path"],
+        ["mailhost",   "m", "localhost",     "Host of SMTP server to use"]
     ]
 
     def __init__(self):
@@ -127,7 +128,7 @@ def updateApplication(app, config):
     if not len(config.groups):
         raise usage.UsageError("No newsgroups specified")
     
-    db = database.NewsShelf(config['datadir'])
+    db = database.NewsShelf(config['mailhost'], config['datadir'])
     for (g, m) in config.groups:
         if m:
             db.addGroup(g, 'm')
