@@ -214,7 +214,7 @@ class CmdNotImplementedError(Exception):
 class CmdNotImplementedForArgError(Exception):
     pass
 
-class FTPError(Exception):
+class Error(Exception):
     pass
 
 class TimeoutError(Exception):
@@ -448,9 +448,6 @@ class FTP(basic.LineReceiver, policies.TimeoutMixin):
 
     binary      = True     # binary transfers? False implies ASCII. defaults to True
 
-    
-
-
     def connectionMade(self):
         log.debug('ftp-pi connectionMade: instance %s' % self.instanceNum)
 
@@ -602,7 +599,7 @@ class FTP(basic.LineReceiver, policies.TimeoutMixin):
             phost = self.transport.getPeer()[1]
             self.dtpFactory = DTPFactory(pi=self, peerHost=phost)
             self.dtpFactory.setTimeout(self.dtpTimeout)
-        if not hasattr(self, 'TestingSoJustSkipTheReactorStep'):    # to allow for testing
+        if not hasattr(self, '_FTP__TestingSoJustSkipTheReactorStep'):    # to allow for testing
             if self.dtpTxfrMode == PASV:    
                 self.dtpPort = reactor.listenTCP(0, self.dtpFactory)
             elif self.dtpTxfrMode == PORT: 
@@ -1336,24 +1333,23 @@ from twisted.internet.interfaces import IProducer, IConsumer, IProtocol, IFinish
 #   * Assumes that USER and PASS should always be sent
 #   * Always sets TYPE I  (binary mode)
 #   * Doesn't understand any of the weird, obscure TELNET stuff (\377...)
-#   * FIXME: Doesn't share any code with the FTPServer
 
-class FTPError(Exception):
+class Error(Exception):
     pass
 
-class ConnectionLost(FTPError):
+class ConnectionLost(Error):
     pass
 
-class CommandFailed(FTPError):
+class CommandFailed(Error):
     pass
 
-class BadResponse(FTPError):
+class BadResponse(Error):
     pass
 
-class UnexpectedResponse(FTPError):
+class UnexpectedResponse(Error):
     pass
 
-class FTPCommand:
+class Command:
     def __init__(self, text=None, public=0):
         self.text = text
         self.deferred = Deferred()
@@ -1378,7 +1374,7 @@ class ProtocolWrapper(Protocol):
         # Signal that transfer has completed
         self.deferred.callback(None)
     def connectionFailed(self):
-        self.deferred.errback(Failure(FTPError('Connection failed')))
+        self.deferred.errback(Failure(Error('Connection failed')))
 
 
 class SenderProtocol(Protocol):
@@ -1432,7 +1428,7 @@ def decodeHostPort(line):
     return host, port
 
 
-class FTPDataPortFactory(ServerFactory):
+class DataPortFactory(ServerFactory):
     """Factory for data connections that use the PORT command
     
     (i.e. "active" transfers)
@@ -1448,7 +1444,7 @@ class FTPDataPortFactory(ServerFactory):
         return self.protocol
 
 
-class FTPClient(basic.LineReceiver):
+class Client(basic.LineReceiver):
     """A Twisted FTP Client
 
     Supports active and passive transfers.
@@ -1528,13 +1524,13 @@ class FTPClient(basic.LineReceiver):
             d.addErrback(lambda x: None)
         
     def queueCommand(self, ftpCommand):
-        """Add an FTPCommand object to the queue.
+        """Add an Command object to the queue.
 
         If it's the only thing in the queue, and we are connected and we aren't
         waiting for a response of an earlier command, the command will be sent
         immediately.
 
-        @param ftpCommand: an L{FTPCommand}
+        @param ftpCommand: an L{Command}
         """
         self.actionQueue.append(ftpCommand)
         if (len(self.actionQueue) == 1 and self.transport is not None and
@@ -1556,7 +1552,7 @@ class FTPClient(basic.LineReceiver):
         @param command: string of an FTP command to execute then receive the
             results of (e.g. LIST, RETR)
         @param protocol: A L{Protocol} *instance* e.g. an
-            L{FTPFileListProtocol}, or something that can be adapted to one.
+            L{FileListProtocol}, or something that can be adapted to one.
             Typically this will be an L{IConsumer} implemenation.
 
         @returns: L{Deferred}.
@@ -1582,7 +1578,7 @@ class FTPClient(basic.LineReceiver):
         """
         This method returns a DeferredList.
         """
-        cmd = FTPCommand(command, public=1)
+        cmd = Command(command, public=1)
 
         if self.passive:
             # Hack: use a mutable object to sneak a variable out of the 
@@ -1603,7 +1599,7 @@ class FTPClient(basic.LineReceiver):
                 f.protocol = protocol
                 _mutable[0] = reactor.connectTCP(host, port, f)
 
-            pasvCmd = FTPCommand('PASV')
+            pasvCmd = Command('PASV')
             self.queueCommand(pasvCmd)
             pasvCmd.deferred.addCallback(doPassive).addErrback(self.fail)
 
@@ -1619,7 +1615,7 @@ class FTPClient(basic.LineReceiver):
         else:
             # We just place a marker command in the queue, and will fill in
             # the host and port numbers later (see generatePortCommand)
-            portCmd = FTPCommand('PORT')
+            portCmd = Command('PORT')
 
             # Ok, now we jump through a few hoops here.
             # This is the problem: a transfer is not to be trusted as complete
@@ -1659,11 +1655,11 @@ class FTPClient(basic.LineReceiver):
         # FIXME: This method is far too ugly.
 
         # FIXME: The best solution is probably to only create the data port
-        #        once per FTPClient, and just recycle it for each new download.
+        #        once per Client, and just recycle it for each new download.
         #        This should be ok, because we don't pipeline commands.
         
         # Start listening on a port
-        factory = FTPDataPortFactory()
+        factory = DataPortFactory()
         factory.protocol = portCmd.protocol
         listener = reactor.listenTCP(0, factory)
         factory.port = listener
@@ -1726,7 +1722,7 @@ class FTPClient(basic.LineReceiver):
 
         @param path: path to get a file listing for.
         @param protocol: a L{Protocol} instance, probably a
-            L{FTPFileListProtocol} instance.  It can cope with most common file
+            L{FileListProtocol} instance.  It can cope with most common file
             listing formats.
 
         @returns: L{Deferred}
@@ -1753,13 +1749,13 @@ class FTPClient(basic.LineReceiver):
         """Queues a string to be issued as an FTP command
         
         @param command: string of an FTP command to queue
-        @param public: a flag intended for internal use by FTPClient.  Don't
+        @param public: a flag intended for internal use by Client.  Don't
             change it unless you know what you're doing.
         
         @returns: a L{Deferred} that will be called when the response to the
         command has been received.
         """
-        ftpCommand = FTPCommand(command, public)
+        ftpCommand = Command(command, public)
         self.queueCommand(ftpCommand)
         return ftpCommand.deferred
 
@@ -1835,7 +1831,7 @@ class FTPClient(basic.LineReceiver):
         self.sendNextCommand()
         
 
-class FTPFileListProtocol(basic.LineReceiver):
+class FileListProtocol(basic.LineReceiver):
     """Parser for standard FTP file listings
     
     This is the evil required to match::
@@ -1893,3 +1889,9 @@ def parsePWDResponse(response):
         return match.groups()[0]
     else:
         return None
+
+FTPClient = Client
+FTPFileListProtocol = FileListProtocol
+FTPDataPortFactory = DataPortFactory
+FTPCommand = Command
+FTPError = Error
