@@ -13,9 +13,7 @@ from twisted import copyright
 from twisted.internet import tcp, ingtkernet
 ingtkernet.install()
 from twisted.spread import pb
-
-portno = 8889
-
+from twisted.spread.ui import gtkutil
 
 def scrollify(widget):
     widget.set_word_wrap(gtk.TRUE)
@@ -107,7 +105,7 @@ class GameWindow(gtk.GtkWindow, pb.Referenced):
     def __hash__(self):
         return id(self)
     
-    def __init__(self, remote, broker):
+    def __init__(self):
         #print self.send_
         gtk.GtkWindow.__init__(self, gtk.WINDOW_TOPLEVEL)
         self.set_title("Reality Faucet")
@@ -153,8 +151,12 @@ class GameWindow(gtk.GtkWindow, pb.Referenced):
         self.descriptions={}
         self.items={}
         self.exits=[]
-        self.remote = remote
-        broker.notifyOnDisconnect(self.connectionLost)
+
+    def connected(self, rem):
+        rem.broker.notifyOnDisconnect(self.connectionLost)
+        self.remote = rem
+        self.show_all()
+        lw.hide()
 
     def connectionLost(self):
         self.hide()
@@ -353,137 +355,12 @@ class GameWindow(gtk.GtkWindow, pb.Referenced):
     def clear_key(self):
         self.cmdarea.emit_stop_by_name("key_press_event")
 
-class LoginWindow(gtk.GtkWindow):
-    def __init__(self):
-        gtk.GtkWindow.__init__(self,gtk.WINDOW_TOPLEVEL)
-        version_label = gtk.GtkLabel("Python GTK Faucet %s" %
-                                     copyright.version)
-        version_label.show()
-        self.character=gtk.GtkEntry()
-        self.password=gtk.GtkEntry()
-        self.worldname=gtk.GtkEntry()
-        self.hostname=gtk.GtkEntry()
-        self.port=gtk.GtkEntry()
-        self.password.set_visibility(gtk.FALSE)
-
-        self.character.set_text("Damien")
-        self.password.set_text("admin")
-        self.worldname.set_text("reality")
-        self.hostname.set_text("localhost")
-        self.port.set_text(str(portno))
-
-        charlbl=gtk.GtkLabel("Character Name:")
-        passlbl=gtk.GtkLabel("Password:")
-        worldlbl=gtk.GtkLabel("World:")
-        hostlbl=gtk.GtkLabel("Hostname:")
-        portlbl=gtk.GtkLabel("Port:")
         
-        self.logstat = gtk.GtkLabel("Protocol PB0")
-        self.okbutton=gtk.GtkButton("Log In")
-
-        okbtnbx=gtk.GtkHButtonBox()
-        okbtnbx.add(self.okbutton)
-        
-        vbox=gtk.GtkVBox()
-        vbox.add(version_label)
-        table=gtk.GtkTable(2,5)
-        z=0
-        for i in [[charlbl,self.character],
-                  [passlbl,self.password],
-                  [hostlbl,self.hostname],
-                  [worldlbl,self.worldname],
-                  [portlbl,self.port]]:
-            table.attach(i[0],0,1,z,z+1)
-            table.attach(i[1],1,2,z,z+1)
-            z=z+1
-
-        vbox.add(table)
-        vbox.add(self.logstat)
-        vbox.add(okbtnbx)
-        self.add(vbox)
-
-        self.okbutton.signal_connect('clicked',self.play)
-        self.signal_connect('destroy',gtk.mainquit,None)
-        #self.set_geometry_hints(max_width=0, max_height=0)
-
-    def loginReset(self):
-        self.logstat.set_text("Idle.")
-        
-    def loginReport(self, txt):
-        self.logstat.set_text(txt)
-        gtk.timeout_add(30000, self.loginReset)
-        
-    def play(self,button):
-        global gw
-        host = self.hostname.get_text()
-        port = self.port.get_text()
-        world = self.worldname.get_text()
-        # Maybe we're connecting to a unix socket, so don't make any
-        # assumptions
-        try:
-            port = int(port)
-        except:
-            pass
-        char = self.character.get_text()
-        pswd = self.password.get_text()
-        b = pb.Broker()
-        self.broker = b
-        b.requestPerspective(world, char, pswd, self.gameWindow, self.tryAgain)
-        b.notifyOnDisconnect(self.discoInferno)
-        tcp.Client(host, port, b)
-
-    def gameWindow(self, rem):
-        print 'window'
-        gw = GameWindow(rem,self.broker)
-        gw.show_all()
-        rem.observe(gw)
-        self.hide()
-
-    def tryAgain(self):
-        self.loginReport("could not connect.")
-
-    def discoInferno(self):
-        self.loginReport("meep, meep")
-        
-##def poke(button):
-##    global gw
-##    import select
-##    print select.select([gw.socket, gw.rfile],[],[],0)
-##    gw.parse(gw.recv_())
-
-##def debug_blocking_bug():
-##    win = gtk.GtkWindow()
-##    win.set_title("Poke")
-##    win.set_usize(125,-1)
-##    b = gtk.GtkButton('Poke')
-##    b.connect('clicked', poke)
-##    win.add(b)
-##    win.show_all()
-
-##def debug_main_quit():
-##    """Create a window with a button to call mainquit"""
-##    win = gtk.GtkWindow()
-##    win.set_title("Quit")
-##    win.set_usize(125, -1)
-##    b = gtk.GtkButton("Main Quit")
-##    b.connect("clicked", gtk.mainquit)
-##    win.add(b)
-##    b.show()
-##    win.show()
-        
-##quitted = 0
-        
-##def myMainLoop():
-##    global quitted
-##    while not quitted:
-##        gtk.mainiteration()
-
-##def myMainQuit():
-##    global quitted
-##    quitted = 1
-
 def main():
     global lw
-    lw = LoginWindow()
+    gw = GameWindow()
+    lw = gtkutil.Login(gw.connected, gw,
+                       "Damien", "admin",
+                       "localhost", "reality")
     lw.show_all()
     gtk.mainloop()

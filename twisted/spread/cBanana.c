@@ -63,7 +63,7 @@ cBananaState_new(PyObject *self, PyObject *args) {
   if (!PyArg_ParseTuple(args, ":newState")){
     return NULL;
   }
-  state = PyObject_New(cBananaState, &cBananaStateType);
+  state = PyObject_NEW(cBananaState, &cBananaStateType);
   state->currentList = NULL;
   return (PyObject*) state;
 }
@@ -80,7 +80,7 @@ cBananaState_dealloc(PyObject* self)
     free(thisList);
     thisList = thatList;
   }
-  PyObject_Del(self);
+  PyMem_DEL(self);
 }
 
 static PyTypeObject cBananaStateType = {
@@ -293,7 +293,9 @@ extern EXTERN_API PyObject *dataReceived( PyObject *self, PyObject *args )
   }
   state = (cBananaState*) stateobj;
 
-  PyString_AsStringAndSize(newChunk,(char**) &buffer, &bufferSize);
+  buffer = PyString_AS_STRING(newChunk);
+  bufferSize = PyString_GET_SIZE(newChunk);
+
   pos = 0;
   while (pos < bufferSize) {
     /* printf("beginning at %d\n", pos); */

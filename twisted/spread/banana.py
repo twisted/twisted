@@ -1,6 +1,7 @@
 # Generic List ENcoding
 
 from twisted.protocols import protocol
+from twisted.persisted import styles
 import types, copy, cStringIO, math, struct
 
 def int2b128(integer, stream):
@@ -35,7 +36,7 @@ FLOAT    = chr(0x86)
 
 HIGH_BIT_SET = chr(0x80)
 
-class Banana(protocol.Protocol):
+class Banana(protocol.Protocol, styles.Ephemeral):
     def connectionMade(self):
         self.listStack = []
 
@@ -223,3 +224,11 @@ except ImportError:
 else:
     print 'using C banana'
     Banana = Canana
+
+# For use from the interactive interpreter
+_i = Banana()
+
+def encode(lst):
+    io = cStringIO.StringIO()
+    _i._encode(lst, io.write)
+    return io.getvalue()

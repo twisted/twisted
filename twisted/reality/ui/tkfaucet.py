@@ -7,8 +7,6 @@ from ScrolledText import *
 from twisted.spread import pb
 from twisted.internet import tkinternet, main, tcp
 
-portno = 8787
-
 class MainWindow(Toplevel, pb.Referenced):
     def __init__(self, *args,**kw):
         self.descriptions = {}
@@ -49,6 +47,18 @@ class MainWindow(Toplevel, pb.Referenced):
     def close(self):
         self.tk.quit()
         self.destroy()
+
+    def loggedIn(self, m):
+        self.remote = m
+        login.withdraw()
+        self.deiconify()
+
+    def tryAgain(self, er):
+        print 'oops'
+        
+    def disco(self):
+        print 'disconnected'
+
 
     def verbSuccess(self, nne):
         self.verbDone()
@@ -175,7 +185,7 @@ class Login(Toplevel):
 
         l=Label(f,text="Port:")
         self.port=Entry(f)
-        self.port.insert('0',str(portno))
+        self.port.insert('0',str(pb.portno))
 
         l.grid(column=0,row=4); self.port.grid(column=1,row=4)
         f.pack()
@@ -200,28 +210,19 @@ class Login(Toplevel):
             port = self.port.get()
         password=self.password.get()
         broker = pb.Broker()
-        broker.requestPerspective(worldname, username, password, self.loggedIn, self.tryAgain)
-        broker.notifyOnDisconnect(self.disco)
-        tcp.Client(hostname, port, broker)
-
-    def loggedIn(self, perspective):
         m = MainWindow()
-        m.remote = perspective
-        perspective.observe(m)
-        self.withdraw()
-
-    def tryAgain(self):
-        print 'try again'
-
-    def disco(self):
-        print 'disconnected'
+        m.withdraw()
+        broker.notifyOnDisconnect(m.disco)
+        broker.requestPerspective(worldname, username, password, m, m.loggedIn, m.tryAgain)
+        tcp.Client(hostname, port, broker)
 
 def main():
     global root
+    global login
     root = Tk()
     root.withdraw()
     tkinternet.install(root)
     print 'displaying login'
-    Login(root)
+    login = Login(root)
     mainloop()
     tkinternet.stop()

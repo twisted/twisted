@@ -86,6 +86,13 @@ class Connection(abstract.FileDescriptor,
         del self.fileno
         protocol.connectionLost()
 
+    logstr = "Uninitialized"
+    
+    def logPrefix(self):
+        """Return the prefix to log with when I own the logging thread.
+        """
+        return self.logstr
+
 
 class Client(Connection):
     """A client for TCP (and similiar) sockets.
@@ -134,9 +141,6 @@ class Client(Connection):
         self.startReading()
         self.protocol.makeConnection(self)
 
-    def logPrefix(self):
-        return self.logstr
-
     def getPeer(self):
         """Returns a tuple of ('INET', hostname, port).
         
@@ -180,11 +184,6 @@ class Server(Connection):
         """A string representation of this connection.
 	"""
 	return self.repstr
-
-    def logPrefix(self):
-        """Return the prefix to log with when I own the logging thread.
-        """
-        return self.logstr
 
     def getPeer(self):
         """

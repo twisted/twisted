@@ -62,7 +62,7 @@ class AtLeastImportTestCase(unittest.TestCase):
         from twisted.protocols import smtp
         from twisted.protocols import telnet
 
-        # TW library
+        # Twisted Web library
 
         from twisted.web import server
         from twisted.web import html
@@ -76,6 +76,8 @@ class AtLeastImportTestCase(unittest.TestCase):
         from twisted.web import vhost
         from twisted.web import weblog
 
-        
+        # Twisted Words
+        from twisted.words import service
+        from twisted.words import ircservice
 
 testCases = [AtLeastImportTestCase]

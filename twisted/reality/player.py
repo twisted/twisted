@@ -44,9 +44,12 @@ class Player(thing.Thing, pb.Perspective):
     def perspective_execute(self, st):
         self.execute(st)
 
-    def perspective_observe(self, i):
+    def attached(self, i):
         self.intelligence = LocalIntelligence(i)
 
+    def detached(self, i):
+        del self.intelligence
+        
     ### Basic Abilities
 
     def ability_go(self, sentence):

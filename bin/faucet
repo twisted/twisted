@@ -1,0 +1,40 @@
+#!/usr/bin/env python
+
+"""
+Usage: faucet [--toolkit tk]
+
+This script is a frontend to a Twisted Reality 'Pump' server; it can use either
+the GTK or TK frontend.
+"""
+
+### TwistedPython Preamble
+# This makes sure that users don't have to set up their environment
+# specially in order to run these programs from bin/.
+import sys,os,string
+
+if string.find(os.path.abspath(sys.argv[0]),'Twisted') != -1:
+    sys.path.append(os.path.dirname(
+        os.path.dirname(os.path.abspath(sys.argv[0])))) 
+### end of preamble
+
+from twisted.python import usage
+
+class Options(usage.Options):
+    optStrings = [["toolkit", "t", "gtk"]]
+
+config = Options()
+config.parseOptions()
+
+try:
+    if config.toolkit != 'gtk':
+        raise ImportError()
+    from twisted.reality.ui import gtkfaucet
+except ImportError:
+    try:
+        from twisted.reality.ui import tkfaucet
+    except ImportError:
+        print "Neither GTK nor TK found."
+    else:
+        tkfaucet.main()
+else:
+    gtkfaucet.main()

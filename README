@@ -1,22 +1,27 @@
-Twisted 0.9.3
+Twisted 0.9.4
 
 Quote of the Release:
 
-  <moshez> glyph: what's Twisted Matrix Laboratories?
-  <dash> moshez: the only enemy the PSU fears
+  <Afterglow> glyth: what's odd is i keep getting a segfault and i don't know why
+  <glyph> Afterglow: are you using C?
+  <Afterglow> yes
+  <glyph> Afterglow: ah.  There's your problem.
 
-What's new in 0.9.3?
+What's new in 0.9.4?
 
-  IRC message-parsing error fixed.
+  Minor bugfixes for twisted.python.rebuild and twisted.web.error.
 
-  twisted.internet.tkinternet, mainloop support for tkinter (and tkfaucet
-  sample application)
+  C implementation of computationally intensive code in Banana.dataReceived,
+  giving roughly a 50x speedup to packet decoding.  This is the first release
+  of Twisted with any C code -- but don't worry!  It will still fall back to
+  Python transparently if you don't have the requisite C module.
 
-  twisted.protocols.toc, client and server support for AOL's TOC protocol.
+  Minor enhancements, bugfixes, and cleanups in PB.
 
-  debian packaging information.
+  Some naming changes.  SPL (Server PickLe) is now TAP (Twisted Application
+  Persistence), since it almost always indicates more than one server.
 
-  NameVirtualHost bugfixes.
+  Twisted.Words, a chat service for PB.
 
 What is this?
 
@@ -60,31 +65,31 @@ Basic Servers
   The normal type of server to create is a webserver.  You can run this
   command::
 
-    % mkserver web --static static
+    % mktap web --static static
 
   which will make a "static" webserver (one that reads from the filesystem) and
   run it from the provided 'static' directory.  This creates a file named
-  'web.spl'.  By default, this server will run on port 8080, but you can change
+  'web.tap'.  By default, this server will run on port 8080, but you can change
   it with the --port option.
 
   You can also create a telnet server::
 
-    % mkserver telnet -p 8023 -u username -p password
+    % mktap telnet -p 8023 -u username -p password
 
   which will create a python-console telnet server listening on port 8023,
   which you can log into with the username "username" and the password
-  "password".  This creates a file called 'telnet.spl'
+  "password".  This creates a file called 'telnet.tap'
 
   A AOL Instant Messanger TOC Server is also available::
     
-    % mkserver toc -p 5190
+    % mktap toc -p 5190
 
   which creates the TOC server, running on port 5190.  To create a user, simply   log in with the username and password you want.  If the name is not already
-  taken on the server, it is created.  This creates a file called 'toc.spl'
+  taken on the server, it is created.  This creates a file called 'toc.tap'
   
   Finally, a rudimentary IRC server::
 
-    % mkserver irc -p 6667
+    % mktap irc -p 6667
 
   This creates an IRC server application, listening on port 6667.  (I apologize
   in advance if this doesn't work with your IRC client; let me know if it
@@ -95,7 +100,7 @@ Running Servers
 
   In order to run any of these servers, run this command::
 
-    % twistd -f [application name].spl
+    % twistd -f [application name].tap
 
   You can stop the server at any time by going back to the directory you
   started it in and running the command::
@@ -111,10 +116,10 @@ Running Servers
   package for "spreadable" computing.  In two different directories, run the
   commands::
 
-    % mkserver web --user
-    % mkserver web --personal [other options, if you desire]
+    % mktap web --user
+    % mktap web --personal [other options, if you desire]
 
-  Both of these create a 'web.spl'; you need to run both at the same time.
+  Both of these create a 'web.tap'; you need to run both at the same time.
   Once you have, go to http://localhost:8080/your_username.twistd/ -- you will
   see the front page from the server you created with the --personal option.
   What's happening here is that the request you've sent is being relayed from

@@ -116,8 +116,8 @@ class ResourceSubscription(resource.Resource):
                 broker.requestPerspective(self.service,
                                           self.username,
                                           self.password,
-                                          self.connected,
-                                          self.notConnected)
+                                          callback=self.connected,
+                                          errback=self.notConnected)
                 broker.notifyOnDisconnect(self.booted)
                 c = tcp.Client(self.host, self.port, broker)
         else:

@@ -20,6 +20,8 @@ import test_explorer
 import test_banana
 import test_rebuild
 import test_toc
+import test_words
+
 from pyunit import unittest
 
 
@@ -33,13 +35,14 @@ def makeBigSuite(testCaseClasses, prefix='test'):
 
 
 def testSuite():
-    cases = (test_observable.testCases + test_reality.testCases   +
-             test_reflect.testCases    + test_delay.testCases     +
-             test_hook.testCases       + test_protocols.testCases +
-             test_dirdbm.testCases     + test_jelly.testCases     +
-             test_pb.testCases         + test_todo.testCases      +
-             test_explorer.testCases   + test_banana.testCases    +
-             test_rebuild.testCases    + test_toc.testCases       +
+    cases = (test_observable.testCases + test_reality.testCases    +
+             test_reflect.testCases    + test_delay.testCases      +
+             test_hook.testCases       + test_protocols.testCases  +
+             test_dirdbm.testCases     + test_jelly.testCases      +
+             test_pb.testCases         + test_todo.testCases       +
+             test_explorer.testCases   + test_banana.testCases     +
+             test_rebuild.testCases    + test_toc.testCases        +
+             test_words.testCases      + 
              # Leave this one at the end.
              test_import.testCases)
     return makeBigSuite(cases)

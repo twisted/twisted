@@ -104,7 +104,11 @@ try:
     else:
         application.run()
 except:
-    traceback.print_exc(file=oldstdout)
-    oldstdout.flush()
+    if config.nodaemon:
+        file = oldstdout
+    else:
+        file = open("TWISTD-CRASH.log")
+    traceback.print_exc(file=file)
+    file.flush()
 os.unlink(config.pidfile)
 print "Server Shut Down."

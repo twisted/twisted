@@ -12,10 +12,15 @@ class Factory:
     This interface only requires that you implement one method; buildProtocol.
     By default, this will create a protocol of the class given in
     self.protocol.
-    
     """
     protocol = None
     def buildProtocol(self, connection):
+        """Create an instance of a subclass of Protocol.
+
+        The returned instance will handle input on an incoming server
+        connection.  Override this method to alter how Protocol instances get
+        created.
+        """
         return self.protocol()
 
 

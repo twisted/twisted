@@ -93,11 +93,11 @@ class Application(log.Logger):
     def save(self, tag=None):
         from cPickle import dump
         if tag:
-            filename = self.name+'-'+tag+'-2.spl'
-            finalname = self.name+'-'+tag+'.spl'
+            filename = self.name+'-'+tag+'-2.tap'
+            finalname = self.name+'-'+tag+'.tap'
         else:
-            filename = self.name+"-2.spl"
-            finalname = self.name+".spl"
+            filename = self.name+"-2.tap"
+            finalname = self.name+".tap"
         log.msg("Saving "+self.name+" application to "+finalname+"...")
         f = open(filename, 'wb')
         dump(self, f, 1)
@@ -137,7 +137,7 @@ delayeds = [task.theScheduler]
 shutdowns = []
 
 def shutDown(a=None, b=None):
-    """Save a copy of this Selector to disk in SHUTDOWN.spl and exit.
+    """Save a copy of this Selector to disk in *appname*.tap and exit.
 
     This is called by various signal handlers which should cause the
     process to exit.

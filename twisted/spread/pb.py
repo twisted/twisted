@@ -36,6 +36,7 @@ from twisted.protocols import protocol
 import jelly
 import banana
 
+portno = 8787
 
 from twisted.protocols import protocol
 
@@ -127,9 +128,11 @@ class Service(authenticator.Authenticator):
     def getPerspectiveNamed(self, name):
         """Return a perspective that represents a user for this service.
 
-        Other services should really, really subclass this method.
+        Raises a KeyError if no such user exists.
+
+        You must implement this method.
         """
-        return Perspective()
+        raise NotImplementedError("%s.getPerspectiveNamed" % str(self.__class__))
 
 
 class Referenced(Serializable):
@@ -308,13 +311,11 @@ class Cached(Copied):
         """
         cacheID = broker.cachedRemotelyAs(self)
         assert cacheID is not None, "You can't call a cached method when the object hasn't been given to the other side yet."
-        callback = noOperation
-        errback = printTraceback
+        callback = kw.get("pbcallback")
+        errback = kw.get("pberrback")
         if kw.has_key('pbcallback'):
-            callback = kw['pbcallback']
             del kw['pbcallback']
         if kw.has_key('pberrback'):
-            errback = kw['pberrback']
             del kw['pberrback']
         broker.sendCacheMessage(cacheID, methodName, perspective, args, kw, callback, errback)
 
@@ -352,13 +353,11 @@ class Reference(Serializable):
     def remoteInstanceDo(self, key, args, kw):
         """Asynchronously send a named message to the object which I proxy for.
         """
-        callback = noOperation
-        errback = printTraceback
+        callback = kw.get("pbcallback")
+        errback = kw.get("pberrback")
         if kw.has_key('pbcallback'):
-            callback = kw['pbcallback']
             del kw['pbcallback']
         if kw.has_key('pberrback'):
-            errback = kw['pberrback']
             del kw['pberrback']
         self.broker.sendMessage(self.perspective, self.luid,
                                 key, args, kw,
@@ -581,27 +580,10 @@ class Broker(banana.Banana):
         assert vnum == self.version, "Version Incompatibility: %s %s" % (self.version, vnum)
 
 
-    def addPerspective(self, tag, perspective):
-        """Add a perspective to this connection.
-        """
-        perspective.attached(self)
-        self.perspectives[tag] = perspective
-        self.setNameForLocal(tag, perspective)
-
-
-    def getPerspective(self, tag):
-        """Get a perspective for this tag.
-        """
-        return self.perspectives[tag]
-
-
     def sendCall(self, *exp):
         """Utility method to send an expression to the other side of the connection.
         """
-        if self.connected:
-            self.sendEncoded(exp)
-        else:
-            self.expq.append(exp)
+        self.sendEncoded(exp)
 
     def proto_didNotUnderstand(self, command):
         """Respond to stock 'didNotUnderstand' message.
@@ -621,11 +603,11 @@ class Broker(banana.Banana):
             return self.serverServices[name]
         return foo
 
-    def proto_login(self, service, username):
-        """Receive a login name, and respond with a challenge.
+    def proto_login(self, service, username, objid):
+        """Receive a service, login name, and object, and respond with a challenge.
 
         This is the second step in the protocol, the first being version number
-        checking.
+        checking.  The peer to this is requestPerspective.
 
         See the documentation for twisted.python.authenticator for more
         information on the challenge/response system that is used here.
@@ -633,6 +615,7 @@ class Broker(banana.Banana):
         self.username = username
         self.loginService = self.getService(service)
         self.loginTag = service
+        self.loginObjID = objid
         self.challenge = authenticator.challenge()
         self.sendCall("challenge", self.challenge)
 
@@ -646,13 +629,21 @@ class Broker(banana.Banana):
         try:
             self.loginService.authenticate(self.username, self.challenge, password)
             perspective = self.loginService.getPerspectiveNamed(self.username)
-            self.addPerspective(self.loginTag, perspective)
+            if self.loginObjID == -1:
+                loginObj = None
+            else:
+                loginObj = Reference(perspective, self, self.loginObjID, 1)
+            perspective.attached(loginObj)
+            self.perspectives[self.loginTag] = (perspective, loginObj)
+            self.setNameForLocal(self.loginTag, perspective)
             self.sendCall("perspective", self.loginTag)
             del self.username
             del self.challenge
             del self.loginTag
             del self.loginService
+            del self.loginObjID
         except authenticator.Unauthorized:
+            print "Unauthorized Login Attempt: %s" % self.username
             self.sendCall("inperspective", self.loginTag)
             # TODO; this should do some more heuristics rather than just
             # closing the connection immediately.
@@ -691,8 +682,8 @@ class Broker(banana.Banana):
         self.jellier = None
         self.unjellier = None
         self.myServices = {}
-        for xp in self.expq:
-            self.sendEncoded(xp)
+        for perspective, username, password, referenced, callback, errback in self.expq:
+            self.requestPerspective(perspective, username, password, referenced, callback, errback)
 
     def connectionFailed(self):
         """The connection failed; bail on any awaiting perspective requests.
@@ -706,12 +697,13 @@ class Broker(banana.Banana):
     def connectionLost(self):
         """The connection was lost.
         """
+        self.disconnected = 1
         # nuke potential circular references.
-        for perspective in self.perspectives.values():
+        for perspective, client in self.perspectives.values():
             try:
-                perspective.detached(self)
+                perspective.detached(client)
             except:
-                log.msg( "Exception in perspective detach ignored:")
+                log.msg("Exception in perspective detach ignored:")
                 traceback.print_exc(file=log.logfile)
         self.perspectives = None
         self.localObjects = None
@@ -734,7 +726,6 @@ class Broker(banana.Banana):
         self.remotelyCachedLUIDs = None
         self.locallyCachedObjects = None
         self.waitingForAnswers = None
-        self.disconnected = 1
 
     def notifyOnDisconnect(self, notifier):
         self.disconnects.append(notifier)
@@ -756,6 +747,8 @@ class Broker(banana.Banana):
         Store a persistent reference to a local object and map its id() to a
         generated, session-unique ID and return that ID.
         """
+        assert object is not None
+        print 'pb:',object
         puid = object.processUniqueID()
         luid = self.luids.get(puid)
         if luid is None:
@@ -772,6 +765,7 @@ class Broker(banana.Banana):
         This is how you specify a 'base' set of objects that the remote
         protocol can connect to.
         """
+        assert object is not None
         self.localObjects[name] = Local(object)
 
     def remoteForName(self, name):
@@ -867,16 +861,49 @@ class Broker(banana.Banana):
         """
         self._gotPerspective(perspective, 1, self.remoteForName(perspective))
 
-    def proto_inperspective(self, name):
+    def proto_inperspective(self, perspective):
         """Received when a perspective authenticates incorrectly.
         """
         self._gotPerspective(perspective, 0)
 
 
-    def requestPerspective(self, perspective, username, password, callback=noOperation, errback=printTraceback):
-        self.sendCall("login", perspective, username)
-        self.awaitingPerspectives[perspective] = callback, errback
-        self.password = password
+    def requestPerspective(self, perspective, username, password, referenced=None, callback=noOperation, errback=printTraceback):
+        """
+        Request a perspective from this broker, and give a callback when it is or is not available.
+
+        Arguments:
+
+          * perspective: this is the name of the perspective broker service to
+            request.
+
+          * username: this is the username you wish to authenticate with.
+
+          * password: this is the password you wish to authenticate with.  pass
+            it in plaintext, it will be hashed using a challenge-response
+            authentication handshake automatically.
+
+          * referenced: this is pb.Referenced instance which represents the
+            "client" to the remote side.  This argument may not be optional
+            depending on the sort of service you are authenticating to.
+
+          * callback: a callback which will be made (with a reference to the
+            resulting perspective as the argument) if and when the
+            authentication succeeds.
+
+          * errback: a callback which will be made (with an error message as
+            the argument) if and when the authentication fails.
+
+        """
+        if self.connected:
+            if referenced == None:
+                num = -1
+            else:
+                num = self.registerReference(referenced)
+            self.sendCall("login", perspective, username, num)
+            self.awaitingPerspectives[perspective] = callback, errback
+            self.password = password
+        else:
+            self.expq.append((perspective, username, password, referenced, callback, errback))
 
     def proto_challenge(self, challenge):
         """Use authenticator.respond to respond to the server's challenge.
@@ -895,9 +922,7 @@ class Broker(banana.Banana):
         self.currentRequestID = self.currentRequestID + 1
         return self.currentRequestID
 
-    def sendMessage(self, perspective, objectID,
-                    message, args, kw,
-                    callback, errback):
+    def sendMessage(self, perspective, objectID, message, args, kw, callback, errback):
         
         """(internal) Send a message to a remote object.
         
@@ -919,34 +944,31 @@ class Broker(banana.Banana):
           * errback: a callback to be made when this request is answered with
             an exception.
         """
-        netArgs = self.serialize(args, perspective=perspective, method=message)
-        netKw = self.serialize(kw, perspective=perspective, method=message)
-        requestID = self.newRequestID()
-        if self.disconnected:
-            try:
-                errback(PB_CONNECTION_LOST)
-            except:
-                traceback.print_exc(file=log.logfile)
-        else:
-            self.waitingForAnswers[requestID] = callback, errback
-            self.sendCall("message", requestID, objectID, message, netArgs, netKw)
+        self._sendMessage('',perspective, objectID, message, args, kw, callback, errback)
 
     def sendCacheMessage(self, cacheID, message, perspective, args, kw, callback, errback):
         """(internal) Similiar to sendMessage, but for cached.
         """
-        netArgs = self.serialize(args, perspective = perspective, method = message)
-        netKw = self.serialize(kw, perspective = perspective, method = message)
-        requestID = self.newRequestID()
+        self._sendMessage('cache',perspective, cacheID, message, args, kw, callback, errback)
+    
+    def _sendMessage(self, prefix, perspective, objectID, message, args, kw, callback, errback):
         if self.disconnected:
-            try:
-                errback(PB_CONNECTION_LOST)
-            except:
-                traceback.print_exc(file=log.logfile)
+            raise ProtocolError("Calling Stale Broker")
+        netArgs = self.serialize(args, perspective=perspective, method=message)
+        netKw = self.serialize(kw, perspective=perspective, method=message)
+        requestID = self.newRequestID()
+        if (callback is None) and (errback is None):
+            answerRequired = 0
         else:
+            answerRequired = 1
+            if callback is None:
+                callback = noOperation
+            if errback is None:
+                errback = printTraceback
             self.waitingForAnswers[requestID] = callback, errback
-            self.sendCall("cachemessage", requestID, cacheID, message, netArgs, netKw)
+        self.sendCall(prefix+"message", requestID, objectID, message, answerRequired, netArgs, netKw)
 
-    def proto_message(self, requestID, objectID, message, netArgs, netKw):
+    def proto_message(self, requestID, objectID, message, answerRequired, netArgs, netKw):
         """Received a message-send.
 
         Look up message based on object, unserialize the arguments, and invoke
@@ -963,12 +985,17 @@ class Broker(banana.Banana):
         except:
             io = cStringIO.StringIO()
             traceback.print_exc(file=io)
-            self.sendError(requestID, io.getvalue())
+            if answerRequired:
+                self.sendError(requestID, io.getvalue())
+            else:
+                log.msg("Client Ignored PB Traceback:")
+                log.msg(io.getvalue())
         else:
-            self.sendAnswer(requestID, netResult)
+            if answerRequired:
+                self.sendAnswer(requestID, netResult)
 
 
-    def proto_cachemessage(self, requestID, cacheID, message, netArgs, netKw):
+    def proto_cachemessage(self, requestID, cacheID, message, answerRequired, netArgs, netKw):
         """Received a message-send to a Cached instance on the other side -- this needs to go to my Cache.
 
         Look up message based on a locally cached object, unserialize the
@@ -983,9 +1010,14 @@ class Broker(banana.Banana):
         except:
             io = cStringIO.StringIO()
             traceback.print_exc(file=io)
-            self.sendError(requestID, io.getvalue())
+            if answerRequired:
+                self.sendError(requestID, io.getvalue())
+            else:
+                log.msg("Client Ignored PB Traceback:")
+                log.msg(io.getvalue())
         else:
-            self.sendAnswer(requestID, netResult)
+            if answerRequired:
+                self.sendAnswer(requestID, netResult)
 
     def sendAnswer(self, requestID, netResult):
         """(internal) Send an answer to a previously sent message.
