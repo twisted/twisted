@@ -16,7 +16,7 @@ for the twisted.mail SMTP server
 from twisted.python import delay, log
 from twisted.mail import relay
 from twisted.internet import tcp
-import os
+import os, string
 
 class SMTPManagedRelayer(relay.SMTPRelayer):
 
@@ -47,7 +47,7 @@ class SMTPManagedRelayer(relay.SMTPRelayer):
         relay.SMTPRelayer.sentMail(self, addresses)
 	if addresses: 
 	    self.manager.notifySuccess(self, message)
-	if addresses: 
+	else: 
 	    self.manager.notifyFailure(self, message)
 
     def connectionLost(self):
@@ -155,7 +155,7 @@ class SmartHostSMTPRelayingManager:
 	    toRelay.append(os.path.join(self.directory, message))
         protocol = SMTPManagedRelayer(toRelay, self)
 	self.managed[protocol] = nextMessages
-	transport = tcp.Client(self.smartHostAddr[0], int(self.smartHostAddr[1]), 
+	transport = tcp.Client(self.smartHostAddr[0], self.smartHostAddr[1], 
                                protocol)
 
 
