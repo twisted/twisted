@@ -89,7 +89,7 @@ class DelayedCall(styles.Ephemeral):
             self.resetter(self)
 
     def active(self):
-        return self.cancelled or self.called
+        return not (self.cancelled or self.called)
 
     def __lt__(self, other):
         # Order reversed for efficiency concerns, see below
