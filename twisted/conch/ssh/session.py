@@ -102,6 +102,7 @@ class SSHSession(connection.SSHChannel):
             return 0
         else:
             self.pty = pty
+            self.conn.transport.transport.setTcpNoDelay(1)
             return 1
 
     def request_exec(self, data):
@@ -129,6 +130,7 @@ class SSHSession(connection.SSHChannel):
             attrs[6][tty.VMIN] = 1
             attrs[6][tty.VTIME] = 0
             tty.tcsetattr(pty.fileno(), tty.TCSANOW, attrs)
+            self.conn.transport.transport.setTcpNoDelay(1)
             return 1
         return 0
 
@@ -172,6 +174,10 @@ class SSHSession(connection.SSHChannel):
             #self.conn.sendClose(self)
             self.buf += data
             return
+        if hasattr(self, 'pty'):
+            attr = tty.tcgetattr(self.pty.fileno())[3]
+            if not attr & tty.ECHO and attr & tty.ICANON: # no echo
+                self.conn.transport.sendIgnore('\x00' * (8+len(data)))
         self.client.dataReceived(data)
 
     def extReceived(self, dataType, data):
@@ -189,7 +195,7 @@ class SSHSession(connection.SSHChannel):
             del self.client
         except AttributeError:
             pass # we didn't have a client
-        SSHChannel.closed(self)
+        connection.SSHChannel.closed(self)
 
 class SSHSessionProtocol(protocol.Protocol, protocol.ProcessProtocol):
     def __init__(self, session, client):
