@@ -3377,9 +3377,12 @@ class MismatchedNesting(IMAP4Exception):
 class MismatchedQuoting(IMAP4Exception):
     pass
 
-def wildcardToRegexp(wildcard, delim):
+def wildcardToRegexp(wildcard, delim=None):
     wildcard = wildcard.replace('*', '(?:.*?)')
-    wildcard = wildcard.replace('%', '(?:(?:[^%s])*?)' % re.escape(delim))
+    if delim is None:
+        wildcard = wildcard.replace('%', '(?:.*?)')
+    else:
+        wildcard = wildcard.replace('%', '(?:(?:[^%s])*?)' % re.escape(delim))
     return re.compile(wildcard)
 
 def splitQuoted(s):

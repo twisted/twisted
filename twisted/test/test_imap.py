@@ -81,6 +81,48 @@ class IMAP4UTF7TestCase(unittest.TestCase):
             self.assertEquals(input, imap4.decoder(output)[0])
 
 class IMAP4HelperTestCase(unittest.TestCase):
+    def testWildcard(self):
+        cases = [
+            ['foo/%gum/bar',
+                ['foo/bar', 'oo/lalagum/bar', 'foo/gumx/bar', 'foo/gum/baz'],
+                ['foo/xgum/bar', 'foo/gum/bar'],
+            ], ['foo/x%x/bar',
+                ['foo', 'bar', 'fuz fuz fuz', 'foo/*/bar', 'foo/xyz/bar', 'foo/xx/baz'],
+                ['foo/xyx/bar', 'foo/xx/bar', 'foo/xxxxxxxxxxxxxx/bar'],
+            ], ['foo/xyz*abc/bar',
+                ['foo/xyz/bar', 'foo/abc/bar', 'foo/xyzab/cbar', 'foo/xyza/bcbar'],
+                ['foo/xyzabc/bar', 'foo/xyz/abc/bar', 'foo/xyz/123/abc/bar'],
+            ]
+        ]
+        
+        for (wildcard, fail, succeed) in cases:
+            wildcard = imap4.wildcardToRegexp(wildcard, '/')
+            for x in fail:
+                self.failIf(wildcard.match(x))
+            for x in succeed:
+                self.failUnless(wildcard.match(x))
+
+    def testWildcardNoDelim(self):
+        cases = [
+            ['foo/%gum/bar',
+                ['foo/bar', 'oo/lalagum/bar', 'foo/gumx/bar', 'foo/gum/baz'],
+                ['foo/xgum/bar', 'foo/gum/bar', 'foo/x/gum/bar'],
+            ], ['foo/x%x/bar',
+                ['foo', 'bar', 'fuz fuz fuz', 'foo/*/bar', 'foo/xyz/bar', 'foo/xx/baz'],
+                ['foo/xyx/bar', 'foo/xx/bar', 'foo/xxxxxxxxxxxxxx/bar', 'foo/x/x/bar'],
+            ], ['foo/xyz*abc/bar',
+                ['foo/xyz/bar', 'foo/abc/bar', 'foo/xyzab/cbar', 'foo/xyza/bcbar'],
+                ['foo/xyzabc/bar', 'foo/xyz/abc/bar', 'foo/xyz/123/abc/bar'],
+            ]
+        ]
+        
+        for (wildcard, fail, succeed) in cases:
+            wildcard = imap4.wildcardToRegexp(wildcard, None)
+            for x in fail:
+                self.failIf(wildcard.match(x), x)
+            for x in succeed:
+                self.failUnless(wildcard.match(x), x)
+
     def testHeaderFormatter(self):
         cases = [
             ({'Header1': 'Value1', 'Header2': 'Value2'}, 'Header2: Value2\r\nHeader1: Value1\r\n'),
