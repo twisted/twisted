@@ -15,9 +15,8 @@
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
-import gtk, sys, string
+import gtk, string, sys, traceback
 
-from twisted.python import usage
 from twisted.spread.ui import gtkutil
 from twisted.internet import ingtkernet
 from twisted.spread import pb
@@ -75,10 +74,11 @@ class Interaction(gtk.GtkWindow):
 
         self.add(vb)
         self.input.grab_focus()
-        self.signal_connect('destroy', sys.exit, None)
+        self.signal_connect('destroy', gtk.mainquit, None)
         self.history = []
         self.histpos = 0
 
+    loginWindow = None
     linemode = 0
 
     def historyUp(self):
@@ -165,8 +165,21 @@ class Interaction(gtk.GtkWindow):
         self.history.append(text)
         self.histpos = len(self.history)
         self.messageReceived([['command',fmt % text]])
-        self.perspective.do(text,
-                            pbcallback=self.messageReceived)
+        try:
+            self.perspective.do(text,
+                                pbcallback=self.messageReceived)
+        except pb.ProtocolError:
+            # ASSUMPTION: pb.ProtocolError means we lost our connection.
+            self.hide()
+            (eType, eVal, tb) = sys.exc_info()
+            s = string.join(traceback.format_exception_only(eType, eVal),
+                            '')
+            self.loginWindow.loginReport(s)
+            self.loginWindow.show()
+        except:
+            traceback.print_exc()
+            gtk.mainquit()
+
 
     def connected(self, perspective):
         self.loginWindow.hide()

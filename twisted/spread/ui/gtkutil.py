@@ -27,7 +27,6 @@ boldFont = gtk.load_font("-adobe-courier-bold-r-normal-*-*-120-*-*-m-*-iso8859-1
 errorFont = gtk.load_font("-adobe-courier-medium-o-normal-*-*-120-*-*-m-*-iso8859-1")
 
 
-
 def selectAll(widget,event):
     widget.select_region(0,-1)
 
@@ -66,6 +65,9 @@ class GetString(gtk.GtkWindow):
 
 
 class Login(gtk.GtkWindow):
+
+    _resetTimeout = None
+
     def __init__(self, callback,
                  referenceable=None,
                  initialUser="guest", initialPassword="guest",
@@ -111,16 +113,16 @@ class Login(gtk.GtkWindow):
         vbox = gtk.GtkVBox()
         vbox.add(version_label)
         table = gtk.GtkTable(2,6)
-        z=0
-        for i in [[userlbl,self.username],
-                  [passlbl,self.password],
-                  [hostlbl,self.hostname],
-                  [servicelbl,self.service],
-                  [perspeclbl,self.perspective],
-                  [portlbl,self.port]]:
-            table.attach(i[0],0,1,z,z+1)
-            table.attach(i[1],1,2,z,z+1)
-            z = z+1
+        row=0
+        for label, entry in [(userlbl, self.username),
+                             (passlbl, self.password),
+                             (hostlbl, self.hostname),
+                             (servicelbl, self.service),
+                             (perspeclbl, self.perspective),
+                             (portlbl, self.port)]:
+            table.attach(label, 0, 1, row, row+1)
+            table.attach(entry, 1, 2, row, row+1)
+            row = row+1
 
         vbox.add(table)
         vbox.add(self.logstat)
@@ -136,11 +138,16 @@ class Login(gtk.GtkWindow):
     def loginReset(self):
         print 'doing login reset'
         self.logstat.set_text("Idle.")
+        self._resetTimeout = None
+        return 0
 
     def loginReport(self, txt):
         print 'setting login report',repr(txt)
         self.logstat.set_text(txt)
-        gtk.timeout_add(59000, self.loginReset)
+        if not (self._resetTimeout is None):
+            gtk.timeout_remove(self._resetTimeout)
+
+        self._resetTimeout = gtk.timeout_add(59000, self.loginReset)
 
     def login(self, btn):
         host = self.hostname.get_text()
