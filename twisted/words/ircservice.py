@@ -33,7 +33,7 @@ from twisted.manhole import coil
 # sibling imports
 import service
 
-class IRCChatter(irc.IRC):
+class IRCChatter(irc.IRC, service.WordsClientInterface):
     nickname = '*'
     passwd = None
     participant = None
@@ -65,8 +65,10 @@ class IRCChatter(irc.IRC):
         #>> :glyph_!glyph@adsl-64-123-27-108.dsl.austtx.swbell.net PRIVMSG glyph_ :hello
         #>> :glyph!glyph@adsl-64-123-27-108.dsl.austtx.swbell.net PRIVMSG glyph_ :hello
 
-        if (metadata is not None) and (metadata['style'] == 'emote'):
-            message = irc.ctcpStringify([('ACTION', message)])
+        if metadata is not None:
+            message = irc.ctcpStringify([(wordsToCtcp(metadata['style']),
+                                          message)])
+
         for line in string.split(message, '\n'):
             self.sendLine(":%s!%s@%s PRIVMSG %s :%s" %
                           (senderName, senderName, self.servicename,
@@ -74,8 +76,9 @@ class IRCChatter(irc.IRC):
 
 
     def receiveGroupMessage(self, sender, group, message, metadata=None):
-        if (metadata is not None) and (metadata['style'] == 'emote'):
-            message = irc.ctcpStringify([('ACTION', message)])
+        if metadata is not None:
+            message = irc.ctcpStringify([(wordsToCtcp(metadata['style']),
+                                          message)])
 
         if sender is not self:
             for line in string.split(message, '\n'):
@@ -85,8 +88,13 @@ class IRCChatter(irc.IRC):
 
     def setGroupMetadata(self, metadata, groupName):
         if metadata.has_key('topic'):
-            self.irc_TOPIC('', ["#"+groupName])
-
+            topic = metadata['topic']
+            sender = metadata['topic_author']
+            irc.IRC.sendMessage(self, 'TOPIC',
+                                '#' + groupName,
+                                ':' + irc.lowQuote(topic),
+                                prefix="%s@%s!%s" %
+                                (sender, sender, self.servicename))
 
     def connectionLost(self):
         log.msg( "%s lost connection" % self.nickname )
@@ -349,12 +357,11 @@ class IRCChatter(irc.IRC):
         else:
             #<< TOPIC #qdf :test
             #>> :glyph!glyph@adsl-64-123-27-108.dsl.austtx.swbell.net TOPIC #qdf :test
-            #raise NotImplementedError("can't change topic yet")
-            self.receiveDirectMessage("*error*", "topic change not implemented")
-##            for chatter in channel.chatters:
-##                chatter.sendLine(":%s!%s TOPIC #%s :%s" % (
-##                    self.nickname, self.servicename, channame, newTopic))
-
+            groupName = params[0][1:]
+            # XXX: Eek, invasion of privacy!
+            group = self.service.getGroup(groupName)
+            group.setMetadata({'topic': params[-1],
+                               'topic_author': self.nickname})
 
     def irc_NAMES(self, prefix, params):
         """Names message
@@ -448,7 +455,7 @@ class IRCChatter(irc.IRC):
                 else:
                     name_ = name
                     msgMethod = self.participant.directMessage
-                    
+
                 m = irc.ctcpExtract(text)
                 print "from _%s_ got %s" % (text, m)
                 for tag, data in m['extended']:
@@ -463,7 +470,7 @@ class IRCChatter(irc.IRC):
                     return
 
                 text = string.join(m['normal'], ' ')
-            
+
             ## 'bot' handling
             if name == 'ContactServ':
                 # crude contacts interface
@@ -701,7 +708,7 @@ class IRCChatter(irc.IRC):
 
         [REQUIRED]
         """
-        pass # XXX - NotImplementedError
+        self.sendMessage('PONG', self.servicename)
 
 
     def irc_PONG(self, prefix, params):
@@ -834,7 +841,14 @@ mapCtcpToWords = {
     'ACTION': 'emote',
     }
 
+mapWordsToCtcp = {}
+for _k, _v in mapCtcpToWords.items():
+    mapWordsToCtcp[_v] = _k
+
 def ctcpToWords(query_tag):
     return mapCtcpToWords.get(query_tag, query_tag)
+
+def wordsToCtcp(style):
+    return mapWordsToCtcp.get(style, style)
 
 coil.registerClass(IRCGateway)

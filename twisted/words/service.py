@@ -355,7 +355,7 @@ class Group(styles.Versioned):
 
 
     ##Persistence Versioning
-    
+
     persistenceVersion = 1
 
     def upgradeToVersion1(self):
@@ -415,7 +415,7 @@ class Service(pb.Service, styles.Versioned, coil.Configurable):
         self._setConfigDispensers()
 
     ## Service functionality.
-        
+
     def getGroup(self, name):
         group = self.groups.get(name)
         if not group:
