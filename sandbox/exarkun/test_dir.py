@@ -22,3 +22,11 @@ class DirTestCase(unittest.TestCase):
         self.assertEquals(L[2:], map(str, range(10)))
 
             
+    def testRewind(self):
+        d = dir.DirType('dirent')
+        list(d)
+        d.rewind()
+        L = [e.name for e in d]
+        L.sort()
+        self.assertEquals(L[:2], ['.', '..'])
+        self.assertEquals(L[2:], map(str, range(10)))

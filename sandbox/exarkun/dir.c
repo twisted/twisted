@@ -186,6 +186,55 @@ PyDirObject_next(PyDirObject *self)
 }
 
 static PyObject *
+PyDirObject_tell(PyDirObject *self) {
+	int result;
+	
+	if (!self->directory) {
+		PyErr_SetString(PyDirObject_Error,
+			"DirObject.tell() called on closed DirObject");
+		return NULL;
+	}
+	
+	if ((result = telldir(self->directory)) == -1) {
+		PyErr_SetFromErrno(PyDirObject_Error);
+		return NULL;
+	}
+	
+	return PyInt_FromLong(result);
+}
+
+static PyObject *
+PyDirObject_rewind(PyDirObject *self) {
+	if (!self->directory) {
+		PyErr_SetString(PyDirObject_Error,
+			"DirObject.rewind() called on closed DirObject");
+			return NULL;
+	}
+	rewinddir(self->directory);
+
+	Py_INCREF(Py_None);
+	return Py_None;
+}
+
+static PyObject *
+PyDirObject_seek(PyDirObject *self, PyObject* args) {
+	int pos;
+	
+	if (!PyArg_ParseTuple(args, "i:seek", &pos))
+		return NULL;
+	
+	if (!self->directory) {
+		PyErr_SetString(PyDirObject_Error,
+			"DirObject.seek() called on closed DirObject");
+		return NULL;
+	}
+	seekdir(self->directory, (off_t)pos);
+	
+	Py_INCREF(Py_None);
+	return Py_None;
+}
+
+static PyObject *
 PyDirObject_close(PyDirObject *self)
 {
 	if (!self->directory) {
@@ -206,10 +255,12 @@ PyDirObject_close(PyDirObject *self)
 }
 
 static PyMethodDef PyDirObject_methods[] = {
-	{"next", (PyCFunction)PyDirObject_next, METH_NOARGS,
-	 	"next() -> DirentObject"},
-	{"close", (PyCFunction)PyDirObject_next, METH_NOARGS,
-		"close() -> close this directory"},
+	{"rewind", (PyCFunction)PyDirObject_rewind, METH_NOARGS,
+		"rewind() -> seek to the beginning of this directory"},
+	{"tell", (PyCFunction)PyDirObject_tell, METH_NOARGS,
+		"tell() -> report the current position in this directory"},
+	{"seek", (PyCFunction)PyDirObject_close, METH_NOARGS,
+		"seek(pos) -> change the current position in this directory"},
 	{NULL,	NULL},
 };
 
