@@ -31,10 +31,15 @@ class DNSBoss:
         self.factories = [None, None]
         self.ports = [None, None]
 
+    def __getstate__(self):
+        dct = self.__dict__.copy()
+        dct['pending'] = {}
+        return dct
+
     def createFactory(self, i):
         if self.factories[i] is None:
             self.factories[i] = protocol.Factory()
-            self.factories[i].protocol = self.protocols[ i ]
+            self.factories[i].protocol = self.protocols[i]
             self.factories[i].boss = self
 
     def createUDPFactory(self):
