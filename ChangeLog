@@ -1,3 +1,8 @@
+2002-12-25  Jp Calderone  <exarkun@twistedmatrix.com>
+
+	* twisted/protocols/dict.py: dict client protocol implementation
+	from Pavel "Pahan" Pergamenshchik (<pp64@cornell.edu>)
+
 2002-12-23  Jp Calderone  <exarkun@twistedmatrix.com>
 
 	* doc/examples/testdns.py and doc/examples/dns-service.py added as
