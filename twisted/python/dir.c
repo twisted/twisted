@@ -305,7 +305,7 @@ PyDirObject_readdir(PyDirObject *self)
 
 static PyObject *
 PyDirObject_tell(PyDirObject *self) {
-	int result;
+	long result;
 	
 	if (!self->directory) {
 		PyErr_SetString(PyDirObject_Error,
@@ -318,7 +318,7 @@ PyDirObject_tell(PyDirObject *self) {
 		return NULL;
 	}
 	
-	return PyInt_FromLong(result);
+	return PyLong_FromLong(result);
 }
 
 static PyObject *
