@@ -17,8 +17,8 @@ class Raw:
 lecture = Lecture(
     "Transluscent Inter-Process Service Migration",
     Slide("What is migration?",
-          Bullet("Transfer of service responsibilities"),
-          Image("transfer-of-service-responsibilities.png", "Service Responsibilities Being Transferred")),
+	  Bullet("Hand-off of application-level duties from one process to another"),
+          Bullet("Existing state passed from old code to new code")),
     Slide("Why do we need migration?",
           Bullet("Buggy software needs to be fixed"),
           Bullet("New features need to be rolled out"),
@@ -134,10 +134,11 @@ class ShellFactory(telnet.ShellFactory):
     Slide("Future directions",
           Bullet("Increase flexibility of existing migration code",
                  SubBullet(Bullet("Support more special objects (eg, scheduled events)"),
-                           Bullet("Port to new version of PB, when available")))),
-    Slide("Further reading",
-          Bullet(),
-          Bullet()),
-    Slide("Questions"))
+                           Bullet("Port to new version of PB, when available"))),
+          Bullet("UI for managing migrations",
+                 SubBullet(Bullet("Render an object graph"),
+                           Bullet("Allow user to select objects to migrate"),
+                           Bullet("Allow user to select references to break")))),
+    Slide("Questions?"))
 
-lecture.renderHTML(".", "migration-%02d.html", css="main.css")
+lecture.renderHTML(".", "migration-%02d.html")
