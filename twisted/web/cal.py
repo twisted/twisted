@@ -23,7 +23,9 @@ import calendar
 import time
 import string
 import cPickle
+import StringIO
 from twisted.web import widgets,error
+from twisted.python import log
 
 class CalendarWidget(widgets.StreamWidget):
     def __init__(self,year,month,getday):
@@ -31,8 +33,10 @@ class CalendarWidget(widgets.StreamWidget):
         self.year=year
         self.getday=getday
     def stream(self,write,request):
-        write('''<table border=0 cellpadding=2>
-<tr>''')
+        write('''<table border=0 cellpadding=2 width=100%>
+''')
+        write('''<tr><td colspan=7 bgcolor=black><font color=white><center><b>%s %s</b></center></font></td></tr>
+<tr>'''%(calendar.month_name[self.month],self.year))
         for day in calendar.day_name:
             write("<td><center><b>&nbsp;%s&nbsp;</b></center></td>"%day)
         write('''</tr>
@@ -48,7 +52,7 @@ class CalendarWidget(widgets.StreamWidget):
                 inf=self.getday(request,day,self.month,self.year)
                 if inf:
                     write("<BR>"+inf)
-                write("</center></td>")
+                write("</center></td>\n")
             write('''</tr>
 ''')
         write("</table>")
@@ -74,15 +78,28 @@ class PostForm(widgets.Form):
         self.page=page
 
     def process(self,write,request,day,month,year,title,data):
-#        day=kw['day']
-#        month=kw['month']
-#        year=kw['year']
-#        title=kw['title']
-#        data=kw['data']
         month=calendar.month_name.index(month)
         self.page.setDay(day,month,year,title,data)
         return [self.page.backToCalendar(request)]
         
+class EditForm(widgets.Form):
+    def __init__(self,page,event):
+        self.page=page
+        self.event=event
+
+    def getFormFields(self,request):
+        text=string.replace(self.event.data,"<br>\n","\n")
+        return [
+            ["string","Title","title",self.event.title],
+            ["text","Data","data",text]]
+
+    def process(self,write,request,title,data):
+        self.event.title=title
+        self.event.data=string.replace(data,"\n","<br>\n")
+        log.msg("made it here")
+        return [self.page.backToCalendar(request)]
+        log.msg("made it here too")
+
 class CalendarPage(widgets.Page):
     isLeaf = 1
     
@@ -92,98 +109,73 @@ class CalendarPage(widgets.Page):
 </HEAD>
 <BODY>
 %%%%displayPage(request)%%%%
-%%%%displayAuth(request)%%%%
+%%%%displayFooter(request)%%%%
 </BODY>
 </HTML>'''
 
-    def __init__(self,password=None,filename=None):
+    def __init__(self,password="twisted",filename=None):
         widgets.Page.__init__(self)
         self.password=password
         self.events={}
         self.filename=filename
         self.loadPickle()
 
-    def setDate(self,request):
-        curtime=time.localtime(time.time())
-        if request.args.has_key("m"):
-            self.month=int(request.args['m'][0])
-        else:
-            self.month=curtime[1]
-        if request.args.has_key("y"):
-            self.year=int(request.args['y'][0])
-        else:
-            self.year=curtime[0]
-        request.auth=0
+    def setValues(self,request):
+        self.auth=0
         if request.postpath:
-            if self.password:
-                if request.postpath[0]==self.password:
-                    request.auth=1
-                    del request.postpath[0]
-            else:
-                request.auth=1
+            if request.postpath[0]==self.password:
+                self.auth=1
+                del request.postpath[0]
         if request.postpath:
             try:
-                if int(request.postpath[0])<=12 and int(request.postpath[0])>=1:
-                    self.month=int(request.postpath[0])
-                    del request.postpath[0]
-                    if request.postpath:
-                        self.year=int(request.postpath[0])
-                        if self.year==0:
-                            self.year=2000
-                        elif self.year<100:
-                            self.year=1900+self.year
-                        del request.postpath[0]
-#                elif
-            except ValueError: pass
+                test=int(request.postpath[0])
+                self.command="calendar"
+                self.options=request.postpath
+            except:
+                self.command=request.postpath[0]
+                self.options=request.postpath[1:]
+        else:
+            self.command="calendar"
+            self.options=[]
+        request.postpath=[]
+
+    def setDate(self):
+        curtime=time.localtime(time.time())
+        self.month=curtime[1]
+        self.year=curtime[0]
+        if not self.options:
+            self.givendate=0
+            return
+        if int(self.options[0])<=12 and int(self.options[0])>=1:
+            self.month=int(self.options[0])
+            self.givendate=1
+            if len(self.options)>1:
+                self.year=int(self.options[0])
+                if self.year==0:
+                    self.year=2000
+                elif self.year<100:
+                    self.year=1900+self.year
 
     def title(self,request):
-        self.setDate(request)
-        return calendar.month_name[self.month]+" "+str(self.year)
+        self.setValues(request)
+        func=getattr(self,"title_%s"%self.command,None)
+        if func:
+            return func(request)
+        else:
+            return "No Title" 
 
     def displayPage(self,request):
-        #self.setDate(request)
-        if not request.postpath:
-            return self.displayCalendar(request)
+        func=getattr(self,"page_%s"%self.command,None)
+        if func:
+            return func(request)
         else:
-            if request.postpath[0]=="event":
-                year,month,day,ind=map(int,request.postpath[1:])
-                return self.events[year][month][day][ind]
-            elif request.auth and self.displayAuth(request):
-                return ""
-            else:
-                return error.NoResource(string.join(request.postpath,"/")).render(request)
+            return "No page for command %s"%self.command
 
-    def displayCalendar(self,request):
-        return CalendarWidget(self.year,self.month,self.getDay)
-
-    def backToCalendar(self,request):
-        url="/"+string.join(request.prepath,"/")
-        if request.auth:
-            return """<a href="%s">Back To the Calendar</a>"""%(url+"/"+self.password)
+    def displayFooter(self,request):
+        func=getattr(self,"footer_%s"%self.command,None)
+        if func:
+            return func(request)
         else:
-            return """<a href="%s">Back To the Calendar</a>"""%url
-
-    def displayAuth(self,request):
-        if request.auth:
-            if request.postpath and request.postpath[0]=="post":
-                return PostForm(self)
-            elif request.postpath and request.postpath[0]=="event":
-                return """<a href="%s/%s/%s/%s/%s">Delete</a>""" % (
-                    request.sibLink("%s/delete"%self.password), request.postpath[1], request.postpath[2],
-                    request.postpath[3], request.postpath[4])+"<br>"+self.backToCalendar(request)
-            elif request.postpath and request.postpath[0]=="delete":
-                year,month,day,ind=map(int,request.postpath[1:5])
-                try:
-                    del self.events[year][month][day][ind]
-                    self.savePickle()
-                except IndexError:
-                    pass
-                return self.backToCalendar(request)
-            else:
-                return """<a href="%s/post">Post an Event</a>"""%(self.password)
-        else:
-            if request.postpath and request.postpath[0]=="event":
-                return self.backToCalendar(request)
             return ""
 
     def getDay(self,request,day,month,year):
@@ -195,12 +187,12 @@ class CalendarPage(widgets.Page):
             return
         c=""
         for event in self.events[year][month][day]:
-            c=c+"""<a href="%s/event/%s/%s/%s/%s">%s</a><br>""" % (
-                request.path,
+            c=c+"""* <a href="%s/event/%s/%s/%s/%s">%s</a><br>
+""" % (
+                self.currentPath(request),
                 year, month, day, self.events[year][month][day].index(event),
                 event.title)
         return c
-        
 
     def setDay(self,day,month,year,title,data):
         self.makeDay(day,month,year)
@@ -230,13 +222,91 @@ class CalendarPage(widgets.Page):
             return
         cPickle.dump(self.events,open(self.filename,"w"))
 
+    def title_event(self,request):
+        return self.getCurrentEvent().title
+
+    def title_calendar(self,request):
+        self.setDate()
+        return calendar.month_name[self.month]+" "+str(self.year)
+
+    def title_post(self,request):
+        return "Post an Event"
+
+    def title_delete(self,request):
+        return "Deleting Event: %s"%self.getCurrentEvent().title
+
+    def title_edit(self,request):
+        return "Editing Event: %s"%self.getCurrentEvent().title
+
+    def page_calendar(self,request):
+        if self.givendate:
+            return CalendarWidget(self.year,self.month,self.getDay)
+        m=self.month+1
+        y=self.year
+        if m==13:
+            m=1
+            y=y+1
+        s=StringIO.StringIO()
+        CalendarWidget(self.year,self.month,self.getDay).stream(s.write,request)
+        CalendarWidget(y,m,self.getDay).stream(s.write,request)
+        return s.getvalue()
+
+    def page_event(self,request):
+        return self.getCurrentEvent()
+
+    def page_post(self,request):
+        if not self.auth: return ""
+        return PostForm(self)
+
+    def page_edit(self,request):
+        if not self.auth: return ""
+        request.path=self.currentPath(request)
+        return EditForm(self,self.getCurrentEvent())
+
+    def page_delete(self,request):
+        if not self.auth: return ""
+        options=map(int,self.options)
+        year,month,day,ind=options
+        try:
+            del self.events[year][month][day][ind]
+            self.savePickle()
+        except:
+            pass
+        return self.backToCalendar(request)
+
+    def footer_event(self,request):
+        if not self.auth: return self.backToCalendar(request)
+        return '''<a href="%s">Delete</a><br>
+<a href="%s">Edit</a><br>
+%s'''%(
+    self.currentPath(request)+"/delete/"+string.join(self.options,"/"),
+    self.currentPath(request)+"/edit/"+string.join(self.options,"/"),
+    self.backToCalendar(request))
+
+    def footer_calendar(self,request):
+        if not self.auth: return ""
+        return '''<a href="%s">Post Event</a>'''%(self.currentPath(request)+"/post")
+
+    def currentPath(self,request):
+        url="/"+string.join(request.prepath,"/")
+        if self.auth: return url+"/"+self.password
+        return url
+
+    def backToCalendar(self,request):
+        return """<a href="%s">Back To the Calendar</a>"""%self.currentPage(request)
+
+    def getCurrentEvent(self):
+        options=map(int,self.options)
+        year,month,day,ind=options
+        return self.events[year][month][day][ind]
+
 class EventWidget(widgets.Widget):
     def __init__(self,day,month,year,title,data):
         self.day=day
         self.month=month
         self.year=year
         self.title=title
-        self.data=data
+        self.data=string.replace(data,"\n","<br>\n")
 
     def display(self,request):
         c="<b>Date:</b> %s %s, %s<br>\n"%(calendar.month_name[self.month],
