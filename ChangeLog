@@ -1,3 +1,7 @@
+2002-02-24  Itamar Shtull-Trauring  <itamarst@twistedmatrix.com>
+
+	* Made SOCKSv4 coilable, and fixed a bug so it'd work with Mozilla.
+
 2002-02-24  Chris Armstrong  <carmstro@twistedmatrix.com>
 
 	* .: Releasing Twisted 0.15.2.
