@@ -160,7 +160,6 @@ class SentQuery:
                 n = dns.Name()
                 n.decode(answer.strio)
                 cnames.append(n.name)
-        print cnames
         for name in cnames:
             if not cnameMap.has_key(name):
                 continue
