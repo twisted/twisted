@@ -79,33 +79,49 @@ Hence, the entire program is not waiting for the connection.</p>
 
 <h3>Advantages of asynchrony</h3>
 
-<p>Multi-threaded programming is tricky, even with high level
-abstractions, and Python's 
-<a href="http://www.python.org/doc/current/api/threads.html">Global
-Interpreter Lock</a> limits the potential performance gain. Forking
-Python processes also has many disadvantages, such as Python's reference
-counting not playing well with copy-on-write and problems with shared
-state. Consequently, it was felt the best option was an event-driven
-framework. A benefit of such an approach is that by letting other
-event-driven frameworks take over the main loop, server and client
-code are essentially the same -- making peer-to-peer a reality.</p>
+<p>Asynchrony has a major advantage over the threaded model of programming.
+Multi-threaded programming is tricky, even with high level abstractions.
+Letting the threading library decide when to give another thread a turn to do
+work means that at any point another thread may interupt your thread, and your
+thread will not be told. Hence, if the threads share data, there is always the
+possibility that one will modify it when the other is working with it.  Design
+solutions to this problem which mark pieces of data as untouchable, like the
+locking abstraction, have their own traps: unless you are extremely careful,
+you reintroduce blocking into your code in unexpected places.</p>
 
-<p>However, event-driven programming still contains some tricky
-aspects. As each callback must be finished as soon as possible,
-it is not possible to keep persistent state in function-local
-variables. In addition, some programming techniques, such as
-recursion, are impossible to use -- for example, this rules out protocol
-handlers being recursive-descent parsers. Event-driven programming has
-a reputation of being hard to use due to the frequent need to
-write state machines. Twisted was built with the assumption
-that with the right library, event-driven programming is easier
-than multi-threaded programming.</p>
+<p>Usually the threaded model has a performance advantage over the asynchrony
+model on a machine with multiple CPUs or another mechanism of letting two
+threads work at once. However, Python's <a
+href="http://www.python.org/doc/current/api/threads.html">Global Interpreter
+Lock</a> limits this potential performance gain.</p>
 
-<p>Note that Twisted still allows the use of threads if you really 
-need them, usually to interface with synchronous legacy code.  See 
-<a href="threading.xhtml">Using Threads</a> for details.</p>
+<p>Note that Twisted still allows the use of threads if you really need them,
+usually to interface with synchronous legacy code.  See <a
+href="threading.xhtml">Using Threads</a> for details.</p>
+
+<!-- FIXME: The "let other event-driven frameworks take over the main loop"
+needs to be spelled out to me before I can explain it properly.
+
+<p>Event-driven frameworks have inherent advantages too. If you let other
+event-driven frameworks take over the main loop, server and client code are
+essentially the same,  -->
+
+<p>Forking Python processes also has many disadvantages, such as Python's
+reference counting not playing well with copy-on-write and problems with
+shared state.  Consequently, an event-driven framework is the best overall
+option for a Python networking framework.</p>
 
 <h2>Async Design Issues</h2>
+
+<p>Event-driven programming still contains some tricky aspects. As each
+callback must be finished as soon as possible, it is not possible to keep
+persistent state in function-local variables. In addition, some programming
+techniques, such as recursion, are impossible to use -- for example, this
+rules out protocol handlers being recursive-descent parsers. Event-driven
+programming has a reputation of being hard to use due to the frequent need to
+write state machines. Twisted was built with the assumption that with the
+right library, event-driven programming is easier than multi-threaded
+programming.</p>
 
 <p>In Python, code is often divided into a generic class calling
 overridable methods which subclasses implement. In that, and similar,
