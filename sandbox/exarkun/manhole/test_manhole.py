@@ -26,25 +26,14 @@ class ControlCharacters(unittest.TestCase):
     for testName, byte in [('Up', 'A'), ('Down', 'B'), ('Right', 'C'), ('Left', 'D')]:
         exec tmpl % (testName, testName.upper(), byte)
 
-    tmpl = "def testF%d(self): self._simpleKeystrokeTest(self.parser.F%d, '\x1bO%s')"
-    for funcNum in range(1, 13):
-        exec tmpl % (funcNum, funcNum, chr(ord('O') + funcNum))
-
-    del tmpl, testName, funcNum, byte
-
     def _setupHandler(self):
-        # All the arrow keys once, followed by 5 function keys
-        bytes = '\x1b[A\x1b[B\x1b[C\x1bD\x1bOP\x1bOQ\x1bOR\x1bOS\x1bOT'
+        # All the arrow keys once
+        bytes = '\x1b[A\x1b[B\x1b[C\x1b[D'
         handler = self.parser.handler = pmock.Mock()
         handler.expects(pmock.once()).keystrokeReceived(pmock.eq(self.parser.UP_ARROW)).id("up")
         handler.expects(pmock.once()).keystrokeReceived(pmock.eq(self.parser.DOWN_ARROW)).id("down").after("up")
         handler.expects(pmock.once()).keystrokeReceived(pmock.eq(self.parser.RIGHT_ARROW)).id("right").after("down")
-        handler.expects(pmock.once()).keystrokeReceived(pmock.eq(self.parser.LEFT_ARROW)).id("left").after("right")
-        handler.expects(pmock.once()).keystrokeReceived(pmock.eq(self.parser.F1)).id("f1").after("left")
-        handler.expects(pmock.once()).keystrokeReceived(pmock.eq(self.parser.F2)).id("f2").after("f1")
-        handler.expects(pmock.once()).keystrokeReceived(pmock.eq(self.parser.F3)).id("f3").after("f2")
-        handler.expects(pmock.once()).keystrokeReceived(pmock.eq(self.parser.F4)).id("f4").after("f3")
-        handler.expects(pmock.once()).keystrokeReceived(pmock.eq(self.parser.F5)).after("f4")
+        handler.expects(pmock.once()).keystrokeReceived(pmock.eq(self.parser.LEFT_ARROW)).after("right")
         return handler, bytes
 
     def testSingleBytes(self):
@@ -53,6 +42,8 @@ class ControlCharacters(unittest.TestCase):
             self.parser.dataReceived(b)
         handler.verify()
 
-    tmpl = "def testByte%s(self):\n\thandler, bytes = self._setupHandler()\n\twhile bytes:\n\t\tself.parser.dataReceived(b[:%d])\n\t\tb = b[%d:]\n\thandler.verify()"
+    tmpl = "def testByte%s(self):\n\th, b = self._setupHandler()\n\twhile b:\n\t\tself.parser.dataReceived(b[:%d])\n\t\tb = b[%d:]\n\th.verify()"
     for word, n in [('Pairs', 2), ('Triples', 3), ('Quads', 4), ('Quints', 5), ('Sexes', 6)]:
         exec tmpl % (word, n, n)
+
+    del tmpl, word, n
