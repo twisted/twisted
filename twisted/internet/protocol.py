@@ -27,9 +27,10 @@ Maintainer: U{Itamar Shtull-Trauring<mailto:twisted@itamarst.org>}
 """
 
 import random
+from zope.interface import implements
 
 # Twisted Imports
-from twisted.python import log, failure
+from twisted.python import log, failure, components
 from twisted.internet import interfaces, error, defer
 
 
@@ -40,7 +41,7 @@ class Factory:
     self.protocol.
     """
 
-    __implements__ = (interfaces.IProtocolFactory,)
+    implements(interfaces.IProtocolFactory)
 
     # put a subclass of Protocol here:
     protocol = None
@@ -101,6 +102,8 @@ class Factory:
         p = self.protocol()
         p.factory = self
         return p
+
+components.backwardsCompatImplements(Factory)
 
 
 class ClientFactory(Factory):
@@ -327,9 +330,10 @@ class BaseProtocol:
 connectionDone=failure.Failure(error.ConnectionDone())
 connectionDone.cleanFailure()
 
+
 class Protocol(BaseProtocol):
 
-    __implements__ = (interfaces.IProtocol,)
+    implements(interfaces.IProtocol)
 
     def dataReceived(self, data):
         """Called whenever data is received.
@@ -364,13 +368,14 @@ class Protocol(BaseProtocol):
         warnings.warn("connectionFailed is deprecated.  See new Client API",
                       category=DeprecationWarning, stacklevel=2)
 
-from twisted.python import components
+components.backwardsCompatImplements(Protocol)
+
 
 class ProtocolToConsumerAdapter(components.Adapter):
     """
     This class is unstable.
     """
-    __implements__ = interfaces.IConsumer
+    implements(interfaces.IConsumer)
 
     def write(self, data):
         self.original.dataReceived(data)
@@ -383,12 +388,14 @@ class ProtocolToConsumerAdapter(components.Adapter):
 
 components.registerAdapter(ProtocolToConsumerAdapter, interfaces.IProtocol,
                            interfaces.IConsumer)
+components.backwardsCompatImplements(ProtocolToConsumerAdapter)
+
 
 class ConsumerToProtocolAdapter(components.Adapter):
     """
     This class is unstable.
     """
-    __implements__ = interfaces.IProtocol
+    implements(interfaces.IProtocol)
 
     def dataReceived(self, data):
         self.original.write(data)
@@ -404,6 +411,8 @@ class ConsumerToProtocolAdapter(components.Adapter):
 
 components.registerAdapter(ConsumerToProtocolAdapter, interfaces.IConsumer,
                            interfaces.IProtocol)
+components.backwardsCompatImplements(ConsumerToProtocolAdapter)
+
 
 class ProcessProtocol(BaseProtocol):
     """Processes have some additional methods besides receiving data.
@@ -543,7 +552,7 @@ class FileWrapper:
     """A wrapper around a file-like object to make it behave as a Transport.
     """
 
-    __implements__ = interfaces.ITransport
+    implements(interfaces.ITransport)
 
     closed = 0
     disconnecting = 0
@@ -599,6 +608,8 @@ class FileWrapper:
 
     def handleException(self):
         pass
+
+components.backwardsCompatImplements(FileWrapper)
 
 
 __all__ = ["Factory", "ClientFactory", "ReconnectingClientFactory",

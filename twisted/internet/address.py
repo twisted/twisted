@@ -17,6 +17,8 @@
 """Address objects for network connections."""
 
 import warnings, os
+from zope.interface import implements
+from twisted.python import components
 from twisted.internet.interfaces import IAddress
 
 
@@ -36,7 +38,7 @@ class IPv4Address(object):
     #  type = map[_bwHack]
     # map = { 'SSL': 'TCP', 'INET': 'TCP', 'INET_UDP': 'UDP' }
 
-    __implements__ = IAddress,
+    implements(IAddress)
     
     def __init__(self, type, host, port, _bwHack = None):
         assert type in ('TCP', 'UDP')
@@ -76,7 +78,7 @@ class UNIXAddress(object):
     @type name: C{str}
     """
 
-    __implements__ = IAddress,
+    implements(IAddress)
     
     def __init__(self, name, _bwHack='UNIX'):
         self.name = name
@@ -104,6 +106,9 @@ class UNIXAddress(object):
 
     def __str__(self):
         return 'UNIXSocket(%r)' % (self.name,)
+
+components.backwardsCompatImplements(IPv4Address)
+components.backwardsCompatImplements(UNIXAddress)
 
 
 # These are for buildFactory backwards compatability due to

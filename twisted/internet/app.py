@@ -1,3 +1,4 @@
+# -*- test-case-name: twisted.test.test_app -*-
 # Twisted, the Framework of Your Internet
 # Copyright (C) 2001 Matthew W. Lefkowitz
 #
@@ -27,6 +28,7 @@ import string
 import socket
 import types
 import warnings
+from zope.interface import implements
 
 try:
     import cPickle as pickle
@@ -40,7 +42,7 @@ except ImportError:
 
 # Twisted Imports
 from twisted.internet import interfaces
-from twisted.python import log
+from twisted.python import log, components
 from twisted.persisted import styles
 from twisted.python.runtime import platform
 from twisted.cred.authorizer import DefaultAuthorizer
@@ -70,7 +72,7 @@ def quieterWarning():
     quieterWarning = lambda: None
 
 class _AbstractServiceCollection:
-    __implements__ = (interfaces.IServiceCollection, )
+    implements(interfaces.IServiceCollection)
 
     def __init__(self):
         """Create an abstract service collection.
@@ -95,6 +97,9 @@ class _AbstractServiceCollection:
     def removeService(self, service):
         """Remove a service from this collection."""
         del self.services[service.serviceName]
+
+components.backwardsCompatImplements(_AbstractServiceCollection)
+
 
 class ApplicationService(Accessor, styles.Versioned):
     """I am a service you can add to an application.

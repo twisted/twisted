@@ -23,6 +23,7 @@ Maintainer: U{Itamar Shtull-Trauring<mailto:twisted@itamarst.org>}
 """
 
 import socket # needed only for sync-dns
+from zope.interface import implements
 
 import sys
 import warnings
@@ -39,14 +40,15 @@ from twisted.internet.interfaces import IReactorTCP, IReactorUDP, IReactorSSL
 from twisted.internet.interfaces import IReactorProcess, IReactorPluggableResolver
 from twisted.internet.interfaces import IConnector, IDelayedCall
 from twisted.internet import main, error, abstract, defer
-from twisted.python import threadable, log, failure, reflect
+from twisted.python import threadable, log, failure, reflect, components
 from twisted.python.runtime import seconds
 from twisted.internet.defer import Deferred, DeferredList
 from twisted.persisted import styles
 
+
 class DelayedCall(styles.Ephemeral):
 
-    __implements__ = IDelayedCall,
+    implements(IDelayedCall)
     # enable .debug to record creator call stack, and it will be logged if
     # an exception occurs while the function is being run
     debug = False
@@ -148,12 +150,14 @@ class DelayedCall(styles.Ephemeral):
             id(self), self.time - seconds(), self.called, self.cancelled, func,
             reflect.safe_repr(self.args))
 
+components.backwardsCompatImplements(DelayedCall)
+
 
 class ReactorBase:
     """Default base class for Reactors.
     """
 
-    __implements__ = IReactorCore, IReactorTime, IReactorThreads, IReactorPluggableResolver
+    implements(IReactorCore, IReactorTime, IReactorThreads, IReactorPluggableResolver)
     installed = 0
 
     __name__ = "twisted.internet.reactor"
@@ -491,7 +495,7 @@ class ReactorBase:
         f = BCFactory(protocol)
         self.connectSSL(host, port, f, contextFactory, timeout)
 
-
+components.backwardsCompatImplements(ReactorBase)
 
 
 from protocol import ClientFactory
@@ -528,7 +532,7 @@ class BaseConnector(styles.Ephemeral):
     State can be: "connecting", "connected", "disconnected"
     """
 
-    __implements__ = IConnector,
+    implements(IConnector)
 
     timeoutID = None
     factoryStarted = 0
@@ -601,6 +605,8 @@ class BaseConnector(styles.Ephemeral):
 
     def getDestination(self):
         raise NotImplementedError, "implement in subclasses"
+
+components.backwardsCompatImplements(BaseConnector)
 
 
 class BasePort(abstract.FileDescriptor):
