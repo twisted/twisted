@@ -180,6 +180,50 @@ def _add(self, objID):
 
 objdoc.DocMap._add = _add
 
+# HACK: Another "only doc what we tell you". We don't want epydoc to
+# automatically recurse into subdirectories: "twisted"'s presence was
+# causing "twisted/test" to be docced, even thought we explicitly
+# didn't put any twisted/test in our modnames.
+
+from epydoc import imports
+orig_find_modules = imports.find_modules
+
+import re
+
+def find_modules(dirname):
+    if not os.path.isdir(dirname): return []
+    found_init = 0
+    modules = {}
+    dirs = []
+
+    # Search for directories & modules, and check for __init__.py.
+    # Don't include duplicates (like foo.py and foo.pyc), and give
+    # precedance to the .py files.
+    for file in os.listdir(dirname):
+        filepath = os.path.join(dirname, file)
+        if os.path.isdir(filepath): dirs.append(filepath)
+        elif not re.match(r'\w+.py.?', file):
+            continue # Ignore things like ".#foo.py" or "a-b.py"
+        elif file[-3:] == '.py':
+            modules[file] = os.path.join(dirname, file)
+            if file == '__init__.py': found_init = 1
+        elif file[-4:-1] == '.py':
+            modules.setdefault(file[:-1], file)
+            if file[:-1] == '__init__.py': found_init = 1
+    modules = modules.values()
+
+    # If there was no __init__.py, then this isn't a package
+    # directory; return nothing.
+    if not found_init: return []
+
+    # Recurse to the child directories.
+    # **twisted** here's the change: commented next line out
+    #for d in dirs: modules += find_modules(d)
+    return modules
+
+imports.find_modules = find_modules
+
+
 
 # Now, set up the list of modules for epydoc to document
 modnames = []
@@ -258,6 +302,14 @@ for name in names:
 
 __builtins__.__import__ = im
 sys.argv = osrv
+
+
+
+
+if 'twisted.test' in modnames:
+    modnames.remove('twisted.test')
+##if 'twisted' in modnames:
+##    modnames.remove('twisted')
 
 sys.argv.extend(modnames)
 
