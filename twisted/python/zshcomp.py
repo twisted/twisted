@@ -9,26 +9,104 @@ pressing Tab at the command line work.
 API Stability: API? what API?
 
 Maintainer: U{Eric Mangold<mailto:teratorn@twistedmatrix.com>}
+
+SPECIAL CLASS VARIABLES
+
+    zsh_altArgDescr
+    zsh_multiUse
+    zsh_mutuallyExclusive
+    zsh_actions
+    zsh_actionDescr
+    zsh_extras
+
+Here is what they mean (with examples):
+
+    zsh_altArgDescr = {"foo":"use this description for foo instead"}
+        A dict mapping long option names to alternate descriptions.  When
+        this variable is present, the descriptions contained here will override
+        those descriptions provided in the optFlags and optParameters variables.
+
+    zsh_multiUse = ["foo", "bar"]
+        A sequence containing those long option names which may appear on the
+        command line more than once. By default, options will only be
+        completed one time.
+
+    zsh_mutuallyExclusive = [("foo", "bar"), ("bar", "baz")]
+        A sequence of sequences, with each sub-sequence containing those long
+        option names that are mutually exclusive. That is, those options
+        that cannot appear on the command line together.
+
+    zsh_actions = {"foo":'_files -g "*.foo"', "bar":"(one two three)",
+            "colors":"_values -s , 'colors to use' red green blue"}
+        A dict mapping long option names to Zsh "actions". These actions
+        define what will be completed as the argument to the given option.
+
+        As you can see in the example above. The "foo" option will have
+        files that end in .foo completed when the user presses Tab. The
+        "bar" option will have either of the strings "one", "two", or
+        "three" compelted when the user presses Tab.
+        
+        "colors" will allow multiple arguments to be completed, seperated by
+        commas. The possible arguments are red, green, and blue. Examples:
+            my_command --foo some-file.foo --colors=red,green
+            my_command --colors=green
+            my_command --colors=green,blue
+
+        Actions may take many forms, and it is beyond the scope of this
+        document to illustrate them all. Please refer to the documention
+        for the Zsh _arguments function. zshcomp is basically a front-end
+        to Zsh's _arguments completion function.
+
+        That documentation is available on the zsh web site at this URL:
+        http://zsh.sunsite.dk/Doc/Release/zsh_19.html#SEC124
+
+    zsh_actionDescr = {"logfile":"log file name", "random":"random seed"}
+        A dict mapping long option names to a description for the corresponding
+        zsh "action". These descriptions are show above the generated matches
+        when the user is doing completions for this option.
+
+        Normally Zsh does not show these descriptions unless you have "verbose"
+        completion turned on. Turn on verbosity with this in your ~/.zshrc
+            zstyle ':completion:*' verbose yes
+            zstyle ':completion:*:descriptions' format '%B%d%b'
+
+    zsh_extras = [":file to read from:action", ":file to write to:action"]
+        A sequence of extra arguments that will be passed verbatim to Zsh's
+        _arguments completion function. The _arguments function does all the
+        hard work of doing command line completions. You can see how
+        zshcomp invokes the _arguments call by looking at the generated
+        completion files that this module creates.
+
+   *** NOTE ***
+        
+        You will need to use this variable to describe completions for normal
+        command line arguments. That is, those arguments that are not
+        associated with an option. That is, the arguments that are
+        given to the parseArgs method of your usage.Options subclass.
+
+        In the example above, the 1st non-option argument will be described
+        as "file to read from" and completion options will be generated
+        in accordance with the "action". (See above about zsh "actions")
+        The 2nd non-option argument will be described as "file to write to"
+        and the action will be interpreted likewise.
+
+        Things you can put here are all documented under the _arguments
+        function here: http://zsh.sunsite.dk/Doc/Release/zsh_19.html#SEC124
+
+Zsh Notes:
+
+To enable advanced completion add something like this to your ~/.zshrc
+    autoload -U compinit
+    compinit
+
+For some extra verbosity, and general niceness add these lines too:
+    zstyle ':completion:*' verbose yes
+    zstyle ':completion:*:descriptions' format '%B%d%b'
+    zstyle ':completion:*:messages' format '%d'
+    zstyle ':completion:*:warnings' format 'No matches for: %d'
+
+Have fun!
 """
-
-import sys, commands #, itertools
-from twisted.python import reflect, util
-
-try:
-    enumerate
-except:
-    def enumerate(seq):
-        return zip(range(len(seq)), seq)
-
-try:
-    from itertools import chain
-except:
-    def chain(*args):
-        lst = []
-        for seq in args:
-            for item in seq:
-                lst.append(item)
-        return lst
 
 # commands to generate completion function files for
 generateFor = [
@@ -48,18 +126,26 @@ generateFor = [
                ('manhole', 'twisted.scripts.manhole', 'MyOptions'),
                ('tap2rpm', 'twisted.scripts.tap2rpm', 'MyOptions'),
                ]
-#for l in generateFor:
-#    import sys
-#    sys.stdout.write(l[0] + " ")
 
-# these attributes may be set on usage.Option subclasses to further
-# refine how command completion is handled
+import sys, commands
+from twisted.python import reflect, util
 
-    #zsh_altArgDescr = {"foo":"use this description for foo instead"}
-    #zsh_multiUse = ["foo", "bar"]
-    #zsh_mutuallyExclusive = [("foo", "bar"), ("bar", "baz")]
-    #zsh_actions = {"foo":'_files -g "*.foo"', "bar":"(one two three)"}
-    #zsh_actionDescr = {"logfile":"log file name", "random":"random seed"}
+try:
+    enumerate
+except:
+    def enumerate(seq):
+        return zip(range(len(seq)), seq)
+
+try:
+    from itertools import chain
+except:
+    def chain(*args):
+        lst = []
+        for seq in args:
+            for item in seq:
+                lst.append(item)
+        return lst
+
 
 class zshCodeGenerator:
     def __init__(self, cmd_name, optionsClass, file):
@@ -73,6 +159,7 @@ class zshCodeGenerator:
         self.multiUse = []
         self.mutuallyExclusive = []
         self.actions = {}
+        self.extras = []
 
         aCL = reflect.accumulateClassList
         aCD = reflect.accumulateClassDict
@@ -82,6 +169,7 @@ class zshCodeGenerator:
         aCL(optionsClass, 'zsh_multiUse', self.multiUse)
         aCL(optionsClass, 'zsh_mutuallyExclusive', self.mutuallyExclusive)
         aCD(optionsClass, 'zsh_actions', self.actions)
+        aCL(optionsClass, 'zsh_extras', self.extras)
 
         optFlags = []
         optParams = []
@@ -183,10 +271,17 @@ class zshCodeGenerator:
     def writeStandardFunction(self):
         self.writeHeader()
 
-        for optList in chain(self.optFlags, self.optParams):
-            self.writeOption(optList[0])
+        for s in self.extras:
+            self.writeExtra(s)
+
+        for long in self.optAll_d:
+            self.writeOption(long)
 
         self.writeFooter()
+
+    def writeExtra(self, s):
+        self.file.write(escape(s))
+        self.file.write(' \\\n')
 
     def makeExcludesDict(self):
         """return a dict that maps each option name appearing in
@@ -220,7 +315,7 @@ class zshCodeGenerator:
 
     def writeHeader(self):
         self.file.write('#compdef %s\n' % self.cmd_name)
-        self.file.write('_arguments -s \\\n')
+        self.file.write('_arguments -s -A "-*" \\\n')
 
     def writeFooter(self):
         self.file.write('&& return 0\n')
