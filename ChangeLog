@@ -2,6 +2,8 @@
 
 	* .: Releasing 1.0.2 Final.
 
+	* .: Releasing 1.0.3alpha1. Release Often :-D
+
 2003-01-29  Kevin Turner  <acapnotic@twistedmatrix.com>
 
 	* twisted/internet/abstract.py (FileDescriptor.__init__): 1.36
