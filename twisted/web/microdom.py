@@ -298,7 +298,7 @@ class MicroDOMParser(XMLParser):
             self._autoclose()
         el = self.elementstack.pop()
         if el.tagName != name:
-            raise ParseError(*((el.tagName, name)+self.saveMark()+el._markpos))
+            raise MismatchedTags(*((el.tagName, name)+self.saveMark()+el._markpos))
         if not self.elementstack:
             self.documents.append(el)
 
