@@ -159,12 +159,12 @@ def footnotes(document):
                                                      "footnote")
     if not footnotes:
         return
-    footnoteElement = microdom.Element('ul')
-    id = 0
+    footnoteElement = microdom.Element('ol')
+    id = 1
     for footnote in footnotes:
-        href = microdom.parseString('<a href="#footnote-%d">'
-                                    '<super>*</super></a>'
-                                    % id).documentElement
+        href = microdom.parseString('<a href="#footnote-%(id)d">'
+                                    '<super>%(id)d</super></a>'
+                                    % vars()).documentElement
         text = ' '.join(domhelpers.getNodeText(footnote).split())
         href.setAttribute('title', text)
         target = microdom.Element('a', attributes={'name': 'footnote-%d' % id})
