@@ -126,7 +126,7 @@ class SSHPublicKeyDatabase:
     def _ebRequestAvatarId(self, f):
         if not f.check(UnauthorizedLogin, error.ValidPublicKey):
             log.msg(f)
-            return UnauthorizedLogin()
+            return failure.Failure(UnauthorizedLogin())
         return f
 
 components.backwardsCompatImplements(SSHPublicKeyDatabase)
