@@ -17,7 +17,6 @@
 #
 # to run test, use 'trial test_flow.py'
 #
-from __future__ import generators
 from __future__ import nested_scopes
 import flow
 from twisted.python.compat import True, False
