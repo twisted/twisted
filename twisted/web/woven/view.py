@@ -48,6 +48,7 @@ def viewMethod(viewClass):
 class View(template.DOMTemplate):
 
     __implements__ = (template.DOMTemplate.__implements__, interfaces.IView)
+    # wvfactory_xxx method signature: request, node, model; returns Widget
 
     wantsAllNotifications = 0
 
@@ -81,7 +82,7 @@ class View(template.DOMTemplate):
         for library in self.viewLibraries:
             self.importViewLibrary(library)
         self.viewStack.push(self)
-    
+
     def importViewLibrary(self, namespace):
         if not hasattr(namespace, 'getSubview'):
             namespace.getSubview = utils.createGetFunction(namespace)
@@ -95,7 +96,7 @@ class View(template.DOMTemplate):
         else:
             self.doneCallback = doSendPage
         return template.DOMTemplate.render(self, request, block=block)
-        
+
     def modelChanged(self, changed):
         """
         Dispatch changed messages to any update_* methods which
@@ -157,7 +158,7 @@ class View(template.DOMTemplate):
                 else:
                     raise Exception("Node had a model=%s "
                                   "attribute, but the submodel was not "
-                                  "found in %s." % (submodel, 
+                                  "found in %s." % (submodel,
                                   filter(lambda x: x, self.model.modelStack.stack)))
         else:
             m = None
@@ -198,7 +199,7 @@ class View(template.DOMTemplate):
                     break
             else:
                 raise NotImplementedError("You specified controller name %s on "
-                                          "a node, but no factory_%s method "
+                                          "a node, but no wcfactory_%s method "
                                           "was found in %s." % (controllerName,
                                         controllerName,
                                         filter(lambda x: x, self.controller.controllerStack.stack)
@@ -217,6 +218,8 @@ class View(template.DOMTemplate):
 
     def getSubview(self, request, node, model, viewName):
         """Get a sub-view from me.
+
+        @returns L{widgets.Widget}
         """
         view = None
         vm = getattr(self, 'wvfactory_' + viewName, None)
@@ -258,15 +261,27 @@ class View(template.DOMTemplate):
             for namespace in self.viewStack:
                 if namespace is None:
                     continue
-                view = namespace.getSubview(request, node, model, viewName)
+                try:
+                    view = namespace.getSubview(request, node, model, viewName)
+                except AttributeError:
+                    # Was that from something in the viewStack that didn't
+                    # have a getSubview?
+                    if not hasattr(namespace, "getSubview"):
+                        log.msg("Warning: There is no getSubview on %r" %
+                                (namespace,))
+                        continue
+                    else:
+                        # No, something else is really broken.
+                        raise
                 if view is not None:
                     break
             else:
-                raise NotImplementedError("You specified view name %s on a "
-                                          "node, but no factory_%s method was "
-                                          "found in %s." % (viewName,
-                                          viewName,
-                                          filter(lambda x: x,self.viewStack.stack)))
+                raise NotImplementedError(
+                    "You specified view name %s on a node %s, but no "
+                    "wvfactory_%s method was found in %s.  (Or maybe they were"
+                    "found but they returned None.)" % (
+                    viewName, node, viewName,
+                    filter(lambda x: x,self.viewStack.stack)))
         elif node.getAttribute("model"):
             # If no "view" attribute was specified on the node, see if there
             # is a IView adapter registerred for the model.
@@ -322,7 +337,7 @@ class View(template.DOMTemplate):
 
             if not isinstance(view, widgets.DefaultWidget):
                 model.addView(view)
-            
+
             if not getattr(view, 'submodel', None):
                 view.setSubmodel(submodelName)
 
@@ -431,6 +446,7 @@ class ViewNodeMutator(template.NodeMutator):
     """
     def generate(self, request, node):
         newNode = self.data.generate(request, node)
+        assert newNode is not None
         if isinstance(newNode, defer.Deferred):
             return newNode
         nodeMutator = template.NodeNodeMutator(newNode)

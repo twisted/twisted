@@ -95,7 +95,7 @@ class IView(components.Interface):
         """Look for a view named "viewName" to handle the node "node".
         When a node <div view="foo" /> is present in the template, this
         method will be called with viewName set to "foo".
-        
+
         Return None if this View doesn't want to provide a Subview for
         the given name.
         """
@@ -104,26 +104,26 @@ class IView(components.Interface):
         """Set the callable "factory", which takes a model and should
         return a Widget, to be called by the default implementation of
         getSubview when the viewName "name" is present in the template.
-        
+
         This would generally be used like this:
-        
+
         view.setSubviewFactory("foo", MyFancyWidgetClass)
-        
+
         This is equivalent to::
-        
+
             def wvfactory_foo(self, request, node, m):
                 return MyFancyWidgetClass(m)
-        
+
         Which will cause an instance of MyFancyWidgetClass to be
         instanciated when template node <div view="foo" /> is encountered.
-        
+
         If setup is passed, it will be passed to new instances returned
         from this factory as a setup method. The setup method is called
         each time the Widget is generated. Setup methods take (request,
         widget, model) as arguments.
-        
+
         This is equivalent to::
-        
+
             def wvupdate_foo(self, request, widget, model):
                 # whatever you want
         """
@@ -137,18 +137,18 @@ class IController(components.Interface):
 
     def importControllerLibrary(moduleOrObject):
         """Import the given object or module into this Controllers's
-        controller namespace stack. If the given object or module has a 
-        getSubcontroller function or method, it will be called when a node 
-        has a controller="foo" attribute. If no getSubcontroller method is 
-        defined, a default one will be provided which looks for the literal 
+        controller namespace stack. If the given object or module has a
+        getSubcontroller function or method, it will be called when a node
+        has a controller="foo" attribute. If no getSubcontroller method is
+        defined, a default one will be provided which looks for the literal
         name in the namespace.
         """
 
     def getSubcontroller(request, node, model, controllerName):
         """Look for a controller named "controllerName" to handle the node
-        "node". When a node <div controller="foo" /> is present in the 
+        "node". When a node <div controller="foo" /> is present in the
         template, this method will be called with controllerName set to "foo".
-        
+
         Return None if this Controller doesn't want to provide a Subcontroller
         for the given name.
         """
@@ -157,13 +157,13 @@ class IController(components.Interface):
         """Set the callable "factory", which takes a model and should
         return an InputHandler, to be called by the default implementation of
         getSubview when the controllerName "name" is present in the template.
-        
+
         This would generally be used like this::
-        
+
             view.setSubcontrollerFactory("foo", MyFancyInputHandlerClass)
-        
+
         This is equivalent to::
-        
+
             def wcfactory_foo(self, request, node, m):
                 return MyFancyInputHandlerClass(m)
 

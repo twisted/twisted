@@ -107,6 +107,10 @@ class NodeNodeMutator(NodeMutator):
     """A NodeNodeMutator replaces the node that is passed in to generate
     with the node it adapts.
     """
+    def __init__(self, data):
+        assert data is not None
+        NodeMutator.__init__(self, data)
+
     def generate(self, request, node):
         if self.data is not node:
             if hasattr(request.d, 'importNode'):
@@ -178,6 +182,10 @@ class DOMTemplate(Resource):
     __implements__ = (Resource.__implements__)
 
     def __init__(self, templateFile = None):
+        """
+        @param templateFile: The name of a file containing a template.
+        @type templateFile: String
+        """
         Resource.__init__(self)
         if templateFile:
             self.templateFile = templateFile

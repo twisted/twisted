@@ -69,11 +69,20 @@ class Widget(view.View):
     @ivar model: If the current model is an L{model.Model}, then the result of
           model.getData(). Otherwise the original object itself.
     """
+    # wvupdate_xxx method signature: request, widget, data; returns None
 
     # Don't do lots of work setting up my stacks; they will be passed to me
     setupStacks = 0
     tagName = None
     def __init__(self, model = None, submodel = None, setup = None, controller = None, viewStack=None):
+        """
+        @type model: L{interfaces.IModel}
+
+        @param submodel: see L{Widget.setSubmodel}
+        @type submodel: String
+
+        @type setup: Callable
+        """
         self.errorFactory = Error
         self.controller = controller
         self.become = None
@@ -451,6 +460,7 @@ class Image(Text):
             data = self.getData()
         else:
             data = self.text
+        assert data is not None, "data is None, self.text is %r" % (self.text,)
         node = Widget.generateDOM(self, request, node)
         node.setAttribute('src', data)
         return node
