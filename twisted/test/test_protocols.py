@@ -22,7 +22,7 @@ from twisted.trial import unittest
 from twisted.protocols import basic, wire
 from twisted.internet import reactor, protocol
 
-import string
+import string, struct
 import StringIO
 
 class StringIOWithoutClosing(StringIO.StringIO):
@@ -127,37 +127,59 @@ a'''
                 a.dataReceived(s)
             self.failUnlessEqual(self.output, a.received)
 
-class TestNetstring(basic.NetstringReceiver):
 
+class TestMixin:
+    
     def connectionMade(self):
         self.received = []
 
     def stringReceived(self, s):
         self.received.append(s)
 
-class TestSafeNetstring(basic.SafeNetstringReceiver):
-
     MAX_LENGTH = 50
     closed = 0
 
-    def stringReceived(self, s):
-        pass
-
-    def connectionLost(self):
+    def connectionLost(self, reason):
         self.closed = 1
 
 
-class NetstringReceiverTestCase(unittest.TestCase):
+class TestNetstring(TestMixin, basic.NetstringReceiver):
+    pass
+
+
+class LPTestCaseMixin:
+
+    illegal_strings = []
+    protocol = None
+
+    def getProtocol(self):
+        t = StringIOWithoutClosing()
+        a = self.protocol()
+        a.makeConnection(protocol.FileWrapper(t))
+        return a
+    
+    def testIllegal(self):
+        for s in self.illegal_strings:
+            r = self.getProtocol()
+            for c in s:
+                r.dataReceived(c)
+            self.assertEquals(r.transport.closed, 1)
+
+
+class NetstringReceiverTestCase(unittest.TestCase, LPTestCaseMixin):
 
     strings = ['hello', 'world', 'how', 'are', 'you123', ':today', "a"*515]
 
     illegal_strings = ['9999999999999999999999', 'abc', '4:abcde',
                        '51:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaab,',]
 
+    protocol = TestNetstring
+    
     def testBuffer(self):
         for packet_size in range(1, 10):
             t = StringIOWithoutClosing()
             a = TestNetstring()
+            a.MAX_LENGTH = 699
             a.makeConnection(protocol.FileWrapper(t))
             for s in self.strings:
                 a.sendString(s)
@@ -166,21 +188,35 @@ class NetstringReceiverTestCase(unittest.TestCase):
                 s = out[i*packet_size:(i+1)*packet_size]
                 if s:
                     a.dataReceived(s)
-            if a.received != self.strings:
-                raise AssertionError(a.received)
+            self.assertEquals(a.received, self.strings)
 
-    def getSafeNS(self):
-        t = StringIOWithoutClosing()
-        a = TestSafeNetstring()
-        a.makeConnection(protocol.FileWrapper(t))
-        return a
 
-    def testSafe(self):
-        for s in self.illegal_strings:
-            r = self.getSafeNS()
-            r.dataReceived(s)
-            if not r.brokenPeer:
-                raise AssertionError("connection wasn't closed on illegal netstring %s" % repr(s))
+class TestInt32(TestMixin, basic.Int32StringReceiver):
+    MAX_LENGTH = 50
+
+
+class Int32TestCase(unittest.TestCase, LPTestCaseMixin):
+
+    protocol = TestInt32
+    strings = ["a", "b" * 16]
+    illegal_strings = ["\x10\x00\x00\x00aaaaaa"]
+    partial_strings = ["\x00\x00\x00", "hello there", ""]
+    
+    def testPartial(self):
+        for s in self.partial_strings:
+            r = self.getProtocol()
+            r.MAX_LENGTH = 99999999
+            for c in s:
+                r.dataReceived(c)
+            self.assertEquals(r.received, [])
+
+    def testReceive(self):
+        r = self.getProtocol()
+        for s in self.strings:
+            for c in struct.pack("!i",len(s))+s:
+                r.dataReceived(c)
+        self.assertEquals(r.received, self.strings)
+
 
 if __name__ == '__main__':
     unittest.main()
