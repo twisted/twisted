@@ -158,7 +158,7 @@ class IntegerRange(Integer):
                  longDesc=None, hints=None):
         self.min = min
         self.max = max
-        Integer.__init__(self, name, allowNone=1, default=default, shortDesc=shortDesc,
+        Integer.__init__(self, name, allowNone=allowNone, default=default, shortDesc=shortDesc,
                          longDesc=longDesc, hints=hints)
 
     def coerce(self, val):
