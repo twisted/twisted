@@ -73,6 +73,7 @@ class TestProgram:
         else:
             reactor = "default"
         self._installReactor(reactor)
+        self._installHooks()
         
         if not text_mode:
             try:
@@ -86,7 +87,16 @@ class TestProgram:
 
         self.value = self.runText()
 
+    def _installHooks(self):
+        """Override default behaviours in order to facilitate testing."""
+        # log.deferr() should raise exception instead of logging it
+        from twisted.python import log
+        def deferr():
+            raise
+        log.deferr = deferr
+    
     def _installReactor(self, reactor):
+        """Install a reactor which will be used for testing."""
         from twisted.python import runtime
         platformType = runtime.platform.getType()
         if platformType == 'java':
