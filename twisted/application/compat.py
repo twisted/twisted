@@ -371,6 +371,7 @@ def convert(oldApp):
         if hasattr(s, 'privileged'):
             s.privileged = 1
     for s in oldApp.services.values():
+        s = _NewService(s)
         s.disownServiceParent()
         s.setServiceParent(c)
     return ret
