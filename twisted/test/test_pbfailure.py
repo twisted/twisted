@@ -77,8 +77,10 @@ class PBFailureTest(unittest.TestCase):
 
 
     def runClient(self):
-        pb.connect("localhost", self.n, "guest", "guest",
-                   "pbfailure", "guest", 30).addCallbacks(self.connected, self.notConnected)
+        f = pb.PBClientFactory()
+        reactor.connectTCP("127.0.0.1", self.n, f)
+        f.getPerspective("guest", "guest", "pbfailure", "guest").addCallbacks(
+            self.connected, self.notConnected)
         self.id = reactor.callLater(10, self.timeOut)
 
 

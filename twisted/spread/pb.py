@@ -52,7 +52,7 @@ applied when serializing arguments.
 # Future Imports
 from __future__ import nested_scopes
 
-__version__ = "$Revision: 1.133 $"[11:-2]
+__version__ = "$Revision: 1.134 $"[11:-2]
 
 
 # System Imports
@@ -60,11 +60,10 @@ try:
     import cStringIO as StringIO
 except ImportError:
     import StringIO
-    
-import traceback
-import string
+
 import sys
 import types
+import warnings
 
 # Twisted Imports
 from twisted.python import log, failure
@@ -1098,6 +1097,7 @@ class _ObjectRetrieval:
     """
 
     def __init__(self, broker, d):
+        warnings.warn("This is deprecated. Use PBClientFactory.", DeprecationWarning, 2)
         self.deferred = d
         self.term = 0
         self.broker = broker
@@ -1136,6 +1136,7 @@ class BrokerClientFactory(protocol.ClientFactory):
     noisy = 0
 
     def __init__(self, protocol):
+        warnings.warn("This is deprecated. Use PBClientFactory.", DeprecationWarning, 2)
         if not isinstance(protocol,Broker): raise TypeError, "protocol is not an instance of Broker"
         self.protocol = protocol
 
@@ -1155,6 +1156,7 @@ def getObjectRetriever():
     @returns: A pair: A ClientFactory and a Deferred which will be passed a
               remote reference to the root object of a PB server.x
     """
+    warnings.warn("This is deprecated. Use PBClientFactory.", DeprecationWarning, 2)
     d = defer.Deferred()
     b = Broker(1)
     bf = BrokerClientFactory(b)
@@ -1175,13 +1177,14 @@ def getObjectAt(host, port, timeout=None):
     @returns: A Deferred which will be passed a remote reference to the
       root object of a PB server.x
     """
-    bf, d = getObjectRetriever()
+    warnings.warn("This is deprecated. Use PBClientFactory.", DeprecationWarning, 2)
+    bf = PBClientFactory()
     if host == "unix":
         # every time you use this, God kills a kitten
         reactor.connectUNIX(port, bf, timeout)
     else:
         reactor.connectTCP(host, port, bf, timeout)
-    return d
+    return bf.getRootObject()
 
 def getObjectAtSSL(host, port, timeout=None, contextFactory=None):
     """Establishes a PB connection over SSL and returns with a RemoteReference.
@@ -1199,12 +1202,13 @@ def getObjectAtSSL(host, port, timeout=None, contextFactory=None):
     @returns: A Deferred which will be passed a remote reference to the
       root object of a PB server.x
     """
-    bf, d = getObjectRetriever()
+    warnings.warn("This is deprecated. Use PBClientFactory.", DeprecationWarning, 2)
+    bf = PBClientFactory()
     if contextFactory is None:
         from twisted.internet import ssl
         contextFactory = ssl.ClientContextFactory()
     reactor.connectSSL(host, port, bf, contextFactory, timeout)
-    return d
+    return d.getRootObject()
 
 def connect(host, port, username, password, serviceName,
             perspectiveName=None, client=None, timeout=None):
@@ -1228,21 +1232,27 @@ def connect(host, port, username, password, serviceName,
               Perspective is connected, and an errback when an error
               occurs at any stage of connecting.
     """
-    d = defer.Deferred()
-    getObjectAt(host,port,timeout).addCallbacks(
-        _connGotRoot, d.errback,
-        callbackArgs=[d, client, serviceName,
-                      username, password, perspectiveName])
-    return d
+    warnings.warn("This is deprecated. Use PBClientFactory.", DeprecationWarning, 2)
+    if timeout == None:
+        timeout = 30
+    bf = PBClientFactory()
+    if host == "unix":
+        # every time you use this, God kills a kitten
+        reactor.connectUNIX(port, bf, timeout)
+    else:
+        reactor.connectTCP(host, port, bf, timeout)
+    return bf.getPerspective(username, password, serviceName, perspectiveName, client)
 
 def _connGotRoot(root, d, client, serviceName,
                  username, password, perspectiveName):
+    warnings.warn("This is deprecated. Use PBClientFactory.", DeprecationWarning, 2)
     logIn(root, client, serviceName, username, password, perspectiveName).chainDeferred(d)
 
 def authIdentity(authServRef, username, password):
     """Return a Deferred which will do the challenge-response dance and
     return a remote Identity reference.
     """
+    warnings.warn("This is deprecated. Use PBClientFactory.", DeprecationWarning, 2)
     d = defer.Deferred()
     authServRef.callRemote('username', username).addCallbacks(
         _cbRespondToChallenge, d.errback,
@@ -1250,12 +1260,14 @@ def authIdentity(authServRef, username, password):
     return d
 
 def _cbRespondToChallenge((challenge, challenger), password, d):
+    warnings.warn("This is deprecated. Use PBClientFactory.", DeprecationWarning, 2)
     challenger.callRemote("respond", identity.respond(challenge, password)).addCallbacks(
         d.callback, d.errback)
 
 def logIn(authServRef, client, service, username, password, perspectiveName=None):
     """I return a Deferred which will be called back with a Perspective.
     """
+    warnings.warn("This is deprecated. Use PBClientFactory.", DeprecationWarning, 2)
     d = defer.Deferred()
     authServRef.callRemote('username', username).addCallbacks(
         _cbLogInRespond, d.errback,
@@ -1264,12 +1276,14 @@ def logIn(authServRef, client, service, username, password, perspectiveName=None
     return d
 
 def _cbLogInRespond((challenge, challenger), d, client, service, password, perspectiveName):
+    warnings.warn("This is deprecated. Use PBClientFactory.", DeprecationWarning, 2)
     challenger.callRemote('respond',
         identity.respond(challenge, password)).addCallbacks(
         _cbLogInResponded, d.errback,
         callbackArgs=(d, client, service, perspectiveName))
 
 def _cbLogInResponded(identity, d, client, serviceName, perspectiveName):
+    warnings.warn("This is deprecated. Use PBClientFactory.", DeprecationWarning, 2)
     if identity:
         identity.callRemote("attach", serviceName, perspectiveName, client).chainDeferred(d)
     else:
@@ -1296,6 +1310,7 @@ class IdentityConnector:
          @param password:          The password to use to autheticate with
                                    the PB server.
          """
+         warnings.warn("This is deprecated. Use PBClientFactory.", DeprecationWarning, 2)
          self.host = host
          self.port = port
          self.identityName = identityName
