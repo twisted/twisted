@@ -1,0 +1,40 @@
+.TH TWISTD "1" "July 2001" "" ""
+.SH NAME
+twistd \- run twisted.internet.main.Application pickles
+.SH SYNOPSIS
+.B twistd
+[options]
+.SH DESCRIPTION
+Read an twisted.internet.main.Application out of a file and runs it.
+.TP
+\fB\-t\fR, \fB\--threaded\fR 
+use threads
+.TP
+\fB\-n\fR, \fB\--nodaemon\fR 
+Don't daemonize (stay in foreground)
+.TP
+\fB\-p\fR, \fB\--profile\fR 
+Run profiler
+.TP
+\fB\-l\fR, \fB\--logfile\fR \fI<logfile>\fR
+Log to a specified file, - for stdout (default twistd.log)
+.TP
+\fB\--pidfile\fR \fI<pidfile>\fR
+Save pid in specified file (default twistd.pid)
+.TP
+\fB\-r\fR, \fB\--rundir\fR \fI<directory>\fR
+change to a supplied directory before running (default .)
+.TP
+\fB\-f\fR, \fB\--file\fR \fI<tap file>\fR
+Read the given .tap file (default twistd.tap)
+.SH AUTHOR
+Written by Moshe Zadka, based on twistd's help messages
+.SH "REPORTING BUGS"
+Report bugs to <twisted-python@twistedmatrix.com>.
+.SH COPYRIGHT
+Copyright \(co 2000 Glyph Lefkowitz
+.br
+This is free software; see the source for copying conditions.  There is NO
+warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+.SH "SEE ALSO"
+mktap(1)
