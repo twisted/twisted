@@ -168,3 +168,8 @@ class Service(app.ApplicationService):
         """Get a string describing the type of this service.
         """
         return self.serviceType or reflect.qual(self.__class__)
+
+    def setServiceParent(self, parent):
+        app.ApplicationService.setServiceParent(self, parent)
+        if self.authorizer is not None:
+            self.authorizer.setServiceCollection(parent)

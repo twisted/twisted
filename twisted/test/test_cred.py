@@ -66,6 +66,19 @@ class ServiceTestCase(unittest.TestCase):
         service.Service("test service", authorizer=auth)
         service.Service("test service", parent)
 
+    def testParent(self):
+        parent = app.MultiService("test")
+        auth = authorizer.Authorizer(parent)
+        s = service.Service("test service", parent, authorizer=auth)
+        self.assertEqual(s.authorizer.getServiceNamed(s.getServiceName()),
+                         s)
+        parent2 = app.MultiService("test")
+        s.disownServiceParent()
+        s.setServiceParent(parent2)
+        self.assertEqual(s.authorizer.getServiceNamed(s.getServiceName()),
+                         s)
+ 
+
     def testConstruction_serviceName(self):
         """serviceName is frequently used as a key, thus it is expected
         to be hashable."""
