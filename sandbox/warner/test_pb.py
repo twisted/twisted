@@ -415,10 +415,12 @@ class TestCall(unittest.TestCase, TargetMixin):
 
 
 class MyCopyable1(pb.Copyable):
+    # the getTypeToCopy name will be the fully-qualified class name, which
+    # (I think) will depend upon how you import this
     pass
 class MyRemoteCopy1(pb.RemoteCopy):
     pass
-pb.registerRemoteCopy("MyCopyable1", MyRemoteCopy1)
+pb.registerRemoteCopy("test_pb.MyCopyable1", MyRemoteCopy1)
 
 class MyCopyable2(pb.Copyable):
     def getTypeToCopy(self):
@@ -454,10 +456,10 @@ class HelperTarget(pb.Referenceable):
         return True
 
 class TestCopyable(unittest.TestCase, TargetMixin):
-    skip = "not ready yet"
+
     def send(self, arg):
         self.setupBrokers()
-        if 1:
+        if 0:
             print
             self.callingBroker.doLog = "TX"
             self.targetBroker.doLog = " rx"
@@ -474,17 +476,23 @@ class TestCopyable(unittest.TestCase, TargetMixin):
         try:
             raise RuntimeError("message here")
         except:
-            f = failure.Failure()
-        res = self.send([f])
-        #print "CopiedFailure is:", len(res)
+            f0 = failure.Failure()
+        f = self.send(f0)
+        #print "CopiedFailure is:", f
+        #print f.__dict__
+        self.failUnlessEqual(f.type, "exceptions.RuntimeError")
+        self.failUnlessEqual(f.value, "message here")
+        self.failUnlessEqual(f.frames, [])
+        self.failUnlessEqual(f.tb, None)
+        self.failUnlessEqual(f.stack, [])
+        # there should be a traceback
+        self.failUnless(f.traceback.find("raise RuntimeError") != -1)
         
     def testCopy1(self):
         obj = MyCopyable1() # just copies the dict
         obj.a = 12
         obj.b = "foo"
         res = self.send(obj)
-        self.failUnless(isinstance(res))
-        self.failUnlessEqual(res.__class__, MyRemoteCopy1)
+        self.failUnless(isinstance(res, MyRemoteCopy1))
         self.failUnlessEqual(res.a, 12)
         self.failUnlessEqual(res.b, "foo")
-        print res.__dict__

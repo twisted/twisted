@@ -181,6 +181,8 @@ class RemoteCopy(object):
     implements(IRemoteCopy)
 
     stateSchema = None
+    nonCyclic = False
+
     def __init__(self):
         # the constructor will not be called with any args
         pass
@@ -201,7 +203,6 @@ class RemoteCopyUnslicer(slicer.BaseUnslicer):
     def start(self, count):
         self.d = {}
         self.count = count
-        self.gettingAttrname = True
         self.deferred = Deferred()
         self.protocol.setObject(count, self.deferred)
 
@@ -240,7 +241,7 @@ class RemoteCopyUnslicer(slicer.BaseUnslicer):
                 raise BananaError("unreferenceable object in attribute",
                                   self.where())
             self.setAttribute(self.attrname, obj)
-        self.gettingAttrname = not self.gettingAttrname
+            self.attrname = None
 
     def setAttribute(self, name, value):
         self.d[name] = value
@@ -249,9 +250,6 @@ class RemoteCopyUnslicer(slicer.BaseUnslicer):
         obj = self.factory()
         obj.setCopyableState(self.d)
         self.protocol.setObject(self.count, obj)
-        # TODO: guess what! this deferred makes it impossible to use this
-        # unslicer for CopiedFailures, since Deferred won't let you .callback
-        # with a Failure (it treats it identically to doing an .errback)
         self.deferred.callback(obj)
         return obj
 
@@ -259,16 +257,42 @@ class RemoteCopyUnslicer(slicer.BaseUnslicer):
         if self.classname == None:
             return "<??>"
         me = "<%s>" % self.classname
-        if self.gettingAttrname:
+        if self.attrname is None:
             return "%s.attrname??" % me
         else:
             return "%s.%s" % (me, self.attrname)
     
 
+class NonCyclicRemoteCopyUnslicer(RemoteCopyUnslicer):
+    # The Deferred used in RemoteCopyUnslicer (used in case the RemoteCopy
+    # is participating in a reference cycle, say 'obj.foo = obj') makes it
+    # unsuitable for holding Failures (which cannot be passed through
+    # Deferred.callback). Use this class for Failures. It cannot handle
+    # reference cycles (they will cause a KeyError when the reference is
+    # followed).
+
+    def start(self, count):
+        self.d = {}
+        self.count = count
+        self.gettingAttrname = True
+
+    def receiveClose(self):
+        obj = self.factory()
+        obj.setCopyableState(self.d)
+        return obj
+
 CopyableRegistry = {}
 def registerRemoteCopy(typename, factory):
+    """Tell PB that 'factory' can be used to handle Copyable objects that
+    provide a getTypeToCopy name of 'typename'. 'factory' can be a
+    RemoteCopy subclass (it implements IRemoteCopy), or they can be an
+    Unslicer class (it implements IUnslicer). In addition, IRemoteCopy
+    factories with a true .nonCyclic attribute will be created with the
+    NonCyclicRemoteCopyUnslicer.
+    """
     # to be more clever than this, register an Unslicer instead
-    assert issubclass(factory, RemoteCopy)
+    assert (IRemoteCopy.implementedBy(factory) or
+            tokens.IUnslicer.implementedBy(factory))
     CopyableRegistry[typename] = factory
 
 

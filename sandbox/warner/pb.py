@@ -532,8 +532,18 @@ class PBRootUnslicer(slicer.RootUnslicer):
                 classname = opentype[1]
                 try:
                     factory = flavors.CopyableRegistry[classname]
-                    child = flavors.RemoteCopyUnslicer(factory)
-                    return child
+                    if tokens.IUnslicer.implementedBy(factory):
+                        child = factory()
+                        return child
+                    if flavors.IRemoteCopy.implementedBy(factory):
+                        if factory.nonCyclic:
+                            child = flavors.NonCyclicRemoteCopyUnslicer(factory)
+                        else:
+                            child = flavors.RemoteCopyUnslicer(factory)
+                        return child
+                    why = "RemoteCopy class '%s' has weird factory %s" \
+                                    % (classname, factory)
+                    raise Violation(why)
                 except KeyError:
                     raise Violation("unknown RemoteCopy class '%s'" \
                                     % classname)
@@ -583,7 +593,7 @@ class ErrorSlicer(ScopedSlicer):
         # TODO: need CopyableFailures
         yield self.f.getBriefTraceback()
 
-# failures are treated as Copyables
+# failures are sent as Copyables
 class FailureSlicer(slicer.BaseSlicer):
     classname = "twisted.python.failure.Failure"
 
@@ -620,6 +630,8 @@ class FailureSlicer(slicer.BaseSlicer):
 registerAdapter(FailureSlicer, failure.Failure, ISlicer)
 
 class CopiedFailure(RemoteCopy, failure.Failure):
+    nonCyclic = True
+    
     pickled = 1
     def printTraceback(self, file=None):
         if not file: file = log.logfile
