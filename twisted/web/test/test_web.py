@@ -3,6 +3,7 @@
 
 from twisted.trial import unittest
 import string, random, copy
+from cStringIO import StringIO
 
 from twisted.web import server, resource, util
 from twisted.internet import defer, interfaces
@@ -421,3 +422,85 @@ class SDTest(unittest.TestCase):
         d = DummyRequest(['foo', 'bar', 'baz'])
         resource.getChildForRequest(s, d)
         self.assertEqual(d.postpath, ['bar', 'baz'])
+
+class DummyRequestForLogTest(DummyRequest):
+    uri='/dummy' # parent class uri has "http://", which doesn't really happen
+    code = 123
+    client = '1.2.3.4'
+    clientproto = 'HTTP/1.0'
+    sentLength = None
+
+    def __init__(self, *a, **kw):
+        DummyRequest.__init__(self, *a, **kw)
+        self.headers = {}
+
+    def getHeader(self, h):
+        return self.headers.get(h.lower(), None)
+
+    def getClientIP(self):
+        return self.client
+
+class TestLogEscaping(unittest.TestCase):
+    def setUp(self):
+        self.site = http.HTTPFactory()
+        self.site.logFile = StringIO()
+        self.request = DummyRequestForLogTest(self.site, False)
+
+    def testSimple(self):
+        http._logDateTime = "[%02d/%3s/%4d:%02d:%02d:%02d +0000]" % (
+            25, 'Oct', 2004, 12, 31, 59)
+        self.site.log(self.request)
+        self.site.logFile.seek(0)
+        self.assertEqual(
+            self.site.logFile.read(),
+            '1.2.3.4 - - [25/Oct/2004:12:31:59 +0000] "GET /dummy HTTP/1.0" 123 - "-" "-"\n')
+
+    def testMethodQuote(self):
+        http._logDateTime = "[%02d/%3s/%4d:%02d:%02d:%02d +0000]" % (
+            25, 'Oct', 2004, 12, 31, 59)
+        self.request.method = 'G"T'
+        self.site.log(self.request)
+        self.site.logFile.seek(0)
+        self.assertEqual(
+            self.site.logFile.read(),
+            '1.2.3.4 - - [25/Oct/2004:12:31:59 +0000] "G\\"T /dummy HTTP/1.0" 123 - "-" "-"\n')
+
+    def testRequestQuote(self):
+        http._logDateTime = "[%02d/%3s/%4d:%02d:%02d:%02d +0000]" % (
+            25, 'Oct', 2004, 12, 31, 59)
+        self.request.uri='/dummy"withquote'
+        self.site.log(self.request)
+        self.site.logFile.seek(0)
+        self.assertEqual(
+            self.site.logFile.read(),
+            '1.2.3.4 - - [25/Oct/2004:12:31:59 +0000] "GET /dummy\\"withquote HTTP/1.0" 123 - "-" "-"\n')
+
+    def testProtoQuote(self):
+        http._logDateTime = "[%02d/%3s/%4d:%02d:%02d:%02d +0000]" % (
+            25, 'Oct', 2004, 12, 31, 59)
+        self.request.clientproto='HT"P/1.0'
+        self.site.log(self.request)
+        self.site.logFile.seek(0)
+        self.assertEqual(
+            self.site.logFile.read(),
+            '1.2.3.4 - - [25/Oct/2004:12:31:59 +0000] "GET /dummy HT\\"P/1.0" 123 - "-" "-"\n')
+
+    def testRefererQuote(self):
+        http._logDateTime = "[%02d/%3s/%4d:%02d:%02d:%02d +0000]" % (
+            25, 'Oct', 2004, 12, 31, 59)
+        self.request.headers['referer'] = 'http://malicious" ".website.invalid'
+        self.site.log(self.request)
+        self.site.logFile.seek(0)
+        self.assertEqual(
+            self.site.logFile.read(),
+            '1.2.3.4 - - [25/Oct/2004:12:31:59 +0000] "GET /dummy HTTP/1.0" 123 - "http://malicious\\" \\".website.invalid" "-"\n')
+
+    def testUserAgentQuote(self):
+        http._logDateTime = "[%02d/%3s/%4d:%02d:%02d:%02d +0000]" % (
+            25, 'Oct', 2004, 12, 31, 59)
+        self.request.headers['user-agent'] = 'Malicious Web" Evil'
+        self.site.log(self.request)
+        self.site.logFile.seek(0)
+        self.assertEqual(
+            self.site.logFile.read(),
+            '1.2.3.4 - - [25/Oct/2004:12:31:59 +0000] "GET /dummy HTTP/1.0" 123 - "-" "Malicious Web\\" Evil"\n')
