@@ -234,7 +234,7 @@ class _Jellier:
         """Initialize.
         """
         self.taster = taster
-        # `preseved' is a dict of previously seen instances.
+        # `preserved' is a dict of previously seen instances.
         self.preserved = {}
         # `cooked' is a dict of previously backreferenced instances to their `ref' lists.
         self.cooked = {}
@@ -245,8 +245,25 @@ class _Jellier:
 
     def _cook(self, object):
         """(internal)
-        backreference an object
+        
+        backreference an object. 
+
+        Notes on this method for the hapless future maintainer: If I've already
+        gone through the prepare/preserve cycle on the specified object (it is
+        being referenced after the serializer is "done with" it, e.g. this
+        reference is NOT circular), the copy-in-place of aList is relevant,
+        since the list being modified is the actual, pre-existing jelly
+        expression that was returned for that object. If not, it's technically
+        superfluous, since the value in self.preserved didn't need to be set,
+        but the invariant that self.preserved[id(object)] is a list is
+        convenient because that means we don't have to test and create it or
+        not create it here, creating fewer code-paths.  that's why
+        self.preserved is always set to a list.
+
+        Sorry that this code is so hard to follow, but Python objects are
+        tricky to persist correctly. -glyph
         """
+
         aList = self.preserved[id(object)]
         newList = copy.copy(aList)
         # make a new reference ID
@@ -263,7 +280,15 @@ class _Jellier:
         create a list for persisting an object to.  this will allow
         backreferences to be made internal to the object. (circular
         references).
+
+        The reason this needs to happen is that we don't generate an ID for
+        every object, so we won't necessarily know which ID the object will
+        have in the future.  When it is 'cooked' ( see _cook ), it will be
+        assigned an ID, and the temporary placeholder list created here will be
+        modified in-place to create an expression that gives this object an ID:
+        [reference id# [object-jelly]].
         """
+
         # create a placeholder list to be preserved
         self.preserved[id(object)] = []
         # keep a reference to this object around, so it doesn't disappear!
