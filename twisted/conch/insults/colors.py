@@ -1,3 +1,7 @@
+"""
+You don't really want to use this module. Try helper.py instead.
+"""
+
 CLEAR = 0
 BOLD = 1
 DIM = 2

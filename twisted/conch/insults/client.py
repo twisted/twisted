@@ -1,3 +1,7 @@
+"""
+You don't really want to use this module. Try insults.py instead.
+"""
+
 from twisted.internet import protocol
 
 class InsultsClient(protocol.Protocol):
