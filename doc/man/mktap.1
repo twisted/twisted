@@ -20,8 +20,20 @@ Application belongs to this gid, and should run with its permissions.
 Append given servers to given file, instead of creating a new one.
 File should be be a tap file.
 .PP
-\fIapptype\fR can be 'web', 'irc', 'reality', 'toc', 'mail' and 'telnet'.
+\fIapptype\fR can be 'stupid', 'web', 'irc', 'reality', 'toc', 'mail' and 
+'telnet'.
 Each of those support different options.
+.PP
+.SH \fBstupid\fR options
+.TP
+\fB\-h\fR, \fB\--host\fR \fI<host>\fR
+Proxy connections to \fI<host>\fR
+.TP
+\fB\-d\fR, \fB\--dest_port\fR \fI<port>\fR
+Proxy connections to \fI<port>\fR on remote host.
+.TP
+\fB\-p\fR, \fB\--port\fR \fI<port>\fR
+Listen locally on \fI<port>\fR
 .PP
 .SH \fBweb\fR options
 .TP
