@@ -27,53 +27,10 @@ class DbService(pb.Service):
         pb.Service.__init__(self, name, app)
         self.manager = manager
 
-    def getPerspectiveNamed(self, name):
-        # TODO - player checking
-        print "Player %s connecting" % name
-        newUser = self.manager.loginUser(name)
-        return newUser
-
-    def getPassword(self, name):
-        """Asks the dbManager to look up this username in the database and find the
-        password. If the user does not exist, the password will be None and we raise
-        an exception.
-        """
-        password = self.manager.getPassword(name)
-        if password:
-            print "Password for '%s' is '%s' " %( name, password)
-            return password
-        else:
-            raise KeyError("Bad Login")
-
-
-    def getPassword(self, name):
-        """Gets the password for a user in the accounts table in the database.
-        Also does the md5 encoding of it. This is called by the authenticator
-        """
-        print "Getting password for %s"%(name)
-        data = self.executeNow("select password from accounts where name = '%s'"%name)
-        if len(data) == 0:
-            return None
-        password = data[0][0][0]
-        newPassword =  md5.md5(password).digest()        
-        return newPassword
-
-
-    def loginUser(self, name):
-        """User has been authenticated. Log the user in to the system and return a perspective.
-        This is called by the authenticator.
-        """
-        newUser = DbUser(name, self)
-        self.users[name] = newUser
-        return newUser
 
 class DbUser(pb.Perspective):
     """A User that wants to interact with the database.
     """
-    def __init__(self, name, manager):
-        self.name = name
-        self.manager = manager
-
     def perspective_request(self, sql):
         #print "Got SQL request:" , sql
         data = self.manager.executeNow(sql)

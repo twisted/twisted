@@ -60,9 +60,13 @@ def getPorts(app, config):
         numConnections = int(config.connections)
         )
     svc = dbservice.DbService(mgr, app)
+    
     i = passport.Identity(config.pbusername)
     i.setPassword(config.pbpassword)
     app.authorizer.addIdentity(i)
+    p = dbservice.DbUser(config.pbusername, svc, i.identityName)
+    svc.addPerspective(p)
+    i.addKeyFor(p)
 
     return [(int(config.pbport), bf)]
 
