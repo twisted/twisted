@@ -1018,8 +1018,7 @@ class SMTPClient(basic.LineReceiver):
     def getMailData(self):
         """Return file-like object containing data of message to be sent.
 
-        The file should be a text file with local line ending convention,
-        i.e. readline() should return a line ending in '\\n'.
+        Lines in the file should be delimited by '\\n'.
         """
         raise NotImplementedError
 
@@ -1504,10 +1503,10 @@ def sendmail(smtphost, from_addr, to_addrs, msg):
     @param to_addrs: A list of addresses to send this mail to.  A string will
         be treated as a list of one address
     @param msg: The message, including headers, either as a file or a string.
-        File-like objects need to support read() and close(). Line endings
-        must be local (i.e. '\\n'). If you pass something that doesn't look
-        like a file, we try to convert it to a string (so you should be able
-        to pass an email.Message directly, but doing the conversion with
+        File-like objects need to support read() and close(). Lines must be
+        delimited by '\\n'. If you pass something that doesn't look like a
+        file, we try to convert it to a string (so you should be able to
+        pass an email.Message directly, but doing the conversion with
         email.Generator manually will give you more control over the
         process).
 
