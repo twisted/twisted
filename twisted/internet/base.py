@@ -28,7 +28,8 @@ class ReactorBase:
         self._delayeds = main._delayeds
         self.addSystemEventTrigger('during', 'shutdown', self.crash)
         self.addSystemEventTrigger('during', 'shutdown', self.disconnectAll)
-
+        threadable.whenThreaded(self.initThreads)
+    
     # override in subclasses
 
     wakerInstalled = 0

@@ -1,5 +1,5 @@
 # -*- Python -*-
-# $Id: default.py,v 1.6 2002/05/04 23:47:48 glyph Exp $
+# $Id: default.py,v 1.7 2002/05/05 15:37:16 itamarst Exp $
 #
 # Twisted, the Framework of Your Internet
 # Copyright (C) 2001 Matthew W. Lefkowitz
@@ -253,11 +253,6 @@ writes = {}
 class SelectReactor(PosixReactorBase):
     """A select() based reactor - runs on all POSIX platforms and on Win32.
     """
-
-    def __init__(self, installSignalHandlers=1):
-        PosixReactorBase.__init__(self, installSignalHandlers)
-        threadable.whenThreaded(self.initThreads)
-        self._installSignalHandlers = installSignalHandlers
 
     def _preenDescriptors(self):
         log.msg("Malformed file descriptor found.  Preening lists.")
