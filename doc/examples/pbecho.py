@@ -31,15 +31,20 @@ class SimplePerspective(pb.Avatar):
     def perspective_error(self):
         raise DefinedError("exception!")
 
+    def logout(self):
+        print self, "logged out"
+
 
 class SimpleRealm:
     __implements__ = IRealm
 
     def requestAvatar(self, avatarId, mind, *interfaces):
         if pb.IPerspective in interfaces:
-            return pb.IPerspective, SimplePerspective("pbecho"), lambda : None
+            avatar = SimplePerspective()
+            return pb.IPerspective, avatar, avatar.logout 
         else:
             raise NotImplementedError("no interface")
+
 
 if __name__ == '__main__':
     import pbecho
