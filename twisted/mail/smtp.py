@@ -1722,7 +1722,7 @@ class ESMTPSenderFactory(SMTPSenderFactory):
         p.timeout = self.timeout
         return p
 
-def sendmail(smtphost, from_addr, to_addrs, msg):
+def sendmail(smtphost, from_addr, to_addrs, msg, senderDomainName=None, port=25):
     """Send an email
 
     This interface is intended to be a direct replacement for
@@ -1743,6 +1743,12 @@ def sendmail(smtphost, from_addr, to_addrs, msg):
         email.Generator manually will give you more control over the
         process).
 
+    @param senderDomainName: Name by which to identify.  If None, try
+    to pick something sane (but this depends on external configuration
+    and may not succeed).
+
+    @param port: Remote port to which to connect.
+
     @rtype: L{Deferred}
     @returns: A L{Deferred}, its callback will be called if a message is sent
         to ANY address, the errback if no message is sent.
@@ -1758,7 +1764,11 @@ def sendmail(smtphost, from_addr, to_addrs, msg):
 
     d = defer.Deferred()
     factory = SMTPSenderFactory(from_addr, to_addrs, msg, d)
-    reactor.connectTCP(smtphost, 25, factory)
+
+    if senderDomainName is not None:
+        factory.domain = senderDomainName
+
+    reactor.connectTCP(smtphost, port, factory)
 
     return d
 
