@@ -108,12 +108,16 @@ class WordsClientInterface:
         'names' is a list of participant names in the group named 'group'.
         """
 
-    def receiveDirectMessage(self, sender, message):
+    def receiveDirectMessage(self, sender, message, metadata=None):
         """Receive a message from someone named 'sender'.
+        'metadata' is a dict of special flags. So far 'style': 'emote'
+        is defined. Note that 'metadata' *must* be optional.
         """
 
-    def receiveGroupMessage(self, sender, group, message):
+    def receiveGroupMessage(self, sender, group, message, metadata=None):
         """Receive a message from 'sender' directed to a group.
+        'metadata' is a dict of special flags. So far 'style': 'emote'
+        is defined. Note that 'metadata' *must* be optional.
         """
 
     def memberJoined(self, member, group):
@@ -230,15 +234,32 @@ class Participant(pb.Perspective, styles.Versioned):
             if group.name == groupName:
                 self.client.setGroupMetadata(group.metadata, group.name)
 
-    def receiveDirectMessage(self, sender, message):
+    def receiveDirectMessage(self, sender, message, metadata):
         if self.client:
-            self.client.receiveDirectMessage(sender.name, message)
+            if metadata:
+                d = self.client.receiveDirectMessage(sender.name, message,
+                                                     metadata)
+                #If the client doesn't support metadata, call this function
+                #again with no metadata, so none is sent
+                d.addCallbacks(None,
+                               self.receiveDirectMessage,
+                               errbackArgs=(sender.name, message, None))
+            else:
+                self.client.receiveDirectMessage(sender.name, message)
         else:
             raise WrongStatusError(self.status, self.name)
 
-    def receiveGroupMessage(self, sender, group, message):
+
+    def receiveGroupMessage(self, sender, group, message, metadata):
         if sender is not self and self.client:
-            self.client.receiveGroupMessage(sender.name, group.name, message)
+            if metadata:
+                d = self.client.receiveGroupMessage(sender.name, group.name,
+                                                    message, metadata)
+                d.addCallbacks(None, self.receiveGroupMessage,
+                               errbackArgs=(sender, group, message, None))
+            else:
+                self.client.receiveGroupMessage(sender.name, group.name,
+                                                message)
 
     def memberJoined(self, member, group):
         self.client.memberJoined(member.name, group.name)
@@ -246,17 +267,17 @@ class Participant(pb.Perspective, styles.Versioned):
     def memberLeft(self, member, group):
         self.client.memberLeft(member.name, group.name)
 
-    def directMessage(self, recipientName, message):
+    def directMessage(self, recipientName, message, metadata=None):
         # XXX getPerspectiveNamed is misleading here -- this ought to look up
         # the user to make sure they're *online*, and if they're not, it may
         # need to query a database.
         recipient = self.service.getPerspectiveNamed(recipientName)
-        recipient.receiveDirectMessage(self, message)
+        recipient.receiveDirectMessage(self, message, metadata or {})
 
-    def groupMessage(self, groupName, message):
+    def groupMessage(self, groupName, message, metadata=None):
         for group in self.groups:
             if group.name == groupName:
-                group.sendMessage(self, message)
+                group.sendMessage(self, message, metadata or {})
                 return
         raise NotInGroupError(groupName)
 
@@ -314,9 +335,9 @@ class Group(styles.Versioned):
             for member in self.members:
                 member.memberLeft(participant, self)
 
-    def sendMessage(self, sender, message):
+    def sendMessage(self, sender, message, metadata):
         for member in self.members:
-            member.receiveGroupMessage(sender, self, message)
+            member.receiveGroupMessage(sender, self, message, metadata)
 
     def setMetadata(self, dict_):
         self.metadata.update(dict_)
