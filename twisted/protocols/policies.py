@@ -100,9 +100,11 @@ class WrappingFactory(ClientFactory):
 
     def doStart(self):
         self.wrappedFactory.doStart()
+        ClientFactory.doStart(self)
 
     def doStop(self):
         self.wrappedFactory.doStop()
+        ClientFactory.doStop(self)
     
     def startedConnecting(self, connector):
         self.wrappedFactory.startedConnecting(connector)
@@ -282,16 +284,8 @@ class SpewingFactory(WrappingFactory):
     protocol = SpewingProtocol
 
 
-class LimitConnectionsByPeerProtocol(ProtocolWrapper):
-    """Stability: Unstable"""
-    def connectionLost(self):
-        self.factory.peerDisconnected(self)
-        self.wrappedProtocol.connectionLost(self)
-    
-
 class LimitConnectionsByPeer(WrappingFactory):
     """Stability: Unstable"""
-    protocol = LimitConnectionsByPeerProtocol
 
     maxConnectionsPerPeer = 5
 
@@ -299,7 +293,7 @@ class LimitConnectionsByPeer(WrappingFactory):
         self.peerConnections = {}
         
     def buildProtocol(self, addr):
-        peerHost = addr[1]
+        peerHost = addr[0]
         connectionCount = self.peerConnections.get(peerHost, 0)
         if connectionCount >= self.maxConnectionsPerPeer:
             return None
