@@ -99,9 +99,11 @@ class LDAPClient(protocol.Protocol):
     ##Search is externalized into class LDAPSearch
         
 
+class LDAPOperation:
+    def __init__(self, ldapclient):
+        self.ldapclient=ldapclient
 
-
-class LDAPSearch:
+class LDAPSearch(LDAPOperation):
     def __init__(self,
                  ldapclient,
                  baseObject='',
@@ -113,7 +115,7 @@ class LDAPSearch:
                  filter=pureldap.LDAPFilterMatchAll,
                  attributes=[],
                  ):
-        self.ldapclient=ldapclient
+        LDAPOperation.__init__(self, ldapclient)
         r=pureldap.LDAPSearchRequest(baseObject=baseObject,
                                      scope=scope,
                                      derefAliases=derefAliases,
@@ -122,12 +124,12 @@ class LDAPSearch:
                                      typesOnly=typesOnly,
                                      filter=filter,
                                      attributes=attributes)
-        self.ldapclient.queue(r, self.handle_search_msg)
+        self.ldapclient.queue(r, self.handle_msg)
 
-    def handle_search_msg(self, msg):
+    def handle_msg(self, msg):
         if isinstance(msg, pureldap.LDAPSearchResultDone):
             assert msg.referral==None #TODO
-            if msg.resultCode==0:
+            if msg.resultCode==0: #TODO ldap.errors.success
                 assert msg.matchedDN==''
                 self.handle_success()
             else:
@@ -146,3 +148,61 @@ class LDAPSearch:
 
     def handle_entry(self, objectName, attributes):
         pass
+
+class LDAPModifyAttributes(LDAPOperation):
+    def __init__(self,
+                 ldapclient,
+                 object,
+                 modification):
+        """
+        Request modification of LDAP attributes.
+
+        object is a string represetation of the object DN.
+
+        modification is a list of LDAPModifications
+        """
+
+        LDAPOperation.__init__(self, ldapclient)
+        r=pureldap.LDAPModifyRequest(object=object,
+                                     modification=modification)
+        self.ldapclient.queue(r, self.handle_msg)
+
+    def handle_msg(self, msg):
+        assert isinstance(msg, pureldap.LDAPModifyResponse)
+        assert msg.referral==None #TODO
+        if msg.resultCode==0: #TODO ldap.errors.success
+            assert msg.matchedDN==''
+            self.handle_success()
+        else:
+            self.handle_fail(msg.resultCode,
+                             msg.errorMessage)
+            return 1
+            
+    def handle_success(self):
+        pass
+
+    def handle_fail(self, resultCode, errorMessage):
+        pass
+
+
+class LDAPDeleteAttributes(LDAPModifyAttributes):
+    def __init__(self,
+                 ldapclient,
+                 object,
+                 vals):
+        """
+        Request deletion of LDAP attributes.
+
+        object is a string represetation of the object DN.
+
+        vals is a list of (type, vals) pairs, where
+
+        type is a string
+
+        vals is a list of values to remove. Additionally, vals can be
+        an empty list or can be left out in order to remove all
+        values. """
+
+        mod = pureldap.LDAPModification_delete(vals=vals)
+        LDAPModifyAttributes.__init__(self, ldapclient,
+                                      object, [mod])
