@@ -314,8 +314,9 @@ class ServerProtocol(protocol.Protocol):
         self._cursorReports = []
 
     def connectionMade(self):
-        self.protocol = self.protocolFactory(*self.protocolArgs, **self.protocolKwArgs)
-        self.protocol.makeConnection(self)
+        if self.protocolFactory is not None:
+            self.protocol = self.protocolFactory(*self.protocolArgs, **self.protocolKwArgs)
+            self.protocol.makeConnection(self)
 
     def dataReceived(self, data):
         for ch in data:
@@ -691,8 +692,9 @@ class ClientProtocol(protocol.Protocol):
         self.protocolKwArgs = kw
 
     def connectionMade(self):
-        self.protocol = self.protocolFactory(*self.protocolArgs, **self.protocolKwArgs)
-        self.protocol.makeConnection(self)
+        if self.protocolFactory is not None:
+            self.protocol = self.protocolFactory(*self.protocolArgs, **self.protocolKwArgs)
+            self.protocol.makeConnection(self)
 
     def dataReceived(self, bytes):
         for b in bytes:
@@ -704,7 +706,7 @@ class ClientProtocol(protocol.Protocol):
                 elif b == '\x15':
                     self.protocol.shiftIn()
                 else:
-                    self.protocol.applicationDataReceived(b)
+                    self.protocol.write(b)
             elif self.state == 'escaped':
                 fName = self._shorts.get(b)
                 if fName is not None:

@@ -3,26 +3,15 @@ from twisted.internet import protocol
 
 import insults
 
+# XXX - need to support scroll regions and scroll history
 class TerminalBuffer(protocol.Protocol):
-    width = 20
-    height = 6
-
-    x = y = 0
+    width = 80
+    height = 24
 
     fill = ' '
 
-    numericKeypad = 'app'
-    activeCharset = insults.G0
-
     def connectionMade(self):
-        self.home = insults.Vector(0, 0)
-        self.lines = [[self.fill] * self.width for i in xrange(self.height)]
-        self.modes = {}
-        self.charsets = {
-            insults.G0: insults.CS_US,
-            insults.G1: insults.CS_US,
-            insults.G2: insults.CS_ALTERNATE,
-            insults.G3: insults.CS_ALTERNATE_SPECIAL}
+        self.reset()
 
     def write(self, bytes):
         for b in bytes:
@@ -56,7 +45,7 @@ class TerminalBuffer(protocol.Protocol):
         self.y = max(0, self.y - n)
 
     def cursorDown(self, n=1):
-        self.y = min(self.height, self.y + n)
+        self.y = min(self.height - 1, self.y + n)
 
     def cursorBackward(self, n=1):
         self.x = max(0, self.x - n)
@@ -178,21 +167,18 @@ class TerminalBuffer(protocol.Protocol):
     def reportCursorPosition(self):
         return (self.x, self.y)
 
+    def reset(self):
+        self.home = insults.Vector(0, 0)
+        self.lines = [[self.fill] * self.width for i in xrange(self.height)]
+        self.modes = {}
+        self.numericKeypad = 'app'
+        self.activeCharset = insults.G0
+        self.x = self.y = 0
+        self.charsets = {
+            insults.G0: insults.CS_US,
+            insults.G1: insults.CS_US,
+            insults.G2: insults.CS_ALTERNATE,
+            insults.G3: insults.CS_ALTERNATE_SPECIAL}
+
     def __str__(self):
         return '\n'.join([''.join(L) for L in self.lines])
-
-if __name__ == '__main__':
-    b = TerminalBuffer()
-    b.connectionMade()
-
-    b.write("hello!  How are you?\n")
-    b.write("\n")
-    b.write("I am fine!  Good bye.\n")
-    print str(b)
-    print '--------------------'
-    b.write("here is some more!!")
-    b.write("lalalala overflowing the line!")
-    print str(b)
-    b.write('xy' * 105)
-    print '--------------------'
-    print str(b)
