@@ -210,6 +210,13 @@ class Client(Connection):
         self.startReading()
         self.protocol.makeConnection(self)
 
+    def getHost(self):
+        """Returns a tuple of ('INET', hostname, port).
+
+        This indicates the address from which I am connecting.
+        """
+        return ('INET',)+self.socket.getsockname()
+
     def getPeer(self):
         """Returns a tuple of ('INET', hostname, port).
         
@@ -260,13 +267,6 @@ class Server(Connection):
         client's address
         """
         return ('INET',)+self.client
-
-    def getHost(self):
-        """
-        Returns a tuple of ('INET', hostname, port), indicating the servers
-        address
-        """
-        return ('INET',)+self.socket.getsockname()
 
 class Port(abstract.FileDescriptor):
     """I am a TCP server port, listening for connections.
