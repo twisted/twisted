@@ -23,7 +23,7 @@ class DocCoverage(unittest.TestCase):
                 ), "%s is not Twisted setup.py" % (setup,)
         self.packageNames = setup.setup_args['packages']
 
-    def test_modules(self):
+    def testModules(self):
         """Looking for docstrings in all modules."""
         docless = []
         for packageName in self.packageNames:
@@ -66,7 +66,7 @@ class DocCoverage(unittest.TestCase):
                     docless.append(modfile)
         return docless
 
-    def test_packages(self):
+    def testPackages(self):
         """Looking for docstrings in all packages."""
         docless = []
         for packageName in self.packageNames:
@@ -87,4 +87,4 @@ class DocCoverage(unittest.TestCase):
 
 
     # This test takes a while and doesn't come close to passing.  :(
-    test_modules.todo = "Activate me when you feel like writing docstrings."
+    testModules.skip = "Activate me when you feel like writing docstrings, and fixing GTK crashing bugs."
