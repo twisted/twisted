@@ -167,13 +167,13 @@ class TestProcess(unittest.TestCase):
     def testDefaults(self):
         p = service.Process(5)
         self.assertEqual(p.uid, 5)
-        self.assertEqual(p.gid, curgid)
+        self.assertEqual(p.gid, None)
         p = service.Process(gid=5)
-        self.assertEqual(p.uid, curuid)
+        self.assertEqual(p.uid, None)
         self.assertEqual(p.gid, 5)
         p = service.Process()
-        self.assertEqual(p.uid, curuid)
-        self.assertEqual(p.gid, curgid)
+        self.assertEqual(p.uid, None)
+        self.assertEqual(p.gid, None)
 
     def testProcessName(self):
         p = service.Process()
@@ -204,11 +204,11 @@ class TestApplication(unittest.TestCase):
 
     def testProcessComponent(self):
         a = service.Application("hello")
-        self.assertEqual(service.IProcess(a).uid, curuid)
-        self.assertEqual(service.IProcess(a).gid, curgid)
+        self.assertEqual(service.IProcess(a).uid, None)
+        self.assertEqual(service.IProcess(a).gid, None)
         a = service.Application("hello", 5)
         self.assertEqual(service.IProcess(a).uid, 5)
-        self.assertEqual(service.IProcess(a).gid, curgid)
+        self.assertEqual(service.IProcess(a).gid, None)
         a = service.Application("hello", 5, 6)
         self.assertEqual(service.IProcess(a).uid, 5)
         self.assertEqual(service.IProcess(a).gid, 6)

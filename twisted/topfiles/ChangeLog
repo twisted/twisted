@@ -1,3 +1,12 @@
+2005-03-12  Jp Calderone  <exarkun@twistedmatrix.com>
+
+	* twisted/scripts/mktap.py, twisted/scripts/twistd.py,
+	twisted/application/app.py: Changed UID and GID defaults for Process
+	to None.  Changed mktap behavior to not specify UID and GID if they
+	are not given on the command line.  Changed application startup to
+	not change UID or GID if they are not given.  Changed twistd to add
+	UID and GID setting command line arguments.
+
 2005-02-10  Jp Calderone  <exarkun@twistedmatrix.com>
 
 	* twisted/internet/defer.py: DeferredLock, DeferredSemaphore, and
