@@ -1,4 +1,4 @@
-# -*- test-case-name: test_components -*-
+# -*- test-case-name: twisted.test.test_components -*-
 
 # Twisted, the Framework of Your Internet
 # Copyright (C) 2001 Matthew W. Lefkowitz
@@ -86,6 +86,8 @@ class MetaInterface(interface.InterfaceClass):
     def __call__():
         # Copying evil trick I dinna understand
         def __call__(self, adaptable, default=_Nothing, persist=None, registry=None):
+            if hasattr(adaptable, "__class__"):
+                fixClassImplements(adaptable.__class__)
             if registry != None:
                 raise RuntimeError, "registry argument will be ignored"
             # getComponents backwards compat
@@ -218,12 +220,15 @@ class _Wrapper(object):
         self.a = a
 
 
+_fixedClasses = {}
 def fixClassImplements(klass):
-    """Switch class from __implements__."""
+    """Switch class from __implements__ to zope implementation."""
+    if _fixedClasses.has_key(klass):
+        return
     if hasattr(klass, "__implements__") and isinstance(klass.__implements__, (tuple, MetaInterface)):
             warnings.warn("Please use implements(), not __implements__ for class %s" % klass, DeprecationWarning)
             declarations.classImplementsOnly(klass, *tupleTreeToList(klass.__implements__))
-
+            _fixedClasses[klass] = 1
 
 def registerAdapter(adapterFactory, origInterface, *interfaceClasses):
     """Register an adapter class.
@@ -253,6 +258,7 @@ def registerAdapter(adapterFactory, origInterface, *interfaceClasses):
 def getAdapterFactory(fromInterface, toInterface, default):
     """Return registered adapter for a given class and interface.
     """
+    fixClassImplements(fromInterface)
     self = _theAdapterRegistry
     if not issubclass(fromInterface, Interface):
         fromInterface = declarations.implementedBy(fromInterface)
@@ -266,6 +272,7 @@ getAdapterClass = getAdapterFactory
 def getAdapterClassWithInheritance(klass, interfaceClass, default):
     """Return registered adapter for a given class and interface.
     """
+    fixClassImplements(klass)
     adapterClass = getAdapterFactory(klass, interfaceClass, _Nothing)
     if adapterClass is _Nothing:
         for baseClass in reflect.allYourBase(klass):
@@ -284,6 +291,8 @@ def getAdapter(obj, interfaceClass, default=_Nothing,
     the parameter itself if it already implements the interface. If no
     adapter can be found, the 'default' parameter will be returned.
     """
+    if hasattr(obj, '__class__'):
+        fixClassImplements(obj.__class__)
     self = _theAdapterRegistry
     if interfaceClass.providedBy(obj):
         return obj
@@ -305,8 +314,12 @@ def getAdapter(obj, interfaceClass, default=_Nothing,
 
 _theAdapterRegistry = ZopeAdapterRegistry()
 # add global adapter lookup hook for our newly created registry
-def _hook(iface, ob):
-    return getAdapter(ob, iface, default=None, persist=False)
+def _hook(iface, ob, lookup=_theAdapterRegistry.lookup1):
+    factory = lookup(declarations.providedBy(ob), iface)
+    if factory is None:
+        return None
+    else:
+        return factory(ob)
 interface.adapter_hooks.append(_hook)
 
 # public zopey registration hook
@@ -404,6 +417,8 @@ class Componentized(styles.Versioned):
     def setComponent(self, interfaceClass, component):
         """
         """
+        if hasattr(component, "__class__"):
+            fixClassImplements(component.__class__)
         self._adapterCache[reflect.qual(interfaceClass)] = component
 
     def addComponent(self, component, ignoreClass=0, registry=None):
@@ -411,7 +426,7 @@ class Componentized(styles.Versioned):
         Add a component to me, for all appropriate interfaces.
 
         In order to determine which interfaces are appropriate, the component's
-        __implements__ attribute will be scanned.
+        provided interfaces will be scanned.
 
         If the argument 'ignoreClass' is True, then all interfaces are
         considered appropriate.
@@ -422,6 +437,8 @@ class Componentized(styles.Versioned):
 
         @return: the list of appropriate interfaces
         """
+        if hasattr(component, "__class__"):
+            fixClassImplements(component.__class__)
         for iface in declarations.providedBy(component):
             if (ignoreClass or
                 (self.locateAdapterClass(self.__class__, iface, None, registry)
@@ -473,13 +490,14 @@ class Componentized(styles.Versioned):
             return self._adapterCache[k]
         else:
             adapter = interface.__adapt__(self)
+            if hasattr(adapter, "__class__"):
+                fixClassImplements(adapter.__class__)
             if adapter is not None and adapter is not _Nothing and not (
                 hasattr(adapter, "temporaryAdapter") and
                 adapter.temporaryAdapter):
                 self._adapterCache[k] = adapter
                 if (hasattr(adapter, "multiComponent") and
-                    adapter.multiComponent and
-                    hasattr(adapter, '__implements__')):
+                    adapter.multiComponent):
                     self.addComponent(adapter)
             return adapter
 
