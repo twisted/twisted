@@ -259,6 +259,7 @@ class SMTPClient(basic.LineReceiver):
         self.transport.loseConnection()
 
     def smtpCode_default(self, line):
+        print "SMTPClient got unexpected message from server --", line
         self.transport.loseConnection()
 
     def sendToOrData(self):
@@ -275,6 +276,9 @@ class SMTPClient(basic.LineReceiver):
 
     def smtpCode_250_to(self, line):
         self.successAddresses.append(self.lastAddress)
+        self.sendToOrData()
+
+    def smtpCode_550_to(self, line):
         self.sendToOrData()
         
     def smtpCode_354_data(self, line):
