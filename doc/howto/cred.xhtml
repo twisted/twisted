@@ -10,30 +10,39 @@
 
     <h2>Goals</h2>
 
-<p>Cred is an pluggable authentication system for servers. It allows a
-protocol to take credentials, such as a username/password pair, and
-login, getting back a business logic object specific to that protocol
-and <q>user</q>. For example, POP3 might pass username and password and get
-back a mailbox object for the specified email account. Cred is
-designed to allow both the backend implementation of the business
-logic - called the <em>avatar</em> - and the authentication database to be
-decided during deployment. For example, the same POP3 server should be
-able to authenticate against /etc/passwd or an LDAP server without
-having to know anything about how or where mail is stored.  </p>
+<p>Cred is an pluggable authentication system for servers.  It allows any
+number of network protocols to connect and authenticate to a system, and
+communicate to those aspects of the system which are meaningful to the specific
+protocol.  For example, Twisted's POP3 support passes a <q>username and
+password</q> set of credentials to get back a mailbox for the specified email
+account.  IMAP does the same, but retrieves a slightly different view of the
+same mailbox, enabling those features specific to IMAP which are not available
+in other mail protocols.</p>
 
-<p>To sketch out how this works - a realm is in charge of avatars,
-business logic objects.  A portal stores a realm, and a number of
-credential checkers. A protocol stores a reference to the
-portal. Login consists of passing credentials and a request interface
-(e.g. IMailbox) to the portal. The portal passes the credentials to
-the appropriate credential checker, which returns an avatar ID. The ID
-is passed to the realm, which returns the appropriate avatar.  For a
-Portal that has a realm that creates mailbox objects and a credential
-checker that checks /etc/passwd, login consists of passing in a
-username/password and the IMailbox interface to the portal. The portal
-passes this to the /etc/passwd credential checker, gets back a avatar
-ID corresponding to an email account, passes that to the realm and
-gets back a mailbox object for that email account.</p>
+<p>Cred is designed to allow both the backend implementation of the business
+logic - called the <em>avatar</em> - and the authentication database - called
+the <em>credential checker</em> - to be decided during deployment. For example,
+the same POP3 server should be able to authenticate against the local UNIX
+password database or an LDAP server without having to know anything about how
+or where mail is stored.  </p>
+
+<p>To sketch out how this works - a <q>Realm</q> corresponds to an application
+domain and is in charge of avatars, which are network-accessible business logic
+objects.  To connect this to an authentication database, a top-level object
+called a <code class="API" base="twisted.cred.portal">Portal</code> stores a
+realm, and a number of credential checkers.  Something that wishes to log in,
+such as a <code class="API" base="twisted.internet.protocol">Protocol</code>,
+stores a reference to the portal. Login consists of passing credentials and a
+request interface (e.g. POP3's <code class="API"
+base="twisted.protocols.pop3">IMailbox</code>) to the portal. The portal passes
+the credentials to the appropriate credential checker, which returns an avatar
+ID. The ID is passed to the realm, which returns the appropriate avatar.  For a
+Portal that has a realm that creates mailbox objects and a credential checker
+that checks /etc/passwd, login consists of passing in a username/password and
+the IMailbox interface to the portal. The portal passes this to the /etc/passwd
+credential checker, gets back a avatar ID corresponding to an email account,
+passes that to the realm and gets back a mailbox object for that email
+account.</p>
 
     <h2>Cred objects</h2>
     <h3>The Portal</h3>
@@ -72,41 +81,6 @@ when the protocol is disconnected or logged out, etc..</p>
 <p>which adds a CredentialChecker to the portal. The optional list of interfaces are interfaces of credentials
 that the checker is able to check.</p>
 </li></ul>
-
-    <h3>The Mind</h3>
-
-<p>As mentioned before, the mind is usually None, so you can skip this
-bit if you want.</p>
-
-<p>Masters of Perspective Broker already know this object as the ill-named 
-<q>client object</q>.  There is no <q>mind</q> class, or even interface, but it 
-is an object which serves an important role - any notifications which 
-are to be relayed to an authenticated client are passed through a 
-'mind'. In addition, it allows passing more information to the realm during 
-login in addition to the avatar ID.</p>
-
-<p>The name may seem rather unusual, but considering that a Mind is 
-representative of the entity on the <q>other end</q> of a network connection
-that is both receiving updates and issuing commands, I believe it is 
-appropriate.</p>
-
-<p>Although many protocols will not use this, it serves an important role. 
-  It is provided as an argument both to the Portal and to the Realm, 
-although a CredentialChecker should interact with a client program 
-exclusively through a Credentials instance.</p>
-
-<p>Unlike the original Perspective Broker <q>client object</q>, a Mind's 
-implementation is most often dictated by the protocol that is 
-connecting rather than the Realm.  A Realm which requires a particular 
-interface to issue notifications will need to wrap the Protocol's mind 
-implementation with an adapter in order to get one that conforms to its 
-expected interface - however, Perspective Broker will likely continue 
-to use the model where the client object has a pre-specified remote 
-interface.</p>
-
-<p>(If you don't quite understand this, it's fine.  It's hard to explain, 
-and it's not used in simple usages of cred, so feel free to pass None 
-until you find yourself requiring something like this.)</p>
 
     <h3>The CredentialChecker</h3>
 <p>This is an object implementing <code class="API"
@@ -172,6 +146,41 @@ return a Deferred or a synchronous result.</p>
 a mailbox, for a first-person-shooter it's the object that interacts with
 the game, the actor as it were. Avatars are specific to an application,
 and each avatar represents a single <q>user</q>.</p>
+
+    <h3>The Mind</h3>
+
+<p>As mentioned before, the mind is usually None, so you can skip this
+bit if you want.</p>
+
+<p>Masters of Perspective Broker already know this object as the ill-named
+<q>client object</q>.  There is no <q>mind</q> class, or even interface, but it
+is an object which serves an important role - any notifications which are to be
+relayed to an authenticated client are passed through a 'mind'. In addition, it
+allows passing more information to the realm during login in addition to the
+avatar ID.</p>
+
+<p>The name may seem rather unusual, but considering that a Mind is 
+representative of the entity on the <q>other end</q> of a network connection
+that is both receiving updates and issuing commands, I believe it is 
+appropriate.</p>
+
+<p>Although many protocols will not use this, it serves an important role. 
+  It is provided as an argument both to the Portal and to the Realm, 
+although a CredentialChecker should interact with a client program 
+exclusively through a Credentials instance.</p>
+
+<p>Unlike the original Perspective Broker <q>client object</q>, a Mind's 
+implementation is most often dictated by the protocol that is 
+connecting rather than the Realm.  A Realm which requires a particular 
+interface to issue notifications will need to wrap the Protocol's mind 
+implementation with an adapter in order to get one that conforms to its 
+expected interface - however, Perspective Broker will likely continue 
+to use the model where the client object has a pre-specified remote 
+interface.</p>
+
+<p>(If you don't quite understand this, it's fine.  It's hard to explain, 
+and it's not used in simple usages of cred, so feel free to pass None 
+until you find yourself requiring something like this.)</p>
 
     <h2>Responsibilities</h2>
 
