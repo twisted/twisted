@@ -701,6 +701,8 @@ class TestInternet2(unittest.TestCase):
             trans.insert(0, "Generic")
         for tran in trans:
             for side in 'Server Client'.split():
+                if tran == "Multicast" and side == "Client":
+                    continue
                 self.assert_(hasattr(internet, tran+side))
                 method = getattr(internet, tran+side).method
                 prefix = {'Server': 'listen', 'Client': 'connect'}[side]

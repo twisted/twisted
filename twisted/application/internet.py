@@ -104,13 +104,15 @@ on arguments to the reactor method.
 
 # TCPServer TCPClient UNIXServer UNIXClient SSLServer SSLClient
 # UDPServer UDPClient UNIXDatagramServer UNIXDatagramClient
-# MulticastServer MulticastClient
+# MulticastServer
 #
 # This message brought to you by the Twisted Committee for Better Grepping
 
 import new
 for tran in 'Generic TCP UNIX SSL UDP UNIXDatagram Multicast'.split():
     for side in 'Server Client'.split():
+        if tran == "Multicast" and side == "Client":
+            continue
         base = globals()['_Abstract'+side]
         method = {'Generic': 'With'}.get(tran, tran)
         doc = _doc[side]%vars()
