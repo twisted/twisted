@@ -64,7 +64,7 @@ class ADBAPITestBase:
         for i in range(self.num_iterations):
             sql = "insert into simple(x) values(%d)" % i
             inserts.append(self.dbpool.runOperation(sql))
-        unittest.wait(defer.gatherResults(inserts))
+        unittest.wait(defer.gatherResults(inserts), timeout=self.num_iterations / 5.0)
         del inserts
 
         # make sure they were added (runQuery)
