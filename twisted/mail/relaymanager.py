@@ -426,7 +426,6 @@ class MXCalculator:
     def __init__(self, resolver = None):
         self.badMXs = {}
         if resolver is None:
-            import pdb; pdb.Pdb().set_trace()
             from twisted.names.client import createResolver
             resolver = createResolver()
         self.resolver = resolver
