@@ -31,9 +31,12 @@ sys.path.insert(0, os.curdir)
 # The Twisted release script. This is terribly unix-centric.
 #
 
-from twisted.python import usage
+from twisted.python import usage, util
 
 import string, os, shutil
+
+# magic for CVS guessing
+defaultRoot = open(util.sibpath(sys.argv[0], 'CVS/Root')).read().strip()
 
 class Options(usage.Options):
     optParameters = [['version', 'v', None,
@@ -45,7 +48,7 @@ class Options(usage.Options):
                      ['release', 'r', os.path.expanduser('~/Releases'),
                       "The directory where your Twisted release archive is (only relevant for --rel)."],
 
-                     ['cvsroot', 'c', '/cvs', "The CVSROOT to export from. (only revelant for --exp)."],
+                     ['cvsroot', 'c', defaultRoot, "The CVSROOT to export from. (only revelant for --exp)."],
 
                      ['root', 't', 'Twisted.CVS', "The directory that your CVS checkout is."]]
 
@@ -143,13 +146,13 @@ def replaceInFile(filename, oldstr, newstr):
 def checkout(opts):
     print "checkout"
     root = opts['cvsroot']
-    sh('cvs -d%s co Twisted' % (root))
+    sh('cvs -d %s co Twisted' % (root))
     sh('mv Twisted %s' % opts['root'])
 
 def updateVersions(opts):
     print "updateVersions"
     from twisted.copyright import version
-    oldver = version.replace('.', '_')
+    oldver = version # version.replace('.', '_')
     newver = opts['version']
    
     r = opts['root']
@@ -157,6 +160,7 @@ def updateVersions(opts):
     files = ('README', 'doc/howto/installing-twisted.html', 'twisted/copyright.py')
     for file in files:
         replaceInFile(file, oldver, newver)
+    sh('cvs diff')
     sh('cvs commit %s' % ' '.join(files), 1)
     os.chdir('..')
 
@@ -173,12 +177,12 @@ def exportCVS(opts):
     sh('cvs -d%s export -r release-%s Twisted' % (root, ver.replace('.', '_')))
 
 
-    from twisted import copyright
-    if opts['version'] != copyright.version:
-        print '''Error: the version you passed in is not the same as copyright.version:
-        -v %s, copyright.version %s''' % (opts['version'], copyright.version)
-        print "Please make sure you've updated the README, the ChangeLog, and copyright.py!"
-        sys.exit(2)
+##     from twisted import copyright
+##     if opts['version'] != copyright.version:
+##         print '''Error: the version you passed in is not the same as copyright.version:
+##         -v %s, copyright.version %s''' % (opts['version'], copyright.version)
+##         print "Please make sure you've updated the README, the ChangeLog, and copyright.py!"
+##         sys.exit(2)
 
 def copyDist(opts):
     ver = opts['version']
