@@ -21,7 +21,7 @@ command line of your program. You use it by subclassing
 Options with certain methods/attributes defined. Here's
 an example::
 
-    from twisted import usage
+    from twisted.python import usage
     import sys
     class MyOptions(usage.Options):
         optFlags = [["hello", "h"], ["goodbye", "g"]]
