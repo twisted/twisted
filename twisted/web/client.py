@@ -362,13 +362,15 @@ def _parse(url, defaultPort=None):
         port = int(port)
     return scheme, host, port, path
 
-def getPage(url, contextFactory=None, *args, **kwargs):
-    '''download a web page
 
-    Download a page. Return a deferred, which will
-    callback with a page or errback with a description
-    of the error.
-    '''
+def getPage(url, contextFactory=None, *args, **kwargs):
+    """Download a web page as a string.
+
+    Download a page. Return a deferred, which will callback with a
+    page (as a string) or errback with a description of the error.
+
+    See HTTPClientFactory to see what extra args can be passed.
+    """
     scheme, host, port, path = _parse(url)
     factory = HTTPClientFactory(url, *args, **kwargs)
     if scheme == 'https':
@@ -380,7 +382,14 @@ def getPage(url, contextFactory=None, *args, **kwargs):
         reactor.connectTCP(host, port, factory)
     return factory.deferred
 
+
 def downloadPage(url, file, contextFactory=None, *args, **kwargs):
+    """Download a web page to a file.
+
+    @param file: path to file on filesystem, or file-like object.
+    
+    See HTTPDownloader to see what extra args can be passed.
+    """
     scheme, host, port, path = _parse(url)
     factory = HTTPDownloader(url, file, *args, **kwargs)
     if scheme == 'https':
