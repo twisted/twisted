@@ -820,7 +820,7 @@ class LiveFireExercise(unittest.TestCase):
         
         f = insServ.getSMTPFactory()
         from twisted.internet import reactor
-        self.insServer = reactor.listenTCP(8888, f, interface='127.0.0.1')
+        self.insServer = reactor.listenTCP(0, f, interface='127.0.0.1')
         
         # Here is the service the previous one will connect to for final
         # delivery
@@ -835,7 +835,7 @@ class LiveFireExercise(unittest.TestCase):
         helper = mail.relaymanager.RelayStateHelper(manager, 1, 'RelayStateHelper B', None)
         
         f = destServ.getSMTPFactory()
-        self.destServer = reactor.listenTCP(9999, f, interface='127.0.0.1')
+        self.destServer = reactor.listenTCP(0, f, interface='127.0.0.1')
         
         # Update the port number the *first* relay will connect to, because we can't use
         # port 25
