@@ -83,6 +83,9 @@ class DelayedCall:
             return cmp((self.time, self.func, self.args, self.kw), (other.time, other.func, other.args, other.kw))
         raise TypeError
 
+    def __str__(self):
+        return "<DelayedCall [%ds] %s%s>" % (self.time - time(),
+                                             self.func, self.args)
 
 class ReactorBase:
     """Default base class for Reactors.
@@ -297,6 +300,9 @@ class ReactorBase:
         warnings.warn("reactor.cancelCallLater(callID) is deprecated - use callID.cancel() instead")
         callID.cancel()
 
+    def getDelayedCalls(self):
+        return tuple(self._pendingTimedCalls)
+    
     def timeout(self):
         if self._pendingTimedCalls:
             t = self._pendingTimedCalls[0].time - time()

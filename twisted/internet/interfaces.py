@@ -366,6 +366,14 @@ class IReactorTime(Interface):
             @raise ValueError: if the callID is not recognized.
         """
 
+    def getDelayedCalls(self):
+        """Retrieve a list of all delayed calls.
+
+        @returns: A tuple of all L{IDelayedCall} objects that are currently
+                  scheduled. This is everything that has been returned by
+                  C{callLater} but not yet called or canceled.
+        """
+        
 
 class IDelayedCall(Interface):
     """A scheduled call.
