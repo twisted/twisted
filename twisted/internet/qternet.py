@@ -159,6 +159,10 @@ class QTReactor(default.PosixReactorBase):
             _timer = None
 
     def doIteration(self, delay=0.0):
+        if delay is None:
+            delay = 1000
+        else:
+            delay = int(delay * 1000)
         self.qApp.processEvents(delay)
     
     def run(self):
