@@ -18,8 +18,8 @@ Twisted is a framework that allows programmers to develop <a
 href="async.xhtml">asynchronous</a> networked programs. <code
 class="API">twisted.internet.defer.Deferred</code> objects are one of the key
 concepts that you should understand in order to develop asynchronous code that
-uses the Twisted framework: they are a signal to the event loop that a result
-is pending.
+uses the Twisted framework: they are a signal to the calling function that a
+result is pending.
 </p>
 
 <p>
@@ -65,8 +65,8 @@ returning to that process.
 </p>
 
 <p>
-In Twisted, a function signals to the main event loop that it is waiting by
-returning a Deferred. When that data is available, the event loop activates
+In Twisted, a function signals to the calling function that it is waiting by
+returning a Deferred. When that data is available, the program activates
 the callbacks on that Deferred to process the data.
 </p>
 
