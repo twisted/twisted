@@ -244,7 +244,7 @@ class SSHTestServerSession(connection.SSHChannel):
         log.msg('execing %s' % (program,))
         self.client = session.SSHSessionClient()
         reactor.spawnProcess(session.SSHSessionProtocol(self, self.client), \
-                             program[0], program, {}, '/tmp', usePTY = 1)
+                             program[0], program, {}, '/tmp')
         return 1
         
 class SSHTestClientConnection(connection.SSHConnection):
@@ -361,7 +361,8 @@ class SSHTestEchoChannel(connection.SSHChannel):
         if status != 0:
             theTest.fail('echo exit status was not 0: %i' % status)
             reactor.crash()
-        if self.buf != 'hello\r\n':
+        self.buf = self.buf.replace('\r\n', '\n')
+        if self.buf != 'hello\n':
             theTest.fail('echo did not return hello: %s' % repr(self.buf))
             reactor.crash()
 
@@ -423,7 +424,8 @@ class SSHTestOpenSSHProcess(protocol.ProcessProtocol):
         global theTest
         self.done = 1
         theTest.assertEquals(reason.value.exitCode, 0, 'exit code was not 0: %i' % reason.value.exitCode)
-        theTest.assertEquals(self.buf, 'hello\r\n')
+        self.buf = self.buf.replace('\r\n', '\n')
+        theTest.assertEquals(self.buf, 'hello\n')
 
 class SSHTransportTestCase(unittest.TestCase):
 
