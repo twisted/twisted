@@ -14,28 +14,22 @@
 # You should have received a copy of the GNU Lesser General Public
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
-
 """
-I am the support module for making a port forwarder with mktap.
+Support module for making a port forwarder with mktap.
 """
-
 from twisted.protocols import portforward
 from twisted.python import usage
 from twisted.application import strports
 
-
 class Options(usage.Options):
     synopsis = "Usage: mktap portforward [options]"
-
-    optParameters = [["port", "p", 6666,"Set the port number."],
-	  ["host", "h", "localhost","Set the host."],
-	  ["dest_port", "d", 6665,"Set the destination port."]]
-
     longdesc = 'Port Forwarder.'
+    optParameters = [
+          ["port", "p", "6666","Set the port number."],
+          ["host", "h", "localhost","Set the host."],
+          ["dest_port", "d", 6665,"Set the destination port."],
+    ]
 
 def makeService(config):
-    port, host, dest_port = (config['port'], config['host'],
-                                                  int(config['dest_port']))
-    return strports.service(port, portforward.ProxyFactory(host, dest_port))
-
-
+    f = portforward.ProxyFactory(config['host'], int(config['dest_port']))
+    return strports.service(config['port'], f)
