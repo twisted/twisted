@@ -168,7 +168,7 @@ class UserStateSender(pb.Avatar):
         return self._sendUserStateWithID(self.id, state, opj(self.dir, self.path))
     
     def _sendUserStateWithID(self, id, state, path):
-        return self.client.callRemote("takeUser", id, state, path)
+        return self.client.callRemote("takeResponsibility", id, state, path)
 
 class Realm:
     __implements__ = (portal.IRealm,)

@@ -126,7 +126,7 @@ class UserStateReceiver(pb.Referenceable):
         self.stateReceived(p.load())
         return True
 
-    def remote_takeUser(self, id, state, path):
+    def remote_takeResponsibility(self, id, state, path):
         d = defer.Deferred()
         f = FileDescriptorRequestFactory(id, d)
         client = UNIXClient(path, f, 60).startService()
