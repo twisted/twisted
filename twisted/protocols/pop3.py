@@ -109,6 +109,7 @@ class POP3(basic.LineReceiver):
 
     magic = None
     _userIs = None
+    _onLogout = None
     highest = 0
     
     # A reference to the newcred Portal instance we will authenticate
@@ -121,6 +122,10 @@ class POP3(basic.LineReceiver):
         self.mbox = None
         self.successResponse(self.magic)
         log.msg("New connection from " + str(self.transport.getPeer()))
+
+    def connectionLost(self, reason):
+        if self._onLogout is not None:
+            self._onLogout()
 
     def successResponse(self, message=''):
         self.sendLine('+OK ' + str(message))
