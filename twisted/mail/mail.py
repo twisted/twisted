@@ -18,7 +18,19 @@
 """Mail support for twisted python.
 """
 
-from twisted.protocols import protocol
+# Twisted imports
+from twisted.protocols import protocol, pop3, smtp
+from twisted.cred import service
+from twisted.manhole import coil
+from twisted.python import roots
+
+# Sibling imports
+import maildir
+
+# System imports
+import types
+import os
+
 
 def createDomainsFactory(protocol_handler, domains):
     '''create a factory with a given protocol handler and a domains attribute
@@ -32,8 +44,87 @@ def createDomainsFactory(protocol_handler, domains):
     ret.domains = domains
     return ret
 
-class DomainWithDefaultDict:
 
+class POP3Factory(protocol.ServerFactory, coil.Configurable):
+    """Protocol for POP3 servers."""
+    
+    protocol = pop3.VirtualPOP3
+    configName = "POP3 Server"
+    configCreatable = 0
+
+coil.registerClass(POP3Factory)
+
+
+class SMTPFactory(protocol.ServerFactory, coil.Configurable):
+    """Protocol for SMTP servers."""
+    
+    protocol = smtp.DomainSMTP
+    configName = "SMTP Server"
+    configCreatable = 0
+
+coil.registerClass(SMTPFactory)
+
+
+class MailService(service.Service, coil.Configurable, roots.Homogenous):
+    """An email service.
+    
+    Also, a collection of domains.
+    """
+    
+    entityType = maildir.AbstractMaildirDomain
+    
+    # path where email will be stored
+    storagePath = "/tmp/changeme"
+    
+    def __init__(self, name, app):
+        service.Service.__init__(self, name, app)
+        self.domains = DomainWithDefaultDict({}, BounceDomain())
+        self.entities = self.domains.domains # for roots.Homogenous
+        self._setConfigDispensers()
+    
+    # Configuration stuff.
+    def _setConfigDispensers(self):
+        self.configDispensers = [
+            ['makePOP3Server', POP3Factory, "POP3 server %s" % self.serviceName],
+            ['makeSMTPServer', SMTPFactory, "SMTP server for %s" % self.serviceName]
+            ]
+
+    def makePOP3Server(self):
+        f = POP3Factory()
+        f.domains = self.domains
+        return f
+    
+    def makeSMTPServer(self):
+        f = SMTPFactory()
+        f.domains = self.domains
+        return f
+    
+    def configInit(self, container, name):
+        self.__init__(name, container.app)
+
+    def getConfiguration(self):
+        return {"name": self.serviceName,
+                "storagePath": self.storagePath}
+
+    configTypes = {
+        'name': types.StringType,
+        'storagePath': types.StringType,
+        }
+
+    configName = 'Twisted Mail Service'
+
+    def config_name(self, name):
+        raise coil.InvalidConfiguration("You can't change a Service's name.")
+
+    def config_storagePath(self, path):
+        if not os.path.exists(path):
+            os.makedirs(path)
+        self.storagePath = path
+
+coil.registerClass(MailService)
+
+
+class DomainWithDefaultDict:
     '''Simulate a dictionary with a default value for non-existing keys.
     '''
     def __init__(self, domains, default):
@@ -45,6 +136,9 @@ class DomainWithDefaultDict:
 
     def __getitem__(self, name):
         return self.domains.get(name, self.default)
+
+    def __setitem__(self, name, value):
+        self.domains[name] = value
 
 
 class BounceDomain:

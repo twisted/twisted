@@ -21,8 +21,11 @@
 import stat, os, socket, time, md5, string
 from twisted.protocols import pop3
 from twisted.persisted import dirdbm
+from twisted.manhole import coil
+
 
 n = 0
+
 def _generateMaildirName():
     """utility function to generate a unique maildir name
     """
@@ -123,7 +126,7 @@ class MaildirMailbox(pop3.Mailbox):
         self.list[i] = 0
 
 
-class MaildirDirdbmDomain(AbstractMaildirDomain):
+class MaildirDirdbmDomain(AbstractMaildirDomain, coil.Configurable):
     """A Maildir Domain where membership is checked by a dirdbm file
     """
 
@@ -155,7 +158,7 @@ class MaildirDirdbmDomain(AbstractMaildirDomain):
             if not self.postmaster:
                 return None
             name = 'postmaster'
-	dir = os.path.join(self.root, name)
+        dir = os.path.join(self.root, name)
         if not os.path.isdir(dir):
             os.mkdir(dir)
             os.mkdir(os.path.join(dir, 'inbox'))
@@ -179,3 +182,22 @@ class MaildirDirdbmDomain(AbstractMaildirDomain):
         my_digest = string.join(map(lambda x: "%02x"%ord(x), my_digest), '')
         if digest == my_digest:
             return MaildirMailbox(os.path.join(self.root, user, 'inbox'))
+    
+    # config interfaces
+    def configInit(self, container, name):
+        path = os.path.join(container.storagePath, name)
+        if not os.path.exists(path):
+            os.makedirs(path)
+        self.__init__(path)
+
+    def getConfiguration(self):
+        return {"postmaster": self.postmaster}
+
+    configTypes = {"postmaster": "boolean"}
+
+    configName = 'Maildir DBM Domain'
+
+    def config_postmaster(self, postmaster):
+        self.postmaster = postmaster
+
+coil.registerClass(MaildirDirdbmDomain)
