@@ -32,18 +32,19 @@ def checkLicenseFile():
         d = {}
         execfile("twisted-registration", d, d)
     except IOError:
-        sys.stderr.write("""
-NOTICE: This copy of Twisted is UNREGISTERED!  See doc/howto/register.html to
-register your copy today!
+        pass
+        # sys.stderr.write("""
+# NOTICE: This copy of Twisted is UNREGISTERED!  See doc/howto/register.html to
+# register your copy today!
 
-If you believe the LICENSE file or the Twisted Matrix Labs software you have
-received is not legally licensed and/or may be counterfeit, please e-mail
-Twisted Matrix Labs at piracy@twistedmatrix.com.
+# If you believe the LICENSE file or the Twisted Matrix Labs software you have
+# received is not legally licensed and/or may be counterfeit, please e-mail
+# Twisted Matrix Labs at piracy@twistedmatrix.com.
 
-Continuing unregistered...
+# Continuing unregistered...
 
-""")
-        sys.stderr.flush()
+# """)
+        # sys.stderr.flush()
     else:
         try:
             global LICENSE_KEY, \
