@@ -60,6 +60,10 @@ class TestCase:
         if not first == second:
             raise FailTest, (msg or '%r != %r' % (first, second))
 
+    def failUnlessIdentical(self, first, second, msg=None):
+        if first is not second:
+            raise FailTest, (msg or '%r is not %r' % (first, second))
+
     def failIfEqual(self, first, second, msg=None):
         if not first != second:
             raise FailTest, (msg or '%r == %r' % (first, second))
@@ -69,6 +73,7 @@ class TestCase:
     assertRaises = failUnlessRaises
     assert_ = failUnless
     failIfEquals = failIfEqual
+    assertIdentical = failUnlessIdentical
 
     def assertApproximates(self, first, second, tolerance, msg=None):
         if abs(first - second) > tolerance:
