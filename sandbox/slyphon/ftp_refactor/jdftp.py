@@ -41,7 +41,7 @@ from twisted.cred import error, portal, checkers, credentials
 
 # constants
 
-MODULE_DEBUG = None
+MODULE_DEBUG = True
 
 PASV = 1
 ACTV = 2
@@ -218,6 +218,8 @@ class DTPFactoryBogusHostException(Exception):
 class PathBelowTLDException(Exception):
     pass
 
+# ------------------
+
 # -- DTP Protocol --
 
 def _getFPName(fp):
@@ -362,6 +364,8 @@ class FTP(basic.LineReceiver):
     user        = None      # the username of the client connected 
     peerHost    = None      # the (type,ip,port) of the client
     dtpTxfrMode = ACTV      # PASV or ACTV, default ACTV
+    cmdQueue    = []        # a command queue for pipelining 
+    deferred    = None      # used by the command queue
 
     # this provides one place to turn off all debugging code
     # but still allows flexibility when debugging
@@ -380,11 +384,12 @@ class FTP(basic.LineReceiver):
         self.reply(WELCOME_MSG)
         self.peerHost = self.transport.getPeer()
         if self.debug and self.DEBUG_AUTO_ANON_LOGIN:
-            self.ftp_USER('anonymous')
-            self.ftp_PASS('f@d.com')
-            self.ftp_PASV('')
-            self.ftp_LIST('')
-            self.ftp_RETR('.vim/vimrc')
+            lr = self.lineReceived
+            lr('USER anonymous')
+            lr('PASS f@d.com')
+            lr('PASV')
+            lr('LIST')
+            lr('RETR .vim/vimrc')
 
     def connectionLost(self, reason):
         log.msg("Oops! lost connection\n %s" % reason)
@@ -393,18 +398,16 @@ class FTP(basic.LineReceiver):
         # DTP connection and close the port
         if hasattr(self.dtpFactory, 'instance') and self.dtpFactory.instance:
             self.dtpFactory.instance.cleanup()
+            self.dtpFactory
 
     def lineReceived(self, line):
         "Process the input from the client"
-        if self.ANNOYINGLY_VERBOSE:
-            log.msg('received line: %s' % line)
         line = string.strip(line)
         if self.debug:
             log.msg(repr(line))
         command = string.split(line)
         if command == []:
-            self.reply(SYNTAX_ERR, '')
-            return 0
+            return self.reply(SYNTAX_ERR, '')
         commandTmp, command = command[0], ''
         command = commandTmp.encode('ascii', 'discard') 
         command = command.upper()
@@ -416,19 +419,38 @@ class FTP(basic.LineReceiver):
             params = line[string.find(line, ' ')+1:]
         else:
             params = ''
+        try:
+            method = getattr(self, "ftp_%s" % command)
+        except AttributeError, e:
+            self.reply(CMD_NOT_IMPLMNTD, string.upper(command))
+        else:
+            self._queueCommand(method, params)
+
+    def _queueCommand(self, method, args):
         # Does this work at all? Quit at ctrl-D
-        if ( string.find(line, "\x1A") > -1):
-            command = 'Quit'
-        method = getattr(self, "ftp_%s" % command, None)
-        
-        if method:
+        class _:
+            def __init__(self, method, args):
+                self.method = method
+                self.args = args
+        self.cmdQueue.insert(0, _(method, args))
+        if not self.deferred:
+            self.deferred = defer.Deferred()
+            self.deferred.callback(None)
+        self.deferred.addCallback(self._checkCmdQueue).addErrback(self._ebCommand)
+
+    def _ebCommand(self, reason):
+        log.msg('error in command %s' % reason)
+
+    def _checkCmdQueue(self, *args):
+        if len(self.cmdQueue) > 0:
             try:
-                method(params)
+                c = self.cmdQueue.pop()
+                c.method(c.args)
+            # TODO: figure out how to call errback on exception
             except BogusSyntaxException, e:
                 self.reply(SYNTAX_ERR, string.upper(command))
-                return
         else:
-            self.reply(CMD_NOT_IMPLMNTD, string.upper(command))
+            self.deferred = None
 
     def reply(self, key, s = ''):
         if string.find(RESPONSE[key], '%s') > -1:
