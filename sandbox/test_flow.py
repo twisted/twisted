@@ -133,6 +133,20 @@ class FlowTest(unittest.TestCase):
         f.execute(3)
         self.assertEqual(result, [('a',3),('b',3)])
 
+    def testChainContext(self):
+        import operator
+        result = []
+        a = Flow()
+        a.addSequence(CountIterator)
+        a.addReduce(operator.add, 0)
+        a.addCallable(lambda data: result.append(('a',data)))
+        b = Flow()
+        b.addCallable(lambda data: result.append(('b',data)))
+        f = Flow()
+        f.addChain(a,b)
+        f.execute(3)
+        self.assertEqual(result, [('a',6),('b',3)])
+
     def testThreaded(self):
         class CountIterator(ThreadedIterator):
             def next(self): # this is run in a separate thread

@@ -307,7 +307,7 @@ class _Merge(Stage):
                 startArgs = getArgumentCount(start, 0)
                 if startArgs > 0: start = start(flow.context)
                 else: start = start()
-            cntx.addFlush(flow.nextLinkItem(), self.bucket, self.skip)
+            flow.addFlush(flow.nextLinkItem(), self.bucket, self.skip)
             setattr(cntx, self.bucket, start)
         curr = getattr(cntx, self.bucket)
         if self.withContext: curr = self.callable(cntx, curr, data)
@@ -343,12 +343,9 @@ class Context(Stage):
     def __init__(self, onFlush = None):
         self.onFlush = onFlush
 
-    def __call__(self, flow, data):
-        cntx = _Context(flow.context)
-        if self.onFlush: 
-            cntx.addFlush(_LinkItem(self.onFlush))
-        flow.context = cntx
-        flow.push(cntx, cntx.onFlush)
+    def __call__(self, flow, data, mayskip = 0):
+        flow.pushContext()
+        if self.onFlush: flow.addFlush(_LinkItem(self.onFlush))
         flow.push(data)
 
 class Chain(Stage):
@@ -356,15 +353,16 @@ class Chain(Stage):
         flows = list(flows)
         flows.reverse()
         self.flows = flows
-    def __getitem__(self, idx):
-        return self.flows[-idx-1]      
+        self.bucket = str(id(self))
     def __call__(self, flow, data):
-        def start(flow, subflow):
-            curr = subflow._stageHead
-            flow.push(data, curr.stage, curr.next)
-        for item in self.flows:
-            flow.push(item, start)
+        setattr(flow.context, self.bucket, data)
+        for itm in self.flows:
+            flow.push((itm._stageHead,data), self.nextStage)
         flow.push(data, mayskip = 1)
+    def nextStage(self, flow, data):
+        (link, data) = data
+        flow.pushContext()
+        flow.push(data, link.stage, link.next)
 
 class _Stack:
     """ a stack of stages and a means for their application
@@ -382,11 +380,39 @@ class _Stack:
              waitInterval  a useful item to slow the flow
         """
         self._stack   = []
-        self.global_context = _Context(context)
-        self.context = self.global_context
-        self._stack.append((self.context, self.context.onFlush, None))
+        self.root_context = _Context(context)
+        self.context = self.root_context
+        self._stack.append((self.context, self._onFlushContext, None))
         self._stack.append((data, flowitem.stage, flowitem.next))
  
+    def _onFlushContext(self, flow, cntx):
+        """
+           cleans up the context and fires onFlush events
+        """
+        assert flow is self
+        assert flow.context is cntx
+        if not(cntx._flush):
+            flow.context = cntx._parent
+            return 
+        (link, bucket, skip) = cntx._flush.pop(0)
+        data = getattr(cntx, bucket, skip)
+        flow.push(cntx, self._onFlushContext)
+        if data is not skip:
+            assert(callable(link.stage))
+            flow.push(data, link.stage, link.next)
+
+    def pushContext(self):
+        cntx = _Context(self.context, self.root_context)
+        self.context = cntx
+        self.push(cntx, self._onFlushContext)
+
+    def addFlush(self, flowLink, bucket = None, skip = None):
+        """ 
+           registers a flowLink to be executed using data from the
+           given bucket once the context has been popped.
+        """
+        self.context._flush.append((flowLink, bucket, skip))
+     
     def currLinkItem(self): 
         """ returns the current stage in the process """
         return _LinkItem(self._current[1], self._current[2]) 
@@ -410,8 +436,10 @@ class _Stack:
         elif not next:
             next = self._current[2]
         if mayskip and not next: return
+        assert callable(stage)
         self._stack.append((data, stage, next))
-     
+   
+    
     def iterate(self):
         """ executes the current flow"""
         stack = self._stack
@@ -427,32 +455,10 @@ class _Stack:
                 return 1
 
 class _Context:
-    def __init__(self, parent = None):
+    def __init__(self, parent = None, root = None):
         self._parent = parent
         self._flush  = []
-     
-    def addFlush(self, flowLink, bucket = None, skip = None):
-        """ 
-           registers a flowLink to be executed using data from the
-           given bucket once the context has been popped.
-        """
-        self._flush.append((flowLink, bucket, skip))
-     
-    def onFlush(self, flow, cntx):
-        """
-           cleans up the context and fires onFlush events
-        """
-        assert flow.context is self
-        assert flow.context is cntx
-        if not(self._flush):
-            flow.context = self._parent
-            return 
-        (link, bucket, skip) = self._flush.pop(0)
-        data = getattr(self, bucket, skip)
-        flow.push(cntx, self.onFlush)
-        if data is not skip:
-            flow.push(data, link.stage, link.next)
-    
+        self.root = None
     def __getattr__(self, attr):
         return getattr(self._parent, attr)
 
@@ -479,7 +485,7 @@ class _LinkItem:
 
 class TwistedFlow(Flow):
     """ lets Flows run nicely within Twisted """
-    def __init__(self, waitInterval = 0):
+    def __init__(self, waitInterval = .05):
         Flow.__init__(self)
         self._waitInterval = waitInterval
     def execute(self, data = None, context = None):
