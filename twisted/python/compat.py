@@ -20,6 +20,8 @@ Compatability module to provide backwards compatability
 for useful Python features.
 """
 
+
+
 import socket, struct, __builtin__
 
 # Python 2.1 forward-compatibility hacks
@@ -41,6 +43,8 @@ except AttributeError:
 
 try:
     bool = bool
+    True = True
+    False = False
 except NameError:
     def bool(value):
         """Demote a value to 0 or 1, depending on its truth value
@@ -49,6 +53,8 @@ except NameError:
         way too hard to duplicate in 2.1 to be worth the trouble.
         """
         return not not value
+    True = 1==1
+    False = not True
 
 try:
     from socket import inet_pton, inet_ntop
@@ -99,8 +105,7 @@ except TypeError:
 else:
     isinstance = isinstance
 
-
-__all__ = ['dict', 'inet_pton', 'inet_ntop', 'isinstance']
+__all__ = ['dict', 'inet_pton', 'inet_ntop', 'isinstance', 'True', 'False', 'bool']
 
 #if __name__ == '__main__':
 #    print repr(inet_pton(socket.AF_INET, '1.2.3.4'))
