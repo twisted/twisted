@@ -41,7 +41,7 @@ class IPv4Address(object):
     def __getitem__(self, index):
         warnings.warn("IPv4Address.__getitem__ is deprecated.  Use attributes instead.",
                       category=DeprecationWarning, stacklevel=2)
-        return (self._bwHack or self.type, self.host, self.port)[index]
+        return (self._bwHack or self.type, self.host, self.port).__getitem__(index)
 
     def __eq__(self, other):
         if isinstance(other, tuple):
@@ -73,7 +73,7 @@ class UNIXAddress(object):
     def __getitem__(self, index):
         warnings.warn("UNIXAddress.__getitem__ is deprecated.  Use attributes instead.",
                       category=DeprecationWarning, stacklevel=2)
-        return (self._bwHack, self.name)[index]
+        return (self._bwHack, self.name).__getitem__(index)
 
     def __eq__(self, other):
         if isinstance(other, tuple):
