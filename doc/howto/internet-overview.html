@@ -1,0 +1,50 @@
+<?xml version="1.0"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+
+<head><title>Overview of Twisted Internet</title></head>
+<body>
+
+<h1>Overview of Twisted Internet</h1>
+
+<h2>Introduction</h2>
+
+<p>Twisted Internet is a compatible collection of event-loops for Python.
+It contains the code to dispatch events to interested observers, and a portable
+API so that observers need not care about which event loop is running. Thus,
+it is possible to use the same code for different loops, from Twisted's basic,
+yet portable, <code>select</code>-based loop to the loops of various GUI
+toolkits like GTK+ or Tk. Twisted Internet also contains a powerful persistence
+API so that network programs can be shutdown and then resurrected with most
+of the code unaware of this.</p>
+
+<h2>Twisted Internet Interfaces</h2>
+
+<p>Twisted Internet contains the various interfaces to the reactor
+API, whose usage is documented in the low-level chapter. Those APIs
+are <code>IReactorCore</code>, <code>IReactorTCP</code>,
+<code>IReactorSSL</code>, <code>IReactorUNIX</code>, <code>IReactorUDP</code>,
+<code>IReactorTime</code>, <code>IReactorProcess</code> and
+<code>IReactorThreads</code>. The reactor APIs allow non-persistent calls
+to be made.</p>
+
+<p>Twisted Internet also covers the interfaces for the various transports,
+in <code>ITransport</code> and friends. These interfaces allow Twisted
+network code to be written without regard to the underlying implementation
+of the transport.</code> 
+
+<p>The <code>IProtocolFactory</code> dictates how factories, which are usually
+a large part of third party code , are written.</p>
+
+<h2>Twisted Internet Application</h2>
+
+<p>The <code>app.Application</code> class allows for a similar API to the
+reactor, which is automatically persistent. Applications usually persist
+and resurrect automatically, depending on the usage. See
+<a href="application.html">the Application documentation</a> for more
+information.</p>
+
+</body></html>
+
