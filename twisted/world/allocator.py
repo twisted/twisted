@@ -17,6 +17,7 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 #
 
+from __future__ import generators
 
 # Twisted Imports
 
@@ -98,20 +99,20 @@ class FragmentFile(Storable):
             if self.allocs.getAt(n, "oid") == oid:
                 return n
 
-    def reallocateSpace(self, oid, begin, oldSize, newSize):
+    def reallocateSpace(self, oid, begin, oldSize, newSize, allocIndex):
         """Attempt to expand some already-allocated space forwards (move its
         end to a higher location in the file).  This means we have to either
         find a fragment that's bumping up against the beginning or end of the
         already-allocated space, or the already-allocated space is touching the
         end of the file.  If my attempt to request more space was successful, I
-        will return True, otherwise, False.
+        will return the allocated size, otherwise, None.
         """
         assert newSize > oldSize, "expanding only goes OUT"
         # first, let's see if we're at the end of the file.
         oldAllocEnd = (begin + oldSize)
-        allocIndex = self._findOIDIndex(oid)
+        # allocIndex = self._findOIDIndex(oid)
+        assert self.allocs.getAt(allocIndex, "oid") == oid, "OID %s claims to own space at %s in %s but does not" % (oid, begin, self)
         if oldAllocEnd == self.fileSize:
-            assert allocIndex is not None, "OID %s claims to own space at %s in %s but does not" % (oid, begin, self)
             self.allocs.setAt(allocIndex, "length", newSize)
             self.fileSize += (newSize - oldSize)
             return newSize
@@ -145,22 +146,24 @@ class FragmentFile(Storable):
         while x < self.fragmentCount:
             offset, length = self.fragments[x]
             if length >= sz:
-                rtrn = offset, length
-                self.allocs[self.allocCount] = oid, offset, length
+                allocIndex = self.allocCount
                 self.allocCount = self.allocCount + 1
+                self.allocs[allocIndex] = oid, offset, length
                 # TODO: we shouldn't ALWAYS kill the whole fragment.  depending
                 # on some heuristics (the lack of which is why this TODO isn't
                 # implemented) we should shorten the fragment towards the
                 # beginning or end but not necessarily eliminate it.
+                rtrn = offset, length, allocIndex
                 self.packFragments(x)
                 return rtrn
             x += 1
         # just chop some space at the end of the file
         offset = self.fileSize
-        self.allocs[self.allocCount] = oid, offset, sz
+        allocIndex = self.allocCount
         self.allocCount += 1
+        self.allocs[allocIndex] = oid, offset, sz
         self.fileSize += sz
-        return offset, sz
+        return offset, sz, allocIndex
 
     def overlapSanityCheck(self):
         # l = [0] * self.fileSize
@@ -188,29 +191,33 @@ class FragmentFile(Storable):
         return rv
 
 
-    def free(self, oid, offset, sz):
-        for x in xrange(self.allocCount):
-            aoid, aoffset, asz = self.allocs[x]
-            if aoid == oid:
-                assert ((asz == sz) and (offset == aoffset)), (
-                    "allocated size reported by object "
-                    "and by fragment file are not the same")
-                self.allocs[x] = 0, 0, 0
-                if x == (self.allocCount - 1):
-                    self.allocCount -= 1
-                self.fragments[self.fragmentCount] = aoffset, asz
-                self.fragmentCount += 1
-                return
+    def free(self, oid, offset, sz, dx):
+        aoid, aoffset, asz = self.allocs[dx]
+        assert ((asz == sz) and (offset == aoffset) and aoid == oid), (
+            "allocated size reported by object "
+            "and by fragment file are not the same")
+        self.allocs[dx] = 0, 0, 0
+        if dx == (self.allocCount - 1):
+            self.allocCount -= 1
+        self.fragments[self.fragmentCount] = aoffset, asz
+        self.fragmentCount += 1
+        return
 
+def _fliter(db):
+    fls = db.queryClassSelect(FragmentFile)
+    for fl in fls:
+        yield fl
+    yield FragmentFile(db)
 
 class Allocation(Storable):
     """I am an object that allocates some space.
     """
     __schema__ = {
         'fragfile': FragmentFile,
-        'allocBegin': int,
-        'allocLength': int,
-        'contentLength': int,
+        'allocBegin': int, # beginning (offset in bytes) of allocated space
+        'allocLength': int, # length (in bytes) of allocated space
+        'allocIndex': int, # index (in records) of alloc record in fragfile
+        'contentLength': int, # length of content (in bytes) within allocation
     }
 
     def __init__(self, db, initialPad=10):
@@ -218,6 +225,7 @@ class Allocation(Storable):
         self.allocBegin = 0
         self.allocLength = 0
         self.contentLength = 0
+        self.allocIndex = 0
         db.insert(self)
         self.findFragFile(initialPad)
         self.__awake__()
@@ -227,28 +235,27 @@ class Allocation(Storable):
         for me.
         """
         if howBig == 0:
-            if self.fragfile:
+            if self.fragfile is not None:
                 self.free()
+                self.fragfile = None
             else:
                 self.allocLength = 0
                 self.allocBegin = 0
+                self.allocIndex = 0
                 self.contentLength = 0
+            return
         db = self.getDatabase()
-        fragFiles = db.queryClassSelect(FragmentFile)
+        fragFiles = _fliter(db)
         # TODO: scale better...
         for fl in fragFiles:
             sp = fl.findSpace(self._inmem_oid, howBig)
             if sp is not None:
-                offset, actual = sp
+                offset, actual, index = sp
                 self.allocBegin = offset
                 self.allocLength = actual
+                self.allocIndex = index
                 self.fragfile = fl
                 break
-        else:
-            self.fragfile = FragmentFile(db)
-            offset, actual = self.fragfile.findSpace(self._inmem_oid, howBig)
-            self.allocBegin = offset
-            self.allocLength = actual
 
     def getDataFile(self):
         if self.fragfile is None:
@@ -268,44 +275,50 @@ class Allocation(Storable):
             howMuch = 10 # small initial pad
         oldAllocBegin = self.allocBegin
         oldAllocLength = self.allocLength
+        oldAllocIndex = self.allocIndex
         oldFragFile = self.fragfile
-        dat = self.fragfile.reallocateSpace(self._inmem_oid,
-                                        oldAllocBegin,
-                                        oldAllocLength,
-                                        self.allocLength + howMuch)
-        if dat is not None:
-            # best case: we don't have to copy anything
-            self.allocLength = dat
-        else:
-            dat2 = self.fragfile.findSpace(self._inmem_oid,
+        dat = None
+        if self.fragfile is not None:
+            dat = self.fragfile.reallocateSpace(self._inmem_oid,
+                                                oldAllocBegin, oldAllocLength,
+                                                self.allocLength + howMuch,
+                                                self.allocIndex)
+            if dat is not None:
+                # best case: we don't have to copy anything
+                self.allocLength = dat
+                return
+            dat = self.fragfile.findSpace(self._inmem_oid,
                                            self.allocLength + howMuch)
-            if dat2 is not None:
+            if dat is not None:
                 # slightly worse case: we have to move the data within a file
-                offset, length = dat2
+                offset, length, index = dat
                 olddf = self.getDataFile()
                 self.allocBegin = offset
                 self.allocLength = length
+                self.allocIndex = index
                 newdf = self.getDataFile()
                 # assert olddf is newdf
-            else:
-                # worst case: we have to copy all the data between files
-                olddf = self.getDataFile()
-                self.findFragFile(self.allocLength + howMuch)
-                newdf = self.getDataFile()
-            # copy data now - better strategy later
-            # TODO: this is not very scalable
-            olddf.seek(oldAllocBegin)
-            allocdata = olddf.read(self.contentLength)
-            newdf.seek(self.allocBegin)
-            newdf.write(allocdata)
-            oldFragFile.free(self._inmem_oid,
-                             oldAllocBegin,
-                             oldAllocLength)
+        if oldFragFile is None or dat is None:
+            # worst case: we have to copy all the data between files
+            olddf = self.getDataFile()
+            self.findFragFile(self.allocLength + howMuch)
+            newdf = self.getDataFile()
+        # copy data now - better strategy later
+        # TODO: this is not very scalable
+        olddf.seek(oldAllocBegin)
+        allocdata = olddf.read(self.contentLength)
+        newdf.seek(self.allocBegin)
+        newdf.write(allocdata)
+        if oldFragFile is not None:
+            oldFragFile.free(self._inmem_oid, oldAllocBegin,
+                             oldAllocLength, oldAllocIndex)
 
     def free(self):
-        self.fragfile.free(self._inmem_oid, self.allocBegin, self.allocLength)
+        self.fragfile.free(self._inmem_oid, self.allocBegin,
+                           self.allocLength, self.allocIndex)
         self.allocBegin = 0
         self.allocLength = 0
+        self.allocIndex = 0
 
 
 class StringStore(Allocation):

@@ -426,13 +426,13 @@ class TestFixedClasses(unittest.TestCase):
         allocz = []
         for x in range(10):
             oid = u()
-            offt, size = ff.findSpace(oid, 10)
+            offt, size, index = ff.findSpace(oid, 10)
             self.failUnless(size >= 10)
-            allocz.append((oid, offt, size))
+            allocz.append((oid, offt, size, index))
         r0_10_2 = range(0,10,2)
         for x in r0_10_2:
-            oid, offt, size = allocz[x]
-            ff.free(oid, offt, size)
+            args = allocz[x]
+            ff.free(*args)
         r0_10_2.reverse()
         for x in r0_10_2:
             del allocz[x]

@@ -276,8 +276,9 @@ class StorableDictionaryStore(StorableList):
         oldFragFile = self.fragfile
         oldOffset = self.allocBegin
         oldLength = self.allocLength
+        oldIndex = self.allocIndex
         if sameFileAlloc is not None:
-            self.allocBegin, self.allocLength = sameFileAlloc
+            self.allocBegin, self.allocLength, self.allocIndex = sameFileAlloc
         else:
             self.findFragFile(self.allocLength + howMuch)
         self.contentLength = self.allocLength
@@ -285,7 +286,7 @@ class StorableDictionaryStore(StorableList):
             self.setDictItem(k, v)
         # at the end of that, the new fragfile is in place again, so nothing
         # has changed (we hope)
-        oldFragFile.free(self._inmem_oid, oldOffset, oldLength)
+        oldFragFile.free(self._inmem_oid, oldOffset, oldLength, oldIndex)
 
     def _updateMeHarder(self, ff, ab, al):
         self.fragfile = ff
