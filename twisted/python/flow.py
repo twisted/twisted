@@ -85,7 +85,7 @@ class Flow:
         return self.append(stage)
 
     def addMergeToList(self, bucket=None):
-        return self.append(FlowMerge(self.addMerge(bucket=bucket)))
+        return self.append(FlowMerge(bucket=bucket))
 
     def addChain(self, *args):
         return self.append(FlowChain(args))
@@ -267,10 +267,13 @@ class _FlowContext:
         '''
         assert flow.context is self
         assert flow.context is cntx
-        for link, bucket in self._flush:
-            data = self.get(bucket, None)
-            flow.push(data, link.stage, link.next)
-        flow.context = self._parent
+        if not(self._flush):
+            flow.context = self._parent
+            return 
+        (link, bucket) = self._flush.pop(0)
+        data = self.get(bucket, None)
+        flow.push(cntx, self.onFlush)
+        flow.push(data, link.stage, link.next)
     #
     #  Making the flow context emulate a mapping,
     #  by recursively handling particular operations
@@ -294,6 +297,8 @@ class _FlowContext:
         dict = self._search(key)
         if dict: return dict[key]
         return default
+    def has_key(self,key):
+        return self._search(key)
 
 class FlowBranch(FlowStage):
     '''
@@ -367,8 +372,8 @@ class FlowMerge(FlowStage):
         etc.  Introducing an intermediate Context can be used to
         limit the merging to one Branch.
     '''
-    def __init__(self, func = list.append, start = lambda: [], 
-                       bucket = None, reduce = 0):
+    def __init__(self, func = lambda lst, val: lst.append(val) or lst,
+                       start = lambda: [], bucket = None, reduce = 1):
         if not bucket: bucket = id(self)
         self.bucket    = str(bucket)
         self.start     = start
@@ -377,7 +382,7 @@ class FlowMerge(FlowStage):
     #
     def __call__(self, flow, data):
         cntx = flow.context
-        if not self.bucket in cntx:
+        if not cntx.has_key(self.bucket):
              start = self.start
              if callable(start): start = start()
              cntx[self.bucket] = start
@@ -387,8 +392,9 @@ class FlowMerge(FlowStage):
             cntx[self.bucket] = curr
         else:
             if curr:
-                 cntx[self.bucket] = curr[0]
-                 flow.push(curr[1])
+                 (save, data) = curr
+                 cntx[self.bucket] = save
+                 if data: flow.push(data)
 
 class FlowLinkItem:
     '''
