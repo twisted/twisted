@@ -1,3 +1,11 @@
+2003-06-08  Jp Calderone  <exarkun@twistedmatrix.com>
+
+	* twisted/internet/interfaces.py: Added ITLSTransport interface,
+	subclassing ITCPTransport and adding one method - startTLS()
+
+	* twisted/internet/tcp.py: Connector class made to implement
+	ITLSTransport if TLS is available.
+
 2003-06-05  Brian Warner  <warner@lothar.com>
 
 	* twisted/conch/ssh/transport.py (ssh_KEX_DH_GEX_INIT): don't use
