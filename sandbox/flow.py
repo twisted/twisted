@@ -256,7 +256,7 @@ class Iterator:
                 return cmd.getResult()
 
 from twisted.internet import defer
-class Deferred(defer.Deferred):
+class Flow(defer.Deferred):
     """ wraps up a Command with a Deferred interface
  
         In this version, the results of the Command are used to 
