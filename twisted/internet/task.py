@@ -5,7 +5,11 @@ import traceback
 
 # Twisted Imports
 
-from twisted.python import log
+from twisted.python import threadable, log
+
+# Sibling Imports
+
+import main
 
 class Task:
     """I am a set of steps that get executed.
@@ -74,6 +78,14 @@ theScheduler = Scheduler()
 
 def schedule(task):
     theScheduler.addTask(task)
+
+def wakeAndSchedule(task):
+    theScheduler.addTask(task)
+    main.wakeUp()
+
+if threadable.threaded:
+    schedule = wakeAndSchedule
+
 
 def doAllTasks():
     while theScheduler.tasks:
