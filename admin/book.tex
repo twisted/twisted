@@ -1,10 +1,17 @@
 \documentclass[oneside]{book}
 \usepackage[dvips]{graphicx}
 \usepackage{times,mathptmx}
+\usepackage{ifthen}
 
 \setlength{\oddsidemargin}{0in}
 \setlength{\textwidth}{\paperwidth}
 \addtolength{\textwidth}{-2in}
+
+\newcommand{\loreref}[1]{%
+    \ifthenelse{\value{page}=\pageref{#1}}%
+               { (this page)}%
+               { (page \pageref{#1})}%
+}
 
 
 \title{The Twisted Documentation}

@@ -17,7 +17,7 @@
 
 from twisted.web import microdom, domhelpers
 from twisted.python import text
-import os, re, string
+import os, os.path, re, string
 from cStringIO import StringIO
 
 import urlparse
@@ -44,6 +44,16 @@ def latexEscape(text):
 
 entities = { 'amp': '\&', 'gt': '>', 'lt': '<', 'quot': '"',
              'copy': '\\copyright'}
+
+
+def realpath(path):
+    # Normalise path
+    cwd = os.getcwd()
+    path = os.path.normpath(os.path.join(cwd, path))
+    if path.startswith(cwd + '/'):
+        path = path[len(cwd)+1:]
+    return path
+
 
 def getLatexText(node, writer, filter=lambda x:x, entities=entities):
     if hasattr(node, 'eref'):
@@ -206,28 +216,40 @@ class LatexSpitter(BaseLatexSpitter):
 
     def visitNode_a_href(self, node):
         supported_schemes=['http', 'https', 'ftp', 'mailto']
-        self.visitNodeDefault(node)
         href = node.getAttribute('href')
         if urlparse.urlparse(href)[0] in supported_schemes:
             text = domhelpers.getNodeText(node)
+            self.visitNodeDefault(node)
             if text != href:
                 self.writer('\\footnote{%s}' % latexEscape(href))
         else:
             path, fragid = (href.split('#', 1) + [None])[:2]
             if path == '':
-                path = os.path.basename(self.filename)
+                path = self.filename
             else:
-                # Hack for linking to man pages from howtos, i.e.
-                # ../doc/foo-man.html -> foo-man.html
-                path = os.path.basename(path)
+                path = os.path.join(os.path.dirname(self.filename), path)
+            #if path == '':
+                #path = os.path.basename(self.filename)
+            #else:
+            #    # Hack for linking to man pages from howtos, i.e.
+            #    # ../doc/foo-man.html -> foo-man.html
+            #    path = os.path.basename(path)
+
+            path = realpath(path)
+
             if fragid:
                 ref = path + 'HASH' + fragid
             else:
                 ref = path
-            self.writer(' (page \\pageref{%s})' % ref)
+            self.writer('\\textit{')
+            self.visitNodeDefault(node)
+            self.writer('}')
+            self.writer('\\loreref{%s}' % ref)
 
     def visitNode_a_name(self, node):
-        self.writer('\\label{%sHASH%s}' % (os.path.basename(self.filename),
+        #self.writer('\\label{%sHASH%s}' % (os.path.basename(self.filename),
+        #                                   node.getAttribute('name')))
+        self.writer('\\label{%sHASH%s}' % (realpath(self.filename),
                                            node.getAttribute('name')))
         self.visitNodeDefault(node)
 
@@ -313,7 +335,8 @@ class SectionLatexSpitter(LatexSpitter):
 
     def visitNode_title(self, node):
         self.visitNodeDefault(node)
-        self.writer('\\label{%s}}\n' % os.path.basename(self.filename))
+        #self.writer('\\label{%s}}\n' % os.path.basename(self.filename))
+        self.writer('\\label{%s}}\n' % realpath(self.filename))
 
     end_title = end_body = start_body = start_html = ''
 

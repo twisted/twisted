@@ -21,6 +21,9 @@ from twisted.python import reflect
 
 import parser, urlparse, os.path
 
+# parser.suite in Python 2.3 raises SyntaxError, <2.3 raises parser.ParserError
+parserErrors = (SyntaxError, parser.ParserError)
+
 class TagChecker:
 
     def check(self, dom, filename):
@@ -131,11 +134,11 @@ class DefaultTagChecker(TagChecker):
                     text = '\n'.join(lines) + '\n'
                     try:
                         parser.suite(text)
-                    except parser.ParserError, e:
+                    except parserErrors, e:
                         # Pretend the "..." idiom is syntactically valid
                         text = text.replace("...","'...'")
                         parser.suite(text)
-                except parser.ParserError, e:
+                except parserErrors, e:
                     self._reportError(filename, node, 
                                       'invalid python code:' + str(e))
 
@@ -191,7 +194,7 @@ span = list2dict(['footnote', 'manhole-output'])
 
 div = list2dict(['note', 'boxed', 'doit'])
 
-a = list2dict(['py-listing', 'html-listing'])
+a = list2dict(['py-listing', 'html-listing', 'absolute'])
 
 pre = list2dict(['python', 'shell', 'python-interpreter', 'elisp'])
 

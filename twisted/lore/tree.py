@@ -14,7 +14,7 @@
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
-import re, os, cStringIO, time, cgi, string
+import re, os, cStringIO, time, cgi, string, urlparse
 from twisted import copyright
 from twisted.python import htmlizer, text
 from twisted.web import microdom, domhelpers
@@ -22,13 +22,20 @@ import process, latex
 
 # relative links to html files
 def fixLinks(document, ext):
+    supported_schemes=['http', 'https', 'ftp', 'mailto']
     for node in domhelpers.findElementsWithAttribute(document, 'href'):
         href = node.getAttribute("href")
-        if '/' not in href:
-            if href.endswith('.html') or href[:href.rfind('#')].endswith('.html'):
-                fname, fext = os.path.splitext(href)
-                fext = fext.replace('.html', ext) 
-                node.setAttribute("href", fname + fext)
+        
+        if urlparse.urlparse(href)[0] in supported_schemes:
+            break
+        if node.getAttribute("class", "") == "absolute":
+            break
+
+        # This is a relative link, so it should be munged.
+        if href.endswith('.html') or href[:href.rfind('#')].endswith('.html'):
+            fname, fext = os.path.splitext(href)
+            fext = fext.replace('.html', ext) 
+            node.setAttribute("href", fname + fext)
 
 
 def addMtime(document, fullpath):

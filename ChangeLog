@@ -1,3 +1,12 @@
+2003-04-22  Andrew Bennetts  <spiv@twistedmatrix.com>
+
+	* twisted/lore/latex.py: Handle cross-references and labels slightly
+	better, so that e.g. man/lore.html and howto/lore.html don't generate
+	conflicting labels.  Also, emit \loreref{...} instead of \pageref{...}
+	-- this isn't a standard LaTeX command, see admin/book.tex for an
+	example definition.  In HTML generation, all relative hrefs in <a>
+	tags are now munged from .html to .xhtml, unless class="absolute".
+
 2003-04-21  Jp Calderone  <exarkun@twistedmatrix.com>
 
 	* twisted/internet/interfaces.py: Added getServiceNamed, addService,

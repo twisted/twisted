@@ -83,7 +83,10 @@ header) element, which contains the exact same content as the
 <dd>Refer to some WWW resource.</dd>
 <dt><code>href=relative-path</code>, <code>href=relative-path#label</code> or
     <code>href=#label</code></dt>
-<dd>Refer to a position in a Lore resource.</dd>
+<dd>Refer to a position in a Lore resource.  By default, relative links to
+    <code>.html</code> files are changed to point to a <code>.xhtml</code> file.
+    If you need a link to a local non-Lore .html file, use
+    <code>class=absolute</code> to make Lore treat it as an absolute link.</dd>
 <dt><code>href=relative-path</code> with <code>class=py-listing</code> or
     <code>class=html-listing</code></dt>
 <dd>Indicate the given resource is a part of the text flow, and should be
