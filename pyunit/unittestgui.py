@@ -33,6 +33,8 @@ import Tkinter
 import tkMessageBox
 import traceback
 
+from twisted.python.failure import Failure
+
 import string, StringIO
 tk = Tkinter # Alternative to the messy 'from Tkinter import *' often seen
 
@@ -340,12 +342,16 @@ class TkTestRunner(BaseGUITestRunner):
         window = tk.Toplevel(self.root)
         window.title(txt)
         window.protocol('WM_DELETE_WINDOW', window.quit)
-        test, failure = self.errorInfo[selected]
-        s = StringIO.StringIO()
-        failure.printTraceback(s)
-        # original code limited this to 10 frames, but Failure doesn't offer
-        # control over that
-        tracebackText = s.getvalue()
+        test, error = self.errorInfo[selected]
+        if isinstance(error, Failure):
+            s = StringIO.StringIO()
+            error.printTraceback(s)
+            # original code limited this to 10 frames, but Failure doesn't
+            # offer control over that
+            tracebackText = s.getvalue()
+        else:
+            tracebackLines = apply(traceback.format_exception, error + (10,))
+            tracebackText = string.join(tracebackLines,'')
         tk.Label(window, text=str(test),
                  foreground="red", justify=tk.LEFT).pack(anchor=tk.W)
         tk.Label(window, text=tracebackText, justify=tk.LEFT).pack()
