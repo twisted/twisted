@@ -106,8 +106,8 @@ the database, and creating a new instance ready to be inserted.</p>
 
 <p>To load rows from the database and create RowObject instances
 for each of the rows, use the loadObjectsFrom method of the Reflector.
-This takes a tableName, an optional &quot;user data&quot; parameter,
-and an optional &quot;where clause&quot;. The where clause may
+This takes a tableName, an optional <q>user data</q> parameter,
+and an optional <q>where clause</q>. The where clause may
 be omitted which will retrieve all the rows from the table. For
 example:</p>
 
@@ -116,7 +116,9 @@ def gotRooms(rooms):
     for room in rooms:
         print "Got room:", room.id
 
-reflector.loadObjectsFrom("testrooms", whereClause=[("id", reflector.EQUAL, 5)]).addCallback(gotRooms)
+d = reflector.loadObjectsFrom("testrooms", 
+                              whereClause=[("id", reflector.EQUAL, 5)])
+d.addCallback(gotRooms)
 </pre>
 
 <p>For more advanced RowObject construction, loadObjectsFrom may
@@ -137,7 +139,7 @@ def testRoomFactory(roomClass, userData, kw):
 <p>The last method of creating a row object is for new instances
 that do not already exist in the database table. In this case,
 create a new instance and assign its primary key attributes and
-all of its member data attributes, then pass it to the &quot;insertRow&quot;
+all of its member data attributes, then pass it to the <code>insertRow</code>
 method of the Reflector. For example:</p>
 
 <pre class="python">
@@ -154,7 +156,7 @@ method of the Reflector. For example:</p>
 </pre>
 
 <p>This will insert a new row into the database table for this
-new RowObject instance. Note that the &quot;assignKeyAttr&quot;
+new RowObject instance. Note that the <code>assignKeyAttr</code>
 method must be used to set primary key attributes - regular attribute
 assignment of a primary key attribute of a rowObject will raise
 an exception. This prevents the database identity of RowObject
@@ -187,17 +189,17 @@ unique keys for this purpose.</p>
 
 <h2>Updating Row Objects</h2>
 
-<p>RowObjects have a &quot;dirty&quot; member attribute that is
+<p>RowObjects have a <code>dirty</code> member attribute that is
 set to 1 when any of the member attributes of the instance that
 map to database columns are changed. This dirty flag can be used
 to tell when RowObjects need to be updated back to the database.
-In addition, the &quot;setDirty&quot; method can be overridden
+In addition, the <code>setDirty</code> method can be overridden
 to provide more complex automated handling such as dirty lists
 (be sure to call the base class setDirty though!).</p>
 
 <p>When it is determined that a RowObject instance is dirty and
 need to have its state updated into the database, pass that object
-to the &quot;updateRow&quot; method of the Reflector. For example:</p>
+to the <code>updateRow</code> method of the Reflector. For example:</p>
 
 <pre class="python">
 reflector.updateRow(room).addCallback(onUpdated)
@@ -214,7 +216,7 @@ updateSQL = reflector.updateRowSQL(room)
 <h2>Deleting Row Objects</h2>
 
 <p>To delete a row from a database pass the RowObject instance
-for that row to the Reflector &quot;deleteRow&quot; method.
+for that row to the Reflector <code>deleteRow</code> method.
 Deleting the python Rowobject instance does <em>not</em> automatically
 delete the row from the database. For example:</p>
 
