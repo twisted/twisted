@@ -317,9 +317,9 @@ except NameError:
     logOwner = LogOwner()
 
 
-def _threaded_msg(stuff):
+def _threaded_msg(*stuff):
     loglock.acquire()
-    real_msg(stuff)
+    apply(real_msg, stuff)
     loglock.release()
 
 def initThreads():
