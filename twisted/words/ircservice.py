@@ -335,24 +335,24 @@ class IRCChatter(irc.IRC):
         """
         log.msg('list %s %s' % (prefix, params))
 
-        if params:
-            group_masks = map(string.lower, string.split(params[0], ','))
-            for mask in group.masks:
-                if len(mask) > 1 and mask[0] in '#!+&':
-                    mask = mask[1:]
-        else:
-            group_masks = ['*']
+##        if params:
+##            group_masks = map(string.lower, string.split(params[0], ','))
+##            for mask in group.masks:
+##                if len(mask) > 1 and mask[0] in '#!+&':
+##                    mask = mask[1:]
+##        else:
+##            group_masks = ['*']
 
-        for group_name, group in self.service.groups.items():
-            group_lname = string.lower(group_name)
-            for mask in group_masks:
-                if fnmatch.fnmatch(group_lname, mask):
-                    it_matches = 1
-                    break
-            if it_matches:
-                self.sendMessage(irc.RPL_LIST, group_name,
-                                 str(len(group.members)),
-                                 ":" + group.topic)
+##        for group_name, group in self.service.groups.items():
+##            group_lname = string.lower(group_name)
+##            for mask in group_masks:
+##                if fnmatch.fnmatch(group_lname, mask):
+##                    it_matches = 1
+##                    break
+##            if it_matches:
+##                self.sendMessage(irc.RPL_LIST, group_name,
+##                                 str(len(group.members)),
+##                                 ":" + group.topic)
         self.sendMessage(irc.RPL_LISTEND, ":End of LIST")
 
 
