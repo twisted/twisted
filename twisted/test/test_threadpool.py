@@ -18,7 +18,18 @@
 from pyunit import unittest
 import pickle, time
 
-from twisted.python import threadpool
+from twisted.python import threadpool, threadable, log
+
+
+class Counter(log.Logger):    
+    index = 0
+    
+    def add(self):
+        self.index = self.index + 1
+    
+    synchronized = ["add"]
+
+threadable.synchronize(Counter)
 
 
 class ThreadPoolTestCase(unittest.TestCase):
@@ -43,6 +54,21 @@ class ThreadPoolTestCase(unittest.TestCase):
         
         tp.stop()
         tp2.stop()
+
+    def testCounter(self):
+        tp = threadpool.ThreadPool()
+        c = Counter()
+        
+        for i in range(1000):
+            tp.dispatch(c, c.add)
+        
+        oldIndex = 0
+        while c.index < 1000:
+            assert oldIndex <= c.index
+            oldIndex = c.index
+        
+        self.assertEquals(c.index, 1000)
+        tp.stop()
 
 
 testCases = [ThreadPoolTestCase]
