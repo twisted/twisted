@@ -39,7 +39,7 @@ class Options(usage.Options):
 
 def updateApplication(app, config):
     auth = authorizer.DefaultAuthorizer(app)
-    svc = service.Service("manhole", serviceParent=app,
+    svc = service.Service("twisted.manhole", serviceParent=app,
                           authorizer=auth)
     p = svc.createPerspective(config.opts['user'])
     p.makeIdentity(config.opts['password'])
@@ -47,4 +47,4 @@ def updateApplication(app, config):
         portno = config.opts['portno']
     except KeyError:
         portno = pb.portno
-    app.listenTCP(portno, pb.BrokerFactory(pb.AuthRoot(app)))
+    app.listenTCP(portno, pb.BrokerFactory(pb.AuthRoot(auth)))
