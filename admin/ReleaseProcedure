@@ -32,8 +32,13 @@ TEST, TEST.
    * cd /twisted/; tar xzvf Twisted-<version>.tar.gz; mv Twisted Twisted.old; mv Twisted-<version> Twisted
    * cd /var/www; kill `cat twistd.pid`; /twisted/Twisted/bin/twistd -f web-shutdown.tap; mv web-shutdown.tap taps/web-shutdown-`date -I`.tap
 
+ * su jh; ~jh/bin/stop; ~jh/bin/start; exit
+
  * su pb; cd ~/Working; kill `cat twistd.pid`; /twisted/Twisted/bin/twistd -f manhole-shutdown.tap; 
-   mv manhole-shutdown.tap oldtaps/manhole-shutdown-`date -I`.tap
+   mv manhole-shutdown.tap oldtaps/manhole-shutdown-`date -I`.tap; exit
+
+ * exit
+
  * Of course, testing the servers as you go.
 
  * If everything's cool, edit WebSite/twistedmatrix.com/news.htc, index, and products/download.htc
