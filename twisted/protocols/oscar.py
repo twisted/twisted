@@ -1,15 +1,15 @@
 # Twisted, the Framework of Your Internet
 # Copyright (C) 2001 Matthew W. Lefkowitz
-# 
+#
 # This library is free software; you can redistribute it and/or
 # modify it under the terms of version 2.1 of the GNU Lesser General Public
 # License as published by the Free Software Foundation.
-# 
+#
 # This library is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
 # Lesser General Public License for more details.
-# 
+#
 # You should have received a copy of the GNU Lesser General Public
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
@@ -109,7 +109,7 @@ def html(text):
     text=string.replace(text,"\n","<br>")
     return '<html><body bgcolor="white"><font color="black">%s</font></body></html>'%text
 
-class OSCARUser:  
+class OSCARUser:
     def __init__(self, name, warn, tlvs):
         self.name = name
         self.warning = warn
@@ -162,7 +162,7 @@ class OSCARUser:
             elif k == 16: # session length (aol)
                 self.sessionLength = struct.unpack('!L',v)[0]
             elif k == 30: # no idea
-                pass 
+                pass
             else:
                 log.msg("unknown tlv for user %s\nt: %s\nv: %s"%(self.name,k,repr(v)))
 
@@ -179,7 +179,7 @@ class OSCARUser:
         s=s+'>'
         return s
 
-               
+
 class SSIGroup:
     def __init__(self, name, tlvs = {}):
         self.name = name
@@ -371,7 +371,7 @@ class SNACBased(OscarConnection):
     def oscar_unknown(self,snac):
         log.msg("unknown for %s" % self)
         log.msg(snac)
-        
+
 
     def oscar_01_03(self, snac):
         numFamilies = len(snac[3])/2
@@ -422,7 +422,7 @@ class BOSConnection(SNACBased):
     }
 
     capabilities = None
-        
+
     def __init__(self,username,cookie):
         SNACBased.__init__(self,cookie)
         self.username=username
@@ -448,7 +448,7 @@ class BOSConnection(SNACBased):
             return u
         else:
             return u, rest
-        
+
     def oscar_01_05(self, snac, d = None):
         """
         data for a new service connection
@@ -523,7 +523,7 @@ class BOSConnection(SNACBased):
         self.offlineBuddy(self.parseUser(snac[3]))
 
 #    def oscar_04_03(self, snac):
-        
+
     def oscar_04_05(self, snac):
         """
         ICBM parms response
@@ -674,7 +674,7 @@ class BOSConnection(SNACBased):
 
     def _cbRequestSSI(self, snac, args = ()):
         if snac[1] == 0x0f: # same SSI as we have
-            return 
+            return
         itemdata = snac[5][3:]
         if args:
             revision, groups, permit, deny, permitMode, visibility = args
@@ -768,7 +768,7 @@ class BOSConnection(SNACBased):
         if self.profile:
             tlvs =  TLV(1,'text/aolrtf; charset="us-ascii"') + \
                     TLV(2,self.profile)
-        
+
         tlvs = tlvs + TLV(5, ''.join(self.capabilities))
         self.sendSNACnr(0x02, 0x04, tlvs)
 
@@ -859,7 +859,7 @@ class BOSConnection(SNACBased):
             d = defer.Deferred()
             self.connectService(SERVICE_CHATNAV,1).addCallback(lambda s:d.arm() or s.createChat(shortName).chainDeferred(d))
             return d
-            
+
 
     def joinChat(self, exchange, fullName, instance):
         """
@@ -898,7 +898,7 @@ class BOSConnection(SNACBased):
         tlvs = readTLVs(rest)
         return tlvs.get(0x04,None) # return None if there is no away message
 
-    #def acceptSendFileRequest(self, 
+    #def acceptSendFileRequest(self,
 
     # methods to be overriden by the client
     def initDone(self):
@@ -957,7 +957,7 @@ class BOSConnection(SNACBased):
         """
         called when a member leaves the chat
         """
-        pass     
+        pass
 
     def receiveSendFileRequest(self, user, file, description, cookie):
         """
@@ -1029,7 +1029,7 @@ class ChatNavService(OSCARService):
         instance = struct.unpack('!H',snac[5][7+length:9+length])[0]
         #d.callback((exchange, fullName, instance))
         return exchange, fullName, instance
-    
+
 class ChatService(OSCARService):
     snacFamilies = {
         0x01:(3, 0x0010, 0x059b),
@@ -1048,7 +1048,7 @@ class ChatService(OSCARService):
     def oscar_01_07(self,snac):
         self.sendSNAC(0x01,0x08,"\000\001\000\002\000\003\000\004\000\005")
         self.clientReady()
-        
+
     def oscar_0E_02(self, snac):
 #        try: # this is EVIL
 #            data = snac[3][4:]
@@ -1222,4 +1222,3 @@ CAP_GET_FILE = '\011F\023HL\177\021\321\202"DEST\000\000'
 CAP_SEND_FILE = '\011F\023CL\177\021\321\202"DEST\000\000'
 CAP_GAMES = '\011F\023GL\177\021\321\202"DEST\000\000'
 CAP_SEND_LIST = '\011F\023KL\177\021\321\202"DEST\000\000'
-        

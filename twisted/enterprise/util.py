@@ -108,7 +108,7 @@ class _TableInfo:
         self.rowTableName = rc.rowTableName
         self.rowKeyColumns = rc.rowKeyColumns
         self.rowColumns = rc.rowColumns
-        
+
         if hasattr(rc, "rowForeignKeys"):
             self.rowForeignKeys = rc.rowForeignKeys
         else:
@@ -141,10 +141,10 @@ class _TableInfo:
             if relationship.childRowClass.rowTableName == tableName:
                 return relationship
         return None
-    
+
 class _TableRelationship:
     """(Internal)
-    
+
     A foreign key relationship between two tables.
     """
     def __init__(self,

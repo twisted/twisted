@@ -42,7 +42,7 @@ Test coverage needs to be better.
 <http://www.irchelp.org/irchelp/rfc/ctcpspec.html>}
 """
 
-__version__ = '$Revision: 1.78 $'[11:-2]
+__version__ = '$Revision: 1.79 $'[11:-2]
 
 from twisted.internet import reactor, protocol
 from twisted.persisted import styles
@@ -180,7 +180,7 @@ class IRC(protocol.Protocol):
             # mIRC is a big pile of doo-doo
             command = string.upper(command)
             # DEBUG: log.msg( "%s %s %s" % (prefix, command, params))
-            
+
             self.handleCommand(command, prefix, params)
 
 
@@ -334,20 +334,20 @@ class IRCClient(basic.LineReceiver):
 
     def modeChanged(self, user, channel, set, modes, args):
         """Called when a channel's modes are changed
-        
+
         @type user: C{str}
         @param user: The user and hostmask which instigated this change.
 
         @type channel: C{str}
         @param channel: The channel for which the modes are changing.
-        
+
         @type set: C{bool} or C{int}
         @param set: true if the mode is being added, false if it is being
         removed.
-        
+
         @type modes: C{str}
         @param modes: The mode or modes which are being changed.
-        
+
         @type args: C{tuple}
         @param args: Any additional information required for the mode
         change.

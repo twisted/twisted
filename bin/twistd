@@ -29,5 +29,3 @@ sys.path.insert(0, os.curdir)
 
 from twisted.scripts.twistd import run
 run()
-
-

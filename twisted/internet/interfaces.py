@@ -65,7 +65,7 @@ class IResolverSimple(Interface):
         @rtype: C{Deferred}
         @return: The callback of the C{Deferred} that is returned will be
         passed a string that represents the IP address of the specified
-        name, or the errback will be called if the lookup times out.  If 
+        name, or the errback will be called if the lookup times out.  If
         multiple types of address records are associated with the name,
         A6 records will be returned in preference to AAAA records, which
         will be returned in preference to A records.  If there are multiple
@@ -374,7 +374,7 @@ class IReactorTime(Interface):
                   scheduled. This is everything that has been returned by
                   C{callLater} but not yet called or canceled.
         """
-        
+
 
 class IDelayedCall(Interface):
     """A scheduled call.
@@ -405,7 +405,7 @@ class IDelayedCall(Interface):
     def reset(self, secondsFromNow):
         """Reset the scheduled call's timer.
         @param secondsLater: how many seconds from now it should fire, equivalent
-                             to C{self.cancel()} and then doing another 
+                             to C{self.cancel()} and then doing another
                              C{reactor.callLater(secondsLater, ...)}
 
         @raises twisted.internet.error.AlreadyCalled: if the call has already
@@ -530,7 +530,7 @@ class IReactorPluggableResolver(Interface):
     """
     def installResolver(self, resolver):
         """Set the internal resolver to use to for name lookups.
-        
+
         @type resolver: An object implementing the C{IResolverSimple} interface
         @param resolver: The new resolver to use.
         """
@@ -797,14 +797,14 @@ class IProcessTransport(ITransport):
 
     def signalProcess(self, signalID):
         """
-        Send a signal to the process.  signalID can 
+        Send a signal to the process.  signalID can
         be:
 
-        * one of "HUP", "KILL", "STOP", or "INT".  
+        * one of "HUP", "KILL", "STOP", or "INT".
             These will be implemented in a
-            cross-platform manner, and so should be used 
+            cross-platform manner, and so should be used
             if possible.
-        * an integer, where it represents a POSIX 
+        * an integer, where it represents a POSIX
             signal ID."""
 
 

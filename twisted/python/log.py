@@ -93,8 +93,8 @@ WARNING: %s::
 %s
 file: %s; line: %s
 ''' % (category, indent(message), filename, lineno))
-   
-    
+
+
 import warnings
 warnings.showwarning = showwarning
 

@@ -1,5 +1,5 @@
 # -*- Python -*-
-# $Id: default.py,v 1.59 2003/01/09 08:03:11 warner Exp $
+# $Id: default.py,v 1.60 2003/01/29 04:51:18 acapnotic Exp $
 #
 # Twisted, the Framework of Your Internet
 # Copyright (C) 2001 Matthew W. Lefkowitz
@@ -76,7 +76,7 @@ class BaseConnector:
 
     timeoutID = None
     factoryStarted = 0
-    
+
     def __init__(self, reactor, factory, timeout):
         self.state = "disconnected"
         self.reactor = reactor
@@ -134,7 +134,7 @@ class BaseConnector:
             # factory hasn't called our connect() method
             self.factory.doStop()
             self.factoryStarted = 0
-    
+
     def connectionLost(self, reason):
         self.state = "disconnected"
         self.factory.clientConnectionLost(self, reason)

@@ -34,7 +34,7 @@ import util as webutil
 #backwards compatibility
 from util import formatFailure, htmlrepr, htmlUnknown, htmlDict, htmlList,\
                  htmlInst, htmlString, htmlReprTypes
-              
+
 
 
 from server import NOT_DONE_YET

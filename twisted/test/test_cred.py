@@ -54,7 +54,7 @@ AppForServiceTest = app.Application
 
 class ServiceTestCase(unittest.TestCase):
     App = AppForServiceTest
-    
+
     def setUp(self):
         self.service = service.Service("test service", authorizer=authorizer.Authorizer())
 
@@ -65,7 +65,7 @@ class ServiceTestCase(unittest.TestCase):
         service.Service("test service")
         service.Service("test service", authorizer=auth)
         service.Service("test service", parent)
-    
+
     def testConstruction_serviceName(self):
         """serviceName is frequently used as a key, thus it is expected
         to be hashable."""
@@ -99,7 +99,7 @@ class ServiceTestCase(unittest.TestCase):
         self.service.addPerspective(p)
         d = self.service.getPerspectiveRequest(pname)
         d.addCallback(self._checkPerspective)
-    
+
     def _checkPerspective(self, q):
         self.assertEquals(self.p, q)
         self.assertEquals(self.pname, q.getPerspectiveName())
@@ -148,7 +148,7 @@ class PerspectiveTestCase(unittest.TestCase):
     Service = ServiceForPerspectiveTest
     def Identity(self, n):
         return self.auth.createIdentity(n)
-        
+
 
     def setUp(self):
         self.app = self.App("app for perspective-test")
@@ -210,7 +210,7 @@ class PerspectiveTestCase(unittest.TestCase):
     def _identityWithNoPassword_plain_fail(self, msg):
         # "Identity with no password did not authenticate (plaintext): %s"
         pass
-    
+
     def testsetIdentity_invalid(self):
         self.assertRaises(TypeError,
                           self.perspective.setIdentity,
@@ -228,7 +228,7 @@ class PerspectiveTestCase(unittest.TestCase):
         except self.failureException, e:
             self.error = sys.exc_info()
             raise
-        
+
     def _testmakeIdentity_1(self, msg):
         # complex password verification
         ident = self.ident
@@ -244,15 +244,15 @@ class PerspectiveTestCase(unittest.TestCase):
         except self.failureException, e:
             self.error = sys.exc_info()
             raise
-        
+
     def _testmakeIdentity_2(self, msg):
         d = self.perspective.getIdentityRequest()
         d.addCallback(self._gotIdentity)
-    
+
     def _gotIdentity(self, ident):
         self.assertEquals(self.ident, ident)
         del self.ident
-        
+
     def testmakeIdentity_invalid(self):
         self.assertRaises(TypeError, self.perspective.makeIdentity,
                           ForeignObject("Illegal Passkey"))
@@ -353,7 +353,7 @@ class IdentityTestCase(unittest.TestCase):
         pwrq1.addErrback(self._test_verifyPlainPassword_fail)
         pwrq1.addCallback(self._test_verifyPlainPassword_ok)
         self.assert_(self._test_verifyPlainPassword_worked==1)
-        
+
         pwrq2 = self.ident.verifyPlainPassword("wrongphrase")
         pwrq2.addCallback(self._test_verifyPlainPassword_false_pos)
         pwrq2.addErrback(self._test_verifyPlainPassword_correct_neg)
@@ -377,17 +377,17 @@ class IdentityTestCase(unittest.TestCase):
 
 class AuthorizerTestCase(unittest.TestCase):
     """TestCase for authorizer.DefaultAuthorizer."""
-    
+
     def setUp(self):
         self.auth = authorizer.DefaultAuthorizer()
-    
+
     def _error(self, e):
         raise RuntimeError, e
-    
+
     def _gotIdentity(self, i):
         self.assertEquals(self.ident, i)
         del self.ident
-    
+
     def test_addIdent(self):
         i = identity.Identity("user", self.auth)
 
@@ -409,7 +409,7 @@ class AuthorizerTestCase(unittest.TestCase):
 
     def _gotNoUser(self, err):
         pass
-    
+
     def test_nonExistentIdent(self):
         d = self.auth.getIdentityRequest("nosuchuser")
         d.addCallback(self._error).addErrback(self._gotNoUser)

@@ -207,7 +207,7 @@ class Adapter:
     """
 
     # These attributes are used with Componentized.
-    
+
     temporaryAdapter = 0
     # should this adapter be ephemeral?
     multiComponent = 1

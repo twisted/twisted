@@ -285,7 +285,7 @@ class ParsingTestCase(unittest.TestCase):
         a.connectionLost()
         self.assertEquals(self.didRequest, 1)
         del self.didRequest
-    
+
     def testHeaders(self):
         httpRequest = """\
 GET / HTTP/1.0
@@ -294,7 +294,7 @@ baz: 1 2 3
 
 """
         testcase = self
-        
+
         class MyRequest(http.Request):
             def process(self):
                 testcase.assertEquals(self.getHeader('foo'), 'bar')
@@ -302,7 +302,7 @@ baz: 1 2 3
                 testcase.assertEquals(self.getHeader('bAz'), '1 2 3')
                 testcase.didRequest = 1
                 self.finish()
-        
+
         self.runRequest(httpRequest, MyRequest)
 
     def testCookies(self):
@@ -312,7 +312,7 @@ Cookie: rabbit="eat carrot"; ninja=secret
 
 '''
         testcase = self
-        
+
         class MyRequest(http.Request):
             def process(self):
                 testcase.assertEquals(self.getCookie('rabbit'), '"eat carrot"')
@@ -336,7 +336,7 @@ GET /?key=value&multiple=two+words&multiple=more%20words&empty= HTTP/1.0
                 testcase.assertEquals(self.args["multiple"], ["two words", "more words"])
                 testcase.didRequest = 1
                 self.finish()
-                
+
         self.runRequest(httpRequest, MyRequest)
 
     def testPOST(self):
@@ -357,5 +357,5 @@ Content-Type: application/x-www-form-urlencoded
                 testcase.assertEquals(self.args["multiple"], ["two words", "more words"])
                 testcase.didRequest = 1
                 self.finish()
-                
+
         self.runRequest(httpRequest, MyRequest)

@@ -366,7 +366,7 @@ def gatherResults(deferredList):
 
     This builds on C{DeferredList} but is useful since you don't
     need to parse the result for success/failure.
-    
+
     @type deferredList:  C{list} of L{Deferred}s
     """
     d = DeferredList(deferredList)

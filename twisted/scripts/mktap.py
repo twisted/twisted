@@ -15,7 +15,7 @@
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 #
-# $Id: mktap.py,v 1.21 2002/09/30 08:25:20 moshez Exp $
+# $Id: mktap.py,v 1.22 2003/01/29 04:51:15 acapnotic Exp $
 
 """ Implementation module for the `mktap` command.
 """
@@ -30,7 +30,7 @@ import sys, traceback, os, cPickle, glob, string
 from twisted.python.plugin import getPlugIns
 
 
-# !!! This code should be refactored; also, 
+# !!! This code should be refactored; also,
 # I bet that it shares a lot with other scripts
 # (i.e. is badly cut'n'pasted).
 
@@ -71,14 +71,14 @@ class GeneralOptions(usage.Options):
                   ['gid', 'g', '0'],
                   ['append', 'a', None,   "An existing .tap file to append the plugin to, rather than creating a new one."],
                   ['type', 't', 'pickle', "The output format to use; this can be 'pickle', 'xml', or 'source'."]]
-    
+
     optFlags = [['xml', 'x',       "DEPRECATED: same as --type=xml"],
                 ['source', 's',    "DEPRECATED: same as --type=source"],
                 ['encrypted', 'e', "Encrypt file before writing"],
                 ['progress', 'p',  "Show progress of plugin loading"],
                 ['debug', 'd',     "Show debug information for plugin loading"]]
 
-    
+
     def __init__(self, tapLookup):
         usage.Options.__init__(self)
         self.subCommands = []
@@ -175,7 +175,7 @@ def run():
         except ImportError:
             print "The --encrypt flag requires the PyCrypto module, no file written."
     elif options['append']:
-        a.save(filename=options['append']) 
+        a.save(filename=options['append'])
     else:
         a.save()
 

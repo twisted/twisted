@@ -112,7 +112,7 @@ RESPONSES = {
     RESET_CONTENT: "Reset Content.",
     PARTIAL_CONTENT: "Partial Content",
     MULTI_STATUS: "Multi-Status",
-    
+
     # 300
     MULTIPLE_CHOICE: "Multiple Choices",
     MOVED_PERMANENTLY: "Moved Permanently",

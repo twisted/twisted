@@ -42,7 +42,7 @@ class SystemEventTestCase(unittest.TestCase):
                 reactor.removeSystemEventTrigger(t)
             except:
                 pass
-    
+
     def testTriggerSystemEvent1(self):
         l = []
         l2 = []
@@ -232,10 +232,10 @@ class InterfaceTestCase(unittest.TestCase):
 
     def _resetcallback(self):
         self._resetcallbackTime = time.time()
-    
+
     def _delaycallback(self):
         self._delaycallbackTime = time.time()
-        
+
     def testCallLaterDelayAndReset(self):
         self._resetcallbackTime = None
         self._delaycallbackTime = None
@@ -288,7 +288,7 @@ class ReactorCoreTestCase(unittest.TestCase):
         except error.AlreadyCalled:
             pass
         self.timers.remove(timer)
-        
+
     def tearDown(self):
         for t in self.triggers:
             try:
@@ -299,7 +299,7 @@ class ReactorCoreTestCase(unittest.TestCase):
         reactor.crash()
     def stop(self):
         reactor.stop()
-        
+
     def testIterate(self):
         reactor.callLater(0.1, self.stop)
         reactor.run() # returns once .stop is called
@@ -399,13 +399,13 @@ class DelayedTestCase(unittest.TestCase):
     def failsafe(self, tag):
         self.finished = 1
         self.fail("timeout")
-        
+
     def addTimer(self, when, callback):
         self.timers[self.counter] = reactor.callLater(when * 0.01, callback,
                                                       self.counter)
         self.counter += 1
         self.checkTimers()
-        
+
     def testGetDelayedCalls(self):
         if not hasattr(reactor, "getDelayedCalls"):
             return
@@ -422,7 +422,7 @@ class DelayedTestCase(unittest.TestCase):
         self.addTimer(25, self.callback)
 
         self.addTimer(50, self.failsafe)
-        
+
         self.timers[which].cancel()
         del self.timers[which]
         self.checkTimers()
@@ -430,7 +430,7 @@ class DelayedTestCase(unittest.TestCase):
         while not self.finished:
             reactor.iterate(0.01)
         self.checkTimers()
-        
+
 
 class Counter:
     index = 0

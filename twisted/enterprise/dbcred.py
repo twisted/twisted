@@ -1,15 +1,15 @@
 # Twisted, the Framework of Your Internet
 # Copyright (C) 2001 Matthew W. Lefkowitz
-# 
+#
 # This library is free software; you can redistribute it and/or
 # modify it under the terms of version 2.1 of the GNU Lesser General Public
 # License as published by the Free Software Foundation.
-# 
+#
 # This library is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
 # Lesser General Public License for more details.
-# 
+#
 # You should have received a copy of the GNU Lesser General Public
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
@@ -46,7 +46,7 @@ class PerspectiveRow(row.RowObject):
 
     def __repr__(self):
         return "identity: %s perspective: %s service: %s" % ( self.identity_name, self.perspective_name, self.service_name)
-    
+
 class ReflectorAuthorizer(authorizer.Authorizer):
     """An authorizer that uses a given row reflector.
     """
@@ -67,7 +67,7 @@ class ReflectorAuthorizer(authorizer.Authorizer):
     def _ebIdentity(self, data):
         print "ERROR:", data
         raise KeyError("Failed to load identity")
-        
+
     def _cbIdentity(self, newIdentityRows):
         if len(newIdentityRows) == 0:
             # no rows! User doesnt exist
@@ -80,11 +80,11 @@ class ReflectorAuthorizer(authorizer.Authorizer):
         i.setAlreadyHashedPassword(hashedPass)
         i.rows = [] #keep the rows around for now...
         i.rows.append(irow)
-        
+
         for prow in irow.childRows:
             i.addKeyByString(prow.service_name, prow.perspective_name)
             i.rows.append(prow) #keep the rows around for now...
-            
+
         return i
 
 class DatabaseAuthorizer(authorizer.Authorizer, adbapi.Augmentation):
@@ -116,7 +116,7 @@ class DatabaseAuthorizer(authorizer.Authorizer, adbapi.Augmentation):
     def __init__(self, dbpool, serviceCollection=None):
         authorizer.Authorizer.__init__(self, serviceCollection)
         self.perspectiveCreators = {}
-        
+
         adbapi.Augmentation.__init__(self, dbpool)
 
     def addIdentity(self, identity):

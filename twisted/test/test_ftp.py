@@ -1,15 +1,15 @@
 # Twisted, the Framework of Your Internet
 # Copyright (C) 2001 Matthew W. Lefkowitz
-# 
+#
 # This library is free software; you can redistribute it and/or
 # modify it under the terms of version 2.1 of the GNU Lesser General Public
 # License as published by the Free Software Foundation.
-# 
+#
 # This library is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
 # Lesser General Public License for more details.
-# 
+#
 # You should have received a copy of the GNU Lesser General Public
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
@@ -65,7 +65,7 @@ class FTPClientTests(unittest.TestCase):
             self.writeResponses(client, responses)
             p = Protocol()
             d = client.retrieveFile('/file/that/doesnt/exist', p)
-            d.addCallback(lambda r, self=self: 
+            d.addCallback(lambda r, self=self:
                             self.fail('Callback incorrectly called: %r' % r))
             d.addBoth(lambda ignored,r=reactor: r.crash())
 
@@ -95,7 +95,7 @@ class FTPClientTests(unittest.TestCase):
 class FTPServerTests(unittest.TestCase):
     def setUp(self):
         """Creates an FTP server
-        
+
         The FTP will serve files from the directory this module resides in.
         """
         self.serverFactory = ftp.FTPFactory()
@@ -117,7 +117,7 @@ class FTPServerTests(unittest.TestCase):
 class FTPClientAndServerTests(FTPServerTests):
     """These test the FTP Client against the FTP Server"""
     passive = 0
-    
+
     def errback(self, failure):
         try:
             self.fail('Errback called: ' + str(failure))
@@ -127,7 +127,7 @@ class FTPClientAndServerTests(FTPServerTests):
 
     def callback(self, result):
         self.result = result
-        
+
     def testLongFileListings(self):
         if hasattr(self, 'result'):
             del self.result
@@ -158,7 +158,7 @@ class FTPClientAndServerTests(FTPServerTests):
 
         # Check that the listing contains this file (test_ftp.py)
         filenames = map(lambda file: file['filename'], fileList.files)
-        self.failUnless('test_ftp.py' in filenames, 
+        self.failUnless('test_ftp.py' in filenames,
                         'test_ftp.py not in file listing')
 
     def testShortFileListings(self):
@@ -191,7 +191,7 @@ class FTPClientAndServerTests(FTPServerTests):
 
         # Check that the listing contains this file (test_ftp.py)
         filenames = p.buf.getvalue().split('\r\n')
-        self.failUnless('test_ftp.py' in filenames, 
+        self.failUnless('test_ftp.py' in filenames,
                         'test_ftp.py not in file listing')
 
     def testRetr(self):
@@ -208,7 +208,7 @@ class FTPClientAndServerTests(FTPServerTests):
         # Download this module's file (test_ftp.py/.pyc/.pyo)
         import test_ftp
         thisFile = test_ftp.__file__
-        
+
         proto = BufferProtocol()
         d = client.retr(os.path.basename(thisFile), proto)
         d.addCallbacks(self.callback, self.errback)
@@ -220,7 +220,7 @@ class FTPClientAndServerTests(FTPServerTests):
         try:
             id.cancel()
         except ValueError: pass
-        
+
         error = getattr(self, 'error', None)
         if error:
             raise error[0], error[1], error[2]
@@ -232,7 +232,7 @@ class FTPClientAndServerTests(FTPServerTests):
         self.failUnless(data == open(thisFile, "rb").read(),
                         'RETRieved file does not match original')
 
-        
+
     def testBadLogin(self):
         client = ftp.FTPClient(passive=self.passive, username='badperson')
 
@@ -253,9 +253,9 @@ class FTPClientAndServerTests(FTPServerTests):
             errors_[x] = failure
 
         # These LIST commands should should both fail
-        d = client.list('.', ftp.FTPFileListProtocol()) 
+        d = client.list('.', ftp.FTPFileListProtocol())
         d.addCallbacks(badResult, gotError, errbackArgs=(0,))
-        d = client.list('.', ftp.FTPFileListProtocol()) 
+        d = client.list('.', ftp.FTPFileListProtocol())
         d.addCallbacks(badResult, gotError, errbackArgs=(1,))
 
         factory = ClientFactory()
@@ -272,7 +272,7 @@ class FTPClientAndServerTests(FTPServerTests):
 
 class FTPPassiveClientAndServerTests(FTPClientAndServerTests):
     """Identical to FTPClientTests, except with passive transfers.
-    
+
     That's right ladies and gentlemen!  I double the number of tests with a
     trivial subclass!  Hahaha!
     """

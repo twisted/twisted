@@ -1,16 +1,16 @@
 
 # Twisted, the Framework of Your Internet
 # Copyright (C) 2001 Matthew W. Lefkowitz
-# 
+#
 # This library is free software; you can redistribute it and/or
 # modify it under the terms of version 2.1 of the GNU Lesser General Public
 # License as published by the Free Software Foundation.
-# 
+#
 # This library is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
 # Lesser General Public License for more details.
-# 
+#
 # You should have received a copy of the GNU Lesser General Public
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
@@ -101,7 +101,7 @@ def checksum(b):
 ##    check0 = check1 = 0x00ff
 ##    for i in range(len(b)):
 ##        if i%2:
-##            if ord(b[i])>check1: 
+##            if ord(b[i])>check1:
 ##                check1=check1+0x100 # wrap
 ##                if check0==0:
 ##                    check0=0x00ff
@@ -136,7 +136,7 @@ def checksum_file(f):
 ##        for char in b:
 ##            i=not i
 ##            if i:
-##                if ord(char)>check1: 
+##                if ord(char)>check1:
 ##                    check1=check1+0x100 # wrap
 ##                    if check0==0:
 ##                        check0=0x00ff
@@ -189,7 +189,7 @@ class TOC(protocol.Protocol):
         self.signontime=0
         self.idletime=0
         self.userinfo="<br>"
-        self.userclass=" O" 
+        self.userclass=" O"
         self.away=""
         self.saved=None
 
@@ -219,7 +219,7 @@ class TOC(protocol.Protocol):
         self._debug(data)
         if type==DATA:
             data=data+"\000"
-        length=len(data) 
+        length=len(data)
         send=send+struct.pack("!BHH",type,self._ourseqnum,length)
         send=send+data
         self._ourseqnum=self._ourseqnum+1
@@ -254,7 +254,7 @@ class TOC(protocol.Protocol):
         the FLAP is the basic TOC message format, and is logically equivilant to a packet in TCP
         """
         if self._buf=='': return None
-        if self._buf[0]!="*": 
+        if self._buf[0]!="*":
             raise TOCParseError
         if len(self._buf)<6: return None
         foo,type,seqnum,length=struct.unpack("!BBHH",self._buf[:6])
@@ -327,7 +327,7 @@ class TOC(protocol.Protocol):
         self.sendFlap(DATA,"CONFIG:%s"%self.saved.config)
         # sending user configuration goes here
         return "Connected"
-   
+
     def authorize(self,server,port,username,password):
         if self.saved.password=="":
             self.saved.password=password
@@ -354,7 +354,7 @@ class TOC(protocol.Protocol):
         return "Connected"
 
     def toc_unknown(self,tocname,data):
-        self._debug("unknown! %s %s" % (tocname,data))  
+        self._debug("unknown! %s %s" % (tocname,data))
 
     def toc_init_done(self,data):
         """
@@ -418,7 +418,7 @@ class TOC(protocol.Protocol):
     def toc_add_buddy(self,data):
         """
         adds users to the buddy list
-        
+
         toc_add_buddy <buddyname1> [<buddyname2>] [<buddyname3>]...
         """
         buddies=map(normalize,string.split(data," "))
@@ -637,7 +637,7 @@ class TOC(protocol.Protocol):
     def canContact(self,user):
         if self.permitmode==PERMITALL: return 1
         elif self.permitmode==DENYALL: return 0
-        elif self.permitmode==PERMITSOME: 
+        elif self.permitmode==PERMITSOME:
             if user.username in self.permitlist: return 1
             else: return 0
         elif self.permitmode==DENYSOME:
@@ -720,7 +720,7 @@ class Chatroom:
 
     def join(self,user):
         if user in self.users:
-            return 
+            return
         self.users.append(user)
         user.chatJoin(self)
 
@@ -789,7 +789,7 @@ MAXARGS["ADMIN_PASSWD_STATUS"]=0
 
 class TOCClient(protocol.Protocol):
     def __init__(self,username,password,authhost="login.oscar.aol.com",authport=5190):
-        
+
         self.username=normalize(username) # our username
         self._password=password # our password
         self._mode="SendNick" # current mode
@@ -1063,7 +1063,7 @@ class TOCClient(protocol.Protocol):
         self._cookies[cookie]=[user,SEND_FILE_UID,pip,port,{'name':name}]
         self.rvousProposal("send",cookie,user,vip,port,description=description,
                            name=name,files=numfiles,size=size)
-        
+
     def tocGET_FILE(self,user,cookie,seq,pip,vip,port,tlvs):
         return
         # XXX add this back in
@@ -1331,7 +1331,7 @@ class TOCClient(protocol.Protocol):
         message := the message, or '' to come back from awayness
         """
         self._awaymessage=message
-        if message: 
+        if message:
             message=' '+quote(message)
         self.sendFlap(2,"toc_set_away%s"%message)
 
@@ -1446,7 +1446,7 @@ class SendFileTransfer(protocol.Protocol):
             if self.hdr[7]==0:
                 self.transport.loseConnection()
 
-        
+
 class GetFileTransfer(protocol.Protocol):
     header_fmt="!4s 2H 8s 6H 10I 32s 3c 69s 16s 2H 64s"
     def __init__(self,client,cookie,dir):
@@ -1475,7 +1475,7 @@ class GetFileTransfer(protocol.Protocol):
              checksum(self.listing),0,0,0,0,0,0,"OFT_Windows ICBMFT V1.1 32",
              "\002",chr(0x1a),chr(0x10),"","",0,0,""]
         self.transport.write(apply(struct.pack,[self.header_fmt]+hdr))
-                    
+
     def dataReceived(self,data):
         self.buf=self.buf+data
         while len(self.buf)>=256:

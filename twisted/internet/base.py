@@ -128,7 +128,7 @@ class ReactorBase:
 
     def installWaker(self):
         raise NotImplementedError()
-    
+
     def installResolver(self, resolver):
         self.resolver = resolver
 
@@ -321,7 +321,7 @@ class ReactorBase:
 
     def getDelayedCalls(self):
         return tuple(self._pendingTimedCalls)
-    
+
     def timeout(self):
         if self._pendingTimedCalls:
             t = self._pendingTimedCalls[0].time - time()

@@ -16,7 +16,7 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
 """
-Compatability module to provide backwards compatability 
+Compatability module to provide backwards compatability
 for useful Python features.
 """
 
@@ -44,7 +44,7 @@ try:
 except NameError:
     def bool(value):
         """Demote a value to 0 or 1, depending on its truth value
-        
+
         This is not to be confused with types.BooleanType, which is
         way too hard to duplicate in 2.1 to be worth the trouble.
         """
@@ -72,8 +72,8 @@ except ImportError:
             return struct.pack('!HHHHHHHH', *parts)
         else:
             raise ValueError, "unsupported address family"
-    
-    
+
+
     def inet_ntop(af, addr):
         if af == socket.AF_INET:
             parts = struct.unpack('!BBBB', addr)

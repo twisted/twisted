@@ -15,7 +15,7 @@
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
-__version__ = "$Revision: 1.26 $"[11:-2]
+__version__ = "$Revision: 1.27 $"[11:-2]
 """
 This module represents flavors of remotely acessible objects.
 
@@ -135,7 +135,7 @@ class Root(Referenceable):
     """I provide a root object to L{pb.Broker}s for a L{pb.BrokerFactory}.
 
     When a L{pb.BrokerFactory} produces a L{pb.Broker}, it supplies that
-    L{pb.Broker} with an object named "root".  That object is obtained
+    L{pb.Broker} with an object named \"root\".  That object is obtained
     by calling my rootObject method.
 
     See also: L{pb.getObjectAt}
