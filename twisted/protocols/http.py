@@ -818,3 +818,4 @@ class HTTPFactory(protocol.ServerFactory):
             request.getHeader("referer") or "-",
             request.getHeader("user-agent") or "-")
         self.logFile.write(line)
+        self.logFile.flush()
