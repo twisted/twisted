@@ -31,7 +31,7 @@ class ProxyClient(Proxy):
     def connectionMade(self):
         self.peer.setPeer(self)
         # We're connected, everybody can read to their hearts content.
-        self.peer.transport.startReading()
+        self.peer.transport.resumeProducing()
 
 class ProxyClientFactory(protocol.ClientFactory):
 
@@ -56,7 +56,7 @@ class ProxyServer(Proxy):
     def connectionMade(self):
         # Don't read anything from the connecting client until we have
         # somewhere to send it to.
-        self.transport.stopReading()
+        self.transport.pauseProducing()
 
         client = self.clientProtocolFactory()
         client.setServer(self)
