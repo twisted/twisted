@@ -14,3 +14,18 @@
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 #
+
+"""
+Twisted WORLD:
+
+the Wonderful Object Row List Database.
+
+This is an object database that makes extensive use of introspection to use
+Python objects (with methods & everything) to represent fixed-length records
+inside files.
+
+Stability: Radioactive Meltdown
+
+Maintainer: U{Not My Fault I Swear<mailto:glyph@twistedmatrix.com>}
+
+"""

@@ -22,7 +22,7 @@ Package installer for Twisted
 Copyright (C) 2001 Matthew W. Lefkowitz
 All rights reserved, see LICENSE for details.
 
-$Id: setup.py,v 1.113 2003/05/05 23:59:15 warner Exp $
+$Id: setup.py,v 1.114 2003/05/07 14:08:52 glyph Exp $
 """
 
 import distutils, os, sys, string
@@ -226,6 +226,7 @@ desktop environments, and your toaster.
         "twisted.web",
         "twisted.web.woven",
         "twisted.words",
+        "twisted.world",
         "twisted.zoot",
     ],
     'scripts' : [
