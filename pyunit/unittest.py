@@ -205,6 +205,22 @@ class TestCase:
             twisted.python.log.msg("---- Running Test: %s.%s ----- " % (self.__class__, self.testMethod.__name__))
             try:
                 self.testMethod()
+                # clean the reactor between tests!
+                from twisted.internet import reactor
+                reactor.iterate() # flush short-range timers
+                # once cReactor acquires this method, remove the check
+                if hasattr(reactor, "getDelayedCalls"):
+                    pending = reactor.getDelayedCalls()
+                    if pending:
+                        msg = "\npendingTimedCalls still pending:\n"
+                        for p in pending:
+                            msg += " %s\n" % p
+                        for p in pending: p.cancel() # delete the rest
+                        from warnings import warn
+                        warn(msg)
+                        # this will go live someday: tests should not leave
+                        # lingering surprises
+                        #self.fail(msg)
                 ok = 1
             except self.failureException, e:
                 result.addFailure(self, self._exc_info())
