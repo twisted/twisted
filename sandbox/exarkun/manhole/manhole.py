@@ -13,10 +13,10 @@ class FileWrapper:
         pass
 
     def write(self, data):
-        self.o.write(data)
+        self.o.addOutput(data)
 
     def writelines(self, lines):
-        self.o.write(''.join(lines))
+        self.o.addOutput(''.join(lines))
 
 class ManholeInterpreter(code.InteractiveInterpreter):
     def __init__(self, handler, locals=None, filename="<console>"):
@@ -53,7 +53,7 @@ class ManholeInterpreter(code.InteractiveInterpreter):
     def runcode(self, *a, **kw):
         orighook, sys.displayhook = sys.displayhook, self.write
         try:
-            origout, sys.stdout = sys.stdout, FileWrapper(self)
+            origout, sys.stdout = sys.stdout, FileWrapper(self.handler)
             try:
                 code.InteractiveInterpreter.runcode(self, *a, **kw)
             finally:
@@ -62,21 +62,21 @@ class ManholeInterpreter(code.InteractiveInterpreter):
             sys.displayhook = orighook
 
     def write(self, data):
-        self.handler.addOutput(str(data).splitlines())
+        self.handler.addOutput(repr(data))
 
 class Manhole(recvline.HistoricRecvLineHandler):
     def __init__(self, proto):
         recvline.HistoricRecvLineHandler.__init__(self, proto)
         self.interpreter = ManholeInterpreter(self)
 
-    def addOutput(self, lines):
-        for L in lines:
-            self.proto.write(L)
-            self.proto.nextLine()
+    def addOutput(self, bytes):
+        self.proto.write(bytes.replace('\n', '\r\n'))
 
     def lineReceived(self, line):
         more = self.interpreter.push(line)
         self.pn = bool(more)
+        if not self.proto.lastWrite.endswith('\r\n') and not self.proto.lastWrite.endswith('\x1bE'):
+            self.proto.write('\r\n')
         self.proto.write(self.ps[self.pn])
 
 from twisted.application import service

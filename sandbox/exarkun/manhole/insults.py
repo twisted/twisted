@@ -289,6 +289,7 @@ class ServerProtocol(protocol.Protocol):
         exec '%s = %r' % (keyID, keyID)
 
     _databuf = ''
+    lastWrite = ''
 
     def __init__(self, *a, **kw):
         self.handlerArgs = a
@@ -297,6 +298,7 @@ class ServerProtocol(protocol.Protocol):
         self._cursorReports = []
 
     def write(self, bytes):
+        self.lastWrite = bytes
         self.transport.write(bytes)
 
     def connectionMade(self):
