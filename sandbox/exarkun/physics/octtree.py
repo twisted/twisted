@@ -2,7 +2,8 @@
 from zope import interface
 
 class ILocated(interface.Interface):
-    position = property(doc="Three tuple of coordinates of a thing")
+    position = interface.Attribute("position",
+                                   __doc__="Three tuple of coordinates of a thing")
 
 def distance(x, y):
     return ((x[0] - y[0]) ** 2 + (x[1] - y[1]) ** 2 + (x[2] - y[2]) ** 2) ** 0.5
@@ -33,6 +34,7 @@ class OctTree(object):
         self.height = height
         self._children = {}
         self.n = n
+        self._children = []
 
     def _getChild(self, p):
         left = p[0] < self.center[0]
