@@ -1,3 +1,11 @@
+2002-09-17  Donovan Preston  <dp@twistedmatrix.com>
+
+    * Added better error reporting to WebMVC. To do this, I had to
+    remove the use of "class" and "id" attributes on nodes as
+    synonyms for "model", "view", and "controller". Overloading
+    these attributes for three purposes, not to mention their
+    usage by JavaScript and CSS, was just far too error-prone.
+
 2002-09-09  Andrew Bennetts  <spiv@twistedmatrix.com>
 
 	* twisted.inetd: An inetd(8) replacement.  TCP support should be

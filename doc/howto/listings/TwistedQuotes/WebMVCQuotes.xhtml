@@ -10,16 +10,16 @@
     
     <body>
         
-        <h1 class="title">
+        <h1 view="title" model="title">
             Title will go here
         </h1>
         
-        <pre class="quote">
+        <pre view="quote" model="title">
             Quote will go here.
         </pre>
         
         <form action="">
-            <input type="text" id="newQuote" name="newQuote" />
+            <input type="text" controller="newQuote" name="newQuote" />
             <input type="submit" />
         </form>
         <a href="">Refresh</a>

@@ -95,7 +95,7 @@ Now, let's take a look at an actual application written in WebMVC. Here is a tem
 <a href="listings/TwistedQuotes/WebMVCQuotes.xhtml" class="html-listing">Listing 1: WebMVCQuotes.html: Twisted Quotes Web Template</a>
 
 <p>
-Notice that we have placed "class" and "id" attributes on those elements that we are interested in operating on. When DOMTemplate is iterating the template looking for nodes to operate on, any node with a class or id will be looked for in both the view and controller. If a node has the class or id "foo" the method factory_foo will be looked for in the view and controller.
+Notice that we have placed "model", "view" and "controller" attributes on those elements that we are interested in operating on. When DOMTemplate is iterating the template looking for nodes to operate on, any node with these attributes will be looked for in both the view and controller. If a node has view attribute of "foo" the method factory_foo will be looked for in the view, and if a node has a controller attribute of "bar" the method factory_bar will be looked for in the controller.
 </p>
 
 <p>
@@ -107,7 +107,7 @@ These factory methods will be called with the request object and current node ob
 </p>
 
 <p>
-So, to bring our template to life, we first override setUp to prepare the view for rendering. We then add factory_quote and factory_title methods on our view subclass. In the case of title we can simply return a domwidgets.Text instance. Since this factory was called in response to a node with the class of "title", when the node is rendered it will use the "title" attribute of the model as it's data. For our quote factory, we have implemented a custom widget. This makes our logic componentized and reusable. The same QuoteWidget could potentially be used to render multiple different pieces of data.
+So, to bring our template to life, we first override setUp to prepare the view for rendering. We then add factory_quote and factory_title methods on our view subclass. In the case of title we can simply return a domwidgets.Text instance. Since this factory was called in response to a node with the model attribute set to "title", when the node is rendered it will use the "title" attribute of the model as it's data. For our quote factory, we have implemented a custom widget. This makes our logic componentized and reusable. The same QuoteWidget could potentially be used to render multiple different pieces of data.
 </p>
 
 <p>
