@@ -24,7 +24,7 @@ Maintainer: U{Itamar Shtull-Trauring<mailto:twisted@itamarst.org>}
 """
 
 # system imports
-import sys
+import sys, os, select
 
 # Twisted Imports
 from twisted.internet import protocol
@@ -35,9 +35,49 @@ import abstract, fdesc
 
 _stdio_in_use = 0
 
-class StandardIO(abstract.FileDescriptor):
-    """I can connect Standard IO to a twisted.protocol.
+class StandardIOWriter(abstract.FileDescriptor):
 
+    connected = 1
+    ic = 0
+
+    def __init__(self):
+        abstract.FileDescriptor.__init__(self)
+        self.fileno = sys.__stdout__.fileno
+        fdesc.setNonBlocking(self.fileno())
+    
+    def writeSomeData(self, data):
+        try:
+            rv = os.write(self.fileno(), self.unsent)
+            if rv == len(self.unsent):
+                self.startReading()
+            return rv
+        except IOError, io:
+            if io.args[0] == errno.EAGAIN:
+                return 0
+            elif io.args[0] == errno.EPERM:
+                return 0
+            return CONNECTION_LOST
+        except OSError, ose:
+            if ose.errno == errno.EPIPE:
+                return CONNECTION_LOST
+            raise
+
+    def write(self, data):
+        self.stopReading()
+        abstract.FileDescriptor.write(self, data)
+
+    def doRead(self):
+        fd = self.fileno()
+        r, w, x = select.select([fd], [fd], [], 0)
+        if r and w:
+            return CONNECTION_LOST
+
+    def connectionLost(self, reason):
+        abstract.FileDescriptor.connectionLost(self, reason)
+        os.close(self.fileno())
+
+class StandardIO(abstract.FileDescriptor):
+    """I can connect Standard IO to a twisted.protocol
     I act as a selectable for sys.stdin, and provide a write method that writes
     to stdout.
     """
@@ -57,10 +97,14 @@ class StandardIO(abstract.FileDescriptor):
         self.protocol = protocol
         self.protocol.makeConnection(self)
         self.startReading()
+        self.writer = StandardIOWriter()
+        self.writer.startReading()
 
     def write(self, data):
         """Write some data to standard output.
         """
+        self.writer.write(data)
+        return
         sys.__stdout__.write(data)
         # This is an asynchronous framework, but stdout *really* ought to be
         # flushable in a reasonable amount of time.
