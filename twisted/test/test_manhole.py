@@ -20,8 +20,18 @@ from twisted.manhole import service
 from twisted.internet import app
 from twisted.spread.util import LocalAsRemote
 
+class Dummy:
+    pass
+
+class DummyTransport:
+    def getHost(self):
+        return 'INET', 'localhost', 0
+
 class DummyManholeClient(LocalAsRemote):
     zero = 0
+    broker = Dummy()
+    broker.transport = DummyTransport()
+
     def __init__(self):
         self.messages = []
 
