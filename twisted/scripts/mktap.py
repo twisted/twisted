@@ -15,7 +15,7 @@
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 #
-# $Id: mktap.py,v 1.22 2003/01/29 04:51:15 acapnotic Exp $
+# $Id: mktap.py,v 1.23 2003/02/03 11:11:07 spiv Exp $
 
 """ Implementation module for the `mktap` command.
 """
@@ -117,15 +117,14 @@ def run():
         # XXX - Yea, this is FILTH FILTH FILTH
         if options['debug'] or options['progress']:
             tapLookup = loadPlugins(options['debug'], options['progress'])
+    except SystemExit:
+        # We don't really want to catch this at all...
+        raise
     except Exception, e:
         # XXX: While developing, I find myself frequently disabling
         # this except block when I want to see what screwed up code
         # caused my updateApplication crash.  That probably means
         # we're not doing something right here.  - KMT
-
-        if isinstance(e, SystemExit):
-            # We don't really want to catch this at all...
-            raise
         print str(sys.exc_value)
         print str(options)
         sys.exit(2)
