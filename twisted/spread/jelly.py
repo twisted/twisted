@@ -108,6 +108,13 @@ typeNames = {
 if hasattr(types, 'UnicodeType'):
     typeNames[types.UnicodeType] = 'unicode'
 
+try:
+    from org.python.core import PyStringMap
+    typeNames[PyStringMap] = "dictionary"
+except ImportError:
+    pass
+
+
 class Unpersistable:
     """
     This is an instance of a class that comes back when something couldn't be
@@ -660,6 +667,8 @@ class SecurityOptions:
                              "string": 1,
                              "int": 1,
                              "float": 1}
+        if hasattr(types, 'UnicodeType'):
+            self.allowedTypes['unicode'] = 1
         self.allowedModules = {}
         self.allowedClasses = {}
 
