@@ -20,7 +20,7 @@
 
 
 # System Imports
-import os, string
+import os, stat, string
 import cStringIO
 import traceback
 import types
@@ -83,7 +83,7 @@ class Redirect(resource.Resource):
     def __init__(self, request):
         resource.Resource.__init__(self)
         self.url = addSlash(request)
-        
+
     def render(self, request):
         return redirectTo(self.url, request)
 
@@ -94,7 +94,7 @@ class Registry(components.Componentized):
 
 def _upgradeRegistry(registry):
     from twisted.internet import app
-    registry.setComponent(interfaces.IServiceCollection, 
+    registry.setComponent(interfaces.IServiceCollection,
                           app.theApplication)
 
 
@@ -106,7 +106,7 @@ class File(resource.Resource, styles.Versioned):
 
     # we don't implement IConfigCollection
     __implements__ = resource.IResource
-    
+
     #argh, we need a MIME db interface
     contentTypes = {
         ".css": "text/css",
@@ -153,7 +153,7 @@ class File(resource.Resource, styles.Versioned):
             self.registry = Registry()
             from twisted.internet import reactor
             reactor.callLater(0, _upgradeRegistry, self.registry)
-    
+
     def upgradeToVersion4(self):
         if not hasattr(self, 'registry'):
             self.registry = {}
@@ -188,7 +188,7 @@ class File(resource.Resource, styles.Versioned):
             self.registry = Registry()
         else:
             self.registry = registry
-        
+
         self.type = self.contentTypes.get(string.lower(ext), defaultType)
 
     def getChild(self, path, request):
@@ -243,7 +243,7 @@ class File(resource.Resource, styles.Versioned):
                 p = processor(childPath, self.registry)
             except TypeError: # this isn't very robust :(
                 p = processor(childPath)
-            
+
             if components.implements(p, resource.IResource):
                 return p
             else:
@@ -262,12 +262,12 @@ class File(resource.Resource, styles.Versioned):
 
         if not os.path.exists(self.path):
             return error.NoResource("File not found.").render(request)
-        
+
         mode, ino, dev, nlink, uid, gid, size, atime, mtime, ctime =\
               os.stat(self.path)
 
         if os.path.isdir(self.path): # stat.S_ISDIR(mode) (see above)
-            if self.path[-1] == '/': 
+            if self.path[-1] == '/':
                 index = self.getIndex(request)
                 if index:
                     return index.render(request)
@@ -277,20 +277,11 @@ class File(resource.Resource, styles.Versioned):
             #return dirListingPage.render(request)
 
         request.setHeader('accept-ranges','bytes')
-        request.setHeader('last-modified', http.datetimeToString(mtime))
+        request.setLastModified(mtime)
         if self.type:
             request.setHeader('content-type', self.type)
         if self.encoding:
             request.setHeader('content-encoding', self.encoding)
-
-        # caching headers support
-        modified_since = request.getHeader('if-modified-since')
-        if modified_since is not None:
-            # check if file has been modified and if not don't return the file
-            modified_since = http.stringToDatetime(modified_since)
-            if modified_since >= mtime:
-                request.setResponseCode(http.NOT_MODIFIED)
-                return ''
 
         try:
             f = open(self.path,'rb')
@@ -330,6 +321,12 @@ class File(resource.Resource, styles.Versioned):
         FileTransfer(f, size, request)
         # and make sure the connection doesn't get closed
         return server.NOT_DONE_YET
+
+    def wasModifiedSince(self, request, when):
+        try:
+            return os.stat(self.path)[stat.ST_MTIME] > when
+        except OSError:
+            return 1
 
     def redirect(self, request):
         return redirectTo(addSlash(request), request)

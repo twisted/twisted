@@ -1,3 +1,13 @@
+2002-09-21  Kevin Turner  <acapnotic@twistedmatrix.com>
+
+	* twisted/protocols/http.py (Request.setLastModified): Use
+	setLastModified to set a timestamp on a http.Request object, and
+	it will add a Last-Modified header to the outgoing reply.
+
+	* twisted/web/resource.py (Resource.wasModifiedSince): companion
+	method, override this to get sensible handling of
+	If-Modified-Since conditional requests.
+
 2002-09-21  Glyph Lefkowitz  <glyph@twistedmatrix.com>
 
 	* twisted/web/static.py, twisted/web/script.py: Previously, it was
@@ -34,7 +44,7 @@
 	  twisted/internet/pollreactor.py, twisted/internet/defer.py:
 	  added and modified __all__
 
-	* twisted/internet/base.py: changed ReactorBase's __name__, added 
+	* twisted/internet/base.py: changed ReactorBase's __name__, added
 	__all__
 
 	* twisted/internet/default.py, twisted/internet/error.py,
@@ -56,7 +66,7 @@
 
 	* twisted/web/microdom.py: minidom compat fixes
 
-2002-9-20  Jp Calderone <exarkun@twistedmatrix.com>            
+2002-9-20  Jp Calderone <exarkun@twistedmatrix.com>
 
 	* twisted/internet/error.py twisted/internet/process.py:
 	ProcessEnded -> ProcessTerminated/ProcessDone. Now it is possible
@@ -86,14 +96,14 @@
 	* twisted/internet/base.py: fix deprecation, add DelayedCall,
 	move to connect*  from client*
 
-	* twisted/internet/error.py: errno mapping works on more platforms, 
+	* twisted/internet/error.py: errno mapping works on more platforms,
 	AlreadyCalled, AlreadyCancelled errors
 
 	* twisted/internet/gtkreactor.py: try requiring gtk1.2, timeout->idle
 
 	* twisted/internet/interfaces.py: added IDelayedCall IProcessTransports
- 
-	* twisted/internet/javareactor.py: using failure, better dealing with 
+
+	* twisted/internet/javareactor.py: using failure, better dealing with
 	connection losing, new connect* API
 
 	* twisted/internet/process.py: dealing better with ending
@@ -106,12 +116,12 @@
 	* twisted/internet/reactor.py: better guessing of default
 
 	* twisted/internet/tcp.py: failure
- 
+
 	* twisted/internet/win32eventreactor.py: update to new API, support GUI
 
 	* twisted/manhole/service.py: fix deprecation
- 
-	* twisted/news/database.py: fix to be 2.1 compat., generating 
+
+	* twisted/news/database.py: fix to be 2.1 compat., generating
 	message-id, bytes, lines, date headers, improved storage
 
 	* twisted/news/news.py: UsenetClientFactory, UsenetServerFactory
@@ -123,16 +133,16 @@
 	* twisted/protocols/http.py: StringTransport instead of StringIO
 
 	* twisted/protocols/irc.py: stricter parsing, avoid flooding
- 
+
 	* twisted/protocols/loopback.py: new reactor API, loopback over UNIX
 	sockets
 
 	* twisted/protocols/nntp.py: more lenient parsing, more protocol support
 
 	* twisted/protocols/oscar.py: new reactor API
- 
+
 	* twisted/python/components.py: fix setAdapter add removeComponent
- 
+
 	* twisted/python/failure.py: cleanFailure
 
 	* twisted/python/log.py: can now log multiple strings in one go
@@ -152,7 +162,7 @@
 	* twisted/tap/news.py: works saner now
 
 	* twisted/tap/ssh.py: can specify authorizer
- 
+
 	* twisted/tap/words.py: can bind services to specific interfaces
 
 	* twisted/web/distrib.py: now works on java too
@@ -178,7 +188,7 @@
 	* twisted/words/ircservice.py: new connectionLost API
 
 	* twisted/words/service.py: refactoring and error handling
- 
+
 	* twisted/words/tendril.py: lots of fixes, it works now
 
 2002-09-17  Donovan Preston  <dp@twistedmatrix.com>
@@ -198,7 +208,7 @@
 
 2002-08-30  Christopher Armstrong  <radix@twistedmatrix.com>
 
-	* Releasing Twisted 0.99.1rc4. There was a bug in the acquisition 
+	* Releasing Twisted 0.99.1rc4. There was a bug in the acquisition
 	code, as well as a typo in TwistedQuotes.
 
 2002-08-29  Christopher Armstrong  <radix@twistedmatrix.com>
@@ -214,7 +224,7 @@
 2002-08-28  Christopher Armstrong  <radix@twistedmatrix.com>
 
 	* Releasing Twisted 0.99.1rc1.
-	
+
 2002-08-27  Donovan Preston  <dp@twistedmatrix.com>
 
 	* twisted.web.domtemplate: Look up templates in the directory of
@@ -277,7 +287,7 @@
 
 2002-08-17  Christopher Armstrong  <radix@twistedmatrix.com>
 
-	* Releasing Twisted 0.99.0rc8, with a fix to tap2deb and 
+	* Releasing Twisted 0.99.0rc8, with a fix to tap2deb and
 	slightly updated options documentation.
 
 	* Releasing Twisted 0.99.0rc9 with fixes to release-twisted
@@ -295,7 +305,7 @@
 
 2002-08-14  Christopher Armstrong  <radix@twistedmatrix.com>
 
-	* Releasing Twisted 0.99.0rc1! ON THE WAY TO 1.0, BABY!  
+	* Releasing Twisted 0.99.0rc1! ON THE WAY TO 1.0, BABY!
 	* Releasing Twisted 0.99.0rc2! Sorry, typoed the version number in
 	copyright.py
 	* Releasing Twisted 0.99.0rc3! I HATE TAGGING!
@@ -324,7 +334,7 @@
 	* twisted.internet: New `writeSequence' method on transport
 	objects: This can increase efficiency as compared to `write`ing
 	concatenated strings, by copying less data in memory.
-	
+
 2002-08-02  Glyph Lefkowitz  <glyph@twistedmatrix.com>
 
 	* twisted.cred.service, twisted.internet.app: Application/Service
@@ -337,7 +347,7 @@
 	TX) hideout with Allen Short, twisted.issues, the successor to
 	Twisted Bugs, is born. Featuring a paranoia-inducing chat-bot
 	interface!
-	
+
 2002-07-30  Itamar Shtull-Trauring  <itamarst@twistedmatrix.com>
 
 	* twisted.internet.kqueue: Thanks to Matt Campbell, we now have a
@@ -347,13 +357,13 @@
 
 	* doc/fun/Twisted.Quotes: Added our seekrut Twisted.Quotes file to
 	Twisted proper.
-	
+
 2002-07-26  Glyph Lefkowitz  <glyph@twistedmatrix.com>
 
 	* twisted.spread: "Paging" for PB: this is an abstraction for
 	sending big streams of data across a PB connection.
 
-	
+
 2002-07-23  Itamar Shtull-Trauring  <itamarst@twistedmatrix.com>
 
 	* twisted.internet: Rewrite of client APIs. `reactor.clientXXX'
@@ -374,7 +384,7 @@
 
 	* twisted.protocols.gnutella: Twisted now has an implementation of
 	the Gnutella protocol.
-	
+
 2002-07-15  Sean Riley  <sean@twistedmatrix.com>
 
 	* twisted.sister: Now featuring distributed login.
@@ -425,14 +435,14 @@
 	* twisted.internet.process,interfaces,default: Process now
 	supports SetUID: there are new UID/GID arguments to the process
 	spawning methods/constructors.
-	
+
 2002-06-22  Paul Swartz  <z3p@twistedmatrix.com>
 
 	* twisted.protocols.oscar: totally rewrote OSCAR protocol
 	implementation.
 
 2002-06-18  Glyph Lefkowitz  <glyph@twistedmatrix.com>
-	
+
 	* twisted.internet.defer: Deprecated the arm method of Deferred
 	objects: the replacement is a pair of methods, pause and
 	unpause. After the pause method is called, it is guaranteed that
@@ -451,13 +461,13 @@
 
 	I will be working on making the formatting better, soon, but it's
 	workable for now.
-	
+
 2002-06-08  Glyph Lefkowitz  <glyph@twistedmatrix.com>
 
 	* twisted.internet, twisted.tap.web: Add a --https and related
 	options to 'mktap web'; web is now much more SSL-friendly.
 
-	
+
 2002-06-02  Itamar Shtull-Trauring  <twisted@itamarst.org>
 
 	* twisted.internet: changed protocol factory interface - it now has
@@ -490,9 +500,9 @@
 
 2002-05-25  Christopher Armstrong  <radix@twistedmatrix.com>
 
-	* twisted/spread/pb.py, twisted/internet/defer.py, 
+	* twisted/spread/pb.py, twisted/internet/defer.py,
 	  twisted/python/failure.py, etc:
-	  
+
 	  Perspective broker now supports Failures! This should make writing
 	  robust PB clients *much* easier. What this means is that errbacks will
 	  recieve instances of t.python.failure.Failure instead of just strings
@@ -509,7 +519,7 @@
 
 		* mail domains now receive service in __init__
 
-		* split file system stuff into Queue (renamed from 
+		* split file system stuff into Queue (renamed from
 	          MessageCollection)
 
 		* Put a Queue in service
@@ -521,7 +531,7 @@
 
 	* Twisted applications can now be persisted to XML files (.tax) with
 	the --xml option -- this is pretty verbose and needs some optimizations.
-	
+
 2002-05-22  Glyph Lefkowitz  <glyph@twistedmatrix.com>
 
 	* twisted/persisted/marmalade.py: Marmalade: Jelly, with just a hint
@@ -532,21 +542,21 @@
 
 	* twisted/internet/gtkreactor.py: GTK+ support for win32; input_add
 	is not supported in win32 and had to be worked around.
-	
+
 2002-05-20  Itamar Shtull-Trauring  <twisted@itamarst.org>
 
 	* twisted/pythor/defer.py, twisted/protocols/protocol.py,
 	  twisted/internet/defer.py, twisted/internet/protocol.py:
-	
+
 	    Moved defer and protocol to twisted.internet to straighten
 	    out dependancies.
-	
+
 2002-05-18  Glyph Lefkowitz  <glyph@twistedmatrix.com>
 
 	* twisted/metrics, twisted/forum: Metrics and Forum are no longer
 	a part of Twisted proper; They are now in different CVS modules, and
 	will be released separately.
-	
+
 2002-05-15  Andrew Bennetts <andrew-twisted@puzzling.org>
 
 	* twisted/protocols/ftp.py: Small fixes to FTPClient that have
@@ -557,13 +567,13 @@
 2002-05-12  Itamar Shtull-Trauring  <twisted@itamarst.org>
 
 	* doc/specifications/banana.html: Documentation of the Banana protocol.
-	
+
 2002-05-06  Glyph Lefkowitz  <glyph@twistedmatrix.com>
 
 	* twisted/im/gtkchat.py: Some more UI improvements to InstanceMessenger:
 	Nicks are now colorful (each nick is hashed to get a color) and
 	messages now have timestamps.
-	
+
 2002-05-04  Glyph Lefkowitz  <glyph@twistedmatrix.com>
 
 	* Reactor Refactor! Pretty much all of the twisted.internet.* classes
@@ -576,7 +586,7 @@
 
 	* twisted/spread/pb.py: There is now some resource limiting in PB.
 	Clients can now have the number of references to an object limited.
-	
+
 2002-04-29  Glyph Lefkowitz  <glyph@twistedmatrix.com>
 
 	* twisted/im/*: Refactored Twisted InstanceMessenger to seperate GUI
@@ -614,9 +624,9 @@
 
 2002-04-21  Chris Armstrong  <carmstro@twistedmatrix.com>
 
-	* twisted/scripts/mktap.py: No more --manhole* options, use 
+	* twisted/scripts/mktap.py: No more --manhole* options, use
 	'--append=my.tap manhole' now.
-	
+
 2002-04-20  Chris Armstrong  <carmstro@twistedmatrix.com>
 
 	* .: Releasing Twisted 0.17.4.

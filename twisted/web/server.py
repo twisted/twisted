@@ -148,8 +148,25 @@ class Request(pb.Copyable, http.Request):
             self.postpath = map(urllib.unquote, string.split(self.path[1:], '/'))
             resrc = self.site.getResourceFor(self)
 
+            # Conditional requests
+            emptyBody = 0
+            modified_since = self.getHeader('if-modified-since')
+            if modified_since is not None:
+                modified_since = http.stringToDatetime(modified_since)
+                # XXX: No unit test for this!
+                if not resrc.wasModifiedSince(self, modified_since):
+                    self.setResponseCode(http.NOT_MODIFIED)
+                    emptyBody = 1
+                else:
+                    log.msg("Conditional request rendering normally.")
+            # TODO: Support for other conditonal requests, i.e. ETags.
+
             # Resource renderring
-            body = resrc.render(self)
+            if emptyBody:
+                body = ''
+            else:
+                body = resrc.render(self)
+
             if body == NOT_DONE_YET:
                 return
             if type(body) is not types.StringType:

@@ -38,9 +38,9 @@ class Resource(coil.ConfigCollection):
     """
 
     __implements__ = (IResource, coil.IConfigCollection)
-    
+
     entityType = IResource
-    
+
     server = None
 
     def __init__(self):
@@ -141,6 +141,11 @@ class Resource(coil.ConfigCollection):
         """
         self.children[path] = child
         child.server = self.server
+
+    def wasModifiedSince(self, request, when):
+        """Have I been modified, for such a request, since such a time?
+        """
+        return 1
 
     def render(self, request):
         """Render a given resource.

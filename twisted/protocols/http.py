@@ -27,6 +27,7 @@ import base64
 import cgi
 import urllib
 import socket
+import math
 import time
 import calendar
 import sys
@@ -303,9 +304,9 @@ class HTTPClient(basic.LineReceiver):
 
 class Request:
     """A HTTP request."""
-    
+
     __implements__ = interfaces.IConsumer
-    
+
     producer = None
     finished = 0
     code = OK
@@ -316,7 +317,8 @@ class Request:
     startedWriting = 0
     chunked = 0
     sentLength = 0 # content-length of response, or total bytes sent via chunking
-    
+    lastModified = None
+
     def __init__(self, channel, queued):
         """
         channel -- the channel we're connected to.
@@ -334,40 +336,40 @@ class Request:
             self.transport = StringTransport()
         else:
             self.transport = self.channel.transport
-    
+
     def _cleanup(self):
         """Called when have finished responding and are no longer queued."""
         self.channel.requestDone(self)
         del self.channel
         self.content.close()
         del self.content
-    
+
     # methods for channel - end users should not use these
-    
+
     def noLongerQueued(self):
         """Notify the object that it is no longer queued.
-        
+
         We start writing whatever data we have to the transport, etc.
         """
         if not self.queued:
             raise RuntimeError, "noLongerQueued() got called unnecessarily."
-    
+
         self.queued = 0
-        
+
         # set transport to real one and send any buffer data
         data = self.transport.getvalue()
         self.transport = self.channel.transport
         if data:
             self.transport.write(data)
-        
+
         # if we have producer, register it with transport
         if self.producer is not None:
             self.transport.registerProducer(self.producer, self.streamingProducer)
-        
+
         # if we're finished, clean up
         if self.finished:
             self._cleanup()
-    
+
     def gotLength(self, length):
         if length < 100000:
             self.content = StringIO()
@@ -383,7 +385,7 @@ class Request:
                     self.received_cookies[k] = v
                 except ValueError:
                     pass
-    
+
     def handleContentChunk(self, data):
         """Write a chunk of data."""
         self.content.write(data)
@@ -393,7 +395,7 @@ class Request:
         self.content.seek(0,0)
         self.args = {}
         self.stack = []
-        
+
         self.method, self.uri = command, path
         self.clientproto = version
         x = self.uri.split('?')
@@ -433,7 +435,7 @@ class Request:
                     cgi.parse_multipart(self.content, pdict))
             else:
                 pass
-        
+
         self.process()
 
     def __repr__(self):
@@ -443,20 +445,20 @@ class Request:
         """Override in subclasses."""
         pass
 
-    
+
     # consumer interface
-    
+
     def registerProducer(self, producer, streaming):
         """Register a producer."""
 
         self.streamingProducer = streaming
-        
+
         if self.queued:
             self.producer = producer
             producer.pauseProducing()
         else:
             self.transport.registerProducer(producer, streaming)
-    
+
     def unregisterProducer(self):
         """Unregister the producer."""
         if self.queued:
@@ -466,11 +468,11 @@ class Request:
 
 
     # private http response methods
-    
+
     def _sendError(self, code, resp=''):
         self.transport.write('%s %s %s\r\n\r\n' % (self.clientproto, code, resp))
 
-    
+
     # http request methods
 
     def getHeader(self, key):
@@ -496,11 +498,11 @@ class Request:
         # log request
         if hasattr(self.channel, "factory"):
             self.channel.factory.log(self)
-        
+
         self.finished = 1
         if not self.queued:
             self._cleanup()
-    
+
     def write(self, data):
         """
         Write some data as a result of an HTTP request.  The first
@@ -517,14 +519,21 @@ class Request:
                 if version == "HTTP/1.1" and self.headers.get('content-length', None) is None:
                     l.append("%s: %s\r\n" % ('Transfer-encoding', 'chunked'))
                     self.chunked = 1
+                if (self.lastModified is not None):
+                    if 'last-modified' in self.headers:
+                        log.msg("Warning: last-modified specified both in"
+                                " header list and lastModified attribute.")
+                    else:
+                        self.setHeader('last-modified',
+                                       datetimeToString(self.lastModified))
                 for name, value in self.headers.items():
                     l.append("%s: %s\r\n" % (name.capitalize(), value))
                 for cookie in self.cookies:
                     l.append('%s: %s\r\n' % ("Set-Cookie", cookie))
                 l.append("\r\n")
-                                
+
                 self.transport.writeSequence(l)
-            
+
             # if this is a "HEAD" request, we shouldn't return any data
             if self.method == "HEAD":
                 self.write = lambda data: None
@@ -537,11 +546,11 @@ class Request:
             else:
                 self.transport.write(data)
         else:
-            log.msg("(harmless warning): discarding zero-length data for request %s" % self) 
+            log.msg("(harmless warning): discarding zero-length data for request %s" % self)
 
     def addCookie(self, k, v, expires=None, domain=None, path=None, max_age=None, comment=None, secure=None):
         """Set an outgoing HTTP cookie.
-        
+
         In general, you should consider using sessions instead of cookies, see
         twisted.web.server.Resource.getSession and the
         twisted.web.server.Session class for details.
@@ -569,11 +578,24 @@ class Request:
             self.code_message = message
         else:
             self.code_message = RESPONSES.get(code, "Unknown Status")
-    
+
     def setHeader(self, k, v):
         """Set an outgoing HTTP header.
         """
         self.headers[k.lower()] = v
+
+    def setLastModified(self, when):
+        """Set the Last-Modified time for the response to this request.
+
+        If I am called more than once, I ignore attempts to set
+        Last-Modified earlier, only replacing the Last-Modified time
+        if it is to a later value.
+        """
+        # time.time() may be a float, but the HTTP-date strings are
+        # only good for whole seconds.
+        when = long(math.ceil(when))
+        if (not self.lastModified) or (self.lastModified < when):
+            self.lastModified = when
 
     def getAllHeaders(self):
         return self.received_headers
@@ -581,7 +603,7 @@ class Request:
     def getRequestHostname(self):
         """Get the hostname that the user passed in to the request.
 
-        This will either use the Host: header (if it is available) or the 
+        This will either use the Host: header (if it is available) or the
         """
         return (self.getHeader('host') or socket.gethostbyaddr(self.getHost()[1])).split(':')[0]
 
@@ -646,17 +668,17 @@ class Request:
 
 class HTTPChannel(basic.LineReceiver):
     """A receiver for HTTP requests."""
-    
+
     length = 0
     persistent = 1
     __header = ''
     __first_line = 1
     __content = None
-    
+
     # set in instances or subclasses
     requestFactory = Request
 
-    
+
     def __init__(self):
         # the request queue
         self.requests = []
@@ -668,7 +690,7 @@ class HTTPChannel(basic.LineReceiver):
             if not self.persistent:
                 self.dataReceived = self.lineReceived = lambda *args: None
                 return
-            
+
             # create a new Request object
             request = self.requestFactory(self, len(self.requests))
             self.requests.append(request)
@@ -723,7 +745,7 @@ class HTTPChannel(basic.LineReceiver):
         command = self.__command
         path = self.__path
         version = self.__version
-        
+
         # reset ALL state variables, so we don't interfere with next request
         self.length = 0
         self.__header = ''
@@ -748,7 +770,7 @@ class HTTPChannel(basic.LineReceiver):
         req.parseCookies()
         self.persistent = self.checkPersistence(req, self.__version)
         req.gotLength(self.length)
-    
+
     def checkPersistence(self, request, version):
         """Check if the channel should close or not."""
         connection = request.getHeader('connection')
@@ -763,7 +785,7 @@ class HTTPChannel(basic.LineReceiver):
         # content-length header, if we don't have the header we need to close the
         # connection. In HTTP 1.1 this is not an issue since we use chunked
         # encoding if content-length is not available.
-        
+
         #if version == "HTTP/1.0":
         #    if 'keep-alive' in tokens:
         #        request.setHeader('connection', 'Keep-Alive')
@@ -778,7 +800,7 @@ class HTTPChannel(basic.LineReceiver):
                 return 1
         else:
             return 0
-    
+
     def requestDone(self, request):
         """Called by first request in queue when it is done."""
         if request != self.requests[0]: raise TypeError
@@ -796,9 +818,9 @@ class HTTPFactory(protocol.ServerFactory):
     """Factory for HTTP server."""
 
     protocol = HTTPChannel
-    
+
     logPath = None
-    
+
     def __init__(self, logPath=None):
         self.logPath = logPath
 
@@ -819,7 +841,7 @@ class HTTPFactory(protocol.ServerFactory):
         f = open(path, "a")
         f.seek(2, 0)
         return f
-    
+
     def log(self, request):
         """Log a request's result to the logfile, by default in combined log format."""
         line = '%s - - %s "%s" %d %s "%s" "%s"\n' % (
