@@ -441,6 +441,9 @@ class TestCase(object):
         @note: you must call os.mkdir on the value returned from this
                method if you wish to use it as a directory!
         """
+        # FIXME: when we drop support for python 2.2 and start to require 2.3,
+        #        we should ditch most of this cruft and just call
+        #        tempfile.mkdtemp.
         cls = self.__class__
         base = os.path.join(cls.__module__, cls.__name__,
                             getattr(self, 'caseMethodName', 'class'))
