@@ -62,11 +62,11 @@ class _Nothing:
 def getRegistry(r):
     return theAdapterRegistry
 
-class CannotAdapt(NotImplementedError, TypeError):
+class CannotAdapt(NotImplementedError):
     """
     Can't adapt some object to some Interface.
     """
-    pass
+
 
 class MetaInterface(interface.InterfaceClass):
     def __call__():
@@ -80,11 +80,19 @@ class MetaInterface(interface.InterfaceClass):
             # XXX does this go away?
             if hasattr(adaptable, "getComponent") and not hasattr(adaptable, "__conform__"):
                 warnings.warn("please use __conform__ instead of getComponent", DeprecationWarning)
-                return adaptable.getComponent(self)
-            if default == _Nothing:
-                return interface.InterfaceClass.__call__(self, adaptable)
-            else:
-                return interface.InterfaceClass.__call__(self, adaptable, alternate=default)
+                result = adaptable.getComponent(self)
+                if result != None:
+                    return result
+            try:
+                if default == _Nothing:
+                    return interface.InterfaceClass.__call__(self, adaptable)
+                else:
+                    return interface.InterfaceClass.__call__(self, adaptable, alternate=default)
+            except (TypeError, NotImplementedError), e:
+                if isinstance(e, CannotAdapt):
+                    raise
+                else:
+                    raise CannotAdapt(str(e))
         return __call__
     __call__ = __call__()
     
@@ -126,9 +134,13 @@ def getInterfaces(klass):
     # try to support both classes and instances, giving different behaviour
     # which is HORRIBLE :(
     if isinstance(klass, (type, types.ClassType)):
-        return list(declarations.implementedBy(klass))
+        l = list(declarations.implementedBy(klass))
     else:
-        return list(declarations.providedBy(klass))
+        l = list(declarations.providedBy(klass))
+    r = []
+    for i in l:
+        r.extend(superInterfaces(i))
+    return util.uniquify(r)
 
 
 def superInterfaces(interface):
@@ -157,6 +169,8 @@ class AdapterRegistry(ZopeAdapterRegistry):
         # we may need to make marker interfaces for class->iface adapters
         # so we store them here:
         self.classInterfaces = {}
+        self.adapterPersistence = weakref.WeakValueDictionary()
+        self.adapterOrigPersistence = weakref.WeakValueDictionary()
     
     def persistAdapter(self, original, iface, adapter):
         self.adapterPersistence[(id(original), iface)] = adapter
@@ -172,24 +186,29 @@ class AdapterRegistry(ZopeAdapterRegistry):
         'origInterface'.
         """
         assert interfaceClasses, "You need to pass an Interface"
+        global ALLOW_DUPLICATES
         if not issubclass(origInterface, Interface):
             # fix up __implements__ if it's old style
             if hasattr(origInterface, "__implements__") and isinstance(origInterface.__implements__, (tuple, MetaInterface)):
                 for i in tupleTreeToList(origInterface.__implements__):
                     declarations.classImplements(origInterface, i)
-            # create marker interface
-            class IMarker(Interface):
-                pass
-            declarations.classImplements(origInterface, IMarker)
-            self.classInterfaces[origInterface] = IMarker
-            origInterface = IMarker
-        self.register(interfaceClasses, origInterface, '', adapterFactory)
+            origInterface = declarations.implementedBy(origInterface)
+        for interfaceClass in interfaceClasses:
+            # XXX NOT WORKING :(
+            if (self.lookup1(origInterface, interfaceClass)
+                and not ALLOW_DUPLICATES):
+                raise ValueError(
+                    "an adapter (%s) was already registered." % (
+                        self.adapterRegistry[(origInterface, interfaceClass)]
+                    )
+                )
+        self.register([origInterface], interfaceClasses[0], '', adapterFactory)
     
     def getAdapterFactory(self, fromInterface, toInterface, default):
         """Return registered adapter for a given class and interface.
         """
         if not issubclass(fromInterface, Interface):
-            fromInterface = self.classInterfaces[fromInterface]
+            fromInterface = declarations.implementedBy(fromInterface)
         # XXX maybe this should just use lookup1 - check!
         return self.get(fromInterface).adapters[False, (), '', toInterface]
 
@@ -224,19 +243,29 @@ class AdapterRegistry(ZopeAdapterRegistry):
         the parameter itself if it already implements the interface. If no
         adapter can be found, the 'default' parameter will be returned.
         """
+        # always do persistence lookups... might be wrong!
+        pkey = (id(obj), interfaceClass)
+        if self.adapterPersistence.has_key(pkey):
+            return self.adapterPersistence[pkey]
+
         for iface in declarations.providedBy(obj):
             factory = self.lookup1(interfaceClass, iface)
             if factory != None:
-                return factory(obj)
+                result = factory(obj)
+                # XXX WE ALWAYS PERSIST NOT GOOD
+                self.persistAdapter(obj, interfaceClass, result)
+                return result
         if default == _Nothing:
-            raise ZeroDivisionError # XXX
+            raise NotImplementedError
         else:
             return default
 
 
 theAdapterRegistry = AdapterRegistry()
 # XXX may need to change to raise correct exceptions
-interface.adapter_hooks.append(lambda iface, ob: theAdapterRegistry.getAdapter(ob, iface))
+def _hook(iface, ob):
+    return theAdapterRegistry.getAdapter(ob, iface, default=None)
+interface.adapter_hooks.append(_hook)
 registerAdapter = theAdapterRegistry.registerAdapter
 getAdapterClass = theAdapterRegistry.getAdapterClass
 getAdapterClassWithInheritance = theAdapterRegistry.getAdapterClassWithInheritance
