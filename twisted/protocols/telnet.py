@@ -175,9 +175,14 @@ class Telnet(protocol.Protocol):
     delimiters = ['\r\n', '\r\000']
     mode = "User"
 
+    def write(self, data):
+        """Send the given data over my transport."""
+        self.transport.write(data)
+
+
     def connectionMade(self):
         """I will write a welcomeMessage and loginPrompt to the client."""
-        self.transport.write(self.welcomeMessage() + self.loginPrompt())
+        self.write(self.welcomeMessage() + self.loginPrompt())
 
     def welcomeMessage(self):
         """Override me to return a string which will be sent to the client
@@ -221,14 +226,14 @@ class Telnet(protocol.Protocol):
         you want to do something else when the username is received (ie,
         create a new user if the user doesn't exist), override me."""
         self.username = user
-        self.transport.write(IAC+WILL+ECHO+"password: ")
+        self.write(IAC+WILL+ECHO+"password: ")
         return "Password"
 
     def telnet_Password(self, paswd):
         """I accept a password as an argument, and check it with the
         checkUserAndPass method. If the login is successful, I call
         loggedIn()."""
-        self.transport.write(IAC+WONT+ECHO+"*****\r\n")
+        self.write(IAC+WONT+ECHO+"*****\r\n")
         if not self.checkUserAndPass(self.username, paswd):
             return "Done"
         self.loggedIn()
@@ -316,4 +321,3 @@ class Telnet(protocol.Protocol):
         Override in subclasses.
         """
         pass
-
