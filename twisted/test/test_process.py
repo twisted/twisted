@@ -55,6 +55,14 @@ class PosixProcessTestCase(unittest.TestCase):
         while hasattr(p, 'writer'):
             main.iterate()
         self.assertEquals(err, f.getvalue())
+    
+    def testPopen(self):
+        """Make sure popen isn't broken by our signal handlers."""
+        main.handleSignals() # install signal handlers
+        for i in range(20):
+            f = os.popen("/bin/gzip --help")
+            f.read()
+            f.close()
 
 
 class Win32ProcessTestCase(unittest.TestCase):
@@ -83,4 +91,3 @@ if runtime.platform.getType() != 'posix':
     del PosixProcessTestCase
 elif runtime.platform.getType() != 'win32':
     del Win32ProcessTestCase
-
