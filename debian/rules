@@ -4,9 +4,11 @@
 # Sample debian/rules that uses debhelper. GNU copyright 1997 by Joey Hess.
 # Some lines taken from debmake, by Christoph Lameter.
 
+versions=2.1 2.2 2.3
+
 build: build-stamp
 build-stamp:
-	set -e; for version in 2.1 2.2; \
+	set -e; for version in $(versions); \
 		do /usr/bin/python$$version setup.py build; \
 	done
 	touch build-stamp
@@ -23,7 +25,7 @@ clean:
 install: install-stamp
 install-stamp: build-stamp 
 	chmod +x debian/scripts/*
-	set -e; for version in 2.1 2.2; \
+	set -e; for version in $(versions); \
 		do rm -rf debian/python$$version-twisted; \
 		install -d debian/python$$version-twisted; \
 		/usr/bin/python$$version setup.py install \
@@ -133,6 +135,11 @@ binary-indep: build install
 	chmod -R go=rX debian/python2.2-twisted
 	dpkg --build debian/python2.2-twisted ..
 
+	chown -R root.root debian/python2.3-twisted
+	chmod -R go=rX debian/python2.3-twisted
+	dpkg --build debian/python2.3-twisted ..
+
+
 binary-arch: build install
 	find debian -name "*.so" | xargs -n 1 dpkg-shlibdeps
 
@@ -145,6 +152,11 @@ binary-arch: build install
 	chown -R root.root debian/python2.2-twisted-bin
 	chmod -R go=rX debian/python2.2-twisted-bin
 	dpkg --build debian/python2.2-twisted-bin ..
+
+	dpkg-gencontrol -isp -ppython2.3-twisted-bin -Pdebian/python2.3-twisted-bin
+	chown -R root.root debian/python2.3-twisted-bin
+	chmod -R go=rX debian/python2.3-twisted-bin
+	dpkg --build debian/python2.3-twisted-bin ..
 
 binary: binary-indep binary-arch
 .PHONY: build clean binary-indep binary-arch binary install
