@@ -33,27 +33,27 @@ def failAtHandlingResult(result):
 
 
 def behindTheScenes(result):
-    if not isinstance(result, failure.Failure): 
+    if not isinstance(result, failure.Failure): # ---- callback
         try:
             result = handleResult(result)
         except:
             result = failure.Failure()
-    else:
+    else:                                       # ---- errback
         pass
 
 
-    if not isinstance(result, failure.Failure): 
+    if not isinstance(result, failure.Failure): # ---- callback
         try:
             result = failAtHandlingResult(result)
         except:
             result = failure.Failure()
-    else:
+    else:                                       # ---- errback
         pass
 
 
-    if not isinstance(result, failure.Failure): 
+    if not isinstance(result, failure.Failure): # ---- callback
         pass
-    else:
+    else:                                       # ---- errback
         try:
             result = handleFailure(result)
         except:
