@@ -87,9 +87,7 @@ def wait(d, timeout=10):
     """
     result = _getDeferredResult(d, timeout)
     if isinstance(result, failure.Failure):
-        if result.tb:
-            raise result.value.__class__, result.value, result.tb
-        raise result.value
+        result.raiseException()
     else:
         return result
     

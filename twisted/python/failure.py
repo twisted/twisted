@@ -246,6 +246,14 @@ class Failure:
                 return error
         return None
 
+    def raiseException(self):
+        """
+        raise the original exception, preserving traceback
+        information if available.
+        """
+        raise self.value.__class__, self.value, self.tb
+
+
     def __repr__(self):
         return "<%s %s>" % (self.__class__, self.type)
 

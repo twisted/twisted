@@ -20,8 +20,11 @@
 Test cases for failure module.
 """
 
-from twisted.trial import unittest
+import sys
 import StringIO
+
+from twisted.trial import unittest, util
+
 
 from twisted.python import failure
 
@@ -61,4 +64,19 @@ class FailureTestCase(unittest.TestCase):
         f = failure.Failure(e)
         f.trap(RuntimeError)
         self.assertEquals(f.value, e)
+
+    def testRaiseExceptionWithTB(self):
+        try:
+            1/0
+        except:
+            f = failure.Failure()
+
+        try:
+            f.raiseException()
+        except ZeroDivisionError:
+            tb = util.extract_tb(sys.exc_info()[2])
+            self.assertEquals(tb[-1][-1], '1/0')
+        else:
+            raise Exception(
+                "f.raiseException() didn't raise ZeroDivisionError!?")
 
