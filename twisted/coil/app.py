@@ -93,7 +93,8 @@ class ServiceCollection(roots.Homogenous):
         return self.app.services.get(name)
 
     def reallyPutEntity(self, name, entity):
-        # No need to put the entity!  It will be Constrainedautomatically registered...
+        # No need to put the entity!  It will be automatically
+        # registered by the Service's constructor...
         pass
 
 
