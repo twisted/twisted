@@ -19,11 +19,12 @@ a running server -- ports to bind to, places where connections
 to must be kept or attempted, periodic actions to do and most
 everything else.</p>
 
-<p>Other HOWTOs teach how to write custom code for Applications,
-but here it will be taught how to use code already written (either
-by the Twisted developers or by third-party Twisted plugin developers.
-The Twisted distribution comes with an assortment of tools to create
-and manipulate <code>Application</code>s.</p>
+<p>Other HOWTOs describe how to write custom code for
+Applications, but this one describes how to use already written
+code (which can be part of Twisted or from a third-party Twisted
+plugin developer).  The Twisted distribution comes with an
+assortment of tools to create and manipulate
+<code>Application</code>s.</p>
 
 <p><code>Application</code>s are just Python objects, which can
 be created and manipulated in the same ways as any other object.
@@ -42,7 +43,7 @@ several serialization formats.</p>
 <dt>TAX</dt>
 <dd>Twisted contains the
     <code class="API">twisted.persisted.marmalade</code> module
-    supports serializing and deserializing from a fortmat which follows
+    supports serializing and deserializing from a format which follows
     the XML standard. This format is human readable and editable.</dd>
 
 <dt>TAS</dt>
@@ -56,13 +57,13 @@ several serialization formats.</p>
 
 <h2>mktap and tapconvert</h2>
 
-<p>The <code>mktap(1)</code> utility is the main way to create file.
-It can be used to create an Application for all of the major Twisted
-server types like web, ftp or IRC. It also supports plugins, so when
-you install a Twisted plugin (that is, unpack it into a directory on
-your <code>PYTHONPATH</code>) it will automatically detect it and use
-any Twisted Application support in it. It can create any of the above
-Application formats.</p>
+<p>The <code>mktap(1)</code> utility is the main way to create a TAP
+(or TAX or TAS) file.  It can be used to create an Application for all
+of the major Twisted server types like web, ftp or IRC. It also
+supports plugins, so when you install a Twisted plugin (that is,
+unpack it into a directory on your <code>PYTHONPATH</code>) it will
+automatically detect it and use any Twisted Application support in it.
+It can create any of the above Application formats.</p>
 
 <p>In order to see which server types are available, use 
 <code>mktap --help</code>. For a given server, 
@@ -81,7 +82,7 @@ between all three Application formats.</p>
 
 <h2>twistd</h2>
 
-<p>Having <code>Application</code> in a variety of format, aesthetically
+<p>Having <code>Application</code> in a variety of formats, aesthetically
 pleasing as it may be, does not actually cause anything to happen.
 For that, we need a program which takes a "dead" Application and brings
 life to it. For UNIX systems (and, until there are are alternatives,
@@ -104,10 +105,11 @@ option.</p>
 <p>When <code>twistd</code> runs, it records its process id in a
 <code>twistd.pid</code> file (this can be configured via a command line
 switch). In order to shutdown the <code>twistd</code> process, kill that
-pid. When the process is killed in an orderly fashion it will leave behind
-the "shutdown Application" which is named the same as the original file
-as a <code>-shutdown</code> added to its base name. This contains the
-new configuration information, as changed in the application.</p>
+pid (usually you would do <code>kill `twisted.pid`</code>). When the
+process is killed in an orderly fashion it will leave behind the "shutdown
+Application" which is named the same as the original file with a
+<code>-shutdown</code> added to its base name. This contains the new
+configuration information, as changed in the application.</p>
 
 <p>As always, the gory details are in the manual page.</p>
 
