@@ -12,14 +12,14 @@
 
 <dl>
 
-<dt><a name="Adapter"><code class="API" base="twisted.python.components">Adapter</code></a></dt>
+<dt><a name="Adapter"><code noexpand="1" class="API" base="twisted.python.components">Adapter</code></a></dt>
 <dd>
   An object which wraps another object to conform to a particular
   <a href="#Interface">Interface</a>, when some code requests the interface
   from an object.  See <code class="API">twisted.python.components</code>.
 </dd>
 
-<dt><a name="Application"><code class="API" base="twisted.internet.app">Application</code></a></dt>
+<dt><a name="Application"><code noexpand="1" class="API" base="twisted.internet.app">Application</code></a></dt>
 <dd>
   A <code class="API">twisted.internet.app.Application</code>.  There are
   HOWTOs on <a href="basics.html">creating and manipulating</a> them as a
@@ -27,19 +27,19 @@
   your code.
 </dd>
 
-<dt><a name="Authorizer"><code class="API" base="twisted.cred.authorizer">Authorizer</code></a></dt>
+<dt><a name="Authorizer"><code noexpand="1" class="API" base="twisted.cred.authorizer">Authorizer</code></a></dt>
 <dd>
   An object responsible for managing <a href="#Identity">Identities</a>.  See
   <code class="API">twisted.cred.authorizer</code>.
 </dd>
 
-<dt><a name="Banana"><code class="API" base="twisted.spread.banana">Banana</code></a></dt>
+<dt><a name="Banana"><code noexpand="1" class="API" base="twisted.spread.banana">Banana</code></a></dt>
 <dd>
   The low-level data marshalling layer of <a href="#Spread">Twisted Spread</a>.
   See <code class="API">twisted.spread.banana</code>.
 </dd>
 
-<dt><a name="Broker"><code class="API" base="twisted.spread.pb">Broker</code></a></dt>
+<dt><a name="Broker"><code noexpand="1" class="API" base="twisted.spread.pb">Broker</code></a></dt>
 <dd>
   A <code class="API">twisted.spread.pb.Broker</code>, the object request
   broker for <a href="#Spread">Twisted Spread</a>.
@@ -59,14 +59,14 @@
   class="API">twisted.python.components.Componentized</code>.
 </dd>
 
-<dt><a name="Componentized"><code class="API" base="twisted.python.components">Componentized</code></a></dt>
+<dt><a name="Componentized"><code noexpand="1" class="API" base="twisted.python.components">Componentized</code></a></dt>
 <dd>
   An object that can hold a number of persistent <code class="API"
   base="twisted.python.components">Adapters</code>, which we call
   <q>components</q>.
 </dd>
 
-<dt><a name="conch"><code class="API" base="twisted">conch</code></a></dt>
+<dt><a name="conch"><code noexpand="1" class="API" base="twisted">conch</code></a></dt>
 <dd>Twisted's SSH implementation.</dd>
 
 <dt><a name="Connector">Connector</a></dt>
@@ -120,7 +120,7 @@
   <code>.addErrback</code> to handle errors.
 </dd>
 
-<dt><a name="Factory"><code class="API" base="twisted.internet.protocol">Factory</code></a></dt>
+<dt><a name="Factory"><code noexpand="1" class="API" base="twisted.internet.protocol">Factory</code></a></dt>
 <dd>
   In general, an object that constructs other objects.  In Twisted, a Factory
   usually refers to a <code
@@ -130,13 +130,13 @@
   href="clients.html">Writing Clients</a>.
 </dd>
 
-<dt><a name="Failure"><code class="API" base="twisted.python.failure">Failure</code></a></dt>
+<dt><a name="Failure"><code noexpand="1" class="API" base="twisted.python.failure">Failure</code></a></dt>
 <dd>
   Basically, an asynchronous exception that contains traceback information;
   these are used for passing errors through asynchronous callbacks.
 </dd>
 
-<dt><a name="Identity"><code class="API" base="twisted.cred.identity">Identity</code></a></dt>
+<dt><a name="Identity"><code noexpand="1" class="API" base="twisted.cred.identity">Identity</code></a></dt>
 <dd>
   A <a href="#Cred">Cred</a> object that represents a single user with a
   username and a password of some sort.
@@ -156,7 +156,7 @@
   Words</a>.  See <code class="API">twisted.im</code>.
 </dd>
 
-<dt><a name="Interface"><code class="API" base="twisted.python.components">Interface</code></a></dt>
+<dt><a name="Interface"><code noexpand="1" class="API" base="twisted.python.components">Interface</code></a></dt>
 <dd>
   A class that defines and documents methods that a class conforming to that
   interface needs to have.  A collection of core twisted.internet interfaces can
@@ -206,7 +206,7 @@
   Broker</a></q>.
 </dd>
 
-<dt><a name="Perspective"><code class="API" base="twisted.cred.perspective">Perspective</code></a></dt>
+<dt><a name="Perspective"><code noexpand="1" class="API" base="twisted.cred.perspective">Perspective</code></a></dt>
 <dd>
   A <a href="#Cred">Cred</a> object; an <a href="#Identity">Identity</a>'s
   <q>perspective</q> (or <q>view</q>) onto a Service. There may be many
@@ -228,7 +228,7 @@
   <code class="API">twisted.internet.interfaces.IProducer</code>.
 </dd>
 
-<dt><a name="Protocol"><code class="API" base="twisted.internet.protocol">Protocol</code></a></dt>
+<dt><a name="Protocol"><code noexpand="1" class="API" base="twisted.internet.protocol">Protocol</code></a></dt>
 <dd>
   In general each network connection has its own Protocol instance to manage
   connection-specific state.  There is a collection of standard
@@ -249,7 +249,7 @@
 <dt><a name="Reality">Reality</a></dt>
 <dd>See <q><a href="#TwistedReality">Twisted Reality</a></q></dd>
 
-<dt><a name="Resource"><code class="API" base="twisted.web.resource">Resource</code></a></dt>
+<dt><a name="Resource"><code noexpand="1" class="API" base="twisted.web.resource">Resource</code></a></dt>
 <dd>
   A <code class="API">twisted.web.resource.Resource</code>, which are served
   by Twisted Web.  Resources can be as simple as a static file on disk, or they
@@ -312,7 +312,7 @@ with <code>mktap</code> and runnable by <code>twistd</code>.  See
   off into a separate project.
 </dd>
 
-<dt><a name="usage"><code class="API" base="twisted.python">usage</code></a></dt>
+<dt><a name="usage"><code noexpand="1" class="API" base="twisted.python">usage</code></a></dt>
 <dd>The <code class="API">twisted.python.usage</code> module, a replacement for
 the standard <code>getopt</code> module for parsing command-lines which is much
 easier to work with.  See <a href="options.html">Parsing command-lines</a>.</dd>

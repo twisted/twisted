@@ -52,6 +52,19 @@ def fixAPI(document, url):
         node2.childNodes = node.childNodes
         node.childNodes = [node2]
 
+def expandAPI(document):
+    seenAPI = {}
+    for node in domhelpers.findElementsWithAttribute(document, "class", "API"):
+        base = ""
+        if node.hasAttribute("base"):
+            base = node.getAttribute("base") + "."
+        api = base+node.childNodes[0].nodeValue
+        if seenAPI.get(api) or node.hasAttribute('noexpand'):
+            continue
+        node.childNodes[0].nodevalue = api
+        node.removeAttribute('base')
+        seenAPI[api] = 1
+
 
 def fontifyPython(document):
     def matcher(n):
@@ -171,6 +184,7 @@ def notes(document):
 
 def munge(document, template, linkrel, d, fullpath, ext, url):
     addMtime(template, fullpath)
+    expandAPI(document)
     fixAPI(document, url)
     fontifyPython(document)
     addPyListings(document, d)

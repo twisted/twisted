@@ -19,6 +19,8 @@ from twisted.web import microdom
 import os, re
 from cStringIO import StringIO
 
+import tree
+
 escapingRE = re.compile(r'([#$%&_{}^~])')
 lowerUpperRE = re.compile(r'([a-z])([A-Z])')
 
@@ -280,4 +282,5 @@ class LeadingTrailingBlankLineFilter:
 
 def processFile(spitter, fin):
     dom = microdom.parse(fin).documentElement
+    tree.expandAPI(dom)
     spitter.visitNode(dom)
