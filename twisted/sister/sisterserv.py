@@ -76,7 +76,6 @@ class SisterService(Service, Perspective):
         
     def startService(self):
         log.msg( 'starting sister, woo')
-        print "sister: staring service"
 
     def __getstate__(self):
         d = copy.copy(self.__dict__)
