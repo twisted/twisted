@@ -157,15 +157,13 @@ class POP3(basic.LineReceiver):
 
     def listCapabilities(self):
         return [
-            # "TOP",
+            "TOP",
             "USER",
-            # "UIDL",
+            "UIDL",
             # "IMPLEMENTATION " + self.getVersionString(),
         ]
 
     def do_CAPA(self):
-        self.sendLine("-ERR bleh")
-        return
         map(self.sendLine, self.listCapabilities())
         self.sendLine(".")
 
