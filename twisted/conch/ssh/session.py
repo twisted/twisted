@@ -190,7 +190,7 @@ class SSHSessionForUnixConchUser:
         self.pty = reactor.spawnProcess(proto, \
                   shell, ['-', '-i'], self.environ, homeDir, uid, gid,
                    usePTY = self.ptyTuple)
-        fcntl.ioctl(pty.fileno(), tty.TIOCSWINSZ, 
+        fcntl.ioctl(self.pty.fileno(), tty.TIOCSWINSZ, 
                         struct.pack('4H', *self.winSize))
         if self.modes:
             self.setModes()
