@@ -801,13 +801,6 @@ class RawText(Widget):
 wvfactory_RawText = viewFactory(RawText)
 
 
-class StringDefault(Widget):
-    def setUp(self, request, node, data):
-        self.add(Text(data))
-
-wvfactory_StringDefault = viewFactory(StringDefault)
-
-
 view.registerViewForModel(Text, model.StringModel)
 view.registerViewForModel(List, model.ListModel)
 view.registerViewForModel(KeyedList, model.DictionaryModel)
