@@ -62,6 +62,7 @@ class FileAuthority(common.ResolverBase):
                 for rec in r:
                     if rec.TYPE != dns.SOA:
                         results.append(dns.RRHeader(k, rec.TYPE, dns.IN, ttl, rec))
+            results.append(results[0])
             return defer.succeed(results)
         return defer.fail(failure.Failure(dns.DomainError(name)))
 

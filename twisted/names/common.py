@@ -19,7 +19,7 @@ import operator, sys
 
 from twisted.protocols import dns
 from twisted.internet import defer
-from twisted.python import failure
+from twisted.python import failure, log
 
 class ResolverBase:
     typeToMethod = None
@@ -29,16 +29,6 @@ class ResolverBase:
         for (k, v) in typeToMethod.items():
             self.typeToMethod[k] = getattr(self, v)
 
-
-    def addHeader(self, results, name, cls):
-        """Add the RR header to each of a list of answers"""
-        print 'ADDING HEADERS TO ', results
-        return [
-            dns.RRHeader(
-                name, r.TYPE, cls,
-                r.ttl, r
-            ) for r in results
-        ]
 
     def query(self, query, timeout = 10):
         try:
@@ -101,6 +91,9 @@ class ResolverBase:
     def lookupAFSDatabase(self, name, timeout = 10):
         return self._lookup(name, dns.IN, dns.AFSDB, timeout)
 
+    def lookupZone(self, name, timeout = 10):
+        return self._lookup(name, dns.IN, dns.AXFR, timeout)
+
     def lookupAllRecords(self, name, timeout = 10):
         return defer.DeferredList([
             self._lookup(name, dns.IN, type, timeout).addErrback(
@@ -109,11 +102,6 @@ class ResolverBase:
         ]).addCallback(
             lambda r: reduce(operator.add, [res[1] for res in r if res[0]], [])
         )
-
-
-    def lookupZone(self, name, timeout = 10):
-        return self._lookup(name, dns.IN, dns.AXFR, timeout)
-        raise NotImplementedError, "zone transfer not implemented for this resolver"
 
 
 typeToMethod = {
