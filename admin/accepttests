@@ -68,6 +68,8 @@ def staticWebTest():
     browse("http://localhost:8080/")
     message("This is Python CGI test output.")
     browse("http://localhost:8080/test.cgi")
+    message("This is RPY test output.")
+    browse("http://localhost:8080/test.rpy")
     killit()
 
 
