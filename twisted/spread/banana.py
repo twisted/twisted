@@ -1,3 +1,5 @@
+# -*- test-case-name: twisted.test.test_banana -*-
+#
 # Twisted, the Framework of Your Internet
 # Copyright (C) 2001 Matthew W. Lefkowitz
 #
@@ -25,7 +27,7 @@ for more details.
 @author: U{Glyph Lefkowitz<mailto:glyph@twistedmatrix.com>}
 """
 
-__version__ = "$Revision: 1.33 $"[11:-2]
+__version__ = "$Revision: 1.34 $"[11:-2]
 
 from twisted.internet import protocol
 from twisted.persisted import styles
