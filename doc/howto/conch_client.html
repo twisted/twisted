@@ -38,7 +38,7 @@ class ClientTransport(transport.SSHClientTransport):
         self.requestService(ClientUserAuth('user', ClientConnection()))
 </pre>
 
-<p>See how easy it is?  SSHClientTransport handles the negotiation of encryption and the verification of keys for you.  The one security element that you as a client writer need to implement is verifyHostKey().  This method is called with two strings: the public key sent by the server and its fingerprint.  You should verify the host key the server sends, either by checking against a hard-coded value as in the example, or by asking the user.  verifyHostKey returns a <code class="API">twisted.internet.defer.Deferred</code> which gets a callback if the host key is valid, or an errback if it is not.</p>
+<p>See how easy it is?  SSHClientTransport handles the negotiation of encryption and the verification of keys for you.  The one security element that you as a client writer need to implement is verifyHostKey().  This method is called with two strings: the public key sent by the server and its fingerprint.  You should verify the host key the server sends, either by checking against a hard-coded value as in the example, or by asking the user.  verifyHostKey returns a <code class="API">twisted.internet.defer.Deferred</code> which gets a callback if the host key is valid, or an errback if it is not. Note that in the above, replace 'user' with the username you're attempting to ssh with, for instance a call to os.getlogin for the current user.</p>
 
 <p>The second method you need to implement is connectionSecure().  It is called when the encryption is set up and other services can be run.  The example requests that the ClientUserAuth service be started.  This service will be discussed next.</p>
 
@@ -154,4 +154,24 @@ we will write no more data.  loseConnection() shuts down our side of the connect
 but we will still receive data through dataReceived().  The closed() method is called
 when both sides of the connection are closed, and we use it to display the data we
 received (which should be the same as the data we sent.)</p>
+
+<p>Finally, let's actually invoke the code we've set up.</p>
+
+<h2>The main() function</h2>
+<pre class="python">
+from twisted.internet import protocol, reactor
+
+def main():
+    factory = protocol.ClientFactory()
+    factory.protocol = ClientTransport
+    reactor.connectTCP('localhost', 22, factory)
+    reactor.run()
+
+if __name__ == "__main__":
+    main()
+</pre>
+
+<P>We call connectTCP() to connect to localhost, port 22 (the standard port for
+ssh), and pass it an instance of <code class="API">twisted.internet.protocol.ClientFactory</code>. This instance has the attribute protocol set to our earlier ClientTransport class. Note that the protocol is set to the class ClientFactory, not an instance of ClientFactory! When the connectTCP call completes, the protocol will be called to create a ClientTransport() object - this then invokes all our previous work.</P>
+
 </body></html>
