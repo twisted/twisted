@@ -57,6 +57,23 @@ class Redirect(resource.Resource):
     def getChild(self, name, request):
         return self
 
+class ChildRedirector(Redirect):
+    isLeaf = 0
+    def __init__(self, url):
+        # XXX is this enough?
+        if ((url.find('://') == -1)
+            and (not url.startswith('..'))
+            and (not url.startswith('/'))):
+            raise ValueError("It seems you've given me a redirect (%s) that is a child of myself! That's not good, it'll cause an infinite redirect." % url)
+        Redirect.__init__(self, url)
+
+    def getChild(self, name, request):
+        newUrl = self.url
+        if not newUrl.endswith('/'):
+            newUrl += '/'
+        newUrl += name
+        return ChildRedirector(newUrl)
+
 
 stylesheet = """
 <style type="text/css">
