@@ -120,11 +120,15 @@ class DomHelpersTest(TestCase):
         actual=domhelpers.gatherTextNodes(doc4)
         expected='\n    stuff\n  '
         assert actual==expected, 'expected %s, got %s' % (expected, actual)
+        actual=domhelpers.gatherTextNodes(doc4.documentElement)
+        self.assertEqual(actual, expected)
         
         doc5_xml='<x>Souffl&eacute;</x>'
         doc5=microdom.parseString(doc5_xml)
         actual=domhelpers.gatherTextNodes(doc5)
         expected='Souffl&eacute;'
+        self.assertEqual(actual, expected)
+        actual=domhelpers.gatherTextNodes(doc5.documentElement)
         self.assertEqual(actual, expected)
 
     def test_clearNode(self):
