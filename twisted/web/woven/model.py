@@ -149,20 +149,29 @@ class Model:
         if not submodelName:
             return None
 
+        # Special case: If the first character is /
+        # Start at the bottom of the model stack
+        currentModel = self
+        if submodelName[0] == '/':
+            while currentModel.parent is not None:
+                currentModel = currentModel.parent
+            submodelName = submodelName[1:]
+
         submodelList = submodelName.split('/')  #[:-1]
 #         print "submodelList", submodelList
-        currentModel = self
         for element in submodelList:
-            parentModel = currentModel
-            currentModel = currentModel.getSubmodel(element)
-            if currentModel is None:
-                return None
-            if isinstance(currentModel, defer.Deferred):
-                currentModel.addCallback(self._getModelWrapper,
-                                         element, parentModel)
-                return currentModel
-#             currentModel = self._getModelWrapper(currentModel,
-#                                                  element, parentModel)
+            if element == '.' or element == '':
+                continue
+            elif element == '..':
+                currentModel = currentModel.parent
+            else:
+                currentModel = currentModel.getSubmodel(element)
+                if currentModel is None:
+                    return None
+                if isinstance(currentModel, defer.Deferred):
+                    currentModel.addCallback(self._getModelWrapper,
+                                             element, parentModel)
+                    return currentModel
         return currentModel
 
 

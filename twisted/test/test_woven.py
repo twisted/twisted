@@ -20,7 +20,7 @@ from twisted.protocols import http
 from twisted.test import test_web
 from twisted.internet import reactor, defer
 
-from twisted.web.woven import template, model, view, controller, widgets, input
+from twisted.web.woven import template, model, view, controller, widgets, input, page
 
 outputNum = 0
 
@@ -335,8 +335,47 @@ class NotifyTest(WovenTC):
         text = domhelpers.gatherTextNodes(liNodes[0])
         assert text == "test", "Wrong output: %s. Test %s" % (text, outputNum)
 
-
 view.registerViewForModel(LLView, LLModel)
 
-testCases = [DOMTemplateTest, TWWTest, ControllerTest, ListDeferredTest, NestedListTest, NotifyTest]
+#### Test 7
+# Test model path syntax
+# model="/" should get you the root object
+# model="." should get you the current object
+# model=".." should get you the parent model object
+
+
+# xxx sanity check for now; just make sure it doesn't raise anything
+
+class ModelPathTest(WovenTC):
+    modelFactory = lambda self: ['hello', ['hi', 'there'], 
+                        'hi', ['asdf', ['qwer', 'asdf']]]
+    resourceFactory = page.Page
+
+    def prerender(self):
+        self.t.template = """<html>
+    <div model="0" view="None">
+        <div model=".." view="Text" />
+    </div>
+    
+    <div model="0" view="None">
+        <div model="../1/../2/../3" view="Text" />
+    </div>
+
+    <div model="0" view="None">
+        <div model="../3/1/./1" view="Text" />
+    </div>
+    
+    <div model="3/1/0" view="None">
+        <div model="/" view="Text" />
+    </div>
+
+    <div model="3/1/0" view="None">
+        <div model="/3" view="Text" />
+    </div>
+
+</html>"""
+
+
+testCases = [DOMTemplateTest, TWWTest, ControllerTest, ListDeferredTest, 
+            NestedListTest, NotifyTest, ModelPathTest]
   
