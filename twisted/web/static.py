@@ -225,7 +225,11 @@ class File(resource.Resource, styles.Versioned):
         return f
 
     def render(self, request):
-        "You know what you doing."
+        """You know what you doing."""
+
+        if not os.path.exists(self.path):
+            return error.NoResource("File not found.").render(request)
+        
         mode, ino, dev, nlink, uid, gid, size, atime, mtime, ctime =\
               os.stat(self.path)
 
@@ -255,7 +259,14 @@ class File(resource.Resource, styles.Versioned):
                 request.setResponseCode(http.NOT_MODIFIED)
                 return ''
 
-        f = open(self.path,'rb')
+        try:
+            f = open(self.path,'rb')
+        except IOError, e:
+            import errno
+            if e[0] == errno.EACCES:
+                return error.ForbiddenResource().render(request)
+            else:
+                raise
         try:
             range = request.getHeader('range')
             if range is not None:

@@ -53,3 +53,9 @@ class NoResource(ErrorPage):
         ErrorPage.__init__(self, http.NOT_FOUND,
                            "No Such Resource",
                            message)
+
+class ForbiddenResource(ErrorPage):
+    def __init__(self, message="Sorry, resource is forbidden."):
+        ErrorPage.__init__(self, http.FORBIDDEN,
+                           "Forbidden Resource",
+                           message)
