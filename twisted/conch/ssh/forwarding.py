@@ -40,7 +40,8 @@ class SSHListenForwardingFactory(protocol.Factory):
         channel = self.klass(conn = self.conn)
         client = SSHForwardingClient(channel)
         channel.client = client
-        channelOpenData = packOpen_direct_tcpip(self.hostport, addr)
+        addrTuple = (addr.host, addr.port)
+        channelOpenData = packOpen_direct_tcpip(self.hostport, addrTuple)
         self.conn.openChannel(channel, channelOpenData)
         return client
 
