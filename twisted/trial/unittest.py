@@ -362,9 +362,11 @@ class TestSuite:
         else:
             names = dir(module)
             objects = [getattr(module, name) for name in names]
-
+        
         for obj in objects:
-            if type(obj) is types.ClassType and util.isTestClass(obj):
+            if ((issubclass(type(obj), types.ClassType) 
+                    or issubclass(type(obj), type(object))) 
+                    and util.isTestClass(obj)):
                 self.addTestClass(obj)
 
     def addPackage(self, package):
