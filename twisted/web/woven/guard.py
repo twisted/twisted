@@ -79,7 +79,7 @@ class GuardSession(components.Componentized):
             log.msg("session given the will to live for %s more seconds" % self.lifetime)
             reactor.callLater(self.lifetime, self.checkExpired)
 
-INIT_SESSION = '__init__'
+INIT_SESSION = 'session-init'
 
 def _setSession(wrap, req, cook):
     req.session = wrap.sessions[cook]
@@ -95,9 +95,12 @@ class SessionWrapper(Resource):
 
     def getChild(self, path, request):
         # we need this in several cases, so let's get it here:
+        if not request.prepath:
+            return None
         pp = request.prepath.pop()
         _urlToMe = request.prePathURL()
-        def urlToChild(c):
+        def urlToChild(*ar):
+            c = '/'.join(ar)
             if _urlToMe[-1] == '/':
                 # this SHOULD only happen in the case where the URL is just the hostname
                 return _urlToMe + c
@@ -106,7 +109,8 @@ class SessionWrapper(Resource):
         request.prepath.append(pp)
         # print "I think I'm at:", _urlToMe
         cookie = request.getCookie(self.cookieKey)
-        request.setupSession = lambda: Redirect(urlToChild(INIT_SESSION))
+        setupURL = request.setupSessionURL = urlToChild(INIT_SESSION, *([path]+request.postpath))
+        request.setupSession = lambda: Redirect(setupURL)
         if self.sessions.has_key(path):
             self.sessions[path].setLifetime(1800)
             if cookie == path:
@@ -114,7 +118,7 @@ class SessionWrapper(Resource):
                 #                  ^
                 #                  we are this getChild
                 # with a matching cookie
-                rd = Redirect(urlToChild('/'.join(request.postpath)))
+                rd = Redirect(urlToChild(*request.postpath))
                 rd.isLeaf = 1
                 return rd
             else:
@@ -139,8 +143,8 @@ class SessionWrapper(Resource):
             #                  ^ this getChild
             # without a session
             newCookie = _sessionCookie()
-            request.addCookie(self.cookieKey, newCookie)
-            rd = Redirect(urlToChild(newCookie))
+            request.addCookie(self.cookieKey, newCookie, path="/")
+            rd = Redirect(urlToChild(newCookie,*request.postpath))
             rd.isLeaf = 1
             sz = self.sessions[newCookie] = GuardSession(self,newCookie)
             sz.checkExpired()

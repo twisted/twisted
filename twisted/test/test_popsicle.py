@@ -155,8 +155,11 @@ class MailsicleTest(unittest.TestCase):
         del bobd
         self.assertEquals(l[0], 'yes')
         idn = bob.getIdentityRequest().result
-        self.assertEquals(operator.truth(idn.verifyPlainPassword('asdf').result),
-                          1)
+        from twisted.python import failure
+        if isinstance(idn, failure.Failure):
+            raise idn
+        rslt = idn.verifyPlainPassword('asdf').result
+        self.failUnless(rslt)
         
 
     def testIndexing(self):

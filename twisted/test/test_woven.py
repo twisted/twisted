@@ -450,7 +450,7 @@ class GuardTest(unittest.TestCase):
 
         # now we're going to make sure that the redirect and cookie are properly set
         req = FakeHTTPRequest(chan, queued=0)
-        req.requestReceived("GET", "/xxx/__init__", "1.0")
+        req.requestReceived("GET", "/xxx/"+guard.INIT_SESSION, "1.0")
         ccv = req._cookieCache.values()
         self.assertEquals(len(ccv),1)
         cookie = ccv[0]

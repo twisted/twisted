@@ -75,14 +75,15 @@ class Tapestry(Resource):
     I am a top-level aggregation of Woven objects: a full `site' or
     `application'.
     """
-
-    def __init__(self, templateDirectory, viewFactory=View):
+    viewFactory = View
+    def __init__(self, templateDirectory, viewFactory=None):
         """
         Create a tapestry with a specified template directory.
         """
         Resource.__init__(self)
         self.templateDirectory = templateDirectory
-        self.viewFactory = viewFactory
+        if viewFactory is not None:
+            self.viewFactory = viewFactory
 
     def makeView(self, model, name):
         v = self.viewFactory(model, name)
@@ -92,6 +93,7 @@ class Tapestry(Resource):
 
     def getSubview(self, request, node, model, viewName):
         mod = sys.modules[self.__class__.__module__]
+        # print "I'm getting a subview", mod, viewName
         # try just the name
         vm = getattr(mod, viewName, None)
         if vm:

@@ -3,19 +3,22 @@
 
 from pyunit import unittest
 
-from twisted.scripts import postinstall
-import os.path
+import os
 
-def noop(name):
-    pass
+if os.name == 'nt':
+    from twisted.scripts import postinstall
+    import os.path
 
-postinstall.directory_created=postinstall.file_created=noop
+    def noop(name):
+        pass
 
-class PostinstallTest(unittest.TestCase):
-    def testInstall(self):
-        files=postinstall.install()
-        for file in files:
-            assert os.path.exists(file)
+    postinstall.directory_created=postinstall.file_created=noop
 
-    def testRemove(self):
-        assert postinstall.remove() is None
+    class PostinstallTest(unittest.TestCase):
+        def testInstall(self):
+            files=postinstall.install()
+            for file in files:
+                assert os.path.exists(file)
+
+        def testRemove(self):
+            assert postinstall.remove() is None
