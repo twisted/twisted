@@ -3466,7 +3466,7 @@ _statusRequestDict = {
     'UIDVALIDITY': 'getUIDValidity',
     'UNSEEN': 'getUnseenCount'
 }
-def statusRequestHelper(self, mbox, names):
+def statusRequestHelper(mbox, names):
     r = {}
     for n in names:
         r[n] = getattr(mbox, _statusRequestDict[n])()
