@@ -60,7 +60,7 @@
 
 	* setup.py: remove cReactor/ to the sandbox. Closes issue318.
 
-2003-10-14  Itamar Shtull-Trauring  <itamar@sheriffpony>
+2003-10-14  Itamar Shtull-Trauring  <itamar@itamarst.org>
 
 	* twisted/web/static.py: registry no longer has support for
 	getting services based on their interfaces.
@@ -97,7 +97,7 @@
 	* bin/tktwistd, twisted/scripts/tktwistd.py, doc/man/tktwistd.1:
 	Removed.
 
-2003-10-12  Itamar Shtull-Trauring  <itamar@sheriffpony>
+2003-10-12  Itamar Shtull-Trauring  <itamar@itamarst.org>
 
 	* twisted/spread/pb.py: Perspective Broker no longer sends
 	detailed tracebacks over the wire unless the "unsafeTracebacks"
