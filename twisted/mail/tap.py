@@ -32,7 +32,7 @@ class Options(usage.Options):
 
     optParameters = [
         ["pop3", "p", 8110, "Port to start the POP3 server on (0 to disable)."],
-        ["pop3s", "S", 8995, "Port to start the POP3-over-SSL server on (0 to disable)."],
+        ["pop3s", "S", 0, "Port to start the POP3-over-SSL server on (0 to disable)."],
         ["smtp", "s", 8025, "Port to start the SMTP server on (0 to disable)."],
         ["relay", "r", None, 
             "relay mail we do not know how to handle to this IP,"
