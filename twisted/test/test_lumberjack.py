@@ -71,6 +71,8 @@ class LogFileTestCase(unittest.TestCase):
         self.assert_(not os.path.exists("%s.4" % self.path))
         log.close()
 
+        self.assertEquals(log.listLogs(), [1, 2, 3])
+    
     def testAppend(self):
         log = logfile.LogFile(self.name, self.dir)
         log.write("0123456789")
@@ -86,3 +88,27 @@ class LogFileTestCase(unittest.TestCase):
         f.seek(0, 0)
         self.assertEquals(f.read(), "0123456789abc")
         log.close()
+
+    def testLogReader(self):
+        log = logfile.LogFile(self.name, self.dir)
+        log.write("abc\n")
+        log.write("def\n")
+        log.rotate()
+        log.write("ghi\n")
+        log.flush()
+        
+        # check reading logs
+        self.assertEquals(log.listLogs(), [1])
+        reader = log.getCurrentLog()
+        reader._file.seek(0)
+        self.assertEquals(reader.readLines(), ["ghi\n"])
+        self.assertEquals(reader.readLines(), [])
+        reader.close()
+        reader = log.getLog(1)
+        self.assertEquals(reader.readLines(), ["abc\n", "def\n"])
+        self.assertEquals(reader.readLines(), [])
+        reader.close()
+        
+        # check getting illegal log readers
+        self.assertRaises(ValueError, log.getLog, 2)
+        self.assertRaises(TypeError, log.getLog, "1")

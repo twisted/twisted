@@ -97,4 +97,37 @@ class LogFile:
         self._file.close()
         os.rename(self.path, "%s.%d" % (self.path, next))
         self._openFile()
+    
+    def getCurrentLog(self):
+        """Return a LogReader for the current log file."""
+        return LogReader(self.path)
+    
+    def getLog(self, identifier):
+        """Given an integer, return a LogReader for an old log file."""
+        filename = "%s.%d" % (self.path, identifier)
+        if not os.path.exists(filename):
+            raise ValueError, "no such logfile exists"
+        return LogReader(filename)
 
+
+class LogReader:
+    """Read from a log file."""
+    
+    def __init__(self, name):
+        self._file = open(name, "r")
+    
+    def readLines(self):
+        """Read a list of lines from the log file.
+        
+        This doesn't returns all of the files lines - call it multiple times.
+        """
+        result = []
+        for i in range(10):
+            line = self._file.readline()
+            if not line:
+                break
+            result.append(line)
+        return result
+
+    def close(self):
+        self._file.close()
