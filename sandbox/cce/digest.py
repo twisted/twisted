@@ -5,23 +5,88 @@
 from twisted.web.resource import Resource
 from twisted.web.error import ErrorPage
 import md5, time, random
+    
+def digestPassword(username, realm, password):
+    return md5.md5("%s:%s:%s" % (username,realm,password)).hexdigest()
 
-class DigestAuthentication(Resource):
+class DigestAuthenticator:
     """ Simple implementation of RFC 2617 - HTTP Digest Authentication """
-    def __init__(self, realm, userfunc, authpage = None, 
-                 failpage = None, testall = True):
+    def __init__(self, realm, userfunc):
         """
-            parent is the page that the getChild request is forwarded to
             realm is a globally unique URI, like tag:clarkevans.com,2004:bing
-            authpage is body to show user when authorization is needed
-            failpage is body to show to user when authorization failed
             userfunc(realm, username) -> MD5('%s:%s:%s') % (user,realm,pass)
         """
+        self.nonce    = {} # list to prevent replay attacks
+        self.userfunc = userfunc
+        self.realm    = realm
+
+    def requestAuthentication(self, request, stale = ''):
+        nonce  = md5.md5("%s:%s" % (time.time(),random.random())).hexdigest()
+        opaque = md5.md5("%s:%s" % (time.time(),random.random())).hexdigest()
+        if stale: stale = 'stale="true", '
+        request.setHeader("WWW-Authenticate",('Digest realm="%s", qop="auth"'
+         ', nonce="%s", opaque="%s"%s') % (self.realm,nonce,opaque,stale))
+        self.nonce[nonce] = 0
+        request.setResponseCode(401)
+           
+    def authenticate(self, request):
+        method = request.method
+        auth = request.getHeader('Authorization')
+        if not auth:
+            self.requestAuthentication(request)
+            return
+        (authtype, auth) = auth.split(" ", 1)
+        if 'Digest' != authtype:
+            request.setResponseCode(400)
+            return
+        amap = {}
+        for itm in auth.split(", "):
+            (k,v) = [s.strip() for s in itm.split("=",1)]
+            amap[k] = v.replace('"','')
+        try:
+            username = amap['username']
+            uri      = amap['uri']
+            nonce    = amap['nonce']
+            realm    = amap['realm']
+            assert uri == request.uri
+            assert realm == self.realm
+            qop      = amap.get('qop','')
+            cnonce   = amap.get('cnonce','')
+            nc       = amap.get('nc','00000000')
+            if qop:
+                assert 'auth' == qop
+                assert nonce and nc
+        except:
+            request.setResponseCode(400)
+            return
+        ha1 = self.userfunc(realm,username)
+        if not ha1:
+            self.requestAuthentication(request)
+            return
+        ha2 = md5.md5('%s:%s' % (method,uri)).hexdigest()
+        if qop:
+            chk = "%s:%s:%s:%s:%s:%s" % (ha1,nonce,nc,cnonce,qop,ha2)
+        else:
+            chk = "%s:%s:%s" % (ha1,nonce,ha2)
+        if amap['response'] != md5.md5(chk).hexdigest():
+            if nonce in self.nonce:
+                del self.nonce[nonce]
+            self.requestAuthentication(request)
+            return
+        if nc <= self.nonce.get(nonce,'00000000'):
+            if nonce in self.nonce:
+                del self.nonce[nonce]
+            self.requestAuthentication(request, stale = True)
+            return
+        self.nonce[nonce] = nc
+        return True
+    
+    __call__ = authenticate
+
+class DigestResource(Resource):
+    def __init__(self, realm, userfunc, authpage = None, failpage = None):
         Resource.__init__(self)
-        self.__nonce    = {} # list to prevent replay attacks
-        self.__userfunc = userfunc
-        self.__realm    = realm
-        self.__testall  = testall
+        self.__authenticate = DigestAuthenticator(realm, userfunc)
         self.__authpage = authpage or \
             ErrorPage(401,'Authentication Required',
               "This server could not verify that you "
@@ -33,68 +98,12 @@ class DigestAuthentication(Resource):
         self.__failpage  = failpage  or \
             ErrorPage(400,'Bad Authentication','Bad Authentication')
 
-    def sendAuthenticateResponse(self, request, stale = ''):
-        nonce = md5.md5(str(time.time() + random.random())).hexdigest()
-        opaque = md5.md5(str(time.time() + random.random())).hexdigest()
-        if stale: stale = 'stale="true", '
-        request.setHeader("WWW-Authenticate",('Digest realm="%s", qop="auth"'
-         ', nonce="%s", opaque="%s"%s') % (self.__realm,nonce,opaque,stale))
-        self.__nonce[nonce] = 0
-        request.setResponseCode(401)
-        return self.__authpage
-           
-    def testAuthentication(self, request):
-        method = request.method
-        auth = request.getHeader('Authorization')
-        if not auth:
-            return self.sendAuthenticateResponse(request)
-        (authtype, auth) = auth.split(" ", 1)
-        if 'Digest' != authtype:
-            return self.__failpage
-        amap = {}
-        for itm in auth.split(", "):
-            (k,v) = [s.strip() for s in itm.split("=",1)]
-            amap[k] = v.replace('"','')
-        try:
-            username = amap['username']
-            uri      = amap['uri']
-            nonce    = amap['nonce']
-            realm    = amap['realm']
-            assert uri == request.uri
-            assert realm == self.__realm
-            qop      = amap.get('qop','')
-            cnonce   = amap.get('cnonce','')
-            nc       = amap.get('nc','00000000')
-            if qop:
-                assert 'auth' == qop
-                assert nonce and nc
-        except:
-            return self.__failpage
-        ha1 = self.__userfunc(realm,username)
-        if not ha1:
-            return self.sendAuthenticateResponse(request)
-        ha2 = md5.md5('%s:%s' % (method,uri)).hexdigest()
-        if qop:
-            chk = "%s:%s:%s:%s:%s:%s" % (ha1,nonce,nc,cnonce,qop,ha2)
-        else:
-            chk = "%s:%s:%s" % (ha1,nonce,ha2)
-        if amap['response'] != md5.md5(chk).hexdigest():
-            if nonce in self.__nonce:
-                del self.__nonce[nonce]
-            return self.sendAuthenticateResponse(request)
-        if nc <= self.__nonce.get(nonce,'00000000'):
-            if nonce in self.__nonce:
-                del self.__nonce[nonce]
-            return self.sendAuthenticateResponse(request,stale=True)
-        self.__nonce[nonce] = nc
-        return None # all is well
-
     def getChildWithDefault(self,path,request):
-        if self.__testall:
-            epage = self.testAuthentication(request)
-            if epage: 
-                return epage
-        return Resource.getChildWithDefault(self,path,request)
+        if self.__authenticate(request):
+            return Resource.getChildWithDefault(self,path,request)
+        if 401 == request.code:
+            return self.__authpage
+        return self.__failpage
 
 def test():
     from twisted.internet import reactor
@@ -107,8 +116,8 @@ def test():
         password = list(username)
         password.reverse()
         password = "".join(password)
-        return md5.md5("%s:%s:%s" % (username,realm,password)).hexdigest()
-    root = DigestAuthentication(realm, gethash)
+        return digestPassword(username,realm,password)
+    root = DigestResource(realm, gethash)
     root.putChild("data",data)
     site = Site(root)
     reactor.listenTCP(8080,site)
@@ -122,14 +131,10 @@ if '__main__' == __name__:
 
 #
 # You can use urllib2 to test this module, but Digest Authentication is
-# broken up till urllib2.py revision 1.53.6.2 ; so, if you have Python
-# 2.3.2 you can fetch the following URL and just overwrite urllib2.py
-# http://cvs.sf.net/viewcvs.py/*checkout*/python/python/dist/src/Lib/urllib2.py?rev=1.53.6.2
-#
-# also works with curl,
+# broken up till urllib2.py revision 1.53.6.2 or Python 2.3.4; so, if
+# you have Python 2.3.2 or 2.3.3 you can fetch this file from CVS.
 #
 # curl --user bing:gnib --digest "http://127.0.0.1:8080/data"
-#
 #
 def fetch():
     import urllib2
@@ -143,4 +148,3 @@ def fetch():
     except Exception, e:
         assert e.code == 404, "file not found"
     print opener.open(uri + "data").read()
-
