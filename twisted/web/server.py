@@ -86,7 +86,8 @@ class UnsupportedMethod(Exception):
 
     def __init__(self, allowedMethods, *args):
         Exception.__init__(self, allowedMethods, *args)
-
+        self.allowedMethods = allowedMethods
+        
         if not operator.isSequenceType(allowedMethods):
             why = "but my first argument is not a sequence."
             s = ("First argument must be a sequence of"

@@ -1,3 +1,11 @@
+2004-03-03  Christopher Armstrong  <radix@twistedmatrix.com>
+
+	* twisted/web/server.py: Fix UnsupportedMethod so that users'
+	allowedMethods are actually honored.
+
+	* twisted/web/resource.py: (Resource.render) If the resource has
+	an 'allowedMethods' attribute, pass it to UnsupportedMethod.
+
 2004-02-27  Andrew Bennetts  <spiv@twistedmatrix.com>
 
 	* twisted/internet/defer.py: Add consumeErrors flag to DeferredList.
