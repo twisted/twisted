@@ -223,7 +223,7 @@ class Iterator:
         environment.
 
     """
-    def __init__(self, command, failureAsResult = 0, shouldBlock = 1 ):
+    def __init__(self, command, failureAsResult = 0):
         """initialize a Flow
         @param command:         top level iterator or command
         @param failureAsResult  if true, then failures will be added to 
@@ -231,7 +231,6 @@ class Iterator:
                                 otherwise the first failure results in 
                                 the errback being called with the failure.
         """
-        self.shouldBlock           = shouldBlock
         self.failureAsResult = failureAsResult
         if not isinstance(command, Command):
             command = Wrap(command)
@@ -241,20 +240,20 @@ class Iterator:
     def next(self):
         """ fetch the next value from the Command flow """
         cmd = self._command
-        if cmd.stop: raise StopIteration
-        result = cmd._next()
-        if result:
-            if isinstance(result, Cooperate):
-                if self.shouldBlock:
+        while 1:
+            if cmd.stop: raise StopIteration
+            result = cmd._next()
+            if result:
+                if isinstance(result, Cooperate):
                     from time import sleep
                     sleep(result.timeout)
+                    continue
                 else:
-                    return result
-            raise TypeError("Invalid command result")
-        if self.failureAsResult: 
-            return cmd.result
-        else:
-            return cmd.getResult()
+                    raise TypeError("Invalid command result")
+            if self.failureAsResult: 
+                return cmd.result
+            else:
+                return cmd.getResult()
 
 from twisted.internet import defer
 class Deferred(defer.Deferred):

@@ -84,7 +84,7 @@ class Counter:
     def next(self):
         ret = self.count
         self.count -= 1
-        if self.count &lt; 1:
+        if ret &lt; 1:
             raise StopIteration
         return ret
 
@@ -115,7 +115,6 @@ pattern.  Simply store in the iterator the next function to be run.
 </p>
 
 <pre class="python">
-from twisted.python.compat import iter, StopIteration
 
 class States:
     def __iter__(self):
@@ -147,7 +146,8 @@ gives the subsequent value produced by the <code>yield</code> statement.
 With generators, the two iterators above become very easy to express.
 
 <pre class="python">
-from __future__ import generators
+from __future__ import generators   # &lt;-- first line of file
+
 def Counter(count):
     while count > 0:
         yield count
@@ -197,7 +197,8 @@ def Consumer():
         if 2 != result:
             yield result
 
-dump(Consumer())
+for x in Consumer():
+    print x
 
 # prints:
 #   3
@@ -222,15 +223,70 @@ def Consumer():
         if 2 != result:
             yield result
 
-dump(flow.Iterator(Consumer))
+for x in flow.Iterator(Consumer):
+    print x
+
+# prints:
+#   3
+#   1
+
 </pre>
 
-<p>Alternatively, the wrapper has to member variables, <code>stop</code>
-which is true if the iterator being wrapped has finished, and
-<code>result</code> which is the last value produced.   The advantage
-of the code above, is that the flow itself can be paused and resumed
-when a producer blocks.  This can be shown by using two Flow objects
-at the same time:</p>
+<p>The call to <code>producer.getResult()</a> does quite a
+few things like checking for the end of the iterator, and
+then checking to see if the result is a failure.  Its behavior
+can best be described with a more verbose (but less useful)
+version below.</p>
+
+<pre>
+def Consumer():
+    producer = flow.Wrap(Counter(3))
+    while 1:
+        yield producer
+        if producer.stop: break
+        if producer.isFailure():
+            raise producer.result
+        else:
+            if 2 != producer.result:
+                yield producer.result
+
+for x in flow.Iterator(Consumer):
+    print x
+
+# prints:  
+#   3
+#   1
+
+</pre>
+
+<p>This seems like quite the effort, wrapping each iterator and 
+then having to alter the calling sequence.  Why?  The answer is
+that it allows for a <code>flow.Cooperate</code> object to be
+returned.   When this happens, the entire call chain can be
+moved off the stack so that other flows can proceed.   For 
+flow.Iterator (which blocks), the implementation of Cooperate
+simply puts the call chain to sleep</p>
+
+<pre class="python">
+from __future__ import generators
+import flow
+
+lst = ['1','2', flow.Cooperate(4), '3']
+for x in flow.Iterator(lst):
+    print x
+
+# prints (with a four second pause after the 2nd value)
+#   1
+#   2
+#   3
+</pre>
+
+<p>Perhaps a more clear example can be found when using the
+Merge function in Flow.  This simply zips two or more wrapped
+iterators together, without blocking one or the other.  In the
+example below, the <code>States</code> iterator isn't blocked 
+by the <code>Counter</code> iterator.
+</p>
 
 <pre class="python">
 from __future__ import generators
@@ -244,40 +300,48 @@ def Counter(count):
     while count &gt; 0:
         if not count % 2:
             yield flow.Cooperate()
-        print "-| producing", count
         yield count
         count -= 1
 
-def Consumer():
-    producer = flow.Wrap(Counter(3))
-    while 1:
-        yield producer
-        result = producer.getResult()
-        if 2 != result:
-            yield result
-
-def AnotherConsumer():
-    producer = flow.Wrap(States())
-    while 1:
-        yield producer
-        yield producer.getResult()
-
-one = flow.Iterator(Consumer())
-two = flow.Iterator(AnotherConsumer())
-print one.next()
-print two.next()
-print one.next()
-print two.next()
+mrg = flow.Merge(Counter(3),States)
+for x in flow.Iterator(mrg):
+    print x
 
 # prints:
-#  -| producing 3
-#  3
-#  one
-#  -| producing 2
-#  -| producing 1
-#  1
-#  two
+#   3
+#   one
+#   two
+#   2
+#   1
+</pre>
 
+
+<h2>Deferred Flow</h2>
+
+<p>The real value in Flow comes not from its stand-alone use, in this
+case, Cooperate does very little and the overhead imposed by flow doesn't
+offset the functionality.  However, when flow is combined with Twisted's
+<code>reactor.callLater</code> and <code>internet.defer.Deferred</code>
+mechanism, things are very nice.  In the example below, the first two
+items in the list are produced (although they arn't delivered yet),
+other events in the reactor are allowed to proceed, and then the 
+last item in the list is produced.</p>
+
+
+<pre class="python">
+from __future__ import generators
+from twisted.internet import reactor
+import flow
+
+def prn(x): 
+    print x
+d = flow.Deferred([1,2,flow.Cooperate(1),3])
+d.addCallback(prn)
+reactor.callLater(2, reactor.stop)
+reactor.run()
+
+# prints
+#   [1,2,3]
 </pre>
 
 
