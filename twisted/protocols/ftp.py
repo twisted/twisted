@@ -834,7 +834,6 @@ class FTPClient(basic.LineReceiver):
                 # Signal that transfer has completed
                 self.deferred.callback(None)
             def connectionFailed(self):
-                self.object.connectionFailed()
                 self.deferred.errback(Failure(FTPError('Connection failed')))
 
         cmd = FTPCommand(command, public=1)
