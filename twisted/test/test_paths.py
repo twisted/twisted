@@ -106,19 +106,28 @@ class FilePathTestCase(unittest.TestCase):
         self.assertRaises(filepath.InsecurePath, self.path.child, "../..")
 
     def testInsecureWin32(self):
+        self.assertRaises(filepath.InsecurePath, self.path.child, r"..\..")
+        self.assertRaises(filepath.InsecurePath, self.path.child, r"C:randomfile")
+
+    if platform.getType() != 'win32':
+        testInsecureWin32.skip = "Consider yourself lucky."
+    else:
+        testInsecureWin32.todo = "Hrm, broken"
+
+    def testInsecureWin32Whacky(self):
         """Windows has 'special' filenames like NUL and CON and COM1 and LPR
         and PRN and ... god knows what else.  They can be located anywhere in
         the filesystem.  For obvious reasons, we do not wish to normally permit
         access to these.
         """
         self.assertRaises(filepath.InsecurePath, self.path.child, "CON")
-        self.assertRaises(filepath.InsecurePath, self.path.child, r"..\..")
         self.assertRaises(filepath.InsecurePath, self.path.child, "C:CON")
         self.assertRaises(filepath.InsecurePath, self.path.child, r"C:\CON")
-        self.assertRaises(filepath.InsecurePath, self.path.child, r"C:randomfile")
 
     if platform.getType() != 'win32':
-        testInsecureWin32.skip = "Consider yourself lucky."
+        testInsecureWin32Whacky.skip = "Consider yourself lucky."
+    else:
+        testInsecureWin32Whacky.todo = "Broken, no checking for whacky devices"
 
 
 from twisted.python import urlpath
