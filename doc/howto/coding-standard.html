@@ -149,6 +149,9 @@ class Foo:
     pass
 parent.Foo = Foo
 </pre>
+
+<p>Every package should be added to the list in
+<code class="shell>setup.py</code>.</p>
      
 
     <h2>Docstrings</h2>
@@ -215,14 +218,33 @@ def foo2bar(f):
     # Optionally, actual code can go here.
        
 </pre>
-    <h2>Manpages</h2>
+    <h2>Scripts</h2>
 
-    <p>All UNIX-style scripts (those that use usage.Options) should have an
-    associated manpage that describes their functionality and briefly outlines
-    their options.</p>
+    <p>For each <q>script</q>, that is, a program you expect a Twisted user
+    to run from the command-line, the following things must be done:</p>
 
-    <p>On debian systems you can find a skeleton example of a manpage in
-    <code>/usr/share/doc/man-db/examples/manpage.example</code></p>
+<ol>
+<li>Write a module in <code class="API">twisted.scripts</code> which contains
+a callable global named <code>run</code>. This will be called by the
+command line part with no arguments (it will usually read
+<code>sys.argv</code>). Feel free to write more functions or classes in this
+module, if you feel they are useful to others.</li>
+<li>Write a file in <code class="shell">bin/</code> which contains the
+Twisted running-from-CVS header, and ending with 
+
+<pre class="python">
+from twisted.scripts.yourmodule import run
+run()
+</pre></li>
+<li>Write a manpage in <code class="shell">doc/man</code>.
+On debian systems you can find a skeleton example of a manpage in
+<code>/usr/share/doc/man-db/examples/manpage.example</code>.</li>
+<li>Add your script to the script list in
+<code class="shell">setup.py</code>.</li>
+</ol>
+
+<p>This will insure your program will work correctly for users of CVS,
+Windows releases and Debian packages.</p>
 
     <h2>ChangeLog</h2>
 
