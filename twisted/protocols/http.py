@@ -340,6 +340,9 @@ class HTTPClient(basic.LineReceiver):
             self.setLineMode(rest)
 
 
+# response codes that must have empty bodies
+NO_BODY_CODES = (204, 304)
+
 class Request:
     """A HTTP request."""
 
@@ -545,7 +548,7 @@ class Request:
 
     def finish(self):
         """We are finished writing data."""
-        if self.chunked:
+        if self.chunked and self.code not in NO_BODY_CODES:
             # write last chunk and closing CRLF
             self.transport.write("0\r\n\r\n")
         elif not self.startedWriting:
@@ -576,9 +579,9 @@ class Request:
                 # chunked mode, so that we can support pipelining in
                 # persistent connections.
                 if ((version == "HTTP/1.1") and
-                    (self.headers.get('content-length', None) is None)):
-                    l.append("%s: %s\r\n" %
-                             ('Transfer-encoding', 'chunked'))
+                    (self.headers.get('content-length', None) is None) and
+                    (self.code not in NO_BODY_CODES)):
+                    l.append("%s: %s\r\n" % ('Transfer-encoding', 'chunked'))
                     self.chunked = 1
                 if self.lastModified is not None:
                     if self.headers.has_key('last-modified'):
@@ -599,6 +602,11 @@ class Request:
 
             # if this is a "HEAD" request, we shouldn't return any data
             if self.method == "HEAD":
+                self.write = lambda data: None
+                return
+
+            # for certain result codes, we should never return any data
+            if self.code in NO_BODY_CODES:
                 self.write = lambda data: None
                 return
 
