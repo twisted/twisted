@@ -28,7 +28,7 @@ import time
 from twisted.python import reflect, log, rebuild
 from twisted.spread import pb
 from twisted.persisted import styles
-from twisted.internet import passport
+from twisted.cred import authorizer
 
 # Sibling Imports
 import thing
@@ -79,7 +79,7 @@ class Player(styles.Versioned, thing.Thing, pb.Perspective):
     def get_service(self):
         """Return my reality, so that it's not duplicately stored.
 
-        This is so that my passport.Perspective methods work properly.
+        This is so that my perspective.Perspective methods work properly.
         """
         return self.reality
     
@@ -107,7 +107,7 @@ class Player(styles.Versioned, thing.Thing, pb.Perspective):
         argument, the interface.  This will be signature-compatible with
         RemoteIntelligence.  This is an implementation of::
 
-            twisted.internet.passport.Perspective.attached(reference, identity)
+            twisted.cred.perspective.Perspective.attached(reference, identity)
 
         and therefore follows those rules.
         """
@@ -117,7 +117,7 @@ class Player(styles.Versioned, thing.Thing, pb.Perspective):
             
         if hasattr(self, 'intelligence'):
             log.msg("player duplicate: [%s]" % self.name)
-            raise passport.Unauthorized("Already logged in from another location.")
+            raise authorizer.Unauthorized("Already logged in from another location.")
         log.msg("player login: [%s]" % (self.name))
         if hasattr(self, 'oldlocation'):
             self.location = self.oldlocation

@@ -26,8 +26,10 @@ from pyunit import unittest
 
 from twisted.spread import pb
 from twisted.protocols import protocol
-from twisted.internet import passport, main
+from twisted.internet import main
 from twisted.python import defer
+from twisted.cred import identity
+
 
 class Dummy(pb.Viewable):
     def view_doNothing(self, user):
@@ -91,7 +93,7 @@ def connectedServerAndClient():
     """
     c = pb.Broker()
     app = main.Application("pb-test")
-    ident = passport.Identity("guest", app)
+    ident = identity.Identity("guest", app)
     ident.setPassword("guest")
     svc = DummyService("test", app)
     ident.addKeyForPerspective(svc.getPerspectiveNamed("any"))

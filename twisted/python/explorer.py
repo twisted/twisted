@@ -1,5 +1,5 @@
 # -*- Python -*-
-# $Id: explorer.py,v 1.10 2002/01/24 10:32:14 itamarst Exp $
+# $Id: explorer.py,v 1.11 2002/02/12 10:52:19 moshez Exp $
 # Twisted, the Framework of Your Internet
 # Copyright (C) 2001 Matthew W. Lefkowitz
 #
@@ -482,7 +482,7 @@ class Signature(pb.Copyable):
         ## if self.name[0] != 'self':
         ##    log.msg("Warning: Told to discard self, but name is %s" %
         ##            self.name[0])
-        self.name.pop(0)
+        self.name = self.name[1:]
         self.default.pop(0)
         self.flavour.pop(0)
 

@@ -22,11 +22,11 @@ import types
 
 # Twisted Imports
 from twisted.spread import pb
-from twisted.internet import passport
 from twisted.python import log, roots
 from twisted.manhole import coil
 from twisted.persisted import styles
 from twisted import copyright
+from twisted.cred import authorizer
 
 # Status "enumeration"
 
@@ -160,7 +160,7 @@ class Participant(pb.Perspective, styles.Versioned):
         """
         if ((self.client is not None)
             and self.client.__class__ != styles.Ephemeral):
-            raise passport.Unauthorized("duplicate login not permitted.")
+            raise authorizer.Unauthorized("duplicate login not permitted.")
         log.msg("attached: %s" % self.name)
         self.client = client
         client.receiveContactList(map(lambda contact: (contact.name,

@@ -1,10 +1,10 @@
 
 from twisted.enterprise import adbapi
-from twisted.internet import passport
+from twisted.cred import authorizer, identity
 import base64
 import string
 
-class DatabaseAuthorizer(passport.Authorizer, adbapi.Augmentation):
+class DatabaseAuthorizer(authorizer.Authorizer, adbapi.Augmentation):
     """A PyPgSQL authorizer for Twisted Internet Passport
     """
     
@@ -73,7 +73,7 @@ class DatabaseAuthorizer(passport.Authorizer, adbapi.Augmentation):
         realIdentName = identData[0][0]
         base64pass = identData[0][1]
         hashedPass = base64.decodestring(base64pass)
-        i = passport.Identity(realIdentName, self.application)
+        i = identity.Identity(realIdentName, self.application)
         i.setAlreadyHashedPassword(hashedPass)
         for ign, ign2, pname, sname in identData:
             i.addKeyByString(sname, pname)

@@ -26,9 +26,7 @@ from twisted.protocols import protocol
 from twisted.python import log, roots, reflect
 from twisted.persisted import styles
 from twisted.python.runtime import platform
-
-# Sibling Imports
-import passport
+from twisted.cred import service, authorizer
 
 class PortCollection(roots.Homogenous):
     """A collection of Ports; names may only be strings which represent port numbers.
@@ -79,7 +77,7 @@ class PortCollection(roots.Homogenous):
 
 
 class ServiceCollection(roots.Homogenous):
-    entityType = passport.Service
+    entityType = service.Service
 
     def __init__(self, app):
         roots.Homogenous.__init__(self)
@@ -100,11 +98,11 @@ class Application(log.Logger, styles.Versioned, roots.Locked):
     """I am the `root object' in a Twisted process.
 
     I represent a set of persistent, potentially interconnected listening TCP
-    ports, delayed event schedulers, and passport.Services.
+    ports, delayed event schedulers, and service.Services.
     """
 
     running = 0
-    def __init__(self, name, uid=None, gid=None, authorizer=None):
+    def __init__(self, name, uid=None, gid=None, authorizer_=None):
         """Initialize me.
 
         Arguments:
@@ -115,7 +113,7 @@ class Application(log.Logger, styles.Versioned, roots.Locked):
 
           * gid: (optional) a POSIX group-id.  Only used on POSIX systems.
 
-          * authorizer: a twisted.internet.passport.Authorizer.
+          * authorizer_: a twisted.cred.authorizer.Authorizer.
 
         If uid and gid arguments are not provided, this application will
         default to having the uid and gid of the user and group who created it.
@@ -129,10 +127,10 @@ class Application(log.Logger, styles.Versioned, roots.Locked):
         self.connectors = []
         # a list of twisted.python.delay.Delayeds
         self.delayeds = []
-        # a list of twisted.internet.passport.Services
+        # a list of twisted.internet.cred.service.Services
         self.services = {}
-        # a passport authorizer
-        self.authorizer = authorizer or passport.DefaultAuthorizer()
+        # a cred authorizer
+        self.authorizer = authorizer_ or authorizer.DefaultAuthorizer()
         self.authorizer.setApplication(self)
         if platform.getType() == "posix":
             self.uid = uid or os.getuid()
@@ -176,7 +174,7 @@ class Application(log.Logger, styles.Versioned, roots.Locked):
         """Version 1 Persistence Upgrade
         """
         log.msg("Upgrading %s Application." % repr(self.name))
-        self.authorizer = passport.DefaultAuthorizer()
+        self.authorizer = authorizer.DefaultAuthorizer()
         self.services = {}
 
     def getServiceNamed(self, serviceName):

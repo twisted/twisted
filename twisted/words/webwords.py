@@ -19,7 +19,7 @@ import time
 
 #Twisted imports
 from twisted.web import html, server, error, widgets
-from twisted.internet import passport
+from twisted.cred import identity
 from twisted.persisted import styles
 from twisted.manhole import coil
 
@@ -45,7 +45,7 @@ class AccountCreationWidget(widgets.Form, styles.Versioned):
         if args.has_key("username"):
             u,p = request.args['username'][0], request.args['password'][0]
             app = self.service.application
-            ident = passport.Identity(u, app)
+            ident = identity.Identity(u, app)
             ident.setPassword(p)
             app.authorizer.addIdentity(ident)
             part = self.service.createParticipant(u)

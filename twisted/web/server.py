@@ -41,11 +41,12 @@ NOT_DONE_YET = 1
 
 # Twisted Imports
 from twisted.spread import pb
-from twisted.internet import passport, main
+from twisted.internet import main
 from twisted.protocols import http, protocol
 from twisted.python import log, reflect, roots, failure
 from twisted import copyright
 from twisted.manhole import coil
+from twisted.cred import authorizer
 
 # Sibling Imports
 import error
@@ -245,7 +246,7 @@ class Request(pb.Copyable, http.HTTP):
                     "Resource: "+html.PRE(reflect.safe_repr(resrc))+"<BR>"+
                     "Value: "+html.PRE(reflect.safe_repr(body))).render(self)
 
-        except passport.Unauthorized:
+        except authorizer.Unauthorized:
             body = "<HTML><BODY>You're not cleared for that.</BODY></HTML>"
             self.setResponseCode(http.UNAUTHORIZED)
             self.setHeader('content-type',"text/html")

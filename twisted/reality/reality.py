@@ -29,7 +29,7 @@ import string
 import twisted
 from twisted.python import reflect, reference, delay
 from twisted.spread import pb
-from twisted.internet import passport
+from twisted.cred import identity
 from twisted.persisted import styles
 
 # Sibling Imports
@@ -57,7 +57,7 @@ class Reality(delay.Delayed,
                 styles.requireUpgrade(th)
                 idname = th.name
                 print "Adding identity %s" % idname
-                ident = passport.Identity(idname, self.application)
+                ident = identity.Identity(idname, self.application)
                 ident.setAlreadyHashedPassword(th.password)
                 ident.addKeyForPerspective(th)
                 try:

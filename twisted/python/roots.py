@@ -17,8 +17,6 @@
 """Twisted Python Roots: an abstract hierarchy representation for Twisted.
 """
 
-from twisted.internet import passport
-
 import types
 
 class Request:

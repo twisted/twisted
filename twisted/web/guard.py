@@ -19,9 +19,6 @@
 import string, traceback
 from cStringIO import StringIO
 
-# Twisted Imports
-from twisted.internet import passport
-
 # Sibling Imports
 import error
 import html

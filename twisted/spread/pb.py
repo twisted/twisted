@@ -48,7 +48,8 @@ import types
 # Twisted Imports
 from twisted.python import log, defer, failure
 from twisted.protocols import protocol
-from twisted.internet import passport, tcp
+from twisted.internet import tcp
+from twisted.cred import authorizer, service, perspective, identity
 from twisted.persisted import styles
 from twisted.manhole import coil
 
@@ -151,7 +152,7 @@ def printTraceback(tb):
     log.msg('Perspective Broker Traceback:' )
     log.msg(tb)
 
-class Perspective(passport.Perspective):
+class Perspective(perspective.Perspective):
     """A perspective on a service.
 
     per*spec*tive, n. : The relationship of aspects of a subject to each
@@ -198,11 +199,11 @@ class Perspective(passport.Perspective):
         return broker.serialize(state, self, method, args, kw)
 
 
-class Service(passport.Service):
+class Service(service.Service):
     """A service for Perspective Broker.
 
     On this Service, the result of a perspective request must be a
-    pb.Perspective rather than a passport.Perspective.
+    pb.Perspective rather than a perspective.Perspective.
     """
 
 
@@ -929,7 +930,7 @@ class _Detacher:
         self.perspective.detached(self.remoteRef, self.identity)
 
 class IdentityWrapper(Referenceable):
-    """I delegate most functionality to a passport.Identity.
+    """I delegate most functionality to a identity.Identity.
     """
 
     def __init__(self, broker, identity):
@@ -991,7 +992,7 @@ class AuthServ(Referenceable):
     def mkchallenge(self, ident):
         if type(ident) == types.StringType:
             # it's an error, so we must fail.
-            challenge = passport.challenge()
+            challenge = identity.challenge()
             return challenge, AuthChallenger(None, self, challenge)
         else:
             challenge = ident.challenge()
@@ -1068,7 +1069,8 @@ def connect(host, port, username, password, serviceName,
     Optional (keyword) arguments:
         perspectiveName -- the name of the perspective to request, if
             different than the username
-        client -- XXX the "reference" argument to passport.Perspective.attached
+        client -- XXX the "reference" argument to 
+                  perspective.Perspective.attached
         timeout -- see twisted.internet.tcp.Client
     """
     d = defer.Deferred()
@@ -1093,7 +1095,7 @@ def authIdentity(authServRef, username, password):
     return d
 
 def _cbRespondToChallenge((challenge, challenger), password, d):
-    challenger.respond(passport.respond(challenge, password)).addCallbacks(
+    challenger.respond(identity.respond(challenge, password)).addCallbacks(
         d.armAndCallback, d.armAndErrback)
 
 def logIn(authServRef, client, service, username, password, perspectiveName=None):
@@ -1108,7 +1110,7 @@ def logIn(authServRef, client, service, username, password, perspectiveName=None
 
 def _cbLogInRespond((challenge, challenger), d, client, service, password, perspectiveName):
     challenger.respond(
-        passport.respond(challenge, password)).addCallbacks(
+        identity.respond(challenge, password)).addCallbacks(
         _cbLogInResponded, d.armAndErrback,
         callbackArgs=(d, client, service, perspectiveName))
 

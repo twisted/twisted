@@ -1,7 +1,8 @@
 
 from pyunit import unittest
 from types import *
-from twisted.internet import app, passport
+from twisted.internet import app
+from twisted.cred import authorizer, identity, perspective, service
 
 
 EXCLUDE_FROM_BIGSUITE="Incapable test author."
@@ -44,25 +45,25 @@ class AppForServiceTest(Stubby, app.Application):
 class ServiceTestCase(unittest.TestCase):
     App = AppForServiceTest
     def setUp(self):
-        self.service = passport.Service("test service")
+        self.service = service.Service("test service")
 
     def testConstruction(self):
         app = self.App("test app for service-test")
-        passport.Service("test service")
-        passport.Service("test service", app)
+        service.Service("test service")
+        service.Service("test service", app)
 
     def testConstruction_serviceName(self):
         """serviceName is frequently used as a key, thus it is expected
         to be hashable."""
 
-        self.assertRaises(TypeError, passport.Service,
+        self.assertRaises(TypeError, service.Service,
                           ForeignObject("Not a Name"))
 
     def testConstruction_application(self):
         """application, if provided, should look at least vaugely like
         an application."""
 
-        self.assertRaises(TypeError, passport.Service,
+        self.assertRaises(TypeError, service.Service,
                           "test service",
                           ForeignObject("Not an Application"))
 
@@ -87,19 +88,19 @@ class ServiceTestCase(unittest.TestCase):
                           app2)
 
     def testaddPerspective(self):
-        p = passport.Perspective("perspective for service-test")
+        p = perspectve.Perspective("perspective for service-test")
         self.service.addPerspective(p)
 
     def testgetPerspective(self):
         pname = "perspective for service-test"
-        p = passport.Perspective(pname)
+        p = perspectve.Perspective(pname)
         self.service.addPerspective(p)
         self.service.getPerspective(pname)
 
     def testGetSetPerspetiveSanity(self):
         # XXX OBSOLETE
         pname = "perspective for service-test"
-        p = passport.Perspective(pname)
+        p = perspectve.Perspective(pname)
         self.service.addPerspective(p)
         q = self.service.getPerspectiveNamed(pname)
         self.assertEqual(pname, q.getPerspectiveName())
@@ -134,13 +135,13 @@ class AppForPerspectiveTest(Stubby, app.Application):
         self.name = name
         self.authorizer = "Stub depth exceeded"
 
-class ServiceForPerspectiveTest(Stubby, passport.Service):
+class ServiceForPerspectiveTest(Stubby, service.Service):
     def __init__(self, name, appl):
         self.serviceName = name
         self.application = appl
         self.perspectives = {}
 
-class IdentityForPerspectiveTest(Stubby, passport.Identity):
+class IdentityForPerspectiveTest(Stubby, identity.Identity):
     def __init__(self, name, appl=None):
         self.name = name
         self.application = appl
@@ -155,25 +156,25 @@ class PerspectiveTestCase(unittest.TestCase):
         self.app = self.App("app for perspective-test")
         self.service = self.Service("service for perspective-test",
                                     self.app)
-        self.perspective = passport.Perspective("test perspective")
+        self.perspective = perspective.Perspective("test perspective")
 
 
     def testConstruction(self):
-        passport.Perspective("test perspective")
-        passport.Perspective("test perspective", "testIdentityName")
+        perspective.Perspective("test perspective")
+        perspective.Perspective("test perspective", "testIdentityName")
 
     def testConstruction_invalidPerspectiveName(self):
-        self.assertRaises(TypeError, passport.Perspective,
+        self.assertRaises(TypeError, perspective.Perspective,
                           ForeignObject("Not a perspectiveName"),
                           self.service)
 
     def testConstruction_invalidService(self):
-        self.assertRaises(TypeError, passport.Perspective,
+        self.assertRaises(TypeError, perspective.Perspective,
                           "test perspective",
                           ForeignObject("Not a Service"))
 
     def testConstruction_invalidIdentityName(self):
-        self.assertRaises(TypeError, passport.Perspective,
+        self.assertRaises(TypeError, perspective.Perspective,
                           "test perspective", self.service,
                           ForeignObject("Not an idenityName"))
 
@@ -239,7 +240,7 @@ class PerspectiveTestCase(unittest.TestCase):
 
 class FunctionsTestCase(unittest.TestCase):
     def test_challenge(self):
-        self.assert_(passport.challenge())
+        self.assert_(identity.challenge())
 
     def test_response(self):
         raise NotImplementedError
@@ -251,7 +252,7 @@ class AppForIdentityTest(Stubby, app.Application):
         self.name = name
         self.authorizer = "Stub depth exceeded"
 
-class ServiceForIdentityTest(Stubby, passport.Service):
+class ServiceForIdentityTest(Stubby, service.Service):
     def __init__(self, name, appl):
         self.serviceName = name
         self.application = appl
@@ -260,7 +261,7 @@ class ServiceForIdentityTest(Stubby, passport.Service):
     def getServiceName(self):
         return self.serviceName
 
-class PerspectiveForIdentityTest(Stubby, passport.Perspective):
+class PerspectiveForIdentityTest(Stubby, perspective.Perspective):
     def __init__(self, name, service, *a, **kw):
         self.perspectiveName = name
         self.service = service
@@ -278,13 +279,13 @@ class IdentityTestCase(unittest.TestCase):
 
     def setUp(self):
         self.app = self.App("app for identity-test")
-        self.ident = passport.Identity("test identity", self.app)
+        self.ident = identity.Identity("test identity", self.app)
 
     def testConstruction(self):
-        passport.Identity("test name", self.app)
+        identity.Identity("test name", self.app)
 
     def testConstruction_invalidApp(self):
-        self.assertRaises(TypeError, passport.Identity,
+        self.assertRaises(TypeError, identity.Identity,
                           "test name", ForeignObject("not an app"))
 
     def test_addKeyByString(self):
@@ -346,7 +347,7 @@ class IdentityTestCase(unittest.TestCase):
 
 
 class AuthorizerTestCase(unittest.TestCase):
-    """XXX - TestCase for passport.DefaultAuthorizer not yet written."""
+    """XXX - TestCase for authorizer.DefaultAuthorizer not yet written."""
     pass
 
 if __name__ == "__main__":

@@ -15,12 +15,12 @@
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
-from twisted.internet import passport
 from twisted.persisted import styles
 from twisted.protocols import irc
 from twisted.python import log
 from twisted.words import service
 from twisted import copyright
+from twisted.cred import authorizer
 
 wordsService = service
 del service
@@ -71,7 +71,7 @@ class TendrilClient(irc.IRCClient, wordsService.WordsClientInterface):
 
     realname = 'Tendril'
     versionName = 'Tendril'
-    versionNum = '$Revision: 1.11 $'[11:-2]
+    versionNum = '$Revision: 1.12 $'[11:-2]
     versionEnv = copyright.longversion
 
     helptext = (
@@ -152,7 +152,7 @@ class TendrilClient(irc.IRCClient, wordsService.WordsClientInterface):
 
         try:
             self.attach()
-        except passport.Unauthorized:
+        except authorizer.Unauthorized:
             if self.perspective.client:
                 log.msg("%s is attached to my perspective: "
                         "kicking it off." % (self.perspective.client,))

@@ -3,7 +3,8 @@ import string, random
 
 from twisted.web import server, resource, widgets, guard
 from twisted.python import defer
-from twisted.internet import app, passport
+from twisted.internet import app
+from twisted.cred import service, identity, perspective
 
 
 class DateTimeTest(unittest.TestCase):
@@ -109,11 +110,11 @@ class WidgetTest(unittest.TestCase):
 class GuardTest(unittest.TestCase):
     def setUp(self):
         self.app = app.Application("guard")
-        ident = passport.Identity("bob", self.app)
+        ident = identity.Identity("bob", self.app)
         ident.setPassword("joe")
         self.app.authorizer.addIdentity(ident)
-        self.svc = passport.Service("simple", self.app)
-        self.psp = passport.Perspective('jethro',ident.name)
+        self.svc = service.Service("simple", self.app)
+        self.psp = perspective.Perspective('jethro',ident.name)
         self.svc.addPerspective(self.psp)
         ident.addKeyForPerspective(self.psp)
 
