@@ -40,7 +40,7 @@ def formulaeToImages(document, dir):
     i = 0
     for node in domhelpers.findElementsWithAttribute(document, 'class',
                                                     'latexformula'):
-        latexText='''\\documentclass{amsart}%s
+        latexText='''\\documentclass[12pt]{amsart}%s
                      \\begin{document}\[%s\]
                      \\end{document}''' % (macros, domhelpers.getNodeText(node))
         file = tempfile.mktemp()
