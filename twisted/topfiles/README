@@ -6,67 +6,57 @@ Quote of the Release:
     languages into two groups, sucks and doesn't-suck and put all of
     them into the first group.
 
-For information on what's new in Twisted SVN-trunk, see the ChangeLog file
-that comes with the distribution, or http://twistedmatrix.com/ChangeLog.txt.
+For information on what's new in Twisted SVN-trunk, see the ChangeLog
+file that comes with the distribution.
 
 What is this?
+=============
 
-  Twisted is an event-based framework for internet applications.  It includes a
-  web server, a telnet server, a chat server, a news server, a generic client 
-  and server for remote object access, and APIs for creating new protocols and
-  services. Twisted supports integration of the Tk, GTK+, GTK+ 2, Qt, Mac OS X,
-  or wxPython event loop with its main event loop. The Win32 event loop 
-  is also supported. Twisted works with all Python 2.2 and 2.3 versions.
+  Twisted is an event-based framework for internet applications.
 
-  Twisted currently supports the following protocols, all implemented in pure
-  Python, most of them as both servers and clients:
+  - twisted.application
+    A "Service" system that allows you to organize your application in
+    hierarchies with well-defined startup and dependency semantics,
+  - twisted.cred
+    A general credentials and authentication system that facilitates
+    pluggable authentication backends,
+  - twisted.enterprise
+    Asynchronous database access, compatible with any Python DBAPI2.0
+    modules,
+  - twisted.internet
+    Low-level asynchronous networking APIs that allow you to define
+    your own protocols that run over certain transports,
+  - twisted.manhole
+    A tool for remote debugging of your services which gives you a
+    Python interactive interpreter,
+  - twisted.protocols
+    Basic protocol implementations and helpers for your own protocol
+    implementations,
+  - twisted.python
+    A large set of utilities for Python tricks, reflection, text
+    processing, and anything else,
+  - twisted.spread
+    A secure, fast remote object system,
+  - twisted.trial
+    A unit testing framework that integrates well with Twisted-based code.
 
-    - SSH  
-    - FTP
-    - HTTP
-    - XML-RPC (using xmlrpclib)
-    - SOAP (using SOAPpy)
-    - NNTP
-    - SOCKSv4 (server only)
-    - SIP
-    - Jabber
-    - SMTP
-    - IRC
-    - telnet
-    - POP3
-    - AOL's instant messaging TOC
-    - OSCAR, used by AOL-IM as well as ICQ (client only)
-    - DNS
-    - MouseMan
-    - finger
-    - Echo, discard, chargen and friends
-    - Twisted Perspective Broker
-  
-  For more information, visit http://www.twistedmatrix.com, or join the list at
-  http://twistedmatrix.com/cgi-bin/mailman/listinfo/twisted-python
+  Twisted supports integration of the Tk, GTK+, GTK+ 2, Qt, Mac OS X,
+  or wxPython event loop with its main event loop. The Win32 event
+  loop is also supported. Twisted works with all Python
+  2.2 and 2.3 versions.
+
+  For more information, visit http://www.twistedmatrix.com, or join the list 
+  at http://twistedmatrix.com/cgi-bin/mailman/listinfo/twisted-python
 
 
-What can I do with it?
+Installing
+==========
 
   Instructions for installing this software are in INSTALL.
 
-  Although there is a lot of infrastructure support in Twisted, the immediately
-  useful applications for the end-user are Twisted Web and Instance Messenger.
-  Twisted Web is a webserver, written entirely in python, which is designed to
-  be "zero maintenance".  We run the twistedmatrix.com website from it, and I 
-  can testify that it has met its goals at least for me! The server can 
-  comfortably handle 50 dynamic-content requests per second on fairly old 
-  hardware (I have a Pentium II/333); however, since Twisted is entirely in
-  Python, it's quite easy to script the webserver to do whatever you like!
-
-  Instance Messenger is a multi-protocol chat client; it's easy to use: just
-  run 'im', and an "account manager" window will pop up. You can create and
-  modify accounts with it, and connect to/disconnect from them. Currently it
-  can support Twisted's own chat service, Twisted Words, Internet Relay Chat
-  (IRC), and AOL Instant Messenger (with the TOC protocol).
-
-
 Unit Tests
+==========
+
 
   See our unit tests run proving that the software is BugFree(TM)::
 
@@ -80,79 +70,25 @@ Unit Tests
    * run them as root.
 
 
-Basic Servers
-
-  There are various servers you can build and run in the main distribution,
-  although they won't be covered here.  Twisted servers do not have
-  configuration files; instead, you instantiate a server and put it into a
-  Pickle file; your servers and all of their component objects are saved in
-  that file, and can be loaded with the Twisted Daemon.
-
-  See http://twistedmatrix.com/documents/howto/basics, or in your archive 
-  doc/howto/basics.xhtml for more information. 
-
-  The normal type of server to create is a webserver.  You can run this
-  command::
-
-    % mktap web --path static
-
-  See http://twistedmatrix.com/documents/howto/using-twistedweb, or in your 
-  archive doc/howto/using-twistedweb.xhtml for more information about using
-  the web server.
-
-  A generic chat server::
-
-    % mktap words
-
-  This creates a chat server application, with 2 different interfaces and a web
-  administration port.  Web administration can be conducted on port 8080, the
-  IRC server on 6667, and a PB service on port 8787.
-
-  You'll need to create an account with the web tool before you can log in,
-  even using IRC (a "bot" will ask you for your password upon connection).
-
-  So far the IRC gateway has only been tested with mIRC, XChat, and ircII; I
-  believe that these are relatively diverse clients, but YMMV.
-
-  The "Instance Messenger" is an instant messaging client to the various chat
-  services that Twisted can interface with, which are IRC, AIM, and,
-  twisted.words.  You can invoke it like this::
-
-    % im
-
-  A AOL Instant Messenger TOC Server is also available::
-
-    % mktap toc -p 5190
-
-  which creates the TOC server, running on port 5190.  To create a user, simply
-  log in with the username and password you want.  If the name is not already
-  taken on the server, it is created.  This creates a file called 'toc.tap'
-  
-
 Documentation and Support
+=========================
 
-  Although this is far from enough, some examples on how to use basic Twisted
-  APIs are located in doc/examples; this might ease the learning curve a
-  little bit, since all these files are kept as short as possible.
-  The file doc/howto/index.xhtml contains an index of all the HOWTOs: this
-  should be your starting point when looking for documentation.
+  Examples on how to use Twisted APIs are located in doc/examples;
+  this might ease the learning curve a little bit, since all these
+  files are kept as short as possible.  The file doc/howto/index.xhtml
+  contains an index of all the HOWTOs: this should be your starting
+  point when looking for documentation.
 
-  As of this release, I realize that Twisted's documentation is rather sparse.
-  I encourage you to read the source code and docstrings, but if you're curious
-  as to what Twisted can do, please feel free to join the mailing list::
+  Help is available on the Twisted mailing list::
 
     http://twistedmatrix.com/cgi-bin/mailman/listinfo/twisted-python
   
-  or to join #twisted on irc.freenode.net for some live help.
-
-  Part of the problem with documentation on a project like this is that
-  everything seems obvious to me :-).  If you have trouble with a particular
-  aspect of the Twisted system, I'd like to hear about what was confusing and
-  why.  The process of your learning may be the material I build a tutorial
-  from, so don't hesitate to ask!
+  There is also a very lively IRC channel, #twisted, on
+  irc.freenode.net.
 
 
 Copyright
+=========
 
   All of the code in this distribution is Copyright (c) 2001-2004
   Twisted Matrix Laboratories.
@@ -162,6 +98,7 @@ Copyright
 
 
 Warranty
+========
 
   THIS SOFTWARE IS PROVIDED "AS IS" WITHOUT WARRANTY OF ANY KIND, EITHER
   EXPRESSED OR IMPLIED, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES
