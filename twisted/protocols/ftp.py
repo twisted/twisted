@@ -69,9 +69,9 @@ from twisted.internet import abstract, reactor
 from twisted.internet.interfaces import IProducer
 from twisted.protocols import basic
 from twisted.protocols import protocol
-from twisted.protocols.protocol import ServerFactory
+from twisted.protocols.protocol import ServerFactory, Protocol
 from twisted import internet
-from twisted.python.defer import Deferred
+from twisted.python.defer import Deferred, DeferredList, FAILURE
 from twisted.python.failure import Failure
 
 
@@ -689,6 +689,31 @@ class FTPCommand:
         self.text = text
         self.deferred = Deferred()
         self.ready = 1
+
+
+class ProtocolProtocol(Protocol):
+    """A convenient wrapper for a Protocol object.
+
+    This needs a better name.
+    """
+    def __init__(self, protocol):
+        self.protocol = protocol
+
+    def makeConnection(self, transport, server=None):
+        self.protocol.makeConnection(self, transport, server)
+
+    def connectionMade(self):
+        self.protocol.connectionMade()
+
+    def connectionLost(self):
+        self.protocol.connectionLost()
+
+    def connectionFailed(self):
+        self.protocol.connectionFailed()
+
+    def dataReceived(self, data):
+        self.protocol.dataReceived(data)
+
         
 class FTPClient(basic.LineReceiver):
     """A Twisted FTP Client
@@ -820,9 +845,26 @@ class FTPClient(basic.LineReceiver):
             # We just place a marker command in the queue, and will fill in
             # the host and port numbers later (see generatePortCommand)
             portCmd = FTPCommand('PORT')
-            portCmd.protocol = protocol
-            portCmd.realDeferred = Deferred()
-            portCmd.deferred.addErrback(portCmd.realDeferred.errback)
+
+            # Ok, now we jump through a few hoops here.
+            # This is the problem: a transfer is not to be trusted as complete
+            # until we get both the "226 Transfer complete" message on the 
+            # control connection, and the data socket is closed.  Thus, we use
+            # a DeferredList to make sure we only fire the callback at the 
+            # right time.
+
+            # Use a wrapper so that we can override connectionLost without
+            # modifying the Protocol instance passed to us
+            class ProtocolWrapper(ProtocolProtocol):
+                def connectionLost(self):
+                    ProtocolProtocol.connectionLost(self)
+                    # Signal that transfer has completed
+                    self.portCmd.transferDeferred.callback(None)
+            
+            portCmd.protocol = ProtocolWrapper(protocol)
+            portCmd.protocol.portCmd = portCmd
+            portCmd.transferDeferred = Deferred()
+            portCmd.deferred.addErrback(portCmd.transferDeferred.errback)
             self.queueCommand(portCmd)
 
             # Create dummy functions for the next callback to call.  
@@ -837,11 +879,23 @@ class FTPClient(basic.LineReceiver):
 
             # If this cmd fails, the Deferred returned by this method should
             # fail too.
-            cmd.deferred.addErrback(portCmd.realDeferred.errback)
-            cmd.deferred.arm()
+            cmd.deferred.addErrback(portCmd.transferDeferred.errback)
 
+            portCmd.deferred.addErrback(lambda e, cmd=cmd: cmd.deferred.errback(e) or e)
+            d = DeferredList([portCmd.deferred, portCmd.transferDeferred, 
+                              cmd.deferred])
+            def raiseOnFailure(deferredListResult):
+                """Triggers errback if one (or more) of the Deferreds failed"""
+                for status, value in deferredListResult:
+                    if status == FAILURE:
+                        raise value
+
+                # If everything is ok, return cmd.deferred's result
+                return deferredListResult[2][1]
+            
+            d.addCallback(raiseOnFailure)
             self.queueCommand(cmd)
-            return portCmd.realDeferred
+            return d
 
     def generatePortCommand(self, portCmd):
         """(Private) Generates the text of a given PORT command"""
@@ -860,7 +914,7 @@ class FTPClient(basic.LineReceiver):
         # Start listening on a port
         class FTPDataPortFactory(ServerFactory):
             def buildProtocol(self, connection):
-                # This is a bit hackish -- we already have Protocol instance,
+                # This is a bit hackish -- we already have a Protocol instance,
                 # so just return it instead of making a new one
                 # FIXME: Reject connections from the wrong address/port
                 #        (potential security problem)
@@ -869,19 +923,12 @@ class FTPClient(basic.LineReceiver):
                 return self.protocol
         FTPDataPortFactory.protocol = portCmd.protocol
 
-        # Make the protocol call the Deferred returned by retrieve when the
-        # socket closes
-        oldCL = portCmd.protocol.connectionLost
-        def newCL(oldCL=oldCL, portCmd=portCmd):
-            oldCL()
-            portCmd.realDeferred.callback(portCmd.protocol)
-        portCmd.protocol.connectionLost = newCL
-
         factory = FTPDataPortFactory()
         listener = reactor.listenTCP(0, factory)
         factory.port = listener
-        listener.deferred = portCmd.realDeferred
         listener.startListening()
+
+        # Ensure we close the listening port if something goes wrong
         def listenerFail(error, listener=listener):
             if listener.connected:
                 listener.loseConnection()
@@ -893,8 +940,6 @@ class FTPClient(basic.LineReceiver):
         port = listener.getHost()[2]
         numbers = string.split(host, '.') + [str(port >> 8), str(port % 256)]
         portCmd.text = 'PORT ' + string.join(numbers,',')
-
-        portCmd.deferred.addErrback(listenerFail).arm()
 
     def escapePath(self, path):
         """Returns a FTP escaped path (replace newlines with nulls)"""
