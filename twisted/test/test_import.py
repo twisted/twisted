@@ -77,6 +77,7 @@ class AtLeastImportTestCase(unittest.TestCase):
         from twisted.python import threadpool
         from twisted.python import usage
         from twisted.python import otp
+        from twisted.python import dir
     
     
     def test_protocols(self):
@@ -91,6 +92,8 @@ class AtLeastImportTestCase(unittest.TestCase):
         from twisted.protocols import telnet
         from twisted.protocols import oscar
         from twisted.protocols import toc
+        from twisted.protocols import imap4
+        from twisted.protocols import policies
     
     def test_web(self):
         """Test importing web
@@ -112,6 +115,17 @@ class AtLeastImportTestCase(unittest.TestCase):
         from twisted.words import service
         from twisted.words import ircservice
 
+    def test_names(self):
+        """Test importing names
+        """
+        from twisted.names import authority
+        from twisted.names import cache
+        from twisted.names import common
+        from twisted.names import hosts
+        from twisted.names import resolve
+        from twisted.names import server
+        from twisted.names import tap
+
     def test_mail(self):
         """Test importing mail
         """
@@ -120,6 +134,7 @@ class AtLeastImportTestCase(unittest.TestCase):
         from twisted.mail import pb
         from twisted.mail import relaymanager
         from twisted.mail import protocols
+        from twisted.mail import tap
 
     def test_enterprise(self):
         from twisted.enterprise import adbapi
