@@ -18,12 +18,11 @@ def setup(**kw):
         if 'twisted' not in os.listdir('.'):
             raise RuntimeError("Sorry, you need to run setup.py from the "
                                "toplevel source directory.")
-        topfiles = os.path.dirname(kw['twisted_subproject'])
-        tsp = os.path.normpath(os.path.join(topfiles, '..'))
-        twistedpath = os.path.normpath(os.path.join(tsp, '..', '..'))
-        
-        kw['packages'] = getPackages(tsp, parent='twisted')
-        kw['data_files'] = getDataFiles(tsp, parent=twistedpath)
+        projname = kw['twisted_subproject']
+        projdir = os.path.join('twisted', projname)
+
+        kw['packages'] = getPackages(projdir, parent='twisted')
+        kw['data_files'] = getDataFiles(projdir, parent='twisted')
         del kw['twisted_subproject']
         
     if 'cmdclass' not in kw:
