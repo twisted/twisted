@@ -115,7 +115,7 @@ Description: Quotes from the Twisted development team
 Package: python2.1-twisted-conch
 Architecture: all
 Depends: python2.1, python2.1-twisted, python2.1-crypto
-Conflicts: python2.1-twisted (<< 1.0.1)
+Conflicts: python2.1-twisted (<= 1.0.0)
 Description: The Twisted SSH Implementation (for Python 2.1)
  A client/server implementation of the SSH protocol, using the
  twisted framework
@@ -125,7 +125,7 @@ Description: The Twisted SSH Implementation (for Python 2.1)
 Package: python2.2-twisted-conch
 Architecture: all
 Depends: python2.2, python2.2-twisted, python2.2-crypto
-Conflicts: python2.2-twisted (<< 1.0.1)
+Conflicts: python2.2-twisted (<=1.0.0)
 Description: The Twisted SSH Implementation (for Python 2.2)
  A client/server implementation of the SSH protocol, using the
  twisted framework
@@ -135,7 +135,7 @@ Description: The Twisted SSH Implementation (for Python 2.2)
 Package: python2.3-twisted-conch
 Architecture: all
 Depends: python2.3, python2.3-twisted, python2.3-crypto
-Conflicts: python2.3-twisted (<< 1.0.1)
+Conflicts: python2.3-twisted (<= 1.0.0)
 Description: The Twisted SSH Implementation (for Python 2.3)
  A client/server implementation of the SSH protocol, using the
  twisted framework
