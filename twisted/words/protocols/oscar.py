@@ -231,7 +231,7 @@ class SSIBuddy:
                     self.alertWhen.append('unaway')
             elif k == 0x013e:
                 self.alertSound = v
-
+ 
     def oscarRep(self, groupID, buddyID):
         tlvData = reduce(lambda x,y: x+y, map(lambda (k,v):TLV(k,v), self.tlvs.items()), '\000\000')
         return struct.pack('!H', len(self.name)) + self.name + \
@@ -737,21 +737,30 @@ class BOSConnection(SNACBased):
         this gets a callback when it's finished, but you can probably ignore it.
         """
         if groupID is None:
-            groupID = item.group.group.findIDFor(item.group)
+            if isinstance(item, SSIGroup):
+                groupID = 0
+            else:
+                groupID = item.group.group.findIDFor(item.group)
         if buddyID is None:
             buddyID = item.group.findIDFor(item)
         return self.sendSNAC(0x13,0x08, item.oscarRep(groupID, buddyID))
 
     def modifyItemSSI(self, item, groupID = None, buddyID = None):
         if groupID is None:
-            groupID = item.group.group.findIDFor(item.group)
+            if isinstance(item, SSIGroup):
+                groupID = 0
+            else:
+                groupID = item.group.group.findIDFor(item.group)
         if buddyID is None:
             buddyID = item.group.findIDFor(item)
         return self.sendSNAC(0x13,0x09, item.oscarRep(groupID, buddyID))
 
     def delItemSSI(self, item, groupID = None, buddyID = None):
         if groupID is None:
-            groupID = item.group.group.findIDFor(item.group)
+            if isinstance(item, SSIGroup):
+                groupID = 0
+            else:
+                groupID = item.group.group.findIDFor(item.group)
         if buddyID is None:
             buddyID = item.group.findIDFor(item)
         return self.sendSNAC(0x13,0x0A, item.oscarRep(groupID, buddyID))
