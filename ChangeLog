@@ -1,3 +1,8 @@
+2003-5-6  Moshe Zadka <moshez@twistedmatrix.com>
+
+	* twisted/trial/reporter.py twisted/scripts/trial.py: Add --timing
+	option to make the reporter output wall-clock time.
+
 2003-05-05  Brian Warner  <warner@lothar.com>
 
 	* setup.py (setup_args): s/licence/license/, preferred in python-2.3

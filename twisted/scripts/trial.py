@@ -29,6 +29,7 @@ class Options(usage.Options):
     optFlags = [["help", "h"],
                 ["text", "t", "Text mode (ignored)"],
                 ["verbose", "v", "Verbose output"],
+                ["timing", None, "Timing output"],
                 ["bwverbose", "o", "Colorless verbose output"],
                 ["jelly", "j", "Jelly (machine-readable) output"],
                 ["summary", "s", "summary output"],
@@ -197,6 +198,8 @@ def run():
     elif config['jelly']:
         import twisted.trial.remote
         reporter = twisted.trial.remote.JellyReporter(sys.stdout)
+    elif config['timing']:
+        reporter = reps.TimingTextReporter(sys.stdout)
     else:
         reporter = reps.TextReporter(sys.stdout)
 

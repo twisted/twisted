@@ -213,6 +213,26 @@ class TextReporter(Reporter):
                              % (name, exc.args[0]))
             self.writeln()
 
+class TimingTextReporter(TextReporter):
+
+    def __init__(self, stream=sys.stdout):
+        TextReporter.__init__(self, stream)
+
+    def reportStart(self, testClass, method):
+        self.testStartedAt = time.time()
+        self.write('%s (%s) ... ', method.__name__, reflect.qual(testClass))
+
+    def reportResults(self, testClass, method, resultType, results=None):
+        stopped = time.time()
+        t = stopped-self.testStartedAt
+        words = {SKIP: '[SKIPPED]',
+                 EXPECTED_FAILURE: '[TODO]',
+                 FAILURE: '[FAIL]', ERROR: '[ERROR]',
+                 UNEXPECTED_SUCCESS: '[SUCCESS!?!]',
+                 SUCCESS: '[OK]'}
+        self.writeln(words.get(resultType, "[??]")+" "+"(%.02f secs)" % t)
+        Reporter.reportResults(self, testClass, method, resultType, results)
+
 class VerboseTextReporter(TextReporter):
     def __init__(self, stream=sys.stdout):
         TextReporter.__init__(self, stream)
