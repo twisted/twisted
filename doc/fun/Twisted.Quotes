@@ -2886,7 +2886,7 @@ dollars, instead of being dead, i am now an oil magnate in my native country."
 %
 <jml> here I am, brain the size of a planet, and they make me do XML
 %
-* glyph/#twisted thinks x++ should have been named "<xml type="programming">
+* glyph thinks x++ should have been named "<xml type="programming">
     <increment /> <increment> </xml>"
 %
 <raph> i was going to publish a spec for bitmap images much along similar lines as BLOAT
@@ -2895,14 +2895,17 @@ dollars, instead of being dead, i am now an oil magnate in my native country."
 <raph> do up an XLST stylesheet to render it as a huge html table with cell backgrounds for each pixel
 <raph> so you can view it in mozilla
 %
+<aum> dash: do we have a 'non-profanity' chan policy here?
+<dash> aum: we have a "not acting lame" policy
+%
 * spiv wishes he never has to see another meta-argument
-<_moshez> spiv: meta-arguments are fun!
+<moshez> spiv: meta-arguments are fun!
 <spiv> _moshez: The first time perhaps.  They're always the same, though.  It gets tiresome.
 <glyph> spiv: you're having a meta-meta argument now
 <spiv> glyph: My life is pain :)
-<_moshez> glyph: I was afraid of having to point this out to spiv myself
+<moshez> glyph: I was afraid of having to point this out to spiv myself
 <dash> moshez: it wasn't an argument 'til you spoke up :)
-<_moshez> dash: but he *answered*
+<moshez> dash: but he *answered*
 <glyph> aaaaaaaaa
 <glyph> METAMETAMETA ARGUMENT
 <jml> glyph: not it's not
