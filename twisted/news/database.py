@@ -34,7 +34,7 @@ from twisted.internet import defer
 from twisted.enterprise import adbapi
 from twisted.persisted import dirdbm
 
-import getpass, pickle, time, socket, md5, string
+import getpass, pickle, time, socket, md5
 import smtplib, os
 
 ERR_NOGROUP, ERR_NOARTICLE = range(2, 4)  # XXX - put NNTP values here (I guess?)
@@ -45,7 +45,7 @@ OVERVIEW_FMT = [
 ]
 
 def hexdigest(md5): #XXX: argh. 1.5.2 doesn't have this.
-    return string.join(map(lambda x: hex(ord(x))[2:], md5.digest()), '')
+    return ''.join(map(lambda x: hex(ord(x))[2:], md5.digest()))
 
 class Article:
     def __init__(self, head, body):
@@ -70,28 +70,29 @@ class Article:
             self.putHeader('Bytes', str(len(self.body)))
         
         if not self.getHeader('Lines'):
-            self.putHeader('Lines', str(string.count(self.body, '\n')))
+            self.putHeader('Lines', str(self.body.count('\n')))
         
         if not self.getHeader('Date'):
             self.putHeader('Date', time.ctime(time.time()))
 
 
     def getHeader(self, header):
-        if self.headers.has_key(string.lower(header)):
-            return self.headers[string.lower(header)][1]
+        h = header.lower()
+        if self.headers.has_key(h):
+            return self.headers[h][1]
         else:
             return ''
 
 
     def putHeader(self, header, value):
-        self.headers[string.lower(header)] = (header, value)
+        self.headers[header.lower()] = (header, value)
 
 
     def textHeaders(self):
         headers = []
         for i in self.headers.values():
             headers.append('%s: %s' % i)
-        return string.join(headers, '\r\n') + '\r\n'
+        return '\r\n'.join(headers) + '\r\n'
     
     def overview(self):
         xover = []
@@ -275,11 +276,11 @@ class PickleStorage(NewsStorage):
         return defer.succeed(['alt.test'])
 
     def postRequest(self, message):
-        cleave = string.find(message, '\r\n\r\n')
+        cleave = message.find('\r\n\r\n')
         headers, article = message[:cleave], message[cleave + 4:]
 
         a = Article(headers, article)
-        groups = string.split(a.getHeader('Newsgroups'))
+        groups = a.getHeader('Newsgroups').split()
         xref = []
 
         # Check moderated status
@@ -299,7 +300,10 @@ class PickleStorage(NewsStorage):
         if len(xref) == 0:
             return defer.fail(None)
 
-        a.putHeader('Xref', '%s %s' % (string.split(socket.gethostname())[0], string.join(map(lambda x: string.join(x, ':'), xref), '')))
+        a.putHeader('Xref', '%s %s' % (
+            socket.gethostname().split()[0],
+            ''.join(map(lambda x: string.join(x, ':'), xref))
+        ))
 
         self.flush()
         return defer.succeed(None)
@@ -725,7 +729,7 @@ class NewsStorageAugmentation(adbapi.Augmentation, NewsStorage):
 
 
     def postRequest(self, message):
-        cleave = string.find(message, '\r\n\r\n')
+        cleave = message.find('\r\n\r\n')
         headers, article = message[:cleave], message[cleave + 4:]
         article = Article(headers, article)
         return self.runInteraction(self._doPost, article)
