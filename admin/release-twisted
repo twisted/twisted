@@ -188,7 +188,7 @@ def makeDocs(opts):
     sh('cd %s && ./admin/process-docs %s' % (tdir, ver))
 
     #shwack the crap
-    sh('find %s -name "*.pyc" | xargs rm -f' % (tdir, ext))
+    sh('find %s -name "*.pyc" | xargs rm -f' % (tdir,))
 
 
 
