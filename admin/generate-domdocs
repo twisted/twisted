@@ -62,8 +62,24 @@ def findElementsWithAttribute(parent, attribute, value=None):
             parent,
             lambda n, attribute=attribute: n.hasAttribute(attribute))
 
+
+def findElementsWithNameAndAttributes(parent, name, attributes):
+    def matcher(n, name=name, attributes=attributes):
+        if name and n.nodeName != name:
+            return 0
+        for (attribute, value) in attributes:
+            if not n.hasAttribute(attribute):
+                return 0
+            if value is not None:
+                if n.getAttribute(attribute) != value:
+                   return 0
+        return 1 
+    return findElements(parent, matcher)
+
+
 def findNodesNamed(parent, name):
     return findNodes(parent, lambda n, name=name: n.nodeName == name)
+
 
 
 class Cache:
@@ -169,13 +185,13 @@ class Walker:
 
 # relative links to html files
 def fixLinks(document, ext):
-    for node in findElementsWithAttribute(document, "href"):
-        if not node.getAttribute("class") == "html-listing":
-            href = node.getAttribute("href")
-            if not (href.startswith("http://") or href.startswith("mailto:")):
-                fname = os.path.splitext(href)
-                if len(fname) == 2 and fname[1] == '.html':
-                    node.setAttribute("href", fname[0] + ext)
+    attributes = (('href', None), ('class', 'html-listing'))
+    for node in findElementsWithNameAndAttributes(document, None, attributes):
+        href = node.getAttribute("href")
+        if not (href.startswith("http://") or href.startswith("mailto:")):
+            fname = os.path.splitext(href)
+            if len(fname) == 2 and fname[1] == '.html':
+                node.setAttribute("href", fname[0] + ext)
 
 
 def addMtime(document, fullpath):
@@ -209,23 +225,23 @@ def fixAPI(document, cache):
 
 
 def fontifyPython(document):
-    for node in findElementsWithAttribute(document, "class", "python"):
-        if node.tagName == 'pre':
-            newio = cStringIO.StringIO()
-            # write the python code to a buffer
-            oldio = cStringIO.StringIO()
-            writeNodeData(node, oldio)
-            oiv = oldio.getvalue()
-            oivs = oiv.strip() + '\n'
-            oldio = cStringIO.StringIO()
-            oldio.write(oivs)
-            oldio.seek(0)
-            fontifyFiles(oldio, newio)
-            newio.seek(0)
-            newdom = dom.parse(newio)
-            newel = newdom.documentElement
-            newel.setAttribute("class", "python")
-            node.parentNode.replaceChild(newel, node)
+    for node in findElementsWithNameAndAttributes(document, 'pre',
+                                                  [("class", "python")]):
+        newio = cStringIO.StringIO()
+        # write the python code to a buffer
+        oldio = cStringIO.StringIO()
+        writeNodeData(node, oldio)
+        oiv = oldio.getvalue()
+        oivs = oiv.strip() + '\n'
+        oldio = cStringIO.StringIO()
+        oldio.write(oivs)
+        oldio.seek(0)
+        fontifyFiles(oldio, newio)
+        newio.seek(0)
+        newdom = dom.parse(newio)
+        newel = newdom.documentElement
+        newel.setAttribute("class", "python")
+        node.parentNode.replaceChild(newel, node)
 
 
 def addPyListings(document, d):
@@ -235,11 +251,11 @@ def addPyListings(document, d):
         fontifyFiles(open(os.path.join(d, fn)), outfile)
         val = outfile.getvalue()
 
-        text = str('<div class="py-listing">'
-                   #'<pre class="python">%s</pre>' #redundant?
-                   '%s'
-                   '<div class="py-caption">%s - '
-                   '<span class="py-filename">%s</span></div></div>' % (
+        text = ('<div class="py-listing">'
+               #'<pre class="python">%s</pre>' #redundant?
+                '%s'
+                '<div class="py-caption">%s - '
+                '<span class="py-filename">%s</span></div></div>' % (
             val, getNodeText(node), node.getAttribute("href")))
         newnode = dom.parseString(text).documentElement
         node.parentNode.replaceChild(newnode, node)
