@@ -214,10 +214,13 @@ class Client(Connection):
         self.protocol.makeConnection(self)
 
     def connectionLost(self):
-        Connection.connectionLost(self)
-        if self.connector:
-            self.connector.connectionLost()
-
+        if not self.connected:
+            self.failIfNotConnected()
+        else:
+            Connection.connectionLost(self)
+            if self.connector:
+                self.connector.connectionLost()
+    
     def getHost(self):
         """Returns a tuple of ('INET', hostname, port).
 
