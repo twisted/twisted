@@ -55,6 +55,9 @@ class Options(usage.Options):
         usage.Options.__init__(self)
         self['commands'] = []
 
+    def opt_checkout(self):
+        self['commands'].append('checkout')
+
     def opt_upver(self):
         self['commands'].append('upver')
 
@@ -115,7 +118,8 @@ def main():
          'rel': release,
          'balls': makeBalls,
 		 'tag': tag,
-         'upver': updateVersions}
+         'upver': updateVersions,
+         'checkout': checkout}
 
     
     sys.path.insert(0, os.path.abspath('Twisted'))
