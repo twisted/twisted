@@ -31,16 +31,17 @@ def int2b128(integer, stream):
         integer = integer >> 7
 
 def b1282int(st):
+    if len(st) > 5:
+        oneHundredAndTwentyEight = 128l
+    else:
+        oneHundredAndTwentyEight = 128
     i = 0l
     place = 0
     for char in st:
         num = ord(char)
-        i = i + (num * (128 ** place))
+        i = i + (num * (oneHundredAndTwentyEight ** place))
         place = place + 1
-    try:
-        return int(i)
-    except:
-        return i
+    return i
 
 # delimiter characters.
 LIST     = chr(0x80)
@@ -50,6 +51,9 @@ SYMBOL   = chr(0x83)
 NEG      = chr(0x84)
 VOCAB    = chr(0x85)
 FLOAT    = chr(0x86)
+# This will make it easier for people writing low-level implementations.
+LONGINT  = chr(0x87)
+LONGNEG  = chr(0x88)
 
 HIGH_BIT_SET = chr(0x80)
 
@@ -103,7 +107,11 @@ class Banana(protocol.Protocol, styles.Ephemeral):
             elif typebyte == INT:
                 buffer = rest
                 num = b1282int(num)
-                gotItem(num)
+                gotItem(int(num))
+            elif typebyte == LONGINT:
+                buffer = rest
+                num = b1282int(num)
+                gotItem(long(num))
             elif typebyte == NEG:
                 buffer = rest
                 num = -b1282int(num)
@@ -117,9 +125,11 @@ class Banana(protocol.Protocol, styles.Ephemeral):
                 num = b1282int(num)
                 gotItem(self.incomingVocabulary[-num])
             elif typebyte == FLOAT:
-                buffer = rest
-                num = float(num)
-                gotItem(num)
+                if len(rest) >= 8:
+                    buffer = rest[8:]
+                    gotItem(struct.unpack("d", rest[:8])[0])
+                else:
+                    return
             else:
                 raise NotImplementedError(("Invalid Type Byte %s" % typebyte))
             while listStack and (len(listStack[-1][1]) == listStack[-1][0]):
@@ -204,9 +214,16 @@ class Banana(protocol.Protocol, styles.Ephemeral):
             else:
                 int2b128(-obj, write)
                 write(NEG)
+        elif isinstance(obj, types.LongType):
+            if obj >= 0l:
+                int2b128(obj, write)
+                write(LONGINT)
+            else:
+                int2b128(-obj, write)
+                write(LONGNEG)
         elif isinstance(obj, types.FloatType):
-            write(str(obj))
             write(FLOAT)
+            write(struct.pack("d", obj))
         elif isinstance(obj, types.StringType):
             if self.outgoingSymbols.has_key(obj):
                 symbolID = self.outgoingSymbols[obj]

@@ -918,7 +918,7 @@ class Broker(banana.Banana):
     """I am a broker for objects.
     """
 
-    version = 4
+    version = 5
     username = None
 
     def __init__(self):

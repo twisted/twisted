@@ -25,7 +25,7 @@ from twisted.protocols import protocol
 
 class MathTestCase(unittest.TestCase):
     def testInt2b128(self):
-        funkylist = range(0,100) + range(1000,1100) + range(1000000,1000100)
+        funkylist = range(0,100) + range(1000,1100) + range(1000000,1000100) + [1024 **10l]
         for i in funkylist:
             x = cStringIO.StringIO()
             banana.int2b128(i, x.write)
