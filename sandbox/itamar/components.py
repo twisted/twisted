@@ -196,7 +196,8 @@ def superInterfaces(interface):
     result = [interface]
     result.extend(reflect.allYourBase(interface, Interface))
     result = util.uniquify(result)
-    result.remove(Interface)
+    if Interface in result:
+        result.remove(Interface)
     return result
 
 
