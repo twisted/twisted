@@ -295,6 +295,8 @@ class SmartHostSMTPRelayingManager:
 class RelayStateHelper(app.ApplicationService):
     """A helper to poke SmartHostSMTPRelayingManager.checkState()"""
 
+    loopCall = None
+
     def __init__(self, manager, delay, *args, **kw):
         app.ApplicationService.__init__(self, *args, **kw)
         self.manager = manager
@@ -309,8 +311,9 @@ class RelayStateHelper(app.ApplicationService):
         self.manager.checkState()
     
     def stopService(self):
-        self.loopCall.cancel()
-        del self.loopCall
+        if self.loopCall is not None:
+            self.loopCall.cancel()
+            self.loopCall = None
 
 
 class MXCalculator:
