@@ -138,7 +138,7 @@ class SSHSession(connection.SSHChannel):
         return 1
 
     def request_window_change(self, data):
-        parseRequest_window_change(data)
+        self.winSize = parseRequest_window_change(data)
         fcntl.ioctl(self.pty.fileno(), tty.TIOCSWINSZ, 
                     struct.pack('4H', *self.winSize))
         return 1
