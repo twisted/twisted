@@ -93,8 +93,11 @@ class Resource(coil.ConfigCollection):
     def listStaticEntities(self):
         return self.children.items()
 
-    listNames = listStaticNames
-    listEntities = listStaticEntities
+    def listNames(self):
+        return self.listStaticNames() + self.listDynamicNames()
+
+    def listEntities(self):
+        return self.listStaticEntities() + self.listDynamicEntities()
 
     def listDynamicNames(self):
         return []
