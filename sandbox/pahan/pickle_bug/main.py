@@ -2,7 +2,7 @@ import t_appl, pickle, traceback
 
 def dump():
     b = t_appl.Blah()
-    pickle.dump(b, file("main.tap", "w"))
+    pickle.dump(b, file("main.tap", "wb"))
 
 def load():
     b = pickle.load(file("module.tap", "rb"))
