@@ -332,5 +332,5 @@ class Portforwarding(unittest.TestCase):
         clientProtocol.transport.loseConnection()
         serverProtocol.transport.loseConnection()
         return defer.gatherResults([
-            realServerPort.stopListening(),
-            proxyServerPort.stopListening()])
+            defer.maybeDeferred(realServerPort.stopListening),
+            defer.maybeDeferred(proxyServerPort.stopListening)])
