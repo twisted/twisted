@@ -17,6 +17,7 @@
 from twisted.trial import unittest
 
 from twisted.python import util
+from twisted.python.runtime import platformType
 import os.path, sys
 import shutil
 
@@ -110,6 +111,10 @@ print test_util.reversePassword()
         # The reversing trick it so make sure that there's not some weird echo
         # thing just sending back what we type in.
         self.failUnlessEqual(reverseString(secret), "secret")
+
+    if platformType != "posix":
+        testStdIn.skip = "unix only"
+
 
 class SearchUpwardsTest(unittest.TestCase):
     def testSearchupwards(self):
