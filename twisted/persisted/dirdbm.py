@@ -49,16 +49,18 @@ class DirDBM:
         if not os.path.isdir(self.dname):
             os.mkdir(self.dname)
         else:
-            # run recovery, in case we crashed. we find all files ending
-            # with ".new". If a corresponding file exists without ".new",
-            # we assume the write failed and delete the ".new" file. If
-            # only a ".new" exist we assume the program crashed right
-            # after deleting the old entry but before renaming the new
-            # entry.
+            # Run recovery, in case we crashed. we delete all files ending
+            # with ".new". Then we find all files who end with ".rpl". If a
+            # corresponding file exists without ".rpl", we assume the write
+            # failed and delete the ".rpl" file. If only a ".rpl" exist we
+            # assume the program crashed right after deleting the old entry
+            # but before renaming the replacement entry.
             #
             # NOTE: '.' is NOT in the base64 alphabet!
-            newFiles = glob.glob(os.path.join(self.dname, "*.new"))
-            for f in newFiles:
+            for f in glob.glob(os.path.join(self.dname, "*.new")):
+                os.remove(f)
+            replacements = glob.glob(os.path.join(self.dname, "*.rpl"))
+            for f in replacements:
                 old = f[:-4]
                 if os.path.exists(old):
                     os.remove(f)
@@ -86,7 +88,10 @@ class DirDBM:
         # we create a new file with extension .new, write the data to it, and
         # if the write succeeds delete the old file and rename the new one.
         old = os.path.join(self.dname, k)
-        new = old + ".new"
+        if os.path.exists(old):
+            new = old + ".rpl" # replacement entry
+        else:
+            new = old + ".new" # new entry
         try:
             f = _open(new,'wb')
             f.write(v)

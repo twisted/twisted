@@ -84,7 +84,7 @@ class DirDbmTestCase(unittest.TestCase):
     def testRecovery(self):
         """DirDBM: test recovery from directory after a faked crash""" 
         k = self.dbm._encode("key1")
-        f = open(os.path.join(self.path, k + ".new"), "wb")
+        f = open(os.path.join(self.path, k + ".rpl"), "wb")
         f.write("value")
         f.close()
         
@@ -92,14 +92,19 @@ class DirDbmTestCase(unittest.TestCase):
         f = open(os.path.join(self.path, k2), "wb")
         f.write("correct")
         f.close()
-        f = open(os.path.join(self.path, k2 + ".new"), "wb")
+        f = open(os.path.join(self.path, k2 + ".rpl"), "wb")
         f.write("wrong")
+        f.close()
+        
+        f = open(os.path.join(self.path, "aa.new"), "wb")
+        f.write("deleted")
         f.close()
         
         dbm = dirdbm.DirDBM(self.path)
         assert dbm["key1"] == "value"
         assert dbm["key2"] == "correct"
         assert not glob.glob(os.path.join(self.path, "*.new"))
+        assert not glob.glob(os.path.join(self.path, "*.rpl"))
 
 
 class ShelfTestCase(DirDbmTestCase):
