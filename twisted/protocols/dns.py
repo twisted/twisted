@@ -746,6 +746,7 @@ class DNSClientProtocol(protocol.DatagramProtocol):
             d.errback(error.TimeoutError(message.queries))
             del self.liveMessages[message.id]
         else:
+            from twisted.internet import reactor
             self.writeMessage(message, address)
             self.liveMessages[message.id] = (
                 d,
@@ -771,16 +772,17 @@ class DNSClientProtocol(protocol.DatagramProtocol):
         
         @rtype: C{Deferred}
         """
+        from twisted.internet import reactor
         id = self.pickID()
-        d = self.liveMessages[id] = (
+        m = Message(id, recDes=1)
+        m.queries = queries
+        d, _ = self.liveMessages[id] = (
             defer.Deferred(),
             reactor.callLater(
                 self.reissue, self._reissueQuery, m, address,
                 self.startCount
             )
         )
-        m = Message(id, recDes=1)
-        m.queries = queries
         self.writeMessage(m, address)
         return d
 

@@ -61,15 +61,13 @@ class RountripDNSTestCase(unittest.TestCase):
     def testRR(self):
         # encode the RR
         f = StringIO()
-        dns.RR("test.org", 3, 4, 17, "foobar").encode(f)
+        dns.RRHeader("test.org", 3, 4, 17).encode(f)
         
         # decode the result
         f.seek(0, 0)
-        result = dns.RR()
+        result = dns.RRHeader()
         result.decode(f)
         self.assertEquals(result.name.name, "test.org")
         self.assertEquals(result.type, 3)
         self.assertEquals(result.cls, 4)
         self.assertEquals(result.ttl, 17)
-        self.assertEquals(result.data, "foobar")
-
