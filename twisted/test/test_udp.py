@@ -177,8 +177,11 @@ class MulticastTestCase(unittest.TestCase):
         p = reactor.listenMulticast(0, c)
         self.runUntilSuccess(self.server.transport.joinGroup, "225.0.0.250")
         c.transport.write("hello world", ("225.0.0.250", self.server.transport.getHost()[2]))
-        while len(self.server.packets) == 0:
+        
+        iters = 0
+        while iters < 100 and len(self.server.packets) == 0:
             reactor.iterate(0.05);
+            iters += 1
         self.assertEquals(self.server.packets[0][0], "hello world")
         p.stopListening()
 
