@@ -929,6 +929,9 @@ class AliasTestCase(unittest.TestCase):
         'After a blank line',
         'Last line'
     ]
+
+    def setUp(self):
+        aliasFile.seek(0)
     
     def testHandle(self):
         result = {}
