@@ -1053,6 +1053,13 @@ class IUDPTransport(Interface):
     def getHost(self):
         """Returns IPv4Address."""
 
+    def stopListening(self):
+        """Stop listening on this port.
+
+        If it does not complete immediately, will return Deferred that fires
+        upon completion.
+        """
+
 
 class IUDPConnectedTransport(Interface):
     """DEPRECATED. Transport for UDP ConnectedPacketProtocols."""

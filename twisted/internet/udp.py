@@ -170,13 +170,9 @@ class Port(base.BasePort):
         self._connectedAddr = (host, port)
         self.socket.connect((host, port))
     
-    def loseConnection(self):
-        """Stop accepting connections on this port.
-
-        This will shut down my socket and call self.connectionLost().
-        """
+    def _loseConnection(self):
         self.stopReading()
-        if self.connected:
+        if self.connected: # actually means if we are *listening*
             from twisted.internet import reactor
             reactor.callLater(0, self.connectionLost)
 
@@ -185,9 +181,13 @@ class Port(base.BasePort):
             result = self.d = defer.Deferred()
         else:
             result = None
-        self.loseConnection()
+        self._loseConnection()
         return result
 
+    def loseConnection(self):
+        warnings.warn("Please use stopListening() to disconnect port", DeprecationWarning, stacklevel=2)
+        self.stopListening()
+    
     def connectionLost(self, reason=None):
         """Cleans up my socket.
         """
@@ -250,7 +250,7 @@ class ConnectedPort(Port):
         self._connectToProtocol()
 
     def connectionFailed(self, reason):
-        self.loseConnection()
+        self._loseConnection()
         self.protocol.connectionFailed(reason)
         del self.protocol
 
