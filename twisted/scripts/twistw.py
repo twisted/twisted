@@ -4,6 +4,7 @@
 
 from twisted.python import log
 from twisted.application import app, service, internet
+from twisted import copyright
 import sys, os
 
 class ServerOptions(app.ServerOptions):
