@@ -21,6 +21,9 @@ class TOCGateway(gateway.Gateway,toc.TOCClient):
         self._chatmapping={}
         self._roomid={}
 
+    def _debug(self,text):
+        pass
+
     def gotConfig(self,mode,buddylist,permit,deny):
         users=[]
         for k in buddylist.keys():
@@ -71,6 +74,9 @@ class TOCGateway(gateway.Gateway,toc.TOCClient):
         if self._chatmapping.has_key(toc.normalize(roomname)):
             del self._chatmapping[toc.normalize(roomname)]
         del self._roomid[roomid]
+    
+    def writeNewConfig(self):
+        self.set_config(self._savedmode,self._savedlist,self._savedpermit,self._saveddeny)
 
     def addContact(self,contact):
         self.add_buddy([contact])
@@ -80,34 +86,38 @@ class TOCGateway(gateway.Gateway,toc.TOCClient):
             k="Twisted Buddies"
             self._savedlist[k]=[]
         self._savedlist[k].append(contact)
-        self.set_config(self._savedmode,self._savedlist,self._savedpermit,self._saveddeny)
+        self.writeNewConfig()
         self._usermapping[toc.normalize(contact)]=contact
         self.notifyStatusChanged(contact,"Offline")
 
     def removeContact(self,contact):
         self.del_buddy([contact])
         n=toc.normalize(contact)
-        del self._usermapping[n]
+        if self._usermapping.has_key(n):del self._usermapping[n]
         for k in self._savedlist.keys():
             for u in range(len(self._savedlist[k])):
                 if n==toc.normalize(self._savedlist[k][u]):
                     del self._savedlist[k][u]
+                    self.writeNewConfig()
                     return
 
     def changeStatus(self,newStatus):
         pass # XXX: need to define what newStatus is
 
     def joinGroup(self,groupname):
-        self.chat_join(4,groupname)
         self._chatmapping[toc.normalize(groupname)]=groupname
+        self.chat_join(4,groupname)
 
     def leaveChat(self,groupname):
-      for i in self._roomid.keys():
-        if self.roomid[i]==groupname:
-            self.chat_leave(groupname)
-            del self._roomid[i]
-            if self._chatmapping.has_key(toc.normalize(groupname)):del self._chatmapping[toc.normalize(groupname)]
+        for i in self._roomid.keys():
+            if self.roomid[i]==groupname:
+                self.chat_leave(groupname)
+                del self._roomid[i]
+                if self._chatmapping.has_key(toc.normalize(groupname)):del self._chatmapping[toc.normalize(groupname)]
 
+    def getGroupMembers(self,groupname):
+        self.receiveGroupMembers([],groupname)
+        
     def directMessage(self,user,message):
         self.say(user,message)
 

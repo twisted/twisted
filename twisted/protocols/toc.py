@@ -745,6 +745,7 @@ class TOCClient(protocol.Protocol):
         """
         UPDATE_BUDDY:<username>:<online T|F>:<warning level>:<signon time>:<idle time (minutes)>:<user class>
         """
+        data=list(data)
         online=(data[1]=='T')
         away=(data[5][-1]=='U')
         if data[5][-1]=='U':

@@ -4,6 +4,7 @@ from twisted.spread import pb
 from twisted.internet import tcp
 from twisted import copyright
 
+import string
 
 #normalFont = Font("-adobe-courier-medium-r-normal-*-*-120-*-*-m-*-iso8859-1")
 #boldFont = Font("-adobe-courier-bold-r-normal-*-*-120-*-*-m-*-iso8859-1")
@@ -15,6 +16,40 @@ def grid_setexpand(widget):
         widget.columnconfigure(i,weight=1)
     for i in range(rows):
         widget.rowconfigure(i,weight=1)
+
+class GenericLogin(Toplevel):
+    def __init__(self,callback,buttons):
+        Toplevel.__init__(self)
+        self.callback=callback
+        Label(self,text="Twisted v%s"%copyright.version).grid(column=0,row=0)
+        self.entries={}
+        row=1
+        for stuff in buttons:
+            label,value=stuff[:2]
+            if len(stuff)==3:
+                dict=stuff[2]
+            else: dict={}
+            Label(self,text=label+": ").grid(column=0,row=row)
+            e=apply(Entry,(self,),dict)
+            e.grid(column=1,row=row)
+            e.insert(0,value)
+            self.entries[label]=e
+            row=row+1
+        Button(self,text="Login",command=self.doLogin).grid(column=0,row=row)
+        Button(self,text="Cancel",command=self.close).grid(column=1,row=row)
+        self.protocol('WM_DELETE_WINDOW',self.close)
+    
+    def close(self):
+        self.tk.quit()
+        self.destroy()
+
+    def doLogin(self):
+        values={}
+        for k in self.entries.keys():
+            values[string.lower(k)]=self.entries[k].get()
+        self.callback(values)
+        self.destroy()
+
 class Login(Toplevel):
     def __init__(self, callback,
              referenced = None,
