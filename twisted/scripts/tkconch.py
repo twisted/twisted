@@ -14,7 +14,7 @@
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 #
-# $Id: tkconch.py,v 1.1 2002/12/27 23:56:00 z3p Exp $
+# $Id: tkconch.py,v 1.2 2002/12/28 00:15:09 z3p Exp $
 
 """ Implementation module for the `tkconch` command.
 """
@@ -65,6 +65,7 @@ class GeneralOptions(usage.Options):
                 ['noshell', 'N', 'Do not execute a shell or command.'],
                 ['subsystem', 's', 'Invoke command (mandatory) as SSH2 subsystem.'],
                 ['log', 'v', 'Log to stderr'],
+                ['ansilog', 'a', 'Print the receieved data to stdout'],
                 ['nox11', 'x']]
 
     identitys = []
@@ -141,7 +142,7 @@ def deferredAskFrame(question, echo):
             if echo:
                 frame.write(ch)
         elif ord(ch) == 8 and resp: # BS
-            frame.write('\x08 \x08')
+            if echo: frame.write('\x08 \x08')
             resp.pop()
     frame.callback = gotChar
     frame.write(question)
@@ -261,7 +262,6 @@ class SSHClientTransport(transport.SSHClientTransport):
         try:
             frame.write("Warning: Permanently added '%s' (%s) to the list of known hosts.\r\n" % (khHost, {'ssh-dss':'DSA', 'ssh-rsa':'RSA'}[keyType]))
             known_hosts = open(os.path.expanduser('~/.ssh/known_hosts'), 'a')
-            print os.path.expanduser('~/.ssh/known_hosts')
             encodedKey = base64.encodestring(pubKey).replace('\n', '')
             known_hosts.write('\n%s %s %s' % (khHost, keyType, encodedKey))
             known_hosts.close()
@@ -299,7 +299,6 @@ class SSHClientTransport(transport.SSHClientTransport):
         return retVal
 
     def connectionSecure(self):
-        print 'connection secure'
         if options['user']:
             user = options['user']
         else:
@@ -437,6 +436,8 @@ class SSHSession(connection.SSHChannel):
             self.write(char)
 
     def dataReceived(self, data):
+        if options['ansilog']:
+            print repr(data)
         frame.write(data)
 
     def extReceived(self, t, data):
