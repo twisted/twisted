@@ -313,7 +313,7 @@ class IMailbox(components.Interface):
     def deleteMessage(self, index):
         """"""
     
-    def undeleteMessage(self, index):
+    def undeleteMessages(self):
         """"""
     
     def sync(self):
@@ -330,7 +330,7 @@ class Mailbox:
         raise ValueError
     def deleteMessage(self, i):
         raise ValueError
-    def undeleteMessage(self, i):
+    def undeleteMessages(self):
         pass
     def sync(self):
         pass
