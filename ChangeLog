@@ -1,3 +1,10 @@
+2003-03-04  Tommi Virtanen  <tv@lapdog>
+
+	* twisted/scripts/mktap.py, twisted/internet/app.py: mktap now
+	accepts --uid=0 and --gid=0 to really mean root, has command line
+	help for --uid=/--gid=, and understands user and group names in
+	addition to numbers.
+
 2003-03-04  Tommi Virtanen  <tv@twistedmatrix.com>
 
 	* twisted/scripts/tap2deb.py, doc/man/tap2deb.1: Option --version=

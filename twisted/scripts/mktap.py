@@ -15,7 +15,7 @@
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 #
-# $Id: mktap.py,v 1.26 2003/02/21 19:29:26 exarkun Exp $
+# $Id: mktap.py,v 1.27 2003/03/04 18:31:57 tv Exp $
 
 """ Implementation module for the `mktap` command.
 """
@@ -25,7 +25,7 @@ from twisted.internet import app
 from twisted.python import usage, util
 from twisted.spread import pb
 
-import sys, traceback, os, cPickle, glob
+import sys, traceback, os, cPickle, glob, pwd
 
 from twisted.python.plugin import getPlugIns
 
@@ -67,8 +67,8 @@ class GeneralOptions(usage.Options):
     synopsis = """Usage:    mktap [options] <command> [command options]
  """
 
-    optParameters = [['uid', 'u', '0'],
-                  ['gid', 'g', '0'],
+    optParameters = [['uid', 'u', None, "The uid to run as."],
+                  ['gid', 'g', None, "The gid to run as."],
                   ['append', 'a', None,   "An existing .tap file to append the plugin to, rather than creating a new one."],
                   ['type', 't', 'pickle', "The output format to use; this can be 'pickle', 'xml', or 'source'."],
                   ['appname', 'n', None, "The process name to use for this application."]]
@@ -142,8 +142,20 @@ def run():
         sys.exit()
 
     mod = getModule(tapLookup, options.subCommand)
+
+    if options['uid'] is not None:
+        try:
+            options['uid'] = int(options['uid'])
+        except ValueError:
+            options['uid'] = pwd.getpwnam(options['uid'])[2]
+    if options['gid'] is not None:
+        try:
+            options['gid'] = int(options['gid'])
+        except ValueError:
+            options['gid'] = pwd.getpwnam(options['gid'])[3]
+
     if not options['append']:
-        a = app.Application(options.subCommand, int(options['uid']), int(options['gid']))
+        a = app.Application(options.subCommand, options['uid'], options['gid'])
     else:
         if os.path.exists(options['append']):
             a = cPickle.load(open(options['append'], 'rb'))

@@ -281,8 +281,12 @@ class Application(log.Logger, styles.Versioned,
             self._authorizer = a
             self._authorizer.setApplication(self)
         if platform.getType() == "posix":
-            self.uid = uid or os.getuid()
-            self.gid = gid or os.getgid()
+            if uid is None:
+                uid = os.getuid()
+            self.uid = uid
+            if gid is None:
+                gid = os.getgid()
+            self.gid = gid
 
     persistenceVersion = 12
 
