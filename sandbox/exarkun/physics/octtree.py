@@ -62,17 +62,17 @@ class OctTree(object):
                 depth = self.depth / 2
                 height = self.depth / 2
                 if left:
-                    center[0] = self.center - width / 2
+                    center[0] = self.center[0] - width / 2
                 else:
-                    center[0] = self.center + width / 2
+                    center[0] = self.center[0] + width / 2
                 if front:
-                    center[1] = self.center - depth / 2
+                    center[1] = self.center[1] - depth / 2
                 else:
-                    center[1] = self.center + depth / 2
+                    center[1] = self.center[1] + depth / 2
                 if bottom:
-                    center[2] = self.center - height / 2
+                    center[2] = self.center[2] - height / 2
                 else:
-                    center[2] = self.center + height / 2
+                    center[2] = self.center[2] + height / 2
                 child = self._children[n] = OctTree(tuple(center),
                                                     width,
                                                     depth,
