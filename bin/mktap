@@ -6,7 +6,7 @@ Usage::
   mktap *apptype* *application_options*
   mktap --help *apptype*
 
-So far *apptype* can be 'web', 'irc', 'reality', 'toc', and 'telnet'
+So far *apptype* can be 'web', 'irc', 'reality', 'toc', 'mail' and 'telnet'
 
 """
 
