@@ -179,17 +179,20 @@ class Game(pb.Referenceable):
 
 <p>and move the responsibility (and capability) for calling Game.move() out
 to a different class. That class is a 
-<code class="API" base="twisted.spread">pb.Perspective</code>.</p>
+<code class="API" base="twisted.spread">pb.IPerspective</code>.</p>
 
 <h2>Perspectives</h2>
 
-<p><code class="API" base="twisted.spread">pb.Perspective</code> (and some
-related classes: Identity, Authorizer, and Service) is a layer on top of the
+<p><code class="API" base="twisted.spread">pb.IPerspective</code> 
+(and the convenience implementation 
+<code class="API" base="twisted.spread">pb.Avatar</code>)
+is a layer on top of the
 basic PB system that handles username/password checking. The basic idea is
-that there is a separate Perspective object (probably a subclass you've
+that there is a separate IPerspective object (probably a subclass 
+of <code>Avatar</code> you've
 created) for each user<span class="footnote">Actually there is a perspective
-per user*service, but we'll get into that later</span>, and <em>only</em>
-the authorized user gets a remote reference to that Perspective object. You
+per user*realm, but we'll get into that later</span>, and <em>only</em>
+the authorized user gets a remote reference to that IPerspective object. You
 can store whatever permissions or capabilities the user possesses in that
 object, and then use them when the user invokes a remote method. You give
 the user access to the Perspective object instead of the objects that do the
@@ -204,7 +207,7 @@ class Game:
   def move(self, playerName, x, y):
     self.board[x,y] = playerName
 
-class PlayerPerspective(pb.Perspective):
+class PlayerPerspective(pb.Avatar):
   def __init__(self, playerName, game):
     self.playerName = playerName
     self.game = game
@@ -224,78 +227,27 @@ not an argument of their remote method call.</p>
 <p>Here is a brief example of using a Perspective. Most of the support code
 is magic for now: we'll explain it later.</p>
 
-<div class="note"><p>
-This example has more support code than you'd actually need.  If you only have
-one Service, then there's probably a one-to-one relationship between your
-Identities and your Perspectives. If that's the case, you can use a utility
-method called Perspective.makeIdentity() instead of creating the perspectives
-and identities in separate steps. This is shorter, but hides some of the
-details that are useful here to explain what's going on. Again, this will make
-more sense later.</p></div>
-
 <a href="listings/pb/pb5server.py" class="py-listing">pb5server.py</a>
 <a href="listings/pb/pb5client.py" class="py-listing">pb5client.py</a>
 
-<p>Note that once this example has done the method call, you'll have to
-terminate both ends yourself. Also note that the Perspective's
-<code>.attached()</code> and <code>.detached()</code> methods are run when
-the client connects and disconnects. The base class implementations of these
-methods just prints a message.</p>
-
 <p>Ok, so that wasn't really very exciting. It doesn't accomplish much more
 than the first PB example, and used a lot more code to do it. Let's try it
-again with two users this time, each with their own Perspective. We also
-override <code>.attached()</code> and <code>.detached()</code>, just to see
-how they are called.</p>
+again with two users this time.</p>
 
 <div class="note">
 
-<p>The Perspective object is usually expected to outlast the user's
-connection to it: it is nominally created some time before the user
-connects, and survives after they disconnect. <code>.attached()</code> and
-<code>.detached()</code> are invoked to let the Perspective know when the
-user has connected and disconnected.</p>
-
-<p>When the client runs <code>getPerspective</code> to request the Perspective,
+<p>When the client runs <code>login</code> to request the Perspective,
 they can provide it with an optional <code>client</code> argument (which
 must be a <code>pb.Referenceable</code> object). If they do, then a
-reference to that object will be handed to the server-side Perspective's
-<code>.attached</code> method, in the <code>clientref</code> argument.</p>
+reference to that object will be handed to the realm's
+<code>requestAvatar</code> in the <code>mind</code> argument.</p>
 
 <p>The server-side Perspective can use it to invoke remote methods on
 something in the client, so that the client doesn't always have to drive the
 interaction. In a chat server, the client object would be the one to which
 <q>display text</q> messages were sent. In a game, this would provide a way
 to tell the clients that someone has made a move, so they can update their
-game boards. To actually use it, you'd probably want to subclass Perspective
-and change the .attached method to stash the clientref somewhere, because
-the default implementation just drops it.</p>
-
-<p><code>.attached()</code> also receives a reference to the
-<code>Identity</code> object that represents the user. (The user has proved,
-by using a password of some sort, that they are that <code>Identity</code>,
-and then they can access any service/perspective on the Identity's keyring).
-The method can use that reference to extract more information about the
-user.</p>
-
-<p>In addition, <code>.attached()</code> has the opportunity to return a
-different Perspective, if it so chooses. You could have all users initially
-access the same Perspective, but then as they connect (and
-<code>.attached()</code> gets called), give them unique Perspectives based
-upon their individual Identities. The client will get a reference to
-whatever <code>.attached()</code> returns, so the default case is to 'return
-self'.</p>
-
-<p>Finally, when the client goes away (i.e., the network connection has been
-closed), <code>.detached()</code> will be called. The Perspective can use
-this to mark the user as having gone away: this may mean that outgoing
-messages should be queued in the Perspective until they reconnect, or
-callers should be given an error message because they messages cannot be
-delivered, etc. It can also be used to terminate or suspend any sessions the
-user was participating in. <code>detached</code> is called with the same
-'clientref' and Identity objects that were given to the original 'attached'
-call. It will be invoked on the Perspective object that was returned by
-<code>.attached()</code>.</p>
+game boards.</p>
 
 </div>
 
@@ -312,284 +264,26 @@ client. You can see how each client logs into a different Perspective.</p>
 
 <p>Now that we've seen some of the motivation behind the Perspective class,
 let's start to de-mystify some of the parts labeled <q>magic</q> in
-<code>pb6server.py</code>. Here are the major classes involved:</p>
+<code>pb6server.py</code>. Most of the major classes involved are
+described in <a href="newcred.xhtml">the cred howto</a>.</p>
 
-<ul>
-  <li><code class="API" base="twisted.internet.app">Application</code>:
-  <code>twisted/internet/app.py</code></li>
-  <li><code class="API" base="twisted.cred.service">Service</code>:
-  <code>twisted/cred/service.py</code></li>
-  <li><code class="API" base="twisted.cred.authorizer">Authorizer</code>:
-  <code>twisted/cred/authorizer.py</code></li>
-  <li><code class="API" base="twisted.cred.identity">Identity</code>:
-  <code>twisted/cred/identity.py</code></li>
-  <li><code class="API" base="twisted.cred.perspective">Perspective</code>:
-  <code>twisted/cred/pb.py</code></li>
-</ul>
-
-<p>You've already seen <code>Application</code>. It holds the program-wide
-settings, like which uid/gid it should run under, and contains a list of
-ports that it should listen on (with a Factory for each one to create
-Protocol objects). When used for PB, we put a pb.BrokerFactory on the port.
-The <code>Application</code> also holds a list of Services.</p>
-
-<p>A <code>Service</code> is, well, a service. A web server would be a
-<code>Service</code>, as would a chat server, or any other kind of server
-you might choose to run. What's the difference between a
-<code>Service</code> and an <code>Application</code>? You can have multiple
-<code>Service</code>s in a single <code>Application</code>: perhaps both a
-web-based chat service and an IM server in the same program, that let you
-exchange messages between the two. Or your program might provide different
-kinds of interfaces to different classes of users: administrators could get
-one <code>Service</code>, while mere end-users get a less-powerful
-<code>Service</code>.</p>
-
-<div class="note">
-
-<p>Note that the <code>Service</code> is a server of some sort, but that
-doesn't mean there's a one-to-one relationship between the
-<code>Service</code> and the TCP port that's being listened to. In theory,
-several different <code>Service</code>s can hang off the same TCP port. Look
-at the MultiService class for details.</p>
-
-</div>
-
-
-<p>The <code>Service</code> is reponsible for providing
-<code>Perspective</code> objects. More on that later.</p>
-
-<p>The <code>Authorizer</code> is a class that provides
-<code>Identity</code> objects. The abstract base class is
-<code>twisted.cred.authorizer.Authorizer</code>, and for simple purposes you
-can just use <code class="API"
-base="twisted.cred.authorizer">DefaultAuthorizer</code>, which is a subclass
-that stores pre-generated Identities in a simple dict (indexed by username).
-The <code>Authorizer</code>'s purpose in life is to implement the
-<code>.getIdentityRequest()</code> method, which takes a user name and
-(eventually) returns the corresponding <code>Identity</code> object. (To be
-precise, <code>.getIdentityRequest()</code> returns a Deferred, which will
-eventually have its callback run with the <code>Identity</code>).</p>
-
-<p>Each <code>Identity</code> object represents a single user, with a
-username and a password of some sort. Its job is to talk to the
-as-yet-anonymous remote user and verify that they really are who they claim
-to be. The default <code class="API">twisted.cred.authorizer.Identity</code>
-class implements MD5-hashed challenge-response password authorization, much
-like the HTTP MD5-Authentication method: the server sends a random challenge
-string, the client concatenates a hash of their password with the challenge
-string, and sends back a hash of the result. At this point the client is
-said to be <q>authorized</q> for access to that <code>Identity</code>, and
-they are given a remote reference to the <code>Identity</code> (actually a
-wrapper around it), giving them all the privileges of that
-<code>Identity</code>.</p>
-
-<p>Those privileges are limited to requesting <code>Perspective</code>s. The
-<code>Identity</code> object also has a <q>keyring</q>, which is a list of
-(serviceName, perspectiveName) pairs that the corresponding authorized user
-is allowed to access. Once the user has been authenticated, the
-<code>Identity</code>'s job is to implement
-<code>.requestPerspectiveForKey()</code>, which it does by verifying the
-<q>key</q> exists on the keyring, then asking the matching
-<code>Service</code> to do <code>.getPerspectiveForIdentity()</code>.</p>
-
-<p>Finally, the <code>Perspective</code> is the subclass of pb.Perspective
-that implements whatever <code>perspective_*</code> methods you wish to
-expose to an authenticated remote user. It also implements
-<code>.attached()</code> and <code>.detached()</code>, which are run when
-the user connects (actually when they finish the authentication sequence) or
-disconnects. Each <code>Perspective</code> has a name, which is scoped to
-the <code>Service</code> which owns the <code>Perspective</code>.
-
-</p>
-
-
-<h2>Class Responsibilities</h2><a name="responsibilities" />
-
-<p>Now that we've gone over the classes and objects involved, let's look at
-the specific responsibilities of each. Most of these classes are on the hook
-to implement just one or two particular methods, and the rest of the class
-is just support code (or the main method has been broken up for ease of
-subclassing). This section indicates what those main methods are and when
-they get called.</p>
-
-
-<h3>Authorizer</h3><a name="responsibilities/authorizer" />
-
-<p>The <code>Authorizer</code> has to provide <code>Identity</code> objects
-(requested by name) by implementing <code>.getIdentityRequest()</code>. The
-<code class="API" base="twisted.cred.authorizer">DefaultAuthorizer</code>
-class just looks up the name in a dict called <code
-class="python">self.identities</code>, so when you use it, you have to make
-the Identities ahead of time (using <code class="python">i =
-auth.createIdentity()</code>) and store them in that dict (by handing them
-to <code class="python">auth.addIdentity(i)</code>).</p>
-
-<p>However, you can make a subclass of <code>Authorizer</code> with a
-<code>.getIdentityRequest</code> method that behaves differently: your
-version could look in <code>/etc/passwd</code>, or do an SQL database
-lookup<span class="footnote">See twisted.enterprise.dbcred for a module that
-does exactly that.</span>, or create new Identities for anyone that asks
-(with a really secret password like '1234' that the user will probably never
-change, even if you ask them to). The Identities could be created by your
-server at startup time and stored in a dict, or they could be pickled and
-stored in a file until needed (in which case
-<code>.getIdentityRequest()</code> would use the username to find a file,
-unpickle the contents, and return the resulting <code>Identity</code>
-object), or created brand-new based upon whatever data you want. Any
-function that returns a Deferred (that will eventually get called back with
-the <code>Identity</code> object) can be used here.</p>
-
-<div class="note">
-<p>For static Identities that are available right away, the Deferred's
-callback() method is called right away. This is why the interface of
-<code>.getIdentityRequest()</code> specifies that its Deferred is returned
-unarmed, so that the caller has a chance to actually add a callback to it
-before the callback gets run. (XXX: check, I think armed/unarmed is an
-outdated concept)</p>
-</div>
-
-<h3>Identity</h3><a name="responsibilities/identity" />
-
-<p>The <code>Identity</code> object thus returned has two responsibilities.
-The first is to authenticate the user, because so far they are unverified:
-they have claimed to be somebody (by giving a username to the Authorizer),
-but have not yet proved that claim. It does this by implementing
-<code>.verifyPassword</code>, which is called by IdentityWrapper (described
-later) as part of the challenge-response sequence. If the password is valid,
-<code>.verifyPassword</code> should return a Deferred and run its callback.
-If the password is wrong, the Deferred should have the error-back run
-instead.</p>
-
-<p>The second responsibility is to provide <code>Perspective</code> objects
-to users who are allowed to access them. The authenticated user gives a
-service name and a perspective name, and
-<code>.requestPerspectiveForKey()</code> is invoked to retrieve the given
-<code>Perspective</code>. The <code>Identity</code> is the one who decides
-which services/perspectives the user is allowed to access. Unless you
-override it in a subclass, the default implementation uses a simple dict
-called <code>.keyring</code>, which has keys that are (servicename,
-perspectivename) pairs. If the requested name pair is in the keyring, access
-is allowed, and the <code>Identity</code> will proceed to ask the
-<code>Service</code> to give back the specified <code>Perspective</code> to
-the user. <code>.requestPerspectiveForKey()</code> is required to return a
-Deferred, which will eventually be called back with a
-<code>Perspective</code> object, or error-backed with a <code>Failure</code>
-object if they were not allowed access.</p>
-
-
-<p>XXX: explain perspective names being scoped to services better</p>
-
-
-<p>You could subclass <code>Identity</code> to change the behavior of either
-of these, but chances are you won't bother. The only reason to change
-<code>.verifyPassword()</code> would be to replace it with some kind of
-public-key verification scheme, but that would require changes to <code
-class="API" base="twisted.spread">pb.IdentityWrapper</code> too, as well as
-significant changes on the client side. Any changes you might want to make
-to <code>.requestPerspectiveForKey()</code> are probably more appropriate to
-put in the Service's <code>.getPerspectiveForIdentity</code> method instead.
-The Identity simply passes all requests for Perspectives off to the
-Service.</p>
-
-<p>The default <code>Identity</code> objects are created with a username and
-password, and a <q>keyring</q> of valid service/perspective name pairs. They
-are children of an <code>Authorizer</code> object. The best way to create
-them is to have the <code>Authorizer</code> do it for you, then fill in the
-details, by doing the following:</p>
-
-<pre class="python">
-i = auth.createIdentity("username")
-i.setPassword("password")
-i.addKeyByString("service", "perspective")
-auth.addIdentity(i)
-</pre>
-
-
-<h3>Service</h3><a name="responsibilities/service" />
-
-<p>The <code class="API" base="twisted.cred.service">Service</code> object's
-job is to provide <code>Perspective</code> instances, by implementing
-<code>.getPerspectiveForIdentity()</code>. This function takes a Perspective
-name, and is expected to return a Deferred which will (eventually) be called
-back with an instance of <code>Perspective</code> (or a subclass).</p>
-
-<p>The default implementation (in <code
-class="API">twisted.spread.pb.Service</code>) retrieves static pre-generated
-<code>Perspective</code>s from a dict (indexed by perspective name), much
-like DefaultAuthorizer does with Identities. And like
-<code>Authorizer</code>, it is very useful to subclass <code class="API"
-base="twisted.spread">pb.Service</code> to change the way
-<code>.getPerspectiveForIdentity()</code> works: to create
-<code>Perspective</code>s out of persistent data or database lookups, to set
-extra attributes in the <code>Perspective</code>, etc.</p>
-
-<p>When using the default implementation, you have to create the
-<code>Perspective</code>s at startup time. Each <code>Service</code> object
-has an attribute named <code>.perspectiveClass</code>, which helps it to
-create the <code>Perspective</code> objects for you. You do this by running
-<code class="python">p =
-svc.createPerspective("perspective_name")</code>.</p>
-
-<p>You should use <code>.createPerspective()</code> rather than running the
-constructor of your Perspective-subclass by hand, because the Perspective
-object needs a pointer to its parent <code>Service</code> object, and the
-<code>Service</code> needs to have a list of all the
-<code>Perspective</code>s that it contains.</p>
+<p>The <code>Avatar</code> subclass implements pb.IPerspective and also
+whatever <code>perspective_*</code> methods you wish to
+expose to an authenticated remote user. It usually gets the name
+of the user from the <code>Realm</code>.</p>
 
 
 <h2>How that example worked</h2><a name="smallexample" />
 
 <p>Ok, so that's what everything is supposed to do. Now you can walk through
 the previous example and see what was going on: we created a subclass called
-<code>MyPerspective</code>, made a <code>DefaultAuthorizer</code> and added
-it to the <code>Application</code>, created a <code>Service</code> and told
-it to make <code>MyPerspective</code>s, used
-<code>.createPerspective()</code> to build a few, for each one we made an
-<code>Identity</code> (with a username and password), and allowed that
-<code>Identity</code> to access a single <code>MyPerspective</code> by
-adding it to the keyring. We added the <code>Identity</code> objects to the
-<code>Authorizer</code>, and then glued the authorizer to the
-<code>pb.BrokerFactory</code>.</p>
-
-<p>How did that last bit of magic glue work? I won't tell you here,
-because it isn't very useful to override it, but you effectively hang
-an <code>Authorizer</code> off of a TCP port. The combination of the
-object and methods exported by the <code class="API"
-base="twisted.spread">pb.AuthRoot</code> object works together with
-the code inside the <code>PBClientFactory.getPerspective()</code>
-function to implement both sides of the challenge-response
-sequence. When you (as the client) use <code>getPerspective()</code>
-(after using e.g. reactor.connectTCP to get to a given host/port), you
-end up talking to a single <code>Authorizer</code>. The
-username/password you give get matched against the
-<code>Identities</code> provided by that authorizer, and then the
-servicename/perspectivename you give are matched against the ones
-authorized by the <code>Identity</code> (in its <code>.keyring</code>
-attribute). You eventually get back a remote reference to a
-<code>Perspective</code> provided by the <code>Service</code> that you
-named.</p>
-
-<div class="note">
-
-<p>Here is how the magic glue code works:</p>
-
-<pre class="python">
-app.listenTCP(8800, pb.BrokerFactory(pb.AuthRoot(auth)))
-</pre>
-
-<p><code class="python">pb.AuthRoot()</code> provides objects that are
-subclassed from <code class="API" base="twisted.spread">pb.Root</code>, so
-as we saw in the first example, they can be served up by <code
-class="python">pb.BrokerFactory()</code>. <code>AuthRoot</code> happens to
-use the <code>.rootObject</code> hook described earlier to serve up an <code
-class="API" base="twisted.spread.pb">AuthServ</code> object, which wraps the
-<code class="API" base="twisted.cred.authorizer">Authorizer</code> and
-offers a method called <code>.remote_username</code>, which is called by the
-client to declare which <code>Identity</code> it claims to be. That method
-starts the challenge-response sequence.</p>
-
-</div>
-
+<code>MyPerspective</code>, created an <code>IRealm</code> which manufactures
+<code>MyPerspective</code> objects, created a portal to hold this realm
+and registered a simple <code>IChecker</code> to hold valid user/password
+pairs. In more complicated situations, the realm could cache the
+<code>MyPerspective</code> objects. Then we wrapped the <code>Portal</code>
+in <code>pb.PBServerFactory</code>. This connects the portal to an
+actual network protocol -- in this case, PB.</p>
 
 <h2>Code Walkthrough: pb.PBClientFactory</h2><a name="walkthrough" />
 
@@ -598,82 +292,38 @@ walkthrough. This will give you a chance to see the places where you might
 write subclasses to implement different behaviors. We will look at what
 happens when <code>pb6client1.py</code> meets <code>pb6server.py</code>. We
 tune in just as the client has run the <code
-class="python">getPerspective()</code> call.</p>
+class="python">login()</code> call.</p>
 
 <p>The client-side code can be summarized by the following sequence of
 function calls, all implemented in twisted/spread/pb.py . <code
-class="python">getPerspective()</code> calls <code
+class="python">login()</code> calls <code
 class="python">getRootObject()</code> directly, after that each step is
 executed as a callback when the previous step completes.</p>
 
 <pre>
- getRootObject()
- _cbAuthIdentity(): authServRef.callRemote('username', username)
- _cbRespondToChallenge():
-    challenger.callRemote('respond', f[challenge,password])
- _cbGetPerspective(): identity.callRemote('attach', servicename,
-                                          perspectivename, client)
- usercallback(perspective)
+getRootObject():
+ root.callRemote("login", credentials.username)
+ challenger.callRemote("respond",
+                       respond(challenge, credentials.password), client)
 </pre>
 
 <p>The client does <code class="python">reactor.connectTCP()</code> to connect to
 the given host and port, and <code class="python">reactor.connectTCP()</code> to
 retrieve the object named <code>root</code>. On
-the server side, the <code>BrokerFactory</code> accepts the connection, asks
-the <code class="API" base="twisted.spread">pb.AuthRoot</code> object for
-its <code class="python">.rootObject()</code>, getting an <code class="API"
-base="twisted.spread.pb">AuthServ</code> object (containing both the
-authorizer and the <code class="API" base="twisted.spread.pb">Broker</code>
-protocol object). It gives a remote reference to that <code>AuthServ</code>
-out to the client.</p>
+the server side, the <code>PBServerFactory</code> accepts the connection and
+creates a wrapper around the <code>Portal</code> to handle the authentication.
+The portal uses the checker registered to do a challenge/response stage,
+and then asks the <code>Realm</code> that it wraps for a
+<code>IPerspective</code>.</p>
 
-<p>Now the client invokes the '<code>.remote_username</code>' method on that
-<code>AuthServ</code>. The <code>AuthServ</code> asks the
-<code>Authorizer</code> to <code
-class="python">.getIdentityRequest()</code>: this retrieves (or creates) the
-<code>Identity</code>. When that finishes, it asks the <code>Identity</code>
-to create a random challenge (usually just a random string). The client is
-given back both the challenge and a reference to a new <code class="API"
-base="twisted.spread.pb">AuthChallenger</code> object which will only accept
-a response that matches that exact challenge.</p>
-
-<p>The client does its part of the MD5 challenge-response protocol and sends
-the response to the <code>AuthChallenger</code>'s
-<code>.remote_response()</code> method. The <code>AuthChallenger</code>
-verifies the response: if it is valid then it gives back a reference to an
-<code class="API" base="twisted.spread.pb">IdentityWrapper</code>, which
-contains an internal reference to the <code>Identity</code> that we now know
-matches the user at the other end of the connection.</p>
-
-<p>The client then invokes the <code>.remote_attach</code> method on that
-<code>IdentityWrapper</code>, passing in a serviceName, perspectiveName, and
-remoteRef. The wrapper asks the <code>Identity</code> to get a perspective
-using <code>identity.requestPerspectiveForKey</code>, which does the <q>is
-this user allowed to get this service/perspective</q> check by looking at
-the tuples on its <code>.keyring</code>, and if that is allowed then it gets
-the <code class="API" base="twisted.spread.pb">Service</code> (by giving
-serviceName to the authorizer), then asks the <code>Service</code> to
-provide the perspective (with <code>svc.getPerspectiveForIdentity</code>).
-The default <code class="API" base="twisted.cred.service">Service</code>
-will ignore the identity object and just look for <code>Perspective</code>s
-by perspectiveName. The <code>Service</code> looks up or creates the
-<code>Perspective</code> and returns it. The <code>.remote_attach</code>
-method runs the Perspective's <code>.attached</code> method (although there
-are some intermediate steps, in <code>IdentityWrapper._attached</code>, to
-make sure <code>.detached</code> will eventually be run, and the
-Perspective's <code>.brokerAttached</code> method is executed to give it a
-chance to return some other Perspective instead). Finally a remote reference
-to the <code class="API" base="twisted.spread.pb">Perspective</code> is
-returned to the client.</p>
-
-<p>The client gives the <code>Perspective</code> reference to the callback
+<p>The client gives the <code>IPerspective</code> reference to the callback
 that was attached to the <code>Deferred</code> that
-<code>getPerspective()</code> returned, which brings us back up to the code
+<code>login()</code> returned, which brings us back up to the code
 visible in <code>pb6client1.py</code>.</p>
 
 <h2>Viewable</h2>
 
-<p>Once you have <code>Perspective</code> objects to represent users, the
+<p>Once you have <code>IPerspective</code> objects to represent users, the
 <code class="API" base="twisted.spread.flavors">Viewable</code> class can
 come into play. This class behaves a lot like <code>Referenceable</code>: it
 turns into a <code>RemoteReference</code> when sent over the wire, and
