@@ -46,12 +46,12 @@ class LoopbackRelay:
         self.write("".join(iovec))
 
     def clearBuffer(self):
-        if self.logFile:
-            self.logFile.write("loopback receiving %s\n" % repr(self.buffer))
-        try:
-            self.target.dataReceived(self.buffer)
-        finally:
+        if self.buffer:
+            if self.logFile:
+                self.logFile.write("loopback receiving %s\n" % repr(self.buffer))
+            buffer = self.buffer
             self.buffer = ''
+            self.target.dataReceived(buffer)
         if self.shouldLose:
             self.target.connectionLost(failure.Failure(main.CONNECTION_DONE))
 
