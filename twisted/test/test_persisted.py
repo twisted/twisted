@@ -95,11 +95,35 @@ class Pickleable:
     def getX(self):
         return self.x
 
+class A:
+    """
+    dummy class
+    """
+    def amethod(self):
+        pass
+
+class B:
+    """
+    dummy class
+    """
+    def bmethod(self):
+        pass
+
+
+
 
 def funktion():
     pass
 
 class MarmaladeTestCase(unittest.TestCase):
+    def testMethodSelfIdentity(self):
+        a = A()
+        b = B()
+        a.bmethod = b.bmethod
+        b.a = a
+        im_ = marmalade.unjellyFromXML(marmalade.jellyToXML(b)).a.bmethod
+        self.assertEquals(im_.im_class, im_.im_self.__class__)
+
     def testBasicIdentity(self):
         # Anyone wanting to make this datastructure more complex, and thus this
         # test more comprehensive, is welcome to do so.

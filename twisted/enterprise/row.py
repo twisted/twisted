@@ -261,8 +261,16 @@ class DBReflector(adbapi.Augmentation):
         return results
 
     def _populate(self):
-        """
-        """
+        
+        # egregiously bad hack, obviously, but we need to avoid calling a
+        # cached callback before persistence is really done, and while the
+        # mainloop is not running.  I'm not sure what the correct behavior here
+        # should be. --glyph
+        
+        from twisted.internet import reactor
+        reactor.callLater(0, self._really_populate)
+
+    def _really_populate(self):
         self.runInteraction(self._transPopulateClasses).addCallbacks(self.populatedCallback).arm()
 
     def _transPopulateClasses(self, transaction):

@@ -403,6 +403,15 @@ def isLike(a, b):
 def modgrep(goal):
     return objgrep(sys.modules, goal, isLike, 'sys.modules')
 
+def isOfType(start, goal):
+    return ((type(start) is goal) or
+            (isinstance(start, types.InstanceType) and
+             start.__class__ is goal))
+
+
+def findInstances(start, t):
+    return objgrep(start, t, isOfType)
+
 def objgrep(start, goal, eq=isLike, path='', paths=None, seen=None):
     '''An insanely CPU-intensive process for finding stuff.
     '''

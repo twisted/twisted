@@ -52,6 +52,8 @@ class ServerOptions(usage.Options):
                    "read the given .tap file"],
                   ['python','y', None,
                    "read an application from within a Python file"],
+                  ['xml', 'x', None,
+                   "Read an application from a .tax file (Marmalade format)."],
                   ['pidfile','','twistd.pid',
                    "use a pidfile"],
                   ['rundir','d','.',
@@ -194,13 +196,7 @@ else:
 from twisted.internet import reactor
 log.msg('reactor class: %s' % reactor.__class__)
 
-if not config.opts['python']:
-    print "Loading %s..." % config.opts['file']
-    sys.modules['__main__'] = EverythingEphemeral()
-    application = load(open(config.opts['file'],'rb'))
-    sys.modules['__main__'] = mainMod
-    styles.doUpgrade()
-else:
+if config.opts['python']:
     pyfile = os.path.abspath(config.opts['python'])
     print "Loading %s..." % pyfile
     dict = {'__file__': pyfile}
@@ -210,6 +206,19 @@ else:
     except KeyError:
         log.msg("Error - python file %s must set a variable named 'application', an instance of twisted.internet.app.Application. No such variable was found!" % repr(pyfile))
         sys.exit()
+elif config.opts['xml']:
+    from twisted.persisted.marmalade import unjellyFromXML
+    print '<Loading file="%s" />' % config.opts['xml']
+    sys.modules['__main__'] = EverythingEphemeral()
+    application = unjellyFromXML(open(config.opts['xml'], 'rb'))
+    sys.modules['__main__'] = mainMod
+    styles.doUpgrade()
+else:
+    print "Loading %s..." % config.opts['file']
+    sys.modules['__main__'] = EverythingEphemeral()
+    application = load(open(config.opts['file'],'rb'))
+    sys.modules['__main__'] = mainMod
+    styles.doUpgrade()
 
 # Load any view plugins which have been registered in plugins.tml file
 # This needs to be moved to an event which occurs on web server startup

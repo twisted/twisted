@@ -15,7 +15,7 @@
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 #
-# $Id: mktap.py,v 1.9 2002/05/04 23:47:45 glyph Exp $
+# $Id: mktap.py,v 1.10 2002/05/23 04:58:49 glyph Exp $
 
 """ Implementation module for the `mktap` command.
 """
@@ -66,6 +66,7 @@ Usage::
     optStrings = [['uid', 'u', '0'],
                   ['gid', 'g', '0'],
                   ['append', 'a', None]]
+    optFlags = [['xml', None, "Output as XML, rather than pickle."]]
     help = 0
 
     def opt_help(self):
@@ -136,7 +137,8 @@ def run():
         print "The use of getPorts() is deprecated."
         for portno, factory in mod.getPorts():
             a.listenTCP(portno, factory)
-
+    if options['xml']:
+        a.asXML = 1
     a.save()
 
 # Make it script-callable for testing purposes

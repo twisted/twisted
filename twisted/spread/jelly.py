@@ -87,6 +87,7 @@ except:
 
 # Twisted Imports
 from twisted.python.reflect import namedObject, namedModule
+from twisted.persisted.crefutil import NotKnown, _Tuple, _InstanceMethod, _DictKeyAndValue, _Dereference
 
 None_atom = "None"                  # N
 # code
@@ -406,58 +407,6 @@ class _Jellier:
         sxp.append(reason)
         return sxp
 
-class NotKnown:
-    def __init__(self):
-        self.dependants = []
-
-    def addDependant(self, mutableObject, key):
-        self.dependants.append( (mutableObject, key) )
-
-    def resolveDependants(self, newObject):
-        for mut, key in self.dependants:
-            mut[key] = newObject
-            if isinstance(newObject, NotKnown):
-                newObject.addDependant(mut, key)
-
-    def __hash__(self):
-        assert 0, "I am not to be used as a dictionary key."
-
-
-class _Tuple(NotKnown):
-    def __init__(self, l):
-        NotKnown.__init__(self)
-        self.l = l
-        self.locs = []
-        for idx in xrange(len(l)):
-            if isinstance(l[idx], NotKnown):
-                self.locs.append(idx)
-                l[idx].addDependant(self, idx)
-
-    def __setitem__(self, n, obj):
-        self.l[n] = obj
-        if not isinstance(obj, NotKnown):
-            self.locs.remove(n)
-            if not self.locs:
-                self.resolveDependants(tuple(self.l))
-
-class _DictKeyAndValue:
-    def __init__(self, dict):
-        self.dict = dict
-    def __setitem__(self, n, obj):
-        if n not in (1, 0):
-            raise AssertionError("DictKeyAndValue should only ever be called with 0 or 1")
-        if n: # value
-            self.value = obj
-        else:
-            self.key = obj
-        if hasattr(self, "key") and hasattr(self, "value"):
-            self.dict[self.key] = self.value
-
-
-class _Dereference(NotKnown):
-    def __init__(self, id):
-        NotKnown.__init__(self)
-        self.id = id
 
 class _Unjellier:
     def __init__(self, taster, persistentLoad, invoker):
@@ -639,9 +588,13 @@ class _Unjellier:
         im_name = rest[0]
         im_self = self.unjelly(rest[1])
         im_class = self.unjelly(rest[2])
+        if type(im_class) is not types.ClassType:
+            raise InsecureJelly("Method found with non-class class.")
         if im_class.__dict__.has_key(im_name):
             if im_self is None:
                 im = getattr(im_class, im_name)
+            elif isinstance(im_self, NotKnown):
+                im = _InstanceMethod(im_name, im_self, im_class)
             else:
                 im = instancemethod(im_class.__dict__[im_name],
                                     im_self,

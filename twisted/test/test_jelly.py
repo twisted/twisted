@@ -62,6 +62,16 @@ class JellyTestCase(unittest.TestCase):
     """
     testcases for `jelly' module serialization.
     """
+
+    def testMethodSelfIdentity(self):
+        a = A()
+        b = B()
+        a.bmethod = b.bmethod
+        b.a = a
+        im_ = jelly.unjelly(jelly.jelly(b)).a.bmethod
+        self.assertEquals(im_.im_class, im_.im_self.__class__)
+
+
     def testSimple(self):
         """
         simplest test case

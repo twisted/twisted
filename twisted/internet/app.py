@@ -249,23 +249,33 @@ class Application(log.Logger, styles.Versioned):
         for port, factory, i, b in self.tcpPorts:
             factory.stopFactory()
 
+    asXML = 0
+    
     def save(self, tag=None, filename=None):
         """Save a pickle of this application to a file in the current directory.
         """
-        from cPickle import dump
+        if self.asXML:
+            from twisted.persisted.marmalade import jellyToXML
+            dumpFunc = jellyToXML
+            ext = "tax"
+        else:
+            from cPickle import dump
+            def dumpFunc(obj, file, _dump=dump):
+                _dump(obj, file, 1)
+            ext = "tap"
         if filename:
             finalname = filename
             filename = finalname + "-2"
         else:
             if tag:
-                filename = self.name+'-'+tag+'-2.tap'
-                finalname = self.name+'-'+tag+'.tap'
+                filename = "%s-%s-2.%s" % (self.name, tag, ext)
+                finalname = "%s-%s.%s" % (self.name, tag, ext)
             else:
-                filename = self.name+"-2.tap"
-                finalname = self.name+".tap"
+                filename = "%s-2.%s" % (self.name, ext)
+                finalname = "%s.%s" % (self.name, ext)
         log.msg("Saving "+self.name+" application to "+finalname+"...")
         f = open(filename, 'wb')
-        dump(self, f, 1)
+        dumpFunc(self, f)
         f.flush()
         f.close()
         if platform.getType() == "win32":
