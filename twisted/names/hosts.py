@@ -20,20 +20,22 @@ from twisted.python import failure
 from twisted.internet import interfaces, defer
 
 def searchFileFor(file, name):
-    fp = open(file)
+    try:
+        fp = open(file)
+    except:
+        return None
+
     lines = fp.readlines()
     for line in lines:
         idx = line.find('#')
-        if idx:
+        if idx != -1:
             line = line[:idx]
         if not line:
             continue
         parts = line.split()
-        if len(parts) != 3:
-            continue
-        if parts[2] == name:
+        if name.lower() in [s.lower() for s in parts[1:]]:
             return parts[0]
-        return None
+    return None
 
 
 class Resolver:
@@ -43,6 +45,12 @@ class Resolver:
 
     def __init__(self, file='/etc/hosts'):
         self.file = file
+    
+    
+    def _lookup(self, name, cls, type, timeout):
+        if cls != dns.IN or type != dns.A:
+            raise NotImplementedError
+        return self.lookupAddress(name, timeout)
 
 
     def lookupAddress(self, name, timeout=10):
