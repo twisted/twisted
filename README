@@ -17,8 +17,20 @@ What's new in 0.11.0?
   DoS attacks. SafeNetstringReceiver serves a similar purpose for netstring
   based protocols.
 
-  Servers under high loads should run faster, since multiple accept() calls
-  are done per select(). Threaded apps might run faster as well.
+  Servers -- especially Web servers or others that open and close connections
+  frequently -- under high loads should run faster, since multiple accept()
+  calls are done per select(). Threaded apps might run faster as well.
+
+  Enhanced the twisted.web.widgets API to accomodate multiple deferreds.
+
+  Protocol revision in PB, refactoring authentication into simply being an
+  object one can connect to.
+
+  New connection API for PB, simplifying and reducing the number of potential
+  failure points in the process of writing a PB client.
+
+  Much more example code for PB, including some simple examples involving
+  web.widgets and GTK clients for PB services.
 
 What is this?
 
