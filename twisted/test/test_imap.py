@@ -449,7 +449,7 @@ class IMAP4ServerTestCase(unittest.TestCase):
         
         self.assertEquals(self.result, [1] * len(succeed) + [0] * len(fail))
         mbox = SimpleServer.theAccount.mailboxes.keys()
-        answers = ['testbox', 'test/box', 'test', 'test/box/box']
+        answers = ['inbox', 'testbox', 'test/box', 'test', 'test/box/box']
         mbox.sort()
         answers.sort()
         self.assertEquals(mbox, [a.upper() for a in answers])
