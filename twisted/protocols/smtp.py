@@ -517,7 +517,7 @@ class SMTP(basic.LineReceiver, policies.TimeoutMixin):
 
     def lineReceived(self, line):
         self.resetTimeout()
-        print 'S:', repr(line)
+        # print 'S:', repr(line)
         return getattr(self, 'state_' + self.mode)(line)
     
     def state_COMMAND(self, line):
@@ -904,7 +904,7 @@ class SMTPClient(basic.LineReceiver):
         self._failresponse = self.smtpConnectionFailed
 
     def lineReceived(self, line):
-        print 'C:', repr(line)
+        # print 'C:', repr(line)
         why = None
 
         self.log.append('<<< ' + line)
