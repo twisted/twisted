@@ -262,6 +262,26 @@ class InterfaceTestCase(unittest.TestCase):
             self.failUnless(d.getTime() - (time.time() + 10) < 1)
         finally:
             d.cancel()
+    
+    def testCallInNextIteration(self):
+        calls = []
+        def f1():
+            calls.append('f1')
+            reactor.callLater(0.0, f2)
+        def f2():
+            calls.append('f2')
+            reactor.callLater(0.0, f3)
+        def f3():
+            calls.append('f3')
+        
+        reactor.callLater(0, f1)
+        self.assertEquals(calls, [])
+        reactor.iterate()
+        self.assertEquals(calls, ['f1'])
+        reactor.iterate()
+        self.assertEquals(calls, ['f1', 'f2'])
+        reactor.iterate()
+        self.assertEquals(calls, ['f1', 'f2', 'f3'])
 
     def testWakeUp(self):
         """reactor.wakeUp should terminate reactor.iterate(5)"""
