@@ -86,7 +86,7 @@ class TOCGateway(gateway.Gateway,toc.TOCClient):
         self.signon()
         self.receiveContactList(users)
         self._savedmode=mode
-        self._savedlist=buddylist
+        self._savedlist=buddylist or {}
         self._savedpermit=permit
         self._saveddeny=deny
         
@@ -149,13 +149,17 @@ class TOCGateway(gateway.Gateway,toc.TOCClient):
             k="Twisted Buddies"
             self._savedlist[k]=[]
         self._savedlist[k].append(contact)
+        self._currentusers.append(contact)
         self.writeNewConfig()
         self.notifyStatusChanged(contact,"Offline")
 
     def removeContact(self,contact):
         self.del_buddy([contact])
         n=toc.normalize(contact)
-        if self._usermapping.has_key(n):del self._usermapping[n]
+        for u in range(len(self._currentusers)):
+            if toc.normalize(self._currentusers[u])==n:
+                del self._currentusers[u]
+                break
         for k in self._savedlist.keys():
             for u in range(len(self._savedlist[k])):
                 if n==toc.normalize(self._savedlist[k][u]):

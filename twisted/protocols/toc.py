@@ -802,6 +802,8 @@ class TOCClient(protocol.Protocol):
         """
         data=list(data)
         online=(data[1]=='T')
+        if len(data[5])==2:
+            data[5]=data[5]+" "
         away=(data[5][-1]=='U')
         if data[5][-1]=='U':
             data[5]=data[5][:-1]
@@ -975,7 +977,7 @@ class TOCClient(protocol.Protocol):
             s=s+"p %s\n"%p
         for d in deny:
             s=s+"d %s\n"%d
-        s="{"+s+"}"
+#        s="{\n"+s+"\n}"
         self.sendFlap(2,"toc_set_config %s"%quote(s))
     def add_buddy(self,buddies):
         s=""

@@ -136,6 +136,8 @@ class IRCGateway(irc.IRCClient,gateway.Gateway):
 
     def irc_NICK(self,prefix,params):
 	oldname=string.split(prefix,"!")[0]
+	self._ingroups[params[0]]=self._ingroups[oldname]
+	del self._ingroups[oldname]
 	self.notifyNameChanged(oldname,params[0])
 
     def irc_JOIN(self,prefix,params):
@@ -177,8 +179,13 @@ class IRCGateway(irc.IRCClient,gateway.Gateway):
 def sendAction(im,gateway,group,currenttext,currentusers):
     return "\001ACTION %s\001"%currenttext
 
+def setNick(im,gateway,group,currenttext,currentusers):
+    gateway.setNick(currenttext)
+    return ""
+
 groupExtras=[
-    ["Send Action",sendAction]
+    ["Send Action",sendAction],
+    ["Set Nick",setNick]
 ]
 
 conversationExtras=[]

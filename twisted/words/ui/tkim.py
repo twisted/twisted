@@ -1,8 +1,10 @@
 from Tkinter import *
-from twisted.internet import tkinternet
+from twisted.internet import tkinternet #, tcp
 from twisted.spread.ui import tkutil
 from twisted.words.ui import im2, gateways
+#from twisted.protocols import telnet
 import time, os, string
+import sys
 
 def timeheader():
     y,mon,d,h,min,sec,ig,no,re=time.localtime(time.time())
@@ -182,6 +184,7 @@ class ContactList(Toplevel):
             statuschange.add_command(label=k,command=lambda i=self.im,s=k:i.changeStatus(s))    
         myim.add_command(label="Account Manager...",command=lambda i=self.im:i.am.deiconify())
         myim.add_command(label="Start Conversation...",command=lambda i=self.im:StartConversation(i))
+#        myim.add_command(label="__reload__",command=self.reload)
 
         sb=Scrollbar()
         self.list=tkutil.CList(self,["Gateway","Username","Status"],height=2,yscrollcommand=sb.set)
@@ -208,6 +211,13 @@ class ContactList(Toplevel):
     def close(self):
         self.tk.quit()
         self.destroy()
+
+    def reload(self):
+        m=sys.modules
+        for k,v in m.items():
+            if k not in ['twisted.internet.main','twisted.internet.tkinternet'] and v and k[:8]=='twisted.':
+                reload(v)
+                print 'reloaded %s'%k
 
     def addContact(self):
         AddContact(self.im)
@@ -282,12 +292,13 @@ class GroupSession(Toplevel):
 
         self.title("%s - %s - Instance Messenger" % (self.name, self.gateway.name))
 
-        self.out = Text(self, height=1)
+        self.out = Text(self, height=1, wrap='word')
         self.out.grid(column=0, row=0, sticky='nesw')
         self.out.bind("<Key>",lambda x:"break")
         out_scroll=Scrollbar(self, command=self.out.yview, orient='v')
         out_scroll.grid(column=1, row=0, sticky='ns')
         self.out.config(yscrollcommand=out_scroll.set)
+        self.out.tag_configure("hilite",foreground="blue")
 
         self.userlist = Listbox(self)
         self.userlist.grid(column=2, row=0, sticky='nesw')
@@ -357,22 +368,30 @@ class GroupSession(Toplevel):
             self.userlist.insert(END,m)
 
     def receiveGroupMessage(self, member, message):
-        self.out.insert(END, "\n<%s> %s" % (member, message))
+        tags=[]
+        if string.find(message,self.gateway.username)!=-1:
+            tags.append("hilite")
+        self.out.insert(END, "\n<%s> %s" % (member, message),tuple(tags))
         self.out.see(END)
 
     def memberJoined(self, member):
         self.out.insert(END, "\n%s joined!" % member)
         self.out.see(END)
+        self.userlist.insert(END,member)
         self._sortlist()
 
     def memberLeft(self, member):
         self.out.insert(END, "\n%s left!" % member)
         self.out.see(END)
+        users=list(self.userlist.get(0,END))
+        if member in users:
+            i=users.index(member)
+            self.userlist.delete(i)
 
     def changeMemberName(self, member, newName):
         users=list(self.userlist.get(0,END))
         if member in users:
-            self.out.insert(END,"\n%s changed name to %s." % (member, NewName))
+            self.out.insert(END,"\n%s changed name to %s." % (member, newName))
             self.out.see(END)
             i=users.index(member)
             self.userlist.delete(i)
@@ -643,6 +662,17 @@ class AccountManager(Toplevel):
             if account.gatewayname==gateway.protocol and account.options["username"]==gateway.logonUsername:
                 self._modifyaccount(account,"False")
 
+def handleError(im,gateway,event,code,message):
+    strgate=str(gateway)
+    for key,value in im.conversations.items():
+        if key[:len(strgate)]==strgate:
+            value.destroy()
+            im.endConversation(gateway,value.target)
+    for key,value in im.groups.items():
+        if key[:len(strgate)]==strgate:
+            value.destroy()
+            del im.groups[strgate+value.name]
+
 def main():
     root=Tk()
     root.withdraw()
@@ -656,6 +686,12 @@ def main():
         f.close()
     except IOError:
         pass
+    im.addCallback(None,"error",handleError)
+#    t=telnet.ShellFactory()
+#    import __main__
+#    t.namespace=__main__.__dict__
+#    t.namespace['im']=im
+#    tcp.Port(10023,t).startListening()
     mainloop()
     for g in im.gateways.values():
         g.loseConnection()
