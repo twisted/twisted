@@ -301,7 +301,10 @@ class File(resource.Resource, styles.Versioned, filepath.FilePath):
                 return self.directoryListing()
 
         if not fpath.exists():
-            return self.childNotFound
+            searchNames = [(path + ext) for ext in self.ignoredExts]
+            fpath = self.childSearchPreauth(*searchNames)
+            if fpath is None:
+                return self.childNotFound
 
         processor = self.processors.get(fpath.splitext()[1])
         if processor:

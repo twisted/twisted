@@ -316,3 +316,16 @@ resource = Data('dynamic world','text/plain')
         self.assertEquals(f.ignoredExts, [])
         f = static.File(".", ignoredExts=(".bar", ".baz"))
         self.assertEquals(f.ignoredExts, [".bar", ".baz"])
+
+    def testIgnoredExts(self):
+        import os
+        dp = os.path.join(self.caseMethodName, 'allYourBase')
+        fp = os.path.join(dp, 'AreBelong.ToUs')
+        os.makedirs(dp)
+        open(fp, 'wb').write("Take off every 'Zig'!!")
+        f = static.File(dp)
+        f.ignoreExt('.ToUs')
+        dreq = DummyRequest([''])
+        child_without_ext = f.getChild('AreBelong', dreq)
+        self.assertNotEquals(child_without_ext, f.childNotFound)
+
