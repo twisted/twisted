@@ -45,7 +45,11 @@ file_protocol = ['close', 'closed', 'fileno',
                  'softspace', 'tell', 'truncate',
                  'write', 'writelines']
 
-logfile = sys.stdout
+# Prevent logfile from being erased on reload.  This only works in cpython.
+try:
+    logfile
+except NameError:
+    logfile = sys.stdout
 
 def write(stuff):
     logfile.write(stuff)
@@ -89,7 +93,7 @@ class Logger:
 
     def __prefix(self):
         y,mon,d,h,min, i,g,no,re = time.localtime(time.time())
-        return ("%s/%s/%s %s:%s [%s]: " %
+        return ("%0.2d/%0.2d/%0.4d %0.2d:%0.2d [%s] " %
                  (d,mon,y,h,min , self.logPrefix()))
 
     def logPrefix(self):
