@@ -559,10 +559,10 @@ class IMAP4HelperTestCase(unittest.TestCase):
     def testQuoteAvoider(self):
         input = [
             'foo', imap4.DontQuoteMe('bar'), "baz", StringIO('this is a file\r\n'),
-            imap4.DontQuoteMe('buz')
+            imap4.DontQuoteMe('buz'), ""
         ]
 
-        output = '"foo" bar "baz" {16}\r\nthis is a file\r\n buz'
+        output = '"foo" bar "baz" {16}\r\nthis is a file\r\n buz ""'
 
         self.assertEquals(imap4.collapseNestedLists(input), output)
 
