@@ -226,7 +226,9 @@ class Port(base.BasePort):
 
 
 class ConnectedPort(Port):
-    """A connected UDP socket."""
+    """DEPRECATED.
+
+    A connected UDP socket."""
 
     __implements__ = Port.__implements__, interfaces.IUDPConnectedTransport
 
@@ -298,10 +300,7 @@ class ConnectedPort(Port):
 
 
 class MulticastMixin:
-    """Implement multicast functionality.
-
-    Initial implementation, probably needs some changes for Windows support.
-    """
+    """Implement multicast functionality."""
 
     def getOutgoingInterface(self):
         i = self.socket.getsockopt(socket.IPPROTO_IP, socket.IP_MULTICAST_IF)
@@ -359,6 +358,8 @@ class MulticastPort(MulticastMixin, Port):
 
 
 class ConnectedMulticastPort(MulticastMixin, ConnectedPort):
-    """Connected UDP Port that supports multicasting."""
+    """DEPRECATED.
+
+    Connected UDP Port that supports multicasting."""
 
     __implements__ = ConnectedPort.__implements__, interfaces.IMulticastTransport
