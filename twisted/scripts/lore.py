@@ -14,7 +14,7 @@
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 import sys
-from twisted.lore import process, default
+from twisted.lore import process, default, indexer
 from twisted.python import usage, plugin, reflect
 
 class Options(usage.Options):
@@ -28,6 +28,7 @@ class Options(usage.Options):
                      ["docsdir", "d", None],
                      ["linkrel", "l", ''],
                      ["output", "o", 'html'],
+                     ["index", "x", "index", "The base filename you want to give your index file"],
                     ]
 
     def __init__(self, *args, **kw):
@@ -71,6 +72,30 @@ def getWalker(df, opt):
     if opt['null']: 
         klass = process.NullReportingWalker
     return klass(df, opt['inputext'], opt['linkrel'])
+
+
+def runGivenOptions(opt):
+    df = getProcessor(opt['input'], opt['output'], opt.config)
+    if not df:
+        return 'getProcessor() failed'
+
+    walker = getWalker(df, opt)
+
+    if opt['files']:
+        for filename in opt['files']:
+            walker.walked.append(('', filename))
+    else:
+        walker.walkdir(opt['docsdir'] or '.')
+
+    indexer.setIndexFilename("%s.%s" % (opt['index'], opt['output']))
+
+    walker.generate()
+
+    if walker.failures:
+        for (file, errors) in walker.failures:
+            for error in errors:
+                print "%s:%s" % (file, error)
+        return 'Walker failures'
 
 
 def run():

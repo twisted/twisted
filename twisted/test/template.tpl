@@ -16,7 +16,7 @@ href="resources/stylesheet.css" />
 	
     </div>
 
-    <p><a href="index.xhtml">Index</a></p>
+    <p><span class="index-link">Index</span></p>
   </body>
 </html>
 

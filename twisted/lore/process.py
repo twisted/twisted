@@ -17,6 +17,7 @@
 #
 import sys, os
 import tree #todo: get rid of this later
+import indexer
 
 class NoProcessorError(Exception):
     pass
@@ -53,6 +54,7 @@ class Walker:
                 
     def generate(self):
         i = 0
+        indexer.clearEntries()
         for linkrel, fullpath in self.walked:
             linkrel = self.linkrel + linkrel
             i += 1
@@ -62,6 +64,7 @@ class Walker:
                 self.df(fullpath, linkrel)
             except ProcessingFailure, e:
                 self.failures.append((fullpath, e))
+        indexer.generateIndex()
         self.percentdone(1., None)
 
     def percentdone(self, percent, fname):

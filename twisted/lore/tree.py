@@ -18,7 +18,7 @@ import re, os, cStringIO, time, cgi, string, urlparse
 from twisted import copyright
 from twisted.python import htmlizer, text
 from twisted.web import microdom, domhelpers
-import process, latex
+import process, latex, indexer
 from twisted.python.util import InsensitiveDict
 
 # relative links to html files
@@ -190,17 +190,25 @@ def notes(document):
     for note in notes:
         note.childNodes.insert(0, notePrefix)
 
-def index(document):
+def index(document, filename):
     entries = domhelpers.findElementsWithAttribute(document, "class", "index")
     if not footnotes:
         return
     i = 0;
     for entry in entries:
         i += 1
+        anchor = 'index%02d' % i
+        indexer.addEntry(filename, anchor, entry.attributes['value'])
         entry.nodeName = 'a' # does this even affect anything?
         entry.tagName = 'a'
         entry.endTagName = 'a'
-        entry.attributes = InsensitiveDict({'name': 'index%02d' % i, 'class': 'index'})
+        entry.attributes = InsensitiveDict({'name': anchor})
+
+def setIndexLink(template, indexFilename):
+    indexLinks = domhelpers.findElementsWithAttribute(template, "class", "index-link")
+    for link in indexLinks:
+        link.nodeName = link.tagName = link.endTagName = 'a'
+        link.attributes = InsensitiveDict({'href': indexFilename})
 
 def fixRelativeLinks(document, linkrel):
     for attr in 'src', 'href':
@@ -250,7 +258,10 @@ def setVersion(template, version):
         node.appendChild(microdom.Text(version))
       
 
-def munge(document, template, linkrel, dir, fullpath, ext, url, config):
+def getOutputFileName(originalFileName, outputExtension, index=None):
+    return os.path.splitext(originalFileName)[0]+outputExtension
+
+def munge(document, template, linkrel, dir, fullpath, ext, url, config, outfileGenerator=getOutputFileName):
     fixRelativeLinks(template, linkrel)
     addMtime(template, fullpath)
     removeH1(document)
@@ -263,7 +274,8 @@ def munge(document, template, linkrel, dir, fullpath, ext, url, config):
     putInToC(template, generateToC(document))
     footnotes(document)
     notes(document)
-    index(document)
+    index(document, outfileGenerator(os.path.split(fullpath)[1], ext))
+    setIndexLink(template, indexer.getIndexFilename())
     setVersion(template, config.get('version', ''))
 
     # Insert the document into the template
@@ -296,9 +308,6 @@ def parseFileAndReport(filename):
     except IOError, e:
         raise process.ProcessingFailure(e.strerror + ", filename was '" + filename + "'")
 
-def getOutputFileName(originalFileName, outputExtension, index=None):
-    return os.path.splitext(originalFileName)[0]+outputExtension
-
 def makeSureDirectoryExists(filename):
     filename = os.path.abspath(filename)
     dirname = os.path.dirname(filename)
@@ -308,7 +317,7 @@ def makeSureDirectoryExists(filename):
 def doFile(filename, linkrel, ext, url, templ, options={}, outfileGenerator=getOutputFileName):
     doc = parseFileAndReport(filename)
     clonedNode = templ.cloneNode(1)
-    munge(doc, clonedNode, linkrel, os.path.dirname(filename), filename, ext, url, options)
+    munge(doc, clonedNode, linkrel, os.path.dirname(filename), filename, ext, url, options, outfileGenerator)
     newFilename = outfileGenerator(filename, ext)
     makeSureDirectoryExists(newFilename)
     clonedNode.writexml(open(newFilename, 'wb'))

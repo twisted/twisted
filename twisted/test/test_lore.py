@@ -1,13 +1,38 @@
+# ++ single anchor added to individual output file
+# ++ two anchors added to individual output file
+# ++ anchors added to individual output files
+# ++ entry added to index
+# ++ index entry pointing to correct file and anchor
+# ++ multiple entries added to index
+# ++ multiple index entries pointing to correct files and anchors
+# __ all of above for files in deep directory structure
+# 
+# ++ group index entries by indexed term
+# ++ sort index entries by indexed term
+# __ hierarchical index entries
+# 
+# ++ add parameter for what the index filename should be
+# __ add ability to NOT index (maybe if index not specified?)
+# 
+# ++ put actual index filename into INDEX link (if any) in the template
+# 
+# __ make index look nice
+# __ make text of index entry links be section numbers
+# 
+# __ put all of our test files someplace neat and tidy
+# 
 from twisted.trial import unittest
 
 from twisted.lore.default import *
 from twisted.lore import tree
 from twisted.lore import process
+from twisted.lore import indexer
 from twisted.lore import default
 
 from twisted.python.util import sibpath
+from twisted.python import usage
 
-from twisted.scripts.lore import getProcessor, getWalker
+from twisted.scripts import lore
 
 import os
 
@@ -96,13 +121,51 @@ class TestFactory(unittest.TestCase):
         os.rmdir(dirname)
 
     def test_indexAnchorsAdded(self):
+        indexer.setIndexFilename('theIndexFile.html')
         # generate the output file
         templ = microdom.parse(open(d['template']))
 
         tree.doFile(sibpath(__file__, 'lore_index_test.xhtml'), self.linkrel, '.html', d['baseurl'], templ, d)
         self.assertEqualFiles("lore_index_test_out.html", "lore_index_test.html")
 
+    def test_indexEntriesAdded(self):
+        indexer.setIndexFilename("lore_index_file.html")
+        indexer.generateIndex()
+        self.assertEqualFiles1("lore_index_file_out.html", "lore_index_file.html")
+
+    def test_runningLore(self):
+        options = lore.Options()
+        templateFilename = sibpath(__file__, 'template.tpl')
+        inputFilename = sibpath(__file__, 'lore_index_test.xhtml')
+        indexFilename = 'theIndexFile'
+        options.parseOptions(['--null', '--config', 'template=%s' % templateFilename,
+                              '--index=%s' % indexFilename,
+                              inputFilename])
+        result = lore.runGivenOptions(options)
+        self.assertEquals(None, result)
+        self.assertEqualFiles1("lore_index_file_out.html", indexFilename + ".html")
+
+    def test_runningLoreMultipleFiles(self):
+        options = lore.Options()
+        templateFilename = sibpath(__file__, 'template.tpl')
+        inputFilename = sibpath(__file__, 'lore_index_test.xhtml')
+        inputFilename2 = sibpath(__file__, 'lore_index_test2.xhtml')
+        indexFilename = 'theIndexFile'
+        options.parseOptions(['--null', '--config', 'template=%s' % templateFilename,
+                              '--index=%s' % indexFilename,
+                              inputFilename, inputFilename2])
+        result = lore.runGivenOptions(options)
+        self.assertEquals(None, result)
+        self.assertEqualFiles1("lore_index_file_out_multiple.html", indexFilename + ".html")
+        self.assertEqualFiles("lore_index_test_out.html", "lore_index_test.html")
+        self.assertEqualFiles("lore_index_test_out2.html", "lore_index_test2.html")
+
 ########################################
+
+    def assertEqualFiles1(self, exp, act):
+        if (exp == act): return True
+        fact = open(act)
+        self.assertEqualsFile(exp, fact.read())
 
     def assertEqualFiles(self, exp, act):
         if (exp == act): return True
@@ -114,6 +177,7 @@ class TestFactory(unittest.TestCase):
         self.assertEqualsString(expected, act)
 
     def assertEqualsString(self, expected, act):
+        if len(expected) != len(act): print "Actual: " + act ##d
         self.assertEquals(len(expected), len(act))
         for i in range(len(expected)):
             e = expected[i]
