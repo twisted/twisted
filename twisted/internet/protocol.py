@@ -197,19 +197,27 @@ class ReconnectingClientFactory(ClientFactory):
     maxRetries = None
     _callID = None
     connector = None
+    
+    continueTrying = 1
 
     def clientConnectionFailed(self, connector, reason):
-        self.connector = connector
-        if not reason.check(error.UserError):
-            self.retry()
+        if self.continueTrying:
+            self.connector = connector
+            if not reason.check(error.UserError):
+                self.retry()
 
     def clientConnectionLost(self, connector, unused_reason):
-        self.connector = connector
-        self.retry()
+        if self.continueTrying:
+            self.connector = connector
+            self.retry()
 
     def retry(self, connector=None):
         """Have this connector connect again, after a suitable delay.
         """
+        if not self.continueTrying:
+            log.msg("Abandoning %s on explicit request" % (connector,))
+            return
+
         if connector is None:
             if self.connector is None:
                 raise ValueError("no connector to retry")
@@ -229,7 +237,11 @@ class ReconnectingClientFactory(ClientFactory):
 
         log.msg("%s will retry in %d seconds" % (connector, self.delay,))
         from twisted.internet import reactor
-        self._callID = reactor.callLater(self.delay, connector.connect)
+        
+        def reconnector():
+            self._callID = None
+            connector.connect()
+        self._callID = reactor.callLater(self.delay, reconnector)
 
     def stopTrying(self):
         """I put a stop to any attempt to reconnect in progress.
@@ -237,6 +249,7 @@ class ReconnectingClientFactory(ClientFactory):
         # ??? Is this function really stopFactory?
         if self._callID:
             self._callID.cancel()
+            self._callID = None
         if self.connector:
             # Hopefully this doesn't just make clientConnectionFailed
             # retry again.
@@ -244,6 +257,7 @@ class ReconnectingClientFactory(ClientFactory):
                 self.connector.stopConnecting()
             except error.NotConnectingError:
                 pass
+        self.continueTrying = 0
 
     def resetDelay(self):
         """Call me after a successful connection to reset.
@@ -253,6 +267,7 @@ class ReconnectingClientFactory(ClientFactory):
         self.delay = self.initialDelay
         self.retries = 0
         self._callID = None
+        self.continueTrying = 1
 
 
 class ServerFactory(Factory):

@@ -1,3 +1,9 @@
+2003-05-02  Jp Calderone  <exarkun@twistedmatrix.com>
+
+	* twisted/internet/protocol.py: Added continueTrying attribute to
+	ReconnectingClientFactory, and increased the number of states where
+	stopTrying() will actually stop further connection attempts.
+
 2003-05-01  Brian Warner  <warner@lothar.com>
 
 	* twisted/test/test_trial.py: handle new trial layout
