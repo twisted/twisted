@@ -55,7 +55,7 @@ class TAPLoader(_BasicLoader):
 class TAXLoader(_BasicLoader):
     type = long = 'xml'
     short = 'x'
-    desc = "read the given .tax file"]
+    desc = "read the given .tax file"
 
 class TASLoader(_BasicLoader):
     type = long = 'source'
