@@ -88,7 +88,7 @@ class CacheResolver(common.ResolverBase):
             return defer.fail(failure.Failure(dns.DomainError(name)))
 
 
-    def cacheResult(self, name, type, cls, payload):
+    def cacheResult(self, name, ttl, type, cls, payload):
         l = self.cache.setdefault(
             str(name).lower(), {}
         ).setdefault(
@@ -98,7 +98,7 @@ class CacheResolver(common.ResolverBase):
         )
         if payload not in l:
             payload = copy.copy(payload)
-            payload.ttl = time.time() + payload.ttl
+            payload.ttl = time.time() + ttl
             if self.verbose > 1:
                 log.msg('Adding %r to cache' % name)
             l.append(payload)

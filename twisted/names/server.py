@@ -112,7 +112,7 @@ class DNSServerFactory(protocol.ServerFactory):
             for res in responses:
                 if not res.cachedResponse:
                     self.cache.cacheResult(
-                        res.name, res.type, res.cls, res.payload
+                        res.name, res.ttl, res.type, res.cls, res.payload
                     )
 
 

@@ -48,12 +48,16 @@ class Resolver:
         self.ttl = ttl
 
 
+    def query(self, query, timeout = 10):
+        return self._lookup(str(query.name), query.type, query.type, timeout)
+
+
     def _lookup(self, name, cls, type, timeout):
         if cls != dns.IN or type != dns.A:
             raise NotImplementedError, (type, cls)
         return self.lookupAddress(
             name, timeout
-        ).addCallback(self.addHeader, name, cls)
+        )
 
 
     def lookupAddress(self, name, timeout=10):
