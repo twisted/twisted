@@ -41,6 +41,9 @@ class Reflector:
         self.rowClasses = rowClasses
         self.schema = {}
         self.populatedCallback = populatedCallback
+        if populatedCallback is not None:
+            import warnings
+            warnings.warn("Callbacks for reflector init are deprecated. use at your peril.\ninit is now synchronous.")
         self._populate()
 
     def __getstate__(self):
