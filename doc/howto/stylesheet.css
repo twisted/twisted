@@ -18,17 +18,17 @@ PRE
 }
 
 
-PRE.shell
+.shell
 { 
   background-color: #ffffdd;
 }
 
-PRE.python
+.python
 {
   background-color: #dddddd;
 }
 
-PRE.python-interpreter
+.python-interpreter
 {
   background-color: #ddddff;
 }
