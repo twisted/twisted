@@ -90,34 +90,38 @@ class PortCleanerUpper(unittest.TestCase):
         reactor.iterate()
 
 class ListeningTestCase(PortCleanerUpper):
+
     def testListen(self):
         f = MyServerFactory()
-        p1 = reactor.listenTCP(9990, f) # listen on port 9990
+        p1 = reactor.listenTCP(0, f) 
         p1.stopListening()
 
     def testNumberedInterface(self):
         f = MyServerFactory()
         # listen only on the loopback interface
-        p1 = reactor.listenTCP(9990, f, interface='127.0.0.1')
+        p1 = reactor.listenTCP(0, f, interface='127.0.0.1')
         p1.stopListening()
         
     def testNamedInterface(self):
         f = MyServerFactory()
         # use named interface instead of 127.0.0.1
-        p1 = reactor.listenTCP(9990, f, interface='localhost')
+        p1 = reactor.listenTCP(0, f, interface='localhost')
         # might raise exception if reactor can't handle named interfaces
         p1.stopListening()
 
 class LoopbackTestCase(PortCleanerUpper):
     """Test loopback connections."""
         
+    n = 10081
+
     def testClosePortInProtocolFactory(self):
         f = ClosingFactory()
-        port = reactor.listenTCP(10080, f)
+        port = reactor.listenTCP(0, f)
+        self.n = port.getHost()[2]
         self.ports.append(port)
         f.port = port
         clientF = MyClientFactory()
-        reactor.connectTCP("localhost", 10080, clientF)
+        reactor.connectTCP("localhost", self.n, clientF)
 
 
         while not clientF.protocol or not clientF.protocol.closed:
@@ -131,10 +135,11 @@ class LoopbackTestCase(PortCleanerUpper):
 
     def testTcpNoDelay(self):
         f = MyServerFactory()
-        port = reactor.listenTCP(10080, f)
+        port = reactor.listenTCP(0, f)
+        self.n = port.getHost()[2]
         self.ports.append(port)
         clientF = MyClientFactory()
-        reactor.connectTCP("localhost", 10080, clientF)
+        reactor.connectTCP("localhost", self.n, clientF)
 
         reactor.iterate()
         reactor.iterate()
@@ -155,7 +160,7 @@ class LoopbackTestCase(PortCleanerUpper):
     
     def testFailing(self):
         clientF = MyClientFactory()
-        reactor.connectTCP("localhost", 10081, clientF, timeout=5)
+        reactor.connectTCP("localhost", 0, clientF, timeout=5)
 
         while not clientF.failed:
             reactor.iterate()
@@ -165,9 +170,10 @@ class LoopbackTestCase(PortCleanerUpper):
     
     def testConnectByService(self):
         serv = socket.getservbyname
-        socket.getservbyname = lambda s, p: s == 'http' and p == 'tcp' and 54345 or 10
         s = MyServerFactory()
-        port = reactor.listenTCP(54345, s)
+        port = reactor.listenTCP(0, s)
+        self.n = port.getHost()[2]
+        socket.getservbyname = lambda s, p,n=self.n: s == 'http' and p == 'tcp' and n or 10
         self.ports.append(port)
         try:
             reactor.connectTCP('localhost', 'http', MyClientFactory())
@@ -224,16 +230,19 @@ class FactoryTestCase(PortCleanerUpper):
         f = StartStopFactory()
 
         # listen on port
-        p1 = reactor.listenTCP(9995, f, interface='127.0.0.1')
+        p1 = reactor.listenTCP(0, f, interface='127.0.0.1')
+        self.n1 = p1.getHost()[2]
         self.ports.append(p1)
         reactor.iterate()
         reactor.iterate()
         self.assertEquals((f.started, f.stopped), (1, 0))
         
         # listen on two more ports
-        p2 = reactor.listenTCP(9996, f, interface='127.0.0.1')
+        p2 = reactor.listenTCP(0, f, interface='127.0.0.1')
+        self.n2 = p2.getHost()[2]
         self.ports.append(p2)
-        p3 = reactor.listenTCP(9997, f, interface='127.0.0.1')
+        p3 = reactor.listenTCP(0, f, interface='127.0.0.1')
+        self.n3 = p3.getHost()[2]
         self.ports.append(p3)
         reactor.iterate()
         reactor.iterate()
@@ -254,14 +263,15 @@ class FactoryTestCase(PortCleanerUpper):
 
     def testClientStartStop(self):
         f = ClosingFactory()
-        p = reactor.listenTCP(9995, f, interface="127.0.0.1")
+        p = reactor.listenTCP(0, f, interface="127.0.0.1")
+        self.n = p.getHost()[2]
         self.ports.append(p)
         f.port = p
         reactor.iterate()
         reactor.iterate()
 
         factory = ClientStartStopFactory()
-        reactor.connectTCP("127.0.0.1", 9995, factory)
+        reactor.connectTCP("127.0.0.1", self.n, factory)
         self.assert_(factory.started)
         reactor.iterate()
         reactor.iterate()
@@ -274,7 +284,8 @@ class ConnectorTestCase(PortCleanerUpper):
 
     def testConnectorIdentity(self):
         f = ClosingFactory()
-        p = reactor.listenTCP(9995, f, interface="127.0.0.1")
+        p = reactor.listenTCP(0, f, interface="127.0.0.1")
+        n = p.getHost()[2]
         self.ports.append(p)
         f.port = p
         reactor.iterate()
@@ -284,8 +295,8 @@ class ConnectorTestCase(PortCleanerUpper):
         factory = ClientStartStopFactory()
         factory.clientConnectionLost = lambda c, r: l.append(c)
         factory.startedConnecting = lambda c: l.append(c)
-        connector = reactor.connectTCP("127.0.0.1", 9995, factory)
-        self.assertEquals(connector.getDestination(), ('INET', "127.0.0.1", 9995))
+        connector = reactor.connectTCP("127.0.0.1", n, factory)
+        self.assertEquals(connector.getDestination(), ('INET', "127.0.0.1", n))
         
         while not factory.stopped:
             reactor.iterate()
@@ -294,7 +305,8 @@ class ConnectorTestCase(PortCleanerUpper):
 
     def testUserFail(self):
         f = MyServerFactory()
-        p = reactor.listenTCP(9991, f, interface="127.0.0.1")
+        p = reactor.listenTCP(0, f, interface="127.0.0.1")
+        n = p.getHost()[2]
         self.ports.append(p)
         
         def startedConnecting(connector):
@@ -302,7 +314,7 @@ class ConnectorTestCase(PortCleanerUpper):
 
         factory = ClientStartStopFactory()
         factory.startedConnecting = startedConnecting
-        reactor.connectTCP("127.0.0.1", 9991, factory)
+        reactor.connectTCP("127.0.0.1", n, factory)
 
         while not factory.stopped:
             reactor.iterate()
@@ -316,7 +328,8 @@ class ConnectorTestCase(PortCleanerUpper):
 
     def testReconnect(self):
         f = ClosingFactory()
-        p = reactor.listenTCP(9995, f, interface="127.0.0.1")
+        p = reactor.listenTCP(0, f, interface="127.0.0.1")
+        n = p.getHost()[2]
         self.ports.append(p)
         f.port = p
         reactor.iterate()
@@ -326,7 +339,7 @@ class ConnectorTestCase(PortCleanerUpper):
         def clientConnectionLost(c, reason):
             c.connect()
         factory.clientConnectionLost = clientConnectionLost
-        reactor.connectTCP("127.0.0.1", 9995, factory)
+        reactor.connectTCP("127.0.0.1", n, factory)
         
         while not factory.failed:
             reactor.iterate()
@@ -343,13 +356,13 @@ class CannotBindTestCase(PortCleanerUpper):
     def testCannotBind(self):
         f = MyServerFactory()
 
-        # listen on port 9990
-        p1 = reactor.listenTCP(9990, f, interface='127.0.0.1')
+        p1 = reactor.listenTCP(0, f, interface='127.0.0.1')
+        n = p1.getHost()[2]
         self.ports.append(p1)
-        self.assertEquals(p1.getHost(), ("INET", "127.0.0.1", 9990,))
+        self.assertEquals(p1.getHost(), ("INET", "127.0.0.1", n,))
         
         # make sure new listen raises error
-        self.assertRaises(error.CannotListenError, reactor.listenTCP, 9990, f, interface='127.0.0.1')
+        self.assertRaises(error.CannotListenError, reactor.listenTCP, n, f, interface='127.0.0.1')
 
         p1.stopListening()
 
@@ -397,11 +410,12 @@ class LocalRemoteAddressTestCase(PortCleanerUpper):
 
     def testHostAddress(self):
         f1 = MyServerFactory()
-        p1 = reactor.listenTCP(9990, f1, interface='127.0.0.1')
+        p1 = reactor.listenTCP(0, f1, interface='127.0.0.1')
+        n = p1.getHost()[2]
         self.ports.append(p1)
         
         f2 = MyOtherClientFactory()
-        p2 = reactor.connectTCP('127.0.0.1', 9990, f2)
+        p2 = reactor.connectTCP('127.0.0.1', n, f2)
 
         reactor.iterate()
 
@@ -458,10 +472,11 @@ class WriteDataTestCase(PortCleanerUpper):
         f.protocol = WriterProtocol
         f.done = 0
         f.problem = 0
-        p = reactor.listenTCP(10080, f)
+        p = reactor.listenTCP(0, f)
+        n = p.getHost()[2]
         self.ports.append(p)
         clientF = WriterClientFactory()
-        reactor.connectTCP("localhost", 10080, clientF)
+        reactor.connectTCP("localhost", n, clientF)
         count = 0
         while not ((count > 10) or (f.done and clientF.done)):
             reactor.iterate()
