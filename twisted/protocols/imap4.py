@@ -27,6 +27,7 @@ To do:
   Use an async message parser instead of buffering in memory
   Figure out a way to not queue multi-message client requests (Flow? A simple callback?)
   Clarify some API docs (Query, etc)
+  Make APPEND recognize (again) non-existent mailboxes before accepting the literal
 """
 
 from __future__ import nested_scopes
@@ -739,7 +740,7 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
         """
         Optional parenthesised list
         """
-        if line[0] == "(":
+        if line.startswith('('):
             return self.arg_plist(line)
         else:
             return (None, line)
@@ -748,7 +749,7 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
         """
         Optional date-time string
         """
-        if line[0] == '"':
+        if line.startswith('"'):
             try:
                 spam, date, rest = line.split('"',2)
             except IndexError:
@@ -1106,6 +1107,7 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
         mbox = self.account.select(mailbox)
         if not mbox:
             self.sendNegativeResponse(tag, '[TRYCREATE] No such mailbox')
+            return
 
         d = mbox.addMessage(message, flags, date)
         d.addCallback(self.__cbAppend, tag, mbox)
