@@ -99,7 +99,8 @@ ftp_reply = {
     'notimpl':   '504 Not implemented.',
     'nopass':    '530 Please login with USER and PASS.',
     'noauth':    '530 Sorry, Authentication failed.',
-    'nodir':     '550 %s: No such file or directory.'
+    'nodir':     '550 %s: No such file or directory.',
+    'noperm':    '550 %s: Permission denied.'
     }
 
 
@@ -551,6 +552,9 @@ class FTP(basic.LineReceiver, DTPFactory):
         if not os.path.isdir(npath):
             self.reply('nodir', params)
             return
+        if not os.access(npath, os.O_EXCL | os.O_RDONLY):
+            self.reply('noperm', params)
+            return
         self.reply('file')
         self.queuedfile = npath 
         self.setAction('LIST')
@@ -561,6 +565,9 @@ class FTP(basic.LineReceiver, DTPFactory):
         npath = self.buildFullpath(params)
         if not os.path.isfile(npath):
             self.reply('nodir', params)
+            return
+        if not os.access(npath, os.O_EXCL | os.O_RDONLY):
+            self.reply('noperm', params)
             return
         self.reply('file')
         self.queuedfile = npath 
