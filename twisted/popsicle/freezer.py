@@ -37,6 +37,7 @@ class Freezer:
         self.persistentObjects = weakref.WeakKeyDictionary()
         self.dirtySet = {}
         self.cleaning = False
+        self.pendingCall = None
 
     def addSaver(self, obj, saver):
         """Add an interested saver to a particular object.
@@ -75,6 +76,9 @@ class Freezer:
         if self.cleaning:
             raise RuntimeError("Can't flag an object as dirty while cleaning.")
         self._dirty(obj)
+        from twisted.internet import reactor
+        if not self.pendingCall:
+            self.pendingCall = reactor.callLater(1.0, self.clean)
 
     def _dirty(self, obj, dirt=SAVE):
         self.dirtySet[obj] = dirt
@@ -87,16 +91,18 @@ class Freezer:
     def delete(self, obj):
         return self.dirty(obj, Freezer.DELETE)
 
-    def tick(self):
-        from twisted.internet import reactor
+    def _cleanTime(self):
+        self.pendingCall = None
         self.clean()
-        reactor.callLater(1.0, self.tick)
 
     def clean(self):
         """Persistence tick.  Clean out the fridge, persist everything that
         wants to be saved.
         """
         #log.msg("cleaning popsicle")
+        if self.pendingCall:
+            self.pendingCall.cancel()
+            self.pendingCall = None
         self.cleaning = True
         savers = {}
         try:
@@ -134,7 +140,6 @@ try:
 except NameError:
     # Create the public interface singleton.
     theFreezer = Freezer()
-    theFreezer.tick()
     ref = theFreezer.getPersistentReference
     clean = theFreezer.clean
     dirty = theFreezer.dirty
