@@ -14,6 +14,7 @@
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
+from __future__ import nested_scopes
 import os, struct, sys
 from twisted.conch import identity, error
 from twisted.conch.ssh import keys, transport, factory, userauth, connection, common, session
@@ -398,7 +399,7 @@ class SSHTestFactory(factory.SSHFactory):
 class SSHTestOpenSSHProcess(protocol.ProcessProtocol):
 
     buf = ''
-    done = False
+    done = 0 
     
     def outReceived(self, data):
         self.buf += data
@@ -406,7 +407,7 @@ class SSHTestOpenSSHProcess(protocol.ProcessProtocol):
 
     def processEnded(self, reason):
         global theTest
-        self.done = True
+        self.done = 1
         theTest.assertEquals(reason.value.exitCode, 0, 'exit code was not 0: %i' % reason.value.exitCode)
         theTest.assertEquals(self.buf, 'hello\r\n')
 

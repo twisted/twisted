@@ -203,7 +203,7 @@ class SSHConnection(service.SSHService):
         self.localChannelID+=1
 
     def sendRequest(self, channel, requestType, data, wantReply = 0):
-        if channel not in self.channelsToRemoteChannel:
+        if not self.channelsToRemoteChannel.has_key(channel):
             return
         log.logOwner.own(self.transport.transport)
         log.msg('sending request for channel %s, request %s'%(channel.id, requestType))
@@ -218,7 +218,7 @@ class SSHConnection(service.SSHService):
             return d
 
     def adjustWindow(self, channel, bytesToAdd):
-        if channel not in self.channelsToRemoteChannel:
+        if not self.channelsToRemoteChannel.has_key(channel):
             return # we're already closed
         self.transport.sendPacket(MSG_CHANNEL_WINDOW_ADJUST, struct.pack('>2L', 
                                     self.channelsToRemoteChannel[channel], 
@@ -226,27 +226,27 @@ class SSHConnection(service.SSHService):
         channel.localWindowLeft+=bytesToAdd
 
     def sendData(self, channel, data):
-        if channel not in self.channelsToRemoteChannel:
+        if not self.channelsToRemoteChannel.has_key(channel):
             return # we're already closed
         self.transport.sendPacket(MSG_CHANNEL_DATA, struct.pack('>L', 
                                     self.channelsToRemoteChannel[channel])+ \
                                    common.NS(data))
 
     def sendExtendedData(self, channel, dataType, data):
-        if channel not in self.channelsToRemoteChannel:
+        if not self.channelsToRemoteChannel.has_key(channel):
             return # we're already closed
         self.transport.sendPacket(MSG_CHANNEL_DATA, struct.pack('>2L', 
                             self.channelsToRemoteChannel[channel],dataType) \
                             + common.NS(data))
 
     def sendEOF(self, channel):
-        if channel not in self.channelsToRemoteChannel:
+        if not self.channelsToRemoteChannel.has_key(channel):
             return # we're already closed
         self.transport.sendPacket(MSG_CHANNEL_EOF, struct.pack('>L', 
                                     self.channelsToRemoteChannel[channel]))
 
     def sendClose(self, channel):
-        if channel not in self.channelsToRemoteChannel:
+        if not self.channelsToRemoteChannel.has_key(channel):
             return # we're already closed
         self.transport.sendPacket(MSG_CHANNEL_CLOSE, struct.pack('>L', 
                                     self.channelsToRemoteChannel[channel]))
