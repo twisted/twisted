@@ -71,7 +71,7 @@ else:
 from twisted.internet import protocol, defer, error
 from twisted.python import log, failure
 from twisted.python import util as tputil
-
+from twisted.python import components
 
 PORT = 53
 
@@ -121,9 +121,14 @@ OP_QUERY, OP_INVERSE, OP_STATUS, OP_NOTIFY = range(4)
 # Response Codes
 OK, EFORMAT, ESERVER, ENAME, ENOTIMP, EREFUSED = range(6)
 
+class IRecord(components.Interface):
+    """An single entry in a zone of authority.
+    
+    @cvar TYPE: An indicator of what kind of record this is.
+    """
+
 class DomainError(ValueError):
     pass
-
 
 class AuthoritativeDomainError(ValueError):
     pass
@@ -432,7 +437,7 @@ class SimpleRecord(tputil.FancyStrMixin, tputil.FancyEqMixin):
     """
     TYPE = None
     
-    __implements__ = (IEncodable,)
+    __implements__ = (IEncodable, IRecord)
     name = None
 
     showAttributes = (('name', 'name', '%s'), 'ttl')
@@ -485,7 +490,7 @@ class Record_DNAME(SimpleRecord):
     TYPE = DNAME
 
 class Record_A(tputil.FancyEqMixin):
-    __implements__ = (IEncodable,)
+    __implements__ = (IEncodable, IRecord)
 
     TYPE = A
     address = None
@@ -519,7 +524,7 @@ class Record_A(tputil.FancyEqMixin):
 
 
 class Record_SOA(tputil.FancyEqMixin, tputil.FancyStrMixin):
-    __implements__ = (IEncodable,)
+    __implements__ = (IEncodable, IRecord)
 
     compareAttributes = ('serial', 'mname', 'rname', 'refresh', 'expire', 'retry', 'ttl')
     showAttributes = (('mname', 'mname', '%s'), ('rname', 'rname', '%s'), 'serial', 'refresh', 'retry', 'expire', 'minimum', 'ttl')
@@ -562,7 +567,7 @@ class Record_SOA(tputil.FancyEqMixin, tputil.FancyStrMixin):
 
 
 class Record_NULL:                   # EXPERIMENTAL
-    __implements__ = (IEncodable,)
+    __implements__ = (IEncodable, IRecord)
     TYPE = NULL
 
     def __init__(self, payload=None, ttl=None):
@@ -583,7 +588,7 @@ class Record_NULL:                   # EXPERIMENTAL
     
     
 class Record_WKS(tputil.FancyEqMixin, tputil.FancyStrMixin):                    # OBSOLETE
-    __implements__ = (IEncodable,)
+    __implements__ = (IEncodable, IRecord)
     TYPE = WKS
 
     compareAttributes = ('address', 'protocol', 'map', 'ttl')
@@ -612,7 +617,7 @@ class Record_WKS(tputil.FancyEqMixin, tputil.FancyStrMixin):                    
 
     
 class Record_AAAA(tputil.FancyEqMixin):               # OBSOLETE (or headed there)
-    __implements__ = (IEncodable,)
+    __implements__ = (IEncodable, IRecord)
     TYPE = AAAA
 
     compareAttributes = ('address', 'ttl')
@@ -639,7 +644,7 @@ class Record_AAAA(tputil.FancyEqMixin):               # OBSOLETE (or headed ther
 
 
 class Record_A6:
-    __implements__ = (IEncodable,)
+    __implements__ = (IEncodable, IRecord)
     TYPE = A6
     
     def __init__(self, prefixLen=0, suffix='::', prefix='', ttl=None):
@@ -690,7 +695,7 @@ class Record_A6:
 
 
 class Record_SRV(tputil.FancyEqMixin, tputil.FancyStrMixin):                # EXPERIMENTAL
-    __implements__ = (IEncodable,)
+    __implements__ = (IEncodable, IRecord)
     TYPE = SRV
 
     compareAttributes = ('priority', 'weight', 'target', 'port', 'ttl')
@@ -723,7 +728,7 @@ class Record_SRV(tputil.FancyEqMixin, tputil.FancyStrMixin):                # EX
 
 
 class Record_AFSDB(tputil.FancyStrMixin, tputil.FancyEqMixin):
-    __implements__ = (IEncodable,)
+    __implements__ = (IEncodable, IRecord)
     TYPE = AFSDB
 
     compareAttributes = ('subtype', 'hostname', 'ttl')
@@ -752,7 +757,7 @@ class Record_AFSDB(tputil.FancyStrMixin, tputil.FancyEqMixin):
     
 
 class Record_RP(tputil.FancyEqMixin, tputil.FancyStrMixin):
-    __implements__ = (IEncodable,)
+    __implements__ = (IEncodable, IRecord)
     TYPE = RP
 
     compareAttributes = ('mbox', 'txt', 'ttl')
@@ -782,7 +787,7 @@ class Record_RP(tputil.FancyEqMixin, tputil.FancyStrMixin):
     
 
 class Record_HINFO(tputil.FancyStrMixin):
-    __implements__ = (IEncodable,)
+    __implements__ = (IEncodable, IRecord)
     TYPE = HINFO
 
     showAttributes = ('cpu', 'os', 'ttl')
@@ -818,7 +823,7 @@ class Record_HINFO(tputil.FancyStrMixin):
 
 
 class Record_MINFO(tputil.FancyEqMixin, tputil.FancyStrMixin):                 # EXPERIMENTAL
-    __implements__ = (IEncodable,)
+    __implements__ = (IEncodable, IRecord)
     TYPE = MINFO
     
     rmailbx = None
@@ -850,7 +855,7 @@ class Record_MINFO(tputil.FancyEqMixin, tputil.FancyStrMixin):                 #
 
 
 class Record_MX(tputil.FancyStrMixin, tputil.FancyEqMixin):
-    __implements__ = (IEncodable,)
+    __implements__ = (IEncodable, IRecord)
     TYPE = MX
 
     compareAttributes = ('preference', 'exchange', 'ttl')
@@ -879,7 +884,7 @@ class Record_MX(tputil.FancyStrMixin, tputil.FancyEqMixin):
     
 # Oh god, Record_TXT how I hate thee.
 class Record_TXT(tputil.FancyEqMixin, tputil.FancyStrMixin):
-    __implements__ = (IEncodable,)
+    __implements__ = (IEncodable, IRecord)
 
     TYPE = TXT
 
