@@ -133,6 +133,19 @@ class BananaTestCase(unittest.TestCase):
             self.enc.dataReceived(crashString)
         except banana.BananaError:
             pass
+
+    def testCrashNegativeLong(self):
+        # There was a bug in cBanana which relied on negating a negative integer
+        # always giving a postive result, but for the lowest possible number in
+        # 2s-complement arithmetic, that's not true, i.e.
+        #     long x = -2147483648;
+        #     long y = -x;
+        #     x == y;  /* true! */
+        # (assuming 32-bit longs)
+        self.enc.sendEncoded(-2147483648)
+        self.enc.dataReceived(self.io.getvalue())
+        assert self.result == -2147483648, "should be -2147483648, got %s" % self.result
+
             
 testCases = [MathTestCase, BananaTestCase]
 

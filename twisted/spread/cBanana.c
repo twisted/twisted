@@ -328,7 +328,7 @@ static const char *findVocab(int offset)
   return vocab[offset];
 }
 
-static void int2b128(long integer, cBananaBuf* writeobj) {
+static void int2b128(unsigned long integer, cBananaBuf* writeobj) {
   char typeByte;
   if (integer == 0) {
     typeByte = 0;
@@ -371,7 +371,8 @@ PyObject* cBanana_encode_internal(PyObject* encodeobj, cBananaBuf* writeobj) {
       typeByte = INT;
       cBananaBuf_append_byte(writeobj, typeByte);
     } else {
-      int2b128(-integer, writeobj);
+      unsigned long absinteger = -integer;
+      int2b128(absinteger, writeobj);
       typeByte = NEG;
       cBananaBuf_append_byte(writeobj, typeByte);
     }
