@@ -21,6 +21,7 @@ from twisted.web import server
 from twisted.internet import reactor, defer
 from twisted.python import log
 
+import time
 
 class Test(XMLRPC):
 
@@ -113,8 +114,11 @@ class XMLRPCTestCase(unittest.TestCase):
                                  (17, "deferFault"), (42, "SESSION_TEST")]:
             l = []
             d = self.proxy().callRemote(methodName).addErrback(l.append)
-            while not l:
-                reactor.iterate()
+            timeout = time.time() + 10
+            while not l and time.time() < timeout:
+                reactor.iterate(0.01)
+            if not l:
+                self.fail("timeout")
             l[0].trap(xmlrpc.Fault)
             self.assertEquals(l[0].value.faultCode, code)
         log.flushErrors(RuntimeError, ValueError)
