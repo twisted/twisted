@@ -1373,6 +1373,67 @@ class FakeyMessage:
         self.got_subpart = part
         return self.subpart
 
+class NewStoreTestCase(unittest.TestCase, IMAP4HelperMixin):
+    result = None
+    storeArgs = None
+
+    def setUp(self):
+        self.received_messages = self.received_uid = None
+        
+        self.server = imap4.IMAP4Server()
+        self.server.state = 'select'
+        self.server.mbox = self
+        self.connected = defer.Deferred()
+        self.client = SimpleClient(self.connected)
+
+    def addListener(self, x):
+        pass
+    def removeListener(self, x):
+        pass
+    
+    def store(self, *args, **kw):
+        self.storeArgs = args, kw
+        return self.response
+
+    def _storeWork(self):
+        def connected():
+            return self.function(self.messages, self.flags, self.silent, self.uid)
+        def result(R):
+            self.result = R
+
+        self.connected.addCallback(strip(connected)
+        ).addCallback(result
+        ).addCallback(self._cbStopClient
+        ).addErrback(self._ebGeneral)
+        
+        loopback.loopbackTCP(self.server, self.client)
+        self.assertEquals(self.result, self.expected)
+        self.assertEquals(self.storeArgs, self.expectedArgs)
+    
+    def testSetFlags(self, uid=0):
+        self.function = self.client.setFlags
+        self.messages = '1,5,9'
+        self.flags = ['\\A', '\\B', 'C']
+        self.silent = False
+        self.uid = uid
+        self.response = {
+            1: ['\\A', '\\B', 'C'],
+            5: ['\\A', '\\B', 'C'],
+            9: ['\\A', '\\B', 'C'],
+        }
+        self.expected = {
+            1: {'FLAGS': ['\\A', '\\B', 'C']},
+            5: {'FLAGS': ['\\A', '\\B', 'C']},
+            9: {'FLAGS': ['\\A', '\\B', 'C']},
+        }
+        msg = imap4.MessageSet()
+        msg.add(1)
+        msg.add(5)
+        msg.add(9)
+        self.expectedArgs = ((msg, ['\\A', '\\B', 'C'], 0), {'uid': 0})
+        self._storeWork()
+
+
 class NewFetchTestCase(unittest.TestCase, IMAP4HelperMixin):
     def setUp(self):
         self.received_messages = self.received_uid = None
