@@ -92,33 +92,25 @@ class Telnet(protocol.Protocol):
         EL: 'EL',
         GA: 'GA'}
 
-    _databuf = ''
-
     # Either 'data' or 'command'
     mode = 'data'
 
     def dataReceived(self, data):
-        data = self._databuf + data
-        self._databuf = ''
-
-        chunks = []
-        commands = []
-
         # Most grossly inefficient implementation ever
         while data:
             b = data[0]
             data = data[1:]
-            if self.mode == 'data':
+            if self.state == 'data':
                 if b == IAC:
-                    self.mode = 'escaped'
+                    self.state = 'escaped'
                 else:
                     self.applicationByteReceived(b)
-            elif self.mode == 'escaped':
+            elif self.state == 'escaped':
                 if b == IAC:
                     self.applicationByteReceived(b)
-                    self.mode = 'data'
+                    self.state = 'data'
                 elif b == SB:
-                    self.mode = 'subnegotiation'
+                    self.state = 'subnegotiation'
                     self.commands = []
                 elif b in (NOP, DM, BREAK, IP, AO, AYT, EC, EL, GA):
                     self.telnetCommandReceived(b, None)
@@ -127,14 +119,14 @@ class Telnet(protocol.Protocol):
                     self.command = b
                 else:
                     raise ValueError("Stumped")
-            elif self.mode == 'command':
+            elif self.state == 'command':
                 self.state = 'data'
                 command = self.command
                 del self.command
                 self.telnetCommandReceived(command, b)
-            elif self.mode == 'subnegotiation':
+            elif self.state == 'subnegotiation':
                 if b == IAC:
-                    self.mode = 'subnegotiation-escaped'
+                    self.state = 'subnegotiation-escaped'
                 elif b == SE:
                     self.state = 'data'
                     commands = self.commands
@@ -142,6 +134,9 @@ class Telnet(protocol.Protocol):
                     self.subnegotiationCommandReceived(commands)
                 else:
                     self.commands.append(b)
+            elif self.state == 'subnegotiation-escaped':
+                self.state = 'subnegotiation'
+                self.commands.append(b)
             else:
                 raise ValueError("How'd you do this?")
 
