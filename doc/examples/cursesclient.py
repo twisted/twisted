@@ -176,6 +176,6 @@ if __name__ == '__main__':
     stdscr.refresh()
     ircFactory = IRCFactory(screen)
     reactor.addReader(screen) # add sceen object as a reader with twisted reactor
-    reactor.connectTCP("irc.openprojects.net",6667,ircFactory) # connect to IRC
+    reactor.connectTCP("irc.freenode.net",6667,ircFactory) # connect to IRC
     reactor.run() # have fun!
     screen.close()
