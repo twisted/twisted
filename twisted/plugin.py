@@ -129,13 +129,13 @@ def getCache(module):
             lastCached = 0
         try:
             dropinNames = os.listdir(p)
-        except OSError, ose:
-            if ose.errno not in (errno.ENOENT, errno.ENOTDIR):
+        except WindowsError, e:
+            if e.errno != 3:
                 raise
             else:
                 continue
-        except WindowsError, e:
-            if e.errno != 3:
+        except OSError, ose:
+            if ose.errno not in (errno.ENOENT, errno.ENOTDIR):
                 raise
             else:
                 continue
