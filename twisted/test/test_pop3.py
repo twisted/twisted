@@ -3,10 +3,10 @@ Test cases for twisted.pop3 module.
 """
 
 from pyunit import unittest
-from twisted import mail, net
+from twisted import mail
 import twisted.protocols.pop3, twisted.protocols.protocol
 from twisted import protocols
-from test_twisted.test_protocols import StringIOWithoutClosing
+from twisted.test.test_protocols import StringIOWithoutClosing
 import StringIO
 
 class MyVirtualPOP3(protocols.pop3.VirtualPOP3):
@@ -73,18 +73,18 @@ Someone set up us the bomb!\015
 ''' % len(message)
 
     def setUp(self):
-        s = net.Selector()
-        # self.server = mail.VirtualPOP3Server(110, s)
-        self.server.domains['baz.com'] = DummyDomain()
-        self.server.domains['baz.com'].addUser('hello')
-        self.server.domains['baz.com'].addMessage('hello', self.message)
+        self.factory = protocols.protocol.Factory()
+        self.factory.domains = {}
+        self.factory.domains['baz.com'] = DummyDomain()
+        self.factory.domains['baz.com'].addUser('hello')
+        self.factory.domains['baz.com'].addMessage('hello', self.message)
 
     def testMessages(self):
         self.output = StringIOWithoutClosing()
         self.transport = protocols.protocol.FileWrapper(self.output)
-        self.transport.server = self.server
         protocol =  MyVirtualPOP3()
         protocol.makeConnection(self.transport)
+        protocol.factory = self.factory
         protocol.lineReceived('APOP hello@baz.com world')
         protocol.lineReceived('UIDL')
         protocol.lineReceived('RETR 1')

@@ -8,8 +8,8 @@ import test_reflect
 import test_delay
 import test_hook
 import test_protocols
-#import test_smtp
-#import test_pop3
+import test_smtp
+import test_pop3
 import test_dirdbm
 #import test_sexpy
 import test_jelly
@@ -42,6 +42,7 @@ def testSuite():
              test_pb.testCases         + test_todo.testCases       +
              test_explorer.testCases   + test_banana.testCases     +
              test_rebuild.testCases    + test_toc.testCases        +
+             test_smtp.testCases       + test_pop3.testCases       +
              test_words.testCases      + 
              # Leave this one at the end.
              test_import.testCases)

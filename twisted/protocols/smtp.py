@@ -139,24 +139,25 @@ class SMTPClient(basic.LineReceiver):
         self.state = 'from'
 
     def smtpCode_250_from(self, line):
-        if self.getmail():
-            self.sendLine('MAIL FROM:<%s>' % self.getMail().from_)
+        from_ = self.getMailFrom()
+        if from_ is not None:
+            self.sendLine('MAIL FROM:<%s>' % from_)
             self.state = 'afterFrom'
         else:
             self.sendLine('QUIT')
             self.state = 'quit'
 
     def smtpCode_250_afterFrom(self, line):
-        self.toAddresses = self.getMail().to
+        self.toAddresses = self.getMailTo()
         self.successAddresses = []
         self.state = 'to'
         self.sendToOrData()
 
     def smtpCode_221_quit(self, line):
-        self.loseConnection()
+        self.transport.loseConnection()
 
     def smtpCode_default(self, line):
-        self.loseConnection()
+        self.transport.loseConnection()
 
     def sendToOrData(self):
         if not self.toAddresses:
@@ -175,11 +176,11 @@ class SMTPClient(basic.LineReceiver):
         self.sendToOrData()
 
     def smtpCode_354_data(self, line):
-        for line in string.split(self.getMail().data, '\n')[:-1]:
-            if line[0] == '.':
+        for line in string.split(self.getMailData(), '\n')[:-1]:
+            if line[:1] == '.':
                 line = line+'.'
             self.sendLine(line)
-        self.sendLine(line)
+        self.sendLine('.')
         self.state = 'afterData'
 
     def smtpCode_250_afterData(self, line):
