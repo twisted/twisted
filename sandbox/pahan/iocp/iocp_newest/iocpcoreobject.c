@@ -597,6 +597,7 @@ static PyMethodDef module_methods[] = {
 PyMODINIT_FUNC
 initiocpcore(void) 
 {
+    int have_connectex = 1;
     PyObject *m;
     GUID guid1 = WSAID_CONNECTEX; // should use one GUID variable, but oh well
     GUID guid2 = WSAID_ACCEPTEX;
@@ -614,8 +615,7 @@ initiocpcore(void)
     ret = WSAIoctl(s, SIO_GET_EXTENSION_FUNCTION_POINTER, &guid1, sizeof(GUID),
                    &gConnectEx, sizeof(gConnectEx), &bytes, NULL, NULL);
     if(ret == SOCKET_ERROR) {
-        PyErr_SetFromWindowsErr(0);
-        return;
+        have_connectex = 0;
     }
     
     ret = WSAIoctl(s, SIO_GET_EXTENSION_FUNCTION_POINTER, &guid2, sizeof(GUID),
@@ -629,8 +629,12 @@ initiocpcore(void)
 
     m = Py_InitModule3("iocpcore", module_methods,
                        "core functionality for IOCP reactor");
-
     if(!m) {
+        return;
+    }
+
+    ret = PyModule_AddIntConstant(m, "have_connectex", have_connectex);
+    if(ret == -1) {
         return;
     }
 

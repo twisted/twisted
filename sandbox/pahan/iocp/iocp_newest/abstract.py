@@ -6,15 +6,19 @@ from twisted.persisted import styles
 from twisted.python import log, failure
 
 from ops import ReadFileOp, WriteFileOp
+from util import StateEventMachineType
 import address
 
 class ConnectedSocket(log.Logger, styles.Ephemeral):
+    __metaclass__ = StateEventMachineType
     __implements__ = interfaces.ITransport, interfaces.IProducer, interfaces.IConsumer
-    events = ["write", "loseConnection", "writeDone", "writeErr", "readDone", "readErr"]
+    events = ["write", "loseConnection", "writeDone", "writeErr", "readDone", "readErr", "shutdown"]
     bufferSize = 2**2**2**2
     producer = None
-    writing = 0
-    reading = 0
+    writing = False
+    reading = False
+    write_shutdown = False
+    read_shutdown = False
     disconnecting = 0 # groan, stupid LineReceiver and LineOnlyReceiver want to see this in a transport
     def __init__(self, socket, protocol, sockfactory):
         self.state = "connected"
@@ -73,6 +77,21 @@ class ConnectedSocket(log.Logger, styles.Ephemeral):
             self.connectionLost(err)
             return None
 
+    def _cbWriteShutdown(self):
+        self.removeBufferCallback(self._cbWriteShutdown, "buffer empty")
+        self.socket.shutdown(1)
+
+    def handle_connected_shutdown(self, write = False, read = False):
+        if read and not self.read_shutdown:
+            self.read_shutdown = True
+            self.socket.shutdown(0)
+        if write and not self.write_shutdown:
+            self.write_shutdown = True # don't need to keep "we are shutting write side down", right?
+            if self.writing:
+                self.addBufferCallback(self._cbWriteShutdown, "buffer empty")
+            else:
+                self.socket.shutdown(1)
+
     def connectionLost(self, reason):
         self.state = "disconnected"
         self.disconnecting = 0
@@ -83,7 +102,8 @@ class ConnectedSocket(log.Logger, styles.Ephemeral):
 #            self.socket.shutdown(2)
 #        except socket.error:
 #            pass
-        self.socket.close() # this should call closesocket() and kill it dead!
+        # this should call closesocket() and kill it dead!
+        self.socket.close()
         del self.socket
         try:
             protocol.connectionLost(reason)
@@ -99,7 +119,7 @@ class ConnectedSocket(log.Logger, styles.Ephemeral):
                 raise
 
     def startReading(self):
-        self.reading = 1
+        self.reading = True
         try:
             self.read_op.initiateOp(self.socket.fileno(), self.readbuf)
         except Exception:
@@ -107,7 +127,7 @@ class ConnectedSocket(log.Logger, styles.Ephemeral):
             self.loseConnection()
 
     def stopReading(self):
-        self.reading = 0
+        self.reading = False
 
     def handle_connected_readDone(self, bytes):
         self.protocol.dataReceived(self.readbuf[:bytes])
@@ -126,7 +146,7 @@ class ConnectedSocket(log.Logger, styles.Ephemeral):
         pass # no kicking the dead horse
 
     def startWriting(self):
-        self.writing = 1
+        self.writing = True
         b = buffer(self.writebuf[0], self.offset)
         try:
             self.write_op.initiateOp(self.socket.fileno(), b)
@@ -135,7 +155,7 @@ class ConnectedSocket(log.Logger, styles.Ephemeral):
             self.loseConnection()
 
     def stopWriting(self):
-        self.writing = 0
+        self.writing = False
 
     def handle_connected_writeDone(self, bytes):
         self.offset += bytes
@@ -144,7 +164,7 @@ class ConnectedSocket(log.Logger, styles.Ephemeral):
             del self.writebuf[0]
             self.offset = 0
         if self.writebuf == []:
-            self.writing = 0
+            self.writing = False
             self.callBufferHandlers(event = "buffer empty")
         else:
             self.startWriting()
@@ -164,12 +184,15 @@ class ConnectedSocket(log.Logger, styles.Ephemeral):
     def registerProducer(self, producer, streaming):
         if self.producer is not None:
             raise RuntimeError("Cannot register producer %s, because producer %s was never unregistered." % (producer, self.producer))
-        self.producer = producer
-        self.streamingProducer = streaming
-        self.addBufferCallback(self.milkProducer, "buffer empty")
-        self.addBufferCallback(self.stfuProducer, "buffer full")
-        if not streaming:
-            producer.resumeProducing()
+        if self.state == "disconnected":
+            producer.stopProducing()
+        else:
+            self.producer = producer
+            self.streamingProducer = streaming
+            self.addBufferCallback(self.milkProducer, "buffer empty")
+            self.addBufferCallback(self.stfuProducer, "buffer full")
+            if not streaming:
+                producer.resumeProducing()
 
     def milkProducer(self):
         if not self.streamingProducer or self.producerPaused:
@@ -211,12 +234,4 @@ class ConnectedSocket(log.Logger, styles.Ephemeral):
 
     def logPrefix(self):
         return self.logstr
-
-def makeHandleGetter(name):
-    def helpful(self):
-        return getattr(self, "handle_%s_%s" % (self.state, name))
-    return helpful
-
-for i in ConnectedSocket.events:
-    setattr(ConnectedSocket, i, property(makeHandleGetter(i)))
 

@@ -7,6 +7,7 @@ from twisted.python import log, reflect
 
 from ops import AcceptExOp
 from abstract import ConnectedSocket
+from util import StateEventMachineType
 import address
 
 class ServerSocket(ConnectedSocket):
@@ -19,6 +20,7 @@ class ServerSocket(ConnectedSocket):
         self.startReading()
 
 class ListeningPort(log.Logger, styles.Ephemeral):
+    __metaclass__ = StateEventMachineType
     __implements__ = interfaces.IListeningPort,
     events = ["startListening", "stopListening", "acceptDone", "acceptErr"]
     sockinfo = None
@@ -87,13 +89,4 @@ class ListeningPort(log.Logger, styles.Ephemeral):
 
     def getPeer(self):
         return address.getFull(self.socket.getpeername(), self.sockinfo)
-
-def makeHandleGetter(name):
-    def helpful(self):
-        return getattr(self, "handle_%s_%s" % (self.state, name))
-    return helpful
-
-# urf this should be done with a metaclass! Or something!
-for i in ListeningPort.events:
-    setattr(ListeningPort, i, property(makeHandleGetter(i)))
 

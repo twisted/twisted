@@ -58,10 +58,10 @@ class AcceptExOp(OverlappedOp):
 class ConnectExOp(OverlappedOp):
     def ovDone(self, ret, bytes, (handle, sock)):
         if ret:
-            m = getattr(self.transport, "acceptErr")
+            m = getattr(self.transport, "connectErr")
             m(ret, bytes)
         else:
-            m = getattr(self.transport, "acceptDone")
+            m = getattr(self.transport, "connectDone")
             sock.setsockopt(socket.SOL_SOCKET, SO_UPDATE_CONNECT_CONTEXT, "")
             m()
 
@@ -69,4 +69,7 @@ class ConnectExOp(OverlappedOp):
         handle = sock.fileno()
         max_addr, family, type, protocol = self.reactor.getsockinfo(handle)
         self.reactor.issueConnectEx(handle, family, addr, self.ovDone, (handle, sock))
+
+    def threadedThing(self, sock, addr):
+        sock.connect_ex(addr)
 

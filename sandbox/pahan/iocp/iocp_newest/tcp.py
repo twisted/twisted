@@ -23,7 +23,6 @@ class TcpMixin:
  
 class ServerSocket(server.ListeningPort.transport, TcpMixin):
     __implements__ = server.ListeningPort.transport.__implements__ + (interfaces.ITCPTransport,)
-    pass
 
 class Port(server.ListeningPort):
     sockinfo = (socket.AF_INET, socket.SOCK_STREAM, 0)
