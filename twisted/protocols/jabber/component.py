@@ -18,6 +18,7 @@
 
 from twisted.xish import domish, xpath, utility
 from twisted.protocols import xmlstream
+from twisted.protocols.jabber import jstrports
 
 def componentFactory(componentid, password):
     a = ComponentAuthenticator(componentid, password)
@@ -59,13 +60,32 @@ class ComponentAuthenticator(xmlstream.Authenticator):
 
 
 from twisted.application import service
+from twisted.python import components
 
-class Service(service.MultiService):
+class IService(components.Interface):
+    def componentConnected(self, xmlstream):
+        """ Parent component has established a connection
+        """
+
+    def componentDisconnected(self):
+        """ Parent component has lost a connection to the Jabber system
+        """
+
+class Service(service.Service):
+    __implements__ = (IService, )
+
+    def componentConnected(self, xmlstream):
+        pass
+
+    def componentDisconnected(self):
+        pass
+
+class ServiceManager(service.MultiService):
     """ Business logic representing a managed component connection to a Jabber router
 
     This Service maintains a single connection to a Jabber router and
     provides facilities for packet routing and transmission. Business
-    logic modules should be written as standard C{service.Service}
+    logic modules can 
     subclasses, and added as sub-service.
     """
     def __init__(self, jid, password):
@@ -77,10 +97,6 @@ class Service(service.MultiService):
 
         # Internal buffer of packets
         self._packetQueue = []
-
-        # Internal events for being (dis)connected
-        self.connectedEvent = utility.CallbackList()
-        self.disconnectedEvent = utility.CallbackList()
 
         # Setup the xmlstream factory
         self._xsFactory = componentFactory(self.jabberId, password)
@@ -100,14 +116,26 @@ class Service(service.MultiService):
 
     def _connected(self, xs):
         self.xmlstream = xs
+
+        # Flush all pending packets
         for p in self._packetQueue:
             self.xmlstream.send(p)
         self._packetQueue = []
-        self.connectedEvent.callback(self.xmlstream)
+
+        # Notify all child services which implement
+        # the IService interface
+        for c in self:
+            if components.implements(c, IService):
+                c.componentConnected(xs)
 
     def _disconnected(self, _):
         self.xmlstream = None
-        self.disconnectedEvent.callback()
+
+        # Notify all child services which implement
+        # the IService interface
+        for c in self:
+            if components.implements(c, IService):
+                c.componentDisconnected()
 
     def send(self, obj):
         if self.xmlstream != None:
@@ -116,12 +144,12 @@ class Service(service.MultiService):
             self._packetQueue.append(obj)
 
 
-import jstrports
 
-def buildService(jid, password, strport):
-    """ Constructs a pre-built C{component.Service}, using the specified strport string.    
+
+def buildServiceManager(jid, password, strport):
+    """ Constructs a pre-built C{component.ServiceManager}, using the specified strport string.    
     """
-    svc = Service(jid, password)
+    svc = ServiceManager(jid, password)
     client_svc = jstrports.client(strport, svc.getFactory())
     client_svc.setServiceParent(svc)
     return svc
