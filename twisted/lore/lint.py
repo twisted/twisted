@@ -83,6 +83,13 @@ class TagChecker:
         if domhelpers.getNodeText(h1) != domhelpers.getNodeText(title):
             self._reportError(filename, h1, 'title and h1 text differ')
 
+    def check_pre(self, dom, filename):
+        for node in domhelpers.findNodesNamed(dom, 'pre'):
+            for line in domhelpers.getNodeText(node).split('\n'):
+                if len(line) > 80:
+                    self._reportError(filename, node, 
+                                      'text wider than 80 columns in pre')
+
 
 def list2dict(l):
     d = {}
