@@ -153,11 +153,17 @@ class InsensitiveDict:
 
 class OrderedDict(UserDict):
     """A UserDict that preserves insert order whenever possible."""
-    def __init__(self, d=None):
-        # UserDict.__init__ calls self.update(d).
+    def __init__(self, dict=None, **kwargs):
         self._order = []
-        UserDict.__init__(self, d)
-
+        self.data = {}
+        if dict is not None:
+            if hasattr(dict,'keys'):
+                self.update(dict)
+            else:
+                for k,v in dict: # sequence
+                    self[k] = v
+        if len(kwargs):
+            self.update(kwargs)
     def __repr__(self):
         return '{'+', '.join([('%r: %r' % item) for item in self.items()])+'}'
 

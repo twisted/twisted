@@ -60,6 +60,9 @@ class OrderedDictTest(unittest.TestCase):
         d = util.OrderedDict({'monkey': 'ook',
                               'apple': 'red'})
         self.failUnless(d._order)
+        
+        d = util.OrderedDict(((1,1),(3,3),(2,2),(0,0)))
+        self.assertEquals(repr(d), "{1: 1, 3: 3, 2: 2, 0: 0}")
 
 class InsensitiveDictTest(unittest.TestCase):
     def testPreserve(self):
