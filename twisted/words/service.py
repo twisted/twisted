@@ -302,7 +302,9 @@ class Participant(pb.Perspective, styles.Versioned):
 
     def receiveDirectMessage(self, sender, message, metadata):        
         if self.client:
-            nick = self.policy.getNameFor(sender)
+            # is this wrong?
+            # nick = self.policy.getNameFor(sender)
+            nick = sender.name
             if self.loggedNames.has_key(nick):
                 self.loggedNames[nick].logMessage(sender.name, message,
                                                          metadata)
