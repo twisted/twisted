@@ -151,7 +151,8 @@ class LogBot(irc.IRCClient):
     def connectionMade(self):
         irc.IRCClient.connectionMade(self)
         self.file = open(self.factory.filename, "a")
-        self.log("[connected at %s]" % time.asctime(time.localtime(time.time())))
+        self.log("[connected at %s]" %
+                 time.asctime(time.localtime(time.time())))
     
     def signedOn(self):
         self.join(self.factory.channel)

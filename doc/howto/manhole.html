@@ -103,12 +103,14 @@ a global variable stored in the <code>app</code> module:</p>
 of Services (subclasses of ApplicationService that have been added to the
 application, most notably Perspective Broker services), and the list of
 ports on which protocol Factories are listening. The ports are kept in a
-list, and the Factory object itself is available inside that list:</p>
+list, and the Factory object itself is available inside that list (word
+wrapped for clarity):</p>
 
 <pre class="python-interpreter">
 &gt;&gt;&gt; a.tcpPorts
 [(8123, &lt;twisted.internet.protocol.Factory instance at 0x8249b8c&gt;, 5, ''),
- (8007, &lt;twisted.manhole.telnet.ShellFactory instance at 0x824aefc&gt;, 5, '')]
+(8007, &lt;twisted.manhole.telnet.ShellFactory instance at 0x824aefc&gt;, 5, '')
+]
 &gt;&gt;&gt; f = a.tcpPorts[0][1]
 &gt;&gt;&gt; f
 &lt;twisted.internet.protocol.Factory instance at 0x8249b8c&gt;
@@ -231,7 +233,7 @@ when <code>manhole</code> establishes a connection to the <code>manhole</code>
 Service. <code>/watch</code>-ing an object adds hooks to the object,
 allowing you to watch modifications to it in real time. Try the following in
 the <code>manhole</code> window and watch what happens in the <q>Spelunking</q>
-box:</p>
+box (word wrapped for clarity):</p>
 
 <pre class="python-interpreter">
 /browse ["hello", "there"]
@@ -269,7 +271,8 @@ x.foo()
      {foo:
         &lt;ObjectLink of x.foo type instance_method&gt;:
           {class: 'twisted.python.explorer.WatchingA8195574'
-           self: '&lt;twisted.python.explorer.WatchingA8195574 instance at 0x8195574&gt;'
+           self: '&lt;twisted.python.explorer.WatchingA8195574 instance at
+                 0x8195574&gt;'
            doc:
              Pretend to be the method I replaced, and ring the bell.
                      
@@ -291,7 +294,8 @@ x.foo()
      {foo:
         &lt;ObjectLink of x.foo type instance_method&gt;:
           {class: 'twisted.python.explorer.WatchingA8195574'
-           self: '&lt;twisted.python.explorer.WatchingA8195574 instance at 0x8195574&gt;'
+           self: '&lt;twisted.python.explorer.WatchingA8195574 instance at
+                 0x8195574&gt;'
            doc:
              Pretend to be the method I replaced, and ring the bell.
                      
