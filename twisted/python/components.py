@@ -396,7 +396,7 @@ class Componentized(styles.Versioned):
                 l.append(reflect.namedObject(k))
         return l
 
-    def getComponent(self, interface, registry=None, default=_Nothing):
+    def getComponent(self, interface, registry=None, default=None):
         """Create or retrieve an adapter for the given interface.
 
         If such an adapter has already been created, retrieve it from the cache
