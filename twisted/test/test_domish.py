@@ -1,0 +1,85 @@
+# Twisted, the Framework of Your Internet
+# Copyright (C) 2001 Matthew W. Lefkowitz
+#
+# This library is free software; you can redistribute it and/or
+# modify it under the terms of version 2.1 of the GNU Lesser General Public
+# License as published by the Free Software Foundation.
+#
+# This library is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+# Lesser General Public License for more details.
+#
+# You should have received a copy of the GNU Lesser General Public
+# License along with this library; if not, write to the Free Software
+# Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+
+from twisted.trial import unittest
+
+import sys, os
+
+from twisted.xish import domish
+
+class DomishTestCase(unittest.TestCase):
+    def testEscaping(self):
+        s = "&<>'\""
+        assert domish.escapeToXml(s) == "&amp;&lt;&gt;'\""
+        assert domish.escapeToXml(s, 1) == "&amp;&lt;&gt;&apos;&quot;"
+
+    def testSerialization(self):
+        e = domish.Element(("testns", "foo"))
+        assert e.toXml() == "<foo/>"
+        assert e.toXml(closeElement = 0) == "<foo>"
+
+    def testNamespaceObject(self):
+        ns = domish.Namespace("testns")
+        assert ns.foo == ("testns", "foo")
+
+    def testElementInit(self):
+        e = domish.Element(("testns", "foo"))
+        assert e.name == "foo"
+        assert e.uri == "testns"
+        assert e.defaultUri == "testns"
+        assert e.parent == None
+
+        e = domish.Element(("testns", "foo"), "test2ns")
+        assert e.name == "foo"
+        assert e.uri == "testns"
+        assert e.defaultUri == "test2ns"
+
+    def testChildOps(self):
+        e = domish.Element(("testns", "foo"))
+        e.addContent("somecontent")
+        b2 = e.addElement(("testns2", "bar2"))
+        e["attrib1"] = "value1"
+        e[("testns2", "attrib2")] = "value2"
+        e[("testns", "attrib3")] = "value3"
+        e.addElement("bar")
+        e.addElement("bar")
+        e.addContent("abc")
+        e.addContent("123")
+
+        # Check content merging
+        assert e.children[-1] == "abc123"
+
+        # Check str()/content extraction
+        assert str(e) == "somecontent"
+
+        # Check direct child accessor
+        assert e.bar2 == b2
+        e.bar2.addContent("subcontent")
+        e.bar2["bar2value"] = "somevalue"
+
+        # Check child ops
+        assert e.children[1] == e.bar2
+        assert e.children[2] == e.bar
+        
+        # Check attribute ops
+        assert e["attrib1"] == "value1"
+        del e["attrib1"]
+        assert e.hasAttribute("attrib1") == 0
+        assert e["attrib3"] == "value3"
+        assert e.hasAttribute("attrib2") == 0
+        assert e[("testns2", "attrib2")] == "value2"
+
+testCases = [DomishTestCase]
