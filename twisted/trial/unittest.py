@@ -125,6 +125,10 @@ class TestSuite:
         self.numTests = 0
         self.couldNotImport = {}
         self.testMethods = []
+        if not ASSERTION_IS_ERROR:
+            self.failingExceptionType = AssertionError
+        else:
+            self.failingExceptionType = FailTest
 
     def addMethod(self, method):
         """Add a single method of a test case class to this test suite.
@@ -170,139 +174,91 @@ class TestSuite:
         for module in modules:
             self.addModule(module)
 
-    def runOneTest(self, testClass, testCase, method, output):
-        testCase.caseMethodName = method.__name__
-        ok = 0
-        # The 'ok' flag is to make sure we only report one result per test.
-        # It would be nice to clean this sequence up; there is a lot of
-        # duplicated code here.
-        
-        if not ASSERTION_IS_ERROR:
-            failingExceptionType = AssertionError
-        else:
-            failingExceptionType = FailTest
 
+    def reactorCleanUp(self):
+        from twisted.internet import reactor
+        reactor.iterate() # flush short-range timers
+        pending = reactor.getDelayedCalls()
+        if pending:
+            msg = "\npendingTimedCalls still pending:\n"
+            for p in pending:
+                msg += " %s\n" % p
+            from warnings import warn
+            warn(msg)
+            for p in pending: p.cancel() # delete the rest
+            reactor.iterate() # flush them
+            testCase.fail(msg)
+        if components.implements(reactor, interfaces.IReactorThreads):
+            reactor.suggestThreadPoolSize(0)
+            if hasattr(reactor, 'threadpool') and reactor.threadpool:
+                reactor.threadpool.stop()
+                reactor.threadpool = None
+        
+
+    def runOneTest(self, testClass, testCase, method, output):
+        """Run a single test"""
+        
+        # If the test has the todo flag set, then our failures and errors are
+        # expected.
         todo = getattr(method, "todo", getattr(testCase, "todo", None))
-            
-        try:
+        if todo:
+            failure = EXPECTED_FAILURE
+            error = EXPECTED_FAILURE
+        else:
+            failure = FAILURE
+            error = ERROR
+
+        def runStage(stage, *args, **kwargs):
+            try:
+                stage(*args, **kwargs)
+            except self.failingExceptionType, e:
+                return (failure, sys.exc_info())
+            except KeyboardInterrupt:
+                raise
+            except SkipTest, r:
+                reason = None
+                if len(r.args) > 0:
+                    reason = r.args[0]
+                else:
+                    reason = sys.exc_info()
+                return (SKIP, reason)
+            except:
+                return (error, sys.exc_info())
+            return None
+
+        def do(results, stage, *args, **kwargs):
+            result = runStage(stage, *args, **kwargs)
+            if result:
+                results.append(result)
+
+        def main(testCase, method):
             if getattr(method, "skip", None):
                 raise SkipTest, method.skip
             if getattr(testCase, "skip", None):
                 raise SkipTest, testCase.skip
             testCase.setUp()
             method(testCase)
-        except failingExceptionType, e:
-            if todo:
-                output.reportResults(testClass, method, EXPECTED_FAILURE,
-                                     sys.exc_info())
-            else:
-                output.reportResults(testClass, method, FAILURE,
-                                     sys.exc_info())
-        except KeyboardInterrupt:
-            raise
-        except SkipTest, r:
-            reason = None
-            if len(r.args) > 0:
-                reason = r.args[0]
-            if reason:
-                output.reportResults(testClass, method, SKIP, reason)
-            else:
-                output.reportResults(testClass, method, SKIP, sys.exc_info())
-        except:
-            if todo:
-                output.reportResults(testClass, method, EXPECTED_FAILURE,
-                                     sys.exc_info())
-            else:
-                output.reportResults(testClass, method, ERROR,
-                                     sys.exc_info())
-        else:
-            ok = 1
 
-        try:
-            testCase.tearDown()
-        except failingExceptionType, e:
-            if ok:
-                if todo:
-                    output.reportResults(testClass, method, EXPECTED_FAILURE,
-                                         sys.exc_info())
-                else:
-                    output.reportResults(testClass, method, FAILURE,
-                                         sys.exc_info())
-            ok = 0
-        except KeyboardInterrupt:
-            raise
-        except:
-            if ok:
-                if todo:
-                    output.reportResults(testClass, method, EXPECTED_FAILURE,
-                                         sys.exc_info())
-                else:
-                    output.reportResults(testClass, method, ERROR,
-                                         sys.exc_info())
-            ok = 0
+        testCase.caseMethodName = method.__name__
 
-        try:
-            from twisted.internet import reactor
-            reactor.iterate() # flush short-range timers
-            pending = reactor.getDelayedCalls()
-            if pending:
-                msg = "\npendingTimedCalls still pending:\n"
-                for p in pending:
-                    msg += " %s\n" % p
-                from warnings import warn
-                warn(msg)
-                for p in pending: p.cancel() # delete the rest
-                reactor.iterate() # flush them
-                # this will go live someday: tests should not leave
-                # lingering surprises
-                testCase.fail(msg)
-            if components.implements(reactor, interfaces.IReactorThreads):
-                reactor.suggestThreadPoolSize(0)
-                if hasattr(reactor, 'threadpool') and reactor.threadpool:
-                    reactor.threadpool.stop()
-                    reactor.threadpool = None
-        except failingExceptionType, e:
-            if ok:
-                if todo:
-                    output.reportResults(testClass, method, EXPECTED_FAILURE,
-                                         sys.exc_info())
-                else:
-                    output.reportResults(testClass, method, FAILURE,
-                                         sys.exc_info())
-            ok = 0
-        except KeyboardInterrupt:
-            raise
-        except:
-            if ok:
-                if todo:
-                    output.reportResults(testClass, method, EXPECTED_FAILURE,
-                                         sys.exc_info())
-                else:
-                    output.reportResults(testClass, method, ERROR,
-                                         sys.exc_info())
-            ok = 0
-
+        failures = []
+        do(failures, main, testCase, method)
+        do(failures, testCase.tearDown)
+        do(failures, self.reactorCleanUp)
+        
         # garbage collect now, to make sure any Deferreds with pending
         # errbacks are caught and counted against this test, not some later
         # one.
-        if gc:
-            gc.collect()
+        if gc: gc.collect()
 
         for e in log.flushErrors():
-            if ok:
-                if todo:
-                    output.reportResults(testClass, method, EXPECTED_FAILURE,
-                                         e)
-                else:
-                    output.reportResults(testClass, method, ERROR, e)
-                ok = 0
+            failures.append((error, e))
 
-        if ok:
-            if todo:
-                output.reportResults(testClass, method, UNEXPECTED_SUCCESS,
-                                     todo)
-            else:
-                output.reportResults(testClass, method, SUCCESS)
+        if not failures:
+            if todo: failures.append((UNEXPECTED_SUCCESS, todo))
+            else: failures.append((SUCCESS,))
+
+        output.reportResults(testClass, method, *failures[0])
 
     def run(self, output, seed = None):
         output.start(self.numTests)
@@ -344,7 +300,7 @@ def extract_tb(tb, limit=None):
     l = traceback.extract_tb(tb, limit)
     myfile = __file__.replace('.pyc','.py')
     # filename, line, funcname, sourcetext
-    if (l[0][0] == myfile) and (l[0][2] == 'runOneTest'):
+    while (l[0][0] == myfile) and (l[0][2] in ('runOneTest', 'runStage', 'main')):
         del l[0]
     if (l[-1][0] == myfile) and (l[-1][2] in _failureConditionals):
         del l[-1]
