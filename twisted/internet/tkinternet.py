@@ -83,6 +83,10 @@ def install(widget):
     global _condition
     import threading # Oh no, Mr. Bill.
     main.installWaker()
+    # Replace them with versions that do wakeUp.
+    main.addReader = wakeAddReader
+    main.addWriter = wakeAddWriter
+    main.addDelayed = wakeAddDelayed
     threadable.isInIOThread = isInIOThread
     _condition = threading.Condition()
     _root = widget
@@ -104,11 +108,6 @@ def wakeAddWriter(writer):
 def wakeAddDelayed(delayed):
     addDelayed(delayed)
     main.waker.wakeUp()
-
-# Replace them with versions that do wakeUp.
-main.addReader = wakeAddReader
-main.addWriter = wakeAddWriter
-main.addDelayed = wakeAddDelayed
 
 def isInIOThread():
     import thread
