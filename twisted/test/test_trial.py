@@ -15,11 +15,11 @@ from twisted.internet import defer, reactor, protocol, error, threads
 from twisted.protocols import loopback
 from twisted.spread import banana, jelly
 from twisted.trial import unittest, reporter, util, runner, itrial, remote
-from twisted.trial.unittest import failUnless, failUnlessIn, failIfIn, failUnlessRaises
-from twisted.trial.unittest import failUnlessEqual, failIf, failIfIdentical, failUnlessSubstring
-from twisted.trial.unittest import failUnlessSubstring, failIfSubstring, assert_
 from twisted.test import trialtest1, trialtest2
 from StringIO import StringIO
+
+# this is ok, the module has been designed for this usage
+from twisted.trial.assertions import *
 
 import zope.interface as zi
 
@@ -116,6 +116,43 @@ class TestUserMethod(unittest.TestCase):
     
     testReentrantWait.todo = "runUntilCurrent is not re-entrant!"
 
+class TestWait2(unittest.TestCase):
+    NUM_FAILURES = 3
+
+    def _generateFailure(self):
+        try:
+            raise RuntimeError, "i am a complete and utter failure"
+        except RuntimeError:
+            return failure.Failure()
+    
+    def _errorfulMethod(self):
+        L = [self._generateFailure() for x in xrange(self.NUM_FAILURES)]
+        raise util.MultiError(L)
+
+    def testMultiError(self):
+        assertRaises(util.MultiError, self._errorfulMethod)
+        try:
+            self._errorfulMethod()
+        except util.MultiError, e:
+            assert_(hasattr(e, 'failures'))
+            assertEqual(len(e.failures), self.NUM_FAILURES)
+            for f in e.failures:
+                assert_(f.check(RuntimeError))
+
+    def testMultiErrorAsFailure(self):
+        assertRaises(util.MultiError, self._errorfulMethod)
+        try:
+            self._errorfulMethod()
+        except util.MultiError:
+            f = failure.Failure()
+            assert_(hasattr(f, 'value'))
+            assert_(hasattr(f.value, 'failures'))
+            assertEqual(len(f.value.failures), self.NUM_FAILURES)
+            for f in f.value.failures:
+                assert_(f.check(RuntimeError))
+
+
+
 class BogusReporter(reporter.Reporter):
     def __init__(self):
         pass
@@ -144,14 +181,14 @@ class ChProcessProtoocol(protocol.ProcessProtocol):
         
     def outReceived(self, data):
         self.out.append(data)
-##         for line in data.split('\n'):
-##             print "LINE: %s" % (line,)
+#:        for line in data.split('\n'):
+#:            print "LINE: %s" % (line,)
 
     def errReceived(self, data):
         self.err.append(data)
-##         for line in data.split('\n'):
-##             sys.stderr.write("\n\tchild stderr: %s" % (line,))
-##             sys.stderr.flush()
+#:        for line in data.split('\n'):
+#:            sys.stderr.write("\n\tchild stderr: %s" % (line,))
+#:            sys.stderr.flush()
 
     def processEnded(self, status):
         lines = ''.join(self.out).split('\n')
@@ -254,7 +291,7 @@ class FunctionalTest(unittest.TestCase, SpawningMixin):
         return self.spawnChild(args).addCallback(_cb)
 
     def testLeftoverSockets(self):
-        args = self.args + ['twisted.test.trialtest1.ReactorCleanupTests.test_socketsLeftOpen']
+        args = self.args + ['twisted.test.trialtest1.SocketOpenTest.test_socketsLeftOpen']
         def _cb(cpp):
             self._failUnlessIn(util.DIRTY_REACTOR_MSG)
             # when it becomes an error to leave selectables in the reactor

@@ -58,7 +58,7 @@ class StringTodo(TodoBase):
         self.msg = original
 
 class TimeoutBase(NewSkoolAdapter, tputil.FancyStrMixin):
-    showAttributes = ('duration', 'excArg', 'excClass') 
+    showAttributes = ('duration', 'excArg', 'excClass')
     duration = excArg = None
     excClass = defer.TimeoutError
     _defaultTimeout, _defaultExcArg = 4.0, "deferred timed out after %s sec"
@@ -92,7 +92,7 @@ class TupleTimeout(TimeoutBase):
         excArg = self._excArg
         if excArg is None:
             excArg = self._defaultExcArg % self.duration
-        return excArg 
+        return excArg
 
     def _setExcArg(self, val):
         self._excArg = val
@@ -102,7 +102,7 @@ class TupleTimeout(TimeoutBase):
 
 class NumericTimeout(TimeoutBase):
     def __init__(self, original):
-        self.duration = original 
+        self.duration = original
         super(NumericTimeout, self).__init__(original)
 
 
@@ -143,7 +143,7 @@ def getClassFromFQString(obj):
     return reflect.namedAny(obj)
 
 
-# -- traceback formatting errors
+# -- traceback formatting
 
 def formatFailureTraceback(fail):
     if HIDE_TRIAL_INTERNALS:
@@ -165,3 +165,4 @@ def formatMultipleFailureTracebacks(failList):
 
 def formatTestMethodFailures(testMethod):
     return itrial.IFormattedFailure(testMethod.errors + testMethod.failures)
+

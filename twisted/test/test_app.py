@@ -108,6 +108,7 @@ class MultiServiceTestCase(unittest.TestCase):
         ms.addService(self.s1)
         ms.addService(self.s2)
         ms.stopService().addCallback(self.woohoo)
+        log.flushErrors (StopError)
 
     def woohoo(self, res):
         self.callbackRan = 1
@@ -122,6 +123,7 @@ class MultiServiceTestCase(unittest.TestCase):
         ms.addService(self.s1)
         d = ms.stopService()
         d.addCallback(self.cb_nonetest)
+        log.flushErrors (StopError)
 
     def cb_nonetest(self, res):
         self.callbackRan = 1

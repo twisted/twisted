@@ -105,7 +105,6 @@ class DemoTest(unittest.TestCase):
     def testHiddenException(self):
         import time
         cl = reactor.callLater(0, self.go)
-        print "%r" % (cl,)
         timeout = time.time() + 2
         while not (self.finished or time.time() > timeout):
             reactor.iterate(0.1)
@@ -115,8 +114,9 @@ class ReactorCleanupTests(unittest.TestCase):
     def test_leftoverPendingCalls(self):
         def _():
             print 'foo!'
-        reactor.callLater(2, _)
+        reactor.callLater(10000.0, _)
 
+class SocketOpenTest(unittest.TestCase):
     def test_socketsLeftOpen(self):
         f = protocol.Factory()
         f.protocol = protocol.Protocol

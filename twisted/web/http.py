@@ -33,7 +33,7 @@ import os
 from zope.interface import implements
 
 # twisted imports
-from twisted.internet import interfaces, reactor, protocol, address
+from twisted.internet import interfaces, reactor, protocol, address, task
 from twisted.protocols import policies, basic
 from twisted.python import log, components
 try: # try importing the fast, C version
@@ -226,7 +226,8 @@ def _logDateTimeStart():
 def _logDateTimeStop():
     global _logDateTimeUsers
     _logDateTimeUsers -= 1;
-    if not _logDateTimeUsers and _resetLogDateTimeID:
+    if (not _logDateTimeUsers and _resetLogDateTimeID
+        and _resetLogDateTimeID.active()):
         _resetLogDateTimeID.cancel()
 
 def timegm(year, month, day, hour, minute, second):

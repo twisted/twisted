@@ -510,6 +510,7 @@ def _setUpAdapters():
                     (adapters.NumericTimeout, types.FloatType, itrial.ITimeout),
                     (adapters.NumericTimeout, types.IntType, itrial.ITimeout),
                     (adapters.TimeoutBase, types.NoneType, itrial.ITimeout),
+                    (adapters.TimeoutBase, types.MethodType, itrial.ITimeout),
                     (runner.UserMethodWrapper, types.MethodType, itrial.IUserMethod),
                     (remote.JellyableTestMethod, itrial.ITestMethod, jelly.IJellyable)]:
         registerAdapter(a, o, i)

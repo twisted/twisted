@@ -159,7 +159,6 @@ class Deferred:
     For more information about Deferreds, see doc/howto/defer.html or
     U{http://www.twistedmatrix.com/documents/howto/defer}
     """
-
     called = 0
     default = 0
     paused = 0

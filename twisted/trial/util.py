@@ -73,13 +73,30 @@ def deferredResult(d, timeout=None):
     else:
         return result
 
+class MultiError(Exception):
+    """smuggle a sequence of failures through a raise
+    @ivar failures: a sequence of failure objects that prompted the raise
+    @ivar args: additional arguments
+    """
+    def __init__(self, failures, *args):
+        if isinstance(failures, failure.Failure):
+            self.failures = [failures]
+        else:
+            self.failures = list(failures)
+        self.args = args
 
-class MultiErrorFailure(object):
-    def __init__(self, original):
-        self.value = [original]
+    def __str__(self):
+        return '\n\n'.join([e.getTraceback() for e in self.failures])
 
-class LoggedErrors(Exception):
+
+class LoggedErrors(MultiError):
     """raised when there have been errors logged using log.err"""
+    
+class WaitError(MultiError):
+    """raised when there have been errors during a call to wait2"""
+
+class JanitorError(MultiError):
+    """raised when an error is encountered during a *Cleanup"""
 
 class DirtyReactorError(Exception):
     """emitted when the reactor has been left in an unclean state"""
@@ -114,20 +131,24 @@ class Janitor(object):
             if getattr(self, attr):
                 try:
                     getattr(self, "do_%s" % attr)()
-                except:
+                except LoggedErrors, e:
+                    print '_dispatch, extending %s' % (e,)
+                    errors.extend(e.failures)
+                except PendingTimedCallsError:
                     errors.append(failure.Failure())
-        return errors
+        if errors:
+            raise JanitorError([e for e in errors if e is not None])
 
     def do_logErrCheck(cls):
         if log._keptErrors:
             L = []
             for err in log._keptErrors:
                 if isinstance(err, failure.Failure):
-                    L.append(err.getTraceback())
+                    L.append(err)
                 else:
                     L.append(repr(err))
             log.flushErrors()
-            raise LoggedErrors, '\n\n'.join(L)
+            raise LoggedErrors(L)
     do_logErrCheck = classmethod(do_logErrCheck)
 
     def do_cleanPending(cls):
@@ -143,12 +164,15 @@ class Janitor(object):
                 s += " %s\n" % (p,)
 
             for p in pending:
-                p.cancel() # delete the rest
+                if p.active():
+                    p.cancel() # delete the rest
+                else:
+                    print "WEIRNESS! pending timed call not active+!"
 
             spinWhile(reactor.getDelayedCalls)
 
         if s is not None:
-            raise PendingTimedCallsError, s
+            raise PendingTimedCallsError(s)
     do_cleanPending = classmethod(do_cleanPending)
 
     def do_cleanThreads(cls):
@@ -204,52 +228,91 @@ def spinWhile(f, timeout=4.0, msg="f did not return false before timeout"):
             raise defer.TimeoutError, msg
         reactor.iterate(0.1)
 
+IN_WAIT = 0
 
 def _wait(d, timeout=None):
     from twisted.trial import unittest, itrial
     from twisted.internet import reactor
+    global IN_WAIT
 
-    def _dbg(msg):
-        log.msg(iface=itrial.ITrialDebug, timeout=msg)
+    if IN_WAIT > 0:
+        warnings.warn("Calling reactor.iterate from within reactor.iterate, this is bad")
 
-    end = start = time.time()
+    IN_WAIT += 1
+    try:
+        assert isinstance(d, defer.Deferred), "first argument must be a deferred!"
 
-    itimeout = itrial.ITimeout(timeout)
+        def _dbg(msg):
+            log.msg(iface=itrial.ITrialDebug, timeout=msg)
 
-    resultSet = []
-    d.addBoth(resultSet.append)
+        end = start = time.time()
 
-    # TODO: refactor following to use spinWhile
+        itimeout = itrial.ITimeout(timeout)
 
-    if itimeout.duration is None:
-        while not resultSet:
-            reactor.iterate(0.01)
-    else:
-        end += float(itimeout.duration)
-        while not resultSet:
-            if itimeout.duration >= 0.0 and time.time() > end:
-                raise itimeout.excClass, itimeout.excArg
-            reactor.iterate(0.01)
+        resultSet = []
+        d.addBoth(resultSet.append)
 
-    r = resultSet[0]
-    if isinstance(r, failure.Failure):
-        r.raiseException()
-    Janitor.do_logErrCheck()
-    return r
+        # TODO: refactor following to use spinWhile
+
+        if itimeout.duration is None:
+            while not resultSet:
+                reactor.iterate(0.01)
+        else:
+            end += float(itimeout.duration)
+            while not resultSet:
+                if itimeout.duration >= 0.0 and time.time() > end:
+                    raise itimeout.excClass, itimeout.excArg
+                reactor.iterate(0.01)
+        return resultSet[0]
+    finally:
+        IN_WAIT -= 1
+
 
 DEFAULT_TIMEOUT = 4.0 # sec
 
-def wait(d, timeout=DEFAULT_TIMEOUT):
-    """Waits (spins the reactor) for a Deferred to arrive, then returns
-    or throws an exception, based on the result. The difference
-    between this and deferredResult is that it actually throws the
-    original exception, not the Failure, so synchronous exception
-    handling is much more sane.
-    @param timeout: None indicates that we will wait indefinately,
-    the default is to wait 4.0 seconds. 
-    @type timeout: types.FloatType
+def wait(d, timeout=DEFAULT_TIMEOUT, useWaitError=False):
+    """Waits (spins the reactor) for a Deferred to arrive, then returns or
+    throws an exception, based on the result. The difference between this and
+    deferredResult is that it actually throws the original exception, not the
+    Failure, so synchronous exception handling is much more sane.  
+    @note: if you are relying on the original traceback for some reason, do
+    useWaitError=True. Due to the way that Deferreds and Failures work, the
+    presence of the original traceback stack cannot be guaranteed without
+    passing this flag (see below).  
+    @param timeout: None indicates that we will wait indefinately, the default
+    is to wait 4.0 seconds.  
+    @type timeout: types.FloatType 
+    @param useWaitError: The exception thrown is a WaitError, which saves the
+    original failure object or objects in a list .failures, to aid in the
+    retrieval of the original stack traces.  The tradeoff is between wait()
+    raising the original exception *type* or being able to retrieve the
+    original traceback reliably. (see issue 769) 
     """
-    return _wait(d, timeout)
+    try:
+        r = _wait(d, timeout)
+    except:
+        #  it would be nice if i didn't have to armor this call like
+        # this (with a blank except:, but we *are* calling user code 
+        r = failure.Failure()
+    
+    if not useWaitError:
+        if isinstance(r, failure.Failure):
+            r.raiseException()
+        Janitor.do_logErrCheck()
+    else:
+        flist = []
+        if isinstance(r, failure.Failure):
+            flist.append(r)
+        
+        try:
+            Janitor.do_logErrCheck()
+        except MultiError, e:
+            flist.extend(e.failures)
+
+        if flist:
+            raise WaitError(flist)
+
+    return r
 
 
 def deferredError(d, timeout=None):
@@ -335,7 +398,7 @@ def suppressWarnings(f, *warningz):
 
 
 def classesToTestWithTrial(*cls):
-    from twisted.trial import itrial 
+    from twisted.trial import itrial
     for c in cls:
         zi.directlyProvides(c, itrial.IPyUnitTCFactory)
         #zi.directlyProvides(c, itrial.ITestCaseFactory)

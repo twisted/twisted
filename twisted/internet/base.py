@@ -145,9 +145,16 @@ class DelayedCall(styles.Ephemeral):
                     func = func.func_code # func_code's repr sometimes has more useful info
         except:
             func = reflect.safe_repr(self.func)
-        return "<DelayedCall %s [%ss] called=%s cancelled=%s %s%s\n%s>" % (
-            id(self), self.time - seconds(), self.called, self.cancelled, func,
-            reflect.safe_repr(self.args), ''.join(getattr(self, 'creator', '')))
+
+        L = ["<DelayedCall %s [%ss] called=%s cancelled=%s %s%s" % (
+                id(self), self.time - seconds(), self.called, self.cancelled, func,
+                reflect.safe_repr(self.args))]
+
+        if self.debug:
+            L.append("\n\ntraceback at creation: \n\n%s" % ('    '.join(self.creator)))
+        L.append('>')
+
+        return "".join(L)
 
 
 components.backwardsCompatImplements(DelayedCall)

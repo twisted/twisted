@@ -294,33 +294,34 @@ class UserMethodWrapper(MethodInfoBase):
         super(UserMethodWrapper, self).__init__(original)
         self.janitor = janitor
         self.original = original
-        if timeout is None:
-            self.timeout = getattr(self.original, 'timeout', None)
-        else:
-            self.timeout = timeout
+        self.timeout = timeout
         self.errors = []
         self.raiseOnErr = raiseOnErr
 
     def __call__(self, *a, **kw):
+        timeout = getattr(self, 'timeout', None)
+        if timeout is None:
+            timeout = getattr(self.original, 'timeout', None)
+        
         self.startTime = time.time()
         try:
-            try:
-                r = self.original(*a, **kw)
-                if isinstance(r, defer.Deferred):
-                    util._wait(r, self.timeout)
-            finally:
-                self.endTime = time.time()
+            util.wait(defer.maybeDeferred(self.original, *a, **kw), timeout, useWaitError=True)
+        except util.MultiError, e:
+            for f in e.failures:
+                self.errors.append(f)
         except:
-            self.errorHook(failure.Failure())
-            try:
-                self.janitor.do_logErrCheck()
-            except util.LoggedErrors:
-                self.errors.append(failure.Failure())
-            if self.raiseOnErr:
-                raise UserMethodError
+            self.errors.append(failure.Failure())
 
-    def errorHook(self, f):
-        self.errors.append(f)
+        self.endTime = time.time()
+        
+        for e in self.errors:
+            self.errorHook(e)
+
+        if self.raiseOnErr and self.errors:
+            raise UserMethodError
+
+    def errorHook(self, fail):
+        pass
 
 
 class JanitorAndReporterMixin:
@@ -531,9 +532,10 @@ class TestClassAndMethodBase(TestRunnerBase):
                     reporter.upDownError(um)
 
         finally:
-            errs = self.doCleanup()
-            if errs:
-                reporter.cleanupErrors(errs)
+            try:
+                self.doCleanup()
+            except util.MultiError, e:
+                reporter.cleanupErrors(e.failures)
             self._signalStateMgr.restore()
             reporter.endClass(self._testCase.__name__) # fix! this sucks!
             self.endTime = time.time()
@@ -722,7 +724,6 @@ class TestMethod(MethodInfoBase, JanitorAndReporterMixin):
                 observer = util.TrialLogObserver().install()
 
                 # Run the setUp method
-                reporter.startTest(self)
                 setUp = UserMethodWrapper(self.setUp, janitor)
                 try:
                     setUp(tci)
@@ -734,21 +735,24 @@ class TestMethod(MethodInfoBase, JanitorAndReporterMixin):
                     else:
                         # give the reporter the illusion that the test has run normally
                         # but don't actually run the test if setUp is broken
+                        reporter.startTest(self)
                         reporter.upDownError(setUp, warn=False, printStatus=False)
                         return
                  
                 # Run the test method
+                reporter.startTest(self)
                 try:
                     sys.stdout = util.StdioProxy(sys.stdout)
                     sys.stderr = util.StdioProxy(sys.stderr)
-                   
-                    um = UserMethodWrapper(self.original, janitor,
-                            raiseOnErr=False, timeout=self.timeout)
-                    um.errorHook = self._eb
-                    um(tci)
-                    self.errors.extend(um.errors)
+                    orig = UserMethodWrapper(self.original, janitor,
+                                             raiseOnErr=False,
+                                             timeout=self.timeout)
+                    orig.errorHook = self._eb
+                    orig(tci)
 
                 finally:
+                    self.endTime = time.time()
+
                     self.stdout = sys.stdout.getvalue()
                     self.stderr = sys.stderr.getvalue()
                     sys.stdout = sys.stdout.original
@@ -776,10 +780,12 @@ class TestMethod(MethodInfoBase, JanitorAndReporterMixin):
         """do cleanup after the test run. check log for errors, do reactor
         cleanup
         """
-        errs = self.getJanitor().postMethodCleanup()
-        for f in errs:
-            self._eb(f)
-        return errs
+        try:
+            self.getJanitor().postMethodCleanup()
+        except util.MultiError, e:
+            for f in e.failures:
+                self._eb(f)
+            return e.failures
 
 
 class BenchmarkMethod(TestMethod):

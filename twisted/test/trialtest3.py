@@ -275,11 +275,11 @@ class TestTests(unittest.TestCase):
 
         def _checkStatus(meth, status):
             statusmsg = "test did not return status %s, instead returned %s" % (status, meth.status)
-            if meth.errors and status is not ERROR: 
+            if meth.errors and status is not ERROR:
                 statusmsg += "\n\n%s" % (''.join(["\t%s\n" % line for line in
                                                   ''.join([f.getTraceback() for f in meth.errors]
                                         ).split('\n')]))
-            failUnlessEqual(meth.status, status, statusmsg) 
+            failUnlessEqual(meth.status, status, statusmsg)
 
         def _checkTimeoutError(meth):
             if meth.timeout is not None:
@@ -362,7 +362,7 @@ class TestTests(unittest.TestCase):
                 failUnlessEqual(itrial.ITimeout(tm.timeout).duration, tm.klass.t_duration)
 
             elif tm.name.endswith("_skipClassAttr"):
-                failUnlessEqual(tm.skip, CLASS_SKIP_MSG) 
+                failUnlessEqual(tm.skip, CLASS_SKIP_MSG)
 
             elif tm.name.endswith("_skipAttr"):
                 failUnlessEqual(tm.skip, METHOD_SKIP_MSG)
