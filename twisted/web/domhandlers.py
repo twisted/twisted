@@ -55,9 +55,8 @@ class InputHandler(Controller):
     
     def handleValid(self, request, data):
         """
-        Take a request and do something with it
-        
-        -- set the model?
+        Once it has been determined that the input is valid, we should
+        update our submodel and notify the model that it has changed.
         """
         if not self.submodel or not self.model: return
         data = str(data)
@@ -68,18 +67,21 @@ class InputHandler(Controller):
 
     def handleInvalid(self, request, data):
         """
-        Do something if the input was invalid?
+        Once it has been determined that the input is invalid, we should
+        tell our view to report this fact to the user.
         """
         self.view.setError("Error!")
 
 
-class SingleValueInputHandler(InputHandler):
+class SingleValue(InputHandler):
     def getInput(self, request):
         input = request.args.get(self.submodel, None)
         if input:
             return input[0]
 
-class AnythingInputHandler(SingleValueInputHandler):
+SingleValueInputHandler = SingleValue
+
+class Anything(SingleValueInputHandler):
     """
     Handle anything except for None
     """
@@ -88,7 +90,9 @@ class AnythingInputHandler(SingleValueInputHandler):
             return 1
         return None
 
-class IntHandler(SingleValueInputHandler):
+AnythingInputHandler = Anything
+
+class Integer(SingleValueInputHandler):
     """
     Only allow a single integer
     """
@@ -104,7 +108,9 @@ class IntHandler(SingleValueInputHandler):
         if data is not None:
             self.view.setError("%s is not an integer. Please enter an integer." % data)
 
-class FloatHandler(SingleValueInputHandler):
+IntHandler = Integer
+
+class Float(SingleValueInputHandler):
     """
     Only allow a single float
     """
@@ -120,11 +126,15 @@ class FloatHandler(SingleValueInputHandler):
         if data is not None:
             self.view.setError("%s is not an float. Please enter a float." % data)
 
-class ListHandler(InputHandler):        
+FloatHandler = Float
+
+class List(InputHandler):        
     def check(self, request, data):
         return None
-        
-class NewObjectHandler(SingleValueInputHandler):
+
+ListHandler = List
+
+class NewObject(SingleValueInputHandler):
     """
     Check to see if the name the user entered is valid.
     If it is, create the object. If not, tell the user why.
@@ -133,7 +143,7 @@ class NewObjectHandler(SingleValueInputHandler):
     
     def check(self, request, name):
         """
-        Check to see if the name the user typed is a valid project name.
+        Check to see if the name the user typed is a valid object name.
         """
         if name is None: return None
 
@@ -153,7 +163,7 @@ class NewObjectHandler(SingleValueInputHandler):
         Get a reference to the parent folder, create a new Project instance, and
         pickle it.
         """
-        assert self.classToCreate is not None, "To use the NewObjectHandler, you must supply a classToCreate."
+        assert self.classToCreate is not None, "To use the NewObject handler, you must supply a classToCreate."
         parent = request.pathRef().parentRef().getObject()
         project = self.classToCreate(projectName = name)
         parent.createPickleChild(name, project)
@@ -163,3 +173,5 @@ class NewObjectHandler(SingleValueInputHandler):
         The user has entered an invalid project name.
         """
         self.view.setError(self.errorReason)
+
+NewObjectHandler = NewObject
