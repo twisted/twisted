@@ -25,19 +25,21 @@ from twisted.python import roots
 import types, os
 
 
-class UserCollection(roots.Homogenous):
-    """A username/password collection."""
-    
-    entityType = types.StringType
-    
-    def __init__(self, factory):
-        roots.Homogenous.__init__(self, factory.userdict)
-
-    def getEntityType(self):
-        return "Password"
-    
-    def getNameType(self):
-        return "Username"
+# XXX fix me - passwords are stored in a subdict, not as the values
+#
+#class UserCollection(roots.Homogenous):
+#    """A username/password collection."""
+#    
+#    entityType = types.StringType
+#    
+#    def __init__(self, factory):
+#        roots.Homogenous.__init__(self, factory.userdict)
+#
+#    def getEntityType(self):
+#        return "Password"
+#    
+#    def getNameType(self):
+#        return "Username"
 
 
 class FTPConfigurator(app.ProtocolFactoryConfigurator, roots.Locked):
@@ -56,7 +58,7 @@ class FTPConfigurator(app.ProtocolFactoryConfigurator, roots.Locked):
     def __init__(self, instance):
         roots.Locked.__init__(self)
         app.ProtocolFactoryConfigurator.__init__(self, instance)
-        self.putEntity("users", UserCollection(self.instance))
+        #self.putEntity("users", UserCollection(self.instance))
         self.lock()
     
     def config_root(self, root):
