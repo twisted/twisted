@@ -239,8 +239,16 @@ class TLSClient(ImplicitStateProtocol):
                         chr(22): ('Handshake', ),
                         chr(23): ('ApplicationData', )}
 
+    def write(self, bytes):
+        print 'Sending', repr(bytes)
+        self.transport.write(bytes)
+
     def send(self, record):
-        self.transport.write(record.encode())
+        self.write(record.encode())
+
+    def dataReceived(self, data):
+        print 'Received', repr(data)
+        ImplicitStateProtocol.dataReceived(self, data)
 
     def connectionMade(self):
         self.send(ClientHello('x' * 28))
