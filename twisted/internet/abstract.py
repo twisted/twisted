@@ -36,7 +36,7 @@ class FileDescriptor(log.Logger, styles.Ephemeral):
     dataBuffer = ""
     offset = 0
     
-    MAX_OFFSET = 1024 * 16
+    SEND_LIMIT = 128*1024
 
     implements(interfaces.IProducer, interfaces.IReadWriteDescriptor,
                interfaces.IConsumer, interfaces.ITransport)
@@ -89,13 +89,14 @@ class FileDescriptor(log.Logger, styles.Ephemeral):
         there; a result of 0 implies no write was done, and a result of None
         indicates that a write was done.
         """
-        if self.offset > self.MAX_OFFSET:
+        if len(self.dataBuffer) - self.offset < self.SEND_LIMIT:
+            # If there is currently less than SEND_LIMIT bytes left to send
+            # in the string, extend it with the array data.
             self.dataBuffer = buffer(self.dataBuffer, self.offset) + "".join(self._tempDataBuffer)
             self.offset = 0
-        else:
-            self.dataBuffer += "".join(self._tempDataBuffer)
-        self._tempDataBuffer = []
-        self._tempDataLen = 0
+            self._tempDataBuffer = []
+            self._tempDataLen = 0
+            
         # Send as much data as you can.
         if self.offset:
             l = self.writeSomeData(buffer(self.dataBuffer, self.offset))
@@ -109,7 +110,7 @@ class FileDescriptor(log.Logger, styles.Ephemeral):
             result = None
         self.offset += l
         # If there is nothing left to send,
-        if self.offset == len(self.dataBuffer):
+        if self.offset == len(self.dataBuffer) and not self._tempDataLen:
             self.dataBuffer = ""
             self.offset = 0
             # stop writing.

@@ -266,7 +266,7 @@ class Connection(abstract.FileDescriptor):
         try:
             # Limit length of buffer to try to send, because some OSes are too
             # stupid to do so themselves (ahem windows)
-            return self.socket.send(buffer(data, 0, 131072))
+            return self.socket.send(buffer(data, 0, self.SEND_LIMIT))
         except socket.error, se:
             if se.args[0] == EINTR:
                 return self.writeSomeData(data)
