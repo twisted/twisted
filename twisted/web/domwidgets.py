@@ -2,7 +2,7 @@
 
 from xml.dom.minidom import parseString
 from twisted.python.mvc import View, Model
-from twisted.web import domhelpers
+from twisted.python import domhelpers
 
 document = parseString("<xml />")
 
