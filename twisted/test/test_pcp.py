@@ -1,6 +1,8 @@
 # -*- Python -*-
 
-__version__ = '$Revision: 1.1 $'[11:-2]
+__version__ = '$Revision: 1.2 $'[11:-2]
+
+from twisted.python.compat import *
 
 from StringIO import StringIO
 from twisted.trial import unittest
@@ -64,7 +66,7 @@ class DummyConsumer(DummyTransport):
     producer = None
     finished = False
     unregistered = True
-    
+
     def registerProducer(self, producer, streaming):
         self.producer = (producer, streaming)
 
@@ -75,7 +77,7 @@ class DummyConsumer(DummyTransport):
         self.finished = True
 
 class TransportInterfaceTest(unittest.TestCase):
-    proxyClass = pcp.BasicProducerConsumerProxy    
+    proxyClass = pcp.BasicProducerConsumerProxy
 
     def setUp(self):
         self.underlying = DummyConsumer()
@@ -192,7 +194,7 @@ class PCPII_ProducerInterfaceTest(ProducerInterfaceTest, unittest.TestCase):
 class ProducerProxyTest(unittest.TestCase):
     """Producer methods on me should be relayed to the Producer I proxy.
     """
-    proxyClass = pcp.BasicProducerConsumerProxy    
+    proxyClass = pcp.BasicProducerConsumerProxy
 
     def setUp(self):
         self.proxy = self.proxyClass(None)
@@ -207,7 +209,7 @@ class ProducerProxyTest(unittest.TestCase):
 class ConsumerProxyTest(unittest.TestCase):
     """Consumer methods on me should be relayed to the Consumer I proxy.
     """
-    proxyClass = pcp.BasicProducerConsumerProxy    
+    proxyClass = pcp.BasicProducerConsumerProxy
 
     def setUp(self):
         self.underlying = DummyConsumer()
@@ -225,8 +227,8 @@ class ConsumerProxyTest(unittest.TestCase):
     def testUnregister(self):
         self.consumer.unregisterProducer()
         self.failUnless(self.underlying.unregistered)
-        
-    
+
+
 class PullProducerTest:
     def setUp(self):
         self.underlying = DummyConsumer()
@@ -253,7 +255,7 @@ class PullProducerTest:
         self.failUnlessEqual(nwrites, 1, "Pull resulted in %d writes instead "
                              "of 1." % (nwrites,))
         self.failUnlessEqual(self.underlying.getvalue(), "hello sunshine")
-        
+
 
     def testLateWrite(self):
         # consumer sends its initial pull before we have data
