@@ -459,7 +459,7 @@ class Request:
         cookietxt = self.getHeader("cookie")
         if cookietxt:
             for cook in cookietxt.split(';'):
-                cook.lstrip()
+                cook = cook.lstrip()
                 try:
                     k, v = cook.split('=')
                     self.received_cookies[k] = v
