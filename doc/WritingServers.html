@@ -197,7 +197,7 @@ state machines:<P>
 <H2>Factories</H2>
 
 <P>As mentioned before, usually the class 
-<CODE>twisted.internet.protocols.protocol.Protocol</P> works, and there
+<CODE>twisted.protocols.protocol.Protocol</P> works, and there
 is no need to override it. However, sometimes there can be factory-specific
 configuration of the protocols, or other considerations. In those cases,
 there is a need to subclass <CODE>Factory</CODE>.</P>
@@ -207,8 +207,8 @@ class, simply instantiate <CODE>Factory</CODE>, and sets its "protocol"
 attribute:</P>
 
 <PRE>
-from twisted.internet.protocols.protocol import Factory
-from twisted.internet.protocols.wire import Echo
+from twisted.protocols.protocol import Factory
+from twisted.protocols.wire import Echo
 
 myFactory = Factory()
 myFactory.protocol = Echo
@@ -218,7 +218,7 @@ myFactory.protocol = Echo
 configuration, a factory function is often useful:</P>
 
 <PRE>
-from twisted.internet.protocols.protocol import Factory, Protocol
+from twisted.protocols.protocol import Factory, Protocol
 
 class QOTD(Protocol):
 
@@ -243,8 +243,8 @@ be too early or too late).</P>
 to a special log-file:</P>
 
 <PRE>
-from twisted.internet.protocols.protocol import Factory
-from twisted.internet.protocols.basic import LineReceiver
+from twisted.protocols.protocol import Factory
+from twisted.protocols.basic import LineReceiver
 
 
 class LoggingProtocol(LineReceiver):
@@ -274,7 +274,7 @@ with configurable quote server, do you? No problems, here is
 an example.</P>
 
 <PRE>
-from twisted.internet.protocols.protocol import Factory, Protocol
+from twisted.protocols.protocol import Factory, Protocol
 from twisted.internet.main import Application
 
 class QOTD(Protocol):
@@ -308,8 +308,8 @@ initialized with a factory and a port number:</P>
 
 <PRE>
 from twisted.internet.tcp import Port
-from twisted.internet.protocols.protocol import Factory
-from twisted.internet.protocols.basic import Echo
+from twisted.protocols.protocol import Factory
+from twisted.protocols.basic import Echo
 
 factory = Factory()
 factory.protocol = Echo
@@ -330,7 +330,7 @@ an easy way to generate configurations.</P>
 the following code, which has already been given as example:</P>
 
 <PRE>
-from twisted.internet.protocols.protocol import Factory, Protocol
+from twisted.protocols.protocol import Factory, Protocol
 
 class QOTD(Protocol):
 
