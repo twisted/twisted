@@ -51,7 +51,6 @@ def runApp(config):
     application = app.getApplication(config, passphrase)
     service.IService(application).privilegedStartService()
     app.startApplication(application, not config['no_save'])
-    service.IService(application).startService()
     app.startApplication(internet.TimerService(0.1, lambda:None), 0)
     app.runReactorWithLogging(config, oldstdout, oldstderr)
     app.reportProfile(config['report-profile'], application.processName)
