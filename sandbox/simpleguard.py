@@ -49,7 +49,8 @@ from twisted.python import urlpath
 class ParentRedirect(resource.Resource):
     isLeaf = 1
     def render(self, request):
-        return util.redirectTo(urlpath.URLPath.fromRequest(request).here(), request)
+        return util.redirectTo(urlpath.URLPath.fromRequest(request).here(),
+                               request)
 
     def getChild(self, request):
         return self
@@ -87,5 +88,5 @@ if __name__ == '__main__':
     
     from twisted.internet import reactor
     reactor.listenTCP(8889, server.Site(
-               resource = guardResource(SimpleResource(), checker, anon)))
+               resource = guardResource(SimpleResource(), [checker, anon])))
     reactor.run()
