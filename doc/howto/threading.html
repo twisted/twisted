@@ -43,7 +43,8 @@ def notThreadSafe(x):
 
 def threadSafeScheduler():
     """Run in thread-safe manner."""
-    reactor.callFromThread(notThreadSafe, 3) # will run 'notThreadSafe(3)' in the event loop
+    reactor.callFromThread(notThreadSafe, 3) # will run 'notThreadSafe(3)'
+                                             # in the event loop
 </pre>
 
     <h2>Running code in threads</h2>

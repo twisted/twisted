@@ -14,10 +14,13 @@
 
 <p>Along with connection to servers across the internet, Twisted also
 connects to local processes with much the same API. The API is described in
-more detail in <code
-class="API">twisted.internet.interfaces.IReactorProcess</code>, <code
-class="API">twisted.internet.interfaces.IProcessTransport</code>, and <code
-class="API">twisted.internet.protocol.ProcessProtocol</code>.</p>
+more detail in the documentation of:
+<ul>
+<li><code class="API">twisted.internet.interfaces.IReactorProcess</code></li>
+<li><code class="API">twisted.internet.interfaces.IProcessTransport</code></li>
+<li><code class="API">twisted.internet.protocol.ProcessProtocol</code></li>
+</ul>
+</p>
 
     <h2>Running Another Process</h2>
 
@@ -78,7 +81,7 @@ civilized thing to do (unless you want to explicitly clean the environment
 as a security precaution). </p>
   
 <p><code class="python">reactor.spawnProcess()</code> returns an instance
-that implements <code
+that implements the <code
 class="API">twisted.internet.interfaces.IProcessTransport</code>.</p>
 
   <h2>Writing a ProcessProtocol</h2>
