@@ -44,7 +44,7 @@ class PlugIn:
             loaded = ' loaded'
         else:
             loaded = ''
-        return "<Coil Plugin %s %s%s>" % (repr(self.name), self.module, loaded)
+        return "<Plugin %s %s%s>" % (repr(self.name), self.module, loaded)
 
 class DropIn:
     """I am a Python package containing plugins.tml.
@@ -59,68 +59,89 @@ class DropIn:
         self.plugins.append(apply(PlugIn, (name, module), kw))
 
     def __repr__(self):
-        return "<Coil Package %s %s>" % (self.name, self.plugins)
+        return "<Package %s %s>" % (self.name, self.plugins)
 
-def getPlugIns(plugInType, debugInspection=0, showProgress=0):
-    loaded = {}
+
+def getPluginFileList(debugInspection=0, showProgress=0):
     result = []
+    loaded = {}
     if showProgress:
-        log.logfile.write(' Loading: [')
+        log.logfile.write(' Looking for plugins.tml files: [')
         log.logfile.flush()
     found = 0
-    for d in sys.path:
-        d = os.path.abspath(d)
+
+    for d in filter(os.path.isdir, map(os.path.abspath, sys.path)):
         if loaded.has_key(d):
             if debugInspection:
                 log.msg('already saw %s' % d)
             continue
         else:
             if debugInspection:
-                log.msg('looking at %s' % d)
+                log.msg('Recursing through %s' % d)
             loaded[d] = 1
-        if os.path.isdir(d):
-            for plugindir in os.listdir(d):
-                plugindir = os.path.join(d, plugindir)
-                if os.path.isdir(plugindir):
-                    if showProgress:
-                        log.logfile.write('-')
-                        log.logfile.flush()
-                    tmlname = os.path.join(plugindir, "plugins.tml")
-                    pname = os.path.split(os.path.abspath(plugindir))[-1]
-                    if debugInspection:
-                        log.msg(tmlname)
-                    if os.path.exists(tmlname):
-                        dropin = DropIn(pname)
-                        ns = {'register': dropin.register}
-                        try:
-                            execfile(tmlname, ns)
-                        except:
-                            if debugInspection:
-                                import traceback
-                                print "Exception in %s:"
-                                traceback.print_exc()
-                            else:
-                                print "Exception in %s (use --debug for more info)" % (tmlname,)
-                            continue
-                        found = 1
-                        if showProgress:
-                            log.logfile.write('+')
-                            log.logfile.flush()
-                        for plugin in dropin.plugins:
-                            if plugInType == plugin.type:
-                                result.append(plugin)
-                        if debugInspection:
-                            log.msg("Successfully loaded %s!" % plugindir)
 
-        else:
+        for plugindir in os.listdir(d):
+            plugindir = os.path.join(d, plugindir)
+            if showProgress:
+                log.logfile.write('+')
+                log.logfile.flush()
+            tmlname = os.path.join(plugindir, "plugins.tml")
             if debugInspection:
-                log.msg('sys.path entry not a directory %s' % d)
+                log.msg(tmlname)
+            if os.path.exists(tmlname):
+                found = 1
+                result.append(tmlname)
+
+    if not found:
+        raise IOError("Couldn't find a plugins file!")
+
+    if showProgress:
+        log.logfile.write(']\n')
+        log.logfile.flush()
+
+    return result
+
+def loadPlugins(plugInType, fileList, debugInspection=0, showProgress=0):
+    result = []
+    if showProgress:
+        log.logfile.write('Loading plugins.tml files: [')
+        log.logfile.flush()
+
+    for tmlFile in fileList:
+        try:
+            pname = os.path.split(os.path.abspath(tmlFile))[-2]
+            dropin = DropIn(pname)
+            ns = {'register': dropin.register}
+            execfile(tmlFile, ns)
+        except:
+            if debugInspection:
+                import traceback
+                print "Exception in %s:" % (tmlFile,)
+                traceback.print_exc()
+            else:
+                print "Exception in %s (use --debug for more info)" % tmlFile
+            continue
+
+        if showProgress:
+            log.logfile.write('+')
+            log.logfile.flush()
+        for plugin in dropin.plugins:
+            if plugInType == plugin.type:
+                result.append(plugin)
+
+        if debugInspection:
+            log.msg("Successfully loaded %s!" % tmlFile)
+
         if showProgress:
             log.logfile.write('.')
             log.logfile.flush()
-    if not found:
-        raise IOError("Couldn't find a plugins file!")
+
     if showProgress:
-        log.logfile.write(' ]\n')
+        log.logfile.write(']\n')
         log.logfile.flush()
+
     return result
+
+def getPlugIns(plugInType, debugInspection=0, showProgress=0):
+    tmlFiles = getPluginFileList(debugInspection, showProgress)
+    return loadPlugins(plugInType, tmlFiles, debugInspection, showProgress)
