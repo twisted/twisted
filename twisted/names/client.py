@@ -218,17 +218,17 @@ class DNSClientFactory(protocol.ClientFactory):
 
 
 def createResolver():
+    import resolver, cache
     if platform.getType() == 'posix':
         theResolver = Resolver('/etc/resolv.conf')
     else:
         theResolver = ThreadedResolver()
-    return theResolver
+    return resolver.ResolverChain([cache.CacheResolver(), theResolver])
 
 try:
     theResolver
 except NameError:
     theResolver = createResolver()
-#    reactor.listenUDP(0, theResolver.protocol, maxPacketSize=512)
 
     for (k, v) in common.typeToMethod.items():
         exec "%s = getattr(theResolver, %r)" % (v, v)
