@@ -22,7 +22,7 @@ Maintainer: U{Itamar Shtull-Trauring<mailto:twisted@itamarst.org>}
 
 To use, do::
 
-    | tksupport.install(reactor, rootWidget)
+    | tksupport.install(rootWidget)
 
 and then run your reactor as usual - do *not* call Tk's mainloop(),
 use Twisted's regular mechanism for running the event loop.
@@ -38,18 +38,20 @@ import Tkinter
 from twisted.python import log
 
 
-def _guiUpdate(reactor, widget):
+def _guiUpdate(reactor, widget, delay):
     try:
         widget.update() # do all pending GUI events
     except Tkinter.TclError:
         log.deferr()
         return
-    reactor.callLater(0.01, _guiUpdate, reactor, widget)
+    reactor.callLater(delay, _guiUpdate, reactor, widget)
 
 
-def install(reactor, widget):
+def install(widget, ms=10, reactor=None):
     """Install a Tkinter.Tk() object into the reactor."""
-    _guiUpdate(reactor, widget)
+    if reactor is None:
+        from twisted.internet import reactor
+    _guiUpdate(reactor, widget, ms/1000.0)
 
 
 __all__ = ["install"]
