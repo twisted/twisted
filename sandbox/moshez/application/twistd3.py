@@ -13,36 +13,21 @@
 # You should have received a copy of the GNU Lesser General Public
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
-
-from __future__ import nested_scopes
-
 from twisted import copyright
-from twisted.python import usage, util, runtime
-from twisted.python import log, logfile
-
+from twisted.python import usage, util, runtime, reflect, log, logfile, syslog
+from twisted.python import failure
 from twisted.persisted import styles
+import cPickle as pickle
+import cStringIO as StringIO
+import traceback, imp, sys, os, errno, signal, pdb, profile
+
 util.addPluginDir()
-
-# System Imports
-try:
-    import cPickle as pickle
-except ImportError:
-    import pickle
-
-try:
-    import cStringIO as StringIO
-except ImportError:
-    import StringIO
-
-import traceback, imp, sys, os, errno
 
 reactorTypes = {
     'gtk': 'twisted.internet.gtkreactor',
     'gtk2': 'twisted.internet.gtk2reactor',
     'glade': 'twisted.internet.gladereactor',
     'default': 'twisted.internet.default',
-    'win32': 'twisted.internet.win32eventreactor',
-    'win': 'twisted.internet.win32eventreactor',
     'poll': 'twisted.internet.pollreactor',
     'qt': 'twisted.internet.qtreactor',
     'c' : 'twisted.internet.cReactor',
@@ -105,16 +90,6 @@ class ServerOptions(usage.Options):
                       'if the application to be run has an application '
                       'name.']]
 
-    def opt_plugin(self, pkgname):
-        """read config.tac from a plugin package, as with -y
-        """
-        try:
-            fname = imp.find_module(pkgname)[1]
-        except ImportError:
-            raise UsageError("Error: Package %s not found. Is it in your "
-                             "~/TwistedPlugins directory?" % pkgname)
-        self.opts['python'] = os.path.join(fname, 'config.tac')
-
     def opt_version(self):
         """Print version information and exit.
         """
@@ -125,10 +100,7 @@ class ServerOptions(usage.Options):
     def opt_spew(self):
         """Print an insanely verbose log of everything that happens.  Useful
         when debugging freezes or locks in complex code."""
-        from twisted.python.util import spewer
-        sys.settrace(spewer)
-
-    opt_g = opt_plugin
+        sys.settrace(util.spewer)
 
 
 def decrypt(passphrase, data):
@@ -222,18 +194,12 @@ def loadApplication(config, passphrase):
 
 def debugSignalHandler(*args):
     """Break into debugger."""
-    import pdb
     pdb.set_trace()
 
 
 def installReactor(reactor)
     if reactor:
-        if runtime.platformType == 'java':
-            from twisted.internet import javareactor
-            javareactor.install()
-        else:
-            from twisted.python.reflect import namedModule
-            namedModule(reactorTypes[reactor]).install()
+        reflect.namedModule(reactorTypes[reactor]).install()
 
 def checkPID(pidfile, quiet)
     if os.path.exists(pidfile):
@@ -253,8 +219,6 @@ def checkPID(pidfile, quiet)
             else:
                 sys.exit("Can't check status of PID %s from pidfile %s: %s" %
                          (pid, pidfile, why[1]))
-        except AttributeError:
-            pass # welcome to windows
         else:
             sys.exit("""\
 Another twistd server is running, PID %s\n
@@ -285,24 +249,15 @@ def startLogging(logfile, syslog, prefix, nodaemon):
     elif nodaemon and not logfile:
         logFile = sys.stdout
     elif syslog:
-        from twisted.python import syslog
         syslog.startLogging(prefix)
     else:
         logPath = os.path.abspath(logfile or 'twistd.log')
         logFile = logfile.LogFile(os.path.basename(logPath),
                                   os.path.dirname(logPath))
-        # rotate logs on SIGUSR1
-        if os.name == "posix":
-            import signal
-            def rotateLog(signal, frame, logFile=logFile):
-                from twisted.internet import reactor
-                reactor.callLater(0, logFile.rotate)
-            signal.signal(signal.SIGUSR1, rotateLog)
-
-
-    oldstdin = sys.stdin
-    oldstdout = sys.stdout
-    oldstderr = sys.stderr
+        def rotateLog(signal, frame, logFile=logFile):
+            from twisted.internet import reactor
+            reactor.callLater(0, logFile.rotate)
+        signal.signal(signal.SIGUSR1, rotateLog)
     if not syslog:
         log.startLogging(logFile)
     sys.stdout.flush()
@@ -312,10 +267,9 @@ def startLogging(logfile, syslog, prefix, nodaemon):
 
 
 
-def runReactor(config):
+def runReactor(config, oldstdout, oldstderr):
     from twisted.internet import reactor
     if config['profile']:
-        import profile
         p = profile.Profile()
         p.runctx("reactor.run()", globals(), locals())
         if config['savestats']:
@@ -327,17 +281,24 @@ def runReactor(config):
             sys.stdout, tmp = tmp, sys.stdout
             tmp.close()
     elif config['debug']:
-        import pdb
-        from twisted.python import failure
         failure.startDebugMode()
         sys.stdout = oldstdout
         sys.stderr = oldstderr
-        if os.name == "posix":
-            import signal
-            signal.signal(signal.SIGINT, debugSignalHandler)
-            pdb.run("reactor.run()", globals(), locals())
+        signal.signal(signal.SIGINT, debugSignalHandler)
+        pdb.run("reactor.run()", globals(), locals())
     else:
         reactor.run()
+
+def runReactorWithLogging(config, oldstdout, oldstderr):
+    try:
+        runReactor(config, oldstdout, oldstderr)
+    except:
+        if config['nodaemon']:
+            file = oldstdout
+        else:
+            file = open("TWISTD-CRASH.log",'a')
+        traceback.print_exc(file=file)
+        file.flush()
 
 
 def daemonize():
@@ -397,46 +358,17 @@ def launchWithName(name):
         log.msg('Changing process name to ' + name)
         os.execv(exe, [name, sys.argv[0], '--originalname']+sys.argv[1:])
     
-def usepid():
-    # java doesn't have getpid, and Windows' getpid is near-useless
-    return ((os.name != 'java') and (os.name != 'nt'))
-
 def setupEnvironment(config):
     if config['chroot'] is not None:
         os.chroot(config['chroot'])
         if config['rundir'] == '.':
             config['rundir'] = '/'
-    if platformType != 'java':
-        # java can't chdir
-        os.chdir(config['rundir'])
+    os.chdir(config['rundir'])
     if not config['nodaemon']:
         daemonize()
-    if usepid():
-        open(config['pidfile'],'wb').write(str(os.getpid()))
-    if os.name == 'nt':
-        # C-c can't interrupt select.select in win32.
-        def callAgain(f):
-            reactor.callLater(0.1, f, f)
-        reactor.callLater(0.1, callAgain, callAgain)
+    open(config['pidfile'],'wb').write(str(os.getpid()))
 
-# Install a reactor immediately.  The application will not load properly
-# unless this is done FIRST; otherwise the first 'reactor' import would
-# trigger an automatic installation of the default reactor.
-
-# To make this callable from within a running Twisted app, allow as the
-# reactor None to bypass this and use whatever reactor is currently in use.
-def runApp(config):
-    passphrase = getPassphrase(config['encrypted'])
-    installReactor(config['reactor'])
-    if runtime.platformType != 'posix' or config['debug']:
-        # only posix can fork, and debugging requires nodaemon
-        config['nodaemon'] = 1
-    startLogging(config['logfile'], config['syslog'], config['prefix'],
-                 config['nodaemon'])
-    checkPID(config['pidfile'], config['quiet'])
-    from twisted.internet import reactor
-    log.msg('reactor class: %s' % reactor.__class__)
-    application = getApplication(config, passphrase)
+def startApplication(config, application)
     if not config['originalname']:
         launchWithName(application.processName)
     setupEnvironment(config)
@@ -445,26 +377,33 @@ def runApp(config):
     application.startService()
     if not config['no_save']:
         application.scheduleSave()
-    try:
-        runReactor(config)
-    except:
-        if config['nodaemon']:
-            file = oldstdout
-        else:
-            file = open("TWISTD-CRASH.log",'a')
-        traceback.print_exc(file=file)
-        file.flush()
-    if usepid():
-        removePID(config['pidfile'])
+
+def reportProfile(report_profile, name):
+    if name:
+        from twisted.python.dxprofile import report
+        log.msg("Sending DXP stats...")
+        report(report_profile, name)
+        log.msg("DXP stats sent.")
+    else:
+        log.err("--report-profile specified but application has no "
+                "name (--appname unspecified)")
+
+def runApp(config):
+    passphrase = getPassphrase(config['encrypted'])
+    installReactor(config['reactor'])
+    config['nodaemon'] = config['nodaemon'] and not config['debug']:
+    oldstdout = sys.stdout
+    oldstderr = sys.stderr
+    startLogging(config['logfile'], config['syslog'], config['prefix'],
+                 config['nodaemon'])
+    checkPID(config['pidfile'], config['quiet'])
+    from twisted.internet import reactor
+    log.msg('reactor class: %s' % reactor.__class__)
+    startApplication(config, getApplication(config, passphrase))
+    runReactorWithLogging(config, oldstdout, oldstderr)
+    removePID(config['pidfile'])
     if config['report-profile']:
-        if application.processName:
-            from twisted.python.dxprofile import report
-            log.msg("Sending DXP stats...")
-            report(config['report-profile'], application.processName)
-            log.msg("DXP stats sent.")
-        else:
-            log.err("--report-profile specified but application has no "
-                    "name (--appname unspecified)")
+        reportProfile(config['report-profile'], application.processName)
     log.msg("Server Shut Down.")
 
 
