@@ -29,7 +29,7 @@ import select, errno
 
 # Twisted imports
 from twisted.python import log, threadable
-from twisted.internet import main
+from twisted.internet import main, default
 
 # globals
 reads = {}
@@ -37,139 +37,125 @@ writes = {}
 selectables = {}
 poller = select.poll()
 
-
-def _updateRegisteration(fd):
-    """Register/unregister an fd with the poller."""
-    try:
-        poller.unregister(fd)
-    except KeyError:
-        pass
-    
-    mask = 0
-    if reads.has_key(fd): mask = mask | select.POLLIN
-    if writes.has_key(fd): mask = mask | select.POLLOUT
-    if mask != 0:
-        poller.register(fd, mask)
-    else:
-        if selectables.has_key(fd): del selectables[fd]
-
-def addReader(reader):
-    """Add a FileDescriptor for notification of data available to read.
-    """
-    fd = reader.fileno()
-    if not reads.has_key(fd):
-        selectables[fd] = reader
-        reads[fd] =  1
-        _updateRegisteration(fd)
-
-def addWriter(writer, writes=writes, selectables=selectables):
-    """Add a FileDescriptor for notification of data available to write.
-    """
-    fd = writer.fileno()
-    if not writes.has_key(fd):
-        selectables[fd] = writer
-        writes[fd] =  1
-        _updateRegisteration(fd)
-
-def removeReader(reader):
-    """Remove a Selectable for notification of data available to read.
-    """
-    fd = reader.fileno()
-    if reads.has_key(fd):
-        del reads[fd]
-        _updateRegisteration(fd)
-
-def removeWriter(writer, writes=writes):
-    """Remove a Selectable for notification of data available to write.
-    """
-    fd = writer.fileno()
-    if writes.has_key(fd):
-        del writes[fd]
-        _updateRegisteration(fd)
-
-def removeAll():
-    """Remove all selectables, and return a list of them."""
-    result = selectables.values()
-    fds = selectables.keys()
-    reads.clear()
-    writes.clear()
-    selectables.clear()
-    for fd in fds:
-        poller.unregister(fd)
-    return result
-
 POLL_DISCONNECTED = (select.POLLHUP | select.POLLERR | select.POLLNVAL)
 
-def doPoll(timeout,
-           reads=reads,
-           writes=writes,
-           selectables=selectables,
-           select=select,
-           log=log,
-           POLL_DISCONNECTED=POLL_DISCONNECTED,
-           POLLIN=select.POLLIN,
-           POLLOUT=select.POLLOUT):
-    """Poll the poller for new events."""
-    if timeout is None:
-        timeout = 1000
-    else:
-        timeout = int(timeout * 1000) # convert seconds to milliseconds
-    
-    try:
-        l = poller.poll(timeout)
-    except select.error, e:
-        if e[0] == errno.EINTR:
-            return
+
+class PollReactor(default.DefaultSelectReactor):
+    """A reactor that uses poll(2)."""
+
+    def _updateRegisteration(self, fd):
+        """Register/unregister an fd with the poller."""
+        try:
+            poller.unregister(fd)
+        except KeyError:
+            pass
+
+        mask = 0
+        if reads.has_key(fd): mask = mask | select.POLLIN
+        if writes.has_key(fd): mask = mask | select.POLLOUT
+        if mask != 0:
+            poller.register(fd, mask)
         else:
-            raise
-    
-    for fd, event in l:
-        why = None
-        selectable = selectables[fd]
-        log.logOwner.own(selectable)
-        
-        if event & POLL_DISCONNECTED:
-            why = main.CONNECTION_LOST
+            if selectables.has_key(fd): del selectables[fd]
+
+    def addReader(self, reader):
+        """Add a FileDescriptor for notification of data available to read.
+        """
+        fd = reader.fileno()
+        if not reads.has_key(fd):
+            selectables[fd] = reader
+            reads[fd] =  1
+            self._updateRegisteration(fd)
+
+    def addWriter(self, writer, writes=writes, selectables=selectables):
+        """Add a FileDescriptor for notification of data available to write.
+        """
+        fd = writer.fileno()
+        if not writes.has_key(fd):
+            selectables[fd] = writer
+            writes[fd] =  1
+            self._updateRegisteration(fd)
+
+    def removeReader(self, reader):
+        """Remove a Selectable for notification of data available to read.
+        """
+        fd = reader.fileno()
+        if reads.has_key(fd):
+            del reads[fd]
+            self._updateRegisteration(fd)
+
+    def removeWriter(self, writer, writes=writes):
+        """Remove a Selectable for notification of data available to write.
+        """
+        fd = writer.fileno()
+        if writes.has_key(fd):
+            del writes[fd]
+            self._updateRegisteration(fd)
+
+    def removeAll(self):
+        """Remove all selectables, and return a list of them."""
+        result = selectables.values()
+        fds = selectables.keys()
+        reads.clear()
+        writes.clear()
+        selectables.clear()
+        for fd in fds:
+            poller.unregister(fd)
+        return result
+
+    def doPoll(self, timeout,
+               reads=reads,
+               writes=writes,
+               selectables=selectables,
+               select=select,
+               log=log,
+               POLL_DISCONNECTED=POLL_DISCONNECTED,
+               POLLIN=select.POLLIN,
+               POLLOUT=select.POLLOUT):
+        """Poll the poller for new events."""
+        if timeout is None:
+            timeout = 1000
         else:
-            try:
-                if event & POLLIN:
-                    why = selectable.doRead()
-                if not why and event & POLLOUT:
-                    why = selectable.doWrite()
-                if not selectable.fileno() == fd:
-                    why = main.CONNECTION_LOST
-            except:
-                log.deferr()
+            timeout = int(timeout * 1000) # convert seconds to milliseconds
+
+        try:
+            l = poller.poll(timeout)
+        except select.error, e:
+            if e[0] == errno.EINTR:
+                return
+            else:
+                raise
+
+        for fd, event in l:
+            why = None
+            selectable = selectables[fd]
+            log.logOwner.own(selectable)
+
+            if event & POLL_DISCONNECTED:
                 why = main.CONNECTION_LOST
-        
-        if why:
-            removeReader(selectable)
-            removeWriter(selectable)
-            try:
-                selectable.connectionLost()
-            except:
-                log.deferr()
-        
-        log.logOwner.disown(selectable)
+            else:
+                try:
+                    if event & POLLIN:
+                        why = selectable.doRead()
+                    if not why and event & POLLOUT:
+                        why = selectable.doWrite()
+                    if not selectable.fileno() == fd:
+                        why = main.CONNECTION_LOST
+                except:
+                    log.deferr()
+                    why = main.CONNECTION_LOST
+
+            if why:
+                self.removeReader(selectable)
+                self.removeWriter(selectable)
+                try:
+                    selectable.connectionLost()
+                except:
+                    log.deferr()
+
+            log.logOwner.disown(selectable)
+
+    doSelect = doPoll
 
 
-def install():
-    """Install the poll()-based event loop."""
-    main.addReader = addReader
-    main.addWriter = addWriter
-    main.removeReader = removeReader
-    main.removeWriter = removeWriter
-    main.doSelect = doPoll
-    main.removeAll = removeAll
-
-
-def initThreads():
-    """Do initialization for threads."""
-    if main.wakerInstalled:
-        # make sure waker is registered with us
-        removeReader(main.waker)
-        addReader(main.waker)
-
-threadable.whenThreaded(initThreads)
-
-__all__ = ["install"]
+__all__ = ["PollReactor"]
