@@ -39,6 +39,10 @@ register("SOCKSv4 Proxy",
          description="SOCKSv4 proxy for firewalls.",
          type='coil')
 
+register("FTP Server",
+         "twisted.protocols.ftp",
+         description="FTP Server.",
+         type='coil')
 
 ## Pending making this realistically work...
 ##register("Twisted Forum",
