@@ -164,7 +164,7 @@ class Port(base.BasePort):
     def connect(self, host, port):
         """'Connect' to remote server."""
         if self._connectedAddr:
-            raise RuntimeError, "already connected, reconnecting is not currently supported"
+            raise RuntimeError, "already connected, reconnecting is not currently supported (talk to itamar if you want this)"
         if not abstract.isIPAddress(host):
             raise ValueError, "please pass only IP addresses, not domain names"
         self._connectedAddr = (host, port)
