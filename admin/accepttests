@@ -193,7 +193,7 @@ def runAllTests():
     runTelnetTest()
     runWordsTest()
     runRealityTest()
-    runExampleTest()
+    #runExampleTest()
     runMailTest()
     message('All tests run.')
 

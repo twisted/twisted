@@ -52,7 +52,7 @@ class Hose(telnet.Telnet):
         return "character: "
 
 
-    def processPassword(self, password):
+    def telnet_Password(self, password):
         """Checks authentication against the reality; returns a boolean indicating success.
         """
         self.transport.write(telnet.IAC+ telnet.WONT+ telnet.ECHO+".....\r\n")
@@ -105,13 +105,15 @@ class Hose(telnet.Telnet):
         log.msg('requested bad username')
         self.transport.loseConnection()
 
-    def processPending(self, pend):
+    def telnet_Pending(self, pend):
         self.transport.write("Please hold...\r\n")
         return "Pending"
 
-    def processCommand(self, cmd):
+    def telnet_Command(self, cmd):
         """Execute a command as a player.
         """
+        if cmd[0] == '"':
+            cmd = 'say "%s"' % cmd[1:].replace('"', r'\"')
         self.player.execute(cmd)
         return "Command"
 

@@ -194,21 +194,21 @@ class Telnet(protocol.Protocol):
         pass
 
     def processLine(self, line):
-        self.mode = getattr(self, "process"+self.mode)(line)
+        self.mode = getattr(self, "telnet_"+self.mode)(line)
 
-    def processUser(self, user):
+    def telnet_User(self, user):
         self.username = user
         self.transport.write(IAC+WILL+ECHO+"password: ")
         return "Password"
 
-    def processPassword(self, paswd):
+    def telnet_Password(self, paswd):
         self.transport.write(IAC+WONT+ECHO+"*****\r\n")
         if not self.checkUserAndPass(self.username, paswd):
             return "Done"
         self.loggedIn()
         return "Command"
 
-    def processCommand(self, cmd):
+    def telnet_Command(self, cmd):
         return "Command"
 
     def processChunk(self, chunk):
@@ -301,7 +301,7 @@ class Shell(Telnet):
         """
         self.transport.write(data)
 
-    def processCommand(self, cmd):
+    def telnet_Command(self, cmd):
         if self.lineBuffer:
             if not cmd:
                 cmd = string.join(self.lineBuffer, '\n') + '\n\n\n'

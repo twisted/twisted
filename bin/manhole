@@ -59,12 +59,12 @@ from twisted.manhole.ui import gtkmanhole
 i = gtkmanhole.Interaction()
 lw = gtkutil.Login(i.connected,
                    i.client,
-                   initialUser=config.user,
-                   initialPassword=config.password,
-                   initialService=config.service,
-                   initialHostname=config.host,
-                   initialPortno=config.port,
-                   initialPerspective=config.perspective)
+                   initialUser=config.opts['user'],
+                   initialPassword=config.opts['password'],
+                   initialService=config.opts['service'],
+                   initialHostname=config.opts['host'],
+                   initialPortno=config.opts['port'],
+                   initialPerspective=config.opts['perspective'])
 
 i.loginWindow = lw
 
