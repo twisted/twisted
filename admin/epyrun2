@@ -149,6 +149,18 @@ class TwistedHTMLFormatter(HTMLFormatter):
                 s = self._method_to_html(uid)
                 open(filename, 'w').write(s)
 
+    #make cross-references work to twisted modules that aren't being documented
+    def _documented(self, uid):
+        value = HTMLFormatter._documented(self, uid)
+        if not document_all:
+            if not value:
+                try:
+                    if uid._name.startswith('twisted.'): #ha ha sucker
+                        return True
+                except:
+                    pass
+        return value
+
 epydoc.html.HTMLFormatter = TwistedHTMLFormatter
 
 # HACK: Only document stuff that we _tell_ you to document, you stupid
@@ -187,7 +199,7 @@ def addMod(arg, path, files):
 
 epydoc_flags = ["--html", "--latex", "--dvi", "--ps", "--pdf", "--private", "--no-private", "--show-imports", "--builtins", "--ignore-param-mismatch", "--separate-classes", "-q", "-v", "--check", "-h", "-V"]
 
-names = ['twisted'] #default, may be overriden below
+document_all = True
 #get list of modules/pkgs on cmd-line
 for i in range(1, len(sys.argv)):
     value = sys.argv[i]
@@ -200,8 +212,21 @@ for i in range(1, len(sys.argv)):
             for name in names:
                 if 'twisted' not in name:
                     raise SystemExit, "You can only specify twisted modules or packages"
+            document_all = False
             sys.argv[i:] = []
+            #if -o was specified, we need to change it to point to a tmp dir
+            #otherwise add our own -o option
+            old_out_dir = None
+            try:
+                i = sys.argv.index('-o')
+                old_out_dir = sys.argv[i+1]
+                sys.argv[i+1] = 'doc/tmp/'
+            except ValueError:
+                sys.argv[1:1] = ['-o', 'doc/tmp/']
             break
+
+if document_all:
+    names = ['twisted'] #default, may be overriden below
 
 osrv = sys.argv
 sys.argv=["IGNORE"]
@@ -230,6 +255,9 @@ sys.argv.extend(modnames)
 from twisted import copyright
 
 sys.argv[1:1] = ['-n', 'Twisted %s' % copyright.version, '-u', 'http://twistedmatrix.com/', '--no-private']
+print sys.argv
+
+#raise SystemExit
 
 # Make it easy to profile epyrun
 if 0:
@@ -237,4 +265,11 @@ if 0:
     profile.run('cli()', 'epyrun.prof')
 else:
     cli()
+
+if not document_all:
+    #move module html files in to place (skip index.html and friends since they won't be right)
+    os.system('mv doc/tmp/twisted.*.html %s' % old_out_dir)
+    #clean up - remove html files in doc/tmp/
+    os.system('rm doc/tmp/*.html doc/tmp/*.css')
+
 print 'Done!'
