@@ -78,6 +78,10 @@ class Widget(view.View):
 
     # Don't do lots of work setting up my stacks; they will be passed to me
     setupStacks = 0
+    
+    # Should we clear the node before we render the widget?
+    clearNode = 0
+    
     tagName = None
     def __init__(self, model = None, submodel = None, setup = None, controller = None, viewStack=None, *args, **kwargs):
         """
@@ -266,7 +270,10 @@ class Widget(view.View):
         else:
             parentNode = node.parentNode
             node.parentNode = None
-            new = node.cloneNode(1)
+            if self.clearNode:
+                new = node.cloneNode(0)
+            else:
+                new = node.cloneNode(1)
             node.parentNode = parentNode
             node = self.cleanNode(new)
         #print "NICE CLEAN NODE", node.toxml(), self._children
@@ -327,7 +334,8 @@ class Widget(view.View):
         will be responsible for mutating the DOM instead of this widget.
         """
         #print "setError called", self
-        id = self['id']
+        id = self.attributes.get('id', '')
+        
         self.become = self.errorFactory(self.model, message)
         self.become['id'] = id
 #        self.modelChanged({'request': request})
@@ -340,7 +348,7 @@ class Widget(view.View):
             top = top.parent
         return top
 
-    def getPattern(self, name, default=missingPattern, clone=1):
+    def getPattern(self, name, default=missingPattern, clone=1, deep=1):
         """Get a named slot from the incoming template node. Returns a copy
         of the node and all its children. If there was more than one node with
         the same slot identifier, they will be returned in a round-robin fashion.
@@ -373,7 +381,7 @@ class Widget(view.View):
         if clone:
             parentNode = slot.parentNode
             slot.parentNode = None
-            clone = slot.cloneNode(1)
+            clone = slot.cloneNode(deep)
             slot.parentNode = parentNode
             return clone
         return slot
@@ -708,19 +716,13 @@ class List(Widget):
         if not listHeader is None:
             node.appendChild(listHeader)
         data = self.getData()
-        if self._has_data(data):
+        if data:
             self._iterateData(node, self.submodel, data)
         elif not emptyList is None:
             node.appendChild(emptyList)
         if not listFooter is None:
             node.appendChild(listFooter)
         return node
-
-    def _has_data(self, data):
-        try:
-            return len(data)
-        except (TypeError, AttributeError):
-            return 0
 
     def _iterateData(self, parentNode, submodel, data):
         currentListItem = 0
@@ -756,9 +758,6 @@ class KeyedList(List):
     I can take advantage of C{listHeader}, C{listFooter} and C{emptyList}
     items just as a L{List} can.
     """
-    def _has_data(self, data):
-        return len(data.keys())
-
     def _iterateData(self, parentNode, submodel, data):
         """
         """
@@ -782,9 +781,9 @@ class KeyedList(List):
             parentNode.appendChild(newNode)
 
 
-class ColumnList(List):
+class ColumnList(Widget):
     def __init__(self, model, columns=1, start=0, end=0, *args, **kwargs):
-        List.__init__(self, model, *args, **kwargs)
+        Widget.__init__(self, model, *args, **kwargs)
         self.columns = columns
         self.start = start
         self.end = end
@@ -798,16 +797,14 @@ class ColumnList(List):
     def setEnd(self, end):
         self.end = end
 
-    def generateDOM(self, request, node):
-        node = Widget.generateDOM(self, request, node)
-        domhelpers.clearNode(node)
-
+    def setUp(self, request, node, data):
+        pattern = self.getPattern('columnListRow', clone=0)
         if self.end:
             listSize = self.end - self.start
-            if listSize > len(self.getData()):
-                listSize = len(self.getData())
+            if listSize > len(data):
+                listSize = len(data)
         else:
-            listSize = len(self.getData())
+            listSize = len(data)
         for itemNum in range(listSize):
             if itemNum % self.columns == 0:
                 row = self.getPattern('columnListRow')
@@ -820,6 +817,7 @@ class ColumnList(List):
             if not newNode.getAttribute("view"):
                 newNode.setAttribute("view", "DefaultWidget")
             row.appendChild(newNode)
+        node.removeChild(pattern)
         return node
 
 
