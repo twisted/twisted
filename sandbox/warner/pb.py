@@ -6,9 +6,9 @@ try:
 except ImportError:
     import StringIO
 
-from twisted.python import components, failure, log
+from twisted.python import failure, log
+from twisted.python.components import registerAdapter
 from twisted.internet import defer, protocol, reactor
-registerAdapter = components.registerAdapter
 
 import slicer, schema, tokens, banana, flavors
 from tokens import BananaError, Violation, ISlicer
@@ -16,7 +16,10 @@ from slicer import UnbananaFailure, BaseUnslicer, ReferenceSlicer
 ScopedSlicer = slicer.ScopedSlicer
 from flavors import getRemoteInterfaces, getRemoteInterfaceNames
 from flavors import Copyable, RemoteCopy, registerRemoteCopy
-from flavors import Referenceable, IRemoteInterface, RemoteInterfaceRegistry
+from flavors import RemoteInterfaceRegistry
+
+# names we import so that others can reach them as pb.foo
+from flavors import RemoteInterface, Referenceable
 
 class PendingRequest(object):
     active = True

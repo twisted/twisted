@@ -161,7 +161,7 @@ class Loopback:
         self.protocol.connectionLost(why)
         self.peer.connectionLost(why)
 
-class IMyTarget(pb.IRemoteInterface):
+class RIMyTarget(pb.RemoteInterface):
     # method constraints can be declared directly:
     add1 = schema.RemoteMethodSchema(_response=int, a=int, b=int)
 
@@ -173,16 +173,16 @@ class IMyTarget(pb.IRemoteInterface):
     def getName(self): return str
     disputed = schema.RemoteMethodSchema(_response=int, a=int)
 
-class IMyTarget2(pb.IRemoteInterface):
-    __remote_name__ = "IMyTargetInterface2"
+class RIMyTarget2(pb.RemoteInterface):
+    __remote_name__ = "RIMyTargetInterface2"
     sub = schema.RemoteMethodSchema(_response=int, a=int, b=int)
 
-# just like IMyTarget except for the return value of the disputed method
-class IMyTarget3(IMyTarget):
+# just like RIMyTarget except for the return value of the disputed method
+class RIMyTarget3(RIMyTarget):
     disputed = schema.RemoteMethodSchema(_response=str, a=int)
 
 class Target(pb.Referenceable):
-    implements(IMyTarget)
+    implements(RIMyTarget)
 
     def __init__(self, name=None):
         self.calls = []
@@ -198,20 +198,21 @@ class Target(pb.Referenceable):
         return 24
 
 class TargetWithoutInterfaces(Target):
-    # undeclare the IMyTarget interface
+    # undeclare the RIMyTarget interface
     implementsOnly()
 
 class BrokenTarget(pb.Referenceable):
-    implements(IMyTarget)
+    implements(RIMyTarget)
 
     def remote_add(self, a, b):
         return "error"
 
 class IFoo(components.Interface):
+    # non-remote Interface
     pass
 
 class Target2(Target):
-    implements(IMyTarget, IFoo, IMyTarget2)
+    implements(RIMyTarget, IFoo, RIMyTarget2)
 
 class TargetMixin:
 
@@ -255,18 +256,18 @@ class TargetMixin:
 class TestInterface(unittest.TestCase, TargetMixin):
 
     def testTypes(self):
-        self.failUnless(isinstance(IMyTarget, flavors.RemoteInterfaceClass))
-        self.failUnless(isinstance(IMyTarget2, flavors.RemoteInterfaceClass))
-        self.failUnless(isinstance(IMyTarget3, flavors.RemoteInterfaceClass))
+        self.failUnless(isinstance(RIMyTarget, flavors.RemoteInterfaceClass))
+        self.failUnless(isinstance(RIMyTarget2, flavors.RemoteInterfaceClass))
+        self.failUnless(isinstance(RIMyTarget3, flavors.RemoteInterfaceClass))
 
     def testRegister(self):
         reg = pb.RemoteInterfaceRegistry
-        self.failUnlessEqual(reg["IMyTarget"], IMyTarget)
-        self.failUnlessEqual(reg["IMyTargetInterface2"], IMyTarget2)
+        self.failUnlessEqual(reg["RIMyTarget"], RIMyTarget)
+        self.failUnlessEqual(reg["RIMyTargetInterface2"], RIMyTarget2)
 
     def testDuplicateRegistry(self):
         try:
-            class IMyTarget(pb.IRemoteInterface):
+            class RIMyTarget(pb.RemoteInterface):
                 def foo(self, bar=int): return int
         except flavors.DuplicateRemoteInterfaceError:
             pass
@@ -279,18 +280,18 @@ class TestInterface(unittest.TestCase, TargetMixin):
         self.setupBrokers()
         rr, target = self.setupTarget(Target())
         ilist = pb.getRemoteInterfaces(target)
-        self.failUnlessEqual(ilist, [IMyTarget])
+        self.failUnlessEqual(ilist, [RIMyTarget])
         inames = pb.getRemoteInterfaceNames(target)
-        self.failUnlessEqual(inames, ["IMyTarget"])
-        self.failUnlessIdentical(pb.RemoteInterfaceRegistry["IMyTarget"],
-                                 IMyTarget)
+        self.failUnlessEqual(inames, ["RIMyTarget"])
+        self.failUnlessIdentical(pb.RemoteInterfaceRegistry["RIMyTarget"],
+                                 RIMyTarget)
         
         rr, target = self.setupTarget(Target2())
         ilist = pb.getRemoteInterfaceNames(target)
-        self.failUnlessEqual(ilist, ["IMyTarget",
-                                     "IMyTargetInterface2"])
+        self.failUnlessEqual(ilist, ["RIMyTarget",
+                                     "RIMyTargetInterface2"])
         self.failUnlessIdentical(\
-            pb.RemoteInterfaceRegistry["IMyTargetInterface2"], IMyTarget2)
+            pb.RemoteInterfaceRegistry["RIMyTargetInterface2"], RIMyTarget2)
 
 
     def testInterface2(self):
@@ -400,10 +401,10 @@ class TestCall(unittest.TestCase, TargetMixin):
     def testFailRemoteArgConstraint(self):
         # the brokers disagree about the Interfaces, so the sender thinks
         # they're ok but the recipient catches the violation
-        rr, target = self.setupTarget3(Target(), ["IMyTarget2"])
+        rr, target = self.setupTarget3(Target(), ["RIMyTarget2"])
         d = rr.callRemote("sub", a=1, b=2)
-        # IMyTarget2 has a 'sub' method. But IMyTarget (the real interface)
-        # does not.
+        # RIMyTarget2 has a 'sub' method. But RIMyTarget (the real
+        # interface) does not.
         self.failIf(target.calls)
         f = unittest.deferredError(d, 2)
         self.failUnless(str(f).find("Violation, method 'sub' not defined in any RemoteInterface") != -1)
@@ -415,11 +416,11 @@ class TestCall(unittest.TestCase, TargetMixin):
         self.failUnless(str(f).find("Violation, in outbound method results") != -1)
 
     def testFailLocalReturnConstraint(self):
-        rr, target = self.setupTarget3(Target(), ["IMyTarget3"])
+        rr, target = self.setupTarget3(Target(), ["RIMyTarget3"])
         d = rr.callRemote("disputed", a=1)
-        # IMyTarget.disputed returns an int, but the local side believes it
-        # uses IMyTarget3 which returns a string. This should be rejected by
-        # the local side when the response comes back
+        # RIMyTarget.disputed returns an int, but the local side believes it
+        # uses RIMyTarget3 which returns a string. This should be rejected
+        # by the local side when the response comes back
         self.failIf(target.calls)
         f = unittest.deferredError(d, 2)
         self.failUnless(str(f).find("Violation, INT token rejected by StringConstraint in inbound method results") != -1)
@@ -602,7 +603,7 @@ class TestReferenceable(unittest.TestCase, TargetMixin):
         self.failUnless(isinstance(res, pb.RemoteReference))
         self.failUnlessEqual(res.broker, self.targetBroker)
         self.failUnless(self.callingBroker.getReferenceable(res.refID) is r)
-        self.failUnlessEqual(res.interfaceNames, ['IMyTarget'])
+        self.failUnlessEqual(res.interfaceNames, ['RIMyTarget'])
 
     def testRef2(self):
         r = Target()
@@ -616,7 +617,7 @@ class TestFactory(unittest.TestCase):
         port = reactor.listenTCP(0, s, interface="127.0.0.1")
         portnum = port.getHost().port
         d = pb.callRemoteURL_TCP("localhost", portnum, "",
-                                 IMyTarget, "add", a=1, b=2)
+                                 RIMyTarget, "add", a=1, b=2)
         res = dr(d)
         self.failUnlessEqual(res, 3)
 
@@ -626,7 +627,7 @@ class TestFactory(unittest.TestCase):
         port = reactor.listenTCP(0, s, interface="127.0.0.1")
         portnum = port.getHost().port
         d = pb.callRemoteURL_TCP("localhost", portnum, "",
-                                 IMyTarget, "missing", a=1, b=2)
+                                 RIMyTarget, "missing", a=1, b=2)
         f = de(d)
         # interesting. the Violation is local, so f.type is the actual
         # tokens.Violation class (rather than just a string). If the failure
@@ -645,7 +646,7 @@ class TestFactory(unittest.TestCase):
         port = reactor.listenTCP(0, s, interface="127.0.0.1")
         portnum = port.getHost().port
         d = pb.callRemoteURL_TCP("localhost", portnum, "two",
-                                 IMyTarget, "getName")
+                                 RIMyTarget, "getName")
         res = dr(d)
         self.failUnlessEqual(res, "gabriel")
 

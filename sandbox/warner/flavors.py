@@ -2,50 +2,63 @@
 
 import types
 
+from zope.interface import interface
 from zope.interface import implements, providedBy
-from zope.interface.interface import InterfaceClass
-from twisted.python import components, reflect
-registerAdapter = components.registerAdapter
-Interface = components.Interface
+from twisted.python import reflect
+from twisted.python.components import registerAdapter
+Interface = interface.Interface
 from twisted.internet.defer import Deferred
 
 import schema, slicer, tokens
 from tokens import ISlicer, BananaError
 
-class RemoteInterfaceClass(components.MetaInterface):
+
+class RemoteInterfaceClass(interface.InterfaceClass):
     def __init__(self, iname, bases=(), attrs=None, __module__=None):
         if attrs is not None:
-            # determine all remotely-callable methods
-            methods = [name for name in attrs.keys()
-                       if ((type(attrs[name]) == types.FunctionType and
-                            not name.startswith("_")) or
-                           schema.IConstraint.providedBy(attrs[name]))]
+            try:
+                remote_name = self._parseRemoteInterface(iname, attrs)
+            except:
+                print "error parsing remote-interface attributes"
+                raise
 
-            # turn them into constraints
-            constraints = {}
-            for name in methods:
-                m = attrs[name]
-                if not schema.IConstraint.providedBy(m):
-                    m = schema.RemoteMethodSchema(method=m)
-                constraints[name] = m
-                # delete the methods, so zope's InterfaceClass doesn't see them
-                del attrs[name]
-
-            # and see if there is a __remote_name__ . We delete it because
-            # InterfaceClass doesn't like arbitrary attributes
-            remote_name = attrs.get("__remote_name__", iname)
-            if attrs.has_key("__remote_name__"):
-                del attrs["__remote_name__"]
-                
-            self.__remote_stuff__ = (methods, constraints, remote_name)
-
-        # now let the MetaInterface at it
-        components.MetaInterface.__init__(self, iname, bases, attrs,
+        # now let the normal InterfaceClass take over
+        interface.InterfaceClass.__init__(self, iname, bases, attrs,
                                           __module__)
 
         # auto-register the interface
         if attrs is not None:
-            registerRemoteInterface(self, remote_name)
+            try:
+                registerRemoteInterface(self, remote_name)
+            except:
+                print "error registering RemoteInterface"
+                raise
+
+    def _parseRemoteInterface(self, iname, attrs):
+        # determine all remotely-callable methods
+        methods = [name for name in attrs.keys()
+                   if ((type(attrs[name]) == types.FunctionType and
+                        not name.startswith("_")) or
+                       schema.IConstraint.providedBy(attrs[name]))]
+
+        # turn them into constraints
+        constraints = {}
+        for name in methods:
+            m = attrs[name]
+            if not schema.IConstraint.providedBy(m):
+                m = schema.RemoteMethodSchema(method=m)
+            constraints[name] = m
+            # delete the methods, so zope's InterfaceClass doesn't see them
+            del attrs[name]
+
+        # and see if there is a __remote_name__ . We delete it because
+        # InterfaceClass doesn't like arbitrary attributes
+        remote_name = attrs.get("__remote_name__", iname)
+        if attrs.has_key("__remote_name__"):
+            del attrs["__remote_name__"]
+
+        self.__remote_stuff__ = (methods, constraints, remote_name)
+        return remote_name
 
     def remoteGetMethodNames(self):
         return self.__remote_stuff__[0]
@@ -54,8 +67,10 @@ class RemoteInterfaceClass(components.MetaInterface):
     def remoteGetRemoteName(self):
         return self.__remote_stuff__[2]
 
-IRemoteInterface = RemoteInterfaceClass("IRemoteInterface",
-                                        __module__="pb.flavors")
+RemoteInterface = RemoteInterfaceClass("RemoteInterface",
+                                       __module__="pb.flavors")
+
+
 
 def getRemoteInterfaces(obj):
     """Get a list of all RemoteInterfaces supported by the object."""

@@ -1,8 +1,7 @@
 #! /usr/bin/python
 
 from twisted.python.failure import Failure
-from twisted.python.components import Interface
-from zope.interface import Attribute
+from zope.interface import Attribute, Interface
 
 # delimiter characters.
 LIST     = chr(0x80) # old
