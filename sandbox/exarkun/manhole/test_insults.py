@@ -8,6 +8,7 @@ from twisted.test.proto_helpers import StringTransport
 from insults import ServerProtocol, ClientProtocol
 from insults import CS_UK, CS_US, CS_DRAWING, CS_ALTERNATE, CS_ALTERNATE_SPECIAL
 from insults import G0, G1, G2, G3
+from insults import KAM, IRM, AUTO_WRAP, AUTO_REPEAT
 
 class ByteGroupingsMixin:
     protocolFactory = None
@@ -190,3 +191,13 @@ class ClientControlSequences(unittest.TestCase):
         self.proto.expects(pmock.once()).nextLine().after("b")
 
         self.parser.dataReceived("\x1bD\x1bM\x1bE")
+
+    def testModes(self):
+        self.proto.expects(pmock.once()).setModes(pmock.eq([IRM, AUTO_WRAP])).id("a")
+        self.proto.expects(pmock.once()).resetModes(pmock.eq([AUTO_REPEAT, KAM])).after("a")
+
+        self.parser.dataReceived(
+            "\x1b[" + ';'.join(map(str, [IRM, AUTO_WRAP])) + "h")
+
+        self.parser.dataReceived(
+            "\x1b[" + ';'.join(map(str, [AUTO_REPEAT, KAM])) + "l")

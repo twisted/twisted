@@ -784,11 +784,21 @@ class ClientProtocol(protocol.Protocol):
 
         def h(self, proto, handler, buf):
             # XXX - Handle '?' to introduce ANSI-Compatible private modes.
-            handler.setModes(buf.split(';'))
+            try:
+                modes = map(int, buf.split(';'))
+            except ValueError:
+                handler.unhandledControlSequence('\x1b[' + buf + 'h')
+            else:
+                handler.setModes(modes)
 
         def l(self, proto, handler, buf):
             # XXX - Handle '?' to introduce ANSI-Compatible private modes.
-            handler.resetModes(buf.split(';'))
+            try:
+                modes = map(int, buf.split(';'))
+            except ValueError:
+                handler.unhandledControlSequence('\x1b[' + buf + 'l')
+            else:
+                handler.resetModes(modes)
 
         def r(self, proto, handler, buf):
             parts = buf.split(';')
