@@ -1163,10 +1163,14 @@ class IFTPShell(components.Interface):
 
 
 try:
-    import pwd, grp
+    from pwd import getpwuid
+    from grp import getgrgid
 except ImportError:
     # not a POSIX platform
-    pass
+    def getpwuid(uid):
+        return str(uid)
+    def getgrgid(gid):
+        return str(gid)
 
 def _callWithDefault(default, _f, *_a, **_kw):
     try:
@@ -1178,7 +1182,7 @@ def _memberGIDs(gid):
     """returns a list of all gid's that are a member of group with id
     """
     gr_mem = 3
-    return grp.getgrgid(gid)[gr_mem]
+    return getgrgid(gid)[gr_mem]
 
 def _testPermissions(uid, gid, spath, mode='r'):
     """checks to see if uid has proper permissions to access path with mode
@@ -1241,7 +1245,7 @@ class FTPAnonymousShell(object):
         # TODO: self.user needs to be set to something!!!
         if self.user is None:
             uid = os.getuid()
-            self.user = pwd.getpwuid(os.getuid())[0]
+            self.user = getpwuid(os.getuid())[0]
             self.getUserUIDAndGID()
         #if self.tld is not None:
             #self.filepath = python.FilePath(self.tld)
@@ -1260,7 +1264,7 @@ class FTPAnonymousShell(object):
             log.msg("""
 COULD NOT SET ANONYMOUS UID! Name %s could not be found.
 We will continue using the user %s.
-""" % (self.user, pwd.getpwuid(os.getuid())[pw_name]))
+""" % (self.user, getpwuid(os.getuid())[pw_name]))
 
 
     def pwd(self):
@@ -1343,8 +1347,6 @@ We will continue using the user %s.
         @attention: this has only been tested on posix systems, I don't
             know at this point whether or not it will work on win32
         """
-        import pwd, grp, time
-
         TYPE, PMSTR, NLINKS, OWN, GRP, SZ, MTIME, NAME = range(8)
 
         if os.path.isdir(spath):
@@ -1374,8 +1376,8 @@ We will continue using the user %s.
                 type = dtype(pstat.st_mode)
                 pmstr = pmask(pstat.st_mode)
                 nlinks = str(pstat.st_nlink)
-                owner = _callWithDefault([str(pstat.st_uid)], pwd.getpwuid, pstat.st_uid)[0]
-                group = _callWithDefault([str(pstat.st_gid)], grp.getgrgid, pstat.st_gid)[0]
+                owner = _callWithDefault([str(pstat.st_uid)], getpwuid, pstat.st_uid)[0]
+                group = _callWithDefault([str(pstat.st_gid)], getgrgid, pstat.st_gid)[0]
                 size = str(pstat.st_size)
                 mtime = time.strftime('%b %d %I:%M', time.gmtime(pstat.st_mtime))
                 name = os.path.split(item)[1]
