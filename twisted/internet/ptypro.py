@@ -1,5 +1,3 @@
-# -*- test-case-name: twisted.test.test_process -*-
-
 # Twisted, the Framework of Your Internet
 # Copyright (C) 2001 Matthew W. Lefkowitz
 #
@@ -16,47 +14,22 @@
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
-"""UNIX Process management.
+"""UNIX PTY Process management.
 """
 
 # System Imports
-import os, sys, traceback, select, errno, pty
+import os, sys, traceback, errno, pty
 
 from twisted.persisted import styles
 from twisted.python import log
 
 # Sibling Imports
-import abstract, main, fdesc
+import abstract, main, fdesc, process
 from main import CONNECTION_LOST, CONNECTION_DONE
 
-def reapProcess(*args):
-    """Reap as many processes as possible (without blocking) via waitpid.
-
-    This is called when sigchild is caught or a Process object loses its
-    "connection" (stdout is closed) This ought to result in reaping all
-    zombie processes, since it will be called twice as often as it needs
-    to be.
-
-    (Unfortunately, this is a slightly experimental approach, since
-    UNIX has no way to be really sure that your process is going to
-    go away w/o blocking.  I don't want to block.)
-    """
-    try:
-        os.waitpid(0,os.WNOHANG)
-    except:
-        pass
 
 class Process(abstract.FileDescriptor, styles.Ephemeral):
-    """An operating-system Process.
-
-    This represents an operating-system process with standard input,
-    standard output, and standard error streams connected to it.
-
-    On UNIX, this is implemented using fork(), exec(), pipe()
-    and fcntl(). These calls may not exist elsewhere so this
-    code is not cross-platform. (also, windows can only select
-    on sockets...)
-    """
+    """An operating-system Process that uses PTY support."""
 
     def __init__(self, command, args, environment, path, proto,
                  uid=None, gid=None):
@@ -92,11 +65,6 @@ class Process(abstract.FileDescriptor, styles.Ephemeral):
         except:
             log.deferr()
 
-    def closeStdin(self):
-        """Call this to close standard input on this process.
-        """
-        self.writer.loseConnection()
-
     def doRead(self):
         """Called when my standard output stream is ready for reading.
         """
@@ -115,7 +83,7 @@ class Process(abstract.FileDescriptor, styles.Ephemeral):
             self.proto.processEnded()
         except:
             log.deferr()
-            reapProcess()
+            process.reapProcess()
 
     def connectionLost(self):
         """I call this to clean up when one or all of my connections has died.
@@ -148,5 +116,3 @@ class Process(abstract.FileDescriptor, styles.Ephemeral):
     def write(self, data):
         self.stopReading()
         abstract.FileDescriptor.write(self, data)
-         
-
