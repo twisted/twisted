@@ -266,27 +266,28 @@ class ViewPoint(Referenceable):
     that perspective as a first argument, so that it can know who is calling
     it.
 
-    While Viewable objects will be converted to Proxies by default when they are
-    returned from or sent as arguments to a remote method, any object may be
-    manually proxied as well.
+    While Viewable objects will be converted to Proxies by default when they
+    are returned from or sent as arguments to a remote method, any object may
+    be manually proxied as well.
 
-    This can be useful when dealing with Perspectives, Copyables, and Cacheables.
-    It is legal to implement a method as such on a perspective::
+    This can be useful when dealing with Perspectives, Copyables, and
+    Cacheables.  It is legal to implement a method as such on a perspective::
 
      | def perspective_getViewPointForOther(self, name):
      |     return ViewPoint(self, self.service.getPerspectiveNamed(name))
 
     This will allow you to have references to Perspective objects in two
     different ways.  One is through the initial 'attach' call -- each peer will
-    have a RemoteReference to their perspective directly.  The other is through this
-    method; each peer can get a RemoteReference to all other perspectives in the
-    service; but that RemoteReference will be to a ViewPoint, not directly to the object.
+    have a RemoteReference to their perspective directly.  The other is through
+    this method; each peer can get a RemoteReference to all other perspectives
+    in the service; but that RemoteReference will be to a ViewPoint, not
+    directly to the object.
 
     The practical offshoot of this is that you can implement 2 varieties of
     remotely callable methods on this Perspective; view_xxx and
-    perspective_xxx.  view_xxx methods will follow the rules for ViewPoint methods
-    (see ViewPoint.remoteMessageReceived), and perspective_xxx methods will follow
-    the rules for Perspective methods.
+    perspective_xxx.  view_xxx methods will follow the rules for ViewPoint
+    methods (see ViewPoint.remoteMessageReceived), and perspective_xxx methods
+    will follow the rules for Perspective methods.
     """
 
     def __init__(self, perspective, object):
@@ -329,24 +330,14 @@ class Viewable(Serializable):
     """I will be converted to a ViewPoint when passed to or returned from a remote method.
 
     The beginning of a peer's interaction with a PB Service is always through a
-    perspective.  However, if a perspective_xxx method returns a Viewable, it will
-    be serialized to the peer as a response to that method.
-
+    perspective.  However, if a perspective_xxx method returns a Viewable, it
+    will be serialized to the peer as a response to that method.
     """
-    proxy = ViewPoint
 
     def remoteSerialize(self, broker):
-        """Serialize a proxy for me.
+        """Serialize a ViewPoint for me and the perspective of the given broker.
         """
-        # getPerspective will have to return different values from different
-        # threads, if this is ever to be made thread safe!
-        # ^^ dunno who wrote this, but getPerspective() in this context is
-        # definitely thread-specific state, since these methods are always
-        # called inside the serialize() call on a broker.  I suspect that
-        # that whole call would need to be synchronized in order to get
-        # thread safety. No need for this to be thread safe now, as far as I
-        # know though.  --glyph
-        return self.proxy(broker.getPerspective(), self).remoteSerialize(broker)
+        return ViewPoint(broker.getPerspective(), self).remoteSerialize(broker)
 
 
 
@@ -544,11 +535,11 @@ class Cacheable(Copyable):
         """Get state to cache on the client and client-cache reference to observe locally.
 
         This is similiar to getStateToCopyFor, but it additionally passes in a
-        reference to the client-side RemoteCache instance that will be created when
-        it is unserialized.  This allows Cacheable instances to keep their RemoteCaches
-        up to date when they change, such that no changes can occurr between
-        the point at which the state is initially copied and the client
-        receives it that are not propogated.
+        reference to the client-side RemoteCache instance that will be created
+        when it is unserialized.  This allows Cacheable instances to keep their
+        RemoteCaches up to date when they change, such that no changes can
+        occurr between the point at which the state is initially copied and the
+        client receives it that are not propogated.
         """
         return self.getStateToCopyFor(perspective)
     
@@ -586,16 +577,17 @@ class Cacheable(Copyable):
 class RemoteReference(Serializable, styles.Ephemeral):
     """This is a translucent reference to a remote object.
 
-    I may be a reference to a ViewPoint, a Referenceable, or a Perspective.  From the
-    client's perspective, it is not possible to tell which except by convention.
+    I may be a reference to a ViewPoint, a Referenceable, or a Perspective.
+    From the client's perspective, it is not possible to tell which except by
+    convention.
 
     I am a "translucent" reference because although no additional bookkeeping
     overhead is given to the application programmer for manipulating a
     reference, return values are asynchronous.
 
-    In order to get a return value from a RemoteReference method, you must pass a
-    callback in as a 'pbcallback'.  Errors can be detected with a 'pberrback'.
-    For example::
+    In order to get a return value from a RemoteReference method, you must pass
+    a callback in as a 'pbcallback'.  Errors can be detected with a
+    'pberrback'.  For example::
 
       | def doIt(reference):
       |     reference.doIt("hello","world", frequency=2,
@@ -639,7 +631,7 @@ class RemoteReference(Serializable, styles.Ephemeral):
 
 
     def remoteInstanceDo(self, key, args, kw):
-        """Asynchronously send a named message to the object which I proxy for.
+        """Asynchronously send a named message to the object which I refer to.
         """
         callback = kw.get("pbcallback")
         errback = kw.get("pberrback")
@@ -673,10 +665,10 @@ class RemoteReference(Serializable, styles.Ephemeral):
 class RemoteCacheProxy(Serializable):
     """I am an ugly implementation detail.
     
-    Cacheable objects have to be manually reference counted in order to properly
-    do handshaking on removing references to them.  I aid in that; when you
-    *think* you have a reference to a RemoteCache, you actually have a reference to
-    me.
+    Cacheable objects have to be manually reference counted in order to
+    properly do handshaking on removing references to them.  I aid in that;
+    when you *think* you have a reference to a RemoteCache, you actually have a
+    reference to me.
     """
     __inited = 0
     def __init__(self, broker, instance, luid):
