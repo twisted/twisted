@@ -33,22 +33,21 @@ reactorTypes = {
     }
 
 
+class EverythingEphemeral(styles.Ephemeral):
+    def __getattr__(self, key):
+        try:
+            return getattr(mainMod, key)
+        except AttributeError:
+            if initRun:
+                raise
+            else:
+                log.msg("Warning!  Loading from __main__: %s" % key)
+                return styles.Ephemeral()
+
 def createApplicationDecoder(config):
-    mainMod = sys.modules['__main__']
-
-    # Twisted Imports
-    class EverythingEphemeral(styles.Ephemeral):
-        def __getattr__(self, key):
-            try:
-                return getattr(mainMod, key)
-            except AttributeError:
-                if initRun:
-                    raise
-                else:
-                    log.msg("Warning!  Loading from __main__: %s" % key)
-                    return styles.Ephemeral()
-
-    # Application creation/unserializing
+    mode = 'r'
+    filename = os.path.abspath(config['python'] or config['xml'] or
+                               config['source'] or config['file'])
     if config['python']:
         def decode(filename, data):
             log.msg('Loading %s...' % (filename,))
@@ -57,20 +56,19 @@ def createApplicationDecoder(config):
             try:
                 return d['application']
             except KeyError:
-                log.msg("Error - python file %r must set a variable named "
-                        "'application', an instance of "
-                        "twisted.internet.app.Application. No such variable "
-                        "was found!" % filename)
-                sys.exit()
-        filename = os.path.abspath(config['python'])
-        mode = 'r'
+                raise RuntimeError(
+                        "Error - python file %r must set a variable named "
+                        "'application', which implements the Application "
+                        "protocol. No such variable " "was found!" % filename)
     else:
         if config['xml']:
             from twisted.persisted.marmalade import unjellyFromXML as load
         elif config['source']:
             from twisted.persisted.aot import unjellyFromSource as load
         else:
-            load=pickle.load
+            from cPickle import load
+            mode = 'rb'
+        mainMod = sys.modules['__main__']
         def decode(filename, data):
             log.msg("Loading %s..." % (filename,))
             sys.modules['__main__'] = EverythingEphemeral()
@@ -78,8 +76,6 @@ def createApplicationDecoder(config):
             sys.modules['__main__'] = mainMod
             styles.doUpgrade()
             return application
-        filename = config['xml'] or config['source'] or config['file']
-        mode = 'r'+((config['file'] and 'b') or '')
     return filename, decode, mode
 
 
@@ -120,10 +116,7 @@ def runReactor(config, oldstdout, oldstderr):
         sys.stdout = oldstdout
         sys.stderr = oldstderr
         if runtime.platformType == 'posix':
-            def debugSignalHandler(*args):
-                """Break into debugger."""
-                pdb.set_trace()
-            signal.signal(signal.SIGINT, debugSignalHandler)
+            signal.signal(signal.SIGINT, lambda *args: pdb.set_trace())
         pdb.run("reactor.run()", globals(), locals())
     else:
         reactor.run()
