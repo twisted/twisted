@@ -2484,3 +2484,15 @@ under. very interesting. want some pictures? :)
 <Tv> What kind of dope is that? md5 digests _are_ 16 bytes.
 <warner> don't trust the hash, man
 %
+<bruce> hmmm. i didn't get my 11pm cron output email.
+* bruce forgets which cronjob that is though.
+<skreech> bruce: nuclear war has erupted. haven't you heard?
+<bruce> (or what machine it runs on)
+<bruce> (or what user it runs as on what machine)
+<glyph> skreech: in 2002, war was beginning
+* skreech makes a "boooosshhh" sound.
+<skreech> glyph: what happen?
+<glyph> skreech: somebody set up bruce the cron, apparently
+<skreech> glyph: main vi turn on
+%
+
