@@ -29,9 +29,9 @@ class Platform:
     """Gives us information about the platform we're running on"""
     
     def __init__(self):
-        if os.name is 'nt':
+        if os.name == 'nt':
             self.type = 'win32'
-        elif os.name is 'posix':
+        elif os.name == 'posix':
             self.type = 'posix'
         elif os.name in ('java', 'org.python.modules.os'):
             self.type = 'java'
