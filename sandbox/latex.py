@@ -70,22 +70,24 @@ class LatexSpitter(XMLParser):
     start_h2 = start_h3 = start_h4 = _headerStart
 
     mapStart_title = '\\title{'
-    mapEnd_title = mapEnd_h2 = mapEnd_h3 = mapEnd_h4 = '}'
+    mapEnd_title = mapEnd_h2 = mapEnd_h3 = mapEnd_h4 = '}\n'
 
-    mapStart_html = '\\documentclass{article}'
+    mapStart_html = '\\documentclass{article}\n'
     mapStart_body = '\\begin{document}\n\\maketitle\n'
     mapEnd_body = '\\end{document}'
 
-    mapStart_dl = mapStart_ul = '\\begin{itemize}'
-    mapEnd_dl = mapEnd_ul = '\\end{itemize}'
+    mapStart_dl = mapStart_ul = '\\begin{itemize}\n'
+    mapEnd_dl = mapEnd_ul = '\\end{itemize}\n'
 
-    mapStart_ol = '\\begin{enumerate}'
-    mapEnd_ol = '\\end{enumerate}'
+    mapStart_ol = '\\begin{enumerate}\n'
+    mapEnd_ol = '\\end{enumerate}\n'
 
     mapStart_li = '\\item '
+    mapEnd_li = '\n'
 
     mapStart_dt = '\\item{'
     mapEnd_dt = '}'
+    mapEnd_dd = '\n'
 
     mapStart_p = '\n\n'
 
