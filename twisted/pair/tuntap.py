@@ -58,9 +58,9 @@ class TuntapPort(base.BasePort):
         try:
             fd, name = opentuntap(name=self.interface,
                                   ethernet=self.ethernet,
-                                  packetinfo=1)
+                                  packetinfo=0)
         except OSError, e:
-            raise error.CannotListenError, (self.interface, e)
+            raise error.CannotListenError, (None, self.interface, e)
         fdesc.setNonBlocking(fd)
         self.interface = name
         self.connected = 1
@@ -80,9 +80,9 @@ class TuntapPort(base.BasePort):
             try:
                 data = os.read(self.fd, self.maxPacketSize)
                 read += len(data)
-                pkt = TuntapPacketInfo(data)
-                self.protocol.datagramReceived(pkt.data,
-                                               partial=pkt.isPartial(),
+#                pkt = TuntapPacketInfo(data)
+                self.protocol.datagramReceived(data,
+                                               partial=0 # pkt.isPartial(),
                                                )
             except OSError, e:
                 if e.errno in (errno.EWOULDBLOCK,):
@@ -99,9 +99,9 @@ class TuntapPort(base.BasePort):
 
     def write(self, datagram):
         """Write a datagram."""
-        header = makePacketInfo(0, 0)
+#        header = makePacketInfo(0, 0)
         try:
-            return os.write(self.fd, header + datagram)
+            return os.write(self.fd, datagram)
         except IOError, e:
             if e.errno == errno.EINTR:
                 return self.write(datagram)
