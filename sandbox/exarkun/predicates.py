@@ -18,6 +18,7 @@ class Address:
     def __ne__(self, address):
         return _Address(address, operator.ne)
 
+
 class _Address:
     subjugates = None
 
@@ -26,8 +27,8 @@ class _Address:
         if len(parts) == 1:
             parts.append('255.255.255.255')
         self.host, self.mask = parts
-        self.host = atoi(self.host)
         self.mask = atoi(self.mask)
+        self.host = atoi(self.host) & self.mask
         self.f = f
     
     def check(self, resource, request):
@@ -128,3 +129,4 @@ Contradiction = Contradiction()
 Address = Address()
 Connections = Connections()
 UniqueHosts = UniqueHosts()
+

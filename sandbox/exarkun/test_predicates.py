@@ -57,6 +57,7 @@ class AddressTestCase(unittest.TestCase):
     def testInequal(self):
         a = (Address != '127.0.0.1/255.255.255.255')
 
+        self.request.client = ('TCP', '127.0.0.1', 9478)
         self.failIf(a.check(self.resource, self.request))
         
         i = 0
@@ -65,7 +66,8 @@ class AddressTestCase(unittest.TestCase):
             ip = '%d.%d.%d.%d' % tuple(struct.unpack('BBBB', struct.pack('I', i)))
             if ip != '127.0.0.1':
                 self.request.client = ('TCP', ip, 12345)
-                self.failUnless(a.check(self.resource, self.request))
+                self.failUnless(a.check(self.resource, self.request),
+                    'Erroneously disallowing ' + ip)
             i = i + step
 
     def testInequalSubnetMask(self):
