@@ -275,15 +275,18 @@ class DictClient(basic.LineReceiver):
         """override to catch succesful MATCH"""
         pass
 
+
 class InvalidResponse(Exception):
     pass
 
+
 class DictLookup(DictClient):
     """Utility class for a single dict transaction. To be used with DictLookupFactory"""
+
     def protocolError(self, reason):
         if not self.factory.done:
             self.factory.d.errback(InvalidResponse(reason))
-	    self.done = 1
+	    self.factory.clientDone()
 
     def dictConnected(self):
         if self.factory.queryType == "define":
@@ -293,23 +296,24 @@ class DictLookup(DictClient):
 
     def defineFailed(self, reason):
         self.factory.d.callback([])
-        self.factory.done = 1
+        self.factory.clientDone()
         self.transport.loseConnection()
 
     def defineDone(self, result):
         self.factory.d.callback(result)
-        self.factory.done = 1
+        self.factory.clientDone()
         self.transport.loseConnection()
 
     def matchFailed(self, reason):
         self.factory.d.callback([])
-        self.factory.done = 1
+        self.factory.clientDone()
         self.transport.loseConnection()
 
     def matchDone(self, result):
         self.factory.d.callback(result)
-        self.factory.done = 1
+        self.factory.clientDone()
         self.transport.loseConnection()
+
 
 class DictLookupFactory(protocol.ClientFactory):
     """Utility factory for a single dict transaction"""
@@ -322,6 +326,11 @@ class DictLookupFactory(protocol.ClientFactory):
         self.d = d
         self.done = 0
 
+    def clientDone(self):
+        """Called by client when done."""
+        self.done = 1
+        del self.d
+    
     def clientConnectionFailed(self, connector, error):
         self.d.errback(error)
 
@@ -333,6 +342,7 @@ class DictLookupFactory(protocol.ClientFactory):
         p = self.protocol()
         p.factory = self
         return p
+
 
 def define(host, port, database, word):
     """Look up a word using a dict server"""
