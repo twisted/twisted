@@ -34,9 +34,9 @@ class InputHandler(controller.Controller):
     contained inside of C{self.model} instead of directly on C{self.model}.
     For example, a Handler whose C{model} has been set to C{"foo"} will handle
     C{self.model.foo}.
-    
+
     The handler's job is to interpret the request and:
-    
+
     1. Check for valid input
     2. If the input is valid, update the model
     3. Use any special API of the view widget to change the view (other
@@ -46,7 +46,7 @@ class InputHandler(controller.Controller):
        the page is rendered, but these values could be used to determine what
        page to display next, etc
     """
-    invalidErrorText = "Error!"        
+    invalidErrorText = "Error!"
 
     def getInput(self, request):
         """
@@ -64,7 +64,7 @@ class InputHandler(controller.Controller):
             success.addErrback(utils.renderFailure, request)
             return (None, success)
         return self.dispatchCheckResult(success, request, data)
-    
+
     def dispatchCheckResult(self, success, request, data):
         if success is not None:
             if success:
@@ -81,7 +81,7 @@ class InputHandler(controller.Controller):
         and return a boolean indicating validity.
         """
         raise NotImplementedError
-    
+
     def handleValid(self, request, data):
         """
         It has been determined that the input for this handler is valid;
@@ -97,7 +97,7 @@ class InputHandler(controller.Controller):
         self.view.setError(request, self.invalidErrorText)
 
     _getMyModel = utils._getModel
-    
+
     def commit(self, request, node, data):
         """
         It has been determined that the input for the entire form is completely
@@ -186,7 +186,7 @@ class Float(SingleValue):
 wcfactory_Float = controllerFactory(Float)
 
 
-class List(InputHandler):        
+class List(InputHandler):
     def check(self, request, data):
         return None
 
@@ -199,7 +199,7 @@ class NewObject(SingleValue):
     If it is, create the object. If not, tell the user why.
     """
     classToCreate = None
-    
+
     def check(self, request, name):
         """
         Check to see if the name the user typed is a valid object name.
@@ -215,7 +215,7 @@ class NewObject(SingleValue):
         else:
             self.errorReason = "The name %s is already in use." % name
         return 0
-    
+
     def handleValid(self, request, name):
         """
         The user has entered a valid project name and chosen to create the project.
@@ -234,4 +234,3 @@ class NewObject(SingleValue):
         self.view.setError(request, self.errorReason)
 
 wcfactory_NewObject = controllerFactory(NewObject)
-

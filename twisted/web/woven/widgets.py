@@ -90,7 +90,7 @@ class Widget(view.View):
         self.attributes = {}
         self.slots = {}
         self._children = []
-    
+
     def initialize(self):
         """
         Use this method instead of __init__ to initialize your Widget, so you
@@ -146,16 +146,16 @@ class Widget(view.View):
     def add(self, item):
         """
         Add `item' to the children of the resultant DOM Node of this widget.
-        
+
         @type item: A DOM node or L{Widget}.
         """
         self._children.append(item)
-        
+
     def insert(self, index, item):
         """
         Insert `item' at `index' in the children list of the resultant DOM Node
         of this widget.
-        
+
         @type item: A DOM node or L{Widget}.
         """
         self._children.insert(index, item)
@@ -177,7 +177,7 @@ class Widget(view.View):
         """
         #if node.hasAttribute('model')
         #    node.removeAttribute('model')
-        
+
         if node.hasAttribute('controller'):
             node.removeAttribute('controller')
         if node.hasAttribute('view'):
@@ -191,7 +191,7 @@ class Widget(view.View):
             data.addErrback(utils.renderFailure, request)
             return data
         return self._regenerate(request, node, data)
-    
+
     def _regenerate(self, request, node, data):
         self._reset()
         self.setUp(request, node, data)
@@ -201,7 +201,7 @@ class Widget(view.View):
         # templateNode from the original HTML
         result = self.generateDOM(request, self.templateNode or node)
         return result
-    
+
     def setDataCallback(self, result, request, node):
         if isinstance(self.getData(), defer.Deferred):
             self.setData(result)
@@ -218,13 +218,13 @@ class Widget(view.View):
         # generateDOM should always get a reference to the
         # templateNode from the original HTML
         return self.generateDOM(request, self.templateNode)
-    
+
     def setUp(self, request, node, data):
         """
         Override this method to set up your Widget prior to generateDOM. This
         is a good place to call methods like L{add}, L{insert}, L{__setitem__}
         and L{__getitem__}.
-        
+
         Overriding this method obsoletes overriding generateDOM directly, in
         most cases.
 
@@ -233,7 +233,7 @@ class Widget(view.View):
         @param data: The Model data this Widget is meant to operate upon.
         """
         pass
-    
+
     def generateDOM(self, request, node):
         """
         @returns: A DOM Node to replace the Node in the template that this
@@ -303,7 +303,7 @@ class Widget(view.View):
         this widget.
         """
         self.attributes[item] = value
-    
+
     def __getitem__(self, item):
         """
         Convenience syntax for getting an attribute from the resultant DOM Node
@@ -338,7 +338,7 @@ class Widget(view.View):
                 if not node:
                     msg = 'WARNING: No template nodes were found '\
                               '(tagged %s="%s"'\
-                              ' or slot="%s") for node %s' % (name + "Of", 
+                              ' or slot="%s") for node %s' % (name + "Of",
                                             sm, name, self.templateNode)
                     if default is _RAISE:
                         raise Exception(msg)
@@ -411,7 +411,7 @@ class Text(Widget):
         else:
             Widget.__init__(self, model.Model())
         self.text = text
-    
+
     def generateDOM(self, request, node):
         if node and self.clear:
             domhelpers.clearNode(node)
@@ -457,7 +457,7 @@ class Error(Widget):
     def __init__(self, model, message=""):
         Widget.__init__(self, model)
         self.message = message
-    
+
     def generateDOM(self, request, node):
         self['style'] = 'color: red'
         self.add(Text(" " + self.message))
@@ -485,7 +485,7 @@ wvfactory_Br = viewFactory(Br)
 
 
 class Input(Widget):
-    tagName = 'input'    
+    tagName = 'input'
     def setSubmodel(self, submodel):
         self.submodel = submodel
         self['name'] = submodel
@@ -586,13 +586,13 @@ class Anchor(Widget):
         self.parameters = {}
         self.raw = 0
         self.text = ''
-    
+
     def setRaw(self, raw):
         self.raw = raw
 
     def setLink(self, href):
         self.baseHREF= href
-    
+
     def setParameter(self, key, value):
         self.parameters[key] = value
 
@@ -654,7 +654,7 @@ class List(Widget):
        |     <tr class="listFooter"><td colspan="2">All done!</td></tr>
        | </table>
 
-    Where blah is the name of a list on the model; eg::             
+    Where blah is the name of a list on the model; eg::
 
        | self.model.blah = ['foo', 'bar']
 
@@ -738,7 +738,7 @@ class KeyedList(List):
                     warnings.warn("itemOf= is deprecated, "
                                         "please use listItemOf instead",
                                         DeprecationWarning)
-            
+
             appendModel(newNode, key)
             if not newNode.getAttribute("view"):
                 newNode.setAttribute("view", "DefaultWidget")
@@ -759,14 +759,14 @@ class ColumnList(List):
 
     def setStart(self, start):
         self.start = start
-    
+
     def setEnd(self, end):
         self.end = end
 
     def generateDOM(self, request, node):
         node = Widget.generateDOM(self, request, node)
         domhelpers.clearNode(node)
-        
+
         if self.end:
             listSize = self.end - self.start
             if listSize > len(self.getData()):

@@ -10,7 +10,7 @@ class IModel(components.Interface):
         """Add a view for the model to keep track of. This model will only
         be notified if "subviewName"'s data has changed.
         """
-    
+
     def removeView(view):
         """Remove a view that the model no longer should keep track of.
         """
@@ -28,14 +28,14 @@ class IModel(components.Interface):
         """Return the raw data contained by this Model object, if it is a
         wrapper. If not, return self.
         """
-    
+
     def setData(self, data):
         """Set the raw data referenced by this Model object, if it is a
         wrapper. This is done by telling our Parent model to setSubmodel
         the new data. If this object is not a wrapper, keep the data
         around and return it for subsequent getData calls.
         """
-    
+
     def lookupSubmodel(self, submodelPath):
         """Return an IModel implementor for the given submodel path
         string. This path may be any number of elements separated
@@ -43,14 +43,14 @@ class IModel(components.Interface):
         getSubmodel until the path is exhausted. You will not normally
         need to override this behavior.
         """
-    
+
     def getSubmodel(self, submodelName):
         """Return an IModel implementor for the submodel named
         "submodelName". If this object contains simple data types,
-        they can be adapted to IModel using 
+        they can be adapted to IModel using
         model.adaptToIModel(m, parent, name) before returning.
         """
-    
+
     def setSubmodel(self, submodelName, data):
         """Set the given data as a submodel of this model. The data
         need not implement IModel, since getSubmodel should adapt
@@ -74,11 +74,11 @@ class IView(components.Interface):
     def controllerFactory():
         """Hook for subclasses to customize the controller that is associated
         with the model associated with this view.
-        
+
         Default behavior: Look up a component that implements IController
         for the self.model instance.
         """
-        
+
     def setController(controller):
         """Set the controller that this view is related to."""
 

@@ -1,16 +1,16 @@
 
 # Twisted, the Framework of Your Internet
 # Copyright (C) 2000-2002 Matthew W. Lefkowitz
-# 
+#
 # This library is free software; you can redistribute it and/or
 # modify it under the terms of version 2.1 of the GNU Lesser General Public
 # License as published by the Free Software Foundation.
-# 
+#
 # This library is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
 # Lesser General Public License for more details.
-# 
+#
 # You should have received a copy of the GNU Lesser General Public
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
@@ -18,22 +18,22 @@
 """
 DOMTemplate
 
-Most templating systems provide commands that you embed 
-in the HTML to repeat elements, include fragments from other 
-files, etc. This works fairly well for simple constructs and people 
-tend to get a false sense of simplicity from this. However, in my 
-experience, as soon as the programmer wants to make the logic 
-even slightly more complicated, the templating system must be 
+Most templating systems provide commands that you embed
+in the HTML to repeat elements, include fragments from other
+files, etc. This works fairly well for simple constructs and people
+tend to get a false sense of simplicity from this. However, in my
+experience, as soon as the programmer wants to make the logic
+even slightly more complicated, the templating system must be
 bent and abused in ways it was never meant to be used.
 
 The theory behind DOMTemplate is that Python code instead
 of template syntax in the HTML should be used to manipulate
-the structure of the HTML. DOMTemplate uses the DOM, a w3c 
-standard tree-based representation of an HTML document that 
-provides an API that allows you to traverse nodes in the tree, 
-examine their attributes, move, add, and delete them. It is a 
-fairly low level API, meaning it takes quite a bit of code to get 
-a bit done, but it is standard -- learn the DOM once, you can 
+the structure of the HTML. DOMTemplate uses the DOM, a w3c
+standard tree-based representation of an HTML document that
+provides an API that allows you to traverse nodes in the tree,
+examine their attributes, move, add, and delete them. It is a
+fairly low level API, meaning it takes quite a bit of code to get
+a bit done, but it is standard -- learn the DOM once, you can
 use it from ActionScript, JavaScript, Java, C++, whatever.
 
 A DOMTemplate subclass must do two things: indicate which
@@ -45,22 +45,22 @@ A short example::
    | class Test(DOMTemplate):
    |     template = '''
    | <html><head><title>Foo</title></head><body>
-   | 
+   |
    | <div view="Test">
    | This test node will be replaced
    | </div>
-   | 
+   |
    | </body></html>
    | '''
-   |         
+   |
    |     def factory_test(self, request, node):
    |         '''
    |         The test method will be called with the request and the
    |         DOM node that the test method was associated with.
    |         '''
-   |         # self.d has been bound to the main DOM "document" object 
+   |         # self.d has been bound to the main DOM "document" object
    |         newNode = self.d.createTextNode("Testing, 1,2,3")
-   |         
+   |
    |         # Replace the test node with our single new text node
    |         return newNode
 """
@@ -106,7 +106,7 @@ class NodeMutator:
 class NodeNodeMutator(NodeMutator):
     """A NodeNodeMutator replaces the node that is passed in to generate
     with the node it adapts.
-    """ 
+    """
     def generate(self, request, node):
         if self.data is not node:
             if hasattr(request.d, 'importNode'):
@@ -129,7 +129,7 @@ class NoneNodeMutator(NodeMutator):
 class StringNodeMutator(NodeMutator):
     """A StringNodeMutator replaces the node that is passed in to generate
     with the string it adapts.
-    """ 
+    """
     def generate(self, request, node):
         if self.data:
             try:
@@ -146,7 +146,7 @@ class StringNodeMutator(NodeMutator):
 class WebWidgetNodeMutator(NodeMutator):
     """A WebWidgetNodeMutator replaces the node that is passed in to generate
     with the result of generating the twisted.web.widget instance it adapts.
-    """ 
+    """
     def generate(self, request, node):
         widget = self.data
         displayed = widget.display(request)
@@ -161,15 +161,15 @@ class WebWidgetNodeMutator(NodeMutator):
         return stringMutator.generate(request, node)
 
 
-components.registerAdapter(NodeNodeMutator, microdom.Node, INodeMutator)        
-components.registerAdapter(NoneNodeMutator, type(None), INodeMutator)        
-components.registerAdapter(StringNodeMutator, type(""), INodeMutator)        
-components.registerAdapter(WebWidgetNodeMutator, widgets.Widget, INodeMutator)        
+components.registerAdapter(NodeNodeMutator, microdom.Node, INodeMutator)
+components.registerAdapter(NoneNodeMutator, type(None), INodeMutator)
+components.registerAdapter(StringNodeMutator, type(""), INodeMutator)
+components.registerAdapter(WebWidgetNodeMutator, widgets.Widget, INodeMutator)
 
 
 class DOMTemplate(Resource):
     """A resource that renders pages using DOM."""
-    
+
     isLeaf = 1
     templateFile = ''
     templateDirectory = ''
@@ -181,10 +181,10 @@ class DOMTemplate(Resource):
         Resource.__init__(self)
         if templateFile:
             self.templateFile = templateFile
-        
+
         self.outstandingCallbacks = 0
         self.failed = 0
-        
+
     def render(self, request, block=0):
         self.handlerResults = {1: [], 0: []}
         template = self.getTemplate(request)
@@ -199,17 +199,17 @@ class DOMTemplate(Resource):
         else:
             # Schedule processing of the document for later...
             reactor.callLater(0, self.handleDocument, request, self.d)
-        
+
         # So we can return NOT_DONE_YET
         return NOT_DONE_YET
-    
+
     def getTemplate(self, request):
         """
         Override this if you want to have your subclass look up its template
         using a different method.
         """
         return self.template
-        
+
     def lookupTemplate(self, request):
         """
         Use acquisition to look up the template named by self.templateFile,
@@ -235,7 +235,7 @@ class DOMTemplate(Resource):
         compiledTemplateName = '.' + templateName + '.pxp'
         compiledTemplatePath = os.path.join(self.templateDirectory, compiledTemplateName)
         # No? Compile and save it
-        if (not os.path.exists(compiledTemplatePath) or 
+        if (not os.path.exists(compiledTemplatePath) or
         os.stat(compiledTemplatePath)[stat.ST_MTIME] < os.stat(templatePath)[stat.ST_MTIME]):
             compiledTemplate = microdom.parse(templatePath)
             from cPickle import dump
@@ -274,11 +274,11 @@ class DOMTemplate(Resource):
                 return self.sendPage(request)
         except:
             self.renderFailure(None, request)
-    
+
     def dispatchResult(self, request, node, result):
         """
-        Check a given result from handling a node and hand it to a process* 
-        method which will convert the result into a node and insert it 
+        Check a given result from handling a node and hand it to a process*
+        method which will convert the result into a node and insert it
         into the DOM tree. Return the new node.
         """
         if not isinstance(result, defer.Deferred):
@@ -318,26 +318,26 @@ class DOMTemplate(Resource):
         self.recurseChildren(request, node)
         if not self.outstandingCallbacks:
             return self.sendPage(request)
-    
+
     def handleNode(self, request, node):
         """
         Handle a single node by looking up a method for it, calling the method
         and dispatching the result.
-        
+
         Also, handle all childNodes of this node using recursion.
         """
         if not hasattr(node, 'getAttribute'): # text node?
             return node
-        
+
         viewName = node.getAttribute('view')
-        if viewName:        
+        if viewName:
             method = getattr(self, "factory_" + viewName, None)
             if not method:
                 raise NotImplementedError, "You specified view name %s on a node, but no factory_%s method was found." % (viewName, viewName)
-        
+
             result = method(request, node)
             node = self.dispatchResult(request, node, result)
-        
+
         if not isinstance(node, defer.Deferred):
             self.recurseChildren(request, node)
 
@@ -388,12 +388,12 @@ class DOMController(controller.Controller, Resource):
     more advanced template lookup logic.
     """
     __implements__ = (controller.Controller.__implements__, resource.IResource)
-    
+
     def __init__(self, *args, **kwargs):
         log.msg("DeprecationWarning: DOMController is deprecated; it has been renamed twisted.web.woven.controller.Controller.\n")
         controller.Controller.__init__(self, *args, **kwargs)
         Resource.__init__(self)
-    
+
     def setUp(self, request):
         pass
 

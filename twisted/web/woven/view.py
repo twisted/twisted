@@ -1,16 +1,16 @@
 
 # Twisted, the Framework of Your Internet
 # Copyright (C) 2000-2002 Matthew W. Lefkowitz
-# 
+#
 # This library is free software; you can redistribute it and/or
 # modify it under the terms of version 2.1 of the GNU Lesser General Public
 # License as published by the Free Software Foundation.
-# 
+#
 # This library is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
 # Lesser General Public License for more details.
-# 
+#
 # You should have received a copy of the GNU Lesser General Public
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
@@ -89,7 +89,7 @@ class View(template.DOMTemplate):
         for x in self.modelStack:
             if x is not None:
                 return x
-        
+
     def modelChanged(self, changed):
         """
         Dispatch changed messages to any update_* methods which
@@ -113,16 +113,16 @@ class View(template.DOMTemplate):
         if controller:
             controller.setView(self)
         return controller
-        
+
     def setController(self, controller):
         self.controller = controller
 
     def setNode(self, node):
         self.node = node
-    
+
     def setSubmodel(self, name):
         self.submodel = name
-    
+
     def getNodeModel(self, request, node, submodel):
         """
         Get the model object associated with this node. If this node has a
@@ -167,7 +167,7 @@ class View(template.DOMTemplate):
         adapter for our model.
         """
         controllerName = node.getAttribute('controller')
-        
+
         if model is None:
             model = self.getTopOfModelStack()
 
@@ -192,7 +192,7 @@ class View(template.DOMTemplate):
                                           "a node, but no factory_%s method "
                                           "was found in %s." % (controllerName,
                                                             controllerName,
-                                                            self.controllerStack 
+                                                            self.controllerStack
                                                             + [input]))
             try:
                 controller = controllerFactory(request, node, model)
@@ -202,11 +202,11 @@ class View(template.DOMTemplate):
                               "now instead of (model)", DeprecationWarning)
                 controller = controllerFactory(model)
         else:
-            # If no "controller" attribute was specified on the node, see if 
+            # If no "controller" attribute was specified on the node, see if
             # there is a IController adapter registerred for the model.
             controller = components.getAdapter(
-                            model, 
-                            interfaces.IController, 
+                            model,
+                            interfaces.IController,
                             None,
                             components.getAdapterClassWithInheritance)
 
@@ -242,15 +242,15 @@ class View(template.DOMTemplate):
                 view = widgets.Widget(self.model)
             view.setupMethods.append(setupMethod)
         return view
-  
+
 
     def getNodeView(self, request, node, submodel, model):
-        view = None   
+        view = None
         viewName = node.getAttribute('view')
 
         if model is None:
             model = self.getTopOfModelStack()
-        
+
         # Look up a view factory.
         if viewName:
             for namespace in self.viewStack:
@@ -273,8 +273,8 @@ class View(template.DOMTemplate):
             if isinstance(model, components.Componentized):
                 view = model.getAdapter(interfaces.IView)
             if not view and hasattr(model, '__class__'):
-                view = components.getAdapter(model, 
-                                interfaces.IView, 
+                view = components.getAdapter(model,
+                                interfaces.IView,
                                 None,
                                 components.getAdapterClassWithInheritance)
 
@@ -283,7 +283,7 @@ class View(template.DOMTemplate):
     def handleNode(self, request, node):
         if not hasattr(node, 'getAttribute'): # text node?
             return node
-        
+
         submodelName = node.getAttribute('model')
         if submodelName is None:
             submodelName = ""
@@ -297,13 +297,13 @@ class View(template.DOMTemplate):
             if not view or not isinstance(view, widgets.Widget):
                 view = widgets.DefaultWidget(model)
             if not controller:
-                controller = input.DefaultHandler(model)            
+                controller = input.DefaultHandler(model)
             controller.parent = self.controllerStack[0]
 
             model.addView(view)
             if not getattr(view, 'submodel', None):
                 view.setSubmodel(submodelName)
-    
+
             id = node.getAttribute("id")
             if not id:
                 id = "woven_id_" + str(self.currentId)
@@ -318,13 +318,13 @@ class View(template.DOMTemplate):
                 self.modelStack[0] = view.model
             view.setController(controller)
             view.setNode(node)
-    
+
             if not getattr(controller, 'submodel', None):
                 controller.setSubmodel(submodelName)
             # xxx refactor this into a widget interface and check to see if the object implements IWidget
             # the view may be a deferred; this is why this check is required
             controller.setView(view)
-            
+
             controllerResult = controller.handle(request)
         else:
             controllerResult = (None, None)
@@ -332,10 +332,10 @@ class View(template.DOMTemplate):
         self.controllerStack.insert(0, controller)
         self.viewStack.insert(0, view)
         self.outstandingCallbacks += 1
-        self.handleControllerResults(controllerResult, request, node, 
+        self.handleControllerResults(controllerResult, request, node,
                                     controller, view, NO_DATA_YET)
 
-    def handleControllerResults(self, controllerResult, request, node, 
+    def handleControllerResults(self, controllerResult, request, node,
                                 controller, view, success):
         isCallback = success != NO_DATA_YET
         self.outstandingCallbacks -= 1
@@ -345,13 +345,13 @@ class View(template.DOMTemplate):
             data = controllerResult
         if isinstance(data, defer.Deferred):
             self.outstandingCallbacks += 1
-            data.addCallback(self.handleControllerResults, request, node, 
+            data.addCallback(self.handleControllerResults, request, node,
                                 controller, view, success)
             data.addErrback(self.renderFailure, request)
             return data
         if success is not None:
             self.handlerResults[success].append((controller, data, node))
-        
+
         returnNode = self.dispatchResult(request, node, view)
         if not isinstance(returnNode, defer.Deferred):
             self.recurseChildren(request, returnNode)
@@ -382,7 +382,7 @@ class View(template.DOMTemplate):
                     stop.addCallback(self.handleProcessCallback, request)
                     stop.addErrback(self.renderFailure, request)
                     stop = template.STOP_RENDERING
-    
+
         if not stop:
             log.msg("Sending page!")
             #sess = request.getSession(IWovenLivePage)
@@ -411,7 +411,7 @@ class View(template.DOMTemplate):
                 del request.args[node.getAttribute('name')]
             result = controller.commit(request, node, data)
             #print 'controller.model', controller.model, controller.model.views
-            returnNodes = controller.model.notify({'request': request, 
+            returnNodes = controller.model.notify({'request': request,
                                         controller.submodel: data})
             if isinstance(result, defer.Deferred):
                 self.outstandingCallbacks += 1
@@ -430,7 +430,7 @@ class View(template.DOMTemplate):
         self.sendPage(request)
 
     def setSubviewFactory(self, name, factory, setup=None):
-        setattr(self, "wvfactory_" + name, lambda request, node, m: 
+        setattr(self, "wvfactory_" + name, lambda request, node, m:
                                                     factory(m))
         if setup:
             setattr(self, "wvupdate_" + name, setup)
@@ -458,4 +458,3 @@ def registerViewForModel(view, model):
 
 import input
 import widgets
-

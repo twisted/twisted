@@ -1,16 +1,16 @@
 
 # Twisted, the Framework of Your Internet
 # Copyright (C) 2000-2002 Matthew W. Lefkowitz
-# 
+#
 # This library is free software; you can redistribute it and/or
 # modify it under the terms of version 2.1 of the GNU Lesser General Public
 # License as published by the Free Software Foundation.
-# 
+#
 # This library is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
 # Lesser General Public License for more details.
-# 
+#
 # You should have received a copy of the GNU Lesser General Public
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
@@ -37,18 +37,18 @@ class Model:
     to notify them when the model changes.
     """
     __implements__ = interfaces.IModel
-    
+
     def __init__(self, *args, **kwargs):
         self.views = []
         self.subviews = {}
         self.submodels = {}
         self.initialize(*args, **kwargs)
-    
+
     def __getstate__(self):
         self.views = []
         self.subviews = {}
         return self.__dict__
-    
+
     def initialize(self, *args, **kwargs):
         """
         Hook for subclasses to initialize themselves without having to
@@ -62,7 +62,7 @@ class Model:
         """
         if view not in self.views:
             self.views.append(weakref.ref(view))
-    
+
     def addSubview(self, name, subview):
         subviewList = self.subviews.get(name, [])
         subviewList.append(weakref.ref(subview))
@@ -73,7 +73,7 @@ class Model:
         Remove a view that the model no longer should keep track of.
         """
         self.views.remove(view)
-    
+
     def notify(self, changed=None):
         """
         Notify all views that something was changed on me.
@@ -105,7 +105,7 @@ class Model:
                 return 0
         else:
             return 1
-    
+
     def __ne__(self, other):
         if other is None: return 1
         for elem in self.__dict__.keys():
@@ -154,7 +154,7 @@ class Model:
             currentModel = adapted
         return adapted
 
-    
+
     def getSubmodel(self, name):
         """
         Get the submodel `name' of this model. If I ever return a
@@ -185,7 +185,7 @@ class Model:
 
     def getData(self):
         return self
-    
+
     def setData(self, data):
         if hasattr(self, 'parent') and self.parent:
             self.parent.setSubmodel(self.name, data)
@@ -200,7 +200,7 @@ class Wrapper(Model):
     """
     I'm a generic wrapper to provide limited interaction with the
     Woven models and submodels.
-    """    
+    """
     parent = None
     name = None
     def __init__(self, orig):
@@ -209,7 +209,7 @@ class Wrapper(Model):
 
     def getData(self):
         return self.orig
-    
+
     def setData(self, data):
         if self.parent:
             self.parent.setSubmodel(self.name, data)
@@ -233,16 +233,16 @@ class ListModel(Wrapper):
         sm = adaptToIModel(orig[int(name)], self, name)
         self.submodels[name] = sm
         return sm
-    
+
     def setSubmodel(self, name, value):
         self.orig[int(name)] = value
 
     def __getitem__(self, name):
         return self.getSubmodel(name)
-    
+
     def __setitem__(self, name, value):
         self.setSubmodel(name, value)
-    
+
     def __repr__(self):
         myLongName = reflect.qual(self.__class__)
         return "<%s instance at 0x%x: wrapped data: %s>" % (myLongName,
@@ -250,10 +250,10 @@ class ListModel(Wrapper):
 
 
 class StringModel(ListModel):
-    
+
     """ I wrap a Python string and allow it to interact with the Woven models
     and submodels.  """
-        
+
     def setSubmodel(self, name, value):
         raise ValueError("Strings are immutable.")
 
@@ -341,4 +341,3 @@ try:
 except ValueError:
     # The adapters were already registered
     pass
-
