@@ -72,7 +72,7 @@ import win32gui
 
 # Twisted imports
 from twisted.internet import abstract, default, main, error
-from twisted.python import log, threadable, failure
+from twisted.python import log, threadable, failure, components
 from twisted.internet.interfaces import IReactorFDSet
 
 # System imports
@@ -82,6 +82,7 @@ import Queue
 import string
 import time
 import sys
+from zope.interface import implements
 
 
 # globals
@@ -93,7 +94,7 @@ events = {}
 class Win32Reactor(default.PosixReactorBase):
     """Reactor that uses Win32 event APIs."""
 
-    __implements__ = (default.PosixReactorBase.__implements__, IReactorFDSet)
+    implements(IReactorFDSet)
 
     dummyEvent = CreateEvent(None, 0, 0, None)
 
@@ -220,6 +221,8 @@ class Win32Reactor(default.PosixReactorBase):
     def spawnProcess(self, processProtocol, executable, args=(), env={}, path=None, usePTY=0):
         """Spawn a process."""
         Process(self, processProtocol, executable, args, env, path)
+
+components.backwardsCompatImplements(Win32Reactor)
 
 
 def install():

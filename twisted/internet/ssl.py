@@ -46,12 +46,13 @@ supported = False
 # System imports
 from OpenSSL import SSL
 import socket
+from zope.interface import implements, implementsOnly, implementedBy
 
 # sibling imports
 import tcp, main, interfaces
 
 # Twisted imports
-from twisted.python import log
+from twisted.python import log, components
 from twisted.internet import base, address
 
 
@@ -108,7 +109,8 @@ class ClientContextFactory:
 class Client(tcp.Client):
     """I am an SSL client."""
 
-    __implements__ = tuple([i for i in tcp.Client.__implements__ if i is not interfaces.ITLSTransport]), interfaces.ISSLTransport
+    implementsOnly(interfaces.ISSLTransport,
+                   *[i for i in implementedBy(tcp.Client) if i != interfaces.ITLSTransport])
     
     def __init__(self, host, port, bindAddress, ctxFactory, connector, reactor=None):
         # tcp.Client.__init__ depends on self.ctxFactory being set
@@ -129,12 +131,14 @@ class Client(tcp.Client):
         self.startWriting()
         tcp.Client._connectDone(self)
 
+components.backwardsCompatImplements(Client)
+
 
 class Server(tcp.Server):
     """I am an SSL server.
     """
 
-    __implements__ = tcp.Server.__implements__, interfaces.ISSLTransport
+    implements(interfaces.ISSLTransport)
     
     def getHost(self):
         """Return server's address."""
@@ -145,6 +149,8 @@ class Server(tcp.Server):
         """Return address of peer."""
         h, p = self.client
         return address.IPv4Address('TCP', h, p, 'SSL')
+
+components.backwardsCompatImplements(Server)
 
 
 class Port(tcp.Port):

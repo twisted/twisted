@@ -41,9 +41,10 @@ except ImportError, AttributeError:
     pass # maybe we're using pygtk before this hack existed.
 import gtk
 import sys, time
+from zope.interface import implements
 
 # Twisted Imports
-from twisted.python import log, threadable, runtime, failure
+from twisted.python import log, threadable, runtime, failure, components
 from twisted.internet.interfaces import IReactorFDSet
 
 # Sibling Imports
@@ -62,7 +63,7 @@ class GtkReactor(default.PosixReactorBase):
     """GTK+ event loop reactor.
     """
 
-    __implements__ = (default.PosixReactorBase.__implements__, IReactorFDSet)
+    implements(IReactorFDSet)
 
     def addReader(self, reader):
         if not hasReader(reader):
@@ -171,6 +172,8 @@ class GtkReactor(default.PosixReactorBase):
         if timeout is None:
             timeout = 0.1
         _simtag = gtk.timeout_add(timeout * 1010, self.simulate) # grumble
+
+components.backwardsCompatImplements(GtkReactor)
 
 
 class PortableGtkReactor(default.SelectReactor):

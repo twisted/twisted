@@ -26,6 +26,7 @@ Maintainer: U{Itamar Shtull-Trauring<mailto:twisted@itamarst.org>}
 # System imports
 import os, stat, socket
 from errno import *
+from zope.interface import implements, implementsOnly, implementedBy
 
 if not hasattr(socket, 'AF_UNIX'):
     raise ImportError, "UNIX sockets not supported on this platform"
@@ -33,7 +34,7 @@ if not hasattr(socket, 'AF_UNIX'):
 # Twisted imports
 from twisted.internet import base, tcp, udp, error, interfaces, protocol, address, defer
 from twisted.internet.error import CannotListenError
-from twisted.python import lockfile, log, reflect, failure
+from twisted.python import lockfile, log, reflect, failure, components
 
 
 class Server(tcp.Server):
@@ -157,7 +158,7 @@ class Connector(base.BaseConnector):
 class DatagramPort(udp.Port):
     """Datagram UNIX port, listening for packets."""
 
-    __implements__ = base.BasePort.__implements__, interfaces.IUNIXDatagramTransport
+    implements(interfaces.IUNIXDatagramTransport)
 
     addressFamily = socket.AF_UNIX
 
@@ -222,11 +223,14 @@ class DatagramPort(udp.Port):
     def getHost(self):
         return address.UNIXAddress(self.socket.getsockname())
 
+components.backwardsCompatImplements(DatagramPort)
+
 
 class ConnectedDatagramPort(DatagramPort):
     """A connected datagram UNIX socket."""
 
-    __implements__ = base.BasePort.__implements__,  interfaces.IUNIXDatagramConnectedTransport
+    implementsOnly(interfaces.IUNIXDatagramConnectedTransport,
+                   *(implementedBy(base.BasePort)))
 
     def __init__(self, addr, proto, maxPacketSize=8192, mode=0666, bindAddress=None, reactor=None):
         assert isinstance(proto, protocol.ConnectedDatagramProtocol)
@@ -287,6 +291,9 @@ class ConnectedDatagramPort(DatagramPort):
 
     def getPeer(self):
         return address.UNIXAddress(self.remoteaddr)
+
+components.backwardsCompatImplements(ConnectedDatagramPort)
+
 
 def _checkPIDFile(pidname):
     try:
