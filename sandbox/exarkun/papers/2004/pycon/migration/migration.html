@@ -1,22 +1,46 @@
 <html>
 <body>
 
-<h2>What Is Migration?</h2>
+<h2>Abstract</h2>
+
+<h3>What Is Migration?</h3>
+
+<p><i>Service migration</i> is the term coined for the process involving the
+hand-off of application-level duties from one process to another. 
+Historically this has typically been achieved by stopping one process and
+then starting another.  In the case of certain platforms, wider reaching
+<i>restart</i> procedures have been required, but ultimate the effect on the
+user has been the same: application state must be saved or lost, a period of
+absence of service must be tolerated, and finally application state must be
+reloaded or recreated.</p>
+
+<p>Examples of service migration are widespread and exist anywhere software
+is in use.  From a desktop user loading a new version of a word processing
+tool, to a system administrator upgrading a company's web server, to a phone
+company rolling over the software that drives millions of telephone calls
+every day; the fundamental requirement of using new code to process old data
+is the same in each case even though the risk, difficulty, and consequences
+differ greatly.</p>
+
+<h3>Why Translucent Migration?</h3>
 
 <p>Circumstances exist where it is desirable to change the behavior of a
-running application without interrupting the service of those clients who
-are using it at the time.  In high load environments, it is often the case
-that there will always be a significant number of users relying on the
+running application <i>without</i> interrupting the service of those clients
+who are using it at the time.  In high load environments, it is often the
+case that there will always be a significant number of users relying on the
 service. In these environments, the simplistic approach of waiting for the
 service to become quiescent, then shutting down and restarting the server
 software is not feasible.</p>
 
-<p>Various techniques for avoiding interruptions of service have been
-explored and developed ...</p>
-
-<h2>Why Migrate?</h2>
-
-<p></p>
+<p>Translucent migration removes the most user-visible portion of the
+migration process: absence of service.  Instead of starting a new process
+after the old process has been shut down, the order is reversed causing the
+new and old processes to exist at the same time.  During this overlap,
+required state can be moved between the two processes.  Expensive
+operations, such as opening a database, establishing connections to remote
+hosts, or building in-memory caches can all be performed by the new process
+while the old is still responding to user requests, minimizing the time
+during which the application is non-responsive.</p>
 
 <h2>Application Requirements</h2>
 
@@ -24,44 +48,47 @@ explored and developed ...</p>
 this migration scheme.  The requirements are minimally invasive to the
 application itself, but necessary for services to be migrated to a new
 process.  It is for these reasons that the process of migration is referred
-to as "transluscent".</p>
+to as <i>translucent</i>.</p>
+
+<h3>Migration Server</h3>
 
 <p>The first requirement is that a migration server be made to listen on a
 socket providing virtual circuit capabilities.  In the demonstration, a
 stream oriented UNIX socket (<code>AF_UNIX</code>, <code>SOCK_STREAM</code>)
 is used, but a TCP/IP socket (<code>AF_INET</code>,
 <code>SOCK_STREAM</code>) would work equally as well.  When migration is to
-occur, the process assuming responsibility for services will connect to this
-server to initiate the migration procedure.  The server must be made aware
-of all objects which represent services to be made available for migration. 
-Each of these objects will be transferred to the new process separately from
-the others, though typically they will all be transferred in rapid
-succession.</p>
+occur, the process assuming responsibility for services (henceforth referred
+to as the <i>service recipient</i>) will connect to this server to initiate
+the migration procedure.  The server must be made aware of all objects which
+represent services (henceforth referred to as <i>service object graphs</i>)
+to be made available for migration.  Each of these service object graphs
+will be transferred to the new process separately from the others, though
+typically they will all be transferred in rapid succession.</p>
 
-<p>The second requirement is that every object which represents a service as
-well as all objects reachable from those objects must be serializable.  This
-is necessary so that they can be conveyed over a socket as a stream of bytes
-to the process assuming responsibility for the service (the initial
-implementation of this migration technique uses
-<code>twisted.spread.jelly</code> as the serialization library, however it
-is not restricted to this library alone; the pickle module provides all the
-necessary hooks for implementing the same functionality).  Serializers for
-instances of most builtin types, including ints, strings, lists, and dicts,
-are provided by framework code.  Additionally, instances of most
-user-defined classes can also be serialized by using the fully qualified
-name of their class and the contents of their instance
-<code>__dict__</code>.  Since the focus of this migration technique is
-internet servers, a serializer for file-like objects which have been wrapped
-in a <code>twisted.internet.abstract.FileDescriptor</code> object is
+<h3>Serializability</h3>
+
+<p>The second requirement is that every service object graph well as all
+must be serializable <a name="1_backref"><a href="#1">[1]</a></a>.  This is
+necessary so that they can be conveyed over a socket as a stream of bytes to
+the service recipient.  Serializers for instances of most built-in types,
+including ints, strings, lists, and dicts, are provided by framework code. 
+Additionally, instances of most user-defined classes can also be serialized
+by using the fully qualified name of their class and the contents of their
+instance <code>__dict__</code>.  Since the focus of this migration technique
+is internet servers, a serializer for file-like objects which have been
+wrapped in a <code>twisted.internet.abstract.FileDescriptor</code> object is
 provided as well.  This allows sockets to be migrated without special
 consideration from application-level code.</p>
 
-<p>The final requirement is that an application be able to assume
-responsibility for a service from an already-running process.  As previously
-mentioned, responsibility for a service is assumed by connecting to a server
-running in the process which is to give up the service in question.  At this
-point, a sequence of events which ultimately result in the state of one or
-more services being transferred to a new process occurs.</p>
+<h3>Migration Client</h3>
+
+<p>The final requirement is placed upon the service recipient rather than
+the service originator.  It must be capable of issuing requests to service
+originator to take responsibility for a service.  As previously mentioned,
+responsibility for a service is assumed by connecting to a server running in
+the process which is to give up the service in question.  At this point, a
+sequence of events which ultimately result in the state of one or more
+services being transferred to a new process occurs.</p>
 
 <p>First, if desired, the client can be required to authenticate with the
 server, proving its identity.  While UNIX sockets already provide some level
@@ -108,7 +135,7 @@ terminate normally.</p>
 
 <p>It is significant to note that services can be transferred not only
 between two versions of the same application, but also between otherwise
-unrelated applications, so long as all the necessary unserializers are
+unrelated applications, so long as all the necessary deserializers are
 present in the receiving application.  This has useful consequences which
 will discussed further below.</p>
 
@@ -133,7 +160,7 @@ from twisted.python import components
 class FileDescriptorJellier(components.Adapter):
     __implements__ = (ispread.IJellyable,)
 
-    # This is the main external entrypoint into the file descriptor
+    # This is the main external entry point into the file descriptor
     # serialization code.  The jellier will call .jellyFor(self) on the
     # object returned by ispread.IJellyable(obj).  The object returned is an
     # s-expression representing the state of this adapted FileDescriptor
@@ -231,5 +258,14 @@ def socketInMyPocket(skt, instance, attribute, mode):
 </code>
 </pre>
 
+<ol>
+<li><a name="1">The initial implementation of this migration technique uses
+<code>twisted.spread.jelly</code> as the serialization library, however it
+is not restricted to this library alone; the pickle module provides all the
+necessary hooks for implementing the same functionality.<a
+href="#1_backref">&lt;-</a></a></li>
+</ol>
+
 </body>
 </html>
+
