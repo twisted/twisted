@@ -67,7 +67,7 @@ applied when serializing arguments.
 @author: U{Glyph Lefkowitz<mailto:glyph@twistedmatrix.com>}
 """
 
-__version__ = "$Revision: 1.149 $"[11:-2]
+__version__ = "$Revision: 1.150 $"[11:-2]
 
 
 # System Imports
@@ -1052,7 +1052,7 @@ class BrokerFactory(protocol.Factory, styles.Versioned):
 ### DEPRECATED AUTH STUFF
 
 class AuthRoot(Root):
-    """DEPRECATD.
+    """DEPRECATED.
     
     I provide AuthServs as root objects to Brokers for a BrokerFactory.
     """
