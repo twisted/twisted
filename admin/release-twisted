@@ -162,20 +162,17 @@ def updateVersions(opts):
     newver = opts['version']
    
     r = opts['root']
-    os.chdir(r)
-    files = ('README', 'doc/howto/installing-twisted.html', 'twisted/copyright.py')
+    files = ('%s/README' % r, '%s/doc/howto/installing-twisted.html' % r, '%s/twisted/copyright.py' % r)
     for file in files:
         replaceInFile(file, oldver, newver)
-    sh('cvs -q diff')
-    sh('cvs commit -m "Preparing for %s" %s' % (newver, ' '.join(files)), 1)
-    os.chdir('..')
+    sh('cd %s; cvs -q diff' % (r))
+    sh('cd %s; cvs commit -m "Preparing for %s" %s' % (r, newver, ' '.join(files)), 1)
+
 
 def tag(opts):
     print "tag"
     ver = opts['version']
-    os.chdir(opts['root'])
-    sh('cvs tag -c release-%s' % ver.replace('.', '_'), 1)
-    os.chdir('..')
+    sh('cd %s; cvs tag -c release-%s' % (opts['root'], ver.replace('.', '_')), 1)
 
 def exportCVS(opts):
     root = opts['cvsroot']
@@ -213,7 +210,7 @@ def makeDocs(opts):
         sys.exit(2)
         
     print "makeDocs: epydoc."
-    sh('cd %s; ./admin/epyrun -o doc/api/%s' % (tdir, tdir))
+    sh('cd %s; ./admin/epyrun -o doc/api; cp doc/api/tree.html doc/api/index.html' % (tdir))
 
     print "makeDocs: generate-domdocs."
     sh('cd %s; ./admin/generate-domdocs -v %s' % (tdir, ver))
@@ -237,32 +234,21 @@ def makeBalls(opts):
     ##
     # NoDocs
     ##
-    print "makeBalls: Moving out the documentation for NoDocs."
-    sh('mv %s/doc TwistedDocs-%s' % (tdir, ver))
+    #print "makeBalls: Moving out the documentation for NoDocs."
+    #sh('mv %s/doc TwistedDocs-%s' % (tdir, ver))
+    
     print "makeBalls: Twisted_NoDocs."
-    map(lambda x: sh(x % (ver, tdir)),
-        ['tar czf   Twisted_NoDocs-%s.tar.gz  %s',
-         'tar cjf   Twisted_NoDocs-%s.tar.bz2 %s',
-         'zip -9 -r Twisted_NoDocs-%s.zip     %s > /dev/null'])
+    map(lambda x: sh(x % (tdir, ver, tdir)),
+        ['tar czf   --exclude %s/doc Twisted_NoDocs-%s.tar.gz  %s',
+         'tar cjf   --exclude %s/doc Twisted_NoDocs-%s.tar.bz2 %s',
+         'zip -9 -r        -x %s/doc Twisted_NoDocs-%s.zip     %s > /dev/null'])
 
 
-    if not os.path.exists('doc'):#we didn't do the docs
-        print "makeBalls: Not continuing: `doc' not found."
+    if not os.path.exists('doc/api/tree.html' % tdir):#we didn't do the docs
+        print "makeBalls: Not continuing: `doc/api/tree.html' not found." % tdir
         return
     
-    ##
-    # TwistedDocs
-    ##
-    print "makeBalls: TwistedDocs"
-    sh('mv doc/* TwistedDocs-%s/api' % ver)
-    sh('rmdir doc')
 
-    map(lambda x: sh(x % ((ver,)*2)),
-        ['tar czf   TwistedDocs-%s.tar.gz  TwistedDocs-%s',
-         'tar cjf   TwistedDocs-%s.tar.bz2 TwistedDocs-%s',
-         'zip -9 -r TwistedDocs-%s.zip     TwistedDocs-%s > /dev/null'])
-    
-    
     ##
     # Fullball
     ##
@@ -272,8 +258,30 @@ def makeBalls(opts):
         ['tar czf   %s.tar.gz  %s',
          'tar cjf   %s.tar.bz2 %s',
          'zip -9 -r %s.zip     %s > /dev/null'])
-    
 
+
+    ##
+    # TwistedDocs
+    ##
+    print "makeBalls: TwistedDocs"
+    #sh('cp doc/* TwistedDocs-%s/api' % ver)
+    #sh('rmdir doc')
+
+    docdir = "TwistedDocs-%s" % ver
+    
+    sh(  '''
+         cd %(tdir)/doc;
+         mv api %(docdir)s
+         
+         tar czf   %(docdir)s.tar.gz  %(docdir)s;
+         mv %(docdir)s.tar.gz ../../;
+         
+         tar cjf   %(docdir)s.tar.bz2 %(docdir)s;
+         mv %(docdir)s.tar.bz2 ../../;
+         
+         zip -9 -r %(docdir)s.zip %(docdir)s > /dev/null;
+         mv %(docdir)s.zip ../../
+         ''' % locals())
 
 
 def release(opts):
