@@ -151,6 +151,8 @@ class _Jellier:
         """
         return st
 
+    _jelly_str = _jelly_string
+
     def _jelly_int(self, nt):
         """(internal)
         Return the serialized representation of an integer (which is the
