@@ -28,18 +28,20 @@ class NameVirtualHost(resource.Resource):
     """I am a resource which represents named virtual hosts.
     """
 
+    default = None
+
     def __init__(self):
         """Initialize.
         """
         resource.Resource.__init__(self)
         self.hosts = {}
-        
+
     def addHost(self, name, resrc):
         """Add a host to this virtual host.
-        
+
         This will take a host named `name', and map it to a resource
         `resrc'.  For example, a setup for our virtual hosts would be::
-        
+
             nvh.addHost('divunal.com', divunalDirectory)
             nvh.addHost('www.divunal.com', divunalDirectory)
             nvh.addHost('twistedmatrix.com', twistedMatrixDirectory)
@@ -50,15 +52,19 @@ class NameVirtualHost(resource.Resource):
     def _getResourceForRequest(self, request):
         """(Internal) Get the appropriate resource for the given host.
         """
-        host = string.split(string.lower(request.getHeader('host')),':')[0]
+        hostHeader = request.getHeader('host')
+        if hostHeader == None:
+            return self.default or error.NoResource()
+        else:
+            host = string.split(string.lower(hostHeader),':')[0]
         return self.hosts.get(host, error.NoResource("host %s not in vhost map" % repr(host)))
-        
+
     def render(self, request):
         """Implementation of resource.Resource's render method.
         """
         resrc = self._getResourceForRequest(request)
         return resrc.render(request)
-        
+
     def getChild(self, path, request):
         """Implementation of resource.Resource's getChild method.
         """
