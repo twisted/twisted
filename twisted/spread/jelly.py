@@ -189,18 +189,26 @@ class _Jellier:
             self.preserved[id(object)] = sexp
         return sexp
 
+    constantTypes = {types.StringType : 1, types.IntType : 1,
+                     types.FloatType : 1, types.LongType : 1}
+    
     def jelly(self, object):
         """(internal) make a list
         """
+        objType = type(object)
+        if self.constantTypes.has_key(objType):
+            return object
+        
+        objId = id(object)
         # if it's been previously backreferenced, then we're done
-        if self.cooked.has_key(id(object)):
-            return self.cooked[id(object)]
+        if self.cooked.has_key(objId):
+            return self.cooked[objId]
         # if it's been previously seen but NOT backreferenced,
         # now's the time to do it.
-        if self.preserved.has_key(id(object)):
+        if self.preserved.has_key(objId):
             self._cook(object)
-            return self.cooked[id(object)]
-        typnm = string.replace(typeNames[type(object)], ' ', '_')
+            return self.cooked[objId]
+        typnm = string.replace(typeNames[objType], ' ', '_')
 ### this next block not _necessarily_ correct due to some tricks in
 ### NetJellier's _jelly_instance...
 ##        if not self.taster.isTypeAllowed(typnm):
@@ -209,45 +217,15 @@ class _Jellier:
         if typfn:
             return typfn(object)
         else:
-            return self.unpersistable("type: %s" % repr(type(object)))
+            return self.unpersistable("type: %s" % repr(objType))
 
-    def _jelly_string(self, st):
-        """(internal) Return the serialized representation of a string.
-
-        This just happens to be the string itself.
-        """
-        return st
+    ### these have to have unjelly equivalents
 
     def _jelly_unicode(self, u):
         """(internal) (python2.1 only) UTF-8 encode a unicode string.
         """
         return ['unicode', u.encode('UTF-8')]
     
-    def _jelly_int(self, nt):
-        """(internal)
-        Return the serialized representation of an integer (which is the
-        integer itself).
-        """
-        return nt
-
-    def _jelly_long(self, ng):
-        """(internal)
-
-        Return the serialized representation of a long integer (this will only
-        work for long ints that can fit into a regular integer, currently, but
-        that limitation is temporary)
-        """
-        return ng
-
-    def _jelly_float(self, loat):
-        """(internal)
-        Return the serialized representation of a float (which is the float
-        itself).
-        """
-        return loat
-
-    ### these have to have unjelly equivalents
-
     def _jelly_instance(self, instance):
         '''Jelly an instance.
 
