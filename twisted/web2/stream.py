@@ -332,6 +332,9 @@ class CompoundStream:
 
 
 def readAndDiscard(stream):
+    """Read all the data from the given stream, and throw it out.
+    FIXME: do something more useful with read errors.
+    """
     def _gotData(data):
         if data is not None:
             readAndDiscard(stream)
@@ -625,4 +628,91 @@ class StreamProducer:
             
         self.finishedCallback = self.deferred = self.consumer = self.stream = None
 
-__all__ = ['IStream', 'IByteStream', 'FileStream', 'MemoryStream', 'CompoundStream', 'fallbackSplit', 'ProducerStream', 'StreamProducer']
+
+class BufferedStream(object):
+    """A stream which buffers its data to provide operations like
+    readline and readExactly."""
+    
+    data = ""
+    def __init__(self, stream):
+        self.stream = stream
+
+    def _readUntil(self, f):
+        """Internal helper function which repeatedly calls f each time
+        after more data has been received, until it returns non-None."""
+        while True:
+            r = f()
+            if r is not None:
+                yield r; return
+            
+            newdata = self.stream.read()
+            if isinstance(newdata, defer.Deferred):
+                newdata = defer.waitForDeferred(newdata)
+                yield newdata; newdata = newdata.getResult()
+            
+            if not newdata:
+                # End Of File
+                newdata = self.data
+                self.data = ''
+                yield newdata; return
+            self.data += str(newdata)
+    _readUntil = defer.deferredGenerator(_readUntil)
+
+    def readExactly(self, size=None):
+        """Read exactly size bytes of data, or, if size is None, read
+        the entire stream into a string."""
+        def gotdata():
+            data = self.data
+            if size is not None and len(data) >= size:
+                pre,post = data[:size], data[size:]
+                self.data=post
+                return pre
+        return self._readUntil(gotdata)
+    
+        
+    def readline(self, delimiter='\r\n'):
+        """Read a line of data from the string, bounded by delimiter"""
+        def gotdata():
+            data = self.data.split(delimiter, 1)
+            if len(data) == 2:
+                self.data=data[1]
+                return data[0]
+        return self._readUntil(gotdata)
+
+    def pushback(self, pushed):
+        """Push data back into the buffer."""
+        
+        self.data = pushed + self.data
+        
+    def read(self):
+        data = self.data
+        if data:
+            self.data = ""
+            return data
+        return self.stream.read()
+
+    def _len(self):
+        l = self.stream.length
+        if l is None:
+            return None
+        return l + len(self.data)
+    
+    length = property(_len)
+    
+    def split(self, offset):
+        off = offset - len(self.data)
+        
+        pre, post = self.stream.split(max(0, off))
+        pre = BufferedStream(pre)
+        post = BufferedStream(post)
+        if off < 0:
+            pre.data = self.data[:-off]
+            post.data = self.data[-off:]
+        else:
+            pre.data = self.data
+        
+        return pre, post
+
+__all__ = ['IStream', 'IByteStream', 'FileStream', 'MemoryStream', 'CompoundStream',
+           'readAndDiscard', 'fallbackSplit', 'ProducerStream', 'StreamProducer',
+           'BufferedStream']
