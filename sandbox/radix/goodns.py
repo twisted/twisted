@@ -135,3 +135,19 @@ def _cbExtractAddresses(result, name):
     if not result:
         return None
     return [x.payload.dottedQuad() for x in result]
+
+def lookupService(name, cnameLevel=4, nsLevel=4, resolver=client, timeout=None):
+    d = resolver.lookupService(name, timeout)
+    d.addCallback(_scroungeRecords, name, dns.SRV, cnameLevel, nsLevel, resolver)
+    d.addCallback(_cbExtractServices, name)
+    return d
+
+def _cbExtractServices(result, name):
+    if not result:
+        return None
+    # DSU
+    result = [ ( x.payload.priority, x.payload ) for x in result ]
+    result.sort()
+    result = [ ( x[1].priority, x[1].weight, 
+               x[1].port, x[1].target.name ) for x in result ]
+    return result
