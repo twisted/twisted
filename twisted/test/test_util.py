@@ -170,3 +170,53 @@ class SearchUpwardsTest(unittest.TestCase):
                                   dirs=['bar', 'bam'])
         expected=None
         self.assertEqual(actual, expected)
+
+class IntervalDifferentialTestCase(unittest.TestCase):
+    def testDefault(self):
+        d = iter(util.IntervalDifferential([], 10))
+        for i in range(100):
+            self.assertEquals(d.next(), 10)
+    
+    def testSingle(self):
+        d = iter(util.IntervalDifferential([5], 10))
+        for i in range(100):
+            self.assertEquals(d.next(), 5)
+    
+    def testPair(self):
+        d = iter(util.IntervalDifferential([5, 7], 10))
+        for i in range(100):
+            self.assertEquals(d.next(), 5)
+            self.assertEquals(d.next(), 2)
+            self.assertEquals(d.next(), 3)
+            self.assertEquals(d.next(), 4)
+            self.assertEquals(d.next(), 1)
+            self.assertEquals(d.next(), 5)
+            self.assertEquals(d.next(), 1)
+            self.assertEquals(d.next(), 4)
+            self.assertEquals(d.next(), 3)
+            self.assertEquals(d.next(), 2)
+            self.assertEquals(d.next(), 5)
+            self.assertEquals(d.next(), 0)
+    
+    def testTriple(self):
+        d = iter(util.IntervalDifferential([2, 4, 5], 10))
+        for i in range(100):
+            self.assertEquals(d.next(), 2)
+            self.assertEquals(d.next(), 2)
+            self.assertEquals(d.next(), 0)
+            self.assertEquals(d.next(), 1)
+            self.assertEquals(d.next(), 1)
+            self.assertEquals(d.next(), 2)
+            self.assertEquals(d.next(), 0)
+            self.assertEquals(d.next(), 2)
+            self.assertEquals(d.next(), 0)
+            self.assertEquals(d.next(), 2)
+            self.assertEquals(d.next(), 0)
+            self.assertEquals(d.next(), 2)
+            self.assertEquals(d.next(), 1)
+            self.assertEquals(d.next(), 1)
+            self.assertEquals(d.next(), 0)
+            self.assertEquals(d.next(), 2)
+            self.assertEquals(d.next(), 2)
+            self.assertEquals(d.next(), 0)
+            self.assertEquals(d.next(), 0)

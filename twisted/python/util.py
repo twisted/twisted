@@ -18,7 +18,7 @@
 
 from __future__ import nested_scopes, generators
 
-__version__ = '$Revision: 1.38 $'[11:-2]
+__version__ = '$Revision: 1.39 $'[11:-2]
 
 import os, sys
 from UserDict import UserDict
@@ -455,8 +455,66 @@ def raises(exception, f, *args, **kwargs):
         return 1
     return 0
 
+class IntervalDifferential:
+    """
+    Given a list of intervals, generate the amount of time to sleep between
+    \"instants\".
+    
+    For example, given 7, 11 and 13 generate the values:
+    
+    7, 4, 2, 1, 7, 1, 4, 2, 5, 2, 4, 5, ...
+    
+    New intervals may be added or removed as iteration proceeds.
+    """
+    def __init__(self, intervals, default=60):
+        """
+        @type intervals: C{list} of C{int}, C{long}, or C{float} param
+        @intervals: The intervals between instants.
+        
+        @type default: C{int}, C{long}, or C{float}
+        @param default: The duration to generate if the intervals list
+        becomes empty.
+        """
+        self.intervals = intervals[:]
+        self.default = default
+    
+    def __iter__(self):
+        return _IntervalDifferentialIterator(self.intervals, self.default)
+
+class _IntervalDifferentialIterator:
+    def __init__(self, i, d):
+        self.intervals = [[e, e] for e in i]
+        self.default = d
+        self.last = 0
+    
+    def next(self):
+        if not self.intervals:
+            return self.default
+#        print 'self.intervals[0][0]', self.intervals[0][0]
+#        print 'self.intervals[0][1]', self.intervals[0][1]
+#        print 'self.last', self.last
+        last = self.intervals[0][0]
+        self.intervals[0][0] += self.intervals[0][1]
+        self.intervals.sort()
+        result = last - self.last
+        self.last = last
+        return result
+
+def nextInterval(intervals):
+    intervals[:] = [[e, e] for e in intervals]
+    intervals.sort()
+    last = 0
+    while True:
+        yield i[0][0] - last
+        last = i[0][0]
+        if isinstance(i[-1], (int, long, float)):
+            i[-1] = [last + i[-1], i[-1]]
+        i[0][0] += i[0][1]
+        i.sort()
+
 __all__ = [
     "uniquify", "padTo", "getPluginDirs", "addPluginDir", "sibpath",
     "getPassword", "dict", "println", "keyed_md5", "makeStatBar",
-    "OrderedDict", "spewer", "searchupwards", "LineLog", "raises"
+    "OrderedDict", "spewer", "searchupwards", "LineLog", "raises",
+    "nextInterval",
 ]
