@@ -202,7 +202,7 @@ def loadValueFromFile(filename, variable, passphrase=None):
     if passphrase:
         data = _decrypt(passphrase, data)
     else:
-        data = data + '\n'
+        data = '\n'.join(data.splitlines()) + '\n'
     d = {'__file__': filename}
     exec data in d, d
     value = d[variable]
