@@ -13,7 +13,7 @@ class MyPP(protocol.ProcessProtocol):
         for i in range(self.verses):
             self.transport.write("Aleph-null bottles of beer on the wall,\n" +
                                  "Aleph-null bottles of beer,\n" +
-                                 "Take on down and pass it around,\n" +
+                                 "Take one down and pass it around,\n" +
                                  "Aleph-null bottles of beer on the wall.\n")
             self.transport.closeStdin() # tell them we're done
     def outReceived(self, data):
