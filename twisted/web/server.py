@@ -273,7 +273,7 @@ class Request(pb.Copyable, http.HTTP):
                     # Oh well, I guess we won't include the content
                     # length then.
                 else:
-                    self.setHeader('content-length', len(body))
+                    self.setHeader('content-length', str(len(body)))
 
                 self.write('')
                 self.finish()
@@ -315,10 +315,10 @@ class Request(pb.Copyable, http.HTTP):
                 log.msg("Warning: HEAD request %s for resource %s is"
                         " returning a message body.  I think I'll eat it."
                         % (self, resrc))
-                self.setHeader('content-length', len(body))
+                self.setHeader('content-length', str(len(body)))
             self.write('')
         else:
-            self.setHeader('content-length', len(body))
+            self.setHeader('content-length', str(len(body)))
             self.write(body)
         self.finish()
 
