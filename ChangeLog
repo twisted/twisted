@@ -1,3 +1,8 @@
+2002-04-19  Itamar Shtull-Trauring  <itamarst@twistedmatrix.com>
+
+	* twisted/web/{server,twcgi}.py: Fixed POST bug in distributed
+	web servers.
+	
 2002-04-19  Chris Armstrong  <carmstro@twistedmatrix.com>
 
 	* .: Releasing Twisted 0.17.3.
