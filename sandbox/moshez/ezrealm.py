@@ -1,42 +1,19 @@
 from twisted.python import components
 from twisted.cred import portal
 
-class IMindfulAvatar(components.Interface):
-    def connect(self, mind):
-        """a mind has connected"
-    def logout(self, mind):
-        """a mind has logged out"
-
 class IAvatar(components.Interface):
-    def connect(self):
+    def connect(self, mind):
         """a mind has connected"
-    def logout(self):
+    def logout(self, mind):
         """a mind has logged out"
 
-class _MindfulFromAvatar(components.Adapter):
-    __implements__ = IMindfulAvatar
-    def connect(self, mind):
-        self.original.connect(self)
-    def logout(self, mind):
-        self.original.logout(self)
-
-class _NullMindfulAvatar:
-    __implements__ = IMindfulAvatar
+class _NullAvatar:
+    __implements__ = IAvatar
     def connect(self, mind):
         pass
     def logout(self, mind):
         pass
-
-components.registerAdapter(_MindfulFromAvatar, IAvatar, IMindfulAvatar)
-
-def getMindful(object):
-    mindful = IMindFulAvatar(object, None)
-    if mindful is None:
-        avatar = IAvatar(object, None)
-        if avatar is not None:
-            mindful = IMindFulAvatar(avatar)
-    if mindful is None:
-        mindful = _NullMindfulAvatar()
+_nullAvatar = _NullAvatar()
 
 class IAvatarFactory(components.Interface):
     def loadAvatar(self, avatarId):
@@ -51,16 +28,15 @@ class Realm:
             avatar = self.factory(avatarId)
         except LookupError:
             raise NotImplementedError("object does not exist")
-        mindful = getMindful(avatar)
         for interface in interfaces:
             o = interface(avatar, None)
             if o is not None:
                 break
         else:
             raise NotImplementedError("cannot follow specified interface")
-        logout = lambda: mindful.logout(mind)
-        mindful.connect(mind)
-        return interface, o, logout
+        conn = IAvatar(avatar, _nullAvatar)
+        conn.connect(mind)
+        return interface, o, lambda: conn.logout(mind)
 
 class PersistentFactory:
     __implements__ = IAvatarFactory
@@ -88,9 +64,9 @@ class PersistentFactory:
 #
 # ------------------------------------------------------------------
 # Example: (based on twisted/manhole/service.py)
-# class MindfulPerspective(components.Adapter):
+# class ConnectedPerspective(components.Adapter):
 #
-#     __implements__ = IMindfulAdapter
+#     __implements__ = IAvatar
 #
 #     def connect(self, mind):
 #         self.original.attached(mind)
@@ -98,7 +74,7 @@ class PersistentFactory:
 #     def logout(self, mind):
 #         self.original.detached(mind)
 #
-# components.registerAdapter(MindfulPerspective, Perspective, IMindfulAdapter)
+# components.registerAdapter(ConnectedPerspective, Perspective, IAvatar)
 #
 # class AvatarFactory:
 # 
@@ -153,18 +129,14 @@ class PersistentFactory:
 #
 # ------------------------------------------------
 # Example: (based on doc/examples/pbbenchserver.py)
-# class _PBBenchAdapter(components.Adapter):
-#     __implements__ = IAvatar
-#     def connect(self):
-#         self.original.printCallsPerSec()
-#     def logout(self): pass
-# components.registerAdapter(_PBBenchAdapter, PBBenchPerspective, IAvatar)
 #
 # class SimpleFactory:
 #     __implements__ = IAvatarFactory
 #
 #    def requestAvatar(self, avatarId):
-#        return PBBenchPerspective()
+#        p = PBBenchPerspective()
+#        p.printCallPerSec()
+#        return p
 #
 # Use: Realm(SimpleFactory())
 #
