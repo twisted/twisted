@@ -87,15 +87,9 @@ class ProcessWriter(abstract.FileDescriptor, styles.Ephemeral):
             raise
 
     def doRead(self):
-        """This will raise an exception, as doRead should never be called.
+        """This does nothing.
         """
-        fd = self.fileno()
-        d = select.select([fd], [fd], [], 0)
-        # If I'm writable, AND readable, then I'm screwed.
-        if d[0] and d[1]:
-            return CONNECTION_LOST
-        else:
-            return 0
+        return
 
     def connectionLost(self):
         """See abstract.FileDescriptor.connectionLost.
@@ -280,7 +274,8 @@ class Process(abstract.FileDescriptor, styles.Ephemeral):
                 self.proto.processEnded()
             except:
                 log.deferr()
-
+            reapProcess()
+    
     def inConnectionLost(self):
         del self.writer
         self.lostInConnection = 1
@@ -305,13 +300,5 @@ class Process(abstract.FileDescriptor, styles.Ephemeral):
         except:
             log.deferr()
         self.maybeCallProcessEnded()
-        reapProcess()
 
 
-if os.name != 'posix':
-    # Win32 l0sers unite
-    class Process:
-        """Non-implementation of Process, for win32.
-        """
-        def __init__(self, *args, **kw):
-            raise "Processes unsupported on non-POSIX systems"
