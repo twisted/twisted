@@ -243,16 +243,19 @@ class Process(abstract.FileDescriptor, styles.Ephemeral):
     def closeStdin(self):
         """Call this to close standard input on this process.
         """
-        self.writer.loseConnection()
+        if hasattr(self, "writer"):
+            self.writer.loseConnection()
 
     def closeStderr(self):
         """Close stderr."""
-        self.err.stopReading()
-        self.err.connectionLost(None)
+        if hasattr(self, "err"):
+            self.err.stopReading()
+            self.err.connectionLost(None)
 
     def closeStdout(self):
         """Close stdout."""
-        abstract.FileDescriptor.loseConnection(self)
+        if not self.lostOutConnection:
+            abstract.FileDescriptor.loseConnection(self)
 
     def loseConnection(self):
         self.closeStdin()
