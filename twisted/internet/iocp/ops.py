@@ -1,4 +1,5 @@
 import struct, socket, os, errno
+#import time
 
 from twisted.python import failure
 
@@ -35,12 +36,14 @@ class ReadFileOp(OverlappedOp):
 
 class WriteFileOp(OverlappedOp):
     def ovDone(self, ret, bytes, (handle, buffer)):
+#        log.msg("WriteFileOp.ovDone", time.time())
         if ret or not bytes:
             self.transport.writeErr(ret, bytes)
         else:
             self.transport.writeDone(bytes)
 
     def initiateOp(self, handle, buffer):
+#        log.msg("WriteFileOp.initiateOp", time.time())
         self.reactor.issueWriteFile(handle, buffer, self.ovDone, (handle, buffer))
 
 class WSASendToOp(OverlappedOp):
