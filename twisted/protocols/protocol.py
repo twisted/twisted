@@ -52,7 +52,7 @@ class Factory:
         It will be called before an application shuts down.
         """
 
-    def buildProtocol(self, connection):
+    def buildProtocol(self, addr):
         """Create an instance of a subclass of Protocol.
 
         The returned instance will handle input on an incoming server
