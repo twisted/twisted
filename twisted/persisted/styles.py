@@ -202,6 +202,7 @@ class Versioned:
             persistVers = persistVers + 1
             method = getattr(self, 'upgradeToVersion%s' % persistVers, None)
             if method:
+                print "Upgrading %s to version %s" % (self.__class__, persistVers)
                 method()
             else:
                 print 'Warning: cannot upgrade %s to version %s' % (self.__class__, persistVers)
