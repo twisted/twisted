@@ -23,7 +23,7 @@ class SSHRealm:
     __implements__ = portal.IRealm,
 
     def requestAvatar(self, avatarId, mind, *interfaces):
-        return SSHAvatar(avatarId), interfaces[0], lambda x: None
+        return interfaces[0], SSHAvatar(avatarId), lambda x: None
 
 class EchoProtocol(protocol.Protocol):
     """this is our example protocol that we will run over SSH
