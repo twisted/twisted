@@ -4665,3 +4665,5 @@ person.
 <dash> what the heck, i think i pushed the wrong button in emacs
 <dash> "Pinging loginfo.py (Paraguay)..."
 %
+<symbiont> btw, i've noticed that the word "federated" is not in the Twisted source tree, should i file a roundup on this issue?
+%
