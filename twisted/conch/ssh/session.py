@@ -35,7 +35,7 @@ class SSHSession(connection.SSHChannel):
     name = 'session'
     def __init__(self, *args, **kw):
         connection.SSHChannel.__init__(self, *args, **kw)
-        self.environ = {}
+        self. environ = {'PATH':'/bin:/usr/bin:/usr/local/bin'}
         self.buf = ''
         self.pty = None
         self.ptyTuple = 0
@@ -171,7 +171,7 @@ class SSHSession(connection.SSHChannel):
         return pyshell
 
     def setModes(self):
-        import ttymodes
+        import tty, ttymodes
         pty = self.pty
         attr = tty.tcgetattr(pty.fileno())
         for mode, modeValue in self.modes:
@@ -222,7 +222,9 @@ class SSHSession(connection.SSHChannel):
 
     def closed(self):
         if self.pty:
+            import signal, os
             self.pty.loseConnection()
+            os.kill(self.pty.pid, signal.SIGHUP)
         ttyGID = os.stat(self.ptyTuple[2])[5]
         os.chown(self.ptyTuple[2], 0, ttyGID)
         try:
