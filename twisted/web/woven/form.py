@@ -28,14 +28,15 @@ class FormFillerWidget(widgets.Widget):
     def input_single(self, request, content, arg):
         return content.input(type="text",
                              size="60",
-                             name=arg.name)
+                             name=arg.name,
+                             value=str(arg.default))
 
     def input_text(self, request, content, arg):
         r = content.textarea(cols="60",
                              rows="10",
                              name=arg.name,
                              wrap="virtual")
-        r.text(arg.default)
+        r.text(str(arg.default))
         return r
 
     input_integer = input_single
@@ -45,28 +46,43 @@ class FormFillerWidget(widgets.Widget):
     def input_choice(self, request, content, arg):
         s = content.select(name=arg.name)
         for tag, value, desc in arg.choices:
-            s.option(value=tag).text(desc)
+            if tag == arg.default:
+                kw = {'selected' : '1'}
+            else:
+                kw = {}
+            s.option(value=tag, **kw).text(desc)
         return s
 
     def input_radiogroup(self, request, content, arg):
         s = content.div()
         for tag, value, desc in arg.choices:
+            if tag in arg.default:
+                kw = {'checked' : '1'}
+            else:
+                kw = {}
             s.div().input(name=arg.name,
-                          type="radio").text(desc)
+                          type="radio", **kw).text(desc)
         return s
 
     def input_checkgroup(self, request, content, arg):
         s = content.div()
         for tag, value, desc in arg.choices:
+            if tag in arg.default:
+                kw = {'checked' : '1'}
+            else:
+                kw = {}
             s.input(type="checkbox",
                     name=arg.name,
-                    value=tag).text(desc)
-            # checked="1"
+                    value=tag, **kw).text(desc)
         return s
 
     def input_boolean(self, request, content, arg):
+        if arg.default:
+            kw = {'checked' : '1'}
+        else:
+            kw = {}
         i = content.input(type="checkbox",
-                          name=arg.name)
+                          name=arg.name, **kw)
         return i
 
     def input_password(self, request, content, arg):
@@ -76,9 +92,13 @@ class FormFillerWidget(widgets.Widget):
 
     def input_flags(self, request, content, arg):
         for key, val, label in arg.flags:
+            if key in arg.default:
+                kw = {'checked' : '1'}
+            else:
+                kw = {}
             nn = content.input(type="checkbox",
                                name=arg.name,
-                               value=str(key))
+                               value=str(key), **kw)
             nn.text(label)
         return content
 
@@ -88,14 +108,17 @@ class FormFillerWidget(widgets.Widget):
                              value=arg.default)
     
     def createInput(self, request, shell, arg):
-        tr = shell.tr()
-        tr.td(align="right", valign="top").text(arg.getShortDescription()+":")
-        content = tr.td(valign="top")
-        imeth = getattr(self,"input_"+(arg.__class__.__name__.lower()))
-        # content.input(type="text", name=arg.name).node
-        return (imeth(request, content, arg).node,
-                content.div(style="color: green").
-                text(arg.getLongDescription()).node)
+        name = arg.__class__.__name__.lower()
+        imeth = getattr(self,"input_"+name)
+        if name == "hidden":
+            return (imeth(request, shell, arg).node, lmx())
+        else:
+            tr = shell.tr()
+            tr.td(align="right", valign="top").text(arg.getShortDescription()+":")
+            content = tr.td(valign="top")
+            return (imeth(request, content, arg).node,
+                    content.div(style="color: green").
+                    text(arg.getLongDescription()).node)
 
     def setUp(self, request, node, data):
         # node = widgets.Widget.generateDOM(self,request,node)
