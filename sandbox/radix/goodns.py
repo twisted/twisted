@@ -233,6 +233,17 @@ def _cbExtractServices(result, name):
     return result
 
 
+def lookupAuthority(name, cnameLevel=D_CNAME, nsLevel=D_NS,
+                    resolver=client, timeout=None):
+    """Look up the authority (SOA record) of a given name."""
+    d = resolver.lookupAuthority(name, timeout)
+    d.addCallback(_scroungeRecords, name, dns.SOA,
+                  cnameLevel, nsLevel, resolver)
+    d.addCallback(lambda x: [rr.payload for rr in x])
+    return d
+
+
+
 globalParameters = """
     @param cnameLevel: (optional) The number of CNAMEs to follow.
     @param nsLevel: (optional) The number of NSes to follow.
