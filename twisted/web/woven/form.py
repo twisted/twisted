@@ -1,4 +1,4 @@
-
+# -*- test-case-name: twisted.test.test_woven -*-
 #
 # WORK IN PROGRESS: HARD HAT REQUIRED
 # 
@@ -8,9 +8,10 @@
 from twisted.python import formmethod, failure
 from twisted.python.components import registerAdapter, getAdapter
 from twisted.web import domhelpers, resource
+from twisted.internet import defer
 
 # Sibling Imports
-from twisted.web.woven import model, view, controller, widgets, input, interfaces
+from twisted.web.woven import model, view, controller, widgets, input, interfaces, tapestry
 
 from twisted.web.microdom import parseString, lmx
 
@@ -194,7 +195,17 @@ class FormProcessor(resource.Resource):
                 err = request.errorInfo = self.errorModelFactory(request.args, outDict, e)
                 return self.errback(err).render(request)
             else:
-                return self.callback(self.modelFactory(outObj)).render(request)
+                if isinstance(outObj, defer.Deferred):
+                    def _cbModel(result):
+                        return self.callback(self.modelFactory(result))
+                    def _ebModel(err):
+                        if err.trap(formmethod.FormException):
+                            return self.errorModelFactory(request.args, outDict, err.value)
+                        raise err
+                    outObj.addCallback(_cbModel).addErrback(_ebModel)
+                    return tapestry._ChildJuggler(outObj)
+                else:
+                    return self.callback(self.modelFactory(outObj)).render(request)
 
     def errorModelFactory(self, args, out, err):
         return FormErrorModel(self.formMethod, args, err)
@@ -216,7 +227,9 @@ class FormProcessor(resource.Resource):
         return v
 
     def modelFactory(self, outObj):
-        return getAdapter(outObj, interfaces.IModel, outObj)
+        adapt = getAdapter(outObj, interfaces.IModel, outObj)
+        # print 'factorizing', adapt
+        return adapt
 
     def viewFactory(self, model):
         # return getAdapter(model, interfaces.IView)

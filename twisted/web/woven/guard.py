@@ -13,6 +13,7 @@ from twisted.python import log, components
 from twisted.web.resource import Resource
 from twisted.web.util import redirectTo, Redirect
 from twisted.internet import reactor
+from twisted.cred.error import Unauthorized
 
 def _sessionCookie():
     return md5.new("%s_%s" % (str(random.random()) , str(time.time()))).hexdigest()
@@ -218,7 +219,13 @@ class PerspectiveWrapper(Resource):
                                  s.setClientForService(ident, psp,
                                                        self.authResourceFactory(psp),
                                                        self.service)))
+                def loginFailure(f):
+                    if f.trap(Unauthorized):
+                        raise fm.FormException(str(f.value))
+                    raise f
+                idfr.addErrback(loginFailure)
                 return idfr
+                
             return form.FormProcessor(loginSignature.method(loginMethod))
         else:
             sc = s.clientForService(self.service)
