@@ -6,7 +6,7 @@ L{UsernamePasswordWrapper}.
 
 from __future__ import nested_scopes
 
-__version__ = "$Revision: 1.26 $"[11:-2]
+__version__ = "$Revision: 1.27 $"[11:-2]
 
 import random
 import time
@@ -320,7 +320,8 @@ newLoginSignature = fm.MethodSignature(
     fm.String("username", "",
               "Username", "Your user name."),
     fm.Password("password", "",
-                "Password", "Your password.")
+                "Password", "Your password."),
+    fm.Submit("submit", choices=[("Login", "login", "")]),
     )
 
 from twisted.cred.credentials import UsernamePassword, Anonymous
@@ -389,7 +390,7 @@ class UsernamePasswordWrapper(Resource):
                 interface, avatarAspect, logout = result
                 s.setResourceForPortal(avatarAspect, self.portal, logout)
 
-            def triggerLogin(username, password):
+            def triggerLogin(username, password, submit=None):
                 return self.portal.login(
                     UsernamePassword(username, password),
                     None, 
