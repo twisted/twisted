@@ -18,7 +18,6 @@
 from twisted.lore import tree
 from twisted.web import domhelpers
 from twisted.python import reflect
-import twisted.python.text
 
 import parser
 
