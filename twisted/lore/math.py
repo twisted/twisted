@@ -76,8 +76,11 @@ class ProcessingFunctionFactory(default.ProcessingFunctionFactory):
     def getLintChecker(self):
         checker = lint.getDefaultChecker()
         checker.allowedClasses = checker.allowedClasses.copy()
-        checker.allowedClasses['div'].__self__['latexmacros'] = 1
-        checker.allowedClasses['span'].__self__['latexformula'] = 1
+        oldDiv = checker.allowedClasses['div']
+        oldSpan = checker.allowedClasses['span']
+        checker.allowedClasses['div'] = lambda x:oldDiv(x) or x=='latexmacros'
+        checker.allowedClasses['span'] = (lambda x:oldSpan(x) or
+                                                     x=='latexformula')
         return checker
 
 factory = ProcessingFunctionFactory()
