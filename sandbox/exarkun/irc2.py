@@ -18,6 +18,7 @@ class AdvancedClient(irc.IRCClient):
     def __init__(self):
         self._pendingJoins = {}
         self._pendingParts = {}
+        self._pendingTopics = {}
         self._pendingNames = []
         self._pendingWho = []
         self._pendingWhois = []
@@ -113,6 +114,15 @@ class AdvancedClient(irc.IRCClient):
             pass
         else:
             del self._pendingParts[channel.lower()]
+            d.errback(NoSuchChannel())
+            return
+        
+        try:
+            d = self._pendingTopics[channel.lower()]
+        except KeyError:
+            pass
+        else:
+            del self._pendingTopics[channel.lower()]
             d.errback(NoSuchChannel())
             return
 
@@ -232,3 +242,37 @@ class AdvancedClient(irc.IRCClient):
         whois, d = self._pendingWhois.pop(0)
         del self._unknownHandlers[0]
         d.errback(NoSuchChannel())
+
+    def topic(self, channel):
+        """Retrieve the topic for the given channel.
+        
+        @type channel C{str}
+        @param channe: The channel for which to retrieve the topic.
+        
+        @rtype: C{Deferred} of C{str} or C{None}
+        @return: A Deferred of the topic, or of None if no topic is set.
+        """
+        d = defer.Deferred()
+        self._pendingTopics[channel.lower()] = d
+        self.sendLine("TOPIC " + channel)
+        return d
+    
+    def irc_RPL_TOPIC(self, prefix, params):
+        channel, topic = params[1:]
+        try:
+            d = self._pendingTopics[channel.lower()]
+        except KeyError:
+            pass
+        else:
+            del self._pendingTopics[channel.lower()]
+            d.callback(topic)
+    
+    def irc_RPL_NOTOPIC(self, prefix, params):
+        channel = params[1]
+        try:
+            d = self._pendingTopics[channel.lower()]
+        except KeyError:
+            pass
+        else:
+            del self._pendingTopics[channel.lower()]
+            d.callback(None)

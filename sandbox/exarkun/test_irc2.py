@@ -183,3 +183,46 @@ class SimpleActionTestCase(unittest.TestCase):
         loopback.loopback(server, client)
         self.failIf(whois)
         self.failure.trap(NoSuchChannel)
+
+    def testTopic(self):
+        server = LineSendingProtocol([
+            ":server 332 user #channel :topic text",
+        ], False)
+        topic = []
+        client = AdvancedTestClient()
+        client.onC.addCallback(lambda p: p.topic("#channel")
+            ).addCallback(topic.append
+            ).addCallback(lambda _: client.transport.loseConnection()
+            ).addErrback(self.fail, client
+            )
+        loopback.loopback(server, client)
+        self.assertEquals(topic, ["topic text"])
+    
+    def testNoTopic(self):
+        server = LineSendingProtocol([
+            ":server 331 user #channel :There is no set topic.",
+        ], False)
+        topic = []
+        client = AdvancedTestClient()
+        client.onC.addCallback(lambda p: p.topic("#channel")
+            ).addCallback(topic.append
+            ).addCallback(lambda _: client.transport.loseConnection()
+            ).addErrback(self.fail, client
+            )
+        loopback.loopback(server, client)
+        self.assertEquals(topic, [None])
+    
+    def testTopicNoChannel(self):
+        server = LineSendingProtocol([
+            ":server 403 user #channel :That channel doesn't exist.",
+        ], False)
+        topic = []
+        client = AdvancedTestClient()
+        client.onC.addCallback(lambda p: p.topic("#channel")
+            ).addCallback(topic.append
+            ).addCallback(lambda _: client.transport.loseConnection()
+            ).addErrback(self.fail, client
+            )
+        loopback.loopback(server, client)
+        self.failIf(topic)
+        self.failure.trap(NoSuchChannel)
