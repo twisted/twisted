@@ -37,7 +37,7 @@ class AuthForm(widgets.Form):
         ['string','Perspective','perspective','']
         ]
 
-    def __init__(self, reqauth, sessionPerspective=None, sessionIdentity=None):
+    def __init__(self, reqauth, sessionIdentity=None, sessionPerspective=None):
         """Initialize, specifying various options.
         
         Arguments:
@@ -47,13 +47,13 @@ class AuthForm(widgets.Form):
               specify a serviceName attribute which indicates the name of the
               service from which perspectives will be requested.
 
-            * [sessionPerspective]: if specified, the name of the attribute on
-              the user's session to set for the perspective they get from
-              logging in to this form.
-
             * [sessionIdentity]: if specified, the name of the attribute on
               the user's session to set for the identity they get from logging
               in to this form.
+            
+            * [sessionPerspective]: if specified, the name of the attribute on
+              the user's session to set for the perspective they get from
+              logging in to this form.
         """
         self.reqauth = reqauth
         self.sessionPerspective = sessionPerspective
@@ -114,7 +114,7 @@ class AuthPage(widgets.Page):
     </html>
     '''
     authForm = None
-    def __init__(self, reqauth, sessionPerspective=None, sessionIdentity=None):
+    def __init__(self, reqauth, sessionIdentity=None, sessionPerspective=None):
         widgets.Page.__init__(self)
         self.authForm = AuthForm(reqauth, sessionPerspective, sessionIdentity)
 
