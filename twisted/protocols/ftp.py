@@ -62,6 +62,7 @@ import time
 import string
 import types
 import re
+import StringIO
 from math import floor
 
 # Twisted Imports
@@ -129,7 +130,8 @@ class SendFileTransfer:
     def resumeProducing(self):
         if (self.request is None) or (self.file.closed):
             return
-        self.request.write(self.file.read(abstract.FileDescriptor.bufferSize))
+        buffer = self.file.read(abstract.FileDescriptor.bufferSize)
+        self.request.write(buffer)
         
         if self.file.tell() == self.filesize:
             self.stopProducing()
@@ -214,8 +216,9 @@ class DTP(protocol.Protocol):
         
     def actionRETR(self, queuedfile):
         "Send the given file to the peer"
-        self.file = open(queuedfile, "rb")
-        self.filesize = os.path.getsize(queuedfile)
+        if self.file is None:
+            self.file = open(queuedfile, "rb")
+            self.filesize = os.path.getsize(queuedfile)
         producer = SendFileTransfer(self.file, self.filesize, self.makeRETRTransport())
         producer.resumeProducing()
 
@@ -245,7 +248,8 @@ class DTP(protocol.Protocol):
         Note that the printout is very fake, and only gives the filesize,
         date, time and filename.
         """
-        list = os.listdir(dir)                
+        list = os.listdir(dir)
+        s = ''
         for a in list:
             s = a
             ff = os.path.join(dir, s) # the full filename
@@ -255,11 +259,12 @@ class DTP(protocol.Protocol):
                 diracc = 'd'
             else:
                 diracc = '-'    
-            self.transport.write(diracc+"r-xr-xr-x    1 twisted twisted %11d"
-                                 % fsize+' '+mtime+' '+s+'\r\n')
-        self.pi.reply('fileok')
-        self.pi.queuedfile = None
-        self.transport.loseConnection()
+            s = s + diracc+"r-xr-xr-x    1 twisted twisted %11d" % fsize+' '+mtime+' '+s+'\r\n'
+        self.action = 'RETR'
+        self.file = StringIO.StringIO(s)
+        self.filesize = len(s)
+        reactor.callLater(0.1, self.executeAction)
+        
 
 class DTPFactory(protocol.Factory):
     """The DTP-Factory.
@@ -324,7 +329,7 @@ class FTP(basic.LineReceiver, DTPFactory):
             if self.debug:
                 print ftp_reply[key] + '\r\n'
             self.transport.write(ftp_reply[key] + '\r\n')
-            
+
     # This command is IMPORTANT! Must also get rid of it :)
     def checkauth(self):
         """Will return None if the user has been authorized
