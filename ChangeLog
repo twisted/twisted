@@ -1,3 +1,8 @@
+2002-9-30  Moshe Zadka <moshez@twistedmatrix.com>
+
+	* twisted/protocols/sux.py twisted/web/microdom.py: Made is possible
+	to sanely handle parse errors
+
 2002-09-26  Kevin Turner  <acapnotic@twistedmatrix.com>
 
 	* twisted/internet/app.py (_AbstractServiceCollection.removeService):
