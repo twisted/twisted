@@ -682,8 +682,9 @@ class IProducer(Interface):
 class IPushProducer(IProducer):
     """
     A push producer, also known as a streaming producer is expected to
-    produce (write to this consumer) data in the main IO thread of
-    some process as the result of a read operation.
+    produce (write to this consumer) data on a continous basis, unless
+    it has been paused. A paused push producer will resume producing
+    after its resumeProducing() method is called.
 
     This interface is semi-stable.
     """
@@ -710,10 +711,12 @@ class IPullProducer(IProducer):
     """
         
     def resumeProducing(self):
-        """Resume producing data.
+        """Produce data for the consumer a single time.
 
-        This tells a producer to re-add itself to the main loop and produce
-        more data for its consumer.
+        This tells a producer to produce data for the consumer once
+        (not repeatedly, once only). Typically this will be done
+        by calling the consumer's write() method a single time with
+        produced data.
         """
     
 class IProtocol(Interface):
