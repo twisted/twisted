@@ -1,6 +1,7 @@
 #! /usr/bin/python
 
-from slicer import RootSlicer, RootUnslicer, DiscardUnslicer, UnbananaFailure, VocabSlicer
+from slicer import RootSlicer, RootUnslicer, DiscardUnslicer, \
+     UnbananaFailure, VocabSlicer, SimpleTokens
 from twisted.internet import protocol
 from twisted.python.failure import Failure
 
@@ -53,7 +54,8 @@ HIGH_BIT_SET = chr(0x80)
 SIZE_LIMIT = 640 * 1024   # 640k is all you'll ever need :-)
 
 class Banana(protocol.Protocol):
-
+    slicerClass = RootSlicer
+    unslicerClass = RootUnslicer
     debug = 0
 
     def __init__(self):
@@ -62,7 +64,7 @@ class Banana(protocol.Protocol):
 
     # output side
     def initSend(self):
-        self.rootSlicer = RootSlicer()
+        self.rootSlicer = self.slicerClass()
         self.rootSlicer.protocol = self
         self.slicerStack = [self.rootSlicer]
         self.openCount = 0
@@ -70,7 +72,10 @@ class Banana(protocol.Protocol):
 
     def send(self, obj):
         assert(len(self.slicerStack) == 1)
-        assert(isinstance(self.slicerStack[0], RootSlicer))
+        assert(isinstance(self.slicerStack[0], self.slicerClass))
+        if type(obj) in SimpleTokens:
+            self.sendToken(obj)
+            return
         self.doSlice(obj)
 
     def setOutgoingVocabulary(self, vocabDict):
@@ -134,7 +139,6 @@ class Banana(protocol.Protocol):
         return openID
 
     def sendToken(self, obj):
-        #self.tokens.append(token)
         write = self.transport.write
         if isinstance(obj, types.IntType):
             if obj >= 0:
@@ -169,12 +173,10 @@ class Banana(protocol.Protocol):
             raise BananaError, "could not send object: %s" % repr(obj)
 
     def sendClose(self, openID):
-        #self.sendToken(("CLOSE", openID))
         int2b128(openID, self.transport.write)
         self.transport.write(CLOSE)
 
     def sendAbort(self, count=0):
-        #self.sendToken(("ABORT",))
         int2b128(count, self.transport.write)
         self.transport.write(ABORT)
 
@@ -184,7 +186,7 @@ class Banana(protocol.Protocol):
     # input side
 
     def initReceive(self):
-        root = RootUnslicer()
+        root = self.unslicerClass()
         root.protocol = self
         self.receiveStack = [root]
         self.objectCounter = 0

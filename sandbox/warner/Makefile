@@ -7,3 +7,7 @@ banana.xhtml: banana.html
 
 test:
 	../../bin/trial -v test_banana
+
+clean:
+	rm -f *~ *.pyc *.xhtml
+	rm -rf _trial_temp

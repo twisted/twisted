@@ -4,6 +4,8 @@ from twisted.python.failure import Failure
 from twisted.internet.defer import Deferred
 from twisted.python import log, reflect
 import types
+from pickle import whichmodule  # used by FunctionSlicer
+from new import instance, instancemethod
 
 class IBananaSlicer:
     def sendOpen(self, opentype):
@@ -177,6 +179,56 @@ class InstanceSlicer(OrderedDictSlicer):
         self.protocol.sendToken(reflect.qual(obj.__class__))
         OrderedDictSlicer.slice(self, getInstanceState(obj)) #DictSlicer
 
+class ModuleSlicer(BaseSlicer):
+    opentype = 'module'
+    trackReferences = 1
+
+    def slice(self, obj):
+        self.send(obj.__name__)
+
+class ClassSlicer(BaseSlicer):
+    opentype = 'class'
+    trackReferences = 1
+
+    def slice(self, obj):
+        self.send(reflect.qual(obj))
+
+class MethodSlicer(BaseSlicer):
+    opentype = 'method'
+    trackReferences = 1
+
+    def slice(self, obj):
+        self.send(obj.im_func.__name__)
+        self.send(obj.im_self)
+        self.send(obj.im_class)
+
+class FunctionSlicer(BaseSlicer):
+    opentype = 'function'
+    trackReferences = 1
+
+    def slice(self, obj):
+        name = obj.__name__
+        fullname = str(whichmodule(obj, obj.__name__)) + '.' + name
+        self.send(fullname)
+
+class NoneSlicer(BaseSlicer):
+    opentype = 'none'
+    trackReferences = 0
+
+    def slice(self, obj):
+        pass
+
+class BooleanSlicer(BaseSlicer):
+    opentype = 'boolean'
+    trackReferences = 0
+
+    def slice(self, obj):
+        if obj:
+            self.send(1)
+        else:
+            self.send(0)
+
+
 class ReferenceSlicer(BaseSlicer):
     opentype = 'reference'
 
@@ -209,7 +261,9 @@ class RootSlicer(BaseSlicer):
         if refid is not None:
             slicer = ReferenceSlicer(refid)
             return slicer
-        slicerClass = SlicerRegistry[type(obj)]
+        slicerClass = SlicerRegistry.get(type(obj))
+        if not slicerClass:
+            raise KeyError, "I don't know how to slice %s" % type(obj)
         slicer = slicerClass()
         return slicer
 
@@ -225,13 +279,45 @@ class RootSlicer(BaseSlicer):
             print "getObject(%s{%s}) -> %s" % (obj, id(obj), refid)
         return refid
 
+class RootSlicer2(RootSlicer):
+
+    def newSlicer(self, obj):
+        refid = self.protocol.getRefID(obj)
+        if refid is not None:
+            slicer = ReferenceSlicer(refid)
+            return slicer
+        slicerClass = SlicerRegistry2.get(type(obj))
+        if not slicerClass:
+            if issubclass(type(obj), type):
+                slicerClass = ClassSlicer
+        if not slicerClass:
+            raise KeyError, "I don't know how to slice %s" % type(obj)
+        slicer = slicerClass()
+        return slicer
+    
 SlicerRegistry = {
     types.UnicodeType: UnicodeSlicer,
     types.ListType: ListSlicer,
     types.TupleType: TupleSlicer,
     types.DictType: OrderedDictSlicer, #DictSlicer
     types.InstanceType: InstanceSlicer,
+    types.NoneType: NoneSlicer,
     }
+
+try:
+    from types import BooleanType
+    SlicerRegistry[BooleanType] = BooleanSlicer
+except ImportError:
+    pass
+
+SlicerRegistry2 = {}
+SlicerRegistry2.update(SlicerRegistry)
+SlicerRegistry2.update({
+    types.ModuleType: ModuleSlicer,
+    types.ClassType: ClassSlicer,
+    types.MethodType: MethodSlicer,
+    types.FunctionType: FunctionSlicer,
+    })
 
 
 
@@ -377,6 +463,13 @@ class BaseUnslicer:
         """
         return None
 
+class LeafUnslicer(BaseUnslicer):
+    # inherit from this to reject any child nodes
+    def receiveChild(self, obj):
+        raise ValueError, "'%s' does not accept sub-objects" % self
+    def doOpen(self, opentype):
+        raise ValueError, "'%s' does not accept sub-objects" % self
+    
 
 class DiscardUnslicer(BaseUnslicer):
     """This Unslicer throws out all incoming tokens. It is used to deal
@@ -538,7 +631,7 @@ class DictUnslicer(BaseUnslicer):
         else:
             return "{}"
 
-class VocabUnslicer(BaseUnslicer):
+class VocabUnslicer(LeafUnslicer):
     """Much like DictUnslicer, but keys must be numbers, and values must
     be strings"""
     
@@ -560,9 +653,6 @@ class VocabUnslicer(BaseUnslicer):
                 raise ValueError, "VOCAB value '%s' must be a string" % token
             self.d[self.key] = token
             self.haveKey = 0
-
-    def receiveChild(self, obj):
-        raise ValueError, "VocabUnslicer does not accept sub-objects"
 
     def receiveClose(self):
         return self.d
@@ -650,8 +740,20 @@ class InstanceUnslicer(DictUnslicer):
             return "%s.%s" % (me, self.key)
         return "%s.attrname??" % me
 
+class InstanceUnslicer2(InstanceUnslicer):
 
-class ReferenceUnslicer(BaseUnslicer):
+    def receiveClose(self):
+        # TODO: taste me!
+        klass = reflect.namedObject(self.classname)
+        assert type(klass) == types.ClassType # TODO: new-style classes
+        o = instance(klass, {})
+        setInstanceState(o, self.d)
+        self.protocol.setObject(self.count, o)
+        self.deferred.callback(o)
+        return o
+    
+
+class ReferenceUnslicer(LeafUnslicer):
 
     def receiveToken(self, token):
         if hasattr(self, 'obj'):
@@ -660,15 +762,92 @@ class ReferenceUnslicer(BaseUnslicer):
             raise ValueError, "'reference' token requires integer"
         self.obj = self.protocol.getObject(token)
 
-    def receiveChild(self, obj):
-        raise ValueError, "'reference' token requires integer"
-
-    def doOpen(self, opentype):
-        raise ValueError, "'reference' token requires integer"
-
     def receiveClose(self):
         return self.obj
+
+class ModuleUnslicer(LeafUnslicer):
+    def receiveToken(self, token):
+        assert type(token) == types.StringType
+        self.name = token
+    def receiveClose(self):
+        # TODO: taste here!
+        mod = __import__(moduleName, {}, {}, "x")
+        return mod
+
+class ClassUnslicer(LeafUnslicer):
+    name = None
+    def receiveToken(self, token):
+        assert(type(token) == types.StringType)
+        assert self.name == None
+        self.name = token
+    def receiveClose(self):
+        # TODO: taste
+        klaus = reflect.namedObject(self.name)
+        return klaus
+
+class MethodUnslicer(BaseUnslicer):
+    state = 0
+    im_func = None
+    im_self = None
+    im_class = None
+
+    # 0: expecting a string with the method name
+    # 1: expecting an instance (or None for unbound methods)
+    # 2: expecting a class
+    def receiveToken(self, token):
+        if self.state == 1:
+            raise ValueError, "%s expecting an instance now" % self
+        if self.state == 2:
+            raise ValueError, "%s expecting a class now" % self
+        if self.state > 2:
+            raise ValueError, "%s got too many tokens" % self
+        assert type(token) == types.StringType
+        self.im_func = token
+        self.state = 1
+
+    def receiveChild(self, obj):
+        if self.state == 0:
+            raise ValueError, "%s expecting a string (method name) now" % self
+        elif self.state == 1:
+            assert type(obj) in (types.InstanceType, types.NoneType)
+            self.im_self = obj
+            self.state = 2
+        elif self.state == 2:
+            assert type(obj) == types.ClassType # TODO: new-style classes?
+            self.im_class = obj
+            self.state = 3
+        else:
+            raise ValueError, "%s got too many tokens" % self
+
+    def receiveClose(self):
+        assert self.state == 3
+        meth = getattr(self.im_class, self.im_func)
+        if self.im_self is None:
+            return meth
+        # TODO: late-available instances
+        #if isinstance(self.im_self, NotKnown):
+        #    im = _InstanceMethod(self.im_name, self.im_self, self.im_class)
+        #    return im
+        im = instancemethod(meth, self.im_self, self.im_class)
+        return im
         
+
+class FunctionUnslicer(LeafUnslicer):
+    name = None
+    def receiveToken(self, token):
+        assert self.name == None
+        assert type(token) == types.StringType
+        self.name = token
+    def receiveClose(self):
+        # TODO: taste here
+        func = reflect.namedObject(self.name)
+        return func
+
+class NoneUnslicer(LeafUnslicer):
+    def receiveToken(self, token):
+        raise ValueError, "'%s' does not accept any tokens" % self
+    def receiveClose(self):
+        return None
 
         
 UnslicerRegistry = {
@@ -678,10 +857,21 @@ UnslicerRegistry = {
     'dict': DictUnslicer,
     'instance': InstanceUnslicer,
     'reference': ReferenceUnslicer,
+    'none': NoneUnslicer,
     # for testing
     'dict1': BrokenDictUnslicer,
     'dict2': ReallyBrokenDictUnslicer,
     }
+        
+UnslicerRegistry2 = {}
+UnslicerRegistry2.update(UnslicerRegistry)
+UnslicerRegistry2.update({
+    'module': ModuleUnslicer,
+    'class': ClassUnslicer,
+    'method': MethodUnslicer,
+    'function': FunctionUnslicer,
+    'instance': InstanceUnslicer2,
+    })
 
 
 class RootUnslicer(BaseUnslicer):
@@ -728,3 +918,14 @@ class RootUnslicer(BaseUnslicer):
             print "getObject(%s) -> %s{%s}" % (counter, obj, id(obj))
         return obj
 
+class RootUnslicer2(RootUnslicer):
+
+    def doOpen(self, opentype):
+        if len(self.protocol.receiveStack) == 1 and opentype == "vocab":
+            # only legal at top-level
+            return VocabUnslicer()
+        return UnslicerRegistry2[opentype]()
+
+    def receiveToken(self, token):
+        self.protocol.receivedObject(token)
+    

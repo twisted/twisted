@@ -3,7 +3,9 @@
 from twisted.trial import unittest
 from twisted.python import reflect
 from banana import Banana
-from slicer import RootSlicer, Dummy, UnbananaFailure, RootUnslicer
+from slicer import Dummy, UnbananaFailure
+from slicer import RootSlicer, RootSlicer2
+from slicer import RootUnslicer, RootUnslicer2
 
 import cStringIO, types
 
@@ -500,7 +502,11 @@ class TestBananaMixin:
     def loop(self, obj):
         return self.decode(self.encode(obj))
     def looptest(self, obj):
-        self.failUnlessEqual(self.loop(obj), obj)
+        obj2 = self.loop(obj)
+        if isinstance(obj2, UnbananaFailure):
+            print obj2.failure.getTraceback()
+            self.fail("UnbananaFailure at %s" % obj2.where)
+        self.failUnlessEqual(obj2, obj)
 
     def OPEN(self, opentype, count):
         assert count < 128
@@ -564,17 +570,31 @@ class ByteStream(TestBananaMixin, unittest.TestCase):
 
 
 class TestBanana(Banana):
+    slicerClass = RootSlicer2
+    unslicerClass = RootUnslicer2
     def receivedObject(self, obj):
         self.object = obj
+
+class A:
+    """
+    dummy class
+    """
+    def amethod(self):
+        pass
+    def __cmp__(self, other):
+        if not type(other) == type(self):
+            return -1
+        return cmp(self.__dict__, other.__dict__)
+
+def afunc(self):
+    pass
 
 class ThereAndBackAgain(TestBananaMixin, unittest.TestCase):
 
     def test_int(self):
         self.looptest(42)
-    test_int.todo = "can't yet serialize non-containers"
     def test_string(self):
         self.looptest("biggles")
-    test_string.todo = "can't yet serialize non-containers"
     def test_list(self):
         self.looptest([1,2])
     def test_tuple(self):
@@ -626,11 +646,12 @@ class ThereAndBackAgain(TestBananaMixin, unittest.TestCase):
         """
         a = A()
         self.looptest(a)
+        self.looptest(A)
         self.looptest(a.amethod)
         items = [afunc, [1, 2, 3], not bool(1), bool(1), 'test', 20.3, (1,2,3), None, A, unittest, {'a':1}, A.amethod]
         for i in items:
             self.looptest(i)
-    testLotsaTypes.skip = "not all types are implemented yet"
+    #testLotsaTypes.skip = "not all types are implemented yet"
 
         
 class VocabTest1(unittest.TestCase):
@@ -694,3 +715,12 @@ class VocabTest2(TestBananaMixin, unittest.TestCase):
         self.wantEqual(s, expected)
         
         
+def encode(obj, debug=0):
+    b = TokenBanana()
+    b.debug = debug
+    return b.testSlice(obj)
+def decode(tokens, debug=0):
+    b = TokenBanana()
+    b.debug = debug
+    obj = b.processTokens(tokens)
+    return obj
