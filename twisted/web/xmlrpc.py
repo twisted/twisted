@@ -38,6 +38,9 @@ FAILURE = 8002
 
 # Useful so people don't need to import xmlrpclib directly
 Fault = xmlrpclib.Fault
+Binary = xmlrpclib.Binary
+Boolean = xmlrpclib.Boolean
+DateTime = xmlrpclib.DateTime
 
 
 class NoSuchFunction(Exception):
@@ -77,7 +80,7 @@ class XMLRPC(resource.Resource):
     You probably want to connect this to '/RPC2'.
 
     Methods published can return XML-RPC serializable results, Faults,
-    Deferreds, or Handler instances.
+    Binray, Boolean, DateTime, Deferreds, or Handler instances.
 
     By default methods beginning with 'xmlrpc_' are published.
     """
