@@ -52,7 +52,7 @@ applied when serializing arguments.
 # Future Imports
 from __future__ import nested_scopes
 
-__version__ = "$Revision: 1.139 $"[11:-2]
+__version__ = "$Revision: 1.140 $"[11:-2]
 
 
 # System Imports
@@ -1485,7 +1485,7 @@ class PBClientFactory(protocol.ClientFactory):
         
         @return Deferred of RemoteReference to the perspective.
         """
-        warnings.warn("Please update your backend to use updated APIs.",
+        warnings.warn("Update your backend to use PBServerFactory, and then use login().",
                       DeprecationWarning, 2)
         if perspectiveName == None:
             perspectiveName = username
@@ -1536,7 +1536,11 @@ class PBClientFactory(protocol.ClientFactory):
 
 
 class PBServerFactory(protocol.ServerFactory):
-    """Server factory for perspective broker."""
+    """Server factory for perspective broker.
+
+    Login is done using a Portal object, whose realm is expected to return
+    avatars implementing IPerspective.
+    """
 
     def __init__(self, portal):
         self.portal = portal
