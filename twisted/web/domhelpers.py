@@ -30,13 +30,16 @@ def substitute(request, node, subs):
             child.replaceData(0, len(child.nodeValue), child.nodeValue % subs)
         substitute(request, child, subs)
 
-def _get(node, nodeId):
+def _get(node, nodeId, nodeAttrs=('id','class','model','pattern')):
     """
     (internal) Get a node with the specified C{nodeId} as any of the C{class},
     C{id} or C{model} attributes.
     """
-    if hasattr(node, 'hasAttributes') and node.hasAttributes() and ((str(node.getAttribute("id")) == nodeId) or (str(node.getAttribute("class")) == nodeId) or (str(node.getAttribute("model")) == nodeId) or (str(node.getAttribute("pattern")) == nodeId)):
-        return node
+    
+    if hasattr(node, 'hasAttributes') and node.hasAttributes():
+        for nodeAttr in nodeAttrs:
+            if (str (node.getAttribute(nodeAttr)) == nodeId):
+                return node
     if node.hasChildNodes():
         if hasattr(node.childNodes, 'length'):
             length = node.childNodes.length
@@ -78,21 +81,22 @@ def clearNode(node):
         while len(node.childNodes):
             node.removeChild(node.lastChild())
 
-def locateNodes(nodeList, key, value):
+def locateNodes(nodeList, key, value, noNesting=1):
     """
     Find subnodes in the given node where the given attribute
     has the given value.
     """
     returnList = []
     if not isinstance(nodeList, type([])):
-        return locateNodes(nodeList.childNodes, key, value)
-    
+        return locateNodes(nodeList.childNodes, key, value, noNesting)
     for childNode in nodeList:
         if not hasattr(childNode, 'getAttribute'):
             continue
         if str(childNode.getAttribute(key)) == value:
             returnList.append(childNode)
-        returnList.extend(locateNodes(childNode, key, value))
+            if noNesting:
+                continue
+        returnList.extend(locateNodes(childNode, key, value, noNesting))
     return returnList
     
 def superSetAttribute(node, key, value):

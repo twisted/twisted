@@ -340,8 +340,8 @@ class Widget(view.View):
             sm = self.submodel.split('/')[-1]
             slots = domhelpers.locateNodes(self.templateNode, name + 'Of', sm)
             if not slots:
-                node = domhelpers.getIfExists(self.templateNode, name)
-                if not node:
+                slots = domhelpers.locateNodes(self.templateNode, "pattern", name, noNesting=1)
+                if not slots:
                     msg = 'WARNING: No template nodes were found '\
                               '(tagged %s="%s"'\
                               ' or pattern="%s") for node %s (full submodel path %s)' % (name + "Of",
@@ -355,7 +355,6 @@ class Widget(view.View):
                         newNode.appendChild(document.createTextNode(msg))
                         return newNode
                     return default
-                slots = [node]
             self.slots[name] = slots
         slot = slots.pop(0)
         slots.append(slot)
