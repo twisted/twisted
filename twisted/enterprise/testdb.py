@@ -14,7 +14,7 @@ class DbManagerTestCase(unittest.TestCase):
             username = "twisted",
             password = "matrix",
             numConnections = 2 )
-        
+
     def tearDown(self):
         self.manager.disconnect()
         self.manager = None
@@ -40,7 +40,7 @@ class DbServiceTestCase(unittest.TestCase):
 
     def gotData(self, data):
         self.data = data
-        
+
     def testAddUser(self):
         request = dbservice.AddUserRequest('testuser','testpass', self.gotData)
         self.manager.addRequest(request)
@@ -74,4 +74,4 @@ suite2 = unittest.makeSuite(DbServiceTestCase, 'test')
 
 if __name__ == "__main__":
     unittest.main()
-    
+
