@@ -62,7 +62,7 @@ def execute(callable, *args, **kw):
     errback with a Failure for the exception thrown.
     """
     try:
-        result = apply(callable, args, kw)
+        result = callable(*args, **kw)
     except:
         return fail()
     else:
@@ -223,8 +223,7 @@ class Deferred:
                 args = args or ()
                 kw = kw or {}
                 try:
-                    self.result = apply(callback,
-                                        (self.result,)+tuple(args), kw)
+                    self.result = callback(self.result, *args, **kw)
                     if isinstance(self.result, Deferred):
                         self.callbacks = cb
 

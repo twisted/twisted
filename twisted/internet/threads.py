@@ -34,7 +34,7 @@ def _putResultInDeferred(deferred, f, args, kwargs):
     """Run a function and give results to a Deferred."""
     from twisted.internet import reactor
     try:
-        result = apply(f, args, kwargs)
+        result = f(*args, **kwargs)
     except:
         f = failure.Failure()
         reactor.callFromThread(deferred.errback, f)
@@ -51,7 +51,7 @@ def deferToThread(f, *args, **kwargs):
 def _runMultiple(tupleList):
     """Run a list of functions."""
     for f, args, kwargs in tupleList:
-        apply(f, args, kwargs)
+        f(*args, **kwargs)
 
 def callMultipleInThread(tupleList):
     """Run a list of functions in the same thread.

@@ -142,7 +142,7 @@ class ReactorBase:
         """
         assert callable(f), "%s is not callable" % f
         if threadable.isInIOThread():
-            apply(self.callLater, (0, f)+ args, kw)
+            self.callLater(0, f, *args, **kw)
         else:
             # lists are thread-safe in CPython, but not in Jython
             # this is probably a bug in Jython, but until fixed this code
@@ -254,7 +254,7 @@ class ReactorBase:
         defrList = []
         for callable, args, kw in sysEvtTriggers[0]:
             try:
-                d = apply(callable, args, kw)
+                d = callable(*args, **kw)
             except:
                 log.deferr()
             else:
@@ -275,7 +275,7 @@ class ReactorBase:
         for callList in sysEvtTriggers[1], sysEvtTriggers[2]:
             for callable, args, kw in callList:
                 try:
-                    apply(callable, args, kw)
+                    callable(*args, **kw)
                 except:
                     log.deferr()
 
@@ -344,7 +344,7 @@ class ReactorBase:
             for i in range(len(self.threadCallQueue)):
                 callable, args, kw = self.threadCallQueue.pop(0)
                 try:
-                    apply(callable, args, kw)
+                    callable(*args, **kw)
                 except:
                     log.deferr()
         now = time()
@@ -352,7 +352,7 @@ class ReactorBase:
             call = self._pendingTimedCalls.pop(0)
             try:
                 call.called = 1
-                apply(call.func, call.args, call.kw)
+                call.func(*call.args, **call.kw)
             except:
                 log.deferr()
         self._delayeds.runUntilCurrent()
@@ -372,7 +372,7 @@ class ReactorBase:
     def callInThread(self, callable, *args, **kwargs):
         if not self.threadpool:
             self._initThreadPool()
-        apply(self.threadpool.dispatch, (log.logOwner.owner(), callable) + args, kwargs)
+        self.threadpool.dispatch(log.logOwner.owner(), callable, *args, **kwargs)
 
     def suggestThreadPoolSize(self, size):
         if not self.threadpool:
