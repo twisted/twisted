@@ -25,6 +25,7 @@ from twisted.mail import imap4
 from twisted.mail import smtp
 from twisted.protocols import loopback
 from twisted.internet import defer
+from twisted.internet import error
 from twisted.trial import unittest
 from twisted.python import util
 from twisted.python import components
@@ -757,11 +758,20 @@ class SimpleServer(imap4.IMAP4Server):
         self.checker = c
         self.portal = portal
         portal.registerChecker(c)
+        self.timeoutTest = False
+
+    def lineReceived(self, line):
+        if self.timeoutTest:
+            #Do not send a respones
+            return
+
+        imap4.IMAP4Server.lineReceived(self, line)
 
     def authenticateLogin(self, username, password):
         if username == 'testuser' and password == 'password-test':
             return imap4.IAccount, self.theAccount, lambda: None
         raise cred.error.UnauthorizedLogin()
+
 
 class SimpleClient(imap4.IMAP4Client):
     def __init__(self, deferred, contextFactory = None):
@@ -2315,6 +2325,24 @@ class SlowMailbox(SimpleMailbox):
         return d
 
 class Timeout(IMAP4HelperMixin, unittest.TestCase):
+    def testServerTimeout(self):
+        self.server.timeoutTest = True
+        self.client.timeout = 5 #seconds
+        self.selectedArgs = None
+
+        def login():
+            d = self.client.login('testuser', 'password-test')
+            d.addErrback(timedOut)
+            return d
+
+        def timedOut(failure):
+            self._cbStopClient(None)
+            failure.trap(error.TimeoutError)
+
+        d = self.connected.addCallback(strip(login))
+        d.addErrback(self._ebGeneral)
+        self.loopback()
+
     def testLongFetchDoesntTimeout(self):
         SimpleServer.theAccount.mailboxFactory = SlowMailbox
         SimpleServer.theAccount.addMailbox('mailbox-test')

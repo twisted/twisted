@@ -372,7 +372,8 @@ class Command:
                 send.append(L)
             else:
                 unuse.append(L)
-        self.defer.callback((send, lastLine))
+        d, self.defer = self.defer, None
+        d.callback((send, lastLine))
         if unuse:
             unusedCallback(unuse)
 
@@ -1933,8 +1934,9 @@ class NoSupportedAuthentication(IMAP4Exception):
 
 class IllegalServerResponse(IMAP4Exception): pass
 
+TIMEOUT_ERROR = error.TimeoutError()
 
-class IMAP4Client(basic.LineReceiver):
+class IMAP4Client(basic.LineReceiver, policies.TimeoutMixin):
     """IMAP4 client protocol implementation
 
     @ivar state: A string representing the state the connection is currently
@@ -1949,6 +1951,10 @@ class IMAP4Client(basic.LineReceiver):
     state = None
 
     startedTLS = False
+
+    # Number of seconds to wait before timing out a connection.
+    # If the number is <= 0 no timeout checking will be performed.
+    timeout = 0
 
     # Capabilities are not allowed to change during the session
     # So cache the first response and use that for all later
@@ -1977,6 +1983,7 @@ class IMAP4Client(basic.LineReceiver):
 
         self._tag = None
         self._parts = None
+        self._lastCmd = None
 
     def registerAuthenticator(self, auth):
         """Register a new form of authentication
@@ -1992,6 +1999,9 @@ class IMAP4Client(basic.LineReceiver):
         self.authenticators[auth.getName().upper()] = auth
 
     def rawDataReceived(self, data):
+        if self.timeout > 0:
+            self.resetTimeout()
+
         self._pendingSize -= len(data)
         if self._pendingSize > 0:
             self._pendingBuffer.write(data)
@@ -2017,8 +2027,20 @@ class IMAP4Client(basic.LineReceiver):
         self._parts = [rest, '\r\n']
         self.setRawMode()
 
+    def connectionMade(self):
+        if self.timeout > 0:
+            self.setTimeout(self.timeout)
+
+    def connectionLost(self, reason):
+        """We are no longer connected"""
+        if self.timeout > 0:
+            self.setTimeout(None)
+
     def lineReceived(self, line):
 #        print 'C: ' + repr(line)
+        if self.timeout > 0:
+            self.resetTimeout()
+
         if self._parts is None:
             lastPart = line.rfind(' ')
             if lastPart != -1:
@@ -2045,6 +2067,19 @@ class IMAP4Client(basic.LineReceiver):
             tag, rest = self._tag, ''.join(self._parts)
             self._tag = self._parts = None
             self.dispatchCommand(tag, rest)
+
+    def timeoutConnection(self):
+        if self._lastCmd and self._lastCmd.defer is not None:
+            d, self._lastCmd.defer = self._lastCmd.defer, None
+            d.errback(TIMEOUT_ERROR)
+
+        if self.queued:
+            for cmd in self.queued:
+                if cmd.defer is not None:
+                    d, cmd.defer = cmd.defer, d
+                    d.errback(TIMEOUT_ERROR)
+
+        self.transport.loseConnection()
 
     def _regularDispatch(self, line):
         parts = line.split(None, 1)
@@ -2185,6 +2220,7 @@ class IMAP4Client(basic.LineReceiver):
         self.tags[t] = cmd
         self.sendLine(cmd.format(t))
         self.waiting = t
+        self._lastCmd = cmd
         return cmd.defer
 
     def getCapabilities(self, useCache=1):
