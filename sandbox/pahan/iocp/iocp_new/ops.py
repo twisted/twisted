@@ -47,7 +47,7 @@ class OverlappedOp(defer.Deferred):
             elif ret in (error.ERROR_OPERATION_ABORTED, error.ERROR_CONNECTION_ABORTED):
 #                print "%s errbacks OperationCancelledException" % (self,)
                 self.errback(error.OperationCancelledException())
-            elif ret == error.ERROR_CONNECTION_REFUSED:
+            elif ret in (error.ERROR_CONNECTION_REFUSED, error.ERROR_PORT_UNREACHABLE):
                 self.errback(internet.error.ConnectionRefusedError())
             elif ret == error.ERROR_NETNAME_DELETED:
 #                print "%s errbacks HandleClosedException" % (self,)

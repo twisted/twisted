@@ -4,7 +4,7 @@
 #include <windows.h>
 #include "structmember.h"
 
-#define SPEW
+//#define SPEW
 // compensate for mingw's lack of recent Windows headers
 #ifndef _MSC_VER
 #define WSAID_CONNECTEX {0x25a207b9,0xddf3,0x4660,{0x8e,0xe9,0x76,0xe5,0x8c,0x74,0x06,0x3e}}
@@ -259,6 +259,7 @@ static PyObject *iocpcore_ReadFile(iocpcore* self, PyObject *args) {
 // rape'n'paste from socketmodule.c
 static PyObject *parsesockaddr(struct sockaddr *addr, int addrlen)
 {
+    PyObject *ret = NULL;
     if (addrlen == 0) {
         /* No address -- may be recvfrom() from known socket */
         Py_INCREF(Py_None);
@@ -271,7 +272,6 @@ static PyObject *parsesockaddr(struct sockaddr *addr, int addrlen)
         struct sockaddr_in *a = (struct sockaddr_in *)addr;
         char *s;
         s = inet_ntoa(a->sin_addr);
-        PyObject *ret = NULL;
         if (s) {
             ret = Py_BuildValue("si", s, ntohs(a->sin_port));
         } else {
@@ -293,10 +293,12 @@ static PyObject *parsesockaddr(struct sockaddr *addr, int addrlen)
 static PyObject *iocpcore_interpretAB(iocpcore* self, PyObject *args) {
     char *buf;
     int len;
+    AddrBuffer *ab;
     if(!PyArg_ParseTuple(args, "t#", &buf, &len)) {
         return NULL;
     }
-    return parsesockaddr((struct sockaddr *)buf, len);
+    ab = (AddrBuffer *)buf;
+    return parsesockaddr((struct sockaddr *)(ab->buffer), ab->size);
 }
 
 static PyObject *iocpcore_WSARecvFrom(iocpcore* self, PyObject *args) {

@@ -3,6 +3,8 @@ import socket
 from twisted.persisted import styles
 from twisted.python import reflect, log
 from twisted.internet import protocol, defer, main
+from twisted import internet
+import twisted.internet.error
 
 from abstract import ConnectedSocket, RWHandle
 from ops import AcceptExOp, WSARecvFromOp, WSASendToOp, ReadFileOp, WriteFileOp
@@ -105,7 +107,7 @@ class SocketPort(styles.Ephemeral):
     def getPeer(self):
         return address.getFull(self.socket.getpeername(), self.af, self.type, self.proto)
 
-# refactor me later to reuse ConnectedPort
+# refactor me later to reuse ConnectedPort. Or not.
 class DatagramPort(RWHandle):
     af = None
     type = None
@@ -133,9 +135,6 @@ class DatagramPort(RWHandle):
         try:
             skt = socket.socket(self.af, self.type, self.proto)
             skt.bind(self.addr)
-            print "Bound to", self.addr
-            print "sockname", skt.getsockname()
-            print "socket", skt.fileno()
         except socket.error, le:
             raise error.CannotListenError, (self.addr, le)
         self.connected = 1
@@ -145,6 +144,21 @@ class DatagramPort(RWHandle):
     def _connectToProtocol(self):
         self.protocol.makeConnection(self)
         self.startReading()
+
+    def write(self, buffer, *args, **kw):
+        if not self.dead:
+            self.writebuf.append((buffer, args, kw))
+            self.startWriting()
+
+    def writeDone(self, bytes):
+        self.writebuf.pop()
+
+    def writeErr(self, err):
+        self.writebuf.pop()
+        if issubclass(err.type, error.NonFatalException):
+            pass
+        else:
+            self.stopWorking(err)
 
     def writeSequence(self, iovec, addr):
         self.write("".join(iovec), addr)
@@ -167,6 +181,8 @@ class DatagramPort(RWHandle):
     def getHost(self):
         return address.getFull(self.socket.getsockname(), self.af, self.type, self.proto)
 
+    def dataReceived(self, data, addr):
+        self.protocol.datagramReceived(data, addr)
 
 class ConnectedDatagramPort(DatagramPort):
     read_op = ReadFileOp
@@ -187,15 +203,32 @@ class ConnectedDatagramPort(DatagramPort):
 
     def setRealAddress(self, addr):
         self.realAddress = addr
-        print "connected to", addr
         self.socket.connect((addr))
         self._connectToProtocol()
     
     def connectionFailed(self, reason):
-        self.loseConnection()
         self.protocol.connectionFailed(reason)
         del self.protocol
+        self.loseConnection()
 
     def getPeer(self):
         return address.getFull(self.socket.getpeername(), self.af, self.type, self.proto)
+
+    def dataReceived(self, data):
+        self.protocol.datagramReceived(data)
+
+    def writeErr(self, err):
+        self.writebuf.pop()
+        if issubclass(err.type, error.NonFatalException):
+            pass
+        elif issubclass(err.type, internet.error.ConnectionRefusedError):
+            self.protocol.connectionRefused()
+        else:
+            self.stopWorking(err)
+
+    def readErr(self, err):
+        if issubclass(err.type, internet.error.ConnectionRefusedError):
+            self.protocol.connectionRefused()
+        else:
+            DatagramPort.readErr(self, err)
 

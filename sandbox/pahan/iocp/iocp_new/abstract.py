@@ -65,10 +65,8 @@ class RWHandle(log.Logger, styles.Ephemeral):
                 self.writing = 1
                 self.startWriting()
 
-    # XXX: this is actually broken -- UDP has to provide its own writeSequence
     def writeSequence(self, iovec, *args, **kw):
-        for i in iovec:
-            self.write(i, *args, **kw)
+            self.write("".join(iovec), *args, **kw)
 
     def startWriting(self):
         b = buffer(self.writebuf[0][0], self.offset)
@@ -89,14 +87,16 @@ class RWHandle(log.Logger, styles.Ephemeral):
         else:
             self.startWriting()
 
+    def readLoop(self):
+        op = self.read_op()
+        op.initiateOp(self.handle, self.readbuf)
+        op.addCallback(self.readDone)
+        op.addErrback(self.readErr)
+
     def startReading(self):
         if not self.reading:
             self.reading = 1
-            op = self.read_op()
-            print "initiating op", self.handle
-            op.initiateOp(self.handle, self.readbuf)
-            op.addCallback(self.readDone)
-            op.addErrback(self.readErr)
+            self.readLoop()
 
     def readDone(self, (bytes, kw)):
         # XXX: got to pass a buffer to dataReceived to avoid copying, but most of the stuff expects that
@@ -107,7 +107,7 @@ class RWHandle(log.Logger, styles.Ephemeral):
             print "    self.reading is", self.reading
         self.dataReceived(self.readbuf[:bytes], **kw)
         if self.reading:
-            self.startReading()
+            self.readLoop()
 
     def dataReceived(self, data, **kw):
         raise NotImplementedError
@@ -115,7 +115,7 @@ class RWHandle(log.Logger, styles.Ephemeral):
     def readErr(self, err):
         if iocpdebug.debug:
             print "RWHandle.readErr(%s, %s)" % (self, err)
-        if isinstance(err, error.NonFatalException):
+        if issubclass(err.type, error.NonFatalException):
             self.startReading() # delay or just fail?
         else:
             self.stopWorking(err)
@@ -125,7 +125,7 @@ class RWHandle(log.Logger, styles.Ephemeral):
             print "RWHandle.writeErr(%s, %s)" % (self, err)
             import traceback
             traceback.print_stack()
-        if isinstance(err, error.NonFatalException):
+        if issubclass(err.type, error.NonFatalException):
             self.startWriting() # delay or just fail?
         else:
             self.stopWorking(err)
