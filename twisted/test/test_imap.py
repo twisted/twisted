@@ -740,14 +740,19 @@ class IMAP4ServerTestCase(IMAP4HelperMixin, unittest.TestCase):
             ('Could not open mailbox',)
         )
 
-    def testAppend(self):
+    def testFullAppend(self):
         infile = util.sibpath(__file__, 'rfc822.message')
         message = open(infile)
         SimpleServer.theAccount.addMailbox('root/subthing')
         def login():
             return self.client.login('testuser', 'password-test')
         def append():
-            return self.client.append('root/subthing', message, (), 'This Date String Is Illegal')
+            return self.client.append(
+                'root/subthing',
+                message,
+                ('\\SEEN', '\\DELETED'),
+                'This Date String Is Illegal'
+            )
         
         d = self.connected.addCallback(strip(login))
         d.addCallbacks(strip(append), self._ebGeneral)
@@ -757,11 +762,42 @@ class IMAP4ServerTestCase(IMAP4HelperMixin, unittest.TestCase):
         mb = SimpleServer.theAccount.mailboxes['ROOT/SUBTHING']
         self.assertEquals(1, len(mb.messages))
         self.assertEquals(
-            ((), 'This Date String Is Illegal', 0),
+            (['\\SEEN', '\\DELETED'], 'This Date String Is Illegal', 0),
             mb.messages[0][1:]
         )
-        self.assertEquals(open(infile).read(), mb.messages[0][0].read())
+        self.assertEquals(open(infile).read(), mb.messages[0][0].getvalue())
 
+    def testPartialAppend(self):
+        infile = util.sibpath(__file__, 'rfc822.message')
+        message = open(infile)
+        SimpleServer.theAccount.addMailbox('root/subthing')
+        def login():
+            return self.client.login('testuser', 'password-test')
+        def append():
+            message = file(infile)
+            continuation = defer.Deferred()
+            continuation.addCallback(self.client._IMAP4Client__cbContinueAppend, message)
+            return self.client.sendCommand(
+                imap4.Command(
+                    'APPEND',
+                    'INBOX (\\SEEN) "Right now" {%d}' % os.path.getsize(infile),
+                    continuation
+                )
+            ).addCallback(self.client._IMAP4Client__cbAppend)
+        
+        d = self.connected.addCallback(strip(login))
+        d.addCallbacks(strip(append), self._ebGeneral)
+        d.addCallbacks(self._cbStopClient, self._ebGeneral)
+        self.loopback()
+        
+        mb = SimpleServer.theAccount.mailboxes['ROOT/SUBTHING']
+        self.assertEquals(1, len(mb.messages))
+        self.assertEquals(
+            (['\\SEEN', '\\DELETED'], 'This Date String Is Illegal', 0),
+            mb.messages[0][1:]
+        )
+        self.assertEquals(open(infile).read(), mb.messages[0][0].getvalue())
+    
     def testCheck(self):
         SimpleServer.theAccount.addMailbox('root/subthing')
         def login():

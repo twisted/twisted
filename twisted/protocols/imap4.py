@@ -638,21 +638,21 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
         self.sendBadResponse(tag, 'STATUS %s failed: %s' % (box, failure))
 
     def auth_APPEND(self, tag, args):
-        parts = splitQuoted(args)
+        parts = parseNestedParens(args, 0)
         if len(parts) == 2:
             flags = ()
             date = rfc822.formatdate()
             size = parts[1]
         elif len(parts) == 3:
-            if parts[1].startswith('(') and parts[1].endswith(')'):
-                flags = tuple(parseNestedParens(parts[1]))
+            if isinstance(parts[1], list):
+                flags = parts[1]
                 date = rfc822.formatdate()
             else:
                 flags = ()
                 date = parts[1]
             size = parts[2]
         elif len(parts) ==  4:
-            flags = tuple(parseNestedParens(parts[1])[0])
+            flags = parts[1]
             date = parts[2]
             size = parts[3]
         else:
@@ -2590,7 +2590,7 @@ def collapseStrings(results):
     return copy
 
 
-def parseNestedParens(s):
+def parseNestedParens(s, handleLiteral = 1):
     """Parse an s-exp-like string into a more useful data structure.
 
     @type s: C{str}
@@ -2624,7 +2624,7 @@ def parseNestedParens(s):
                     contentStack[-1].append(c)
                     inQuote = not inQuote
                     i += 1
-                elif c == '{':
+                elif handleLiteral and c == '{':
                     end = s.find('}', i)
                     if end == -1:
                         raise ValueError, "Malformed literal"
