@@ -112,6 +112,7 @@ class _TLSMixin:
             self.startWriting()
             return
         except SSL.Error:
+            log.err()
             return main.CONNECTION_LOST
 
     def loseConnection(self):
@@ -147,6 +148,7 @@ class _TLSMixin:
             else:
                 return main.CONNECTION_LOST
         except SSL.Error:
+            log.err()
             return main.CONNECTION_LOST
 
     def _closeSocket(self):
@@ -170,6 +172,7 @@ class _TLSMixin:
             done = self.socket.shutdown()
             self.sslShutdown = 1
         except SSL.Error:
+            log.err()
             return main.CONNECTION_LOST
         if done:
             return main.CONNECTION_DONE

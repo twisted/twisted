@@ -530,6 +530,7 @@ class WriteDataTestCase(PortCleanerUpper):
 
 class ConnectionLosingProtocol(protocol.Protocol):
     def connectionMade(self):
+        self.transport.write("1")
         self.transport.loseConnection()
         self.master._connectionMade()
 
@@ -553,11 +554,6 @@ class ProperlyCloseFilesTestCase(unittest.TestCase):
         self.connector = connector
 
         self.totalConnections = 0
-        try:
-            import resource
-        except ImportError:
-            return
-        self.numberRounds = resource.getrlimit(resource.RLIMIT_NOFILE)[0] + 10
     
     def testProperlyCloseFiles(self):
         self.connector()
@@ -575,3 +571,10 @@ class ProperlyCloseFilesTestCase(unittest.TestCase):
 
     def tearDown(self):
         self.listener.stopListening()
+
+try:
+    import resource
+except ImportError:
+    pass
+else:
+    ProperlyCloseFilesTestCase.numberRounds = resource.getrlimit(resource.RLIMIT_NOFILE)[0] + 10
