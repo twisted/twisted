@@ -173,8 +173,9 @@ class InputOutputWindow:
             self.entry.delete_text(0, -1)
 
 
-def createMethodDict(o):
-    d = {}
+def createMethodDict(o, d=None):
+    if d is None:
+        d = {}
     for base in reflect.allYourBase(o.__class__) + [o.__class__]:
         for n in dir(base):
             m = getattr(o, n)
@@ -183,10 +184,12 @@ def createMethodDict(o):
     #print d
     return d
 
-def autoConnectMethods(obj):
-    o = createMethodDict(obj)
-    #print 'connecting', o
-    obj.xml.signal_autoconnect(o)
+def autoConnectMethods(*objs):
+    o = {}
+    for obj in objs:
+        createMethodDict(obj, o)
+    # print 'connecting', o
+    objs[0].xml.signal_autoconnect(o)
 
 
 

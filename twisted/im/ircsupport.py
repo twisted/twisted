@@ -228,7 +228,7 @@ class IRCProto(basesupport.AbstractClientMixin, irc.IRCClient):
         self.join(name)
         self.getGroupConversation(name)
 
-class IRCAccount:
+class IRCAccount(basesupport.AbstractAccount):
     gatewayType = "IRC"
     _isOnline = 0
     def __init__(self, accountName, autoLogin, nickname, password, channels, host, port):
@@ -254,6 +254,6 @@ class IRCAccount:
     def isOnline(self):
         return self.isOnline
 
-    def logOn(self, chatui):
+    def startLogOn(self, chatui):
         reactor.clientTCP(self.host, self.port, IRCProto(self, chatui))
 

@@ -22,9 +22,9 @@ import gtk
 from twisted.im.gtkcommon import GLADE_FILE, autoConnectMethods, InputOutputWindow, openGlade
 
 class ContactsList:
-    def __init__(self, chatui):
-        self.xml = openGlade(GLADE_FILE, root="ContactsWidget")
-        self.widget = self.xml.get_widget("ContactsWidget")
+    def __init__(self, chatui, xml):
+        self.xml = xml# openGlade(GLADE_FILE, root="ContactsWidget")
+        # self.widget = self.xml.get_widget("ContactsWidget")
         self.people = []
         self.onlinePeople = []
         self.countOnline = 0
@@ -334,12 +334,12 @@ class GroupConversation(InputOutputWindow):
 
 class GtkChatClientUI:
     # IM-GUI Utility functions
-    def __init__(self):
+    def __init__(self,xml):
         self.conversations = {}         # cache of all direct windows
         self.groupConversations = {}    # cache of all group windows
         self.personCache = {}           # keys are (name, account)
         self.groupCache = {}            # cache of all groups
-        self.theContactsList = None
+        self.theContactsList = ContactsList(self,xml)
         self.onlineAccounts = []     # list of message sources currently online
         
     def registerAccountClient(self,account):
@@ -352,13 +352,10 @@ class GtkChatClientUI:
         self.onlineAccounts.remove(account)
         self.getContactsList().unregisterAccountClient(account)
 
+    def contactsListClose(self, w, evt):
+        return gtk.TRUE
+
     def getContactsList(self):
-        if not self.theContactsList:
-            self.theContactsList = ContactsList(self)
-            w = gtk.GtkWindow(gtk.WINDOW_TOPLEVEL)
-            w.set_title("Contacts List")
-            w.add(self.theContactsList.widget)
-            w.show_all()
         return self.theContactsList
 
     def getConversation(self, person):

@@ -29,12 +29,12 @@ import gtkchat
 
 class AccountManager:
     def __init__(self):
-        self.xml = openGlade(GLADE_FILE, root="AccountManager")
+        self.xml = openGlade(GLADE_FILE, root="MainIMWindow")
+        self.chatui = gtkchat.GtkChatClientUI(self.xml)
         print self.xml._o
-        autoConnectMethods(self)
-        self.widget = self.xml.get_widget("AccountManager")
+        autoConnectMethods(self, self.chatui.theContactsList)
+        self.widget = self.xml.get_widget("AccountManWidget")
         self.widget.show_all()
-        self.chatui = gtkchat.GtkChatClientUI()
         try:
             f = open(SETTINGS_FILE)
             self.accounts = cPickle.load(f)
@@ -51,9 +51,6 @@ class AccountManager:
         l.localNS['chat'] = self.chatui
         l.signal_connect('delete_event', self.closeConsole)
         l.show_all()
-
-    def on_ContactsButton_clicked(self, b):
-        self.chatui.getContactsList()
 
     def closeConsole(self, w, evt):
         return 1
@@ -76,12 +73,12 @@ class AccountManager:
     def on_NewAccountButton_clicked(self, b):
         NewAccount(self)
 
-    def on_AccountManager_destroy(self, w):
+    def on_MainIMWindow_destroy(self, w):
         print 'Saving...'
         cPickle.dump(self.accounts, open(SETTINGS_FILE,'wb'))
         print 'Saved.'
         gtk.mainquit()
-        
+
 
     def on_DeleteAccountButton_clicked(self, b):
         lw = self.xml.get_widget("accountsList")
