@@ -6,8 +6,6 @@ try:
     import Crypto
 except ImportError:
     Crypto = None
-    import sys
-    del sys.modules['Crypto'] # remove the bad import
 
 from twisted.conch.ssh import common, session, forwarding
 from twisted.conch import avatar, error

@@ -13,8 +13,6 @@ try:
     import Crypto
 except:
     Crypto = None
-    import sys
-    del sys.modules['Crypto'] # remove the bad import
 
 from twisted.test.test_process import SignalMixin
 from test_ssh import ConchTestRealm, _LogTimeFormatMixin
