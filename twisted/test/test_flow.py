@@ -373,7 +373,8 @@ class FlowTest(unittest.TestCase):
         rhs = unittest.deferredResult(d)
         self.assertEquals([('a',1),('b',2),('a',3),('a',4),('b',5)],rhs)
 
-    def testProtocolLocalhost(self):
+    def _testProtocolLocalhost(self):
+        # this fails if parallel tests are run on the same box
         PORT = 8392
         server = protocol.ServerFactory()
         server.protocol = flow.Protocol
@@ -396,6 +397,7 @@ class FlowTest(unittest.TestCase):
         self.assertEquals('testing', unittest.deferredResult(client.factory.d))
 
     def testThreaded(self):
+        # this still fails intermittently, esp on dual processors
         result = [5,4,3,2,1]
         d = flow.Deferred(flow.Threaded(CountIterator(5)))
         self.assertEquals(result, unittest.deferredResult(d))
