@@ -71,7 +71,7 @@ config = ServerOptions()
 try:
     config.parseOptions()
 except usage.error, ue:
-    print config.longdesc
+    config.opt_help()
     print "%s: %s" % (sys.argv[0], ue)
     os._exit(1)
 

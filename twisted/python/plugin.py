@@ -64,6 +64,7 @@ def getPlugIns(plugInType, debugInspection=0, showProgress=0):
     if showProgress:
         sys.stdout.write(' Loading: [')
         sys.stdout.flush()
+    found = 0
     for d in sys.path:
         d = os.path.abspath(d)
         if loaded.has_key(d):
@@ -89,6 +90,7 @@ def getPlugIns(plugInType, debugInspection=0, showProgress=0):
                         dropin = DropIn(pname)
                         ns = {'register': dropin.register}
                         execfile(tmlname, ns)
+                        found = 1
                         if showProgress:
                             sys.stdout.write('+')
                             sys.stdout.flush()
@@ -97,12 +99,15 @@ def getPlugIns(plugInType, debugInspection=0, showProgress=0):
                                 result.append(plugin)
                         if debugInspection:
                             print "Successfully loaded %s!" % plugindir
+        
         else:
             if debugInspection:
                 print 'sys.path entry not a directory', d
         if showProgress:
             sys.stdout.write('.')
             sys.stdout.flush()
+    if not found:
+        raise IOError("Couldn't find a plugins file!")
     if showProgress:
         sys.stdout.write(' ]\n')
         sys.stdout.flush()

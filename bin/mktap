@@ -39,7 +39,11 @@ import sys, traceback, os, cPickle, glob
 
 from twisted.python.plugin import getPlugIns
 
-plugins = getPlugIns("tap")
+try:
+    plugins = getPlugIns("tap")
+except IOError:
+    print "Couldn't load the plugins file!"
+    sys.exit(2)
 
 tapLookup = {}
 for plug in plugins:
