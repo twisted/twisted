@@ -167,7 +167,7 @@ class XMLRPC(resource.Resource):
         If functionPath contains self.separator, the sub-handler for
         the initial prefix is used to search for the remaining path.
         """
-        if functionPath.find(self.separator):
+        if functionPath.find(self.separator) != -1:
             prefix, functionPath = functionPath.split(self.separator, 1)
             handler = self.getSubHandler(prefix)
             if handler is None: raise NoSuchFunction
