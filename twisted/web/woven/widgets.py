@@ -584,6 +584,8 @@ class List(Widget):
         listHeader = domhelpers.getIfExists(node, 'listHeader')
         listFooter = domhelpers.getIfExists(node, 'listFooter')
         emptyList = domhelpers.getIfExists(node, 'emptyList')
+        if not listHeader is None:
+            node.appendChild(listHeader)
         data = self.getData()
         if self._has_data(data):
             self._iterateData(node, self.submodel, data)
