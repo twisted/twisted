@@ -40,10 +40,10 @@ import main, defer, error
 
 def encrypt(passphrase, data):
     import md5
-    from Crypto.Cipher import AES
-    if len(data) % 8:
-        data = data + (' ' * (8 - len(data) % 8))
-    return AES.new(md5.new(passphrase).digest()[:16]).encrypt(data)
+    from Crypto.Cipher import AES as cipher
+    if len(data) % cipher.block_size:
+        data = data + (' ' * (cipher.block_size - len(data) % cipher.block_size))
+    return cipher.new(md5.new(passphrase).digest()[:16]).encrypt(data)
 
 
 class _SSLlistener:
