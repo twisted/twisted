@@ -1,3 +1,19 @@
+2003-06-26  Christopher Armstrong  <radix@twistedmatrix.com>
+
+	* .: Releasing Twisted 1.0.6rc1.
+
+2003-06-26  Clark C. Evans  <cce@twistedmatrix.com>
+
+	* twisted/flow/*.py: Moved Flow from the sandbox to
+	twisted.lore. The callback is dead. Long live the callback!
+
+2003-06-26  Jp Calderone  <exarkun@twistedmatrix.com>
+
+	* twisted/protocols/pop3.py: POP3.authenticateUserXYZ no longer
+	returns a Mailbox object. It now returns a 3-tuple. See
+	twisted.cred.portal.Portal.login for more details about the return
+	value.
+	
 2003-06-24  Brian Warner  <warner@lothar.com>
 
 	* doc/howto/upgrading.html: Explain Versioned and rebuild()
