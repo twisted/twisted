@@ -75,7 +75,7 @@ class StaticConfigurator(coil.Configurator, coil.StaticCollection):
                    'execCGI': ['boolean', "Execute CGIs", "Support running CGI scripts."],
                    'execEPY': ['boolean', "Execute EPYs", "Support running EPY scripts."],
                    'defaultType': [types.StringType, "Default MIME Type", "MIME type for files whose type can't be guessed."],
-                   'allowExt': [types.IntType, "Allow extensions to be ignored (0 or 1)", "Specify wether or not requests for /foo will return /foo.ext if it exists."]
+                   'allowExt': ['boolean', "Allow extensions to be ignored", "Specify wether or not requests for /foo will return /foo.ext if it exists."]
                   }
 
     configName = 'Web Filesystem Access'
