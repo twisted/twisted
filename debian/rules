@@ -30,6 +30,7 @@ build-stamp:
 clean:
 	rm -rf *-stamp build
 	rm -rf $(addprefix debian/,$(packages)) debian/files debian/substvars
+	rm -rf _trial_temp
 	find . -name "*.pyc" |xargs -r rm
 
 install-base: install-base-stamp
