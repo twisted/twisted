@@ -72,6 +72,8 @@ class DirTestCase(unittest.TestCase):
     def testSeek(self):
         d = self.d
         i = iter(d)
+        i.next()
+        i.next()
         l = d.tell()
         v = i.next()
         for _ in range(100):
