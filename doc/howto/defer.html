@@ -515,21 +515,23 @@ deferred3.callback('three')
 
 <p>A standard DeferredList will never call errback.</p>
 
-<p>Note that if you want to apply callbacks to the individual Deferreds that
+<div class="note">
+<p>If you want to apply callbacks to the individual Deferreds that
 go into the DeferredList, you should be careful about when those callbacks
 are added. The act of adding a Deferred to a DeferredList inserts a callback
 into that Deferred (when that callback is run, it checks to see if the
 DeferredList has been completed yet). The important thing to remember is
-that it is <b>this callback</b> which records the value that goes into the
+that it is <em>this callback</em> which records the value that goes into the
 result list handed to the DeferredList's callback.</p>
 
 <!-- TODO: add picture here: three columns of callback chains, with a value
 being snarfed out of the middle of each and handed off to the DeferredList
 -->
 
-<p>Therefore, if you add a callback to the Deferred <b>after</b> adding the
+<p>Therefore, if you add a callback to the Deferred <em>after</em> adding the
 Deferred to the DeferredList, the value returned by that callback will not
 be given to the DeferredList's callback.</p>
+</div>
 
 <pre class="python">
 def printResult(result):
