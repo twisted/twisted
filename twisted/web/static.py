@@ -76,6 +76,7 @@ class File(resource.Resource):
         ".oz": "text/x-oz",
         ".java": "text/plain",
         ".pdf": "application/x-pdf",
+	".exe": "application/x-executable",
         }
 
     contentEncodings = {
