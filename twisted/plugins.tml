@@ -77,7 +77,7 @@ register("Bot-Creating Bot",
 
 register("Twisted Inetd Server",
          "twisted.runner.inetdtap",
-         description="An inetd(8) replacement.",
+	 description="An inetd(8) replacement.",
          type='tap',
          tapname='inetd')
 
@@ -126,8 +126,7 @@ register("Tree Reporter",
          longOpt="verbose",
          shortOpt="v",
          type="trial_reporter",
-         klass="TreeReporter",
-         default=True)
+         klass="TreeReporter")
 
 register("Black-And-White Reporter",
          "twisted.trial.reporter",
@@ -151,7 +150,8 @@ register("Default Reporter",
          longOpt="text",
          shortOpt="t",
          type="trial_reporter",
-         klass="TextReporter")
+         klass="TextReporter",
+         default=True)
          
 register("Timing Reporter",
          "twisted.trial.reporter",

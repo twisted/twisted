@@ -31,7 +31,7 @@ from twisted.python import usage, reflect, failure, log, plugin
 from twisted.python.util import spewer
 from twisted.spread import jelly
 from twisted.trial import runner, util, itrial, registerAdapter, remote, adapters, reporter
-from twisted.trial.itrial import ITrialDebug
+from twisted.trial.itrial import ITrialDebug 
 
 import zope.interface as zi
 
@@ -90,10 +90,10 @@ class Options(usage.Options):
                 ["until-failure", "u", "Repeat test until it fails"],
                 ["recurse", "R", "Search packages recursively"],
                 ['psyco', None, 'run tests with psyco.full() (EXPERIMENTAL)'],
-                ['verbose', 'v', 'verbose color output (default)'],
+                ['verbose', 'v', 'verbose color output'],
                 ['bwverbose', 'o', 'Colorless verbose output'],
                 ['summary', 's', 'minimal summary output'],
-                ['text', 't', 'terse text output'],
+                ['text', 't', 'terse text output (default reporter)'],
                 ['timing', None, 'Timing output']]
 
     optParameters = [["reactor", "r", None,
@@ -106,7 +106,7 @@ class Options(usage.Options):
                       "a string passed to the reporter's 'args' kwarg"]]
 
 
-    fallbackReporter = reporter.TreeReporter
+    fallbackReporter = reporter.VerboseTextReporter
     defaultReporter = None
 
     def __init__(self):
@@ -162,6 +162,9 @@ class Options(usage.Options):
                 log.msg(iface=ITrialDebug, reporter="reporter option: %s, returning %r" % (opt, nany))
                 return nany
         else:
+            warnings.warn("""Your twisted plugins are broken for some reason.
+Please tell slyphon you saw this message!
+Using default: TextReporter""", PluginWarning)
             return self.fallbackReporter
             
 
@@ -206,7 +209,7 @@ class Options(usage.Options):
         # much like emacs local-variables scanner as is sensible
 
         # XXX: This doesn't make sense! ------------------------------------
-        if not os.path.isfile(filename):
+        if not os.path.isfile(filename): 
             return
 
         # recognize twisted/test/test_foo.py, which is itself a test case
@@ -351,11 +354,9 @@ class Options(usage.Options):
                 _dbg("*Probably* a file.")
                 if osp.exists(arg):
                     modstr = osp.abspath(arg)
-                    mname = reflect.filenameToModuleName(arg)
-                    _dbg("modulename: %s" % (mname,))
-                    if mname:
-                        self['modules'].append(mname)
-                        continue
+                    _dbg("osp.exists, appending '%s' to self['modules']" % (modstr,))
+                    self['modules'].append(mod)
+                    continue
 
             if osp.isdir(arg) and osp.exists(opj(arg, '__init__.py')):
                 _dbg("it's a package")
@@ -630,7 +631,7 @@ def reallyRun(config, suite):
             call_until_failure(suite, suite.run, config['random'])
         else:
             suite.run(config['random'])
-    return suite
+    return suite 
 
 
 def run():
@@ -651,8 +652,6 @@ def run():
     suite = _getSuite(config)
     _setUpTestdir()
     _setUpLogging(config)
-    
-    raise SystemExit, "testing"
 
     reallyRun(config, suite)
 
