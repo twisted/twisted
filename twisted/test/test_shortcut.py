@@ -13,8 +13,8 @@ if os.name == 'nt':
     class ShortcutTest(unittest.TestCase):
         def testCreate(self):
             s1=shortcut.Shortcut("test_shortcut.py")
-            tempname=self.mktemp('.lnk')
+            tempname=self.mktemp() + '.lnk'
             s1.save(tempname)
-            assert os.path.exists(tempname)
+            self.assert_(os.path.exists(tempname))
             sc=shortcut.open(tempname)
-            assert sc.GetPath(0)[0].endswith('test_shortcut.py')
+            self.assert_(sc.GetPath(0)[0].endswith('test_shortcut.py'))
