@@ -1,4 +1,5 @@
-
+# -*- test-case-name: twisted.test.test_xmlrpc -*-
+#
 # Twisted, the Framework of Your Internet
 # Copyright (C) 2001 Matthew W. Lefkowitz
 # 
@@ -36,8 +37,7 @@ from twisted.internet import defer, protocol, reactor
 from twisted.python import log
 from twisted.protocols import http
 
-# Error codes for Twisted, if they conflict with yours then
-# modify them at runtime.
+# These are deprecated, use the class level definitions
 NOT_FOUND = 8001
 FAILURE = 8002
 
@@ -97,34 +97,26 @@ class XMLRPC(resource.Resource):
     FAILURE = 8002
 
     isLeaf = 1
-    
-    def __init__(self):
-        resource.Resource.__init__(self)
-        self.requests = {}
-    
-    def requestFinished(self, request):
-        del self.requests[request]
-    
+        
     def render(self, request):
         request.content.seek(0, 0)
         args, functionPath = xmlrpclib.loads(request.content.read())
         try:
             function = self._getFunction(functionPath)
         except NoSuchFunction:
-            result = Fault(NOT_FOUND, "no such function %s" % functionPath)
+            result = Fault(self.NOT_FOUND, "no such function %s" % functionPath)
         else:
             try:
                 result = apply(function, args)
             except:
                 log.deferr()
-                result = Fault(FAILURE, "error")
+                result = Fault(self.FAILURE, "error")
         
         request.setHeader("content-type", "text/xml")
         if isinstance(result, Handler):
             result = result.result
         if isinstance(result, defer.Deferred):
             responder = _DeferredResult(self, request)
-            self.requests[responder] = 1
             result.addCallbacks(responder.gotResult, responder.gotFailure)
             return server.NOT_DONE_YET
         else:
@@ -153,7 +145,7 @@ class _DeferredResult:
     """The deferred result of an XML-RPC request."""
 
     def __init__(self, resource, request):
-        self.resource = resource
+        self.FAILURE = resource.FAILURE
         self.request = request
 
     def gotResult(self, result):
@@ -164,18 +156,20 @@ class _DeferredResult:
 
     def gotFailure(self, error):
         """Callback for when request failed."""
-        self.finish(Fault(FAILURE, "error"))
+        if error.value and isinstance(error.value, Fault):
+            f = error.value
+        else:
+            f = Fault(self.FAILURE, "error")
+        self.finish(f)
 
     def finish(self, result):
         try:
             output = xmlrpclib.dumps(result, methodresponse=1)
         except:
-            fault = Fault(FAILURE, "can't serialize output")
+            fault = Fault(self.FAILURE, "can't serialize output")
             output = xmlrpclib.dumps(fault, methodresponse=1)
         self.request.write(output)
         self.request.finish()
-        self.resource.requestFinished(self)
-        del self.resource
 
 
 class QueryProtocol(http.HTTPClient):
