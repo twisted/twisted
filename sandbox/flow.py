@@ -23,6 +23,8 @@
     saving the handler's state so it can be resumed later. 
 """
 
+from __future__ import nested_scopes
+
 class Flow:
     '''
        This object maintains a sequence of FlowStages which can be
