@@ -52,7 +52,7 @@ class Issue:
 class ResourceSubscription(resource.Resource):
     isLeaf = 1
     waiting = 0
-    def __init__(self, host, port, service="web", username="web", password="web"):
+    def __init__(self, host, port, service="twisted.web.distrib", username="web", password="web"):
         resource.Resource.__init__(self)
         self.host = host
         self.port = port
@@ -74,6 +74,14 @@ class ResourceSubscription(resource.Resource):
         # There will be no pending requests.
         state['pending'] = []
         return state
+
+    def preConnected(self, identity):
+        """Retrieved identity, now get the publisher perspective...
+        """
+        identity.attach(self.service, None,
+                        pbcallback = self.connected,
+                        pberrback = self.notConnected)
+    
 
     def connected(self, publisher):
         """I've connected to a publisher; I'll now send all my requests.
@@ -114,11 +122,10 @@ class ResourceSubscription(resource.Resource):
             if not self.waiting:
                 self.waiting = 1
                 broker = pb.Broker()
-                broker.requestPerspective(self.service,
-                                          self.username,
-                                          self.password,
-                                          callback=self.connected,
-                                          errback=self.notConnected)
+                broker.requestIdentity(self.username,
+                                       self.password,
+                                       callback = self.preConnected,
+                                       errback  = self.notConnected)
                 broker.notifyOnDisconnect(self.booted)
                 c = tcp.Client(self.host, self.port, broker)
         else:
@@ -129,8 +136,8 @@ class ResourceSubscription(resource.Resource):
         return NOT_DONE_YET
 
 class ResourcePublisher(pb.Service, pb.Perspective):
-    def __init__(self, site):
-        pb.Service.__init__(self)
+    def __init__(self, site, app, name='twisted.web.distrib'):
+        pb.Service.__init__(self, name, app)
         pb.Perspective.__init__(self, "web", self, "web")
         self.site = site
         

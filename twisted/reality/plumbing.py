@@ -1,4 +1,3 @@
-
 """Plumbing classes (pump, pipeline) to put Twisted Reality on the net.
 """
 
@@ -8,7 +7,7 @@ from cStringIO import StringIO
 
 from twisted.reality import player
 from twisted.protocols import telnet, protocol, http
-from twisted.python import threadable, authenticator
+from twisted.python import threadable, authenticator, log
 from twisted.internet import tcp
 from twisted.web import resource, html
 from twisted import copyright
@@ -26,36 +25,53 @@ class Hose(telnet.Telnet):
         """
         return "\r\nTwisted Reality %s\r\n" % copyright.version
 
+
     def loginPrompt(self):
         """A login prompt that asks for your character name.
         """
         return "character: "
 
 
-    def checkUserAndPass(self, username, password):
+    def processPassword(self, password):
         """Checks authentication against the reality; returns a boolean indicating success.
         """
-        try:
-            self.factory.reality.checkUserAndPass(username, password)
-            p = self.factory.reality.getPerspectiveNamed(self.username)
+        self.transport.write(telnet.IAC+ telnet.WONT+ telnet.ECHO+".....\r\n")
+        req = self.factory.reality.application.authorizer.getIdentityRequest(self.username)
+        self.pw = password
+        req.addCallbacks(self.loggedIn, self.notLoggedIn)
+        req.arm()
+        # kludge; this really ought to be called later, but since the arm()
+        # call actually calls self.loggedIn, then the return value of this
+        # function will be used to assign to self.mode... ugh.
+        if self.mode == 'Command':
+            return 'Command'
+        return "Pending"
+
+    def loggedIn(self, identity):
+        if identity.verifyPlainPassword(self.pw):
+            k = identity.getKey(self.factory.reality.getServiceName())
+            p = k.getPerspective()
             p.attached(self)
-        except authenticator.Unauthorized, u:
-            self.transport.write("Login Refused: %s\r\n" % str(u))
-            return 0
-        else:
             self.player = p
             self.transport.write("Hello "+self.player.name+", welcome to Reality!\r\n"+
                                  telnet.IAC+telnet.WONT+telnet.ECHO)
-            return 1
+            self.mode = "Command"
+        else:
+            log.msg("incorrect password") 
+            self.transport.loseConnection()
 
+    def notLoggedIn(self, err):
+        log.msg('requested bad username')
+        self.transport.loseConnection()
 
+    def processPending(self, pend):
+        self.transport.write("Please hold...\r\n")
+        return "Pending"
+    
     def processCommand(self, cmd):
         """Execute a command as a player.
         """
-        try:
-            self.player.execute(cmd)
-        except:
-            pass
+        self.player.execute(cmd)
         return "Command"
 
     def connectionLost(self):

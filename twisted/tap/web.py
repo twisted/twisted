@@ -41,7 +41,7 @@ class from twisted.web.test in it."""
 
 # Twisted Imports
 from twisted.web import server, static, twcgi, script, test, distrib
-from twisted.internet import tcp
+from twisted.internet import tcp, passport
 from twisted.python import usage
 from twisted.spread import pb
 
@@ -113,10 +113,12 @@ def getPorts(app, config):
 
         pw_name, pw_passwd, pw_uid, pw_gid, pw_gecos, pw_dir, pw_shell \
                  = pwd.getpwuid(os.getuid())
-
-        service = distrib.ResourcePublisher(site)
-        factory = pb.BrokerFactory()
-        factory.addService("web", service)
+        ident = passport.Identity('web', app)
+        ident.setPassword('web')
+        app.authorizer.addIdentity(ident)
+        service = distrib.ResourcePublisher(site, app, 'twisted.web.distrib')
+        ident.addKeyFor(service.getPerspectiveNamed('web'))
+        factory = pb.BrokerFactory(app)
         ports.append((os.path.join(pw_dir,
                                    distrib.UserDirectory.userSocketName),
                       factory))

@@ -1,0 +1,7 @@
+
+Troubleshooting:
+
+  If you are going to use Python 2.0 or greater, you cannot regress an
+  application pickle to a previous python version.  The pickle format is not
+  backwards compatible, and this has accounted for at least two three-hour
+  debugging sessions on the Twisted team.

@@ -117,6 +117,10 @@ class _Jellier:
             self._cook(object)
             return self.cooked[id(object)]
         typnm = string.replace(type(object).__name__, ' ', '_')
+### this next block not _necessarily_ correct due to some tricks in
+### NetJellier's _jelly_instance...
+##        if not self.taster.isTypeAllowed(typnm):
+##            raise InsecureJelly("Type %s not jellyable." % typnm)
         typfn = getattr(self, "_jelly_%s" % typnm, None)
         if typfn:
             return typfn(object)

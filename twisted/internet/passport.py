@@ -67,8 +67,6 @@ class Service:
 
     def addPerspective(self, perspective):
         """Add a perspective to this Service.
-
-        perspective's perspectiveName, 
         """
         self.perspectives[perspective.getPerspectiveName()] = perspective
     

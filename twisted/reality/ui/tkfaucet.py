@@ -54,7 +54,7 @@ class MainWindow(Toplevel, pb.Referenced):
         self.deiconify()
         
     def tryAgain(self, er):
-        print 'oops'
+        print 'oops',er
         
     def disco(self):
         print 'disconnected'
@@ -212,14 +212,15 @@ class Login(Toplevel):
         self.m = MainWindow()
         self.m.withdraw()
          # he's a hack, he's a hack
-        broker.requestIdentity(username, password, callback= self.gotIdentity, errback= self.m.tryAgain)
+        broker.requestIdentity(username, password,
+                               callback=self.gotIdentity,
+                               errback=self.m.tryAgain)
         broker.notifyOnDisconnect(self.m.disco)
-        #broker.requestPerspective(worldname, username, password, m, m.loggedIn, m.tryAgain)
         tcp.Client(hostname, port, broker)
 
     def gotIdentity(self, identity):
         # he's a man with a happy knack
-        identity.attach(self.worldname.get(), self.m, pbCallback=self.m.loggedIn)
+        identity.attach(self.worldname.get(), self.m, pbcallback=self.m.loggedIn)
 
 def main():
     global root

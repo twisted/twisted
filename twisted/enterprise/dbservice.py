@@ -23,7 +23,8 @@ class DbService(pb.Service):
     This is assumed to be single threaded for now.
 
     """
-    def __init__(self, manager):
+    def __init__(self, manager, app, name='twisted.enterprise.db'):
+        pb.Service.__init__(self, name, app)
         self.manager = manager
 
     def getPerspectiveNamed(self, name):
