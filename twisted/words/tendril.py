@@ -1,5 +1,5 @@
 # -*- test-case-name: twisted.test.test_tendril -*-
-# $Id: tendril.py,v 1.29 2002/09/23 03:35:00 itamarst Exp $
+# $Id: tendril.py,v 1.30 2002/10/01 21:41:00 acapnotic Exp $
 # Twisted, the Framework of Your Internet
 # Copyright (C) 2001 Matthew W. Lefkowitz
 #
@@ -16,18 +16,36 @@
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
-"""
-How to start a tendril:
-from twisted.internet import reactor as R
-from twisted.internet.app import theApplication as A
-from twisted.words import tendril as T
+"""Tendril between Words and IRC servers.
 
-w = A.services['twisted.words']
-f = T.TendrilFactory(w)
-# Maybe do some customization of f here, i.e.
-## f.nickname = 'PartyLink'
-## f.groupList = ['this', 'that', 'other']
-R.connectTCP(irchost, 6667, f)
+A Tendril, attached to a Words service, signs on as a user to an IRC
+server.  It can then relay traffic for one or more channels/groups
+between the two servers.  Anything it hears on a Words group it will
+repeat as a user in an IRC channel; anyone it hears on IRC will appear
+to be logged in to the Words service and speaking in a group there.
+
+How to Start a Tendril
+----------------------
+
+In manhole::
+
+  from twisted.internet import reactor as R
+  from twisted.internet.app import theApplication as A
+  from twisted.words import tendril as T
+
+  w = A.getServiceNamed('twisted.words')
+  f = T.TendrilFactory(w)
+  # Maybe do some customization of f here, i.e.
+  ## f.nickname = 'PartyLink'
+  ## f.groupList = ['this', 'that', 'other']
+  R.connectTCP(irchost, 6667, f)
+
+Stability: No more stable than L{words<twisted.words.service>}.
+
+Future plans: Use \"L{Policy<twisted.words.service.Policy>}\" to get
+Perspectives.
+
+@author: U{Kevin Turner<acapnotic@twistedmatrix.com>}
 """
 
 from twisted import copyright
@@ -53,8 +71,6 @@ _LOGALL = False
 
 # XXX FIXME -- This will need to be fixed to work asynchronously in order to
 # support multiple-server twisted.words and database access to accounts
-
-# TODO: Use words 'Policy' to get Perspectives.
 
 class TendrilFactory(protocol.ReconnectingClientFactory, reflect.Accessor):
     """I build Tendril clients for a words service.
@@ -195,7 +211,7 @@ class TendrilIRC(irc.IRCClient, styles.Ephemeral):
 
     realname = 'Tendril'
     versionName = 'Tendril'
-    versionNum = '$Revision: 1.29 $'[11:-2]
+    versionNum = '$Revision: 1.30 $'[11:-2]
     versionEnv = copyright.longversion
 
     helptext = TendrilFactory.helptext
