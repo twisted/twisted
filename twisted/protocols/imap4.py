@@ -331,6 +331,28 @@ class LiteralFile:
         self.defer.callback((self.data, line))
 
 
+class WriteBuffer:
+    """Buffer up a bunch of writes before sending them all to a transport at once.
+    """
+    def __init__(self, transport, size=8192):
+        self.bufferSize = size
+        self.transport = transport
+        self._length = 0
+        self._writes = []
+
+    def write(self, s):
+        self._length += len(s)
+        self._writes.append(s)
+        if self._length > self.bufferSize:
+            self.flush()
+
+    def flush(self):
+        if self._writes:
+            self.transport.writeSequence(self._writes)
+            self._writes = []
+            self._length = 0
+
+
 class Command:
     _1_RESPONSES = ('CAPABILITY', 'FLAGS', 'LIST', 'LSUB', 'STATUS', 'SEARCH', 'NAMESPACE')
     _2_RESPONSES = ('EXISTS', 'EXPUNGE', 'FETCH', 'RECENT')
@@ -1630,13 +1652,19 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
         log.err(failure)
         self.transport.loseConnection()
 
-    def spew_envelope(self, id, msg):
-        self.transport.write('ENVELOPE ' + collapseNestedLists([getEnvelope(msg)]))
+    def spew_envelope(self, id, msg, _w=None, _f=None):
+        if _w is None:
+            _w = self.transport.write
+        _w('ENVELOPE ' + collapseNestedLists([getEnvelope(msg)]))
 
-    def spew_flags(self, id, msg):
-        self.transport.write('FLAGS ' + '(%s)' % (' '.join(msg.getFlags())))
+    def spew_flags(self, id, msg, _w=None, _f=None):
+        if _w is None:
+            _w = self.transport.write
+        _w('FLAGS ' + '(%s)' % (' '.join(msg.getFlags())))
 
-    def spew_internaldate(self, id, msg):
+    def spew_internaldate(self, id, msg, _w=None, _f=None):
+        if _w is None:
+            _w = self.transport.write
         idate = msg.getInternalDate()
         ttup = rfc822.parsedate_tz(idate)
         if ttup is None:
@@ -1652,24 +1680,33 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
             else:
                 sign = "-"
             odate = odate + sign + string.zfill(str(((abs(ttup[9]) / 3600) * 100 + (abs(ttup[9]) % 3600) / 60)), 4)
+        _w('INTERNALDATE ' + _quote(odate))
 
-        self.transport.write('INTERNALDATE ' + _quote(odate))
-
-    def spew_rfc822header(self, id, msg):
+    def spew_rfc822header(self, id, msg, _w=None, _f=None):
+        if _w is None:
+            _w = self.transport.write
         hdrs = _formatHeaders(msg.getHeaders(True))
-        self.transport.write('RFC822.HEADER ' + _literal(hdrs))
+        _w('RFC822.HEADER ' + _literal(hdrs))
 
-    def spew_rfc822text(self, id, msg):
-        self.transport.write('RFC822.TEXT ')
+    def spew_rfc822text(self, id, msg, _w=None, _f=None):
+        if _w is None:
+            _w = self.transport.write
+        _w('RFC822.TEXT ')
+        _f()
         return FileProducer(msg.getBodyFile()
             ).beginProducing(self.transport
             )
 
-    def spew_rfc822size(self, id, msg):
-        self.transport.write('RFC822.SIZE ' + str(msg.getSize()))
+    def spew_rfc822size(self, id, msg, _w=None, _f=None):
+        if _w is None:
+            _w = self.transport.write
+        _w('RFC822.SIZE ' + str(msg.getSize()))
 
-    def spew_rfc822(self, id, msg):
-        self.transport.write('RFC822 ')
+    def spew_rfc822(self, id, msg, _w=None, _f=None):
+        if _w is None:
+            _w = self.transport.write
+        _w('RFC822 ')
+        _f()
         mf = IMessageFile(msg, default=None)
         if mf is not None:
             return FileProducer(mf.open()
@@ -1679,43 +1716,52 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
             ).beginProducing(self.transport
             )
 
-    def spew_uid(self, id, msg):
-        self.transport.write('UID ' + str(msg.getUID()))
+    def spew_uid(self, id, msg, _w=None, _f=None):
+        if _w is None:
+            _w = self.transport.write
+        _w('UID ' + str(msg.getUID()))
 
-    def spew_bodystructure(self, id, msg):
-        self.transport.write('BODYSTRUCTURE ' + collapseNestedLists([getBodyStructure(msg, True)]))
+    def spew_bodystructure(self, id, msg, _w=None, _f=None):
+        _w('BODYSTRUCTURE ' + collapseNestedLists([getBodyStructure(msg, True)]))
 
-    def spew_body(self, part, id, msg):
+    def spew_body(self, part, id, msg, _w=None, _f=None):
+        if _w is None:
+            _w = self.transport.write
         for p in part.part or ():
             msg = msg.getSubPart(p)
         if part.header:
             hdrs = msg.getHeaders(part.header.negate, *part.header.fields)
             hdrs = _formatHeaders(hdrs)
-            self.transport.write(str(part) + ' ' + _literal(hdrs))
+            _w(str(part) + ' ' + _literal(hdrs))
         elif part.text:
-            self.transport.write(str(part) + ' ')
+            _w(str(part) + ' ')
+            _f()
             return FileProducer(msg.getBodyFile()
                 ).beginProducing(self.transport
                 )
         elif part.mime:
             hdrs = _formatHeaders(msg.getHeaders(True))
-            self.transport.write(str(part) + ' ' + _literal(hdrs))
+            _w(str(part) + ' ' + _literal(hdrs))
         elif part.empty:
-            self.transport.write(str(part) + ' ')
+            _w(str(part) + ' ')
+            _f()
             mf = IMessageFile(msg, default=None)
             if mf is not None:
                 return FileProducer(mf.open()).beginProducing(self.transport)
             return MessageProducer(msg).beginProducing(self.transport)
         else:
-            self.transport.write('BODY ' + collapseNestedLists([getBodyStructure(msg)]))
+            _w('BODY ' + collapseNestedLists([getBodyStructure(msg)]))
 
     def spewMessage(self, id, msg, query, uid):
+        wbuf = WriteBuffer(self.transport)
+        write = wbuf.write
+        flush = wbuf.flush
         def start():
-            self.transport.write('* %d FETCH (' % (id,))
+            write('* %d FETCH (' % (id,))
         def finish():
-            self.transport.write(')\r\n')
+            write(')\r\n')
         def space():
-            self.transport.write(' ')
+            write(' ')
 
         def spew():
             seenUID = False
@@ -1724,16 +1770,17 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
                 if part.type == 'uid':
                     seenUID = True
                 if part.type == 'body':
-                    yield self.spew_body(part, id, msg)
+                    yield self.spew_body(part, id, msg, write, flush)
                 else:
                     f = getattr(self, 'spew_' + part.type)
-                    yield f(id, msg)
+                    yield f(id, msg, write, flush)
                 if part is not query[-1]:
                     space()
             if uid and not seenUID:
                 space()
-                yield self.spew_uid(id, msg)
+                yield self.spew_uid(id, msg, write, flush)
             finish()
+            flush()
         return iterateInReactor(spew())
 
     def __ebFetch(self, failure, tag):
