@@ -203,6 +203,7 @@ def debugSignalHandler(*args):
 
 
 def run():
+    global initRun
     # make default be "--help"
     if len(sys.argv) == 1:
         sys.argv.append("--help")
