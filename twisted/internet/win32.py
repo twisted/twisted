@@ -127,8 +127,7 @@ def doWaitForMultipleEvents(timeout,
     else:
         timeout = int(timeout * 1000)
     
-    handles = events.keys()
-    if not handles:
+    if not (events or writes):
         # sleep so we don't suck up CPU time
         time.sleep(timeout / 1000.0)
         return
@@ -157,6 +156,11 @@ def doWaitForMultipleEvents(timeout,
     if canDoMoreWrites:
         timeout = 0
     
+    if not events:
+        time.sleep(timeout / 1000.0)
+        return
+    
+    handles = events.keys()
     val = WaitForMultipleObjects(handles, 0, timeout)
     if val == WAIT_TIMEOUT:
         return
