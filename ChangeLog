@@ -1,3 +1,8 @@
+2003-10-12  Jp Calderone  <exarkun@twistedmatrix.com>
+
+	* bin/tktwistd, twisted/scripts/tktwistd.py, doc/man/tktwistd.1:
+	Removed.
+
 2003-10-12  Itamar Shtull-Trauring  <itamar@sheriffpony>
 
 	* twisted/spread/pb.py: Perspective Broker no longer sends
