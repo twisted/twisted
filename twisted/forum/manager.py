@@ -103,7 +103,6 @@ CREATE TABLE forum_permissions
         d = self.cacheForums()
         d.arm() #NOTE: must arm it as this is during initialization        
 
-
     def cacheForums(self):
         # load all forums
         sql = "SELECT forum_id, name from forums"
@@ -131,14 +130,6 @@ CREATE TABLE forum_permissions
         """Get the name of a forum by it's ID.
         """
         return self.forums.get(id, "ERROR - no Forum for this ID")
-
-
-    def createUser(self, username, signature):
-        """Create a new user in the system and set default permissions.
-        This is complex as it must interface with the dbAuthorizer.
-        """
-        
-        return self.runInteraction(self._userCreator, username, signature)
      
     def _userCreator(self, trans, username, signature):
         sql = """INSERT INTO forum_perspectives
@@ -154,22 +145,42 @@ CREATE TABLE forum_permissions
             print toExec
             trans.execute(toExec)
 
-    def createForum(self, name, description):
-        """Create a new forum with this name.
+    def createUser(self, username, signature):
+        """Create a new user in the system and set default permissions.
+        This is complex as it must interface with the dbAuthorizer.
         """
+        return self.runInteraction(self._userCreator, username, signature)
+
+    def _forumCreator(self, trans, name, description, default_access):
         sql = """INSERT INTO forums
                (name, description, default_access)
                VALUES
-               ('%s', '%s', 1)""" % (name, description)
-        self.runOperation(sql)
+               ('%s', '%s', %d)""" % (name, description, int(default_access))
+        trans.execute(sql)
+
+        trans.execute("SELECT forum_id FROM forums WHERE name = '%s'" % name)
+        rows = trans.fetchall()
+        forum_id = int(rows[0][0])
+        
+        if default_access:
+            # setup permissions if required
+            sql = "INSERT INTO forum_permissions (SELECT user_name, %d, 1, 1 FROM forum_perspectives);" % forum_id
+            trans.execute(sql)
+            
         self.cacheForums()
+        
+    def createForum(self, name, description, default_access):
+        """Create a new forum with this name.
+        """
+        self.runInteraction(self._forumCreator, name, description, default_access)
 
     def deleteForum(self, forum_id):
         """Delete the forum with this name and all posted messages in it.
         """
         # NOTE: This should be in a transaction!!!
         sql = """DELETE FROM forums WHERE forum_id = %d;
-                 DELETE FROM posts WHERE forum_id = %d""" % (forum_id, forum_id)
+                 DELETE FROM posts WHERE forum_id = %d;
+                 DELETE FROM forum_permissions WHERE forum_id = %d""" % (forum_id, forum_id, forum_id)
         self.runOperation(sql)
 
 

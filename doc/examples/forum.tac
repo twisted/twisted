@@ -31,4 +31,9 @@ reg = gadgets.RegisterUser(application, forumService)
 regsite = server.Site(reg)
 application.listenOn(8488, regsite)
 
+
+create = gadgets.NewForumForm(application, forumService)
+csite = server.Site(create)
+application.listenOn(8489, csite)
+
 # Done.

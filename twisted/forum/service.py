@@ -16,6 +16,16 @@ class ForumUser(pb.Perspective):
     def __init__(self, identity_name, user_name, sig):
         pb.Perspective.__init__(self, identity_name, user_name)
         self.signature = sig
+        global theService
+        self.service = theService
+
+    def attached(self, reference, identity):
+        pb.Perspective.attached(self, reference, identity)
+        self.service.addUser()
+
+    def detached(self, reference, identity):
+        pb.Perspective.detached(self, reference, identity)
+        self.service.removeUser()
 
 class ForumService(pb.Service):
 
@@ -24,8 +34,18 @@ class ForumService(pb.Service):
         self.dbpool = dbpool
         self.manager = manager.ForumDB(dbpool)
         self.desc = desc
-
+        self.usersOnline = 0
+        global theService
+        theService = self
         
     def getPerspectiveRequest(self, name):
         return self.manager.getPerspectiveRequest(name)
 
+    def addUser(self):
+        self.usersOnline += 1
+
+    def removeUser(self):
+        self.usersOnline -= 1
+
+
+theService = None

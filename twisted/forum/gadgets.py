@@ -63,7 +63,7 @@ class ForumBaseGadget(widgets.Gadget, widgets.StreamWidget):
         return title
 
     def displayFooter(self):
-        text = "<hr> <i> Twisted Forums - %s </i>" % self.service.desc
+        text = "<hr> <i> Twisted Forums - %s </i>  (%d users online)" % (self.service.desc, self.service.usersOnline)
         return text
     
 """The forum application has these functional pages:
@@ -477,3 +477,31 @@ class RegisterUser(widgets.Form, widgets.Gadget):
     def errIdentity(self, error):
         print "ERROR: couldn't create identity."
         return ["Drat and blast!  No identity created: %s." % error]
+
+class NewForumForm(widgets.Form, widgets.Gadget):
+    
+    title = "Create a new forum:"
+
+    def __init__(self, app, service):
+        self.app = app
+        self.service = service
+        widgets.Gadget.__init__(self)
+
+    def display(self, request):
+        self.request = request
+
+        self.formFields = [
+            ['string', 'Forum Name:',   'name', ''],
+            ['text',   'Description:',  'description',    ''],
+            ['checkbox',    'Allow Default Access:', 'default_access', 1],
+            ]
+        
+        return widgets.Form.display(self, self.request)
+    
+    def process(self, write, request, submit, name, description, default_access):
+        self.service.manager.createForum(name, description, default_access)
+        write("Created new forum '%s'.<hr>\n" % name)
+        write("<a href='/'>Return</a>")
+
+        
+
