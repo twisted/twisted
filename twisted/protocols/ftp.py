@@ -808,7 +808,35 @@ class FTPClient(basic.LineReceiver):
 
         Returns a Deferred, which should be armed by the caller to ensure that
         the connection terminates properly."""
+        # First define a helpful class and function 
+
+        # Use a wrapper so that we can override connectionLost without
+        # modifying the Protocol instance passed to us
+        class ProtocolWrapper(ObjectWrapper):
+            def connectionLost(self):
+                self.object.connectionLost()
+                # Signal that transfer has completed
+                self.deferred.callback(None)
+            def connectionFailed(self):
+                self.object.connectionFailed()
+                self.deferred.errback(Failure(FTPError('Connection failed')))
+        
+        def raiseOnFailure(deferredListResult):
+            """Triggers errback if one (or more) of the Deferreds failed
+            
+            On success, it returns the result of the first Deferred.
+            """
+            for status, value in deferredListResult:
+                if status == FAILURE:
+                    raise value
+
+            # If everything is ok, return the first Deferred's result
+            return deferredListResult[0][1]
+            
         if self.passive:
+            protocol = ProtocolWrapper(protocol)
+            protocol.deferred = Deferred()
+            
             # Hack: use a mutable object to sneak a variable out of the 
             # scope of doPassive
             _mutable = [None]
@@ -822,20 +850,23 @@ class FTPClient(basic.LineReceiver):
                 host = "%s.%s.%s.%s" % (a, b, c, d)
                 port = int(e)*256 + int(f)
 
-                mutable[0] = (reactor.clientTCP(host, port, protocol, 30.0))
+                mutable[0] = reactor.clientTCP(host, port, protocol, 30.0)
 
             pasvCmd = FTPCommand('PASV')
             self.queueCommand(pasvCmd)
-            pasvCmd.deferred.addCallbacks(doPassive, self.fail).arm()
+            pasvCmd.deferred.addCallbacks(doPassive, self.fail)
+            pasvCmd.deferred.addErrback(lambda e,p=protocol: p.deferred.errback(e) or e)
+            pasvCmd.deferred.arm()
 
             cmd = FTPCommand(command)
-            self.queueCommand(cmd)
             # Ensure the connection is always closed
             cmd.deferred.addCallbacks(
                 lambda result, mutable=_mutable: mutable[0].loseConnection() or result,
                 lambda result, mutable=_mutable: mutable[0].loseConnection())
+            cmd.deferred.addErrback(lambda e,p=protocol: p.deferred.errback(e) or e)
 
-            return cmd.deferred
+            d = DeferredList([cmd.deferred, protocol.deferred])
+
         else:
             # We just place a marker command in the queue, and will fill in
             # the host and port numbers later (see generatePortCommand)
@@ -848,17 +879,9 @@ class FTPClient(basic.LineReceiver):
             # a DeferredList to make sure we only fire the callback at the 
             # right time.
 
-            # Use a wrapper so that we can override connectionLost without
-            # modifying the Protocol instance passed to us
-            class ProtocolWrapper(ObjectWrapper):
-                def connectionLost(self):
-                    self.object.connectionLost()
-                    # Signal that transfer has completed
-                    self.portCmd.transferDeferred.callback(None)
-            
             portCmd.protocol = ProtocolWrapper(protocol)
-            portCmd.protocol.portCmd = portCmd
             portCmd.transferDeferred = Deferred()
+            portCmd.protocol.deferred = portCmd.transferDeferred
             portCmd.deferred.addErrback(portCmd.transferDeferred.errback)
             self.queueCommand(portCmd)
 
@@ -877,20 +900,12 @@ class FTPClient(basic.LineReceiver):
             cmd.deferred.addErrback(portCmd.transferDeferred.errback)
 
             portCmd.deferred.addErrback(lambda e, cmd=cmd: cmd.deferred.errback(e) or e)
-            d = DeferredList([portCmd.deferred, portCmd.transferDeferred, 
-                              cmd.deferred])
-            def raiseOnFailure(deferredListResult):
-                """Triggers errback if one (or more) of the Deferreds failed"""
-                for status, value in deferredListResult:
-                    if status == FAILURE:
-                        raise value
-
-                # If everything is ok, return cmd.deferred's result
-                return deferredListResult[2][1]
-            
-            d.addCallback(raiseOnFailure)
-            self.queueCommand(cmd)
-            return d
+            d = DeferredList([cmd.deferred, portCmd.deferred, 
+                              portCmd.transferDeferred])
+                              
+        d.addCallback(raiseOnFailure)
+        self.queueCommand(cmd)
+        return d
 
     def generatePortCommand(self, portCmd):
         """(Private) Generates the text of a given PORT command"""
