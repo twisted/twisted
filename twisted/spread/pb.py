@@ -52,7 +52,7 @@ applied when serializing arguments.
 # Future Imports
 from __future__ import nested_scopes
 
-__version__ = "$Revision: 1.128 $"[11:-2]
+__version__ = "$Revision: 1.129 $"[11:-2]
 
 
 # System Imports
@@ -1187,7 +1187,8 @@ def getObjectAtSSL(host, port,  timeout=None):
       root object of a PB server.x
     """
     bf, d = getObjectRetriever()
-    reactor.connectSSL(host, port, bf, timeout)
+    from twisted.internet import ssl
+    reactor.connectSSL(host, port, bf, ssl.ClientContextFactory(), timeout)
     return d
 
 def connect(host, port, username, password, serviceName,
