@@ -212,11 +212,9 @@ class Port(abstract.FileDescriptor):
         
         This will shut down my socket and call self.connectionLost().
         """
-        # Since ports can't, by definition, write any data, we can just close
-        # instantly (no need for the more complex stuff for selectables which
-        # write)
         self.stopReading()
-        self.connectionLost()
+        if self.connected:
+            task.schedule(self.connectionLost)
 
     def connectionLost(self):
         """Cleans up my socket.

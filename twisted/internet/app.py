@@ -135,10 +135,17 @@ class Application(log.Logger, styles.Versioned):
 
     def dontListenTCP(self, portno):
         for p in self.ports[:]:
-            if p.port == portno:
+            if p.port == portno and isinstance(p, tcp.Port):
                 p.loseConnection()
                 self.ports.remove(p)
 
+    def dontListenUDP(self, portno):
+        from twisted.internet import udp
+        for p in self.ports[:]:
+            if p.port == portno and isinstance(p, udp.Port):
+                p.loseConnection()
+                self.ports.remove(p)
+    
     # deprecated name for backward compat.
     listenOn = listenTCP
 
