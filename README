@@ -2,10 +2,11 @@ Twisted 1.1.0alpha3
 
 Quote of the Release:
 
-"from experience and months of lurking, I would say the Twisted newbie
-experience is characterised by waves of confusion and euphoria."
-  -- Douglas Bagnall
-
+--> orangecat has joined #twisted
+<orangecat> I was just on my way to the bar to pick up some internet
+    and wondered if everyone had enough enterprise.  No facilitated
+    client-based XML quality vector refills? Budweiser?
+<-- orangecat has left #twisted"
 
 For information on what's new in Twisted 1.1.0alpha3, see the ChangeLog file
 that comes with the distribution, or http://twistedmatrix.com/ChangeLog.txt.
