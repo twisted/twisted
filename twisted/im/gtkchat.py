@@ -21,31 +21,31 @@ import gtk
 
 from twisted.im.gtkcommon import GLADE_FILE, autoConnectMethods, InputOutputWindow, openGlade
 
-class GroupJoinWindow:
-    def __init__(self, chatui):
-        self.xml = openGlade(GLADE_FILE, root="JoinGroupWindow")
-        self.widget = self.xml.get_widget("JoinGroupWindow")
-        autoConnectMethods(self)
-        om = self.xml.get_widget("AccountSelector")
-        m = gtk.GtkMenu()
-        om.set_menu(m)
-        activ = 0
-        for acct in chatui.onlineAccounts:
-            print 'adding account to menu:',acct.accountName
-            i = gtk.GtkMenuItem(acct.accountName)
-            m.append(i)
-            i.connect('activate', self.on_AccountSelectorMenu_activate, acct)
-        if chatui.onlineAccounts:
-            self.currentAccount = chatui.onlineAccounts[0]
-        self.widget.show_all()
+##class GroupJoinWindow:
+##    def __init__(self, chatui):
+##        self.xml = openGlade(GLADE_FILE, root="JoinGroupWindow")
+##        self.widget = self.xml.get_widget("JoinGroupWindow")
+##        autoConnectMethods(self)
+##        om = self.xml.get_widget("AccountSelector")
+##        m = gtk.GtkMenu()
+##        om.set_menu(m)
+##        activ = 0
+##        for acct in chatui.onlineAccounts:
+##            print 'adding account to menu:',acct.accountName
+##            i = gtk.GtkMenuItem(acct.accountName)
+##            m.append(i)
+##            i.connect('activate', self.on_AccountSelectorMenu_activate, acct)
+##        if chatui.onlineAccounts:
+##            self.currentAccount = chatui.onlineAccounts[0]
+##        self.widget.show_all()
 
-    def on_AccountSelectorMenu_activate(self, m, acct):
-        self.currentAccount = acct
+##    def on_AccountSelectorMenu_activate(self, m, acct):
+##        self.currentAccount = acct
 
-    def on_GroupJoinButton_clicked(self, b):
-        name = self.xml.get_widget("GroupNameEntry").get_text()
-        self.currentAccount.joinGroup(name)
-        self.widget.destroy()
+##    def on_GroupJoinButton_clicked(self, b):
+##        name = self.xml.get_widget("GroupNameEntry").get_text()
+##        self.currentAccount.joinGroup(name)
+##        self.widget.destroy()
 
 
 class ContactsList:
@@ -80,6 +80,9 @@ class ContactsList:
             i = gtk.GtkMenuItem(account.accountName)
             i.connect('activate', self.on_AccountsListPopup_activate, account)
             self.accountMenu.append(i)
+        if self.accountMenuItems:
+            print "setting default account to", self.accountMenuItems[0]
+            self.currentAccount = self.accountMenuItems[0]
         self.accountMenu.show_all()
         self.optionMenu.set_menu(self.accountMenu)
 
@@ -272,9 +275,12 @@ class GroupConversation(InputOutputWindow):
         pl = self.xml.get_widget("ParticipantList")
         pl.freeze()
         pl.clear()
+        self.members.sort(lambda x,y: cmp(string.lower(x), string.lower(y)))
         for member in self.members:
             pl.append([member])
         pl.thaw()
+
+        
     def on_HideButton_clicked(self, b):
         self.membersHidden = not self.membersHidden
         self.xml.get_widget("GroupHPaned").set_position(self.membersHidden and -1 or 20000)
