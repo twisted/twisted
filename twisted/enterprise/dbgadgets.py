@@ -15,6 +15,9 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 """Web interface for the Twisted db authentication system.
 
+This now deprecated, as it is based on the old twisted.cred API
+and uses a deprecated web widget system.
+
 Has pages to:
     - show all the identities
     - show the perspectives for an identity
@@ -37,8 +40,12 @@ for an identity: show perspectives and actions
 """
 
 import md5
+import warnings
 
 from twisted.web import widgets
+
+warnings.warn("This is deprecated. You should be using Woven.",
+              DeprecationWarning)
 
 class IdentitiesGadget(widgets.Gadget, widgets.StreamWidget):
     title = "Database Identities"

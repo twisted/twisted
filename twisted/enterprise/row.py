@@ -21,6 +21,7 @@ This is an extremely thin wrapper.
 """
 
 import string
+import warnings
 
 from twisted.enterprise.util import DBError, NOQUOTE, getKeyColumn, dbTypeMap
 
@@ -125,10 +126,11 @@ class RowObject:
 
 class KeyFactory:
     """I create unique keys to use as primary key columns in database tables.
-    I am able to use a specified range.
+    I am able to use a specified range. I am deprecated, don't use me.
     (NOTE: not thread safe....)
     """
     def __init__(self, minimum, pool):
+        warnings.warn("This is deprecated. Use the underlying database to generate keys, or just roll your own.", DeprecationWarning)
         self.min = minimum
         self.pool = minimum + pool
         self.current = self.min
@@ -142,9 +144,10 @@ class KeyFactory:
 
 
 class StatementBatch:
-    """A keep a set of SQL statements to be executed in a single batch.
+    """I keep a set of SQL statements to be executed in a single batch. But I am deprecated so don't use me.
     """
     def __init__(self):
+        warnings.warn("This is deprecated. Just use ';'.join(statements)", DeprecationWarning)
         self.statements = []
 
     def addStatement(self, statement):
@@ -157,5 +160,3 @@ class StatementBatch:
 
     def getSize(self):
         return len(self.statements)
-
-

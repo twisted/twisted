@@ -38,8 +38,8 @@ class SQLReflector(reflector.Reflector, adbapi.Augmentation):
     def __init__(self, dbpool, rowClasses):
         """Initialize me against a database.
         """
-        adbapi.Augmentation.__init__(self, dbpool)
-        reflector.Reflector.__init__(self, rowClasses)        
+        reflector.Reflector.__init__(self, rowClasses)
+        self.dbpool = dbpool
 
     def _populate(self):
         self._transPopulateSchema()
@@ -120,8 +120,9 @@ class SQLReflector(reflector.Reflector, adbapi.Augmentation):
             pass
         else:
             whereClause = []
-        return self.runInteraction(self._rowLoader, tableName, parentRow,
-                                   data, whereClause, forceChildren)
+        return self.dbpool.runInteraction(self._rowLoader, tableName,
+                                          parentRow, data, whereClause,
+                                          forceChildren)
 
     def _rowLoader(self, transaction, tableName, parentRow, data,
                    whereClause, forceChildren):
@@ -291,7 +292,7 @@ class SQLReflector(reflector.Reflector, adbapi.Augmentation):
         """
         sql = self.updateRowSQL(rowObject)
         rowObject.setDirty(0)
-        return self.runOperation(sql)
+        return self.dbpool.runOperation(sql)
 
     def insertRowSQL(self, rowObject):
         """Build SQL to insert the contents of rowObject.
@@ -308,7 +309,7 @@ class SQLReflector(reflector.Reflector, adbapi.Augmentation):
         """
         rowObject.setDirty(0)
         sql = self.insertRowSQL(rowObject)
-        return self.runOperation(sql)
+        return self.dbpool.runOperation(sql)
 
     def deleteRowSQL(self, rowObject):
         """Build SQL to delete rowObject from the database.
@@ -327,4 +328,4 @@ class SQLReflector(reflector.Reflector, adbapi.Augmentation):
         """
         sql = self.deleteRowSQL(rowObject)
         self.removeFromCache(rowObject)
-        return self.runOperation(sql)
+        return self.dbpool.runOperation(sql)

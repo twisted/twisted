@@ -136,9 +136,10 @@ class AtLeastImportTestCase(unittest.TestCase):
 
     def test_enterprise(self):
         from twisted.enterprise import adbapi
-        from twisted.enterprise import dbcred
-        from twisted.enterprise import dbgadgets
-        from twisted.enterprise import dbpassport
+        from twisted.enterprise import reflector
+        from twisted.enterprise import sqlreflector
+        from twisted.enterprise import xmlreflector
+        from twisted.enterprise import row
 
     def test_lore(self):
         from twisted.lore import tree

@@ -15,13 +15,18 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 """
 Database backend for L{twisted.cred}.
+This now deprecated, as it implements the old twisted.cred API.
 """
+
+import base64
+import string
+import warnings
 
 from twisted.enterprise import adbapi, row, reflector
 from twisted.cred import authorizer, identity
-import base64
-import string
 
+warnings.warn("This is deprecated. The Cred API has changed.",
+              DeprecationWarning)
 
 class IdentityRow(row.RowObject):
     rowColumns     = [

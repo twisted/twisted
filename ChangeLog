@@ -1,3 +1,20 @@
+2003-08-16  Dave Peticolas  <dave@krondo.com>
+
+	* twisted/test/test_import.py: update for enterprise
+
+	* twisted/enterprise/sqlreflector.py: use dbpool directly
+
+	* twisted/enterprise/row.py: deprecate KeyFactory and StatementBatch
+
+	* twisted/enterprise/dbpassport.py: remove
+
+	* twisted/enterprise/dbgadgets.py: deprecate all
+
+	* twisted/enterprise/dbcred.py: deprecate all
+
+	* twisted/enterprise/adbapi.py: deprecate Augmentation. deprecate
+	crufty bits of ConnectionPool API.
+
 2003-08-11  Dave Peticolas  <dave@krondo.com>
 
 	* twisted/enterprise/sqlreflector.py: fix docs

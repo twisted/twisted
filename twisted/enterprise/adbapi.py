@@ -17,6 +17,8 @@
 An asynchronous mapping to U{DB-API 2.0<http://www.python.org/topics/database/DatabaseAPI-2.0.html>}.
 """
 
+import warnings
+
 from twisted.spread import pb
 from twisted.internet import defer
 from twisted.internet import threads
@@ -132,7 +134,9 @@ class ConnectionPool(pb.Referenceable):
         @return: a Deferred which will fire the return value of
         'interaction(Transaction(...))', or a Failure.
         """
-        return self._deferToThread(self._runInteraction, interaction, *args, **kw)
+
+        return self._deferToThread(self._runInteraction,
+                                   interaction, *args, **kw)
 
     def runQuery(self, *args, **kw):
         """Execute an SQL query and return the result.
@@ -152,9 +156,7 @@ class ConnectionPool(pb.Referenceable):
         cursor's 'fetchall' method, or a Failure.
         """
 
-        d = defer.Deferred()
-        apply(self.query, (d.callback, d.errback)+args, kw)
-        return d
+        return self._deferToThread(self._runQuery, *args, **kw)
 
     def runOperation(self, *args, **kw):
         """Execute an SQL query and return None.
@@ -173,9 +175,7 @@ class ConnectionPool(pb.Referenceable):
         @return: a Deferred which will fire None or a Failure.
         """
 
-        d = defer.Deferred()
-        apply(self.operation, (d.callback, d.errback)+args, kw)
-        return d
+        return self._deferToThread(self._runOperation, *args, **kw)
 
     def close(self):
         """Close all pool connections and shutdown the pool."""
@@ -234,7 +234,7 @@ class ConnectionPool(pb.Referenceable):
             trans._connection.rollback()
             raise
 
-    def _runQuery(self, args, kw):
+    def _runQuery(self, *args, **kw):
         conn = self.connect()
         curs = conn.cursor()
         try:
@@ -249,7 +249,7 @@ class ConnectionPool(pb.Referenceable):
             conn.rollback()
             raise
 
-    def _runOperation(self, args, kw):
+    def _runOperation(self, *args, **kw):
         conn = self.connect()
         curs = conn.cursor()
         try:
@@ -286,20 +286,21 @@ class ConnectionPool(pb.Referenceable):
         return d
 
     def query(self, callback, errback, *args, **kw):
-        # this will be deprecated ASAP
-        self._deferToThread(self._runQuery, args, kw).addCallbacks(
+        warnings.warn("This is deprecated. Use runQuery.", DeprecationWarning)
+        self._deferToThread(self._runQuery, *args, **kw).addCallbacks(
             callback, errback)
 
     def operation(self, callback, errback, *args, **kw):
-        # this will be deprecated ASAP
-        self._deferToThread(self._runOperation, args, kw).addCallbacks(
+        warnings.warn("This is deprecated. Use runOperation", DeprecationWarning)
+        self._deferToThread(self._runOperation, *args, **kw).addCallbacks(
             callback, errback)
 
     def synchronousOperation(self, *args, **kw):
-        self._runOperation(args, kw)
+        warnings.warn("This is deprecated. Use DB-API directly.", DeprecationWarning)
+        self._runOperation(*args, **kw)
 
     def interaction(self, interaction, callback, errback, *args, **kw):
-        # this will be deprecated ASAP
+        warnings.warn("This is deprecated. Use runInteraction", DeprecationWarning)
         apply(self._deferToThread,
               (self._runInteraction, interaction) + args, kw).addCallbacks(
             callback, errback)
@@ -307,6 +308,8 @@ class ConnectionPool(pb.Referenceable):
 
 class Augmentation:
     '''A class which augments a database connector with some functionality.
+
+    This class is now deprecated. Just use the ConnectionPool directly.
 
     Conventional usage of me is to write methods that look like
 
@@ -316,6 +319,7 @@ class Augmentation:
     '''
 
     def __init__(self, dbpool):
+        warnings.warn("This is deprecated. Use ConnectionPool.", DeprecationWarning)
         self.dbpool = dbpool
 
     def __setstate__(self, state):
@@ -326,6 +330,7 @@ class Augmentation:
 
         Override this, and/or define your own callbacks.
         """
+        warnings.warn("This is deprecated. Roll your own.", DeprecationWarning)
         log.msg("%s Operation Done: %s" % (reflect.qual(self.__class__), done))
 
     def operationError(self, error):
@@ -333,31 +338,41 @@ class Augmentation:
 
         Override this, and/or define your own callbacks.
         """
+        warnings.warn("This is deprecated. Roll your own.", DeprecationWarning)
         log.msg("%s Operation Failed: %s" % (reflect.qual(self.__class__), error))
         log.err(error)
 
     schema = ''' Insert your SQL database schema here. '''
 
     def createSchema(self):
+        warnings.warn("This is deprecated. Roll your own.", DeprecationWarning)
         return self.runOperation(self.schema).addCallbacks(self.schemaCreated, self.schemaNotCreated)
 
     def schemaCreated(self, result):
+        warnings.warn("This is deprecated. Roll your own.", DeprecationWarning)
         log.msg("Successfully created schema for %s." % reflect.qual(self.__class__))
 
     def schemaNotCreated(self, error):
+        warnings.warn("This is deprecated. Roll your own.", DeprecationWarning)
         log.msg("Schema already exists for %s." % reflect.qual(self.__class__))
 
     def runQuery(self, *args, **kw):
+        warnings.warn("This is deprecated. Use the ConnectionPool.",
+                      DeprecationWarning)
         d = defer.Deferred()
         apply(self.dbpool.query, (d.callback, d.errback)+args, kw)
         return d
 
     def runOperation(self, *args, **kw):
+        warnings.warn("This is deprecated. Use the ConnectionPool.",
+                      DeprecationWarning)
         d = defer.Deferred()
         apply(self.dbpool.operation, (d.callback,d.errback)+args, kw)
         return d
 
     def runInteraction(self, interaction, *args, **kw):
+        warnings.warn("This is deprecated. Use the ConnectionPool.",
+                      DeprecationWarning)
         d = defer.Deferred()
         apply(self.dbpool.interaction, (interaction,d.callback,d.errback,)+args, kw)
         return d
