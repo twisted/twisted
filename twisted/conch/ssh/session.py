@@ -61,17 +61,19 @@ class SSHSession(connection.SSHChannel):
             log.msg('tried to get shell without pty, failing')
             return 0
         user = self.conn.transport.authenticatedUser
-        #homeDir = user.getHomeDir()
-        #self.environ['USER'] = user.name
-        #self.environ['HOME'] = homeDir
-        #self.environ['SHELL'] = shell
+        uid, gid = user.getUserGroupID()
+        homeDir = user.getHomeDir()
+        shell = user.getShell()
+        self.environ['USER'] = user.name
+        self.environ['HOME'] = homeDir
+        self.environ['SHELL'] = shell
         peerHP = tuple(self.conn.transport.transport.getPeer()[1:])
         hostP = (self.conn.transport.transport.getHost()[2],)
         self.environ['SSH_CLIENT'] = '%s %s %s' % (peerHP+hostP)
         try:
             self.client = SSHSessionClient()
             pty = reactor.spawnProcess(SSHSessionProtocol(self, self.client), \
-                  'login', ['login','-p', '-f', user.name], self.environ,  
+                  shell, ['-', '-i'], self.environ, homeDir, uid, gid,
                    usePTY = self.ptyTuple)
             fcntl.ioctl(pty.fileno(), tty.TIOCSWINSZ, 
                         struct.pack('4H', *self.winSize))
@@ -94,6 +96,9 @@ class SSHSession(connection.SSHChannel):
         homeDir = user.getHomeDir()
         shell = user.getShell() or '/bin/sh'
         command = [shell, '-c', command]
+        peerHP = tuple(self.conn.transport.transport.getPeer()[1:])
+        hostP = (self.conn.transport.transport.getHost()[2],)
+        self.environ['SSH_CLIENT'] = '%s %s %s' % (peerHP+hostP)
         try:
             self.client = SSHSessionClient()
             pty = reactor.spawnProcess(SSHSessionProtocol(self, self.client), \
