@@ -1,4 +1,17 @@
 #!/usr/bin/python
+# usage: 
+# * unpack ~radix/Releases/Twisted-<version>.tar.gz in /sid/home/you
+# * if it is not a final version:
+#   * mv Twisted-<version>/ Twisted-<old version>+<version>/
+# * ssh -p 9022 localhost
+# * run ./Twisted-<whatever>/admin/make-deb -d
+#   * when launched into an editor, change the version number at the top
+#     to <whatever>-1
+# * exit
+# * cp /sid/home/you/*twisted* ~moshez/public_html/snapshot/
+# * cd ~moshez/public_html/snapshot
+# * ./createpackages
+# celebrate
 import os, sys, getopt
 
 run_dch, install = 0, None
