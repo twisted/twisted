@@ -152,7 +152,7 @@ class Widget(mvc.View):
         if isinstance(data, defer.Deferred):
             data.addCallback(self.callback, request, node)
             return data
-        self.setUp(request, node, result)
+        self.setUp(request, node, data)
         return self.generateDOM(request, node)
     
     def setUp(self, request, node, data):
