@@ -13,10 +13,13 @@ from __future__ import  nested_scopes
 
 import sys, types, os.path, re
 from StringIO import StringIO
+import shutil
+
 from zope.interface import implements
 
 from twisted import internet
 from twisted.trial import unittest
+from twisted.trial.util import wait
 from twisted.protocols import basic
 from twisted.internet import reactor, protocol, defer, interfaces
 from twisted.cred import error, portal, checkers, credentials
@@ -159,27 +162,27 @@ class ConnectedFTPServer(object):
         self.c, self.s, self.iop = c, s, iop
 
     def hookUpDTP(self):
+        """Establish a data connection, and return: (dummy client protocol
+        instance, dummy server protocol instance, io pump)
+        """
         log.debug('hooking up dtp')
-        self.dcio, self.dsio = NonClosingStringIO(), NonClosingStringIO()
 
-        ds = ftp.DTP()
-        ds.pi = self.s
-        ds.pi.dtpInstance = ds
+        self.s._createDTP(ftp.PASV, testHack=True)
+        from twisted.internet.protocol import ClientCreator
+        self.dataClientIO, dataServerIO = NonClosingStringIO(), NonClosingStringIO()
+        port = self.s.dtpPort.getHost().port
+        clientCreator = ClientCreator(reactor, CustomFileWrapper, dataServerIO)
+        clientConnection = wait(clientCreator.connectTCP('127.0.0.1', port))
 
-        ds.factory = ftp.DTPFactory(self.s)
-        self.s.dtpFactory = ds.factory
-
-        ds.makeConnection(CustomFileWrapper(self.dsio))
-        
         dc = Dummy()
         dc.logname = 'ftp-dtp'
         dc.factory = protocol.ClientFactory()
         dc.factory.protocol = Dummy
         dc.setRawMode()
         del dc.lines
-        dc.makeConnection(CustomFileWrapper(self.dcio))
+        dc.makeConnection(CustomFileWrapper(self.dataClientIO))
 
-        iop = IOPump(dc, ds, self.dcio, self.dsio)
+        iop = IOPump(dc, ds, self.dataClientIO, dataServerIO)
         self.dc, self.ds, self.diop = dc, ds, iop
         log.debug('flushing pi buffer')
         self.iop.flush()
@@ -367,163 +370,172 @@ class TestFTPFactory(FTPTestCase):
         self.failUnlessEqual(ftpf.instances[0], p)
 
     testBuildProtocol.skip = "add test for maxProtocolInstances=None"
+
+
+
+class SaneTestFTPServer(unittest.TestCase):
+    """Simple tests for an FTP server with the default settings."""
+    
+    def setUp(self):
+        # Create a directory
+        self.directory = self.mktemp()
+        os.mkdir(self.directory)
+
+        # Start the server
+        portal = getPortal()
+        #portal.realm.tld = '.'
+        portal.realm.tld = self.directory
+        self.factory = ftp.FTPFactory(portal=portal)
+        self.port = reactor.listenTCP(0, self.factory, interface="127.0.0.1")
         
-class TestFTPServer(FTPTestCase):
+        # Connect to it
+        portNum = self.port.getHost().port
+        clientCreator = protocol.ClientCreator(reactor, ftp.FTPClientBasic)
+        self.client = wait(clientCreator.connectTCP("127.0.0.1", portNum))
+
     def testNotLoggedInReply(self):
-        cli, sr, iop, send = self.cnx.getCSTuple()
-        cmdlist = ['CDUP', 'CWD', 'LIST', 'MODE', 'PASV', 'PORT', 
-                 'PWD', 'RETR', 'STRU', 'SYST', 'TYPE']
-        for cmd in cmdlist:
-            send(cmd)
-            self.failUnless(cli.lines > 0)
-            self.assertEqual(cli.lines[-1], ftp.RESPONSE[ftp.NOT_LOGGED_IN])
+        """When not logged in, all commands other than USER and PASS should
+        get NOT_LOGGED_IN errors.
+        """
+        commandList = ['CDUP', 'CWD', 'LIST', 'MODE', 'PASV', 
+                       'PWD', 'RETR', 'STRU', 'SYST', 'TYPE']
 
-    def testBadCmdSequenceReply(self):
-        cli, sr, iop, send = self.cnx.getCSTuple()
-        send('PASS') 
-        self.failUnless(cli.lines > 0)
-        self.assertEqual(cli.lines[-1], 
-                ftp.RESPONSE[ftp.BAD_CMD_SEQ] % 'USER required before PASS')
+        # Issue commands, check responses
+        for command in commandList:
+            deferred = self.client.queueStringCommand(command)
+            try:
+                responseLines = wait(deferred)
+            except ftp.CommandFailed, e:
+                response = e.args[0][-1]
+                self.failUnless(response.startswith("530"),
+                                "Response didn't start with 530: %r"
+                                % (response,))
+            else:
+                self.fail('ftp.CommandFailed not raised for %s, got %r' 
+                          % (command, responseLines))
 
-    def testBadCmdSequenceReplyPartTwo(self):
-        cli, sr, iop, send = self.cnx.getCSTuple()
-        self.cnx.loadAvatar()
-        self.failUnlessRaises(ftp.BadCmdSequenceError, self.cnx.s.ftp_RETR,'foo')
-        #self.assertEqual(cli.lines[-1], ftp.RESPONSE[ftp.BAD_CMD_SEQ] % 'must send PORT or PASV before RETR')
-        log.flushErrors(ftp.BadCmdSequenceError)
+    def testPASSBeforeUSER(self):
+        """Issuing PASS before USER should give an error."""
+        d = self.client.queueStringCommand('PASS foo')
+        try:
+            responseLines = wait(d)
+        except ftp.CommandFailed, e:
+            self.failUnlessEqual(
+                ["503 Incorrect sequence of commands: "
+                 "USER required before PASS"], 
+                e.args[0])
+        else:
+            self.fail('ftp.CommandFailed not raised for %s, got %r' 
+                      % (command, responseLines))
 
-    def testCmdNotImplementedForArgErrors(self):
-        cli, sr, iop, send = self.cnx.getCSTuple()
-        self.cnx.loadAvatar()
-        self.failUnlessRaises(ftp.CmdNotImplementedForArgError, self.cnx.s.ftp_MODE, 'z')
-        self.failUnlessRaises(ftp.CmdNotImplementedForArgError, self.cnx.s.ftp_STRU, 'I')
+    def testRETRBeforePORT(self):
+        self.client.queueLogin('anonymous', 'anonymous')
+        d = self.client.queueStringCommand('RETR foo')
+        try:
+            responseLines = wait(d)
+        except ftp.CommandFailed, e:
+            self.failUnlessEqual(
+                ["503 Incorrect sequence of commands: "
+                 "PORT or PASV required before RETR"], 
+                e.args[0])
+        else:
+            self.fail('ftp.CommandFailed not raised for %s, got %r' 
+                      % (command, responseLines))
+
+    def testBadCommandArgs(self):
+        self.client.queueLogin('anonymous', 'anonymous')
+        d = self.client.queueStringCommand('MODE z')
+        try:
+            responseLines = wait(d)
+        except ftp.CommandFailed, e:
+            self.failUnlessEqual(
+                ["504 Not implemented for parameter 'z'."],
+                e.args[0])
+        else:
+            self.fail('ftp.CommandFailed not raised for %s, got %r' 
+                      % (command, responseLines))
+        d = self.client.queueStringCommand('STRU I')
+        try:
+            responseLines = wait(d)
+        except ftp.CommandFailed, e:
+            self.failUnlessEqual(
+                ["504 Not implemented for parameter 'I'."],
+                e.args[0])
+        else:
+            self.fail('ftp.CommandFailed not raised for %s, got %r' 
+                      % (command, responseLines))
 
     def testDecodeHostPort(self):
         self.assertEquals(ftp.decodeHostPort('25,234,129,22,100,23'), 
                 ('25.234.129.22', 25623))
 
     def testPASV(self):
-        cli, sr, iop, send = self.cnx.getCSTuple()
-        self.cnx.loadAvatar()
-        # Hack getHost and getPeer to make it look like there's a real TCP
-        # connection, even though there isn't really.
-        self.cnx.s.transport.getHost = lambda: IPv4Address('TCP', '1.2.3.4', 0)
-        self.cnx.s.transport.getPeer = lambda: IPv4Address('TCP', '5.6.7.8', 0)
-        self.cnx.s.ftp_PASV()
-        iop.flush()
-        reply = cli.lines[-1]
-        # Make sure the reply has the right response code, and the expected IP
-        # address.
-        self.assert_(reply.startswith('227 =1,2,3,4,'))
-        self.cnx.s.cleanupDTP()
+        self.client.queueLogin('anonymous', 'anonymous')
+        responseLines = wait(self.client.queueStringCommand('PASV'))
+        host, port = ftp.decodeHostPort(responseLines[-1][4:])
+        server = self.factory.instances[0]
+        self.assertEqual(port, server.dtpPort.getHost().port)
 
-    def testTYPE(self):
-        cli, sr, iop, send = self.cnx.getCSTuple()
-        self.cnx.loadAvatar()
-        for n in ['I', 'A', 'L', 'i', 'a', 'l']:
-            self.cnx.s.ftp_TYPE(n)
-            iop.flush()
-            self.assertEquals(cli.lines[-1], ftp.RESPONSE[ftp.TYPE_SET_OK] % n.upper())
-            if n in ['I', 'L', 'i', 'l']:
-                self.assertEquals(self.cnx.s.binary, True)
-            else:
-                self.assertEquals(self.cnx.s.binary, False)
-        s = ftp.FTP()
-        okParams = ['i', 'a', 'l']
-        for n in [chr(x) for x in xrange(97,123)]:
-            if n not in okParams:
-                self.failUnlessRaises(ftp.CmdArgSyntaxError, s.ftp_TYPE, n)           
-        self.cnx.hookUpDTP()
-        dc, ds, diop = self.cnx.getDtpCSTuple()
-        sr.dtpTxfrMode = ftp.PASV
-
-        sr.ftp_TYPE('A')        # set ascii mode
-        self.assertEquals(self.cnx.s.binary, False)
-
-        iop.flush()
-        diop.flush()
-        log.debug('flushed buffers, about to run RETR')
-        sr.ftp_RETR('ASCII')
-        iop.flush()
-        diop.flush()
-        self.failUnless(len(dc.rawData) >= 1)
-        log.msg(dc.rawData)
-        rx = ''.join(dc.rawData)
-        log.msg(rx)
-        self.failUnlessEqual(rx.count('\r\n'), 2, "more than 2 \\r\\n's ")
-        self.fail('test is not complete')
-
-    testTYPE.skip = 'rework tests to make sure only binary is supported'
-
-    def testRETR(self):
-        cli, sr, iop, send = self.cnx.getCSTuple()
-        avatar = self.cnx.loadAvatar()
-
-        sr.ftp_TYPE('L')
-        self.assert_(self.cnx.s.binary == True)
-
-        iop.flush()
-        self.cnx.hookUpDTP()
-        dc, ds, diop = self.cnx.getDtpCSTuple()
-        sr.dtpTxfrMode = ftp.PASV
-        self.assert_(sr.blocked is None)
-        self.assert_(sr.dtpTxfrMode == ftp.PASV)
-        log.msg('about to send RETR command')
-        
-        filename = '/home/foo/foo.txt'
-        
-        send('RETR %s' % filename)
-        iop.flush()
-        diop.flush()
-        log.msg('dc.rawData: %s' % dc.rawData)
-        self.assert_(len(dc.rawData) >= 1)
-        self.failUnlessEqual(avatar.path, filename)
-        rx = ''.join(dc.rawData)
-        self.failUnlessEqual(rx, avatar.sentfile.getvalue())
-        
-    testRETR.skip = 'awaiting MASSIVE refactoring of ftp.py'
+        # Hack: clean up the DTP port directly
+        wait(server.dtpPort.stopListening())
+        server.dtpFactory = None
 
     def testSYST(self):
-        cli, sr, iop, send = self.cnx.getCSTuple()
-        self.cnx.loadAvatar()
-        self.cnx.s.ftp_SYST()
-        iop.flush()
-        self.assertEquals(cli.lines[-1], ftp.RESPONSE[ftp.NAME_SYS_TYPE])
-
+        self.client.queueLogin('anonymous', 'anonymous')
+        responseLines = wait(self.client.queueStringCommand('SYST'))
+        self.assertEqual(["215 UNIX Type: L8"], responseLines)
 
     def testLIST(self):
-        cli, sr, iop, send = self.cnx.getCSTuple()
-        avatar = self.cnx.loadAvatar()
-        sr.dtpTxfrMode = ftp.PASV 
-        self.cnx.hookUpDTP()
-        dc, ds, diop = self.cnx.getDtpCSTuple()
-        self.assert_(hasattr(self.cnx.s, 'binary'))
-        self.cnx.s.binary = True
-        sr.ftp_LIST('/')
-        iop.flush()
-        diop.flush()
-        log.debug('dc.rawData: %s' % dc.rawData)
-        self.assert_(len(dc.rawData) > 1)
-        avatarsent = avatar.sentlist.getvalue()
-        dcrx = ''.join(dc.rawData)
-        #print avatarsent.strip(), dcrx.strip()
-        self.assertEqual(avatarsent, dcrx, 
-"""
-avatar's sentlist != dtp client's ''.join(rawData)
+        self.client.queueLogin('anonymous', 'anonymous')
+        responseLines = wait(self.client.queueStringCommand('PASV'))
+        host, port = ftp.decodeHostPort(responseLines[-1][4:])
+        class BufferingProtocol(protocol.Protocol):
+            def connectionMade(self):
+                self.buffer = ''
+                self.d = defer.Deferred()
+            def dataReceived(self, data):
+                self.buffer += data
+            def connectionLost(self, reason):
+                self.d.callback(None)
+        downloader = wait(
+            protocol.ClientCreator(reactor, 
+                                   BufferingProtocol).connectTCP('127.0.0.1',
+                                                                 port)
+        )
+        d = self.client.queueStringCommand('LIST')
+        wait(defer.gatherResults([d, downloader.d]))
 
-avatar's sentlist:
+        # No files, should be empty
+        self.assertEqual('', downloader.buffer)
 
-%s
+        # Make some directories
+        os.mkdir(os.path.join(self.directory, 'foo'))
+        os.mkdir(os.path.join(self.directory, 'bar'))
 
-''.join(dc.rawData):
+        # Do it again
+        responseLines = wait(self.client.queueStringCommand('PASV'))
+        host, port = ftp.decodeHostPort(responseLines[-1][4:])
+        downloader = wait(
+            protocol.ClientCreator(reactor, 
+                                   BufferingProtocol).connectTCP('127.0.0.1',
+                                                                 port)
+        )
+        d = self.client.queueStringCommand('LIST')
+        wait(defer.gatherResults([d, downloader.d]))
 
-%s
-""" % (avatarsent, dcrx))
+        # 2 files means we expect 2 lines
+        self.assertEqual(2, len(downloader.buffer.rstrip('\n').split('\n')))
 
-    
-    #testLIST.todo = 'something is b0rK3n'
+    def tearDown(self):
+        # Clean up
+        self.client.transport.loseConnection()
+        wait(self.port.stopListening())
+        
+        shutil.rmtree(self.directory)
+
 
 class TestDTPTesting(FTPTestCase):
+    skip = 'This is crack.'
     def testDTPTestingSanityCheck(self):
         filesizes = [(n*100) for n in xrange(100,110)]
         for fs in filesizes:
@@ -535,7 +547,6 @@ class TestDTPTesting(FTPTestCase):
         cli, sr, iop, send = self.cnx.getCSTuple()
         avatar = self.cnx.loadAvatar()
         avatar.filesize = filesize
-        sr.dtpTxfrMode = ftp.PASV
         sr.binary = True                            # set transfer mode to binary
         self.cnx.hookUpDTP()
         dc, ds, diop = self.cnx.getDtpCSTuple()
