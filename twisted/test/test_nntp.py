@@ -19,7 +19,7 @@ from pyunit import unittest
 from twisted.news import news, database
 from twisted.protocols import nntp, loopback
 from twisted.protocols import protocol
-from twisted.internet import main
+from twisted.internet import reactor
 
 ALL_GROUPS = ('alt.test.nntp', 0, 0, 'y')
 GROUP = ('0', '0', '0', 'alt.test.nntp', 'group', 'selected')
@@ -77,17 +77,24 @@ class TestNNTPClient(nntp.NNTPClient):
 
 class NNTPTestCase(unittest.TestCase):
     def setUp(self):
-        # Re-init pickle db, we depend on no articles
-        database.PickleStorage.sharedDB = {'alt.test.nntp': {}, 'groups': ['alt.test.nntp']}
+        f = 'news.pickle'
+        g = ['alt.test.nntp']
+        self.server = nntp.NNTPServer()
+        self.server.factory = self
+        self.backend = database.PickleStorage(f, g)
+
+        self.client = TestNNTPClient()
 
     def testLoopback(self):
-        server = nntp.NNTPServer(database.PickleStorage)
-        client = TestNNTPClient()
-        loopback.loopback(server, client)
+        loopback.loopback(self.server, self.client)
 
-        # XXX FIXME three things seem to be task.schedule'd here, and I don't
-        # really know what they are.
-        main.iterate(); main.iterate(); main.iterate()
+        # XXX This test is woefully incomplete.  It tests the single
+        # most common code path and nothing else.  Expand it and the
+        # test fairy will leave you a surprise.
+
+        reactor.iterate() # fetchGroups() 
+        reactor.iterate() # fetchGroup()
+        reactor.iterate() # postArticle()
 
     def tearDown(self):
         # Clean up the pickle file

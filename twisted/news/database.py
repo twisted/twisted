@@ -31,7 +31,7 @@ def hexdigest(md5): #XXX: argh. 1.5.2 doesn't have this.
 
 class Article:
     def __init__(self, head, body):
-        head = map(lambda x: string.split(x, ': '), string.split(head, '\r\n'))
+        head = map(lambda x: string.split(x, ': ', 1), string.split(head, '\r\n'))
         self.headers = {}
         for i in head:
             if len(i) == 0:
@@ -53,7 +53,10 @@ class Article:
         self.headers[string.lower(header)] = (header, value)
 
     def textHeaders(self):
-        return string.join(map(lambda x: '%s: %s' % x, self.headers.values()), '\r\n')
+        headers = []
+        for i in self.headers.values():
+            headers.append('%s: %s' % i)
+        return string.join(headers, '\r\n')
     
     def overview(self):
         xover = []
@@ -62,15 +65,29 @@ class Article:
         return xover
 
 class PickleStorage:
-    "A trivial NewsStorage implementation using pickles"
-
-    try:
-        sharedDB = pickle.load(open('news.pickle', 'r'))
-    except:
-        sharedDB = {'groups': ['alt.test.nntp'], 'alt.test.nntp': {}}
+    """A trivial NewsStorage implementation using pickles
     
-    def __init__(self):
-        self.db = PickleStorage.sharedDB
+    Contains numerous flaws and is generally unsuitable for any
+    real applications.  Consider yourself warned!
+    """
+
+    sharedDBs = {}
+
+    def __init__(self, filename, groups = None):
+        self.datafile = filename
+        if PickleStorage.sharedDBs.has_key(filename):
+            self.db = PickleStorage.sharedDBs[filename]
+        else:
+            try:
+                self.db = pickle.load(open(filename))
+                PickleStorage.sharedDBs[filename] = self.db
+            except IOError, e:
+                self.db = PickleStorage.sharedDBs[filename] = {}
+                self.db['groups'] = groups
+                if groups is not None:
+                    for i in groups:
+                        self.db[i] = {}
+                self.flush()
 
     def listRequest(self):
         "Returns a list of 4-tuples: (name, max index, min index, flags)"
@@ -200,7 +217,7 @@ class PickleStorage:
             return defer.fail(ERR_NOGROUP)
 
     def flush(self):
-        pickle.dump(self.db, open('news.pickle', 'w'))
+        pickle.dump(self.db, open(self.datafile, 'w'))
 
 class DatabaseStorage(adbapi.Augmentation):
     """

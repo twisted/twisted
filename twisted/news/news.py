@@ -25,7 +25,7 @@ class NNTPFactory(protocol.ServerFactory):
         self.backend = backend
     
     def buildProtocol(self, connection):
-        p = self.protocol(self.backend)
+        p = self.protocol()
         p.factory = self
         return p
 

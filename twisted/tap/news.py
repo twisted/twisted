@@ -18,15 +18,40 @@ from twisted.news import news, database
 from twisted.python import usage
 
 class Options(usage.Options):
-    synopsis = "Usage: mktap nntp [options]"
+    synopsis = "Usage: mktap news [options]"
     
     optParameters = [
-        ["port", "p", "119", "Listen port"]
+        ["port", "p", "119", "Listen port"],
+        ["database", "d", "pickle", "Message storage backend"],
+        ["filename", "f", None, "Pickle file name"],
+        ["groups", "g", None, "News groups to run"]
     ]
 
 
 def updateApplication(app, config):
+    # key - storage name
+    # value - 2-tuple of storage class and tuple of additional options to
+    #         find and pass to the storage class constructor
+    BACK = {'pickle': (database.PickleStorage, ('filename',))}
+
+    if not BACK.has_key(config.opts['database']):
+        raise usage.UsageError("backend must be one of: %s" % ' '.join(BACK.keys()))
+    else:
+        x = BACK[config.opts['database']]
+        db = x[0]
+        opts = {}
+        for i in x[1]:
+            if config.opts.has_key(i) and config.opts[i]:
+                opts[i] = config.opts[i]
+            else:
+                raise usage.UsageError("Missing required option: %s" % i)
+
+    opts['groups'] = config.opts['groups'] and config.opts['groups'].split() or []
+    print opts['groups']
+
     app.listenTCP(
         int(config.opts['port']),
-        news.NNTPFactory(database.PickleStorage)
+
+        # XXX This isn't *very* bad, is it?
+        news.NNTPFactory(apply(db, (), opts))
     )

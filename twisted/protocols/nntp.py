@@ -281,9 +281,8 @@ class NNTPServer(NNTPClient):
         'NEXT', 'LAST', 'POST', 'QUIT'
     ]
 
-    def __init__(self, db):
+    def __init__(self):
         NNTPClient.__init__(self)
-        self.newsStorage = db()
 
     def connectionMade(self):
         try:
@@ -305,7 +304,7 @@ class NNTPServer(NNTPClient):
                 group, article = self.currentGroup, self.message
                 del self.message
 
-                defer = self.newsStorage.postRequest(article)
+                defer = self.factory.backend.postRequest(article)
                 defer.addCallbacks(self._gotPost, self._errPost)
                 defer.arm()
             else:
@@ -328,17 +327,17 @@ class NNTPServer(NNTPClient):
                 self.sendLine('215 Descriptions in form "group description".')
                 self.sendLine('.')
             elif subcmd == 'overview.fmt':
-                defer = self.newsStorage.overviewRequest()
+                defer = self.factory.backend.overviewRequest()
                 defer.addCallbacks(self._gotOverview, self._errOverview)
                 defer.arm()
             elif subcmd == 'subscriptions':
-                defer = self.newsStorage.subscriptionRequest()
+                defer = self.factory.backend.subscriptionRequest()
                 defer.addCallbacks(self._gotSubscription, self._errSubscription)
                 defer.arm()
             else:
                 self.sendLine('500 command not recognized')
         else:
-            defer = self.newsStorage.listRequest()
+            defer = self.factory.backend.listRequest()
             defer.addCallbacks(self._gotList, self._errList)
             defer.arm()
             
@@ -380,7 +379,7 @@ class NNTPServer(NNTPClient):
             else:
                 group = self.currentGroup
         
-        defer = self.newsStorage.listGroupRequest(group)
+        defer = self.factory.backend.listGroupRequest(group)
         defer.addCallbacks(self._gotListGroup, self._errListGroup)
         defer.arm()
 
@@ -414,7 +413,7 @@ class NNTPServer(NNTPClient):
             if l is h is None:
                 self.sendLine('501 command syntax error')
             else:
-                defer = self.newsStorage.xoverRequest(self.currentGroup, l, h)
+                defer = self.factory.backend.xoverRequest(self.currentGroup, l, h)
                 defer.addCallbacks(self._gotXOver, self._errXOver)
                 defer.arm()
 
@@ -445,7 +444,7 @@ class NNTPServer(NNTPClient):
             if l is h is None:
                 self.sendLine('430 no such article')
             else:
-                defer = self.newsStorage.xhdrRequest(self.currentGroup, l, h, header)
+                defer = self.factory.backend.xhdrRequest(self.currentGroup, l, h, header)
                 defer.addCallbacks(self._gotXHDR, self._errXHDR)
                 defer.arm()
 
@@ -470,7 +469,7 @@ class NNTPServer(NNTPClient):
         self.sendLine('441 posting failed')
 
     def do_GROUP(self, parts):
-        defer = self.newsStorage.groupRequest(parts[0])
+        defer = self.factory.backend.groupRequest(parts[0])
         defer.addCallbacks(self._gotGroup, self._errGroup)
         defer.arm()
     
@@ -485,7 +484,7 @@ class NNTPServer(NNTPClient):
     def do_ARTICLE(self, parts):
         if len(parts):
             i = int(parts[0])
-            defer = self.newsStorage.articleRequest(self.currentGroup, i)
+            defer = self.factory.backend.articleRequest(self.currentGroup, i)
             defer.addCallbacks(self._gotArticle, self._errArticle)
             defer.arm()
         else:
@@ -504,7 +503,7 @@ class NNTPServer(NNTPClient):
     def do_STAT(self, parts):
         if len(parts):
             i = int(parts[0])
-            defer = self.newsStorage.articleRequest(self.currentGroup, i)
+            defer = self.factory.backend.articleRequest(self.currentGroup, i)
             defer.addCallbacks(self._gotStat, self._errStat)
             defer.arm()
         else:
@@ -521,7 +520,7 @@ class NNTPServer(NNTPClient):
     def do_HEAD(self, parts):
         if len(parts):
             i = int(parts[0])
-            defer = self.newsStorage.headRequest(self.currentGroup, i)
+            defer = self.factory.backend.headRequest(self.currentGroup, i)
             defer.addCallbacks(self._gotHead, self._errHead)
             defer.arm()
         else:
@@ -539,7 +538,7 @@ class NNTPServer(NNTPClient):
     def do_BODY(self, parts):
         if len(parts):
             i = int(parts[0])
-            defer = self.newsStorage.bodyRequest(self.currentGroup, i)
+            defer = self.factory.backend.bodyRequest(self.currentGroup, i)
             defer.addCallbacks(self._gotBody, self._errBody)
             defer.arm()
         else:
