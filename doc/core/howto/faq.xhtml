@@ -306,6 +306,36 @@ class MyProtocol(protocol.Protocol):
         print "connection from", self.transport.getPeer()
 </pre>
 
+<h3>Why don't Twisted's network methods support Unicode objects as well as
+strings?</h3>
+
+<p>In general, such methods (eg <code class="API"
+base="twisted.internet.abstract">FileDescriptor</code>'s <code>write</code>)
+are designed to send bytes over the network. These methods use non-Unicode
+string objects as a container for the bytes that they send and receive.</p>
+
+<p>Unicode objects are not byte-based and are an abstraction used for
+representing strings of human readable text. In order to send Unicode strings
+using these methods, you should explicitly specify a byte-based encoding for
+them, for example: <code>s.encode("utf-8")</code> and explicitly decode them
+at the receiving end.</p>
+
+<p>Twisted cannot choose an encoding for you at this level: your encoding
+choice will be protocol specific and may need to be specified in the message
+you send (for example, HTTP headers include a encoding specification).</p>
+
+<p>For a more complete discussion of the distinction between Unicode strings
+and specific encodings of Unicode strings, see the following articles:</p>
+
+<ul>
+<li>Dan Sugalski's <a
+href="http://www.sidhe.org/~dan/blog/archives/000255.html">What the heck is: A
+string</a>; and</li>
+<li>Joel Spolsky's <a
+href="http://www.joelonsoftware.com/articles/Unicode.html">The Absolute
+Minimum Every Software Developer Absolutely, Positively Must Know
+About Unicode and Character Sets (No Excuses!)</a>.</li>
+</ul>
 
 <h2>Perspective Broker</h2>
 
