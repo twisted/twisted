@@ -45,6 +45,15 @@ class ProtocolError(Exception):
     This error is raised when an invalid protocol statement is received.
     """
 
+class Error(Exception):
+    """
+    This error can be raised to generate known error conditions.
+
+    When a PB callable method (perspective_, remote_, proxy_) raises this
+    error, it indicates that a traceback should not be printed, but instead,
+    the string representation of the exception should be sent.
+    """
+
 class Serializable:
     """
     This is a style of object which can be serialized by Perspective Broker.
@@ -560,7 +569,6 @@ class Broker(banana.Banana):
         """Evaluate an expression as it's received.
         """
         if isinstance(sexp, types.ListType):
-            # print "pb:",sexp
             command = sexp[0]
             methodName = "proto_%s" % command
             method = getattr(self, methodName, None)
@@ -643,7 +651,7 @@ class Broker(banana.Banana):
             del self.loginService
             del self.loginObjID
         except authenticator.Unauthorized:
-            print "Unauthorized Login Attempt: %s" % self.username
+            log.msg("Unauthorized Login Attempt: %s" % self.username)
             self.sendCall("inperspective", self.loginTag)
             # TODO; this should do some more heuristics rather than just
             # closing the connection immediately.
@@ -748,7 +756,6 @@ class Broker(banana.Banana):
         generated, session-unique ID and return that ID.
         """
         assert object is not None
-        print 'pb:',object
         puid = object.processUniqueID()
         luid = self.luids.get(puid)
         if luid is None:
@@ -982,6 +989,9 @@ class Broker(banana.Banana):
             else:
                 netResult = object.remoteMessageReceived(self, message,
                                                          netArgs, netKw)
+        except Error, e:
+            if answerRequired:
+                self.sendError(requestID, str(e))
         except:
             io = cStringIO.StringIO()
             traceback.print_exc(file=io)
@@ -1007,6 +1017,9 @@ class Broker(banana.Banana):
             args = self.unserialize(netArgs)
             kw = self.unserialize(netKw)
             netResult = object.remoteMessageReceived(self, message, args, kw)
+        except Error, e:
+            if answerRequired:
+                self.sendError(requestID, str(e))
         except:
             io = cStringIO.StringIO()
             traceback.print_exc(file=io)

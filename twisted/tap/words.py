@@ -12,19 +12,25 @@ Run this to generate a TAP for a twisted.words server."""
 from twisted.internet import tcp
 from twisted.python import usage
 from twisted.spread import pb
-from twisted.words import service, ircservice
+from twisted.words import service, ircservice, webwords
+
 import sys
+
+usage_message = """Usage:
+  mktap words [--irc portno] [--port portno] [--web portno]
+"""
 
 class Options(usage.Options):
     optStrings = [["irc", "i", "6667"],
-                  ["port", "p", str(pb.portno)]]
+                  ["port", "p", str(pb.portno)],
+                  ["web", "w", "8080"]]
 
 def getPorts(app, config):
-    s = service.Service()
-    b = pb.BrokerFactory()
-    b.addService("words", s)
-    t = ircservice.IRCGateway(s)
-    portno = int(config.port)
-    ircport = int(config.irc)
-    return [(int(portno), b),
-            (int(ircport), t)]
+    svc = service.Service()
+    bkr = pb.BrokerFactory()
+    bkr.addService("words", svc)
+    irc = ircservice.IRCGateway(svc)
+    adm = webwords.WebWordsAdminSite(svc)
+    return [(int(config.port), bkr),
+            (int(config.irc), irc),
+            (int(config.web), adm)]

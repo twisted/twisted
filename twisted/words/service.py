@@ -5,49 +5,44 @@ import string
 
 # Twisted Imports
 from twisted.spread import pb
+from twisted.python import authenticator
 from twisted import copyright
 
-# Status "enumeration"
-OFFLINE = 0
-ONLINE  = 1
-AWAY = 2
+# Sibling Imports
+from status import *
 
-class Participant(pb.Cached, pb.Perspective):
+class Participant(pb.Perspective):
     def __init__(self, name, password, service):
         self.name = name
         self.service = service
         self.password = md5.new(password).digest()
         self.status = OFFLINE
         self.contacts = []
+        self.reverseContacts = []
         self.groups = []
         self.client = None
-
-
-    def getStateToCopyFor(self, other):
-        assert other in self.contacts,\
-               "Non-contacts should not be able to get direct references to each other."
-        return {"name": self.name,
-                "status": self.status,
-                "remote": pb.Proxy(other, self)}
-
-    def proxy_receiveMessage(self, other, message):
-        self.receiveMessage(other, None, message)
+        self.info = ""
 
     def attached(self, client):
-        print "participant %s attached to the service" % self.name
+        if self.client:
+            raise authenticator.Unauthorized("duplicate login not permitted.")
+        print "attached: %s" % self.name
         self.client = client
-        client.receiveContactList(self.contacts)
+        client.receiveContactList(map(lambda contact: (contact.name, contact.status),
+                                      self.contacts))
         self.changeStatus(ONLINE)
 
     def changeStatus(self, newStatus):
-        for contact in self.contacts:
-            contact.notifyStatusChanged(self, newStatus)
+        self.status = newStatus
+        for contact in self.reverseContacts:
+            contact.notifyStatusChanged(self)
 
-    def notifyStatusChanged(self, contact, newStatus):
+    def notifyStatusChanged(self, contact):
         if self.client:
-            self.client.notifyStatusChanged(contact, newStatus)
+            self.client.notifyStatusChanged(contact.name, contact.status)
 
     def detached(self, client):
+        print "detached: %s" % self.name
         self.client = None
         if self.groups:
             for group in self.groups:
@@ -58,11 +53,10 @@ class Participant(pb.Cached, pb.Perspective):
         # TODO: make this consentual
         contact = self.service.getPerspectiveNamed(contactName)
         self.contacts.append(contact)
-        if contact is not self:
-            contact.contacts.append(self)
+        contact.reverseContacts.append(self)
 
     def joinGroup(self, name):
-        remote = self.remote
+        client = self.client
         group = self.service.getGroup(name)
         group.addMember(self)
         self.groups.append(self)
@@ -70,21 +64,28 @@ class Participant(pb.Cached, pb.Perspective):
     def leaveGroup(self, group):
         group.removeMember(self)
 
-    def receiveMessage(self, sender, group, message):
-        self.remote.receiveMessage(sender, group, message)
+    def receiveDirectMessage(self, sender, message):
+        if self.client:
+            self.client.receiveDirectMessage(sender.name, message)
+        else:
+            raise pb.Error("%s not logged in" % self.name)
 
     def memberJoined(self, member, group):
-        self.remote.memberJoined(member, group)
+        self.client.memberJoined(member, group)
 
     def memberLeft(self, member, group):
-        self.remote.memberLeft(member, group)
+        self.client.memberLeft(member, group)
 
-    def sendMessage(self, recipient, message):
-        recipient.receiveMessage(self, recipient, message)
+    def directMessage(self, recipientName, message):
+        recipient = self.service.getPerspectiveNamed(recipientName)
+        recipient.receiveDirectMessage(self, message)
 
-    # Establish remote protocol for PB.
+    def groupMessage(self, groupName, message):
+        raise NotImplementedError()
+
+    # Establish client protocol for PB.
     perspective_joinGroup = joinGroup
-    perspective_sendMessage = sendMessage
+    perspective_directMessage = directMessage
     perspective_addContact = addContact
 
 
@@ -114,8 +115,6 @@ class Service(pb.Service):
     """I am a chat service.
     """
 
-    allowGuests = 1
-    
     def __init__(self):
         self.participants = {}
         self.groups = {}
@@ -134,10 +133,6 @@ class Service(pb.Service):
         return self.getPerspectiveNamed(name).password
 
     def getPerspectiveNamed(self, name):
-        if self.allowGuests:
-            return (self.participants.get(name)
-                    or self.addParticipant(name, "guest"))
-        else:
-            return self.participants[name]
+        return self.participants[name]
 
 

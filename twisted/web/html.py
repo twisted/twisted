@@ -6,9 +6,7 @@ import resource
 
 import traceback, string
 
-import cStringIO
-StringIO = cStringIO
-del cStringIO
+from cStringIO import StringIO
 
 def escape(text):
     "Escape a few HTML special chars with HTML entities."
@@ -23,6 +21,21 @@ def PRE(text):
     "Wrap <PRE> tags around some text and escape it with web.escape."
     return "<PRE>"+escape(text)+"</PRE>"
 
+def UL(lst):
+    io = StringIO()
+    io.write("<UL>\n")
+    for el in lst:
+        io.write("<LI> %s\n" % el)
+    io.write("</ul>")
+    return io.getvalue()
+
+def linkList(lst):
+    io = StringIO()
+    io.write("<UL>\n")
+    for hr, el in lst:
+        io.write('<LI> <A HREF="%s">%s</a>\n' % (hr, el))
+    io.write("</ul>")
+    return io.getvalue()
 
 def output(func, *args, **kw):
     """output(func, *args, **kw) -> html string
@@ -33,7 +46,7 @@ def output(func, *args, **kw):
     try:
         return apply(func, args, kw)
     except:
-        io = StringIO.StringIO()
+        io = StringIO()
         io.write("Calling:\n\t")
         io.write(repr(func))
         io.write("\nWith:\n\t")
@@ -167,7 +180,7 @@ P, BODY, TD, OL, UL, MENU, BLOCKQUOTE, DIV
 
     def _input_menu(self, request, name, data):
         "Data of the format (NAME, [OPTION, OPTION, OPTION])"
-        io = StringIO.StringIO()
+        io = StringIO()
         io.write('<SELECT NAME="')
         io.write(name)
         io.write('">\n')
@@ -193,7 +206,7 @@ P, BODY, TD, OL, UL, MENU, BLOCKQUOTE, DIV
         This method is extremely fragile.  Running it under web.output is
         highly advisable.
         """
-        io = StringIO.StringIO()
+        io = StringIO()
         io.write('<FORM')
         if action is not None:
             io.write(' ACTION="%s"' % action)
