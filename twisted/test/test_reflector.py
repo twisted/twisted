@@ -11,7 +11,6 @@ import os, random
 from twisted.internet import defer
 from twisted.enterprise.row import RowObject
 from twisted.enterprise.reflector import *
-from twisted.enterprise.xmlreflector import XMLReflector
 from twisted.enterprise.sqlreflector import SQLReflector
 from twisted.enterprise import util
 from twisted.test.test_adbapi import makeSQLTests
@@ -256,20 +255,6 @@ class ReflectorTestBase:
         self.data = data
 
 ReflectorTestBase.timeout = 30.0
-
-class XMLReflectorTestCase(ReflectorTestBase, unittest.TestCase):
-    """Test cases for the XML reflector. """
-
-    DB = "./xmlDB"
-
-    nulls_ok = True
-    trailing_spaces_ok = True
-
-    num_iterations = 10 # slow
-
-    def createReflector(self):
-        return XMLReflector(self.DB, [TestRow, ChildRow])
-
 
 class SQLReflectorTestBase(ReflectorTestBase):
     """Base class for the SQL reflector."""
