@@ -111,3 +111,7 @@ this file directly.
     code seems to flake out around the edges)
 
 023 [[Allen Short]] Emacs integration with PB.
+
+024 [[Glyph Lefkowitz]] Refactor twisted.internet so that there is a
+    single defined API for connecting protocols to their transports.
+    (listenTCP, listenSSL, connectTCP, connectSSL, etc)
