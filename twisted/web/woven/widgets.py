@@ -778,15 +778,17 @@ class ColumnList(List):
                 domhelpers.clearNode(row)
                 node.appendChild(row)
 
+            newNode = self.getPattern('columnListItem')
             if not newNode:
-                newNode = self.getPattern('item')
+                newNode = self.getPattern('item', _RAISE)
                 if newNode:
                     warnings.warn("itemOf= is deprecated, "
                                         "please use listItemOf instead",
                                         DeprecationWarning)
 
             appendModel(newNode, itemNum + self.start)
-
+            if not newNode.getAttribute("view"):
+                newNode.setAttribute("view", "DefaultWidget")
             row.appendChild(newNode)
         return node
 
