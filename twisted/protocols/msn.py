@@ -2251,14 +2251,22 @@ errorCodes = {
     217 : "User not online",
     218 : "Already in mode",
     219 : "User is in the opposite list",
+    223 : "Too many groups",
+    224 : "Invalid group",
+    225 : "User not in group",
+    229 : "Group name too long",
+    230 : "Cannot remove group 0",
+    231 : "Invalid group",
     280 : "Switchboard failed",
     281 : "Transfer to switchboard failed",
 
     300 : "Required field missing",
+    301 : "Too many FND responses",
     302 : "Not logged in",
 
     500 : "Internal server error",
     501 : "Database server error",
+    502 : "Command disabled",
     510 : "File operation failed",
     520 : "Memory allocation failed",
     540 : "Wrong CHL value sent to server",
@@ -2268,18 +2276,34 @@ errorCodes = {
     602 : "Peer nameserver is down",
     603 : "Database connection failed",
     604 : "Server is going down",
+    605 : "Server unavailable",
 
     707 : "Could not create connection",
+    710 : "Invalid CVR parameters",
     711 : "Write is blocking",
     712 : "Session is overloaded",
     713 : "Too many active users",
     714 : "Too many sessions",
     715 : "Not expected",
     717 : "Bad friend file",
+    731 : "Not expected",
 
+    800 : "Requests too rapid",
+
+    910 : "Server too busy",
     911 : "Authentication failed",
+    912 : "Server too busy",
     913 : "Not allowed when offline",
+    914 : "Server too busy",
+    915 : "Server too busy",
+    916 : "Server too busy",
+    917 : "Server too busy",
+    918 : "Server too busy",
+    919 : "Server too busy",
     920 : "Not accepting new users",
+    921 : "Server too busy",
+    922 : "Server too busy",
+    923 : "No parent consent",
     924 : "Passport account not yet verified"
 
 }
@@ -2303,7 +2327,7 @@ statusCodes = {
 listIDToCode = {
 
     FORWARD_LIST : 'fl',
-    BLOCK_LIST : 'bl',
+    BLOCK_LIST   : 'bl',
     ALLOW_LIST   : 'al',
     REVERSE_LIST : 'rl'
 
