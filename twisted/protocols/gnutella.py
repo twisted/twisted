@@ -26,7 +26,7 @@ The "GnutellaRouter" and "GnutellaServent" classes are yet to be written.
 import re, string, struct
 
 # twisted import
-from twisted.internet.protocols import LineReceiver
+from twisted.protocols.basic import LineReceiver
 from twisted.python import log
 
 true = 1
@@ -90,7 +90,7 @@ class GnutellaTalker(LineReceiver):
         """
         pass
 
-    def pongReceived(self, descriptorId, ttl, hops, ipAddress, port, numberOfFilesShared, kbShared)
+    def pongReceived(self, descriptorId, ttl, hops, ipAddress, port, numberOfFilesShared, kbShared):
         """
         Override this to handle pong messages.
 
@@ -249,7 +249,7 @@ class GnutellaTalker(LineReceiver):
         @precondition A GNUTELLA CONNECT must not already have been received.: not self.gothello: "line: %s" % str(line)
         """
         assert not self.gothello, "precondition failure: A GNUTELLA CONNECT must not already have been received." + "--" + "line: %s" % str(line)
-        mo = CONNSTRING.match(line):
+        mo = CONNSTRING.match(line)
         if not mo:
             self.abortConnection("Received incorrect GNUTELLA HELLO.  Closing connection.  line: %s" % str(line))
             return 
@@ -262,10 +262,11 @@ class GnutellaTalker(LineReceiver):
     def rawDataReceived(self, data):
         self.buf += data # XXX opportunity for future optimization  --Zooko 2002-07-15
         if len(self.buf) >= HEADERLENGTH:
-            (payloadLength,) = struct.unpack(PAYLOADENCODING, self.buf[PAYLOADLENGTHOFFSET:HEADERLENGTH])
-        except struct.error, le:
-            self.abortConnection("Received ill-formatted raw data.  Closing connection.  self.buf: %s" % str(self.buf))
-            return
+            try:
+                (payloadLength,) = struct.unpack(PAYLOADENCODING, self.buf[PAYLOADLENGTHOFFSET:HEADERLENGTH])
+            except struct.error, le:
+                self.abortConnection("Received ill-formatted raw data.  Closing connection.  self.buf: %s" % str(self.buf))
+                return
             if (payloadLength > OURMAXPAYLOADLENGTH) or (payloadLength < 0):
                 # 640 KB ought to be enough for anybody...
                 self.abortConnection("Received payload > %d KB or < than 0 in size.  Closing connection.  payloadLength: %s" % ((OURMAXPAYLOADLENGTH / 2**10), str(payloadLength),))
