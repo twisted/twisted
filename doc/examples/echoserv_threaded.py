@@ -22,9 +22,9 @@
 # you need to do a number of things.
 #
 # When you want to call a non thread-safe operation, you don't call it, but
-# instead you add the operation to the threadtask scheduler. The main thread
-# running the event loop will then read these tasks from the scheduler and
-# execute them.
+# instead you add the operation to the twisted.internet.task scheduler. The
+# main thread running the event loop will then read these tasks from the
+# scheduler and execute them.
 #
 # Additionally, you must make sure to run twisd in threaded mode (by using the
 # '-t' option.) If you are not using twistd to run your app but are running it
@@ -36,11 +36,17 @@
 # The following example server has a thread for each connections that does the
 # actual processing of the protocol, in this case echoing back all received
 # data.
+#
+# For a more scalable solution you might want to use a thread pool, where
+# commands received by each protocol are dispatched to threads. Check out
+# twisted.internet.threadtask for details.
 
 import threading, Queue
+from twisted.python import threadable
+threadable.init(1)
 
 from twisted.protocols.protocol import Protocol, Factory
-from twisted.internet import threadtask
+from twisted.internet import task
 
 ### Protocol Implementation
 
@@ -61,7 +67,7 @@ class Echo(Protocol):
         """Schedule data to be written in a thread-safe manner"""
         # instead of doing self.transport.write(data), which is not
         # thread safe, we do:
-        threadtask.schedule(self.transport.write, (data,))
+        task.schedule(self.transport.write, data)
 
     def connectionLost(self):
         # tell thread to shutdown
@@ -93,14 +99,10 @@ class Handler(threading.Thread):
 # This builds a .tap file
 
 if __name__ == '__main__':
-    # Since this is persistent, it's important to get the module naming right
-    # (If we just used Echo, then it would be __main__.Echo when it attempted
-    # to unpickle)
-    import echoserv_threaded
     from twisted.internet.main import Application
     factory = Factory()
-    factory.protocol = echoserv_threaded.Echo
+    factory.protocol = Echo
     app = Application("echo")
     app.listenOn(8000,factory)
-    app.save("start")
-    print "Make sure to start twistd in threaded mode!"
+    app.run(save=0)
+
