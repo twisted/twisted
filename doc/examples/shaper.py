@@ -1,5 +1,4 @@
 # -*- Python -*-
-# Run with `twistd -y shaper.py`
 
 """Example of rate-limiting your web server.
 
@@ -50,5 +49,6 @@ elif servertype == "chargen":
     site.protocol = htb.ShapedProtocolFactory(wire.Chargen, webFilter)
     #site.protocol = wire.Chargen
 
-application = app.Application("htbwebsite")
-application.listenTCP(8000, site)
+from twisted.internet import reactor
+reactor.listenTCP(8000, site)
+reactor.run()

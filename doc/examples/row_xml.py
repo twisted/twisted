@@ -1,7 +1,6 @@
 import random
 
 from twisted.internet import reactor
-from twisted.internet.app import Application
 
 from twisted.enterprise import adbapi, row, sqlreflector, xmlreflector, reflector
 
@@ -67,9 +66,6 @@ def tick():
 
 dbpool = adbapi.ConnectionPool("pyPgSQL.PgSQL", database="test")
 #dbpool = adbapi.ConnectionPool("psycopg", "dbname=test")
-
-# Create Twisted application object
-application = Application("testApp")
 
 def kickOffTests(ignoredResult=0):
     global manager, xmanager

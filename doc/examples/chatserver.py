@@ -26,11 +26,13 @@ class MyChat(basic.LineReceiver):
         self.transport.write(message + '\n')
 
 
-from twisted.internet import protocol, app
+from twisted.internet import protocol
+from twisted.application import service, internet
 
 factory = protocol.ServerFactory()
 factory.protocol = MyChat
 factory.clients = []
 
-application = app.Application('chat')
-application.listenTCP(1025, factory)
+application = service.Application("chatserver")
+svc = internet.TCPServer(1025, factory)
+service.IService(application).addService(svc)

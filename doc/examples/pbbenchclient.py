@@ -1,6 +1,7 @@
 
 from twisted.spread import pb
 from twisted.internet import defer, reactor
+from twisted.cred.credentials import UsernamePassword
 import time
 
 class PBBenchClient:
@@ -29,7 +30,8 @@ class PBBenchClient:
     def runTest(self):
         factory = pb.PBClientFactory()
         reactor.connectTCP(self.hostname, self.portno, factory)
-        factory.getPerspective("benchmark", "benchmark", "benchmark").addCallback(self._cbPerspective)
+        factory.login(UsernamePassword("benchmark", "benchmark")).addCallback(self._cbPerspective)
+
 
 PBBenchClient().runTest()
 from twisted.internet import reactor

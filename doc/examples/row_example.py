@@ -1,7 +1,6 @@
 import random
 
 from twisted.internet import reactor
-from twisted.internet.app import Application
 
 from twisted.enterprise import adbapi, row, reflector, sqlreflector
 
@@ -92,8 +91,6 @@ dbpool = adbapi.ConnectionPool("pyPgSQL.PgSQL", database="test")
 # use this for MySQL
 #dbpool = adbapi.ConnectionPool("MySQLdb", db="test", passwd="pass")
 
-# Create Twisted application object
-application = Application("testApp")
 
 def kickOffTests(ignoredResult=0):
     global manager

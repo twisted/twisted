@@ -15,8 +15,9 @@
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
-from twisted.internet import app
+from twisted.internet import reactor
 from twisted.web import proxy, server
+
 site = server.Site(proxy.ReverseProxyResource('www.yahoo.com', 80, '/'))
-application = app.Application('web-proxy')
-application.listenTCP(8080, site)
+reactor.listenTCP(8080, site)
+reactor.run()

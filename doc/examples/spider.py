@@ -8,4 +8,4 @@ s.addTargets(['http://twistedmatrix.com/'])
 s.maxDepth = 1
 s.notifyDownloadStart = lambda uri: println('starting', uri)
 s.notifyDownloadEnd = lambda uri: println('stopping', uri)
-a.run(save=0)
+reactor.run()

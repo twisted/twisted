@@ -21,7 +21,7 @@
 # and on redirects and other link calculation, the external-host:port will
 # be transmitted to the client.
 
-from twisted.internet import app
+from twisted.internet import reactor
 from twisted.web import static, server, vhost, twcgi, script, trp
 
 root = static.File("static")
@@ -35,5 +35,5 @@ root.processors = {
 }
 root.putChild('vhost', vhost.VHostMonsterResource())
 site = server.Site(root)
-application = app.Application('web')
-application.listenTCP(10999, site)
+reactor.listenTCP(1999, site)
+reactor.run()

@@ -17,11 +17,14 @@
 """Server for PB benchmark."""
 
 from twisted.spread import pb
-from twisted.internet import reactor, app
-from twisted.cred import authorizer
+from twisted.internet import reactor
+from twisted.cred.portal import IRealm
 
 class PBBenchPerspective(pb.Perspective):
     callsPerSec = 0
+    def __init__(self):
+        pass
+    
     def perspective_simple(self):
         self.callsPerSec = self.callsPerSec + 1
         return None
@@ -34,14 +37,24 @@ class PBBenchPerspective(pb.Perspective):
     def perspective_complexTypes(self):
         return ['a', 1, 1l, 1.0, [], ()]
 
-class PBBenchService(pb.Service):
-    perspectiveClass = PBBenchPerspective
 
-a = app.Application("pbbench")
-auth = authorizer.DefaultAuthorizer(a)
-a.listenTCP(8787, pb.BrokerFactory(pb.AuthRoot(auth)))
-b = PBBenchService("benchmark", a, authorizer=auth)
-u = b.createPerspective("benchmark")
-u.makeIdentity("benchmark")
-u.printCallsPerSec()
-a.run()
+class SimpleRealm:
+    __implements__ = IRealm
+
+    def requestAvatar(self, avatarId, mind, *interfaces):
+        if pb.IPerspective in interfaces:
+            p = PBBenchPerspective()
+            p.printCallsPerSec()
+            return pb.IPerspective, p, lambda : None
+        else:
+            raise NotImplementedError("no interface")
+
+
+from twisted.cred.portal import Portal
+from twisted.cred.checkers import InMemoryUsernamePasswordDatabaseDontUse
+portal = Portal(SimpleRealm())
+checker = InMemoryUsernamePasswordDatabaseDontUse()
+checker.addUser("benchmark", "benchmark")
+portal.registerChecker(checker)
+reactor.listenTCP(8787, pb.PBServerFactory(portal))
+reactor.run()

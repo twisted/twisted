@@ -33,13 +33,10 @@ class ServerContextFactory:
 if __name__ == '__main__':
     import echoserv, sys
     from twisted.internet.protocol import Factory
-    from twisted.internet.app import Application
-    from twisted.internet import ssl
+    from twisted.internet import ssl, reactor
     from twisted.python import log
     log.startLogging(sys.stdout)
-    from echoserv_ssl import ServerContextFactory
     factory = Factory()
     factory.protocol = echoserv.Echo
-    app = Application("echo-ssl")
-    app.listenSSL(8000, factory, ServerContextFactory())
-    app.run(save=0)
+    reactor.listenSSL(8000, factory, ServerContextFactory())
+    reactor.run()

@@ -17,7 +17,7 @@
 """PB interop server."""
 
 from twisted.spread import pb, jelly, flavors
-from twisted.internet import app
+from twisted.internet import reactor
 
 
 class Interop(pb.Root):
@@ -76,9 +76,8 @@ class Interop(pb.Root):
 
 
 if __name__ == '__main__':
-    appl = app.Application("pb_interop")
-    appl.listenTCP(8789, pb.BrokerFactory(Interop()))
-    appl.run(save=0)
+    reactor.listenTCP(8789, pb.PBServerFactory(Interop()))
+    reactor.run()
 
 
 
