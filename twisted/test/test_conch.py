@@ -510,7 +510,7 @@ class SSHTransportTestCase(unittest.TestCase):
                 break
         if not ssh_path:
             log.msg('skipping test, cannot find ssh')
-            return
+            raise unittest.SkipTest, 'skipping test, cannot find ssh'
         cmds = (cmdline % port).split()
         p = SSHTestOpenSSHProcess()
         def _failTest():
