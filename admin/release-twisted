@@ -122,7 +122,6 @@ def tar(tdir):
     sh('find %s -name "*.pyc" | xargs rm -f' % (tdir,))
     sh('tar cjhf %(tdir)s.tar.bz2 %(tdir)s' % locals())
 
-        
 
 ##
 # The MEAT.
@@ -137,7 +136,7 @@ def exportTemp(opts):
         raise DirectoryExists("ExportTemp: 'Twisted.exp' already exists")
     sh('svn export %s Twisted.exp' % (opts['temptagurl'],))
 
-    
+
 def makeDocCore(opts):
     ver = opts['core-version']
     os.chdir('Twisted.exp')
@@ -194,7 +193,7 @@ def makeBallCore(opts):
 
     os.makedirs(os.path.join(tdir, 'twisted'))
     os.makedirs(os.path.join(tdir, 'bin'))
-    
+
     twisted_subprojects = ','.join(dist.twisted_subprojects)
 
     sh('''
@@ -233,8 +232,9 @@ def makeBallSumo(opts):
         raise DirectoryDoesntExist("MakeBalls: Twisted.exp doesn't exist")
     zig = glob.glob('ZopeInterface-*.tgz')
     if not zig:
-        raise Exception("Please download ZopeInterface from "
-                        "http://www.zope.org/Products/ZopeInterface")
+        raise Exception(
+            "Creating sumo distribution rquires a ZopeInterface tarball - "
+            "Please download one from <http://www.zope.org/Products/ZopeInterface>.")
     zi = zig[0]
     os.makedirs(tdir)
     sh('''
@@ -257,7 +257,7 @@ def makeBallSumo(opts):
                             "subprojects when building sumo! including %s"
                             % subproj)
         sumoReplace['%s-SVN-Trunk' % subproj.capitalize()] = subver
-                                   
+
     replaceInFile(os.path.join(tdir, 'README'), sumoReplace)
     # replace versions for core
     coreReplace = {'SVN-Trunk': basever}
@@ -275,6 +275,8 @@ def makeBallSumo(opts):
 def createSubprojectDirectory(proj, version):
     sdir = 'Twisted%s-%s' % (proj.capitalize(), version)
     os.makedirs(sdir+'/twisted/%s' % (proj,))
+    os.makedirs(sdir+'/twisted/plugins')
+
     sh('''
     ln -s `pwd`/Twisted.exp/twisted/%(proj)s/* %(sdir)s/twisted/%(proj)s
     rm %(sdir)s/twisted/%(proj)s/topfiles
@@ -282,6 +284,9 @@ def createSubprojectDirectory(proj, version):
     cp `pwd`/Twisted.exp/twisted/%(proj)s/__init__.py %(sdir)s/twisted/%(proj)s/
     ln -s `pwd`/Twisted.exp/LICENSE %(sdir)s
     ln -s `pwd`/Twisted.exp/twisted/%(proj)s/topfiles/* %(sdir)s
+
+    # We want this project's plugin module
+    ln -s `pwd`/Twisted.exp/twisted/plugins/twisted_%(proj)s.py %(sdir)s/twisted/plugins
 
     # we want copies so we can replace versions
     rm %(sdir)s/setup.py %(sdir)s/README

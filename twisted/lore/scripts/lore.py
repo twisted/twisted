@@ -2,8 +2,20 @@
 # See LICENSE for details.
 
 import sys
+
+from zope.interface import Interface, Attribute
+
 from twisted.lore import process, default, indexer, numberer, htmlbook
-from twisted.python import usage, plugin, reflect
+
+from twisted.python import usage, plugin as oldplugin, reflect
+from twisted import plugin as newplugin
+
+class IProcessor(Interface):
+    """
+    """
+
+    factory = Attribute(
+        "")
 
 class Options(usage.Options):
 
@@ -39,18 +51,24 @@ class Options(usage.Options):
 
 
 def getProcessor(input, output, config):
-    plugins = plugin.getPlugIns("lore", None, None)
+    plugins = oldplugin._getPlugIns("lore")
     for plug in plugins:
         if plug.tapname == input:
             module = plug.load()
             break
     else:
-        # try treating it as a module name
-        try:
-            module = reflect.namedModule(input)
-        except ImportError:
-            print '%s: no such input: %s' % (sys.argv[0], input)
-            return
+        plugins = newplugin.getPlugIns(IProcessor)
+        for plug in plugins:
+            if plug.name == input:
+                module = reflect.namedModule(plug.moduleName)
+                break
+        else:
+            # try treating it as a module name
+            try:
+                module = reflect.namedModule(input)
+            except ImportError:
+                print '%s: no such input: %s' % (sys.argv[0], input)
+                return
     try:
         return process.getProcessor(module, output, config)
     except process.NoProcessorError, e:
@@ -59,9 +77,9 @@ def getProcessor(input, output, config):
 
 def getWalker(df, opt):
     klass = process.Walker
-    if opt['plain']: 
+    if opt['plain']:
         klass = process.PlainReportingWalker
-    if opt['null']: 
+    if opt['null']:
         klass = process.NullReportingWalker
     return klass(df, opt['inputext'], opt['linkrel'])
 

@@ -33,7 +33,7 @@ class PlugIn:
 
     def isLoaded(self):
         """Check to see if the module for this plugin has been imported yet.
-        
+
         @rtype: C{int}
         @return: A true value if the module for this plugin has been loaded,
         false otherwise.
@@ -42,7 +42,7 @@ class PlugIn:
 
     def load(self):
         """Load the module for this plugin.
-        
+
         @rtype: C{ModuleType}
         @return: The module object that is loaded.
         """
@@ -65,6 +65,9 @@ class DropIn:
     def register(self, name, module, **kw):
         """Register a new plug-in.
         """
+        warnings.warn("The twisted.python.plugin system is deprecated.  "
+                      "See twisted.plugin for the revised edition.",
+                      DeprecationWarning, 2)
         self.plugins.append(PlugIn(name, module, **kw))
 
     def __repr__(self):
@@ -98,10 +101,10 @@ def getPluginFileList(debugInspection=None, showProgress=None):
     @param debugInspection: If not None, this is invoked with strings containing
     debug information about the loading process.  If it is any other true value,
     this debug information is written to stdout (This behavior is deprecated).
-    
+
     @type showProgress: C{None} or a callable taking one argument.
     @param showProgress: If not None, this is invoked with floating point
-    values between 0 and 1 describing the progress of the loading process. 
+    values between 0 and 1 describing the progress of the loading process.
     If it is any other true value, this progress information is written to
     stdout.  (This behavior is deprecated).
 
@@ -126,13 +129,13 @@ def getPluginFileList(debugInspection=None, showProgress=None):
     result = []
     loaded = {}
     seenNames = {}
-    
+
     # XXX Some people claim to have found non-strings in sys.path (an empty
     # list, in particular).  Instead of tracking down the cause for their
     # presence, they decided it was better to discard them unconditionally
     # without further investigation.  At some point, someone should track
     # down where non-strings are coming from and do something about them.
-    paths = [cacheTransform(p) for p in sys.path 
+    paths = [cacheTransform(p) for p in sys.path
              if isinstance(p, str) and os.path.isdir(p)]
 
     # special case for commonly used directories we *know* shouldn't be checked
@@ -193,20 +196,20 @@ def loadPlugins(plugInType, fileList, debugInspection=None, showProgress=None):
     @param plugInType: The type of plugin to search for.  This is tested
     against the C{type} argument to the C{register} function in the
     plugin.tml files.
-    
+
     @type fileList: C{list} of C{str}
     @param fileList: A list of the files to attempt to load plugin
     information from.  One name is put in their scope, the C{register}
     function.
-    
+
     @type debugInspection: C{None} or a callable taking one argument
     @param debugInspection: If not None, this is invoked with strings containing
     debug information about the loading process.  If it is any other true value,
     this debug information is written to stdout (This behavior is deprecated).
-    
+
     @type showProgress: C{None} or a callable taking one argument.
     @param showProgress: If not None, this is invoked with floating point
-    values between 0 and 1 describing the progress of the loading process. 
+    values between 0 and 1 describing the progress of the loading process.
     If it is any other true value, this progress information is written to
     stdout.  (This behavior is deprecated).
 
@@ -217,17 +220,17 @@ def loadPlugins(plugInType, fileList, debugInspection=None, showProgress=None):
         warnings.warn(
             "int parameter for debugInspection is deprecated, pass None or "
             "a function that takes a single argument instead.",
-            DeprecationWarning, 2
+            DeprecationWarning, 4
         )
     if isinstance(showProgress, types.IntType):
         warnings.warn(
             "int parameter for showProgress is deprecated, pass None or "
             "a function that takes a single argument instead.",
-            DeprecationWarning, 2
+            DeprecationWarning, 4
         )
     result = []
     debugInspection, showProgress = _prepCallbacks(debugInspection, showProgress)
-    
+
     if not fileList:
         raise ValueError("No plugins passed to loadPlugins")
 
@@ -239,14 +242,14 @@ def loadPlugins(plugInType, fileList, debugInspection=None, showProgress=None):
         debugInspection("Loading from " + tmlFile)
         pname = os.path.split(os.path.abspath(tmlFile))[-2]
         dropin = DropIn(pname)
-        ns = {'register': dropin.register}
+        ns = {'register': dropin.register, '__name__': tmlFile}
         try:
             execfile(tmlFile, ns)
         except (IOError, OSError), e:
             # guess we don't have permissions for that
             debugInspection("Error loading: %s" % e)
             continue
-        
+
         ldp = len(dropin.plugins) or 1.0
         incr = increments * (1.0 / ldp)
         for plugin in dropin.plugins:
@@ -265,37 +268,43 @@ def loadPlugins(plugInType, fileList, debugInspection=None, showProgress=None):
 
 def getPlugIns(plugInType, debugInspection=None, showProgress=None):
     """Helper function to get all the plugins of a particular type.
-    
+
     @type plugInType: C{str}
     @param plugInType: The type of plugin to search for.  This is tested
     against the C{type} argument to the C{register} function in the
     plugin.tml files.
-    
+
     @type debugInspection: C{None} or a callable taking one argument
     @param debugInspection: If not None, this is invoked with strings containing
     debug information about the loading process.  If it is any other true value,
     this debug information is written to stdout (This behavior is deprecated).
-    
+
     @type showProgress: C{None} or a callable taking one argument.
     @param showProgress: If not None, this is invoked with floating point
-    values between 0 and 1 describing the progress of the loading process. 
+    values between 0 and 1 describing the progress of the loading process.
     If it is any other true value, this progress information is written to
     stdout.  (This behavior is deprecated).
 
     @rtype: C{list}
     @return: A list of C{PlugIn} objects that were found.
     """
+    warnings.warn("The twisted.python.plugin system is deprecated.  "
+                  "See twisted.plugin for the revised edition.",
+                  DeprecationWarning, 2)
+    return _getPlugIns(plugInType, debugInspection, showProgress)
+
+def _getPlugIns(plugInType, debugInspection=None, showProgress=None):
     if isinstance(debugInspection, types.IntType):
         warnings.warn(
             "int parameter for debugInspection is deprecated, pass None or "
             "a function that takes a single argument instead.",
-            DeprecationWarning, 2
+            DeprecationWarning, 3
         )
     if isinstance(showProgress, types.IntType):
         warnings.warn(
             "int parameter for showProgress is deprecated, pass None or "
             "a function that takes a single argument instead.",
-            DeprecationWarning, 2
+            DeprecationWarning, 3
         )
     debugInspection, showProgress = _prepCallbacks(debugInspection, showProgress)
 

@@ -14,7 +14,8 @@ from os.path import join as opj
 from cStringIO import StringIO
 
 from twisted.application import app
-from twisted.python import usage, reflect, failure, log, plugin
+from twisted.python import usage, reflect, failure, log
+from twisted import plugin
 from twisted.python.util import spewer
 from twisted.spread import jelly
 from twisted.trial import runner, util, itrial, remote
@@ -123,7 +124,7 @@ class Options(usage.Options):
 
     def _loadReporters(self):
         self.pluginFlags, self.optToQual = [], {}
-        self.plugins = plugin.getPlugIns("trial_reporter", None, None)
+        self.plugins = plugin.getPlugIns(itrial.IReporter)
         for p in self.plugins:
             self.pluginFlags.append([p.longOpt, p.shortOpt, p.description])
             qual = "%s.%s" % (p.module, p.klass)

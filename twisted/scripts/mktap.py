@@ -1,12 +1,41 @@
-
 # Copyright (c) 2001-2004 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
-#
+import sys, os
+
+from zope.interface import Interface, Attribute, implements
+from twisted.python.components import backwardsCompatImplements
+
 from twisted.application import service, compat, app
 from twisted.persisted import sob
-from twisted.python import usage, util, plugin
-import sys, os
+from twisted.python import log, usage, util, plugin as oldplugin
+from twisted import plugin as newplugin
+
+class IServiceMaker(Interface):
+    name = Attribute(
+        "A brief string naming this TAP plugin, for example \"Mega Crusher 2000\".")
+
+    tapname = Attribute(
+        "A short string naming this TAP plugin, for example \"web\" or "
+        "\"pencil\".")
+
+    description = Attribute(
+        "A brief summary of the features provided by this TAP plugin.")
+
+    options = Attribute(
+        "A C{twisted.python.usage.Options} subclass defining the"
+        "configuration options for this application.")
+
+    def makeService(options):
+        """Create an object implementing C{twisted.application.service.IService}
+
+        Configure the object according to the specified options.
+
+        @param options: A mapping (typically a C{dict} or
+        C{twisted.python.usage.Options} instance) of configuration
+        options to desired configuration values.
+        """
+
 try:
     import pwd, grp
 except ImportError:
@@ -32,14 +61,20 @@ else:
 
 
 def loadPlugins(debug = None, progress = None):
-    plugins = plugin.getPlugIns("tap", debug, progress)
     tapLookup = {}
+
+    plugins = oldplugin._getPlugIns("tap", debug, progress)
     for plug in plugins:
         if hasattr(plug, 'tapname'):
             shortTapName = plug.tapname
         else:
             shortTapName = plug.module.split('.')[-1]
         tapLookup[shortTapName] = plug
+
+    plugins = newplugin.getPlugIns(IServiceMaker)
+    for plug in plugins:
+        tapLookup[plug.tapname] = plug
+
     return tapLookup
 
 def makeService(mod, name, options):
@@ -94,9 +129,16 @@ class FirstPassOptions(usage.Options):
     ]
 
     def init(self, tapLookup):
-        sc = [ [name, None, (lambda obj=module:obj.load().Options()),
-                getattr(module, 'description', '')]
-                                     for name, module in tapLookup.items()]
+        sc = []
+        for (name, module) in tapLookup.iteritems():
+            if IServiceMaker.providedBy(module):
+                sc.append((
+                    name, None, lambda m=module: m.options, module.description))
+            else:
+                sc.append((
+                    name, None, lambda obj=module: obj.load().Options(),
+                    getattr(module, 'description', '')))
+
         sc.sort()
         self.subCommands = sc
 
@@ -147,10 +189,42 @@ def run():
         sys.exit(2)
     except KeyboardInterrupt:
         sys.exit(1)
-    ser = makeService(options.tapLookup[options.subCommand].load(),
-                      options.subCommand,
-                      options.subOptions)
+
+    plg = options.tapLookup[options.subCommand]
+    if not IServiceMaker.providedBy(plg):
+        plg = plg.load()
+    ser = makeService(plg, options.subCommand, options.subOptions)
     addToApplication(ser,
                      options.subCommand, options['append'], options['appname'],
                      options['type'], options['encrypted'],
                      *getid(options['uid'], options['gid']))
+
+from twisted.python.reflect import namedAny
+from twisted.plugin import IPlugin
+
+class _tapHelper(object):
+    """
+    Internal utility class to simplify the definition of \"new-style\"
+    mktap plugins based on existing, \"classic\" mktap plugins.
+    """
+
+    implements(IPlugin, IServiceMaker)
+
+    def __init__(self, name, module, description, tapname):
+        self.name = name
+        self.module = module
+        self.description = description
+        self.tapname = tapname
+
+    def options():
+        def get(self):
+            return namedAny(self.module).Options
+        return get,
+    options = property(*options())
+
+    def makeService():
+        def get(self):
+            return namedAny(self.module).makeService
+        return get,
+    makeService = property(*makeService())
+backwardsCompatImplements(_tapHelper)

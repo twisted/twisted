@@ -34,8 +34,22 @@ def setup(**kw):
         projdir = os.path.join('twisted', projname)
 
         kw['packages'] = getPackages(projdir, parent='twisted')
+
+        plugin = "twisted/plugins/twisted_" + projname + ".py"
+        if os.path.exists(plugin):
+            kw.setdefault('py_modules', []).append(plugin.replace("/", ".")[:-3])
+
         kw['data_files'] = getDataFiles(projdir, parent='twisted')
+
         del kw['twisted_subproject']
+    else:
+        if 'plugins' in kw:
+            py_modules = []
+            for plg in kw['plugins']:
+                py_modules.append("twisted.plugins." + plg)
+            kw.setdefault('py_modules', []).extend(py_modules)
+            del kw['plugins']
+
     if 'cmdclass' not in kw:
         kw['cmdclass'] = {
             'install_data': install_data_twisted,

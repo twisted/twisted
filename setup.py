@@ -42,7 +42,7 @@ def runSetup(project, args):
         sys.exit(1)
 
     result = os.spawnv(os.P_WAIT, sys.executable,
-                   [sys.executable, setupPy] + args)
+                       [sys.executable, setupPy] + args)
     if result != 0:
         sys.stderr.write("Error: Subprocess exited with result %d for project %s\n" %
                          (result, project))

@@ -4,9 +4,18 @@ import string
 
 # Twisted Imports
 from twisted.words.service import WordsClient
-from twisted.python.plugin import getPlugIns
 from twisted.python.failure import Failure
-from twisted.python import log
+from twisted.python import log, plugin as oldplugin
+from twisted import plugin as newplugin
+
+from zope.interface import Interface
+
+class IBotBot(Interface):
+    def createBot():
+        """Create a bot... bot.
+
+        No one uses this code, who cares what this method does.
+        """
 
 class BotBot(WordsClient):
 
@@ -47,10 +56,16 @@ class BotBot(WordsClient):
         self.loadBotList()
 
     def loadBotList(self):
-        botTypeList = getPlugIns("twisted.words.bot")
         botTypes = {}
+
+        botTypeList = newplugin.getPlugIns(IBotBot)
         for bott in botTypeList:
             botTypes[bott.botType] = bott
+
+        botTypeList = oldplugin.getPlugIns("twisted.words.bot")
+        for bott in botTypeList:
+            botTypes[bott.botType] = bott.load()
+
         self.botTypes = botTypes
 
     ### botbot bot commands
@@ -74,7 +89,7 @@ class BotBot(WordsClient):
 
     def bot_new(self, sender, message, metadata):
         bottype, botname = string.split(message, ' ', 1)
-        self.voice.service.addBot(botname, self.botTypes[bottype].load().createBot())
+        self.voice.service.addBot(botname, self.botTypes[bottype].createBot())
         self.voice.directMessage(sender, "Bot Created!")
 
 def createBot():
