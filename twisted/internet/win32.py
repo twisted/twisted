@@ -28,6 +28,9 @@ from win32file import WSAEventSelect, FD_READ, FD_WRITE, FD_CLOSE, \
 from win32event import CreateEvent, WaitForMultipleObjects, \
                        WAIT_OBJECT_0, WAIT_TIMEOUT, INFINITE
 
+# System imports
+import time
+
 # Twisted imports
 from twisted.python import log, threadable
 
@@ -37,23 +40,32 @@ reads = {}
 writes = {}
 events = {}
 
-def _addEvent(fd, why, events=events):
+def _makeSocketEvent(fd, action, why, events=events):
+    """Make a win32 event object for a socket."""
     event = CreateEvent(None, 0, 0, None)
     WSAEventSelect(fd, event, why)
-    events[event] = (fd, why)
+    events[event] = (fd, action)
     return event
 
+def addEvent(event, fd, action, events=events):
+    """Add a new win32 event to the event loop."""
+    events[event] = (fd, action)
+
+def removeEvent(event):
+    """Remove an event."""
+    del events[event]
+
 def addReader(reader, reads=reads):
-    """Add a FileDescriptor for notification of data available to read.
+    """Add a socket FileDescriptor for notification of data available to read.
     """
     if not reads.has_key(reader):
-        reads[reader] = _addEvent(reader, FD_READ|FD_ACCEPT|FD_CONNECT|FD_CLOSE)
+        reads[reader] = _makeSocketEvent(reader, reader.doRead, FD_READ|FD_ACCEPT|FD_CONNECT|FD_CLOSE)
         
 def addWriter(writer, writes=writes):
-    """Add a FileDescriptor for notification of data available to write.
+    """Add a socket FileDescriptor for notification of data available to write.
     """
     if not writes.has_key(writer):
-        writes[writer] =_addEvent(writer, FD_WRITE|FD_CLOSE)
+        writes[writer] =_makeSocketEvent(writer, writer.doWrite, FD_WRITE|FD_CLOSE)
 
 def removeReader(reader):
     """Remove a Selectable for notification of data available to read.
@@ -87,18 +99,19 @@ def doWaitForMultipleEvents(timeout,
         timeout = timeout * 1000
     
     handles = events.keys()
+    if not handles:
+        # sleep so we don't suck up CPU time
+        time.sleep(timeout / 1000.0)
+        return
     val = WaitForMultipleObjects(handles, 0, timeout)
     if val == WAIT_TIMEOUT:
         return
     elif val >= WAIT_OBJECT_0 and val < WAIT_OBJECT_0 + len(handles):
-        fd, why = events[handles[val - WAIT_OBJECT_0]]
+        fd, action = events[handles[val - WAIT_OBJECT_0]]
         closed = 0
         log.logOwner.own(fd)
         try:
-            if why & (FD_READ|FD_ACCEPT|FD_CONNECT):
-                closed = fd.doRead()
-            elif why & FD_WRITE:
-                closed = fd.doWrite()
+            closed = action()
         except:
             log.deferr()
             closed = 1
