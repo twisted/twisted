@@ -38,19 +38,24 @@ except ImportError:
 try:
     from Crypto.Util import randpool
 except ImportError:
-    import warnings, random
-    warnings.warn(
-        "PyCrypto not available - proceeding with non-cryptographically "
-        "secure random source",
-        RuntimeWarning,
-        1
-    )
+    import os
+    if not os.path.exists('/dev/random'):
+        import warnings, random
+        warnings.warn(
+            "PyCrypto not available - proceeding with non-cryptographically "
+            "secure random source",
+            RuntimeWarning,
+            1
+        )
 
-    def randomSource():
-        return random.randint(0, 65535)
+        def randomSource():
+            return random.randint(0, 65535)
+    else:
+        def randomSource(r = open('/dev/random', 'rb').read):
+            return struct.unpack('H', r(2))[0]
 else:
     def randomSource(r = randpool.RandomPool().get_bytes):
-        return struct.unpack('h', r(2))[0]
+        return struct.unpack('H', r(2))[0]
 
 # Twisted imports
 from twisted.internet import protocol, defer, error
