@@ -24,11 +24,11 @@ from twisted.web import resource
 import traceback, string
 
 from cStringIO import StringIO
-from microdom import escape, unescape
+from microdom import escape
 
 def PRE(text):
     "Wrap <pre> tags around some text and escape it with web.escapehtml."
-    return "<pre>"+escapehtml(text)+"</pre>"
+    return "<pre>"+escape(text)+"</pre>"
 
 def UL(lst):
     io = StringIO()
