@@ -265,11 +265,13 @@ class Widget(mvc.View):
             data = payload[self.submodel]
         else:
             data = self.getData()
+        self.children = []
         self.setUp(request, oldNode, data)
         newNode = self.generateDOM(request, oldNode)
         mutator = template.NodeNodeMutator(newNode)
         mutator.d = request.d
         mutator.generate(request, oldNode)
+        self.node = newNode
     
     def __setitem__(self, item, value):
         """

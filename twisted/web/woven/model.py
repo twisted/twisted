@@ -36,11 +36,18 @@ class ListModel:
         self.orig = orig
 
     def getSubmodel(self, name):
-        return self.orig[int(name)]
+        orig = self.orig
+        return orig[int(name)]
     
     def setSubmodel(self, name, value):
         self.orig[int(name)] = value
 
+    def __getitem__(self, name):
+        return self.getSubmodel(name)
+    
+    def __setitem__(self, name, value):
+        self.setSubmodel(name, value)
+    
     def getData(self):
         return self.orig
     
@@ -73,6 +80,7 @@ class DictionaryModel:
         self.orig = orig
 
     def getSubmodel(self, name):
+        orig = self.orig
         return self.orig[name]
 
     def setSubmodel(self, name, value):

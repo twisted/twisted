@@ -85,7 +85,11 @@ class WView(template.DOMTemplate):
                                 model.__class__, 
                                 mvc.IController, 
                                 controllerFactory)
-        return controllerFactory(self.model)
+        try:
+            return controllerFactory(request, node, self.model)
+        except TypeError:
+            log.write("DeprecationWarning: A Controller Factory takes (request, node, model) now instead of (model)\n")
+            return controllerFactory(self.model)
     
     def getNodeView(self, request, node, submodel):
         view = None   
@@ -140,7 +144,10 @@ class WView(template.DOMTemplate):
         controller = self.getNodeController(request, node, submodel)
         view = self.getNodeView(request, node, submodel)
         
-        controller.setView(view)
+        if isinstance(view, mvc.View):
+            controller.setView(view)
+        else:
+            controller.setView(DefaultWidget(self.model))
         if not getattr(controller, 'submodel', None):
             controller.setSubmodel(submodel)
         # xxx refactor this into a widget interface and check to see if the object implements IWidget
@@ -227,6 +234,7 @@ class WView(template.DOMTemplate):
                 del request.args[node.getAttribute('name')]
             result = controller.commit(request, node, data)
             self.model.notify({'request': request, controller.submodel: data})
+            self.recurseChildren(request, controller.view.node)
             if isinstance(result, defer.Deferred):
                 self.outstandingCallbacks += 1
                 result.addCallback(self.handleCommitCallback, request)

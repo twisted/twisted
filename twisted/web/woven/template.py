@@ -118,7 +118,10 @@ class NodeNodeMutator(NodeMutator):
             if hasattr(self.d, 'importNode'):
                 self.data = self.d.importNode(self.data, 1)
             parent = node.parentNode
-            parent.replaceChild(self.data, node)
+            if parent:
+                parent.replaceChild(self.data, node)
+            else:
+                print "WARNING: There was no parent for node %s; node not mutated" % node
         return self.data
 
 
