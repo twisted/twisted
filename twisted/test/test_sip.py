@@ -20,6 +20,8 @@ from twisted.trial import unittest
 from twisted.protocols import sip
 from twisted.internet import defer, reactor
 
+from twisted.test import proto_helpers
+
 from twisted import cred
 import twisted.cred.portal
 import twisted.cred.checkers
@@ -459,6 +461,8 @@ class RegistrationTestCase(unittest.TestCase):
 
     def testBasicAuthentication(self):
         self.addPortal()
+        self.proxy.authorizers = self.proxy.authorizers.copy()
+        self.proxy.authorizers['basic'] = sip.BasicAuthorizer()
 
         r = sip.Request("REGISTER", "sip:bell.example.com")
         r.addHeader("to", "sip:joe@bell.example.com")
@@ -474,6 +478,8 @@ class RegistrationTestCase(unittest.TestCase):
     
     def testFailedBasicAuthentication(self):
         self.addPortal()
+        self.proxy.authorizers = self.proxy.authorizers.copy()
+        self.proxy.authorizers['basic'] = sip.BasicAuthorizer()
 
         r = sip.Request("REGISTER", "sip:bell.example.com")
         r.addHeader("to", "sip:joe@bell.example.com")
@@ -558,3 +564,93 @@ class LiveTest(unittest.TestCase):
         self.assertEquals(len(self.client.received), 1)
         r = self.client.received[0]
         self.assertEquals(r.code, 200)
+
+registerRequest = """
+REGISTER sip:intarweb.us SIP/2.0\r
+Via: SIP/2.0/UDP 192.168.1.100:50609\r
+From: <sip:exarkun@intarweb.us:50609>\r
+To: <sip:exarkun@intarweb.us:50609>\r
+Contact: "exarkun" <sip:exarkun@192.168.1.100:50609>\r
+Call-ID: 94E7E5DAF39111D791C6000393764646@intarweb.us\r
+CSeq: 9898 REGISTER\r
+Expires: 500\r
+User-Agent: X-Lite build 1061\r
+Content-Length: 0\r
+\r
+"""
+
+challengeResponse = """\
+SIP/2.0 401 Unauthorized\r
+Via: SIP/2.0/UDP 192.168.1.100:50609;received=127.0.0.1;rport=5632\r
+To: <sip:exarkun@intarweb.us:50609>\r
+From: <sip:exarkun@intarweb.us:50609>\r
+Call-ID: 94E7E5DAF39111D791C6000393764646@intarweb.us\r
+CSeq: 9898 REGISTER\r
+WWW-Authenticate: Digest nonce="92956076410767313901322208775",opaque="1674186428",qop-options="auth",algorithm="MD5",realm="intarweb.us"\r
+\r
+"""
+
+authRequest = """\
+REGISTER sip:intarweb.us SIP/2.0\r
+Via: SIP/2.0/UDP 192.168.1.100:50609\r
+From: <sip:exarkun@intarweb.us:50609>\r
+To: <sip:exarkun@intarweb.us:50609>\r
+Contact: "exarkun" <sip:exarkun@192.168.1.100:50609>\r
+Call-ID: 94E7E5DAF39111D791C6000393764646@intarweb.us\r
+CSeq: 9899 REGISTER\r
+Expires: 500\r
+Authorization: Digest username="exarkun",realm="intarweb.us",nonce="92956076410767313901322208775",response="4a47980eea31694f997369214292374b",uri="sip:intarweb.us",algorithm=MD5,opaque="1674186428"\r
+User-Agent: X-Lite build 1061\r
+Content-Length: 0\r
+\r
+"""
+
+okResponse = """\
+SIP/2.0 200 OK\r
+Via: SIP/2.0/UDP 192.168.1.100:50609\r
+To: <sip:exarkun@intarweb.us:50609>\r
+From: <sip:exarkun@intarweb.us:50609>\r
+Call-ID: 94E7E5DAF39111D791C6000393764646@intarweb.us\r
+CSeq: 9899 REGISTER\r
+Contact: sip:exarkun@192.168.1.100:50609\r
+Expires: 3599\r
+Content-length: 0\r
+\r
+"""
+
+class FakeDigestAuthorizer(sip.DigestAuthorizer):
+    def generateNonce(self):
+        return '92956076410767313901322208775'
+    def generateOpaque(self):
+        return '1674186428'
+
+class AuthorizationTestCase(unittest.TestCase):
+    def setUp(self):
+        self.proxy = sip.RegisterProxy(host="intarweb.us")
+        self.proxy.authorizers = self.proxy.authorizers.copy()
+        self.proxy.authorizers['digest'] = FakeDigestAuthorizer()
+        self.registry = sip.InMemoryRegistry("intarweb.us")
+        self.proxy.registry = self.proxy.locator = self.registry
+        self.transport = proto_helpers.FakeDatagramTransport()
+        self.proxy.transport = self.transport
+
+        r = TestRealm()
+        p = cred.portal.Portal(r)
+        c = cred.checkers.InMemoryUsernamePasswordDatabaseDontUse()
+        c.addUser('exarkun', 'password')
+        p.registerChecker(c)
+        self.proxy.portal = p
+    
+    def testChallenge(self):
+        self.proxy.datagramReceived(registerRequest, ("127.0.0.1", 5632))
+        self.assertEquals(
+            self.transport.written,
+            [(challengeResponse, ("127.0.0.1", 5632))]
+        )
+        self.transport.written = []
+
+        self.proxy.datagramReceived(authRequest, ("127.0.0.1", 5632))
+        self.assertEquals(
+            self.transport.written,
+            [(okResponse, ("127.0.0.1", 5632))]
+        )
