@@ -147,12 +147,9 @@ class Application(log.Logger, styles.Versioned):
                 p.loseConnection()
                 self.ports.remove(p)
     
-    # deprecated name for backward compat.
-    listenOn = listenTCP
-
     def listenUDP(self, port, factory, interface='', maxPacketSize=8192):
         """
-        Connects a given protocol factory to the given numeric TCP/IP port.
+        Connects a given protocol factory to the given numeric UDP port.
         """
         from twisted.internet import udp
         self.addPort(udp.Port(port, factory, interface, maxPacketSize))
