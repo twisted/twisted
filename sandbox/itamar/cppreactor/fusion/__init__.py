@@ -3,4 +3,4 @@
 # make sure fusion.util is loaded so C++ code can use it.
 from fusion import util
 
-__version__ = "0.1.2"
+__version__ = "0.1.2-post"
