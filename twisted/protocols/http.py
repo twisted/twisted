@@ -377,13 +377,12 @@ class Request:
     def requestReceived(self, command, path, version):
         """Called by channel when all data has been received."""
         self.content.seek(0,0)
-        from string import split
         self.args = {}
         self.stack = []
         
         self.method, self.uri = command, path
         self.clientproto = version
-        x = split(self.uri,'?')
+        x = self.uri.split('?')
 
         if len(x) == 1:
             self.path = urllib.unquote(self.uri)
