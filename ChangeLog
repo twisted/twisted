@@ -1,3 +1,12 @@
+2003-01-08  Jonathan M. Lange  <jml@mumak.net>
+
+	* twisted/trial/*, bin/trial, twisted/scripts/trial.py,
+	doc/man/trial.1: Added 'trial', a new unit testing framework for
+	Twisted.
+
+	* twisted/test/test_*, admin/runtests: Moved existing tests over to
+	trial.
+
 2003-01-06  Glyph Lefkowitz  <glyph@twistedmatrix.com>
 
 	* twisted/python/microdom.py: Added beExtremelyLenient mode (for
