@@ -5,8 +5,6 @@
 	twisted/lore/latex.py twisted/lore/tree.py: Add the document generation
 	Twisted uses internally to the public interface.
 
-2002-10-25  Moshe Zadka <moshez@twistedmatrix.com>
-
 	* twisted/python/htmlizer.py: a Python->HTML colouriser
 
 2002-10-23  Itamar Shtull-Trauring  <twisted@itamarst.org>
