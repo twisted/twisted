@@ -379,9 +379,11 @@ class TestCall(unittest.TestCase, TargetMixin):
         # add() does not take a 'c' argument, so we get a TypeError here
         self.failIf(target.calls)
         f = unittest.deferredError(d, 2)
-        # TODO: once CopyableFailure is done, this comparison should be
-        # less stringish
-        self.failUnless(str(f).find("remote_add() got an unexpected keyword argument 'c'") != -1)
+        # TODO: once CopyableFailure is done, this comparison should be less
+        # stringish. Also, should it be a RuntimeError or a Violation?
+        self.failUnless(f.check(RuntimeError))
+        self.failUnless("remote_add() got an unexpected keyword argument 'c'"
+                        in f.value.args[0])
 
     def testCall2(self):
         # use interfaces this time
@@ -396,7 +398,8 @@ class TestCall(unittest.TestCase, TargetMixin):
         d = rr.callRemote("add", a=1, b=2, c=3)
         self.failIf(target.calls)
         f = unittest.deferredError(d, 2)
-        self.failUnless(str(f).find("Violation, unknown argument 'c'") != -1)
+        self.failUnless(f.check(Violation))
+        self.failUnless("unknown argument 'c'" in f.value.args[0])
 
     def testFailRemoteArgConstraint(self):
         # the brokers disagree about the Interfaces, so the sender thinks
@@ -407,13 +410,16 @@ class TestCall(unittest.TestCase, TargetMixin):
         # interface) does not.
         self.failIf(target.calls)
         f = unittest.deferredError(d, 2)
-        self.failUnless(str(f).find("Violation, method 'sub' not defined in any RemoteInterface") != -1)
+        self.failUnless(f.check(RuntimeError))
+        self.failUnless("method 'sub' not defined in any RemoteInterface"
+                        in f.value.args[0])
 
     def testFailRemoteReturnConstraint(self):
         rr, target = self.setupTarget2(BrokenTarget())
         d = rr.callRemote("add", 3, 4) # violates return constraint
         f = unittest.deferredError(d, 2)
-        self.failUnless(str(f).find("Violation, in outbound method results") != -1)
+        self.failUnless(f.check(RuntimeError))
+        self.failUnless("in outbound method results" in f.value.args[0])
 
     def testFailLocalReturnConstraint(self):
         rr, target = self.setupTarget3(Target(), ["RIMyTarget3"])
@@ -423,7 +429,8 @@ class TestCall(unittest.TestCase, TargetMixin):
         # by the local side when the response comes back
         self.failIf(target.calls)
         f = unittest.deferredError(d, 2)
-        self.failUnless(str(f).find("Violation, INT token rejected by StringConstraint in inbound method results") != -1)
+        self.failUnless(f.check(Violation))
+        self.failUnless("INT token rejected by StringConstraint in inbound method results" in f.value.args[0])
 
 
 

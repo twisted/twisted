@@ -43,6 +43,7 @@ class BaseSlicer:
         return self.parent.slicerForObject(obj)
     def slice(self, streamable, banana):
         # this is what makes us ISlicer
+        self.streamable = streamable
         assert self.opentype
         for o in self.opentype:
             yield o
@@ -216,8 +217,9 @@ UnsafeSlicerTable.update({
 
 
 class RootSlicer:
-    implements(tokens.ISlicer)
+    implements(tokens.ISlicer, tokens.IRootSlicer)
 
+    streamableInGeneral = True
     producingDeferred = None
     objectSentDeferred = None
     slicerTable = {}
@@ -226,6 +228,9 @@ class RootSlicer:
     def __init__(self, protocol):
         self.protocol = protocol
         self.sendQueue = []
+
+    def allowStreaming(self, streamable):
+        self.streamableInGeneral = streamable
 
     def registerReference(self, refid, obj):
         pass
@@ -257,10 +262,12 @@ class RootSlicer:
             self.objectSentDeferred = None
         if self.sendQueue:
             (obj, self.objectSentDeferred) = self.sendQueue.pop()
+            self.streamable = self.streamableInGeneral
             return obj
         if self.protocol.debugSend:
             print "LAST BAG"
         self.producingDeferred = Deferred()
+        self.streamable = True
         return self.producingDeferred
 
     def childAborted(self, v):
@@ -276,6 +283,8 @@ class RootSlicer:
         self.sendQueue.append((obj, objectSentDeferred))
         if idle:
             # wake up
+            if self.protocol.debugSend:
+                print " waking up to send"
             if self.producingDeferred:
                 d = self.producingDeferred
                 self.producingDeferred = None
@@ -284,6 +293,18 @@ class RootSlicer:
                 d.callback(None)
         return objectSentDeferred
 
+    def describe(self):
+        return "<Root>"
+
+    def connectionLost(self, why):
+        # abandon everything we wanted to send
+        if self.objectSentDeferred:
+            self.objectSentDeferred.errback(why)
+            self.objectSentDeferred = None
+        for obj, d in self.sendQueue:
+            d.errback(why)
+        self.sendQueue = []
+            
 class UnsafeRootSlicer(RootSlicer):
     slicerTable = UnsafeSlicerTable
 
@@ -321,11 +342,11 @@ class BaseUnslicer:
     def __init__(self):
         pass
 
-    def describeSelf(self):
+    def describe(self):
         return "??"
 
     def where(self):
-        return self.protocol.describe()
+        return self.protocol.describeReceive()
 
     def setConstraint(self, constraint):
         pass
@@ -476,7 +497,7 @@ class UnicodeUnslicer(LeafUnslicer):
 
     def receiveClose(self):
         return self.string
-    def describeSelf(self):
+    def describe(self):
         return "<unicode>"
 
 class ListUnslicer(BaseUnslicer):
@@ -560,7 +581,7 @@ class ListUnslicer(BaseUnslicer):
     def receiveClose(self):
         return self.list
 
-    def describeSelf(self):
+    def describe(self):
         return "[%d]" % len(self.list)
 
 class TupleUnslicer(BaseUnslicer):
@@ -640,7 +661,7 @@ class TupleUnslicer(BaseUnslicer):
         self.finished = 1
         return self.checkComplete()
 
-    def describeSelf(self):
+    def describe(self):
         return "[%d]" % len(self.list)
 
 
@@ -729,7 +750,7 @@ class DictUnslicer(BaseUnslicer):
     def receiveClose(self):
         return self.d
 
-    def describeSelf(self):
+    def describe(self):
         if self.gettingKey:
             return "{}"
         else:
@@ -771,7 +792,7 @@ class VocabUnslicer(LeafUnslicer):
     def receiveClose(self):
         return NewVocabulary(self.d)
 
-    def describeSelf(self):
+    def describe(self):
         if self.key is not None:
             return "<vocabdict>[%s]" % self.key
         else:
@@ -881,7 +902,7 @@ class InstanceUnslicer(BaseUnslicer):
         self.deferred.callback(obj)
         return obj
 
-    def describeSelf(self):
+    def describe(self):
         if self.classname is None:
             return "<??>"
         me = "<%s>" % self.classname
@@ -1099,7 +1120,7 @@ class BooleanUnslicer(LeafUnslicer):
     def receiveClose(self):
         return self.value
 
-    def describeSelf(self):
+    def describe(self):
         return "<bool>"
         
 UnslicerRegistry = {
@@ -1212,7 +1233,7 @@ class RootUnslicer(BaseUnslicer):
     def receiveClose(self):
         raise BananaError("top-level should never receive CLOSE tokens")
 
-    def describeSelf(self):
+    def describe(self):
         return "root"
 
     def setObject(self, counter, obj):

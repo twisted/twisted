@@ -340,7 +340,7 @@ class CallUnslicer(BaseUnslicer):
             self.broker.sendError(f, self.reqID)
         return f
 
-    def describeSelf(self):
+    def describe(self):
         if self.stage == 0:
             return "<methodcall>"
         elif self.stage == 1:
@@ -586,6 +586,7 @@ class FailureSlicer(slicer.BaseSlicer):
     classname = "twisted.python.failure.Failure"
 
     def slice(self, streamable, banana):
+        self.streamable = streamable
         yield 'copyable'
         yield self.classname
         state = self.getStateToCopy(self.obj, banana)

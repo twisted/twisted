@@ -13,7 +13,11 @@ DONE, need glyph to do URL parsing
 places where BananaError or Violation might be raised
 
 sending side:
- Slicer creation (schema pre-validation?)
+ Slicer creation (schema pre-validation? no): no no
+  pre-validation is done before sending the object, Broker.callFinished,
+  RemoteReference.doCall
+  slicer creation is done in newSlicerFor
+
  .slice (called in pushSlicer) ?
  .slice.next raising Violation
  .slice.next returning Deferrable when streaming isn't allowed

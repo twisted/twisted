@@ -5,8 +5,10 @@ dr = unittest.deferredResult
 de = unittest.deferredError
 from twisted.python import reflect, log
 from twisted.python.components import registerAdapter
+from twisted.internet import reactor, defer
+
 from banana import BananaError
-from tokens import ISlicer
+from tokens import ISlicer, Violation
 import slicer, schema, tokens, debug
 from slicer import UnbananaFailure
 
@@ -482,6 +484,150 @@ class EncodeTest(unittest.TestCase):
                                   "d", 4,
                                  CLOSE(2),
                               CLOSE(0)])
+
+
+
+class ErrorfulSlicer(slicer.BaseSlicer):
+    def __init__(self, mode, shouldSucceed, ignoreChildDeath=False):
+        self.mode = mode
+        self.items = [1]
+        self.items.append(mode)
+        self.items.append(3)
+        #if mode not in ('success', 'deferred-good'):
+        if not shouldSucceed:
+            self.items.append("unreached")
+        self.counter = -1
+        self.childDied = False
+        self.ignoreChildDeath = ignoreChildDeath
+
+    def __iter__(self):
+        return self
+    def slice(self, streamable, banana):
+        self.streamable = streamable
+        if self.mode == "slice":
+            raise Violation("slice failed")
+        return self
+
+    def next(self):
+        self.counter += 1
+        if not self.items:
+            raise StopIteration
+        obj = self.items.pop(0)
+        if obj == "next":
+            raise Violation("next failed")
+        if obj == "deferred-good":
+            d = defer.Deferred()
+            reactor.callLater(1, d.callback, None)
+            return d
+        if obj == "deferred-bad":
+            d = defer.Deferred()
+            # the Banana should bail, so don't bother with the timer
+            return d
+        if obj == "newSlicerFor":
+            unserializable = open("unserializable.txt", "w")
+            # Hah! Serialize that!
+            return unserializable
+        if obj == "unreached":
+            print "error: slicer.next called after it should have stopped"
+        return obj
+
+    def childAborted(self, v):
+        self.childDied = True
+        if not self.ignoreChildDeath:
+            raise v
+
+    def describe(self):
+        return "ErrorfulSlicer[%d]" % self.counter
+
+# Slicer creation (schema pre-validation?)
+# .slice (called in pushSlicer) ?
+# .slice.next raising Violation
+# .slice.next returning Deferred when streaming isn't allowed
+# .sendToken (non-primitive token, can't happen)
+# .newSlicerFor (no ISlicer adapter)
+# top.childAborted
+
+class EncodeFailureTest(unittest.TestCase):
+    def setUp(self):
+        self.banana = TokenBanana()
+
+    def send(self, obj):
+        return self.banana.send(obj)
+    def failed(self, d):
+        print "timeout"
+        d.callback("timeout")
+        
+    def waitForSuccess(self, d):
+        timeout = reactor.callLater(2, self.failed, d)
+        e = dr(d)
+        if e != "timeout":
+            timeout.cancel()
+        return self.banana.tokens
+        
+    def waitForError(self, d):
+        timeout = reactor.callLater(2, self.failed, d)
+        e = de(d)
+        if e != "timeout":
+            timeout.cancel()
+        return e
+
+    def testSuccess1(self):
+        # make sure the test slicer works correctly
+        s = ErrorfulSlicer("success", True)
+        d = self.send(s)
+        encoded = self.waitForSuccess(d)
+
+    def testSuccess2(self):
+        # success
+        s = ErrorfulSlicer("deferred-good", True)
+        d = self.send(s)
+        encoded = self.waitForSuccess(d)
+
+    def test1(self):
+        # failure during .slice (called from pushSlicer)
+        s = ErrorfulSlicer("slice", False)
+        d = self.send(s)
+        e = self.waitForError(d)
+        self.failUnless(e.check(Violation))
+        self.failUnlessEqual(e.value.where, "<Root>")
+        self.failUnlessEqual(e.value.args, ("slice failed",))
+
+    def test2(self):
+        # .slice.next raising Violation
+        s = ErrorfulSlicer("next", False)
+        d = self.send(s)
+        e = self.waitForError(d)
+        self.failUnless(e.check(Violation))
+        self.failUnlessEqual(e.value.where, "<Root>.ErrorfulSlicer[1]")
+        self.failUnlessEqual(e.value.args, ("next failed",))
+
+    def test3(self):        
+        # .slice.next returning Deferred when streaming isn't allowed
+        self.banana.rootSlicer.allowStreaming(False)
+        s = ErrorfulSlicer("deferred-bad", False)
+        d = self.send(s)
+        e = self.waitForError(d)
+        self.failUnless(e.check(Violation))
+        self.failUnlessEqual(e.value.where, "<Root>.ErrorfulSlicer[1]")
+        self.failUnlessEqual(e.value.args, ("parent not streamable",))
+
+    def test4(self):
+        # .newSlicerFor (no ISlicer adapter), parent re-raises
+        s = ErrorfulSlicer("newSlicerFor", False)
+        d = self.send(s)
+        e = self.waitForError(d)
+        self.failUnless(e.check(Violation))
+        self.failUnlessEqual(e.value.where, "<Root>.ErrorfulSlicer[1]")
+        self.failUnless("cannot serialize <open file" in e.value.args[0])
+        self.failUnless(s.childDied)
+
+    def test5(self):
+        # .newSlicerFor (no ISlicer adapter), parent ignores
+        s = ErrorfulSlicer("newSlicerFor", True, True)
+        d = self.send(s)
+        e = self.waitForSuccess(d)
+        self.failUnless(s.childDied) # noticed but ignored
+        
 
 class FailedInstanceTests(unittest.TestCase):
     def setUp(self):
@@ -1100,6 +1246,7 @@ class SliceableByItself(slicer.BaseSlicer):
     def __init__(self, value):
         self.value = value
     def slice(self, streamable, banana):
+        self.streamable = streamable
         # this is our "instance state"
         yield {"value": self.value}
 
@@ -1109,6 +1256,7 @@ class CouldBeSliceable:
 
 class _AndICanHelp(slicer.BaseSlicer):
     def slice(self, streamable, banana):
+        self.streamable = streamable
         yield {"value": self.obj.value}
 registerAdapter(_AndICanHelp, CouldBeSliceable, ISlicer)
 

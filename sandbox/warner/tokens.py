@@ -57,11 +57,21 @@ class Violation(Exception):
     unbanana code to use the original UbF instead of creating a nest of
     Violation/UbFs as deep as the current serialization stack.
     """
+    where = None
 
     def __init__(self, *args, **kwargs):
         Exception.__init__(self, *args)
         self.failure = kwargs.get("failure", None)
 
+    def setLocation(self, where):
+        if self.where is None:
+            self.where = where
+
+    def __str__(self):
+        if self.where:
+            return "Violation (at %s): %s" % (self.where, self.args)
+        else:
+            return "Violation: %s" % (self.args,)
 
 
 class BananaError(Exception):
@@ -113,6 +123,18 @@ necessary to send multiple copies as a single instance and a bunch of
 References, rather than as separate copies. Instances are referenceable, as
 are mutable containers like lists.""")
 
+    streamable = Attribute(\
+"""True if children of this object are allowed to use Deferreds to stall
+production of new tokens. This must be set in slice() before yielding each
+child object, and affects that child and all descendants. Streaming is only
+allowed if the parent also allows streaming: if slice() is called with
+streamable=False, then self.streamable must be False too. It can be changed
+from within the slice() generator at any time as long as this restriction is
+obeyed.
+
+This attribute is read when each child Slicer is started.""")
+        
+
     def slice(streamable, banana):
         """Return an iterator which provides Index Tokens and the Body
         Tokens of the object's serialized form. This is frequently
@@ -121,7 +143,12 @@ are mutable containers like lists.""")
         be handled elsewhere.
 
         If a Violation exception is raised, slicing will cease. An ABORT
-        token followed by a CLOSE token will be emitted."""
+        token followed by a CLOSE token will be emitted.
+
+        If 'streamable' is True, the iterator may yield a Deferred to
+        indicate that slicing should wait until the Deferred is fired. If
+        the Deferred is errbacked, the connection will be dropped. TODO: it
+        should be possible to errback with a Violation."""
 
     def registerReference(refid, obj):
         """Register the relationship between 'refid' (a number taken from
@@ -133,10 +160,14 @@ are mutable containers like lists.""")
         Slicers usually delgate this function upwards to the RootSlicer, but
         it can be handled at any level to allow local scoping of references
         (they might only be valid within a single RPC invocation, for
-        example)."""
+        example).
+
+        This method is *not* allowed to raise a Violation, as that will mess
+        up the transmit logic. If it raises any other exception, the
+        connection will be dropped."""
 
     def childAborted(v):
-        """Notify the Slicer that one of its child tokens (as produced by
+        """Notify the Slicer that one of its child slicers (as produced by
         its .slice iterator) emitted an ABORT token, terminating their token
         stream. The corresponding Unslicer (receiving this token stream)
         will get an UnbananaFailure and is likely to ignore any remaining
@@ -153,6 +184,18 @@ are mutable containers like lists.""")
         If something on the stack does not want the object to be sent, it can
         raise a Violation exception. This is the 'taster' function."""
 
+    def describe():
+        """Return a short string describing where in the object tree this
+        slicer is sitting, relative to its parent. These strings are
+        obtained from every slicer in the stack, and joined to describe
+        where any problems occurred."""
+
+class IRootSlicer(Interface):
+    def allowStreaming(streamable):
+        """Specify whether or not child Slicers will be allowed to stream."""
+    def connectionLost(why):
+        """Called when the transport is closed. The RootSlicer may choose to
+        abandon objects being sent here."""
 
 class IUnslicer(Interface):
     # .parent
@@ -256,7 +299,7 @@ class IUnslicer(Interface):
         object be returned from finish() instead of receiveClose?
         """
 
-    def describeSelf(self):
+    def describe(self):
         """Return a short string describing where in the object tree this
         unslicer is sitting, relative to its parent. These strings are
         obtained from every unslicer in the stack, and joined to describe

@@ -95,6 +95,8 @@ class Banana(protocol.Protocol):
     ### connection setup
 
     def connectionMade(self):
+        if self.debugSend:
+            print "Banana.connectionMade"
         # prime the pump
         self.produce()
         # TODO: do setup/negotiation
@@ -110,15 +112,20 @@ class Banana(protocol.Protocol):
 
     slicerClass = slicer.RootSlicer
     paused = False
-    streamable = True
+    streamable = True # this is only checked during __init__
     debugSend = False
 
     def initSend(self):
         self.rootSlicer = self.slicerClass(self)
+        self.rootSlicer.allowStreaming(self.streamable)
+        assert tokens.ISlicer.providedBy(self.rootSlicer)
+        assert tokens.IRootSlicer.providedBy(self.rootSlicer)
+
         itr = self.rootSlicer.slice()
         next = iter(itr).next
-        top = (self.rootSlicer, next, self.streamable, None)
+        top = (self.rootSlicer, next, None)
         self.slicerStack = [top]
+
         self.openCount = 0
         self.outgoingVocabulary = {}
 
@@ -127,16 +134,18 @@ class Banana(protocol.Protocol):
         return self.rootSlicer.send(obj)
 
     def produce(self, dummy=None):
-        # optimize: cache 'next' and 'streamable' because we get many more
-        # tokens than stack pushes/pops
+        # optimize: cache 'next' because we get many more tokens than stack
+        # pushes/pops
         while self.slicerStack and not self.paused:
             if self.debugSend: print "produce.loop"
             try:
-                slicer, next, streamable, openID = self.slicerStack[-1]
+                slicer, next, openID = self.slicerStack[-1]
                 obj = next()
-                if self.debugSend: print " produce.obj", obj
+                if self.debugSend: print " produce.obj=%s" % obj
                 if isinstance(obj, defer.Deferred):
-                    assert streamable
+                    for s,n,o in self.slicerStack:
+                        if not s.streamable:
+                            raise Violation("parent not streamable")
                     obj.addCallback(self.produce)
                     obj.addErrback(self.sendFailed) # what could cause this?
                     # this is the primary exit point
@@ -146,16 +155,25 @@ class Banana(protocol.Protocol):
                     self.sendToken(obj)
                 else:
                     # newSlicerFor raises a Violation for unsendable types
+                    # pushSlicer calls .slice, which can raise Violation
                     try:
                         slicer = self.newSlicerFor(obj)
-                    except Violation, v:
-                        # no child tokens have been sent yet, the Slicer has
-                        # not yet been pushed
-                        topSlicer = self.slicerStack[-1][0]
-                        # .childAborted might re-raise the exception
-                        topSlicer.childAborted(v)
-                    else:
                         self.pushSlicer(slicer, obj)
+                    except Violation, v:
+                        if self.debugSend:
+                            print " violation in newSlicerFor"
+                            print Failure()
+                        v.setLocation(self.describeSend())
+                        # no child tokens have been sent yet, the Slicer has
+                        # not yet been pushed. Inform the parent
+                        topSlicer = self.slicerStack[-1][0]
+                        # .childAborted might re-raise the exception, which
+                        # is handled below where it can propogate all the
+                        # way up to the root
+                        topSlicer.childAborted(v)
+
+                        # the parent wants to forge ahead
+
             except StopIteration:
                 if self.debugSend: print "StopIteration"
                 self.popSlicer()
@@ -166,31 +184,55 @@ class Banana(protocol.Protocol):
                 # .childAborted(). Either case indicates that the Slicer
                 # should be abandoned.
 
-                # the parent .childAborted might re-raise the Violation, so we
-                # have to loop this until someone stops complaining
+                # the parent .childAborted might re-raise the Violation, so
+                # we have to loop this until someone stops complaining
+                v1.setLocation(self.describeSend())
                 v = v1
-                while True:
-                    # should we send an ABORT? Only if the OPEN has already
-                    # been sent, which happens in pushSlicer. For now,
-                    # assume this has happened. TODO: maybe have pushSlicer
-                    # set a flag when the OPEN is sent so we can do this
-                    # precisely.
-                    self.sendAbort()
+                if self.debugSend: print " violation in loop:", v
 
-                    # should we pop the Slicer? again, we assume that
-                    # pushSlicer has completed.
+                while True:
+                    # should we send an ABORT? Only if an OPEN has been
+                    # sent, which happens in pushSlicer (if at all).
+                    lastOpenID = self.slicerStack[-1][2]
+                    if lastOpenID is not None:
+                        self.sendAbort()
+
+                    # should we pop the Slicer? yes
                     self.popSlicer()
                     if not self.slicerStack:
                         if self.debugSend: print "RootSlicer died!"
                         raise BananaError("Hey! You killed the RootSlicer!")
+
+                    # now inform the parent. If they also give up, we will
+                    # loop, popping more Slicers off the stack until the
+                    # RootSlicer ignores the error
+
+                    # The Violation is tagged with a location the first time
+                    # it is handled. Later Slicers have the option of
+                    # re-raising it (which means it will retain that
+                    # original location description) or creating a new
+                    # Violation (in which case they are responsible for
+                    # describing it).
                     topSlicer = self.slicerStack[-1][0]
                     try:
+                        if self.debugSend:
+                            print "  notifying parent", topSlicer
                         topSlicer.childAborted(v)
                     except Violation, v2:
                         v = v2 # not sure this is necessary
                         continue
                     else:
                         break
+            except:
+                print "exception in produce"
+                self.sendFailed(Failure())
+                # there is no point to raising this again. The Deferreds are
+                # all errbacked in sendFailed(). This function was called
+                # inside a Deferred which errbacks to sendFailed(), and
+                # we've already called that once. The connection will be
+                # dropped by sendFailed(), and the error is logged, so there
+                # is nothing left to do.
+                return
 
         assert self.slicerStack # should never be empty
 
@@ -204,9 +246,37 @@ class Banana(protocol.Protocol):
     def pushSlicer(self, slicer, obj):
         if self.debugSend: print "push", slicer
         assert len(self.slicerStack) < 10000 # failsafe
+
+        # if this method raises a Violation, it means that .slice failed,
+        # and neither the OPEN nor the stack-push has occurred
+
         topSlicer = self.slicerStack[-1][0]
         slicer.parent = topSlicer
-        streamable = self.slicerStack[-1][2]
+
+        # we start the Slicer (by getting its iterator) first, so that if it
+        # fails we can refrain from sending the OPEN (hence we do not have
+        # to send an ABORT and CLOSE, which simplifies the send logic
+        # considerably). slicer.slice is the only place where a Violation
+        # can be raised: it is caught and passed cleanly to the parent. If
+        # it happens anywhere else, or if any other exception is raised, the
+        # connection will be dropped.
+
+        # the downside to this approach is that .slice happens before
+        # .registerReference, so any late-validation being done in .slice
+        # will not be able to detect the fact that this object has already
+        # begun serialization. Validation performed in .next is ok.
+
+        # also note that if .slice is a generator, any exception it raises
+        # will not occur until .next is called, which happens *after* the
+        # slicer has been pushed. This check is only useful for .slice
+        # methods which are *not* generators.
+
+        itr = slicer.slice(topSlicer.streamable, self)
+        next = iter(itr).next
+
+        # we are now committed to sending the OPEN token, meaning that
+        # failures after this point will cause an ABORT/CLOSE to be sent
+
         openID = None
         if slicer.sendOpen:
             openID = self.sendOpen()
@@ -215,17 +285,28 @@ class Banana(protocol.Protocol):
             # note that the only reason to hold on to the openID here is for
             # the debug/optional copy in the CLOSE token. Consider ripping
             # this code out if we decide to stop sending that copy.
-        # now start slicing it
-        itr = slicer.slice(streamable, self)
-        slicertuple = (slicer, iter(itr).next, streamable, openID)
+
+        slicertuple = (slicer, next, openID)
         self.slicerStack.append(slicertuple)
 
     def popSlicer(self):
         slicertuple = self.slicerStack.pop()
-        openID = slicertuple[3]
+        openID = slicertuple[2]
         if openID is not None:
             self.sendClose(openID)
         if self.debugSend: print "pop", slicertuple[0]
+
+    def describeSend(self):
+        where = []
+        for i in self.slicerStack:
+            try:
+                piece = i[0].describe()
+            except:
+                log.err()
+                piece = "???"
+            where.append(piece)
+        return ".".join(where)
+        
 
     def setOutgoingVocabulary(self, vocabDict):
         # build a VOCAB message, send it, then set our outgoingVocabulary
@@ -307,9 +388,15 @@ class Banana(protocol.Protocol):
         print "SendBanana.sendFailed:", f
         log.err(f)
         try:
-            self.transport.loseConnection(f)
+            if self.transport:
+                self.transport.loseConnection(f)
         except:
-            print "exception during self.transport.loseConnection"
+            print "exception during transport.loseConnection"
+            log.err()
+        try:
+            self.rootSlicer.connectionLost(f)
+        except:
+            print "exception during rootSlicer.connectionLost"
             log.err()
 
     ### ReceiveBanana
@@ -454,7 +541,7 @@ class Banana(protocol.Protocol):
                         self.discardCount += 1
                         if self.logDiscardCount:
                             print "discardCount+++++ now", self.discardCount
-                    gotItem(UnbananaFailure(v, self.describe()))
+                    gotItem(UnbananaFailure(v, self.describeReceive()))
 
             rest = buffer[pos+1:]
 
@@ -709,7 +796,7 @@ class Banana(protocol.Protocol):
             f = v.failure
             assert isinstance(f, UnbananaFailure)
         else:
-            where = self.describe()
+            where = self.describeReceive()
             f = UnbananaFailure(v, where)
             if self.logViolations:
                 log.msg("Violation in %s at %s" % (methname, where))
@@ -752,11 +839,11 @@ class Banana(protocol.Protocol):
         self.handleToken(f)
 
 
-    def describe(self):
+    def describeReceive(self):
         where = []
         for i in self.receiveStack:
             try:
-                piece = i.describeSelf()
+                piece = i.describe()
             except:
                 piece = "???"
                 #raise
