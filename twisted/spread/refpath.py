@@ -72,6 +72,22 @@ class PathReferenceAcquisitionContext(PathReferenceContext):
                 self.path.pop(0)
         return PathReferenceContext.getObject(self)
 
+    def getIndex(self):
+        """
+        Dereference this path reference object, then look for an object
+        named 'index' inside of it and return it.
+        """
+        thisOb = self.getObject()
+        if hasattr(self.root, 'indexNames'):
+            indexNames = self.root.indexNames
+        else:
+            indexNames = ['index']
+        
+        childNames = thisOb.listNames()
+        for indexName in indexNames:
+            if indexName in childNames:
+                return thisOb.getChild(indexName, self)
+
     def parentRef(self):
         """
         Return a reference to my parent.
@@ -80,7 +96,7 @@ class PathReferenceAcquisitionContext(PathReferenceContext):
 
     def childRef(self, name):
         """
-        Return a reference to my parent.
+        Return a reference to the named child.
         """
         newPath = copy(self.path)
         newPath.append(name)
@@ -102,6 +118,23 @@ class PathReferenceAcquisitionContext(PathReferenceContext):
         pathList = [self.root.path]
         pathList.extend(self.path)
         return os.path.join(*pathList)
+
+    def relativePath(self, request):
+        """
+        Return the URL to the resource, relative to the current request object
+        """
+        print self.path, request.prepath
+        relPath = copy(self.path)
+        for segNum in range(len(request.prepath)):
+            if relPath[0] == request.prepath[segNum]:
+                relPath.pop(0)
+            else:
+                upNum = len(request.prepath) - segNum
+                break
+        upPath = ['..'] * (upNum - 1)
+        upPath.insert(0, '.')
+        upPath.extend(relPath)
+        return "/".join(upPath)
 
     def locate(self, name):
         """
