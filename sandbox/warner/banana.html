@@ -22,11 +22,16 @@ tokens, the header is a base-128 number, but for some it may be a UTF-7
 encoded string. (?? maybe just strict ASCII. the high bit of all bytes in
 the header must be zero).</p>
 
+<p>Tokens are described below as [header-TOKEN-body], where either
+<q>header</q> or <q>body</q> may be empty. For example, [len-LIST-empty]
+indicates that the length is put into the header, <q>LIST</q> is the token
+being used, and the body is empty.</p>
+
 <p>The possible Token types are:</p>
 
 <ul>
   <li>
-  <code>0x80: LIST (old): [len-LIST]</code>
+  <code>0x80: LIST (old): [len-LIST-empty]</code>
 
   <p>This token marks the beginning of a list with LEN elements. It acts as
   the <q>open parenthesis</q>, and the matching <q>close parenthesis</q> is
@@ -42,7 +47,7 @@ the header must be zero).</p>
   </li>
 
   <li>
-  <code>0x81: INT: [value-INT]</code>
+  <code>0x81: INT: [value-INT-empty]</code>
 
   <p>This token defines a single positive short integer. The range is
   defined as <q>whatever fits in a Python IntType</q>, as opposed to a
@@ -61,13 +66,13 @@ the header must be zero).</p>
   </li>
 
   <li>
-  <code>0x83: NEG: [value-NEG]</code>
+  <code>0x83: NEG: [value-NEG-empty]</code>
 
   <p>This token defines a negative short integer.</p>
   </li>
 
   <li>
-  <code>0x84: FLOAT [FLOAT-value]</code>
+  <code>0x84: FLOAT [empty-FLOAT-value]</code>
 
   <p>This token defines a floating-point number. There is no header, and the
   type byte is followed by 8 bytes which are a 64-bit IEEE <q>double</q>, as
@@ -75,15 +80,15 @@ the header must be zero).</p>
   </li>
 
   <li>
-  <code>0x85: LONGINT: [value-LONGINT]</code>
-  <code>0x86: LONGNEG: [value-LONGNEG]</code>
+  <p><code>0x85: LONGINT: [value-LONGINT-empty]</code></p>
+  <p><code>0x86: LONGNEG: [value-LONGNEG-empty]</code></p>
 
   <p>These define positive/negative long integers, defined as Python's
   <q>long integer</q> types.</p>
   </li>
 
   <li>
-  <code>0x87: VOCAB: [index-VOCAB]</code>
+  <code>0x87: VOCAB: [index-VOCAB-empty]</code>
   
   <p>This defines a tokenized string. Banana keeps a mapping of common
   strings, each one is assigned a small integer. These strings can be sent
@@ -97,8 +102,8 @@ the header must be zero).</p>
   </li>
 
   <li>
-  <code>??: OPEN: [[num]-OPEN]</code>
-  <code>??: CLOSE: [[num]-CLOSE]</code>
+  <p><code>??: OPEN: [[num]-OPEN-empty]</code></p>
+  <p><code>??: CLOSE: [[num]-CLOSE-empty]</code></p>
 
   <p>These tokens are the newbanana parenthesis markers. They carry an
   optional number in their header: if present, the number counts the
@@ -119,35 +124,48 @@ the header must be zero).</p>
   
 </ul>
 
-<p>TODO: add token to re-set the list of abbreviated strings</p>
+<p>TODO: add a token to re-set the list of abbreviated strings. This should
+basically contain a dictionary that replaces the previous VOCAB mapping.</p>
+
+
+<h2>Object graph serialization</h2>
+
+<p>When serializing an object, it is useful to view it as a directed graph.
+The root object is the one you start with, any objects it refers to are
+children of that root. Those children may point back to other objects that
+have already been serialized, or which will be serialized later.</p>
+
+<p>Banana, like pickle and other serialization schemes, does a depth-first
+traversal of this graph. Serialization is begun on each node before going
+down into the child nodes. Banana tracks previously-handled nodes and
+replaces them with numbered <code>reference</code> tokens to break loops in
+the graph.</p>
+
 
 <h2>Banana Slices</h2>
 
 <p>A <em>Banana Slicer</em> is responsible for serializing a single user
-object: it <q>slices</q> the object into a series of Banana tokens. On the
+object: it <q>slices</q> that object into a series of Banana tokens. On the
 receiving end, there is a corresponding <em>Banana Unslicer</em> which
 accepts the incoming tokens and re-creates the user object. There are
 different kinds of Slicers and Unslicers for lists, tuples, dictionaries,
 and instances. Classes can provide their own Slicers if they want more
 control over the serialization process.</p>
 
-<p>types and classes are classified into containers and non-containers. The
-containers are further divided into mutable and non-mutable. Some examples
-of non-mutable containers are tuples and bound methods. Lists and dicts are
-mutable containers. Ints and strings are non-containers.</p>
-
 <h2>The Banana Stack</h2>
 
-<p>The serialization context is stored in a <q>???</q> object (name still to
-be decided). This holds a stack of Banana Slicers, one per object currently
-being serialized. E.g.: suppose a class instance is being serialized, and
-this class chose to use a dictionary to hold its instance state. That
-dictionary holds a list of numbers in one of its values. The Banana Stack
-would hold the root slice, an InstanceSlicer, a DictSlicer, and finally a
-ListSlicer.</p>
+<p>The serialization context is stored in a <q>Banana</q> object (names are
+still being decided). This holds a stack of Banana Slicers, one per object
+currently being serialized (i.e. one per node in the path from the root
+object to the one currently being serialized).</p>
 
-<p>(it might be possible to move the functionality of the ??? object into
-the <q>root slice</q>). </p>
+<p>For example, suppose a class instance is being serialized, and this class
+chose to use a dictionary to hold its instance state. That dictionary holds
+a list of numbers in one of its values. The Banana Stack would hold the root
+slicer, an InstanceSlicer, a DictSlicer, and finally a ListSlicer.</p>
+
+<p>(note: it might be possible to move the functionality of the Banana
+object entirely into the <q>root slice</q>). </p>
 
 <p>Upon unserialization, the <q>Unbanana</q> object holds this context. A
 stack of <q>Unslicer</q> objects handle incoming tokens. The <q>Unbanana</q>
@@ -158,65 +176,244 @@ currently being unserialized to fail: its parent gets a UnbananaFailure
 instead of the dict or list or instance that it would normally have
 received.</p>
 
+<p>The stack is used to determine three things:</p>
+
+<ul>
+  <li> Whether to allow a given child to be serialized: the Taster
+       function</li>
+  <li> How to handle a child object: which Slicer should be used</li>
+  <li> How to track object references, to break cycles in the object graph</li>
+</ul>
+
+<p>The default case puts a <q>Parent</q> slice at the bottom of the stack.
+This can also be interpreted as a <q>root object</q>, if you imagine that
+any given user object being serialized is somehow a child of the overall
+serialization context. In PB, for example, the root object would be related
+to the connection.</p>
+
+<p>In addition, the stack can be queried to find out what path leads from
+the root object to the one currently being serialized. If something goes
+wrong in the serialization process (an exception is thrown), this path can
+make it much easier to find out <em>when</em> the trouble happened, as
+opposed to merely where. Knowing which method of your FooObject failed
+during serialization isn't very useful when you have 500 of them inside your
+data structure and you need to know whether it was <code>bar.thisfoo</code>
+or <code>bar.thatfoo</code> which caused the problem. To this end, each
+Slicer has a <code>.describe</code> method which is supposed to return a
+short string that explains how to get to the child node currently being
+processed. When an error occurs, these strings are concatenated together and
+put into the failure object.</p>
+
+<p>The Parent slice is meant to provide the default behavior for the stack.
+The default class currently does the following:</p>
+
+<ul>
+  <li> Allow all objects to be serialzed: .taster is empty.</li>
+  <li> Use the BananaRegistry mapping from object types to Slicer classes.</li>
+  <li> Record object references in a dict inside the parent slice.</li>
+</ul>
+
+<p>TODO: The idea is to let other serialization contexts to other things.
+The tokens should probably go to the parent slice for handling: turning into
+bytes and sending over a wire, saving to a file, etc. Having the whole stack
+participate in the Tasting process means that objects can put restrictions
+on what is sent on their behalf: objects could refuse to let certain classes
+be sent as part of their instance state.</p>
+
+
 <h2>Bananaing</h2>
 
-<p>Serialization starts</p>
+<p>Serialization starts with the Parent Slicer being asked to serialize the
+given object. The Parent gives the object to Banana. Banana starts by
+walking the stack (which, of course, has only the Parent on it at that
+point), calling the <code>.taste</code> method for each Slicer there. If any
+of them have a problem with the object being serialized, they express it by
+raising an exception (TODO: which one? InsecureBanana?).</p>
 
-Any given object has a Jellier object that knows how to turn it into a
-sequence of Banana tokens. Jelly provides for the standard built-in types
-(list, dict, tuple, etc). Class instances have a set of methods (from the
-IJellyable interface) which are used to serialize them.
+<p>If the Taster stack passes the object, Banana's next job is to find a new
+Slicer to handle the object. It does this by walking the stack, calling
+<code>.newSlicer</code> on each slice. The first one that returns an object
+ends the search. In most cases, this is the Parent slice, which just looks
+up the <code>type()</code> of the object in the <code>SlicerRegistry</code>.
+A type which does not have a Slicer registered for it will cause an
+exception to be raised here.</p>
 
-Banana keeps strict track of the nesting level.
+<p>The new Slicer is pushed on the the stack. It is then sent three methods
+in succession: <code>.start</code>, <code>.slice</code>, and
+<code>.finish</code>. <code>start</code> defaults to registering the object
+with <code>setRefID</code> and sending a appropriate OPEN token.
+<code>slice</code> is defined on a per-Slicer basis to send all the
+necessary tokens. <code>finish</code> sends the CLOSE token.</p>
 
-Banana is asked to serialize an object. It creates a Jellier based upon the
-type of that object. The Jellier does banana.sendOpen, banana.sendToken
+<p>Banana keeps strict track of the nesting level. For safety, each OPEN
+gets a sequence number so it can be matched with its CLOSE token. If a
+Slicer's .close method fails to send the close token, very bad things will
+happen (in general, all further objects will become children of the one that
+didn't CLOSE properly). The sequence numbers are an attempt to minimize the
+damage.</p>
+
 
 <h2>Unbananaing</h2>
 
-<p>The Unbanana object has an UnslicerParent at the base of it's banana
-stack. As tokens arrive, they are broken into several types:</p>
+<p>The Unbanana object has a corresponding stack of <em>Banana Unslicer</em>
+objects. Each one receives the tokens emitted by the matching Slicer on the
+sending side. The whole stack is used to determine new Unslicer objects,
+perform Tasting of incoming tokens, and manage object references.</p>
+
+<p>OPEN tokens have a string to indicate what kind of object is being
+started. This is looked up in the UnbananaRegistry just like object types
+are looked up in the BananaRegistry. The new Unslicer is pushed onto the
+stack.</p>
+
+<p><q>ABORT</q> tokens indicate that something went wrong on the sending
+side and that the current object is to be aborted. It causes the receiver to
+ignore all tokens until the CLOSE token which closes the current node. This
+is implemented by replacing the top-most slice with a DiscardUnslicer.</p>
+
+<p><q>CLOSE</q> tokens finish the current node. The slice will pass its
+completed object up to the <q>childFinished</q> method of its parent.</p>
+
+
+
+
+<h2>Other Issues</h2>
+
+
+<h3>Deferred Object Recreation: The Trouble With Tuples</h3>
+
+<p>Types and classes are roughly classified into containers and
+non-containers. The containers are further divided into mutable and
+immutable. Some examples of immutable containers are tuples and bound
+methods. Lists and dicts are mutable containers. Ints and strings are
+non-containers.</p>
+
+<p>During unserialization, objects are in one of three states: uncreated,
+referenceable (but not complete), and complete. Only mutable containers can
+be referenceable but not complete: immutable containers have no intermediate
+referenceable state.</p>
+
+<p>Mutable containers (like lists) are referenceable but not complete during
+traversal of their child nodes. This means those children can reference the
+list without trouble.</p>
+
+<p>Immutable containers (like tuples) present challenges when unserializing.
+The object cannot be created until all its components are referenceable.
+While it is guaranteed that these component objects will be complete before
+the graph traversal exits the current node, the child nodes are allowed to
+reference the current node during that traversal. To handle this, the
+TupleUnslicer installs a Deferred into the object table when it begins
+unserializing (in the .start method). When the tuple is finally complete,
+the object table is updated and the Deferred is fired with the new
+tuple.</p>
+
+<p>Containers (both mutable and immutable) are required to pay attention to
+the types of their incoming children. These containers are not complete (in
+the sense described above) until those Deferreds have been replaced with
+referenceable objects. When the container receives the Deferred, it should
+attach a callback to it which will perform the replacement. In addition,
+immutable containers should check after each update to see if all the
+Deferreds have been cleared, and if so, complete the object (and fired their
+own Deferreds so any containers <em>they</em> are a child of may be updated
+and/or completed).</p>
+
+
+<h3>Security Model</h3>
+
+<p>Having the whole Slicer stack particpate in Tasting on the sending side
+seems to make a lot of sense. It might be better to have a way to push new
+Taster objects onto a separate stack. This would certainly help with
+performance, as the common case (where most Slicers ignore .taste) does a
+pointless method call to every Slice for every object sent. The trick is to
+make sure that exception cases don't leave a taster stranded on the stack
+when the object that put it there has gone away.</p>
+
+<p>On the receiving side, each object has a corresponding .taste method,
+which receives tokens instead of complete objects. This makes sense, because
+you want to catch the dangerous data before it gets turned into an object,
+but tokens are a pretty low-level place to do security checks. It might be
+more useful to have some kind of <q>instance taster stack</q>, with tasters
+that are asked specifically about (class,state) pairs and whether they
+should be turned into objects or not.</p>
+
+<p>Because the Unslicers receive their data one token at a time, things like
+InstanceUnslicer can perform security checks one attribute at a time.
+<q>traits</q>-style attribute constraints (see the Chaco project or the
+PyCon-2003 presentation for details) can be implemented by having a
+per-class dictionary of tests that attribute values must pass before they
+will be accepted. The instance will only be created if all attributes fit
+the constraints. The idea is to catch violations before any code is run on
+the receiving side. Typical checks would be things like <q>.foo must be a
+number</q>, <q>.bar must not be an instance</q>, <q>.baz must implement the
+IBazzer interface</q>.</p>
+
+<p>Using the stack instead of a single Taster object means that the rules
+can be changed depending upon the context of the object being processed. A
+class that is valid as the first argument to a method call may not be valid
+as the second argument, or inside a list provided as the first argument. The
+PBMethodArgumentsUnslicer could change the way its .taste method behaves as
+its state machine progresses through the argument list.</p>
+
+<p>There are several different ways to implement this Taster stack:</p>
 
 <ul>
-  <li> <q>OPEN</q>: this token includes a string to specify what kind of
-  node is being created. The string is passed to the <q>doOpen</q> method on
-  the stack, and each slice is asked in turn what new Unslicer object should
-  be created to handle the new node. The first one to return non-None
-  wins.</li>
+  <li> Each object in the Unslicer stack gets to raise an exception if they
+  don't like what they see: unanimous consent is required to let the token or
+  object pass</li>
+  
+  <li> The top-most unslicer is asked, and it has the option of asking the
+  next slice down. It might not, allowing local <q>I'm sure this is safe</q>
+  classes to override higher-level paranoia.</li>
 
-  <li> <q>STRING</q>, <q>NUMBER</q>: these are sent to the
-  <q>receiveToken</q> method of the top-most slice.</li>
-
-  <li> <q>ABORT</q>: this indicates that something went wrong on the sending
-  side and that the current object is to be aborted. It causes the receiver
-  to ignore all tokens until the CLOSE token which closes the current node.
-  This is implemented by replacing the top-most slice with a
-  DiscardUnslicer.</li>
-
-  <li> <q>CLOSE</q>: this finishes the current node. The slice will pass its
-  completed object up to the <q>childFinished</q> method of its parent.
-  </li>
-
+  <li> Unslicer objects may add and remove Taster objects on a separate
+  stack. This is undoubtedly faster but must be done carefully to make sure
+  Tasters and Unslicers stay in sync.</li>
 </ul>
 
+<p>Of course, all this holds true for the sending side as well. A Slicer
+could enforce a policy that no objects of type Foo will be sent while it is
+on the stack.</p>
+
+<p>It is anticipated that something like the current Jellyable/Unjellyable
+classes will be created to offer control over the Slicer/Unslicers used to
+handle instance of that class.</p>
+
+<p>One eventual goal is to allow PB to implement E-like argument
+constraints.</p>
 
 
-<h2>Unjellying: the Banana Leaf Stack</h2>
+<h3>Streaming Slices</h3>
 
-Unserialization in newbanana is done with something that could be described
-as <q>streaming s-expressions</q>. The tokens on the wire describe a
-depth-first traversal of a tree structure. When describing a node with
-children, some number of tokens are sent for the node itself, followed by
-tokens for each of its children. Those children may involve a sublist.
+<p>The big change from the old Jelly scheme is that now
+serialization/unserialization is done in a more streaming format. Individual
+tokens are the basic unit of information. The basic tokens are just numbers
+and strings: anything more complicated (starting at lists) involves
+composites of other tokens.</p>
 
-Each time a OPEN token (and the associated type string) is received, a new
-leaf is added to the stack. Each object in the stack has a chance to
-influence the type of the object that will be added to the stack.
+<p>The serialization side will be reworked to be a bit more
+producer-oriented. Objects should be able to defer their serialization
+temporarily (TODO: really??) like twisted.web resources can do NOT_DONE_YET
+right now. The big goal here is that large objects which can't fit into the
+socket buffers should not consume lots of memory, sitting around in a
+serialized state with nowhere to go. This must be balanced against the
+confusion caused by time-distributed serialization. PB method calls must
+retain their current in-order execution, and it must not be possible to
+interleave serialized state (big mess).</p>
 
-multiple stacks:
- recipient of tokens
- decider of new objects on the token-recipient stack
- taster objects
 
+<h3>CBanana, CBananaRun, RunBananaRun</h3>
+
+<p>Another goal of the Jelly+Banana-&gt;JustBanana change is the hope of
+writing Slicers and Unslicers in C. The CBanana module should have C objects
+(structs with function pointers) that can be looked up in a registry table
+and run to turn python objects into tokens and vice versa. This ought to be
+faster than running python code to implement the slices, at the cost of less
+flexibility. It would be nice if the resulting tokens could be sent directly
+to the socket at the C level without surfacing into python; barring this it
+is probably a good idea to accumulate the tokens into a large buffer so the
+code can do a few large writes instead of a gazillion small ones.</p>
+
+<p>It ought to be possible to mix C and Python slices here: if the C code
+doesn't find the slice in the table, it can fall back to calling a python
+method that does a lookup in an extensible registry.</p>
 
 </body> </html>
