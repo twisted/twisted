@@ -13,8 +13,9 @@ indeppackages=twisted python-twisted python-twisted-conch twisted-doc \
          $(addsuffix -twisted-conch,$(addprefix python,$(versions)))
 
 archpackages=$(addsuffix -twisted-bin,$(addprefix python,$(versions)))
-
 packages=$(indeppackages) $(archpackages)
+docdir=debian/twisted-doc/$(DOC)/twisted-doc/
+gamesdir=debian/twisted-quotes/usr/share/games/fortunes/
 
 build: build-stamp
 build-stamp:
@@ -74,9 +75,9 @@ install-indep-stamp: install-base-stamp
 		install -d debian/$$package/usr/share/man/man1;\
 		install -d debian/$$package/usr/lib/menu/;\
 		install -d debian/$$package/usr/bin/;\
-		install -m 644 ChangeLog debian/$$package/$$doc/changelog;\
-		gzip -9 debian/$$package/$$doc/changelog;\
-		install -m 644 TODO README CREDITS debian/$$package/$$doc/;\
+		install -m 644 ChangeLog debian/$$package/${DOC}/changelog;\
+		gzip -9 debian/$$package/${DOC}/changelog;\
+		install -m 644 TODO README CREDITS debian/$$package/${DOC}/;\
 		for file in debian/$$package/usr/bin/*;\
 			do sed "1s|.*|#!/usr/bin/python$$version|" $$file >\
 			   $$file$$version;\
@@ -102,13 +103,13 @@ install-indep-stamp: install-base-stamp
 	set -e;for file in debian/$(DEFAULTPACKAGE)/usr/bin/*;\
 		do target=`echo $$file | sed "s/$(DEFAULT)$$//"`;\
 		ln -s `basename $$file` $$target;\
+		manname=`basename $$target`.1.gz;\
 		ln -s `basename $$file`.1.gz \
-		      debian/$(DEFAULTPACKAGE)/usr/share/man/man1/`basename $$target`.1.gz;\
+		      debian/$(DEFAULTPACKAGE)/usr/share/man/man1/$$manname;\
 	done
 
 	set -e; for version in $(versions); \
-		do \
-		package=python$$version-twisted-conch;\
+		do package=python$$version-twisted-conch;\
 		tpackage=python$$version-twisted;\
 		dir=usr/lib/python$$version/site-packages;\
 		install -d debian/$$package/$$dir/twisted/scripts; \
@@ -118,8 +119,7 @@ install-indep-stamp: install-base-stamp
 		   debian/$$package/$$dir/twisted/;\
 		mv debian/$$tpackage/$$dir/twisted/scripts/conch.py \
 		   debian/$$package/$$dir/twisted/scripts;\
-		mv debian/$$tpackage/usr/bin/conch* \
-		   debian/$$package/usr/bin/; \
+		mv debian/$$tpackage/usr/bin/conch* debian/$$package/usr/bin/; \
 		mv debian/$$tpackage/usr/share/man/man1/conch* \
 		   debian/$$package/usr/share/man/man1/; \
 		for maint in postinst prerm; \
@@ -132,30 +132,22 @@ install-indep-stamp: install-base-stamp
 		done;\
 	done
 		
-
-	install -d debian/twisted-doc/usr/share/doc/twisted-doc/examples
-	install -d debian/twisted-doc/usr/share/doc/twisted-doc/howto
-	install -d debian/twisted-doc/usr/share/doc/twisted-doc/specifications
-	install -d debian/twisted-doc/usr/share/doc/twisted-doc/img
-	install -d debian/twisted-doc/usr/share/doc/twisted-doc/api
-	install -m 644 doc/howto/*.html \
-	               debian/twisted-doc/${DOC}/twisted-doc/howto/
-	cp -ar doc/howto/listings/ debian/twisted-doc/${DOC}/twisted-doc/howto/
-	install -m 644 doc/specifications/*.html \
-	               debian/twisted-doc/${DOC}/twisted-doc/specifications/
-	install -m 644 doc/img/*.png debian/twisted-doc/${DOC}/twisted-doc/img/
-	install -m 644 doc/img/*.bmp debian/twisted-doc/${DOC}/twisted-doc/img/
-	cp -ar doc/api/* debian/twisted-doc/${DOC}/twisted-doc/api/
-	install -m 644  doc/examples/*.py \
-	                debian/twisted-doc/${DOC}/twisted-doc/examples/
+	set -e;for subdir in examples howto specifications img api;\
+		do install -d $(docdir)/$$subdir;\
+	done
+	install -m 644 doc/howto/*.xhtml doc/howto/book.* $(docdir)/howto/
+	cp -ar doc/howto/listings/ $(docdir)/howto/
+	install -m 644 doc/specifications/*.xhtml $(docdir)/specifications/
+	install -m 644 doc/img/*.png doc/img/*.bmp $(docdir)/img/
+	cp -ar doc/api/* $(docdir)/api/
+	install -m 644  doc/examples/*.* $(docdir)/examples/
 
 	install -m 644 debian/python-twisted.README.Debian \
 	               debian/python-twisted/${DOC}/README.Debian
 
-	install -d debian/twisted-quotes/usr/share/games/fortunes/
-	install -m 644 doc/fun/Twisted.Quotes \
-	          debian/twisted-quotes/usr/share/games/fortunes/twisted-quotes
-	strfile debian/twisted-quotes/usr/share/games/fortunes/twisted-quotes
+	install -d $(gamesdir)
+	install -m 644 doc/fun/Twisted.Quotes $(gamesdir)/twisted-quotes
+	strfile $(gamesdir)/twisted-quotes
 	touch install-indep-stamp
 
 
