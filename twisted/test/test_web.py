@@ -8,12 +8,13 @@ from twisted.internet import main, passport
 
 class DummyRequest:
     def __init__(self, postpath, session=None):
+        self.sitepath = []
         self.written = []
         self.finished = 0
         self.postpath = postpath
         self.prepath = []
         self.session = None
-        self.protoSession = session or server.Session(0)
+        self.protoSession = session or server.Session(0, self)
         self.args = {}
     def getSession(self):
         if self.session:

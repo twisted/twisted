@@ -37,8 +37,27 @@ class AuthForm(widgets.Form):
         ['string','Perspective','perspective','']
         ]
 
-    def __init__(self, reqauth):
+    def __init__(self, reqauth, sessionPerspective=None, sessionIdentity=None):
+        """Initialize, specifying various options.
+        
+        Arguments:
+
+            * reqauth: a web.resource.Resource instance, indicating which
+              resource a user will be logging into with this form; this must
+              specify a serviceName attribute which indicates the name of the
+              service from which perspectives will be requested.
+
+            * [sessionPerspective]: if specified, the name of the attribute on
+              the user's session to set for the perspective they get from
+              logging in to this form.
+
+            * [sessionIdentity]: if specified, the name of the attribute on
+              the user's session to set for the identity they get from logging
+              in to this form.
+        """
         self.reqauth = reqauth
+        self.sessionPerspective = sessionPerspective
+        self.sessionIdentity = sessionIdentity
 
     def gotIdentity(self, ident, password, request, perspectiveName):
         if ident.verifyPlainPassword(password):
@@ -47,17 +66,29 @@ class AuthForm(widgets.Form):
             except KeyError:
                 traceback.print_exc()
             else:
-                resKey = string.join(['AUTH',self.reqauth.serviceName]+request.prepath, '_')
-                setattr(request.getSession(), resKey, perspective)
+                # TODO: fix this...
+                resKey = string.join(['AUTH',self.reqauth.serviceName]+request.sitepath, '_')
+                sess = request.getSession()
+                setattr(sess, resKey, perspective)
+                if self.sessionPerspective:
+                    setattr(sess, self.sessionPerspective, perspective)
+                if self.sessionIdentity:
+                    setattr(sess, self.sessionIdentity, ident)
                 return self.reqauth.reallyRender(request)
         else:
             print 'password not verified'
         # TODO: render the form as if an exception were thrown from the
         # data processing step...
-        return "beep"
+        io = StringIO()
+        io.write(self.formatError("Login incorrect."))
+        self.format(self.getFormFields(request), io.write)
+        return io.getvalue()
 
     def didntGetIdentity(self, unauth, request):
-        return "beep"
+        io = StringIO()
+        io.write(self.formatError("Login incorrect."))
+        self.format(self.getFormFields(request), io.write)
+        return io.getvalue()
 
     def process(self, write, request, username, password, perspective):
         """Process the form results.
@@ -83,34 +114,41 @@ class AuthPage(widgets.Page):
     </html>
     '''
     authForm = None
-    def __init__(self, reqauth):
+    def __init__(self, reqauth, sessionPerspective=None, sessionIdentity=None):
         widgets.Page.__init__(self)
-        self.authForm = AuthForm(reqauth)
+        self.authForm = AuthForm(reqauth, sessionPerspective, sessionIdentity)
 
 
 class WidgetGuard(widgets.Widget):
-    def __init__(self, wid, serviceName):
+    
+    def __init__(self, wid, serviceName,
+                 sessionIdentity=None,
+                 sessionPerspective=None):
         self.wid = wid
         self.serviceName = serviceName
+        self.sessionPerspective = sessionPerspective
+        self.sessionIdentity = sessionIdentity
 
     def reallyRender(self, request):
         return widgets.possiblyDeferWidget(self.wid, request)
 
     def display(self, request):
         session = request.getSession()
-        resKey = string.join(['AUTH',self.serviceName]+request.prepath, '_')
+        resKey = string.join(['AUTH',self.serviceName]+request.sitepath, '_')
         if hasattr(session, resKey):
             return self.wid.display(request)
         else:
             return AuthForm(self).display(request)
 
-    
+
 
 class ResourceGuard(resource.Resource):
     isLeaf = 1
-    def __init__(self, res, serviceName):
+    def __init__(self, res, serviceName, sessionIdentity=None, sessionPerspective=None):
         self.res = res
         self.serviceName = serviceName
+        self.sessionPerspective = sessionPerspective
+        self.sessionIdentity = sessionIdentity
 
     def reallyRender(self, request):
         # it's authenticated already...
@@ -134,5 +172,7 @@ class ResourceGuard(resource.Resource):
             self.reallyRender(request)
             return NOT_DONE_YET
         else:
-            return AuthPage(self).render(request)
+            return AuthPage(self,
+                            self.sessionPerspective,
+                            self.sessionIdentity).render(request)
 

@@ -15,11 +15,15 @@
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
-from twisted.spread import pb, jelly
-import new, string, sys, types
+# System Imports
+import new, string, sys, types, copy
 
-# sibling
+# Twisted Imports
+from twisted.spread import pb, jelly
+
+# Sibling Imports
 import reflect, text
+
 
 def typeString(type):
     """Given a Type, returns a string."""
@@ -150,6 +154,21 @@ class ObjectBrowser:
             self.localNamespace = {}
 
         self.watchUninstallers = {}
+
+    def __setstate__(self, state):
+        if state['globalNamespace'] is None:
+            state['globalNamespace'] = ObjectBrowser.globalNamespace
+        self.__dict__ = state
+
+    def __getstate__(self):
+        c = copy.copy(self.__dict__)
+        for n in 'globalNamespace', 'localNamespace':
+            if c[n] is getattr(ObjectBrowser, n):
+                c[n] = None
+            elif c.has_key(n):
+                if c[n].has_key('__builtins__'):
+                    del c[n]['__builtins__']
+        return c
 
     def browseStrictlyIdentifier(self, identifier):
         """Browse an object in the local namespace by its name.

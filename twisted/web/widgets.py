@@ -16,7 +16,7 @@ from server import NOT_DONE_YET
 
 # magic value that sez a widget needs to take over the whole page.
 
-FORGET_IT = 99 
+FORGET_IT = 99
 
 def listify(x):
     return [x]
@@ -24,7 +24,6 @@ def listify(x):
 class Widget:
     def display(self, request):
         raise NotImplementedError("twisted.web.widgets.Widget.display")
-
 
 class StreamWidget(Widget):
     def stream(self, write, request):
@@ -41,7 +40,6 @@ class StreamWidget(Widget):
             io = StringIO()
             traceback.print_exc(file=io)
             return [html.PRE(io.getvalue())]
-
 
 class Presentation(Widget):
     template = '''
@@ -190,6 +188,9 @@ class Form(StreamWidget):
             raise FormInputError("unknown fields: %s" % repr(args))
         return apply(self.process, (write, request), kw)
 
+    def formatError(self,error):
+        return '<FONT COLOR=RED><B><I>%s</i></b></font><br>\n' % error
+
     def stream(self, write, request):
         args = request.args
         form = self.getFormFields(request)
@@ -197,7 +198,7 @@ class Form(StreamWidget):
             try:
                 return self.doProcess(form, write, request)
             except FormInputError, fie:
-                write('<FONT COLOR=RED><B><I>%s</i></b></font><br>\n' % str(fie))
+                write(self.formatError(str(fie)))
         self.format(form, write)
 
 
@@ -337,7 +338,7 @@ class WidgetResource(resource.Resource):
     def render(self, request):
         RenderSession(self.widget.display(request), request)
         return NOT_DONE_YET
-    
+
 
 class Page(resource.Resource, Presentation):
 
@@ -409,18 +410,35 @@ class WidgetPage(Page):
         return NOT_DONE_YET
 
 class Gadget(resource.Resource):
-    widgets = {
-    }
-    files = [
-    ]
-    modules = [
-    ]
     page = WidgetPage
+
+    def __init__(self):
+        resource.Resource.__init__(self)
+        self.widgets = {}
+        self.files = []
+        self.modules = []
+
+    def render(self, request):
+        """Redirect to view this entity as a collection.
+        """
+        request.setResponseCode(301)
+        request.setHeader("location","http://%s%s/" % (
+            request.getHeader("host"),
+            (string.split(request.uri,'?')[0])))
+        return "NO DICE!"
+
+    def putWidget(self, path, widget):
+        self.widgets[path] = widget
+
+    def getWidget(self, path, request):
+        return self.widgets.get(path)
 
     def getChild(self, path, request):
         if path == '':
-            path = 'index'
-        widget = self.widgets.get(path)
+            # ZOOP!
+            if isinstance(self, Widget):
+                return self.page(self)
+        widget = self.getWidget(path, request)
         if widget:
             if isinstance(widget, resource.Resource):
                 return widget
@@ -442,7 +460,7 @@ class TitleBox(Presentation):
     template = '''\
     <table cellpadding="1" cellspacing="0" border="0"><tr>\
     <td bgcolor="#000000"><center><font color="#FFFFFF">%%%%title%%%%</font\
-    ></center><table cellpadding="3" cellspacing="0" border="0"><tr>\
+    ></center><table width="100%" cellpadding="3" cellspacing="0" border="0"><tr>\
     <td bgcolor="#FFFFFF"><font color="#000000">%%%%widget%%%%</font></td>\
     </tr></table></td></tr></table>\
     '''

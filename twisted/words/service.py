@@ -74,9 +74,10 @@ class WrongStatusError(WordsError):
         else:
             pName = "User"
 
-        status = statuses.get(self.status,
-                              'unknown? (%s)' % (self.status,))
-
+        if self.status in statuses:
+            status = self.status
+        else:
+            status = 'unknown? (%s)' % self.status
         s = ("%s status is '%s'." % (pName, status))
         return s
 

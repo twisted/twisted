@@ -39,7 +39,7 @@ import time
 
 # Twisted Imports
 from twisted.spread import pb
-from twisted.internet import tcp, passport
+from twisted.internet import tcp, passport, main
 from twisted.protocols import http, protocol
 from twisted.python import log, reflect
 from twisted import copyright
@@ -390,6 +390,7 @@ class Request(pb.Copyable, http.HTTP):
                 self.session = self.site.makeSession()
                 self.setHeader('Set-Cookie',
                                'TWISTED_SESSION='+self.session.uid)
+        self.session.touch()
         return self.session
 
     def getHost(self):
@@ -448,11 +449,27 @@ class Session:
     This utility class contains no functionality, but is used to
     represent a session.
     """
-    def __init__(self, uid):
+    def __init__(self, site, uid):
         """Initialize a session with a unique ID for that session.
         """
+        self.site = site
         self.uid = uid
+        self.touch()
 
+    def touch(self):
+        self.lastModified = time.time()
+
+    def expire(self):
+        # If I haven't been touched in 15 minutes:
+        if time.time() - self.lastModified > 900:
+            if self.site.sessions.has_key(self.uid):
+                log.msg("expired session %s" % self.uid)
+                del self.site.sessions[self.uid]
+            else:
+                log.msg("no session to expire: %s" % self.uid)
+        else:
+            log.msg("session given the will to live for 30 more minutes")
+            main.addTimeout(self.expire, 1800)
 
 version = "TwistedWeb/%s" % copyright.version
 
@@ -464,6 +481,11 @@ class Site(protocol.Factory):
         self.sessions = {}
         self.resource = resource
 
+    def __getstate__(self):
+        d = copy.copy(self.__dict__)
+        d['sessions'] = {}
+        return d
+
     def _mkuid(self):
         """(internal) Generate an opaque, unique ID for a user's session.
         """
@@ -474,7 +496,9 @@ class Site(protocol.Factory):
         """Generate a new Session instance, and store it for future reference.
         """
         uid = self._mkuid()
-        session = self.sessions[uid] = Session(uid)
+        s = Session(self, uid)
+        session = self.sessions[uid] = s
+        main.addTimeout(s.expire, 1800)
         return session
 
     def getSession(self, uid):
@@ -515,6 +539,13 @@ class Site(protocol.Factory):
         stopping when it hits an element where isLeaf is true.
         """
         request.site = self
+        # The following is useful in twisted.web.guard.  It is useful to know
+        # when you are on a distributed web server so that you can set a
+        # different session-cookie than for the main site, so it uses sitepath
+        # as a unique key for what physical server it's on.  I don't know if
+        # this is really robust enough to deal with things like mod_rewrite
+        # though.  -glyph
+        request.sitepath = copy.copy(request.prepath)
         return self.resource.getChildForRequest(request)
 
 

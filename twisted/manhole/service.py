@@ -157,6 +157,8 @@ class Perspective(pb.Perspective):
     def __getstate__(self):
         state = self.__dict__.copy()
         state['clients'] = {}
+        if state['localNamespace'].has_key("__builtins__"):
+            del state['localNamespace']['__builtins__']
         return state
 
     def setService(self, service):
