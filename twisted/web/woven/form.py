@@ -18,6 +18,28 @@ from twisted.web.woven import model, view, controller, widgets, input, interface
 from twisted.web.microdom import parseString, lmx
 
 
+def getValue(request, argument):
+    """Return value for form inpurt."""
+    values = request.args.get(argument.name, None)
+    if values:
+        try:
+            return argument.coerce(values[0])
+        except formmethod.InputError:
+            return values[0]
+    return argument.default
+
+
+def getValues(request, argument):
+    """Return values for form inpurt."""
+    values = request.args.get(argument.name, None)
+    if values:
+        try:
+            return argument.coerce(values)
+        except formmethod.InputError:
+            return values
+    return argument.default
+
+
 class FormFillerWidget(widgets.Widget):
 
     def createShell(self, request, node, data):
@@ -29,14 +51,14 @@ class FormFillerWidget(widgets.Widget):
         return content.input(type="text",
                              size="60",
                              name=arg.name,
-                             value=str(arg.default))
+                             value=str(getValue(request, arg)))
 
     def input_text(self, request, content, arg):
         r = content.textarea(cols="60",
                              rows="10",
                              name=arg.name,
                              wrap="virtual")
-        r.text(str(arg.default))
+        r.text(str(getValue(request, arg)))
         return r
 
     input_integer = input_single
@@ -45,8 +67,9 @@ class FormFillerWidget(widgets.Widget):
 
     def input_choice(self, request, content, arg):
         s = content.select(name=arg.name)
+        default = getValue(request, arg)
         for tag, value, desc in arg.choices:
-            if tag == arg.default:
+            if tag == default:
                 kw = {'selected' : '1'}
             else:
                 kw = {}
@@ -55,8 +78,9 @@ class FormFillerWidget(widgets.Widget):
 
     def input_radiogroup(self, request, content, arg):
         s = content.div()
+        defaults = getValues(request, arg)
         for tag, value, desc in arg.choices:
-            if tag in arg.default:
+            if tag in defaults:
                 kw = {'checked' : '1'}
             else:
                 kw = {}
@@ -66,8 +90,9 @@ class FormFillerWidget(widgets.Widget):
 
     def input_checkgroup(self, request, content, arg):
         s = content.div()
+        defaults = getValues(request, arg)
         for tag, value, desc in arg.choices:
-            if tag in arg.default:
+            if tag in defaults:
                 kw = {'checked' : '1'}
             else:
                 kw = {}
@@ -77,7 +102,7 @@ class FormFillerWidget(widgets.Widget):
         return s
 
     def input_boolean(self, request, content, arg):
-        if arg.default:
+        if getValue(request, arg):
             kw = {'checked' : '1'}
         else:
             kw = {}
@@ -91,8 +116,9 @@ class FormFillerWidget(widgets.Widget):
                              name=arg.name)
 
     def input_flags(self, request, content, arg):
+        defaults = getValues(request, arg)
         for key, val, label in arg.flags:
-            if key in arg.default:
+            if key in defaults:
                 kw = {'checked' : '1'}
             else:
                 kw = {}
@@ -105,7 +131,7 @@ class FormFillerWidget(widgets.Widget):
     def input_hidden(self, request, content, arg):
         return content.input(type="hidden",
                              name=arg.name,
-                             value=arg.default)
+                             value=getValue(request, arg))
     
     def createInput(self, request, shell, arg):
         name = arg.__class__.__name__.lower()
