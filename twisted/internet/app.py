@@ -200,17 +200,32 @@ class MultiService(_AbstractServiceCollection, ApplicationService):
         ApplicationService.__init__(self, serviceName, serviceParent)
 
     def startService(self):
+        """
+        Start all of my Services.
+        """
         ApplicationService.startService(self)
         for svc in self.services.values():
             svc.startService()
 
     def stopService(self):
+        """
+        Stop all of my Services.
+
+        I return a Deferred that results in a dict that looks like
+        {serviceObject: (successOrFailure, result)}, where
+        successOrFailure is a boolean and result is the result of the
+        Deferred returned by serviceObject.stopService.
+        """
         ApplicationService.stopService(self)
         v = self.services.values()
         l = [svc.stopService() for svc in v]
         return defer.DeferredList(l).addBoth(self._cbAttachServiceNames, v)
 
     def _cbAttachServiceNames(self, result, services):
+        """
+        I massage the result of a DeferredList into something that's a bit
+        easier to work with (see L{stopService}'s __doc__).
+        """
         r = {}
         i = 0
         for svc in services:
@@ -220,11 +235,17 @@ class MultiService(_AbstractServiceCollection, ApplicationService):
 
 
     def addService(self, service):
+        """
+        Add a Service to me.
+        """
         _AbstractServiceCollection.addService(self, service)
         if self.serviceRunning:
             service.startService()
 
     def removeService(self, service):
+        """
+        Remove a Service from me.
+        """
         if service.serviceRunning:
             service.stopService()
         _AbstractServiceCollection.removeService(self, service)
