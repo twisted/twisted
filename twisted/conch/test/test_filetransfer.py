@@ -42,6 +42,7 @@ class ConchSessionForTestAvatar:
 
     def __init__(self, avatar):
         self.avatar = avatar
+
 if unix:
     class FileTransferForTestAvatar(unix.SFTPServerForUnixConchUser):
 
@@ -95,6 +96,9 @@ class SFTPTestBase(unittest.TestCase):
        
 
 class TestOurServerOurClient(SFTPTestBase):
+
+    if not unix:
+        skip = "can't run on non-posix computers"
 
     def setUp(self):
         self.avatar = FileTransferTestAvatar()
