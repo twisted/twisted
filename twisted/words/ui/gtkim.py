@@ -16,32 +16,20 @@ class Group(pb.Cache):
 pb.setCopierForClass("twisted.words.service.Group", Group)
 
 
-class AddContact(gtk.GtkWindow):
-    def __init__(self, contactList):
-        gtk.GtkWindow.__init__(self, gtk.WINDOW_TOPLEVEL)
-        self.set_title("Add Contact")
-        self.contactList = contactList
-        button = gtkutil.cbutton("Add Contact", self.clicked)
-        self.entry = gtk.GtkEntry()
-        hb = gtk.GtkHBox()
-        hb.add(self.entry)
-        hb.add(button)
-        self.add(hb)
-        self.show_all()
+class AddContact(gtkutil.GetString):
+    def __init__(self, im):
+        gtkutil.GetString.__init__(self, im, "Add Contact")
 
     def clicked(self, btn):
-        self.contactList.persp.addContact(self.entry.get_text())
+        self.im.remote.addContact(self.entry.get_text())
         self.destroy()
 
 
-normalFont = gtk.load_font("-adobe-courier-medium-r-normal-*-*-120-*-*-m-*-iso8859-1")
-boldFont = gtk.load_font("-adobe-courier-bold-r-normal-*-*-120-*-*-m-*-iso8859-1")
-errorFont = gtk.load_font("-adobe-courier-medium-o-normal-*-*-120-*-*-m-*-iso8859-1")
 
 class Conversation(gtk.GtkWindow):
-    def __init__(self, contactList, contact):
+    def __init__(self, im, contact):
         gtk.GtkWindow.__init__(self, gtk.WINDOW_TOPLEVEL)
-        self.contactList = contactList
+        self.im = im
         self.contact = contact
         self.set_title("%s - Instance Messenger" % contact)
         self.text = gtk.GtkText()
@@ -61,7 +49,7 @@ class Conversation(gtk.GtkWindow):
         t.set_point(t.get_length())
         t.freeze()
         y,mon,d,h,min,sec, ig,no,re = time.localtime(time.time())
-        t.insert(font or boldFont, None, None, "%s:%s:%s %s: %s\n"
+        t.insert(font or gtkutil.boldFont, None, None, "%s:%s:%s %s: %s\n"
                  % (h,min,sec,sender or self.contact, message))
         a = t.get_vadjustment()
         t.thaw()
@@ -71,24 +59,26 @@ class Conversation(gtk.GtkWindow):
     def sendMessage(self, entry):
         txt = self.entry.get_text()
         self.entry.set_text("")
-        ms = MessageSent(self, txt)
-        self.contactList.persp.directMessage(self.contact, txt,
+        ms = MessageSent(self.im, self, txt)
+        self.im.remote.directMessage(self.contact, txt,
                                              pbcallback=ms.success,
                                              pberrback=ms.failure)
 
     def removeFromList(self, win, evt):
-        del self.contactList.conversations[self.contact]
+        del self.im.conversations[self.contact]
 
 class GroupSession(gtk.GtkWindow):
-    def __init__(self, name, contactList):
-        self.name = name
-        self.contactList = contactList
+    def __init__(self, groupName, im):
+        self.groupName = groupName
+        self.im = im
         gtk.GtkWindow.__init__(self, gtk.WINDOW_TOPLEVEL)
-        self.set_title("%s - Instance Messenger" % name)
+        self.set_title("%s - Instance Messenger" % self.im.name)
+        self.connect('destroy', self.leaveGroup)
+        
         self.vb = gtk.GtkVBox()
         self.output = gtk.GtkText()
         self.output.set_word_wrap(gtk.TRUE)
-        self.vb.pack_start(gtkutil.scrollify(self.output), 0,0,1)
+        self.vb.pack_start(gtkutil.scrollify(self.output), 1,1,1)
 
         self.input = gtk.GtkEntry()
         self.vb.pack_start(self.input,0,0,1)
@@ -96,59 +86,62 @@ class GroupSession(gtk.GtkWindow):
         self.add(self.vb)
         self.show_all()
 
+
+    def leaveGroup(self, blargh):
+        self.im.remote.leaveGroup(self.groupName)
+        self.destroy()
+
     def sendMessage(self, entry):
-        self.contactList.persp.groupMessage(self.name, entry.get_chars(0,-1))
+        val = entry.get_text()
+        self.im.remote.groupMessage(self.groupName, val)
+        self.output.insert_defaults("<<%s>> %s\n" % (self.im.name, val))
         entry.set_text("")
 
     def displayMessage(self, sender, message):
-        self.output.insert_defaults("<%s> %s" % (sender,message))
+        self.output.insert_defaults("<%s> %s\n" % (sender,message))
 
     def memberJoined(self,member):
-        self.output.insert_defaults("%s joined!" % member)
+        self.output.insert_defaults("%s joined!\n" % member)
+
+    def memberLeft(self,member):
+        self.output.insert_defaults("%s left!\n" % member)
         
 
 class MessageSent:
-    def __init__(self, conv, mesg):
+    def __init__(self, im, conv, mesg):
+        self.im = im
         self.conv = conv
         self.mesg = mesg
 
     def success(self, result):
-        self.conv.messageReceived(self.mesg, self.conv.contactList.name, normalFont)
+        self.conv.messageReceived(self.mesg, self.im.name, gtkutil.normalFont)
 
     def failure(self, tb):
         self.conv.messageReceived("could not send message %s: %s"
-                                  % (repr(self.mesg), tb), "error", errorFont )
+                                  % (repr(self.mesg), tb), "error", gtkutil.errorFont )
         
 
 
-class JoinGroup(gtk.GtkWindow):
-    def __init__(self, contactList):
-        self.contactList = contactList
-        gtk.GtkWindow.__init__(self, gtk.WINDOW_TOPLEVEL)
-        hb = gtk.GtkHBox()
-        desc = gtk.GtkLabel("Which group?")
-        input = gtk.GtkEntry()
-        hb.pack_start(desc,0,0,1)
-        hb.pack_start(input,0,0,1)
-        input.connect('activate', self.joinGroup)
-        self.add(hb)
-        self.show_all()
+class JoinGroup(gtkutil.GetString):
+    def __init__(self, im):
+        gtkutil.GetString.__init__(self, im, "Join Group")
 
-    def joinGroup(self, text):
-        self.contactList.persp.joinGroup(text.get_text())
-        self.contactList.groups[text.get_text()] = GroupSession(text.get_text(),self.contactList)
+    def clicked(self, btn):
+        val = self.entry.get_text()
+        self.im.remote.joinGroup(val)
+        self.im.groups[val] = GroupSession(val,self.im)
+        self.destroy()
 
 
-class ContactList(gtk.GtkWindow, pb.Referenced):
-    def __init__(self):
+class ContactList(gtk.GtkWindow):
+    def __init__(self, im):
+        self.im = im
         # Set up the Contact List window.
         gtk.GtkWindow.__init__(self, gtk.WINDOW_TOPLEVEL)
         # Cheat, we'll do this correctly later --
         self.signal_connect('destroy', gtk.mainquit, None)
         self.set_title("Instance Messenger")
         # self.set_usize(200,400)
-        
-        self.conversations = {}
         
         # Vertical Box packing
         vb = gtk.GtkVBox(gtk.FALSE, 5)
@@ -160,13 +153,11 @@ class ContactList(gtk.GtkWindow, pb.Referenced):
         self.list.set_column_width(0, 50)
         self.list.signal_connect("select_row", self.contactSelected)
        
-        self.groups = {}
-       
         vb.pack_start(gtkutil.scrollify(self.list), gtk.TRUE, gtk.TRUE, 0)
         
-        addContactButton = gtkutil.cbutton("Add Contact", self.addContact)
+        addContactButton = gtkutil.cbutton("Add Contact", self.addContactWindow)
         sendMessageButton = gtkutil.cbutton("Send Message", self.sendMessage)
-        joinGroupButton = gtkutil.cbutton("Join Group", self.joinGroup)
+        joinGroupButton = gtkutil.cbutton("Join Group", self.joinGroupWindow)
         hb = gtk.GtkHBox()
         hb.pack_start(addContactButton)
         hb.pack_start(sendMessageButton)
@@ -174,55 +165,25 @@ class ContactList(gtk.GtkWindow, pb.Referenced):
         
         vb.pack_start(hb, gtk.FALSE, gtk.FALSE, 0)
         self.add(vb)
+        self.show_all()
 
-    def addContact(self, button):
-        AddContact(self)
+    def addContactWindow(self, blargh):
+        AddContact(self.im)
 
-    def conversationWith(self, target):
-        x = self.conversations.get(target)
-        if not x:
-            x = Conversation(self, target)
-            self.conversations[target] = x
-        return x
+    def joinGroupWindow(self, bleh):
+        JoinGroup(self.im)
 
-    def joinGroup(self, bleh):
-        JoinGroup(self)
-
-    def remote_receiveDirectMessage(self, sender, message):
-        w = self.conversationWith(sender)
-        w.messageReceived(message)
-
-    def remote_receiveGroupMessage(self,sender,group, message):
-        self.groups[group].displayMessage(sender,message)
-
-    def remote_memberJoined(self,member,group):
-        self.groups[group].memberJoined(member)
-    
     def contactSelected(self, clist, row, column, event):
         print 'event on',row
         target = self.list.get_row_data(row)
         if event.type == gtk.GDK._2BUTTON_PRESS:
             print 'Double Click on', target
-            self.conversationWith(target)
+            self.im.conversationWith(target)
 
     def sendMessage(self, blah):
         print 'message send'
 
-    def connected(self, perspective):
-        self.name = lw.username.get_text()
-        lw.hide()
-        self.persp = perspective
-        self.show_all()
-
-    def remote_receiveContactList(self, contacts):
-        print 'got contacts'
-        for contact, status in contacts:
-            row = self.list.append([str(status), contact])
-            print 'list',row,contact
-            self.list.set_row_data(row, intern(contact))
-
-    def remote_notifyStatusChanged(self, contact, newStatus):
-        print "status change",contact, newStatus
+    def changeContactStatus(self, contact, newStatus):
         row = self.list.find_row_from_data(intern(contact))
         r = [str(newStatus), contact]
         if row != -1:
@@ -234,9 +195,58 @@ class ContactList(gtk.GtkWindow, pb.Referenced):
             row = self.list.append(r)
         self.list.set_row_data(row, intern(contact))
 
+
+class InstanceMessenger(pb.Referenced):
+    """This is a broker between the PB broker and the various windows
+    that make up InstanceMessenger."""
+
+    def __init__(self):
+        self.conversations = {}
+        self.groups = {}
+
+    def conversationWith(self, target):
+        conv = self.conversations.get(target)
+        if not conv:
+            conv = Conversation(self, target)
+            self.conversations[target] = conv
+        return conv
+
+#The PB interface.
+    def connected(self, perspective):
+        self.name = lw.username.get_text()
+        lw.hide()
+        self.remote = perspective
+
+    def remote_receiveContactList(self,contacts):
+        print 'got contacts'
+        self.cl = ContactList(self)
+        for contact,status in contacts:
+            self.cl.changeContactStatus(contact,status)
+
+    def remote_receiveDirectMessage(self, sender, message):
+        #make sure we've started the conversation
+        w = self.conversationWith(sender) 
+        w.messageReceived(message)
+
+    def remote_notifyStatusChanged(self,contact,newStatus):
+        print contact,"changed status to",newStatus
+        self.cl.changeContactStatus(contact,newStatus)
+
+
+    def remote_receiveGroupMessage(self,member,group,message):
+        self.groups[group].displayMessage(member,message)
+
+    def remote_memberJoined(self,member,group):
+        self.groups[group].memberJoined(member)
+
+    def remote_memberLeft(self,member,group):
+        self.groups[group].memberLeft(member)
+
+
+        
 def main():
     global lw
-    b = ContactList()
+    b = InstanceMessenger()
     lw = gtkutil.Login(b.connected, b,
                        initialPassword="guest",
                        initialService="twisted.words")
