@@ -192,7 +192,7 @@ from the <code>xmlrpclib</code> way which should be noted:</p>
 <li>No implicit <code>/RPC2</code>. If the services uses this path for the
     XML-RPC calls, then it will have to be given explicitly.</li>
 <li>No magic <code>__getattr__</code>: calls must be made by an explicit
-    <code>callMethod</code>.</li>
+    <code>callRemote</code>.</li>
 </ol>
 
 <p>The interface Twisted presents to XML-RPC client is that of a proxy object:
@@ -200,7 +200,7 @@ from the <code>xmlrpclib</code> way which should be noted:</p>
 object receives a URL: it must be an HTTP or HTTPS URL. When an XML-RPC service
 is described, the URL to that service will be given there.</p>
 
-<p>Having a proxy object, one can just call the <code>callMethod</code> method,
+<p>Having a proxy object, one can just call the <code>callRemote</code> method,
 which accepts a method name and a variable argument list (but no named
 arguments, as these are not supported by XML-RPC). It returns a deferred,
 which will be called back with the result. If there is any error, at any
