@@ -156,9 +156,7 @@ class AppConfiguratorPage(widgets.Presentation):
             ret.extend(widgets.TitleBox("Configuration", ConfigForm(self, cfg, linkfrom)).display(request))
         
         # add a form for a collection of objects
-        print obj
         coll = coil.getCollection(obj)
-        print coll
         if components.implements(coll, coil.IConfigCollection):
             if coll.entityType in (types.StringType, types.IntType, types.FloatType):
                 ret.extend(widgets.TitleBox("Delete Items", ImmutableCollectionDeleteForm(self, coll, linkfrom)).display(request))
@@ -295,22 +293,16 @@ class CollectionForm(widgets.Form):
         # write(str(('YAY', name, type)))
         # TODO: validation on the name?
         if submit == 'Delete':
-            try:
-                for item in items:
-                    obj = self.coll.getStaticEntity(item)
-                    if components.implements(obj, coil.IConfigurator):
-                        obj = obj.getInstance()
-                    self.configurator.dispensers.removeObject(obj)
-                    self.coll.delEntity(item)
-            except:
-                raise widgets.FormInputError(str(sys.exc_info()[1]))
+            for item in items:
+                obj = self.coll.getStaticEntity(item)
+                if components.implements(obj, coil.IConfigurator):
+                    obj = obj.getInstance()
+                self.configurator.dispensers.removeObject(obj)
+                self.coll.delEntity(item)
             write("<b>Items Deleted.</b><br>(%s)<br>" % html.escape(repr(items)))
         elif submit == "Insert":
-            try:
-                obj = self.configurator.makeConfigurable(type, self.coll, name)
-                self.coll.putEntity(name, obj)
-            except:
-                raise widgets.FormInputError(str(sys.exc_info()[1]))
+            obj = self.configurator.makeConfigurable(type, self.coll, name)
+            self.coll.putEntity(name, obj)
             write("<b>%s created!</b>" % type)
         else:
             raise widgets.FormInputError("Don't know how to %s" % repr(submit))
@@ -341,18 +333,12 @@ class ImmutableCollectionForm(widgets.Form):
 
     def process(self, write, request, submit, name, value, **newitems):
         if name:
-            try:
-                self.collection.putEntity(name, value)
-            except:
-                raise widgets.FormInputError(str(sys.exc_info()[1]))
+            self.collection.putEntity(name, value)
             write("<b>%s created!</b>" % name)
         for key, value in newitems.items():
             if len(key) <= 4 or key[:4] != "val_": continue
             key = key[4:]
-            try:
-                self.collection.putEntity(key, value)
-            except:
-                raise widgets.FormInputError(str(sys.exc_info()[1]))
+            self.collection.putEntity(key, value)
             write("<b>%s changed!</b>" % key)
         self.format(self.getFormFields(request), write, request)
 
@@ -381,10 +367,7 @@ class ImmutableCollectionDeleteForm(widgets.Form):
         return widgets.Form.getFormFields(self, request, result)
 
     def process(self, write, request, submit, items=()):
-        try:
-            for item in items:
-                self.collection.delEntity(item)
-        except:
-            raise widgets.FormInputError(str(sys.exc_info()[1]))
+        for item in items:
+            self.collection.delEntity(item)
         write("<b>Items Deleted.</b><br>(%s)<br>" % html.escape(repr(items)))
         self.format(self.getFormFields(request), write, request)
