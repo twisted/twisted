@@ -23,7 +23,7 @@ from twisted.spread import pb
 
 from twisted.im.locals import ONLINE, OFFLINE, AWAY
 
-import basesupport
+import basesupport, interfaces
 
 class TwistedWordsPerson(basesupport.AbstractPerson):
     """I a facade for a person you can talk to through a twisted.words service.
@@ -59,6 +59,7 @@ class TwistedWordsPerson(basesupport.AbstractPerson):
         self.chat.getContactsList().setContactStatus(self)
 
 class TwistedWordsGroup(basesupport.AbstractGroup):
+    __implements__ = (interfaces.IGroup,)
     def __init__(self, name, wordsClient):
         basesupport.AbstractGroup.__init__(self, name, wordsClient)
         self.joined = 0
@@ -187,6 +188,7 @@ pbFrontEnds = {
 
 
 class PBAccount(basesupport.AbstractAccount):
+    __implements__ = (interfaces.IAccount,)
     gatewayType = "PB"
     _groupFactory = TwistedWordsGroup
     _personFactory = TwistedWordsPerson

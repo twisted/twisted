@@ -24,7 +24,7 @@ from twisted.internet import defer, reactor, protocol
 from twisted.internet.defer import succeed
 
 # Sibling Imports
-import basesupport
+import basesupport, interfaces, locals
 
 def dehtml(text):
     text=string.replace(text,"<br>","\n")
@@ -58,11 +58,15 @@ class TOCPerson(basesupport.AbstractPerson):
         return str(self.idletime)
 
     def setStatusAndIdle(self, status, idletime):
+        if self.account.client is None:
+            raise locals.OfflineError
         self.status = status
         self.idletime = idletime
         self.account.client.chat.getContactsList().setContactStatus(self)
 
     def sendMessage(self, text, meta=None):
+        if self.account.client is None:
+            raise locals.OfflineError
         if meta:
             if meta.get("style", None) == "emote":
                 text="* "+text+"* "
@@ -70,11 +74,14 @@ class TOCPerson(basesupport.AbstractPerson):
         return succeed(text)
 
 class TOCGroup(basesupport.AbstractGroup):
+    __implements__ = (interfaces.IGroup,)
     def __init__(self, name, tocAccount):
         basesupport.AbstractGroup.__init__(self, name, tocAccount)
         self.roomID = self.client.roomID[self.name]
 
     def sendGroupMessage(self, text, meta=None):
+        if self.account.client is None:
+            raise locals.OfflineError
         if meta:
             if meta.get("style", None) == "emote":
                 text="* "+text+"* "
@@ -82,6 +89,8 @@ class TOCGroup(basesupport.AbstractGroup):
         return succeed(text)
 
     def leave(self):
+        if self.account.client is None:
+            raise locals.OfflineError
         self.account.client.chat_leave(self.roomID)
 
 class TOCProto(basesupport.AbstractClientMixin, toc.TOCClient):
@@ -202,6 +211,7 @@ class TOCProto(basesupport.AbstractClientMixin, toc.TOCClient):
         self.chat_join(4,toc.normalize(name))
 
 class TOCAccount(basesupport.AbstractAccount):
+    __implements__ = (interfaces.IAccount,)
     gatewayType = "AIM (TOC)"
 
     _groupFactory = TOCGroup

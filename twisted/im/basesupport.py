@@ -17,7 +17,7 @@
 
 # Abstract representation of chat "model" classes
 
-from locals import ONLINE, OFFLINE
+from locals import ONLINE, OFFLINE, OfflineError
 import interfaces
 
 from twisted.internet.protocol import Protocol
@@ -48,6 +48,16 @@ class AbstractGroup:
         appropriate commands on the given user
         """
         return prefixedMethods(self, "imtarget_")
+
+    def join(self):
+        if not self.account.client:
+            raise OfflineError
+        self.account.client.joinGroup(self.name)
+
+    def leave(self):
+        if not self.account.client:
+            raise OfflineError
+        self.account.client.leaveGroup(self.name)
 
     def __repr__(self):
         return '<%s %r>' % (self.__class__, self.name)
@@ -192,6 +202,9 @@ class AbstractAccount(styles.Versioned):
             d = self._startLogOn(chatui)
             d.addErrback(self._loginFailed)
             d.addCallback(self._cb_logOn)
+            # if chatui is not None:
+            # (I don't particularly like having to pass chatUI to this function,
+            # but we haven't factored it out yet.)
             d.addCallback(chatui.registerAccountClient)
             return d
         else:
@@ -253,3 +266,10 @@ class AbstractAccount(styles.Versioned):
         self._isConnecting = 0
         self._isOnline = 0
         return reason
+
+    def __repr__(self):
+        return "<%s: %s (%s@%s:%s)>" % (self.__class__,
+                                        self.accountName,
+                                        self.username,
+                                        self.host,
+                                        self.port)

@@ -162,6 +162,9 @@ class IGroup(Interface):
         @type metadata: dict
         """
 
+    def join(self):
+        pass
+
     def leave(self):
         pass
 

@@ -21,11 +21,13 @@ from twisted.im.locals import ONLINE
 from twisted.internet import defer, reactor, protocol
 from twisted.internet.defer import succeed
 
-import basesupport
+import basesupport, interfaces, locals
 
 class IRCPerson(basesupport.AbstractPerson):
 
     def imperson_whois(self):
+        if self.account.client is None:
+            raise locals.OfflineError
         self.account.client.sendLine("WHOIS %s" % self.name)
 
     ### interface impl
@@ -41,6 +43,8 @@ class IRCPerson(basesupport.AbstractPerson):
         self.chat.getContactsList().setContactStatus(self)
 
     def sendMessage(self, text, meta=None):
+        if self.account.client is None:
+            raise locals.OfflineError
         for line in string.split(text, '\n'):
             if meta and meta.get("style", None) == "emote":
                 self.account.client.ctcpMakeQuery(self.name,[('ACTION', line)])
@@ -50,10 +54,14 @@ class IRCPerson(basesupport.AbstractPerson):
 
 class IRCGroup(basesupport.AbstractGroup):
 
+    __implements__ = (interfaces.IGroup,)
+
     def imgroup_testAction(self):
         print 'action test!'
 
     def imtarget_kick(self, target):
+        if self.account.client is None:
+            raise locals.OfflineError
         reason = "for great justice!"
         self.account.client.sendLine("KICK #%s %s :%s" % (
             self.name, target.name, reason))
@@ -61,9 +69,13 @@ class IRCGroup(basesupport.AbstractGroup):
     ### Interface Implementation
 
     def setTopic(self, topic):
+        if self.account.client is None:
+            raise locals.OfflineError
         self.account.client.topic(self.name, topic)
 
     def sendGroupMessage(self, text, meta={}):
+        if self.account.client is None:
+            raise locals.OfflineError
         if meta and meta.get("style", None) == "emote":
             self.account.client.me(self.name,text)
             return succeed(text)
@@ -73,6 +85,8 @@ class IRCGroup(basesupport.AbstractGroup):
         return succeed(text)
 
     def leave(self):
+        if self.account.client is None:
+            raise locals.OfflineError
         self.account.client.leave(self.name)
         self.account.client.getGroupConversation(self.name,1)
 
@@ -239,6 +253,7 @@ class IRCProto(basesupport.AbstractClientMixin, irc.IRCClient):
         self.getGroupConversation(name)
 
 class IRCAccount(basesupport.AbstractAccount):
+    __implements__ = (interfaces.IAccount,)
     gatewayType = "IRC"
 
     _groupFactory = IRCGroup
