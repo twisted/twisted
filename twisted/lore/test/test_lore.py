@@ -230,10 +230,10 @@ class TestFactory(unittest.TestCase):
         self.assertEqualFiles1("lore_index_file_unnumbered_out.html", indexFilename + ".html")
 
     def test_runningLoreMultipleFiles(self):
-        tmp = self.makeTemp('lore_index_test.xhtml')
+        tmp = self.makeTemp('lore_index_test.xhtml', 'lore_index_test2.xhtml')
         templateFilename = sp('template.tpl')
         inputFilename = os.path.join(tmp, 'lore_index_test.xhtml')
-        inputFilename2 = sp('lore_index_test2.xhtml')
+        inputFilename2 = os.path.join(tmp, 'lore_index_test2.xhtml')
         indexFilename = 'theIndexFile'
 
         bookFilename = os.path.join(tmp, 'lore_test_book.book')
@@ -252,7 +252,8 @@ class TestFactory(unittest.TestCase):
         self.assertEqualFiles1("lore_index_file_unnumbered_multiple_out.html", indexFilename + ".html")
         self.assertEqualFiles1("lore_index_test_out.html",
                                os.path.join(tmp, "lore_index_test.html"))
-        self.assertEqualFiles("lore_index_test_out2.html", "lore_index_test2.html")
+        self.assertEqualFiles1("lore_index_test_out2.html",
+                               os.path.join(tmp, "lore_index_test2.html"))
 
     def XXXtest_NumberedSections(self):
         # run two files through lore, with numbering turned on
