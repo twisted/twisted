@@ -1537,8 +1537,6 @@ class ProtocolWrapper(Protocol):
         self.original.connectionLost(reason)
         # Signal that transfer has completed
         self.deferred.callback(None)
-    def connectionFailed(self):
-        self.deferred.errback(Failure(FTPError('Connection failed')))
 
 
 class SenderProtocol(Protocol):
@@ -1758,7 +1756,8 @@ class FTPClient(basic.LineReceiver):
                         self.protocol.factory = self
                         return self.protocol
                     def clientConnectionFailed(self, connector, reason):
-                        self.protocol.connectionFailed()
+                        e = FTPError('Connection Failed', reason)
+                        self.protocol.deferred.errback(e)
                 f = _Factory()
                 f.protocol = protocol
                 _mutable[0] = reactor.connectTCP(host, port, f)
