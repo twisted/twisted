@@ -1,16 +1,16 @@
 
 # Twisted, the Framework of Your Internet
 # Copyright (C) 2001 Matthew W. Lefkowitz
-# 
+#
 # This library is free software; you can redistribute it and/or
 # modify it under the terms of version 2.1 of the GNU Lesser General Public
 # License as published by the Free Software Foundation.
-# 
+#
 # This library is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
 # Lesser General Public License for more details.
-# 
+#
 # You should have received a copy of the GNU Lesser General Public
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
@@ -29,6 +29,7 @@ import types
 import copy
 
 try:
+    from new import instance
     from new import instancemethod
 except:
     from org.python.core import PyMethod
@@ -187,7 +188,7 @@ class _Jellier:
 
     def _jelly_long(self, ng):
         """(internal)
-        
+
         Return the serialized representation of a long integer (this will only
         work for long ints that can fit into a regular integer, currently, but
         that limitation is temporary)
@@ -213,7 +214,7 @@ class _Jellier:
         However, if I was created with a persistentStore method, then that
         method will be called with the 'instance' argument.  If that method
         returns a string, I will return::
-        
+
           (persistent "...")
         '''
         # like pickle's persistent_id
@@ -256,7 +257,7 @@ class _Jellier:
                 return self.unpersistable("class %s deemed insecure" % str(klaus))
         else:
             return self.unpersistable("class from module %s deemed insecure" % str(klaus.__module__))
-                
+
 
     def _jelly_dictionary(self, dict):
         ''' (internal) Jelly a dictionary.
@@ -285,7 +286,7 @@ class _Jellier:
         returns the list (none).
         '''
         return [None_atom]
-        
+
     def _jelly_instance_method(self, im):
         ''' (internal) Jelly an instance method.
         return a list of the form (method "name" (instance ...) (class ...))
@@ -296,7 +297,7 @@ class _Jellier:
         jim.append(self.jelly(im.im_self))
         jim.append(self.jelly(im.im_class))
         return self._preserve(im, jim)
-    
+
     def _jelly_tuple(self, tup):
         ''' (internal) Jelly a tuple.
         returns a list of n items of the form (tuple "value" "value" ...)
@@ -350,7 +351,7 @@ class _Jellier:
         sxp.append(unpersistable_atom)
         sxp.append(reason)
         return sxp
-            
+
 class NotKnown:
     def __init__(self):
         self.dependants = []
@@ -395,9 +396,13 @@ class _Unjellier:
         self.taster = taster
         self.persistentLoad = persistentLoad
         self.references = {}
+        self.stateCallbacks = []
 
     def unjelly(self, obj):
-        return self._unjelly(obj)
+        o = self._unjelly(obj)
+        for m, s in self.stateCallbacks:
+            m(s)
+        return o
 
     def _unjelly(self, obj):
         if type(obj) is not types.ListType:
@@ -479,7 +484,7 @@ class _Unjellier:
         return mod
 
     def _unjelly_class(self, rest):
-        mod = self.unjelly(rest[0])
+        mod = self._unjelly(rest[0])
         if type(mod) is not types.ModuleType:
             raise InsecureJelly("class has a non-module module")
         name = rest[1]
@@ -491,7 +496,7 @@ class _Unjellier:
         return klaus
 
     def _unjelly_function(self, rest):
-        module = self.unjelly(rest[1])
+        module = self._unjelly(rest[1])
         if type(module) is not types.ModuleType:
             raise InsecureJelly("function references a non-module module")
         function = getattr(module, rest[0])
@@ -506,15 +511,17 @@ class _Unjellier:
             return Unpersistable("persistent callback not found")
 
     def _unjelly_instance(self, rest):
-        inst = _Dummy()
-        clz = self.unjelly(rest[0])
+        clz = self._unjelly(rest[0])
         if type(clz) is not types.ClassType:
             raise InsecureJelly("Instance found with non-class class.")
-        state = self.unjelly(rest[1])
         if hasattr(clz, "__setstate__"):
-            inst.__setstate__(state)
+            inst = instance(clz, {})
+            cbl = [inst.__setstate__, None]
+            self.unjellyInto(cbl, 1, rest[1])
+            self.stateCallbacks.append(cbl)
         else:
-            inst.__dict__ = state
+            state = self._unjelly(rest[1])
+            inst = instance(clz, state)
         return inst
 
     def _unjelly_unpersistable(self, rest):
@@ -579,7 +586,7 @@ class DummySecurityOptions:
         Returns 1 if the given type is allowed, 0 otherwise.
         """
         return 1
-    
+
 
 
 class SecurityOptions:
@@ -590,7 +597,7 @@ class SecurityOptions:
     basicTypes = ["dictionary", "list", "tuple",
                   "reference", "dereference", "unpersistable",
                   "persistent"]
-    
+
     def __init__(self):
         """SecurityOptions()
         Initialize.
@@ -660,7 +667,7 @@ class SecurityOptions:
 
 def jelly(object, taster = DummySecurityOptions(), persistentStore = None):
     """Serialize to s-expression.
-    
+
     Returns a list which is the serialized representation of an object.  An
     optional 'taster' argument takes a SecurityOptions and will mark any
     insecure objects as unpersistable rather than serializing them.
@@ -670,7 +677,7 @@ def jelly(object, taster = DummySecurityOptions(), persistentStore = None):
 
 def unjelly(sexp, taster = DummySecurityOptions(), persistentLoad = None):
     """Unserialize from s-expression.
-    
+
     Takes an list that was the result from a call to jelly() and unserializes
     an arbitrary object from it.  The optional 'taster' argument, an instance
     of SecurityOptions, will cause an InsecureJelly exception to be raised if a

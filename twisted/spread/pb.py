@@ -901,8 +901,9 @@ class _NetUnjellier(jelly._Unjellier):
         """
         global copyTags
         inst = copyTags[rest[0]]()
-        state = self.unjelly(rest[1])
-        inst.setCopyableState(state)
+        cbl = [inst.setCopyableState, None]
+        self.unjellyInto(cbl, 1, rest[1])
+        self.stateCallbacks.append(cbl)
         return inst
 
     def _unjelly_cache(self, rest):
@@ -911,8 +912,9 @@ class _NetUnjellier(jelly._Unjellier):
         cNotProxy = copyTags[rest[1]]()
         cProxy = RemoteCacheProxy(self.broker, cNotProxy, luid)
         self.broker.cacheLocally(luid, cNotProxy)
-        state = self.unjelly(rest[2])
-        cNotProxy.setCopyableState(state)
+        cbl = [cNotProxy.setCopyableState, None]
+        self.unjellyInto(cbl, 1, rest[2])
+        self.stateCallbacks.append(cbl)
         return cProxy
 
     def _unjelly_cached(self, rest):

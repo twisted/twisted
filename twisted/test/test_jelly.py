@@ -56,6 +56,7 @@ class SimpleJellyTest:
     def isTheSameAs(self, other):
         return self.__dict__ == other.__dict__
 
+
 class JellyTestCase(unittest.TestCase):
     """
     testcases for `jelly' module serialization.
@@ -151,6 +152,22 @@ class JellyTestCase(unittest.TestCase):
         jelly.unjelly(jelly.jelly(50.3)) # float
         jelly.unjelly(jelly.jelly((1, 2, 3))) # tuple
         # TODO: More thorough testing here.
+
+    def testSetState(self):
+        global TupleState
+        class TupleState:
+            def __init__(self, other):
+                self.other = other
+            def __getstate__(self):
+                return (self.other,)
+            def __setstate__(self, state):
+                self.other = state[0]
+        a = A()
+        t1 = TupleState(a)
+        t2 = TupleState(a)
+        t3 = TupleState((t1, t2))
+        t3prime = jelly.unjelly(jelly.jelly(t3))
+        assert t3prime.other[0].other is t3prime.other[1].other
 
     def testClassSecurity(self):
         """
