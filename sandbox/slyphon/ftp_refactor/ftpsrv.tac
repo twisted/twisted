@@ -22,16 +22,18 @@ myService = service.IServiceCollection(application)
 
 # Create the protocol factory
 ftpFactory = FTPFactory()
-p = portal.Portal(FTPRealm())
+realm = FTPRealm(os.getcwd())
+p = portal.Portal(realm)
 p.registerChecker(checkers.AllowAnonymousAccess(), credentials.IAnonymous)
 
 ftpFactory.portal = p
 ftpFactory.protocol = FTP
+ftpFactory.timeOut = 30
 
 # Create the (sole) server
 port = 2121
 if os.getuid() == 0:        # if we're root
-    port = 21               # use the priviledged port
+    port = 21               # use the privileged port
 
 myServer = internet.TCPServer(port, ftpFactory)
 
