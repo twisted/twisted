@@ -21,6 +21,7 @@
 # twisted imports
 from twisted.python import log, util
 from twisted.internet import protocol
+from twisted.python.compat import *
 
 # sibling imports
 import basic
@@ -44,6 +45,64 @@ for k, v in shortHeaders.items():
 del k, v
 
 
+class Via:
+    """A SIP Via header."""
+
+    def __init__(self, host, port=5060, transport="UDP", ttl=None, hidden=False,
+                 received=None, branch=None, maddr=None):
+        self.transport = transport
+        self.host = host
+        self.port = port
+        self.ttl = ttl
+        self.hidden = hidden
+        self.received = received
+        self.branch = branch
+        self.maddr = maddr
+
+    def toString(self):
+        s = "SIP/2.0/%s %s:%s" % (self.transport, self.host, self.port)
+        if self.hidden:
+            s += ";hidden"
+        for n in "ttl", "received", "branch", "maddr":
+            value = gettattr(self, n)
+            if value != None:
+                s += ";%s=%s" % (n, value)
+        return s
+
+
+def parseViaHeader(value):
+    """Parse a Via header, returning Via class instance."""
+    parts = via.split(";")
+    sent, params = parts[0], parts[1:]
+    protocolinfo, by = sent.split(" ", 1)
+    result = {}
+    pname, pversion, transport = protocolinfo.split("/")
+    if pname != "SIP" or pversion != "2.0":
+        raise ValueError, "wrong protocol or version: %r" % value
+    result["transport"] = transport
+    if ":" in by:
+        host, port = by.split(":")
+        result["port"] = int(port)
+        result["host"] = host
+    else:
+        result["host"] = by
+    for p in params:
+        # it's the comment-striping dance!
+        p = p.strip().split(" ", 1)
+        if len(p) == 1:
+            p, comment = p, ""
+        else:
+            p, comment = p
+        if p == "hidden":
+            result["hidden"] = True
+            continue
+        name, value = p.split("=")
+        if name == "ttl":
+            value = int(value)
+        result[name] = value
+    return Via(**result)
+
+    
 class Message:
     """A SIP message."""
 
