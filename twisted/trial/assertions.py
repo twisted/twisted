@@ -181,8 +181,11 @@ def assertFailure(deferred, *expectedFailures):
     """
     def _cb(ignore):
         raise FailTest, "did not catch an error, instead got %r" % (ignore,)
-
-    return deferred.addCallbacks(_cb, lambda f: f.trap(*expectedFailures))
+    
+    def _eb(failure):
+        failure.trap(*expectedFailures)
+        return failure.value
+    return deferred.addCallbacks(_cb, _eb)
 
 def failUnlessSubstring(substring, astring, msg=None):
     """a python2.2 friendly test to assert that substring is found in astring
