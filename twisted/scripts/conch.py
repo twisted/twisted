@@ -14,7 +14,7 @@
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 #
-# $Id: conch.py,v 1.62 2003/11/19 22:53:06 z3p Exp $
+# $Id: conch.py,v 1.63 2003/12/12 04:04:11 z3p Exp $
 
 #""" Implementation module for the `conch` command.
 #"""
@@ -161,6 +161,8 @@ def run():
     finally:
         if old:
             tty.tcsetattr(fd, tty.TCSANOW, old)
+        if (options['command'] and options['tty']) or not options['notty']:
+            signal.signal(signal.SIGWINCH, signal.SIG_DFL)
     if sys.stdout.isatty():
         print 'Connection to %s closed.' % options['host']
     sys.exit(exitStatus)
@@ -728,7 +730,7 @@ class SSHConnection(connection.SSHConnection):
         log.msg('requesting remote forwarding %s:%s' %(remotePort, hostport))
 
     def cancelRemoteForwarding(self, remotePort):
-        data = forwarding.packGlobal_tcpip_forward(('0.0.0.0', remotePort))
+        data = forwarding.packGlobal_tcpip_forward(('127.0.0.1', remotePort))
         self.sendGlobalRequest('cancel-tcpip-forward', data)
         del self.remoteForwards[remotePort]
 
@@ -793,6 +795,7 @@ class SSHSession(channel.SSHChannel):
                 winSize = struct.unpack('4H', winsz)
                 ptyReqData = session.packRequest_pty_req(term, winSize, '')
                 self.conn.sendRequest(self, 'pty-req', ptyReqData)
+                signal.signal(signal.SIGWINCH, self._windowResized)
             self.conn.sendRequest(self, 'exec', \
                 common.NS(options['command']))
         else:
@@ -802,6 +805,7 @@ class SSHSession(channel.SSHChannel):
                 winSize = struct.unpack('4H', winsz)
                 ptyReqData = session.packRequest_pty_req(term, winSize, '')
                 self.conn.sendRequest(self, 'pty-req', ptyReqData)
+                signal.signal(signal.SIGWINCH, self._windowResized)
             self.conn.sendRequest(self, 'shell', '')
             if hasattr(self.conn.transport, 'transport'):
                 self.conn.transport.transport.setTcpNoDelay(1)
@@ -870,6 +874,13 @@ class SSHSession(channel.SSHChannel):
 
     def startWriting(self):
         self.stdio.startReading()
+
+    def _windowResized(self, *args):
+        winsz = fcntl.ioctl(0, tty.TIOCGWINSZ, '12345678')
+        winSize = struct.unpack('4H', winsz)
+        newSize = winSize[1], winSize[0], winSize[2], winSize[3]
+        self.conn.sendRequest(self, 'window-change', struct.pack('!4L', *newSize))
+           
 
 class SSHListenClientForwardingChannel(forwarding.SSHListenClientForwardingChannel):
 
