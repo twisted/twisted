@@ -67,7 +67,6 @@ class Request(pb.RemoteCopy, server.Request):
         self.setETag          = self.remote.remoteMethod('setETag')
         self.setResponseCode  = self.remote.remoteMethod('setResponseCode')
         self.setLastModified  = self.remote.remoteMethod('setLastModified')
-        self.acqpath = []
 
     def registerProducer(self, producer, streaming):
         self.remote.callRemote("registerProducer",

@@ -116,7 +116,6 @@ class Request(pb.Copyable, http.Request, components.Componentized):
         self.content.seek(0, 0)
         x['content_data'] = self.content.read()
         x['remote'] = pb.ViewPoint(issuer, self)
-        x['acqpath'] = []
         return x
 
     # HTML generation helpers
@@ -485,7 +484,6 @@ class Site(http.HTTPFactory):
         # Sitepath is used to determine cookie names between distributed
         # servers and disconnected sites.
         request.sitepath = copy.copy(request.prepath)
-        request.acqpath = copy.copy(request.prepath)
         return self.resource.getChildForRequest(request)
 
 
