@@ -268,13 +268,15 @@ def stringToDatetime(dateString):
     return int(timegm(year, month, day, hour, min, sec))
 
 def toChunk(data):
-    """Convert string to a chunk."""
+    """Convert string to a chunk.
+    
+    @returns: a tuple of strings representing the chunked encoding of data"""
     return ("%x\r\n" % len(data), data, "\r\n")
 
 def fromChunk(data):
     """Convert chunk to string.
 
-    Returns tuple (result, remaining), may raise ValueError.
+    @returns: tuple (result, remaining), may raise ValueError.
     """
     prefix, rest = data.split('\r\n', 1)
     length = int(prefix, 16)
