@@ -60,8 +60,10 @@ class ListMailbox:
     def __init__(self, list):
         self.list = list
 
-    def listMessages(self):
-        return map(len, self.list)
+    def listMessages(self, i=None):
+        if i is None:
+            return map(len, self.list)
+        return len(self.list[i])
 
     def getMessage(self, i):
         return StringIO.StringIO(self.list[i])
@@ -174,8 +176,10 @@ How are you, friend?
     def __init__(self):
         self.messages = DummyMailbox.messages[:]
 
-    def listMessages(self):
-        return map(len, self.messages)
+    def listMessages(self, i=None):
+        if i is None:
+            return map(len, self.messages)
+        return len(self.messages[i])
 
     def getMessage(self, i):
         return StringIO.StringIO(self.messages[i])

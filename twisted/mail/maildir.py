@@ -102,16 +102,18 @@ class MaildirMailbox(pop3.Mailbox):
             for file in os.listdir(os.path.join(path, name)):
                 self.list.append(os.path.join(path, name, file))
 
-    def listMessages(self):
+    def listMessages(self, i=None):
         """Return a list of lengths of all files in new/ and cur/
         """
-        ret = []
-        for mess in self.list:
-            if mess:
-                ret.append(os.stat(mess)[stat.ST_SIZE])
-            else:
-                ret.append(0)
-        return ret
+        if i is None:
+            ret = []
+            for mess in self.list:
+                if mess:
+                    ret.append(os.stat(mess)[stat.ST_SIZE])
+                else:
+                    ret.append(0)
+            return ret
+        return os.stat(self.list[i])[stat.ST_SIZE]
 
     def getMessage(self, i):
         """Return an open file-pointer to a message

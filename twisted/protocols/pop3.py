@@ -21,7 +21,7 @@
 from twisted.protocols import basic
 import os, time, string, operator, stat, md5, binascii
 from twisted.internet import protocol
-from twisted.python import components
+from twisted.python import components, log
 
 class POP3Error(Exception):
     pass
@@ -48,6 +48,7 @@ class POP3(basic.LineReceiver):
         try:
             return self.processCommand(*line.split())
         except (ValueError, AttributeError, POP3Error, TypeError), e:
+            log.err()
             self.failResponse('bad protocol or server: %s: %s' % (e.__class__.__name__, e))
     
     def processCommand(self, command, *args):
@@ -102,11 +103,10 @@ class POP3(basic.LineReceiver):
         self.sendLine('.')
 
     def getMessageFile(self, i):
-        i = int(i)-1
-        list = self.mbox.listMessages()
+        i = int(i) - 1
         try:
-            resp = list[i]
-        except IndexError:
+            resp = self.mbox.listMessages(i)
+        except (IndexError, ValueError), e:
             self.failResponse('index out of range')
             return None, None
         if not resp:
@@ -200,7 +200,7 @@ class POP3(basic.LineReceiver):
 
 class IMailbox(components.Interface):
     
-    def listMessages(self):
+    def listMessages(self, i=None):
         """"""
 
     def getMessage(self, index):
