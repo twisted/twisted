@@ -1,3 +1,11 @@
+2003-02-04  Jp Calderone  <exarkun@twistedmatrix.com
+
+	* twisted/internet/app.py: listenUNIX and unlistenUNIX methods added
+	to Application class.  These should be used in place of listenTCP
+	and unlistenTCP when UNIX sockets are desired.  The old,
+	undocumented behavior no longer works!  Also added connectUDP and
+	unlistenUDP to Application.
+
 2003-01-31  Cory Dodt  <corydodt@yahoo.com>
 
 	* twisted/lore/latex.py:  Don't treat comments like text nodes, just
