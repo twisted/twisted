@@ -524,7 +524,17 @@ class RemoteCacheObserver:
     """
 
     def __init__(self, broker, cached, perspective):
-        """Initialize me pointing at a client side cache for a particular broker/perspective.
+        """(internal) Initialize me.
+
+        Arguments:
+
+          * broker: a pb.Broker instance.
+
+          * cached: a Cacheable instance that this RemoteCacheObserver
+            corresponds to.
+
+          * perspective: a reference to the perspective who is observing this.
+
         """
 
         self.broker = broker
@@ -555,10 +565,13 @@ class RemoteCacheObserver:
         cacheID = self.broker.cachedRemotelyAs(self.cached)
         if cacheID is None:
             from pb import ProtocolError
-            raise ProtocolError("You can't call a cached method when the object hasn't been given to the peer yet.")
-        return self.broker._sendMessage('cache', self.perspective, cacheID, name, args, kw)
+            raise ProtocolError("You can't call a cached method when the "
+                                "object hasn't been given to the peer yet.")
+        return self.broker._sendMessage('cache', self.perspective, cacheID,
+                                        name, args, kw)
 
     def remoteMethod(self, key):
         """Get a RemoteMethod for this key.
         """
         return RemoteCacheMethod(key, self.broker, self.cached, self.perspective)
+
