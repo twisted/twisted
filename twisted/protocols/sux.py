@@ -15,7 +15,9 @@ If you're looking for an XML parser that *does* do any of these things, I
 strongly recommend the various parsers in PyXML.
 
 TODO:
-  * do something minidom-ish (microdom?)
+
+  * support comments
+  * real tests
 
 """
 
@@ -49,7 +51,7 @@ class XMLParser(Protocol):
             else:
                 self.colno += 1
             oldState = self.state
-            #print "%s: %s %s" % (self.state, repr(byte), self.saveMark())
+            # print "%s: %s %s" % (self.state, repr(byte), self.saveMark())
             newState = getattr(self, "do_" + self.state)(byte)
             if newState and newState != oldState:
                 #print oldState,'=>',newState
@@ -256,6 +258,7 @@ if __name__ == '__main__':
     <foo>
     <bar />
     <baz boz="buz">boz &zop;</baz>
+    <![CDATA[ foo bar baz ]]>
     </foo>
     '''
     x = XMLParser()

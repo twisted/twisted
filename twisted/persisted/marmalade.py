@@ -18,7 +18,7 @@
 
 """Marmalade: jelly, with just a hint of bitterness.
 
-I can serialize a Python object to an XML DOM tree (xml.dom.minidom), and
+I can serialize a Python object to an XML DOM tree (twisted.web.microdom), and
 therefore to XML data, similarly to twisted.spread.jelly.  Because both Python
 lists and DOM trees are tree data-structures, many of the idioms used here are
 identical.
@@ -391,11 +391,4 @@ def unjellyFromXML(stringOrFile):
     return unjellyFromDOM(document)
 
 
-try:
-    from xml.dom.minidom import Text, Element, Node, Document, parse, parseString, CDATASection, NodeList
-except ImportError:
-    def jellyToXML(object, file=None):
-        raise NotImplementedError("PyXML libraries could not be loaded.")
-
-    def unjellyFromXML(stringOrFile):
-        raise NotImplementedError("PyXML libraries could not be loaded.")
+from twisted.web.microdom import Text, Element, Node, Document, parse, parseString, CDATASection, NodeList
