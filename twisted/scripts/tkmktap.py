@@ -21,6 +21,7 @@
 
 # System imports
 import Tkinter, tkMessageBox, tkFileDialog, StringIO, os, sys, inspect
+import traceback
 
 # Twisted imports
 from twisted.internet import tksupport, reactor, app
