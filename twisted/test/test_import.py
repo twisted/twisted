@@ -114,6 +114,7 @@ class AtLeastImportTestCase(unittest.TestCase):
         from twisted.mail import maildir
         from twisted.mail import pb
         from twisted.mail import relaymanager
+        from twisted.mail import protocols
 
     def test_enterprise(self):
         from twisted.enterprise import adbapi
