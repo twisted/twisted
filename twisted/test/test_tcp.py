@@ -14,7 +14,7 @@ from twisted.trial.util import spinWhile, spinUntil
 from twisted.trial.unittest import assert_
 from  twisted.python import log
 
-from twisted.internet import protocol, reactor, defer
+from twisted.internet import protocol, reactor, defer, interfaces
 from twisted.internet import error
 from twisted.internet.address import IPv4Address
 from twisted.internet.interfaces import IHalfCloseableProtocol
@@ -101,6 +101,7 @@ class ListeningTestCase(PortCleanerUpper):
     def testListen(self):
         f = MyServerFactory()
         p1 = reactor.listenTCP(0, f, interface="127.0.0.1")
+        self.failUnless(interfaces.IListeningPort.providedBy(p1))
         p1.stopListening()
 
     def testStopListening(self):
@@ -355,6 +356,7 @@ class ConnectorTestCase(PortCleanerUpper):
         factory.clientConnectionLost = lambda c, r: (l.append(c), m.append(r))
         factory.startedConnecting = lambda c: l.append(c)
         connector = reactor.connectTCP("127.0.0.1", n, factory)
+        self.failUnless(interfaces.IConnector.providedBy(connector))
         dest = connector.getDestination()
         self.assertEquals(dest.type, "TCP")
         self.assertEquals(dest.host, "127.0.0.1")

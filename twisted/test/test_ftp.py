@@ -435,6 +435,7 @@ class TestFTPServer(FTPTestCase):
                 self.failUnlessRaises(ftp.CmdArgSyntaxError, s.ftp_TYPE, n)           
         self.cnx.hookUpDTP()
         dc, ds, diop = self.cnx.getDtpCSTuple()
+        # XXX: remove dtpTxfrMode from test_ftp
         sr.dtpTxfrMode = ftp.PASV
 
         sr.ftp_TYPE('A')        # set ascii mode
