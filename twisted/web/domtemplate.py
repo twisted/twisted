@@ -280,7 +280,6 @@ class DOMTemplate(Resource):
         """
         self.outstandingCallbacks -= 1
         node = self.dispatchResult(request, node, result)
-        print node
         self.recurseChildren(request, node)
         if not self.outstandingCallbacks:
             return self.sendPage(request)
@@ -323,3 +322,70 @@ class DOMTemplate(Resource):
             if child.nodeValue:
                 child.replaceData(0, len(child.nodeValue), child.nodeValue % subs)
             self.substitute(request, child, subs)
+
+# DOMView: The DOMTemplate for MVC
+
+from twisted.python.mvc import View, IView, Controller
+from twisted.web.domwidgets import Widget
+
+# If no widget/handler was found in the container controller or view, these modules will be searched.
+import domhandlers, domwidgets
+
+class DefaultHandler(Controller):
+    def handle(self, request):
+        """
+        By default, we don't do anything, and we return the default view.
+        """
+        return self.view.render(request)
+
+    def setId(self, id):
+        self.id = id
+
+
+class DefaultWidget(Widget):
+    def render(self, request):
+        return None
+
+    def setId(self, id):
+        self.id = id
+
+
+class DOMView(DOMTemplate, View):
+    # uuugly, thank you zope...
+    __implements__ = (DOMTemplate.__implements__, View.__implements__, IView)
+    
+    def handleNode(self, request, node):
+        if not hasattr(node, 'getAttribute'): return node
+        
+        controllerName = node.getAttribute('controller')
+        viewName = node.getAttribute('view')
+        id = node.getAttribute('id')
+        
+        defaultHandlerFactory = lambda x: DefaultHandler(x)
+        defaultWidgetFactory = lambda x: DefaultWidget(x)
+        controllerFactory, viewFactory = (defaultHandlerFactory, defaultWidgetFactory)
+        if controllerName:
+            if hasattr(self, 'controller'):
+                controllerFactory = getattr(self.controller, controllerName, defaultHandlerFactory)
+            if controllerFactory is defaultHandlerFactory:
+                controllerFactory = getattr(domhandlers, controllerName)
+        if viewName:
+            viewFactory = getattr(self, viewName, defaultWidgetFactory)
+            if viewFactory is defaultWidgetFactory:
+                viewFactory = getattr(domwidgets, viewName)
+
+        controller = controllerFactory(self.model)
+        view = viewFactory(self.model)
+
+        controller.setView(view)
+        controller.setId(id)
+        view.setController(controller)
+        view.setId(id)
+        view.setNode(node)
+        
+        result = controller.handle(request)
+        returnNode = self.dispatchResult(request, node, result)
+        if returnNode:
+            node = returnNode
+
+        self.recurseChildren(request, node)
