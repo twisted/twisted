@@ -110,6 +110,9 @@ class ConchTestForwardingPort(protocol.Protocol):
         self.proto.transport.loseConnection()
         reactor.callLater(0, os.kill, self.proto.transport.pid, signal.SIGKILL)
 
+from test_keys import publicRSA_openssh, privateRSA_openssh
+from test_keys import publicDSA_openssh, privateDSA_openssh
+
 if Crypto:
     from twisted.conch.client import options, default, connect
     from twisted.conch.error import ConchError
@@ -117,8 +120,6 @@ if Crypto:
     from twisted.conch.ssh import connection, common, session, channel
     from Crypto.PublicKey import RSA, DSA
 
-    from test_keys import publicRSA_openssh, privateRSA_openssh
-    from test_keys import publicDSA_openssh, privateDSA_openssh
     from test_ssh import ConchTestServerFactory, ConchTestPublicKeyChecker
 
 
