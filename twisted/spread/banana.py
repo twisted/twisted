@@ -220,9 +220,9 @@ Pynana = Banana
 try:
     import cBanana
 except ImportError:
-    print 'using python banana'
+    #print 'using python banana'
 else:
-    print 'using C banana'
+    #print 'using C banana'
     Banana = Canana
 
 # For use from the interactive interpreter
