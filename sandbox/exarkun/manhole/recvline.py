@@ -138,7 +138,19 @@ class HistoricRecvLineHandler(RecvLineHandler):
             self.lineBufferIndex = len(self.lineBuffer)
 
     def handle_DOWN(self):
-        pass
+        if self.historyPosition < len(self.historyLines) - 1:
+            self.historyPosition += 1
+            self.lineBuffer = list(self.historyLines[self.historyPosition])
+            self.proto.eraseLine()
+            self.proto.cursorPosition(0, self.height - 1)
+            self.proto.write(''.join(self.lineBuffer))
+            self.lineBufferIndex = len(self.lineBuffer)
+        else:
+            self.historyPosition = len(self.historyLines)
+            self.lineBuffer = []
+            self.proto.eraseLine()
+            self.proto.cursorPosition(0, self.height - 1)
+            self.lineBufferIndex = 0
 
     def handle_RETURN(self):
         self.historyLines.append(''.join(self.lineBuffer))
