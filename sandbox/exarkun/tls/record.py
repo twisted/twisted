@@ -35,6 +35,43 @@ class Integer:
 class Int255String:
     pass
 
+def unsignedNegation(n, w):
+    return struct.unpack('>I', struct.pack('>i', n))[0] & (2 ** w - 1)
+
+
+from binary import binary
+def extract(bytes, offset, size):
+    result = 0
+    b = binary(ord(bytes)).zfill(8)
+    print b[offset:offset+size]
+    for i in range(offset, offset + size):
+        ch = ord(bytes[i / 8])
+        print bool(ch >> (i % 8))
+    return result
+
+def processDecode(attrs, toproc, bytes):
+    offset = 0
+    for (a, t) in toproc:
+        attrs[a] = extract(bytes, offset, t.bits)
+        offset += t.bits
+
+def processEncode(result, toproc):
+    offset = 0
+    accum = 0
+    toproc.reverse()
+    for (v, t) in toproc:
+        accum |= unsignedNegation(v, t.bits) << offset
+        offset += t.bits
+
+    for (n, fmt) in ((32, 'I'), (16, 'H'), (8, 'B')):
+        while offset >= n:
+            result.append(struct.pack('>' + fmt, accum & (2 ** n - 1)))
+            offset -= n
+            accum >>= n
+
+    if offset:
+        raise ValueError("Non-byte-aligned values in format")
+
 class RecordType(type):
     FORMAT_SPECIFIERS = {
         Integer(8, False): 'B',
@@ -57,24 +94,9 @@ class RecordType(type):
             result = []
             subbytes = []
             for (attr, type) in format:
-                print attr, type
                 if type in klass.FORMAT_SPECIFIERS:
-                    print 'yonk'
-                    offset = 0
-                    accum = 0
-                    subbytes.reverse()
-                    for (v, t) in subbytes:
-                        accum |= unsignedNegation(v) << offset
-                        offset += t.bits
+                    processEncode(result, subbytes)
                     subbytes = []
-                    for (n, fmt) in ((32, 'I'), (16, 'H'), (8, 'B')):
-                        while offset >= n:
-                            result.append(struct.pack('>' + fmt, accum & (2 ** n - 1)))
-                            offset -= n
-                            accum >>= n
-
-                    if offset:
-                        raise ValueError("Non-byte-aligned values in format")
 
                     fmt = klass.FORMAT_SPECIFIERS[type]
                     result.append(struct.pack('>' + fmt, getattr(self, attr)))
@@ -82,7 +104,8 @@ class RecordType(type):
                     subbytes.append((getattr(self, attr), type))
                 else:
                     raise NotImplementedError((type, attr))
-            print format, result
+            if subbytes:
+                processEncode(result, subbytes)
             return ''.join(result)
         return encode
     makeEncoder = classmethod(makeEncoder)
@@ -90,23 +113,26 @@ class RecordType(type):
     def makeDecoder(klass, format):
         def decode(cls, bytes):
             d = {}
+            offset = 0
+            subbytes = []
             for (attr, type) in format:
                 if type in klass.FORMAT_SPECIFIERS:
+                    if offset:
+                        raise ValueError("Non-byte-aligned values in format")
                     fmt = klass.FORMAT_SPECIFIERS[type]
                     size = struct.calcsize('>' + fmt)
                     d[attr] = struct.unpack('>' + fmt, bytes[:size])[0]
                     bytes = bytes[size:]
                 else:
-                    if type.bits % 8 == 0:
-                        # Yay, easy
-                        accum = 0
-                        for b in bytes[:type.bits % 8]:
-                            accum <<= 8
-                            accum |= ord(b)
-                        d[attr] = accum
-                        bytes = bytes[type.bits % 8:]
-                    else:
-                        raise NotImplementedError("Decoding sub-byte fields is hard")
+                    if offset + type.bits < 8:
+                        subbytes.append((attr, type))
+                        offset += type.bits
+                    elif (offset + type.bits) % 8 == 0:
+                        subbytes.append((attr, type))
+                        processDecode(d, subbytes, bytes)
+                        bytes = bytes[(offset + type.bits) / 8:]
+                        subbytes = []
+                        offset = 0
             i = cls()
             i.__dict__.update(d)
             return i

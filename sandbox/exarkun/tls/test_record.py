@@ -56,6 +56,8 @@ records = [SingleSignedByte, SingleUnsignedByte, SingleSignedShort,
            MultiByte, MultiType, SubByteFields, MiddleSubByteFields]
 
 def randomValue(type):
+    if type.signed:
+        return random.randrange(-2 ** type.bits + 1, 2 ** type.bits)
     return random.randrange(2 ** type.bits)
 
 from twisted.trial import unittest
@@ -72,6 +74,7 @@ class RecordPacking(unittest.TestCase):
             for (k, t) in fmt:
                 # Pick a random value that the attribute can take on
                 setattr(inst, k, randomValue(t))
+                print 'Randomly picked', vars(inst)[k], 'for', t
             s = inst.encode()
             msg = "%s encoded to %d bytes, not %d bytes" % (rt.__name__, len(s), rt.EXPECTED_ENCODED_SIZE)
             self.assertEquals(len(s), rt.EXPECTED_ENCODED_SIZE, msg)
