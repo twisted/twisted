@@ -19,6 +19,32 @@ from twisted.python import log, reflect, components
 from twisted.internet import base, fdesc, error
 from twisted.protocols import ethernet
 
+"""
+You need Eunuchs for twisted.pair.tuntap to work.
+
+Eunuchs is a library containing the missing manly parts of
+UNIX API for Python.
+
+Eunuchs is a library of Python extension that complement the standard
+libraries in parts where full support for the UNIX API (or the Linux
+API) is missing.
+
+Most of the functions wrapped by Eunuchs are low-level, dirty, but
+absolutely necessary functions for real systems programming. The aim is
+to have the functions added to mainstream Python libraries.
+
+Current list of functions included:
+
+ - fchdir(2)
+ - recvmsg(2) and sendmsg(2), including use of cmsg(3)
+ - socketpair(2)
+ - support for TUN/TAP virtual network interfaces
+
+Eunuchs doesn't have a proper web home right now, but you can fetch
+the source from http://ftp.debian.org/debian/pool/main/e/eunuch
+-- debian users can just use 'apt-get install python-eunuchs'.
+
+"""
 from eunuchs.tuntap import opentuntap, TuntapPacketInfo, makePacketInfo
 
 class TuntapPort(base.BasePort):
