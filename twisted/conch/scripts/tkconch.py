@@ -366,7 +366,7 @@ class SSHClientTransport(transport.SSHClientTransport):
                 khHost = '%s,%s' % (options['host'], 
                                     self.transport.getPeer()[1])
             keyType = common.getNS(pubKey)[0]
-            ques = """The authenticity of host '%s' can't be extablished.\r
+            ques = """The authenticity of host '%s' can't be established.\r
 %s key fingerprint is %s.""" % (host, 
                                 {'ssh-dss':'DSA', 'ssh-rsa':'RSA'}[keyType], 
                                 fingerprint) 

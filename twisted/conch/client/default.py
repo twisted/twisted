@@ -28,7 +28,7 @@ def verifyHostKey(transport, host, pubKey, fingerprint):
             khHost = '%s,%s' % (host,
                                 transport.transport.getPeer().host)
         keyType = common.getNS(pubKey)[0]
-        print """The authenticity of host '%s' can't be extablished.
+        print """The authenticity of host '%s' can't be established.
 %s key fingerprint is %s.""" % (host,
                             {'ssh-dss':'DSA', 'ssh-rsa':'RSA'}[keyType],
                             fingerprint)
