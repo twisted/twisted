@@ -258,22 +258,22 @@ class XPathQuery:
 
 __internedQueries = {}
 
-def intern(queryString):
+def internQuery(queryString):
     if queryString not in __internedQueries:
         __internedQueries[queryString] = XPathQuery(queryString)
     return __internedQueries[queryString]
 
 def matches(xpathstr, elem):
-    return intern(xpathstr).matches(elem)
+    return internQuery(xpathstr).matches(elem)
 
 def queryForStringList(xpathstr, elem):
-    return intern(xpathstr).queryForStringList(elem)
+    return internQuery(xpathstr).queryForStringList(elem)
 
 def queryForString(xpathstr, elem):
-    return intern(xpathstr).queryForString(elem)
+    return internQuery(xpathstr).queryForString(elem)
 
 def queryForNodes(xpathstr, elem):
-    return intern(xpathstr).queryForNodes(elem)
+    return internQuery(xpathstr).queryForNodes(elem)
 
 # Convenience main to generate new xpathparser.py
 if __name__ == "__main__":

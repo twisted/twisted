@@ -77,7 +77,7 @@ class EventDispatcher:
                 observers = self._eventObservers
             else:
                 # Treat as xpath
-                event = xpath.intern(event)
+                event = xpath.internQuery(event)
                 if (priority != None):
                     event.priority = priority
                 else:
@@ -114,7 +114,7 @@ class EventDispatcher:
             if self.prefix == event[0:len(self.prefix)]:
                 observers = self._eventObservers
             else:
-                event = xpath.intern(event)
+                event = xpath.internQuery(event)
                 observers = self._xpathObservers
         else:
             observers = self._xpathObservers

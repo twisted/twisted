@@ -7,8 +7,8 @@
 from twisted.xish import domish, xpath, utility
 from twisted.protocols import xmlstream
 
-DigestAuthQry = xpath.intern("/iq/query/digest")
-PlaintextAuthQry = xpath.intern("/iq/query/password")
+DigestAuthQry = xpath.internQuery("/iq/query/digest")
+PlaintextAuthQry = xpath.internQuery("/iq/query/password")
 
 def basicClientFactory(jid, secret):
     a = BasicAuthenticator(jid, secret)
