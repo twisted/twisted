@@ -11,6 +11,7 @@ if SN[0].isdigit():
     icqMode = 1
     hostport = ('login.icq.com', 5238)
 else:
+    hostport = ('login.oscar.aol.com', 5190)
     icqMode = 0
 
 class B(oscar.BOSConnection):
@@ -22,6 +23,7 @@ class B(oscar.BOSConnection):
         print user.__dict__
         self.name = user.name
     def gotBuddyList(self, l):
+        print l
         self.activateSSI()
         self.setProfile("""this is a test of the current twisted.oscar code.<br>
 current features:<br>
