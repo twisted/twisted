@@ -56,10 +56,10 @@ class IConnector(Interface):
 
 
 class IResolver(Interface):
-    
+
     def lookupAddress(self, name, timeout = 10):
         """Resolve the domain name C{name} into an IP address.
-        
+
         @type name: C{str}
         @type timeout: C{int}
         @rtype: C{Deferred}
@@ -73,11 +73,19 @@ class IReactorTCP(Interface):
     def listenTCP(self, port, factory, backlog=5, interface=''):
         """Connects a given protocol factory to the given numeric TCP/IP port.
 
-       @returns: an object that satisfies the IListeningPort interface
+        @param port: a port number on which to listen
 
-       @raise CannotListenError: as defined in twisted.internet.error, if it
-          cannot listen on this port (e.g., it cannot bind to the required port
-          number)
+        @param factory: a twisted.internet.protocol.ServerFactory instance
+
+        @param backlog: size of the listen queue
+
+        @param interface: the hostname to bind to, defaults to '' (all)
+
+        @returns: an object that satisfies the IListeningPort interface
+
+        @raise CannotListenError: as defined in twisted.internet.error, if it
+           cannot listen on this port (e.g., it cannot bind to the required port
+           number)
         """
 
     def connectTCP(self, host, port, factory, timeout=30, bindAddress=None):
@@ -128,6 +136,17 @@ class IReactorSSL(Interface):
         Connects a given protocol factory to the given numeric TCP/IP port.
         The connection is a SSL one, using contexts created by the context
         factory.
+
+        @param port: a port number on which to listen
+
+        @param factory: a L{twisted.internet.protocol.ServerFactory} instance
+
+        @param ctxFactory: a L{twisted.internet.ssl.ContextFactory} instance
+
+        @param backlog: size of the listen queue
+
+        @param interface: the hostname to bind to, defaults to '' (all)
+
         """
 
 
@@ -164,7 +183,7 @@ class IReactorUDP(Interface):
     IMPORTANT: This is an experimental new interface. It may change
     without backwards compatability. Suggestions are welcome.
     """
-    
+
     def listenUDP(self, port, protocol, interface='', maxPacketSize=8192):
         """Connects a given DatagramProtocol to the given numeric UDP port.
 
@@ -183,7 +202,7 @@ class IReactorMulticast(Interface):
     IMPORTANT: This is an experimental new interface. It may change
     without backwards compatability. Suggestions are welcome.
     """
-    
+
     def listenMulticast(self, port, protocol, interface='', maxPacketSize=8192):
         """Connects a given DatagramProtocol to the given numeric UDP port.
 
@@ -215,14 +234,14 @@ class IReactorProcess(Interface):
 
         @param path: the path to run the subprocess in - defaults to the
                      current directory.
-        
+
         @param uid: user ID to run the subprocess as. (Only available on
                     POSIX systems.)
 
         @param gid: group ID to run the subprocess as. (Only available on
                     POSIX systems.)
 
-        @param usePTY: if true, run this process in a psuedo-terminal. 
+        @param usePTY: if true, run this process in a psuedo-terminal.
                        (Not available on all systems.)
 
         @see: C{twisted.protocols.protocol.ProcessProtocol}
@@ -249,13 +268,13 @@ class IReactorTime(Interface):
 
     def cancelCallLater(self, callID):
         """This method is deprecated.
-        
+
         Cancel a call that would happen later.
 
         @param callID: this is an opaque identifier returned from C{callLater}
                        that will be used to cancel a specific call.
-	
-	    @raise ValueError: if the callID is not recognized.
+
+            @raise ValueError: if the callID is not recognized.
         """
 
 
@@ -684,28 +703,27 @@ class IMulticastTransport(Interface):
 
     def getOutgoingInterface(self):
         """Return interface of outgoing multicast packets."""
-    
+
     def setOutgoingInterface(self, addr):
         """Set interface for outgoing multicast packets.
 
         Returns Deferred of success.
         """
-    
+
     def getLoopbackMode(self):
         """Return if loopback mode is enabled."""
-    
+
     def setLoopbackMode(self, mode):
         """Set if loopback mode is enabled."""
 
     def getTTL(self):
         """Get time to live for multicast packets."""
-    
+
     def setTTL(self, ttl):
         """Set time to live on multicast packets."""
 
     def joinGroup(self, addr, interface=""):
         """Join a multicast group. Returns Deferred of success."""
-    
+
     def leaveGroup(self, addr, interface=""):
         """Leave multicast group, return Deferred of success."""
-
