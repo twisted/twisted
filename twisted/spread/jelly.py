@@ -698,7 +698,7 @@ class SecurityOptions:
 
     basicTypes = ["dictionary", "list", "tuple",
                   "reference", "dereference", "unpersistable",
-                  "persistent"]
+                  "persistent", "long_int"]
 
     def __init__(self):
         """SecurityOptions()
