@@ -20,8 +20,6 @@
 # Twisted imports
 from twisted.python import log, failure
 
-# System Imports
-import types
 
 class AlreadyCalledError(Exception):
     pass
@@ -275,8 +273,8 @@ class Deferred:
         """
         if (self.called and
             self.isError and
-            isinstance(self.result, failure.Failure) and
-            self.result.frames):
+            isinstance(self.result, failure.Failure)):
+            log.msg("Unhandled error in Deferred:")
             log.err(self.result)
 
 
