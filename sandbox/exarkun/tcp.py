@@ -104,6 +104,7 @@ class _TLSMixin:
                     self.sslShutdown = 1
                 except SSL.Error:
                     pass
+            print 'losting conn1'
             return main.CONNECTION_DONE
         except SSL.WantReadError:
             return
@@ -112,6 +113,7 @@ class _TLSMixin:
             self.startWriting()
             return
         except SSL.Error:
+            print 'losting conn2'
             log.err()
             return main.CONNECTION_LOST
 
@@ -134,7 +136,7 @@ class _TLSMixin:
 
     def writeSomeData(self, data):
         try:
-            return Connection.writeSomeData(self, data)
+            return _BufferFlushBase.writeSomeData(self, data)
         except SSL.WantWriteError:
             return 0
         except SSL.WantReadError:
@@ -146,10 +148,48 @@ class _TLSMixin:
                 # and can be ignored
                 return 0
             else:
+                print 'losting conn3'
                 return main.CONNECTION_LOST
         except SSL.Error:
+            print 'losting conn4'
             log.err()
             return main.CONNECTION_LOST
+        
+
+    def write(self, data):
+        """Reliably write some data.
+
+        If there is no buffered data this tries to write this data immediately,
+        otherwise this adds data to be written the next time this file descriptor is
+        ready for writing.
+        """
+        assert isinstance(data, str), "Data must be a string."
+        if not self.connected or not data:
+            return
+        if (not self.dataBuffer) and (self.producer is None):
+            l = self.writeSomeData(data)
+            if l == len(data):
+                # all data was sent, our work here is done
+                return
+            elif not isinstance(l, Exception) and l > 0:
+                # some data was sent
+                self.dataBuffer = data
+                self.offset = l
+            else:
+                # either no data was sent, or we were disconnected.
+                # if we were disconnected we still continue, so that
+                # the event loop can figure it out later on.
+                self.dataBuffer = data
+        else:
+            self.dataBuffer = self.dataBuffer + data
+        if self.producer is not None:
+            if len(self.dataBuffer) > self.bufferSize:
+                self.producerPaused = 1
+                self.producer.pauseProducing()
+        self.startWriting()
+
+    def writeSequence(self, iovec):
+        self.write("".join(iovec))
 
     def _closeSocket(self):
         try:
@@ -186,7 +226,7 @@ class _TLSMixin:
             # don't close socket just yet
             return None
 
-class _BufferFlushMixin:
+class _BufferFlushBase(abstract.FileDescriptor):
     def writeSomeData(self, data):
         """Connection.writeSomeData(data) -> #of bytes written | CONNECTION_LOST
         This writes as much data as possible to the socket and returns either
@@ -203,7 +243,15 @@ class _BufferFlushMixin:
             else:
                 return main.CONNECTION_LOST
 
-class _IOVecFlushMixin:
+    def _flattenForSSL(self):
+        pass
+
+class _IOVecFlushBase(abstract.FileDescriptor):
+    def _flattenForSSL(self):
+        self.dataBuffer = ''.join(self.vector)
+        self.offset = 0
+        del self.vector
+
     def writeVector(self, vector):
         written, errno = iovec.writev(self.fileno(), vector)
         if written == -1:
@@ -229,11 +277,11 @@ class _IOVecFlushMixin:
 try:
     from twisted.python import iovec
 except ImportError:
-    _FlushMixin = _BufferFlushMixin
+    _FlushBase = _BufferFlushBase
 else:
-    _FlushMixin = _IOVecFlushMixin
+    _FlushBase = _IOVecFlushBase
     
-class Connection(_FlushMixin, abstract.FileDescriptor):
+class Connection(_FlushBase):
     """I am the superclass of all socket-based FileDescriptors.
 
     This is an abstract superclass of all objects which represent a TCP/IP
@@ -265,8 +313,9 @@ class Connection(_FlushMixin, abstract.FileDescriptor):
 
         def _startTLS(self):
             self.TLS = 1
-            class TLSConnection(_TLSMixin, self.__class__):
+            class TLSConnection(_TLSMixin, _BufferFlushBase, self.__class__):
                 pass
+            self._flattenForSSL()
             self.__class__ = TLSConnection
 
     def doRead(self):
