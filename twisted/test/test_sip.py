@@ -95,7 +95,7 @@ class MessageParsingTestCase(unittest.TestCase):
     def validateMessage(self, m, method, uri, headers, body):
         """Validate Requests."""
         self.assertEquals(m.method, method)
-        self.assertEquals(m.uri, uri)
+        self.assertEquals(m.uri.toString(), uri)
         self.assertEquals(m.headers, headers)
         self.assertEquals(m.body, body)
         self.assertEquals(m.finished, 1)
@@ -222,6 +222,7 @@ class URLTestCase(unittest.TestCase):
             "sip:j.doe@big.com",
             "sip:j.doe:secret@big.com;transport=tcp",
             "sip:j.doe@big.com?subject=project",
+            "sip:example.com",
             ]:
             self.assertEquals(sip.parseURL(url).toString(), url)
 

@@ -105,7 +105,7 @@ def parseViaHeader(value):
 class URL:
     """A SIP URL."""
 
-    def __init__(self, username, host, password=None, port=None,
+    def __init__(self, host, username=None, password=None, port=None,
                  transport=None, usertype=None, method=None,
                  ttl=None, maddr=None, tag=None, other=None, headers=None):
         self.username = username
@@ -129,10 +129,13 @@ class URL:
 
     def toString(self):
         l = []; w = l.append
-        w("sip:%s" % self.username)
-        if self.password != None:
-            w(":%s" % self.password)
-        w("@%s" % self.host)
+        w("sip:")
+        if self.username != None:
+            w(self.username)
+            if self.password != None:
+                w(":%s" % self.password)
+            w("@")
+        w(self.host)
         if self.port != None:
             w(":%d" % self.port)
         if self.usertype != None:
@@ -159,13 +162,17 @@ def parseURL(url):
         raise ValueError("unsupported scheme")
     parts = url[4:].split(";")
     userdomain, params = parts[0], parts[1:]
-    userpass, hostport = userdomain.split("@")
-    upparts = userpass.split(":", 1)
-    if len(upparts) == 1:
-        d["username"] = upparts[0]
+    udparts = userdomain.split("@", 1)
+    if len(udparts) == 2:
+        userpass, hostport = udparts
+        upparts = userpass.split(":", 1)
+        if len(upparts) == 1:
+            d["username"] = upparts[0]
+        else:
+            d["username"] = upparts[0]
+            d["password"] = upparts[1]
     else:
-        d["username"] = upparts[0]
-        d["password"] = upparts[1]
+        hostport = udparts[0]
     hpparts = hostport.split(":", 1)
     if len(hpparts) == 1:
         d["host"] = hpparts[0]
@@ -235,13 +242,13 @@ class Request(Message):
     def __init__(self, method, uri, version="SIP/2.0"):
         Message.__init__(self)
         self.method = method
-        self.uri = uri
+        self.uri = parseURL(uri)
 
     def __repr__(self):
         return "<SIP Request %d:%s %s>" % (id(self), self.method, self.uri)
 
     def _getHeaderLine(self):
-        return "%s %s SIP/2.0" % (self.method, self.uri)
+        return "%s %s SIP/2.0" % (self.method, self.uri.toString())
 
 
 class Response(Message):
