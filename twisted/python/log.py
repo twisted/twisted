@@ -158,9 +158,9 @@ def err(stuff):
                     _keptErrors.append(stuff)
             else:
                 _keptErrors.append(stuff)
-        stuff.printTraceback(file=logfile)
+        stuff.printTraceback(file=logerr)
     else:
-        msg(stuff)
+        logerr.write(str(stuff)+os.linesep)
 
 def deferr():
     """Write the default failure (the current exception) to the log.
@@ -354,7 +354,8 @@ threadable.whenThreaded(initThreads)
 def startLogging(file, setStdout=1):
     """Initialize logging to a specified file."""
     global logfile
-    logfile = Log(file, logOwner)
+    global logerr
+    logerr = logfile = Log(file, logOwner)
     msg("Log opened.")
     if setStdout:
         sys.stdout = sys.stderr = logfile
@@ -371,6 +372,7 @@ try:
     logfile
 except NameError:
     logfile = NullFile()
+    logerr = sys.stderr
 
 def discardLogs():
     """Throw away all logs.

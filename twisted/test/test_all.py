@@ -103,8 +103,8 @@ class TestLoader(unittest.TestLoader):
 
         return string.join(lines, '')
 
-#log.msg("opening test.log")
-log.logfile = open("test.log", 'a')
+
+log.startLogging(open("test.log", 'a'), 0)
 
 def testSuite():
     """unittestgui wants a callable to return a suite."""
