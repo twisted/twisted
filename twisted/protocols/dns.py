@@ -27,8 +27,7 @@ Future Plans: Get rid of some toplevels, maybe.  Put in a better
 """
 
 # System imports
-import StringIO, struct, random, types
-from socket import inet_aton, inet_ntoa
+import StringIO, struct, random, types, socket
 
 # Twisted imports
 from twisted.internet import protocol, defer, error
@@ -45,6 +44,8 @@ QUERY_TYPES = {
 
     17: 'RP',    18: 'AFSDB', 
     # 19 through 32?  Eh, I'll get to 'em.
+    
+    28: 'AAAA',
 
     33: 'SRV'
 }
@@ -432,7 +433,7 @@ class Record_A:
 
     def __init__(self, address = 0):
         if isinstance(address, types.StringType):
-            address = inet_aton(address)
+            address = socket.inet_aton(address)
         self.address = address
 
 
@@ -451,11 +452,11 @@ class Record_A:
 
 
     def __str__(self):
-        return '<A %s>' % (inet_ntoa(self.address),)
+        return '<A %s>' % (socket.inet_ntoa(self.address),)
 
 
     def xfrString(self):
-        return 'A %s' % (inet_ntoa(self.address),)
+        return 'A %s' % (socket.inet_ntoa(self.address),)
 
 
 class Record_SOA:
@@ -581,6 +582,38 @@ class Record_WKS:                    # OBSOLETE
             socket.inet_ntoa(self.address), self.protocol,
             ' '.join(map(str, r))
         )
+
+
+class Record_AAAA:               # OBSOLETE (or headed there)
+    __implements__ = (IEncodable,)
+    TYPE = AAAA
+    
+    def __init__(self, address = 0):
+        if isinstance(address, types.StringType):
+            address = socket.inet_pton(socket.AF_INET6, address)
+        self.address = address
+    
+    
+    def encode(self, strio, compDict = None):
+        strio.write(self.address)
+    
+    
+    def decode(self, strio, length = None):
+        self.address = readPrecisely(strio, 16)
+    
+    
+    def __eq__(self, other):
+        if isinstance(other, Record_AAAA):
+            return other.address == self.address
+        return 0
+    
+    
+    def __str__(self):
+        return '<AAAA %s>' % (socket.inet_ntop(socket.AF_INET6, self.address),)
+    
+    
+    def xfrString(self):
+        return 'AAAA %s' % (socket.inet_ntop(socket.AF_INET6, self.address),)
 
 
 class Record_SRV:                # EXPERIMENTAL

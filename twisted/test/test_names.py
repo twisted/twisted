@@ -291,6 +291,14 @@ class ServerDNSTestCase(unittest.DeferredTestCase):
         )
 
 
+#    def testAAAA(self):
+#        """Test DNS 'AAAA' record queries (IPv6)"""
+#        self.namesTest(
+#            self.resolver.lookupAddress6('test-domain.com'),
+#            [dns.Record_AAAA('AF43:5634:1294:AFCB:56AC:48EF:34C3:01FF')]
+#        )
+
+
 #    def testZoneTransfer(self):
 #        """Test DNS 'AXFR' queries (Zone transfer)"""
 #        self.namesTest(
