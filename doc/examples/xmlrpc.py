@@ -29,7 +29,7 @@ def main():
     from twisted.web import server
     app = Application("xmlrpc")
     r = xmlrpc.PB(Echoer())
-    app.listenOn(7080, server.Site(r))
+    app.listenTCP(7080, server.Site(r))
     app.run(0)
 
 

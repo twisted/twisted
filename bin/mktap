@@ -125,13 +125,13 @@ haveBroker = 0
 for num, proto in mod.getPorts(a, config):
     if isinstance(proto, pb.BrokerFactory):
         haveBroker = 1
-    a.listenOn(num, proto)
+    a.listenTCP(num, proto)
 
 # Would you like a manhole with that?
 if options.manholePass:
     if not haveBroker:
         bkr = pb.BrokerFactory(pb.AuthRoot(a))
-        a.listenOn(options.manholePort, bkr)
+        a.listenTCP(options.manholePort, bkr)
 
     svc = manholeService.Service(application=a)
     p = svc.createPerspective(options.manholeUser)

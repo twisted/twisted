@@ -23,5 +23,5 @@ class Echoer(pb.Root):
         return st
 if __name__ == '__main__':
     app = main.Application("pbsimple")
-    app.listenOn(8789, pb.BrokerFactory(Echoer()))
+    app.listenTCP(8789, pb.BrokerFactory(Echoer()))
     app.run()

@@ -30,5 +30,5 @@ if __name__ == '__main__':
     import pbecho
     app = main.Application("pbecho")
     pbecho.SimpleService("pbecho",app).getPerspectiveNamed("guest").makeIdentity("guest")
-    app.listenOn(pb.portno, pb.BrokerFactory(pb.AuthRoot(app)))
+    app.listenTCP(pb.portno, pb.BrokerFactory(pb.AuthRoot(app)))
     app.save("start")

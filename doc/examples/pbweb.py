@@ -39,5 +39,5 @@ if __name__ == "__main__":
     a = main.Application("pbweb")
     gdgt = widgets.Gadget()
     gdgt.widgets['index'] = EchoDisplay()
-    a.listenOn(8080, server.Site(gdgt))
+    a.listenTCP(8080, server.Site(gdgt))
     a.run()

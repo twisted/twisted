@@ -100,6 +100,6 @@ if __name__ == '__main__':
     factory = Factory()
     factory.protocol = Echo
     app = Application("echo")
-    app.listenOn(8000,factory)
+    app.listenTCP(8000, factory)
     app.run(save=0)
 

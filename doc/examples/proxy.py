@@ -19,4 +19,4 @@ from twisted.internet import main
 from twisted.web import proxy, server
 site = server.Site(proxy.ReverseProxyResource('www.yahoo.com', 80, '/'))
 application = main.Application('web-proxy')
-application.listenOn(8080, site)
+application.listenTCP(8080, site)
