@@ -39,7 +39,7 @@ class ConvertOptions(usage.Options):
                 self["typein"] = app.guessType(self["in"])
             except KeyError:
                 raise usage.UsageError("Could not guess type for '%s'" %
-                                       options["typein"])
+                                       self["typein"])
 
 def run():
     options = ConvertOptions()
