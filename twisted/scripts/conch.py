@@ -141,7 +141,9 @@ def handleError():
     from twisted.python import failure
     global exitStatus
     exitStatus = 2
-    reactor.stop()
+    try:
+        reactor.stop()
+    except: pass
     log.err(failure.Failure())
     raise
 
@@ -171,7 +173,9 @@ def _ebExit(f):
     else:
         s = str(f)
     exitStatus = "conch: exiting with error %s" % f
-    reactor.stop()
+    try:
+        reactor.stop()
+    except: pass
 
 def onConnect():
 #    if keyAgent and options['agent']:
@@ -282,6 +286,15 @@ class SSHConnection(connection.SSHConnection):
 #        else:
 #            return connection.OPEN_CONNECT_FAILED, "don't have an agent"
 
+    def channelClosed(self, channel):
+        log.msg('connection closing %s' % channel)
+        log.msg(self.channels)
+        if len(self.channels) == 1 and not (options['noshell'] and not options['nocache']): # just us left
+            log.msg('stopping connection')
+            stopConnection()
+        else:
+            connection.SSHConnection.channelClosed(self, channel)
+ 
 class SSHSession(channel.SSHChannel):
 
     name = 'session'
@@ -387,9 +400,7 @@ class SSHSession(channel.SSHChannel):
         global old
         log.msg('closed %s' % self)
         log.msg(repr(self.conn.channels))
-        if len(self.conn.channels) == 0 and not (options['noshell'] and not options['nocache']): # just us left
-            stopConnection()
-        elif not options['nocache']: # fork into the background
+        if not options['nocache']: # fork into the background
             if os.fork():
                 if old:
                     fd = sys.stdin.fileno()
@@ -428,21 +439,8 @@ class SSHSession(channel.SSHChannel):
         self.conn.sendRequest(self, 'window-change', struct.pack('!4L', *newSize))
            
 
-class SSHListenClientForwardingChannel(forwarding.SSHListenClientForwardingChannel):
-
-    def closed(self):
-        forwarding.SSHListenClientForwardingChannel.closed(self)
-        log.msg(repr(self.conn.channels))
-        if len(self.conn.channels) == 0 and not (options['noshell'] and not options['nocache']): # just us left
-            stopConnection()
-
-class SSHConnectForwardingChannel(forwarding.SSHConnectForwardingChannel):
-
-    def closed(self):
-        forwarding.SSHConnectForwardingChannel.closed(self)
-        log.msg(repr(self.conn.channels))
-        if len(self.conn.channels) == 0 and not (options['noshell'] and not options['nocache']): # just us left
-            stopConnection()
+class SSHListenClientForwardingChannel(forwarding.SSHListenClientForwardingChannel): pass
+class SSHConnectForwardingChannel(forwarding.SSHConnectForwardingChannel): pass
 
 def _leaveRawMode():
     global _inRawMode
