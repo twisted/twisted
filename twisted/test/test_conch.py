@@ -139,7 +139,6 @@ class SSHTestBase:
     def connectionLost(self, reason):
         global theTest
         if not hasattr(self,'expectedLoseConnection'):
-            reactor.crash()
             theTest.fail('unexpectedly lost connection %s\n%s' % (self, reason))
         reactor.crash()
 
@@ -400,6 +399,7 @@ class SSHTestFactory(factory.SSHFactory):
 class SSHTestOpenSSHProcess(protocol.ProcessProtocol):
 
     buf = ''
+    done = False
     
     def outReceived(self, data):
         self.buf += data
@@ -409,7 +409,7 @@ class SSHTestOpenSSHProcess(protocol.ProcessProtocol):
         global theTest
         theTest.assertEquals(reason.value.exitCode, 0, 'exit code was not 0: %i' % reason.value.exitCode)
         theTest.assertEquals(self.buf, 'hello\r\n')
-        reactor.crash()
+        self.done = True
 
 class SSHTransportTestCase(unittest.TestCase):
 
@@ -465,5 +465,9 @@ class SSHTransportTestCase(unittest.TestCase):
         host = reactor.listenTCP(0, fac).getHost()
         port = host[2]
         cmds = (cmdline % port).split()
-        reactor.spawnProcess(SSHTestOpenSSHProcess(), 'ssh', cmds)
+        p = SSHTestOpenSSHProcess()
+        reactor.spawnProcess(p, 'ssh', cmds)
         reactor.run()
+        # wait for process to finish
+        while not p.done:
+            reactor.iterate()
