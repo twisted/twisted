@@ -125,7 +125,7 @@ class TestCase:
             raise FailTest, (msg or "%s ~== %s" % (first, second))
 
 
-components.registerAdapter(runner.TestClassRunner, TestCase, runner.ITestRunner)
+# components.registerAdapter(runner.TestClassRunner, TestCase, runner.ITestRunner)
 
 class Tester:
     """I contain all the supporting machinery for running a single test method.
@@ -239,7 +239,7 @@ class TestSuite:
         self.numTests += testAdapter.numTests()
 
     def addTestClass(self, testClass):
-        testAdapter = util.getClassAdapter(testClass, runner.ITestRunner)
+        testAdapter = runner.TestClassRunner(testClass)
         self.tests.append(testAdapter)
         self.numTests += testAdapter.numTests()
 

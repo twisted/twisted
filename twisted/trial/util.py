@@ -1,4 +1,4 @@
-#
+# -*- test-case-name: twisted.test.test_trial -*-
 # Twisted, the Framework of Your Internet
 # Copyright (C) 2001-2003 Matthew W. Lefkowitz
 #
@@ -52,14 +52,6 @@ def isTestClass(testClass):
 
 def isTestCase(testCase):
     return isinstance(testCase, unittest.TestCase)
-
-def getClassAdapter(klass, interfaceClass, default=None):
-    adapterClass = components.getAdapterClassWithInheritance(klass, interfaceClass, default)
-    if adapterClass == None:
-        if default is None:
-            raise NotImplementedError('%s has no registered adapter for %s' %
-                                      (klass, interfaceClass))
-    return adapterClass(klass)
 
 def _getDeferredResult(d, timeout=None):
     from twisted.internet import reactor
