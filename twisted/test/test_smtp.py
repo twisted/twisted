@@ -22,8 +22,9 @@ Test cases for twisted.smtp module.
 from pyunit import unittest
 import twisted.protocols.protocol, twisted.protocols.smtp
 from twisted import protocols
-from twisted.protocols import loopback
+from twisted.protocols import loopback, smtp, protocol
 from twisted.test.test_protocols import StringIOWithoutClosing
+import string
 
 
 class DummyDomain:
@@ -144,4 +145,61 @@ QUIT\r
         if self.output.getvalue() != self.expected_output:
             raise AssertionError(`self.output.getvalue()`)
 
-testCases = [SMTPTestCase, SMTPClientTestCase, LoopbackSMTPTestCase]
+
+class DummySMTP(smtp.SMTP):
+
+    def connectionMade(self):
+        smtp.SMTP.connectionMade(self)
+        self.messages = []
+
+    def handleMessage(self, users, message, success, failure):
+        helo, origin = users[0].helo, users[0].orig
+        recipients = []
+        for user in users:
+            recipients.append(user.name+'@'+user.domain)
+        self.messages.append((helo, origin, recipients, message))
+        success()
+
+
+class AnotherSMTPTestCase(unittest.TestCase):
+
+    messages = [ ('foo.com', 'moshez@foo.com', ['moshez@bar.com'], '''\
+From: Moshe
+To: Moshe
+
+Hi,
+how are you?
+'''),
+                 ('foo.com', 'tttt@rrr.com', ['uuu@ooo', 'yyy@eee'], '''\
+Subject: pass
+
+..rrrr..
+''')
+              ]
+
+    expected_output = '220 Spammers beware, your ass is on fire\015\012250 Nice to meet you\015\012250 From address accepted\015\012250 Address recognized\015\012354 Continue\015\012250 Delivery in progress\015\012250 From address accepted\015\012250 Address recognized\015\012250 Address recognized\015\012354 Continue\015\012250 Delivery in progress\015\012221 See you later\015\012'
+
+    input = 'HELO foo.com\r\n'
+    for _, from_, to_, message in messages:
+        input = input + 'MAIL FROM:<%s>\r\n' % from_
+        for item in to_:
+            input = input + 'RCPT TO:<%s>\r\n' % item
+        input = input + 'DATA\r\n'
+        for line in string.split(message, '\n')[:-1]:
+            if line[:1] == '.': line = '.' + line
+            input = input + line + '\r\n'
+        input = input + '.' + '\r\n'
+    input = input + 'QUIT\r\n'
+
+    def testBuffer(self):
+        output = StringIOWithoutClosing()
+        a = DummySMTP()
+        a.makeConnection(protocol.FileWrapper(output))
+        a.dataReceived(self.input)
+        if a.messages != self.messages:
+            raise AssertionError(a.messages)
+        if output.getvalue() != self.expected_output:
+            raise AssertionError(`output.getvalue()`)
+
+
+testCases = [SMTPTestCase, SMTPClientTestCase, LoopbackSMTPTestCase, AnotherSMTPTestCase]

@@ -16,13 +16,14 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
 """
-Test cases for twisted.pop3 module.
+Test cases for twisted.protocols.pop3 module.
 """
 
 from pyunit import unittest
 from twisted import mail
 import twisted.protocols.pop3, twisted.protocols.protocol
 from twisted import protocols
+from twisted.protocols import pop3, protocol
 from twisted.test.test_protocols import StringIOWithoutClosing
 from twisted.protocols import loopback
 import StringIO, string
@@ -145,4 +146,61 @@ Someone set up us the bomb!\015
         loopback.loopback(protocol, clientProtocol)
         self.failUnlessEqual(clientProtocol.message, self.message)
 
-testCases = [POP3TestCase]
+
+class DummyPOP3(pop3.POP3):
+
+    magic = '<moshez>'
+
+    def authenticateUserAPOP(self, user, password):
+        return DummyMailbox()
+
+class DummyMailbox(pop3.Mailbox):
+
+    messages = [
+'''\
+From: moshe
+To: moshe
+
+How are you, friend?
+''']
+
+    def __init__(self):
+        self.messages = DummyMailbox.messages[:]
+
+    def listMessages(self):
+        return map(len, self.messages)
+
+    def getMessage(self, i):
+        return StringIO.StringIO(self.messages[i])
+
+    def getUidl(self, i):
+        return str(i)
+
+    def deleteMessage(self, i):
+        self.messages[i] = ''
+
+
+class AnotherPOP3TestCase(unittest.TestCase):
+
+    def testBuffer(self):
+        a = StringIOWithoutClosing()
+        dummy = DummyPOP3()
+        dummy.makeConnection(protocol.FileWrapper(a))
+        lines = string.split('''\
+APOP moshez dummy
+LIST
+UIDL
+RETR 1
+RETR 2
+DELE 1
+RETR 1
+QUIT''', '\n')
+        expected_output = '+OK <moshez>\r\n+OK \r\n+OK 1\r\n1 44\r\n.\r\n+OK \r\n1 0\r\n.\r\n+OK 44\r\nFrom: moshe\r\nTo: moshe\r\n\r\nHow are you, friend?\r\n.\r\n-ERR index out of range\r\n+OK \r\n-ERR message deleted\r\n+OK \r\n'
+        for line in lines:
+            dummy.lineReceived(line)
+        self.failUnlessEqual(expected_output, a.getvalue(),
+                             "\nExpected:\n%s\nResults:\n%s\n"
+                             % (expected_output, a.getvalue()))
+
+
+testCases = [POP3TestCase, AnotherPOP3TestCase]
