@@ -53,16 +53,14 @@
 
 <h2>Release</h2>
 
-<h3>Unix</h3>
-
-<h4>Ensure Debian correctness for alpha1</h4>
+<h3>Ensure Debian correctness for alpha1</h3>
 
 <p>If you're doing an alpha1, make sure debian/changelog has been
 updated to show the prior full-release. e.g., if doing 1.1.2alpha1,
 make sure 1.1.1 is in debian/changelog, or else your new .deb will
 have a broken Version.</p>
 
-<h4>Update from previous RC for rcN &gt; 1</h4>
+<h3>Update from previous RC for rcN &gt; 1</h3>
 
 <p>If you're doing an rcN &gt; 1, then you need to base the release on
 the previous RC. You do that with something like this:</p>
@@ -86,7 +84,7 @@ After doing this, use the first command below. If you're doing a
 release from HEAD (i.e., an alpha or rc1), use the second command.
 </p>
 
-<h4>Run release-twisted</h4>
+<h3>Run release-twisted</h3>
 
 <ul>
   <li>
@@ -117,10 +115,8 @@ $SOMEWHERE/admin/release-twisted -V $VERSION -o $LASTVERSION --checkout \
   </li>
 </ul>
 
-
 <h3>win32</h3>
 <p>Run win32/bdist_wininst.bat.</p>
-
 
 <h2>Post-release</h2>
 
