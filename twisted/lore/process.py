@@ -40,12 +40,12 @@ class Walker:
         self.walked = []
         self.failures = []
 
-    def walkdir(self, topdir):
+    def walkdir(self, topdir, prefix=''):
         self.basecount = dircount(topdir)
-        os.path.walk(topdir, self.walk, None)
+        os.path.walk(topdir, self.walk, prefix)
 
-    def walk(self, ig, d, names):
-        linkrel = '../' * (dircount(d) - self.basecount)
+    def walk(self, prefix, d, names):
+        linkrel = prefix + '../' * (dircount(d) - self.basecount)
         for name in names:
             fullpath = os.path.join(d, name)
             fext = os.path.splitext(name)[1]

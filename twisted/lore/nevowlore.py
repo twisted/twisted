@@ -36,7 +36,7 @@ from twisted.protocols import sux
 
 from twisted.lore import default, tree, process
 
-from nevow import rend
+from nevow import loaders
 
 def parseStringAndReport(s):
     try:
@@ -58,7 +58,7 @@ def nevowify(filename, linkrel, ext, url, templ, options=None, outfileGenerator=
         options = {}
     pclass = options['pageclass']
     pclass = reflect.namedObject(pclass)
-    page = pclass(docFactory=rend.htmlfile(filename))
+    page = pclass(docFactory=loaders.htmlfile(filename))
     s = page.renderString()
     from twisted.trial.util import wait
     s = wait(s)

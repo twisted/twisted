@@ -32,6 +32,7 @@ class Options(usage.Options):
                      ["output", "o", 'html'],
                      ["index", "x", None, "The base filename you want to give your index file"],
                      ["book", "b", None, "The book file to generate a book from"],
+                     ["prefixurl", None, "", "The prefix to stick on to relative links; only useful when processing directories"],
                     ]
 
     def __init__(self, *args, **kw):
@@ -98,7 +99,7 @@ def runGivenOptions(opt):
         for filename in book.getFiles():
             walker.walked.append(('', filename))
     else:
-        walker.walkdir(opt['docsdir'] or '.')
+        walker.walkdir(opt['docsdir'] or '.', opt['prefixurl'])
 
     if opt['index']:
         indexFilename = opt['index']
