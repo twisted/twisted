@@ -149,7 +149,7 @@ class PHPScript(FilteredScript):
     Sometimes, php wants the path to itself as argv[0]. This is that time.
     """
 
-    filter = '/usr/bin/php'
+    filter = '/usr/bin/php4'
 
 
 class CGIProcessProtocol(protocol.ProcessProtocol, pb.Viewable):
