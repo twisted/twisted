@@ -11,9 +11,23 @@ def _connected(i):
     d.addCallback(_password,i)
     d.addErrback(_bad)
 def _password(r,i):
-    print 'worked!'
-    assert i.isAuthenticated() 
-    reactor.stop()
+    assert i.isAuthenticated()
+    d = i.openSession()
+    d.addCallback(_session)
+    d.addErrback(_bad)
+
+def _session(s):
+    c = CrazyProtocol()
+    s.setClient(c)
+    s.openExec('echo hello world!')
+
+class CrazyProtocol(protocol.Protocol):
+    def dataReceived(self, data):
+        reactor.stop()
+        if data != 'hello world!\n':
+            assert 0
+        else:
+            print 'worked!'
 
 d = defer.Deferred()
 protocol.ClientCreator(reactor, SimpleTransport, d).connectTCP('localhost', 22)

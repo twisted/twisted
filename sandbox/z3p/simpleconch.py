@@ -1,7 +1,8 @@
 # inital work at building a simpler interface to the Conchcode
 
 from twisted.conch.ssh import common, transport, userauth, connection, keys
-from twisted.internet import defer
+from twisted.conch.ssh import channel, session
+from twisted.internet import defer, protocol
 
 class SimpleTransport(transport.SSHClientTransport):
 
@@ -25,8 +26,8 @@ class SimpleTransport(transport.SSHClientTransport):
 
     def _getAuthClient(self):
         d = defer.Deferred()
-        self._connection = SimpleConnection()
-        self._authClient = SimpleAuthClient(d, self._connection)
+        self._conn = SimpleConnection()
+        self._authClient = SimpleAuthClient(d, self._conn)
         self.requestService(self._authClient)
         return d
 
@@ -73,6 +74,13 @@ class SimpleTransport(transport.SSHClientTransport):
             self._authClient.tryAuth('publickey')
         return d
 
+    def openSession(self):
+        d = defer.Deferred()
+        c = SimpleSession(conn=self._conn)
+        c._d = d
+        self._conn.openChannel(c)
+        return d
+
 class SimpleAuthClient(userauth.SSHUserAuthClient):
 
     def __init__(self, d, instance):
@@ -104,3 +112,36 @@ class SimpleAuthClient(userauth.SSHUserAuthClient):
             d.errback(error.ConchError())
 
 class SimpleConnection(connection.SSHConnection): pass
+
+class SimpleSession(channel.SSHChannel):
+
+    name = 'session'
+
+    def channelOpen(self, data):
+        d = self._d
+        del self._d
+        self.specificData = data
+        d.callback(self)
+
+    def openFailed(self, reason):
+        d = self._d
+        del self._d
+        d.errback(reason)
+
+    # client methods
+
+    def setClient(self, client):
+        self.dataReceived = client.dataReceived
+        self.closed = lambda:client.connectionLost(protocol.connectionDone)
+        client.makeConnection(self)
+
+    def requestPTY(self, term='xterm', width=80, height=24, xpixel=0, ypixel=0, modes='', wantReply = 0):
+        data = session.packRequest_pty_req(term, (width, heght, xpixel, ypixel), modes)
+        return self.conn.sendRequest(self, 'pty-req', data, wantReply)
+
+    def openShell(self, wantReply = 0):
+        return self.conn.sendRequest(self, 'shell', '', wantReply)
+
+    def openExec(self, program, wantReply = 0):
+        return self.conn.sendRequest(self, 'exec', common.NS(program), wantReply)
+        
