@@ -6,10 +6,9 @@ from twisted.python import log, usage
 import sys
 
 if sys.platform == 'win32':
-    # win32 serial does not work yet!
-    raise NotImplementedError, "The SerialPort transport does not currently support Win32"
     from twisted.internet import win32eventreactor
     win32eventreactor.install()
+
 
 class GPSFixLogger:
     def handle_fix(self, *args):
