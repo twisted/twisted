@@ -165,7 +165,7 @@ class MaildirDirdbmDomain(AbstractMaildirDomain):
                 os.mkdir(os.path.join(dir, 'inbox', '.Trash', subdir))
             fp=open(os.path.join(dir, 'inbox', '.Trash', 'maildirfolder'), 'w')
             fp.close()
-        return dir
+        return os.path.join(dir, 'inbox')
 
     def authenticateUserAPOP(self, user, magic, digest, domain):
         """Return Mailbox to valid APOP authentications
