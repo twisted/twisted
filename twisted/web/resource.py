@@ -93,7 +93,7 @@ class Resource(coil.ConfigCollection):
     def listDynamicNames(self):
         return []
 
-    def listDynamicEntities(self, request):
+    def listDynamicEntities(self, request=None):
         return []
 
     def getStaticEntity(self, name):
