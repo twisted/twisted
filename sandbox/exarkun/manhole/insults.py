@@ -860,8 +860,8 @@ class ClientProtocol(protocol.Protocol):
 
         def n(self, proto, handler, buf):
             if buf == '6':
-                pos = handler.reportCursorPosition()
-                proto.transport.write('\x1b[%d;%dR' % (pos))
+                x, y = handler.reportCursorPosition()
+                proto.transport.write('\x1b[%d;%dR' % (x + 1, y + 1))
             else:
                 handler.unhandledControlSequence('\x1b[' + buf + 'n')
 
