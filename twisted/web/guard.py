@@ -172,6 +172,12 @@ class WidgetGuard(widgets.Widget):
 
 
 
+# TODO hiding forms behind a ResourceGuard sucks, because if
+# ResourceGuard needs to authenticate the user, it will 1) complain
+# about the form submitted, 2) throw the data away. This happens if
+# you use "foo?a=b" -style URLs and the user hasn't authenticated yet,
+# or with session expiry.
+
 class ResourceGuard(resource.Resource):
     isLeaf = 1
     def __init__(self, res, service, sessionIdentity=None, sessionPerspective=None):
