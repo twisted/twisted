@@ -34,7 +34,9 @@ class MyModel(mvc.Model):
         self.random=random
 
 class MyView(mvc.View):        
-    def draw(self):
+    def __init__(self, model):
+        mvc.View.__init__(self, model)
+        self.model.addView(self)
         # pretend self.foo is what the user now sees on their screen
         self.foo = self.model.foo
         self.random = self.model.random
