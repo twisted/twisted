@@ -16,10 +16,9 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
 """
-DEPRECATED.
-
 Twisted Spread UI: UI utilities for various toolkits connecting to PB.
 """
 
-import warnings
-warnings.warn("twisted.spread.ui is deprecated. Please do not use.", DeprecationWarning)
+# Undeprecating this until someone figures out a real plan for alternatives to spread.ui.
+##import warnings
+##warnings.warn("twisted.spread.ui is deprecated. Please do not use.", DeprecationWarning)
