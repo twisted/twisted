@@ -295,6 +295,14 @@ class Connection(abstract.FileDescriptor):
             pass
 
     def _closeReadConnection(self):
+        if platformType == "win32":
+            # win32 will send a RST if there's anything in read buffer when
+            # we do the shutdown(), or if any data appears afterwards, so
+            # we need to handler this specially.
+            # http://msdn.microsoft.com/library/en-us/winsock/winsock/shutdown_2.asp
+            # Basicaly we should pretend to close it but really just continue
+            # reading and discarding data. TLS will need the same sort of code.
+            raise NotImplementedError, "XXX this is currently not supported on Windows."
         self.socket.shutdown(0)
         p = interfaces.IHalfCloseableProtocol(self.protocol, None)
         if p:
