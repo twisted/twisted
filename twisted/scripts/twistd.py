@@ -201,6 +201,17 @@ def run():
     register.checkLicenseFile()
     sys.path.append(config.opts['rundir'])
 
+    # Install a reactor immediately.  The application will not load properly
+    # unless this is done FIRST; otherwise the first 'reactor' import would
+    # trigger an automatic installation of the default reactor.
+
+    if platformType == 'java':
+        from twisted.internet import javareactor
+        javareactor.install()
+    else:
+        from twisted.python.reflect import namedModule
+        namedModule(reactorTypes[config['reactor']]).install()
+
     if platformType != 'posix' or config.opts['debug']:
         # only posix can fork, and debugging requires nodaemon
         config.opts['nodaemon'] = 1
@@ -284,13 +295,6 @@ def run():
         oldstdin.close()
         oldstdout.close()
         oldstderr.close()
-
-    if platformType == 'java':
-        from twisted.internet import javareactor
-        javareactor.install()
-    else:
-        from twisted.python.reflect import namedModule
-        namedModule(reactorTypes[config['reactor']]).install()
 
     from twisted.internet import reactor
     log.msg('reactor class: %s' % reactor.__class__)
