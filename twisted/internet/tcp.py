@@ -74,9 +74,9 @@ class Connection(abstract.FileDescriptor, styles.Ephemeral):
     This is an abstract superclass of all objects which represent a TCP/IP
     connection based socket.
     """
-    
+
     __implements__ = abstract.FileDescriptor.__implements__, interfaces.ITCPTransport
-    
+
     def __init__(self, skt, protocol, reactor=None):
         abstract.FileDescriptor.__init__(self, reactor=reactor)
         self.socket = skt
@@ -127,7 +127,7 @@ class Connection(abstract.FileDescriptor, styles.Ephemeral):
             self.socket.shutdown(2)
         except socket.error:
             pass
-    
+
     def connectionLost(self, reason):
         """See abstract.FileDescriptor.connectionLost().
         """
@@ -159,10 +159,10 @@ class Connection(abstract.FileDescriptor, styles.Ephemeral):
 
     def getTcpNoDelay(self):
         return operator.truth(self.socket.getsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY))
-    
+
     def setTcpNoDelay(self, enabled):
         self.socket.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, enabled)
-        
+
 
 class BaseClient(Connection):
     """A base class for client TCP (and similiar) sockets.
@@ -181,7 +181,7 @@ class BaseClient(Connection):
     def stopConnecting(self):
         """Stop attempt to connect."""
         self.failIfNotConnected(error.UserError())
-    
+
     def failIfNotConnected(self, err):
         if (self.connected or
             self.disconnected or
@@ -251,7 +251,7 @@ class BaseClient(Connection):
         self.protocol = self.connector.buildProtocol(self.getPeer())
         self.protocol.makeConnection(self)
         self.logstr = self.protocol.__class__.__name__+",client"
-    
+
     def connectionLost(self, reason):
         if not self.connected:
             self.failIfNotConnected(error.ConnectError())
@@ -287,7 +287,7 @@ class UNIXClient(BaseClient):
         err = None
         whenDone = None
         skt = None
-        
+
         try:
             mode = os.stat(filename)[0]
         except OSError, ose:
@@ -454,7 +454,7 @@ class Port(abstract.FileDescriptor):
             try:
                 skt.bind((self.interface, self.port))
             except socket.error, le:
-                raise CannotListenError, (self.interface, self.port, str(le))
+                raise CannotListenError, (self.interface, self.port, le)
         skt.setblocking(0)
         skt.listen(self.backlog)
         self.connected = 1
