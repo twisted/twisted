@@ -113,8 +113,21 @@ class ProcessWriter(abstract.FileDescriptor):
         abstract.FileDescriptor.write(self, data)
 
     def doRead(self):
-        """The only way this pipe can become readable is at EOF, because the
-        child has closed it.
+        """The only way a write pipe can become "readable" is at EOF, because the
+        child has closed it, and we're using a reactor which doesn't distinguish
+        between readable and closed (such as the select reactor).
+        
+        Except that's not true on linux < 2.6.11. It has the following characteristics:
+        write pipe is completely empty => POLLOUT (writable in select)
+        write pipe is not completely empty => POLLIN (readable in select)
+        write pipe's reader closed => POLLIN|POLLERR (readable and writable in select)
+        
+        That's what this funky code is for. If linux was not broken, this function could
+        be simply "return CONNECTION_LOST".
+        
+        BUG: We call select no matter what the reactor.
+        If the reactor is pollreactor, and the fd is > 1024, this will fail.
+        (only occurs on broken versions of linux, though).
         """
         fd = self.fd
         r, w, x = select.select([fd], [fd], [], 0)
@@ -126,7 +139,7 @@ class ProcessWriter(abstract.FileDescriptor):
         """
         abstract.FileDescriptor.connectionLost(self, reason)
         os.close(self.fd)
-        self.proc.childConnectionLost(self.name)
+        self.proc.childConnectionLost(self.name, reason)
 
 
 class ProcessReader(abstract.FileDescriptor):
@@ -169,7 +182,7 @@ class ProcessReader(abstract.FileDescriptor):
         if self.connected and not self.disconnecting:
             self.disconnecting = 1
             self.stopReading()
-            self.reactor.callLater(0, self.connectionLost, CONNECTION_DONE)
+            self.reactor.callLater(0, self.connectionLost, failure.Failure(CONNECTION_DONE))
     
     def connectionLost(self, reason):
         """Close my end of the pipe, signal the Process (which signals the
@@ -177,7 +190,7 @@ class ProcessReader(abstract.FileDescriptor):
         """
         abstract.FileDescriptor.connectionLost(self, reason)
         os.close(self.fd)
-        self.proc.childConnectionLost(self.name)
+        self.proc.childConnectionLost(self.name, reason)
 
 
 class Process(styles.Ephemeral):
@@ -567,7 +580,7 @@ class Process(styles.Ephemeral):
         ##self.closeStdin()
         self.maybeCallProcessEnded()
 
-    def childConnectionLost(self, childFD):
+    def childConnectionLost(self, childFD, reason):
         # this is called when one of the helpers (ProcessReader or
         # ProcessWriter) notices their pipe has been closed
         del self.pipes[childFD]
