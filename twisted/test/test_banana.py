@@ -21,7 +21,8 @@ import cStringIO
 import sys
 # Twisted Imports
 from twisted.spread import banana
-from twisted.internet import protocol
+from twisted.python import failure
+from twisted.internet import protocol, main
 
 class MathTestCase(unittest.TestCase):
     def testInt2b128(self):
@@ -48,7 +49,7 @@ class BananaTestCase(unittest.TestCase):
         self.result = result
 
     def tearDown(self):
-        self.enc.connectionLost()
+        self.enc.connectionLost(failure.Failure(main.CONNECTION_DONE))
         del self.enc
 
     def testString(self):

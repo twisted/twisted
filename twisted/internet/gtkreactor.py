@@ -34,7 +34,7 @@ import gtk
 import sys
 
 # Twisted Imports
-from twisted.python import log, threadable, runtime
+from twisted.python import log, threadable, runtime, failure
 from twisted.internet.interfaces import IReactorFDSet
 
 # Sibling Imports
@@ -114,12 +114,12 @@ class GtkReactor(default.PosixReactorBase):
                 method = getattr(source, cbName)
                 why = method()
             except:
-                why = main.CONNECTION_LOST
+                why = sys.exc_value
                 log.msg('Error In %s.%s' %(source,cbName))
                 log.deferr()
             if why:
                 try:
-                    source.connectionLost()
+                    source.connectionLost(failure.Failure(why))
                 except:
                     log.deferr()
                 self.removeReader(source)

@@ -180,7 +180,7 @@ class DTP(protocol.Protocol):
         if self.transport is not None:
             self.executeAction()
 
-    def connectionLost(self):
+    def connectionLost(self, reason):
         if (self.action == 'STOR') and (self.file):
             self.pi.reply('fileok')
         elif self.file is not None:
@@ -805,8 +805,8 @@ class FTPClient(basic.LineReceiver):
         # Use a wrapper so that we can override connectionLost without
         # modifying the Protocol instance passed to us
         class ProtocolWrapper(ObjectWrapper):
-            def connectionLost(self):
-                self.object.connectionLost()
+            def connectionLost(self, reason):
+                self.object.connectionLost(reason)
                 # Signal that transfer has completed
                 self.deferred.callback(None)
             def connectionFailed(self):

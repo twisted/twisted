@@ -104,7 +104,7 @@ class Echo(Protocol):
             self.transport.write("Too many connections, try later") 
             self.transport.loseConnection()
 
-    def connectionLost(self):
+    def connectionLost(self, reason):
         self.factory.numProtocols = self.factory.numProtocols-1
 
     def dataReceived(self, data):

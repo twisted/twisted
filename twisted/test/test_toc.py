@@ -15,9 +15,12 @@
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
-from twisted.protocols import toc
-from twisted.internet import protocol
 from pyunit import unittest
+
+from twisted.protocols import toc
+from twisted.internet import protocol, main
+from twisted.python import failure
+
 import StringIO
 from struct import pack,unpack
 
@@ -114,7 +117,7 @@ class TOCGeneralTestCase(unittest.TestCase):
                     for j in k:
                         dummy[i].dataReceived(j) # test by doing a character at a time
                 else:
-                    dummy[i].connectionLost()
+                    dummy[i].connectionLost(failure.Failure(main.CONNECTION_DONE))
         values=range(USERS)
         for i in values:
             values[i]=strings[i].getvalue()
@@ -200,7 +203,7 @@ class TOCMultiPacketTestCase(unittest.TestCase):
         d.factory=fac
         d.makeConnection(protocol.FileWrapper(s))
         d.dataReceived(data)
-        d.connectionLost()
+        d.connectionLost(failure.Failure(main.CONNECTION_DONE))
         value=s.getvalue()
         flaps=[]
         f,value=readFlap(value)
@@ -261,7 +264,7 @@ class TOCSavedValuesTestCase(unittest.TestCase):
         d.makeConnection(protocol.FileWrapper(s))
         for i in beforesend:
             d.dataReceived(i)
-        d.connectionLost()
+        d.connectionLost(failure.Failure(main.CONNECTION_DONE))
         v=s.getvalue()
         flaps=[]
         f,v=readFlap(v)
@@ -279,7 +282,7 @@ class TOCSavedValuesTestCase(unittest.TestCase):
         d.makeConnection(protocol.FileWrapper(s))
         for i in badpasssend:
             d.dataReceived(i)
-        d.connectionLost()
+        d.connectionLost(failure.Failure(main.CONNECTION_DONE))
         v=s.getvalue()
         flaps=[]
         f,v=readFlap(v)
@@ -297,7 +300,7 @@ class TOCSavedValuesTestCase(unittest.TestCase):
         d.makeConnection(protocol.FileWrapper(s))
         for i in goodpasssend:
             d.dataReceived(i)
-        d.connectionLost()
+        d.connectionLost(failure.Failure(main.CONNECTION_DONE))
         v=s.getvalue()
         flaps=[]
         f,v=readFlap(v)
@@ -337,7 +340,7 @@ class TOCPrivacyTestCase(unittest.TestCase):
         d.makeConnection(protocol.FileWrapper(s))
         for i in sends:
             d.dataReceived(i)
-        d.connectionLost()
+        d.connectionLost(failure.Failure(main.CONNECTION_DONE))
         v=s.getvalue()
         flaps=[]
         f,v=readFlap(v)

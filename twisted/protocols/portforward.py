@@ -28,7 +28,7 @@ class Proxy(protocol.Protocol):
     def setPeer(self, peer):
         self.peer = peer
 
-    def connectionLost(self):
+    def connectionLost(self, reason):
         self.peer.loseConnection()
         del self.peer
 

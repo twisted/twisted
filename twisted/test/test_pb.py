@@ -25,7 +25,7 @@ from cStringIO import StringIO
 from pyunit import unittest
 
 from twisted.spread import pb, util
-from twisted.internet import protocol
+from twisted.internet import protocol, main
 from twisted.internet.app import Application
 from twisted.python import failure, log
 from twisted.cred import identity
@@ -677,7 +677,7 @@ class DisconnectionTestCase(unittest.TestCase):
         self.remoteObject = r
         
         # disconnect
-        c.connectionLost()
+        c.connectionLost(failure.Failure(main.CONNECTION_DONE))
         self.assert_(self.gotCallback)
         self.assert_(self.objectCallback)
 

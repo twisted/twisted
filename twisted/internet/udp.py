@@ -101,12 +101,12 @@ class Connection(abstract.FileDescriptor,
         else:
             return 0
 
-    def connectionLost(self):
+    def connectionLost(self, reason):
         """See abstract.FileDescriptor.connectionLost().
         """
         protocol = self.protocol
         del self.protocol
-        abstract.FileDescriptor.connectionLost(self)
+        abstract.FileDescriptor.connectionLost(self, reason)
         self.socket.close()
         del self.socket
         del self.fileno
@@ -220,11 +220,11 @@ class Port(abstract.FileDescriptor):
             from twisted.internet import reactor
             reactor.callLater(0, self.connectionLost)
 
-    def connectionLost(self):
+    def connectionLost(self, reason=None):
         """Cleans up my socket.
         """
         log.msg('(Port %s Closed)' % self.port)
-        abstract.FileDescriptor.connectionLost(self)
+        abstract.FileDescriptor.connectionLost(self, reason)
         self.factory.doStop()
         self.connected = 0
         self.socket.close()

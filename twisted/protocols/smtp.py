@@ -152,7 +152,7 @@ class SMTP(basic.LineReceiver):
         self.__messages = self.startMessage(recipients)
         self.sendCode(354, 'Continue')
 
-    def connectionLost(self):
+    def connectionLost(self, reason):
         if self.mode is DATA:
             for message in self.__messages:
                 message.connectionLost()

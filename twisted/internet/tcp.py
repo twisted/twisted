@@ -30,9 +30,9 @@ import copy
 import exceptions
 import socket
 import sys
-import string
 import select
 import operator
+import warnings
 
 if os.name == 'nt':
     EINVAL      = 10022
@@ -127,16 +127,27 @@ class Connection(abstract.FileDescriptor, styles.Ephemeral):
         except socket.error:
             pass
     
-    def connectionLost(self):
+    def connectionLost(self, reason):
         """See abstract.FileDescriptor.connectionLost().
         """
-        abstract.FileDescriptor.connectionLost(self)
+        abstract.FileDescriptor.connectionLost(self, reason)
         self._closeSocket()
         protocol = self.protocol
         del self.protocol
         del self.socket
         del self.fileno
-        protocol.connectionLost()
+        try:
+            protocol.connectionLost(reason)
+        except TypeError, e:
+            # while this may break, it will only break on deprecated code
+            # as opposed to other approaches that might've broken on
+            # code that uses the new API (e.g. inspect).
+            if e.args and e.args[0] == "connectionLost() takes exactly 1 argument (2 given)":
+                warnings.warn("Protocol %s's connectionLost should accept a reason argument" % protocol,
+                              category=DeprecationWarning, stacklevel=2)
+                protocol.connectionLost()
+            else:
+                raise
 
     logstr = "Uninitialized"
 
@@ -241,12 +252,12 @@ class BaseClient(Connection):
         self.protocol.makeConnection(self)
         self.logstr = self.protocol.__class__.__name__+",client"
     
-    def connectionLost(self):
+    def connectionLost(self, reason):
         if not self.connected:
             self.failIfNotConnected(error.ConnectError())
         else:
-            Connection.connectionLost(self)
-            self.connector.connectionLost()
+            Connection.connectionLost(self, reason)
+            self.connector.connectionLost(reason)
 
     def getHost(self):
         """Returns a tuple of ('INET', hostname, port).
@@ -498,15 +509,16 @@ class Port(abstract.FileDescriptor):
         self.disconnecting = 1
         self.stopReading()
         if self.connected:
-            self.reactor.callLater(0, self.connectionLost)
+            self.reactor.callLater(0, self.connectionLost,
+                                   main.CONNECTION_DONE)
 
     stopListening = loseConnection
 
-    def connectionLost(self):
+    def connectionLost(self, reason):
         """Cleans up my socket.
         """
         log.msg('(Port %s Closed)' % self.port)
-        abstract.FileDescriptor.connectionLost(self)
+        abstract.FileDescriptor.connectionLost(self, reason)
         self.connected = 0
         self.socket.close()
         if self.unixsocket:

@@ -25,7 +25,7 @@ from twisted.python import log
 
 # Sibling Imports
 import abstract, main, fdesc, process
-from main import CONNECTION_LOST, CONNECTION_DONE
+from main import CONNECTION_LOST
 
 
 class Process(abstract.FileDescriptor, styles.Ephemeral):
@@ -85,10 +85,10 @@ class Process(abstract.FileDescriptor, styles.Ephemeral):
             log.deferr()
             process.reapProcess()
 
-    def connectionLost(self):
+    def connectionLost(self, reason):
         """I call this to clean up when one or all of my connections has died.
         """
-        abstract.FileDescriptor.connectionLost(self)
+        abstract.FileDescriptor.connectionLost(self, reason)
         os.close(self.fd)
         try:
             self.proto.connectionLost()

@@ -25,10 +25,10 @@ listeners or connectors are added):
 """
 
 # System imports
-import select, errno
+import select, errno, sys
 
 # Twisted imports
-from twisted.python import log, threadable
+from twisted.python import log, threadable, failure
 from twisted.internet import main, default
 
 # globals
@@ -139,16 +139,16 @@ class PollReactor(default.PosixReactorBase):
                     if not why and event & POLLOUT:
                         why = selectable.doWrite()
                     if not selectable.fileno() == fd:
-                        why = main.CONNECTION_LOST
+                        why = main.ConnectionFdescWentAway('Filedescriptor went away')
                 except:
                     log.deferr()
-                    why = main.CONNECTION_LOST
+                    why = sys.exc_value
 
             if why:
                 self.removeReader(selectable)
                 self.removeWriter(selectable)
                 try:
-                    selectable.connectionLost()
+                    selectable.connectionLost(failure.Failure(why))
                 except:
                     log.deferr()
 

@@ -1,5 +1,5 @@
 # -*- Python -*-
-# $Id: default.py,v 1.26 2002/08/06 03:31:03 glyph Exp $
+# $Id: default.py,v 1.27 2002/08/06 17:12:40 itamarst Exp $
 #
 # Twisted, the Framework of Your Internet
 # Copyright (C) 2001 Matthew W. Lefkowitz
@@ -25,6 +25,7 @@ from time import time, sleep
 import os
 import socket
 import signal
+import sys
 
 from twisted.internet.interfaces import IReactorCore, IReactorTime, IReactorUNIX
 from twisted.internet.interfaces import IReactorTCP, IReactorUDP, IReactorSSL
@@ -32,7 +33,8 @@ from twisted.internet.interfaces import IReactorProcess, IReactorFDSet
 from twisted.internet import main, error, protocol, interfaces
 from twisted.internet import tcp, udp, task
 
-from twisted.python import log, threadable
+
+from twisted.python import log, threadable, failure
 from twisted.persisted import styles
 from twisted.python.runtime import platform
 
@@ -44,7 +46,7 @@ try:
 except:
     sslEnabled = 0
 
-from main import CONNECTION_LOST, CONNECTION_DONE
+from main import CONNECTION_LOST
 
 if platform.getType() != 'java':
     import select
@@ -107,14 +109,14 @@ class BaseConnector:
     def connectionFailed(self, reason):
         self.cancelTimeout()
         self.state = "disconnected"
-        self.factory.connectionFailed(self, reason)
+        self.factory.clientConnectionFailed(self, reason)
         if self.state == "disconnected":
             # factory hasn't called our connect() method
             self.factory.doStop()
 
-    def connectionLost(self):
+    def connectionLost(self, reason):
         self.state = "disconnected"
-        self.factory.connectionLost(self)
+        self.factory.clientConnectionLost(self, reason)
         if self.state == "disconnected":
             # factory hasn't called our connect() method
             self.factory.doStop()
@@ -384,7 +386,7 @@ class _Win32Waker(log.Logger, styles.Ephemeral):
         """
         self.r.recv(8192)
 
-    def connectionLost(self):
+    def connectionLost(self, reason):
         self.r.close()
         self.w.close()
 
@@ -416,7 +418,7 @@ class _UnixWaker(log.Logger, styles.Ephemeral):
         self.o.write('x')
         self.o.flush()
 
-    def connectionLost(self):
+    def connectionLost(self, reason):
         """Close both ends of my pipe.
         """
         self.i.close()
@@ -527,16 +529,18 @@ class SelectReactor(PosixReactorBase):
                 try:
                     why = getattr(selectable, method)()
                     handfn = getattr(selectable, 'fileno', None)
-                    if not handfn or handfn() == -1:
-                        why = CONNECTION_LOST
+                    if not handfn:
+                        why = main.ConnectionFdescWentAway('Handler has no fileno method')
+                    elif handfn() == -1:
+                        why = main.ConnectionFdescWentAway('Filedescriptor went away')
                 except:
                     log.deferr()
-                    why = CONNECTION_LOST
+                    why = sys.exc_value
                 if why:
                     self.removeReader(selectable)
                     self.removeWriter(selectable)
                     try:
-                        selectable.connectionLost()
+                        selectable.connectionLost(failure.Failure(why))
                     except:
                         log.deferr()
                 log.logOwner.disown(selectable)

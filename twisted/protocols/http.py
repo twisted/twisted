@@ -262,7 +262,7 @@ class HTTPClient(basic.LineReceiver):
             self.handleEndHeaders()
             self.setRawMode()
 
-    def connectionLost(self):
+    def connectionLost(self, reason):
         if self.__buffer:
             b = self.__buffer
             self.__buffer = ''

@@ -847,7 +847,7 @@ class DccSendProtocol(protocol.Protocol, styles.Ephemeral):
             # Nothing more to send, transfer complete.
             self.transport.loseConnection()
 
-    def connectionLost(self):
+    def connectionLost(self, reason):
         if hasattr(self.file, "close"):
             self.file.close()
 
@@ -1086,7 +1086,7 @@ class DccFileReceive(DccFileReceiveBasic):
 
         # XXX: update a progress indicator here?
 
-    def connectionLost(self):
+    def connectionLost(self, reason):
         """When the connection is lost, I close the file.
         """
         self.connected = 0

@@ -69,13 +69,13 @@ You're going to need to patch PyKqueue as well:
 """
 
 # System imports
-import errno
+import errno, sys
 
 # PyKQueue imports
 from kqsyscall import *
 
 # Twisted imports
-from twisted.python import log
+from twisted.python import log, failure
 
 # Sibling imports
 import main
@@ -179,14 +179,14 @@ class KQueueReactor(default.PosixReactorBase):
                 if not selectable.fileno() == fd:
                     why = main.CONNECTION_LOST
             except:
+                why = sys.exc_value
                 log.deferr()
-                why = main.CONNECTION_LOST
 
             if why:
                 self.removeReader(selectable)
                 self.removeWriter(selectable)
                 try:
-                    selectable.connectionLost()
+                    selectable.connectionLost(failure.Failure(why))
                 except:
                     log.deferr()
 

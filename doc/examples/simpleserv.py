@@ -15,29 +15,24 @@
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
-from twisted.internet.protocol import Protocol, Factory
+from twisted.internet.protocol import Protocol, ServerFactory
+from twisted.interner import protocol
 
-### Protocol Implementation
-
-# This is just about the simplest possible protocol
 
 class Echo(Protocol):
+    """This is just about the simplest possible protocol"""
+    
     def dataReceived(self, data):
         "As soon as any data is received, write it back."
         self.transport.write(data)
 
 
-# this runs the protocol on port 8000
 def main():
-    from twisted.internet import default
-    default.install()
-    
-    from twisted.internet.app import Application
-    factory = Factory()
+    """This runs the protocol on port 8000"""
+    factory = ServerFactory()
     factory.protocol = Echo
-    app = Application("echo")
-    app.listenTCP(8000,factory)
-    app.run(save=0)
+    reactor.listenTCP(8000,factory)
+    reactor.run()
 
 # this only runs if the module was *not* imported
 if __name__ == '__main__':

@@ -14,6 +14,8 @@
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
+from __future__ import nested_scopes
+
 """Generic TCP tests."""
 
 from pyunit import unittest
@@ -39,9 +41,8 @@ class MyProtocol(protocol.Protocol):
     def connectionMade(self):
         self.made = 1
         
-    def connectionLost(self):
+    def connectionLost(self, reason):
         self.closed = 1
-
 
 
 class MyServerFactory(protocol.ServerFactory):
@@ -61,9 +62,12 @@ class MyClientFactory(protocol.ClientFactory):
         self.protocol = p
         return p
 
-    def connectionFailed(self, connector, reason):
+    def clientConnectionFailed(self, connector, reason):
         self.failed = 1
         self.reason = reason
+
+    def clientConnectionLost(self, connector, reason):
+        self.lostReason = reason
 
 
 class LoopbackTestCase(unittest.TestCase):
@@ -88,6 +92,7 @@ class LoopbackTestCase(unittest.TestCase):
         
         self.assert_(clientF.protocol.made)
         self.assert_(port.disconnected)
+        clientF.lostReason.trap(error.ConnectionLost)
 
     def testTcpNoDelay(self):
         f = MyServerFactory()
@@ -114,6 +119,7 @@ class LoopbackTestCase(unittest.TestCase):
         port.stopListening()
         reactor.iterate()
         reactor.iterate()
+        clientF.lostReason.trap(error.ConnectionDone)
     
     def testFailing(self):
         clientF = MyClientFactory()
@@ -218,7 +224,8 @@ class ConnectorTestCase(unittest.TestCase):
 
         l = []
         factory = ClientStartStopFactory()
-        factory.connectionLost = factory.startedConnecting = lambda c, l=l: l.append(c)
+        factory.clientConnectionLost = lambda c, r: l.append(c)
+        factory.startedConnecting = lambda c: l.append(c)
         connector = reactor.connectTCP("127.0.0.1", 9995, factory)
         self.assertEquals(connector.getDestination(), ('INET', "127.0.0.1", 9995))
         
@@ -256,9 +263,9 @@ class ConnectorTestCase(unittest.TestCase):
         reactor.iterate()
 
         factory = MyClientFactory()
-        def connectionLost(c):
+        def clientConnectionLost(c, reason):
             c.connect()
-        factory.connectionLost = connectionLost
+        factory.clientConnectionLost = clientConnectionLost
         reactor.connectTCP("127.0.0.1", 9995, factory)
         
         while not factory.failed:

@@ -540,8 +540,10 @@ class Broker(banana.Banana):
                 notifier()
             except:
                 log.deferr()
+    
     waitingForAnswers = None
-    def connectionLost(self):
+
+    def connectionLost(self, reason):
         """The connection was lost.
         """
 

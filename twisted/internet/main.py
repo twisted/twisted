@@ -18,8 +18,6 @@
 
 # System Imports
 import socket
-CONNECTION_LOST = -1
-CONNECTION_DONE = -2
 
 # Twisted Imports
 
@@ -29,6 +27,10 @@ from twisted.persisted import styles
 from twisted.python.components import implements
 from twisted.internet.interfaces import IReactorFDSet, IReactorCore
 from twisted.internet.interfaces import IReactorTime, IReactorUNIX
+import error
+
+CONNECTION_DONE = error.ConnectionDone('Connection done')
+CONNECTION_LOST = error.ConnectionLost('Connection lost')
 
 
 class DummyResolver:

@@ -62,7 +62,7 @@ class StandardIO(abstract.FileDescriptor):
         """
         return fdesc.readFromFD(self.fileno(), self.protocol.dataReceived)
 
-    def connectionLost(self):
+    def connectionLost(self, reason):
         """The connection was lost.
         """
         self.protocol.connectionLost()

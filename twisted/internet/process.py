@@ -92,10 +92,10 @@ class ProcessWriter(abstract.FileDescriptor, styles.Ephemeral):
             # print 'read r+w', r, w, x
             return CONNECTION_LOST
 
-    def connectionLost(self):
+    def connectionLost(self, reason):
         """See abstract.FileDescriptor.connectionLost.
         """
-        abstract.FileDescriptor.connectionLost(self)
+        abstract.FileDescriptor.connectionLost(self, reason)
         os.close(self.proc.stdin)
         self.proc.inConnectionLost()
 
@@ -125,10 +125,10 @@ class ProcessError(abstract.FileDescriptor):
         """
         return self.proc.doError()
 
-    def connectionLost(self):
+    def connectionLost(self, reason):
         """I close my process's stderr.
         """
-        abstract.FileDescriptor.connectionLost(self)
+        abstract.FileDescriptor.connectionLost(self, reason)
         os.close(self.proc.stderr)
         self.proc.errConnectionLost()
         del self.proc
@@ -299,11 +299,11 @@ class Process(abstract.FileDescriptor, styles.Ephemeral):
             log.deferr()
         self.maybeCallProcessEnded()
 
-    def connectionLost(self):
+    def connectionLost(self, reason):
         """I call this to clean up when one or all of my connections has died.
         """
         self.lostOutConnection = 1
-        abstract.FileDescriptor.connectionLost(self)
+        abstract.FileDescriptor.connectionLost(self, reason)
         os.close(self.stdout)
         try:
             self.proto.connectionLost()

@@ -35,12 +35,15 @@ class EchoClient(Protocol):
         print "Server said:", data
         self.transport.loseConnection()
     
-    def connectionLost(self):
+    def connectionLost(self, reason):
         print "connection lost"
         from twisted.internet import reactor
         reactor.stop()
 
-    def connectionFailed(self):
+
+class EchoFactory(protocol.ClientFactory):
+    
+    def connectionFailed(self, connector, reason):
         print "Connection failed - goodbye!"
         from twisted.internet import reactor
         reactor.stop()

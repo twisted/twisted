@@ -22,8 +22,8 @@ Twisted Python.  The Protocol class contains some introductory material.
 """
 
 # Twisted Imports
-from twisted.python import log
-from twisted.internet import interfaces
+from twisted.python import log, failure
+from twisted.internet import interfaces, error
 
 
 class Factory:
@@ -106,13 +106,20 @@ class ClientFactory(Factory):
         You can call connector.stopConnecting() to stop the connection attempt.
         """
 
-    def connectionFailed(self, connector, reason):
-        """Called when a connection has failed."""
+    def clientConnectionFailed(self, connector, reason):
+        """Called when a connection has failed.
 
-    def connectionLost(self, connector):
+        It may be useful to call connector.connect() - this will reconnect.
+
+        reason is a Failure object.
+        """
+
+    def clientConnectionLost(self, connector, reason):
         """Called when a connection is lost.
 
         It may be useful to call connector.connect() - this will reconnect.
+
+        reason is a Failure object.
         """
         
 
@@ -173,11 +180,13 @@ class Protocol:
         method with differing chunk sizes, down to one byte at a time.
         """
 
-    def connectionLost(self):
+    def connectionLost(self, reason=failure.Failure(error.ConnectionDone())):
         """Called when the connection is shut down.
 
         Clear any circular references here, and any external references
         to this Protocol.  The connection has been closed.
+
+        reason is a Failure object.
         """
 
     def connectionFailed(self):
@@ -205,6 +214,9 @@ class ProcessProtocol(Protocol):
     def errConnectionLost(self):
         """This will be called when stderr is closed.
         """
+
+    def connectionLost(self):
+        """Called when stdout is shut down."""
 
     def processEnded(self):
         """This will be called when the subprocess is finished.

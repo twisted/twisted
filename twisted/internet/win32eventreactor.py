@@ -57,7 +57,7 @@ import msvcrt
 
 # Twisted imports
 from twisted.internet import abstract, default
-from twisted.python import log, threadable
+from twisted.python import log, threadable, failure
 from twisted.internet.interfaces import IReactorFDSet
 
 # System imports
@@ -66,6 +66,7 @@ import threading
 import Queue
 import string
 import time
+import sys
 
 
 # globals
@@ -148,14 +149,14 @@ class Win32Reactor(default.PosixReactorBase):
             try:
                 closed = fd.doWrite()
             except:
+                closed = sys.exc_value
                 log.deferr()
-                closed = 1
 
             if closed:
                 self.removeReader(fd)
                 self.removeWriter(fd)
                 try:
-                    fd.connectionLost()
+                    fd.connectionLost(failure.Failure(closed))
                 except:
                     log.deferr()
             elif closed is None:
@@ -180,14 +181,14 @@ class Win32Reactor(default.PosixReactorBase):
             try:
                 closed = action()
             except:
+                closed = sys.exc_value
                 log.deferr()
-                closed = 1
 
             if closed:
                 self.removeReader(fd)
                 self.removeWriter(fd)
                 try:
-                    fd.connectionLost()
+                    fd.connectionLost(failure.Failure(closed))
                 except:
                     log.deferr()
 
@@ -311,10 +312,10 @@ class Process(abstract.FileDescriptor):
             self.closed = 1
             self.connectionLost()
     
-    def connectionLost(self):
+    def connectionLost(self, reason=None):
         """Shut down resources."""
         self.reactor.removeEvent(self.hProcess)
-        abstract.FileDescriptor.connectionLost(self)
+        abstract.FileDescriptor.connectionLost(self, reason)
         self.closeStdin()
         win32file.CloseHandle(self.hStdoutR)
         win32file.CloseHandle(self.hStderrR)

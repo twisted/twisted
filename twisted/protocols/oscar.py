@@ -217,7 +217,7 @@ class OscarConnection(protocol.Protocol):
         self.stopKeepAliveID = None
         self.setKeepAlive(4*60) # 4 minutes
 
-    def connectionLost(self):
+    def connectionLost(self, reason):
         print "Connection Lost!",self
         self.stopKeepAlive()
 
@@ -280,7 +280,7 @@ class OscarConnection(protocol.Protocol):
         send the disconnect flap, and sever the connection
         """
         self.sendFLAP('', 0x04)
-        def f(): pass
+        def f(reason): pass
         self.connectionLost = f
         self.transport.loseConnection()
 
@@ -884,11 +884,11 @@ class OSCARService(SNACBased):
         self.bos = bos
         self.d = d
 
-    def connectionLost(self):
+    def connectionLost(self, reason):
         for k,v in self.bos.services.items():
             if v == self:
                 del self.bos.services[k]
-        SNACBased.connectionLost(self)
+        SNACBased.connectionLost(self, reason)
 
     def connectionFailed(self):
         for k,v in self.bos.services.items():

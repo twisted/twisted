@@ -30,9 +30,10 @@ __all__ = ['install']
 
 # System Imports
 from qt import QSocketNotifier, QObject, SIGNAL, QTimer, QApplication
+import sys
 
 # Twisted Imports
-from twisted.python import log, threadable
+from twisted.python import log, threadable, failure
 
 # Sibling Imports
 import main, default
@@ -68,12 +69,12 @@ class TwistedSocketNotifier(QSocketNotifier):
         try:
             why = w.doRead()
         except:
-            why = main.CONNECTION_LOST
+            why = sys.exc_value
             log.msg('Error in %s.doRead()' % w)
             log.deferr()
         if why:
             try:
-                w.connectionLost()
+                w.connectionLost(failure.Failure(why))
             except:
                 log.deferr()
             self.reactor.removeReader(w)
@@ -87,12 +88,12 @@ class TwistedSocketNotifier(QSocketNotifier):
         try:
             why = w.doWrite()
         except:
-            why = main.CONNECTION_LOST
+            why = sys.exc_value
             log.msg('Error in %s.doWrite()' % w)
             log.deferr()
         if why:
             try:
-                w.connectionLost()
+                w.connectionLost(failure.Failure(why))
             except:
                 log.deferr()
             self.reactor.removeReader(w)

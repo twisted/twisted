@@ -26,7 +26,7 @@ else:
     import FCNTL
 
 # twisted imports
-from main import CONNECTION_LOST, CONNECTION_DONE
+from main import CONNECTION_LOST
 
 
 def setNonBlocking(fd):

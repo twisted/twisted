@@ -95,3 +95,15 @@ def getConnectError(e):
     else:
         klass = errnoMapping.get(number, ConnectError)
     return klass(number, string)
+
+
+class ConnectionLost(Exception):
+    """Connection to the other side was lost in a non-clean fashion."""
+    
+
+class ConnectionDone(Exception):
+    """Connection was closed cleanly."""
+
+
+class ConnectionFdescWentAway(ConnectionLost):
+    """Uh."""

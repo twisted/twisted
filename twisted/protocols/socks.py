@@ -46,7 +46,7 @@ class SOCKSv4Outgoing(protocol.Protocol):
     def connectionFailed(self):
         self.socks.makeReply(91)
 
-    def connectionLost(self):
+    def connectionLost(self, reason):
         self.socks.transport.loseConnection()
 
     def dataReceived(self,data):
@@ -63,7 +63,7 @@ class SOCKSv4Incoming(protocol.Protocol):
         self.socks=socks
         self.socks.otherConn=self
     
-    def connectionLost(self):
+    def connectionLost(self, reason):
         self.socks.transport.loseConnection()
     
     def dataReceived(self,data):

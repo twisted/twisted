@@ -64,12 +64,12 @@ class EchoClient(LineReceiver):
 class EchoClientFactory(ClientFactory):
     protocol = EchoClient
 
-    def connectionFailed(self, connector, reason):
+    def clientConnectionFailed(self, connector, reason):
         print 'connection failed:', reason.getErrorMessage()
         reactor.stop()
 
-    def connectionLost(self, connector):
-        print 'connection lost'
+    def clientConnectionLost(self, connector, reason):
+        print 'connection lost:', reason.getErrorMessage()
         reactor.stop()
 
 factory = EchoClientFactory()

@@ -18,8 +18,8 @@
 # censored by the PSU
 
 # Twisted Imports
-from twisted.internet import interfaces, protocol
-from twisted.python import hook
+from twisted.internet import interfaces, protocol, main
+from twisted.python import hook, failure
 
 
 class LoopbackRelay:
@@ -50,7 +50,7 @@ class LoopbackRelay:
         finally:
             self.buffer = ''
         if self.shouldLose:
-            self.target.connectionLost()
+            self.target.connectionLost(failure.Failure(main.CONNECTION_DONE))
 
     def loseConnection(self):
         self.shouldLose = 1
@@ -79,8 +79,8 @@ def loopback(server, client, logFile=None):
             break
         elif clientToServer.shouldLose:
             break
-    client.connectionLost()
-    server.connectionLost()
+    client.connectionLost(failure.Failure(main.CONNECTION_DONE))
+    server.connectionLost(failure.Failure(main.CONNECTION_DONE))
     reactor.iterate() # last gasp before I go away
 
 
@@ -93,7 +93,7 @@ class LoopbackClientFactory(protocol.ClientFactory):
     def buildProtocol(self, addr):
         return self.protocol
 
-    def connectionLost(self, connector):
+    def clientConnectionLost(self, connector, reason):
         self.disconnected = 1
 
 

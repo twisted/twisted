@@ -191,7 +191,7 @@ class TOC(protocol.Protocol):
     def _debug(self,data):
         print data
 
-    def connectionLost(self):
+    def connectionLost(self, reason):
         self._debug("dropped connection from %s" % self.username)
         try:
             del self.factory.users[self.username]
@@ -316,7 +316,7 @@ class TOC(protocol.Protocol):
         password=unroast(data[4])
         if not(self.authorize(data[1],int(data[2]),data[3],password)):
             self.sendError(BAD_NICKNAME)
-            self.connectionLost()
+            self.transport.loseConnection()
             return
         self.sendFlap(DATA,"SIGN_ON:TOC1.0")
         self.sendFlap(DATA,"NICK:%s"%self.saved.nick)
@@ -848,7 +848,7 @@ class TOCClient(protocol.Protocol):
         self._debug("connection made! %s" % self.transport)
         self.transport.write("FLAPON\r\n\r\n")
 
-    def connectionLost(self):
+    def connectionLost(self, reason):
         self._debug("connection lost!")
         self._online=0
 

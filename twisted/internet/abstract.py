@@ -49,7 +49,7 @@ class FileDescriptor(log.Logger):
             from twisted.internet import reactor
         self.reactor = reactor
     
-    def connectionLost(self):
+    def connectionLost(self, reason):
         """The connection was lost.
 
         This is called when the connection on a selectable object has been
