@@ -97,7 +97,7 @@ class File(resource.Resource, styles.Versioned):
         ".pdf": "application/x-pdf",
         ".png": "image/png",
         ".py": "text/x-python",
-        ".swf": "appplication/x-shockwave-flash",
+        ".swf": "application/x-shockwave-flash",
         ".tar": "application/x-tar",
         ".tgz": "application/x-gtar",
         ".tif": "image/tiff",
