@@ -1,0 +1,35 @@
+#!/bin/sh
+set -e -v
+
+DIR=debian/python$1-twisted
+
+install -d $DIR/usr/share/doc/python$1-twisted/
+install -d $DIR/usr/share/man/man1/
+install -d $DIR/usr/lib/menu/
+
+install -m 644 TODO README CREDITS $DIR/usr/share/doc/python$1-twisted/
+install -m 644 ChangeLog $DIR/usr/share/doc/python$1-twisted/changelog
+install -m 644 debian/changelog $DIR/usr/share/doc/python$1-twisted/changelog.Debian
+gzip -9 $DIR/usr/share/doc/python$1-twisted/*
+install -m 644 debian/copyright $DIR/usr/share/doc/python$1-twisted/
+for file in $DIR/usr/bin/*;
+do
+	sed '1s|.*|#!/usr/bin/python$1|' $file > $file.$$
+	cat $file.$$ > $file''$1;rm $file $file.$$
+done
+chmod +x $DIR/usr/bin/*
+for file in doc/man/*.1
+do
+	install -m 644 $file \
+	           $DIR/usr/share/man/man1/`basename $file .1`$1.1
+done
+install -m 644 debian/python$1-twisted.menu $DIR/usr/lib/menu/python$1-twisted
+gzip -9 $DIR/usr/share/man/man1/*
+
+find $DIR -name "*.so" | xargs -n1 strip --remove-section=.comment --remove-section=.note --strip-unneeded
+
+install -d $DIR/DEBIAN
+for maint in prerm postrm postinst
+do
+	install -m 755 debian/python$1-twisted.$maint $DIR/DEBIAN/$maint
+done

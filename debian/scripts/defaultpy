@@ -1,0 +1,18 @@
+#!/bin/sh
+set -e -v
+
+DEFAULT_PYTHON=`/usr/bin/python -c 'import sys;v=sys.hexversion;print "%s.%s" % ( (v>>24)&0xff, (v>>16)&0xff)'`
+DIR=debian/python${DEFAULT_PYTHON}-twisted
+
+for file in $DIR/usr/bin/*
+do
+	file=`basename $file`
+	ln -s $file $DIR/usr/bin/`echo $file|sed 's/...$//'`
+done
+
+for file in $DIR/usr/share/man/man1/*
+do
+	file=`basename $file`
+	target=`echo $file|sed 's/'$DEFAULT_PYTHON'//'`
+	ln -s $file $DIR/usr/share/man/man1/$target
+done

@@ -1,4 +1,4 @@
-twisted (0.18.0) unstable; urgency=low
+twisted (0.18.0-1) unstable; urgency=low
 
   * New upstream release
   * Lots of debian changes:
