@@ -21,9 +21,9 @@ from twisted.python import reflect
 
 class TagChecker:
 
-    def __init__(self, allowedTags, allowedCodeClasses):
+    def __init__(self, allowedTags, allowedClasses):
         self.allowedTags = allowedTags
-        self.allowedCodeClasses = allowedCodeClasses
+        self.allowedClasses = allowedClasses
 
     def check(self, dom, filename):
         for method in reflect.prefixedMethods(self, 'check_'):
@@ -40,15 +40,14 @@ class TagChecker:
             self._reportError(filename, element,
                                'unrecommended tag %s' % element.tagName)
 
-    def check_codeClass(self, dom, filename):
+    def check_disallowedClasses(self, dom, filename):
         def matcher(element, self=self):
-            if element.tagName != 'code':
+            if not self.allowedClasses.has_key(element.tagName):
                 return 0
             if not element.hasAttribute('class'):
                 return 0
-            if self.allowedCodeClasses(element.getAttribute('class')):
-                return 0
-            return 1
+            checker = self.allowedClasses[element.tagName]
+            return not checker(element.getAttribute('class'))
         for element in domhelpers.findElements(dom, matcher):
             self._reportError(filename, element,
                               'unkown class %s' %element.getAttribute('class'))
@@ -69,15 +68,20 @@ def list2dict(l):
     return d
 
 classes = list2dict(['shell', 'API', 'python', 'py-prototype', 'py-filename',
-                     'py-src-string', 'py-signature', 'py-src-parameter'])
+                     'py-src-string', 'py-signature', 'py-src-parameter',
+                     'py-src-identifier', 'py-src-keyword'])
 
 tags = list2dict(["html", "title", "head", "body", "h1", "h2", "h3", "ol", "ul",
                   "dl", "li", "dt", "dd", "p", "code", "img", "blockquote", "a",
                   "cite", "div", "span", "strong", "em", "pre", "q", "table",
                   "tr", "td", "th", "style"])
 
+span = list2dict(['footnote', 'manhole-output'])
+
+allowed = {'code': classes.has_key, 'span': span.has_key }
+
 def getDefaultChecker():
-    return TagChecker(tags.has_key, classes.has_key)
+    return TagChecker(tags.has_key, allowed)
 
 def doFile(file, checker):
     dom = tree.parseFileAndReport(file)
