@@ -20,7 +20,7 @@
 #"""
 from twisted.conch.client import agent, connect, default, options
 from twisted.conch.error import ConchError
-from twisted.conch.ssh import userauth, connection, common
+from twisted.conch.ssh import userauth, connection, common, transport
 from twisted.conch.ssh import session, forwarding, channel
 from twisted.internet import reactor, stdio, defer, protocol
 from twisted.internet.error import CannotListenError
@@ -213,7 +213,10 @@ def stopConnection():
         for remotePort, hostport in options.remoteForwards:
             log.msg('cancelling %s:%s' % (remotePort, hostport))
             conn.cancelRemoteForwarding(remotePort)
-    reactor.stop()
+    try:
+        reactor.stop()
+    except RuntimeError: # ignore "can't stop stopped reactor"
+        pass
 
 
 class SSHConnection(connection.SSHConnection):
@@ -366,7 +369,8 @@ class SSHSession(channel.SSHChannel):
     def closed(self):
         global old
         log.msg('closed %s' % self)
-        if len(self.conn.channels) == 0 and not (options['noshell'] and not options['nocache']): # just us left
+        log.msg(repr(self.conn.channels))
+        if len(self.conn.channels) == 1 and not (options['noshell'] and not options['nocache']): # just us left
             stopConnection()
         elif not options['nocache']: # fork into the background
             if os.fork():
@@ -411,14 +415,16 @@ class SSHListenClientForwardingChannel(forwarding.SSHListenClientForwardingChann
 
     def closed(self):
         forwarding.SSHListenClientForwardingChannel.closed(self)
-        if len(self.conn.channels) == 0 and not (options['noshell'] and not options['nocache']): # just us left
+        log.msg(repr(self.conn.channels))
+        if len(self.conn.channels) == 1 and not (options['noshell'] and not options['nocache']): # just us left
             stopConnection()
 
 class SSHConnectForwardingChannel(forwarding.SSHConnectForwardingChannel):
 
     def closed(self):
         forwarding.SSHConnectForwardingChannel.closed(self)
-        if len(self.conn.channels) == 0 and not (options['noshell'] and not options['nocache']): # just us left
+        log.msg(repr(self.conn.channels))
+        if len(self.conn.channels) == 1 and not (options['noshell'] and not options['nocache']): # just us left
             stopConnection()
 
 def _leaveRawMode():
