@@ -29,7 +29,7 @@ del cStringIO
 
 class FunkyForm(widgets.Form):
     formFields = [
-        ['string', 'Title', 'title', "Chicken Little"],
+        ['string', 'Title', 'title', 'Chicken Little', 'This is for chickens!'],
         ['checkbox', 'First Checkbox', 'checkone', 1],
         ['checkbox', 'Second Checkbox', 'checktwo', 0],
         ['checkgroup', 'First Checkgroup', 'checkn',
@@ -39,7 +39,7 @@ class FunkyForm(widgets.Form):
         ['menu', 'My Menu', 'mnu',
          [['IDENTIFIER', 'Some Innocuous String'],
           ['TEST_FORM', 'Just another silly string.'],
-          ['CONEHEADS', 'Hoo ha.']]],
+          ['CONEHEADS', 'Hoo ha.']], 'A menu of stuffs.'],
         ['text', 'Description', 'desc', "Once upon a time..."]
         ]
     submitNames = [
@@ -70,7 +70,7 @@ class Test(widgets.Gadget, widgets.Presentation):
 
     def deepest(self):
         # Get ready!!
-        raise "Hell", "This exception is unexpected."
+        raise "Hell", "This exception *is* expected."
 
     def goDeeper(self):
         print 'one level deeper'

@@ -315,10 +315,12 @@ class Form(StreamWidget):
       |  from twisted.web import widgets
       |  class HelloForm(widgets.Form):
       |      formFields = [
-      |          ['string', 'Who to greet?', 'whoToGreet', 'World'],
+      |          ['string', 'Who to greet?', 'whoToGreet', 'World',
+      |            'This is for choosing who to greet.'],
       |          ['menu', 'How to greet?', 'how', [('cheerfully', 'with a smile'),
       |                                            ('sullenly', 'without enthusiasm'),
-      |                                            ('spontaneously', 'on the spur of the moment')]]]
+      |                                            ('spontaneously', 'on the spur of the moment')]]
+      |            'This is for choosing how to greet them.']
       |      def process(self, write, request, submit, whoToGreet, how):
       |          write('The web wakes up and %s says, \"Hello, %s!\"' % (how, whoToGreet))
 
@@ -353,8 +355,8 @@ class Form(StreamWidget):
         This information is used both to display the form and to process it.
         The list is in the following format::
 
-          | [['Input Type',   'Display Name',   'Input Name',   'Input Value'],
-          |  ['Input Type 2', 'Display Name 2', 'Input Name 2', 'Input Value 2']
+          | [['Input Type',   'Display Name',   'Input Name',   'Input Value', 'Description'],
+          |  ['Input Type 2', 'Display Name 2', 'Input Name 2', 'Input Value 2', 'Description 2']
           |  ...]
 
         Valid values for 'Input Type' are:
@@ -388,6 +390,9 @@ class Form(StreamWidget):
         value for 'checkgroup' should be a list of ('inputName', 'Display
         Name', 'checked') triplets.
 
+        The 'Description' field is an (optional) string which describes the form
+        item to the user.
+
         If this result is statically determined for your Form subclass, you can
         assign it to FormSubclass.formFields; if you need to determine it
         dynamically, you can override this method.
@@ -408,7 +413,14 @@ class Form(StreamWidget):
             fieldSet = self.formFields
         if not self.shouldProcess(request):
             return fieldSet
-        for inputType, displayName, inputName, inputValue in fieldSet:
+
+        for field in fieldSet:
+            if len(field)==5:
+                inputType, displayName, inputName, inputValue, description = field
+            else:
+                inputType, displayName, inputName, inputValue = field
+                description = ""
+
             if inputType == 'checkbox':
                 if request.args.has_key('__checkboxes__'):
                     if inputName in request.args['__checkboxes__']:
@@ -435,7 +447,7 @@ class Form(StreamWidget):
                         inputValue.insert(0, iv)
                 else:
                     inputValue = iv
-            fields.append([inputType, displayName, inputName, inputValue])
+            fields.append([inputType, displayName, inputName, inputValue, description])
         return fields
 
     submitNames = ['Submit']
@@ -445,12 +457,18 @@ class Form(StreamWidget):
         """
         write('<FORM ENCTYPE="multipart/form-data" METHOD="post" ACTION="%s">\n'
               '<TABLE BORDER="0">\n' % request.uri)
-        for inputType, displayName, inputName, inputValue in form:
+  
+        for field in form:
+            if len(field) == 5:
+                inputType, displayName, inputName, inputValue, description = field
+            else:
+                inputType, displayName, inputName, inputValue = field
+                description = ""
             write('<TR>\n<TD ALIGN="right" VALIGN="top"><B>%s</b></td>\n'
                   '<TD VALIGN="%s">\n' %
                   (displayName, ((inputType == 'text') and 'top') or 'middle'))
             self.formGen[inputType](write, inputName, inputValue)
-            write('</td>\n</tr>\n')
+            write('\n%s\n</td>\n</tr>\n' % description)
         write('<TR><TD></TD><TD ALIGN="left"><hr>\n')
         for submitName in self.submitNames:
             write('<INPUT TYPE="submit" NAME="submit" VALUE="%s">\n' % submitName)
@@ -500,7 +518,8 @@ class Form(StreamWidget):
         """
         args = copy.copy(request.args)
         kw = {}
-        for inputType, displayName, inputName, inputValue in form:
+        for field in form:
+            inputType, displayName, inputName, inputValue = field[:4]
             if inputType == 'checkbox':
                 if request.args.has_key('__checkboxes__'):
                     if inputName in request.args['__checkboxes__']:
