@@ -7,6 +7,7 @@ class ReportResource(Resource):
         path = request.path
         _, host, port = request.getHost()
         url = request.prePathURL()
+        uri = request.uri
         secure = (request.isSecure() and "securely") or "insecurely"
         return ("""\
 <HTML>
@@ -19,6 +20,7 @@ class ReportResource(Resource):
     <LI>The port I'm on is %(port)s
     <LI>I was accessed %(secure)s
     <LI>A URL to me is %(url)s
+    <LI>My URI to me is %(uri)s
     </UL>
     </body>
 </html>""" % vars())
