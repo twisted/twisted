@@ -182,6 +182,7 @@ def updateApplication(app, config):
         helper = relaymanager.RelayStateHelper(manager, 1, 'RelayStateHelper', app)
         config.service.domains.setDefaultDomain(default)
 
+    ctx = None
     if config['certificate']:
         from twisted.mail.protocols import SSLContextFactory
         ctx = SSLContextFactory(config['certificate'])
