@@ -161,7 +161,7 @@ class View(template.DOMTemplate):
             submodel = submodel_prefix
         else:
             submodel = ""
-                
+
         controller = self.getNodeController(request, node, submodel)
         view = self.getNodeView(request, node, submodel)
         

@@ -525,9 +525,9 @@ class List(Widget):
                 currentListItem = 0
             else:
                 currentListItem += 1
-
+            modelName = submodel.split('/')[-1]
             domhelpers.superAppendAttribute(newNode, '_submodel_prefix',
-                                            submodel)
+                                            modelName)
             domhelpers.superAppendAttribute(newNode, '_submodel_prefix',
                                             str(itemNum))
             parentNode.appendChild(newNode)
@@ -561,9 +561,10 @@ class KeyedList(List):
                 currentListItem = 0
             else:
                 currentListItem += 1
-
+            
+            modelName = submodel.split('/')[-1]
             domhelpers.superAppendAttribute(newNode, '_submodel_prefix',
-                                            self.submodel)
+                                            modelName)
             domhelpers.superAppendAttribute(newNode, '_submodel_prefix',
                                             str(key))
             parentNode.appendChild(newNode)
