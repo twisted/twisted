@@ -368,7 +368,7 @@ class Session(components.Componentized):
     def expire(self):
         """Expire/logout of the session.
         """
-        log.msg("expired session %s" % self.uid)
+        #log.msg("expired session %s" % self.uid)
         del self.site.sessions[self.uid]
         for c in self.expireCallbacks:
             c()
@@ -383,9 +383,10 @@ class Session(components.Componentized):
             if self.site.sessions.has_key(self.uid):
                 self.expire()
             else:
-                log.msg("no session to expire: %s" % self.uid)
+                pass
+                #log.msg("no session to expire: %s" % self.uid)
         else:
-            log.msg("session given the will to live for 30 more minutes")
+            #log.msg("session given the will to live for 30 more minutes")
             reactor.callLater(1800, self.checkExpired)
 
 version = "TwistedWeb/%s" % copyright.version
