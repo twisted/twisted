@@ -692,9 +692,9 @@ class IMAP4Server(basic.LineReceiver):
         )
 
     def _cbStore(self, result, tag, silent):
-        if not silent:
-            for (k, v) in result.items():
-                self.sendUntaggedResponse('%d (%s)' % (k, ' '.join(v)))
+        if result and not silent:
+              for (k, v) in result.items():
+                self.sendUntaggedResponse('%d FETCH FLAGS (%s)' % (k, ' '.join(v)))
         self.sendPositiveResponse(tag, 'STORE completed')
 
     def _ebStore(self, failure, tag):
@@ -2271,7 +2271,7 @@ def collapseNestedLists(items):
             pieces.extend([' ', 'NIL'])
         elif isinstance(i, types.StringTypes):
             if '\n' in i or '\r' in i:
-                pieces.extend([' ', '{', len(i), '}', IMAP4Server.delimiter, i])
+                pieces.extend([' ', '{', str(len(i)), '}', IMAP4Server.delimiter, i])
             elif (not i.startswith('BODY')) and (' ' in i or '\t' in i):
                 pieces.extend([' ', '"%s"' % (i,)])
             else:
