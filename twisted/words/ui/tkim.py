@@ -100,6 +100,7 @@ class Conversation(Toplevel):
         sb = Scrollbar(self,  command=self.out.yview, orient='v')
         self.out.config(yscrollcommand = sb.set)
         self.out.bind("<Key>",lambda x:"break")
+        self.out.bind("<Button-3>",self.copy)
         sb.grid(column=1, row=0, sticky='ns')
 
         self.input = Text(self, height=1, width=1)
@@ -128,6 +129,18 @@ class Conversation(Toplevel):
         frame.grid_columnconfigure(2, weight=1, minsize=30)
 
         self.protocol('WM_DELETE_WINDOW', self.endConversation)
+
+    def blink(self):
+        return
+#        self.deiconify()
+#        self.input.focus()
+
+    def copy(self,event):
+        text=self.out.selection_get()
+        if text:
+            self.clipboard_clear()
+            self.clipboard_append(text)
+        return "break"
 
     def showExtrasMenu(self, e):
         m=Menu()
@@ -158,7 +171,7 @@ class Conversation(Toplevel):
     def messageReceived(self, message):
         self.out.insert(END,"\n%s <%s> %s" % (timeheader(), self.target, message))
         self.out.see(END)
-        self.deiconify()
+        self.blink()
 
     def changeName(self, newName):
         self.out.insert(END,"\n%s %s changed name to %s." % (timeheader(), self.target, newName))
@@ -297,6 +310,7 @@ class GroupSession(Toplevel):
         self.out = Text(self, height=1, wrap='word')
         self.out.grid(column=0, row=0, sticky='nesw')
         self.out.bind("<Key>",lambda x:"break")
+        self.out.bind("<Button-3>",self.copy)
         out_scroll=Scrollbar(self, command=self.out.yview, orient='v')
         out_scroll.grid(column=1, row=0, sticky='ns')
         self.out.config(yscrollcommand=out_scroll.set)
@@ -337,6 +351,18 @@ class GroupSession(Toplevel):
         self.userlist.delete(0,END)
         for u in l:
             self.userlist.insert(END,u)
+
+    def blink(self):
+        return
+#        self.deiconify()
+#        self.input.focus()
+
+    def copy(self,event):
+        text=self.out.selection_get()
+        if text:
+            self.clipboard_clear()
+            self.clipboard_append(text)
+        return "break"
 
     def sendMessage(self,event=None):
         message=self.input.get("1.0",END)[:-1]
@@ -380,14 +406,14 @@ class GroupSession(Toplevel):
             tags.append("hilite")
         self.out.insert(END, "\n<%s> %s" % (member, message),tuple(tags))
         self.out.see(END)
-        self.deiconify()
+        self.blink()
 
     def memberJoined(self, member):
         self.out.insert(END, "\n%s joined!" % member)
         self.out.see(END)
         self.userlist.insert(END,member)
         self._sortlist()
-        self.deiconify()
+        self.blink()
 
     def memberLeft(self, member):
         self.out.insert(END, "\n%s left!" % member)
@@ -396,7 +422,7 @@ class GroupSession(Toplevel):
         if member in users:
             i=users.index(member)
             self.userlist.delete(i)
-        self.deiconify()
+        self.blink()
 
     def changeMemberName(self, member, newName):
         users=list(self.userlist.get(0,END))

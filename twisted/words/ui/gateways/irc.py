@@ -18,6 +18,7 @@ from twisted.protocols import irc
 from twisted.words.ui import gateway
 from twisted.internet import tcp
 import string
+import time
 
 shortName="IRC"
 longName="Internet Relay Chat"
@@ -110,7 +111,7 @@ class IRCGateway(irc.IRCClient,gateway.Gateway):
 	>> NAMES #bnl
 	<< :Arlington.VA.US.Undernet.Org 353 z3p = #bnl :pSwede Dan-- SkOyg AG
 	"""
-	channel=params[2][1:]
+	channel=string.lower(params[2][1:])
 	users=string.split(params[3])
 	for ui in range(len(users)):
 	    while users[ui][0] in ["@","+"]: # channel modes
@@ -126,8 +127,8 @@ class IRCGateway(irc.IRCClient,gateway.Gateway):
 
     def irc_366(self,prefix,params):
 	group=params[1][1:]
-	self.receiveGroupMembers(self._namreplies[group],group)
-	del self._namreplies[group]
+	self.receiveGroupMembers(self._namreplies[string.lower(group)],group)
+	del self._namreplies[string.lower(group)]
 
     def irc_301(self,prefix,params):
         nickname=params[1]
@@ -176,6 +177,60 @@ class IRCGateway(irc.IRCClient,gateway.Gateway):
 	else:
 	    self.receiveDirectMessage(nickname,message)
 
+    def irc_311(self,prefix,params):
+        """
+        >>>WHOIS z3pfoo
+        <<<:sagan.openprojects.net 311 z3pfoo z3pfoo z3p 66-44-50-121.s121.tnt6.lnhdc.md.di
+alup.rcn.com * :z3p
+        <<<:sagan.openprojects.net 312 z3pfoo z3pfoo sagan.openprojects.net :New York, US
+        <<<:sagan.openprojects.net 317 z3pfoo z3pfoo 67 1002978040 :seconds idle, signon ti
+me
+        <<<:sagan.openprojects.net 318 z3pfoo z3pfoo :End of /WHOIS list.
+        """
+        ircname=params[1]
+        username=params[2]
+        hostname=params[3]
+        name=params[5]
+        self.receiveDirectMessage("**irc**","%s (%s@%s) : %s" % (ircname,
+                                    username,hostname,name))
+
+    def irc_312(self,prefix,params):
+        ircname=params[1]
+        server=params[2]
+        serverinfo=params[3]
+        self.receiveDirectMessage("**irc**","%s on server %s (%s)" % (ircname,
+                                    server,serverinfo))
+
+    def irc_313(self,prefix,params):
+        ircname=params[2]
+        self.receiveDirectMessage("**irc**","%s is an IRC operator" % (ircname))
+
+    def irc_317(self,prefix,params):
+        ircname=params[1]
+        parts=string.split(params[-1],', ')
+        foo=[]
+        for i in range(len(parts)):
+            if parts[i]=="signon time":
+                t=time.ctime(int(params[i+2]))
+            else:
+                t=params[i+2]
+            foo.append(t+" "+parts[i])
+        foo=string.join(foo,", ")
+        if foo:
+            self.receiveDirectMessage("**irc**", "%s is %s" % (ircname, foo))
+
+    def irc_319(self,prefix,params):
+        ircname=params[1]
+        foo=[]
+        for i in string.split(params[2]," "):
+            if i:
+                while i[0] in ['@','+']:
+                    i=i[1:]
+                foo.append(i)
+        self.receiveDirectMessage("**irc**","%s is on %s" % (ircname,
+                                                string.join(foo,",")))
+        
+
 def sendAction(im,gateway,group,currenttext,currentusers):
     return "\001ACTION %s\001"%currenttext
 
@@ -188,10 +243,17 @@ def sendIM(im,gateway,group,text,users):
         im.conversationWith(gateway,u)
     return text
 
+def whoisUser(im,gateway,group,text,users):
+    for u in users:
+        gateway.sendLine("WHOIS %s"%u)
+    return text
+
 groupExtras=[
     ["Send Action",sendAction],
     ["Set Nick",setNick],
-    ["Send IM",sendIM]
+    ["Send IM",sendIM],
+    ["Whois",whoisUser]
+]
 
 conversationExtras=[]
 
