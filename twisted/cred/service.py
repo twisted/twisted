@@ -111,8 +111,9 @@ class Service:
         """Return a perspective that represents a user for this service. (DEPRECATED)
 
         Raises a KeyError if no such user exists.  Override this method to
-        provide dynamic instantiation of perspectives -- it is deprecated to
-        call this method directly.
+        provide dynamic instantiation of perspectives.  It is only deprecated
+        to call this method directly, not to override it; when you need to get
+        a Perspective, call getPerspectiveRequest.
         """
         return self.perspectives[name]
 
