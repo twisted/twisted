@@ -253,16 +253,17 @@ class MethodSignature:
             if a.name == name:
                 return a
 
-    def method(self, callable):
-        return FormMethod(self, callable)
+    def method(self, callable, takesRequest=False):
+        return FormMethod(self, callable, takesRequest)
 
 
 class FormMethod:
     """A callable object with a signature."""
 
-    def __init__(self, signature, callable):
+    def __init__(self, signature, callable, takesRequest=False):
         self.signature = signature
         self.callable = callable
+        self.takesRequest = takesRequest
 
     def getArgs(self):
         return tuple(self.signature.methodSignature)

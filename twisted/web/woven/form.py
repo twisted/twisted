@@ -332,7 +332,10 @@ class FormProcessor(resource.Resource):
             return self.errback(self.errorModelFactory(request.args, outDict, errDict)).render(request)
         else:
             try:
-                outObj = self.formMethod.call(**outDict)
+                if self.formMethod.takesRequest:
+                    outObj = self.formMethod.call(request=request, **outDict)
+                else:
+                    outObj = self.formMethod.call(**outDict)
             except formmethod.FormException, e:
                 err = request.errorInfo = self.errorModelFactory(request.args, outDict, e)
                 return self.errback(err).render(request)
