@@ -200,16 +200,6 @@ class BComp(AComp):
 class CComp(BComp):
     pass
 
-class IStacker(components.Interface):
-    pass
-
-class DComp(components.Componentized):
-    __implements__ = IStacker,
-
-class Stacker(components.Adapter):
-    __implements__ = IStacker,
-
-
 class ITest(components.Interface):
     pass
 class ITest2(components.Interface):
