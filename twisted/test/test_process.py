@@ -24,7 +24,7 @@ from pyunit import unittest
 import cStringIO, gzip, os, popen2, time, sys
 
 # Twisted Imports
-from twisted.internet import reactor, protocol
+from twisted.internet import reactor, protocol, error
 from twisted.python import util, runtime
 
 class TestProcessProtocol(protocol.ProcessProtocol):
@@ -61,6 +61,7 @@ class TestProcessProtocol(protocol.ProcessProtocol):
     
     def processEnded(self, reason):
         self.finished = 1
+        self.reason = reason
 
 
 class EchoProtocol(protocol.ProcessProtocol):
@@ -93,6 +94,11 @@ class ProcessTestCase(unittest.TestCase):
         while not p.finished:
             reactor.iterate()
         self.assertEquals(p.stages, [1, 2, 3, 4, 5])
+
+        # test status code
+        f = p.reason
+        f.trap(error.ProcessEnded)
+        self.assertEquals(f.value.exitCode, 23)
         
         try:
             import process_tester
@@ -208,6 +214,11 @@ if runtime.platform.getType() != 'posix':
     del PosixProcessTestCase
 else:
     lsOut = popen2.popen3("/bin/ls ZZXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX")[2].read()
+    # make sure SIGCHILD handler is installed, as it should be on reactor.run().
+    # problem is reactor may not have been run when this test runs.
+    import signal
+    from twisted.internet import process
+    signal.signal(signal.SIGCHLD, process.reapAllProcesses)
 
 if runtime.platform.getType() != 'win32':
     del Win32ProcessTestCase

@@ -28,25 +28,42 @@ from twisted.persisted import styles
 from twisted.python import log, failure
 
 # Sibling Imports
-import abstract, main, fdesc
+import abstract, main, fdesc, error
 from main import CONNECTION_LOST, CONNECTION_DONE
 
-def reapProcess(*args):
-    """Reap as many processes as possible (without blocking) via waitpid.
 
-    This is called when sigchild is caught or a Process object loses its
-    "connection" (stdout is closed) This ought to result in reaping all
-    zombie processes, since it will be called twice as often as it needs
-    to be.
+reapProcessHandlers = {}
 
-    (Unfortunately, this is a slightly experimental approach, since
-    UNIX has no way to be really sure that your process is going to
-    go away w/o blocking.  I don't want to block.)
+def reapAllProcesses(signum, frame):
+    """Reap all registered processes.
+
+    This gets called on SIGCHILD.
     """
+    for process in reapProcessHandlers.values():
+        process.reapProcess()
+
+
+def registerReapProccessHandler(pid, process):
+    if reapProcessHandlers.has_key(pid):
+        raise RuntimeError
     try:
-        os.waitpid(0,os.WNOHANG)
+        aux_pid, status = os.waitpid(pid, os.WNOHANG)
     except:
-        pass
+        log.deferr()
+        aux_pid = None
+    if aux_pid:
+        process.processEnded(status)
+    else:
+        reapProcessHandlers[pid] = process
+
+
+def unregisterReapProccessHandler(pid, process):
+    if not (reapProcessHandlers.has_key(pid)
+            and reapProcessHandlers[pid] == process):
+        raise RuntimeError
+    del reapProcessHandlers[pid]
+
+
 
 class ProcessWriter(abstract.FileDescriptor, styles.Ephemeral):
     """(Internal) Helper class to write to Process's stdin.
@@ -147,7 +164,7 @@ class Process(abstract.FileDescriptor, styles.Ephemeral):
     on sockets...)
     """
 
-    def __init__(self, command, args, environment, path, proto,
+    def __init__(self, reactor, command, args, environment, path, proto,
                  uid=None, gid=None):
         """Spawn an operating-system process.
 
@@ -160,7 +177,7 @@ class Process(abstract.FileDescriptor, styles.Ephemeral):
         nuances of setXXuid on UNIX: it will assume that either your effective
         or real UID is 0.)
         """
-        abstract.FileDescriptor.__init__(self)
+        abstract.FileDescriptor.__init__(self, reactor)
         settingUID = (uid is not None) or (gid is not None)
         if settingUID:
             curegid = os.getegid()
@@ -177,8 +194,8 @@ class Process(abstract.FileDescriptor, styles.Ephemeral):
         stdout_read, stdout_write = os.pipe()
         stderr_read, stderr_write = os.pipe()
         stdin_read,  stdin_write  = os.pipe()
-        pid = os.fork()
-        if pid == 0: # pid is 0 in the child process
+        self.pid = os.fork()
+        if self.pid == 0: # pid is 0 in the child process
             # stop debugging, if I am!  I don't care anymore!
             sys.settrace(None)
             # Destroy my stdin / stdout / stderr (in that order)
@@ -239,6 +256,28 @@ class Process(abstract.FileDescriptor, styles.Ephemeral):
             self.proto.makeConnection(self)
         except:
             log.deferr()
+        registerReapProccessHandler(self.pid, self)
+
+    def reapProcess(self):
+        """Try to reap a process (without blocking) via waitpid.
+
+        This is called when sigchild is caught or a Process object loses its
+        "connection" (stdout is closed) This ought to result in reaping all
+        zombie processes, since it will be called twice as often as it needs
+        to be.
+
+        (Unfortunately, this is a slightly experimental approach, since
+        UNIX has no way to be really sure that your process is going to
+        go away w/o blocking.  I don't want to block.)
+        """    
+        try:
+            pid, status = os.waitpid(self.pid, os.WNOHANG)
+        except:
+            log.deferr()
+            pid = None
+        if pid:
+            self.processEnded(status)
+            del reapProcessHandlers[pid]
 
     def closeStdin(self):
         """Call this to close standard input on this process.
@@ -293,17 +332,29 @@ class Process(abstract.FileDescriptor, styles.Ephemeral):
     lostErrorConnection = 0
     lostOutConnection = 0
     lostInConnection = 0
-
+    lostProcess = 0
+    
     def maybeCallProcessEnded(self):
         if (self.lostErrorConnection and
             self.lostOutConnection and
             self.lostInConnection):
-            try:
-                self.proto.processEnded(failure.Failure(CONNECTION_DONE))
-            except:
-                log.deferr()
-            reapProcess()
+            if self.lostProcess:
+                try:
+                    if self.status != -1:
+                        exitCode = self.status >> 8
+                    else:
+                        exitCode = None # wonder when this happens
+                    self.proto.processEnded(failure.Failure(error.ProcessEnded(exitCode)))
+                except:
+                    log.deferr()
+            else:
+                self.reapProcess()
 
+    def processEnded(self, status):
+        self.status = status
+        self.lostProcess = 1
+        self.maybeCallProcessEnded()
+    
     def inConnectionLost(self):
         try:
             self.proto.inConnectionLost()

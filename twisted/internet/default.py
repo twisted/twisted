@@ -1,5 +1,5 @@
 # -*- Python -*-
-# $Id: default.py,v 1.39 2002/09/15 18:00:47 itamarst Exp $
+# $Id: default.py,v 1.40 2002/09/15 19:50:30 itamarst Exp $
 #
 # Twisted, the Framework of Your Internet
 # Copyright (C) 2001 Matthew W. Lefkowitz
@@ -207,7 +207,7 @@ class PosixReactorBase(ReactorBase):
             signal.signal(signal.SIGBREAK, self.sigBreak)
 
         if platform.getType() == 'posix':
-            signal.signal(signal.SIGCHLD, process.reapProcess)
+            signal.signal(signal.SIGCHLD, process.reapAllProcesses)
 
     def startRunning(self):
         threadable.registerAsIOThread()
@@ -252,7 +252,7 @@ class PosixReactorBase(ReactorBase):
                      uid=None, gid=None):
         p = platform.getType()
         if p == 'posix':
-            return process.Process(executable, args, env, path, processProtocol, uid, gid)
+            return process.Process(self, executable, args, env, path, processProtocol, uid, gid)
         # This is possible, just needs work - talk to itamar if you want this.
         #elif p == "win32":
         #    if win32process:

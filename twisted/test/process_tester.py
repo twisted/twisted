@@ -28,5 +28,9 @@ def main():
     bytes = sys.stdin.read(4)
     f.write("three: %r\n" % bytes)
 
+    # exit with status code 23
+    sys.exit(23)
+
+
 if __name__ == '__main__':
     main()

@@ -122,3 +122,14 @@ class AlreadyCalled(ValueError):
 
 class AlreadyCancelled(ValueError):
     """Tried to cancel an already-cancelled event."""
+
+
+class ProcessEnded(Exception):
+    """A process has ended."""
+
+    def __init__(self, exitCode=None):
+        self.exitCode = exitCode
+        s = "process ended"
+        if exitCode is not None: s = s + " with exit code %s" % exitCode
+        Exception.__init__(self, s)
+

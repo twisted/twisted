@@ -67,7 +67,7 @@ import msvcrt
 import win32gui
 
 # Twisted imports
-from twisted.internet import abstract, default, main
+from twisted.internet import abstract, default, main, error
 from twisted.python import log, threadable, failure
 from twisted.internet.interfaces import IReactorFDSet
 
@@ -359,9 +359,10 @@ class Process(abstract.FileDescriptor):
     
     def connectionLost(self, reason=None):
         """Shut down resources."""
+        exitCode = win32process.GetExitCodeProcess(self.hProcess)
         self.reactor.removeEvent(self.hProcess)
         abstract.FileDescriptor.connectionLost(self, reason)
-        self.protocol.processEnded(failure.Failure(main.CONNECTION_DONE))
+        self.protocol.processEnded(failure.Failure(error.ProcessEnded(exitCode)))
     
     def doWrite(self):
         """Runs in thread."""
