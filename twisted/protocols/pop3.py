@@ -80,6 +80,7 @@ class POP3(basic.LineReceiver):
             self.magic = '<%s>' % time.time()
         self.mbox = None
         self.successResponse(self.magic)
+        log.msg("New connection from " + str(self.transport.getPeer()))
 
     def successResponse(self, message=''):
         self.sendLine('+OK ' + str(message))
@@ -105,20 +106,23 @@ class POP3(basic.LineReceiver):
 
     def do_APOP(self, user, digest):
         d = defer.maybeDeferred(self.authenticateUserAPOP, user, digest)
-        d.addCallbacks(self._cbMailbox, self._ebMailbox
+        d.addCallbacks(self._cbMailbox, self._ebMailbox, callbackArgs=(user,)
         ).addErrback(self._ebUnexpected)
     
-    def _cbMailbox(self, (interface, avatar, logout)):
+    def _cbMailbox(self, (interface, avatar, logout), user):
         self.mbox = avatar
         self._onLogout = logout
         self.successResponse('Authentication succeeded')
+        log.msg("Authenticated login for " + user)
     
     def _ebMailbox(self, failure):
         failure.trap(cred.error.LoginFailed)
         self.failResponse('Authentication failed')
+        log.msg("Denied login attempt from " + str(self.transport.getPeer()))
     
     def _ebUnexpected(self, failure):
-        self.failResponse('Server error: ' + str(failure))
+        self.failResponse('Server error: ' + failure.getErrorMessage())
+        log.err(failure)
 
     def do_USER(self, user):
         self._userIs = user
@@ -127,8 +131,8 @@ class POP3(basic.LineReceiver):
     def do_PASS(self, password):
         user = self._userIs
         self._userIs = None
-        d = defer.maybeDeferred(self.authenticateUserAPOP, user, password)
-        d.addCallbacks(self._cbMailbox, self._ebMailbox
+        d = defer.maybeDeferred(self.authenticateUserPASS, user, password)
+        d.addCallbacks(self._cbMailbox, self._ebMailbox, callbackArgs=(user,)
         ).addErrback(self._ebUnexpected)
 
     def do_STAT(self):
