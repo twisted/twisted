@@ -457,7 +457,7 @@ def deferredResult(d, timeout=None):
     """    
     result = _getDeferredResult(d, timeout)
     if isinstance(result, failure.Failure):
-        raise result.value
+        raise result
     else:
         return result
 
@@ -471,5 +471,3 @@ def deferredError(d, timeout=None):
         return result
     else:
         raise AssertionError, "Deferred did not fail: %r" % result
-
-
