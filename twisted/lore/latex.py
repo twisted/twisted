@@ -20,6 +20,8 @@ from twisted.python import text
 import os, re
 from cStringIO import StringIO
 
+import urlparse
+
 import tree
 
 escapingRE = re.compile(r'([#$%&_{}^~\\])')
@@ -140,13 +142,12 @@ class LatexSpitter(BaseLatexSpitter):
                     % latexEscape(os.path.basename(fileName)))
 
     def visitNode_a_href(self, node):
+        supported_schemes=['http', 'https', 'ftp', 'mailto']
         self.visitNodeDefault(node)
         href = node.getAttribute('href')
-        if href.startswith('http://') or href.startswith('https://'):
+        if urlparse.urlparse(href)[0] in supported_schemes:
             if node.childNodes[0].data != href:
                 self.writer('\\footnote{%s}' % latexEscape(href))
-        elif href.startswith('mailto:'):
-            pass
         else:
             if href.startswith('#'):
                 href = self.filename + href
