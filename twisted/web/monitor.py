@@ -25,6 +25,12 @@ class BaseChangeNotified:
 
     __implements__ = IChangeNotified,
 
+    def reportChange(self, old, new):
+        pass
+
+    def reportNoChange(self):
+        pass
+
 
 class ChangeChecker:
 
