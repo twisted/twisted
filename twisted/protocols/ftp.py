@@ -376,8 +376,9 @@ class FTP(basic.LineReceiver, DTPFactory):
         if not self.user:
             self.reply('nouser')
             return
-        self.passwd = params
+        
         if self.user == self.factory.useranonymous:
+            self.passwd = params
             self.reply('guestok')
         else:
             # Authing follows
@@ -385,12 +386,14 @@ class FTP(basic.LineReceiver, DTPFactory):
                 otp = self.factory.userdict[self.user]["otp"]
                 try:
                     otp.authenticate(self.passwd)
+                    self.passwd = params
                     self.reply('userok', self.user)
                 except:
                     self.reply('noauth')
             else:
                 if (self.factory.userdict.has_key(self.user)) and \
                    (self.factory.userdict[self.user]["passwd"] == self.passwd):
+                    self.passwd = params
                     self.reply('userok', self.user)
                 else:
                     self.reply('noauth')
@@ -636,10 +639,10 @@ class FTP(basic.LineReceiver, DTPFactory):
 class FTPFactory(protocol.Factory):
     command = ''
     userdict = {}
-    anonymous = 0
+    anonymous = 1
     thirdparty = 0
-    otp = 1
-    root = '/usr/bin/local'
+    otp = 0
+    root = '/var/www'
     useranonymous = 'anonymous'
  
     def buildProtocol(self, addr):
