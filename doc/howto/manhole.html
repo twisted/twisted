@@ -21,15 +21,20 @@ If you've already got a <q>TAP</q> for a server, you can use the argument
 
 <h2>Using the Manhole PB Client</h2>
 
-<p>The second service offered by twisted.manhole is a Perspective Broker
--based server. This gives the client a remote reference to a
-twisted.manhole.service.Service object, which offers remotely-callable
-methods to evaluate Python code. With the rich remote-method-invocation
+<p>The second service <!-- second?  what was the first? --> offered by
+twisted.manhole is a Perspective Broker -based server. This gives the
+client a remote reference to a <code class="API"
+>twisted.manhole.service.Service</code> object, which offers
+remotely-callable methods to evaluate Python code.</p>
+
+<!-- This is vapourware these days:
+
+With the rich remote-method-invocation
 facilities provided by PB, however, much more is possible: the client can
-ask to <q>watch</q> certain objects, and then will receive messages every time
+ask to {q>watch{/q} certain objects, and then will receive messages every time
 that python object is changed. (this takes advantage of some twisted.python
-code that <q>hooks</q> some functions, like .setattr). These features are
-described in detail below.</p>
+code that {q}hooks{/q} some functions, like .setattr). These features are
+described in detail below. -->
 
 <p>With this in place and running, you're ready to connect with the manhole
 client. This is a Gtk+-based GUI application named <code>manhole</code> that
@@ -73,13 +78,17 @@ service = a.getServiceNamed("twisted.manhole")
 
 <h2>Special Commands</h2>
 
+<div class="note"><p>At this time, not all commands are available in
+all manhole clients.  <code>/browse</code> is currently only
+implemented in the GTK 1.x client, the <q>Spelunking</q> view is only
+available with GTK 1.x + GNOME.</p></div>
+
 <p>There are a few special commands so far that make debugging Twisted
-objects really nice. These are <code>/browse</code> and <code>/watch</code>.
+objects really nice.  Well, just one at the moment, really: <code>/browse</code>.
 You can <code>/browse</code> any type of object, and it will give you some
 nice information about that object in the <q>Spelunking</q> window that pops up
 when <code>manhole</code> establishes a connection to the <code>manhole</code>
-Service. <code>/watch</code>-ing an object adds hooks to the object,
-allowing you to watch modifications to it in real time. Try the following in
+Service.  Try the following in
 the <code>manhole</code> window and watch what happens in the <q>Spelunking</q>
 box (word wrapped for clarity):</p>
 
@@ -102,78 +111,12 @@ x = A()
    class: 'A'
    methods: {}}
 </span>
-
-/watch x
- <span class="manhole-output"> &lt;ObjectLink of x type instance&gt;:
-  {members: {}
-   class: 'A'
-   methods: {}}
-</span>
-
-x.foo()
-
-<span class="manhole-output">&lt;ObjectLink of x type instance&gt;:
-  {members: {x: 1}
-   class: 'twisted.python.explorer.WatchingA8195574'
-   methods:
-     {foo:
-        &lt;ObjectLink of x.foo type instance_method&gt;:
-          {class: 'twisted.python.explorer.WatchingA8195574'
-           self: '&lt;twisted.python.explorer.WatchingA8195574 instance at
-                 0x8195574&gt;'
-           doc:
-             Pretend to be the method I replaced, and ring the bell.
-                     
-           line: 651
-           signature:
-             [{name: instance},
-              {name: a
-               list: 1},
-              {name: kw
-               keywords: 1},]
-           file: /home/punck/cvs/Twisted/twisted/python/explorer.py
-           name: __call__}
-        }}
-
-&lt;ObjectLink of x type instance&gt;:
-  {members: {x: 1}
-   class: 'twisted.python.explorer.WatchingA8195574'
-   methods:
-     {foo:
-        &lt;ObjectLink of x.foo type instance_method&gt;:
-          {class: 'twisted.python.explorer.WatchingA8195574'
-           self: '&lt;twisted.python.explorer.WatchingA8195574 instance at
-                 0x8195574&gt;'
-           doc:
-             Pretend to be the method I replaced, and ring the bell.
-                     
-           line: 651
-           signature:
-             [{name: instance},
-              {name: a
-               list: 1},
-              {name: kw
-               keywords: 1},]
-           file: /home/punck/cvs/Twisted/twisted/python/explorer.py
-           name: __call__}
-        }}
-</span>
-   
 </pre>
 
-<p>TODO: <code>/watch</code> might be broken right now.</p>
-
-<p>As you can see, <code>/watch</code> really gives you a lot of power (and
-a lot of output, too -- hopefully we'll have a nice GUI display for this in
-the future). The <code>/browse</code> and <code>/watch</code> functionality
-is brought to you by the <code class="API">twisted.manhole.explorer</code>
-module, which was written largely by Kevin Turner.</p>
-
-
-<p>TODO: Add an example using <code
+<div class="doit"><p>TODO: Add an example using <code
 class="API">twisted.python.rebuild.rebuild</code>. This lets you tell your
 application (remotely) to reload its classes, allowing you to upgrade a
-running server without missing a beat.</p>
+running server without missing a beat.</p></div>
 
 <p>Have fun!</p>
 
