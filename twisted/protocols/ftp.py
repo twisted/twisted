@@ -547,9 +547,9 @@ class FTP(object, basic.LineReceiver, policies.TimeoutMixin):
             self.transport.write(RESPONSE[key] + ENDLN)
 
     def lineReceived(self, line):
-        "Process the input from the client"
+        """Process the input from the client"""
         self.resetTimeout()
-        line = string.strip(line)
+        line = line.strip()
         log.debug(repr(line))
         line = self.reTelnetChars.sub('', line)  # clean up '\xff\xf4\xff' nonsense
         line = line.encode() 
@@ -564,7 +564,6 @@ class FTP(object, basic.LineReceiver, policies.TimeoutMixin):
             self.reply(e.errorCode, '')
         except FTPCmdError, e:
             self.reply(e.errorCode, e.errorMessage)
-        
         except Exception, e:
             log.err(e)
             self.reply(REQ_ACTN_NOT_TAKEN, 'internal server error')
@@ -572,28 +571,36 @@ class FTP(object, basic.LineReceiver, policies.TimeoutMixin):
 
     def processCommand(self, cmd, *args):
         log.debug('FTP.processCommand: cmd = %s, args = %s' % (cmd,args))
-        if self.blocked != None:                                                # all DTP commands block, 
+
+        # all DTP commands block, so queue new requests
+        if self.blocked != None:
             log.debug('FTP is queueing command: %s' % cmd)
-            self.blocked.append((cmd,args))                                     # so queue new requests
+            self.blocked.append((cmd,args))
             return
 
         cmd = cmd.upper()
-        if cmd not in ['USER','PASS'] and not self.shell:                       # these are the only two commands that don't require
-            log.debug('ftp_%s returning, user not logged in' % cmd)             # an authenticated user
+
+        # Every command except USER and PASS requires an authenticated user.
+        if cmd not in ['USER','PASS'] and not self.shell:
+            log.debug('ftp_%s returning, user not logged in' % cmd)
             self.reply(NOT_LOGGED_IN)
             return
 
-        if cmd in self.blockingCommands:                                        # if this is a DTP related command
+        # if this is a DTP related command, and there's no DTP instance (i.e. no
+        # data connection) yet, add this command to the queue.
+        if cmd in self.blockingCommands:
             log.debug('FTP.processCommand: cmd %s in blockingCommands' % cmd)
-            if not self.dtpInstance:                                            # if no one has connected yet
+            if not self.dtpInstance:
                 log.debug('FTP.processCommand: self.dtpInstance = %s' % self.dtpInstance)
                 # a bit hackish, but manually blocks this command 
                 # until we've set up the DTP protocol instance
                 # _unblock will run this first command and subsequent
-                self.blocked = [(cmd,args)]                                     # add item to queue and start blocking
+                self.blocked = [(cmd,args)]
                 log.debug('during dtp setup, blocked = %s' % self.blocked)
                 return
-        method = getattr(self, "ftp_%s" % cmd, None)                            # try to find the method in this class
+
+        # Dispatch to the command-specific method.
+        method = getattr(self, "ftp_%s" % cmd, None)
         log.debug('FTP.processCommand: method = %s' % method)
         if method:
             return method(*args)                                                
