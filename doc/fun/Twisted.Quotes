@@ -4497,3 +4497,10 @@ person.
 <itamar> jml: the Sex Pistols have no songs about Hillary Clinton
 <jml> itamar: an unfortunate accident of history
 %
+<slyphon> dammit! my upstream just sucks
+<slyphon> 20 kb/sec!
+<slyphon> if i'm lucky!
+<exarkun> install an optimization
+<slyphon> how?
+<slyphon> ifconfig eth0 --don't-suck-upstream up??
+%
