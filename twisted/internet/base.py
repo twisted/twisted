@@ -104,8 +104,8 @@ class ReactorBase:
             apply(self.callLater, (0, f)+ args, kw)
         else:
             # lists are thread-safe in CPython, but not in Jython
-            # this is probably a bug in Jython, but until fixed this code won't work
-            # in Jython.
+            # this is probably a bug in Jython, but until fixed this code
+            # won't work in Jython.
             self.threadCallQueue.append((f, args, kw))
             self.wakeUp()
 
