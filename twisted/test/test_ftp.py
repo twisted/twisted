@@ -124,7 +124,7 @@ class FTPClientTests(FTPTest):
         self.failUnless(type(self.result) == types.ListType,
                         'callback result is wrong type: ' + str(self.result))
         data = proto.buf.getvalue()
-        self.failUnless(data == open(thisFile).read(),
+        self.failUnless(data == open(thisFile, "rb").read(),
                         'RETRieved file does not match original')
 
         
