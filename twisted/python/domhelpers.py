@@ -36,8 +36,8 @@ def clearNode(node):
     Remove all children from the given node.
     """
     if node.hasChildNodes():
-        for child in node.childNodes:
-            node.removeChild(child)
+        while node.childNodes.length:
+            node.removeChild(node.firstChild)
 
 def locateNodes(nodeList, key, value):
     """
