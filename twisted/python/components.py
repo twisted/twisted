@@ -230,6 +230,21 @@ class Componentized:
     def setComponent(self, interfaceClass, component):
         self._adapterCache[interfaceClass] = component
 
+    def addComponent(self, component):
+        """
+        Add a component to me, for all appropriate interfaces.
+
+        In order to determine which interfaces are appropriate, the component's
+        __implements__ attribute will be scanned.  An 'appropriate' interface
+        is one which it implments, and for which its class has been registered
+        as an adapter for my class according to the rules of getComponent.
+        """
+        for iface in component.__implements__:
+            ac = self.locateAdapterClass(self.__class__, iface, None)
+            if ac == component.__class__:
+                self._adapterCache[iface] = component
+
+
     def removeComponent(self, interfaceClass):
         del self._adapterCache[interfaceClass]
 
@@ -244,6 +259,10 @@ class Componentized:
         getComponent, but you don't require (or don't want) your adapter to be
         cached and kept alive for the lifetime of this Componentized object,
         set the attribute 'temporaryAdapter' to True on your adapter class.
+
+        If you want to automatically register an adapter for all appropriate
+        interfaces (with addComponent), set the attribute 'multiComponent' to
+        True on your adapter class.
         """
         if self._adapterCache.has_key(interface):
             return self._adapterCache[interface]
@@ -256,14 +275,10 @@ class Componentized:
                 hasattr(adapter, "temporaryAdapter") and
                 adapter.temporaryAdapter):
                 self._adapterCache[interface] = adapter
-                # TODO: document the following behavior better
                 if (hasattr(adapter, "multiComponent") and
                     adapter.multiComponent and
                     hasattr(adapter, '__implements__')):
-                    for iface in adapter.__implements__:
-                        ac = self.locateAdapterClass(self.__class__, iface, None)
-                        if ac == adapter.__class__:
-                            self._adapterCache[iface] = adapter
+                    self.addComponent(adapter)
                     
             return adapter
 
