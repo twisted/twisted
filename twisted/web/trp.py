@@ -25,7 +25,7 @@ from pickle import Unpickler
 from twisted.python.components import implements, getAdapter
 from twisted.web.resource import IResource
 
-def ResourceUnpickler(path):
+def ResourceUnpickler(path, registry = None):
     fl = open(path)
     result = Unpickler(fl).load()
     return result
