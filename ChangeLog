@@ -1,3 +1,8 @@
+2003-05-01  Brian Warner  <warner@lothar.com>
+
+	* twisted/internet/gtk2reactor.py (Gtk2Reactor._doReadOrWrite):
+	add Anthony's cached-Failure speedup to gtk2 too.
+
 2003-04-29  Brian Warner  <warner@lothar.com>
 
 	* twisted/test/test_process.py: make all child processes inherit

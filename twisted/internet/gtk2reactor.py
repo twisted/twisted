@@ -46,7 +46,7 @@ from twisted.python import log, threadable, runtime, failure
 from twisted.internet.interfaces import IReactorFDSet
 
 # Sibling Imports
-from twisted.internet import main, default
+from twisted.internet import main, default, error
 
 reads = default.reads
 writes = default.writes
@@ -150,7 +150,9 @@ class Gtk2Reactor(default.PosixReactorBase):
         self.simulate()
         gtk.main()
 
-    def _doReadOrWrite(self, source, condition):
+    def _doReadOrWrite(self, source, condition, faildict={
+        error.ConnectionDone: failure.Failure(error.ConnectionDone()),
+        error.ConnectionLost: failure.Failure(error.ConnectionLost())  }):
         why = None
         if condition & POLL_DISCONNECTED and \
                not (condition & gtk._gobject.IO_IN):
@@ -174,7 +176,11 @@ class Gtk2Reactor(default.PosixReactorBase):
         if why:
             self.removeReader(source)
             self.removeWriter(source)
-            source.connectionLost(failure.Failure(why))
+            f = faildict.get(why.__class__)
+            if f:
+                source.connectionLost(f)
+            else:
+                source.connectionLost(failure.Failure(why))
 
 
     def callback(self, source, condition):
