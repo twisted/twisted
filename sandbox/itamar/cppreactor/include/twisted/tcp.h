@@ -29,11 +29,6 @@ namespace Twisted
 	virtual void dealloc(void* buf) = 0;
     };
 
-    typedef struct {
-	PyBufferObject buffer;
-	Deallocator* dealloc;
-    } DeallocBuffer;
-    
     class Protocol;     // forward definition
 
     // The resulting Python class should be wrapped in to the transports

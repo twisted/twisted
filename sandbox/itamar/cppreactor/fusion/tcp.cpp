@@ -1,5 +1,3 @@
-#include <iostream>
-using namespace std;
 #include <unistd.h>
 #include <errno.h>
 #include <boost/python.hpp> 
@@ -58,12 +56,57 @@ object Twisted::TCPTransport::doRead()
 
 /* Buffer implementation. Doesn't use boost since boost doesn't yet have
    support for the buffer object API. */
+typedef struct {
+    PyObject_HEAD
+    void* b_ptr;
+    int b_size;
+    Deallocator* b_dealloc;
+} DeallocBuffer;
+    
+    
+static int Buffer_getreadbuf(DeallocBuffer *self, int idx, void **pp)
+{
+    *pp = self->b_ptr;
+    return self->b_size;
+}
+
+static int Buffer_getsegcount(DeallocBuffer *self, int *lenp)
+{
+    if (lenp) {
+	*lenp = self->b_size;
+    }
+    return 1;
+}
+
+static int Buffer_length(DeallocBuffer* self)
+{
+    return self->b_size;
+}
+
+
+static PyObject* Buffer_str(DeallocBuffer* self)
+{
+        return PyString_FromStringAndSize(reinterpret_cast<char*>(self->b_ptr),
+					  self->b_size);
+}
 
 static void Buffer_dealloc(DeallocBuffer* self)
 {
-    self->dealloc->dealloc(self->buffer.b_ptr);
-    PyObject_DEL(self);
+    self->b_dealloc->dealloc(self->b_ptr);
+    self->ob_type->tp_free((PyObject*)self);
 }
+
+
+static PySequenceMethods buffer_as_sequence = {
+    (inquiry)Buffer_length, /*sq_length*/
+};
+
+static PyBufferProcs buffer_as_buffer = {
+    (getreadbufferproc)Buffer_getreadbuf,
+    0,
+    (getsegcountproc)Buffer_getsegcount,
+    0,
+};
 
 PyTypeObject BufferType = {
     PyObject_HEAD_INIT(NULL)
@@ -78,36 +121,44 @@ PyTypeObject BufferType = {
     0,                         /*tp_compare*/
     0,                         /*tp_repr*/
     0,                         /*tp_as_number*/
-    0,                         /*tp_as_sequence*/
+    &buffer_as_sequence,       /*tp_as_sequence*/
     0,                         /*tp_as_mapping*/
     0,                         /*tp_hash */
     0,                         /*tp_call*/
-    0,                         /*tp_str*/
+    (reprfunc)Buffer_str,      /*tp_str*/
     0,                         /*tp_getattro*/
     0,                         /*tp_setattro*/
-    0,                         /*tp_as_buffer*/
+    &buffer_as_buffer,         /*tp_as_buffer*/
     Py_TPFLAGS_DEFAULT | Py_TPFLAGS_BASETYPE,        /*tp_flags*/
     "Buffer with custom deallocator.", /* tp_doc */
 };
 
 static PyObject* createDeallocBuffer(Deallocator* d, void* buf, int size) {
     DeallocBuffer* b;
-    b = PyObject_NEW(DeallocBuffer, &BufferType);
-    if (b == NULL) {
-	return NULL;
+    b = (DeallocBuffer*)BufferType.tp_alloc(&BufferType, 0);
+    if (b != NULL) {
+	b->b_dealloc = d;
+	b->b_ptr = buf;
+	b->b_size = size;
     }
-    b->dealloc = d;
-    b->buffer.b_base = NULL;
-    b->buffer.b_ptr = buf;
-    b->buffer.b_size = size;
-    b->buffer.b_readonly = 1;
-    b->buffer.b_hash = -1;
     return (PyObject *) b;
 }
 
 void Twisted::TCPTransport::write(Deallocator* d, char* buf, int buflen) 
 {
-    PyObject_CallMethod(self, "write", "O", createDeallocBuffer(d, (void*)buf, buflen));
+    PyObject* result;
+    PyObject* tup;
+    PyObject* b = createDeallocBuffer(d, (void*)buf, buflen);
+    tup = PyTuple_New(1);
+    if (tup == NULL) {
+	return;
+    }
+    if (PyTuple_SetItem(tup, 0, b) < 0) {
+	return;
+    }
+    result = PyObject_CallMethod(self, "write", "O", tup);
+    Py_XDECREF(result);
+    Py_DECREF(tup);
 }
 
 
@@ -121,10 +172,10 @@ BOOST_PYTHON_MODULE(tcp)
 	.def("connectionLost", &Protocol::connectionLost)
 	.def("makeConnection", &Protocol::makeConnection)
 	;
-    BufferType.tp_base = &PyBuffer_Type;
     if (PyType_Ready(&BufferType) < 0) {
 	return;
     }
+    Py_INCREF(&BufferType);
     PyModule_AddObject(scope().ptr(), "Buffer", (PyObject *)&BufferType);
     //lvalue_from_pytype<extract_identity<DeallocBuffer>,&BufferType>();
 }

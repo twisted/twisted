@@ -8,7 +8,7 @@ static char greeting[] = "hello there\n";
 class TestDeallocator: public Deallocator
 {
 public:
-    void dealloc(void* buf) { cout << "dealloc"; }
+    virtual void dealloc(void* buf) { cout << "dealloc\n"; }
 };
 
 class Echo : public Protocol
