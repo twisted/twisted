@@ -62,6 +62,9 @@ class CopmatTestCase(unittest.TestCase):
         self.assertEquals(bool(False), False)
 
     def testIteration(self):
+        iter = compat.iter
+        StopIteration = compat.StopIteration
+        
         lst1, lst2 = range(10), []
         
         for i in iter(lst1):
@@ -97,6 +100,8 @@ class CopmatTestCase(unittest.TestCase):
         self.assertEquals(lst1, lst2)
         
     def testIsinstance(self):
+        isinstance = compat.isinstance
+        # is this really supposed to be injected into types?
         from types import StringTypes
         self.assert_(isinstance(u'hi', StringTypes))
         self.assert_(isinstance(self, unittest.TestCase))
