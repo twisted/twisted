@@ -59,7 +59,8 @@ class TestProcessProtocol(protocol.ProcessProtocol):
     def errConnectionLost(self):
         self.stages.append(3)
         if self.err != "1234":
-            raise RuntimeError
+            print 'err != 1234: ' + repr(self.err)
+            raise RuntimeError()
         self.transport.write("abcd")
         self.stages.append(4)
 
@@ -96,7 +97,7 @@ class ProcessTestCase(unittest.TestCase):
         exe = sys.executable
         scriptPath = util.sibpath(__file__, "process_tester.py")
         p = TestProcessProtocol()
-        reactor.spawnProcess(p, exe, ["python", "-u", scriptPath])
+        reactor.spawnProcess(p, exe, [exe, "-u", scriptPath])
         while not p.finished:
             reactor.iterate()
         self.assertEquals(p.stages, [1, 2, 3, 4, 5])
@@ -116,7 +117,7 @@ class ProcessTestCase(unittest.TestCase):
         exe = sys.executable
         scriptPath = util.sibpath(__file__, "process_echoer.py")
         p = EchoProtocol()
-        reactor.spawnProcess(p, exe, ["python", "-u", scriptPath])
+        reactor.spawnProcess(p, exe, [exe, "-u", scriptPath])
         while not p.finished:
             reactor.iterate(0.01)
         self.assertEquals(len(p.buffer), len(p.s * 10))
