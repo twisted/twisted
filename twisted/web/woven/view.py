@@ -59,12 +59,13 @@ class View(template.DOMTemplate):
         A view must be told what its model is, and may be told what its
         controller is, but can also look up its controller if none specified.
         """
-        self.model = self.mainModel = model.adaptToIModel(m, None, None)
+        if not components.implements(m, interfaces.IModel):
+            m = model.adaptToIModel(m, None, None)
+        self.model = self.mainModel = m
+        self.subviews = {}
         if self.setupStacks:
             self.model.modelStack = Stack([self.model])
             self.setupViewStack()
-            self.subviews = {}
-            self.currentId = 0
             if controller:
                 self.controller = controller
             else:
@@ -73,6 +74,7 @@ class View(template.DOMTemplate):
                 self.doneCallback = doSendPage
             else:
                 self.doneCallback = doneCallback
+        self.setupMethods = []
         template.DOMTemplate.__init__(self, templateFile=templateFile)
 
     def setupViewStack(self):
@@ -89,6 +91,8 @@ class View(template.DOMTemplate):
         self.viewStack.push(namespace)
 
     def render(self, request, doneCallback=None, block=None):
+        request.currentId = 0
+        request.currentPage = self
         if self.controller is None:
             self.controller = controller.Controller(self.model)
         if doneCallback is not None:
@@ -164,10 +168,11 @@ class View(template.DOMTemplate):
             m = None
         self.model.modelStack.push(m)
         if m:
-            if parent is not m:
-                m.parent = parent
-            if not getattr(m, 'name', None):
-                m.name = submodel
+#            print "M NAME", m.name
+#             if parent is not m:
+#                 m.parent = parent
+#             if not getattr(m, 'name', None):
+#                 m.name = submodel
             return m
         #print `submodel`, self.getTopOfModelStack()
         if submodel:
@@ -304,7 +309,6 @@ class View(template.DOMTemplate):
         if submodelName is None:
             submodelName = ""
         model = self.getNodeModel(request, node, submodelName)
-
         if isinstance(model, defer.Deferred):
             model.addCallback(self.handleModelLater,
                               request, node, submodelName)
@@ -317,11 +321,11 @@ class View(template.DOMTemplate):
         self.handleModel(model, request, node, submodelName)
         if not self.outstandingCallbacks:
             self.sendPage(request)
+        return model
 
     def handleModel(self, model, request, node, submodelName):
         view = self.getNodeView(request, node, submodelName, model)
         controller = self.getNodeController(request, node, submodelName, model)
-
         if view or controller:
             if model is None:
                 model = self.model.modelStack.peek()
@@ -337,16 +341,19 @@ class View(template.DOMTemplate):
 
             if not isinstance(view, widgets.DefaultWidget):
                 model.addView(view)
-
+            submodelList = [x.name for x in self.model.modelStack.stack if x is not None and x.name]
+            submodelList.reverse()
+            submodelName = '/'.join(submodelList)
             if not getattr(view, 'submodel', None):
-                view.setSubmodel(submodelName)
+                view.submodel = submodelName
 
-#             id = node.getAttribute("id")
-#             if not id:
-#                 id = "woven_id_" + str(self.currentId)
-#                 self.currentId += 1
-#                 view['id'] = id
-#             self.subviews[id] = view
+            theId = node.getAttribute("id")
+            if not theId:
+                theId = "woven_id_" + str(request.currentId)
+                request.currentId += 1
+                view.setupMethods.append(utils.createSetIdFunction(theId))
+                #print "SET AN ID", theId
+            self.subviews[theId] = view
             view.parent = self.viewStack.peek()
             # If a Widget was constructed directly with a model that so far
             # is not in modelspace, we should put it on the stack so other
@@ -364,7 +371,9 @@ class View(template.DOMTemplate):
             # xxx refactor this into a widget interface and check to see if the object implements IWidget
             # the view may be a deferred; this is why this check is required
             controller.setView(view)
-            controller._parent = self.controller.controllerStack.peek()
+            cParent = self.controller.controllerStack.peek()
+            if controller._parent is None or cParent != controller:
+                controller._parent = cParent
             controllerResult = controller.handle(request)
         else:
             controllerResult = (None, None)
@@ -393,15 +402,18 @@ class View(template.DOMTemplate):
             self.handlerResults[success].append((controller, data, node))
 
         returnNode = self.dispatchResult(request, node, view)
+        self.handleNewNode(request, returnNode)
+        
+        if isCallback and not self.outstandingCallbacks:
+            log.msg("Sending page from controller callback!")
+            self.doneCallback(self, self.d, request)
+
+    def handleNewNode(self, request, returnNode):
         if not isinstance(returnNode, defer.Deferred):
             self.recurseChildren(request, returnNode)
             self.model.modelStack.pop()
             self.viewStack.pop()
             self.controller.controllerStack.pop()
-
-        if isCallback and not self.outstandingCallbacks:
-            log.msg("Sending page from controller callback!")
-            self.doneCallback(self, self.d, request)
 
     def sendPage(self, request):
         """
@@ -409,11 +421,20 @@ class View(template.DOMTemplate):
         """
         self.doneCallback(self, self.d, request)
 
-    def setSubviewFactory(self, name, factory, setup=None):
+    def setSubviewFactory(self, name, factory, setup=None, *args, **kwargs):
         setattr(self, "wvfactory_" + name, lambda request, node, m:
-                                                    factory(m))
+                                                    factory(m, *args, **kwargs))
         if setup:
             setattr(self, "wvupdate_" + name, setup)
+
+    def __setitem__(self, key, value):
+        pass
+
+    def unlinkViews(self):
+        print "unlinking views"
+        self.model.removeView(self)
+        for key, value in self.subviews.items():
+            value.model.removeView(value)
 
 
 #backwards compatibility

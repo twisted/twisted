@@ -1,9 +1,10 @@
 # page.py
 
+from twisted.python import reflect
 from twisted.web import resource
-from twisted.web.woven import model, view, controller
+from twisted.web.woven import model, view, controller, interfaces, template
 
-class Page(model.Model, view.View, controller.Controller):
+class Page(model.Model, controller.Controller, view.View):
     __implements__ = (model.Model.__implements__, view.View.__implements__,
                       controller.Controller.__implements__)
     def __init__(self, m=None, templateFile=None, inputhandlers=None,
@@ -13,26 +14,40 @@ class Page(model.Model, view.View, controller.Controller):
             self.model = self
         else:
             self.model = m
-        self.view = self
         controller.Controller.__init__(self, self.model,
                                        inputhandlers=inputhandlers)
+        self.view = self
         view.View.__init__(self, self.model, controller=self,
                            templateFile=templateFile)
         self.controllerRendered = 0
+    
+    def renderView(self, request, block=0):
+        return view.View.render(self, request,
+                                doneCallback=self.gatheredControllers,
+                                block=block)
 
-    def render(self, request, block=0):
-        """
-        Trigger any inputhandlers that were passed in to this Page,
-        then delegate to the View for traversing the DOM. Finally,
-        call gatheredControllers to deal with any InputHandlers that
-        were constructed from any controller= tags in the
-        DOM. gatheredControllers will render the page to the browser
-        when it is done.
-        """
-        # Handle any inputhandlers that were passed in to the controller first
-        for ih in self._inputhandlers:
-            ih._parent = self
-            ih.handle(request)
+class LivePage(model.Model, controller.LiveController, view.View):
+    # M.I. sucks.
+    __implements__ = (model.Model.__implements__, view.View.__implements__,
+                      controller.Controller.__implements__)
+    def __init__(self, m=None, templateFile=None, inputhandlers=None,
+                 *args, **kwargs):
+        model.Model.__init__(self, *args, **kwargs)
+        if m is None:
+            self.model = self
+        else:
+            self.model = m
+        controller.LiveController.__init__(self, self.model,
+                                       inputhandlers=inputhandlers)
+        self.view = self
+        view.View.__init__(self, self.model, controller=self,
+                           templateFile=templateFile)
+        self.controllerRendered = 0
+    
+    def wvfactory_webConduitGlue(self, request, node, m):
+    	return view.View(m, templateFile="WebConduitGlue.html")
+
+    def renderView(self, request, block=0):
         return view.View.render(self, request,
                                 doneCallback=self.gatheredControllers,
                                 block=block)

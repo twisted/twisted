@@ -17,6 +17,8 @@
 
 # DOMWidgets
 
+from __future__ import nested_scopes
+
 import urllib
 import warnings
 from twisted.web.microdom import parseString
@@ -289,7 +291,10 @@ class Widget(view.View):
             node.setAttribute(key, value)
         for item in self._children:
             if hasattr(item, 'generateDOM'):
-                item = item.generateDOM(request, node)
+                parentNode = node.parentNode
+                node.parentNode = None
+                item = item.generateDOM(request, node.cloneNode(1))
+                node.parentNode = parentNode
             node.appendChild(item)
         #print "WE GOT A NODE", node.toxml()
         self.node = node
@@ -306,24 +311,16 @@ class Widget(view.View):
         else:
             data = self.getData()
         newNode = self._regenerate(request, oldNode, data)
-        mutator = template.NodeNodeMutator(newNode)
-        mutator.d = request.d
-        mutator.generate(request, oldNode)
-        self.node = newNode
-        parent = self.parent
-
-        viewStack = self.viewStack
-        modelStack = self.model.modelStack
-        controllerStack = self.controller.controllerStack
-
-        self.recurseChildren(request, newNode)
-        return newNode
+        returnNode = self.dispatchResult(request, oldNode, newNode)
+        self.handleNewNode(request, returnNode)
+        self.controller.domChanged(request, returnNode)
 
     def __setitem__(self, item, value):
         """
         Convenience syntax for adding attributes to the resultant DOM Node of
         this widget.
         """
+        assert value is not None
         self.attributes[item] = value
 
     def __getitem__(self, item):
@@ -360,7 +357,7 @@ class Widget(view.View):
                 if not node:
                     msg = 'WARNING: No template nodes were found '\
                               '(tagged %s="%s"'\
-                              ' or slot="%s") for node %s' % (name + "Of",
+                              ' or pattern="%s") for node %s' % (name + "Of",
                                             sm, name, self.templateNode)
                     if default is _RAISE:
                         raise Exception(msg)
@@ -375,6 +372,40 @@ class Widget(view.View):
         clone = slot.cloneNode(1)
         slot.parentNode = parentNode
         return clone
+
+    def addUpdateMethod(self, updateMethod):
+        """Add a method to this widget that will be called when the widget
+        is being rendered. The signature for this method should be
+        updateMethod(request, widget, data) where widget will be the
+        instance you are calling addUpdateMethod on.
+        """
+        self.setupMethods.append(updateMethod)
+
+    def addEventHandler(self, eventName, handler, *args):
+        """Add an event handler to this widget. eventName is a string
+        indicating which javascript event handler should cause this
+        handler to fire. Handler is a callable that has the signature
+        handler(request, widget, *args).
+        """
+        def handlerUpdateStep(request, widget, data):
+            extraArgs = ''
+            for x in args:
+                extraArgs += " ,'" + x.replace("'", "\\'") + "'"
+            widget[eventName] = "woven_eventHandler('%s', this%s)" % (eventName, extraArgs)
+            setattr(self, 'wevent_' + eventName, handler)
+        self.addUpdateMethod(handlerUpdateStep)
+        
+    def onEvent(self, request, eventName, *args):
+        """Dispatch a client-side event to an event handler that was
+        registered using addEventHandler.
+        """
+        eventHandler = getattr(self, 'wevent_' + eventName, None)
+        if eventHandler is None:
+            raise NotImplementedError("A client side '%s' event occured,"
+                    " but there was no event handler registered on %s." % 
+                    (eventName, self))
+                
+        eventHandler(request, self, *args)
 
 wvfactory_Widget = viewFactory(Widget)
 
@@ -507,7 +538,14 @@ class Input(Widget):
         self['name'] = submodel
 
     def generateDOM(self, request, node):
+        if not self.attributes.has_key('name') and not node.getAttribute('name'):
+            if self.submodel:
+                id = self.submodel
+            else:
+                id = self.attributes.get('id', node.getAttribute('id'))
+            self['name'] = id
         mVal = self.getData()
+        assert mVal is not None
         if not self.attributes.has_key('value'):
             self['value'] = str(mVal)
         return Widget.generateDOM(self, request, node)
@@ -864,6 +902,7 @@ class RawText(Widget):
 
 wvfactory_RawText = viewFactory(RawText)
 
+defaultWidgetInstance = DefaultWidget()
 
 
 view.registerViewForModel(Text, model.StringModel)

@@ -173,11 +173,17 @@ class IController(components.Interface):
         """
 
 
-class IWovenLivePage(server.Session):
+class IWovenLivePage(components.Interface):
     def getCurrentPage():
         """Return the current page object contained in this session.
         """
 
     def setCurrentPage(page):
         """Set the current page object contained in this session.
+        """
+
+    def write(text):
+        """Write "text" to the live page's persistent output conduit.
+        If there is no conduit connected yet, save the text and write it
+        as soon as the output conduit is connected.
         """

@@ -19,12 +19,12 @@ from __future__ import nested_scopes
 
 from twisted.python import log
 from twisted.python import components
-from twisted.web import resource
+from twisted.web import resource, server
 from twisted.web.woven import interfaces, utils
 
 
 import warnings
-
+from time import time as now
 
 def controllerFactory(controllerClass):
     return lambda request, node, model: controllerClass(model)
@@ -46,6 +46,7 @@ class Controller(resource.Resource):
     setupStacks = 1
     controllerLibraries = []
     def __init__(self, m, inputhandlers=None):
+        #self.start = now()
         resource.Resource.__init__(self)
         self.model = m
         self.subcontrollers = []
@@ -103,7 +104,7 @@ class Controller(resource.Resource):
     def setView(self, view):
         self.view = view
 
-    def setUp(self, request):
+    def setUp(self, request, *args):
         """
         @type request: L{twisted.web.server.Request}
         """
@@ -130,14 +131,20 @@ class Controller(resource.Resource):
 
     def render(self, request, block=0):
         """
-        This passes responsibility on to the view class registered for
-        the model. You can override me to perform more advanced
-        template lookup logic.
+        Trigger any inputhandlers that were passed in to this Page,
+        then delegate to the View for traversing the DOM. Finally,
+        call gatheredControllers to deal with any InputHandlers that
+        were constructed from any controller= tags in the
+        DOM. gatheredControllers will render the page to the browser
+        when it is done.
         """
         # Handle any inputhandlers that were passed in to the controller first
         for ih in self._inputhandlers:
             ih._parent = self
             ih.handle(request)
+        return self.renderView(request, block=block)
+
+    def renderView(self, request, block=0):
         return self.view.render(request, doneCallback=self.gatheredControllers, block=block)
 
     def gatheredControllers(self, v, d, request):
@@ -147,7 +154,11 @@ class Controller(resource.Resource):
             process[key.submodel] = value
         self.process(request, **process)
         from twisted.web.woven import view
+        #log.msg("Sending page!")
         utils.doSendPage(v, d, request)
+        #v.unlinkViews()
+
+        #print "Page time: ", now() - self.start
         #return view.View.render(self, request, block=0)
 
     def aggregateValid(self, request, input, data):
@@ -168,7 +179,67 @@ class Controller(resource.Resource):
         """
         return (None, None)
 
+    def domChanged(self, request, node):
+        parent = getattr(self, 'parent', None)
+        if parent is not None:
+            parent.domChanged(request, node)
 
+
+class LiveController(Controller):
+    """A Controller that encapsulates logic that makes it possible for this
+    page to be "Live". A live page can have it's content updated after the
+    page has been sent to the browser, and can translate client-side
+    javascript events into server-side events.
+    """
+    def render(self, request, block=0):
+        """First, check to see if this request is attempting to hook up the
+        output conduit. If so, do it. Otherwise, unlink the current session's
+        View from the MVC notification infrastructure, then render the page
+        normally.
+        """
+        # Check to see if we're hooking up an output conduit
+        sess = request.getSession(interfaces.IWovenLivePage)
+        #print "REQUEST.ARGS", request.args
+        if request.args.has_key('woven_hookupOutputConduitToThisFrame'):
+            sess.hookupOutputConduit(request)
+            return server.NOT_DONE_YET
+        if request.args.has_key('woven_clientSideEventName'):
+            eventName = request.args['woven_clientSideEventName'][0]
+            eventTarget = request.args['woven_clientSideEventTarget'][0]
+            eventArgs = request.args.get('woven_clientSideEventArguments', [])
+            #print "EVENT", eventName, eventTarget, eventArgs
+            self.view = sess.getCurrentPage()
+            request.d = self.view.d
+            target = self.view.subviews[eventTarget]
+            target.onEvent(request, eventName, *eventArgs)
+            return '''<html><body>event sent.</body></html>'''
+
+        # Unlink the current page in this user's session from MVC notifications
+        page = sess.getCurrentPage()
+        if page is not None:
+            page.unlinkViews()
+            sess.setCurrentPage(None)
+        self.pageSession = None
+        return Controller.render(self, request, block=block)
+
+    def gatheredControllers(self, v, d, request):
+        Controller.gatheredControllers(self, v, d, request)
+        sess = request.getSession(interfaces.IWovenLivePage)
+        #print "THIS PAGE IS GOING LIVE:", self
+        self.pageSession = sess
+        sess.setCurrentPage(self)
+
+    def domChanged(self, request, node):
+        print "DOM CHANGED"
+        if self.pageSession is not None:
+            nodeId = node.getAttribute('id')
+            nodeXML = node.toxml()
+            nodeXML = nodeXML.replace('\n', '')
+            nodeXML = nodeXML.replace('\r', '')
+            nodeXML = nodeXML.replace("'", "\\'")
+            js = "top.woven_replaceElement('%s', '%s')" % (nodeId, nodeXML)
+            self.pageSession.sendJavaScript(js)
+        
 WController = Controller
 
 def registerControllerForModel(controller, model):

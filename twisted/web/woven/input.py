@@ -65,6 +65,9 @@ class InputHandler(controller.Controller):
         if submodel is not None:
             self.submodel = submodel
 
+    def initialize(self):
+        pass
+
     def getInput(self, request):
         """
         Return the data associated with this handler from the request, if any.
@@ -74,6 +77,7 @@ class InputHandler(controller.Controller):
             return input
 
     def handle(self, request):
+        self.initialize()
         data = self.getInput(request)
         success = self.check(request, data)
         if isinstance(success, defer.Deferred):
@@ -114,7 +118,7 @@ class InputHandler(controller.Controller):
         and implement a state machine that waits for all data to be collected
         and then fires.
         """
-        self._parent.aggregateValid(request, self, data)
+        self._parent.aggregateValid(request, inputhandler, data)
  
     def handleInvalid(self, request, data):
         """
@@ -128,7 +132,7 @@ class InputHandler(controller.Controller):
         """By default we just pass this method call all the way up to the root
         Controller.
         """
-        self._parent.aggregateInvalid(request, self, data)
+        self._parent.aggregateInvalid(request, inputhandler, data)
 
     _getMyModel = utils._getModel
 
@@ -142,7 +146,6 @@ class InputHandler(controller.Controller):
             if self._commit is None:
                 self.model.setData(data)
             else:
-                print "committing in inputhandler"
                 self._commit(data)
             self.model.notify({'request': request, self.submodel: data})
 
@@ -268,3 +271,5 @@ class NewObject(SingleValue):
         SingleValue.handleInvalid(self, request, data)
 
 wcfactory_NewObject = controllerFactory(NewObject)
+
+defaultHandlerInstance = DefaultHandler(None)

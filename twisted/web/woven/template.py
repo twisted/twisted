@@ -365,6 +365,10 @@ class DOMTemplate(Resource):
             xml = request.d.toxml()
         except:
             xml = ""
+#         if not hasattr(request, 'channel'):
+#             log.msg("The request got away from me before I could render an error page.")
+#             log.err(failure)
+#             return failure
         if not self.failed:
             self.failed = 1
             if failure:

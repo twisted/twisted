@@ -1,3 +1,22 @@
+2002-11-24  Donovan Preston  <dp@twistedmatrix.com>
+
+	* twisted/web/woven/*: Added the beginnings of a general framework for
+	asynchronously updating portions of woven pages that have already been
+	sent to the browser. Added controller.LiveController, page.LivePage,
+	and utils.ILivePage to contain code for dealing with keeping Views alive
+	for as long as the user is still looking at a page and has a live Session
+	object on the server; code for responding to model changed notifications,
+	rerendering Views that depend on those models that have changed; code
+	for sending these rerendered views as html fragments to the browser; and
+	javascript code to mutate the DOM of the live page with the updated HTML.
+	Mozilla only for the moment; ie to come soon.
+
+	* twisted/web/woven/widgets.py: Added API for attaching Python functions
+	to widgets that fire when a given javascript event occurs in the browser.
+	Widget.addEventHandler(self, eventName, handler, *args) and
+	Widget.onEvent(self, request, eventName, *args). The default onEvent
+	will dispatch to event handlers registered with addEventHandler.
+
 2002-11-24  Christopher Armstrong  <radix@twistedmatrix.com>
 
 	* .: Releasing 1.0.1.

@@ -1,9 +1,9 @@
 from __future__ import nested_scopes
 
+from twisted.web import server
 from twisted.web import util as webutil
 from twisted.web.woven import model, interfaces
-
-from twisted.python import failure, log
+from twisted.python import failure, log, components
 
 
 def renderFailure(fail, request):
@@ -29,10 +29,6 @@ def _getModel(self):
 
 
 def doSendPage(self, d, request):
-    log.msg("Sending page!")
-    #sess = request.getSession(IWovenLivePage)
-    #if sess:
-    #    sess.setCurrentPage(self)
     page = str(d.toxml())
     request.write(page)
     request.finish()
@@ -42,6 +38,13 @@ def doSendPage(self, d, request):
 class WovenLivePage:
     currentPage = None
     __implements__ = interfaces.IWovenLivePage
+    def __init__(self, session):
+        self.session = session
+        self.output = None
+        self.input = None
+        self.cached = []
+        self.inputCache = []
+    
     def getCurrentPage(self):
         """Return the current page object contained in this session.
         """
@@ -51,6 +54,56 @@ class WovenLivePage:
         """Set the current page object contained in this session.
         """
         self.currentPage = page
+
+    def write(self, text):
+        """Write "text" to the live page's persistent output conduit.
+        If there is no conduit connected yet, save the text and write it
+        as soon as the output conduit is connected.
+        """
+        if self.output is None:
+            print "CACHING",
+            self.cached.append(text)
+        else:
+            print "WRITING", text
+            if text[-1] != '\n':
+                text += '\n'
+            self.output.write(text)
+
+    def sendJavaScript(self, js):
+        self.write('<script language="javascript">' + js + "</script>\r\n")
+
+    def hookupOutputConduit(self, request):
+        """Hook up the given request as the output conduit for this
+        session.
+        """
+        print "TOOT! WE HOOKED UP OUTPUT!"
+        self.output = request
+        for text in self.cached:
+            self.write(text)
+        self.cached = []
+        # xxx start some sort of keepalive timer.
+
+    def hookupInputConduit(self, obj):
+        """Hook up the given object as the input conduit for this
+        session.
+        """
+        print "HOOKING UP", self.inputCache
+        self.input = obj
+        for text in self.inputCache:
+            self.pushThroughInputConduit(text)
+        self.inputCache = []
+        print "DONE HOOKING", self.inputCache
+
+    def pushThroughInputConduit(self, inp):
+        """Push some text through the input conduit.
+        """
+        print "PUSHING INPUT", inp
+        if self.input is None:
+            self.inputCache.append(inp)
+        else:
+            self.input(inp)
+
+components.registerAdapter(WovenLivePage, server.Session, interfaces.IWovenLivePage)
 
 
 class Stack:
@@ -64,7 +117,8 @@ class Stack:
         self.stack.insert(0, item)
     
     def pop(self):
-        return self.stack.pop(0)
+    	if self.stack:
+	        return self.stack.pop(0)
     
     def peek(self):
         for x in self.stack:
@@ -96,3 +150,8 @@ def createGetFunction(namespace):
         if vc:
             return vc(model)
     return getFunction
+
+def createSetIdFunction(theId):
+    def setId(request, wid, data):
+        wid['id'] = theId
+    return setId

@@ -99,6 +99,7 @@ class Node:
         return child
 
     def replaceChild(self, newChild, oldChild):
+        assert isinstance(newChild, Node)
         if newChild.parentNode:
             newChild.parentNode.removeChild(newChild)
         assert oldChild.parentNode is self

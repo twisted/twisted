@@ -32,7 +32,7 @@ def adaptToIModel(m, parent, submodel):
     return adapted
 
 
-class Model:
+class Model(object):
     """
     A Model which keeps track of views which are looking at it in order
     to notify them when the model changes.
@@ -40,6 +40,8 @@ class Model:
     __implements__ = interfaces.IModel
 
     def __init__(self, *args, **kwargs):
+        self.name = ''
+        self.parent = None
         self.views = []
         self.subviews = {}
         self.submodels = {}
@@ -73,7 +75,11 @@ class Model:
         """
         Remove a view that the model no longer should keep track of.
         """
-        self.views.remove(view)
+        for weakref in self.views:
+            ref = weakref()
+            if ref is view or ref is None:
+                print "removed a view."
+                self.views.remove(weakref)
 
     def notify(self, changed=None):
         """
@@ -138,7 +144,7 @@ class Model:
         XXX: Move bits of this docstring to interfaces.py
         """
         if not submodelName:
-            return self.getData()
+            return None
 
         submodelList = submodelName.split('/')  #[:-1]
 #         print "submodelList", submodelList
@@ -152,8 +158,8 @@ class Model:
                 currentModel.addCallback(self._getModelWrapper,
                                          element, parentModel)
                 return currentModel
-            currentModel = self._getModelWrapper(currentModel,
-                                                 element, parentModel)
+#             currentModel = self._getModelWrapper(currentModel,
+#                                                  element, parentModel)
         return currentModel
 
 
@@ -202,6 +208,7 @@ class Model:
             self.parent.setSubmodel(self.name, data)
         if hasattr(self, 'orig'):
             self.orig = data
+
 
 #backwards compatibility
 WModel = Model
@@ -342,12 +349,23 @@ class UnsafeObjectWrapper(ObjectWrapper):
         return sm
 
 
+class DeferredWrapper(Wrapper):
+    def setData(self, data):
+        if isinstance(data, defer.Deferred):
+            self.orig = data
+        else:
+            views, subviews = self.views, self.subviews
+            new = adaptToIModel(data, self.parent, self.name)
+            self.__class__ = new.__class__
+            self.__dict__ = new.__dict__
+            self.views, self.subviews = views, subviews
+
 try:
     components.registerAdapter(StringModel, types.StringType, interfaces.IModel)
     components.registerAdapter(ListModel, types.ListType, interfaces.IModel)
     components.registerAdapter(ListModel, types.TupleType, interfaces.IModel)
     components.registerAdapter(DictionaryModel, types.DictionaryType, interfaces.IModel)
-    components.registerAdapter(Wrapper, defer.Deferred, interfaces.IModel)
+    components.registerAdapter(DeferredWrapper, defer.Deferred, interfaces.IModel)
 except ValueError:
     # The adapters were already registered
     pass
