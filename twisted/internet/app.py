@@ -101,7 +101,7 @@ class Application(log.Logger, styles.Versioned, marmalade.DOMJellyable):
             tcpnode.appendChild(n)
         for connector in self.connectors:
             n = jellier.jellyToNode(connector.factory)
-            n.setAttribute("parent:connect", "%s:%d" % (connector.host, str(connector.portno)))
+            n.setAttribute("parent:connect", "%s:%d" % (connector.host, connector.portno))
             if connector.timeout != 30:
                 n.setAttribute("parent:timeout", connector.timeout)
             tcpnode.appendChild(n)
