@@ -1,3 +1,8 @@
+2002-04-09  Itamar Shtull-Trauring  <itamarst@twistedmatrix.com>
+
+        * win32 process support seems to *finally* be working correctly. Many
+        thanks to Drew Whitehouse for help with testing and debugging.
+
 2002-04-08  Itamar Shtull-Trauring  <itamarst@twistedmatrix.com>
 
         * coil refactored yet again, this time to use components and adapters.
