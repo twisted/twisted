@@ -77,13 +77,15 @@ class MetaInterface(interface.InterfaceClass):
             # possibly should be removed for efficiency reasons
             if persist != None:
                 warnings.warn("persist argument is deprecated", DeprecationWarning)
-            if default == _Nothing:
-                default = self.marker
             # XXX does this go away?
             if hasattr(adaptable, "getComponent") and not hasattr(adaptable, "__conform__"):
                 warnings.warn("please use __conform__ instead of getComponent", DeprecationWarning)
                 return adaptable.getComponent(self)
-            return interface.InterfaceClass.__call__(self, adaptable, alternate=default)
+            if default == _Nothing:
+                return interface.InterfaceClass.__call__(self, adaptable)
+            else:
+                return interface.InterfaceClass.__call__(self, adaptable, alternate=default)
+        return __call__
     __call__ = __call__()
     
     def adaptWith(self, using, to, registry=None):
@@ -91,7 +93,7 @@ class MetaInterface(interface.InterfaceClass):
             raise RuntimeError, "registry argument will be ignored"
         warnings.warn("persist argument is deprecated", DeprecationWarning)
         registry = theAdapterRegistry
-        registry.registerAdapter(using, self, to)
+        registry.register([to], self, '', using)
 
 Interface = MetaInterface("Interface", __module__="twisted.python.components")
 
@@ -144,6 +146,12 @@ class _Wrapper(object):
 
 
 class AdapterRegistry(ZopeAdapterRegistry):
+
+    def __init__(self):
+        ZopeAdapterRegistry.__init__(self)
+        # we may need to make marker interfaces for class->iface adapters
+        # so we store them here:
+        self.classInterfaces = {}
     
     def persistAdapter(self, original, iface, adapter):
         self.adapterPersistence[(id(original), iface)] = adapter
@@ -159,13 +167,21 @@ class AdapterRegistry(ZopeAdapterRegistry):
         'origInterface'.
         """
         assert interfaceClasses, "You need to pass an Interface"
-        self.register([origInterface], interfaceClasses, '', adapterFactory)
+        if not issubclass(origInterface, Interface):
+            class IMarker(Interface):
+                pass
+            declarations.directlyProvides(origInterface, IMarker)
+            self.classInterfaces[origInterface] = IMarker
+            origInterface = IMarker
+        self.register(interfaceClasses, origInterface, '', adapterFactory)
     
     def getAdapterFactory(self, fromInterface, toInterface, default):
         """Return registered adapter for a given class and interface.
         """
-        # XXX
-        raise NotImplementedError
+        if not issubclass(fromInterface, Interface):
+            fromInterface = self.classInterfaces[fromInterface]
+        # XXX maybe this should just use lookup1 - check!
+        return self.get(fromInterface).adapters[False, (), '', toInterface]
 
     getAdapterClass = getAdapterFactory
 
@@ -198,7 +214,15 @@ class AdapterRegistry(ZopeAdapterRegistry):
         the parameter itself if it already implements the interface. If no
         adapter can be found, the 'default' parameter will be returned.
         """
-        
+        for iface in declarations.providedBy(obj):
+            factory = self.lookup1(interfaceClass, iface)
+            if factory != None:
+                return factory(obj)
+        if default == _Nothing:
+            raise ZeroDivisionError # XXX
+        else:
+            return default
+
 
 theAdapterRegistry = AdapterRegistry()
 # XXX may need to change to raise correct exceptions
