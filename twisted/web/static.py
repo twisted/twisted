@@ -182,9 +182,6 @@ class File(resource.Resource, styles.Versioned, filepath.FilePath):
     @cvar childNotFound: L{Resource} used to render 404 Not Found error pages.
     """
 
-    # we don't implement IConfigCollection
-    __implements__ = resource.IResource
-
     contentTypes = loadMimeTypes()
 
     contentEncodings = {
@@ -411,7 +408,6 @@ class File(resource.Resource, styles.Versioned, filepath.FilePath):
         f.indexNames = self.indexNames[:]
         f.childNotFound = self.childNotFound
         return f
-
 
 class FileTransfer(pb.Viewable):
     """

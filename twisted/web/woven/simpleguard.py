@@ -30,6 +30,8 @@ you need to use twisted.web.woven.guard directly.
 from twisted.cred import portal, checkers as checkerslib
 from twisted.web import resource, util
 from twisted.web.woven import guard
+from twisted.python import components
+from zope.interface import implements
 
 
 class Authenticated:
@@ -43,7 +45,7 @@ class Authenticated:
 
 class MarkAuthenticatedResource:
 
-    __implements__ = resource.IResource,
+    implements(resource.IResource)
 
     isLeaf = False
 
@@ -58,11 +60,12 @@ class MarkAuthenticatedResource:
     def getChildWithDefault(self, path, request):
         request.setComponent(Authenticated, self.authenticated)
         return self.resource.getChildWithDefault(path, request)
+components.backwardsCompatImplements(MarkAuthenticatedResource)
 
 
 class MarkingRealm:
 
-    __implements__ = portal.IRealm,
+    implements(portal.IRealm)
 
     def __init__(self, resource, nonauthenticated=None):
         self.resource = resource
@@ -78,6 +81,7 @@ class MarkingRealm:
                     lambda:None)
         else:
             return resource.IResource, self.nonauthenticated, lambda:None
+components.backwardsCompatImplements(MarkingRealm)
 
 
 def parentRedirect(_):

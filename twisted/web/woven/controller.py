@@ -27,6 +27,7 @@ import types
 from twisted.python import log
 from twisted.python import components
 from twisted.python import failure
+from zope.interface import implements
 from twisted.web import resource, server, static
 from twisted.web.woven import interfaces, utils
 from twisted.web import woven
@@ -52,7 +53,7 @@ class Controller(resource.Resource):
     L{registerControllerForModel} makes this so).
     """
 
-    __implements__ = (interfaces.IController, resource.IResource)
+    implements(interfaces.IController)
     setupStacks = 1
     addSlash = 1 # Should this controller add a slash to the url automatically?
     controllerLibraries = []
@@ -269,6 +270,7 @@ class Controller(resource.Resource):
         process is complete.
         """
         pass
+components.backwardsCompatImplements(Controller)
 
 WOVEN_PATH = os.path.split(woven.__file__)[0]
 

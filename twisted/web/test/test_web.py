@@ -22,6 +22,7 @@ from twisted.web import http
 from twisted.protocols import loopback
 from twisted.python import log, reflect
 from twisted.internet.address import IPv4Address
+from zope.interface import implements
 
 class DummyRequest:
     uri='http://dummy/'
@@ -259,7 +260,7 @@ class DummyChannel:
         def getHost(self):
             return IPv4Address("TCP", 'example.com', self.port)
     class SSLBaz(Baz):
-        __implements__ = interfaces.ISSLTransport,
+        implements(interfaces.ISSLTransport)
     transport = Baz()
     site = server.Site(resource.Resource())
 

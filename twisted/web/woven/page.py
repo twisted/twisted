@@ -9,7 +9,6 @@ from twisted.web import resource
 from twisted.web.woven import model, view, controller, interfaces, template
 
 from twisted.python import components
-from zope.interface import implements
 
 class Page(model.MethodModel, controller.Controller, view.View):
     """
@@ -66,15 +65,11 @@ class Page(model.MethodModel, controller.Controller, view.View):
     def renderView(self, request):
         return view.View.render(self, request,
                                 doneCallback=self.gatheredControllers)
-components.backwardsCompatImplements(Page)
 
 class LivePage(model.MethodModel, controller.LiveController, view.LiveView):
 
     appRoot = False
 
-    # M.I. sucks.
-    __implements__ = (model.Model.__implements__, view.View.__implements__,
-                      controller.Controller.__implements__)
     def __init__(self, m=None, templateFile=None, inputhandlers=None,
                  templateDirectory=None, controllers=None, *args, **kwargs):
         template = kwargs.setdefault('template', None)

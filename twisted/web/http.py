@@ -42,6 +42,8 @@ import calendar
 import warnings
 import os
 
+from zope.interface import implements
+
 # twisted imports
 from twisted.internet import interfaces, reactor, protocol, address
 from twisted.protocols import policies, basic
@@ -402,7 +404,7 @@ class Request:
     @ivar received_headers: All received headers
     """
 
-    __implements__ = interfaces.IConsumer,
+    implements(interfaces.IConsumer)
 
     producer = None
     finished = 0
@@ -908,7 +910,7 @@ class Request:
     def connectionLost(self, reason):
         """connection was lost"""
         pass
-
+components.backwardsCompatImplements(Request)
 
 class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin):
     """A receiver for HTTP requests."""

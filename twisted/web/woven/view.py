@@ -33,6 +33,7 @@ from twisted.python import components
 from twisted.python import log
 from twisted.web import resource, microdom, html, error
 from twisted.web.server import NOT_DONE_YET
+from zope.interface import implements
 
 try:
     import cPickle as pickle
@@ -80,8 +81,7 @@ templateCache = {}
 
 
 class View:
-
-    __implements__ = (resource.IResource, interfaces.IView)
+    implements(resource.IResource, interfaces.IView)
     # wvfactory_xxx method signature: request, node, model; returns Widget
     # wvupdate_xxx method signature: request, widget, data; mutates widget 
     #    based on data (not necessarily an IModel; 
@@ -660,7 +660,7 @@ class View:
             request.write("</body></html>")
             request.finish()
         return failure
-
+components.backwardsCompatImplements(View)
 
 class LiveView(View):
     livePage = 1

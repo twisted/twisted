@@ -85,6 +85,7 @@ from twisted.internet import defer
 from twisted.python import failure
 from twisted.internet import reactor, defer
 from twisted.python import log
+from zope.interface import implements
 
 from twisted.web.server import NOT_DONE_YET
 STOP_RENDERING = 1
@@ -104,10 +105,10 @@ class INodeMutator(components.Interface):
 
 
 class NodeMutator:
-    __implements__ = (INodeMutator, )
+    implements(INodeMutator)
     def __init__(self, data):
         self.data = data
-
+components.backwardsCompatImplements(NodeMutator)
 
 class NodeNodeMutator(NodeMutator):
     """A NodeNodeMutator replaces the node that is passed in to generate
@@ -164,7 +165,6 @@ class DOMTemplate(Resource):
     templateDirectory = ''
     template = ''
     _cachedTemplate = None
-    __implements__ = (Resource.__implements__)
 
     def __init__(self, templateFile = None):
         """
@@ -351,7 +351,6 @@ class DOMTemplate(Resource):
             request.finish()
         return failure
 
-
 ##########################################
 # Deprecation zone
 # Wear a hard hat
@@ -368,7 +367,6 @@ class DOMController(controller.Controller, Resource):
     class registered for the model. You can override render to perform
     more advanced template lookup logic.
     """
-    __implements__ = (controller.Controller.__implements__, resource.IResource)
 
     def __init__(self, *args, **kwargs):
         log.msg("DeprecationWarning: DOMController is deprecated; it has been renamed twisted.web.woven.controller.Controller.\n")

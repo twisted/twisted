@@ -6,7 +6,7 @@ from twisted.web import server
 from twisted.web import util as webutil
 from twisted.web.woven import interfaces
 from twisted.python import failure, log, components
-
+from zope.interface import implements
 
 def renderFailure(fail, request):
     if not fail:
@@ -31,8 +31,9 @@ class Script:
 
 
 class WovenLivePage:
+    implements(interfaces.IWovenLivePage)
+
     currentPage = None
-    __implements__ = interfaces.IWovenLivePage
     def __init__(self, session):
         self.session = session
         self.output = None
@@ -114,7 +115,7 @@ class WovenLivePage:
             self.inputCache.append(inp)
         else:
             self.input(inp)
-
+components.backwardsCompatImplements(WovenLivePage)
 
 class Stack:
     def __init__(self, stack=None):
