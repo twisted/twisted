@@ -306,6 +306,9 @@ class Request:
         self.queued = queued
         self.received_headers = {}
         self.received_cookies = {}
+        self.headers = {} # outgoing headers
+        self.cookies = [] # outgoing cookies
+
         if queued:
             self.transport = StringIO()
         else:
@@ -370,8 +373,6 @@ class Request:
         from string import split
         self.args = {}
         self.stack = []
-        self.headers = {}
-        self.cookies = [] # outgoing cookies
         
         self.method, self.uri = command, path
         self.clientproto = version
