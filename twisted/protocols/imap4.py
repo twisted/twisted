@@ -27,10 +27,11 @@ from __future__ import nested_scopes
 
 from twisted.protocols import basic
 from twisted.internet import defer
-from twisted.python import log, components
+from twisted.python import log, components, util
 from twisted.python.compat import *
 
-import binascii, operator, re, string, types, rfc822
+import base64, binascii, operator, re, string, types, rfc822, random
+
 
 def maybeDeferred(obj, cb, eb, cbArgs, ebArgs):
     if isinstance(obj, defer.Deferred):
@@ -57,10 +58,6 @@ class IMAP4Server(basic.LineReceiver):
         Selected
         Logout
     """
-
-    # Authentication schemes
-    IMAP_AUTH = ()
-    
     # Capabilities supported by this server
     CAPABILITIES = {}
     
@@ -81,6 +78,29 @@ class IMAP4Server(basic.LineReceiver):
     _pendingBuffer = None
     _pendingSize = None
     
+    # Challenge generators for AUTHENTICATE command
+    challengers = None
+    
+    def __init__(self):
+        self.challengers = {}
+        self.CAPABILITIES = self.CAPABILITIES.copy()
+    
+    def registerChallenger(self, name, chal):
+        """Register a new form of authentication
+        
+        Challengers registered here will be listed as available to the client
+        in the CAPABILITY response.
+
+        @type name: C{str}
+        @param name: The authentication type to associate
+        
+        @type chal: Implementor of C{IServerAuthentication}
+        @param chal: The object to use to perform the client
+        side of this authentication scheme.
+        """
+        self.challengers[name.upper()] = chal
+        self.CAPABILITIES.setdefault('AUTH', []).append(name.upper())
+
     def connectionMade(self):
         self.tags = {}
         self.state = 'unauth'
@@ -107,7 +127,12 @@ class IMAP4Server(basic.LineReceiver):
         # print 'S: ' + line
         args = line.split(None, 2)
         rest = None
-        if len(args) == 3:
+        if self._pendingLiteral:
+            d = self._pendingLiteral
+            self._pendingLiteral = None
+            d.callback(line)
+            return
+        elif len(args) == 3:
             tag, cmd, rest = args
         elif len(args) == 2:
             tag, cmd = args
@@ -203,23 +228,25 @@ class IMAP4Server(basic.LineReceiver):
     
     def unauth_AUTHENTICATE(self, tag, args):
         args = args.upper().strip()
-        if not self.authenticators.has_key(args):
+        if not self.challengers.has_key(args):
             self.sendNegativeResponse(tag, 'AUTHENTICATE method unsupported')
         else:
-            auth = self.authenticators[args]
+            auth = self.challengers[args]
             try:
                challenge = auth.generateChallenge()
             except Exception, e:
                 self.sendBadResponse(tag, 'Server error: ' + str(e))
             else:
-                coded = binascii.b2a_base64(challenge)[:-1]
-                d = self.sendContinuationRequest(coded)
-                d.addCallback(self._cbAuthChunk, challenge, tag)
+                coded = base64.encodestring(challenge)[:-1]
+                self._pendingLiteral = defer.Deferred()
+                self.sendContinuationRequest(coded)
+                self._pendingLiteral.addCallback(self._cbAuthChunk, auth, challenge, tag)
     
-    def _cbAuthChunk(self, result, challenge, tag):
+    def _cbAuthChunk(self, result, auth, savedState, tag):
         try:
-            challenge = auth.generateChallenge(challenge, result)
-        except AuthenticationError:
+            savedState, challenge = auth.authenticateResponse(savedState, result)
+        except AuthenticationError, e:
+            print e
             self.sendNegativeResponse(tag, 'Authentication failed')
         else:
             if challenge == 1:
@@ -227,7 +254,7 @@ class IMAP4Server(basic.LineReceiver):
                 self.state = 'auth'
             else:
                 d = self.sendContinuationRequest(challenge)
-                d.addCallback(self._cbAuthChunk, challenge, tag)
+                d.addCallback(self._cbAuthChunk, savedState, tag)
 
     def unauth_LOGIN(self, tag, args):
         args = args.split()
@@ -701,7 +728,7 @@ class IMAP4Client(basic.LineReceiver):
         self.authenticators = {}
     
     def registerAuthenticator(self, name, auth):
-        """Register an new form of authentication
+        """Register a new form of authentication
         
         When invoking the authenticate() method of IMAP4Client, the first
         matching authentication scheme found will be used.  The ordering is
@@ -776,7 +803,7 @@ class IMAP4Client(basic.LineReceiver):
             else:
                 if tag == '+':
                     d, lines, continuation = self.tags[self.waiting]
-                    continuation.callback(lines)
+                    continuation.callback(rest)
                     self.tags[self.waiting] = (d, lines, None)
                 else:
                     self.tags[self.waiting][1].append(rest)
@@ -907,13 +934,18 @@ class IMAP4Client(basic.LineReceiver):
         else:
             raise NoSupportedAuthentication(auths, self.authenticators.keys())
         
-        d = self.sendCommand('AUTHENTICATE', scheme)
-        d.addCallback(self._cbAnswerAuth, scheme, secret)
+        continuation = defer.Deferred()
+        continuation.addCallback(self._cbContinueAuth, scheme, secret)
+        d = self.sendCommand('AUTHENTICATE', scheme, continuation)
+        d.addCallback(self._cbAuth)
         return d
     
-    def _cbAnswerAuth(self, (lines, tagline), scheme, secret):
+    def _cbContinueAuth(self, rest, scheme, secret): 
         auth = self.authenticators[scheme]
-        self.sendLine(auth.challengeResponse(secret, lines))
+        self.sendLine(auth.challengeResponse(secret, rest + '\n'))
+
+    def _cbAuth(self, *args, **kw):
+        return None
     
     def login(self, username, password):
         """Authenticate with the server using a username and password
@@ -2054,7 +2086,7 @@ def collapseNestedLists(items):
 class AuthenticationError(IMAP4Exception): pass
 
 class IServerAuthentication(components.Interface):
-    def generateChallenge(self, ):
+    def generateChallenge(self):
         """Create a challenge string
         
         @rtype: C{str}
@@ -2080,6 +2112,53 @@ class IServerAuthentication(components.Interface):
 class IClientAuthentication(components.Interface):
     def challengeResponse(self, secret, challenge):
         """Generate a challenge response string"""
+
+# Do these belong here?
+class CramMD5ServerAuthenticator:
+    __implements__ = (IServerAuthentication,)
+    
+    def __init__(self, host, users = None):
+        self.host = host
+        if users is None:
+            users = {}
+        self.users = users
+    
+    def generateChallenge(self):
+        chal = '<%d.%d@%s>' % (
+            random.randrange(2**31-1), random.randrange(2**31-1), self.host
+        )
+        return chal
+    
+    def authenticateResponse(self, state, response):
+        try:
+            uncoded = base64.decodestring(response)
+        except TypeError:
+            raise AuthenticationError, "Malformed Response - not base64"
+        parts = uncoded.split(None, 1)
+        if len(parts) != 2:
+            raise AuthenticationError, "Malformed Response - wrong number of parts"
+        name, digest = parts
+        if not self.users.has_key(name):
+            raise AuthenticationError, "Unknown user"
+        secret = self.users[name]
+        verify = util.keyed_md5(secret, state)
+        
+        if verify != digest:
+            raise AuthenticationError, "Invalid response"
+        return None, 1
+
+class CramMD5ClientAuthenticator:
+    __implements__ = (IClientAuthentication,)
+    
+    def __init__(self, user):
+        self.user = user
+    
+    def challengeResponse(self, secret, challenge):
+        chal = base64.decodestring(challenge)
+        response = util.keyed_md5(secret, chal)
+        both = '%s %s' % (self.user, response)
+        return base64.encodestring(both)
+            
 
 class MailboxException(IMAP4Exception): pass
 

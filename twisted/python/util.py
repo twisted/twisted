@@ -114,3 +114,30 @@ def dict(*a, **k):
 
 def println(*a):
     sys.stdout.write(' '.join(map(str, a))+'\n')
+
+
+# XXX
+# This does not belong here
+# But where does it belong?
+
+def str_xor(s, b):
+    return ''.join([chr(ord(c) ^ b) for c in s])
+
+def keyed_md5(secret, challenge):
+    opad = 0x5C
+    ipad = 0x36
+    
+    import md5
+    
+    if len(secret) < 64:
+        secret = secret + (64 - len(secret)) * '\0'
+    elif len(secret) > 64:
+        # Is this supposed to be zero-padded to 64 bytes?  I don't know :(
+        secret = md5.new(secret).digest()
+    
+    return md5.new(
+        str_xor(secret, opad) + 
+        md5.new(
+            str_xor(secret, ipad) + challenge
+        ).digest()
+    ).hexdigest()

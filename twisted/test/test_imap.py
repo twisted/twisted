@@ -351,22 +351,6 @@ class IMAP4ServerTestCase(unittest.TestCase):
         
         self.assertEquals(self.responses, [])
 
-    def testAuthenticate(self):
-        raise unittest.SkipTest, "No authentication schemes implemented to test"
-
-        self.authenticated = 0
-        def auth():
-            def setAuth():
-                self.authenticated = 1
-                self.server.transport.loseConnection()
-            d = self.client.authenticate('secret')
-            d.addCallback(strip(setAuth))
-            d.addErrbacks(self._ebGeneral)
-        self.connected.addCallback(strip(auth)).addErrback(self._ebGeneral)
-        loopback.loopback(self.server, self.client)
-        
-        self.assertEquals(self.authenticated, 1)
-
     def testLogin(self):
         def login():
             d = self.client.login('testuser', 'password-test')
@@ -729,3 +713,49 @@ class IMAP4ServerTestCase(unittest.TestCase):
         self.assertEquals(m.messages[0], ('Message 2', ('AnotherFlag',), None, 1))
         
         self.assertEquals(self.results, [0, 2])
+
+class AuthenticatorTestCase(unittest.TestCase):
+    def setUp(self):
+        d = defer.Deferred()
+        self.server = SimpleServer()
+        self.client = SimpleClient(d)
+        self.connected = d
+
+        theAccount = imap4.Account()
+        theAccount.mboxType = SimpleMailbox
+        SimpleServer.theAccount = theAccount
+
+    
+    def tearDown(self):
+        del self.server
+        del self.client
+        del self.connected
+
+    def _cbStopClient(self):
+        self.client.transport.loseConnection()
+
+    def _ebGeneral(self, failure):
+        self.client.transport.loseConnection()
+        self.server.transport.loseConnection()
+        failure.printTraceback(open('failure.log', 'w'))
+        raise failure.value
+
+    def testAuthenticate(self):
+        # raise unittest.SkipTest, "No authentication schemes implemented to test"
+        
+        self.client.registerAuthenticator('CRAM-MD5', imap4.CramMD5ClientAuthenticator('testuser'))
+        self.server.registerChallenger('CRAM-MD5', imap4.CramMD5ServerAuthenticator('test-domain.com', {'testuser': 'secret'}))
+        self.authenticated = 0
+
+        def auth():
+            return self.client.authenticate('secret')
+        def authed():
+            self.authenticated = 1
+
+        d = self.connected.addCallback(strip(auth))
+        d.addCallbacks(strip(authed), self._ebGeneral)
+        d.addCallbacks(strip(self._cbStopClient), self._ebGeneral)
+        loopback.loopback(self.server, self.client)
+        
+        self.assertEquals(self.authenticated, 1)
+
