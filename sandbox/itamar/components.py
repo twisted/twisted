@@ -117,23 +117,28 @@ def implements(obj, interfaceClass):
     return interfaceClass.providedBy(obj)
 
 
-def getInterfaces(obj):
-    """Return list of all interfaces the object provides."""
-    return list(declarations.providedBy(obj))
+def getInterfaces(klass):
+    """DEPRECATED. Return list of all interfaces the class implements. Or the object provides.
+
+    This is horrible and stupid. Please use zope.interface.providedBy() or implementedBy().
+    """
+    warnings.warn("getInterfaces should not be used, use providedBy() or implementedBy()", DeprecationWarning)
+    # try to support both classes and instances, giving different behaviour
+    # which is HORRIBLE :(
+    if isinstance(klass, (type, types.ClassType)):
+        return list(declarations.implementedBy(klass))
+    else:
+        return list(declarations.providedBy(klass))
 
 
 def superInterfaces(interface):
-    """Given an interface, return list of super-interfaces (including itself)."""
+    """DEPRECATED. Given an interface, return list of super-interfaces (including itself)."""
+    warnings.warn("Please use zope.interface APIs", DeprecationWarning)
     result = [interface]
     result.extend(reflect.allYourBase(interface, Interface))
     result = util.uniquify(result)
     result.remove(Interface)
     return result
-
-def classToInterfaces(k):
-    l = getInterfaces(k)
-    l.insert(0, k)
-    return l
 
 
 class _Wrapper(object):
