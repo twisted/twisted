@@ -1,3 +1,8 @@
+2002-12-18  Jp Calderone  <exarkun@twistedmatrix.com>
+
+	* twisted/persisted/dirdbm.py: copyTo and clear methods added
+	to DirDBM class
+
 2002-12-18  Paul Swartz  <z3p@twistedmatrix.com>
 
 	* twisted/conch/ssh/connection.py, twisted/test/test_conch: fixes to
