@@ -49,42 +49,37 @@ class Persistant:
         self.original = original
         self.name = name
 
+    def setStyle(self, style):
+        self.style = style
+
     def _getFilename(self, filename, ext, tag):
         if filename:
             finalname = filename
             filename = finalname + "-2"
+        elif tag:
+            filename = "%s-%s-2.%s" % (self.name, tag, ext)
+            finalname = "%s-%s.%s" % (self.name, tag, ext)
         else:
-            if tag:
-                filename = "%s-%s-2.%s" % (self.name, tag, ext)
-                finalname = "%s-%s.%s" % (self.name, tag, ext)
-            else:
-                filename = "%s-2.%s" % (self.name, ext)
-                finalname = "%s.%s" % (self.name, ext)
+            filename = "%s-2.%s" % (self.name, ext)
+            finalname = "%s.%s" % (self.name, ext)
         return finalname, filename
 
     def _saveTemp(self, filename, passphrase, dumpFunc):
+        f = open(filename, 'wb')
         if passphrase is None:
-            f = open(filename, 'wb')
             dumpFunc(self, f)
-            f.flush()
-            f.close()
         else:
-            f = StringIO.StringIO()
-            dumpFunc(self, f)
-            s = encrypt(passphrase, f.getvalue())
-            f = open(filename, 'wb')
-            f.write(s)
-            f.flush()
-            f.close()
+            s = StringIO.StringIO()
+            dumpFunc(self, s)
+            f.write(encrypt(passphrase, s.getvalue()))
+        f.close()
 
     def _getStyle(self):
         if self.style == "xml":
-            from twisted.persisted.marmalade import jellyToXML
-            dumpFunc = jellyToXML
+            from twisted.persisted.marmalade import jellyToXML as dumpFunc
             ext = "tax"
         elif self.style == "aot":
-            from twisted.persisted.aot import jellyToSource
-            dumpFunc = jellyToSource
+            from twisted.persisted.aot import jellyToSource as dumpFunc
             ext = "tas"
         else:
             def dumpFunc(obj, file):
@@ -100,6 +95,6 @@ class Persistant:
         log.msg("Saving "+self.name+" application to "+finalname+"...")
         self._saveTemp(filename, passphrase, dumpFunc)
         if runtime.platformType == "win32" and os.path.isfile(finalname):
-                os.remove(finalname)
+            os.remove(finalname)
         os.rename(filename, finalname)
         log.msg("Saved.")
