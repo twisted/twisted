@@ -1,0 +1,8 @@
+* Inter-dependencies are kept to a minimum:
+  * [python dependencies aren't counted]
+  * service doesn't depend on anything
+  * app depends on service and twisted.persisted
+  * timer/servers/clients depend on twisted.internet and service.py
+  * convert/compat depend servers/clients
+  * apprun depends on twisted.internet and twisted.persisted
+  * twistd3/twistw depend on twisted.internet and apprun
