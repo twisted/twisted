@@ -205,6 +205,8 @@ class File(resource.Resource, styles.Versioned, filepath.FilePath):
     File('/tmp'), then http://server/FILE/ will return an HTML-formatted
     listing of the /tmp/ directory, and http://server/FILE/foo/bar.html will
     return the contents of /tmp/foo/bar.html .
+
+    @cvar childNotFound: L{Resource} used to render 404 Not Found error pages.
     """
 
     # we don't implement IConfigCollection
