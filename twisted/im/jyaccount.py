@@ -4,6 +4,7 @@ from twisted.im.tocsupport import TOCAccount
 from twisted.im.ircsupport import IRCAccount
 
 from java.awt import GridLayout, FlowLayout, BorderLayout, Container
+import sys
 from java.awt.event import ActionListener
 from javax.swing import JTextField, JPasswordField, JComboBox, JPanel, JLabel,\
      JCheckBox, JFrame, JButton, BoxLayout, JTable, JScrollPane, \
@@ -158,32 +159,67 @@ class AccountManagementGUI:
         self.table = JTable(self.data)
         self.table.setColumnSelectionAllowed(0)   #cannot select columns
         self.table.setSelectionMode(ListSelectionModel.SINGLE_SELECTION)
-        
+
+        self.connectbutton = actionWidget(JButton("Connect"), self.connect)
+        self.dconnbutton = actionWidget(JButton("Disconnect"), self.disconnect)
         self.deletebutton = actionWidget(JButton("Delete"), self.deleteAccount)
-        self.deletebutton.setEnabled(0)
         self.buildpane()
         self.mainframe.pack()
         self.mainframe.show()
         
     def buildpane(self):
         buttons = JPanel(FlowLayout(), doublebuffered)
+        buttons.add(self.connectbutton)
+        buttons.add(self.dconnbutton)
         buttons.add(actionWidget(JButton("New"), self.addNewAccount))
         buttons.add(self.deletebutton)
-
+        buttons.add(actionWidget(JButton("Quit"), self.quit))
+        
         mainpane = self.mainframe.getContentPane()
         mainpane.setLayout(BoxLayout(mainpane, BoxLayout.Y_AXIS))
         mainpane.add(JScrollPane(self.table))
         mainpane.add(buttons)
+        self.update()
 
     def update(self):
-        data = self.acctmanager.getSnapShot()
-        self.data.setDataVector(data, self.headers)
-        if len(data) == 0:
+        self.data.setDataVector(self.acctmanager.getSnapShot(), self.headers)
+        if self.acctmanager.isEmpty():
             self.deletebutton.setEnabled(0)
+            self.connectbutton.setEnabled(0)
+            self.dconnbutton.setEnabled(0)
         else:
             self.deletebutton.setEnabled(1)
+            if not 1 in self.acctmanager.getConnectionInfo(): #all disconnected
+                self.dconnbutton.setEnabled(0)
+                self.connectbutton.setEnabled(1)
+            elif not 0 in self.acctmanager.getConnectionInfo():  #all connected
+                self.dconnbutton.setEnabled(1)
+                self.connectbutton.setEnabled(0)
+            else:
+                self.dconnbutton.setEnabled(1)
+                self.connectbutton.setEnabled(1)
 
     #callable button actions
+    def connect(self, ae):
+        print "Trying to connect"
+        row = self.table.getSelectedRow()
+        if row < 0:
+            print "Trying to connect to an account but no account selected"
+        else:
+            acctname = self.data.getValueAt(row, 0)
+            self.acctmanager.connect(acctname)
+            self.update()
+
+    def disconnect(self, ae):
+        print "Trying to disconnect"
+        row = self.table.getSelectedRow()
+        if row < 0:
+            print "Trying to logoff an account but no account was selected."
+        else:
+            acctname = self.data.getValueAt(row, 0)
+            self.acctmanager.disconnect(acctname)
+            self.update()
+    
     def addNewAccount(self, ae):
         print "Starting new account creation"
         NewAccountGUI(self).show()
@@ -194,8 +230,13 @@ class AccountManagementGUI:
         if row < 0:
             print "Trying to delete an account but no account selected"
         else:
-            self.data.removeRow(row)
+            acctname = self.data.getValueAt(row, 0)
+            self.acctmanager.delAccount(acctname)
+            self.update()
 
+    def quit(self, ae):
+        self.acctmanager.quit()
+        sys.exit()
 
 if __name__ == "__main__":
     n = AccountManagementGUI()
