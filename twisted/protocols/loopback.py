@@ -15,6 +15,7 @@ from zope.interface import implements
 # Twisted Imports
 from twisted.internet import interfaces, protocol, main
 from twisted.python import hook, failure, components
+from twisted.trial.util import spinUntil, spinWhile
 
 class LoopbackRelay:
 
@@ -120,12 +121,15 @@ def loopbackTCP(server, client, port=0, noisy=True):
     clientF = LoopbackClientFactory(client)
     clientF.noisy = noisy
     reactor.connectTCP('127.0.0.1', serverPort.getHost().port, clientF)
-    
-    while not clientF.disconnected:
-        reactor.iterate(0.01)
 
+    # this needs to wait until:
+    #  A: the client has disconnected
+    #  B: the server has noticed, and its own socket has disconnected
+    #  C: the listening socket has been shut down
+    spinUntil(lambda :clientF.disconnected)        # A
+    spinWhile(lambda :server.transport.connected)  # B
     serverPort.stopListening()
-    reactor.iterate()
+    spinWhile(lambda :serverPort.connected)        # C
 
 
 def loopbackUNIX(server, client, noisy=True):
@@ -140,9 +144,8 @@ def loopbackUNIX(server, client, noisy=True):
     clientF = LoopbackClientFactory(client)
     clientF.noisy = noisy
     reactor.connectUNIX(path, clientF)
-    
-    while not clientF.disconnected:
-        reactor.iterate(0.01)
 
+    spinUntil(lambda :clientF.disconnected)        # A
+    spinWhile(lambda :server.transport.connected)  # B
     serverPort.stopListening()
-    reactor.iterate()
+    spinWhile(lambda :serverPort.connected)        # C
