@@ -14,7 +14,7 @@
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 #
-# $Id: conch.py,v 1.40 2003/02/19 07:23:21 z3p Exp $
+# $Id: conch.py,v 1.41 2003/02/19 22:40:47 z3p Exp $
 
 #""" Implementation module for the `conch` command.
 #"""
@@ -158,7 +158,6 @@ def run():
     filename = os.path.expanduser("~/.conch-%(user)s-%(host)s-%(port)s" % options)
     log.msg(filename)
     if not options['nocache'] and os.path.exists(filename):
-        log.msg("using UNIX connection")
         reactor.connectUNIX(filename, SSHUnixClientFactory())
     else:
         reactor.connectTCP(options['host'], options['port'], SSHClientFactory())
@@ -205,7 +204,7 @@ def onConnect():
     if isinstance(conn, SSHConnection) and not options['nocache']:
         filename = os.path.expanduser("~/.conch-%(user)s-%(host)s-%(port)s" % options)
         try:
-            reactor.listenUNIX(filename, SSHUnixServerFactory())
+            reactor.listenUNIX(filename, SSHUnixServerFactory(), mode = 0600)
         except CannotListenError:
             pass # we'll just not listen, not a big deal
 
@@ -216,15 +215,18 @@ class SSHUnixClientFactory(protocol.ClientFactory):
         reactor.stop()
 
     def startedConnecting(self, connector):
-        return
-        fd = connector.transport.socket.fileno()
+        fd = connector.transport.fileno()
         stats = os.fstat(fd)
-        if not stat.S_IMODE(stats[0]) == 0600:
+        filestats = os.stat(connector.transport.addr)
+        if stat.S_IMODE(filestats[0]) != 0600:
             log.msg("socket mode is not 0600: %s" % oct(stat.S_IMODE(stats[0])))
-        elif stats[4] != os.getuid():
+        elif filestats[4] != os.getuid():
             log.msg("socket not owned by us: %s" % stats[4])
-        elif stats[5] != os.getgid():
+        elif filestats[5] != os.getgid():
             log.msg("socket not owned by our group: %s" % stats[5])
+        # XXX reenable this when i can fix it for cygwin    
+        #elif filestats[-3:] != stats[-3:]:
+        #    log.msg("socket doesn't have same create times")
         else:
             log.msg('conecting OK')
             return
