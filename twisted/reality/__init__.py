@@ -1,5 +1,8 @@
-#This is here for backwards-compatibility. 
-#It will be removed one version later.
+"""
+
+Twisted Reality: a Text Game Universe
+
+"""
 
 _default = None
 

@@ -1,3 +1,8 @@
+"""
+
+Twisted Web: a Twisted Web Server.
+
+"""
 import server
 import twcgi
 import html

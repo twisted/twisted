@@ -1,2 +1,5 @@
-# Comment to make sure WinZip doesn't 
-# Eat Me.
+"""
+
+Twisted Protocols: a collection of internet protocol implementations.
+
+"""
