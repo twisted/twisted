@@ -92,6 +92,7 @@ class Options(usage.Options):
                 ["summary", "s", "summary output"],
                 ["debug", "b", "Run tests in the Python debugger. Will load '.pdbrc' from current directory if it exists."],
                 ["nopm", None, "don't automatically jump into debugger for postmorteming of exceptions"],
+                ["dry-run", 'n', "do everything but run the tests"],
                 ["profile", None, "Run tests under the Python profiler"],
                 ["benchmark", None, "Run performance tests instead of unit tests."],
                 ["until-failure", "u", "Repeat test until it fails"],
@@ -528,6 +529,8 @@ def _getSuite(config):
                              _getJanitor(),
                              benchmark=config['benchmark'])
     suite.couldNotImport.update(config['_couldNotImport'])
+    
+    suite.dryRun = config['dry-run']
 
     for package in config['packages']:
         if isinstance(package, types.StringType):

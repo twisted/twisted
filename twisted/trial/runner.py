@@ -97,6 +97,7 @@ class TestSuite(Timed):
     moduleGlob = 'test_*.py'
     sortTests = 1
     debugger = False
+    dryRun = False
 
     def __init__(self, reporter, janitor, benchmark=0):
         self.reporter = IReporter(reporter)
@@ -187,6 +188,8 @@ class TestSuite(Timed):
         return stat
     benchmarkStats = property(_getBenchmarkStats)
 
+    ####
+    # the root of the ParentAttributeMixin tree
     def getJanitor(self):
         return self.janitor
 
@@ -195,6 +198,10 @@ class TestSuite(Timed):
 
     def isDebuggingRun(self):
         return self.debugger
+    
+    def isDryRun(self):
+        return self.dryRun
+    ####
 
     def _bail(self):
         from twisted.internet import reactor
@@ -352,6 +359,9 @@ class ParentAttributeMixin:
 
     def isDebuggingRun(self):
         return self.parent.isDebuggingRun()
+
+    def isDryRun(self):
+        return self.parent.isDryRun()
 
 
 class TestRunnerBase(Timed, ParentAttributeMixin):
@@ -578,7 +588,9 @@ class TestClassAndMethodBase(TestRunnerBase):
                                               testMethod.name))
 
                 # suppression is handled by each testMethod
-                testMethod.run(tci)
+                
+                if not self.isDryRun():
+                    testMethod.run(tci)
                 self.methodsWithStatus.setdefault(testMethod.status,
                                                   []).append(testMethod)
 
