@@ -31,7 +31,7 @@ class InputText(gtk.GtkText):
         self['name'] = 'Input'
         self.set_editable(gtk.TRUE)
         self.connect("key_press_event", self.processKey)
-        self.set_word_wrap(gtk.TRUE)
+        #self.set_word_wrap(gtk.TRUE)
 
         self.history = []
         self.histpos = 0
@@ -204,7 +204,7 @@ class OutputConsole(gtk.GtkText):
         gtk.GtkText.__init__(self)
         self['name'] = "Console"
         gtkutil.defocusify(self)
-        self.set_word_wrap(gtk.TRUE)
+        #self.set_word_wrap(gtk.TRUE)
 
         if toplevel:
             self.toplevel = toplevel

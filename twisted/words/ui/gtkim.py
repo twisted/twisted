@@ -143,7 +143,7 @@ class Conversation(gtk.GtkWindow):
         self.text = gtk.GtkText()
         vb = gtk.GtkVBox()
         gtkutil.defocusify(self.text)
-        self.text.set_word_wrap(gtk.TRUE)
+        #self.text.set_word_wrap(gtk.TRUE)
         vb.pack_start(gtkutil.scrollify(self.text), 1, 1, 0)
         self.entry = gtk.GtkEntry()
         self.entry.signal_connect('activate', self.sendMessage)
@@ -191,7 +191,7 @@ class GroupSession(gtk.GtkWindow):
         hb = gtk.GtkHBox()
 
         self.output = gtk.GtkText()
-        self.output.set_word_wrap(gtk.TRUE)
+        #self.output.set_word_wrap(gtk.TRUE)
         gtkutil.defocusify(self.output)
         hb.pack_start(gtkutil.scrollify(self.output), 1,1,1)
 

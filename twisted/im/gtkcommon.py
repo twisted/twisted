@@ -41,9 +41,9 @@ class InputOutputWindow:
         self.xml = openGlade(GLADE_FILE, root=rootName)
         wid = self.xml.get_widget
         self.entry = wid(inputName)
-        self.entry.set_word_wrap(gtk.TRUE)
+        #self.entry.set_word_wrap(gtk.TRUE)
         self.output = wid(outputName)
-        self.output.set_word_wrap(gtk.TRUE)
+        #self.output.set_word_wrap(gtk.TRUE)
         self.widget = wid(rootName)
         self.history = []
         self.histpos = 0
