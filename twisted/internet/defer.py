@@ -20,9 +20,11 @@ from twisted.python import log, failure
 
 # System Imports
 import types
-import sys
 
 class AlreadyArmedError(Exception):
+    pass
+
+class TimeoutError(Exception):
     pass
 
 def logError(err):
@@ -44,6 +46,9 @@ def fail(result):
     d.errback(result)
     _sched(d.arm)
     return d
+
+def timeout(deferred):
+    deferred.errback(failure.Failure(TimeoutError("Callback timed out")))
 
 
 class Deferred:
@@ -209,6 +214,17 @@ class Deferred:
 ##        else:
 ##            log.msg("WARNING: double-arming deferred.")
 
+    def setTimeout(self, seconds, timeoutFunc=timeout):
+        """Set a timeout function to be triggered if I am not called.
+
+        timeoutFunc will receive the Deferred as its only argument.  The 
+        default timeoutFunc will call the errback with a TimeoutError.
+
+        The timeout counts down from when this method is called.
+        """
+        reactor.callLater(seconds, 
+                          lambda s=self, f=timeoutFunc: s.called or f(s))
+
 
 class DeferredList(Deferred):
     """I combine a group of deferreds into one callback.
@@ -248,3 +264,5 @@ FAILURE = 0
 
 __all__ = ["Deferred", "DeferredList", "succeed", "fail", "FAILURE", "SUCCESS"]
 
+# Workaround circular import issues
+import reactor

@@ -1,5 +1,5 @@
 # -*- Python -*-
-# $Id: default.py,v 1.12 2002/05/27 11:02:55 itamarst Exp $
+# $Id: default.py,v 1.13 2002/05/28 01:03:17 spiv Exp $
 #
 # Twisted, the Framework of Your Internet
 # Copyright (C) 2001 Matthew W. Lefkowitz
@@ -34,7 +34,6 @@ from twisted.internet import main
 from twisted.internet import main, tcp, udp, task, process
 from twisted.python import log, threadable
 from twisted.persisted import styles
-from twisted.python.defer import DeferredList, Deferred
 from twisted.python.runtime import platform
 
 from twisted.internet.base import ReactorBase
