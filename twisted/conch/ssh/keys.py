@@ -24,7 +24,6 @@ Maintainer: U{Paul Swartz<mailto:z3p@twistedmatrix.com>}
 
 # base library imports
 import base64
-import os.path
 import string
 import sha, md5
 

@@ -82,7 +82,7 @@ class SSHSession(channel.SSHChannel):
             self.session.getPty(term, windowSize, modes) 
         except:
             log.msg('error getting pty')
-            log.deferr()
+            log.err()
             return 0
         else:
             return 1
@@ -94,7 +94,7 @@ class SSHSession(channel.SSHChannel):
             self.session.windowChanged(winSize)
         except:
             log.msg('error changing window size')
-            log.deferr()
+            log.err()
             return 0
         else:
             return 1
@@ -112,6 +112,9 @@ class SSHSession(channel.SSHChannel):
                 self.client.transport.writeErr(data)
         else:
             log.msg('weird extended data: %s'%dataType)
+
+    def closed(self):
+        self.session.closed()
 
     def eofReceived(self):
         self.loseConnection() # don't know what to do with this
@@ -174,7 +177,10 @@ class SSHSessionProcessProtocol(protocol.ProcessProtocol):
         self.session.write(data)
 
     def errReceived(self, err):
-        self.session.conn.sendExtendedData(self.session, connection.EXTENDED_DATA_STDERR, err)
+        self.session.writeExtended(connection.EXTENDED_DATA_STDERR, err)
+
+    def inConnectionLost(self):
+        self.session.conn.sendEOF(self.session)
 
     def connectionLost(self, reason = None):
         self.session.loseConnection()
@@ -195,6 +201,7 @@ class SSHSessionProcessProtocol(protocol.ProcessProtocol):
 
     def loseConnection(self):
         self.session.loseConnection()
+
 class SSHSessionClient(protocol.Protocol):
 
     def dataReceived(self, data):

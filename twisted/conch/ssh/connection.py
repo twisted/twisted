@@ -95,9 +95,9 @@ class SSHConnection(service.SSHService):
             channel.channelOpen('')
         except Exception, e:
             log.msg('channel open failed')
-            log.deferr()
+            log.err(e)
             if isinstance(e, error.ConchError):
-                reason, textualInfo = c.data, c.value
+                reason, textualInfo = e.data, e.args[0]
             else:
                 reason = OPEN_CONNECT_FAILED
                 textualInfo = "unknown failure"
@@ -132,13 +132,16 @@ class SSHConnection(service.SSHService):
         self.channels[localChannel].addWindowBytes(bytesToAdd)
 
     def ssh_CHANNEL_DATA(self, packet):
-        localChannel = struct.unpack('>L', packet[: 4])[0]
+        localChannel, dataLength = struct.unpack('>2L', packet[: 8])
         channel = self.channels[localChannel]
-        data = common.getNS(packet[4:])[0]
         # XXX should this move to dataReceived to put client in charge?
-        if len(data) > channel.localWindowLeft:
-            data = data[: channel.localWindowLeft]
-        channel.localWindowLeft-=len(data)
+        if dataLength > channel.localWindowLeft or \
+           dataLength > channel.localMaxPacket: # more data than we want
+            self.sendClose(channel)
+            return
+            #packet = packet[:channel.localWindowLeft+4]
+        data = common.getNS(packet[4:])[0]
+        channel.localWindowLeft-=dataLength
         if channel.localWindowLeft < channel.localWindowSize/2:
             self.adjustWindow(channel, channel.localWindowSize- \
                                channel.localWindowLeft)
@@ -299,7 +302,7 @@ class SSHConnection(service.SSHService):
         """
         if not self.channelsToRemoteChannel.has_key(channel):
             return # we're already closed
-        self.transport.sendPacket(MSG_CHANNEL_DATA, struct.pack('>2L', 
+        self.transport.sendPacket(MSG_CHANNEL_EXTENDED_DATA, struct.pack('>2L', 
                             self.channelsToRemoteChannel[channel],dataType) \
                             + common.NS(data))
 
@@ -334,7 +337,7 @@ class SSHConnection(service.SSHService):
         maxPacket is the largest packet we should send,
         data is any other packet data (often nothing).
 
-        We return a subclass of SSHChan
+        We return a subclass of SSHChannel
 
         By default, this dispatches to a method 'channel_channelType' with any
         non-alphanumerics in the channelType replace with _'s.  If it cannot 

@@ -16,12 +16,13 @@
 
 from __future__ import nested_scopes
 import os, struct, sys
-from twisted.conch import error, checkers, avatar 
+from twisted.conch import checkers, avatar 
+from twisted.conch.error import ConchError
 from twisted.conch.ssh import keys, transport, factory, userauth, connection, common, session,channel
 from twisted.cred import portal
 from twisted.cred.credentials import IUsernamePassword
-from twisted.internet import reactor, defer, protocol
-from twisted.python import log
+from twisted.internet import reactor, defer, protocol, error
+from twisted.python import log, failure
 from twisted.trial import unittest
 from Crypto.PublicKey import RSA, DSA
 
@@ -129,6 +130,65 @@ class SSHKeysHandlingTestCase(unittest.TestCase):
 # instead of a FAILURE.
 theTest = None
 
+class CrazySubsystem(protocol.Protocol):
+
+    def __init__(self, *args, **kw):
+        pass
+
+    def connectionMade(self):
+        """
+        good ... good
+        """
+
+class FalseTransport:
+
+    def __init__(self, p):
+        p.makeConnection(self) 
+        p.processEnded(failure.Failure(error.ProcessTerminated(255, None, None)))
+
+    def loseConnection(self):
+        pass
+
+class EchoTransport:
+
+    def __init__(self, p):
+        self.proto = p
+        p.makeConnection(self)
+        self.closed = 0
+
+    def write(self, data):
+        self.proto.outReceived(data)
+        self.proto.outReceived('\r\n')
+
+    def loseConnection(self):
+        if self.closed: return
+        self.closed = 1
+        self.proto.inConnectionLost()
+        self.proto.outConnectionLost()
+        self.proto.errConnectionLost()
+        self.proto.processEnded(failure.Failure(error.ProcessTerminated(0, None, None)))
+
+class SuperEchoTransport:
+
+    def __init__(self, p):
+        self.proto = p
+        p.makeConnection(self)
+        self.closed = 0
+
+    def write(self, data):
+        self.proto.outReceived(data)
+        self.proto.outReceived('\r\n')
+        self.proto.errReceived(data)
+        self.proto.errReceived('\r\n')
+
+    def loseConnection(self):
+        if self.closed: return
+        self.closed = 1
+        self.proto.inConnectionLost()
+        self.proto.outConnectionLost()
+        self.proto.errConnectionLost()
+        self.proto.processEnded(failure.Failure(error.ProcessTerminated(0, None, None)))
+
 class ConchTestRealm:
     
     def requestAvatar(self, avatarID, mind, *interfaces):
@@ -142,6 +202,17 @@ class ConchTestAvatar(avatar.ConchUser):
     def __init__(self):
         avatar.ConchUser.__init__(self)
         self.channelLookup.update({'session': session.SSHSession})
+        self.subsystemLookup.update({'crazy': CrazySubsystem})
+
+    def global_foo(self, data):
+        global theTest
+        theTest.assertEquals(data, 'bar')
+        return 1
+
+    def global_foo_2(self, data):
+        global theTest
+        theTest.assertEquals(data, 'bar2')
+        return 1, 'data'
 
     def logout(self):
         loggedOut = True
@@ -150,17 +221,48 @@ class ConchSessionForTestAvatar:
 
     def __init__(self, avatar):
         theTest.assert_(isinstance(avatar, ConchTestAvatar))
+        self.cmd = None
+        self.ptyReq = False
 
-    def getPty(self, *args):
-        theTest.fail("should not have gotten pty request")
+    def getPty(self, term, windowSize, attrs):
+        log.msg('pty req')
+        theTest.assertEquals(term, 'conch-test-term')
+        theTest.assertEquals(windowSize, (24, 80, 0, 0))
+        self.ptyReq = True
 
-    def openShell(self, *args):
-        theTest.fail("should not have gotten shell request")
+    def openShell(self, proto):
+        log.msg('openning shell')
+        theTest.assertEquals(self.ptyReq, True)
+        self.proto = proto
+        EchoTransport(proto)
+        self.cmd = 'shell'
 
     def execCommand(self, proto, cmd):
-        theTest.assert_(cmd.split()[0] in ['true', 'false', 'echo'])
-        reactor.spawnProcess(proto, \
-                                     cmd.split()[0], cmd.split(), {}, '/tmp')
+        theTest.assert_(cmd.split()[0] in ['false', 'echo', 'secho','jumboliah'])
+        if cmd == 'jumboliah':
+            raise ConchError('bad exec')
+        self.cmd = cmd
+        self.proto = proto
+        f = cmd.split()[0]
+        if f == 'false':
+            FalseTransport(proto)
+        elif f == 'echo':
+            t = EchoTransport(proto)
+            t.write(cmd[5:])
+            t.loseConnection()
+        elif f == 'secho':
+            t = SuperEchoTransport(proto)
+            t.write(cmd[6:])
+            t.loseConnection()
+        
+
+    def closed(self):
+        global theTest
+        log.msg('closing cmd %s' % self.cmd)
+        if self.cmd == 'echo hello':
+            lwl = self.proto.session.localWindowLeft
+            theTest.assertEquals(lwl, 6)
+        self.proto.transport.loseConnection()
 
 from twisted.python import components
 components.registerAdapter(ConchSessionForTestAvatar, ConchTestAvatar, session.ISession)
@@ -270,51 +372,62 @@ class SSHTestClientConnection(connection.SSHConnection):
 
     name = 'ssh-connection'
     results = 0
+    totalResults = 6 
 
     def serviceStarted(self):
-        self.openChannel(SSHTestTrueChannel(conn = self))
+        self.openChannel(SSHUnknownChannel(conn = self))
+        self.openChannel(SSHTestFailExecChannel(conn = self))
         self.openChannel(SSHTestFalseChannel(conn = self))
-        c = SSHTestEchoChannel(conn = self)
-        self.openChannel(c)
+        self.openChannel(SSHTestEchoChannel(localWindow=4, localMaxPacket=1, conn = self))
+        self.openChannel(SSHTestShellChannel(conn = self))
+        self.openChannel(SSHTestSubsystemChannel(conn = self))
 
-class SSHTestTrueChannel(channel.SSHChannel):
+    def addResult(self):
+        self.results += 1
+        log.msg('got %s of %s results' % (self.results, self.totalResults))
+        if self.results == self.totalResults:
+            self.transport.expectedLoseConnection = 1
+            theTest.fac.proto.expectedLoseConnection = 1
+            #self.loseConnection()
+            self.serviceStopped()
+            reactor.crash()
+
+class SSHUnknownChannel(channel.SSHChannel):
+
+    name = 'crazy-unknown-channel'
+
+    def openFailed(self, reason):
+        """
+        good .... good
+        """
+        log.msg('unknown open failed')
+        log.flushErrors()
+        self.conn.addResult()
+
+    def channelOpen(self, ignored):
+        global theTest
+        theTest.fail("opened unknown channel")
+        reactor.crash()
+
+class SSHTestFailExecChannel(channel.SSHChannel):
 
     name = 'session'
 
     def openFailed(self, reason):
         global theTest
-        theTest.fail('true open failed: %s' % reason)
+        theTest.fail('fail exec open failed: %s' % reason)
         reactor.crash()
 
     def channelOpen(self, ignore):
-        d = self.conn.sendRequest(self, 'exec', common.NS('true'), 1)
-        d.addErrback(self._ebRequestFailed)
-        log.msg('opened true')
+        d = self.conn.sendRequest(self, 'exec', common.NS('jumboliah'), 1)
+        d.addCallback(self._cbRequestWorked)
+        d.addErrback(lambda x,s=self:log.flushErrors() and s.conn.addResult())
+        log.msg('opened fail exec')
 
-    def _ebRequestFailed(self, reason):
+    def _cbRequestWorked(self, ignored):
         global theTest
-        theTest.fail('true exec failed: %s' % reason)
+        theTest.fail('fail exec succeeded')
         reactor.crash()
-
-    def dataReceived(self, data):
-        global theTest
-        theTest.fail('got data when using true')
-        reactor.crash()
-
-    def request_exit_status(self, status):
-        status = struct.unpack('>L', status)[0]
-        if status != 0:
-            global theTest
-            theTest.fail('true exit status was not 0: %i' % status)
-            reactor.crash()
-        self.conn.results +=1
-        log.msg('finished true')
-        if self.conn.results == 3: # all tests run
-            self.conn.transport.expectedLoseConnection = 1
-            theTest.fac.proto.expectedLoseConnection = 1
-            self.loseConnection()
-            reactor.crash()
-        return 1
 
 class SSHTestFalseChannel(channel.SSHChannel):
 
@@ -327,8 +440,12 @@ class SSHTestFalseChannel(channel.SSHChannel):
 
     def channelOpen(self, ignored):
         d = self.conn.sendRequest(self, 'exec', common.NS('false'), 1)
+        d.addCallback(self._cbRequestWorked)
         d.addErrback(self._ebRequestFailed)
         log.msg('opened false')
+
+    def _cbRequestWorked(self, ignored):
+        pass
 
     def _ebRequestFailed(self, reason):
         global theTest
@@ -346,19 +463,17 @@ class SSHTestFalseChannel(channel.SSHChannel):
             global theTest
             theTest.fail('false exit status was 0')
             reactor.crash()
-        self.conn.results +=1
         log.msg('finished false')
-        if self.conn.results == 3: # all tests run
-            self.conn.transport.expectedLoseConnection = 1
-            theTest.fac.proto.expectedLoseConnection = 1
-            self.loseConnection()
-            reactor.crash()
+        self.conn.addResult()
+        self.loseConnection()
         return 1
 
 class SSHTestEchoChannel(channel.SSHChannel):
 
     name = 'session'
-    buf = ''
+    testBuf = ''
+    testExtBuf = ''
+    eofCalled = 0
 
     def openFailed(self, reason):
         global theTest
@@ -366,7 +481,7 @@ class SSHTestEchoChannel(channel.SSHChannel):
         reactor.crash()
 
     def channelOpen(self, ignore):
-        d = self.conn.sendRequest(self, 'exec', common.NS('echo hello'), 1)
+        d = self.conn.sendRequest(self, 'exec', common.NS('secho hello'), 1)
         d.addErrback(self._ebRequestFailed)
         log.msg('opened echo')
 
@@ -376,27 +491,149 @@ class SSHTestEchoChannel(channel.SSHChannel):
         reactor.crash()
 
     def dataReceived(self, data):
-        self.buf += data
+        self.testBuf += data
+
+    def extReceived(self, extType, data):
+        global theTest
+        theTest.assertEquals(extType, connection.EXTENDED_DATA_STDERR)
+        self.testExtBuf += data
 
     def request_exit_status(self, status):
-        global theTest
-        status = struct.unpack('>L', status)[0]
-        if status != 0:
-            theTest.fail('echo exit status was not 0: %i' % status)
-            reactor.crash()
-        self.buf = self.buf.replace('\r\n', '\n')
-        if self.buf != 'hello\n':
-            theTest.fail('echo did not return hello: %s' % repr(self.buf))
-            reactor.crash()
+        self.status = struct.unpack('>L', status)[0]
+        
+    def eofReceived(self):
+        log.msg('eof received')
+        self.eofCalled = 1
 
-        self.conn.results +=1
-        log.msg('finished echo')
-        if self.conn.results == 3: # all tests run
-            self.conn.transport.expectedLoseConnection = 1
-            theTest.fac.proto.expectedLoseConnection = 1
-            self.loseConnection()
+    def closed(self):
+        global theTest
+        if self.status != 0:
+            theTest.fail('echo exit status was not 0: %i' % self.status)
             reactor.crash()
+        self.testBuf = self.testBuf.replace('\r\n', '\n')
+        self.testExtBuf = self.testExtBuf.replace('\r\n', '\n')
+        if self.testBuf != 'hello\n':
+            theTest.fail('echo did not return hello: %s' % repr(self.testBuf))
+            reactor.crash()
+        if self.testExtBuf != 'hello\n':
+            theTest.fail('stderr did not return hello: %s' % repr(self.testExtBuf))
+            reactor.crash()
+        theTest.assert_(self.eofCalled)
+        log.msg('finished echo')
+        self.conn.addResult()
+        self.loseConnection()
         return 1
+
+class SSHTestShellChannel(channel.SSHChannel):
+    
+    name = 'session'
+    testBuf = ''
+    eofCalled = 0
+
+    def openFailed(self, reason):
+        theTest.fail('shell open failed: %s' % reason)
+        reactor.crash()
+
+    def channelOpen(self, ignored):
+        data = session.packRequest_pty_req('conch-test-term', (24, 80, 0, 0), '')
+        d = self.conn.sendRequest(self, 'pty-req', data, 1)
+        d.addCallback(self._cbPtyReq)
+        d.addErrback(self._ebPtyReq)
+        log.msg('opened shell')
+
+    def _cbPtyReq(self, ignored):
+        d = self.conn.sendRequest(self, 'shell', '', 1)
+        d.addCallback(self._cbShellOpen)
+        d.addErrback(self._ebShellOpen)
+
+    def _ebPtyReq(self, reason):
+        theTest.fail('pty request failed: %s' % reason)
+        reactor.crash()
+
+    def _cbShellOpen(self, ignored):
+        self.write('testing the shell!')
+        self.loseConnection()
+
+    def _ebShellOpen(self, reason):
+        theTest.fail('shell request failed: %s' % reason)
+        reactor.crash()
+
+    def dataReceived(self, data):
+        self.testBuf += data
+
+    def request_exit_status(self, status):
+        self.status = struct.unpack('>L', status)[0]
+
+    def eofReceived(self):
+        self.eofCalled = 1
+
+    def closed(self):
+        log.msg('calling shell closed')
+        if self.status != 0:
+            log.msg('shell exit status was not 0: %i' % self.status)
+            reactor.crash()
+        self.testBuf = self.testBuf.replace('\r\n', '\n')
+        theTest.assertEquals(self.testBuf, 'testing the shell!\n')
+        theTest.assert_(self.eofCalled)
+        self.conn.addResult()
+        self.loseConnection()
+
+class SSHTestSubsystemChannel(channel.SSHChannel):
+
+    name = 'session'
+
+    def openFailed(self, reason):
+        global theTest
+        theTest.fail('subsystem open failed: %s' % reason)
+        reactor.crash()
+
+    def channelOpen(self, ignore):
+        d = self.conn.sendRequest(self, 'subsystem', common.NS('not-crazy'), 1)
+        d.addCallback(self._cbRequestWorked)
+        d.addErrback(self._ebRequestFailed)
+
+
+    def _cbRequestWorked(self, ignored):
+        global theTest
+        theTest.fail('opened non-crazy subsystem')
+        reactor.crash()
+
+    def _ebRequestFailed(self, ignored):
+        d = self.conn.sendRequest(self, 'subsystem', common.NS('crazy'), 1)
+        d.addCallback(self._cbRealRequestWorked)
+        d.addErrback(self._ebRealRequestFailed)
+
+    def _cbRealRequestWorked(self, ignored):
+        d1 = self.conn.sendGlobalRequest('foo', 'bar', 1)
+        d1.addErrback(self._ebFirstGlobal)
+
+        d2 = self.conn.sendGlobalRequest('foo-2', 'bar2', 1)
+        d2.addCallback(lambda x,s=self: theTest.assertEquals(x, 'data'))
+        d2.addErrback(self._ebSecondGlobal)
+        
+        d3 = self.conn.sendGlobalRequest('bar', 'foo', 1)
+        d3.addCallback(self._cbThirdGlobal)
+        d3.addErrback(lambda x,s=self: s.conn.addResult() and s.loseConnection())
+
+    def _ebRealRequestFailed(self, reason):
+        global theTest
+        theTest.fail('opening crazy subsystem failed: %s' % reason)
+        reactor.crash()
+
+    def _ebFirstGlobal(self, reason):
+        global theTest
+        theTest.fail('first global request failed: %s' % reason)
+        reactor.crash()
+
+    def _ebSecondGlobal(self, reason):
+        global theTest
+        theTest.fail('second global request failed: %s' % reason)
+        reactor.crash()
+
+    def _cbThirdGlobal(self, ignored):
+        global theTest
+        theTest.fail('second global request succeeded')
+        reactor.crash()
 
 class SSHTestFactory(factory.SSHFactory):
     noisy = 0
@@ -453,7 +690,7 @@ class SSHTestOpenSSHProcess(protocol.ProcessProtocol):
         self.done = 1
         theTest.assertEquals(reason.value.exitCode, 0, 'exit code was not 0: %s' % reason.value.exitCode)
         self.buf = self.buf.replace('\r\n', '\n')
-        theTest.assertEquals(self.buf, 'hello\n')
+        theTest.assertEquals(self.buf, 'goodbye\n')
 
 class SSHTransportTestCase(unittest.TestCase):
 
@@ -524,7 +761,7 @@ class SSHTransportTestCase(unittest.TestCase):
                    '-oHostKeyAlgorithms=ssh-rsa '
                    '-i dsa_test '
                    'localhost '
-                   'echo hello')
+                   'echo goodbye')
         global theTest
         theTest = self
         realm = ConchTestRealm()
