@@ -289,11 +289,15 @@ class MulticastTestCase(unittest.TestCase):
             self.assertEquals(o.transport.getLoopbackMode(), 0)
     
     def testInterface(self):
-        for o in self.client, self.server:
-            self.assertEquals(o.transport.getOutgoingInterface(), "0.0.0.0")
-            self.runUntilSuccess(o.transport.setOutgoingInterface, "127.0.0.1")
-            self.assertEquals(o.transport.getOutgoingInterface(), "127.0.0.1")
-
+        o = self.client
+        self.assertEquals(o.transport.getOutgoingInterface(), "0.0.0.0")
+        self.runUntilSuccess(o.transport.setOutgoingInterface, "127.0.0.1")
+        self.assertEquals(o.transport.getOutgoingInterface(), "127.0.0.1")
+        o = self.server
+        self.assertEquals(o.transport.getOutgoingInterface(), "0.0.0.0")
+        self.runUntilSuccess(o.transport.setOutgoingInterface, "127.0.0.1")
+        self.assertEquals(o.transport.getOutgoingInterface(), "127.0.0.1")
+    
     def testJoinLeave(self):
         for o in self.client, self.server:
             self.runUntilSuccess(o.transport.joinGroup, "225.0.0.250")
