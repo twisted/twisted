@@ -1,5 +1,5 @@
 # -*- Python -*-
-# $Id: default.py,v 1.42 2002/09/27 15:38:18 itamarst Exp $
+# $Id: default.py,v 1.43 2002/09/29 04:27:50 z3p Exp $
 #
 # Twisted, the Framework of Your Internet
 # Copyright (C) 2001 Matthew W. Lefkowitz
@@ -251,10 +251,10 @@ class PosixReactorBase(ReactorBase):
     # IReactorProcess
 
     def spawnProcess(self, processProtocol, executable, args=(), env={}, path=None,
-                     uid=None, gid=None):
+                     uid=None, gid=None, usePTY = 0):
         p = platform.getType()
         if p == 'posix':
-            return process.Process(self, executable, args, env, path, processProtocol, uid, gid)
+            return process.Process(self, executable, args, env, path, processProtocol, uid, gid, usePTY)
         # This is possible, just needs work - talk to itamar if you want this.
         #elif p == "win32":
         #    if win32process:

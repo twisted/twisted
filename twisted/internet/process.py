@@ -26,6 +26,11 @@ Maintainer: U{Itamar Shtull-Trauring<mailto:twisted@itamarst.org>}
 # System Imports
 import os, sys, traceback, select, errno
 
+try:
+    import pty
+except:
+    pty = None
+
 from twisted.persisted import styles
 from twisted.python import log, failure
 
@@ -166,7 +171,7 @@ class Process(abstract.FileDescriptor, styles.Ephemeral):
     """
 
     def __init__(self, reactor, command, args, environment, path, proto,
-                 uid=None, gid=None):
+                 uid=None, gid=None, usePTY = 0):
         """Spawn an operating-system process.
 
         This is where the hard work of disconnecting all currently open
@@ -195,7 +200,10 @@ class Process(abstract.FileDescriptor, styles.Ephemeral):
         stdout_read, stdout_write = os.pipe()
         stderr_read, stderr_write = os.pipe()
         stdin_read,  stdin_write  = os.pipe()
-        self.pid = os.fork()
+        if usePTY and pty:
+            self.pid = pty.fork()[0]
+        else:
+            self.pid = os.fork()
         if self.pid == 0: # pid is 0 in the child process
             # stop debugging, if I am!  I don't care anymore!
             sys.settrace(None)

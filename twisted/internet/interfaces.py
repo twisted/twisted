@@ -179,7 +179,7 @@ class IReactorUDP(Interface):
 
 class IReactorProcess(Interface):
 
-    def spawnProcess(self, processProtocol, executable, args=(), env={}, path=None, uid=None, gid=None):
+    def spawnProcess(self, processProtocol, executable, args=(), env={}, path=None, uid=None, gid=None, usePTY=0):
         """Spawn a process, with a process protcol.
 
         @param processProtocol: a ProcessProtocol instance
@@ -202,6 +202,9 @@ class IReactorProcess(Interface):
 
         @param gid: group ID to run the subprocess as. (Only available on
                     POSIX systems.)
+
+        @param usePTY: if true, run this process in a psuedo-terminal. 
+                       (Not available on all systems.)
 
         @see: C{twisted.protocols.protocol.ProcessProtocol}
         """
