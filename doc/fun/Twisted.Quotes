@@ -2934,6 +2934,12 @@ dollars, instead of being dead, i am now an oil magnate in my native country."
 %
 <bram> I just got a call from a mechanical voice which said 'I'm sorry, I dialed your number in error'
 %
+Grocible says, "this programming job on another site demands "courage, commitment and loyalty""
+Grocible says, "Courage commitment and fucking loyalty?!"
+Grocible asks, "is this an ad for a knight's assistant circa 1450?"
+Grocible asks, "what were they called? Pages?"
+Nate says, "So that's what Active Server Pages are."
+%
 <liiwi> _pattern = re.compile('^(?P<client>[^ ]+) (?P<ident>[^ ]+) (?P<authuser>[^\[\n]+) \[(?P<mday>[0-9]+)\/(?P<mon_name>\w+)\/(?P<ye\
 <liiwi> ar>[0-9]+):(?P<hour>[0-9]+):(?P<min>[0-9]+):(?P<sec>[0-9]+) (?P<timediff>[^ ]+)\] "(?P<method>(GET|HEAD|PUT|POST|TRACE|DELETE|O\
 <liiwi> PTIONS|-))( (?P<url>.*) (?P<proto>[^ ].*))" (?P<status>.*) (?P<bytes>.*) "(?P<refer>.*)" "(?P<agent>[^"]+)"(($)|( (?P<stime>[^ \
@@ -3125,6 +3131,9 @@ of anti-establishment bile in their stomach? :)
 <Pahan> dash uses windows?
 <Tenshihan> his grandparents do -- so he's got some windows in his blood
 <Tenshihan> it's like being a quarter jewish
+%
+<dash> lament: well. inductive folds are pretty much the same thing as
+__get__ in python combined with the appropriate metaclass 
 %
 <jml> hmmm
 <jml> Let me put it this way.

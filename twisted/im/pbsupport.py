@@ -15,6 +15,8 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
 
+from twisted.internet import defer
+from twisted.python import log
 from twisted.python.failure import Failure
 from twisted.spread import pb
 
@@ -99,12 +101,14 @@ class TwistedWordsClient(pb.Referenceable, basesupport.AbstractClientMixin):
     """In some cases, this acts as an Account, since it a source of text
     messages (multiple Words instances may be on a single PB connection)
     """
-    def __init__(self, acct, serviceName, perspectiveName, chatui):
+    def __init__(self, acct, serviceName, perspectiveName, chatui,
+                 _logonDeferred=None):
         self.accountName = "%s (%s:%s)" % (acct.accountName, serviceName, perspectiveName)
         self.name = perspectiveName
         print "HELLO I AM A PB SERVICE", serviceName, perspectiveName
         self.chat = chatui
         self.account = acct
+        self._logonDeferred = _logonDeferred
 
     def getPerson(self, name):
         return self.chat.getPerson(name, self, TwistedWordsPerson)
@@ -168,7 +172,8 @@ class TwistedWordsClient(pb.Referenceable, basesupport.AbstractClientMixin):
 
     def connected(self, perspective):
         print 'Connected Words Client!', perspective
-        self.registerAsAccountClient()
+        if self._logonDeferred is not None:
+            self._logonDeferred.callback(self)
         self.perspective = perspective
         self.chat.getContactsList()
 
@@ -196,25 +201,57 @@ class PBAccount(basesupport.AbstractAccount):
             self.services.append([pbFrontEnds[serviceType], serviceName,
                                   perspectiveName])
 
+    def logOn(self, chatui):
+        """
+        @returns: this breaks with L{interfaces.IAccount}
+        @returntype: DeferredList of L{interfaces.IClient}s
+        """
+        # Overriding basesupport's implementation on account of the
+        # fact that _startLogOn tends to return a deferredList rather
+        # than a simple Deferred, and we need to do registerAccountClient.
+        if (not self._isConnecting) and (not self._isOnline):
+            self._isConnecting = 1
+            d = self._startLogOn(chatui)
+            d.addErrback(self._loginFailed)
+            def registerMany(results):
+                for success, result in results:
+                    if success:
+                        chatui.registerAccountClient(result)
+                    else:
+                        log.err(result)
+            d.addCallback(registerMany)
+            return d
+        else:
+            raise error.ConnectionInProgress()
+
+
     def _startLogOn(self, chatui):
         print 'Connecting...',
-        return pb.getObjectAt(self.host, self.port).addCallbacks(
-            self._cbConnected, self._ebConnected, callbackArgs=(chatui,))
+        d = pb.getObjectAt(self.host, self.port)
+        d.addCallbacks(self._cbConnected, self._ebConnected,
+                       callbackArgs=(chatui,))
+        return d
 
     def _cbConnected(self, root, chatui):
         print 'Connected!'
         print 'Identifying...',
-        pb.authIdentity(root, self.username, self.password).addCallbacks(
-            self._cbIdent, self._ebConnected, callbackArgs=(chatui,))
+        d = pb.authIdentity(root, self.username, self.password)
+        d.addCallbacks(self._cbIdent, self._ebConnected,
+                       callbackArgs=(chatui,))
+        return d
 
     def _cbIdent(self, ident, chatui):
         if not ident:
             print 'falsely identified.'
             return self._ebConnected(Failure(Exception("username or password incorrect")))
         print 'Identified!'
+        dl = []
         for handlerClass, sname, pname in self.services:
-            handler = handlerClass(self, sname, pname, chatui)
+            d = defer.Deferred()
+            dl.append(d)
+            handler = handlerClass(self, sname, pname, chatui, d)
             ident.callRemote('attach', sname, pname, handler).addCallback(handler.connected)
+        return defer.DeferredList(dl)
 
     def _ebConnected(self, error):
         print 'Not connected.'

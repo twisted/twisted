@@ -44,7 +44,7 @@ class IAccount(Interface):
     def logOn(self):
         """Go on-line.
 
-        @returntype: Deferred
+        @returntype: Deferred L{Client}
         """
 
     def logOff(self):
@@ -52,12 +52,18 @@ class IAccount(Interface):
         """
 
 class IClient(Interface):
-    def __init__(self, account, chatui):
+    """
+    @ivar account: The Account I am a Client for.
+    @type account: L{IAccount}
+    """
+    def __init__(self, account, chatui, logonDeferred):
         """
         @type account: L{IAccount}
         @type chatui: L{IChatUI}
+        @param logonDeferred: Will be called back once I am logged on.
+        @type logonDeferred: L{Deferred<twisted.internet.defer.Deferred>}
         """
-        
+
     def joinGroup(self, groupName):
         """
         @type groupname: string
@@ -73,8 +79,8 @@ class IClient(Interface):
 
     def getPerson(self,name):
         pass
-        
-        
+
+
 class IPerson(Interface):
     def isOnline(self):
         """Am I online right now?
@@ -95,7 +101,7 @@ class IPerson(Interface):
 
     def sendMessage(self, text, metadata=None):
         """Send a message to this person.
-        
+
         @type text: string
         @type metadata: dict
         """
@@ -122,7 +128,7 @@ class IConversation(Interface):
         """
         @type person: L{IPerson}
         """
-    
+
     def show(self):
         """doesn't seem like it belongs in this interface."""
 
@@ -139,14 +145,14 @@ class IConversation(Interface):
         """
         @param person: XXX Shouldn't this always be Conversation.person?
         """
-        
+
 class IGroupConversation(Interface):
     def show(self):
         """doesn't seem like it belongs in this interface."""
 
     def hide(self):
         """nor this neither."""
-    
+
     def sendText(self, text, metadata):
         pass
 
@@ -254,7 +260,7 @@ class IChatUI(Interface):
 
         @returntype: L{Group<interfaces.IGroup>}
         """
-        
+
     def contactChangedNick(self, oldnick, newnick):
         """For the given person, changes the person's name to newnick, and
         tells the contact list and any conversation windows with that person

@@ -59,7 +59,10 @@ class AccountManager:
         del self.accounts[accountName]
 
     def connect(self, accountName, chatui):
-        self.accounts[accountName].logOn(chatui)
+        """
+        @returntype: Deferred L{interfaces.IClient}
+        """
+        return self.accounts[accountName].logOn(chatui)
 
     def disconnect(self, accountName):
         pass

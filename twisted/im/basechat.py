@@ -206,10 +206,12 @@ class ChatUI:
         """Notifies user that an account has been signed on to.
 
         @type client: L{Client<interfaces.IClient>}
+        @returns: client, so that I may be used in a callback chain
         """
         print "signing onto", client.accountName
         self.onlineClients.append(client)
         self.contactsList.registerAccountClient(client)
+        return client
 
     def unregisterAccountClient(self, client):
         """Notifies user that an account has been signed off or disconnected

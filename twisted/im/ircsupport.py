@@ -18,7 +18,7 @@ import string
 
 from twisted.protocols import irc
 from twisted.im.locals import ONLINE
-from twisted.internet import reactor, protocol
+from twisted.internet import defer, reactor, protocol
 from twisted.internet.defer import succeed
 
 import basesupport
@@ -77,8 +77,9 @@ class IRCGroup(basesupport.AbstractGroup):
         self.client.getGroupConversation(self.name,1)
 
 class IRCProto(basesupport.AbstractClientMixin, irc.IRCClient):
-    def __init__(self, account, chatui):
-        basesupport.AbstractClientMixin.__init__(self, account, chatui)
+    def __init__(self, account, chatui, logonDeferred=None):
+        basesupport.AbstractClientMixin.__init__(self, account, chatui,
+                                                 logonDeferred)
         self._namreplies={}
         self._ingroups={}
         self._groups={}
@@ -103,7 +104,8 @@ class IRCProto(basesupport.AbstractClientMixin, irc.IRCClient):
                 self.joinGroup(channel)
             self.account._isOnline=1
             print 'uh, registering irc acct'
-            self.registerAsAccountClient()
+            if self._logonDeferred is not None:
+                self._logonDeferred.callback(self)
             self.chat.getContactsList()
         except:
             import traceback
@@ -246,4 +248,9 @@ class IRCAccount(basesupport.AbstractAccount):
             self.channels = []
 
     def _startLogOn(self, chatui):
-        return protocol.ClientCreator(reactor, IRCProto, self, chatui).connectTCP(self.host, self.port)
+        logonDeferred = defer.Deferred()
+        cc = protocol.ClientCreator(reactor, IRCProto, self, chatui,
+                                    logonDeferred)
+        d = cc.connectTCP(self.host, self.port)
+        d.addErrback(logonDeferred.errback)
+        return logonDeferred

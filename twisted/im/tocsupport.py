@@ -20,7 +20,7 @@ import string, re
 # Twisted Imports
 from twisted.protocols import toc
 from twisted.im.locals import ONLINE, OFFLINE, AWAY
-from twisted.internet import reactor, protocol
+from twisted.internet import defer, reactor, protocol
 from twisted.internet.defer import succeed
 
 # Sibling Imports
@@ -85,9 +85,10 @@ class TOCGroup(basesupport.AbstractGroup):
         self.client.chat_leave(self.roomID)
 
 class TOCProto(basesupport.AbstractClientMixin, toc.TOCClient):
-    def __init__(self, account, chatui):
+    def __init__(self, account, chatui, logonDeferred):
         toc.TOCClient.__init__(self, account.username, account.password)
-        basesupport.AbstractClientMixin.__init__(self, account, chatui)
+        basesupport.AbstractClientMixin.__init__(self, account, chatui,
+                                                 logonDeferred)
         self.roomID = {}
         self.roomIDreverse = {}
 
@@ -145,7 +146,8 @@ class TOCProto(basesupport.AbstractClientMixin, toc.TOCClient):
             print 'reregistering...?', data
             self.name=data[0]
             # self.accountName = "%s (TOC)"%data[0]
-            self.registerAsAccountClient()
+            if self._logonDeferred is not None:
+                self._logonDeferred.callback(self)
 
     ### Error Messages
     def hearError(self, code, args):
@@ -204,4 +206,9 @@ class TOCAccount(basesupport.AbstractAccount):
     gatewayType = "AIM (TOC)"
 
     def _startLogOn(self, chatui):
-        return protocol.ClientCreator(reactor, TOCProto, self, chatui).connectTCP(self.host, self.port)
+        logonDeferred = defer.Deferred()
+        cc = protocol.ClientCreator(reactor, TOCProto, self, chatui,
+                                    logonDeferred)
+        d = cc.connectTCP(self.host, self.port)
+        d.addErrback(logonDeferred.errback)
+        return logonDeferred

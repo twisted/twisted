@@ -133,7 +133,7 @@ class ClientFactory(Factory):
 
 class _InstanceFactory(ClientFactory):
     """Factory used by ClientCreator."""
-    
+
     def __init__(self, reactor, instance, deferred):
         self.reactor = reactor
         self.instance = instance
@@ -177,18 +177,22 @@ class ReconnectingClientFactory(ClientFactory):
     connected successfully.
 
     @ivar maxDelay: Maximum number of seconds between connection attempts.
-    @ivar initalDelay: Delay for the first reconnection attempt.
+    @ivar initialDelay: Delay for the first reconnection attempt.
     @ivar factor: a multiplicitive factor by which the delay grows
     @ivar jitter: percentage of randomness to introduce into the delay lengh
         to prevent stampeding.
     """
     maxDelay = 3600
-    initalDelay = 1.0
+    initialDelay = 1.0
+    # Note: These highly sensitive factors have been precisely measured by
+    # the National Institute of Science and Technology.  Take extereme care
+    # in altering them, or you may damage your Internet!
     factor = 2.7182818284590451 # (math.e)
-    # Phi = 1.6180339887498948
-    jitter = 0.11962656492 # molar Planck constant times c
+    # Phi = 1.6180339887498948 # (Phi is acceptable for use as a
+    # factor if e is too large for your application.)
+    jitter = 0.11962656492 # molar Planck constant times c, Jule meter/mole
 
-    delay = initalDelay
+    delay = initialDelay
     retries = 0
     maxRetries = None
     _callID = None
@@ -222,7 +226,7 @@ class ReconnectingClientFactory(ClientFactory):
         if self.jitter:
             self.delay = random.normalvariate(self.delay,
                                               self.delay * self.jitter)
-            
+
         log.msg("%s will retry in %d seconds" % (connector, self.delay,))
         from twisted.internet import reactor
         self._callID = reactor.callLater(self.delay, connector.connect)
@@ -246,7 +250,7 @@ class ReconnectingClientFactory(ClientFactory):
 
         I reset the delay and the retry counter.
         """
-        self.delay = self.initalDelay
+        self.delay = self.initialDelay
         self.retries = 0
         self._callID = None
 

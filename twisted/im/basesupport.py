@@ -88,8 +88,10 @@ class AbstractClientMixin:
     """Designed to be mixed in to a Protocol implementing class.
 
     Inherit from me first.
+
+    @ivar _logonDeferred: Fired when I am done logging in.
     """
-    def __init__(self, account, chatui):
+    def __init__(self, account, chatui, logonDeferred):
         for base in self.__class__.__bases__:
             if issubclass(base, Protocol):
                 self.__class__._protoBase = base
@@ -98,6 +100,7 @@ class AbstractClientMixin:
             pass
         self.account = account
         self.chat = chatui
+        self._logonDeferred = logonDeferred
 
     def connectionMade(self):
         self.account._isOnline = 1
@@ -108,11 +111,6 @@ class AbstractClientMixin:
         self.account._isOnline = 0
         self.unregisterAsAccountClient()
         self._protoBase.connectionLost(self, other)
-
-    def registerAsAccountClient(self):
-        """Register me with the chat UI as `signed on'.
-        """
-        self.chat.registerAccountClient(self)
 
     def unregisterAsAccountClient(self):
         """Tell the chat UI that I have `signed off'.
@@ -172,20 +170,24 @@ class AbstractAccount:
         already in progress.  You will need to implement
         L{_startLogOn} for this to work, and it would be a good idea
         to override L{_loginFailed} too.
+
+        @returntype: Deferred L{interfaces.IClient}
         """
         if (not self._isConnecting) and (not self._isOnline):
             self._isConnecting = 1
-            self._startLogOn(chatui).addErrback(self._loginFailed)
+            d = self._startLogOn(chatui)
+            d.addErrback(self._loginFailed)
+            d.addCallback(chatui.registerAccountClient)
+            return d
         else:
-            print 'already connecting'
+            raise error.ConnectionInProgress()
 
     def _startLogOn(self, chatui):
         """Start the sign on process.
 
         Factored out of L{logOn}.
 
-        @returns: None
-        @returntype: Deferred
+        @returntype: Deferred L{interfaces.IClient}
         """
         raise NotImplementedError()
 
@@ -196,3 +198,4 @@ class AbstractAccount:
         """
         self._isConnecting = 0
         self._isOnline = 0 # just in case
+        return reason

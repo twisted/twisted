@@ -1,3 +1,14 @@
+2003-01-26  Kevin Turner  <acapnotic@twistedmatrix.com>
+
+	* twisted/im/interfaces.py (IClient.__init__): 1.3 Accept a
+	logonDeferred parameter.  The client should call this back when
+	it is successfully logged in.
+
+	* twisted/im/basesupport.py
+	(AbstractClientMixin.registerAsAccountClient): 1.13 Gone.
+	chatui.registerAccountClient is called in AbstractAccount.logOn
+	instead.
+
 2003-01-22  Dave Peticolas  <dave@krondo.com>
 
 	* twisted/web/xmlrpc.py: add docstring for Proxy. handle
@@ -120,7 +131,7 @@
 
 	* twisted/test/test_internet.py (DelayedTestCase): add test
 	coverage for IReactorTime.getDelayedCalls
-	
+
 2002-12-30  Brian Warner  <warner@lothar.com>
 
 	* pyunit/unittest.py (TestCase.__call__): clean the reactor between
@@ -179,7 +190,7 @@
 
 2002-12-22  Paul Swartz  <z3p@twistedmatrix.com>
 
-	* twisted/conch/ssh/keys.py, twisted/conch/ssh/asn1.py: support for 
+	* twisted/conch/ssh/keys.py, twisted/conch/ssh/asn1.py: support for
 	writing	public and private keys.
 
 	* bin/ckeygen: new script to create public/private key pairs
@@ -248,7 +259,7 @@
 2002-12-12  Moshe Zadka <moshez@twistedmatrix.com>
 
 	* twisted/python/log.py: add setStdout, set logfile to NullFile by
-	default. 
+	default.
 
 2002-12-11  Donovan Preston <dp@twistedmatrix.com>
 
@@ -386,10 +397,17 @@
 
 2002-11-23  Jp Calderone <exarkun@twistedmatrix.com>
 
+<<<<<<< ChangeLog
+        * twisted/names/client.py, twisted/names/server.py: Client and
+          server domain name APIs
+
+        * twisted/tap/dns.py: 'mktap dns'
+=======
 	* twisted/names/client.py, twisted/names/server.py: Client and
 	  server domain name APIs
-	
+
 	* twisted/tap/dns.py: 'mktap dns'
+>>>>>>> 1.190
 
 2002-11-23  Moshe Zadka <moshez@twistedmatrix.com>
 
