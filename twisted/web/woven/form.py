@@ -36,6 +36,9 @@ def registerRenderer(argumentClass, renderer):
 
     
 class FormFillerWidget(widgets.Widget):
+
+    SPANNING_TYPES = ["hidden", "submit"]
+    
     def getValue(self, request, argument):
         """Return value for form input."""
         if not self.model.alwaysDefault:
@@ -279,14 +282,16 @@ class FormFillerWidget(widgets.Widget):
             imeth = _renderers[model.__class__]
         else:
             imeth = getattr(self,"input_"+name)
-        if name == "hidden":
-            return (imeth(request, shell, model).node, shell.tr().td().node)
-        elif name == "submit":
+        if name in self.SPANNING_TYPES:
             td = shell.tr().td(valign="top", colspan="2")
-            return (imeth(request, td, model).node, shell.tr().td().node)
+            return (imeth(request, td, model).node, shell.tr().td(colspan="2").node)
         else:
+            if model.allowNone:
+                required = ""
+            else:
+                required = " *"
             tr = shell.tr()
-            tr.td(align="right", valign="top").text(model.getShortDescription()+":")
+            tr.td(align="right", valign="top").text(model.getShortDescription()+":"+required)
             content = tr.td(valign="top")
             return (imeth(request, content, model).node, 
                     content.div(_class="formDescription"). # because class is a keyword
