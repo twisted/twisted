@@ -1,0 +1,2 @@
+Use cases and design notes for t.trial
+
