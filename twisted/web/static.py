@@ -279,6 +279,10 @@ class File(resource.Resource, styles.Versioned):
         self.type = self.contentTypes.get(string.lower(ext), defaultType)
 
     def ignoreExt(self, ext):
+        """Ignore the given extension.
+
+        Serve file.ext if file is requested
+        """
         self.ignoredExts.append(ext)
 
     def getChild(self, path, request):
