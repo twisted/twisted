@@ -28,6 +28,7 @@ import copy
 import socket
 import sys
 import traceback
+import string
 
 if os.name == 'nt':
     EWOULDBLOCK = 10035
@@ -49,7 +50,7 @@ from twisted.python import log
 
 # Sibling Imports
 import abstract
-from main import CONNECTION_LOST, CONNECTION_DONE
+import main
 
 class Connection(abstract.FileDescriptor,
                  protocol.Transport,
@@ -79,9 +80,9 @@ class Connection(abstract.FileDescriptor,
             if se.args[0] == EWOULDBLOCK:
                 return
             else:
-                return CONNECTION_LOST
+                return main.CONNECTION_LOST
         if not data:
-            return CONNECTION_LOST
+            return main.CONNECTION_LOST
         return self.protocol.dataReceived(data)
 
     def writeSomeData(self, data):
@@ -95,7 +96,7 @@ class Connection(abstract.FileDescriptor,
         except socket.error, se:
             if se.args[0] == EWOULDBLOCK:
                 return 0
-            return CONNECTION_LOST
+            return main.CONNECTION_LOST
 
     def connectionLost(self):
         """See abstract.FileDescriptor.connectionLost().
@@ -145,7 +146,7 @@ class Client(Connection):
         self.port = port
         Connection.__init__(self, skt, protocol)
         self.doWrite = self.doConnect
-        self.doConnect()
+        self.resolveAddress()
         self.logstr = self.protocol.__class__.__name__+",client"
 	if timeout is not None:
 	    main.addTimeout(self.failIfNotConnected, timeout)
@@ -161,13 +162,24 @@ class Client(Connection):
         # factored out so as to minimise the code necessary for SecureClient
         return socket.socket(socket.AF_INET,socket.SOCK_STREAM)
 
+    def resolveAddress(self):
+        if abstract.isIPAddress(self.addr[0]):
+            self.setRealdAddress(self.addr[0])
+        else:
+            main.resolver.resolve(self.addr[0], self.setRealAddress, 
+                                                self.failIfNotConnected)
+
+    def setRealAddress(self, address):
+        self.realAddress = address
+        self.doConnect()
+
     def doConnect(self):
         """I connect the socket.
         
         Then, call the protocol's makeConnection, and start waiting for data.
         """
         try:
-            self.socket.connect(self.addr)
+            self.socket.connect((self.realAddress, self.addr[1]))
         except socket.error, se:
             if se.args[0] == EMYSTERY:
                 self.startWriting()

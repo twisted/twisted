@@ -40,6 +40,7 @@ sys.path.append('.')
 
 from twisted.protocols import telnet
 from twisted.internet import main,tcp
+from twisted.names import native
 from twisted.python import usage
 import sys, traceback, os, cPickle
 
@@ -90,6 +91,7 @@ except usage.error, ue:
 
 if not options.append:
     a = main.Application(options.args[0], int(options.uid), int(options.gid))
+    a.resolver = native.Resolver()
 else:
     a = cPickle.load(open(options.append))
 for num, proto in mod.getPorts(a, config):

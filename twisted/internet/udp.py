@@ -35,8 +35,7 @@ from twisted.persisted import styles
 from twisted.python import log
 
 # Sibling Imports
-import abstract
-from main import CONNECTION_LOST, CONNECTION_DONE
+import abstract, main
 
 
 class Connection(abstract.FileDescriptor,
@@ -61,12 +60,26 @@ class Connection(abstract.FileDescriptor,
         self.local = local
         self.sessionno = sessionno
         self.connected = 1
-        self.logstr = "%s,%s,%s (UDP)" % (self.protocol.__class__.__name__, sessionno, self.remote[0])
+        self.logstr = "%s,%s,%s (UDP)" % (self.protocol.__class__.__name__, 
+                                          sessionno, self.remote[0])
+        if abstract.isIPAddress(self.remote[0]):
+            self.realAddress = self.remote[0]
+        else:
+            self.realAddress = None
+            main.resolver.resolve(self.remote[0], self.setRealAddress,
+                                                  self.connectionLost)
+
+            
+    def setRealAddress(self, address):
+        self.realAddress = address
+        self.startWriting()
 
     def write(self,data):
         res = abstract.FileDescriptor.write(self,data)
         if not self.keepConnection:
             self.loseConnection()
+        if self.realAddress is None:
+            self.stopWriting()
         return res
 
     def writeSomeData(self, data):
@@ -81,7 +94,7 @@ class Connection(abstract.FileDescriptor,
             except socket.error, se:
                 if se.args[0] == EWOULDBLOCK:
                     return 0
-                return CONNECTION_LOST
+                return main.CONNECTION_LOST
         else:
             return 0
 
@@ -171,14 +184,11 @@ class Port(abstract.FileDescriptor):
 
     def createConnection(self, addr):
         """Creates a virtual connection over UDP"""
-        try:
-            protocol = self.factory.buildProtocol(addr)
-            s = self.sessionno
-            self.sessionno = s+1
-            transport = Connection(self.socket.dup(), protocol, addr, self, s)
-            protocol.makeConnection(transport, self)
-        except:
-            traceback.print_exc(file=log.logfile)
+        protocol = self.factory.buildProtocol(addr)
+        s = self.sessionno
+        self.sessionno = s+1
+        transport = Connection(self.socket.dup(), protocol, addr, self, s)
+        protocol.makeConnection(transport, self)
         return transport
 
     def doRead(self):

@@ -17,7 +17,7 @@
 
 
 # System Imports
-import types
+import types, string
 
 # Twisted Imports
 from twisted.python import threadable, log
@@ -237,6 +237,19 @@ class FileDescriptor(log.Logger):
         raise NotImplementedError(str(self.__class__)+' has no fileno method')
 
 
+
+def isIPAddress(addr):
+    parts = string.split(addr, '.')
+    if len(parts) == 4:
+        try:
+            for part in map(int, parts):
+                if not (0<=part<256):
+                    break
+            else:
+                return 1
+        except ValueError:
+                pass
+    return 0
 
 # Sibling Imports
 import main

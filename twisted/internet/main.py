@@ -50,8 +50,12 @@ class Application(log.Logger, styles.Versioned):
         if os.name == "posix":
             self.uid = uid or os.getuid()
             self.gid = gid or os.getgid()
+        self.resolver = DummyResolver()
 
-    persistentVersion = 1
+    persistentVersion = 2
+
+    def upgradeToVersion2(self):
+        self.resolver = DummyResolver()
 
     def upgradeToVersion1(self):
         """Version 1 Persistence Upgrade
@@ -161,6 +165,7 @@ class Application(log.Logger, styles.Versioned):
     def run(self, save=1):
         """Run this application, running the main loop if necessary.
         """
+        global resolver
         if not self.running:
             threadable.dispatcher.own(self)
             delayeds.extend(self.delayeds)
@@ -174,6 +179,7 @@ class Application(log.Logger, styles.Versioned):
                     return
             for service in self.services.values():
                 service.startService()
+            resolver = self.resolver
             self.running = 1
             threadable.dispatcher.disown(self)
         if not running:
@@ -192,6 +198,11 @@ def addTimeout(method, seconds):
     """
     theTimeouts.later(method, seconds)
 
+class DummyResolver:
+
+    def resolve(self, address, success, fail):
+        fail()
+
 reads = {}
 writes = {}
 running = None
@@ -199,6 +210,7 @@ delayeds = [theTimeouts, task.theScheduler]
 if threadable.threaded:
     delayeds.append(threadtask.theScheduler)
 shutdowns = [theTimeouts.runEverything]
+resolver = DummyResolver()
 
 def shutDown(a=None, b=None):
     """Run all shutdown callbacks (save all running Applications) and exit.
@@ -523,6 +535,7 @@ def addPluginDir():
     # currentPlugins = os.path.abspath("TwistedPlugins")
     allPlugins = [systemPlugins, userPlugins, confPlugins] #, currentPlugins]
     sys.path.extend(allPlugins)
+
 
 # Sibling Import
 import process
