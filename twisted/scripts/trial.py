@@ -191,8 +191,12 @@ def run():
 
     testdir = os.path.abspath("_trial_temp")
     if os.path.exists(testdir):
-       import shutil
-       shutil.rmtree(testdir)
+       import shutil, random
+       try:
+          shutil.rmtree(testdir)
+       except OSError, e:
+          print "Error deleting:", e
+          os.rename(testdir, os.path.abspath("_trial_temp_old%s" % random.randint(0, 99999999)))
     os.mkdir(testdir)
     os.chdir(testdir)
 
