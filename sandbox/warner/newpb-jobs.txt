@@ -1,3 +1,4 @@
+-*- outline -*-
 
 Reasonably independent newpb sub-tasks that need doing.
 
@@ -166,4 +167,177 @@ implemented for all the Constraint classes. There are some tests (disabled)
 in test_schema.py for this code: those tests assert specific values for
 maxSize. Those values are probably wrong, so they must be updated to match
 however maxSize actually works.
+
+* complete tests of LONGINT/LONGNEG
+
+test_banana.InboundByteStream.testConstrainedInt needs implementation
+
+* add constraints to Slicers (outbound constraints)
+
+This is much easier then the inbound side. Each constraint just gets a single
+checkObject() call with the candidate object before it is sent.
+
+* implement CopyableSlicer/CopyableUnslicer
+
+This is pretty straightforward, the main issue is how to determine the
+constraint and in what way to allow the use of Adapters.
+
+* nail down some useful schema syntaxes
+
+This has two parts: parsing something like a __schema__ class attribute (see
+the sketches in schema.xhtml) into a tree of FooConstraint objects, and
+deciding how to retrieve schemas at runtime from things like the object being
+serialized or the object being called from afar. To be most useful, the
+syntax needs to mesh nicely (read "is identical to") things like formless and
+(maybe?) atop or whatever has replaced the high-density highly-structured
+save-to-disk scheme that twisted.world used to do.
+
+Some lingering questions in this area:
+
+ When an object has a remotely-invokable method, where does the appropriate
+ MethodConstraint come from? Some possibilities:
+
+  an attribute of the method itself: obj.method.__schema__
+
+  from inside a __schema__ attribute of the object's class
+
+  from inside a __schema__ attribute of an Interface (which?) that the object
+  implements
+
+ Likewise, when a caller holding a RemoteReference invokes a method on it, it
+ would be nice to enforce a schema on the arguments they are sending to the
+ far end ("be conservative in what you send"). Where should this schema come
+ from? It is likely that the sender only knows an Interface for their
+ RemoteReference.
+
+ When PB determines that an object wants to be copied by value instead of by
+ reference (pb.Copyable subclass, Copyable(obj), schema says so), where
+ should it find a schema to define what exactly gets copied over? A class
+ attribute of the object's class would make sense: most object would do this,
+ some could override jellyFor to get more control, and others could override
+ something else to push a new Slicer on the stack and do streaming
+ serialization. Whatever the approach, it needs to be paralleled by the
+ receiving side's unjellyableRegistry.
+
+* decide upon what the "Shared" constraint should mean
+
+The idea of this one was to avoid some vulnerabilities by rejecting arbitrary
+object graphs. Fundamentally Banana can represent most anything (just like
+pickle), including objects that refer to each other in exciting loops and
+whorls. There are two problems with this: it is hard to enforce a schema that
+allows cycles in the object graph (indeed it is tricky to even describe one),
+and the shared references could be used to temporarily violate a schema.
+
+I think these might be fixable (the sample case is where one tuple is
+referenced in two different places, each with a different constraint, but the
+tuple is incomplete until some higher-level node in the graph has become
+referenceable, so [maybe] the schema can't be enforced until somewhat after
+the object has actually finished arriving).
+
+However, Banana is aimed at two different use-cases. One is kind of a
+replacement for pickle, where the goal is to allow arbitrary object graphs to
+be serialized but have more control over the process (in particular we still
+have an unjellyableRegistry to prevent arbitrary constructors from being
+executed during deserialization). In this mode, a larger set of Unslicers are
+available (for modules, bound methods, etc), and schemas may still be useful
+but are not enforced by default.
+
+PB will use the other mode, where the set of conveyable objects is much
+smaller, and security is the primary goal (including putting limits on
+resource consumption). Schemas are enforced by default, and all constraints
+default to sensible size limits (strings to 1k, lists to [currently] 30
+items). Because complex object graphs are not commonly transported across
+process boundaries, the default is to not allow any Copyable object to be
+referenced multiple times in the same serialization stream. The default is to
+reject both cycles and shared references in the object graph, allowing only
+strict trees, making life easier (and safer) for the remote methods which are
+being given this object tree.
+
+The "Shared" constraint is intended as a way to turn off this default
+strictness and allow the object to be referenced multiple times. The
+outstanding question is what this should really mean: must it be marked as
+such on all places where it could be referenced, what is the scope of the
+multiple-reference region (per- method-call, per-connection?), and finally
+what should be done when the limit is violated. Currently Unslicers see an
+Error object which they can respond to any way they please: the default
+containers abandon the rest of their contents and hand an Error to their
+parent, the MethodCallUnslicer returns an exception to the caller, etc. With
+shared references, the first recipient sees a valid object, while the second
+and later recipient sees an error.
+
+
+* figure out Deferred errors for immutable containers
+
+Somewhat related to the previous one. The now-classic example of an immutable
+container which cannot be created right away is the object created by this
+sequence:
+
+        t = ([],)
+        t[0].append((t,))
+
+This serializes into (with implicit reference numbers on the left):
+
+[0] OPEN(tuple)
+[1]  OPEN(list)
+[2]   OPEN(tuple)
+[3]    OPEN(reference #0)
+      CLOSE
+     CLOSE
+    CLOSE
+
+In newbanana, the second TupleUnslicer cannot return a fully-formed tuple to
+its parent (the ListUnslicer), because that tuple cannot be created until the
+contents are all referenceable, and that cannot happen until the first
+TupleUnslicer has completed. So the second TupleUnslicer returns a Deferred
+instead of a tuple, and the ListUnslicer adds a callback which updates the
+list's item when the tuple is complete.
+
+The problem here is that of error handling. In general, if an exception is
+raised (perhaps a protocol error, perhaps a schema violation) while an
+Unslicer is active, that Unslicer is abandoned (all its remaining tokens are
+discarded) and the parent gets an Error object. (the parent may give up too..
+the basic Unslicers all behave this way, so any exception will cause
+everything up to the RootUnslicer to go boom, and the RootUnslicer has the
+option of dropping the connection altogether). When the error is noticed, the
+Unslicer stack is queried to figure out what path was taken from the root of
+the object graph to the site that had an error. This is really useful when
+trying to figure out which exact object cause a SchemaViolation: rather than
+being told a call trace or a description of the *object* which had a problem,
+you get a description of the path to that object (the same series of
+dereferences you'd use to print the object: obj.children[12].peer.foo.bar).
+
+When references are allowed, these exceptions could occur after the original
+object has been received, when that Deferred fires. There are two problems:
+one is that the error path is now misleading, the other is that it might not
+have been possible to enforce a schema because the object was incomplete.
+
+The most important thing is to make sure that an exception that occurs while
+the Deferred is being fired is caught properly and flunks the object just as
+if the problem were caught synchronously. This may involve discarding an
+otherwise complete object graph and blaming the problem on a node much closer
+to the root than the one which really caused the failure.
+
+* constrain ReferenceUnslicer properly
+
+The schema can use a ReferenceConstraint to indicate that the object must be
+a RemoteReference, and can also require that the remote object be capable of
+handling a particular Interface.
+
+This needs to be implemented. slicer.ReferenceUnslicer must somehow actually
+ask the constraint about the incoming tokens.
+
+An outstanding question is "what counts". The general idea is that
+RemoteReferences come over the wire as a connection-scoped ID number and an
+optional list of Interface names (strings and version numbers). In this case
+it is the far end which asserts that its object can implement any given
+Interface, and the receiving end just checks to see if the schema-imposed
+required Interface is in the list.
+
+This becomes more interesting when applied to local objects, or if a
+constraint is created which asserts that its object is *something* (maybe a
+RemoteReference, maybe a RemoteCopy) which implements a given Interface. In
+this case, the incoming object could be an actual instance, but the class
+name must be looked up in the unjellyableRegistry (and the class located, and
+the __implements__ list consulted) before any of the object's tokens are
+accepted.
 
