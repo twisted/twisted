@@ -46,7 +46,7 @@ from twisted.protocols import http, protocol
 from twisted.python import log, reflect, roots, failure
 from twisted import copyright
 from twisted.manhole import coil
-from twisted.cred import authorizer
+from twisted.cred import util
 
 # Sibling Imports
 import error
@@ -246,7 +246,7 @@ class Request(pb.Copyable, http.HTTP):
                     "Resource: "+html.PRE(reflect.safe_repr(resrc))+"<BR>"+
                     "Value: "+html.PRE(reflect.safe_repr(body))).render(self)
 
-        except authorizer.Unauthorized:
+        except util.Unauthorized:
             body = "<HTML><BODY>You're not cleared for that.</BODY></HTML>"
             self.setResponseCode(http.UNAUTHORIZED)
             self.setHeader('content-type',"text/html")
