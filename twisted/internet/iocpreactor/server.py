@@ -100,5 +100,5 @@ class ListeningPort(log.Logger, styles.Ephemeral, object):
 
     # stupid workaround for test_tcp.LoopbackTestCase.testClosePortInProtocolFactory
     disconnected = property(lambda self: self.state == "disconnected")
-    connected = property(lambda self: self.state == "connected")
+    connected = property(lambda self: self.state == "listening")
 

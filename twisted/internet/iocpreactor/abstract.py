@@ -37,6 +37,7 @@ class ConnectedSocket(log.Logger, styles.Ephemeral, object):
         self.bufferEvents = {"buffer full": Set(), "buffer empty": Set()}
         self.offset = 0
         self.writeBufferedSize = 0
+        self.producerBuffer = []
         self.read_op = ReadFileOp(self)
         self.write_op = WriteFileOp(self) # XXX: these two should be specified like before, with a class field
 
@@ -112,10 +113,10 @@ class ConnectedSocket(log.Logger, styles.Ephemeral, object):
         protocol = self.protocol
         del self.protocol
         # XXX: perhaps the following needs to be around to avoid resetting the connection ungracefully
-#        try:
-#            self.socket.shutdown(2)
-#        except socket.error:
-#            pass
+        try:
+            self.socket.shutdown(2)
+        except socket.error:
+            pass
         # this should call closesocket() and kill it dead!
         self.socket.close()
         del self.socket
@@ -135,6 +136,11 @@ class ConnectedSocket(log.Logger, styles.Ephemeral, object):
 
     def startReading(self):
         self.reading = True
+        while self.producerBuffer:
+            item = self.producerBuffer.pop(0)
+            self.protocol.dataReceived(item)
+            if not self.reading:
+                return
         try:
             self.read_op.initiateOp(self.socket.fileno(), self.readbuf)
         except WindowsError, we:
@@ -145,9 +151,11 @@ class ConnectedSocket(log.Logger, styles.Ephemeral, object):
         self.reading = False
 
     def handle_connected_readDone(self, bytes):
-        self.protocol.dataReceived(self.readbuf[:bytes])
         if self.reading:
+            self.protocol.dataReceived(self.readbuf[:bytes])
             self.startReading()
+        else:
+            self.producerBuffer.append(self.readbuf[:bytes])
 
     def handle_disconnecting_readDone(self, bytes):
         pass # a leftover read op from before we began disconnecting
