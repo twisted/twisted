@@ -82,7 +82,7 @@ class ContactsList:
         self.selectedPerson = self.onlinePeople[row]
         entry = self.xml.get_widget("ContactNameEntry")
         entry.set_text(self.selectedPerson.name)
-        self.currentAccount = self.selectedPerson.client
+        self.currentAccount = self.selectedPerson.account.client
         idx = self.accountMenuItems.index(self.currentAccount)
         self.accountMenu.set_active(idx)
         self.optionMenu.remove_menu()
