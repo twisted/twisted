@@ -64,7 +64,7 @@ class IOVec(unittest.TestCase):
                 if errno == errno.EINTR:
                     continue
                 else:
-                    print 'Breaking', errno
+                    break
             while True:
                 try:
                     bytes += s.recv(written * 10)
@@ -76,14 +76,13 @@ class IOVec(unittest.TestCase):
                 del v[0]
             
             if written > 0:
-                v[0] = v[0][:written]
+                v[0] = v[0][written:]
                 written = 0
             
         while True:
             try:
                 bytes += s.recv(1024 * 1024)
             except Exception, e:
-                print e
                 break         
 
         # file('first', 'w').write('\n'.join(splitup(bytes)))
