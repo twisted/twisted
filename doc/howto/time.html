@@ -10,7 +10,7 @@
   <body>
     <h2>Scheduling a task to be run in the future</h2>
 
-    <p>Let's say you want to run a task X seconds in the future.
+    <p>Let's say we want to run a task X seconds in the future.
     The way to do that is defined in the reactor interface <code
     class="API">twisted.internet.interfaces.IReactorTime</code>:</p>
 <pre class="python">
@@ -33,7 +33,18 @@ def runEverySecond():
 
 reactor.callLater(1, runEverySecond)
 </pre>
-     
+
+    <p>If we want to cancel a task that we've scheduled:</p>
+<pre class="python">
+from twisted.internet import reactor
+
+def f():
+    print "I'll never run."
+
+callID = reactor.callLater(5, f)
+reactor.cancelCallLater(callID)
+</pre>     
+
   </body>
 </html>
 
