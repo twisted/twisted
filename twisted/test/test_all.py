@@ -103,7 +103,7 @@ class TestLoader(unittest.TestLoader):
 
         return string.join(lines, '')
 
-log.msg("opening test.log")
+#log.msg("opening test.log")
 log.logfile = open("test.log", 'a')
 
 def testSuite():
