@@ -4,6 +4,7 @@ from TwistedQuotes import pbquote       # perspective broker binding
 
 from twisted.python import usage        # twisted command-line processing
 from twisted.spread import pb           # Perspective Broker
+from twisted.cred import authorizer     # cred authorizer, to allow logins
 
 class Options(usage.Options):
     optParameters = [["port", "p", 8007,
@@ -28,10 +29,11 @@ def updateApplication(app, config):
     # protocol instances when events arrive on the specified port.
     pbport = config['pb']               # TCP PB port to listen on
     if pbport:
-        pbserv = pbquote.QuoteService(quoter, "twisted.quotes", app)
+        auth = authorizer.DefaultAuthorizer(app)
+        pbserv = pbquote.QuoteService(quoter, "twisted.quotes", app, auth)
         # create a quotereader "guest" give that perspective a password and
         # create an account based on it, with the password "guest".
         pbserv.createPerspective("guest").makeIdentity("guest")
-        pbfact = pb.BrokerFactory(pb.AuthRoot(app))
+        pbfact = pb.BrokerFactory(pb.AuthRoot(auth))
         app.listenTCP(int(pbport), pbfact)
     app.listenTCP(port, factory)

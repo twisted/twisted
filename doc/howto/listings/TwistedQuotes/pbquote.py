@@ -5,7 +5,7 @@ class QuoteReader(pb.Perspective):
         return self.service.quoter.getQuote()
 
 class QuoteService(pb.Service):
-    def __init__(self, quoter, serviceName, app=None):
-        pb.Service.__init__(self, serviceName, app)
+    def __init__(self, quoter, serviceName, serviceParent, authorizer):
+        pb.Service.__init__(self, serviceName, serviceParent, authorizer)
         self.quoter = quoter
     perspectiveClass = QuoteReader
