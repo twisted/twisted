@@ -24,6 +24,7 @@
 """
 from controller import Deferred
 from twisted.web import resource, server
+from twisted.python.failure import Failure
 
 class Resource(resource.Resource):
     """ a resource which uses flow in its page generation
@@ -51,6 +52,6 @@ class Resource(resource.Resource):
     def isLeaf(self): return true
     def render(self, req):
         self.d = Deferred(self.gen(req))
-        self.d.addCallback(lambda ret: req.finish() or ret)
+        self.d.addErrback(lambda fail: fail.printTraceback())
+        self.d.addBoth(lambda ret: req.finish() or ret)
         return server.NOT_DONE_YET
-
