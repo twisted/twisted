@@ -8,8 +8,11 @@ import os.path
 from path import path
 
 # win32all
-from win32ui import CreateFileDialog
-import win32con
+try:
+    from win32ui import CreateFileDialog
+    import win32con
+except:
+    def CreateFileDialog(*args, **kwargs):pass
 
 # gtk2
 import gtk, gobject
