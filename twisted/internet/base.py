@@ -37,9 +37,8 @@ class ReactorBase:
 
     def initThreads(self):
         import thread
-        import Queue
         self.installWaker()
-        self.threadCallQueue = Queue.Queue()
+        self.threadCallQueue = []
 
     threadCallQueue = None
 
@@ -56,8 +55,8 @@ class ReactorBase:
             apply(self.callLater, (0, callable)+ args, kw)
             #print self, ' did it'
         else:
-            # print self, ' in a thread'
-            self.threadCallQueue.put((callable, args, kw))
+            # lists are thread-safe in CPython
+            self.threadCallQueue.append((callable, args, kw))
             self.wakeUp()
 
     def wakeUp(self):
@@ -236,12 +235,8 @@ class ReactorBase:
         """
         # print self, 'running until current', self.threadCallQueue, self._pendingTimedCalls
         if self.threadCallQueue:
-            from Queue import Empty
-            while 1:
-                try:
-                    callable, args, kw = self.threadCallQueue.get(0)
-                except Empty:
-                    break
+            for i in range(len(self.threadCallQueue)):
+                callable, args, kw = self.threadCallQueue.pop(0)
                 try:
                     # print 'popping the thread queue', self.threadCallQueue.queue
                     apply(callable, args, kw)
