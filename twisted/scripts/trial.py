@@ -75,7 +75,8 @@ class PluginError(Exception):
 class PluginWarning(Warning):
     pass
 
-class WhatchuTalkinBoutWillisError(Exception):
+
+class ArgumentError(Exception):
     """raised when trial can't figure out how to convert an argument into
     a runnable chunk of python
     """
@@ -280,7 +281,7 @@ class Options(usage.Options):
             try:
                 mname = reflect.filenameToModuleName(filename)
                 self._tryNamedAny(mname)
-            except WhatchuTalkinBoutWillisError:
+            except ArgumentError:
                 # okay, not in PYTHONPATH...
                 path, fullname = osp.split(filename)
                 name, ext = osp.splitext(fullname)
@@ -356,7 +357,7 @@ class Options(usage.Options):
         try:
             n = reflect.namedAny(arg)
         except ValueError:
-            raise WhatchuTalkinBoutWillisError
+            raise ArgumentError
         except:
             f = failure.Failure()
             f.printTraceback()
@@ -376,7 +377,7 @@ class Options(usage.Options):
         elif inspect.ismethod(n):
             self['methods'].append(n)
         else:
-            raise WhatchuTalkinBoutWillisError, "could not figure out how to use %s" % arg
+            raise ArgumentError, "could not figure out how to use %s" % arg
             #self['methods'].append(n)
 
 
@@ -397,7 +398,7 @@ class Options(usage.Options):
                 # only one option, use namedAny
                 try:
                     self._tryNamedAny(arg)
-                except WhatchuTalkinBoutWillisError:
+                except ArgumentError:
                     pass
                 else:
                     continue
@@ -428,8 +429,9 @@ class Options(usage.Options):
                     self._tryNamedAny(modname)
                     continue
                 
-            print "can't figure out what to do with argument %r, continuing" % (arg,)
-            continue
+            raise ArgumentError, ("argument %r appears to be "
+                 "invalid, rather than doing something incredibly stupid, "
+                 "I'm blowing up" % (arg,))
 
 
     def postOptions(self):
