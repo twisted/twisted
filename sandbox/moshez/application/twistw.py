@@ -34,21 +34,19 @@ def startLogging(logfilename):
     if logfilename == '-' or not logfilename:
         logFile = sys.stdout
     else:
-        logPath = os.path.abspath(logfilename or 'twistd.log')
-        logFile = logfile.LogFile(os.path.basename(logPath),
-                                  os.path.dirname(logPath))
+        logFile = app.getLogFile(logfilename)
     log.startLogging(logFile)
     sys.stdout.flush()
 
 def runApp(config):
     passphrase = app.getPassphrase(config['encrypted'])
     app.installReactor(config['reactor'])
+    application = app.getApplication(config, passphrase)
     oldstdout = sys.stdout
     oldstderr = sys.stderr
     startLogging(config['logfile'])
     app.initialLog()
     os.chdir(config['rundir'])
-    application = app.getApplication(config, passphrase)
     service.IService(application).privilegedStartService()
     app.startApplication(application, not config['no_save'])
     app.startApplication(internet.TimerService(0.1, lambda:None), 0)

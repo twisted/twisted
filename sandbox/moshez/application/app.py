@@ -244,3 +244,9 @@ def startApplication(application, save):
         scheduleSave(application)
     reactor.addSystemEventTrigger('before', 'shutdown',
                                   service.IService(application).stopService)
+
+def getLogFile(logfilename):
+    logPath = os.path.abspath(logfilename or 'twistd.log')
+    logFile = logfile.LogFile(os.path.basename(logPath),
+                              os.path.dirname(logPath))
+    return logFile
