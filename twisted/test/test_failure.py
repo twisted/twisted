@@ -35,8 +35,9 @@ class FailureTestCase(unittest.TestCase):
         except:
             f = failure.Failure()
         error = f.trap(SystemExit, RuntimeError)
-        self.assert_(error == RuntimeError)
-
+        self.assertEquals(error, RuntimeError)
+        self.assertEquals(f.type, NotImplementedError)
+    
     def test_notTrapped(self):
         """Making sure trap doesn't trap what it shouldn't."""
         try:
@@ -55,5 +56,9 @@ class FailureTestCase(unittest.TestCase):
         f.printBriefTraceback(out)
         f.printTraceback(out)
 
+    def testExplictPass(self):
+        e = RuntimeError()
+        f = failure.Failure(e)
+        f.trap(RuntimeError)
+        self.assertEquals(f.value, e)
 
-testCases = [FailureTestCase]
