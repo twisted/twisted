@@ -486,6 +486,12 @@ the Deferreds you want it to wait for:</p>
 dl = defer.DeferredList([deferred1, deferred2, deferred3])
 </pre>
 
+<p>You can also add the Deferreds later:</p>
+
+<pre class="python">
+dl.addDeferred(deferred4)
+</pre>
+
 <p>You can now treat the DeferredList like an ordinary Deferred; you can call
 <code>addCallbacks</code> and so on.  The DeferredList will call its callback
 when all the deferreds have completed.  The callback will be called with a list
@@ -508,6 +514,51 @@ deferred3.callback('three')
 </pre>
 
 <p>A standard DeferredList will never call errback.</p>
+
+<p>Note that if you want to apply callbacks to the individual Deferreds that
+go into the DeferredList, you should be careful about when those callbacks
+are added. The act of adding a Deferred to a DeferredList inserts a callback
+into that Deferred (when that callback is run, it checks to see if the
+DeferredList has been completed yet). The important thing to remember is
+that it is <b>this callback</b> which records the value that goes into the
+result list handed to the DeferredList's callback.</p>
+
+<!-- TODO: add picture here: three columns of callback chains, with a value
+being snarfed out of the middle of each and handed off to the DeferredList
+-->
+
+<p>Therefore, if you add a callback to the Deferred <b>after</b> adding the
+Deferred to the DeferredList, the value returned by that callback will not
+be given to the DeferredList's callback.</p>
+
+<pre class="python">
+def printResult(result):
+    print result
+def addTen(result):
+    return result + " ten"
+
+# Deferred gets callback before DeferredList is created
+deferred1 = defer.Deferred()
+deferred2 = defer.Deferred()
+deferred1.addCallback(addTen)
+dl = defer.DeferredList([deferred1, deferred2])
+dl.addCallback(printResult)
+deferred1.callback("one") # fires addTen, checks DeferredList, stores "one ten"
+deferred2.callback("two")
+# At this point, dl will fire its callback, printing:
+#     [(1, 'one ten'), (1, 'two')]
+
+# Deferred gets callback after DeferredList is created
+deferred1 = defer.Deferred()
+deferred2 = defer.Deferred()
+dl = defer.DeferredList([deferred1, deferred2])
+deferred1.addCallback(addTen) # will run *after* DeferredList gets its value
+dl.addCallback(printResult)
+deferred1.callback("one") # checks DeferredList, stores "one", fires addTen
+deferred2.callback("two")
+# At this point, dl will fire its callback, printing:
+#     [(1, 'one), (1, 'two')]
+</pre>
 
 <h3>Other behaviours</h3>
 
