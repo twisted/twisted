@@ -15,11 +15,10 @@
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 #
-# $Id: mktap.py,v 1.15 2002/08/09 00:29:24 exarkun Exp $
+# $Id: mktap.py,v 1.16 2002/08/17 03:11:07 radix Exp $
 
 """ Implementation module for the `mktap` command.
 """
-## Copied from bin/mktap 1.26!
 
 from twisted.internet import default
 default.install()
@@ -69,9 +68,10 @@ class GeneralOptions(usage.Options):
 
     optParameters = [['uid', 'u', '0'],
                   ['gid', 'g', '0'],
-                  ['append', 'a', None]]
-    optFlags = [['xml', 'x', "Output as XML, rather than pickle."],
-                ['source', 's', "Output as Python source-code (AOT format), rather than pickle."]]
+                  ['append', 'a', None, "An existing .tap file to append the plugin to, rather than creating a new one."],
+                  ['type', 't', 'pickle', "The output format to use; this can be 'pickle', 'xml', or 'source'."]]
+    optFlags = [['xml', 'x', "DEPRECATED: same as --type=xml"],
+                ['source', 's', "DEPRECATED: same as --type=source"]]
 
     subCommands = [
         [x, None, (lambda obj = y: obj.load().Options()), getattr(y, 'description', '')] for (x, y) in tapLookup.items()
@@ -133,10 +133,17 @@ def run():
         print "The use of getPorts() is deprecated."
         for portno, factory in mod.getPorts():
             a.listenTCP(portno, factory)
+   
+    #backwards compatibility for old --xml and --source options
     if options['xml']:
-        a.persistStyle = 'xml'
-    elif options['source']:
-        a.persistStyle = 'aot'
+        options['type'] = 'xml'
+    if options['source']:
+        options['type'] = 'source'
+   
+    a.persistStyle = ({'xml': 'xml', 
+                       'source': 'aot', 
+                       'pickle': 'pickle'}
+                       [options['type']])
     a.save()
 
 # Make it script-callable for testing purposes
