@@ -1,0 +1,93 @@
+import os
+import time
+
+from twisted.internet import reactor, defer
+
+class DidNotGetLock(Exception): pass
+
+class LockFile:
+
+    def __init__(self, filename, writePID = 0):
+        pid = os.getpid()
+        t = (time.time()%1)*10
+        host = os.uname()[1]
+        uniq = ".lk%05d%x%s" % (pid, t, host)
+        if writePID:
+            data = str(os.getpid())
+        else:
+            data = ""
+        open(uniq,'w').write(data)
+        uniqStat = os.stat(uniq)
+        try:
+            os.link(uniq, filename)
+        except:
+            pass
+        fileStat = os.stat(filename)
+        if fileStat != uniqStat:
+            raise DidNotGetLock()
+        self.filename = filename
+        self._killLaterTouch = reactor.callLater(60, self._laterTouch)
+
+    def _laterTouch(self):
+        self.touch()
+        self._killLaterTouch = reactor.callLater(60, self._laterTouch)
+
+    def touch(self):
+        open(self.filename).close() # keep the lock fresh
+
+    def remove(self):
+        self._killLaterTouch.cancel()
+        os.remove(self.filename)
+
+def createLock(lockedFile, retryCount = 10, retryTime = 5, usePID = 0):
+    filename = lockedFile + ".lock"
+    d = defer.Deferred()
+    _tryCreateLock(d, filename, retryCount, 0, retryTime, usePID)
+    return d
+
+def _tryCreateLock(d, filename, retryCount, retryCurrent, retryTime, usePID):
+    if retryCount == retryCurrent:
+        return d.errback(DidNotGetLock())
+    if retryTime > 60: retryTime = 60
+    try:
+        l = LockFile(filename, usePID)
+    except DidNotGetLock:
+        s = os.stat(filename)
+        if (time.time() - s.st_atime) > 300: # older than 5 minutes
+            os.remove(filename)
+            return _tryCreateLock(d, filename, retryCount, retryCurrent, retryTime, usePID)
+        if usePID:
+            try:
+                pid = int(open(filename).read())
+            except ValueError:
+                return _tryCreateLock(d, filename, retryCount, retryCurrent, retryTime, usePID)
+            try:
+                os.kill(pid, 0)
+            except OSError, why:
+                if why[0] == errno.ESRCH:
+                    os.remove(filename)
+                    return _tryCreateLock(d, filename, retryCount, retryCurrent, retryTime, usePID)
+    else:
+        return d.callback(l)
+    reactor.callLater(retryTime, _tryCreateLock, d, filename, retryCount, retryCurrent+1, retryTime + 5, usePID)
+
+def checkLock(lockedFile, usePID=0):
+    filename = lockedFile + ".lock"
+    if not os.path.exists(filename):
+        return 0
+    s = os.stat(filename)
+    if (time.time() - s.st_atime) > 300: # older than 5 minutes
+        return 0
+    if usePID:
+        try:
+            pid = int(open(filename).read())
+        except ValueError:
+            return 0
+        try:
+            os.kill(pid, 0)
+        except OSError, why:
+            if why[0] == errno.ESRCH: # dead pid
+                return 0
+    return 1
+
+__all__ = ["createLock", "checkLock"]
