@@ -38,7 +38,7 @@ class ResultHarvester:
     def performTest(self, function, *args, **kwargs):
         l = len(self.results)
         try:
-            apply(function, args, kwargs)
+            function(*args, **kwargs)
         except Exception, e:
             self.results.append(e)
         if l == len(self.results):
