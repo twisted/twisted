@@ -77,6 +77,11 @@ class GtkReactor(default.PosixReactorBase):
             gtk.input_remove(writes[writer])
             del writes[writer]
 
+    def doIteration(self, delay=0.0):
+        if delay != 0:
+            log.msg("Error, gtk doIteration() only supports delay of 0")
+        gtk.mainiteration()
+    
     def crash(self):
         gtk.mainquit()
 
