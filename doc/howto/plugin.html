@@ -51,7 +51,8 @@ well as other information, Twisted serializes <code
 class="python">Application</code> instances, storing all event handlers that
 have been registered with them.  Since the whole <code
 class="python">Application</code> instance is serialized, Twisted
-"configuration" files are significantly more comprehensive than those for other
+<q>configuration</q> files are significantly more comprehensive than
+those for other
 systems. These files store everything related to a running <code
 class="python">Application</code> instance; in essence the full state of a
 running process.</p>
@@ -84,10 +85,12 @@ plug-in system for Twisted, <code class="API">twisted.python.plugin</code>, is
 a way to find (without loading) and then load plug-ins for particular
 systems.</p>
 
-<p>Unlike other "plug-in" systems, like the well known ones associated with The
+<p>Unlike other <q>plug-in</q> systems, like the well known ones associated
+with The
 Gimp, Photoshop, and Apache <code class="API">twisted.python.plugin</code> is
 generic.  Any one of the Twisted <a
-href="http://twistedmatrix.com/products/dot-products" >"dot-products"</a> can
+href="http://twistedmatrix.com/products/dot-products" ><q>dot-products</q></a>
+can
 define mechanisms for extensibility using plug-ins.  Two Twisted dot-products
 already load such plug-ins.  The twisted.tap package loads Twisted Application
 builder modules (TAP plug-ins) and the twisted.coil package loads configuration
@@ -99,7 +102,8 @@ href="http://www.python.org/doc/current/tut/node8.html#SECTION008400000000000000
 >Python package</a> (that is, a directory whose parent is on sys.path which
 contains an <code class="shell">__init__.py</code>) can potentially contain
 some number of plug-ins.  Packages which contain plug-ins are called
-"drop-ins", because you "drop" them into your sys.path. The only difference
+<q>drop-ins</q>, because you <q>drop</q> them into your sys.path. The only
+difference
 between a package and a drop-in is the existence of a file named <code
 class="shell">plugins.tml</code> (TML for Twisted Module List) that contains
 some special Python expressions to identify the location of sub-packages or
@@ -176,7 +180,8 @@ writing your first one.</p>
 <h2>Twisted Quotes: A Case Study</h2>
 
 <p>As an example, we are going to work on a Quote of the Day application,
-"TwistedQuotes".  Aspects of this application will be explored in more depth
+<code>TwistedQuotes</code>.
+Aspects of this application will be explored in more depth
 throughout in the Twisted documentation. </p>
 
 <p>TwistedQuotes is a very simple plugin which is a great demonstration of
@@ -236,7 +241,8 @@ Having such classes provides a way to decouple your components from each other,
 by allowing each to be used independently.</p>
 
 <p>In this manner, Twisted itself has minimal impact on the logic of your
-program.  Although the Twisted "dot products" are highly interoperable, they
+program.  Although the Twisted <q>dot products</q> are highly interoperable,
+they
 also follow this approach.  You can use them independently because they are not
 stuck to each other.  They communicate in well-defined ways, and only when that
 communication provides some additional feature.  Thus, you can use <code
@@ -349,7 +355,8 @@ An apple a day keeps the doctor away.
 </pre>
 
 <p>Let's walk through the above example.  First, we run <code
-class="shell">mktap</code> specifying the Application type ("qotd") to create.
+class="shell">mktap</code> specifying the Application type
+(<code>qotd</code>) to create.
 <code class="shell">mktap</code> reads in our <code
 class="shell">plugins.tml</code> file, instantiates an <code
 class="python">Application</code> object, fills in the appropriate data, and
