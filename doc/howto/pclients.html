@@ -1,0 +1,168 @@
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<title>Managing Clients of Perspectives</title>
+<link rel="author" href="http://twistedmatrix.com/users/acapnotic/" title="Kevin Turner" />
+</head>
+<body>
+<h1>Managing Clients of Perspectives</h1>
+
+<h2>Overview</h2>
+
+<p>As we've watched several applications build on top of <code class=
+"API" >twisted.cred</code> and <a href= "FIXME" >Perspective
+Broker</a>, we've seen several models of interaction between <code
+class="API" base="twisted.cred.perspective">Perspective</code>s and
+the clients which connect to them.  In the future, these patterns may
+be codified by support classes in the framework, but for now we shall
+just document them here.  They are:</p>
+
+<dl>
+  <dt><a href="#clientless">Clientless Perspective</a></dt>
+  <dd><p>in which the Perspective remains oblivious of the fact that
+  clients attach to it.</p></dd>
+
+  <dt><a href="#singleClient">Single Client</a></dt>
+
+  <dd><p>in which no more than one client is attached to a Perspective.
+  There are two sub-categories, based on how this limit is enforced:</p>
+    <ul>
+      <li>excess connections from clients are <a href= "#singleClient"
+      >refused</a> (seen in <a href= "http://purl.net/net/CVSToys/"
+      >CVSToys</a>).</li>
+      <li>new connections <a href="#singleClientKick">replace</a> the
+      old (seen in <code class="API">twisted.words</code>).</li>
+    </ul>
+  </dd>
+
+  <dt><a href="#multiClient">Multiple Client</a></dt>
+
+  <dd><p>in which the Perspective keeps a list of clients instead of a
+     single one.  The clients all share this Perspective, the actions
+     of any may effect the perspective for all.  (Seen in <span class=
+     "API" >twisted.manhole</span>.)</p></dd>
+     
+  <dt><a href="#anonymous">Anonymous Clients</a></dt>
+  <dd><p>where any number of clients may connect to the service using
+     a particular perspective name, but clients may not effect one
+     another and any changes to the perspective do not
+     persist.</p></dd>
+</dl>
+
+<p class="doIt">explain or point to how clients get attached to
+perspectives (pb.connect, guard(?)).</p>
+
+<h2 id="clientless">Clientless Perspective</h2>
+
+<a href="listings/pclients/clientless.py" class="py-listing" >clientless.py</a>
+
+<p>Needless to say, the <code>ClientlessPerspective</code> is not ideal for
+all applications.  A common model for network applications is to have the
+client functioning as an observer of messages distributed by the server
+(i.e. chat services, build failure notification, etc.).  For this purpose,
+the server needs maintain a list of observers on reachable clients.  The
+Perspective class provides facilities for this, offering <code class="API"
+base= "twisted.cred.perspective.Perspective" >attached</code>() and <code
+class="API" base= "twisted.cred.perspective.Perspective" >detached</code>()
+methods which are called with references to clients connecting or disconnecting
+from the service.</p>
+
+<h2 id="singleClient">Single Client</h2>
+
+<a href="listings/pclients/single.py" class="py-listing" >single.py</a>
+
+<p>Here's a more complex example, using the more specialized <code
+class="API" base="twisted.spread.pb.Perspective">brokerAttached</code>
+method of Perspective Broker.</p>
+
+<a href="listings/pclients/single-pb.py" class="py-listing" >single-pb.py</a>
+
+<p id="singleClientKick">Here's an example which attempts to enforce
+the single-client limit in a different manner:</p>
+
+<a href="listings/pclients/single-kick.py" class="py-listing" >single-kick.py</a>
+
+<p>What do we learn?</p>
+
+<ul>
+  <li><code class="API">twisted.words</code>, the only system that
+   ships with Twisted which uses Perspectives in Perspective Broker,
+   is a lousy example.  ;)</li>
+
+  <li><code class="API" base= "twisted.cred.perspective.Perspective"
+  >detached</code> is not sufficient to kick a client off.</li>
+</ul>
+
+<p>In fact, it turns out to be hard to kick a client off a Perspective, because
+there's no way you can force them to lose the reference they hold.  The best
+you can do is define a "goodbye" method on the client interface and hope
+they honor and implement it correctly.  If the client is talking to you over
+a transport (as is the case with Perspective Broker), you can kick them off
+somewhat forcibly by closing the transport, but this is bad practice for
+several reasons.  First, it requires knowing how to access and shut down the
+transport, which breaks some abstractions.  Second, it's a damned inconsiderate
+thing to do if that transport may have been also carrying traffic for other
+services.</p>
+
+<p>I can think of several lines along which you could develop from here:</p>
+
+<ul>
+  <li>Add a way to mark references as invalid to Perspective Broker.  Then
+  when the client tried to call a method on the perspective, it would get
+  an exception saying it wasn't allowed to talk to that object any more.
+  Obviously, this only works for Perspective Broker, and not for other systems
+  which might access your Service.</li>
+
+  <li>Forget about the whole idea of kicking clients off.  Anyone who has
+  gained a reference to the Perspective through the Authorizer has a right to
+  keep it.  If another client wants to attach before the first one is done,
+  you'll just have to accommodate them both. Which leads us to...</li>
+</ul>
+
+<h2 id="multiClient">Multiple Client</h2>
+
+<a href="listings/pclients/multiple.py" class="py-listing" >multiple.py</a>
+
+<h2 id="anonymous">Anonymous Clients</h2>
+
+<p>Last item on the list: Anonymous perspectives.  One way to do
+it would be to use a <code >ClientlessPerspective</code> or <code
+>MultipleClientPerspective</code> and promise to not have any methods that
+stored state on or otherwise modified the perspective instance so no client
+can interfere with any other.  Another way to do it, without that restriction,
+would be to use disposable Perspectives:</p>
+
+<a href="listings/pclients/unattachable.py" class="py-listing" >unattachable.py</a>
+
+<p>If you wanted to have <em>all</em> access to a Service be
+anonymous, you could make a service like this:</p>
+
+<pre class="python">
+class AnonymousService(service.Service):
+    class perspectiveClass(UnattachablePerspective):
+        disposablePerspectiveClass = MyAnonymousPerspective
+        # XXX: does this lazy subclassing work, or do you end up with a class
+        # that isn't persistable because it's not module-level or something?
+</pre>
+
+<p>But to make only certain log-ins anonymous:</p>
+
+<pre class="python">
+theService = Service(serviceName)
+anonymousPerspective = UnattachablePerspective("anonymous")
+anonymousPerspective.disposablePerspectiveClass = MyAnonymousPerspective
+theService.addPerspective(anonymousPerspective)
+# Set anonymous's password to the empty string:
+anonymousPerspective.makeIdentity('')
+</pre>
+
+<h2>Feedback</h2>
+
+<p>That's all for today, thanks for playing.  We'd like to hear about
+how you're using this code!  Questions, comments, reservations?
+Please send them to <a href= "mailto:twisted-python@twistedmatrix.com"
+>twisted-python@twistedmatrix.com</a>.</p>
+
+<hr />
+<!-- $Id -->
+<!-- hhmts start -->Last modified: Mon Apr 14 20:49:19 PDT 2003 <!-- hhmts end -->
+</body> </html>
