@@ -446,31 +446,20 @@ class PTYProcess(abstract.FileDescriptor, styles.Ephemeral):
         if pid == 0: # pid is 0 in the child process
             try:
                 sys.settrace(None)
-                
-                if hasattr(termios, 'TIOCNOTTY'):
-                    try:
-                        fd = os.open('/dev/tty', os.O_RDWR|os.O_NOCTTY)
-                    except:
-                        pass
-                    else:
-                        fcntl.ioctl(fd, termios.TIOCNOTTY, 0)
-                        os.close(fd)
-                
-                os.setsid()
                 os.close(masterfd)
-                #for fd in range(3):
-                #    os.close(fd)
+                os.setsid()
+                if hasattr(termios, 'TIOCSCTTY'):
+                    fcntl.ioctl(slavefd, termios.TIOCSCTTY, '')
+                else:
+                    for fd in range(3):
+                        if fd != slavefd:
+                            os.close(fd)
+                    fd = os.open(ttyname, os.O_RDWR)
+                    os.close(fd)
 
                 os.dup2(slavefd, 0) # stdin
                 os.dup2(slavefd, 1) # stdout
                 os.dup2(slavefd, 2) # stderr
-                
-                if hasattr(termios, 'TIOCSCTTY'):
-                    fcntl.ioctl(slavefd, termios.TIOCSCTTY, 0)
-
-                os.close(slavefd)
-                fd = os.open('/dev/tty',os.O_WRONLY)
-                os.close(fd)
 
                 if path:
                     os.chdir(path)
@@ -492,6 +481,8 @@ class PTYProcess(abstract.FileDescriptor, styles.Ephemeral):
                 traceback.print_exc(file=stderr)
                 stderr.flush()
             os._exit(1)
+        assert pid!=0
+        os.close(slavefd)
         fdesc.setNonBlocking(masterfd)
         self.fd=masterfd
         self.startReading()
@@ -533,7 +524,7 @@ class PTYProcess(abstract.FileDescriptor, styles.Ephemeral):
 
     def processEnded(self, status):
         self.status = status
-        self.lostProcess = 1
+        self.lostProcess += 1
         self.maybeCallProcessEnded()
 
     def doRead(self):
@@ -550,8 +541,8 @@ class PTYProcess(abstract.FileDescriptor, styles.Ephemeral):
         return self.fd
 
     def maybeCallProcessEnded(self):
-        if self.lostProcess:
-            self.doRead()
+        log.msg('mcpe %s' % self.lostProcess)
+        if self.lostProcess == 2:
             try:
                 if self.status != -1:
                     exitCode = os.WEXITSTATUS(self.status) 
@@ -568,6 +559,7 @@ class PTYProcess(abstract.FileDescriptor, styles.Ephemeral):
         """I call this to clean up when one or all of my connections has died.
         """
         abstract.FileDescriptor.connectionLost(self, reason)
+        self.lostProcess +=1
         self.maybeCallProcessEnded()
 
     def writeSomeData(self, data):
