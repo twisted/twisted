@@ -8,6 +8,8 @@ hopefully encompass all forms of remote access which can emulate subsets of PB
 
 """
 
+import types
+
 copy_atom = "copy"
 cache_atom = "cache"
 cached_atom = "cached"
