@@ -3047,3 +3047,6 @@ ensues
 %
 <radix> I love killing everything with the sword
 %
+<porridge> does python have an equivalent of C ternary "?:" operator?
+<Erwin> Python has the sextary operator, !@#$^&. Given expression x, each of the 6 operands of the sextary operator is evaluated depending on whether the expression is logically true, false, morally right or wrong or neither of those
+%
