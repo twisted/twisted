@@ -240,26 +240,30 @@ class TestSuite(Timed):
             # this is where the test run starts
             # eventually, the suite should call reporter.startSuite() with
             # the predicted number of tests to be run
-            for test in tests:
-                tr = itrial.ITestRunner(test)
-                self.children.append(tr)
-                tr.parent = self
+            try:
+                for test in tests:
+                    tr = itrial.ITestRunner(test)
+                    self.children.append(tr)
+                    tr.parent = self
 
-                try:
-                    tr.runTests(randomize=(seed is not None))
-                except KeyboardInterrupt:
-                    log.msg(iface=ITrialDebug, kbd="KEYBOARD INTERRUPT")
-                    self._bail()
-                    raise
-                except:
-                    f = failure.Failure()
-                    annoyingBorder = "-!*@&" * 20
-                    trialIsBroken = """
+                    try:
+                        tr.runTests(randomize=(seed is not None))
+                    except KeyboardInterrupt:
+                        # KeyboardInterrupts are normal, not a bug in trial.
+                        # Just stop the test run, and do the usual reporting.
+                        raise
+                    except:
+                        # Any other exception is problem.  Report it.
+                        f = failure.Failure()
+                        annoyingBorder = "-!*@&" * 20
+                        trialIsBroken = """
 \tWHOOP! WHOOP! DANGER WILL ROBINSON! DANGER! WHOOP! WHOOP!
 \tcaught exception in TestSuite! \n\n\t\tTRIAL IS BROKEN!\n\n
 \t%s""" % ('\n\t'.join(f.getTraceback().split('\n')),)
-                    print "\n%s\n%s\n\n%s\n" % \
-                          (annoyingBorder, trialIsBroken, annoyingBorder)
+                        print "\n%s\n%s\n\n%s\n" % \
+                              (annoyingBorder, trialIsBroken, annoyingBorder)
+            except KeyboardInterrupt:
+                log.msg(iface=ITrialDebug, kbd="KEYBOARD INTERRUPT")
 
             for name, exc in self.couldNotImport.iteritems():
                 # XXX: AFAICT this is only used by RemoteJellyReporter
