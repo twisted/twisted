@@ -332,6 +332,14 @@ class Widget(view.View):
         self.become['id'] = id
 #        self.modelChanged({'request': request})
 
+    def getTopModel(self):
+        """Get a reference to this page's top model object.
+        """
+        top = self.model
+        while top.parent is not None:
+            top = top.parent
+        return top
+
     def getPattern(self, name, default=missingPattern, clone=1):
         """Get a named slot from the incoming template node. Returns a copy
         of the node and all its children. If there was more than one node with
