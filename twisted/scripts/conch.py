@@ -15,7 +15,7 @@
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 #
-# $Id: conch.py,v 1.1 2002/11/07 22:11:02 z3p Exp $
+# $Id: conch.py,v 1.2 2002/11/07 22:30:04 z3p Exp $
 
 #""" Implementation module for the `ssh` command.
 #"""
@@ -158,7 +158,7 @@ class SSHConnection(connection.SSHConnection):
     def serviceStarted(self):
 # port forwarding will go here
         if not options['notty']:
-            self.openChannel(SSHSession(1048576, 16384))
+            self.openChannel(SSHSession(1048576, 1073741824))
 
 class SSHSession(connection.SSHChannel):
     name = 'session'
@@ -180,8 +180,8 @@ class SSHSession(connection.SSHChannel):
         c.dataReceived = self.write
         stdio.StandardIO(c)
         term = os.environ['TERM']
-        columns = os.environ.get('COLUMNS', 80)
-        rows = os.environ.get('ROWS', 25)
+        columns = int(os.environ.get('COLUMNS', 80))
+        rows = int(os.environ.get('ROWS', 25))
         if options['subsystem']:
             self.conn.sendRequest(self, 'subsystem', \
                 common.NS(options['command']))
