@@ -203,13 +203,5 @@ class TOCProto(basesupport.AbstractClientMixin, toc.TOCClient):
 class TOCAccount(basesupport.AbstractAccount):
     gatewayType = "AIM (TOC)"
 
-    def __init__(self, accountName, autoLogin, username, password, host, port):
-        self.accountName = accountName
-        self.autoLogin = autoLogin
-        self.username = username
-        self.password = password
-        self.host = host
-        self.port = port
-
     def _startLogOn(self, chatui):
         return protocol.ClientCreator(reactor, TOCProto, self, chatui).connectTCP(self.host, self.port)

@@ -128,9 +128,24 @@ class AbstractAccount:
     connection to the server.
     @type _isOnline: boolean
     @ivar _isOnline: Whether I am currently on-line with the server.
+
+    @ivar accountName:
+    @ivar autoLogin:
+    @ivar username:
+    @ivar password:
+    @ivar host:
+    @ivar port:
     """
     _isOnline = 0
     _isConnecting = 0
+
+    def __init__(self, accountName, autoLogin, username, password, host, port):
+        self.accountName = accountName
+        self.autoLogin = autoLogin
+        self.username = username
+        self.password = password
+        self.host = host
+        self.port = port
 
     def __setstate__(self, d):
         if d.has_key('isOnline'):

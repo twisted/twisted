@@ -97,7 +97,7 @@ class IRCProto(basesupport.AbstractClientMixin, irc.IRCClient):
             print 'connection made on irc service!?', self
             if self.account.password:
                 self.sendLine("PASS :%s" % self.account.password)
-            self.setNick(self.account.nickname)
+            self.setNick(self.account.username)
             self.sendLine("USER %s foo bar :Twisted-IM user" % (self.nickname,))
             for channel in self.account.channels:
                 self.joinGroup(channel)
@@ -237,19 +237,13 @@ class IRCProto(basesupport.AbstractClientMixin, irc.IRCClient):
 
 class IRCAccount(basesupport.AbstractAccount):
     gatewayType = "IRC"
-    _isOnline = 0
-    def __init__(self, accountName, autoLogin, nickname, password, host, port,
+    def __init__(self, accountName, autoLogin, username, password, host, port,
                  channels=''):
-        self.accountName = accountName
-        self.autoLogin = autoLogin
-        self.nickname = nickname
-        self.password = password
-        self.channels=map(string.strip,string.split(channels,','))
-        if self.channels==['']:
-            self.channels=[]
-        self.host = host
-        self.port = port
-        self._isOnline = 0
+        baseaccount.AbstractAccount.__init__(self, accountName, autoLogin,
+                                             username, password, host, port)
+        self.channels = map(string.strip,string.split(channels,','))
+        if self.channels == ['']:
+            self.channels = []
 
     def _startLogOn(self, chatui):
         return protocol.ClientCreator(reactor, IRCProto, self, chatui).connectTCP(self.host, self.port)

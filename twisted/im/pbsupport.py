@@ -173,7 +173,6 @@ class TwistedWordsClient(pb.Referenceable, basesupport.AbstractClientMixin):
         self.chat.getContactsList()
 
 
-
 pbFrontEnds = {
     "twisted.words": TwistedWordsClient,
     "twisted.reality": None
@@ -181,19 +180,18 @@ pbFrontEnds = {
 
 
 class PBAccount(basesupport.AbstractAccount):
-    _isOnline = 0
     gatewayType = "PB"
-    def __init__(self, accountName, autoLogin, identity, password, host, port,
+    def __init__(self, accountName, autoLogin, username, password, host, port,
                  services=None):
-        self.accountName = accountName
-        self.autoLogin = autoLogin
-        self.password = password
-        self.host = host
-        self.port = port
-        self.identity = identity
+        """
+        @param username: The name of your PB Identity.
+        @type username: string
+        """
+        baseaccount.AbstractAccount.__init__(self, accountName, autoLogin,
+                                             username, password, host, port)
         self.services = []
         if not services:
-            services = [('twisted.words', 'twisted.words', identity)]
+            services = [('twisted.words', 'twisted.words', username)]
         for serviceType, serviceName, perspectiveName in services:
             self.services.append([pbFrontEnds[serviceType], serviceName,
                                   perspectiveName])
@@ -206,7 +204,7 @@ class PBAccount(basesupport.AbstractAccount):
     def _cbConnected(self, root, chatui):
         print 'Connected!'
         print 'Identifying...',
-        pb.authIdentity(root, self.identity, self.password).addCallbacks(
+        pb.authIdentity(root, self.username, self.password).addCallbacks(
             self._cbIdent, self._ebConnected, callbackArgs=(chatui,))
 
     def _cbIdent(self, ident, chatui):
