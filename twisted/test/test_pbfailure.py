@@ -90,9 +90,9 @@ class PBFailureTest(unittest.TestCase):
 
 
     def stopReactor(self):
-        reactor.cancelCallLater(self.id)
+        self.id.cancel()
         reactor.crash()
-        
+
     ##
     # callbacks
     ##

@@ -1,5 +1,5 @@
 # -*- Python -*-
-# $Id: default.py,v 1.33 2002/08/28 05:00:51 glyph Exp $
+# $Id: default.py,v 1.34 2002/08/30 19:15:20 exarkun Exp $
 #
 # Twisted, the Framework of Your Internet
 # Copyright (C) 2001 Matthew W. Lefkowitz
@@ -108,7 +108,7 @@ class BaseConnector:
     def cancelTimeout(self):
         if self.timeoutID:
             try:
-                self.reactor.cancelCallLater(self.timeoutID)
+                self.timeoutID.cancel()
             except ValueError:
                 pass
             del self.timeoutID

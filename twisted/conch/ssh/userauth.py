@@ -77,7 +77,7 @@ class SSHUserAuthServer(service.SSHService):
         self.authenticatedWith.append(self.method)
         self.supportedAuthentications.remove(self.method)
         if self.areDone():
-            reactor.cancelCallLater(self.cancelLoginTimeout)
+            self.cancelLoginTimeout.cancel()
             self.transport.sendPacket(MSG_USERAUTH_SUCCESS, '')
             self.transport.setService(self.transport.factory.services[self.nextService]())
         else:

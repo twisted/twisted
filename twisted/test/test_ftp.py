@@ -63,7 +63,7 @@ class FTPClientTests(unittest.TestCase):
             id = reactor.callLater(2, self.timeout)
             reactor.run()
             try:
-                reactor.cancelCallLater(id)
+                id.cancel()
             except:
                 pass
         finally:
@@ -136,7 +136,7 @@ class FTPClientAndServerTests(FTPServerTests):
         while not hasattr(self, 'result') and not hasattr(self, 'error'):
             reactor.iterate()
         try:
-            reactor.cancelCallLater(id)
+            id.cancel()
         except ValueError: pass
 
         error = getattr(self, 'error', None)
@@ -176,7 +176,7 @@ class FTPClientAndServerTests(FTPServerTests):
         while not hasattr(self, 'result') and not hasattr(self, 'error'):
             reactor.iterate()
         try:
-            reactor.cancelCallLater(id)
+            id.cancel()
         except ValueError: pass
         
         error = getattr(self, 'error', None)

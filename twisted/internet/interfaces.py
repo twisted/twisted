@@ -199,7 +199,9 @@ class IReactorTime(Interface):
           * callID: this is an opaque identifier returned from callLater that
             wil be used to cancel a specific call.
 	
-	Will raise ValueError if the callID is not recognized.
+        Will raise ValueError if the callID is not recognized.
+
+        This method is deprecated.
         """
 
 

@@ -42,7 +42,7 @@ def f():
     print "I'll never run."
 
 callID = reactor.callLater(5, f)
-reactor.cancelCallLater(callID)
+callID.cancel()
 </pre>     
 
   </body>

@@ -15,7 +15,7 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
 from pyunit import unittest
-from twisted.internet import reactor, protocol
+from twisted.internet import reactor, protocol, error
 from twisted.internet.defer import Deferred
 from twisted.python import threadable
 threadable.init(1)
@@ -83,14 +83,20 @@ class InterfaceTestCase(unittest.TestCase):
         def bad():
             raise RuntimeError, "this shouldn't have been called"
         i = reactor.callLater(0.1, bad)
-        reactor.cancelCallLater(i)
+        i.cancel()
+        
+        self.assertRaises(error.AlreadyCancelled, i.cancel)
         
         start = time.time()
-        reactor.callLater(0.5, self._callback, 1, a=1)
+        i = reactor.callLater(0.5, self._callback, 1, a=1)
+
         while time.time() - start < 0.6:
             reactor.iterate(0.01)
+
         self.assertEquals(self._called, 1)
         self.assert_( 0 < self._calledTime - start - 0.5 < 0.2 )
+        self.assertRaises(error.AlreadyCalled, i.cancel)
+
         del self._called
         del self._calledTime
 

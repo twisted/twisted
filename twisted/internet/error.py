@@ -110,3 +110,11 @@ class ConnectionDone(Exception):
 
 class ConnectionFdescWentAway(ConnectionLost):
     """Uh."""
+
+
+class AlreadyCalled(ValueError):
+    """Tried to cancel an already-called event."""
+
+
+class AlreadyCancelled(ValueError):
+    """Tried to cancel an already-cancelled event."""

@@ -20,13 +20,14 @@
 
 import socket # needed only for sync-dns
 
+import warnings
 from time import time
 from bisect import insort
 
 from twisted.internet.interfaces import IReactorCore, IReactorTime, IReactorUNIX, IReactorThreads
 from twisted.internet.interfaces import IReactorTCP, IReactorUDP, IReactorSSL
 from twisted.internet.interfaces import IReactorProcess
-from twisted.internet import main
+from twisted.internet import main, error
 from twisted.python import threadable, log
 from twisted.internet.defer import Deferred, DeferredList
 
@@ -39,6 +40,27 @@ def _nmin(a, b):
     return min(a, b)
 
 
+
+class DelayedCall:
+    def __init__(self, time, func, args, kw, cancel):
+        self.time, self.func, self.args, self.kw = time, func, args, kw
+        self.canceller = cancel
+        self.cancelled = self.called = 0
+    
+    def cancel(self):
+        if self.cancelled:
+            raise error.AlreadyCancelled
+        elif self.called:
+            raise error.AlreadyCalled
+        else:
+            self.canceller(self)
+            self.cancelled = 1
+
+
+    def __cmp__(self, other):
+        if isinstance(other, DelayedCall):
+            return cmp((self.time, self.func, self.args, self.kw), (other.time, other.func, other.args, other.kw))
+        raise TypeError
 
 
 class ReactorBase:
@@ -235,18 +257,19 @@ class ReactorBase:
         """See twisted.internet.interfaces.IReactorTime.callLater.
         """
         assert callable(f)
-        tple = (time() + seconds, f, args, kw)
+        tple = DelayedCall(time() + seconds, f, args, kw, self._pendingTimedCalls.remove)
         insort(self._pendingTimedCalls, tple)
         return tple
 
     def cancelCallLater(self, callID):
         """See twisted.internet.interfaces.IReactorTime.cancelCallLater.
         """
-        self._pendingTimedCalls.remove(callID)
+        warnings.warn("reactor.cancelCallLater(callID) is deprecated - use callID.cancel() instead")
+        callID.cancel()
 
     def timeout(self):
         if self._pendingTimedCalls:
-            t = self._pendingTimedCalls[0][0] - time()
+            t = self._pendingTimedCalls[0].time - time()
             if t < 0:
                 t = 0
             mt = _nmin(t, self._delayeds.timeout())
@@ -265,10 +288,11 @@ class ReactorBase:
                 except:
                     log.deferr()
         now = time()
-        while self._pendingTimedCalls and (self._pendingTimedCalls[0][0] <= now):
-            seconds, func, args, kw = self._pendingTimedCalls.pop(0)
+        while self._pendingTimedCalls and (self._pendingTimedCalls[0].time <= now):
+            call = self._pendingTimedCalls.pop(0)
             try:
-                apply(func, args, kw)
+                call.called = 1
+                apply(call.func, call.args, call.kw)
             except:
                 log.deferr()
         self._delayeds.runUntilCurrent()

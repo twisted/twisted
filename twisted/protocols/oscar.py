@@ -269,7 +269,7 @@ class OscarConnection(protocol.Protocol):
 
     def stopKeepAlive(self):
         if self.stopKeepAliveID:
-            reactor.cancelCallLater(self.stopKeepAliveID)
+            self.stopKeepAliveID.cancel()
             self.stopKeepAliveID = None
 
     def disconnect(self):
