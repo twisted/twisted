@@ -600,9 +600,9 @@ class IMailbox(components.Interface):
         @type index: C{int}
         @param index: The number of the message for which to retrieve a UIDL
         
-        @rtype: C{int}
-        @return: An string of printable characters uniquely identifying for
-        all time the specified message.
+        @rtype: C{str}
+        @return: A string of printable characters uniquely identifying for all
+        time the specified message.
         """
     
     def deleteMessage(self, index):
