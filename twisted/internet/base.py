@@ -145,7 +145,7 @@ class ReactorBase:
         self.resolver = resolver
 
     def callFromThread(self, f, *args, **kw):
-        """See twisted.internet.interfaces.IReactorCore.callFromThread.
+        """See twisted.internet.interfaces.IReactorThreads.callFromThread.
         """
         assert callable(f), "%s is not callable" % f
         if threadable.isInIOThread():
@@ -378,11 +378,15 @@ class ReactorBase:
         self.addSystemEventTrigger('during', 'shutdown', self.threadpool.stop)
 
     def callInThread(self, callable, *args, **kwargs):
+        """See twisted.internet.interfaces.IReactorThreads.callInThread.
+        """
         if not self.threadpool:
             self._initThreadPool()
         self.threadpool.dispatch(log.logOwner.owner(), callable, *args, **kwargs)
 
     def suggestThreadPoolSize(self, size):
+        """See twisted.internet.interfaces.IReactorThreads.suggestThreadPoolSize.
+        """
         if size == 0 and not self.threadpool:
             return
         if not self.threadpool:
