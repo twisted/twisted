@@ -16,21 +16,17 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
 """
-I am a support module for making TOC servers with mktap.
+Support module for making TOC servers with mktap.
 """
 
 from twisted.protocols import toc
 from twisted.python import usage
-from twisted.application import internet
-import sys
+from twisted.application import strports
 
 class Options(usage.Options):
     synopsis = "Usage: mktap toc [-p <port>]"
-    optParameters = [["port", "p", 5190]]
-
+    optParameters = [["port", "p", "5190"]]
     longdesc = "Makes a TOC server."
 
 def makeService(config):
-    t = toc.TOCFactory()
-    portno = int(config['port'])
-    return internet.TCPServer(portno, t)
+    return strports.service(config['port'], toc.TOCFactory())
