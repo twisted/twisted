@@ -84,12 +84,14 @@ class DOMJellyable:
 class DOMUnjellier:
     def __init__(self):
         self.references = {}
+        self._savedLater = []
 
     def unjellyLater(self, node):
         """Unjelly a node, later.
         """
         d = _Defer()
         self.unjellyInto(d, 0, node)
+        self._savedLater.append(d)
         return d
 
     def unjellyInto(self, obj, loc, node):
@@ -98,9 +100,9 @@ class DOMUnjellier:
         This automates the handling of backreferences.
         """
         o = self.unjellyNode(node)
+        obj[loc] = o
         if isinstance(o, NotKnown):
             o.addDependant(obj, loc)
-        obj[loc] = o
         return o
 
     def unjellyAttribute(self, instance, attrName, valueNode):
@@ -199,8 +201,9 @@ class DOMUnjellier:
                 retval = der
         elif node.tagName == "copyreg":
             nodefunc = namedObject(node.getAttribute("loadfunc"))
-            return self.unjellyLater(getValueElement(node)).addCallback(
+            loaddef = self.unjellyLater(getValueElement(node)).addCallback(
                 lambda result, _l: apply(_l, result), nodefunc)
+            retval = loaddef
         else:
             raise "Unsupported Node Type: %s" % str(node.tagName)
         if node.hasAttribute("reference"):
@@ -216,7 +219,11 @@ class DOMUnjellier:
         return retval
 
     def unjelly(self, doc):
-        return self.unjellyNode(doc.childNodes[0])
+        l = [None]
+        self.unjellyInto(l, 0, doc.childNodes[0])
+        for svd in self._savedLater:
+            svd.unpause()
+        return l[0]
 
 
 class DOMJellier:

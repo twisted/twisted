@@ -54,7 +54,7 @@ class Interop(pb.Root):
 
     def remote_local(self, obj):
         d = obj.callRemote("hello")
-        d.addCallback(self._local_success).arm()
+        d.addCallback(self._local_success)
 
     def _local_success(self, result):
         if result != "hello, world":

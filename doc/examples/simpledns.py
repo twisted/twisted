@@ -14,6 +14,6 @@ resolver = dns.Resolver(["192.114.42.86"])
 deferred = resolver.resolve("www.zoteca.com")
 deferred.addCallback(printAnswer)
 deferred.addErrback(printFailure)
-deferred.arm()
+deferred
 
 main.run()

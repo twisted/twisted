@@ -787,7 +787,6 @@ class Broker(banana.Banana):
                     netResult.addCallbacks(self._sendAnswer, self._sendFailure,
                                            callbackArgs=args, errbackArgs=args)
                     # XXX Should this be done somewhere else?
-                    netResult.arm()
                 else:
                     self._sendAnswer(netResult, requestID)
     ##
@@ -806,7 +805,7 @@ class Broker(banana.Banana):
         """
         d = self.waitingForAnswers[requestID]
         del self.waitingForAnswers[requestID]
-        d.armAndCallback(self.unserialize(netResult))
+        d.callback(self.unserialize(netResult))
 
     ##
     # failure
@@ -1002,7 +1001,6 @@ class AuthChallenger(Referenceable):
             pwrq = self.ident.verifyPassword(self.challenge, response)
             pwrq.addCallback(self._authOk, d)
             pwrq.addErrback(self._authFail, d)
-            pwrq.arm()
             return d
 
     def _authOk(self, result, d):

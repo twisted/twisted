@@ -168,12 +168,12 @@ class Marmaladeable(marmalade.DOMJellyable):
                     unjellier.unjellyAttribute(self, "instance", node)
                 else:
                     self.sequence.append(None)
-                    # TODO: MUST BE FIXED!!! calling .arm() in situations like
-                    # this makes _no_ sense
-                    unjellier.unjellyLater(node).addCallback(self.gotSequenceItem, i).arm()
+                    unjellier.unjellyLater(node).addCallback(
+                        self.gotSequenceItem, i)
                     i = i + 1
 
     def gotSequenceItem(self, seqitem, num):
+        print "seq item", seqitem, num
         self.sequence[num] = seqitem
 
 
@@ -192,6 +192,12 @@ class MarmaladeTestCase(unittest.TestCase):
         s2 = marmalade.jellyToXML(u)
         u2 = marmalade.unjellyFromXML(s2)
         self.assertEquals( u2.sequence,  [u2.instance, u2.instance, u2.instance])
+
+    def testCopyReg(self):
+        s = "foo_bar"
+        sio = cStringIO.StringIO()
+        sio.write(s)
+        assert marmalade.unjellyFromXML(marmalade.jellyToXML({1:sio}))[1].getvalue() == s
 
     def testMethodSelfIdentity(self):
         a = A()
@@ -255,6 +261,11 @@ class EvilSourceror:
         self.a.b = self
         self.a.b.c = x
 
+class NonDictState:
+    def __getstate__(self):
+        return self.state
+    def __setstate__(self, state):
+        self.state = state
 
 class AOTTestCase(unittest.TestCase):
     def testMethodSelfIdentity(self):
@@ -284,10 +295,24 @@ class AOTTestCase(unittest.TestCase):
         assert uj[0] is uj[1]
         assert uj[1][0:5] == l[0:5]
 
+
+    def testNonDictState(self):
+        a = NonDictState()
+        a.state = "meringue!"
+        assert aot.unjellyFromSource(aot.jellyToSource(a)).state == a.state
+
+    def testCopyReg(self):
+        s = "foo_bar"
+        sio = cStringIO.StringIO()
+        sio.write(s)
+        uj = aot.unjellyFromSource(aot.jellyToSource(sio))
+        # print repr(uj.__dict__)
+        assert uj.getvalue() == s
+
     def testFunkyReferences(self):
         o = EvilSourceror(EvilSourceror([]))
-
-        oj = aot.unjellyFromAOT(aot.jellyToAOT(o))
+        j1 = aot.jellyToAOT(o)
+        oj = aot.unjellyFromAOT(j1)
 
         assert oj.a is oj
         assert oj.a.b is oj.b

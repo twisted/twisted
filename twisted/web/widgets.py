@@ -705,18 +705,14 @@ class RenderSession:
         self.needsHeaders = 0
         self.beforeBody = 1
         self.forgotten = 0
-        toArm = []
+        self.pauseList = []
         for i in range(len(self.lst)):
             item = self.lst[i]
             if isinstance(item, defer.Deferred):
-                self.lst[i] = (self._addDeferred(item), item)
-                toArm.append(item)
-
+                self._addDeferred(item, self.lst, i)
         self.keepRendering()
-        for item in toArm:
-            item.arm()
 
-    def _addDeferred(self, deferred):
+    def _addDeferred(self, deferred, lst, idx):
         sentinel = self.Sentinel()
         if hasattr(deferred, 'needsHeader'):
             # You might want to set a header from a deferred, in which
@@ -725,9 +721,12 @@ class RenderSession:
             args = (sentinel, 1)
         else:
             args = (sentinel, 0)
+        lst[idx] = sentinel, deferred
+        deferred.pause()
+        self.pauseList.append(deferred)
         deferred.addCallbacks(self.callback, self.callback,
                               callbackArgs=args, errbackArgs=args)
-        return sentinel
+        
 
     def callback(self, result, sentinel, decNeedsHeaders):
         if self.forgotten:
@@ -754,12 +753,10 @@ class RenderSession:
         else:
             done = 1
 
-        toArm = []
         for i in xrange(len(result)):
             item = result[i]
             if isinstance(item, defer.Deferred):
-                result[i] = (self._addDeferred(item), item)
-                toArm.append(item)
+                self._addDeferred(item, result, i)
 
         for position in range(len(self.lst)):
             item = self.lst[position]
@@ -774,20 +771,17 @@ class RenderSession:
         else:
             self.lst[position:position] = result
 
-        # Consolidate strings to minimize length of list,
-        # Good try, but this seems really buggy
-##        for i in range(1, len(self.lst)):
-##            last = type(self.lst[i-1]) is types.StringType
-##            this = type(self.lst[i]) is types.StringType
-##            if last and this:
-##                self.lst[i-1:i+1] = [self.lst[i-1] + self.lst[i]]
-
         self.keepRendering()
-        for r in toArm:
-            r.arm()
 
 
     def keepRendering(self):
+        while self.pauseList:
+            pl = self.pauseList
+            self.pauseList = []
+            for deferred in pl:
+                deferred.unpause()
+            return
+
         if self.needsHeaders:
             # short circuit actual rendering process until we're sure no
             # more deferreds need to set headers...

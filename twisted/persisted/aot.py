@@ -21,7 +21,7 @@
 # this side of Marmalade!
 # 
 
-import types, new, string
+import types, new, string, copy_reg
 
 from twisted.python import reflect
 from twisted.persisted import crefutil
@@ -59,16 +59,36 @@ class InstanceMethod:
         return "InstanceMethod(%r, %r, \n\t%s)" % (self.name, self.klass, prettify(self.instance))
 
 
+class _NoStateObj:
+    pass
+NoStateObj = _NoStateObj()
+
 class Instance:
-    def __init__(self, className, **state):
+    def __init__(self, className, __stateObj__=NoStateObj, **state):
         if not isinstance(className, types.StringType):
             raise TypeError("%s isn't a string!" % className)
         self.klass = className
-        self.state = state
+        if __stateObj__ is not NoStateObj:
+            self.state = __stateObj__
+            self.stateIsDict = 0
+        else:
+            self.state = state
+            self.stateIsDict = 1
 
     def getSource(self):
         #XXX make state be foo=bar instead of a dict.
-        return "Instance(%r, %s\n\t)" % (self.klass, dictToKW(self.state))
+        if self.stateIsDict:
+            stateDict = self.state
+        elif isinstance(self.state, Ref) and isinstance(self.state.obj, types.DictType):
+            stateDict = self.state.obj
+        else:
+            stateDict = None
+        if stateDict is not None:
+            try:
+                return "Instance(%r, %s)" % (self.klass, dictToKW(stateDict))
+            except NonFormattableDict:
+                pass
+        return "Instance(%r, %s)" % (self.klass, prettify(self.state))
 
 class Ref:
 
@@ -108,12 +128,12 @@ class Deref:
 
 
 class Copyreg:
-    def __init__(self, loadfunc, **state):
+    def __init__(self, loadfunc, state):
         self.loadfunc = loadfunc
         self.state = state
 
     def getSource(self):
-        return "Copyreg(%r, %r)" % (self.loadfunc, dictToKW(self.state))
+        return "Copyreg(%r, %s)" % (self.loadfunc, prettify(self.state))
 
 
 
@@ -125,16 +145,24 @@ class Copyreg:
 def getSource(ao):
     """Pass me an AO, I'll return a nicely-formatted source representation."""
     return indentify("app = " + prettify(ao))
-    
+
+
+class NonFormattableDict(Exception):
+    """A dictionary was not formattable.
+    """
 
 def dictToKW(d):
     out = []
-    for k,v in d.items():
+    items = d.items()
+    items.sort()
+    for k,v in items:
+        if not isinstance(k, types.StringType):
+            raise NonFormattableDict(d)
         out.append(
             "\n\t%s=%s," % (k, prettify(v))
             )
     return string.join(out, '')
-            
+
 
 def prettify(obj):
     if hasattr(obj, 'getSource'):
@@ -221,7 +249,7 @@ def unjellyFromSource(stringOrFile):
         exec stringOrFile in ns
 
     if ns.has_key('app'):
-        return unjellyFromAOT(ns['app']) #either an Instance or a Ref
+        return unjellyFromAOT(ns['app'])
     else:
         raise ValueError("%s needs to define an 'app', it didn't!" % stringOrFile)
 
@@ -248,9 +276,9 @@ class AOTUnjellier:
         This automates the handling of backreferences.
         """
         o = self.unjellyAO(ao)
+        obj[loc] = o
         if isinstance(o, crefutil.NotKnown):
             o.addDependant(obj, loc)
-        obj[loc] = o
         return o
 
     def unjellyAttribute(self, instance, attrName, ao):
@@ -265,7 +293,8 @@ class AOTUnjellier:
 
     def unjellyAO(self, ao):
         """Unjelly an Abstract Object and everything it contains.
-        I return the real object."""
+        I return the real object.
+        """
         t = type(ao)
         if t is types.InstanceType:
             #Abstract Objects
@@ -311,8 +340,11 @@ class AOTUnjellier:
                 elif isinstance(ref, crefutil.NotKnown):
                     ref.resolveDependants(o)
                     self.references[refkey] = o
+                elif refkey is None:
+                    # This happens when you're unjellying from an AOT not read from source
+                    pass
                 else:
-                    raise ValueError("Multiple references with the same ID!")
+                    raise ValueError("Multiple references with the same ID: %s, %s, %s!" % (ref, refkey, ao))
                 return o
 
             elif c is Deref:
@@ -325,9 +357,10 @@ class AOTUnjellier:
                 return ref
 
             elif c is Copyreg:
-                loadfunc = ao.loadfunc
-                return self.unjellyLater(ao.state).addCallback(
+                loadfunc = reflect.namedObject(ao.loadfunc)
+                d = self.unjellyLater(ao.state).addCallback(
                     lambda result, _l: apply(_l, result), loadfunc)
+                return d
 
         #Types
                 
@@ -363,9 +396,10 @@ class AOTUnjellier:
             raise TypeError("Unsupported AOT type: %s" % t)
 
         
-
-
-    unjelly = unjellyAO
+    def unjelly(self, ao):
+        l = [None]
+        self.unjellyInto(l, 0, ao)
+        return l[0]
 
 #########
 # Jelly #
@@ -469,13 +503,13 @@ class AOTJellier:
                     state = self.jellyToAO(obj.__getstate__())
                 else:
                     state = self.jellyToAO(obj.__dict__)
-                retval.setObj(apply(Instance, (str(obj.__class__),), state.obj))
+                retval.setObj(Instance(str(obj.__class__), state))
 
             elif copy_reg.dispatch_table.has_key(objType):
                 unpickleFunc, state = copy_reg.dispatch_table[objType](obj)
                 
-                retval.setObj(apply(Copyreg, (fullFuncName(unpickleFunc),),
-                                    self.jellyToAO(state).obj))
+                retval.setObj(Copyreg( reflect.fullFuncName(unpickleFunc),
+                                       self.jellyToAO(state)))
                 
             else:
                 raise "Unsupported type: %s" % objType.__name__

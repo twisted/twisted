@@ -58,7 +58,6 @@ class ServerDNSTestCase(unittest.TestCase):
         resolver = dns.Resolver(["localhost"])
         d = resolver.resolve("example.foo")
         d.addCallback(self.tS_result).addErrback(self.tS_error)
-        d.arm()
         
         while not hasattr(self, "gotAnswer"):
             reactor.iterate()
@@ -88,7 +87,6 @@ class LookupDNSTestCase(unittest.TestCase):
         else:
             d = self.resolver.resolve(domain, type)
             d.addCallback(self._result).addErrback(self._error)
-            d.arm()
             while len(self.results) == 0:
                 reactor.iterate()
             self.assertEquals(self.results[0], result)

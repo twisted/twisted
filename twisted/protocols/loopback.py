@@ -32,7 +32,7 @@ class LoopbackRelay(protocol.Transport):
         self.logFile = logFile
 
     def write(self, data):
-        #print "writing", `data`
+        # print "writing", `data`
         self.buffer = self.buffer + data
         if self.logFile:
             self.logFile.write("loopback writing %s\n" % repr(data))
@@ -55,12 +55,15 @@ class LoopbackRelay(protocol.Transport):
 
 
 def loopback(server, client, logFile=None):
-    """Run session between server and client."""
+    """Run session between server and client.
+    """
+    from twisted.internet import reactor
     serverToClient = LoopbackRelay(client, logFile)
     clientToServer = LoopbackRelay(server, logFile)
     server.makeConnection(serverToClient)
     client.makeConnection(clientToServer)
     while 1:
+        reactor.iterate() # this is to clear any deferreds
         serverToClient.clearBuffer()
         clientToServer.clearBuffer()
         if serverToClient.shouldLose:
@@ -70,6 +73,7 @@ def loopback(server, client, logFile=None):
             break
     client.connectionLost()
     server.connectionLost()
+    reactor.iterate() # last gasp before I go away
 
 
 def loopbackTCP(server, client, port=64124):
@@ -92,6 +96,5 @@ def loopbackTCP(server, client, port=64124):
 
     serverPort.stopListening()
     reactor.iterate()
-    reactor.iterate()
 
-        
+

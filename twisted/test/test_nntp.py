@@ -92,9 +92,9 @@ class NNTPTestCase(unittest.TestCase):
         # most common code path and nothing else.  Expand it and the
         # test fairy will leave you a surprise.
 
-        reactor.iterate() # fetchGroups() 
-        reactor.iterate() # fetchGroup()
-        reactor.iterate() # postArticle()
+        #         reactor.iterate(1) # fetchGroups()
+        #         reactor.iterate(1) # fetchGroup()
+        #         reactor.iterate(1) # postArticle()
 
     def tearDown(self):
         # Clean up the pickle file

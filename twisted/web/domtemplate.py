@@ -258,7 +258,6 @@ class DOMTemplate(Resource):
         elif isinstance(result, Deferred):
             self.outstandingCallbacks += 1
             result.addCallbacks(self.callback, callbackArgs=(request, node))
-            result.arm()
             # Got to wait until the callback comes in
             return None
         elif isinstance(result, types.StringType):

@@ -12,7 +12,7 @@ class PBBenchClient:
     def callLoop(self, ignored):
         d1 = self.persp.callRemote("simple")
         d2 = self.persp.callRemote("complexTypes")
-        defer.DeferredList([d1, d2]).addCallback(self.callLoop).arm()
+        defer.DeferredList([d1, d2]).addCallback(self.callLoop)
         self.calledThisSecond += 1
         thisSecond = int(time.time())
         if thisSecond != self.lastSecond:

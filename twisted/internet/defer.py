@@ -21,6 +21,9 @@ from twisted.python import log, failure
 # System Imports
 import types
 
+class AlreadyCalledError(Exception):
+    pass
+
 class AlreadyArmedError(Exception):
     pass
 
@@ -31,20 +34,18 @@ def logError(err):
     log.err(err)
     return err
 
-def _sched(m):
+def _sched(m, r):
     from twisted.internet import reactor
-    reactor.callLater(0, m)
+    reactor.callLater(0, m, r)
 
 def succeed(result):
     d = Deferred()
     d.callback(result)
-    _sched(d.arm)
     return d
 
 def fail(result):
     d = Deferred()
     d.errback(result)
-    _sched(d.arm)
     return d
 
 def timeout(deferred):
@@ -64,10 +65,9 @@ class Deferred:
     threads (see for example twisted.enterprise.adbapi).
     """
 
-    armed = 0
-    #self.called: 0 = "not called"; 1 = "answered", 2 = "errored"
     called = 0
     default = 0
+    paused = 0
 
     def __init__(self):
         self.callbacks = []
@@ -79,9 +79,6 @@ class Deferred:
 
         These will be executed when the 'master' callback is run.
         """
-        if self.armed:
-            raise AlreadyArmedError("You cannot add callbacks after a deferred"
-                                    "has already been armed.")
         cbs = ((callback, callbackArgs, callbackKeywords),
                (errback or logError, errbackArgs, errbackKeywords))
         if self.default:
@@ -89,6 +86,8 @@ class Deferred:
         else:
             self.callbacks.append(cbs)
         self.default = asDefaults
+        if self.called:
+            self._runCallbacks()
         return self
 
     def addCallback(self, callback, *args, **kw):
@@ -121,27 +120,6 @@ class Deferred:
     def chainDeferred(self, d):
         return self.addCallbacks(d.callback, d.errback)
 
-    def armAndCallback(self, result):
-        """Utility method to arm me and immediately issue a callback.
-        """
-        self.arm()
-        return self._runCallbacks(result, 0)
-
-    def armAndErrback(self, error):
-        """Utility method to arm me and immediately issue an error callback.
-        """
-        self.arm()
-        return self._runCallbacks(error, 1)
-
-    def armAndChain(self, deferred):
-        """Utility method to add another deferred to me as a set of callbacks.
-
-        Arguments:
-
-          deferred: the Deferred to be armed and fired when my callback arrives.
-        """
-        return self.addCallbacks(deferred.armAndCallback, deferred.armAndErrback)
-
     def callback(self, result):
         """Run all success callbacks that have been added to this Deferred.
 
@@ -152,7 +130,7 @@ class Deferred:
         If this deferred has not been armed yet, nothing will happen until it
         is armed.
         """
-        return self._runCallbacks(result, 0)
+        self._startRunCallbacks(result, 0)
 
 
     def errback(self, fail=None):
@@ -167,52 +145,64 @@ class Deferred:
         """
         if not fail:
             fail = failure.Failure()
-        return self._runCallbacks(fail, 1)
+        self._startRunCallbacks(fail, 1)
 
-    def _runCallbacks(self, result, isError):
+
+    def pause(self):
+        """Stop processing on a Deferred until unpause() is called.
+        """
+        self.paused = 1
+
+
+    def unpause(self):
+        """Process all callbacks made since pause() was called.
+        """
+        self.paused = 0
+        self._runCallbacks()
+
+
+    def _startRunCallbacks(self, result, isError):
+        if self.called:
+            raise AlreadyCalledError()
         self.called = isError + 1
-        if self.armed:
-            for item in self.callbacks:
-                callback, args, kw = item[isError]
-                args = args or ()
-                kw = kw or {}
-                try:
-                    result = apply(callback, (result,)+tuple(args), kw)
-                    if type(result) != types.StringType:
-                        # TODO: make this hack go away; it has something to do
-                        # with PB returning strings from errbacks that are
-                        # actually tracebacks that we still want to handle as
-                        # errors sometimes... can't find exactly where right
-                        # now
-                        if not isinstance(result, failure.Failure):
-                            isError = 0
-                except:
-                    result = failure.Failure()
-                    isError = 1
-                    # if this was the last pair of callbacks, we must make sure
-                    # that the error was logged, otherwise we'll never hear about it.
-                    if item == self.callbacks[-1]:
-                        logError(result)
-        else:
-            self.cbResult = result
+        self.isError = isError
+        self.result = result
+        self._runCallbacks()
+
+
+    def _runCallbacks(self):
+        if self.paused:
+            return
+        cb = self.callbacks
+        self.callbacks = []
+        for item in cb:
+            callback, args, kw = item[self.isError]
+            args = args or ()
+            kw = kw or {}
+            try:
+                self.result = apply(callback, (self.result,)+tuple(args), kw)
+                if type(self.result) != types.StringType:
+                    # TODO: make this hack go away; it has something to do
+                    # with PB returning strings from errbacks that are
+                    # actually tracebacks that we still want to handle as
+                    # errors sometimes... can't find exactly where right
+                    # now
+                    if not isinstance(self.result, failure.Failure):
+                        self.isError = 0
+            except:
+                self.result = failure.Failure()
+                self.isError = 1
+                # if this was the last pair of callbacks, we must make sure
+                # that the error was logged, otherwise we'll never hear about
+                # it.
+                if item is cb[-1]:
+                    logError(self.result)
 
 
     def arm(self):
-        #start doing callbacks whenever you're ready, Mr. Deferred.
-        """State that this function is ready to be called.
-
-        This is to prevent callbacks from being executed sometimes
-        synchronously and sometimes asynchronously.  The system
-        expecting a Deferred will explicitly arm the delayed after
-        it has been returned; at _that_ point, it may fire later.
+        """This method is deprecated.
         """
-        if not self.armed:
-            self.armed = 1
-            if self.called:
-                #'self.called - 1' is so self.called won't be changed.
-                self._runCallbacks(self.cbResult, self.called - 1)
-##        else:
-##            log.msg("WARNING: double-arming deferred.")
+        pass
 
     def setTimeout(self, seconds, timeoutFunc=timeout):
         """Set a timeout function to be triggered if I am not called.
@@ -225,6 +215,10 @@ class Deferred:
         from twisted.internet import reactor
         reactor.callLater(seconds, 
                           lambda s=self, f=timeoutFunc: s.called or f(s))
+
+    armAndErrback = errback
+    armAndCallback = callback
+    armAndChain = chainDeferred
 
 
 class DeferredList(Deferred):
@@ -248,7 +242,6 @@ class DeferredList(Deferred):
                                   callbackArgs=(index,SUCCESS),
                                   errbackArgs=(index,FAILURE))
             index = index + 1
-            deferred.arm()
 
     def _cbDeferred(self, result, index, succeeded):
         """(internal) Callback for when one of my deferreds fires.

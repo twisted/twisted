@@ -185,7 +185,7 @@ class ReactorBase:
                 if isinstance(d, Deferred):
                     defrList.append(d)
         if defrList:
-            DeferredList(defrList).addBoth(self._cbContinueSystemEvent, eventType).arm()
+            DeferredList(defrList).addBoth(self._cbContinueSystemEvent, eventType)
         else:
             self.callLater(0, self._continueSystemEvent, eventType)
 

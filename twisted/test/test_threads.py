@@ -85,7 +85,6 @@ class ThreadsTestCase(unittest.TestCase):
     def testDeferredResult(self):
         d = threads.deferToThread(lambda x, y=5: x + y, 3, y=4)
         d.addCallback(self._resultCallback)
-        d.arm()
         while not self.gotResult:
             reactor.iterate()
         self.gotResult = 0
@@ -98,7 +97,6 @@ class ThreadsTestCase(unittest.TestCase):
         def raiseError(): raise TypeError
         d = threads.deferToThread(raiseError)
         d.addErrback(self._resultErrback)
-        d.arm()
         while not self.gotResult:
             reactor.iterate()
         self.gotResult = 0

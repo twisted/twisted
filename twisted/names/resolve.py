@@ -42,5 +42,4 @@ class ResolverChain:
             deferred = defer.Deferred()
             deferred.addCallback(origCallback)
             deferred.addErrback(errback)
-            deferred.arm()
         self.resolvers[-1].resolve(name, deferred, type, timeout)

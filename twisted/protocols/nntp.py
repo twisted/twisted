@@ -306,7 +306,6 @@ class NNTPServer(NNTPClient):
 
                 defer = self.factory.backend.postRequest(article)
                 defer.addCallbacks(self._gotPost, self._errPost)
-                defer.arm()
             else:
                 if line and line[0] == '.':
                     line = '.' + line
@@ -329,17 +328,16 @@ class NNTPServer(NNTPClient):
             elif subcmd == 'overview.fmt':
                 defer = self.factory.backend.overviewRequest()
                 defer.addCallbacks(self._gotOverview, self._errOverview)
-                defer.arm()
+                print 'overview'
             elif subcmd == 'subscriptions':
                 defer = self.factory.backend.subscriptionRequest()
                 defer.addCallbacks(self._gotSubscription, self._errSubscription)
-                defer.arm()
+                print 'subscriptions'
             else:
                 self.sendLine('500 command not recognized')
         else:
             defer = self.factory.backend.listRequest()
             defer.addCallbacks(self._gotList, self._errList)
-            defer.arm()
             
     def _gotSubscription(self, parts):
         self.sendLine('215 information follows')
@@ -381,7 +379,6 @@ class NNTPServer(NNTPClient):
         
         defer = self.factory.backend.listGroupRequest(group)
         defer.addCallbacks(self._gotListGroup, self._errListGroup)
-        defer.arm()
 
     def _gotListGroup(self, parts):
         group, articles = parts
@@ -415,7 +412,6 @@ class NNTPServer(NNTPClient):
             else:
                 defer = self.factory.backend.xoverRequest(self.currentGroup, l, h)
                 defer.addCallbacks(self._gotXOver, self._errXOver)
-                defer.arm()
 
     def _gotXOver(self, parts):
         self.sendLine('224 Overview information follows')
@@ -446,7 +442,6 @@ class NNTPServer(NNTPClient):
             else:
                 defer = self.factory.backend.xhdrRequest(self.currentGroup, l, h, header)
                 defer.addCallbacks(self._gotXHDR, self._errXHDR)
-                defer.arm()
 
     def _gotXHDR(self, parts):
         self.sendLine('221 Header follows')
@@ -471,7 +466,6 @@ class NNTPServer(NNTPClient):
     def do_GROUP(self, parts):
         defer = self.factory.backend.groupRequest(parts[0])
         defer.addCallbacks(self._gotGroup, self._errGroup)
-        defer.arm()
     
     def _gotGroup(self, parts):
         name, num, high, low, flags = parts
@@ -486,7 +480,6 @@ class NNTPServer(NNTPClient):
             i = int(parts[0])
             defer = self.factory.backend.articleRequest(self.currentGroup, i)
             defer.addCallbacks(self._gotArticle, self._errArticle)
-            defer.arm()
         else:
             self.sendLine('501 command parse error')
 
@@ -505,7 +498,6 @@ class NNTPServer(NNTPClient):
             i = int(parts[0])
             defer = self.factory.backend.articleRequest(self.currentGroup, i)
             defer.addCallbacks(self._gotStat, self._errStat)
-            defer.arm()
         else:
             self.sendLine('501 command parse error')
     
@@ -522,7 +514,6 @@ class NNTPServer(NNTPClient):
             i = int(parts[0])
             defer = self.factory.backend.headRequest(self.currentGroup, i)
             defer.addCallbacks(self._gotHead, self._errHead)
-            defer.arm()
         else:
             self.sendLine('501 command parse error')
     
@@ -540,7 +531,6 @@ class NNTPServer(NNTPClient):
             i = int(parts[0])
             defer = self.factory.backend.bodyRequest(self.currentGroup, i)
             defer.addCallbacks(self._gotBody, self._errBody)
-            defer.arm()
         else:
             self.sendLine('501 command parse error')
 

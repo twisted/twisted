@@ -184,8 +184,10 @@ class Application(log.Logger, styles.Versioned, marmalade.DOMJellyable):
                         interface = facnode.getAttribute("parent:interface") or ''
                         backlog = int(facnode.getAttribute("parent:backlog") or 5)
                         listener = _SSLlistener(self, portno, interface, backlog)
-                        unjellier.unjellyLater(ctxFacNode).addCallback(listener.setContext).arm()
-                        unjellier.unjellyLater(facnode).addCallback(listener.setFactory).arm()
+                        unjellier.unjellyLater(ctxFacNode).addCallback(
+                            listener.setContext)
+                        unjellier.unjellyLater(facnode).addCallback(
+                            listener.setFactory)
             if subnode.tagName == 'tcp':
                 self.tcpPorts = []
                 self.connectors = []
@@ -196,25 +198,25 @@ class Application(log.Logger, styles.Versioned, marmalade.DOMJellyable):
                         portno = int(portno)
                         s = facnode.getAttribute("parent:timeout") or 0
                         timeout = int(s)
-                        unjellier.unjellyLater(facnode).addCallback(self._cbConnectTCP, hostname, portno, timeout).arm()
+                        unjellier.unjellyLater(facnode).addCallback(self._cbConnectTCP, hostname, portno, timeout)
                     elif facnode.hasAttribute("parent:listen"):
                         portno = int(facnode.getAttribute("parent:listen"))
                         interface = facnode.getAttribute("parent:interface") or ''
                         backlog = int(facnode.getAttribute("parent:backlog") or 5)
-                        unjellier.unjellyLater(facnode).addCallback(self._cbListenTCP, portno, backlog, interface).arm()
+                        unjellier.unjellyLater(facnode).addCallback(self._cbListenTCP, portno, backlog, interface)
                     else:
                         raise ValueError("Couldn't determine type of TCP node.")
             elif subnode.tagName == 'services':
                 self.services = {}
                 for svcnode in self._getChildElements(subnode):
-                    unjellier.unjellyLater(svcnode).addCallback(self.addService).arm()
+                    unjellier.unjellyLater(svcnode).addCallback(self.addService)
             elif subnode.tagName == 'authorizer':
                 authnode = marmalade.getValueElement(subnode)
                 unjellier.unjellyAttribute(self, "authorizer", authnode)
             elif subnode.tagName == 'delayeds':
                 self.delayeds = []
                 for delnode in self._getChildElements(subnode):
-                    unjellier.unjellyLater(delnode).addCallback(self.addDelayed).arm()
+                    unjellier.unjellyLater(delnode).addCallback(self.addDelayed)
 
     persistenceVersion = 8
 

@@ -55,7 +55,7 @@ class RoomRow(row.RowObject):
 
 def runTests(stuff):
     global manager
-    manager.loadObjectsFrom("testrooms", [("roomId", "int4")], None, RoomRow).addCallback(gotRooms).arm()
+    manager.loadObjectsFrom("testrooms", [("roomId", "int4")], None, RoomRow).addCallback(gotRooms)
 
 def createSchema():
     return dbpool.runOperation(testSchema).addCallbacks(kickOffTests, kickOffTests)
@@ -67,7 +67,7 @@ def gotRooms(rooms):
         print "  ROOM:", room
         if room.roomId == 10:
             room.moveTo( int(random.random() * 100) , int(random.random() * 100) )
-            manager.updateRow(room).addCallback(onUpdate).arm()
+            manager.updateRow(room).addCallback(onUpdate)
 
 def onUpdate(data):
     print "updated row."
@@ -84,17 +84,17 @@ def onUpdate(data):
     newRoom.height = 20
     
     #insert row into database
-    manager.insertRow(newRoom).addCallback(onInsert).arm()
+    manager.insertRow(newRoom).addCallback(onInsert)
 
 def onInsert(data):
     print "row inserted", newRoom.roomId
-    manager.deleteRow(newRoom).addCallback(onDelete).arm()
+    manager.deleteRow(newRoom).addCallback(onDelete)
 
 def onDelete(data):
     print "row deleted."
     newRoom2 = RoomRow()
     newRoom2.assignKeyAttr("roomId", 10)
-    manager.selectRow(newRoom2).addCallback(onSelected).arm()
+    manager.selectRow(newRoom2).addCallback(onSelected)
 
 
 def onSelected(room):
@@ -118,7 +118,7 @@ def kickOffTests(ignoredResult):
     global manager
     manager = row.DBReflector(dbpool, stubs, runTests)
 
-createSchema().addCallback(kickOffTests).arm()
+createSchema().addCallback(kickOffTests)
 
 kf = row.KeyFactory(100000,50000)
 

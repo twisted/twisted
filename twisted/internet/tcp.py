@@ -206,7 +206,7 @@ class Client(Connection):
             self.reactor.resolve(self.addr[0]
                             ).addCallbacks(
                 self._setRealAddress, self.failIfNotConnected
-                ).arm()
+                )
 
     def _setRealAddress(self, address):
         # print 'real address:',repr(address),repr(self.addr)

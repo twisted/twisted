@@ -206,7 +206,6 @@ class IRCChatter(irc.IRC, service.WordsClientInterface):
         self.pendingPassword = password
         req = participant.getIdentityRequest()
         req.addCallbacks(self.loggedInAs, self.notLoggedIn)
-        req.arm()
 
     def loggedInAs(self, ident):
         """Successfully logged in.
@@ -214,7 +213,6 @@ class IRCChatter(irc.IRC, service.WordsClientInterface):
         pwrq = ident.verifyPlainPassword(self.pendingPassword)
         pwrq.addCallback(self.successfulLogin, ident)
         pwrq.addErrback(self.failedLogin)
-        pwrq.arm()
 
     def successfulLogin(self, msg, ident):
         self.identity = ident

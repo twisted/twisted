@@ -105,10 +105,29 @@ class _Dereference(NotKnown):
 
 from twisted.internet.defer import Deferred
 
+class _Catcher:
+    def catch(self, value):
+        self.value = value
+
 class _Defer(Deferred, NotKnown):
     def __init__(self):
         Deferred.__init__(self)
         NotKnown.__init__(self)
+        self.pause()
+
+    wasset = 0
 
     def __setitem__(self, n, obj):
-        self.resolveDependants(self.callback(obj))
+        if self.wasset:
+            raise 'waht!?', n, obj
+        else:
+            self.wasset = 1
+        self.callback(obj)
+
+    def addDependant(self, dep, key):
+        # by the time I'm adding a dependant, I'm *not* adding any more
+        # callbacks
+        NotKnown.addDependant(self,  dep, key)
+        self.unpause()
+        resovd = self.result
+        self.resolveDependants(resovd)

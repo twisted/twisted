@@ -96,15 +96,15 @@ def run():
     reactor.clientTCP(config.opts['host'], config.opts['port'], ftpClient, 10.0)
 
     # Get the current working directory
-    ftpClient.pwd().addCallbacks(success, fail).arm()
+    ftpClient.pwd().addCallbacks(success, fail)
 
     # Get a detailed listing of the current directory
     fileList = FTPFileListProtocol()
     d = ftpClient.list('.', fileList)
-    d.addCallbacks(showFiles, fail, callbackArgs=(fileList,)).arm()
+    d.addCallbacks(showFiles, fail, callbackArgs=(fileList,))
 
     # Change to the parent directory
-    ftpClient.cdup().addCallbacks(success, fail).arm()
+    ftpClient.cdup().addCallbacks(success, fail)
     
     # Create a buffer
     proto = BufferingProtocol()
@@ -113,8 +113,7 @@ def run():
     d = ftpClient.nlst('.', proto)
     d.addCallbacks(showBuffer, fail, callbackArgs=(proto,))
     d.addCallback(lambda result: reactor.stop())
-    d.arm()
-    
+
     reactor.run()
 
 # this only runs if the module was *not* imported

@@ -777,11 +777,10 @@ class FTPClient(basic.LineReceiver):
 
         Login, send the password, set retrieval mode to binary"""
         self.nextDeferred = Deferred().addErrback(self.fail)
-        self.nextDeferred.arm()
         for command in ('USER ' + self.username, 
                         'PASS ' + self.password,
                         'TYPE I',):
-            self.queueStringCommand(command).addErrback(self.fail).arm()
+            self.queueStringCommand(command).addErrback(self.fail)
         
     def queueCommand(self, ftpCommand):
         """Add an FTPCommand object to the queue.
@@ -856,7 +855,6 @@ class FTPClient(basic.LineReceiver):
             self.queueCommand(pasvCmd)
             pasvCmd.deferred.addCallbacks(doPassive, self.fail)
             pasvCmd.deferred.addErrback(lambda e,p=protocol: p.deferred.errback(e) or e)
-            pasvCmd.deferred.arm()
 
             cmd = FTPCommand(command)
             # Ensure the connection is always closed

@@ -99,7 +99,7 @@ class RegServer(Form):
             license_org,
             license_dir,
             license_host
-            )).arm()
+            ))
         request.setHeader("content-type", "text/x-twisted-license")
         request.write("""
 # Twisted Registration File

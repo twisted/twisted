@@ -56,7 +56,6 @@ class PerspectiveConnector:
             apply(reference.callRemote, (method,)+args, kw).addCallbacks(
                 defr.callback,
                 defr.errback)
-            defr.arm()
 
     def _ebConnected(self, error):
         """We haven't connected yet.  Try again.

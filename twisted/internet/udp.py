@@ -71,7 +71,7 @@ class Connection(abstract.FileDescriptor,
             deferred = self.reactor.resolve(self.remote[0]
                                        ).addCallbacks(
                 self.setRealAddress, self.connectionLost
-                ).arm()
+                )
 
     def setRealAddress(self, address):
         self.realAddress = address

@@ -113,9 +113,9 @@ class ParentService(Service, Perspective):
         d, host, port = self.pendingResources[path]
         del self.pendingResources[path]
         self.lockedResources[path] = (host, port)
-        d.armAndCallback((host, port))
+        d.callback((host, port))
     def _ebLoaded(self, error, path):
         d, host, port = self.pendingResources[path]
         del self.pendingResources[path]
-        d.armAndErrback(error)
+        d.errback(error)
 

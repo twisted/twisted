@@ -74,7 +74,6 @@ class XMLRPC(resource.Resource):
             responder = Result(self, request)
             self.requests[responder] = 1
             result.addCallbacks(responder.gotResult, responder.gotFailure)
-            result.arm()
             return server.NOT_DONE_YET
         else:
             if not isinstance(result, xmlrpclib.Fault):

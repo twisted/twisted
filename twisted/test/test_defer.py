@@ -42,7 +42,6 @@ class DeferredTestCase(unittest.TestCase):
         self.errback_results = None
         deferred = defer.Deferred()
         deferred.addCallback(self._callback)
-        deferred.arm()
         deferred.callback("hello")
         self.failUnlessEqual(self.errback_results, None)
         self.failUnlessEqual(self.callback_results, (('hello',), {}))
@@ -52,7 +51,6 @@ class DeferredTestCase(unittest.TestCase):
         self.errback_results = None
         deferred = defer.Deferred()
         deferred.addCallback(self._callback, "world")
-        deferred.arm()
         deferred.callback("hello")
         self.failUnlessEqual(self.errback_results, None)
         self.failUnlessEqual(self.callback_results, (('hello', 'world'), {}))
@@ -62,7 +60,6 @@ class DeferredTestCase(unittest.TestCase):
         self.errback_results = None
         deferred = defer.Deferred()
         deferred.addCallback(self._callback, world="world")
-        deferred.arm()
         deferred.callback("hello")
         self.failUnlessEqual(self.errback_results, None)
         self.failUnlessEqual(self.callback_results,
@@ -75,7 +72,6 @@ class DeferredTestCase(unittest.TestCase):
         deferred = defer.Deferred()
         deferred.addCallback(self._callback)
         deferred.addCallback(self._callback2)
-        deferred.arm()
         deferred.callback("hello")
         self.failUnlessEqual(self.errback_results, None)
         self.failUnlessEqual(self.callback_results,
@@ -92,7 +88,6 @@ class DeferredTestCase(unittest.TestCase):
         def cb(resultList, result=result):
             result.extend(resultList)
         dl.addCallbacks(cb, cb)
-        dl.arm()
         defr1.armAndCallback(1)
         defr2.armAndErrback(2)
         defr3.armAndCallback(3)
@@ -104,8 +99,6 @@ class DeferredTestCase(unittest.TestCase):
         l = []
         d = defer.succeed("success")
         d.addCallback(l.append)
-        self.assertEquals(l, [])
-        reactor.iterate()
         self.assertEquals(l, ["success"])
 
     def testImmediateFailure(self):
@@ -114,6 +107,21 @@ class DeferredTestCase(unittest.TestCase):
         d.addErrback(l.append)
         self.assertEquals(l, [])
         reactor.iterate()
+        self.assertEquals(l, ["fail"])
+
+    def testImmediateFailure(self):
+        l = []
+        d = defer.fail("fail")
+        d.addErrback(l.append)
+        self.assertEquals(l, ["fail"])
+
+    def testPausedFailure(self):
+        l = []
+        d = defer.fail("fail")
+        d.pause()
+        d.addErrback(l.append)
+        self.assertEquals(l, [])
+        d.unpause()
         self.assertEquals(l, ["fail"])
 
 

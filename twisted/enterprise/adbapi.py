@@ -176,11 +176,11 @@ class Augmentation:
 
     def __init__(self, dbpool):
         self.dbpool = dbpool
-        #self.createSchema().arm()
+        #self.createSchema()
 
     def __setstate__(self, state):
         self.__dict__ = state
-        #self.createSchema().arm()
+        #self.createSchema()
 
     def operationDone(self, done):
         """Default callback for database operation success.

@@ -271,7 +271,8 @@ class DBReflector(adbapi.Augmentation):
         reactor.callLater(0, self._really_populate)
 
     def _really_populate(self):
-        self.runInteraction(self._transPopulateClasses).addCallbacks(self.populatedCallback).arm()
+        self.runInteraction(self._transPopulateClasses).addCallbacks(
+            self.populatedCallback)
 
     def _transPopulateClasses(self, transaction):
         """Used to construct the row classes in a single interaction.

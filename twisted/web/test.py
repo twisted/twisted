@@ -78,6 +78,7 @@ class Test(widgets.Gadget, widgets.Presentation):
         self.deepest()
 
     def raiseHell(self):
+        return 'hi'
         x = 1
         y = 2
         z = "some string"; self.goDeeper()

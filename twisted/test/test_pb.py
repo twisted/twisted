@@ -67,8 +67,11 @@ class IOPump:
 
     def flush(self):
         "Pump until there is no more input or output."
+        reactor.iterate()
         while self.pump():
-            pass
+            reactor.iterate()
+        reactor.iterate()
+
 
     def pump(self):
         """Move data back and forth.
@@ -525,6 +528,9 @@ class BrokerTestCase(unittest.TestCase):
         # ident = c.remoteForName("identity")
         # ident.attach("test", "any", None).addCallback(accum.append)
         pump.flush()
+        pump.flush()
+        pump.flush()
+        
         test = accum.pop() # okay, this should be our perspective...
         test.callRemote('getDummyViewPoint').addCallback(accum.append)
         pump.flush()

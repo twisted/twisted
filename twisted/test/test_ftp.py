@@ -73,7 +73,6 @@ class FTPClientTests(FTPTest):
         fileList = ftp.FTPFileListProtocol()
         d = client.list('.', fileList)
         d.addCallbacks(self.callback, self.errback)
-        d.arm()
 
         # Wait for the result
         id = reactor.callLater(5, self.errback, "timed out") # timeout so we don't freeze
@@ -112,7 +111,6 @@ class FTPClientTests(FTPTest):
         proto = BufferProtocol()
         d = client.retr(os.path.basename(thisFile), proto)
         d.addCallbacks(self.callback, self.errback)
-        d.arm()
 
         # Wait for a result
         id = reactor.callLater(5, self.errback, "timed out") # timeout so we don't freeze
@@ -155,9 +153,9 @@ class FTPClientTests(FTPTest):
 
         # These LIST commands should should both fail
         d = client.list('.', ftp.FTPFileListProtocol()) 
-        d.addCallbacks(badResult, gotError, errbackArgs=(0,)).arm()
+        d.addCallbacks(badResult, gotError, errbackArgs=(0,))
         d = client.list('.', ftp.FTPFileListProtocol()) 
-        d.addCallbacks(badResult, gotError, errbackArgs=(1,)).arm()
+        d.addCallbacks(badResult, gotError, errbackArgs=(1,))
 
         reactor.clientTCP('localhost', FTP_PORT, client)
         while None in errors and not self.callbackException:
