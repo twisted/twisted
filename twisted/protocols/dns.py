@@ -199,6 +199,11 @@ class Name:
             else:
                 self.name = self.name + '.' + label
 
+    def __eq__(self, other):
+        if isinstance(other, Name):
+            return str(self) == str(other)
+        return 0
+
 
     def __str__(self):
         return self.name
@@ -365,7 +370,7 @@ class SimpleRecord:
 
     def __eq__(self, other):
         if isinstance(other, SimpleRecord):
-            return str(self.name).lower() == str(other.name).lower()
+            return self.name == other.name
         return 0
 
 
@@ -463,8 +468,12 @@ class Record_SOA:
     
     def __eq__(self, other):
         if isinstance(other, Record_SOA):
-            # XXX - Is this a good idea?
-            return self.serial == other.serial
+            return (self.serial == other.serial and 
+                    self.mname == other.mname and
+                    self.rname == other.rname and
+                    self.refresh == other.refresh and
+                    self.expire == other.expire and
+                    self.retry == other.retry)
         return 0
 
 
@@ -557,7 +566,7 @@ class Record_SRV:                # EXPERIMENTAL
             return (self.priority == other.priority and
                     self.weight == other.weight and
                     self.port == other.port and
-                    str(self.target) == str(other.target))
+                    self.target == other.target)
         return 0
     
     
@@ -590,7 +599,7 @@ class Record_AFSDB:
     def __eq__(self, other):
         if isinstance(other, Record_AFSDB):
             return (self.subtype == other.subtype and
-                    str(self.hostname) == str(other.hostname))
+                    self.hostname == other.hostname)
         return 0
     
     
@@ -621,8 +630,8 @@ class Record_RP:
 
     def __eq__(self, other):
         if isinstance(other, Record_RP):
-            return (str(self.mbox) == str(other.mbox) and 
-                    str(self.txt) == str(other.txt))
+            return (self.mbox == other.mbox and 
+                    self.txt == other.txt)
         return 0
     
     
@@ -686,8 +695,8 @@ class Record_MINFO:                 # EXPERIMENTAL
 
     def __eq__(self, other):
         if isinstance(other, Record_MINFO):
-            return (str(self.rmailbx).lower() == str(other.rmailbx).lower() and
-                    str(self.emailbx).lower() == str(other.emailbx).lower())
+            return (self.rmailbx == other.rmailbx and
+                    self.emailbx == other.emailbx)
         return 0
 
 
@@ -717,7 +726,7 @@ class Record_MX:
     def __eq__(self, other):
         if isinstance(other, Record_MX):
             return (self.preference == other.preference and
-                    str(self.exchange).lower() == str(other.exchange).lower())
+                    self.exchange == other.exchange)
         return 0
 
 
