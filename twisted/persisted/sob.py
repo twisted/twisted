@@ -198,13 +198,15 @@ def loadValueFromFile(filename, variable, passphrase=None):
         mode = 'rb'
     else:
         mode = 'r'
-    data = open(filename, mode).read()
+    fileObj = open(filename, mode)
     if passphrase:
+        d = {'__file__': filename}
+        data = fileObj.read()
         data = _decrypt(passphrase, data)
+        exec data in d, d
     else:
-        data = '\n'.join(data.splitlines()) + '\n'
-    d = {'__file__': filename}
-    exec data in d, d
+        d = {}
+        exec fileObj in d, d
     value = d[variable]
     return value
 
