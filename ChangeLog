@@ -1,3 +1,24 @@
+2002-02-23  Itamar Shtull-Trauring  <itamarst@twistedmatrix.com>
+
+	* twisted/tap/coil.py: There is now a tap-creator for COIL.
+
+	* twisted/internet/stupidproxy.py: Now with COILability!
+
+2002-02-23  Glyph Lefkowitz  <glyph@zelda.twistedmatrix.com>
+
+	* bin/mktap: mktap now uses Plugins instead of searching through
+	twisted.tap. Yay for unified configuration systems!
+
+
+2002-02-22  Chris Armstrong  <carmstro@twistedmatrix.com>
+
+	* twisted/im, twisted/words: t-im can now do topic setting (words
+	only), fixed the Group Metadata-setting interface in the service.
+
+2002-02-22  Glyph Lefkowitz  <glyph@zelda.twistedmatrix.com>
+
+	* twisted/manhole: COIL can now load Plugins.
+
 2002-02-21  Glyph Lefkowitz  <glyph@zelda.twistedmatrix.com>
 
 	* twisted.spread.pb: Changed remote method invocations to be

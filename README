@@ -1,10 +1,12 @@
-Twisted 0.15.0
+Twisted 0.15.1
 
 Quote of the Release:
 
-<itamar> two more webmonkey days, and then I'm off to the USA
-* shapr hands a web-banana to itamar 
-<desaster@ircnet> my god, the banana is full of ads
+<thirmite> srbaker: www.twistedmatrix.com - a framework for building 
+asynchronous network based apps
+<dreid> in other words, doing cool stuff with little work and even less 
+documentation
+[*ahem*, hopefully not for long --ed]
 
 For information on what's new in Twisted 0.15.0, see the ChangeLog file
 that comes with the distribution, or http://twistedmatrix.com/ChangeLog.txt.
@@ -48,7 +50,7 @@ What can I do with it?
 
     export PYTHONPATH=$PYTHONPATH:/home/bob/Twisted-0.15.0/
   
-  in your ~/.bash_profile.
+  in your ~/.bash_profile, ~/.zshrc, ~/.cshrc, etc etc.
 
 
   Although there is a lot of infrastructure support in Twisted, the immediately
