@@ -412,6 +412,25 @@ class DecodeTest(UnbananaTestMixin, unittest.TestCase):
         self.failUnlessEqual(f.value.args[0],
                              "InstanceUnslicer keys must be STRINGs")
 
+    def test_instance_unsafe1(self):
+
+        "instances when instances aren't allowed"
+        self.banana.rootUnslicer.topRegistry = slicer.UnslicerRegistry
+        self.banana.rootUnslicer.openRegistry = slicer.UnslicerRegistry
+
+        tokens = [tOPEN(0),'instance', "Foo",
+                   "a", 1,
+                   "b", tOPEN(1),'list', 2, 3, tCLOSE(1),
+                   "c",
+                   tOPEN(2),'instance',
+                    "Bar", 37, 4,
+                   tCLOSE(2),
+                  tCLOSE(0)]
+        f = self.shouldFail(tokens)
+        self.failUnlessEqual(f.value.where, "<RootUnslicer>")
+        self.failUnlessEqual(f.value.args[0],
+                             "unknown top-level OPEN type ('instance',)")
+
     def test_ref1(self):
         res = self.do([tOPEN(0),'list',
                         tOPEN(1),'list', 1, 2, tCLOSE(1),
@@ -686,7 +705,7 @@ class EncodeTest(unittest.TestCase):
                                   "d", 4,
                                  tCLOSE(2),
                               tCLOSE(0)])
-
+        
 
 
 class ErrorfulSlicer(slicer.BaseSlicer):
@@ -779,12 +798,16 @@ class EncodeFailureTest(unittest.TestCase):
         s = ErrorfulSlicer("success", True)
         d = self.send(s)
         encoded = self.waitForSuccess(d)
+        self.failUnlessEqual(encoded,
+                             [('OPEN', 0), 1, 'success', 3, ('CLOSE', 0)])
 
     def testSuccessStreaming(self):
         # success
         s = ErrorfulSlicer("deferred-good", True)
         d = self.send(s)
         encoded = self.waitForSuccess(d)
+        self.failUnlessEqual(encoded,
+                             [('OPEN', 0), 1, 3, ('CLOSE', 0)])
 
     def test1(self):
         # failure during .slice (called from pushSlicer)
@@ -794,6 +817,7 @@ class EncodeFailureTest(unittest.TestCase):
         self.failUnless(e.check(Violation))
         self.failUnlessEqual(e.value.where, "<RootSlicer>")
         self.failUnlessEqual(e.value.args, ("slice failed",))
+        self.failUnlessEqual(self.banana.tokens, [])
 
     def test2(self):
         # .slice.next raising Violation
@@ -803,6 +827,8 @@ class EncodeFailureTest(unittest.TestCase):
         self.failUnless(e.check(Violation))
         self.failUnlessEqual(e.value.where, "<RootSlicer>.ErrorfulSlicer[1]")
         self.failUnlessEqual(e.value.args, ("next failed",))
+        self.failUnlessEqual(self.banana.tokens,
+                             [('OPEN', 0), 1, ('ABORT',), ('CLOSE', 0)])
 
     def test3(self):        
         # .slice.next returning Deferred when streaming isn't allowed
@@ -813,6 +839,8 @@ class EncodeFailureTest(unittest.TestCase):
         self.failUnless(e.check(Violation))
         self.failUnlessEqual(e.value.where, "<RootSlicer>.ErrorfulSlicer[1]")
         self.failUnlessEqual(e.value.args, ("parent not streamable",))
+        self.failUnlessEqual(self.banana.tokens,
+                             [('OPEN', 0), 1, ('ABORT',), ('CLOSE', 0)])
 
     def test4(self):
         # .newSlicerFor (no ISlicer adapter), parent propagates upwards
@@ -823,6 +851,8 @@ class EncodeFailureTest(unittest.TestCase):
         self.failUnlessEqual(e.value.where, "<RootSlicer>.ErrorfulSlicer[1]")
         self.failUnless("cannot serialize <open file" in e.value.args[0])
         self.failUnless(s.childDied)
+        self.failUnlessEqual(self.banana.tokens,
+                             [('OPEN', 0), 1, ('ABORT',), ('CLOSE', 0)])
 
     def test5(self):
         # .newSlicerFor (no ISlicer adapter), parent ignores
@@ -830,13 +860,29 @@ class EncodeFailureTest(unittest.TestCase):
         d = self.send(s)
         e = self.waitForSuccess(d)
         self.failUnless(s.childDied) # noticed but ignored
+        self.failUnlessEqual(self.banana.tokens,
+                             [('OPEN', 0), 1, 3, ('CLOSE', 0)])
+
+    def test_instance_unsafe(self):
+        self.banana.rootSlicer.slicerTable = {}
+        f1 = Foo(); f1.a = 1; f1.b = [2,3]
+        d = self.send(f1)
+        e = self.waitForError(d)
+        self.failUnless(e.check(Violation))
+        self.failUnlessEqual(e.value.where, "<RootSlicer>")
+        why = e.value.args[0]
+        self.failUnless(
+            why.startswith("cannot serialize <test_banana.Foo instance at"))
+        self.failUnless(why.endswith(" (<type 'instance'>)"))
+        # it will fail before any tokens have been emitted
+        self.failUnlessEqual(self.banana.tokens, [])
 
 # receiving side:
 #  long header (>64 bytes)
 #  checkToken (top.openerCheckToken)
 #  checkToken (top.checkToken)
 #  typebyte == LIST (oldbanana)
-#  bad VOCAB key
+#  bad VOCAB key # TODO
 #  too-long vocab key
 #  bad FLOAT encoding  # I don't there is such a thing
 #  top.receiveClose
@@ -928,7 +974,9 @@ class DecodeFailureTest(TestBananaMixin, unittest.TestCase):
                           bCLOSE(0),
                          )
     abortStream = join(bOPEN("errorful", 0), bINT(1),
-                       bOPEN("list", 1), bINT(2), bABORT(1), bCLOSE(1),
+                        bOPEN("list", 1),
+                         bINT(2), bABORT(1), bINT(3),
+                        bCLOSE(1),
                        bCLOSE(0))
 
     def setUp(self):
@@ -1088,38 +1136,6 @@ class DecodeFailureTest(TestBananaMixin, unittest.TestCase):
         self.failUnlessEqual(f.value.where, "<RootUnslicer>.failing")
         self.failUnlessEqual(f.value.args[0], "foom")
         self.testSuccess1()
-        
-class FailedInstanceTests(unittest.TestCase):
-    # TODO: inherit from UnbananaTestMixin
-    def setUp(self):
-        self.banana = TokenBanana()
-        # turn off the "unsafe" extensions
-        self.banana.rootSlicer.slicerTable = {}
-        self.banana.rootUnslicer.topRegistry = slicer.UnslicerRegistry
-        self.banana.rootUnslicer.openRegistry = slicer.UnslicerRegistry
-
-    def encode(self, obj):
-        return self.banana.testFailure(obj)
-    def decode(self, tokens):
-        return self.banana.processTokens(tokens)
-
-    def test_make_instance(self):
-        f1 = Foo(); f1.a = 1; f1.b = [2,3]
-        # this will fail
-        f, encoded = self.encode(f1)
-        self.failUnless(f.check(tokens.Violation))
-        # it fails before any tokens have been emitted
-        self.failUnlessEqual(encoded, [])
-       
-    def test_get_instance(self):
-        raise unittest.SkipTest("should inherit from UnbananaTestMixin")
-        tokens = [tOPEN(0),'instance', "test_banana.Foo", "a", 1,
-                  "b", tOPEN(1),'list', 2, 3, tCLOSE(1),
-                  "c", tOPEN(2),'instance', "Bar", "d", 4, tCLOSE(2),
-                  tCLOSE(0)]
-        # this will fail
-        res = self.shouldFail(tokens)
-        print res # TODO
 
 class ByteStream(TestBananaMixin, unittest.TestCase):
 
