@@ -22,6 +22,7 @@ Test cases for twisted.internet.task module.
 
 from pyunit import unittest
 from twisted.internet import task, main
+import threading, time
 
 
 class Counter:
@@ -47,6 +48,14 @@ class Order:
         if self.stage != 2: raise RuntimeError
         self.stage = 3
     
+
+class ThreadOrder(threading.Thread, Order):
+
+    def run(self):
+        self.schedule(self.a)
+        self.schedule(self.b)
+        self.schedule(self.c)
+
 
 class TaskTestMixin:
     """Mixin for task scheduler tests."""
@@ -117,4 +126,19 @@ class NonThreadedTaskTestCase(TaskTestMixin, unittest.TestCase):
     
     def schedule(self, *args, **kwargs):
         apply(self.scheduler.addTask, args, kwargs)
+    
+    def testThreads(self):
+        threads = []
+        for i in range(10):
+            t = ThreadOrder()
+            t.schedule = self.schedule
+            threads.append(t)
+        for t in threads:
+            t.start()
+        main.iterate()
+        time.sleep(0.1)
+        main.iterate()
+        main.iterate()
+        for t in threads:
+            self.assertEquals(t.stage, 3)
 
