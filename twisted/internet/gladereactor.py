@@ -85,7 +85,6 @@ class GladeReactor(sup):
         self.stop()
 
     def __init__(self):
-        sup.__init__(self)
         self.xml = gtk.glade.XML(util.sibpath(__file__,"gladereactor.glade"))
         d = {}
         for m in reflect.prefixedMethods(self, "on_"):
@@ -122,6 +121,7 @@ class GladeReactor(sup):
             
             self.servers.append_column(col)
             col.set_resizable(1)
+        sup.__init__(self)
 
     def addReader(self, reader):
         sup.addReader(self, reader)
