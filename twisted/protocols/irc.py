@@ -43,7 +43,7 @@ Test coverage needs to be better.
 <http://www.irchelp.org/irchelp/rfc/ctcpspec.html>}
 """
 
-__version__ = '$Revision: 1.93 $'[11:-2]
+__version__ = '$Revision: 1.94 $'[11:-2]
 
 from twisted.internet import reactor, protocol
 from twisted.persisted import styles
@@ -932,7 +932,7 @@ class IRCClient(basic.LineReceiver):
         self.yourHost(params[1])
     
     def irc_RPL_MYINFO(self, prefix, params):
-        self.myInfo(*params[1:6])
+        self.myInfo(*params[1:5])
     
     def irc_RPL_BOUNCE(self, prefix, params):
         # 005 is doubly assigned.  Piece of crap dirty trash protocol.
