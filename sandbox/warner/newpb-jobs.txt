@@ -31,11 +31,12 @@ exactly their current exposure is. The tradeoff between flexibility ("accept
 any object whatsoever here") and exposure to DoS attack is then user-visible
 and thus user-selectable.
 
-To implement maxSize() for a basic schema (like a string), you simply need to
-look at banana.xhtml and see how basic tokens are encoded. For a
-schema.StringConstraint(32) (which accepts strings <= 32 characters in
-length), the largest serialized form that has not yet been either accepted or
-rejected is:
+To implement maxSize() for a basic schema (like a string), you simply need
+to look at banana.xhtml and see how basic tokens are encoded (you will also
+need to look at banana.py and see how deserialization is actually
+implemented). For a schema.StringConstraint(32) (which accepts strings <= 32
+characters in length), the largest serialized form that has not yet been
+either accepted or rejected is:
 
   64 bytes (header indicating 0x000000..0020 with lots of leading zeros)
  + 1 byte (STRING token)
