@@ -517,7 +517,7 @@ class SMTP(basic.LineReceiver, policies.TimeoutMixin):
 
     def lineReceived(self, line):
         self.resetTimeout()
-        # print 'S:', repr(line)
+        print 'S:', repr(line)
         return getattr(self, 'state_' + self.mode)(line)
     
     def state_COMMAND(self, line):
@@ -877,6 +877,7 @@ class SMTPFactory(protocol.ServerFactory):
     def buildProtocol(self, addr):
         p = protocol.ServerFactory.buildProtocol(self, addr)
         p.portal = self.portal
+        p.host = self.domain
         return p
 
 class SMTPClient(basic.LineReceiver):
@@ -903,7 +904,7 @@ class SMTPClient(basic.LineReceiver):
         self._failresponse = self.smtpConnectionFailed
 
     def lineReceived(self, line):
-        # print 'C:', repr(line)
+        print 'C:', repr(line)
         why = None
 
         self.log.append('<<< ' + line)
@@ -1352,6 +1353,7 @@ class SMTPSenderFactory(protocol.ClientFactory):
     Utility factory for sending emails easily.
     """
 
+    domain = DNSNAME
     protocol = SMTPSender
     
     def __init__(self, fromEmail, toEmail, file, deferred, retries=5):
@@ -1376,7 +1378,7 @@ class SMTPSenderFactory(protocol.ClientFactory):
         self.sendFinished -= 1
 
     def buildProtocol(self, addr):
-        p = self.protocol(DNSNAME, len(self.toEmail)*2+2)
+        p = self.protocol(self.domain, len(self.toEmail)*2+2)
         p.factory = self
         return p
 

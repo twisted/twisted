@@ -45,7 +45,8 @@ class Options(usage.Options):
         ["certificate", "c", None, "Certificate file to use for SSL connections"],
         ["smartrelay", "R", None, 
             "Relay messages according to their envelope 'To', using the given"
-            "path as a queue directory."]
+            "path as a queue directory."],
+        ["hostname", "H", None, "The hostname by which to identify this server."],
     ]
     
     optFlags = [
@@ -156,4 +157,7 @@ def updateApplication(app, config):
             SSLContextFactory(config['certificate'])
         )
     if config['smtp']:
-        app.listenTCP(config['smtp'], smtpFactory())
+        f = smtpFactory()
+        if config['hostname']:
+            f.domain = config['hostname']
+        app.listenTCP(config['smtp'], f)
