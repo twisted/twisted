@@ -208,11 +208,10 @@ class DOMTemplate(Resource, View):
             return self.processWidget(request, result, node)
         elif isinstance(result, minidom.Node):
             return self.processNode(request, result, node)
-        elif isinstance(result, domwidgets.Widget):
-            return self.processNode(request, result.generateDOM(request, node), node)
         elif isinstance(result, Deferred):
             self.outstandingCallbacks += 1
-            result.addCallbacks(self.dispatchResultCallback, renderFailure, callbackArgs=(request, node), errbackArgs=(request,))
+            result.addCallback(self.dispatchResultCallback, request, node)
+            result.addErrback(renderFailure, request)
             # Got to wait until the callback comes in
             return result
         elif isinstance(result, types.StringType):
