@@ -184,8 +184,6 @@ class Model:
             self.parent.setSubmodel(self.name, data)
         if hasattr(self, 'orig'):
             self.orig = data
-        
-#            raise NotImplementedError, "How to implement this?"
 
 #backwards compatibility
 WModel = Model

@@ -15,6 +15,8 @@
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
+from __future__ import nested_scopes
+
 # Sibling imports
 import interfaces
 import template
@@ -26,6 +28,10 @@ from twisted.internet import defer
 from twisted.python import components
 from twisted.python import log
 from twisted.web import resource, microdom
+
+
+import warnings
+
 
 NO_DATA_YET = 2
 
@@ -97,7 +103,9 @@ class View(template.DOMTemplate):
                     if m is not None:
                         break
                 else:
-                    log.msg("POTENTIAL ERROR: Node had a model=%s attribute, but the submodel did not exist." % (submodel, ))
+                    warnings.warn("POTENTIAL ERROR: Node had a model=%s "
+                                  "attribute, but the submodel did not "
+                                  "exist." % (submodel, ))
                     m = parent = self.getTopOfModelStack()
         else:
             m = None
@@ -118,7 +126,8 @@ class View(template.DOMTemplate):
         controllerFactory = input.DefaultHandler
         if controllerName:
             if not node.hasAttribute('name'):
-                log.msg("POTENTIAL ERROR: %s had a controller, but not a 'name' attribute." % node)
+                warnings.warn("POTENTIAL ERROR: %s had a controller, but not a "
+                              "'name' attribute." % node)
             for namespace in self.controllerStack:
                 controllerFactory = getattr(namespace, 'wcfactory_' + controllerName, None)
                 if controllerFactory is not None:
@@ -129,7 +138,11 @@ class View(template.DOMTemplate):
             if controllerFactory is None:
                 controllerFactory = getattr(input, controllerName, None)
             if controllerFactory is None:
-                raise NotImplementedError, "You specified controller name %s on a node, but no factory_%s method was found in %s." % (controllerName, controllerName, namespaces + [input])
+                raise NotImplementedError("You specified controller name %s on "
+                                          "a node, but no factory_%s method was "
+                                          "found in %s." % (controllerName,
+                                                            controllerName,
+                                                            namespaces + [input]))
         else:
             # If no "controller" attribute was specified on the node, see if 
             # there is a IController adapter registerred for the model.
@@ -141,7 +154,8 @@ class View(template.DOMTemplate):
         try:
             return controllerFactory(request, node, model)
         except TypeError:
-            log.write("DeprecationWarning: A Controller Factory takes (request, node, model) now instead of (model)\n")
+            warnings.warn("A Controller Factory takes (request, node, model) "
+                          "now instead of (model)", DeprecationWarning)
             return controllerFactory(model)
     
     def getNodeView(self, request, node, submodel, model):
@@ -157,7 +171,8 @@ class View(template.DOMTemplate):
                     break
                 viewMethod = getattr(namespace, 'factory_' + viewName, None)
                 if viewMethod is not None:
-                    log.write("DeprecationWarning: factory_ methods are deprecated; please use wcfactory_ instead")
+                    warnings.warn("factory_ methods are deprecated; please use "
+                                  "wcfactory_ instead", DeprecationWarning)
                     break
 
             if viewMethod is None:
@@ -173,13 +188,22 @@ class View(template.DOMTemplate):
                     view = viewMethod(request, node, model)
                     self.model = self.mainModel
                 except TypeError:
-                    log.write("DeprecationWarning: wvfactory_ methods take (request, node, model) instead of (request, node) now. *** Please instanciate your widgets with a reference to model instead of self.model ***")
+                    warnings.warn("wvfactory_ methods take (request, node, "
+                                  "model) instead of (request, node) now. \n"
+                                  "Please instanciate your widgets with a "
+                                  "reference to model instead of self.model",
+                                  DeprecationWarning)
                     self.model = model
                     view = viewMethod(request, node)
                     self.model = self.mainModel
 
             if view is None and not hasattr(self, 'wvupdate_' + viewName):
-                raise NotImplementedError, "You specified view name %s on a node, but no factory_%s method was found in %s or %s." % (viewName, viewName, self, widgets)
+                raise NotImplementedError("You specified view name %s on a "
+                                          "node, but no factory_%s method was "
+                                          "found in %s or %s." % (viewName,
+                                                                  viewName,
+                                                                  self,
+                                                                  widgets))
         else:
             # If no "view" attribute was specified on the node, see if there
             # is a IView adapter registerred for the model.
