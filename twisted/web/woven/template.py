@@ -385,3 +385,4 @@ class DOMController(controller.Controller, Resource):
     def process(self, request, **kwargs):
         log.msg("Processing results: ", kwargs)
         return RESTART_RENDERING
+components.backwardsCompatImplements(DOMController)
