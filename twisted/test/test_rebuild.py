@@ -53,7 +53,7 @@ class RebuildTestCase(unittest.TestCase):
             test_rebuild.C = C
             c = C()
         i = myrebuilder.Inherit()
-        assert a.a() == 'a'
+        self.assertEquals(a.a(), 'a')
         # necessary because the file has not "changed" if a second has not gone
         # by in unix.  This sucks, but it's not often that you'll be doing more
         # than one reload per second.
@@ -67,12 +67,12 @@ class RebuildTestCase(unittest.TestCase):
             pass
         else:
             b2 = myrebuilder.B()
-            assert b2.b() == 'c'
-            assert b.b() == 'c'
-        assert i.a() == 'd'
-        assert a.a() == 'b'
+            self.assertEquals(b2.b(), 'c')
+            self.assertEquals(b.b(), 'c')
+        self.assertEquals(i.a(), 'd')
+        self.assertEquals(a.a(), 'b')
         # more work to be done on new-style classes
-        # assert c.b() == 'c'
+        # self.assertEquals(c.b(), 'c')
 
     def testRebuild(self):
         """Rebuilding an unchanged module."""
