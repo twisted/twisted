@@ -22,18 +22,19 @@ def addMod(arg, path, files):
     for fn in files:
         file = os.path.join(path, fn).replace('/__init__', '')
         if file[-3:] == '.py' and not file.count('/test/'):
+            modName = file[2:-3].replace('/','.')
             try:
-                modName = file[2:-3].replace('/','.')
-                print 'pre-loading', modName
+                #print 'pre-loading', modName
                 reflect.namedModule(modName)
             except ImportError:
-                print 'Whoops!'
+                print 'import error:', modName
             except:
-                print 'traceback occurred'
+                print 'other error:', modName
             else:
                 modnames.append(modName)
-
+osrv = sys.argv
+sys.argv=["IGNORE"]
 os.path.walk('./twisted', addMod, None)
-sys.argv.extend(['-v'])              # cmdline options
+sys.argv = osrv
 sys.argv.extend(modnames)              # list of modules
 cli()
