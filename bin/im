@@ -17,9 +17,11 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
 
-"""Usage: im
+"""
+Usage: im [--toolkit tk]
 
-This script runs Instance Messenger, a client for Twisted.Words"""
+This script runs Instance Messenger, a client for Twisted.Words
+"""
 
 ### TwistedPython Preamble
 # This makes sure that users don't have to set up their environment
@@ -28,12 +30,27 @@ import sys,os,string
 
 if string.find(os.path.abspath(sys.argv[0]),'Twisted') != -1:
     sys.path.append(os.path.dirname(
-        os.path.dirname(os.path.abspath(sys.argv[0]))))
+        os.path.dirname(os.path.abspath(sys.argv[0])))) 
 ### end of preamble
 
+from twisted.python import usage
+
+class Options(usage.Options):
+    optStrings = [["toolkit", "t", "gtk"]]
+
+config = Options()
+config.parseOptions()
+
 try:
+    if config.toolkit != 'gtk':
+        raise ImportError()
     from twisted.words.ui import gtkim
+except ImportError:
+    try:
+        from twisted.words.ui import tkim
+    except ImportError:
+        print "Neither GTK nor TK found."
+    else:
+        tkim.main()
+else:
     gtkim.main()
-except ImportError: # oh dear, no gtk, revert to tkinter
-    from twisted.words.ui import tkim
-    tkim.main()
