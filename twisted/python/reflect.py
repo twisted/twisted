@@ -567,6 +567,7 @@ def accumulateClassDict(classObj, attr, adict, baseClass=None):
     if baseClass is None or baseClass in classObj.__bases__:
         adict.update(getattr(classObj, attr, {}))
 
+
 def accumulateClassList(classObj, attr, listObj, baseClass=None):
     """Accumulate all attributes of a given name in a class heirarchy into a single list.
 
