@@ -23,6 +23,8 @@ listeners or connectors are added)::
     pollreactor.install()
 
 This module is stable.
+
+Maintainer: U{Itamar Shtull-Trauring<mailto:twisted@itamarst.org>}
 """
 
 # System imports

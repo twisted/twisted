@@ -17,7 +17,9 @@
 
 """Various asynchronous UDP classes.
 
-This is in-flux, and will be changed.
+This is in flux, and will be changed.
+
+Maintainer: U{Itamar Shtull-Trauring<mailto:twisted@itamarst.org>}
 """
 
 # System Imports

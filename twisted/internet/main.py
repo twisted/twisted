@@ -18,6 +18,8 @@
 
 In general, this module should not be used, other than by reactor authors
 who need to use the 'installReactor' method.
+
+Maintainer: U{Itamar Shtull-Trauring<mailto:twisted@itamarst.org>}
 """
 
 # System Imports

@@ -19,6 +19,8 @@
 For basic support see reactor threading API docs.
 
 This module is stable.
+
+Maintainer: U{Itamar Shtull-Trauring<mailto:twisted@itamarst.org>}
 """
 
 # twisted imports

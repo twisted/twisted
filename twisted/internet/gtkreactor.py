@@ -27,6 +27,8 @@ Then use twisted.internet APIs as usual.  The other methods here are not
 intended to be called directly.
 
 This module is stable.
+
+Maintainer: U{Itamar Shtull-Trauring<mailto:twisted@itamarst.org>}
 """
 
 __all__ = ['install']

@@ -17,15 +17,17 @@
 """A kqueue()/kevent() based implementation of the Twisted main loop.
 
 To install the event loop (and you should do this before any connections,
-listeners or connectors are added):
+listeners or connectors are added)::
 
     | from twisted.internet import kqreactor
     | kqreactor.install()
 
 This module is stable.
 
+Maintainer: U{Itamar Shtull-Trauring<mailto:twisted@itamarst.org>}
+
 This reactor only works on FreeBSD and requires PyKQueue 1.3, which is
-available at:  http://people.freebsd.org/~dwhite/PyKQueue/
+available at:  U{http://people.freebsd.org/~dwhite/PyKQueue/}
 
 You're going to need to patch PyKqueue as well:
 

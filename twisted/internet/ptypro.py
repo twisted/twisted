@@ -18,6 +18,8 @@
 
 This module is not stable, and may be merged into IReactorProcess API
 in the future.
+
+Maintainer: U{Itamar Shtull-Trauring<mailto:twisted@itamarst.org>}
 """
 
 # System Imports

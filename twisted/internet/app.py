@@ -17,6 +17,8 @@
 """Main `application' configuration and persistence support.
 
 This module is stable.
+
+Maintainer: U{Itamar Shtull-Trauring<mailto:twisted@itamarst.org>}
 """
 
 # System Imports

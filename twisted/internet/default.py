@@ -1,5 +1,5 @@
 # -*- Python -*-
-# $Id: default.py,v 1.40 2002/09/15 19:50:30 itamarst Exp $
+# $Id: default.py,v 1.41 2002/09/27 00:44:31 itamarst Exp $
 #
 # Twisted, the Framework of Your Internet
 # Copyright (C) 2001 Matthew W. Lefkowitz
@@ -20,6 +20,8 @@
 """Default reactor base classes, and a select() based reactor.
 
 This module is stable.
+
+Maintainer: U{Itamar Shtull-Trauring<mailto:twisted@itamarst.org>}
 """
 
 from bisect import insort

@@ -19,6 +19,8 @@
 """Support for results that aren't immediately available.
 
 This module is stable.
+
+Maintainer: U{Glyph Lefkowitz<mailto:glyph@twistedmatrix.com>}
 """
 
 # Twisted imports

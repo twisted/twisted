@@ -17,6 +17,8 @@
 """Very basic functionality for a Reactor implementation.
 
 This module is stable.
+
+Maintainer: U{Itamar Shtull-Trauring<mailto:twisted@itamarst.org>}
 """
 
 import socket # needed only for sync-dns

@@ -18,6 +18,8 @@
 
 This requires win32all or ActivePython to be installed.
 
+Maintainer: U{Itamar Shtull-Trauring<mailto:twisted@itamarst.org>}
+
 
 LIMITATIONS:
 1. WaitForMultipleObjects and thus the event loop can only handle 64 objects.

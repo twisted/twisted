@@ -15,8 +15,9 @@
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
-"""
-This module integrates Tkinter with twisted.internet's mainloop.
+"""This module integrates Tkinter with twisted.internet's mainloop.
+
+Maintainer: U{Itamar Shtull-Trauring<mailto:twisted@itamarst.org>}
 """
 
 # Sibling Imports

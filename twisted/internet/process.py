@@ -19,6 +19,8 @@
 """UNIX Process management.
 
 Do NOT use this module directly - use reactor.spawnProcess() instead.
+
+Maintainer: U{Itamar Shtull-Trauring<mailto:twisted@itamarst.org>}
 """
 
 # System Imports

@@ -23,6 +23,8 @@ in IReactorSSL.
 
 This module is stable, but at some point should be split so reactor-specific
 classes are in a separate module.
+
+Maintainer: U{Itamar Shtull-Trauring<mailto:twisted@itamarst.org>}
 """
 
 # System imports

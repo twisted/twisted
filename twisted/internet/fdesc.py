@@ -17,6 +17,8 @@
 """Utility functions for dealing with POSIX file descriptors.
 
 This module is stable.
+
+Maintainer: U{Itamar Shtull-Trauring<mailto:twisted@itamarst.org>}
 """
 
 import sys

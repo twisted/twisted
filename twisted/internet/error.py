@@ -18,6 +18,8 @@
 """Exceptions and errors for use in twisted.internet modules.
 
 This module is semi-stable.
+
+Maintainer: U{Itamar Shtull-Trauring<mailto:twisted@itamarst.org>}
 """
 
 import socket, types

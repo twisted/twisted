@@ -19,6 +19,8 @@
 """Various asynchronous TCP/IP classes.
 
 End users shouldn't use this module directly - use the reactor APIs instead.
+
+Maintainer: U{Itamar Shtull-Trauring<mailto:twisted@itamarst.org>}
 """
 
 
