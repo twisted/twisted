@@ -1,4 +1,3 @@
-
 # Twisted, the Framework of Your Internet
 # Copyright (C) 2001 Matthew W. Lefkowitz
 # 
@@ -79,17 +78,33 @@ class ClientContextFactory(ContextFactory):
 class Connection(tcp.Connection):
     """I am an SSL connection.
     """
+
+    writeBlockedOnRead = 0
+    readBlockedOnWrite= 0
     
     def doRead(self):
         """See tcp.Connection.doRead for details.
         """
+        if self.writeBlockedOnRead:
+            self.writeBlockedOnRead = 0
+            return self.doWrite()
         try:
             return tcp.Connection.doRead(self)
         except SSL.WantReadError:
-            # redo command with same arguments
-            return self.doRead()
+            return
+        except SSL.WantWriteError:
+            self.readBlockedOnWrite = 1
+            self.startWriting()
+            return
         except (SSL.ZeroReturnError, SSL.SysCallError):
             return main.CONNECTION_LOST
+
+    def doWrite(self):
+        if self.readBlockedOnWrite:
+            self.readBlockedOnWrite = 0
+            if not self.unsent: self.stopWriting()
+            return self.doRead()
+        return tcp.Connection.doWrite(self)
     
     def writeSomeData(self, data):
         """See tcp.Connection.writeSomeData for details.
@@ -97,8 +112,10 @@ class Connection(tcp.Connection):
         try:
             return tcp.Connection.writeSomeData(self, data)
         except SSL.WantWriteError:
-            # redo command with same arguments
-            return self.writeSomeData(data)
+            return 0
+        except SSL.WantReadError:
+            self.writeBlockedOnRead = 1
+            return 0
         except (SSL.ZeroReturnError, SSL.SysCallError):
             return main.CONNECTION_LOST
 
@@ -108,7 +125,11 @@ class Connection(tcp.Connection):
             self.socket.shutdown()
         except SSL.Error:
             pass
-        self.socket.close()
+        try:
+            self.socket.sock_shutdown(2)
+            self.socket.close()
+        except socket.error:
+            pass
 
 
 class Client(Connection, tcp.Client):
