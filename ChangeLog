@@ -1,3 +1,8 @@
+2002-12-22  Jp Calderone  <exarkun@twistedmatrix.com>
+
+	* twisted/protocols/dns.py: Support for AFSDB, RP, and SRV RRs
+	added.
+
 2002-12-18  Jp Calderone  <exarkun@twistedmatrix.com>
 
 	* twisted/persisted/dirdbm.py: copyTo and clear methods added
