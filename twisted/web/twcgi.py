@@ -249,7 +249,7 @@ class CGIProcessProtocol(protocol.ProcessProtocol, pb.Viewable):
             self.request.write(
                 error.ErrorPage(http.INTERNAL_SERVER_ERROR,
                                 "CGI Script Error",
-                                "Premature end of script headers; errors follow:<hr>" +
-                                html.PRE(self.errortext) + "<hr>" +
-                                html.PRE(self.headertext) + "<hr>").render(self.request))
+                                "Premature end of script headers; errors follow:<hr />" +
+                                html.PRE(self.errortext) + "<hr />" +
+                                html.PRE(self.headertext) + "<hr />").render(self.request))
         self.request.finish()
