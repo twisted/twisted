@@ -42,12 +42,14 @@ class ConnectionPool(pb.Referenceable):
     of the thread pool used to serve database requests (possibly this is
     deprecated - it does not work at the moment in any case).
     """
+    noisy = 1
     
     def __init__(self, dbapiName, *connargs, **connkw):
         """See ConnectionPool.__doc__
         """
         self.dbapiName = dbapiName
-        log.msg("Connecting to database: %s %s %s" % (dbapiName, connargs, connkw))
+        if self.noisy:
+            log.msg("Connecting to database: %s %s %s" % (dbapiName, connargs, connkw))
         self.dbapi = reflect.namedModule(dbapiName)
         assert self.dbapi.apilevel == '2.0', 'DB API module not DB API 2.0 compliant.'
         assert self.dbapi.threadsafety > 0, 'DB API module not sufficiently thread-safe.'
@@ -84,7 +86,8 @@ class ConnectionPool(pb.Referenceable):
         if not conn:
             conn = apply(self.dbapi.connect, self.connargs, self.connkw)
             self.connections[tid] = conn
-            log.msg('adbapi connecting: %s %s%s' %
+            if self.noisy:
+                log.msg('adbapi connecting: %s %s%s' %
                     ( self.dbapiName, self.connargs or '', self.connkw or ''))
         return conn
 
@@ -172,8 +175,9 @@ class ConnectionPool(pb.Referenceable):
         self.finalClose()
     def finalClose(self):
         for connection in self.connections.values():
-            log.msg('adbapi closing: %s %s%s' %
-                    ( self.dbapiName, self.connargs or '', self.connkw or ''))
+            if self.noisy:
+                log.msg('adbapi closing: %s %s%s' %
+                        ( self.dbapiName, self.connargs or '', self.connkw or ''))
             connection.close()
 
 class Augmentation:
