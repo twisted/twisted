@@ -86,11 +86,10 @@ def install():
         # FIXME - this list needs some work
         advertised_scripts=" ".join(["twistd", "mktap", "manhole",
                                      "tapconvert", "ckeygen", "trial",
-                                     "coil", "lore",
+                                     "coil", "lore", "websetroot", 
                                      ])
         # The following scripts are not advertised for the following reasons
         #  conch - issues an exception when run with no arguments
-        #  websetroot - issues an exception when run with no args
         #  im, t-im - issue exceptions for missing gtk when run
         #  tap2deb - platform-specific
         #  tk* - the ones that work have icons in the start menu, no need
