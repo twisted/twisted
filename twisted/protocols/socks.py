@@ -18,11 +18,8 @@
 Implementation of the SOCKSv4 protocol.
 """
 
-# sibling imports
-import protocol
-
 # twisted imports
-from twisted.internet import reactor
+from twisted.internet import reactor, protocol
 from twisted.python import log
 
 # python imports
@@ -30,7 +27,6 @@ import struct
 import string
 import socket
 import time
-import types
 
 
 class SOCKSv4Outgoing(protocol.Protocol):
@@ -42,9 +38,6 @@ class SOCKSv4Outgoing(protocol.Protocol):
         junk, host, port = self.transport.getPeer()
         self.socks.makeReply(90, 0, port=port, ip=host)
         self.socks.otherConn=self
-
-    def connectionFailed(self):
-        self.socks.makeReply(91)
 
     def connectionLost(self, reason):
         self.socks.transport.loseConnection()
@@ -105,7 +98,8 @@ class SOCKSv4(protocol.Protocol):
                 self.makeReply(91)
                 return
             if code==1: # CONNECT
-                protocol.ClientCreator(reactor, SOCKSv4Outgoing, self).connectTCP(server,port)
+                d = protocol.ClientCreator(reactor, SOCKSv4Outgoing, self).connectTCP(server,port)
+                d.addErrback(lambda result, self=self: self.makeReply(91))
             elif code==2: # BIND
                 self.serv = reactor.listenTCP(0, SOCKSv4IncomingFactory(self, socket.gethostbyname(server)))
                 kind, ourip, ourport = self.serv.getHost()
