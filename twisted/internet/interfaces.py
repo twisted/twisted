@@ -1034,7 +1034,10 @@ class ISSLTransport(ITCPTransport):
 
 
 class IProcessTransport(ITransport):
-    """A process transport."""
+    """A process transport.
+
+    @ivar pid: The Process-ID of this process.
+    """
 
     def closeStdin(self):
         """Close stdin after all data has been written out."""
