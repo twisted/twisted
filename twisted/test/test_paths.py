@@ -96,3 +96,43 @@ class FilePathTestCase(unittest.TestCase):
 
     if platform.getType() != 'win32':
         testInsecureWin32.skip = "Consider yourself lucky."
+
+
+from twisted.python import urlpath
+
+
+class URLPathTestCase(unittest.TestCase):
+    def setUp(self):
+        self.path = urlpath.URLPath.fromString("http://example.com/foo/bar?yes=no&no=yes#footer")
+
+    def testStringConversion(self):
+        self.assertEquals(str(self.path), "http://example.com/foo/bar?yes=no&no=yes#footer")
+
+    def testChildString(self):
+        self.assertEquals(str(self.path.child('hello')), "http://example.com/foo/bar/hello")
+        self.assertEquals(str(self.path.child('hello').child('')), "http://example.com/foo/bar/hello/")
+
+    def testSiblingString(self):
+        self.assertEquals(str(self.path.sibling('baz')), 'http://example.com/foo/baz')
+        
+        # The sibling of http://example.com/foo/bar/
+        #     is http://example.comf/foo/bar/baz
+        # because really we are constructing a sibling of
+        # http://example.com/foo/bar/index.html
+        self.assertEquals(str(self.path.child('').sibling('baz')), 'http://example.com/foo/bar/baz')
+
+    def testParentString(self):
+        # parent should be equivalent to '..'
+        # 'foo' is the current directory, '/' is the parent directory
+        self.assertEquals(str(self.path.parent()), 'http://example.com/')
+        self.assertEquals(str(self.path.child('').parent()), 'http://example.com/foo/')
+        self.assertEquals(str(self.path.child('baz').parent()), 'http://example.com/foo/')
+        self.assertEquals(str(self.path.parent().parent().parent().parent().parent()), 'http://example.com/')
+
+    def testHereString(self):
+        # here should be equivalent to '.'
+        self.assertEquals(str(self.path.here()), 'http://example.com/foo/')
+        self.assertEquals(str(self.path.child('').here()), 'http://example.com/foo/bar/')
+
+
+

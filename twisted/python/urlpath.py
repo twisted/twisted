@@ -1,73 +1,30 @@
-
-# submitted for inclusion in twisted.python
-
-import os
-from os.path import isdir, isabs, isfile, exists, normpath, abspath
-from os.path import split as splitpath
-from os.path import join as joinpath
-from os import sep as slash
-
-class InsecurePath(Exception):
-    pass
-
-class FilesystemPath:
-    """Immutable filesystem path.
-    """
-    def __init__(self, path, abs=None):
-        if abs is None:
-            self.path = normpath(path)
-            self.abs = abspath(self.path)
-        else:
-            self.path = path
-            self.abs = abs
-
-    def child(self, path, allowDotDot=0):
-        norm = normpath(path)
-        if os.sep in norm:
-            raise InsecurePath()
-        newpath = normpath(joinpath(self.path, norm))
-        newabs = abspath(newpath)
-        if not newabs.startswith(self.abs):
-            raise InsecurePath()
-        return FilesystemPath(newpath, newabs)
-
-    def open(self, mode='r'):
-        return open(self.path, mode+'b')
-
-    def exists(self):
-        return exists(self.path)
-
-    def isabs(self):
-        return isabs(self.path)
-
-    def isdir(self):
-        return isdir(self.path)
-
-    def __str__(self):
-        return self.path
-
-    def __repr__(self):
-        return 'FilesystemPath(%r)' % self.path
-
-    def __hash__(self):
-        return hash(self.path) + 1
-
-    def __cmp__(self, other):
-        return cmp(self.__str__(), other)
-
+# -*- test-case-name: twisted.test.test_paths -*-
+# Twisted, the Framework of Your Internet
+# Copyright (C) 2001-2002 Matthew W. Lefkowitz
+#
+# This library is free software; you can redistribute it and/or
+# modify it under the terms of version 2.1 of the GNU Lesser General Public
+# License as published by the Free Software Foundation.
+#
+# This library is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+# Lesser General Public License for more details.
+#
+# You should have received a copy of the GNU Lesser General Public
+# License along with this library; if not, write to the Free Software
+# Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+#
 
 import urlparse
 import urllib
 
 class URLPath:
-
     def __init__(self, scheme='', netloc='localhost', path='',
                  query='', fragment=''):
         self.scheme = scheme or 'http'
         self.netloc = netloc
-        if path == '/':
-            path = ''
-        self.path = path
+        self.path = path or '/'
         self.query = query
         self.fragment = fragment
 
@@ -120,13 +77,16 @@ class URLPath:
         if l[-1] == '':
             del l[-2]
         else:
+            # We are a file, such as http://example.com/foo/bar
+            # our parent directory is http://example.com/
             l.pop()
+            l[-1] = ''
         return self._pathMod(l, keepQuery)
 
     def here(self, keepQuery=0):
         l = self.pathList()
         if l[-1] != '':
-            l.pop()
+            l[-1] = ''
         return self._pathMod(l, keepQuery)
 
     def click(self, st):
@@ -143,7 +103,7 @@ class URLPath:
                 if not query:
                     query = self.query
             elif path[0] != '/':
-                l = self.path.split('/')
+                l = self.pathList()
                 l[-1] = path
                 path = '/'.join(l)
         
@@ -163,26 +123,3 @@ class URLPath:
 
     def __repr__(self):
         return repr(self.__dict__)
-
-def test():
-    fs = FilesystemPath('/')
-    print fs.child('hello')
-    print fs.child('hello').child('goodbye')
-    fs = FilesystemPath('')
-    print fs.child('hello').child('goodbye')
-    try:
-        print fs.child('..')
-    except InsecurePath:
-        pass
-    else:
-        raise 'this is definitely insecure'
-    hp = URLPath.fromString('http://www.twistedmatrix.com:8080/')
-    print hp
-    print repr(hp)
-    print hp.click('test#what').click('aaa?a').click('http://shazbot.com').click('ghngh')
-    shz = hp.click('aaa').click("?aaa").click("#aaa").click("?yyy=zzz")
-    print shz.sibling('bbb')
-
-
-if __name__ == '__main__':
-    test()
