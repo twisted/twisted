@@ -5,21 +5,28 @@
     <body>
         <h3 model="greeting" view="Text">Greeting here.</h3>
         
-        You are visitor <span model="anInt" view="Text">0</span>! Not really, though.
+        You are visitor <span model="anInt" view="Text">0</span>! Not really, 
+        though.
         
         <ol model="aList" view="List">
             <li listItemOf="aList" view="Text">List item here.</li>
         </ol>
 
         <span model="aList" view="List">
-            <div listItemOf="aList" view="Text" style="background-color: blue">List item here.</div>
-            <div listItemOf="aList" view="Text" style="background-color: green">List item here.</div>
+            <div listItemOf="aList" view="Text" style="background-color: blue">
+                List item here.
+            </div>
+            <div listItemOf="aList" view="Text" style="background-color: green">
+                List item here.
+            </div>
         </span>
 
         <p>
             <span model="aDict" view="KeyedList">
-                <div keyedListItemOf="aDict" view="Text" style="background-color: blue">List item here.</div>
-                <div keyedListItemOf="aDict" view="Text" style="background-color: green">List item here.</div>
+                <div keyedListItemOf="aDict" view="Text" 
+                     style="background-color: blue">List item here.</div>
+                <div keyedListItemOf="aDict" view="Text" 
+                     style="background-color: green">List item here.</div>
             </span>
         </p>
         
