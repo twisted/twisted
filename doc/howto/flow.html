@@ -615,13 +615,14 @@ def consumer():
     yield query
     for row in query:
         print "Processed result : ", row
+        yield query
 
 from twisted.internet import reactor
 def finish(result): 
     print "Deferred Complete : ", result
+    reactor.stop()
 f = flow.Deferred(consumer())
 f.addBoth(finish)
-reactor.callLater(1,reactor.stop)
 reactor.run()
 
 # prints
