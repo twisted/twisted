@@ -20,8 +20,11 @@ from twisted.internet import protocol, reactor
 from twisted.protocols import basic
 from twisted.python import util
 
-from OpenSSL import SSL
-from twisted.internet import ssl
+try:
+    from OpenSSL import SSL
+    from twisted.internet import ssl
+except:
+    SSL = ssl = None
 
 import os
 import test_tcp
@@ -229,3 +232,7 @@ class BufferingTestCase(unittest.TestCase):
             reactor.iterate()
         
         self.assertEquals(client.buffer, ["+OK <some crap>\r\n"])
+
+if SSL is None:
+    for case in (BufferingTestCase, TLSTestCase, StolenTCPTestCase):
+        case.skip = "OpenSSL not present"

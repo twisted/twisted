@@ -36,7 +36,10 @@ import twisted.cred.portal
 import twisted.cred.checkers
 import twisted.cred.credentials
 
-from ssl_helpers import ClientTLSContext, ServerTLSContext
+try:
+    from ssl_helpers import ClientTLSContext, ServerTLSContext
+except ImportError:
+    ClientTLSContext = ServerTLSContext = None
 
 import re
 
@@ -397,26 +400,6 @@ class AuthTestCase(unittest.TestCase, LoopbackMixin):
 
         self.assertEquals(server.authenticated, 1)
 
-class NoticeTLSClient(MyESMTPClient):
-    tls = False
-    def esmtpState_starttls(self, code, resp):
-        MyESMTPClient.esmtpState_starttls(self, code, resp)
-        self.tls = True
-
-class TLSTestCase(unittest.TestCase, LoopbackMixin):
-    def testTLS(self):
-        clientCTX = ClientTLSContext()
-        serverCTX = ServerTLSContext()
-        
-        client = NoticeTLSClient(contextFactory=clientCTX)
-        server = DummyESMTP(contextFactory=serverCTX)
-        
-        self.loopback(server, client)
-        
-        self.assertEquals(client.tls, True)
-        self.assertEquals(server.startedTLS, True)
-    testTLS.skip = "SSL wrongly buffers, hanging this test"
-
 class SMTPHelperTestCase(unittest.TestCase):
     def testMessageID(self):
         d = {}
@@ -450,3 +433,27 @@ class SMTPHelperTestCase(unittest.TestCase):
         for (case, expected) in cases:
             self.assertEquals(case.encode('xtext'), expected)
             self.assertEquals(expected.decode('xtext'), case)
+
+class NoticeTLSClient(MyESMTPClient):
+    tls = False
+    def esmtpState_starttls(self, code, resp):
+        MyESMTPClient.esmtpState_starttls(self, code, resp)
+        self.tls = True
+
+class TLSTestCase(unittest.TestCase, LoopbackMixin):
+    def testTLS(self):
+        clientCTX = ClientTLSContext()
+        serverCTX = ServerTLSContext()
+        
+        client = NoticeTLSClient(contextFactory=clientCTX)
+        server = DummyESMTP(contextFactory=serverCTX)
+        
+        self.loopback(server, client)
+        
+        self.assertEquals(client.tls, True)
+        self.assertEquals(server.startedTLS, True)
+    testTLS.skip = "SSL wrongly buffers, hanging this test"
+
+if ClientTLSContext is None:
+    for case in (TLSTestCase,):
+        case.skip = "OpenSSL not present"
