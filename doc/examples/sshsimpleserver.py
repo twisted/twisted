@@ -1,6 +1,7 @@
 #!/usr/bin/env python
-from twisted.cred import authorizer
+from twisted.cred import portal, authorizer, checkers
 from twisted.conch import identity, error
+from twisted.conch.checkers import SSHPublicKeyDatabase
 from twisted.conch.ssh import factory, userauth, connection, channel, keys
 from twisted.internet import reactor, protocol, defer
 from twisted.python import log
@@ -12,6 +13,17 @@ log in with username "user" and password "password".
 Alternatively, put a public key in ./id_dsa.pub and the user may be
 authenticated with that.
 """
+
+class SSHAvatar:
+
+    def __init__(self, username):
+        self.username = username
+
+class SSHRealm:
+    __implements__ = portal.IRealm,
+
+    def requestAvatar(self, avatarId, mind, *interfaces):
+        return SSHAvatar(avatarId), interfaces[0], lambda x: None
 
 class EchoProtocol(protocol.Protocol):
     """this is our example protocol that we will run over SSH
@@ -38,19 +50,12 @@ pSTqy7c3a2AScC/YyOwkDaICHnnD3XyjMwIxALRzl0tQEKMXs6hH8ToUdlLROCrP
 EhQ0wahUTCk1gKA4uPD6TMTChavbh4K63OvbKg==
 -----END RSA PRIVATE KEY-----"""
 
-class Identity(identity.ConchIdentity):
-    def validatePublicKey(self, data):
-        try:
-            if data == keys.getPublicKeyString('id_dsa.pub') and self.name == 'user':
-                return defer.succeed('')
-        except IOError:
-            pass
-        return defer.fail(error.ConchError('no or bad public key'))
 
-    def verifyPlainPassword(self, password):
-        if password=='password' and self.name == 'user':
-            return defer.succeed('')
-        return defer.fail(error.ConchError('bad password'))
+class InMemoryPublicKeyChecker(SSHPublicKeyDatabase):
+
+    def checkKey(self, credentials):
+        return credentials.username == 'user' and \
+            keys.getPublicKeyString(publicKey) == credentials.blob
 
 class Authorizer(authorizer.Authorizer):
     def getIdentityRequest(self, name):
@@ -92,7 +97,14 @@ class SSHFactory(factory.SSHFactory):
         'ssh-userauth': userauth.SSHUserAuthServer,
         'ssh-connection': SSHConnection
     }
-    authorizer = Authorizer()
+    
+
+portal = portal.Portal(SSHRealm())
+passwdDB = checkers.InMemoryUsernamePasswordDatabaseDontUse()
+passwdDB.addUser('user', 'password')
+portal.registerChecker(passwdDB)
+portal.registerChecker(InMemoryPublicKeyChecker())
+SSHFactory.portal = portal
 
 reactor.listenTCP(5022, SSHFactory())
 reactor.run()
