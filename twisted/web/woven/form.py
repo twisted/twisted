@@ -48,10 +48,15 @@ class FormFillerWidget(widgets.Widget):
         return lmx(node).table(border="0")
     
     def input_single(self, request, content, arg):
+        value = getValue(request, arg)
+        if value == None:
+            value = ""
+        else:
+            value = str(value)
         return content.input(type="text",
                              size="60",
                              name=arg.name,
-                             value=str(getValue(request, arg)))
+                             value=value)
 
     def input_text(self, request, content, arg):
         r = content.textarea(cols="60",

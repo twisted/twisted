@@ -95,8 +95,16 @@ class Hidden(String):
 class Integer(Argument):
     """A single integer.
     """
-    defaultDefault = 0
+    
+    defaultDefault = None
+
+    def __init__(self, name, allowNone=1, default=None, shortDesc=None, longDesc=None, hints=()):
+        Argument.__init__(self, name, default, shortDesc, longDesc, hints)
+        self.allowNone = allowNone
+    
     def coerce(self, val):
+        if not val.strip() and self.allowNone:
+            return None
         try:
             return int(val)
         except ValueError:
@@ -105,9 +113,15 @@ class Integer(Argument):
 
 class Float(Argument):
     
-    defaultDefault = 0.0
+    defaultDefault = None
+
+    def __init__(self, name, allowNone=1, default=None, shortDesc=None, longDesc=None, hints=()):
+        Argument.__init__(self, name, default, shortDesc, longDesc, hints)
+        self.allowNone = allowNone
 
     def coerce(self, val):
+        if not val.strip() and self.allowNone:
+            return None
         try:
             return float(val)
         except ValueError:

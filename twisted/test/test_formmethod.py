@@ -36,10 +36,13 @@ class ArgumentTestCase(unittest.TestCase):
         self.argTest(formmethod.String, [("a", "a"), (1, "1")], ())
 
     def testInt(self):
-        self.argTest(formmethod.Integer, [("3", 3), ("-2", -2)], ("q", "2.3"))
+        self.argTest(formmethod.Integer, [("3", 3), ("-2", -2), ("", None)], ("q", "2.3"))
+        self.argTest(formmethod.Integer, [("3", 3), ("-2", -2)], ("q", "2.3", ""), allowNone=0)
 
     def testFloat(self):
-        self.argTest(formmethod.Float, [("3", 3.0), ("-2.3", -2.3)], ("q", "2.3z"))
+        self.argTest(formmethod.Float, [("3", 3.0), ("-2.3", -2.3), ("", None)], ("q", "2.3z"))
+        self.argTest(formmethod.Float, [("3", 3.0), ("-2.3", -2.3)], ("q", "2.3z", ""),
+                     allowNone=0)
 
     def testChoice(self):
         choices = [("a", "apple", "an apple"),
