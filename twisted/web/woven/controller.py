@@ -18,7 +18,7 @@
 
 from __future__ import nested_scopes
 
-__version__ = "$Revision: 1.62 $"[11:-2]
+__version__ = "$Revision: 1.63 $"[11:-2]
 
 import os
 import cgi
@@ -333,7 +333,7 @@ class LiveController(Controller):
         target.onEvent(request, eventName, *eventArgs)
         sess.sendScript = orig
 
-        scriptOutput.append('top.woven_clientToServerEventComplete()')        
+        scriptOutput.append('parent.woven_clientToServerEventComplete()')        
         
         #print "GATHERED JS", scriptOutput
 
@@ -376,7 +376,7 @@ class LiveController(Controller):
             nodeXML = nodeXML.replace('\v', ' ')
             nodeXML = nodeXML.replace('\f', ' ')
 
-            js = "top.woven_replaceElement('%s', '%s')" % (nodeId, nodeXML)
+            js = "parent.woven_replaceElement('%s', '%s')" % (nodeId, nodeXML)
             #for key in widget.subviews.keys():
             #    view.subviews[key].unlinkViews()
             oldNode = page.view.subviews[nodeId]
