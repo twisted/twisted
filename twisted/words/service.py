@@ -559,7 +559,7 @@ class Service(pb.Service, styles.Versioned):
 
     def createPerspective(self, name):
         if self.perspectives.has_key(name):
-            raise KeyError("Pariticpant already exists: %s." % name)
+            raise KeyError("Participant already exists: %s." % name)
         log.msg("Creating New Participant: %s" % name)
         return pb.Service.createPerspective(self, name)
 
