@@ -84,7 +84,7 @@ between all three Application formats.</p>
 
 <p>Having <code>Application</code> in a variety of formats, aesthetically
 pleasing as it may be, does not actually cause anything to happen.
-For that, we need a program which takes a "dead" Application and brings
+For that, we need a program which takes a <q>dead</q> Application and brings
 life to it. For UNIX systems (and, until there are are alternatives,
 for other operating systems too), this program is <code>twistd(1)</code>.
 Strictly speaking, <code>twistd</code> is not necessary -- unserializing
@@ -106,8 +106,8 @@ option.</p>
 <code>twistd.pid</code> file (this can be configured via a command line
 switch). In order to shutdown the <code>twistd</code> process, kill that
 pid (usually you would do <code>kill `twisted.pid`</code>). When the
-process is killed in an orderly fashion it will leave behind the "shutdown
-Application" which is named the same as the original file with a
+process is killed in an orderly fashion it will leave behind the <q>shutdown
+Application</q> which is named the same as the original file with a
 <code>-shutdown</code> added to its base name. This contains the new
 configuration information, as changed in the application.</p>
 
