@@ -1,7 +1,6 @@
 import random
 
 from twisted.internet import reactor
-from twisted.internet import main
 from twisted.internet.app import Application
 
 from twisted.enterprise import adbapi, row, sqlreflector, xmlreflector, reflector
@@ -13,18 +12,24 @@ from row_util import *
     Loads the objects from the XML DB
 """
 
+class DataException(Exception): pass
+
 xmanager = None
 manager = None
 
 def runTests(ignore=0):
     global manager
     print "running tests."
-    manager.loadObjectsFrom("testrooms").addCallback(gotDBRooms)
+    manager.loadObjectsFrom("testrooms").addCallbacks(gotDBRooms, fail)
+
+def fail(failure):
+    print "FAILURE"
+    print failure.getErrorMessage()
+    reactor.stop()
 
 def dumpRooms(rooms):
     if not rooms:
-        print "no rooms found!"
-        main.shutDown()
+        raise DataException, "no rooms found!"
 
     for room in rooms:
         print "  ", room
@@ -37,24 +42,31 @@ def dumpRooms(rooms):
 def gotDBRooms(rooms):
     print "------------ got rooms from database ------------"
     dumpRooms(rooms)
-    for obj in xmanager.rowCache.values():
+    for obj in manager.rowCache.values():
         xmanager.insertRow(obj)
 
-    xmanager.loadObjectsFrom("testrooms", data=None, whereClause=[("roomId",reflector.EQUAL, 12)]).addCallback(gotXMLRooms)
+    d = xmanager.loadObjectsFrom("testrooms", data=None,
+                                 whereClause=[("roomId",reflector.EQUAL, 12)])
+    d.addCallback(gotXMLRooms)
+    d.addErrback(fail)
 
 def gotXMLRooms(rooms):
     print "------------ got rooms from XML ------------"    
     dumpRooms(rooms)
-    xmanager.loadObjectsFrom("testrooms", data=None, whereClause=[("roomId",reflector.EQUAL, 12)]).addCallback(gotXMLRooms2)
+    d = xmanager.loadObjectsFrom("testrooms", data=None,
+                                 whereClause=[("roomId",reflector.EQUAL, 12)])
+    d.addCallback(gotXMLRooms2)
+    d.addErrback(fail)
 
 def gotXMLRooms2(rooms):
     print "------------ got rooms from XML again! ------------"        
-    main.shutDown()
+    reactor.stop()
     
 def tick():
-    main.addTimeout(tick, 0.5)
+    reactor.callLater(0.5, tick)
 
-dbpool = adbapi.ConnectionPool("pyPgSQL.PgSQL", database="sean", host="localhost", port=5432)
+dbpool = adbapi.ConnectionPool("pyPgSQL.PgSQL", database="test")
+#dbpool = adbapi.ConnectionPool("psycopg", "dbname=test")
 
 # Create Twisted application object
 application = Application("testApp")
@@ -62,9 +74,10 @@ application = Application("testApp")
 def kickOffTests(ignoredResult=0):
     global manager, xmanager
     xmanager = xmlreflector.XMLReflector("myXMLdb", [RoomRow, FurnitureRow, RugRow, LampRow] )    
-    manager = sqlreflector.SQLReflector(dbpool, [RoomRow, FurnitureRow, RugRow, LampRow], runTests)
+    manager = sqlreflector.SQLReflector(dbpool, [RoomRow, FurnitureRow, RugRow, LampRow])
+    runTests()
 
 # make sure we can be shut down on windows.
-main.addTimeout(tick, 0.5)
-main.addTimeout(kickOffTests, 0.4)
+reactor.callLater(0.5, tick)
+reactor.callLater(0.4, kickOffTests)
 reactor.run()
