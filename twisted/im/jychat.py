@@ -1,3 +1,19 @@
+# Twisted, the Framework of Your Internet
+# Copyright (C) 2001-2003 Matthew W. Lefkowitz
+#
+# This library is free software; you can redistribute it and/or
+# modify it under the terms of version 2.1 of the GNU Lesser General Public
+# License as published by the Free Software Foundation.
+#
+# This library is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+# Lesser General Public License for more details.
+#
+# You should have received a copy of the GNU Lesser General Public
+# License along with this library; if not, write to the Free Software
+# Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+#
 from twisted.im.basechat import ContactsList, Conversation, GroupConversation,\
      ChatUI
 from twisted.im.locals import OFFLINE, ONLINE, AWAY
@@ -47,7 +63,7 @@ class _AccountAdder:
         acct = self.contactslist.clientsByName[self.account.getSelectedItem()]
         acct.addContact(self.contactname.getText())
         self.mainframe.dispose()
-    
+
     def cancel(self, ae):
         self.mainframe.dispose()
 
@@ -66,7 +82,7 @@ class ContactsListGUI(ContactsList):
         self.buildpane()
         self.mainframe.pack()
         self.mainframe.show()
-    
+
     def setContactStatus(self, person):
         ContactsList.setContactStatus(self, person)
         self.update()
@@ -97,7 +113,7 @@ class ContactsListGUI(ContactsList):
         mainpane.add(JScrollPane(self.table))
         mainpane.add(buttons)
         self.update()
-    
+
     def update(self):
         contactdata = []
         for contact in self.onlineContacts.values():
@@ -117,10 +133,10 @@ class ContactsListGUI(ContactsList):
         else:
             person = self.onlineContacts[self.data.getValueAt(row, 0)]
             self.chat.getConversation(person)
-    
+
     def addContact(self, ae):
         _AccountAdder(self)
-        
+
     def quit(self, ae):
         sys.exit()
 
@@ -150,7 +166,7 @@ class ConversationWindow(Conversation):
         self.typepad.actionPerformed = self.send
         mainpane.add(self.typepad)
         mainpane.add(buttons)
-    
+
     def show(self):
         self.mainframe.pack()
         self.mainframe.show()
@@ -197,21 +213,21 @@ class GroupConversationWindow(GroupConversation):
         self.typepad = JTextField()
         self.buildpane()
         self.lentext = 0
-            
+
     def show(self):
         self.mainframe.pack()
         self.mainframe.show()
 
     def hide(self):
         self.mainframe.hide()
-    
+
     def showGroupMessage(self, sender, text, metadata=None):
         self.displayText(sender + ": " + text)
-    
+
     def setGroupMembers(self, members):
         GroupConversation.setGroupMembers(self, members)
         self.updatelist()
-        
+
     def setTopic(self, topic, author):
         topictext = "Topic: " + topic + ", set by " + author
         self.mainframe.setTitle(self.group.name + ": " + topictext)
@@ -248,7 +264,7 @@ class GroupConversationWindow(GroupConversation):
         mainpane.setLayout(BoxLayout(mainpane, BoxLayout.X_AXIS))
         mainpane.add(chat)
         mainpane.add(memberframe)
-        
+
     def displayText(self, text):
         self.lentext = self.lentext + len(text)
         self.display.append(text)
@@ -280,4 +296,3 @@ class JyChatUI(ChatUI):
         return ChatUI.getGroupConversation(self, group,
                                             GroupConversationWindow,
                                             stayHidden)
-    
