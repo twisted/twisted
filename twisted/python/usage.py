@@ -1,5 +1,4 @@
-# -*- Python -*-
-# $Id: usage.py,v 1.57 2004/01/30 18:00:18 exarkun Exp $
+# -*- test-case-name: twisted.test.test_usage -*-
 # Copyright (c) 2001-2004 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
@@ -367,7 +366,7 @@ class Options(dict):
         return longOpt, shortOpt, docs, settings, synonyms, dispatch
 
 
-    def __str__(self, width=None):
+    def __str__(self):
         return self.getSynopsis() + '\n' + self.getUsage(width=None)
 
     def getSynopsis(self):
