@@ -31,8 +31,8 @@ class Options(usage.Options):
     synopsis = "Usage: mktap mail [options]"
 
     optParameters = [
-        ["pop", "p", 8110, "Port to start the POP3 server on."],
-        ["smtp", "s", 8025, "Port to start the SMTP server on."],
+        ["pop", "p", 8110, "Port to start the POP3 server on (0 to disable)."],
+        ["smtp", "s", 8025, "Port to start the SMTP server on (0 to disable)."],
         ["relay", "r", None, 
             "relay mail we do not know how to handle to this IP,"
             " using the given path as a queue directory"]
@@ -48,8 +48,10 @@ class Options(usage.Options):
     def opt_domain(self, domain):
         """generate an SMTP/POP3 virtual domain which saves to \"path\"
         """
-
-        name, path = string.split(domain, '=')
+        try:
+            name, path = string.split(domain, '=')
+        except ValueError:
+            raise usage.UsageError("Argument to --domain must be of the form 'name=path'")
         self.last_domain = maildir.MaildirDirdbmDomain(self.service, os.path.abspath(path))
         self.service.domains[name] = self.last_domain
     opt_d = opt_domain
@@ -57,7 +59,10 @@ class Options(usage.Options):
     def opt_user(self, user_pass):
         """add a user/password to the last specified domains
         """
-        user, password = string.split(user_pass, '=')
+        try:
+            user, password = string.split(user_pass, '=')
+        except ValueError:
+            raise usage.UsageError("Argument to --user must be of the form 'user=password'")
         self.last_domain.dbm[user] = password
     opt_u = opt_user
 
@@ -66,7 +71,22 @@ class Options(usage.Options):
         """
         self.last_domain.postmaster = 1
     opt_b = opt_bounce_to_postmaster
-
+    
+    
+    def postOptions(self):
+        try:
+            self['pop'] = int(self['pop'])
+            assert 0 <= self['pop'] < 2 ** 16, ValueError
+        except ValueError:
+            raise usage.UsageError('Invalid port specified to --pop: %s' % self['pop'])
+        try:
+            self['smtp'] = int(self['smtp'])
+            assert 0 <= self['smtp'] < 2 ** 16, ValueError
+        except ValueError:
+            raise usage.UsageError('Invalid port specified to --smtp: %s' % self['smtp'])
+        
+        if not (self['pop'] or self['smtp']):
+            raise usage.UsageError("You cannot disable both POP and SMTP")
 
 def updateApplication(app, config):
     if config.opts['relay']:
@@ -80,5 +100,8 @@ def updateApplication(app, config):
         relaymanager.attachManagerToDelayed(manager, delayed)
         config.service.domains.setDefaultDomain(default)
         app.addDelayed(delayed)
-    app.listenTCP(int(config.opts['pop']), config.service.getPOP3Factory())
-    app.listenTCP(int(config.opts['smtp']), config.service.getSMTPFactory())
+    
+    if config['pop']:
+        app.listenTCP(config.opts['pop'], config.service.getPOP3Factory())
+    if config['smtp']:
+        app.listenTCP(config.opts['smtp'], config.service.getSMTPFactory())
