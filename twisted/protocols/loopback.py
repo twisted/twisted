@@ -1,4 +1,3 @@
-
 # Twisted, the Framework of Your Internet
 # Copyright (C) 2001 Matthew W. Lefkowitz
 #
@@ -81,22 +80,30 @@ def loopback(server, client, logFile=None):
     reactor.iterate() # last gasp before I go away
 
 
+class LoopbackClientFactory(protocol.ClientFactory):
+
+    def __init__(self, protocol):
+        self.disconnected = 0
+        self.protocol = protocol
+
+    def buildProtocol(self, addr):
+        return self.protocol
+
+    def connectionLost(self, connector):
+        self.disconnected = 1
+
+
 def loopbackTCP(server, client, port=64124):
-    """Run session between server and client over TCP."""
+    """Run session between server and client protocol instances over TCP."""
     from twisted.internet import reactor
     f = protocol.Factory()
     f.buildProtocol = lambda addr, p=server: p
     serverPort = reactor.listenTCP(port, f, interface='127.0.0.1')
-    reactor.clientTCP('127.0.0.1', port, client)
-    class MyServer(server.__class__):
-
-        _loopbackTCP_notRunningAnymore = 0
-        def connectionLost(self):
-            self._loopbackTCP_notRunningAnymore = 1
-            self.__class__.__bases__[0].connectionLost(self)
-
-    server.__class__ = MyServer
-    while not server._loopbackTCP_notRunningAnymore:
+    reactor.iterate()
+    clientF = LoopbackClientFactory(client)
+    reactor.connectTCP('127.0.0.1', port, clientF)
+    
+    while not clientF.disconnected:
         reactor.iterate()
 
     serverPort.stopListening()
