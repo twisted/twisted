@@ -20,7 +20,7 @@ if __name__ == '__main__':
         # metadata
         name="Twisted Runner",
         version="SVN-Trunk",
-        description="Twisted Runner is an inetd replacement.",
+        description="Twisted Runner is a process management library and inetd replacement.",
         author="Twisted Matrix Laboratories",
         author_email="twisted-python@twistedmatrix.com",
         maintainer="Andrew Bennetts",
@@ -28,7 +28,8 @@ if __name__ == '__main__':
         url="http://twistedmatrix.com/projects/runner/",
         license="MIT",
         long_description="""\
-Twisted Runner is an inetd replacement.
+Twisted Runner contains code useful for persistent process management
+with Python and Twisted, and has an almost full replacement for inetd.
 """,
         # build stuff
         detectExtensions=detectExtensions,
