@@ -1,3 +1,7 @@
+2004-07-05  Jp Calderone  <exarkun@twistedmatrix.com>
+
+	* bin/newtexaco, twisted/scripts/newtexaco.py: sendmail replacement
+
 2003-07-04  Dave Peticolas  <dave@krondo.com>
 
 	* twisted/test/test_enterprise.py: add sqlite. more tests.
