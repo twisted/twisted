@@ -58,7 +58,7 @@ class TwistedWordsPerson(basesupport.AbstractPerson):
 
 class TwistedWordsGroup(basesupport.AbstractGroup):
     def __init__(self, name, wordsClient, chatui):
-        basesupport.AbstractGroup.__init__(name, wordsClient, chatui)
+        basesupport.AbstractGroup.__init__(self, name, wordsClient, chatui)
         self.joined = 0
 
     def sendGroupMessage(self, text, metadata=None):
