@@ -215,7 +215,7 @@ def formatError(tm): # would need another adapter for tbformat='emacs'
 
     for msg in tm.skip, itrial.ITodo(tm.todo).msg:
         if msg is not None:
-            ret.append(msg + '\n')
+            ret.append(str(msg) + '\n')
 
     if tm.status not in (SUCCESS, SKIP, UNEXPECTED_SUCCESS):
         return "%s\n%s" % ('\n'.join(ret),
