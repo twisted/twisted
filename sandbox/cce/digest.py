@@ -49,7 +49,6 @@ class DigestAuthentication(Resource):
         if not auth:
             return self.sendAuthenticateResponse(request)
         (authtype, auth) = auth.split(" ", 1)
-        print auth
         if 'Digest' != authtype:
             return self.__failpage
         amap = {}
