@@ -5,7 +5,11 @@ if string.find(os.path.abspath(sys.argv[0]), os.sep+'Twisted') != -1:
 from twisted.python import usage
 
 class Options(usage.Options):
-    updates = ()
+    updates = ('README',
+               'doc/howto/installing-twisted.html',
+               'twisted/copyright.py',
+               'admin/twisted.spec',
+               'ChangeLog')
     optParameters = [
      ["type", "t", "alpha", "Type of release -- alpha, RC or final"],
      ["qotr", "q", None, "Quote of the release"],
@@ -100,7 +104,7 @@ def run(config):
     tag, version = getrevision()
     command = 'cvs -d :ext:cvs.twistedmatrix.com:/cvs co -d Twisted.CVS'
     if not config['head']:
-        command += "-r %s" % tag
+        command += " -r %s" % tag
     do = not config['dry-run']
     system(command, do)
     old = strtag(*version)
