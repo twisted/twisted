@@ -18,25 +18,26 @@
 import errno, os, sys, string
 
 copyright = '''\
-# Twisted, the Framework of Your Internet
-# Copyright (C) 2001-2002 Matthew W. Lefkowitz
-#
-# This library is free software; you can redistribute it and/or
-# modify it under the terms of version 2.1 of the GNU Lesser General Public
-# License as published by the Free Software Foundation.
-#
-# This library is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-# Lesser General Public License for more details.
-#
-# You should have received a copy of the GNU Lesser General Public
-# License along with this library; if not, write to the Free Software
-# Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+Twisted, the Framework of Your Internet
+Copyright (C) 2001-2002 Matthew W. Lefkowitz
+
+This library is free software; you can redistribute it and/or
+modify it under the terms of version 2.1 of the GNU Lesser General Public
+License as published by the Free Software Foundation.
+
+This library is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+Lesser General Public License for more details.
+
+You should have received a copy of the GNU Lesser General Public
+License along with this library; if not, write to the Free Software
+Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 '''
 
 try:
-    fp = open(sys.argv[1])
+    fn = sys.argv[1]
+    fp = open(fn)
 except IOError, e:
     if e.errno != errno.ENOENT:
         raise
@@ -49,11 +50,22 @@ preamble = None
 if lines and lines[0][:2] == '#!':
     preamble = lines.pop(0)
 
+ext = os.path.splitext(fn)[1]
+if ext == '.c' or ext == '.h':
+    cpy = '/*\n'
+    for line in string.split(copyright, '\n'):
+        cpy = cpy + ' * ' + line + '\n'
+    copyright = cpy + ' */\n'
+else:
+    cpy = ''
+    for line in string.split(copyright, '\n'):
+        cpy = cpy + '# ' + line + '\n'
+    copyright = cpy
+    
+
+
 # try to guess whether the file already has a copyright notice:
-criteria_lines = [
-'# Twisted, the Framework of Your Internet',
-'# Copyright (C) 2001 Matthew W. Lefkowitz',
-'# Lesser General Public License for more details.']
+criteria_lines = map(string.strip, string.split(copyright, '\n')[1:4])
 
 for line in criteria_lines:
     if not line in map(string.strip, lines):
