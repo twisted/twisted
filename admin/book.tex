@@ -1,6 +1,9 @@
 \documentclass[oneside]{book}
 \usepackage[dvips]{graphicx}
 \usepackage{times,mathptmx}
+\usepackage{url}
+\renewcommand\url{\begingroup \def\UrlLeft{ <}\def\UrlRight{>}%
+                  \small\urlstyle{sf}\Url}
 
 \setlength{\oddsidemargin}{0in}
 \setlength{\textwidth}{\paperwidth}

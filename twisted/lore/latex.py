@@ -134,7 +134,12 @@ class LatexSpitter:
             ref = self.filename + 'HASH' + href[1:]
         elif href.find('#') != 1 and not href.startswith('http:'):
             ref = href.replace('#', 'HASH')
-        elif not href.startswith('http:'):
+        elif href.startswith('http:'):
+            # If the text of the link is the url already, don't bother
+            # repeating the url.
+            if node.childNodes[0].data != href:
+                self.writer('\\url{%s}' % href)
+        else:
             ref = href
         if ref:
             self.writer(' (page \\pageref{%s})' % ref)
