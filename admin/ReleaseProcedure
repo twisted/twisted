@@ -4,11 +4,11 @@ TEST, TEST.
 ./admin/runtests
  * run the accepttests. I use:
 WEBBROWSER='galeon -n' IRCCLIENT=epic4 admin/accepttests -b
- * kill your regular personal server
+ * kill your regular personal server, if you have one
  * run the prerelease tests.
 ./admin/prereleasetests
  * when you're in less, actually *READ* the log, looking for errors
- * Restart your regular personal server
+ * Restart your regular personal server, if you have one
 
  * Also make sure that the words .tap remained compatible; start the words server's .tap on some out-of-the-way port
        (same as above, I've gotta automate this)
