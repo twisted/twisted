@@ -40,7 +40,7 @@ install-stamp: build-stamp
 	cp TODO README CREDITS debian/twisted/usr/share/doc/twisted/
 	cp ChangeLog debian/twisted/usr/share/doc/twisted/changelog
 	cp debian/copyright debian/twisted/usr/share/doc/twisted/
-	cp bin/eco bin/manhole bin/tap2deb bin/mktap bin/gnusto bin/twistd bin/im bin/t-im bin/faucet bin/coil debian/twisted/usr/bin/
+	cp bin/manhole bin/tap2deb bin/mktap bin/twistd bin/im bin/t-im bin/coil debian/twisted/usr/bin/
 	for file in debian/twisted/usr/bin/*;do sed '1s|.*|#!/usr/bin/python2.1|' $$file > $$file.$$$$;cat $$file.$$$$ > $$file;rm $$file.$$$$;done
 	cp doc/man/*.1 debian/twisted/usr/share/man/man1/
 	gzip -9 debian/twisted/usr/share/man/man1/*
