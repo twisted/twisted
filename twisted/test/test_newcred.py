@@ -111,6 +111,14 @@ class NewCredTest(unittest.TestCase):
         self.failUnless(l)
         self.failUnlessEqual(error.UnauthorizedLogin, l[0])
 
+    def testFailedLoginName(self):
+        l = []
+        self.portal.login(credentials.UsernamePassword("jay", "hello"),
+                          self, ITestable).addErrback(
+            lambda x: x.trap(error.UnauthorizedLogin)).addCallback(l.append)
+        self.failUnless(l)
+        self.failUnlessEqual(error.UnauthorizedLogin, l[0])
+
 
 class CramMD5CredentialsTestCase(unittest.TestCase):
     def testIdempotentChallenge(self):
