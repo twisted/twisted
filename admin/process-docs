@@ -7,15 +7,12 @@ done
 baseurl=http://twistedmatrix.com/documents/TwistedDocs/TwistedDocs-$1/api/%s.html
 templ=doc/howto/template.tpl
 for doc in doc/man doc/howto doc/specifications; do
-  for file in $doc/*.html; do
-    ./bin/hlint $file
-  done
-  ./bin/generatelore -p --docsdir $doc -t $templ --baseurl $baseurl -l ../howto/
+  ./bin/hlint -p $doc/*.html
+  ./bin/generatelore -p --docsdir $doc -t $templ --baseurl $baseurl \
+                    -l ../howto/ $doc/*.html
+  ./bin/html2latex -p -s --docsdir $doc $doc/*.html
 done
 cp admin/book.tex doc/howto
-for dir in doc/howto/ doc/man/ doc/specifications/; do
-  ./bin/html2latex -p -s --docsdir $dir
-done
 cd doc/howto
 for i in 1 2 3;do latex book.tex;done
 dvips -o book.ps book.dvi
