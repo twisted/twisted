@@ -302,3 +302,12 @@ def processFile(spitter, fin):
     dom = microdom.parse(fin).documentElement
     tree.expandAPI(dom)
     spitter.visitNode(dom)
+
+
+def convertFile(filename, spitterClass):
+    fout = open(os.path.splitext(filename)[0]+".tex", 'w')
+    spitter = spitterClass(fout, os.path.dirname(filename), filename)
+    fin = open(filename)
+    processFile(spitter, fin)
+    fin.close()
+    fout.close()
