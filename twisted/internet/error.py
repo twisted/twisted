@@ -25,12 +25,13 @@ import socket, types
 
 
 class BindError(Exception):
-    """An error occurred binding to an interface."""
+    """An error occurred binding to an interface"""
 
     def __str__(self):
         s = self.__doc__
         if self.args:
             s = '%s: %s' % (s, ' '.join(self.args))
+        s = '%s.' % s
         return s
 
 class CannotListenError(BindError):
@@ -49,33 +50,35 @@ class CannotListenError(BindError):
 
     def __str__(self):
         iface = self.interface or 'any'
-        return "Couldn't listen on %s:%s: %s" % (iface, self.port,
+        return "Couldn't listen on %s:%s: %s." % (iface, self.port,
                                                  self.socketError)
 
 class MessageLengthError(Exception):
-    """Message is too long to send."""
+    """Message is too long to send"""
 
     def __str__(self):
         s = self.__doc__
         if self.args:
             s = '%s: %s' % (s, ' '.join(self.args))
+        s = '%s.' % s
         return s
 
 
 class DNSLookupError(IOError):
-    """DNS lookup failed."""
+    """DNS lookup failed"""
 
     def __str__(self):
         s = self.__doc__
         if self.args:
             s = '%s: %s' % (s, ' '.join(self.args))
+        s = '%s.' % s
         return s
 
 
 # connection errors
 
 class ConnectError(Exception):
-    """An error occurred while connecting."""
+    """An error occurred while connecting"""
 
     def __init__(self, osError=None, string=""):
         self.osError = osError
@@ -87,45 +90,46 @@ class ConnectError(Exception):
             s = '%s: %s' % (s, self.osError)
         if self[0]:
             s = '%s: %s' % (s, self[0])
+        s = '%s.' % s
         return s
 
 class ConnectBindError(ConnectError):
-    """Couldn't bind."""
+    """Couldn't bind"""
 
 
 class UnknownHostError(ConnectError):
-    """Hostname couldn't be looked up."""
+    """Hostname couldn't be looked up"""
 
 
 class NoRouteError(ConnectError):
-    """No route to host."""
+    """No route to host"""
 
 
 class ConnectionRefusedError(ConnectError):
-    """Connection was refused by other side."""
+    """Connection was refused by other side"""
 
 
 class TCPTimedOutError(ConnectError):
-    """TCP connection timed out."""
+    """TCP connection timed out"""
 
 
 class BadFileError(ConnectError):
-    """File used for UNIX socket is no good."""
+    """File used for UNIX socket is no good"""
 
 
 class ServiceNameUnknownError(ConnectError):
-    """Service name given as port is unknown."""
+    """Service name given as port is unknown"""
 
 
 class UserError(ConnectError):
-    """User aborted connection."""
+    """User aborted connection"""
 
 
 class TimeoutError(UserError):
-    """User timeout caused connection failure."""
+    """User timeout caused connection failure"""
 
 class SSLError(ConnectError):
-    """An SSL error occurred."""
+    """An SSL error occurred"""
 
 try:
     import errno
@@ -159,50 +163,54 @@ def getConnectError(e):
 
 
 class ConnectionLost(Exception):
-    """Connection to the other side was lost in a non-clean fashion."""
+    """Connection to the other side was lost in a non-clean fashion"""
 
     def __str__(self):
         s = self.__doc__
         if self.args:
             s = '%s: %s' % (s, ' '.join(self.args))
+        s = '%s.' % s
         return s
 
 
 class ConnectionDone(Exception):
-    """Connection was closed cleanly."""
+    """Connection was closed cleanly"""
 
     def __str__(self):
         s = self.__doc__
         if self.args:
             s = '%s: %s' % (s, ' '.join(self.args))
+        s = '%s.' % s
         return s
 
 
 class ConnectionFdescWentAway(ConnectionLost):
-    """Uh."""
+    """Uh""" #TODO
 
 
 class AlreadyCalled(ValueError):
-    """Tried to cancel an already-called event."""
+    """Tried to cancel an already-called event"""
 
     def __str__(self):
         s = self.__doc__
         if self.args:
             s = '%s: %s' % (s, ' '.join(self.args))
+        s = '%s.' % s
         return s
 
 
 class AlreadyCancelled(ValueError):
-    """Tried to cancel an already-cancelled event."""
+    """Tried to cancel an already-cancelled event"""
 
     def __str__(self):
         s = self.__doc__
         if self.args:
             s = '%s: %s' % (s, ' '.join(self.args))
+        s = '%s.' % s
         return s
 
 class ProcessDone(ConnectionDone):
-    """A process has ended without apparent errors."""
+    """A process has ended without apparent errors"""
 
     def __init__(self, status):
         Exception.__init__(self, "process finished with exit code 0")
@@ -212,7 +220,7 @@ class ProcessDone(ConnectionDone):
 
 
 class ProcessTerminated(ConnectionLost):
-    """A process has ended with a probable error condition."""
+    """A process has ended with a probable error condition"""
 
     def __init__(self, exitCode=None, signal=None, status=None):
         self.exitCode = exitCode
@@ -224,19 +232,21 @@ class ProcessTerminated(ConnectionLost):
         Exception.__init__(self, s)
 
 class NotConnectingError(RuntimeError):
-    """The Connector was not connecting when it was asked to stop connecting."""
+    """The Connector was not connecting when it was asked to stop connecting"""
 
     def __str__(self):
         s = self.__doc__
         if self.args:
             s = '%s: %s' % (s, ' '.join(self.args))
+        s = '%s.' % s
         return s
 
 class NotListeningError(RuntimeError):
-    """The Port was not listening when it was asked to stop listening."""
+    """The Port was not listening when it was asked to stop listening"""
 
     def __str__(self):
         s = self.__doc__
         if self.args:
             s = '%s: %s' % (s, ' '.join(self.args))
+        s = '%s.' % s
         return s

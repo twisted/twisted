@@ -29,21 +29,48 @@ class TestStringification(unittest.TestCase):
         ("An error occurred binding to an interface.",
          error.BindError),
 
-        ("Couldn't listen on eth0:4242: Foo",
+        ("An error occurred binding to an interface: foo.",
+         error.BindError, ['foo']),
+
+        ("An error occurred binding to an interface: foo bar.",
+         error.BindError, ['foo', 'bar']),
+
+        ("Couldn't listen on eth0:4242: Foo.",
          error.CannotListenError,
          ('eth0', 4242, socket.error('Foo'))),
 
         ("Message is too long to send.",
          error.MessageLengthError),
 
+        ("Message is too long to send: foo bar.",
+         error.MessageLengthError, ['foo', 'bar']),
+
         ("DNS lookup failed.",
          error.DNSLookupError),
+
+        ("DNS lookup failed: foo bar.",
+         error.DNSLookupError, ['foo', 'bar']),
 
         ("An error occurred while connecting.",
          error.ConnectError),
 
+        ("An error occurred while connecting: someOsError.",
+         error.ConnectError, ['someOsError']),
+
+        ("An error occurred while connecting: foo.",
+         error.ConnectError, [], {'string': 'foo'}),
+
+        ("An error occurred while connecting: someOsError: foo.",
+         error.ConnectError, ['someOsError', 'foo']),
+
         ("Couldn't bind.",
          error.ConnectBindError),
+
+        ("Couldn't bind: someOsError.",
+         error.ConnectBindError, ['someOsError']),
+
+        ("Couldn't bind: someOsError: foo.",
+         error.ConnectBindError, ['someOsError', 'foo']),
 
         ("Hostname couldn't be looked up.",
          error.UnknownHostError),
@@ -75,8 +102,14 @@ class TestStringification(unittest.TestCase):
         ("Connection to the other side was lost in a non-clean fashion.",
          error.ConnectionLost),
 
+        ("Connection to the other side was lost in a non-clean fashion: foo bar.",
+         error.ConnectionLost, ['foo', 'bar']),
+
         ("Connection was closed cleanly.",
          error.ConnectionDone),
+
+        ("Connection was closed cleanly: foo bar.",
+         error.ConnectionDone, ['foo', 'bar']),
 
         ("Uh.", #TODO nice docstring, you've got there.
          error.ConnectionFdescWentAway),
@@ -84,23 +117,25 @@ class TestStringification(unittest.TestCase):
         ("Tried to cancel an already-called event.",
          error.AlreadyCalled),
 
+        ("Tried to cancel an already-called event: foo bar.",
+         error.AlreadyCalled, ['foo', 'bar']),
+
         ("Tried to cancel an already-cancelled event.",
          error.AlreadyCancelled),
 
-        ("A process has ended without apparent errors.: process finished with exit code 0",
+        ("A process has ended without apparent errors: process finished with exit code 0.",
          error.ProcessDone,
          [None]),
 
-        ("A process has ended with a probable error condition.: process ended",
+        ("A process has ended with a probable error condition: process ended.",
          error.ProcessTerminated),
 
-        # TODO the period is ugly. Search for ".:" in this file for more.
-        ("A process has ended with a probable error condition.: process ended with exit code 42",
+        ("A process has ended with a probable error condition: process ended with exit code 42.",
          error.ProcessTerminated,
          [],
          {'exitCode': 42}),
 
-        ("A process has ended with a probable error condition.: process ended by signal SIGBUS",
+        ("A process has ended with a probable error condition: process ended by signal SIGBUS.",
          error.ProcessTerminated,
          [],
          {'signal': 'SIGBUS'}),
