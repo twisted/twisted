@@ -43,6 +43,11 @@ class IPv4Address(object):
                       category=DeprecationWarning, stacklevel=2)
         return (self._bwHack or self.type, self.host, self.port).__getitem__(index)
 
+    def __getslice__(self, start, stop):
+        warnings.warn("IPv4Address.__getitem__ is deprecated.  Use attributes instead.",
+                      category=DeprecationWarning, stacklevel=2)
+        return (self._bwHack or self.type, self.host, self.port)[start:stop]
+
     def __eq__(self, other):
         if isinstance(other, tuple):
             return tuple(self) == other
@@ -74,6 +79,11 @@ class UNIXAddress(object):
         warnings.warn("UNIXAddress.__getitem__ is deprecated.  Use attributes instead.",
                       category=DeprecationWarning, stacklevel=2)
         return (self._bwHack, self.name).__getitem__(index)
+
+    def __getslice__(self, start, stop):
+        warnings.warn("UNIXAddress.__getitem__ is deprecated.  Use attributes instead.",
+                      category=DeprecationWarning, stacklevel=2)
+        return (self._bwHack, self.name)[start:stop]
 
     def __eq__(self, other):
         if isinstance(other, tuple):
