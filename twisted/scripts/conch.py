@@ -15,7 +15,7 @@
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 #
-# $Id: conch.py,v 1.8 2002/11/10 03:43:15 z3p Exp $
+# $Id: conch.py,v 1.9 2002/11/10 05:39:19 z3p Exp $
 
 #""" Implementation module for the `ssh` command.
 #"""
@@ -24,7 +24,7 @@ from twisted.conch.ssh import transport, userauth, connection, common, keys
 from twisted.internet import reactor, stdio, defer, protocol
 from twisted.python import usage, log
 
-import os, sys, getpass, struct, tty, fcntl
+import os, sys, getpass, struct, tty, fcntl, base64
 
 class GeneralOptions(usage.Options):
     synopsis = """Usage:    ssh [options] host [command]
@@ -107,6 +107,68 @@ class SSHClientFactory(protocol.ClientFactory):
         return SSHClientTransport()
 
 class SSHClientTransport(transport.SSHClientTransport):
+    def verifyHostKey(self, pubKey, fingerprint):
+        goodKey = self.isInKnownHosts(options['host'], pubKey)
+        if goodKey == 1: # good key
+            return 1
+        elif goodKey == 2: # AAHHHHH changed
+            return 0
+        else:
+            oldout, oldin = sys.stdout, sys.stdin
+            sys.stdin = sys.stdout = open('/dev/tty','r+')
+            if options['host'] == self.transport.getPeer()[1]:
+                host = options['host']
+                khHost = options['host']
+            else:
+                host = '%s (%s)' % (options['host'], 
+                                    self.transport.getPeer()[1])
+                khHost = '%s,%s' % (options['host'], 
+                                    self.transport.getPeer()[1])
+            keyType = common.getNS(pubKey)[0]
+            print """The authenticity of host '%s' can't be extablished.
+%s key fingerprint is %s.""" % (host, 
+                                {'ssh-dss':'DSA', 'ssh-rsa':'RSA'}[keyType], 
+                                fingerprint) 
+            ans = raw_input('Are you sure you want to continue connecting (yes/no)? ')
+            while ans.lower() not in ('yes', 'no'):
+                ans = raw_input("Please type 'yes' or 'no': ")
+            sys.stdout,sys.stdin=oldout,oldin
+            if ans == 'no':
+                print 'Host key verification failed.'
+                return 0
+            print "Warning: Permanently added '%s' (%s) to the list of known hosts." % (khHost, {'ssh-dss':'DSA', 'ssh-rsa':'RSA'}[keyType])
+            known_hosts = open(os.path.expanduser('~/.ssh/known_hosts'), 'a')
+            encodedKey = base64.encodestring(pubKey).replace('\n', '')
+            known_hosts.write('%s %s %s' % (khHost, keyType, encodedKey))
+            known_hosts.close()
+            return 1
+
+    def isInKnownHosts(self, host, pubKey):
+        """checks to see if host is in the known_hosts file for the user.
+        returns 0 if it isn't, 1 if it is and is the same, 2 if it's changed.
+        """
+        keyType = common.getNS(pubKey)[0]
+        retVal = 0
+        try:
+            known_hosts = open(os.path.expanduser('~/.ssh/known_hosts'))
+        except IOError:
+            return 0
+        for line in known_hosts.xreadlines():
+            hosts, hostKeyType, encodedKey = line.split()
+            if not host in hosts.split(','): # incorrect host
+                continue
+            if not hostKeyType == keyType: # incorrect type of key
+                continue
+            try:
+                decodedKey = base64.decodestring(encodedKey)
+            except:
+                continue
+            if decodedKey == pubKey:
+                return 1
+            else:
+                retVal = 2
+        return retVal
+
     def connectionSecure(self):
         if options['user']:
             user = options['user']

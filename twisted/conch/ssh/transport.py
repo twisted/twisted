@@ -487,7 +487,7 @@ class SSHClientTransport(SSHTransportBase):
         sharedSecret = MP(pow(f, self.x, self.p))
         fingerprint = ':'.join(map(lambda c:'%02x'%ord(c),md5.new(pubKey).digest()))
         if not self.verifyHostKey(pubKey, fingerprint):
-            self.sendDisconnect(DISCONNECT_KEY_EXCHANGE_FAILED, 'bad fingerprint')
+            self.sendDisconnect(DISCONNECT_KEY_EXCHANGE_FAILED, 'bad host key')
             return
         h = sha.new()
         h.update(NS(self.ourVersionString))
@@ -525,6 +525,8 @@ class SSHClientTransport(SSHTransportBase):
         return k1+k2
 
     def ssh_NEWKEYS(self, packet):
+        if not hasattr(self.nextEncryptions, 'outCip'):
+            return # ignore this message if we aren't really set up
         self.currentEncryptions = self.nextEncryptions
         if self.outgoingCompressionType == 'zlib':
             self.outgoingCompression = zlib.compressobj(6)
