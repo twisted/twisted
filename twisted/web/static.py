@@ -412,12 +412,16 @@ class FileTransfer(pb.Viewable):
         self.file = file
         self.size = size
         self.request = request
+        self.written = self.file.tell()
         request.registerProducer(self, 0)
 
     def resumeProducing(self):
         if not self.request:
             return
-        self.request.write(self.file.read(abstract.FileDescriptor.bufferSize))
+        data = self.file.read(min(abstract.FileDescriptor.bufferSize, self.size - self.written))
+        if data:
+            self.written += len(data)
+            self.request.write(data)
         if self.file.tell() == self.size:
             self.request.unregisterProducer()
             self.request.finish()
