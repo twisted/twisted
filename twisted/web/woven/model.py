@@ -15,7 +15,7 @@
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
-__version__ = "$Revision: 1.46 $"[11:-2]
+__version__ = "$Revision: 1.47 $"[11:-2]
 
 import types
 import weakref
@@ -369,10 +369,12 @@ class ListModel(Wrapper):
             return self.submodels[name]
         orig = self.original
         try:
-            int(name)
+            i = int(name)
         except:
             return None
-        sm = adaptToIModel(orig[int(name)], self, name)
+        if i > len(orig):
+            return None
+        sm = adaptToIModel(orig[i], self, name)
         self.submodels[name] = sm
         return sm
 
@@ -432,6 +434,8 @@ class DictionaryModel(Wrapper):
         if self.submodels.has_key(name):
             return self.submodels[name]
         orig = self.original
+        if not orig.has_key(name):
+            return None
         sm = adaptToIModel(orig[name], self, name)
         self.submodels[name] = sm
         return sm
