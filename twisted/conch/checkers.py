@@ -23,7 +23,7 @@ from twisted.cred.checkers import ICredentialsChecker
 from twisted.cred.credentials import IUsernamePassword
 from twisted.cred.error import UnauthorizedLogin, UnhandledCredentials
 from twisted.internet import defer
-from twisted.python import components, failure, reflect
+from twisted.python import components, failure, reflect, log
 from credentials import ISSHPrivateKey, IPluggableAuthenticationModules
 from zope import interface
 
@@ -74,19 +74,25 @@ class SSHPublicKeyDatabase:
     interface.implements(ICredentialsChecker)
 
     def requestAvatarId(self, credentials):
-        if not self.checkKey(credentials):
-            return defer.fail(UnauthorizedLogin())
+        d = defer.maybeDeferred(self.checkKey, credentials)
+        d.addCallback(self._cbRequestAvatarId, credentials)
+        d.addErrback(self._ebRequestAvatarId)
+        return d
+
+    def _cbRequestAvatarId(self, validKey, credentials):
+        if not validKey:
+            return failure.Failure(UnauthorizedLogin())
         if not credentials.signature:
-            return defer.fail(error.ValidPublicKey())
+            return failure.Failure(error.ValidPublicKey())
         else:
             try:
                 pubKey = keys.getPublicKeyObject(data = credentials.blob)
                 if keys.verifySignature(pubKey, credentials.signature,
                                         credentials.sigData):
-                    return defer.succeed(credentials.username)
+                    return credentials.username
             except:
                 pass
-        return defer.fail(UnauthorizedLogin())
+        return failure.Failure(UnauthorizedLogin())
 
     def checkKey(self, credentials):
         sshDir = os.path.expanduser('~%s/.ssh/' % credentials.username)
@@ -116,6 +122,12 @@ class SSHPublicKeyDatabase:
                 except binascii.Error:
                     continue
         return 0
+
+    def _ebRequestAvatarId(self, f):
+        if not f.check(UnauthorizedLogin, error.ValidPublicKey):
+            log.msg(f)
+            return UnauthorizedLogin()
+        return f
 
 components.backwardsCompatImplements(SSHPublicKeyDatabase)
 
