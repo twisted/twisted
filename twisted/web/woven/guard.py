@@ -1,4 +1,22 @@
 # -*- test-case-name: twisted.test.test_woven -*-
+
+# Twisted, the Framework of Your Internet
+# Copyright (C) 2001-2003 Matthew W. Lefkowitz
+#
+# This library is free software; you can redistribute it and/or
+# modify it under the terms of version 2.1 of the GNU Lesser General Public
+# License as published by the Free Software Foundation.
+#
+# This library is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+# Lesser General Public License for more details.
+#
+# You should have received a copy of the GNU Lesser General Public
+# License along with this library; if not, write to the Free Software
+# Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+#
+
 """Resource protection for Woven. If you wish to use twisted.cred to protect
 your Woven application, you are probably most interested in
 L{UsernamePasswordWrapper}.
@@ -6,11 +24,12 @@ L{UsernamePasswordWrapper}.
 
 from __future__ import nested_scopes
 
-__version__ = "$Revision: 1.31 $"[11:-2]
+__version__ = "$Revision: 1.32 $"[11:-2]
 
 import random
 import time
 import md5
+import warnings
 
 # Twisted Imports
 
@@ -251,7 +270,9 @@ loginSignature = fm.MethodSignature(
               "you wish to perform."))
 
 class PerspectiveWrapper(Resource):
-    """I am a wrapper that will restrict access to Resources based on a
+    """DEPRECATED.
+    
+    I am a wrapper that will restrict access to Resources based on a
     C{twisted.cred.service.Service}'s 'authorizer' and perspective list.
 
     Please note that I must be in turn wrapped by a SessionWrapper, since my
@@ -276,6 +297,7 @@ class PerspectiveWrapper(Resource):
         from this should be a link to 'perspective-init', which will display a
         C{form.FormProcessor} that allows the user to log in.
         """
+        warnings.warn("Please use UsernamePasswordWrapper instead", DeprecationWarning, 2)
         Resource.__init__(self)
         self.service = service
         self.noAuthResource = noAuthResource
