@@ -303,7 +303,7 @@ class File(resource.Resource, styles.Versioned):
             if os.path.exists(childPath):
                 if hasattr(request, 'postpath') and not request.postpath and \
                                                 not self.getIndex(request):
-                    return widgets.WidgetPage(DirectoryListing(self.path))
+                    return widgets.WidgetPage(DirectoryListing(self.path, self.listNames()))
 
         ##
         # If we're told to, allow requests for 'foo' to return
@@ -500,7 +500,8 @@ class File(resource.Resource, styles.Versioned):
 
 
 class DirectoryListing(widgets.StreamWidget):
-    def __init__(self, pathname):
+    def __init__(self, pathname, dirs=None):
+        self.dirs = dirs
         self.path = pathname
 
     def getTitle(self, request):
@@ -508,8 +509,11 @@ class DirectoryListing(widgets.StreamWidget):
 
     def stream(self, write, request):
         write("<ul>\n")
-        directory = os.listdir(self.path)
-        directory.sort()
+        if self.dirs is None:
+            directory = os.listdir(self.path)
+            directory.sort()
+        else:
+            directory = self.dirs
         for path in directory:
             url = urllib.quote(path, "/:")
             if os.path.isdir(os.path.join(self.path, path)):
