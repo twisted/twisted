@@ -13,6 +13,11 @@ def escape(text):
     text = quoteRE.sub('<q>\\1</q>', text)
     return text
 
+def stripQuotes(s):
+    if s[0] == s[-1] == '"':
+        s = s[1:-1]
+    return s
+
 class ManConverter:
     state = 'regular'
     tp = 0
@@ -61,7 +66,7 @@ class ManConverter:
     
     def macro_TH(self, line):
         self.write('<html><head>\n')
-        parts = [x.strip('"') for x in line.split(' ', 2)] + ['', '']
+        parts = [stripQuotes(x) for x in line.split(' ', 2)] + ['', '']
         title, manSection = parts[:2]
         self.write('<title>%s.%s</title>' % (title, manSection))
         self.write('</head>\n<body>\n\n')
@@ -71,7 +76,7 @@ class ManConverter:
         self.closeTags()
         self.write('<h2>')
         self.para = 1
-        self.text(line.strip('"'))
+        self.text(stripQuotes(line))
         self.para = 0
         self.closeTags()
         self.write('</h2>\n\n')
