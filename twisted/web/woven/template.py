@@ -67,7 +67,7 @@ A short example::
 
 from cStringIO import StringIO
 import string, os, sys, stat, types
-from twisted.web import microdom as minidom
+from twisted.web import microdom
 
 from twisted.python import components
 from twisted.web import resource
@@ -132,7 +132,7 @@ class StringNodeMutator(NodeMutator):
     def generate(self, request, node):
         if self.data:
             try:
-                child = minidom.parseString(self.data)
+                child = microdom.parseString(self.data)
             except Exception, e:
                 log.msg("Error parsing return value, probably invalid xml:", e)
                 child = self.d.createTextNode(self.data)
@@ -161,7 +161,7 @@ class WebWidgetNodeMutator(NodeMutator):
         return stringMutator.generate(request, node)
 
 
-components.registerAdapter(NodeNodeMutator, minidom.Node, INodeMutator)        
+components.registerAdapter(NodeNodeMutator, microdom.Node, INodeMutator)        
 components.registerAdapter(NoneNodeMutator, type(None), INodeMutator)        
 components.registerAdapter(StringNodeMutator, type(""), INodeMutator)        
 components.registerAdapter(WebWidgetNodeMutator, widgets.Widget, INodeMutator)        
@@ -179,8 +179,6 @@ class DOMTemplate(Resource):
 
     def __init__(self, model = None):
         Resource.__init__(self)
-        if self.controller is None:
-            self.controller = self
         self.model = model
         
         self.outstandingCallbacks = 0
@@ -189,7 +187,7 @@ class DOMTemplate(Resource):
         self.handlerResults = {1: [], 0: []}
         template = self.getTemplate(request)
         if template:
-            self.d = minidom.parseString(template)
+            self.d = microdom.parseString(template)
         else:
             if not self.templateFile:
                 raise AttributeError, "%s does not define self.templateFile to operate on" % self.__class__
@@ -236,7 +234,7 @@ class DOMTemplate(Resource):
         # No? Compile and save it
         if (not os.path.exists(compiledTemplatePath) or 
         os.stat(compiledTemplatePath)[stat.ST_MTIME] < os.stat(templatePath)[stat.ST_MTIME]):
-            compiledTemplate = minidom.parse(templatePath)
+            compiledTemplate = microdom.parse(templatePath)
             from cPickle import dump
             dump(compiledTemplate, open(compiledTemplatePath, 'wb'), 1)
 #            parent = templateRef.parentRef().getObject()
