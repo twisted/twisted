@@ -1,3 +1,9 @@
+twisted (0.15.0) unstable; urgency=low
+
+  * New upstream release
+
+ -- Moshe Zadka <moshez@debian.org>  Wed,  6 Feb 2002 14:38:38 +0200
+
 twisted (0.13.0) unstable; urgency=low
 
   * New upstream version 
