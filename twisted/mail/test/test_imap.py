@@ -471,8 +471,8 @@ class IMAP4HelperTestCase(unittest.TestCase):
         self.failUnless(isinstance(p.result[0], p.Body))
         self.assertEquals(p.result[0].peek, False)
         self.failUnless(isinstance(p.result[0].header, p.Header))
-        self.assertEquals(p.result[0].header.negate, False)
-        self.assertEquals(p.result[0].header.fields, None)
+        self.assertEquals(p.result[0].header.negate, True)
+        self.assertEquals(p.result[0].header.fields, ())
         self.assertEquals(p.result[0].empty, False)
         self.assertEquals(str(p.result[0]), 'BODY[HEADER]')
 
@@ -482,8 +482,8 @@ class IMAP4HelperTestCase(unittest.TestCase):
         self.failUnless(isinstance(p.result[0], p.Body))
         self.assertEquals(p.result[0].peek, True)
         self.failUnless(isinstance(p.result[0].header, p.Header))
-        self.assertEquals(p.result[0].header.negate, False)
-        self.assertEquals(p.result[0].header.fields, None)
+        self.assertEquals(p.result[0].header.negate, True)
+        self.assertEquals(p.result[0].header.fields, ())
         self.assertEquals(p.result[0].empty, False)
         self.assertEquals(str(p.result[0]), 'BODY[HEADER]')
 

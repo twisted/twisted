@@ -5110,7 +5110,9 @@ class _FetchParser:
             self.pending_body.empty = True
             used += 1
         elif l.startswith('header]'):
-            self.pending_body.header = self.Header()
+            h = self.pending_body.header = self.Header()
+            h.negate = True
+            h.fields = ()
             used += 7
         elif l.startswith('text]'):
             self.pending_body.text = self.Text()
