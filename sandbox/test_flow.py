@@ -19,7 +19,8 @@
 #
 from __future__ import nested_scopes
 import flow
-from twisted.python.compat import True, False
+import twisted.python.compat
+#from twisted.python.compat import True, False
 from twisted.trial import unittest
 from twisted.python import failure
 from twisted.internet import defer, reactor, protocol
@@ -44,7 +45,7 @@ class slowlist:
     def next(self):
         if self.list:
             return self.list.pop(0)
-        raise flow.StopIteration
+        raise StopIteration
 
 _onetwothree = ['one','two',flow.Cooperate(),'three']
 
@@ -122,7 +123,7 @@ class badgen:
         return 'x'
     def yield_done(self):
         err = 3 / 0
-        raise flow.StopIteration
+        raise StopIteration
 
 class buildlist:
     """ building a list
@@ -147,12 +148,12 @@ class buildlist:
     def yield_append(self):
         try:
             self.out.append(self.src.next())
-        except flow.StopIteration: 
+        except StopIteration: 
             self.next = self.yield_finish
             return self.out
         return self.src
     def yield_finish(self):
-        raise flow.StopIteration
+        raise StopIteration
 
 class testconcur:
     """ interweving two concurrent stages
@@ -221,7 +222,7 @@ class echoClient:
     def yield_stop(self):
         # signal that we are done
         self.conn.factory.d.callback(self.conn.next())
-        raise flow.StopIteration()
+        raise StopIteration()
  
 class FlowTest(unittest.TestCase):
     def testNotReady(self):
@@ -395,7 +396,7 @@ class FlowTest(unittest.TestCase):
                 sleep(.1)
                 val = self.count
                 if not(val):
-                    raise flow.StopIteration
+                    raise StopIteration
                 self.count -= 1
                 return val
         result = [5,4,3,2,1]

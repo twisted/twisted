@@ -116,7 +116,8 @@ from __future__ import nested_scopes
 
 import time, types
 from twisted.python.failure import Failure
-from twisted.python.compat import StopIteration, iter, isinstance, True, False
+import twisted.python.compat
+#from twisted.python.compat import StopIteration, iter, isinstance, True, False
 from twisted.internet import defer, reactor, protocol
 from twisted.internet.error import ConnectionLost, ConnectionDone
 
@@ -732,6 +733,9 @@ class Callback(Stage):
             printFlow(source)
 
     """
+    # TODO: Potentially rename this 'Consumer' and make it
+    #       comply with protocols.IConsumer
+    # TODO: Make the inverse stage, which is an IProducer
     class Instruction(CallLater):
         def __init__(self):
             self.flow = lambda: True
@@ -937,7 +941,11 @@ def makeProtocol(controller, baseClass = protocol.Protocol,
         creates a connection flow based on the two.   For example, 
         the following would build a simple 'echo' protocol.
 
+            from __future__ import generators
+            from twisted.internet import reactor, protocol
+            import flow
             PORT = 8392
+
             def echoServer(conn):
                 yield conn
                 for data in conn:
@@ -995,11 +1003,11 @@ def makeProtocol(controller, baseClass = protocol.Protocol,
             # are sending data in strange chunks, and even
             # putting the last chunk on hold for 2 seconds. 
             def echoClient(conn):
-                conn.write("Good Morning!\nHow ")
+                conn.write("Good Morning!\nPlease ")
                 yield conn
                 print "server said: ", conn.next()
-                conn.write("are you this fine ")
-                reactor.callLater(2, conn.write, "morning? \n")
+                conn.write("do not disregard ")
+                reactor.callLater(2, conn.write, "this.\n")
                 yield conn
                 print "server said: ", conn.next()
                 reactor.callLater(0,reactor.stop)
@@ -1011,7 +1019,8 @@ def makeProtocol(controller, baseClass = protocol.Protocol,
     class _Protocol(Controller, Callback, baseClass):
         def __init__(self):
             Callback.__init__(self, *trap)
-            setattr(self, callbacks[0], self)  # only one callback support
+            setattr(self, callbacks[0], self)  
+            # TODO: support more than one callback via Concurrent
         def _execute(self, dummy = None):
             cmd = self._controller
             self.write = self.transport.write
