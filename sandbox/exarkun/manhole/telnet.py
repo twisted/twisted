@@ -193,6 +193,9 @@ class Telnet(protocol.Protocol):
     def _write(self, bytes):
         self.transport.write(bytes)
 
+    def getOptionState(self, opt):
+        return self.options.setdefault(opt, self._OptionState())
+
     def requestEnable(self, option):
         s = self.getOptionState(option)
         if s.negotiating:
@@ -341,9 +344,6 @@ class Telnet(protocol.Protocol):
         state = 'no'
         negotiating = False
         onResult = None
-
-    def getOptionState(self, opt):
-        return self.options.setdefault(opt, self._OptionState())
 
     def telnet_WILL(self, option):
         s = self.getOptionState(option)

@@ -190,6 +190,7 @@ class ITerminal(components.Interface):
 
         Characters to the right of deleted characters are shifted to the left.
         """
+
     def insertLine(self, n=1):
         """Insert n lines at the cursor position.
 

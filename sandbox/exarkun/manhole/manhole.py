@@ -3,6 +3,8 @@ import code, sys
 
 import insults, recvline
 
+from twisted.internet import defer
+
 class FileWrapper:
     softspace = 0
 
@@ -19,8 +21,10 @@ class FileWrapper:
         self.o.addOutput(''.join(lines))
 
 class ManholeInterpreter(code.InteractiveInterpreter):
+    numDeferreds = 0
     def __init__(self, handler, locals=None, filename="<console>"):
         code.InteractiveInterpreter.__init__(self, locals)
+        self._pendingDeferreds = {}
         self.handler = handler
         self.filename = filename
         self.resetbuffer()
@@ -51,7 +55,7 @@ class ManholeInterpreter(code.InteractiveInterpreter):
         return more
 
     def runcode(self, *a, **kw):
-        orighook, sys.displayhook = sys.displayhook, lambda s: self.write(repr(s))
+        orighook, sys.displayhook = sys.displayhook, self.displayhook
         try:
             origout, sys.stdout = sys.stdout, FileWrapper(self.handler)
             try:
@@ -61,8 +65,32 @@ class ManholeInterpreter(code.InteractiveInterpreter):
         finally:
             sys.displayhook = orighook
 
-    def write(self, data):
-        self.handler.addOutput(data)
+    def displayhook(self, obj):
+        if isinstance(obj, defer.Deferred):
+            # XXX Ick, where is my "hasFired()" interface?
+            if hasattr(obj, "result"):
+                self.write(repr(obj))
+            else:
+                d = self._pendingDeferreds
+                k = self.numDeferreds
+                d[k] = obj
+                self.numDeferreds += 1
+                obj.addCallbacks(self._cbDisplayDeferred, self._ebDisplayDeferred,
+                                 callbackArgs=(k,), errbackArgs=(k,))
+                self.write("<Deferred #%d>" % (k,))
+        else:
+            self.write(repr(obj))
+
+    def _cbDisplayDeferred(self, result, k):
+        self.write("Deferred #%d called back: %r" % (k, result), True)
+        del self._pendingDeferreds[k]
+
+    def _ebDisplayDeferred(self, failure, k):
+        self.write("Deferred #%d failed: %r" % (k, failure.getErrorMessage()), True)
+        del self._pendingDeferreds[k]
+
+    def write(self, data, async=False):
+        self.handler.addOutput(data, async)
 
 class Manhole(recvline.HistoricRecvLineHandler):
     def __init__(self, proto):
@@ -83,8 +111,17 @@ class Manhole(recvline.HistoricRecvLineHandler):
     def handle_QUIT(self):
         self.proto.disconnect()
 
-    def addOutput(self, bytes):
+    def addOutput(self, bytes, async=False):
+        if async:
+            self.proto.eraseLine()
+            self.proto.cursorBackward(len(self.lineBuffer) + len(self.ps[self.pn]))
+
         self.proto.write(bytes.replace('\n', '\r\n'))
+
+        if async:
+            if not self.proto.lastWrite.endswith('\r\n') and not self.proto.lastWrite.endswith('\x1bE'):
+                self.proto.write('\r\n')
+            self.proto.write(self.ps[self.pn] + ''.join(self.lineBuffer))
 
     def lineReceived(self, line):
         more = self.interpreter.push(line)
