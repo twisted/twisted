@@ -68,12 +68,6 @@ class Flow:
             If the return value is skip (None if you do not have 
             a return statement) then the next stage is not processed.
              
-            Optionally, if the callback happens to accept two 
-            arguments rather than one, it will be passed the 
-            context first and the data value second.  The context
-            exists for the life of the flow, so it can be used
-            to stuff away variables as needed.
-            
             Note that this implementation is tail recursive, that is, 
             in most cases each callable finishes executing before the 
             next stage is pushed onto the stack.
@@ -106,9 +100,7 @@ class Flow:
             
             Optionally, an onFinish function can be provided which 
             is executed after the iteration finishes.  This function
-            takes no arguments.  And, just like addCallable, if the 
-            callable has two arguments, then the current context 
-            is passed as the first argument.
+            takes no arguments. 
         """            
         return self._append(Sequence(callable, onFinish))
     
@@ -173,6 +165,15 @@ class Flow:
         """
         return self._append(Context(onFlush))
 
+    def addFilter(self, callable, skip = None, rootContext = 0):
+        """ a callable which takes a context for a first argument
+
+            This is almost identical to Callback, only that it takes
+            either a local or global context for the first argument
+            and the data value for the second argument.
+        """
+        return self._append(Filter(callable, skip, rootContext))
+
     def addChain(self, *flows):
         """ adds one or more flows to the current flow
 
@@ -227,7 +228,6 @@ class Flow:
         stack = self.build(data, context)
         while stack.iterate(): pass
 
-
 class Stage:
     def __call__(self, flow, data):
         pass
@@ -244,15 +244,8 @@ class Callable(Stage):
     def __init__(self, callable, skip = None):
         self.callable    = callable
         self.skip        = skip
-        args = getArgumentCount(callable, 1)
-        if 0 == args: self.callable = lambda data: callable()
-        self.withContext = (2 == args)
-     
     def __call__(self, flow, data):
-        if self.withContext:
-            ret = self.callable(flow.context,data)
-        else:
-            ret = self.callable(data)
+        ret = self.callable(data)
         if ret is PauseFlowValue: return 1
         if ret is not self.skip:
             flow.push(ret)
@@ -348,6 +341,20 @@ class Context(Stage):
         if self.onFlush: flow.addFlush(_LinkItem(self.onFlush))
         flow.push(data)
 
+class Filter(Stage):
+    def __init__(self, callable, skip = None, rootContext = 0):
+        self.callable      = callable
+        self.skip          = skip
+        self.rootContext = rootContext
+
+    def __call__(self, flow, data):
+        cntx = flow.context
+        if self.rootContext: cntx = flow.globalContext
+        ret = self.callable(cntx, data)
+        if ret is PauseFlowValue: return 1
+        if ret is not self.skip:
+            flow.push(ret)
+
 class Chain(Stage):
     def __init__(self, flows):
         flows = list(flows)
@@ -379,9 +386,9 @@ class _Stack:
              data          starting argument
              waitInterval  a useful item to slow the flow
         """
-        self._stack   = []
-        self.context = _Context(context)
-        self.context.root = self.context
+        self._stack        = []
+        self.context       = _Context(context)
+        self.globalContext = self.context
         self._stack.append((self.context, self._onFlushContext, None))
         self._stack.append((data, flowitem.stage, flowitem.next))
  
@@ -455,13 +462,10 @@ class _Stack:
                 return 1
 
 class _Context:
-    def __init__(self, parent = None, root = None):
+    def __init__(self, parent = None):
         self._parent = parent
         self._flush  = []
-        try:
-            self.root = parent.root
-        except:
-            self.root = self
+
     def __getattr__(self, attr):
         return getattr(self._parent, attr)
 

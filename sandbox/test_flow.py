@@ -30,6 +30,17 @@ class CountIterator:
 
 class FlowTest(unittest.TestCase):
 
+    def testReduceToList(self):
+        def callable(data, ignore_me_please=0): return data
+        result = []
+        f = Flow()
+        f.addSequence(CountIterator)
+        f.addReduceToList()
+        f.addCallable(callable)
+        f.addCallable(lambda data: result.append(data))
+        f.execute(5)
+        self.assertEqual(result,[[5,4,3,2,1,0]])
+
     def testBasic(self):   
         result = []
         def write(data): result.append(data)
@@ -117,7 +128,7 @@ class FlowTest(unittest.TestCase):
         dummy.increment = 3
         result = []
         f = Flow()
-        f.addCallable(lambda cntx, data: data + cntx.increment)
+        f.addFilter(lambda cntx, data: data + cntx.increment)
         f.addCallable(lambda data: result.append(data))
         f.execute(2, dummy)
         self.assertEqual(result, [5])
@@ -141,18 +152,21 @@ class FlowTest(unittest.TestCase):
         a.addReduce(operator.add, 0)
         a.addCallable(lambda data: result.append(('a',data)))
         b = Flow()
-        def middle(cntx, data):
-            cntx.root.data = data
+        def store(cntx, data):
+            cntx.data = data
             result.append(('b','data'))
-        b.addCallable(middle)
+        b.addFilter(store, rootContext = 1)
         c = Flow()
-        c.addCallable(lambda: result.append("done"))
+        c.addCallable(lambda data: result.append("done"))
         d = Flow()
-        d.addCallable(lambda cntx, data: result.append(cntx.root.data))
+        def retrieve(cntx, data):
+            result.append(cntx.data)
+        d.addFilter(retrieve, rootContext = 1)
         f = Flow()
         f.addChain(a,b,c,d)
         f.execute(3)
         self.assertEqual(result, [('a',6),('b','data'), 'done', 3 ])
+
 
     def testThreaded(self):
         class CountIterator(ThreadedIterator):
