@@ -45,17 +45,9 @@ What is this?
 
 What can I do with it?
 
-  To install Twisted, just make sure the Twisted-$VERSION/ directory
-  is in the "PYTHONPATH" environment variable. For example, if you extracted
-  Twisted-0.99.0rc1.tar.gz to /home/bob/, then you would have something like:
-
-    export PYTHONPATH=$PYTHONPATH:/home/bob/Twisted-0.99.0rc1/
-  
-  in your ~/.bash_profile, ~/.zshrc, ~/.cshrc, etc. If you use Windows NT,
-  2k, or XP, then set your environment variables by right-clicking on My
-  Computer and selecting Properties. If you use some other version of windows,
-  you'll need to set the variable at a command prompt, or in autoexec.bat, with
-  the 'set' command.
+  Instructions for installing this software are at
+  http://twistedmatrix.com/documents/howto/installing-twisted, or in
+  your archive in doc/howto/installing-twisted.xhtml.
 
   Although there is a lot of infrastructure support in Twisted, the immediately
   useful applications for the end-user are Twisted Web and Instance Messenger.

@@ -12,17 +12,31 @@
 
 <h2>Installation</h2>
 
+<!--
 <p> If you are on Windows, you may want to skip this and simply get the Windows Installer version of Twisted from the <a href="http://www.twistedmatrix.com/products/download">download page</a>.  </p>
+-->
 
-<p> To install Twisted, just make sure the <code>Twisted-$VERSION/</code> directory is in the "<code>PYTHONPATH</code>" environment variable. For example, if you extracted Twisted-0.19.0.tar.gz to /home/bob/, then you would have something like:  </p>
+<p> To install Twisted, just make sure the
+<code>Twisted-$VERSION/</code> directory is in the
+"<code>PYTHONPATH</code>" environment variable. For example, if you
+extracted Twisted-0.99.0rc1.tar.gz to /home/bob/, then you would have
+something like: </p>
 
 <pre class="shell">
-export PYTHONPATH=$PYTHONPATH:/home/bob/Twisted-0.19.0/
+export PYTHONPATH=$PYTHONPATH:/home/bob/Twisted-0.99.0rc1/
 </pre>
 
-<p> in your <code>~/.bash_profile</code>, <code>~/.zshrc</code>, <code>~/.cshrc</code>, etc. If you use Windows NT, 2000, or XP, then set your environment variables by right-clicking on My Computer and selecting Properties, then the Advanced tab, and click on the "Environment Variables" button. If you use some other version of windows, you'll need to set the variable at a command prompt, or in autoexec.bat, with the 'set' command.  </p>
+<p> in your <code>~/.bash_profile</code>, <code>~/.zshrc</code>,
+<code>~/.cshrc</code>, etc. If you use Windows NT, 2000, or XP, then
+set your environment variables by right-clicking on My Computer and
+selecting Properties, then the Advanced tab, and click on the
+"Environment Variables" button. If you use some other version of
+windows, you'll need to set the variable at a command prompt, or in
+autoexec.bat, with the 'set' command.  </p>
 
-<p> If you'd like to install Twisted system-wide on your machine and into the default <code>PYTHONPATH</code>, you can use <code>setup.py</code> to do so:  </p>
+<p> If you'd like to install Twisted system-wide on your machine and
+into the default <code>PYTHONPATH</code>, you can use
+<code>setup.py</code> to do so: </p>
 
 <pre class="shell">
 # python ./setup.py install
@@ -32,15 +46,22 @@ export PYTHONPATH=$PYTHONPATH:/home/bob/Twisted-0.19.0/
 
 <h2>Optional Compilation</h2>
 
-<p>There are a couple of small optional alternative implementations of pieces of Twisted that are in C for increased performance.  If you don't run the installer, and you need these modules, you'll need to perform a couple of extra steps:  </p>
+<p>There are a couple of small optional alternative implementations of
+pieces of Twisted that are in C for increased performance.  If you
+don't run the installer, and you need these modules, you'll need to
+perform a couple of extra steps: </p>
 
 <pre class="shell">
 $ python ./setup.py build_ext
 </pre>
 
-<p> This will (eventually) generate some shared libraries (cBanana.so, cReactor.so) within a directory tree called 'build' under the Twisted directory. </p>
+<p> This will (eventually) generate some shared libraries (cBanana.so,
+cReactor.so) within a directory tree called 'build' under the Twisted
+directory. </p>
 
-<p> If you don't go on to install the build results into a directory on the <code>$PYTHONPATH</code>, then you will need to create a couple of symlinks:  </p>
+<p> If you don't go on to install the build results into a directory
+on the <code>$PYTHONPATH</code>, then you will need to create a couple
+of symlinks: </p>
 
 <pre class="shell">
 $ cd twisted/spread
@@ -59,7 +80,10 @@ $ ln -s ../../build/lib.linux-i686-2.1/twisted/internet/cReactor.so cReactor.so
 % admin/runtests
 </pre>
 
-<p> Some of these tests will fail if you don't have the Python XML packages installed on your system.  </p>
+<p>(From the directory where Twisted was originally untarred/unzipped to.)</p>
+
+<p>Some of these tests will fail if you don't have the Python XML or
+Crypto packages installed on your system.</p>
 
 </body>
 </html>

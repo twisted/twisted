@@ -16,6 +16,7 @@ TEST, TEST.
  * OK, so everything's working, time to update release documents
  * README: add a new Quote of the Release, update all mentions of last version number (use your editors
    search function, there are several of them)
+ * doc/howto/installing-twisted
  * ChangeLog: Browse through twisted-commits; if you see any updates that are
    significant but weren't mentioned in ChangeLog, retroactively add them
  * ChangeLog: Add an entry: * .: Releasing Twisted <version>
