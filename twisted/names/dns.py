@@ -140,10 +140,17 @@ class SentQuery:
         self.callback(process(message))
 
     def processAnswer_1(self, message):
+        '''looking for name->address resolution
+        
+        choose one of the IPs at random'''
         answer = random.choice(message.answers)
         return string.join(map(str, map(ord, answer.data)), '.')
 
     def processAnswer_15(self, message):
+        '''looking for Mail eXchanger for the domain
+
+        order answers in in increasing priority, so the
+        first MX is bad'''
         answers = []
         for answer in message.answers:
             priority = struct.unpack("!H", answer.data[:2])[0]
