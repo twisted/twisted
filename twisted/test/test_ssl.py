@@ -16,9 +16,9 @@
 
 from __future__ import nested_scopes
 from twisted.trial import unittest
-from twisted.internet import protocol, reactor
+from twisted.internet import protocol, reactor, interfaces
 from twisted.protocols import basic
-from twisted.python import util
+from twisted.python import util, components
 
 try:
     from OpenSSL import SSL
@@ -238,3 +238,7 @@ class BufferingTestCase(unittest.TestCase):
 if SSL is None:
     for case in (BufferingTestCase, TLSTestCase, StolenTCPTestCase):
         case.skip = "OpenSSL not present"
+
+if not components.implements(reactor, interfaces.IReactorSSL):
+    for case in (BufferingTestCase, TLSTestCase, StolenTCPTestCase):
+        case.skip = "Reactor doesn't support SSL"

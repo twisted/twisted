@@ -16,8 +16,9 @@
 
 from twisted.trial import unittest
 from twisted.web import server, static, client, error, util, resource
-from twisted.internet import reactor, defer
+from twisted.internet import reactor, defer, interfaces
 from twisted.python.util import sibpath
+from twisted.python import components
 
 try:
     from twisted.internet import ssl
@@ -365,3 +366,8 @@ class CookieTestCase(unittest.TestCase):
 if ssl is None or not hasattr(ssl, 'DefaultOpenSSLContextFactory'):
     for case in [WebClientSSLTestCase, WebClientRedirectBetweenSSLandPlainText]:
         case.skip = "OpenSSL not present"
+
+if not components.implements(reactor, interfaces.IReactorSSL):
+    for case in [WebClientSSLTestCase, WebClientRedirectBetweenSSLandPlainText]:
+        case.skip = "Reactor doesn't support SSL"
+

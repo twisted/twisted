@@ -26,7 +26,7 @@ from twisted import protocols
 from twisted import internet
 from twisted.protocols import loopback
 from twisted.protocols import smtp
-from twisted.internet import defer, protocol
+from twisted.internet import defer, protocol, reactor, interfaces
 from twisted.test.test_protocols import StringIOWithoutClosing
 from twisted.python import components
 
@@ -472,6 +472,10 @@ class TLSTestCase(unittest.TestCase, LoopbackMixin):
 if ClientTLSContext is None:
     for case in (TLSTestCase,):
         case.skip = "OpenSSL not present"
+
+if not components.implements(reactor, interfaces.IReactorSSL):
+    for case in (TLSTestCase,):
+        case.skip = "Reactor doesn't support SSL"
 
 class EmptyLineTestCase(unittest.TestCase):
     def testEmptyLineSyntaxError(self):
