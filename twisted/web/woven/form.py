@@ -151,7 +151,8 @@ class FormFillerWidget(widgets.Widget):
         lmn = lmx(node)
         if not node.hasAttribute('action'):
             lmn['action'] = (request.prepath+request.postpath)[-1]
-        lmn['method'] = 'post'
+        if not node.hasAttribute("method"):
+            lmn['method'] = 'post'
         lmn['enctype'] = 'multipart/form-data'
         self.errorNodes = errorNodes = {}                     # name: nodes which trap errors
         self.inputNodes = inputNodes = {}
