@@ -70,11 +70,21 @@ class OldRequestAdapter(components.Componentized, object):
             delattr(getattr(self, where), name)
         return property(_get, _set, _del)
 
-    def _getHeaders(where):
+    def _getsetHeaders(where):
         def _get(self):
             headers = getattr(self, where).headers
             return HeaderAdapter(headers)
-        return property(_get)
+
+        def _set(self, newheaders):
+            if not isinstance(newheaders, HeaderAdapter):
+                headers = http_headers.Headers()
+                for n,v in newheaders.items:
+                    headers.setRawHeaders(n, (v,))
+                newheaders = headers
+            getattr(self, where).headers = newheaders
+            
+        return property(_get, _set)
+    
     
     code = _getsetFrom('response', 'code')
     code_message = ""
@@ -83,8 +93,8 @@ class OldRequestAdapter(components.Componentized, object):
     uri = _getsetFrom('request', 'uri')
     clientproto = _getsetFrom('request', 'clientproto')
     
-    received_headers = _getHeaders('request')
-    headers = _getHeaders('response')
+    received_headers = _getsetHeaders('request')
+    headers = _getsetHeaders('response')
     path = _getsetFrom('request', 'path')
     
     # cookies = # Do I need this?
@@ -146,17 +156,21 @@ class OldRequestAdapter(components.Componentized, object):
         return self.request.host.split(':')[0]
 
 
-### TODO:
     def getCookie(self, key):
-        # get cookie
+        for cookie in self.request.headers.getHeader('Cookie', ()):
+            if cookie.name == key:
+                return cookie.value
+            
         return None
 
     def addCookie(self, k, v, expires=None, domain=None, path=None, max_age=None, comment=None, secure=None):
         if expires is None and max_age is not None:
             expires=max_age-time.time()
         cookie = http_headers.Cookie(k,v, expires=expires, domain=domain, path=path, comment=comment, secure=secure)
-        # add Cookie
+        self.response.headers.setHeader('Set-Cookie', self.request.headers.getHeader('Set-Cookie', ())+(cookie,))
+        print "Added cookie:", cookie
         
+### TODO:
     def getHost(self):
         # FIXME, need a real API to acccess this.
         return self.request.chanRequest.channel.transport.getHost()
@@ -224,24 +238,56 @@ class OldRequestAdapter(components.Componentized, object):
             hostport,
             string.join(self.prepath, '/')), "/:")
 
-    def URLPath(self):
-        from twisted.python import urlpath
-        return urlpath.URLPath.fromRequest(self)
+#     def URLPath(self):
+#         from twisted.python import urlpath
+#         return urlpath.URLPath.fromRequest(self)
 
-    def rememberRootURL(self):
+# But nevow wants it to look like this... :(
+    def URLPath(self):
+        from nevow import url
+        return url.URL.fromContext(self)
+
+    def rememberRootURL(self, url=None):
         """
         Remember the currently-processed part of the URL for later
         recalling.
         """
-        url = self.prePathURL()
-        # remove one segment
-        self.appRootURL = url[:url.rindex("/")]
+        if url is None:
+            url = self.prePathURL()
+            # remove one segment
+            self.appRootURL = url[:url.rindex("/")]
+        else:
+            self.appRootURL = url
 
     def getRootURL(self):
         """
         Get a previously-remembered URL.
         """
         return self.appRootURL
+
+    
+    session = None
+
+    def getSession(self, sessionInterface = None):
+        # Session management
+        if not self.session:
+            cookiename = string.join(['TWISTED_SESSION'] + self.sitepath, "_")
+            sessionCookie = self.getCookie(cookiename)
+            if sessionCookie:
+                try:
+                    self.session = self.site.getSession(sessionCookie)
+                except KeyError:
+                    pass
+            # if it still hasn't been set, fix it up.
+            if not self.session:
+                self.session = self.site.makeSession()
+                self.addCookie(cookiename, self.session.uid, path='/')
+        self.session.touch()
+        if sessionInterface:
+            return self.session.getComponent(sessionInterface)
+        return self.session
+
+
 
 class OldResourceAdapter(object):
     implements(iweb.IResource)

@@ -15,11 +15,6 @@
  - Resource API for prerender checking (I've forgotten what I mean by this?)
  - Other useful filters: content-encoding, caching, others?
 
-- Resource:
- - Default form POST processing.
- - Handle HTTP methods properly on all standard resources, and make it easy 
-    to do right on user resources
-
 - Compatibility Layer
  - Handle setETag and setLastModified RFC-compliantly, even though they are
    the wrong interface (need to have both before being able to respond properly)

@@ -52,7 +52,7 @@ class Resource(object):
     def child_(self, ctx):
         """I'm how requests for '' (urls ending in /) get handled :)
         """
-        if self.addSlash and len(inevow.IRemainingSegments(ctx)) == 1:
+        if self.addSlash and len(iweb.IRemainingSegments(ctx)) == 1:
             return self
         return None
         

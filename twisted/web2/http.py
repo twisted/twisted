@@ -673,7 +673,9 @@ class HTTPChannelRequest:
         
     
     def write(self, data):
-        if self.chunkedOut:
+        if not data:
+            return
+        elif self.chunkedOut:
             self.transport.writeSequence(toChunk(data))
         else:
             self.transport.write(data)
@@ -967,7 +969,7 @@ class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin, object):
             self.lingeringClose()
 
     def timeoutConnection(self):
-        log.msg("Timing out client: %s" % str(self.transport.getPeer()))
+        #log.msg("Timing out client: %s" % str(self.transport.getPeer()))
         policies.TimeoutMixin.timeoutConnection(self)
 
     def lingeringClose(self):
