@@ -22,7 +22,7 @@ Package installer for Twisted
 Copyright (C) 2001 Matthew W. Lefkowitz
 All rights reserved, see LICENSE for details.
 
-$Id: setup.py,v 1.98 2003/01/30 06:54:30 moshez Exp $
+$Id: setup.py,v 1.99 2003/02/07 16:26:49 moshez Exp $
 """
 
 import distutils, os, sys, string
@@ -236,7 +236,7 @@ http://starship.python.net/crew/mhammond/win32/Downloads.html
         'bin/manhole', 'bin/mktap', 'bin/twistd',
         'bin/im', 'bin/t-im', 'bin/tap2deb',
         'bin/coil', 'bin/tapconvert', 'bin/websetroot',
-        'bin/generatelore', 'bin/html2latex', 'bin/hlint',
+        'bin/lore',
         'bin/tkmktap', 'bin/conch', 'bin/ckeygen', 'bin/tktwistd',
         'bin/tkconch', 'bin/trial'
     ],
