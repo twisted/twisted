@@ -81,7 +81,7 @@ osrv = sys.argv
 sys.argv=["IGNORE"]
 im = __import__
 __builtins__.__import__ = myimport
-os.path.walk(osrv[1], addMod, None)
+os.path.walk('./twisted', addMod, None)
 __builtins__.__import__ = im
 sys.argv = osrv
 sys.argv.extend(modnames)              # list of modules
