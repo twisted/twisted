@@ -27,6 +27,7 @@ cReactorTime_callLater(PyObject *self, PyObject *args, PyObject *kw)
     cReactor *reactor;
     int method_id;
     int delay                   = 0;
+    PyObject *delay_obj         = NULL;
     PyObject *req_args          = NULL;
     PyObject *callable_args     = NULL;
     PyObject *callable          = NULL;
@@ -37,17 +38,21 @@ cReactorTime_callLater(PyObject *self, PyObject *args, PyObject *kw)
     req_args = PyTuple_GetSlice(args, 0, 2);
 
     /* Now use PyArg_ParseTuple on the required args. */
-    if (!PyArg_ParseTuple(req_args, "iO:callLater", &delay, &callable))
+    if (!PyArg_ParseTuple(req_args, "OO:callLater", &delay_obj, &callable))
     {
         Py_DECREF(req_args);
         return NULL;
     }
     Py_DECREF(req_args);
 
-    /* Delays less than zero become zero. */
-    if (delay < 0)
+    /* Convert delay. */
+    if (delay_obj)
     {
-        delay = 0;
+        delay = cReactorUtil_ConvertDelay(delay_obj);
+        if (delay < 0)
+        {
+            return NULL;
+        }
     }
 
     /* Verify the given object is callable. */

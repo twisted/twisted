@@ -20,6 +20,8 @@
 
 /* includes */
 #include "cReactor.h"
+#include <sys/time.h>
+#include <unistd.h>
 
 /* The global method id allocator. */
 static int next_call_id = 1;
@@ -27,12 +29,12 @@ static int next_call_id = 1;
 /* The sorted method list node. */
 struct _cReactorMethod
 {
-  int               call_id;
-  time_t            call_time;
-  PyObject *        callable;
-  PyObject *        args;
-  PyObject *        kw;
-  cReactorMethod *  next;
+    int                 call_id;
+    struct timeval      call_time;
+    PyObject *          callable;
+    PyObject *          args;
+    PyObject *          kw;
+    cReactorMethod *    next;
 };
 
 /* Do the equivalent of:
@@ -77,24 +79,27 @@ cReactorUtil_AddMethod(cReactorMethod **list,
 
 int 
 cReactorUtil_AddDelayedMethod(cReactorMethod **list,
-                              int delay,
+                              int delay_ms,
                               PyObject *callable,
                               PyObject *args,
                               PyObject *kw)
 {
     cReactorMethod *method;
     cReactorMethod *node, *shadow;
-    time_t call_time;
+    struct timeval call_time;
 
     /* Calc the call time. */
-    time(&call_time);
-    call_time += delay;
+    gettimeofday(&call_time, NULL);
+
+    call_time.tv_usec   += (delay_ms * 1000);
+    call_time.tv_sec    += call_time.tv_usec / 1000000;
+    call_time.tv_usec   = call_time.tv_usec % 1000000;
 
     /* Make the new method node. */
     method = (cReactorMethod *)malloc(sizeof(cReactorMethod));
     memset(method, 0x00, sizeof(cReactorMethod));
-    method->call_id     = next_call_id++;
-    method->call_time   = call_time;
+    method->call_id = next_call_id++;
+    memcpy(&method->call_time, &call_time, sizeof(call_time));
 
     Py_INCREF(callable);
     method->callable = callable;
@@ -130,7 +135,8 @@ cReactorUtil_AddDelayedMethod(cReactorMethod **list,
          * will work like a FIFO and put this new method after any methods
          * with the same call time.
          */
-        if (method->call_time < node->call_time)
+        if (   (method->call_time.tv_sec < node->call_time.tv_sec)
+            && (method->call_time.tv_usec < node->call_time.tv_usec))
         {
             break;
         }
@@ -195,18 +201,23 @@ cReactorUtil_RemoveMethod(cReactorMethod **list, int call_id)
 }
     
 
-time_t
-cReactorUtil_RunMethods(cReactorMethod **list, time_t now)
+int
+cReactorUtil_RunMethods(cReactorMethod **list)
 {
     cReactorMethod *node;
     cReactorMethod *method;
     PyObject *result;
+    struct timeval now;
+    int delay;
+
+    gettimeofday(&now, NULL);
 
     node = *list;
     while (node)
     {
         /* Check for stopping condition. */
-        if (node->call_time > now)
+        if (   (node->call_time.tv_sec > now.tv_sec)
+            || (node->call_time.tv_usec > now.tv_usec))
         {
             break;
         }
@@ -234,8 +245,20 @@ cReactorUtil_RunMethods(cReactorMethod **list, time_t now)
         free(method);
     }
 
-    /* If there is a node left, return its call time. */
-    return node ? node->call_time : 0;
+    /* If there is a node left, return the number of milliseconds until it
+     * needs to be called.
+     */
+    if (node)
+    {
+        delay = ((node->call_time.tv_sec - now.tv_sec) * 1000)
+                + ((node->call_time.tv_usec - now.tv_usec) / 1000);
+    }
+    else
+    {
+        delay = -1;
+    }
+
+    return delay;
 }
 
 void
@@ -332,6 +355,7 @@ int
 cReactorUtil_NextMethodDelay(cReactorMethod *list)
 {
     int delay;
+    struct timeval now;
 
     /* No methods on this list. */
     if (!list)
@@ -339,10 +363,20 @@ cReactorUtil_NextMethodDelay(cReactorMethod *list)
         return -1;
     }
 
-    /* Return something >= 0 */
-    delay = list->call_time - time(NULL);
-    return (delay > 0) ? delay : 0;
+    /* Get the delta. */
+    gettimeofday(&now, NULL);
+    delay = ((list->call_time.tv_sec - now.tv_sec) * 1000)
+            + ((list->call_time.tv_usec - now.tv_usec) / 1000);
+
+    /* Clamp to zero. */
+    if (delay < 0)
+    {   
+        delay = 0;
+    }
+
+    return delay;
 }
+
 
 PyObject *
 cReactorUtil_MakeImplements(const char **names, unsigned int num_names)
@@ -369,4 +403,59 @@ cReactorUtil_MakeImplements(const char **names, unsigned int num_names)
 
     return impl_tup;
 }
+
+
+PyObject *
+cReactorUtil_CreateDeferred(void)
+{
+    PyObject *defer_class;
+
+    /* Get the class object. */
+    defer_class = cReactorUtil_FromImport("twisted.internet.defer", "Deferred");
+    if (!defer_class)
+    {   
+        return NULL;
+    }
+
+    /* Return a new instance. */
+    return PyObject_CallFunction(defer_class, "()");
+}
+
+
+int
+cReactorUtil_ConvertDelay(PyObject *delay_obj)
+{
+    int delay;
+    double delay_float;
+
+    /* Verify we have a number. */
+    if (!PyNumber_Check(delay_obj))
+    {
+        PyErr_SetString(PyExc_ValueError, "delay arg must be a number!");
+        return -1;
+    }
+
+    /* Convert to double obj. */
+    delay_obj = PyNumber_Float(delay_obj);
+    if (!delay_obj)
+    {
+        return -1;
+    }
+   
+    /* Get a double. */
+    delay_float = PyFloat_AsDouble(delay_obj);
+    Py_DECREF(delay_obj);
+
+    /* Convert to millisecond int. */
+    delay = (int)(delay_float * 1000.0f);
+
+    /* If it is negative, raise. */
+    if (delay < 0)
+    {
+        PyErr_SetString(PyExc_ValueError, "delay is negative!");
+    }
+
+    return delay;
+}
+
 /* vim: set sts=4 sw=4: */
