@@ -1010,7 +1010,7 @@ class Headers:
                 # if isinstance(h, types.GeneratorType):
                 #     h=list(h)
         except ValueError,v:
-            print v
+            # print v
             h=None
         
         self._headers[name]=h

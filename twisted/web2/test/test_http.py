@@ -647,7 +647,30 @@ class CoreHTTPTestCase(HTTPTests):
         self.compareResult(cxn, cmds, data)
         time.sleep(0.5) # Wait for timeout
         self.assertDone(cxn)
+
+    def testExtraCRLFs(self):
+        cxn = self.connect()
+        cmds = [[]]
+        data = ""
         
+        # Some broken clients (old IEs) send an extra CRLF after post
+        cxn.client.write("POST / HTTP/1.1\r\nContent-Length: 5\r\nHost: localhost\r\n\r\nInput\r\n")
+        cmds[0] += [('init', 'POST', '/', (1,1),
+                     (('Content-Length', ['5']), ('Host', ['localhost']))),
+                    ('contentChunk', 'Input'),
+                    ('contentComplete',)]
+
+        self.compareResult(cxn, cmds, data)
+        
+        cxn.client.write("GET /two HTTP/1.1\r\n\r\n")
+        cmds.append([])
+        cmds[1] += [('init', 'GET', '/two', (1,1), ()),
+                    ('contentComplete',)]
+        self.compareResult(cxn, cmds, data)
+
+        cxn.client.loseConnection()
+        self.assertDone(cxn)
+
 class ErrorTestCase(HTTPTests):
     def assertStartsWith(self, first, second, msg=None):
         self.assert_(first.startswith(second), '%r.startswith(%r)' % (first, second))
@@ -695,7 +718,7 @@ class ErrorTestCase(HTTPTests):
         cxn = self.connect()
         cxn.client.write("GET "+("/Bar")*10000 +" HTTP/1.1\r\n")
 
-        self.checkError(cxn, 400)
+        self.checkError(cxn, 414)
 
     def testNoColon(self):
         cxn = self.connect()

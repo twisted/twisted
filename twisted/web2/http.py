@@ -494,8 +494,9 @@ class HTTPChannelRequest:
             
             channel.setLineMode(extraneous)
 
-    def lineLengthExceeded(self, line):
-        self._abortWithError(responsecode.BAD_REQUEST, 'Header line too long.')
+    def lineLengthExceeded(self, line, wasFirst=False):
+        code = wasFirst and responsecode.REQUEST_URI_TOO_LONG or responsecode.BAD_REQUEST
+        self._abortWithError(code, 'Header line too long.')
         
     def headerReceived(self, line):
         """Store this header away. Check for too much header data
@@ -869,12 +870,14 @@ class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin):
                 pass
 
     def lineLengthExceeded(self, line):
+        first = False
         if self._first_line:
             # Fabricate a request object to respond to the line length violation.
             self.chanRequest = self.chanRequestFactory(self, "GET fake HTTP/1.0",
                                                        len(self.requests))
+            first = True
         try:
-            self.chanRequest.lineLengthExceeded(line)
+            self.chanRequest.lineLengthExceeded(line, first)
         except AbortedException:
             pass
             
