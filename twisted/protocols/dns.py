@@ -28,7 +28,7 @@ def readPrecisely( file, l ):
         raise EOFError
     return buff
 
-class NotConnectedError(Exception)
+class NotConnectedError(Exception):
     pass
 
 class Name:
