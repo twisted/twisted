@@ -32,7 +32,6 @@ import sys
 class Options(usage.Options):
     synopsis = "Usage: mktap web [options]"
     optParameters = [["port", "p", "8080","Port to start the server on."],
-                     ["telnet", "t", None, "Run a telnet server on this port."],
                      ["logfile", "l", None, "Path to web log file."],
                      ["https", None, None, "Port to listen on for Secure HTTP."],
                      ["certificate", "c", "server.pem", "SSL certificate to use for HTTPS."],
@@ -154,10 +153,6 @@ twisted.web.test in it."""
 
 
 def updateApplication(app, config):
-    if config['telnet']:
-        from twisted.protocols import telnet
-        factory = telnet.ShellFactory()
-        app.listenTCP(int(config['telnet']), factory)
     if config['root']:
         root = config['root']
         if config['indexes']:
