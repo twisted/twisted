@@ -148,7 +148,8 @@ a = list2dict(['py-listing', 'html-listing'])
 pre = list2dict(['python', 'shell', 'python-interpreter', 'elisp'])
 
 allowed = {'code': classes.has_key, 'span': span.has_key, 'div': div.has_key,
-           'a': a.has_key, 'pre': pre.has_key}
+           'a': a.has_key, 'pre': pre.has_key, 'ul': lambda x: x=='toc',
+           'ol': lambda x: x=='toc', 'li': lambda x: x=='ignoretoc'}
 
 def getDefaultChecker():
     return TagChecker(tags.has_key, allowed)
