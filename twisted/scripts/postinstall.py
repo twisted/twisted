@@ -105,7 +105,8 @@ def install():
         pass
     else:
         print "Installing environment script...",
-        scripts_dir=os.path.join(sysconfig.get_config_var("prefix"), "scripts")
+        python_dir=sysconfig.get_config_var("prefix")
+        scripts_dir=os.path.join(python_dir, "scripts")
         # FIXME - this list needs some work
         twisted_scripts=" ".join(["twistd", "mktap", "im", "generatelore",
                                     "hlint", "manhole", "t-im", "tapconvert",
@@ -155,6 +156,7 @@ If you want icons to appear in the Start menu, you must:
             except OSError:
                 pass
 
+            # command prompt
             shortcut=Shortcut(os.getenv("ComSpec"),
                                 "/k %s" % bat_location,
                                 workingdir="C:\\")
@@ -163,7 +165,17 @@ If you want icons to appear in the Start menu, you must:
             file_created(cp_shortcut_path)
             files_created.append(cp_shortcut_path)
 
-            python_dir=sysconfig.get_config_var("prefix")
+            # tkmktap
+            exec_dir=sysconfig.get_config_var("exec_prefix")
+            shortcut=Shortcut(os.path.join(exec_dir, "pythonw.exe"),
+                              os.path.join(scripts_dir, "tkmktap.py"),
+                              workingdir="C:\\")
+            mktap_shortcut_path=os.path.join(menu_path, "Application Maker.lnk")
+            shortcut.save(mktap_shortcut_path)
+            file_created(mktap_shortcut_path)
+            files_created.append(mktap_shortcut_path)
+
+            # uninstall
             remove_exe=os.path.join(python_dir, "RemoveTwisted.exe")
             remove_log=os.path.join(python_dir, "Twisted-wininst.log")
             icon_dll=getShell32DLLPath()
