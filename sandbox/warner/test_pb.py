@@ -155,11 +155,11 @@ class Loopback:
 
 class Target:
     def __init__(self):
-        self.results = []
+        self.calls = []
     def getMethodSchema(self, methodname):
         return None
     def remote_add(self, a, b):
-        self.results.append((a,b))
+        self.calls.append((a,b))
         return a+b
 
 class TestCall(unittest.TestCase):
@@ -182,14 +182,14 @@ class TestCall(unittest.TestCase):
     def testCall1(self):
         rr, target = self.setupTarget()
         d = rr.callRemote("add", a=1, b=2)
-        self.failUnlessEqual(target.results, [(1,2)])
+        self.failUnlessEqual(target.calls, [(1,2)])
         r = unittest.deferredResult(d)
         self.failUnlessEqual(r, 3)
 
-        # the caller still knows about the RemoteReference
+        # the caller still holds the RemoteReference
         self.failUnless(self.callingBroker.remoteReferences.has_key(1))
 
-        # free the RemoteReference. This does two things: 1) the
+        # release the RemoteReference. This does two things: 1) the
         # callingBroker will forget about it. 2) they will send a decref to
         # the targetBroker so *they* can forget about it.
         del rr # this fires a DecRef
@@ -201,7 +201,7 @@ class TestCall(unittest.TestCase):
     def testFail1(self):
         rr, target = self.setupTarget()
         d = rr.callRemote("add", a=1, b=2, c=3)
-        self.failIf(target.results)
+        self.failIf(target.calls)
         f = unittest.deferredError(d)
         self.failUnless(str(f).find("remote_add() got an unexpected keyword argument 'c'") != -1)
         
