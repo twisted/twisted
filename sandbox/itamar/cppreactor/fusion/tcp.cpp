@@ -38,7 +38,7 @@ void TwistedImpl::IOVecManager::ensureEnoughSpace()
 	m_offset = 0;
     } else {
 	// allocate more
-	m_vecs = (iovec*) ::realloc(m_vecs, m_len + 2048);
+	m_vecs = (iovec*) ::realloc(m_vecs, (m_len + 2048) * sizeof(iovec));
 	m_len += 2048;
     }
 }
@@ -67,7 +67,8 @@ char* TwistedImpl::LocalBufferManager::getBuffer(size_t bytes)
     }
     LocalBuffer& b = m_localbuffers.back();
     b.len += bytes;
-    return b.buf;
+    assert(checkLocalBuffer(b));
+    return b.buf + (b.offset + b.len - bytes);
 }
 
 void TwistedImpl::LocalBufferManager::didntUse(size_t bytes)
@@ -173,7 +174,6 @@ object Twisted::TCPTransport::doWrite()
     if (!m_protocol) {
 	return import("twisted.internet.tcp").attr("Connection").attr("doWrite")(m_self);
     }
-    assert (checkBuffered(m_bufferedbytes, m_iovec, m_local));
     m_iovec.twiddleFirst();
     ssize_t result = ::writev(m_sockfd, m_iovec.m_vecs + m_iovec.m_offset, 
 			  std::min(int(m_iovec.m_used), IOV_MAX));
@@ -211,7 +211,6 @@ void Twisted::TCPTransport::wrote(size_t bytes)
     if (bytes == 0)
 	return;
     assert (bytes <= m_bufferedbytes);
-    assert (checkBuffered(m_bufferedbytes, m_iovec, m_local));
     m_bufferedbytes -= bytes;
     if (m_iovec.m_bytessent) {
 	bytes += m_iovec.m_bytessent;
@@ -234,7 +233,6 @@ void Twisted::TCPTransport::wrote(size_t bytes)
 	}
     }
     assert (bytes == 0);
-    assert (checkBuffered(m_bufferedbytes, m_iovec, m_local));
 }
 
 

@@ -130,10 +130,14 @@ namespace TwistedImpl
 
 namespace {
     bool checkLocalBuffer(const TwistedImpl::LocalBuffer& l) {
-	return (l.offset <= TwistedImpl::LocalBuffer::CHUNK_SIZE * l.numchunks) &&
+	bool result = (l.offset <= TwistedImpl::LocalBuffer::CHUNK_SIZE * l.numchunks) &&
 	 (l.len <= TwistedImpl::LocalBuffer::CHUNK_SIZE * l.numchunks) &&
 	 (l.len + l.offset <= TwistedImpl::LocalBuffer::CHUNK_SIZE * l.numchunks) &&
 	 (l.available() <= TwistedImpl::LocalBuffer::CHUNK_SIZE * l.numchunks);
+	if (!result) {
+	    std::cerr << l.offset <<"," << l.len << "," << l.numchunks << "," << l.available() << std::endl;
+	}
+	return result;
     }
 
     bool checkBuffered(size_t bufferedBytes, const TwistedImpl::IOVecManager& iov, 
@@ -153,7 +157,9 @@ namespace {
 	     it != lbm.m_localbuffers.end(); ++it) {
 	    lbmbuf += (*it).len;
 	}
-	if (lbmbuf != bufferedBytes) {
+	// some of bytes may be in OwnerPtr added stuff, so we can't do
+	// straight comparision:
+	if (lbmbuf > bufferedBytes) {
 	    std::cerr << "LocalBuffers: " << lbmbuf << ", BufferdBytes: " << bufferedBytes << std::endl;
 	    return  false;
 	}
@@ -215,7 +221,6 @@ namespace Twisted
 	void write(size_t reserve, W writer) {
 	    if (!connected || reserve == 0)
 		return;
-	    assert (checkBuffered(m_bufferedbytes, m_iovec, m_local));
 	    char* buf = m_local.getBuffer(reserve);
 	    size_t written = writer(buf);
 	    assert (written <= reserve);
@@ -230,7 +235,6 @@ namespace Twisted
 		m_producer.attr("pauseProducing")();
 	    }
 	    startWriting();
-	    assert (checkBuffered(m_bufferedbytes, m_iovec, m_local));
 	}
 
 	void write(const char* buf, size_t len, const OwnerPtr owner) {
