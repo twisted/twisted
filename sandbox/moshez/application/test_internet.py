@@ -149,6 +149,13 @@ class TestInternet(unittest.TestCase):
         t.stopService()
         self.failIf(t.running)
         self.assertEqual(l, ["hello"])
+        l = []
+        t = internet.TimerService(0.01, l.append, "hello")
+        t.startService()
+        while len(l)<10:
+            reactor.iterate(0.1)
+        t.stopService()
+        self.assertEqual(l, ["hello"]*10)
 
     def testEverythingThere(self):
         for tran in 'Generic TCP UNIX SSL UDP UNIXDatagram Multicast'.split():

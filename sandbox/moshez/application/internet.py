@@ -100,12 +100,10 @@ class TimerService(_VolatileDataService):
     def startService(self):
         from twisted.internet import reactor
         service.Service.startService(self)
-        self._call = reactor.callLater(self.step, self._setupCall)
-
-    def _setupCall(self):
-        from twisted.internet import reactor
-        self.callable(*self.args, **self.kwargs)
-        self._call = reactor.callLater(self.step, self._setupCall)
+        def setupCall():
+            self.callable(*self.args, **self.kwargs)
+            self._call = reactor.callLater(self.step, setupCall)
+        self._call = reactor.callLater(self.step, setupCall)
 
     def stopService(self):
         service.Service.stopService(self)
