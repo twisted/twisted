@@ -20,7 +20,7 @@
 
 Please do not use this module directly.
 
-API Stability: unstable
+API Stability: semi-stable
 
 Maintainer: U{Itamar Shtull-Trauring<mailto:twisted@itamarst.org>}
 """
