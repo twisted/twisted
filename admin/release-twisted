@@ -711,7 +711,7 @@ class UpdateWebDocs(Transaction):
                    "http://twistedmatrix.com/documents/current/api/%s.html")
         sh("%s --config ext= *.xhtml" % lorecmd)
         os.chdir('..')
-        for dir in ['examples', 'historic', 'legal',
+        for dir in ['examples', 'historic',
                     'specifications', 'vision', 'man']:
             os.chdir(dir)
             sh('%s  --config ext= -l../howto/ *.xhtml' % lorecmd)
