@@ -61,7 +61,7 @@ SERVENTIDENTIFIERENCODING="<%ds" % DESCRIPTORLENGTH # serventIdentifier
 
 PUSHPAYLOADENCODING="<%dsIBBBBH" % DESCRIPTORLENGTH # serventIdentifier, fileIndex, -- 4 octets of IPv4 address --, port
 
-MAXUINT32=(2**32)-1
+MAXUINT32=(2**32L)-1
 MAXUINT16=(2**16)-1
 MAXUINT8=(2**8)-1
 
