@@ -43,7 +43,7 @@ from twisted.lore import tree, process, indexer, numberer, htmlbook, default
 from twisted.python.util import sibpath
 from twisted.python import usage
 
-from twisted.scripts import lore
+from twisted.lore.scripts import lore
 
 import os
 

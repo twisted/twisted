@@ -234,6 +234,8 @@ desktop environments, and your toaster.
         "twisted.internet.iocpreactor",
         "twisted.internet.serialport",
         "twisted.lore",
+        "twisted.lore.scripts",
+        "twisted.lore.test",
         "twisted.mail",
         "twisted.mail.test",
         "twisted.mail.scripts",

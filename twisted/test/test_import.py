@@ -115,12 +115,6 @@ class AtLeastImportTestCase(unittest.TestCase):
         from twisted.enterprise import xmlreflector
         from twisted.enterprise import row
 
-    def test_lore(self):
-        from twisted.lore import tree
-        from twisted.lore import latex
-        from twisted.lore import slides
-        from twisted.lore import lmath
-
     def test_test(self):
         import os, sys
         oldargv = sys.argv
