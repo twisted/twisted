@@ -103,7 +103,7 @@ These factory methods will be called with the request object and current node ob
 </p>
 
 <p>
-<a href="listings/TwistedQuotes/webmvcquotes.py" class="py-listing">Listing 2: webquoteresource.py: Twisted Quotes Web Resource module</a>
+<a href="listings/TwistedQuotes/webmvcquotes.py" class="py-listing">Listing 2: webmvcquotes.py: Twisted Quotes WebMVC module</a>
 </p>
 
 <p>
@@ -116,6 +116,14 @@ A DOMWidget's main responsibility is implementing generateDOM, which should retu
 
 <p>
 Finally, we provide a factory_newQuote method on the controller which returns a custom InputHandler subclass. There are a few methods handlers may override to deal with data, but in this case we override "check", which decides if the input the user entered was valid, and "commit", which applies the user's input. For check, we simply see if the user entered anything at all; for commit, we append the newly entered quote to the end of the quotefile.
+</p>
+
+<p>
+Now, you just need a Resource Script to handle everything.
+</p>
+
+<p>
+<a href="listings/TwistedQuotes/webmvcquote.rpy" class="py-listing">Listing 3: webmvcquote.rpy: Twisted Quotes WebMVC Resource module</a>
 </p>
 
 <p>
