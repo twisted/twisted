@@ -775,7 +775,7 @@ def makeProtocol(controller, baseClass = protocol.Protocol,
         callbacks = ('dataReceived',)
     class _Protocol(Controller, Callback, baseClass):
         def __init__(self):
-            Callback.__init__(self)
+            Callback.__init__(self, ConnectionLost)
             setattr(self, callbacks[0], self)  # only one callback support
         def _execute(self, dummy = None):
             cmd = self._controller
@@ -791,7 +791,6 @@ def makeProtocol(controller, baseClass = protocol.Protocol,
                     self.transport.loseConnection()
                     return
                 if cmd.failure:
-                    print "TODO: Help! Any ideas on reporting faliures?"
                     cmd.failure.trap()
                     return
                 if cmd.results:
