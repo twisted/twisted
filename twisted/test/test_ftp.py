@@ -412,6 +412,7 @@ class TestFTPServer(FTPTestCase):
         iop.flush()
         reply = cli.lines[-1]
         self.assert_(re.search(r'227 =.*,[0-2]?[0-9]?[0-9],[0-2]?[0-9]?[0-9]',cli.lines[-1]))
+        self.cnx.s.cleanupDTP()
 
     def testTYPE(self):
         cli, sr, iop, send = self.cnx.getCSTuple()
