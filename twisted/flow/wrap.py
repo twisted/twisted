@@ -128,9 +128,9 @@ class _Deferred(Stage):
             self.deferred.addBoth(callable)
     def __init__(self, deferred, *trap):
         Stage.__init__(self, *trap)
+        self._called     = False
         deferred.addCallbacks(self._callback, self._errback)
         self._cooperate  = _Deferred.Instruction(deferred)
-        self._called     = False
 
     def _callback(self, res):
         self._called = True
