@@ -184,8 +184,16 @@ class Resource:
         request. Examples: render_GET, render_HEAD, render_POST, and
         so on. Generally you should implement those methods instead of
         overriding this one.
-        """
 
+        render_METHOD methods are expected to return a string which
+        will be the rendered page, unless the return value is
+        twisted.web.server.NOT_DONE_YET, in which case it is this
+        class's responsibility to write the results to
+        request.write(data), then call request.finish().
+
+        Old code that overrides render() directly is likewise expected
+        to return a string or NOT_DONE_YET.
+        """
         m = getattr(self, 'render_' + request.method, None)
         if not m:
             from twisted.web.server import UnsupportedMethod
@@ -194,12 +202,10 @@ class Resource:
         return m(request)
 
     def render_HEAD(self, request):
-        """
+        """Default handling of HEAD method.
+        
         I just return self.render_GET(request). When method is HEAD,
-        the framework will handle this correctly, assuming render_GET
-        returns a string as opposed to using
-        NOT_DONE_YET/write/finish. The length of the string will be
-        used to set the content-length, but no body will be written.
+        the framework will handle this correctly.
         """
         return self.render_GET(request)
         
