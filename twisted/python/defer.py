@@ -46,25 +46,28 @@ class Deferred:
 
 
     def callback(self, result):
-        """The callback to register with whatever will be calling this Deferred.
-        """
-        self.runCallbacks(result, 0)
-
-
-    def errback(self, error):
-        """The error callback to register with whatever will be calling this Deferred.
-        """
-        self.runCallbacks(error, 1)
-
-
-    def runCallbacks(self, result, isError):
-        """Run all callbacks and/or errors that have been added to this Deferred.
-
+        """Run all success callbacks that have been added to this Deferred.
+        
         Each callback will have its result passed as the first argument to the
         next; this way, the callbacks act as a 'processing chain'.
 
         If this deferred has not been armed yet, nothing will happen.
         """
+        self._runCallbacks(result, 0)
+
+
+    def errback(self, error):
+        """Run all error callbacks that have been added to this Deferred.
+        
+        Each callback will have its result passed as the first argument to the
+        next; this way, the callbacks act as a 'processing chain'.
+
+        If this deferred has not been armed yet, nothing will happen.
+        """
+        self._runCallbacks(error, 1)
+
+
+    def _runCallbacks(self, result, isError):
         self.called = isError + 1
         if self.armed:
             for item in self.callbacks:
@@ -98,7 +101,7 @@ class Deferred:
         if not self.armed:
             self.armed = 1
             if self.called:
-                self.runCallbacks(self.cbResult, self.called - 1)
+                self._runCallbacks(self.cbResult, self.called - 1)
         else:
             log.msg("WARNING: double-arming deferred.")
 
