@@ -7,14 +7,6 @@ from StringIO import StringIO
 from pprint import pprint
 from compiler import parse, walk
 
-from twisted.internet import defer, reactor
-from defgen import waitForDeferred, deferredGenerator
-
-def someKindOfDeferred():
-    d = defer.Deferred()
-    reactor.callLater(1, d.callback, 'Hello!')
-    return d
-
 class SourceWriter(object):
     _i = 0
 
@@ -327,8 +319,10 @@ def magic(s):
     ast = parse(s)
     sw = SourceWriter()
     walk(ast, sw)
-    print sw
-    return {'deferredUsingFunction': None}
+    return ast, sw
 
-f = file(__file__, 'r').read()
-deferredUsingFunction = magic(f)['deferredUsingFunction']
+if __name__ == '__main__':
+    f = file(__file__, 'r').read()
+    ast, sw = magic(f)
+    print sw
+    print ast
