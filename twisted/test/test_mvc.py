@@ -47,14 +47,12 @@ class MyView(view.View):
         self.random = self.model.random
         self.controller = components.getAdapter(self.model, interfaces.IController, None)
 
-    def update_foo(self, newValue):
-        # pretend self.foo is what the user actually sees on the screen
-        self.foo = newValue
-   
-    def update_random(self, newValue):
-        # pretend self.random is what the user actually sees on the screen
-        self.random = newValue
-    
+    def modelChanged(self, changed):
+        if changed.has_key('foo'):
+            self.foo = changed['foo']
+        if changed.has_key('random'):
+            self.random = changed['random']
+
     def twiddleControl(self, newValue):
         """
         The user twiddled a control onscreen, causing this event
