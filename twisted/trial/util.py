@@ -47,18 +47,10 @@ def _append(result, lst):
     lst.append(result)
 
 def deferredResult(d, timeout=None):
-    """DEPRECATED: use L{twisted.trial.util.wait} instead
-    
+    """
     Waits for a Deferred to arrive, then returns or throws an exception,
     based on the result.
     """
-    warnings.warn(("twisted.trial.util.deferredResult is DEPRECATED! "
-                   "Return a deferred from your test method, "
-                   "and trial will do the Right Thing. Alternatively, "
-                   "call twisted.trial.util.wait to block until the "
-                   "deferred fires."), DeprecationWarning,
-                  stacklevel=2)
-
     result = _Wait.wait(d, timeout)
     if isinstance(result, failure.Failure):
         raise result
@@ -66,18 +58,11 @@ def deferredResult(d, timeout=None):
         return result
 
 def deferredError(d, timeout=None):
-    """DEPRECATED: use L{twisted.trial.util.wait} instead
+    """
     Waits for deferred to fail, and it returns the Failure.
 
     If the deferred succeeds, raises FailTest.
     """
-    warnings.warn(("twisted.trial.util.deferredError is DEPRECATED! "
-                   "Return a deferred from your test method, "
-                   "and trial will do the Right Thing. Alternatively, "
-                   "call twisted.trial.util.wait to block until the "
-                   "deferred fires."), DeprecationWarning,
-                  stacklevel=2)
-
     result = _Wait.wait(d, timeout)
     if isinstance(result, failure.Failure):
         return result
