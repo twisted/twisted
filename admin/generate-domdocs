@@ -61,20 +61,6 @@ def findElementsWithAttribute(parent, attribute, value=None):
             lambda n, attribute=attribute: n.hasAttribute(attribute))
 
 
-def findElementsWithNameAndAttributes(parent, name, attributes):
-    def matcher(n, name=name, attributes=attributes):
-        if name and n.nodeName != name:
-            return 0
-        for (attribute, value) in attributes:
-            if not n.hasAttribute(attribute):
-                return 0
-            if value is not None:
-                if n.getAttribute(attribute) != value:
-                   return 0
-        return 1 
-    return findElements(parent, matcher)
-
-
 def findNodesNamed(parent, name):
     return findNodes(parent, lambda n, name=name: n.nodeName == name)
 
@@ -221,8 +207,10 @@ def fixAPI(document, cache):
 
 
 def fontifyPython(document):
-    for node in findElementsWithNameAndAttributes(document, 'pre',
-                                                  [("class", "python")]):
+    def matcher(n):
+        return (n.nodeName == 'pre' and n.hasAttribute('class') and
+                n.getAttribute('class') == 'python')
+    for node in findElements(document, matcher):
         newio = cStringIO.StringIO()
         # write the python code to a buffer
         oldio = cStringIO.StringIO()
