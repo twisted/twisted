@@ -291,12 +291,12 @@ class OldRequestAdapter(components.Componentized, object):
 
 
 
-class OldResourceAdapter(object):
+class OldNevowResourceAdapter(object):
     implements(iweb.IResource)
     
     def __init__(self, original):
         # Can't use self.__original= because of __setattr__.
-        self.__dict__['_OldResourceAdapter__original']=original
+        self.__dict__['_OldNevowResourceAdapter__original']=original
         
     def locateChild(self, ctx, segments):
         import server
@@ -332,3 +332,38 @@ class OldResourceAdapter(object):
 
     def __delattr__(self, name):
         delattr(self.__original, name)
+
+
+class OldResourceAdapter(object):
+    __implements__ = iweb.IOldNevowResource,
+
+    def __init__(self, original):
+        self.original = original
+
+    def __repr__(self):
+        return "<%s @ 0x%x adapting %r>" % (self.__class__.__name__, id(self), self.original)
+
+    def locateChild(self, ctx, segments):
+        import server
+        request = iweb.IOldNevowRequest(ctx)
+        if self.original.isLeaf:
+            return self, server.StopTraversal
+        name = segments[0]
+        request.prepath.append(request.postpath.pop(0))
+        res = self.original.getChildWithDefault(name, request)
+        request.postpath.insert(0, request.prepath.pop())
+        if isinstance(res, defer.Deferred):
+            return res.addCallback(lambda res: (res, segments[1:]))
+        return res, segments[1:]
+
+    def _handle_NOT_DONE_YET(self, data, request):
+        if data == server.NOT_DONE_YET:
+            return request.deferred
+        else:
+            return data
+
+    def renderHTTP(self, ctx):
+        request = iweb.IOldNevowRequest(ctx)
+        result = defer.maybeDeferred(self.original.render, request).addCallback(
+            self._handle_NOT_DONE_YET, request)
+        return result

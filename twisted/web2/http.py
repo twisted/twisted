@@ -1271,6 +1271,13 @@ class HTTPFactory(protocol.ServerFactory):
 
 from twisted.web2 import compat
 components.registerAdapter(compat.makeOldRequestAdapter, iweb.IRequest, iweb.IOldRequest)
-components.registerAdapter(compat.OldResourceAdapter, iweb.IOldResource, iweb.IResource)
+components.registerAdapter(compat.OldNevowResourceAdapter, iweb.IOldNevowResource, iweb.IResource)
 components.registerAdapter(Response, int, iweb.IResponse)
+
+try:
+    # If twisted.web is installed, add an adapter for it
+    from twisted import web
+    components.registerAdapter(compat.OldResourceAdapter, web.Resource, iweb.IOldNevowResource)
+except:
+    pass
 

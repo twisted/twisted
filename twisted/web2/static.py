@@ -251,7 +251,6 @@ class File(resource.Resource):
         
         response.headers.setHeader('etag', etag)
         response.headers.setHeader('content-length', size)
-        
         response.stream = stream.FileStream(f, 0, size)
         return response
 

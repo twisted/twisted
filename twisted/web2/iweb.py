@@ -30,20 +30,20 @@ class IResource(Interface):
 # Is there a better way to do this than this funky extra class?
 class SpecialAdaptInterfaceClass(interface.InterfaceClass):
     # A special adapter for IResource to handle the extra step of adapting
-    # from IOldResource-providing resources.
+    # from IOldNevowResource-providing resources.
     def __adapt__(self, other):
         result = interface.InterfaceClass.__adapt__(self, other)
         if result is not None:
             return result
         
-        result = IOldResource(other, None)
+        result = IOldNevowResource(other, None)
         if hasattr(result, "__class__"):
             components.fixClassImplements(result.__class__)
         if result is not None:
             return IResource(result)
 IResource.__class__ = SpecialAdaptInterfaceClass
 
-class IOldResource(components.Interface):
+class IOldNevowResource(components.Interface):
     # Shared interface with inevow.IResource
     """
         I am a web resource.

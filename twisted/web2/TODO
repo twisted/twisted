@@ -23,6 +23,7 @@
 - Convert twcgi, proxy?, vhost
 - add wsgi application support
 - Client library *LATER*
+- Internal request submission API
 
 - Compatibility Layer
  - Handle setETag and setLastModified RFC-compliantly, even though they are
