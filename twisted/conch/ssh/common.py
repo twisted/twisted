@@ -11,11 +11,16 @@ Maintainer: U{Paul Swartz<mailto:z3p@twistedmatrix.com>}
 """
 
 import struct
-from Crypto import Util
-from Crypto.Util import randpool
-
-entropy = randpool.RandomPool()
-entropy.stir()
+try:
+    from Crypto import Util
+    from Crypto.Util import randpool
+except ImportError:
+    import warnings
+    warnings.warn("PyCrypto not installed, but continuing anyways!", 
+            RuntimeWarning)
+else:
+    entropy = randpool.RandomPool()
+    entropy.stir()
 
 
 def NS(t):
@@ -79,17 +84,22 @@ def _fastMP(i):
     return struct.pack('!L', len(i2)) + i2
 
 def _fastMPpow(x, y, z=None):
-    r = pow(gmpy.mpz(x),y,z).binary()[::-1]
+    r = pyPow(gmpy.mpz(x),y,z).binary()[::-1]
     return struct.pack('!L', len(r)) + r
 
 def _fastpow(x, y, z=None):
     return pyPow(gmpy.mpz(x), y, z)
 
-try:
-    import gmpy
+def install():
+    global getMP, MP, _MPpow
     getMP = _fastgetMP
     MP = _fastMP
     _MPpow = _fastMPpow
-    __builtins__['pow'] = _fastpow # this is probably evil
+    __builtins__['pow'] = _fastpow # evil evil
+    
+try:
+    import gmpy
+    install()
 except ImportError:
     pass
+    
