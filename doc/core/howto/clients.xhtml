@@ -70,7 +70,33 @@ class WelcomeMessage(Protocol):
     happens, as well as any initial greetings (as in the WelcomeMessage
     protocol above).  Any tearing down of Protocol-specific objects is done in
     connectionLost.</p>
-    
+
+	<h2>Simple, single-use clients</h2>
+
+	<p>In many cases, the protocl only needs to connect to the server
+	once, and the code just wants to get a connected instance of the
+	protocol. In those cases <code
+	class="API">twisted.internet.protocol.ClientCreator</code>
+	provides the appropriate API.</p>
+
+	<pre class="python">
+from twisted.internet import reactor
+from twisted.internet.protocol import Protocol, ClientCreator
+
+class Greeter(Protocol):
+
+    def sendMessage(self, msg):
+	    self.transport.write("MESSAGE %s\n" % msg)
+
+def gotProtocol(p):
+    p.sendMessage("Hello")
+	reactor.callLater(1, p.sendMessage, "This is sent in a second")
+	reactor.callLater(2, p.transport.loseConnection)
+
+c = ClientCreator(reactor, Greeter)
+c.connectTCP("localhost", 1234).addCallback(gotProtocol)
+	</pre>
+		
     <h2>ClientFactory</h2>
     <p>We use reactor.connect* and a ClientFactory.
     The ClientFactory is in charge of creating the Protocol, and also receives
@@ -175,7 +201,7 @@ class EchoClientFactory(ReconnectingClientFactory):
         ReconnectingClientFactory.clientConnectionFailed(self,
                 connector, reason)
 </pre>
-    
+
     <h2>A Higher-Level Example: ircLogBot</h2>
     
     <h3>Overview of ircLogBot</h3>
