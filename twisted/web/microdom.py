@@ -482,7 +482,7 @@ class MicroDOMParser(XMLParser):
     # P, DT, DD, LI, INPUT, OPTION, THEAD, TFOOT, TBODY, COLGROUP, COL, TR, TH,
     # TD, HEAD, BASE, META, HTML all have optional closing tags
     
-    soonClosers = 'area link br img hr input option base meta'.split()
+    soonClosers = 'area link br img hr input base meta'.split()
     laterClosers = {'p': ['p'],
                     'dt': ['dt','dd'],
                     'dd': ['dt', 'dd'],
@@ -496,7 +496,8 @@ class MicroDOMParser(XMLParser):
                     'td': ['td'],
                     'th': ['th'],
                     'head': ['body'],
-                    'title': ['head', 'body']
+                    'title': ['head', 'body'], # this looks wrong...
+                    'option': ['option'],
                     }
 
 
