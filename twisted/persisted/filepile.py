@@ -133,8 +133,7 @@ class _FilePileStackEntry:
     along, move along.
     """
     
-    def __init__(self, dirname, loader=str, pilext='pile', itemext='item',
-                 cmpfunc=cmp):
+    def __init__(self, dirname, sorter, pilext='pile', itemext='item'):
         
         """Create a pointer into a directory given with dirname.  Pass in
         options from a parent FilePile.  NOTE THAT CMPFUNC WILL BE IGNORED ON
@@ -142,28 +141,21 @@ class _FilePileStackEntry:
         GIVEN IN ITEMEXT.
         """
         self.dirname = dirname
-        self.loader = loader
         self.pilext = pilext
         self.itemext = itemext
-        self.cmpfunc = cmpfunc
+        self.sorter = sorter
         self.dirlist = None
         if os.path.exists(os.path.join(self.dirname, '.'+pilext+'.sequence')):
             self.cmpfunc = LenientIntCompare(pilext=pilext, itemext=itemext)
         else:
-            self.cmpfunc = cmpfunc
+            self.cmpfunc = self.sorter.comparePathFragments
 
     def makeChild(self, path):
         """Create a stack entry with similar options for a subpath of the
         directory I am listing.
         """
         return _FilePileStackEntry(os.path.join(self.dirname, path),
-                                   self.loader, self.pilext, self.itemext,
-                                   self.cmpfunc)
-
-    def makeCopy(self):
-        return _FilePileStackEntry(self.dirname,
-                                   self.loader, self.pilext, self.itemext,
-                                   self.cmpfunc)
+                                   self.sorter, self.pilext, self.itemext)
 
     def listdir(self, forwards=True):
         """If I do not have a cached directory listing, load a directory
@@ -203,7 +195,8 @@ class _FilePileStackEntry:
                 self.pos -= 1
             ext = name.split('.')[-1]
             if ext == self.itemext:
-                return False, self.loader(os.path.join(self.dirname, name))
+                return False, self.sorter.loadItem(
+                    os.path.join(self.dirname, name))
             elif ext == self.pilext:
                 return True, self.makeChild(name)
 
@@ -230,11 +223,12 @@ class FilePileIterator:
     filenames to Python objects using a 'loader' factory function.
     """
 
-    def __init__(self, dirname, loader=str, pilext='pile', itemext='item', cmpfunc=cmp):
+    def __init__(self, dirname, sorter, pilext='pile', itemext='item'):
         self.dirname = dirname
         self.itemext = itemext
         self.pilext = pilext
-        self.stack = [_FilePileStackEntry(dirname, loader, pilext, itemext, cmpfunc)]
+        self.stack = [
+            _FilePileStackEntry(dirname, sorter, pilext, itemext)]
 
     def rewind(self):
         """Jump back to the beginning of the top level directory, as if I had
@@ -289,21 +283,99 @@ class FilePileIterator:
     def __iter__(self):
         return self
 
+from twisted.python.components import Interface
+
+class ISorter(Interface):
+    """
+    I am an interface which implements storage of a particular type of thing in
+    a FilePile.  I can sort path-fragments and implement the various simple
+    functions that a FilePile requires to keep its elements sorted.
+
+    A Sorter locates *paths* to *items* by *keys*.
+
+    An 'abstract path' is a sequence of strings that describes a location in
+    the filesystem relative to the directory that the FilePile is in.  For a
+    more expansive description, see the docstring for pathFromItem.
+
+    A 'concrete path' is just an absolute path-name on the filesystem.
+
+    An 'item' is a Python object which is loaded somehow.  This is the kind of
+    thing which FilePiles are really designed to store.
+
+    A 'key' is an object which is convertible to an 'abstract path'.  For
+    example, although the path might be ['2003', '7', '8', '23'], the key may
+    be 1057726555.86: a fragment of a localtime tuple and the actual date
+    stored in local time.  Keys can be compared to one and other and to items.
+    They are used for querying and retrieval.
+
+    @cvar allowDuplicates: A boolean.  Do I allow duplicate entries for the
+    same item path?  This affects the way that the result of pathFromItem is
+    interpreted: see its doc for details.
+    """
+
+    def pathFromItem(self, item):
+        
+        """Create a list of strings that represent the 'abstract' path to an
+        item.  For example, if the filesystem path you want is
+
+            2003.pile/6.pile/4.pile/17.pile/(???).item
+
+        this method should return
+
+            ['2003', '6', '4', '17']
+
+        If the class var 'allowDuplicates' is true, insertions will
+        automatically create a monotonically increasing numbered link to hold
+        the place of the item being inserted and queries will rely on my
+        comparison methods (itemBeforeKey/itemAfterKey) to authoritatively
+        compare elements within the same sub-pile.  (It is assumed that items
+        will sort in insertion order by those comparisons.)
+
+        Otherwise, this will result in the path:
+
+            2003.pile/6.pile/4.pile/17.item
+
+        The class variable is so named due to the effect on insertions.  If
+        duplicates are allowed, insertions of items with matching paths will
+        replace them.  Otherwise, they will simply add a new
+        sequentially-numbered item in that pile.
+        """
+
+    def pathFromKey(self, key):
+        """Create an 'abstract' path (described in C{pathFromItem}) from a key.
+        """
+
+    def compareItemToKey(self, item, key):
+        """This method is similar to cmp().  It returns -1, 0, or 1 depending
+        on whether the item is less than, equal to, or greater than the given
+        key, respectively.
+        """
+
+    def comparePathFragments(self, path1, path2):
+        """Compares 2 path-fragments to each other.  It is a similar method to
+        'cmp'.  A path-fragment in this context is an item from a 'concrete'
+        path; e.g. something returned from a 'listdir' which has an extension
+        and all that jazz.
+        """
+
+    def loadItem(self, fullpath):
+        """Load an item from the filesystem.
+        """
+
+    def saveItem(self, item, fullpath):
+        """Save an item to a path on the filesystem.
+        """
+
 class FilePile:
     """
     I manage trees of filenames and symlinks to help you write storage
     systems.
     """
 
-    def __init__(self, dirname, loader=str, pilext='pile', itemext='item', cmpfunc=cmp):
+    def __init__(self, dirname, sorter, pilext='pile', itemext='item'):
         """Create a FilePile.
 
-        @param loader: a factory function for whatever kind of objects you are
-        storing here.  The signature of this function is loader(filename) ->
-        object.
-
-        @param cmpfunc: a comparison function which compares filenames.  This
-        has a signature identical to cmp, and is passed to list.sort.
+        @param sorter: an implementor of C{ISorter}.
 
         @param pilext: The extension to use for subdirectories which represent
         collections, or 'subpiles'.
@@ -315,8 +387,7 @@ class FilePile:
         self.dirname = dirname
         self.itemext = itemext
         self.pilext = pilext
-        self.cmpfunc = cmpfunc
-        self.loader = loader
+        self.sorter = sorter
 
     def pilePath(self, *path):
         "pilePath('1','2','3') => '<self.dirname>/1.pile/2.pile/3.pile'"
@@ -362,9 +433,50 @@ class FilePile:
         items.  Iterating this will change my cursor, so watch out for
         concurrent uses!
         """
-        return FilePileIterator(self.dirname, self.loader,
-                                self.pilext, self.itemext,
-                                self.cmpfunc)
+        return FilePileIterator(self.dirname, self.sorter,
+                                self.pilext, self.itemext)
+
+    def itemsBetween(self, startKey, endKey=None, stopAfter=None):
+        startPath = self.sorter.pathFromKey(startKey)
+        itemIter = iter(self)
+        itemIter.jumpTo(*startPath)
+        return _Betweener(itemIter, self.sorter.compareItemToKey,
+                          startKey, endKey, stopAfter)
+
+    def add(self, item):
+        abstractPath = self.sorter.pathFromItem(item)
+        if self.sorter.allowDuplicates:
+            fullpath = self.numberedLink(*abstractPath)
+        else:
+            fullpath = self.itemPath(*abstractPath)
+        self.sorter.saveItem(item, fullpath)
+
+class _Betweener:
+    def __init__(self, itemIter, compare, startKey, endKey, stopAfter):
+        self.startKey = startKey
+        self.endKey = endKey
+        self.stopAfter = stopAfter
+        self.itemIter = itemIter
+        self.compare = compare
+
+    def __iter__(self):
+        return self
+
+    def next(self):
+        while True:
+            item = self.itemIter.next()
+            if self.compare(item, self.startKey) == -1:
+                continue
+            if self.stopAfter is not None:
+                self.stopAfter -= 1
+                if self.stopAfter < 0:
+                    raise StopIteration
+            if self.endKey is not None:
+                if self.compare(item, self.endKey) == 1:
+                    raise StopIteration
+            return item
+
+        
 
 class _b:
     """Backwards iterator for FilePile."""
@@ -416,3 +528,12 @@ class LenientIntCompare:
             return 1
         else:
             return cmp(fn1,fn2)
+
+class DefaultSorter:
+    __implements__ = ISorter
+
+    loadItem = str
+    comparePathFragments = cmp
+    compareItemToKey = cmp
+    pathFromItem = str
+    pathFromKey = str

@@ -18,18 +18,26 @@
 import os
 
 from twisted.trial import unittest
-from twisted.persisted.filepile import FilePile, LenientIntCompare, readlink
+from twisted.persisted.filepile import FilePile, LenientIntCompare, readlink, ISorter, DefaultSorter, symlink
 
-class FilePileTest(unittest.TestCase):
+class SymlinkIntSorter(DefaultSorter):
+
+    __implements__ = ISorter
+
+    def loadItem(self, fullpath):
+        return int(readlink(fullpath))
+
+class SymlinkIntPlusSorter(SymlinkIntSorter):
+    comparePathFragments = LenientIntCompare()
+
+class LowLevelFilePileTest(unittest.TestCase):
 
     def pile(self):
-        return FilePile(self.caseMethodName,
-                          loader=lambda x: int(readlink(x)))
+        return FilePile(self.caseMethodName, SymlinkIntSorter())
 
     def intpile(self):
         return FilePile(self.caseMethodName+'-int',
-                        cmpfunc=LenientIntCompare(),
-                        loader=lambda x: int(readlink(x)))
+                        SymlinkIntPlusSorter())
 
     def fourFilePile(self):
         pl = self.pile()
@@ -111,3 +119,67 @@ class FilePileTest(unittest.TestCase):
             pl.jumpTo(*''.join(list('%0.3d'% num)))
             self.assertEquals(list(pl),
                               range(num,1000))
+
+class RoloEntry:
+    def __init__(self, first, last):
+        self.first = first
+        self.last = last
+
+    def __cmp__(self, other):
+        x = cmp(self.last.lower(), other.last.lower())
+        if x:
+            return x
+        else:
+            return cmp(self.first.lower(), other.first.lower())
+
+    def __repr__(self):
+        return 'RoloEntry(%r,%r)' % (self.first, self.last)
+
+class RoloSorter:
+
+    __implements__ = ISorter
+
+    allowDuplicates = False
+
+    def pathFromItem(self, item):
+        return [item.last.lower(), item.first.lower()]
+
+    def pathFromKey(self, key):
+        return key.split(', ')
+
+    def compareItemToKey(self, item, key):
+        return cmp((item.last+', '+item.first).lower(), key)
+
+    def loadItem(self, fullpath):
+        encodedName = readlink(fullpath)
+        first, last = encodedName.decode('base64').split('---')
+        return RoloEntry(first, last)
+
+    def saveItem(self, item, fullpath):
+        encodedName = (item.first + '---' + item.last).encode('base64')
+        os.makedirs(os.path.dirname(fullpath))
+        symlink(encodedName, fullpath)
+
+    def comparePathFragments(self, path1, path2):
+        return cmp(path1.lower(), path2.lower())
+
+class HighLevelFilePileTest(unittest.TestCase):
+
+    def testRolo(self):
+        fp = FilePile(self.caseMethodName, RoloSorter())
+        bob = RoloEntry("Bob", "jones")
+        bob2 = RoloEntry("Bob", "JONEZ")
+        bob3 = RoloEntry("Cesar", "JONESs")
+        nb1 = RoloEntry("Bleh", "janes")
+        nb2 = RoloEntry("Bleh", "jznes")
+        fp.add(bob)
+        fp.add(bob2)
+        fp.add(bob3)
+        l = [bob, bob2, bob3]
+        l.sort()
+        l2 = list(fp.itemsBetween('jb', 'jy'))
+        self.assertEquals( l, l2 )
+        fp.add(nb1)
+        fp.add(nb2)
+        l2 = list(fp.itemsBetween('jb', 'jy'))
+        self.assertEquals( l, l2 )
