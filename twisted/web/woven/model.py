@@ -15,7 +15,7 @@
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
-__version__ = "$Revision: 1.50 $"[11:-2]
+__version__ = "$Revision: 1.51 $"[11:-2]
 
 import types
 import weakref
@@ -173,10 +173,6 @@ class Model:
                 currentModel = currentModel.getSubmodel(request, element)
                 if currentModel is None:
                     return None
-                if isinstance(currentModel, defer.Deferred):
-                    currentModel.addCallback(adaptToIModel,
-                                             element, parentModel)
-                    return currentModel
         return currentModel
 
     def submodelCheck(self, request, name):
