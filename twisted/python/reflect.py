@@ -244,18 +244,24 @@ def isinst(inst,clazz):
     else:
         return ISNT
 
+
 def namedModule(name):
+    """Return a module give it's name."""
     return __import__(name, {}, {}, 'x')
 
+
 def namedClass(name):
+    """Return class object given it's full name."""
     classSplit = string.split(name, '.')
     module = namedModule(string.join(classSplit[:-1], '.'))
     return getattr(module, classSplit[-1])
+
 
 def _reclass(clazz):
     clazz = getattr(namedModule(clazz.__module__),clazz.__name__)
     clazz.__bases__ = tuple(map(_reclass, clazz.__bases__))
     return clazz
+
 
 def refrump(obj):
     x = _reclass(obj.__class__)
@@ -263,13 +269,13 @@ def refrump(obj):
         obj.__class__ = x
     return obj
 
+
 def macro(name, filename, source, **identifiers):
     """macro(name, source, **identifiers)
 
     This allows you to create macro-like behaviors in python.  See
     twisted.python.hook for an example of its usage.
     """
-
     if not identifiers.has_key('name'):
         identifiers['name'] = name
     source = source % identifiers
@@ -301,6 +307,7 @@ def prefixedMethodNames(classObj, prefix):
     addMethodNamesToDict(classObj, dct, prefix)
     return dct.keys()
 
+
 def allYourBase(classObj):
     """A list of all bases of a particular class object.
     """
@@ -308,11 +315,13 @@ def allYourBase(classObj):
     accumulateBases(classObj, l)
     return l
 
+
 def accumulateBases(classObj, l):
     for base in classObj.__bases__:
         l.append(base)
     for base in classObj.__bases__:
         accumulateBases(base, l)
+
 
 def addMethodNamesToDict(classObj, dict, prefix, baseClass=None):
     """
@@ -384,6 +393,7 @@ def accumulateClassList(classObj, attr, listObj, baseClass=None):
 
 def isSame(a, b):
     return (a is b)
+
 def isLike(a, b):
     return (a == b)
 

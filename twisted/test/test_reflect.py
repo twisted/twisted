@@ -128,4 +128,13 @@ class PromiseTest(unittest.TestCase):
         del self.obj
         del self.slowObj
 
-testCases = [SettableTest, AccessorTest, PromiseTest]
+
+class LookupsTestCase(unittest.TestCase):
+    """Test lookup methods."""
+    
+    def testClassLookup(self):
+        self.assertEquals(reflect.namedClass("twisted.python.reflect.Summer"), reflect.Summer)
+    
+    def testModuleLookup(self):
+        self.assertEquals(reflect.namedModule("twisted.python.reflect"), reflect)
+
