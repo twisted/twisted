@@ -45,9 +45,12 @@ from twisted.protocols import http, protocol
 from twisted.python import log, reflect, roots, failure
 from twisted import copyright
 from twisted.cred import util
+from twisted.persisted import styles
 
 # Sibling Imports
 import error
+import resource
+import static
 
 
 # backwards compatability
@@ -103,6 +106,7 @@ class Request(pb.Copyable, http.Request):
         self.content.seek(0, 0)
         x['content_data'] = self.content.read()
         x['remote'] = pb.ViewPoint(issuer, self)
+        x['acqpath'] = []
         return x
 
     # HTML generation helpers
@@ -297,8 +301,7 @@ class Request(pb.Copyable, http.Request):
             string.join(self.prepath, '/')), "/:")
 
     def pathRef(self):
-        return refpath.PathReferenceAcquisitionContext(self.prepath, self.site.resource)
-
+        return refpath.PathReferenceAcquisitionContext(self.acqpath, self.site.resource)
 
 class _RemoteProducerWrapper:
     def __init__(self, remote):
@@ -422,6 +425,7 @@ class Site(protocol.Factory):
         # Sitepath is used to determine cookie names between distributed
         # servers and disconnected sites.
         request.sitepath = copy.copy(request.prepath)
+        request.acqpath = copy.copy(request.prepath)
         return self.resource.getChildForRequest(request)
 
 

@@ -132,6 +132,7 @@ class Resource(coil.ConfigCollection):
         res = self
         while request.postpath and not res.isLeaf:
             pathElement = request.postpath.pop(0)
+            request.acqpath.append(pathElement)
             request.prepath.append(pathElement)
             res = res.getChildWithDefault(pathElement, request)
         return res

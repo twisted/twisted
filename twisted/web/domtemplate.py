@@ -6,7 +6,7 @@ import string, os, stat
 from twisted.web.resource import Resource
 from twisted.web.widgets import Presentation
 
-from xml.dom.minidom import parse, parseString
+from xml.dom.minidom import *
 
 class MethodLookup:
     def __init__(self):
@@ -45,7 +45,9 @@ class DOMTemplate(Resource):
         Resource.__init__(self)
         self.model = model
         self.templateMethods = MethodLookup()
-        tm = self.getTemplateMethods()
+        self.setTemplateMethods( self.getTemplateMethods() )
+
+    def setTemplateMethods(self, tm):
         for m in tm:
             self.templateMethods.register(**m)
 
@@ -70,10 +72,23 @@ class DOMTemplate(Resource):
         if not self.templateFile:
             raise AttributeError, "%s does not define self.templateFile to operate on" % self.__class__
         
+        args = request.args
+        if args.has_key('submit'):
+            controller = self.controllerFactory(self.model, self)
+            if controller:
+                controller.submit(request, args)
+            
         self.d = self.lookupTemplate(request)
         self.processNode(request, self.d)
         return str(self.d.toxml())
     
+    def controllerFactory(self, model, view):
+        """
+        Override this if you want a controller to be instanciated when a form is
+        submitted.
+        """
+        pass
+
     def lookupTemplate(self, request):
         # look up an object named by our template data member
         templateRef = request.pathRef().locate(self.templateFile)
@@ -88,7 +103,7 @@ class DOMTemplate(Resource):
         if (not os.path.exists(compiledTemplatePath) or 
         os.stat(compiledTemplatePath)[stat.ST_MTIME] < os.stat(templatePath)[stat.ST_MTIME]):
             compiledTemplate = parse(templatePath)
-            parent = templateRef['parentRef'].getObject()
+            parent = templateRef.parentRef().getObject()
             parent.putChild(compiledTemplateName, compiledTemplate)
         else:
             from cPickle import Unpickler
@@ -133,8 +148,32 @@ class DOMTemplate(Resource):
             child = self.d.createTextNode(html)
             node.appendChild(child)
 
-
-
+    def substitute(self, request, node, subs):
+        """
+        Look through the given node's children for strings, and
+        attempt to do string substitution with the given parameter.
+        """
+        for child in node.childNodes:
+            if child.nodeValue:
+                child.replaceData(0, len(child.nodeValue), child.nodeValue % subs)
+            self.substitute(request, child, subs)
+            
+    def locateNodes(self, nodeList, key, value):
+        """
+        Find subnodes in the given node where the given attribute
+        as the given value.
+        """
+        returnList = []
+        if not type(nodeList) is type([]) and not isinstance(nodeList, NodeList):
+            return self.locateNodes(nodeList.childNodes, key, value)
+        
+        for childNode in nodeList:
+            if not hasattr(childNode, 'getAttribute'):
+                continue
+            if str(childNode.getAttribute(key)) == value:
+                returnList.append(childNode)
+            returnList.extend(self.locateNodes(childNode, key, value))
+        return returnList
 
 
 

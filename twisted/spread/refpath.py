@@ -16,6 +16,7 @@
 
 from flavors import Referenceable, Viewable
 from copy import copy
+import os
 
 ### "Server"-side objects
 
@@ -63,11 +64,44 @@ class PathReferenceAcquisitionContext(PathReferenceContext):
         else:
             raise AttributeError, "%s not found." % name
 
+    def getObject(self):
+        # fix for t.w.distrib, where the first path segment doesn't point to a file on disk
+        if self.path:
+            testOb = PathReferenceContext([self.path[0]], self.root).getObject()
+            if testOb.__module__ == 'twisted.web.error':
+                self.path.pop(0)
+        return PathReferenceContext.getObject(self)
+
     def parentRef(self):
         """
         Return a reference to my parent.
         """
         return PathReferenceAcquisitionContext(self.path[:-1], self.root)
+
+    def childRef(self, name):
+        """
+        Return a reference to my parent.
+        """
+        newPath = copy(self.path)
+        newPath.append(name)
+        return PathReferenceAcquisitionContext(newPath, self.root)
+
+    def siblingRef(self, name):
+        """
+        Return a reference to a sibling of mine.
+        """
+        newPath = copy(self.path)
+        newPath[-1] = name
+        return PathReferenceAcquisitionContext(newPath, self.root)
+
+    def diskPath(self):
+        """
+        Return the path to me on disk.
+        """
+        self.getObject()
+        pathList = [self.root.path]
+        pathList.extend(self.path)
+        return os.path.join(*pathList)
 
     def locate(self, name):
         """

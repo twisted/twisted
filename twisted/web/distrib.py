@@ -60,6 +60,7 @@ class Request(pb.RemoteCopy, server.Request):
         self.finish           = self.remote.remoteMethod('finish')
         self.setHeader        = self.remote.remoteMethod('setHeader')
         self.setResponseCode  = self.remote.remoteMethod('setResponseCode')
+        self.acqpath = []
 
     def registerProducer(self, producer, streaming):
         self.remote.callRemote("registerProducer",
@@ -170,6 +171,7 @@ class ResourcePublisher(pb.Root, styles.Versioned):
     def __init__(self, site):
         self.site = site
 
+    notActualDiskFile = 1
     persistenceVersion = 2
 
     def upgradeToVersion2(self):

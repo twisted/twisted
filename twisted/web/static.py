@@ -59,20 +59,24 @@ class Data(resource.Resource):
             return ''
         return self.data
 
-class DirectoryListing(widgets.StreamWidget):
-    def __init__(self, pathname):
-        self.path = pathname
-
-    def getTitle(self, request):
-        return "Directory Listing For %s" % request.path
-
-    def stream(self, write, request):
-        write("<UL>\n")
-        directory = os.listdir(self.path)
-        directory.sort()
-        for path in directory:
-            write('<LI><A HREF="%s">%s</a>' % (urllib.quote(path, "/:"), path))
-        write("</UL>\n")
+class Redirect(resource.Resource):
+    def __init__(self, url):
+        self.url = url
+    
+    def render(self, request):
+        request.setHeader("location", self.url)
+        request.setResponseCode(http.TEMPORARY_REDIRECT)
+        return """
+<html>
+    <head>
+        <meta http-equiv="refresh" content="0;URL=%(url)s">
+    </head>
+    <body bgcolor="#FFFFFF" text="#000000">
+    <!- The user's browser must be incredibly feeble if they have to click...-->
+        Click <a href="%(url)s">here</a>.
+    </body>
+</html>
+""" % {'url': self.url}
 
 class File(resource.Resource, styles.Versioned):
     """
@@ -115,7 +119,7 @@ class File(resource.Resource, styles.Versioned):
 
     processors = {}
 
-    indexNames = ["index", "index.html"]
+    indexNames = ["index", "index.html", "index.trp"]
 
     ### Versioning
 
@@ -149,78 +153,82 @@ class File(resource.Resource, styles.Versioned):
         self.allowExt = allowExt
         self.type = self.contentTypes.get(string.lower(ext), defaultType)
 
-
     def getChild(self, path, request):
         """See twisted.web.Resource.getChild.
         """
         if path == '..':
             return error.NoResource("Invalid request URL.")
-        if path == '':
-            for path in self.indexNames:
-                ##
-                # This next step is so urls like
-                #     /foo/bar/baz/
-                # will be represented (internally) as
-                #     ['foo','bar','baz','index.qux']
-                # So that request.childLink() will work correctly.
-                ##
-                if os.path.exists(os.path.join(self.path, path)):
-                    request.prepath[-1] = path
-                    break
-            else:
-                if os.path.exists(self.path):
+
+        childPath = os.path.join(self.path, path)
+        try:
+            mode, ino, dev, nlink, uid, gid, size, atime, mtime, ctime =\
+                  os.stat(childPath)
+        except OSError:
+            mode=0
+
+        if stat.S_ISDIR(mode):
+            # If someone is looking for children with a PathReferenceContext,
+            # the request won't have a prepath, and we shouldn't do this kind
+            # of mangling anyway because it has already been done.
+            if hasattr(request, 'postpath') and not request.postpath and request.uri[-1] != '/':
+                return self.redirect(request)
+            if os.path.exists(childPath):
+                if hasattr(request, 'postpath') and not request.postpath and not self.getIndex(request):
                     return widgets.WidgetPage(DirectoryListing(self.path))
-                else:
-                    return error.NoResource("File not found.")
 
         ##
         # If we're told to, allow requests for 'foo' to return
         # 'foo.bar'.
         ##
-        if self.allowExt:
-            for fn in os.listdir(self.path):
-                if '.' in fn and os.path.splitext(fn)[0]==path:
-                    log.msg('    Returning %s' % fn)
-                    path = fn
+        if not os.path.exists(childPath):
+            if self.allowExt and path:
+                for fn in os.listdir(self.path):
+                    if os.path.splitext(fn)[0]==path:
+                        log.msg('    Returning %s' % fn)
+                        newpath = os.path.join(self.path, fn)
+                childPath = os.path.join(self.path, path)
 
-        newpath = os.path.join(self.path, path)
-        if not os.path.exists(newpath):
+        if not os.path.exists(childPath):
+            # Before failing ask index.foo if it knows about this child
+            index = self.getIndex(request)
+            if index:
+                child = index.getChild(path, request)
+                if child:
+                    return child
             return error.NoResource("File not found.")
 
         # forgive me, oh lord, for I know not what I do
-        p, ext = os.path.splitext(newpath)
+        p, ext = os.path.splitext(childPath)
         processor = self.processors.get(ext)
         if processor:
-            p = processor(newpath)
+            p = processor(childPath)
             if components.implements(p, resource.IResource):
                 return p
             else:
                 adapter = components.getAdapter(p, resource.IResource, None)
                 if not adapter:
-                    raise "%s instance does not implement IResource, and there is no registered adapter." % result.__class__
+                    raise "%s instance does not implement IResource, and there is no registered adapter." % p.__class__
                 return adapter
 
-        f = File(newpath, self.defaultType, self.allowExt)
+        f = File(childPath, self.defaultType, self.allowExt)
         f.processors = self.processors
         f.indexNames = self.indexNames[:]
         
         return f
 
-
     def render(self, request):
         "You know what you doing."
-        try:
-            mode, ino, dev, nlink, uid, gid, size, atime, mtime, ctime =\
-                  os.stat(self.path)
-        except OSError:
-            return error.NoResource("Unable to access file.").render(request)
+        mode, ino, dev, nlink, uid, gid, size, atime, mtime, ctime =\
+              os.stat(self.path)
+
         if stat.S_ISDIR(mode):
-            # tack a '/' on to the response if it's a directory.
-            request.setHeader("location","http://%s%s/" % (
-                request.getHeader("host"),
-                (string.split(request.uri,'?')[0])))
-            request.setResponseCode(http.TEMPORARY_REDIRECT)
-            return " "
+            index = self.getIndex(request)
+            if index:
+                    return index.render(request)
+    
+            dirwidget = DirectoryListing(self.path)
+            return widgets.RenderSession(dirwidget.display(request), request)
+
         request.setHeader('accept-ranges','bytes')
         request.setHeader('last-modified', http.datetimeToString(mtime))
         if self.type:
@@ -269,6 +277,27 @@ class File(resource.Resource, styles.Versioned):
         # and make sure the connection doesn't get closed
         return server.NOT_DONE_YET
 
+    def redirect(self, request):
+        redirectURL = "http://%s%s/" % (
+            request.getHeader("host"),
+            (string.split(request.uri,'?')[0]))
+        return Redirect(redirectURL)
+
+    def getIndex(self, request):
+        if not hasattr(request, 'prepath'): return
+        for name in self.indexNames:
+            ##
+            # This next step is so urls like
+            #     /foo/bar/baz/
+            # will be represented (internally) as
+            #     ['foo','bar','baz','index.qux']
+            # So that request.childLink() will work correctly.
+            ##
+            if os.path.exists(os.path.join(self.path, name)):
+                request.prepath[-1] = name
+                request.acqpath[-1] = name
+                return self.getChild(name, request)
+
     def listNames(self):
         if not os.path.isdir(self.path): return []
         directory = os.listdir(self.path)
@@ -282,15 +311,33 @@ class File(resource.Resource, styles.Versioned):
         if not os.path.isdir(self.path):
             resource.Resource.putChild(self, name, child)
         # xxx use a file-extension-to-save-function dictionary instead
-        fl = open(os.path.join(self.path, name), 'w')
         if type(child) == type(""):
+            fl = open(os.path.join(self.path, name), 'w')
             fl.write(child)
         else:
+            if '.' not in name:
+                name += '.trp'
+            fl = open(os.path.join(self.path, name), 'w')
             from pickle import Pickler
             pk = Pickler(fl)
             pk.dump(child)
         fl.close()
-        
+
+class DirectoryListing(File, widgets.StreamWidget):
+    def __init__(self, pathname):
+        self.path = pathname
+
+    def getTitle(self, request):
+        return "Directory Listing For %s" % request.path
+
+    def stream(self, write, request):
+        write("<UL>\n")
+        directory = os.listdir(self.path)
+        directory.sort()
+        for path in directory:
+            write('<LI><A HREF="%s">%s</a>' % (urllib.quote(path, "/:"), path))
+        write("</UL>\n")
+
 class FileTransfer(pb.Viewable):
     """
     A class to represent the transfer of a file over the network.
