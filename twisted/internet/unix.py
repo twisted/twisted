@@ -67,7 +67,7 @@ class Port(tcp.Port):
             skt = self.createInternetSocket()
             skt.bind(self.port)
         except socket.error, le:
-            raise CannotListenError, (self.port, le)
+            raise CannotListenError, (None, self.port, le)
         else:
             # Make the socket readable and writable to the world.
             os.chmod(self.port, 0666)
