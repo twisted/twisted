@@ -657,6 +657,40 @@ class SubclassableCStringIO(object):
     def getvalue(self):
         return self.__csio.getvalue()
 
+def moduleMovedForSplit(origModuleName, newModuleName, moduleDesc,
+                        projectName, projectURL, globDict):
+    from twisted.python import reflect
+    modoc = """
+%(moduleDesc)s
+
+This module is DEPRECATED. It has been split off into a third party
+package, Twisted %(projectName)s. Please see %(projectURL)s.
+
+This is just a place-holder that imports from the third-party %(projectName)s
+package for backwards compatibility. To use it, you need to install
+that package.
+""" % {'moduleDesc': moduleDesc,
+       'projectName': projectName,
+       'projectURL': projectURL}
+
+    #origModule = reflect.namedModule(origModuleName)
+    try:
+        newModule = reflect.namedModule(newModuleName)
+    except ImportError:
+        raise ImportError("You need to have the Twisted %s "
+                          "package installed to use %s. "
+                          "See %s."
+                          % (projectName, origModuleName, projectURL))
+
+    # Populate the old module with the new module's contents
+    for k,v in vars(newModule).items():
+        globDict[k] = v
+    globDict['__doc__'] = modoc
+    import warnings
+    warnings.warn("%s is DEPRECATED. See %s." % (origModuleName, projectURL),
+                  DeprecationWarning, stacklevel=3)
+    return
+
 __all__ = [
     "uniquify", "padTo", "getPluginDirs", "addPluginDir", "sibpath",
     "getPassword", "dict", "println", "keyed_md5", "makeStatBar",
