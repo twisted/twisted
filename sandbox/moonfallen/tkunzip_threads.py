@@ -7,7 +7,7 @@ from Tkinter import *
 from twisted.internet import tksupport, reactor, defer, threads
 from twisted.python import failure, log
 # local
-from PASS_unzip import unzipiter
+import PASS_unzip
 
 
 class ProgressBar:
@@ -103,9 +103,8 @@ class Unzipness:
     """
     
     def __init__(self, filename, bar):
-        self.unzipper=unzipiter(filename)
-        zf=zipfile.ZipFile(filename)
-        bar.updateProgress(0, len(zf.namelist()))
+        self.unzipper=PASS_unzip.chunkyUnzipIter(filename)
+        bar.updateProgress(0, PASS_unzip.countZipFileChunks(filename, 4096))
         self.bar=bar
         self.stopping=0
 
@@ -113,7 +112,9 @@ class Unzipness:
         for remaining in self.unzipper:
             if self.stopping:
                 return
-            reactor.callFromThread(self.updateBar, remaining)
+            if remaining%10==0:
+                reactor.callFromThread(self.updateBar, remaining)
+        reactor.callFromThread(self.updateBar, 0)
 
     def updateBar(self, remaining):
         b=self.bar
