@@ -63,3 +63,6 @@ TEST, TEST.
    * comp.lang.python.announce
    * parnassus.
  
+ * notify packagers:
+   * Moshe Zadka <moshez@twistedmatrix.com>, Debian
+   * Johann Visagie <johann@egenetics.com>, FreeBSD
