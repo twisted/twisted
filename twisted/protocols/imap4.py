@@ -1863,11 +1863,12 @@ class IMAP4Client(basic.LineReceiver):
         # XXX - Also, this should collapse temporally proximate calls into single
         #       invocations of IMailboxListener methods, where possible.
         flags = {}
+        recent = exists = None
         for L in lines:
             if L.find('EXISTS') != -1:
-                self.newMessages(int(L.split()[0]), None)
+                exists = int(L.split()[0])
             elif L.find('RECENT') != -1:
-                self.newMessages(None, int(L.split()[0]))
+                recent = int(L.split()[0])
             elif L.find('READ-ONLY') != -1:
                 self.modeChanged(0)
             elif L.find('READ-WRITE') != -1:
@@ -1882,6 +1883,8 @@ class IMAP4Client(basic.LineReceiver):
                 log.msg('Unhandled unsolicited response: ' + repr(L))
         if flags:
             self.flagsChanged(flags)
+        if recent is not None or exists is not None:
+            self.newMessages(exists, recent)
 
     def sendCommand(self, cmd):
         cmd.defer = defer.Deferred()
