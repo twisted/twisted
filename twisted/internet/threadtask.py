@@ -42,12 +42,13 @@ class Scheduler:
         return dict
 
     def addTask(self, function, args=[], kwargs={}):
-        hadNoTasks = (self.threadTasks == {})
+        threadTasks = self.threadTasks
+        hadNoTasks = (threadTasks == {})
         thread = reflect.currentThread()
-        if not self.threadTasks.has_key(thread):
-            self.threadTasks[thread] = []
-        self.threadTasks[thread].append((function, args, kwargs))
-
+        
+        if not threadTasks.has_key(thread):
+            threadTasks[thread] = []
+        threadTasks[thread].append((function, args, kwargs))
         if hadNoTasks:
             main.wakeUp()
 
@@ -60,10 +61,11 @@ class Scheduler:
             return None
 
     def runUntilCurrent(self):
-        for thread, tasks in self.threadTasks.items():
+        threadTasks = self.threadTasks
+        for thread, tasks in threadTasks.items():
             func, args, kwargs = tasks.pop(0)
             apply(func, args, kwargs)
-            if len(tasks) == 0: del self.threadTasks[thread]
+            if len(tasks) == 0: del threadTasks[thread]
 
     synchronized = ["addTask", "runUntilCurrent"]
 
