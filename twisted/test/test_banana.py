@@ -34,9 +34,12 @@ class MathTestCase(unittest.TestCase):
             assert y == i, "y = %s; i = %s" % (y,i)
 
 class BananaTestCase(unittest.TestCase):
+
+    encClass = banana.Pynana
+    
     def setUp(self):
         self.io = cStringIO.StringIO()
-        self.enc = banana.Banana()
+        self.enc = self.encClass()
         self.enc.makeConnection(protocol.FileWrapper(self.io))
         self.enc._selectDialect("none")
         self.enc.expressionReceived = self.putResult
@@ -91,5 +94,12 @@ class BananaTestCase(unittest.TestCase):
             self.enc.dataReceived(byte)
         assert self.result == foo, "%s!=%s" % (repr(self.result), repr(foo))
 
-
 testCases = [MathTestCase, BananaTestCase]
+
+if hasattr(banana, 'cBanana'):
+    class CananaTestCase(BananaTestCase):
+    
+        encClass = banana.Canana
+    testCases.append(CananaTestCase)
+
+
