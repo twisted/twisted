@@ -488,6 +488,7 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
             self.setLineMode(passon)
 
     def lineReceived(self, line):
+        # print 'S:', repr(line)
         self.resetTimeout()
         if self._pendingLiteral:
             self._pendingLiteral.callback(line)
