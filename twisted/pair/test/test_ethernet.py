@@ -18,7 +18,7 @@ from twisted.trial import unittest
 
 from twisted.internet import protocol, reactor, error
 from twisted.python import failure, components
-from twisted.protocols import ethernet, raw
+from twisted.pair import ethernet, raw
 
 class MyProtocol:
     __implements__ = raw.IRawPacketProtocol

@@ -246,6 +246,7 @@ desktop environments, and your toaster.
         "twisted.news",
         "twisted.news.test",
         "twisted.pair",
+        "twisted.pair.test",
         "twisted.persisted",
         "twisted.persisted.journal",
         "twisted.protocols",

@@ -17,7 +17,7 @@
 import errno, os
 from twisted.python import log, reflect, components
 from twisted.internet import base, fdesc, error
-from twisted.protocols import ethernet
+from twisted.pair import ethernet
 
 """
 You need Eunuchs for twisted.pair.tuntap to work.
