@@ -24,7 +24,7 @@
     Within single-threaded twisted main-loop, all code shares the same
     execution stack.  Sometimes it is useful when writing a handler
     to allow the handler to return (for example, if must block), but 
-    saving the handler's state so it can be resumed later. 
+    saving the handler state so it can be resumed later. 
 """
 from twisted.python.reflect import getArgumentCount
 from twisted.python.compat import StopIteration, iter
@@ -65,7 +65,7 @@ class Flow:
 
             This wraps a callable with a single input parameter
             and an optional output value, one-to-one behavior.
-            If the return value is skip (None if you don't have 
+            If the return value is skip (None if you do not have 
             a return statement) then the next stage is not processed.
              
             Optionally, if the callback happens to accept two 
@@ -90,7 +90,7 @@ class Flow:
                 the data value from the parent data flow.   This can
                 be a function returning a list, for example.  Or, it
                 could be a class implementing the iterator protocol 
-                with a __init__ taking a 'data' argument.
+                with a __init__ taking a "data" argument.
  
                 Second, the result value, if any, is passed to iter,
                 where __iter__ is called to create an iterator.  This
@@ -122,7 +122,7 @@ class Flow:
                            output; the function has two paramaters, first
                            is the current accumulated value, and second is
                            the value passed via the stream; the output 
-                           depends on the 'inplace' parameter.
+                           depends on the "inplace" parameter.
     
                 start      the starting value; or, if it is a callable,
                            a function taking no arguments that will be
@@ -147,7 +147,7 @@ class Flow:
     def addMerge(self, callable, start = None, skip = None):
         """ a more general reduce, resulting in more than one output
 
-            This is a more general form of 'reduce' where M messages
+            This is a more general form of "reduce" where M messages
             may be merged into N messages (N < M).   To do this, the
             output may be delayed one call; thus, to know that the 
             stage is to produce a result, it may have to look at the
@@ -165,7 +165,7 @@ class Flow:
     def addContext(self, onFlush = None):
         """ adds a nested context, provides for end notification
 
-            In a flow, introducing a branch or a callable doesn't
+            In a flow, introducing a branch or a callable does not
             necessarly create a variable context.  This is done explicitly
             with this Stage.  This context also provides a callback
             which can be used with the context is flushed, that is when
@@ -185,7 +185,6 @@ class Flow:
     def __init__(self):
         self.stageHead    = None
         self.stageTail    = None
-        self.waitInterval = 0
           
     def _append(self, stage):
         """ adds an additional stage to the singly-lined list """
@@ -198,17 +197,27 @@ class Flow:
             self.stageTail = link
         return self
 
-    def execute(self, data = None, context = None):
-        """ executes the current flow
+    def build(self, data = None, context = None):
+        """ builds a flow stack for execution
 
-            This method creates a new Stack and then begins the execution 
-            of the flow within that stack.  Note that this means that the 
-            Flow object itself shouldn't be used for execution specific 
-            information, this is what the Stack is for.
+            This method creates a new flow Stack, binds it to the
+            first stage of the flow and the seed data / context.
+            The stack object returned should be either "run()"
+            if not in the context of Twisted, or should have iterate()
+            called on it subsequent times.
         """
-        if self.stageHead:
-            stack = Stack(self.stageHead, data, context, self.waitInterval)
-            stack.execute()
+        assert self.stageHead, "What? A flow without stages?"
+        return Stack(self.stageHead, data, context)
+
+    def execute(self, data = None, context = None):
+        """ builds and runs a flow stack w/o pause function
+
+            This method is primarly for testing without requiring
+            a Twisted reactor.   See TwistedFlow below for a better
+            version of "run" that is more twisted friendly.
+        """
+        stack = self.build(data, context)
+        while stack.iterate(): pass
 
 class Stage:
     def __call__(self, flow, data):
@@ -261,11 +270,11 @@ class Sequence(Stage):
                     ret = self.onFinish()
 
 class _Merge(Stage):
-    '''
+    """
        A base class for both Reduce and Merge, performing
        the common functionality of setting up an aggregation
        bucket in the current context, etc.
-    '''
+    """
     def __init__(self, callable, start = None, skip = None):
         self.bucket   = "_%d" % id(self)
         self.start    = start
@@ -347,14 +356,13 @@ class Stack:
         further items back on to the call stack.  Once the stage
         returns, the stack is checked and iteration continues.
     """
-    def __init__(self, flowitem, data, context = None, waitInterval = 0):
+    def __init__(self, flowitem, data, context = None):
         """ bootstraps the processing of the flow
 
              flowitem      the very first stage in the process
              data          starting argument
              waitInterval  a useful item to slow the flow
         """
-        self._waitInterval = waitInterval
         self._stack   = []
         self.global_context = _Context(context)
         self.context = self.global_context
@@ -386,7 +394,7 @@ class Stack:
         if mayskip and not next: return
         self._stack.append((data, stage, next))
      
-    def execute(self):
+    def iterate(self):
         """ executes the current flow"""
         stack = self._stack
         while stack:
@@ -398,8 +406,6 @@ class Stack:
             except PauseFlow: pause = 1
             if pause:
                 self.push(data, stage, next)
-                from twisted.internet import reactor
-                reactor.callLater(self._waitInterval,self.execute)
                 return 1
 
 class _Context:
@@ -445,22 +451,59 @@ class LinkItem:
         self.stage = stage
         self.next  = next
 
+
+#
+# END of Flow.py PROPER
+#
+# Following are a bunch of "homeless" items which are here
+# till they find their own home.
+#
+
+class TwistedFlow(Flow):
+    """ lets Flows run nicely within Twisted """
+    def __init__(self, waitInterval = 0):
+        Flow.__init__(self)
+        self._waitInterval = waitInterval
+    def execute(self, data = None, context = None):
+        """ runs a flow stack with twisted.internet.reactor """
+        stack = self.build(data,context)
+        _MultiRun(stack.iterate, self._waitInterval)
+
+class _MultiRun:
+    """ a helper class which keeps running a callable till it is done """
+    def __init__(self, callable, waitInterval = 0):
+        self.callable = callable
+        self.waitInterval = waitInterval
+        self.iterate(starting = 1)
+    def iterate(self, starting = 0):
+        if starting or self.callable():
+            from twisted.internet import reactor
+            reactor.callLater(self.waitInterval, self.iterate)
+
+#
+# The following is a thread package which really is othogonal to
+# Flow.  Flow does not depend on it, and it does not depend on Flow.
+# Although, if you are trying to bring the output of a thread into
+# a Flow, it is exactly what you want.   The QueryIterator is 
+# just an obvious application of the ThreadedIterator.
+#
+
 class ThreadedIterator:
     """
        This is an iterator base class which can be used to build
        iterators which are constructed and run within a Flow
     """
-    #
+     
     def __init__(self, data = None):
         from twisted.internet.reactor import callInThread
         self.data = data  
         tunnel = _TunnelIterator(self)
         callInThread(tunnel.process)
         self._tunnel = tunnel
-    #
+     
     def __iter__(self): 
         return self._tunnel
-    #
+     
     def next(self):
         """ 
             The method used to fetch the next value, make sure
@@ -486,7 +529,7 @@ class _TunnelIterator:
         self.isFinished = 0
         self.failure    = None
         self.buff       = []
-    #
+     
     def process(self):
         """
             This is called in the 'source' thread, and 
@@ -500,13 +543,13 @@ class _TunnelIterator:
                 callFromThread(self.buff.extend,val)
         except StopIteration:
             callFromThread(self.stop)
-    #
+     
     def setFailure(self, failure):
         self.failure = failure
-    #
+     
     def stop(self):
         self.isFinished = 1
-    #
+     
     def next(self):
         if self.buff:
            return self.buff.pop(0)
@@ -524,11 +567,11 @@ class QueryIterator(ThreadedIterator):
         self.pool = pool
         self.data = None
         self.fetchall = fetchall
-    #
+     
     def __call__(self,data):
         self.data = data
         return self
-    #
+     
     def next(self):
         if not self.curs:
             conn = self.pool.connect()
@@ -540,6 +583,5 @@ class QueryIterator(ThreadedIterator):
         else:
             res = self.curs.fetchmany()
         if not(res): 
-            #self.curs.close()
             raise StopIteration
         return res

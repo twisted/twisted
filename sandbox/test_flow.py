@@ -133,10 +133,9 @@ class FlowTest(unittest.TestCase):
                 return [val]
         result = []
         def finished(): result.append('Finished')
-        f = Flow()
+        f = TwistedFlow(.1)
         f.addSequence(CountIterator, onFinish=finished)
         f.addCallable(lambda data: result.append(data))
-        f.waitInterval = 1
         f.execute(5)
         from twisted.internet import reactor
         reactor.callLater(1,reactor.stop)
