@@ -1,3 +1,7 @@
+2003-1-9  Moshe Zadka <moshez@twistedmatrix.com>
+
+	* twisted/web/google.py: Search google for best matches
+
 2003-01-09  Dave Peticolas  <dave@krondo.com>
 
 	* twisted/protocols/http.py: start/stop log timer as needed
