@@ -21,7 +21,7 @@ for man in doc/*/man; do
     $LORE -p --input man --output lore --config ext=-man.xhtml $man/*.1
 done
 
-for doc in doc/core/{man,howto,howto/tutorial,howto/policy,specifications,vision} doc/{conch,flow,lore,mail,names,pair,web,words}/howto; do
+for doc in doc/core/{man,howto,howto/tutorial,howto/policy,specifications,vision} doc/{conch,flow,lore,names,pair,web,words}/howto; do
     echo "Lore-->Lint"
     $LORE -n --output lint $doc/*.xhtml |sed 's/^/WARNING: /'
     echo "Lore-->HTML"
