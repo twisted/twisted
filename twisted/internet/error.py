@@ -116,8 +116,6 @@ try:
         # return wrong exception, alas
         errno.EINVAL: ConnectionRefusedError,
     }
-    if hasattr(errno, "EADDRNOTAVAIL"):
-        errnoMapping[errno.EADDRNOTAVAIL] = ConnectionRefusedError # for FreeBSD
 except ImportError:
     errnoMapping = {}
 
