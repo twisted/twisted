@@ -1,0 +1,37 @@
+This is the README for the Twisted SVN repository; it is not included
+in releases.
+
+== topfiles/ ==
+Project-specific READMEs (and other files, like ChangeLogs and NEWS
+files) are located in topfiles/*/, where * is either a twisted
+subpackage name or 'core' for core Twisted.
+
+== bin/ ==
+The executable scripts that come with Twisted core are in
+bin/. Twisted subprojects get a subdirectory of bin/, like
+bin/conch/conch.
+
+== doc/ ==
+Documentation resides in the doc/ directory, with a similar layout to
+bin/ and topfiles/.
+
+== packages/ ==
+The packages/ directory contains subdirectories for each special
+Twisted package. Each subdirectory contains zpkgtools support files.
+
+== twisted/ ==
+twisted/, of course, contains the code. Each package that represents a
+single project (e.g., the toplevel 'twisted', and 'twisted.web', etc,
+but not 'twisted.python', since that's a part of core) probably has
+zpkgtools support files in it.
+
+
+== info ==
+zpkgtools is what we're using to create upstream packages now;
+Information on it can be found at
+http://zope.org/Members/fdrake/zpkgtools/
+
+Information about the Twisted split can be found at
+http://twistedmatrix.com/products/splitfaq
+
+-- radix
