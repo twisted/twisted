@@ -409,7 +409,8 @@ class AOTUnjellier:
             return l[0]
         except:
             print "Error jellying object! Stacktrace follows::"
-            print string.join(self.stack, "\n")
+            print string.join(map(repr, self.stack), "\n")
+            raise
 #########
 # Jelly #
 #########
