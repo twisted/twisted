@@ -18,7 +18,9 @@
 import os
 
 from twisted.trial import unittest
-from twisted.persisted.filepile import FilePile, LenientIntCompare, readlink, ISorter, DefaultSorter, symlink
+from twisted.persisted.filepile import FilePile, LenientIntCompare, readlink
+from twisted.persisted.filepile import ISorter, DefaultSorter, symlink
+from twisted.persisted.filepile import DecimalSorter
 
 class SymlinkIntSorter(DefaultSorter):
 
@@ -163,6 +165,39 @@ class RoloSorter:
     def comparePathFragments(self, path1, path2):
         return cmp(path1.lower(), path2.lower())
 
+
+not_crypto_related = (1,
+                      276199, 897280, 997986, 590880, 80162, 992946, 992122,
+                      2,
+                      664366, 440466, 355511, 50620, 519115, 954237, 298939,
+                      3,
+                      928694, 426542, 896640, 852694, 31555, 554657, 555093,
+                      4,
+                      397138, 498766, 278493, 78864, 274481, 737012, 200643,
+                      5,
+                      857855, 798194, 69156, 478069, 800028, 287443, 184335,
+                      6,
+                      218103, 194379, 789057, 141499, 477107, 274409, 702027,
+                      7,
+                      519083, 502148, 50994, 342574, 196087, 95144, 269701,
+                      8,
+                      433162, 161096, 556428, 981103, 515075, 875453, 745845,
+                      9,
+                      730083, 591161, 394256, 471298, 370684, 281977, 625265,
+                      10,
+                      341975, 208477, 3873, 106520, 163789, 181476, 18712,
+                      100,
+                      490599, 665224, 376918, 888995, 272461, 872271, 549382,
+                      101,
+                      818153, 32412, 67417, 468673, 634883, 93274, 928138,
+                      102,
+                      181669, 724094, 399577, 806467, 736970, 310344, 868319,
+                      103,
+                      478601, 818908, 175377, 207460, 619181, 264845, 550488,
+                      104,
+                      11719, 105626,
+                      105)
+
 class HighLevelFilePileTest(unittest.TestCase):
 
     def testRolo(self):
@@ -183,3 +218,11 @@ class HighLevelFilePileTest(unittest.TestCase):
         fp.add(nb2)
         l2 = list(fp.itemsBetween('jb', 'jy'))
         self.assertEquals( l, l2 )
+
+    def testDecimalSort(self):
+        testSorted = list(not_crypto_related)
+        testSorted.sort()
+        fp = FilePile(self.caseMethodName, DecimalSorter())
+        for item in not_crypto_related:
+            fp.add(item)
+        self.assertEquals(list(iter(fp)), testSorted)

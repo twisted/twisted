@@ -369,6 +369,7 @@ class ISorter(Interface):
         """Save an item to a path on the filesystem.
         """
 
+
 class FilePile:
     """
     I manage trees of filenames and symlinks to help you write storage
@@ -517,21 +518,21 @@ class LenientIntCompare:
     """I am a comparator object which can be used for directories which has had
     objects created in it by nextFileName.
     """
-    def __init__(self, itemext='item', poolext='pool', filt=_lenieint):
+    def __init__(self, itemext='item', pilext='pile', filt=_lenieint):
         self.itemext = itemext
-        self.poolext = poolext
+        self.pilext = pilext
         self.filt = filt
 
     def __call__(self, fn1, fn2):
         fn1p, fn1e = os.path.splitext(fn1)
         fn2p, fn2e = os.path.splitext(fn2)
         
-        # note - it might be a good idea to guarantee that pools sort before
+        # note - it might be a good idea to guarantee that piles sort before
         # items (or vice-versa) in order to make certain kinds of sorting
         # easier
 
-        fn1i = fn1e[1:] in (self.itemext, self.poolext)
-        fn2i = fn2e[1:] in (self.itemext, self.poolext)
+        fn1i = fn1e[1:] in (self.itemext, self.pilext)
+        fn2i = fn2e[1:] in (self.itemext, self.pilext)
         if fn1i and fn2i:
             return cmp(self.filt(fn1p),
                        self.filt(fn2p))
@@ -542,6 +543,7 @@ class LenientIntCompare:
         else:
             return cmp(fn1,fn2)
 
+
 class DefaultSorter:
     __implements__ = ISorter
 
@@ -550,3 +552,54 @@ class DefaultSorter:
     compareItemToKey = cmp
     pathFromItem = str
     pathFromKey = str
+
+    def saveItem(self, item, fullpath):
+        pass
+
+class DecimalSorter:
+    """A simple example of a Sorter, which can be either subclassed or used
+    directly to have items sorted by an integer key.  It will make relatively
+    sparse (on UNIX, nearly optimal) use of directory spacing.
+    """
+
+    exp = 3
+
+    allowDuplicates = False
+
+    def pathFromKey(self, i):
+        # the very *embodiment* simplicitiy
+        exp = self.exp
+        l = []
+        while i:
+            l.append(str(i))
+            i = (i // (10 ** exp)) * 10 ** exp
+            exp += 1
+        l.reverse()
+        return l
+
+    def pathFromItem(self, item):
+        return self.pathFromKey(int(item))
+
+    def compareItemToKey(self, item, key):
+        return cmp(int(item), key)
+
+    def loadItem(self, fullpath):
+        return int(os.path.splitext(os.path.basename(fullpath))[0])
+
+    def saveItem(self, item, fullpath):
+        try:
+            makedirs(os.path.dirname(fullpath))
+        except OSError:
+            pass
+        try:
+            symlink(str(int(item)), fullpath)
+        except OSError:
+            raise
+            raise Exception("Couldn't link %r for %r" % (fullpath, item))
+
+    def comparePathFragments(self, path1, path2):
+        result = LenientIntCompare()(path1, path2)
+        print [result, path1, path2]
+        return result
+
+
