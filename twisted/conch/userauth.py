@@ -26,8 +26,6 @@ class SSHUserAuthServer(service.SSHService):
     authenticatedWith = []
 
     def tryAuth(self, kind, user, data):
-        print 'trying auth %s for %s' % (kind, user)
-        #print 'with data: %s' % repr(data)
         f= getattr(self,'auth_%s'%kind, None)
         if f:
             return f(user, data)
@@ -61,7 +59,6 @@ class SSHUserAuthServer(service.SSHService):
         hasSig = ord(packet[0])
         self.hasSigType = hasSig # protocol impl.s differ in this
         algName, blob, rest = getNS(packet[1:], 2)
-        print hasSig, algName
         if hasSig:
             if self.isValidKeyFor(user, blob) and self.verifySignatureFor(user, blob, getNS(rest)[0]):
                     return 1
@@ -79,7 +76,9 @@ class SSHUserAuthServer(service.SSHService):
             NS(keys.objectType(pubKey)) + NS(blob)
         return keys.verifySignature(pubKey, signature, b)
 
-#    def aut
+    def auth_password(self, user, packet):
+        password = getNS(packet[1:])[0]
+        return self.verifyPassword(user,password)
 
     # overwrite on the client side            
     def areDone(self):
@@ -95,6 +94,10 @@ class SSHUserAuthServer(service.SSHService):
                         return 1
         print 'not vaild key'
         return 0
+
+    def verifyPasswordFor(self, user, password):
+        return 0
+        # this is just a stub for now
 
 class SSHUserAuthClient(service.SSHService):
     name = 'ssh-userauth'
@@ -123,7 +126,6 @@ class SSHUserAuthClient(service.SSHService):
     def ssh_USERAUTH_FAILURE(self, packet):
         canContinue, partial = getNS(packet)
         canContinue = canContinue.split(',')
-        print canContinue
         partial = ord(partial)
         if partial:
             self.authenticatedWith.append(self.lastAuth)
@@ -134,12 +136,13 @@ class SSHUserAuthClient(service.SSHService):
     def ssh_USERAUTH_PK_OK(self, packet):
         if self.lastAuth == 'publickey':
             # this is ok
-            privateKey = keys.getPrivateKeyObject(os.path.expanduser('~/.ssh/id_rsa'))
-            publicKey = keys.getPublicKeyString(os.path.expanduser('~/.ssh/id_rsa.pub'))
+            privateKey = self.getPrivateKey()
+            publicKey = self.lastPublicKey
+            keyType =  keys.objectType(privateKey)
             b = NS(self.transport.sessionID) + chr(MSG_USERAUTH_REQUEST) + \
                 NS(self.user) + NS(self.instance.name) + NS('publickey') + '\xff' + \
-                NS('ssh-rsa') + NS(publicKey)
-            self.askForAuth('publickey', '\xff' + NS('ssh-rsa') + NS(publicKey) + \
+                NS(keyType) + NS(publicKey)
+            self.askForAuth('publickey', '\xff' + NS(keyType) + NS(publicKey) + \
                             NS(keys.signData(privateKey, b)))
         elif self.lastAuth == 'password':
             prompt, language, rest = getNS(packet, 2)
@@ -148,10 +151,13 @@ class SSHUserAuthClient(service.SSHService):
             self.askForAuth('password', '\xff'+NS(op)+NS(np))
 
     def auth_publickey(self):
-        if os.path.exists(os.path.expanduser('~/.ssh/id_rsa')) and not 'file' in self.triedPublicKeys:
-            self.triedPublicKeys.append('file')
-            self.askForAuth('publickey', '\x00' + NS('ssh-rsa') + \
-                            NS(keys.getPublicKeyString(os.path.expanduser('~/.ssh/id_rsa.pub'))))
+        if self.getPublicKey():
+            publicKey = self.getPublicKey()
+            self.lastPublicKey = publicKey
+            self.triedPublicKeys.append(publicKey)
+            keyType = getNS('publicKey')[0]
+            self.askForAuth('publickey', '\x00' + NS(keyType) + \
+                            NS(publicKey))
             return 1
 
     def auth_password(self):
@@ -161,6 +167,14 @@ class SSHUserAuthClient(service.SSHService):
 
     def _cbPassword(self, password):
         self.askForAuth('password', '\x00'+NS(password))
+
+    def getPublicKey(self):
+        # XXX try to get public key
+        return
+
+    def getPrivateKey(self):
+        # XXX try to get the private key
+        return None
 
     def getPassword(self, prompt = None):
         if not prompt:

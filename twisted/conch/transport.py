@@ -61,12 +61,11 @@ class SSHTransportBase(protocol.Protocol):
     service = None
 
     def connectionLost(self):
-        print 'connection lost'
         #from twisted.internet import reactor
         #reactor.stop()
+        print 'connection lost'
 
     def connectionMade(self):
-        print 'woo we got a connection'
         self.transport.write('%s\r\n' % (self.ourVersionString)
                             )
         self.ourKexInitPayload = chr(MSG_KEXINIT) + open('/dev/random').read(16) + \
@@ -203,7 +202,6 @@ class SSHTransportBase(protocol.Protocol):
         self.receiveDebug(alwaysDisplay, message, lang)
 
     def setService(self, service):
-        print 'setting service for',self,'to',service.name
         self.service = service
         service.transport = self
         self.service.serviceStarted()
@@ -275,7 +273,6 @@ class SSHServerTransport(SSHTransportBase):
             h.update(MP(f))
             h.update(sharedSecret)
             exchangeHash = h.digest()
-            print 'hash', h.hexdigest()
             self.sendPacket(MSG_KEXDH_REPLY, NS(self.factory.publicKeys[self.keyAlg]) + \
                             MP(f) + NS(keys.signData(self.factory.privateKeys[self.keyAlg], exchangeHash)))
             self._keySetup(sharedSecret, exchangeHash)
@@ -347,7 +344,6 @@ class SSHServerTransport(SSHTransportBase):
         integKeySC = self._getKey('F', sharedSecret, exchangeHash)
         self.nextEncryptions.setKeys(initIVSC, encKeySC, initIVCS, encKeyCS, integKeySC, integKeyCS)
         self.sendPacket(MSG_NEWKEYS, '')
-        print 'set ciphers'
 
     def _getKey(self, c, sharedSecret, exchangeHash):
         k1 = sha.new(sharedSecret+exchangeHash+c+self.sessionID).digest()

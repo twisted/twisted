@@ -16,8 +16,8 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
 import os
-from twisted.internet import reactor
-from twisted.conch import keys, transport, factory
+from twisted.internet import reactor, defer
+from twisted.conch import keys, transport, factory, userauth
 from pyunit import unittest
 
 publicRSA = "ssh-rsa AAAAB3NzaC1yc2EAAAABIwAAAEEAtGjpLkkSunM1pejcYuIPPH4vO/Duf734AKqjl2n7a4jhRJ8XRdRpw1+YZlCvQ4JJCD5wc74RWukctaO1Nkjz7w== Paul@MOO"
@@ -100,16 +100,53 @@ class SSHTestBase:
 
 class SSHTestServer(SSHTestBase, transport.SSHServerTransport): pass
 
+class SSHTestServerAuth(userauth.SSHUserAuthServer):
+
+    def areDone(self):
+        #self.tranport.factory.services['ssh-connection'] = SSHTestConnection
+        print 'auth',self.authenticatedWith
+        return len(self.authenticatedWith)==2
+
+    def isValidKeyFor(self, user, pubKey):
+        self.transport.factory.test.assert_(user=='testuser','bad username')
+        self.transport.factory.test.assert_(pubKey==keys.getPublicKeyString('dsa_test.pub'), 'bad public key')
+        return 1
+
+    def verifyPassword(self,user, password):
+        self.transport.factory.test.assert_(user=='testuser','bad username')
+        self.transport.factory.test.assert_(password=='testpass','bad password')
+        return 1
+
+class SSHTestClientAuth(userauth.SSHUserAuthClient):
+    
+    def getPassword(self):
+        return defer.succeed('testpass')
+
+    def getPrivateKey(self):
+        return keys.getPrivateKeyObject('dsa_test')
+
+    def getPublicKey(self):
+        return keys.getPublicKeyString('dsa_test.pub')
 
 class SSHTestClient(SSHTestBase, transport.SSHClientTransport):
 
     def connectionSecure(self):
-        self.expectedLoseConnection = 1
-        self.serverfac.proto.expectedLoseConnection = 1
-        self.transport.loseConnection()
+        self.requestService(SSHTestClientAuth('testuser',SSHTestConnection()))
 
+class SSHTestConnection:
+
+    name = 'ssh-connection'
+
+    def serviceStarted(self):
+        #self.transport.expectedLostConnection = 1
+        reactor.crash()
 
 class SSHTestFactory(factory.SSHFactory):
+
+    services = {
+        'ssh-userauth':SSHTestServerAuth,
+        'ssh-connection':SSHTestConnection
+    }
 
     def buildProtocol(self, addr):
         if hasattr(self, 'proto'):
@@ -136,7 +173,6 @@ class SSHTestFactory(factory.SSHFactory):
         return {
             2048:[(transport.DH_GENERATOR, transport.DH_PRIME)]
         }
-
 
 class ConchTransportTest(unittest.TestCase):
 
