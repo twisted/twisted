@@ -373,12 +373,9 @@ class Widget(view.View):
             top = top.parent
         return top
 
-    def getPattern(self, name, default=missingPattern, clone=1, deep=1):
-        """Get a named slot from the incoming template node. Returns a copy
-        of the node and all its children. If there was more than one node with
-        the same slot identifier, they will be returned in a round-robin fashion.
+    def getAllPatterns(self, name, default=missingPattern, clone=1, deep=1):
+        """Get all nodes below this one which have a matching pattern attribute.
         """
-        #print self.templateNode.toxml()
         if self.slots.has_key(name):
             slots = self.slots[name]
         else:
@@ -402,9 +399,23 @@ class Widget(view.View):
                     if default is missingPattern:
                         newNode = missingPattern.cloneNode(1)
                         newNode.appendChild(document.createTextNode(msg))
-                        return newNode
-                    return default
+                        return [newNode]
+                    if default is None:
+                        return None
+                    return [default]
             self.slots[name] = slots
+        if clone:
+            return [x.cloneNode(deep) for x in slots]
+        return slots
+
+    def getPattern(self, name, default=missingPattern, clone=1, deep=1):
+        """Get a named slot from the incoming template node. Returns a copy
+        of the node and all its children. If there was more than one node with
+        the same slot identifier, they will be returned in a round-robin fashion.
+        """
+        slots = self.getAllPatterns(name, default=default, clone=0)
+        if slots is None:
+            return None
         slot = slots.pop(0)
         slots.append(slot)
         if clone:
@@ -744,19 +755,22 @@ class List(Widget):
     defaultItemView = "DefaultWidget"
     def generateDOM(self, request, node):
         node = Widget.generateDOM(self, request, node)
-        listHeader = self.getPattern('listHeader', None)
-        listFooter = self.getPattern('listFooter', None)
-        emptyList = self.getPattern('emptyList', None)
+        listHeaders = self.getAllPatterns('listHeader', None)
+        listFooters = self.getAllPatterns('listFooter', None)
+        emptyLists = self.getAllPatterns('emptyList', None)
         domhelpers.clearNode(node)
-        if not listHeader is None:
-            node.appendChild(listHeader)
+        if listHeaders:
+            node.childNodes.extend(listHeaders)
+            for n in listHeaders: n.parentNode = node
         data = self.getData(request)
         if data:
             self._iterateData(node, self.submodel, data)
-        elif not emptyList is None:
-            node.appendChild(emptyList)
-        if not listFooter is None:
-            node.appendChild(listFooter)
+        elif emptyLists:
+            node.childNodes.extend(emptyLists)
+            for n in emptyLists: n.parentNode = node
+        if listFooters:
+            node.childNodes.extend(listFooters)
+            for n in listFooters: n.parentNode = node
         return node
 
     def _iterateData(self, parentNode, submodel, data):
