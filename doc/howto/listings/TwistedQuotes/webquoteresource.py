@@ -1,5 +1,5 @@
 from twisted.web.woven import template
-from twisted.python import domhelpers #helpers for munging the DOM
+from twisted.web import domhelpers #helpers for munging the DOM
 
 
 from TwistedQuotes import quoters

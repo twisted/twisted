@@ -2,7 +2,7 @@
 
 from twisted.web.woven import model, view, controller
 from twisted.web.woven import widgets, input
-from twisted.python import domhelpers
+from twisted.web import domhelpers
 
 from TwistedQuotes import quoters
 
