@@ -225,8 +225,6 @@ class Proxy:
     def __init__(self, url):
         parts = urlparse.urlparse(url)
         self.url = urlparse.urlunparse(('', '')+parts[2:])
-        if not self.url:
-            self.url = '/'
         if ':' in parts[1]:
             self.host, self.port = parts[1].split(':')
             self.port = int(self.port)
