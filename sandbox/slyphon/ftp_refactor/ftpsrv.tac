@@ -11,7 +11,7 @@ from twisted.cred import credentials
 
 import os.path, os
 
-from jdftp import FTP, FTPFactory, IFTPShell, FTPAnonymousShell, FTPRealm
+from twisted.protocols.ftp import FTP, FTPFactory, IFTPShell, FTPAnonymousShell, FTPRealm
 
 
 # Construct the application
@@ -38,12 +38,13 @@ myServer = internet.TCPServer(port, ftpFactory)
 # Tie the service to the application
 myServer.setServiceParent(myService)
 
-t = telnet.ShellFactory()
-t.pi = ftpFactory
-t.username, t.password = "jds", "jds"
-s = strports.service('2112', t)
-t.setService(s)
-s.setServiceParent(myService)
+# this is a manhole-telnet server for debugging
+#t = telnet.ShellFactory()
+#t.pi = ftpFactory
+#t.username, t.password = "jds", "jds"
+#s = strports.service('2112', t)
+#t.setService(s)
+#s.setServiceParent(myService)
 
 
 # vim:ft=python
