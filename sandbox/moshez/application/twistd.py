@@ -97,7 +97,7 @@ def startLogging(logfilename, sysLog, prefix, nodaemon):
     elif nodaemon and not logfilename:
         logFile = sys.stdout
     else:
-        logFile = app.getLogFie(logfilename)
+        logFile = app.getLogFile(logfilename or 'twistd.log')
         def rotateLog(signal, frame):
             from twisted.internet import reactor
             reactor.callLater(0, logFile.rotate)

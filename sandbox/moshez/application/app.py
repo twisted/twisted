@@ -246,7 +246,7 @@ def startApplication(application, save):
                                   service.IService(application).stopService)
 
 def getLogFile(logfilename):
-    logPath = os.path.abspath(logfilename or 'twistd.log')
+    logPath = os.path.abspath(logfilename)
     logFile = logfile.LogFile(os.path.basename(logPath),
                               os.path.dirname(logPath))
     return logFile
