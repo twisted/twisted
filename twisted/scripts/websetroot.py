@@ -73,3 +73,5 @@ def run():
         main(config)
     except LookupError, err:
         sys.exit(sys.argv[0]+": "+str(err))
+    except IOError, err:
+        sys.exit(sys.argv[0]+": %s: %s" % (err.filename, err.strerror))
