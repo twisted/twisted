@@ -359,6 +359,45 @@ I was plugged in properly and am operating
     
 <p>Voila; the magic of components.</p>
 
+<h3>Components and Inheritance</h3>
+
+<p>If you inherit from a class which <code>__implements__</code> some
+interface, and your new subclass defines its own <code>__implements__</code>
+tuple (because it implements an additional interface), you must explicitly
+include the base clase interface list. The Interface code does not walk the
+complete inheritance tree (because that would be a significant performance
+hit), but instead will recursively expand any tuples it finds in each
+class's <code>__implements__</code> attribute.</p>
+
+<p>For example, <code>pb.Root</code> (actually defined in <code class="API"
+base="twisted.spread">flavors.Root</code>) is a class which implements <code
+class="API" base="twisted.spread.flavors">IPBRoot</code>. This interface
+indicates that an object has remotely-invokable methods and can be used as
+the initial object served by a new Broker instance. It has an
+<code>__implements__</code> attribute like:</p>
+
+<pre class="python">
+class Root(Referenceable):
+    __implements__ = IPBRoot,
+</pre>
+
+<p>Suppose you have your own class which implements your
+<code>IMyInterface</code> interface:</p>
+
+<pre class="python">
+class MyThing:
+    __implements__ = IMyInterface,
+</pre>
+
+<p>Now if you want to make this class inherit from <code>pb.Root</code>, you
+must manually include <code>pb.Root</code>'s interface list:</p>
+
+<pre class="python">
+class MyThing(pb.Root):
+    __implements__ = (IMyInterface, pb.Root.__implements__)
+</pre>
+
+
 </body>
 
 </html>
