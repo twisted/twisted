@@ -60,13 +60,20 @@ void CALLBACK dummy_completion(DWORD err, DWORD bytes, OVERLAPPED *ov, DWORD fla
 }
 
 static void
-iocpcore_dealloc(iocpcore* self)
+iocpcore_dealloc(iocpcore *self)
 {
 //    PyDict_Clear(self->cur_ops);
 //    Py_DECREF(self->cur_ops);
     CloseHandle(self->iocp);
     self->ob_type->tp_free((PyObject*)self);
 }
+
+/*
+static PyObject *
+iocpcore_getattr(iocpcore *self, char *name) {
+    if(!strcmp(name, "have_connectex
+}
+*/
 
 static PyObject *
 iocpcore_new(PyTypeObject *type, PyObject *args, PyObject *kwds)
@@ -550,7 +557,8 @@ static PyTypeObject iocpcoreType = {
     0,                         /*tp_itemsize*/
     (destructor)iocpcore_dealloc, /*tp_dealloc*/
     0,                         /*tp_print*/
-    0,                         /*tp_getattr*/
+//    (getattrfunc)iocpcore_getattr, /*tp_getattr*/
+    0, /*tp_getattr*/
     0,                         /*tp_setattr*/
     0,                         /*tp_compare*/
     0,                         /*tp_repr*/
@@ -564,7 +572,7 @@ static PyTypeObject iocpcoreType = {
     0,                         /*tp_setattro*/
     0,                         /*tp_as_buffer*/
     Py_TPFLAGS_DEFAULT | Py_TPFLAGS_BASETYPE, /*tp_flags*/
-    "core functionality for IOCP reactor",           /* tp_doc */
+    "core functionality for IOCP reactor", /* tp_doc */
     0,                         /* tp_traverse */
     0,                         /* tp_clear */
     0,                         /* tp_richcompare */

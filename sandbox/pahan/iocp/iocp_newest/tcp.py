@@ -5,7 +5,7 @@ from twisted.internet.error import ServiceNameUnknownError
 from twisted.internet import defer, interfaces
 from twisted.python import log
 
-import server#, client
+import server, client
 import iocpdebug
 
 class TcpMixin:
@@ -37,15 +37,12 @@ class Port(server.ListeningPort):
                 raise ServiceNameUnknownError(string=str(e))
         server.ListeningPort.__init__(self, (host, port), factory, backlog)
 
-"""
-class ClientSocket(client.SocketConnector.real_transport, TcpMixin):
+class ClientSocket(client.SocketConnector.transport, TcpMixin):
     pass
 
 class Connector(client.SocketConnector):
-    af = socket.AF_INET
-    type = socket.SOCK_STREAM
-    proto = 0
-    real_transport = ClientSocket
+    sockinfo = (socket.AF_INET, socket.SOCK_STREAM, 0)
+    transport = ClientSocket
 
     def _filterRealAddress(self, host):
         return (host, self.addr[1])
@@ -59,11 +56,10 @@ class Connector(client.SocketConnector):
                 port = socket.getservbyname(port, 'tcp')
             except socket.error, e:
                 return defer.fail(ServiceNameUnknownError(string=str(e)))
-        self.addr = (host, port)
+        self.addr= (host, port)
         if isIPAddress(host):
             return self.addr
         else:
             from twisted.internet import reactor
             return reactor.resolve(host).addCallback(self._filterRealAddress)
-"""
 

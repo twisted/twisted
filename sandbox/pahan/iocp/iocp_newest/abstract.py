@@ -1,7 +1,7 @@
 from sets import Set
 import warnings
 
-from twisted.internet import interfaces, defer, main
+from twisted.internet import interfaces, defer, main, error
 from twisted.persisted import styles
 from twisted.python import log, failure
 
@@ -9,7 +9,7 @@ from ops import ReadFileOp, WriteFileOp
 from util import StateEventMachineType
 import address
 
-class ConnectedSocket(log.Logger, styles.Ephemeral):
+class ConnectedSocket(log.Logger, styles.Ephemeral, object):
     __metaclass__ = StateEventMachineType
     __implements__ = interfaces.ITransport, interfaces.IProducer, interfaces.IConsumer
     events = ["write", "loseConnection", "writeDone", "writeErr", "readDone", "readErr", "shutdown"]
@@ -67,14 +67,14 @@ class ConnectedSocket(log.Logger, styles.Ephemeral):
         self.removeBufferCallback(self._cbDisconnecting, "buffer empty")
         self.connectionLost(failure.Failure(main.CONNECTION_DONE))
 
-    def handle_connected_loseConnection(self, err):
+    def handle_connected_loseConnection(self):
         self.stopReading()
         if self.writing:
             self.addBufferCallback(self._cbDisconnecting, "buffer empty")
             self.state = "disconnecting"
             self.disconnecting = 1
         else:
-            self.connectionLost(err)
+            self.connectionLost(error.UserError())
             return None
 
     def _cbWriteShutdown(self):
@@ -138,7 +138,7 @@ class ConnectedSocket(log.Logger, styles.Ephemeral):
         pass # a leftover read op from before we began disconnecting
 
     def handle_connected_readErr(self, ret, bytes):
-        self.loseConnection(failure.Failure(main.CONNECTION_DONE))
+        self.loseConnection()
 
     handle_disconnecting_readErr = handle_connected_readErr
     

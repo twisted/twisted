@@ -49,22 +49,22 @@ class Proactor(iocpcore, base.ReactorBase):
         pass
 
     def wakeUp(self):
-        def ignore(ret, bytes):
+        def ignore(ret, bytes, arg):
             pass
         if not threadable.isInIOThread():
-            self.issuePostQueuedCompletionStatus(ignore)
+            self.issuePostQueuedCompletionStatus(ignore, None)
             
     def listenTCP(self, port, factory, backlog=5, interface=''):
         p = tcp.Port((interface, port), factory, backlog)
         p.startListening()
         return p
 
-"""
     def connectTCP(self, host, port, factory, timeout=30, bindAddress=None):
         c = tcp.Connector((host, port), factory, timeout, bindAddress)
         c.connect()
         return c
 
+"""
     def listenUDP(self, port, protocol, interface='', maxPacketSize=8192):
         p = udp.Port((interface, port), protocol, maxPacketSize)
         p.startListening()
@@ -78,6 +78,8 @@ class Proactor(iocpcore, base.ReactorBase):
 """
 
 def install():
+    from twisted.python import threadable
     p = Proactor()
+    threadable.init()
     main.installReactor(p)
 

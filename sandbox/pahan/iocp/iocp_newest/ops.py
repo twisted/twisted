@@ -1,4 +1,5 @@
 import struct, socket
+from iocpcore import have_connectex
 
 SO_UPDATE_ACCEPT_CONTEXT = 0x700B
 SO_UPDATE_CONNECT_CONTEXT = 0x7010
@@ -18,11 +19,9 @@ class OverlappedOp:
 class ReadFileOp(OverlappedOp):
     def ovDone(self, ret, bytes, (handle, buffer)):
         if ret or not bytes:
-            m = getattr(self.transport, "readErr")
-            m(ret, bytes)
+            self.transport.readErr(ret, bytes)
         else:
-            m = getattr(self.transport, "readDone")
-            m(bytes)
+            self.transport.readDone(bytes)
 
     def initiateOp(self, handle, buffer):
         self.reactor.issueReadFile(handle, buffer, self.ovDone, (handle, buffer))
@@ -30,11 +29,9 @@ class ReadFileOp(OverlappedOp):
 class WriteFileOp(OverlappedOp):
     def ovDone(self, ret, bytes, (handle, buffer)):
         if ret or not bytes:
-            m = getattr(self.transport, "writeErr")
-            m(ret, bytes)
+            self.transport.writeErr(ret, bytes)
         else:
-            m = getattr(self.transport, "writeDone")
-            m(bytes)
+            self.transport.writeDone(bytes)
 
     def initiateOp(self, handle, buffer):
         self.reactor.issueWriteFile(handle, buffer, self.ovDone, (handle, buffer))
@@ -42,12 +39,10 @@ class WriteFileOp(OverlappedOp):
 class AcceptExOp(OverlappedOp):
     def ovDone(self, ret, bytes, (handle, buffer, acc_sock)):
         if ret:
-            m = getattr(self.transport, "acceptErr")
-            m(ret, bytes)
+            self.transport.acceptErr(ret, bytes)
         else:
-            m = getattr(self.transport, "acceptDone")
             acc_sock.setsockopt(socket.SOL_SOCKET, SO_UPDATE_ACCEPT_CONTEXT, struct.pack("I", handle))
-            m(acc_sock, acc_sock.getpeername())
+            self.transport.acceptDone(acc_sock, acc_sock.getpeername())
 
     def initiateOp(self, handle):
         max_addr, family, type, protocol = self.reactor.getsockinfo(handle)
@@ -56,20 +51,27 @@ class AcceptExOp(OverlappedOp):
         self.reactor.issueAcceptEx(handle, acc_sock.fileno(), self.ovDone, (handle, buffer, acc_sock), buffer)
 
 class ConnectExOp(OverlappedOp):
-    def ovDone(self, ret, bytes, (handle, sock)):
+    def ovDone(self, ret, bytes, (handle, sock)): # change this signature
         if ret:
-            m = getattr(self.transport, "connectErr")
-            m(ret, bytes)
+            self.transport.connectErr(ret, bytes)
         else:
-            m = getattr(self.transport, "connectDone")
-            sock.setsockopt(socket.SOL_SOCKET, SO_UPDATE_CONNECT_CONTEXT, "")
-            m()
+            if have_connectex:
+                sock.setsockopt(socket.SOL_SOCKET, SO_UPDATE_CONNECT_CONTEXT, "")
+            self.transport.connectDone()
 
     def initiateOp(self, sock, addr):
         handle = sock.fileno()
-        max_addr, family, type, protocol = self.reactor.getsockinfo(handle)
-        self.reactor.issueConnectEx(handle, family, addr, self.ovDone, (handle, sock))
+        if have_connectex:
+            max_addr, family, type, protocol = self.reactor.getsockinfo(handle)
+            self.reactor.issueConnectEx(handle, family, addr, self.ovDone, (handle, sock))
+        else:
+            from twisted.internet.threads import deferToThread
+            from twisted.python import log
+            d = deferToThread(self.threadedThing, sock, addr)
+            d.addCallback(self.ovDone, None, (None, None))
+            d.addErrback(log.err) # should not occur
 
     def threadedThing(self, sock, addr):
-        sock.connect_ex(addr)
+        res = sock.connect_ex(addr)
+        return res
 

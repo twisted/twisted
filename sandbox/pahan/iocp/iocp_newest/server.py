@@ -19,7 +19,7 @@ class ServerSocket(ConnectedSocket):
                 address.getPort(self.sf.addr, self.sf.sockinfo))
         self.startReading()
 
-class ListeningPort(log.Logger, styles.Ephemeral):
+class ListeningPort(log.Logger, styles.Ephemeral, object):
     __metaclass__ = StateEventMachineType
     __implements__ = interfaces.IListeningPort,
     events = ["startListening", "stopListening", "acceptDone", "acceptErr"]
