@@ -1585,7 +1585,8 @@ class AuthClient:
         else:
             self.errback("invalid username or password")
 
-class connect:
+def connect(callback, errback, host, port, username, password,
+            service, perspective=None, client=None, timeout=None):
     """Connects and authenticates, then retrieves a PB service.
 
     Required arguments:
@@ -1602,21 +1603,17 @@ class connect:
             different than the username
         client -- XXX the "reference" argument to passport.Perspective.attached
         timeout -- see twisted.internet.tcp.Client
-
-    (I'm a utility function which happens to be implemented as a
-    class.  So I will return a new "connect" instance, but you'll be
-    best off ignoring that.)
     """
+    _Connect(callback, errback, host, port, username, password,
+             service, perspective, client, timeout)
 
-    # Would it be worth hiding this behind a wrapper _function_, just so
-    # the definition types would feel more natural?
-
+class _Connect:
+    """Holds state for the connect() function."""
     def __init__(self, callback, errback, host, port, username, password,
                  service, perspective=None, client=None, timeout=None):
         """Connects and authenticates, then retrieves a PB service.
 
         See pb.connect.__doc__
-        and pay no attention to the man behind the curtain.
         """
 
         self.callback = callback

@@ -17,7 +17,7 @@
 
 import gtk, string, sys, traceback, types
 
-from twisted.python import explorer
+from twisted.python import explorer, util
 from twisted.spread.ui import gtkutil
 from twisted.internet import ingtkernet
 from twisted.spread import pb
@@ -26,10 +26,8 @@ ingtkernet.install()
 True = gtk.TRUE
 False = gtk.FALSE
 
-normalFont = gtk.load_font("-adobe-courier-medium-r-normal-*-*-120-*-*-m-*-iso8859-1")
-font = normalFont
-boldFont = gtk.load_font("-adobe-courier-bold-r-normal-*-*-120-*-*-m-*-iso8859-1")
-errorFont = gtk.load_font("-adobe-courier-medium-o-normal-*-*-120-*-*-m-*-iso8859-1")
+rcfile = util.sibpath(__file__, 'gtkrc')
+gtk.rc_parse(rcfile)
 
 def findBeginningOfLineWithPoint(entry):
     pos = entry.get_point()
@@ -59,6 +57,7 @@ class Interaction(gtk.GtkWindow, pb.Referenceable):
     def __init__(self):
         gtk.GtkWindow.__init__(self, gtk.WINDOW_TOPLEVEL)
         self.set_title("Manhole Interaction")
+        self['name'] = "Manhole"
 
         vbox = gtk.GtkVBox()
         pane = gtk.GtkVPaned()
@@ -89,18 +88,6 @@ class Interaction(gtk.GtkWindow, pb.Referenceable):
         self.show_all()
         self.set_title("Manhole: %s@%s" % (self.name, self.hostname))
 
-        # This is .connected? Sloppy.  But then, isn't colour
-        # allocation always?
-        win = self.get_window()
-        blue = win.colormap.alloc(0x0000, 0x0000, 0xffff)
-        red = win.colormap.alloc(0xffff, 0x0000, 0x0000)
-        orange = win.colormap.alloc(0xaaaa, 0x8888, 0x0000)
-        black = win.colormap.alloc(0x0000, 0x0000, 0x0000)
-        gray = win.colormap.alloc(0x6666, 0x6666, 0x6666)
-        self.output.textStyles = {"out": black,   "err": orange,
-                                  "result": blue, "error": red,
-                                  "command": gray}
-
     def connectionLost(self, reason=None):
         if not reason:
             reason = "Connection Lost"
@@ -109,7 +96,7 @@ class Interaction(gtk.GtkWindow, pb.Referenceable):
         self.loginWindow.show()
 
 
-class BrowserDisplay:
+class LineOrientedBrowserDisplay:
     def __init__(self, toplevel=None):
         if toplevel:
             self.toplevel = toplevel
@@ -153,11 +140,17 @@ class BrowserDisplay:
 
         self.toplevel.output.console([('out',s)])
 
+#if _GNOME_POWER:
+#    BrowserDisplay = CanvasBrowserDisplay
+#else:
+BrowserDisplay = LineOrientedBrowserDisplay
+
 class OutputConsole(gtk.GtkText):
     maxBufSz = 10000
 
     def __init__(self, toplevel=None):
         gtk.GtkText.__init__(self)
+        self['name'] = "Console"
         gtkutil.defocusify(self)
         self.set_word_wrap(gtk.TRUE)
 
@@ -167,25 +160,30 @@ class OutputConsole(gtk.GtkText):
     def console(self, message):
         self.set_point(self.get_length())
         self.freeze()
-        for element in message:
-            if element[0] == 'error':
-                s = traceback.format_list(element[1]['traceback'])
-                s.extend(element[1]['exception'])
-                s = string.join(s, '')
-            else:
-                s = element[1]
-            self.insert(font, self.textStyles[element[0]],
-                        None, s)
-        l = self.get_length()
-        diff = self.maxBufSz - l
-        if diff < 0:
-            diff = - diff
-            self.delete_text(0,diff)
-        self.thaw()
-        a = self.get_vadjustment()
-        a.set_value(a.upper - a.page_size)
-        # self.input.grab_focus()
-
+        try:
+            for element in message:
+                if element[0] == 'exception':
+                    s = traceback.format_list(element[1]['traceback'])
+                    s.extend(element[1]['exception'])
+                    s = string.join(s, '')
+                else:
+                    s = element[1]
+                gtk.rc_parse_string(
+                    'widget \"Manhole.*.Console\" style \"Console_%s\"\n'
+                    % (element[0]))
+                self.set_rc_style()
+                style = self.get_style()
+                self.insert(style.font, style.fg[gtk.STATE_NORMAL],
+                            None, s)
+            l = self.get_length()
+            diff = self.maxBufSz - l
+            if diff < 0:
+                diff = - diff
+                self.delete_text(0,diff)
+            a = self.get_vadjustment()
+            a.set_value(a.upper - a.page_size)
+        finally:
+            self.thaw()
 
 class InputText(gtk.GtkText):
     linemode = 0
@@ -193,6 +191,7 @@ class InputText(gtk.GtkText):
 
     def __init__(self, toplevel=None):
         gtk.GtkText.__init__(self)
+        self['name'] = 'Input'
         self.set_editable(gtk.TRUE)
         self.connect("key_press_event", self.processKey)
         self.set_word_wrap(gtk.TRUE)

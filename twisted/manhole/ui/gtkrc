@@ -1,0 +1,34 @@
+style "codefont" {
+    font = "-adobe-courier-medium-r-normal-*-*-120-*-*-m-*-iso8859-1"
+}
+
+style "Input" = "codefont" {
+    # pass
+}
+
+style "Console" = "codefont" {
+    # pass
+}
+
+style "Console_stdout" = "Console" {
+    fg[NORMAL] = { 0, 0, 0 }
+}
+
+style "Console_stderr" = "Console" {
+    fg[NORMAL] = { 0.66, 0.5, 0 }
+}
+
+style "Console_result" = "Console" {
+    fg[NORMAL] = { 0, 0, 1.0 }
+}
+
+style "Console_exception" = "Console" {
+    fg[NORMAL] = { 1.0, 0, 0 }
+}
+
+style "Console_command" = "Console" {
+    fg[NORMAL] = { 0.4, 0.4, 0.4 }
+}
+
+widget "Manhole.*.Input" style "Input"
+widget "Manhole.*.Console" style "Console"

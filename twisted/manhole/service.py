@@ -45,14 +45,14 @@ class ManholeClientInterface:
         """Takes a list of (type, message) pairs to display.
 
         Types include:
-            \"out\" -- string sent to sys.stdout
+            \"stdout\" -- string sent to sys.stdout
 
-            \"err\" -- string sent to sys.stderr
+            \"stderr\" -- string sent to sys.stderr
 
             \"result\" -- string repr of the resulting value
                  of the expression
 
-            \"error\" -- a dictionary with two members:
+            \"exception\" -- a dictionary with two members:
                 \'traceback\' -- traceback.extract_tb output; a list of
                      tuples (filename, line number, function name, text)
                      suitable for feeding to traceback.format_list.
@@ -80,9 +80,9 @@ def runInConsole(command, console, globalNS=None, localNS=None,
     display, see ManholeClientInterface.console.
     """
     output = []
-    fakeout = FakeStdIO("out", output)
-    fakeerr = FakeStdIO("err", output)
-    errfile = FakeStdIO("error", output)
+    fakeout = FakeStdIO("stdout", output)
+    fakeerr = FakeStdIO("stderr", output)
+    errfile = FakeStdIO("exception", output)
     code = None
     val = None
     if filename is None:
@@ -156,6 +156,11 @@ class Perspective(pb.Perspective):
 
         self.clients = {}
 
+    def __getstate__(self):
+        state = self.__dict__.copy()
+        state['clients'] = {}
+        return state
+
     def setService(self, service):
         pb.Perspective.setService(self, service)
         self.browser.globalNamespace = service.namespace
@@ -171,7 +176,7 @@ class Perspective(pb.Perspective):
             'longversion': copyright.longversion,
             }
 
-        client.console([("out", msg)])
+        client.console([("stdout", msg)])
 
         return pb.Perspective.attached(self, client, identity)
 
