@@ -124,8 +124,8 @@ cp "%(rpm_file)s.init" "$RPM_BUILD_ROOT"/etc/init.d/"%(rpm_file)s"
 
 %%files
 %%defattr(-,root,root)
-%%attr(0755,-,-) /etc/init.d/%(rpm_file)s
-/etc/twisted-taps/%(tap_file)s
+%%attr(0755,root,root) /etc/init.d/%(rpm_file)s
+%%attr(0660,root,root) /etc/twisted-taps/%(tap_file)s
 
 %%changelog
 * %(date)s %(maintainer)s 
@@ -239,7 +239,7 @@ def run():
     tap2deb.save_to_file(os.path.join(source_dir, '%s.init' % rpm_file),
                                       initFileData % vars())
     shutil.copy(tap_file, source_dir)
-    
+
     #  create source tar
     os.system('cd "%(tmp_dir)s"; tar cfz "%(tarfile_name)s" "%(directory)s"'
               % vars())
