@@ -49,10 +49,11 @@ applied when serializing arguments.
 @author: U{Glyph Lefkowitz<mailto:glyph@twistedmatrix.com>}
 """
 
-__version__ = "$Revision: 1.120 $"[11:-2]
-
 # Future Imports
 from __future__ import nested_scopes
+
+__version__ = "$Revision: 1.121 $"[11:-2]
+
 
 # System Imports
 import traceback
