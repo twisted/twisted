@@ -19,8 +19,8 @@ DNS protocol implementation.
 
 API Stability: Unstable
 
-Future Plans: Fix message encoding!  Get rid of some toplevels,
-  maybe.  Put in a better lookupRecordType implementation.
+Future Plans: Get rid of some toplevels, maybe.  Put in a better
+  lookupRecordType implementation.
 
 @author: U{Moshe Zadka<mailto:moshez@twistedmatrix.com>},
          U{Jp Calderone<mailto:exarkun@twistedmatrix.com}
@@ -751,7 +751,7 @@ class Message:
 
 
     def lookupRecordType(self, type):
-        return globals().get('Record_' + QUERY_TYPES.get(type, ''))
+        return globals().get('Record_' + QUERY_TYPES.get(type, ''), None)
 
 
     def toStr(self):
@@ -765,8 +765,7 @@ class Message:
         self.decode(strio)
 
 
-# This is probably general enough to not be called "Client" anymore
-class DNSClientProtocol(protocol.DatagramProtocol):
+class DNSDatagramProtocol(protocol.DatagramProtocol):
     id = None
     liveMessages = None
     
@@ -785,6 +784,9 @@ class DNSClientProtocol(protocol.DatagramProtocol):
 
 
     def writeMessage(self, message, address):
+        if not self.transport:
+            from twisted.internet import reactor
+            reactor.listenUDP(0, self, maxPacketSize=512)
         self.transport.write(message.toStr(), address)
 
 
@@ -854,8 +856,7 @@ class DNSClientProtocol(protocol.DatagramProtocol):
         return d
 
 
-# Ditto
-class TCPDNSClientProtocol(protocol.Protocol):
+class DNSProtocol(protocol.Protocol):
     id = None
     liveMessages = None
 

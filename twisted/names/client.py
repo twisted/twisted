@@ -21,11 +21,12 @@ Asynchronous client DNS
 API Stability: Unstable
 
 Future plans: Proper nameserver acquisition on Windows/MacOS,
-  caching, other lookup* methods.
+    better caching, respect timeouts
 
-@author: U{Jp Calderone <exarkun@twistedmatrix.com>}
+@author: U{Jp Calderone<mailto:exarkun@twistedmatrix.com>}
 """
 
+from __future__ import nested_scopes
 
 # System imports
 import struct
@@ -36,7 +37,10 @@ from twisted.internet import defer, protocol, interfaces
 from twisted.python import log
 from twisted.protocols import dns
 
-class Resolver:
+
+import common
+
+class Resolver(common.ResolverBase):
     __implements__ = (interfaces.IResolver,)
 
     index = 0
@@ -65,6 +69,10 @@ class Resolver:
         
         @raise ValueError: Raised if no nameserver addresses can be found.
         """
+        common.ResolverBase.__init__(self)
+
+        self.timeout = timeout
+
         if servers is None:
             self.servers = []
         else:
@@ -76,12 +84,11 @@ class Resolver:
         if not len(self.servers):
             raise ValueError, "No nameservers specified"
         
-        self.timeout = timeout
         self.factory = DNSClientFactory(self, timeout)
+        self.factory.noisy = 0   # Be quiet by default
         
-        from twisted.internet import reactor
-        self.protocol = dns.DNSClientProtocol(self)
-        reactor.listenUDP(0, self.protocol, maxPacketSize=512)
+        self.protocol = dns.DNSDatagramProtocol(self)
+        self.protocol.noisy = 0  # You too
         
         self.connections = []
         self.pending = []
@@ -93,7 +100,7 @@ class Resolver:
             l = l.strip()
             if l.startswith('nameserver'):
                 self.servers.append((l.split()[1], dns.PORT))
-                #log.msg("Resolver added %s to server list" % (self.servers[-1],))
+                log.msg("Resolver added %r to server list" % (self.servers[-1],))
 
 
     def pickServer(self):
@@ -163,32 +170,27 @@ class Resolver:
             if message.trunc:
                 return self.queryTCP(message.queries).addCallback(self.filterAnswers(type))
             else:
-                return [n.payload for n in message.answers if n.type == type]
+                return [n.payload for n in message.answers if not type or n.type == type]
         return getOfType
 
 
-    def lookupAddress(self, name, timeout = None):
+    def _lookup(self, name, cls, type, timeout):
         return self.queryUDP(
-            [dns.Query(name, dns.A, dns.IN)], timeout
-        ).addCallback(self.filterAnswers(dns.A))
-
-
-    def lookupMailExchange(self, name, timeout = None):
+            [dns.Query(name, type, cls)], timeout
+        ).addCallback(self.filterAnswers(type))
+    
+    
+    # This one we can do more efficiently than the default
+    def lookupAllRecords(self, name, timeout = 10):
         return self.queryUDP(
-            [dns.Query(name, dns.MX, dns.IN)], timeout
-        ).addCallback(self.filterAnswers(dns.MX))
+            [dns.Query(name, dns.ALL_RECORDS, dns.IN)], timeout
+        ).addCallback(self.filterAnswers(None))
 
 
-    def lookupNameservers(self, name, timeout = None):
-        return self.queryUDP(
-            [dns.Query(name, dns.NS, dns.IN)], timeout
-        ).addCallback(self.filterAnswers(dns.NS))
+class ThreadedResolver:
+    __implements__ = (interfaces.IResolverSimple,)
 
-
-class ThreadedResolver(Resolver):
-    def lookup(self, name, type = dns.ALL_RECORDS, cls = dns.ANY):
-        assert type == dns.A and cls == dns.IN, \
-            "No support for query types other than A IN"
+    def lookupAddress(self, name, timeout = 10):
         return defer.deferToThread(socket.gethostbyname, name)
 
 
@@ -203,19 +205,23 @@ class DNSClientFactory(protocol.ClientFactory):
 
 
     def buildProtocol(self, addr):
-        p = dns.TCPDNSClientProtocol(self.controller)
+        p = dns.DNSProtocol(self.controller)
         p.factory = self
         return p
 
 
-try:
-    theResolver
-except NameError:
+def createResolver():
     if platform.getType() == 'posix':
         theResolver = Resolver('/etc/resolv.conf')
     else:
         theResolver = ThreadedResolver()
+    return theResolver
 
-    lookupAddress = theResolver.lookupAddress
-    lookupMailExchange = theResolver.lookupMailExchange
-    lookupNameservers = theResolver.lookupNameservers
+try:
+    theResolver
+except NameError:
+    theResolver = createResolver()
+#    reactor.listenUDP(0, theResolver.protocol, maxPacketSize=512)
+
+    for (k, v) in common.typeToMethod.items():
+        exec "%s = getattr(theResolver, %r)" % (v, v)

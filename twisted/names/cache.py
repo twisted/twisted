@@ -15,28 +15,69 @@
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
+import operator
+
 from twisted.protocols import dns
-from twisted.python import failure
-from twisted.internet import interfaces
+from twisted.python import failure, log
+from twisted.internet import interfaces, defer
 
+import common
 
-class CacheResolver:
+class CacheResolver(common.ResolverBase):
+    """A resolver that serves records from a local, memory cache."""
+
     __implements__ = (interfaces.IResolver,)
     
     cache = None
     
-    def __init__(self, cache = None):
+    def __init__(self, cache = None, verbose = 0):
+        common.ResolverBase.__init__(self)
+
         if cache is None:
             cache = {}
         self.cache = cache
-    
-    
-    def lookupAddress(self, name, timeout=10):
+        self.verbose = verbose
+
+
+    def _lookup(self, name, cls, type, timeout):
         try:
-            return self.cache[name.lower()][dns.A]
+            r = defer.succeed(self.cache[name.lower()][cls][type])
+            if self.verbose:
+                log.msg('Cache hit for ' + repr(name))
+            return r
         except KeyError:
-            return []
+            if self.verbose > 1:
+                log.msg('Cache miss for ' + repr(name))
+            return defer.fail(ValueError(dns.ENAME))
+    
+    
+    def lookupAllRecords(self, name, timeout = 10):
+        try:
+            r = defer.succeed(
+                reduce(
+                    operator.add,
+                    self.cache[name.lower()][dns.IN].values(),
+                    []
+                )
+            )
+            if self.verbose:
+                log.msg('Cache hit for ' + repr(name))
+            return r
+        except KeyError:
+            if self.verbose > 1:
+                log.msg('Cache miss for ' + repr(name))
+            return defer.fail(ValueError(dns.ENAME))
 
 
-    def cacheResult(self, name, type, payload):
-        self.cache.setdefault(name.lower(), {}).setdefault(type, []).append(payload)
+    def cacheResult(self, name, type, cls, payload):
+        l = self.cache.setdefault(
+            str(name).lower(), {}
+        ).setdefault(
+            cls, {}
+        ).setdefault(
+            type, []
+        )
+        if payload not in l:
+            if self.verbose > 1:
+                log.msg('Adding %r to cache' % name)
+            l.append(payload)

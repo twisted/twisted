@@ -55,8 +55,7 @@ class IConnector(Interface):
         """
 
 
-class IResolver(Interface):
-
+class IResolverSimple(Interface):
     def lookupAddress(self, name, timeout = 10):
         """Resolve the domain name C{name} into an IP address.
 
@@ -66,6 +65,56 @@ class IResolver(Interface):
         @raise C{twisted.internet.defer.TimeoutError}: Raised if the name
         cannot be resolved within the specified timeout period.
         """
+
+class IResolver(IResolverSimple):
+    def lookupRecord(self, name, cls, type, timeout = 10):
+        """Lookup the records associated with the given name
+           that are of the given type and in the given class.
+        """
+
+    def query(self, query, timeout = 10):
+        """Interpret and dispatch a query object to the appropriate
+        lookup* method.
+        """
+
+    def lookupMailExchange(self, name, timeout = 10):
+        """Lookup the MX records associated with C{name}."""
+
+    def lookupNameservers(self, name, timeout = 10):
+        """Lookup the the NS records associated with C{name}."""
+
+    def lookupCanonicalName(self, name, timeout = 10):
+        """Lookup the CNAME records associated with C{name}."""
+
+    def lookupMailBox(self, name, timeout = 10):
+        """Lookup the MB records associated with C{name}."""
+
+    def lookupMailGroup(self, name, timeout = 10):
+        """Lookup the MG records associated with C{name}."""
+
+    def lookupMailRename(self, name, timeout = 10):
+        """Lookup the MR records associated with C{name}."""
+
+    def lookupPointer(self, name, timeout = 10):
+        """Lookup the PTR records associated with C{name}."""
+
+    def lookupAuthority(self, name, timeout = 10):
+        """Lookup the SOA records associated with C{name}."""
+
+    def lookupNull(self, name, timeout = 10):
+        """Lookup the NULL records associated with C{name}."""
+
+    def lookupServices(self, name, timeout = 10):
+        """Lookup the WKS records associated with C{name}."""
+
+    def lookupHostInfo(self, name, timeout = 10):
+        """Lookup the HINFO records associated with C{name}."""
+
+    def lookupMailboxInfo(self, name, timeout = 10):
+        """Lookup the MINFO records associated with C{name}."""
+
+    def lookupText(self, name, timeout = 10):
+        """Lookup the TXT records associated with C{name}."""
 
 
 class IReactorTCP(Interface):

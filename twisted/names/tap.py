@@ -28,14 +28,17 @@ import traceback
 
 class Options(usage.Options):
     optParameters = [
-        ["interface", "i", "",  "The interface to which to bind"],
+        ["interface", "i", "",   "The interface to which to bind"],
         ["port",      "p", "53", "The port on which to listen"],
     ]
     
     optFlags = [
-        ["verbose", "v", "Log verbosely"]
+        ["cache",       "c", "Enable record caching"],
+        ["recursive",   "r", "Perform recursive lookups"],
+        ["verbose",     "v", "Log verbosely"]
     ]
 
+    zones = None
     zonefiles = None
     
     def __init__(self):
@@ -56,19 +59,13 @@ class Options(usage.Options):
 
 
     def postOptions(self):
-        zones = []
-        if not len(self.zonefiles):
-            raise usage.UsageError("At least one zone file must be specified")
+        self.zones = []
         for f in self.zonefiles:
             try:
-                zones.append(server.Authority(f))
+                self.zones.append(server.Authority(f))
             except Exception, e:
                 traceback.print_exc()
-                raise usage.UsageError(e)
-        if not len(zones):
-            raise usage.UsageError("At least one zone file must contain a valid zone")
-        self.zones = zones
-        
+                raise usage.UsageError("Invalid syntax in " + f)
         try:
             self['port'] = int(self['port'])
         except ValueError:
@@ -76,7 +73,17 @@ class Options(usage.Options):
 
 
 def updateApplication(app, config):
-    f = server.DNSServerFactory(config.zones, config['verbose'])
-    p = dns.DNSClientProtocol(f)
+    import client, cache
+
+    ca, cl = [], []
+    if config['cache']:
+        ca.append(cache.CacheResolver(verbose=config['verbose']))
+    if config['recursive']:
+        cl.append(client.createResolver())
+
+    f = server.DNSServerFactory(config.zones, ca, cl, config['verbose'])
+    p = dns.DNSDatagramProtocol(f)
+    f.noisy = 0
+
     app.listenUDP(config['port'], p)
     app.listenTCP(config['port'], f)

@@ -16,7 +16,7 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
 from twisted.python import failure
-from twisted.internet import interfaces
+from twisted.internet import interfaces, defer
 
 def searchFileFor(file, name):
     fp = open(file)
@@ -36,11 +36,13 @@ def searchFileFor(file, name):
 
 
 class Resolver:
-    __implements__ = (interfaces.IResolver,)
+    """A resolver that services hosts(5) format files."""
 
+    __implements__ = (interfaces.IResolverSimple,)
 
     def __init__(self, file='/etc/hosts'):
         self.file = file
+
 
     def lookupAddress(self, name, timeout=10):
         res = searchFileFor(self.file, name)

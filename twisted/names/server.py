@@ -33,18 +33,20 @@ from __future__ import nested_scopes
 import struct
 
 # Twisted imports
-from twisted.internet import protocol
+from twisted.internet import protocol, defer
 from twisted.protocols import dns
 from twisted.python import log
 
-import client
+import resolve, common
 
-class Authority:
+class Authority(common.ResolverBase):
     """
     Guess.
     """
 
     def __init__(self, filename):
+        common.ResolverBase.__init__(self)
+
         g, l = self.setupConfigNamespace(), {}
         execfile(filename, g, l)
         if not l.has_key('zone'):
@@ -54,7 +56,7 @@ class Authority:
         for rr in l['zone']:
             if isinstance(rr[1], dns.Record_SOA):
                 self.soa = rr
-            self.records.setdefault(rr[0], []).append(rr[1])
+            self.records.setdefault(rr[0].lower(), []).append(rr[1])
 
 
     def wrapRecord(self, type):
@@ -70,22 +72,46 @@ class Authority:
         return r
 
 
+    def _lookup(self, name, cls, type, timeout = 10):
+        try:
+            return defer.succeed([
+                rec for rec in self.records[name.lower()] if rec.TYPE == type
+            ])
+        except KeyError:
+            return defer.fail(ValueError(dns.ENAME))
+
+
 class DNSServerFactory(protocol.ServerFactory):
-    def __init__(self, authorities, verbose = 0):
-        self.authorities = authorities
+    cache = None
+
+    def __init__(self, authorities = None, caches = None, clients = None, verbose = 0):
+        resolvers = []
+        if authorities is not None:
+            resolvers.extend(authorities)
+        if caches is not None:
+            resolvers.extend(caches)
+        if clients is not None:
+            resolvers.extend(clients)
+
+        self.canRecurse = bool(clients)
+        self.resolver = resolve.ResolverChain(resolvers)
         self.verbose = verbose
+        if caches:
+            self.cache = caches[-1]
 
 
     def startFactory(self):
-        self.resolver = client.theResolver
+        pass
+        # self.resolver = client.theResolver
 
 
     def stopFactory(self):
-        del self.resolver
+        pass
+        # del self.resolver
 
 
     def buildProtocol(self, addr):
-        p = dns.TCPDNSClientProtocol(self)
+        p = dns.DNSProtocol(self)
         p.factory = self
         return p
 
@@ -108,79 +134,45 @@ class DNSServerFactory(protocol.ServerFactory):
             protocol.writeMessage(message, address)
 
 
-    def gotRecursiveResponse(self, answers, message, protocol, address):
-        answers = answers.answers
-        message.auth = 0
-        if len(answers):
-            message.answers = answers
-        else:
-            message.rCode = dns.ENAME
+    def gotResolverResponse(self, responses, protocol, message, address):
+        message.rCode = dns.OK
+        message.answers = responses
         self.sendReply(protocol, message, address)
         if self.verbose:
             log.msg(
-                "Recursive lookup found %d record%s" % (
-                    len(answers), len(answers) != 1 and "s" or ""
+                "Lookup found %d record%s" % (
+                    len(responses), len(responses) != 1 and "s" or ""
                 )
             )
+        if self.cache:
+            # Hmm, we're caching cache hits - probably bad
+            for res in responses:
+                self.cache.cacheResult(
+                    res.name, res.type, res.cls, res.payload
+                )
 
 
-    def recursiveLookupFailed(self, failure, message, protocol, address):
-        message.rCode = dns.ESERVER
+    def gotResolverError(self, failure, protocol, message, address):
+        if isinstance(failure.value.args[0], int):
+            message.rCode = failure.value.args[0]
+        else:
+            import traceback
+            failure.printTraceback()
+            print 'DOH', repr(failure.value.args[0])
+            message.rCode = dns.ESERVER
         self.sendReply(protocol, message, address)
         if self.verbose:
-            log.msg("Recursive lookup failed")
-
-
-    def performLookups(self, queries):
-        extra = []
-        answers = []
-        for q in queries:
-            for a in self.authorities:
-                n = str(q.name).lower()
-                if n.endswith(a.soa[0].lower()):
-                    for r in a.records.get(n, ()):
-                        if q.type == r.TYPE or q.type == dns.ALL_RECORDS or r.TYPE == dns.CNAME:
-                            res = dns.RRHeader(str(q.name), r.TYPE, q.cls, 10)
-                            res.payload = r
-                            answers.append(res)
-                            
-                            if r.TYPE == dns.CNAME:
-                                # XXX - sigh - wtf
-                                extra.extend([
-                                    dns.Query(str(r.name), dns.A, dns.IN),
-                                    dns.Query(str(r.name), dns.CNAME, dns.IN)
-                                ])
-                    if self.verbose:
-                        log.msg("Responding authoritatively with %d records" % len(answers))
-                    return answers, extra
-        if self.verbose:
-            log.msg("No records found locally")
-        return None
+            log.msg("Lookup failed")
 
 
     def handleQuery(self, message, protocol, address):
-        local = self.performLookups(message.queries)
-        if local is None:
-            if self.resolver and message.recDes:
-                f = address and self.resolver.queryUDP or self.resolver.queryTCP
-                f(message.queries).addCallback(
-                    self.gotRecursiveResponse, message, protocol, address
-                ).addErrback(
-                    self.recursiveLookupFailed, message, protocol, address
-                )
-            else:
-                message.rCode = dns.ENAME
-        else:
-            message.answers, extra = local
-            if extra:
-                # XXX - Hardcoded single level of re-resolution
-                #       This might be better as a paremeter someplace
-                reres = self.performLookups(extra)
-                if reres:
-                    message.answers.extend(reres[0])
-            message.auth = 1
-            message.rCode = dns.OK
-            self.sendReply(protocol, message, address)
+        assert len(message.queries) == 1
+        
+        return self.resolver.query(message.queries[0]).addCallback(
+            self.gotResolverResponse, protocol, message, address
+        ).addErrback(
+            self.gotResolverError, protocol, message, address
+        )
 
 
     def handleInverseQuery(self, message, protocol, address):
@@ -216,7 +208,7 @@ class DNSServerFactory(protocol.ServerFactory):
             else:
                 log.msg("%s query from %r" % (s, address or protocol.transport.getPeer()))
 
-        message.recAv = self.resolver is not None
+        message.recAv = self.canRecurse
         message.answer = 1
 
         if message.opCode == dns.OP_QUERY:

@@ -20,26 +20,32 @@ Lookup a name using multiple resolvers.
 
 API Stability: Unstable
 
-Future plans: Other types of queries
+Future Plans: This needs someway to specify which resolver answered
+  the query, or someway to specify (authority|ttl|cache behavior|more?)
 
 @author: U{Jp Calderone<mailto:exarkun@twistedmatrix.com}
 """
 
 from twisted.internet import defer, interfaces
+from twisted.protocols import dns
 
-class ResolverChain:
-    """Lookup an address using multiple C{IResolver}s
-    """
+import common
+
+class ResolverChain(common.ResolverBase):
+    """Lookup an address using multiple C{IResolver}s"""
     
     __implements__ = (interfaces.IResolver,)
 
+
     def __init__(self, resolvers):
+        common.ResolverBase.__init__(self)
         self.resolvers = resolvers
-        self.resolvers.reverse()
 
 
-    def lookupAddress(self, name, timeout=10):
-        d = r.lookupAddress(name, timeout)
-        for r in self.resolvers:
-            d = d.addErrback(r.lookupAddress, name, timeout)
+    def _lookup(self, name, cls, type, timeout):
+        d = self.resolvers[0]._lookup(name, cls, type, timeout)
+        for r in self.resolvers[1:]:
+            d = d.addErrback(
+                lambda f, r=r, n=name, t=timeout: r._lookup(name, cls, type, timeout)
+            )
         return d
