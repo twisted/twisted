@@ -5,7 +5,7 @@
     
     <body>
       <h1>Twisted Python Coding Standard</h1>
-      <h3>In General</h3>
+      <h3>Naming</h3>
       <p>
         Try to choose names which are both easy to remember and meaningful.
         Some silliness is OK at the module naming level (see twisted.spread...)
@@ -19,6 +19,16 @@
         In particular, words like "handler", "processor", "engine", "manager",
         and "component" don't really indicate what something does, only that it
         does <b>something</b>.
+      </p>
+      <h3>Testing</h3>
+      <p>
+        Unit tests are written using the PyUnit framework.  Many examples are
+        in the twisted.test package, and all tests should be integrated through
+        the main test suite builder in twisted.test.test_all.
+      </p>
+      <p>
+        Acceptance tests are all automated by the bin/accepttests script
+        currently.  (TODO: real acceptance tests strategy!)
       </p>
       <h3>Whitespace</h3>
       <p>
@@ -191,7 +201,7 @@ def foo2bar(f):
     <address><a href="mailto:glyph@helix.twistedmatrix.com">Glyph Lefkowitz</a></address>
 <!-- Created: Thu Apr 26 07:53:26 CDT 2001 -->
 <!-- hhmts start -->
-Last modified: Mon Sep  3 21:34:28 CDT 2001
+Last modified: Thu Sep  6 02:59:43 CDT 2001
 <!-- hhmts end -->
   </body>
 </html>
