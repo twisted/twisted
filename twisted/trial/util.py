@@ -2,7 +2,7 @@
 # Copyright (c) 2001-2004 Twisted Matrix Laboratories.
 # See LICENSE for details.
 #
-# Author: Jonathan Simms <slyphon@twistedmatrix.com>
+# Author: Jonathan D. Simms <slyphon@twistedmatrix.com>
 #         and countless contributors
 #
 from __future__ import generators
