@@ -246,7 +246,8 @@ print list(flow.Block(Consumer))
 <p>In the code above, <code>producer.next()</code> is implicitly
 called.  It does several things like checking for the end of the
 iterator and scanning for failures.   Its behavior can best be
-described with a more verbose version below.</p>
+described with a more verbose version below, with Counter
+replaced with a simple list, for brevity.</p>
 
 <pre>
 from __future__ import generators

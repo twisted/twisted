@@ -357,7 +357,7 @@ class ThreadedIterator:
        main thread data is not available, then a particular 
        exception.
     """
-    def __init__(self, extend = 0):
+    def __init__(self, outer = None, extend = 0 ):
         class _Tunnel:
             def __init__(self, source, extend ):
                 """
@@ -402,6 +402,7 @@ class ThreadedIterator:
                 raise Cooperate()
         tunnel = _Tunnel(self, extend)
         self._tunnel = tunnel
+        self._outer  = outer
 
     def __iter__(self): 
         from twisted.internet.reactor import callInThread
@@ -409,9 +410,12 @@ class ThreadedIterator:
         return self._tunnel
     
     def init(self):
-        pass   
+        if self._outer: 
+            self._outer = self._outer.__iter__()
      
     def next(self):
+        if self._outer: 
+            return self._outer.next()
         raise StopIteration
 
 class QueryIterator(ThreadedIterator):
