@@ -66,7 +66,9 @@ install-stamp: build-stamp
 	               debian/twisted-doc/usr/share/doc/twisted-doc/howto/
 	install -m 644 doc/specifications/*.html \
 	               debian/twisted-doc/usr/share/doc/twisted-doc/specifications/
-	install -m 644 doc/img/*.{png,bmp} \
+	install -m 644 doc/img/*.png \
+	               debian/twisted-doc/usr/share/doc/twisted-doc/img/
+	install -m 644 doc/img/*.bmp \
 	               debian/twisted-doc/usr/share/doc/twisted-doc/img/
 	cp -ar doc/api/* debian/twisted-doc/usr/share/doc/twisted-doc/
 	install -m 644  doc/examples/*.py \
