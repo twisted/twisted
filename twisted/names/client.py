@@ -39,10 +39,13 @@ from twisted.protocols import dns
 class Resolver:
     index = 0
 
+    factory = None
+    servers = None
     pending = None
+    protocol = None
     connections = None
 
-    def __init__(self, resolv = None, servers = None):
+    def __init__(self, resolv = None, servers = None, timeout = 10):
         """
         @type servers: C{list} of C{str} or C{None}
         @param servers: If not None, interpreted as a list of addresses of
@@ -52,6 +55,12 @@ class Resolver:
         @type resolv: C{str}
         @param resolv: Filename to read and parse as a resolver(5)
         configuration file.
+        
+        @type timeout: C{int}
+        @param timeout: Number of seconds after which to fail with a
+        TimeoutError
+        
+        @raise ValueError: Raised if no nameserver addresses can be found.
         """
         if servers is None:
             self.servers = []
@@ -65,10 +74,10 @@ class Resolver:
             raise ValueError, "No nameservers specified"
         
         from twisted.internet import reactor
-        self.protocol = dns.DNSClientProtocol(self)
+        self.protocol = dns.DNSClientProtocol(self, timeout)
         reactor.listenUDP(0, self.protocol, maxPacketSize=512)
-
-        self.factory = DNSClientFactory(self)
+        
+        self.factory = DNSClientFactory(self, timeout)
         self.connections = []
         self.pending = []
 
@@ -159,8 +168,9 @@ class ThreadedResolver(Resolver):
 
 
 class DNSClientFactory(protocol.ClientFactory):
-    def __init__(self, controller):
+    def __init__(self, controller, timeout = 10):
         self.controller = controller
+        self.timeout = timeout
     
 
     def clientConnectionLost(self, connector, reason):
