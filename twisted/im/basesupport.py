@@ -15,6 +15,11 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 #
 
+"""Instance Messenger base classes for protocol support.
+
+You will find these useful if you're adding a new protocol to IM.
+"""
+
 # Abstract representation of chat "model" classes
 
 from locals import ONLINE, OFFLINE, OfflineError

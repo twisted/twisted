@@ -14,6 +14,8 @@
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 #
+"""HTTP client."""
+
 from twisted.protocols import http
 from twisted.internet import defer, protocol, reactor
 from twisted.python import failure
@@ -55,7 +57,7 @@ class HTTPPageGetter(http.HTTPClient):
         l = self.headers.get('location')
         if not l:
             self.handleStatusDefault()
-        host, port, url = _parse(l[0]) 
+        host, port, url = _parse(l[0])
         self.factory.host, self.factory.url = host, url
         reactor.connectTCP(host, port, self.factory)
         self.quietLoss = 1
@@ -148,7 +150,7 @@ class HTTPDownloader(HTTPClientFactory):
         if self.file:
             self.file.write(data)
 
-    
+
 def _parse(url):
     parsed = urlparse.urlparse(url)
     url = urlparse.urlunparse(('','')+parsed[2:])

@@ -1,5 +1,5 @@
 # -*- test-case-name: twisted.test.test_explorer -*-
-# $Id: explorer.py,v 1.5 2003/02/12 13:15:32 acapnotic Exp $
+# $Id: explorer.py,v 1.6 2003/02/18 21:15:30 acapnotic Exp $
 # Twisted, the Framework of Your Internet
 # Copyright (C) 2001 Matthew W. Lefkowitz
 #
@@ -20,6 +20,10 @@
 
 Note that Explorers, what with their list of attributes, are much like
 manhole.coil.Configurables.  Someone should investigate this further. (TODO)
+
+Also TODO: Determine how much code in here (particularly the function
+signature stuff) can be replaced with functions available in the
+L{inspect} module available in Python 2.1.
 """
 
 # System Imports

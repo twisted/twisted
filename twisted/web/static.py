@@ -15,11 +15,10 @@
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
-from __future__ import nested_scopes
-
 """I deal with static resources.
 """
 
+from __future__ import nested_scopes
 
 # System Imports
 import os, stat, string
@@ -182,7 +181,7 @@ def loadMimeTypes():
     upd = contentTypes.update
     if os.path.exists("/etc/mime.types"):
         upd(mimetypes.read_mime_types("/etc/mime.types"))
-    
+
     return contentTypes
 
 
@@ -255,7 +254,7 @@ class File(resource.Resource, styles.Versioned):
             self.ignoredExts = ['*']
         else:
             self.ignoredExts = list(ignoredExts)
-        
+
         if not registry:
             self.registry = Registry()
         else:
@@ -321,7 +320,7 @@ class File(resource.Resource, styles.Versioned):
         processor = self.processors.get(ext)
         if processor:
             #the `registry' argument is new, so we have to do this nasty hack
-            try: 
+            try:
                 p = processor(childPath, self.registry)
             except TypeError: # this isn't very robust :(
                 potentialErrorMessage = widgets.formatFailure(failure.Failure())
@@ -335,7 +334,7 @@ class File(resource.Resource, styles.Versioned):
                 #this really should be a very short phase-out period; I doubt there are even any third-party processors
                 warnings.warn("warning: Processor %s doesn't use the signature (childPath, registry), it should." % processor,
                               category=DeprecationWarning, stacklevel=2)
-                              
+
 
             if components.implements(p, resource.IResource):
                 return p
@@ -353,7 +352,7 @@ class File(resource.Resource, styles.Versioned):
         f.indexNames = self.indexNames[:]
         return f
 
-    # methods to allow subclasses to e.g. decrypt files on the fly:    
+    # methods to allow subclasses to e.g. decrypt files on the fly:
     def openForReading(self):
         """Open a file and return it."""
         return open(self.path,'rb')

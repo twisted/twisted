@@ -15,6 +15,11 @@
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
+"""IRC interface to L{twisted.words}.
+
+I implement an IRC server so you can connect to a L{twisted.words}
+service with a regular IRC client.
+"""
 
 # XXX FIXME This will need to be fixed to work with multi-server twisted.words
 # and database access

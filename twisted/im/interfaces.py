@@ -1,11 +1,11 @@
-from twisted.python.components import Interface
-
-import locals
-
+# -*- Python -*-
 """Pan-protocol chat client.
 
 Stability: incendiary, work in progress.
 """
+from twisted.python.components import Interface
+
+import locals
 
 # (Random musings, may not reflect on current state of code:)
 #
