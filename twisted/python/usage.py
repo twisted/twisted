@@ -1,16 +1,16 @@
 
 # Twisted, the Framework of Your Internet
 # Copyright (C) 2001 Matthew W. Lefkowitz
-# 
+#
 # This library is free software; you can redistribute it and/or
 # modify it under the terms of version 2.1 of the GNU Lesser General Public
 # License as published by the Free Software Foundation.
-# 
+#
 # This library is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
 # Lesser General Public License for more details.
-# 
+#
 # You should have received a copy of the GNU Lesser General Public
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
@@ -64,6 +64,7 @@ that will work:
 """
 
 # System Imports
+import string
 import sys
 import getopt
 import types
@@ -75,8 +76,8 @@ error = getopt.error
 
 class Options:
     """
-    A class which can be subclassed to provide command-line options to your
-    program. See twisted.usage.__doc__ for for details.
+    A class which can be subclassed to provide command-line options
+    to your program. See twisted.usage.__doc__ for for details.
     """
     def parseOptions(self, options=None):
         """
@@ -158,9 +159,64 @@ class Options:
         self.postOptions()
 
     def postOptions(self):
-        """ TODO: Undocumented """
+        """I am called after the options are parsed.
+
+        Override this method in your subclass to do something after
+        the options have been parsed and assigned.
+
+        XXX: Like what?
+        """
         pass
 
     def parseArgs(self):
-        """ TODO: Undocumented """
+        """I am called with any leftover arguments which were not options.
+
+        Override me to do something with the remaining arguments on
+        the command line, those which were not flags or options. e.g.
+        interpret them as a list of files to operate on.
+
+        Note that if there more arguments on the command line
+        than this method accepts, parseArgs will blow up with
+        a getopt.error.  This means if you don't override me,
+        parseArgs will blow up if I am passed any arguments at
+        all!
+        """
         pass
+
+
+    def __str__(self):
+        flags = []
+        reflect.accumulateClassList(self.__class__, 'optFlags', flags)
+        strings = []
+        reflect.accumulateClassList(self.__class__, 'optStrings', strings)
+
+        maxFlagLen = 0
+        for long, short in flags:
+            maxFlagLen = max(len(long), maxFlagLen)
+
+        flagLines = []
+        for long, short in flags:
+            if short:
+                short = "-%c," % (short,)
+            long = "--%-*s" % (maxFlagLen, long)
+            flagLines.append("  %s %s  " % (short, long))
+
+        # colWidth1 = len(flagLines[0])
+        # # We have this much room to print the description.
+        # colWidth2 = 80 - colWidth1
+
+        # XXX: add descriptions of flags
+
+        # XXX: now do the same for optStrings
+
+        s = ("Flags:\n%(flagLines)s\n"
+             "Options:\n  -f, --FIXME  optStrings not done yet [default: Eek!]\n"% {
+            'flagLines': string.join(flagLines,'\n')
+            })
+
+        return s
+
+
+    #def __repr__(self):
+    #    XXX: It'd be cool if we could return a succinct representation
+    #        of which flags and options were set here.
