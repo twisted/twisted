@@ -16,7 +16,7 @@
 
 """Cred integration for twisted.web.
 
-This code is unstable and will probably be reimplemented at some point.
+You probably should be using twisted.web.woven.guard instead.
 """
 
 # System Imports
