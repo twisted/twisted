@@ -33,31 +33,33 @@ class DirTestCase(unittest.TestCase):
 
     def testTell(self):
         d = self.d
+        i = iter(d)
         l = 0
-        d.next()
+        i.next()
         self.failUnless(d.tell() > l)
         l = d.tell()
-        d.next()
+        i.next()
         self.failUnless(d.tell() > l)
         l = d.tell()
-        d.next()
+        i.next()
         self.failUnless(d.tell() > l)
         l = d.tell()
-        d.next()
+        i.next()
         self.failUnless(d.tell() > l)
         l = d.tell()
-        d.next()
+        i.next()
         self.failUnless(d.tell() > l)
 
 
     def testClose(self):
         self.d.close()
-        self.failUnlessRaises(dir.DirError, self.d.next)
+        self.failUnlessRaises(dir.DirError, iter(self.d).next)
 
     def testSeek(self):
         d = self.d
+        i = iter(d)
         l = d.tell()
-        d.next()
-        d.next()
+        i.next()
+        i.next()
         d.seek(l)
         self.assertEquals(d.tell(), l)
