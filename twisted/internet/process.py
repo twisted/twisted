@@ -171,7 +171,7 @@ class Process(abstract.FileDescriptor, styles.Ephemeral):
     """
 
     def __init__(self, reactor, command, args, environment, path, proto,
-                 uid=None, gid=None, usePTY = 0):
+                 uid=None, gid=None):
         """Spawn an operating-system process.
 
         This is where the hard work of disconnecting all currently open
@@ -200,13 +200,7 @@ class Process(abstract.FileDescriptor, styles.Ephemeral):
         stdout_read, stdout_write = os.pipe()
         stderr_read, stderr_write = os.pipe()
         stdin_read,  stdin_write  = os.pipe()
-        if usePTY:
-            if pty:
-                self.pid = pty.fork()[0]
-            else:
-                raise Exception('cannot use pty')
-        else:
-            self.pid = os.fork()
+        self.pid = os.fork()
         if self.pid == 0: # pid is 0 in the child process
             # stop debugging, if I am!  I don't care anymore!
             sys.settrace(None)
@@ -437,11 +431,12 @@ class PTYProcess(abstract.FileDescriptor, styles.Ephemeral):
         self.pid=pid
         if pid == 0: # pid is 0 in the child process
             try:
-                attrs = tty.tcgetattr(1)
-                attrs[3] = attrs[3] & ~tty.ICANON & ~tty.ECHO
-                attrs[6][tty.VMIN] = 1
-                attrs[6][tty.VTIME] = 0
-                tty.tcsetattr(1, tty.TCSANOW, attrs)
+                #attrs = tty.tcgetattr(1)
+                #attrs[3] = attrs[3] & ~tty.ICANON & ~tty.ECHO
+                #attrs[6][tty.VMIN] = 1
+                #attrs[6][tty.VTIME] = 0
+                #tty.tcsetattr(1, tty.TCSANOW, attrs)
+                #turns out i don't need that code
 
                 sys.settrace(None)
 
