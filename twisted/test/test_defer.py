@@ -109,6 +109,39 @@ class DeferredTestCase(unittest.TestCase):
                               (defer.FAILURE, "2"),
                               (defer.SUCCESS, "3")])
 
+    def testEmptyDeferredList(self):
+        result = []
+        def cb(resultList, result=result):
+            result.append(resultList)
+
+        dl = defer.DeferredList([])
+        dl.addCallbacks(cb)
+        self.failUnlessEqual(result, [[]])
+
+        defr1 = defer.Deferred()
+        dl.addDeferred(defr1)
+        defr1.callback(1)
+        self.failUnlessEqual(result, [[(1, 1)]])
+
+        defr2 = defer.Deferred()
+        dl.addDeferred(defr2)
+        defr2.callback(2)
+        self.failUnlessEqual(result, [[(1, 1), (1, 2)]])
+
+        result[:] = []
+        dl = defer.DeferredList([], fireOnOneCallback=1)
+        dl.addCallbacks(cb)
+
+        defr1 = defer.Deferred()
+        dl.addDeferred(defr1)
+        defr1.callback('a')
+        self.failUnlessEqual(result, [('a', 0)])
+
+        defr2 = defer.Deferred()
+        dl.addDeferred(defr2)
+        defr2.callback('b')
+        self.failUnlessEqual(result, [('a', 0)])
+
     def testDeferredListFireOnOneError(self):
         defr1 = defer.Deferred()
         defr2 = defer.Deferred()
@@ -121,8 +154,8 @@ class DeferredTestCase(unittest.TestCase):
         defr1.callback("1")
         defr2.addErrback(catch)
         defr2.errback(GenericError("2"))
-        self.failUnlessEqual([str(result[0].value[0].value), str(result[0].value[1])],
-
+        self.failUnlessEqual([str(result[0].value[0].value),
+                              str(result[0].value[1])],
                              ["2", "1"])
 
     def testTimeOut(self):

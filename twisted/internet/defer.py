@@ -384,8 +384,8 @@ class DeferredList(Deferred):
         """
         self.resultList = [None] * len(deferredList)
         Deferred.__init__(self)
-        if len(deferredList) == 0:
-            self.callback([])
+        if len(deferredList) == 0 and not fireOnOneCallback:
+            self.callback(self.resultList)
 
         index = 0
         for deferred in deferredList:
@@ -401,8 +401,8 @@ class DeferredList(Deferred):
         self.resultList.append(None)
         index = len(self.resultList) - 1
         deferred.addCallbacks(self._cbDeferred, self._cbDeferred,
-                                  callbackArgs=(index,SUCCESS),
-                                  errbackArgs=(index,FAILURE))
+                              callbackArgs=(index,SUCCESS),
+                              errbackArgs=(index,FAILURE))
 
     def _cbDeferred(self, result, index, succeeded):
         """(internal) Callback for when one of my deferreds fires.
