@@ -180,12 +180,9 @@ class FlowTest(unittest.TestCase):
     def testCallback(self):
         cb = flow.Callback()
         d = flow.Deferred(buildlist(cb))
-        def startFlow():
-            for x in range(9):
-                cb.callback(x)
-            cb.finish()
-        from twisted.internet import reactor
-        reactor.callLater(0, startFlow)
+        for x in range(9):
+            cb.callback(x)
+        cb.finish()
         rhs = unittest.deferredResult(d)
         self.assertEquals([range(9)],rhs)
 
@@ -200,7 +197,6 @@ class FlowTest(unittest.TestCase):
         r = unittest.deferredError(d) 
         self.failUnless(isinstance(r, failure.Failure))
         self.failUnless(isinstance(r.value, ZeroDivisionError))
-
 
     def testZipFailure(self):
         lhs = [(1,'a'),(2,'b'),(3,'c')]
@@ -230,9 +226,9 @@ class FlowTest(unittest.TestCase):
         from twisted.internet import reactor 
         a = defer.Deferred()
         reactor.callLater(0, lambda: a.callback("test"))
-        b = flow.Merge(a, [1,2, flow.Cooperate(),3])
+        b = flow.Merge(a, [1,2,flow.Cooperate(),3])
         rhs = unittest.deferredResult(flow.Deferred(b))
-        self.assertEquals(rhs, ['test',1, 2, 3])
+        self.assertEquals(rhs, [1, 2, 'test', 3])
 
     def testThreaded(self):
         class CountIterator:

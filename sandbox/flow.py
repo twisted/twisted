@@ -292,7 +292,6 @@ class Merge(Stage):
         for stage in stages:
             self._queue.append(wrap(stage))
         self._cooperate = None
-        self._timeout = None
 
     def _yield(self):
         Stage._yield(self)
@@ -303,13 +302,11 @@ class Merge(Stage):
                 if isinstance(result, Cooperate):
                     self._queue.append(curr)
                     if self._cooperate is curr:
-                        return Cooperate(self._timeout)
+                        self._cooperate = None
+                        return result
                     if self._cooperate is None:
                         self._cooperate = curr
-                        self._timeout = result.timeout
                         continue
-                    if self._timeout > result.timeout:
-                         self._timeout = result.timeout
                     continue
                 raise TypeError("Unsupported flow instruction")
             self.result = curr.result
@@ -344,8 +341,9 @@ class Block(Stage):
             result = stage._yield()
             if result:
                 if isinstance(result, Cooperate):
-                    self.block(result.timeout)
-                    continue
+                    if result.__class__ == Cooperate:
+                        self.block(result.timeout)
+                        continue
                 raise TypeError("Unsupported flow instruction")
             return stage.next()
 
@@ -515,7 +513,7 @@ class Deferred(defer.Deferred):
         self.failureAsResult = failureAsResult
         self._results = []
         self._stage = wrap(stage)
-        reactor.callLater(0, self._execute)
+        self._execute()
 
     def _execute(self, dummy = None):
         cmd = self._stage
