@@ -19,6 +19,7 @@ from pyunit import unittest
 from twisted.news import news, database
 from twisted.protocols import nntp, loopback
 from twisted.protocols import protocol
+from twisted.internet import main
 
 ALL_GROUPS = ('alt.test.nntp', 0, 0, 'y')
 GROUP = ('0', '0', '0', 'alt.test.nntp', 'group', 'selected')
@@ -83,6 +84,10 @@ class NNTPTestCase(unittest.TestCase):
         server = nntp.NNTPServer(database.PickleStorage)
         client = TestNNTPClient()
         loopback.loopback(server, client)
+
+        # XXX FIXME three things seem to be task.schedule'd here, and I don't
+        # really know what they are.
+        main.iterate(); main.iterate(); main.iterate()
 
     def tearDown(self):
         # Clean up the pickle file
