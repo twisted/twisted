@@ -57,8 +57,8 @@ class Options(usage.Options):
     element is the long name, and will be used on the command line
     as <code>--fast</code>. The second one is the short name, and
     will be used on the command line as <code>-f</code>. The long
-    name also determines the name of the key that will be set in
-    the 'opts' dict. Its value will be 1 if the option was seen, 0
+    name also determines the name of the key that will be set on
+    the Options instance. Its value will be 1 if the option was seen, 0
     otherwise. Here is an example for usage: 
 <pre class="python">
 class Options(usage.Options):
@@ -74,16 +74,21 @@ except usage.UsageError, errortext:
     print '%s: %s' % (sys.argv[0], errortext)
     print '%s: Try --help for usage details.' % (sys.argv[0])
     sys.exit(1)
-if options.opts['fast']:
+if options['fast']:
     print "fast",
-if options.opts['good']:
+if options['good']:
     print "good",
-if options.opts['cheap']:
+if options['cheap']:
     print "cheap",
 print
 </pre>
 
     <p>The above will print <code>fast good</code>.</p>
+
+    <p>Note here that Options fully supports the mapping interface. You can
+    access it mostly just like you can access any other dict. Options are stored
+    as mapping items in the Options instance: parameters as 'paramname': 'value'
+    and flags as 'flagname': 1 or 0.</p>
 
     <h3>Inheritance, Or: How I Learned to Stop Worrying and Love
     the Superclass</h3>
@@ -113,9 +118,9 @@ class SpecificOptions(BaseOptions):
     optFlags = [["quiet", "q"], ["fast", "f"], ["good", "g"], ["cheap", "c"]]
 </pre>
 
-    <h2>String Options</h2>
+    <h2>Parameters</h2>
 
-    <p>String options are specified using the attribute
+    <p>Parameters are specified using the attribute
     <code>optParameters</code>. They <em>must</em> be given a
     default. If you want to make sure you got the parameter from
     the command line, give a non-string default. Since the command
@@ -137,15 +142,15 @@ except usage.UsageError, errortext:
     print '%s: Try --help for usage details.' % (sys.argv[0])
     sys.exit(1)
 
-if config.opts['user'] is not None:
-    print "Hello," config.opts['user']
+if config['user'] is not None:
+    print "Hello," config['user']
 print "So, you want it:"
 
-if config.opts['fast']:
+if config['fast']:
     print "fast",
-if config.opts['good']:
+if config['good']:
     print "good",
-if config.opts['cheap']:
+if config['cheap']:
     print "cheap",
 print
 </pre>
@@ -167,13 +172,15 @@ from twisted.python import usage
 
 class Options(usage.Options):
 
-    verbosity = 0 # default
+    def __init__(self):
+        usage.Options.__init__(self)
+	self['verbosity'] = 0 # default
 
     def opt_verbose(self):
-        self.opts['verbosity'] = self.opts['verbosity']+1
+        self['verbosity'] = self['verbosity']+1
 
     def opt_quiet(self):
-        self.opts['verbosity'] = self.['verbosity']-1
+        self['verbosity'] = self['verbosity']-1
 
     opt_v = opt_verbose
     opt_q = opt_quiet
@@ -181,14 +188,13 @@ class Options(usage.Options):
 
     <p>Command lines that like like "command -v -v -v -v" will
     increase verbosity to 4, while "command -q -q -q" will decrease
-    verbosity to -3. Note that while it is not required, it is
-    recommended that you store option-related state in the
-    'self.opts' dict, which is where the rest of the options are
-    stored.</p>
+    verbosity to -3. 
+    </p>
 
     <p>The <code>usage.Options</code> class knows that these are
     parameter-less options, since the methods do not receive an
     argument. Here is an example for a method with a parameter:</p>
+
 <pre class="python">
 from twisted.python import usage
 
@@ -196,10 +202,10 @@ class Options(usage.Options):
 
     def __init__(self):
         usage.Options.__init__(self)
-        self.opts['symbols'] = []
+        self['symbols'] = []
 
     def opt_define(self, symbol):
-        self.opts['symbols'].append(symbol)
+        self['symbols'].append(symbol)
 
     opt_D = opt_define
 </pre>
@@ -221,8 +227,8 @@ class Options(usage.Options):
     optParameters = [["max_differences", "d", 1]]
 
     def parseArgs(self, origin, changed):
-        self.opts['origin'] = origin
-        self.opts['changed'] = changed
+        self['origin'] = origin
+        self['changed'] = changed
 </pre>
 
     <p>The command should look like <code>command origin
@@ -245,7 +251,7 @@ class Options(usage.Options):
     optFlags = [["fast", "f"], ["good", "g"], ["cheap", "c"]]
 
     def postOptions(self):
-        if self.opts['fast'] and self.opts['good'] and self.opts['cheap']:
+        if self['fast'] and self['good'] and self['cheap']:
             raise usage.UsageError, "can't have it all, brother"
 </pre>
 
