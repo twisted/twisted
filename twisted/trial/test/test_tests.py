@@ -388,7 +388,10 @@ class TestTests(unittest.TestCase):
 
     def testMethods(self):
         from twisted.trial.test.common import BogusReporter
-        for klass in (self.Tests, self.TestLeetTimeout, self.TestSkipClassAttr, self.TestTodoClassAttr):
+        for klass in (self.Tests,
+                      self.TestLeetTimeout,
+                      self.TestSkipClassAttr,
+                      self.TestTodoClassAttr):
             suite = runner.TestSuite(BogusReporter(), util._Janitor())
             suite.addTestClass(klass)
             suite.run()
