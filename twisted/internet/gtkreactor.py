@@ -149,11 +149,6 @@ class PortableGtkReactor(default.SelectReactor):
     input_add is not supported on GTK+ for Win32, apparently.
     """
     
-    def doIteration(self, delay=0.0):
-        if delay != 0:
-            log.msg("Error, gtk doIteration() only supports delay of 0")
-        default.SelectReactor.doIteration(self,delay)
-    
     def crash(self):
         gtk.mainquit()
 
@@ -167,12 +162,9 @@ class PortableGtkReactor(default.SelectReactor):
         """
         global _simtag
         if _simtag is not None:
-            gtk.timeout_remove(_simtag)
+            gtk.idle_remove(_simtag)
         self.iterate()
-        timeout = min(self.timeout(), 0.1)
-        if timeout is None:
-            timeout = 0.1
-        _simtag = gtk.timeout_add(timeout * 1010, self.simulate) # grumble
+        _simtag = gtk.idle_add(self.simulate)
 
 
 def install():
