@@ -159,6 +159,7 @@ class IMAP4HelperTestCase(unittest.TestCase):
         
         for (query, expected) in zip(inputs, outputs):
             self.assertEquals(query, expected)
+        
 
 class SimpleMailbox:
     flags = ('\\Flag1', 'Flag2', '\\AnotherSysFlag', 'LastFlag')
@@ -671,6 +672,3 @@ class IMAP4ServerTestCase(unittest.TestCase):
         self.assertEquals(m.messages[0], ('Message 2', ('AnotherFlag',), None, 1))
         
         self.assertEquals(self.results, [0, 2])
-        
-    def testSearch(self):
-        pass

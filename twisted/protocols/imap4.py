@@ -530,6 +530,19 @@ class IMAP4Server(basic.LineReceiver):
 
     def _ebExpunge(self, failure, tag):
         self.sendBadResponse(tag, 'EXPUNGE failed: ' + str(failure))
+    
+    def select_SEARCH(self, tag, args):
+        query = parseNestedParens(args)
+        d = self.mbox.search(query)
+        if isinstance(d, defer.Deferred):
+            d.addCallbacks(
+                self._cbSearch,
+                self._ebSearch,
+                callbackArgs=(tag,),
+                errbackArgs=(tag,)
+            )
+        else:
+            self._cbSearch(d, tag)
 
 
 class UnhandledResponse(IMAP4Exception): pass
@@ -1661,7 +1674,19 @@ class IMailbox(components.Interface):
         """Remove all messages flagged \\Deleted.
         
         @rtype: C{Deferred}
-        @return: A deferred whose callback should be invoked with a list of
-        message sequence numbers which were deleted and whose errback should
-        be invoked if there is an error.
+        @return: A deferred whose callback is invoked with a list of
+        message sequence numbers which were deleted and whose errback is
+        invoked if there is an error.
+        """
+
+    def search(self, query):
+        """Search for messages that meet the given query criteria.
+        
+        @type query: C{list}
+        @param query: The search criteria
+        
+        @rtype: C{Deferred}
+        @return: A deferred whose callback is invoked with a list of
+        message sequence numbers which match the search criteria and whose
+        errback is invoked if there is an error.
         """
