@@ -661,7 +661,10 @@ class IRCClient(basic.LineReceiver):
 
     def mode(self, chan, set, modes, limit = None, user = None, mask = None):
         """Change the modes on a user or channel."""
-        line = 'MODE %s %s%s' % (chan, set and '+' or '-', modes)
+        if set:
+            line = 'MODE %s +%s' % (chan, modes)
+        else:
+            line = 'MODE %s -%s' % (chan, modes)
         if limit is not None:
             line = '%s %d' % (line, limit)
         elif user is not None:
