@@ -24,6 +24,7 @@ Maintainer: U{Itamar Shtull-Trauring<mailto:twisted@itamarst.org>}
 
 # System Imports
 import socket
+import warnings
 
 # Twisted Imports
 
@@ -129,7 +130,9 @@ def installReactor(reactor):
 
     # IReactorTime
     if implements(reactor, IReactorTime):
-        addTimeout = lambda m, t, f=reactor.callLater: f(t, m)
+        def addTimeout(m, t, f=reactor.callLater):
+            warnings.warn("main.addTimeout is deprecated, use reactor.callLater instead.")
+            f(t, m)
 
     # ???
     if hasattr(reactor, "wakeUp"):

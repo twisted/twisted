@@ -82,7 +82,7 @@ def gotRooms2(rooms):
     main.shutDown()
 
 def tick():
-    main.addTimeout(tick, 0.5)
+    reactor.callLater(0.5, tick)
 
 newRoom = None
 
@@ -109,6 +109,6 @@ def kickOffTests(ignoredResult=0):
 kf = row.KeyFactory(100000,50000)
 
 # make sure we can be shut down on windows.
-main.addTimeout(tick, 0.5)
-main.addTimeout(kickOffTests, 0.4)
+reactor.callLater(0.5, tick)
+reactor.callLater(0.4, kickOffTests)
 reactor.run()
