@@ -7,14 +7,14 @@ d = o.open("http://www.yahoo.com/")
 d.addCallback(download(file("yahoo.html", 'wb'))
 d.addCallback(close)
 """
-from twisted.internet import protocol
+from twisted.internet import protocol, defer
 from twisted.protocols import http
 import urllib2, urlparse
 
 class Request(urllib2.Request):
 
-    def __init__(self, url, data, headers, visited=None):
-        urllib2.Request.__init__(url, data, headers)
+    def __init__(self, url, data=None, headers={}, visited=None):
+        urllib2.Request.__init__(self, url, data, headers)
         if visited is None:
             visited = {}
         self.visited = visited
@@ -26,12 +26,11 @@ class Response:
         self.version = version
         self.status = status
         self.message = message
+        self.headers = {}
         self._events = []
 
     def handleHeader(self, key, value):
-        key = key.lower()
-        l = self.headers[key] = self.headers.get(key, [])
-        l.append(value)
+        self.headers.setdefault(key.lower(), []).append(value)
 
     def setHandler(self, dataReceived, connectionLost, dataDone):
         self.dataReceived = dataReceived
@@ -51,7 +50,7 @@ class Response:
 class HTTPClient(http.HTTPClient):
 
     def connectionMade(self):
-        self.factory.connection.callback(fobj)
+        self.factory.connection.callback(self)
 
     def setResponseSink(self, deferred):
         self.sink = deferred
@@ -63,13 +62,13 @@ class HTTPClient(http.HTTPClient):
     def handleEndHeaders(self):
         self.sink.callback(self.response)
         def _(reason):
-            HTTPClient.connectionLost(self, reason)
+            http.HTTPClient.connectionLost(self, reason)
             if not self.done:
                 self.response.connectionLost(reason)
         self.connectionLost = _
 
     def connectionLost(self, reason):
-        HTTPClient.connectionLost(self, reason)
+        http.HTTPClient.connectionLost(self, reason)
         self.sink.errback(reason)
 
     def handleResponsePart(self, data):
@@ -82,7 +81,7 @@ class HTTPClient(http.HTTPClient):
 class ClientFactory(protocol.ClientFactory):
     protocol = HTTPClient
     def __init__(self):
-        self.connection = defer.Deferred
+        self.connection = defer.Deferred()
     def connectionFailed(self, _, reason):
         self.connection.errback(reason)
 
@@ -118,7 +117,7 @@ class Opener:
     def callMethod(self, name, *args, **kw):
         value = None
         for handler in self.handlers:
-            value = getattr(handler, name, lambda *args,**kw:NEXT)(*args, **kw)
+            value = getattr(handler, name, lambda *args,**kw:None)(*args, **kw)
             if value is not None:
                 break
         if value is None:
@@ -131,7 +130,7 @@ class Opener:
         except NoHandler:
             pass
         factory = ClientFactory()
-        self.callMethod('connect_'+request.type, request, factory)
+        self.callMethod('connect_'+request.get_type(), request, factory)
         d = factory.connection
         d.addCallback(sendHeaders, request)
         def _(connection):
@@ -154,15 +153,24 @@ class BaseHandler:
     def setOpener(self, parent):
         self.parent = parent
 
+HTTP_PORT = 80
+HTTPS_PORT = 443
+
 class BaseHTTPHandler(BaseHandler):
 
     def connect_http(self, request, factory):
-        host, port = request.get_host(), request.get_port()
+        from twisted.internet import reactor
+        host, port = urllib2.splitport(request.get_host())
+        if port is None:
+            port = HTTP_PORT
         reactor.connectTCP(host, port, factory)
         return 1 # handled
 
     def connect_https(self, request, factory):
-        host, port = request.get_host(), request.get_port()
+        from twisted.internet import reactor
+        host, port = urllib2.splitport(request.get_host())
+        if port is None:
+            port = HTTPS_PORT
         reactor.connectSSL(host, port, factory)
         return 1 # handled
 
@@ -225,9 +233,9 @@ def opener():
 def gatherResults(response):
     d, l = defer.Deferred(), []
     response.setHandler(
-        dataReceived=l.append
-        dataDone=lambda:d.callback(''.join(l))
-        connectionLost=d.errback
+        dataReceived=l.append,
+        dataDone=lambda:d.callback(''.join(l)),
+        connectionLost=d.errback,
     )
     return d
 
@@ -235,11 +243,11 @@ def download(fp):
     def _(response):
         d = defer.Deferred()
         response.setHandler(
-            dataReceived=fp.write
-            dataDone=lambda:d.callback(fp)
-            connectionLost=d.errback
+            dataReceived=fp.write,
+            dataDone=lambda:d.callback(fp),
+            connectionLost=d.errback,
         )
-        return processDeferred(d)
+        return d
     return _
 
 def close(fp):
@@ -253,3 +261,10 @@ def urlretrieve(name, url, data=None):
     d.addCallback(download(file(name, 'wb')))
     d.addCallback(close)
     return d
+
+if __name__ == '__main__':
+    from twisted.internet import reactor
+    import sys
+    opener().open(Request('http://www.yahoo.com/')
+    ).addCallback(download(sys.stdout))
+    reactor.run()
