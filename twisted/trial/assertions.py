@@ -51,17 +51,21 @@ def failUnlessRaises(exception, f, *args, **kwargs):
 
     @param exception: exception type that is to be expected
     @param f: the function to call
+    
+    @return: The raised exception instance, if it is of the given type.
+    @raise FailTest: Raised if the function call does not raise an exception
+    or if it raises an exception of a different type.
     """
     try:
-        if not twisted.python.util.raises(exception, f, *args, **kwargs):
-            raise FailTest, '%s not raised' % exception.__name__
-    except FailTest, e:
-        raise
+        result = f(*args, **kwargs)
+    except exception, inst:
+        return inst
     except:
-        # import traceback; traceback.print_exc()
         raise FailTest, '%s raised instead of %s:\n %s' % \
               (sys.exc_info()[0], exception.__name__,
                failure.Failure().getTraceback())
+    else:
+        raise FailTest, '%s not raised (%r returned)' % (exception.__name__, result)
 
 def failUnlessEqual(first, second, msg=None):
     """fail the test if C{first} and C{second} are not equal

@@ -15,16 +15,6 @@ def setUp():
     p.makeConnection(t)
     return p, t
 
-def assertRaisesInst(_exceptionInstance, _f, *_a, **_kw):
-    try:
-        result = _f(*_a, **_kw)
-    except _exceptionInstance.__class__, exc:
-        unittest.assertEquals(exc.args, _exceptionInstance.args)
-    else:
-        raise unittest.FailTest(
-            "%s returned %r instead of raising %r" % (
-                _f.func_name, result, _exceptionInstance))
-
 class POP3ClientLoginTestCase(unittest.TestCase):
     def testOkUser(self):
         p, t = setUp()
@@ -38,8 +28,8 @@ class POP3ClientLoginTestCase(unittest.TestCase):
         d = p.user("username")
         self.assertEquals(t.value(), "USER username\r\n")
         p.dataReceived("-ERR account suspended\r\n")
-        exc = ServerErrorResponse("account suspended")
-        assertRaisesInst(exc, unittest.wait, d)
+        exc = self.assertRaises(ServerErrorResponse, unittest.wait, d)
+        self.assertEquals(exc.args[0], "account suspended")
 
     def testOkPass(self):
         p, t = setUp()
@@ -53,8 +43,8 @@ class POP3ClientLoginTestCase(unittest.TestCase):
         d = p.password("password")
         self.assertEquals(t.value(), "PASS password\r\n")
         p.dataReceived("-ERR go away\r\n")
-        exc = ServerErrorResponse("go away")
-        assertRaisesInst(exc, unittest.wait, d)
+        exc = self.assertRaises(ServerErrorResponse, unittest.wait, d)
+        self.assertEquals(exc.args[0], "go away")
 
     def testOkLogin(self):
         p, t = setUp()
@@ -74,8 +64,8 @@ class POP3ClientLoginTestCase(unittest.TestCase):
         p.dataReceived("+OK waiting on you\r\n")
         self.assertEquals(t.value(), "USER username\r\nPASS password\r\n")
         p.dataReceived("-ERR bogus login\r\n")
-        exc = ServerErrorResponse("bogus login")
-        assertRaisesInst(exc, unittest.wait, d)
+        exc = self.assertRaises(ServerErrorResponse, unittest.wait, d)
+        self.assertEquals(exc.args[0], "bogus login")
 
     def testBadUsernameLogin(self):
         p, t = setUp()
@@ -83,8 +73,8 @@ class POP3ClientLoginTestCase(unittest.TestCase):
         d = p.login("username", "password")
         self.assertEquals(t.value(), "USER username\r\n")
         p.dataReceived("-ERR bogus login\r\n")
-        exc = ServerErrorResponse("bogus login")
-        assertRaisesInst(exc, unittest.wait, d)
+        exc = self.assertRaises(ServerErrorResponse, unittest.wait, d)
+        self.assertEquals(exc.args[0], "bogus login")
 
     def testServerGreeting(self):
         p, t = setUp()
@@ -159,8 +149,8 @@ class POP3ClientListTestCase(unittest.TestCase):
         d = p.listSize()
         self.assertEquals(t.value(), "LIST\r\n")
         p.dataReceived("-ERR Fatal doom server exploded\r\n")
-        exc = ServerErrorResponse("Fatal doom server exploded")
-        assertRaisesInst(exc, unittest.wait, d)
+        exc = self.assertRaises(ServerErrorResponse, unittest.wait, d)
+        self.assertEquals(exc.args[0], "Fatal doom server exploded")
 
     def testListUID(self):
         p, t = setUp()
@@ -187,8 +177,8 @@ class POP3ClientListTestCase(unittest.TestCase):
         d = p.listUID()
         self.assertEquals(t.value(), "UIDL\r\n")
         p.dataReceived("-ERR Fatal doom server exploded\r\n")
-        exc = ServerErrorResponse("Fatal doom server exploded")
-        assertRaisesInst(exc, unittest.wait, d)
+        exc = self.assertRaises(ServerErrorResponse, unittest.wait, d)
+        self.assertEquals(exc.args[0], "Fatal doom server exploded")
 
 class POP3ClientMessageTestCase(unittest.TestCase):
     def testRetrieve(self):
@@ -250,8 +240,8 @@ class POP3ClientMessageTestCase(unittest.TestCase):
         d = p.retrieve(0)
         self.assertEquals(t.value(), "RETR 1\r\n")
         p.dataReceived("-ERR Fatal doom server exploded\r\n")
-        exc = ServerErrorResponse("Fatal doom server exploded")
-        assertRaisesInst(exc, unittest.wait, d)
+        exc = self.assertRaises(ServerErrorResponse, unittest.wait, d)
+        self.assertEquals(exc.args[0], "Fatal doom server exploded")
 
 class POP3ClientMiscTestCase(unittest.TestCase):
     def testCapability(self):
@@ -278,8 +268,8 @@ class POP3ClientMiscTestCase(unittest.TestCase):
         d = p.capabilities()
         self.assertEquals(t.value(), "CAPA\r\n")
         p.dataReceived("-ERR This server is lame!\r\n")
-        exc = ServerErrorResponse("This server is lame!")
-        assertRaisesInst(exc, unittest.wait, d)
+        exc = self.assertRaises(ServerErrorResponse, unittest.wait, d)
+        self.assertEquals(exc.args[0], "This server is lame!")
 
     def testDelete(self):
         p, t = setUp()
@@ -293,5 +283,5 @@ class POP3ClientMiscTestCase(unittest.TestCase):
         d = p.delete(3)
         self.assertEquals(t.value(), "DELE 4\r\n")
         p.dataReceived("-ERR Winner is not you.\r\n")
-        exc = ServerErrorResponse("Winner is not you.")
-        assertRaisesInst(exc, unittest.wait, d)
+        exc = self.assertRaises(ServerErrorResponse, unittest.wait, d)
+        self.assertEquals(exc.args[0], "Winner is not you.")

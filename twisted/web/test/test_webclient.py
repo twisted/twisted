@@ -183,6 +183,7 @@ class WebClientTestCase(unittest.TestCase):
         f = unittest.deferredError(client.getPage(self.getURL("nosuchfile")))
         f.trap(error.Error)
         self.assertEquals(f.value.args[0], "404")
+        print f.value.args
         f = unittest.deferredError(client.getPage(self.getURL("error")))
         f.trap(error.Error)
         self.assertEquals(f.value.args[0], "401")
