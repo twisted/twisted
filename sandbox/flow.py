@@ -233,7 +233,7 @@ class Callable(Wrapper):
     def _yield_next(self, result):
         """ Fetch the next value from the underlying callable """
         if callable(result):
-            self._next = result
+            self._callable = result
             return Continue
         return Wrapper._yield_next(self, result)
 
