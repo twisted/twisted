@@ -178,6 +178,7 @@ def assertApproximates(first, second, tolerance, msg=None):
 
 def assertFailure(deferred, *expectedFailures):
     """assert that deferred will errback a failure of type in expectedFailures
+    this is analagous to an async assertRaises 
     """
     def _cb(ignore):
         raise FailTest, "did not catch an error, instead got %r" % (ignore,)

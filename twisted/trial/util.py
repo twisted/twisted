@@ -45,16 +45,6 @@ class SignalStateManager:
 def _append(result, lst):
     lst.append(result)
 
-def _getDeferredResult(d, timeout=None):
-    from twisted.internet import reactor
-    if timeout is not None:
-        d.setTimeout(timeout)
-    resultSet = []
-    d.addBoth(_append, resultSet)
-    while not resultSet:
-        reactor.iterate(0.01)
-    return resultSet[0]
-
 def deferredResult(d, timeout=None):
     """This function is DEPRECATED
     
@@ -67,11 +57,33 @@ def deferredResult(d, timeout=None):
                    "call twisted.trial.util.wait to block until the "
                    "deferred fires."), DeprecationWarning,
                   stacklevel=2)
-    result = _getDeferredResult(d, timeout)
+
+    result = _wait(d, timeout)
     if isinstance(result, failure.Failure):
         raise result
     else:
         return result
+
+def deferredError(d, timeout=None):
+    """This function is DEPRECATED
+    Waits for deferred to fail, and it returns the Failure.
+
+    If the deferred succeeds, raises FailTest.
+    """
+    warnings.warn(("twisted.trial.util.deferredError is DEPRECATED! "
+                   "Return a deferred from your test method, "
+                   "and trial will do the Right Thing. Alternatively, "
+                   "call twisted.trial.util.wait to block until the "
+                   "deferred fires."), DeprecationWarning,
+                  stacklevel=2)
+
+    result = _wait(d, timeout)
+    if isinstance(result, failure.Failure):
+        return result
+    else:
+        from twisted.trial import unittest
+        raise unittest.FailTest, "Deferred did not fail: %r" % (result,)
+
 
 class MultiError(Exception):
     """smuggle a sequence of failures through a raise
@@ -228,44 +240,58 @@ def spinWhile(f, timeout=4.0, msg="f did not return false before timeout"):
             raise defer.TimeoutError, msg
         reactor.iterate(0.1)
 
-IN_WAIT = 0
+REENTRANT_WAIT_ERROR_MSG = ("already waiting on a deferred, do not call wait() "
+                            "in callbacks or from threads "
+                            "until such time as runUntilCurrent becomes "
+                            "reentrant. (see issue 781)")
 
-def _wait(d, timeout=None):
-    from twisted.trial import unittest, itrial
-    from twisted.internet import reactor
-    global IN_WAIT
+class WaitIsNotReentrantError(Exception):
+    pass
 
-    if IN_WAIT > 0:
-        warnings.warn("Calling reactor.iterate from within reactor.iterate, this is bad")
+class _Wait(object):
+    _active = 0
 
-    IN_WAIT += 1
-    try:
-        assert isinstance(d, defer.Deferred), "first argument must be a deferred!"
+    def wait(cls, d, timeout=None):
+        from twisted.trial import unittest, itrial
+        from twisted.internet import reactor
 
-        def _dbg(msg):
-            log.msg(iface=itrial.ITrialDebug, timeout=msg)
+        if cls._active >= 1:
+            raise WaitIsNotReentrantError, REENTRANT_WAIT_ERROR_MSG
+        cls._active += 1
 
-        end = start = time.time()
+        try:
+            assert isinstance(d, defer.Deferred), "first argument must be a deferred!"
 
-        itimeout = itrial.ITimeout(timeout)
+            def _dbg(msg):
+                log.msg(iface=itrial.ITrialDebug, timeout=msg)
 
-        resultSet = []
-        d.addBoth(resultSet.append)
+            end = start = time.time()
 
-        # TODO: refactor following to use spinWhile
+            itimeout = itrial.ITimeout(timeout)
 
-        if itimeout.duration is None:
-            while not resultSet:
-                reactor.iterate(0.01)
-        else:
-            end += float(itimeout.duration)
-            while not resultSet:
-                if itimeout.duration >= 0.0 and time.time() > end:
-                    raise itimeout.excClass, itimeout.excArg
-                reactor.iterate(0.01)
-        return resultSet[0]
-    finally:
-        IN_WAIT -= 1
+            resultSet = []
+            d.addBoth(resultSet.append)
+
+            # TODO: refactor following to use spinWhile
+
+            if itimeout.duration is None:
+                while not resultSet:
+                    reactor.iterate(0.01)
+            else:
+                end += float(itimeout.duration)
+                while not resultSet:
+                    if itimeout.duration >= 0.0 and time.time() > end:
+                        raise itimeout.excClass, itimeout.excArg
+                    reactor.iterate(0.01)
+            return resultSet[0]
+        finally:
+            cls._active -= 1
+
+    wait = classmethod(wait)
+
+
+# XXX: Fix this
+_wait = _Wait.wait
 
 
 DEFAULT_TIMEOUT = 4.0 # sec
@@ -314,25 +340,6 @@ def wait(d, timeout=DEFAULT_TIMEOUT, useWaitError=False):
 
     return r
 
-
-def deferredError(d, timeout=None):
-    """This function is DEPRECATED
-    Waits for deferred to fail, and it returns the Failure.
-
-    If the deferred succeeds, raises FailTest.
-    """
-    warnings.warn(("twisted.trial.util.deferredError is DEPRECATED! "
-                   "Return a deferred from your test method, "
-                   "and trial will do the Right Thing. Alternatively, "
-                   "call twisted.trial.util.wait to block until the "
-                   "deferred fires."), DeprecationWarning,
-                  stacklevel=2)
-    result = _getDeferredResult(d, timeout)
-    if isinstance(result, failure.Failure):
-        return result
-    else:
-        from twisted.trial import unittest
-        raise unittest.FailTest, "Deferred did not fail: %r" % (result,)
 
 
 def extract_tb(tb, limit=None):

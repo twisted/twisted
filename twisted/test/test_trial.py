@@ -90,7 +90,7 @@ class TestUserMethod(unittest.TestCase):
         failUnless(umw.errors[0].check(UserError))
         failUnless(umw.endTime > umw.startTime)
     
-    def testReturnedDeferredThenWait(self):
+    def _returnedDeferredThenWait(self):
         def threadedOperation():
             time.sleep(0.1)
             return "Beginning"
@@ -100,12 +100,15 @@ class TestUserMethod(unittest.TestCase):
     def _cbDoWait(self, result):
         self.assertEquals(result, "Beginning")
         d = defer.Deferred()
-        reactor.callLater(0.1, d.callback, "End")
+        self.laterCall = reactor.callLater(0.1, d.callback, "End")
         self.assertEquals(unittest.wait(d), "End")
     
-    testReturnedDeferredThenWait.todo = "runUntilCurrent is not re-entrant!"
+    def testReturnedDeferredThenWait(self):
+        d = self._returnedDeferredThenWait()
+        assertRaises(util.WaitIsNotReentrantError, unittest.wait, d)
+        self.laterCall.cancel()
     
-    def testReentrantWait(self):
+    def _reentrantWait(self):
         def threadedOperation(n):
             time.sleep(n)
             return n
@@ -114,7 +117,8 @@ class TestUserMethod(unittest.TestCase):
         d1.addCallback(lambda ignored: unittest.wait(d2))
         unittest.wait(d1)
     
-    testReentrantWait.todo = "runUntilCurrent is not re-entrant!"
+    def testReentrantWait(self):
+        assertRaises(util.WaitIsNotReentrantError, self._reentrantWait)
 
 class TestWait2(unittest.TestCase):
     NUM_FAILURES = 3
