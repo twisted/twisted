@@ -67,6 +67,14 @@ class SMTPManagedRelayer(relay.SMTPRelayer):
 	else: 
 	    self.manager.notifyFailure(self, message)
 
+    def connectionFailed(self):
+        '''called when connection could not be made
+
+        our manager should be notified that this happened,
+        it might prefer some other host in that case'''
+        self.manager.notifyNoConection()
+        self.manager.notifyDone()
+
     def connectionLost(self):
         '''called when connection is broken
 
@@ -130,6 +138,9 @@ class SmartHostSMTPRelayingManager:
 	    self.notifyFailure(relay, message)
         del self.managed[relay]
 
+    def notifyNoConnection(self, relay):
+        pass
+
     def __getstate__(self):
         '''(internal) delete volatile state'''
         dct = self.__dict__.copy()
@@ -175,7 +186,37 @@ class SmartHostSMTPRelayingManager:
 	transport = tcp.Client(self.smartHostAddr[0], self.smartHostAddr[1], 
                                protocol)
 
+class MXCalculator:
 
+    timeOutBadMX = 60*60 # One hour
+
+    def __init__(self):
+        self.badMXs = {}
+
+    def markBad(self, mx):
+        self.badMXs[mx] = time.time()+self.timeOutBadMX
+
+    def markGood(self, mx):
+        del self.badMXs[mx]
+
+    def getMX(self, deferred, domain):
+        ""
+        # TBD
+
+    def getMXAnswer(self, deferred, answers):
+        if not answers:
+            deferred.errback("No MX found")
+        for answer in answers:
+            if not self.badMXs.has_key(answer):
+                deferred.callback(answer)
+                return
+            t = time.time() - self.badMXs[answer]
+            if t > 0:
+                del self.badMXs[answer]
+                deferrd.callback(answer)
+                return
+        deferred.callback(answers[0])
+        
 # It's difficult to pickle methods
 # So just have a function call the method
 def checkState(manager):
