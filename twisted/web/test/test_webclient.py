@@ -114,9 +114,9 @@ class WebClientTestCase(unittest.TestCase):
 
     def testBrokenDownload(self):
         # test what happens when download gets disconnected in the middle
-        f = unittest.deferredError(client.getPage(self.getURL("broken")))
-        f.trap(client.PartialDownloadError)
-        self.assertEquals(f.value.response, "abc")
+        exc = self.assertRaises(client.PartialDownloadError, unittest.wait,
+                                client.getPage(self.getURL("broken")))
+        self.assertEquals(exc.response, "abc")
     
     def testHostHeader(self):
         # if we pass Host header explicitly, it should be used, otherwise
@@ -132,10 +132,11 @@ class WebClientTestCase(unittest.TestCase):
                           "0123456789")
 
     def testTimeout(self):
-        r = unittest.deferredResult(client.getPage(self.getURL("wait"), timeout=1.5))
-        self.assertEquals(r, 'hello!!!')
-        f = unittest.deferredError(client.getPage(self.getURL("wait"), timeout=0.5))
-        f.trap(defer.TimeoutError)
+        d = client.getPage(self.getURL("wait"), timeout=1.5)
+        self.assertEquals(unittest.wait(d), "hello!!!")
+        return unittest.assertFailure(
+            client.getPage(self.getURL("wait"), timeout=0.5),
+            defer.TimeoutError)
 
     def testDownloadPage(self):
         name = self.mktemp()
@@ -152,9 +153,9 @@ class WebClientTestCase(unittest.TestCase):
             def close(self):
                 pass
         ef = errorfile()
-        d = client.downloadPage(self.getURL("file"), ef)
-        f = unittest.deferredError(d)
-        self.failUnless(f.check(IOError))
+        return unittest.assertFailure(
+            client.downloadPage(self.getURL("file"), ef),
+            IOError)
 
     def testDownloadPageError2(self):
         class errorfile:
@@ -163,9 +164,9 @@ class WebClientTestCase(unittest.TestCase):
             def close(self):
                 raise IOError, "badness happened during close"
         ef = errorfile()
-        d = client.downloadPage(self.getURL("file"), ef)
-        f = unittest.deferredError(d)
-        self.failUnless(f.check(IOError))
+        return unittest.assertFailure(
+            client.downloadPage(self.getURL("file"), ef),
+            IOError)
 
     def testDownloadPageError3(self):
         # make sure failures in open() are caught too. This is tricky.
@@ -173,35 +174,28 @@ class WebClientTestCase(unittest.TestCase):
         tmpfile = open("unwritable", "wb")
         tmpfile.close()
         os.chmod("unwritable", 0) # make it unwritable (to us)
-        d = client.downloadPage(self.getURL("file"), "unwritable")
-        f = unittest.deferredError(d)
-        self.failUnless(f.check(IOError))
-        os.chmod("unwritable", 0700)
+        d = unittest.assertFailure(
+            client.downloadPage(self.getURL("file"), "unwritable"),
+            IOError)
+        d.addBoth(self._cleanupDownloadPageError3)
+        return d
+
+    def _cleanupDownloadPageError3(self, ignored):
+        os.chmod("unwritable", 700)
         os.unlink("unwritable")
+        return ignored
+
+    def _downloadTest(self, method):
+        for (url, code) in [("nosuchfile", "404"), ("error", "401"),
+                            ("error?showlength=1", "401")]:
+            exc = self.assertRaises(error.Error, unittest.wait, method(url))
+            self.assertEquals(exc.args[0], code)
 
     def testServerError(self):
-        f = unittest.deferredError(client.getPage(self.getURL("nosuchfile")))
-        f.trap(error.Error)
-        self.assertEquals(f.value.args[0], "404")
-        print f.value.args
-        f = unittest.deferredError(client.getPage(self.getURL("error")))
-        f.trap(error.Error)
-        self.assertEquals(f.value.args[0], "401")
-        f = unittest.deferredError(client.getPage(self.getURL("error?showlength=1")))
-        f.trap(error.Error)
-        self.assertEquals(f.value.args[0], "401")
+        return self._downloadTest(lambda url: client.getPage(self.getURL(url)))
 
     def testDownloadServerError(self):
-        f = unittest.deferredError(client.downloadPage(self.getURL("nosuchfile"), "nosuchfile"))
-        f.trap(error.Error)
-        self.assertEquals(f.value.args[0], "404")
-        # this is different since content length is 0, and HTTPClient SUCKS
-        f = unittest.deferredError(client.downloadPage(self.getURL("error"), "error"))
-        f.trap(error.Error)
-        self.assertEquals(f.value.args[0], "401")
-        f = unittest.deferredError(client.downloadPage(self.getURL("error?showlength=1"), "error"))
-        f.trap(error.Error)
-        self.assertEquals(f.value.args[0], "401")
+        return self._downloadTest(lambda url: client.downloadPage(self.getURL(url), url.split('?')[0]))
         
     def testFactoryInfo(self):
         url = self.getURL('file')
@@ -218,10 +212,9 @@ class WebClientTestCase(unittest.TestCase):
     def testRedirect(self):
         self.assertEquals("0123456789",
             unittest.deferredResult(client.getPage(self.getURL("redirect"))))
-        f = unittest.deferredError(client.getPage(self.getURL("redirect"), 
-                                                  followRedirect = 0))
-        f.trap(error.PageRedirect)
-        self.assertEquals(f.value.location, "/file")
+        d = client.getPage(self.getURL("redirect"), followRedirect = 0)
+        exc = self.assertRaises(error.PageRedirect, unittest.wait, d)
+        self.assertEquals(exc.location, "/file")
 
     def testPartial(self):
         name = self.mktemp()
