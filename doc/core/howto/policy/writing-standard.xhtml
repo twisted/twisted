@@ -30,6 +30,38 @@
     write SQL queries.</li>
     </ul>
 
+    <h2>General style</h2>
+
+    <p>Documents should aim to be clear and concise, allowing the API
+    documentation and the example code to tell as much of the story as they
+    can. Demonstrations and where necessary supported arguments should always
+    preferred to simple statements (&quot;here is how you would simplify this
+    code with Deferreds&quot; rather than &quot;Deferreds make code
+    simpler&quot;).</p>
+
+    <p>Documents should be clearly delineated into sections and subsections.
+    Each of these sections, like the overall document, should have a single
+    clear purpose. This is most easily tested by trying to have meaningful
+    headings: a section which is headed by &quot;More details&quot; or
+    &quot;Advanced stuff&quot; is not purposeful enough. There should be
+    fairly obvious ways to split a document. The two most common are task
+    based sectioning and sectioning which follows module and class
+    separations.</p>
+
+    <h2>Linking</h2>
+
+    <p>The first occurence of the name of any module, class or function should
+    always link to the API documents. Subsequent mentions may or may not link
+    at the author's discretion: discussions which are very closely bound to a
+    particular API should probably link in the first mention in the given
+    section.</p>
+
+    <p>Links between howtos are encouraged. Overview documents and tutorials
+    should always link to reference documents and indepth documents. These
+    documents should link among themselves wherever it's needed: if you're
+    tempted to re-describe the functionality of another module, you should
+    certainly link instead.</p>
+
     <h2>Introductions</h2>
 
     <p>The introductory section of a Twisted howto should immediately follow
