@@ -224,6 +224,7 @@ class TupleTypeMapper(AbstractTypeMapper):
 _db_nil = (0, 0)
 
 class ObjectTypeMapper(AbstractTypeMapper):
+
     def getLowColumns(self, name):
         return (
                 (int, name+"$oid"), 
@@ -302,6 +303,9 @@ class StorableDictionaryTypeMapper(ObjectTypeMapper):
         from twisted.world.compound import StorableDictionaryStore
         self.keyClass = keyClass
         self.valueClass = valueClass
+
+    def toTuple(self):
+        return ('dictionary', self.getKeyType().toTuple(), self.getValueType().toTuple())
 
     def getKeyType(self):
         return getMapper(self.keyClass)

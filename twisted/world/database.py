@@ -17,6 +17,8 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 #
 
+from __future__ import generators
+
 # System Imports
 import os
 opj = os.path.join
@@ -34,11 +36,11 @@ from twisted.python.compat import True, False, bool
 # Sibling Imports
 from twisted.world import hashless
 from twisted.world.structfile import FixedSizeString, StructuredFile
-from twisted.world.storable import Storable
+from twisted.world.storable import Storable, _currentVersion
 from twisted.world.typemap import getMapper
 
 class Table:
-    def __init__(self, db, classname):
+    def __init__(self, db, classname, version=None):
         self.classname = classname
         self._class = None
         self._kwmapcache = None
@@ -47,6 +49,10 @@ class Table:
         self.colNameToId = {}
         self.structArgs = []
         lowColId = 0
+        if version is None:
+            version = _currentVersion(self.getClass())
+        self.version = version
+        self._makeSchema()
 
         for mapper, nam in self.getSchema():
             lowcols = mapper.getLowColumns(nam)
@@ -54,7 +60,8 @@ class Table:
             for typ, nam in lowcols:
                 self.colNameToId[nam] = lowColId
                 lowColId += 1
-        self.instanceData = db.structured(classname + ".data",
+        self.instanceData = db.structured("%s-%s.data" % (self.classname,
+                                                          self.version),
                                           *self.structArgs)
 
     def close(self):
@@ -65,18 +72,43 @@ class Table:
             self._class = reflect.namedClass(self.classname)
         return self._class
 
-    def getSchema(self):
-        if self._mapcache is None:
+    def _makeSchema(self):
+        mapCacheFileName = opj(self.db.dirname,
+                               "%s-%s.schema" % (self.classname,
+                                                 self.version) )
+        self.isCurrent = (self.version == _currentVersion(self.getClass()))
+        if self.isCurrent:
             clazz = self.getClass()
             self._mapcache = tuple(
-                [(getMapper(clazz.__schema__[name]), name) 
-                for name in clazz._schema_storeorder]
-            )
-            self._kwmapcache = d = {}
-            for v, k in self._mapcache:
-                d[k] = v
-        return self._mapcache
+                [(getMapper(clazz.__schema__[name]), name)
+                 for name in clazz._schema_storeorder]
+                )
+            if os.path.exists(mapCacheFileName):
+                # load it
+                f = open(mapCacheFileName, "rb")
+                o = cPickle.load(f)
+                f.close()
+                one = [(x.toTuple(), n) for x,n in o]
+                two = [(x.toTuple(), n) for x,n in self._mapcache]
+                assert one == two, "%s != %s" % (str(one), str(two))
+            else:
+                # what the heck, let's pickle it
+                f = open(mapCacheFileName, "wb")
+                cPickle.dump(self._mapcache, f)
+                f.flush()
+                f.close()
+        else:
+            assert os.path.exists(mapCacheFileName), \
+                   "I'm not deleting the schema cache anywhere yet, so this shouldn't happen."
+            f = open(mapCacheFileName, "rb")
+            self._mapcache = cPickle.load(f)
+            f.close()
+        self._kwmapcache = d = {}
+        for v, k in self._mapcache:
+            d[k] = v
 
+    def getSchema(self):
+        return self._mapcache
 
     def setDataFor(self, inst, name, value):
         offt = self.db.oidsFile.getAt(inst._inmem_oid, "offset")
@@ -102,13 +134,13 @@ class Table:
         # XXX: Speed this up
         for mapper, nam in self.getSchema():
             mapper.lowDataToRow(offset, nam, self.db, self.instanceData,
-                                
+
             ## XXX weird but (apparently?) harmless behavior: this 'getattr'
             ## will, in cases where the attribute didn't exist before the
             ## object was inserted, go all the way to the database - now that
             ## the _schema_table attribute is set, the object is considered
             ## 'stored' and will seek to its offset.
-                                
+
                                 getattr(inst, nam))
 
         return offset
@@ -122,8 +154,35 @@ class Table:
             raise AssertionError(
                 "Sanity Check Failed: %s ~ %s,  %s ~ %s" %
                 (oid, sanitycheck_oid, genhash, sanitycheck_genhash))
-        return self.getClass().fromDB(self, oid, genhash)
-        
+        obj = self.getClass().fromDB(self, oid, genhash)
+        if not self.isCurrent:
+            # we need to upgrade
+            currentTable = self.db.registerClass(self.getClass())
+            firstInput = {}
+            # get the old data
+            for mapper, name in self.getSchema():
+                firstInput[name] = mapper.highDataFromRow(
+                    self.db.oidsFile.getAt(oid, "offset"),
+                    name, self.db, self.instanceData)
+            # convert the data to the new data
+            output = obj._upgradeFrom(self.version, firstInput)
+            # sprinkle it with pixie dust
+            output['_schema_oid'] = oid
+            output['_schema_genhash'] = genhash
+            # move the new data to the new table
+            # XXX TODO - I AM LEAKING A ROW HERE - Correct thing to do is
+            # decref, then incref.
+            offset = len(currentTable.instanceData)
+            currentTable.instanceData.expand(1)
+            for mapper, name in currentTable.getSchema():
+                mapper.lowDataToRow(offset, name, self.db,
+                                    currentTable.instanceData,
+                                    output.get(name))
+            self.db.oidsFile.setAt(oid, "classId", self.db.classToClassId[self.classname])
+            self.db.oidsFile.setAt(oid, "offset", offset)
+            obj._schema_table = currentTable
+        return obj
+
 TABLE_OID = "_schema_oid"
 TABLE_GENHASH = "_schema_genhash"
 ##         for mapper, nam in self.getSchema():
@@ -131,7 +190,7 @@ TABLE_GENHASH = "_schema_genhash"
 ##             for lowType, lowName in mapper.getLowColumns(nam):
 ##                 recTup.append(self.instanceData.getAt(offset, lowName))
 ##             highCol = mapper.lowToHigh(self.db, tuple(recTup))
-            
+
 
 
 class Database:
@@ -142,6 +201,7 @@ class Database:
         self.identityToUID = hashless.HashlessWeakKeyDictionary()
         self.uidToIdentity = weakref.WeakValueDictionary()
         self.classes = self.structured("classes",
+                                       (int, "version"),
                                        (FixedSizeString(512), "classname"))
         self.oidsFile = self.structured("objects",
                                         (int, "hash"),
@@ -152,7 +212,7 @@ class Database:
         if len(self.oidsFile) == 0:
             self.oidsFile.append((0, 0, 0, 0, 0))
         if len(self.classes) == 0:
-            self.classes.append(('',))
+            self.classes.append((0, ''))
         self.classToClassId = {}
         self.tables = []
         mapFile = opj(self.dirname, "mappers")
@@ -166,15 +226,22 @@ class Database:
             self.typeMapperKeyToMapper = {}
         c = 0
         self.tables.append(None)
-        for cn, in self.classes:
+        for version, cn in self.classes:
             #classname = cn.strip('\x00')
             # strip(arg) is in 2.2.2, but not 2.2.0 or 2.2.1
             classname = cn
             while len(classname) and classname[-1] == '\x00':
                 classname = classname[:-1]
             if classname:
-                self.tables.append(Table(self, classname))
-                self.classToClassId[classname] = c
+                currentClass = reflect.namedClass(classname)
+                currentVersion = getattr(currentClass, "schemaVersion", 1)
+                if currentVersion == version:
+                    self.tables.append(Table(self, classname))
+                    self.classToClassId[classname] = c
+                elif currentVersion < version:
+                    assert False, "I can't open this database because it has newer data than I know how to read."
+                else:
+                    self.tables.append(Table(self, classname, version))
             c += 1
 
     def mapperToKey(self, mapper):
@@ -203,27 +270,27 @@ class Database:
         del self.oidsFile
 
     def queryClassSelect(self, klass, _cond=None, **kw):
-        l = []
-        t = self.registerClass(klass)
-        scma = t.getSchema()
-        idx_OID = t.instanceData.getColumnIndex(TABLE_OID)
-        idx_GENHASH = t.instanceData.getColumnIndex(TABLE_GENHASH)
-        for val in t.instanceData:
-            oid, genhash = val[idx_OID], val[idx_GENHASH]
-            o = self.retrieveOID(oid, genhash)
-            if (_cond is not None) and (not _cond(o)):
+        for t in self.tables[1:]:
+            if t.getClass() != klass:
                 continue
-            if kw:
-                continueOuter = False
-                for v, k in scma:
-                    if k in kw:
-                        if getattr(o, k, None) != kw[k]:
-                            continueOuter = True
-                            break
-                if continueOuter:
+            scma = t.getSchema()
+            idx_OID = t.instanceData.getColumnIndex(TABLE_OID)
+            idx_GENHASH = t.instanceData.getColumnIndex(TABLE_GENHASH)
+            for val in t.instanceData:
+                oid, genhash = val[idx_OID], val[idx_GENHASH]
+                o = self.retrieveOID(oid, genhash)
+                if (_cond is not None) and (not _cond(o)):
                     continue
-            l.append(o)
-        return l
+                if kw:
+                    continueOuter = False
+                    for v, k in scma:
+                        if k in kw:
+                            if getattr(o, k, None) != kw[k]:
+                                continueOuter = True
+                                break
+                    if continueOuter:
+                        continue
+                yield o
 
     def sanityCheck(self):
         rv = 1
@@ -234,7 +301,7 @@ class Database:
     _superchatty = False
 
     def insert(self, obj):
-        
+
         """Insert an object into the database, returning the OID it can be
         retrieved with.
 
@@ -287,7 +354,7 @@ class Database:
 
     def retrieve(self, uid):
         """Retrieve an object from the database by UID.
-        
+
         @type uid: str
         @param uid: The UID to a particular storable, as returned by
             L{Database.insert} or L{Storable.getUID}
@@ -331,7 +398,8 @@ class Database:
     def structured(self, name, *fields):
         """Return
         """
-        return StructuredFile(opj(self.dirname, name),*fields)
+        retval = StructuredFile(opj(self.dirname, name),*fields)
+        return retval
 
     def registerClass(self, klass):
         """
@@ -342,7 +410,7 @@ class Database:
         if cn not in self.classToClassId:
             assert len(self.classes)
             self.classToClassId[cn] = len(self.classes)
-            self.classes.append((cn,))
+            self.classes.append((_currentVersion(klass), cn))
             self.tables.append(Table(self, cn))
         return self.tables[self.classToClassId[cn]]
 
@@ -362,7 +430,7 @@ class Database:
             table.instanceData.dumpHTML(f)
 
     _logcount = 0
-    
+
     def dumpstep(self):
         self._logcount += 1
         f = open(os.path.join(self.dirname, "step-%s.html" % self._logcount), 'w')
@@ -372,3 +440,5 @@ class Database:
         """ % (self.dirname, self._logcount-1, self._logcount+1))
         self.dumpHTMLData(f)
         f.write("</body></html")
+        f.flush()
+        f.close()

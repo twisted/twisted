@@ -397,11 +397,10 @@ class TestFixedClasses(unittest.TestCase):
         self.db.close()
         Upgrader = upgraderv2
         self.setUp()
-        q = self.db.queryClassSelect(Upgrader)
-        self.failUnlessEqual(q[0].strab, "1,2")
-        self.failUnlessEqual(q[0].aplusb, 3)
+        q = self.db.queryClassSelect(Upgrader).next()
+        self.failUnlessEqual(q.strab, "1,2")
+        self.failUnlessEqual(q.aplusb, 3)
 
-    testSchemaVersioning.todo = "Upgrading isn't checked in yet."
 
     def testRecursiveStuff(self):
         n = Node("top")

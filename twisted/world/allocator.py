@@ -30,7 +30,7 @@ from twisted.world.fileutils import openPlus
 from twisted.world.structfile import StructuredFile
 from twisted.world.util import BoundProxy
 
-DEFAULT_MAX_ALLOCS = 50                 # random number - currently small so testing is easy
+DEFAULT_MAX_ALLOCS = 5000                 # random number - currently small so testing is easy
 
 class FragmentFile(Storable):
     __schema__ = {

@@ -26,6 +26,8 @@ from twisted.python.compat import True, False
 from twisted.world import hashless
 from twisted.world.util import Backwards
 
+def _currentVersion(k):
+    return getattr(k, "schemaVersion", 1)
 
 class Ref(object):
     """A forward reference to a class, for __schema__"""
@@ -225,6 +227,11 @@ class Storable:
         self = object.__new__(klazz, *args, **kwargs)
         self._attrcache = {}
         return self
+
+    def _upgradeFrom(self, version, input):
+        for v in xrange(version, _currentVersion(self.__class__)):
+            input = getattr(self.__class__, "upgradeToSchema%s" % (v+1))(self, input)
+        return input
     
     def keepAlive(self, volatileObject):
         """Keep me alive until nobody references volatileObject any more.
@@ -270,13 +277,7 @@ class Storable:
 
     def __getAttrMapper(self, name):
         # XXX: HACK HACK - reimplement this, it's going to slow things down a lot
-        for highType, highName in self._schema_table.getSchema():
-            if name == highName:
-                if isinstance(highType, Ref):
-                    return highType()
-                return highType
-        else:
-            raise AttributeError(name)
+        return self._schema_table._kwmapcache[name]
 
     def _saveattr(self, attr, val):
         if self._schema_table is None:
