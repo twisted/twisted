@@ -56,6 +56,18 @@ class ITest2(Interface):
 class Test2(object):
     implements(ITest2)
     foo=1
+
+class ITest3(ITest2):
+    bar=Attribute("bar")
+
+class ITest3a(ITest2):
+    frob=Attribute("frob")
+
+class Test3(object):
+    implements(ITest3)
+    foo=1
+    bar=1
+    frob=1
     
 def assertRaisesMsg(exception, msg, f, *args, **kwargs):
     assertEquals(msg, str(assertRaises(exception, f, *args, **kwargs)))
@@ -106,6 +118,7 @@ class IProxyTestCase(unittest.TestCase):
         self.doit('r1')
         self.doit('r1o1')
         self.doit('r1o1kw')
+        self.doit('r1o1args')
 
     def test_attributes(self):
         obj=Test2()
@@ -126,8 +139,26 @@ class IProxyTestCase(unittest.TestCase):
             proxy.frob
         def s():
             proxy.frob=1
-        assertRaisesMsg(AttributeError, "'Test2' object has no attribute 'frob'",
+        assertRaisesMsg(AttributeError,
+                        "'Test2' object has no attribute 'frob'",
                         g)
-        assertRaisesMsg(AttributeError, "'Test2' object has no attribute 'frob'",
+        assertRaisesMsg(AttributeError,
+                        "'Test2' object has no attribute 'frob'",
                         s)
+        
+    def test_specified(self):
+        obj = Test3()
+        proxy = iproxy.InterfaceProxy(obj, (ITest3,))
+        assertEquals(proxy.foo, 1)
+        assertEquals(proxy.bar, 1)
+        def g():
+            proxy.frob
+        assertRaisesMsg(AttributeError,
+                        "'Test3' object has no attribute 'frob'",
+                        g)
+        
+        proxy = iproxy.InterfaceProxy(obj, (ITest3,ITest3a))
+        assertEquals(proxy.foo, 1)
+        assertEquals(proxy.bar, 1)
+        assertEquals(proxy.frob, 1)
         

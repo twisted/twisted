@@ -1,6 +1,10 @@
-from zope.interface import providedBy, interfaces as zinterfaces
+from zope.interface import providedBy, Declaration, Interface, interfaces as zinterfaces
 from twisted.python.reflect import getClass
+from twisted.python import components
 
+class IPrivate(Interface):
+    """Allows access to private parts of an object"""
+    
 class InterfaceProxy:
     """A wrapper to put around an object that only allows access to the
     specified interfaces.
@@ -12,7 +16,9 @@ class InterfaceProxy:
         
         if interfaces is None:
             interfaces = providedBy(original)
-        
+        else:
+            interfaces = Declaration(interfaces).flattened()
+            
         for interface in interfaces:
             for name in interface.names():
                 attr = interface[name]
@@ -41,20 +47,22 @@ class InterfaceProxy:
             raise AttributeError("'%s' object has no attribute '%s'" %(
                 getClass(self.__original).__name__, name))
         return setattr(self.__original, name, val)
-        
+
+components.registerAdapter(lambda o: o.original, InterfaceProxy, IPrivate)
+
 def _functionWrapper(original, name, signatureInfo):
     positional=signatureInfo['positional']
-    kwargs=signatureInfo['kwargs']
     required=signatureInfo['required']
     optional=signatureInfo['optional']
-    varargs=signatureInfo['varargs']
+    hasvarargs=signatureInfo['varargs'] is not None
+    haskwargs=signatureInfo['kwargs'] is not None
 
     def _callthrough(*pos, **kw):
         argcount = len(pos)
         kwcount = len(kw)
         
-        if len(positional) > 0 or kwargs is not None or varargs is not None:
-            if varargs is None and argcount > len(positional):
+        if len(positional) > 0 or haskwargs or hasvarargs:
+            if not hasvarargs and argcount > len(positional):
                 raise TypeError("%.200s() takes %s %d %sargument%s (%d given)" %(
                     name,
                     len(optional) and "at most" or "exactly",
@@ -63,7 +71,7 @@ def _functionWrapper(original, name, signatureInfo):
                     len(positional) != 1 and "s" or "",
                     argcount))
             for k in kw:
-                if kwargs is None:
+                if not haskwargs:
                     if k not in positional:
                         raise TypeError("%.200s() got an unexpected "
                                         "keyword argument '%.400s'" %(
@@ -78,7 +86,7 @@ def _functionWrapper(original, name, signatureInfo):
                 if not kw.has_key(n):
                     raise TypeError("%.200s() takes %s %d %sargument%s (%d given)" %(
                         name, 
-                        (varargs is not None or optional) and "at least" or "exactly",
+                        (hasvarargs or optional) and "at least" or "exactly",
                         len(required), kwcount and "non-keyword" or "",
                         len(required) != 1 and "s" or "", i))
         else:
