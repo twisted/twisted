@@ -267,8 +267,8 @@ class FlowTest(unittest.TestCase):
                                                    ZeroDivisionError)))
 
     def testZip(self):
-        lhs = [(1,'a'),(2,'b'),(3,'c')]
-        mrg = flow.Zip([1,2,flow.Cooperate(),3],['a','b','c'])
+        lhs = [(1,'a'),(2,'b'),(3,None)]
+        mrg = flow.Zip([1,2,flow.Cooperate(),3],['a','b'])
         rhs = list(flow.Block(mrg))
         self.assertEqual(lhs,rhs)
 

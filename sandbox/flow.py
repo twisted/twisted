@@ -134,7 +134,11 @@ class Cooperate(CallLater):
         during an intensive processing task.   The flow mechanism uses these
         objects to signal that the current processing chain should be paused
         and resumed later.  This allows other delayed operations to be
-        processed, etc.
+        processed, etc.  Usage is quite simple:
+
+               // within some generator wrapped by a Controller
+               yield Cooperate(1)  # yield for a second or more
+
     """
     def __init__(self, timeout = 0):
         self.timeout = timeout
@@ -276,6 +280,22 @@ class _String(Stage):
         This is probably the simplest stage of all.  It is a 
         constant list of one item.   While it may not have much
         pratical use, it is illustrative.
+
+            # necessary imports to make the world happy
+            from __future__ import generators
+            import flow
+            from twisted.internet import reactor
+            from twisted.python import util
+            
+            # your basic string producer
+            producer = "a string"
+
+            # print the production
+            d = flow.Deferred(producer)
+            d.addCallback(util.println)
+            d.addCallback(lambda _: reactor.stop())
+            reactor.run()
+
     """
     def __init__(self, str):
         Stage.__init__(self)
@@ -290,6 +310,24 @@ class _List(Stage):
         A simple stage, which admits the usage of instructions,
         such as Cooperate() within the list.   This would be
         much simpler without logic to handle instructions.
+
+            from __future__ import generators
+            import flow
+            from twisted.internet import reactor
+            from twisted.python import util
+            
+            def iterable():
+                yield "one"
+                yield flow.Cooperate()
+                yield "two"
+            
+            d = flow.Deferred(iterable())
+            d.addCallback(util.println)
+            d.addCallback(lambda _: reactor.stop())
+            reactor.run()
+            for x in flow.Block(["one",flow.Cooperate(1),"two"]):
+                print x
+
     """
     def __init__(self, seq):
         Stage.__init__(self)
@@ -319,6 +357,22 @@ class _Iterable(Stage):
         All exceptions signal the end of the Stage.  StopIteration 
         means to stop without providing a result, while all other
         exceptions provide a Failure self.result followed by stoppage.
+
+            from __future__ import generators
+            import flow
+            from twisted.internet import reactor
+            from twisted.python import util
+            
+            def iterable():
+                yield "one"
+                yield flow.Cooperate()
+                yield "two"
+            
+            d = flow.Deferred(iterable())
+            d.addCallback(util.println)
+            d.addCallback(lambda _: reactor.stop())
+            reactor.run()
+            
     """
     def __init__(self, iterable, *trap):
         Stage.__init__(self, *trap)
@@ -425,15 +479,22 @@ def wrap(obj, *trap):
 # Public Stages
 # 
 
-class Zip(Stage):
-    """ Zips two or more stages into a stream of N tuples
-
-        Zip([1, Cooperate(), 2],[3, 4]) => [ (1, 3), (2, 4) ]
-
+class Map(Stage):
+    """ flow equivalent to map:  Map(function, stage, ... )
+ 
+        Apply a function to every item yielded and yield the results.
+        If additional stages are passed, the function must take that
+        many arguments and is applied to the items of all lists in 
+        parallel.  If a list is shorter than another, it is assumed
+        to be extended with None items.    If the function is None,
+        the identity function is assumed; if there are multiple list
+        arguments, Map stage returns a sequence consisting of tuples
+        containing the corresponding items from all lists.
     """
-    def __init__(self, *stages):
+    def __init__(self, func, stage, *stages):
         Stage.__init__(self)
-        self._stage  = []
+        self.func = func
+        self._stage  = [wrap(stage)]
         for stage in stages:
             self._stage.append(wrap(stage))
         self._index  = 0
@@ -443,6 +504,7 @@ class Zip(Stage):
             return
         if not self._index:
             self._curr = []
+            self._done = True
         while self._index < len(self._stage):
             idx = self._index
             curr = self._stage[idx]
@@ -452,16 +514,40 @@ class Zip(Stage):
             if curr.results:
                 self._curr.append(curr.results.pop(0))
                 self._index += 1
+                self._done = False
                 continue
             if curr.stop:
-                self.stop = True
-                return
+                self._curr.append(None)
+                self._index += 1
+                continue
             if curr.failure:
                 self.failure = curr.failure
                 return
             self._index += 1
-        self.results.append(tuple(self._curr))
+        if self._done:
+            self.stop = 1
+            return
+        curr = tuple(self._curr)
+        if self.func:
+            try:
+                curr = self.func(*curr)
+            except Failure, fail:
+                self.failure = fail
+                return
+            except:
+                self.failure = Failure()
+                return
+        self.results.append(curr)
         self._index  = 0
+
+class Zip(Map):
+    """ Zips two or more stages into a stream of N tuples
+
+        Zip([1, Cooperate(), 2],[3, 4]) => [ (1, 3), (2, 4) ]
+
+    """
+    def __init__(self, *stages):
+        Map.__init__(self, None, stages[0], *stages[1:])
 
 class Concurrent(Stage):
     """ Executes stages concurrently
@@ -812,6 +898,7 @@ def makeProtocol(controller, baseClass = protocol.Protocol,
                     self.transport.loseConnection()
                     return
                 if cmd.failure:
+                    self.transport.loseConnection()
                     cmd.failure.trap()
                     return
                 if cmd.results:
