@@ -25,7 +25,7 @@ this side of Marmalade!
 
 import types, new, string, copy_reg, tokenize, re
 
-from twisted.python import reflect
+from twisted.python import reflect, log
 from twisted.persisted import crefutil
 
 ###########################
@@ -431,8 +431,8 @@ class AOTUnjellier:
                 callable(v[0])
             return l[0]
         except:
-            print "Error jellying object! Stacktrace follows::"
-            print string.join(map(repr, self.stack), "\n")
+            log.msg("Error jellying object! Stacktrace follows::")
+            log.msg(string.join(map(repr, self.stack), "\n"))
             raise
 #########
 # Jelly #
@@ -557,6 +557,6 @@ class AOTJellier:
             ao = self.jellyToAO(obj)
             return ao
         except:
-            print "Error jellying object! Stacktrace follows::"
-            print string.join(self.stack, '\n')
+            log.msg("Error jellying object! Stacktrace follows::")
+            log.msg(string.join(self.stack, '\n'))
             raise

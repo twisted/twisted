@@ -56,7 +56,6 @@ def ResourceScript(path):
     be an instance of (a subclass of) web.resource.Resource; it will be
     renderred.
     """
-    from pprint import pprint
     glob = {'__file__': path, 'resource': SimpleErrorPage()}
 
     execfile(path, glob, glob)

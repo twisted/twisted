@@ -14,9 +14,13 @@
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
+from twisted.python import log
+
 from flavors import Referenceable, Viewable
 from copy import copy
 import os
+
+
 
 ### "Server"-side objects
 
@@ -56,16 +60,16 @@ class PathReferenceAcquisitionContext(PathReferenceContext):
         return getattr(self.request, name)
     
     def _lookup(self, name, acquire=0, debug=0):
-        if debug: print "Looking for ", name
+        if debug: log.msg("Looking for %s" % name)
         obRef = self
         ob = self.getObject()
         while obRef:
-            if debug: print obRef
+            if debug: log.msg(obRef)
             if acquire and hasattr(ob, name):
                 return getattr(ob, name)
             elif hasattr(ob, 'listNames'):
                 names = ob.listNames()
-                if debug: print name, names, name in names
+                if debug: log.msg('%s %s %s' % (name, names, name in names))
                 if name in names:
                     if acquire:
                         return ob.getChild(name, self)
@@ -139,7 +143,7 @@ class PathReferenceAcquisitionContext(PathReferenceContext):
         """
         self.getObject()
         pathList = [self.root.path]
-        print "PathReferenceAcquisitionContext.path: ", self.path
+        log.msg("PathReferenceAcquisitionContext.path:", self.path)
         pathList.extend(self.path)
         return apply(os.path.join, pathList)
 
@@ -147,7 +151,7 @@ class PathReferenceAcquisitionContext(PathReferenceContext):
         """
         Return the URL to the resource, relative to the current request object
         """
-        print self.path, request.prepath
+        log.msg(self.path, request.prepath)
         relPath = copy(self.path)
         for segNum in range(len(request.prepath)):
             if relPath[0] == request.prepath[segNum]:

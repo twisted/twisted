@@ -238,7 +238,6 @@ class FileWrapper:
         self.file = file
 
     def write(self, data):
-        # print 'w', repr(data)
         try:
             self.file.write(data)
         except:

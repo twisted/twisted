@@ -68,7 +68,7 @@ class Sensitive:
         elif t == types.ClassType:
             return latestClass(object)
         else:
-            print 'warning returning object!'
+            log.msg('warning returning object!')
             return object
 
 _modDictIDMap = {}
@@ -125,7 +125,7 @@ def rebuild(module, doLog=1):
     functions = {}
     values = {}
     if doLog:
-        print '  (scanning %s): ' % str(module.__name__),
+        log.msg('  (scanning %s): ' % str(module.__name__))
     for k, v in d.items():
         if type(v) == types.ClassType:
             # Failure condition -- instances of classes with buggy
@@ -133,14 +133,14 @@ def rebuild(module, doLog=1):
             if v.__module__ == module.__name__:
                 classes[v] = 1
                 if doLog:
-                    sys.stdout.write("c")
-                    sys.stdout.flush()
+                    log.logfile.write("c")
+                    log.logfile.flush()
         elif type(v) == types.FunctionType:
             if v.func_globals is module.__dict__:
                 functions[v] = 1
                 if doLog:
-                    sys.stdout.write("f")
-                    sys.stdout.flush()
+                    log.logfile.write("f")
+                    log.logfile.flush()
 
     values.update(classes)
     values.update(functions)
@@ -149,8 +149,8 @@ def rebuild(module, doLog=1):
     functions = functions.keys()
 
     if doLog:
-        print
-        print '  (reload   %s)' % str(module.__name__)
+        log.msg('')
+        log.msg('  (reload   %s)' % str(module.__name__))
 
     # Boom.
     reload(module)
@@ -158,22 +158,22 @@ def rebuild(module, doLog=1):
     linecache.clearcache()
 
     if doLog:
-        print '  (cleaning %s): ' % str(module.__name__),
+        log.msg('  (cleaning %s): ' % str(module.__name__))
 
     for clazz in classes:
         if getattr(module, clazz.__name__) is clazz:
-            print "WARNING: class %s not replaced by reload!" % str(clazz)
+            log.msg("WARNING: class %s not replaced by reload!" % str(clazz))
         else:
             if doLog:
-                sys.stdout.write("x")
-                sys.stdout.flush()
+                log.logfile.write("x")
+                log.logfile.flush()
             clazz.__bases__ = ()
             clazz.__dict__.clear()
             clazz.__getattr__ = __getattr__
             clazz.__module__ = module.__name__
     if doLog:
-        print
-        print '  (fixing   %s): ' % str(module.__name__),
+        log.msg('')
+        log.msg('  (fixing   %s): ' % str(module.__name__))
     modcount = 0
     for mk, mod in sys.modules.items():
         modcount = modcount + 1
@@ -185,22 +185,20 @@ def rebuild(module, doLog=1):
             continue
         changed = 0
         for k, v in mod.__dict__.items():
-            # print "checking for %s.%s" % (mod.__name__, k)
             try:
                 hash(v)
             except TypeError:
                 continue
             if fromOldModule(v):
-                # print "Found a match! (%s.%s)" % (mod.__name__, k)
                 if type(v) == types.ClassType:
                     if doLog:
-                        sys.stdout.write("c")
-                        sys.stdout.flush()
+                        log.logfile.write("c")
+                        log.logfile.flush()
                     nv = latestClass(v)
                 else:
                     if doLog:
-                        sys.stdout.write("f")
-                        sys.stdout.flush()
+                        log.logfile.write("f")
+                        log.logfile.flush()
                     nv = latestFunction(v)
                 changed = 1
                 setattr(mod, k, nv)
@@ -211,9 +209,9 @@ def rebuild(module, doLog=1):
                         if fromOldModule(base):
                             latestClass(v)
         if doLog and not changed and ((modcount % 10) ==0) :
-            sys.stdout.write(".")
-            sys.stdout.flush()
+            log.logfile.write(".")
+            log.logfile.flush()
     if doLog:
-        print
-        print '   Rebuilt %s.' % str(module.__name__)
+        log.msg('')
+        log.msg('   Rebuilt %s.' % str(module.__name__))
     return module

@@ -89,7 +89,6 @@ class ProcessWriter(abstract.FileDescriptor, styles.Ephemeral):
         fd = self.fileno()
         r, w, x = select.select([fd], [fd], [], 0)
         if r and w:
-            # print 'read r+w', r, w, x
             return CONNECTION_LOST
 
     def connectionLost(self, reason):

@@ -73,9 +73,12 @@ def write(stuff):
     logfile.write(str(stuff))
     logfile.flush()
 
-def msg(stuff):
+def msg(*stuff):
     """Write some data to the log (a linebreak will be appended)."""
-    logfile.write(str(stuff) + os.linesep)
+    if len(stuff) > 1:
+        logfile.write(' '.join(map(str, stuff)) + os.linesep)
+    else:
+        logfile.write(str(stuff[0]) + os.linesep)
     logfile.flush()
 
 _keepErrors = 0

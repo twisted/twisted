@@ -17,6 +17,7 @@
 import pwd
 from twisted.cred import authorizer
 from twisted.internet import defer
+from twisted.python import log
 import identity, error
 
 class OpenSSHConchAuthorizer(authorizer.DefaultAuthorizer):
@@ -29,6 +30,6 @@ class OpenSSHConchAuthorizer(authorizer.DefaultAuthorizer):
             defer.fail(error.ConchError('not a valid key'))
         else:
             if not self.identities.has_key(name):
-                print 'adding %s for %s' % (self.identityClass, name)
+                log.msg('adding %s for %s' % (self.identityClass, name))
                 self.addIdentity(self.identityClass(name, self))
             return defer.succeed(self.identities[name])

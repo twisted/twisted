@@ -21,6 +21,8 @@
 Utility classes for dealing with circular references.
 """
 
+from twisted.python import log
+
 try:
     from new import instance
     from new import instancemethod
@@ -77,9 +79,9 @@ class _InstanceMethod(NotKnown):
 
     def __call__(self, *args, **kw):
         import traceback
-        print 'instance method %s.%s' % (str(self.my_class), self.name)
-        print 'being called with %r %r' % (args, kw)
-        traceback.print_stack()
+        log.msg('instance method %s.%s' % (str(self.my_class), self.name))
+        log.msg('being called with %r %r' % (args, kw))
+        traceback.print_stack(file=log.logfile)
         assert 0
 
     def __setitem__(self, n, obj):

@@ -18,8 +18,11 @@
 import sys
 import os
 
+from twisted.python import log
+
 # Sibling Imports
 from reflect import namedModule
+
 
 class PlugIn:
     """I am a Python module registered in a plugins.tml file.
@@ -62,54 +65,54 @@ def getPlugIns(plugInType, debugInspection=0, showProgress=0):
     loaded = {}
     result = []
     if showProgress:
-        sys.stdout.write(' Loading: [')
-        sys.stdout.flush()
+        log.logfile.write(' Loading: [')
+        log.logfile.flush()
     found = 0
     for d in sys.path:
         d = os.path.abspath(d)
         if loaded.has_key(d):
             if debugInspection:
-                print 'already saw', d
+                log.msg('already saw %s' % d)
             continue
         else:
             if debugInspection:
-                print 'looking at', d
+                log.msg('looking at %s' % d)
             loaded[d] = 1
         if os.path.isdir(d):
             for plugindir in os.listdir(d):
                 plugindir = os.path.join(d, plugindir)
                 if os.path.isdir(plugindir):
                     if showProgress:
-                        sys.stdout.write('-')
-                        sys.stdout.flush()
+                        log.logfile.write('-')
+                        log.logfile.flush()
                     tmlname = os.path.join(plugindir, "plugins.tml")
                     pname = os.path.split(os.path.abspath(plugindir))[-1]
                     if debugInspection:
-                        print tmlname
+                        log.msg(tmlname)
                     if os.path.exists(tmlname):
                         dropin = DropIn(pname)
                         ns = {'register': dropin.register}
                         execfile(tmlname, ns)
                         found = 1
                         if showProgress:
-                            sys.stdout.write('+')
-                            sys.stdout.flush()
+                            log.logfile.write('+')
+                            log.logfile.flush()
                         for plugin in dropin.plugins:
                             if plugInType == plugin.type:
                                 result.append(plugin)
                         if debugInspection:
-                            print "Successfully loaded %s!" % plugindir
+                            log.msg("Successfully loaded %s!" % plugindir)
         
         else:
             if debugInspection:
-                print 'sys.path entry not a directory', d
+                log.msg('sys.path entry not a directory %s' % d)
         if showProgress:
-            sys.stdout.write('.')
-            sys.stdout.flush()
+            log.logfile.write('.')
+            log.logfile.flush()
     if not found:
         raise IOError("Couldn't find a plugins file!")
     if showProgress:
-        sys.stdout.write(' ]\n')
-        sys.stdout.flush()
+        log.logfile.write(' ]\n')
+        log.logfile.flush()
     return result
  

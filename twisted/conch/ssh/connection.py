@@ -218,7 +218,6 @@ class SSHSession(SSHChannel, protocol.Protocol): # treat us as a protocol for th
         self.environ['ROWS'] = str(rows)
         self.environ['COLUMNS'] = str(cols)
         # XXX handle modes
-        #print repr(modes)
         return 1
 
     def subsystem_python(self):

@@ -4,7 +4,7 @@ import urllib
 from xml.dom.minidom import parseString
 
 from twisted.python.mvc import View, Model
-from twisted.python import domhelpers
+from twisted.python import domhelpers, log
 
 document = parseString("<xml />")
 
@@ -42,7 +42,7 @@ class Widget(View):
         """
         I use the ID to know which attribute in self.model I am responsible for
         """
-        print "setId is deprecated; please use setSubmodel."
+        log.msg("setId is deprecated; please use setSubmodel.")
         self.submodel = id
 
     def setSubmodel(self, submodel):
@@ -101,7 +101,7 @@ class Widget(View):
     def generateDOM(self, request, node):
         if DEBUG:
             template = node.toxml()
-            print template
+            log.msg(template)
         if self.tagName and str(node.tagName) != self.tagName:
             node = document.createElement(self.tagName)
         else:

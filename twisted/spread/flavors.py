@@ -108,7 +108,7 @@ class Referenceable(Serializable):
         try:
             state = apply(method, args, kw)
         except TypeError:
-            print ("%s didn't accept %s and %s" % (method, args, kw))
+            log.msg("%s didn't accept %s and %s" % (method, args, kw))
             raise
         return broker.serialize(state, self.perspective)
 
@@ -204,7 +204,7 @@ class ViewPoint(Referenceable):
         try:
             state = apply(method, (self.perspective,)+args, kw)
         except TypeError:
-            print ("%s didn't accept %s and %s" % (method, args, kw))
+            log.msg("%s didn't accept %s and %s" % (method, args, kw))
             raise
         rv = broker.serialize(state, self.perspective, method, args, kw)
         return rv
@@ -404,7 +404,7 @@ class RemoteCache(RemoteCopy, Serializable):
         try:
             state = apply(method, args, kw)
         except TypeError:
-            print ("%s didn't accept %s and %s" % (method, args, kw))
+            log.msg("%s didn't accept %s and %s" % (method, args, kw))
             raise
         return broker.serialize(state, None, method, args, kw)
 

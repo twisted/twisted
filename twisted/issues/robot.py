@@ -23,6 +23,7 @@ import string
 from twisted.issues.repo import IIssueNotifier, CouldNotTranscribe
 from twisted.words.service import WordsClient
 from twisted.issues.task import Task
+from twisted.python import log
 
 # Sibling Imports
 import issue
@@ -106,7 +107,7 @@ class IssueBot(WordsClient):
     # bot methods
 
     def receiveDirectMessage(self, sender, message, metadata=None):
-        print 'zing!'
+        log.msg('zing!')
         cmds = string.split(message, maxsplit=1)
         command = cmds[0]
         args = (len(cmds)>1 and cmds[1]) or ''

@@ -129,7 +129,7 @@ class Connection(tcp.Connection):
             return main.CONNECTION_LOST
 
     def _closeSocket(self):
-        print "closing socket"
+        log.msg("closing socket")
         # do the SSL shutdown exchange, before we close the underlying socket
         try:
             self.socket.shutdown()

@@ -1,6 +1,6 @@
 # -*- Python -*-
 # Twisted, the Framework of Your Internet
-# $Id: spelunk_gnome.py,v 1.8 2002/04/10 12:15:33 itamarst Exp $
+# $Id: spelunk_gnome.py,v 1.9 2002/08/19 03:21:56 radix Exp $
 # Copyright (C) 2001 Matthew W. Lefkowitz
 #
 # This library is free software; you can redistribute it and/or
@@ -18,6 +18,8 @@
 
 """Object browser GUI, GnomeCanvas implementation.
 """
+
+from twisted.python import log
 
 # TODO:
 #  gzigzag-style navigation
@@ -103,7 +105,7 @@ class SpelunkDisplay(gnome.Canvas):
 
     def receiveExplorer(self, xplorer):
         if self.visages.has_key(xplorer.id):
-            print "Using cached visage for %d" % (xplorer.id, )
+            log.msg("Using cached visage for %d" % (xplorer.id, ))
             # Ikk.  Just because we just received this explorer, that
             # doesn't necessarily mean its attributes are fresh.  Fix
             # that, either by having this side pull or the server
@@ -112,7 +114,7 @@ class SpelunkDisplay(gnome.Canvas):
             #xplorer.give_properties(visage)
             #xplorer.give_attributes(visage)
         else:
-            print "Making new visage for %d" % (xplorer.id, )
+            log.msg("Making new visage for %d" % (xplorer.id, ))
             self.visages[xplorer.id] = xplorer.newVisage(self.root(),
                                                          self)
         xplorer.requestState()
@@ -141,7 +143,7 @@ class Explorer(pb.RemoteCache):
         canvas = canvas or self.canvas
         klass = spelunkerClassTable.get(self.explorerClass, None)
         if (not klass) or (klass[0] is None):
-            print self.explorerClass, "not in table, using generic"
+            log.msg("%s not in table, using generic" % self.explorerClass)
             klass = GenericVisage
         else:
             klass = klass[0]
@@ -163,7 +165,7 @@ class Explorer(pb.RemoteCache):
         """
         klass = spelunkerClassTable.get(self.explorerClass, None)
         if (not klass) or (klass[1] is None):
-            print self.explorerClass, "not in table, using generic"
+            log.msg("%s not in table, using generic" % self.explorerClass)
             klass = GenericAttributeWidget
         else:
             klass = klass[1]
@@ -388,7 +390,7 @@ class Visage(gnome.CanvasGroup):
 
     def signal_event(self, widget, event=None):
         if not event:
-            print "Huh? got event signal with no event."
+            log.msg("Huh? got event signal with no event.")
             return
         if event.type == GDK.BUTTON_PRESS:
             if event.button == 1:

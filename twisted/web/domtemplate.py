@@ -312,7 +312,7 @@ class DOMTemplate(Resource, View):
             try:
                 child = minidom.parseString(html)
             except Exception, e:
-                print "damn, error parsing, probably invalid xml:", e
+                log.msg("damn, error parsing, probably invalid xml:", e)
                 child = self.d.createTextNode(html)
         else:
             child = self.d.createTextNode(html)
@@ -437,11 +437,11 @@ class DOMTemplate(Resource, View):
             otherSelf.render(request)
 
     def handleFailures(self, request, failures):
-        print "There were failures: ", failures
+        log.msg("There were failures: ", failures)
         return 0
 
     def handleSuccesses(self, request, successes):
-        print "There were successes: ", successes
+        log.msg("There were successes: ", successes)
         process = {}
         for controller, data, node in successes:
             process[str(node.getAttribute('name'))] = data
@@ -450,7 +450,7 @@ class DOMTemplate(Resource, View):
         return process
 
     def process(self, request, **kwargs):
-        print "Processing results: ", kwargs
+        log.msg("Processing results: ", kwargs)
         return RESTART_RENDERING
 
 # DOMView is now deprecated since the functionality was merged into domtemplate
@@ -478,5 +478,5 @@ class DOMController(mvc.Controller, Resource):
         return self.view.render(request)
 
     def process(self, request, **kwargs):
-        print "Processing results: ", kwargs
+        log.msg("Processing results: ", kwargs)
         return RESTART_RENDERING

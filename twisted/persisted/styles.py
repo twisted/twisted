@@ -90,9 +90,9 @@ def pickleModule(module):
 def unpickleModule(name):
     'support function for copy_reg to unpickle module refs'
     if oldModules.has_key(name):
-        print "Module has moved:",name,
+        log.msg("Module has moved: %s" % name)
         name = oldModules[name]
-        print name
+        log.msg(name)
     return __import__(name,{},{},'x')
 
 

@@ -23,6 +23,8 @@ import string
 from cStringIO import StringIO
 import types
 
+
+
 #sibling imports
 import reflect
 
@@ -75,7 +77,6 @@ class Failure:
             self.value = exc_value
         if isinstance(self.value, Failure):
             self.__dict__ = self.value.__dict__
-            #print "not chaining failure"
             return
         frames = self.frames = []
         while tb is not None:
@@ -154,14 +155,14 @@ class Failure:
 
     def getBriefTraceback(self):
         io = StringIO()
-        self.printBriefTraceback(file=io)
+        self.printBriefTraceback(file=log.logfile)
         return io.getvalue()
 
 
     def printTraceback(self, file=None):
         """Emulate Python's standard error reporting mechanism.
         """
-        if file is None: file = sys.stdout
+        if file is None: file = log.logfile
         w = file.write
         w( 'Traceback (most recent call last):\n')
         for method, filename, lineno, localVars, globalVars in self.frames:
@@ -176,7 +177,7 @@ class Failure:
     def printBriefTraceback(self, file=None):
         """Print a traceback as densely as possible.
         """
-        if file is None: file = sys.stdout
+        if file is None: file = log.logfile
         w = file.write
         w("Traceback! %s, %s\n" % (self.type, self.value))
         for method, filename, lineno, localVars, globalVars in self.frames:
@@ -188,7 +189,7 @@ class Failure:
     def printDetailedTraceback(self, file=None):
         """Print a traceback with detailed locals and globals information.
         """
-        if file is None: file = sys.stdout
+        if file is None: file = log.logfile
         w = file.write
         w( '*--- Failure #%d%s---\n' %
            (self.count,
@@ -205,3 +206,6 @@ class Failure:
             w(" (chained Failure)\n")
             self.value.printDetailedTraceback(file)
         w('*--- End of Failure #%d ---\n' % self.count)
+
+#rawr stupid non-lazy import python #!*($@*(
+import log

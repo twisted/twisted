@@ -489,7 +489,7 @@ class IRCChatter(irc.IRC, service.WordsClient):
                         msgMethod(name_, data, metadata)
                     except pb.Error, e:
                         self.receiveDirectMessage("*error*", str(e))
-                        print 'error sending CTCP query:',str(e)
+                        log.msg('error sending CTCP query:',str(e))
 
                 if not m['normal']:
                     return
@@ -513,7 +513,7 @@ class IRCChatter(irc.IRC, service.WordsClient):
                     self.participant.groupMessage(channame, text)
                 except pb.Error, e:
                     self.receiveDirectMessage("*error*", str(e))
-                    print 'error chatting to channel:',str(e)
+                    log.msg('error chatting to channel:',str(e))
             else:
                 try:
                     self.participant.directMessage(name, text)

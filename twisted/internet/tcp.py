@@ -212,7 +212,6 @@ class BaseClient(Connection):
                 )
 
     def _setRealAddress(self, address):
-        # print 'real address:',repr(address),repr(self.addr)
         self.realAddress = (address, self.addr[1])
         self.doConnect()
 

@@ -55,7 +55,7 @@ class SMTPManagedRelayer(relay.SMTPRelayer):
         self.manager = manager
 
     def lineReceived(self, line):
-        print "managed -- got", line
+        log.msg("managed -- got %s" % line)
         relay.SMTPRelayer.lineReceived(self, line)
 
     def sentMail(self, addresses):
@@ -206,7 +206,7 @@ class SmartHostSMTPRelayingManager:
 
         Mark it as sent in our lists
         """
-        print "success sending", message, "removing from queue"
+        log.msg("success sending %s, removing from queue" % message)
         self._finish(relay, message)
 
     def notifyFailure(self, relay, message):

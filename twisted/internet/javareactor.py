@@ -46,7 +46,6 @@ class JConnection(abstract.FileDescriptor,
     writeBlocker = None
 
     def __init__(self, skt, protocol, jport):
-        # print 'made a connection'
         self.skt = skt
         self.protocol = protocol
         self.istream = skt.getInputStream()
@@ -55,9 +54,7 @@ class JConnection(abstract.FileDescriptor,
         self.jport = jport
 
     def write(self, data):
-        # print 'waiting to put some data into the writeQ'
         self.writeQ.put(data)
-        # print 'put data'
 
     def registerProducer(self, producer, streaming):
         abstract.FileDescriptor.registerProducer(self, producer, streaming)
@@ -68,12 +65,10 @@ class JConnection(abstract.FileDescriptor,
         self.writeQ.put(END_CONSUMING)
 
     def produceMore(self, x):
-        # print 'being asked to produce more'
         if self.producer:
             self.producer.resumeProducing()
 
     def connectionLost(self, arg=None):
-        # print 'closing the connection'
         if not self.disconnected:
             self.skt.close()
             self.protocol.connectionLost()

@@ -17,6 +17,8 @@
 from __future__ import nested_scopes    # BAD!  This creates 2.1+ dependency
 
 from twisted.internet import reactor, main, defer, protocol
+from twisted.python import log
+
 import struct
 import md5
 import string
@@ -32,9 +34,8 @@ def logPacketData(data):
         d = tuple(data[16*i:16*i+16])
         hex = map(lambda x: "%02X"%ord(x),d)
         text = map(lambda x: (len(repr(x))>3 and '.') or x, d)
-        print ' '.join(hex)+ ' '*3*(16-len(d)),
-        print ''.join(text)
-    print ''
+        log.msg(' '.join(hex)+ ' '*3*(16-len(d)) +''.join(text))
+    log.msg('')
 
 def SNAC(fam,sub,id,data,flags=[0,0]):
     header="!HHBBL"
@@ -155,7 +156,7 @@ class OSCARUser:
             elif k == 30: # no idea
                 pass 
             else:
-                print "unknown tlv for user %s\nt: %s\nv: %s"%(self.name,k,repr(v))
+                log.msg("unknown tlv for user %s\nt: %s\nv: %s"%(self.name,k,repr(v)))
 
     def __str__(self):
         s = '<OSCARUser %s' % self.name
@@ -218,15 +219,14 @@ class OscarConnection(protocol.Protocol):
         self.setKeepAlive(4*60) # 4 minutes
 
     def connectionLost(self, reason):
-        print "Connection Lost!",self
+        log.msg("Connection Lost! %s" % self)
         self.stopKeepAlive()
 
     def connectionFailed(self):
-        print "Connection Failed!",self
+        log.msg("Connection Failed! %s" % self)
         self.stopKeepAlive()
 
     def sendFLAP(self,data,channel = 0x02):
-        #print repr((channel,data))
         header="!cBHH"
         self.seqnum=(self.seqnum+1)%0xFFFF
         seqnum=self.seqnum
@@ -234,7 +234,6 @@ class OscarConnection(protocol.Protocol):
                          seqnum, len(data))
         self.transport.write(head+str(data))
 #        if isinstance(self, ChatService):
-#            print time.ctime()+'\t127.0.0.1:0000 > %s:%s'%self.transport.getHost()[1:]
 #            logPacketData(head+str(data))
 
     def readFlap(self):
@@ -247,15 +246,13 @@ class OscarConnection(protocol.Protocol):
 
     def dataReceived(self,data):
 #        if isinstance(self, ChatService):
-#            print time.ctime()+'\t'+'127.0.0.1:0000 < %s:%s'%self.transport.getHost()[1:]
 #            logPacketData(data)
         self.buf=self.buf+data
         flap=self.readFlap()
         while flap:
-            #print flap
             func=getattr(self,"oscar_%s"%self.state,None)
             if not func:
-                print "no func for state: %s" % self.state
+                log.msg("no func for state: %s" % self.state)
             state=func(flap)
             if state:
                 self.state=state
@@ -307,14 +304,13 @@ class SNACBased(OscarConnection):
         d.addErrback(self._ebDeferredError,fam,sub,data) # XXX for testing
 
         self.requestCallbacks[reqid] = d
-        #print [fam,sub,data]
         self.sendFLAP(SNAC(fam,sub,reqid,data))
         return d
 
     def _ebDeferredError(self, error, fam, sub, data):
-        print 'ERROR IN DEFERRED', error
-        print 'on sending of message, family 0x%02x, subtype 0x%02x' % (fam, sub)
-        print 'data: %s' % repr(data)
+        log.msg('ERROR IN DEFERRED %s' % error)
+        log.msg('on sending of message, family 0x%02x, subtype 0x%02x' % (fam, sub))
+        log.msg('data: %s' % repr(data))
 
     def sendSNACnr(self,fam,sub,data,flags=[0,0]):
         """
@@ -328,7 +324,6 @@ class SNACBased(OscarConnection):
 
     def oscar_Data(self,data):
         snac=readSNAC(data[1])
-        #print snac
         if self.requestCallbacks.has_key(snac[4]):
             d = self.requestCallbacks[snac[4]]
             del self.requestCallbacks[snac[4]]
@@ -345,8 +340,8 @@ class SNACBased(OscarConnection):
         return "Data"
 
     def oscar_unknown(self,snac):
-        print "unknown for ",self
-        print snac
+        log.msg("unknown for %s" % self)
+        log.msg(snac)
         
 
     def oscar_01_03(self, snac):
@@ -510,7 +505,6 @@ class BOSConnection(SNACBased):
         data = data[2:]
         user, data = self.parseUser(data, 1)
         tlvs = readTLVs(data)
-#        print user.name, channel, tlvs
         if channel == 1: # message
             flags = []
             multiparts = []
@@ -552,13 +546,12 @@ class BOSConnection(SNACBased):
                     flags.append('extradata')
                     flags.append(v)
                 else:
-                    print 'unknown TLV for incoming IM, %04x, %s' % (k,repr(v))
+                    log.msg('unknown TLV for incoming IM, %04x, %s' % (k,repr(v)))
             self.receiveMessage(user, multiparts, flags)
         elif channel == 2: # rondevouz
             status = struct.unpack('!H',tlvs[5][:2])
             requestClass = tlvs[5][10:26]
             moreTLVs = readTLVs(tlvs[5][26:])
-            #print status, requestClass, moreTLVs
             if requestClass == CAP_CHAT: # a chat request
                 exchange = struct.unpack('!H',moreTLVs[10001][:2])[0]
                 name = moreTLVs[10001][3:-2]
@@ -570,8 +563,8 @@ class BOSConnection(SNACBased):
                     self.services[SERVICE_CHATNAV].getChatInfo(exchange, name, instance).\
                         addCallback(self._cbGetChatInfoForInvite, user, moreTLVs[12])
         else:
-            print 'unknown channel %02x' % channel
-            print tlvs
+            log.msg('unknown channel %02x' % channel)
+            log.msg(tlvs)
 
     def _cbGetChatInfoForInvite(self, info, user, message):
         apply(self.receiveChatInvite, (user,message)+info)
@@ -666,7 +659,7 @@ class BOSConnection(SNACBased):
             elif itemType == 5: # unknown (perhaps idle data)?
                 pass
             else:
-                print name, groupID, buddyID, itemType, tlvs
+                log.msg('%s %s %s %s %s' % (name, groupID, buddyID, itemType, tlvs))
         timestamp = struct.unpack('!L',itemdata)[0]
         if not timestamp: # we've got more packets coming
             # which means add some deferred stuff
@@ -824,21 +817,21 @@ class BOSConnection(SNACBased):
         """
         called when we get the rate information, which means we should do other init. stuff.
         """
-        print self,'initDone'
+        log.msg('%s initDone' % self)
         pass
 
     def updateBuddy(self, user):
         """
         called when a buddy changes status, with the OSCARUser for that buddy.
         """
-        print self,'updateBuddy',user
+        log.msg('%s updateBuddy %s' % (self, user))
         pass
 
     def offlineBuddy(self, user):
         """
         called when a buddy goes offline
         """
-        print self,'offlineBuddy',user
+        log.msg('%s offlineBuddy %s' % (self, user))
         pass
 
     def receiveMessage(self, user, multiparts, flags):
@@ -1098,13 +1091,13 @@ class OscarAuthenticator(OscarConnection):
             else: error=repr(errorcode)
             self.error(error,errorurl)
         else:
-            print tlvs
+            log.msg(tlvs)
         return "None"
 
     def oscar_None(self,data): pass
 
     def error(self,error,url):
-        print "ERROR!",error,url
+        log.msg("ERROR! %s %s" % (error,url))
         if self.deferred: self.deferred.armAndErrback((error,url))
         self.transport.loseConnection()
 

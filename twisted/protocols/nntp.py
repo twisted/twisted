@@ -153,7 +153,7 @@ class NNTPClient(basic.LineReceiver):
             self._statePassive(self, line)
 
     def _statePassive(self, line):
-        print 'Server said: ', line
+        log.msg('Server said: %s' % line)
 
     def _stateInitial(self, line):
         l = filter(None, string.split(string.strip(line)))
@@ -187,7 +187,7 @@ class NNTPClient(basic.LineReceiver):
                 else:
                     self._groups = []
             except Exception, e:
-                print '_stateList exception:', e
+                log.msg('_stateList exception: %s' % e)
         
     def _stateGroup(self, line):
         info = string.split(string.strip(line))
@@ -214,7 +214,7 @@ class NNTPClient(basic.LineReceiver):
                 else:
                     self._article = ''
             except Exception, e:
-                print '_stateArticle exception: ', e
+                log.msg('_stateArticle exception: %s' % e)
 
     def _stateHead(self, line):
         if self._head != None:
@@ -234,7 +234,7 @@ class NNTPClient(basic.LineReceiver):
                 else:
                     self._head = ''
             except Exception, e:
-                print '_stateHead exception', e
+                log.msg('_stateHead exception %s' % e)
 
     def _stateBody(self, line):
         if self._body != None:
@@ -254,7 +254,7 @@ class NNTPClient(basic.LineReceiver):
                 else:
                     self._body = ''
             except Exception, e:
-                print '_stateBody exception', e
+                log.msg('_stateBody exception %s' % e)
 
     def _statePost(self, line):
         del self.state[0]
@@ -313,7 +313,6 @@ class NNTPServer(NNTPClient):
         self.sendLine('200 server ready - posting allowed')
 
     def lineReceived(self, line):
-#        print line
         if self.posting == 1:
             self._doingPost(line)
         else:
@@ -335,11 +334,11 @@ class NNTPServer(NNTPClient):
             elif subcmd == 'overview.fmt':
                 defer = self.factory.backend.overviewRequest()
                 defer.addCallbacks(self._gotOverview, self._errOverview)
-                print 'overview'
+                log.msg('overview')
             elif subcmd == 'subscriptions':
                 defer = self.factory.backend.subscriptionRequest()
                 defer.addCallbacks(self._gotSubscription, self._errSubscription)
-                print 'subscriptions'
+                log.msg('subscriptions')
             else:
                 self.sendLine('500 command not recognized')
         else:
@@ -604,5 +603,4 @@ class NNTPServer(NNTPClient):
 
 
     def sendLine(self, line):
-#        print 'sending: ', line
         basic.LineReceiver.sendLine(self, line)

@@ -63,7 +63,6 @@ class OpenSSHConchIdentity(ConchIdentity):
                 for l in lines:
                     if base64.decodestring(l.split()[1])==pubKeyString:
                         return defer.succeed('')
-        #print 'not valid key'
         return defer.fail(error.ConchError('not valid key'))
 
     def verifyPlainPassword(self, password):

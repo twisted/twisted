@@ -1,5 +1,5 @@
 # -*- Python -*-
-# $Id: usage.py,v 1.28 2002/08/14 23:39:45 radix Exp $
+# $Id: usage.py,v 1.29 2002/08/19 03:21:59 radix Exp $
 # Twisted, the Framework of Your Internet
 # Copyright (C) 2001 Matthew W. Lefkowitz
 #
@@ -38,6 +38,7 @@ import UserDict
 import reflect
 import text
 import util
+import log
 
 class UsageError(Exception):
     pass
@@ -142,7 +143,7 @@ class Options(UserDict.UserDict):
             raise AttributeError('Options instance has no attribute data: You probably forgot to call Options.__init__ from your subclass.')
         #XXX GET RID OF ME!
         if self.opts.has_key(attr):
-            print "optionObject.option is deprecated! Use new-style optionObject['option'] instead! (This is only a warning) (%s, %s)" % (attr, self.opts[attr])
+            log.msg("optionObject.option is deprecated! Use new-style optionObject['option'] instead! (This is only a warning) (%s, %s)" % (attr, self.opts[attr]))
             return self.opts[attr]
         else:
             raise AttributeError("%s instance has no attribute '%s'" % (self.__class__, attr))
@@ -278,7 +279,7 @@ class Options(UserDict.UserDict):
         reflect.accumulateClassList(self.__class__, 'optStrings',
                                     parameters)
         if parameters:
-            print "Warning: Options.optStrings is deprecated, please use optParameters instead."
+            log.msg("Warning: Options.optStrings is deprecated, please use optParameters instead.")
 
         reflect.accumulateClassList(self.__class__, 'optParameters',
                                     parameters)

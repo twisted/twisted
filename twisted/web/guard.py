@@ -19,6 +19,8 @@
 import string, traceback
 from cStringIO import StringIO
 
+from twisted.python import log
+
 # Sibling Imports
 import error
 import html
@@ -91,7 +93,7 @@ class AuthForm(widgets.Form):
         return self.reqauth.reallyRender(request)
     
     def didntGetPerspective(self, error, request):
-        print 'Password not verified! Error:', error
+        log.msg('Password not verified! Error:', error)
         io = StringIO()
         io.write(self.formatError("Login incorrect."))
         self.format(self.getFormFields(request), io.write, request)

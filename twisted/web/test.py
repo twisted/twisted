@@ -18,6 +18,8 @@
 """I am a test application for twisted.web.
 """
 
+from twisted.python import log
+
 # Sibling Imports
 import widgets
 
@@ -73,7 +75,7 @@ class Test(widgets.Gadget, widgets.Presentation):
         raise "Hell", "This exception *is* expected."
 
     def goDeeper(self):
-        print 'one level deeper'
+        log.msg('one level deeper')
         test = self.funkyForm
         self.deepest()
 

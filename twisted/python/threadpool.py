@@ -153,10 +153,10 @@ class ThreadPool:
             thread.join()
     
     def dumpStats(self):
-        print 'queue:',self.q.queue
-        print 'waiters:',self.waiters
-        print 'workers:',self.working
-        print 'total:',self.threads
+        log.msg('queue: %s'   % self.q.queue)
+        log.msg('waiters: %s' % self.waiters)
+        log.msg('workers: %s' % self.working)
+        log.msg('total: %s'   % self.threads)
 
 
 class ThreadSafeList:

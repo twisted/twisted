@@ -24,6 +24,9 @@ import sha
 from Crypto.PublicKey import RSA, DSA
 from Crypto import Util
 
+#twisted
+from twisted.python import log
+
 # sibling imports
 import asn1, common
 
@@ -137,12 +140,12 @@ def verifySignature_dsa(obj, sig, data):
     return obj.verify(sha.new(data).digest(), sigTuple)
 
 def printKey(obj):
-    print '%s %s (%s bits)'%(objectType(obj), 
+    log.msg('%s %s (%s bits)'%(objectType(obj), 
                                obj.hasprivate()and 'Private Key'or 'Public Key', 
-                               obj.size())
+                               obj.size()))
     for k in obj.keydata:
         if hasattr(obj, k):
-            print 'attr', k
+            log.msg('attr', k)
             by = common.MP(getattr(obj, k))[4:]
             while by:
                 m = by[: 15]
@@ -152,6 +155,6 @@ def printKey(obj):
                     o = o+'%02x:'%ord(c)
                 if len(m) < 15:
                     o = o[:-1]
-                print '\t'+o
+                log.msg('\t'+o)
 
 ID_SHA1 = '\x30\x21\x30\x09\x06\x05\x2b\x0e\x03\x02\x1a\x05\x00\x04\x14'

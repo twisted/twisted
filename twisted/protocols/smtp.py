@@ -19,6 +19,7 @@
 
 from twisted.protocols import basic
 from twisted.internet import protocol, defer
+from twisted.python import log
 
 import os, time, string, operator
 
@@ -240,7 +241,7 @@ class SMTPClient(basic.LineReceiver):
         self.transport.loseConnection()
 
     def smtpCode_default(self, line):
-        print "SMTPClient got unexpected message from server --", line
+        log.msg("SMTPClient got unexpected message from server -- %s" % line)
         self.transport.loseConnection()
 
     def sendToOrData(self):

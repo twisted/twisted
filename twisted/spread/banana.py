@@ -18,6 +18,8 @@
 
 from twisted.internet import protocol
 from twisted.persisted import styles
+from twisted.python import log
+
 import types, copy, cStringIO, struct
 
 def int2b128(integer, stream):
@@ -69,11 +71,6 @@ class Banana(protocol.Protocol, styles.Ephemeral):
         self.connectionReady()
 
     def callExpressionReceived(self, obj):
-        #print '---'
-        #import pprint, sys
-        #pprint.pprint(obj)
-        #print '***'
-        #sys.stdout.flush()
         if self.currentDialect:
             self.expressionReceived(obj)
         else:
@@ -87,14 +84,14 @@ class Banana(protocol.Protocol, styles.Ephemeral):
                         break
                 else:
                     # I can't speak any of those dialects.
-                    print 'error losing'
+                    log.msg('error losing')
                     self.transport.loseConnection()
             else:
                 if obj in self.knownDialects:
                     self._selectDialect(obj)
                 else:
                     # the client just selected a protocol that I did not suggest.
-                    print 'freaky losing'
+                    log.msg('freaky losing')
                     self.transport.loseConnection()
 
 
@@ -288,7 +285,6 @@ class Canana(Banana):
         self.cbuf.clear()
         cBanana.encode(obj, self.cbuf)
         rv = self.cbuf.get()
-        # print repr(rv)
         self.transport.write(rv)
 
     def dataReceived(self, chunk):

@@ -71,7 +71,6 @@ class SSHUserAuthServer(service.SSHService):
         if self.method != 'none': # ignore 'none' as a method
             log.msg('%s failed auth %s' % (self.user, self.method))
             log.msg('potential reason: %s' % foo)
-            #print foo
         self.transport.sendPacket(MSG_USERAUTH_FAILURE, NS(','.join(self.supportedAuthentications))+'\x00')
 
     def auth_publickey(self, ident, packet):
@@ -79,12 +78,10 @@ class SSHUserAuthServer(service.SSHService):
         self.hasSigType = hasSig # protocol impl.s differ in this
         algName, blob, rest = getNS(packet[1:], 2)
         if hasSig:
-            #print 'has sig'
             d = ident.validatePublicKey(blob)
             d.addCallback(self._cbToVerifySig, ident, blob, getNS(rest)[0])
             return d
         else:
-            #print 'does not have sig'
             d = ident.validatePublicKey(blob)
             d.addCallback(self._cbValidateKey, packet[1:])
             return d

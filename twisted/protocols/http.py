@@ -792,7 +792,7 @@ class HTTPFactory(protocol.ServerFactory):
         if self.logPath:
             self.logFile = self._openLogFile(self.logPath)
         else:
-            self.logFile = sys.stdout
+            self.logFile = log.logfile
 
     def stopFactory(self):
         if hasattr(self, "logFile"):

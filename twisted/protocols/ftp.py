@@ -73,6 +73,7 @@ from twisted.internet.protocol import ClientFactory, ServerFactory, Protocol
 from twisted import internet
 from twisted.internet.defer import Deferred, DeferredList, FAILURE
 from twisted.python.failure import Failure
+from twisted.python import log
 
 
 # the replies from the ftp server
@@ -317,11 +318,11 @@ class FTP(basic.LineReceiver, DTPFactory):
     def reply(self, key, s = ''):
         if string.find(ftp_reply[key], '%s') > -1:
             if self.debug:
-                print ftp_reply[key] % s + '\r\n'
+                log.msg(ftp_reply[key] % s + '\r\n')
             self.transport.write(ftp_reply[key] % s + '\r\n')
         else:
             if self.debug:
-                print ftp_reply[key] + '\r\n'
+                log.msg(ftp_reply[key] + '\r\n')
             self.transport.write(ftp_reply[key] + '\r\n')
 
     # This command is IMPORTANT! Must also get rid of it :)
@@ -607,7 +608,7 @@ class FTP(basic.LineReceiver, DTPFactory):
         "Process the input from the client"
         line = string.strip(line)
         if self.debug:
-            print repr(line)
+            log.msg(repr(line))
         command = string.split(line)
         if command == []:
             self.reply('unknown')
@@ -618,7 +619,7 @@ class FTP(basic.LineReceiver, DTPFactory):
                 command = command + c
         command = string.capitalize(command)
         if self.debug:
-            print "-"+command+"-"
+            log.msg("-"+command+"-")
         if command == '':
             return 0
         if string.count(line, ' ') > 0:
@@ -762,7 +763,7 @@ class FTPClient(basic.LineReceiver):
         if ftpCommand.text == 'PORT':
             self.generatePortCommand(ftpCommand)
         if self.debug:
-            print '<--', ftpCommand.text
+            log.msg('<-- %s' % ftpCommand.text)
         self.nextDeferred = ftpCommand.deferred
         self.sendLine(ftpCommand.text)
 
@@ -1005,7 +1006,7 @@ class FTPClient(basic.LineReceiver):
         """(Private) Parses the response messages from the FTP server."""
         # Add this line to the current response
         if self.debug:
-            print '-->', line
+            log.msg('--> %s' % line)
         line = string.rstrip(line)
         self.response.append(line)
 
@@ -1039,7 +1040,7 @@ class FTPClient(basic.LineReceiver):
             self.nextDeferred.errback(Failure(CommandFailed(response)))
         else:
             # This shouldn't happen unless something screwed up.
-            print 'Server sent invalid response code %s' % (code,)
+            log.msg('Server sent invalid response code %s' % (code,))
             self.nextDeferred.errback(Failure(BadResponse(response)))
             
         # Run the next command

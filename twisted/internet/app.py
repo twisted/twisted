@@ -257,7 +257,6 @@ class Application(log.Logger, styles.Versioned, marmalade.DOMJellyable,
             del self.asXML
 
     def upgradeToVersion7(self):
-        print 'upgrading 7'
         self.tcpPorts = []
         self.udpPorts = []
         self.sslPorts = []
@@ -272,7 +271,7 @@ class Application(log.Logger, styles.Versioned, marmalade.DOMJellyable,
                     port.port, port.factory,
                     port.interface, port.maxPacketSize)
             else:
-                print 'upgrade of %s not implemented, sorry' % port.__class__
+                log.msg('upgrade of %s not implemented, sorry' % port.__class__)
         del self.ports
 
     def upgradeToVersion6(self):

@@ -3,6 +3,7 @@
 import os
 
 from twisted.python.mvc import Controller
+from twisted.python import log
 
 class InputHandler(Controller):
     """
@@ -22,7 +23,7 @@ class InputHandler(Controller):
         page to display next, etc
     """
     def setId(self, id):
-        print "setId is deprecated; please use setSubmodel."
+        log.msg("setId is deprecated; please use setSubmodel.")
         self.submodel = id
         
     def setSubmodel(self, submodel):

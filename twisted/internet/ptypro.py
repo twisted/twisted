@@ -53,7 +53,7 @@ class Process(abstract.FileDescriptor, styles.Ephemeral):
                     os.chdir(path)
                 os.execvpe(command, args, environment)
             except:
-                traceback.print_exc()
+                traceback.print_exc(file=log.logfile)
                 os._exit(1)
         fdesc.setNonBlocking(fd)
         self.fd=fd

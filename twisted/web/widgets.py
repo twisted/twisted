@@ -946,7 +946,7 @@ class Gadget(resource.Resource):
         Gadget.putPath instead.
         """
 
-        print "Gadget.addFile() is deprecated."
+        log.msg("Gadget.addFile() is deprecated.")
         self.paths[path] = path
 
     def putPath(self, path, pathname):
@@ -969,7 +969,7 @@ class Gadget(resource.Resource):
         """
         #XXX: delete this after a while.
         if hasattr(self, "page"):
-            print "Gadget.page is deprecated, use Gadget.pageFactory instead"
+            log.msg("Gadget.page is deprecated, use Gadget.pageFactory instead")
             return apply(self.page, args, kwargs)
         else:
             return apply(WidgetPage, args, kwargs)

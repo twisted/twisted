@@ -6,6 +6,7 @@ import string
 from twisted.words.service import WordsClient
 from twisted.python.plugin import getPlugIns
 from twisted.python.failure import Failure
+from twisted.python import log
 
 class BotBot(WordsClient):
 
@@ -60,16 +61,16 @@ class BotBot(WordsClient):
 
     def bot_list(self, sender, message, metadata):
         self.voice.directMessage(sender, "Bot List")
-        print 'starting bot list'
+        log.msg('starting bot list')
         import traceback
         try:
             for bot in self.voice.service.bots:
                 self.voice.directMessage(sender, " - %s" % bot.voice.perspectiveName)
         except:
-            traceback.print_exc()
-        print 'finished bot list'
+            traceback.print_exc(file=log.logfile)
+        log.msg('finished bot list')
         self.voice.directMessage(sender, "End of Bot List")
-        print 'finished'
+        log.msg('finished')
 
     def bot_new(self, sender, message, metadata):
         bottype, botname = string.split(message, ' ', 1)

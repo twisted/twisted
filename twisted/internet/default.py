@@ -1,5 +1,5 @@
 # -*- Python -*-
-# $Id: default.py,v 1.29 2002/08/13 15:34:48 itamarst Exp $
+# $Id: default.py,v 1.30 2002/08/19 03:21:54 radix Exp $
 #
 # Twisted, the Framework of Your Internet
 # Copyright (C) 2001 Matthew W. Lefkowitz
@@ -245,7 +245,6 @@ class PosixReactorBase(ReactorBase):
                     self.runUntilCurrent()
                     t2 = self.timeout()
                     t = self.running and t2
-                    # print self, 'running ', t, ' ', t2, ' ',self._pendingTimedCalls
                     self.doIteration(t)
             except:
                 log.msg("Unexpected error in main loop.")
@@ -367,7 +366,7 @@ class _Win32Waker(log.Logger, styles.Ephemeral):
     def __init__(self):
         """Initialize.
         """
-        print "starting waker"
+        log.msg("starting waker")
         # Following select_trigger (from asyncore)'s example;
         address = ("127.0.0.1", 19939)
         server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)

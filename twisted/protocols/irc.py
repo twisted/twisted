@@ -630,7 +630,7 @@ class IRCClient(basic.LineReceiver):
             self.dcc_sessions = []
 
         if dcctype == 'SEND':
-            print "hah! how dare you try to DCC me!"
+            log.msg("hah! how dare you try to DCC me!")
 ##            size = -1
 ##            if len(data) >= 5:
 ##                try:
@@ -949,7 +949,7 @@ class DccChat(basic.LineReceiver, styles.Ephemeral):
             self.lineReceived(line)
 
     def lineReceived(self, line):
-        print "DCC CHAT<%s> %s" % (self.remoteParty, line)
+        log.msg("DCC CHAT<%s> %s" % (self.remoteParty, line))
         self.client.privmsg(self.remoteParty,
                             self.client.nickname, line)
 

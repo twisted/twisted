@@ -183,15 +183,18 @@ def funcinfo(function):
     argv=code.co_varnames[:argc]
     defaults=function.func_defaults
 
-    print 'The function',name,'accepts',argc,'arguments.'
+    out = []
+    
+    out.append('The function %s accepts %s arguments' % (name ,argc))
     if defaults:
         required=argc-len(defaults)
-        print 'It requires',required,'arguments.'
-        print 'The arguments required are: ',argv[:required]
-        print 'additional arguments are:'
+        out.append('It requires %s arguments' % required)
+        out.append('The arguments required are: %s' % argv[:required])
+        out.append('additional arguments are:')
         for i in range(argc-required):
             j=i+required
-            print argv[j],'which has a default of',defaults[i]
+            out.append('%s which has a default of' % (argv[j], defaults[i]))
+    return out
 
 
 # currentThread uses 'print'; that's no good.
@@ -231,8 +234,8 @@ def getcurrent(clazz):
     module = namedModule(clazz.__module__)
     currclass = getattr(module, clazz.__name__, None)
     if currclass is None:
-        print "Reflection Warning: class %s deleted from module %s" % (
-            clazz.__name__, clazz.__module__)
+        log.msg("Reflection Warning: class %s deleted from module %s" % (
+            clazz.__name__, clazz.__module__))
         return clazz
     return currclass
 
@@ -499,3 +502,5 @@ def filenameToModuleName(fn):
             break
     return modName
 
+#boo python
+import log

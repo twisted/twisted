@@ -98,7 +98,6 @@ class RowObject:
 
         if name in self.rowColumns:
             if value != self.__dict__.get(name,None) and not self.dirty:
-                ##print "dirtying %s for %s" % (self.objectType.name, name)
                 self.setDirty(1)
 
         self.__dict__[name] = value
@@ -257,7 +256,6 @@ class DBReflector(adbapi.Augmentation):
             resultObject = apply(factoryMethod, (rowClass, data, kw) )
             results.append(resultObject)
 
-        #print "RESULTS", results
         return results
 
     def _populate(self):
@@ -305,10 +303,10 @@ class DBReflector(adbapi.Augmentation):
         try:
             transaction.execute(sql)
         except ValueError, e:
-            print "No data trying to populate rowclass <%s>. [%s] SQL was: '%s'" % (tableName,  e, sql)
+            log.msg("No data trying to populate rowclass <%s>. [%s] SQL was: '%s'" % (tableName,  e, sql))
             raise e
         except:
-            print "unknow ERROR!", sql
+            log.msg("Unknown ERROR: %s" % sql)
             raise
         columns = transaction.fetchall()
 
@@ -412,7 +410,6 @@ class DBReflector(adbapi.Augmentation):
                 sql = sql + " AND "
             sql = sql + "   %s = %s " % (keyColumn, quote("%s", type) )
             first = 0
-        #print "Generated SQL:", sql
         return sql
 
     def buildInsertSQL(self, tableName, columns):

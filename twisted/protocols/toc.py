@@ -24,6 +24,7 @@ info,dir: see how gaim connects for this...it may never work if it tries to conn
 
 # twisted imports
 from twisted.internet import reactor, protocol
+from twisted.python import log
 
 # base imports
 import struct
@@ -189,7 +190,7 @@ class TOC(protocol.Protocol):
         self.saved=None
 
     def _debug(self,data):
-        print data
+        log.msg(data)
 
     def connectionLost(self, reason):
         self._debug("dropped connection from %s" % self.username)
@@ -267,7 +268,6 @@ class TOC(protocol.Protocol):
     #        get,username,http=string.split(line," ",2)
     #    except:
     #        return "Web" # not enough data
-    #    print get,username,http
     #    foo,type,username=string.split(username,"/")
     #    if type=="info":
     #        user=self.factory.users[username]
@@ -804,7 +804,7 @@ class TOCClient(protocol.Protocol):
         self._awaymessage=''
 
     def _debug(self,data):
-        print data
+        log.msg(data)
 
     def sendFlap(self,type,data):
         if type==DATA:
@@ -1496,12 +1496,12 @@ class GetFileTransfer(protocol.Protocol):
                 hdr[18]=hdr[19]=0
                 hdr[21]=chr(0x20)
                 self.transport.write(apply(struct.pack,[self.header_fmt]+hdr))
-                print "got file request for %s"%file,hex(hdr[13])
+                log.msg("got file request for %s"%file,hex(hdr[13]))
             elif hdr[2]==0x0202:
-                print "sending file"
+                log.msg("sending file")
                 self.transport.registerProducer(self,0)
             elif hdr[2]==0x0204:
-                print "real checksum: %s"%hex(hdr[19])
+                log.msg("real checksum: %s"%hex(hdr[19]))
                 del self.file
             elif hdr[2]==0x0205: # resume
                 already=hdr[18]
@@ -1509,19 +1509,19 @@ class GetFileTransfer(protocol.Protocol):
                     data=self.file.read(already)
                 else:
                     data=""
-                print "restarting at %s"%already
+                log.msg("restarting at %s"%already)
                 hdr[2]=0x0106
                 hdr[19]=checksum(data)
                 self.transport.write(apply(struct.pack,[self.header_fmt]+hdr))
             elif hdr[2]==0x0207:
                 self.transport.registerProducer(self,0)
             else:
-                print "don't understand 0x%04x"%hdr[2]
-                print hdr
+                log.msg("don't understand 0x%04x"%hdr[2])
+                log.msg(hdr)
 
     def resumeProducing(self):
         data=self.file.read(4096)
-        print len(data)
+        log.msg(len(data))
         if not data:
             self.transport.unregisterProducer()
         self.transport.write(data)

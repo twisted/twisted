@@ -239,17 +239,14 @@ class ReactorBase:
     def cancelCallLater(self, callID):
         """See twisted.internet.interfaces.IReactorTime.cancelCallLater.
         """
-        # print self, 'cancelling call'
         self._pendingTimedCalls.remove(callID)
 
     def timeout(self):
         if self._pendingTimedCalls:
-            # print 'pending timed calls', self._pendingTimedCalls
             t = self._pendingTimedCalls[0][0] - time()
             if t < 0:
                 t = 0
             mt = _nmin(t, self._delayeds.timeout())
-            # print 'returning mt', mt
             return mt
         else:
             return self._delayeds.timeout()
@@ -257,21 +254,17 @@ class ReactorBase:
     def runUntilCurrent(self):
         """Run all pending timed calls.
         """
-        # print self, 'running until current', self.threadCallQueue, self._pendingTimedCalls
         if self.threadCallQueue:
             for i in range(len(self.threadCallQueue)):
                 callable, args, kw = self.threadCallQueue.pop(0)
                 try:
-                    # print 'popping the thread queue', self.threadCallQueue.queue
                     apply(callable, args, kw)
                 except:
                     log.deferr()
         now = time()
         while self._pendingTimedCalls and (self._pendingTimedCalls[0][0] <= now):
-            # print 'calling the callback', now, self._pendingTimedCalls
             seconds, func, args, kw = self._pendingTimedCalls.pop(0)
             try:
-                # print self, '_calling_ timed callback', func, args, kw
                 apply(func, args, kw)
             except:
                 log.deferr()

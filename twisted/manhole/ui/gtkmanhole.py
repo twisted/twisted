@@ -1,6 +1,6 @@
 # -*- Python -*-
 # Twisted, the Framework of Your Internet
-# $Id: gtkmanhole.py,v 1.36 2002/05/26 06:42:40 acapnotic Exp $
+# $Id: gtkmanhole.py,v 1.37 2002/08/19 03:21:56 radix Exp $
 # Copyright (C) 2001 Matthew W. Lefkowitz
 #
 # This library is free software; you can redistribute it and/or
@@ -47,13 +47,9 @@ else:
 ##     pos = entry.get_point()
 ##     while pos:
 ##         pos = pos - 1
-##         #print 'looking at',pos
 ##         c = entry.get_chars(pos, pos+1)
-##         #print 'found',repr(c)
 ##         if c == '\n':
-##             #print 'got it!'
 ##             return pos+1
-##     #print 'oops.'
 ##     return 0
 
 import pywidgets

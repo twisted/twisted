@@ -406,7 +406,7 @@ class CopyableFailure(failure.Failure, Copyable):
 
 class CopiedFailure(RemoteCopy, failure.Failure):
     def printTraceback(self, file=None):
-        if not file: file = sys.stdout
+        if not file: file = log.logfile
         file.write(self.traceback)
 
     printBriefTraceback = printTraceback
@@ -616,9 +616,7 @@ class Broker(banana.Banana):
         puid = object.processUniqueID()
         luid = self.luids.get(puid)
         if luid is None:
-            # print len(self.localObjects)
             if len(self.localObjects) > MAX_BROKER_REFS:
-                # print 'EXCEEDED'
                 self.maxBrokerRefsViolations = self.maxBrokerRefsViolations + 1
                 if self.maxBrokerRefsViolations > 3:
                     self.transport.loseConnection()
@@ -657,7 +655,6 @@ class Broker(banana.Banana):
         puid = instance.processUniqueID()
         luid = self.remotelyCachedLUIDs.get(puid)
         if (luid is not None) and (incref):
-            # print 'caching remotely ', luid, instance
             self.remotelyCachedObjects[luid].incref()
         return luid
 
@@ -672,7 +669,6 @@ class Broker(banana.Banana):
         puid = instance.processUniqueID()
         luid = self.newLocalID()
         if len(self.remotelyCachedObjects) > MAX_BROKER_REFS:
-            # print 'EXCEEDED'
             self.maxBrokerRefsViolations = self.maxBrokerRefsViolations + 1
             if self.maxBrokerRefsViolations > 3:
                 self.transport.loseConnection()
@@ -684,7 +680,6 @@ class Broker(banana.Banana):
         # This table may not be necessary -- for now, it's to make sure that no
         # monkey business happens with id(instance)
         self.remotelyCachedObjects[luid] = Local(instance, self.serializingPerspective)
-        # print "caching remotely for the first time", luid
         return luid
 
     def cacheLocally(self, cid, instance):
@@ -877,7 +872,6 @@ class Broker(banana.Banana):
         object.
         """
         refs = self.localObjects[objectID].decref()
-        # print "decref for %d #refs: %d" % (objectID, refs)
         if refs == 0:
             puid = self.localObjects[objectID].object.processUniqueID()
             del self.luids[puid]
