@@ -102,6 +102,7 @@ def runUntilCurrent():
     timeout = None
     for delayed in delayeds:
         delayed.runUntilCurrent()
+    for delay in delayeds:
         newTimeout = delayed.timeout()
         if ((newTimeout is not None) and
             ((timeout is None) or
@@ -216,6 +217,7 @@ def run(installSignalHandlers=1):
                 timeout = None
                 for delayed in delayeds:
                     delayed.runUntilCurrent()
+                for delayed in delayeds:
                     newTimeout = delayed.timeout()
                     if ((newTimeout is not None) and
                         ((timeout is None) or
