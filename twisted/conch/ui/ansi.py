@@ -127,12 +127,18 @@ class AnsiParser:
                     if s[i] not in string.digits+'[;?':
                         break
                     i+=1
+                if not s:
+                    self.prepend = '\x1b'
+                    return
                 if s[0]!='[':
                     self.writeString(self.formatText(s[i+1:]))
                     continue
                 else:
                     s=s[1:]
                     i-=1
+                if i==L-1:
+                    self.prepend = '\x1b['
+                    return
                 type = _setmap.get(s[i], None)
                 if type is None:
                     continue 
