@@ -1181,7 +1181,7 @@ class TOCClient(protocol.Protocol):
         called to finish the setup, and signon to the network
         """
         self.sendFlap(2,"toc_init_done")
-        self.sendFlap(2,"toc_set_caps %s" % (SEND_FILE_UID,) # GET_FILE_UID))
+        self.sendFlap(2,"toc_set_caps %s" % (SEND_FILE_UID,)) # GET_FILE_UID)
 
     def say(self,user,message,autoreply=0):
         """

@@ -9,6 +9,9 @@ def cmd(st):
 
 def browse(url):
     scmd(webbrowser+" "+url)
+    if block:
+        print "Hit enter to continue:"
+        raw_input()
 
 def scmd(st):
     print 'Running System Command: %s' % repr(st)
@@ -117,6 +120,9 @@ def runWordsTest():
     browse("http://localhost:8080/create")
     message("You will have to '/msg *login* testing' to log in.")
     scmd(ircclient+" test localhost")
+    if block:
+        print "Hit enter to continue:"
+        raw_input()
     message("Now let's test the 'im' interface.")
     cmd("im")
     killit()
@@ -192,14 +198,20 @@ def runAllTests():
 
 twistedBinDir = os.path.dirname(sys.argv[0]) or '.'
 try:
+    block = sys.argv[1] == "-b"
+except IndexError:
+    block = None
+try:
     webbrowser = os.environ['WEBBROWSER']
     username = os.environ['USER']
     ircclient = os.environ['IRCCLIENT']
 except KeyError:
     message("Required Environment Variables:",
             "  * WEBBROWSER: a command which will run a web browser.",
-            "                (this should block until the window has been closed.)",
-            "  * IRCCLIENT: an IRC client in the style of ircii",
+            "                (If this doesn't block until the window is closed,",
+            "                 pass '-b' as an argument to the script.)",
+            "  * IRCCLIENT: an IRC client in the style of ircii (use -b in the",
+            "               same situation as above)",
             "  * USER: your UNIX username.")
 else:
     runAllTests()
