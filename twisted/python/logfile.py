@@ -27,35 +27,35 @@ import os, stat, glob, string
 
 import threadable
 
-
-class LogFile:
-    """A log file that can be rotated.
-    
-    A rotateLength of None disables automatic log rotation.
+class BaseLogFile:
+    """The base class for a log file that can be rotated.
     """
 
     synchronized = ["write", "rotate"]
     
-    def __init__(self, name, directory, rotateLength=1000000):
-        self.directory = directory
+    def __init__(self, name, directory, defaultMode=None):
+        self.directory = os.path.realpath(directory)
+        assert os.path.isdir(self.directory)
         self.name = name
         self.path = os.path.join(directory, name)
-        self.rotateLength = rotateLength
-        if os.path.exists(self.path) and hasattr(os, "chmod"):
+        if defaultMode is None and os.path.exists(self.path) and hasattr(os, "chmod"):
             self.defaultMode = os.stat(self.path)[0]
         else:
             self.defaultMode = None
         self._openFile()
     
+    def shouldRotate(self):
+        """Override with a method to that returns true if the log 
+        should be rotated"""
+        raise NotImplementedError
+
     def _openFile(self):
         """Open the log file."""
         self.closed = 0
         if os.path.exists(self.path):
-            self.size = os.stat(self.path)[stat.ST_SIZE]
             self._file = open(self.path, "r+")
             self._file.seek(0, 2)
         else:
-            self.size = 0
             self._file = open(self.path, "w+")
         # set umask to be same as original log file
         if self.defaultMode is not None:
@@ -63,7 +63,6 @@ class LogFile:
     
     def __getstate__(self):
         state = self.__dict__.copy()
-        del state["size"]
         del state["_file"]
         return state
     
@@ -73,10 +72,10 @@ class LogFile:
     
     def write(self, data):
         """Write some data to the file."""
-        self.size = self.size + len(data)
-        self._file.write(data)
-        if self.rotateLength and self.size >= self.rotateLength:
+        if self.shouldRotate():
+            self.flush()
             self.rotate()
+        self._file.write(data)
     
     def flush(self):
         """Flush the file."""
@@ -91,19 +90,37 @@ class LogFile:
         self._file.close()
         self._file = None
     
-    def listLogs(self):
-        """Return sorted list of integers - the old logs' identifiers."""
-        result = []
-        for name in glob.glob("%s.*" % self.path):
-            try:
-                counter = int(string.split(name, '.')[-1])
-                if counter:
-                    result.append(counter)
-            except ValueError:
-                pass
-        result.sort()
-        return result
+    def getCurrentLog(self):
+        """Return a LogReader for the current log file."""
+        return LogReader(self.path)
     
+class LogFile(BaseLogFile):
+    """A log file that can be rotated.
+    
+    A rotateLength of None disables automatic log rotation.
+    """
+    def __init__(self, name, directory, rotateLength=1000000, defaultMode=None):
+        BaseLogFile.__init__(self, name, directory, defaultMode)
+        self.rotateLength = rotateLength
+
+    def _openFile(self):
+        BaseLogFile._openFile(self)
+        self.size = self._file.tell()
+        
+    def shouldRotate(self):
+        return self.rotateLength and self.size >= self.rotateLength
+
+    def getLog(self, identifier):
+        """Given an integer, return a LogReader for an old log file."""
+        filename = "%s.%d" % (self.path, identifier)
+        if not os.path.exists(filename):
+            raise ValueError, "no such logfile exists"
+        return LogReader(filename)
+
+    def write(self, data):
+        BaseLogFile.write(self, data)
+        self.size += len(data)
+
     def rotate(self):
         """Rotate the file and create a new one.
 
@@ -119,34 +136,40 @@ class LogFile:
         self._file.close()
         os.rename(self.path, "%s.1" % self.path)
         self._openFile()
-    
-    def getCurrentLog(self):
-        """Return a LogReader for the current log file."""
-        return LogReader(self.path)
-    
-    def getLog(self, identifier):
-        """Given an integer, return a LogReader for an old log file."""
-        filename = "%s.%d" % (self.path, identifier)
-        if not os.path.exists(filename):
-            raise ValueError, "no such logfile exists"
-        return LogReader(filename)
+
+    def listLogs(self):
+        """Return sorted list of integers - the old logs' identifiers."""
+        result = []
+        for name in glob.glob("%s.*" % self.path):
+            try:
+                counter = int(string.split(name, '.')[-1])
+                if counter:
+                    result.append(counter)
+            except ValueError:
+                pass
+        result.sort()
+        return result
+
+    def __getstate__(self):
+        state = LogFile.__getstate__(self)
+        del state["size"]
+        return state
 
 threadable.synchronize(LogFile)
-
-
+  
 class LogReader:
     """Read from a log file."""
     
     def __init__(self, name):
         self._file = open(name, "r")
     
-    def readLines(self):
+    def readLines(self, lines=10):
         """Read a list of lines from the log file.
         
         This doesn't returns all of the files lines - call it multiple times.
         """
         result = []
-        for i in range(10):
+        for i in range(lines):
             line = self._file.readline()
             if not line:
                 break

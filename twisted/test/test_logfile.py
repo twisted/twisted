@@ -56,9 +56,10 @@ class LogFileTestCase(unittest.TestCase):
         # test automatic rotation
         log.write("123")
         log.write("4567890")
+        log.write("1" * 11)
         self.assert_(os.path.exists("%s.1" % self.path))
         self.assert_(not os.path.exists("%s.2" % self.path))
-        log.write("1" * 11)
+        log.write('')
         self.assert_(os.path.exists("%s.1" % self.path))
         self.assert_(os.path.exists("%s.2" % self.path))
         self.assert_(not os.path.exists("%s.3" % self.path))
