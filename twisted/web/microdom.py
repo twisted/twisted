@@ -228,6 +228,7 @@ class MicroDOMParser(XMLParser):
 
 def parse(readable):
     mdp = MicroDOMParser()
+    mdp.filename = getattr(readable, "name", "<xmlfile />")
     mdp.makeConnection(None)
     r = readable.read(1024)
     while r:

@@ -32,8 +32,8 @@ strongly recommend the various parsers in PyXML.
 
 TODO:
 
-  * support comments
-  * real tests
+  * real tests (currently we're just hoping Marmalade tests are good enough)
+  * better error messages
 
 """
 
@@ -49,12 +49,16 @@ def nop(*args, **kw):
 
 class XMLParser(Protocol):
     state = None
+    filename = "<xml />"
     def connectionMade(self):
         self.lineno = 1
         self.colno = 0
 
     def saveMark(self):
         return (self.lineno, self.colno)
+
+    def _parseError(self, message):
+        raise Exception("%s:%s:%s: %s" % ((self.filename,)+self.saveMark()+(message,)))
 
     def dataReceived(self, data):
         if not self.state:
@@ -67,10 +71,8 @@ class XMLParser(Protocol):
             else:
                 self.colno += 1
             oldState = self.state
-            # print "%s: %s %s" % (self.state, repr(byte), self.saveMark())
             newState = getattr(self, "do_" + self.state)(byte)
             if newState and newState != oldState:
-                #print oldState,'=>',newState
                 self.state = newState
                 getattr(self, "end_" + oldState, nop)()
                 getattr(self, "begin_" + newState, nop)(byte)
@@ -81,7 +83,7 @@ class XMLParser(Protocol):
         if byte in string.whitespace:
             return
         if byte != '<':
-            raise Exception("First char of document wasn't <")
+            self._parseError("First char of document wasn't <")
         return 'tagstart'
 
     def begin_tagstart(self, byte):
@@ -90,17 +92,28 @@ class XMLParser(Protocol):
         self.termtag = 0                # is the tag self-terminating
         self.endtag = 0
 
+    def begin_comment(self, byte):
+        self.commentbuf = ''
+
+    def do_comment(self, byte):
+        self.commentbuf += byte
+        if self.commentbuf[-3:] == '-->':
+            self.gotComment(self.commentbuf[:-3])
+            return 'bodydata'
+
     def do_tagstart(self, byte):
         if byte in identChars:
             self.tagName += byte
+            if self.tagName =='!--':
+                return 'comment'
         elif byte in string.whitespace:
             if self.tagName:
                 return 'attrs'
             else:
-                raise Exception("no tag name")
+                self._parseError("no tag name")
         elif byte in '!?':
             if self.tagName:
-                raise Exception("exclamation point!?")
+                self._parseError("exclamation point!?")
             else:
                 self.tagName += byte
                 self.termtag = 1
@@ -108,7 +121,7 @@ class XMLParser(Protocol):
             if self.tagName == '!':
                 return 'expectcdata'
             else:
-                raise Exception("hurk")
+                self._parseError("hurk")
         elif byte == '/':
             if self.tagName:
                 return 'afterslash'
@@ -121,7 +134,7 @@ class XMLParser(Protocol):
                 self.gotTagStart(self.tagName, {})
             return 'bodydata'
         else:
-            raise Exception(repr(byte))
+            self._parseError(repr(byte))
 
     def begin_expectcdata(self, byte):
         self.cdatabuf = byte
@@ -134,11 +147,11 @@ class XMLParser(Protocol):
             if cd.startswith(cdb):
                 return
             else:
-                raise Exception("Uh, cdata section looked hella malformed")
+                self._parseError("Uh, cdata section looked hella malformed")
         if cd == cdb:
             self.cdatabuf = ''
             return 'cdata'
-        raise Exception("uh, cdata looks badz0r")
+        self._parseError("uh, cdata looks badz0r")
 
     def do_cdata(self, byte):
         self.cdatabuf += byte
@@ -163,7 +176,7 @@ class XMLParser(Protocol):
         elif byte == '>':
             self.gotTagStart(self.tagName, self.tagAttributes)
             return 'bodydata'
-        raise Exception("not well formed, etc")
+        self._parseError("Unexpected character: %s" % repr(byte))
 
     def do_waitforgt(self, byte):
         if byte == '>':
@@ -180,21 +193,21 @@ class XMLParser(Protocol):
         elif byte == '=':
             return 'beforeattrval'
         else:
-            raise Exception("not well formed, etc")
+            self._parseError("not well formed, etc")
 
     def do_beforeattrval(self, byte):
         if byte in string.whitespace:
             return
         elif byte in '"\'':
             return 'attrval'
-        raise Exception("Not well formed, etc")
+        self._parseError("Not well formed, etc")
 
     def do_beforeeq(self, byte):
         if byte in string.whitespace:
             return
         elif byte == '=':
             return 'beforeattrval'
-        raise Exception("Not well formed, etc")
+        self._parseError("Not well formed, etc")
 
     def begin_attrval(self, byte):
         self.quotetype = byte
@@ -214,9 +227,9 @@ class XMLParser(Protocol):
     def do_afterslash(self, byte):
         # this state is only after a self-terminating slash, e.g. <foo/>
         if self._after_slash_closed:
-            raise Exception("Not well formed, etc")
+            self._parseError("Not well formed, etc")
         if byte != '>':
-            raise Exception("Not well formed, etc")
+            self._parseError("Not well formed, etc")
         self._after_slash_closed = 1
         self.gotTagStart(self.tagName, self.tagAttributes)
         self.gotTagEnd(self.tagName)
@@ -258,6 +271,9 @@ class XMLParser(Protocol):
 
     def gotEntityReference(self, entityRef):
         print 'entityRef: &%s;' % entityRef
+
+    def gotComment(self, comment):
+        pass
 
     def gotCData(self, cdata):
         print 'CDATA:', repr(cdata)
