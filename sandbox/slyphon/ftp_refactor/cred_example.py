@@ -75,6 +75,7 @@ class CredProtocol(basic.LineReceiver):
         self.sendLine("Check privileges with PRIVS")
 
     def connectionLost(self, reason):
+        print 'we lost the connection!'
         if self.logout:
             self.logout()
             self.avatar = None

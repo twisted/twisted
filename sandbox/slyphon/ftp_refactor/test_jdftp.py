@@ -40,10 +40,10 @@ class NonClosingStringIO(StringIO):
 class CustomFileWrapper(protocol.FileWrapper):
     def write(self, data):
         protocol.FileWrapper.write(self, data)
-        self._checkProducer()
+        #self._checkProducer()
 
-    def loseConnection(self):
-        self.closed = 1
+    #def loseConnection(self):
+        #self.closed = 1
 
 
 class CustomLogObserver(log.FileLogObserver):
@@ -428,7 +428,7 @@ class FTPTestCase(unittest.TestCase):
         self.cnx = None
 
         
-class TestFTPServer:#(FTPTestCase):
+class TestFTPServer(FTPTestCase):
     def testNotLoggedInReply(self):
         cli, sr, iop, send = self.cnx.getCSTuple()
         cmdlist = ['CDUP', 'CWD', 'LIST', 'MODE', 'PASV', 'PORT', 
@@ -501,7 +501,7 @@ class TestFTPServer:#(FTPTestCase):
         log.debug(dc.lines)
         self.failUnless(len(dc.lines) >= 1)
 
-    testTYPE.todo = 'not receiving anything on clientIO'
+    testTYPE.todo = 'ask someone about how to test if binary/ascii is working properly'
 
     def testRETR(self):
         cli, sr, iop, send = self.cnx.getCSTuple()
@@ -526,7 +526,7 @@ class TestFTPServer:#(FTPTestCase):
         self.assert_(len(dc.lines) >= 1)
  
         
-    testRETR.todo = 'not quite there yet'
+    #testRETR.todo = 'not quite there yet'
 
 
     def testSYST(self):

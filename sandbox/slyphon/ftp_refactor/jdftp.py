@@ -238,7 +238,7 @@ class DTPFileSender(basic.FileSender):
         chunk = ''
         if self.file:
             chunk = self.file.read(self.CHUNK_SIZE)
-            log.debug('chunk: %s' % chunk)
+            #log.debug('chunk: %s' % chunk)
         if not chunk:
             self.file = None
             self.consumer.unregisterProducer()
@@ -282,7 +282,6 @@ class DTP(object, protocol.Protocol):
         when the client connects"""
         self.pi.setTimeout(None)        # don't timeout as long as we have a connection
         peer = self.transport.getPeer()
-        log.debug('got a DTP connection %s:%s' % (peer[1],peer[2]))
         self.isConnected = True
 
         if self.factory.peerCheck and peer[1] != self.pi.peerHost[1]:
@@ -310,10 +309,14 @@ class DTP(object, protocol.Protocol):
         log.debug('sendfile sending %s' % filename)
 
         fs = DTPFileSender()
-        if not self.pi.binary:
-            transform = self.transformChunk
-        else:
+        if self.pi.binary:
             transform = None
+        else:
+            transform = self.transformChunk
+        
+        # lets set self.pi.fp file pointer to 0 just to make sure the avatar didn't forget, hmm?
+        self.pi.fp.seek(0)
+        
         return fs.beginFileTransfer(self.pi.fp, self.transport, transform
                 ).addCallback(debugDeferred,'firing at end of file transfer'
                 ).addCallback(self._dtpPostTransferCleanup
