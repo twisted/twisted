@@ -63,11 +63,11 @@ class BodyTest(unittest.TestCase):
         x = point.Body(self.space, 1e9, (10, 0, 0), (-1, 0, 1))
         y = point.Body(self.space, 1e9, (0, 0, 10), (0, 1, -1))
 
-        self.space.update()
+        self.space._updatePosition()
         self.assertEquals(x.position, (9, 0, 1))
         self.assertEquals(y.position, (0, 1, 9))
 
-        self.space.update()
+        self.space._updatePosition()
         self.assertEquals(x.position, (8, 0, 2))
         self.assertEquals(y.position, (0, 2, 8))
 

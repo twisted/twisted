@@ -24,7 +24,7 @@ class Space(object):
 
     def freeHandle(self, n):
         self.freelist.append(n)
-        self.contents[n] = [-42] * _V_DIMS
+        self.contents[n] = [0] * _V_DIMS
 
     def update(self):
         self._updatePosition()
@@ -38,9 +38,11 @@ class Space(object):
     def _updateVelocity(self):
         # Adjust velocities for gravitational effects
         for a in self.contents:
-            accel = N.zeros(3)
+            accel = N.zeros(3, typecode='f')
+            mass = a[_MASS]
+            if not mass:
+                continue
             for b in self.contents:
-                mass = a[_MASS]
                 deltas = b[_POSITION] - a[_POSITION]
                 delta2 = deltas * deltas
                 distance2 = N.sum(delta2)
@@ -48,7 +50,8 @@ class Space(object):
                     distance = distance2 ** 0.5
                     unit = deltas / distance2
                     force = G * mass * b[_MASS]
-                    N.add(accel, unit * force / mass, accel)
+                    deltaA = unit * force / mass
+                    N.add(accel, deltaA, accel)
             velocity = a[_VELOCITY]
             N.add(velocity, accel, velocity)
 
