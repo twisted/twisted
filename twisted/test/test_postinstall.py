@@ -18,7 +18,7 @@ if os.name == 'nt':
     def noop1(*args, **kwargs):
         pass
 
-    def create_shortcut(targ, title, path, args, workdir, dll=None, icon=None):
+    def create_shortcut(targ, title, path, args=None, workdir=None, dll=None, icon=None):
         file(path, 'w').close()
     def get_special_folder_path(*args, **kwargs):
         return ''
