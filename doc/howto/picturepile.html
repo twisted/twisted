@@ -31,14 +31,15 @@ be displayed.</p>
 &lt;/html&gt;
 </pre>
 
-<p>The main things that distinguish a Woven template from standard XHTML
-are the 'model', 'view', and 'pattern' attributes on tags. Predictably,
-'model' and 'view' specify which model and view will be chosen to fill the
-corresponding node. The 'pattern' attribute is used with views that have
-multiple parts, such as List. This example uses two patterns List provides;
-'listItem' marks the node that will be used as the template for each item
-in the list, and 'emptyList' marks the node displayed when the list has no
-items.</p>
+<p>The main things that distinguish a Woven template from standard XHTML are the
+<code>model</code>, <code>view</code>, and <code>pattern</code> attributes on
+tags. Predictably, <code>model</code> and <code>view</code> specify which model
+and view will be chosen to fill the corresponding node. The <code>pattern</code>
+attribute is used with views that have multiple parts, such as List. This
+example uses two patterns <code base= "twisted.web.woven.widgets">List</code>
+provides; <code>listItem</code> marks the node that will be used as the template
+for each item in the list, and <code>emptyList</code> marks the node displayed
+when the list has no items.</p>
 
 <p>Next, we create a <code class="API" base= "twisted.web.woven.page"
 >Page</code> that will display the directory listing, filling the template
@@ -76,30 +77,34 @@ class DirectoryListing(page.Page):
                 return ImageDisplay(image=path)
 </pre>
 
-<p>Due to the somewhat complex inheritance hierarchy in Woven's internals,
-a lot of processing is done in the '__init__' method for Page. Therefore, a
-separate 'initialize' method is provided so that one can easily access keyword
+<p>Due to the somewhat complex inheritance hierarchy in Woven's internals, a lot
+of processing is done in the <code>__init__</code> method for <code class="API"
+base="twisted.web.woven.page">Page</code>. Therefore, a separate
+<code>initialize</code> method is provided so that one can easily access keyword
 args without having to disturb the internal setup; it is called with the same
-args that Page.__init__ receives.</p>
+args that <code class="API" base="twisted.web.woven.page">Page.__init__</code>
+receives.</p>
 
-<p>The 'templateFile' attribute tells the Page what file to load the template
-from; in this case, we will store the templates in the same directory as the
-Python module. The 'wmfactory' (short for Woven Model Factory) methods return
-objects to be used as models; In this case, 'wmfactory_title' will return a
-string, the directory's name, and 'wmfactory_directory' will return a list of
-strings, the directory's content.</p>
+<p>The <code>templateFile</code> attribute tells the Page what file to load the
+template from; in this case, we will store the templates in the same directory
+as the Python module. The <code>wmfactory</code> (short for Woven Model Factory)
+methods return objects to be used as models; In this case,
+<code>wmfactory_title</code> will return a string, the directory's name, and
+<code>wmfactory_directory</code> will return a list of strings, the directory's
+content.</p>
 
 <p>Upon rendering, Woven will scan the template's DOM tree for nodes to fill;
-when it encounters one, it gets the model (in this case by calling methods
-on the Page prefixed with 'wmfactory_'), then creates a view for that model;
-this page uses standard widgets for its models and so contains no custom
-view code. The view fills the DOM node with the appropriate data. Here, the
-view for 'title' is <code class="API" base= "twisted.web.woven.widgets"
->Text</code>, and so will merely insert the string. The view for 'directory'
-is <code class="API" base= "twisted.web.woven.widgets" >List</code>, and so
-each element of the list will be formatted within the '&lt;ul&gt;'. Since the
-view for list items is Anchor, each item in the list will be formatted as an
-'&lt;a&gt;' tag.</p>
+when it encounters one, it gets the model (in this case by calling methods on
+the Page prefixed with <code>wmfactory_</code>), then creates a view for that
+model; this page uses standard widgets for its models and so contains no custom
+view code. The view fills the DOM node with the appropriate data. Here, the view
+for <code>title</code> is <code class="API" 
+base="twisted.web.woven.widgets">Text</code>, and so will merely insert the
+string.  The view for <code>directory</code> is <code class="API" 
+base= "twisted.web.woven.widgets">List</code>, and so each element of the list
+will be formatted within the '&lt;ul&gt;'. Since the view for list items is
+Anchor, each item in the list will be formatted as an <code>&lt;a&gt;</code>
+tag.</p>
 
 <p>So, for a directory <q>Images</q> containing <q>foo.jpeg</q>,
 <q>baz.png</q>, and a directory <q>MoreImages</q>, the rendered page will look
@@ -127,10 +132,10 @@ like this:</p>
 &lt;/html&gt;
 </pre>
 
-<p>As you can see, the nodes marked with 'model' and 'view' are replaced with
-the data from their models, as formatted by their views. In particular, the
-List view repeated the node marked with the 'listItem' pattern for each item
-in the list.</p>
+<p>As you can see, the nodes marked with <code>model</code> and
+<code>view</code> are replaced with the data from their models, as formatted by
+their views. In particular, the List view repeated the node marked with the
+<code>listItem</code> pattern for each item in the list.</p>
 
 <p>For displaying the actual images, we use this template:</p>
 
@@ -145,7 +150,7 @@ in the list.</p>
 &lt;/html&gt;
 </pre>
 
-And here is the definition of 'ImageDisplay':
+And here is the definition of <code>ImageDisplay</code>:
 
 <pre class="python">
 class ImageDisplay(page.Page):
@@ -162,9 +167,10 @@ class ImageDisplay(page.Page):
         return static.File(self.image)
 </pre>
 
-<p>Instead of using 'getDynamicChild', this class uses a 'wchild_' method to
-return the image data when the 'preview' child is requested. 'getDynamicChild'
-is only called if there are no 'wchild_' methods available to handle the
+<p>Instead of using <code>getDynamicChild</code>, this class uses a
+<code>wchild_</code> method to return the image data when the
+<code>preview</code> child is requested. <code>getDynamicChild</code> is only
+called if there are no <code>wchild_</code> methods available to handle the
 requested URL.</p>
 
 <p>Finally, we create a webserver set to start with a directory listing, and
@@ -212,7 +218,7 @@ to write the code for this view ourselves. (Standard widgets are named with
 initial capital letters; by convention, custom views are named like methods,
 with initial lowercase letters.)</p>
 
-<p>The simplest way to do it is with a 'wvupdate_' (short for Woven
+<p>The simplest way to do it is with a <code>wvupdate_</code> (short for Woven
 View Update) method on our DirectoryListing class:</p>
 
 <pre class="python">
@@ -225,16 +231,16 @@ View Update) method on our DirectoryListing class:</p>
             a.add('img', src=(data+'/preview'),width='200',height='200')
 </pre>
 
-<p>When the 'thumbnail' view is requested, this method is called with the HTTP
-request, the DOM node marked with this view, and the data from the associated
-model (in this case, the name of the image or directory). With this approach,
-we can now modify the DOM as necessary. First, we wrap the node in <code
-class= "API" base= "twisted.web.microdom" >lmx</code>, a class provided by
-Twisted's DOM implementation that provides convenient syntax for modifying
-DOM nodes; attributes can be treated as dictionary keys, and the 'text'
-and 'add' methods provide for adding text to the node and adding children,
-respectively. If this item is a directory, a textual link is displayed; else,
-it produces an 'IMG' tag of fixed size.</p>
+<p>When the <code>thumbnail</code> view is requested, this method is called with
+the HTTP request, the DOM node marked with this view, and the data from the
+associated model (in this case, the name of the image or directory). With this
+approach, we can now modify the DOM as necessary. First, we wrap the node in
+<code class= "API" base= "twisted.web.microdom" >lmx</code>, a class provided by
+Twisted's DOM implementation that provides convenient syntax for modifying DOM
+nodes; attributes can be treated as dictionary keys, and the <code>text</code>
+and <code>add</code> methods provide for adding text to the node and adding
+children, respectively.  If this item is a directory, a textual link is
+displayed; else, it produces an <code>IMG</code> tag of fixed size.</p>
 
 <h2>Simple Input Handling</h2>
 
@@ -245,9 +251,10 @@ directory listing. Again, we start with the template:</p>
 <a href="listings/PicturePile/directory-listing3.html" class="html-listing">directory-listing3.html</a>
 
 <p>This time, we add a form with a list of thumbnail sizes named
-'thumbnailSize': we want the form to reflect the selected option, so we place
-an 'adjuster' view on the 'select' tag that looks for the right 'option' tag
-and puts 'selected=1' on it (the default size being 200):</p>
+<code>thumbnailSize</code>: we want the form to reflect the selected option, so
+we place an <code>adjuster</code> view on the <code>select</code> tag that looks
+for the right <code>option</code> tag and puts <code>selected=1</code> on it
+(the default size being 200):</p>
 
 <pre class="python"
 title="DirectoryListing.wvupdate_adjuster, in picturepile3.py."
@@ -257,14 +264,15 @@ title="DirectoryListing.wvupdate_adjuster, in picturepile3.py."
                                'value', size)[0].setAttribute('selected', '1')
 </pre>
 
-<p>'request.args' is a dictionary, mapping argument names to lists of values
-(since multiple HTTP arguments are possible). In this case, we only care about
-the first argument named 'thumbnailSize'. 'domhelpers.locateNodes' is a helper
-function which, given a list of DOM nodes, a key, and a value, will search
-each tree and return all nodes that have the requested key-value pair.</p>
+<p><code>request.args</code> is a dictionary, mapping argument names to lists of
+values (since multiple HTTP arguments are possible). In this case, we only care
+about the first argument named <code>thumbnailSize</code>.
+<code>domhelpers.locateNodes</code> is a helper function which, given a list of
+DOM nodes, a key, and a value, will search each tree and return all nodes that
+have the requested key-value pair.</p>
 
-<p>Next, we modify the 'thumbnail' view to look at the arguments from the
-HTTP request and use that as the size for the images:</p>
+<p>Next, we modify the <code>thumbnail</code> view to look at the arguments from
+the HTTP request and use that as the size for the images:</p>
 
 <pre class="python"
 title="DirectoryListing.wvupdate_thumbnail, in picturepile3.py"
@@ -305,9 +313,9 @@ components.registerAdapter(Preferences, server.Session, IPreferences)
 
 <p>We're just going to store data on this class, so no methods are defined.</p>
 
-<p>Next, we change our view methods, 'wvupdate_thumbnail' and
-'wvupdate_adjuster', to retrieve their size data from the Preferences object
-stored on the Session, instead of the HTTP request:</p>
+<p>Next, we change our view methods, <code>wvupdate_thumbnail</code> and
+<code>wvupdate_adjuster</code>, to retrieve their size data from the Preferences
+object stored on the Session, instead of the HTTP request:</p>
 
 <pre class="python"
 title="DirectoryListing.wvupdate_thumbnail and DirectoryListing.wvupdate_adjuster, from picturepile4.py."
@@ -330,12 +338,12 @@ title="DirectoryListing.wvupdate_thumbnail and DirectoryListing.wvupdate_adjuste
 
 <h3>Controllers</h3>
 
-<p>Now we turn to the question of how the data gets into the session in
-the first place. While it is possible to to place it there from within the
-'wvupdate_' methods, since they both have access to the HTTP request, it is
-desirable at times to separate out input handling, which is what controllers
-are for. So, we add a 'wcfactory_' (short for Woven Controller Factory) method
-to DirectoryListing:</p>
+<p>Now we turn to the question of how the data gets into the session in the
+first place. While it is possible to to place it there from within the
+<code>wvupdate_</code> methods, since they both have access to the HTTP request,
+it is desirable at times to separate out input handling, which is what
+controllers are for. So, we add a <code>wcfactory_</code> (short for Woven
+Controller Factory) method to DirectoryListing:</p>
 
 <pre class="python"
 title="DirectoryListing.wcfactory_adjuster, from picturepile4.py."
@@ -343,11 +351,12 @@ title="DirectoryListing.wcfactory_adjuster, from picturepile4.py."
         return ImageSizer(model, name='thumbnailSize')
 </pre>
 
-<p>ImageSizer is a controller. It checks the input for validity (in this
-case, since it subclasses Anything, it merely ensures the input is non-empty)
-and calls 'handleValid' if the check succeeds; in this case, we retrieve the
-Preferences component from the session, and store the size received from the
-form upon it:</p>
+<p>ImageSizer is a controller. It checks the input for validity (in this case,
+since it subclasses <code class="API"
+base="twisted.web.woven.input">Anything</code>, it merely ensures the input is
+non-empty) and calls <code>handleValid</code> if the check succeeds; in this
+case, we retrieve the Preferences component from the session, and store the size
+received from the form upon it:</p>
 
 <pre class="python"
 title="From picturepile4.py."
@@ -357,9 +366,9 @@ title="From picturepile4.py."
         prefs.size = data 
 </pre>
 
-<p>Finally, we must modify the template to use our new controller. Since we
-are concerned with the input from the '&lt;select&gt;' element of the form, we
-place the controller upon it:</p>
+<p>Finally, we must modify the template to use our new controller. Since we are
+concerned with the input from the <code>&lt;select&gt;</code> element of the
+form, we place the controller upon it:</p>
 
 <a href="listings/PicturePile/directory-listing4.html" class="html-listing">directory-listing4.html</a>
 
