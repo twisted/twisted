@@ -75,7 +75,7 @@ class TestCase:
 
     expectedAssertions = None
     _assertions = 0
-
+    
     def setUpClass(self):
         pass
 
@@ -180,7 +180,7 @@ class TestCase:
     # Utility method for creating temporary names
     def mktemp(self):
         cls = self.__class__
-        base = os.path.join(cls.__module__, cls.__name__, self.caseMethodName)
+        base = os.path.join(cls.__module__, cls.__name__, getattr(self, 'caseMethodName', 'class'))
         try:
             os.makedirs(base)
         except OSError, e:
