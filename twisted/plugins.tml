@@ -3,7 +3,7 @@
 ## Coil modules
 
 register("Twisted Words",
-         "twisted.coils.words",
+         "twisted.coil.plugins.words",
          description="A chat and collaboration system.",
          type='coil')
 
@@ -13,32 +13,32 @@ register("Twisted Words",
          # type='coil')
 
 register("Twisted Web",
-         "twisted.coils.web",
+         "twisted.coil.plugins.web",
          description="Web servers & services for Twisted",
          type='coil')
 
 register("Twisted Manhole",
-         "twisted.coils.manhole",
+         "twisted.coil.plugins.manhole",
          description="Mail protocol implementation for Twisted.",
          type='coil')
 
 register("Telnet Shell",
-         "twisted.coils.telnet",
+         "twisted.coil.plugins.telnet",
          description="Shell access through telnet.  Warning: This is insecure!",
          type='coil')
 
 register("TCP Port Forwarder",
-         "twisted.coils.stupidproxy",
+         "twisted.coil.plugins.stupidproxy",
          description="TCP port forwarding.",
          type='coil')
 
 register("SOCKSv4 Proxy",
-         "twisted.coils.socks",
+         "twisted.coil.plugins.socks",
          description="SOCKSv4 proxy for firewalls.",
          type='coil')
 
 register("FTP Server",
-         "twisted.coils.ftp",
+         "twisted.coil.plugins.ftp",
          description="FTP Server.",
          type='coil')
 
