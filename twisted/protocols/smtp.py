@@ -219,7 +219,7 @@ class DomainSMTP(SMTP):
 
 class SMTPClient(basic.LineReceiver):
     """SMTP client for sending emails."""
-    
+
     def __init__(self, identity):
         self.identity = identity
 
@@ -276,18 +276,32 @@ class SMTPClient(basic.LineReceiver):
     def smtpCode_250_to(self, line):
         self.successAddresses.append(self.lastAddress)
         self.sendToOrData()
-
+        
     def smtpCode_354_data(self, line):
-        for line in string.split(self.getMailData(), '\n')[:-1]:
-            if line[:1] == '.':
-                line = line+'.'
-            self.sendLine(line)
-        self.sendLine('.')
-        self.state = 'afterData'
+        self.mailFile = self.getMailData()
+        self.transport.registerProducer(self, 0)
 
     def smtpCode_250_afterData(self, line):
         self.sentMail(self.successAddresses)
         self.smtpCode_250_from('')
+
+    # IProducer interface
+    def resumeProducing(self):
+        """Write another """
+        chunk = self.mailFile.read(8192)
+        if not chunk:
+            self.transport.unregisterProducer()
+            self.sendLine('.')
+            self.state = 'afterData'
+
+        chunk = string.replace(chunk, "\n", "\r\n")
+        self.transport.write(chunk)
+
+    def pauseProducing(self):
+        pass
+
+    def stopProducing(self):
+        self.mailFile.close()
 
 
     # these methods should be overriden in subclasses
@@ -300,7 +314,11 @@ class SMTPClient(basic.LineReceiver):
         raise NotImplementedError
 
     def getMailData(self):
-        """Return the data of message to be sent."""
+        """Return file-like object containing data of message to be sent.
+
+        The file should be a text file with local line ending convention,
+        i.e. readline() should return a line ending in '\n'.
+        """
         raise NotImplementedError
 
     def sentMail(self, addresses):

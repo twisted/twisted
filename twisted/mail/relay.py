@@ -72,10 +72,7 @@ class SMTPRelayer(smtp.SMTPClient):
             finally:
                 fp.close()
             fp = open(message+'-D')
-            try:
-                messageContents.append(fp.read())
-            finally:
-                fp.close()
+            messageContents.append(fp)
             self.messages.append(messageContents)
             self.names.append(message)
 

@@ -9,6 +9,8 @@
 		* split file system stuff into Queue (renamed from MessageCollection) 
 
 		* Put a Queue in service
+	* twisted/protocol/smtp.py: changed SMTPClient API so that it returns
+	a file for the message content, instead of a string.
 
 2002-05-15  Andrew Bennetts <andrew-twisted@puzzling.org>
 
