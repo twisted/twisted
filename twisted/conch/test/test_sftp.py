@@ -462,5 +462,5 @@ exit
 if not unix:
     TestOurServerOurClient.skip = "don't run on non-posix"
     TestOurServerCmdLineClient.skip = "don't run on non-posix"
-    TestOurServerCmdLineClient.skip = "don't run on non-posix"
+    TestOurServerBatchFile.skip = "don't run on non-posix"
 
