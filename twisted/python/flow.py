@@ -71,8 +71,8 @@ class Flow:
     def addContext(self, onFlush = None):
         return self.append(FlowContext(onFlush))
 
-    def addAccumulator(self, accum, start = None, bucket = None):
-        stage = FlowAccumulator(accum, start, bucket)
+    def addMerge(self, accum, start = None, bucket = None):
+        stage = FlowMerge(accum, start, bucket)
         return self.append(stage)
 
     def addChain(self, *args):
@@ -323,7 +323,7 @@ class FlowBranch(FlowStage):
             if self.onFinish:
                self.onFinish()
 
-class FlowAccumulator(FlowStage):
+class FlowMerge(FlowStage):
     '''
         the opposite of a FlowBranch, this takes multiple calls
         and converges them into a single call; this implements
