@@ -90,6 +90,12 @@ class WrappingFactory(ClientFactory):
         self.wrappedFactory = wrappedFactory
         self.protocols = {}
 
+    def doStart(self):
+        self.wrappedFactory.doStart()
+
+    def doStop(self):
+        self.wrappedFactory.doStop()
+    
     def startedConnecting(self, connector):
         self.wrappedFactory.startedConnecting(connector)
 
