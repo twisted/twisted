@@ -48,14 +48,15 @@ from twisted.python.compat import isinstance
 from types import ListType as NodeList
 from types import StringTypes, UnicodeType
 import sys
-dictsAreNotSequences = sys.version_info < (2, 2)
+try:
+    'x' in {}
+except TypeError:
+    dictsAreNotSequences = 1
 
 def getElementsByTagName(iNode, name):
     matches = []
-    matches_append = matches.append
-    if iNode.nodeName == name:
-        matches_append(iNode)
-    slice = iNode.childNodes[:]
+    matches_append = matches.append # faster lookup. don't do this at home
+    slice=[iNode]
     while len(slice)>0:
         c = slice.pop(0)
         if c.nodeName == name:
@@ -66,10 +67,7 @@ def getElementsByTagName(iNode, name):
 def getElementsByTagNameNoCase(iNode, name):
     matches = []
     matches_append = matches.append
-    name = name.lower()
-    if iNode.nodeName.lower() == name:
-        matches.append(iNode)
-    slice = iNode.childNodes[:]
+    slice=[iNode]
     while len(slice)>0:
         c = slice.pop(0)
         if c.nodeName.lower() == name:
