@@ -288,6 +288,14 @@ class View(template.DOMTemplate):
         if submodelName is None:
             submodelName = ""
         model = self.getNodeModel(request, node, submodelName)
+
+        if isinstance(model, defer.Deferred):
+            model.addCallback(self.handleModel, request, node, submodelName)
+        else:
+            self.handleModel(model, request, node, submodelName)
+
+    def handleModel(self, model, request, node, submodelName):
+
         view = self.getNodeView(request, node, submodelName, model)
         controller = self.getNodeController(request, node, submodelName, model)
 
