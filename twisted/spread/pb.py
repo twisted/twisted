@@ -52,7 +52,7 @@ applied when serializing arguments.
 # Future Imports
 from __future__ import nested_scopes
 
-__version__ = "$Revision: 1.137 $"[11:-2]
+__version__ = "$Revision: 1.138 $"[11:-2]
 
 
 # System Imports
@@ -1587,7 +1587,8 @@ class IPerspective(Interface):
     system's concept of a 'user'.
     
     Expected to have methods beginning with 'perspective_' that will
-    be published remotely.
+    be published remotely, and to be a subclass of Perspective class,
+    at least for the moment.
     """
 
 
