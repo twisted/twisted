@@ -5,9 +5,20 @@ from twisted.internet.app import Application
 from twisted.internet import reactor
 from twisted.internet.protocol import Protocol, ServerFactory, ProcessProtocol
 from twisted.python import log, usage
+from twisted.protocols import wire
 
 import inetdconf
 
+
+# A dict of known 'internal' services (i.e. those that don't involve spawning
+# another process.
+internalProtocols = {
+    'echo': wire.Echo,
+    'chargen': wire.Chargen,
+    'discard': wire.Discard,
+    'daytime': wire.Daytime,
+    'time': wire.Time,
+}
 
 class InetdProtocol(Protocol):
     def connectionMade(self):
@@ -109,8 +120,18 @@ def main(options=None):
                     log.msg('Unknown group: ' + service.group)
                     continue
 
+        if service.program == 'internal':
+            # Internal services can use a standard ServerFactory
+            if not internalProtocols.has_key(service.name):
+                log.msg('Unknown internal service: ' + service.name)
+                continue
+            factory = ServerFactory()
+            factory.protocol = internalProtocols[service.name]
+        else:
+            # Non-internal services use InetdFactory
+            factory = InetdFactory(service)
+
         log.msg('Adding service:', service.name, service.port, service.protocol)
-        factory = InetdFactory(service)
         if service.protocol == 'tcp':
             app.listenTCP(service.port, factory)
         elif service.protocol == 'udp':
