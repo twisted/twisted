@@ -181,7 +181,7 @@ class LatexSpitter(BaseLatexSpitter):
         else:
             path, fragid = (href.split('#', 1) + [None])[:2]
             if path == '':
-                path = self.filename
+                path = os.path.basename(self.filename)
             else:
                 # Hack for linking to man pages from howtos, i.e.
                 # ../doc/foo-man.html -> foo-man.html
@@ -193,7 +193,7 @@ class LatexSpitter(BaseLatexSpitter):
             self.writer(' (page \\pageref{%s})' % ref)
 
     def visitNode_a_name(self, node):
-        self.writer('\\label{%sHASH%s}' % (self.filename,
+        self.writer('\\label{%sHASH%s}' % (os.path.basename(self.filename),
                                            node.getAttribute('name')))
         self.visitNodeDefault(node)
 
@@ -272,7 +272,7 @@ class SectionLatexSpitter(LatexSpitter):
     def visitNode_title(self, node):
         self.writer('\\section{')
         self.visitNodeDefault(node)
-        self.writer('\\label{%s}}\n' % self.filename)
+        self.writer('\\label{%s}}\n' % os.path.basename(self.filename))
 
     start_title = end_title = end_body = start_body = start_html = None
 
