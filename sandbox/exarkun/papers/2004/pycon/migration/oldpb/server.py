@@ -118,7 +118,8 @@ class MigrationServer(pb.Avatar):
         del self.transition[name]
 
     def outOfServers(self):
-        pass
+        from twisted.internet import reactor
+        reactor.stop()
 
 class MigrationRealm:
     __implements__ = (portal.IRealm,)
