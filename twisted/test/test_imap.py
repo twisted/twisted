@@ -112,14 +112,30 @@ class IMAP4HelperTestCase(unittest.TestCase):
         for (case, expected) in zip(cases, answers):
             self.assertEquals(imap4.parseNestedParens(case), expected)
 
-
 class SimpleMailbox:
-    pass
+    def getFlags(self):
+        return ('\\Flag1', 'Flag2', 'LastFlag')
+    
+    def getUID(self):
+        return 42
+    
+    def getMessageCount(self):
+        return 9
+    
+    def getRecentCount(self):
+        return 3
+    
+    def isWriteable(self):
+        return 1
 
 class SimpleServer(imap4.IMAP4Server):
+    theAccount = imap4.Account()
+    theAccount.mboxType = SimpleMailbox
+    theAccount.addMailbox('test-mailbox', SimpleMailbox())
+
     def authenticateLogin(self, username, password):
         if username == 'testuser' and password == 'password-test':
-            return 'This is my mailbox'
+            return self.theAccount
         return None
 
 class SimpleClient(imap4.IMAP4Client):
@@ -129,7 +145,7 @@ class SimpleClient(imap4.IMAP4Client):
 
     def connectionMade(self):
         self.deferred.callback(None)
-    
+
 class IMAP4ServerTestCase(unittest.TestCase):
     def setUp(self):
         d = defer.Deferred()
@@ -137,12 +153,18 @@ class IMAP4ServerTestCase(unittest.TestCase):
         self.client = SimpleClient(d)
         self.connected = d
     
+    def tearDown(self):
+        del self.server
+        del self.client
+        del self.connected
+
     def _cbStopClient(self):
         self.client.transport.loseConnection()
 
     def _ebGeneral(self, failure):
         self.client.transport.loseConnection()
         self.server.transport.loseConnection()
+        failure.printTraceback(file('failure.log', 'w'))
         raise failure.value
 
     def testCapability(self):
@@ -205,4 +227,93 @@ class IMAP4ServerTestCase(unittest.TestCase):
         self.connected.addCallback(strip(login)).addErrback(self._ebGeneral)
         loopback.loopback(self.server, self.client)
         
-        self.assertEquals(self.server.mbox, 'This is my mailbox')
+        self.assertEquals(self.server.account, SimpleServer.theAccount)
+        self.assertEquals(self.server.state, 'auth')
+
+    def testFailedLogin(self):
+        def login():
+            d = self.client.login('testuser', 'wrong-password')
+            d.addBoth(strip(self._cbStopClient))
+
+        self.connected.addCallback(strip(login)).addErrback(self._ebGeneral)
+        loopback.loopback(self.server, self.client)
+
+        self.assertEquals(self.server.account, None)
+        self.assertEquals(self.server.state, 'unauth')
+
+    def testSelect(self):
+        self.selectedArgs = None
+        def login():
+            return self.client.login('testuser', 'password-test')
+        def select():
+            def selected(args):
+                self.selectedArgs = args
+                self._cbStopClient()
+            d = self.client.select('test-mailbox')
+            d.addCallback(selected)
+            return d
+
+        d = self.connected.addCallback(strip(login))
+        d.addCallback(strip(select))
+        d.addErrback(self._ebGeneral)
+        loopback.loopback(self.server, self.client)
+        
+        mbox = SimpleServer.theAccount.mailboxes['TEST-MAILBOX']
+        self.assertEquals(self.server.mbox, mbox)
+        self.assertEquals(self.selectedArgs, {
+            'EXISTS': 9, 'RECENT': 3, 'UID': 42,
+            'FLAGS': ('\\Flag1', 'Flag2', 'LastFlag'),
+            'READ-WRITE': 1
+        })
+
+    def testExamine(self):
+        self.examinedArgs = None
+        def login():
+            return self.client.login('testuser', 'password-test')
+        def examine():
+            def examined(args):
+                self.examinedArgs = args
+                self._cbStopClient()
+            d = self.client.examine('test-mailbox')
+            d.addCallback(examined)
+            return d
+
+        d = self.connected.addCallback(strip(login))
+        d.addCallback(strip(examine))
+        d.addErrback(self._ebGeneral)
+        loopback.loopback(self.server, self.client)
+        
+        mbox = SimpleServer.theAccount.mailboxes['TEST-MAILBOX']
+        self.assertEquals(self.server.mbox, mbox)
+        self.assertEquals(self.examinedArgs, {
+            'EXISTS': 9, 'RECENT': 3, 'UID': 42,
+            'FLAGS': ('\\Flag1', 'Flag2', 'LastFlag'),
+            'READ-WRITE': 0
+        })
+
+    def testCreate(self):
+        succeed = ('testbox', 'test/box', 'test/', 'test/box/box')
+        fail = ('INBOX', 'testbox', 'test/box')
+        
+        def cb(): self.result.append(1)
+        def eb(failure): self.result.append(0)
+        
+        def login():
+            return self.client.login('testuser', 'password-test')
+        def create():
+            for name in succeed + fail:
+                d = self.client.create(name)
+                d.addCallback(strip(cb)).addErrback(eb)
+            d.addCallbacks(strip(self._cbStopClient), self._ebGeneral)
+
+        self.result = []
+        d = self.connected.addCallback(strip(login)).addCallback(strip(create))
+        loopback.loopback(self.server, self.client)
+        
+        self.assertEquals(self.result, [1] * len(succeed) + [0] * len(fail))
+        mbox = SimpleServer.theAccount.mailboxes.keys()
+        answers = ['testbox', 'test/box', 'test', 'test/box/box', 'test-mailbox']
+        mbox.sort()
+        answers.sort()
+        self.assertEquals(mbox, [a.upper() for a in answers])
+        

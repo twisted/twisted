@@ -36,6 +36,8 @@ class IMAP4Exception(Exception):
     def __init__(self, *args):
         Exception.__init__(self, *args)
 
+class IllegalClientResponse(IMAP4Exception): pass
+
 class IMAP4Server(basic.LineReceiver):
 
     """
@@ -60,7 +62,10 @@ class IMAP4Server(basic.LineReceiver):
     # Mapping of tags to commands we have received
     tags = None
     
-    # The mailbox object for this connection
+    # The account object for this connection
+    account = None
+    
+    # The currently selected mailbox
     mbox = None
     
     # Command data to be processed when literal data is received
@@ -91,6 +96,7 @@ class IMAP4Server(basic.LineReceiver):
             self.setLineMode(passon)
     
     def lineReceived(self, line):
+        # print 'S: ' + line
         args = line.split(None, 2)
         rest = None
         if len(args) == 3:
@@ -100,6 +106,7 @@ class IMAP4Server(basic.LineReceiver):
         else:
             # XXX - This is rude.
             self.transport.loseConnection()
+            raise IllegalClientResponse(line) 
     
         cmd = cmd.upper()
         if rest and rest[0] == '{' and rest[-1] == '}':
@@ -108,6 +115,7 @@ class IMAP4Server(basic.LineReceiver):
             except ValueError:
                 # XXX - This is rude.
                 self.transport.loseConnection()
+                raise IllegalClientResponse(line)
             else:
                 if self.lookupCommand(cmd):
                     self._setupForLiteral(octets, (tag, cmd))
@@ -143,8 +151,8 @@ class IMAP4Server(basic.LineReceiver):
     def sendNegativeResponse(self, tag = None, message = ''):
         self._respond('NO', tag, message)
     
-    def sendUntaggedResponse(self, command, rest):
-        self._respond(command, None, rest)
+    def sendUntaggedResponse(self, message):
+        self._respond(message, None, '')
 
     def sendContinuationRequest(self, msg = 'Ready for additional command text'):
         self.sendLine('+ ' + msg)
@@ -167,7 +175,7 @@ class IMAP4Server(basic.LineReceiver):
                 caps = ' '.join([caps] + [('%s=%s' % (c, cap)) for cap in v])
             else:
                 caps = ' '.join((caps, c))
-        self.sendUntaggedResponse('CAPABILITY', caps)
+        self.sendUntaggedResponse('CAPABILITY ' + caps)
         self.sendPositiveResponse(tag, 'CAPABILITY completed')
 
     auth_CAPABILITY = unauth_CAPABILITY
@@ -175,7 +183,7 @@ class IMAP4Server(basic.LineReceiver):
     logout_CAPABILITY = unauth_CAPABILITY
     
     def unauth_LOGOUT(self, tag, args):
-        self.sendUntaggedResponse('BYE', 'Nice talking to you')
+        self.sendUntaggedResponse('BYE Nice talking to you')
         self.sendPositiveResponse(tag, 'LOGOUT successful')
         self.transport.loseConnection()
     
@@ -230,18 +238,84 @@ class IMAP4Server(basic.LineReceiver):
                 self._cbLogin(d, tag)
 
     def authenticateLogin(self, user, passwd):
+        """Lookup the account associated with the given parameters
+        
+        Override this method to define the desired authentication behavior.
+        
+        @type user: C{str}
+        @param user: The username to lookup
+        
+        @type passwd: C{str}
+        @param passwd: The password to login with
+        
+        @rtype: C{Account}
+        @return: An appropriate account object, or None
+        """
         return None
     
-    def _cbLogin(self, mbox, tag):
-        if mbox is None:
+    def _cbLogin(self, account, tag):
+        if account is None:
             self.sendNegativeResponse(tag, 'LOGIN failed')
         else:
-            self.mbox = mbox
+            self.account = account
             self.sendPositiveResponse(tag, 'LOGIN succeeded')
             self.state = 'auth'
     
     def _ebLogin(self, failure, tag):
         self.sendBadResponse(tag, 'Server error: ' + str(failure.value))
+    
+    
+    def auth_SELECT(self, tag, args):
+        mbox = self.account.select(args)
+        if mbox is None:
+            self.sendNegativeResponse(tag, 'No such mailbox')
+        else:
+            self.state = 'select'
+            
+            flags = mbox.getFlags()
+            self.sendUntaggedResponse(str(mbox.getMessageCount()) + ' EXISTS')
+            self.sendUntaggedResponse(str(mbox.getRecentCount()) + ' RECENT')
+            self.sendUntaggedResponse('FLAGS (%s)' % ' '.join(flags))
+            self.sendPositiveResponse(None, '[UIDVALIDITY %d]' % mbox.getUID())
+
+            if mbox.isWriteable():
+                s = 'READ-WRITE'
+            else:
+                s = 'READ-ONLY'
+
+            if self.mbox:
+                self.account.release(mbox)
+            self.mbox = mbox
+            self.sendPositiveResponse(tag, '[%s] SELECT successful' % s)
+    select_SELECT = auth_SELECT
+    
+    def auth_EXAMINE(self, tag, args):
+        mbox = self.account.select(args, 0)
+        if mbox is None:
+            self.sendNegativeResponse(tag, 'No such mailbox')
+        else:
+            self.state = 'select'
+            
+            flags = mbox.getFlags()
+            self.sendUntaggedResponse(str(mbox.getMessageCount()) + ' EXISTS')
+            self.sendUntaggedResponse(str(mbox.getRecentCount()) + ' RECENT')
+            self.sendUntaggedResponse('FLAGS (%s)' % ' '.join(flags))
+            self.sendPositiveResponse(None, '[UIDVALIDITY %d]' % mbox.getUID())
+
+            if self.mbox:
+                self.account.release(mbox)
+            self.mbox = mbox
+            self.sendPositiveResponse(tag, '[READ-ONLY] EXAMINE successful')
+    select_EXAMINE = auth_EXAMINE
+    
+    def auth_CREATE(self, tag, args):
+        try:
+            self.account.create(args.strip())
+        except MailboxCollision, c:
+            self.sendNegativeResponse(tag, str(c))
+        else:
+            self.sendPositiveResponse(tag, 'Mailbox created')
+    select_CREATE = auth_CREATE
 
 class UnhandledResponse(IMAP4Exception): pass
 
@@ -253,9 +327,11 @@ class NoSupportedAuthentication(IMAP4Exception):
         self.serverSupports = serverSupports
         self.clientSupports = clientSupports
 
+class IllegalServerResponse(IMAP4Exception): pass
+
 class IMAP4Client(basic.LineReceiver):
     tags = None
-    ambiguity = None
+    waiting = None
     queued = None
     tagID = 1
     state = None
@@ -293,84 +369,105 @@ class IMAP4Client(basic.LineReceiver):
         self.authenticators[name.upper()] = auth
 
     def lineReceived(self, line):
+        # print 'C: ' + line
         rest = None
-        parts = line.split(None, 2)
-        if len(parts) == 3:
-            tag, status, rest = parts
-        elif len(parts) == 2:
-            tag, status = parts
+        parts = line.split(None, 1)
+        if len(parts) == 2:
+            tag, rest = parts
         else:
             # XXX - This is rude.
             self.transport.loseConnection()
+            raise IllegalServerResponse(line)
         
-        status = status.upper()
-        self.dispatchCommand(tag, status, rest)
+        self.dispatchCommand(tag, rest)
 
     def makeTag(self):
         tag = '%0.4X' % self.tagID
         self.tagID += 1
         return tag
 
-    def dispatchCommand(self, tag, command, rest):
-        if command in self.STATUS_CODES:
-            f = getattr(self, 'status_' + command)
-            f(tag, rest)
-        elif tag == '*' and self.ambiguity:
-            self.tags[self.ambiguity][1].append((command, rest))
-        elif tag == '+':
-            d, lines = self.tags[self.ambiguity]
-            del self.tags[self.ambiguity]
-            d.callback(lines)
-        else:
-            pass
-
-    def status_OK(self, tag, args):
+    def dispatchCommand(self, tag, rest):
         if self.state is None:
-            self.state = 'unauth'
-        elif tag != '*' and tag != '+':
+            f = self.response_UNAUTH
+        else:
+            f = getattr(self, 'response_' + self.state.upper(), None)
+        if f:
+            try:
+                f(tag, rest)
+            except:
+                log.deferr()
+                self.transport.loseConnection()
+        else:
+            log.err("Cannot dispatch: %s, %s, %s" % (self.state, tag, rest))
+            self.transport.loseConnection()
+
+    def response_UNAUTH(self, tag, rest):
+        if self.state is None:
+            # Server greeting, this is
+            status, rest = rest.split(None, 1)
+            if status.upper() == 'OK':
+                self.state = 'unauth'
+            elif status.upper() == 'PREAUTH':
+                self.state = 'auth'
+            else:
+                # XXX - This is rude.
+                self.transport.loseConnection()
+                raise IllegalServerResponse(tag + ' ' + rest)
+        else:
+            self._defaultHandler(tag, rest)
+
+    def response_AUTH(self, tag, rest):
+        self._defaultHandler(tag, rest)
+
+    def _defaultHandler(self, tag, rest):
+        if tag == '*' or tag == '+':
+            if not self.waiting:
+                # XXX - This is rude.
+                self.transport.loseConnection()
+                raise IllegalServerResponse(tag + ' ' + rest)
+            else:
+                if tag == '+':
+                    d, lines = self.tags[self.waiting]
+                    d.callback(lines)
+                    del self.tags[self.waiting]
+                    self.waiting = None
+                    self._flushQueue()
+                else:
+                    self.tags[self.waiting][1].append(rest)
+        else:
             try:
                 d, lines = self.tags[tag]
             except KeyError:
-                # XXX - This is rude
+                # XXX - This is rude.
                 self.transport.loseConnection()
+                raise IllegalServerResponse(tag + ' ' + rest)
             else:
+                status, line = rest.split(None, 1)
+                if status == 'OK':
+                    # Give them this last line, too
+                    d.callback((lines, rest))
+                else:
+                    d.errback(IMAP4Exception(rest))
                 del self.tags[tag]
-                d.callback(lines)
-
-    def status_PREAUTH(self, tag, args):
-        self.state = 'auth'
+                self.waiting = None
+                self._flushQueue()
     
-    def status_BYE(self, tag, args):
-        self.state = 'logout'
-    
-    def status_BAD(self, tag, args):
-        try:
-            self.tags[tag][0].errback(UnhandledResponse(args))
-        except KeyError:
-            # XXX
-            log.msg(tag + ' ' + args)
-        else:
-            del self.tags[tag]
+    def _flushQueue(self):
+        if self.queued:
+            d, t, command, args = self.queued.pop(0)
+            self.tags[t] = d, []
+            self.sendLine(' '.join((t, command, args)))
+            self.waiting = t
 
-    def status_NO(self, tag, args):
-        try:
-            self.tags[tag][0].errback(NegativeResponse(args))
-        except KeyError:
-            # XXX
-            log.msg(tag + ' ' + args)
-        else:
-            del self.tags[tag]
-
-    def sendCommand(self, command, args = '', ambiguous = 0):
-        if self.ambiguity:
-            self.queued.append((command, args, ambiguous))
-            return
+    def sendCommand(self, command, args = ''):
         d = defer.Deferred()
         t = self.makeTag()
+        if self.waiting:
+            self.queued.append((d, t, command, args))
+            return d
         self.tags[t] = d, []
         self.sendLine(' '.join((t, command, args)))
-        if ambiguous:
-            self.ambiguity = t
+        self.waiting = t
         return d
 
     def getCapabilities(self):
@@ -385,14 +482,14 @@ class IMAP4Client(basic.LineReceiver):
         """
         if self._capCache is not None:
             return defer.succeed(self._capCache)
-        d = self.sendCommand('CAPABILITY', ambiguous=1)
+        d = self.sendCommand('CAPABILITY')
         d.addCallback(self._cbCapabilities)
         return d
     
-    def _cbCapabilities(self, lines):
+    def _cbCapabilities(self, (lines, tagline)):
         caps = {}
-        for (cmd, rest) in lines:
-            rest = rest.split()
+        for rest in lines:
+            rest = rest.split()[1:]
             for cap in rest:
                 eq = cap.find('=')
                 if eq == -1:
@@ -411,11 +508,11 @@ class IMAP4Client(basic.LineReceiver):
         @return: A deferred whose callback will be invoked with None
         when the proper server acknowledgement has been received.
         """
-        d = self.sendCommand('LOGOUT', ambiguous=1)
+        d = self.sendCommand('LOGOUT')
         d.addCallback(self._cbLogout)
         return d
     
-    def _cbLogout(self, lines):
+    def _cbLogout(self, (lines, tagline)):
         # We don't particularly care what the server said
         return None
     
@@ -429,11 +526,11 @@ class IMAP4Client(basic.LineReceiver):
         @return: A deferred whose callback will be invoked with a list
         of untagged status updates the server responds with.
         """
-        d = self.sendCommand('NOOP', ambiguous=1)
+        d = self.sendCommand('NOOP')
         d.addCallback(self._cbNoop)
         return d
     
-    def _cbNoop(self, lines):
+    def _cbNoop(self, (lines, tagline)):
         # Conceivable, this is elidable.
         # It is, afterall, a no-op.
         return lines
@@ -464,11 +561,11 @@ class IMAP4Client(basic.LineReceiver):
         else:
             raise NoSupportedAuthentication(auths, self.authenticators.keys())
         
-        d = self.sendCommand('AUTHENTICATE', scheme, ambiguous=1)
+        d = self.sendCommand('AUTHENTICATE', scheme)
         d.addCallback(self._cbAnswerAuth, scheme, secret)
         return d
     
-    def _cbAnswerAuth(self, lines, scheme, secret):
+    def _cbAnswerAuth(self, (lines, tagline), scheme, secret):
         auth = self.authenticators[scheme]
         self.sendLine(auth.challengeResponse(secret, lines))
     
@@ -487,8 +584,111 @@ class IMAP4Client(basic.LineReceiver):
         @return: A deferred whose callback is invoked if login is successful
         and whose errback is invoked otherwise.
         """
-        return self.sendCommand('LOGIN', ' '.join((username, password)), 1)
-
+        return self.sendCommand('LOGIN', ' '.join((username, password)))
+    
+    def select(self, mailbox):
+        """Select a mailbox
+        
+        This command is allowed in the Authenticated and Selected states.
+        
+        @type mailbox: C{str}
+        @param mailbox: The name of the mailbox to select
+        
+        @rtype: C{Deferred}
+        @return: A deferred whose callback is invoked with mailbox
+        information if the select is successful and whose errback is
+        invoked otherwise.
+        """
+        d = self.sendCommand('SELECT', mailbox)
+        d.addCallback(self._cbSelect)
+        return d
+    
+    def examine(self, mailbox):
+        """Select a mailbox in read-only mode
+        
+        This command is allowed in the Authenticated and Selected states.
+        
+        @type: mailbox: C{str}
+        @param mailbox: The name of the mailbox to examine
+        
+        @rtype: C{Deferred}
+        @return: A deferred whose callback is invoked with mailbox
+        information if the examine is successful and whose errback
+        is invoked otherwise.
+        """
+        d = self.sendCommand('EXAMINE', mailbox)
+        d.addCallback(self._cbSelect)
+        return d
+    
+    def _cbSelect(self, (lines, tagline)):
+        # In the absense of specification, we are free to assume:
+        #   READ-WRITE access
+        datum = {'READ-WRITE': 1}
+        lines.append(tagline)
+        for parts in lines:
+            split = parts.split()
+            if len(split) == 2:
+                if split[1].upper().strip() == 'EXISTS':
+                    try:
+                        datum['EXISTS'] = int(split[0])
+                    except ValueError:
+                        raise IllegalServerResponse(parts)
+                elif split[1].upper().strip() == 'RECENT':
+                    try:
+                        datum['RECENT'] = int(split[0])
+                    except ValueError:
+                        raise IllegalServerResponse(parts)
+                else:
+                    log.err('Unhandled SELECT response (1): ' + parts)
+            elif split[0].upper().strip() == 'FLAGS':
+                split = parts.split(None, 1)
+                datum['FLAGS']= tuple(parseNestedParens(split[1]))
+            elif split[0].upper().strip() == 'OK':
+                begin = parts.find('[')
+                end = parts.find(']')
+                if begin == -1 or end == -1:
+                    raise IllegalServerResponse(line)
+                else:
+                    content = parts[begin+1:end].split(None, 1)
+                    if len(content) >= 1:
+                        key = content[0].upper()
+                        if key == 'READ-ONLY':
+                            datum['READ-WRITE'] = 0
+                        elif key == 'READ-WRITE':
+                            datum['READ-WRITE'] = 1
+                        elif key == 'UIDVALIDITY':
+                            try:
+                                datum['UID'] = int(content[1])
+                            except ValueError:
+                                raise IllegalServerResponse(parts)
+                        elif key == 'UNSEEN':
+                            try:
+                                datum['UNSEEN'] = int(content[1])
+                            except ValueError:
+                                raise IllegalServerResponse(parts)
+                        elif key == 'PERMANENTFLAGS':
+                            datum['PERMANENTFLAGS'] = tuple(parseNestedParens(content[1]))
+                        else:
+                            log.err('Unhandled SELECT response (2): ' + parts)
+                    else:
+                        log.err('Unhandled SELECT response (3): ' + parts)
+            else:
+                log.err('Unhandled SELECT response (4): ' + parts)
+        return datum
+    
+    def create(self, name):
+        """Create a new mailbox on the server
+        
+        This command is allowed in the Authenticated and Selected states.
+        
+        @type name: C{str}
+        @param name: The name of the mailbox to create.
+        
+        @rtype: C{Deferred}
+        @return: A deferred whose callback is invoked if the mailbox creation
+        is successful and whose errback is invoked otherwise.
+        """
+        return self.sendCommand('CREATE', name)
 
 class MismatchedNesting(Exception):
     pass
@@ -634,3 +834,81 @@ class IServerAuthentication(components.Interface):
 class IClientAuthentication(components.Interface):
     def challengeResponse(self, secret, challenge):
         """Generate a challenge response string"""
+
+
+class MailboxException(IMAP4Exception): pass
+
+class MailboxCollision(MailboxException):
+    def __str__(self):
+        return 'Mailbox named %s already exists' % self.args
+
+class NoSuchMailbox(MailboxException):
+    def __str__(self):
+        return 'No mailbox named %s exists' % self.args
+
+class Account:
+    mboxType = None
+
+    mailboxes = None
+
+    def __init__(self):
+        self.mailboxes = {}
+    
+    def addMailbox(self, name, mbox = None):
+        name = name.upper()
+        if name == 'INBOX' or self.mailboxes.has_key(name):
+            raise MailboxCollision, name
+        if mbox is None:
+            mbox = self._emptyMailbox()
+        self.mailboxes[name] = mbox
+
+    def create(self, pathspec):
+        paths = filter(None, pathspec.split('/'))
+        for accum in range(1, len(paths) - 1):
+            try:
+                self.addMailbox('/'.join(paths[:accum]))
+            except MailboxCollision:
+                pass
+        try:
+            self.addMailbox('/'.join(paths))
+        except MailboxCollision:
+            if not pathspec.endswith('/'):
+                raise
+
+    def _emptyMailbox(self):
+        return self.mboxType()
+
+    def select(self, name, readwrite=1):
+        return self.mailboxes.get(name.upper())
+
+    def release(self, mbox):
+        pass
+
+class IMailbox(components.Interface):
+    def getUIDValidity(self):
+        """Return the unique validity identifier for this mailbox.
+        
+        @rtype: C{int}
+        """
+    
+    def getFlags(self):
+        """Return the flags defined in this mailbox
+        
+        Flags with the \\ prefix are reserved for use as system flags.
+        
+        @rtype: C{list} of C{str}
+        @return: A list of the flags that can be set on messages in this mailbox.
+        """
+    
+    def getMessageCount(self):
+        """Return the number of messages in this mailbox"""
+    
+    def getRecentCount(self):
+        """Return the number of messages with the 'Recent' flag"""
+
+    def isWriteable(self):
+        """Get the read/write status of the mailbox.
+        
+        @rtype: C{int}
+        @return: A true value if write permission is allowed, a false value otherwise.
+        """
