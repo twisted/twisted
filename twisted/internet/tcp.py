@@ -85,7 +85,7 @@ class _TLSMixin:
     writeBlockedOnRead = 0
     readBlockedOnWrite = 0
     sslShutdown = 0
-    
+        
     def doRead(self):
         if self.writeBlockedOnRead:
             self.writeBlockedOnRead = 0
@@ -110,18 +110,15 @@ class _TLSMixin:
         except SSL.Error:
             return main.CONNECTION_LOST
 
+    def loseConnection(self):
+        Connection.loseConnection(self)
+        if self.connected:
+            self.startReading()
+    
     def doWrite(self):
         if self.writeBlockedOnRead:
-            # if we always stopWriting the tests fail, apparently some
-            # data never gets read or something. this should insure it
-            # always will be. we need to stopWriting or we get massive
-            # cpu usage from doWrite repeatedly being called when waiting
-            # for client to send data for SSL negotiation.
-            if select.select([self.socket], [], [], 0)[0]:
-                return self.doRead()
-            else:
-                self.stopWriting()
-                return
+            self.stopWriting()
+            return
         if self.readBlockedOnWrite:
             self.readBlockedOnWrite = 0
             # XXX - This is touching internal guts bad bad bad
