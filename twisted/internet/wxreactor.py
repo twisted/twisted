@@ -50,7 +50,11 @@ from wxPython.wx import wxTimer, wxApp
 
 class ReactorTimer(wxTimer):
     """Run reactor event loop every millisecond."""
-    
+
+    # The wx docs promise no better than 1ms and no worse than 1s (!) 
+    # Experiments have shown that Linux, gets better than 50K timer 
+    # calls per second --  however, Windows only gets around 100 
+    # timer calls per second. Caveat coder.
     def __init__(self, reactor): 
         wxTimer.__init__(self) 
         self.reactor = reactor
