@@ -80,10 +80,18 @@ def htmlInst(i):
 def htmlString(s):
     return html.escape(saferepr(s))
 
+def htmlFunc(f):
+    return ('<b style="background-color: orange">' +
+            html.escape("function %s in file %s at line %s" %
+                        (f.__name__, f.func_code.co_filename,
+                         f.func_code.co_firstlineno))+
+            '</b>')
+
 htmlReprTypes = {types.DictType: htmlDict,
                  types.ListType: htmlList,
                  types.InstanceType: htmlInst,
-                 types.StringType: htmlString}
+                 types.StringType: htmlString,
+                 types.FunctionType: htmlFunc}
 
 
 def formatFailure(myFailure):
