@@ -60,7 +60,10 @@ class Service(app.ApplicationService):
         self.perspectives = {}
         if application:
             if serviceParent:
-                raise Exception("You can't do that.")
+                raise Exception(
+                    "'serviceParent' supercedes the 'application' argument"
+                    " -- you may not supply both.  ('application' accepted"
+                    "for backwards compatibility only.)")
             else:
                 sp = application
         else:
@@ -132,7 +135,7 @@ class Service(app.ApplicationService):
         """A hook to use if the identity is required when getting the perspective.
         """
         return self.getPerspectiveRequest(name)
-    
+
     def getPerspectiveRequest(self, name):
         """Return a Deferred which is a request for a perspective on this service.
         """
@@ -152,4 +155,3 @@ class Service(app.ApplicationService):
         """Get a string describing the type of this service.
         """
         return self.serviceType or str(self.__class__)
-
