@@ -30,15 +30,17 @@ import sys
 import traceback
 
 if os.name == 'nt':
-    EINVALIDARG = 10022    
     EWOULDBLOCK = 10035
     EINPROGRESS = 10036
     EALREADY    = 10037
     ECONNRESET  = 10054
-    EMYSTERY    = 10056
     ENOTCONN    = 10057
 else:
     from errno import EALREADY, EINPROGRESS, EWOULDBLOCK, ECONNRESET, ENOTCONN
+    
+# The magical mystery errors (THANK YOU WINDOWS!!)
+EMYSTERY    = 10056
+EINVALIDARG = 10022    
 
 # Twisted Imports
 from twisted.protocols import protocol
