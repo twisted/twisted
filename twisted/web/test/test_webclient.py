@@ -186,7 +186,7 @@ class WebClientTestCase(unittest.TestCase):
         return d
 
     def _cleanupDownloadPageError3(self, ignored):
-        os.chmod("unwritable", 700)
+        os.chmod("unwritable", 0700)
         os.unlink("unwritable")
         return ignored
 
