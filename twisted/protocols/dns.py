@@ -42,7 +42,7 @@ try:
 except ImportError:
     import os
     if not os.path.exists('/dev/random'):
-        import warnings, random
+        import warnings
         warnings.warn(
             "PyCrypto not available - proceeding with non-cryptographically "
             "secure random source",
@@ -1106,7 +1106,6 @@ class DNSDatagramProtocol(protocol.DatagramProtocol):
         
         @rtype: C{Deferred}
         """
-        from twisted.internet import reactor
         if id is None:
             id = self.pickID()
         else:
