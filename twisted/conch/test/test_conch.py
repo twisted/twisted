@@ -36,6 +36,9 @@ class ConchTestOpenSSHProcess(protocol.ProcessProtocol):
     buf = ''
     done = 0
 
+    def connectionMade(self):
+        log.msg('MAD(ssh): connection made')
+
     def outReceived(self, data):
         self.buf += data
 
@@ -54,11 +57,25 @@ class ConchTestForwardingProcess(protocol.ProcessProtocol):
         self.port = port
         self.fac = fac
         self.done = 0
+        self.connected = 0
+        self.buf = ''
 
     def connectionMade(self):
-        log.msg('FORWARdING PROCESS OPEN')
+        reactor.callLater(1, self._connect)
+    
+    def _connect(self):
+        self.connected = 1
         cc = protocol.ClientCreator(reactor, ConchTestForwardingPort, self)
-        reactor.callLater(1, cc.connectTCP, 'localhost', self.port)
+        d = cc.connectTCP('127.0.0.1', self.port)
+        d.addErrback(self._ebConnect)
+
+    def _ebConnect(self, f):
+        # probably because the server wasn't listening in time
+        # but who knows, just try again
+        log.msg('ERROR CONNECTING TO %s' % self.port)
+        log.err(f)
+        log.flushErrors()
+        reactor.callLater(1, self._connect)
 
     def errReceived(self, data):
         log.msg("ERR(ssh): '%s'" % data)
@@ -75,7 +92,6 @@ class ConchTestForwardingPort(protocol.Protocol):
         self.proto = proto
 
     def connectionMade(self):
-        log.msg('FORWARDING PORT OPEN')
         self.proto.fac.proto.expectedLoseConnection = 1
         self.buf = ''
         self.transport.write(self.data)
@@ -84,7 +100,6 @@ class ConchTestForwardingPort(protocol.Protocol):
         self.buf += data
 
     def connectionLost(self, reason):
-        log.msg('FORWARDING PORT CLOSED %s' % repr(self.buf))
         unittest.failUnlessEqual(self.buf, self.data)
 
         # forwarding-only clients don't die on their own
@@ -214,10 +229,11 @@ class CmdLineClientTestBase(SignalMixin):
         except AttributeError:
             pass
         else:
-            d = defer.maybeDeferred(self.fac.proto.transport.loseConnection)
+            self.fac.proto.transport.loseConnection()
+            reactor.iterate()
+        d = self.server.stopListening()
+        if d:
             util.wait(d)
-        d = defer.maybeDeferred(self.server.stopListening)
-        util.wait(d)
 
     # actual tests
 
@@ -229,7 +245,7 @@ class CmdLineClientTestBase(SignalMixin):
         f = EchoFactory()
         serv = reactor.listenTCP(0, f)
         port = serv.getHost().port
-        p = ConchTestForwardingProcess(port+10, self.fac)
+        p = ConchTestForwardingProcess(port+10,self.fac)
         self.execute('', p, preargs='-N -L%i:localhost:%i' % (port+10, port))
         serv.stopListening()
 
@@ -263,7 +279,7 @@ class OpenSSHClientTestCase(CmdLineClientTestBase, unittest.TestCase):
             raise unittest.SkipTest, 'skipping test, cannot find ssh'
         cmds = (cmdline % port).split()
         reactor.spawnProcess(p, ssh_path, cmds)
-        util.spinWhile(lambda: not p.done)
+        util.spinWhile(lambda: not p.done, timeout=10)
 
         # cleanup
         if not p.done:
@@ -287,9 +303,9 @@ class CmdLineClientTestCase(CmdLineClientTestBase, unittest.TestCase):
                ' localhost ' + args
         cmds = _makeArgs(cmd.split())
         log.msg(str(cmds))
-        reactor.spawnProcess(p, sys.executable, cmds, env=None)
+        reactor.spawnProcess(p, sys.executable, cmds, env={})
         # wait for process to finish
-        util.spinWhile(lambda: not p.done)
+        util.spinWhile(lambda: not p.done, timeout=10)
         
         # cleanup
         if not p.done:
@@ -324,9 +340,10 @@ class UnixClientTestCase(CmdLineClientTestBase, unittest.TestCase):
         vhk = default.verifyHostKey
         conn = SSHTestConnectionForUnix(p, sys.executable, cmds2)
         uao = default.SSHUserAuthClient(o['user'], o, conn)
-        connect.connect(o['host'], int(o['port']), o, vhk, uao)
+        d = connect.connect(o['host'], int(o['port']), o, vhk, uao)
+        d.addErrback(lambda f: unittest.fail('Failure connecting to test server: %s' % f))
         
-        util.spinWhile(lambda: not p.done)
+        util.spinWhile(lambda: not p.done, timeout=10)
 
         # cleanup
         if not p.done:
