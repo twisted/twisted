@@ -192,8 +192,15 @@ class ConnectionPool(pb.Referenceable):
             callback, errback)
 
     def runOperation(self, *args, **kw):
+        """Run a SQL statement and return a Deferred of result."""
         d = defer.Deferred()
         apply(self.operation, (d.callback,d.errback)+args, kw)
+        return d
+
+    def runQuery(self, *args, **kw):
+        """Run a read-only query and return a Deferred."""
+        d = defer.Deferred()
+        apply(self.query, (d.callback, d.errback)+args, kw)
         return d
 
     def _runInteraction(self, interaction, *args, **kw):
