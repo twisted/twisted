@@ -1,15 +1,15 @@
 import sexpy
 import operator
 import types
+import pprint
 
-globalValues = {"nil" : []}
-globalFunctions = {}
+## special prefixes:
+# eval_foo(exp, env); special form
+# func_foo(*args); python-defined regular function
+# def_foo(name, forms); 'def' statement, for declaring global thingies.
 
-def ValueEnvironment():
-    return (None, globalValues)
-def FunctionEnvironment():
-    return (None, globalFunctions)
 
+# In the beginning, there was the cons, and it was good.
 def consify(sexp):
     if sexp and isinstance(sexp, types.ListType):
         qar = sexp[0]
@@ -18,19 +18,179 @@ def consify(sexp):
     else:
         return sexp
 
+# And then came the evaluator. There was much rejoicing!
 def eval(string):
     c = consify(sexpy.fromString(string))
-    return Evaluator().evalExp(c)
+    env = (ValueEnvironment(), FunctionEnvironment())
+    return evalExp(c, env)
 
-def lisp_map(fun, list):
+def evalExp(exp, env):
+    if isinstance(exp, sexpy.Atom):
+        return lookup(exp, env[0])
+    elif isinstance(exp, types.ListType):
+        if exp == []:
+            return exp
+        n = exp[0].string
+        specialForm = globals().get("eval_" + n)
+        if specialForm:
+            return specialForm(cdr(exp), env)
+        else:
+            # macro = globals().get("macro_" + n)
+            # if macro:
+            #   return evalExp(macroexpand(macro), env)
+            return eval_apply(exp, env)
+    else:
+        return exp
+
+
+# And then He created the Two Namespaces. Many people spoke out! They did
+# not want the segregation, but lo, it was how it was to be.
+
+globalValues = {"nil" : []}
+globalFunctions = {}
+
+VAR = 0
+FUN = 1
+
+def ValueEnvironment():
+    return (None, globalValues)
+
+def FunctionEnvironment():
+    return (None, globalFunctions)
+
+def lookup(exp, env):
+    val = None
+    while 1:
+        val = env[1].get(exp)
+        if val:
+            return val
+        env = env[0]
+        if not env:
+            raise NameError("variable '%s' not found" % exp)
+
+def extendEnv(varOrFun, oldEnv, bindings):
+    d = {}
+    while bindings:
+        k = car(car(bindings))
+        v = cadr(car(bindings))
+        bindings = cdr(bindings)
+        d[k.string] = evalExp(v, oldEnv)
+
+    if varOrFun == VAR:
+        e = ((oldEnv[0], d), oldEnv[1])
+    else:
+        e = (oldEnv[0], (oldEnv[1], d))
+    return e
+
+
+
+## The functions were angered by this segregation. They came in hoardes to
+## plunder the lands of the variables -- But He defeated them! And He tamed
+## them to serve His followers.
+
+class Function:
+    def __init__(self, forms, env):
+        self.env = env
+        self.llist = car(forms)
+        self.body = cadr(forms)
+
+
+    def __call__(self, *args):
+        if len(args) != len(self.llist):
+            raise TypeError("Wrong number of args, foo'!")
+
+        bindings = []
+        i = 0
+        crap = self.llist
+        while crap:
+            #print "crap is", crap
+            var = car(crap)
+            #print "binding", var, "to", args[i]
+            bindings.append([var, args[i]])
+            i = i + 1
+            crap = cdr(crap)
+
+        #pprint.pprint(bindings)
+        bindings = consify(bindings)
+        #pprint.pprint(bindings)
+        
+        newEnv = extendEnv(VAR, self.env, bindings)
+        #print "evaluating", self.body
+        return evalExp(self.body, newEnv)
+
+
+
+### Dispatched stuff.
+
+## special forms
+
+
+## "muhahahahaha" -- Moshe
+eval_fn = Function
+
+def eval_apply(exp, env):
+    #lookup order: python-defined functions, eco-defined functions.
+    evaledList = []
+    args = cdr(exp)
+    while args:
+        evaledList.append(evalExp(car(args), env))
+        args = cdr(args)
+        
+    funkyDict = {"+": func_add, "-": func_subtract}
+    name = car(exp).string
+    
+    global_fun = globals().get('func_' + name)
+    funky_fun = funkyDict.get(name)
+    try:
+        local_fun = lookup(name, env[1])
+    except NameError:
+        local_fun = None
+
+    f = global_fun or funky_fun or local_fun
+    if f:
+        return apply(f,
+                     evaledList)
+    else:
+        raise NameError("No callable named %s" % name)
+
+
+def eval_if(exp, env):
+    test = car(exp)
+    then = cadr(exp)
+    els  = caddr(exp)
+    if evalExp(test, env):
+        return evalExp(then, env)
+    else:
+        return evalExp(els, env)
+
+
+def eval_let(exp, env):
+    newEnv = extendEnv(VAR, env, car(exp))
+    exp = cdr(exp)
+    while exp:
+        rv = evalExp(car(exp), newEnv)
+        exp = cdr(exp)
+    return rv
+
+def eval_def(exp, env):
+    f = globals().get("def_" + car(exp).string)
+    if f:
+        f(cadr(exp), cddr(exp), env)
+        
+def def_fn(name, forms, env):
+    globalFunctions[name] = Function(forms, env)
+
+
+
+## python-defined functions
+
+def func_map(fun, list):
     if list:
-        return [fun(car(list)), lisp_map(fun, cdr(list))]
+        return [fun(car(list)), func_map(fun, cdr(list))]
     else:
         return []
 
-func_map = lisp_map
-
-def lisp_reduce(fun, list):
+def func_reduce(fun, list):
     if not list:
         raise TypeError("Cannot pass empty list")
     elif not cdr(list):
@@ -38,13 +198,13 @@ def lisp_reduce(fun, list):
     else:
         return reduce_1(fun, cddr(list), fun(car(list), cadr(list)))
 
-func_reduce = lisp_reduce
-
-def lisp_reduce_1(fun, list, prevResult):
+def reduce_1(fun, list, prevResult):
     if list:
         return reduce_1(fun, cdr(list), fun(prevResult, car(list)))
     else:
         return prevResult
+
+# car/cdr and compositions
 
 def car(x):
     return x[0]
@@ -65,6 +225,8 @@ func_caddr = caddr
 def cddr(x):
     return x[1][1]
 func_cddr = cddr
+
+
 
 def func_eq(a, b):
     return a == b
@@ -99,75 +261,3 @@ def func_list(*exp):
 def func_subtract(exp, env):
     return reduce(operator.add, exp)
 
-
-class Evaluator:
-    def __init__(self):
-        self.vals = ValueEnvironment()
-        self.funs = FunctionEnvironment()
-        
-    def extendEnv(self, oldEnv, bindings):
-        while bindings:
-            k = car(car(bindings))
-            v = cadr(car(bindings))
-            bindings = cdr(bindings)
-            d[k.string] = self.evalExp(v)
-        return (oldEnv, d)
-    
-    def lookup(self, exp, env):
-        val = None
-        while 1:
-            val = env[1].get(exp)
-            if val:
-                return val
-            env = env[0]
-            if not env:
-                raise AttributeError("'%s' not found" % exp)
-
-    def eval_apply(self, exp):
-        evaledList = []
-        args = cdr(exp)
-        while args:
-            evaledList.append(self.evalExp(car(args)))
-            args = cdr(args)
-            funkyDict = {"+": func_add, "-": func_subtract}
-            fname = 'func_'+car(exp).string
-        return apply((globals().get(fname) or funkyDict.get(car(exp).string)), evaledList)
-
-    def evalExp(self, exp):
-        if isinstance(exp, sexpy.Atom):
-            return self.lookup(exp, self.vals)
-        elif isinstance(exp, types.ListType):
-            if exp == []:
-                return exp
-            n = exp[0].string
-            special_form = getattr(self, "eval_" + n, None)
-            if special_form:
-                return special_form(cdr(exp))
-            else:
-                return self.eval_apply(exp)
-        else:
-            return exp
-
-    def eval_if(self, exp):
-        test = car(exp)
-        then = cadr(exp)
-        els  = caddr(exp)
-        if self.evalExp(test):
-            return self.evalExp(then)
-        else:
-            return self.evalExp(els)
-        
-
-    def eval_let(self, exp):
-        self.vals = extendEnv(self.vals, car(exp))
-        exp = cdr(exp)
-        while exp:
-            rv = self.evalExp(car(exp))
-            exp = cdr(exp)
-        return rv
-
-    def eval_function(self, exp):
-        return self.lookup(car(exp), self.funs)
-    
-#def eval_def(exp, env):
-    
