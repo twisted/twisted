@@ -195,12 +195,13 @@ class SSHConnection(service.SSHService):
         return OPEN_UNKNOWN_CHANNEL_TYPE, "don't know %s" % channelTypes
 
     def gotGlobalRequest(self, requestType, data):
-        """we got a global request.  pretty much, this is just used by the client
+        """
+        We got a global request.  pretty much, this is just used by the client
         to request that we forward a port from the server to the client.
         returns either:
-            1: request accepted
-            1, <data>: request accepted with request specific data
-            0: request denied
+            - 1: request accepted
+            - 1, <data>: request accepted with request specific data
+            - 0: request denied
         """
         return 0
         
