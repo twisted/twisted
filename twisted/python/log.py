@@ -262,12 +262,13 @@ class StdioOnnaStick:
     """Class that pretends to be stout/err."""
     
     closed = 0
-    softspace = 1
+    softspace = 0
     mode = 'wb'
     name = '<stdio (log)>'
 
     def __init__(self, isError=0):
         self.isError = isError
+        self.buf = ''
 
     def close(self):
         pass
@@ -287,7 +288,11 @@ class StdioOnnaStick:
     tell = read
 
     def write(self, data):
-        msg(data, printed=True, isError=self.isError)
+        d = (self.buf + data).split('\n')
+        self.buf = d[-1]
+        messages = d[0:-1]
+        for message in messages:
+            msg(message, printed=True, isError=self.isError)
 
     def writelines(self, lines):
         for line in lines:
