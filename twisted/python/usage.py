@@ -24,8 +24,8 @@ an example::
     from twisted.python import usage
     import sys
     class MyOptions(usage.Options):
-        flags = [["hello", "h"], ["goodbye", "g"]]
-        parameters = [["message", "m", "friend!"]]
+        optFlags = [["hello", "h"], ["goodbye", "g"]]
+        optParameters = [["message", "m", "friend!"]]
         def __init__(self):
             self.debug = 0
         def opt_debug(self, opt):
@@ -195,9 +195,6 @@ class Options:
         docs, settings, synonyms, dispatch = {}, {}, {}, {}
 
         flags = []
-        # Lose the 'opt' prefix...
-        reflect.accumulateClassList(self.__class__, 'flags', flags)
-        # (transitional) read optFlags for compatibility
         reflect.accumulateClassList(self.__class__, 'optFlags', flags)
 
         for flag in flags:
@@ -223,16 +220,18 @@ class Options:
         longOpt, shortOpt = [], ''
         docs, settings, synonyms, dispatch = {}, {}, {}, {}
 
-        # Transition to referring to them as parameters, not "option
-        # strings".  (Yes, they will be passed from getopt as string
-        # types, but that's not relevant.)
         parameters = []
-        reflect.accumulateClassList(self.__class__, 'parameters',
-                                    parameters)
-
-        # read optStrings for backward compatibility.
+        # We have to keep calling these "optStrings" because this code is
+        # used in the IPC10 paper, which makes it written in stone...
         reflect.accumulateClassList(self.__class__, 'optStrings',
                                     parameters)
+
+        # But since "strings" is a very poor description (yes, getopt
+        # does happen to return the values as strings, but that's
+        # irrelevant), provide another name that makes more sense.
+        reflect.accumulateClassList(self.__class__, 'optParameters',
+                                    parameters)
+
         synonyms = {}
 
         for parameter in parameters:
