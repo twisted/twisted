@@ -9,6 +9,7 @@ def main():
     reactor.run()
 
 def got_obj(obj):
+    # change "broken" into "broken2" to demonstrate an unhandled exception
     d2 = obj.callRemote("broken")
     d2.addCallback(working)
     d2.addErrback(broken)
