@@ -126,6 +126,13 @@ class TestInternet(unittest.TestCase):
 
 class Dummy:
     processName = None
+
+class DummyApp:
+    processName = None
+    def addService(self, service):
+        self.services[service.name] = service
+    def removeService(self, service):
+        del self.services[service.name]
     
 
 class TestConvert(unittest.TestCase):
@@ -167,3 +174,21 @@ class TestConvert(unittest.TestCase):
         self.assert_(isinstance(s, internet.UNIXServer))
         args = s.args
         self.assertEqual(args[0], '/home/moshez/.twistd-web-pb')
+
+    def testSimpleService(self):
+        a = DummyApp()
+        a.__dict__ = {'udpConnectors': [], 'unixConnectors': [],
+                      '_listenerDict': {}, 'name': 'dummy',
+                      'sslConnectors': [], 'unixPorts': [],
+                      '_extraListeners': {}, 'sslPorts': [], 'tcpPorts': [],
+                      'services': {}, 'gid': 0, 'tcpConnectors': [],
+                      'extraConnectors': [], 'udpPorts': [], 'extraPorts': [],
+                      'uid': 0}
+        s = service.Service()
+        s.setName("lala")
+        s.setServiceParent(a)
+        appl = compat.convert(a)
+        services = list(service.IServiceCollection(appl))
+        self.assertEqual(len(services), 1)
+        s1 = services[0]
+        self.assertEqual(s, s1)
