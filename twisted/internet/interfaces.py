@@ -325,7 +325,7 @@ class IReactorMulticast(Interface):
 class IReactorProcess(Interface):
 
     def spawnProcess(self, processProtocol, executable, args=(), env={}, path=None, uid=None, gid=None, usePTY=0):
-        """Spawn a process, with a process protcol.
+        """Spawn a process, with a process protocol.
 
         @param processProtocol: a L{ProcessProtocol} instance
 
