@@ -135,7 +135,12 @@ def getPluginFileList(debugInspection=None, showProgress=None):
     loaded = {}
     seenNames = {}
     paths = filter(os.path.isdir, map(os.path.abspath, sys.path))
+
+    progress = 0.0
+    increments = 1.0 / len(paths)
+
     for (index, d) in zip(range(len(paths)), paths):
+        showProgress(progress)
         if loaded.has_key(d):
             debugInspection('Already saw ' + d)
             continue
@@ -146,11 +151,13 @@ def getPluginFileList(debugInspection=None, showProgress=None):
         except OSError, (err, s):
             # Permission denied, carry on
             if err == errno.EACCES:
-                showProgress((index + 1) / len(paths))
                 debugInspection('Permission denied on ' + d)
             else:
                 raise
         else:
+            if not subDirs:
+                continue
+            incr = increments * (1.0 / len(subDirs))
             for plugindir in subDirs:
                 if seenNames.has_key(plugindir):
                     debugInspection('Seen %s already' % plugindir)
@@ -162,6 +169,8 @@ def getPluginFileList(debugInspection=None, showProgress=None):
                     debugInspection('Found ' + tmlname)
                 else:
                     debugInspection('Failed ' + tmlname)
+                progress = progress + incr
+                showProgress(progress)
 
     if not result:
         raise IOError("Couldn't find a plugins file!")
@@ -209,7 +218,12 @@ def loadPlugins(plugInType, fileList, debugInspection=None, showProgress=None):
         )
     result = []
     debugInspection, showProgress = _prepCallbacks(debugInspection, showProgress)
+    
+    increments = 1.0 / len(fileList)
+    progress = 0.0
+
     for (index, tmlFile) in zip(range(len(fileList)), fileList):
+        showProgress(progress)
         debugInspection("Loading from " + tmlFile)
         try:
             pname = os.path.split(os.path.abspath(tmlFile))[-2]
@@ -220,13 +234,15 @@ def loadPlugins(plugInType, fileList, debugInspection=None, showProgress=None):
             debugInspection(sys.exc_info())
             continue
 
-        showProgress((index + 1) / len(fileList))
+        incr = increments * (1.0 / len(dropin.plugins))
         for plugin in dropin.plugins:
             if plugInType == plugin.type:
                 result.append(plugin)
                 debugInspection("Found %r" % (plugin,))
             else:
                 debugInspection("Disqualified %r" % (plugin,))
+            progress = progress + incr
+            showProgress(progress)
         debugInspection("Finished loading from %s!" % tmlFile)
 
     showProgress(1.0)
@@ -271,8 +287,8 @@ def getPlugIns(plugInType, debugInspection=None, showProgress=None):
 
     firstHalf = secondHalf = lambda x: None
     if showProgress:
-        firstHalf = lambda x: showProgress(x / 2)
-        secondHalf = lambda x: showProgress(x / 2 + 0.5)
+        firstHalf = lambda x: showProgress(x / 2.0)
+        secondHalf = lambda x: showProgress(x / 2.0 + 0.5)
 
     tmlFiles = getPluginFileList(debugInspection, firstHalf)
     return loadPlugins(plugInType, tmlFiles, debugInspection, secondHalf)
