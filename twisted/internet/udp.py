@@ -53,7 +53,6 @@ class Port(base.BasePort):
     def __init__(self, port, proto, interface='', maxPacketSize=8192, reactor=None):
         """Initialize with a numeric port to listen on.
         """
-        assert isinstance(proto, protocol.DatagramProtocol)
         base.BasePort.__init__(self, reactor)
         self.port = port
         self.protocol = proto
@@ -226,7 +225,6 @@ class ConnectedPort(Port):
     implements(interfaces.IUDPConnectedTransport)
 
     def __init__(self, (remotehost, remoteport), port, proto, interface='', maxPacketSize=8192, reactor=None):
-        assert isinstance(proto, protocol.ConnectedDatagramProtocol)
         Port.__init__(self, port, proto, interface, maxPacketSize, reactor)
         self.remotehost = remotehost
         self.remoteport = remoteport
