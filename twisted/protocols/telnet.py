@@ -235,7 +235,7 @@ class Telnet(protocol.Protocol):
         loggedIn()."""
         self.write(IAC+WONT+ECHO+"*****\r\n")
         try:
-            checked = self.checkUserAndPass(self.username, paswd):
+            checked = self.checkUserAndPass(self.username, paswd)
         except:
             return "Done"
         if not checked:
