@@ -182,8 +182,17 @@ class DOMTemplate(Resource, View):
         """
         try:
             self.setUp(request, document)
+            # Don't let outstandingCallbacks get to 0 until the
+            # entire tree has been recursed
+            # If you don't do this, and any callback has already
+            # completed by the time the dispatchResultCallback
+            # is added in dispachResult, then sendPage will be
+            # called prematurely within dispatchResultCallback
+            # resulting in much gnashing of teeth.
+            self.outstandingCallbacks += 1
             for node in document.childNodes:
                 self.handleNode(request, node)
+            self.outstandingCallbacks -= 1
             if not self.outstandingCallbacks:
                 return self.sendPage(request)
         except:
