@@ -67,6 +67,7 @@ def gotRooms(rooms):
 
 def selected(room):
     print "\ngot Room:", room
+    main.shutDown()
 
 def test(stuff):
     global newRoom
@@ -75,9 +76,10 @@ def test(stuff):
     qRoom = RoomRow( room_id=11)
     qRoom.selectRow().addCallback(selected).arm()
     
-dbpool = adbapi.ConnectionPool("pyPgSQL.PgSQL", "localhost:5432", database="sean")
+dbpool = adbapi.ConnectionPool("pyPgSQL.PgSQL", "crue:5432", database="sean-test")
 manager = adbapi.Augmentation(dbpool)
 newRoom = None
+
 # Create Twisted application object
 application = main.Application("testApp")
 

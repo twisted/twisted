@@ -1,4 +1,7 @@
-#NOTE: no imports?!
+
+
+class DBError(Exception):
+    pass
 
 class RowObject:
     """I represent a row in a table in a relational database. My class is "populated"
@@ -28,15 +31,15 @@ class RowObject:
         the database when keyColumns is populated.
         """
         if not self.populated:
-            raise ("ERROR: class %s has not been populated" % repr(self.__class__) )            
+            raise DBError("class %s has not been populated" % repr(self.__class__) )            
         if len(args) != 0:
-            raise ("ERROR: you cannot pass non-keyword args to construct a RowObject")        
+            raise DBError("you cannot pass non-keyword args to construct a RowObject")        
         if len(kw) != len(self.keyColumns):
-            raise ("ERROR: wrong number of key arguments %s" % repr(kw) )
+            raise DBError(": wrong number of key arguments %s" % repr(kw) )
 
         for key in kw.keys():
             if not getKeyColumn(self.__class__, key):
-                raise ("ERROR: wrong key argument: <%s>" % key)
+                raise DBError(" wrong key argument: <%s>" % key)
         # set the key attributes
         self.__dict__.update(kw)             
     
@@ -62,7 +65,7 @@ class RowObject:
         """insert a new row for this object instance.
         """
         if not self.populated:
-            raise ("ERROR: class %s has not been populated" % repr(self.__class__) )     
+            raise DBError("class %s has not been populated" % repr(self.__class__) )     
         args = []
         # build values
         for column, type, typeid in self.columns:
@@ -75,7 +78,7 @@ class RowObject:
         """delete the row for this object from the database.
         """
         if not self.populated:
-            raise ("ERROR: class %s has not been populated" % repr(self.__class__) )                    
+            raise DBError("class %s has not been populated" % repr(self.__class__) )                    
         args = []
         # build where clause
         for keyColumn, type in self.keyColumns:
@@ -88,7 +91,7 @@ class RowObject:
         """load this rows current values from the database.
         """
         if not self.populated:
-            raise ("ERROR: class %s has not been populated" % repr(self.__class__) )                    
+            raise DBError("class %s has not been populated" % repr(self.__class__) )                    
         args = []
         # build where clause
         for keyColumn, type in self.keyColumns:
@@ -100,9 +103,9 @@ class RowObject:
 
     def gotSelectData(self, data):
         if len(data) > 1:
-            raise "ERROR: select data included more than one row!"
+            raise DBError("ERROR: select data included more than one row!")
         if len(data) == 0:
-            raise "ERROR: select data was empty"
+            raise DBError("ERROR: select data was empty")
         actualPos = 0
         for i in range(0, len(self.columns)):
             if not getKeyColumn(self.__class__, self.columns[i][0] ):            
@@ -117,7 +120,7 @@ class RowObject:
         """
         # build where clause
         if getKeyColumn(self.__class__, name):
-            raise ("ERROR: cannot assign to key column attribute <%s> of RowObject class" % name)
+            raise DBError("cannot assign to key column attribute <%s> of RowObject class" % name)
         self.__dict__[name] = value
         self.__dict__["insync"] = 0  # no longer in sync with database
 
