@@ -19,7 +19,6 @@ An asynchronous mapping to U{DB-API 2.0<http://www.python.org/topics/database/Da
 
 import warnings
 
-from twisted.spread import pb
 from twisted.internet import defer
 from twisted.internet import threads
 from twisted.python import reflect, log, failure
@@ -45,7 +44,7 @@ class Transaction:
         return getattr(self._cursor, name)
 
 
-class ConnectionPool(pb.Referenceable):
+class ConnectionPool:
     """I represent a pool of connections to a DB-API 2.0 compliant database.
 
     You can pass cp_min, cp_max or both to set the minimum and maximum
@@ -134,11 +133,11 @@ class ConnectionPool(pb.Referenceable):
         objects.
 
         @param interaction: a callable object whose first argument is
-            L{adbapi.Transaction}.
-        @param *args,**kw: additional arguments to be passed to 'interaction'
+            L{adbapi.Transaction}. *args,**kw will be passed as
+            additional arguments.
 
         @return: a Deferred which will fire the return value of
-        'interaction(Transaction(...))', or a Failure.
+            'interaction(Transaction(...))', or a Failure.
         """
 
         return self._deferToThread(self._runInteraction,
@@ -155,7 +154,7 @@ class ConnectionPool(pb.Referenceable):
         'fetchall' methods raise an exception, the transaction will be rolled
         back and a Failure returned.
 
-        @param *args,**kw: arguments to be passed to a DB-API cursor's
+        The  *args and **kw arguments will be passed to the DB-API cursor's
         'execute' method.
 
         @return: a Deferred which will fire the return value of a DB-API
@@ -175,10 +174,10 @@ class ConnectionPool(pb.Referenceable):
         which do not return values. If the 'execute' method raises an exception,
         the transaction will be rolled back and a Failure returned.
 
-        @param *args,**kw: arguments to be passed to a DB-API cursor's
+        The args and kw arguments will be passed to the DB-API cursor's
         'execute' method.
 
-        @return: a Deferred which will fire None or a Failure.
+        return: a Deferred which will fire None or a Failure.
         """
 
         return self._deferToThread(self._runOperation, *args, **kw)
