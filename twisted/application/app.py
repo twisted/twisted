@@ -55,7 +55,7 @@ def runReactorWithLogging(config, oldstdout, oldstderr):
             sys.stdout = oldstdout
             sys.stderr = oldstderr
             if runtime.platformType == 'posix':
-                signal.signal(signal.SIGINT, lambda *args: pdb.set_trace())
+                signal.signal(signal.SIGUSR2, lambda *args: reactor.callLater(0, pdb.set_trace))
             pdb.runcall(reactor.run)
         else:
             reactor.run()
@@ -115,7 +115,7 @@ class ServerOptions(usage.Options):
                  "the profiler."],
                 ['debug', 'b',
                  "run the application in the Python Debugger "
-                 "(implies nodaemon), sending SIGINT will drop into debugger"],
+                 "(implies nodaemon), sending SIGUSR2 will drop into debugger"],
                 ['no_save','o',   "do not save state on shutdown"],
                 ['encrypted', 'e',
                  "The specified tap/aos/xml file is encrypted."]]
