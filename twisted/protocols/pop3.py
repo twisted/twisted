@@ -135,6 +135,9 @@ class POP3(basic.LineOnlyReceiver, policies.TimeoutMixin):
     # Current protocol state
     state = "COMMAND"
     
+    # PIPELINE
+    blocked = None
+    
     def connectionMade(self):
         if self.magic is None:
             self.magic = self.generateMagic()
@@ -157,10 +160,24 @@ class POP3(basic.LineOnlyReceiver, policies.TimeoutMixin):
     def failResponse(self, message=''):
         self.sendLine('-ERR ' + str(message))
 
+#    def sendLine(self, line):
+#        print 'S:', repr(line)
+#        basic.LineOnlyReceiver.sendLine(self, line)
+
     def lineReceived(self, line):
+#        print 'C:', repr(line)
         self.resetTimeout()
         getattr(self, 'state_' + self.state)(line)
-    
+
+    def _unblock(self, _):
+        commands = self.blocked
+        self.blocked = None
+        while commands and self.blocked is None:
+            cmd, args = commands.pop(0)
+            self.processCommand(cmd, *args)
+        if self.blocked:
+            self.blocked.extend(commands)
+
     def state_COMMAND(self, line):
         try:
             return self.processCommand(*line.split())
@@ -169,12 +186,14 @@ class POP3(basic.LineOnlyReceiver, policies.TimeoutMixin):
             self.failResponse('bad protocol or server: %s: %s' % (e.__class__.__name__, e))
     
     def processCommand(self, command, *args):
+        if self.blocked is not None:
+            self.blocked.append((command, args))
+            return
+    
         command = string.upper(command)
         authCmd = command in self.AUTH_CMDS
         if not self.mbox and not authCmd:
             raise POP3Error("not authenticated yet: cannot do " + command)
-        #elif self.mbox and authCmd:
-        #    raise POP3Error("already authenticated: cannot do " + command)
         f = getattr(self, 'do_' + command, None)
         if f:
             return f(*args)
@@ -383,9 +402,21 @@ class POP3(basic.LineOnlyReceiver, policies.TimeoutMixin):
         fp = _HeadersPlusNLines(fp, size)
         self.successResponse("Top of message follows")
         s = basic.FileSender()
+        self.blocked = []
         s.beginFileTransfer(fp, self.transport, self.transformChunk
-        ).addCallback(self.finishedFileTransfer)
+        ).addCallback(self.finishedFileTransfer).addErrback(log.err).addCallback(self._unblock)
     
+    def do_RETR(self, i):
+        self.highest = max(self.highest, i)
+        resp, fp = self.getMessageFile(i)
+        if not fp:
+            return
+        self.successResponse(resp)
+        s = basic.FileSender()
+        self.blocked = []
+        s.beginFileTransfer(fp, self.transport, self.transformChunk
+        ).addCallback(self.finishedFileTransfer).addCallback(self._unblock)
+
     def transformChunk(self, chunk):
         return chunk.replace('\n', '\r\n').replace('\r\n.', '\r\n..')
 
@@ -396,23 +427,6 @@ class POP3(basic.LineOnlyReceiver, policies.TimeoutMixin):
             line = '.'
         self.sendLine(line)
         
-    def do_RETR(self, i):
-        self.highest = max(self.highest, i)
-        resp, fp = self.getMessageFile(i)
-        if not fp:
-            return
-        self.successResponse(resp)
-        while 1:
-            line = fp.readline()
-            if not line:
-                break
-            if line[-1] == '\n':
-                line = line[:-1]
-            if line[:1] == '.':
-                line = '.'+line
-            self.sendLine(line)
-        self.sendLine('.')
-
     def do_DELE(self, i):
         i = int(i)-1
         self.mbox.deleteMessage(i)
