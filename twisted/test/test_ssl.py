@@ -22,8 +22,6 @@ import test_tcp
 
 
 class ProperlyCloseFilesTestCase(test_tcp.ProperlyCloseFilesTestCase):
-
-    numberRounds = 256
     
     def setUp(self):
         certPath = os.path.join(os.path.split(test_tcp.__file__)[0], "server.pem")
