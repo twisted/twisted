@@ -26,6 +26,7 @@
     <p>Platform-specific reactor implementations exist for:</p>
 
     <ul>
+      <li><a href="#creactor">cReactor for Unix</a></li>
       <li><a href="#java">Java</a></li>
       <li><a href="#win32">Win32</a></li>
     </ul>
@@ -79,6 +80,19 @@ pollreactor.install()
 </pre>
 
     <h2>Platform-Specific Reactors</h2>
+
+    <a name="creactor" />
+    <h3>cReactor for Unix</h3>
+
+    <p>The cReactor is a high-performance C implementation of the
+    Reactor interfaces.  It is currently experimental and under
+    active development.  Be sure to see the <a href="installing-twisted.html"
+    >installation notes</a> prior to using the cReactor.</p>
+
+<pre class="python">
+from twisted.internet import cReactor
+cReactor.install()
+</pre>
 
     <a name="java" />
     <h3>Java</h3>
