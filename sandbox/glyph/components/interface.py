@@ -10,8 +10,6 @@ backwards compatibility.  (No, we are _NOT_ going to use zcml.)
 This is a minimalist components system to fill that gap.  The backwards compat
 wrappers should be implemented in terms of this.
 
-TODO
-
 """
 
 import zope.interface.interface as zii
@@ -22,25 +20,55 @@ import types
 
 globalRegistry = zia.AdapterRegistry()
 
-class MetaInterface(zii.InterfaceClass):
-    def __adapt__(self, adaptee):
-        factory = globalRegistry.lookup1(zi.providedBy(adaptee), self, '')
-        if factory is not None:
-            adapter = factory(adaptee)
-            if adapter is not None:
-                return adapter
-        return zii.InterfaceClass.__adapt__(self, adaptee)
+def twistedInterfaceAdapterHook(interface, adaptee):
+    """A simpler version of Zope's adapter hook; provide a global registry as
+    truly global, not accessed through context.
+    """
+    factory = globalRegistry.lookup1(zi.providedBy(adaptee), interface, '')
+    if factory is not None:
+        adapter = factory(adaptee)
+        if adapter is not None:
+            return adapter
 
+zii.adapter_hooks.append(twistedInterfaceAdapterHook)
+
+def registerAdapter(adapterFactory, originalSpec, interface):
+    """A convenience function for registering an adapter with Twisted's global
+    registry.
+
+    @param adapterFactory: a 1-arg callable which procduces an object that
+    implements 'interface'.
+
+    @param originalSpec: An interface, specification, type or class to register
+    the adapter *from*.  An instance or implementor of this argument will be
+    passed to 'adapterFactory' when adaptation happens.
+
+    @param interface: The interface to adapt to.  adapterFactory must return
+    providers of this interface.
+    """
+    if isinstance(originalSpec, type) or isinstance(originalSpec, types.ClassType):
+        originalSpec = zi.implementedBy(originalSpec)
+    globalRegistry.register(required=[originalSpec], provided=interface,
+                            name='', value=adapterFactory)
+
+class MetaInterface(zii.InterfaceClass):
     def __setitem__(self, originalSpec, adapterFactory):
         """Register an adapter to me from a provided interface or type.  For
         example,
 
                 IResource[FooBar] = WebBarAdapter
+
+        is exactly equivalent to
+
+                registerAdapter(WebBarAdapter, FooBar, IResource)
+
+        This is a convenience syntax to make the order of arguments for
+        registerAdapter easier to remember.  You can remember that the above
+        syntax has conceptual parity the expression with:
+
+                IResource(FooBar()) # ==> Returns a WebBarAdapter()
         """
-        if isinstance(originalSpec, type) or isinstance(originalSpec, types.ClassType):
-            originalSpec = zi.implementedBy(originalSpec)
-        globalRegistry.register(required=[originalSpec], provided=self,
-                                name='', value=adapterFactory)
+        registerAdapter(adapterFactory, originalSpec, self)
 
 Interface = MetaInterface('Interface', __module__=__name__)
 
@@ -70,6 +98,8 @@ def test():
     ITo[Concrete] = mixer
     print ITo(Concrete())
     print ITo(7, None)
+    ITo[int] = lambda x : 100
+    print ITo(7)
 
 if __name__ == '__main__':
     test()
