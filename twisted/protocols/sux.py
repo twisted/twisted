@@ -42,10 +42,11 @@ from twisted.internet.protocol import Protocol, FileWrapper
 from twisted.python.reflect import prefixedMethodNames
 from twisted.python.compat import dict
 
-import string
+import re
 
 identChars = '.-_:'
 lenientIdentChars = identChars + ';+#' 
+special = re.compile('[&<\n]')
 
 def nop(*args, **kw):
     "Do nothing."
@@ -154,7 +155,24 @@ class XMLParser(Protocol):
         # fetch functions from the stateTable
         beginFn, doFn, endFn = stateTable[curState]
         try:
-            for byte in data:
+            i = 0
+            l = len(data)
+            while i<l:
+                byte = data[i]
+                i += 1
+                # Shield your eyes small children
+                # IT IS A PERFORMANCE HACK!
+                if curState is 'bodydata' and byte not in '<&\n':
+                    m = special.search(data, i)
+                    if not m:
+                        end = l
+                    else:
+                        end = m.start()
+                    s = data[i-1:end]
+                    doFn(s)
+                    i = end
+                    colno += len(s)
+                    continue
                 # do newline stuff
                 if byte == '\n':
                     lineno += 1
