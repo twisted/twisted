@@ -4,7 +4,7 @@
 #
 # Service discovery APIs
 
-from twisted.internet import reactor
+from twisted.internet import reactor, defer
 from twisted.protocols import dns
 from twisted.python.components import Interface
 
@@ -48,12 +48,14 @@ class ServiceSubscription:
         self.service = service
         self.resolver = resolver
         self.subscribers = []
-        self.addresses = {} # map name to (host, port)
-
+        self.addresses = {} # map name to (domainname, port)
+        self.resolver._sendQuery([dns.Query(service, dns.PTR, dns.IN)])
+        # XXX schedule stage new lookups at intervals
+    
     def unsubscribe(self, subscriber):
         self.subscribers.remove(subscriber)
         if not self.subscribers:
-            del self.service.subscriptions[self.service]
+            self.resolver._removeSubscription(self.service)
 
     def subscribe(self, subscriber):
         self.subscribers.append(subscriber)
@@ -61,6 +63,7 @@ class ServiceSubscription:
     def gotSRV(self, name, record):
         """Called by resolver with SRV for our service type."""
         # XXX deal with TTLs
+        # XXX supress duplicates
         self.addresses[name] = str(record.target), record.port
         for s in self.subscribers:
             s.serviceAdded(name, str(record.target), record.port)
@@ -76,14 +79,13 @@ class mDNSResolver:
 
     def __init__(self):
         self.protocol = mDNSDatagramProtocol(self)
-        self.subscriptions = {}
+        self.subscriptions = {} # map service name to ServiceSubscription
+        self.cachedDomains = {} # map .local domain name to IP
 
     # external API
     
     def startListening(self):
         self.protocol.startListening()
-        # XXX set QU
-        self._sendQuery([dns.Query('_workstation._tcp.local', dns.PTR, dns.IN)])
     
     def stopListening(self):
         # XXX
@@ -94,6 +96,14 @@ class mDNSResolver:
         if not self.subscriptions.has_key(service):
             self.subscriptions[service] = ServiceSubscription(service, self)
         self.subscriptions[service].subscribe(subscriber)
+
+    def getIP(self, domain):
+        """Do A lookup."""
+        if self.cachedDomains.has_key(domain):
+            return defer.succeed(self.cachedDomains[domain])
+        else:
+            # XXX do lookup
+            pass
     
     # internal methods
     
@@ -108,8 +118,13 @@ class mDNSResolver:
                 name = r.name.name
                 for service, subscription in self.subscriptions.items():
                     if name.endswith(service):
-                        subscription.gotSRV(name, r.payload)
+                        # we might have gotten A record with this SRV, so to make sure we have its
+                        # IP cached we put off the notification slightly
+                        reactor.callLater(0, subscription.gotSRV, name[:-len(service) - 1], r.payload)
                     break
+            elif r.type == dns.A:
+                # XXX need to deal with TTL
+                self.cachedDomains[str(r.name)] = r.payload.dottedQuad()
     
     def _cbGotQueryResult(self, result):
         self.messageReceived(result, self.protocol)
@@ -118,6 +133,10 @@ class mDNSResolver:
         """Send a query."""
         self.protocol.query((MDNS_ADDRESS, 5353), queries).addCallback(
             self._cbGotQueryResult)
+
+    def _removeSubscription(self, service):
+        """Called by ServiceSubscription to remove itself."""
+        del self.subscription[service]
 
 
 class mDNSDatagramProtocol(dns.DNSDatagramProtocol):
@@ -131,11 +150,15 @@ class mDNSDatagramProtocol(dns.DNSDatagramProtocol):
 
 if __name__ == '__main__':
     class Sub:
-        def serviceAdded(self, *args):
-            print args
+        def _resolved(self, ip, host):
+            print host, "is actually", ip
+        
+        def serviceAdded(self, name, host, port):
+            print "%s is ('%s', %s)" % (name, host, port)
+            d.getIP(host).addCallback(self._resolved, host)
     
     d = mDNSResolver()
+    d.startListening()
     print "Subscribing to _workstation._tcp.local, which should show all Macs on network"
     d.subscribeService("_workstation._tcp.local", Sub())
-    d.startListening()
     reactor.run()
