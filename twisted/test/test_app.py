@@ -19,7 +19,7 @@ Test cases for twisted.internet.app.
 """
 
 from twisted.trial import unittest
-from twisted.internet import app, protocol
+from twisted.internet import app, protocol, error
 
 
 class AppTestCase(unittest.TestCase):
@@ -61,6 +61,14 @@ class AppTestCase(unittest.TestCase):
         self.assertEquals(len(a.unixPorts), 1)
         a.unlistenUNIX("xxx")
         self.assertEquals(len(a.unixPorts), 0)
+    
+    def testIllegalUnlistens(self):
+        a = app.Application("foo")
+        
+        self.assertRaises(error.NotListeningError, a.unlistenTCP, 1010)
+        self.assertRaises(error.NotListeningError, a.unlistenUNIX, '1010')
+        self.assertRaises(error.NotListeningError, a.unlistenSSL, 1010)
+        self.assertRaises(error.NotListeningError, a.unlistenUDP, 1010)
 
 
 class ServiceTestCase(unittest.TestCase):
