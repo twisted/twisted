@@ -154,10 +154,10 @@ class Options(usage.Options):
                 if self['type'] == 'final':
                     commands += [UpdateWebDocs]
 
-                commands += [UpdateWebSite,
-                             Announce,
-                             NotifyPackagers,
-                             ]
+                #yeah yeah, maybe next year
+##                commands += [Announce,
+##                             NotifyPackagers,
+##                             ]
 
         self['commands'] = commands
 
@@ -732,107 +732,17 @@ class UpdateWebDocs(Transaction):
             return
         os.chdir(opts['docdir'])
 
-        if origlinkdest is not None:
+        if self.origlinkdest is not None:
             if not os.path.exists('current'):
                 os.symlink(self.origlinkdest, 'current')
             # I can't imagine 'else' of this ever having a useful back-out
 
         sh('rm -rf TwistedDocs-%s' % opts['full-version'])
 
-from twisted.web import microdom, domhelpers
-import cStringIO
-
-class UpdateWebSite(Transaction):
-
-    def updateSimpleVersions(self, opts):
-        # XXX OMFG OMFG this should so totally be obsoleted by lore
-        # and/or nevow.
-
-        webdir = opts['webdir']
-        index = os.path.join(webdir, 'index')
-        docindex = os.path.join(webdir, 'documents', 'index.html')
-
-        attrvalue = 'stable-version'
-        if not opts['type'] == 'final':
-            attrvalue = 'un' + attrvalue
-
-        for fn in (index, docindex):
-            print "UpdateWebSite: updating %s" % fn
-            d = microdom.parseXML(fn)
-
-
-            # first find class="versions"; this is only used by
-            # index. It generates a format like "stable-version or
-            # unstable-version", but "or unstable-version" is only
-            # there if there IS a new unstable version.
-
-            for node in domhelpers.findElementsWithAttribute(
-                d, 'class', 'versions'
-                ):
-                if opts['type'] == 'final':
-                    # shwack all the children and just put in a <span
-                    # class="stable-version"></span>
-                        domhelpers.clearNode(node)
-                        sversion = microdom.Element(
-                            'span', {'class': 'stable-version'}
-                            )
-                        node.appendChild(sversion)
-                else:
-                    # otherwise, we can assume that a stable-version is
-                    # already there, but 'or [foo]' might _not_ be there
-                    unsversions = domhelpers.findElementsWithAttribute(
-                        node, 'class', 'unstable-version'
-                        )
-                    if unsversions:
-                        for uns in unsversions:
-                            domhelpers.clearNode(uns)
-                    else:
-                        newunsnode = microdom.Element(
-                            'span', {'class': 'unstable-version'}
-                            )
-                        node.appendChild(microdom.Text(' or '))
-                        node.appendChild(newunsnode)
-
-            # Now fill in all version-tags.
-            for node in domhelpers.findElementsWithAttribute(
-                d, 'class', attrvalue
-                ):
-                domhelpers.clearNode(node)
-                node.appendChild(microdom.Text(opts['full-version']))
-
-
-            d.writexml(open(fn, 'w'))
-
-
-    def updateGetCurrent(self, opts):
-        if not opts['type'] == 'final':
-            return
-        print "UpdateWebSite: updating get-current.epy"
-        getcurrent = os.path.join(opts['webdir'],
-                                  'products', 'get-current.epy')
-        replaceInFile(getcurrent,
-                      'STABLE_VERSION = .*',
-                      'STABLE_VERSION = %r' % opts['full-version'],
-                      escape=False
-                      )
-        cmd = 'cd %s && cvs diff products/get-current.epy' % (opts['webdir'])
-        print cmd
-        crapout = os.popen(cmd).read()
-        print "diff output:"
-        print crapout
-        if not crapout:
-            raise Exception("No diff output!")
-
-
-    def doIt(self, opts):
-        self.updateSimpleVersions(opts)
-        self.updateGetCurrent(opts)
-        #self.updateDownloadPage(opts)
-        
-
 
 class Announce(Transaction):
     pass
+
 
 class NotifyPackagers(Transaction):
     pass
