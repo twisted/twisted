@@ -18,7 +18,7 @@ sys.path.insert(0, os.curdir)
 from twisted.python import usage, util, failure, dist
 from twisted.python.release import replaceInFile, runChdirSafe, sh, CommandFailed, DirectoryExists, DirectoryDoesntExist
 
-import shutil, re
+import shutil, re, time
 
 repourl = 'svn+ssh://svn.twistedmatrix.com/svn/Twisted'
 #repourl = 'file:///home/radix/Twisted.repo'
@@ -226,12 +226,15 @@ def makeBallCore(opts):
 
 
 def makeBallSumo(opts):
-    ver = opts['base-version']
+    ver = time.strftime('%Y-%m-%d')
     tdir = "TwistedSumo-%s" % (ver,)
     if not os.path.exists('Twisted.exp'):
         raise DirectoryDoesntExist("MakeBalls: Twisted.exp doesn't exist")
-                                  
-
+    zig = glob.glob('ZopeInterface-*.tgz')
+    if not zig:
+        raise Exception("Please download ZopeInterface from "
+                        "http://www.zope.org/Products/ZopeInterface")
+    zi = zig[0]
     os.makedirs(tdir)
     sh('''
     ln -s `pwd`/Twisted.exp/bin %(tdir)s/
@@ -240,6 +243,7 @@ def makeBallSumo(opts):
     ln -s `pwd`/Twisted.exp/README %(tdir)s/
     ln -s `pwd`/Twisted.exp/LICENSE %(tdir)s/
     ln -s `pwd`/Twisted.exp/setup.py %(tdir)s/
+    ln -s `pwd`/%(zi)s %(tdir)s/
     ''' % locals())
 
     tar(tdir)
