@@ -376,7 +376,9 @@ def runApp(config):
 
     try:
         if config['profile']:
-            import profile
+            # XXX - Is this right?
+            import profile, __main__
+            __main__.application = application
             profile.run("application.run(%d)" % (not config['no_save']))
         elif config['debug']:
             import pdb
