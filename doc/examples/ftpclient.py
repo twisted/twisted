@@ -56,14 +56,14 @@ def fail(error):
     reactor.stop()
 
 
-def showFiles(fileListProtocol):
+def showFiles(result, fileListProtocol):
     print 'Processed file listing:'
     for file in fileListProtocol.files:
         print '    %s: %d bytes, %s' \
               % (file['filename'], file['size'], file['date'])
     print 'Total: %d files' % (len(fileListProtocol.files))
 
-def showBuffer(bufferProtocol):
+def showBuffer(result, bufferProtocol):
     print 'Got data:'
     print bufferProtocol.buffer.getvalue()
 
@@ -99,8 +99,9 @@ def run():
     ftpClient.pwd().addCallbacks(success, fail).arm()
 
     # Get a detailed listing of the current directory
-    d = ftpClient.list('.', FTPFileListProtocol())
-    d.addCallbacks(showFiles, fail).arm()
+    fileList = FTPFileListProtocol()
+    d = ftpClient.list('.', fileList)
+    d.addCallbacks(showFiles, fail, callbackArgs=(fileList,)).arm()
 
     # Change to the parent directory
     ftpClient.cdup().addCallbacks(success, fail).arm()
@@ -110,7 +111,7 @@ def run():
 
     # Get short listing of current directory, and quit when done
     d = ftpClient.nlst('.', proto)
-    d.addCallbacks(showBuffer, fail)
+    d.addCallbacks(showBuffer, fail, callbackArgs=(proto,))
     d.addCallback(lambda result: reactor.stop())
     d.arm()
     
