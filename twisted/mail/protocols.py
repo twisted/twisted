@@ -48,7 +48,7 @@ class SMTPFactory(protocol.ServerFactory):
     
     def buildProtocol(self, addr):
         p = DomainSMTP()
-        p.service = self
+        p.service = self.service
         return p
 
 
@@ -81,5 +81,5 @@ class POP3Factory(protocol.ServerFactory):
     
     def buildProtocol(self, addr):
         p = VirtualPOP3()
-        p.service = self
+        p.service = self.service
         return p
