@@ -77,14 +77,14 @@ class Flow(Generator):
     def __init__(self, iterable):
         Generator.__init__(self, iterable)
         self._stack = [self]
-    def execute(self):
+    def execute(self, cooperate = 0):
         while self._stack:
             head = self._stack[-1]
             head.generate()
             if head.active:
                 if isinstance(result, FlowItem):
                     if result is Cooperate:
-                        return 1
+                        if cooperate: return 1
                     self._stack.append(result)
             else:
                 self._stack.pop()
@@ -101,7 +101,7 @@ class DeferredFlow(Flow, defer.Deferred):
        Flow.__init__(iterable)
        reactor.callLater(0, self.execute)
    def execute(self):
-       if Flow.execute(self):
+       if Flow.execute(self, cooperate = 1):
            reactor.callLater(0, self.execute)
        else:
            if self.isFailure():
