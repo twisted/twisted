@@ -21,13 +21,25 @@ class AccountCreation(html.Interface):
                             )
 
 
+class ParticipantInfo(html.Interface):
+    def content(self, request):
+        return "Sorry, this feature not complete yet."
+
 class ParticipantsDirectory(html.Interface):
     def content(self, request):
+        """Get HTML for a directory of participants.
+        """
         svc = request.site.service
         keys =  svc.participants.keys()
         keys.sort()
         return self.runBox(request, "Directory",
-                           html.linkList, map(lambda key: (key,key), keys))
+                           html.linkList, map(
+            lambda key, request=request: (request.childLink(key),key), keys))
+
+    def getChild(self, path, request):
+        """Get info for a particular participant.
+        """
+        return ParticipantInfo()
 
 class AdminDir(html.Interface):
     def content(self, request):
