@@ -1,6 +1,6 @@
 """C++ hooks from inside reactor."""
 
-from twisted.internet import tcp, udp
+from twisted.internet import tcp, udp, reactor
 from fusion import tcp as ctcp
 from fusion import udp as cudp
 
@@ -39,43 +39,46 @@ class CConnector(tcp.Connector):
         return CClient(self.host, self.port, self.bindAddress, self, self.reactor)
 
 
-_origUDPPort = udp.Port
-_origMulticastPort = udp.MulticastPort
-
-
-class CUDPPort(cudp.UDPPortMixin, _origUDPPort):
+class CUDPPort(cudp.UDPPortMixin, udp.Port):
 
     def __init__(self, *args, **kwargs):
-        _origUDPPort.__init__(self, *args, **kwargs)
+        udp.Port.__init__(self, *args, **kwargs)
 
     def _bindSocket(self):
-        _origUDPPort._bindSocket(self)
+        udp.Port._bindSocket(self)
         cudp.UDPPortMixin.__init__(self, self)
 
 
-class CMulticastPort(cudp.UDPPortMixin, _origMulticastPort):
+class CMulticastPort(cudp.UDPPortMixin, udp.MulticastPort):
 
     def __init__(self, *args, **kwargs):
-        _origMulticastPort.__init__(self, *args, **kwargs)
+        udp.MulticastPort.__init__(self, *args, **kwargs)
 
     def _bindSocket(self):
-        _origMulticastPort._bindSocket(self)
+        udp.MulticastPort._bindSocket(self)
         cudp.UDPPortMixin.__init__(self, self)
 
 
-INSTALLED = False
+def _listenWith(portType, *args, **kwargs):
+    p = portType(*args, **kwargs)
+    p.startListening()
+    return p
 
-def install():
-    """Install support for C protocols."""
-    global INSTALLED
-    if INSTALLED:
-        return
-    # XXX this'll fail if code does "from t.i.tcp import Port"
-    # but since default.py doesn't this should be ok for now
-    tcp.Port = CPort
-    tcp.Connector = CConnector
-    udp.Port = CUDPPort
-    udp.MulticastPort = CMulticastPort
-    INSTALLED = True
 
-__all__ = ["install"]
+def listenTCP(port, factory, backlog=50, interface=""):
+    return _listenWith(CPort, port, factory, backlog, interface, reactor)
+
+def listenUDP(port, protocol, interface='', maxPacketSize=8192):
+    return _listenWith(CUDPPort, port, protocol, interface, maxPacketSize, reactor)
+
+def listenMulticast(port, protocol, interface='', maxPacketSize=8192, listenMultiple=False):
+    return _listenWith(CMulticastPort, port, protocol, interface, maxPacketSize, reactor, listenMultiple)
+
+def connectTCP(host, port, factory, timeout=30, bindAddress=None):
+    c = CConnector(host, port, factory, timeout, bindAddress, reactor)
+    c.connect()
+    return c
+
+
+
+__all__ = ["listenTCP", "connectTCP", "listenUDP", "listenMulticast"]

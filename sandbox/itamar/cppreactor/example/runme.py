@@ -1,7 +1,6 @@
 from twisted.internet import reactor, protocol
-import fusion
+from fusion import creactor
 import echo
-fusion.install()
 
 
 class PyEcho(echo.Echo):
@@ -18,7 +17,7 @@ class PyEcho(echo.Echo):
 def main():
     f = protocol.ServerFactory()
     f.buildProtocol = lambda _: PyEcho()
-    reactor.listenTCP(1234, f)
+    creactor.listenTCP(1234, f)
     reactor.run()
 
 
