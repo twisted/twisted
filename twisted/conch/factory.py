@@ -1,26 +1,9 @@
-# Twisted, the Framework of Your Internet
-# Copyright (C) 2001-2002 Matthew W. Lefkowitz
-# 
-# This library is free software; you can redistribute it and/or
-# modify it under the terms of version 2.1 of the GNU Lesser General Public
-# License as published by the Free Software Foundation.
-# 
-# This library is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-# Lesser General Public License for more details.
-# 
-# You should have received a copy of the GNU Lesser General Public
-# License along with this library; if not, write to the Free Software
-# Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
-# 
 import md5, os
 
 from twisted.internet import protocol
 
 import common, userauth, keys, transport, primes, connection
 
-class Nothing: pass
 class SSHFactory(protocol.Factory):
     services = {
         'ssh-userauth':userauth.SSHUserAuthServer,
@@ -28,9 +11,9 @@ class SSHFactory(protocol.Factory):
     }
     def startFactory(self):
         if not hasattr(self,'publicKeys'):
-            self.publicKeys = self.getPublicKey()
+            self.publicKeys = self.getPublicKeys()
         if not hasattr(self,'privateKeys'):
-            self.privateKeys = self.getPrivateKey()
+            self.privateKeys = self.getPrivateKeys()
         if not hasattr(self,'primes'):
             self.primes = self.getPrimes()
 
@@ -49,7 +32,7 @@ class SSHFactory(protocol.Factory):
 
 class OpenSSHFactory(SSHFactory):
     dataRoot = '/usr/local/etc'
-    def getPublicKey(self):
+    def getPublicKeys(self):
         ks = {}
         for file in os.listdir(self.dataRoot):
             if file[:9] == 'ssh_host_' and file[-8:]=='_key.pub':
@@ -60,7 +43,7 @@ class OpenSSHFactory(SSHFactory):
                 except:
                     print 'bad key file', file
         return ks
-    def getPrivateKey(self):
+    def getPrivateKeys(self):
         ks = {}
         for file in os.listdir(self.dataRoot):
             if file[:9] == 'ssh_host_' and file[-4:]=='_key':
@@ -73,3 +56,6 @@ class OpenSSHFactory(SSHFactory):
         return ks
     def getPrimes(self):
         return primes.parseModuliFile(self.dataRoot+'/moduli')
+
+
+

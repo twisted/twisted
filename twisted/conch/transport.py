@@ -158,7 +158,7 @@ class SSHTransportBase(protocol.Protocol):
             for p in parts:
                 if p[:4]=='SSH-':
                     self.gotVersion = 1
-                    print 'got ssh version from client:', p.strip()
+                    print 'got ssh version from other side:', p.strip()
                     self.otherVersionString = p.strip()
                     if p.split('-')[1] not in ('1.99','2.0'): # bad version
                         self.sendDisconnect(DISCONNECT_PROTOCOL_VERSION_NOT_SUPPORTED, 'bad version %s'%p.split('-')[1])
@@ -410,7 +410,6 @@ class SSHClientTransport(SSHTransportBase):
             h.update(sharedSecret)
             exchangeHash = h.digest()
             #print 'hash', h.hexdigest()
-            keys.printKey(serverKey)
             if not keys.verifySignature(serverKey, signature, exchangeHash):
                 self.sendDisconnect(DISCONNECT_KEY_EXCHANGE_FAILED, 'bad signature')
                 return
@@ -447,7 +446,6 @@ class SSHClientTransport(SSHTransportBase):
         h.update(sharedSecret)
         exchangeHash = h.digest()
         #print 'hash', h.hexdigest()
-        keys.printKey(serverKey)
         if not keys.verifySignature(serverKey, signature, exchangeHash):
             self.sendDisconnect(DISCONNECT_KEY_EXCHANGE_FAILED, 'bad signature')
             return
