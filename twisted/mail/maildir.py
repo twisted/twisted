@@ -31,10 +31,11 @@ from twisted.python import components
 from twisted.mail import mail
 from twisted.internet import defer
 
-from twisted.cred import portal
-from twisted.cred import credentials
-from twisted.cred import checkers
-from twisted.cred import error
+from twisted import cred
+import twisted.cred.portal
+import twisted.cred.credentials
+import twisted.cred.checkers
+import twisted.cred.error
 
 class _MaildirNameGenerator:
     """Utility class to generate a unique maildir name
@@ -184,7 +185,7 @@ class MaildirDirdbmDomain(AbstractMaildirDomain):
     """A Maildir Domain where membership is checked by a dirdbm file
     """
     
-    __implements__ = (portal.IRealm,)
+    __implements__ = (cred.portal.IRealm,)
     
     portal = None
     _credcheckers = None
@@ -235,7 +236,7 @@ class MaildirDirdbmDomain(AbstractMaildirDomain):
     
     def getCredentialsCheckers(self):
         if self._credcheckers is None:
-            self._credcheckers = [DirdbmDatabase(self.root)]
+            self._credcheckers = [DirdbmDatabase(self.dbm)]
         return self._credcheckers
 
     ##
@@ -249,15 +250,15 @@ class MaildirDirdbmDomain(AbstractMaildirDomain):
         )
 
 class DirdbmDatabase:
-    __implements__ = (checkers.ICredentialsChecker,)
+    __implements__ = (cred.checkers.ICredentialsChecker,)
     
-    credentialInterfaces = (pop3.IAPOP, credentials.IUsernamePassword)
+    credentialInterfaces = (pop3.IAPOP, cred.credentials.IUsernamePassword)
     
-    def __init__(self, root):
-        self.dirdbm = dirdbm.open(root)
+    def __init__(self, dbm):
+        self.dirdbm = dbm
     
     def requestAvatarId(self, credentials):
-        if components.implements(credentials, credentials.IUsernamePassword):
+        if components.implements(credentials, cred.credentials.IUsernamePassword):
             if credentials.username in self.dirdbm:
                 if credentials.password == self.dirdbm[credentials.username]:
                     return credentials.username
@@ -265,4 +266,4 @@ class DirdbmDatabase:
             if credentials.username in self.dirdbm:
                 if credentials.check(self.dirdbm[credentials.username]):
                     return credentials.username
-        raise error.UnauthorizedLogin
+        raise cred.error.UnauthorizedLogin

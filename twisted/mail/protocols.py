@@ -78,7 +78,7 @@ class VirtualPOP3(pop3.POP3):
             return defer.fail(cred.error.UnauthorizedLogin())
         else:
             return portal.login(
-                pop3.APOPCredential(user, self.magic, digest),
+                pop3.APOPCredentials(self.magic, user, digest),
                 None,
                 pop3.IMailbox
             )
@@ -86,7 +86,7 @@ class VirtualPOP3(pop3.POP3):
     def authenticateUserPASS(self, user, password):
         portal = self.service.defaultPortal()
         return portal.login(
-            cred.credentials.UserPassword(user, password),
+            cred.credentials.UsernamePassword(user, password),
             None,
             pop3.IMailbox
         )
@@ -98,7 +98,7 @@ class VirtualPOP3(pop3.POP3):
             domain = ''
         if domain not in self.service.domains:
              raise pop3.POP3Error("no such domain %s" % domain)
-        return user, self.service.domains[domain]
+        return user, domain
 
 
 class POP3Factory(protocol.ServerFactory):
