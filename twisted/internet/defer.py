@@ -259,22 +259,23 @@ class Deferred:
         """
         pass
 
-    def setTimeout(self, seconds, timeoutFunc=timeout):
+    def setTimeout(self, seconds, timeoutFunc=timeout, *args, **kw):
         """Set a timeout function to be triggered if I am not called.
 
         @param seconds: How long to wait (from now) before firing the
         timeoutFunc.
         
-        @param timeoutFunc: will receive the Deferred as its only
-        argument.  The default timeoutFunc will call the errback with
-        a L{TimeoutError}.
+        @param timeoutFunc: will receive the Deferred and *args, **kw as its
+        arguments.  The default timeoutFunc will call the errback with a
+        L{TimeoutError}.
         """
 
         assert not self.timeoutCall, "Don't call setTimeout twice on the same Deferred."
         
         from twisted.internet import reactor
-        self.timeoutCall = reactor.callLater(seconds,
-                                             lambda s=self, f=timeoutFunc: s.called or f(s))
+        self.timeoutCall = reactor.callLater(
+            seconds,
+            lambda: self.called or timeoutFunc(self, *args, **kw))
         return self.timeoutCall
 
     armAndErrback = errback
