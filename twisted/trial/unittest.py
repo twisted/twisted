@@ -114,9 +114,12 @@ class TestSuite:
     def addMethod(self, method):
         """Add a single method of a test case class to this test suite.
         """
-        assert type(method) is types.StringType
-        klass = reflect.namedObject('.'.join(method.split('.')[:-1]))
-        methodName = method.split('.')[-1]
+        if type(method) is types.StringType:
+            klass = reflect.namedObject('.'.join(method.split('.')[:-1]))
+            methodName = method.split('.')[-1]
+        else:
+            klass = method.im_class
+            methodName = method.__name__
         self.testMethods.append((klass, methodName))
         self.numTests += 1
 
@@ -139,12 +142,13 @@ class TestSuite:
             if type(obj) is types.ClassType and isTestClass(obj):
                 self.addTestClass(obj)
 
-    def addPackage(self, packageName):
-        try:
-            package = reflect.namedModule(packageName)
-        except ImportError, e:
-            self.couldNotImport[packageName] = e
-            return
+    def addPackage(self, package):
+        if type(package) is types.StringType:
+            try:
+                package = reflect.namedModule(packageName)
+            except ImportError, e:
+                self.couldNotImport[packageName] = e
+                return
         modGlob = os.path.join(os.path.dirname(package.__file__),
                                self.moduleGlob)
         modules = map(reflect.filenameToModuleName, glob.glob(modGlob))

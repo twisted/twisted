@@ -21,9 +21,12 @@
 
 from twisted.python import usage, reflect
 from twisted.trial import unittest
-import sys, os, types
+import sys, os, types, inspect
 
 class Options(usage.Options):
+    synopsis = """%s [options] [[file|package|module|TestCase|testmethod]...]
+    """ % (
+        os.path.basename(sys.argv[0]),)
     optFlags = [["help", "h"],
                 ["text", "t", "Text mode (ignored)"],
                 ["verbose", "v", "Verbose output"],
@@ -72,6 +75,45 @@ class Options(usage.Options):
 
     opt_f = opt_file
 
+    def parseArgs(self, *args):
+        for arg in args:
+            if (os.sep in arg):
+                # It's a file.
+                if not os.path.exists(arg):
+                    raise IOError(errno.ENOENT, os.strerror(errno.ENOENT), arg)
+                if arg.endswith(os.sep) and (arg != os.sep):
+                    arg = arg[:-len(os.sep)]
+                name = reflect.filenameToModuleName(arg)
+                if os.path.isdir(arg):
+                    self['packages'].append(name)
+                else:
+                    self['modules'].append(name)
+                continue
+
+            if arg.endswith('.py'):
+                # *Probably* a file.
+                if os.path.exists(arg):
+                    arg = reflect.filenameToModuleName(arg)
+                    self['modules'].append(arg)
+                    continue
+
+            arg = reflect.namedAny(arg)
+
+            if inspect.ismodule(arg):
+                filename = os.path.basename(arg.__file__)
+                filename = os.path.splitext(filename)[0]
+                if filename == '__init__':
+                    self['packages'].append(arg)
+                else:
+                    self['modules'].append(arg)
+            elif inspect.isclass(arg):
+                self['testcases'].append(arg)
+            elif inspect.ismethod(arg):
+                self['methods'].append(arg)
+            else:
+                # Umm, seven?
+                self['methods'].append(arg)
+
     def postOptions(self):
         if self['random'] is not None:
             try:
@@ -107,7 +149,10 @@ def run():
     for module in config['modules']:
         suite.addModule(module)
     for testcase in config['testcases']:
-        case = reflect.namedObject(testcase)
+        if type(testcase) is types.StringType:
+            case = reflect.namedObject(testcase)
+        else:
+            case = testcase
         if type(case) is types.ClassType and unittest.isTestClass(case):
             suite.addTestClass(case)
     for testmethod in config['methods']:

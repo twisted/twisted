@@ -1,5 +1,10 @@
 2003-04-04  Kevin Turner  <acapnotic@twistedmatrix.com>
 
+	* twisted/scripts/trial.py: Now takes whatever you throw at it on
+	the command line, be it a filename, or a dotted python name for a
+	package, module, TestCase, or test method; you no longer need to
+	use the -pmcfM switches (unless you really want to).
+
 	* twisted/protocols/htb.py: Egress traffic shaping for Consumers
 	and Transports, using Heirarchial Token Buckets, patterened after
 	Martin Devera's Hierarchical Token Bucket traffic shaper for the
