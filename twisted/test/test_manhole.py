@@ -18,8 +18,9 @@
 from pyunit import unittest
 from twisted.manhole import service
 from twisted.internet import app
+from twisted.spread.util import LocalAsRemote
 
-class DummyManholeClient:
+class DummyManholeClient(LocalAsRemote):
     zero = 0
     def __init__(self):
         self.messages = []
@@ -35,6 +36,12 @@ class DummyManholeClient:
 
     def getMessages(self):
         return self.messages[self.zero:]
+
+    # local interface
+    sync_console = console
+    sync_receiveExplorer = receiveExplorer
+    sync_setZero = setZero
+    sync_getMessages = getMessages
 
 class DummyApp(app.Application):
     name = 'None'

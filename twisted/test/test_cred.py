@@ -249,8 +249,9 @@ class PerspectiveTestCase(unittest.TestCase):
         s = self.perspective.getService()
         self.assert_(s is self.service)
 
-
-# Identity
+class FunctionsTestCase(unittest.TestCase):
+    def test_challenge(self):
+        self.assert_(identity.challenge())
 
 class AppForIdentityTest(Stubby, app.Application):
     def __init__(self, name, *a, **kw):
