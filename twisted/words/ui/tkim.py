@@ -807,7 +807,7 @@ def handleError(gateway,event_name,message):
     for key,value in imclient.groups.items():
         if key[:len(strgate)]==strgate:
             value.destroy()
-            del im.groups[strgate+value.name]
+            del imclientt.groups[strgate+value.name]
 
 def main():
     global imclient

@@ -493,7 +493,10 @@ def getState(file):
     returns the state as a list of Account objects.
     file := the file to retreive the state from (open file)
     """
-    return cPickle.load(file)
+    try:
+        return cPickle.load(file)
+    except EOFError:
+        return []
 
 def saveState(file,state):
     """
@@ -503,8 +506,8 @@ def saveState(file,state):
     """
     for account in state:
         if not account.savepass: # don't save password
+            lo=gateways.__gateways__[account.gatewayname].loginOptions
             for k in account.options.keys():
-                lo=gateways.__gateways__[k].loginOptions
                 for type,foo,name,bar in lo:
                     if name==k and type=="password":
                         del(account.options[k])
