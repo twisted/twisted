@@ -22,7 +22,7 @@ Package installer for Twisted
 Copyright (C) 2001 Matthew W. Lefkowitz
 All rights reserved, see LICENSE for details.
 
-$Id: setup.py,v 1.143 2003/09/24 15:11:22 glyph Exp $
+$Id: setup.py,v 1.144 2003/10/03 20:18:44 exarkun Exp $
 """
 
 import distutils, os, sys, string
@@ -205,17 +205,6 @@ int main(int argc, char **argv)
         exts.append( Extension("twisted.protocols._c_urlarg",
                                 ["twisted/protocols/_c_urlarg.c"],
                                 define_macros=define_macros) )
-
-        # opendir/readdir/scandir wrapper
-        # Only build it if dirent.h defines "struct dirent" with the fields
-        # d_name and d_type.
-        if (self._check_struct_member(["sys/types.h", "dirent.h"], 'dirent', 'd_name')
-            and self._check_struct_member(["sys/types.h", "dirent.h"], 'dirent', 'd_type')):
-            exts.append( Extension("twisted.python._c_dir",
-                                    ["twisted/python/_c_dir.c"],
-                                    define_macros=define_macros) )
-        else:
-            self.announce("scandir() wrapper is unavailable on this system (don't worry, everything will still work)")
 
         self.extensions.extend(exts)
 

@@ -1,3 +1,9 @@
+2003-10-02  Jp Calderone  <exarkun@twistedmatrix.com>
+
+	* setup.py, twisted/test/test_dir.py, twisted/python/_c_dir.c:
+	Removed _c_dir extension module for portability and maintenance
+	reasons.
+
 2003-10-03  Moshe Zadka <moshez@twistedmatrix.com>
 
 	* twisted/spread/util.py twisted/test/test_spread.py: Fix issue
