@@ -65,7 +65,7 @@ class SQLReflector(reflector.Reflector, adbapi.Augmentation):
         attributes = ("rowColumns", "rowKeyColumns", "rowTableName" )
         for att in attributes:
             if not hasattr(rc, att):
-                raise DBError("RowClass must have class variable: %s" % att)
+                raise DBError("RowClass %s must have class variable: %s" % (rc, att))
             
         tableInfo = _TableInfo(rc)
         tableInfo.updateSQL = self.buildUpdateSQL(tableInfo)
@@ -78,7 +78,8 @@ class SQLReflector(reflector.Reflector, adbapi.Augmentation):
 
         Create a set of python objects of <rowClass> from the contents
         of a table populated with appropriate data members.
-        Example:
+        Example::
+
           |  class EmployeeRow(row.RowObject):
           |      pass
           |
@@ -181,7 +182,6 @@ class SQLReflector(reflector.Reflector, adbapi.Augmentation):
         for column, type in tableInfo.rowColumns:
             if column.upper() == columnName.upper():
                 return type
-            
 
     def buildUpdateSQL(self, tableInfo):
         """(Internal) Build SQL to update a RowObject.
