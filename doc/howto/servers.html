@@ -22,14 +22,14 @@
     implement protocol parsing and handling.  If you are implementing 
     an application then you should read this document second, after 
     first reading the top level overview of how to begin writing your 
-    Twisted application, in <a href="plugin.html" >Writing Plug-Ins 
+    Twisted application, in <a href="plugin.html">Writing Plug-Ins 
     for Twisted</a>. </p>
 
     <p>Your protocol handling class will usually subclass <code
     class="API">twisted.internet.protocol.Protocol</code>. Most
     protocol handlers inherit either from this class or from one of
     its convenience children. An instance of the protocol class
-    will be instantiated per-connection, on demand, and it will go
+    might be instantiated per-connection, on demand, and might go
     away when the connection is finished. This means that
     persistent configuration is not saved in the
     <code>Protocol</code>.</p>
@@ -37,14 +37,14 @@
     <p>The persistent configuration is kept in a Factory class,
     which usually inherits from <code
     class="API">twisted.internet.protocol.Factory</code>. The
-    default factory class just instantiates each Protocol, and then
+    default factory class just instantiates each <code>Protocol</code>, and then
     sets on it an attribute called <code>factory</code> which
     points to itself. This lets every <code>Protocol</code> access,
     and possibly modify, the persistent configuration.</p>
 
     <p>It is usually useful to be able to offer the same service on
-    multiple ports or network addresses. This is why the Factory
-    does not listen to connections, and in fact does not know
+    multiple ports or network addresses. This is why the <code>Factory</code>
+    does not listen to connections, and in fact does not
     know anything about the network. See <code
     class="API">twisted.internet.interfaces.IReactorTCP.listenTCP</code>,
     and the other <code>IReactor*.listen*</code> APIs for more
@@ -71,8 +71,8 @@ class Echo(Protocol):
 </pre>
 
     <p>This is one of the simplest protocols. It simply writes back
-    whatever is written to it. There are many events it does not
-    respond to. Here is an example of a Protocol responding to
+    whatever is written to it. There are many events to which it does not
+    respond. Here is an example of a Protocol responding to
     another event:</p>
 <pre class="python">
 from twisted.internet.protocol import Protocol
@@ -90,8 +90,8 @@ class QOTD(Protocol):
     <p>The connectionMade event is usually where set up of the
     connection object happens, as well as any initial greetings (as
     in the QOTD protocol above, which is actually based on RFC
-    865). The connectionLost event is where tearing down of any
-    Protocol-specific objects is done. Here is an example:</p>
+    865). The <code>connectionLost</code> event is where tearing down of any
+    connection-specific objects is done. Here is an example:</p>
 <pre class="python">
 from twisted.internet.protocol import Protocol
 
@@ -211,8 +211,8 @@ class Answer(LineReceiver):
     <h2>Factories</h2>
 
     <p>As mentioned before, usually the class <code
-    class="API">twisted.internet.protocol.Protocol</code> works,
-    and there is no need to override it. However, sometimes there
+    class="API">twisted.internet.protocol.Factory</code> works,
+    and there is no need to subclass it. However, sometimes there
     can be factory-specific configuration of the protocols, or
     other considerations. In those cases, there is a need to
     subclass <code>Factory</code>.</p>
@@ -307,8 +307,16 @@ reactor.listenTCP(8007, QOTDFactory("configurable quote"))
 reactor.run()
 </pre>
 
-    <p>And that's it!</p>
+    <p>The only lines you might not understand are the last two.</p>
+
+<p><code class="API"
+base="twisted.internet.interfaces.IReactorTCP">listenTCP</code> is
+the method which connects a <code>Factory</code> to the network.
+It uses the reactor interface, which lets many different loops handle
+the networking code, without modifying end-user code, like this.
+As mentioned above, if you want to write your code to be a production-grade
+Twisted server, and not a mere 20-line hack, you will want to
+use <a href="application.html">the Application object</a>.</p>
 
   </body>
 </html>
-
