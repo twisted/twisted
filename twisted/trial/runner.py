@@ -205,8 +205,11 @@ class TestSuite(Timed):
 
     def _bail(self):
         from twisted.internet import reactor
+        d = defer.Deferred()
+        reactor.addSystemEventTrigger('after', 'shutdown', lambda: d.callback(None))
         reactor.fireSystemEvent('shutdown') # radix's suggestion
         reactor.suggestThreadPoolSize(0)
+        util.wait(d) # so that the shutdown event completes
 
     def _setUpSigchldHandler(self):
         # set up SIGCHLD signal handler so that parents of spawned processes
