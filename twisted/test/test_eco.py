@@ -14,30 +14,38 @@
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 from pyunit import unittest
-from twisted.eco import eco, sexpy
+from twisted.eco import eco, sexpy, cons
 atom = sexpy.Atom
 
 class EcoTestCase(unittest.TestCase):
     
     def testConsify(self):
         c = eco.consify([1,2,3,["a","b"]])
-        assert c == [1, [2, [3, [["a", ["b", []]], []]]]]
+        expect = cons.cons(1, cons.cons(2, cons.cons(3, cons.cons(cons.cons("a", cons.cons("b", cons.nil)), cons.nil))))
+        assert c == expect, "%s isn't %s!" % (c, expect)
+        
+        #[1, [2, [3, [["a", ["b", []]], []]]]]
 
     def testEval(self):
         assert eco.eval('[+ 2 3]') == 5
         assert eco.eval('[let [[x 1] [y 2]] [+ x y]]') == 3
         assert eco.eval('''[if [eq [+ 3 3] 0] [foo 1 2 3]
-                            [list 1 2 3]]''') == [1, [2, [3, []]]]
+                            [list 1 2 3]]''') == cons.cons(1, cons.cons(2, cons.cons(3, cons.nil)))
         assert eco.eval('[let [[x [cons 1 2]]] [and [eq x [cons 1 2]] [not [is x [cons 1 2]]]]]')
         assert not eco.eval('[]')
-        assert eco.eval('[let [[x [list 1 2]]] [and [eq [car x] 1] [eq [cdr x] [cons 2 []]] [eq [cadr x] 2]]]')
+        assert eco.eval('[let [[x [list 1 2]]] [and [eq [car x] 1] [eq [cdr x] [cons 2 nil]] [eq [cadr x] 2]]]')
         assert eco.eval('[fn [a b] [+ a b]]')(1,2) == 3
         eco.eval('[def fn my-add [a b] [+ a b]]')
         assert eco.eval('[my-add 5 10]') == 15
 
     def testBackquote(self):
-        assert eco.eval("[let [[x [list 1 2 3]] [y [list 7 3 2]]] (a b ,x d ,@y)]") == [atom('a'), [atom('b'), [[1, [2, [3, []]]], [atom('d'), [7, [3, [2, []]]]]]]]
-    def testMacros(self):        
+        r = eco.eval("[let [[x [list 1 2 3]] [y [list 7 3 2]]] (a b ,x d ,@y)]")
+        expect = cons.cons(atom('a'), cons.cons(atom('b'), cons.cons(\
+            cons.cons(1, cons.cons(2, cons.cons(3, cons.nil))), cons.cons(\
+            atom('d'), cons.cons(7, cons.cons(3, cons.cons(2, cons.nil)))))))
+        assert r == expect, "%s isn't %s!" % (r, expect)
+
+    def testMacros(self):
         eco.eval('[def macro mung [x] (+ ,[cadr x] ,[caddr x])]')
         assert eco.eval('[mung [* 10 5]] ') == 15
         assert eco.eval("[let [[x [macroexpand (mung [* 10 5])]]] [and [eq [car x] '+] [eq [cadr x] 10] [eq [caddr x] 5]]]")

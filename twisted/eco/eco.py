@@ -14,10 +14,10 @@
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
-import sexpy
+import sexpy, cons
+
 import operator
 import types
-import pprint
 import string
 import sys
 atom = sexpy.Atom
@@ -37,8 +37,8 @@ def consify(sexp):
         if maybe_dot == atom('.'):
             qdr = sexp[2]
         else:
-            qdr = sexp[1:]
-        return [consify(qar),consify(qdr)]
+            qdr = sexp[1:] or nil
+        return cons.cons(consify(qar),consify(qdr))
     else:
         return sexp
 
@@ -55,12 +55,15 @@ def evalFile(fileObj):
     return eval(fileObj.read())
 
 def evalExp(exp, env):
+    """evalExp(exp, env) -> None
+    I take a cons or atom and an environment, and evaluate that cons/atom in
+    the context of that environment."""
     if isinstance(exp, atom):
         return lookup(exp, env, VAR)
-    elif isinstance(exp, types.ListType):
+    elif isinstance(exp, cons.cons):
         if func_null(exp):
             return exp
-        n = exp[0].string
+        n = car(exp).string
         specialForm = globals().get("eval_" + n)
         if specialForm:
             return specialForm(cdr(exp), env)
@@ -112,17 +115,17 @@ class Function:
         self.llist = car(forms)
         self.body = cadr(forms)
 
-    def parseLambdaList(self, args):
+    def parseLambdaList(self, vector):
         i = 0
         bindings = []
         crap = self.llist
         while crap:
             if func_consp(crap):
-                b =  cons(car(crap), args[i])
+                b = cons.cons(car(crap), vector[i])
             else:
-                rgs = apply(func_list, args[i:])
-                b = cons(crap, rgs)
-            bindings = cons(b, bindings)
+                rgs = apply(func_list, vector[i:])
+                b = cons.cons(crap, rgs)
+            bindings = cons.cons(b, bindings)
             i = i + 1
             if func_consp(crap):
                 crap = cdr(crap)
@@ -132,6 +135,7 @@ class Function:
         
 
     def __call__(self, *args):
+        args = consify(args)
         bindings = self.parseLambdaList(args)        
         newEnv = extendEnv(VAR, self.env, bindings)
         return evalExp(self.body, newEnv)
@@ -143,6 +147,7 @@ class Macro(Function):
         return evalExp(self.body, newEnv)
         
     def __call__(self, env, *args):
+        args = consify(args)
         return evalExp(self.expand(args), env)
 
 ### Dispatched stuff.
@@ -217,7 +222,7 @@ def backquotize(exp, env):
         return func_list(exp)
             
 def eval_let(exp, env):
-    newEnv = extendEnv(VAR, env, func_map(lambda x, env=env: cons(car(x), evalExp(cadr(x), env)), car(exp)))
+    newEnv = extendEnv(VAR, env, func_map(lambda x, env=env: cons.cons(car(x), evalExp(cadr(x), env)), car(exp)))
     exp = cdr(exp)
     while exp:
         rv = evalExp(car(exp), newEnv)
@@ -242,7 +247,7 @@ def def_macro(name, forms, env):
 
 def func_map(fun, list):
     if list:
-        return cons(fun(car(list)), func_map(fun, cdr(list)))
+        return cons.cons(fun(car(list)), func_map(fun, cdr(list)))
     else:
         return nil
 def func_mapcan(fun, list):
@@ -299,7 +304,7 @@ def func_macroexpand(sexp):
             elif a.string == 'def':
                 return func_list(a, car(d), cadr(d), func_map(func_macroexpand, cddr(d)))
             else:
-                return cons(a, func_map(func_macroexpand, d))
+                return cons.cons(a, func_map(func_macroexpand, d))
 
     else:
         return sexp
@@ -309,24 +314,28 @@ def func_macroexpand(sexp):
 # car/cdr and compositions
 
 def car(x):
-    return x[0]
+##    if x is nil:
+##        return nil
+    return x.car
 func_car = car
 
 def cdr(x):
-    return x[1]
+##    if x is nil:
+##        return nil
+    return x.cdr
 func_cdr = cdr
 
 def cadr(x):
-    return x[1][0]
+    return x.cdr.car
 func_cadr = cadr
 
 
 def caddr(x):
-    return x[1][1][0]
+    return x.cdr.cdr.car
 func_caddr = caddr
 
 def cddr(x):
-    return x[1][1]
+    return x.cdr.cdr
 func_cddr = cddr
 
 def func_eq(a, b):
@@ -345,7 +354,7 @@ def func_and(*exp):
     return e or 0
 
 def func_consp(exp):
-    return isinstance(exp, types.ListType) and len(exp) == 2 
+    return isinstance(exp, cons.cons) 
 
 def func_or(*exp):
     for e in exp:
@@ -356,30 +365,33 @@ def func_or(*exp):
 def func_not(a):
     return not a
 
-def func_cons(car, cdr):
-    return [car, cdr]
-cons = func_cons
+## def func_cons(car, cdr):
+##     return [car, cdr]
 
-def func_setcar(lst, newcar):
-    lst[0] = newcar
+func_cons = cons.cons
 
-def func_setcdr(lst, newcdr):
-    lst[1] = newcdr
+def func_setcar(qons, newcar):
+    qons.car = newcar
 
-def func_list(*exp):
-    head = lispList = []
-    for val in exp:
-        newLispList = []
-        lispList.append(val)
-        lispList.append(newLispList)
-        lispList = newLispList
-    return head
+def func_setcdr(qons, newcdr):
+    qons.cdr = newcdr
+
+##def func_list(*exp):
+##    head = lispList = cons.cons(None, None)
+##    for val in exp:
+##        newLispList = cons.cons(None, None)
+##        lispList.car = val
+##        lispList.cdr = newLispList
+##        lispList = newLispList
+##    return head
+
+func_list = cons.list
 
 def func_nconc(*lists):
     top = apply(func_list, lists)
     while 1:
         if not top:
-            return nil        
+            return nil
         top_of_top = car(top)
         if func_consp(top_of_top):
             elements = cdr(top)
@@ -411,7 +423,7 @@ def func_nconc(*lists):
     top = cdr(top)
 
 def func_null(exp):
-    return exp == []
+    return exp == nil
 
 def func_last(lst):
     if func_null(cdr(lst)):
@@ -423,8 +435,8 @@ def func_subtract(*exp):
     return reduce(operator.sub, exp)
  
 globalFunctions =  {"+": func_add, "-": func_subtract}
-globalValues = {"nil" : []}
-nil = []
+globalValues = {"nil" : cons.nil}
+nil = cons.nil
 VAR = 0
 FUN = 1
 
@@ -438,7 +450,7 @@ def cMacroExpand(form):
         if car(form) == 'comment':
             return func_list(atom('comment'), cadr(form))
         else:
-            return cMacroExpand1(cons(car(form), func_map(cMacroExpand, cdr(form))))
+            return cMacroExpand1(cons.cons(car(form), func_map(cMacroExpand, cdr(form))))
     elif isinstance(form, atom):
         return form.string
     else:
