@@ -194,8 +194,9 @@ class DTP(protocol.Protocol):
                 self.pi.reply('fileok')
             else:
                 self.pi.reply('getabort')
-        self.file.close()
-        self.file = None
+        if self.file is not None:
+            self.file.close()
+            self.file = None
         self.pi.queuedfile = None
         self.action = None
         if hasattr(self.dtpPort, 'loseConnection'):
@@ -256,13 +257,22 @@ class DTP(protocol.Protocol):
         for a in list:
             ts = a
             ff = os.path.join(dir, ts) # the full filename
-            mtime = time.strftime("%b %d %H:%M", time.gmtime(os.path.getmtime(ff)))
-            fsize = os.path.getsize(ff)
+            try:
+                # os.path.getmtime calls os.stat: os.stat fails w/ an IOError
+                # on broken symlinks.  I know there's some way to get the real
+                # mtime out, since ls does it, but I haven't had time to figure
+                # out how to do it from python.
+                mtn = os.path.getmtime(ff)
+                fsize = os.path.getsize(ff)
+            except OSError:
+                mtn = 0
+                fsize = 0
+            mtime = time.strftime("%b %d %H:%M", time.gmtime(mtn))
             if os.path.isdir(ff):
                 diracc = 'd'
             else:
                 diracc = '-'    
-            s = s + diracc+"r-xr-xr-x    1 twisted twisted %11d" % fsize+' '+mtime+' '+ts+'\n'
+            s = s + diracc+"r-xr-xr-x    1 twisted twisted %11d" % fsize+' '+mtime+' '+ts+'\r\n'
         self.action = 'RETR'
         self.file = StringIO.StringIO(s)
         self.filesize = len(s)
