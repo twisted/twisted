@@ -1,3 +1,4 @@
+# -*- test-case-name: twisted.trial.test.test_util -*-
 from twisted.python import failure
 from twisted.python.runtime import platformType
 from twisted.internet import defer, reactor, threads
@@ -129,7 +130,7 @@ class TestMktemp(unittest.TestCase):
     def testMktmp(self):
         tmp = self.mktemp()
         tmp1 = self.mktemp()
-        exp = os.path.join('twisted.test.test_trial', 'UtilityTestCase', 'testMktmp')
+        exp = os.path.join('twisted.trial.test.test_trial', 'UtilityTestCase', 'testMktmp')
         failIfEqual(tmp, tmp1)
         failIf(os.path.exists(exp))
 
