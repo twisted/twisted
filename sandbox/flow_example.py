@@ -37,6 +37,7 @@
 from __future__ import generators
 from twisted.internet import reactor
 from twisted.web import server, resource
+from twisted.python import util
 import flow
 
 def cooperative():
@@ -144,9 +145,24 @@ class FlowResource(resource.Resource):
         flow.Deferred(render(req))
         return server.NOT_DONE_YET
 
+# compute a factorial just for fun
+def fact(n):
+    acc = 1
+    while n > 1:
+        acc = acc*n
+        n -= 1
+        if n % 3: 
+           yield flow.Cooperate()
+    yield acc
+d = flow.Deferred(fact(10))
+d.addCallback(util.println)
+for x in range(3):
+    reactor.iterate()
+
 if __name__=='__main__':
     print "visit http://localhost:8081/ to view the example"
     root = FlowResource()
     site = server.Site(root)
     reactor.listenTCP(8081,site)
     reactor.run()
+
