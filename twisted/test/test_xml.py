@@ -239,7 +239,7 @@ class MicroDOMTest(TestCase):
     def testCloneNode(self):
         s = '<foo a="b"><bax>x</bax></foo>'
         node = microdom.parseString(s).documentElement
-        clone = node.cloneNode()
+        clone = node.cloneNode(deep=1)
         self.failIfEquals(node, clone)
         self.assertEquals(len(node.childNodes), len(clone.childNodes))
         c1, c2 = node.firstChild(), clone.firstChild()
