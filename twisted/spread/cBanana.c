@@ -35,7 +35,7 @@ extern EXTERN_API PyObject *cBananaBuf_write( PyObject *self, PyObject *args );
 extern EXTERN_API PyObject *cBananaBuf_get( PyObject *self, PyObject *args );
 extern EXTERN_API PyObject *cBananaBuf_clear( PyObject *self, PyObject *args );
 
-// function table passed into Python by initcBanana()
+/* function table passed into Python by initcBanana() */
 static PyMethodDef cBanana__methods__[] =
   {
     { "dataReceived", cBanana_dataReceived, METH_VARARGS },
@@ -250,9 +250,9 @@ cBananaState_dealloc(PyObject* self)
 }
 
 const char *vocab[] = {
-  // Filler so we start at 1 not 0
+  /* Filler so we start at 1 not 0 */
   "Dummy",  /* 0 */
-  // Jelly Data Types
+  /* Jelly Data Types */
   "None",   /* 1 */
   "class",  /* 2 */
   "dereference", /* 3 */
@@ -265,14 +265,14 @@ const char *vocab[] = {
   "persistent",/* 10 */
   "tuple",/* 11 */
   "unpersistable",/* 12 */
-  // PB Data Types
+  /* PB Data Types */
   "copy",/* 13 */
   "cache",/* 14 */
   "cached",/* 15 */
   "remote",/* 16 */
   "local",/* 17 */
   "lcache",/* 18 */
-  // PB Protocol messages
+  /* PB Protocol messages */
   "version",/* 19 */
   "login",/* 20 */
   "password",/* 21 */
@@ -469,7 +469,7 @@ long b1282int(unsigned char *str, int begin, int end) {
   for (count=begin; count < end; count++) {
     unsigned char num = str[count];
     if (place) {
-      result = result +  (num << (7 * place)); // (num * (128 ^ place));
+      result = result +  (num << (7 * place)); /* (num * (128 ^ place)); */
     } else {
       result = result + num;
     }
@@ -558,13 +558,13 @@ int gotItemList(PyObject *listObject, struct listItem *currentList, PyObject *ex
 extern EXTERN_API PyObject *cBanana_dataReceived( PyObject *self, PyObject *args )
 {
 
-  PyObject *newChunk;             // pointer to new chunk
-  PyObject *expressionReceived;   // callback
-  PyObject *stateobj;             // state object
-  cBananaState *state;            // state
-  unsigned char *buffer;          // buffer to work from
-  char **bufptr;                  // for python funcs that want *buffer
-  int bufferSize;                 // size of the remaining portion
+  PyObject *newChunk;             /* pointer to new chunk */
+  PyObject *expressionReceived;   /* callback */
+  PyObject *stateobj;             /* state object */
+  cBananaState *state;            /* state */
+  unsigned char *buffer;          /* buffer to work from */
+  char **bufptr;                  /* for python funcs that want *buffer */
+  int bufferSize;                 /* size of the remaining portion */
   int pos;
   int nBeginPos;
   int nEndPos;
@@ -575,7 +575,7 @@ extern EXTERN_API PyObject *cBanana_dataReceived( PyObject *self, PyObject *args
     return NULL;
 
   if (!PyCallable_Check(expressionReceived) ) {
-    // ERROR - must be a callback we can use
+    /* ERROR - must be a callback we can use */
     Py_INCREF(Py_None);
     return Py_None;
   }
@@ -601,10 +601,10 @@ extern EXTERN_API PyObject *cBanana_dataReceived( PyObject *self, PyObject *args
     /* printf("beginning at %d\n", pos); */
     nBeginPos = pos; /* beginning of number, also, 'consumed so far' */
     while (buffer[pos] < HIGH_BIT_SET) {
-      //printf("Got character %c (%d) at %d\n", current[pos], current[pos], pos );
+      /* printf("Got character %c (%d) at %d\n", current[pos], current[pos], pos ); */
       pos++;
       if ((pos-nBeginPos) > 64) {
-        //ERROR: "Security precaution: more than 64 bytes of prefix"
+        /* ERROR: "Security precaution: more than 64 bytes of prefix" */
         PyErr_SetString(PyExc_SystemError,
 			"Security precaution: more than 64 bytes of prefix (this should raise an exception).\n");
         return NULL;
@@ -613,7 +613,7 @@ extern EXTERN_API PyObject *cBanana_dataReceived( PyObject *self, PyObject *args
         return PyInt_FromLong(nBeginPos);
       }
     }
-    // extract the type byte
+    /* extract the type byte */
     nEndPos = pos;
     typeByte = buffer[pos];
     pos++;
@@ -741,8 +741,8 @@ extern EXTERN_API PyObject *cBanana_dataReceived( PyObject *self, PyObject *args
       long fhi, flo;
       char* p;
       if (8 > (bufferSize - pos) ) {
-	// printf("\nWARNING: buffer size %d pos %d\n", bufferSize, pos);
-        // boundary condition; not enough bytes to complete string
+	/* printf("\nWARNING: buffer size %d pos %d\n", bufferSize, pos); */
+        /*   boundary condition; not enough bytes to complete string */
         return PyInt_FromLong(nBeginPos);
       }
       p = (char*) (buffer + pos);
@@ -781,7 +781,7 @@ extern EXTERN_API PyObject *cBanana_dataReceived( PyObject *self, PyObject *args
       if (sign_bit)
 	num = -num;
       /* Would you like your posessions identified? */
-      // printf("float number: %f\n", num);
+      /* printf("float number: %f\n", num); */
       gotItemFloat(num, state->currentList, expressionReceived);
       /* doubles are 8 bytes long */
       pos += 8;
@@ -795,7 +795,7 @@ extern EXTERN_API PyObject *cBanana_dataReceived( PyObject *self, PyObject *args
       return NULL;
     }
     }
-    // If there is a list, check if it is full
+    /* If there is a list, check if it is full */
     if (state->currentList) {
       /* printf("bufferSize: %d  listSize: %d\n", PyList_Size(state->currentList->thisList), state->currentList->size); */
       while (state->currentList && PyList_Size(state->currentList->thisList) == state->currentList->size) {
@@ -815,12 +815,12 @@ extern EXTERN_API PyObject *cBanana_dataReceived( PyObject *self, PyObject *args
   }
 
 
-  ////printf(full);
+  /* printf(full); */
   return PyInt_FromLong(pos);
 
 }
 
-// module's initialization function for Python
+/* module's initialization function for Python */
 extern EXTERN_API void initcBanana(void)
 {
   cBananaStateType.ob_type = &PyType_Type;
