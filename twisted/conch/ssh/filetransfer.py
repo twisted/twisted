@@ -17,9 +17,253 @@
 import struct, array, pwd, os, stat, time, errno
 
 from twisted.internet import defer, protocol
-from twisted.python import log
+from twisted.python import failure, log
 
 from common import NS, getNS
+
+class ISFTPServer:
+    """
+    The only attribute of this class is "avatar".  It is the avatar
+    returned by the Realm that we are authenticated with, and
+    represents the logged-in user.  Each method should check to verify
+    that the user has permission for their actions.
+    """
+
+    def gotVersion(self, otherVersion, extData):
+        """
+        Called when the client sends their version info.
+
+        otherVersion is an integer representing the version of the SFTP
+        protocol they are claiming.
+        extData is a dictionary of extended_name : extended_data items.
+        These items are sent by the client to indicate additional features.
+
+        This method should return a dictionary of extended_name : extended_data
+        items.  These items are the additional features (if any) supported
+        by the server.
+        """
+        return {}
+
+    def openFile(self, filename, flags, attrs):
+        """
+        Called when the clients asks to open a file.
+
+        filename is a string representing the file to open.
+
+        flags is a integer of the flags to open the file with, ORed together.
+        The flags and their values are listed at the bottom of this file.
+
+        attrs is a list of attributes to open the file with.  It is a
+        dictionary, consisting of 0 or more keys.  The possible keys are:
+            size: the size of the file in bytes
+            uid: the user ID of the file as an integer
+            gid: the group ID of the file as an integer
+            permissions: the permissions of the file with as an integer.
+            the bit representation of this field is defined by POSIX.
+            atime: the access time of the file as seconds since the epoch.
+            mtime: the modification time of the file as seconds since the epoch.
+            ext_*: extended attributes.  The server is not required to
+            understand this, but it may.
+
+        NOTE: there is no way to indicate text or binary files.  it is up
+        to the SFTP client to deal with this.
+
+        This method returns an object that meets the ISFTPFile interface.
+        Alternatively, it can return a Deferred that will be called back
+        with the object.
+        """
+
+    def removeFile(self, filename):
+        """
+        Remove the given file.
+
+        filename is the name of the file as a string.
+
+        This method returns when the remove succeeds, or a Deferred that is
+        called back when it succeeds.
+        """
+
+    def renameFile(self, oldpath, newpath):
+        """
+        Rename the given file.
+
+        oldpath is the current location of the file.
+        newpath is the new file name.
+
+        This method returns when the rename succeeds, or a Deferred that is
+        called back when it succeeds.
+        """
+
+    def makeDirectory(self, path, attrs):
+        """
+        Make a directory.
+
+        path is the name of the directory to create as a string.
+        attrs is a dictionary of attributes to create the directory with.
+        It's meaning is the same as the attrs in the openFile method.
+
+        This method returns when the directory is created, or a Deferred that
+        is called back when it is created.
+        """
+
+    def removeDirectory(self, path):
+        """
+        Remove a directory (non-recursively)
+
+        path is the directory to remove.
+
+        It is an error to remove a directory that has files or directories in
+        it.
+
+        This method returns when the directory is removed, or a Deferred that
+        is called back when it is removed.
+        """
+
+    def openDirectory(self, path):
+        """
+        Open a directory for scanning.
+
+        path is the directory to open.
+
+        This method returns an iterable object that has a close() method,
+        or a Deferred that is called back with same.
+
+        The close() method is called when the client is finished reading
+        from the directory.  At this point, the iterable will no longer
+        be used.
+
+        The iterable should return triples of the form (filename,
+        longname, attrs) or Deferreds that return the same.  The
+        sequence must support __getitem__, but otherwise may be any
+        'sequence-like' object.
+
+        filename is the name of the file relative to the directory.
+        logname is an expanded format of the filename.  The recommended format
+        is:
+        -rwxr-xr-x   1 mjos     staff      348911 Mar 25 14:29 t-filexfer
+        1234567890 123 12345678 12345678 12345678 123456789012
+
+        The first line is sample output, the second is the length of the field.
+        The fields are: permissions, link count, user owner, group owner,
+        size in bytes, modification time.
+
+        attrs is a dictionary in the format of the attrs argument to openFile.
+        """
+
+    def getAttrs(self, path, followLinks):
+        """
+        Return the attributes for the given path.
+
+        path is the path to return attributes for as a string.
+        followLinks is a boolean.  if it is True, follow symbolic links
+        and return attributes for the real path at the base.  if it is False,
+        return attributes for the specified path.
+
+        This method returns a dictionary in the same format as the attrs
+        argument to openFile or a Deferred that is called back with same.
+        """
+
+    def setAttrs(self, path, attrs):
+        """
+        Set the attributes for the path.
+
+        path is the path to set attributes for as a string.
+        attrs is a idctionary in the same format as the attrs argument to
+        openFile.
+
+        This method returns when the attributes are set or a Deferred that is
+        called back when they are.
+        """
+
+    def readLink(self, path):
+        """
+        Find the root of a set of symbolic links.
+
+        path is the path of the symlink to read.
+
+        This method returns the target of the link, or a Deferred that
+        returns the same.
+        """
+
+    def makeLink(self, linkPath, targetPath):
+        """
+        Create a symbolic link.
+
+        linkPath is is the pathname of the symlink as a string
+        targetPath is the path of the target of the link as a string.
+
+        This method returns when the link is made, or a Deferred that
+        returns the same.
+        """
+
+    def realPath(self, path):
+        """
+        Convert any path to an absolute path.
+
+        path is the path to convert as a string.
+
+        This method returns the absolute path as a string, or a Deferred
+        that returns the same.
+        """
+
+class ISFTPFile:
+    """
+    This represents an open file on the server.  An object adhering to this
+    interface should be returned from openFile().
+    """
+
+    def close(self):
+        """
+        Close the file.
+
+        This method returns nothing if the close succeeds immediatly, or a
+        Deferred that is called back when the close succeeds.
+        """
+
+    def readChunk(self, offset, length):
+        """
+        Read from the file.
+
+        offset is an integer that is the index to start from in the file.
+        length is the maximum length of data to return.  The actual amount
+        returned may less than this.  For normal disk files, however,
+        this should read the requested number (up to the end of the file).
+
+        If EOF is reached before any data is read, raise EOFError.
+
+        This method returns the data as a string, or a Deferred that is
+        called back with same.
+        """
+
+    def writeChunk(self, offset, data):
+        """
+        Write to the file.
+
+        offset is an integer that is the index to start from in the file.
+        data is a string that is the data to write.
+
+        This method returns when the write completes, or a Deferred that is
+        called when it completes.
+        """
+
+    def getAttrs(self):
+        """
+        Return the attributes for the file.
+
+        This method returns a dictionary in the same format as the attrs
+        argument to openFile or a Deferred that is called back with same.
+        """
+
+    def setAttrs(self, attrs):
+        """
+        Set the attributes for the file.
+
+        attrs is a dictionary in the same format as the attrs argument to
+        openFile.
+
+        This method returns when the attributes are set or a Deferred that is
+        called back when they are.
+        """
 
 
 class FileTransferBase(protocol.Protocol):
@@ -121,6 +365,8 @@ class FileTransferBase(protocol.Protocol):
 
 class FileTransferServer(FileTransferBase):
 
+    __implements__ = ISFTPServer
+
     def __init__(self, avatar):
         FileTransferBase.__init__(self)
         self.avatar = avatar
@@ -166,12 +412,12 @@ class FileTransferServer(FileTransferBase):
         assert data == '', 'still have data in CLOSE: %s' % repr(data)
         if handle in self.openFiles:
             fileObj = self.openFiles[handle]
-            d = defer.maybeDeferred(self.closeFile, fileObj)
+            d = defer.maybeDeferred(fileObj.close)
             d.addCallback(self._cbClose, handle, requestId)
             d.addErrback(self._ebStatus, requestId, "close failed")
         elif handle in self.openDirs:
-            dirObj = self.openDirs[handle]
-            d = defer.maybeDeferred(self.closeDirectory, dirObj)
+            dirObj = self.openDirs[handle][0]
+            d = defer.maybeDeferred(dirObj.close)
             d.addCallback(self._cbClose, handle, requestId, 1)
             d.addErrback(self._ebStatus, requestId, "close failed")
         else:
@@ -193,7 +439,7 @@ class FileTransferServer(FileTransferBase):
             self._ebRead(failure.Failure(KeyError()), requestId)
         else:
             fileObj = self.openFiles[handle]
-            d = defer.maybeDeferred(self.readFile, fileObj, offset, length)
+            d = defer.maybeDeferred(fileObj.readChunk, offset, length)
             d.addCallback(self._cbRead, requestId)
             d.addErrback(self._ebStatus, requestId, "read failed")
 
@@ -212,7 +458,7 @@ class FileTransferServer(FileTransferBase):
             self._ebWrite(failure.Failure(KeyError()), requestId)
         else:
             fileObj = self.openFiles[handle]
-            d = defer.maybeDeferred(self.writeFile, fileObj, offset, writeData)
+            d = defer.maybeDeferred(fileObj.writeChunk, offset, writeData)
             d.addCallback(self._cbStatus, requestId, "write succeeded")
             d.addErrback(self._ebStatus, requestId, "write failed")
 
@@ -262,7 +508,7 @@ class FileTransferServer(FileTransferBase):
         handle = str(id(dirObj))
         if handle in self.openDirs:
             raise KeyError, "already opened this directory"
-        self.openDirs[handle] = dirObj
+        self.openDirs[handle] = [dirObj, iter(dirObj)]
         self.sendPacket(FXP_HANDLE, struct.pack('!L', requestId) + NS(handle))
 
     def packet_READDIR(self, data):
@@ -272,12 +518,31 @@ class FileTransferServer(FileTransferBase):
         if handle not in self.openDirs:
             self._ebStatus(failure.Failure(KeyError()), requestId)
         else:
-            dirObj = self.openDirs[handle]
-            d = defer.maybeDeferred(self.scanDirectory, dirObj)
-            d.addCallback(self._cbScanDirectory, requestId)
+            dirObj, dirIter = self.openDirs[handle]
+            d = defer.maybeDeferred(self._scanDirectory, dirIter, [])
+            d.addCallback(self._cbSendDirectory, requestId)
             d.addErrback(self._ebStatus, requestId, "scan directory failed")
 
-    def _cbScanDirectory(self, result, requestId):
+    def _scanDirectory(self, dirIter, f):
+        while len(f) < 250:
+            try:
+                info = dirIter.next()
+            except StopIteration:
+                if not f:
+                    raise EOFError
+                return f
+            if isinstance(info, defer.Deferred):
+                d.addCallback(self._cbScanDirectory, dirIter, f)
+                return
+            else:
+                f.append(info)
+        return f
+
+    def _cbScanDirectory(self, result, dirIter, f):
+        f.append(result)
+        return self._scanDirectory(dirIter, f)
+
+    def _cbSendDirectory(self, result, requestId):
         data = ''
         for (filename, longname, attrs) in result:
             data += NS(filename)
@@ -304,8 +569,8 @@ class FileTransferServer(FileTransferBase):
         if handle not in self.openDirs:
             self._ebStatus(failure.Failure(KeyError()), requestId)
         else:
-            dirObj = self.openDirs[handle]
-            d = defer.maybeDeferred(self.getAttrsOpaque, dirObj)
+            fileObj = self.openFiles[handle]
+            d = defer.maybeDeferred(fileObj.getAttrs)
             d.addCallback(self._cbStat, requestId)
             d.addErrback(self._ebStatus, requestId, 'fstat failed')
 
@@ -331,7 +596,7 @@ class FileTransferServer(FileTransferBase):
             self._ebStatus(failure.Failure(KeyError()), requestId)
         else:
             fileObj = self.openFiles[handle]
-            d = defer.maybeDeferred(self.setAttrsOpaque, fileObj, attrs)
+            d = defer.maybeDeferred(fileObj.setAttrs, attrs)
             d.addCallback(self._cbStatus, requestId, 'fsetstat succeeded')
             d.addErrback(self._ebStatus, requestId, 'fsetstat failed')
 
@@ -344,7 +609,7 @@ class FileTransferServer(FileTransferBase):
         d.addErrback(self._ebStatus, requestId, 'readlink failed')
 
     def _cbReadLink(self, result, requestId):
-        self._cbScanDirectory([(result, '', {})], requestId)
+        self._cbSendDirectory([(result, '', {})], requestId)
 
     def packet_SYMLINK(self, data):
         requestId, data = struct.unpack('!L', data[:4])[0], data[4:]
@@ -451,54 +716,62 @@ class FileTransferServer(FileTransferBase):
         return os.path.abspath(os.path.join(home, path))
 
     def gotVersion(self, otherVersion, extData):
-        """
-        Called when the client sends their version info.
-
-        otherVersion is an integer representing the version of the SFTP
-        protocol they are claiming.
-        extData is a dictionary of extended_name : extended_data items.
-        These items are sent by the client to indicate additional features.
-
-        This method should return a dictionary of extended_name : extended_data
-        items.  These items are the additional features (if any) supported
-        by the server.
-        """
         return {}
 
     def openFile(self, filename, flags, attrs):
-        """
-        Called when the clients asks to open a file.
+        return SFTPFile(self, self._absPath(filename), flags, attrs)
 
-        filename is a string representing the file to open.
+    def removeFile(self, filename):
+        filename = self._absPath(filename)
+        return self._runAsUser(os.remove, filename)
 
-        flags is a integer of the flags to open the file with, ORed together.
-        The flags and their values are listed at the bottom of this file.
+    def renameFile(self, oldpath, newpath):
+        oldpath = self._absPath(oldpath)
+        newpath = self._absPath(newpath)
+        return self._runAsUser(os.rename, oldpath, newpath)
 
-        attrs is a list of attributes to open the file with.  It is a
-        dictionary, consisting of 0 or more keys.  The possible keys are:
-            size: the size of the file in bytes
-            uid: the user ID of the file as an integer
-            gid: the group ID of the file as an integer
-            permissions: the permissions of the file with as an integer.
-            the bit representation of this field is defined by POSIX.
-            atime: the access time of the file as seconds since the epoch.
-            mtime: modification time of the file as seconds since the epoch.
-            ext_*: extended attributes.  The server is not required to
-            understand this, but it may.
+    def makeDirectory(self, path, attrs):
+        path = self._absPath(path)
+        return self._runAsUser([(os.mkdir, path),
+                                (self._setAttrs, path, attrs)])
 
-        NOTE: there is no way to indicate text or binary files.  it is up
-        to the SFTP client to deal with this.
+    def removeDirectory(self, path):
+        path = self._absPath(path)
+        self._runAsUser(os.rmdir, path)
 
-        This method returns an opaque identifier for this file.  This
-        identifier is passed as the first argument to the other file
-        access methods.  Alternatively, it can return a Deferred that will
-        be called back with the identifier.
+    def openDirectory(self, path):
+        return SFTPDirectory(self, self._absPath(path))
 
-        The only requirement on the opaque identifier is that it is usable
-        as the value in a directory.  Opening the same file twice should not
-        return the same opaque identifer, and the identifier should last
-        as long as it is open, or until the end of the client connection.
-        """
+    def getAttrs(self, path, followLinks):
+        path = self._absPath(path)
+        if followLinks:
+            s = self._runAsUser(os.stat, path)
+        else:
+            s = self._runAsUser(os.lstat, path)
+        return self._getAttrs(s)
+
+    def setAttrs(self, path, attrs):
+        path = self._absPath(path)
+        self._runAsUser(self._setAttrs, path, attrs)
+
+    def readLink(self, path):
+        path = self._absPath(path)
+        return self._runAsUser(os.readlink, path)
+
+    def makeLink(self, linkPath, targetPath):
+        linkPath = self._absPath(linkPath)
+        targetPath = self._absPath(targetPath)
+        return self._runAsUser(os.symlink, targetPath, linkPath)
+
+    def realPath(self, path):
+        return self._absPath(path)
+
+class SFTPFile:
+
+    __implements__ = ISFTPFile
+
+    def __init__(self, server, filename, flags, attrs):
+        self.server = server
         openFlags = 0
         if flags & FXF_READ == FXF_READ and flags & FXF_WRITE == 0:
             openFlags = os.O_RDONLY
@@ -519,277 +792,51 @@ class FileTransferServer(FileTransferBase):
             del attrs["permissions"]
         else:
             mode = 0777
-        filename = self._absPath(filename)
-        fd = self._runAsUser(os.open, filename, openFlags, mode)
+        fd = server._runAsUser(os.open, filename, openFlags, mode)
         if attrs:
-            self._runAsUser(self._setAttrs, filename, attrs)
-        return fd
+            server._runAsUser(server._setAttrs, filename, attrs)
+        self.fd = fd
 
-    def closeFile(self, opaqueId):
-        """
-        Close the file represented by the opaqueId.
+    def close(self):
+        return self.server._runAsUser(os.close, self.fd)
 
-        This method returns nothing if the close succeeds immediatly, or a
-        Deferred that is called back when the close succeeds.
-        """
-        return self._runAsUser(os.close, opaqueId)
+    def readChunk(self, offset, length):
+        return self.server._runAsUser([(os.lseek, self.fd, offset, 0),
+                                       (os.read, self.fd, length)])
 
-    def readFile(self, opaqueId, offset, length):
-        """
-        Read from the file represented by the opaqueId.
+    def writeChunk(self, offset, data):
+        return self.server._runAsUser([(os.lseek, self.fd, offset, 0),
+                                       (os.write, self.fd, 0)])
 
-        offset is an integer that is the index to start from in the file.
-        length is the maximum length of data to return.  The actual amount
-        returned may less than this.  For normal disk files, however,
-        this should read the requested number (up to the end of the file).
+    def getAttrs(self):
+        s = self.server._runAsUser(os.fstat, self.fd)
+        return self.server._getAttrs(s)
 
-        If EOF is reached before any data is read, raise EOFError.
-
-        This method returns the data as a string, or a Deferred that is
-        called back with same.
-        """
-        return self._runAsUser([(os.lseek, opaqueId, offset, 0),
-                                (os.read, opaqueId, length)])
-
-    def writeFile(self, opaqueId, offset, data):
-        """
-        Write to the file represented by the opaqueId
-
-        offset is an integer that is the index to start from in the file.
-        data is a string that is the data to write.
-
-        This method returns when the write completes, or a Deferred that is
-        called when it completes.
-        """
-        return self._runAsUser([(os.lseek, opaqueId, offset, 0),
-                                (os.write, opaqueId, data)])
-
-    def removeFile(self, filename):
-        """
-        Remove the given file.
-
-        filename is the name of the file as a string.
-
-        This method returns when the remove succeeds, or a Deferred that is
-        called back when it succeeds.
-        """
-        filename = self._absPath(filename)
-        return self._runAsUser(os.remove, filename)
-
-    def renameFile(self, oldpath, newpath):
-        """
-        Rename the given file.
-
-        oldpath is the current location of the file.
-        newpath is the new file name.
-
-        This method returns when the rename succeeds, or a Deferred that is
-        called back when it succeeds.
-        """
-        oldpath = self._absPath(oldpath)
-        newpath = self._absPath(newpath)
-        return self._runAsUser(os.rename, oldpath, newpath)
-
-    def makeDirectory(self, path, attrs):
-        """
-        Make a directory.
-
-        path is the name of the directory to create as a string.
-        attrs is a dictionary of attributes to create the directory with.
-        It's meaning is the same as the attrs in the openFile method.
-
-        This method returns when the directory is created, or a Deferred that
-        is called back when it is created.
-        """
-        path = self._absPath(path)
-        return self._runAsUser([(os.mkdir, path),
-                                (self._setAttrs, path, attrs)])
-
-    def removeDirectory(self, path):
-        """
-        Remove a directory (non-recursively)
-
-        path is the directory to remove.
-
-        It is an error to remove a directory that has files or directories in
-        it.
-
-        This method returns when the directory is removed, or a Deferred that
-        is called back when it is removed.
-        """
-        path = self._absPath(path)
-        self._runAsUser(os.rmdir, path)
-
-    def openDirectory(self, path):
-        """
-        Open a directory for scanning.
-
-        path is the directory to open.
-
-        This method returns an opaqueId that is passed as the first argument
-        to scanDirectory, or a Deferred that is called back with same.
-        """
-        return [self._absPath(path)]
-
-    def scanDirectory(self, opaqueId):
-        """
-        Scan the directory represented by the opaqueId.
-
-        This method returns a sequence of sequences of (filename, longname,
-        attrs) or a Deferred of same.  This does not need to be all the files
-        in the directory, but calls to this method should not return files
-        returned by previous calls.  The container sequence must support
-        __len__ and be iterable, but otherwise may be any other "sequence-like"
-        object.  The interior sequences must support __getitem__, but
-        otherwise may be any "sequence-like" object.
-
-        filename is the name of the file relative to the directory.
-        logname is an expanded format of the filename.  The recommended format
-        is:
-        -rwxr-xr-x   1 mjos     staff      348911 Mar 25 14:29 t-filexfer
-        1234567890 123 12345678 12345678 12345678 123456789012
-
-        The first line is sample output, the second is the length of the field.
-        The fields are: permissions, link count, user owner, group owner,
-        size in bytes, modification time.
-
-        attrs is a dictionary in the format of the attrs argument to openFile.
-
-        NOTE:  the way this works is the client sends a request,
-        SSH_FXP_READDIR.  This method is called once for each request, and
-        returns the files that this method returns.  The client keeps
-        sending requests, and this method is called, until this method
-        sends an exception (typically EOFError) to indicate that there are no
-        more files in that directory.  Then, the client knows to stop sending
-        requests.
-
-        No more than 250 files should be returned at once, as some clients
-        cannot handle packets that large.
-        """
-        if len(opaqueId) > 2: raise EOFError
-        path = opaqueId[0]
-        if len(opaqueId) == 2:
-            start = opaqueId[1]
-        else:
-            start = 0
-        files = []
-        d = self._runAsUser(os.listdir, path)[start:]
-        for f in d[:250]:
-            s = self._runAsUser(os.lstat, os.path.join(path, f))
-            longname = _lsLine(f, s)
-            attrs = self._getAttrs(s)
-            files.append((f, longname, attrs))
-        if len(d) > 250:
-            start += 250
-            if len(opaqueId) == 2:
-                opaqueId[1] = start
-            else:
-                opaqueId.append(start)
-        else:
-            opaqueId.append(1)
-            opaqueId.append(1)
-        return files
-
-    def closeDirectory(self, opaqueId):
-        """
-        Close the directory referenced by the opaqueId.
-
-        This method returns when the directory is closed, or a Deferred that
-        is called back when it is closed.
-        """
-        return
-
-    def getAttrs(self, path, followLinks):
-        """
-        Return the attributes for the given path.
-
-        path is the path to return attributes for as a string.
-        followLinks is a boolean.  if it is True, follow symbolic links
-        and return attributes for the real path at the base.  if it is False,
-        return attributes for the specified path.
-
-        This method returns a dictionary in the same format as the attrs
-        argument to openFile or a Deferred that is called back with same.
-        """
-        path = self._absPath(path)
-        if followLinks:
-            s = self._runAsUser(os.stat, path)
-        else:
-            s = self._runAsUser(os.lstat, path)
-        return self._getAttrs(s)
-
-    def getAttrsOpaque(self, opaqueId):
-        """
-        Return the attributes for the given opaqueId.
-
-        This method returns a dictionary in the same format as the attrs
-        argument to openFile or a Deferred that is called back with same.
-        """
-        s = self._runAsUser(os.fstat, opaqueId)
-        return self._getAttrs(s)
-
-    def setAttrs(self, path, attrs):
-        """
-        Set the attributes for the path.
-
-        path is the path to set attributes for as a string.
-        attrs is a dictionary in the same format as the attrs argument to
-        openFile.
-
-        This method returns when the attributes are set or a Deferred that is
-        called back when they are.
-        """
-        path = self._absPath(path)
-        self._runAsUser(self._setAttrs, path, attrs)
-
-    def setAttrsOpaque(self, opaqueId, attrs):
-        """
-        Set the attributes for the opaqueId.
-
-        attrs is a dictionary in the same format as the attrs argument to
-        openFile.
-
-        This method returns when the attributes are set or a Deferred that is
-        called back when they are.
-        """
+    def setAttrs(self, attrs):
         raise NotImplementedError
 
-    def readLink(self, path):
-        """
-        Find the root of a set of symbolic links.
+class SFTPDirectory:
+    def __init__(self, server, directory):
+        self.server = server
+        self.files = server._runAsUser(os.listdir, directory)
+        self.dir = directory
 
-        path is the path of the symlink to read.
+    def __iter__(self):
+        return self
 
-        This method returns the target of the link, or a Deferred that
-        returns the same.
-        """
-        path = self._absPath(path)
-        return self._runAsUser(os.readlink, path)
+    def next(self):
+        try:
+            f = self.files.pop(0)
+        except IndexError:
+            raise StopIteration
+        else:
+            s = self.server._runAsUser(os.lstat, os.path.join(self.dir, f))
+            longname = _lsLine(f, s)
+            attrs = self.server._getAttrs(s)
+            return (f, longname, attrs)
 
-    def makeLink(self, linkPath, targetPath):
-        """
-        Create a symbolic link.
-
-        linkPath is is the pathname of the symlink as a string
-        targetPath is the path of the target of the link as a string.
-
-        This method returns when the link is made, or a Deferred that
-        returns the same.
-        """
-        linkPath = self._absPath(linkPath)
-        targetPath = self._absPath(targetPath)
-        return self._runAsUser(os.symlink, targetPath, linkPath)
-
-    def realPath(self, path):
-        """
-        Convert any path to an absolute path.
-
-        path is the path to convert as a string.
-
-        This method returns the absolute path as a string, or a Deferred
-        that returns the same.
-        """
-        return self._absPath(path)
+    def close(self):
+        self.files = []
 
 class SFTPError(Exception):
 

@@ -1,3 +1,8 @@
+2003-12-05  Paul Swartz  <z3p@twistedmatrix.com>
+
+	* twisted/conch/ssh/filetransfer.py, session.py: added SFTPv3 support
+	to the Conch server.
+
 2003-12-04  Christopher Armstrong  <radix@twistedmatrix.com>
 
 	* .: Releasing Twisted 1.1.1rc4, based on rc2. rc3 never happened!
