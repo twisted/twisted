@@ -42,7 +42,7 @@ Test coverage needs to be better.
 <http://www.irchelp.org/irchelp/rfc/ctcpspec.html>}
 """
 
-__version__ = '$Revision: 1.73 $'[11:-2]
+__version__ = '$Revision: 1.74 $'[11:-2]
 
 from twisted.internet import reactor, protocol
 from twisted.persisted import styles
@@ -345,6 +345,12 @@ class IRCClient(basic.LineReceiver):
         """
         pass
 
+    def nickChanged(self, nick):
+        """Called when my nick has been changed.
+        """
+        self.nickname = nick
+
+
     ### Things I observe other people doing in a channel.
 
     def userJoined(self, user, channel):
@@ -551,7 +557,7 @@ class IRCClient(basic.LineReceiver):
 
     def irc_PART(self, prefix, params):
         nick = string.split(prefix,'!')[0]
-        channel = params[-1]
+        channel = params[0]
         if nick == self.nickname:
             self.left(channel)
         else:
@@ -599,7 +605,7 @@ class IRCClient(basic.LineReceiver):
     def irc_NICK(self, prefix, params):
         nick = string.split(prefix,'!',0)[0]
         if nick == self.nickname:
-            self.nickname = params[0]
+            self.nickChanged(params[0])
         else:
             self.userRenamed(nick, params[0])
 
@@ -845,7 +851,7 @@ class IRCClient(basic.LineReceiver):
         address = dccParseAddress(address)
         try:
             port = int(port)
-        except VauleError:
+        except ValueError:
             raise IRCBadMessage, "Indecipherable port %r" % (port,)
 
         self.dccDoChat(user, channel, address, port, data)
