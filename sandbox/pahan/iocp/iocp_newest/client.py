@@ -75,7 +75,7 @@ class SocketConnector(styles.Ephemeral, object):
     def __init__(self, addr, factory, timeout, bindAddress):
         from twisted.internet import reactor
         self.state = "disconnected"
-        self.addr= addr
+        self.addr = addr
         self.factory = factory
         self.timeout = timeout
         self.bindAddress = bindAddress
@@ -146,7 +146,7 @@ class SocketConnector(styles.Ephemeral, object):
         del self.sub
         self.state = "connected"
         self.cancelTimeout()
-        p = self.factory.buildProtocol(self.getAddress(socket))
+        p = self.factory.buildProtocol(self.buildAddress(socket.getpeername()))
         self.transport_obj = self.transport(socket, p, self)
         p.makeConnection(self.transport_obj)
 

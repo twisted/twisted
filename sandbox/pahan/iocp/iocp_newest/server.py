@@ -52,7 +52,7 @@ class ListeningPort(log.Logger, styles.Ephemeral, object):
         self.accept_op.initiateOp(self.socket.fileno())
 
     def handle_listening_acceptDone(self, sock, addr):
-        protocol = self.factory.buildProtocol(self.buildAddress(addr, server = True))
+        protocol = self.factory.buildProtocol(self.buildAddress(addr))
         if protocol is None:
             sock.close()
         else:

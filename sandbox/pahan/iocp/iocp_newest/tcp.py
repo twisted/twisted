@@ -45,11 +45,8 @@ class Port(server.ListeningPort):
     def getHost(self):
         return address.IPv4Address('TCP', *(self.socket.getsockname() + ('INET',)))
 
-    def buildAddress(self, addr, server = False):
-        if server:
-            return address._ServerFactoryIPv4Address('TCP', addr[0], addr[1], 'INET')
-        else:
-            return address.IPv4Address('TCP', addr[0], addr[1], 'INET')
+    def buildAddress(self, addr):
+        return address._ServerFactoryIPv4Address('TCP', addr[0], addr[1], 'INET')
 
 class ClientSocket(client.SocketConnector.transport, TcpMixin):
     __implements__ = client.SocketConnector.transport.__implements__ + (interfaces.ITCPTransport,)
@@ -80,7 +77,6 @@ class Connector(client.SocketConnector):
     def getDestination(self):
         return address.IPv4Address('TCP', self.addr[0], self.addr[1], 'INET')
 
-    def getAddress(self, socket):
-        pn = socket.getpeername()
-        return address.IPv4Address('TCP', pn[0], pn[1], 'INET')
+    def buildAddress(self, addr):
+        return address.IPv4Address('TCP', addr[0], addr[1], 'INET')
 
