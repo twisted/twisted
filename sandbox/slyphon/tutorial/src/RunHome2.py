@@ -9,8 +9,8 @@ from storage import CSVStorage, RDBStorage
 # If we wanted to use a different one, we could just drop it in here
 # and the program would use that one (for instance, an RDBMS)
 #
-#resource = HomePage(storage=CSVStorage.CSVStorage('storage/'))
-resource = HomePage(storage=RDBStorage.RDBStorage())
+resource = HomePage(storage=CSVStorage.CSVStorage('storage/'))
+#resource = HomePage(storage=RDBStorage.RDBStorage())
 
 # We create a new twisted.web.server.Site by passing it
 # an instance of the root page of our Woven application
@@ -56,8 +56,6 @@ resource.putChild('google', util.Redirect('http://www.google.com'))
 
 # let's add a cgi directory for man page lookups
 resource.putChild('cgi-bin', twcgi.CGIDirectory('/usr/lib/cgi-bin'))
-
-
 
 # create a new application with name 'HomePage'
 application = service.Application('HomePage')
