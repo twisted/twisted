@@ -171,6 +171,7 @@ class TestSuite:
             self.addModule(module)
 
     def runOneTest(self, testClass, testCase, method, output):
+        testCase.caseMethodName = method.__name__
         ok = 0
         if not ASSERTION_IS_ERROR:
             failingExceptionType = AssertionError
