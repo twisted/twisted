@@ -97,7 +97,7 @@ SYNTAX_ERR                              = "500"
 SYNTAX_ERR_IN_ARGS                      = "501"
 CMD_NOT_IMPLMNTD                        = "502"
 BAD_CMD_SEQ                             = "503"
-CMD_NOT_IMPLMNTD_FOR_PARAM              = "504"
+CMD_NOT_IMPLMNTD_FOR_ARG                = "504"
 NOT_LOGGED_IN                           = "530.1"     # v1 of code 530 - please log in
 AUTH_FAILURE                            = "530.2"     # v2 of code 530 - authorization failure
 NEED_ACCT_FOR_STOR                      = "532"
@@ -157,7 +157,7 @@ RESPONSE = {
     SYNTAX_ERR_IN_ARGS:                 '501 syntax error in argument(s) %s.',
     CMD_NOT_IMPLMNTD:                   "502 command '%s' not implemented",
     BAD_CMD_SEQ:                        '503 Incorrect sequence of commands: %s',
-    CMD_NOT_IMPLMNTD_FOR_PARAM:         "504 Not implemented for parameter '%s'.",
+    CMD_NOT_IMPLMNTD_FOR_ARG:           "504 Not implemented for argument '%s'.",
     NOT_LOGGED_IN:                      '530 Please login with USER and PASS.',
     AUTH_FAILURE:                       '530 Sorry, Authentication failed. %s',
     NEED_ACCT_FOR_STOR:                 '532 Need an account for storing files',
@@ -424,7 +424,7 @@ def cleanPath(path):
 class FTP(basic.LineReceiver, policies.TimeoutMixin):      
     """the File Transfer Protocol"""
     # FTP is a bit of a misonmer, as this is the PI - Protocol Interpreter
-    blockingCommands = ['RETR', 'STOR', 'LIST', 'PORT']
+    blockingCommands = ['RETR', 'STOR', 'LIST'] #, 'PORT'] <- #TODO add this when implemented properly
     reTelnetChars = re.compile(r'(\\x[0-9a-f]{2}){1,}')
 
     # how long the DTP waits for a connection
@@ -447,6 +447,8 @@ class FTP(basic.LineReceiver, policies.TimeoutMixin):
     dtpHostPort = None     # client address/port to connect to on PORT command
 
     binary      = True     # binary transfers? False implies ASCII. defaults to True
+
+    
 
 
     def connectionMade(self):
@@ -531,6 +533,9 @@ class FTP(basic.LineReceiver, policies.TimeoutMixin):
         except CmdNotImplementedError, (e,):
             log.debug(e)
             self.reply(CMD_NOT_IMPLMNTD, e)
+        except CmdNotImplementedForArgError, (e,):
+            log.debug(e)
+            self.reply(CMD_NOT_IMPLMNTD_FOR_ARG, e)
         except BadCmdSequenceError, (e,): 
             log.debug(e)
             self.reply(BAD_CMD_SEQ, e)
@@ -904,7 +909,10 @@ class FTP(basic.LineReceiver, policies.TimeoutMixin):
         port = (int(e)<<8) + int(f)
         return (host, port)
 
-    def ftp_PORT(self, params):
+    def ftp_PORT(self, params=None):
+        self.reply(CMD_NOT_IMPLMNTD, 'PORT')
+        return
+        # XXX: This is b0rk3n for now
         log.debug('ftp_PORT')
         self.dtpTxfrMode = PORT
         self.dtpHostPort = self.decodeHostPort(params)
@@ -954,12 +962,15 @@ class FTP(basic.LineReceiver, policies.TimeoutMixin):
 
     def ftp_DELE(self, path=''):
         self.shell.dele(path)
-
+        self.reply(REQ_FILE_ACTN_COMPLETED_OK)
+        
     def ftp_MKD(self, path=''):
         self.shell.mkd(path)
+        self.reply(REQ_FILE_ACTN_COMPLETED_OK)
 
     def ftp_RMD(self, path=''):
         self.shell.rmd(path)
+        self.reply(REQ_FILE_ACTN_COMPLETED_OK)
 
     def ftp_STOR(self, path=''):
         if self.dtpTxfrMode is None:
@@ -1301,13 +1312,6 @@ class IHighLevelShell(components.Interface):
         @raise OperationFailedError: when an error occurs removing a directory.
         """
         pass
-
-
-
-
-
-
-
 
 
 
