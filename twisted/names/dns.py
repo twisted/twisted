@@ -146,7 +146,10 @@ class SentQuery:
             n.decode(answer.strio)
             answers.append((priority, n.name))
         answers.sort()
-        return answers
+        ret = []
+        for answer in answers:
+            ret.append(answer[1])
+        return ret
 
     def timeOut(self):
         if not self.done:
