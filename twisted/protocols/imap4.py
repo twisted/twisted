@@ -488,12 +488,8 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
         if passon is not None:
             self.setLineMode(passon)
 
-    def sendLine(self, line):
-        print 'C:', repr(line)
-        return basic.LineReceiver.sendLine(self, line)
-
     def lineReceived(self, line):
-        print 'S:', repr(line)
+        # print 'S:', repr(line)
         self.resetTimeout()
         if self._pendingLiteral:
             self._pendingLiteral.callback(line)
@@ -1247,17 +1243,19 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
         except StopIteration:
             self.sendPositiveResponse(tag, 'FETCH completed')
         else:
+            # Case normalization
+            parts = dict([(k.lower(), v) for (k, v) in parts.iteritems()])
             finalParts = []
             sawUID = False
             for p in query:
-                key = str(p)
+                key = str(p).lower()
                 ukey = key.upper()
                 if ukey == 'UID':
                     sawUID = True
                 try:
                     finalParts.extend((ukey, parts[key]))
                 except KeyError:
-                    log.err("imap4.IMailbox.fetch() did not return %s response" % (str(p),))
+                    log.err("imap4.IMailbox.fetch() did not return %s response" % (key,))
             if uid and not sawUID:
                 finalParts[:0] = ['UID', str(msgId)]
             self.sendUntaggedResponse(
@@ -3756,6 +3754,7 @@ class _FetchParser:
         # reply-to and sender must not be None.  If not present in a message
         # they should be defaulted to the value of the from field.
         type = 'envelope'
+        __str__ = lambda self: 'envelope'
 
     class Flags:
         type = 'flags'

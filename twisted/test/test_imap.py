@@ -232,9 +232,9 @@ class IMAP4HelperTestCase(unittest.TestCase):
 
     def testFetchParserMacros(self):
         cases = [
-            ['ALL', (4, ['flags', 'internaldate', 'rfc822size', 'envelope'])],
-            ['FULL', (5, ['flags', 'internaldate', 'rfc822size', 'envelope', 'body'])], 
-            ['FAST', (3, ['flags', 'internaldate', 'rfc822size'])],
+            ['ALL', (4, ['flags', 'internaldate', 'rfc822.size', 'envelope'])],
+            ['FULL', (5, ['flags', 'internaldate', 'rfc822.size', 'envelope', 'body'])], 
+            ['FAST', (3, ['flags', 'internaldate', 'rfc822.size'])],
         ]
 
         for (inp, outp) in cases:
@@ -1356,6 +1356,10 @@ class FetchSearchStoreCopyTestCase(unittest.TestCase, IMAP4HelperMixin):
         self.parts and self.parts.sort()
         self.server_received_parts and self.server_received_parts.sort()
         
+        if self.uid:
+            for (k, v) in self.expected.items():
+                v['UID'] = str(k)
+        
         self.assertEquals(self.result, self.expected)
         self.assertEquals(self.uid, self.server_received_uid)
         self.assertEquals(self.parts, self.server_received_parts)
@@ -1477,10 +1481,10 @@ class FetchSearchStoreCopyTestCase(unittest.TestCase, IMAP4HelperMixin):
             return self.client.fetchHeaders(self.messages, uid=uid)
         
         self.expected = {
-            19: {'RFC822HEADER': 'XXX put some headers here'},
+            19: {'RFC822.HEADER': 'XXX put some headers here'},
         }
         self.messages = '2:3,4:5,6:*'
-        self.parts = ['RFC822HEADER']
+        self.parts = ['RFC822.HEADER']
         self.uid = uid
         self._fetchWork(fetch)
     
@@ -1492,10 +1496,10 @@ class FetchSearchStoreCopyTestCase(unittest.TestCase, IMAP4HelperMixin):
             return self.client.fetchBody(self.messages, uid=uid)
         
         self.expected = {
-            1: {'RFC822TEXT': 'XXX put some body here'},
+            1: {'RFC822.TEXT': 'XXX put some body here'},
         }
         self.messages = '1,2,3,4,5,6,7'
-        self.parts = ['RFC822TEXT']
+        self.parts = ['RFC822.TEXT']
         self.uid = uid
         self._fetchWork(fetch)
     
@@ -1507,9 +1511,10 @@ class FetchSearchStoreCopyTestCase(unittest.TestCase, IMAP4HelperMixin):
             return self.client.fetchSize(self.messages, uid=uid)
         
         self.expected = {
-            1: {'SIZE': '12345'},
+            1: {'RFC822.SIZE': '12345'},
         }
-        self.parts = ['RFC822SIZE']
+        self.messages = '1:100,2:*'
+        self.parts = ['RFC822.SIZE']
         self.uid = uid
         self._fetchWork(fetch)
     
@@ -1524,20 +1529,20 @@ class FetchSearchStoreCopyTestCase(unittest.TestCase, IMAP4HelperMixin):
             1: {
                 'FLAGS': 'XXX put some flags here',
                 'INTERNALDATE': 'Sun, 25 Jul 2010 06:20:30 -0400 (EDT)',
-                'RFC822SIZE': '12345',
+                'RFC822.SIZE': '12345',
                 'ENVELOPE': 'XXX envelope',
                 'BODY': 'XXX body',
             },
             3: {
                 'FLAGS': 'XXX put some flags here',
                 'INTERNALDATE': 'Mon, 14 Apr 2003 19:43:44 -0400',
-                'RFC822SIZE': '12345',
+                'RFC822.SIZE': '12345',
                 'ENVELOPE': 'XXX envelope',
                 'BODY': 'XXX body',
             }
         }
         self.messages = '1,3'
-        self.parts = ['FLAGS', 'INTERNALDATE', 'RFC822SIZE', 'ENVELOPE', 'BODY']
+        self.parts = ['FLAGS', 'INTERNALDATE', 'RFC822.SIZE', 'ENVELOPE', 'BODY']
         self.uid = uid
         self._fetchWork(fetch)
     
@@ -1551,18 +1556,18 @@ class FetchSearchStoreCopyTestCase(unittest.TestCase, IMAP4HelperMixin):
         self.expected = {
             1: {
                 'ENVELOPE': 'the envelope looks like this',
-                'RFC822SIZE': '1023',
+                'RFC822.SIZE': '1023',
                 'INTERNALDATE': 'Tuesday',
                 'FLAGS': [],
             }, 2: {
                 'ENVELOPE': 'another envelope',
-                'RFC822SIZE': '3201',
+                'RFC822.SIZE': '3201',
                 'INTERNALDATE': 'Friday',
                 'FLAGS': ['\\SEEN', '\\DELETED'],
             }
         }
         self.messages = '1,2:3'
-        self.parts = ['ENVELOPE', 'RFC822SIZE', 'INTERNALDATE', 'FLAGS']
+        self.parts = ['ENVELOPE', 'RFC822.SIZE', 'INTERNALDATE', 'FLAGS']
         self.uid = uid
         self._fetchWork(fetch)
 
@@ -1577,11 +1582,11 @@ class FetchSearchStoreCopyTestCase(unittest.TestCase, IMAP4HelperMixin):
             1: {
                 'FLAGS': [],
                 'INTERNALDATE': '19 Mar 2003 19:22:21 -0500',
-                'RFC822SIZE': '12345',
+                'RFC822.SIZE': '12345',
             },
         }
         self.messages = '1'
-        self.parts = ['FLAGS', 'INTERNALDATE', 'RFC822SIZE']
+        self.parts = ['FLAGS', 'INTERNALDATE', 'RFC822.SIZE']
         self.uid = uid
         self._fetchWork(fetch)
     
