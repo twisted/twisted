@@ -1,3 +1,4 @@
+# -*- test-case-name: twisted.test.test_lore -*-
 # Twisted, the Framework of Your Internet
 # Copyright (C) 2001-2002 Matthew W. Lefkowitz
 #
@@ -95,11 +96,11 @@ def fooAddingGenerator(originalFileName, outputExtension):
 
 def outputdirGenerator(originalFileName, outputExtension, inputdir, outputdir):
     originalFileName = os.path.abspath(originalFileName)
-    if originalFileName[:len(inputdir)] != inputdir:
+    if os.path.commonprefix((originalFileName, inputdir)) != inputdir:
         raise ValueError("Original file name '" + originalFileName +
               "' not under input directory '" + inputdir + "'")
 
-    adjustedPath = outputdir + originalFileName[len(inputdir):]
+    adjustedPath = os.path.join(outputdir, os.path.basename(originalFileName))
     return tree.getOutputFileName(adjustedPath, outputExtension)
 
 def getFilenameGenerator(config, outputExt):
