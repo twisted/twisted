@@ -285,6 +285,10 @@ class Connection(abstract.FileDescriptor):
             self.socket.shutdown(2)
         except socket.error:
             pass
+        try:
+            self.socket.close()
+        except socket.error:
+            pass
 
     def connectionLost(self, reason):
         """See abstract.FileDescriptor.connectionLost().
