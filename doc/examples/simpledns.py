@@ -1,14 +1,21 @@
 from twisted.names import dns
 from twisted.internet import main
+from twisted.python import defer
+
+deferred = defer.Deferred()
 
 def printAnswer(answer):
     print answer
     main.shutDown()
 
-def printFailure():
-    print "error: could not resolve"
+def printFailure(arg):
+    print "error: could not resolve", arg
     main.shutDown()
 
-resolver = dns.Resolver(["212.29.241.226"])
-resolver.resolve("moshez.org", printAnswer, printFailure)
+deferred.addCallback(printAnswer)
+deferred.addErrback(printFailure)
+deferred.arm()
+
+resolver = dns.Resolver(["192.114.42.86"])
+resolver.resolve(deferred, "www.zoteca.com")
 main.run()
