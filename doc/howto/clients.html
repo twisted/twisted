@@ -78,7 +78,13 @@ class WelcomeMessage(Protocol):
     simple ClientFactory that uses the Echo protocol (above) and also prints
     what state the connection is in.</p>
     <pre class="python">
-from twisted.internet.protocol import ClientFactory
+from twisted.internet.protocol import Protocol, ClientFactory
+from sys import stdout
+class Echo(Protocol):
+
+    def dataReceived(self, data):
+            stdout.write(data)
+
 class EchoClientFactory(ClientFactory):
     
     def startedConnection(self, connector):
