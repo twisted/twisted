@@ -1,5 +1,11 @@
-1. "run as" parameter
-2. Startup type parameter
-3. Handle apps loading plugins better
-4. What happens when an app already does its own logging using twisted.log?
+. Lots of options for things like the service name.  (MSDN's entry on sc.exe
+is a good reference for things that should be parameterized.)
+. "run as" parameter at install time
+. Startup type parameter (auto, manual, etc.)
+. Handle .tml plugins better
+. More stuff in ntsvc.helpers.helpers
+. What happens when an app already does its own logging using twisted.log?
+. Use the icon by default
+. Put it into twisted somewheres
+. Generate NSIS wrapper, and a Makefile to make it.
 
