@@ -14,7 +14,7 @@
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 #
-# $Id: conch.py,v 1.51 2003/04/17 15:57:36 z3p Exp $
+# $Id: conch.py,v 1.52 2003/04/17 17:11:54 z3p Exp $
 
 #""" Implementation module for the `conch` command.
 #"""
@@ -171,7 +171,7 @@ def run():
         reactor.run()
     finally:
         if old:
-            tty.tcsetattr(fd, tty.TCSADRAIN, old)
+            tty.tcsetattr(fd, tty.TCSANOW, old)
     if sys.stdout.isatty():
         print 'Connection to %s closed.' % options['host']
     sys.exit(exitStatus)
@@ -181,9 +181,8 @@ def handleError():
     global exitStatus
     exitStatus = 2
     reactor.stop()
-    if sys.exc_info()[0] != SystemExit:
-        log.err(failure.Failure())
-        raise
+    log.err(failure.Failure())
+    raise
 
 def onConnect():
     if not options['noshell']:
@@ -599,13 +598,10 @@ class SSHUserAuthClient(userauth.SSHUserAuthClient):
         try:
             return defer.succeed(util.getPassword(prompt))
         except KeyboardInterrupt, e:
-            return defer.fail(e)
+            print
+            reactor.stop()
+            return defer.fail(ConchError('PEBKAC'))
        
-    def gotPassword(self, q, password):
-        d = self.passDeferred
-        del self.passDeferred
-        d.callback(password)
-
     def getPublicKey(self):
         files = [x for x in options.identitys if x not in self.usedFiles]
         log.msg(str(options.identitys))
@@ -642,6 +638,9 @@ class SSHUserAuthClient(userauth.SSHUserAuthClient):
                         pass
                 return defer.fail(ConchError('bad password'))
             raise
+        except KeyboardError:
+            print
+            reactor.stop()
 
 class SSHConnection(connection.SSHConnection):
     def serviceStarted(self):

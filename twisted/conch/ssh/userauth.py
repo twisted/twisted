@@ -294,8 +294,7 @@ class SSHUserAuthClient(service.SSHService):
             self._newPass = np
 
     def _errPass(self, failure):
-        failure.trap(KeyboardInterrupt)
-        raise SystemExit
+        self.askForAuth('none', '')
 
     def auth_publickey(self):
         publicKey = self.getPublicKey()
