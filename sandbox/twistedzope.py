@@ -6,7 +6,7 @@ from Zope.Publisher.Publish import publish
 from Zope.Publisher.Browser.BrowserRequest import BrowserRequest
 
 from twisted.protocols import protocol, http
-from twisted.internet import reactor, threadtask, main
+from twisted.internet import reactor
 from twisted.python import log
 
 
@@ -36,9 +36,18 @@ class ZopeHTTPRequest(log.Logger, http.Request):
             self.setHeader(k, v)
     
     def process(self):
-        self.channel.threadpool.dispatch(self, self._process)
+        """Process a request.
+
+        Doesn't do the actual processing, instead runs self._process in
+        the thread pool.
+        """
+        reactor.callInThread(self._process)
     
     def _process(self):
+        """Do the real processing of a request.
+
+        Runs in a thread pool.
+        """
         env = self.create_environment()
         self.content.seek(0, 0)
         req = BrowserRequest(self.content, self, env)
@@ -90,14 +99,12 @@ class HTTPFactory(http.HTTPFactory):
         h = http.HTTPChannel()
         h.requestFactory = ZopeHTTPRequest
         h.factory = self
-        h.threadpool = self.tp
         h.publication = self.publication
         return h
     
     def __init__(self, publication):
+        http.HTTPFactory.__init__(self)
         self.publication = publication
-        self.tp = threadtask.ThreadDispatcher(4, 4)
-        main.callDuringShutdown(self.tp.stop)
     
 
 if __name__ == '__main__':
@@ -111,7 +118,5 @@ if __name__ == '__main__':
     db = DB(FileStorage("Data.fs"))
     pub = BrowserPublication(db)
     
-    from twisted.internet import app
-    application = app.Application("zope")
-    application.listenTCP(8080, HTTPFactory(pub))
-    application.run(save=0)
+    reactor.listenTCP(8080, HTTPFactory(pub))
+    reactor.run()
