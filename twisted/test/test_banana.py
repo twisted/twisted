@@ -149,7 +149,15 @@ class BananaTestCase(unittest.TestCase):
             
 testCases = [MathTestCase, BananaTestCase]
 
-if hasattr(banana, 'cBanana'):
+try:
+    from twisted.spread import cBanana
+except ImportError:
+    pass
+else:
+    # XXX: Eww.  It shouldn't be this hard to install cBanana.
+    banana.cBanana = cBanana
+    cBanana.pyb1282int = banana.b1282int
+    cBanana.pyint2b128 = banana.int2b128
     class CananaTestCase(BananaTestCase):
         encClass = banana.Canana
 
