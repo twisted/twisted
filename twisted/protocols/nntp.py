@@ -22,13 +22,12 @@ from twisted.python import log
 import string, random, socket
 
 def parseRange(text):
-    # FIXME: should cope with '1-', '-443' and even '-'
-    articles = string.split(text, '-')
+    articles = text.split('-')
     if len(articles) == 1:
         try:
             a = int(articles[0])
             return a, a
-        except:
+        except ValueError, e:
             return None, None
     elif len(articles) == 2:
         try:
@@ -40,7 +39,7 @@ def parseRange(text):
                 h = int(articles[1])
             else:
                 h = None
-        except:
+        except ValueError, e:
             return None, None
     return l, h
     
@@ -401,11 +400,8 @@ class NNTPServer(NNTPClient):
                 self.sendLine('501 command syntax error')
                 return
             l, h = parseRange(parts[0])
-            if l is h is None:
-                self.sendLine('501 command syntax error')
-            else:
-                defer = self.factory.backend.xoverRequest(self.currentGroup, l, h)
-                defer.addCallbacks(self._gotXOver, self._errXOver)
+            defer = self.factory.backend.xoverRequest(self.currentGroup, l, h)
+            defer.addCallbacks(self._gotXOver, self._errXOver)
 
     def _gotXOver(self, parts):
         self.sendLine('224 Overview information follows')
@@ -561,7 +557,7 @@ class NNTPServer(NNTPClient):
         index, id, body = parts
         self.currentIndex = index
         self.sendLine('221 %d %s article retrieved' % (index, id))
-        self.transport.write(body + '\r\n')
+        self.transport.write(body.replace('\r\n..', '\r\n.') + '\r\n')
         self.sendLine('.')
 
     def _errBody(self, body):
