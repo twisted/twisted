@@ -692,20 +692,24 @@ class Application(log.Logger, styles.Versioned,
         """Retrieve persistent uid/gid pair (if possible) and set the current
         process's euid/egid.
         """
-        if hasattr(os, 'getgid'):
-            if not os.getgid():
-                os.setegid(self.gid)
-                os.seteuid(self.uid)
-                log.msg('set euid/egid %s/%s' % (self.uid, self.gid))
+        try:
+            os.setegid(self.gid)
+            os.seteuid(self.uid)
+        except (AttributeError, OSError):
+            pass
+        else:
+            log.msg('set euid/egid %s/%s' % (self.uid, self.gid))
 
     def setUID(self):
         """Retrieve persistent uid/gid pair (if possible) and set the current process's uid/gid
         """
-        if hasattr(os, 'getgid'):
-            if not os.getgid():
-                os.setgid(self.gid)
-                os.setuid(self.uid)
-                log.msg('set uid/gid %s/%s' % (self.uid, self.gid))
+        try:
+            os.setgid(self.gid)
+            os.setuid(self.uid)
+        except (AttributeError, OSError):
+            pass
+        else:
+            log.msg('set uid/gid %s/%s' % (self.uid, self.gid))
 
 
 
