@@ -356,16 +356,12 @@ class Threaded(Stage):
         inherited code implementing next(), and using init() for
         initialization code to be run in the thread.
     """
-    def __init__(self, iterable, trap = None, extend = 0, delay = 0):
+    def __init__(self, iterable, trap = None, delay = 0):
         Stage.__init__(self, trap)
         self._iterable  = iterable
         self._stop      = 0
         self._buffer    = []
         self._cooperate = Cooperate(delay)
-        if extend:
-            self._append = self._buffer.extend
-        else:
-            self._append = self._buffer.append
         from twisted.internet.reactor import callInThread
         callInThread(self._process)
     def _process(self):
@@ -377,7 +373,7 @@ class Threaded(Stage):
         else:
             try:
                 while 1:
-                    self._append(self._iterable.next())
+                    self._buffer.append(self._iterable.next())
             except StopIteration: pass
             except: 
                 self._append(Failure())
@@ -451,6 +447,7 @@ class Deferred(defer.Deferred):
 # a DBAPI 2.0 database connection
 #
 
+
 class QueryIterator:
     """ Converts a database query into a result iterator """
     def __init__(self, pool, sql, fetchall=0):
@@ -458,6 +455,7 @@ class QueryIterator:
         self.sql  = sql
         self.pool = pool
         self.fetchall = fetchall
+        self.rows = None
     def __iter__(self):
         conn = self.pool.connect()
         self.curs = conn.cursor()
@@ -465,14 +463,15 @@ class QueryIterator:
         return self
     def next(self):
         res = None
-        if self.curs:
-            if self.fetchall:
-                res = self.curs.fetchall()
-                self.curs = None
-            else:
-                res = self.curs.fetchmany()
-        if not(res): 
-            self.curs = None
-            raise StopIteration
-        return res
-
+        if not self.rows:
+            if self.curs:
+                if self.fetchall:
+                    self.rows = self.curs.fetchall()
+                    self.curs = None
+                else:
+                    self.rows = self.curs.fetchmany()
+                self.rows.reverse()
+        if self.rows:
+           return self.rows.pop()
+        self.curs = None
+        raise StopIteration

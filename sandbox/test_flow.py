@@ -194,7 +194,7 @@ class FlowTest(unittest.TestCase):
         rhs = unittest.deferredResult(flow.Deferred(a))
         self.assertEquals(rhs, ['test'])
 
-    def xtestThreaded(self):
+    def testThreaded(self):
         class CountIterator:
             def __init__(self, count):
                 self.count = count
