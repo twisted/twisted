@@ -185,7 +185,12 @@ class Transaction:
                              "this transaction? ").lower().startswith('n'):
                     return f
             print "rolling back transaction."
-            self.undoIt(data, f)
+            try:
+                self.undoIt(data, f)
+            except:
+                print "Argh, the rollback failed."
+                import traceback
+                traceback.print_exc()
             return f
 
     def doIt(self, data):
@@ -194,7 +199,7 @@ class Transaction:
 
     def undoIt(self, data, fail):
         """Oops."""
-        raise NotImplementedError
+        print "%s HAS NO ROLLBACK!" % self.__class__.__name__
 
 
 #errors
@@ -538,7 +543,7 @@ class MakeDebs(Transaction):
 class FinalizeTag(Transaction):
     def doIt(self, opts):
         # atomic-assumption
-        sh('svn mv %s %s' % opts['temptagurl'], opts['tagurl'])
+        sh('svn mv -m "Finalizing release of %s" %s %s' % (opts['full-version'], opts['temptagurl'], opts['tagurl']))
 
 
 class ReleaseDebs(Transaction):
