@@ -52,7 +52,7 @@ applied when serializing arguments.
 # Future Imports
 from __future__ import nested_scopes
 
-__version__ = "$Revision: 1.127 $"[11:-2]
+__version__ = "$Revision: 1.128 $"[11:-2]
 
 
 # System Imports
@@ -392,6 +392,7 @@ class CopyableFailure(failure.Failure, Copyable):
     def getStateToCopy(self):
         #state = self.__getstate__()
         state = self.__dict__.copy()
+        state['tb'] = None
         state['frames'] = []
         state['stack'] = []
         if isinstance(self.value, failure.Failure):
