@@ -42,6 +42,7 @@ except:
 # Sibling Imports
 import failure
 
+from twisted.python.compat import *
 
 class Settable:
     """
@@ -603,7 +604,10 @@ def isOfType(start, goal):
 def findInstances(start, t):
     return objgrep(start, t, isOfType)
 
-def objgrep(start, goal, eq=isLike, path='', paths=None, seen=None):
+import weakref, re, gc
+RegexType = type(re.compile(""))
+
+def objgrep(start, goal, eq=isLike, path='', paths=None, seen=None, showUnknowns=0):
     '''An insanely CPU-intensive process for finding stuff.
     '''
     if paths is None:
@@ -624,13 +628,22 @@ def objgrep(start, goal, eq=isLike, path='', paths=None, seen=None):
     elif isinstance(start, types.ListType) or isinstance(start, types.TupleType):
         for idx in xrange(len(start)):
             objgrep(start[idx], goal, eq, path+'['+str(idx)+']', paths, seen)
-    elif (isinstance(start, types.InstanceType) or
-          isinstance(start, types.ClassType) or
-          isinstance(start, types.ModuleType)):
+    elif hasattr(start, '__dict__'):
         for k, v in start.__dict__.items():
             objgrep(v, goal, eq, path+'.'+k, paths, seen)
         if isinstance(start, types.InstanceType):
             objgrep(start.__class__, goal, eq, path+'.__class__', paths, seen)
+    elif (isinstance(start, weakref.ProxyTypes + (weakref.ReferenceType,))):
+        objgrep(start(), goal, eq, path+'()', paths, seen)
+    elif (isinstance(start, types.StringTypes+
+                    (types.IntType, types.FunctionType, types.MethodType,
+                     types.BuiltinMethodType, RegexType, types.FloatType,
+                     types.NoneType, types.FileType)) or
+          type(start).__name__ in ('wrapper_descriptor', 'method_descriptor',
+                                   'member_descriptor', 'getset_descriptor')):
+        pass
+    elif showUnknowns:
+        print 'unknown type', type(start), start
     return paths
 
 def _startswith(s, sub):
