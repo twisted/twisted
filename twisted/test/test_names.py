@@ -91,7 +91,6 @@ class ServerDNSTestCase(unittest.DeferredTestCase):
             )
         ], verbose=2)
         
-        from twisted.internet import reactor
         self.listenerTCP = reactor.listenTCP(PORT, self.factory)
         
         p = dns.DNSClientProtocol(self.factory)
@@ -105,37 +104,50 @@ class ServerDNSTestCase(unittest.DeferredTestCase):
         self.listenerUDP.stopListening()
 
 
-    def testAddressRecord(self):
+    def testAddressRecord1(self):
+        global gotResponse
+        gotResponse = 0
         r = self.resolver
-
         self.deferredFailUnlessEqual(
-            r.lookupAddress('test-domain.com'),
+            r.lookupAddress('test-domain.com').addCallback(setDone),
             [dns.Record_A('127.0.0.1')]
         )
+        while not gotResponse:
+            reactor.iterate(0.05)
+
+
+    def testAddressRecord2(self):
+        global gotResponse
+        gotResponse = 0
+        r = self.resolver
         self.deferredFailUnlessEqual(
-            r.lookupAddress('host.test-domain.com'),
+            r.lookupAddress('host.test-domain.com').addCallback(setDone),
             [dns.Record_A('123.242.1.5'), dns.Record_A('0.255.0.255')]
         )
+        while not gotResponse:
+            reactor.iterate(0.05)
+
+
+    def testAdressRecord3(self):
+        global gotResponse
+        gotResponse = 0
+        r = self.resolver
         self.deferredFailUnlessEqual(
-            r.lookupAddress('host-two.test-domain.com'),
+            r.lookupAddress('host-two.test-domain.com').addCallback(setDone),
             [dns.Record_A('255.255.255.254'), dns.Record_A('0.0.0.0')]
         )
-
-        from twisted.internet import reactor
-        for i in range(10):
-            reactor.iterate(0.1)
+        while not gotResponse:
+            reactor.iterate(0.05)
 
 
     def testAuthority(self):
         global gotResponse
         gotResponse = 0
-
         r = self.resolver
         self.deferredFailUnlessEqual(
             r.queryUDP([dns.Query('test-domain.com', dns.SOA, dns.IN)]).addCallback(getPayload),
             [soa_record]
         )
-        
         while not gotResponse:
             reactor.iterate(0.05)
 
@@ -143,13 +155,11 @@ class ServerDNSTestCase(unittest.DeferredTestCase):
     def testMailExchangeRecord(self):
         global gotResponse
         gotResponse = 0
-
         r = self.resolver
         self.deferredFailUnlessEqual(
             r.lookupMailExchange('test-domain.com').addCallback(setDone),
             [dns.Record_MX(10, 'host.test-domain.com')]
         )
-
         while not gotResponse:
             reactor.iterate(0.05)
 
@@ -157,32 +167,35 @@ class ServerDNSTestCase(unittest.DeferredTestCase):
     def testNameserver(self):
         global gotResponse
         gotResponse = 0
-
         r = self.resolver
         self.deferredFailUnlessEqual(
             r.lookupNameservers('test-domain.com').addCallback(setDone),
             [dns.Record_NS('39.28.189.39')]
         )
-
         while not gotResponse:
             reactor.iterate(0.05)
 
 
     # Yea, second class citizens all the way
-    def testOther(self):
+    def testHINFO(self):
         global gotResponse
         gotResponse = 0
-        
         r = self.resolver
         self.deferredFailUnlessEqual(
             r.queryUDP([dns.Query('test-domain.com', dns.HINFO, dns.IN)]).addCallback(getPayload),
             [dns.Record_HINFO(os='Linux', cpu='A Fast One, Dontcha know')]
         )
-        
+        while not gotResponse:
+            reactor.iterate(0.05)
+
+
+    def testPTR(self):
+        global gotResponse
+        gotResponse = 0
+        r = self.resolver
         self.deferredFailUnlessEqual(
-            r.queryUDP([dns.Query('123.93.84.28.in-addr.arpa', dns.HINFO, dns.IN)]).addCallback(getPayload),
+            r.queryUDP([dns.Query('123.93.84.28.in-addr.arpa', dns.PTR, dns.IN)]).addCallback(getPayload),
             [dns.Record_PTR('test.host-reverse.lookup.com')]
         )
-
         while not gotResponse:
             reactor.iterate(0.05)
