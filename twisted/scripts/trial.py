@@ -65,6 +65,13 @@ class Options(usage.Options):
         "Module to find a test case for"
         # only look at the first two lines of the file. Try to behave as
         # much like emacs local-variables scanner as is sensible
+        if not os.path.isfile(file):
+            return
+        # recognize twisted/test/test_foo.py, which is itself a test case
+        d,f = os.path.split(file)
+        if d == "twisted/test" and f.startswith("test_") and f.endswith(".py"):
+            self['modules'].append("twisted.test." + f[:-3])
+            return
         f = open(file, "r")
         lines = [f.readline(), f.readline()]
         f.close()

@@ -1,3 +1,8 @@
+2003-05-24  Brian Warner  <warner@lothar.com>
+
+	* twisted/scripts/trial.py (Options.opt_testmodule): ignore
+	deleted files, recognize twisted/test/* files as test cases
+
 2003-05-22  Brian Warner  <warner@lothar.com>
 
 	* twisted/test/test_newjelly.py (JellyTestCase.testUnicode): make
