@@ -17,8 +17,9 @@
 import os
 import string
 import time
+import cPickle
 from twisted.spread import pb
-from twisted.words.ui import gateway
+from twisted.words.ui import gateways
 
 ERROR,CONNECTIONFAILED,CONNECTIONLOST=range(3) # the error codes
 
@@ -365,6 +366,77 @@ class InstanceMessenger:
             if callbacks:
                 for g,c in callbacks:
                     if g in (gateway,None):
+                        print "calling %s with %s"%(c,(self,gateway,event)+args)
                         r=apply(c,(self,gateway,event)+args,{})
                         if r=="break": br=1
         return not br
+
+class Account:
+    def __init__(self,gatewayname,options,autologon,savepass):
+        """
+        A simple class to save the options for an IM account.
+        gatewayname := the shortName of the gateway to use (string)
+        options := the options to use for makeConnection (dictionary)
+        autologon := automatically log this account in? (int)
+        savepass := save this password? (int)
+        """
+        self.gatewayname=gatewayname
+        self.options=options
+        self.autologon=autologon
+        self.savepass=savepass
+
+def getState(file):
+    """
+    retrieve the state from an open file.
+    returns the state as a list of Account objects.
+    file := the file to retreive the state from (open file)
+    """
+    return cPickle.load(file)
+
+def saveState(file,state):
+    """
+    save the current state to a file.
+    file := the file to save the state to (open file)
+    state := the current state (list of Account objects)
+    """
+    for account in state:
+        if not account.savepass: # don't save password
+            for k in account.options.keys():
+                if k[:4]=="pass":
+                    del account.options[k]
+    cPickle.dump(state,file)
+
+def logonAccount(im,account):
+    """
+    log on to a given account.
+    if not all the options are present, returns the options that are missing.
+    im := the InstanceMessenger to connect the account to
+        (class InstanceMessenger)
+    account := the account to connect (class Account)
+    """
+    if len(account.options)<len(gateways.__gateways__[account.gatewayname].loginOptions):
+        ret=[]
+        for foo,key,bar in gateways.__gateways__[account.gatewayname].loginOptions:
+            if not account.options.has_key(key):
+                ret.append([foo,key,bar])
+        print ret
+        return ret
+    print im,account.__dict__
+    apply(gateways.__gateways__[account.gatewayname].makeConnection,(im,),account.options)
+
+def logoffAccount(im,account):
+    """
+    log off a given account
+    im := the InstanceMessenger to disconnect the account from
+        (class InstanceMessenger)
+    account := the account to disconnect (class Account)
+    """
+    for g in im.gateways.values():
+        print g.username,g.protocol
+        if g.username==account.options["username"] and g.protocol==account.gatewayname:
+            im.addCallback(g,"error",_handleDisconnect)
+            g.loseConnection()
+
+def _handleDisconnect(im,gateway,event,code,message):
+    im.removeCallback(gateway,event,_handleDisconnect)
+    if code==im2.CONNECTIONLOST: return "break"

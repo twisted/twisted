@@ -22,7 +22,6 @@ from twisted.words.ui import im2
 from twisted.words.ui import gateways
 import time
 import string
-import cPickle
 import copy
 import os
 
@@ -119,8 +118,8 @@ class GroupSession(Toplevel):
         self.im.getGroupMembers(gateway,self.name)
 
     def close(self):
-        self.im.leaveGroup(self.gateway,self.name)
         self.destroy()
+        self.im.leaveGroup(self.gateway,self.name)
     
     def _out(self,text):
         self.output.config(state=NORMAL)
@@ -290,12 +289,12 @@ class ChooseGateway(Toplevel):
         self.callback(self.gateways[index])
         self.destroy()
 
-class AddGateway(Toplevel):
+class AddAccount(Toplevel):
     def __init__(self,gateway,acctman,**kw):
         apply(Toplevel.__init__,(self,),kw)
         self.gateway=gateway
         self.acctman=acctman
-        self.title("Add %s Gateway - Instance Messenger"%gateway)
+        self.title("Add %s Account - Instance Messenger"%gateway)
         self.options={}
         useroptions=gateways.__gateways__[gateway].loginOptions
         r=0
@@ -315,28 +314,27 @@ class AddGateway(Toplevel):
         self.savepass=IntVar()
         Checkbutton(self,text="Save Password?",variable=self.savepass).grid(column=0,row=r,columnspan=2,sticky=W+E+N)
         r=r+1
-        Button(self,text="OK",command=self.addGateway).grid(column=0,row=r,sticky=N+W)
+        Button(self,text="OK",command=self.addAccount).grid(column=0,row=r,sticky=N+W)
         Button(self,text="Cancel",command=self.destroy).grid(column=1,row=r,sticky=E+W)
         self.protocol("WM_DELETE_WINDOW",self.destroy)
 
-    def addGateway(self):
+    def addAccount(self):
         o={}
         for k in self.options.keys():
             o[k]=self.options[k].get()
         auto=self.autologon.get()
         savepass=self.savepass.get()
-        self.acctman._addgateway(self.gateway,o,auto,savepass)
+        self.acctman._addaccount(im2.Account(self.gateway,o,auto,savepass))
         self.destroy()
 
-class ModifyGateway(Toplevel):
-    def __init__(self,acctman,gateway,options,autologon,savepass,**kw):
+class ModifyAccount(Toplevel):
+    def __init__(self,acctman,account,**kw):
         apply(Toplevel.__init__,(self,),kw)
-        self.gateway=gateway
         self.acctman=acctman
-        self.username=options["username"]
-        self.title("Modify %s Gateway - Instance Messenger"%gateway)
+        self.account=account
+        self.title("Modify %s Account - Instance Messenger"%account.gatewayname)
         self.options={}
-        useroptions=gateways.__gateways__[gateway].loginOptions
+        useroptions=gateways.__gateways__[account.gatewayname].loginOptions
         r=0
         for title,key,default in useroptions:
             dict={}
@@ -345,32 +343,35 @@ class ModifyGateway(Toplevel):
             Label(self,text=title+": ").grid(column=0,row=r,sticky=W+N)
             if key!="username":
                 entry=apply(Entry,(self,),dict)
-                entry.insert(0,options[key])
+                try:
+                    default=account.options[key]
+                except KeyError:
+                    default=""
+                entry.insert(0,default)
                 entry.grid(column=1,row=r,sticky=E+N)
                 self.options[key]=entry
             else:
-                Label(self,text=options[key],relief=SUNKEN,anchor=W).grid(column=1,row=r,sticky=W+E+N)
+                Label(self,text=account.options[key],relief=SUNKEN,anchor=W).grid(column=1,row=r,sticky=W+E+N)
             r=r+1
         self.autologon=IntVar()
-        self.autologon.set(autologon)
+        self.autologon.set(account.autologon)
         Checkbutton(self,text="Auto Logon?",variable=self.autologon).grid(column=0,row=r,columnspan=2,sticky=W+E+N)
         r=r+1
         self.savepass=IntVar()
-        self.savepass.set(savepass)
+        self.savepass.set(account.savepass)
         Checkbutton(self,text="Save Password?",variable=self.savepass).grid(column=0,row=r,columnspan=2,sticky=W+E+N)
         r=r+1
-        Button(self,text="OK",command=self.modifyGateway).grid(column=0,row=r,sticky=N+W)
+        Button(self,text="OK",command=self.modifyAccount).grid(column=0,row=r,sticky=N+W)
         Button(self,text="Cancel",command=self.destroy).grid(column=1,row=r,sticky=E+W)
         self.protocol("WM_DELETE_WINDOW",self.destroy)
 
-    def modifyGateway(self):
+    def modifyAccount(self):
         o={}
         for k in self.options.keys():
-            o[k]=self.options[k].get()
-        o["username"]=self.username
-        auto=self.autologon.get()
-        savepass=self.savepass.get()
-        self.acctman._modifygateway(self.gateway,o,auto,savepass)
+            self.account.options[k]=self.options[k].get()
+        self.account.autologon=self.autologon.get()
+        self.account.savepass=self.savepass.get()
+        self.acctman._modifyaccount(self.account)
         self.destroy()
 
 class AccountManager(Toplevel):
@@ -378,17 +379,17 @@ class AccountManager(Toplevel):
         apply(Toplevel.__init__,(self,)+args,kw)
         self.title("Account Manager - Instance Messenger")
         self.im=im
-        self.gateways={}
+        self.accounts=[]
         sb=Scrollbar(self)
         self.list=tkutil.CList(self,["Username    ","Online","Auto-Logon","Gateway    "],yscrollcommand=sb.set)
         sb.config(command=self.list.yview)
         self.list.grid(column=0,row=0,sticky=N+E+S+W)
         sb.grid(column=1,row=0,sticky=N+S+E)
         f=Frame(self)
-        Button(f,text="Add",command=self.addGateway).grid(column=0,row=0,sticky=N+E+S+W)
-        Button(f,text="Modify",command=self.modifyGateway).grid(column=1,row=0,sticky=N+E+S+W)
+        Button(f,text="Add",command=self.addAccount).grid(column=0,row=0,sticky=N+E+S+W)
+        Button(f,text="Modify",command=self.modifyAccount).grid(column=1,row=0,sticky=N+E+S+W)
         Button(f,text="Log On/Off",command=self.logOnOff).grid(column=2,row=0,sticky=N+E+S+W)
-        Button(f,text="Delete",command=self.deleteGateway).grid(column=3,row=0,sticky=N+E+S+W)
+        Button(f,text="Delete",command=self.deleteAccount).grid(column=3,row=0,sticky=N+E+S+W)
         tkutil.grid_setexpand(f)
         f.grid(column=0,row=1,rowspan=2,sticky=S+E+W)
         self.rowconfigure(0,weight=1)
@@ -402,115 +403,87 @@ class AccountManager(Toplevel):
         self.withdraw()
         if self.im.cl==None: self.tk.quit() 
     
-    def saveState(self,file):
-        options=copy.copy(self.gateways)
-        for o in options.values():
-            if not o[2]: # don't save password
-                for k in o[0].keys():
-                    if k[:4]=="pass":
-                        del o[0][k]
-        cPickle.dump(options.values(),file)
+    def getState(self):
+        return self.accounts
 
-    def loadState(self,file):
-        options=cPickle.load(file)
-        autos=[]
-        for o in options:
-            self._addgateway(o[3],o[0],o[1],o[2])
-            if o[1]: # autologon
-                autos.append(o)
-        for o in autos:
-            self.logonGateway(o)
+    def loadState(self,state):
+        for account in state:
+            self._addaccount(account)
+            if account.autologon: # autologon
+                autos.append(account)
+        for account in autos:
+            self.logonAccount(account)
 
-    def addGateway(self):
-        ChooseGateway(callback=lambda g,s=self:AddGateway(g,s))
+    def addAccount(self):
+        ChooseGateway(callback=lambda g,s=self:AddAccount(g,s))
         
-    def _addgateway(self,gatewayname,options,autologon,savepass,online=0):
-        name=gatewayname+" "+options["username"] # assumes username is an option
-        self.gateways[name]=options,autologon,savepass,gatewayname
-        auto=autologon and "True" or "False"
-        online=online and "True" or "False"
-        self.list.insert(END,(options["username"],online,auto,gatewayname))
+    def _addaccount(self,account,online="False"):
+        self.accounts.append(account)
+        auto=account.autologon and "True" or "False"
+        self.list.insert(END,(account.options["username"],online,auto,\
+                              account.gatewayname))
         
-    def modifyGateway(self):
+    def modifyAccount(self):
         index=self.list.index(ACTIVE)
-        username,online,auto,gateway=self.list.get(index)
-        try:
-            options=self.gateways[gateway+" "+username]
-        except:
-            return
-        ModifyGateway(self,gateway,options[0],options[1],options[2])
+        account=self.accounts[index]
+        ModifyAccount(self,account)
         
-    def _modifygateway(self,gatewayname,options,autologon,savepass,online="False"):
-        name=gatewayname+" "+options["username"] # assumes username is an option
-        self.gateways[name]=options,autologon,savepass,gatewayname
-        auto=autologon and "True" or "False"
-        gate=self.list.get(0,END)
-        for i in range(len(gate)):
-            username,foo,bar,gn=gate[i]
-            if gn+" "+username==name:
-                self.list.delete(i)
-                self.list.insert(i,[username,online,auto,gn])
+    def _modifyaccount(self,account,online="False"):
+        # assumes username is an option
+        #self.accounts[name]=account
+        i=self.accounts.index(account)
+        username,foo,bar,gateway=self.list.get(i)
+        auto=account.autologon and "True" or "False"
+        self.list.delete(i)
+        self.list.insert(i,[username,online,auto,gateway])
 
     def logOnOff(self):
         index=self.list.index(ACTIVE)
+        account=self.accounts[index]
         username,online,auto,gateway=self.list.get(index)
-        name=gateway+" "+username
-        try:
-            options=self.gateways[name]
-        except:
-            return
         if online=="False":
-            self.logonGateway(options)
+            self.logonAccount(account)
         else:
-            self.logoffGateway(username,gateway)
+            self.logoffAccount(account)
                 
-    def logonGateway(self,options):
-        gateway=options[3]
-        username=options[0]["username"]
-        self._modifygateway(gateway,options[0],options[1],options[2],"Attempting")      
-        if len(options[0])<len(gateways.__gateways__[gateway].loginOptions):
-            for foo,key,bar in gateways.__gateways__[gateway].loginOptions:
-                if not options[0].has_key(key):
-                    if key[:4]=="pass":
-                        value=tkutil.askpassword("Enter %s for %s"%(foo,username),foo+": ")
-                    else:
-                        value=tkSimpleDialog.askstring("Enter "+foo,foo+": ")
-                    self.gateways[gateway+" "+username][0][key]=value
-        apply(gateways.__gateways__[gateway].makeConnection,(self.im,),options[0])
-    
-    def logoffGateway(self,username,gateway):
-        for g in self.im.gateways.values():
-            if g.username==username and g.protocol==gateway:
-                self.im.addCallback(g,"error", \
-                    self.handleDisconnectGracefully)
-                g.loseConnection()
-    
-    def deleteGateway(self):
+    def logonAccount(self,account):
+        self._modifyaccount(account,"Attempting")
+        missing=im2.logonAccount(self.im,account)
+        while missing:
+            for foo,key,bar in missing:
+                print "asking for "+key
+                if key[:4]=="pass":
+                    print "pass"
+                    value=tkutil.askpassword("Enter %s for %s"%(foo, \
+                                    account.options["username"]), foo+": ")
+                else:
+                    print "other"
+                    value=tkSimpleDialog.askstring("Enter %s for %s"%(foo, \
+                                    account.options["username"]), foo+": ")
+                print "got %s: %s"%(key,value)
+                account.options[key]=value
+            missing=im2.logonAccount(self.im,account)
+
+    def logoffAccount(self,account):
+        im2.logoffAccount(self.im,account)
+
+    def deleteAccount(self):
         index=self.list.index(ACTIVE)
-        username,online,auto,gateway=self.list.get(index)
         self.list.delete(index)
-        self.logoffGateway(username,gateway)
-        try:
-            del self.gateways[gateway+" "+username]
-        except:
-            pass
+        account=self.accounts[index]
+        self.logoffAccount(account)
+        del self.accounts[index]
 
     def handleAttached(self,im,gateway,event):
-        name=gateway.protocol+" "+gateway.username
-        options=self.gateways[name]
-        self._modifygateway(gateway.protocol,options[0],options[1],options[2],"True")
+        for account in self.accounts:
+            if account.gatewayname==gateway.protocol and account.options["username"]==gateway.username:
+                self._modifyaccount(account,"True")
 
     def handleDetached(self,im,gateway,event):
         if im.cl!=None: im.cl.removeGateway(gateway)
-        try:
-            options=self.gateways[gateway.protocol+" "+gateway.username]
-        except KeyError:
-            return
-        self._modifygateway(gateway.protocol,options[0],options[1],options[2],"False")
-
-    def handleDisconnectGracefully(self,im,gateway,event,code,message):
-        im.removeCallback(gateway,event,self.handleDisconnectGracefully)
-        if code==im2.CONNECTIONLOST: return "break"
+        for account in self.accounts:
+            if account.gatewayname==gateway.protocol and account.options["username"]==gateway.username:
+                self._modifyaccount(account,"False")
 
 im2.Conversation=Conversation
 im2.ContactList=ContactList
@@ -527,13 +500,12 @@ def main():
     im.am=AccountManager(im)
     try:
         f=open(os.path.expanduser("~"+os.sep+".imsaved"),"r")
+        im.am.loadState(im2.getState(f))
     except:
-        pass
-    else:
-        im.am.loadState(f)
+        pass        
     mainloop()
     tkinternet.stop()
     f=open(os.path.expanduser("~"+os.sep+".imsaved"),"w")
-    im.am.saveState(f)
+    im2.saveState(f,im.am.getState())
 
 if __name__=="__main__":main()
