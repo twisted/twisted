@@ -34,12 +34,13 @@
 I am a support module for making SSH servers with mktap.
 """
 
-from twisted.conch import factory
+from twisted.conch import identity
+from twisted.conch.ssh import factory
 from twisted.python import usage
-import sys
+import sys, pwd
 
 class Options(usage.Options):
-    synopsis = "Usage: mktap sshd [-i <interface>] [-p <port>] [-d <dir>]"
+    synopsis = "Usage: mktap sshd [-i <interface>] [-p <port>] [-d <dir>] "
     optParameters = [["interface", "i", "", "local interface to which we listen"],
                   ["port", "p", 5822],
                   ["data", "d", "/etc", "directory to look for host keys in"]]
@@ -48,6 +49,12 @@ class Options(usage.Options):
 
 def updateApplication(app, config):
     t = factory.OpenSSHFactory()
+    t.authorizer = app.authorizer
     t.dataRoot = config.opts['data']
     portno = int(config.opts['port'])
+    for pwdinfo in pwd.getpwall():
+        username = pwdinfo[0]
+        print 'adding identity for', username
+        ident = identity.OpenSSHConchIdentity(username, app)
+        app.authorizer.addIdentity(ident)
     app.listenTCP(portno, t, interface=config.opts['interface'])

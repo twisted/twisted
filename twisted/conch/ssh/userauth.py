@@ -40,7 +40,9 @@ class SSHUserAuthServer(service.SSHService):
 
     def ssh_USERAUTH_REQUEST(self, packet):
         user, nextService, method, rest = getNS(packet, 3)
+        self.user = user
         self.nextService = nextService
+        self.method = method
         d = self.tryAuth(method, user, rest)
         d.addCallbacks(self._cbGoodAuth, self._ebBadAuth, callbackArgs = (method,))
         d.unpause() # we need this because it turns out Deferreds /really/ want to report errors
@@ -56,6 +58,9 @@ class SSHUserAuthServer(service.SSHService):
             self.transport.sendPacket(MSG_USERAUTH_FAILURE, NS(','.join(self.supportedAuthentications))+'\xff')
 
     def _ebBadAuth(self, foo):
+        if self.method != 'none': # ignore 'none' as a method
+            print '%s failed auth %s (next service: %s)' % (self.user, self.method, self.nextService)
+            print 'potential reason: %s' % foo
         self.transport.sendPacket(MSG_USERAUTH_FAILURE, NS(','.join(self.supportedAuthentications))+'\x00')
         #return foo # this will be a failure to continue in errs
 

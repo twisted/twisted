@@ -43,7 +43,7 @@ class OpenSSHConchIdentity(ConchIdentity):
             if os.path.exists(home+file):
                 lines = open(home+file).readlines()
                 for l in lines:
-                    if base64.decodestring(l.split()[1])==pubKey:
+                    if base64.decodestring(l.split()[1])==pubKeyString:
                         return defer.succeed('')
         print 'not vaild key'
         return defer.fail('')
