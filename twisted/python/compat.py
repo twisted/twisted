@@ -124,7 +124,7 @@ def inet_ntop(af, addr):
         if parts[0] == '':
             parts.insert(0, '')
         if parts[-1] == '':
-            parts.insert(-1, '')
+            parts.insert(len(parts) - 1, '')
         return ':'.join(parts)
     else:
         raise socket.error(97, 'Address family not supported by protocol')
