@@ -388,7 +388,7 @@ class Process(styles.Ephemeral):
             # the 'transport' is used for some compatibility methods
             self.proto.makeConnection(self)
         except:
-            log.deferr()
+            log.err()
         registerReapProcessHandler(self.pid, self)
 
     def _setupChild(self, fdmap):
@@ -568,7 +568,7 @@ class Process(styles.Ephemeral):
         try:
             self.proto.childConnectionLost(childFD)
         except:
-            log.deferr()
+            log.err()
         self.maybeCallProcessEnded()
 
     def maybeCallProcessEnded(self):
@@ -600,7 +600,7 @@ class Process(styles.Ephemeral):
                 e = error.ProcessDone(self.status)
             self.proto.processEnded(failure.Failure(e))
         except:
-            log.deferr()
+            log.err()
 
 
 class PTYProcess(abstract.FileDescriptor, styles.Ephemeral):
@@ -691,7 +691,7 @@ class PTYProcess(abstract.FileDescriptor, styles.Ephemeral):
         try:
             self.proto.makeConnection(self)
         except:
-            log.deferr()
+            log.err()
         registerReapProcessHandler(self.pid, self)
 
     def reapProcess(self):
@@ -714,7 +714,7 @@ class PTYProcess(abstract.FileDescriptor, styles.Ephemeral):
             else:
                 raise
         except:
-            log.deferr()
+            log.err()
             pid = None
         if pid:
             self.processEnded(status)
@@ -777,7 +777,7 @@ class PTYProcess(abstract.FileDescriptor, styles.Ephemeral):
                     e = error.ProcessDone(self.status)
                 self.proto.processEnded(failure.Failure(e))
             except:
-                log.deferr()
+                log.err()
 
     def connectionLost(self, reason):
         """I call this to clean up when one or all of my connections has died.
