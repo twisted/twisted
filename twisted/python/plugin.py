@@ -178,16 +178,19 @@ def getPluginFileList(debugInspection=None, showProgress=None):
                 continue
             incr = increments * (1.0 / len(subDirs))
             for plugindir in subDirs:
-                tmlname = join((d, plugindir, "plugins.tml"))
-                if seenNames.has_key(tmlname):
-                    debugInspection('Seen %s already' % tmlname)
+                if seenNames.has_key(plugindir):
+                    debugInspection('Seen %s already' % plugindir)
                     continue
-                seenNames[tmlname] = 1
-                if exists(tmlname):
-                    result.append(tmlname)
-                    debugInspection('Found ' + tmlname)
+                tmlname = join((d, plugindir, "plugins.tml"))
+                if isAModule(join((d,plugindir))):
+                    seenNames[plugindir] = 1
+                    if exists(tmlname):
+                        result.append(tmlname)
+                        debugInspection('Found ' + tmlname)
+                    else:
+                        debugInspection('Failed ' + tmlname)
                 else:
-                    debugInspection('Failed ' + tmlname)
+                    debugInspection('Not a module ' + tmlname)
                 progress = progress + incr
                 showProgress(progress)
 
@@ -312,5 +315,16 @@ def getPlugIns(plugInType, debugInspection=None, showProgress=None):
 
     tmlFiles = getPluginFileList(debugInspection, firstHalf)
     return loadPlugins(plugInType, tmlFiles, debugInspection, secondHalf)
+
+def isAModule(d):
+    """This function checks the directory for __init__ files.
+    """
+    suffixes = ['py', 'pyc', 'pyo', 'so', 'pyd', 'dll']
+    exists = os.path.exists
+    join = os.sep.join
+    for s in suffixes: # bad algorithm, but probably works
+        if exists(join((d,'__init__.%s' % s))):
+            return 1
+    return 0
 
 __all__ = ['PlugIn', 'DropIn', 'getPluginFileList', 'loadPlugins', 'getPlugIns']
