@@ -294,7 +294,6 @@ class Canana(Banana):
 
 Pynana = Banana
 
-# cBanana is currently out of sync with python Banana
 try:
     import cBanana
     cBanana.pyb1282int = b1282int
@@ -304,12 +303,16 @@ except ImportError:
 else:
     print 'using C banana'
     Banana = Canana
+
+
 # For use from the interactive interpreter
 _i = Banana()
 _i.connectionMade()
 _i._selectDialect("none")
 
+
 def encode(lst):
+    """Encode a list s-expression."""
     io = cStringIO.StringIO()
     _i.transport = io
     _i.sendEncoded(lst)
@@ -317,6 +320,7 @@ def encode(lst):
 
 
 def decode(st):
+    """Decode a banana-encoded string."""
     l=[]
     _i.expressionReceived = l.append
     _i.dataReceived(st)
