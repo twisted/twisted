@@ -149,7 +149,7 @@ For example::
         c=slice.pop(0)
         if hasattr(c, 'nodeValue') and c.nodeValue is not None:
             gathered_append(c.nodeValue)
-        slice=c.childNodes+slice
+        slice[:0]=c.childNodes
     return ''.join(gathered)
 
 class RawText(microdom.Text):
