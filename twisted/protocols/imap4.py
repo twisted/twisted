@@ -1689,7 +1689,9 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
             self.sendNegativeResponse(tag, 'No such mailbox: ' + mailbox)
         else:
             maybeDeferred(self.mbox.fetch, messages, uid
-                ).addCallbacks(self.__cbCopy, self.__ebCopy, (tag, mbox), None, (tag,),
+                ).addCallback(self.__cbCopy, tag, mbox
+                ).addCallback(self.__cbCopied, tag, mbox
+                ).addErrback(self.__ebCopy, tag
                 )
 
     select_COPY = (do_COPY, arg_seqset, arg_astring)
@@ -1700,23 +1702,28 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
         addedIDs = []
         failures = []
         for (id, msg) in messages:
-            body = msg.getMessageFile()
             flags = msg.getFlags()
             date = msg.getInternalDate()
-            try:
-                d = mbox.addMessage(body, flags, date)
-            except Exception, e:
-                log.err()
-                failures.append(e)
-            else:
-                if isinstance(d, defer.Deferred):
-                    addedDeferreds.append(d)
-                else:
-                    addedIDs.append(d)
-        d = defer.DeferredList(addedDeferreds)
-        d.addCallback(self.__cbCopied, addedIDs, failures, tag, mbox)
 
-    def __cbCopied(self, deferredIds, ids, failures, tag, mbox):
+            body = IMessageFile(msg, default=None)
+            if body is not None:
+                bodyFile = body.open()
+                d = maybeDeferred(mbox.addMessage, bodyFile, flags, date)
+            else:
+                def rewind(f):
+                    f.seek(0)
+                    return f
+                buffer = tempfile.TemporaryFile()
+                d = MessageProducer(msg, buffer
+                    ).beginProducing(None
+                    ).addCallback(lambda _, b=buffer, f=flags, d=date: mbox.addMessage(rewind(b), f, d)
+                    )
+            addedDeferreds.append(d)
+        return defer.DeferredList(addedDeferreds)
+
+    def __cbCopied(self, deferredIds, tag, mbox):
+        ids = []
+        failures = []
         for (status, result) in deferredIds:
             if status:
                 ids.append(result)

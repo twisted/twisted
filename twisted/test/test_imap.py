@@ -2170,7 +2170,77 @@ class FetchSearchStoreTestCase(unittest.TestCase, IMAP4HelperMixin):
         self.assertEquals(self.parts, self.server_received_parts)
         self.assertEquals(imap4.parseIdList(self.messages),
                           imap4.parseIdList(self.server_received_messages))
+
+
+class FakeMailbox:
+    def __init__(self):
+        self.args = []
+    def addMessage(self, body, flags, date):
+        self.args.append((body, flags, date))
+        return defer.succeed(None)
+
+class FeaturefulMessage:
+    __implements__ = imap4.IMessageFile,
     
+    def getFlags(self):
+        return 'flags'
+    
+    def getInternalDate(self):
+        return 'internaldate'
+    
+    def open(self):
+        return StringIO("open")
+
+class CopyWorkerTestCase(unittest.TestCase):
+    def testFeaturefulMessage(self):
+        s = imap4.IMAP4Server()
+        
+        # Yes.  I am grabbing this uber-non-public method to test it.
+        # It is complex.  It needs to be tested directly!
+        # Perhaps it should be refactored, simplified, or split up into
+        # not-so-private components, but that is a task for another day.
+        f = s._IMAP4Server__cbCopy
+
+        m = FakeMailbox()
+        d = f([(i, FeaturefulMessage()) for i in range(1, 11)], 'tag', m)
+        r = unittest.deferredResult(d)
+        
+        for a in m.args:
+            self.assertEquals(a[0].read(), "open")
+            self.assertEquals(a[1], "flags")
+            self.assertEquals(a[2], "internaldate")
+        
+        for (status, result) in r:
+            self.failUnless(status)
+            self.assertEquals(result, None)
+
+    def testUnfeaturefulMessage(self):
+        s = imap4.IMAP4Server()
+        
+        # See above comment
+        f = s._IMAP4Server__cbCopy
+        
+        m = FakeMailbox()
+        msgs = [FakeyMessage({'Header-Counter': str(i)}, (), 'Date', 'Body %d' % (i,), i + 10, None) for i in range(1, 11)]
+        d = f([im for im in zip(range(1, 11), msgs)], 'tag', m)
+        r = unittest.deferredResult(d)
+        
+        seen = []
+        for a in m.args:
+            seen.append(a[0].read())
+            self.assertEquals(a[1], ())
+            self.assertEquals(a[2], "Date")
+        
+        seen.sort()
+        exp = ["Header-Counter: %d\r\n\r\nBody %d" % (i, i) for i in range(1, 11)]
+        exp.sort()
+        self.assertEquals(seen, exp)
+        
+        for (status, result) in r:
+            self.failUnless(status)
+            self.assertEquals(result, None)
+        
+
 class TLSTestCase(IMAP4HelperMixin, unittest.TestCase):
     serverCTX = ServerTLSContext and ServerTLSContext()
     clientCTX = ClientTLSContext and ClientTLSContext()
