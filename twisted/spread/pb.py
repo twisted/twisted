@@ -176,7 +176,8 @@ class Perspective(passport.Perspective):
         try:
             state = apply(method, args, kw)
         except TypeError:
-            raise TypeError("%s didn't accept %s and %s" % (method, args, kw))
+            print ("%s didn't accept %s and %s" % (method, args, kw))
+            raise
         return broker.serialize(state, self, method, args, kw)
 
 
@@ -318,7 +319,8 @@ class Proxy(Referenced):
         try:
             state = apply(method, (self.perspective,)+args, kw)
         except TypeError:
-            raise TypeError("%s didn't accept %s and %s" % (method, args, kw))
+            print ("%s didn't accept %s and %s" % (method, args, kw))
+            raise
         rv = broker.serialize(state, self.perspective, method, args, kw)
         return rv
 
@@ -445,8 +447,8 @@ class Cache(Copy):
         try:
             state = apply(method, args, kw)
         except TypeError:
-            raise TypeError("%s didn't accept %s and %s" % (method, args, kw))
-
+            print ("%s didn't accept %s and %s" % (method, args, kw))
+            raise
         return broker.serialize(state, None, method, args, kw)
 
 copyTags = {}
