@@ -264,7 +264,7 @@ class RemoteReference(Serializable, styles.Ephemeral):
     def notifyOnDisconnect(self, callback):
         """Register a callback to be called if our broker gets disconnected.
 
-        This callback will be called with one method, this instance.
+        This callback will be called with one argument, this instance.
         """
         assert callable(callback)
         self.disconnectCallbacks.append(callback)
@@ -272,7 +272,7 @@ class RemoteReference(Serializable, styles.Ephemeral):
             self.broker.notifyOnDisconnect(self._disconnected)
 
     def dontNotifyOnDisconnect(self, callback):
-        """Register a callback to be called if our broker gets disconnected."""
+        """Remove a callback that was registered with notifyOnDisconnect."""
         self.disconnectCallbacks.remove(callback)
         if not self.disconnectCallbacks:
             self.broker.dontNotifyOnDisconnect(self._disconnected)
