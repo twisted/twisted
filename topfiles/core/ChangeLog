@@ -1,3 +1,9 @@
+2004-10-06  Itamar Shtull-Trauring  <itamar@itamarst.org>
+
+	* Transports: New TCP/SSL/etc. buffering algorithm. All writes are
+	now stored until next iteration before being written, and many
+	small writes are not expensive.
+
 2004-10-03  Jp Calderone  <exarkun@twistedmatrix.com>
 
 	* twisted/mail/pop3.py, twisted/mail/test/test_pop3client.py:

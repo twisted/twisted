@@ -43,7 +43,9 @@ class FileDescriptor(log.Logger, styles.Ephemeral):
         if not reactor:
             from twisted.internet import reactor
         self.reactor = reactor
-
+        self._tempDataBuffer = [] # will be added to dataBuffer in doWrite
+        self._tempDataLen = 0
+    
     def connectionLost(self, reason):
         """The connection was lost.
 
@@ -81,6 +83,9 @@ class FileDescriptor(log.Logger, styles.Ephemeral):
         there; a result of 0 implies no write was done, and a result of None
         indicates that a write was done.
         """
+        self.dataBuffer += "".join(self._tempDataBuffer)
+        self._tempDataBuffer = []
+        self._tempDataLen = 0
         # Send as much data as you can.
         if self.offset:
             l = self.writeSomeData(buffer(self.dataBuffer, self.offset))
@@ -131,16 +136,19 @@ class FileDescriptor(log.Logger, styles.Ephemeral):
         if not self.connected:
             return
         if data:
-            self.dataBuffer = self.dataBuffer + data
+            self._tempDataBuffer.append(data)
+            self._tempDataLen += len(data)
             if self.producer is not None:
-                if len(self.dataBuffer) > self.bufferSize:
+                if len(self.dataBuffer) + self._tempDataLen > self.bufferSize:
                     self.producerPaused = 1
                     self.producer.pauseProducing()
             self.startWriting()
 
     def writeSequence(self, iovec):
-        self.write("".join(iovec))
-
+        self._tempDataBuffer.extend(iovec)
+        for i in iovec:
+            self._tempDataLen += len(i)
+    
     def loseConnection(self):
         """Close the connection at the next available opportunity.
 

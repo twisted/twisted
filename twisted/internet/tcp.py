@@ -116,7 +116,7 @@ class _TLSMixin:
         if self.readBlockedOnWrite:
             self.readBlockedOnWrite = 0
             # XXX - This is touching internal guts bad bad bad
-            if not self.dataBuffer:
+            if not self.dataBuffer and not self._tempDataBuffer:
                 self.stopWriting()
             return self.doRead()
         return Connection.doWrite(self)
@@ -197,7 +197,10 @@ class Connection(abstract.FileDescriptor):
 
         def startTLS(self, ctx):
             assert not self.TLS
-            if self.dataBuffer:
+            if self.dataBuffer or self._tempDataBuffer:
+                self.dataBuffer += "".join(self._tempDataBuffer)
+                self._tempDataBuffer = []
+                self._tempDataLen = 0
                 written = self.writeSomeData(buffer(self.dataBuffer, self.offset))
                 offset = self.offset
                 dataLen = len(self.dataBuffer)
