@@ -1564,7 +1564,7 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
                 response.extend((D('RFC822.SIZE'), msg.getSize()))
             elif part.type == 'rfc822':
                 response.append(D('RFC822'))
-                response.extend(_wholeMessage(msg))
+                response.append(_wholeMessage(msg))
             elif part.type == 'uid':
                 seenUID = True
                 response.extend((D('UID'), msg.getUID()))
@@ -1586,7 +1586,7 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
                     response.extend((D(part), _formatHeaders(subMsg.getHeaders(True))))
                 elif part.empty:
                     response.append(D(part))
-                    response.extend(_wholeMessage(subMsg))
+                    response.append(_wholeMessage(subMsg))
                 else:
                     # Simplified bodystructure request
                     response.extend((D('BODY'), getBodyStructure(subMsg, False)))
@@ -3595,6 +3595,10 @@ class DontQuoteMe:
     def __str__(self):
         return str(self.value)
 
+class Coalesce:
+    def __init__(self, value):
+        self.value = value
+
 _ATOM_SPECIALS = '(){ %*"'
 def _needsQuote(s):
     if s == '':
@@ -3659,7 +3663,8 @@ def produceNestedLists(items):
     inserted into the output as a literal.  Integers will be converted to
     strings and inserted into the output unquoted.  Instances of
     C{DontQuoteMe} will be converted to strings and inserted into the output
-    unquoted.
+    unquoted.  Instances of C{Coalesce} will be treated as single entities
+    which must be sent as literals.
     
     This function used to be much nicer, and only quote things that really
     needed to be quoted (and C{DontQuoteMe} did not exist), however, many
@@ -3694,6 +3699,28 @@ def produceNestedLists(items):
             yield StringProducer(''.join(pieces))
             pieces = []
             yield FileProducer(i)
+        elif isinstance(i, Coalesce):
+            L = 0
+            for e in i.value:
+                if isinstance(e, types.StringType): 
+                    L += len(e)
+                else:
+                    b = e.tell()
+                    e.seek(0, 2)
+                    e = e.tell()
+                    e.seek(b, 0)
+                    L += (e - b)
+            pieces.extend((' ', '{%d}%s' % (L, IMAP4Server.delimiter)))
+            if top:
+                top = False
+                pieces.pop(0)
+            yield StringProducer(''.join(pieces))
+            pieces = []
+            for e in i.value:
+                if isinstance(e, types.StringType): 
+                    yield StringProducer(e)
+                else:
+                    yield FileProducer(e)
         else:
             if pieces and top:
                 top = False
@@ -4497,7 +4524,7 @@ def _formatHeaders(headers, order=None):
     return hdrs
 
 def _wholeMessage(msg):
-    parts = [_formatHeaders(msg.getHeaders(True)), '\r\n']
+    parts = [_formatHeaders(msg.getHeaders(True))]
     try:
         while True:
             submsg = msg.getSubPart(len(parts))
@@ -4508,8 +4535,7 @@ def _wholeMessage(msg):
     except IndexError:
         # Got all the parts
         pass
-    parts.append('\r\n')
-    return parts
+    return Coalesce(parts)
 
 class _FetchParser:
     class Envelope:
