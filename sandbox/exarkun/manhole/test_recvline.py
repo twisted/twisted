@@ -391,8 +391,9 @@ class _TelnetMixin(_BaseMixin):
         self.serverTransport.clearBuffer()
 
 import demo_stdio
+from twisted.test.test_process import SignalMixin
 
-class _StdioMixin(_BaseMixin):
+class _StdioMixin(_BaseMixin, SignalMixin):
     def setUp(self):
         from twisted.internet import reactor
         recvlineClient = helper.TerminalBuffer()
@@ -403,7 +404,8 @@ class _StdioMixin(_BaseMixin):
         module = demo_stdio.__file__
         args = ["python2.3", module, reflect.qual(self.serverProtocol)]
         env = {"PYTHONPATH": os.environ.get("PYTHONPATH", "")}
-        clientTransport = reactor.spawnProcess(processClient, exe, args, env=env)
+        clientTransport = reactor.spawnProcess(processClient, exe, args,
+                                               env=env, usePTY=True)
 
         if processClient.onConnection is not None:
             unittest.deferredResult(processClient.onConnection)
@@ -421,7 +423,7 @@ class _StdioMixin(_BaseMixin):
     def _emptyBuffers(self):
         # Duuh... I dunno
         from twisted.internet import reactor
-        for i in range(100):
+        for i in range(1000):
             reactor.iterate(0.01)
 
 class RecvlineLoopbackMixin:

@@ -2,7 +2,7 @@
 import tty, sys, termios
 
 from twisted.internet import reactor, stdio, protocol, defer
-from twisted.python import failure
+from twisted.python import failure, reflect
 
 from insults import ServerProtocol
 from stdio import ConsoleManhole
@@ -21,14 +21,13 @@ class TerminalProcessProtocol(protocol.ProcessProtocol):
         self.onConnection = None
 
     def write(self, bytes):
+        print repr(bytes)
         self.transport.write(bytes)
 
     def outReceived(self, bytes):
-        print 'rar bytes', bytes
         self.proto.dataReceived(bytes)
 
     def errReceived(self, bytes):
-        print 'crap crap crap', repr(bytes)
         self.transport.loseConnection()
         if self.proto is not None:
             self.proto.connectionLost(failure.Failure(UnexpectedOutputError(bytes)))
@@ -57,7 +56,6 @@ def main(argv=None):
         klass = reflect.namedClass(argv[0])
     else:
         klass = ConsoleManhole
-    print 'Starting', klass
     runWithProtocol(klass)
 
 if __name__ == '__main__':
