@@ -17,12 +17,13 @@
 
 from __future__ import nested_scopes
 
-__version__ = "$Revision: 1.14 $"[11:-2]
+__version__ = "$Revision: 1.15 $"[11:-2]
 
 from twisted.python import reflect
 from twisted.trial import unittest, reporter, util, runner
 from StringIO import StringIO
 import sys
+import os
 
 class TestTraceback(unittest.TestCase):
     def testExtractTB(self):
@@ -321,3 +322,12 @@ class TestTests(unittest.TestCase):
                 reporter.stop()
                 raise
             
+class UtilityTestCase(unittest.TestCase):
+    def testMktmp(self):
+        tmp = self.mktemp()
+        exp = os.path.join('twisted.test.test_trial', 'UtilityTestCase', 'testMktmp')
+        self.failUnless(os.path.exists(exp))
+        self.failUnless(os.path.isdir(exp))
+
+        
+

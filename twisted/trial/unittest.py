@@ -127,7 +127,13 @@ class TestCase:
     def assertApproximates(self, first, second, tolerance, msg=None):
         if abs(first - second) > tolerance:
             raise FailTest, (msg or "%s ~== %s" % (first, second))
-
+    
+    # Utility method for creating temporary names
+    def mktemp(self):
+        cls = self.__class__
+        base = os.path.join(cls.__module__, cls.__name__, self.caseMethodName)
+        os.makedirs(base)
+        return os.path.join(base, str(len(os.listdir(base)) + 1))
 
 # components.registerAdapter(runner.TestClassRunner, TestCase, runner.ITestRunner)
 
