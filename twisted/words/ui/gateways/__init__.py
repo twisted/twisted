@@ -26,8 +26,7 @@ g={}
 for f in l:
     if f[:8]=="__init__":
         pass
-    elif f[-3:]==".py" and not g.has_key(f[:-3]):
-            g[f[:-3]]=__import__("twisted.words.ui.gateways."+f[:-3],{},{},["foo"])
-    elif f[-4:]==".pyc" and not g.has_key(f[:-4]):
-            g[f[:-4]]=__import__("twisted.words.ui.gateways."+f[:-4],{},{},["foo"])
+    elif f[-3:]==".py":
+           i=__import__("twisted.words.ui.gateways."+f[:-3],{},{},["foo"])
+           g[i.shortName]=i
 __gateways__=g

@@ -16,7 +16,7 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
 from Tkinter import *
-
+from tkSimpleDialog import _QueryString
 from twisted.spread import pb
 from twisted.internet import tcp
 from twisted import copyright
@@ -26,6 +26,35 @@ import string
 #normalFont = Font("-adobe-courier-medium-r-normal-*-*-120-*-*-m-*-iso8859-1")
 #boldFont = Font("-adobe-courier-bold-r-normal-*-*-120-*-*-m-*-iso8859-1")
 #errorFont = Font("-adobe-courier-medium-o-normal-*-*-120-*-*-m-*-iso8859-1")
+
+class _QueryPassword(_QueryString):
+    def body(self, master):
+
+        w = Label(master, text=self.prompt, justify=LEFT)
+        w.grid(row=0, padx=5, sticky=W)
+
+        self.entry = Entry(master, name="entry",show="*")
+        self.entry.grid(row=1, padx=5, sticky=W+E)
+
+        if self.initialvalue:
+            self.entry.insert(0, self.initialvalue)
+            self.entry.select_range(0, END)
+
+        return self.entry    
+
+def askpassword(title, prompt, **kw):
+    '''get a password from the user
+
+    Arguments:
+
+        title -- the dialog title
+        prompt -- the label text
+        **kw -- see SimpleDialog class
+
+    Return value is a string
+    '''
+    d = apply(_QueryPassword, (title, prompt), kw)
+    return d.result
 
 def grid_setexpand(widget):
     cols,rows=widget.grid_size()
@@ -46,6 +75,7 @@ class CList(Frame):
             box.grid(column=i,row=1,sticky=N+E+S+W)
             self.lists.append(box)
         grid_setexpand(self)
+        self.rowconfigure(0,weight=0)
         self._callall("bind",'<Button-1>',self.Button1)
         self._callall("bind",'<B1-Motion>',self.Button1)
         self.bind('<Up>',self.UpKey)
@@ -56,13 +86,14 @@ class CList(Frame):
         for l in self.lists:
             func=getattr(l,funcname)
             ret=apply(func,args,kw)
-            if ret: rets.append(ret)
+            if ret!=None: rets.append(ret)
         if rets: return rets
         
     def Button1(self,e):
         index=self.nearest(e.y)
         self.select_clear(0,END)
         self.select_set(index)
+        self.activate(index)
         return "break"
 
     def UpKey(self,e):
@@ -92,7 +123,16 @@ class CList(Frame):
         apply(self._callall,("delete",)+args)
 
     def get(self,*args):
-        return apply(self._callall,("get",)+args)
+        bad=apply(self._callall,("get",)+args)
+        if len(args)==1:
+            return bad
+        ret=[] 
+        for i in range(len(bad[0])):
+            r=[]
+            for j in range(len(bad)):
+                r.append(bad[j][i])
+            ret.append(r)
+        return ret 
 
     def index(self,index):
         return self.lists[0].index(index)

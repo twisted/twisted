@@ -29,31 +29,44 @@ class makeConnection:
     def __init__(self,im,server=None,port=None,username=None,password=None,service=None):
         self.im=im
         self.service=service
-        self.ref=WordsGateway(im,username)
+        self.username=username
+        self.attached=0
+        self.ref=WordsGateway(username)
         b=pb.Broker()
         b.requestIdentity(username,password,callback=self.gotIdentity,errback=self.connectionFailed)
         b.notifyOnDisconnect(self.connectionLost)
         tcp.Client(server,int(port),b)
+        self.connected=1
 
     def connectionFailed(self,tb):
-        im.connectionFailed(self.ref.name,"Could not connect to host!\n"+tb)
-    
+        if self.connected:
+            self.im.connectionFailed(self.ref,"Could not connect to host!\n"+tb)
+            if self.attached:
+                self.im.detachGateway(self)
+        self.connected=0
+
     def connectionLost(self):
-        im.connectionLost(self.ref.name,"Connection lost.")
-        
+        if self.connected:
+            self.im.connectionLost(self.ref,"Connection lost.")
+            if self.attached:
+                self.im.detachGateway(self)
+        self.connected=0
+    
     def gotIdentity(self,identity):
         identity.attach(self.service,self.username,self.ref,pbcallback=self.pbCallback)
 
     def pbCallback(self,perspective):
-        self.ref.connected(perspective)
         self.im.attachGateway(self.ref)
+        self.ref.connected(perspective)
+        self.attached=1
         
 class WordsGateway(gateway.Gateway,pb.Referenced):
     """This is the interface between IM and a twisted.words service
     """
-    protocol="Words"
-    def __init__(self,im,username):
-        gateway.Gateway.__init__(self,im)
+    protocol=shortName
+
+    def __init__(self,username):
+        gateway.Gateway.__init__(self)
         self.username=username
         self.name="%s (%s)"%(self.username,self.protocol)
         self._connected=0

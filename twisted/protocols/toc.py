@@ -809,7 +809,7 @@ class TOCClient(protocol.Protocol):
         ERROR:<error code>:<misc. data>
         """
         code,args=data[0],data[1:]
-        SELF.HEAReRROR(INT(CODE),args)
+        self.hearError(int(code),args)
     def tocEVILED(self,data):
         """
         EVILED:<current warning level>:<user who warned us>

@@ -20,19 +20,19 @@ from twisted.internet import tcp
 from twisted.words.ui import gateway
 import string,re
 
-loginOptions=[["Nickname","username","my_screen_name"],["Password","password","my_password"],["Hostname","server","toc.oscar.aol.com"],["Port #","port","9898"]]
-
 shortName="TOC"
 longName="AOL Instant Messenger/TOC"
+
+loginOptions=[["Nickname","username","my_screen_name"],["Password","password","my_password"],["Hostname","server","toc.oscar.aol.com"],["Port #","port","9898"]]
 
 def makeConnection(im,server=None,port=None,**kwargs):
     try:
         port=int(port)
     except:
         pass
-    c=apply(TOCGateway,(im,),kwargs)
-    tcp.Client(server,port,c)
+    c=apply(TOCGateway,(),kwargs)
     im.attachGateway(c)
+    tcp.Client(server,port,c)
     
 def dehtml(text):
     text=re.sub('<.*?>','',text)
@@ -46,9 +46,10 @@ def dehtml(text):
 class TOCGateway(gateway.Gateway,toc.TOCClient):
     """This is the interface between IM and a TOC server
     """
-    protocol="TOC"
-    def __init__(self,im,username,password,*args,**kw):
-        gateway.Gateway.__init__(self,im)
+    protocol=shortName
+    
+    def __init__(self,username,password,*args,**kw):
+        gateway.Gateway.__init__(self)
         apply(toc.TOCClient.__init__,(self,username,password)+args,kw)
         self.name="%s (%s)"%(username,self.protocol)
         self._usermapping={}
@@ -59,10 +60,13 @@ class TOCGateway(gateway.Gateway,toc.TOCClient):
         pass
 
     def connectionFailed(self):
-        self.im.connectionFailed(self.name,"Connection Failed!")
+        self.im.connectionFailed(self,"Connection Failed!")
+        self.im.detachGateway(self)
 
     def connectionLost(self):
-        self.im.connectionLost(self.name,"Connection lost.")
+        self.im.connectionLost(self,"Connection lost.")
+        self.im.detachGateway(self)
+
     def gotConfig(self,mode,buddylist,permit,deny):
         users=[]
         for k in buddylist.keys():
@@ -155,7 +159,8 @@ class TOCGateway(gateway.Gateway,toc.TOCClient):
                 if self._chatmapping.has_key(toc.normalize(groupname)):del self._chatmapping[toc.normalize(groupname)]
 
     def getGroupMembers(self,groupname):
-        self.receiveGroupMembers([],groupname)
+        #self.receiveGroupMembers([],groupname)
+        pass
         
     def directMessage(self,user,message):
         self.say(user,message)
