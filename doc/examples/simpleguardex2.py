@@ -25,9 +25,8 @@ class HaHa(resource.Resource):
 
 checker = checkers.InMemoryUsernamePasswordDatabaseDontUse()
 checker.addUser("bob", "12345")
-anon = checkers.AllowAnonymousAccess()
 
 reactor.listenTCP(8889, server.Site(
-      simpleguard.guardResource(SimpleResource(), [checker, anon],
+      simpleguard.guardResource(SimpleResource(), [checker],
                                 nonauthenticated=HaHa())))
 reactor.run()

@@ -27,7 +27,7 @@ If you need
 you need to use twisted.web.woven.guard directly.
 """
 
-from twisted.cred import portal
+from twisted.cred import portal, checkers as checkerslib
 from twisted.web import resource, util
 from twisted.web.woven import guard
 
@@ -84,7 +84,7 @@ def parentRedirect(_):
 def guardResource(resource, checkers, callback=parentRedirect, errback=None,
                   nonauthenticated=None):
     myPortal = portal.Portal(MarkingRealm(resource, nonauthenticated))
-    for checker in checkers:
+    for checker in checkers+[checkerslib.AllowAnonymousAccess()]:
         myPortal.registerChecker(checker)
     un = guard.UsernamePasswordWrapper(myPortal,
                                        callback=callback, errback=errback)

@@ -20,8 +20,7 @@ class SimpleResource(resource.Resource):
 
 checker = checkers.InMemoryUsernamePasswordDatabaseDontUse()
 checker.addUser("bob", "12345")
-anon = checkers.AllowAnonymousAccess()
 
 reactor.listenTCP(8889, server.Site(
-      resource = simpleguard.guardResource(SimpleResource(), [checker, anon])))
+      resource = simpleguard.guardResource(SimpleResource(), [checker])))
 reactor.run()
