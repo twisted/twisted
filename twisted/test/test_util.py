@@ -61,13 +61,15 @@ class GetPasswordTest(unittest.TestCase):
         """Making sure getPassword accepts a password from standard input.
         """
         script = "from twisted.test import test_util; print test_util.reversePassword()"
-        cmd_in, cmd_out = os.popen2("%(python)s -c '%(script)s'" %
-                                   {'python': sys.executable,
-                                    'script': script}, 'rw')
+        cmd_in, cmd_out, cmd_err = os.popen3("%(python)s -c '%(script)s'" %
+                                             {'python': sys.executable,
+                                              'script': script}, 'rw')
         cmd_in.write("secret\n")
         cmd_in.close()
         # stripping print's trailing newline.
         secret = cmd_out.read()[:-1]
+        errors = cmd_err.read()
+        self.failIf(errors, errors)
         # The reversing trick it so make sure that there's not some weird echo
         # thing just sending back what we type in.
         self.failUnlessEqual(reverseString(secret), "secret")
