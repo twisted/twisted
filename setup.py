@@ -22,7 +22,7 @@ Package installer for Twisted
 Copyright (C) 2001 Matthew W. Lefkowitz
 All rights reserved, see LICENSE for details.
 
-$Id: setup.py,v 1.97 2003/01/29 22:13:53 itamarst Exp $
+$Id: setup.py,v 1.98 2003/01/30 06:54:30 moshez Exp $
 """
 
 import distutils, os, sys, string
@@ -225,6 +225,7 @@ http://starship.python.net/crew/mhammond/win32/Downloads.html
         "twisted.spread.ui",
         "twisted.tap",
         "twisted.test",
+        "twisted.test.interactive",
         "twisted.trial",
         "twisted.web",
         "twisted.web.woven",
