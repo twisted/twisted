@@ -131,6 +131,8 @@ def loadMimeTypes(mimetype_locations=['/etc/mime.types']):
             '.tgz':   'application/x-gtar',
             '.wml':   'text/vnd.wap.wml',
             '.xul':   'application/vnd.mozilla.xul+xml',
+            '.py':    'text/plain',
+            '.patch': 'text/plain',
         }
     )
     # Users can override these mime-types by loading them out configuration
