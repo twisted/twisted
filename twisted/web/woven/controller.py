@@ -18,7 +18,7 @@
 
 from __future__ import nested_scopes
 
-__version__ = "$Revision: 1.51 $"[11:-2]
+__version__ = "$Revision: 1.52 $"[11:-2]
 
 import os
 import cgi
@@ -162,7 +162,8 @@ class Controller(resource.Resource):
         """
         This method is called when getChild cannot find a matching wchild_*
         method in the Controller. Override me if you wish to have dynamic
-        handling of child pages. Should return a Resource.
+        handling of child pages. Should return a Resource if appropriate.
+        Return None to indicate no resource found.
 
         @param name: The name of the child being requested.
         @type name: string
