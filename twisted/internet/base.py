@@ -14,8 +14,9 @@
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
-
 """Very basic functionality for a Reactor implementation.
+
+This module is stable.
 """
 
 import socket # needed only for sync-dns
@@ -388,3 +389,6 @@ class BCFactory(ClientFactory):
         self.connector = None
         self.protocol.connectionFailed()
         self.protocol = None
+
+
+__all__ = ["ReactorBase"]

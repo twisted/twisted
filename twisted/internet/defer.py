@@ -16,6 +16,10 @@
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
+"""Support for results that aren't immediately available.
+
+This module is stable.
+"""
 
 # Twisted imports
 from twisted.python import log, failure
@@ -337,4 +341,5 @@ class DeferredList(Deferred):
 SUCCESS = 1
 FAILURE = 0
 
-__all__ = ["Deferred", "DeferredList", "succeed", "fail", "FAILURE", "SUCCESS"]
+__all__ = ["Deferred", "DeferredList", "succeed", "fail", "FAILURE", "SUCCESS",
+           "AlreadyCalledError", "TimeoutError"]

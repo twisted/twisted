@@ -22,6 +22,7 @@ listeners or connectors are added)::
     from twisted.internet import pollreactor
     pollreactor.install()
 
+This module is stable.
 """
 
 # System imports
@@ -157,9 +158,11 @@ class PollReactor(default.PosixReactorBase):
     doIteration = doPoll
 
 
-__all__ = ["PollReactor"]
-
 def install():
+    """Install the poll() reactor."""
     p = PollReactor()
     import main
     main.installReactor(p)
+
+
+__all__ = ["PollReactor", "install"]

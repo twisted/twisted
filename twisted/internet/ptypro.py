@@ -15,6 +15,9 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
 """UNIX PTY Process management.
+
+This module is not stable, and may be merged into IReactorProcess API
+in the future.
 """
 
 # System Imports

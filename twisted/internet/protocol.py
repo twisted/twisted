@@ -19,6 +19,8 @@
 
 Start here if you are looking to write a new protocol implementation for
 Twisted.  The Protocol class contains some introductory material.
+
+This module is stable.
 """
 
 # Twisted Imports
@@ -363,3 +365,7 @@ class FileWrapper:
 
     def handleException(self):
         pass
+
+
+__all__ = ["Factory", "ClientFactory", "ReconnectingClientFactory",
+           "Protocol", "ProcessProtocol", "FileWrapper", "ServerFactory"]

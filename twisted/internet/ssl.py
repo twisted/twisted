@@ -17,6 +17,12 @@
 """SSL transport. Requires PyOpenSSL (http://pyopenssl.sf.net).
 
 SSL connections require a ContextFactory so they can create SSL contexts.
+End users should only use the ContextFactory classes directly - for SSL
+connections use the reactor.connectSSL/listenSSL and so on, as documented
+in IReactorSSL.
+
+This module is stable, but at some point should be split so reactor-specific
+classes are in a separate module.
 """
 
 # System imports
@@ -240,3 +246,5 @@ class Port(tcp.Port):
         except:
             log.deferr()
 
+
+__all__ = ["ContextFactory", "DefaultOpenSSLContextFactory", "ClientContextFactory"]

@@ -16,6 +16,10 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
 """A java implementation of a ``select'' loop.
+
+This implementation is very incomplete, and is rather buggy. This may be
+inherent in the fact that it uses threads - a java.nio reactor will
+someday hopefully provide better support.
 """
 
 # Twisted Imports

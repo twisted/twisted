@@ -22,6 +22,8 @@ listeners or connectors are added):
     | from twisted.internet import kqreactor
     | kqreactor.install()
 
+This module is stable.
+
 This reactor only works on FreeBSD and requires PyKQueue 1.3, which is
 available at:  http://people.freebsd.org/~dwhite/PyKQueue/
 

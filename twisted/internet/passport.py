@@ -16,13 +16,17 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
 """Authorization & authentication in Twisted.
+
+This module is for backwards compatability purposes only. Use twisted.cred
+instead.
 """
 
 # System Imports
 import md5
 import random
-from twisted.python import log
-log.msg( 'warning: twisted.internet.passport now obsolete.' )
+import warnings
+warnings.warn('twisted.internet.passport now obsolete, use twisted.cred')
+
 from twisted.cred.service import Service
 from twisted.cred.perspective import Perspective
 from twisted.cred.identity import Identity

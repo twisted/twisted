@@ -1,5 +1,5 @@
 # -*- Python -*-
-# $Id: default.py,v 1.38 2002/09/06 09:13:22 itamarst Exp $
+# $Id: default.py,v 1.39 2002/09/15 18:00:47 itamarst Exp $
 #
 # Twisted, the Framework of Your Internet
 # Copyright (C) 2001 Matthew W. Lefkowitz
@@ -18,6 +18,8 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
 """Default reactor base classes, and a select() based reactor.
+
+This module is stable.
 """
 
 from bisect import insort
@@ -551,12 +553,11 @@ class SelectReactor(PosixReactorBase):
         return readers
 
 
-
-
-
 def install():
-    # Replace 'main' methods with my own
-    """Configure the twisted mainloop to be run inside the gtk mainloop.
+    """Configure the twisted mainloop to be run using the select() reactor.
     """
     reactor = SelectReactor(1)
     main.installReactor(reactor)
+
+
+__all__ = ["install", "PosixReactorBase", "SelectReactor"]

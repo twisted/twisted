@@ -13,7 +13,10 @@
 # You should have received a copy of the GNU Lesser General Public
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+
 """Main `application' configuration and persistence support.
+
+This module is stable.
 """
 
 # System Imports
@@ -30,6 +33,7 @@ from twisted.python import log
 from twisted.persisted import styles, marmalade
 from twisted.python.runtime import platform
 from twisted.cred.authorizer import DefaultAuthorizer
+from twisted.python.reflect import Accessor
 
 # Sibling Imports
 import main, defer, error
@@ -87,8 +91,6 @@ class _AbstractServiceCollection:
         self.services[service.serviceName] = service
 
 
-
-from twisted.python.reflect import Accessor
 class ApplicationService(Accessor, styles.Versioned):
     """I am a service you can add to an application.
 
@@ -577,3 +579,6 @@ class Application(log.Logger, styles.Versioned,
 class PortCollection: pass
 
 class ServiceCollection: pass
+
+
+__all__ = ["ApplicationService", "MultiService", "Application"]

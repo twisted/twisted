@@ -24,6 +24,8 @@ To use::
     
 Use Twisted's APIs for running and stopping the event loop, don't use
 wxPython's methods.
+
+This module is stable.
 """
 
 # wxPython imports

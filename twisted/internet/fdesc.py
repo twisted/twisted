@@ -14,7 +14,10 @@
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
-"""Utility functions for dealing with POSIX file descriptors."""
+"""Utility functions for dealing with POSIX file descriptors.
+
+This module is stable.
+"""
 
 import sys
 import os
@@ -51,3 +54,6 @@ def readFromFD(fd, callback):
     if not output:
         return CONNECTION_LOST
     callback(output)
+
+
+__all__ = ["setNonBlocking", "readFromFD"]

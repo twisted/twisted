@@ -24,6 +24,8 @@ In order to use this support, simply do the following::
 
 Then use twisted.internet APIs as usual.  The other methods here are not
 intended to be called directly.
+
+This module is stable.
 """
 
 __all__ = ['install']

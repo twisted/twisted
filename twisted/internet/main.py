@@ -1,4 +1,3 @@
-
 # Twisted, the Framework of Your Internet
 # Copyright (C) 2001 Matthew W. Lefkowitz
 #
@@ -15,6 +14,11 @@
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
+"""Backwards compatability, and utility functions.
+
+In general, this module should not be used, other than by reactor authors
+who need to use the 'installReactor' method.
+"""
 
 # System Imports
 import socket
@@ -216,3 +220,6 @@ class Delayeds:
 _delayeds = Delayeds()
 addDelayed = _delayeds.addDelayed
 removeDelayed = _delayeds.removeDelayed
+
+
+__all__ = ["CONNECTION_LOST", "CONNECTION_DONE", "installReactor"]

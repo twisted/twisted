@@ -15,7 +15,6 @@
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
-
 """
 This module integrates Tkinter with twisted.internet's mainloop.
 """
@@ -32,3 +31,5 @@ def install(widget):
     reactor.startRunning() # I only support PosixReactorBase subclasses anyway
     widget.after(6, _doReactorIter, reactor, widget)
 
+
+__all__ = ["install"]

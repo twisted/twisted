@@ -17,6 +17,8 @@
 """Extended thread dispatching support.
 
 For basic support see reactor threading API docs.
+
+This module is stable.
 """
 
 # twisted imports
