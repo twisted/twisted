@@ -24,7 +24,7 @@ class ADBAPITestBase:
     openfun_called = {}
 
     def wait(self, d, timeout=10.0):
-        return unittest.wait(d)
+        return unittest.wait(d, timeout=timeout)
 
     def setUp(self):
         self.startDB()
@@ -161,7 +161,7 @@ class ReconnectTestBase:
     """Test the asynchronous DB-API code with reconnect."""
 
     def wait(self, d, timeout=10.0):
-        return unittest.wait(d)
+        return unittest.wait(d, timeout=timeout)
 
     def setUp(self):
         if self.good_sql is None:
