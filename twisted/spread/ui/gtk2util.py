@@ -84,7 +84,7 @@ class LoginDialog(GladeKeeper):
               'serviceName','perspectiveName']
 
     _widgets = ("hostEntry", "portEntry", "identityNameEntry", "passwordEntry",
-                "serviceNameEntry", "perspectiveNameEntry", "statusBar",
+                "perspectiveNameEntry", "statusBar",
                 "loginDialog")
 
     _advancedControls = ['perspectiveLabel', 'perspectiveNameEntry',
