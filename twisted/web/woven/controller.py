@@ -20,7 +20,10 @@ from __future__ import nested_scopes
 from twisted.python import log
 from twisted.python import components
 from twisted.web import resource
-from twisted.web.woven import interfaces
+from twisted.web.woven import interfaces, utils
+
+
+import warnings
 
 
 def controllerFactory(controllerClass):
@@ -40,11 +43,14 @@ class Controller(resource.Resource):
     """
 
     __implements__ = (interfaces.IController, resource.IResource)
-
+    setupStacks = 1
+    controllerLibraries = []
     def __init__(self, m, inputhandlers=None):
         resource.Resource.__init__(self)
         self.model = m
         self.subcontrollers = []
+        if self.setupStacks:
+            self.setupControllerStack()
         viewFactory = components.getAdapterClass(self.model.__class__, interfaces.IView, None)
         if viewFactory is not None:
             self.view = viewFactory(self.model, controller=self)
@@ -55,6 +61,44 @@ class Controller(resource.Resource):
             self._inputhandlers = inputhandlers
         self._valid = {}
         self._invalid = {}
+
+    def setupControllerStack(self):
+        self.controllerStack = utils.Stack([])
+        from twisted.web.woven import input
+        if input not in self.controllerLibraries:
+            self.controllerLibraries.append(input)
+        for library in self.controllerLibraries:
+            self.importControllerLibrary(library)
+        self.controllerStack.push(self)
+    
+    def importControllerLibrary(self, namespace):
+        if not hasattr(namespace, 'getSubcontroller'):
+            namespace.getSubcontroller = utils.createGetFunction(namespace)
+        self.controllerStack.push(namespace)
+
+    def getSubcontroller(self, request, node, model, controllerName):
+        controller = None
+        cm = getattr(self, 'wcfactory_' +
+                                    controllerName, None)
+        if cm is None:
+            cm = getattr(self, 'factory_' +
+                                         controllerName, None)
+            if cm is not None:
+                warnings.warn("factory_ methods are deprecated; please use "
+                              "wcfactory_ instead", DeprecationWarning)
+        if cm:
+            try:
+                controller = cm(request, node, model)
+            except TypeError:
+                warnings.warn("A Controller Factory takes "
+                              "(request, node, model) "
+                              "now instead of (model)", DeprecationWarning)
+                controller = controllerFactory(model)
+        return controller
+
+    def setSubcontrollerFactory(self, name, factory, setup=None):
+        setattr(self, "wcfactory_" + name, lambda request, node, m:
+                                                    factory(m))
 
     def setView(self, view):
         self.view = view
@@ -103,7 +147,7 @@ class Controller(resource.Resource):
             process[key.submodel] = value
         self.process(request, **process)
         from twisted.web.woven import view
-        view.doSendPage(v, d, request)
+        utils.doSendPage(v, d, request)
         #return view.View.render(self, request, block=0)
 
     def aggregateValid(self, request, input, data):
@@ -141,3 +185,4 @@ def registerControllerForModel(controller, model):
     components.registerAdapter(controller, model, interfaces.IController)
     if components.implements(controller, resource.IResource):
         components.registerAdapter(controller, model, resource.IResource)
+

@@ -70,7 +70,8 @@ class Widget(view.View):
           model.getData(). Otherwise the original object itself.
     """
 
-
+    # Don't do lots of work setting up my stacks; they will be passed to me
+    setupStacks = 0
     tagName = None
     def __init__(self, model = None, submodel = None, setup = None, controller = None):
         self.errorFactory = Error
@@ -827,19 +828,6 @@ class RawText(Widget):
 
 wvfactory_RawText = viewFactory(RawText)
 
-def getSubview(request, node, model, viewName):
-    """Get a sub-view from me.
-    """
-    if viewName == "None":
-        return DefaultWidget(model)
-    view = None
-    self = globals()
-
-    vm = self.get(viewName, None)
-    if vm:
-        view = vm(model)
-
-    return view
 
 
 view.registerViewForModel(Text, model.StringModel)

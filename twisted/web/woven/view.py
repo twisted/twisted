@@ -21,13 +21,14 @@ from __future__ import nested_scopes
 import interfaces
 import template
 import utils
+from utils import doSendPage, Stack
 import model
 
 # Twisted imports
 from twisted.internet import defer
 from twisted.python import components
 from twisted.python import log
-from twisted.web import resource, microdom, server
+from twisted.web import resource, microdom
 
 
 import warnings
@@ -43,96 +44,51 @@ def viewMethod(viewClass):
     return lambda self, request, node, model: viewClass(model)
 
 
-class IWovenLivePage(server.Session):
-    def getCurrentPage():
-        """Return the current page object contained in this session.
-        """
-
-    def setCurrentPage(page):
-        """Set the current page object contained in this session.
-        """
-
-class WovenLivePage:
-    currentPage = None
-    def getCurrentPage(self):
-        """Return the current page object contained in this session.
-        """
-        return self.currentPage
-
-    def setCurrentPage(self, page):
-        """Set the current page object contained in this session.
-        """
-        self.currentPage = page
-
-
-class Stack:
-    def __init__(self, stack=None):
-        if stack is None:
-            self.stack = []
-        else:
-            self.stack = stack
-    
-    def push(self, item):
-        self.stack.insert(0, item)
-    
-    def pop(self):
-        return self.stack.pop(0)
-    
-    def peek(self):
-        for x in self.stack:
-            if x is not None:
-                return x
-    
-    def poke(self, item):
-        self.stack[0] = item
-    
-    def clone(self):
-        return Stack(self.stack[:])
-
-    def __len__(self):
-        return len(self.stack)
-    
-    def __getitem__(self, item):
-        return self.stack[item]
-
-
-def doSendPage(self, d, request):
-    log.msg("Sending page!")
-    #sess = request.getSession(IWovenLivePage)
-    #if sess:
-    #    sess.setCurrentPage(self)
-    page = str(d.toxml())
-    request.write(page)
-    request.finish()
-    return page
-
-
 class View(template.DOMTemplate):
 
     __implements__ = (template.DOMTemplate.__implements__, interfaces.IView)
 
     wantsAllNotifications = 0
 
-    def __init__(self, m, templateFile=None, controller=None, doneCallback=None):
+    viewLibraries = []
+    setupStacks = 1
+    def __init__(self, m, templateFile=None, controller=None, doneCallback=None, modelStack=None, viewStack=None, controllerStack=None):
         """
         A view must be told what its model is, and may be told what its
         controller is, but can also look up its controller if none specified.
         """
         self.model = self.mainModel = model.adaptToIModel(m, None, None)
-        self.modelStack = Stack([self.model])
-        self.viewStack = Stack([self, widgets])
-        self.subviews = {}
-        self.currentId = 0
-        if controller:
-            self.controller = controller
-        else:
-            self.controller = self.controllerFactory(self.model)
-        self.controllerStack = Stack([self.controller, input])
-        if doneCallback is None:
-            self.doneCallback = doSendPage
-        else:
-            self.doneCallback = doneCallback
+        if self.setupStacks:
+            self.modelStack = Stack([self.model])
+            self.setupViewStack()
+            self.subviews = {}
+            self.currentId = 0
+            if controller:
+                self.controller = controller
+            else:
+                self.controller = self.controllerFactory(self.model)
+            if self.controller:
+                self.controllerStack = self.controller.controllerStack
+            else:
+                self.controllerStack = Stack([])
+            if doneCallback is None:
+                self.doneCallback = doSendPage
+            else:
+                self.doneCallback = doneCallback
         template.DOMTemplate.__init__(self, templateFile=templateFile)
+
+    def setupViewStack(self):
+        self.viewStack = Stack([])
+        if widgets not in self.viewLibraries:
+            self.viewLibraries.append(widgets)
+        for library in self.viewLibraries:
+            self.importViewLibrary(library)
+        self.viewStack.push(self)
+    
+    def importViewLibrary(self, namespace):
+        if not hasattr(namespace, 'getSubview'):
+            namespace.getSubview = utils.createGetFunction(namespace)
+        self.viewStack.push(namespace)
 
     def render(self, request, doneCallback=None, block=None):
         if doneCallback is not None:
@@ -174,6 +130,7 @@ class View(template.DOMTemplate):
 
     def setController(self, controller):
         self.controller = controller
+        self.controllerStack = controller.controllerStack
 
     def setNode(self, node):
         self.node = node
@@ -203,7 +160,6 @@ class View(template.DOMTemplate):
                     raise Exception("Node had a model=%s "
                                   "attribute, but the submodel was not "
                                   "found in %s." % (submodel, filter(lambda x: x, self.modelStack)))
-                    m = self.modelStack.peek()
         else:
             m = None
         self.modelStack.push(m)
@@ -236,30 +192,18 @@ class View(template.DOMTemplate):
                 warnings.warn("POTENTIAL ERROR: %s had a controller, but not a "
                               "'name' attribute." % node)
             for namespace in self.controllerStack:
-                controllerFactory = getattr(namespace, 'wcfactory_' +
-                                            controllerName, None)
-                if controllerFactory is not None:
+                if namespace is None:
+                    continue
+                controller = namespace.getSubcontroller(request, node, model, controllerName)
+                if controller is not None:
                     break
-                controllerFactory = getattr(namespace, 'factory_' +
-                                             controllerName, None)
-                if controllerFactory is not None:
-                    warnings.warn("factory_ methods are deprecated; please use "
-                                  "wcfactory_ instead", DeprecationWarning)
-                    break
-            if controllerFactory is None:
+            else:
                 raise NotImplementedError("You specified controller name %s on "
                                           "a node, but no factory_%s method "
                                           "was found in %s." % (controllerName,
                                                             controllerName,
                                                             filter(lambda x: x, self.controllerStack)
                                                             + [input]))
-            try:
-                controller = controllerFactory(request, node, model)
-            except TypeError:
-                warnings.warn("A Controller Factory takes "
-                              "(request, node, model) "
-                              "now instead of (model)", DeprecationWarning)
-                controller = controllerFactory(model)
         elif node.getAttribute("model"):
             # If no "controller" attribute was specified on the node, see if
             # there is a IController adapter registerred for the model.
@@ -277,7 +221,7 @@ class View(template.DOMTemplate):
         """
         view = None
         vm = getattr(self, 'wvfactory_' + viewName, None)
-        if not vm:
+        if vm is None:
             vm = getattr(self, 'factory_' + viewName, None)
             if vm is not None:
                 warnings.warn("factory_ methods are deprecated; please use "
@@ -318,8 +262,7 @@ class View(template.DOMTemplate):
                 view = namespace.getSubview(request, node, model, viewName)
                 if view is not None:
                     break
-            if view is None:
-
+            else:
                 raise NotImplementedError("You specified view name %s on a "
                                           "node, but no factory_%s method was "
                                           "found in %s." % (viewName,

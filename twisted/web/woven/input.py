@@ -47,7 +47,7 @@ class InputHandler(controller.Controller):
        page to display next, etc
     """
     invalidErrorText = "Error!"
-
+    setupStacks = 0
     def __init__(self, model, parent=None, check=None, commit = None, invalidErrorText = None, submodel=None):
         controller.Controller.__init__(self, model)
         self._check = check

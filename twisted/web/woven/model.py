@@ -18,6 +18,7 @@
 import types, weakref
 
 from twisted.python import components, reflect
+from twisted.internet import defer
 
 from twisted.web.woven import interfaces
 
@@ -340,7 +341,6 @@ class UnsafeObjectWrapper(ObjectWrapper):
         self.submodels = sm
         return sm
 
-from twisted.internet import defer
 
 try:
     components.registerAdapter(StringModel, types.StringType, interfaces.IModel)
