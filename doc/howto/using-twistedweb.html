@@ -280,7 +280,7 @@ name is desired, the <code>addHost</code> method should be called.</p>
 
 <pre class="python">
 from twisted.internet import app
-from twisted.web import static, server, vhost
+from twisted.web import static, server, vhost, script
 
 root = vhost.NameVirtualHost()
 
@@ -295,7 +295,7 @@ root.addHost("bar.com", static.File("/var/www/bar"))
 
 # The "baz" people want to use Resource Scripts in their web site
 baz = static.File("/var/www/baz")
-baz.processors = {'.rpy': ResourceScript}
+baz.processors = {'.rpy': script.ResourceScript}
 baz.ignoreExt('.rpy')
 root.addHost('baz', baz)
 
