@@ -26,8 +26,48 @@ from __future__ import nested_scopes
     the use of generators.  The basic idea of flow is that when ever
     you require data from a producer, you yield the producer.  If the
     producer is ready, then you can call producer.next() to fetch the
-    incoming data.  Otherwise, the underlying process will suspend the
-    operation to try again later.
+    incoming data.  Otherwise, the underlying controller will suspend
+    the operation to try again later.
+
+    For example, here is a simple 'printer' which consumes items
+    from its source by printing them.   Note that to get a new item,
+    it first yields the data source and then calls source.next()
+
+        from __future__ import generators
+        import flow
+        from twisted.internet import reactor, defer
+        
+        def printer(source):
+            source = flow.wrap(source)
+            while True:
+                yield source
+                print source.next()
+        
+        someFlowSource =  ["one", flow.Cooperate(1), "two"]
+
+        d = flow.Deferred(printer(someFlowSource))
+        d.addCallback(lambda _: reactor.stop())
+        reactor.run()
+   
+    In the example above, there are three objects imported from
+    the flow module:
+
+       flow.wrap        This converts many data sources such as lists,
+                        generators, and deferreds, into a special 
+                        instruction object, a Stage.   In this case,  
+                        a simple list is wrapped.
+     
+       flow.Deferred    This is a flow Controller, which executes the
+                        stage passed to it, aggregating all results into
+                        a list which is passed to the deferred's callback.
+                        In this case, the result list is empty, but the
+                        callback is used to stop the reactor after the
+                        printing has finished.
+
+       flow.Cooperate   This is a special instruction object, which is
+                        used by the flow Controller.  In this case, the
+                        the flow pauses for one second between 'one'
+                        and 'two'.
 
     Most classes in the flow module an Instruction, either a CallLater
     or a Stage.   A Stage instruction is used to wrap various sorts of
@@ -50,26 +90,28 @@ from __future__ import nested_scopes
     CallLater which handles the process of resuming flow for their 
     specific case.
 
-    Instruction
-       CallLater
-          Cooperate
-       Stage
-              # private stages (use flow.wrap)
-          _String
-          _List
-          _Iterable
-          _Deferred
-              # public stages
-          Zip
-          Concurrent
-             Merge
-          Block
-          Callback*
-          Threaded*
-    Controller
-        Deferred 
-        Block
-        Protocol
+        Instruction
+           CallLater
+              Cooperate
+           Stage
+                  # private stages (use flow.wrap)
+              _String
+              _List
+              _Iterable
+              _Deferred
+                  # public stages
+              Map
+                 Zip
+              Concurrent
+                 Merge
+              Block
+              Callback*
+              Threaded*
+        Controller
+            Deferred 
+            Block
+            Protocol
+
 """
 
 import time, types
@@ -166,7 +208,7 @@ class Stage(Instruction):
         one stage at a time.
 
              def someGenerator():
-                 iterable = SomeStage(..., SpamError, EggsError)
+                 iterable = SomeStage( ... , SpamError, EggsError)
                  while True:
                      yield iterable
                      result = iterable.next() 
@@ -278,23 +320,7 @@ class _String(Stage):
     """ Wrapper for a string object; don't create directly use flow.wrap
 
         This is probably the simplest stage of all.  It is a 
-        constant list of one item.   While it may not have much
-        pratical use, it is illustrative.
-
-            # necessary imports to make the world happy
-            from __future__ import generators
-            import flow
-            from twisted.internet import reactor
-            from twisted.python import util
-            
-            # your basic string producer
-            producer = "a string"
-
-            # print the production
-            d = flow.Deferred(producer)
-            d.addCallback(util.println)
-            d.addCallback(lambda _: reactor.stop())
-            reactor.run()
+        constant list of one item.   See wrap for an example.
 
     """
     def __init__(self, str):
@@ -310,23 +336,6 @@ class _List(Stage):
         A simple stage, which admits the usage of instructions,
         such as Cooperate() within the list.   This would be
         much simpler without logic to handle instructions.
-
-            from __future__ import generators
-            import flow
-            from twisted.internet import reactor
-            from twisted.python import util
-            
-            def iterable():
-                yield "one"
-                yield flow.Cooperate()
-                yield "two"
-            
-            d = flow.Deferred(iterable())
-            d.addCallback(util.println)
-            d.addCallback(lambda _: reactor.stop())
-            reactor.run()
-            for x in flow.Block(["one",flow.Cooperate(1),"two"]):
-                print x
 
     """
     def __init__(self, seq):
@@ -357,21 +366,6 @@ class _Iterable(Stage):
         All exceptions signal the end of the Stage.  StopIteration 
         means to stop without providing a result, while all other
         exceptions provide a Failure self.result followed by stoppage.
-
-            from __future__ import generators
-            import flow
-            from twisted.internet import reactor
-            from twisted.python import util
-            
-            def iterable():
-                yield "one"
-                yield flow.Cooperate()
-                yield "two"
-            
-            d = flow.Deferred(iterable())
-            d.addCallback(util.println)
-            d.addCallback(lambda _: reactor.stop())
-            reactor.run()
             
     """
     def __init__(self, iterable, *trap):
@@ -424,7 +418,6 @@ class _Deferred(Stage):
         deferred.addCallbacks(self._callback)
         self._cooperate  = _Deferred.Instruction(deferred)
         self._called     = False
-        self._fetched    = False
 
     def _callback(self, res):
         self._called = True
@@ -439,13 +432,51 @@ class _Deferred(Stage):
             return
         if not self._called:
             return self._cooperate
-        if self._fetched:
+        if self._called:
            self.stop = True
            return
-        self._fetched = True
 
 def wrap(obj, *trap):
-    """ Wraps various objects for use within a flow """
+    """ Wraps various objects for use within a flow
+
+        The following example illustrates many different
+        ways in which regular objects can be wrapped by
+        the flow module to behave in a cooperative manner.
+
+            # required imports
+            from __future__ import generators
+            import flow
+            from twisted.internet import reactor, defer
+            
+            # save this function, it is used everwhere
+            def printFlow(source):
+                def printer(source):
+                    source = flow.wrap(source)
+                    while True:
+                        yield source
+                        print source.next()
+                d = flow.Deferred(printer(source))
+                d.addCallback(lambda _: reactor.stop())
+                reactor.run()
+          
+            # constuct a flow from a string 
+            source = "string"
+            printFlow(source)
+
+            source = ["one",flow.Cooperate(1),"two"]
+            printFlow(source)
+
+            def source():
+                yield "aeye"
+                yield flow.Cooperate()
+                yield "capin"
+            printFlow(source)
+
+            source = defer.Deferred()
+            reactor.callLater(1, lambda: source.callback("howdy"))
+            printFlow(source)
+
+    """
     if isinstance(obj, Stage):
         if trap:
             # merge trap list
@@ -478,6 +509,32 @@ def wrap(obj, *trap):
 #
 # Public Stages
 # 
+
+class Filter(Stage):
+    """ flow equivalent to filter:  Filter(function, stage, ... )
+
+        Yield those elements from a stage for which a function
+        returns true.   If the function is None, the identity 
+        function is assumed, that is, all items yielded that are
+        false (zero or empty) are discarded.
+    """
+    def __init__(self, func, stage, *trap):
+        Stage.__init__(self, *trap)
+        self.func = func
+        self.stage = wrap(stage)
+
+    def _yield(self):
+        if self.results or self.stop or self.failure:
+            return
+        stage = self.stage
+        instruction = stage._yield()
+        if instruction:
+            return instruction
+        self.results.extend(filter(self.func,stage.results))
+        if stage.stop:
+            self.stop = 1
+        if stage.failure:
+            self.failure = stage.failure
 
 class Map(Stage):
     """ flow equivalent to map:  Map(function, stage, ... )
@@ -523,7 +580,7 @@ class Map(Stage):
             if curr.failure:
                 self.failure = curr.failure
                 return
-            self._index += 1
+            raise AssertionError("flow.Map ; no results, stop or failure?")
         if self._done:
             self.stop = 1
             return
@@ -640,7 +697,7 @@ class Merge(Stage):
 class Callback(Stage):
     """ Converts a single-thread push interface into a pull interface.
    
-        Once this stage is constructed, its callback, errback, and 
+        Once this stage is constructed, its result, errback, and 
         finish member variables may be called by a producer.   The
         results of which can be obtained by yielding the Callback and
         then calling next().   For example:
