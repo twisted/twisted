@@ -843,6 +843,7 @@ class FTPClient(basic.LineReceiver):
                 port = int(e)*256 + int(f)
 
                 class _Factory(ClientFactory):
+                    noisy = 0
                     def buildProtocol(self, ignored):
                         self.protocol.factory = self
                         return self.protocol
@@ -909,6 +910,7 @@ class FTPClient(basic.LineReceiver):
         
         # Start listening on a port
         class FTPDataPortFactory(ServerFactory):
+            noisy = 0
             def buildProtocol(self, connection):
                 # This is a bit hackish -- we already have a Protocol instance,
                 # so just return it instead of making a new one

@@ -52,6 +52,7 @@ class FTPClientTests(unittest.TestCase):
             client.makeConnection(FileWrapper(b))
             self.writeResponses(client, responses)
             f = Factory()
+            f.noisy = 0
             f.protocol = Protocol
             port = reactor.listenTCP(10*256 + 0, f)
             p = Protocol()
@@ -89,6 +90,7 @@ class FTPServerTests(unittest.TestCase):
         The FTP will serve files from the directory this module resides in.
         """
         self.serverFactory = ftp.FTPFactory()
+        self.serverFactory.noisy = 0
         import test_ftp         # Myself
         serverPath = os.path.dirname(test_ftp.__file__)
         self.serverFactory.root = serverPath
@@ -123,6 +125,7 @@ class FTPClientAndServerTests(FTPServerTests):
         # Connect
         client = ftp.FTPClient(passive=self.passive)
         factory = ClientFactory()
+        factory.noisy = 0
         factory.buildProtocol = lambda s, c=client: c
         reactor.connectTCP('localhost', FTP_PORT, factory)
 
@@ -155,6 +158,7 @@ class FTPClientAndServerTests(FTPServerTests):
         # Connect
         client = ftp.FTPClient(passive=self.passive)
         factory = ClientFactory()
+        factory.noisy = 0
         factory.buildProtocol = lambda s, c=client: c
         reactor.connectTCP('localhost', FTP_PORT, factory)
 
@@ -217,6 +221,7 @@ class FTPClientAndServerTests(FTPServerTests):
         d.addCallbacks(badResult, gotError, errbackArgs=(1,))
 
         factory = ClientFactory()
+        factory.noisy = 0
         factory.buildProtocol = lambda s,c=client: c
         reactor.connectTCP('localhost', FTP_PORT, factory)
         while None in errors and not self.callbackException:
