@@ -1,6 +1,14 @@
+2002-10-13  Moshe Zadka <moshez@twistedmatrix.com>
+
+	* twisted/internet/utils.py twisted/internet/process.py
+        twisted/internet/interfaces.py twisted/internet/default.py: Moved 
+	utility functions into twisted.internet.utils
+
 2002-10-12  Moshe Zadka <moshez@twistedmatrix.com>
 
-	* twisted/internet/process.py twisted/internet/interfaces.py twisted/internet/default.py: Add utility method to get output of programs.
+	* twisted/internet/process.py twisted/internet/interfaces.py 
+	twisted/internet/default.py: Add utility method to get output of
+	programs.
 
 2002-10-11  Itamar Shtull-Trauring  <itamarst@twistedmatrix.com>
 
