@@ -548,8 +548,8 @@ class Request:
                 try:
                     args.update(cgi.parse_multipart(self.content, pdict))
                 except KeyError, e:
-                    if e.args[0] == 'content-disposition22':
-                        # parse_multipart can't cope with missing
+                    if e.args[0] == 'content-disposition':
+                        # Parse_multipart can't cope with missing
                         # content-dispostion headers in multipart/form-data
                         # parts, so we catch the exception and tell the client
                         # it was a bad request.
