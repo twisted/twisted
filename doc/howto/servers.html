@@ -43,9 +43,9 @@
     points to itself. This lets every <code>Protocol</code> access,
     and possibly modify, the persistent configuration.</p>
 
-    <p>It is frequently needed to serve the same thing on two or
-    more different ports or network addresses. This is why the
-    Factory does not listen to connections, and in fact does not
+    <p>It is usually useful to be able to offer the same service on
+    multiple ports or network addresses. This is why the Factory
+    does not listen to connections, and in fact does not know
     know anything about the network. See <code
     class="API">twisted.internet.interfaces.IReactorTCP.listenTCP</code>,
     and the other <code>IReactor*.listen*</code> APIs for more
@@ -285,6 +285,7 @@ class LogfileFactory(Factory):
     <p>So, you know what factories are, and want to run the QOTD
     with configurable quote server, do you? No problems, here is an
     example.</p>
+
 <pre class="python">
 from twisted.internet.protocol import Factory, Protocol
 from twisted.internet import reactor

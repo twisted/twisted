@@ -56,6 +56,7 @@ from my.service import MyService, OtherService
 multiserv = MultiService("pb")
 # multiservice named "pb" to hold other services
 auth = DefaultAuthorizer()
+auth.setApplication(multiserv)
 # the authorizer for both of our other services
 myserv = MyService("my service", multiserv, auth)
 otherserv = OtherService("another service", multiserv, auth)

@@ -2,7 +2,9 @@
 basics
 book
 choosing-reactor
+clients
 coding-standard
+cred
 defer
 doc-standard
 domtemplate
@@ -17,6 +19,7 @@ options
 overview
 pb
 plugin
+process
 reactor-basics
 register
 roadmap

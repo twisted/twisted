@@ -384,27 +384,44 @@ useful functionality. </p>
 
 <pre class="shell">
 % mktap
-Usage::
+Usage:    mktap [options] &lt;command&gt; [command options]
 
-  mktap 'apptype' [application_options]
-  mktap --help 'apptype'
-
-'apptype' can be one of: web portforward toc coil words manhole im news socks <b>qotd</b> telnet parent sister ftp mail
 Options:
-  -x, --xml      Output as XML, rather than pickle.
-  -s, --source   Output as Python source-code (AOT format), rather than pickle.
+  -x, --xml      DEPRECATED: same as --type=xml
+  -s, --source   DEPRECATED: same as --type=source
+  -e, --encrypted  Encrypt file before writing
+  -p, --progress   Show progress of plugin loading
+  -d, --debug      Show debug information for plugin loading
   -u, --uid=     [default: 1000]
   -g, --gid=     [default: 1000]
-  -a, --append=  
+  -a, --append=  An existing .tap file to append the plugin to, rather than
+                 creating a new one.
+  -t, --type=    The output format to use; this can be 'pickle', 'xml', or
+                 'source'. [default: pickle]
       --help     display this message
-% mktap --help qotd
-Usage: mktap [options]
-Options:
-  -p, --port=    Port number to listen on for QOTD protocol. [default: 8007]
-  -s, --static=  A static quote to display. [default: An apple a day keeps the
-                 doctor away.]
-  -f, --file=    A fortune-format text file to read quotes from.
-      --help     
+Commands:
+    coil             A web-based configuration manager.
+    ftp              An FTP server.
+    im               A multi-protocol chat client.
+    inetd
+    issues           Bug reporting/tracking service.
+    mail             An email service.
+    manhole          An interactive remote debugger service.
+    news             News Server
+    parent           Parent service.
+    pinger           Zoot Pinger TAP builder module
+    ponger           Zoot Ponger TAP builder module
+    portforward      A simple port-forwarder.
+    <b>qotd             Example of a TAP builder module.</b>
+    sister           Sister service.
+    socks            A SOCKSv4 proxy service.
+    ssh
+    telnet           A simple, telnet-based remote debugging service.
+    toc              An AIM TOC service.
+    web              A general-purpose web server which can serve from a
+                     filesystem or application resource.
+    words            A chat service.
+    zoot             Zoot TAP builder module
 </pre>
 
 <p>Not only does our Options class get instantiated by <code
