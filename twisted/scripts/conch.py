@@ -208,10 +208,10 @@ def keepAlive():
     reactor.callLater(300, keepAlive)
 
 def stopConnection():
-    if options.remoteForwards:
-        for remotePort, hostport in options.remoteForwards:
-            log.msg('cancelling %s:%s' % (remotePort, hostport))
-            conn.cancelRemoteForwarding(remotePort)
+    remoteForwards = options.remoteForwards
+    for remotePort, hostport in remoteForwards:
+        log.msg('cancelling %s:%s' % (remotePort, hostport))
+        conn.cancelRemoteForwarding(remotePort)
     if not options['reconnect']:
         try:
             reactor.stop()
@@ -224,6 +224,10 @@ class SSHConnection(connection.SSHConnection):
         global conn
         conn = self
         self.remoteForwards = {}
+        if not isinstance(self, connection.SSHConnection):
+            # make these fall through
+            del self.__class__.requestRemoteForwarding
+            del self.__class__.cancelRemoteForwarding
         onConnect()
 
     def serviceStopped(self):
@@ -231,21 +235,35 @@ class SSHConnection(connection.SSHConnection):
 
     def requestRemoteForwarding(self, remotePort, hostport):
         data = forwarding.packGlobal_tcpip_forward(('0.0.0.0', remotePort))
-        self.sendGlobalRequest('tcpip-forward', data)
-        self.remoteForwards[remotePort] = hostport
+        d = self.sendGlobalRequest('tcpip-forward', data, 
+                                   wantReply=1)
         log.msg('requesting remote forwarding %s:%s' %(remotePort, hostport))
+        d.addCallback(self._cbRemoteForwarding, remotePort, hostport)
+        d.addErrback(self._ebRemoteForwarding, remotePort, hostport)
+
+    def _cbRemoteForwarding(self, result, remotePort, hostport):
+        log.msg('accepted remote forwarding %s:%s' % (remotePort, hostport))
+        self.remoteForwards[remotePort] = hostport
         log.msg(repr(self.remoteForwards))
+    
+    def _ebRemoteForwarding(self, f, remotePort, hostport):
+        log.msg('remote forwarding %s:%s failed' % (remotePort, hostport))
+        log.msg(f)
 
     def cancelRemoteForwarding(self, remotePort):
         data = forwarding.packGlobal_tcpip_forward(('0.0.0.0', remotePort))
         self.sendGlobalRequest('cancel-tcpip-forward', data)
         log.msg('cancelling remote forwarding %s' % remotePort)
-        del self.remoteForwards[remotePort]
+        try:
+            del self.remoteForwards[remotePort]
+        except:
+            pass
         log.msg(repr(self.remoteForwards))
 
     def channel_forwarded_tcpip(self, windowSize, maxPacket, data):
         remoteHP, origHP = forwarding.unpackOpen_forwarded_tcpip(data)
         log.msg(self.remoteForwards)
+        log.msg(remoteHP)
         if self.remoteForwards.has_key(remoteHP[1]):
             connectHP = self.remoteForwards[remoteHP[1]]
             log.msg('connect forwarding %s' % (connectHP,))
@@ -254,7 +272,7 @@ class SSHConnection(connection.SSHConnection):
                                             remoteMaxPacket = maxPacket,
                                             conn = self)
         else:
-            return connection.OPEN_CONNECT_FAILED, "don't know about that port"
+            raise ConchError(connection.OPEN_CONNECT_FAILED, "don't know about that port")
 
 #    def channel_auth_agent_openssh_com(self, windowSize, maxPacket, data):
 #        if options['agent'] and keyAgent:
@@ -360,12 +378,16 @@ class SSHSession(channel.SSHChannel):
     def eofReceived(self):
         log.msg('got eof')
         self.stdio.closeStdin()
+    
+    def closeReceived(self):
+        log.msg('remote side closed %s' % self)
+        self.conn.sendClose(self)
 
     def closed(self):
         global old
         log.msg('closed %s' % self)
         log.msg(repr(self.conn.channels))
-        if len(self.conn.channels) == 1 and not (options['noshell'] and not options['nocache']): # just us left
+        if len(self.conn.channels) == 0 and not (options['noshell'] and not options['nocache']): # just us left
             stopConnection()
         elif not options['nocache']: # fork into the background
             if os.fork():
@@ -411,7 +433,7 @@ class SSHListenClientForwardingChannel(forwarding.SSHListenClientForwardingChann
     def closed(self):
         forwarding.SSHListenClientForwardingChannel.closed(self)
         log.msg(repr(self.conn.channels))
-        if len(self.conn.channels) == 1 and not (options['noshell'] and not options['nocache']): # just us left
+        if len(self.conn.channels) == 0 and not (options['noshell'] and not options['nocache']): # just us left
             stopConnection()
 
 class SSHConnectForwardingChannel(forwarding.SSHConnectForwardingChannel):
@@ -419,7 +441,7 @@ class SSHConnectForwardingChannel(forwarding.SSHConnectForwardingChannel):
     def closed(self):
         forwarding.SSHConnectForwardingChannel.closed(self)
         log.msg(repr(self.conn.channels))
-        if len(self.conn.channels) == 1 and not (options['noshell'] and not options['nocache']): # just us left
+        if len(self.conn.channels) == 0 and not (options['noshell'] and not options['nocache']): # just us left
             stopConnection()
 
 def _leaveRawMode():

@@ -26,6 +26,11 @@ from error import ConchError
 from interfaces import ISession, ISFTPServer, ISFTPFile
 
 import struct, array, os, stat, time
+import fcntl, tty
+import pwd
+import pty
+import ttymodes
+import os
 
 class UnixSSHRealm:
     __implements__ = portal.IRealm
@@ -39,7 +44,6 @@ class UnixConchUser(ConchUser):
     def __init__(self, username):
         ConchUser.__init__(self)
         self.username = username
-        import pwd
         self.pwdData = pwd.getpwnam(self.username)
         self.listeners = {}  # dict mapping (interface, port) -> listener
         self.channelLookup.update(
@@ -128,7 +132,6 @@ class SSHSessionForUnixConchUser:
         self.ptyTuple = 0
 
     def getPty(self, term, windowSize, modes):
-        import pty
         self.environ['TERM'] = term
         self.winSize = windowSize
         self.modes = modes
@@ -138,7 +141,6 @@ class SSHSessionForUnixConchUser:
         self.ptyTuple = (master, slave, ttyname)
 
     def openShell(self, proto):
-        import fcntl, tty
         from twisted.internet import reactor
         if not self.ptyTuple: # we didn't get a pty-req
             log.msg('tried to get shell without pty, failing')
@@ -157,7 +159,7 @@ class SSHSessionForUnixConchUser:
                   shell, ['-', '-i'], self.environ, homeDir, uid, gid,
                    usePTY = self.ptyTuple)
         fcntl.ioctl(self.pty.fileno(), tty.TIOCSWINSZ, 
-                        struct.pack('4H', *self.winSize))
+                    struct.pack('4H', *self.winSize))
         if self.modes:
             self.setModes()
         self.oldWrite = proto.transport.write
@@ -182,7 +184,6 @@ class SSHSessionForUnixConchUser:
             if self.modes:
                 self.setModes()
         else:
-            import tty
             tty.setraw(self.pty.fileno(), tty.TCSANOW)
         self.avatar.conn.transport.transport.setTcpNoDelay(1)
 
@@ -199,7 +200,6 @@ class SSHSessionForUnixConchUser:
             os.seteuid(euid)
         
     def setModes(self):
-        import tty, ttymodes
         pty = self.pty
         attr = tty.tcgetattr(pty.fileno())
         for mode, modeValue in self.modes:
@@ -225,19 +225,22 @@ class SSHSessionForUnixConchUser:
 
     def closed(self):
         if self.pty:
-            import os
             self.pty.loseConnection()
             self.pty.signalProcess('HUP')
             if self.ptyTuple:
                 ttyGID = os.stat(self.ptyTuple[2])[5]
                 os.chown(self.ptyTuple[2], 0, ttyGID)
 
+    def windowChanged(self, winSize):
+        self.winSize = winSize
+        fcntl.ioctl(self.pty.fileno(), tty.TIOCSWINSZ, 
+                        struct.pack('4H', *self.winSize))
+
     def _writeHack(self, data):
         """
         Hack to send ignore messages when we aren't echoing.
         """
         if self.pty is not None:
-            import tty
             attr = tty.tcgetattr(self.pty.fileno())[3]
             if not attr & tty.ECHO and attr & tty.ICANON: # no echo
                 self.avatar.conn.transport.sendIgnore('\x00'*(8+len(data)))
@@ -274,7 +277,6 @@ class SFTPServerForUnixConchUser:
         }
 
     def _absPath(self, path):
-        import pwd
         uid, gid = self.avatar.getUserGroupId()
         home = pwd.getpwuid(uid)[5]
         return os.path.realpath(os.path.abspath(os.path.join(home, path)))

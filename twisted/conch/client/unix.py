@@ -35,17 +35,24 @@ class SSHUnixClientFactory(protocol.ClientFactory):
     def clientConnectionLost(self, connector, reason):
         if self.options['reconnect']:
             connector.connect()
-
-    def clientConnectionFailed(self, connector, reason):
-        try:
-            os.unlink(connector.transport.addr)
-        except:
-            pass
+        log.err(reason)
         if not self.d: return
         d = self.d
         self.d = None
         d.errback(reason)
-        #reactor.connectTCP(options['host'], options['port'], SSHClientFactory())
+      
+
+    def clientConnectionFailed(self, connector, reason):
+        #try:
+        #    os.unlink(connector.transport.addr)
+        #except:
+        #    pass
+        log.err(reason)
+        if not self.d: return
+        d = self.d
+        self.d = None
+        d.errback(reason)
+       #reactor.connectTCP(options['host'], options['port'], SSHClientFactory())
     
     def startedConnecting(self, connector):
         fd = connector.transport.fileno()
@@ -239,10 +246,15 @@ class SSHUnixClientProtocol(SSHUnixProtocol):
         channelID = lst[0]
         self.channels[channelID].eofReceived()
 
+    def msg_closeReceived(self, lst):
+        channelID = lst[0]
+        self.channels[channelID].closeReceived()
+
     def msg_closed(self, lst):
         channelID = lst[0]
-        self.channels[channelID].closed()
+        channel = self.channels[channelID]
         del self.channels[channelID]
+        channel.closed()
 
 class SSHUnixServerProtocol(SSHUnixProtocol):
 
@@ -273,7 +285,7 @@ class SSHUnixServerProtocol(SSHUnixProtocol):
         requestName, data, wantReply = lst
         d = self.conn.sendGlobalRequest(requestName, data, wantReply)
         if wantReply:
-            self.returnDeferred(d)
+            self.returnDeferredWire(d)
 
     def msg_openChannel(self, lst):
         name, windowSize, maxPacket, extra = lst
@@ -285,7 +297,7 @@ class SSHUnixServerProtocol(SSHUnixProtocol):
         cn, requestType, data, wantReply = lst
         if not self.haveChannel(cn):
             if wantReply:
-                self.returnDeferred(defer.fail(ConchError("no channel")))
+                self.returnDeferredWire(defer.fail(ConchError("no channel")))
         channel = self.getChannel(cn)
         d = self.conn.sendRequest(channel, requestType, data, wantReply)
         if wantReply:
@@ -349,6 +361,9 @@ class SSHUnixChannel(channel.SSHChannel):
 
     def eofReceived(self):
         self.unix.sendMessage('eofReceived', self.id)
+
+    def closeReceived(self):
+        self.unix.sendMessage('closeReceived', self.id)
 
     def closed(self):
         self.unix.sendMessage('closed', self.id)

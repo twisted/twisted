@@ -97,7 +97,7 @@ class SSHConnection(service.SSHService):
             log.msg('channel open failed')
             log.err(e)
             if isinstance(e, error.ConchError):
-                reason, textualInfo = e.data, e.args[0]
+                reason, textualInfo = e.args[0], e.data
             else:
                 reason = OPEN_CONNECT_FAILED
                 textualInfo = "unknown failure"
@@ -171,12 +171,13 @@ class SSHConnection(service.SSHService):
     def ssh_CHANNEL_CLOSE(self, packet):
         localChannel = struct.unpack('>L', packet[: 4])[0]
         channel = self.channels[localChannel]
+        channel.closeReceived()
         channel.remoteClosed = 1
         if channel.localClosed and channel.remoteClosed:
             del self.localToRemoteChannel[localChannel]
             del self.channels[localChannel]
             del self.channelsToRemoteChannel[channel]
-        channel.closed()
+            channel.closed()
 
     def ssh_CHANNEL_REQUEST(self, packet):
         localChannel = struct.unpack('>L', packet[: 4])[0]
@@ -340,10 +341,12 @@ class SSHConnection(service.SSHService):
             return # we're already closed
         self.transport.sendPacket(MSG_CHANNEL_CLOSE, struct.pack('>L', 
                                     self.channelsToRemoteChannel[channel]))
+        channel.localClosed = 1
         if channel.localClosed and channel.remoteClosed:
             del self.localToRemoteChannel[channel.id]
             del self.channels[channel.id]
             del self.channelsToRemoteChannel[channel]
+            channel.closed()
 
     # methods to override
     def getChannel(self, channelType, windowSize, maxPacket, data):

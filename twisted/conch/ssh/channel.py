@@ -129,9 +129,16 @@ class SSHChannel:
         """
         log.msg('channel %s remote eof'%self.id)
 
+    def closeReceived(self):
+        """
+        Called when the other side has closed the channel.
+        """
+        log.msg('channel %s remote close'%self.id)
+
     def closed(self):
         """
-        Called when the channel is closed.
+        Called when the channel is closed.  This means that both our side and
+        the remote side have closed the channel.
         """
         log.msg('channel %s closed'%self.id)
 
