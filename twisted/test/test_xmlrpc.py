@@ -87,7 +87,7 @@ class XMLRPCTestCase(unittest.TestCase):
                 reactor.iterate()
             l[0].trap(xmlrpc.Fault)
             self.assertEquals(l[0].value.faultCode, code)
-        log.flushErrors(RuntimeError)
+        log.flushErrors(RuntimeError, ValueError)
 
 
 if not xmlrpclib:

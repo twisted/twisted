@@ -133,9 +133,7 @@ class XMLRPC(resource.Resource):
     def _ebRender(self, failure):
         if isinstance(failure.value, Fault):
             return failure.value
-        # XXX - This causes bad things to happen
-        # XXX - But throwing away this information is bad
-        # log.err(failure)
+        log.err(failure)
         return Fault(self.FAILURE, "error")
         
     def _getFunction(self, functionPath):
