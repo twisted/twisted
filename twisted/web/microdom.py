@@ -599,8 +599,9 @@ class MicroDOMParser(XMLParser):
 
 
 def parse(readable, *args, **kwargs):
+    """Parse HTML or XML readable."""
     if not hasattr(readable, "read"):
-        readable = open(readable)
+        readable = open(readable, "rb")
     mdp = MicroDOMParser(*args, **kwargs)
     mdp.filename = getattr(readable, "name", "<xmlfile />")
     mdp.makeConnection(None)
@@ -641,6 +642,16 @@ def parseString(st, *args, **kw):
         # this isn't particularly ideal, but it does work.
         return parse(StringIO(st.encode('UTF-16')), *args, **kw)
     return parse(StringIO(st), *args, **kw)
+
+
+def parseXML(readable):
+    """Parse an XML readable object."""
+    return parse(readable, caseInsensitive=0, preserveCase=1)
+
+
+def parseXMLString(st):
+    """Parse an XML readable object."""
+    return parseString(st, caseInsensitive=0, preserveCase=1)
 
 
 # Utility
