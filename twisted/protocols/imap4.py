@@ -35,6 +35,7 @@ from __future__ import generators
 from twisted.protocols import basic
 from twisted.protocols import policies
 from twisted.internet import defer
+from twisted.internet import error
 from twisted.internet.defer import maybeDeferred
 from twisted.python import log, components, util, failure
 from twisted.cred import perspective
@@ -47,13 +48,11 @@ import twisted.cred.credentials
 
 import base64
 import binascii
-import operator
 import re
+import tempfile
 import string
 import time
 import types
-import rfc822
-import random
 import sys
 
 try:
@@ -866,11 +865,11 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
         try:
             uncoded = base64.decodestring(result)
         except binascii.Error:
-            raise error.Unauthorized("Malformed Response - not base64")
+            raise IllegalClientResponse("Malformed Response - not base64")
 
         parts = uncoded.split(None, 1)
         if len(parts) != 2:
-            raise error.Unauthorized("Malformed Response - wrong number of parts")
+            raise IllegalClientResponse("Malformed Response - wrong number of parts")
         chal.username = parts[0]
         chal.response = parts[1]
         self.portal.login(chal, None, IAccount).addCallbacks(
@@ -1278,7 +1277,7 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
         mailbox = self._parseMbox(mailbox)
         mbox = self.account.select(mailbox)
         if not mbox:
-            self.sendNegativeResponse(tag, 'No such mailbox: ' + parts[1])
+            self.sendNegativeResponse(tag, 'No such mailbox: ' + mailbox)
         else:
             maybeDeferred(
                 self.mbox.fetch, messages,
@@ -3039,9 +3038,6 @@ def collapseStrings(results):
     copy = []
     begun = None
     listsList = [isinstance(s, types.ListType) for s in results]
-
-#    if reduce(operator.add, listsList, 0) == 0:
-#        return splitQuoted(''.join(results))
 
     pred = lambda e: isinstance(e, types.TupleType)
     tran = {
