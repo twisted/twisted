@@ -22,7 +22,7 @@ Package installer for Twisted
 Copyright (C) 2001 Matthew W. Lefkowitz
 All rights reserved, see LICENSE for details.
 
-$Id: setup.py,v 1.125 2003/07/29 06:03:45 warner Exp $
+$Id: setup.py,v 1.126 2003/07/31 00:54:56 spiv Exp $
 """
 
 import distutils, os, sys, string
@@ -226,6 +226,7 @@ desktop environments, and your toaster.
         "twisted.persisted.journal",
         "twisted.popsicle",
         "twisted.protocols",
+        "twisted.protocols.jabber",
         "twisted.protocols.gps",
         "twisted.protocols.mice",
         "twisted.python",
