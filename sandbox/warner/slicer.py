@@ -6,12 +6,12 @@ from new import instance, instancemethod
 
 from twisted.python.failure import Failure
 from twisted.python.components import registerAdapter
+from zope.interface import implements
 from twisted.internet.defer import Deferred
 from twisted.python import log, reflect
 
 import tokens
-from tokens import Violation, BananaError, tokenNames, UnbananaFailure, \
-     ISlicer
+from tokens import Violation, BananaError, tokenNames, UnbananaFailure
 import schema
 
 def getInstanceState(inst):
@@ -24,10 +24,11 @@ def getInstanceState(inst):
     return state
 
 class BaseSlicer:
-    __implements__ = ISlicer,
+    implements(tokens.ISlicer)
+
     parent = None
     sendOpen = True
-    openindex = ()
+    opentype = ()
     trackReferences = False
 
     def __init__(self, obj):
@@ -42,41 +43,64 @@ class BaseSlicer:
         return self.parent.slicerForObject(obj)
     def slice(self, streamable, banana):
         # this is what makes us ISlicer
-        assert self.openindex
-        for o in self.openindex:
+        assert self.opentype
+        for o in self.opentype:
             yield o
         for t in self.sliceBody(streamable, banana):
             yield t
     def sliceBody(self, streamable, banana):
         raise NotImplementedError
-    def childAborted(self):
+    def childAborted(self, v):
         pass
 
     def describe(self):
         return "??"
 
 
+class ScopedSlicer(BaseSlicer):
+    """This Slicer provides a containing scope for referenceable things like
+    lists. The same list will not be serialized twice within this scope, but
+    it will not survive outside it."""
+
+    def __init__(self, obj):
+        BaseSlicer.__init__(self, obj)
+        self.references = {}
+
+    def registerReference(self, refid, obj):
+        # keep references here, not in the actual PBRootSlicer
+        self.references[id(obj)] = refid
+
+    def slicerForObject(self, obj):
+        # check for an object which was sent previously or has at least
+        # started sending
+        refid = self.references.get(id(obj), None)
+        if refid is not None:
+            return ReferenceSlicer(refid)
+        # otherwise go upstream
+        return self.parent.slicerForObject(obj)
+
+
 class UnicodeSlicer(BaseSlicer):
-    openindex = ("unicode",)
+    opentype = ("unicode",)
     def sliceBody(self, streamable, banana):
         yield self.obj.encode("UTF-8")
-registerAdapter(UnicodeSlicer, unicode, ISlicer)
+registerAdapter(UnicodeSlicer, unicode, tokens.ISlicer)
 
 class ListSlicer(BaseSlicer):
-    openindex = ("list",)
+    opentype = ("list",)
     trackReferences = True
 
     def sliceBody(self, streamable, banana):
         for i in self.obj:
             yield i
-registerAdapter(ListSlicer, list, ISlicer)
+registerAdapter(ListSlicer, list, tokens.ISlicer)
 
 class TupleSlicer(ListSlicer):
-    openindex = ("tuple",)
-registerAdapter(TupleSlicer, tuple, ISlicer)
+    opentype = ("tuple",)
+registerAdapter(TupleSlicer, tuple, tokens.ISlicer)
 
 class DictSlicer(BaseSlicer):
-    openindex = ('dict',)
+    opentype = ('dict',)
     trackReferences = True
     def sliceBody(self, streamable, banana):
         for key,value in self.obj.items():
@@ -92,19 +116,19 @@ class OrderedDictSlicer(DictSlicer):
             value = self.obj[key]
             yield key
             yield value
-registerAdapter(OrderedDictSlicer, dict, ISlicer)
+registerAdapter(OrderedDictSlicer, dict, tokens.ISlicer)
 
 class NoneSlicer(BaseSlicer):
-    openindex = ('none',)
+    opentype = ('none',)
     trackReferences = False
     def sliceBody(self, streamable, banana):
         # hmm, we need an empty generator. I think a sequence is the only way
         # to accomplish this, other than 'if 0: yield' or something silly
         return []
-registerAdapter(NoneSlicer, types.NoneType, ISlicer)
+registerAdapter(NoneSlicer, types.NoneType, tokens.ISlicer)
 
 class BooleanSlicer(BaseSlicer):
-    openindex = ('boolean',)
+    opentype = ('boolean',)
     trackReferences = False
     def sliceBody(self, streamable, banana):
         if self.obj:
@@ -114,14 +138,14 @@ class BooleanSlicer(BaseSlicer):
 
 try:
     from types import BooleanType
-    registerAdapter(BooleanSlicer, bool, ISlicer)
+    registerAdapter(BooleanSlicer, bool, tokens.ISlicer)
 except ImportError:
     pass
 
 
 class ReferenceSlicer(BaseSlicer):
     # this is created explicitly, not as an adapter
-    openindex = ('reference',)
+    opentype = ('reference',)
     trackReferences = False
 
     def __init__(self, refid):
@@ -132,15 +156,15 @@ class ReferenceSlicer(BaseSlicer):
 
 class VocabSlicer(OrderedDictSlicer):
     # this is created explicitly, but otherwise works just like a dictionary
-    openindex = ('vocab',)
+    opentype = ('vocab',)
     trackReferences = False
 
 
-# Extended types, not generally safe. The TrustingRoot checks for these with
-# a separate table.
+# Extended types, not generally safe. The UnsafeRootSlicer checks for these
+# with a separate table.
 
 class InstanceSlicer(OrderedDictSlicer):
-    openindex = ('instance',)
+    opentype = ('instance',)
     trackReferences = True
 
     def sliceBody(self, streamable, banana):
@@ -150,21 +174,21 @@ class InstanceSlicer(OrderedDictSlicer):
             yield t
 
 class ModuleSlicer(BaseSlicer):
-    openindex = ('module',)
+    opentype = ('module',)
     trackReferences = True
 
     def sliceBody(self, streamable, banana):
         yield self.obj.__name__
 
 class ClassSlicer(BaseSlicer):
-    openindex = ('class',)
+    opentype = ('class',)
     trackReferences = True
 
     def sliceBody(self, streamable, banana):
         yield reflect.qual(self.obj)
 
 class MethodSlicer(BaseSlicer):
-    openindex = ('method',)
+    opentype = ('method',)
     trackReferences = True
 
     def sliceBody(self, streamable, banana):
@@ -173,7 +197,7 @@ class MethodSlicer(BaseSlicer):
         yield self.obj.im_class
 
 class FunctionSlicer(BaseSlicer):
-    openindex = ('function',)
+    opentype = ('function',)
     trackReferences = True
 
     def sliceBody(self, streamable, banana):
@@ -181,8 +205,8 @@ class FunctionSlicer(BaseSlicer):
         fullname = str(whichmodule(self.obj, self.obj.__name__)) + '.' + name
         yield fullname
 
-ExtendedSlicerRegistry = {}
-ExtendedSlicerRegistry.update({
+UnsafeSlicerTable = {}
+UnsafeSlicerTable.update({
     types.InstanceType: InstanceSlicer,
     types.ModuleType: ModuleSlicer,
     types.ClassType: ClassSlicer,
@@ -192,181 +216,92 @@ ExtendedSlicerRegistry.update({
 
 
 class RootSlicer:
-    __implements__ = ISlicer,
-    deferred = None
+    implements(tokens.ISlicer)
+
+    producingDeferred = None
+    objectSentDeferred = None
     slicerTable = {}
+    debug = False
 
     def __init__(self, sendbanana):
         self.sendbanana = sendbanana
         self.sendQueue = []
-        self.references = {}
 
     def registerReference(self, refid, obj):
-        if self.sendbanana.debug:
-            print "registerReference[%d]=%s %s 0x%x" % (refid, obj, type(obj),
-                                                        id(obj))
-        self.references[id(obj)] = refid
+        pass
 
     def slicerForObject(self, obj):
-        if self.sendbanana.debug:
-            print "slicerForObject(0x%x)" % id(obj)
-        # check for an object which was sent previously or has at least
-        # started sending
-        refid = self.references.get(id(obj), None)
-        if refid is not None:
-            if self.sendbanana.debug:
-                print "found Reference[%d]" % refid
-            return ReferenceSlicer(refid)
         # could use a table here if you think it'd be faster than an
         # adapter lookup
+        if self.debug: print "slicerForObject(%s)" % type(obj)
+        # do the adapter lookup first, so that registered adapters override
+        # UnsafeSlicerTable's InstanceSlicer
+        slicer = tokens.ISlicer(obj, None)
+        if slicer:
+            return slicer
         slicerFactory = self.slicerTable.get(type(obj))
         if slicerFactory:
+            if self.debug: print " got slicerFactory", slicerFactory
             return slicerFactory(obj)
-        slicer = ISlicer(obj, None)
-        if not slicer:
-            raise Violation("cannot serialize %s (%s)" % (obj, type(obj)))
-        return slicer
+        raise Violation("cannot serialize %s (%s)" % (obj, type(obj)))
 
     def slice(self):
         return self
     def __iter__(self):
         return self # we are our own iterator
     def next(self):
+        if self.objectSentDeferred:
+            self.objectSentDeferred.callback(None)
+            self.objectSentDeferred = None
         if self.sendQueue:
-            return self.sendQueue.pop()
+            (obj, self.objectSentDeferred) = self.sendQueue.pop()
+            return obj
         if self.sendbanana.debug:
             print "LAST BAG"
-        self.deferred = Deferred()
-        return self.deferred
+        self.producingDeferred = Deferred()
+        return self.producingDeferred
+
+    def childAborted(self, v):
+        assert self.objectSentDeferred
+        self.objectSentDeferred.errback(v)
+        self.objectSentDeferred = None
 
     def send(self, obj):
-        # obj can also be a Slicer, say, a CallSlicer
+        # obj can also be a Slicer, say, a CallSlicer. We return a Deferred
+        # which fires when the object has been fully serialized.
         idle = (len(self.sendbanana.slicerStack) == 1) and not self.sendQueue
-        self.sendQueue.append(obj)
+        objectSentDeferred = Deferred()
+        self.sendQueue.append((obj, objectSentDeferred))
         if idle:
             # wake up
-            if self.deferred:
-                d = self.deferred
-                self.deferred = None
+            if self.producingDeferred:
+                d = self.producingDeferred
+                self.producingDeferred = None
+                # TODO: consider reactor.callLater(0, d.callback, None)
+                # I'm not sure it's actually necessary, though
                 d.callback(None)
+        return objectSentDeferred
 
-class TrustingRootSlicer(RootSlicer):
-    slicerTable = ExtendedSlicerRegistry
+class UnsafeRootSlicer(RootSlicer):
+    slicerTable = UnsafeSlicerTable
 
+class StorageRootSlicer(UnsafeRootSlicer):
+    # some pieces taken from ScopedSlicer
+    def __init__(self, sendbanana):
+        UnsafeRootSlicer.__init__(self, sendbanana)
+        self.references = {}
 
+    def registerReference(self, refid, obj):
+        self.references[id(obj)] = refid
 
-
-class IBananaUnslicer:
-    # .parent
-
-    # start/receiveChild/receiveClose/finish are
-    # the main "here are some tokens, make an object out of them" entry
-    # points used by Unbanana.
-
-    # start/receiveChild can call self.protocol.abandonUnslicer(failure,
-    # self) to tell the protocol that the unslicer has given up on life and
-    # all its remaining tokens should be discarded. The failure will be
-    # given to the late unslicer's parent in lieu of the object normally
-    # returned by receiveClose.
-    
-    # start/receiveChild/receiveClose/finish may raise a Violation
-    # exception, which tells the protocol that this object is contaminated
-    # and should be abandoned. An UnbananaFailure will be passed to its
-    # parent.
-
-    # Note, however, that it is not valid to both call abandonUnslicer *and*
-    # raise a Violation. That would discard too much.
-
-    def setConstraint(self, constraint):
-        """Add a constraint for this unslicer. The unslicer will enforce
-        this constraint upon all incoming data. The constraint must be of an
-        appropriate type (a ListUnslicer will only accept a ListConstraint,
-        etc.). It must not be None.
-
-        If this function is not called, the Unslicer will accept any valid
-        banana as input, which probably means there is no limit on the
-        number of bytes it will accept (and therefore on the memory it could
-        be made to consume) before it finally accepts or rejects the input.
-        """
-
-    def start(self, count):
-        """Called to initialize the new slice. The 'count' argument is the
-        reference id: if this object might be shared (and therefore the
-        target of a 'reference' token), it should call
-        self.protocol.setObject(count, obj) with the object being created.
-        If this object is not available yet (tuples), it should save a
-        Deferred there instead.
-        """
-
-    def checkToken(self, typebyte, size):
-        """Check to see if the given token is acceptable (does it conform to
-        the constraint?). It will not be asked about ABORT or CLOSE tokens,
-        but it *will* be asked about OPEN. It should enfore a length limit
-        for long tokens (STRING and LONGINT/LONGNEG types). If STRING is
-        acceptable, then VOCAB should be too. It should return None if the
-        token and the size are acceptable. Should raise Violation if the
-        schema indiates the token is not acceptable. Should raise
-        BananaError if the type byte violates the basic Banana protocol. (if
-        no schema is in effect, this should never raise Violation, but might
-        still raise BananaError).
-        """
-
-    def openerCheckToken(self, typebyte, size, opentype):
-        """'typebyte' is the type of an incoming index token. 'size' is the
-        value of header associated with this typebyte. 'opentype' is a list
-        of open tokens that we've received so far, not including the one
-        that this token hopes to create.
-
-        This method should ask the current opener if this index token is
-        acceptable, and is used in lieu of checkToken() when the receiver is
-        in the index phase. Usually implemented by calling
-        self.opener.openerCheckToken, thus delegating the question to the
-        RootUnslicer. """
-
-    def doOpen(self, opentype):
-        """opentype is a tuple. Return None if more index tokens are
-        required. Check to see if this kind of child object conforms to the
-        constraint, raise Violation if not. Create a new Unslicer (usually
-        by calling self.opener.doOpen, which delegates the
-        opentype-to-Unslicer mapping to the RootUnslicer). Set a constraint
-        on the child unslicer, if any. Set the child's .opener attribute
-        (usually to self.opener).
-        """
-
-    def receiveChild(self, childobject):
-        """'childobject' is being handed to this unslicer. It may be a
-        primitive type (number or string), or a composite type produced by
-        another Unslicer. It might be an UnbananaFailure if something went
-        wrong, in which case it may be appropriate to do
-        self.protocol.abandonUnslicer(failure, self). It might also be a
-        Deferred, in which case you should add a callback that will fill in
-        the appropriate object later."""
-
-    def receiveClose(self):
-        """Called when the Close token is received. Should return the object
-        just created, or an UnbananaFailure if something went wrong. If
-        necessary, unbanana.setObject should be called, then the Deferred
-        created in start() should be fired with the new object."""
-
-    def finish(self):
-        """Called when the unslicer is popped off the stack. This is called
-        even if the pop is because of an exception. The unslicer should
-        perform cleanup, including firing the Deferred with an
-        UnbananaFailure if the object it is creating could not be created.
-
-        TODO: can receiveClose and finish be merged? Or should the child
-        object be returned from finish() instead of receiveClose?
-        """
-
-    def describeSelf(self):
-        """Return a short string describing where in the object tree this
-        unslicer is sitting, relative to its parent. These strings are
-        obtained from every unslicer in the stack, and joined to describe
-        where any problems occurred."""
-
-    def where(self):
-        """This returns a string that describes the location of this
-        unslicer, starting at the root of the object tree."""
+    def slicerForObject(self, obj):
+        # check for an object which was sent previously or has at least
+        # started sending
+        refid = self.references.get(id(obj), None)
+        if refid is not None:
+            return ReferenceSlicer(refid)
+        # otherwise go upstream
+        return UnsafeRootSlicer.slicerForObject(self, obj)
 
 
 def setInstanceState(inst, state):
@@ -379,8 +314,10 @@ def setInstanceState(inst, state):
     return inst
 
 class BaseUnslicer:
+    implements(tokens.IUnslicer)
+
     def __init__(self):
-        self.opener = None # must be chained by our parent
+        pass
 
     def describeSelf(self):
         return "??"
@@ -398,36 +335,33 @@ class BaseUnslicer:
         return # no restrictions
 
     def openerCheckToken(self, typebyte, size, opentype):
-        return self.opener.openerCheckToken(typebyte, size, opentype)
+        return self.parent.openerCheckToken(typebyte, size, opentype)
 
     def open(self, opentype):
-        """Return an IBananaUnslicer object based upon the 'opentype' tuple.
+        """Return an IUnslicer object based upon the 'opentype' tuple.
+        Subclasses that wish to change the way opentypes are mapped to
+        Unslicers can do so by changing this behavior.
 
         This method does not apply constraints, it only serves to map
-        opentypes into Unslicers. Most subclasses will implement this by
-        delegating the request to their .opener (which usually points to the
+        opentype into Unslicer. Most subclasses will implement this by
+        delegating the request to their parent (and thus, eventually, to the
         RootUnslicer), and will set the new child's .opener attribute so
         that they can do the same. Subclasses that wish to change the way
         opentypes are mapped to Unslicers can do so by changing this
-        behavior.
-        """
+        behavior."""
 
-        unslicer = self.opener.open(opentype)
-        if unslicer:
-            unslicer.opener = self.opener
-        return unslicer
+        return self.parent.open(opentype)
 
-        
     def doOpen(self, opentype):
-        """Return an IBananaUnslicer object based upon the 'opentype' tuple.
-        This object will receive all tokens destined for the subnode.
+        """Return an IUnslicer object based upon the 'opentype' tuple. This
+        object will receive all tokens destined for the subnode. 
 
         If you want to enforce a constraint, you must override this method
         and do two things: make sure your constraint accepts the opentype,
         and set a per-item constraint on the new child unslicer.
 
-        This method calls self.open() to obtain the unslicer. That may
-        return None instead of a child unslicer if the opener wants a
+        This method gets the IUnslicer from our .open() method. That might
+        return None instead of a child unslicer if the they want a
         multi-token opentype tuple, so be sure to check for Noneness before
         adding a per-item constraint.
         """
@@ -489,10 +423,30 @@ class BaseUnslicer:
         print failure
         self.protocol.exploded = failure
 
+class ScopedUnslicer(BaseUnslicer):
+    """This Unslicer provides a containing scope for referenceable things
+    like lists. It corresponds to the ScopedSlicer base class."""
+
+    def __init__(self):
+        BaseUnslicer.__init__(self)
+        self.references = {}
+
+    def setObject(self, counter, obj):
+        if self.protocol.debug:
+            print "setObject(%s): %s{%s}" % (counter, obj, id(obj))
+        self.references[counter] = obj
+
+    def getObject(self, counter):
+        obj = self.references.get(counter)
+        if self.protocol.debug:
+            print "getObject(%s) -> %s{%s}" % (counter, obj, id(obj))
+        return obj
+
+
 class LeafUnslicer(BaseUnslicer):
     # inherit from this to reject any child nodes
 
-    # checkToken should reject OPEN tokens
+    # .checkToken in LeafUnslicer subclasses should reject OPEN tokens
 
     def doOpen(self, opentype):
         raise Violation("'%s' does not accept sub-objects" % self)
@@ -526,7 +480,6 @@ class UnicodeUnslicer(LeafUnslicer):
 class ListUnslicer(BaseUnslicer):
     maxLength = None
     itemConstraint = None
-    # .opener usually chains to RootUnslicer.opener
     debug = False
 
     def setConstraint(self, constraint):
@@ -790,11 +743,10 @@ class VocabUnslicer(LeafUnslicer):
     
     def start(self, count):
         self.d = {}
-        self.gettingKey = True
         self.key = None
 
     def checkToken(self, typebyte, size):
-        if self.gettingKey:
+        if self.key is None:
             if typebyte != tokens.INT:
                 raise BananaError("VocabUnslicer only accepts INT keys",
                                   self.where())
@@ -805,20 +757,20 @@ class VocabUnslicer(LeafUnslicer):
 
     def receiveChild(self, token):
         self.propagateUnbananaFailures(token)
-        if self.gettingKey:
+        if self.key is None:
             if self.d.has_key(token):
                 raise BananaError("duplicate key '%s'" % token,
                                   self.where())
             self.key = token
         else:
             self.d[self.key] = token
-        self.gettingKey = not self.gettingKey
+            self.key = None
 
     def receiveClose(self):
         return NewVocabulary(self.d)
 
     def describeSelf(self):
-        if self.gettingKey:
+        if self.key is not None:
             return "<vocabdict>[%s]" % self.key
         else:
             return "<vocabdict>"
@@ -859,6 +811,10 @@ class Dummy:
 
 
 class InstanceUnslicer(BaseUnslicer):
+    # this is an unsafe unslicer: an attacker could induce you to create
+    # instances of arbitrary classes with arbitrary attributes: VERY
+    # DANGEROUS!
+    
     # danger: instances are mutable containers. If an attribute value is not
     # yet available, __dict__ will hold a Deferred until it is. Other
     # objects might be created and use our object before this is fixed.
@@ -870,79 +826,67 @@ class InstanceUnslicer(BaseUnslicer):
     def start(self, count):
         self.d = {}
         self.count = count
-        self.gettingClassname = True
-        self.gettingAttrname = False
-        self.deferred = Deferred()
-        self.protocol.setObject(count, self.deferred)
         self.classname = None
         self.attrname = None
+        self.deferred = Deferred()
+        self.protocol.setObject(count, self.deferred)
 
     def checkToken(self, typebyte, size):
-        if self.gettingClassname:
+        if self.classname is None:
             if typebyte not in (tokens.STRING, tokens.VOCAB):
                 raise BananaError("InstanceUnslicer classname must be string",
                                   self.where())
-        if self.gettingAttrname:
+        elif self.attrname is None:
             if typebyte not in (tokens.STRING, tokens.VOCAB):
                 raise BananaError("InstanceUnslicer keys must be STRINGs",
                                   self.where())
-        # TODO: use schema to determine attribute value constraint
 
     def receiveChild(self, obj):
         self.propagateUnbananaFailures(obj)
-        if self.gettingClassname:
+        if self.classname is None:
             self.classname = obj
-            self.gettingClassname = False
-            self.gettingAttrname = True
+            self.attrname = None
+        elif self.attrname is None:
+            self.attrname = obj
         else:
-            if self.gettingAttrname:
-                self.attrname = obj
-            else:
-                if isinstance(obj, Deferred):
-                    # TODO: this is an artificial restriction, and it might
-                    # be possible to remove it, but I need to think through
-                    # it carefully first
-                    raise BananaError("unreferenceable object in attribute",
-                                      self.where())
-                if self.d.has_key(self.attrname):
-                    raise BananaError("duplicate attribute name '%s'" % name,
-                                      self.where())
-                self.setAttribute(self.attrname, obj)
-            self.gettingAttrname = not self.gettingAttrname
+            if isinstance(obj, Deferred):
+                # TODO: this is an artificial restriction, and it might
+                # be possible to remove it, but I need to think through
+                # it carefully first
+                raise BananaError("unreferenceable object in attribute",
+                                  self.where())
+            if self.d.has_key(self.attrname):
+                raise BananaError("duplicate attribute name '%s'" % name,
+                                  self.where())
+            self.setAttribute(self.attrname, obj)
+            self.attrname = None
 
     def setAttribute(self, name, value):
         self.d[name] = value
 
     def receiveClose(self):
-        # TODO: TASTE HERE IF YOU WANT TO LIVE!
-        inst = Dummy()
-        #inst.__classname__ = self.classname
-        setInstanceState(inst, self.d)
-        self.protocol.setObject(self.count, inst)
-        self.deferred.callback(inst)
-        return inst
+        # you could attempt to do some value-checking here, but there would
+        # probably still be holes
+
+        #obj = Dummy()
+        klass = reflect.namedObject(self.classname)
+        assert type(klass) == types.ClassType # TODO: new-style classes
+        obj = instance(klass, {})
+
+        setInstanceState(obj, self.d)
+
+        self.protocol.setObject(self.count, obj)
+        self.deferred.callback(obj)
+        return obj
 
     def describeSelf(self):
-        if self.classname == None:
+        if self.classname is None:
             return "<??>"
         me = "<%s>" % self.classname
-        if self.gettingAttrname:
+        if self.attrname is None:
             return "%s.attrname??" % me
         else:
             return "%s.%s" % (me, self.attrname)
-
-class InstanceUnslicer2(InstanceUnslicer):
-
-    def receiveClose(self):
-        # TODO: taste me!
-        klass = reflect.namedObject(self.classname)
-        assert type(klass) == types.ClassType # TODO: new-style classes
-        o = instance(klass, {})
-        setInstanceState(o, self.d)
-        self.protocol.setObject(self.count, o)
-        self.deferred.callback(o)
-        return o
-    
 
 class ReferenceUnslicer(LeafUnslicer):
     constraint = None
@@ -1161,7 +1105,6 @@ UnslicerRegistry = {
     ('list',): ListUnslicer,
     ('tuple',): TupleUnslicer,
     ('dict',): DictUnslicer,
-    ('instance',): InstanceUnslicer,
     ('reference',): ReferenceUnslicer,
     ('none',): NoneUnslicer,
     ('boolean',): BooleanUnslicer,
@@ -1170,19 +1113,21 @@ UnslicerRegistry = {
     ('dict2',): ReallyBrokenDictUnslicer,
     }
         
-UnslicerRegistry2 = UnslicerRegistry.copy()
-UnslicerRegistry2.update({
+UnsafeUnslicerRegistry = UnslicerRegistry.copy()
+UnsafeUnslicerRegistry.update({
+    ('instance',): InstanceUnslicer,
     ('module',): ModuleUnslicer,
     ('class',): ClassUnslicer,
     ('method',): MethodUnslicer,
     ('function',): FunctionUnslicer,
-    ('instance',): InstanceUnslicer2,
     })
 
 
 class RootUnslicer(BaseUnslicer):
-    openRegistry = UnslicerRegistry
+    # topRegistry is used for top-level objects
     topRegistry = UnslicerRegistry
+    # openRegistry is used for everything at lower levels
+    openRegistry = UnslicerRegistry
     constraint = None
 
     def __init__(self):
@@ -1214,41 +1159,33 @@ class RootUnslicer(BaseUnslicer):
             raise BananaError("index token 0x%02x not STRING or VOCAB" % \
                               ord(typebyte))
 
-    def open(self, opentype, typemap=None):
-        """Accept an opentype tuple and produce a new Unslicer. This
-        function is generally called (by delegation) by the top Unslicer on
-        the stack, regardless of what kind of unslicer it is.
-        """
-
-        if typemap == None:
-            typemap = self.openRegistry
-
+    def open(self, opentype):
+        # called (by delegation) by the top Unslicer on the stack,
+        # regardless of what kind of unslicer it is.
+        assert len(self.protocol.receiveStack) > 1
         try:
-            opener = typemap[opentype]
+            opener = self.openRegistry[opentype]
             child = opener()
-            # do not set .opener here, but leave it for the caller. Unslicer
-            # subclasses will set it to their parent in their own .open()
-            # call. The RootUnslicer will set it (to itself) in
-            # RootUnslicer.doOpen() .
         except KeyError:
-            raise Violation("unknown OPEN type '%s'" % (opentype,))
+            raise Violation("unknown OPEN type %s" % (opentype,))
         return child
 
-    def openTop(self, opentype):
-        return self.open(opentype, self.topRegistry)
-
     def doOpen(self, opentype):
+        # this is only called for top-level objects
+        assert len(self.protocol.receiveStack) == 1
         if self.constraint:
             self.constraint.checkOpentype(opentype)
-        if len(self.protocol.receiveStack) == 1 and opentype[0] == "vocab":
+        if opentype == ("vocab",):
             # only legal at top-level
-            child = VocabUnslicer()
-        else:
-            child = self.openTop(opentype)
-        if child:
-            child.opener = self
-            if self.constraint:
-                child.setConstraint(self.constraint)
+            return VocabUnslicer()
+        try:
+            opener = self.topRegistry[opentype]
+            child = opener()
+        except KeyError:
+            raise Violation("unknown top-level OPEN type %s" % (opentype,))
+            
+        if self.constraint:
+            child.setConstraint(self.constraint)
         return child
 
     def receiveChild(self, obj):
@@ -1271,17 +1208,24 @@ class RootUnslicer(BaseUnslicer):
     def describeSelf(self):
         return "root"
 
-
     def setObject(self, counter, obj):
-        if self.protocol.debug:
-            print "setObject(%s): %s{%s}" % (counter, obj, id(obj))
-        self.objects[counter] = obj
+        pass
 
     def getObject(self, counter):
-        obj = self.objects.get(counter)
-        if self.protocol.debug:
-            print "getObject(%s) -> %s{%s}" % (counter, obj, id(obj))
-        return obj
+        return None
+
+
+class UnsafeRootUnslicer(RootUnslicer):
+    topRegistry = UnsafeUnslicerRegistry
+    openRegistry = UnsafeUnslicerRegistry
+
+class StorageRootUnslicer(UnsafeRootUnslicer, ScopedUnslicer):
+    # this version tracks references for the entire lifetime of the protocol
+    def __init__(self):
+        ScopedUnslicer.__init__(self)
+        UnsafeRootUnslicer.__init__(self)
     
-
-
+    def setObject(self, counter, obj):
+        return ScopedUnslicer.setObject(self, counter, obj)
+    def getObject(self, counter):
+        return ScopedUnslicer.getObject(self, counter)

@@ -1,8 +1,7 @@
-all: lint banana.html
+all: banana.html pb.html
 
-lint: banana.xhtml
+%.html: %.xhtml
 	-lore -n --output lint $<
-banana.html: banana.xhtml
 	lore -p --config template=../../doc/howto/template.tpl \
 		--config ext=.html $<
 
@@ -13,5 +12,5 @@ test2:
 	../../bin/trial -o $(TEST)
 
 clean:
-	rm -f *~ *.pyc *.xhtml
+	rm -f *~ *.pyc *.html
 	rm -rf _trial_temp

@@ -41,7 +41,8 @@ modifiers:
 """
 
 import types, inspect
-from twisted.python import failure, components
+from zope.interface import implements, Interface
+from twisted.python import failure
 
 from tokens import Violation, SIZE_LIMIT, STRING, LIST, INT, NEG, \
      LONGINT, LONGNEG, VOCAB, FLOAT, OPEN, tokenNames
@@ -65,7 +66,7 @@ openTaster = {
 class UnboundedSchema(Exception):
     pass
 
-class IConstraint(components.Interface):
+class IConstraint(Interface):
     pass
 
 class Constraint:
@@ -75,7 +76,7 @@ class Constraint:
     the tokens are arriving off the wire.
     """
 
-    __implements__ = IConstraint,
+    implements(IConstraint)
 
     taster = everythingTaster
     """the Taster is a dict that specifies which basic token types are
@@ -325,7 +326,7 @@ class InterfaceConstraint(Constraint):
         self.interface = interface
     def checkObject(self, obj):
         # TODO: maybe try to get an adapter instead?
-        if not implements(obj, self.interface):
+        if not self.interface.providedBy(obj):
             raise Violation
 
 class ClassConstraint(Constraint):
@@ -484,6 +485,7 @@ class DictConstraint(Constraint):
 
 DictOf = DictConstraint
 
+
 class AttributeDictConstraint(Constraint):
     """This is a constraint for dictionaries that are used for attributes.
     All keys are short strings, and each value has a separate constraint.
@@ -522,6 +524,20 @@ class AttributeDictConstraint(Constraint):
         # items is 1. The other "1" is for the AttributeDict container itself
         return 1 + reduce(max, [c.maxDepth(seen[:])
                                 for c in self.itervalues()], 1)
+
+    def getAttrConstraint(self, attrname):
+        c = self.attrConstraints.get(attrname)
+        if c:
+            if isinstance(c, schema.Optional):
+                c = c.constraint
+            return (True, c)
+        # unknown attribute
+        if self.ignoreUnknown:
+            return (False, None)
+        if self.acceptUnknown:
+            return (True, None)
+        raise Violation("unknown attribute '%s'" % attrname)
+
     def checkObject(self, obj):
         if type(obj) != type({}):
             raise Violation, "'%s' (%s) is not a Dictionary" % (obj,
@@ -547,6 +563,7 @@ class AttributeDictConstraint(Constraint):
             raise Violation("object is missing required keys: %s" % \
                             ",".join(allkeys))
 
+
 class RemoteMethodSchema:
     """
     This is a constraint for a single remotely-invokable method. It gets to
@@ -566,7 +583,7 @@ class RemoteMethodSchema:
     of these objects.
     """
 
-    __implements__ = IConstraint,
+    implements(IConstraint)
 
     taster = {} # this should not be used as a top-level constraint
     opentypes = [] # overkill
@@ -709,7 +726,8 @@ class RemoteMethodSchema:
 
 
 class RemoteReferenceSchema:
-    __implements__ = IConstraint,
+    implements(IConstraint)
+
     missingMethods = False
     # under development
 
@@ -804,7 +822,7 @@ FailureConstraint = StringConstraint
 
 def makeConstraint(t):
     #if isinstance(t, Constraint):
-    if components.implements(t, IConstraint):
+    if IConstraint.providedBy(t):
         return t
     map = {
         types.StringType: StringConstraint(),
@@ -817,7 +835,7 @@ def makeConstraint(t):
     if c:
         return c
     try:
-        if isinstance(t, type) and issubclass(t, components.Interface):
+        if isinstance(t, type) and issubclass(t, Interface):
             return InterfaceConstraint(t)
     except NameError:
         pass # if t is not a class, issubclass raises an exception

@@ -84,6 +84,9 @@ class TestAnswer(unittest.TestCase):
         unslicer.protocol = self.broker
         return unslicer
 
+    def makeRequest(self):
+        req = pb.PendingRequest(defer.Deferred())
+
     def testAccept1(self):
         req = pb.PendingRequest()
         self.broker.waitingForAnswers[12] = req

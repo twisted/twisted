@@ -4,13 +4,12 @@ import types, struct
 
 from twisted.internet import protocol, error, defer
 from twisted.python.failure import Failure
-from twisted.python.components import implements
 from twisted.python import log
 
-from slicer import RootSlicer, RootUnslicer, VocabSlicer
-from tokens import Violation, SIZE_LIMIT, STRING, LIST, INT, NEG, \
-     LONGINT, LONGNEG, VOCAB, FLOAT, OPEN, CLOSE, ABORT, tokenNames, \
-     BananaError, UnbananaFailure, ISlicer
+import slicer, tokens
+from tokens import SIZE_LIMIT, STRING, LIST, INT, NEG, \
+     LONGINT, LONGNEG, VOCAB, FLOAT, OPEN, CLOSE, ABORT, \
+     BananaError, UnbananaFailure, Violation
 
 def int2b128(integer, stream):
     if integer == 0:
@@ -84,7 +83,7 @@ def bytes_to_long(s):
 HIGH_BIT_SET = chr(0x80)
 
 class SendBanana:
-    slicerClass = RootSlicer
+    slicerClass = slicer.RootSlicer
     paused = False
     streamable = True
     debug = False
@@ -101,7 +100,7 @@ class SendBanana:
         self.produce()
 
     def send(self, obj):
-        self.rootSlicer.send(obj)
+        return self.rootSlicer.send(obj)
 
     def produce(self, dummy=None):
         # optimize: cache 'next' and 'streamable' because we get many more
@@ -114,29 +113,55 @@ class SendBanana:
                 if isinstance(obj, defer.Deferred):
                     assert streamable
                     obj.addCallback(self.produce)
+                    obj.addErrback(self.sendFailed) # what could cause this?
                     # this is the primary exit point
                     break
                 elif type(obj) in (int, long, float, str):
+                    # sendToken raises a BananaError for weird tokens
                     self.sendToken(obj)
                 else:
-                    slicer = self.newSlicerFor(obj)
-                    self.pushSlicer(slicer, obj)
+                    # newSlicerFor raises a Violation for unsendable types
+                    try:
+                        slicer = self.newSlicerFor(obj)
+                    except Violation, v:
+                        # no child tokens have been sent yet, the Slicer has
+                        # not yet been pushed
+                        topSlicer = self.slicerStack[-1][0]
+                        # .childAborted might re-raise the exception
+                        topSlicer.childAborted(v)
+                    else:
+                        self.pushSlicer(slicer, obj)
             except StopIteration:
                 if self.debug: print "StopIteration"
                 self.popSlicer()
-            except Violation:
-                if self.debug: print "Violation"
+            except Violation, v:
+                # Violations that occur because of Constraints are caught
+                # before the Slicer is pushed. A Violation that is caught
+                # here was either raised inside .next() or re-raised by
+                # .childAborted(). Either case indicates that the Slicer
+                # should be abandoned.
+
+                # should we send an ABORT? Only if the OPEN has already been
+                # sent, which happens in pushSlicer. For now, assume this
+                # has happened. TODO: maybe have pushSlicer set a flag when
+                # the OPEN is sent so we can do this precisely.
                 self.sendAbort()
+
+                # should we pop the Slicer? again, we assume that pushSlicer
+                # has completed.
                 self.popSlicer()
+                if not self.slicerStack:
+                    if self.debug: print "RootSlicer died!"
+                    raise BananaError("Hey! You killed the RootSlicer!")
                 topSlicer = self.slicerStack[-1][0]
-                topSlicer.childAborted()
-                # TODO: there should be an easy way to propogate this upwards
+                topSlicer.childAborted(v)
         assert self.slicerStack # should never be empty
 
     def newSlicerFor(self, obj):
-        if implements(obj, ISlicer):
+        if tokens.ISlicer.providedBy(obj):
             return obj
         topSlicer = self.slicerStack[-1][0]
+        # slicerForObject could raise a Violation, for unserializeable types
         return topSlicer.slicerForObject(obj)
 
     def pushSlicer(self, slicer, obj):
@@ -170,7 +195,7 @@ class SendBanana:
         for key,value in vocabDict.items():
             assert(isinstance(key, types.IntType))
             assert(isinstance(value, types.StringType))
-        s = VocabSlicer(vocabDict)
+        s = slicer.VocabSlicer(vocabDict)
         # insure the VOCAB message does not use vocab tokens itself. This
         # would be legal (sort of a differential compression), but
         # confusing, and it would enhance the bugginess of the race
@@ -237,9 +262,17 @@ class SendBanana:
         int2b128(count, self.transport.write)
         self.transport.write(ABORT)
 
+    def sendFailed(self, f):
+        # call this if an exception is raised in transmission. The Failure
+        # will be logged and the connection will be dropped. This is
+        # suitable for use as an errback handler.
+        print "SendBanana.sendFailed:", f
+        log.err(f)
+        self.transport.loseConnection(f)
+
 
 class ReceiveBanana:
-    unslicerClass = RootUnslicer
+    unslicerClass = slicer.RootUnslicer
     debug = False
     logViolations = False
 
@@ -533,10 +566,14 @@ class ReceiveBanana:
             self.handleViolation(v, "doOpen", False)
             return
 
+        if not tokens.IUnslicer.providedBy(child):
+            print "child is", child
+            assert tokens.IUnslicer.providedBy(child)
         self.objectCounter += 1
         self.inOpen = False
         child.protocol = self
         child.openCount = openCount
+        child.parent = top
         self.receiveStack.append(child)
         try:
             child.start(objectCount)
@@ -672,7 +709,16 @@ class ReceiveBanana:
         raise NotImplementedError
 
 
-class Banana(SendBanana, ReceiveBanana, protocol.Protocol):
+class BaseBanana(SendBanana, ReceiveBanana, protocol.Protocol):
+    # lacks scoping on the roots, so it can't be used for looped object
+    # graphs. Use StorageBanana to handle arbitrary nested objects.
     def __init__(self):
         SendBanana.__init__(self)
         ReceiveBanana.__init__(self)
+
+class StorageBanana(BaseBanana):
+    # this is "unsafe", in that it will do import() and create instances of
+    # arbitrary classes. It is also scoped at the root, so each
+    # StorageBanana should be used only once.
+    slicerClass = slicer.StorageRootSlicer
+    unslicerClass = slicer.StorageRootUnslicer

@@ -9,21 +9,10 @@ registerAdapter = components.registerAdapter
 import slicer, schema, tokens, banana
 from tokens import BananaError, Violation, ISlicer
 from slicer import UnbananaFailure, BaseUnslicer, ReferenceSlicer
-
-class Referenceable(object):
-    refschema = None
-    # TODO: this wants to be in an adapter, not a base class
-    def getSchema(self):
-        # create and return a RemoteReferenceSchema for us
-        if not self.refschema:
-            interfaces = dict([
-                (iface.__remote_name__ or iface.__name__, iface)
-                for iface in getRemoteInterfaces(self)])
-            self.refschema = schema.RemoteReferenceSchema(interfaces)
-        return self.refschema
-
-class Copyable(object):
-    pass
+ScopedSlicer = slicer.ScopedSlicer
+from flavors import getRemoteInterfaces, getRemoteInterfaceNames, \
+     RemoteCopy, registerRemoteCopy
+from flavors import Referenceable, IRemoteInterface
 
 class PendingRequest(object):
     active = True
@@ -32,6 +21,16 @@ class PendingRequest(object):
         self.constraint = None # this constrains the results
     def setConstraint(self, constraint):
         self.constraint = constraint
+    def complete(self, res):
+        if self.active:
+            self.active = False
+            self.deferred.callback(res)
+        else:
+            log.msg("PendingRequest.complete called on an inactive request")
+    def fail(self, why):
+        if self.active:
+            self.active = False
+            self.deferred.errback(why)
 
 class RemoteReference(object):
     def __init__(self, broker, refID, interfaceNames):
@@ -65,13 +64,23 @@ class RemoteReference(object):
 
         _resultConstraint = kwargs.get("_resultConstraint", "none")
         # remember that "none" is not a valid constraint, so we use it to
-        # mean "not set by the caller"
+        # mean "not set by the caller", which means we fall back to whatever
+        # the RemoteInterface says
+
         if _resultConstraint != "none":
             del kwargs["_resultConstraint"]
 
         try:
             # newRequestID() could fail with a StaleBrokerError
             reqID = self.broker.newRequestID()
+        except:
+            d = defer.Deferred()
+            d.errback(failure.Failure())
+            return d
+
+        try:
+            # in this clause, we validate the outbound arguments against our
+            # notion of what the other end will accept (the RemoteInterface)
             req = PendingRequest()
 
             methodSchema = None
@@ -90,7 +99,8 @@ class RemoteReference(object):
                 # any arguments are of the wrong type
                 methodSchema.checkAllArgs(kwargs)
 
-                # the Interface gets to constraint the return value too
+                # the Interface gets to constraint the return value too, so
+                # make a note of it to use later
                 req.setConstraint(methodSchema.getResponseConstraint())
             else:
                 assert not args
@@ -101,7 +111,21 @@ class RemoteReference(object):
             if _resultConstraint != "none":
                 req.setConstraint(_resultConstraint) # overrides schema
 
+        except: # TODO: merge this with the next try/except clause
+            # we have not yet sent anything to the far end. A failure here
+            # is entirely local: stale broker, bad method name, bad
+            # arguments. We abandon the PendingRequest, but errback the
+            # Deferred it was going to use
+            req.fail(failure.Failure())
+            return req.deferred
+
+        try:
+            # once we start sending the CallSlicer, we could get either a
+            # local or a remote failure, so we must be prepared to accept an
+            # answer. After this point, we assign all responsibility to the
+            # PendingRequest structure.
             self.broker.waitingForAnswers[reqID] = req
+
             # TODO: there is a decidability problem here: if the reqID made
             # it through, the other end will send us an answer (possibly an
             # error if the remaining slices were aborted). If not, we will
@@ -110,18 +134,24 @@ class RemoteReference(object):
             # slicing process made it.
 
             slicer = CallSlicer(reqID, self.refID, _name, argsdict)
-
+            
             # this could fail if any of the arguments (or their children)
             # are unsliceable
-            self.broker.send(slicer)
+            d = self.broker.send(slicer)
+            # d will fire when the last argument has been serialized. It
+            # will errback if the arguments could not be serialized. We need
+            # to catch this case and errback the caller.
 
         except:
-            if req:
-                d = req.deferred
-            else:
-                d = defer.Deferred()
-            d.errback(failure.Failure())
-            return d
+            req.fail(failure.Failure())
+            return req.deferred
+
+        # if we got here, we have been able to start serializing the
+        # arguments. If serialization fails, the PendingRequest needs to be
+        # flunked (because we aren't guaranteed that the far end will do it).
+
+        d.addErrback(req.fail)
+
 
         # the remote end could send back an error response for many reasons:
         #  bad method name
@@ -434,17 +464,23 @@ class ErrorUnslicer(BaseUnslicer):
     def receiveClose(self):
         self.broker.gotError(self.request, self.failure)
 
+PBTopRegistry = {
+    ("remote",): ReferenceUnslicer,
+    ("decref",): DecRefUnslicer,
+    ("call",): CallUnslicer,
+    ("answer",): AnswerUnslicer,
+    ("error",): ErrorUnslicer,
+    }
+
+PBOpenRegistry = slicer.UnslicerRegistry.copy()
+PBOpenRegistry.update({
+    ('remote',): ReferenceUnslicer,
+    # ('copyable', classname) is handled inline, through the CopyableRegistry
+    })
 
 class PBRootUnslicer(slicer.RootUnslicer):
-    # topRegistry defines what objects are allowed at the top-level. All of
-    # these accept a Broker in their __init__ call
-    topRegistry = {
-        ("remote",): ReferenceUnslicer,
-        ("decref",): DecRefUnslicer,
-        ("call",): CallUnslicer,
-        ("answer",): AnswerUnslicer,
-        ("error",): ErrorUnslicer,
-        }
+    # topRegistry defines what objects are allowed at the top-level
+    topRegistry = PBTopRegistry
     # openRegistry defines what objects are allowed at the second level and
     # below
     openRegistry = slicer.UnslicerRegistry
@@ -454,8 +490,30 @@ class PBRootUnslicer(slicer.RootUnslicer):
         if typebyte != tokens.OPEN:
             raise BananaError("top-level must be OPEN")
 
-    def openTop(self, opentype):
-        child = self.open(opentype, self.topRegistry)
+    def open(self, opentype):
+        # used for lower-level objects, delegated up from childunslicer.open
+        assert len(self.protocol.receiveStack) > 1
+        if opentype[0] == 'copyable':
+            if len(opentype) > 1:
+                classname = opentype[1]
+                try:
+                    factory = flavors.CopyableRegistry[classname]
+                    child = flavors.RemoteCopyUnslicer(factory)
+                    return child
+                except KeyError:
+                    raise Violation("unknown RemoteCopy class '%s'" \
+                                    % classname)
+            else:
+                return None # still need classname
+        try:
+            opener = self.openRegistry[opentype]
+            child = opener()
+        except KeyError:
+            raise Violation("unknown OPEN type '%s'" % (opentype,))
+        return child
+
+    def doOpen(self, opentype):
+        child = slicer.RootUnslicer.doOpen(self, opentype)
         if child:
             child.broker = self.broker
         return child
@@ -466,29 +524,8 @@ class PBRootUnslicer(slicer.RootUnslicer):
 
 
 
-class ScopedSlicer(slicer.BaseSlicer):
-    """This Slicer provides a containing scope for things like lists. The
-    same list will not be serialized twice within this scope, but it will
-    not survive outside it."""
-
-    def __init__(self, obj):
-        slicer.BaseSlicer.__init__(self, obj)
-        self.references = {}
-
-    def registerReference(self, refid, obj):
-        # keep references here, not in the actual PBRootSlicer
-        self.references[id(obj)] = refid
-
-    def slicerForObject(self, obj):
-        # search for references here before going upstream
-        refid = self.references.get(id(obj), None)
-        if refid is not None:
-            return ReferenceSlicer(refid)
-        # otherwise go upstream
-        return self.parent.slicerForObject(obj)
-
 class AnswerSlicer(ScopedSlicer):
-    openindex = ('answer',)
+    opentype = ('answer',)
 
     def __init__(self, reqID, results):
         self.reqID = reqID
@@ -499,7 +536,7 @@ class AnswerSlicer(ScopedSlicer):
         yield self.results
 
 class ErrorSlicer(AnswerSlicer):
-    openindex = ('error',)
+    opentype = ('error',)
 
     def __init__(self, reqID, f):
         self.reqID = reqID
@@ -510,67 +547,65 @@ class ErrorSlicer(AnswerSlicer):
         # TODO: need CopyableFailures
         yield self.f.getBriefTraceback()
 
+# failures are treated as Copyables
+class FailureSlicer(slicer.BaseSlicer):
+    classname = "twisted.python.failure.Failure"
+
+    def slice(self, streamable, banana):
+        yield 'copyable'
+        yield self.classname
+        state = self.getStateToCopy(self.obj, banana)
+        for k,v in state.iteritems():
+            yield k
+            yield v
+    def describe(self):
+        return "<%s>" % self.classname
+        
+    def getStateToCopy(self, obj, banana):
+        state = obj.__dict__.copy()
+        state['tb'] = None
+        state['frames'] = []
+        state['stack'] = []
+        if isinstance(self.value, failure.Failure):
+            state['value'] = failure2Copyable(self.value,
+                                              banana.unsafeTracebacks)
+        else:
+            state['value'] = str(self.value) # Exception instance
+        state['type'] = str(self.type) # Exception class
+        if banana.unsafeTracebacks:
+            io = StringIO.StringIO()
+            self.printTraceback(io)
+            state['traceback'] = io.getvalue()
+        else:
+            state['traceback'] = 'Traceback unavailable\n'
+        return state
+registerAdapter(FailureSlicer, failure.Failure, ISlicer)
+
+class CopiedFailure(RemoteCopy, failure.Failure):
+    def printTraceback(self, file=None):
+        if not file: file = log.logfile
+        file.write("Traceback from remote host -- ")
+        file.write(self.traceback)
+
+    printBriefTraceback = printTraceback
+    printDetailedTraceback = printTraceback
+registerRemoteCopy(FailureSlicer.classname, CopiedFailure)
+
 remoteInterfaceRegistry = {}
 def registerRemoteInterface(iface):
     """Call this to register each subclass of IRemoteInterface."""
     name = iface.__remote_name__ or iface.__name__
     remoteInterfaceRegistry[name] = iface
 
-def getRemoteInterfaces(obj):
-    """Get a list of all RemoteInterfaces supported by the object."""
-    interfaces = components.getInterfaces(obj)
-    # TODO: versioned Interfaces!
-    ilist = []
-    for i in interfaces:
-        if issubclass(i, IRemoteInterface):
-            if i not in ilist:
-                ilist.append(i)
-    def getname(i):
-        return i.__remote_name__ or i.__name__
-    ilist.sort(lambda x,y: cmp(getname(x), getname(y)))
-    # TODO: really? both sides must match
-    return ilist
-
-def getRemoteInterfaceNames(obj):
-    """Get the names of all RemoteInterfaces supported by the object."""
-    return [i.__remote_name__ or i.__name__ for i in getRemoteInterfaces(obj)]
-
-class ReferenceableSlicer(slicer.BaseSlicer):
-    """I handle pb.Referenceable objects (things with remotely invokable
-    methods, which are copied by reference).
-    """
-    openindex = ('remote',)
-
-    def sliceBody(self, streamable, banana):
-        puid = self.obj.processUniqueID()
-        firstTime = self.broker.luids.has_key(puid)
-        luid = self.broker.registerReference(self.obj)
-        yield luid
-        if not firstTime:
-            # this is the first time the Referenceable has crossed this
-            # wire. In addition to the luid, send the interface list to the
-            # far end.
-            yield getRemoteInterfaceNames(self.obj)
-            # TODO: maybe create the RemoteReferenceSchema now
-            # obj.getSchema()
-registerAdapter(ReferenceableSlicer, Referenceable, ISlicer)
-
 class DecRefSlicer(slicer.BaseSlicer):
-    openindex = ('decref',)
+    opentype = ('decref',)
     def __init__(self, refID):
         self.refID = refID
     def sliceBody(self, streamable, banana):
         yield self.refID
 
-class CopyableSlicer(slicer.BaseSlicer):
-    """I handle pb.Copyable objects (things which are copied by value)."""
-
-    openindex = ('instance',)
-    # ???
-#registerAdapter(CopyableSlicer, Copyable, ISlicer)
-
 class CallSlicer(ScopedSlicer):
-    openindex = ('call',)
+    opentype = ('call',)
 
     def __init__(self, reqID, refID, methodname, args):
         self.reqID = reqID
@@ -593,12 +628,12 @@ class PBRootSlicer(slicer.RootSlicer):
         assert 0
 
 
-class Broker(banana.Banana):
+class Broker(banana.BaseBanana):
     slicerClass = PBRootSlicer
     unslicerClass = PBRootUnslicer
 
     def __init__(self):
-        banana.Banana.__init__(self)
+        banana.BaseBanana.__init__(self)
         self.rootSlicer.broker = self
         self.rootUnslicer.broker = self
         self.remoteReferences = weakref.WeakValueDictionary()
@@ -649,13 +684,9 @@ class Broker(banana.Banana):
             raise BananaError("non-existent reqID '%d'" % reqID)
 
     def gotAnswer(self, req, results):
-        assert req.active
-        req.active = False
-        req.deferred.callback(results)
+        req.complete(results)
     def gotError(self, req, failure):
-        assert req.active
-        req.active = False
-        req.deferred.errback(failure)
+        req.fail(failure)
 
     # decref is also invoked on the calling side (the pb.Referenceable
     # holder) when the other side sends us a decref message
@@ -744,25 +775,3 @@ class Broker(banana.Banana):
             f = failure.Failure()
             print f.getTraceback()
             raise
-
-class RemoteMetaInterface(components.MetaInterface):
-    def __init__(self, iname, bases, dct):
-        components.MetaInterface.__init__(self, iname, bases, dct)
-        # determine all remotely-callable methods
-        methods = [name for name in dct.keys()
-                   if ((type(dct[name]) == types.FunctionType and
-                        not name.startswith("_")) or
-                       components.implements(dct[name], schema.IConstraint))]
-        self.methods = methods
-        # turn them into constraints
-        for name in methods:
-            m = dct[name]
-            if not components.implements(m, schema.IConstraint):
-                s = schema.RemoteMethodSchema(method=m)
-                #dct[name] = s  # this doesn't work, dct is copied
-                setattr(self, name, s)
-
-class IRemoteInterface(components.Interface, object):
-    __remote_name__ = None
-    __metaclass__ = RemoteMetaInterface
-

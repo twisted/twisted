@@ -1,7 +1,7 @@
 #! /usr/bin/python
 
 from twisted.python.failure import Failure
-from twisted.python.components import Interface
+from zope.interface import Attribute, Interface
 
 # delimiter characters.
 LIST     = chr(0x80) # old
@@ -97,14 +97,9 @@ class UnbananaFailure(Failure):
 class ISlicer(Interface):
     """I know how to slice objects into tokens."""
 
-    sendOpen = """True if an OPEN/CLOSE token pair should be sent around the
-    Slicer's body tokens. Only special-purpose Slicers (like the RootSlicer)
-    should use False."""
+    sendOpen = Attribute("True if an OPEN/CLOSE token pair should be sent around the Slicer's body tokens. Only special-purpose Slicers (like the RootSlicer) should use False.")
 
-    trackReferences = """True if the object we slice is referenceable: i.e.
-    it is useful or necessary to send multiple copies as a single instance
-    and a bunch of References, rather than as separate copies. Instances are
-    referenceable, as are mutable containers like lists."""
+    trackReferences = Attribute("True if the object we slice is referenceable: i.e. it is useful or necessary to send multiple copies as a single instance and a bunch of References, rather than as separate copies. Instances are referenceable, as are mutable containers like lists.")
 
     def slice(self, streamable, banana):
         """Return an iterator which provides Index Tokens and the Body
@@ -128,7 +123,7 @@ class ISlicer(Interface):
         (they might only be valid within a single RPC invocation, for
         example)."""
 
-    def childAborted(self):
+    def childAborted(self, v):
         """Notify the Slicer that one of its child tokens (as produced by
         its .slice iterator) emitted an ABORT token, terminating their token
         stream. The corresponding Unslicer (receiving this token stream)
@@ -146,6 +141,118 @@ class ISlicer(Interface):
         If something on the stack does not want the object to be sent, it can
         raise a Violation exception. This is the 'taster' function."""
 
+
+class IUnslicer(Interface):
+    # .parent
+
+    # start/receiveChild/receiveClose/finish are
+    # the main "here are some tokens, make an object out of them" entry
+    # points used by Unbanana.
+
+    # start/receiveChild can call self.protocol.abandonUnslicer(failure,
+    # self) to tell the protocol that the unslicer has given up on life and
+    # all its remaining tokens should be discarded. The failure will be
+    # given to the late unslicer's parent in lieu of the object normally
+    # returned by receiveClose.
+    
+    # start/receiveChild/receiveClose/finish may raise a Violation
+    # exception, which tells the protocol that this object is contaminated
+    # and should be abandoned. An UnbananaFailure will be passed to its
+    # parent.
+
+    # Note, however, that it is not valid to both call abandonUnslicer *and*
+    # raise a Violation. That would discard too much.
+
+    def setConstraint(self, constraint):
+        """Add a constraint for this unslicer. The unslicer will enforce
+        this constraint upon all incoming data. The constraint must be of an
+        appropriate type (a ListUnslicer will only accept a ListConstraint,
+        etc.). It must not be None. To leave us unconstrained, do not call
+        this method.
+
+        If this method is not called, the Unslicer will accept any valid
+        banana as input, which probably means there is no limit on the
+        number of bytes it will accept (and therefore on the memory it could
+        be made to consume) before it finally accepts or rejects the input.
+        """
+
+    def start(self, count):
+        """Called to initialize the new slice. The 'count' argument is the
+        reference id: if this object might be shared (and therefore the
+        target of a 'reference' token), it should call
+        self.protocol.setObject(count, obj) with the object being created.
+        If this object is not available yet (tuples), it should save a
+        Deferred there instead.
+        """
+
+    def checkToken(self, typebyte, size):
+        """Check to see if the given token is acceptable (does it conform to
+        the constraint?). It will not be asked about ABORT or CLOSE tokens,
+        but it *will* be asked about OPEN. It should enfore a length limit
+        for long tokens (STRING and LONGINT/LONGNEG types). If STRING is
+        acceptable, then VOCAB should be too. It should return None if the
+        token and the size are acceptable. Should raise Violation if the
+        schema indiates the token is not acceptable. Should raise
+        BananaError if the type byte violates the basic Banana protocol. (if
+        no schema is in effect, this should never raise Violation, but might
+        still raise BananaError).
+        """
+
+    def openerCheckToken(self, typebyte, size, opentype):
+        """'typebyte' is the type of an incoming index token. 'size' is the
+        value of header associated with this typebyte. 'opentype' is a list
+        of open tokens that we've received so far, not including the one
+        that this token hopes to create.
+
+        This method should ask the current opener if this index token is
+        acceptable, and is used in lieu of checkToken() when the receiver is
+        in the index phase. Usually implemented by calling
+        self.opener.openerCheckToken, thus delegating the question to the
+        RootUnslicer.
+        """
+
+    def doOpen(self, opentype):
+        """opentype is a tuple. Return None if more index tokens are
+        required. Check to see if this kind of child object conforms to the
+        constraint, raise Violation if not. Create a new Unslicer (usually
+        by delegating to self.parent.doOpen, up to the RootUnslicer). Set a
+        constraint on the child unslicer, if any.
+        """
+
+    def receiveChild(self, childobject):
+        """'childobject' is being handed to this unslicer. It may be a
+        primitive type (number or string), or a composite type produced by
+        another Unslicer. It might be an UnbananaFailure if something went
+        wrong, in which case it may be appropriate to do
+        self.protocol.abandonUnslicer(failure, self). It might also be a
+        Deferred, in which case you should add a callback that will fill in
+        the appropriate object later."""
+
+    def receiveClose(self):
+        """Called when the Close token is received. Should return the object
+        just created, or an UnbananaFailure if something went wrong. If
+        necessary, unbanana.setObject should be called, then the Deferred
+        created in start() should be fired with the new object."""
+
+    def finish(self):
+        """Called when the unslicer is popped off the stack. This is called
+        even if the pop is because of an exception. The unslicer should
+        perform cleanup, including firing the Deferred with an
+        UnbananaFailure if the object it is creating could not be created.
+
+        TODO: can receiveClose and finish be merged? Or should the child
+        object be returned from finish() instead of receiveClose?
+        """
+
+    def describeSelf(self):
+        """Return a short string describing where in the object tree this
+        unslicer is sitting, relative to its parent. These strings are
+        obtained from every unslicer in the stack, and joined to describe
+        where any problems occurred."""
+
+    def where(self):
+        """This returns a string that describes the location of this
+        unslicer, starting at the root of the object tree."""
 
 class IReferenceable(Interface):
     # TODO: really?

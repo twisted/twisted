@@ -1,16 +1,16 @@
 #! /usr/bin/python
 
 from twisted.trial import unittest
-from twisted.python import reflect
+from twisted.python import reflect, log
 from twisted.python.components import registerAdapter
-from banana import Banana, BananaError
+from banana import StorageBanana, BananaError
 from tokens import ISlicer
 import slicer, schema, tokens
-from slicer import Dummy, UnbananaFailure
-from slicer import BaseSlicer, RootSlicer, TrustingRootSlicer
-from slicer import RootUnslicer
+from slicer import UnbananaFailure
 
-import cStringIO, types
+import cStringIO, types, sys
+
+#log.startLogging(sys.stderr)
 
 def OPEN(count):
     return ("OPEN", count)
@@ -18,7 +18,7 @@ def CLOSE(count):
     return ("CLOSE", count)
 ABORT = ("ABORT",)
 
-class TokenBanana(Banana):
+class TokenBanana(StorageBanana):
     """this Banana formats tokens as strings, numbers, and ('OPEN',) tuples
     instead of bytes. Used for testing purposes."""
 
@@ -31,6 +31,7 @@ class TokenBanana(Banana):
         return openID
 
     def sendToken(self, token):
+        #print token
         self.tokens.append(token)
 
     def sendClose(self, openID):
@@ -41,13 +42,25 @@ class TokenBanana(Banana):
 
     def testSlice(self, obj):
         assert len(self.slicerStack) == 1
-        assert isinstance(self.slicerStack[0][0],RootSlicer)
+        assert isinstance(self.slicerStack[0][0], slicer.RootSlicer)
         self.tokens = []
-        self.send(obj)
+        d = self.send(obj)
+        r = unittest.deferredResult(d)
         assert len(self.slicerStack) == 1
         assert not self.rootSlicer.sendQueue
-        assert isinstance(self.slicerStack[0][0],RootSlicer)
+        assert isinstance(self.slicerStack[0][0], slicer.RootSlicer)
         return self.tokens
+
+    def testFailure(self, obj):
+        assert len(self.slicerStack) == 1
+        assert isinstance(self.slicerStack[0][0], slicer.RootSlicer)
+        self.tokens = []
+        d = self.send(obj)
+        f = unittest.deferredError(d)
+        assert len(self.slicerStack) == 1
+        assert not self.rootSlicer.sendQueue
+        assert isinstance(self.slicerStack[0][0], slicer.RootSlicer)
+        return f, self.tokens
 
     def __del__(self):
         assert not self.rootSlicer.sendQueue
@@ -55,7 +68,7 @@ class TokenBanana(Banana):
     def getTokens(self):
         self.produce()
         assert(len(self.slicerStack) == 1)
-        assert(isinstance(self.slicerStack[0][0],RootSlicer))
+        assert(isinstance(self.slicerStack[0][0], slicer.RootSlicer))
         return self.tokens
         
     def receiveToken(self, token):
@@ -108,9 +121,6 @@ class TokenBanana(Banana):
             self.receiveToken(t)
         return self.object
 
-class TrustingTokenBanana(TokenBanana):
-    slicerClass = TrustingRootSlicer
-
 class UnbananaTestMixin:
     def setUp(self):
         self.hangup = False
@@ -119,7 +129,7 @@ class UnbananaTestMixin:
         if not self.hangup:
             self.failUnless(len(self.banana.receiveStack) == 1)
             self.failUnless(isinstance(self.banana.receiveStack[0],
-                                       RootUnslicer))
+                                       slicer.StorageRootUnslicer))
             
     def do(self, tokens):
         return self.banana.processTokens(tokens)
@@ -128,7 +138,7 @@ class UnbananaTestMixin:
         if isinstance(res, UnbananaFailure):
             # something went wrong
             print "There was a failure while Unbananaing '%s':" % res.where
-            print res.failure.getTraceback()
+            print res.getTraceback()
             self.fail("UnbananaFailure")
 
     def assertRaisesBananaError(self, where, f, *args):
@@ -153,9 +163,9 @@ class UnbananaTestMixin:
         if failtype:
             self.failUnless(res.failure,
                             "No Failure object in UnbananaFailure")
-            if not res.failure.check(failtype):
+            if not res.check(failtype):
                 print "Wrong exception (wanted '%s'):" % failtype
-                print res.failure.getTraceback()
+                print res.getTraceback()
                 self.fail("Wrong exception (wanted '%s'):" % failtype)
         self.failUnlessEqual(res.where, where)
         self.banana.object = None # to stop the tearDown check TODO ??
@@ -234,11 +244,12 @@ class UnbananaTestCase(UnbananaTestMixin, unittest.TestCase):
 
     def test_instance(self):
         "instance"
-        f1 = Dummy(); f1.a = 1; f1.b = [2,3]
-        f2 = Dummy(); f2.d = 4; f1.c = f2
-        res = self.do([OPEN(0),'instance', "Foo", "a", 1,
+        f1 = Foo(); f1.a = 1; f1.b = [2,3]
+        f2 = Bar(); f2.d = 4; f1.c = f2
+        res = self.do([OPEN(0),'instance', "test_banana.Foo", "a", 1,
                        "b", OPEN(1),'list', 2, 3, CLOSE(1),
-                       "c", OPEN(2),'instance', "Bar", "d", 4, CLOSE(2),
+                       "c", OPEN(2),'instance', "test_banana.Bar",
+                                    "d", 4, CLOSE(2),
                        CLOSE(0)])
         self.failUnlessEqual(res, f1)
         
@@ -395,6 +406,7 @@ class FailureTests(UnbananaTestMixin, unittest.TestCase):
                        CLOSE(0)])
         self.checkUnbananaFailure(res, "root.[1].{}")
         # "dead in receiveClose()"
+
         
 class BananaTests(unittest.TestCase):
     def setUp(self):
@@ -403,7 +415,8 @@ class BananaTests(unittest.TestCase):
         return self.banana.testSlice(obj)
     def tearDown(self):
         self.failUnless(len(self.banana.slicerStack) == 1)
-        self.failUnless(isinstance(self.banana.slicerStack[0][0], RootSlicer))
+        self.failUnless(isinstance(self.banana.slicerStack[0][0],
+                                   slicer.RootSlicer))
 
     def testList(self):
         res = self.do([1,2])
@@ -495,21 +508,23 @@ class BananaTests(unittest.TestCase):
 
 
 class Bar:
-    def __cmp__(self, other):
-        if not type(other) == type(self):
+    def __cmp__(self, them):
+        if not type(them) == type(self):
             return -1
-        return cmp(self.__dict__, other.__dict__)
+        return cmp((self.__class__, self.__dict__),
+                   (them.__class__, them.__dict__))
 class Foo(Bar):
     pass
 
-class BananaInstanceTests(unittest.TestCase):
+class InstanceTests(unittest.TestCase):
     def setUp(self):
-        self.banana = TrustingTokenBanana()
+        self.banana = TokenBanana()
     def do(self, obj):
         return self.banana.testSlice(obj)
     def tearDown(self):
         self.failUnless(len(self.banana.slicerStack) == 1)
-        self.failUnless(isinstance(self.banana.slicerStack[0][0], RootSlicer))
+        self.failUnless(isinstance(self.banana.slicerStack[0][0],
+                                   slicer.RootSlicer))
     
     def test_one(self):
         obj = Bar()
@@ -534,6 +549,36 @@ class BananaInstanceTests(unittest.TestCase):
                                   "d", 4,
                                  CLOSE(2),
                               CLOSE(0)])
+
+class FailedInstanceTests(unittest.TestCase):
+    def setUp(self):
+        self.banana = TokenBanana()
+        # turn off the "unsafe" extensions
+        self.banana.rootSlicer.slicerTable = {}
+        self.banana.rootUnslicer.topRegistry = slicer.UnslicerRegistry
+        self.banana.rootUnslicer.openRegistry = slicer.UnslicerRegistry
+
+    def encode(self, obj):
+        return self.banana.testFailure(obj)
+    def decode(self, tokens):
+        return self.banana.processTokens(tokens)
+
+    def test_make_instance(self):
+        f1 = Foo(); f1.a = 1; f1.b = [2,3]
+        # this will fail
+        f, encoded = self.encode(f1)
+        self.failUnless(f.check(tokens.Violation))
+        # it fails before any tokens have been emitted
+        self.failUnlessEqual(encoded, [])
+       
+    def test_get_instance(self):
+        tokens = [OPEN(0),'instance', "test_banana.Foo", "a", 1,
+                  "b", OPEN(1),'list', 2, 3, CLOSE(1),
+                  "c", OPEN(2),'instance', "Bar", "d", 4, CLOSE(2),
+                  CLOSE(0)]
+        # this will fail
+        res = self.decode(tokens)
+        self.failUnless(isinstance(res, UnbananaFailure))
 
 class TestBananaMixin:
     def setUp(self):
@@ -566,7 +611,7 @@ class TestBananaMixin:
     def looptest(self, obj):
         obj2 = self.loop(obj)
         if isinstance(obj2, UnbananaFailure):
-            print obj2.failure.getTraceback()
+            print obj2.getTraceback()
             self.fail("UnbananaFailure at %s" % obj2.where)
         self.failUnlessEqual(obj2, obj)
         self.failUnlessEqual(type(obj2), type(obj))
@@ -704,7 +749,7 @@ class InboundByteStream(unittest.TestCase):
     def conform2(self, stream, obj, constraint, childConstraint=None):
         obj2 = self.decode2(stream, constraint, childConstraint)
         if isinstance(obj2, UnbananaFailure):
-            print "failure", obj2, obj2.failure
+            print "failure", obj2
         self.failUnlessEqual(obj, obj2)
     def violate2(self, stream, where, constraint, childConstraint=None):
         obj2 = self.decode2(stream, constraint, childConstraint)
@@ -916,13 +961,7 @@ class InboundByteStream(unittest.TestCase):
                       schema.BooleanConstraint(True))
 
 
-class ConstrainedRootUnslicer(RootUnslicer):
-    openRegistry = slicer.UnslicerRegistry2
-    topRegistry = slicer.UnslicerRegistry2
-
-class TestBanana(Banana):
-    slicerClass = TrustingRootSlicer
-    unslicerClass = ConstrainedRootUnslicer
+class TestBanana(StorageBanana):
     def receivedObject(self, obj):
         self.object = obj
 
@@ -999,9 +1038,7 @@ class ThereAndBackAgain(TestBananaMixin, unittest.TestCase):
 
     # some stuff from test_newjelly
     def testIdentity(self):
-        """
-        test to make sure that objects retain identity properly
-        """
+        # test to make sure that objects retain identity properly
         x = []
         y = (x)
         x.append(y)
@@ -1099,21 +1136,21 @@ class VocabTest2(TestBananaMixin, unittest.TestCase):
         self.wantEqual(s, expected)
 
 
-class IAmSliceableByMyself(BaseSlicer):
+class SliceableByItself(slicer.BaseSlicer):
     def __init__(self, value):
         self.value = value
     def slice(self, streamable, banana):
         # this is our "instance state"
         yield {"value": self.value}
 
-class ICouldBeSliceable:
+class CouldBeSliceable:
     def __init__(self, value):
         self.value = value
 
-class _AndICanHelp(BaseSlicer):
+class _AndICanHelp(slicer.BaseSlicer):
     def slice(self, streamable, banana):
         yield {"value": self.obj.value}
-registerAdapter(_AndICanHelp, ICouldBeSliceable, ISlicer)
+registerAdapter(_AndICanHelp, CouldBeSliceable, ISlicer)
 
 class Sliceable(unittest.TestCase):
     def setUp(self):
@@ -1122,11 +1159,12 @@ class Sliceable(unittest.TestCase):
         return self.banana.testSlice(obj)
     def tearDown(self):
         self.failUnless(len(self.banana.slicerStack) == 1)
-        self.failUnless(isinstance(self.banana.slicerStack[0][0], RootSlicer))
+        self.failUnless(isinstance(self.banana.slicerStack[0][0],
+                                   slicer.RootSlicer))
 
     def testDirect(self):
         # the object is its own Slicer
-        i = IAmSliceableByMyself(42)
+        i = SliceableByItself(42)
         res = self.do(i)
         self.failUnlessEqual(res, [OPEN(0),
                                    OPEN(1), "dict", "value", 42, CLOSE(1),
@@ -1134,7 +1172,7 @@ class Sliceable(unittest.TestCase):
 
     def testAdapter(self):
         # the adapter is the Slicer
-        i = ICouldBeSliceable(43)
+        i = CouldBeSliceable(43)
         res = self.do(i)
         self.failUnlessEqual(res, [OPEN(0),
                                    OPEN(1), "dict", "value", 43, CLOSE(1),
@@ -1143,11 +1181,11 @@ class Sliceable(unittest.TestCase):
 
 
 def encode(obj, debug=0):
-    b = TokenBanana()
+    b = UnsafeTokenBanana()
     b.debug = debug
     return b.testSlice(obj)
 def decode(tokens, debug=0):
-    b = TokenBanana()
+    b = UnsafeTokenBanana()
     b.debug = debug
     obj = b.processTokens(tokens)
     return obj
