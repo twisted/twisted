@@ -347,6 +347,9 @@ class POP3(basic.LineOnlyReceiver, policies.TimeoutMixin):
         self.successResponse('USER accepted, send PASS')
 
     def do_PASS(self, password):
+        if self._userIs is None:
+            self.failResponse("USER required before PASS")
+            return
         user = self._userIs
         self._userIs = None
         d = defer.maybeDeferred(self.authenticateUserPASS, user, password)

@@ -241,6 +241,17 @@ QUIT''', '\n')
         lines = ['APOP spiv dummy', 'NOOP', 'QUIT']
         expected_output = '+OK <moshez>\r\n+OK Authentication succeeded\r\n+OK \r\n+OK \r\n'
         self.runTest(lines, expected_output)
+    
+    def testIllegalPASS(self):
+        dummy = DummyPOP3()
+        client = LineSendingProtocol([
+            "PASS fooz",
+            "QUIT"
+        ])
+        expected_output = '+OK <moshez>\r\n-ERR USER required before PASS\r\n+OK \r\n'
+        loopback.loopback(dummy, client)
+        self.failUnlessEqual(expected_output, '\r\n'.join(client.response) + '\r\n')
+        dummy.connectionLost(failure.Failure(Exception()))
 
 
 class TestServerFactory:
