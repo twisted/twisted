@@ -21,7 +21,7 @@ Copyright information for Twisted.
 """
 
 
-version="0.15.1"
+version="0.15.2"
 longversion="Twisted %s" % version
 
 disclaimer="""
