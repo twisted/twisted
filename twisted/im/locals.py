@@ -125,7 +125,7 @@ def isCursorOnLastLine(entry):
 def openGlade(*args, **kwargs):
     print "opening glade file"
     r = apply(GladeXML, args, kwargs)
-    if r:
+    if r._o:
         return r
     else:
         raise IOError("Couldn't open Glade XML: %s; %s" % (args, kwargs))
