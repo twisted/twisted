@@ -1,6 +1,7 @@
 "THIS DOESN'T WORK"
 
 from twisted.web import microdom, domhelpers
+from twisted.python import reflect
 
 class BadStream(Exception):
      pass
@@ -72,6 +73,12 @@ def makeJID(user, host, resource):
     
 
 class JabberBasic(XMLStream):
+
+    def connectionMade(self):
+        XMLStream.connectionMade(self)
+        methods = reflect.prefixedMethods('notifyConnectionMade_')
+        for m in methods:
+            m()
 
     def gotGlobalAttributes(self, attributes):
         self.gotGlobalFrom(attributes.get('from'))
@@ -186,32 +193,54 @@ class JabberPresenceMixin:
     def gotPresence_probe(self, type, from_, to, id, message):
         pass # implement
 
+class IQFailure(Exception):
+    pass
 
 class JabberIQMixin:
+
+    def notifyConnectionMade_IQ(self):
+        self.lastID = 0
+        self.requests = {}
+
+    def sendIQ(self, type, from_, to, query):
+        id = str(self.lastID)
+        self.lastID += 1
+        deferred = defer.Deferred()
+        self.transport.write('<iq from="%s" to="%s" id="%s" type="%s">' %
+                             (from_, to, id, type))
+        query.writexml(self.transport)
+        self.transport.write('</iq>')
+        self.requests[id] = deferred
+        return id, deferred
 
     def gotElement_iq(self, element):
         type = element.attributes['type']
         id = element.attributes.get('id')
         from_ = element.attributes.get('from')
         to = element.attributes.get('to')
-        if type == 'error':
-            error = _getElementNamedOrNone(message, 'error')
-            code = error.attributes['code']
-            text = domhelpers.getNodeText(error)
-            return self.gotIQError(type, from_, to, id, code, text)
-        query = _getElementNamedOrNone(message, 'query')
-        if query is None: # technically, there could be those.
-            return
-        ns = query.attributes['xmlns']
-        pns = type+'_'+ns.replace(':', '_').replace('/', '_')
-        m = getattr(self, 'gotIQ_'+pns, self.gotIQUnknown)
-        m(type, ns, id, from_, to, query)
+        if type == 'result' or type == 'error':
+            if not self.requests.has_key(id):
+                return # ignore results for cancelled/non-existing requests
+            if type == 'result':
+                query = _getElementNamedOrNone(message, 'query')
+                self.requests[id].callback(query)
+                del self.requests[id]
+            else:
+                error = _getElementNamedOrNone(message, 'error')
+                code = error.attributes['code']
+                text = domhelpers.getNodeText(error)
+                self.requests[id].errback(IQFailure(code, text))
+                del self.requests[id]
+        elif type == 'get' or type == 'set': # a remove method call!
+             query = _getElementNamedOrNone(message, 'query')
+             ns = query.attributes['xmlns']
+             d = self.methodCalled(type, ns, id, from_, to, query)
+             d.addCallback() # do something to send an iq type=result
+             d.addErrback() # do something to send an iq type=error
          
-    def gotIQUnknown(self, type, ns, from_, to, id, query):
-        return # ignore unknown IQs by default
-
-    def gotIQError(self, from_, to, id, code, text):
-        raise NotImplementedError
+    def methodCalled(self, type, ns, from_, to, id, query):
+        # fail
+        return defer.fail(IQFailure(502, "I am a silly monkey"))
 
 
 class JabberCoreMixin(JabberMessageMixin, JabberPresenceMixin, JabberIQMixin):
