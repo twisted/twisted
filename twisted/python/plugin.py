@@ -126,7 +126,10 @@ def getPluginFileList(debugInspection=None, showProgress=None):
     result = []
     loaded = {}
     seenNames = {}
-    paths = filter(os.path.isdir, map(cacheTransform, sys.path))
+    
+    paths = filter(os.path.isdir,
+                map(cacheTransform,
+                    filter(lambda x:isinstance(x, type('')), sys.path)))
     # special case for commonly used directories we *know* shouldn't be checked
     # and really slow down mktap and such-like in real installations
     for p in ("/usr/bin", "/usr/local/bin"):
