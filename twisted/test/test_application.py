@@ -315,6 +315,9 @@ class TestAppSupport(unittest.TestCase):
 class TestInternet(unittest.TestCase):
 
     def testUNIX(self):
+        from twisted.python import runtime
+        if runtime.platformType == 'win32':
+            raise unittest.SkipTest, "This is impossible on win32"
         if not interfaces.IReactorUNIX(reactor, None):
             raise unittest.SkipTest, "This reactor does not support UNIX domain sockets"
         s = service.MultiService()
