@@ -23,7 +23,8 @@ import sys, os
 class Options(usage.Options):
     optFlags = [["help", "h"],
                 ["text", "t", "Text mode (ignored)"],
-                ["verbose", "v", "Verbose output"]]
+                ["verbose", "v", "Verbose output"],
+                ["debug", "b", "Run tests in the Python debugger"]]
     optParameters = [["reactor", "r", None,
                       "The Twisted reactor to install before running the tests (looked up as a module contained in twisted.internet)"],
                      ["logfile", "l", "test.log", "log file name"]]
@@ -90,9 +91,12 @@ def run():
     else:
         reporter = unittest.TextReporter(sys.stdout)
 
-    suite.run(reporter)
-
-    sys.exit(not reporter.allPassed())
+    if config['debug']:
+        import pdb
+        pdb.run("suite.run(reporter)", globals(), locals())
+    else:
+        suite.run(reporter)
+        sys.exit(not reporter.allPassed())
 
 if __name__ == '__main__':
     run()
