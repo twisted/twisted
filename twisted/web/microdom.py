@@ -413,7 +413,7 @@ class MicroDOMParser(XMLParser):
                         # this was a garbage close tag; wait for a real one
                         self.elementstack.append(el)
                         return
-                    del self.elementstack[-idx+1:]
+                    del self.elementstack[-(idx+1):]
                     if not self.elementstack:
                         self.documents.append(lastEl)
             else:
