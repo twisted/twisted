@@ -64,8 +64,8 @@ class InMemoryUsernamePasswordDatabaseDontUse:
     credentialInterfaces = (credentials.IUsernamePassword,
         credentials.IUsernameHashedPassword)
 
-    def __init__(self):
-        self.users = {}
+    def __init__(self, **users):
+        self.users = users
 
     def addUser(self, username, password):
         self.users[username] = password
