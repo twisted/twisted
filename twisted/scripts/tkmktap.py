@@ -387,12 +387,17 @@ class TkConfigFrame(Tkinter.Frame):
             flags.extend(self.options.optFlags)
 
         d = {}
+        soFar = {}
         for meth in reflect.prefixedMethodNames(self.options.__class__, 'opt_'):
             full = 'opt_' + meth
             func = getattr(self.options, full)
-            
+
             if not usage.flagFunction(func) or meth in ('help', 'version'):
                 continue
+            
+            if soFar.has_key(func):
+                continue
+            soFar[func] = 1
             
             existing = d.setdefault(func, meth)
             if existing != meth:
@@ -418,12 +423,15 @@ class TkConfigFrame(Tkinter.Frame):
             params.extend(self.options.optParameters)
 
         d = {}
+        soFar = {}
         for meth in reflect.prefixedMethodNames(self.options.__class__, 'opt_'):
             full = 'opt_' + meth
             func = getattr(self.options, full)
 
-            if usage.flagFunction(func):
+            if usage.flagFunction(func) or soFar.has_key(func):
                 continue
+            
+            soFar[func] = 1
 
             existing = d.setdefault(func, meth)
             if existing != meth:
