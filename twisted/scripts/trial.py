@@ -106,7 +106,10 @@ class Options(usage.Options):
 
             # this is a problem: it imports the module, which installs a
             # reactor, and this happens before --reactor is processed
-            arg = reflect.namedAny(arg)
+            try:
+                arg = reflect.namedAny(arg)
+            except ValueError:
+                raise usage.UsageError, "Can't find anything named %r to run" % arg
 
             if inspect.ismodule(arg):
                 filename = os.path.basename(arg.__file__)
