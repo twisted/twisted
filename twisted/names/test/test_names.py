@@ -184,7 +184,6 @@ class ServerDNSTestCase(unittest.TestCase):
 
     def testAddressRecord1(self):
         """Test simple DNS 'A' record queries"""
-        reactor.debug = True
         self.namesTest(
             self.resolver.lookupAddress('test-domain.com'),
             [dns.Record_A('127.0.0.1', ttl=19283784)]
