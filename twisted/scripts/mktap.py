@@ -48,10 +48,12 @@ def loadPlugins(debug = None, progress = None):
         tapLookup[shortTapName] = plug
     return tapLookup
 
-def makeService(mod, options):
+def makeService(mod, name, options):
     if hasattr(mod, 'updateApplication'):
         ser = service.MultiService()
-        mod.updateApplication(compat.IOldApplication(ser), options)
+        oldapp = compat.IOldApplication(ser)
+        oldapp.name = name
+        mod.updateApplication(oldapp, options)
     else:
         ser = mod.makeService(options)
     return ser
@@ -154,6 +156,7 @@ def run():
     except KeyboardInterrupt:
         sys.exit(1)
     ser = makeService(options.tapLookup[options.subCommand].load(),
+                      options.subCommand,
                       options.subOptions)
     addToApplication(ser,
                      options.subCommand, options['append'], options['appname'],
