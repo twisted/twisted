@@ -1,0 +1,31 @@
+.TH COIL "1" "March 2002" "" ""
+.SH NAME
+coil \- configure twisted TAP files
+.SH SYNOPSIS
+.B coil
+[--new=\fIname\fR] \fI<file.tap>\fR
+.SH DESCRIPTION
+.PP
+Once you've launched coil, point \
+your browser at http://localhost:9080 to configure the TAP file, and when done hit Ctrl-C to shutdown \
+and save the changes.
+.TP
+\fB\--help\fR	 
+Print out a usage message to standard output. 
+.TP 
+\fB\-n\fR, \fB\--new\fR \fI<name>\fR
+Create a new twisted Application.
+.TP
+\fB\-p\fR, \fB\--port\fR \fI<port>\fR
+Run the coil web server on <port> (defaults to 9080)
+.SH AUTHOR
+Written by Itamar Shtull-Trauring, based on coil's help messages
+.SH "REPORTING BUGS"
+Report bugs to <twisted-python@twistedmatrix.com>.
+.SH COPYRIGHT
+Copyright \(co 2002 Glyph Lefkowitz
+.br
+This is free software; see the source for copying conditions.  There is NO
+warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+.SH "SEE ALSO"
+twistd(1), mktap(1)
