@@ -97,8 +97,8 @@ def _replaceWithListing(node, val, fn):
     if caption == os.path.basename(fn):
         caption = 'Source listing'
     text = ('<div class="py-listing">%s<div class="py-caption">%s - '
-            '<span class="py-filename">%s</span></div></div>' %
-            (val, caption, fn))
+            '<a href="%s"><span class="py-filename">%s</span></a></div></div>' %
+            (val, caption, fn, fn))
     newnode = microdom.parseString(text).documentElement
     node.parentNode.replaceChild(newnode, node)
 
