@@ -155,7 +155,7 @@ install-indep-stamp: install-base-stamp
 	install -m 644 doc/vision/*.html $(docdir)/vision/
 	install -m 644 doc/img/*.png doc/img/*.bmp $(docdir)/img/
 	cp -ar doc/examples/* $(docdir)/examples/
-	find $(docdir)/examples/ -name CVS | xargs -r rm
+	find $(docdir)/examples/ -name CVS | xargs -r rm -r
 	find $(docdir)/examples/ -name .cvsignore | xargs -r rm
 	sed '/api/d' doc/index.xhtml > $(docdir)/index.html
 	set -e;for maint in postinst prerm;\
