@@ -36,5 +36,6 @@ class OctTreeTest(unittest.TestCase):
                              20, 20, 20)
 
         ot.iterInFrustum(point=(4,4,4), fov=100,
+                         distance=100,
                          angle=angleBetween((4,4,4), o1.position))
 
