@@ -134,7 +134,8 @@ class PySourceAuthority(FileAuthority):
 
     def setupConfigNamespace(self):
         r = {}
-        for record in [x for x in dir(dns) if x.startswith('Record_')]:
+        items = dns.__dict__.iterkeys()
+        for record in [x for x in items if x.startswith('Record_')]:
             type = getattr(dns, record)
             f = self.wrapRecord(type)
             r[record[len('Record_'):]] = f
