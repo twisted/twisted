@@ -34,6 +34,8 @@ What is this?
 
 What's new in 0.12.2-pre?
 
+  Removed some broken and/or experimental code.
+  
   Added poll() based event loop implementation.
 
   Documentation for webwidgets and manhole.
