@@ -626,7 +626,7 @@ class Deferred(defer.Deferred):
                 return
             self._results.append(cmd.result)
 
-def buildProtocol(controller, baseClass = protocol.Protocol, 
+def makeFlowProtocol(controller, baseClass = protocol.Protocol, 
                   *callbacks, **kwargs):
     """ Construct a flow based protocol
 
@@ -648,10 +648,10 @@ def buildProtocol(controller, baseClass = protocol.Protocol,
                 reactor.callLater(0,reactor.stop)
             
             server = protocol.ServerFactory()
-            server.protocol = flow.buildProtocol(echoServer)
+            server.protocol = flow.makeFlowProtocol(echoServer)
             reactor.listenTCP(PORT,server)
             client = protocol.ClientFactory()
-            client.protocol = flow.buildProtocol(echoClient)
+            client.protocol = flow.makeFlowProtocol(echoClient)
             reactor.connectTCP("localhost", PORT, client)
             reactor.run()
 

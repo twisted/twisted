@@ -326,10 +326,10 @@ class FlowTest(unittest.TestCase):
     def testProtocol(self):
         PORT = 8392
         server = protocol.ServerFactory()
-        server.protocol = flow.buildProtocol(echoServer)
+        server.protocol = flow.makeFlowProtocol(echoServer)
         reactor.listenTCP(PORT,server)
         client = protocol.ClientFactory()
-        client.protocol = flow.buildProtocol(echoClient)
+        client.protocol = flow.makeFlowProtocol(echoClient)
         client.d = defer.Deferred()
         reactor.connectTCP("localhost", PORT, client)
         self.assertEquals('testing', unittest.deferredResult(client.d))
