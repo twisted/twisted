@@ -5,6 +5,8 @@ Woven object collections.
 THIS MODULE IS HIGHLY EXPERIMENTAL AND MAY BE DEPRECATED SOON.
 """
 
+from __future__ import nested_scopes
+
 # System Imports
 import time
 import sys

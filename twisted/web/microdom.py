@@ -30,6 +30,9 @@ fine for the documentation generator, which parses a fairly representative
 sample of XML.
 
 """
+
+from __future__ import nested_scopes
+
 # System Imports
 import copy
 from cStringIO import StringIO

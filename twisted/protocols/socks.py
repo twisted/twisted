@@ -103,7 +103,7 @@ class SOCKSv4(protocol.Protocol):
             elif code==2: # BIND
                 ip = socket.gethostbyname(server)
                 d = self.listenClass(0, SOCKSv4IncomingFactory, self, ip)
-                d.addCallback(lambda (h, p), s=self: self.makeReply(90, 0, p, h))
+                d.addCallback(lambda (h, p), self=self: self.makeReply(90, 0, p, h))
             else:
                 raise RuntimeError, "Bad Connect Code: %s" % code
             assert self.buf=="","hmm, still stuff in buffer... %s" % repr(self.buf)
