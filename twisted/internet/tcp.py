@@ -40,6 +40,9 @@ except ImportError:
     fcntl = None
 
 if os.name == 'nt':
+    # we hardcode these since windows actually wants e.g.
+    # WSAEALREADY rather than EALREADY. Possibly we should
+    # just be doing "from errno import WSAEALREADY as EALREADY".
     EPERM       = 10001
     EINVAL      = 10022
     EWOULDBLOCK = 10035
@@ -235,7 +238,9 @@ class BaseClient(Connection):
             # this happens when connection failed but doConnect
             # was scheduled via a callLater in self._finishInit
             return
-        
+
+        # on windows failed connects are reported on exception
+        # list, not write or read list.
         if platform.getType() == "win32":
             r, w, e = select.select([], [], [self.fileno()], 0.0)
             if e:
@@ -247,6 +252,8 @@ class BaseClient(Connection):
         except socket.error, se:
             if se.args[0] == EISCONN:
                 pass
+            # on Windows EINVAL means sometimes that we should keep trying:
+            # http://msdn.microsoft.com/library/default.asp?url=/library/en-us/winsock/winsock/connect_2.asp
             elif se.args[0] in (EWOULDBLOCK, EINVAL, EINPROGRESS, EALREADY):
                 self.startReading()
                 self.startWriting()
