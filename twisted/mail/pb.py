@@ -1,26 +1,26 @@
 # Twisted, the Framework of Your Internet
 # Copyright (C) 2001 Matthew W. Lefkowitz
-# 
+#
 # This library is free software; you can redistribute it and/or
 # modify it under the terms of version 2.1 of the GNU Lesser General Public
 # License as published by the Free Software Foundation.
-# 
+#
 # This library is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
 # Lesser General Public License for more details.
-# 
+#
 # You should have received a copy of the GNU Lesser General Public
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 from twisted.spread import pb, banana
 import types
 
-class Maildir(pb.Referencable):
+class Maildir(pb.Referenceable):
 
     def __init__(self, directory, rootDirectory):
-        self.virtualDirectory = directory 
-        self.rootDirectory = rootDirectory 
+        self.virtualDirectory = directory
+        self.rootDirectory = rootDirectory
         self.directory = os.path.join(rootDirectory, directory)
 
     def getFolderMessage(self, folder, name):
@@ -30,7 +30,7 @@ class Maildir(pb.Referencable):
         try:
             return fp.read()
         finally:
-            fp.close() 
+            fp.close()
 
     def deleteFolderMessage(self, folder, name):
         if '/' in name:
@@ -54,11 +54,11 @@ class Maildir(pb.Referencable):
         return os.listdir(os.path.join(self.directory, 'cur'))
     remote_getCurMessages = getCurMessages
 
-    def getNewMessage(self, name): 
+    def getNewMessage(self, name):
         return self.getFolderMessage('new', name)
     remote_getNewMessage = getNewMessage
 
-    def getCurMessage(self, name): 
+    def getCurMessage(self, name):
         return self.getFolderMessage('cur', name)
     remote_getCurMessage = getCurMessage
 
@@ -77,11 +77,11 @@ class Maildir(pb.Referencable):
 
     def _isSubFolder(self, name):
         return (not os.path.isdir(os.path.join(self.rootDirectory, name)) or
-                not os.path.isfile(os.path.join(self.rootDirectory, name, 
+                not os.path.isfile(os.path.join(self.rootDirectory, name,
                                                 'maildirfolder')))
 
 
-class MaildirCollection(pb.Referencable):
+class MaildirCollection(pb.Referenceable):
 
     def __init__(self, root):
         self.root = root
@@ -110,7 +110,7 @@ class MaildirBroker(pb.Broker):
         if not self.domains.has_key(domain):
             return
         domain = self.domains[domain]
-        if (domain.dbm.has_key(name) and 
+        if (domain.dbm.has_key(name) and
             domain.dbm[name] == password):
             return MaildirCollection(domain.userDirectory(name))
 
