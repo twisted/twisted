@@ -20,6 +20,8 @@
 Test cases for defer module.
 """
 
+from __future__ import nested_scopes
+
 from twisted.trial import unittest
 from twisted.internet import reactor, defer
 from twisted.python import failure
