@@ -24,6 +24,7 @@ API Stability: unstable
 
 Maintainer: U{Moshe Zadka<mailto:moshez@twistedmatrix.com>}
 """
+from __future__ import generators
 
 def _parseTCP(factory, port, interface="", backlog=5):
     return (int(port), factory), {'interface': interface, 'backlog': backlog}
@@ -47,6 +48,38 @@ _funcs = {"tcp": _parseTCP,
          "unix": _parseUNIX,
          "ssl": _parseSSL}
 
+_OP, _STRING = range(2)
+def _tokenize(description):
+    current = ''
+    description = iter(description)
+    for n in description:
+        if n in ':=':
+            yield STRING, current
+            yield OP, n
+            current = ''
+        elif n=='\\':
+            current += description.next()
+        else:
+            current += n
+    yield STRING, current
+
+def _parse(description):
+    args, kw = [], {}
+    def add(sofar):
+        if len(sofar)==1:
+            args.append(sofar[0])
+        else:
+            kw[sofar[0]] = '='.join(sofar[1:])
+    sofar = ()
+    for (type, value) in _tokenize(description):
+        if type is STRING:
+            so_far += (value,)
+        elif type is OP and value==':':
+            add(sofar)
+            sofar = ()
+    add(sofar)
+    return args, kw 
+
 def parse(description, factory):
     """Parse a description of a reliable virtual circuit server
 
@@ -69,8 +102,8 @@ def parse(description, factory):
     colon-separated string. The first part means the type -- currently,
     it can only be ssl, unix or tcp. After that, comes a list of
     arguments. Arguments can be positional or keyword, and can be mixed.
-    Keyword arguments are indicated by C{'name=value'}. Obviously, a value
-    which contain an C{'='} can only be given positionally.
+    Keyword arguments are indicated by C{'name=value'}. If a value is supposed
+    to contain a C{':'}, a C{'='} or a C{'\\'}, escape it with a C{'\\'}.
 
     For TCP, the arguments are the port (port number) and, optionally the
     interface (interface on which to listen) and backlog (how many clients to
