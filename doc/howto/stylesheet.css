@@ -20,13 +20,13 @@ TH
   }
 */
 
-/*
+
 PRE, CODE
 {
   font-family: Neep Alt, Courier New, Courier;
   font-size: 12pt;
-  }
-*/
+}
+
 
 /*
 PRE.code 
@@ -39,16 +39,14 @@ PRE.code
   }
 */
 
-/*
 PRE.shell
 { 
-  color: white;
-  background-color: blue;
+  background-color: #ffffcc;
   margin: 1em;
   padding: 1em;
   border: thin black solid;
   }
-*/
+
 
 
 H1, H2, H3, H4, H5, H6

@@ -33,9 +33,7 @@ sys.path.append('.')
 # No docs. I want to keep my job.
 #
 
-import os, time, sgmllib, re, string, sys, cgi, cStringIO, glob
-
-import sgmlfilter
+import os, time, sgmllib, re, string, sys, cgi, cStringIO, glob, types
 
 from twisted.python import usage
 from twisted import copyright
@@ -45,35 +43,69 @@ cssclassmap =  {'services': 'serv-text',
                 'documents': 'doc-text',
                 'developers': 'dev-text',
                 'products': 'prod-text'}
- 
 
-class TemplateFilter(sgmlfilter.SGMLFilter):
+DO_NOT_CHANGE = 1
+
+class TemplateFilter(sgmllib.SGMLParser):
     def __init__(self, file, APICache):
+        sgmllib.SGMLParser.__init__(self)
         self.io = cStringIO.StringIO()
         self.titleMode = 1
         self.title = []
         self.apiLink = 0
         self.APICache = APICache
-        sgmlfilter.SGMLFilter.__init__(self, self.io, file)
+        while 1:
+            s = file.read(1024)
+            if not s: break
+            self.feed(s)
+        self.close()
+
+
+    def unknown_starttag(self, tag, attrs):
+        result = self.start(tag, attrs)
+        if result == DO_NOT_CHANGE:
+            #if we don't munge it, then it should be exactly the same
+            t = self.get_starttag_text()
+            #print "writing",t,"untouched."
+            self.io.write(t)
+            return
+        self.io.write(result)
+
+    def unknown_endtag(self, tag):
+        self.io.write(self.end(tag))
+
+    def handle_entityref(self, name):
+        self.io.write("&%s;" % name)
+
+    def generate_tag(self, tag, attrs):
+        if not attrs:
+            return "<%s>" % tag
+        else:
+            o = "<%s" % tag
+            for k,v in attrs:
+                o += " %s=%s" % (k,repr(v))
+            o += ">"
+            return o
 
     def handle_data(self, data):
         if self.apiLink:
-            url = self.lookupInAPI(data)
+            url = self.APICache.match(data)
             if url:
                 data = '<a href="%s">%s</a>' % (url, data)
         if self.titleMode:
             self.title.append(data)
         
-        self.write(data)
+        self.io.write(data)
 
-    def lookupInAPI(self, data):
-#        print "looking up --", data
-        return self.APICache.match(data)
-#        pass
 
     def start(self, tag, attrs):
+        if tag in ('br', 'hr'):
+            return DO_NOT_CHANGE
+        
         if tag == 'title':
             self.titleMode = 1
+            return DO_NOT_CHANGE
+
         if tag == 'a':
             #If it's a relative link, we have to replace '.html' with ''.
             for i in range(len(attrs)):
@@ -85,29 +117,31 @@ class TemplateFilter(sgmlfilter.SGMLFilter):
                         #print "relative!", attrs,
                         attrs[i] = ('href', attr[1].replace('.html', ''))
                         #print "returning", attrs
+                        return self.generate_tag(tag,attrs)
+
         for i in range(len(attrs)):
             attr = attrs[i]
             if attr[0] == 'class':
                 if string.lower(attr[1]) == 'api':
-#                    print "entering API mode for",attr[0], attr[1]
                     self.apiLink = tag
                     
-        return tag, attrs
+        return DO_NOT_CHANGE
 
     def end(self, tag):
-        self.titleMode = 0
         #print "end",tag
         if tag == 'title':
+            self.titleMode = 0
             self.title = string.join(self.title, "")
             #print "got title", self.title
-#        print tag
+            #        print tag
         if tag == self.apiLink:
-#            print "turning off API mode for", tag, self.apiLink
             self.apiLink = 0
-        return tag
+        return "</%s>" % tag
+
+
 
     def get_title(self):
-        assert type(self.title) is not type([]), "Hmm. Something's wrong with the <title> of this document."
+        assert isinstance(self.title, types.StringType), "Hmm. Something's wrong with the <title> of this document."
         return self.title
 
 class Walker:
@@ -181,7 +215,6 @@ class Cache:
         """
         I take a fully-qualified *or* relative module or class-name, and return an URL to the Twisted API documentation for that name.
         """
-        print "matching..?"
         # Evil is fun.
         if not '.' in name:
             raise ValueError("Gimme more than just *%s* to work with, will ya?!?" % name)
