@@ -156,7 +156,7 @@ class DefaultTagChecker(TagChecker):
                 continue
             text = domhelpers.getNodeText(node)
             proto = urlparse.urlparse(text)[0]
-            if proto:
+            if proto and ' ' not in text:
                 if text != node.getAttribute('href',''):
                     self._reportError(filename, node, 
                                       'link text does not match href')
