@@ -331,8 +331,11 @@ class _Attr(CharacterData):
 import new
 
 class Element(Node):
-
-    def __init__(self, tagName, attributes=None, parentNode=None, filename=None, markpos=None, caseInsensitive=1, preserveCase=0):
+    preserveCase = 0
+    caseInsensitive = 0
+    def __init__(self, tagName, attributes=None, parentNode=None, 
+                        filename=None, markpos=None, 
+                        caseInsensitive=1, preserveCase=0):
         Node.__init__(self, parentNode)
         self.preserveCase = preserveCase or not caseInsensitive
         self.caseInsensitive = caseInsensitive
