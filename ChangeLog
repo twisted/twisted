@@ -1,3 +1,9 @@
+2003-01-05  Brian Warner  <warner@lothar.com>
+
+	* twisted/internet/cReactor/*, setup.py: Implement getDelayedCalls for
+	cReactor. Create cDelayedCall class, implement .cancel(), .reset(),
+	and .delay() for them.
+
 2003-01-03  Jp Calderone  <exarkun@twistedmatrix.com>
 
 	* twisted/python/components.py: Fix bug due to interaction between
