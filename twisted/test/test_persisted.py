@@ -159,7 +159,7 @@ class Marmaladeable(marmalade.DOMJellyable):
         # _Dereference instances in places where you thought you should have
         # references to back-referenced data.  I am working on making this
         # simpler.
-        from xml.dom.minidom import Element
+        from twisted.web.microdom import Element
         self.sequence = []
         i = 0
         for node in element.childNodes:
