@@ -1,3 +1,28 @@
+2003-04-27  Jp Calderone  <exarkun@twistedmatrix.com>
+
+	* doc/examples/bananabench.py, twisted/internet/utils.py,
+	twisted/mail/bounce.py, twisted/persisted/styles.py,
+	twisted/python/log.py, twisted/python/reflect.py,
+	twisted/spread/pb.py, twisted/test/test_banana.py,
+	twisted/test/test_iutils.py, twisted/test/test_persisted.py,
+	twisted/test/test_process.py, twisted/web/domhelpers.py,
+	twisted/web/script.py, twisted/web/server.py, twisted/web/test.py:
+	Change the usage of cStringIO to fallback to StringIO if the former
+	is not available.
+
+	* twisted/im/gtkaccount.py, twisted/internet/app.py,
+	twisted/mail/relay.py, twisted/mail/relaymanager.py,
+	twisted/persisted/journal/base.py, twisted/persisted/dirdbm.py,
+	twisted/scripts/conch.py, twisted/scripts/tapconvert.py,
+	twisted/scripts/twistd.py, twisted/scripts/websetroot.py,
+	twisted/test/test_mvc.py, twisted/test/test_persisted.py,
+	twisted/web/woven/template.py, twisted/web/woven/view.py,
+	twisted/popsicle/picklesicle.py: Change the usage of cPickle to
+	fallback to pickle if the former is not available.
+
+	* doc/howto/coding-standard.html: Document the way to use extension
+	versions of modules for which there is a pure-python equivalent.
+
 2003-04-26  Dave Peticolas  <dave@krondo.com>
 
 	* twisted/enterprise/adbapi.py: commit successful _runQuery calls

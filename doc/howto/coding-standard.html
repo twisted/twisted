@@ -204,6 +204,24 @@ On debian systems you can find a skeleton example of a manpage in
 <p>This will insure your program will work correctly for users of CVS,
 Windows releases and Debian packages.</p>
 
+    <h2>Standard Library Extension Modules</h2>
+
+    <p>When using the extension version of a module for which there is also
+    a Python version, place the import statement inside a try/except block,
+    and import the Python version if the import fails.  This allows code to
+    work on platforms where the extension version is not available.  For
+    example:
+
+<pre class="python">
+try:
+    import cPickle as pickle
+except ImportError:
+    import pickle
+</pre>
+
+    Use the &quot;as&quot; syntax of the import statement as well, to set
+    the name of the extension module to the name of the Python module.</p>
+
     <h2>ChangeLog</h2>
 
     <p>All changes that will affect the way end-users see Twisted should come
