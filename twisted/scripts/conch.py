@@ -14,7 +14,7 @@
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 #
-# $Id: conch.py,v 1.44 2003/03/04 21:23:00 z3p Exp $
+# $Id: conch.py,v 1.45 2003/03/13 19:40:39 z3p Exp $
 
 #""" Implementation module for the `conch` command.
 #"""
@@ -610,6 +610,8 @@ class SSHUserAuthClient(userauth.SSHUserAuthClient):
 
     def getPublicKey(self):
         files = [x for x in options.identitys if x not in self.usedFiles]
+        log.msg(str(options.identitys))
+        log.msg(str(files))
         if not files:
             return None
         file = files[0]
@@ -678,7 +680,7 @@ class SSHSession(channel.SSHChannel):
         else:
             c.dataReceived = self.write
         c.connectionLost = self.sendEOF
-        stdio.StandardIO(c)
+        self.stdio = stdio.StandardIO(c)
         if options['subsystem']:
             self.conn.sendRequest(self, 'subsystem', \
                 common.NS(options['command']))
@@ -729,9 +731,7 @@ class SSHSession(channel.SSHChannel):
             self.write(char)
 
     def dataReceived(self, data):
-        sys.stdout.write(data)
-        sys.stdout.flush()
-        #sys.stdout.flush()
+        self.stdio.write(data)
 
     def extReceived(self, t, data):
         if t==connection.EXTENDED_DATA_STDERR:
