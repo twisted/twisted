@@ -15,7 +15,7 @@
 # That way we can re-locate the completion functions so that we are sure
 # to be completing for the right version of twisted.
 
-local dir old_fpath python_code run
+local dir old_fpath python_code run shebang
 
 function debug () {
     echo $1 >> /tmp/debug
@@ -24,9 +24,8 @@ function debug () {
 #debug "START _twisted_stub"
 
 function load_twisted_completions() {
-    local python_code shebang
     [[ -z $commands[twistd] ]] && echo 'ERROR: test command "twistd" not found in path' && return 1
-    shebang=$(cat $commands[twistd]|head -1)
+    shebang=$(head -1 $commands[twistd])
     [[ $shebang != \#\!* ]] && echo 'ERROR: invalid shebang line for test script "twistd"' && return 1
     PYTHON=$shebang[3,-1]
 
