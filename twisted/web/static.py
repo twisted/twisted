@@ -229,7 +229,7 @@ class File(resource.Resource, styles.Versioned, filepath.FilePath):
 
     contentEncodings = {
         ".gz" : "application/x-gzip",
-        ".bz2": "appliation/x-bzip2"
+        ".bz2": "application/x-bzip2"
         }
 
     processors = {}
