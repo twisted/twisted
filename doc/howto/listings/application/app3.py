@@ -12,10 +12,10 @@ class OneTimeKey(Protocol):
 
 def main():
     # namespaces are weird. See the comment in doc/examples/echoserv.py
-    import app1
+    import app3
     from twisted.internet.app import Application
     f = Factory()
-    f.protocol = app1.OneTimeKey
+    f.protocol = app3.OneTimeKey
     f.nextkey = 0
     app = Application("otk")
     app.listenTCP(8123, f)
