@@ -33,7 +33,8 @@ ALLOW_DUPLICATES = 0
 
 class _Nothing:
     """
-    An alternative to None - default value for functions which raise if default not passed.
+    An alternative to None - default value for functions which raise 
+    if default not passed.
     """
 
 def getRegistry(r):
@@ -49,20 +50,25 @@ class CannotAdapt(NotImplementedError):
     pass
 
 class MetaInterface(type):
-    def __call__(self, adaptable, default=_Nothing, persist=None, registry=None):
+    def __call__(self, adaptable, default=_Nothing, 
+                       persist=None, registry=None):
         """
-        Try to adapt `adaptable' to self; return `default' if it was passed, otherwise
-        raise L{CannotAdapt}.
+        Try to adapt `adaptable' to self; return `default' if it was passed,
+        otherwise raise L{CannotAdapt}.
         """
         adapter = default
         registry = getRegistry(registry)
         try:
             # should this be `implements' of some kind?
-            if (persist is None or persist) and isinstance(adaptable, Componentized):
+            if (persist is None or persist) \
+            and isinstance(adaptable, Componentized):
                 adapter = adaptable.getComponent(self, registry, _Nothing)
             else:
-                adapter = registry.getAdapter(adaptable, self, _Nothing, persist=persist)
+                adapter = registry.getAdapter(adaptable, self, _Nothing, 
+                                              persist=persist)
         except NotImplementedError:
+            # if the interface has implemented PEP 246, Object Adaption
+            # http://www.python.org/peps/pep-0246.html
             if hasattr(self, '__adapt__'):
                 adapter = self.__adapt__.im_func(adaptable, _Nothing)
 
