@@ -118,7 +118,7 @@ class DirectoryLister(page.Page):
         return files + dirs
 
     def wmfactory_header(self, request):
-        return "Directory listing for %s" % request.uri
+        return "Directory listing for %s" % urllib.unquote(request.uri)
 
     def __repr__(self):  
         return '<DirectoryLister of %r>' % self.path
