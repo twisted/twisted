@@ -27,7 +27,7 @@ Connected to localhost.
 Escape character is '^]'.
 
 twisted.manhole.telnet.ShellFactory
-Twisted 1.0.4
+Twisted 1.1.0
 username: <em>admin</em>
 password: <em>admin</em>
 &gt;&gt;&gt;
@@ -48,19 +48,20 @@ here. Let's try looking around.</p>
 &gt;&gt;&gt; <em>dir(__main__)</em>
 ['__builtins__', '__doc__', '__name__', 'os', 'run', 'string', 'sys']
 
-&gt;&gt;&gt; <em>from twisted.internet import app</em>
-&gt;&gt;&gt; <em>app.theApplication</em>
-&lt;'telnet' app&gt;
-&gt;&gt;&gt; <em>app.theApplication.tcpPorts</em>
-[(4040, &lt;twisted.manhole.telnet.ShellFactory instance at 0x8268edc&gt;,5,'')]
+&gt;&gt;&gt; <em>service</em>
+&lt;twisted.application.internet.TCPServer instance at 0x10270f48&gt;
+&gt;&gt;&gt; <em>service._port</em>
+&lt;twisted.manhole.telnet.ShellFactory on 4040&gt;
+&gt;&gt;&gt; <em>service.parent</em>
+&lt;twisted.application.service.MultiService instance at 0x1024d7a8&gt;
 </pre>
 
-<p>From this session we learned that there is an application object stored
-in <code class="python">twisted.internet.app.theApplication</code> that's a
-telnet app, and that it is listening on port 4040 with something called a
-<code class="API" base="twisted.manhole.telnet">ShellFactory</code>. There
-are lots of other attributes in <code class="python">theApplication</code>,
-which we're not going to worry about for now.</p>
+<p>The service object is the service used to serve the telnet shell,
+and that it is listening on port 4040 with something called a
+<code class="API" base="twisted.manhole.telnet">ShellFactory</code>. 
+Its parent is a <code class="python">twisted.application.service.MultiService</code>,
+a collection of services. We can keep getting the parent attribute
+of services until we hit the root of all services in this tap.</p>
 
 <p>Alright, so now you've decided that you hate Twisted and
 want to shut it down. Or you just want to go to bed. Either
@@ -73,7 +74,7 @@ directory again, you'll notice that there will be a file named
 telnet-shutdown.tap. If you wanted to restart the server with
 exactly the same state as you left it, you could just run <code
 class="shell">twistd -f telnet-shutdown.tap</code>. This is why
-Twisted doesn't need any sort of configuration files -- all the
+Twisted doesn't necessarily need any sort of configuration files -- all the
 configuration data is stored right in the objects!</p>
 
 <p>Now that you've learned how to create a telnet server with
