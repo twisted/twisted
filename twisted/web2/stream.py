@@ -36,8 +36,13 @@ import copy,os
 from zope.interface import Interface, Attribute, implements
 from twisted.internet.defer import Deferred
 from twisted.internet import interfaces as ti_interfaces, defer, reactor, protocol, error
+from twisted.python import components
 
-import mmap
+try:
+    import mmap
+except ImportError:
+    mmap = None
+
 
 class IStream(Interface):
     """A stream of arbitrary data."""
@@ -148,7 +153,7 @@ class FileStream(SimpleStream):
     CHUNK_SIZE = 2 ** 2 ** 2 ** 2 - 32
 
     f = None
-    def __init__(self, f, start=0, length=None, useMMap=True):
+    def __init__(self, f, start=0, length=None, useMMap=bool(mmap)):
         """
         Create the stream from file f. If you specify start and length,
         use only that portion of the file.
@@ -208,7 +213,10 @@ class FileStream(SimpleStream):
     def close(self):
         self.f = None
         SimpleStream.close(self)
-        
+
+components.registerAdapter(FileStream, file, IByteStream)
+
+
 class MemoryStream(SimpleStream):
     """A stream that reads data from a buffer object."""
     def __init__(self, mem, start=0, length=None):
@@ -239,7 +247,11 @@ class MemoryStream(SimpleStream):
     def close(self):
         self.mem = None
         SimpleStream.close(self)
-        
+
+components.registerAdapter(MemoryStream, str, IByteStream)
+components.registerAdapter(MemoryStream, buffer, IByteStream)
+
+
 class CompoundStream:
     """A stream which is composed of many other streams.
     Call addStream to add substreams.
@@ -254,18 +266,13 @@ class CompoundStream:
         
     def addStream(self, bucket):
         """Add a stream to the output"""
+        bucket = IByteStream(bucket)
         self.buckets.append(bucket)
         if self.length is not None:
             if bucket.length is None:
                 self.length = None
             else:
                 self.length += bucket.length
-
-    def addStr(self, s):
-        """Shortcut to add a string to the output. 
-        Simply calls self.addStream(MemoryStream(s))
-        """
-        self.addStream(MemoryStream(s))
 
     def read(self, sendfile=False):
         if self.deferred is not None:

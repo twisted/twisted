@@ -116,14 +116,14 @@ def rangefilter(request, oldresponse):
             headerString+="\r\nContent-Range: %s\r\n\r\n"
             
             for start,end in offsetList:
-                out.addStr(headerString % 
+                out.addStream(headerString % 
                     http_headers.generateContentRange(('bytes', start, end, size)))
 
                 content, origStream = makeSegment(origStream, lastOffset, start, end)
                 lastOffset = end + 1
                 out.addStream(content)
             origStream.close()
-            out.addStr("\r\n--%s--\r\n" % boundary)
+            out.addStream("\r\n--%s--\r\n" % boundary)
             return response
     else:
         return oldresponse

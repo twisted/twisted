@@ -273,6 +273,18 @@ class ProcessStreamerTest(unittest.TestCase):
         return d.addCallback(verify).addErrback(lambda _: _.trap(error.ProcessDone))
 
 
+class AdapterTestCase(unittest.TestCase):
+
+    def test_adapt(self):
+        f = file("foo", "w")
+        f.write("test")
+        f.close()
+        for i in ("test", buffer("test"), file("foo")):
+            s = stream.IByteStream(i)
+            assertEquals(str(s.read()), "test")
+            assertEquals(s.read(), None)
+
+
 from twisted.web2.stream import *
 class CompoundStreamTest:
     """
@@ -310,7 +322,7 @@ class CompoundStreamTest:
     For a more complicated example, let's try reading from a file:
     >>> s = CompoundStream()
     >>> s.addStream(FileStream(open(sibpath(__file__, "stream_data.txt"))))
-    >>> s.addStr("================")
+    >>> s.addStream("================")
     >>> s.addStream(FileStream(open(sibpath(__file__, "stream_data.txt"))))
 
     Again, the length is the sum:
