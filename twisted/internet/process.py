@@ -83,13 +83,15 @@ class BackRelay(protocol.ProcessProtocol):
 
     def errReceived(self, text):
         self.deferred.errback(failure.Failure(IOError("got stderr")))
+        self.deferred = None
         self.transport.loseConnection()
 
     def outReceived(self, text):
         self.s.write(text)
 
     def processEnded(self, reason):
-        self.deferred.callback(self.s.getvalue())
+        if self.deferred is not None:
+            self.deferred.callback(self.s.getvalue())
 
 
 
