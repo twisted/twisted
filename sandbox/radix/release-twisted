@@ -28,11 +28,8 @@ sys.path.insert(0, os.curdir)
 ### end of preamble
 
 from twisted.python import usage, util, failure
-from twisted import copyright
 
 import shutil, re
-
-defaultOptions = '--upver --tag --exp --dist --docs --balls --rel --deb' # --debi'
 
 defaultSVNBase = 'svn+ssh://svn.twistedmatrix.com/svn/Twisted'
 
@@ -61,8 +58,12 @@ class Options(usage.Options):
          "automatically be added"],
         ['releasedir', None, '/twisted/Releases',
          "The directory to put tarballs."],
+        ['docdir', None, '/twisted/TwistedDocs',
+         "The directory to deploy documentation to."],
+        ['webdir', None, os.path.expanduser('~/Projects/WebSite/twistedmatrix.com'),
+         "The directory where your working copy of the tm.com website is."],
         ['sfname', None, None,
-         "Your username on sourceforge."]
+         "Your username on sourceforge."],
         ]
 
     optFlags = [
@@ -163,6 +164,12 @@ class Options(usage.Options):
         print "GOING TO DO", [x.__name__ for x in commands]
 
 
+def runChdirSafe(f, *args, **kw):
+    origdir = os.path.abspath('.')
+    try:
+        f(*args, **kw)
+    finally:
+        os.chdir(origdir)
 
 class Transaction:
     """I am a dead-simple Transaction."""
@@ -175,8 +182,9 @@ class Transaction:
         return a Failure.
         """
         print "*", self.__class__.__name__
+
         try:
-            self.doIt(data)
+            runChdirSafe(self.doIt, data)
         except:
             f = failure.Failure()
             print "%s failed!" % self.__class__.__name__
@@ -186,7 +194,7 @@ class Transaction:
                     return f
             print "rolling back transaction."
             try:
-                self.undoIt(data, f)
+                runChdirSafe(self.undoIt, data, f)
             except:
                 print "Argh, the rollback failed."
                 import traceback
@@ -266,13 +274,15 @@ def sh(command):#, sensitive=0):
         raise CommandFailed(command)
 
         
-def replaceInFile(filename, oldstr, newstr):
+def replaceInFile(filename, oldstr, newstr, escape=True):
     """
     I replace the text `oldstr' with `newstr' in `filename' using sed
     and mv.
     """
     sh('cp %s %s.bak' % (filename, filename))
-    sh("sed -e 's/%s/%s/' < %s > %s.new" % (re.escape(oldstr),
+    if escape:
+        oldstr = re.escape(oldstr)
+    sh("sed -e 's/%s/%s/' < %s > %s.new" % (oldstr,
                                             newstr, filename, filename))
     sh('cp %s.new %s' % (filename,  filename))
 
@@ -421,7 +431,6 @@ class MakeDocs(Transaction):
             #no state change here
             return
 
-        ver = opts['full-version']
         tdir = "Twisted.exp"
 
         #first shwack the epydocs
@@ -633,9 +642,6 @@ class ReleaseBalls(Transaction):
                 except:
                     pass
 
-
-    
-
 class ReleaseSourceforge(Transaction):
 
     #takes a long time
@@ -668,6 +674,168 @@ class ReleaseSourceforge(Transaction):
            "cd /home/groups/t/tw/twisted/htdocs&&"
            "tar xzf TwistedDocs-%(ver)s.tar.gz'"
            "|ssh %(name)s@shell.sf.net newgrp twisted" % vars())
+
+
+class UpdateWebDocs(Transaction):
+    origlinkdest = None
+    def doIt(self, opts):
+        os.chdir(opts['docdir'])
+
+        tdocdir = os.path.join(opts['docdir'],
+                               'TwistedDocs-%s' % opts['full-version'])
+
+        tbz2 = '%s/TwistedDocs-%s.tar.bz2' % (opts['releasedir'],
+                                              opts['full-version'])
+        if os.path.exists(tdocdir):
+            raise DirectoryExists('%s already exists!' % tdocdir)
+
+        sh('tar xjf %s' % tbz2)
+
+        # lore-ize all the docs
+
+        os.chdir('%s/howto' % tdocdir)
+
+        template = os.path.abspath('website-template.tpl')
+
+        lorecmd = (("lore -p --config template=%s " % template)
+                   + "--config baseurl="
+                   "http://twistedmatrix.com/documents/current/api/%s.html")
+        sh("%s --config ext= *.xhtml" % lorecmd)
+        os.chdir('..')
+        for dir in ['examples', 'fun', 'historic', 'legal',
+                    'specifications', 'vision', 'man']:
+            os.chdir(dir)
+            sh('%s  --config ext= -l../howto/ *.xhtml')
+            os.chdir('..')
+
+        os.chdir('man')
+        sh('lore -p --config ext=.xhtml -l../howto -iman -olore *.1')
+        sh('lore -p --config template=$templ '
+           '--config ext=-man -l ../howto *.xhtml')
+
+        os.chdir('../..') # should be in docdir now
+
+        # 'deploy' to web
+
+        if os.path.exists('current'):
+            if os.path.islink('current'):
+                self.origlinkdest = os.path.realpath('current')
+                os.unlink('current')
+            else:
+                raise Exception("'current' exists and is NOT a symlink. Won't remove.")
+
+        os.symlink(tdocdir, 'current')
+        # who cares where we're chdir'd to; Transaction'll set us back.
+
+    def undoIt(self, opts, fail):
+        if fail.check(DirectoryExists):
+            return
+        os.chdir(opts['docdir'])
+
+        if origlinkdest is not None:
+            if not os.path.exists('current'):
+                os.symlink(self.origlinkdest, 'current')
+            # I can't imagine 'else' of this ever having a useful back-out
+
+        sh('rm -rf TwistedDocs-%s' % opts['full-version'])
+
+from twisted.web import microdom, domhelpers
+import cStringIO
+
+class UpdateWebSite(Transaction):
+
+    def updateSimpleVersions(self, opts):
+        # XXX OMFG OMFG this should so totally be obsoleted by lore
+        # and/or nevow.
+
+        webdir = opts['webdir']
+        index = os.path.join(webdir, 'index')
+        docindex = os.path.join(webdir, 'documents', 'index.html')
+
+        attrvalue = 'stable-version'
+        if not opts['type'] == 'final':
+            attrvalue = 'un' + attrvalue
+
+        for fn in (index, docindex):
+            print "UpdateWebSite: updating %s" % fn
+            d = microdom.parseXML(fn)
+
+
+            # first find class="versions"; this is only used by
+            # index. It generates a format like "stable-version or
+            # unstable-version", but "or unstable-version" is only
+            # there if there IS a new unstable version.
+
+            for node in domhelpers.findElementsWithAttribute(
+                d, 'class', 'versions'
+                ):
+                if opts['type'] == 'final':
+                    # shwack all the children and just put in a <span
+                    # class="stable-version"></span>
+                        domhelpers.clearNode(node)
+                        sversion = microdom.Element(
+                            'span', {'class': 'stable-version'}
+                            )
+                        node.appendChild(sversion)
+                else:
+                    # otherwise, we can assume that a stable-version is
+                    # already there, but 'or [foo]' might _not_ be there
+                    unsversions = domhelpers.findElementsWithAttribute(
+                        node, 'class', 'unstable-version'
+                        )
+                    if unsversions:
+                        for uns in unsversions:
+                            domhelpers.clearNode(uns)
+                    else:
+                        newunsnode = microdom.Element(
+                            'span', {'class': 'unstable-version'}
+                            )
+                        node.appendChild(microdom.Text(' or '))
+                        node.appendChild(newunsnode)
+
+            # Now fill in all version-tags.
+            for node in domhelpers.findElementsWithAttribute(
+                d, 'class', attrvalue
+                ):
+                domhelpers.clearNode(node)
+                node.appendChild(microdom.Text(opts['full-version']))
+
+
+            d.writexml(open(fn, 'w'))
+
+
+    def updateGetCurrent(self, opts):
+        if not opts['type'] == 'final':
+            return
+        print "UpdateWebSite: updating get-current.epy"
+        getcurrent = os.path.join(opts['webdir'],
+                                  'products', 'get-current.epy')
+        replaceInFile(getcurrent,
+                      'STABLE_VERSION = .*',
+                      'STABLE_VERSION = %r' % opts['full-version'],
+                      escape=False
+                      )
+        cmd = 'cd %s && cvs diff products/get-current.epy' % (opts['webdir'])
+        print cmd
+        crapout = os.popen(cmd).read()
+        print "diff output:"
+        print crapout
+        if not crapout:
+            raise Exception("No diff output!")
+
+
+    def doIt(self, opts):
+        self.updateSimpleVersions(opts)
+        self.updateGetCurrent(opts)
+        #self.updateDownloadPage(opts)
+        
+
+
+class Announce(Transaction):
+    pass
+
+class NotifyPackagers(Transaction):
+    pass
 
 
 if __name__=='__main__':
