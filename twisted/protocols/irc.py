@@ -264,22 +264,25 @@ class IRCClient(basic.LineReceiver):
 
     def say(self, channel, message, split = None):
         if channel[0] not in '&#': channel = '#' + channel
-        fmt = "PRIVMSG %s :%%s" % (channel,)
+        self.msg(channel, message, split)
+
+    def msg(self, user, message, split = None):
+        fmt = "PRIVMSG %s :%%s" % (user,)
 
         if split is None:
             self.sendLine(fmt % (message,))
+            print fmt
         else:
             i = split - len(fmt) - 2
             if i <= 0:
+                print fmt
                 self.sendLine(fmt % (message,))
                 return
             while len(message):
                 s = fmt % message[:i]
                 message = message[i:]
+                print s
                 self.sendLine(s)
-
-    def msg(self, user, message):
-        self.sendLine("PRIVMSG %s :%s" % (user, message))
 
     def notice(self, user, message):
         self.sendLine("NOTICE %s :%s" % (user, message))
