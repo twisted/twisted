@@ -369,7 +369,7 @@ class TypeMapperRegistry:
             if isinstance(x, (ClassType, type)):
                 return x()
             return x
-        if isinstance(x, ref):
+        if isinstance(x, Ref):
             x = x()
         if x in self._mapperCache:
             return self._mapperCache[x]
@@ -394,6 +394,6 @@ _defaultMapper = TypeMapperRegistry({
 
 getMapper = _defaultMapper.getMapper
 
-from twisted.world.storable import ref, Storable
+from twisted.world.storable import Ref, Storable
 from twisted.world.structfile import FixedSizeString
 from twisted.world.allocator import StringStore

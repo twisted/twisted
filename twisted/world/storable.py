@@ -26,17 +26,15 @@ from twisted.python.compat import True, False
 from twisted.world import hashless
 from twisted.world.util import Backwards
 
-class ref(object):
-    """A forward reference to a class, for __schema__"""
-    __classcache__ = {}
-    def __new__(self, name):
-        if name in ref.__classcache__:
-            return ref.__classcache__[name]
-        return object.__new__(self, name)
 
-    def __init__(self, name):
+class Ref(object):
+    """A forward reference to a class, for __schema__"""
+    def __init__(self, name, _back=1):
         self.name = name
-        self.module = sys._getframe().f_back.f_globals.get('__name__', '')
+        frame = sys._getframe()
+        for _ in range(_back):
+            frame = frame.f_back
+        self.module = frame.f_globals.get('__name__', '')
         self.cls = None
 
     def __call__(self):
@@ -50,6 +48,19 @@ class ref(object):
             return self.module + '.' + self.name
         else:
             return self.name
+
+class RefCache(object):
+    def __init__(self):
+        self.classcache = {}
+
+    def refForClass(self, name):
+        try:
+            return self.classcache[name]
+        except KeyError:
+            self.classcache[name] = rval = Ref(name, _back=2)
+            return rval
+
+ref = RefCache().refForClass
 
 
 def _upgradeSchema(s):
@@ -65,6 +76,9 @@ class MetaStorable(type):
     use of __metaclass__
     """
     def __new__(klass, subklass, bases, klassdict):
+        # Python 2.2.0 bug!  yay!
+        if '__module__' not in klassdict:
+            klassdict['__module__'] = sys._getframe().f_back.f_globals.get('__name__', __name__)
         if '__setattr__' in klassdict and not '__setattr_is_useful_here__' in klassdict:
             #
             # If you're reading this, you probably tried to make a Storable with
@@ -145,7 +159,7 @@ class MetaStorable(type):
                     
                 getter.func_doc = """get %s from cache or database""" % sname
                 setter.func_doc = """update %s in cache and database""" % sname
-                if isinstance(stype, ref):
+                if isinstance(stype, Ref):
                     clsname = str(stype)
                 elif isinstance(stype, type):
                     clsname = stype.__name__
@@ -258,7 +272,7 @@ class Storable:
         # XXX: HACK HACK - reimplement this, it's going to slow things down a lot
         for highType, highName in self._schema_table.getSchema():
             if name == highName:
-                if isinstance(highType, ref):
+                if isinstance(highType, Ref):
                     return highType()
                 return highType
         else:
