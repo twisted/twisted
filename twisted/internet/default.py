@@ -143,7 +143,7 @@ class PosixReactorBase(ReactorBase):
 
 
     def installWaker(self):
-        """Install a `waker' to allow other threads to wake up the IO thread.
+        """Install a `waker' to allow threads and signals to wake up the IO thread.
 
         We use the self-pipe trick (http://cr.yp.to/docs/selfpipe.html) to wake
         the reactor. On Windows we use a pair of sockets.
