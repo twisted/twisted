@@ -152,7 +152,8 @@ class DOMTemplate(Resource, View):
     def __init__(self, model = None):
         Resource.__init__(self)
         View.__init__(self, model)
-        self.controller = self
+        if self.controller is None:
+            self.controller = self
         self.model = model
         self.templateMethods = MethodLookup()
         self.setTemplateMethods( self.getTemplateMethods() )
