@@ -157,6 +157,11 @@ register("Twisted Issues Interface Bot",
          type="twisted.words.bot",
          botType="issues")
 
+register("Twisted Inetd Server",
+         "twisted.inetd.tap",
+         type='tap',
+         tapname='inetd')
+
 register("Zoot TAP Builder",
          "twisted.zoot.zoottap",
          description="Zoot TAP builder module",
