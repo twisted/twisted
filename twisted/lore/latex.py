@@ -56,24 +56,19 @@ class LatexSpitter:
         self.currDir = currDir
         self.filename = filename
 
+    def writeNodeData(self, node):
+        buf = StringIO()
+        getLatexText(node, buf.write, latexEscape)
+        parents = getParents(node.parentNode)[:-1]
+        text = buf.getvalue()
+        if not [n.tagName in ('pre', 'code') for n in parents]:
+            text = text.replace('<', '$<$').replace('>', '$>$')
+        self.writer(text)
+
     def visitNode(self, node):
         if not hasattr(node, 'tagName'):
-            # Extract the text from this node
-            buf = StringIO()
-            getLatexText(node, buf.write, latexEscape)
-
-            # HACK: Check that we aren't inside a <code> or a <pre> tag
-            parents = getParents(node.parentNode)[:-1]
-            text = buf.getvalue()
-            if not filter(lambda n: n.tagName in ('pre', 'code'), parents):
-                # If we aren't in a <code> or a <pre>,
-                # then we need to escape "<" and ">"
-                text = text.replace('<', '$<$').replace('>', '$>$')
-
-            # Write the text
-            self.writer(text)
+            self.writeNodeData(node)
             return
-
         m = getattr(self, 'visitNode_'+node.tagName, self.visitNodeDefault)
         m(node)
 
