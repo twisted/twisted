@@ -72,8 +72,7 @@ class SSHSession(channel.SSHChannel):
         peerHP = tuple(self.conn.transport.transport.getPeer()[1:])
         hostP = (self.conn.transport.transport.getHost()[2],)
         self.environ['SSH_CLIENT'] = '%s %s %s' % (peerHP+hostP)
-        ttyGID = os.stat(self.ptyTuple[2])[5]
-        os.chown(self.ptyTuple[2], uid, ttyGID)
+        self.getPtyOwnership()
         try:
             self.client = SSHSessionClient()
             pty = reactor.spawnProcess(SSHSessionProtocol(self, self.client), \
@@ -104,8 +103,7 @@ class SSHSession(channel.SSHChannel):
         hostP = (self.conn.transport.transport.getHost()[2],)
         self.environ['SSH_CLIENT'] = '%s %s %s' % (peerHP+hostP)
         if self.ptyTuple:
-            ttyGID = os.stat(self.ptyTuple[2])[5]
-            os.chown(self.ptyTuple[2], uid, ttyGID)
+            self.getPtyOwnership()
         try:
             self.client = SSHSessionClient()
             pty = reactor.spawnProcess(SSHSessionProtocol(self, self.client), \
@@ -177,6 +175,23 @@ class SSHSession(channel.SSHChannel):
         ft.makeConnection(self)
         return ft
 
+    def getPtyOwnership(self):
+        ttyGid = os.stat(self.ptyTuple[2])[5]
+        euid = os.geteuid()
+        egid = os.getegid()
+        uid = self.conn.transport.authenticatedUser.getUserGroupId()[0]
+        os.setegid(0)
+        os.seteuid(0)
+        try:
+            os.chown(self.ptyTuple[2], uid, ttyGid)
+        except:
+            os.setegid(egid)
+            os.seteuid(euid)
+            raise
+        else:
+            os.setegid(egid)
+            os.seteuid(euid)
+        
     def setModes(self):
         import tty, ttymodes
         pty = self.pty
@@ -233,9 +248,10 @@ class SSHSession(channel.SSHChannel):
         if self.pty:
             import signal
             self.pty.loseConnection()
-            self.pty.signalProcess('HUP') 
-            ttyGID = os.stat(self.ptyTuple[2])[5]
-            os.chown(self.ptyTuple[2], 0, ttyGID)
+            self.pty.signalProcess('HUP')
+            if self.ptyTuple:
+                ttyGID = os.stat(self.ptyTuple[2])[5]
+                os.chown(self.ptyTuple[2], 0, ttyGID)
         try:
             del self.client
         except AttributeError:
