@@ -1222,23 +1222,38 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
     def do_FETCH(self, tag, messages, query, uid=0):
         maybeDeferred(self.mbox.fetch, messages, query, uid=uid).addCallbacks(
             self.__cbFetch, self.__ebFetch,
-            (tag, self.mbox, uid), None, (tag,), None
+            (tag, uid), None, (tag,), None
         )
 
     select_FETCH = (do_FETCH, arg_seqset, arg_fetchatt)
 
-    def __cbFetch(self, results, tag, mbox, uid):
-        for (mId, parts) in results.iteritems():
+    def __cbFetch(self, results, tag, uid):
+        if isinstance(results, dict):
+            import warnings
+            warnings.warn(
+                "Returning a dict from imap4.IMailbox.fetch is deprecated.  "
+                "Return an iterable instead.", DeprecationWarning, stacklevel=2
+            )
+            results = results.iteritems()
+        self._consumeFetchResponse(results, tag, uid)
+
+    def _consumeFetchResponse(self, results, tag, uid):
+        try:
+            msgId, parts = results.next()
+        except StopIteration:
+            self.sendPositiveResponse(tag, 'FETCH completed')
+        else:
             if uid:
                 if 'UID' not in parts:
-                    parts['UID'] = str(mId)
+                    parts['UID'] = str(msgId)
             finalParts = []
             for p in parts.iteritems():
                 finalParts.extend(p)
             self.sendUntaggedResponse(
-                '%d FETCH %s' % (mId, collapseNestedLists([finalParts]))
+                '%d FETCH %s' % (msgId, collapseNestedLists([finalParts]))
             )
-        self.sendPositiveResponse(tag, 'FETCH completed')
+            from twisted.internet import reactor
+            reactor.callLater(0, self._consumeFetchResponse, results, tag, uid)
 
     def __ebFetch(self, failure, tag):
         log.err(failure)
@@ -3680,11 +3695,11 @@ class IMailbox(components.Interface):
         @param uid: If true, the IDs specified in the query are UIDs;
         otherwise they are message sequence IDs.
 
-        @rtype: C{dict} or C{Deferred}
-        @return: A C{dict} mapping message sequence numbers (if uid is False) or
-        message UIDs (if uid is True) to C{dicts} mapping portion
-        identifiers to strings representing that portion of that message, or
-        a C{Deferred} whose callback will be invoked with such a C{dict}.
+        @return: An iterator that produces two-tuples of message sequence
+        numbers (if uid is False) or message UIDs (if uid is True) and
+        C{dicts} mapping portion identifiers to strings or file objects
+        representing that portion of that message, or a C{Deferred} whose
+        callback will be invoked with such a tuple.
         """
 
     def store(self, messages, flags, mode, uid):
