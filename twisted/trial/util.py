@@ -152,16 +152,17 @@ class _Janitor(object):
     def do_cleanPending(cls):
         # don't import reactor when module is loaded
         from twisted.internet import reactor
-        s = None
-        reactor.iterate(0.01) # flush short-range timers
+        
+        # flush short-range timers
+        reactor.iterate(0)
+        reactor.iterate(0)
+        
         pending = reactor.getDelayedCalls()
         if pending:
             s = PENDING_TIMED_CALLS_MSG
 
             for p in pending:
                 s += " %s\n" % (p,)
-
-            for p in pending:
                 if p.active():
                     p.cancel() # delete the rest
                 else:
@@ -169,7 +170,6 @@ class _Janitor(object):
 
             spinWhile(reactor.getDelayedCalls)
 
-        if s is not None:
             raise PendingTimedCallsError(s)
     do_cleanPending = classmethod(do_cleanPending)
 
