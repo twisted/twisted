@@ -115,7 +115,7 @@ class Application(log.Logger, styles.Versioned, marmalade.DOMJellyable):
 
     def _cbListenTCP(self, factory, portno, backlog, interface):
         self.listenTCP(portno, factory, backlog, interface)
-        
+
 
     def unjellyFromDOM_1(self, unjellier, node):
         from xml.dom.minidom import Element
@@ -204,7 +204,7 @@ class Application(log.Logger, styles.Versioned, marmalade.DOMJellyable):
     def upgradeToVersion2(self):
         """Version 2 Persistence Upgrade
         """
-        self.resolver = DummyResolver()
+        self.resolver = main.DummyResolver()
 
     def upgradeToVersion1(self):
         """Version 1 Persistence Upgrade
@@ -253,14 +253,14 @@ class Application(log.Logger, styles.Versioned, marmalade.DOMJellyable):
         Connects a given protocol factory to the given numeric UDP port.
         """
         from twisted.internet import reactor
-        self.udpPorts.append((port, factory, backlog, interface))
+        self.udpPorts.append((port, factory, interface, maxPacketSize))
         if self.running:
             factory.startFactory()
             reactor.listenUDP(port, factory, interface, maxPacketSize)
 
     def dontListenUDP(self, portno):
         raise 'temporarily not implemented'
-    
+
     def listenSSL(self, port, factory, ctxFactory, backlog=5, interface=''):
         """
         Connects a given protocol factory to the given numeric TCP/IP port.
@@ -339,7 +339,7 @@ class Application(log.Logger, styles.Versioned, marmalade.DOMJellyable):
             factory.stopFactory()
 
     asXML = 0
-    
+
     def save(self, tag=None, filename=None):
         """Save a pickle of this application to a file in the current directory.
         """
@@ -394,7 +394,7 @@ class Application(log.Logger, styles.Versioned, marmalade.DOMJellyable):
     def _afterShutDown(self):
         if self._save:
             self.shutDownSave()
-        
+
 
     def run(self, save=1, installSignalHandlers=1):
         """run(save=1, installSignalHandlers=1)
@@ -405,7 +405,7 @@ class Application(log.Logger, styles.Versioned, marmalade.DOMJellyable):
         function that starts the mainloop.
         """
         from twisted.internet import reactor
-    
+
         if not self.running:
             log.logOwner.own(self)
             for delayed in self.delayeds:

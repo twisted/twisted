@@ -150,7 +150,7 @@ class ConnectorCollection(coil.ConfigCollection):
             name = string.split(name, ',', 1)[0]
             host, port = string.split(name, ':')
         except:
-            raise roots.ConstraintViolation("Name %s is not a string"
+            raise roots.ConstraintViolation("Name %s is not a string "
                                             "in \"host:port\" format."
                                             % (repr(name),))
         else:

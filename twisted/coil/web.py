@@ -1,15 +1,15 @@
 # Twisted, the Framework of Your Internet
 # Copyright (C) 2001 Matthew W. Lefkowitz
-# 
+#
 # This library is free software; you can redistribute it and/or
 # modify it under the terms of version 2.1 of the GNU Lesser General Public
 # License as published by the Free Software Foundation.
-# 
+#
 # This library is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
 # Lesser General Public License for more details.
-# 
+#
 # You should have received a copy of the GNU Lesser General Public
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
@@ -34,7 +34,7 @@ import coil, app
 
 class ConfigRoot(widgets.Gadget, widgets.Widget):
     """The root of the coil web interface."""
-    
+
     def __init__(self, application):
         widgets.Gadget.__init__(self)
         self.putWidget("config", AppConfiguratorPage(application))
@@ -49,10 +49,10 @@ class ConfigRoot(widgets.Gadget, widgets.Widget):
 
 class PluginLoader(widgets.Form):
     """Form for loading plugins."""
-    
+
     def __init__(self, appConfig):
         self.appConfig = appConfig
-    
+
     def getFormFields(self, request):
         plugins = getPlugIns("coil")
         mnuList = []
@@ -81,7 +81,7 @@ class AppConfiguratorPage(widgets.Presentation):
 
     This configures the toplevel application.
     """
-    
+
     template = '''
     <center>
     <table width="95%">
@@ -92,21 +92,21 @@ class AppConfiguratorPage(widgets.Presentation):
     </table>
     </center>
     '''
-    
+
     isLeaf = 1
-    
-    
+
+
     def __init__(self, application):
         widgets.Presentation.__init__(self)
         self.app = app.ApplicationConfig(application)
         self.reloadDispensers()
-    
+
     def reloadDispensers(self):
         self.dispensers = coil.DispenserStorage(self.app)
-    
+
     def pluginLoader(self):
         return PluginLoader(self)
-    
+
     def displayTree(self, write, request):
         self.displayTreeElement(write,
                                 str(self.app),
@@ -139,8 +139,8 @@ class AppConfiguratorPage(widgets.Presentation):
                         obj = None
                     else:
                         obj = collection.getStaticEntity(elem)
-                    
-                    if obj is None:    
+
+                    if obj is None:
                         # no such subobject
                         request.setResponseCode(http.TEMPORARY_REDIRECT)
                         request.setHeader('location', request.prePathURL())
@@ -150,11 +150,11 @@ class AppConfiguratorPage(widgets.Presentation):
         ret = []
         linkfrom = string.join(['config']+request.postpath, '/') + '/'
         cfg = coil.getConfigurator(obj)
-        
+
         # add a form for configuration if available
         if cfg and cfg.configTypes:
             ret.extend(widgets.TitleBox("Configuration", ConfigForm(self, cfg, linkfrom)).display(request))
-        
+
         # add a form for a collection of objects
         coll = coil.getCollection(obj)
         if components.implements(coll, coil.IConfigCollection):
@@ -164,7 +164,7 @@ class AppConfiguratorPage(widgets.Presentation):
             else:
                 colClass = CollectionForm
             ret.extend(widgets.TitleBox("Listing", colClass(self, coll, linkfrom)).display(request))
-        
+
         ret.append(html.PRE(str(obj)))
         return ret
 
@@ -201,23 +201,25 @@ class AppConfiguratorPage(widgets.Presentation):
                     obj = getattr(cfg, methodName)()
                     print "created %s from dispenser" % obj
                     break
-        
+        else:
+            raise ValueError, "Unrecognized command %r in cfgInfo %r" % (cmd, cfgInfo)
+
         self.dispensers.addObject(obj)
         return obj
 
 
 class ConfigForm(widgets.Form):
     """A form for configuring an object."""
-    
+
     def __init__(self, configurator, cfgr, linkfrom):
         if not components.implements(cfgr, coil.IConfigurator):
             raise TypeError
         self.configurator = configurator  # this is actually a AppConfiguratorPage
         self.cfgr = cfgr
         self.linkfrom = linkfrom
-    
+
     submitNames = ['Configure']
-    
+
     def getFormFields(self, request):
         existing = self.cfgr.getConfiguration()
         allowed = self.cfgr.configTypes
@@ -266,7 +268,7 @@ class ConfigForm(widgets.Form):
 
 class CollectionForm(widgets.Form):
     """Form for a collection of objects - adding, deleting, etc."""
-    
+
     def __init__(self, configurator, coll, linkfrom):
         self.configurator = configurator # this is actually a AppConfiguratorPage
         self.coll = coll
@@ -311,17 +313,17 @@ class CollectionForm(widgets.Form):
 
 class ImmutableCollectionForm(widgets.Form):
     """A collection of immutable objects such as strings or integers."""
-    
+
     typeMap = {types.StringType : 'string',
                types.IntType : 'integer',
                types.FloatType : 'float'
               }
-    
+
     def __init__(self, appcpage, coll, linkfrom):
         self.appcpage = appcpage
         self.collection = coll
         self.linkfrom = linkfrom
-    
+
     def getFormFields(self, request):
         result = []
         for name, val in self.collection.listStaticEntities():
@@ -345,17 +347,17 @@ class ImmutableCollectionForm(widgets.Form):
 
 class ImmutableCollectionDeleteForm(widgets.Form):
     """A collection of immutable objects such as strings or integers.
-    
+
     This form allows you to delete entries.
     """
-    
+
     submitNames = ["Delete"]
-    
+
     def __init__(self, appcpage, coll, linkfrom):
         self.appcpage = appcpage
         self.collection = coll
         self.linkfrom = linkfrom
-    
+
     def getFormFields(self, request):
         itemlst = []
         for name, val in self.collection.listStaticEntities():

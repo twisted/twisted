@@ -26,7 +26,7 @@ from twisted.python import log, components
 
 class IFactory(components.Interface):
     """Interface for protocol factories.
-    
+
     Must implement startFactory, stopFactory and buildProtocol.
     """
 
@@ -37,9 +37,9 @@ class Factory:
     By default, buildProtocol will create a protocol of the class given in
     self.protocol.
     """
-    
+
     __implements__ = IFactory
-    
+
     protocol = None
 
     def startFactory(self):
@@ -66,11 +66,16 @@ class Factory:
         """Create an instance of a subclass of Protocol.
 
         The returned instance will handle input on an incoming server
-        connection, and an attribute "factory" pointing to the creating
+        connection, and an attribute \"factory\" pointing to the creating
         factory. If None is returned, the connection is assumed to have
         been refused, and the Port will close the connection.
-        
+
         Override this method to alter how Protocol instances get created.
+
+        TODO:
+         * Document 'addr' argument -- what format is it in?
+         * Is the phrase \"incoming server connection\" correct when Factory
+           is a ClientFactory?
         """
         p = self.protocol()
         p.factory = self
@@ -243,6 +248,6 @@ class FileWrapper(Transport):
 
     def getHost(self):
         return 'file'
-    
+
     def handleException(self):
         pass
