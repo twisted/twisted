@@ -24,6 +24,24 @@ from twisted.internet import reactor, protocol
 # system imports
 import string, time
 
+class MessageLogger:
+    """
+    An independant logger class (because separation of application
+    and protocol logic is a good thing).
+    """
+    def __init__(self, file):
+        self.file = file
+
+
+    def log(self, message):
+        timestamp = time.strftime("[%H:%M:%S]", time.localtime(time.time()))
+        self.file.write('%s %s\n' % (timestamp, message))
+        self.file.flush()
+
+
+    def close(self):
+        self.file.close()
+
 
 class LogBot(irc.IRCClient):
     """A logging IRC bot."""
@@ -32,7 +50,8 @@ class LogBot(irc.IRCClient):
 
     def connectionMade(self):
         irc.IRCClient.connectionMade(self)
-        self.file = open(self.factory.filename, "a")
+        self.logger = MessageLogger(open(self.factory.filename, "a"))
+        self.log = self.logger.log
         self.log("[connected at %s]" % time.asctime(time.localtime(time.time())))
 
     def signedOn(self):
@@ -41,13 +60,7 @@ class LogBot(irc.IRCClient):
     def connectionLost(self):
         irc.IRCClient.connectionLost(self)
         self.log("[disconnected at %s]" % time.asctime(time.localtime(time.time())))
-        self.file.close()
-
-    def log(self, s):
-        timestamp = time.strftime("[%H:%M:%S]", time.localtime(time.time()))
-        self.file.write("%s %s\n" % (timestamp, s))
-        self.file.flush()
-
+        self.logger.close()
 
 
     # callbacks for events
