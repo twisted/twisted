@@ -28,7 +28,7 @@ import struct, types
 from twisted.internet import protocol, reactor, defer
 from twisted.python import log
 from twisted.conch import error
-import service, common
+import service, common, session, forwarding
 
 class SSHConnection(service.SSHService):
     name = 'ssh-connection'
@@ -335,9 +335,9 @@ class SSHConnection(service.SSHService):
         if self.transport.isClient and channelType != 'forwarded-tcpip':
             return OPEN_ADMINISTRATIVELY_PROHIBITED, 'not on the client bubba'
         if channelType == 'session':
-            return SSHSession(remoteWindow = windowSize, 
-                              remoteMaxPacket = maxPacket, 
-                              conn = self)
+            return session.SSHSession(remoteWindow = windowSize, 
+                                      remoteMaxPacket = maxPacket, 
+                                      conn = self)
         elif channelType == 'forwarded-tcpip':
             remoteHP, origHP = forwarding.unpackOpen_forwarded_tcpip(data)
             if self.remoteForwards.has_key(remoteHP[1]):
@@ -400,185 +400,6 @@ class SSHConnection(service.SSHService):
             log.msg('ignoring unknown global request %s'%requestType)
             return 0
 
-class SSHChannel:
-    name = None # only needed for client channels
-    def __init__(self, localWindow = 0, localMaxPacket = 0, 
-                       remoteWindow = 0, remoteMaxPacket = 0, 
-                       conn = None):
-        self.localWindowSize = localWindow or 131072
-        self.localWindowLeft = self.localWindowSize
-        self.localMaxPacket = localMaxPacket or 32768
-        self.remoteWindowLeft = remoteWindow
-        self.remoteMaxPacket = remoteMaxPacket
-        self.conn = conn
-        self.specificData = ''
-        self.buf = ''
-        self.extBuf = ''
-        self.id = None # gets set later by SSHConnection
-
-    def channelOpen(self, specificData):
-        """
-        Called when the channel is opened.  specificData is any data that the
-        other side sent us when opening the channel.
-
-        @type specificData: C{str}
-        """
-        log.msg('channel %s open'%self.id)
-
-    def openFailed(self, reason):
-        """
-        Called when the the open failed for some reason.
-        reason.desc is a string descrption, reason.code the the SSH error code.
-
-        @type reason: C{error.ConchError}
-        """
-        log.msg('other side refused channel %s\nreason: %s'%(self.id, reason))
-
-    def addWindowBytes(self, bytes):
-        """
-        Called when bytes are added to the remote window.  By default it clears
-        the data buffers.
-
-        @type bytes:    C{int}
-        """
-        self.remoteWindowLeft = self.remoteWindowLeft+bytes
-        if self.buf:
-            b = self.buf
-            self.buf = ''
-            self.write(b)
-        if self.extBuf:
-            b = self.extBuf
-            self.extBuf = None
-            map(self.writeExtended, b)
-
-    def requestReceived(self, requestType, data):
-        """
-        Called when a request is sent to this channel.  By default it delegates
-        to self.request_<requestType>.
-        If this functio returns true, the request succeeded, otherwise it
-        failed.
-
-        @type requestType:  C{str}
-        @type data:         C{str}
-        @rtype:             C{bool}
-        """
-        foo = requestType.replace('-', '_')
-        f = getattr(self, 'request_%s'%foo, None)
-        if f:
-            return f(data)
-        log.msg('unhandled request for %s'%requestType)
-        return 0
-
-    def dataReceived(self, data):
-        """
-        Called when we receive data.
-
-        @type data: C{str}
-        """
-        log.msg('got data %s'%repr(data))
-
-    def extReceived(self, dataType, data):
-        """
-        Called when we receive extended data (usually standard error).
-
-        @type dataType: C{int}
-        @type data:     C{str}
-        """
-        log.msg('got extended data %s %s'%(dataType, repr(data)))
-
-    def eofReceived(self):
-        """
-        Called when the other side will send no more data.
-        """
-        log.msg('channel %s remote eof'%self.id)
-
-    def closed(self):
-        """
-        Called when the channel is closed.
-        """
-        log.msg('channel %s closed'%self.id)
-
-    # transport stuff
-    def write(self, data):
-        """
-        Write some data to the channel.  If there is not enough remote window
-        available, buffer until it is.
-
-        @type data: C{str}
-        """
-        if self.buf:
-            self.buf += data
-            return
-        if len(data) > self.remoteWindowLeft:
-            data, self.buf = data[: self.remoteWindowLeft],  \
-                            data[self.remoteWindowLeft:]
-        if not data: return
-        while len(data) > self.remoteMaxPacket:
-            self.conn.sendData(self, data[: self.remoteMaxPacket])
-            data = data[self.remoteMaxPacket:]
-            self.remoteWindowLeft-=self.remoteMaxPacket
-        if data:
-            self.conn.sendData(self, data)
-            self.remoteWindowLeft-=len(data)
-
-    def writeExtended(self, dataType, data):
-        """
-        Send extended data to this channel.  If there is not enough remote
-        window available, buffer until there is.
-
-        @type dataType: C{int}
-        @type data:     C{str}
-        """
-        if self.extBuf:
-            if self.extBuf[-1][0] == dataType:
-                self.extBuf[-1][1]+=data
-            else:
-                self.extBuf.append((dataType, data))
-            return
-        if len(data) > self.remoteWindowLeft:
-            data, self.extBuf = data[:self.remoteWindowLeft], \
-                                [(dataType, data[self.remoteWindowLeft:])]
-        if not data: return
-        while len(data) > self.remoteMaxPacket:
-            self.conn.sendExtendedData(self, dataType, 
-                                             data[:self.remoteMaxPacket])
-            data = data[self.remoteMaxPacket:]
-            self.remoteWindowLeft-=self.remoteMaxPacket
-        if data:
-            self.conn.sendExtendedData(self, dataType, data)
-            self.remoteWindowLeft-=len(data)
-
-    def writeSequence(self, data):
-        """
-        Part of the Transport interface.  Write a list of strings to the
-        channel.
-
-        @type data: C{list} of C{str}
-        """
-        self.write(''.join(data))
-
-    def loseConnection(self):
-        """
-        Close the channel.
-        """
-        self.conn.sendClose(self)
-
-    def getPeer(self):
-        """
-        Return a tuple describing the other side of the connection.
-
-        @rtype: C{tuple}
-        """
-        return('SSH', )+self.conn.transport.getPeer()
-
-    def getHost(self):
-        """
-        Return a tuple describing out side of the connection.
-
-        @rtype: C{tuple}
-        """
-        return('SSH', )+self.conn.transport.getHost()
-
 MSG_GLOBAL_REQUEST = 80
 MSG_REQUEST_SUCCESS = 81
 MSG_REQUEST_FAILURE = 82
@@ -608,6 +429,3 @@ for v in dir(connection):
         messages[getattr(connection, v)] = v # doesn't handle doubles
 
 SSHConnection.protocolMessages = messages
-
-from session import SSHSession # evil circular import
-import forwarding

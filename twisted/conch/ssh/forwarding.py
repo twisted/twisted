@@ -28,7 +28,7 @@ import struct
 from twisted.internet import protocol, reactor
 from twisted.python import log
 
-import common, connection
+import common, channel
 
 class SSHListenForwardingFactory(protocol.Factory):
     def __init__(self, connection, hostport, klass):
@@ -44,7 +44,7 @@ class SSHListenForwardingFactory(protocol.Factory):
         self.conn.openChannel(channel, channelOpenData)
         return client
 
-class SSHListenForwardingChannel(connection.SSHChannel):
+class SSHListenForwardingChannel(channel.SSHChannel):
 
     def channelOpen(self, specificData):
         log.msg('opened forwarding channel %s' % self.id)
@@ -73,10 +73,10 @@ class SSHListenServerForwardingChannel(SSHListenForwardingChannel):
 
     name = 'forwarded-tcpip'
 
-class SSHConnectForwardingChannel(connection.SSHChannel):
+class SSHConnectForwardingChannel(channel.SSHChannel):
 
     def __init__(self, hostport, *args, **kw):
-        connection.SSHChannel.__init__(self, *args, **kw)
+        channel.SSHChannel.__init__(self, *args, **kw)
         self.hostport = hostport
         self.client = None
         self.clientBuf = ''

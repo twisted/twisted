@@ -17,7 +17,7 @@
 from __future__ import nested_scopes
 import os, struct, sys
 from twisted.conch import identity, error
-from twisted.conch.ssh import keys, transport, factory, userauth, connection, common, session
+from twisted.conch.ssh import keys, transport, factory, userauth, connection, common, session,channel
 from twisted.cred import authorizer
 from twisted.internet import reactor, defer, app, protocol
 from twisted.python import log
@@ -237,7 +237,7 @@ class SSHTestServerConnection(connection.SSHConnection):
                                     remoteMaxPacket = mp,
                                     conn = self)
 
-class SSHTestServerSession(connection.SSHChannel):
+class SSHTestServerSession(channel.SSHChannel):
 
     def request_exec(self, data):
         program = common.getNS(data)[0].split()
@@ -258,7 +258,7 @@ class SSHTestClientConnection(connection.SSHConnection):
         c = SSHTestEchoChannel(conn = self)
         self.openChannel(c)
 
-class SSHTestTrueChannel(connection.SSHChannel):
+class SSHTestTrueChannel(channel.SSHChannel):
 
     name = 'session'
 
@@ -297,7 +297,7 @@ class SSHTestTrueChannel(connection.SSHChannel):
             reactor.crash()
         return 1
 
-class SSHTestFalseChannel(connection.SSHChannel):
+class SSHTestFalseChannel(channel.SSHChannel):
 
     name = 'session'
     
@@ -306,7 +306,8 @@ class SSHTestFalseChannel(connection.SSHChannel):
         theTest.fail('false open failed: %s' % reason)
         reactor.crash()
 
-    def channelOpen(self, ignore):
+    def channelOpen(self, ignored):
+        print 'false is open'
         d = self.conn.sendRequest(self, 'exec', common.NS('false'), 1)
         d.addErrback(self._ebRequestFailed)
         log.msg('opened false')
@@ -336,7 +337,7 @@ class SSHTestFalseChannel(connection.SSHChannel):
             reactor.crash()
         return 1 
 
-class SSHTestEchoChannel(connection.SSHChannel):
+class SSHTestEchoChannel(channel.SSHChannel):
 
     name = 'session'
     buf = ''

@@ -28,9 +28,9 @@ import struct, os
 from twisted.internet import protocol, reactor
 from twisted.python import log
 
-import common, connection
+import common, channel
 
-class SSHSession(connection.SSHChannel):
+class SSHSession(channel.SSHChannel):
 
     name = 'session'
     def __init__(self, *args, **kw):
@@ -222,8 +222,9 @@ class SSHSession(connection.SSHChannel):
         connection.SSHChannel.loseConnection(self)
 
     def closed(self):
+        import os
         if self.pty:
-            import signal, os
+            import signal
             self.pty.loseConnection()
             self.pty.signalProcess('HUP') 
         ttyGID = os.stat(self.ptyTuple[2])[5]
