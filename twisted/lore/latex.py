@@ -123,15 +123,24 @@ class LatexSpitter(BaseLatexSpitter):
         target = os.path.join(self.currDir, os.path.basename(target)+'.eps')
         f(fileName, target)
         target = os.path.basename(target)
-        self.writer('\\includegraphics{%s}\n' % target)
+        self.writer('\\begin{center}\\includegraphics{%s}\\end{center}\n' % target)
 
     def convert_png(self, src, target):
         os.system("pngtopnm %s | pnmtops > %s" % (src, target))
 
     def convert_dia(self, src, target):
+        # EVIL DISGUSTING HACK
+        data = os.popen("gunzip -dc %s" % (src)).read()
+        pre = '<dia:attribute name="scaling">\n          <dia:real val="1"/>'
+        post = '<dia:attribute name="scaling">\n          <dia:real val="0.5"/>'
+        open('%s_hacked.dia' % (src), 'wb').write(data.replace(pre, post))
+        os.system('gzip %s_hacked.dia' % (src,))
+        os.system('mv %s_hacked.dia.gz %s_hacked.dia' % (src,src))
+        # Let's pretend we never saw that.
+        
         # Silly dia needs an X server, even though it doesn't display anything.
         # If this is a problem for you, try using Xvfb.
-        os.system("dia %s -n -e %s" % (src, target))
+        os.system("dia %s_hacked.dia -n -e %s" % (src, target))
 
     def visitNodeHeader(self, node):
         level = (int(node.tagName[1])-2)+self.baseLevel
