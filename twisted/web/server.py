@@ -103,6 +103,7 @@ class Request(pb.Copyable, http.Request):
         del x['channel']
         del x['content']
         del x['site']
+        self.content.seek(0, 0)
         x['content_data'] = self.content.read()
         x['remote'] = pb.ViewPoint(issuer, self)
         return x

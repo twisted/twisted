@@ -167,6 +167,7 @@ class CGIProcess(process.Process, pb.Viewable):
         self.request = request
         process.Process.__init__(self, script, args, env, path)
         self.request.registerProducer(self, 1)
+        self.request.content.seek(0, 0)
         content = self.request.content.read()
         if content:
             self.write(content)
