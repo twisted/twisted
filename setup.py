@@ -22,7 +22,7 @@ Package installer for Twisted
 Copyright (C) 2001 Matthew W. Lefkowitz
 All rights reserved, see LICENSE for details.
 
-$Id: setup.py,v 1.90 2003/01/08 17:23:55 moonfallen Exp $
+$Id: setup.py,v 1.91 2003/01/09 17:56:07 moonfallen Exp $
 """
 
 import distutils, os, sys, string
@@ -248,9 +248,7 @@ if os.name=='nt':
     # FIXME - see
     # http://mail.python.org/pipermail/distutils-sig/2003-January/003147.html
     # This Workaround: copy the script to Twisted/ at pre-build time.
-    import shutil
-    shutil.copyfile('win32/twisted-postinstall.py', 'twisted-postinstall.py')
-    setup_args['scripts'].append('twisted-postinstall.py')
+    setup_args['scripts'].append('win32/twisted-postinstall.py')
 
 if hasattr(distutils.dist.DistributionMetadata, 'get_keywords'):
     setup_args['keywords'] = "internet www tcp framework games"
