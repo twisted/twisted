@@ -42,7 +42,16 @@ try:
     from Crypto.Util import randpool
 except ImportError:
     import os
-    if not os.path.exists('/dev/random'):
+    for randSource in ('random', 'srandom', 'urandom'):
+        try:
+            file('/dev/random').close()
+        except:
+            pass
+        else:
+            def randomSource(r = file('/dev/' + randSource, 'rb').read):
+                return struct.unpack('H', r(2))[0]
+            break
+    else:
         import warnings
         warnings.warn(
             "PyCrypto not available - proceeding with non-cryptographically "
@@ -53,9 +62,6 @@ except ImportError:
 
         def randomSource():
             return random.randint(0, 65535)
-    else:
-        def randomSource(r = open('/dev/random', 'rb').read):
-            return struct.unpack('H', r(2))[0]
 else:
     def randomSource(r = randpool.RandomPool().get_bytes):
         return struct.unpack('H', r(2))[0]
