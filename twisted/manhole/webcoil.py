@@ -79,11 +79,16 @@ class Configurator(widgets.Presentation):
     <center>
     <table width="95%">
     <tr><td width="20%" valign="top">%%%%self.streamCall(self.displayTree, request)%%%%</td>
-    <td width="80%" valign="top">%%%%self.configd%%%%</td></tr>
+    <td width="80%" valign="top">%%%%self.configd%%%%</td>
+    </tr>
+    <tr><td colspan="2">%%%%self.pluginLoader()%%%%</td></tr>
     </table>
     </center>
     '''
     isLeaf = 1
+    
+    def pluginLoader(self):
+        return PluginLoader()
     
     def displayTree(self, write, request):
         self.displayTreeElement(write,
