@@ -18,7 +18,7 @@
 
 # Twisted Import
 from twisted.python import threadpool, threadable, log, failure
-from twisted.internet import reactor
+from twisted.internet import reactor, main
 threadable.init(1)
 
 
@@ -39,7 +39,7 @@ class ThreadDispatcher(threadpool.ThreadPool):
 
     def __init__(self, *args, **kwargs):
         apply(threadpool.ThreadPool.__init__, (self,) + args, kwargs)
-        reactor.addSystemEventTrigger('after', 'startup', self.start)
+        main.callWhenRunning(self.start)
         self._callbacks = []
 
     def _runWithCallback(self, callback, errback, func, args, kwargs):
@@ -68,7 +68,7 @@ class ThreadDispatcher(threadpool.ThreadPool):
         threadpool.ThreadPool.stop(self)
 
 
-theDispatcher = ThreadDispatcher(0)
+theDispatcher = ThreadDispatcher()
 
 def dispatchApply(callback, errback, func, args, kw):
     theDispatcher.dispatchApply(log.logOwner.owner(), callback, errback, func, args, kw)
