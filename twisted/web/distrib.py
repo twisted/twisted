@@ -1,16 +1,16 @@
 
 # Twisted, the Framework of Your Internet
 # Copyright (C) 2001 Matthew W. Lefkowitz
-# 
+#
 # This library is free software; you can redistribute it and/or
 # modify it under the terms of version 2.1 of the GNU Lesser General Public
 # License as published by the Free Software Foundation.
-# 
+#
 # This library is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
 # Lesser General Public License for more details.
-# 
+#
 # You should have received a copy of the GNU Lesser General Public
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
@@ -58,7 +58,9 @@ class Request(pb.RemoteCopy, server.Request):
         self.write            = self.remote.remoteMethod('write')
         self.finish           = self.remote.remoteMethod('finish')
         self.setHeader        = self.remote.remoteMethod('setHeader')
+        self.setETag          = self.remote.remoteMethod('setETag')
         self.setResponseCode  = self.remote.remoteMethod('setResponseCode')
+        self.setLastModified  = self.remote.remoteMethod('setLastModified')
         self.acqpath = []
 
     def registerProducer(self, producer, streaming):
@@ -147,6 +149,20 @@ class ResourceSubscription(resource.Resource):
     def booted(self):
         self.notConnected("connection dropped")
 
+    def tagMatches(self, request, tags):
+        if not self.publisher:
+            # easy is better than accurate
+            return defer.succeed(0)
+        else:
+            return self.publisher.callRemote('tagMatches', request, tags)
+
+    def wasModifiedSince(self, request, when):
+        if not self.publisher:
+            # easy is better than accurate
+            return defer.succeed(1)
+        else:
+            return self.publisher.callRemote('wasModifiedSince', request, when)
+
     def render(self, request):
         """Render this request, from my server.
 
@@ -181,6 +197,14 @@ class ResourcePublisher(pb.Root, styles.Versioned):
 
     def getPerspectiveNamed(self, name):
         return self
+
+    def remote_tagMatches(self, request, tags):
+        res = self.site.getResourceFor(request)
+        return res.tagMatches(request, tags)
+
+    def remote_wasModifiedSince(self, request, when):
+        res = self.site.getResourceFor(request)
+        return res.wasModifiedSince(request, when)
 
     def remote_request(self, request):
         res = self.site.getResourceFor(request)

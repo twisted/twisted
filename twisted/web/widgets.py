@@ -151,7 +151,7 @@ class Widget:
 
         If not, return a false value.
         """
-        return 1
+        return defer.succeed(1)
 
     def display(self, request):
         """Implement me to represent your widget.

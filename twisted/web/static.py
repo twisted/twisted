@@ -324,9 +324,9 @@ class File(resource.Resource, styles.Versioned):
 
     def wasModifiedSince(self, request, when):
         try:
-            return os.stat(self.path)[stat.ST_MTIME] > when
+            return defer.succeed(os.stat(self.path)[stat.ST_MTIME] > when)
         except OSError:
-            return 1
+            return defer.succeed(1)
 
     def redirect(self, request):
         return redirectTo(addSlash(request), request)

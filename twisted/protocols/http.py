@@ -1,3 +1,4 @@
+# -*- test-case-name: twisted.test.test_http -*-
 
 # Twisted, the Framework of Your Internet
 # Copyright (C) 2001 Matthew W. Lefkowitz
@@ -317,6 +318,7 @@ class Request:
     startedWriting = 0
     chunked = 0
     sentLength = 0 # content-length of response, or total bytes sent via chunking
+    etag = None
     lastModified = None
 
     def __init__(self, channel, queued):
@@ -537,13 +539,15 @@ class Request:
                 if version == "HTTP/1.1" and self.headers.get('content-length', None) is None:
                     l.append("%s: %s\r\n" % ('Transfer-encoding', 'chunked'))
                     self.chunked = 1
-                if (self.lastModified is not None):
+                if self.lastModified is not None:
                     if 'last-modified' in self.headers:
                         log.msg("Warning: last-modified specified both in"
                                 " header list and lastModified attribute.")
                     else:
                         self.setHeader('last-modified',
                                        datetimeToString(self.lastModified))
+                if self.etag is not None:
+                    self.setHeader('ETag', self.etag)
                 for name, value in self.headers.items():
                     l.append("%s: %s\r\n" % (name.capitalize(), value))
                 for cookie in self.cookies:
@@ -622,6 +626,18 @@ class Request:
         when = long(math.ceil(when))
         if (not self.lastModified) or (self.lastModified < when):
             self.lastModified = when
+
+    def setETag(self, etag):
+        """Set an entity tag for the outgoing response.
+
+        That's \"entity tag\" as in the HTTP/1.1 ETag header, \"used
+        for comparing two or more entities from the same requested
+        resource.\"
+        """
+        if etag:
+            self.etag = etag
+        # Return the argument so it can be used in a deferred's callback chain.
+        return etag
 
     def getAllHeaders(self):
         """Return dictionary of all headers the request received."""
