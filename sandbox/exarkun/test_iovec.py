@@ -4,6 +4,7 @@ import iovec
 
 import tempfile
 import socket
+from cStringIO import StringIO
 
 from twisted.trial import unittest
 
@@ -96,3 +97,32 @@ class IOVectorTestCase(unittest.TestCase):
         # print
         # print written
         # print
+
+    def testRead(self):
+        v = iovec.iovec()
+        v.extend(map(str, range(100)))
+        expect = StringIO()
+        expect.write(''.join(map(str, range(100))))
+        expect.seek(0)
+        self.assertEquals(v.read(120), expect.read(120))
+        self.assertEquals(v.read(500), None)
+        self.assertEquals(v.bytes, 70)
+        self.assertEquals(v.read(69), expect.read(69))
+        self.assertEquals(v.bytes, 1)
+        self.assertEquals(v.read(2), None)
+        self.assertEquals(v.read(1), expect.read(1))
+        self.assertEquals(v.read(), expect.read())
+        self.assertEquals(v.read(1), None)
+        self.assertEquals(v.bytes, 0)
+        v.extend(map(str, range(100)))
+        expect.seek(0)
+        self.assertEquals(v.read(120), expect.read(120))
+        self.assertEquals(v.read(500), None)
+        self.assertEquals(v.bytes, 70)
+        self.assertEquals(v.read(69), expect.read(69))
+        self.assertEquals(v.bytes, 1)
+        self.assertEquals(v.read(2), None)
+        self.assertEquals(v.read(1), expect.read(1))
+        self.assertEquals(v.read(), expect.read())
+        self.assertEquals(v.read(1), None)
+        self.assertEquals(v.bytes, 0)

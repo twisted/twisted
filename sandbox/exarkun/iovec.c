@@ -52,9 +52,9 @@ static int IOVectors_Length(IOVectors *v);
 /* Calculate the length of the IOVectors linked list itself */
 static int IOVectors_ListLength(IOVectors *v);
 
-/* Make clean to be passed up as PyStrings */
+/* Make clean to be passed up as readable PyBuffers (PyStrings, primarily) */
 /* -1 for err, >=0 for how many strings were created */
-static int IOVectors_MakePyStrings(IOVectors *v);
+static int IOVectors_MakePyBuffers(IOVectors *v);
 
 /* Make a PyTuple out of the current element */
 static PyObject* IOVectors_AsTuple(IOVectors *v);
@@ -118,7 +118,7 @@ IOVectors_Wipe(IOVectors* v) {
     for (i = v->first; i < v->last; ++i) {
         ref = v->objects[i];
         if (ref != NULL) {
-            Py_DECREF(ref);
+            Py_XDECREF(ref);
         } else {
             PyMem_Del(v->vectors[i].iov_base);
         }
@@ -183,7 +183,7 @@ IOVectors_Remove(IOVectors* head, size_t bytes) {
             if (o == NULL) {
                 PyMem_Del(v->iov_base);
             } else {
-                Py_DECREF(o);
+                Py_XDECREF(o);
             }
             bytes -= v->iov_len;
             ++idx;
@@ -209,11 +209,90 @@ IOVectors_Remove(IOVectors* head, size_t bytes) {
     return head;
 }
 
+static IOVectors*
+IOVectors_Read(IOVectors* head, size_t bytes, PyObject **resultString) {
+    int idx, len, orig_bytes;
+    PyObject* obj;
+    char *buf;
+    orig_bytes = (int)bytes;
+
+    /* MAKE ABSOLUTELY SURE THAT bytes <= total bytes from PyIOVector!!! */
+    if (bytes == 0 || head == NULL || head->bytes == 0) {
+        /* This is lame, don't do this */
+        *resultString = NULL;
+        return head;
+    }
+
+    if ((*resultString = PyString_FromStringAndSize(NULL, (int)bytes)) == NULL) {
+        PyErr_NoMemory();
+        return head;
+    }
+
+    buf = PyString_AsString(*resultString);
+
+    while (head != NULL && bytes >= head->bytes) {
+        for (idx = head->first; idx < head->last; ++idx) {
+            len = head->vectors[idx].iov_len;
+            memcpy(buf, head->vectors[idx].iov_base, len);
+            buf += len;
+        }
+        bytes -= head->bytes;
+        if (head->next == NULL) {
+            IOVectors_Wipe(head);
+            head->first = head->last = 0;
+            head->bytes = 0;
+            break;
+        }
+        head = IOVectors_Del(head);
+    }
+
+    if (head->bytes == 0 && bytes > 0) {
+        /* XXX - over-read */
+        _PyString_Resize(resultString, orig_bytes - (int)bytes);
+        return head;
+    }
+
+    orig_bytes = bytes;
+    for (idx = head->first; (bytes > 0) && (idx < head->last); ++idx) {
+        if ((len = head->vectors[idx].iov_len) > bytes) {
+            len = bytes;
+            memcpy(buf, head->vectors[idx].iov_base, len);
+            if (head->objects[idx] != NULL) {
+                head->vectors[idx].iov_base += len;
+                head->vectors[idx].iov_len -= len;
+            } else {
+                obj = PyString_FromStringAndSize((const char *)head->vectors[idx].iov_base, (int)head->vectors[idx].iov_len);
+                if (obj == NULL) {
+                    PyErr_NoMemory();
+                    return head;
+                }
+                PyMem_Del(head->vectors[idx].iov_base);
+                head->objects[idx] = obj;
+                head->vectors[idx].iov_base = PyString_AsString(obj);
+            }
+            break;
+        } else {
+            memcpy(buf, head->vectors[idx].iov_base, len);
+            buf += len;
+            bytes -= len;
+            if (head->objects[idx] != NULL) {
+                Py_XDECREF(head->objects[idx]);
+            } else {
+                PyMem_Del(head->vectors[idx].iov_base);
+            }
+        }
+    }
+    head->first = idx;
+    head->bytes -= orig_bytes;
+    return head;
+}
+            
 static int
-IOVectors_MakePyStrings(IOVectors *v) {
+IOVectors_MakePyBuffers(IOVectors *v) {
     int idx;
     PyObject *obj;
-    int res = 0;
+    int res = 0, len = 0;
+    char *buf = NULL;
     if (v == NULL) {
         return 0;
     }
@@ -229,21 +308,23 @@ IOVectors_MakePyStrings(IOVectors *v) {
             PyMem_Del(v->vectors[idx].iov_base);
             v->objects[idx] = obj;
             v->vectors[idx].iov_base = PyString_AsString(obj);
-        } else if (v->vectors[idx].iov_base != PyString_AsString(obj)) {
+        } else if ((PyObject_AsReadBuffer(obj, (const void **)&buf, &len) == -1) || (v->vectors[idx].iov_base != buf)) {
             ++res;
             obj = PyString_FromStringAndSize((const char *)v->vectors[idx].iov_base, (int)v->vectors[idx].iov_len);
             if (obj == NULL) {
                 PyErr_NoMemory();
                 return -1;
             }
-            Py_DECREF(v->objects[idx]);
+            Py_XDECREF(v->objects[idx]);
             v->objects[idx] = obj;
             v->vectors[idx].iov_base = PyString_AsString(obj);
         }
     }
+    /*
     if (res > 0) {
         printf("DEBUG: %d new strings created\n", res);
     }
+    */
     return res;
 }
 
@@ -255,7 +336,7 @@ IOVectors_AsTuple(IOVectors *v) {
         PyErr_SetString(iovec_error, "Trying to turn NULL into a tuple?!");
         return NULL;
     }
-    if (IOVectors_MakePyStrings(v) == -1) {
+    if (IOVectors_MakePyBuffers(v) == -1) {
         /* XXX - memory error */
         return NULL;
     }
@@ -418,7 +499,7 @@ PyIOVector_extend(PyIOVector* self, PyObject* args) {
         }
         /* retain item implicitly */
     }
-    Py_DECREF(iterator);
+    Py_XDECREF(iterator);
     Py_INCREF(Py_None);
     return Py_None;
 }
@@ -447,7 +528,7 @@ PyIOVector_write(PyIOVector* self, PyObject* args) {
             return NULL;
         
         res = PyObject_CallObject(func, NULL);
-        Py_DECREF(func);
+        Py_XDECREF(func);
         if (res == NULL)
             return NULL;
         
@@ -457,7 +538,7 @@ PyIOVector_write(PyIOVector* self, PyObject* args) {
         }
         
         fileno = PyInt_AsLong(res);
-        Py_DECREF(res);
+        Py_XDECREF(res);
     }
     
     /* I really don't know if threads can be allowed here. */
@@ -494,18 +575,38 @@ PyIOVector__asTuple(PyIOVector* self, PyObject* args) {
     return tuple;
 
 PyIOVector__asTuple_NoInnerTuple:
-    Py_DECREF(tuple);
+    Py_XDECREF(tuple);
 PyIOVector__asTuple_NoTuple:
     return PyErr_NoMemory();
+}
+
+static char PyIOVector_read_doc[] = "v.read([bytes]) if not given, it will read all bytes available";
+
+static PyObject*
+PyIOVector_read(PyIOVector* self, PyObject *args) {
+    int bytes = self->bytes;
+    PyObject *rval;
+    if (!PyArg_ParseTuple(args, "|i:read", &bytes))
+        return NULL;
+    if (bytes == 0) {
+        return PyString_FromString("");
+    }
+    if (bytes > self->bytes) {
+        Py_INCREF(Py_None);
+        return Py_None;
+    }
+    self->head = IOVectors_Read(self->head, bytes, &rval);
+    self->bytes -= bytes;
+    return rval;
 }
 
 static PyMethodDef PyIOVector_methods[] = {
     {"add", (PyCFunction)PyIOVector_append, METH_VARARGS, PyIOVector_append_doc},
     {"append", (PyCFunction)PyIOVector_append, METH_VARARGS, PyIOVector_append_doc},
-    /*{"read", (PyCFunction)PyIOVector_read, METH_VARARGS, PyIOVector_read_doc},*/
+    {"read", (PyCFunction)PyIOVector_read, METH_VARARGS, PyIOVector_read_doc},
     {"write", (PyCFunction)PyIOVector_write, METH_VARARGS, PyIOVector_write_doc},
     {"extend", (PyCFunction)PyIOVector_extend, METH_VARARGS, PyIOVector_extend_doc},
-    {"_asTuple", (PyCFunction)PyIOVector__asTuple, METH_VARARGS, PyIOVector__asTuple_doc},
+    {"_asTuple", (PyCFunction)PyIOVector__asTuple, METH_NOARGS, PyIOVector__asTuple_doc},
     {NULL, NULL},
 };
 
@@ -565,30 +666,19 @@ static PyMethodDef iovec_functions[] = {
 
 DL_EXPORT(void)
 initiovec(void) {
-    PyObject* module;
-    PyObject* dict;
+    PyObject* self;
 
     PyIOVector_Type.ob_type = &PyType_Type;
     PyIOVector_Type.tp_base = &PyBaseObject_Type;
     if (PyType_Ready(&PyIOVector_Type) < 0)
         return;
     
-    module = Py_InitModule("iovec", iovec_functions);
-    if (module == NULL)
+    if ((self = Py_InitModule("iovec", iovec_functions)) == NULL) {
         return;
-    
-    dict = PyModule_GetDict(module);
-    if (dict == NULL)
-        return;
+    }
     
     Py_INCREF(&PyIOVector_Type);
-    if (PyDict_SetItemString(dict, "iovec", (PyObject*)&PyIOVector_Type) < 0)
-        return;
-    
-    iovec_error = PyErr_NewException("iovec.error", NULL, NULL);
-    if (iovec_error == NULL)
-        return;
-    
-    if (PyDict_SetItemString(dict, "error", iovec_error) < 0)
-        return;
+    iovec_error = PyErr_NewException("iovec.error", PyExc_StandardError, NULL);
+    PyModule_AddObject(self, "error", iovec_error);
+    PyModule_AddObject(self, "iovec", (PyObject*)&PyIOVector_Type);
 }
