@@ -321,16 +321,14 @@ a new process.</p>
 
 <h2>Results</h2>
 
-<h3>Web Server Migration</h3>
-
 <h3>Interactive Python Shell / Telnet Server</h3>
 
-<p>To demonstrate this technique in a more complex and stateful
-environment, a migration server was added to a telnet server
-connected to an interactive Python shell.  The telnet portion of
-the server uses classes which have been part of Twisted for nearly
-two years as of the writing of this paper, and only makes a few
-lines of modifications to allow migration to be possible.</p>
+<p>To demonstrate this technique in a complex and stateful environment,
+a migration server was added to a telnet server connected to an
+interactive Python shell.  The telnet portion of the server uses classes
+which have been part of Twisted for nearly two years as of the writing of
+this paper, and only makes a few lines of modifications to allow migration
+to be possible.</p>
 
 <p>The first portion of a transcript of a brief telnet session
 with this server is as follows:</p>
@@ -385,6 +383,8 @@ state has successfully migrated to the service recipient.  Finally,
 the new value of <code>sys.version</code> indicates that an entirely
 different version of the Python interpreter is now handling this telnet
 session.</p>
+
+<h3>Flexibility and Security Concerns</h3>
 
 <p>It is significant to note that services can be transferred not only
 between two versions of the same application, but also between otherwise
