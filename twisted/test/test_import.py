@@ -102,14 +102,12 @@ class AtLeastImportTestCase(unittest.TestCase):
         from twisted.web import server
         from twisted.web import html
         from twisted.web import twcgi
-        ## from twisted.web import distributed
         from twisted.web import cal
         from twisted.web import script
         from twisted.web import static
         from twisted.web import test
         from twisted.web import utils
         from twisted.web import vhost
-        from twisted.web import weblog
 
     def test_words(self):
         """Test importing words
