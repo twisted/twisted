@@ -32,7 +32,7 @@ namespace TwistedImpl
     typedef Twisted::OwnerPtr OwnerPtr;
 
     // bool indicates if this has a OwnerPtr:
-    typedef std::queue<std::pair<bool,OwnerPtr> > OwnerQueue;
+    typedef std::queue<std::pair<bool,const OwnerPtr> > OwnerQueue;
     
     struct IOVecManager {
 	iovec* m_vecs;
@@ -62,7 +62,7 @@ namespace TwistedImpl
 	    m_vecs[m_offset].iov_len += m_bytessent;
 	}
 	
-	inline void reallyAdd(const char* buf, size_t len, OwnerPtr p, bool isExternal) {
+	inline void reallyAdd(const char* buf, size_t len, const OwnerPtr p, bool isExternal) {
 	    ensureEnoughSpace();
 	    m_vecs[m_offset + m_used].iov_base = (void*) buf;
 	    m_vecs[m_offset + m_used].iov_len = len;
@@ -80,7 +80,7 @@ namespace TwistedImpl
 	}
 
 	// Add externally owned storage:
-	inline void add(const char* buf, size_t len, OwnerPtr p) {
+	inline void add(const char* buf, size_t len, const OwnerPtr p) {
 	    reallyAdd(buf, len, p, true);
 	}
 
@@ -233,7 +233,7 @@ namespace Twisted
 	    assert (checkBuffered(m_bufferedbytes, m_iovec, m_local));
 	}
 
-	void write(char* buf, size_t len, OwnerPtr owner) {
+	void write(const char* buf, size_t len, const OwnerPtr owner) {
 	    if (!connected || len == 0)
 		return;
 	    m_iovec.add(buf, len, owner);
