@@ -1,3 +1,11 @@
+2004-06-06  Dave Peticolas  <dave@krondo.com>
+
+	* twisted/test/test_enterprise.py: test open callback and
+	connect/disconnect.
+
+	* twisted/enterprise/adbapi.py: add open callback support
+	and disconnect() method. Issue 480.
+
 2004-06-05  Dave Peticolas  <dave@krondo.com>
 
 	* twisted/enterprise/adbapi.py: Don't log sql exceptions (issue 631).

@@ -105,7 +105,7 @@ CREATE TABLE simple (
 )
 """
 
-def randomizeRow(row, nullsOK=1, trailingSpacesOK=1):
+def randomizeRow(row, nullsOK=True, trailingSpacesOK=True):
     values = {}
     for name, type in row.rowColumns:
         if util.getKeyColumn(row, name):
@@ -132,8 +132,8 @@ def rowMatches(row, values):
         if getattr(row, name) != values[name]:
             print ("Mismatch on column %s: |%s| (row) |%s| (values)" %
                    (name, getattr(row, name), values[name]))
-            return
-    return 1
+            return False
+    return True
 
 class ReflectorTestCase:
     """Base class for testing reflectors.
@@ -148,8 +148,8 @@ class ReflectorTestCase:
     """
 
     count = 100 # a parameter used for running iterative tests
-    nullsOK = 1 # we can put nulls into the db
-    trailingSpacesOK = 1 # we can put strings with trailing spaces into the db
+    nullsOK = True # db supports nulls
+    trailingSpacesOK = True # db supports strings with trailing spaces
 
     def randomizeRow(self, row):
         return randomizeRow(row, self.nullsOK, self.trailingSpacesOK)
@@ -324,10 +324,22 @@ class SQLReflectorTestCase(ReflectorTestCase):
     DB_USER = 'twisted_test'
     DB_PASS = 'twisted_test'
 
-    can_rollback = 1
-    test_failures = 1
+    can_rollback = True
+    test_failures = True
+    mulitple_conns = True
 
     reflectorClass = SQLReflector
+
+    openfun_called = {}
+
+    def openfun(self, conn):
+        self.openfun_called[conn] = True
+
+    def checkOpenfunCalled(self, conn=None):
+        if not conn:
+            self.failUnless(self.openfun_called)
+        else:
+            self.failUnless(self.openfun_called.has_key(conn))
 
     def createReflector(self):
         self.startDB()
@@ -358,6 +370,8 @@ class SQLReflectorTestCase(ReflectorTestCase):
         row = deferredResult(self.dbpool.runQuery(sql))
         self.failUnless(int(row[0][0]) == 0, "Interaction not rolled back")
 
+        self.checkOpenfunCalled()
+
         # add some rows to simple table (runOperation)
         for i in range(self.count):
             sql = "insert into simple(x) values(%d)" % i
@@ -372,15 +386,15 @@ class SQLReflectorTestCase(ReflectorTestCase):
             self.failUnless(rows[i][0] == i, "Values not returned.")
 
         # runInteraction
-        self.assertEquals(deferredResult(self.dbpool.runInteraction(self.interaction)),
-                          "done")
+        res = deferredResult(self.dbpool.runInteraction(self.interaction))
+        self.assertEquals(res, "done")
 
         # give the pool a workout
         ds = []
         for i in range(self.count):
             sql = "select x from simple where x = %d" % i
             ds.append(self.dbpool.runQuery(sql))
-        dlist = defer.DeferredList(ds, fireOnOneErrback=1)
+        dlist = defer.DeferredList(ds, fireOnOneErrback=True)
         result = deferredResult(dlist)
         for i in range(self.count):
             self.failUnless(result[i][1][0][0] == i, "Value not returned")
@@ -390,13 +404,33 @@ class SQLReflectorTestCase(ReflectorTestCase):
         for i in range(self.count):
             sql = "delete from simple where x = %d" % i
             ds.append(self.dbpool.runOperation(sql))
-        dlist = defer.DeferredList(ds, fireOnOneErrback=1)
+        dlist = defer.DeferredList(ds, fireOnOneErrback=True)
         deferredResult(dlist)
 
         # verify simple table is empty
         sql = "select count(1) from simple"
         row = deferredResult(self.dbpool.runQuery(sql))
-        self.failUnless(int(row[0][0]) == 0, "Interaction not rolled back")
+        self.failUnless(int(row[0][0]) == 0,
+                        "Didn't successfully delete table contents")
+
+        self.checkConnect()
+
+    def checkConnect(self):
+        """Check the connect/disconnect synchronous calls."""
+        conn = self.dbpool.connect()
+        self.checkOpenfunCalled(conn)
+        curs = conn.cursor()
+        curs.execute("insert into simple(x) values(1)")
+        curs.execute("select x from simple")
+        res = curs.fetchall()
+        self.failUnlessEqual(len(res), 1)
+        self.failUnlessEqual(len(res[0]), 1)
+        self.failUnlessEqual(res[0][0], 1)
+        curs.execute("delete from simple")
+        curs.execute("select x from simple")
+        self.failUnlessEqual(len(curs.fetchall()), 0)
+        curs.close()
+        self.dbpool.disconnect(conn)
 
     def interaction(self, transaction):
         transaction.execute("select x from simple order by x")
@@ -428,10 +462,10 @@ class GadflyTestCase(SQLReflectorTestCase, unittest.TestCase):
     """
 
     count = 10 # gadfly is slow
-    nullsOK = 0
+    nullsOK = False
     DB_DIR = "./gadflyDB"
     reflectorClass = NoSlashSQLReflector
-    can_rollback = 0
+    can_rollback = False
 
     def startDB(self):
         if not os.path.exists(self.DB_DIR): os.mkdir(self.DB_DIR)
@@ -445,7 +479,8 @@ class GadflyTestCase(SQLReflectorTestCase, unittest.TestCase):
         conn.close()
 
     def makePool(self):
-        return ConnectionPool('gadfly', self.DB_NAME, self.DB_DIR, cp_max=1)
+        return ConnectionPool('gadfly', self.DB_NAME, self.DB_DIR, cp_max=1,
+                              cp_openfun=self.openfun)
 
 
 class SQLiteTestCase(SQLReflectorTestCase, unittest.TestCase):
@@ -461,7 +496,8 @@ class SQLiteTestCase(SQLReflectorTestCase, unittest.TestCase):
         if os.path.exists(self.database): os.unlink(self.database)
 
     def makePool(self):
-        return ConnectionPool('sqlite', database=self.database, cp_max=1)
+        return ConnectionPool('sqlite', database=self.database, cp_max=1,
+                              cp_openfun=self.openfun)
 
 
 class PostgresTestCase(SQLReflectorTestCase, unittest.TestCase):
@@ -471,7 +507,7 @@ class PostgresTestCase(SQLReflectorTestCase, unittest.TestCase):
     def makePool(self):
         return ConnectionPool('pyPgSQL.PgSQL', database=self.DB_NAME,
                               user=self.DB_USER, password=self.DB_PASS,
-                              cp_min=0)
+                              cp_min=0, cp_openfun=self.openfun)
 
 class PsycopgTestCase(SQLReflectorTestCase, unittest.TestCase):
     """Test cases for the SQL reflector using psycopg for Postgres.
@@ -480,26 +516,27 @@ class PsycopgTestCase(SQLReflectorTestCase, unittest.TestCase):
     def makePool(self):
         return ConnectionPool('psycopg', database=self.DB_NAME,
                               user=self.DB_USER, password=self.DB_PASS,
-                              cp_min=0)
+                              cp_min=0, cp_openfun=self.openfun)
 
 
 class MySQLTestCase(SQLReflectorTestCase, unittest.TestCase):
     """Test cases for the SQL reflector using MySQL.
     """
 
-    trailingSpacesOK = 0
-    can_rollback = 0
+    trailingSpacesOK = False
+    can_rollback = False
 
     def makePool(self):
         return ConnectionPool('MySQLdb', db=self.DB_NAME,
-                              user=self.DB_USER, passwd=self.DB_PASS)
+                              user=self.DB_USER, passwd=self.DB_PASS,
+                              cp_openfun=self.openfun)
 
 
 class FirebirdTestCase(SQLReflectorTestCase, unittest.TestCase):
     """Test cases for the SQL reflector using Firebird/Interbase."""
 
     count = 2 # CHANGEME
-    test_failures = 0 # failure testing causes problems
+    test_failures = False # failure testing causes problems
     reflectorClass = NoSlashSQLReflector
     DB_DIR = tempfile.mktemp()
     DB_NAME = os.path.join(DB_DIR, SQLReflectorTestCase.DB_NAME)
@@ -516,7 +553,7 @@ class FirebirdTestCase(SQLReflectorTestCase, unittest.TestCase):
     def makePool(self):
         return ConnectionPool('kinterbasdb', database=self.DB_NAME,
                               host='localhost', user=self.DB_USER,
-                              password=self.DB_PASS)
+                              password=self.DB_PASS, cp_openfun=self.openfun)
 
     def stopDB(self):
         conn = kinterbasdb.connect(database=self.DB_NAME,

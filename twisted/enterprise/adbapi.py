@@ -54,12 +54,19 @@ class ConnectionPool:
     number of connections that will be opened by the pool. You can pass
     the noisy arg which determines whether informational log messages are
     generated during the pool's operation.
+
+    You can pass a function cp_openfun which will get called after
+    every connect() operation on the underlying DB-API object. The
+    cp_openfun can setup per-connection state, such as charset,
+    timezone, etc.
     """
 
     noisy = 1   # if true, generate informational log messages
     min = 3     # minimum number of connections in pool
     max = 5     # maximum number of connections in pool
     running = 0 # true when the pool is operating
+
+    openfun = None # A function to call on new connections
 
     def __init__(self, dbapiName, *connargs, **connkw):
         self.dbapiName = dbapiName
@@ -85,6 +92,10 @@ class ConnectionPool:
         if connkw.has_key('cp_noisy'):
             self.noisy = connkw['cp_noisy']
             del connkw['cp_noisy']
+
+        if connkw.has_key('cp_openfun'):
+            self.openfun = connkw['cp_openfun']
+            del connkw['cp_openfun']
 
         self.min = min(self.min, self.max)
         self.max = max(self.min, self.max)
@@ -198,11 +209,7 @@ class ConnectionPool:
         self.threadpool.stop()
         self.running = 0
         for conn in self.connections.values():
-            if self.noisy:
-                log.msg('adbapi closing: %s %s%s' % (self.dbapiName,
-                                                     self.connargs or '',
-                                                     self.connkw or ''))
-            conn.close()
+            self._close(conn)
         self.connections.clear()
 
     def connect(self):
@@ -222,8 +229,31 @@ class ConnectionPool:
                                                         self.connargs or '',
                                                         self.connkw or ''))
             conn = self.dbapi.connect(*self.connargs, **self.connkw)
+            if self.openfun != None:
+                self.openfun(conn)
             self.connections[tid] = conn
         return conn
+
+    def disconnect(self, conn):
+        """Disconnect a database connection associated with this pool.
+
+        Note: This function should only be used by the same thread which
+        called connect(). As with connect(), this function is not used
+        in normal non-threaded twisted code.
+        """
+        tid = self.threadID()
+        if conn is not self.connections.get(tid):
+            raise Exception("wrong connection for thread")
+        if conn is not None:
+            self._close(conn)
+            del self.connections[tid]
+
+    def _close(self, conn):
+        if self.noisy:
+            log.msg('adbapi closing: %s %s%s' % (self.dbapiName,
+                                                 self.connargs or '',
+                                                 self.connkw or ''))
+        conn.close()
 
     def _runInteraction(self, interaction, *args, **kw):
         trans = Transaction(self, self.connect())
