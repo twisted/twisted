@@ -62,6 +62,22 @@ class TelnetTestCase(unittest.TestCase):
 
         self.assertEquals(h.bytes, ''.join(L))
 
+    def testNewlineHandling(self):
+        # Send various kinds of newlines and make sure they get translated
+        # into \n.
+        h = self.p.protocol
+
+        L = ["here is the first line",
+             "here is the second line",
+             "here is the third line",
+             "here is the last line"]
+        nl = ["\r\n", "\r\0"] * 2
+
+        for b in L:
+            self.p.dataReceived(b + nl.pop())
+
+        self.assertEquals(h.bytes, "\n".join(L) + "\n")
+
     def testIACEscape(self):
         # Send a bunch of bytes and a couple quoted \xFFs.  Unquoted,
         # \xFF is a telnet command.  Quoted, one of them from each pair

@@ -171,7 +171,7 @@ class Telnet(protocol.Protocol):
     Changes should not be made to it.
 
     @ivar state: A string indicating the current parse state.  It
-    can take on the values "data", "escaped", "command",
+    can take on the values "data", "escaped", "command", "newline",
     "subnegotiation", and "subnegotiation-escaped".  Changes
     should not be made to it.
 
@@ -220,11 +220,6 @@ class Telnet(protocol.Protocol):
             self.dont(option)
             return d
 
-        return self._disable(option, self.dont)
-
-    def offerDisable(self, option):
-        return self._disable(option, self.wont)
-
     def requestNegotiation(self, about, bytes):
         """Send a subnegotiation request.
 
@@ -244,11 +239,13 @@ class Telnet(protocol.Protocol):
             if self.state == 'data':
                 if b == IAC:
                     self.state = 'escaped'
+                elif b == '\r':
+                    self.state = 'newline'
                 else:
-                    self.applicationByteReceived(b)
+                    self.applicationDataReceived(b)
             elif self.state == 'escaped':
                 if b == IAC:
-                    self.applicationByteReceived(b)
+                    self.applicationDataReceived(b)
                     self.state = 'data'
                 elif b == SB:
                     self.state = 'subnegotiation'
@@ -266,6 +263,12 @@ class Telnet(protocol.Protocol):
                 command = self.command
                 del self.command
                 self.commandReceived(command, b)
+            elif self.state == 'newline':
+                if b == '\n' or b == '\0':
+                    self.applicationDataReceived('\n')
+                else:
+                    self.applicationDataReceived('\r' + b)
+                self.state = 'data'
             elif self.state == 'subnegotiation':
                 if b == IAC:
                     self.state = 'subnegotiation-escaped'
@@ -290,7 +293,7 @@ class Telnet(protocol.Protocol):
                 state.onResult = None
                 d.errback(reason)
 
-    def applicationByteReceived(self, byte):
+    def applicationDataReceived(self, bytes):
         """Called with application-level data.
         """
 
@@ -538,7 +541,7 @@ class TelnetTransport(Telnet, ProtocolTransportMixin):
     def unhandledCommand(self, command, argument):
         self.protocol.unhandledCommand(command, argument)
 
-    def applicationByteReceived(self, bytes):
+    def applicationDataReceived(self, bytes):
         self.protocol.dataReceived(bytes)
 
     def connectionLost(self, reason):
