@@ -18,7 +18,6 @@ from twisted.scripts import twistd
 from twisted.python import usage
 
 class Options(usage.Options):
-
     optFlags = [
                 ['encrypted', 'e' ,
                  "The specified tap/aos/xml file is encrypted."]
@@ -39,11 +38,15 @@ class Options(usage.Options):
                     ]
 
     def opt_script(self, scriptname):
+        """Set the root resource of the web server to the resource created 
+        (and put into the `resource' variable) by this script."""
         d = {}
         execfile(scriptname, d)
         self['root'] = d['resource']
 
     def opt_pickle(self, picklename):
+        """Set the root resource of the web server to the resource saved in 
+        this pickle."""
         self['root'] = cPickle.load(open(picklename))
  
 

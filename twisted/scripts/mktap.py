@@ -15,7 +15,7 @@
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 #
-# $Id: mktap.py,v 1.30 2003/03/14 05:35:01 exarkun Exp $
+# $Id: mktap.py,v 1.31 2003/03/18 00:04:28 radix Exp $
 
 """ Implementation module for the `mktap` command.
 """
@@ -84,7 +84,7 @@ class GeneralOptions(usage.Options):
 
     optFlags = [['xml', 'x',       "DEPRECATED: same as --type=xml"],
                 ['source', 's',    "DEPRECATED: same as --type=source"],
-                ['encrypted', 'e', "Encrypt file before writing"],
+                ['encrypted', 'e', "Encrypt file before writing (will make the extension of the resultant file begin with 'e')"],
                 ['progress', 'p',  "Show progress of plugin loading"],
                 ['debug', 'd',     "Show debug information for plugin loading"]]
 
