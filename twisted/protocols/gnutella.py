@@ -79,14 +79,11 @@ class GnutellaTalker(LineReceiver):
     One constraint that it imposes which is not specified in the Gnutella 0.4 spec is that payload lengths must be less than or equal to 640 KB.  If the payload length is greater than that, GnutellaTalker closes the connection.
     """
     def __init__(self):
-        self.handshake = "start" # state transitions: "start" -> "hesaidhello", "hesaidhello" -> "completed", "start" -> "isaidhello", "isaidhello" -> "completed"
+        self.initiator = false # True iff this instance initiated an outgoing TCP connection rather than being constructed to handle an incoming TCP connection.
+        self.handshake = "start" # state transitions: "start" -> "initiatorsaidhello", "initiatorsaidhello" -> "completed"
         self.gotver = None
-        self.secret = "geheim"
 
         self.buf = ''
-
-    def setSecret(self, secret):
-        self.secret = secret
 
     # METHODS OF INTEREST TO CLIENTS (including subclasses)
     def sendPing(self, ttl):
@@ -149,7 +146,19 @@ class GnutellaTalker(LineReceiver):
         pass
     
     # METHODS OF INTEREST TO THIS CLASS ONLY
-    def abortConnection(self, logmsg):
+    def initiateConnection(self, ipAddress, port):
+        assert self.handshake == "start"
+        assert self.initiator == false
+        self.initiator = true
+        # xxx ask Twisted to make a connection here.
+        # self.makeConnection(xxx) # ??
+
+    def connectionMade(self):
+        if self.initiator:
+            self.transport.write(CONNSTRING)
+            self.handshake = "initiatorsaidhello"
+
+    def _abortConnection(self, logmsg):
         log.msg(logmsg + ", self: %s" % str(self))
         self.transport.loseConnection()
         return
@@ -159,7 +168,7 @@ class GnutellaTalker(LineReceiver):
         A ping message has arrived.
         """
         if payload != '':
-            self.abortConnection("Received non-empty Ping payload.  Closing connection.  payload: %s" % str(payload))
+            self._abortConnection("Received non-empty Ping payload.  Closing connection.  payload: %s" % str(payload))
             return 
 
         self.pingReceived(descriptorId, ttl, hops)
@@ -168,7 +177,7 @@ class GnutellaTalker(LineReceiver):
         try:
             (port, ipA0, ipA1, ipA2, ipA3, numberOfFilesShared, kbShared,) = struct.unpack(PONGPAYLOADENCODING, payload)
         except struct.error, le:
-            self.abortConnection("Received ill-formatted Pong payload.  Closing connection.  payload: %s" % str(payload))
+            self._abortConnection("Received ill-formatted Pong payload.  Closing connection.  payload: %s" % str(payload))
             return
 
         ipAddress = string.join(map(str, (ipA0, ipA1, ipA2, ipA3,)), '.')
@@ -178,7 +187,7 @@ class GnutellaTalker(LineReceiver):
         try:
             (minimumSpeed,) = struct.unpack("<H", payload[:2])
         except struct.error, le:
-            self.abortConnection("Received ill-formatted Query payload.  Closing connection.  payload: %s" % str(payload))
+            self._abortConnection("Received ill-formatted Query payload.  Closing connection.  payload: %s" % str(payload))
             return
         searchCriteria = payload[2:]
         self.queryReceived(descriptorId, ttl, hops, searchCriteria, minimumSpeed)
@@ -187,7 +196,7 @@ class GnutellaTalker(LineReceiver):
         try:
             (numberOfHits, port, ipA0, ipA1, ipA2, ipA3, speed,) = struct.unpack(PARTIALQUERYHITPAYLOADENCODING, payload[:PARTIALQUERYHITPAYLOADLENGTH])
         except struct.error, le:
-            self.abortConnection("Received ill-formatted QueryHit payload.  Closing connection.  payload: %s" % str(payload))
+            self._abortConnection("Received ill-formatted QueryHit payload.  Closing connection.  payload: %s" % str(payload))
             return
         resultSet = []
         i = PARTIALQUERYHITPAYLOADLENGTH
@@ -196,7 +205,7 @@ class GnutellaTalker(LineReceiver):
             try:
                 (fileIndex, fileSize,) = struct.unpack(PARTIALQUERYHITRESULTENCODING, payload[i:i+PARTIALQUERYHITRESULTLENGTH])
             except struct.error, le:
-                self.abortConnection("Received ill-formatted partial QueryHit result.  Closing connection.  partial query hit result: %s" % str(payload[i:i+PARTIALQUERYHITRESULTLENGTH]))
+                self._abortConnection("Received ill-formatted partial QueryHit result.  Closing connection.  partial query hit result: %s" % str(payload[i:i+PARTIALQUERYHITRESULTLENGTH]))
                 return
             p += PARTIALQUERYHITRESULTLENGTH
             nuli = string.find(payload, '\x00', p, end)
@@ -220,7 +229,7 @@ class GnutellaTalker(LineReceiver):
         try:
             (serventIdentifier,) = struct.unpack(SERVENTIDENTIFIERENCODING, payload[i:])
         except struct.error, le:
-            self.abortConnection("Received ill-formatted QueryHit payload.  Closing connection.  i: %s, ill-formed part of query hit payload: %s" % (str(i), str(payload[i:]),))
+            self._abortConnection("Received ill-formatted QueryHit payload.  Closing connection.  i: %s, ill-formed part of query hit payload: %s" % (str(i), str(payload[i:]),))
             return
 
         ipAddress = string.join(map(str, (ipA0, ipA1, ipA2, ipA3,)), '.')
@@ -230,7 +239,7 @@ class GnutellaTalker(LineReceiver):
         try:
             (serventIdentifer, fileIndex, ipA0, ipA1, ipA2, ipA3, port,) = struct.unpack(PUSHPAYLOADENCODING, payload)
         except struct.error, le:
-            self.abortConnection("Received ill-formatted Push payload.  Closing connection.  i: %s, ill-formed part of query hit payload: %s" % (str(i), str(payload[i:]),))
+            self._abortConnection("Received ill-formatted Push payload.  Closing connection.  i: %s, ill-formed part of query hit payload: %s" % (str(i), str(payload[i:]),))
             return
         ipAddress = string.join(map(str, (ipA0, ipA1, ipA2, ipA3,)), '.')
         self.pushReceived(descriptorId, ttl, hops, ipAddress, port, serventIdentifer, fileIndex)
@@ -246,12 +255,12 @@ class GnutellaTalker(LineReceiver):
         try:
             (descriptorId, payloadDescriptor, ttl, hops, payloadLength,) = struct.unpack(HEADERENCODING, descriptor[:HEADERLENGTH])
         except struct.error, le:
-            self.abortConnection("Received ill-formatted descriptor.  Closing connection.  payload: %s" % str(descriptor))
+            self._abortConnection("Received ill-formatted descriptor.  Closing connection.  payload: %s" % str(descriptor))
             return
 
         name = payloadDescriptor2Name.get(payloadDescriptor)
         if name is None:
-            self.abortConnection("Received unrecognized payload descriptor.  Closing connection.  payloadDescriptor: %s" % str(payloadDescriptor))
+            self._abortConnection("Received unrecognized payload descriptor.  Closing connection.  payloadDescriptor: %s" % str(payloadDescriptor))
             return 
 
         handlermeth = getattr(self, "handle" + name)
@@ -261,26 +270,26 @@ class GnutellaTalker(LineReceiver):
 
     def lineReceived(self, line):
         """
-        @precondition We must be expecting a GNUTELLA CONNECT handshake move.: self.handshake in ("start", "isaidhello",): "self.handshake: %s, line: %s" % (str(self.handshake), str(line),)
+        @precondition We must be expecting a GNUTELLA CONNECT handshake move.: (self.initiator and (self.handshake == "initiatorsaidhello")) or ((not self.initiator) and (self.handshake == "start")): "self.initiator: %s, self.handshake: %s, line: %s" % (str(self.initiator), str(self.handshake), str(line),)
         """
-        assert self.handshake in ("start", "isaidhello",), "precondition failure: We must be expecting a GNUTELLA CONNECT handshake move." + "--" + "self.handshake: %s, line: %s" % (str(self.handshake), str(line),)
-
-        if self.handshake == "start":
+        assert (self.initiator and (self.handshake == "initiatorsaidhello")) or ((not self.initiator) and (self.handshake == "start")), "precondition failure: We must be expecting a GNUTELLA CONNECT handshake move." + "--" + "self.initiator: %s, self.handshake: %s, line: %s" % (str(self.initiator), str(self.handshake), str(line),)
+        if self.initiator:
+            assert self.handshake == "initiatorsaidhello"
+            if line != ACKSTRING:
+                self._abortConnection("Received incorrect GNUTELLA OK.  Closing connection.  line: %s" % str(line))
+                return 
+            self.handshake = "completed"
+            self.setRawMode()
+        else:
+            assert self.handshake == "start"
             mo = CONNSTRINGRE.match(line)
             if not mo:
-                self.abortConnection("Received incorrect GNUTELLA HELLO.  Closing connection.  line: %s" % str(line))
+                self._abortConnection("Received incorrect GNUTELLA HELLO.  Closing connection.  line: %s" % str(line))
                 return 
 
             self.handshake = "completed"
             self.gotver = mo.group(1)
             self.sendLine(ACKSTRING)
-            self.setRawMode()
-        else:
-            assert self.handshake == "isaidhello"
-            if line != ACKSTRING:
-                self.abortConnection("Received incorrect GNUTELLA OK.  Closing connection.  line: %s" % str(line))
-                return 
-            self.handshake = "completed"
             self.setRawMode()
 
     def rawDataReceived(self, data):
@@ -289,11 +298,11 @@ class GnutellaTalker(LineReceiver):
             try:
                 (payloadLength,) = struct.unpack(PAYLOADENCODING, self.buf[PAYLOADLENGTHOFFSET:HEADERLENGTH])
             except struct.error, le:
-                self.abortConnection("Received ill-formatted raw data.  Closing connection.  self.buf: %s" % str(self.buf))
+                self._abortConnection("Received ill-formatted raw data.  Closing connection.  self.buf: %s" % str(self.buf))
                 return
             if (payloadLength > OURMAXPAYLOADLENGTH) or (payloadLength < 0):
                 # 640 KB ought to be enough for anybody...
-                self.abortConnection("Received payload > %d KB or < than 0 in size.  Closing connection.  payloadLength: %s" % ((OURMAXPAYLOADLENGTH / 2**10), str(payloadLength),))
+                self._abortConnection("Received payload > %d KB or < than 0 in size.  Closing connection.  payloadLength: %s" % ((OURMAXPAYLOADLENGTH / 2**10), str(payloadLength),))
                 return
             descriptorlength = HEADERLENGTH + payloadLength
             if len(self.buf) >= descriptorlength:
