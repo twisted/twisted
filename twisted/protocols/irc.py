@@ -42,7 +42,7 @@ Test coverage needs to be better.
 <http://www.irchelp.org/irchelp/rfc/ctcpspec.html>}
 """
 
-__version__ = '$Revision: 1.77 $'[11:-2]
+__version__ = '$Revision: 1.78 $'[11:-2]
 
 from twisted.internet import reactor, protocol
 from twisted.persisted import styles
@@ -332,9 +332,12 @@ class IRCClient(basic.LineReceiver):
         """
         self.privmsg(user, channel, message)
 
-    def modeChanged(self, channel, set, modes, args):
+    def modeChanged(self, user, channel, set, modes, args):
         """Called when a channel's modes are changed
         
+        @type user: C{str}
+        @param user: The user and hostmask which instigated this change.
+
         @type channel: C{str}
         @param channel: The channel for which the modes are changing.
         
@@ -601,7 +604,7 @@ class IRCClient(basic.LineReceiver):
         set = rest[0][0] == '+'
         modes = rest[0][1:]
         args = rest[1:]
-        self.modeChanged(channel, set, modes, tuple(args))
+        self.modeChanged(prefix, channel, set, modes, tuple(args))
 
     def irc_PING(self, prefix, params):
         self.sendLine("PONG %s" % params[-1])

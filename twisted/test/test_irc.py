@@ -88,10 +88,10 @@ class CTCPTest(unittest.TestCase):
         del self.transport
 
 class ModeNoticingClient(IRCClientWithoutLogin):
-    channel = set = mode = args = None
+    user = channel = set = mode = args = None
 
     def modeChanged(self, *args):
-        self.channel, self.set, self.mode, self.args = args
+        self.user, self.channel, self.set, self.mode, self.args = args
 
 
 class ModeTestCase(unittest.TestCase):
@@ -110,6 +110,7 @@ class ModeTestCase(unittest.TestCase):
     def test_MODE_CHANGE(self):
         message = ":ChanServ!ChanServ@services. MODE #tanstaafl +o exarkun\r\n"
         self.client.dataReceived(message)
+        self.assertEquals(self.client.user, "ChanServ!ChanServ@services.")
         self.assertEquals(self.client.channel, "#tanstaafl")
         self.assertEquals(self.client.set, 1)
         self.assertEquals(self.client.mode, "o")
