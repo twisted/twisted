@@ -205,6 +205,22 @@ class TestCase:
             twisted.python.log.msg("---- Running Test: %s.%s ----- " % (self.__class__, self.testMethod.__name__))
             try:
                 self.testMethod()
+                ok = 1
+            except self.failureException, e:
+                result.addFailure(self, self._exc_info())
+            except:
+                result.addError(self, self._exc_info())
+
+            try:
+                self.tearDown()
+            except:
+                result.addError(self, self._exc_info())
+                ok = 0
+            for e in twisted.python.log.flushErrors():
+                result.addError(self, e)
+                ok = 0
+
+            try:
                 # clean the reactor between tests!
                 from twisted.internet import reactor
                 reactor.iterate() # flush short-range timers
@@ -221,20 +237,13 @@ class TestCase:
                         # this will go live someday: tests should not leave
                         # lingering surprises
                         #self.fail(msg)
-                ok = 1
             except self.failureException, e:
                 result.addFailure(self, self._exc_info())
+                ok = 0
             except:
                 result.addError(self, self._exc_info())
+                ok = 0
 
-            try:
-                self.tearDown()
-            except:
-                result.addError(self, self._exc_info())
-                ok = 0
-            for e in twisted.python.log.flushErrors():
-                result.addError(self, e)
-                ok = 0
             if ok: result.addSuccess(self)
         finally:
             result.stopTest(self)
