@@ -1,0 +1,22 @@
+
+  insults is a curses-like module that runs over a socket connected to any
+vt102 or vt102-like terminal.
+
+  demo_insults.py draws a bunch of random crap on the screen.  +, -, *, and
+/ change the drawing timings.  There is no key to quit.
+
+  demo_recvline.py is a trivial line editor.  It does not support histories. 
+It does support printable characters, left and right arrow, backspace, and
+C-d for delete (if you can tell me why the delete key doesn't work, I'd love
+to fix it).  Enter will add the line below the prompt (where you probably
+cannot see it).
+
+  demo_drawing.py lets you spew random things onto the terminal.  It
+supports all four arrow keys and spacebar to switch between "drawing"
+characters.
+
+  All demos listen on two ports, 6022 for ssh and 6023 for telnet.  The
+telnet server requires no login.  The credentials for the ssh server are
+username / password.  No terminal cleanup is performed, so you will probably
+need to reset after you disconnect.
+ 
