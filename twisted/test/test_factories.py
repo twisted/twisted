@@ -79,6 +79,7 @@ class ReconnectingFactoryTestCase(unittest.TestCase):
             reactor.iterate(0.1)
         
         self.assertEquals(f.connections, 2,
-                          "Number of successful connections incorrect")
+                          "Number of successful connections incorrect %d" %
+                          f.connections)
         self.assertEquals(f.allMessages, [Out.msgs] * 2)
         self.failIf(c.continueTrying, "stopTrying never called or ineffective")
