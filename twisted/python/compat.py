@@ -38,6 +38,18 @@ try:
 except AttributeError:
     types.StringTypes = (types.StringType,)
 
+
+try:
+    bool = bool
+except AttributeError:
+    def bool(value):
+        """Demote a value to 0 or 1, depending on its truth value
+        
+        This is not to be confused with types.BooleanType, which is
+        way too hard to duplicate in 2.1 to be worth the trouble.
+        """
+        return not not value
+
 try:
     from socket import inet_pton, inet_ntop
 except ImportError:
