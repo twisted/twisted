@@ -194,6 +194,7 @@ class LogPublisher:
         Observers are callable objects that will be called with each new log
         message (a dict).
         """
+        assert callable(other)
         self.observers.append(other)
 
     def removeObserver(self, other):
