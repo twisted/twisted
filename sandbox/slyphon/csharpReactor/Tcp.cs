@@ -3,8 +3,8 @@ using System.Net;
 using System.Net.Sockets;
 using csharpReactor.interfaces;
 
-namespace csharpReactor {
-  public class Server : ITransport {
+namespace csharpReactor.tcp {
+  public class Server : ITransport, ISocket {
     protected Socket _sock;
     protected IProtocol _protocol;
     protected IAddress _client;
@@ -12,10 +12,10 @@ namespace csharpReactor {
     protected double _sessionNum;
     protected bool _connected = false;
     
-    public Socket socket {
-      get { return this._sock; }
-    }
-    
+		public Socket socket {
+			get { return this._sock; }
+		}
+
     public IProtocol protocol {
       get { return this._protocol; }
     }
@@ -48,24 +48,22 @@ namespace csharpReactor {
     }
 
     public void startReading() {
-
+			Reactor.instance.addReader((ISocket)this);
     }
   }
 
 
-  public class Port : IFileDescriptor, IPort {
+  public class Port : existential.FileDescriptor, IPort {
     public static AddressFamily addressFamily = AddressFamily.InterNetwork;
     public static SocketType socketType = SocketType.Stream;
     public static ProtocolType protocolType = ProtocolType.Tcp;
     protected IPEndPoint _localEndPoint;
     protected IFactory _factory;
     protected int _backlog;
-    protected Socket _socket; // the listening socket
     protected IAddress _address;
-    protected bool _connected = false;
     protected int _numberAccepts = 100;
-    protected double _sessionNum = 0;
     protected IReactor _reactor;
+
 
     // -- Property Definitions --------------
 
@@ -83,23 +81,8 @@ namespace csharpReactor {
       set { this._backlog = value; }
     }
 
-    /// <summary>
-    /// return a socket suitable for Select()ing on
-    /// </summary>
-    public Socket selectableSocket { // IFileDescriptor
-      get { return this._socket; }
-    }
-
     public IAddress address {
       get { return this._address; }
-    }
-
-    public bool connected {
-      get { return this._connected; }
-    }
-
-    public double sessionNum {
-      get { return this._sessionNum; }
     }
     
     public IReactor reactor {
@@ -143,10 +126,6 @@ namespace csharpReactor {
       s.Blocking = false;
       this._socket = s;
       return s;
-    }
-		
-    public virtual void startReading() {
-      this._reactor.addReader(this);
     }
 
     /// <summary>

@@ -3,11 +3,31 @@ using System.Net;
 using System.Net.Sockets;
 
 namespace csharpReactor.interfaces {
-  /// <summary>
+	public interface ISocket {
+		Socket socket { get; }
+	}
+
+	public interface IProducer {
+		void stopProducing();
+	}
+	
+	public interface IConsumer {
+		void registerProducer(IProducer producer, bool streaming);
+		void unregisterProducer();
+		void write(String data);
+	}
+
+	// -- To be fleshed out later -----------------
+	public interface IReadDescriptor : ISocket {}
+	public interface IWriteDescriptor : ISocket {}
+	public interface IReadWriteDescriptor : ISocket {}
+	// ----------------------------------------
+
+	
+	/// <summary>
   /// A transport for bytes
   /// </summary>
-  public interface ITransport {
-    Socket socket { get; }
+  public interface ITransport : ISocket {
     IProtocol protocol { get; }
     IAddress client { get; }
     IPort server { get; }
@@ -16,16 +36,12 @@ namespace csharpReactor.interfaces {
     void startReading();
   }
 
-  public interface IPort {
+  public interface IPort : ISocket {
     IPEndPoint localEndPoint { get; }
     int backlog { get; set; }
-    Socket selectableSocket { get; }
     IAddress address { get; }
-    bool connected { get; }
-    double sessionNum { get; }
     IFactory factory { get; set; }
     void doRead();
-    void startReading();
     void startListening();
   }
 
@@ -43,7 +59,7 @@ namespace csharpReactor.interfaces {
   public interface IReactor {
     IPort listenTCP(IPEndPoint ep, IFactory f, int backlog);
     void doIteration(int timeout);
-    void addReader(IFileDescriptor fd);
+    void addReader(ISocket fd);
     void run();
     void stop();
     void mainLoop();
@@ -74,11 +90,4 @@ namespace csharpReactor.interfaces {
     void doStop();
   }
   
-  public interface IFileDescriptor {
-    /// <summary>
-    /// start waiting for read availability
-    /// </summary>
-    void startReading();
-    Socket selectableSocket { get; }
-  }
 }

@@ -13,6 +13,17 @@ namespace csharpReactor {
 		private Hashtable _reads = new Hashtable();
 		private Hashtable _writes = new Hashtable();
 		private bool _running = false;
+		private static Reactor _instance = null;
+
+		private Reactor() {}
+
+		public static Reactor instance {
+			get {
+				if (_instance == null) 
+					_instance = new Reactor();
+				return _instance;
+			}
+		}
 
 		public Hashtable readables {
 			get { return this._reads; }
@@ -27,7 +38,7 @@ namespace csharpReactor {
     }
 
 		public IPort listenTCP(IPEndPoint endPoint, IFactory factory, int backlog) {
-			Port p = new Port(endPoint, factory, backlog, this);
+			tcp.Port p = new tcp.Port(endPoint, factory, backlog, this);
 			p.startListening();
 			return p;
 		}
@@ -46,10 +57,24 @@ namespace csharpReactor {
 			}
 		}
 		
-		public void addReader(IFileDescriptor fd) {
-			this._reads.Add(fd.selectableSocket, fd);
+		public void addReader(ISocket fd) {
+			this._reads.Add(fd.socket, fd);
 		}
-			
+		
+		public ICollection removeAll() {
+			ArrayList values = new ArrayList(this._reads.Values);
+			ArrayList keys = new ArrayList(this._reads.Keys);
+			// this is kind of confusing, why would reads' keys hold true
+			// for objects in writes?
+			foreach (Object o in keys) {
+				if (this._reads.ContainsKey(o))
+					this._reads.Remove(o);
+				if (this._writes.ContainsKey(o))
+					this._writes.Remove(o);
+			}
+			return (ICollection)values;
+		}
+
 		public void run() {
 			this._running = true;
 			mainLoop();

@@ -11,7 +11,7 @@
                     RemoteDebugEnabled = "false"
                     RemoteDebugMachine = ""
                     StartAction = "Program"
-                    StartArguments = "..\..\..\csharpReactor.nunit"
+                    StartArguments = "..\..\csharpReactor.nunit"
                     StartPage = ""
                     StartProgram = "C:\Program Files\dotnet-local\NUnit 2.2\bin\nunit-console.exe"
                     StartURL = ""

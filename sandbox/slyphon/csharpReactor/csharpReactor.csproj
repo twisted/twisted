@@ -110,6 +110,11 @@
                     BuildAction = "None"
                 />
                 <File
+                    RelPath = "Existential.cs"
+                    SubType = "Code"
+                    BuildAction = "Compile"
+                />
+                <File
                     RelPath = "Factory.cs"
                     SubType = "Code"
                     BuildAction = "Compile"
