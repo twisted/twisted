@@ -730,15 +730,17 @@ class KeyedList(List):
         """
         currentListItem = 0
         for key in data.keys():
+            newNode = self.getPattern('keyedListItem')
             if not newNode:
-                newNode = self.getPattern('item')
+                newNode = self.getPattern('item', _RAISE)
                 if newNode:
                     warnings.warn("itemOf= is deprecated, "
                                         "please use listItemOf instead",
                                         DeprecationWarning)
             
             appendModel(newNode, key)
-
+            if not newNode.getAttribute("view"):
+                newNode.setAttribute("view", "DefaultWidget")
             parentNode.appendChild(newNode)
 
 wvfactory_KeyedList = viewFactory(KeyedList)
