@@ -1,3 +1,8 @@
+2002-12-23  Jp Calderone  <exarkun@twistedmatrix.com>
+
+	* doc/examples/testdns.py added as simple example of how to
+	use new DNS client API.
+
 2002-12-23  Moshe Zadka <moshez@twistedmatrix.com>
 
 	* twisted/web/xmlrpc.py:  added XML RPC client support
