@@ -25,7 +25,7 @@ for filename in sys.argv[1:]:
                     value = 1
     elif ext == '.html':
         if os.path.dirname(filename) in ["doc/man", "doc/howto",
-                                         "doc/specifications"]:
+                                         "doc/specifications", "doc/vision"]:
             n = os.system("./bin/lore -n -olint %s" % filename)
             if n:
                 value = 1
