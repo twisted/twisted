@@ -169,7 +169,7 @@ exarkun@boson:~/mail/tutorial/smtpclient$ twistd -noy smtpclient-2.tac
 2005/03/27 18:55 EST [-] Main loop terminated.
 2005/03/27 18:55 EST [-] Server Shut Down.
 exarkun@boson:~/mail/tutorial/smtpclient$
-</pre><code></blockquote>
+</pre></code></blockquote>
 
 <p>What happened?  Those first two arguments to <code>TCPClient</code>
 turned out to be important after all.  We'll get to them in the next
@@ -235,7 +235,10 @@ exarkun@boson:~/mail/tutorial/smtpclient$ twistd -noy smtpclient-3.tac
 exarkun@boson:~/mail/tutorial/smtpclient$
 </pre></code></blockquote>
 
-<p>A meagre amount of progress, but the service still raises an exception.  This time, it's because we haven't specified a <em>protocol class</em> for the factory to use.  We'll do that in the next example.
+<p>A meagre amount of progress, but the service still raises an
+exception.  This time, it's because we haven't specified a
+<em>protocol class</em> for the factory to use.  We'll do that in the
+next example.</p>
 
 <h3>SMTP Client 4</h3>
 
@@ -295,7 +298,7 @@ to ever use it.</p>
 
 <blockquote><code>
 from twisted.mail import smtp
-</blockquote></code>
+</code></blockquote>
 
 <p>All of the mail related code in Twisted exists beneath the
 <code>twisted.mail</code> package.  More specifically, everything
@@ -407,7 +410,7 @@ exarkun@boson:~/doc/mail/tutorial/smtpclient$ twistd -noy smtpclient-6.tac
 2005/03/29 21:17 EST [-] reactor class: twisted.internet.selectreactor.SelectReactor
 2005/03/29 21:17 EST [-] Loading smtpclient-6.tac...
 2005/03/29 21:17 EST [-] Loaded.
-2005/03/29 21:17 EST [-] Starting factory <__builtin__.SMTPClientFactory instance at 0xb77fd68c>
+2005/03/29 21:17 EST [-] Starting factory &lt;__builtin__.SMTPClientFactory instance at 0xb77fd68c&gt;
 2005/03/29 21:17 EST [-] Enabling Multithreading.
 2005/03/29 21:17 EST [ESMTPClient,client] Traceback (most recent call last):
           File "twisted/python/log.py", line 56, in callWithLogger
@@ -418,7 +421,7 @@ exarkun@boson:~/doc/mail/tutorial/smtpclient$ twistd -noy smtpclient-6.tac
             return self.currentContext().callWithContext(ctx, func, *args, **kw)
           File "twisted/python/context.py", line 31, in callWithContext
             return func(*args,**kw)
-        --- <exception caught here> ---
+        --- &lt;exception caught here&gt; ---
           File "twisted/internet/selectreactor.py", line 139, in _doReadOrWrite
             why = getattr(selectable, method)()
           File "twisted/internet/tcp.py", line 351, in doRead
@@ -439,7 +442,7 @@ exarkun@boson:~/doc/mail/tutorial/smtpclient$ twistd -noy smtpclient-6.tac
             raise NotImplementedError
         exceptions.NotImplementedError:
 
-2005/03/29 21:17 EST [ESMTPClient,client] Stopping factory <__builtin__.SMTPClientFactory instance at 0xb77fd68c>
+2005/03/29 21:17 EST [ESMTPClient,client] Stopping factory &lt;__builtin__.SMTPClientFactory instance at 0xb77fd68c&gt;
 2005/03/29 21:17 EST [-] Received SIGINT, shutting down.
 2005/03/29 21:17 EST [-] Main loop terminated.
 2005/03/29 21:17 EST [-] Server Shut Down.
@@ -470,8 +473,8 @@ class SMTPTutorialClient(smtp.ESMTPClient):
     mailTo = "tutorial_recipient@example.net"
     mailData = '''\
 Date: Fri, 6 Feb 2004 10:14:39 -0800
-From: Tutorial Guy <tutorial_sender@example.com>
-To: Tutorial Gal <tutorial_recipient@example.net>
+From: Tutorial Guy &lt;tutorial_sender@example.com&gt;
+To: Tutorial Gal &lt;tutorial_recipient@example.net&gt;
 Subject: Tutorate!
 
 Hello, how are you, goodbye.
@@ -594,7 +597,7 @@ exarkun@boson:~/doc/mail/tutorial/smtpclient$
 <p>One task remains to be completed in this tutorial SMTP client:
 instead of always sending mail through a well-known host, we will look
 up the mail exchange server for the recipient address and try to
-deliver the message to that host.<p>
+deliver the message to that host.</p>
 
 <p>In <a href="smtpclient-9.tac">smtpclient-9.tac</a>, we'll take the
 first step towards this feature by defining a function which returns
