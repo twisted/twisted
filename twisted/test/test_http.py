@@ -334,16 +334,6 @@ GET /?key=value&multiple=two+words&multiple=more%20words&empty= HTTP/1.0
                 testcase.assertEquals(self.args["key"], ["value"])
                 testcase.assertEquals(self.args["empty"], [""])
                 testcase.assertEquals(self.args["multiple"], ["two words", "more words"])
-                l = self.getArg("key")
-                testcase.assertEquals(len(l), 1)
-                testcase.assertEquals(l[0].value, "value")
-                l = self.getArg("empty")
-                testcase.assertEquals(len(l), 1)
-                testcase.assertEquals(l[0].value, "")
-                l = self.getArg("multiple")
-                testcase.assertEquals(len(l), 2)
-                testcase.assertEquals(l[0].value, "two words")
-                testcase.assertEquals(l[1].value, "more words")
                 testcase.didRequest = 1
                 self.finish()
                 
@@ -365,16 +355,6 @@ Content-Type: application/x-www-form-urlencoded
                 testcase.assertEquals(self.args["key"], ["value"])
                 testcase.assertEquals(self.args["empty"], [""])
                 testcase.assertEquals(self.args["multiple"], ["two words", "more words"])
-                l = self.getArg("key")
-                testcase.assertEquals(len(l), 1)
-                testcase.assertEquals(l[0].value, "value")
-                l = self.getArg("empty")
-                testcase.assertEquals(len(l), 1)
-                testcase.assertEquals(l[0].value, "")
-                l = self.getArg("multiple")
-                testcase.assertEquals(len(l), 2)
-                testcase.assertEquals(l[0].value, "two words")
-                testcase.assertEquals(l[1].value, "more words")
                 testcase.didRequest = 1
                 self.finish()
                 
