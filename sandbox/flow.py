@@ -355,6 +355,10 @@ class Threaded(Stage):
         extended via inheritance; with the functionality of the
         inherited code implementing next(), and using init() for
         initialization code to be run in the thread.
+
+        If the iterable happens to have a chunked attribute, and
+        that attribute is true, then this wrapper will assume that
+        data arrives in chunks via a sequence instead of by values.
     """
     def __init__(self, iterable, trap = None, delay = 0):
         Stage.__init__(self, trap)
@@ -362,6 +366,10 @@ class Threaded(Stage):
         self._stop      = 0
         self._buffer    = []
         self._cooperate = Cooperate(delay)
+        if getattr(iterable, 'chunked', 0):
+            self._append = self._buffer.extend
+        else:
+            self._append = self._buffer.append
         from twisted.internet.reactor import callInThread
         callInThread(self._process)
     def _process(self):
@@ -373,10 +381,10 @@ class Threaded(Stage):
         else:
             try:
                 while 1:
-                    self._buffer.append(self._iterable.next())
+                    self._append(self._iterable.next())
             except StopIteration: pass
             except: 
-                self._append(Failure())
+                self._buffer.append(Failure())
         self._stop = 1
     def _yield(self):
         """ update locals from the buffer, or return Cooperate """
@@ -447,32 +455,33 @@ class Deferred(defer.Deferred):
 # a DBAPI 2.0 database connection
 #
 
-
 class QueryIterator:
     """ Converts a database query into a result iterator """
-    def __init__(self, pool, sql, fetchall=0):
-        self.curs = None
-        self.sql  = sql
-        self.pool = pool
-        self.fetchall = fetchall
-        self.rows = None
+    def __init__(self, pool, sql, fetchmany = 0, fetchall=0):
+        self.curs    = None
+        self.sql     = sql
+        self.pool    = pool
+        if fetchmany: 
+            self.next = self.next_fetchmany
+            self.chunked = 1
+        if fetchall:
+            self.next = self.next_fetchall
+            self.chunked = 1  
     def __iter__(self):
         conn = self.pool.connect()
         self.curs = conn.cursor()
         self.curs.execute(self.sql)
         return self
-    def next(self):
-        res = None
-        if not self.rows:
-            if self.curs:
-                if self.fetchall:
-                    self.rows = self.curs.fetchall()
-                    self.curs = None
-                else:
-                    self.rows = self.curs.fetchmany()
-                self.rows = list(self.rows)
-                self.rows.reverse()
-        if self.rows:
-           return self.rows.pop()
-        self.curs = None
+    def next_fetchall(self):
+        if self.curs:
+            self.curs = None
+            return self.curs.fetchall()
         raise StopIteration
+    def next_fetchmany(self):
+        ret = self.curs.fetchmany()
+        if not ret: raise StopIteration
+        return ret
+    def next(self):
+        ret = self.curs.fetchone()
+        if not ret: raise StopIteration
+        return ret
