@@ -121,15 +121,17 @@ class IRCProto(basesupport.AbstractClientMixin, irc.IRCClient):
     def userKicked(self, kickee, channel, kicker, message):
         print 'whew somebody else', kickee, channel, kicker, message
 
+    def noticed(self, username, channel, message):
+        self.privmsg(username, channel, message, {"dontAutoRespond": 1})
 
-    def privmsg(self,username,channel,message):
+    def privmsg(self, username, channel, message, metadata=None):
         username=string.split(username,'!',1)[0]
         if username==self.name: return
         if channel[0]=='#':
             group=channel[1:]
-            self.getGroupConversation(group).showGroupMessage(username, message)
+            self.getGroupConversation(group).showGroupMessage(username, message, metadata)
             return
-        self.chat.getConversation(self.getPerson(username)).showMessage(message)
+        self.chat.getConversation(self.getPerson(username)).showMessage(message, metadata)
 
     def action(self,username,channel,emote):
         username=string.split(username,'!',1)[0]
