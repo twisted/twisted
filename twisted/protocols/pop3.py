@@ -186,6 +186,9 @@ class POP3(basic.LineReceiver, policies.TimeoutMixin):
             "TOP",
             "USER",
             "UIDL",
+            "CELERITY",
+            "AUSPEX",
+            "POTENCE",
         ]
         
         if components.implements(self.factory, IServerFactory):
@@ -243,7 +246,9 @@ class POP3(basic.LineReceiver, policies.TimeoutMixin):
         return baseCaps
 
     def do_CAPA(self):
-        map(self.sendLine, self.listCapabilities())
+        self.successResponse("I can do the following:")
+        for cap in self.listCapabilities():
+            self.sendLine(cap)
         self.sendLine(".")
 
     def do_AUTH(self, args):
