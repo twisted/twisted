@@ -1,3 +1,6 @@
+
+import socket
+
 from twisted.internet import defer, protocol
 from twisted.protocols import basic
 from twisted.python import log
@@ -32,7 +35,7 @@ class StupidRPC(basic.NetstringReceiver):
         self.clean()
         self.sendString('Success')
         self.sendString(result)
-    
+
     def sendFailure(self, type, result=''):
         if not self.dispatching:
             log.msg("warning: sending failure when not dispatching")
@@ -91,10 +94,18 @@ class IStupid(components.Interface):
 class AuthServer(StupidRPC):
 
     root = None
+    avatar = None
+    logout = None
+
+    def connectionLost(self, reason):
+        if self.logout is not None:
+            self.logout()
+            self.logout = None
+        self.avatar = None
 
     def findMethod(self, name):
-        if self.root:
-            return getattr(self.root, 'remote_'+name, None)
+        if self.avatar is not None:
+            return getattr(self.avatar, 'remote_'+name, None)
         else:
             return StupidRPC.findMethod(self, name)
 
@@ -108,9 +119,10 @@ class AuthServer(StupidRPC):
         d.addErrback(self._ebNoRoot)
     remote_auth.sig = (str, str)
 
-    def _cbGotRoot(self, root):
-        self.root = root
-        root.proto = self
+    def _cbGotRoot(self, (i, a, l)):
+        self.avatar = a
+        self.logout = l
+        self.avatar.proto = self
         self.sendSuccess(AUTH_SUCCESS)
 
     def _ebNoRoot(self, f):
@@ -126,11 +138,35 @@ def ipify(ipstr):
     assert ipstr.count('.') == 3
     return ipstr
 
-class CapServer:
+SOCKET_BOUND = "Socket bound"
+PERMISSION_DENIED = "Permission denied"
 
-    def remote_bindPort(self, interface, portno):
-        self.proto.sendSuccess("<3")
-    remote_bindPort.sig = (ipify, int)
+def makeCoercerWithDefault(coercer, default):
+    def coerce(s):
+        if not s:
+            return default
+        return coercer(s)
+    return coerce
+
+class CapServer:
+    def __init__(self, allowed=None):
+        if allowed is None:
+            allowed = {}
+        self.allowed = allowed
+
+    def remote_bindPort(self, interface, portno, addressFamily, socketType):
+        if (interface, portno, addressFamily, socketType) in self.allowed:
+            s = self.socket(addressFamily, socketType)
+            s.bind((interface, portno))
+            self.sendSocket(s)
+            self.proto.sendSuccess("<3")
+        else:
+            self.proto.sendFailure(PERMISSION_DENIED)
+    remote_bindPort.sig = (ipify, int,
+                           makeCoercerWithDefault(int, socket.AF_INET),
+                           makeCoercerWithDefault(int, socket.SOCK_STREAM))
+
+    socket = staticmethod(socket.socket)
 
 
 def makeAuthFactory(rootFactory, checker):
@@ -143,7 +179,7 @@ def makeAuthFactory(rootFactory, checker):
     class Realm:
         def requestAvatar(self, name, mind, iface):
             assert iface is IStupid, iface
-            return rootFactory()
+            return iface, rootFactory(), lambda: None
     f.portal = portal.Portal(Realm())
     f.portal.registerChecker(checker)
     return f

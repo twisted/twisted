@@ -13,7 +13,7 @@ class StupidObj:
 class Realm:
     o = StupidObj()
     def requestAvatar(self, *args):
-        return self.o
+        return capserver.IStupid, self.o, lambda: None
 
 class Test(unittest.TestCase):
     def setUp(self):
@@ -26,7 +26,7 @@ class Test(unittest.TestCase):
 
         checker = checkers.InMemoryUsernamePasswordDatabaseDontUse(user='password')
         self.f.portal.registerChecker(checker)
-        
+
     def _command(self, cmdlist, result):
         l = []
         self.rpc.sendString = l.append
@@ -36,8 +36,7 @@ class Test(unittest.TestCase):
             if len(l) >= len(result):
                 break
         self.assertEquals(l, result)
-            
+
     def test_auth(self):
         self._command(['auth', 'user', 'password'], ['Success', capserver.AUTH_SUCCESS])
         self._command(['gunk', '5', 'foob'], ['Success', 'hi'])
-
