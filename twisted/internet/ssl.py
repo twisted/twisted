@@ -17,15 +17,32 @@
 
 """SSL transport. Requires PyOpenSSL (http://pyopenssl.sf.net).
 
-Most servers will likely want to overide the Port class's getContext()
-method with their own.
+SSL connections require a ContextFactory so they can create SSL contexts.
 """
 
 # System imports
 from OpenSSL import SSL
+import socket
+import traceback
+
 
 # sibling imports
 import tcp, main
+
+
+class ContextFactory:
+    """A factory for SSL context objects."""
+    
+    def getContext(self):
+        """Return a SSL.Context object. override in subclasses."""
+        raise NotImplementedError
+
+
+class ClientContextFactory(ContextFactory):
+    """A sample context factory for SSL clients."""
+    
+    def getContext(self):
+        return SSL.Context(SSL.SSLv23_METHOD)
 
 
 class Connection(tcp.Connection):
@@ -69,19 +86,15 @@ class Client(Connection, tcp.Client):
     """I am an SSL client.
     """
     
-    def __init__(*args, **kwargs):
-        # we need those so we don't use ssl.Connection's __init__
-        apply(tcp.Client.__init__, args, kwargs)
+    def __init__(self, host, port, protocol, ctxFactory, timeout=None):
+        self.ctxFactory = ctxFactory
+        apply(tcp.Client.__init__, (self, host, port, protocol), {'timeout': timeout})
     
-    def getContext(self):
-        """Get an SSL context. Override in subclasses."""
-        return SSL.Context(SSL.SSLv23_METHOD)
-
     def createInternetSocket(self):
         """(internal) create an SSL socket
         """
         sock = tcp.Client.createInternetSocket(self)
-        return SSL.Connection(self.getContext(), sock)
+        return SSL.Connection(self.ctxFactory.getContext(), sock)
 
 
 class Server(Connection, tcp.Server):
@@ -99,18 +112,35 @@ class Port(tcp.Port):
     
     transport = Server
     
-    def getContext(self):
-        """Create an SSL context. Override in subclasses.
-        
-        This is a sample implementation that loads a certificate from a file 
-        called 'server.pem'."""
-        ctx = SSL.Context(SSL.SSLv23_METHOD)
-        ctx.use_certificate_file('server.pem')
-        ctx.use_privatekey_file('server.pem')
-        return ctx
+    def __init__(self, port, factory, ctxFactory, backlog=5, interface=''):
+        self.ctxFactory = ctxFactory
+        apply(tcp.Port.__init__, (self, port, factory), {'backlog': backlog, 'interface': interface})
     
     def createInternetSocket(self):
         """(internal) create an SSL socket
         """
         sock = tcp.Port.createInternetSocket(self)
-        return SSL.Connection(self.getContext(), sock)
+        return SSL.Connection(self.ctxFactory.getContext(), sock)
+    
+    def doRead(self):
+        """Called when my socket is ready for reading.
+
+        This accepts a connection and callse self.protocol() to handle the
+        wire-level protocol.
+        """
+        try:
+            try:
+                skt,addr = self.socket.accept()
+            except socket.error, e:
+                if e.args[0] == EWOULDBLOCK:
+                    return
+                raise
+            except SSL.Error:
+                return
+            protocol = self.factory.buildProtocol(addr)
+            s = self.sessionno
+            self.sessionno = s+1
+            transport = self.transport(skt, protocol, addr, self, s)
+            protocol.makeConnection(transport, self)
+        except:
+            traceback.print_exc(file=log.logfile)

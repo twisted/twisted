@@ -36,6 +36,11 @@ What's new in 0.12.2-pre?
 
   Added poll() based event loop implementation.
 
+  Documentation for webwidgets and manhole.
+  
+  Made some changes to SSL APIs - SSL ports can now be added with a listenSSL
+  method.
+  
   Tons of fixed bugs.
 
 What can I do with it?

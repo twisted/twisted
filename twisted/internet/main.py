@@ -99,6 +99,15 @@ class Application(log.Logger, styles.Versioned):
         """
         self.addPort(tcp.Port(port, factory, backlog))
 
+    def listenSSL(self, port, factory, ctxFactory, backlog=5):
+        """
+        Connects a given protocol factory to the given numeric TCP/IP port.
+        The connection is a SSL one, using contexts created by the context
+        factory.
+        """
+        from twisted.internet import ssl
+        self.addPort(ssl.Port(port, factory, ctxFactory, backlog))
+    
     def addPort(self, port):
         """
         Adds a listening port (an instance of a twisted.internet.tcp.Port) to
