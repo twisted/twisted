@@ -4,7 +4,7 @@
 #
 
 from twisted.cred import portal
-from twisted.python import components, log
+from twisted.python import components, log, util
 from twisted.internet.process import ProcessExitedAlready
 from zope import interface
 from ssh import session, forwarding, filetransfer
@@ -17,7 +17,7 @@ from interfaces import ISession, ISFTPServer, ISFTPFile
 
 import struct, array, os, stat, time, socket
 import fcntl, tty
-import pwd
+import pwd, grp
 import pty
 import ttymodes
 import os
@@ -42,6 +42,11 @@ class UnixConchUser(ConchUser):
         ConchUser.__init__(self)
         self.username = username
         self.pwdData = pwd.getpwnam(self.username)
+        l = [self.pwdData[3]]
+        for groupname, password, gid, userlist in grp.getgrall():
+            if username in userlist:
+                l.append(gid)
+        self.otherGroups = l
         self.listeners = {}  # dict mapping (interface, port) -> listener
         self.channelLookup.update(
                 {"session": session.SSHSession,
@@ -52,6 +57,9 @@ class UnixConchUser(ConchUser):
 
     def getUserGroupId(self):
         return self.pwdData[2:4]
+
+    def getOtherGroups(self):
+        return self.otherGroups
 
     def getHomeDir(self):
         return self.pwdData[5]
@@ -96,9 +104,11 @@ class UnixConchUser(ConchUser):
     def _runAsUser(self, f, *args, **kw):
         euid = os.geteuid()
         egid = os.getegid()
+        groups = os.getgroups()
         uid, gid = self.getUserGroupId()
         os.setegid(0)
         os.seteuid(0)
+        os.setgroups(self.getOtherGroups())
         os.setegid(gid)
         os.seteuid(uid)
         try:
@@ -114,6 +124,7 @@ class UnixConchUser(ConchUser):
         finally:
             os.setegid(0)
             os.seteuid(0)
+            os.setgroups(groups)
             os.setegid(egid)
             os.seteuid(euid)
         return r
