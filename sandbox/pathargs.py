@@ -17,7 +17,24 @@
 # USA
 #
 
+from twisted.python import components
+
+from twisted.web import server
 from twisted.web.resource import Resource
+
+
+class IPathArgs(components.Interface):
+    """Provide a dictionary object which contains arguments
+    which were specified in pathargs format; pathargs format
+    is /foo:bar/ where foo is the key and bar is the value.
+    """
+
+
+# Use a dict as the IPathArgs implementor for any given request
+components.registerAdapter(lambda request: {}, server.Request, IPathArgs)
+
+
+
 class PathArgs(Resource):
     """ Provides a mechanism to add 'pathargs' attribute to
         each request, and to populate it with instances of
@@ -29,21 +46,15 @@ class PathArgs(Resource):
         pair = path.split(':')
         if 2 == len(pair):
             (key,val) = pair
-            lst = request.pathargs.get(key,[])
-            if not lst: request.pathargs[key] = lst
-            lst.append(val)
+            pathargs = IPathArgs(request)
+            pathargs.setdefault(key, []).append(val)
             return self
     def getChild(self,path,request):
         ret = self.getChildPathArgs(path,request)
         if not ret: 
             ret = Resource.getChild(self,path,request)
         return ret 
-    def getChildWithDefault(self,path,request):
-        if not(hasattr(request,'root')):
-            request.root = "/"
-        if not(hasattr(request,'pathargs')):
-            request.pathargs = {}
-        return Resource.getChildWithDefault(self,path,request)
+
 
 def test():
     from twisted.internet import reactor
@@ -54,12 +65,13 @@ def test():
         def isLeaf(self):
             return true
         def render(self, req):
+            pathargs = IPathArgs(req)
             req.setHeader('Content-type','text/html')
             resp = """
                 <html><body><pre>uri: %s \nargs: %s\npathargs: %s
                 </pre></body></html>
             """
-            return resp % ( req.uri, req.args, req.pathargs )
+            return resp % ( req.uri, req.args, pathargs )
 
     root = PathArgs()
     root.putChild('dynamic', DynamicRequest())
@@ -68,5 +80,9 @@ def test():
     reactor.listenTCP(8080,site)
     reactor.run()
 
+
 if '__main__' == __name__:
+    import sys               
+    from twisted.python import log 
+    log.startLogging(sys.stdout, 0) 
     test()
