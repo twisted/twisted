@@ -100,12 +100,14 @@ class TestClassRunner:
 
     def runTests(self, output):
         self.testCase = self.testClass()
+        self.testCase.setUpClass()
         for methodName in self.methodNames:
             method = getattr(self.testCase, methodName)
             output.reportStart(self.testClass, method)
             results = unittest.Tester(self.testClass, self.testCase,
                                       method, self.runTest).run()
             output.reportResults(self.testClass, method, *results)
+        self.testCase.tearDownClass()
 
 def runTest(method):
     # utility function, used by test_trial to more closely emulate the usual

@@ -71,6 +71,12 @@ else:
 
 
 class TestCase:
+    def setUpClass(self):
+        pass
+
+    def tearDownClass(self):
+        pass
+    
     def setUp(self):
         pass
 
