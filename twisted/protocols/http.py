@@ -627,7 +627,7 @@ class Request:
 
         The request should have finish() called after this.
         """
-        self.setResponseCode(TEMPORARY_REDIRECT)
+        self.setResponseCode(FOUND)
         self.setHeader("location", url)
 
     def setLastModified(self, when):
