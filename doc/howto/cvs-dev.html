@@ -1,0 +1,200 @@
+<html>
+  <head>
+    <title>Working from Twisted CVS</title>
+  </head>
+
+  <body>
+    <h1>Working from Twisted CVS</h1>
+
+<p>If you're going to be doing development on Twisted itself, or if you want
+to take advantage of bleeding-edge features (or bug fixes) that are not yet
+available in a numbered release, you'll probably want to check out a tree
+from the Twisted CVS repository. The HEAD branch is where all current
+development takes place.</p>
+
+<p>This document lists some useful tips for working on this cutting
+edge.</p>
+
+<h2>Checkout</h2>
+
+<p>CVS tutorials can be found elsewhere. The relevant data you need to check
+out a copy of the Twisted tree is available on the <a
+href="http://twistedmatrix.com/developers/cvs">pserver page</a>, and is as
+follows:</p>
+
+<pre class="shell">cvs -d:pserver:anon@twistedmatrix.com:/cvs checkout Twisted</pre>
+
+<p>The <q>CVS Password</q> is empty: just hit return when prompted. Please
+use -z3 when doing checkouts or updates to conserve the limited bandwidth of
+the CVS server.</p>
+
+
+<h2>Alternate tree names</h2>
+
+<p>By using <code>cvs checkout -d foo Twisted</code>, you can put the
+workspace tree in a directory other than <q>Twisted</q>. I do this (with a
+name like <q>Twisted-CVS</q>) to remind myself that this tree comes from CVS
+and not from a released version (like <q>Twisted-1.0.5</q>). This practice
+can cause a few problems, because there are a few places in the Twisted tree
+that need to know where the tree starts, so they can add it to
+<code>sys.path</code> without requiring the user manually set their
+PYTHONPATH. These functions walk the current directory up to the root,
+looking for a directory named <q>Twisted</q> (sometimes exactly that,
+sometimes with a <code>.startswith</code> test). Generally these are test
+scripts or other administrative tools which expect to be launched from
+somewhere inside the tree (but not necessarily from the top).</p>
+
+<p>If you rename the tree to something other than <code>Twisted</code>,
+these tools may wind up trying to use Twisted source files from
+/usr/lib/python2.2 or elsewhere on the default <code>sys.path</code>.
+Normally this won't matter, but it is good to be aware of the issue in case
+you run into problems.</p>
+
+<p><code>twisted/test/process_twisted.py</code> is one of these programs.</p>
+
+<h2>Compiling C extensions</h2>
+
+<p>There are currently 3 C extension modules in Twisted:
+twisted.internet.cReactor, twisted.runner.portmap, and
+twisted.spread.cBanana . These modules are optional, but you'll have to
+compile them if you want to experience their features, performance
+improvements, or bugs. There are two approaches.</p>
+
+<p>The first is to do a regular distutils <code>./setup.py build</code>,
+which will create a directory under <code>build/</code> to hold both the
+generated <code>.so</code> files as well as a copy of the 600-odd
+<code>.py</code> files that make up Twisted. If you do this, you will need
+to set your PYTHONPATH to something like
+<code>MyDir/Twisted/build/lib.linux-i686-2.2</code> in order to run code
+against the CVS twisted (as opposed to whatever's installed in
+<code>/usr/lib/python2.2</code> or wherever python usually looks). In
+addition, you will need to re-run the <code>build</code> command <em>every
+time</em> you change a <code>.py</code> file. The <code>build/lib.foo</code>
+directory is a copy of the main tree, and that copy is only updated when you
+re-run <code>setup.py build</code>. It is easy to forget this and then
+wonder why your code changes aren't being expressed.</p>
+
+<p>The second technique is to build the C modules in place, and point your
+PYTHONPATH at the top of the tree, like <code>MyDir/Twisted</code>. This way
+you're using the .py files in place too, removing the confusion a forgotten
+rebuild could cause with the separate build/ directory above. To build the C
+modules in place, do <code>./setup.py build_ext -i</code>. You only need to
+re-run this command when you change the C files. Note that
+<code>setup.py</code> is not Make, it does not always get the dependencies
+right (<code>.h</code> files in particular), so if you are hacking on the
+cReactor you may need to manually delete the <code>.o</code> files before
+doing a rebuild. Also note that doing a <code>setup.py clean</code> will
+remove the <code>.o</code> files but not the final <code>.so</code> files,
+they must be deleted by hand.</p>
+
+
+<h2>Running tests</h2>
+
+<p>To run the full unit-test suite, do:</p>
+
+<pre class="shell">./bin/trial -v twisted.test</pre>
+
+<p>To run a single test file (like <code>twisted/test/test_defer.py</code>),
+do one of:</p>
+
+<pre class="shell">./bin/trial -v twisted.test.test_defer</pre>
+
+<p>or</p>
+
+<pre class="shell">./bin/trial -v twisted/test/test_defer.py</pre>
+
+<p>To run any tests that are related to a code file, like
+<code>twisted/protocols/imap4.py</code>, do:</p>
+
+<pre class="shell">./bin/trial -v --testmodule twisted/protocols/imap4.py</pre>
+
+<p>This depends upon the <code>.py</code> file having an appropriate
+<q>test-case-name</q> tag that indicates which test cases provide coverage.
+See the <a href="coding-standard.html">Coding Standards</a> document for
+details about using <q>test-case-name</q>. In this example, the
+<code>twisted.test.test_imap</code> test will be run.</p>
+
+<p>Many tests create temporary files in /tmp or ./_trial_temp, but
+everything in /tmp should be deleted when the test finishes. Sometimes these
+cleanup calls are commented out by mistake, so if you see a stray
+/tmp/@12345.1 directory, it is probably from test_dirdbm or test_popsicle.
+Look for an <code>rmtree</code> that has been commented out and complain to
+the last developer who touched that file.</p>
+
+<h2>Admin scripts</h2>
+
+<p>The <code>admin/</code> directory holds several administrative tools,
+some of which are used when turning a CVS checkout into a full numbered
+release.</p>
+
+
+<h2>Building docs</h2>
+
+<p>Twisted documentation (not including the automatically-generated API
+docs) is in <a href="lore.html">Lore Format</a>. These <code>.html</code>
+files are translated into <code>.xhtml</code> files by the <q>bin/lore</q>
+script, which can check the files for syntax problems (hlint), process
+multiple files at once, insert the files into a template before processing,
+and can also translate the files into LaTeX or PostScript instead.</p>
+
+<p>To generate the full documentation set, run the
+<code>admin/process-docs</code> shell script. This will create processed
+HTML, man pages, and 250-page <q>book.pdf</q> file containing all the docs
+rolled into a single nicely-formatted volume. This script needs several
+helper tools to handle the images and the LaTeX conversion: debian packages
+<q>tetex-extra</q>, <q>netpbm</q>, and <q>gs-common</q> should be
+sufficient. The docs-build process currently takes about 3 minutes on the
+twistedmatrix.com build machine.</p>
+
+<p>To build just the HTML form of the howto/ docs, do a subset of the work
+done in <code>admin/process-docs</code>, such as the following. Note that
+the index file will be placed in <code>doc/howto/index.xhtml</code>.</p>
+
+<pre class="shell">./bin/lore -p --config template=doc/howto/template.tpl doc/howto/*.html</pre>
+
+<p>To run hlint over a single Lore document, such as
+<code>doc/howto/cvs-dev.html</code>, do the following. This is useful
+because the HTML conversion may bail without a useful explanation if it sees
+mismatched tags.</p>
+
+<pre class="shell">./bin/lore -n --output lint doc/howto/cvs-dev.html</pre>
+
+<p>To convert it to HTML (including markup, interpolation of examples,
+footnote processing, etc), do the following. The results will be placed in
+<code>doc/howto/cvs-dev.xhtml</code>:</p>
+
+<pre class="shell">./bin/lore -p --config template=doc/howto/template.tpl doc/howto/cvs-dev.html</pre>
+
+<p>Note that hyperlinks to other documents may not be quite right unless you
+include a <q>-l</q> argument to <code>bin/lore</code>. Links in the .html
+file are to .html targets: when the .html is turned into .xhtml, the link
+targets are supposed to be turned into .xhtml also. In addition to this,
+Lore markup of the form &lt;code class=&quot;API&quot;&gt; is supposed to
+turn into a link to the corresponding API reference page. These links will
+probably be wrong unless the correct base URL is provided to Lore.</p>
+
+<h2>Emacs</h2>
+
+<p>Check out the TwistedEmacs module (which lives in the same CVS
+repository, just do <q>cvs checkout TwistedEmacs</q> instead of <q>cvs
+checkout Twisted</q>). <code>twisted-dev.el</code> has several utility
+functions which make it easier to grep for methods, run test cases, process
+Lore documents, etc.</p>
+
+
+<h2>Building Debian packages</h2>
+
+<p>Running <q>debuild -uc -us</q> from the top of the CVS tree will
+(hopefully) result in a collection of .deb packages in the tree's parent
+directory. This requires other tools to be installed (devscripts for one),
+and requires that <q>admin/process-docs</q> be run first. The .debs created
+will have a version number based upon whatever is at the top of
+<code>debian/changelog</code>, which is generally only updated when an
+official release is made, so be careful that you don't create
+confusingly-numbered package files. </p>
+
+
+
+  </body>
+</html>
+

@@ -1,3 +1,7 @@
+2003-06-11  Brian Warner  <warner@lothar.com>
+
+	* doc/howto/cvs-dev.html: add "Working from CVS" hints
+
 2003-06-10  Itamar Shtull-Trauring  <itamar@itamarst.org>
 
 	* twisted/internet/protocol.py: connection refused errors for
