@@ -84,7 +84,7 @@ class SSHChannel(log.Logger):
         """
         Called when a request is sent to this channel.  By default it delegates
         to self.request_<requestType>.
-        If this functio returns true, the request succeeded, otherwise it
+        If this function returns true, the request succeeded, otherwise it
         failed.
 
         @type requestType:  C{str}
