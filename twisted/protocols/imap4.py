@@ -221,6 +221,8 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
 
     # Challenge generators for AUTHENTICATE command
     challengers = None
+    
+    state = 'unauth'
 
     def __init__(self, contextFactory = None):
         self.challengers = {}
@@ -248,7 +250,6 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
             self.CAPABILITIES['STARTTLS'] = None
         
         self.tags = {}
-        self.state = 'unauth'
         self.sendServerGreeting()
     
     def connectionLost(self, reason):
@@ -761,6 +762,7 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
 
     def __ebExpunge(self, failure, tag):
         self.sendBadResponse(tag, 'EXPUNGE failed: ' + str(failure.value))
+        log.err(failure)
 
     def select_SEARCH(self, tag, args, uid=0):
         query = parseNestedParens(args)
@@ -776,6 +778,7 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
 
     def __ebSearch(self, failure, tag):
         self.sendBadResponse(tag, 'SEARCH failed: ' + str(failure.value))
+        log.err(failure)
 
     def select_FETCH(self, tag, args, uid=0):
         parts = args.split(None, 1)
