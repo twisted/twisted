@@ -321,12 +321,6 @@ class DOMTemplate(Resource, View):
     def getNodeController(self, request, node):
         # Most specific
         controllerName = node.getAttribute('controller')
-        # Next-most specific
-        if not controllerName:
-            controllerName = node.getAttribute('id')
-        # Least specific
-        if not controllerName:
-            controllerName = node.getAttribute('class')
         
         # Look up a handler
         controllerFactory = DefaultHandler
@@ -334,6 +328,9 @@ class DOMTemplate(Resource, View):
             controllerFactory = getattr(self.controller, 'factory_' + controllerName, DefaultHandler)
             if controllerFactory is DefaultHandler:
                 controllerFactory = getattr(dominput, controllerName, DefaultHandler)
+        if controllerName and controllerFactory is DefaultHandler:
+            nodeText = node.toxml()
+            raise NotImplementedError, "You specified controller name %s on a node, but no factory_%s method was found." % (controllerName, controllerName)
 
         return controllerFactory(self.model)
     
@@ -342,12 +339,6 @@ class DOMTemplate(Resource, View):
         
         # Most specific
         viewName = node.getAttribute('view')
-        # Next-most specific
-        if not viewName:
-            viewName = node.getAttribute('id')
-        # Least specific
-        if not viewName:
-            viewName = node.getAttribute('class')
 
         # Look up either a widget factory, or a dom-mutating method
         defaultViewMethod = None
@@ -389,8 +380,6 @@ class DOMTemplate(Resource, View):
             return node
 
         id = node.getAttribute('model')
-#        if not id: id = node.getAttribute('id')
-#        if not id: id = node.getAttribute('class')
         
         controller = self.getNodeController(request, node)
         view, viewMethod, result = self.getNodeView(request, node)
