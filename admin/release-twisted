@@ -20,8 +20,8 @@ from twisted.python.release import replaceInFile, runChdirSafe, sh, CommandFaile
 
 import shutil, re
 
-#repourl = 'svn+ssh://svn.twistedmatrix.com/svn/Twisted'
-repourl = 'file:///home/radix/Twisted.repo'
+repourl = 'svn+ssh://svn.twistedmatrix.com/svn/Twisted'
+#repourl = 'file:///home/radix/Twisted.repo'
 trunkurl = repourl + '/trunk'
 
 debug = False
@@ -207,10 +207,13 @@ def makeTwistedCore(opts):
         
         excludes += ['--exclude %s/%s/%s' % (tdir, subProjectContainer, x)
                     for x in dist.twisted_subprojects]
+    excludes.append('--exclude %s/README' % (tdir,))
     excludes = ' '.join(excludes)
 
     sh('''
-    tar %(excludes)s -cjf %(tdir)s.tar.bz2 %(tdir)s
+    tar %(excludes)s -c  %(tdir)s |
+      tarcust -s "s,doc/core,doc," -s "s,twisted/topfiles/,,"|
+        bzip2 > %(tdir)s.tar.bz2
     ''' % locals())
 
 def makeBalls(opts):
