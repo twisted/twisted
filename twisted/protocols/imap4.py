@@ -1210,7 +1210,14 @@ class IMAP4Client(basic.LineReceiver):
 
     def __cbContinueAuth(self, rest, scheme, secret):
         auth = self.authenticators[scheme]
-        self.sendLine(auth.challengeResponse(secret, rest + '\n'))
+        try:
+            chal = base64.decodestring(rest + '\n')
+        except binascii.Error:
+            # XXX - Uh
+            self.transport.loseConnection()
+        else:
+            chal = auth.challengeResponse(secret, chal)
+            self.sendLine(base64.encodestring(chal))
 
     def __cbAuth(self, *args, **kw):
         return None
@@ -2715,11 +2722,9 @@ class CramMD5ClientAuthenticator:
     def getName(self):
         return "CRAM-MD5"
 
-    def challengeResponse(self, secret, challenge):
-        chal = base64.decodestring(challenge)
+    def challengeResponse(self, secret, chal):
         response = util.keyed_md5(secret, chal)
-        both = '%s %s' % (self.user, response)
-        return base64.encodestring(both)
+        return '%s %s' % (self.user, response)
 
 class MailboxException(IMAP4Exception): pass
 
