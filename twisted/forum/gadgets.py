@@ -13,7 +13,7 @@ class ForumPage(webpassport.SessionPerspectiveMixin, widgets.WidgetPage):
     """This class and stylesheet give forum pages a look different from the
     default web widgets pages.
     """
-    
+
     stylesheet = '''
     A
     {
@@ -83,7 +83,7 @@ p    '''
 class ForumBaseWidget(webpassport.SessionPerspectiveMixin, widgets.StreamWidget):
 
     defaultUsername = "poster"
-    
+
     def __init__(self, service):
         self.service = service
         self.manager = service.manager
@@ -150,9 +150,9 @@ class ForumsGadget(ForumBaseWidget, widgets.Gadget):
 class ThreadsWidget(ForumBaseWidget):
     """Displays a list of threads for a forum
     """
-    
+
     title = "List of Threads for a forum"
-    
+
     def stream(self, write, request):
         forum_id = int(request.args.get(['forum_id'][0])[0])
         d = self.manager.getTopMessages(forum_id, self.getUserName(request)).addCallback(self._cbThreadData, request)
@@ -170,7 +170,7 @@ class ThreadsWidget(ForumBaseWidget):
         <td COLOR="#000000"><b> Thread Starter </b> </td>
         <td COLOR="#000000"><b> Replies </b> </td>
         </tr>\n''')
-        # change the background color of every second row 
+        # change the background color of every second row
         i=0
         for (id, subject, postdate, username, replies) in data:
             if i % 2 == 1:
@@ -191,13 +191,13 @@ class ThreadsWidget(ForumBaseWidget):
 class FullWidget(ForumBaseWidget):
     """Displays a full details of all posts for a thread in a forum
     """
-    
+
     title = "Contents of a thread"
-    
+
     def stream(self, write, request):
         self.request = request
         self.forum_id = int(request.args.get('forum_id',[0])[0])
-        self.post_id = int(request.args.get('post_id',[0])[0])        
+        self.post_id = int(request.args.get('post_id',[0])[0])
         print "Getting posts for thread %d for forum: %d" % (self.post_id, self.forum_id)
         write(self.manager.getFullMessages(self.forum_id, self.post_id, self.getUserName(request)).addCallback(self._cbPostData))
 
@@ -238,16 +238,16 @@ class FullWidget(ForumBaseWidget):
         l.append('[<a href="reply?post_id=%d&amp;forum_id=%d&amp;thread_id=%d">Reply</a>]' % (post_id, self.forum_id, first) )
         return l
 
-    
+
 class PostsWidget(ForumBaseWidget):
     """Displays a list of posts for a thread in a forum
     """
-    
+
     title = "lists of posts for a thread"
-    
+
     def stream(self, write, request):
         self.forum_id = int(request.args.get('forum_id',[0])[0])
-        self.post_id = int(request.args.get('post_id',[0])[0])        
+        self.post_id = int(request.args.get('post_id',[0])[0])
         print "Getting posts for thread %d for forum: %d" % (self.post_id, self.forum_id)
         write( self.manager.getThreadMessages(self.forum_id, self.post_id).addCallback(self._cbPostData) )
 
@@ -266,7 +266,7 @@ class PostsWidget(ForumBaseWidget):
         tmp = self.byParent[0]
         subject = tmp[0][1]
         posted = tmp[0][2]
-        
+
         l = []
         l.append( '<table cellpadding=4 cellspacing=1 border=0 width="95%">')
         l.append( '<tr bgcolor="#ff9900">' )
@@ -284,21 +284,21 @@ class PostsWidget(ForumBaseWidget):
             l.append( self.formatList(post_id) )
         l.append( "</UL>" )
         return l
-    
-        
+
+
     def formatPost(self, post_id, subject, posted, username):
         return '<LI> [<a href="details?post_id=%d">%s</a>], <I>%s</I> <BR>\n' %\
                             (post_id, subject, username)
-    
+
 class DetailsWidget(ForumBaseWidget):
     title = "details for a post"
-    
+
     def stream(self, write, request):
         self.request = request
         self.post_id = int(request.args.get('post_id',[0])[0])
         print "Getting details for post %d" % (self.post_id)
         write( self.manager.getMessage(self.post_id).addCallback( self._cbDetailData) )
-        
+
     def _cbDetailData(self, data):
         (post_id, parent_id, forum_id, thread_id, subject, posted, user, body) = data[0]
         l = []
@@ -336,7 +336,7 @@ class ActionsWidget(widgets.StreamWidget):
                       % (self.post_id, self.forum_id, self.thread_id),
                       "Reply", 1)
         return l
-    
+
     def makeMenu(self, write, link, text, flag):
         if flag:
             write( '[<a href="%s">%s</a>]\n' % (link, text) )
@@ -345,13 +345,13 @@ class ActionsWidget(widgets.StreamWidget):
 
 
 class ReplyForm(webpassport.SessionPerspectiveMixin, widgets.Form):
-    
+
     title = "Reply to Posted message:"
     page = ForumPage
     def __init__(self, service):
         self.service = service
         self.manager = service.manager
-        
+
     def display(self, request):
         self.request = request
         self.post_id = int(request.args.get('post_id',[0])[0])
@@ -372,12 +372,12 @@ class ReplyForm(webpassport.SessionPerspectiveMixin, widgets.Form):
         return "Posted."
 
     def _cbDetailData(self, data):
-        (post_id, parent_id, forum_id, thread_id, subject, posted, user, body) = data[0]        
+        (post_id, parent_id, forum_id, thread_id, subject, posted, user, body) = data[0]
         outString = "\nOn %s, %s wrote:\n" % ( posted, user)
         lines = string.split(body,'\n')
         for line in lines:
             outString = outString + "> %s" % line
-            
+
         self.formFields = [
             ['string', 'Subject: ', 'subject', "RE: %s" % subject],
             ['text',   'Message:',  'body',    outString],
@@ -385,12 +385,12 @@ class ReplyForm(webpassport.SessionPerspectiveMixin, widgets.Form):
             ['hidden', '',          'forum_id', self.forum_id],
             ['hidden', '',          'thread_id', self.thread_id]
             ]
-        
+
         return widgets.Form.display(self, self.request)
-    
+
 class NewPostForm(webpassport.SessionPerspectiveMixin, widgets.Form):
     title = "Post a new message:"
-    
+
     def __init__(self, service):
         self.service = service
         self.manager = service.manager
@@ -404,9 +404,9 @@ class NewPostForm(webpassport.SessionPerspectiveMixin, widgets.Form):
             ['text',   'Message:',  'body',    ''],
             ['hidden', '',          'forum_id', self.forum_id],
             ]
-        
+
         return widgets.Form.display(self, self.request)
-    
+
     def process(self, write, request, submit, subject, body, forum_id):
         p = self.getPerspective(request)
         name = (p and p.perspectiveName) or 'anonymous'
@@ -420,13 +420,13 @@ class NewPostForm(webpassport.SessionPerspectiveMixin, widgets.Form):
 class RegisterUser(webpassport.SessionPerspectiveMixin, widgets.Form):
     """This creates a new identity and perspective for the user.
     """
-    
+
     title = "Register new user"
 
     def __init__(self, service):
         self.service = service
         self.manager = service.manager
-        
+
     def display(self, request):
         self.request = request
 
@@ -481,7 +481,7 @@ class NewForumForm(webpassport.SessionPerspectiveMixin, widgets.Form):
     def __init__(self, service):
         self.service = service
         self.manager = service.manager
-        
+
     def display(self, request):
         self.request = request
 
@@ -490,7 +490,7 @@ class NewForumForm(webpassport.SessionPerspectiveMixin, widgets.Form):
             ['text',   'Description:',  'description',    ''],
             ['checkbox',    'Allow Default Access:', 'default_access', 1],
             ]
-        
+
         return widgets.Form.display(self, self.request)
 
     def process(self, write, request, submit, name, description, default_access):
@@ -498,7 +498,7 @@ class NewForumForm(webpassport.SessionPerspectiveMixin, widgets.Form):
         write("Created new forum '%s'.<hr>\n" % name)
         write("<a href='../'>Return</a>")
 
-    
+
 class LoginForm(webpassport.LogInForm, ForumBaseWidget):
     title = "Enter the forum"
     def display(self, request):
