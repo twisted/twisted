@@ -121,6 +121,7 @@ class UsersModel(model.MethodModel):
         self.service = service
 
     def wmfactory_users(self, request):
+        print "getting users"
         return self.service.getUsers()
 
 components.registerAdapter(UsersModel, IFingerService, interfaces.IModel)
@@ -130,8 +131,7 @@ class UserStatusTree(page.Page):
     template = """<html><head><title>Users</title></head><body>
                   <h1>Users</h1>
                   <ul model="users" view="List">
-                  <li pattern="listItem" /><a view="Link" model="."
-                  href="dummy"><span model="." view="Text" /></a>
+                  <li pattern="listItem"><span view="Text" /></li>
                   </ul></body></html>"""
 
     def wchild_RPC2(self, request):
@@ -200,7 +200,8 @@ class FingerService(internet.TimerService):
     __implements__ = internet.TimerService.__implements__, IFingerService,
 
     def __init__(self, file):
-        internet.TimerService(self, self._read)
+        self.file = file
+        internet.TimerService.__init__(self, 1, self._read)
 
     def _read(self):
         self.users = {}
@@ -212,6 +213,7 @@ class FingerService(internet.TimerService):
         return defer.succeed(self.users.get(user, "No such user"))
 
     def getUsers(self):
+        print self.users.keys()
         return defer.succeed(self.users.keys())
 
 

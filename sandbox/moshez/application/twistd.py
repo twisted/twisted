@@ -169,7 +169,8 @@ def runApp(config):
     startApplication(config, application)
     app.runReactorWithLogging(config, oldstdout, oldstderr)
     removePID(config['pidfile'])
-    app.reportProfile(config['report-profile'], application.processName)
+    app.reportProfile(config['report-profile'],
+                      service.IProcess(application).processName)
     log.msg("Server Shut Down.")
 
 
