@@ -63,6 +63,12 @@ class LoopTestCase(unittest.TestCase):
         err = unittest.deferredError(d)
         err.trap(TestException)
         reactor.iterate() # catch any issues from scheduled stop()
+
+    def testBadDelay(self):
+        lc = task.LoopingCall(lambda: None)
+        self.assertRaises(ValueError, lc.start, 0)
+        lc = task.LoopingCall(lambda: None)
+        self.assertRaises(ValueError, lc.start, -1)
     
     def testDelayedStart(self):
         ran = []

@@ -50,6 +50,8 @@ class LoopingCall:
         raises an exception.
         """
         assert not self.running
+        if interval <= 0:
+            raise ValueError, "interval must be >= 0"
         self.running = True
         d = self.deferred = defer.Deferred()
         self.starttime = seconds()
