@@ -26,6 +26,10 @@ def encrypt(passphrase, data):
         data += ' '*(cipher.block_size - leftover)
     return cipher.new(md5.new(passphrase).digest()[:16]).encrypt(data)
 
+def decrypt(passphrase, data):
+    from Crypto.Cipher import AES
+    return AES.new(md5.new(passphrase).digest()[:16]).decrypt(data)
+
 
 class IPersistable(components.Interface):
 

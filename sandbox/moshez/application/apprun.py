@@ -15,6 +15,7 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 from twisted.python import runtime, log, usage
 from twisted.persisted import styles
+from twisted.application import persist
 from twisted import copyright
 import sys, os, pdb, profile, getpass, md5, traceback
 
@@ -30,10 +31,6 @@ reactorTypes = {
     'c' : 'twisted.internet.cReactor',
     'kqueue': 'twisted.internet.kqreactor'
     }
-
-def decrypt(passphrase, data):
-    from Crypto.Cipher import AES
-    return AES.new(md5.new(passphrase).digest()[:16]).decrypt(data)
 
 
 def createApplicationDecoder(config):
@@ -106,7 +103,7 @@ def loadApplication(config, passphrase):
     filename, decode, mode = createApplicationDecoder(config)
     if config['encrypted']:
         data = open(filename, 'rb').read()
-        data = decrypt(passphrase, data)
+        data = persist.decrypt(passphrase, data)
         try:
             return decode(filename, data)
         except:
