@@ -1,4 +1,4 @@
-2003-02-04  Jp Calderone  <exarkun@twistedmatrix.com
+2003-02-04  Jp Calderone  <exarkun@twistedmatrix.com>
 
 	* twisted/internet/app.py: listenUNIX and unlistenUNIX methods added
 	to Application class.  These should be used in place of listenTCP
