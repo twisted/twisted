@@ -322,7 +322,7 @@ class Text(Widget):
         """
         @param text: The text to render.
         @type text: A string or L{model.Model}.
-        @ivar raw: A boolean that specifies whether to render the text as
+        @param raw: A boolean that specifies whether to render the text as
               a L{domhelpers.RawText} or as a DOM TextNode.
         """
         self.raw = raw

@@ -1,5 +1,5 @@
 # -*- test-case-name: twisted.test.test_tendril -*-
-# $Id: tendril.py,v 1.30 2002/10/01 21:41:00 acapnotic Exp $
+# $Id: tendril.py,v 1.31 2002/10/18 06:20:32 bruce Exp $
 # Twisted, the Framework of Your Internet
 # Copyright (C) 2001 Matthew W. Lefkowitz
 #
@@ -25,7 +25,7 @@ repeat as a user in an IRC channel; anyone it hears on IRC will appear
 to be logged in to the Words service and speaking in a group there.
 
 How to Start a Tendril
-----------------------
+======================
 
 In manhole::
 
@@ -211,7 +211,7 @@ class TendrilIRC(irc.IRCClient, styles.Ephemeral):
 
     realname = 'Tendril'
     versionName = 'Tendril'
-    versionNum = '$Revision: 1.30 $'[11:-2]
+    versionNum = '$Revision: 1.31 $'[11:-2]
     versionEnv = copyright.longversion
 
     helptext = TendrilFactory.helptext

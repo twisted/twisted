@@ -127,7 +127,7 @@ class _HostResource(resource.Resource):
 
 class VHostMonsterResource(resource.Resource):
 
-    """\
+    """
     Use this to be able to record the hostname and method (http vs. https)
     in the URL without disturbing your web site. If you put this resource
     in a URL http://foo.com/bar then requests to
@@ -143,3 +143,4 @@ class VHostMonsterResource(resource.Resource):
         elif path == 'https':
             request.isSecure = lambda: 1
         return _HostResource()
+
