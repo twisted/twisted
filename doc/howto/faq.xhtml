@@ -78,12 +78,9 @@ modules may change, but not in a large way and some sort of backwards-compatibil
 will probably be provided. If no comment about API stability is present, assume
 the module is unstable.</p>
 
-<p>In Twisted 1.0, <em>most of twisted.internet is completely stable</em>, other than:
-
-<ol>
-<li>UDP support</li>
-<li>twisted.internet.win32eventreactor - will be replaced with win32support in future.</li>
-</ol>
+<p>In Twisted 1.1, <em>most of twisted.internet, .cred and
+.application are completely stable</em> (excepting of course code
+marked as deprecated).</p>
 
 But as always, the only accurate way of knowing a module's stability is reading
 the module's docstrings.</p>
@@ -280,7 +277,7 @@ try to run my Twisted program!  What's wrong?</h3>
 <p>The default reactor, by default, will install signal handlers to catch
 events like Ctrl-C, SIGTERM, and so on.  However, you can't install signal
 handlers from non-main threads in Python, which means that
-<code>reactor.run()</code> (and <code>Application.run</code>) will cause an
+<code>reactor.run()</code> will cause an
 error.  Pass the <code>installSignalHandlers=0</code> keyword argument to
 <code>reactor.run</code> (or <code>Application.run</code>) to work around
 this.</p>
