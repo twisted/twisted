@@ -58,6 +58,7 @@ class Participant(pb.Perspective):
         client.receiveContactList(map(lambda contact: (contact.name, contact.status),
                                       self.contacts))
         self.changeStatus(ONLINE)
+        return self
 
     def changeStatus(self, newStatus):
         self.status = newStatus
@@ -68,7 +69,7 @@ class Participant(pb.Perspective):
         if self.client:
             self.client.notifyStatusChanged(contact.name, contact.status)
 
-    def detached(self, client):
+    def detached(self, client, identity):
         log.msg("detached: %s" % self.name)
         self.client = None
         for group in self.groups[:]:

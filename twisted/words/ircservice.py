@@ -75,7 +75,7 @@ class IRCChatter(irc.IRC):
     def connectionLost(self):
         log.msg( "%s lost connection" % self.nickname )
         if self.participant:
-            self.participant.detached(self)
+            self.participant.detached(self, self.identity)
 
 
     def sendMessage(self, command, *parameter_list, **kw):
@@ -172,7 +172,8 @@ class IRCChatter(irc.IRC):
         """Successfully logged in.
         """
         if ident.verifyPlainPassword(self.pendingPassword):
-            self.pendingLogin.attached(self, ident)
+            self.identity = ident
+            self.pendingLogin.attached(self, self.identity)
             self.participant = self.pendingLogin
             self.receiveDirectMessage("*login*", "Authentication accepted.  Thank you.")
         else:
