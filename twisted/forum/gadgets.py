@@ -5,8 +5,55 @@ import string
 
 from twisted.web import widgets
 from twisted.python import defer
+from twisted.internet import passport
 
 from sim.server import engine, player
+
+class ForumPage(widgets.WidgetPage):
+    """This class and stylesheet give forum pages a look different from the
+    default web widgets pages.
+    """
+    
+    stylesheet = '''
+    A
+    {
+        font-family: Lucida, Verdana, Helvetica, Arial;
+        color: #996633;
+        text-decoration: none;
+    }
+
+    TH
+    {
+        font-family: Lucida, Verdana, Helvetica, Arial;
+        font-weight: bold;
+        text-decoration: none;
+    }
+
+    PRE, CODE
+    {
+        font-family: Courier New, Courier;
+        font-size: 10pt;
+    }
+
+    P, BODY, TD, OL, UL, MENU, BLOCKQUOTE, DIV
+    {
+        font-family: Lucida, Verdana, Helvetica, Arial;
+        font-size: 10pt;
+        color: #000000;
+    }
+    '''
+
+class ForumBaseGadget(widgets.Gadget, widgets.StreamWidget):
+    """
+    base gadget class for all forum gadgets. This sets the page template.
+    """
+    page = ForumPage
+
+    def __init__(self, app, service):
+        self.app = app
+        self.service = service
+        widgets.Gadget.__init__(self)
+
 
 """The forum application has these functional pages:
      intro   - (/)        - List of forums
@@ -16,22 +63,23 @@ from sim.server import engine, player
      details - (/details) - Details of a message
      reply   - (/reply)   - Reply form to reply to a message
      new     - (/new)     - Post a new message/thread
+     register- (/register) - Register a new user
 
   The ForumGadget contains widgets to perform each of these functions.
   
 """
-class ForumGadget(widgets.Gadget, widgets.StreamWidget):
+class ForumsGadget(ForumBaseGadget):
     title = "Posting Board"
+
     def __init__(self, app, service):
-        widgets.Gadget.__init__(self)
-        self.app = app
-        self.service = service
+        ForumBaseGadget.__init__(self, app, service)
         self.putWidget('threads', ThreadsGadget(self.app, self.service))
         self.putWidget('posts',   PostsGadget(self.app, self.service))
         self.putWidget('full',    FullGadget(self.app, self.service))
         self.putWidget('details', DetailsGadget(self.app, self.service))
         self.putWidget('reply',   ReplyForm(self.app, self.service))
         self.putWidget('new',     NewPostForm(self.app, self.service))
+        self.putWidget('register',RegisterUser(self.app, self.service))
 
     def display(self, request):
         """Display the intro list of forums. This is only called if there is no URI.
@@ -60,17 +108,12 @@ class ForumGadget(widgets.Gadget, widgets.StreamWidget):
         return "ERROR:" + repr(error)
 
 
-class ThreadsGadget(widgets.Gadget, widgets.StreamWidget):
+class ThreadsGadget(ForumBaseGadget):
     """Displays a list of threads for a forum
     """
     
     title = " "
-
-    def __init__(self, app, service):
-        widgets.Gadget.__init__(self)
-        self.app = app
-        self.service = service
-
+    
     def display(self, request):
         self.forum_id = int(request.args.get('forum_id',[0])[0])
         print "Getting threads for forum: %d" % self.forum_id
@@ -79,15 +122,23 @@ class ThreadsGadget(widgets.Gadget, widgets.StreamWidget):
 
     def onThreadData(self, data):
         l = []
+        l.append( '<h3> %s:</h3>' % self.service.manager.getForumByID(self.forum_id) )
         l.append( '<table cellpadding=4 cellspacing=1 border=0 width="95%">')
         l.append( '<tr bgcolor="#ff9900">' )
         l.append( '<td COLOR="#000000"><b> Thread Subject </b> </td>' )
         l.append( '<td COLOR="#000000"><b> Thread Starter </b> </td>' )
         l.append( '<td COLOR="#000000"><b> Replies </b> </td>' )
         l.append( '</tr>\n' )
-        
+
+        # change the background color of every second row 
+        i=0
         for (id, subject, postdate, username, replies) in data:
-            l.append("<tr> <td> <a href='/full/?forum_id=%d&amp;post_id=%d'> %s </a> </td>" % (self.forum_id, int(id), subject))
+            if i % 2 == 1:
+                c = " bgcolor=#cccccc"
+            else:
+                c = ""
+            i = i + 1
+            l.append("<tr %s> <td> <a href='/full/?forum_id=%d&amp;post_id=%d'> %s </a> </td>" % (c, self.forum_id, int(id), subject))
             l.append("<td> <i> %s </i> </td>" % username)
             l.append("<td> %d replies </td>" % replies)
             l.append("</tr>\n")
@@ -103,17 +154,12 @@ class ThreadsGadget(widgets.Gadget, widgets.StreamWidget):
         return "ERROR: " + repr(error)
 
 
-class FullGadget(widgets.Gadget, widgets.StreamWidget):
+class FullGadget(ForumBaseGadget):
     """Displays a full details of all posts for a thread in a forum
     """
     
     title = " "
-
-    def __init__(self, app, service):
-        widgets.Gadget.__init__(self)
-        self.app = app
-        self.service = service
-
+    
     def display(self, request):
         self.request = request
         self.forum_id = int(request.args.get('forum_id',[0])[0])
@@ -138,7 +184,7 @@ class FullGadget(widgets.Gadget, widgets.StreamWidget):
                 l.append( '<td COLOR="#000000"><b> Topic: %s </b> </td>'%subject )        
                 l.append( '</tr>\n' )
 
-            body = string.replace(body, "\n", "<p>")
+            body = string.replace(body, "\n", "<br>")
             l.append( '<tr> <td valign=top > <b> %s </b> <br> </td>' % (username) )
             l.append( '<td> <i> %s </i> (%s) <hr> %s <br></td> </tr>\n' % ( subject, posted, body) )
 
@@ -160,17 +206,12 @@ class FullGadget(widgets.Gadget, widgets.StreamWidget):
         return "ERROR: " + repr(error)
 
 
-class PostsGadget(widgets.Gadget, widgets.StreamWidget):
+class PostsGadget(ForumBaseGadget):
     """Displays a list of posts for a thread in a forum
     """
     
     title = " "
-
-    def __init__(self, app, service):
-        widgets.Gadget.__init__(self)
-        self.app = app
-        self.service = service
-
+    
     def display(self, request):
         self.forum_id = int(request.args.get('forum_id',[0])[0])
         self.post_id = int(request.args.get('post_id',[0])[0])        
@@ -222,14 +263,9 @@ class PostsGadget(widgets.Gadget, widgets.StreamWidget):
         print error
         return "ERROR: " + repr(error)
 
-class DetailsGadget(widgets.Gadget, widgets.StreamWidget):
+class DetailsGadget(ForumBaseGadget):
     title = " "
     
-    def __init__(self, app, service):
-        widgets.Gadget.__init__(self)
-        self.app = app
-        self.service = service
-
     def display(self, request):
         self.request = request
         self.post_id = int(request.args.get('post_id',[0])[0])
@@ -242,7 +278,8 @@ class DetailsGadget(widgets.Gadget, widgets.StreamWidget):
         l = []
         l.append( ActionsWidget(post_id, parent_id, forum_id, thread_id).display(self.request) + ("<H2> %s </H2>\n" % subject) )
         l.append( '(#%d)Posted on <i>%s</i> by <i>%s</i> <HR>' % (post_id,posted, user) )
-        l.append( '<PRE>' + body  + '</PRE>')
+        #l.append( '<PRE>' + body  + '</PRE>')
+        l.append(  body )        
         l.append( '<hr> <i> Twisted Forums </i>' )    
         return l
 
@@ -279,7 +316,8 @@ class ActionsWidget(widgets.StreamWidget):
             return "[ %s ]\n" % (text)            
 
 
-class ReplyForm(widgets.Gadget, widgets.Form):
+class ReplyForm(widgets.Form, widgets.Gadget):
+    
     title = "Reply to Posted message:"
 
     def __init__(self, app, service):
@@ -297,7 +335,7 @@ class ReplyForm(widgets.Gadget, widgets.Form):
     
     def process(self, write, request, submit, subject, body, post_id, forum_id, thread_id):
         body = string.replace(body,"'","''")                
-        self.service.manager.postMessage(self.forum_id, 'poster', self.thread_id, int(post_id), subject, body)
+        self.service.manager.postMessage(self.forum_id, 'poster', self.thread_id, int(post_id), 0, subject, body)
         write("Posted reply to '%s'.<hr>\n" % subject)
         write("<a href='/threads/?forum_id=%s'>Return to Threads</a>" % self.forum_id)
 
@@ -332,7 +370,8 @@ class ReplyForm(widgets.Gadget, widgets.Form):
 
 
 
-class NewPostForm(widgets.Gadget, widgets.Form):
+class NewPostForm(widgets.Form, widgets.Gadget):
+    
     title = "Post a new message:"
 
     def __init__(self, app, service):
@@ -358,10 +397,60 @@ class NewPostForm(widgets.Gadget, widgets.Form):
         write("Posted new message '%s'.<hr>\n" % subject)
         write("<a href='/threads/?forum_id=%s'>Return to Threads</a>" % self.forum_id)
 
-    def insertDone(self, done):
-        print 'INSERT SUCCESS'
-
-    def insertError(self, error):
-        print 'ERROR: Reply', error
-        return "ERROR"
         
+
+class RegisterUser(widgets.Form, widgets.Gadget):
+    """This creates a new identity and perspective for the user.
+    """
+    page = ForumPage
+    
+    title = "Register new user"
+
+    def __init__(self, app, service):
+        self.app = app
+        self.service = service
+        widgets.Gadget.__init__(self)
+
+    def display(self, request):
+        self.request = request
+
+        self.formFields = [
+            ['string',   'User Name:',         'name',  ''],
+            ['password', 'Password:',          'password1', ''],
+            ['password', 'Confirm Password:',  'password2', ''],
+            ['string',   'Signature:',         'signature', '']
+            ]
+
+        return widgets.Form.display(self, self.request)
+
+    def process(self, write, request, submit, name, password1, password2, signature):
+        if password1 != password2:
+            write("ERROR: Passwords not valid!")
+            return
+
+        newIdentity = passport.Identity(name, self.service.application)
+        newIdentity.setPassword(password1)
+        write("Created identity.<br>")        
+        newPerspective = self.service.createPerspective(name)
+        newIdentity.addKeyForPerspective(newPerspective)
+        write("Created perspective.<br>")                
+        self.name = name
+        self.signature = signature
+
+        write("Creating in database...<br>")
+        
+        # create the identity in the database
+        return self.service.application.authorizer.addIdentity(newIdentity, self.doneIdentity, self.errIdentity)
+
+    def doneIdentity(self):
+        print "Created Identity Successfully for %s" % self.name
+        print "Creating forum user."
+        
+        # create the forum user in the database
+        self.service.manager.newUser(self.name, self.signature)
+        
+        #write("Created new user %s.<hr>" % name)
+        #write("<a href='/threads/'>Return to Forums</a>")
+
+    def errIdentity(self):
+        print "ERROR: couldn't create identity."

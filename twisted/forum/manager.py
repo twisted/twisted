@@ -39,6 +39,8 @@ class ForumDB(adbapi.Augmentation):
     This class operates asynchronously (like everything in twisted). The query methods
     (getTopMessages and getThreadMessages) take callback and errback methods which will
     be called when the query has finished.
+
+    This class caches the names of the forums in the database.
        
     """
 
@@ -62,7 +64,8 @@ CREATE TABLE forums
 (
     forum_id       serial        PRIMARY KEY,
     name           varchar(64)   NOT NULL,
-    description    text          NOT NULL
+    description    text          NOT NULL,
+    default_access integer       NOT NULL
 );
 
 CREATE TABLE posts
@@ -72,6 +75,7 @@ CREATE TABLE posts
                                  REFERENCES forums (forum_id),
     parent_id      int           NOT NULL,
     thread_id      int           NOT NULL,
+    previous_id    int           NOT NULL,
     subject        varchar(64)   NOT NULL,
     user_name      varchar(64)   CONSTRAINT user_name_posts
                                  REFERENCES forum_perspectives (user_name),
@@ -83,20 +87,59 @@ CREATE TABLE forum_permissions
 (
     user_name         varchar(64) NOT NULL,
     forum_id          integer,
-    access_level      integer,
+    read_access       integer,
+    post_access       integer,
     CONSTRAINT perm_key PRIMARY KEY (user_name, forum_id)
 );
     
     """
 
+    def __init__(self, dbpool):
+        adbapi.Augmentation.__init__(self, dbpool)
+        self.forums = {}        
+        d = self.cacheForums()
+        d.arm() #NOTE: must arm it as this is during initialization        
+
+
+    def cacheForums(self):
+        # load all forums
+        sql = "SELECT forum_id, name from forums"
+        d = self.runQuery(sql, self.gotForums, self.gotError)
+        return d
+
+    def gotError(self, error):
+        print "ERROR: couldn't load forums.", error
+        
+    def gotForums(self, data):
+        for (id, name) in data:
+            self.forums[id] = name
+
+    def getForumByID(self, id):
+        """Get the name of a forum by it's ID.
+        """
+        return self.forums.get(id, "ERROR - no Forum for this ID")
+
+
+    def newUser(self, username, signature):
+        """Create a new user in the system and set default permissions.
+        This is complex as it must interface with the dbAuthorizer.
+        """
+        
+        sql = """INSERT INTO forum_perspectives
+                 (identity_name, user_name, signature)
+                 VALUES
+                 ('%s', '%s', '%s')""" % (username, username, signature)
+        self.runOperation(sql)
+        
     def createForum(self, name, description):
         """Create a new forum with this name.
         """
         sql = """INSERT INTO forums
-               (name, description)
+               (name, description, default_access)
                VALUES
-               ('%s', '%s')""" % (name, description)
+               ('%s', '%s', 1)""" % (name, description)
         self.runOperation(sql)
+        self.cacheForums()
 
     def deleteForum(self, forum_id):
         """Delete the forum with this name and all posted messages in it.
@@ -110,32 +153,32 @@ CREATE TABLE forum_permissions
     def checkPermission(self, forum_id, user_name, callback, errback):
         """Get the permission level for the user for the forum.
         """
-        sql = """SELECT access_level
+        sql = """SELECT read_access
                  FROM forum_permissions
                  WHERE forum_id = %d
                  AND user_name = '%s'""" % ( forum_id, user_name)
         self.runQuery(sql, callback, errrback)
 
-    def _messagePoster(self, trans, forum_id, user_name, thread_id, parent_id, subject, body):
-        trans.execute("""SELECT access_level
+    def _messagePoster(self, trans, forum_id, user_name, thread_id, parent_id, previous_id, subject, body):
+        trans.execute("""SELECT post_access
                          FROM forum_permissions
                          WHERE forum_id = %d
                          AND user_name = '%s'""" % ( forum_id, user_name))
         result = trans.fetchall()
         if result:
             trans.execute("""INSERT INTO posts
-            (forum_id, parent_id, thread_id, subject, user_name, posted, body)
+            (forum_id, parent_id, thread_id, previous_id, subject, user_name, posted, body)
             VALUES
-            (%d, %d, %d, '%s', '%s', now(), '%s')""" %
-            (forum_id, parent_id, thread_id, subject, user_name, body))
+            (%d, %d, %d, %d, '%s', '%s', now(), '%s')""" %
+            (forum_id, parent_id, thread_id, previous_id, subject, user_name, body))
             return "Posted successfully!"
         else:
             return "You don't have permission to post to this forum!"
 
-    def postMessage(self, forum_id, user_name, thread_id, parent_id, subject, body):
+    def postMessage(self, forum_id, user_name, thread_id, parent_id, previous_id, subject, body):
         """Post a message to a forum.
         """
-        return self.runInteraction(self._messagePoster, forum_id, user_name, thread_id, parent_id, subject, body)
+        return self.runInteraction(self._messagePoster, forum_id, user_name, thread_id, parent_id, previous_id, subject, body)
 
     def newMessage(self, forum_id, user_name, subject, body):
         """Post a new message - start a new thread."""
