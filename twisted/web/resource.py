@@ -19,7 +19,6 @@
 
 
 # System Imports
-import string
 from twisted.python import roots
 
 class Resource(roots.Homogenous):
@@ -51,10 +50,10 @@ class Resource(roots.Homogenous):
     listEntities = listStaticEntities
 
     def listDynamicNames(self):
-        raise NotImplementedError("Web Resources not true Collections")
+        return []
 
     def listDynamicEntities(self, request):
-        raise NotImplementedError("Web Resources not true Collections")
+        return []
 
     def getStaticEntity(self, name):
         return self.children.get(name)
@@ -62,6 +61,8 @@ class Resource(roots.Homogenous):
     def getDynamicEntity(self, name, request):
         if not self.children.has_key(name):
             return self.getChild(name, request)
+        else:
+            return None
 
     def delEntity(self, name):
         del self.children[name]
@@ -130,7 +131,6 @@ class Resource(roots.Homogenous):
         self.children[path] = child
         child.server = self.server
 
-
     def render(self, request):
         """Render a given resource.
 
@@ -141,7 +141,7 @@ class Resource(roots.Homogenous):
         this class's responsability to write the results to
         request.write(data), then call request.finish().
         """
-        raise "%s called" % str(self.__class__.__name__)
+        raise NotImplementedError("%s called" % str(self.__class__.__name__))
 
 Resource.entityType = Resource
 

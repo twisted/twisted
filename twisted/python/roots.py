@@ -1,15 +1,15 @@
 # Twisted, the Framework of Your Internet
 # Copyright (C) 2001 Matthew W. Lefkowitz
-# 
+#
 # This library is free software; you can redistribute it and/or
 # modify it under the terms of version 2.1 of the GNU Lesser General Public
 # License as published by the Free Software Foundation.
-# 
+#
 # This library is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
 # Lesser General Public License for more details.
-# 
+#
 # You should have received a copy of the GNU Lesser General Public
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
@@ -18,6 +18,12 @@
 """
 
 import types
+
+class NotSupportedError(NotImplementedError):
+    """
+    An exception meaning that the tree-manipulation operation
+    you're attempting to perform is not supported.
+    """
 
 class Request:
     """I am an abstract representation of a request for an entity.
@@ -60,7 +66,7 @@ class Collection:
     """I represent a static collection of entities.
 
     I contain methods designed to represent collections that can be dynamically
-    created.  
+    created.
     """
     def __init__(self):
         """Initialize me.
@@ -113,12 +119,12 @@ class Collection:
     def storeEntity(self, name, request):
         """Store an entity for 'name', based on the content of 'request'.
         """
-        raise NotImplementedError("%s.storeEntity" % str(self.__class__))
+        raise NotSupportedError("%s.storeEntity" % str(self.__class__))
 
     def removeEntity(self, name, request):
         """Remove an entity for 'name', based on the content of 'request'.
         """
-        raise NotImplementedError("%s.removeEntity" % str(self.__class__))
+        raise NotSupportedError("%s.removeEntity" % str(self.__class__))
 
     def listStaticEntities(self):
         """Retrieve a list of all name, entity pairs that I store references to.
@@ -202,7 +208,7 @@ class Constrained(Collection):
         else:
             raise ConstraintViolation("Name constraint violated.")
 
-                
+
 
 class Locked(Constrained):
     locked = 0
