@@ -135,4 +135,10 @@ class AtLeastImportTestCase(unittest.TestCase):
         from twisted.mail import pb
         from twisted.mail import relaymanager
 
+    def test_enterprise(self):
+        from twisted.enterprise import adbapi
+        from twisted.enterprise import dbcred
+        from twisted.enterprise import dbgadgets
+        from twisted.enterprise import dbpassport
+
 testCases = [AtLeastImportTestCase]
