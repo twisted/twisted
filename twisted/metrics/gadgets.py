@@ -27,7 +27,6 @@ import time
 from twisted.web import widgets
 from twisted.python import defer
 
-from sim.server import engine, player
 
 """The metrics web application has these functional pages:
      intro   - (/)        - Show the available host machines
