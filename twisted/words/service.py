@@ -370,6 +370,7 @@ class Participant(pb.Perspective, styles.Versioned):
                                            map(lambda m: m.name,
                                                group.members),
                                            group.name)
+                    return
             raise NotInGroupError(groupName)
 
     def getGroupMetadata(self, groupName):
