@@ -82,15 +82,15 @@ class Perspective:
         I participate in.  (My identity name will be 'Nobody' by
         default, which will normally not resolve.)
         """
-        if not isinstance(perspectiveName, types.StringType):
+        if not isinstance(perspectiveName, types.StringTypes):
             raise TypeError("Expected string, got %s."% perspectiveName)
-        if not isinstance(identityName, types.StringType):
+        if not isinstance(identityName, types.StringTypes):
             raise TypeError("Expected string, got %s."% identityName)
         self.perspectiveName = perspectiveName
         self.identityName = identityName
 
     def setIdentityName(self, name):
-        if not isinstance(name, types.StringType):
+        if not isinstance(name, types.StringTypes):
             raise TypeError
         self.identityName = name
 
@@ -108,7 +108,7 @@ class Perspective:
         where the distinction between Perspective and Identity is weak,
         such as single-Service servers.
         """
-        if not isinstance(password, types.StringType):
+        if not isinstance(password, types.StringTypes):
             raise TypeError
         ident = self.service.authorizer.createIdentity(self.perspectiveName)
         # ident = identity.Identity(self.perspectiveName, self.service.application)
