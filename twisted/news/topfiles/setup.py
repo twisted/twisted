@@ -15,6 +15,8 @@ if __name__ == '__main__':
         maintainer_email="exarkun@divmod.com",
         url="http://twistedmatrix.com/projects/news/",
         license="MIT",
-        long_description="Twisted News is a news server.",
+        long_description="""\
+Twisted News is a news server.
+""",
     )
 

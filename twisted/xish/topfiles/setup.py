@@ -15,5 +15,7 @@ if __name__ == '__main__':
         maintainer_email="twisted@ralphm.ik.nu",
         url="http://twistedmatrix.com/projects/xish/",
         license="MIT",
-        long_description="Twisted Xish is some XML stuff.",
+        long_description="""\
+Twisted Xish is some XML stuff.
+""",
         )

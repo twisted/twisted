@@ -27,7 +27,9 @@ if __name__ == '__main__':
         maintainer_email="spiv@twistedmatrix.com",
         url="http://twistedmatrix.com/projects/runner/",
         license="MIT",
-        long_description="Twisted Runner is an inetd replacement.",
+        long_description="""\
+Twisted Runner is an inetd replacement.
+""",
         # build stuff
         detectExtensions=detectExtensions,
     )

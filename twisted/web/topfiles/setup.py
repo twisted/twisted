@@ -16,5 +16,7 @@ if __name__ == '__main__':
         maintainer_email="foom@fuhm.net",
         url="http://twistedmatrix.com/projects/web/",
         license="MIT",
-        long_description="Twisted Web is a web server.",
+        long_description="""\
+Twisted Web is a web server.
+""",
         )

@@ -8,12 +8,15 @@ if __name__ == '__main__':
         # metadata
         name="Twisted Pair",
         version="SVN-Trunk",
-        description="Twisted Pair is low-level netorking stuff.",
+        description="Twisted Pair contains low-level networking support.",
         author="Twisted Matrix Laboratories",
         author_email="twisted-python@twistedmatrix.com",
         maintainer="Tommi Virtanen",
         maintainer_email="tv@twistedmatrix.com",
         url="http://twistedmatrix.com/projects/pair/",
         license="MIT",
-        long_description="Twisted Pair is low-level netorking stuff.",
+        long_description="""
+Raw network packet parsing routines, including ethernet, IP and UDP
+packets, and tuntap support.
+""",
         )

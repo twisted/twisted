@@ -78,7 +78,7 @@ setup_args = dict(
     # metadata
     name="Twisted",
     version=copyright.version,
-    description="Twisted is a framework to build frameworks",
+    description="An asynchronous networking framework written in Python",
     author="Twisted Matrix Laboratories",
     author_email="twisted-python@twistedmatrix.com",
     maintainer="Glyph Lefkowitz",
@@ -86,10 +86,12 @@ setup_args = dict(
     url="http://twistedmatrix.com/",
     license="MIT",
     long_description="""\
-Twisted is a framework to build frameworks. It is expected that one
-day the project will expanded to the point that the framework will
-seamlessly integrate with mail, web, DNS, netnews, IRC, RDBMSs,
-desktop environments, and your toaster.
+An extensible framework for Python programming, with special focus
+on event-based network programming and multiprotocol integration.
+
+It is expected that one day the project will expanded to the point
+that the framework will seamlessly integrate with mail, web, DNS,
+netnews, IRC, RDBMSs, desktop environments, and your toaster.
 """,
 
     # build stuff
