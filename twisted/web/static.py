@@ -177,6 +177,7 @@ class File(resource.Resource, styles.Versioned):
         ".tif": "image/tiff",
         ".tiff": "image/tiff",
         ".txt": "text/plain",
+        ".xul": "application/vnd.mozilla.xul+xml",
         ".zip": "application/x-zip",
         }
 
