@@ -92,8 +92,9 @@ class CacheResolver(common.ResolverBase):
         if self.cancel.has_key(query):
             self.cancel[query].cancel()
 
-        m = 2 ** 32
-        for r in list(payload[0]) + list(payload[1]) + list(payload[2]):
+        s = list(payload[0]) + list(payload[1]) + list(payload[2])
+        m = s[0].ttl
+        for r in s:
             m = min(m, r.ttl)
         
         from twisted.internet import reactor

@@ -63,3 +63,12 @@ class ResolverChain(common.ResolverBase):
                 FailureHandler(r.query, q, timeout)
             )
         return d
+
+
+    def lookupAllRecords(self, name, timeout = 10):
+        d = self.resolvers[0].lookupAllRecords(name, timeout)
+        for r in self.resolvers[1:]:
+            d = d.addErrback(
+                FailureHandler(r.lookupAllRecords, name, timeout)
+            )
+        return d

@@ -106,6 +106,12 @@ class Resolver(common.ResolverBase):
             if l.startswith('nameserver'):
                 self.servers.append((l.split()[1], dns.PORT))
                 log.msg("Resolver added %r to server list" % (self.servers[-1],))
+            elif l.startswith('domain'):
+                self.domain = l.split()[1]
+                self.search = None
+            elif l.startswith('search'):
+                self.search = l.split()[1:]
+                self.domain = None
 
 
     def pickServer(self):
@@ -183,13 +189,6 @@ class Resolver(common.ResolverBase):
         ).addCallback(self.filterAnswers)
     
     
-    # This one we can do more efficiently than the default
-    def lookupAllRecords(self, name, timeout = 10):
-        return self.queryUDP(
-            [dns.Query(name, dns.ALL_RECORDS, dns.IN)], timeout
-        ).addCallback(self.filterAnswers)
-    
-
     # This one doesn't ever belong on UDP
     def lookupZone(self, name, timeout = 10):
         return self.queryTCP(

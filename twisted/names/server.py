@@ -108,11 +108,12 @@ class DNSServerFactory(protocol.ServerFactory):
         message.authority = auth
         message.additional = add
         self.sendReply(protocol, message, address)
+        
+        l = len(ans) + len(auth) + len(add)
         if self.verbose:
-            l = len(ans) + len(auth) + len(add)
             log.msg("Lookup found %d record%s" % (l, l != 1 and "s" or ""))
 
-        if self.cache:
+        if self.cache and l:
             self.cache.cacheResult(
                 message.queries[0], (ans, auth, add)
             )

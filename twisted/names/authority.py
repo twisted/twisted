@@ -25,6 +25,22 @@ from twisted.python import failure
 
 import common, bind
 
+#class LookupCacherMixin(object):
+#    _cache = None
+#
+#    def _lookup(self, name, cls, type, timeout = 10):
+#        if not self._cache:
+#            self._cache = {}
+#            self._meth = super(LookupCacherMixin, self)._lookup
+#
+#        if self._cache.has_key((name, cls, type)):
+#            return self._cache[(name, cls, type)]
+#        else:
+#            r = self._meth(name, cls, type, timeout)
+#            self._cache[(name, cls, type)] = r
+#            return r
+
+
 class FileAuthority(common.ResolverBase):
     """An Authority that is loaded from a file."""
     
@@ -34,7 +50,12 @@ class FileAuthority(common.ResolverBase):
     def __init__(self, filename):
         common.ResolverBase.__init__(self)
         self.loadFile(filename)
+        self._cache = {}
 
+
+    def __setstate__(self, state):
+        self.__dict__ = state
+#        print 'setstate ', self.soa
 
     def _lookup(self, name, cls, type, timeout = 10):
         results = []
@@ -47,10 +68,19 @@ class FileAuthority(common.ResolverBase):
                     results.append(
                         dns.RRHeader(name, record.TYPE, dns.IN, ttl, record)
                     )
-                elif record.TYPE == dns.NS:
+                elif record.TYPE == dns.NS and type != dns.ALL_RECORDS:
                     authority.append(
                         dns.RRHeader(name, record.TYPE, dns.IN, ttl, record)
                     )
+            
+            for record in results + authority:
+                if record.type == dns.NS or record.type == dns.CNAME:
+                    n = str(record.payload.name)
+                    for rec in self.records.get(n.lower(), ()):
+                        if rec.TYPE == dns.A:
+                            additional.append(
+                                dns.RRHeader(n, dns.A, dns.IN, ttl, rec)
+                            )
             return defer.succeed((results, authority, additional))
         except KeyError:
             if name.lower().endswith(self.soa[0].lower()):
@@ -71,6 +101,15 @@ class FileAuthority(common.ResolverBase):
             results.append(results[0])
             return defer.succeed((results, (), ()))
         return defer.fail(failure.Failure(dns.DomainError(name)))
+
+    def _cbAllRecords(self, results):
+        ans, auth, add = [], [], []
+        for res in results:
+            if res[0]:
+                ans.extend(res[1][0])
+                auth.extend(res[1][1])
+                add.extend(res[1][2])
+        return ans, auth, add
 
 
 class PySourceAuthority(FileAuthority):

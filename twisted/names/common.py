@@ -101,20 +101,23 @@ class ResolverBase:
         return self._lookup(name, dns.IN, dns.AXFR, timeout)
 
     def lookupAllRecords(self, name, timeout = 10):
-        return defer.DeferredList([
-            self._lookup(name, dns.IN, type, timeout).addErrback(
-                lambda f: f.trap(NotImplementedError) and EMPTY_RESULT
-            ) for type in dns.QUERY_TYPES.keys()
-        ]).addCallback(self._cbAllRecords)
-    
-    def _cbAllRecords(self, results):
-        ans, auth, add = [], [], []
-        for res in results:
-            if res[0]:
-                ans.extend(res[1][0])
-                auth.extend(res[1][1])
-                add.extend(res[1][2])
-        return ans, auth, add
+        return self._lookup(name, dns.IN, dns.ALL_RECORDS, timeout)
+
+#    def lookupAllRecords(self, name, timeout = 10):
+#        return defer.DeferredList([
+#            self._lookup(name, dns.IN, type, timeout).addErrback(
+#                lambda f: f.trap(NotImplementedError) and EMPTY_RESULT
+#            ) for type in dns.QUERY_TYPES.keys()
+#        ]).addCallback(self._cbAllRecords)
+
+#    def _cbAllRecords(self, results):
+#        ans, auth, add = [], [], []
+#        for res in results:
+#            if res[0]:
+#                ans.extend(res[1][0])
+#                auth.extend(res[1][1])
+#                add.extend(res[1][2])
+#        return ans, auth, add
 
     def getHostByName(self, name, timeout = 10):
         # XXX - respect timeout
