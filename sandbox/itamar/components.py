@@ -33,6 +33,7 @@ from twisted.python import reflect, util, context
 from twisted.persisted import styles
 
 # system imports
+import sys
 import types
 import warnings
 import weakref
@@ -65,10 +66,17 @@ class MetaInterface(interface.InterfaceClass):
 
     def __init__(self, name, bases=(), attrs=None, __doc__=None,
                  __module__=None):
-        if attrs is not None and attrs.has_key("__adapt__"):
-            warnings.warn("Please don't use __adapt__ on Interface subclasses", DeprecationWarning)
-            self.__instadapt__ = attrs["__adapt__"]
-            del attrs["__adapt__"]
+        if attrs is not None:
+            if attrs.has_key("__adapt__"):
+                warnings.warn("Please don't use __adapt__ on Interface subclasses", DeprecationWarning)
+                self.__instadapt__ = attrs["__adapt__"]
+                del attrs["__adapt__"]
+            for k, v in attrs.items():
+                if not isinstance(v, types.FunctionType) and not isinstance(v, interface.Attribute):
+                    attrs[k] = interface.Attribute(repr(v))
+        # BEHOLD A GREAT EVIL SHALL COME UPON THEE
+        if __module__ == None:
+            __module__ = sys._getframe(1).f_globals['__name__']
         return interface.InterfaceClass.__init__(self, name, bases, attrs, __doc__, __module__)
 
     def __call__():
@@ -319,11 +327,11 @@ class Adapter:
         I forward getComponent to self.original if it has it, otherwise I
         simply return default.
         """
-        #if hasattr(self.original, "__conform__"):
-        #    result = self.original.__conform__(interface)
-        #    if result == None:
-        #        result = default
-        #    return result
+        if hasattr(self.original, "__conform__"):
+            result = self.original.__conform__(interface)
+            if result == None:
+                result = default
+            return result
         try:
             f = self.original.getComponent
         except AttributeError:
@@ -332,8 +340,8 @@ class Adapter:
             warnings.warn("please use __conform__ instead of getComponent on %r's class" % self.original, DeprecationWarning)            
             return f(interface, registry=registry, default=default)
 
-    #def __conform__(self, interface):
-    #    return self.getComponent(interface)
+    def __conform__(self, interface):
+        return self.getComponent(interface)
     
     def isuper(self, iface, adapter):
         """
@@ -396,7 +404,7 @@ class Componentized(styles.Versioned):
 
         @return: the list of appropriate interfaces
         """
-        for iface in tupleTreeToList(component.__implements__):
+        for iface in declarations.providedBy(component):
             if (ignoreClass or
                 (self.locateAdapterClass(self.__class__, iface, None, registry)
                  == component.__class__)):
@@ -457,6 +465,7 @@ class Componentized(styles.Versioned):
                     self.addComponent(adapter)
             return adapter
 
+    # XXX uncommenting this fails tests, figure out why
     #def __conform__(self, interface):
     #    return self.getComponent(interface)
     
