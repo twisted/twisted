@@ -37,13 +37,16 @@ class SSHSession(SSHChannel):
     environ = {}
 
     def request_subsystem(self, data):
-        return 0
         subsystem = common.getNS(data)[0]
         f = getattr(self, 'subsystem_%s'%subsystem, None)
         if f:
-            log.msg('starting subsystem %s'%subsystem)
-            self.client = f()
-            return 1
+            client = f()
+            if client:
+                log.msg('starting subsystem %s'%subsystem)
+                self.client = client
+                return 1
+            else:
+                return 0
         elif self.conn.factory.authorizer.clients.has_key(subsytem):
             # we have a client for a pb service
             pass # for now
@@ -121,6 +124,10 @@ class SSHSession(SSHChannel):
         return 1
 
     def subsystem_python(self):
+        """This is disabled by default, because it allows access to a
+        python shell running as the owner of the process.
+        """
+        return 0
         # XXX hack hack hack
         # this should be refacted into the 'interface to pb service' part
         from twisted.manhole import telnet
