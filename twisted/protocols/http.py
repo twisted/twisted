@@ -680,8 +680,7 @@ class Request:
         self.sentLength = self.sentLength + len(data)
         if data:
             if self.chunked:
-                for s in toChunk(data):
-                    self.transport.write(s)
+                self.transport.writeSequence(toChunk(data))
             else:
                 self.transport.write(data)
 
