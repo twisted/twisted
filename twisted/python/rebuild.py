@@ -91,7 +91,6 @@ def latestClass(oldClass):
     module = __import__(oldClass.__module__, {}, {}, 'nothing')
     newClass = getattr(module, oldClass.__name__)
     newBases = []
-    # print 'latest:', oldClass
     for base in newClass.__bases__:
         newBases.append(latestClass(base))
     newClass.__bases__ = tuple(newBases)

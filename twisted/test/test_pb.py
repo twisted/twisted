@@ -462,8 +462,7 @@ class BrokerTestCase(unittest.TestCase):
         pump.pump()
         authRef = c.remoteForName("root")
         accum = []
-        pb.AuthClient(authRef, None, "test", "guest", "guest",
-                      accum.append, self.whatTheHell, "any")
+        pb.logIn(authRef, None, "test", "guest", "guest", "any").addCallbacks(accum.append, self.whatTheHell)
         # ident = c.remoteForName("identity")
         # ident.attach("test", "any", None, pbcallback=accum.append)
         pump.pump() # send call

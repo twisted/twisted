@@ -179,11 +179,17 @@ class Login(gtk.GtkWindow):
         self.loginReport("connecting...")
         # putting this off to avoid a stupid bug in gtk where it won't redraw
         # if you input_add a connecting socket (!??)
-        afterOneTimeout(10, pb.connect,
-                        self.pbCallback, self.couldNotConnect,
-                        host, port, user, pswd,
-                        service, perspective or user,
-                        self.pbReferenceable, 30)
+        self.user_tx = user
+        self.pswd_tx = pswd
+        self.host_tx = host
+        self.port_tx = port
+        self.service_tx = service
+        self.perspective_tx = perspective or user
+        afterOneTimeout(10, self.__actuallyConnect)
+    def __actuallyConnect(self):
+        pb.connect(self.host_tx, self.port_tx, self.user_tx, self.pswd_tx,
+                   self.service_tx, self.perspective_tx, self.pbReferenceable, 30).addCallbacks(
+            self.pbCallback, self.couldNotConnect)
 
     def couldNotConnect(self, msg):
         self.loginReport("couldn't connect: %s" % str(msg))

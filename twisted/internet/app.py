@@ -349,7 +349,7 @@ class Application(log.Logger, styles.Versioned, roots.Locked):
                 try:
                     port.startListening()
                 except socket.error:
-                    print 'port %s already bound' % port.port
+                    log.msg('port %s already bound' % port.port)
                     return
             for connector in self.connectors:
                 connector.startConnecting()

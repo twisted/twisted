@@ -65,12 +65,9 @@ class ConnectionPool(pb.Referenceable):
     def _runOperation(self, args, kw):
         """This is used for non-query operations that don't want "fetch*" to be called
         """
-        # print 'running operation'
         conn = self.connect()
         curs = conn.cursor()
         try:
-            print args
-            print kw
             apply(curs.execute, args, kw)
             result = None
             curs.close()

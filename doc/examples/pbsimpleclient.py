@@ -19,12 +19,12 @@ from twisted.spread import pb
 from twisted.internet import main
 def gotObject(object):
     print "got object:",object
-    object.echo("hello network", pbcallback=gotEcho)
+    object.echo("hello network").addCallback(gotEcho)
 def gotEcho(echo):
     print 'server echoed:',echo
     main.shutDown()
 def gotNoObject(reason):
     print "no object:",reason
     main.shutDown()
-pb.getObjectAt("localhost", 8789, gotObject, gotNoObject, 30)
+pb.getObjectAt("localhost", 8789, 30).addCallbacks(gotObject, gotNoObject)
 main.run()

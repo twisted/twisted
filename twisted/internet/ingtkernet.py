@@ -34,6 +34,7 @@ import gtk
 import sys
 
 # Twisted Imports
+from twisted.python import log
 
 # Sibling Imports
 import main
@@ -85,7 +86,7 @@ def callback(source, condition):
             why = method()
         except:
             why = main.CONNECTION_LOST
-            print 'Error In',source,'.',cbName
+            log.msg('Error In %s.%s' %(source,cbName))
             log.deferr()
         if why:
             try:

@@ -139,7 +139,7 @@ class Serializable:
 
         return id(self)
 
-class Message:
+class RemoteMethod:
     """This is a translucent reference to a remote message.
     """
     def __init__(self, obj, name):
@@ -157,10 +157,7 @@ class Message:
     def __call__(self, *args, **kw):
         """Asynchronously invoke a remote method.
         """
-        self.obj.remoteInstanceDo(self.name, args, kw)
-    
-    # this is deprecated
-    send = __call__
+        return self.obj.broker._sendMessage('',self.obj.perspective, self.obj.luid,  self.name, args, kw)
 
 def noOperation(*args, **kw):
     """Do nothing.
@@ -540,7 +537,7 @@ class RemoteCache(RemoteCopy, Serializable):
         """Do distributed reference counting on finalize.
         """
         try:
-            print 'decache: %s %d' % (self, self.luid)
+            # print 'decache: %s %d' % (self, self.luid)
             self.broker.decCacheRef(self.luid)
         except:
             traceback.print_exc(file=log.logfile)
@@ -625,11 +622,10 @@ class RemoteCacheMethod:
     def __call__(self, *args, **kw):
         """(internal) action method.
         """
-        self.cached.remoteCacheDo(self.broker, self.name, self.perspective, args, kw)
-
-    # this method is deprecated
-    do = __call__
-
+        cacheID = self.broker.cachedRemotelyAs(self.cached)
+        if cacheID is None:
+            raise ProtocolError("You can't call a cached method when the object hasn't been given to the peer yet.")
+        return self.broker._sendMessage('cache', self.perspective, cacheID, self.name, args, kw)
 
 class RemoteCacheObserver:
     """I am a reverse-reference to the peer's RemoteCache.
@@ -720,20 +716,6 @@ class Cacheable(Copyable):
         else:
             return cached_atom, luid
 
-    def remoteCacheDo(self, broker, methodName, perspective, args, kw):
-        """Call this method on the remotely cached version of this object. (For a given broker.)
-        """
-
-        cacheID = broker.cachedRemotelyAs(self)
-        assert cacheID is not None, "You can't call a cached method when the object hasn't been given to the other side yet."
-        callback = kw.get("pbcallback")
-        errback = kw.get("pberrback")
-        if kw.has_key('pbcallback'):
-            del kw['pbcallback']
-        if kw.has_key('pberrback'):
-            del kw['pberrback']
-        broker.sendCacheMessage(cacheID, methodName, perspective, args, kw, callback, errback)
-
 class RemoteReference(Serializable, styles.Ephemeral):
     """This is a translucent reference to a remote object.
 
@@ -745,20 +727,10 @@ class RemoteReference(Serializable, styles.Ephemeral):
     bookkeeping overhead is given to the application programmer for
     manipulating a reference, return values are asynchronous.
 
-    In order to get a return value from a RemoteReference method,
-    you must pass a callback in as a 'pbcallback'.  Errors can be
-    detected with a 'pberrback'.  For example::
-
-      | def doIt(reference):
-      |     reference.doIt("hello","world", frequency=2,
-      |                   pbcallback=didIt,
-      |                    pberrback=couldntDoIt)
-      | def didIt(result):
-      |     print 'I did it and the answer was: %s'% result
-      | def couldntDoIt(traceback):
-      |     print 'I couldn't do it and the traceback was: %s' % traceback
-
-    This snippet of code will execute a method and report feedback.
+    All attributes besides '__double_underscored__' attributes are RemoteMethod
+    instances; these act like methods which return Deferreds.
+    
+    See also twisted.python.defer.
     """
 
     def __init__(self, perspective, broker, luid, doRefCount):
@@ -781,33 +753,13 @@ class RemoteReference(Serializable, styles.Ephemeral):
         return local_atom, self.luid
 
     def __getattr__(self, key):
-        """Get a Message for this key.
-
-        This makes attributes translucent, so that the method call
-        syntax foo.bar(baz) will still work.  However, please note
-        that method calls are asynchronous, so return values and
-        exceptions will not be propogated.  (Message calls always
-        return None.)
+        """Get a RemoteMethod for this key.
         """
 
         if key[:2]=='__' and key[-2:]=='__':
             raise AttributeError(key)
-        return Message(self, key)
+        return RemoteMethod(self, key)
 
-
-    def remoteInstanceDo(self, key, args, kw):
-        """Asynchronously send a named message to the object which I refer to.
-        """
-
-        callback = kw.get("pbcallback")
-        errback = kw.get("pberrback")
-        if kw.has_key('pbcallback'):
-            del kw['pbcallback']
-        if kw.has_key('pberrback'):
-            del kw['pberrback']
-        self.broker.sendMessage(self.perspective, self.luid,
-                                key, args, kw,
-                                callback, errback)
 
     def __cmp__(self,other):
         """Compare me [to another RemoteReference].
@@ -1071,9 +1023,9 @@ class Broker(banana.Banana):
         self.disconnected = 1
         # nuke potential circular references.
         self.luids = None
-        for callback, errback in self.waitingForAnswers.values():
+        for d in self.waitingForAnswers.values():
             try:
-                errback(PB_CONNECTION_LOST)
+                d.errback(PB_CONNECTION_LOST)
             except:
                 print_excFullStack(file=log.logfile)
         for notifier in self.disconnects:
@@ -1258,56 +1210,38 @@ class Broker(banana.Banana):
         self.currentRequestID = self.currentRequestID + 1
         return self.currentRequestID
 
-    def sendMessage(self, perspective, objectID, message, args, kw, callback, errback):
-        """(internal) Send a message to a remote object.
-
-        Arguments:
-
-          * perspective: a perspective to serialize with/for.
-
-          * objectID: an ID which will map to a remote object.
-
-          * message: a string which names the message to be sent.
-
-          * args: a tuple or list of arguments to be applied
-
-          * kw: a dict of keyword arguments
-
-          * callback: a callback to be made when this request is answered
-            with a return value.
-
-          * errback: a callback to be made when this request is answered
-            with an exception.
-        """
-
-        self._sendMessage('',perspective, objectID, message, args, kw, callback, errback)
-
-    def sendCacheMessage(self, cacheID, message, perspective, args, kw, callback, errback):
-        """(internal) Similiar to sendMessage, but for cached.
-        """
-        self._sendMessage('cache',perspective, cacheID, message, args, kw, callback, errback)
-
-    def _sendMessage(self, prefix, perspective, objectID, message, args, kw, callback, errback):
+    def _sendMessage(self, prefix, perspective, objectID, message, args, kw):
+        pbc = None
+        pbe = None
+        answerRequired = 1
+        if kw.has_key('pbcallback'):
+            pbc = kw['pbcallback']
+            del kw['pbcallback']
+        if kw.has_key('pberrback'):
+            pbe = kw['pberrback']
+            del kw['pberrback']
+        if kw.has_key('pbanswer'):
+            assert (not pbe) and (not pbc), "You can't specify a no-answer requirement."
+            answerRequired = kw['pbanswer']
+            del kw['pbanswer']
         if self.disconnected:
             raise ProtocolError("Calling Stale Broker")
         netArgs = self.serialize(args, perspective=perspective, method=message)
         netKw = self.serialize(kw, perspective=perspective, method=message)
         requestID = self.newRequestID()
-        if (callback is None) and (errback is None):
-            answerRequired = 0
+        if answerRequired:
+            rval = defer.Deferred()
+            self.waitingForAnswers[requestID] = rval
+            if pbc or pbe:
+                log.msg('warning! using deprecated "pbcallback"')
+                rval.addCallbacks(pbc, pbe)
         else:
-            answerRequired = 1
-            if callback is None:
-                callback = noOperation
-            if errback is None:
-                errback = printTraceback
-            self.waitingForAnswers[requestID] = callback, errback
+            rval = None
         self.sendCall(prefix+"message", requestID, objectID, message, answerRequired, netArgs, netKw)
-
+        return rval
 
     def proto_message(self, requestID, objectID, message, answerRequired, netArgs, netKw):
         self._recvMessage(self.localObjectForID, requestID, objectID, message, answerRequired, netArgs, netKw)
-
     def proto_cachemessage(self, requestID, objectID, message, answerRequired, netArgs, netKw):
         self._recvMessage(self.cachedLocallyAs, requestID, objectID, message, answerRequired, netArgs, netKw)
 
@@ -1317,7 +1251,6 @@ class Broker(banana.Banana):
         Look up message based on object, unserialize the arguments, and
         invoke it with args, and send an 'answer' or 'error' response.
         """
-
         try:
             object = findObjMethod(objectID)
             if object is None:
@@ -1335,17 +1268,17 @@ class Broker(banana.Banana):
                 io = cStringIO.StringIO()
                 failure.Failure().printBriefTraceback(file=io)
                 self._sendError(io.getvalue(), requestID)
+                log.msg("Client Received PB Traceback:")
             else:
                 log.msg("Client Ignored PB Traceback:")
-                log.deferr()
+            log.deferr()
         else:
             if answerRequired:
                 if isinstance(netResult, defer.Deferred):
                     args = (requestID,)
-                    netResult.addCallbacks(
-                        self._sendAnswer, self._sendError,
-                        callbackArgs=args, errbackArgs=args
-                        )
+                    netResult.addCallbacks(self._sendAnswer, self._sendError,
+                                           callbackArgs=args, errbackArgs=args)
+                    # XXX Should this be done somewhere else?
                     netResult.arm()
                 else:
                     self._sendAnswer(netResult, requestID)
@@ -1354,7 +1287,6 @@ class Broker(banana.Banana):
     def _sendAnswer(self, netResult, requestID):
         """(internal) Send an answer to a previously sent message.
         """
-
         self.sendCall("answer", requestID, netResult)
 
     def proto_answer(self, requestID, netResult):
@@ -1362,25 +1294,22 @@ class Broker(banana.Banana):
 
         Look up the appropriate callback and call it.
         """
-
-        callback, errback = self.waitingForAnswers[requestID]
+        d = self.waitingForAnswers[requestID]
         del self.waitingForAnswers[requestID]
-        result = self.unserialize(netResult)
-        # XXX should this exception be caught?
-        callback(result)
+        d.armAndCallback(self.unserialize(netResult))
 
     def _sendError(self, descriptiveString, requestID):
         """(internal) Send an error for a previously sent message.
         """
-
         self.sendCall("error", requestID, descriptiveString)
 
     def proto_error(self, requestID, descriptiveString):
         """(internal) Deal with an error.
         """
-        callback, errback = self.waitingForAnswers[requestID]
+        d = self.waitingForAnswers[requestID]
         del self.waitingForAnswers[requestID]
-        errback(descriptiveString)
+        d.arm()
+        d.errback(descriptiveString)
 
     def sendDecRef(self, objectID):
         """(internal) Send a DECREF directive.
@@ -1399,7 +1328,7 @@ class Broker(banana.Banana):
         object.
         """
         refs = self.localObjects[objectID].decref()
-        print "decref for %d #refs: %d" % (objectID, refs)
+        # print "decref for %d #refs: %d" % (objectID, refs)
         if refs == 0:
             puid = self.localObjects[objectID].object.processUniqueID()
             del self.luids[puid]
@@ -1412,7 +1341,7 @@ class Broker(banana.Banana):
         'uncached' directive.
         """
         refs = self.remotelyCachedObjects[objectID].decref()
-        print 'decaching: %s #refs: %s' % (objectID, refs)
+        # print 'decaching: %s #refs: %s' % (objectID, refs)
         if refs == 0:
             puid = self.remotelyCachedObjects[objectID].object.processUniqueID()
             del self.remotelyCachedLUIDs[puid]
@@ -1422,7 +1351,7 @@ class Broker(banana.Banana):
     def proto_uncache(self, objectID):
         """(internal) Tell the client it is now OK to uncache an object.
         """
-        print "uncaching %d" % objectID
+        # print "uncaching %d" % objectID
         obj = self.locallyCachedObjects[objectID]
         def reallyDel(obj=obj):
             obj.__really_del__()
@@ -1483,7 +1412,7 @@ class _Detacher:
         self.identity = identity
 
     def detach(self):
-        self.perspective.detached(self.perspective, self.identity)
+        self.perspective.detached(self.remoteRef, self.identity)
 
 class IdentityWrapper(Referenceable):
     """I delegate most functionality to a passport.Identity.
@@ -1558,9 +1487,8 @@ class _ObjectRetrieval:
     """(Internal) Does callbacks for getObjectAt.
     """
 
-    def __init__(self, broker, cb, eb):
-        self.cb = cb
-        self.eb = eb
+    def __init__(self, broker, d):
+        self.deferred = d
         self.term = 0
         self.broker = broker
         # XXX REFACTOR: this seems weird.
@@ -1581,109 +1509,80 @@ class _ObjectRetrieval:
         x = self.broker.remoteForName("root")
         del self.broker
         self.term = 1
-        self.cb(x)
+        self.deferred.armAndCallback(x)
 
     def connectionFailed(self):
         if not self.term:
             self.term = 1
             del self.broker
-            self.eb("connection failed")
+            self.deferred.armAndErrback("connection failed")
 
-def getObjectAt(host, port, cb, eb, timeout=None):
+def getObjectAt(host, port, timeout=None):
     """Establishes a PB connection and returns with a RemoteReference.
 
-    A Broker is created to communicate with the given host and port.
-    When the connection is established successfully, the callback cb is
-    called with the root object provided to the Broker.  If the
-    attempt to establish a connection failed, the callback eb is
-    called with the error.
+    Arguments:
+    
+      host: the host to connect to
+      
+      port: the port number to connect to
+      
+      timeout (optional): a value in milliseconds to wait before failing by
+      default.
 
-    See also: Root
+    Returns:
+
+      A Deferred which will be passed a remote reference to the root object of
+      a PB server.x
     """
-
+    d = defer.Deferred()
     b = Broker()
-    _ObjectRetrieval(b, cb, eb)
+    _ObjectRetrieval(b, d)
     tcp.Client(host, port, b, timeout)
+    return d
 
-class AuthClient:
-    # Python NEEDS continuations.
-    def __init__(self, authServRef, localRef, serviceName, userName,
-                 password, callback, errback, perspectiveName=None):
-        self.localRef = localRef
-        self.userName = userName
-        self.password = password
-        self.serviceName = serviceName
-        self.callback = callback
-        self.errback = errback
-        self.authServRef = authServRef
-        if perspectiveName is None:
-            self.perspectiveName = userName
-        else:
-            self.perspectiveName = perspectiveName
-        authServRef.username(userName, pbcallback=self.respond, pberrback=errback)
-
-    def respond(self, (challenge, challenger)):
-        challenger.respond(
-            passport.respond(challenge, self.password),
-            pbcallback=self.responded,
-            pberrback=self.errback)
-    def responded(self, identity):
-        if identity:
-            identity.attach(
-                self.serviceName,
-                self.perspectiveName,
-                self.localRef,
-                pbcallback=self.callback,
-                pberrback=self.errback)
-        else:
-            self.errback("invalid username or password")
-
-def connect(callback, errback, host, port, username, password,
-            service, perspective=None, client=None, timeout=None):
+def connect(host, port, username, password, serviceName,
+            perspectiveName=None, client=None, timeout=None):
     """Connects and authenticates, then retrieves a PB service.
 
     Required arguments:
-        callback -- will be called with your perspective to the service
-        errback -- will be called if an error prevents me from connecting
         host -- the host the service is running on
         port -- the port on the host to connect to
         username -- the name you will be identified as to the authorizer
         password -- the password for this username
-        service -- the service to request
+        serviceName -- name of the service to request
 
     Optional (keyword) arguments:
-        perspective -- the name of the perspective to request, if
+        perspectiveName -- the name of the perspective to request, if
             different than the username
         client -- XXX the "reference" argument to passport.Perspective.attached
         timeout -- see twisted.internet.tcp.Client
     """
-    _Connect(callback, errback, host, port, username, password,
-             service, perspective, client, timeout)
+    d = defer.Deferred()
+    getObjectAt(host,port,timeout).addCallbacks(
+        _connGotRoot, d.armAndErrback,
+        callbackArgs=[d, client, serviceName, username, password, perspectiveName])
+    return d
 
-class _Connect:
-    """Holds state for the connect() function."""
-    def __init__(self, callback, errback, host, port, username, password,
-                 service, perspective=None, client=None, timeout=None):
-        """Connects and authenticates, then retrieves a PB service.
+def _connGotRoot(root, d, client, serviceName,
+                 username, password, perspectiveName):
+    logIn(root, client, serviceName, username, password, perspectiveName).armAndChain(d)
 
-        See pb.connect.__doc__
-        """
+def logIn(authServRef, client, service, username, password, perspectiveName=None):
+    """I return a Deferred which will be called back with a Perspective.
+    """
+    d = defer.Deferred()
+    authServRef.username(username).addCallbacks(_cbLogInRespond, d.armAndErrback,
+                                                callbackArgs=(d, client, service, password, perspectiveName or userName))
+    return d
 
-        self.callback = callback
-        self.errback = errback
-        self.username = username
-        self.password = password
-        self.service = service
-        if perspective is None:
-            self.perspective = username
-        else:
-            self.perspective = perspective
-        self.client = client
-        getObjectAt(host, port, self.gotRoot, self.dontGotRoot, timeout)
+def _cbLogInRespond((challenge, challenger), d, client, service, password, perspectiveName):
+    challenger.respond(
+        passport.respond(challenge, password)).addCallbacks(
+        _cbLogInResponded, d.armAndErrback,
+        callbackArgs=(d, client, service, perspectiveName))
 
-    def gotRoot(self, root):
-        AuthClient(root, self.client, self.service, self.username, self.password,
-                   self.callback, self.errback, self.perspective)
-
-    def dontGotRoot(self, err):
-        self.errback(err)
+def _cbLogInResponded(identity, d, client, serviceName, perspectiveName):
+    if identity:
+        identity.attach(serviceName, perspectiveName, client).armAndChain(d)
+    else:
+        d.armAndErrback("invalid username or password")

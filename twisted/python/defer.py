@@ -82,6 +82,30 @@ class Deferred:
     def addCallback(self, callback, *args, **kw):
         return self.addCallbacks(callback, callbackArgs=args, callbackKeywords = kw)
 
+    def chainDeferred(self, d):
+        return self.addCallbacks(d.callback, d.errback)
+
+    def armAndCallback(self, result):
+        """Utility method to arm me and immediately issue a callback.
+        """
+        self.arm()
+        return self._runCallbacks(result, 0)
+
+    def armAndErrback(self, error):
+        """Utility method to arm me and immediately issue an error callback.
+        """
+        self.arm()
+        return self._runCallbacks(error, 1)
+
+    def armAndChain(self, deferred):
+        """Utility method to add another deferred to me as a set of callbacks.
+
+        Arguments:
+
+          deferred: the Deferred to be armed and fired when my callback arrives.
+        """
+        return self.addCallbacks(deferred.armAndCallback, deferred.armAndErrback)
+
     def callback(self, result):
         """Run all success callbacks that have been added to this Deferred.
 
@@ -89,10 +113,10 @@ class Deferred:
         argument to the next; this way, the callbacks act as a
         'processing chain'.
 
-        If this deferred has not been armed yet, nothing will happen.
+        If this deferred has not been armed yet, nothing will happen until it
+        is armed.
         """
-        self._runCallbacks(result, 0)
-        return self
+        return self._runCallbacks(result, 0)
 
 
     def errback(self, error):
@@ -102,11 +126,10 @@ class Deferred:
         argument to the next; this way, the callbacks act as a
         'processing chain'.
 
-        If this deferred has not been armed yet, nothing will happen.
+        If this deferred has not been armed yet, nothing will happen until it
+        is armed.
         """
-        self._runCallbacks(error, 1)
-        return self
-
+        return self._runCallbacks(error, 1)
 
     def _runCallbacks(self, result, isError):
         self.called = isError + 1
@@ -116,12 +139,7 @@ class Deferred:
                 args = args or ()
                 kw = kw or {}
                 try:
-                    # print callback, result, args, kw
-                    # print 'defres:',callback,result
                     result = apply(callback, (result,)+tuple(args), kw)
-                    if isinstance(result, Deferred):
-                        print callback, result
-                        raise 'suck iet'
                     if type(result) != types.StringType:
                         # TODO: make this hack go away; it has something to do
                         # with PB returning strings from errbacks that are

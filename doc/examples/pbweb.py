@@ -23,16 +23,15 @@ class EchoDisplay(widgets.Presentation):
     <p>Here it is: %%%%getEchoPerspective()%%%%</p>"""
     echotext = 'hello web!'
     def getEchoPerspective(self):
-        d = defer.Deferred()
-        pb.connect(d.callback, d.errback, "localhost", pb.portno,
-                   "guest", "guest",      "pbecho", "guest", 1)
-        d.addCallbacks(self.makeListOf, self.formatTraceback)
-        return ['<b>',d,'</b>']
+        return ['<b>',
+                pb.connect("localhost", pb.portno,
+                           "guest", "guest",
+                           "pbecho", "guest", 1).addCallback(self.makeListOf),
+                '</b>']
+
     def makeListOf(self, echoer):
-        d = defer.Deferred()
-        echoer.echo(self.echotext, pbcallback=d.callback, pberrback=d.errback)
-        d.addCallbacks(widgets.listify, self.formatTraceback)
-        return [d]
+        return [echoer.echo(self.echotext, pbcallback=d.callback, pberrback=d.errback).addCallback(widgets.listify)]
+
 if __name__ == "__main__":
     from twisted.web import server
     from twisted.internet import app

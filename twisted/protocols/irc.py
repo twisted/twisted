@@ -551,10 +551,10 @@ class IRCClient(basic.LineReceiver):
 
         #elif dcctype == 'PERSPECTIVE':
         #    b = self.classDccPbRequest(user, channel, arg)
-        #    pb.connect(b.callback, b.errback, address, port,
+        #    pb.connect(address, port,
         #               string.split(arg, ':')[0],
         #               string.split(arg, ':')[1],
-        #               string.split(arg, ':')[2])
+        #               string.split(arg, ':')[2]).addCallbacks(b.callback, b.errback)
         else:
             nick = string.split(user,"!")[0]
             self.ctcpMakeReply(nick, [('ERRMSG',

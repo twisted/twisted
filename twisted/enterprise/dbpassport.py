@@ -37,7 +37,6 @@ class DatabaseAuthorizer(passport.Authorizer, adbapi.Augmentation):
     def addIdentity(self, identity):
         """Create an identity.
         """
-        print "Creating identity", identity
         passwd = base64.encodestring(identity.hashedPassword)
         username = identity.name
         createIdentity = "INSERT INTO twisted_identities VALUES ('%s', '%s')" % (adbapi.safe(username), adbapi.safe(passwd) )

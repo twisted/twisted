@@ -126,7 +126,7 @@ class Player(styles.Versioned, thing.Thing, pb.Perspective):
         return self
 
     def detached(self, remoteIntelligence, identity):
-        if self.intelligence and remoteIntelligence == self.intelligence.remote:
+        if self.intelligence and hasattr(self.intelligence, 'remote'):
             log.msg("player logout: [%s]" % self.name)
             del self.intelligence
             self.oldlocation = self.location

@@ -34,29 +34,10 @@ class MetricsClientComponent:
         self.stateVariables = {}               # map to a tuple of (callback, frequency, last)
         self.metricsItems = []                 # items recorded ready to be sent. tuples of (name, value, when)
         self.lastReport = time.time()
-        
+
     def doLogin(self, user, pasw):
         print "Connecting to %s on %d as %s" % (self.hostname, self.port, user)
-        self.username = user
-        self.pasw = pasw
-        pb.getObjectAt(self.hostname, self.port, self.gotAuthRoot, self.failedLogin)
-
-    def gotAuthRoot(self, authroot):
-        print "gotAuthRoot", authroot
-        identityName = self.username
-        perspectiveName = self.username
-        pb.AuthClient(authroot,
-                      None,
-                      "twisted.metrics",  # service name
-                      identityName,
-                      self.pasw,
-                      self.connected,
-                      self.failedLogin,
-                      perspectiveName)
-    
-    def failedLogin(self, data):
-        """This is called on a failed connect."""
-        print "Failed:", data
+        pb.connect(self.hostname, self.port, user, pasw, "twisted.metrics").addCallback(self.connected)
 
     def connected(self, client):
         """This is called when a connection is established"""

@@ -246,10 +246,10 @@ class Login(Toplevel):
         self.m = MainWindow()
         self.m.withdraw()
         # he's a hack, he's a hack
-        pb.connect(self.m.loggedIn, self.m.tryAgain,
-                   hostname, port,
+        pb.connect(hostname, port,
                    username, password,
-                   self.worldname.get(), username, self.m, 60)
+                   self.worldname.get(), username, self.m, 60).addCallbacks(self.m.loggedIn, self.m.tryAgain)
+
 
 def main():
     global root

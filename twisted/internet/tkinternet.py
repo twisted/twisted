@@ -68,14 +68,11 @@ def waiter():
     waiterthread = thread.get_ident()
     while 1:
         # Do the select, see if there's any input waiting...
-        # print 'tkinternet: waiting on select'
         select.select(main.reads.keys(), main.writes.keys(), [])
         if stopped:
             return
-        # print 'tkinternet: waiting for condition'
         # Wait for the main thread to be done before select()ing again
         _condition.acquire()
-        # print 'tkinternet: scheduling event'
         # Tell the main thread to go boogie when there is...
         _root.after(0, worker)
         _condition.wait()

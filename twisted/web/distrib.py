@@ -129,10 +129,8 @@ class ResourceSubscription(resource.Resource):
             self.pending.append(request)
             if not self.waiting:
                 self.waiting = 1
-                pb.getObjectAt(
-                    self.host, self.port,
-                    self.connected,
-                    self.notConnected, 10)
+                pb.getObjectAt(self.host, self.port, 10).addCallbacks(self.connected, self.notConnected)
+
         else:
             i = Issue(request)
             self.publisher.request(request,

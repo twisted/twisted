@@ -112,6 +112,7 @@ class ForumsGadget(ForumBaseWidget, widgets.Gadget):
         self.putWidget('details', DetailsWidget(self.service))
         self.putWidget('reply',   ReplyForm(self.service))
         self.putWidget('new',     NewPostForm(self.service))
+        self.putWidget('newforum', NewForumForm(self.service))
         self.putWidget('register',RegisterUser(self.service))
         self.putWidget('login',   LoginForm(self.service))
 
@@ -145,14 +146,15 @@ class ThreadsWidget(ForumBaseWidget):
     title = "List of Threads for a forum"
     
     def stream(self, write, request):
-        self.forum_id = int(request.args.get('forum_id',[0])[0])
-        print "Getting threads for forum: %d" % self.forum_id
-        write(self.service.manager.getTopMessages(self.forum_id, 'poster').addCallback(self._cbThreadData))
+        write(self.service.manager.getTopMessages(
+            request.args.get(['forum_id'][0])[0], 'poster').
+              addCallback(self._cbThreadData, request))
 
-    def _cbThreadData(self, data):
+    def _cbThreadData(self, data, request):
+        forum_id = int(request.args.get('forum_id',[0])[0])
         l = []
         w = l.append
-        w( '<h3> %s:</h3>' % self.service.manager.getForumByID(self.forum_id) )
+        w( '<h3> %s:</h3>' % self.service.manager.getForumByID(forum_id) )
         w('''
         <table cellpadding=4 cellspacing=1 border=0 width="95%">
         <tr bgcolor="#ff9900">
@@ -168,14 +170,14 @@ class ThreadsWidget(ForumBaseWidget):
             else:
                 c = ""
             i = i + 1
-            w('<tr %s> <td> <a href="full?forum_id=%d&amp;post_id=%d"> %s </a> </td>' % (c, self.forum_id, int(id), subject))
+            w('<tr %s> <td> <a href="full?forum_id=%d&amp;post_id=%d"> %s </a> </td>' % (c, forum_id, int(id), subject))
             w("<td> <i> %s </i> </td>" % username)
             w("<td> %d replies </td>" % replies)
             w("</tr>\n")
 
-        l.append( '</table><br>' )
-        l.append( '[<a href="new?forum_id=%d">Start a new thread</a>]' % (self.forum_id) )
-        l.append( '[<a href="../">Return to Forums</a>]' )                
+        w( '</table><br>' )
+        w( '[<a href="new?forum_id=%d">Start a new thread</a>]' % (forum_id) )
+        w( '[<a href="../">Return to Forums</a>]' )
         return l
 
 class FullWidget(ForumBaseWidget):
@@ -460,10 +462,10 @@ class RegisterUser(webpassport.SessionPerspectiveMixin, widgets.Form):
         return ['Created perspective.  <hr><a href="threads">Return to Forums</a>']
 
 class NewForumForm(webpassport.SessionPerspectiveMixin, widgets.Form):
-    
+
     title = "Create a new forum:"
     page = ForumPage
-    
+
     def __init__(self, service):
         self.service = service
 
@@ -477,7 +479,7 @@ class NewForumForm(webpassport.SessionPerspectiveMixin, widgets.Form):
             ]
         
         return widgets.Form.display(self, self.request)
-    
+
     def process(self, write, request, submit, name, description, default_access):
         self.service.manager.createForum(name, description, default_access)
         write("Created new forum '%s'.<hr>\n" % name)

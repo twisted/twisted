@@ -109,7 +109,7 @@ def doPoll(timeout,
     try:
         l=poller.poll(timeout)
     except select.error, e:
-        print repr(e)
+        log.msg(repr(e))
         if e[0] == errno.EINTR:
             return
         else:

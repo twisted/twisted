@@ -24,10 +24,9 @@ def failure(error):
     print "Failure...",error
     main.shutDown()
 def connected(perspective):
-    perspective.echo("hello world",
-                     pbcallback=success,
-                     pberrback=failure)
+    perspective.echo("hello world").addCallbacks(success, failure)
     print "connected."
-pb.connect(connected, failure,   "localhost", pb.portno,
-           "guest", "guest",     "pbecho", "guest", 30)
+pb.connect("localhost", pb.portno,
+           "guest", "guest",
+           "pbecho", "guest", 30).addCallbacks(connected, failure)
 main.run()

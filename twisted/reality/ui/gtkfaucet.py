@@ -104,7 +104,6 @@ class GameWindow(gtk.GtkWindow, pb.Referenceable):
         return id(self)
 
     def __init__(self):
-        #print self.send_
         gtk.GtkWindow.__init__(self, gtk.WINDOW_TOPLEVEL)
         self.set_title("Reality Faucet")
         self.set_usize(640,480)

@@ -26,8 +26,4 @@ s = server.Site(gdgt)
 s.app = application
 application.listenOn(8485, s)
 
-create = gadgets.NewForumForm(forumService)
-csite = server.Site(create)
-application.listenOn(8489, csite)
-
 # Done.
