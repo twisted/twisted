@@ -9,3 +9,7 @@
 - Initial implementation of Windows I/O Completion Ports event loop.
 
 - Bug fixes and feature enhancements.
+
+- Nevow support for Lore (so your Lore documents can use Nevow directives).
+
+- This is the last release before Twisted begins splitting up.
