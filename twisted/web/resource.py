@@ -22,7 +22,7 @@
 # System Imports
 from twisted.internet import defer
 from twisted.python import roots, components, reflect
-from twisted.coil import coil
+
 
 class IResource(components.Interface):
     """A web resource."""
@@ -54,7 +54,7 @@ class IResource(components.Interface):
         """
 
 
-class Resource(coil.ConfigCollection):
+class Resource:
     """I define a web-accessible resource.
 
     I serve 2 main purposes; one is to provide a standard representation for
@@ -62,8 +62,8 @@ class Resource(coil.ConfigCollection):
     abstract directory structure for URL retrieval.
     """
 
-    __implements__ = (IResource, coil.IConfigCollection)
-
+    __implements__ = IResource,
+    
     entityType = IResource
 
     server = None
