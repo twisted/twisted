@@ -1,5 +1,9 @@
 """I am a virtual hosts implementation."""
 
+# System Imports
+import string
+
+# Sibling Imports
 import resource
 import error
 
@@ -29,7 +33,7 @@ class NameVirtualHost(resource.Resource):
     def _getResourceForRequest(self, request):
         """(Internal) Get the appropriate resource for the given host.
         """
-        host = request.getHeader('host')
+        host = string.lower(request.getHeader('host'))
         return self.hosts.get(host, error.NoResource())
         
     def render(self, request):

@@ -2,8 +2,17 @@ Twisted 0.9.1
 
 Quote of the Release:
 
-  <dash> "COM Error: Errors occurred"
-  * dash attacks ASP with a rusty hacksaw blade
+  <Acapnotic> glyph: why are you being an asshole and insisting on seven bits
+              instead of eight, anyway?
+  <glyph> Acapnotic: because I gave up that bit in exchange for eternal life
+
+What's new in 0.9.1?
+
+  A few bug and "completeness" fixes for PB and the spreadable webserver.
+
+  There is now a basic IRC server as well as a client.
+
+  Benjamin Bruheim contributed an EDNA derivative.
 
 What is this?
 
@@ -61,6 +70,15 @@ Basic Servers
   which will create a python-console telnet server listening on port 8023,
   which you can log into with the username "username" and the password
   "password".  This creates a file called 'telnet.spl'
+
+  Finally, a rudimentary IRC server::
+
+    % mkircserver
+
+  This creates an IRC server application, listening on port 6667.  (I apologize
+  in advance if this doesn't work with your IRC client; let me know if it
+  doesn't.  IRC seems to be a protocol developed by concensus, not
+  standardization.)
 
 Running Servers
 

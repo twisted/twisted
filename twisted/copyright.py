@@ -4,7 +4,7 @@ Copyright information for Twisted.
 """
 
 
-version="0.9.0"
+version="0.9.1"
 
 disclaimer="""
 THIS IS ALPHA QUALITY SOFTWARE AND SHOULD NOT BE USED FOR ANY PURPOSES
@@ -18,7 +18,7 @@ SOLD THIS TO YOU, OR RATHER, THEY CERTAINLY SHOULDN'T HAVE (IT'S NOT
 MERCHANTIBLE, DUH), SO I CAN'T THINK WHY THAT WARRANTY IS IMPLIED.
 
 Please see the LICENSE file for more technical details about what you
-can and can't do with this software.
+may and may not do with this software.
 """ 
 
 copyright="(c) 2000 Matthew William Lefkowitz, all rights reserved."
