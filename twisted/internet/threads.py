@@ -14,58 +14,16 @@
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
-"""Thread dispatching support."""
+"""Extended thread dispatching support.
+
+For basic support see reactor threading API docs.
+"""
 
 # twisted imports
-from twisted.python import threadable, log, failure
+from twisted.python import log, failure
 
 # sibling imports
-import defer
-
-# this will get initialized when threading is enabled
-theThreadPool = None
-
-def _initThreading():
-    """Called the first time callInThread is called."""
-    global theThreadPool
-    if theThreadPool:
-        return
-
-    from twisted.python import threadpool
-    from twisted.internet import reactor
-    threadable.init(1)
-    theThreadPool = threadpool.ThreadPool(0, 10)
-    theThreadPool.start()
-    reactor.addSystemEventTrigger('during', 'shutdown', shutdown)
-
-
-def shutdown():
-    """Close the thread pool."""
-    global theThreadPool
-    if theThreadPool:
-        theThreadPool.stop()
-        theThreadPool = None
-
-
-def suggestThreadPoolSize(size):
-    """Suggest the maximum size of the thread pool."""
-    if not theThreadPool:
-        _initThreading()
-    oldSize = theThreadPool.max
-    theThreadPool.max = size
-    if oldSize > size:
-        from twisted.python import threadpool
-        for i in range(oldSize - size):
-            theThreadPool.q.put(threadpool.WorkerStop)
-    else:
-        theThreadPool._startSomeWorkers()
-
-
-def callInThread(f, *args, **kwargs):
-    """Run a function in a separate thread."""
-    if not theThreadPool:
-        _initThreading()
-    apply(theThreadPool.dispatch, (log.logOwner.owner(), f) + args, kwargs)
+from twisted.internet import defer, reactor
 
 
 def _putResultInDeferred(deferred, f, args, kwargs):
@@ -82,7 +40,7 @@ def _putResultInDeferred(deferred, f, args, kwargs):
 def deferToThread(f, *args, **kwargs):
     """Run function in thread and return result as Deferred."""
     d = defer.Deferred()
-    callInThread(_putResultInDeferred, d, f, args, kwargs)
+    reactor.callInThread(_putResultInDeferred, d, f, args, kwargs)
     return d
 
 
@@ -96,7 +54,7 @@ def callMultipleInThread(tupleList):
 
     tupleList should be a list of (function, argsList, kwargsDict) tuples.
     """
-    callInThread(_runMultiple, tupleList)
+    reactor.callInThread(_runMultiple, tupleList)
 
 
-__all__ = ["suggestThreadPoolSize", "callInThread", "deferToThread", "callMultipleInThread"]
+__all__ = ["deferToThread", "callMultipleInThread"]

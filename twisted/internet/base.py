@@ -26,7 +26,7 @@ from bisect import insort
 from twisted.internet.interfaces import IReactorCore, IReactorTime, IReactorUNIX, IReactorThreads
 from twisted.internet.interfaces import IReactorTCP, IReactorUDP, IReactorSSL
 from twisted.internet.interfaces import IReactorProcess
-from twisted.internet import main, threads
+from twisted.internet import main
 from twisted.python import threadable, log
 from twisted.internet.defer import Deferred, DeferredList
 
@@ -280,9 +280,29 @@ class ReactorBase:
 
     # IReactorThreads
 
+    threadpool = None
+
+    def _initThreadPool(self):
+        from twisted.python import threadpool, threadable
+        threadable.init(1)
+        self.threadpool = threadpool.ThreadPool(0, 10)
+        self.threadpool.start()
+        self.addSystemEventTrigger('during', 'shutdown', self.threadpool.stop)
+
     def callInThread(self, callable, *args, **kwargs):
-        apply(threads.callInThread, (callable,) + args, kwargs)
+        if not self.threadpool:
+            self._initThreadPool()
+        apply(self.threadpool.dispatch, (log.logOwner.owner(), callable) + args, kwargs)
 
     def suggestThreadPoolSize(self, size):
-        threads.suggestThreadPoolSize(size)
-
+        if not self.threadpool:
+            self._initThreadPool()
+        theThreadPool = self.threadpool
+        oldSize = theThreadPool.max
+        theThreadPool.max = size
+        if oldSize > size:
+            from twisted.python import threadpool
+            for i in range(oldSize - size):
+                theThreadPool.q.put(threadpool.WorkerStop)
+            else:
+                theThreadPool._startSomeWorkers()

@@ -23,7 +23,7 @@ from twisted.python import threadable, failure
 
 # make sure thread pool is shutdown
 import atexit
-atexit.register(threads.shutdown)
+atexit.register(reactor.suggestThreadPoolSize, 0)
 
 
 class Counter:    
@@ -77,6 +77,7 @@ class ThreadsTestCase(unittest.TestCase):
     
     def testSuggestThreadPoolSize(self):
         reactor.suggestThreadPoolSize(34)
+        reactor.suggestThreadPoolSize(4)
 
     gotResult = 0
     
