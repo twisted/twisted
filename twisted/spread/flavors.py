@@ -40,6 +40,7 @@ __version__ = "$Revision: 1.32 $"[11:-2]
 
 # system imports
 import types
+from zope.interface import implements
 
 # twisted imports
 from twisted.python import log, reflect, components
@@ -147,7 +148,7 @@ class Root(Referenceable):
     See also: L{pb.getObjectAt}
     """
 
-    __implements__ = IPBRoot,
+    implements(IPBRoot)
     
     def rootObject(self, broker):
         """A L{pb.BrokerFactory} is requesting to publish me as a root object.
@@ -157,6 +158,9 @@ class Root(Referenceable):
         object.  By default I return myself.
         """
         return self
+
+components.backwardsCompatImplements(Root)
+
 
 class ViewPoint(Referenceable):
     """

@@ -24,6 +24,7 @@ only specific tests for old API.
 import sys, os
 
 from cStringIO import StringIO
+from zope.interface import implements
 
 from twisted.trial import unittest
 dR = unittest.deferredResult
@@ -961,7 +962,7 @@ class MyRealm:
 
 class MyPerspective(pb.Avatar):
 
-    __implements__ = pb.IPerspective,
+    implements(pb.IPerspective)
 
     loggedIn = loggedOut = False
 
@@ -1037,7 +1038,7 @@ class NewCredTestCase(unittest.TestCase):
         factory.disconnect()
 
 class NonSubclassingPerspective:
-    __implements__ = pb.IPerspective,
+    implements(pb.IPerspective)
 
     # IPerspective implementation
     def perspectiveMessageReceived(self, broker, message, args, kwargs):

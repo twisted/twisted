@@ -81,7 +81,7 @@ import types
 import warnings
 
 # Twisted Imports
-from twisted.python import log, failure
+from twisted.python import log, failure, components
 from twisted.internet import reactor, defer, protocol, error
 from twisted.cred import authorizer, service, perspective, identity
 from twisted.cred.portal import Portal
@@ -232,7 +232,7 @@ class Avatar:
     L{flavors.ViewPoint}.)
     """
 
-    __implements__ = IPerspective
+    implements(IPerspective)
 
     def perspectiveMessageReceived(self, broker, message, args, kw):
         """This method is called when a network message is received.
@@ -256,6 +256,7 @@ class Avatar:
             raise
         return broker.serialize(state, self, method, args, kw)
 
+components.backwardsCompatImplements(Avatar)
 
 class Perspective(perspective.Perspective, Avatar):
     """
@@ -324,7 +325,7 @@ class RemoteReference(Serializable, styles.Ephemeral):
     @type broker: L{Broker}
     """
 
-    __implements__ = IUnjellyable,
+    implements(IUnjellyable)
 
     def __init__(self, perspective, broker, luid, doRefCount):
         """(internal) Initialize me with a broker and a locally-unique ID.
@@ -416,6 +417,7 @@ class RemoteReference(Serializable, styles.Ephemeral):
             self.broker.sendDecRef(self.luid)
 
 setUnjellyableForClass("remote", RemoteReference)
+components.backwardsCompatImplements(RemoteReference)
 
 class Local:
     """(internal) A reference to a local object.
@@ -1698,7 +1700,7 @@ class IUsernameMD5Password(ICredentials):
 class _PortalRoot:
     """Root object, used to login to portal."""
 
-    __implements__ = IPBRoot,
+    implements(IPBRoot)
 
     def __init__(self, portal):
         self.portal = portal
@@ -1706,6 +1708,7 @@ class _PortalRoot:
     def rootObject(self, broker):
         return _PortalWrapper(self.portal, broker)
 
+components.backwardsCompatImplements(_PortalRoot)
 registerAdapter(_PortalRoot, Portal, IPBRoot)
 
 
