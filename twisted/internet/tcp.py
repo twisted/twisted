@@ -420,8 +420,7 @@ class Port(abstract.FileDescriptor):
             skt.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
             skt.bind(self.port)
             # Make the socket readable and writable to the world.
-            mode = os.stat(self.port)[0]
-            os.chmod(self.port, mode | stat.S_IROTH | stat.S_IWOTH)
+            os.chmod(self.port, 0666)
             self.unixsocket = 1
         else:
             skt = self.createInternetSocket()
