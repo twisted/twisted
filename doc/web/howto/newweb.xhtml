@@ -12,33 +12,36 @@
 This document is not meant for people writing web applications (although it might be useful for writing such documentation), but rather, for those hacking on twisted.web itself.
 
 <h2>Low-level web</h2>
-This lowest level is designed to have multiple implementations. The implementation merely needs to provide a <code>iweb.IChanRequest</code> interface. User applications should not generally have to touch this level at all. There are currently two: HTTP and CGI. Another implementation for interfacing with e.g. ModPython might be nifty. On the other hand, if you want to interface with Apache, the best way is probably to just use its modproxy.
+This lowest level is designed to have multiple implementations. The implementation merely needs to provide a <code>iweb.IChanRequest</code> interface. User applications should not generally have to touch this level at all. There are currently two: HTTP and CGI. Another implementation for interfacing with e.g. ModPython might be nifty. On the other hand, if you want to interface with Apache, the best way is probably to just use its mod_proxy.
 
 <h3>Standard HTTP server (<code>http.py</code>)</h3>
 The standard low-level HTTP server infrastructure is comprised of three layers: the <code>http.HTTPFactory</code>, <code>http.HTTPChannel</code>, and <code>http.ChannelRequest</code>. 
 
-<p><code><strong>HTTPFactory</strong></code></p>
+<h4><code>HTTPFactory</code></h4>
 This object doesn't have much on it -- it's a protocol ServerFactory that creates a <code>HTTPChannel</code> object for each incoming request. It also holds some variables to fiddle with: <code>timeOut</code> and <code>maxPipeline</code>. The user-level server.Site object is a subclass of this. (TODO: I don't think server.Site shouldn't inherit from this, as it means you can't have a Site on a CGI easily...)
 
-<p><code><strong>HTTPChannel</strong></code></p>
+<h4><code>HTTPChannel</code></h4>
 This object handles the very lowest level parsing: it separates the incoming stream into multiple requests, and creates a ChannelRequest to do the parsing of that request. Its implementation is closely tied to the implementation of ChannelRequest -- there is no well-defined interface.
 
-<p><code><strong>HTTPChannelRequest</strong></code></p>
-The <code>HTTPChannelRequest</code> object is a object encompassing the state and parsing functions for one HTTP request. It is responsible for all the low-level connection oriented behavior of the HTTP request. Thus, it takes care of keep-alive, de-chunking, etc., and only passes the non-connection headers up to the next level. It has a well-defined interface (<code>iweb.IChanRequest</code>). See <code>iweb.IChanRequestCallbacks</code> for the methods it requires on the Request object. (TODO: how do you tell it what Request object to use?)
+<h4><code>HTTPChannelRequest</code></h4>
+The <code>HTTPChannelRequest</code> object encompasses the state and parsing functions for one HTTP request. It is responsible for all the low-level connection oriented behavior of the HTTP request. Thus, it takes care of keep-alive, de-chunking, etc., and only passes the non-connection headers up to the user-level Request object. It has a well-defined interface (<code>iweb.IChanRequest</code>). See <code>iweb.IChanRequestCallbacks</code> for the methods it requires on the Request object. 
 
 <h3>CGI server (<code>cgichannel.py</code>)</h3>
 This server mode can only handle a single request per process. But, other than that, the idea is to support the standard twisted.web interface. Thus, the <code>CGIChannelRequest</code> object provides the same interface (<code>iweb.IChanRequest</code>) as the standard HTTP server and you can build a standard app on top of it.
 
 <h2>Slightly higher low-level web (<code>http.py</code>)</h2>
 <h3><code>Request</code></h3>
-The <code>http.Request</code> object implements the somewhat higher-level protocol bits without dictating any policy about how to process requests. If you wanted a different resource-traversal API than the standard server, you should be able to subclass this object yourself and implement whatever you want without excessive trouble. The <code>server.Request</code> object is the standard subclass of this.
+The <code>http.Request</code> object implements the somewhat higher-level protocol bits without dictating any policy about how to process requests. If you want a different resource-traversal API than the standard, you should be able to subclass this object and implement it. For the default implementation of all the higher-level API, see <code>server.Request</code>
 <p />
-TODO: fix up interface on this object.
+This class has all the incoming data state. The raw data from the first line: method, unparsed uri, and client protocol, the incoming headers, and the incoming data stream. There is a single method: .writeResponse(response), to write back an IResponse object.
+
+<h3><code>Response</code></h3>
+The <code>http.Response</code> object is a self-contained representation of the desired response to a given request. The interface is fairly simple. You provide three pieces of information: response code (e.g. 200), the headers (http_headers.Headers object), and an outgoing data stream (implementor of stream.IStream). 
 
 <h2>Header object (<code>http_header.py</code>)</h2>
 Parsing and generating correct HTTP headers is not always as trivial as you might like. The goal here is to have the framework parse and generate the headers for you, from a structured representation.
 <p />
-The only real public interface in this module is <q>Header</q>. It has methods <code>getHeader</code>/<code>setHeader</code> which deal with parsed representations, as well as methods <code>getRawHeaders</code>/<code>setRawHeaders</code> which deal with unparsed representations. Headers are automatically converted between the two representations on demand, using the machinery in the rest of the file. There's also <code>removeHeader</code> and <code>hasHeader</code>, to fill out the set.
+The only public interface in this module is "Header". It has methods <code>getHeader</code>/<code>setHeader</code> which deal with parsed representations, as well as methods <code>getRawHeaders</code>/<code>setRawHeaders</code> which deal with unparsed representations. Headers are automatically converted between the two representations on demand, using the machinery in the rest of the file. There's also <code>removeHeader</code> and <code>hasHeader</code>, to fill out the set.
 <p />
 Here's a list of the HTTP headers and their expected parsed formats:
 
@@ -57,12 +60,12 @@ Here's a list of the HTTP headers and their expected parsed formats:
 
 <h3>Request headers</h3>
 <ul>
-<li>Accept: dictionary of MimeType->int qvalue.</li>
-<li>Accept-Charset: dictionary of string charset->int qvalue</li>
-<li>Accept-Encoding: dictionary of string encoding->int qvalue</li>
-<li>Accept-Language: dictionary of string language->int qvalue</li>
+<li>Accept: dictionary of MimeType-&gt;int qvalue.</li>
+<li>Accept-Charset: dictionary of string charset-&gt;int qvalue</li>
+<li>Accept-Encoding: dictionary of string encoding-&gt;int qvalue</li>
+<li>Accept-Language: dictionary of string language-&gt;int qvalue</li>
 <li>Authorization: TODO</li>
-<li>Expect: dictionary of expect feature->tuple (value, (param, paramvalue)*)</li>
+<li>Expect: dictionary of expect feature-&gt;tuple (value, (param, paramvalue)*)</li>
 <li>From: string</li>
 <li>Host: string</li>
 <li>If-Match: list of ('*' or ETag instance)</li>
@@ -74,7 +77,7 @@ Here's a list of the HTTP headers and their expected parsed formats:
 <li>Proxy-Authorization: TODO</li>
 <li>Range: tuple (rangetype, (int start or None, int end or None))</li>
 <li>Referer: string</li>
-<li>TE: dictionary of string TE->int qvalue</li>
+<li>TE: dictionary of string TE-&gt;int qvalue</li>
 <li>User-Agent: string</li>
 </ul>
 
@@ -106,6 +109,10 @@ Here's a list of the HTTP headers and their expected parsed formats:
 <li>Expires: integer seconds since Epoch</li>
 <li>Last-Modified: integer seconds since Epoch</li>
 </ul>
+
+<h2>Stream objects (<code>stream.py</code>)</h2>
+See the docstring in stream.py.
+
 
 </body>
 </html>
