@@ -464,7 +464,7 @@ def deferredResult(d, timeout=None):
 def deferredError(d, timeout=None):
     """Waits for deferred to fail, and it returns the Failure.
 
-    If the deferred succeeds, raises an acception.
+    If the deferred succeeds, raises an AssertionError.
     """
     result = _getDeferredResult(d, timeout)
     if isinstance(result, failure.Failure):
