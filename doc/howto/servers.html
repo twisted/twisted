@@ -16,7 +16,9 @@
     you write powerful servers. The cost of this flexibility is a
     few layers in the way to writing your server.</p>
 
-    <p>This document describes the "Protocol" layer, where you 
+    <p>This document describes the
+    <code class="API" base="twisted.internet.protocol">Protocol</code>
+    layer, where you 
     implement protocol parsing and handling.  If you are implementing 
     an application then you should read this document second, after 
     first reading the top level overview of how to begin writing your 
@@ -217,7 +219,7 @@ class Answer(LineReceiver):
 
     <p>For a factory which simply instantiates instances of a
     specific protocol class, simply instantiate
-    <code>Factory</code>, and sets its "protocol" attribute:</p>
+    <code>Factory</code>, and sets its <code>protocol</code> attribute:</p>
 <pre class="python">
 from twisted.internet.protocol import Factory
 from twisted.protocols.wire import Echo
