@@ -174,9 +174,8 @@ class Widget(view.View):
         """
         Do your part, prevent infinite recursion!
         """
-        #if node.hasAttribute('model')
-        #    node.removeAttribute('model')
-
+        if node.hasAttribute('model'):
+            node.removeAttribute('model')
         if node.hasAttribute('controller'):
             node.removeAttribute('controller')
         if node.hasAttribute('view'):
@@ -249,8 +248,10 @@ class Widget(view.View):
             old = node.cloneNode(1)
             node.parentNode = parent
             gen = become.generateDOM(request, node)
-            del old.attributes['model']
-            gen.appendChild(self.cleanNode(old))
+            if old.attributes.has_key('model'):
+                del old.attributes['model']
+            old.removeAttribute('controller')
+            gen.appendChild(old)
             self.node = gen
             return gen
         if DEBUG:
@@ -301,7 +302,7 @@ class Widget(view.View):
 #        self.controller.controllerStack.push(self.controller)
         self.handleNewNode(request, returnNode)
         self.handleOutstanding(request)
-        self.controller.domChanged(request, returnNode)
+        self.controller.domChanged(request, self, returnNode)
 
     def __setitem__(self, item, value):
         """
@@ -326,7 +327,9 @@ class Widget(view.View):
         will be responsible for mutating the DOM instead of this widget.
         """
         #print "setError called", self
+        id = self['id']
         self.become = self.errorFactory(self.model, message)
+        self.become['id'] = id
 #        self.modelChanged({'request': request})
 
     def getPattern(self, name, default=missingPattern, clone=1):
@@ -546,7 +549,7 @@ class File(Input):
 
 
 class Hidden(Input):
-    def initialize(self):
+    def setUp(self, request, node, m):
         self['type'] = 'hidden'
 
 
