@@ -18,9 +18,9 @@
 import sys, os, sha
 from twisted.trial import unittest
 
-from twisted.protocols.jabber.component import ConnectComponentAuthenticator
-from twisted.protocols import jabber
-from twisted.protocols import xmlstream
+from twisted.words.protocols.jabber.component import ConnectComponentAuthenticator
+from twisted.words.protocols import jabber
+from twisted.xish import xmlstream
 
 class ComponentAuthTest(unittest.TestCase):
     def authPassed(self, stream):

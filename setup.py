@@ -268,6 +268,7 @@ desktop environments, and your toaster.
         "twisted.web.woven",
         "twisted.words",
         "twisted.words.protocols",
+        "twisted.words.protocols.jabber",
         "twisted.words.test",
         "twisted.words.scripts",
         "twisted.words.im",

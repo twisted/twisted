@@ -18,7 +18,7 @@
 import sys, os
 from twisted.trial import unittest
 
-from twisted.protocols.jabber import jid
+from twisted.words.protocols.jabber import jid
 
 class JIDParsingTest(unittest.TestCase):
     def testParse(self):

@@ -97,7 +97,7 @@ from twisted.internet.ssl import ClientContextFactory
 from twisted.python import failure, log
 
 from twisted.protocols.basic import LineReceiver
-from twisted.protocols.http import HTTPClient
+from twisted.web.http import HTTPClient
 
 # System imports
 import types, operator, os, md5

@@ -16,9 +16,8 @@
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
-from twisted.xish import domish, xpath, utility
-from twisted.protocols import xmlstream
-from twisted.protocols.jabber import jstrports
+from twisted.xish import domish, xpath, utility, xmlstream
+from twisted.words.protocols.jabber import jstrports
 
 def componentFactory(componentid, password):
     a = ConnectComponentAuthenticator(componentid, password)
