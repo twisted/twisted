@@ -1169,7 +1169,8 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
             if not sub or self.account.isSubscribed(name):
                 flags = box.getFlags()
                 delim = box.getHierarchicalDelimiter()
-                self.sendUntaggedResponse(collapseNestedLists((cmdName, flags, delim, name)))
+                resp = (DontQuoteMe(cmdName), map(DontQuoteMe, flags), delim, name)
+                self.sendUntaggedResponse(collapseNestedLists(resp))
         self.sendPositiveResponse(tag, '%s completed' % (cmdName,))
 
     auth_LIST = (_listWork, arg_astring, arg_astring, 0, 'LIST')
@@ -1525,53 +1526,55 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
             reactor.callLater(0, self._consumeMessageIterable, results, tag, query, uid)
 
     def _sendMessageFetchResponse(self, msgId, msg, query, uid):
+        D = DontQuoteMe
+
         seenUID = False
         response = []
         for part in query:
             if part.type == 'envelope':
-                response.extend(('ENVELOPE', getEnvelope(msg)))
+                response.extend((D('ENVELOPE'), getEnvelope(msg)))
             elif part.type == 'flags':
-                response.extend(('FLAGS', msg.getFlags()))
+                response.extend((D('FLAGS'), map(D, msg.getFlags())))
             elif part.type == 'internaldate':
-                response.extend(('INTERNALDATE', msg.getInternalDate()))
+                response.extend((D('INTERNALDATE'), msg.getInternalDate()))
             elif part.type == 'rfc822header':
                 hdrs = _formatHeaders(msg.getHeaders(True))
-                response.extend(('RFC822.HEADER', hdrs))
+                response.extend((D('RFC822.HEADER'), hdrs))
             elif part.type == 'rfc822text':
-                response.extend(('RFC822.TEXT', msg.getBodyFile()))
+                response.extend((D('RFC822.TEXT'), msg.getBodyFile()))
             elif part.type == 'rfc822size':
-                response.extend(('RFC822.SIZE', str(msg.getSize())))
+                response.extend((D('RFC822.SIZE'), msg.getSize()))
             elif part.type == 'rfc822':
                 hdrs = _formatHeaders(msg.getHeaders(True))
                 body = msg.getBodyFile().read()
-                response.extend(('RFC822',  hdrs + '\r\n' + body))
+                response.extend((D('RFC822'),  hdrs + '\r\n' + body))
             elif part.type == 'uid':
                 seenUID = True
-                response.extend(('UID', str(msg.getUID())))
+                response.extend((D('UID'), msg.getUID()))
             elif part.type == 'bodystructure':
-                response.extend(('BODYSTRUCTURE', getBodyStructure(msg, True)))
+                response.extend((D('BODYSTRUCTURE'), getBodyStructure(msg, True)))
             elif part.type == 'body':
                 subMsg = msg
                 for p in part.part or ():
                     subMsg = subMsg.getSubPart(p)
                 if part.header:
                     if not part.header.fields:
-                        response.extend((str(part), _formatHeaders(msg.getHeaders(True))))
+                        response.extend((D(part), _formatHeaders(msg.getHeaders(True))))
                     else:
                         hdrs = subMsg.getHeaders(part.header.negate, *part.header.fields)
-                        response.extend((str(part), _formatHeaders(hdrs, part.header.fields)))
+                        response.extend((D(part), _formatHeaders(hdrs, part.header.fields)))
                 elif part.text:
-                    response.extend((str(part), subMsg.getBodyFile()))
+                    response.extend((D(part), subMsg.getBodyFile()))
                 elif part.mime:
-                    response.extend((str(part), _formatHeaders(msg.getHeaders(True))))
+                    response.extend((D(part), _formatHeaders(msg.getHeaders(True))))
                 elif part.empty:
-                    response.extend((str(part), _formatHeaders(msg.getHeaders(True)) + '\r\n' + subMsg.getBodyFile().read()))
+                    response.extend((D(part), _formatHeaders(msg.getHeaders(True)) + '\r\n' + subMsg.getBodyFile().read()))
                 else:
                     # Simplified bodystructure request
-                    response.extend(('BODY', getBodyStructure(msg, False)))
+                    response.extend((D('BODY'), getBodyStructure(msg, False)))
 
         if uid and not seenUID:
-            response[:0] = ['UID', str(msg.getUID())]
+            response[:0] = [D('UID'), msg.getUID()]
 
         self.sendUntaggedResponse("%d FETCH %s" % (msgId, collapseNestedLists([response])))
 
@@ -3566,6 +3569,13 @@ def parseNestedParens(s, handleLiteral = 1):
 def _quote(s):
     return '"%s"' % (s.replace('\\', '\\\\').replace('"', '\\"'),)
 
+class DontQuoteMe:
+    def __init__(self, value):
+        self.value = value
+    
+    def __str__(self):
+        return str(self.value)
+
 _ATOM_SPECIALS = '(){ %*"'
 def _needsQuote(s):
     if s == '':
@@ -3585,11 +3595,18 @@ def collapseNestedLists(items):
     """Turn a nested list structure into an s-exp-like string.
 
     Strings in C{items} will be sent as literals if they contain CR or LF,
-    quoted if they contain other whitespace, or sent unquoted otherwise.
-    References to None in C{items} will be translated to the atom NIL.
-    Objects with a 'read' attribute will have it called on them with no
-    arguments and the returned string will be inserted into the output as a
-    literal.
+    otherwise they will be quoted.  References to None in C{items} will be
+    translated to the atom NIL.  Objects with a 'read' attribute will have
+    it called on them with no arguments and the returned string will be
+    inserted into the output as a literal.  Integers will be converted to
+    strings and inserted into the output unquoted.  Instances of
+    C{DontQuoteMe} will be converted to strings and inserted into the output
+    unquoted.
+    
+    This function used to be much nicer, and only quote things that really
+    needed to be quoted (and C{DontQuoteMe} did not exist), however, many
+    broken IMAP4 clients were unable to deal with this level of sophistication,
+    forcing the current behavior to be adopted for practical reasons.
 
     @type items: Any iterable
 
@@ -3599,18 +3616,16 @@ def collapseNestedLists(items):
     for i in items:
         if i is None:
             pieces.extend([' ', 'NIL'])
-        elif hasattr(i, 'read'):
-            d = i.read()
-            pieces.extend([' ', '{', str(len(d)), '}', IMAP4Server.delimiter, d])
+        elif isinstance(i, (DontQuoteMe, int, long)):
+            pieces.extend([' ', str(i)])
         elif isinstance(i, types.StringTypes):
             if _needsLiteral(i):
                 pieces.extend([' ', '{', str(len(i)), '}', IMAP4Server.delimiter, i])
-            elif (not i.startswith('BODY')) and _needsQuote(i):
-                pieces.extend([' ', _quote(i)])
             else:
-                pieces.extend([' ', i])
-        elif pieces and pieces[-1].upper() == 'BODY.PEEK':
-            pieces.append('[%s]' % (collapseNestedLists(i),))
+                pieces.extend([' ', _quote(i)])
+        elif hasattr(i, 'read'):
+            d = i.read()
+            pieces.extend([' ', '{', str(len(d)), '}', IMAP4Server.delimiter, d])
         else:
             pieces.extend([' ', '(%s)' % (collapseNestedLists(i),)])
     return ''.join(pieces[1:])
