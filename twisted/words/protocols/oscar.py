@@ -84,16 +84,16 @@ def dehtml(text):
     text=re.sub('<.*?>','',text)
     text=string.replace(text,'&gt;','>')
     text=string.replace(text,'&lt;','<')
-    text=string.replace(text,'&amp;','&')
     text=string.replace(text,'&nbsp;',' ')
     text=string.replace(text,'&#34;','"')
+    text=string.replace(text,'&amp;','&')
     return text
 
 def html(text):
     text=string.replace(text,'"','&#34;')
-    text=string.replace(text,'&amp;','&')
-    text=string.replace(text,'&lt;','<')
-    text=string.replace(text,'&gt;','>')
+    text=string.replace(text,'&','&amp;')
+    text=string.replace(text,'<','&lt;')
+    text=string.replace(text,'>','&gt;')
     text=string.replace(text,"\n","<br>")
     return '<html><body bgcolor="white"><font color="black">%s</font></body></html>'%text
 
