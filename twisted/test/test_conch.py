@@ -307,7 +307,6 @@ class SSHTestFalseChannel(channel.SSHChannel):
         reactor.crash()
 
     def channelOpen(self, ignored):
-        print 'false is open'
         d = self.conn.sendRequest(self, 'exec', common.NS('false'), 1)
         d.addErrback(self._ebRequestFailed)
         log.msg('opened false')
