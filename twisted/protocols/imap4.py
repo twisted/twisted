@@ -450,6 +450,8 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
     challengers = None
     
     state = 'unauth'
+    
+    parseState = 'command'
 
     def __init__(self, chal = None, contextFactory = None):
         if chal is None:
@@ -490,18 +492,28 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
         if passon is not None:
             self.setLineMode(passon)
 
-#    def sendLine(self, line):
-#        print 'C:', repr(line)
-#        return basic.LineReceiver.sendLine(self, line)
+    def sendLine(self, line):
+        print 'C:', repr(line)
+        return basic.LineReceiver.sendLine(self, line)
 
     def lineReceived(self, line):
-#        print 'S:', repr(line)
+        print 'S:', repr(line)
         self.resetTimeout()
-        if self._pendingLiteral:
-            self._pendingLiteral.callback(line)
-            self._pendingLiteral = None
-            return
-            
+        
+        f = getattr(self, 'parse_' + self.parseState)
+        try:
+            f(line)
+        except IllegalClientResponse, e:
+            self.sendBadResponse(tag, 'Illegal syntax: ' + str(e))
+        except IllegalOperation, e:
+            self.sendNegativeResponse(tag, 'Illegal operation: ' + str(e))
+        except IllegalMailboxEncoding, e:
+            self.sendNegativeResponse(tag, 'Illegal mailbox name: ' + str(e))
+        except Exception, e:
+            self.sendBadResponse(tag, 'Server error: ' + str(e))
+            log.err()
+
+    def parse_command(self, line):
         args = line.split(None, 2)
         rest = None
         if len(args) == 3:
@@ -511,31 +523,25 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
         elif len(args) == 1:
             tag = args[0]
             self.sendBadResponse(tag, 'Missing command')
-            return
+            return None
         else:
             self.sendBadResponse(None, 'Null command')
-            return
+            return None
 
         cmd = cmd.upper()
-        self.dispatchCommand(tag, cmd, rest)
+        return self.dispatchCommand(tag, cmd, rest)
+
+    def parse_pending(self, line):
+        self._pendingLiteral.callback(line)
+        self._pendingLiteral = None
+        self.state = 'command'
 
     def dispatchCommand(self, tag, cmd, rest, uid=None):
         f = self.lookupCommand(cmd)
         if f:
-            try:
-                fn = f[0]
-                parseargs = f[1:]
-                self.__doCommand(tag, fn, [self, tag], parseargs, rest,
-                                 uid)
-            except IllegalClientResponse, e:
-                self.sendBadResponse(tag, 'Illegal syntax: ' + str(e))
-            except IllegalOperation, e:
-                self.sendNegativeResponse(tag, 'Illegal operation: ' + str(e))
-            except IllegalMailboxEncoding, e:
-                self.sendNegativeResponse(tag, 'Illegal mailbox name: ' + str(e))
-            except Exception, e:
-                self.sendBadResponse(tag, 'Server error: ' + str(e))
-                log.err()
+            fn = f[0]
+            parseargs = f[1:]
+            self.__doCommand(tag, fn, [self, tag], parseargs, rest, uid)
         else:
             self.sendBadResponse(tag, 'Unsupported command')
 
@@ -543,6 +549,8 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
         return getattr(self, '_'.join((self.state, cmd.upper())), None)
 
     def __doCommand(self, tag, handler, args, parseargs, line, uid):
+#        if line:
+#            import pdb; pdb.Pdb().set_trace()
         for (i, arg) in zip(infrangeobject, parseargs):
             if callable(arg):
                 parseargs = parseargs[i+1:]
@@ -585,6 +593,7 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
                 "Literal too long! I accept at most %d octets" %
                 (self._literalStringLimit,))
         d = defer.Deferred()
+        self.parseState = 'pending'
         self._pendingLiteral = LiteralString(size, d)
         self.sendContinuationRequest('Ready for %d octets of text' % size)
         self.setRawMode()
@@ -592,6 +601,7 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
 
     def _fileLiteral(self, size):
         d = defer.Deferred()
+        self.parseState = 'pending'
         self._pendingLiteral = LiteralFile(size, d)
         self.sendContinuationRequest('Ready for %d octets of data' % size)
         self.setRawMode()
@@ -861,6 +871,7 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
             self.sendBadResponse(tag, 'Server error: ' + str(e))
         else:
             coded = base64.encodestring(challenge)[:-1]
+            self.parseState = 'pending'
             self._pendingLiteral = defer.Deferred()
             self.sendContinuationRequest(coded)
             self._pendingLiteral.addCallback(self.__cbAuthChunk, chal, tag)

@@ -81,6 +81,14 @@ class IMAP4UTF7TestCase(unittest.TestCase):
             self.assertEquals(input, imap4.decoder(output)[0])
 
 class IMAP4HelperTestCase(unittest.TestCase):
+    def testHeaderFormatter(self):
+        cases = [
+            ({'Header1': 'Value1', 'Header2': 'Value2'}, 'Header2: Value2\r\nHeader1: Value1\r\n'),
+        ]
+        
+        for (input, output) in cases:
+            self.assertEquals(imap4._formatHeaders(input), output)
+
     def testMessageSet(self):
         m1 = MessageSet()
         m2 = MessageSet()
@@ -1260,7 +1268,13 @@ class StringTransport:
     disconnecting = 0
 
     def __init__(self):
+        self.clear()
+
+    def clear(self):
         self.io = StringIO()
+
+    def value(self):
+        return self.io.getvalue()
     
     def write(self, data):
         self.io.write(data)
@@ -1297,6 +1311,25 @@ class HandCraftedTestCase(unittest.TestCase):
         c.dataReceived('* 1 FETCH (RFC822 {10}\r\n0123456789\r\n RFC822.SIZE 10)\r\n')
         c.dataReceived('0003 OK FETCH\r\n')
         self.failUnless(unittest.deferredResult(d))
+
+    def testPathelogicalScatteringOfLiterals(self):
+        transport = StringTransport()
+        c = imap4.IMAP4Server()
+        c.makeConnection(transport)
+        
+        transport.clear()
+        c.lineReceived("01 LOGIN {8}")
+        self.assertEquals(transport.value(), "+ Ready for 8 octets of text\r\n")
+        
+        transport.clear()
+        c.lineReceived("testuser {8}")
+        self.assertEquals(transport.value(), "+ Ready for 8 octets of text\r\n")
+        
+        transport.clear()
+        c.lineReceived("password")
+        self.assertEquals(transport.value(), "01 OK Login succeeded\r\n")
+        self.assertEquals(c.state, 'auth')
+    testPathelogicalScatteringOfLiterals.todo = "Parsing this protocol is hard :("
 
 class FakeyServer(imap4.IMAP4Server):
     state = 'select'
