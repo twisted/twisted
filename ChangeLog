@@ -1,8 +1,7 @@
-2002-07-13  Itamar Shtull-Trauring <itamarst@twistedmatrix.com>
+2002-07-14  Christopher Armstrong  <radix@twistedmatrix.com>
 
-	* Added getTcpNoDelay and setTcpNoDelay methods to TCP transports,
-	for changing TCP_NODELAY options.
-	
+	* Releasing Twisted 0.19.0! It's exactly the same as rc4.
+
 2002-07-13  Christopher Armstrong  <radix@twistedmatrix.com>
 
 	* Releasing Twisted 0.19.0rc4. All Known Issues in the README have
