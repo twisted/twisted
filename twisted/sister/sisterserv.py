@@ -1,5 +1,4 @@
-
-
+# -*- test-case-name: twisted.test.test_sister -*-
 import copy
 
 from twisted.spread.pb import Service, Perspective, Error
@@ -7,8 +6,29 @@ from twisted.spread.sturdy import PerspectiveConnector
 from twisted.spread.flavors import Referenceable
 from twisted.spread.refpath import PathReferenceDirectory
 
-from twisted.python import defer
+from twisted.python import defer, log
 from twisted.python.failure import Failure
+from twisted.cred.util import challenge
+
+from twisted.cred.authorizer import DefaultAuthorizer
+from twisted.cred.identity import Identity
+
+class TicketPerspective(Perspective):
+    def __init__(self, name, realPerspective, ticketAuth):
+        Perspective.__init__(self, name, name)
+        self.realPerspective = realPerspective
+        self.ticketAuth = ticketAuth
+    def attached(self, reference, identity):
+        self.ticketAuth.application.authorizer.removeIdentity(self.identityName)
+        return self.realPerspective.attached(reference, identity)
+
+class TicketAuthorizer(DefaultAuthorizer):
+    def addTicket(self, realPerspective):
+        ticket = challenge()
+        ticketPerspective = TicketPerspective(ticket, realPerspective, self)
+        self.sisterService.ticketService.addPerspective(ticketPerspective)
+        ticketPerspective.makeIdentity(ticket)
+        return ticket
 
 True = 1
 False = 0
@@ -18,8 +38,8 @@ class SisterParentClient(Referenceable):
     def __init__(self, sistersrv):
         self.sistersrv = sistersrv
 
-    def remote_loadResource(self, path):
-        return self.sistersrv.loadResource(path)
+    def remote_loadResource(self, resourceType, resourceName, generateTicket):
+        return self.sistersrv.loadResource(resourceType, resourceName, generateTicket)
 
 class SisterService(Service, Perspective):
     """A `parent' object, managing many sister-servers.
@@ -33,21 +53,27 @@ class SisterService(Service, Perspective):
     def __init__(self, parentHost, parentPort, parentService, localPort,
                  sharedSecret, serviceName="twisted.sister", application=None):
         """Initialize me.
+
+        (Application's authorizer must be a TicketAuthorizer, otherwise
+        login won't work.)
         """
         Service.__init__(self, serviceName, application)
         Perspective.__init__(self, "sister")
+        self.ticketService = Service(serviceName + "-ticket", application)
         self.addPerspective(self)
         self.ownedResources = {}
         self.remoteResources = {}
+        self.resourceLoaders = {}
         self.localPort = localPort
         self.parentRef = PerspectiveConnector(
             parentHost, parentPort, "parent", sharedSecret, parentService,
             client=(localPort, SisterParentClient(self)))
         self.makeIdentity(sharedSecret)
+        self.application.authorizer.sisterService = self
 
     def startService(self):
-        print 'starting sister, woo'
-        self.parentRef.callRemote("boink")
+        log.msg( 'starting sister, woo')
+        self.parentRef.startConnecting()
 
     def __getstate__(self):
         d = copy.copy(self.__dict__)
@@ -55,6 +81,7 @@ class SisterService(Service, Perspective):
         d['remoteResources'] = {}
         return d
 
+    # XXX I know what these mean, don't delete them -glyph
     def _cbLocked(self, result, path):
         if result is None:
             obj = apply(func, args, kw)
@@ -65,83 +92,37 @@ class SisterService(Service, Perspective):
             return (False, result)
 
     def _ebLocked(self, error, path):
-        print 'not locked, panicking'
+        log.msg('not locked, panicking')
         raise error
 
-    def loadResource(self, path):
-        """Load a resource on a path.
+    # OK now on to the real code
 
-        If the server sends you this message, it means that as soon as this
-        method completes (successfully), you must be ready to handle messages
-        being sent to that resource.
+    def ownResource(self, resourceObject, resourceType, resourceName):
+        log.msg('sister: owning resource %s/%s' % (resourceType, resourceName))
+        self.ownedResources[resourceType, resourceName] = resourceObject
+        return resourceObject
 
-        (Keep in mind that you do not need to run this method atomically; all
-        remote methods may be postponed by returning a Deferred.)
+    def loadResource(self, resourceType, resourceName, generateTicket):
+        """Returns a Deferred which may yield a ticket.
+
+        If generateTicket is True, this will yield a ticket, otherwise, it
+        yields None.
         """
-        if self.ownedResources.has_key(path):
-            return self.ownedResources[path]
+        log.msg( 'sister: loading resource %s/%s' %(resourceType, resourceName))
+        value = self.resourceLoaders[resourceType](resourceName)
+        if isinstance(value, defer.Deferred):
+            dvalue = value
         else:
-            resource = self.resourceLoaders[path[0]].load(path)
-            self.ownedResources[path] = resource
-            return resource
+            dvalue = defer.succeed(value)
+        dvalue.addCallback(self.ownResource, resourceType, resourceName)
+        if generateTicket:
+            dvalue.addCallback(self.application.authorizer.addTicket)
+        return dvalue
 
-    def perspective_callPath(self, path, name, *args, **kw):
-        if self.ownedResources.has_key(path):
-            method = getattr(self.ownedResources[path], 'remote_'+name)
-            return apply(method, args, kw)
-        else:
-            raise Error("I do not own this resource: %s" % repr(path))
+    def registerResourceLoader(self, resourceType, resourceLoader):
+        """Register a callable object to generate resources.
 
-    def registerResourceLoader(self, resourcePath, resourceLoader):
+        The callable object may return Deferreds or synchronous values.
         """
-        By convention, calls to loadResource will use the first
-        element of the path to determine how to load them; for
-        example, ('twisted.words', 'group', 'foobar') is a
-        twisted.words group, and there will be a twisted.words loader
-        that will deal with constructing it.
-
-        ('Loading' the object just means constructing it in some way;
-        it does not have to be loaded from external media)
-        """
-        self.resourceLoaders[resourcePath] = resourceLoader
-
-    def lockResource(self, path):
-        """Attempt to lock a resource.
-
-        Arguments:
-
-          * path: a tuple of strings, describing the path to the resource on my
-            parent server.  For example, for a twisted.wors chatroom of the
-            name "foobar", this path would be ('twisted.words', 'groups',
-            'foobar').  For a user of the name "joe", this path would be
-            ('twisted.words', 'users', 'joe').
-
-        Attempt to lock a resource accessible via a given path on my parent
-        server, for some local activity.  This is useful in services which
-        require 'ownership' of stateful objects with behavior that must be
-        processed.
-
-        Returns:
-
-            A deferred which will fire when the resource has either been locked
-            or determined to be locked on another server.  The result of this
-            deferred will be a 2-tuple.  The first element of the tuple will be
-            true if the resource was in fact locked, and the second element
-            will be the local instance created by loadResource.
-
-            If the resource was locked by another server, then the first
-            element of the tuple will be false, and the second element will be
-            a descriptor tuple of (host, portno) describing where we can go
-            looking for said resource.
-
-        """
-        if self.ownedResources.has_key(path):
-            return defer.succeed((True, self.ownedResources[path]))
-        elif self.remoteResources.has_key(path):
-            return defer.succeed((False, self.remoteResources[path]))
-        else:
-            return self.parentRef.callRemote(
-                "lockResource", self.localPort, path
-                ).addCallbacks(
-                self._cbLocked, self._ebLocked,
-                callbackArgs=(path,),errbackArgs=(path,))
+        log.msg( 'sister: registering resource loader %s:%s' % (resourceType, repr(resourceLoader)))
+        self.resourceLoaders[resourceType] = resourceLoader

@@ -1,10 +1,14 @@
+# -*- test-case-name: twisted.test.test_sister -*-
 
 # Sibling Server
 
 from twisted.spread.pb import Service, Perspective, Error
 from twisted.spread.flavors import Referenceable
 from twisted.spread.refpath import PathReferenceDirectory
+from twisted.internet import defer
+from twisted.python import log
 
+from random import choice
 
 class ParentService(Service, Perspective):
     """A `parent' object, managing many sister-servers.
@@ -21,9 +25,33 @@ class ParentService(Service, Perspective):
         self.addPerspective(self)
         # Three states: unlocked, pending lock, locked
         self.pendingResources = {}      # path: deferred, host, port
+        self.toLoadOnConnect = []       # [deferred, deferred, ...]
         self.lockedResources = {}       # path: host, port
         self.daughters = []             # [(host, port, reference)]
         self.makeIdentity(sharedSecret)
+
+    def _cbLoadedResource(self, ticket, resourceType, resourceName, host, port):
+        log.msg( 'parent: loaded resource')
+        self.lockedResources[(resourceType, resourceName)] = (host, port)
+        return ticket
+
+    def loadRemoteResource(self, resourceType, resourceName, generateTicket):
+        """Request a sister-server to load a resource.
+
+        Return a Deferred which will fire with (host, port, ticket), that will
+        describe where and how a resource can be located.
+        """
+        # dead-simple positive path case; need more checking for if it's
+        # already locked, etc
+        log.msg( 'parent: loading resource' )
+        if not self.daughters:
+            defr = defer.Deferred()
+            self.toLoadOnConnect.append((resourceType, resourceName, generateTicket, defr))
+            return defr
+        (host, port, daughterPerspective) = choice(self.daughters)
+        return daughterPerspective.callRemote("loadResource", resourceType, resourceName, generateTicket
+                                              ).addCallback(
+            self._cbLoadedResource, resourceType, resourceName, host, port)
 
     def perspectiveMessageReceived(self, broker, message, args, kw):
         """A remote message has been received.  Dispatch it appropriately.
@@ -38,16 +66,20 @@ class ParentService(Service, Perspective):
         try:
             state = apply(method, (broker,)+args, kw)
         except TypeError:
-            print ("%s didn't accept %s and %s" % (method, args, kw))
+            log.msg ("%s didn't accept %s and %s" % (method, args, kw))
             raise
         return broker.serialize(state, self.perspective)
 
     def brokerAttached(self, cli, ident, broker):
-        print 'beep', self.daughters
+        log.msg( 'parent: daughter attached %s' % repr(self.daughters))
         port, ref = cli
         host = broker.transport.getPeer()[1]
         self.daughters.append((host, port, ref))
-        print 'sister attached', (host, port, ref)
+        toLoad = self.toLoadOnConnect
+        self.toLoadOnConnect = []
+        for resourceType, resourceName, generateTicket, deferred in toLoad:
+            self.loadRemoteResource(resourceType, resourceName, generateTicket).chainDeferred(deferred)
+        log.msg('sister attached: %s:%s %r' % (host, port, ref))
         return self
 
     def brokerDetached(self, cli, ident, broker):
@@ -58,56 +90,8 @@ class ParentService(Service, Perspective):
             if (host, port) == (lhost, lport):
                 # XXX do i need some kind of notification here?
                 del self.lockedResources[path]
-        print 'sister detached', (host, port, ref)
+        log.msg( 'sister detached %s:%s %r' % (host, port, ref))
         return self
-
-    def perspective_lockResource(self, broker, port, path):
-        """Lock a resource.
-
-        First, I attempt to locate the resource.  If I locate it, I will return
-        its location in the form of a 3-tuple: (host, port, path).  A remote
-        reference representing that resource may then be retrieved by doing::
-
-            from twisted.spread import pb, refpath
-            pb.connect(host, port, 'sister', secret,
-                       'twisted.sister').addCallback(
-                       refpath.RemotePathReference, path)
-
-
-        If I do not locate the resource's location immediately, I will ask a
-        low-load server to own the object, and then return the location where I
-        sent it.
-
-        """
-
-        host = broker.transport.getPeer()[1]      # getPeer is ('INET', host, port)
-        # (keep in mind that the 'port' in getPeer is not the port number I
-        # want; it's the port that the client has allocated)
-        if self.lockedResources.has_key(path):
-            return self.lockedResources[path]
-        elif self.pendingResources.has_key(path):
-            d = defer.Deferred()
-            self.pendingResources[path][0].chainDeferred(d)
-            # this contortion is necessary because each deferred returned from
-            # a remote method is armed and thus cannot have further callbacks
-            # added (e.g. be returned again)
-            return d
-        else:
-            # try to locate a sister server who can host this resource
-            for dhost, dport, dref in self.daughters:
-                if host == dhost and port == dport:
-                    d = defer.Deferred()
-                    self.pendingResources[path] = d, host, port
-                    return dref.callRemote("loadResource", path
-                                           ).addCallbacks(
-                        self._cbLoaded,
-                        self._ebLoaded,
-                        callbackArgs=(path,),
-                        errbackArgs=(path,)
-                        )
-            else:
-                raise Error("Unable to locate requesting client...")
-
 
     def _cbLoaded(self, ignored, path):
         d, host, port = self.pendingResources[path]

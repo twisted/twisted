@@ -84,6 +84,7 @@ class Application(log.Logger, styles.Versioned, marmalade.DOMJellyable):
         self.tcpPorts = []              # check
         self.udpPorts = []
         self.sslPorts = []
+        self._listenerDict = []
         # a list of (tcp, ssl, udp) Connectors
         self.connectors = []            # check
         # a list of twisted.python.delay.Delayeds
@@ -297,6 +298,10 @@ class Application(log.Logger, styles.Versioned, marmalade.DOMJellyable):
         dict = styles.Versioned.__getstate__(self)
         if dict.has_key("running"):
             del dict['running']
+        if dict.has_key("_boundPorts"):
+            del dict['_boundPorts']
+        if dict.has_key("_listenerDict"):
+            del dict['_listenerDict']
         return dict
 
     def listenTCP(self, port, factory, backlog=5, interface=''):
@@ -308,7 +313,7 @@ class Application(log.Logger, styles.Versioned, marmalade.DOMJellyable):
             from twisted.internet import reactor
             reactor.listenTCP(port, factory, backlog, interface)
 
-    def dontListenTCP(self, port, interface=''):
+    def unlistenTCP(self, port, interface=''):
         toRemove = []
         for t in self.tcpPorts:
             port_, factory_, backlog_, interface_ = t
@@ -316,7 +321,9 @@ class Application(log.Logger, styles.Versioned, marmalade.DOMJellyable):
                 toRemove.append(t)
         for t in toRemove:
             self.tcpPorts.remove(t)
-        
+        if self._listenerDict.has_key((port_, interface_)):
+            self._listenerDict[port_,interface_].stopListening()
+
     def listenUDP(self, port, factory, interface='', maxPacketSize=8192):
         """
         Connects a given protocol factory to the given numeric UDP port.
@@ -466,27 +473,18 @@ class Application(log.Logger, styles.Versioned, marmalade.DOMJellyable):
         if self._save:
             self.save("shutdown")
 
-
-    def run(self, save=1, installSignalHandlers=1):
-        """run(save=1, installSignalHandlers=1)
-        Run this application, running the main loop if necessary.
-        If 'save' is true, then when this Application is shut down, it
-        will be persisted to a pickle.
-        'installSignalHandlers' is passed through to main.run(), the
-        function that starts the mainloop.
-        """
+    _boundPorts = 0
+    def bindPorts(self):
         from twisted.internet import reactor
-
+        self._listenerDict= {}
+        self._boundPorts = 1
         if not self.running:
             log.logOwner.own(self)
             for delayed in self.delayeds:
                 main.addDelayed(delayed)
-            self._save = save
-            main.callBeforeShutdown(self._beforeShutDown)
-            main.callAfterShutdown(self._afterShutDown)
             for port, factory, backlog, interface in self.tcpPorts:
                 try:
-                    reactor.listenTCP(port, factory, backlog, interface)
+                    self._listenerDict[port, interface] = reactor.listenTCP(port, factory, backlog, interface)
                 except socket.error, msg:
                     log.msg('error on TCP port %s: %s' % (port, msg))
                     return
@@ -508,9 +506,21 @@ class Application(log.Logger, styles.Versioned, marmalade.DOMJellyable):
                 service.startService()
             self.running = 1
             log.logOwner.disown(self)
+    def run(self, save=1, installSignalHandlers=1):
+        """run(save=1, installSignalHandlers=1)
+        Run this application, running the main loop if necessary.
+        If 'save' is true, then when this Application is shut down, it
+        will be persisted to a pickle.
+        'installSignalHandlers' is passed through to main.run(), the
+        function that starts the mainloop.
+        """
+        if not self._boundPorts:
+            self.bindPorts()
+        self._save = save
+        main.callBeforeShutdown(self._beforeShutDown)
+        main.callAfterShutdown(self._afterShutDown)
         if not main.running:
             log.logOwner.own(self)
-            self.setUID()
             global theApplication
             theApplication = self
             main.run(installSignalHandlers=installSignalHandlers)

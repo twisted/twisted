@@ -15,7 +15,7 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
 from twisted.spread import pb
-from twisted.python import defer
+from twisted.python import defer, log
 import copy
 
 True = 1
@@ -49,7 +49,7 @@ class PerspectiveConnector:
     def _cbConnected(self, reference):
         """We've connected.  Reset everything and call all pending methods.
         """
-        print 'connected!'
+        log.msg( 'connected!' )
         self.reference = reference
         self.connecting = False
         for method, args, kw, defr in self.methodsToCall:
@@ -60,11 +60,11 @@ class PerspectiveConnector:
     def _ebConnected(self, error):
         """We haven't connected yet.  Try again.
         """
-        print 'error in connecting', error
+        log.msg( 'PerspectiveConnector: error in connecting: %s' % error)
         self.startConnecting()
 
     def startConnecting(self):
-        print 'trying to connect...'
+        log.msg( 'PerspectiveConnector: connecting: %s:%s %s/%s/%s' % (self.host, self.port, self.serviceName, self.username, self.perspectiveName))
         return pb.connect(self.host, self.port, self.username, self.password,
                           self.serviceName, self.perspectiveName, self.client
                           ).addCallbacks(self._cbConnected, self._ebConnected)
