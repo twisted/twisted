@@ -249,7 +249,7 @@ class DOMTemplate(Resource):
         elif isinstance(result, minidom.Node):
             return self.processNode(request, result, node)
         elif isinstance(result, domwidgets.Widget):
-            return self.processNode(request, result.render(request), node)
+            return self.processNode(request, result.generateDOM(request), node)
         elif isinstance(result, Deferred):
             self.outstandingCallbacks += 1
             result.addCallbacks(self.callback, callbackArgs=(request, node))
