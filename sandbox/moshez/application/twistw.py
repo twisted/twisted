@@ -40,6 +40,10 @@ def startLogging(logfilename):
     log.startLogging(logFile)
     sys.stdout.flush()
 
+def callMeAgain():
+    from twisted.internet import reactor
+    reactor.callLater(0.1, callMeAgain)
+
 def runApp(config):
     passphrase = app.getPassphrase(config['encrypted'])
     app.installReactor(config['reactor'])
@@ -49,13 +53,10 @@ def runApp(config):
     app.initialLog()
     os.chdir(config['rundir'])
     application = app.getApplication(config, passphrase)
-    from twisted.internet import reactor
     service.IService(application).privilegedStartService()
     app.startApplication(application, not config['no_save'])
     service.IService(application).startService()
-    def callMeAgain():
-        reactor.callLater(0.1, callMeAgain)
-    reactor.callLater(0.1, callMeAgain)
+    callMeAgain()
     app.runReactorWithLogging(config, oldstdout, oldstderr)
     app.reportProfile(config['report-profile'], application.processName)
     log.msg("Server Shut Down.")
