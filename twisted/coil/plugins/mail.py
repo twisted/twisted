@@ -73,8 +73,12 @@ coil.registerConfigurator(MailConfigurator, mailFactory)
 components.registerAdapter(MailConfigurator, mail.MailService, coil.IConfigCollection)
 
 
-class MaildirDBMConfigurator(coil.Configurator):
+class MaildirDBMConfigurator(coil.Configurator, coil.ConfigCollection):
 
+    __implements__ = [coil.IConfigurator, coil.IConfigCollection]
+    
+    entityType = types.StringType
+    
     configurableClass = maildir.MaildirDirdbmDomain
     
     configTypes = {
@@ -83,6 +87,16 @@ class MaildirDBMConfigurator(coil.Configurator):
 
     configName = 'Maildir DBM Domain'
 
+    def __init__(self, instance):
+        coil.Configurator.__init__(self, instance)
+        coil.ConfigCollection.__init__(self, instance.dbm)
+
+    def getEntityType(self):
+        return "Password"
+    
+    def reallyPutEntity(self, name, entity):
+        self.instance.dbm[name] = entity
+        self.instance.userDirectory(name) # make maildir
 
 def maildirDbmFactory(container, name):
     if components.implements(container, coil.IConfigurator):
@@ -93,3 +107,4 @@ def maildirDbmFactory(container, name):
     return maildir.MaildirDirdbmDomain(path)
 
 coil.registerConfigurator(MaildirDBMConfigurator, maildirDbmFactory)
+components.registerAdapter(MaildirDBMConfigurator, maildir.MaildirDirdbmDomain, coil.IConfigCollection)
