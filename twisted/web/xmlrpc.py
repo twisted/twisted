@@ -53,6 +53,8 @@ class XMLRPC(resource.Resource):
             except:
                 traceback.print_exc(file=sys.stdout)
                 result = xmlrpclib.Fault(2, "error")
+        
+        request.setHeader("content-type", "text/xml")
         return xmlrpclib.dumps(result, methodresponse=1)
     
     def _getFunction(self, functionPath):
