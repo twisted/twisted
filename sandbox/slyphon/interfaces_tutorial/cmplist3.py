@@ -9,7 +9,7 @@ import zope.interface
 
 # functions can be adapters too!
 
-class IFilePath(zope.interface.Interface):
+class IFilePath(components.Interface):
    """i return a string that the this object represents in terms of a file path"""
    pass
 

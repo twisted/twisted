@@ -9,30 +9,33 @@ import zope.interface as zi
 
 # the interface we'll be adapting instances to
 
-class IFilePath(zope.interface.Interface):
+class IFilePath(components.Interface):
     def getPath():
         """i return a string that represents a file path"""
 
 
+class Adapter(object):
+    def __init__(self, original):
+        self.original = original
+
 # here are some adapters to IFilePath
 
-class ModulePath(object):
+class ModulePath(Adapter):
     zi.implements(IFilePath)
     def getPath(self):
         return os.path.abspath(self.original.__file__)
 
-class ListPath(object):
+class ListPath(Adapter):
     zi.implements(IFilePath)
     def getPath(self):
         return os.path.join(*self.original)
 
-class StringPath(object):
+class StringPath(Adapter):
     zi.implements(IFilePath)
     def getPath(self):
         return os.path.basename(self.original)
 
-
-class KlassPath(object):
+class KlassPath(Adapter):
     zi.implements(IFilePath)
     def getPath(self):
         return os.path.abspath(__import__(self.original.__module__).__file__)
@@ -43,7 +46,7 @@ class KlassPath(object):
 for _adapter, _original, _interface in [ ( ModulePath, types.ModuleType, IFilePath ),
                                          ( ListPath,   types.ListType,   IFilePath ),
                                          ( StringPath, types.StringType, IFilePath ),
-                                         ( KlassPath,  types.ClassType,  IFilePath ) ]:
+                                         ( KlassPath,  type,  IFilePath ) ]:
 
     components.registerAdapter(_adapter, _original, _interface)
 
@@ -52,16 +55,15 @@ def main():
     aString = "/foo/bar/baz"
     aList = ['path', 'to', 'knowhere']
     aModule = __import__('twisted')
-    aKlass = StringPath
+    aKlass = Adapter
 
     # if you've ever been in a situation where you were just *dying* to use isinstance()
     # you actually wanted interfaces and adapters
 
-
-    # XXX: write this part out and make what's happening _very explicit_
-    for original in [aString, aList, aModule, aKlass]:
-        adapterToIFilePath = IFilePath(original)
-        adapterToIFilePath.getPath() 
+    print IFilePath(aString).getPath()
+    print IFilePath(aList).getPath()
+    print IFilePath(aModule).getPath()
+    print IFilePath(aKlass).getPath()
 
 if __name__ == '__main__':
     main()

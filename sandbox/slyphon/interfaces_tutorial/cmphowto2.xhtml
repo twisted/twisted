@@ -106,14 +106,14 @@ name: scrubble
 
 <h3>Explanation</h3>
 
-<p>Okay, now there's a fair amount of stuff going on here, so lemme begin at
+<p>Okay, now there's a fair amount of stuff going on here, so allow me to begin at
 the beginning.</p>
 
-<p>First we define our interface. Notice that in the zope interface sytle, interfaces do not
+<p>First we define our interface. Notice that in the Zope interface style, interfaces do not
 use <code>self</code> in their function definitions. This is because zope thinks that
 interfaces should how you <strong>use</strong> interfaces, rather than their implementation
 details (and, one could argue that self is an implementation detail of the Python
-langugage). Our interface is dead-simple and only defines one method,
+language). Our interface is dead-simple and only defines one method,
 <code>getPath</code>. Interface definitions are an ideal place to put docstrings,
 as your public interfaces are likely to remain more stable than your classes.</p>
 
@@ -149,7 +149,7 @@ class, but we'll cover that later</span>&nbsp;<code>ListPath</code> and return t
 </blockquote>
 
 
-<p>So, in our <code>main</code> method, we can see what it looks like to "wrap" or "adapt"
+<p>So, in our <code>main</code> function, we can see what it looks like to "wrap" or "adapt"
 an instance to an interface. The line <code>adapterToIFilePath = IFilePath(original)</code>
 is where the adaptation happens and <code>adapterToIFilePath.getPath()</code> is actually calling
 the method <code>getPath</code> on the proper adapter instance.</p>
@@ -271,7 +271,8 @@ IDisplay interface to show (again) two different kinds of output.
 <h2>Conclusion</h2>
 
 <p>Interfaces are an incredibly useful tool because they allow your code to focus on objects' interface
-rather than implementation-specific details such as what class they are instances of.</p>
+rather than implementation-specific details such as what class they are instances of. Interfaces, and
+component systems in general, are also very useful to avoid monkey-patching of existing code.</p>
 
 
 </body>

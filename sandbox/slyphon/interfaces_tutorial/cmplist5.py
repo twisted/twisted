@@ -6,8 +6,11 @@ from os.path import join as opj
 from twisted.python import components
 import zope.interface as zi
 
+class Adapter(object):
+    def __init__(self, original):
+        self.original = original
 
-class IDisplay(zi.Interface):
+class IDisplay(components.Interface):
     def simple():
         """display a simple version of data"""
    
@@ -15,7 +18,7 @@ class IDisplay(zi.Interface):
         """display a verbose view of data"""
 
 
-class IListDirItem(zi.Interface):
+class IListDirItem(components.Interface):
    def __call__(pathAsString):
       """@param pathAsString: the path to a file"""
    path = zi.Attribute("the path given to this file")
@@ -27,7 +30,7 @@ class IListDirItem(zi.Interface):
    gid = zi.Attribute("the group id of the owner")
 
 
-class ListDirItem(object):
+class ListDirItem(Adapter):
     """a basic wrapper around the os.lstat object"""
     _stat = None
 
@@ -56,7 +59,7 @@ class IFileLister(components.Interface):
                              "has listed (without full path info)")
     paths = zi.Attribute("the full path of the items this lister has listed")
 
-class FileLister(object):
+class FileLister(Adapter):
     """list all files in a directory"""
     zi.implements(IFileLister)
     _dirlist = None
@@ -83,7 +86,7 @@ components.registerAdapter(FileLister, types.StringType, IFileLister)
 
 
     
-class DisplayFileList(object):
+class DisplayFileList(Adapter):
     zi.implements(IDisplay)
 
     def simple(self):
@@ -117,13 +120,13 @@ components.registerAdapter(DisplayFileList, IFileLister, IDisplay)
 
 
 
-class IFileGrepper(zi.Interface):
+class IFileGrepper(components.Interface):
    pattern = zi.Attribute('the patern to grep for')
    matchingLines = zi.Attribute("a list of (path, num, line) tuples "
                                 "that matched the pattern in path")
 
 
-class FileListerGrepper(object):
+class FileListerGrepper(Adapter):
    """I grep a file with a regex pattern and display matching lines""" 
    zi.implements(IFileGrepper)
 
@@ -158,7 +161,7 @@ class FileListerGrepper(object):
 components.registerAdapter(FileListerGrepper, FileLister, IFileGrepper)
 
 
-class DisplayFileGrepper(object):
+class DisplayFileGrepper(Adapter):
     zi.implements(IDisplay)
 
     def simple(self):

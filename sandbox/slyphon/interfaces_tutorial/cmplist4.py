@@ -7,7 +7,7 @@ from twisted.python import components
 import zope.interface 
 
 
-class IFile(zope.interface.Interface):
+class IFile(components.Interface):
    """an interface that models the stdlib's file object"""
 
    closed = zope.interface.Attribute("bool indicating the current "
@@ -61,7 +61,7 @@ def main():
             "attributes that are methods provide access to the method signature\n",
             "read = IFile['read']",
             "read.getSignatureString(): %r" % read.getSignatureString()
-            ])
+            ]
 
    print '\n'.join(lines)
    
