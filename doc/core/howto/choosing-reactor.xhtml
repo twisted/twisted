@@ -150,12 +150,18 @@ win32eventreactor.install()
     <h3>GTK+</h3><a name="gtk" />
 
     <p>Twisted integrates with <a href="http://www.daa.com.au/~james/pygtk/"
-    >PyGTK</a>, versions 1.2 and 2.0.  Sample applications using GTK+ and
+    >PyGTK</a>, versions 1.2 (<code>gtkreactor</code>) and 2.0
+    (<code>gtk2reactor</code>). Sample applications using GTK+ and
     Twisted are available in the Twisted CVS.</p>
 
 <pre class="python">
-from twisted.internet import gtkreactor
+from twisted.internet import gtkreactor # for gtk-1.2
 gtkreactor.install()
+</pre>
+
+<pre class="python">
+from twisted.internet import gtk2reactor # for gtk-2.0
+gtk2reactor.install()
 </pre>
 
     <h2>GUI Integration Reactors</h2>
