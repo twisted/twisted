@@ -1080,9 +1080,6 @@ class Test3Way(unittest.TestCase):
 #  means f.type is a string. When it is local, it is reported in a Failure,
 #  and f.type is the tokens.Violation class. I'm not sure how I feel about
 #  these being different.
-#
-#  make sure an actual exception in the remote method call is handled
-#  properly (not just a Violation)
 
 # TODO: tests to port from oldpb suite
 # testTooManyRefs: sending pb.MAX_BROKER_REFS across the wire should die

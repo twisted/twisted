@@ -9,7 +9,7 @@ protocol issues, and therefore need to be decided sooner rather than later.
 *** negotiation
 *** VOCABADD/DEL/SET sequences
 *** remove 'copy' prefix from RemoteCopy type sequences?
-*** smaller scope for OPEN-counter reference numbers
+*** smaller scope for OPEN-counter reference numbers?
 ** implementation issues
 *** cred
 *** oldbanana compatibility
@@ -380,6 +380,7 @@ of the RI) is important. We have to bypass most of Interface to parse the
 method definitions differently.
 
 * create UnslicerRegistry, registerUnslicer
+DONE (PROVISIONAL), flat registry (therefore problematic for len(opentype)>1)
 
 consider adopting the existing collection API (getChild, putChild) for this,
 or maybe allow registerUnslicer() to take a callable which behaves kind of
@@ -389,16 +390,20 @@ tokens to the isLeaf=1 node)
 also some APIs to get a list of everything in the registry
 
 * use metaclass to auto-register RemoteCopy classes
+DONE
 
 ** use metaclass to auto-register Unslicer classes
+DONE
 
 ** and maybe Slicer classes too
+DONE with name 'slices', perhaps change to 'slicerForClasses'?
 
  class FailureSlicer(slicer.BaseSlicer):
      classname = "twisted.python.failure.Failure"
      slicerForClasses = (failure.Failure,) # triggers auto-register
 
 ** various registry approaches
+DONE
 
 There are currently three kinds of registries used in banana/newpb:
 

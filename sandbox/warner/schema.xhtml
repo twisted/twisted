@@ -11,7 +11,159 @@
 protocol design than anything else. Do not believe this document. This
 sentence is lying. So there.</em>
 
-<pre class="py-listing">
+
+<h3>Existing <code>Constraint</code> classes</h3>
+
+<table border="" width="">
+  <tr><td>class name</td><td>shortcut</td><td></td></tr>
+
+  <tr>
+    <td><code>Any()</code></td>
+    <td></td>
+    <td>accept anything</td>
+  </tr>
+
+  <tr>
+    <td><code>StringConstraint(maxLength=1000)</code></td>
+    <td><code>str</code></td>
+    <td>string of up to maxLength characters (maxLength=None means
+      unlimited), or a VOCAB sequence of any length</td>
+    </tr>
+
+  <tr>
+    <td><code>IntegerConstraint(maxBytes=-1)</code></td>
+    <td><code>int</code></td>
+    <td>integer. maxBytes=-1 means s_int32_t, =N means LONGINT which can be
+      expressed in N or fewer bytes (i.e. abs(num) &lt; 2**(8*maxBytes)),
+      =None means unlimited. NOTE: shortcut 'long' is like shortcut 'int' but
+      maxBytes=1024.</td>
+  </tr>
+
+  <tr>
+    <td><code>NumberConstraint(maxBytes=1024)</code></td>
+    <td><code>float</code></td>
+
+    <td>integer or float. Integers are limited by maxBytes as in
+      <code>IntegerConstraint</code>, floats are fixed size.</td>
+  </tr>
+
+  <tr>
+    <td><code>BooleanConstraint(value=None)</code></td>
+    <td><code>bool</code></td>
+
+    <td>True or False. If value=True, only accepts True. If value=False,
+      only accepts False. NOTE: value= is a very silly parameter.</td>
+  </tr>
+
+  <tr>
+    <td><code>InterfaceConstraint(iface)</code></td>
+    <td>Interface</td>
+
+    <td>TODO. UNSAFE. Accepts an instance which claims to implement the given
+      Interface. The shortcut is simply any Interface subclass.</td>
+  </tr>
+
+  <tr>
+    <td><code>ClassConstraint</code></td>
+    <td>Class</td>
+
+    <td>TODO. UNSAFE. Accepts an instance which claims to be of the given
+      class name. The shortcut is simply any (old-style) class object.</td>
+  </tr>
+
+  <tr>
+    <td><code>PolyConstraint(*alternatives)</code></td>
+    <td>(alt1, alt2)</td>
+
+    <td>Accepts any object which obeys at least one of the alternative
+      constraints provided. Implements a logical OR function of the given
+      constraints. Also known as <code>ChoiceOf</code>.</td>
+  </tr>
+
+  <tr>
+    <td><code>TupleConstraint(*elemConstraints)</code></td>
+    <td></td>
+
+    <td>Accepts a tuple of fixed length with elements that obey the given
+      constraints. Also known as <code>TupleOf</code>.</td>
+  </tr>
+
+  <tr>
+    <td><code>ListConstraint(elemConstraint, maxLength=30)</code></td>
+    <td></td>
+
+    <td>Accepts a list of up to maxLength items, each of which obeys the
+    element constraint provided. Also known as <code>ListOf</code>.</td>
+  </tr>
+
+  <tr>
+    <td><code>DictConstraint(keyConstraint, valueConstraint, maxKeys=30)</code></td>
+    <td></td>
+
+    <td>Accepts a dictionary of up to maxKeys items. Each key must obey
+      keyConstraint and each value must obey valueConstraint. Also known
+      as <code>DictOf</code>.</td>
+  </tr>
+
+  <tr>
+    <td><code>AttributeDictConstraint(*attrTuples, **kwargs)</code></td>
+    <td></td>
+
+    <td>Constrains dictionaries used to describe instance attributes, as used
+      by RemoteCopy. Each attrTuple is a pair of (attrname, constraint), used
+      to constraint individual named attributes. kwargs['attributes']
+      provides the same control. kwargs['ignoreUnknown'] is a boolean flag
+      which indicates that unknown attributes in inbound state should simply
+      be dropped. kwargs['acceptUnknown'] indicates that unknown attributes
+      should be accepted into the instance state dictionary.</td>
+  </tr>
+
+  <tr>
+    <td><code>RemoteMethodSchema(method=None, _response=None,
+      __options=[], **kwargs)</code></td>
+    <td></td>
+
+    <td>Constrains arguments and return value of a single remotely-invokable
+    method. If method= is provided, the <code>inspect</code> module is used
+    to extract constraints from the method itself (positional arguments are
+    not allowed, default values of keyword arguments provide constraints for
+    each argument, the results of running the method provide the return value
+    constraint). If not, most kwargs items provide constraints for method
+    arguments, _response provides a constraint for the return value.
+    __options and additional kwargs keys provide neato whiz-bang future
+    expansion possibilities.</td>
+  </tr>
+
+  <tr>
+    <td><code>Shared(constraint, refLimit=None)</code></td>
+    <td></td>
+
+    <td>TODO. Allows objects with refcounts no greater than refLimit (=None
+      means unlimited). Wraps another constraint, which the object must obey.
+      refLimit=1 rejects shared objects.</td>
+  </tr>
+
+  <tr>
+    <td><code>Optional(constraint, default)</code></td>
+    <td></td>
+
+    <td>TODO. Can be used to tag Copyable attributes or (maybe) method
+    arguments. Wraps another constraint. If an object is provided, it must
+    obey the constraint. If not provided, the default value will be given in
+    its place.</td>
+  </tr>
+
+  <tr>
+    <td><code>FailureConstraint()</code></td>
+    <td></td>
+
+    <td>Constrains the contents of a CopiedFailure.</td>
+  </tr>
+
+</table>
+  
+
+<pre>
 
 """
 
