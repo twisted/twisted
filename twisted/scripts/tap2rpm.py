@@ -57,8 +57,7 @@ case "$1" in
 				--pidfile=$pidfile \\
 				--rundir=$rundir \\
 				--%(twistd_option)s=$file \\
-				--logfile=$logfile \\
-				--quiet
+				--logfile=$logfile
 		status %(rpm_file)s
 		;;
 
