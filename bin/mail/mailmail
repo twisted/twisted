@@ -21,9 +21,11 @@
 ### Twisted Preamble
 # This makes sure that users don't have to set up their environment
 # specially in order to run these programs from bin/.
-import sys, os, string
-if string.find(os.path.abspath(sys.argv[0]), os.sep+'Twisted') != -1:
-    sys.path.insert(0, os.path.normpath(os.path.join(os.path.abspath(sys.argv[0]), os.pardir, os.pardir)))
+import sys, os
+parts = os.path.abspath(sys.argv[0]).split(os.sep)
+t = [x for x in parts if x.startswith('Twisted')]
+if t:
+    sys.path.insert(0, os.path.join(*parts[:parts.index(t[0])+1]))
 ### end of preamble
 
 
