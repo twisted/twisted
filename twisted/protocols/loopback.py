@@ -76,7 +76,7 @@ class LoopbackRelay:
 
 def loopback(server, client, logFile=None):
     """Run session between server and client.
-     """
+    """
     from twisted.internet import reactor
     serverToClient = LoopbackRelay(client, logFile)
     clientToServer = LoopbackRelay(server, logFile)
