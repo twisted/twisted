@@ -163,6 +163,7 @@ class Delayed(rebuild.Sensitive):
         """
         self.__dict__ = dict
         self.last_tick = time()
+        self.rebuildUpToDate()
 
 
     def _later(self, func,ticks=0,args=()):

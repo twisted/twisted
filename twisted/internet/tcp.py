@@ -174,7 +174,12 @@ class Server(Connection):
         self.startReading()
         self.connected = 1
 	self.logstr = "%s,%s,%s" % (self.protocol.__class__.__name__, sessionno, self.hostname)
-	
+
+    def __repr__(self):
+        """A string representation of this connection.
+	"""
+	return "<%s #%s on %s>" % (self.protocol.__class__.__name__, self.sessionno, self.server.port)
+
     def logPrefix(self):
         """Return the prefix to log with when I own the logging thread.
         """
@@ -215,6 +220,9 @@ class Port(abstract.FileDescriptor):
         """
         self.port = port
 	self.factory = factory
+
+    def __repr__(self):
+        return "<%s on %s>" % (self.factory.__class__, self.port)
         
     def createInternetSocket(self):
         """(internal) create an AF_INET socket.
@@ -240,7 +248,7 @@ class Port(abstract.FileDescriptor):
         This is called on unserialization, and must be called after creating a
         server to begin listening on the specified port.
         """
-        print "starting on",self.port
+        print "%s starting on %s"%(self.factory.__class__, self.port)
         if type(self.port) == types.StringType:
             skt = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
             skt.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)

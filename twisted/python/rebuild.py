@@ -112,10 +112,11 @@ def rebuild(module, log=1):
         if type(v) == types.ClassType:
             # Failure condition -- instances of classes with buggy
             # __hash__/__cmp__ methods referenced at the module level...
-            classes[v] = 1
-            if log:
-                sys.stdout.write("c")
-                sys.stdout.flush()
+            if v.__module__ == module.__name__:
+                classes[v] = 1
+                if log:
+                    sys.stdout.write("c")
+                    sys.stdout.flush()
         elif type(v) == types.FunctionType:
             functions[v] = 1
             if log:

@@ -32,6 +32,9 @@ class Application(log.Logger):
             self.uid = uid or os.getuid()
             self.gid = gid or os.getgid()
 
+    def __repr__(self):
+        return "<%s app>" % self.name
+    
     def __getstate__(self):
         dict = copy.copy(self.__dict__)
         if dict.has_key("running"):

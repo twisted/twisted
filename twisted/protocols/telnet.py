@@ -259,6 +259,16 @@ class Shell(Telnet):
         return ((self.factory.username == username) and
                 (password == self.factory.password))
 
+    def flush(self):
+        """Try to flush; I might not be able to though.
+        """
+        self.transport.doWrite()
+
+    def write(self, data):
+        """Write some data to the transport.
+        """
+        self.transport.write(data)
+
     def processCommand(self, cmd):
         fn = '$telnet$'
         try:
@@ -272,8 +282,12 @@ class Shell(Telnet):
                 self.transport.write(io.getvalue()+'\r\n')
                 return "Command"
         try:
-            val, output = log.output(eval, code, self.factory.namespace)
-            self.transport.write(output)
+            out = sys.stdout
+            sys.stdout = self
+            try:
+                val = eval(code, self.factory.namespace)
+            finally:
+                sys.stdout = out
 
             if val is not None:
                 self.transport.write(repr(val))
