@@ -545,7 +545,7 @@ class Form(Widget):
     def _doProcess(self, form, write, request):
         """(internal) Prepare arguments for self.process.
         """
-        args = copy.copy(request.args)
+        args = request.args.copy()
         kw = {}
         for field in form:
             inputType, displayName, inputName, inputValue = field[:4]

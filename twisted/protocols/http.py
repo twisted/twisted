@@ -337,15 +337,12 @@ class FieldStorage(cgi.FieldStorage):
     def items(self):
         return [(k, self[k]) for k in self.keys()]
 
-    def __delitem__(self, k):
-        deleted = 0
-        for i in self.list:
-            if i.name == k:
-                self.list.remove(i)
-                deleted = 1
-        if not deleted:
-            raise KeyError, k
-
+    def copy(self):
+        """Return a dictionary with same contents."""
+        d = {}
+        for k, v in self.items(): d[k] = v
+        return d
+    
     def get(self, k, default=None):
         try:
             return self[k]
