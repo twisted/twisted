@@ -38,3 +38,7 @@ class IX(components.Interface):
 
 class XA(components.Adapter):
     __implements__ = (IX,)
+
+    def method(self):
+        # Kick start :(
+        pass
