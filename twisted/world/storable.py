@@ -146,8 +146,10 @@ class MetaStorable(type):
                 setter.func_doc = """update %s in cache and database""" % sname
                 if isinstance(stype, ref):
                     clsname = str(stype)
-                else:
+                elif isinstance(stype, type):
                     clsname = stype.__name__
+                else:
+                    clsname = repr(stype)
                 klassdict[sname] = property(getter, setter, doc='%s(%s)' % (clsname, sname))
         if isdebug:
             # lock down attribute setting while debugging Storable subclasses

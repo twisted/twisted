@@ -322,6 +322,24 @@ class Strings(Storable):
         'strings': compound.ListOf(str)
     }
 
+class TwoTuples(Storable):
+    __schema__ = {
+        'tup1': (int, int, int),
+        'tup2': (int, int, str)
+        }
+
+class TupList(Storable):
+    __schema__ = {
+        'list': compound.ListOf((int, int, str))
+        }
+
+from twisted.world import typemap
+
+class TestTypeMapper(unittest.TestCase):
+    def testTup(self):
+        self.assertEquals(typemap.getMapper((int,int,int)),
+                          typemap.getMapper((int,int,int)))
+
 class TestFixedClasses(unittest.TestCase):
     def setUp(self):
         self.db = database.Database(self.caseMethodName)
@@ -557,6 +575,40 @@ class TestFixedClasses(unittest.TestCase):
         f2 = None
         newf2 = self.db.retrieve(uid2)
         self.assertIdentical(newf2.storTest, newf)
+
+    def testTuples(self):
+        tt = TwoTuples()
+        tt.tup1 = (4, 5, 6)
+        tt.tup2 = (9, 10, "hello")
+        uid = self.db.insert(tt)
+        self.assertEquals( tt.tup1, (4, 5, 6) )
+        self.assertEquals( tt.tup2, (9, 10, "hello") )
+        self.db.close()
+        del self.db
+        del tt
+        self.setUp()
+        self.db.insert(Node("screw up"))
+        tt2 = self.db.retrieve(uid)
+        self.assertEquals(tt2.tup1, (4, 5, 6))
+
+    def testTuplesAndLists(self):
+        # self.db._superchatty = 1
+        sl = Strlist()
+        uid = self.db.insert(sl)
+        self.assertEquals(sl.strlist[:],'a b c'.split())
+        self.db.close()
+        self.setUp()
+        # self.db._superchatty = 1
+        tl = TupList()
+        tl.list = [(1, 2, "3"), (4, 5, "6")]
+        self.db.insert(tl)
+        sl2 = self.db.retrieve(uid)
+        self.assertEquals(sl2.strlist[:],'a b c'.split())
+
+class Strlist(Storable):
+    __schema__ = {"strlist": compound.ListOf(str)}
+    def __init__(self):
+        self.strlist = 'a b c'.split()
 
 from twisted.world.util import Backwards
 

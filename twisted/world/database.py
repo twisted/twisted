@@ -25,6 +25,7 @@ import operator
 from struct import pack, unpack
 import md5
 import time
+import cPickle
 
 # Twisted Imports
 from twisted.python import reflect
@@ -81,6 +82,9 @@ class Table:
         self._kwmapcache[name].lowDataToRow(offt, name, self.db, self.instanceData, value)
 
     def addInstanceWithUID(self, inst, oid, genhash):
+##         if reflect.qual(inst.__class__) == 'twisted.test.test_world.TwoTuples':
+##             import pdb
+##             pdb.set_trace()
         # populate crap data
         assert inst._schema_table is None, "caching is broken"
         inst._inmem_oid = oid
@@ -96,7 +100,15 @@ class Table:
 
         # XXX: Speed this up
         for mapper, nam in self.getSchema():
-            mapper.lowDataToRow(offset, nam, self.db, self.instanceData, getattr(inst, nam))
+            mapper.lowDataToRow(offset, nam, self.db, self.instanceData,
+                                
+            ## XXX weird but (apparently?) harmless behavior: this 'getattr'
+            ## will, in cases where the attribute didn't exist before the
+            ## object was inserted, go all the way to the database - now that
+            ## the _schema_table attribute is set, the object is considered
+            ## 'stored' and will seek to its offset.
+                                
+                                getattr(inst, nam))
 
         return offset
 
@@ -142,6 +154,15 @@ class Database:
             self.classes.append(('',))
         self.classToClassId = {}
         self.tables = []
+        mapFile = opj(self.dirname, "mappers")
+        if os.path.exists(mapFile):
+            self.typeMapperKeyToMapper = cPickle.load(open(mapFile))
+            self.typeMapperTupToKey = {}
+            for k, v in self.typeMapperKeyToMapper.iteritems():
+                self.typeMapperTupToKey[v.toTuple()] = k
+        else:
+            self.typeMapperTupToKey = {}
+            self.typeMapperKeyToMapper = {}
         c = 0
         self.tables.append(None)
         for cn, in self.classes:
@@ -150,6 +171,21 @@ class Database:
                 self.tables.append(Table(self, classname))
                 self.classToClassId[classname] = c
             c += 1
+
+    def mapperToKey(self, mapper):
+        mtup = mapper.toTuple()
+        if not self.typeMapperTupToKey.has_key(mtup):
+            self.typeMapperTupToKey[mtup] = len(self.typeMapperTupToKey) + 1
+            self.typeMapperKeyToMapper[self.typeMapperTupToKey[mtup]] = mapper
+            if self._superchatty:
+                print 'assigning', mapper, 'key', self.typeMapperTupToKey[mtup]
+            f = open(opj(self.dirname,"mappers"),"wb")
+            cPickle.dump(self.typeMapperKeyToMapper, f)
+            f.flush(); f.close()
+        return self.typeMapperTupToKey[mtup]
+
+    def keyToMapper(self, key):
+        return self.typeMapperKeyToMapper[key]
 
     def close(self):
         for table in self.tables:

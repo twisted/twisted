@@ -18,10 +18,10 @@
 #
 
 
-from types import NoneType
+from types import NoneType, ClassType
 import struct
 
-from twisted.python import components
+from twisted.python import components, reflect
 from twisted.world import structfile
 
 class ITypeMapper(components.Interface):
@@ -53,6 +53,12 @@ class ITypeMapper(components.Interface):
         """Return an integer - the size of one column of this datatype.
         """
 
+    def toTuple(self):
+        """convert this typemapper to a tuple which both globally identifies it
+        and provides a simple serialization for it.
+        """
+
+
 class AbstractTypeMapper(components.Adapter):
     __implements__ = ITypeMapper
     def highDataFromRow(self, index, name, db, sFile):
@@ -83,6 +89,9 @@ class NoneTypeMapper(AbstractTypeMapper):
     def getPhysicalSize(self):
         return 0
 
+    def toTuple(self):
+        return ('None',)
+
 components.registerAdapter(NoneTypeMapper, NoneType, ITypeMapper)
 
 class TypeTypeMapper(AbstractTypeMapper):
@@ -98,6 +107,9 @@ class TypeTypeMapper(AbstractTypeMapper):
 
     def highToLow(self, db, obj):
         return (self.original(obj),)
+
+    def toTuple(self):
+        return (self.original.__name__,)
 
 # components.registerAdapter(TypeTypeMapper, type, ITypeMapper)
 
@@ -115,6 +127,9 @@ class Varchar(AbstractTypeMapper):
     def getPhysicalSize(self):
         INT_SIZE = 4
         return (3 * INT_SIZE) + self.original
+
+    def toTuple(self):
+        return ('varchar',self.original)
 
     def lowToHigh(self, db, tup):
         extoid, extgenhash, length, data = tup
@@ -142,6 +157,46 @@ class Varchar(AbstractTypeMapper):
             length = len(obj)
         return oid, genhash, length, data
 
+class TupleTypeMapper(AbstractTypeMapper):
+    def getPhysicalSize(self):
+        i = 0
+        for t in self.original:
+            i += getMapper(t).getPhysicalSize()
+        return i
+
+    def getLowColumns(self, name):
+        x = []
+        i = 0
+        for t in self.original:
+            x.extend(getMapper(t).getLowColumns("%s$%s" % (name, i)))
+            i += 1
+        return tuple(x)
+
+    def toTuple(self):
+        l = ['tuple']
+        for t in self.original:
+            l.append(getMapper(t).toTuple())
+        return tuple(l)
+
+    def lowToHigh(self, db, tup):
+        offt = 0
+        x = []
+        for t in self.original:
+            tm = getMapper(t)
+            lcol = len(tm.getLowColumns(""))
+            subtup = tup[offt:offt+lcol]
+            offt += lcol
+            x.append(tm.lowToHigh(db, subtup))
+        return tuple(x)
+
+    def highToLow(self, db, obj):
+        x = []
+        assert len(self.original) == len(obj)
+        for t, o in zip(self.original, obj):
+            x.extend(getMapper(t).highToLow(db,o))
+        return tuple(x)
+
+        
 _db_nil = (0, 0)
 
 class ObjectTypeMapper(AbstractTypeMapper):
@@ -150,6 +205,9 @@ class ObjectTypeMapper(AbstractTypeMapper):
                 (int, name+"$oid"), 
                 (int, name+"$hash"),
                 )
+
+    def toTuple(self):
+        return ('object', reflect.qual(self.original))
 
     def getPhysicalSize(self):
         INT_SIZE = 4
@@ -178,10 +236,24 @@ class ObjectTypeMapper(AbstractTypeMapper):
 
 
 class StorableListTypeMapper(ObjectTypeMapper):
+    def __init__(self, original):
+        from twisted.world.compound import StorableList
+        ObjectTypeMapper.__init__(self, StorableList)
+        # Can't do this here because of "ref"
+        # ltype = getMapper(original)
+        # self.ltype = ltype
+        self.lclass = original
+
+    def getType(self):
+        return getMapper(self.lclass)
+
+    def toTuple(self):
+        return ('list', self.getType().toTuple())
 
     def highToLow(self, db, obj):
         if isinstance(obj, list):
-            st = self.original(db)
+            from twisted.world.compound import StorableList
+            st = StorableList(db, self.getType())
             d = {}
             d[st] = 1
             assert st in d
@@ -194,19 +266,41 @@ class StorableListTypeMapper(ObjectTypeMapper):
         else:
             return ObjectTypeMapper.highToLow(self, db, obj)
 
+class TypeMapperMapper(AbstractTypeMapper):
+    def __init__(self):
+        pass
+
+    def getLowColumns(self, name):
+        return [(int,name)]
+
+    def getPhysicalSize(self):
+        return 4
+
+    def toTuple(self):
+        return ('typemapper',)
+
+    def highToLow(self, db, obj):
+        return db.mapperToKey(obj),
+
+    def lowToHigh(self, db, tup):
+        return db.keyToMapper(tup[0])
 
 class TypeMapperRegistry:
     def __init__(self, d):
         self._mapperCache = d
 
     def getMapper(self, x):
+        if components.implements(x, ITypeMapper):
+            if isinstance(x, (ClassType, type)):
+                return x()
+            return x
         if isinstance(x, ref):
             x = x()
         if x in self._mapperCache:
             return self._mapperCache[x]
         else:
-            if issubclass(x, StorableList):
-                ot = StorableListTypeMapper(x)
+            if isinstance(x, tuple):
+                ot = TupleTypeMapper(x)
             elif issubclass(x, Storable):
                 ot = ObjectTypeMapper(x)
             else:
@@ -226,6 +320,5 @@ _defaultMapper = TypeMapperRegistry({
 getMapper = _defaultMapper.getMapper
 
 from twisted.world.storable import ref, Storable
-from twisted.world.compound import StorableList
 from twisted.world.structfile import FixedSizeString
 from twisted.world.allocator import StringStore

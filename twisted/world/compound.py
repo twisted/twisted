@@ -18,28 +18,25 @@
 #
 
 from __future__ import generators
-
 from twisted.world.storable import Storable, ref
 from twisted.world.allocator import Allocation, FragmentFile
 from twisted.world.structfile import StructuredFile
-
+from twisted.world.typemap import TypeMapperMapper
 ## class MetaStorableList(MetaStorable):
 ##     """
 ##     """
 
 class StorableList(Allocation):
     __schema__ = {
-        'typeMapper': None,
+        'typeMapper': TypeMapperMapper,
         'fragdata': None,
     }
 
 ##     __metaclass__ = MetaStorableList
 
-    dataType = Storable
-
-    def __init__(self, db):
-        Allocation.__init__(self, db,
-                            getMapper(self.dataType).getPhysicalSize() * 10)
+    def __init__(self, db, typeMapper):
+        self.typeMapper = typeMapper
+        Allocation.__init__(self, db, typeMapper.getPhysicalSize() * 10)
 
     def updateFragData(self):
         #print self.allocBegin, self.allocLength, self.fragfile
@@ -55,8 +52,6 @@ class StorableList(Allocation):
         self.updateFragData()
 
     def __awake__(self):
-        #print "%r.__awake__() dataType=%r" % (self, self.dataType)
-        self.typeMapper = getMapper(self.dataType)
         self.updateFragData()
 
     def _checkindex(self, inum):
@@ -147,7 +142,6 @@ class StorableList(Allocation):
         val = self.typeMapper.highDataFromRow(inum, "value",
                                               self.getDatabase(),
                                               self.fragdata)
-        assert isinstance(val, self.getClass()), "%s not an instance of %s" % (val, self.getClass())
         return val
 
     def __getslice__(self, begin, end):
@@ -162,15 +156,8 @@ class StorableList(Allocation):
 
     def __setitem__(self, inum, value):
         inum = self._checkindex(inum)
-        assert isinstance(value, self.getClass()), "%s not an instance of %s" % (value, self.getClass())
         self.typeMapper.lowDataToRow(inum, "value", self.getDatabase(),
                                      self.fragdata, value)
-
-    def getClass(self):
-        if not hasattr(self, 'storedClassName'):
-            return self.dataType
-        else:
-            return reflect.namedClass(self.storedClassName)
 
     def __delslice__(self, begin, end):
         self[begin:end] = []
@@ -239,41 +226,5 @@ class FloatList(StorableList):
     dataType = float
 
 
-def _codedlist(module, othername):
-    """horrible hack"""
-    return StorableList
-    otherclass = module + '.' + othername
-    classname = 'StorableList_' + otherclass.replace(".", "_")
-    import listtypes
-    if hasattr(listtypes, classname):
-        # print 'found our ref'
-        return getattr(listtypes, classname)
-    execstring = """
-class %(classname)s(StorableList):
-    storedClassName = %(otherclass)r
-""" % {
-        'classname': classname,
-        'otherclass': otherclass
-        }
-    print 'execing'
-    print execstring
-    exec execstring in listtypes.__dict__, listtypes.__dict__
-    return getattr(listtypes, classname)
-    
-
-def ListOf(n):
-    if n is int:
-        return IntList
-    if n is str:
-        return StrList
-    if n is float:
-        return FloatList
-    if isinstance(n, ref):
-        return _codedlist(n.module, n.name)
-    if issubclass(n, Storable):
-        othername = n.__name__
-        module = n.__module__
-        return _codedlist(module, othername)
-    raise KeyError("can't have lists of %s" % n)
-
 from twisted.world.typemap import getMapper
+from twisted.world.typemap import StorableListTypeMapper as ListOf
