@@ -87,7 +87,7 @@ class Deferred:
         return self.addCallbacks(lambda x: x, errback,
                                  errbackArgs=args,
                                  errbackKeywords=kw)
-        
+
     def chainDeferred(self, d):
         return self.addCallbacks(d.callback, d.errback)
 
@@ -188,4 +188,3 @@ __all__ = ["Deferred", "succeed", "fail"]
 # Sibling Imports
 import log
 import failure
-

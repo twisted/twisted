@@ -208,7 +208,7 @@ class Log:
     This will create a Log file (intended to be written to with
     'print', but usable from anywhere that a file is) from a file.
     """
-    
+
     synchronized = ['write', 'writelines']
 
     def __init__(self, file, ownable):
@@ -256,4 +256,3 @@ def startLogging(file):
 
 
 __all__ = ["logOwner", "Log", "Logger", "startLogging", "msg", "write"]
-
