@@ -56,6 +56,11 @@ threadable.synchronize(Counter)
 class ThreadsTestCase(unittest.TestCase):
     """Test twisted.internet.threads."""
 
+    def setUp(self):
+        reactor.suggestThreadPoolSize(8)
+    def tearDown(self):
+        reactor.suggestThreadPoolSize(0)
+
     def testCallInThread(self):
         c = Counter()
         
@@ -131,8 +136,13 @@ class DeferredResultTestCase(unittest.TestCase):
     """Test threads.deferToThread"""
 
     def setUp(self):
+        reactor.suggestThreadPoolSize(8)
         self.done = 0
         self.gotResult = 0
+
+    def tearDown(self):
+        reactor.suggestThreadPoolSize(0)
+
 
     def _timeout(self):
         self.done = 1
