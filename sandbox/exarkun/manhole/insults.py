@@ -307,8 +307,9 @@ class ServerProtocol(protocol.Protocol):
                   'F10', 'F11', 'F12'):
         exec '%s = object()' % (keyID,)
 
-    _databuf = ''
     lastWrite = ''
+
+    state = 'data'
 
     def __init__(self, protocolFactory, *a, **kw):
         self.protocolFactory = protocolFactory
@@ -322,30 +323,52 @@ class ServerProtocol(protocol.Protocol):
         self.protocol.makeConnection(self)
 
     def dataReceived(self, data):
-        data = self._databuf + data
-        self._databuf = ''
-        escBuf = []
-
         for ch in data:
-            if escBuf:
-                if ch in CST:
-                    self._handleControlSequence(ch, escBuf)
-                    escBuf = []
+            if self.state == 'data':
+                if ch == '\x1b':
+                    self.state = 'escaped'
                 else:
-                    escBuf.append(ch)
-            elif ch == CSI:
-                escBuf.append(ch)
+                    self.protocol.keystrokeReceived(ch)
+            elif self.state == 'escaped':
+                if ch == '[':
+                    self.state = 'bracket-escaped'
+                    self.escBuf = []
+                else:
+                    self._handleShortControlSequence(ch)
+                    self.state = 'data'
+            elif self.state == 'bracket-escaped':
+                if ch == 'O':
+                    self.state = 'low-function-escaped'
+                elif ch in CST:
+                    self._handleControlSequence(''.join(self.escBuf) + ch)
+                    del self.escBuf
+                    self.state = 'data'
+                else:
+                    self.escBuf.append(ch)
+            elif self.state == 'low-function-escaped':
+                self._handleLowFunctionControlSequence(ch)
+                self.state = 'data'
             else:
-                self.protocol.keystrokeReceived(ch)
-        if escBuf:
-            self._databuf = ''.join(escBuf)
+                raise ValueError("Illegal state")
 
-    def _handleControlSequence(self, terminal, buf):
-        f = getattr(self.controlSequenceParser, CST[terminal], None)
+    def _handleShortSequence(self, ch):
+        raise NotImplementedError('short', ch)
+
+    def _handleControlSequence(self, buf):
+        buf = '\x1b[' + buf
+        f = getattr(self.controlSequenceParser, CST[buf[-1]], None)
         if f is None:
-            self.protocol.unhandledControlSequence(''.join(buf) + terminal)
+            self.protocol.unhandledControlSequence(buf)
         else:
-            f(self, self.protocol, ''.join(buf))
+            f(self, self.protocol, buf[:-1])
+
+    def _handleLowFunctionControlSequence(self, ch):
+        map = {'P': self.F1, 'Q': self.F2, 'R': self.F3, 'S': self.F4}
+        keyID = map.get(ch)
+        if keyID is not None:
+            self.protocol.keystrokeReceived(keyID)
+        else:
+            self.protocol.unhandledControlSequence('\x1b[O' + ch)
 
     class ControlSequenceParser:
         def h(self, proto, handler, buf):
