@@ -28,6 +28,7 @@ from twisted.protocols import protocol
 
 LENGTH, DATA, COMMA = range(3)
 NUMBER = re.compile('(\d*)(:?)')
+DEBUG = 0
 
 class NetstringParseError(ValueError):
     '''The incoming data is not in valid Netstring format'''
@@ -60,14 +61,20 @@ class NetstringReceiver(protocol.Protocol):
     def doComma(self):
         self.mode = LENGTH
         if self.__data[0] != ',':
-            raise NetstringParseError(self.__data)
+            if DEBUG:
+                raise NetstringParseError(repr(self.__data))
+            else:
+                raise NetstringParseError
         self.__data = self.__data[1:]
 
 
     def doLength(self):
         m = NUMBER.match(self.__data)
         if not m.end():
-            raise NetstringParseError(self.__data)
+            if DEBUG:
+                raise NetstringParseError(repr(self.__data))
+            else:
+                raise NetstringParseError
         self.__data = self.__data[m.end():]
         if m.group(1):
             self.length = self.length * (10**len(m.group(1))) + int(m.group(1))
