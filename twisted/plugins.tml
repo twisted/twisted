@@ -179,4 +179,4 @@ register("Twisted DNS Server",
          "twisted.tap.dns",
          description="A Domain Name Server",
          type="tap",
-         tapname="dns")x
+         tapname="dns")
