@@ -24,10 +24,10 @@ from cStringIO import StringIO
 
 from pyunit import unittest
 
-from twisted.spread import pb
+from twisted.spread import pb, util
 from twisted.protocols import protocol
 from twisted.internet import main
-from twisted.python import defer
+from twisted.python import defer, failure
 from twisted.cred import identity
 
 
@@ -581,4 +581,48 @@ class DisconnectionTestCase(unittest.TestCase):
         self.assert_(self.gotCallback)
         self.assert_(self.objectCallback)
 
-testCases = [BrokerTestCase, DisconnectionTestCase]
+
+class LocalRemoteTest(util.LocalAsRemote):
+
+    def sync_add1(self, x):
+        return x + 1
+
+    def async_add(self, x=0, y=1):
+        return x + y
+
+    def async_fail(self):
+        raise RuntimeError
+
+
+class SpreadUtilTestCase(unittest.TestCase):
+    """Tests for twisted.spread.util"""
+    
+    def testSync(self):
+        o = LocalRemoteTest()
+        self.assertEquals(o.callRemote("add1", 2), 3)
+    
+    def testAsync(self):
+        l = []
+        o = LocalRemoteTest()
+        d = o.callRemote("add", 2, y=4)
+        self.assert_(isinstance(d, defer.Deferred))
+        d.addCallback(l.append)
+        main.iterate()
+        self.assertEquals(l, [6])
+    
+    def testAsyncFail(self):
+        l = []
+        o = LocalRemoteTest()
+        d = o.callRemote("fail")
+        d.addErrback(l.append)
+        main.iterate()
+        self.assertEquals(len(l), 1)
+        self.assert_(isinstance(l[0], failure.Failure))
+    
+    def testRemoteMethod(self):
+        o = LocalRemoteTest()
+        m = o.remoteMethod("add1")
+        self.assertEquals(m(3), 4)
+
+
+testCases = [BrokerTestCase, DisconnectionTestCase, SpreadUtilTestCase]
