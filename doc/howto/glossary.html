@@ -61,8 +61,12 @@
 
 <dt><a name="Componentized"><code noexpand="1" class="API" base="twisted.python.components">Componentized</code></a></dt>
 <dd>
-  An object that can hold a number of persistent <code class="API"
-  base="twisted.python.components">Adapters</code>, which we call
+  A Componentized object is a collection of information, separated
+  into domain-specific or role-specific instances, that all stick
+  together and refer to each other.
+  Each object is an <code class="API"
+  base="twisted.python.components">Adapter</code>, which, in the
+  context of Componentized, we call
   <q>components</q>.
 </dd>
 
