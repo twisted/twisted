@@ -47,7 +47,6 @@ def updateApplication(app, config):
                 raise usage.UsageError("Missing required option: %s" % i)
 
     opts['groups'] = config.opts['groups'] and config.opts['groups'].split() or []
-    print opts['groups']
 
     app.listenTCP(
         int(config.opts['port']),

@@ -22,6 +22,7 @@ from twisted.python import log
 import string, random, socket
 
 def parseRange(text):
+    # FIXME: should cope with '1-', '-443' and even '-'
     articles = string.split(text, '-')
     if len(articles) == 1:
         try:
@@ -292,32 +293,22 @@ class NNTPServer(NNTPClient):
             self.ip = "unknown"
         self.posting = 0
         self.currentGroup = None
-        self.currentArticle = None
+        self.currentIndex = None
         self.sendLine('200 server ready - posting allowed')
 
     def lineReceived(self, line):
 #        print line
-        # XXX - This is ugly.  How should I improve it?
         if self.posting == 1:
-            if line == '.':
-                self.posting = 0
-                group, article = self.currentGroup, self.message
-                del self.message
-
-                defer = self.factory.backend.postRequest(article)
-                defer.addCallbacks(self._gotPost, self._errPost)
-            else:
-                if line and line[0] == '.':
-                    line = '.' + line
-                self.message = self.message + line + '\r\n'
+            self._doingPost(line)
         else:
             parts = filter(None, string.split(string.strip(line)))
-            cmd, parts = string.upper(parts[0]), parts[1:]
-            if cmd in NNTPServer.COMMANDS:
-                func = getattr(self, 'do_%s' % cmd)
-                apply(func, (parts,))
-            else:
-                self.sendLine('500 command not recognized')
+            if len(parts):
+                cmd, parts = string.upper(parts[0]), parts[1:]
+                if cmd in NNTPServer.COMMANDS:
+                    func = getattr(self, 'do_%s' % cmd)
+                    apply(func, (parts,))
+                else:
+                    self.sendLine('500 command not recognized')
 
     def do_LIST(self, parts):
         if parts:
@@ -338,7 +329,17 @@ class NNTPServer(NNTPClient):
         else:
             defer = self.factory.backend.listRequest()
             defer.addCallbacks(self._gotList, self._errList)
-            
+
+    def _gotList(self, list):
+        # Currently a RFC 977 list - understand no arguments
+        self.sendLine('215 newsgroups in form "group high low flags"')
+        for i in list:
+            self.sendLine('%s %d %d %s' % i)
+        self.sendLine('.')
+
+    def _errList(self, error):
+        self.sendLine('%s' % str(error))
+
     def _gotSubscription(self, parts):
         self.sendLine('215 information follows')
         for i in parts:
@@ -357,15 +358,6 @@ class NNTPServer(NNTPClient):
     def _errOverview(self):
         self.sendLine('503 program error, function not performed')
 
-    def _gotList(self, list):
-        # Currently a RFC 977 list - understand no arguments
-        self.sendLine('215 newsgroups in form "group high low flags"')
-        for i in list:
-            self.sendLine('%s %d %d %s' % i)
-        self.sendLine('.')
-
-    def _errList(self, error):
-        self.sendLine('%s' % str(error))
 
     def do_LISTGROUP(self, parts):
         if len(parts):
@@ -384,9 +376,9 @@ class NNTPServer(NNTPClient):
         group, articles = parts
         self.currentGroup = group
         if len(articles):
-            self.currentArticle = articles[0]
+            self.currentIndex = int(articles[0])
         else:
-            self.currentArticle = None
+            self.currentIndex = None
 
         self.sendLine('211 list of article numbers follow')
         for i in articles:
@@ -396,8 +388,10 @@ class NNTPServer(NNTPClient):
     def _errListGroup(self):
         self.sendLine('502 no permission')
 
+
     def do_NEWSGROUPS(self, parts):
         pass
+
 
     def do_XOVER(self, parts):
         if self.currentGroup is None:
@@ -422,19 +416,23 @@ class NNTPServer(NNTPClient):
     def _errXOver(self, error):
         self.sendLine('420 No article(s) selected')
 
+
     def do_XHDR(self, parts):
         if self.currentGroup is None:
             self.sendLine('412 No news group currently selected')
         else:
-            if len(parts) == 1:
-                if self.currentArticle is None:
+            if len(parts) == 0:
+                self.sendLine('501 header [range|MessageID]')
+            elif len(parts) == 1:
+                if self.currentIndex is None:
                     self.sendLine('420 No current article selected')
                     return
                 else:
                     header = parts[0]
-                    l = h = self.currentArticle
+                    l = h = self.currentIndex
             else:
                 header, articles = parts
+                # FIXME: articles may be a message-id
                 l, h = parseRange(articles)
 
             if l is h is None:
@@ -452,16 +450,31 @@ class NNTPServer(NNTPClient):
     def _errXHDR(self):
         self.sendLine('502 no permission')
 
+
     def do_POST(self, parts):
         self.posting = 1
         self.message = ''
         self.sendLine('340 send article to be posted.  End with <CR-LF>.<CR-LF>')
+
+    def _doingPost(self, line):
+        if line == '.':
+            self.posting = 0
+            group, article = self.currentGroup, self.message
+            del self.message
+
+            defer = self.factory.backend.postRequest(article)
+            defer.addCallbacks(self._gotPost, self._errPost)
+        else:
+            if line and line[0] == '.':
+                line = '.' + line
+            self.message = self.message + line + '\r\n'
 
     def _gotPost(self, parts):
         self.sendLine('240 article posted ok')
     
     def _errPost(self, parts):
         self.sendLine('441 posting failed')
+
 
     def do_GROUP(self, parts):
         defer = self.factory.backend.groupRequest(parts[0])
@@ -470,22 +483,28 @@ class NNTPServer(NNTPClient):
     def _gotGroup(self, parts):
         name, num, high, low, flags = parts
         self.currentGroup = name
+        self.currentIndex = low
         self.sendLine('211 %d %d %d %s group selected' % (num, low, high, name))
     
     def _errGroup(self, group):
         self.sendLine('411 no such group')
 
+
     def do_ARTICLE(self, parts):
         if len(parts):
-            i = int(parts[0])
-            defer = self.factory.backend.articleRequest(self.currentGroup, i)
-            defer.addCallbacks(self._gotArticle, self._errArticle)
+            if parts[0][0] == '<':
+                # FIXME: Request for article by message-id not implemented
+                self.sendLine('501 ARTICLE <message-id> not implemented :(')
+            else:
+                i = int(parts[0])
         else:
-            self.sendLine('501 command parse error')
+            i = self.currentIndex
+        defer = self.factory.backend.articleRequest(self.currentGroup, i)
+        defer.addCallbacks(self._gotArticle, self._errArticle)
 
     def _gotArticle(self, parts):
         index, id, article = parts
-        self.currentArticle = article
+        self.currentIndex = index
         self.sendLine('220 %d %s article' % (index, id))
         self.transport.write(article)
         self.sendLine('.')
@@ -493,32 +512,35 @@ class NNTPServer(NNTPClient):
     def _errArticle(self, article):
         self.sendLine('423 bad article number')
 
+
     def do_STAT(self, parts):
         if len(parts):
             i = int(parts[0])
-            defer = self.factory.backend.articleRequest(self.currentGroup, i)
-            defer.addCallbacks(self._gotStat, self._errStat)
         else:
-            self.sendLine('501 command parse error')
+            i = self.currentIndex
+        defer = self.factory.backend.articleRequest(self.currentGroup, i)
+        defer.addCallbacks(self._gotStat, self._errStat)
     
     def _gotStat(self, parts):
         index, id, article = parts
-        self.currentArticle = article
+        self.currentIndex = index
         self.sendLine('223 %d %s article retreived - request text separately' % (index, id))
 
     def _errStat(self, parts):
         self.sendLine('423 bad article number')
 
+
     def do_HEAD(self, parts):
         if len(parts):
             i = int(parts[0])
-            defer = self.factory.backend.headRequest(self.currentGroup, i)
-            defer.addCallbacks(self._gotHead, self._errHead)
         else:
-            self.sendLine('501 command parse error')
+            i = self.currentIndex
+        defer = self.factory.backend.headRequest(self.currentGroup, i)
+        defer.addCallbacks(self._gotHead, self._errHead)
     
     def _gotHead(self, parts):
         index, id, head = parts
+        self.currentIndex = index
         self.sendLine('221 %d %s article retrieved' % (index, id))
         self.transport.write(head + '\r\n')
         self.sendLine('.')
@@ -526,16 +548,18 @@ class NNTPServer(NNTPClient):
     def _errHead(self, head):
         self.sendLine('423 no such article number in this group')
 
+
     def do_BODY(self, parts):
         if len(parts):
             i = int(parts[0])
-            defer = self.factory.backend.bodyRequest(self.currentGroup, i)
-            defer.addCallbacks(self._gotBody, self._errBody)
         else:
-            self.sendLine('501 command parse error')
+            i = self.currentIndex
+        defer = self.factory.backend.bodyRequest(self.currentGroup, i)
+        defer.addCallbacks(self._gotBody, self._errBody)
 
     def _gotBody(self, parts):
         index, id, body = parts
+        self.currentIndex = index
         self.sendLine('221 %d %s article retrieved' % (index, id))
         self.transport.write(body + '\r\n')
         self.sendLine('.')
@@ -543,12 +567,28 @@ class NNTPServer(NNTPClient):
     def _errBody(self, body):
         self.sendLine('423 no such article number in this group')
 
+
+    # NEXT and LAST are just STATs that increment currentIndex first.
+    # Accordingly, use the STAT callbacks.
+    def do_NEXT(self, parts):
+        i = self.currentIndex + 1
+        defer = self.factory.backend.articleRequest(self.currentGroup, i)
+        defer.addCallbacks(self._gotStat, self._errStat)
+
+    def do_LAST(self, parts):
+        i = self.currentIndex - 1
+        defer = self.factory.backend.articleRequest(self.currentGroup, i)
+        defer.addCallbacks(self._gotStat, self._errStat)
+
+
     def do_MODE(self, parts):
         self.sendLine('200 Hello, you can post')
+
 
     def do_QUIT(self, parts):
         self.sendLine('205 goodbye')
         self.transport.loseConnection()
+
 
     def sendLine(self, line):
 #        print 'sending: ', line

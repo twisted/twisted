@@ -75,19 +75,7 @@ class PickleStorage:
 
     def __init__(self, filename, groups = None):
         self.datafile = filename
-        if PickleStorage.sharedDBs.has_key(filename):
-            self.db = PickleStorage.sharedDBs[filename]
-        else:
-            try:
-                self.db = pickle.load(open(filename))
-                PickleStorage.sharedDBs[filename] = self.db
-            except IOError, e:
-                self.db = PickleStorage.sharedDBs[filename] = {}
-                self.db['groups'] = groups
-                if groups is not None:
-                    for i in groups:
-                        self.db[i] = {}
-                self.flush()
+        self.load(filename, groups)
 
     def listRequest(self):
         "Returns a list of 4-tuples: (name, max index, min index, flags)"
@@ -129,7 +117,7 @@ class PickleStorage:
         if not a.getHeader('Message-ID'):
             s = str(time.time()) + a.body
             id = hexdigest(md5.md5(s)) + '@' + socket.gethostname()
-            a.putHeader('Message-ID', id)
+            a.putHeader('Message-ID', '<%s>' % id)
 
         if not a.getHeader('Bytes'):
             a.putHeader('Bytes', str(len(a.body)))
@@ -163,7 +151,7 @@ class PickleStorage:
         r = []
         for i in self.db[group].keys():
             if low is None or i >= low and high is None or i <= high:
-                r.append((i, self.db[group][i].headers[header]))
+                r.append((i, self.db[group][i].getHeader(header)))
         return defer.succeed(r)
 
     def listGroupRequest(self, group):
@@ -218,6 +206,21 @@ class PickleStorage:
 
     def flush(self):
         pickle.dump(self.db, open(self.datafile, 'w'))
+
+    def load(self, filename, groups = None):
+        if PickleStorage.sharedDBs.has_key(filename):
+            self.db = PickleStorage.sharedDBs[filename]
+        else:
+            try:
+                self.db = pickle.load(open(filename))
+                PickleStorage.sharedDBs[filename] = self.db
+            except IOError, e:
+                self.db = PickleStorage.sharedDBs[filename] = {}
+                self.db['groups'] = groups
+                if groups is not None:
+                    for i in groups:
+                        self.db[i] = {}
+                self.flush()
 
 class DatabaseStorage(adbapi.Augmentation):
     """
