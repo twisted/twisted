@@ -1,3 +1,9 @@
+2003-04-29  Brian Warner  <warner@lothar.com>
+
+	* twisted/web/resource.py (IResource)
+	  twisted/spread/refpath.py (PathReferenceAcquisitionContext.getIndex)
+	  twisted/python/roots.py (Collection.getEntity): appease pychecker
+
 2003-04-27  Jp Calderone  <exarkun@twistedmatrix.com>
 
 	* doc/examples/bananabench.py, twisted/internet/utils.py,

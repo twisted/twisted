@@ -121,6 +121,7 @@ class Collection:
         ent = self.getDynamicEntity(name, request)
         if ent is not None:
             return ent
+        return None
 
     def putEntity(self, name, entity):
         """Store a static reference on 'name' for 'entity'.

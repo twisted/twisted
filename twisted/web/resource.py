@@ -31,7 +31,7 @@ class IResource(components.Interface):
     ## If True, getChildWithDefault will not be called on this Resource.
     isLeaf = 0
 
-    def getChildWithDefault(name, request):
+    def getChildWithDefault(self, name, request):
         """Return a child with the given name for the given request.
         This is the external interface used by the Resource publishing
         machinery. If implementing IResource without subclassing
@@ -39,11 +39,11 @@ class IResource(components.Interface):
         getChild overridden instead.
         """
 
-    def putChild(path, child):
+    def putChild(self, path, child):
         """Put a child IResource implementor at the given path.
         """
 
-    def render(request):
+    def render(self, request):
         """Render a request. This is called on the leaf resource for
         a request. Render must return either a string, which will
         be sent to the browser as the HTML for the request, or
