@@ -167,7 +167,7 @@ class JellyTestCase(unittest.TestCase):
         a.append((t,))
         s = jelly.jelly(t)
         z = jelly.unjelly(s)
-        self.assertEquals(z[0][0][0], z)
+        self.assertIdentical(z[0][0][0], z)
 
     def testTypeSecurity(self):
         """
