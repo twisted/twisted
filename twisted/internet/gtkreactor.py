@@ -117,10 +117,9 @@ class GtkReactor(default.PosixReactorBase):
                 methods.append(method)
                 cbNames.append('doWrite')
 
-        for method, cbName in map(None, methods, cbNames):
+        for method, cbName in zip(methods, cbNames):
             why = None
             try:
-                method = getattr(source, cbName)
                 why = method()
             except:
                 why = sys.exc_value
