@@ -400,18 +400,18 @@ class BaseClient(Connection):
         # that the socket is connected.
         del self.doWrite
         del self.doRead
-        self.connected = 1
         # we first stop and then start, to reset any references to the old doRead
         self.stopReading()
         self.stopWriting()
         self._connectDone()
 
     def _connectDone(self):
-        self.startReading()
         self.protocol = self.connector.buildProtocol(self.getPeer())
+        self.connected = 1
         self.protocol.makeConnection(self)
         self.logstr = self.protocol.__class__.__name__+",client"
-    
+        self.startReading()
+
     def connectionLost(self, reason):
         if not self.connected:
             self.failIfNotConnected(error.ConnectError())
