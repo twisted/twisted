@@ -131,16 +131,20 @@ debug = 0
 
 def sh(command, sensitive=0):
     if debug or sensitive:
-        if not raw_input("%r ??" % command).startswith('n'):
-            os.system(command)
+        if raw_input("%r ?? " % command).startswith('n'):
+            return
+    os.system(command)
+
         
 def replaceInFile(filename, oldstr, newstr):
     sh("sed -e 's/%s/%s/' < %s > %s.new" % (oldstr, newstr, filename, filename))
     sh('mv %s.new %s' % (filename,  filename))
 
 def checkout(opts):
+    print "checkout"
     root = opts['cvsroot']
-    os.system('cvs co -d%s co Twisted' % (root))
+    sh('cvs -d%s co Twisted' % (root))
+    sh('mv Twisted %s' % opts['root'])
 
 def updateVersions(opts):
     print "updateVersions"
@@ -279,7 +283,7 @@ def release(opts):
         os.mkdir("%s/old" % rel)
 
     print "release: Moving old releases to %s/old" % rel
-    sh('mv %s/*.tar.gz %s/*.zip %s/old' % ((rel,)*3))
+    sh('mv %s/*.tar.gz %s/*.tar.bz2 %s/*.zip %s/old' % ((rel,)*4))
 
     print "release: Copying Twisted_NoDocs."
     map(lambda x: shutil.copy(x % ver, rel),
