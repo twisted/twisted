@@ -13,18 +13,16 @@
 # You should have received a copy of the GNU Lesser General Public
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
-"""An asynchronous mapping to DB-API.
-
-This is designed to integrate with twisted.internet.threadtask.
-"""
-import traceback
+"""An asynchronous mapping to DB-API."""
 
 from twisted.spread import pb
 from twisted.internet import task, main, defer
 from twisted.internet import threads
 from twisted.python import reflect, log, failure
 
+
 class Transaction:
+
     def __init__(self, pool, connection):
         self._connection = connection
         cursor = self._cursor = connection.cursor()
@@ -34,17 +32,20 @@ class Transaction:
         self.fetchmany = cursor.fetchmany
         self.fetchall = cursor.fetchall
 
+
 class ConnectionPool(pb.Referenceable):
     """I represent a pool of connections to a DB-API 2.0 compliant database.
 
     You can pass keywords args cp_min and cp_max that will specify the size
-    of the thread pool used to serve database requests.
+    of the thread pool used to serve database requests (possibly this is
+    deprecated - it does not work at the moment in any case).
     """
+    
     def __init__(self, dbapiName, *connargs, **connkw):
         """See ConnectionPool.__doc__
         """
         self.dbapiName = dbapiName
-        print "Connecting to database: %s %s %s" % (dbapiName, connargs, connkw)
+        log.msg("Connecting to database: %s %s %s" % (dbapiName, connargs, connkw))
         self.dbapi = reflect.namedModule(dbapiName)
         assert self.dbapi.apilevel == '2.0', 'DB API module not DB API 2.0 compliant.'
         assert self.dbapi.threadsafety > 0, 'DB API module not sufficiently thread-safe.'
@@ -152,8 +153,8 @@ class ConnectionPool(pb.Referenceable):
         try:
             result = apply(interaction, (trans,)+args, kw)
         except:
-            print 'Exception in SQL interaction!  rolling back...'
-            failure.Failure().printTraceback()
+            log.msg('Exception in SQL interaction!  rolling back...')
+            log.deferr()
             trans._connection.rollback()
             raise
         else:
