@@ -1,3 +1,8 @@
+2003-02-12  Kevin Turner  <acapnotic@twistedmatrix.com>
+
+	* twisted/python/text.py (docstringLStrip): 1.6 This will be going
+	away in favor of inspect.getdoc.
+
 2003-02-11  Kevin Turner  <acapnotic@twistedmatrix.com>
 
 	* twisted/im/interfaces.py (IAccount): 1.4 New instance attribute:

@@ -86,6 +86,9 @@ def docstringLStrip(docstring):
 
     You'd think someone would have done this already, but apparently
     not in 1.5.2.
+
+    BUT since we're all using Python 2.1 now, use L{inspect.getdoc}
+    instead.  I{This function should go away soon.}
     """
 
     if not docstring:

@@ -1,5 +1,5 @@
 # -*- test-case-name: twisted.test.test_explorer -*-
-# $Id: explorer.py,v 1.3 2003/01/08 14:18:54 spiv Exp $
+# $Id: explorer.py,v 1.4 2003/02/12 13:11:55 acapnotic Exp $
 # Twisted, the Framework of Your Internet
 # Copyright (C) 2001 Matthew W. Lefkowitz
 #
@@ -28,7 +28,7 @@ import UserDict
 
 # Twisted Imports
 from twisted.spread import pb
-from twisted.python import reflect, text
+from twisted.python import reflect
 
 
 True=(1==1)
@@ -267,7 +267,7 @@ class ExplorerClass(Explorer):
                 members[i] = explorerPool.getExplorer(member, mIdentifier)
 
         self.name = theClass.__name__
-        self.doc = text.docstringLStrip(theClass.__doc__)
+        self.doc = inspect.getdoc(theClass)
         self.data = members
         self.methods = methods
         self.bases = explorerPool.getExplorer(theClass.__bases__,
@@ -317,7 +317,7 @@ class ExplorerFunction(Explorer):
 
         self.name = function.__name__
         self.signature = signature
-        self.doc = text.docstringLStrip(function.__doc__)
+        self.doc = inspect.getdoc(function)
         self.file = code.co_filename
         self.line = code.co_firstlineno
 
@@ -386,7 +386,7 @@ class ExplorerModule(Explorer):
                 data[key] = explorerPool.getExplorer(value, mIdentifier)
 
         self.name = module.__name__
-        self.doc = text.docstringLStrip(module.__doc__)
+        self.doc = inspect.getdoc(module)
         self.file = getattr(module, '__file__', None)
         self.classes = classes
         self.functions = functions
