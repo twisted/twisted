@@ -187,10 +187,10 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
     Protocol implementation for an IMAP4rev1 server.
 
     The server can be in any of four states:
-        Non-authenticated
-        Authenticated
-        Selected
-        Logout
+        - Non-authenticated
+        - Authenticated
+        - Selected
+        - Logout
     """
     __implements__ = (IMailboxListener,)
 
@@ -987,9 +987,6 @@ class IMAP4Client(basic.LineReceiver):
         matching authentication scheme found will be used.  The ordering is
         that in which the server lists support authentication schemes.
 
-        @type name: C{str}
-        @param name: The authentication type to associate
-
         @type auth: Implementor of C{IClientAuthentication}
         @param auth: The object to use to perform the client
         side of this authentication scheme.
@@ -1398,7 +1395,7 @@ class IMAP4Client(basic.LineReceiver):
 
         This command is allowed in the Authenticated and Selected states.
 
-        @type: mailbox: C{str}
+        @type mailbox: C{str}
         @param mailbox: The name of the mailbox to examine
 
         @rtype: C{Deferred}
@@ -1655,7 +1652,7 @@ class IMAP4Client(basic.LineReceiver):
         @param flags: The flags to associated with this message.
 
         @type date: C{str}
-        @param data: The date to associate with this message.
+        @param date: The date to associate with this message.
 
         @rtype: C{Deferred}
         @return: A deferred whose callback is invoked when this command
@@ -2104,7 +2101,7 @@ class IMAP4Client(basic.LineReceiver):
         @param uid: Indicates whether the message sequence set is of message
         numbers or of unique message IDs.
 
-        @param headerType: C{str}
+        @type headerType: C{str}
         @param headerType: If specified, must be one of HEADER,
         HEADER.FIELDS, HEADER.FIELDS.NOT, MIME, or TEXT, and will determine
         which part of the message is retrieved.  For HEADER.FIELDS and
@@ -2728,7 +2725,7 @@ class IServerAuthentication(components.Interface):
 
         @rtype: Any object implemtenting C{IAccount} or a C{Deferred}
 
-        @raise: C{twisted.cred.error.Unauthorized} if the response is
+        @raise twisted.cred.error.Unauthorized: if the response is
         incorrect.
         """
 
@@ -2860,7 +2857,7 @@ class IAccount(components.Interface):
         @return: A true value if the creation succeeds, or a deferred whose
         callback will be invoked when the creation succeeds.
         
-        @raise C{MailboxException}: Raised if this mailbox cannot be added for
+        @raise MailboxException: Raised if this mailbox cannot be added for
         some reason.  This may also be raised asynchronously, if a C{Deferred}
         is returned.
         """
@@ -2877,7 +2874,7 @@ class IAccount(components.Interface):
         @return: A true value if the creation succeeds, or a deferred whose
         callback will be invoked when the creation succeeds.
         
-        @raise C{MailboxException}: Raised if this mailbox cannot be added. 
+        @raise MailboxException: Raised if this mailbox cannot be added. 
         This may also be raised asynchronously, if a C{Deferred} is
         returned.
         """
@@ -2908,7 +2905,7 @@ class IAccount(components.Interface):
         C{Deferred} whose callback will be invoked when the deletion
         completes.
 
-        @raise C{MailboxException}: Raised if this mailbox cannot be deleted.
+        @raise MailboxException: Raised if this mailbox cannot be deleted.
         This may also be raised asynchronously, if a C{Deferred} is returned.
         """
     
@@ -2926,7 +2923,7 @@ class IAccount(components.Interface):
         C{Deferred} whose callback will be invoked when the rename operation
         is completed.
         
-        @raise C{MailboxException}: Raised if this mailbox cannot be
+        @raise MailboxException: Raised if this mailbox cannot be
         renamed.  This may also be raised asynchronously, if a C{Deferred}
         is returned.
         """
@@ -2953,7 +2950,7 @@ class IAccount(components.Interface):
         or a Deferred whose callback will be invoked with this value when
         the subscription is successful.
 
-        @raise C{MailboxException}: Raised if this mailbox cannot be
+        @raise MailboxException: Raised if this mailbox cannot be
         subscribed to.  This may also be raised asynchronously, if a
         C{Deferred} is returned.
         """
@@ -2969,7 +2966,7 @@ class IAccount(components.Interface):
         or a Deferred whose callback will be invoked with this value when
         the unsubscription is successful.
 
-        @raise C{MailboxException}: Raised if this mailbox cannot be
+        @raise MailboxException: Raised if this mailbox cannot be
         unsubscribed from.  This may also be raised asynchronously, if a
         C{Deferred} is returned.
         """
@@ -3176,7 +3173,7 @@ class IMailbox(components.Interface):
     def addListener(self, listener):
         """Add a mailbox change listener
         
-        @param listener: Any object which implements C{IMailboxListener}
+        @type listener: Any object which implements C{IMailboxListener}
         @param listener: An object to add to the set of those which will
         be notified when the contents of this mailbox change.
         """
