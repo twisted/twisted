@@ -16,8 +16,7 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 from twisted.protocols.ldap import ldapclient
 from twisted.protocols import pureber
-from twisted.internet import tcp
-import twisted.internet.main
+
 
 CONNECTIONS=5
 SEARCHES=10
@@ -67,14 +66,18 @@ conns = []
 def callback(searchalot):
     conns.remove(searchalot)
     if not conns:
-        twisted.internet.main.shutDown()
+        from twisted.install import reactor
+        reactor.stop()
 
 def main():
+    from twisted.internet import default
+    default.install()
+    from twisted.install import reactor
     for x in xrange(0,CONNECTIONS):
         s=SearchALot(callback, str(x)+'.')
         conns.append(s)
-        tcp.Client("localhost", 389, s)
-    twisted.internet.main.run()
+        reactor.clientTCP("localhost", 389, s)
+    reactor.run()
 
 if __name__ == "__main__":
     main()

@@ -16,7 +16,7 @@
 
 from twisted.protocols import irc
 from twisted.words.ui import gateway
-from twisted.internet import tcp
+from twisted.internet import reactor
 import string
 import time
 
@@ -36,7 +36,7 @@ def makeConnection(im,server=None,port=None,**kw):
         port=int(port)
     except:
         pass
-    tcp.Client(server,port,c)
+    reactor.clientTCP(server,port,c)
 
 class IRCGateway(irc.IRCClient,gateway.Gateway):
 

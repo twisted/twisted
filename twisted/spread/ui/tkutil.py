@@ -19,7 +19,7 @@ from Tkinter import *
 from tkSimpleDialog import _QueryString
 from tkFileDialog import _Dialog
 from twisted.spread import pb
-from twisted.internet import tcp
+from twisted.internet import reactor
 from twisted import copyright
 
 import string
@@ -402,7 +402,7 @@ class Login(Toplevel):
                              callback   = self.gotIdentity,
                              errback    = self.couldNotConnect)
         b.notifyOnDisconnect(self.disconnected)
-        tcp.Client(host, port, b)
+        reactor.clientTCP(host, port, b)
 
     def gotIdentity(self,identity):
         identity.attach(self.service.get(),self.pbReferenceable).addCallback(self.pbCallback)

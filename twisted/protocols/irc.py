@@ -26,7 +26,6 @@ References:
    http://www.irchelp.org/irchelp/rfc/ctcpspec.html
 """
 
-from twisted.internet import tcp
 from twisted.internet import reactor
 from twisted.persisted import styles
 from twisted.protocols import basic, protocol
@@ -574,12 +573,12 @@ class IRCClient(basic.LineReceiver):
             protocol = DccFileReceive(filename, size,
                                       queryData=(user,channel,data))
 
-            tcp.Client(address, port, protocol)
+            reactor.clientTCP(address, port, protocol)
             self.dcc_sessions.append(protocol)
 
         elif dcctype == 'CHAT':
             protocol = DccChat(self, queryData=(user, channel, data))
-            tcp.Client(address, port, protocol)
+            reactor.clientTCP(address, port, protocol)
             self.dcc_sessions.append(protocol)
 
         #elif dcctype == 'PERSPECTIVE':

@@ -32,7 +32,7 @@ for the twisted.mail SMTP server
 """
 from twisted.python import delay, log
 from twisted.mail import relay
-from twisted.internet import tcp
+from twisted.internet import reactor
 import os, string
 
 
@@ -221,8 +221,8 @@ class SmartHostSMTPRelayingManager:
             self.messageCollection.relaying(message)
         protocol = SMTPManagedRelayer(toRelay, self)
         self.managed[protocol] = nextMessages
-        transport = tcp.Client(self.smartHostAddr[0], self.smartHostAddr[1], 
-                               protocol)
+        transport = reactor.clientTCP(self.smartHostAddr[0], self.smartHostAddr[1], 
+                                      protocol)
 
 class MXCalculator:
 

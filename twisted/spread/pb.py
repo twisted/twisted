@@ -48,7 +48,7 @@ import types
 # Twisted Imports
 from twisted.python import log, defer, failure
 from twisted.protocols import protocol
-from twisted.internet import tcp
+from twisted.internet import reactor
 from twisted.cred import authorizer, service, perspective, identity
 from twisted.persisted import styles
 
@@ -1037,7 +1037,7 @@ def getObjectAt(host, port, timeout=None):
     d = defer.Deferred()
     b = Broker(1)
     _ObjectRetrieval(b, d)
-    tcp.Client(host, port, b, timeout)
+    reactor.clientTCP(host, port, b, timeout)
     return d
 
 def connect(host, port, username, password, serviceName,

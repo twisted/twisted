@@ -19,7 +19,7 @@ from twisted.spread.ui import tkutil
 from twisted.internet import tkinternet
 from twisted.words.ui import im2,tkim
 from twisted.words.ui.gateways import toc 
-from twisted.internet import tcp 
+from twisted.internet import reactor
 
 im2.Conversation=tkim.Conversation
 im2.ContactList=tkim.ContactList
@@ -33,7 +33,7 @@ def our_callback(values):
     server=values["server"]
     port=int(values["port"])
     c=toc.TOCGateway(im,user,password)
-    tcp.Client(server,port,c)
+    reactor.clientTCP(server,port,c)
     im.attachGateway(c)
 
 def main():

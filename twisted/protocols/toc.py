@@ -24,7 +24,7 @@ info,dir: see how gaim connects for this...it may never work if it tries to conn
 
 # twisted imports
 import protocol
-from twisted.internet import tcp
+from twisted.internet import reactor
 
 # base imports
 import struct
@@ -1061,7 +1061,7 @@ class TOCClient(protocol.Protocol):
     def tocGET_FILE(self,user,cookie,seq,pip,vip,port,tlvs):
         return
         # XXX add this back in
-        #tcp.Client(pip,port,GetFileTransfer(self,cookie,os.path.expanduser("~")))
+        #reactor.clientTCP(pip,port,GetFileTransfer(self,cookie,os.path.expanduser("~")))
         #self.rvous_accept(user,cookie,GET_FILE_UID)
 
     def onLine(self):
@@ -1390,7 +1390,7 @@ class TOCClient(protocol.Protocol):
         self.sendFlap(2,"toc_rvous_accept %s %s %s" % (normalize(user),
                                                      cookie,uuid))
         if uuid==SEND_FILE_UID:
-            tcp.Client(pip,port,SendFileTransfer(self,cookie,user,d["name"]))
+            reactor.clientTCP(pip,port,SendFileTransfer(self,cookie,user,d["name"]))
 
     def rvous_cancel(self,cookie):
         user,uuid,pip,port,d=self._cookies[cookie]

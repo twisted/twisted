@@ -22,7 +22,6 @@ An example of using the FTP client
 # Twisted imports
 from twisted.protocols.ftp import FTPClient, FTPFileListProtocol
 from twisted.protocols.protocol import Protocol
-from twisted.internet import main, tcp
 from twisted.python import usage
 
 # Standard library imports
@@ -53,7 +52,8 @@ def success(response):
 def fail(error):
     print 'Failed.  Error was:'
     print error
-    main.shutDown()
+    from twisted.internet import reactor
+    reactor.stop()
 
 
 def showFiles(fileListProtocol):
@@ -80,6 +80,10 @@ class Options(usage.Options):
     
 # this connects the protocol to an FTP server running locally
 def run():
+    from twisted.internet import default
+    default.install()
+    from twisted.internet import reactor
+    
     # Get config
     config = Options()
     config.parseOptions()
@@ -91,7 +95,7 @@ def run():
     ftpClient = FTPClient(config.opts['username'], config.opts['password'], 
                           passive=config.opts['passive'])
     ftpClient.debug = config.opts['debug']
-    tcp.Client(config.opts['host'], config.opts['port'], ftpClient, 10.0)
+    reactor.clientTCP(config.opts['host'], config.opts['port'], ftpClient, 10.0)
 
     # Get the current working directory
     ftpClient.pwd().addCallbacks(success, fail).arm()
@@ -109,10 +113,10 @@ def run():
     # Get short listing of current directory, and quit when done
     d = ftpClient.nlst('.', proto)
     d.addCallbacks(showBuffer, fail)
-    d.addCallback(lambda result: main.shutDown())
+    d.addCallback(lambda result: reactor.stop())
     d.arm()
     
-    main.run()
+    reactor.run()
 
 # this only runs if the module was *not* imported
 if __name__ == '__main__':

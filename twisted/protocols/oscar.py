@@ -13,8 +13,9 @@
 # You should have received a copy of the GNU Lesser General Public
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+
 from twisted.protocols import protocol
-from twisted.internet import tcp, main
+from twisted.internet import reactor, main
 from twisted.python import delay
 import struct
 import md5
@@ -429,7 +430,7 @@ class BOSConnection(SNACBased):
                 serverip=tlvs[5]
                 self.chatService=ChatService(self,cookie)
                 self.chatService.joinChat(room)
-                tcp.Client(serverip,5190,self.chatService)
+                reactor.clientTCP(serverip,5190,self.chatService)
             self.sendSNAC(0x01,0x04,"\x00\x0d",callback) # ask for chat service
         else:
             self.chatService.joinChat(group)
@@ -530,7 +531,7 @@ class BOSConnection(SNACBased):
                       TLV(0x05,"\121\106")+
                       TLV(0x03,""))
         self.directConnections[user]=DirectConnection(self)
-        tcp.Client(ip,4443,self.directConnections[user])
+        reactor.clientTCP(ip,4443,self.directConnections[user])
 
     # callback
     def error(self,url): print url
@@ -663,7 +664,7 @@ class ChatService(SNACBased):
                 cookie=tlvs[6]
                 serverip=tlvs[5]
                 self.roomConnections[room]=ChatRoomConnection(self.bos,room,cookie)
-                tcp.Client(serverip,5190,self.roomConnections[room])
+                reactor.clientTCP(serverip,5190,self.roomConnections[room])
             self.bos.sendSNAC(0x01,0x04,"\x00\x0e\x00\x01\x00 \x00\x04\x1b"+url+"\x00\x00",callback)
 
     def room(self,room): return self.roomConnections[room]    
@@ -843,7 +844,7 @@ class OscarAuthenticator(OscarConnection):
             server,port=string.split(tlvs[5],":")
             bos=self.BOSClass(self.username,self.cookie)
             if self.callback: self.callback(bos)
-            tcp.Client(server,int(port),bos)
+            reactor.clientTCP(server,int(port),bos)
             self.transport.loseConnection()
         elif tlvs.has_key(8):
             errorcode=tlvs[8]

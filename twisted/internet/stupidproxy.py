@@ -20,7 +20,7 @@ A simple port forwarder.
 """
 
 # Twisted imports
-from twisted.internet import tcp
+from twisted.internet import reactor
 from twisted.protocols import protocol
 
 # System imports
@@ -45,8 +45,8 @@ class StupidProtocolServer(StupidProtocol):
     def connectionMade(self):
         clientProtocol = StupidProtocol()
         clientProtocol.setPeer(self.transport)
-        client = tcp.Client(self.factory.host, self.factory.port,
-                            clientProtocol)
+        client = reactor.clientTCP(self.factory.host, self.factory.port,
+                                   clientProtocol)
         self.setPeer(client)
 
 

@@ -16,7 +16,7 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
 from twisted.protocols import toc
-from twisted.internet import tcp
+from twisted.internet import reactor
 from twisted.words.ui import gateway
 import string,re
 
@@ -36,7 +36,7 @@ def makeConnection(im,server=None,port=None,**kwargs):
         pass
     c=apply(TOCGateway,(),kwargs)
     c.attachIM(im)
-    tcp.Client(server,port,c)
+    reactor.clientTCP(server,port,c)
     
 def dehtml(text):
     text=string.replace(text,"<br>","\n")

@@ -15,7 +15,7 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
 from twisted.protocols import http
-from twisted.internet import tcp
+from twisted.internet import reactor
 from twisted.web import resource, server
 import urlparse
 
@@ -71,7 +71,7 @@ class ProxyRequest(http.Request):
             self.received['host'] = host
         clientProtocol = class_(self.method, rest, self.clientproto, self.received,
                                 self.content.read(), self)
-        client = tcp.Client(host, port, clientProtocol)
+        client = reactor.clientTCP(host, port, clientProtocol)
 
 class Proxy(http.HTTPChannel):
 
@@ -84,7 +84,7 @@ class ReverseProxyRequest(http.Request):
         self.received['host'] = self.factory.host
         clientProtocol = ProxyClient(self.method, self.uri, self.clientproto, self.getAllHeaders(), 
                                      self.content.read(), self)
-        client = tcp.Client(self.factory.host, self.factory.port,
+        client = reactor.clientTCP(self.factory.host, self.factory.port,
                             clientProtocol)
 
 class ReverseProxy(http.HTTPChannel):
@@ -108,5 +108,5 @@ class ReverseProxyResource(resource.Resource):
                                      request.clientproto, 
                                      request.getAllHeaders(), request.content,
                                      request)
-        client = tcp.Client(self.host, self.port, clientProtocol)
+        client = reactor.clientTCP(self.host, self.port, clientProtocol)
         return server.NOT_DONE_YET
