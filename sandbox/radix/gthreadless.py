@@ -16,7 +16,9 @@ def deferredGreenlet(func):
                 d.callback(func(*args, **kwargs))
             except:
                 d.errback()
-        crap = greenlet.greenlet(greenfunc).switch(*args, **kwargs)
+        crap = greenlet.greenlet(greenfunc)
+        #print hex(id(greenlet.getcurrent())), "->", hex(id(crap))
+        crap = crap.switch(*args, **kwargs)
         return d
     return replacement
 
@@ -27,7 +29,7 @@ class _IAmAnException(object):
     def __init__(self, f):
         self.f = f
 
-def blockOn(d):
+def blockOn(d, desc=None):
     """
     Use me in non-main greenlets to wait for a Deferred to fire.
     """
@@ -35,14 +37,28 @@ def blockOn(d):
     if g is greenlet.main:
         raise CalledFromMain("You cannot call blockOn from the main greenlet.")
 
+    if g.parent is greenlet.main:
+        mainOrNot =  "(main)"
+    else:
+        mainOrNot = ""
+
+    #print hex(id(g.parent)), mainOrNot, "<-", hex(id(g)), "(%s)" % (desc,)
+
     def cb(r):
+        #print hex(id(greenlet.getcurrent())), "~~>", hex(id(g)), "(%s)" % (desc,)
         g.switch(r)
     def eb(f):
-        g.switch(_IAmAnException(f))
+        #print hex(id(greenlet.getcurrent())), "~~>", hex(id(g)), "(%s)" % (desc,)
+        try:
+            g.switch(_IAmAnException(f))
+        except SystemExit:
+            print "GREENLETS ARE BUGGERED"
     d.addCallback(cb)
     d.addErrback(eb)
 
-    x = greenlet.main.switch()
+    #x = greenlet.main.switch()
+    x = g.parent.switch()
+    #print "back from parent! got", repr(x)
     if isinstance(x, _IAmAnException):
         x.f.raiseException()
     return x

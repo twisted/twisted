@@ -1,22 +1,26 @@
 from twisted.internet import defer
 from twisted.trial import unittest
-import gthreadless
+from gthreadless import blockOn, deferredGreenlet, GreenletWrapper, CalledFromMain
+from twisted.internet import reactor
 
+def laterResult(n, result):
+    d = defer.Deferred()
+    reactor.callLater(n, d.callback, result)
+    return d
+    
 class GThreadlessTest(unittest.TestCase):
+    def _getDeferred(self):
+        r = blockOn(laterResult(0.1, 'goofledorf'), desc="_getDeferred")
+        return r
+    _getDeferred = deferredGreenlet(_getDeferred)
+
     def testBasic(self):
-        from twisted.internet import reactor
-        def getDeferred():
-            d = defer.Deferred()
-            reactor.callLater(0.1, d.callback, 'goofledorf')
-            r = gthreadless.blockOn(d)
-            return r
-        getDeferred = gthreadless.deferredGreenlet(getDeferred)
-        d = getDeferred()
+        d = self._getDeferred()
         d.addCallback(self.assertEquals, 'goofledorf')
         return d
 
     def _magic(self):
-        o = gthreadless.GreenletWrapper(Asynchronous())
+        o = GreenletWrapper(Asynchronous())
         self.assertEquals(o.syncResult(3), 3)
         self.assertEquals(o.asyncResult(0.1, 4), 4)
         self.assertRaises(ZeroDivisionError, o.syncException)
@@ -24,11 +28,18 @@ class GThreadlessTest(unittest.TestCase):
         return "hi there"
 
     def testGreenletWrapper(self):
-        d = gthreadless.deferredGreenlet(self._magic)()
+        d = deferredGreenlet(self._magic)()
         return d.addCallback(self.assertEquals, "hi there")
 
     def testCallFromMain(self):
-        self.assertRaises(gthreadless.CalledFromMain, gthreadless.blockOn, defer.succeed(1))
+        self.assertRaises(CalledFromMain, blockOn, defer.succeed(1))
+
+    def testNestedBlocks(self):
+        thingy = deferredGreenlet(lambda: blockOn(self._getDeferred(), "thingy"))
+        d = thingy().addCallback(self.assertEquals, "goofledorf")
+        return d
+    testNestedBlocks.timeout = 2
+
 
 class Asynchronous(object):
     def syncResult(self, v):
