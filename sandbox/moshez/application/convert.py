@@ -34,7 +34,7 @@ def convert(oldApp):
     for (pList, klass) in [(oldApp.extraPorts, servers.GenericServer),
                            (oldApp.extraConnectors, clients.GenericClient),]:
         for (portType, args, kw) in pList:
-            klass(portType, args, kw).setServiceParent(ret)
+            klass(portType, *args, **kw).setServiceParent(ret)
     for (name, klass) in mapping:
         for args in getattr(oldApp, name):
             klass(*args).setServiceParent(ret)
