@@ -271,17 +271,19 @@ def _getFPName(fp):
         return fp.name
     return 'file'   # stringIO objects have no .name attr
 
-class DTP(protocol.Protocol):
+class DTP(object, protocol.Protocol):
     """The Data Transfer Protocol for this FTP-PI instance
     all dtp_* methods return a deferred
     """
+    isConnected = False 
+
     def connectionMade(self):
         """Will start an transfer, if one is queued up, 
         when the client connects"""
         self.pi.setTimeout(None)        # don't timeout as long as we have a connection
         peer = self.transport.getPeer()
-        #log.debug('got a DTP connection %s:%s' % (peer[1],peer[2]))
-
+        log.debug('got a DTP connection %s:%s' % (peer[1],peer[2]))
+        self.isConnected = True
 
         if self.factory.peerCheck and peer[1] != self.pi.peerHost[1]:
             # DANGER Will Robinson! Bailing!
@@ -320,13 +322,11 @@ class DTP(protocol.Protocol):
     def _dtpPostTransferCleanup(self, *arg):
         log.debug("dtp._dtpPostTransferCleanup")
         self.transport.loseConnection()
-        t = self.transport
-        log.debug("disconnecting?: %d, disconnected?: %d" % (t.disconnecting, t.disconnected))
 
     def connectionLost(self, reason):
         log.debug('dtp.connectionLost: %s' % reason)
         self.pi._finishedFileTransfer()
-        
+        self.isConnected = False
 
 class DTPFactory(protocol.Factory): 
     # -- configuration variables --
@@ -399,9 +399,6 @@ class FTP(object, basic.LineReceiver, policies.TimeoutMixin):
     # reply with appropriate error message and drop the connection
     instanceNum = 0
 
-    # need to do this so we can test this with a different transport
-    reactorPasvDTPFunction = reactor.listenTCP
-    reactorPortDTPFunction = reactor.connectTCP
     
     def __init__(self):
         self.portal      = None
@@ -588,9 +585,8 @@ class FTP(object, basic.LineReceiver, policies.TimeoutMixin):
             self.transport.loseConnection()
         elif r == ClientDisconnectError:
             self.reply(CNX_CLOSED_TXFR_ABORTED)
-        # TODO: find out if this is correct pipelining behavior
-        #       if any error happens, all previously pipelined commands
-        #       are junked
+        # if we timeout, or if an error occurs, 
+        # all previous commands are junked
         self.blocked = None                         
         
     def cleanupDTP(self):
@@ -599,16 +595,12 @@ class FTP(object, basic.LineReceiver, policies.TimeoutMixin):
         log.debug('cleanupDTP')
 
         dtpPort, self.dtpPort = self.dtpPort, None
-        if hasattr(dtpPort, 'connected'):
-            if dtpPort.connected:
-                log.debug('dtpPort is still connected')
-                dtpPort.loseConnection()
-        if hasattr(dtpPort, 'transport') and hasattr(dtpPort.transport, 'socket'):
-            log.debug('transport has socket, running stopListening()')
+        try:
             dtpPort.stopListening()
+        except AttributeError, (e,):
+            log.msg('Already Called dtpPort.stopListening!!!: %s' % e)
 
         self.dtpFactory.doStop()
-
         if self.dtpFactory is None:
             log.debug('ftp.dtpFactory already set to None')
         else:
@@ -788,7 +780,7 @@ class FTP(object, basic.LineReceiver, policies.TimeoutMixin):
         if params == "-aL": params = '' # bug in gFTP 2.0.15
 
         self.fp, self.fpsize = self.shell.list(cleanPath(params))    # returns a StringIO object
-        if self.dtpInstance and self.dtpInstance.connected:
+        if self.dtpInstance and self.dtpInstance.isConnected:
             self.reply(DATA_CNX_ALREADY_OPEN_START_XFR)
         else:
             self.reply(FILE_STATUS_OK_OPEN_DATA_CNX)
@@ -889,7 +881,7 @@ class FTP(object, basic.LineReceiver, policies.TimeoutMixin):
             raise BadCmdSequenceError('must send PORT or PASV before RETR')
         self.fp, self.fpsize = self.shell.retr(cleanPath(params))
         log.debug('self.fp = %s, self.fpsize = %s' % (self.fp, self.fpsize))
-        if self.dtpInstance and self.dtpInstance.connected:
+        if self.dtpInstance and self.dtpInstance.isConnected:
             self.reply(DATA_CNX_ALREADY_OPEN_START_XFR)
         else:
             self.reply(FILE_STATUS_OK_OPEN_DATA_CNX)
