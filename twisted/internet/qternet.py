@@ -35,10 +35,10 @@ from qt import QSocketNotifier, QObject, SIGNAL, QTimer
 from twisted.python import log
 
 # Sibling Imports
-import main
+import main, default
 
-reads = main.reads
-writes = main.writes
+reads = default.reads
+writes = default.writes
 delayeds = main.delayeds
 hasReader = reads.has_key
 hasWriter = writes.has_key
@@ -102,58 +102,56 @@ class TwistedSocketNotifier(QSocketNotifier):
         simulate()
 
 
-def addReader(reader):
-    if not hasReader(reader):
-        reads[reader] = TwistedSocketNotifier(reader, QSocketNotifier.Read)
-
-
-def addWriter(writer):
-    if not hasWriter(writer):
-        writes[writer] = TwistedSocketNotifier(writer, QSocketNotifier.Write)
-
-
-def removeReader(reader): 
-    if hasReader(reader):
-        reads[reader].shutdown()
-        del reads[reader]
-
-
-def removeWriter(writer): 
-    if hasWriter(writer):
-        writes[writer].shutdown()
-        del writes[writer]
-
-
+# global timer
 _timer = None
 
-def simulate():
-    global _timer
-    if _timer: _timer.stop()
 
-    timeout = (main.runUntilCurrent() or 0.1) * 1010
+class QTReactor(default.ReactorBase):
+    """Qt based reactor."""
 
-    if not _timer:
-        _timer = QTimer()
-        QObject.connect( _timer, SIGNAL("timeout()"), simulate )
-    _timer.start(timeout, 1)
+    def addReader(self, reader):
+        if not hasReader(reader):
+            reads[reader] = TwistedSocketNotifier(reader, QSocketNotifier.Read)
 
-def cleanup():
-    global _timer
-    if _timer: 
-        _timer.stop()
-        _timer = None
+    def addWriter(self, writer):
+        if not hasWriter(writer):
+            writes[writer] = TwistedSocketNotifier(writer, QSocketNotifier.Write)
+
+    def removeReader(self, reader): 
+        if hasReader(reader):
+            reads[reader].shutdown()
+            del reads[reader]
+
+    def removeWriter(self, writer): 
+        if hasWriter(writer):
+            writes[writer].shutdown()
+            del writes[writer]
+
+    def simulate(self):
+        global _timer
+        if _timer: _timer.stop()
+
+        timeout = (main.runUntilCurrent() or 0.1) * 1010
+
+        if not _timer:
+            _timer = QTimer()
+            QObject.connect( _timer, SIGNAL("timeout()"), self.simulate )
+        _timer.start(timeout, 1)
+
+    def cleanup(self):
+        global _timer
+        if _timer: 
+            _timer.stop()
+            _timer = None
 
 
 def install():
     """Configure the twisted mainloop to be run inside the qt mainloop.
     """
-    global main
-    main.addWriter = addWriter
-    main.removeWriter = removeWriter
-    main.addReader = addReader
-    main.removeReader = removeReader
-    main.callBeforeShutdown( cleanup )
+    reactor = QTReactor()
+    reactor.install()
+    main.callBeforeShutdown( reactor.cleanup )
 
     main.running = 2
     main.ALLOW_TWISTED_REBUILD = 0
-    simulate()
+    reactor.simulate()

@@ -70,8 +70,7 @@ class DummyResolver:
         else:
             deferred.callback(address)
 
-reads = {}
-writes = {}
+
 running = None
 shuttingDown = None
 delayeds = [theTimeouts]

@@ -39,8 +39,8 @@ from twisted.python import log
 # Sibling Imports
 import main, default
 
-reads = main.reads
-writes = main.writes
+reads = default.reads
+writes = default.writes
 delayeds = main.delayeds
 hasReader = reads.has_key
 hasWriter = writes.has_key
