@@ -108,3 +108,36 @@ class ServerParserTestCase(unittest.TestCase):
         p.resultValue = ('SYS', 'USER')
         p.lineReceived('123, 456')
         self.assertEquals(L[0], '123, 456 : USERID : SYS : USER')
+
+class ProcMixinTestCase(unittest.TestCase):
+    line = ('4: 0100007F:0019 04030201:02FA 0A 00000000:00000000 '
+            '00:00000000 00000000     0        0 10927 1 f72a5b80 '
+            '3000 0 0 2 -1')
+
+    def testDottedQuadFromHexString(self):
+        p = ident.ProcServerMixin()
+        self.assertEquals(p.dottedQuadFromHexString('0100007F'), '127.0.0.1')
+
+    def testUnpackAddress(self):
+        p = ident.ProcServerMixin()
+        self.assertEquals(p.unpackAddress('0100007F:0277'), ('127.0.0.1', 631))
+
+    def testLineParser(self):
+        p = ident.ProcServerMixin()
+        self.assertEquals(
+            p.parseLine(self.line),
+            (('127.0.0.1', 25), ('1.2.3.4', 762), 0))
+
+    def testExistingAddress(self):
+        p = ident.ProcServerMixin()
+        p.entries = lambda: iter([self.line])
+        self.assertEquals(
+            p.lookup(('127.0.0.1', 25), ('1.2.3.4', 762)),
+            (p.SYSTEM_NAME, 'root'))
+
+    def testNonExistingAddress(self):
+        p = ident.ProcServerMixin()
+        p.entries = lambda: iter([self.line])
+        self.assertRaises(ident.NoUser, p.lookup, ('127.0.0.1', 26), ('1.2.3.4', 762))
+        self.assertRaises(ident.NoUser, p.lookup, ('127.0.0.1', 25), ('1.2.3.5', 762))
+        self.assertRaises(ident.NoUser, p.lookup, ('127.0.0.1', 25), ('1.2.3.4', 763))
