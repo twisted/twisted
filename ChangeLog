@@ -1,3 +1,8 @@
+2003-11-21  Jp Calderone  <exarkun@twistedmatrix.com>
+
+	* twisted/trial/runner.py: Added missing calls to setUpClass and
+	tearDownClass in SingletonRunner.
+
 2003-11-21  Christopher Armstrong  <radix@twistedmatrix.com>
 
 	* .: Releasing Twisted 1.1.1rc1.
