@@ -14,11 +14,11 @@ import types, string
 from zope.interface import implements
 
 # Twisted Imports
-from twisted.python import log, reflect, components
+from twisted.python import log, reflect, components, failure
 from twisted.persisted import styles
 
 # Sibling Imports
-import interfaces
+import interfaces, main
 
 class FileDescriptor(log.Logger, styles.Ephemeral):
     """An object which can be operated on by select().
@@ -192,7 +192,7 @@ class FileDescriptor(log.Logger, styles.Ephemeral):
                 self.producer.pauseProducing()
         self.startWriting()
     
-    def loseConnection(self):
+    def loseConnection(self, _connDone=failure.Failure(main.CONNECTION_DONE)):
         """Close the connection at the next available opportunity.
 
         Call this to cause this FileDescriptor to lose its connection; if this is in
@@ -209,7 +209,7 @@ class FileDescriptor(log.Logger, styles.Ephemeral):
                 # doWrite won't trigger the connection close anymore
                 self.stopReading()
                 self.stopWriting()
-                self.connectionLost(main.CONNECTION_DONE)
+                self.connectionLost(_connDone)
             else:
                 self.stopReading()
                 self.startWriting()
@@ -332,9 +332,5 @@ def isIPAddress(addr):
         except ValueError:
                 pass
     return 0
-
-# Sibling Imports
-import main
-
 
 __all__ = ["FileDescriptor"]
