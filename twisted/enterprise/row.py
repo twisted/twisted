@@ -368,11 +368,15 @@ class DBReflector(adbapi.Augmentation):
 
         # build where clause
         first = 1
-        for keyColumn, type in keyColumns:
-            if not first:
-                sql = sql + " AND "
-            sql = sql + "   %s = %s " % (keyColumn, quote("%s", type) )
-            first = 0
+        try:
+            for keyColumn, type in keyColumns:
+                if not first:
+                    sql = sql + " AND "
+                sql = sql + "   %s = %s " % (keyColumn, quote("%s", type) )
+                first = 0
+        except DBError, dbe:
+            raise DBError("Error: %r while formatting %s"% (dbe.args[0],
+                                                            rowClass))
         return sql
 
     def buildUpdateSQL(self, rowClass, tableName, columns, keyColumns):
@@ -573,6 +577,7 @@ dbTypeMap = {
     "bool": NOQUOTE,
     "int2": NOQUOTE,
     "int4": NOQUOTE,
+    "int": NOQUOTE,
     "float8": NOQUOTE,
     "char": USEQUOTE,
     "varchar": USEQUOTE,
@@ -594,8 +599,8 @@ def quote(value, typeCode):
     NOTE: uses Postgresql type codes..
     """
     q = dbTypeMap.get(typeCode, None)
-    if not q:
-        raise ("Type %s not known" % typeCode)
+    if q is None:
+        raise DBError("Type %s not known" % typeCode)
     if q == NOQUOTE:
         return value
     elif q == USEQUOTE:
