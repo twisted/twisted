@@ -202,6 +202,17 @@ class View(template.DOMTemplate):
                                                                   viewName,
                                                                   self,
                                                                   widgets))
+            for namespace in self.viewStack:
+                if namespace is None: continue
+                setupMethod = getattr(namespace, 'wvupdate_' + viewName, None)
+                if setupMethod:
+                    if view is None:
+                        if model is None:
+                            model = self.getTopOfModelStack()
+                        self.model = model
+                        view = widgets.Widget(self.model)
+                        self.model = self.mainModel
+                    view.setupMethods.append(setupMethod)
         else:
             # If no "view" attribute was specified on the node, see if there
             # is a IView adapter registerred for the model.
@@ -215,16 +226,6 @@ class View(template.DOMTemplate):
                                 components.getAdapterClassWithInheritance)
         if view is None:
             view = node
-        for namespace in namespaces:
-            setupMethod = getattr(namespace, 'wvupdate_' + viewName, None)
-            if setupMethod:
-                if view is node:
-                    if model is None:
-                        model = self.getTopOfModelStack()
-                    self.model = model
-                    view = widgets.Widget(self.model)
-                    self.model = self.mainModel
-                view.setupMethods.append(setupMethod)
         return view
 
     def handleNode(self, request, node):
