@@ -284,9 +284,6 @@ class AdapterTestCase(unittest.TestCase):
         self.assert_( o is adder )
 
     def testBadRegister(self):
-        # should fail because Sub doesn't implement IMultiply
-        self.assertRaises(ValueError, components.registerAdapter, Sub, MultiplyAndAdd, IMultiply)
-
         # should fail because we already registered an IMultiply adapter for IntAdder
         self.assertRaises(ValueError, components.registerAdapter, IntMultiplyWithAdder, IntAdder, IMultiply)
     

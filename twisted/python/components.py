@@ -207,10 +207,6 @@ class AdapterRegistry:
                     )
                 )
 
-            # this may need to be removed
-            if not implements(adapterFactory, interfaceClass):
-                raise ValueError, "%s instances don't implement interface %s" % (adapterFactory, interfaceClass)
-
             if not issubclass(interfaceClass, Interface):
                 raise ValueError, "interface %s doesn't inherit from %s" % (interfaceClass, Interface)
 
