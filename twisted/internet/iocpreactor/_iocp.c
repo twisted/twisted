@@ -4,6 +4,9 @@
 #include <windows.h>
 #include "structmember.h"
 
+static int g_imallocs, g_ifrees, g_amallocs, g_afrees;
+static int g_incobj, g_decobj, g_incarg, g_decarg;
+
 //#define SPEW
 // compensate for mingw's lack of recent Windows headers
 #ifndef _MSC_VER
@@ -157,13 +160,19 @@ static PyObject *iocpcore_doIteration(iocpcore* self, PyObject *args) {
         ret = PyObject_CallFunction(object, "llO", err, bytes, object_arg);
         if(!ret) {
             Py_DECREF(object);
+            g_decobj++;
             PyMem_Free(ov);
+            g_ifrees++;
             return NULL;
         }
         Py_DECREF(ret);
         Py_DECREF(object);
+        g_decobj++;
+        Py_DECREF(object_arg);
+        g_decarg++;
     }
     PyMem_Free(ov);
+    g_ifrees++;
     return Py_BuildValue("");
 }
 
@@ -188,13 +197,16 @@ static PyObject *iocpcore_WriteFile(iocpcore* self, PyObject *args) {
         return NULL;
     }
     ov = PyMem_Malloc(sizeof(MyOVERLAPPED));
+    g_imallocs++;
     if(!ov) {
         PyErr_NoMemory();
         return NULL;
     }
     memset(ov, 0, sizeof(MyOVERLAPPED));
     Py_INCREF(object);
+    g_incobj++;
     Py_INCREF(object_arg);
+    g_incarg++;
     ov->callback = object;
     ov->callback_arg = object_arg;
     CreateIoCompletionPort(handle, self->iocp, 0, 1);
@@ -210,8 +222,11 @@ static PyObject *iocpcore_WriteFile(iocpcore* self, PyObject *args) {
 #endif
     if(!res && err != ERROR_IO_PENDING) {
         Py_DECREF(object);
+        g_decobj++;
         Py_DECREF(object_arg);
+        g_decarg++;
         PyMem_Free(ov);
+        g_ifrees++;
         return PyErr_SetFromWindowsErr(err);
     }
     if(res) {
@@ -243,13 +258,16 @@ static PyObject *iocpcore_ReadFile(iocpcore* self, PyObject *args) {
         return NULL;
     }
     ov = PyMem_Malloc(sizeof(MyOVERLAPPED));
+    g_imallocs++;
     if(!ov) {
         PyErr_NoMemory();
         return NULL;
     }
     memset(ov, 0, sizeof(MyOVERLAPPED));
     Py_INCREF(object);
+    g_incobj++;
     Py_INCREF(object_arg);
+    g_incarg++;
     ov->callback = object;
     ov->callback_arg = object_arg;
     CreateIoCompletionPort(handle, self->iocp, 0, 1);
@@ -265,8 +283,11 @@ static PyObject *iocpcore_ReadFile(iocpcore* self, PyObject *args) {
 #endif
     if(!res && err != ERROR_IO_PENDING) {
         Py_DECREF(object);
+        g_decobj++;
         Py_DECREF(object_arg);
+        g_decarg++;
         PyMem_Free(ov);
+        g_ifrees++;
         return PyErr_SetFromWindowsErr(err);
     }
     if(res) {
@@ -295,9 +316,11 @@ static int makesockaddr(int sock_family, PyObject *args, struct sockaddr **addr_
             return 0;
         }
         addr = PyMem_Malloc(sizeof(struct sockaddr_in));
+        g_amallocs++;
         result = inet_addr(host);
         if(result == -1) {
             PyMem_Free(addr);
+            g_afrees++;
             PyErr_SetString(PyExc_ValueError, "Can't parse ip address string");
             return 0;
         }
@@ -343,13 +366,16 @@ static PyObject *iocpcore_WSASendTo(iocpcore* self, PyObject *args) {
         return NULL;
     }
     ov = PyMem_Malloc(sizeof(MyOVERLAPPED));
+    g_imallocs++;
     if(!ov) {
         PyErr_NoMemory();
         return NULL;
     }
     memset(ov, 0, sizeof(MyOVERLAPPED));
     Py_INCREF(object);
+    g_incobj++;
     Py_INCREF(object_arg);
+    g_incarg++;
     ov->callback = object;
     ov->callback_arg = object_arg;
     wbuf.len = buflen;
@@ -367,8 +393,11 @@ static PyObject *iocpcore_WSASendTo(iocpcore* self, PyObject *args) {
 #endif
     if(res == SOCKET_ERROR && err != ERROR_IO_PENDING) {
         Py_DECREF(object);
+        g_decobj++;
         Py_DECREF(object_arg);
+        g_decarg++;
         PyMem_Free(ov);
+        g_ifrees++;
         return PyErr_SetFromWindowsErr(err);
     }
     if(!res) {
@@ -406,13 +435,16 @@ static PyObject *iocpcore_WSARecvFrom(iocpcore* self, PyObject *args) {
         return NULL;
     }
     ov = PyMem_Malloc(sizeof(MyOVERLAPPED));
+    g_imallocs++;
     if(!ov) {
         PyErr_NoMemory();
         return NULL;
     }
     memset(ov, 0, sizeof(MyOVERLAPPED));
     Py_INCREF(object);
+    g_incobj++;
     Py_INCREF(object_arg);
+    g_incarg++;
     ov->callback = object;
     ov->callback_arg = object_arg;
     wbuf.len = buflen;
@@ -431,8 +463,11 @@ static PyObject *iocpcore_WSARecvFrom(iocpcore* self, PyObject *args) {
 #endif
     if(res == SOCKET_ERROR && err != ERROR_IO_PENDING) {
         Py_DECREF(object);
+        g_decobj++;
         Py_DECREF(object_arg);
+        g_decarg++;
         PyMem_Free(ov);
+        g_ifrees++;
         return PyErr_SetFromWindowsErr(err);
     }
     if(!res) {
@@ -517,13 +552,16 @@ static PyObject *iocpcore_AcceptEx(iocpcore* self, PyObject *args) {
         return NULL;
     }
     ov = PyMem_Malloc(sizeof(MyOVERLAPPED));
+    g_imallocs++;
     if(!ov) {
         PyErr_NoMemory();
         return NULL;
     }
     memset(ov, 0, sizeof(MyOVERLAPPED));
     Py_INCREF(object);
+    g_incobj++;
     Py_INCREF(object_arg);
+    g_incarg++;
     ov->callback = object;
     ov->callback_arg = object_arg;
     CreateIoCompletionPort((HANDLE)handle, self->iocp, 0, 1);
@@ -539,8 +577,11 @@ static PyObject *iocpcore_AcceptEx(iocpcore* self, PyObject *args) {
 #endif
     if(!res && err != ERROR_IO_PENDING) {
         Py_DECREF(object);
+        g_decobj++;
         Py_DECREF(object_arg);
+        g_decarg++;
         PyMem_Free(ov);
+        g_ifrees++;
         return PyErr_SetFromWindowsErr(err);
     }
     if(res) {
@@ -567,13 +608,16 @@ static PyObject *iocpcore_ConnectEx(iocpcore* self, PyObject *args) {
         return NULL;
     }
     ov = PyMem_Malloc(sizeof(MyOVERLAPPED));
+    g_imallocs++;
     if(!ov) {
         PyErr_NoMemory();
         return NULL;
     }
     memset(ov, 0, sizeof(MyOVERLAPPED));
     Py_INCREF(object);
+    g_incobj++;
     Py_INCREF(object_arg);
+    g_incarg++;
     ov->callback = object;
     ov->callback_arg = object_arg;
     CreateIoCompletionPort((HANDLE)handle, self->iocp, 0, 1);
@@ -584,14 +628,18 @@ static PyObject *iocpcore_ConnectEx(iocpcore* self, PyObject *args) {
     res = gConnectEx(handle, addr, addrlen, NULL, 0, NULL, (OVERLAPPED *)ov);
     Py_END_ALLOW_THREADS;
     PyMem_Free(addr);
+    g_afrees++;
     err = WSAGetLastError();
 #ifdef SPEW
     printf("    ce returned %d, err %ld\n", res, err);
 #endif
     if(!res && err != ERROR_IO_PENDING) {
         Py_DECREF(object);
+        g_decobj++;
         Py_DECREF(object_arg);
+        g_decarg++;
         PyMem_Free(ov);
+        g_ifrees++;
         return PyErr_SetFromWindowsErr(err);
     }
     if(res) {
@@ -613,13 +661,16 @@ static PyObject *iocpcore_PostQueuedCompletionStatus(iocpcore* self, PyObject *a
         return NULL;
     }
     ov = PyMem_Malloc(sizeof(MyOVERLAPPED));
+    g_imallocs++;
     if(!ov) {
         PyErr_NoMemory();
         return NULL;
     }
     memset(ov, 0, sizeof(MyOVERLAPPED));
     Py_INCREF(object);
+    g_incobj++;
     Py_INCREF(object_arg);
+    g_incarg++;
     ov->callback = object;
     ov->callback_arg = object_arg;
 #ifdef SPEW
@@ -634,8 +685,11 @@ static PyObject *iocpcore_PostQueuedCompletionStatus(iocpcore* self, PyObject *a
 #endif
     if(!res && err != ERROR_IO_PENDING) {
         Py_DECREF(object);
+        g_decobj++;
         Py_DECREF(object_arg);
+        g_decarg++;
         PyMem_Free(ov);
+        g_ifrees++;
         return PyErr_SetFromWindowsErr(err);
     }
     if(res) {
@@ -651,6 +705,14 @@ PyObject *iocpcore_AllocateReadBuffer(PyObject *self, PyObject *args)
         return NULL;
     }
     return PyBuffer_New(bufSize);
+}
+
+PyObject *iocpcore_get_mstats(PyObject *self, PyObject *args)
+{
+    if(!PyArg_ParseTuple(args, "")) {
+        return NULL;
+    }
+    return Py_BuildValue("(ii)(ii)(ii)(ii)", g_imallocs, g_ifrees, g_amallocs, g_afrees, g_incobj, g_decobj, g_incarg, g_decarg);
 }
 
 static PyMethodDef iocpcore_methods[] = {
@@ -676,6 +738,8 @@ static PyMethodDef iocpcore_methods[] = {
      "Given a socket handle, retrieve its protocol info"},
     {"AllocateReadBuffer", (PyCFunction)iocpcore_AllocateReadBuffer, METH_VARARGS,
      "Allocate a buffer to read into"},
+    {"get_mstats", (PyCFunction)iocpcore_get_mstats, METH_VARARGS,
+     "Get memory leak statistics"},
     {NULL}
 };
 
