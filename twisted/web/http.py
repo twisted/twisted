@@ -1116,7 +1116,12 @@ class HTTPFactory(protocol.ServerFactory):
         return f
 
     def _escape(self, s):
-        return s.encode("string_escape").replace('"', '\\"').replace("\\'", "'")
+        # pain in the ass. Return a string like python repr, but always
+        # escaped as if surrounding quotes were "".
+        r = repr(s)
+        if r[0] == "'":
+            return r[1:-1].replace('"', '\\"').replace("\\'", "'")
+        return r[1:-1]
 
     def log(self, request):
         """Log a request's result to the logfile, by default in combined log format."""
