@@ -1,3 +1,7 @@
+2002-12-09  Paul Swartz  <z3p@twistedmatrix.com
+
+    * twisted/internet/app.py: actually set the euid/egid if users ask
+
 2002-12-09  Dave Peticolas  <dave@krondo.com>
 
 	* twisted/test/test_conch.py: wait for ssh process to finish
