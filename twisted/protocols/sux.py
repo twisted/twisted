@@ -64,12 +64,14 @@ class ParseError(Exception):
 class XMLParser(Protocol):
 
     state = None
+    encodings = None
     filename = "<xml />"
     beExtremelyLenient = 0
 
     def connectionMade(self):
         self.lineno = 1
         self.colno = 0
+        self.encodings = []
 
     def saveMark(self):
         '''Get the line number and column of the last character parsed'''
@@ -81,7 +83,14 @@ class XMLParser(Protocol):
 
     def dataReceived(self, data):
         if not self.state:
+            if data.startswith('\xff\xfe'):
+                self.encodings.append('UTF-16')
             self.state = 'begin'
+        if self.encodings:
+            if 'UTF-16' in self.encodings or 'UCS-2' in self.encodings:
+                assert not len(data) & 1, 'UTF-16 must come in pairs for now'
+            for encoding in self.encodings:
+                data = data.decode(encoding)
         curState = self.state
         stateFn = getattr(self, 'do_' + curState)
         lineno, colno = self.lineno, self.colno
