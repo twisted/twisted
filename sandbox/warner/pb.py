@@ -545,19 +545,18 @@ PBTopRegistry = {
     ("error",): ErrorUnslicer,
     }
 
-PBOpenRegistry = slicer.UnslicerRegistry.copy()
-PBOpenRegistry.update({
+PBOpenRegistry = {
     ('my-reference',): flavors.ReferenceUnslicer,
     ('your-reference',): flavors.YourReferenceUnslicer,
     # ('copyable', classname) is handled inline, through the CopyableRegistry
-    })
+    }
 
 class PBRootUnslicer(slicer.RootUnslicer):
     # topRegistry defines what objects are allowed at the top-level
-    topRegistry = PBTopRegistry
+    topRegistry = [PBTopRegistry]
     # openRegistry defines what objects are allowed at the second level and
     # below
-    openRegistry = PBOpenRegistry
+    openRegistry = [slicer.UnslicerRegistry, PBOpenRegistry]
     logViolations = False
 
     def checkToken(self, typebyte, size):
@@ -617,11 +616,13 @@ class PBRootUnslicer(slicer.RootUnslicer):
                 raise Violation(why)
             else:
                 return None # still need classname
-        try:
-            opener = self.openRegistry[opentype]
-            child = opener()
-        except KeyError:
-            raise Violation("unknown OPEN type '%s'" % (opentype,))
+        for reg in self.openRegistry:
+            opener = reg.get(opentype)
+            if opener is not None:
+                child = opener()
+                break
+        else:
+            raise Violation("unknown OPEN type %s" % (opentype,))
         child.broker = self.broker
         return child
 
@@ -672,6 +673,7 @@ class ErrorSlicer(ScopedSlicer):
 
 # failures are sent as Copyables
 class FailureSlicer(slicer.BaseSlicer):
+    slices = failure.Failure
     classname = "twisted.python.failure.Failure"
 
     def slice(self, streamable, banana):
@@ -713,7 +715,6 @@ class FailureSlicer(slicer.BaseSlicer):
                                   "\n\n-- TRACEBACK TRUNCATED --\n")
         state['parents'] = obj.parents
         return state
-registerAdapter(FailureSlicer, failure.Failure, ISlicer)
 
 class CopiedFailure(failure.Failure, RemoteCopy):
     """I am a shadow of some remote Failure instance. I contain less

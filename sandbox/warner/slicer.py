@@ -23,8 +23,21 @@ def getInstanceState(inst):
         state = inst.__dict__
     return state
 
+class SlicerClass(type):
+    # auto-register Slicers
+    def __init__(self, name, bases, dict):
+        type.__init__(self, name, bases, dict)
+        typ = dict.get('slices')
+        #reg = dict.get('slicerRegistry')
+        if typ:
+            registerAdapter(self, typ, tokens.ISlicer)
+
+
 class BaseSlicer:
+    __metaclass__ = SlicerClass
     implements(tokens.ISlicer)
+
+    slices = None
 
     parent = None
     sendOpen = True
@@ -83,39 +96,40 @@ class ScopedSlicer(BaseSlicer):
 
 class UnicodeSlicer(BaseSlicer):
     opentype = ("unicode",)
+    slices = unicode
     def sliceBody(self, streamable, banana):
         yield self.obj.encode("UTF-8")
-registerAdapter(UnicodeSlicer, unicode, tokens.ISlicer)
 
 class ListSlicer(BaseSlicer):
     opentype = ("list",)
     trackReferences = True
+    slices = list
 
     def sliceBody(self, streamable, banana):
         for i in self.obj:
             yield i
-registerAdapter(ListSlicer, list, tokens.ISlicer)
 
 class TupleSlicer(ListSlicer):
     opentype = ("tuple",)
-registerAdapter(TupleSlicer, tuple, tokens.ISlicer)
+    slices = tuple
 
 class SetSlicer(ListSlicer):
     opentype = ("set",)
     trackReferences = True
+    slices = sets.Set
 
     def sliceBody(self, streamable, banana):
         for i in self.obj:
             yield i
-registerAdapter(SetSlicer, sets.Set, tokens.ISlicer)
 
 class ImmutableSetSlicer(SetSlicer):
     opentype = ("immutable-set",)
-registerAdapter(ImmutableSetSlicer, sets.ImmutableSet, tokens.ISlicer)
+    slices = sets.ImmutableSet
 
 class DictSlicer(BaseSlicer):
     opentype = ('dict',)
     trackReferences = True
+    slices = None
     def sliceBody(self, streamable, banana):
         for key,value in self.obj.items():
             yield key
@@ -123,6 +137,7 @@ class DictSlicer(BaseSlicer):
 
 
 class OrderedDictSlicer(DictSlicer):
+    slices = dict
     def sliceBody(self, streamable, banana):
         keys = self.obj.keys()
         keys.sort()
@@ -130,16 +145,15 @@ class OrderedDictSlicer(DictSlicer):
             value = self.obj[key]
             yield key
             yield value
-registerAdapter(OrderedDictSlicer, dict, tokens.ISlicer)
 
 class NoneSlicer(BaseSlicer):
     opentype = ('none',)
     trackReferences = False
+    slices = type(None)
     def sliceBody(self, streamable, banana):
         # hmm, we need an empty generator. I think a sequence is the only way
         # to accomplish this, other than 'if 0: yield' or something silly
         return []
-registerAdapter(NoneSlicer, types.NoneType, tokens.ISlicer)
 
 class BooleanSlicer(BaseSlicer):
     opentype = ('boolean',)
@@ -348,6 +362,16 @@ class StorageRootSlicer(UnsafeRootSlicer):
         return UnsafeRootSlicer.slicerForObject(self, obj)
 
 
+
+UnslicerRegistry = {}
+UnsafeUnslicerRegistry = {}
+
+def registerUnslicer(opentype, factory, registry=None):
+    if registry is None:
+        registry = UnslicerRegistry
+    assert not registry.has_key(opentype)
+    registry[opentype] = factory
+
 def setInstanceState(inst, state):
     """Utility function to default to 'normal' state rules in unserialization.
     """
@@ -357,7 +381,18 @@ def setInstanceState(inst, state):
         inst.__dict__ = state
     return inst
 
+class UnslicerClass(type):
+    # auto-register Unslicers
+    def __init__(self, name, bases, dict):
+        type.__init__(self, name, bases, dict)
+        opentype = dict.get('opentype')
+        reg = dict.get('unslicerRegistry')
+        if opentype:
+            registerUnslicer(opentype, self, reg)
+
 class BaseUnslicer:
+    __metaclass__ = UnslicerClass
+    opentype = None
     implements(tokens.IUnslicer)
 
     def __init__(self):
@@ -483,8 +518,10 @@ class LeafUnslicer(BaseUnslicer):
 
 class UnicodeUnslicer(LeafUnslicer):
     # accept a UTF-8 encoded string
+    opentype = ("unicode",)
     string = None
     constraint = None
+
     def setConstraint(self, constraint):
         if isinstance(constraint, schema.Any):
             return
@@ -508,6 +545,8 @@ class UnicodeUnslicer(LeafUnslicer):
         return "<unicode>"
 
 class ListUnslicer(BaseUnslicer):
+    opentype = ("list",)
+
     maxLength = None
     itemConstraint = None
     debug = False
@@ -592,6 +631,8 @@ class ListUnslicer(BaseUnslicer):
         return "[%d]" % len(self.list)
 
 class TupleUnslicer(BaseUnslicer):
+    opentype = ("tuple",)
+
     debug = False
     constraints = None
 
@@ -673,15 +714,19 @@ class TupleUnslicer(BaseUnslicer):
         return "[%d]" % len(self.list)
 
 class SetUnslicer(ListUnslicer):
+    opentype = ("set",)
     def receiveClose(self):
         return sets.Set(self.list)
 
 class ImmutableSetUnslicer(ListUnslicer):
+    opentype = ("immutable-set",)
     def receiveClose(self):
         return sets.ImmutableSet(self.list)
 
 
 class DictUnslicer(BaseUnslicer):
+    opentype = ('dict',)
+
     gettingKey = True
     keyConstraint = None
     valueConstraint = None
@@ -779,7 +824,7 @@ class NewVocabulary:
 class VocabUnslicer(LeafUnslicer):
     """Much like DictUnslicer, but keys must be numbers, and values must
     be strings"""
-    
+
     def start(self, count):
         self.d = {}
         self.key = None
@@ -825,6 +870,8 @@ class InstanceUnslicer(BaseUnslicer):
     # this is an unsafe unslicer: an attacker could induce you to create
     # instances of arbitrary classes with arbitrary attributes: VERY
     # DANGEROUS!
+    opentype = ('instance',)
+    unslicerRegistry = UnsafeUnslicerRegistry
     
     # danger: instances are mutable containers. If an attribute value is not
     # yet available, __dict__ will hold a Deferred until it is. Other
@@ -895,8 +942,11 @@ class InstanceUnslicer(BaseUnslicer):
             return "%s.%s" % (me, self.attrname)
 
 class ReferenceUnslicer(LeafUnslicer):
+    opentype = ('reference',)
+
     constraint = None
     finished = False
+
     def setConstraint(self, constraint):
         self.constraint = constraint
 
@@ -920,6 +970,9 @@ class ReferenceUnslicer(LeafUnslicer):
         return self.obj
 
 class ModuleUnslicer(LeafUnslicer):
+    opentype = ('module',)
+    unslicerRegistry = UnsafeUnslicerRegistry
+
     finished = False
 
     def checkToken(self, typebyte, size):
@@ -940,6 +993,9 @@ class ModuleUnslicer(LeafUnslicer):
         return self.mod
 
 class ClassUnslicer(LeafUnslicer):
+    opentype = ('class',)
+    unslicerRegistry = UnsafeUnslicerRegistry
+
     finished = False
 
     def checkToken(self, typebyte, size):
@@ -959,6 +1015,9 @@ class ClassUnslicer(LeafUnslicer):
         return self.klass
 
 class MethodUnslicer(BaseUnslicer):
+    opentype = ('method',)
+    unslicerRegistry = UnsafeUnslicerRegistry
+
     state = 0
     im_func = None
     im_self = None
@@ -1026,6 +1085,9 @@ class MethodUnslicer(BaseUnslicer):
         
 
 class FunctionUnslicer(LeafUnslicer):
+    opentype = ('function',)
+    unslicerRegistry = UnsafeUnslicerRegistry
+
     finished = False
 
     def checkToken(self, typebyte, size):
@@ -1045,12 +1107,16 @@ class FunctionUnslicer(LeafUnslicer):
         return self.func
 
 class NoneUnslicer(LeafUnslicer):
+    opentype = ('none',)
+
     def checkToken(self, typebyte, size):
         raise BananaError("NoneUnslicer does not accept any tokens")
     def receiveClose(self):
         return None
 
 class BooleanUnslicer(LeafUnslicer):
+    opentype = ('boolean',)
+
     value = None
     constraint = None
 
@@ -1080,43 +1146,23 @@ class BooleanUnslicer(LeafUnslicer):
 
     def describe(self):
         return "<bool>"
-        
-UnslicerRegistry = {
-    ('unicode',): UnicodeUnslicer,
-    ('list',): ListUnslicer,
-    ('tuple',): TupleUnslicer,
-    ('dict',): DictUnslicer,
-    ('reference',): ReferenceUnslicer,
-    ('none',): NoneUnslicer,
-    ('boolean',): BooleanUnslicer,
-    ('set',): SetUnslicer,
-    ('immutable-set',): ImmutableSetUnslicer,
-    }
-        
-UnsafeUnslicerRegistry = UnslicerRegistry.copy()
-UnsafeUnslicerRegistry.update({
-    ('instance',): InstanceUnslicer,
-    ('module',): ModuleUnslicer,
-    ('class',): ClassUnslicer,
-    ('method',): MethodUnslicer,
-    ('function',): FunctionUnslicer,
-    })
 
 
 class RootUnslicer(BaseUnslicer):
     # topRegistry is used for top-level objects
-    topRegistry = UnslicerRegistry
+    topRegistry = [UnslicerRegistry]
     # openRegistry is used for everything at lower levels
-    openRegistry = UnslicerRegistry
+    openRegistry = [UnslicerRegistry]
     constraint = None
     openCount = None
 
     def __init__(self):
         self.objects = {}
-        maxLength = reduce(max,
-                           [len(k[0]) for k in (self.openRegistry.keys() +
-                                                self.topRegistry.keys()) ])
-        self.maxIndexLength = maxLength
+        keys = []
+        for r in self.topRegistry + self.openRegistry:
+            for k in r.keys():
+                keys.append(len(k[0]))
+        self.maxIndexLength = reduce(max, keys)
 
     def start(self, count):
         pass
@@ -1146,15 +1192,17 @@ class RootUnslicer(BaseUnslicer):
                               ord(typebyte))
 
     def open(self, opentype):
-        # called (by delegation) by the top Unslicer on the stack,
-        # regardless of what kind of unslicer it is.
+        # called (by delegation) by the top Unslicer on the stack, regardless
+        # of what kind of unslicer it is. This is only used for "internal"
+        # objects: non-top-level nodes
         assert len(self.protocol.receiveStack) > 1
-        try:
-            opener = self.openRegistry[opentype]
-            child = opener()
-        except KeyError:
+        for reg in self.openRegistry:
+            opener = reg.get(opentype)
+            if opener is not None:
+                child = opener()
+                return child
+        else:
             raise Violation("unknown OPEN type %s" % (opentype,))
-        return child
 
     def doOpen(self, opentype):
         # this is only called for top-level objects
@@ -1164,12 +1212,14 @@ class RootUnslicer(BaseUnslicer):
         if opentype == ("vocab",):
             # only legal at top-level
             return VocabUnslicer()
-        try:
-            opener = self.topRegistry[opentype]
-            child = opener()
-        except KeyError:
+        for reg in self.topRegistry:
+            opener = reg.get(opentype)
+            if opener is not None:
+                child = opener()
+                break
+        else:
             raise Violation("unknown top-level OPEN type %s" % (opentype,))
-            
+
         if self.constraint:
             child.setConstraint(self.constraint)
         return child
@@ -1205,8 +1255,8 @@ class RootUnslicer(BaseUnslicer):
 
 
 class UnsafeRootUnslicer(RootUnslicer):
-    topRegistry = UnsafeUnslicerRegistry
-    openRegistry = UnsafeUnslicerRegistry
+    topRegistry = [UnslicerRegistry, UnsafeUnslicerRegistry]
+    openRegistry = [UnslicerRegistry, UnsafeUnslicerRegistry]
 
 class StorageRootUnslicer(UnsafeRootUnslicer, ScopedUnslicer):
     # This version tracks references for the entire lifetime of the

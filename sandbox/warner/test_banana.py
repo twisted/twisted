@@ -282,9 +282,11 @@ class DecodeTest(UnbananaTestMixin, unittest.TestCase):
     def setUp(self):
         UnbananaTestMixin.setUp(self)
         self.banana.logReceiveErrors = False
-        self.banana.rootUnslicer.topRegistry.update(
-            { ('dict1',): BrokenDictUnslicer,
-              ('dict2',): ReallyBrokenDictUnslicer, })
+        d ={ ('dict1',): BrokenDictUnslicer,
+             ('dict2',): ReallyBrokenDictUnslicer,
+             }
+        self.banana.rootUnslicer.topRegistry.insert(0, d)
+        self.banana.rootUnslicer.openRegistry.insert(0, d)
 
     def test_simple_list(self):
         "simple list"
@@ -416,8 +418,8 @@ class DecodeTest(UnbananaTestMixin, unittest.TestCase):
     def test_instance_unsafe1(self):
 
         "instances when instances aren't allowed"
-        self.banana.rootUnslicer.topRegistry = slicer.UnslicerRegistry
-        self.banana.rootUnslicer.openRegistry = slicer.UnslicerRegistry
+        self.banana.rootUnslicer.topRegistry = [slicer.UnslicerRegistry]
+        self.banana.rootUnslicer.openRegistry = [slicer.UnslicerRegistry]
 
         tokens = [tOPEN(0),'instance', "Foo",
                    "a", 1,
@@ -982,10 +984,11 @@ class DecodeFailureTest(TestBananaMixin, unittest.TestCase):
 
     def setUp(self):
         TestBananaMixin.setUp(self)
-        self.banana.rootUnslicer.topRegistry.update(
-            {('errorful',): ErrorfulUnslicer,
+        d = {('errorful',): ErrorfulUnslicer,
              ('failing',): FailingUnslicer,
-             })
+             }
+        self.banana.rootUnslicer.topRegistry.insert(0, d)
+        self.banana.rootUnslicer.openRegistry.insert(0, d)
         self.banana.ignoreChildDeath = False
 
     def testSuccess1(self):
