@@ -65,7 +65,7 @@ class WCProcessProtocol(protocol.ProcessProtocol):
     <p>We're done!  To use our WCProcessProtocol, we create an instance, and pass it to spawnProcess.</p>
 <pre class="python">
 from twisted.internet import reactor
-wcProcess = WCProcessProtocol("acessing protocols through Twisted is fun!\n")
+wcProcess = WCProcessProtocol("accessing protocols through Twisted is fun!\n")
 reactor.spawnProcess(wcProcess, 'wc', ['wc'])
 reactor.run()
 </pre>
