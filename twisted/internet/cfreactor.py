@@ -27,6 +27,11 @@ Maintainer: U{Bob Ippolito<mailto:bob@redivi.com>}
 __all__ = ['install']
 
 import sys
+
+# hints for py2app
+import _CarbonEvt
+import traceback
+
 import cfsupport as cf
 
 from twisted.python import log, threadable, failure
