@@ -98,7 +98,7 @@ def setattr(self, name):
 def callattr(self, name):
     return lambda value: getattr(self, name)(value)
 
-class RecordMixin:
+class Record:
     FORMAT_SPECIFIERS = {
         Integer(8, False): 'B',
         Integer(8, True): 'b',
@@ -109,17 +109,25 @@ class RecordMixin:
         Int255String(): 'p',
         }
 
+    __format__ = ()
+
+    def __encode__(self):
+        return self.__format__
+
+    def __decode__(self):
+        return self.__format__
+
     def encode(self):
         result = []
         subbytes = []
-        for (attr, t) in self.__format__:
+        for (attr, t) in self.__encode__():
             if t in self.FORMAT_SPECIFIERS:
                 processEncode(result, subbytes)
                 subbytes = []
 
                 fmt = self.FORMAT_SPECIFIERS[t]
                 result.append(struct.pack('>' + fmt, getattr(self, attr)))
-            elif isinstance(t, (types.ClassType, types.TypeType)) and issubclass(t, RecordMixin):
+            elif isinstance(t, (types.ClassType, types.TypeType)) and issubclass(t, Record):
                 processEncode(result, subbytes)
                 subbytes = []
 
@@ -137,7 +145,7 @@ class RecordMixin:
         i = cls()
         offset = 0
         subbytes = []
-        for (attrspec, t) in i.__format__:
+        for (attrspec, t) in i.__decode__():
             if isinstance(attrspec, str):
                 attrspec = setattr(i, attrspec)
             if t in cls.FORMAT_SPECIFIERS:
@@ -147,7 +155,7 @@ class RecordMixin:
                 size = struct.calcsize('>' + fmt)
                 attrspec(struct.unpack('>' + fmt, bytes[:size])[0])
                 bytes = bytes[size:]
-            elif isinstance(t, (types.ClassType, types.TypeType)) and issubclass(t, RecordMixin):
+            elif isinstance(t, (types.ClassType, types.TypeType)) and issubclass(t, Record):
                 o, bytes = t.decode(bytes)
                 attrspec(o)
             else:

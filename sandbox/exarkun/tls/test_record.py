@@ -1,7 +1,7 @@
 
 import random
 
-from record import RecordMixin as Record, Integer, Int255String
+from record import Record, Integer, Int255String
 
 class SingleSignedByte(Record):
     __format__ = [('a', Integer(8, True))]
