@@ -22,6 +22,8 @@ class _foo:
     pass
     
 class _Cache(components.Adapter):
+    __implements__ = (IRebuildable,)
+
     def cret(self, memo, original, result):
         memo[id(original)] = result
         return result
