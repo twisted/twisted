@@ -270,7 +270,7 @@ desktop environments, and your toaster.
         'bin/manhole', 'bin/mktap', 'bin/twistd',
         'bin/im', 'bin/t-im', 'bin/tap2deb', 'bin/tap2rpm',
         'bin/tapconvert', 'bin/websetroot',
-        'bin/lore',
+        'bin/lore/lore',
         'bin/tkmktap', 'bin/conch', 'bin/ckeygen',
         'bin/tkconch', 'bin/trial', 'bin/mail/mailmail'
     ],
