@@ -119,7 +119,6 @@ class NotReadyError(RuntimeError):
     """
     pass
 
-
 class CallLater(Instruction):
     """ Instruction to support callbacks
 
@@ -213,7 +212,6 @@ class Stage(Instruction):
                      // handle iterable.failure
                      iterable.stop = True
                      break
-
     """      
     def __init__(self, *trap):
         self._trap = trap
@@ -223,10 +221,6 @@ class Stage(Instruction):
     
     def __iter__(self):
         return self
-
-    def isFailure(self):
-        """ for backwards compatibility, use 'fail' attribute instead """
-        return self.failure
 
     def next(self):
         """ return current result
@@ -242,7 +236,7 @@ class Stage(Instruction):
         if self.stop:
             raise StopIteration()
         if self.failure:
-            self.stop = 1
+            self.stop = True
             return self.failure.trap(*self._trap)
         raise NotReadyError("Must 'yield' this object before calling next()")
 
@@ -267,7 +261,7 @@ class String(Stage):
     def __init__(self, str):
         Stage.__init__(self)
         self.results.append(str)
-        self.stop = 1
+        self.stop = True
     def _yield(self):
         pass
 
@@ -526,14 +520,14 @@ class Callback(Stage):
         Stage.__init__(self, *trap)
         self._finished   = False
         self._cooperate  = Callback.Instruction()
-    def callback(self,result):
+    def result(self,result):
         """ called by the producer to indicate a successful result """
         self.results.append(result)
         self._cooperate.flow()
     def finish(self):
         """ called by producer to indicate successful stream completion """
         assert not self.failure, "failed streams should not be finished"
-        self._finished = 1
+        self._finished = True
         self._cooperate.flow()
     def errback(self, fail):
         """ called by the producer in case of Failure """
@@ -549,7 +543,7 @@ class Callback(Stage):
                 self.stop = True
                 return
             return self._cooperate
-    __call__ = callback
+    __call__ = result
 
 class DeferredWrapper(Stage):
     """ Wraps a Deferred object into a stage
@@ -583,9 +577,9 @@ class DeferredWrapper(Stage):
         if not self._called:
             return self._cooperate
         if self._fetched:
-           self.stop = 1
+           self.stop = True
            return
-        self._fetched = 1
+        self._fetched = True
 
 class Threaded(Stage):
     """ A stage which runs a blocking iterable in a separate thread
