@@ -2251,6 +2251,10 @@ def parseNestedParens(s):
 def collapseNestedLists(items):
     """Turn a nested list structure into an s-exp-like string.
 
+    Strings in C{items} will be sent as literals if they contain CR or LF,
+    quoted if they contain other whitespace, or sent unquoted otherwise.
+    References to None in C{items} will be translated to the atom NIL.
+
     @type items: Any iterable
 
     @rtype: C{str}
@@ -2260,7 +2264,7 @@ def collapseNestedLists(items):
         if i is None:
             pieces.extend([' ', 'NIL'])
         elif isinstance(i, types.StringTypes):
-            if '\n' in i:
+            if '\n' in i or '\r' in i:
                 pieces.extend([' ', '{%d}' % (len(i),), IMAP4Server.delimiter, i, IMAP4Server.delimiter])
             elif (not i.startswith('BODY')) and (' ' in i or '\t' in i):
                 pieces.extend([' ', '"%s"' % (i,)])
