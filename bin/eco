@@ -1,0 +1,32 @@
+#!/usr/bin/env python
+
+import sys
+from twisted.eco import eco, sexpy
+
+
+def interpret():
+    """Run a command-line intepreter for ECO."""
+    continuation = 0
+    parser = sexpy.SymbolicExpressionReceiver()
+    parser.connectionMade()
+    l = []
+    parser.symbolicExpressionReceived = l.append
+    evaluator = eco.Evaluator()
+    
+    while 1:
+        if continuation:
+            sys.stdout.write("... ")
+        else:
+            sys.stdout.write(">>> ")
+        line = sys.stdin.readline()
+        parser.dataReceived(line)
+        if l:
+            value = l.pop()
+            sys.stdout.write("%s\n" % evaluator.evalExp(eco.consify(value)))
+            continuation = 0
+        else:
+            continuation = 1
+
+
+if __name__ == '__main__':
+    interpret()
