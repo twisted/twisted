@@ -426,158 +426,164 @@ def elementStream():
         es = ExpatElementStream()
         return es
     except ImportError:
+        if SuxElementStream is None:
+            raise Exception("No parsers available :(")
         es = SuxElementStream()
         return es
 
-from twisted.protocols import sux
-class SuxElementStream(sux.XMLParser):
-    def __init__(self):
-        self.connectionMade()
-        self.DocumentStartEvent = None
-        self.ElementEvent = None
-        self.DocumentEndEvent = None
-        self.currElem = None
-        self.rootElem = None
-        self.documentStarted = False
-        self.defaultNsStack = []
-        self.prefixStack = []
-        self.parse = self.dataReceived
-
-    def findUri(self, prefix):
-        # Walk prefix stack backwards, looking for the uri
-        # matching the specified prefix
-        stack = self.prefixStack
-        for i in range(-1, (len(self.prefixStack)+1) * -1, -1):
-            if prefix in stack[i]:
-                return stack[i][prefix]
-        return None
-
-    def gotTagStart(self, name, attributes):
-        defaultUri = None
-        localPrefixes = {}
-        attribs = {}
-        uri = None
-                    
-        # Pass 1 - Identify namespace decls
-        for k, v in attributes.items():
-            if k.startswith("xmlns"):
-                x, p = _splitPrefix(k)
-                if (x == None): # I.e.  default declaration
-                    defaultUri = v
-                else:
-                    localPrefixes[p] = v
-                del attributes[k]
-
-        # Push namespace decls onto prefix stack
-        self.prefixStack.append(localPrefixes)
-
-        # Determine default namespace for this element; if there
-        # is one
-        if defaultUri == None and len(self.defaultNsStack) > 0:
-            defaultUri = self.defaultNsStack[-1]
-                
-        # Fix up name
-        prefix, name = _splitPrefix(name)
-        if prefix == None: # This element is in the default namespace
-            uri = defaultUri
-        else:
-            # Find the URI for the prefix
-            uri = self.findUri(prefix)
-        
-        # Pass 2 - Fix up and escape attributes
-        for k, v in attributes.items():
-            p, n = _splitPrefix(k)
-            if p == None:
-                attribs[n] = v
-            else:
-                attribs[(self.findUri(p)), n] = unescapeFromXml(v)
-
-        # Construct the actual Element object
-        e = Element((uri, name), defaultUri, attribs)
-
-        # Save current default namespace
-        self.defaultNsStack.append(defaultUri)
-
-        # Document already started
-        if self.documentStarted:
-            # Starting a new packet
-            if self.currElem == None:
-                self.currElem = e
-            # Adding to existing element
-            else:
-                self.currElem = self.currElem.addChild(e)
-        # New document
-        else:
-            self.rootElem = e
-            self.documentStarted = True
-            self.DocumentStartEvent(e)
-
-    def gotText(self, data):
-        if self.currElem != None:
-            self.currElem.addContent(data)
-
-    def gotCData(self, data):
-        if self.currElem != None:
-            self.currElem.addContent(data)
-
-    def gotComment(self, data):
-        # Ignore comments for the moment
-        pass
-
-    entities = { "amp" : "&",
-                 "lt"  : "<",
-                 "gt"  : ">",
-                 "apos": "'",
-                 "quot": "\"" }
-
-    def gotEntityReference(self, entityRef):
-        # If this is an entity we know about, add it as content
-        # to the current element
-        if entityRef in SuxElementStream.entities:
-            self.currElem.addContent(SuxElementStream.entities[entityRef])
-
-    def gotTagEnd(self, name):
-        # Ensure the document hasn't already ended
-        if self.rootElem == None:
-            # XXX: Write more legible explanation
-            raise ParserError, "Element closed after end of document."
-        
-        # Fix up name
-        prefix, name = _splitPrefix(name)
-        if prefix == None:
-            uri = self.defaultNsStack[-1]
-        else:
-            uri = self.findUri(prefix)
-
-        # End of document
-        if self.currElem == None:
-            # Ensure element name and uri matches
-            if self.rootElem.name != name or self.rootElem.uri != uri:
-                raise ParserError, "Mismatched root elements"
-            self.DocumentEndEvent()
+try:
+    from twisted.web import sux
+except:
+    SuxElementStream = None
+else:
+    class SuxElementStream(sux.XMLParser):
+        def __init__(self):
+            self.connectionMade()
+            self.DocumentStartEvent = None
+            self.ElementEvent = None
+            self.DocumentEndEvent = None
+            self.currElem = None
             self.rootElem = None
+            self.documentStarted = False
+            self.defaultNsStack = []
+            self.prefixStack = []
+            self.parse = self.dataReceived
 
-        # Other elements
-        else:
-            # Ensure the tag being closed matches the name of the current
-            # element
-            if self.currElem.name != name or self.currElem.uri != uri:
-                # XXX: Write more legible explanation
-                raise ParserError, "Malformed element close"
+        def findUri(self, prefix):
+            # Walk prefix stack backwards, looking for the uri
+            # matching the specified prefix
+            stack = self.prefixStack
+            for i in range(-1, (len(self.prefixStack)+1) * -1, -1):
+                if prefix in stack[i]:
+                    return stack[i][prefix]
+            return None
 
-            # Pop prefix and default NS stack
-            self.prefixStack.pop()
-            self.defaultNsStack.pop()
+        def gotTagStart(self, name, attributes):
+            defaultUri = None
+            localPrefixes = {}
+            attribs = {}
+            uri = None
 
-            # Check for parent null parent of current elem;
-            # that's the top of the stack
-            if self.currElem.parent == None:
-                self.ElementEvent(self.currElem)
-                self.currElem = None
+            # Pass 1 - Identify namespace decls
+            for k, v in attributes.items():
+                if k.startswith("xmlns"):
+                    x, p = _splitPrefix(k)
+                    if (x == None): # I.e.  default declaration
+                        defaultUri = v
+                    else:
+                        localPrefixes[p] = v
+                    del attributes[k]
 
-            # Anything else is just some element wrapping up
+            # Push namespace decls onto prefix stack
+            self.prefixStack.append(localPrefixes)
+
+            # Determine default namespace for this element; if there
+            # is one
+            if defaultUri == None and len(self.defaultNsStack) > 0:
+                defaultUri = self.defaultNsStack[-1]
+
+            # Fix up name
+            prefix, name = _splitPrefix(name)
+            if prefix == None: # This element is in the default namespace
+                uri = defaultUri
             else:
-                self.currElem = self.currElem.parent
+                # Find the URI for the prefix
+                uri = self.findUri(prefix)
+
+            # Pass 2 - Fix up and escape attributes
+            for k, v in attributes.items():
+                p, n = _splitPrefix(k)
+                if p == None:
+                    attribs[n] = v
+                else:
+                    attribs[(self.findUri(p)), n] = unescapeFromXml(v)
+
+            # Construct the actual Element object
+            e = Element((uri, name), defaultUri, attribs)
+
+            # Save current default namespace
+            self.defaultNsStack.append(defaultUri)
+
+            # Document already started
+            if self.documentStarted:
+                # Starting a new packet
+                if self.currElem == None:
+                    self.currElem = e
+                # Adding to existing element
+                else:
+                    self.currElem = self.currElem.addChild(e)
+            # New document
+            else:
+                self.rootElem = e
+                self.documentStarted = True
+                self.DocumentStartEvent(e)
+
+        def gotText(self, data):
+            if self.currElem != None:
+                self.currElem.addContent(data)
+
+        def gotCData(self, data):
+            if self.currElem != None:
+                self.currElem.addContent(data)
+
+        def gotComment(self, data):
+            # Ignore comments for the moment
+            pass
+
+        entities = { "amp" : "&",
+                     "lt"  : "<",
+                     "gt"  : ">",
+                     "apos": "'",
+                     "quot": "\"" }
+
+        def gotEntityReference(self, entityRef):
+            # If this is an entity we know about, add it as content
+            # to the current element
+            if entityRef in SuxElementStream.entities:
+                self.currElem.addContent(SuxElementStream.entities[entityRef])
+
+        def gotTagEnd(self, name):
+            # Ensure the document hasn't already ended
+            if self.rootElem == None:
+                # XXX: Write more legible explanation
+                raise ParserError, "Element closed after end of document."
+
+            # Fix up name
+            prefix, name = _splitPrefix(name)
+            if prefix == None:
+                uri = self.defaultNsStack[-1]
+            else:
+                uri = self.findUri(prefix)
+
+            # End of document
+            if self.currElem == None:
+                # Ensure element name and uri matches
+                if self.rootElem.name != name or self.rootElem.uri != uri:
+                    raise ParserError, "Mismatched root elements"
+                self.DocumentEndEvent()
+                self.rootElem = None
+
+            # Other elements
+            else:
+                # Ensure the tag being closed matches the name of the current
+                # element
+                if self.currElem.name != name or self.currElem.uri != uri:
+                    # XXX: Write more legible explanation
+                    raise ParserError, "Malformed element close"
+
+                # Pop prefix and default NS stack
+                self.prefixStack.pop()
+                self.defaultNsStack.pop()
+
+                # Check for parent null parent of current elem;
+                # that's the top of the stack
+                if self.currElem.parent == None:
+                    self.ElementEvent(self.currElem)
+                    self.currElem = None
+
+                # Anything else is just some element wrapping up
+                else:
+                    self.currElem = self.currElem.parent
 
 
 class ExpatElementStream:
