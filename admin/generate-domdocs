@@ -274,6 +274,30 @@ def munge(document, template, linkrel, d, fullpath, ext, cache):
     findNodesNamed(template, "title")[0].childNodes.extend(
         findNodesNamed(document, 'title')[0].childNodes)
     body = findNodesNamed(document, "body")[0]
+    headers = findElements(document, 
+                           lambda n,m=re.compile('h[23]$').match:m(n.nodeName))
+    toc, level, id = '\n<ol>\n', 0, 0
+    for element in headers:
+        elementLevel = int(element.tagName[1])-2
+        toc += (level-elementLevel)*'</ul>\n'
+        toc += (elementLevel-level)*'<ul>'
+        toc += '<li><a href="#auto%d">' % id
+        for child in element.childNodes:
+            toc += child.toxml()
+        toc += '</a></li>\n'
+        level = elementLevel
+        name = dom.parseString('<a name="auto%d" />' % id).documentElement
+        element.childNodes.append(name)
+        id += 1
+    toc += '</ul>\n' * level
+    toc += '</ol>\n'
+    newnode = dom.parseString(toc).documentElement
+    h1 = findNodesNamed(document, 'h1')
+    if h1:
+        h1 = h1[0]
+        parent = h1.parentNode
+        i = parent.childNodes.index(h1)
+        parent.childNodes[i+1:i+1] = [newnode]
     tmplbody = findElementsWithAttribute(template, "class", "body")[0]
     tmplbody.childNodes = body.childNodes
     tmplbody.setAttribute("class", "content")
