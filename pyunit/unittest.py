@@ -383,7 +383,7 @@ class DeferredTestCase(TestCase):
                 cleanupDeferred = 1
         except:
             testResult.addError(self, self._exc_info())
-        for e in log.flushErrors():
+        for e in twisted.python.log.flushErrors():
             self.testResult.addError(self, e)
         if not cleanupDeferred:
             self.cleanup()
@@ -391,6 +391,7 @@ class DeferredTestCase(TestCase):
     def cleanup(self, ignored=None):
         from twisted.internet import reactor
         self.testResult.stopTest(self)
+        #reactor.runUntilCurrent()
         reactor.stop()
         if self.testResult.wasSuccessful():
             self.testResult.addSuccess(self)
