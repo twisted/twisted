@@ -54,8 +54,10 @@
        TAPs or plugins, there is no need to choose a reactor explicitly, since
        this can be chosen using <code>twistd</code>'s -r option.</p>
 
-    <p>In all cases, the event loop is started by calling
-    <code class="python">reactor.run()</code>.</p>
+    <p>In all cases, the event loop is started by calling <code
+    class="python">reactor.run()</code>. In all cases, the event loop
+    should be stopped with <code
+    class="python">reactor.stop()</code>.</p>
 
     <p><strong>IMPORTANT:</strong> installing a reactor should be the first thing
     done in the app, since any code that does
@@ -220,6 +222,25 @@ from twisted.internet import wxsupport, reactor
 
 myWxAppInstance = wxApp(0)
 wxsupport.install(myWxAppInstance)
+</pre>
+
+    <p>However, this has issues when runnin on Windows, so Twisted now
+    comes with alternative wxPython support using a reactor. Using
+    this method is probably better. Initialization is done in two
+    stages. In the first, the reactor is installed:</p>
+
+<pre class="python">
+from twisted.internet import wxreactor
+wxreactor.install()
+</pre>
+
+    <p>Later, once a <code class="python">wxApp</code> instance has
+    been created, but before <code class="python">reactor.run()</code>
+    is called:</p>
+
+<pre class="python">
+myWxAppInstance = wxApp(0)
+reactor.registerWxApp(myWxAppInstance)
 </pre>
 
     <p>An example Twisted application that uses WxWindows can be found

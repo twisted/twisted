@@ -21,6 +21,7 @@ from twisted import copyright
 import sys, os, pdb, profile, getpass, traceback, signal
 
 reactorTypes = {
+    'wx': 'twisted.internet.wxreactor',
     'gtk': 'twisted.internet.gtkreactor',
     'gtk2': 'twisted.internet.gtk2reactor',
     'glade': 'twisted.internet.gladereactor',

@@ -16,7 +16,10 @@
 
 from wxPython.wx import *
 
-from twisted.internet import wxsupport, reactor
+from twisted.internet import wxreactor
+wxreactor.install()
+from twisted.internet import reactor
+
 
 # set up so that "hello, world" is printed once a second
 def helloWorld():
@@ -57,8 +60,8 @@ class MyApp(wxApp):
 
 def demo():
     app = MyApp(0)
-    wxsupport.install(app)
-    reactor.run()
+    reactor.registerWxApp(app)
+    reactor.run(0)
 
 
 if __name__ == '__main__':
