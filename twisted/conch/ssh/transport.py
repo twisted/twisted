@@ -27,6 +27,7 @@ from Crypto.PublicKey import RSA
 
 # twisted imports
 from twisted.internet import protocol
+from twisted.python import log
 
 # sibling importsa
 from common import NS, getNS, MP, getMP, ffs # ease of use
@@ -39,13 +40,12 @@ class SSHTransportBase(protocol.Protocol):
     ourVersionString = ('SSH-'+protocolVersion+'-'+serverVersion+' '+comment).strip()
 
     supportedCiphers = ('aes256-cbc', 'aes192-cbc', 'aes128-cbc', 'cast128-cbc',
-                        'blowfish', 'idea-cbc', '3des-cbc', 'arcfour', 'none')
-    supportedMACs = ('hmac-sha1', 'hmac-md5', 'none')
-    supportedKeyExchanges = (#'diffie-hellman-group1-sha1',
-        'diffie-hellman-group-exchange-sha1',)
-#                             'diffie-hellman-group1-sha1')
+                        'blowfish', 'idea-cbc', '3des-cbc', 'arcfour')
+    supportedMACs = ('hmac-sha1', 'hmac-md5')
+    supportedKeyExchanges = ('diffie-hellman-group-exchange-sha1',
+                             'diffie-hellman-group1-sha1')
     supportedPublicKeys = ('ssh-rsa', 'ssh-dss', )
-    supportedCompressions = ('none',) # compression doesn't work
+    supportedCompressions = ('zlib', 'none')
     supportedLanguages = ()
 
     gotVersion = 0
@@ -62,7 +62,7 @@ class SSHTransportBase(protocol.Protocol):
     def connectionLost(self):
         #from twisted.internet import reactor
         #reactor.stop()
-        print 'connection lost'
+        log.msg('connection lost')
 
     def connectionMade(self):
         self.transport.write('%s\r\n' % (self.ourVersionString)
@@ -120,6 +120,9 @@ class SSHTransportBase(protocol.Protocol):
         else:
             first = self.buf[:bs]
         packetLen, randomLen = struct.unpack('!LB',first[:5])
+        if packetLen > 1048576: # 1024 ** 2
+            self.sendDisconnect(DISCONNECT_PROTOCOL_ERROR, 'bad packet length')
+            return           
         if (packetLen+4)%bs != 0:
             self.sendDisconnect(DISCONNECT_PROTOCOL_ERROR, 'bad packet length')
             return
@@ -144,7 +147,7 @@ class SSHTransportBase(protocol.Protocol):
             try:
                 payload = self.incomingCompression.decompress(payload)
             except zlib.error, e:
-                self.sendDisconnect(DISCONNECT_COMPRESSION_ERROR, e)
+                self.sendDisconnect(DISCONNECT_COMPRESSION_ERROR, 'compression error')
                 return
         self.incomingPacketSequence += 1
         return payload
@@ -172,14 +175,14 @@ class SSHTransportBase(protocol.Protocol):
                 if f:
                     f(packet[1:])
                 else:
-                    print "couldn't handle", messageType
-                    print repr(packet[1:])
+                    log.msg("couldn't handle %s" % messageType)
+                    log.msg(repr(packet[1:]))
                     self.sendUnimplemented()
             elif self.service:
                 self.service.packetReceived(ord(packet[0]), packet[1:])
             else:                     
-                print "couldn't handle", messageNum
-                print repr(packet[1:])
+                log.msg("couldn't handle %s" % messageNum)
+                log.msg(repr(packet[1:]))
                 self.sendUnimplemented()
             packet = self.getPacket()
 
@@ -201,12 +204,16 @@ class SSHTransportBase(protocol.Protocol):
         self.receiveDebug(alwaysDisplay, message, lang)
 
     def setService(self, service):
+        log.msg('starting service %s' % service.name)
         self.service = service
         service.transport = self
         self.service.serviceStarted()
 
     def sendDebug(self, message, alwaysDisplay = 0, language = ''):
         self.sendPacket(MSG_DEBUG, chr(alwaysDisplay) + NS(message) + NS(language))
+
+    def sendIgnore(self, message):
+        self.sendPacket(MSG_IGNORE, NS(message))
 
     def sendUnimplemented(self):
         seqnum = self.incomingPacketSequence
@@ -221,11 +228,11 @@ class SSHTransportBase(protocol.Protocol):
         raise 'Got remote error, code %s\nreason: %s' % (reasonCode, description)
 
     def receiveUnimplemented(self, seqnum):
-        print 'other side unimplemented packet #%s' % seqnum
+        log.msg('other side unimplemented packet #%s' % seqnum)
 
     def receiveDebug(self, alwaysDisplay, message, lang):
         if alwaysDisplay:
-            print 'Remote Debug Message:', message
+            log.msg('Remote Debug Message:', message)
 
 class SSHServerTransport(SSHTransportBase):
     def ssh_KEXINIT(self, packet):
@@ -253,7 +260,15 @@ class SSHServerTransport(SSHTransportBase):
             return
         if None in self.nextEncryptions.__dict__.values():
             self.sendDisconnect(DISCONNECT_KEY_EXCHANGE_FAILED, "couldn't match all kex parts")
-            return            
+            return
+        log.msg('kex alg, key alg: %s %s' % (self.kexAlg, self.keyAlg))
+        log.msg('server->client: %s %s %s' % (self.nextEncryptions.outCipType,
+                                            self.nextEncryptions.outMacType,
+                                            self.outgoingCompressionType))
+        log.msg('client->server: %s %s %s' % (self.nextEncryptions.inCipType,
+                                            self.nextEncryptions.inMacType,
+                                            self.incomingCompressionType))
+
 #        print self.nextEncryptions.__dict__
 
     def ssh_KEX_DH_GEX_REQUEST_OLD(self, packet):
@@ -484,7 +499,7 @@ class SSHClientTransport(SSHTransportBase):
     # client methods
     def checkFingerprint(self, fingerprint):
         # return 1 if it's good
-        print 'got server fingerprint', fingerprint
+        log.msg('got server fingerprint %s' % fingerprint)
         return 1
 
     def connectionSecure(self):

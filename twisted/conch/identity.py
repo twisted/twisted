@@ -54,15 +54,15 @@ class OpenSSHConchIdentity(ConchIdentity):
     def validatePublicKey(self, pubKeyString):
         home = os.path.expanduser('~%s/.ssh/' % self.name)
         if home[0] == '~': # couldn't expand
-            return defer.fail('')
+            return defer.fail('not valid user')
         for file in ['authorized_keys', 'authorized_keys2']:
             if os.path.exists(home+file):
                 lines = open(home+file).readlines()
                 for l in lines:
                     if base64.decodestring(l.split()[1])==pubKeyString:
                         return defer.succeed('')
-        print 'not vaild key'
-        return defer.fail('')
+        #print 'not valid key'
+        return defer.fail('not valid key')
 
     def verifyPlainPassword(self, password):
         if pwd:

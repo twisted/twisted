@@ -16,7 +16,7 @@
 # 
 import os.path, base64
 from twisted.internet import app, defer
-from twisted.python import failure
+from twisted.python import failure, log
 from common import NS, getNS, MP
 import keys, transport, service
 
@@ -27,9 +27,10 @@ class SSHUserAuthServer(service.SSHService):
     authenticatedWith = []
 
     def tryAuth(self, kind, user, data):
+        log.msg('%s trying auth %s' % (user, kind))
         d = self.transport.factory.authorizer.getIdentityRequest(user)
         d.pause()
-        d.addCallbacks(self._cbTryAuth, self._ebBadAuth, (kind, data))
+        d.addCallback(self._cbTryAuth, kind, data)
         return d
 
     def _cbTryAuth(self, identity, kind, data):
@@ -44,13 +45,14 @@ class SSHUserAuthServer(service.SSHService):
         self.nextService = nextService
         self.method = method
         d = self.tryAuth(method, user, rest)
-        d.addCallbacks(self._cbGoodAuth, self._ebBadAuth, callbackArgs = (method,))
+        d.addCallbacks(self._cbGoodAuth, self._ebBadAuth)
         d.unpause() # we need this because it turns out Deferreds /really/ want to report errors
 
-    def _cbGoodAuth(self, foo, method):
+    def _cbGoodAuth(self, foo):
         if foo == -1: # got a callback saying we sent another packet type
             return
-        self.authenticatedWith.append(method)
+        log.msg('%s authenticated with %s' % (self.user, self.method))
+        self.authenticatedWith.append(self.method)
         if self.areDone():
             self.transport.sendPacket(MSG_USERAUTH_SUCCESS, '')
             self.transport.setService(self.transport.factory.services[self.nextService]())
@@ -59,8 +61,8 @@ class SSHUserAuthServer(service.SSHService):
 
     def _ebBadAuth(self, foo):
         if self.method != 'none': # ignore 'none' as a method
-            print '%s failed auth %s (next service: %s)' % (self.user, self.method, self.nextService)
-            print 'potential reason: %s' % foo
+            log.msg('%s failed auth %s' % (self.user, self.method))
+            #print 'potential reason: %s' % foo
         self.transport.sendPacket(MSG_USERAUTH_FAILURE, NS(','.join(self.supportedAuthentications))+'\x00')
         #return foo # this will be a failure to continue in errs
 
@@ -70,11 +72,11 @@ class SSHUserAuthServer(service.SSHService):
         algName, blob, rest = getNS(packet[1:], 2)
         if hasSig:
             d = ident.validatePublicKey(blob)
-            d.addCallbacks(self._cbToVerifySig, self._ebBadAuth, (ident, blob, getNS(rest)[0]))
+            d.addCallback(self._cbToVerifySig, ident, blob, getNS(rest)[0])
             return d
         else:
             d = ident.validatePublicKey(blob)
-            d.addCallbacks(self._cbValidateKey, self._ebBadAuth,(packet[1:],))
+            d.addCallback(self._cbValidateKey, packet[1:])
             return d
 
     def _cbToVerifySig(self, foo, ident, blob, signature):

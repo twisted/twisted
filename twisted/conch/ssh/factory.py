@@ -17,6 +17,7 @@
 import md5, os
 
 from twisted.internet import protocol
+from twisted.python import log
 
 import common, userauth, keys, transport, primes, connection
 
@@ -61,7 +62,7 @@ class OpenSSHFactory(SSHFactory):
                     t = common.getNS(k)[0]
                     ks[t] = k
                 except:
-                    print 'bad key file', file
+                    log.msg('bad public key file %s' % file)
         return ks
     def getPrivateKeys(self):
         ks = {}
@@ -72,7 +73,7 @@ class OpenSSHFactory(SSHFactory):
                     t = keys.objectType(k)
                     ks[t] = k
                 except:
-                    print 'bad key file', file
+                    log.msg('bad private key file %s' % file)
         return ks
     def getPrimes(self):
         return primes.parseModuliFile(self.dataRoot+'/moduli')

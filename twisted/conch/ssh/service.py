@@ -14,6 +14,9 @@
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 # 
+
+from twisted.python import log
+
 class SSHService:
     name = None # this is the ssh name for the service
     protocolMessages = {} # these map #'s -> protocol names
@@ -26,10 +29,11 @@ class SSHService:
         """
         called when we receieve a packet on the transport
         """
+        #print self.protocolMessages
         f = getattr(self,'ssh_%s' % self.protocolMessages[messageType][4:], None)
         if f:
             f(packet)            
         else:                     
-            print "couldn't handle", messageType
-            print repr(packet[1:])
+            log.msg("couldn't handle", messageType)
+            log.msg(repr(packet[1:]))
             self.transport.sendUnimplemented()

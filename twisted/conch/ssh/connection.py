@@ -14,8 +14,10 @@
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 # 
+
 import struct
 from twisted.internet import protocol, ptypro
+from twisted.python import log
 import service, common
 
 class SSHConnection(service.SSHService):
@@ -33,12 +35,14 @@ class SSHConnection(service.SSHService):
         if type(channel)!=type((1,)):
             localChannel = self.localChannelID
             self.localChannelID += 1
+            channel.id = localChannel
             self.channels[localChannel] = channel
             self.channelsToRemoteChannel[channel] = senderChannel
             self.localToRemoteChannel[localChannel] = senderChannel
             self.transport.sendPacket(MSG_CHANNEL_OPEN_CONFIRMATION, struct.pack('>4L',
                                         senderChannel, localChannel, windowSize, maxPacket) +\
                                       channel.specificData)
+            channel.channelOpen()
         else:
             reason, textualInfo = channel
             self.transport.sendPacket(MSG_CHANNEL_OPEN_FAILURE,
@@ -95,10 +99,12 @@ class SSHConnection(service.SSHService):
                 + struct.pack('>3L', self.localChannelID,
                               channel.windowSize, channel.maxPacket)
                 + extra)
+        channel.id = self.localChannelID
         self.channels[self.localChannelID] = channel
         self.localChannelID += 1
 
     def sendRequest(self, channel, requestType, data, wantReply = 0):
+        log.msg('sending request for channel %s, request %s' % (channel.id, requestType))
         # XXX handle wantReply
         self.transport.sendPacket(MSG_CHANNEL_REQUEST, struct.pack('>L',
                                             self.channelsToRemoteChannel[channel]) + \
@@ -139,7 +145,7 @@ class SSHChannel:
         self.specificData = ''
 
     def channelOpen(self):
-        print 'channel open'
+        log.msg('channel %s open' % self.id)
 
     def addWindowBytes(self, bytes):
         self.windowSize = self.windowSize + bytes
@@ -150,20 +156,20 @@ class SSHChannel:
         f = getattr(self,'request_%s' % foo)
         if f:
             return f(data)
-        print 'unhandled request for', requestType
+        log.msg('unhandled request for %s' % requestType)
         return 0
 
     def receiveData(self, data):
-        print 'got data', repr(data)
+        log.msg('got data %s' % repr(data))
 
     def receiveExtendedData(self, dataType, data):
-        print 'got extended data', dataType, repr(data)
+        log.msg('got extended data %s %s' % (dataType, repr(data)))
 
     def receiveEOF(self):
-        print 'got eof'
+        log.msg('channel %s remote eof' % self.id)
 
     def receiveClose(self):
-        print 'closed'
+        log.msg('channel %s closed' % self.id)
 
 class SSHSession(SSHChannel, protocol.Protocol): # treat us as a protocol for the sake of Process
 
@@ -173,25 +179,33 @@ class SSHSession(SSHChannel, protocol.Protocol): # treat us as a protocol for th
         subsystem = common.getNS(data)[0]
         f = getattr(self,'subsystem_%s' % subsystem)
         if f:
+            log.msg('starting subsystem %s' % subsystem)
             self.client = f()
             return 1
-        
-        print 'failed to get subsystem', subsystem
+        elif self.conn.factory.authorizer.clients.has_key(subsytem):
+            # we have a client for a pb service
+            pass # for now
+        log.msg('failed to get subsystem %s' % subsystem)
         return 0
 
     def request_shell(self, data):
         if not self.environ.has_key('TERM'): # we didn't get a pty-req
-            print 'tried to get shell without pty, failing'
+            log.msg('tried to get shell without pty, failing')
             return 0
         shell = '/bin/sh' # fix this
-        print 'accepted shell', shell
-        ptypro.Process(shell, [shell], self.environ, '/tmp', self) # fix this too
-        return 1
+        try:
+            ptypro.Process(shell, [shell], self.environ, '/tmp', self) # fix this too
+        except OSError:
+            log.msg('failed to get pty')
+            return 0
+        else:
+            log.msg('starting shell %s' % shell)
+            return 1
 
     def request_exec(self, data):
-        print 'disabled exec'
+        log.msg('disabled exec')
         return 0
-        print 'accepted exec (horribly insecure)', data[4:]
+        log.msg('accepted exec (horribly insecure) %s' % data[4:])
         args = data[4:].split()
         ptypro.Process(args[0], args, self.environ, '/tmp', self)
         return 1
@@ -227,8 +241,28 @@ class SSHSession(SSHChannel, protocol.Protocol): # treat us as a protocol for th
         return pyshell
 
     def receiveData(self, data):
+        if not hasattr(self, 'client'):
+            log.msg("hmm, got data, but we don't have a client: %s" % repr(data))
+            self.conn.sendClose(self)
+            return
         self.client.dataReceived(data)
 
+    def receiveExtendedData(self, dataType, data):
+        if dataType == EXTENDED_DATA_STDERR:
+            if hasattr(self.client, 'errorReceieved'):
+                self.client.errorReceived(data)
+        else:
+            log.msg('weird extended data: %s' % dataType)
+
+#    def receiveEOF(self):
+#        pass # don't know what to do with this
+
+    def receiveClose(self):
+        try:
+            del self.client
+        except AttributeError:
+            pass # we didn't have a client
+        SSHChannel.receiveClose(self)
     # protocol/process stuff
     def dataReceived(self, data):
         self.conn.sendData(self, data)
