@@ -7,7 +7,7 @@ Further information is available in the bundled documentation, and from
 
   http://pyunit.sourceforge.net/
 
-Copyright (c) 1999, 2000 Steve Purcell
+Copyright (c) 1999, 2000, 2001 Steve Purcell
 This module is free software, and you may redistribute it and/or modify
 it under the same terms as Python itself, so long as this copyright message
 and disclaimer are retained in their original form.
@@ -25,14 +25,14 @@ SUPPORT, UPDATES, ENHANCEMENTS, OR MODIFICATIONS.
 """
 
 __author__ = "Steve Purcell (stephen_purcell@yahoo.com)"
-__version__ = "$Revision: 1.1 $"[11:-2]
+__version__ = "Revision: 1.7"
 
 import unittest
-import Dialog
 import sys
-import __builtin__
 import Tkinter
+import tkMessageBox
 import traceback
+
 import string
 tk = Tkinter # Alternative to the messy 'from Tkinter import *' often seen
 
@@ -69,13 +69,13 @@ class BaseGUITestRunner:
             self.errorDialog("Test name entry", "You must enter a test name")
             return
         if self.__rollbackImporter:
-            self.__rollbackImporter.uninstall()
+            self.__rollbackImporter.rollbackImports()
         self.__rollbackImporter = RollbackImporter()
         try:
-            test = unittest.createTestInstance(testName)
+            test = unittest.defaultTestLoader.loadTestsFromName(testName)
         except:
-            traceback.print_exc()
             exc_type, exc_value, exc_tb = sys.exc_info()
+            apply(traceback.print_exception,sys.exc_info())
             self.errorDialog("Unable to run test '%s'" % testName,
                              "Error loading specified test: %s, %s" % \
                              (exc_type, exc_value))
@@ -126,16 +126,16 @@ class GUITestResult(unittest.TestResult):
     Used by BaseGUITestRunner. Need not be created directly.
     """
     def __init__(self, callback):
-        unittest.TestResult.__init__(self)
-        self.callback = callback
+	unittest.TestResult.__init__(self)
+	self.callback = callback
 
     def addError(self, test, err):
-        unittest.TestResult.addError(self, test, err)
-        self.callback.notifyTestErrored(test, err)
+	unittest.TestResult.addError(self, test, err)
+	self.callback.notifyTestErrored(test, err)
 
     def addFailure(self, test, err):
-        unittest.TestResult.addFailure(self, test, err)
-        self.callback.notifyTestFailed(test, err)
+	unittest.TestResult.addFailure(self, test, err)
+	self.callback.notifyTestFailed(test, err)
 
     def stopTest(self, test):
         unittest.TestResult.stopTest(self, test)
@@ -148,32 +148,16 @@ class GUITestResult(unittest.TestResult):
 
 class RollbackImporter:
     """This tricky little class is used to make sure that modules under test
-    will be reloaded the next time they are imported. It provides a temporary
-    wrapper around __import__ which notes imported modules and unloads them.
-
-    Alternative mechanisms using the 'imp' and 'ihooks' standard modules were
-    considered but were found to be unworkable. Additionally, use of those
-    modules can disturb PythonWin.
+    will be reloaded the next time they are imported.
     """
     def __init__(self):
-        "Creates an instance and installs as the global importer"
         self.previousModules = sys.modules.copy()
-        self.realImport = __builtin__.__import__
-        # __builtin__.__import__ = self._import
-        # self.newModules = {}
-        
-    def _import(self, name, globals=None, locals=None, fromlist=[]):
-        result = apply(self.realImport, (name, globals, locals, fromlist))
-        self.newModules[name] = 1
-        return result
-        
-    def uninstall(self):
-        currentModules = sys.modules.copy()
-        for modname in currentModules.keys():
+
+    def rollbackImports(self):
+        for modname in sys.modules.keys():
             if not self.previousModules.has_key(modname):
                 # Force reload when modname next imported
                 del(sys.modules[modname])
-        # __builtin__.__import__ = self.realImport
 
 
 ##############################################################################
@@ -210,23 +194,21 @@ class TkTestRunner(BaseGUITestRunner):
         """
         self.root = root
         # Set up values that will be tied to widgets
-        self.suiteNameVar = tk.StringVar()
-        self.suiteNameVar.set(initialTestName)
+	self.suiteNameVar = tk.StringVar()
+	self.suiteNameVar.set(initialTestName)
         self.statusVar = tk.StringVar()
         self.statusVar.set("Idle")
-        self.runCountVar = tk.IntVar()
-        self.failCountVar = tk.IntVar()
-        self.errorCountVar = tk.IntVar()
-        self.remainingCountVar = tk.IntVar()
-        self.win = tk.Toplevel()
-        self.win.group(self.root)
-        self.top = tk.Frame(self.win)
-        self.top.pack(fill=tk.BOTH, expand=1)
+	self.runCountVar = tk.IntVar()
+	self.failCountVar = tk.IntVar()
+	self.errorCountVar = tk.IntVar()
+	self.remainingCountVar = tk.IntVar()
+        self.top = tk.Frame()
+	self.top.pack(fill=tk.BOTH, expand=1)
         self.createWidgets()
 
     def createWidgets(self):
         """Creates and packs the various widgets.
-        
+
         Why is it that GUI code always ends up looking a mess, despite all the
         best intentions to keep it tidy? Answers on a postcard, please.
         """
@@ -235,11 +217,11 @@ class TkTestRunner(BaseGUITestRunner):
         statusFrame.pack(anchor=tk.SW, fill=tk.X, side=tk.BOTTOM)
         tk.Label(statusFrame, textvariable=self.statusVar).pack(side=tk.LEFT)
 
-        # Area to enter name of test to run
+	# Area to enter name of test to run
         leftFrame = tk.Frame(self.top, borderwidth=3)
         leftFrame.pack(fill=tk.BOTH, side=tk.LEFT, anchor=tk.NW, expand=1)
-        suiteNameFrame = tk.Frame(leftFrame, borderwidth=3)
-        suiteNameFrame.pack(fill=tk.X)
+	suiteNameFrame = tk.Frame(leftFrame, borderwidth=3)
+	suiteNameFrame.pack(fill=tk.X)
         tk.Label(suiteNameFrame, text="Enter test name:").pack(side=tk.LEFT)
         e = tk.Entry(suiteNameFrame, textvariable=self.suiteNameVar, width=25)
         e.pack(side=tk.LEFT, fill=tk.X, expand=1)
@@ -248,26 +230,26 @@ class TkTestRunner(BaseGUITestRunner):
 
         # Progress bar
         progressFrame = tk.Frame(leftFrame, relief=tk.GROOVE, borderwidth=2)
-        progressFrame.pack(fill=tk.X, expand=1, anchor=tk.NW)
+        progressFrame.pack(fill=tk.X, expand=0, anchor=tk.NW)
         tk.Label(progressFrame, text="Progress:").pack(anchor=tk.W)
         self.progressBar = ProgressBar(progressFrame, relief=tk.SUNKEN,
                                        borderwidth=2)
         self.progressBar.pack(fill=tk.X, expand=1)
 
-        # Area with buttons to start/stop tests and quit
+	# Area with buttons to start/stop tests and quit
         buttonFrame = tk.Frame(self.top, borderwidth=3)
         buttonFrame.pack(side=tk.LEFT, anchor=tk.NW, fill=tk.Y)
-        self.stopGoButton = tk.Button(buttonFrame, text="Start",
+	self.stopGoButton = tk.Button(buttonFrame, text="Start",
                                       command=self.runClicked)
-        self.stopGoButton.pack()
+	self.stopGoButton.pack(fill=tk.X)
         tk.Button(buttonFrame, text="Close",
-                  command=self.top.quit).pack(side=tk.BOTTOM)
+                  command=self.top.quit).pack(side=tk.BOTTOM, fill=tk.X)
         tk.Button(buttonFrame, text="About",
-                  command=self.showAboutDialog).pack(side=tk.BOTTOM)
+                  command=self.showAboutDialog).pack(side=tk.BOTTOM, fill=tk.X)
         tk.Button(buttonFrame, text="Help",
-                  command=self.showHelpDialog).pack(side=tk.BOTTOM)
+                  command=self.showHelpDialog).pack(side=tk.BOTTOM, fill=tk.X)
 
-        # Area with labels reporting results
+	# Area with labels reporting results
         for label, var in (('Run:', self.runCountVar),
                            ('Failures:', self.failCountVar),
                            ('Errors:', self.errorCountVar),
@@ -281,10 +263,10 @@ class TkTestRunner(BaseGUITestRunner):
         tk.Label(leftFrame, text="Failures and errors:").pack(anchor=tk.W)
         listFrame = tk.Frame(leftFrame, relief=tk.SUNKEN, borderwidth=2)
         listFrame.pack(fill=tk.BOTH, anchor=tk.NW, expand=1)
-        self.errorListbox = tk.Listbox(listFrame, foreground='red',
+	self.errorListbox = tk.Listbox(listFrame, foreground='red',
                                        selectmode=tk.SINGLE,
                                        selectborderwidth=0)
-        self.errorListbox.pack(side=tk.LEFT, fill=tk.BOTH, expand=1,
+	self.errorListbox.pack(side=tk.LEFT, fill=tk.BOTH, expand=1,
                                anchor=tk.NW)
         listScroll = tk.Scrollbar(listFrame, command=self.errorListbox.yview)
         listScroll.pack(side=tk.LEFT, fill=tk.Y, anchor=tk.N)
@@ -297,8 +279,8 @@ class TkTestRunner(BaseGUITestRunner):
         return self.suiteNameVar.get()
 
     def errorDialog(self, title, message):
-        Dialog.Dialog(self.root, title=title, text=message,
-                      strings=("Close",), default=0, bitmap="info")
+        tkMessageBox.showerror(parent=self.root, title=title,
+                               message=message)
 
     def notifyRunning(self):
         self.runCountVar.set(0)
@@ -320,9 +302,7 @@ class TkTestRunner(BaseGUITestRunner):
         self.statusVar.set("Idle")
 
     def notifyTestStarted(self, test):
-        self.statusVar.set("Started: %s.%s" % (test.__class__.__name__,
-                                               test._TestCase__testMethod.
-                                               __name__))
+        self.statusVar.set(str(test))
         self.top.update_idletasks()
 
     def notifyTestFailed(self, test, err):
@@ -343,15 +323,17 @@ class TkTestRunner(BaseGUITestRunner):
         self.progressBar.setProgressFraction(fractionDone, fillColor)
 
     def showAboutDialog(self):
-        Dialog.Dialog(self.root, title="About PyUnit", text=_ABOUT_TEXT,
-                      strings=("Close",), default=0, bitmap="info")
+        tkMessageBox.showinfo(parent=self.root, title="About PyUnit",
+                              message=_ABOUT_TEXT)
 
     def showHelpDialog(self):
-        Dialog.Dialog(self.root, title="PyUnit help", text=_HELP_TEXT,
-                      strings=("Close",), default=0, bitmap="info")
+        tkMessageBox.showinfo(parent=self.root, title="PyUnit help",
+                              message=_HELP_TEXT)
 
     def showSelectedError(self):
-        selected = int(self.errorListbox.curselection()[0])
+        selection = self.errorListbox.curselection()
+        if not selection: return
+        selected = int(selection[0])
         txt = self.errorListbox.get(selected)
         window = tk.Toplevel(self.root)
         window.title(txt)
@@ -379,33 +361,33 @@ class ProgressBar(tk.Frame):
                                 background='white', borderwidth=3)
         self.canvas.pack(fill=tk.X, expand=1)
         self.rect = self.text = None
+        self.canvas.bind('<Configure>', self.paint)
+        self.setProgressFraction(0.0)
 
     def setProgressFraction(self, fraction, color='blue'):
+        self.fraction = fraction
+        self.color = color
+        self.paint()
+        self.canvas.update_idletasks()
+
+    def paint(self, *args):
         totalWidth = self.canvas.winfo_width()
-        width = int(fraction * float(totalWidth))
+        width = int(self.fraction * float(totalWidth))
         height = self.canvas.winfo_height()
         if self.rect is not None: self.canvas.delete(self.rect)
         if self.text is not None: self.canvas.delete(self.text)
         self.rect = self.canvas.create_rectangle(0, 0, width, height,
-                                                 fill=color)
+                                                 fill=self.color)
+        percentString = "%3.0f%%" % (100.0 * self.fraction)
         self.text = self.canvas.create_text(totalWidth/2, height/2,
                                             anchor=tk.CENTER,
-                                            text="%3.0f%%" % (100.0*fraction))
-        self.canvas.update_idletasks()
-        
+                                            text=percentString)
 
 def main(initialTestName=""):
-    root = tk.Tk(baseName='pyunit',className='PyUnit')
-    import sys, os
-    sys.argv[0] = os.path.abspath(sys.argv[0])
-    root.group(root)
-    root.withdraw()
-    root.update()
-    root.title('PyUnit')
-    root.command('python "'+string.join(sys.argv,'" "')+'"')
+    root = tk.Tk()
+    root.title("PyUnit")
     runner = TkTestRunner(root, initialTestName)
-    runner.win.title("PyUnit")
-    runner.win.protocol('WM_DELETE_WINDOW', root.quit)
+    root.protocol('WM_DELETE_WINDOW', root.quit)
     root.mainloop()
 
 
