@@ -1,3 +1,14 @@
+2003-11-13  Paul Swartz  <z3p@twistedmatrix.com>
+
+	* twisted/conch/ssh/agent.py: support for the OpenSSH agent protocol
+	* twisted/conch/ssh/connection.py: fix broken channel retrieval code
+	* twisted/conch/ssh/userauth.py: refactoring to allow use of the agent
+	* twisted/conch/ssj/transport.py: fix intermittent test failure
+	* twisted/internet/protocol.py: add UNIX socket support to
+	ClientCreator
+	* twisted/scripts/conch.py: use the key agent if available, also
+	agent forwarding
+
 2003-11-07  Brian Warner  <warner@lothar.com>
 
 	* twisted/application/app.py (getApplication): provide a more
