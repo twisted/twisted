@@ -1,7 +1,3 @@
-
-# Twisted, the Framework of Your Internet
-# Copyright (C) 2001 Matthew W. Lefkowitz
-#
 # This library is free software; you can redistribute it and/or
 # modify it under the terms of version 2.1 of the GNU Lesser General Public
 # License as published by the Free Software Foundation.
@@ -243,10 +239,10 @@ class ChunkingTestCase(unittest.TestCase):
 
     def testChunks(self):
         for s in self.strings:
-            self.assertEquals((s, ''), http.fromChunk(http.toChunk(s)))
+            self.assertEquals((s, ''), http.fromChunk(''.join(http.toChunk(s))))
 
     def testConcatenatedChunks(self):
-        chunked = string.join(map(http.toChunk, self.strings), '')
+        chunked = ''.join([''.join(http.toChunk(t)) for t in self.strings])
         result = []
         buffer = ""
         for c in chunked:

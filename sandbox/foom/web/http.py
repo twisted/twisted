@@ -1,8 +1,3 @@
-# -*- test-case-name: twisted.test.test_http -*-
-
-# Twisted, the Framework of Your Internet
-# Copyright (C) 2001 Matthew W. Lefkowitz
-#
 # This library is free software; you can redistribute it and/or
 # modify it under the terms of version 2.1 of the GNU Lesser General Public
 # License as published by the Free Software Foundation.
@@ -18,16 +13,14 @@
 
 """HyperText Transfer Protocol implementation.
 
-This is used by twisted.web.
-
-API Stability: Server HTTP support is semi-stable, client HTTP is unstable.
+The second coming.
 
 Future Plans:
  - HTTP client support will at some point be refactored to support HTTP/1.1.
  - Accept chunked data from clients in server.
  - Other missing HTTP features from the RFC.
 
-Maintainer: U{Itamar Shtull-Trauring<mailto:twisted@itamarst.org>}
+Maintainer: U{James Y Knight <mailto:foom@fuhm.net>}
 """
 
 # system imports
@@ -44,11 +37,12 @@ import os
 
 # sibling imports
 import basic
+import responsecode
 
 # twisted imports
-from twisted.internet import interfaces, reactor, protocol
+from twisted.internet import interfaces, reactor, protocol, address
 from twisted.protocols import policies
-from twisted.python import log
+from twisted.python import log, components
 try: # try importing the fast, C version
     from twisted.protocols._c_urlarg import unquote
 except ImportError:
@@ -57,123 +51,6 @@ except ImportError:
 
 protocol_version = "HTTP/1.1"
 
-_CONTINUE = 100
-SWITCHING = 101
-
-OK                              = 200
-CREATED                         = 201
-ACCEPTED                        = 202
-NON_AUTHORITATIVE_INFORMATION   = 203
-NO_CONTENT                      = 204
-RESET_CONTENT                   = 205
-PARTIAL_CONTENT                 = 206
-MULTI_STATUS                    = 207
-
-MULTIPLE_CHOICE                 = 300
-MOVED_PERMANENTLY               = 301
-FOUND                           = 302
-SEE_OTHER                       = 303
-NOT_MODIFIED                    = 304
-USE_PROXY                       = 305
-TEMPORARY_REDIRECT              = 307
-
-BAD_REQUEST                     = 400
-UNAUTHORIZED                    = 401
-PAYMENT_REQUIRED                = 402
-FORBIDDEN                       = 403
-NOT_FOUND                       = 404
-NOT_ALLOWED                     = 405
-NOT_ACCEPTABLE                  = 406
-PROXY_AUTH_REQUIRED             = 407
-REQUEST_TIMEOUT                 = 408
-CONFLICT                        = 409
-GONE                            = 410
-LENGTH_REQUIRED                 = 411
-PRECONDITION_FAILED             = 412
-REQUEST_ENTITY_TOO_LARGE        = 413
-REQUEST_URI_TOO_LONG            = 414
-UNSUPPORTED_MEDIA_TYPE          = 415
-REQUESTED_RANGE_NOT_SATISFIABLE = 416
-EXPECTATION_FAILED              = 417
-
-INTERNAL_SERVER_ERROR           = 500
-NOT_IMPLEMENTED                 = 501
-BAD_GATEWAY                     = 502
-SERVICE_UNAVAILABLE             = 503
-GATEWAY_TIMEOUT                 = 504
-HTTP_VERSION_NOT_SUPPORTED      = 505
-INSUFFICIENT_STORAGE_SPACE      = 507
-NOT_EXTENDED                    = 510
-
-RESPONSES = {
-    # 100
-    _CONTINUE: "Continue",
-    SWITCHING: "Switching Protocols",
-
-    # 200
-    OK: "OK",
-    CREATED: "Created",
-    ACCEPTED: "Accepted",
-    NON_AUTHORITATIVE_INFORMATION: "Non-Authoritative Information",
-    NO_CONTENT: "No Content",
-    RESET_CONTENT: "Reset Content.",
-    PARTIAL_CONTENT: "Partial Content",
-    MULTI_STATUS: "Multi-Status",
-
-    # 300
-    MULTIPLE_CHOICE: "Multiple Choices",
-    MOVED_PERMANENTLY: "Moved Permanently",
-    FOUND: "Found",
-    SEE_OTHER: "See Other",
-    NOT_MODIFIED: "Not Modified",
-    USE_PROXY: "Use Proxy",
-    # 306 not defined??
-    TEMPORARY_REDIRECT: "Temporary Redirect",
-
-    # 400
-    BAD_REQUEST: "Bad Request",
-    UNAUTHORIZED: "Unauthorized",
-    PAYMENT_REQUIRED: "Payment Required",
-    FORBIDDEN: "Forbidden",
-    NOT_FOUND: "Not Found",
-    NOT_ALLOWED: "Method Not Allowed",
-    NOT_ACCEPTABLE: "Not Acceptable",
-    PROXY_AUTH_REQUIRED: "Proxy Authentication Required",
-    REQUEST_TIMEOUT: "Request Time-out",
-    CONFLICT: "Conflict",
-    GONE: "Gone",
-    LENGTH_REQUIRED: "Length Required",
-    PRECONDITION_FAILED: "Precondition Failed",
-    REQUEST_ENTITY_TOO_LARGE: "Request Entity Too Large",
-    REQUEST_URI_TOO_LONG: "Request-URI Too Long",
-    UNSUPPORTED_MEDIA_TYPE: "Unsupported Media Type",
-    REQUESTED_RANGE_NOT_SATISFIABLE: "Requested Range not satisfiable",
-    EXPECTATION_FAILED: "Expectation Failed",
-
-    # 500
-    INTERNAL_SERVER_ERROR: "Internal Server Error",
-    NOT_IMPLEMENTED: "Not Implemented",
-    BAD_GATEWAY: "Bad Gateway",
-    SERVICE_UNAVAILABLE: "Service Unavailable",
-    GATEWAY_TIMEOUT: "Gateway Time-out",
-    HTTP_VERSION_NOT_SUPPORTED: "HTTP Version not supported",
-    INSUFFICIENT_STORAGE_SPACE: "Insufficient Storage Space",
-    NOT_EXTENDED: "Not Extended"
-    }
-
-CACHED = """Magic constant returned by http.Request methods to set cache
-validation headers when the request is conditional and the value fails
-the condition."""
-
-# backwards compatability
-responses = RESPONSES
-
-
-# datetime parsing and formatting
-weekdayname = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
-monthname = [None,
-             'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-             'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
 
 def parse_qs(qs, keep_blank_values=0, strict_parsing=0, unquote=unquote):
     """like cgi.parse_qs, only with custom unquote function"""
@@ -248,13 +125,15 @@ def timegm(year, month, day, hour, minute, second):
     return seconds
 
 def toChunk(data):
-    """Convert string to a chunk."""
-    return "%x\r\n%s\r\n" % (len(data), data)
-
+	"""Convert string to a chunk.
+	
+	@returns: a tuple of strings representing the chunked encoding of data"""
+	return ("%x\r\n" % len(data), data, "\r\n")
+	
 def fromChunk(data):
     """Convert chunk to string.
 
-    Returns tuple (result, remaining), may raise ValueError.
+    @returns: tuple (result, remaining), may raise ValueError.
     """
     prefix, rest = data.split('\r\n', 1)
     length = int(prefix, 16)
@@ -268,7 +147,7 @@ def fromChunk(data):
 class StringTransport:
     """
     I am a StringIO wrapper that conforms for the transport API. I support
-    the `writeSequence' method.
+    the 'writeSequence' method.
     """
     def __init__(self):
         self.s = StringIO()
@@ -277,99 +156,8 @@ class StringTransport:
     def __getattr__(self, attr):
         return getattr(self.__dict__['s'], attr)
 
-
-class HTTPClient(basic.LineReceiver):
-    """A client for HTTP 1.0
-
-    Notes:
-    You probably want to send a 'Host' header with the name of
-    the site you're connecting to, in order to not break name
-    based virtual hosting.
-    """
-    length = None
-    firstLine = 1
-    __buffer = ''
-
-    def sendCommand(self, command, path):
-        self.transport.write('%s %s HTTP/1.0\r\n' % (command, path))
-
-    def sendHeader(self, name, value):
-        self.transport.write('%s: %s\r\n' % (name, value))
-
-    def endHeaders(self):
-        self.transport.write('\r\n')
-
-    def lineReceived(self, line):
-        if self.firstLine:
-            self.firstLine = 0
-            try:
-                version, status, message = line.split(None, 2)
-            except ValueError:
-                # sometimes there is no message
-                version, status = line.split(None, 1)
-                message = ""
-            self.handleStatus(version, status, message)
-            return
-        if line:
-            key, val = line.split(':', 1)
-            val = val.lstrip()
-            self.handleHeader(key, val)
-            if key.lower() == 'content-length':
-                self.length = int(val)
-        else:
-            self.handleEndHeaders()
-            self.setRawMode()
-
-    def connectionLost(self, reason):
-        self.handleResponseEnd()
-
-    def handleResponseEnd(self):
-        if self.__buffer != None:
-            b = self.__buffer
-            self.__buffer = None
-            self.handleResponse(b)
-    
-    def handleResponsePart(self, data):
-        self.__buffer += data
-
-    def connectionMade(self):
-        pass
-
-    handleStatus = handleHeader = handleEndHeaders = lambda *args: None
-
-    def rawDataReceived(self, data):
-        if self.length is not None:
-            data, rest = data[:self.length], data[self.length:]
-            self.length -= len(data)
-        else:
-            rest = ''
-        self.handleResponsePart(data)
-        if self.length == 0:
-            self.handleResponseEnd()
-            self.setLineMode(rest)
-
-
 # response codes that must have empty bodies
 NO_BODY_CODES = (204, 304)
-
-class Content:
-    def gotLength(self, length):
-        """Called when HTTP channel got length of content in this request.
-
-        This method is not intended for users.
-        """
-        if length < 100000:
-            self.content = StringIO()
-        else:
-            self.content = tempfile.TemporaryFile()
-
-    def handleContentChunk(self, data):
-        """Write a chunk of data.
-
-        This method is not intended for users.
-        """
-        self.content.write(data)
-
 
 class Request:
     """A HTTP request.
@@ -391,18 +179,16 @@ class Request:
 
     producer = None
     finished = 0
-    code = OK
-    code_message = RESPONSES[OK]
-    method = "(no method yet)"
-    clientproto = "(no clientproto yet)"
-    uri = "(no uri yet)"
+    code = responsecode.OK
+    code_message = responsecode.RESPONSES[responsecode.OK]
     startedWriting = 0
     chunked = 0
     sentLength = 0 # content-length of response, or total bytes sent via chunking
-    etag = None
-    lastModified = None
 
-    def __init__(self, channel, queued):
+	_foreceSSL = False
+	
+	
+    def __init__(self, channel, queued, command, path, version, raw_in_headers):
         """
         @param channel: the channel we're connected to.
         @param queued: are we in the request queue, or can we start writing to
@@ -410,10 +196,12 @@ class Request:
         """
         self.channel = channel
         self.queued = queued
-        self.received_headers = {}
-        self.received_cookies = {}
-        self.headers = {} # outgoing headers
-        self.cookies = [] # outgoing cookies
+        self.method = command
+        self.uri = path
+        self.clientproto = version
+
+        self.out_headers = http_headers.ResponseHeaders()
+        self.in_headers = http_headers.RequestHeaders(raw_in_headers)
 
         if queued:
             self.transport = StringTransport()
@@ -427,12 +215,6 @@ class Request:
             self.unregisterProducer()
         self.channel.requestDone(self)
         del self.channel
-        try:
-            self.content.close()
-        except OSError:
-            # win32 suckiness, no idea why it does this
-            pass
-        del self.content
 
     # methods for channel - end users should not use these
 
@@ -462,17 +244,20 @@ class Request:
         if self.finished:
             self._cleanup()
 
-    def requestReceived(self, command, path, version):
+	def handleContentChunk(self, data):
+		"""Called by channel when a piece of data has been received.
+
+		Should be overridden by a subclass to do something appropriate."""
+		pass
+	
+    def requestReceived(self)
         """Called by channel when all data has been received.
 
         This method is not intended for users.
         """
-        self.content.seek(0,0)
         self.args = {}
         self.stack = []
 
-        self.method, self.uri = command, path
-        self.clientproto = version
         x = self.uri.split('?')
 
         if len(x) == 1:
@@ -489,33 +274,8 @@ class Request:
         self.client = self.channel.transport.getPeer()
         self.host = self.channel.transport.getHost()
 
-        # Argument processing
-        args = self.args
-        ctype = self.getHeader('content-type')
-        if self.method == "POST" and ctype:
-            mfd = 'multipart/form-data'
-            key, pdict = cgi.parse_header(ctype)
-            if key == 'application/x-www-form-urlencoded':
-                args.update(
-                    parse_qs(self.content.read(), 1))
-            elif key == mfd:
-                args.update(
-                    cgi.parse_multipart(self.content, pdict))
-            else:
-                pass
-
-        self.process()
-
     def __repr__(self):
         return '<%s %s %s>'% (self.method, self.uri, self.clientproto)
-
-    def process(self):
-        """Override in subclasses.
-
-        This method is not intended for users.
-        """
-        pass
-
 
     # consumer interface
 
@@ -578,59 +338,61 @@ class Request:
         if not self.queued:
             self._cleanup()
 
+	def _initialWrite(self):
+		self.startedWriting = 1
+		version = self.clientproto
+		l = []
+		l.append('%s %s %s\r\n' % (version, self.code,
+								   self.code_message))
+		# if we don't have a content length, we send data in
+		# chunked mode, so that we can support pipelining in
+		# persistent connections.
+		if ((version == "HTTP/1.1") and
+			(self.headers.get('content-length', None) is None) and
+			(self.code not in NO_BODY_CODES)):
+			l.append("%s: %s\r\n" % ('Transfer-encoding', 'chunked'))
+			self.chunked = 1
+		for name, value in self.headers.items():
+			l.append("%s: %s\r\n" % (name.capitalize(), value))
+		l.append("\r\n")
+
+		self.transport.writeSequence(l)
+
+		# if this is a "HEAD" request, we shouldn't return any data
+		if self.method == "HEAD":
+			self.write = lambda data: None
+			return False
+
+		# for certain result codes, we should never return any data
+		if self.code in NO_BODY_CODES:
+			self.write = lambda data: None
+			return False
+
+		return True
+
     def write(self, data):
         """
         Write some data as a result of an HTTP request.  The first
         time this is called, it writes out response data.
         """
-        if not self.startedWriting:
-            self.startedWriting = 1
-            version = self.clientproto
-            l = []
-            l.append('%s %s %s\r\n' % (version, self.code,
-                                       self.code_message))
-            # if we don't have a content length, we send data in
-            # chunked mode, so that we can support pipelining in
-            # persistent connections.
-            if ((version == "HTTP/1.1") and
-                (self.headers.get('content-length', None) is None) and
-                (self.code not in NO_BODY_CODES)):
-                l.append("%s: %s\r\n" % ('Transfer-encoding', 'chunked'))
-                self.chunked = 1
-            if self.lastModified is not None:
-                if self.headers.has_key('last-modified'):
-                    log.msg("Warning: last-modified specified both in"
-                            " header list and lastModified attribute.")
-                else:
-                    self.setHeader('last-modified',
-                                   datetimeToString(self.lastModified))
-            if self.etag is not None:
-                self.setHeader('ETag', self.etag)
-            for name, value in self.headers.items():
-                l.append("%s: %s\r\n" % (name.capitalize(), value))
-            for cookie in self.cookies:
-                l.append('%s: %s\r\n' % ("Set-Cookie", cookie))
-            l.append("\r\n")
-
-            self.transport.writeSequence(l)
-
-            # if this is a "HEAD" request, we shouldn't return any data
-            if self.method == "HEAD":
-                self.write = lambda data: None
-                return
-
-            # for certain result codes, we should never return any data
-            if self.code in NO_BODY_CODES:
-                self.write = lambda data: None
-                return
-
+		if not self.startedWriting:
+			if not self._initialWrite():
+				return
         self.sentLength = self.sentLength + len(data)
         if data:
             if self.chunked:
-                self.transport.write(toChunk(data))
+				self.transport.writeSequence(toChunk(data))
             else:
                 self.transport.write(data)
 
+    # FIXME: usefulize this
+	def writeFile(self, file):
+		"""
+		Write data from a file, possibly more efficiently than write(data)
+		would do. Otherwise identical to write(file.read()).
+		"""
+		self.write(file.read())
+		
     def setResponseCode(self, code, message=None):
         """Set the HTTP response code.
         """
@@ -660,63 +422,60 @@ class Request:
         Last-Modified earlier, only replacing the Last-Modified time
         if it is to a later value.
 
-        If I am a conditional request, I may modify my response code
-        to L{NOT_MODIFIED} if appropriate for the time given.
-
         @param when: The last time the resource being returned was
             modified, in seconds since the epoch.
         @type when: number
-        @return: If I am a X{If-Modified-Since} conditional request and
-            the time given is not newer than the condition, I return
-            L{http.CACHED<CACHED>} to indicate that you should write no
-            body.  Otherwise, I return a false value.
         """
         # time.time() may be a float, but the HTTP-date strings are
         # only good for whole seconds.
         when = long(math.ceil(when))
-        if (not self.lastModified) or (self.lastModified < when):
-            self.lastModified = when
+        lastModified = self.getRespHeader('Last-Modified')
+        if (not lastModified or (lastModified < when):
+            self.setRespHeader('Last-Modified') = when
 		
-	def hasBody(self):
-		"""If I am a conditional request, I may modify my response code
-        to L{NOT_MODIFIED} or L{PRECONDITION_FAILED}, if appropriate
-        for the tag given.
-
-        @param etag: The entity tag for the resource being returned.
-        @type etag: string
-        @return: If I am a X{If-None-Match} conditional request and
-            the tag matches one in the request, I return
-            L{http.CACHED<CACHED>} to indicate that you should write
-            no body.  Otherwise, I return a false value.
+	def checkBody(self):
+		"""Check to see if this request should have a body. As a side-effect
+		may modify my response code to L{NOT_MODIFIED} or L{PRECONDITION_FAILED},
+		if appropriate.
+		
+        Call this function after setting the ETag and Last-Modified
+        output headers, but before actually proceeding with request
+        processing.
+		
+		This examines the appropriate request headers for conditionals,
+		the existing response headers and sets the response code as necessary.
+		
+        @return: True if you should write a body, False if you should
+                 not.
 		"""
-        tags = self.getHeader("if-none-match")
+        tags = self.getReqHeader("if-none-match")
+        etag = self.getRespHeader("etag")
         if tags:
-            tags = tags.split()
             if (etag in tags) or ('*' in tags):
                 self.setResponseCode(((self.method in ("HEAD", "GET"))
                                       and NOT_MODIFIED)
                                      or PRECONDITION_FAILED)
-                return CACHED
+                return False
 
-		modified_since = self.getHeader('if-modified-since')
+		modified_since = self.getReqHeader('if-modified-since')
         if modified_since:
-            modified_since = stringToDatetime(modified_since)
             if modified_since >= self.lastModified:
                 self.setResponseCode(NOT_MODIFIED)
-                return CACHED
-        return None
-		
-    def getAllHeaders(self):
-        """Return dictionary of all headers the request received."""
-        return self.received_headers
+                return False
 
+		# if this is a "HEAD" request, we shouldn't return any data
+		if self.method == "HEAD":
+			return False
+		
+        return True
+		
     def getRequestHostname(self):
         """Get the hostname that the user passed in to the request.
 
         This will either use the Host: header (if it is available) or the
         host we are listening on if the header is unavailable.
         """
-        return (self.getHeader('host') or
+        return (self.getReqHeader('host') or
                 socket.gethostbyaddr(self.getHost()[1])[0]
                 ).split(':')[0]
 
@@ -745,26 +504,27 @@ class Request:
 
         This method is experimental.
         """
-        if ssl:
-            method = 'SSL'
-        else:
-            method = 'INET'
+		self._forceSSL = ssl
         self.received_headers["host"] = host
-        self.host = (method, host, port)
+        self.host = address.IPv4Address("TCP", host, port)
 
     def getClientIP(self):
-        if self.client[0] in ('INET', 'SSL'):
-            return self.client[1]
+		if isinstance(self.client, address.IPv4Address)
+            return self.client.host
         else:
             return None
 
     def isSecure(self):
-        return (self.host[0] == 'SSL')
+		return self._forceSSL or components.implements(self.channel.transport, interfaces.ISSLTransport)
 
     def _authorize(self):
         # Authorization, (mostly) per the RFC
         try:
-            authh = self.getHeader("Authorization")
+            authh = self.getReqHeaderRaw("Authorization")
+			if not authh:
+				self.user = self.password = ''
+				return
+				
             bas, upw = authh.split()
             if bas.lower() != "basic":
                 raise ValueError
@@ -816,28 +576,27 @@ class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin):
 
     maxHeaders = 500 # max number of headers allowed per request
     
-    length = 0
+    
     persistent = 1
-    __header = ''
-    __first_line = 1
-    __content = None
-
+    _partialheader = ''
+    _first_line = 1
     # set in instances or subclasses
     requestFactory = Request
 
     _savedTimeOut = None
 
     def __init__(self):
+        self.reqHeaders = []
         # the request queue
         self.requests = []
-
+        
     def connectionMade(self):
         self.setTimeout(self.timeOut)
     
     def lineReceived(self, line):
         self.resetTimeout()
 
-        if self.__first_line:
+        if self._first_line:
             # if this connection is not persistent, drop any data which
             # the client (illegally) sent after the last request.
             if not self.persistent:
@@ -846,72 +605,67 @@ class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin):
 
             # IE sends an extraneous empty line (\r\n) after a POST request;
             # eat up such a line, but only ONCE
-            if not line and self.__first_line == 1:
-                self.__first_line = 2
+            if not line and self._first_line == 1:
+                self._first_line = 2
                 return
 
-            # create a new Request object
-            request = self.requestFactory(self, len(self.requests))
-            self.requests.append(request)
-            
-            self.__first_line = 0
+            self._first_line = 0
             parts = line.split()
             if len(parts) != 3:
                 self.transport.write("HTTP/1.1 400 Bad Request\r\n\r\n")
                 self.transport.loseConnection()
                 return
-            command, request, version = parts
-            self._command = command
-            self._path = request
-            self._version = version
+            self._command, self._path, self._version = parts
         elif line == '':
-            if self.__header:
-                self.headerReceived(self.__header)
-            self.__header = ''
+            if self._partialheader:
+                self.headerReceived(self._partialheader)
+            self._partialheader = ''
             self.allHeadersReceived()
             if self.length == 0:
                 self.allContentReceived()
             else:
                 self.setRawMode()
         elif line[0] in ' \t':
-            self.__header = self.__header+'\n'+line
+            self._partialheader = self._partialheader+line
         else:
-            if self.__header:
-                self.headerReceived(self.__header)
-            self.__header = line
-
+            if self._partialheader:
+                self.headerReceived(self._partialheader)
+            self._partialheader = line
+    
     def headerReceived(self, line):
-        """Do pre-processing (for content-length) and store this header away.
+        """Store this header away. Check for too many headers
+           (> maxHeaders) and abort the connection if so.
         """
-        header, data = line.split(':', 1)
-        header = header.lower()
-        data = data.strip()
-        if header == 'content-length':
-            self.length = int(data)
-        reqHeaders = self.requests[-1].received_headers
-        reqHeaders[header] = data
-        if len(reqHeaders) > self.maxHeaders:
+        self._reqHeaders.append(line)
+        if len(_reqHeaders) > self.maxHeaders:
             self.transport.write("HTTP/1.1 400 Bad Request\r\n\r\n")
             self.transport.loseConnection()
             
+    def allHeadersReceived(self):
+        # create a new Request object
+        request = self.requestFactory(self, len(self.requests), self._command, self._path, self._version, self._reqHeaders)
+        self.requests.append(request)
+
+		# Reset header state variables
+		del self._command, self._path, self._version
+        self.reqHeaders = []
+		
+        self.persistent = self.checkPersistence(request)
+        self.length=req.getReqHeader('Content-Length')
+        req.gotLength(self.length)
+
     def allContentReceived(self):
-        command = self._command
-        path = self._path
-        version = self._version
-
-        # reset ALL state variables, so we don't interfere with next request
+        # reset state variables, so we don't interfere with next request
         self.length = 0
-        self._header = ''
-        self.__first_line = 1
-        del self._command, self._path, self._version
-
+        self._first_line = 1
+        
         # Disable the idle timeout, in case this request takes a long
         # time to finish generating output.
         if self.timeOut:
             self._savedTimeOut = self.setTimeout(None)
 
         req = self.requests[-1]
-        req.requestReceived(command, path, version)
+        req.requestReceived()
 
     def rawDataReceived(self, data):
         if len(data) < self.length:
@@ -923,36 +677,22 @@ class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin):
             self.allContentReceived()
             self.setLineMode(extraneous)
 
-    def allHeadersReceived(self):
-        req = self.requests[-1]
-        req.parseCookies()
-        self.persistent = self.checkPersistence(req, self._version)
-        req.gotLength(self.length)
-
-    def checkPersistence(self, request, version):
+    def checkPersistence(self, request):
         """Check if the channel should close or not."""
-        connection = request.getHeader('connection')
-        if connection:
-            tokens = map(lambda x: x.lower(), connection.split(' '))
-        else:
-            tokens = []
 
-        # HTTP 1.0 persistent connection support is currently disabled,
+        # HTTP 1.0 persistent connection support is disabled,
         # since we need a way to disable pipelining. HTTP 1.0 can't do
         # pipelining since we can't know in advance if we'll have a
         # content-length header, if we don't have the header we need to close the
         # connection. In HTTP 1.1 this is not an issue since we use chunked
         # encoding if content-length is not available.
 
-        #if version == "HTTP/1.0":
-        #    if 'keep-alive' in tokens:
-        #        request.setHeader('connection', 'Keep-Alive')
-        #        return 1
-        #    else:
-        #        return 0
-        if version == "HTTP/1.1":
-            if 'close' in tokens:
-                request.setHeader('connection', 'close')
+        # Also, who cares about extra features for HTTP/1.0, nearly everyone
+        # supports 1.1 these days, so as long as 1.0 *works*, that's fine.
+        
+        if request.version == "HTTP/1.1":
+            if 'close' in request.getReqHeader('connection'):
+                request.addRespHeader('connection', 'close')
                 return 0
             else:
                 return 1
@@ -1035,6 +775,42 @@ class HTTPFactory(protocol.ServerFactory):
             '%s %s %s' % (request.method, request.uri, request.clientproto),
             request.code,
             request.sentLength or "-",
-            request.getHeader("referer") or "-",
-            request.getHeader("user-agent") or "-")
+            request.getReqHeader("referer") or "-",
+            request.getReqHeader("user-agent") or "-")
         self.logFile.write(line)
+
+
+# class Content:
+#     def gotLength(self, length):
+#         """Called when HTTP channel got length of content in this request.
+
+#         This method is not intended for users.
+#         """
+#         if length < 100000:
+#             self.content = StringIO()
+#         else:
+#             self.content = tempfile.TemporaryFile()
+
+#     def handleContentChunk(self, data):
+#         """Write a chunk of data.
+
+#         This method is not intended for users.
+#         """
+#         self.content.write(data)
+
+
+#         # Argument processing
+#         args = self.args
+#         ctype = self.getHeader('content-type')
+#         if self.method == "POST" and ctype:
+#             mfd = 'multipart/form-data'
+#             key, pdict = cgi.parse_header(ctype)
+#             if key == 'application/x-www-form-urlencoded':
+#                 args.update(
+#                     parse_qs(self.content.read(), 1))
+#             elif key == mfd:
+#                 args.update(
+#                     cgi.parse_multipart(self.content, pdict))
+#             else:
+#                 pass
+
