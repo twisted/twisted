@@ -773,9 +773,10 @@ def makeProtocol(controller, baseClass = protocol.Protocol,
     """
     if not callbacks:
         callbacks = ('dataReceived',)
+    trap = kwargs.get("trap", tuple())
     class _Protocol(Controller, Callback, baseClass):
         def __init__(self):
-            Callback.__init__(self, ConnectionLost)
+            Callback.__init__(self, *trap)
             setattr(self, callbacks[0], self)  # only one callback support
         def _execute(self, dummy = None):
             cmd = self._controller
