@@ -916,17 +916,17 @@ class Link(Widget):
 class RootRelativeLink(Link):
     """
     Just like a regular Link, only it makes the href relative to the
-    appRoot (that is, request.getRootPath()).
+    appRoot (that is, request.getRootURL()).
     """
     def setUp(self, request, node, data):
         # hack, hack: some juggling so I can type less and share more
         # code with Link
         st = isinstance(data, StringType)
         if st:
-            data = request.getRootPath() + '/' + data
+            data = request.getRootURL() + '/' + data
         Link.setUp(self, request, node, data)
         if not st:
-            self['href'] = request.getRootPath() + '/' + self['href']
+            self['href'] = request.getRootURL() + '/' + self['href']
 
 class ExpandMacro(Widget):
     """A Macro expansion widget modeled after the METAL expander

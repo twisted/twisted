@@ -341,14 +341,14 @@ class Request(pb.Copyable, http.Request, components.Componentized):
     def pathRef(self):
         return refpath.PathReferenceAcquisitionContext(self, self.acqpath)
 
-    def rememberRootPath(self):
+    def rememberRootURL(self):
         """
         Remember the currently-processed part of the URL for later
         recalling.
         """
         self.appRootURL = self.pathRef().parentRef().fullURL(self)
 
-    def getRootPath(self):
+    def getRootURL(self):
         """
         Get a previously-remembered URL.
         """

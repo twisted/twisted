@@ -2,7 +2,7 @@
 #
 # page.py
 
-__version__ = "$Revision: 1.18 $"[11:-2]
+__version__ = "$Revision: 1.19 $"[11:-2]
 
 from twisted.python import reflect
 from twisted.python.compat import *
@@ -12,8 +12,8 @@ from twisted.web.woven import model, view, controller, interfaces, template
 class Page(model.MethodModel, controller.Controller, view.View):
     """
     @cvar appRoot: Set this to True if you want me to call
-          request.rememberRootPath() in my getChild, so you can later use
-          request.getRootPath() to get the URL to this "application"'s root
+          request.rememberRootURL() in my getChild, so you can later use
+          request.getRootURL() to get the URL to this "application"'s root
           resource. (You don't have to worry if there will be multiple
           instances of this Page involved in a single request; I'll only
           call it for the upper-most instance).
@@ -54,12 +54,12 @@ class Page(model.MethodModel, controller.Controller, view.View):
         self.controllerRendered = 0
 
     def getChild(self, name, request):
-        # Don't call the rememberPath if we already did once; That way
+        # Don't call the rememberURL if we already did once; That way
         # we can support an idiom of setting appName as a class
         # attribue *even if* the same class is used more than once in
         # a hierarchy of Pages.
-        if self.appRoot and not request.getRootPath():
-            request.rememberRootPath()
+        if self.appRoot and not request.getRootURL():
+            request.rememberRootURL()
         return controller.Controller.getChild(self, name, request)
 
 
