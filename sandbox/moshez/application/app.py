@@ -32,14 +32,6 @@ reactorTypes = {
     'kqueue': 'twisted.internet.kqreactor'
     }
 
-def loadApplication(d, passphrase):
-    s = [(d[t], t) for t in ['python', 'xml', 'source', 'file'] if d[t]][0]
-    filename, style = s[0], {'file':'pickle'}.get(s[1],s[1])
-    log.msg("Loading %s..." % filename)
-    application = loadPersisted(filename, style, passphrase)
-    log.msg("Loaded.")
-    return application
-
 def installReactor(reactor):
     if reactor:
         reflect.namedModule(reactorTypes[reactor]).install()
@@ -83,8 +75,13 @@ def getPassphrase(needed):
         return None
 
 def getApplication(config, passphrase):
+    s = [(config[t], t)
+           for t in ['python', 'xml', 'source', 'file'] if config[t]][0]
+    filename, style = s[0], {'file':'pickle'}.get(s[1],s[1])
     try:
-        application = loadApplication(config, passphrase)
+        log.msg("Loading %s..." % filename)
+        application = loadPersisted(filename, style, passphrase)
+        log.msg("Loaded.")
     except Exception, e:
         s = "Failed to load application: %s" % e
         traceback.print_exc(file=log.logfile)

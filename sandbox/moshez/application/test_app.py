@@ -47,20 +47,16 @@ class TestAppSupport(unittest.TestCase):
             config[{'pickle': 'file'}.get(style, style)] = 'helloapplication'
             sob.IPersistable(a).setStyle(style)
             sob.IPersistable(a).save(filename='helloapplication')
-            a1 = app.loadApplication(config, None)
+            a1 = app.getApplication(config, None)
             self.assertEqual(service.IService(a1).name, "hello")
-            a2 = app.getApplication(config, None)
-            self.assertEqual(service.IService(a2).name, "hello")
         config = baseconfig.copy()
         config['python'] = 'helloapplication'
         open("helloapplication", 'w').writelines([
         "from twisted.application import service\n",
         "application = service.Application('hello')\n",
         ])
-        a1 = app.loadApplication(config, None)
+        a1 = app.getApplication(config, None)
         self.assertEqual(service.IService(a1).name, "hello")
-        a2 = app.getApplication(config, None)
-        self.assertEqual(service.IService(a2).name, "hello")
 
     def test_loadOrCreate(self):
         # make sure nothing exists
