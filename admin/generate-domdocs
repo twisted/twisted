@@ -211,7 +211,7 @@ class Walker:
         for node in findElementsWithAttribute(document, "class", "py-listing"):
             fn = node.getAttribute("href")
             outfile = cStringIO.StringIO()
-            fontifyFiles(open(d+'/'+fn), outfile)
+            fontifyFiles(open(os.path.join(d, fn)), outfile)
             val = outfile.getvalue()
             
             text = str('<div class="py-listing">'
@@ -239,6 +239,19 @@ class Walker:
                 newel = newdom.documentElement
                 newel.setAttribute("class", "python")
                 node.parentNode.replaceChild(newel, node)
+        
+        for node in findElementsWithAttribute(document, "class", "html-listing"):
+            fn = node.getAttribute("href")
+            outfile = cStringIO.StringIO()
+            val = open(os.path.join(d, fn)).read()
+            text = str('<div class="py-listing">'
+                            '<pre>%s</pre>'
+                            '<div class="py-caption">%s - '
+                            '<span class="py-filename">%s</span></div></div>' % (
+                            val, getNodeText(node), node.getAttribute('href')))
+            newnode = dom.parseString(text).documentElement
+            node.parentNode.replaceChild(newnode, node)
+
         # the title
         findNodesNamed(template, "title")[0].childNodes.extend(
             findNodesNamed(document, 'title')[0].childNodes)
