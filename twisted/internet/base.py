@@ -257,7 +257,7 @@ class ReactorBase:
 
         if _threadSupport:
             self.usingThreads = 0
-            threadable.whenThreaded(self.initThreads)
+            threadable.whenThreaded(self._initThreads)
 
     # override in subclasses
 
