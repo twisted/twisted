@@ -457,8 +457,8 @@ class Application(log.Logger, styles.Versioned,
         if toRemove:
             for t in toRemove:
                 self.tcpPorts.remove(t)
-            if self._listenerDict.has_key((port_, interface_)):
-                self._listenerDict[port_,interface_].stopListening()
+            if self._listenerDict.has_key((port, interface)):
+                self._listenerDict[(port, interface)].stopListening()
         else:
             raise error.NotListeningError, (interface, port)
 
@@ -480,8 +480,8 @@ class Application(log.Logger, styles.Versioned,
         if toRemove:
             for t in toRemove:
                 self.unixPorts.remove(t)
-            if self._listenerDict.has_key((filename_)):
-                self._listenerDict[filename_].stopListening()
+            if self._listenerDict.has_key(filename):
+                self._listenerDict[filename].stopListening()
         else:
             raise error.NotListeningError, filename
 
