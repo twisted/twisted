@@ -137,20 +137,8 @@ class Process(abstract.FileDescriptor, styles.Ephemeral):
     These calls may not exist elsewhere so this code is not cross-platform.
     (also, windows can only select on sockets...)
     """
+    
     def __init__(self, command, args, environment, path):
-        """Initialize a Process object.
-
-        Actual spawning of the process is deferred, to be sure that it happens
-        in the main thread.
-        """
-        # I can't initialize immediately because I need to garuantee
-        # that this happens in the main thread, so that process
-        # reaping can happen there too.  This means that processes are
-        # in an inconsistent state when they're initialized.
-        threadable.dispatchOS(self, self.startProcess, command, args,
-                              environment, path)
-
-    def startProcess(self, command, args, environment, path):
         """Spawn an operating-system process.
 
         This is where the hard work of disconnecting all currently open files /
@@ -258,7 +246,7 @@ class Process(abstract.FileDescriptor, styles.Ephemeral):
         self.stdout.close()
         self.closeStdin()
         del self.writer
-        threadable.dispatchOS(self, reapProcess)
+        reapProcess()
 
 
 if os.name != 'posix':

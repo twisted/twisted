@@ -41,17 +41,17 @@ def _no_log_output(func, *args, **kw):
 
 def _log_output(func, *args, **kw):
     io = Output()
-    sys.stdout.ownable.own(io)
+    logOwner.own(io)
     try:
         result = apply(func, args, kw)
         return result, io.getvalue()
     finally:
-        sys.stdout.ownable.disown(io)
+        logOwner.disown(io)
         
 
 def output(func, *args, **kw):
     return apply([_no_log_output, _log_output]
-                 [hasattr(sys.stdout, 'ownable')],
+                 [isinstance(sys.stdout, Log)],
                  (func,)+args,kw)
         
         
@@ -75,14 +75,20 @@ def msg(stuff):
 
 
 def startLogging(file):
-    global logfile
+    global logfile, logOwner
     import threadable
-    import sys
-    logfile = Log(file, threadable.dispatcher)
+    threadable.requireInit()
+    
     lgr = Logger()
-    threadable.dispatcher.defaultOwner = lgr
+    if threadable.threaded:
+        logOwner = ThreadedLogOwner(lgr)
+    else:
+        logOwner = LogOwner(lgr)
+    logfile = Log(file, logOwner)
+    
     sys.stdout = sys.stderr = logfile
     msg( "Log opened." )
+
 
 class Logger:
     """
@@ -134,10 +140,71 @@ class Output:
     def getvalue(self):
         return self.io.getvalue()
         
+
+class LogOwner:
+    """Allow object to register themselves as owners of the log."""
     
+    def __init__(self, defaultOwner):
+        self.owners = []
+        self.defaultOwner = defaultOwner
+    
+    def own(self, owner):
+        """Set an object as owner of the log."""
+        if owner is not None:
+            self.owners.append(owner)
+
+    def disown(self, owner):
+        """Remove an object as owner of the log."""
+        if owner is not None:
+            x = self.owners.pop()
+            assert x is owner, "Bad disown"
+
+    def owner(self):
+        """Return the owner of the log."""
+        try:
+            return self.owners[-1]
+        except:
+            return self.defaultOwner
+
+
+class ThreadedLogOwner:
+    """Allow object to register themselves as owners of the log, per thread."""
+    
+    def __init__(self, defaultOwner):
+        import thread
+        self.threadId = thread.get_ident
+        self.ownersPerThread = {}
+        self.defaultOwner = defaultOwner
+    
+    def own(self, owner):
+        """Set an object as owner of the log."""
+        if owner is not None:
+            i = self.threadId()
+            owners = self.ownersPerThread.get(i,[])
+            owners.append(owner)
+            self.ownersPerThread[i] = owners
+
+    def disown(self, owner):
+        """Remove an object as owner of the log."""
+        if owner is not None:
+            i = self.threadId()
+            owners = self.ownersPerThread[i]
+            x = owners.pop()
+            assert x is owner, "Bad disown"
+            if not owners: del self.ownersPerThread[i]
+    
+    def owner(self):
+        """Return the owner of the log."""
+        i = self.threadId()
+        try:
+            return self.ownersPerThread[i][-1]
+        except (KeyError, IndexError):
+            return self.defaultOwner
+
+
 class Log:
-    __synchronized__ = ['write',
-                        'writelines']
+    
+    synchronized = ['write', 'writelines']
     
     def __init__(self, file, ownable):
 
@@ -171,3 +238,10 @@ class Log:
     def writelines(self, lines):
         for line in lines:
             self.write(line)
+
+
+# Make sure we have some basic logging setup.  This only works in cpython.
+try:
+    logOwner
+except NameError:
+    logOwner = LogOwner(None)

@@ -16,63 +16,88 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
 """A task scheduler that is integrated with the main event loop.
-
-This scheduler is not thread-safe - use the threadtask instead if you need it.
 """
 
 # System Imports
 
-import traceback
+import traceback, copy
 
 # Twisted Imports
 
-from twisted.python import threadable, log
+from twisted.python import threadable, reflect, log
 
-class Task:
-    """I am a set of steps that get executed.
 
-    Each "step" is a method to call and some arguments to call it with.  I am
-    to be used with the Scheduler class.
+class ThreadedScheduler:
+    """I am a thread-aware delayed scheduler of for synchronous event loops.
+
+    This lets threads execute non-thread safe code by adding it to the
+    scheduler. This module should not be used by non-threaded modules,
+    instead they should use twisted.internet.task.
+
+    Tasks added to this scheduler will *not* be stored persistently.
+
+    This is an implementation of the Active Object pattern, and can be used
+    as part of the queueing layer for the Async/Half-Async pattern. For more
+    details:
+
+      1) POSA2 book - http://www.cs.wustl.edu/~schmidt/POSA/    
+
+      2) Active Object - http://www.cs.wustl.edu/~schmidt/PDF/Act-Obj.pdf
+
+      3) Async/Half-Async - http://www.cs.wustl.edu/~schmidt/PDF/PLoP-95.pdf
     """
-    
-    def __init__(self, steps=None):
-        """Create a Task.
+    def __init__(self):
+        self.threadTasks = {}
+
+    def __getstate__(self):
+        dict = copy.copy(self.__dict__)
+        dict['threadTasks'] = {}
+        return dict
+
+    def addTask(self, function, *args, **kwargs):
+        """Schedule a function to be called by the main event-loop thread.
+        
+        The result of the function will not be returned.
         """
-        # Format for 'steps' is [[func,args,kw],[func,args,kw], ...]
-        self.steps = []
-        self.progress = 0
+        threadTasks = self.threadTasks
+        hadNoTasks = (threadTasks == {})
+        thread = reflect.currentThread()
+        
+        if not threadTasks.has_key(thread):
+            threadTasks[thread] = []
+        threadTasks[thread].append((function, args, kwargs))
+        if hadNoTasks:
+            main.wakeUp()
+    
+    def timeout(self):
+        """Either I have work to do immediately, or no work to do at all.
+        """
+        if self.threadTasks:
+            return 0.
+        else:
+            return None
 
-    def addWork(self, callable, *args, **kw):
-        self.steps.append([callable, args, kw])
+    def runUntilCurrent(self):
+        threadTasks = self.threadTasks
+        for thread, tasks in threadTasks.items():
+            func, args, kwargs = tasks.pop(0)
+            apply(func, args, kwargs)
+            if len(tasks) == 0: del threadTasks[thread]
 
-    def next(self):
-        if self.progress < len(self.steps):
-            func, args, kw = self.steps[self.progress]
-            try:
-                apply(func, args, kw)
-            except:
-                log.msg( 'Exception in Task' )
-                traceback.print_exc(file=log.logfile)
-                return 0
-            else:
-                self.progress = self.progress + 1
-                return 1
-        return 0
+    synchronized = ["addTask", "runUntilCurrent"]
 
+threadable.synchronize(ThreadedScheduler)
 
 
 class Scheduler:
-    """I am a delayed scheduler for synchronous event loops.
-
-    I am really a set of tasks, which have interleaved execution phases.  Each
-    time runUntilCurrent is called, I call each task's next() method; if the
-    task has more work to do, I'll keep it around.
+    """I am a non-thread-safe delayed scheduler for synchronous event loops.
     """
+    
     def __init__(self):
         self.tasks = []
 
-    def addTask(self, task):
-        self.tasks.append(task)
+    def addTask(self, function, *args, **kwargs):
+        self.tasks.append((function, args, kwargs))
 
     def timeout(self):
         """Either I have work to do immediately, or no work to do at all.
@@ -85,35 +110,68 @@ class Scheduler:
     def runUntilCurrent(self):
         tasks = self.tasks
         self.tasks = []
-        for task in tasks:
-            moreWork = task.next()
-            if moreWork:
-                self.tasks.append(task)
+        for function, args, kwargs in tasks:
+            apply(function, args, kwargs)
 
 
-theScheduler = Scheduler()
-
-def schedule(task):
-    """Add a task to the scheduler.
-    """
-    theScheduler.addTask(task)
-
-def wakeAndSchedule(task):
-    """Add a task to the scheduler.
-    """
-    theScheduler.addTask(task)
-    main.wakeUp()
-
+threadable.requireInit()
 if threadable.threaded:
-    schedule = wakeAndSchedule
+    theScheduler = ThreadedScheduler()
+else:
+    theScheduler = Scheduler()
 
+def schedule(function, *args, **kwargs):
+    """Add a task to the scheduler.
+    """
+    apply(theScheduler.addTask, (function,) + args, kwargs)
 
 def doAllTasks():
     """Run all tasks in the scheduler.
     """
-    while theScheduler.tasks:
+    while theScheduler.timeout() != None:
         theScheduler.runUntilCurrent()
 
-# Sibling Imports
 
+class Task:
+    """I am a set of steps that get executed.
+
+    Each "step" is a method to call and some arguments to call it with.  I am
+    to be used with the Scheduler class - after each step is called I will
+    readd myself to the scheduler if I still have steps to do.
+    """
+    
+    def __init__(self, steps=None, scheduler=theScheduler):
+        """Create a Task.
+        """
+        # Format for 'steps' is [[func,args,kw],[func,args,kw], ...]
+        if steps:
+            self.steps = steps
+        else:
+            self.steps = []
+        self.progress = 0
+        self.scheduler = scheduler
+
+    def addWork(self, callable, *args, **kw):
+        self.steps.append([callable, args, kw])
+
+    def __call__(self):
+        if self.progress < len(self.steps):
+            func, args, kw = self.steps[self.progress]
+            try:
+                apply(func, args, kw)
+            except:
+                log.msg( 'Exception in Task' )
+                traceback.print_exc(file=log.logfile)
+                return 0
+            else:
+                self.progress = self.progress + 1
+                # if we still have tasks left we add ourselves to the scheduler
+                if self.progress < len(self.steps):
+                    self.scheduler.addTask(self)
+                return 1
+        return 0
+
+
+# Sibling Imports
 import main
+main.addDelayed(theScheduler)

@@ -231,15 +231,13 @@ def requireInit():
 def init(with_threads):
     """Initialize threading. Should be run once, at the beginning of program.
     """
-    global threaded, _to_be_synched, dispatcher, dispatch, Waiter, dispatchOS
+    global threaded, _to_be_synched, Waiter
     global threadingmodule, threadmodule
     if threaded == with_threads:
         return
     assert threaded is None
     threaded = with_threads
     if threaded:
-        from twisted.python import threadpool
-        dispatcher = threadpool.Dispatcher()
         Waiter = _ThreadedWaiter
         apply(synchronize, _to_be_synched)
         _to_be_synched = []
@@ -247,16 +245,11 @@ def init(with_threads):
         threadmodule = thread
         threadingmodule = threading
     else:
-        from twisted.python import worker
-        dispatcher = worker.Dispatcher()
         Waiter = _Waiter
         # Hack to allow XLocks to be unpickled on an unthreaded system.
         global XLock
         class XLock:
             pass
-        
-    dispatch = dispatcher.dispatch
-    dispatchOS = dispatcher.dispatchOS
 
 def isInIOThread():
     """Are we in the thread responsable for I/O requests (the event loop)?

@@ -28,7 +28,6 @@ if platform.getType() != 'java':
 
 import traceback
 import sys
-import copy
 import socket
 CONNECTION_LOST = -1
 CONNECTION_DONE = -2
@@ -43,7 +42,7 @@ threadable.requireInit()
 
 # Sibling Imports
 
-import task, tcp, passport, threadtask
+import tcp, passport
 
 class Application(log.Logger, styles.Versioned):
     running = 0
@@ -177,7 +176,7 @@ class Application(log.Logger, styles.Versioned):
         """
         global resolver
         if not self.running:
-            threadable.dispatcher.own(self)
+            log.logOwner.own(self)
             delayeds.extend(self.delayeds)
             if save:
                 shutdowns.append(self.shutDownSave)
@@ -191,12 +190,12 @@ class Application(log.Logger, styles.Versioned):
                 service.startService()
             resolver = self.resolver
             self.running = 1
-            threadable.dispatcher.disown(self)
+            log.logOwner.disown(self)
         if not running:
-            threadable.dispatcher.own(self)
+            log.logOwner.own(self)
             self.setUID()
             run()
-            threadable.dispatcher.disown(self)
+            log.logOwner.disown(self)
 
 theTimeouts = delay.Delayed() # A delay for non-peristent delayed actions
 theTimeouts.ticktime = 1
@@ -209,7 +208,6 @@ def addTimeout(method, seconds):
     """
     theTimeouts.later(method, seconds)
 
-import socket
 
 class DummyResolver:
     """
@@ -230,9 +228,7 @@ class DummyResolver:
 reads = {}
 writes = {}
 running = None
-delayeds = [theTimeouts, task.theScheduler]
-if threadable.threaded:
-    delayeds.append(threadtask.theScheduler)
+delayeds = [theTimeouts]
 shutdowns = [theTimeouts.runEverything]
 resolver = DummyResolver()
 
@@ -249,7 +245,6 @@ def shutDown(a=None, b=None):
             removeReader(waker)
         running = 0
         log.msg('Starting Shutdown Sequence.')
-        threadable.dispatcher.stop()
     else:
         log.msg('Duplicate Shutdown Ignored.')
 
@@ -277,8 +272,8 @@ def doSelect(timeout,
              writes=writes,
              rhk=reads.has_key,
              whk=writes.has_key,
-             own=threadable.dispatcher.own,
-             disown=threadable.dispatcher.disown):
+             own=log.logOwner.own,
+             disown=log.logOwner.disown):
     """Run one iteration of the I/O monitor loop.
 
     This will run all selectables who had input or output readiness
@@ -340,15 +335,14 @@ def iterate(timeout=0.):
     for delayed in delayeds:
         delayed.runUntilCurrent()
     doSelect(timeout)
-    threadable.dispatcher.work()
+
 
 def run():
     """Run input/output and dispatched/delayed code.
 
     This call never returns.  It is the main loop which runs
-    threadable workers (see twisted.threadable), delayed timers
-    (see twisted.python.delay and addDelayed), and the I/O monitor
-    (doSelect).
+    delayed timers (see twisted.python.delay and addDelayed), 
+    and the I/O monitor (doSelect).
     """
     global running
     running = 1
@@ -358,7 +352,6 @@ def run():
     if platform.getType() == 'posix':
         signal.signal(signal.SIGCHLD, process.reapProcess)
 
-    work = threadable.dispatcher.work
     try:
         try:
             while running:
@@ -372,7 +365,6 @@ def run():
                         ((timeout is None) or
                          (newTimeout < timeout))):
                         timeout = newTimeout
-                threadable.dispatcher.work()
                 doSelect(timeout)
         except select.error:
             log.msg('shutting down after select() loop interruption')
@@ -397,12 +389,12 @@ def run():
                 del reads[reader]
             if writes.has_key(reader):
                 del writes[reader]
-            threadable.dispatcher.own(reader)
+            log.logOwner.own(reader)
             try:
                 reader.connectionLost()
             except:
                 traceback.print_exc(file=log.logfile)
-            threadable.dispatcher.disown(reader)
+            log.logOwner.disown(reader)
         # TODO: implement shutdown callbacks for gtk & tk
         for callback in shutdowns:
             try:
@@ -452,7 +444,6 @@ if platform.getType() == 'win32':
             pass
         else:
             doSelect(0)
-        threadable.dispatcher.work()
 
 class _Win32Waker(styles.Ephemeral):
     """I am a workaround for the lack of pipes on win32.

@@ -55,7 +55,6 @@ def worker():
     _condition.acquire()
     main.doSelect(0)
     Simulator().simulate()
-    threadable.dispatcher.work()
     _condition.notify()
     _condition.release()
 

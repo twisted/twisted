@@ -1,4 +1,3 @@
-
 # Twisted, the Framework of Your Internet
 # Copyright (C) 2001 Matthew W. Lefkowitz
 # 
@@ -16,36 +15,36 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
 """
-twisted.threadpool: an implementation of a threadable Dispatcher.
+twisted.threadpool: a pool of threads to which we dispatch tasks.
 
-see the 'threadable' module for more information.
+If you want integration with Twisted's event loop then use
+twisted.internet.threadtask instead.
 """
 
 # System Imports
 import Queue
 import threading
 import threadable
-import thread
 import traceback
 import sys
 import copy
 
 # Twisted Imports
-from twisted.python import worker
+from twisted.python import log
 
 class error(Exception):
     pass
 
 WorkerStop = None
 
-class Dispatcher:
+
+class ThreadPool:
     """
     This class (hopefully) generalizes the functionality of a pool of
     threads to which work can be dispatched.
     """
     __inited = 0
-    synchronized = ['startSomeWorkers',
-                    'stop']
+    synchronized = ['_startSomeWorkers', 'stop']
     
     def __init__(self, minthreads=5, maxthreads=20, qlen=1000):
         assert minthreads <= maxthreads, 'minimum is greater than maximum'
@@ -54,25 +53,15 @@ class Dispatcher:
         self.waiters = []
         self.threads = []
         self.working = {}
-        self.owners = {}
         self.workers = 0
         self.joined = 0
-        self.osDispatcher = worker.Dispatcher()
 
-    def startSomeWorkers(self):
+    def _startSomeWorkers(self):
         if not self.waiters:
             if self.workers < self.max:
                 self.workers=self.workers+1
-                threading.Thread(target=self.worker).start()
+                threading.Thread(target=self._worker).start()
 
-    def dispatchOS(self, owner, func, *args, **kw):
-        """
-        Dispatch to perform an OS task (currently forking; this may
-        require refactoring.
-        """
-        return apply(self.osDispatcher.dispatch,
-                     (owner, func)+args, kw)
-    
     def dispatch(self, owner, func, *args, **kw):
         """Dispatch a function to be a run in a thread.
         
@@ -80,23 +69,28 @@ class Dispatcher:
         """
         if self.joined: return
         o=(owner,func,args,kw)
-        self.startSomeWorkers()
+        self._startSomeWorkers()
         self.q.put(o)
-
+    
+    def _runWithCallback(self, callback, errback, func, args, kwargs):
+        try:
+            result = apply(func, args, kwargs)
+        except Exception, e:
+            errback(e)
+        else:
+            callback(result)
+    
+    def dispatchWithCallback(self, owner, callback, errback, func, *args, **kw):
+        """Dispatch a function, returning the result to a callback function.
         
-    def work(self):
-        """
-        Process OS dispatches (i.e. those which must be handled in the
-        main thread.)
-        """
-        return self.osDispatcher.work()
-        
+        The callback function will be called in the thread - make sure it is
+        thread-safe."""
+        self.dispatch(owner, self._runWithCallback, callback, errback, func, args, kw)
 
-
-    def worker(self):
+    def _worker(self):
         ct = threading.currentThread()
         self.threads.append(ct)
-        self.owners[thread.get_ident()] = []
+        
         while 1:
             self.waiters.append(ct)
             o = self.q.get()
@@ -104,7 +98,7 @@ class Dispatcher:
             if o == WorkerStop: break
             self.working[ct] = ct
             owner = o[0]
-            self.own(owner)
+            log.logOwner.own(owner)
             try:
                 apply(apply,o[1:])
             except:
@@ -115,43 +109,13 @@ class Dispatcher:
                 if hasattr(e, 'traceback'):
                     print e.traceback
                 traceback.print_exc(file=sys.stdout)
-            self.disown(owner)
+            log.logOwner.disown(owner)
             del self.working[ct]
         self.threads.remove(ct)
         self.workers = self.workers-1
-        del self.owners[thread.get_ident()] 
-
-
-    def own(self, owner):
-        if owner is not None:
-            i = thread.get_ident()
-            owners = self.owners.get(i,[])
-            owners.append(owner)
-            self.owners[i] = owners
-
-        
-    def disown(self, owner):
-        if owner is not None:
-            i = thread.get_ident()
-            owners = self.owners[i]
-            x = owners.pop()
-            assert x is owner, "Inappropriate Owner for Threaded Dispatcher"
-        
-
-    def owner(self):
-        # This returns the currently "active" object (the one
-        # responsible for the work currently being performed, in this
-        # thread, by this dispatcher).  This can be used for things
-        # such as logging.
-        
-        i = thread.get_ident()
-        try:
-            return self.owners[i][-1]
-        except:
-            return self.defaultOwner
-    
     
     def stop(self):
+        """Shutdown the threads in the threadpool."""
         self.dumpStats()
         self.joined=1
         threads = copy.copy(self.threads)
@@ -161,7 +125,6 @@ class Dispatcher:
         # and let's just make sure
         for thread in threads:
             thread.join()
-
     
     def dumpStats(self):
         print 'queue:',self.q.queue
@@ -170,4 +133,4 @@ class Dispatcher:
         print 'total:',self.threads
 
 
-threadable.synchronize(Dispatcher)
+threadable.synchronize(ThreadPool)

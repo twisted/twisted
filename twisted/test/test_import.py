@@ -43,6 +43,8 @@ class AtLeastImportTestCase(unittest.TestCase):
         from twisted.internet import stdio
         from twisted.internet import abstract
         from twisted.internet import process
+        from twisted.internet import task
+        from twisted.internet import threadtask
         
         from twisted.spread import pb
         from twisted.reality import plumbing
@@ -52,7 +54,6 @@ class AtLeastImportTestCase(unittest.TestCase):
         from twisted.python import threadable
         from twisted.python import threadpool
         from twisted.python import usage
-        from twisted.python import worker
 
         # TR imports
         from twisted.reality import reality
