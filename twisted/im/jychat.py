@@ -12,15 +12,6 @@ from javax.swing.table import DefaultTableModel
 
 doublebuffered = 0
 
-class _Listener(ActionListener):
-    def __init__(self, callable):
-        self.callable = callable
-    def actionPerformed(self, ae):
-        self.callable(ae)
-
-def actionWidget(widget, callable):
-    widget.addActionListener(_Listener(callable))
-    return widget
 
 class UneditableTableModel(DefaultTableModel):
     def isCellEditable(self, x, y):
@@ -36,8 +27,8 @@ class _AccountAdder:
 
     def buildpane(self):
         buttons = JPanel()
-        buttons.add(actionWidget(JButton("OK"), self.add))
-        buttons.add(actionWidget(JButton("Cancel"), self.cancel))
+        buttons.add(JButton("OK", actionPerformed=self.add))
+        buttons.add(JButton("Cancel", actionPerformed=self.cancel))
 
         acct = JPanel(GridLayout(1, 2), doublebuffered)
         acct.add(JLabel("Account"))
@@ -68,9 +59,9 @@ class ContactsListGUI(ContactsList):
         self.mainframe = JFrame("Contacts List")
         self.headers = ["Contact", "Status", "Idle", "Account"]
         self.data = UneditableTableModel([], self.headers)
-        self.table = JTable(self.data)
-        self.table.setColumnSelectionAllowed(0)   #cannot select columns
-        self.table.setSelectionMode(ListSelectionModel.SINGLE_SELECTION)
+        self.table = JTable(self.data,
+                            columnSelectionAllowed = 0, #cannot select columns
+                            selectionMode = ListSelectionModel.SINGLE_SELECTION)
 
         self.buildpane()
         self.mainframe.pack()
@@ -97,9 +88,9 @@ class ContactsListGUI(ContactsList):
     #GUI code
     def buildpane(self):
         buttons = JPanel(FlowLayout(), doublebuffered)
-        buttons.add(actionWidget(JButton("Send Message"), self.message))
-        buttons.add(actionWidget(JButton("Add Contact"), self.addContact))
-        #buttons.add(actionWidget(JButton("Quit"), self.quit))
+        buttons.add(JButton("Send Message", actionPerformed=self.message))
+        buttons.add(JButton("Add Contact", actionPerformed=self.addContact))
+        #buttons.add(JButton("Quit", actionPerformed=self.quit))
 
         mainpane = self.mainframe.getContentPane()
         mainpane.setLayout(BoxLayout(mainpane, BoxLayout.Y_AXIS))
@@ -140,24 +131,24 @@ class ConversationWindow(Conversation):
         """ConversationWindow(basesupport.AbstractPerson:person)"""
         Conversation.__init__(self, person, chatui)
         self.mainframe = JFrame("Conversation with "+person.name)
-        self.display = JTextArea()
-        self.display.setColumns(100)
-        self.display.setRows(15)
-        self.display.setEditable(0)
-        self.display.setLineWrap(1)
+        self.display = JTextArea(columns=100,
+                                 rows=15,
+                                 editable=0,
+                                 lineWrap=1)
         self.typepad = JTextField()
         self.buildpane()
         self.lentext = 0
 
     def buildpane(self):
         buttons = JPanel(doublebuffered)
-        buttons.add(actionWidget(JButton("Send"), self.send))
-        buttons.add(actionWidget(JButton("Hide"), self.hidewindow))
+        buttons.add(JButton("Send", actionPerformed=self.send))
+        buttons.add(JButton("Hide", actionPerformed=self.hidewindow))
 
         mainpane = self.mainframe.getContentPane()
         mainpane.setLayout(BoxLayout(mainpane, BoxLayout.Y_AXIS))
         mainpane.add(JScrollPane(self.display))
-        mainpane.add(actionWidget(self.typepad, self.send))
+        self.typepad.actionPerformed = self.send
+        mainpane.add(self.typepad)
         mainpane.add(buttons)
     
     def show(self):
@@ -202,11 +193,7 @@ class GroupConversationWindow(GroupConversation):
         self.mainframe = JFrame(self.group.name)
         self.headers = ["Member"]
         self.memberdata = UneditableTableModel([], self.headers)
-        self.display = JTextArea()
-        self.display.setColumns(100)
-        self.display.setRows(15)
-        self.display.setEditable(0)
-        self.display.setLineWrap(1)
+        self.display = JTextArea(columns=100, rows=15, editable=0, lineWrap=1)
         self.typepad = JTextField()
         self.buildpane()
         self.lentext = 0
@@ -245,7 +232,7 @@ class GroupConversationWindow(GroupConversation):
     #GUI code
     def buildpane(self):
         buttons = JPanel(doublebuffered)
-        buttons.add(actionWidget(JButton("Hide"), self.hidewindow))
+        buttons.add(JButton("Hide", actionPerformed=self.hidewindow))
 
         memberpane = JTable(self.memberdata)
         memberframe = JScrollPane(memberpane)
@@ -253,7 +240,8 @@ class GroupConversationWindow(GroupConversation):
         chat = JPanel(doublebuffered)
         chat.setLayout(BoxLayout(chat, BoxLayout.Y_AXIS))
         chat.add(JScrollPane(self.display))
-        chat.add(actionWidget(self.typepad, self.send))
+        self.typepad.actionPerformed = self.send
+        chat.add(self.typepad)
         chat.add(buttons)
 
         mainpane = self.mainframe.getContentPane()

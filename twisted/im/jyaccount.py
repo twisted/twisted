@@ -16,15 +16,6 @@ from javax.swing.table import DefaultTableModel
 doublebuffered = 0
 stype = "twisted.words"
 
-class _Listener(ActionListener):
-    def __init__(self, callable):
-        self.callable = callable
-    def actionPerformed(self, ae):
-        self.callable(ae)
-
-def actionWidget(widget, callable):
-    widget.addActionListener(_Listener(callable))
-    return widget
 
 class NewAccountGUI:
     def __init__(self, amgui):
@@ -34,7 +25,7 @@ class NewAccountGUI:
         self.autologin = JCheckBox("Automatically Log In")
         self.acctname = JTextField()
         self.gwoptions = JPanel(doublebuffered)
-        self.gwoptions.setBorder(TitledBorder("Gateway Options"))
+        self.gwoptions.border = TitledBorder("Gateway Options")
         self.buildgwoptions("Twisted")
         self.mainframe = JFrame("New Account Window")
         self.buildpane()
@@ -75,7 +66,7 @@ class NewAccountGUI:
 
     def buildgwoptions(self, gw):
         self.gwoptions.removeAll()
-        self.gwoptions.setLayout(GridLayout(len(self.gateways[gw]), 2))
+        self.gwoptions.layout = GridLayout(len(self.gateways[gw]), 2)
         for mapping in self.displayorder[gw]:
             self.gwoptions.add(JLabel(mapping[0]))
             self.gwoptions.add(self.gateways[gw][mapping[1]])
@@ -83,24 +74,23 @@ class NewAccountGUI:
     def buildpane(self):
         gw = JPanel(GridLayout(1, 2), doublebuffered)
         gw.add(JLabel("Gateway"))
-        self.gwlist = actionWidget(JComboBox(self.gateways.keys()),
-                                   self.changegw)
+        self.gwlist = JComboBox(self.gateways.keys())#, actionPerformed=self.changegw)
         self.gwlist.setSelectedItem("Twisted")
         gw.add(self.gwlist)
 
         stdoptions = JPanel(GridLayout(2, 2), doublebuffered)
-        stdoptions.setBorder(TitledBorder("Standard Options"))
+        stdoptions.border = TitledBorder("Standard Options")
         stdoptions.add(JLabel())
         stdoptions.add(self.autologin)
         stdoptions.add(JLabel("Account Name"))
         stdoptions.add(self.acctname)
 
         buttons = JPanel(FlowLayout(), doublebuffered)
-        buttons.add(actionWidget(JButton("OK"), self.addaccount))
-        buttons.add(actionWidget(JButton("Cancel"), self.cancel))
+        buttons.add(JButton("OK", actionPerformed=self.addaccount))
+        buttons.add(JButton("Cancel", actionPerformed=self.cancel))
 
         mainpane = self.mainframe.getContentPane()
-        mainpane.setLayout(BoxLayout(mainpane, BoxLayout.Y_AXIS))
+        mainpane.layout = BoxLayout(mainpane, BoxLayout.Y_AXIS)
         mainpane.add(gw)
         mainpane.add(self.gwoptions)
         mainpane.add(stdoptions)
@@ -120,16 +110,16 @@ class NewAccountGUI:
     def addaccount(self, ae):
         gwselection = self.gwlist.getSelectedItem()
         gw = self.gateways[gwselection]
-        name = gw["ident"].getText()
-        passwd = gw["passwd"].getText()
-        host = gw["host"].getText()
-        port = int(gw["port"].getText())
+        name = gw["ident"].text
+        passwd = gw["passwd"].text
+        host = gw["host"].text
+        port = int(gw["port"].text)
         autologin = self.autologin.isSelected()
-        acctname = self.acctname.getText()
+        acctname = self.acctname.text
 
         if gwselection == "Twisted":
-            sname = gw["service"].getText()
-            perspective = gw["persp"].getText()
+            sname = gw["service"].text
+            perspective = gw["persp"].text
             self.am.addAccount(PBAccount(acctname, autologin, host, port, name,
                                          passwd,[[stype, sname, perspective]]))
         elif gwselection == "AIM":
@@ -137,7 +127,7 @@ class NewAccountGUI:
                                           host, port))
 
         elif gwselection == "IRC":
-            channels = gw["channels"].getText()
+            channels = gw["channels"].text
             self.am.addAccount(IRCAccount(acctname, autologin, name,
                                           passwd, channels, host, port))
                 
@@ -162,12 +152,12 @@ class AccountManagementGUI:
         self.headers = ["Account Name", "Status", "Autologin", "Gateway"]
         self.data = UneditableTableModel([], self.headers)
         self.table = JTable(self.data)
-        self.table.setColumnSelectionAllowed(0)   #cannot select columns
-        self.table.setSelectionMode(ListSelectionModel.SINGLE_SELECTION)
+        self.table.columnSelectionAllowed = 0   #cannot select columns
+        self.table.selectionMode = ListSelectionModel.SINGLE_SELECTION
 
-        self.connectbutton = actionWidget(JButton("Connect"), self.connect)
-        self.dconnbutton = actionWidget(JButton("Disconnect"), self.disconnect)
-        self.deletebutton = actionWidget(JButton("Delete"), self.deleteAccount)
+        self.connectbutton = JButton("Connect", actionPerformed=self.connect)
+        self.dconnbutton = JButton("Disconnect", actionPerformed=self.disconnect)
+        self.deletebutton = JButton("Delete", actionPerformed=self.deleteAccount)
         self.buildpane()
         self.mainframe.pack()
         self.mainframe.show()
@@ -176,12 +166,12 @@ class AccountManagementGUI:
         buttons = JPanel(FlowLayout(), doublebuffered)
         buttons.add(self.connectbutton)
         buttons.add(self.dconnbutton)
-        buttons.add(actionWidget(JButton("New"), self.addNewAccount))
+        buttons.add(JButton("New", actionPerformed=self.addNewAccount))
         buttons.add(self.deletebutton)
-        buttons.add(actionWidget(JButton("Quit"), self.quit))
+        buttons.add(JButton("Quit", actionPerformed=self.quit))
         
         mainpane = self.mainframe.getContentPane()
-        mainpane.setLayout(BoxLayout(mainpane, BoxLayout.Y_AXIS))
+        mainpane.layout = BoxLayout(mainpane, BoxLayout.Y_AXIS)
         mainpane.add(JScrollPane(self.table))
         mainpane.add(buttons)
         self.update()
