@@ -83,10 +83,10 @@ def makeDist(opts):
 
     print "Stripping *~, *.pyc, *.rpl, *.tap..."
     for x in ['*~', '*.pyc', '*.rpl', '*.tap', '.cvsignore', '.#*']:
-#        os.system('find %s -name "%s" | xargs rm -f' % (destDir, x))
+        os.system('find %s -name "%s" | xargs rm -f' % (destDir, x))
 
-##    print "Stripping 'CVS' directories..."
-##    os.system('find %s -name CVS | xargs rm -rf' % destDir)
+    print "Stripping 'CVS' directories..."
+    os.system('find %s -name CVS | xargs rm -rf' % destDir)
 
     print "Making dist tarball..."
     os.system('tar czf Twisted-%s.tar.gz %s' % (ver, destDir))
