@@ -161,7 +161,9 @@ class FormErrorWidget(FormFillerWidget):
             for n in en, tn:
                 n.setAttribute('style', "color: red")
             en.childNodes[:]=[] # gurfle, CLEAR IT NOW!@#
-            lmx(en).text(f.getErrorMessage())
+            if isinstance(f, failure.Failure):
+                f = f.getErrorMessage()
+            lmx(en).text(str(f))
 
 
 class FormDisplayModel(model.MethodModel):
