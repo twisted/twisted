@@ -1,0 +1,114 @@
+
+SCP=bash admin/aapscp
+
+:python
+    import sys
+    import winreg
+
+    def quickdict(initial={}, *args, **kwargs):
+        new=dict(initial)
+        new.update(kwargs)
+        return new
+
+    def geniss(iss_template, dodocs):
+        """Return the inno setup file"""
+        tdct=quickdict(setupbase=_top.setupbase, version=_top.version,
+                       pyversion=_top.pyversion)
+        template='%(setupbase)s-%(version)s.win32-py%(pyversion)s' % tdct
+        
+        docdct=quickdict(pyversion=_top.pyversion, twversion=_top.version, 
+                         twhome=_top.TOPDIR, 
+                         pykey=r"{reg:HKLM\Software\Python\PythonCore\%s\InstallPath,|ACK}" % _top.pyversion,
+                         docfile=r'Source: "%s\doc\twisteddoc.zip"; DestDir: "{app}"' % _top.TOPDIR,
+                         outputbasefilename=template,
+                         )
+        nodocdct=quickdict(docdct, docfile='')
+
+        if dodocs:
+            dct=docdct
+        else:
+            dct=nodocdct
+
+        return iss_template % dct
+
+    def getValueFromReg(key, value, default):
+        try:
+            key=winreg.Key(winreg.HKLM, key)
+        except winreg.KeyNotFound:
+            return default
+        if value is None:
+            return key.value
+        try:    
+            return key.values[value].value
+        except winreg.ValueNotFound:
+            return default
+
+    def getBuildingTwistedVersion(dir):
+        """Return the version of Twisted in $TOPDIR, which may be
+        different from the version of Twisted in sys.path.
+        """
+        sys.path.insert(0, _top.TOPDIR)
+        # get rid of twisted from sys.path
+        if sys.modules.has_key('twisted'):
+            del sys.modules['twisted']
+            import twisted        
+        from twisted.copyright import version
+        return version
+
+    def getPythonHomeForVersion(ver):
+        return getValueFromReg(r'Software\Python\PythonCore\%s\InstallPath' %
+                               ver, None, r'C:\pythonxx')
+
+version=`getBuildingTwistedVersion(_top.TOPDIR)`
+
+# PyVersion is variant rather than a regular string variable so the script
+# will accept only one of these two values
+:variant PyVersion
+    py2.2
+        pyversion=2.2
+        pyhome=`getPythonHomeForVersion('2.2')`
+        pyexe=$(pyhome)\python.exe
+    py2.3
+        pyversion=2.3
+        pyhome=`getPythonHomeForVersion('2.3')`
+        pyexe=$(pyhome)\python.exe
+
+:variant DoDocs
+    nodocs
+        setupbase=Twisted_NoDocs
+    withdocs
+        setupbase=Twisted
+
+innohome=`getValueFromReg(r'SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\Inno Setup 3_',
+                          "Inno Setup: App Path",
+                          r'C:\Program Files\Inno Setup 3')`
+iscc='$innohome\ISCC.exe'
+
+all: dist/$(setupbase)-$(version).win32-py$(pyversion).exe
+    # :publish {scp://shell.sf.net//home/groups/t/tw/twisted/htdocs/$(nodisttarget)} $(target)
+    :print : Done building $(target)
+
+dist/Twisted-$(version).win32-py$(pyversion).exe: doc/twisteddoc.zip 
+                                                  py$(pyversion)-$(DoDocs).iss
+    :sys $(pyexe) setup.py -q clean --all build --compiler=mingw32
+    :sys $(iscc) py$(pyversion)-withdocs.iss
+
+dist/Twisted_NoDocs-$(version).win32-py$(pyversion).exe: py$(pyversion)-$(DoDocs).iss
+    :sys $(pyexe) setup.py -q clean --all build --compiler=mingw32
+    :sys $(iscc) py$(pyversion)-nodocs.iss
+
+:attr {fetch=scp://shell.sf.net//home/groups/t/tw/twisted/htdocs/TwistedDocs-$(version).tar.bz2} doc/TwistedDocs-$(version).tar.bz2
+
+doc/twisteddoc.zip: doc/TwistedDocs-$(version).tar.bz2
+    :chdir doc
+    :sys tar xfj TwistedDocs-$(version).tar.bz2
+    :chdir TwistedDocs-$(version)
+    :sys zip -rq ../twisteddoc.zip *
+
+py$(pyversion)-$(DoDocs).iss: win32/pyx.x-foo.iss.template
+    @docs=(_top.DoDocs == 'withdocs')
+    # file2string is fucked, don't use
+    @tmpl=file('win32/pyx.x-foo.iss.template').read()
+    @iss=_top.geniss(tmpl, docs)
+    @file(target, 'w').write(iss)
+

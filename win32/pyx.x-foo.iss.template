@@ -1,0 +1,37 @@
+[Setup]
+AppName=Twisted (Python %(pyversion)s)
+OutputDir=dist
+OutputBaseFilename=%(outputbasefilename)s
+AppVerName=Twisted %(twversion)s (Python %(pyversion)s)
+AppPublisher=Twisted Matrix Laboratories
+AppPublisherURL=http://twistedmatrix.com/
+AppSupportURL=http://twistedmatrix.com/
+AppUpdatesURL=http://twistedmatrix.com/
+DefaultDirName=%(pykey)s\lib\site-packages
+DisableDirPage=yes
+DefaultGroupName=Twisted (Python %(pyversion)s)
+DisableProgramGroupPage=yes
+PrivilegesRequired=admin
+UninstallFilesDir=%(pykey)s
+
+[Files]
+Source: "%(twhome)s\build\lib.win32-%(pyversion)s\*.*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs
+%(docfile)s
+Source: "%(twhome)s\build\scripts-%(pyversion)s\*.*"; DestDir: "%(pykey)s\scripts"; Flags: ignoreversion recursesubdirs
+Source: "win32\twistenv.bat"; DestDir: "{app}\twisted"; Flags: ignoreversion
+
+[UninstallDelete]
+; *.pyc keeps this directory around
+Type: filesandordirs; Name: "{app}\twisted"
+Type: filesandordirs; Name: "{app}\TwistedDocs"
+
+[Icons]
+Name: "{group}\Manual"; Filename: "{app}\TwistedDocs\howto\index.xhtml"
+Name: "{group}\API Documentation"; Filename: "{app}\TwistedDocs\api\index.html"
+Name: "{group}\Twisted Command Prompt"; Filename: "{%%ComSpec}"; Parameters: "/k {app}\twisted\twistenv.bat %(pykey)s\scripts"; WorkingDir: "{sd}\"
+Name: "{group}\Application Maker"; Filename: "%(pykey)s\scripts\tktwistd.py"
+Name: "{group}\TkConch (ssh)"; Filename: "%(pykey)s\scripts\tkconch.py"
+Name: "{group}\Uninstall {groupname}"; Filename: "{uninstallexe}"
+
+[Run]
+Filename: "%(pykey)s\pythonw.exe"; Parameters: "%(pykey)s\scripts\twisted_postinstall.py"

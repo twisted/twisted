@@ -16,8 +16,6 @@
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
-# post-install
-
 import sys
 import os.path
 from distutils import sysconfig
@@ -33,14 +31,14 @@ def run(argv=sys.argv):
     install(sitepackages)
 
 
-
 def install(sitepackages):
     # FIXME - make this asynch
     join=os.path.join
-    compileall.compile_dir(join(sitepackages, 'twisted'))
     td=join(sitepackages, 'twisteddoc.zip')
     if os.path.isfile(td):
-        tkunzip.run(['tkunzip', td, join(sitepackages,'TwistedDocs')])
+        tkunzip.run(['tkunzip', '--zipfile', td,
+                     '--ziptargetdir', join(sitepackages, 'TwistedDocs'),
+                     '--compiledir', join(sitepackages, 'twisted')])
 
 if __name__=='__main__':
     run()
