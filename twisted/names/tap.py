@@ -28,8 +28,12 @@ import traceback
 
 class Options(usage.Options):
     optParameters = [
-        ["interface", "i", "*",  "The interface to which to bind"],
-        ["port",      "p", "53", "The port on which to listen"]
+        ["interface", "i", "",  "The interface to which to bind"],
+        ["port",      "p", "53", "The port on which to listen"],
+    ]
+    
+    optFlags = [
+        ["verbose", "v", "Log verbosely"]
     ]
 
     zonefiles = None
@@ -66,7 +70,7 @@ class Options(usage.Options):
 
 
 def updateApplication(app, config):
-    f = server.DNSServerFactory(config.zones)
+    f = server.DNSServerFactory(config.zones, config['verbose'])
     p = dns.DNSClientProtocol(f)
     app.listenUDP(config['port'], p)
     app.listenTCP(config['port'], f)

@@ -35,6 +35,8 @@ import struct
 # Twisted imports
 from twisted.internet import protocol
 from twisted.protocols import dns
+from twisted.python import log
+
 
 class Authority:
     """
@@ -68,8 +70,9 @@ class Authority:
 
 
 class DNSServerFactory(protocol.ServerFactory):
-    def __init__(self, authorities):
+    def __init__(self, authorities, verbose = 0):
         self.authorities = authorities
+        self.verbose = verbose
 
 
     def buildProtocol(self, addr):
@@ -86,17 +89,17 @@ class DNSServerFactory(protocol.ServerFactory):
         answers = []
         for q in message.queries:
             for a in self.authorities:
-                if a.records.has_key(str(q.name).lower()):
-                    for r in a.records[str(q.name).lower()]:
-                        if q.type == r.TYPE or q.type == dns.ALL_RECORDS:
-                            answers.append(dns.RRHeader(str(q.name), r.TYPE, q.cls, 10))
-                            answers[-1].payload = r
+                for r in a.records.get(str(q.name).lower(), ()):
+                    if q.type == r.TYPE or q.type == dns.ALL_RECORDS:
+                        answers.append(dns.RRHeader(str(q.name), r.TYPE, q.cls, 10))
+                        answers[-1].payload = r
         if len(answers):
             message.answers = answers
             message.auth = 1
         else:
             message.answers = []
             message.rCode = dns.ENAME
+
         try:
             protocol.writeMessage(message)
         except TypeError:
@@ -128,6 +131,13 @@ class DNSServerFactory(protocol.ServerFactory):
 
 
     def messageReceived(self, message, protocol, address = None):
+        if self.verbose:
+            s = ' '.join([dns.QUERY_TYPES.get(q.type, 'UNKNOWN') for q in message.queries])
+            if not len(s):
+                log.msg("Empty query from %r" % (address or protocol.transport.getPeer()))
+            else:
+                log.msg("%s query from %r" % (s, address or protocol.transport.getPeer()))
+
         message.recAv = 0
         message.answer = 1
         
