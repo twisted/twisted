@@ -193,7 +193,7 @@ class Connection(abstract.FileDescriptor):
     connection based socket.
     """
 
-    __implements__ = abstract.FileDescriptor.__implements__, interfaces.ITCPTransport
+    __implements__ = abstract.FileDescriptor.__implements__, interfaces.ITCPTransport, interfaces.ISystemHandle
 
     TLS = 0
 
@@ -222,6 +222,10 @@ class Connection(abstract.FileDescriptor):
                 pass
             self.__class__ = TLSConnection
 
+    def getHandle(self):
+        """Return the socket for this connection."""
+        return self.socket
+    
     def doRead(self):
         """Calls self.protocol.dataReceived with all available data.
 

@@ -714,6 +714,21 @@ class IReadWriteDescriptor(IReadDescriptor, IWriteDescriptor):
     """
 
 
+class ISystemHandle(Interface):
+    """An object that wraps a networking OS-specific handle."""
+
+    def getHandle(self):
+        """Return a system- and reactor-specific handle.
+
+        This might be a socket.socket() object, or some other type of
+        object, depending on which reactor is being used. Use and
+        manipulate at your own risk.
+
+        This might be used in cases where you want to set specific
+        options not exposed by the Twisted APIs.
+        """
+
+
 class IConsumer(Interface):
     """A consumer consumes data from a producer."""
 

@@ -54,7 +54,7 @@ import abstract, main, error, interfaces
 class Port(base.BasePort):
     """UDP port, listening for packets."""
 
-    __implements__ = base.BasePort.__implements__, interfaces.IUDPTransport
+    __implements__ = base.BasePort.__implements__, interfaces.IUDPTransport, interfaces.ISystemHandle
 
     addressFamily = socket.AF_INET
     socketType = socket.SOCK_DGRAM
@@ -76,6 +76,10 @@ class Port(base.BasePort):
     def __repr__(self):
         return "<%s on %s>" % (self.protocol.__class__, self.port)
 
+    def getHandle(self):
+        """Return a socket object."""
+        return self.socket
+    
     def startListening(self):
         """Create and bind my socket, and begin listening on it.
 
