@@ -717,13 +717,13 @@ case the object is relocated to the specified trashcan. See also
             obj.destroy()
             self.hears("*foop* ",obj.nounPhrase," was destroyed.")
 
-    def ability_locate(self, sentence):
+    def ability_locate(self, d):
         """locate {Thing}
 
 Tells you the current location of the named Thing, assuming it exists. Note
 that you must provide the "true" name of the Thing being located, and not just
 one of it's synonyms."""
-        dstring = sentence.directString()
+        dstring = d.directString()
         obj = self.reality.get(dstring)
         if (obj):
             if (not obj.location):

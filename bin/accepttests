@@ -124,7 +124,8 @@ def runWordsTest():
 def runRealityTest():
     message("Running Reality Test")
     for mapname, loginname, password in [('TRDemo', 'guest', 'guest'),
-                                         ('Inheritance', 'damien', 'admin')]:
+                                         ('Inheritance', 'damien', 'admin'),
+                                         ('Divunal', 'guest', 'guest')]:
         if os.path.exists(mapname):
             twistdg(mapname)
             message("Log in now, username %s password %s" %
