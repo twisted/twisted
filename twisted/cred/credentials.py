@@ -17,6 +17,7 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
 from twisted.python import components
+from zope.interface import implements
 
 import hmac
 import time
@@ -88,7 +89,7 @@ class IAnonymous(ICredentials):
 
 
 class CramMD5Credentials:
-    __implements__ = (IUsernameHashedPassword,)
+    implements(IUsernameHashedPassword)
 
     challenge = ''
     response = ''
@@ -121,7 +122,7 @@ class CramMD5Credentials:
         return verify == self.response
 
 class UsernameHashedPassword:
-    __implements__ = (IUsernameHashedPassword,)
+    implements(IUsernameHashedPassword)
 
     def __init__(self, username, hashed):
         self.username = username
@@ -131,7 +132,7 @@ class UsernameHashedPassword:
         return self.hashed == password
 
 class UsernamePassword:
-    __implements__ = (IUsernamePassword,)
+    implements(IUsernamePassword)
 
     def __init__(self, username, password):
         self.username = username
@@ -141,4 +142,4 @@ class UsernamePassword:
         return self.password == password
 
 class Anonymous:
-    __implements__ = (IAnonymous,)
+    implements(IAnonymous)
