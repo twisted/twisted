@@ -91,6 +91,10 @@ from twisted.internet.interfaces import IServiceCollection
 from twisted.internet.app import ApplicationService
 
 class Registry(components.Componentized):
+    """
+    I am a Componentized object that will be made available to internal Twisted
+    file-based dynamic web content such as .rpy and .epy scripts.
+    """
     def _grabService(self, svc, sclas):
         """
         Find an instance of a particular class in a service collection and all
@@ -111,8 +115,17 @@ class Registry(components.Componentized):
         This adds the additional default behavior that if no component already
         exists and 'interface' is a subclass of
         L{twisted.internet.app.ApplicationService}, it will automatically scan
-        through twisted.internet.app.theApplication and look for
-        
+        through twisted.internet.app.theApplication and look for instances of
+        'interface'.
+
+        This has the general effect that if your web script (in an RPY, EPY, or
+        anywhere else that a Registry is present) wishes to locate a Service in
+        a default webserver, it can say 'registry.getComponent(MyServiceClass)'
+        and if there is a service of that type registered with the Application,
+        it will be found.  Additionally, in a more complex server, the registry
+        can be explicitly given a service to locate for that interface using
+        setComponent(MyServiceClass, myServiceInstance). Separate File
+        instances can be used to represent access to different services.
         """
         c = components.Componentized.getComponent(self, interface)
         if c is not None:
