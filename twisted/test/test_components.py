@@ -228,6 +228,11 @@ class ComponentizedTestCase(unittest.TestCase):
         co4 = c.getComponent(ITest2)
         assert co1 is co2
         assert co3 is not co4
+        c.removeComponent(co1)
+        co5 = c.getComponent(ITest)
+        co6 = c.getComponent(ITest)
+        assert co5 is co6
+        assert co1 is not co5
 
     def testMultiAdapter(self):
         c = CComp()
@@ -299,4 +304,99 @@ class AdapterTestCase(unittest.TestCase):
         self.assertRaises(ValueError, components.registerAdapter,
                           IntMultiplyWithAdder, IntAdder, IMultiply)
 
-        
+
+class IMeta(components.Interface):
+    def __adapt__(o, dflt):
+        if hasattr(o, 'add'):
+            return o
+        elif hasattr(o, 'num'):
+            return MetaAdder(o)
+        return dflt
+
+class MetaAdder(components.Adapter):
+    __implements__ = IMeta
+    def add(self, num):
+        return self.original.num + num
+
+class BackwardsAdder(components.Adapter):
+    __implements__ = IMeta
+    def add(self, num):
+        return self.original.num - num
+
+class MetaNumber:
+    def __init__(self, num):
+        self.num = num
+
+class FakeAdder:
+    def add(self, num):
+        return num + 5
+
+class FakeNumber:
+    num = 3
+
+class ComponentNumber(components.Componentized):
+    def __init__(self):
+        self.num = 0
+        components.Componentized.__init__(self)
+
+class ComponentMeta(components.Adapter):
+    __implements__ = IMeta
+    def __init__(self, original):
+        components.Adapter.__init__(self, original)
+        self.num = self.original.num
+
+class ComponentAdder(ComponentMeta):
+    def add(self, num):
+        self.num += num
+        return self.num
+
+class ComponentDoubler(ComponentMeta):
+    def add(self, num):
+        self.num += (num * 2)
+        return self.original.num
+
+components.registerAdapter(MetaAdder, MetaNumber, IMeta)
+components.registerAdapter(ComponentAdder, ComponentNumber, IMeta)
+
+class TestMetaInterface(unittest.TestCase):
+    
+    def testBasic(self):
+        n = MetaNumber(1)
+        self.assertEquals(IMeta(n).add(1), 2)
+
+    def testInterfaceAdaptMethod(self):
+        a = FakeAdder()
+        self.assertIdentical(IMeta(a), a)
+        n2 = FakeNumber()
+        self.assertEquals(IMeta(n2).add(3), 6)
+
+    def testComponentizedInteraction(self):
+        c = ComponentNumber()
+        IMeta(c).add(1)
+        IMeta(c).add(1)
+        self.assertEquals(IMeta(c).add(1), 3)
+        self.assertEquals(IMeta(c, persist=False).add(1), 1)
+        self.assertEquals(IMeta(c).add(1), 4)
+
+    def testCustomRegistry(self):
+        from twisted.python import context
+        n = MetaNumber(0)
+        myReg = components.AdapterRegistry()
+        myReg.registerAdapter(BackwardsAdder, MetaNumber, IMeta)
+        self.assertEquals(context.run({components.AdapterRegistry: myReg},
+                                      IMeta, n).add(2), -2)
+
+    def testRegistryPersistence(self):
+        n = MetaNumber(1)
+        i1 = IMeta(n)
+        i2 = IMeta(n)
+        self.assertIdentical(i1, i2)
+        import weakref
+        r = weakref.ref(i1)
+        del i1
+        del i2
+        self.assertNotEqual(r(), IMeta(n))
+
+    testRegistryPersistence.todo = "implement registry weak-ref cache"
+
+

@@ -19,7 +19,7 @@
 """Component architecture for Twisted."""
 
 # sibling imports
-import reflect, util
+import reflect, util, context
 
 from twisted.persisted import styles
 
@@ -29,6 +29,35 @@ import warnings
 
 
 ALLOW_DUPLICATES = 0
+
+class _Nothing:
+    """
+    An alternative to None - default value for functions which raise if default not passed.
+    """
+
+def getRegistry(r):
+    if r is None:
+        return context.get(AdapterRegistry, theAdapterRegistry)
+    else:
+        return r
+
+class MetaInterface(type):
+    def __call__(self, adaptable, default=_Nothing, persist=None, registry=None):
+        registry = getRegistry(registry)
+        try:
+            # should this be `implements' of some kind?
+            if (persist is None or persist) and isinstance(adaptable, Componentized):
+                adapter = adaptable.getComponent(self, registry, _Nothing)
+            else:
+                adapter = registry.getAdapter(adaptable, self, _Nothing)
+                if persist:
+                    registry.persistAdapter(adaptable, adapter)
+        except NotImplementedError:
+            adapter = self.__adapt__.im_func(adaptable, _Nothing)
+            if adapter is _Nothing:
+                raise
+        return adapter
+
 
 class Interface:
     """Base class for interfaces.
@@ -60,6 +89,8 @@ class Interface:
         |         return a + b
 
     """
+
+    __metaclass__ = MetaInterface
 
 
 def tupleTreeToList(t, l=None):
@@ -93,7 +124,7 @@ def getInterfaces(obj):
     result = []
     for i in tupleTreeToList(obj.__implements__):
         result.append(i)
-        result.extend(reflect.allYourBase(i))
+        result.extend(reflect.allYourBase(i, Interface))
     result = util.uniquify(result)
     result.remove(Interface)
     return result
@@ -101,14 +132,10 @@ def getInterfaces(obj):
 def superInterfaces(interface):
     """Given an interface, return list of super-interfaces (including itself)."""
     result = [interface]
-    result.extend(reflect.allYourBase(interface))
+    result.extend(reflect.allYourBase(interface, Interface))
     result = util.uniquify(result)
     result.remove(Interface)
     return result
-
-
-class _Nothing: #An alternative to None
-    pass
 
 
 class AdapterRegistry:
@@ -230,12 +257,12 @@ class Adapter:
         """
         self.original = original
 
-    def getComponent(self, interface):
+    def getComponent(self, interface, registry=None, default=None):
         """
         I forward getComponent to self.original on the assumption that it is an
         instance of Componentized.
         """
-        return self.original.getComponent(interface)
+        return self.original.getComponent(interface, registry=None, default=None)
 
 class Componentized(styles.Versioned):
     """I am a mixin to allow you to be adapted in various ways persistently.
@@ -254,26 +281,26 @@ class Componentized(styles.Versioned):
     def __init__(self):
         self._adapterCache = {}
 
-    def locateAdapterClass(self, klass, interfaceClass, default):
-        return getAdapterClassWithInheritance(klass, interfaceClass, default)
+    def locateAdapterClass(self, klass, interfaceClass, default, registry=None):
+        return getRegistry(registry).getAdapterClassWithInheritance(klass, interfaceClass, default)
 
     def setAdapter(self, interfaceClass, adapterClass):
         self.setComponent(interfaceClass, adapterClass(self))
 
-    def addAdapter(self, adapterClass, ignoreClass=0):
+    def addAdapter(self, adapterClass, ignoreClass=0, registry=None):
         """Utility method that calls addComponent.  I take an adapter class and
         instantiate it with myself as the first argument.
 
         Returns the adapter instantiated.
         """
         adapt = adapterClass(self)
-        self.addComponent(adapt, ignoreClass)
+        self.addComponent(adapt, ignoreClass, registry)
         return adapt
 
     def setComponent(self, interfaceClass, component):
         self._adapterCache[reflect.qual(interfaceClass)] = component
 
-    def addComponent(self, component, ignoreClass=0):
+    def addComponent(self, component, ignoreClass=0, registry=None):
         """
         Add a component to me, for all appropriate interfaces.
 
@@ -291,7 +318,7 @@ class Componentized(styles.Versioned):
         """
         for iface in tupleTreeToList(component.__implements__):
             if (ignoreClass or
-                (self.locateAdapterClass(self.__class__, iface, None)
+                (self.locateAdapterClass(self.__class__, iface, None, registry)
                  == component.__class__)):
                 self._adapterCache[reflect.qual(iface)] = component
 
@@ -319,7 +346,7 @@ class Componentized(styles.Versioned):
                 l.append(reflect.namedObject(k))
         return l
 
-    def getComponent(self, interface):
+    def getComponent(self, interface, registry=None, default=None):
         """Create or retrieve an adapter for the given interface.
 
         If such an adapter has already been created, retrieve it from the cache
@@ -335,15 +362,17 @@ class Componentized(styles.Versioned):
         interfaces (with addComponent), set the attribute 'multiComponent' to
         True on your adapter class.
         """
+        registry = getRegistry(registry)
         k = reflect.qual(interface)
         if self._adapterCache.has_key(k):
             return self._adapterCache[k]
         elif implements(self, interface):
             return self
         else:
-            adapter = getAdapter(self, interface, None,
-                                 self.locateAdapterClass)
-            if adapter is not None and not (
+            adapter = registry.getAdapter(self, interface, default,
+                                          lambda k, ik, d:
+                                          self.locateAdapterClass(k, ik, d, registry))
+            if adapter is not None and adapter is not _Nothing and not (
                 hasattr(adapter, "temporaryAdapter") and
                 adapter.temporaryAdapter):
                 self._adapterCache[k] = adapter

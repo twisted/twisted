@@ -111,7 +111,7 @@ class Registry(components.Componentized, styles.Versioned):
                 if ss:
                     return ss
 
-    def getComponent(self, interface):
+    def getComponent(self, interface, registry=None):
         """
         Very similar to Componentized.getComponent, with a little magic.
 
@@ -130,7 +130,7 @@ class Registry(components.Componentized, styles.Versioned):
         setComponent(MyServiceClass, myServiceInstance). Separate File
         instances can be used to represent access to different services.
         """
-        c = components.Componentized.getComponent(self, interface)
+        c = components.Componentized.getComponent(self, interface, registry)
         if c is not None:
             return c
         elif issubclass(interface, ApplicationService):
