@@ -18,6 +18,7 @@ class AdvancedClient(irc.IRCClient):
     def __init__(self):
         self._pendingJoins = {}
         self._pendingParts = {}
+        self._pendingNames = []
     
     def connectionLost(self, reason):
         if self._pendingQuit:
@@ -105,3 +106,27 @@ class AdvancedClient(irc.IRCClient):
             del self._pendingParts[channel.lower()]
             d.errback(NoSuchChannel())
             return
+
+    def names(self, *channels):
+        """List names of users visible to this user.
+        
+        @type channels: C{str}
+        @param channels: The channels for which to request names.
+        
+        @rtype: C{dict} mapping C{str} to C{list} of C{str}
+        @return: A mapping of channel names to lists of users in those
+        channels.
+        """
+        d = defer.Deferred()
+        self._pendingNames.append(({}, d))
+        self.sendLine("NAMES " + " ".join(channels))
+        return d
+    
+    def irc_RPL_NAMREPLY(self, prefix, params):
+        channel = params[2]
+        names = params[3].split()
+        self._pendingNames[0][0].setdefault(channel, []).extend(names)
+    
+    def irc_RPL_ENDOFNAMES(self, prefix, params):
+        names, d = self._pendingNames.pop(0)
+        d.callback(names)

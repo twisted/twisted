@@ -105,3 +105,22 @@ class SimpleActionTestCase(unittest.TestCase):
         loopback.loopback(server, client)
         self.failIf(self.success)
         self.failure.trap(ActionInProgress)
+
+    def testNames(self):
+        server = LineSendingProtocol([
+            ":server 353 user = #channel :user another1 another2 another3",
+            ":server 353 user = #channel :another4 another5",
+            ":server 366 user #channel :End of /NAMES list."
+        ], False)
+        client = AdvancedTestClient()
+        names = {}
+        client.onC.addCallback(lambda p: p.names("#channel")
+            ).addCallback(names.update
+            ).addCallback(lambda _: client.transport.loseConnection()
+            ).addErrback(self.fail, client
+            )
+        loopback.loopback(server, client)
+        self.assertEquals(names, {'#channel': [
+            "user", "another1", "another2", "another3", "another4",
+            "another5"
+        ]})
