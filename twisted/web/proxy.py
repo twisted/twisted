@@ -14,10 +14,16 @@
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
+"""Simplistic HTTP proxy support."""
+
+# twisted imports
 from twisted.protocols import http
 from twisted.internet import reactor
 from twisted.web import resource, server
+
+# system imports
 import urlparse
+import string
 
 
 class ProxyClient(http.HTTPClient):
@@ -67,9 +73,10 @@ class ProxyRequest(http.Request):
         if not rest:
             rest = rest+'/'
         class_ = self.protocols[protocol]
-        if not self.received.has_key('host'):
-            self.received['host'] = host
-        clientProtocol = class_(self.method, rest, self.clientproto, self.received,
+        headers = self.getAllHeaders().copy()
+        if not headers.has_key('host'):
+            headers['host'] = host
+        clientProtocol = class_(self.method, rest, self.clientproto, headers,
                                 self.content.read(), self)
         client = reactor.clientTCP(host, port, clientProtocol)
 
@@ -81,7 +88,7 @@ class Proxy(http.HTTPChannel):
 class ReverseProxyRequest(http.Request):
 
     def process(self):
-        self.received['host'] = self.factory.host
+        self.received_headers['host'] = self.factory.host
         clientProtocol = ProxyClient(self.method, self.uri, self.clientproto, self.getAllHeaders(), 
                                      self.content.read(), self)
         client = reactor.clientTCP(self.factory.host, self.factory.port,
