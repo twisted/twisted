@@ -227,8 +227,18 @@ else:
 
 # For use from the interactive interpreter
 _i = Banana()
+_i.connectionMade()
 
 def encode(lst):
     io = cStringIO.StringIO()
     _i._encode(lst, io.write)
     return io.getvalue()
+
+def decode(st):
+    l=[]
+    _i.expressionReceived = l.append
+    _i.dataReceived(st)
+    _i.buffer = ''
+    del _i.expressionReceived
+    return l[0]
+
