@@ -7,7 +7,10 @@ from twisted.web import monitor
 from twisted.internet import reactor
 import sys, time
 
-class ChangeChecker(monitor.ChangeChecker):
+class ChangeNotified(monitor.BaseChangeNotified):
+
+    def __init__(self, url):
+        self.url = url
 
     def reportChange(self, old, new):
         print time.ctime(),
@@ -19,6 +22,7 @@ class ChangeChecker(monitor.ChangeChecker):
             print self.url, "changed"
 
 for url in sys.argv[1:]:
-    checker = ChangeChecker(url, 30)
+    notified = ChangeNotified(url)
+    checker = monitor.ChangeChecker(notified, url, 30)
     checker.start()
 reactor.run()
