@@ -318,10 +318,10 @@ class Group(styles.Versioned):
         for member in self.members:
             member.receiveGroupMessage(sender, self, message)
 
-    def setMetadata(dict_):
+    def setMetadata(self, dict_):
         self.metadata.update(dict_)
         for member in self.members:
-            member.setGroupMetadata(dict_)
+            member.setGroupMetadata(dict_, self.name)
 
     def __repr__(self):
         s = "<%s '%s' at %x>" % (self.__class__, self.name, id(self))

@@ -432,6 +432,7 @@ class IRCChatter(irc.IRC):
         name = params[0]
         text = params[-1]
         if self.participant:
+            ## 'bot' handling
             if name == 'ContactServ':
                 # crude contacts interface
                 cmds = string.split(text, ' ', 1)
@@ -449,6 +450,9 @@ class IRCChatter(irc.IRC):
                 except pb.Error, e:
                     self.receiveDirectMessage("*error*", str(e))
                     print 'error chatting to channel:',str(e)
+
+            elif name in map(lambda x: x.name, self.participant.groups):
+                self.groupBotMessage(name, text)
             else:
                 try:
                     self.participant.directMessage(name, text)
@@ -458,12 +462,21 @@ class IRCChatter(irc.IRC):
                     self.sendMessage(irc.ERR_NOSUCHNICK, name,
                                      ":%s" % (e,))
         else:
+            
             if name == 'NickServ':
                 self.logInAs(self.pendingLogin, text)
             else:
                 self.receiveDirectMessage("NickServ", "You haven't logged in yet.")
 
 
+
+    def groupBotMessage(self, group, command):
+        log.msg("%s to %s" % (command, group))
+        l = len('topic')
+        if command[:l] == "topic":
+            group = self.service.getGroup(group)
+            group.setMetadata({"topic": command[l+1:],
+                               "topic_author": self.nickname})
 
     def irc_NOTICE(self, prefix, params):
         """Notice
