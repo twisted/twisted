@@ -31,14 +31,13 @@ class ThreadedScheduler:
     """I am a thread-aware delayed scheduler of for synchronous event loops.
 
     This lets threads execute non-thread safe code by adding it to the
-    scheduler. This module should not be used by non-threaded modules,
-    instead they should use twisted.internet.task.
-
-    Tasks added to this scheduler will *not* be stored persistently.
+    scheduler. Tasks added to this scheduler will *not* be stored persistently.
 
     This is an implementation of the Active Object pattern, and can be used
-    as part of the queueing layer for the Async/Half-Async pattern. For more
-    details:
+    as part of the queueing layer for the Async/Half-Async pattern. The other
+    half the Async/Half-Async pattern is twisted.internet.threadtask.
+    
+    For more details:
 
       1) POSA2 book - http://www.cs.wustl.edu/~schmidt/POSA/    
 
