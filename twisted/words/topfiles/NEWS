@@ -3,3 +3,4 @@
  - Add QUIT notification for IRC
  - Fix message wrapping
  - Misc Jabber fixes
+ - Added stringprep support for Jabber IDs
