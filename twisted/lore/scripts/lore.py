@@ -5,7 +5,7 @@ import sys
 
 from zope.interface import Interface, Attribute
 
-from twisted.lore import process, default, indexer, numberer, htmlbook
+from twisted.lore import process, indexer, numberer, htmlbook
 
 from twisted.python import usage, plugin as oldplugin, reflect
 from twisted import plugin as newplugin
