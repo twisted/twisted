@@ -129,18 +129,6 @@ Basic Servers
   log in with the username and password you want.  If the name is not already
   taken on the server, it is created.  This creates a file called 'toc.tap'
   
-Configuring Servers
-
-  Once you've created a tap file, you can use a browser based interface to
-  configure it. Run this command::
-  
-    % coil [application name].tap
-
-  And then point your browser to http://localhost:9080 to see the config
-  interface. Once you've finished configuring the server, hit Ctrl-C in the
-  terminal where you run coil in order to shutdown the web server and save
-  your changes.
-
 
 Documentation and Support
 
