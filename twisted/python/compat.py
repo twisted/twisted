@@ -91,7 +91,6 @@ if sys.version_info[:3] in ((2, 2, 0), (2, 2, 1)):
 import types, socket, struct
 
 if sys.version[:3] == "2.2":
-    print "python 2.2, importing pymodule's sets"
     from twisted.python.pymodules import sets23 as sets
 else:
     import sets
