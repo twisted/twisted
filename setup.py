@@ -22,7 +22,7 @@ Package installer for Twisted
 Copyright (C) 2001 Matthew W. Lefkowitz
 All rights reserved, see LICENSE for details.
 
-$Id: setup.py,v 1.123 2003/07/19 02:19:06 itamarst Exp $
+$Id: setup.py,v 1.124 2003/07/25 02:13:29 exarkun Exp $
 """
 
 import distutils, os, sys, string
@@ -172,8 +172,8 @@ class build_ext_twisted(build_ext):
 
         # opendir/readdir/scandir wrapper
         if self._check_header("dirent.h"):
-            exts.append( Extension("twisted.python.dir",
-                                    ["twisted/python/dir.c"],
+            exts.append( Extension("twisted.python._c_dir",
+                                    ["twisted/python/_c_dir.c"],
                                     define_macros=define_macros) )
         else:
             self.announce("scandir() wrapper is unavailable on this system (don't worry, everything will still work)")
