@@ -127,8 +127,10 @@ class JellyTestCase(unittest.TestCase):
 
     def testUnicode(self):
         if hasattr(types, 'UnicodeType'):
-            x = 'blah'
-            self.assertEquals(self.jc.unjelly(self.jc.jelly(unicode(x))), x)
+            x = unicode('blah')
+            y = self.jc.unjelly(self.jc.jelly(x))
+            self.assertEquals(x, y)
+            self.assertEquals(type(x), type(y))
 
     def testStressReferences(self):
         reref = []

@@ -1,3 +1,8 @@
+2003-05-22  Brian Warner  <warner@lothar.com>
+
+	* twisted/test/test_newjelly.py (JellyTestCase.testUnicode): make
+	sure unicode strings don't mutate into plain ones
+
 2003-05-21  Brian Warner  <warner@lothar.com>
 
 	* twisted/internet/tcp.py (Connection.getTcpKeepAlive): Add
