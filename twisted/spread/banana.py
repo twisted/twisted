@@ -131,7 +131,7 @@ class Banana(protocol.Protocol, styles.Ephemeral):
             elif typebyte == FLOAT:
                 if len(rest) >= 8:
                     buffer = rest[8:]
-                    gotItem(struct.unpack("d", rest[:8])[0])
+                    gotItem(struct.unpack("!d", rest[:8])[0])
                 else:
                     return
             else:
@@ -227,7 +227,7 @@ class Banana(protocol.Protocol, styles.Ephemeral):
                 write(LONGNEG)
         elif isinstance(obj, types.FloatType):
             write(FLOAT)
-            write(struct.pack("d", obj))
+            write(struct.pack("!d", obj))
         elif isinstance(obj, types.StringType):
             if self.outgoingSymbols.has_key(obj):
                 symbolID = self.outgoingSymbols[obj]
