@@ -47,9 +47,10 @@ class IRCChatter(irc.IRC, service.WordsClientInterface):
             self.notifyStatusChanged(name, status)
 
     def notifyStatusChanged(self, name, status):
-        self.receiveDirectMessage(
-            "ContactServ",
-            "%s is %s" % (name, service.statuses[status]))
+        self.sendMessage('NOTICE', ":%s is %s"
+                         % (name, service.statuses[status]),
+                         prefix='ContactServ!services@%s'
+                         % (self.servicename,))
 ##         # This didn't work very well.
 ##         if status is service.ONLINE:
 ##             self.sendMessage(irc.RPL_ISON, ":%s" % (name,))
@@ -212,7 +213,9 @@ class IRCChatter(irc.IRC, service.WordsClientInterface):
             self.identity = ident
             self.pendingLogin.attached(self, self.identity)
             self.participant = self.pendingLogin
-            self.receiveDirectMessage("NickServ", "Authentication accepted.  Thank you.")
+            self.sendMessage('NOTICE', ":Authentication accepted.  "
+                             "Thank you.", prefix='NickServ!services@%s'
+                             % (self.servicename,))
         else:
             self.notLoggedIn("unauthorized")
         del self.pendingLogin
@@ -317,7 +320,6 @@ class IRCChatter(irc.IRC, service.WordsClientInterface):
         #<< PART #java :test
         #>> :niven.openprojects.net 442 glyph #java :You're not on that channel
         channame = params[0][1:]
-        print 'trying to part', channame
         try:
             self.participant.leaveGroup(channame)
         except pb.Error, e:
@@ -471,7 +473,6 @@ class IRCChatter(irc.IRC, service.WordsClientInterface):
                     msgMethod = self.participant.directMessage
 
                 m = irc.ctcpExtract(text)
-                print "from _%s_ got %s" % (text, m)
                 for tag, data in m['extended']:
                     metadata = {'style': ctcpToWords(tag)}
                     try:
@@ -643,7 +644,7 @@ class IRCChatter(irc.IRC, service.WordsClientInterface):
         """
         self.sendMessage(irc.RPL_SERVLISTEND,
                          ":I'd tell you, but this is an unsecured line.")
-        
+
 
     def irc_SQUERY(self, prefix, params):
         """Squery

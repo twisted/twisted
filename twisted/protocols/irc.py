@@ -136,7 +136,7 @@ class IRC(protocol.Protocol):
             prefix, command, params = parsemsg(line)
             # mIRC is a big pile of doo-doo
             command = string.upper(command)
-            log.msg( "%s %s %s" % (prefix, command, params))
+            # DEBUG: log.msg( "%s %s %s" % (prefix, command, params))
             method = getattr(self, "irc_%s" % command, None)
             try:
                 if method is not None:
@@ -1318,6 +1318,7 @@ ERR_CANTKILLSERVER = '483'
 ERR_RESTRICTED = '484'
 ERR_UNIQOPPRIVSNEEDED = '485'
 ERR_NOOPERHOST = '491'
+ERR_NOSERVICEHOST = '492'
 ERR_UMODEUNKNOWNFLAG = '501'
 ERR_USERSDONTMATCH = '502'
 
@@ -1458,6 +1459,7 @@ symbolic_to_numeric = {
     "ERR_RESTRICTED": '484',
     "ERR_UNIQOPPRIVSNEEDED": '485',
     "ERR_NOOPERHOST": '491',
+    "ERR_NOSERVICEHOST": '492',
     "ERR_UMODEUNKNOWNFLAG": '501',
     "ERR_USERSDONTMATCH": '502',
 }
