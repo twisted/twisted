@@ -187,7 +187,7 @@ class POP3ClientMessageTestCase(unittest.TestCase):
         self.assertEquals(t.value(), "RETR 8\r\n")
         p.dataReceived("+OK Message incoming\r\n")
         p.dataReceived("La la la here is message text\r\n")
-        p.dataReceived(".Further message text tra la la\r\n")
+        p.dataReceived("..Further message text tra la la\r\n")
         p.dataReceived(".\r\n")
         return d.addCallback(
             unittest.assertEqual, 
@@ -202,7 +202,7 @@ class POP3ClientMessageTestCase(unittest.TestCase):
         self.assertEquals(t.value(), "RETR 8\r\n")
         p.dataReceived("+OK Message incoming\r\n")
         p.dataReceived("La la la here is message text\r\n")
-        p.dataReceived(".Further message text\r\n.\r\n")
+        p.dataReceived("..Further message text\r\n.\r\n")
         self.assertIdentical(unittest.wait(d), f)
         self.assertEquals(c.data, ["La la la here is message text",
                                    ".Further message text"])

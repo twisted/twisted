@@ -72,6 +72,16 @@ def _codeStatusSplit(line):
         return parts[0], ''
     return parts
 
+def _dotUnquoter(line):
+    """
+    '.' characters which begin a line of a message are doubled to avoid
+    confusing with the terminating '.\r\n' sequence.  This function unquotes
+    them.
+    """
+    if line.startswith('..'):
+        return line[1:]
+    return line
+
 class POP3Client(basic.LineOnlyReceiver):
     """POP3 client protocol implementation class
 
@@ -389,8 +399,8 @@ class POP3Client(basic.LineOnlyReceiver):
         """
         idx = str(index + 1)
         if lines is None:
-            return self._consumeOrAppend('RETR', idx, consumer, None)
-        return self._consumeOrAppend('TOP', '%s %d' % (idx, lines), consumer, None)
+            return self._consumeOrAppend('RETR', idx, consumer, _dotUnquoter)
+        return self._consumeOrAppend('TOP', '%s %d' % (idx, lines), consumer, _dotUnquoter)
 
     def listSize(self, consumer=None):
         """Retrieve a list of the size of all messages on the server.
