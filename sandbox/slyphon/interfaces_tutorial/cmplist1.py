@@ -5,7 +5,7 @@ from twisted.python import components
 import zope.interface 
 
 
-class IHaveAName(components.Interface):
+class IHaveAName(zope.interface.Interface):
     def getName():
         """returns my name as a string"""
 

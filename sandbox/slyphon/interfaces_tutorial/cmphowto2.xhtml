@@ -153,7 +153,7 @@ on the object, we don't care <em>what class that object is an instance of!</em> 
 defined an adapter class to act as an interpreter between the original object's interface and the
 desired interface, we know that the adapted object will do what we want it to do!</p>
 
-<h2>A slight variation on the last example</h2>
+<h2>Using zope.interface.directlyProvides()</h2>
 
 <p>Now, one thing that's important to realise is that adapters don't actually have to subclass
 <code class="API" base="twisted.python.components">Adapter</code>, they just have to be callable,
@@ -162,6 +162,90 @@ an adapter, we make use of the <code>zope.interface.directlyProvides</code> meth
 </p>
 
 <a href="cmplist3.py" class="py-listing" />
+
+<h3>Explanation</h3>
+
+<p>Remember how before I said that <q>instances of a class <em>provide</em> an interface</q>?
+Well, here's where that comes into play. Technically speaking <code>modulePath</code>,
+<code>listPath</code>, and <code>filePath</code> are all instances of <code>types.FunctionType</code>.
+Instead of defining a class that <em>implements</em> the interface, we instead say that an instance
+of <code>types.FunctionType</code> <em>directlyProvides</em> a given interface. In this case, the string
+returned when we do <code>IFilePath(original)</code> is the interface...it's pure data.
+</p>
+
+<h2>Defining Interface Attributes</h2>
+
+<p>Now we move a little deeper into zope's interfaces. The semantics for describing zope interfaces
+are a little different from the classic Twisted way of doing things. In the previous examples,
+the interfaces we defined had only methods for attributes, so here we'll see how to define attributes
+of other types.</p>
+
+<a href="cmplist4.py" class="py-listing" />
+
+<h3>output</h3>
+
+<pre>
+IFile.__doc__: "an interface that models the stdlib's file object"
+IFile.__name__: "IFile"
+
+use mapping syntax to access an interfaces' attributes: 
+
+
+name = IFile['name']
+type(name): &lt;class 'zope.interface.interface.Attribute'&gt;
+name.__name__: 'name'
+name.__doc__: 'the name of the file (or appropriate alternative)'
+
+
+you can use 'in' to determine if an interface defines a name
+
+'name' in IFile: True
+
+
+you can iterate over the names an interface provides
+
+repr('\n\t'.join([n for n in IFile])): 
+	softspace
+	name
+	encoding
+	read
+	next
+	mode
+	closed
+	flush
+	close
+	newlines
+
+attributes that are methods provide access to the method signature
+
+read = IFile['read']
+read.getSignatureString(): '(size=-1)'
+</pre>
+
+<h3>Explanation</h3>
+<p>Now, chances are you won't have to use many of these features, and if you do, you can look
+in the zope.interface README.txt, which will give you a very good explanation. The important thing
+to notice here is how to define attributes of classes that aren't methods. In the Twisted component
+system, there was no way of accomplishing this, besides for the writing of docstrings. In zope.interface
+they allow us to define these class attributes using the <code>zope.interface.Attribute</code> method,
+which takes the attribute's docstring as an argument.
+</p>
+
+<h2>Wrapping other people's objects</h2>
+
+<p>One place where interfaces can save the day is when you have to use someone else's library, and
+you need to use their objects in a different way than they intended. For instance, let's say that you
+wrote a function <code>concat</code> that concatenates the two arguments that it gets handed. For
+some reason you find yourself in the situation where calling a 3rd-party library function returns
+a file-like object that you then have to pass to that function and for some reason, this is monsterously
+inconvenient. Here is a way to deal with this (hypothetical and contrived) situation using adapters:
+</p>
+
+<h2>Conclusion</h2>
+
+<p>Interfaces are an incredibly useful tool because they allow your code to focus on objects' interface
+rather than implementation-specific details such as what class they are instances of.</p>
+
 
 </body>
 </html>

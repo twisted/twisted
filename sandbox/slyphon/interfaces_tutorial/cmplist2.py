@@ -9,7 +9,7 @@ import zope.interface as zi
 
 # the interface we'll be adapting instances to
 
-class IFilePath(components.Interface):
+class IFilePath(zope.interface.Interface):
     def getPath():
         """i return a string that represents a file path"""
 
