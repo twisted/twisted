@@ -1,53 +1,42 @@
 #!/usr/bin/env python
 
+import os, os.path, types
 
 from twisted.python import components
-import zope.interface 
+import zope.interface as zi
+
+class ElectricDevice(object):
+    expectedVolts = 0
+    name = "Generic Device"
+
+    def feedPower(self, volts):
+        if volts == self.expectedVolts:
+            print "I am a %s. I was plugged in properly and am now operating." % self.name
+        else:
+            print "\nBANG! ZAP! *=> SPARKS FLY EVERYWHERE <=*"
+            print "I was plugged in improperly and "
+            print "now you have no %s any more." % self.name
+    
 
 
-class IHaveAName(components.Interface):
-    def getName():
-        """returns my name as a string"""
+class IPlug(components.Interface):
+    def power(volts):
+        """a socket supplies me with volts of electricity which i feed to my device"""
+       
 
-class Foo(object):
-    value = 'scrubble'
+class Plug(components.Adapter):
+    zi.interfaces(IPlug)
+    name = "Plug"
+    def power(self, volts):
+        self.original.feedPower(volts)
 
-class GetFoosName(object):
-    zope.interface.implements(IHaveAName)
 
-    # this is the constructor for an adapter,
-    # if you want a class to act as an adapter, it must take
-    # a single argument, and assign that argument to the
-    # instance attribute self.original
-    def __init__(self, original):
-        self.original = original
-
-    def getName(self):
-        return self.original.value
-
-components.registerAdapter(GetFoosName, Foo, IHaveAName)
-
-def main():
-    f = Foo()
-    print "repr(f) %r" % f
-
-    # what happens here is that the component architecture looks to see
-    # if someone has registered an adapter from Foo to IHaveAName, it
-    # finds GetFoosName, and does
-    #
-    # return GetFoosName(f)
-    #
-    haveAName = IHaveAName(f)
-
-    print "repr(haveAName): %r" % haveAName
-
-    print "repr(haveAName.original): %r" % haveAName.original
-
-    print "haveAName.original is f: %s" % (haveAName.original is f)
-
-    name = haveAName.getName()
-    print "name: %s" % name
-
+class Socket(object):
+    voltage = 110
+    def plugIn(self, obj):
+        """I supply a device with power through an IPlug interface"""
+        obj.power(self.voltage)
+            
 
 if __name__ == '__main__':
     main()

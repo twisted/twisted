@@ -83,22 +83,36 @@ with the instance as it's first (and only) argument.</p>
 
 <h3>Explanation</h3>
 
-<p>So we start out by defining our interface <code>IHaveAName</code>, which has
-one method <code>getName</code>. <code>Foo</code> is the class we will adapt to our
-interface, and <code>GetFoosName</code> is our adapter. The important bit that
-relates these three classes is the call to <code>components.registerAdapter</code>.
-This call tells the component system that we will use <code>GetFoosName</code> to
-adapt <code>Foo</code> to the interface <code>IHaveAName</code>. When we run
-this code we see:
+<p>This is a slightly modified version of the original components example. We
+start out by defining some <code>ElectricDevices<code>, <code>USHairDryer</code>,
+and <code>UKStereo</code>. Each of them expect to be powered by a certain (and
+different) level of voltage. Next we define some sockets that will power our devices,
+each providing a different level of voltage. We then try plugging each device into each
+type of socket, and we get the following result:
 </p>
 
 <pre>
-repr(f) &lt;__main__.Foo object at 0x403f43ac&gt;
-repr(haveAName): &lt;__main__.GetFoosName instance at 0x403f458c&gt;
-repr(haveAName.original): &lt;__main__.Foo object at 0x403f43ac&gt;
-haveAName.original is f: True
-name: scrubble
+first we try a few combinations of plugging devices into sockets
+
+
+I am a US Hair Dryer. I was plugged in properly and am now operating.
+I am a UK Stereo. I was plugged in properly and am now operating.
+
+
+BANG! ZAP! *=> SPARKS FLY EVERYWHERE <=*
+I was plugged in improperly and 
+now you have no US Hair Dryer any more.
+
+
+BANG! ZAP! *=> SPARKS FLY EVERYWHERE <=*
+I was plugged in improperly and 
+now you have no UK Stereo any more.
 </pre>
+
+<p>Oh No! We simply be traveling abroad without our USHairDryer! And what about
+that UKStereo! This is where <em>adapters</em> come into play. First, we define
+an interface, IVoltageConverter. 
+</p>
 
 <h2>A slightly more involved example</h2>
 
