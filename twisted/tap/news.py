@@ -16,7 +16,7 @@
 
 from twisted.enterprise import adbapi
 from twisted.news import news, database
-from twisted.application import internet
+from twisted.application import strports
 from twisted.python import usage, log
 
 import sys, getpass
@@ -139,9 +139,8 @@ def makeService(config):
     for s in config.subscriptions:
         print s
         db.addSubscription(s)
-
-    return internet.TCPServer(
-        int(config['port']),
-        news.UsenetServerFactory(db, config.servers),
-        interface = config['interface']
-    )
+    s = config['port']
+    if config['interface']:
+        # Add a warning here
+        s += ':interface='+config['interface']
+    return strports.service(s, news.UsenetServerFactory(db, config.servers))
