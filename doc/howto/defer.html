@@ -472,9 +472,8 @@ already-called-back-to Deferred.</p>
 <p>The important consequence of this is that <strong>sometimes, addCallbacks
 will call its argument synchronously, and sometimes it will not</strong>. In
 situations where callbacks modify state, it is highly desirable for the chain
-of processing to halt until all callbacks are added. (For the curious: the code
-for <code class="API">twisted.web.widgets</code> has a textbook example of
-this.) For this, it is possible to <code>pause</code> and <code>unpause</code>
+of processing to halt until all callbacks are added. For this, it is possible
+to <code>pause</code> and <code>unpause</code>
 a Deferred's processing chain while you are adding lots of callbacks.</p>
 
 <p>Be careful when you use these methods! If you <code>pause</code> a Deferred,
