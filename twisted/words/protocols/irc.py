@@ -905,9 +905,13 @@ class IRCClient(basic.LineReceiver):
         self.topicUpdated(user, channel, newtopic)
 
     def irc_RPL_MOTDSTART(self, prefix, params):
+        if params[-1].startswith("- "):
+            params[-1] = params[-1][2:]
         self.motd = [params[-1]]
 
     def irc_RPL_MOTD(self, prefix, params):
+        if params[-1].startswith("- "):
+            params[-1] = params[-1][2:]
         self.motd.append(params[-1])
 
     def irc_RPL_ENDOFMOTD(self, prefix, params):

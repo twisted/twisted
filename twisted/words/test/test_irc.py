@@ -163,8 +163,14 @@ class ModeTestCase(unittest.TestCase):
     def _serverTestImpl(self, code, msg, func, **kw):
         host = kw.pop('host', 'server.host')
         nick = kw.pop('nick', 'nickname')
+        args = kw.pop('args', '')
 
-        message = ":" + host + " " + code + " " + nick + " :" + msg + "\r\n"
+        message = (":" +
+                   host + " " +
+                   code + " " +
+                   nick + " " +
+                   args + " :" +
+                   msg + "\r\n")
 
         self.client.dataReceived(message)
         self.assertEquals(
@@ -186,6 +192,67 @@ class ModeTestCase(unittest.TestCase):
                              version="server-version",
                              umodes="abcDEF",
                              cmodes="bcdEHI")
+
+    def testLuserClient(self):
+        msg = "There are 9227 victims and 9542 hiding on 24 servers"
+        self._serverTestImpl("251", msg, "luserClient",
+                             info=msg)
+
+    def testISupport(self):
+        args = ("MODES=4 CHANLIMIT=#:20 NICKLEN=16 USERLEN=10 HOSTLEN=63 "
+                "TOPICLEN=450 KICKLEN=450 CHANNELLEN=30 KEYLEN=23 CHANTYPES=# "
+                "PREFIX=(ov)@+ CASEMAPPING=ascii CAPAB IRCD=dancer")
+        msg = "are available on this server"
+        self._serverTestImpl("005", msg, "isupport", args=args,
+                             options=['MODES=4',
+                                      'CHANLIMIT=#:20',
+                                      'NICKLEN=16',
+                                      'USERLEN=10',
+                                      'HOSTLEN=63',
+                                      'TOPICLEN=450',
+                                      'KICKLEN=450',
+                                      'CHANNELLEN=30',
+                                      'KEYLEN=23',
+                                      'CHANTYPES=#',
+                                      'PREFIX=(ov)@+',
+                                      'CASEMAPPING=ascii',
+                                      'CAPAB',
+                                      'IRCD=dancer'])
+
+    def testBounce(self):
+        msg = "Try server some.host, port 321"
+        self._serverTestImpl("005", msg, "bounce",
+                             info=msg)
+
+    def testLuserChannels(self):
+        args = "7116"
+        msg = "channels formed"
+        self._serverTestImpl("254", msg, "luserChannels", args=args,
+                             channels=int(args))
+
+    def testLuserOp(self):
+        args = "34"
+        msg = "flagged staff members"
+        self._serverTestImpl("252", msg, "luserOp", args=args,
+                             ops=int(args))
+
+    def testLuserMe(self):
+        msg = "I have 1937 clients and 0 servers"
+        self._serverTestImpl("255", msg, "luserMe",
+                             info=msg)
+
+    def testMOTD(self):
+        lines = [
+            ":host.name 375 nickname :- host.name Message of the Day -",
+            ":host.name 372 nickname :- Welcome to host.name",
+            ":host.name 376 nickname :End of /MOTD command."]
+        for L in lines:
+            self.assertEquals(self.client.calls, [])
+            self.client.dataReceived(L + '\r\n')
+
+        self.assertEquals(
+            self.client.calls,
+            [("receivedMOTD", {"motd": ["host.name Message of the Day -", "Welcome to host.name"]})])
 
 class BasicServerFunctionalityTestCase(unittest.TestCase):
     def setUp(self):
