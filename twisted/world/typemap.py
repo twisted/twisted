@@ -362,7 +362,7 @@ class EnumTypeMapper(AbstractTypeMapper):
         return 4
 
     def toTuple(self):
-        return ('enum', self.original)
+        return ('enum', self.values)
 
     def null(self):
         return self.values[0]
