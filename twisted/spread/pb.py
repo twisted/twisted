@@ -127,10 +127,10 @@ class RemoteMethod:
 
     def __cmp__(self, other):
         return cmp((self.obj, self.name), other)
-    
+
     def __hash__(self):
         return hash((self.obj, self.name))
-    
+
     def __call__(self, *args, **kw):
         """Asynchronously invoke a remote method.
         """
@@ -233,10 +233,10 @@ class RemoteReference(Serializable, styles.Ephemeral):
     All attributes besides '__double_underscored__' attributes and
     attributes beginning with 'local_' are RemoteMethod instances;
     these act like methods which return Deferreds.
-    
+
     Methods beginning with 'local_' are methods that run locally on
     the instance.
-    
+
     See also twisted.python.defer.
     """
 
@@ -254,26 +254,26 @@ class RemoteReference(Serializable, styles.Ephemeral):
 
     def local_notifyOnDisconnect(self, callback):
         """Register a callback to be called if our broker gets disconnected.
-        
+
         This callback will be called with one method, this instance.
         """
         assert callable(callback)
         self.disconnectCallbacks.append(callback)
         if len(self.disconnectCallbacks):
             self.broker.notifyOnDisconnect(self._disconnected)
-    
+
     def local_dontNotifyOnDisconnect(self, callback):
         """Register a callback to be called if our broker gets disconnected."""
         self.disconnectCallbacks.remove(callback)
         if not self.disconnectCallbacks:
             self.broker.dontNotifyOnDisconnect(self._disconnected)
-    
+
     def _disconnected(self):
         """Called if we are disconnected and have callbacks registered."""
         for callback in self.disconnectCallbacks:
             callback(self)
         self.disconnectCallbacks = None
-    
+
     def remoteSerialize(self, broker):
         """If I am being sent back to where I came from, serialize as a local backreference.
         """
@@ -578,7 +578,7 @@ class Broker(banana.Banana):
             self.disconnects.remove(notifier)
         except ValueError:
             pass
-    
+
     def localObjectForID(self, luid):
         """Get a local object for a locally unique ID.
 
@@ -679,13 +679,13 @@ class Broker(banana.Banana):
                 'kw': kw
                 })
             return object
-        
+
         # XXX This call is NOT REENTRANT and testing for reentrancy is just
         # crazy, so it likely won't be.  Don't ever write methods that call the
         # broker's serialize() method recursively (e.g. sending a method call
         # from within a getState (this causes concurrency problems anyway so
         # you really, really shouldn't do it))
-        
+
         self.jellier = _NetJellier(self)
         self.serializingPerspective = perspective
         self.jellyMethod = method
@@ -1035,11 +1035,11 @@ def getObjectAt(host, port, timeout=None):
     """Establishes a PB connection and returns with a RemoteReference.
 
     Arguments:
-    
+
       host: the host to connect to
-      
+
       port: the port number to connect to
-      
+
       timeout (optional): a value in milliseconds to wait before failing by
       default.
 
@@ -1068,7 +1068,7 @@ def connect(host, port, username, password, serviceName,
     Optional (keyword) arguments:
         perspectiveName -- the name of the perspective to request, if
             different than the username
-        client -- XXX the "reference" argument to 
+        client -- XXX the "reference" argument to
                   perspective.Perspective.attached
         timeout -- see twisted.internet.tcp.Client
     """
