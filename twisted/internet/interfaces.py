@@ -672,7 +672,8 @@ class IConsumer(Interface):
         This sets self to be a consumer for a producer.  When this object
         runs out of data on a write() call, it will ask the producer
         to resumeProducing(). A producer should implement the IProducer
-        interface.
+        interface.   A push producer which is unable to pause or stop
+        need not register or unregister.
         """
 
     def unregisterProducer(self):
@@ -710,7 +711,8 @@ class IPushProducer(IProducer):
     A push producer, also known as a streaming producer is expected to
     produce (write to this consumer) data on a continous basis, unless
     it has been paused. A paused push producer will resume producing
-    after its resumeProducing() method is called.
+    after its resumeProducing() method is called.   For a push producer
+    which is not pauseable, these functions may be noops.
 
     This interface is semi-stable.
     """
