@@ -1,7 +1,28 @@
+2003-05-01  Glyph Lefkowitz  <glyph@twistedmatrix.com>
+
+	* twisted/python/context.py: call-stack context tree.
+
+	* twisted/python/components.py: support interface-to-interface
+	adapatation, IFoo(o) syntax for adaptation, context-based
+	registries and more.
+
+	* twisted/python/log.py: Totally rewritten logging system.
+
 2003-05-01  Brian Warner  <warner@lothar.com>
 
 	* twisted/internet/gtk2reactor.py (Gtk2Reactor._doReadOrWrite):
 	add Anthony's cached-Failure speedup to gtk2 too.
+
+2003-05-01  Itamar Shtull-Trauring  <itamar@itamarst.org>
+
+	* twisted/internet/tcp.py, twisted/internet/default.py: cache
+	Failures whose contents are always identical. Speeds up lost
+	connections considerably.
+
+	* twisted/python/failure.py: If you pass only an exception object
+	to Failure(), a stack will not be constructed. Speeds up Failure
+	creation in certain common cases where traceback printing isn't
+	required.
 
 2003-04-29  Brian Warner  <warner@lothar.com>
 
