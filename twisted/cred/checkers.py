@@ -50,6 +50,16 @@ class AllowAnonymousAccess:
 components.backwardsCompatImplements(AllowAnonymousAccess)
 
 class InMemoryUsernamePasswordDatabaseDontUse:
+    """An extremely simple credentials checker.
+    
+    This is only of use in one-off test programs or examples which don't
+    want to focus too much on how credentials are verified.
+    
+    You really don't want to use this for anything else.  It is, at best, a
+    toy.  If you need a simple credentials checker for a real application,
+    see L{FilePasswordDB}.
+    """
+
     interface.implements(ICredentialsChecker)
 
     credentialInterfaces = (credentials.IUsernamePassword,
