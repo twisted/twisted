@@ -18,7 +18,7 @@
 
 
 """
-Usage: im [--toolkit tk]
+Usage: im [--toolkit gtk]
 
 This script runs Instance Messenger, a client for Twisted.Words
 """
@@ -36,21 +36,21 @@ if string.find(os.path.abspath(sys.argv[0]),'Twisted') != -1:
 from twisted.python import usage
 
 class Options(usage.Options):
-    optStrings = [["toolkit", "t", "gtk"]]
+    optStrings = [["toolkit", "t", "tk"]]
 
 config = Options()
 config.parseOptions()
 
 try:
-    if config.toolkit != 'gtk':
+    if config.toolkit != 'tk':
         raise ImportError()
-    from twisted.words.ui import gtkim
+    from twisted.words.ui import tkim
 except ImportError:
     try:
-        from twisted.words.ui import tkim
+        from twisted.words.ui import gtkim
     except ImportError:
         print "Neither GTK nor TK found."
     else:
-        tkim.main()
+        gtkim.main()
 else:
-    gtkim.main()
+    tkim.main()
