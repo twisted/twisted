@@ -261,6 +261,7 @@ desktop environments, and your toaster.
         "twisted.words.scripts",
         "twisted.words.im",
         "twisted.xish",
+        "twisted.xish.test",
     ],
     'scripts' : [
         'bin/manhole', 'bin/mktap', 'bin/twistd',
