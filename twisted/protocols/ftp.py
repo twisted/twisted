@@ -23,11 +23,10 @@ overloaded with stupid features.
 TODO:
 
  * Authorization
-   Anonymous are included, but any user or password is accepted ATM.
+   Anonymous are included
+   User / Password is stored in a dict (factory.userdict) in plaintext
    Use passport
-
- * Upload
-   Write-Access?
+   Filelevel access
 
  * Ascii-download
    Currently binary only. Ignores TYPE
@@ -71,15 +70,6 @@ from twisted.protocols import basic
 from twisted.protocols import protocol
 from twisted.python import threadable
 
-ALLOW_ANONYMOUS = 1
-# The next option enables 'PORT' to connect to a arbitrary port
-# Should not be enabled by default, but for testing it is
-ALLOW_THIRDPARTY = 1
-USER_ANONYMOUS = 'anonymous'
-FTP_ROOT = '/usr/local/ftp'
-if os.name == 'nt':
-    FTP_ROOT = 'c:/temp'
-
 # the replies from the ftp server
 # a 3-digit number identifies the meaning
 # used by Ftp.reply(key)
@@ -106,27 +96,24 @@ ftp_reply = {
     'getabort':  '426 Transfer aborted.  Data connection closed.',
     'unknown':   "500 '%s': command not understood.",
     'nouser':    '503 Login with USER first.',
-    'notimpl':   '504 Not implemented',
-    'noauth':    '530 Please login with USER and PASS.',
+    'notimpl':   '504 Not implemented.',
+    'nopass':    '530 Please login with USER and PASS.',
+    'noauth':    '530 Sorry, Authentication failed.',
     'nodir':     '550 %s: No such file or directory.'
     }
 
-class FileTransfer:
+
+
+class sendFileTransfer:
+    "Producer, server to client"
     request = None
     file = None
     filesize = None
-
     def __init__(self, file, filesize, request):
         self.request = request
         self.file = file
         self.filesize = filesize
-
-class sendFileTransfer(FileTransfer):
-    "Producer, server to client"
-    def __init__(self, *args, **kw):
-        apply(FileTransfer.__init__,((self,)+args),kw)
-        args[2].registerProducer(self, 0) # TODO: Dirty
-
+        request.registerProducer(self, 0) # TODO: Dirty
     
     def resumeProducing(self):
         if (self.request is None) or (self.file.closed):
@@ -159,6 +146,7 @@ class DTP(protocol.Protocol):
     pi = None
     file = None
     filesize = None
+    action = ""
 
     #
     #   "GET"
@@ -171,8 +159,7 @@ class DTP(protocol.Protocol):
             if self.file.tell() == self.filesize:
                 self.pi.reply('fileok')
             else:
-                self.pi.reply('fileok')
-                #self.pi.reply('getabort')
+                self.pi.reply('getabort')
             self.file.close()
             self.file = None
         self.pi.queuedfile = None # just incase
@@ -198,7 +185,6 @@ class DTP(protocol.Protocol):
     #
     #   "PUT"
     #
-
     def connectionLost(self):
         if (self.action == 'STOR') and (self.file):
             self.file.close()
@@ -285,7 +271,7 @@ class FTP(protocol.Protocol, protocol.Factory):
         This must be run in front of all commands except USER, PASS and QUIT
         """
         if None in [self.user, self.passwd]:
-            self.reply('noauth')
+            self.reply('nopass')
             return 1
         else:
             return None
@@ -304,15 +290,15 @@ class FTP(protocol.Protocol, protocol.Factory):
         if params=='':
             return 1
         self.user = params.split()[0]
-        if ALLOW_ANONYMOUS and self.user == USER_ANONYMOUS:
+        if self.factory.config.anonymous and self.user == self.factory.config.useranonymous:
             self.reply('guest')
-            self.root = FTP_ROOT
+            self.root = self.factory.config.root
             self.wd = '/'
         else:
             # TODO:
             # Add support for home-dir
             self.reply('user', self.user)
-            self.root = FTP_ROOT
+            self.root = self.factory.config.root
             self.wd = '/'
         # Flush settings
         self.passwd = None
@@ -320,18 +306,20 @@ class FTP(protocol.Protocol, protocol.Factory):
             
     def ftp_Pass(self, params):
         """Authorize the USER and the submitted password
-        Password authorization is not implemented.
         """
-        # todo:
-        # Add authorizing
         if not self.user:
             self.reply('nouser')
             return
         self.passwd = params
-        if self.user == USER_ANONYMOUS:
+        if self.user == self.factory.config.useranonymous:
             self.reply('guestok')
         else:
-            self.reply('userok', self.user)
+            # Authing follows
+            if (self.factory.userdict.has_key(self.user)) and \
+               (self.factory.userdict[self.user] == self.passwd):
+                self.reply('userok', self.user)
+            else:
+                self.reply('noauth')
 
     def ftp_Noop(self, params):
         """Do nothing, and reply an OK-message
@@ -431,7 +419,7 @@ class FTP(protocol.Protocol, protocol.Factory):
         if peerport < 1024:
             self.reply('notimpl')
             return
-        if not ALLOW_THIRDPARTY:
+        if not self.factory.config.thirdparty:
             sockname = self.transport.getPeer()
             if not (peerhost == sockname[1]):
                 self.reply('notimpl')
@@ -610,7 +598,8 @@ class ShellFactory(protocol.Factory):
     command = ''
     done = None
     parent = None
-
+    userdict = {}
+ 
     def buildProtocol(self, addr):
         p=FTP()
         p.factory = self
