@@ -180,7 +180,7 @@ class Process(abstract.FileDescriptor):
         self.hStdinW = tmp
         
         # create the process
-        cmdline = "%s %s" % (command, string.join(args, ' '))
+        cmdline = "%s %s" % (command, string.join(args[1:], ' '))
         hProcess, hThread, dwPid, dwTid = win32process.CreateProcess(None, cmdline, None, None, 1, 0, environment, path, StartupInfo)
         
         # close handles which only the child will use

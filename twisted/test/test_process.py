@@ -68,7 +68,7 @@ class Win32ProcessTestCase(unittest.TestCase):
         errF = cStringIO.StringIO()
         outF = cStringIO.StringIO()
         scriptPath = util.sibpath(__file__, "process_stdinreader.py")
-        p = process.Process(pyExe, ["-u", scriptPath], None, None)
+        p = process.Process(pyExe, [pyExe, "-u", scriptPath], None, None)
         p.handleError = errF.write
         p.handleChunk = outF.write
         main.iterate()
