@@ -26,7 +26,7 @@ Anyway, such things are all the rage these days, so I figured I'd have to write
 one.
 
 LMX stands for the List Markup eXtension.
-
+  
 This is quite possibly the most awful code I've ever written in my life.
 """
 
