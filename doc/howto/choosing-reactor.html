@@ -134,15 +134,23 @@ from twisted.internet import gtkreactor
 gtkreactor.install()
 </pre>
 
+    <h2>Non-Reactor GUI Integration</h2>
+
     <a name="qt" />
     <h3>Qt</h3>
 
 <pre class="python">
-from twisted.internet import qtreactor
-qtreactor.install()
-</pre>
+from qt import QApplication
+app = QApplication([])
 
-    <h2>Non-Reactor GUI Integration</h2>
+from twisted.internet import qtsupport, reactor
+
+# make sure QT quits when twisted is stopped
+reactor.addSystemEventTrigger('after', 'shutdown', app.quit )
+
+# install QT support
+qtsupport.install(app)
+</pre>
 
     <a name="tkinter" />
     <h3>Tkinter</h3>

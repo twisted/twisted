@@ -22,8 +22,6 @@ Fetch a URL's contents.
 import sys, urlparse
 from qt import *
 
-from twisted.internet  import qtreactor
-qtreactor.install()
 from twisted.protocols import http
 
 
@@ -86,17 +84,26 @@ class TwistzillaWindow(QMainWindow):
         client = TwistzillaClient(self.edit, (host, port, file))
         from twisted.internet import reactor
         reactor.clientTCP(host, port, client)
- 
-def main(args):
-    from twisted.internet import reactor
-    app = reactor.qApp
+
+
+def main():
+    """Run application."""
+    # hook up Qt application to Twisted
+    from twisted.internet import qtsupport, reactor
+    app = QApplication([])
+    qtsupport.install(app)
 
     win = TwistzillaWindow()
     win.show()
 
-    app.connect(app, SIGNAL("lastWindowClosed()"), app, SLOT("quit()"))
+    # make sure stopping twisted event also shuts down QT
+    reactor.addSystemEventTrigger('after', 'shutdown', app.quit )
+
+    # shutdown twisted when window is closed
+    app.connect(app, SIGNAL("lastWindowClosed()"), reactor.stop)
   
     reactor.run()
 
+
 if __name__ == '__main__':
-    main(sys.argv)
+    main()
