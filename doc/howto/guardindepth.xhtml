@@ -119,6 +119,19 @@ when creating the guarded resource. Here is an example:</p>
 
 <a href="listings/guard/login.py" class="py-listing">listings/guard/login.py</a>
 
-<code>TODO: explain how this works.</code>
+<p>The trick here is that, of course, we define the <em>original</em> login
+page: while <code>guard.PERSPECTIVE_INIT</code> gives a default form, it
+is quite all right to use a different one. In this example, we just use
+the home page of non-authenticated users to show the login form. There
+is one other case where the default form will be shown: if the attempt
+to login did not succeed. However, this is only what happens by default:
+we can override this by supplying an <code>errback</code>. This will
+be called with a model describing the form, and all we have to do is
+to use woven to display it.</p>
+
+<p>Note that this example uses <code>simpleguard</code>, but equivalent
+code can be developed using <code>guard</code> -- the errback should
+be passed to the <code>UsernamePasswordWrapper</code> constructor
+in that case.</p>
 
 </body></html>
