@@ -1,7 +1,6 @@
 CC=gcc -I.
 
-default:
-	all
+default: all
 
 all:	mdriver digcalc
 
