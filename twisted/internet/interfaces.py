@@ -236,7 +236,7 @@ class IReactorSSL(Interface):
         @returns: an L{IConnector}.
         """
 
-    def listenSSL(self, port, factory, ctxFactory, backlog=5, interface=''):
+    def listenSSL(self, port, factory, contextFactory, backlog=5, interface=''):
         """
         Connects a given protocol factory to the given numeric TCP/IP port.
         The connection is a SSL one, using contexts created by the context
@@ -246,7 +246,7 @@ class IReactorSSL(Interface):
 
         @param factory: a L{twisted.internet.protocol.ServerFactory} instance
 
-        @param ctxFactory: a L{twisted.internet.ssl.ContextFactory} instance
+        @param contextFactory: a L{twisted.internet.ssl.ContextFactory} instance
 
         @param backlog: size of the listen queue
 
