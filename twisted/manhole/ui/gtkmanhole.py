@@ -138,7 +138,7 @@ class LineOrientedBrowserDisplay:
         else:
             s = str(obj) + '\n'
 
-        self.toplevel.output.console([('out',s)])
+        self.toplevel.output.console([('stdout',s)])
 
 #if _GNOME_POWER:
 #    BrowserDisplay = CanvasBrowserDisplay
