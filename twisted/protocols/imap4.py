@@ -489,12 +489,12 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
         if passon is not None:
             self.setLineMode(passon)
 
-#    def sendLine(self, line):
-#        print 'C:', repr(line)
-#        return basic.LineReceiver.sendLine(self, line)
+    def sendLine(self, line):
+        print 'C:', repr(line)
+        return basic.LineReceiver.sendLine(self, line)
 
     def lineReceived(self, line):
-#        print 'S:', repr(line)
+        print 'S:', repr(line)
         self.resetTimeout()
         if self._pendingLiteral:
             self._pendingLiteral.callback(line)
@@ -3733,17 +3733,16 @@ def getBodyStructure(msg, extended=False):
         size,                               # Number of octets total
     ]
     
-    if not major:
-        pass
-    elif major.lower() == 'text':
-        result.append(str(getLineCount(msg)))
-    elif (major.lower(), minor.lower()) == ('message', 'rfc822'):
-        contained = msg.getSubPart(0)
-        result.append(getEnvelope(contained))
-        result.append(getBodyStructure(contained, False))
-        result.append(str(getLineCount(contained)))
+    if major is not None:
+        if major.lower() == 'text':
+            result.append(str(getLineCount(msg)))
+        elif (major.lower(), minor.lower()) == ('message', 'rfc822'):
+            contained = msg.getSubPart(0)
+            result.append(getEnvelope(contained))
+            result.append(getBodyStructure(contained, False))
+            result.append(str(getLineCount(contained)))
 
-    if not extended:
+    if not extended or major is None:
         return result
 
     if major.lower() != 'multipart':
