@@ -25,12 +25,25 @@ tableName = "testTable"
 childTableName = "childTable"
 
 class TestRow(RowObject):
-    rowColumns    = ["key_string", "col2", "another_column", "Column4", "column_5_"]
+    rowColumns    = [ 
+        ("key_string",      "varchar"),
+        ("col2",            "int"),
+        ("another_column",  "varchar"),
+        ("Column4",         "varchar"),
+        ("column_5_",       "int")
+        ]
     rowKeyColumns = [("key_string", "varchar")]
     rowTableName  = tableName
 
 class ChildRow(RowObject):
-    rowColumns    = ["childId", "foo", "test_key","stuff", "gogogo", "data"]
+    rowColumns    = [
+        ("childId",  "int"),
+        ("foo",      "varchar"),
+        ("test_key", "varchar"),
+        ("stuff",    "varchar"),
+        ("gogogo",   "int"),
+        ("data",     "varchar")
+        ]
     rowKeyColumns = [("childId", "int")]
     rowTableName  = childTableName
     rowForeignKeys = [(tableName, [("test_key","varchar")], [("key_string","varchar")], None, 1)]

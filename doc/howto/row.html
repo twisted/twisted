@@ -39,7 +39,7 @@ table that class corresponds to. The required class attributes
 are:</p>
 
 <ul>
-  <li>rowColumns - list of the columns in the table with the correct
+  <li>rowColumns - list of the column names and types in the table with the correct
   case</li>
   <li>rowKeyColumns - list of key columns in form: [(columnName,
   typeName)]</li>
@@ -60,7 +60,14 @@ are:</p>
 
 <pre class="python">
 class RoomRow(row.RowObject):
-    rowColumns       = [&quot;roomId&quot;,&quot;town_id&quot;,&quot;name&quot;,&quot;owner&quot;,&quot;posx&quot;,&quot;posy&quot;,&quot;width&quot;,&quot;height&quot;]
+    rowColumns       = [(&quot;roomId&quot;,  &quot;int&quot;), 
+                        (&quot;town_id&quot;, &quot;int&quot;),
+                        (&quot;name&quot;,    &quot;varchar&quot;),
+                        (&quot;owner&quot;,   &quot;varchar&quot;),
+                        (&quot;posx&quot;,    &quot;int&quot;),
+                        (&quot;posy&quot;,    &quot;int&quot;),
+                        (&quot;width&quot;,   &quot;int&quot;),
+                        (&quot;height&quot;,  &quot;int&quot;)]
     rowKeyColumns    = [(&quot;id&quot;, &quot;int4&quot;)]
     rowTableName     = &quot;testrooms&quot;
     rowFactoryMethod = [myRowFactory]
@@ -188,7 +195,7 @@ need to have its state updated into the database, pass that object
 to the &quot;updateRow&quot; method of the DBReflector. For example:</p>
 
 <pre class="python">
-reflector.updateRow(room).addCallback(onUpdated)\
+reflector.updateRow(room).addCallback(onUpdated)
 </pre>
 
 <p>For more complex behavior, the reflector can generate the SQL
@@ -196,7 +203,7 @@ for the update but not perform the update. This can be useful
 for batching up multiple updates into single requests. For example:</p>
 
 <pre class="python">
-updateSQL = reflector.updateRowSQL(room)\
+updateSQL = reflector.updateRowSQL(room)
 </pre>
 
 <h2>Deleting Row Objects</h2>

@@ -29,7 +29,7 @@ class XMLRowProxy:
     """
     def __init__(self, rowObject):
         self.kw = {}
-        for columnName in rowObject.rowColumns:
+        for columnName, type  in rowObject.rowColumns:
             self.kw[columnName] = getattr(rowObject, columnName)
 
 class XMLReflector(reflector.Reflector):

@@ -28,9 +28,7 @@ class SQLReflector(reflector.Reflector, adbapi.Augmentation):
 
     In order to do this, I interrogate a relational database to
     extract schema information and interface with RowObject class
-    objects that can interact with specific tables.  Currently this
-    works only with PostgreSQL databases, but this functionality will
-    hopefully be extended
+    objects that can interact with specific tables. 
     """
     populated = 0
     conditionalLabels = {
@@ -64,9 +62,6 @@ class SQLReflector(reflector.Reflector, adbapi.Augmentation):
     def _populateSchemaFor(self, transaction, rc):
         """construct all the SQL for database operations on <tableName> and
         populate the class <rowClass> with that info.
-        NOTE: works with Postgresql for now...
-        NOTE: 26 - 29 are system column types that you shouldn't use...
-
         """
         attributes = ("rowColumns", "rowKeyColumns", "rowTableName" )
         for att in attributes:
@@ -74,32 +69,9 @@ class SQLReflector(reflector.Reflector, adbapi.Augmentation):
                 raise DBError("RowClass must have class variable: %s" % att)
             
         tableInfo = _TableInfo(rc)
-        #print "populating: ", tableInfo.rowClass, tableInfo.rowTableName        
-        sql = """
-          SELECT pg_attribute.attname, pg_type.typname, pg_attribute.atttypid
-          FROM pg_class, pg_attribute, pg_type
-          WHERE pg_class.oid = pg_attribute.attrelid
-          AND pg_attribute.atttypid = pg_type.oid
-          AND pg_class.relname = '%s'
-          AND pg_attribute.atttypid not in (26,27,28,29)\
-        """ % tableInfo.rowTableName
-
-        # get the columns for the table
-        try:
-            transaction.execute(sql)
-        except ValueError, e:
-            log.msg("No data trying to populate schema <%s>. [%s] SQL was: '%s'" % (tableInfo.rowTableName,  e, sql))
-            raise e
-        except:
-            log.msg("Unknown ERROR: %s" % sql)
-            raise
-        columns = transaction.fetchall()
-
-        tableInfo.dbColumns = columns
-        tableInfo.updateSQL = self.buildUpdateSQL(tableInfo.rowClass, tableInfo.rowTableName, columns, tableInfo.rowKeyColumns)
-        tableInfo.insertSQL = self.buildInsertSQL(tableInfo.rowTableName, columns)
-        tableInfo.deleteSQL = self.buildDeleteSQL(tableInfo.rowTableName, tableInfo.rowKeyColumns)
-
+        tableInfo.updateSQL = self.buildUpdateSQL(tableInfo)
+        tableInfo.insertSQL = self.buildInsertSQL(tableInfo)
+        tableInfo.deleteSQL = self.buildDeleteSQL(tableInfo)
         self.populateSchemaFor(tableInfo)
         
     def loadObjectsFrom(self, tableName, parentRow=None, data=None, whereClause=None, forceChildren=0):
@@ -145,7 +117,7 @@ class SQLReflector(reflector.Reflector, adbapi.Augmentation):
         # Build the SQL for the query
         sql = "SELECT "
         first = 1
-        for column, type, typeid in tableInfo.dbColumns:
+        for column, type in tableInfo.rowColumns:
             if first:
                 first = 0
             else:
@@ -174,8 +146,8 @@ class SQLReflector(reflector.Reflector, adbapi.Augmentation):
         for args in rows:
             kw = {}
             for i in range(0,len(args)):
-                columnName = tableInfo.dbColumns[i][0]
-                for attr in tableInfo.rowClass.rowColumns:
+                columnName = tableInfo.rowColumns[i][0]
+                for attr, type in tableInfo.rowClass.rowColumns:
                     if string.lower(attr) == string.lower(columnName):
                         kw[attr] = args[i]
                         break
@@ -205,21 +177,21 @@ class SQLReflector(reflector.Reflector, adbapi.Augmentation):
         
     def findTypeFor(self, tableName, columnName):
         tableInfo = self.schema[tableName]
-        for column, type, typeid in tableInfo.dbColumns:
+        for column, type in tableInfo.rowColumns:
             if column.upper() == columnName.upper():
                 return type
             
 
-    def buildUpdateSQL(self, rowClass, tableName, columns, keyColumns):
+    def buildUpdateSQL(self, tableInfo):
         """(Internal) Build SQL to update a RowObject.
 
         Returns: SQL that is used to contruct a rowObject class.
         """
-        sql = "UPDATE %s SET" % tableName
+        sql = "UPDATE %s SET" % tableInfo.rowTableName
         # build update attributes
         first = 1
-        for column, type, typeid in columns:
-            if getKeyColumn(rowClass, column):
+        for column, type in tableInfo.rowColumns:
+            if getKeyColumn(tableInfo.rowClass, column):
                 continue
             if not first:
                 sql = sql + ", "
@@ -229,23 +201,23 @@ class SQLReflector(reflector.Reflector, adbapi.Augmentation):
         # build where clause
         first = 1
         sql = sql + "  WHERE "
-        for keyColumn, type in keyColumns:
+        for keyColumn, type in tableInfo.rowKeyColumns:
             if not first:
                 sql = sql + " AND "
             sql = sql + "   %s = %s " % (keyColumn, quote("%s", type) )
             first = 0
         return sql
 
-    def buildInsertSQL(self, tableName, columns):
+    def buildInsertSQL(self, tableInfo):
         """(Internal) Build SQL to insert a new row.
 
         Returns: SQL that is used to insert a new row for a rowObject
         instance not created from the database.
         """
-        sql = "INSERT INTO %s (" % tableName
+        sql = "INSERT INTO %s (" % tableInfo.rowTableName
         # build column list
         first = 1
-        for column, type, typeid in columns:
+        for column, type in tableInfo.rowColumns:
             if not first:
                 sql = sql + ", "
             sql = sql + column
@@ -255,7 +227,7 @@ class SQLReflector(reflector.Reflector, adbapi.Augmentation):
 
         # build values list
         first = 1
-        for column, type, typeid in columns:
+        for column, type in tableInfo.rowColumns:
             if not first:
                 sql = sql + ", "
             sql = sql + quote("%s", type)
@@ -264,14 +236,14 @@ class SQLReflector(reflector.Reflector, adbapi.Augmentation):
         sql = sql + ")"
         return sql
 
-    def buildDeleteSQL(self, tableName, keyColumns):
+    def buildDeleteSQL(self, tableInfo):
         """Build the SQL to delete a row from the table.
         """
-        sql = "DELETE FROM %s " % tableName
+        sql = "DELETE FROM %s " % tableInfo.rowTableName
         # build where clause
         first = 1
         sql = sql + "  WHERE "
-        for keyColumn, type in keyColumns:
+        for keyColumn, type in tableInfo.rowKeyColumns:
             if not first:
                 sql = sql + " AND "
             sql = sql + "   %s = %s " % (keyColumn, quote("%s", type) )
@@ -285,7 +257,7 @@ class SQLReflector(reflector.Reflector, adbapi.Augmentation):
         args = []
         tableInfo = self.schema[rowObject.rowTableName]
         # build update attributes
-        for column, type, typeid in tableInfo.dbColumns:
+        for column, type in tableInfo.rowColumns:
             if not getKeyColumn(rowObject.__class__, column):
                 args.append(rowObject.findAttribute(column))
         # build where clause
@@ -308,7 +280,7 @@ class SQLReflector(reflector.Reflector, adbapi.Augmentation):
         args = []
         tableInfo = self.schema[rowObject.rowTableName]        
         # build values
-        for column, type, typeid in tableInfo.dbColumns:
+        for column, type in tableInfo.rowColumns:
             args.append(rowObject.findAttribute(column))
         return self.getTableInfo(rowObject).insertSQL % tuple(args)
 

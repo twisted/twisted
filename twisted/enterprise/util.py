@@ -88,6 +88,7 @@ class _TableInfo:
         self.rowClass = rc
         self.rowTableName = rc.rowTableName
         self.rowKeyColumns = rc.rowKeyColumns
+        self.rowColumns = rc.rowColumns
         
         if hasattr(rc, "rowForeignKeys"):
             self.rowForeignKeys = rc.rowForeignKeys

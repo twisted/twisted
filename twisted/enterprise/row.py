@@ -80,7 +80,7 @@ class RowObject:
     def findAttribute(self, attrName):
         """Find an attribute by caseless name.
         """
-        for attr in self.rowColumns:
+        for attr, type in self.rowColumns:
             if string.lower(attr) == string.lower(attrName):
                 return getattr(self, attr)
         raise DBError("Unable to find attribute %s" % attrName)
