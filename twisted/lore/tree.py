@@ -14,7 +14,7 @@
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
-import re, os, cStringIO, stat, time, cgi, glob
+import re, os, cStringIO, time, cgi, glob
 from twisted import copyright
 from twisted.python import htmlizer
 from twisted.web import microdom, domhelpers
@@ -35,9 +35,8 @@ def fixLinks(document, ext):
 
 
 def addMtime(document, fullpath):
-    mtime = os.stat(fullpath)[stat.ST_MTIME]
     for node in domhelpers.findElementsWithAttribute(document, "class","mtime"):
-        node.appendChild(microdom.Text(time.asctime(time.localtime(mtime))))
+        node.appendChild(microdom.Text(time.ctime(os.path.getmtime(fullpath))))
 
 def fixAPI(document, url):
     # API references
