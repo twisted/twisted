@@ -16,4 +16,4 @@ for i in 1 2 3;do latex book.tex;done
 dvips -o book.ps book.dvi
 ps2pdf13 book.ps book.pdf
 rm *.eps *.tex *.aux *.log book.dvi book.toc ../man/*.tex \
-   ../specifications/*.tex
+   ../specifications/*.tex ../man/*-man.html
