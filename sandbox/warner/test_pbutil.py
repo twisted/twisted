@@ -8,7 +8,7 @@ from twisted.trial import unittest
 dR = unittest.deferredResult
 
 # the new module
-from pb import ReconnectingPBClientFactory
+from pbutil import ReconnectingPBClientFactory
 
 from twisted.spread import pb, util
 from twisted.internet import protocol, main
