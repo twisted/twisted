@@ -48,11 +48,7 @@ class Options(usage.Options):
                       ", ".join(app.reactorTypes.keys()) + "."],
                      ["logfile", "l", "test.log", "log file name"],
                      ["random", "z", None,
-                      "Run tests in random order using the specified seed"],
-                     ["extra","x", None,
-                      "Add an extra argument.  "
-                      "(This is a hack necessary for "
-                      "interfacing with emacs's `gud'.)" ]]
+                      "Run tests in random order using the specified seed"]]
 
     def __init__(self):
         usage.Options.__init__(self)
@@ -142,10 +138,26 @@ class Options(usage.Options):
 
     opt_f = opt_file
 
+    #     ["extra","x", None,
+    #      "Add an extra argument.  "
+    #      "(This is a hack necessary for "
+    #      "interfacing with emacs's `gud'.)" ]
+    extra = None
+    def opt_extra(self, arg):
+        """
+        Add an extra argument.  (This is a hack necessary for interfacing with
+        emacs's `gud'.)
+        """
+        if self.extra is None:
+            self.extra = []
+        self.extra.append(arg)
+
+    opt_x = opt_extra
+
     def parseArgs(self, *args):
-        if self['extra'] is not None:
+        if self.extra is not None:
             args = list(args)
-            args.append(self['extra'])
+            args.extend(self.extra)
         for arg in args:
             if (os.sep in arg):
                 # It's a file.
