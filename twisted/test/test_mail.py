@@ -502,7 +502,6 @@ class RelayTestCase(unittest.TestCase):
             user.protocol.transport.getPeer = lambda: peer
             user.dest = 'who@cares'
             
-            import pdb; pdb.Pdb().set_trace()
             self.assertRaises(smtp.SMTPBadRcpt, domain.exists, user)
 
 class RelayerTestCase(unittest.TestCase):
