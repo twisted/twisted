@@ -22,7 +22,7 @@ Package installer for Twisted
 Copyright (C) 2001 Matthew W. Lefkowitz
 All rights reserved, see LICENSE for details.
 
-$Id: setup.py,v 1.36 2002/04/26 05:08:41 carmstro Exp $
+$Id: setup.py,v 1.37 2002/04/27 22:51:31 glyph Exp $
 """
 
 import distutils, os, sys, string
@@ -156,7 +156,7 @@ class install_data_twisted(install_data):
 ver = string.replace(copyright.version, '-', '_') #RM doesn't like '-'
 setup_args = {
     'name': "Twisted",
-    'version': ver
+    'version': ver,
     'description': "Twisted %s is a framework to build frameworks" % ver,
     'author': "Twisted Matrix Laboratories",
     'author_email': "twisted-python@twistedmatrix.com",
