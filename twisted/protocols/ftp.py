@@ -664,21 +664,6 @@ class FTPFactory(protocol.Factory):
 #   * Doesn't understand any of the weird, obscure TELNET stuff (\377...)
 #   * FIXME: Doesn't share any code with the FTPServer
 
-# this uses APIs that no longer exist - someone had better clean this stuff
-# up. you know how you are :)
-class XXXFTPDataPort:
-    def approveConnection(self, sock, addr):
-        # FIXME: Guard against FTP spoofing
-        return 1
-    
-    def fail(self, error):
-        """Calls self.loseConnection
-        
-        Safe to call multiple times"""
-        # TODO: Check that this really works...
-        if self.connected:
-            self.loseConnection()
-
 class FTPError(Exception):
     pass
 
@@ -736,6 +721,7 @@ class FTPClient(basic.LineReceiver):
         while self.actionQueue:
             ftpCommand = self.popCommandQueue()
             ftpCommand.deferred.errback(Failure(ConnectionLost('FTP connection lost', error)))
+        return error
 
     def sendLine(self, line):
         """(Private) Sends a line, unless line is None."""
@@ -861,12 +847,18 @@ class FTPClient(basic.LineReceiver):
         # create the text of the PORT command to send to the FTP server.
 
         # FIXME: This method is far too ugly.
+
+        # FIXME: The best solution is probably to only create the data port
+        #        once per FTPClient, and just recycle it for each new download.
+        #        This should be ok, because we don't pipeline commands.
         
         # Start listening on a port
         class FTPDataPortFactory(ServerFactory):
             def buildProtocol(self, connection):
                 # This is a bit hackish -- we already have Protocol instance,
                 # so just return it instead of making a new one
+                # FIXME: Reject connections from the wrong address/port
+                #        (potential security problem)
                 self.protocol.factory = self
                 self.port.loseConnection()
                 return self.protocol
@@ -881,25 +873,23 @@ class FTPClient(basic.LineReceiver):
         portCmd.protocol.connectionLost = newCL
 
         factory = FTPDataPortFactory()
-        listener = FTPDataPort(0, factory)
+        listener = reactor.listenTCP(0, factory)
         factory.port = listener
         listener.deferred = portCmd.realDeferred
         listener.startListening()
-        portCmd.fail = listener.fail
+        def listenerFail(error, listener=listener):
+            if listener.connected:
+                listener.loseConnection()
+            return error
+        portCmd.fail = listenerFail
 
         # Construct crufty FTP magic numbers that represent host & port
         host = self.transport.getHost()[1]
         port = listener.getHost()[2]
-
-        # Bleagh: port/256 isn't safe with Python 2.2's
-        # "from __future__ import division", 
-        # so we have to use int(floor(port/256)).  Yuck.  I would use
-        # port//256, but that's not backwards-compatible.  This won't actually
-        # be a problem until Python 2.3, but it's best to be future-proof...
-        numbers = string.split(host, '.') + [str(int(floor(port/256))), 
-                                             str(port%256)]
+        numbers = string.split(host, '.') + [str(port >> 8), str(port % 256)]
         portCmd.text = 'PORT ' + string.join(numbers,',')
-        portCmd.deferred.addErrback(listener.fail).arm()
+
+        portCmd.deferred.addErrback(listenerFail).arm()
 
     def escapePath(self, path):
         """Returns a FTP escaped path (replace newlines with nulls)"""

@@ -80,8 +80,6 @@ class Options(usage.Options):
     
 # this connects the protocol to an FTP server running locally
 def run():
-    from twisted.internet import default
-    default.install()
     from twisted.internet import reactor
     
     # Get config
