@@ -235,3 +235,14 @@ for k in locals().keys():
 del k
 
 import types, socket, struct
+
+# Compatibility with compatibility
+# We want to get rid of these as quickly as we can
+# Unfortunately some code imports them by name
+
+True = True
+False = False
+bool = bool
+dict = dict
+StopIteration = StopIteration
+iter = iter
