@@ -307,7 +307,10 @@ except NameError:
 
 
 def startLogging(file, setStdout=1):
-    """Initialize logging to a specified file."""
+    """Initialize logging to a specified file. If setStdout is true 
+       (defaults to yes), also redirect sys.stdout and sys.stderr 
+       to the specified file.
+    """
     global defaultObserver, _oldshowwarning
     if not _oldshowwarning:
         _oldshowwarning = warnings.showwarning
