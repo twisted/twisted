@@ -41,8 +41,9 @@ from twisted.internet.protocol import Protocol, FileWrapper
 
 import string
 
-identChars = string.letters+string.digits+'.-_:'
+identChars = string.letters + string.digits + '.-_:'
 lenientIdentChars = identChars + ';+#'
+whitespace = string.whitespace
 
 def nop(*args, **kw):
     "Do nothing."
@@ -80,6 +81,8 @@ class XMLParser(Protocol):
     def dataReceived(self, data):
         if not self.state:
             self.state = 'begin'
+        curState = self.state
+        stateFn = getattr(self, 'do_' + curState)
         for byte in data:
             # do newline stuff
             if byte == '\n':
@@ -87,23 +90,23 @@ class XMLParser(Protocol):
                 self.colno = 0
             else:
                 self.colno += 1
-            oldState = self.state
-            newState = getattr(self, "do_" + self.state)(byte)
-            if newState and newState != oldState:
-                self.state = newState
-                getattr(self, "end_" + oldState, nop)()
+            newState = stateFn(byte)
+            if newState is not None and newState != curState:
+                getattr(self, "end_" + curState, nop)()
                 getattr(self, "begin_" + newState, nop)(byte)
+                curState = newState
+                stateFn = getattr(self, "do_" + curState)
+        self.state = curState
 
     # state methods
 
     def do_begin(self, byte):
-        if byte in string.whitespace:
+        if byte in whitespace:
             return
         if byte != '<':
             if self.beExtremelyLenient:
                 return 'bodydata'
-            else:
-                self._parseError("First char of document wasn't <")
+            self._parseError("First char of document [%r] wasn't <" % (byte,))
         return 'tagstart'
 
     def begin_tagstart(self, byte):
@@ -117,16 +120,16 @@ class XMLParser(Protocol):
 
     def do_comment(self, byte):
         self.commentbuf += byte
-        if self.commentbuf[-3:] == '-->':
+        if self.commentbuf.endswith('-->'):
             self.gotComment(self.commentbuf[:-3])
             return 'bodydata'
 
     def do_tagstart(self, byte):
         if byte in identChars:
             self.tagName += byte
-            if self.tagName =='!--':
+            if self.tagName == '!--':
                 return 'comment'
-        elif byte in string.whitespace:
+        elif byte in whitespace:
             if self.tagName:
                 if self.endtag:
                     # properly strict thing to do here is probably to only
@@ -135,6 +138,17 @@ class XMLParser(Protocol):
                 return 'attrs'
             else:
                 self._parseError("Whitespace before tag-name")
+        elif byte == '>':
+            if self.endtag:
+                self.gotTagEnd(self.tagName)
+            else:
+                self.gotTagStart(self.tagName, {})
+            return 'bodydata'
+        elif byte == '/':
+            if self.tagName:
+                return 'afterslash'
+            else:
+                self.endtag = 1
         elif byte in '!?':
             if self.tagName:
                 self._parseError("Invalid character in tag-name")
@@ -146,17 +160,6 @@ class XMLParser(Protocol):
                 return 'expectcdata'
             else:
                 self._parseError("Invalid '[' in tag-name")
-        elif byte == '/':
-            if self.tagName:
-                return 'afterslash'
-            else:
-                self.endtag = 1
-        elif byte == '>':
-            if self.endtag:
-                self.gotTagEnd(self.tagName)
-            else:
-                self.gotTagStart(self.tagName, {})
-            return 'bodydata'
         else:
             self._parseError('Invalid tag character: %r'% byte)
 
@@ -194,20 +197,20 @@ class XMLParser(Protocol):
         self.cdatabuf = ''
 
     def do_attrs(self, byte):
-        if byte in string.whitespace:
-            return
-        elif byte in identChars:
+        if byte in identChars:
             # XXX FIXME really handle !DOCTYPE at some point
             if self.tagName == '!DOCTYPE':
                 return 'doctype'
             if self.tagName[0] in '!?':
                 return 'waitforgt'
             return 'attrname'
-        elif byte == '/':
-            return 'afterslash'
+        elif byte in whitespace:
+            return
         elif byte == '>':
             self.gotTagStart(self.tagName, self.tagAttributes)
             return 'bodydata'
+        elif byte == '/':
+            return 'afterslash'
         elif self.beExtremelyLenient:
             # discard and move on?  Only case I've seen of this so far was:
             # <foo bar="baz"">
@@ -238,10 +241,10 @@ class XMLParser(Protocol):
         if byte in identChars:
             self.attrname += byte
             return
-        elif byte in string.whitespace:
-            return 'beforeeq'
         elif byte == '=':
             return 'beforeattrval'
+        elif byte in whitespace:
+            return 'beforeeq'
         elif self.beExtremelyLenient:
             if byte in '"\'':
                 return 'attrval'
@@ -261,10 +264,10 @@ class XMLParser(Protocol):
         self._parseError("Invalid attribute name: %r %r" % (self.attrname, byte))
 
     def do_beforeattrval(self, byte):
-        if byte in string.whitespace:
-            return
-        elif byte in '"\'':
+        if byte in '"\'':
             return 'attrval'
+        elif byte in whitespace:
+            return
         elif self.beExtremelyLenient:
             if byte in lenientIdentChars:
                 return 'messyattr'
@@ -286,10 +289,10 @@ class XMLParser(Protocol):
         self._beforeeq_termtag = 0
 
     def do_beforeeq(self, byte):
-        if byte in string.whitespace:
-            return
-        elif byte == '=':
+        if byte == '=':
             return 'beforeattrval'
+        elif byte in whitespace:
+            return
         elif self.beExtremelyLenient:
             if byte in identChars:
                 self.attrval = 'True'
@@ -318,18 +321,17 @@ class XMLParser(Protocol):
 
     def end_attrval(self):
         self.tagAttributes[self.attrname] = self.attrval
-        self.attrname = ''
-        self.attrval = ''
+        self.attrname = self.attrval = ''
 
     def begin_messyattr(self, byte):
         self.attrval = byte
 
     def do_messyattr(self, byte):
-        if byte in string.whitespace:
+        if byte in whitespace:
             return 'attrs'
         elif byte == '>':
             endTag = 0
-            if self.attrval[-1] == '/':
+            if self.attrval.endswith('/'):
                 endTag = 1
                 self.attrval = self.attrval[:-1]
             self.tagAttributes[self.attrname]=self.attrval
@@ -376,7 +378,7 @@ class XMLParser(Protocol):
         self.erefbuf = ''
 
     def do_entityref(self, byte):
-        if byte in string.whitespace:
+        if byte in whitespace:
             if self.beExtremelyLenient:
                 self.erefbuf = "amp"
                 return 'bodydata'

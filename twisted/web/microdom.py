@@ -48,32 +48,32 @@ from types import ListType as NodeList
 from types import StringType
 
 def getElementsByTagName(iNode, name):
-    matches=[]
-    if iNode.nodeName==name:
+    matches = []
+    if iNode.nodeName == name:
         matches.append(iNode)
-    slice=iNode.childNodes[:]
+    slice = iNode.childNodes[:]
     while len(slice)>0:
-        c=slice.pop(0)
-        if c.nodeName==name:
+        c = slice.pop(0)
+        if c.nodeName == name:
             matches.append(c)
-        slice=c.childNodes+slice
+        slice = c.childNodes + slice
     return matches
+
+# order is important
+ESCAPE_CHARS = (('&', '&amp;'),
+                 ('<', '&lt;'),
+                 ('>', '&gt;'),
+                 ('"', '&quot;'))
 
 def unescape(text):
     "Perform the exact opposite of 'escape'."
-    for s, h in [('&', '&amp;'), #order is important
-                 ('<', '&lt;'),
-                 ('>', '&gt;'),
-                 ('"', '&quot;')]:
+    for s, h in ESCAPE_CHARS:
         text = text.replace(h, s)
     return text
 
 def escape(text):
     "Escape a few HTML special chars with HTML entities."
-    for s, h in [('&', '&amp;'), #order is important
-                 ('<', '&lt;'),
-                 ('>', '&gt;'),
-                 ('"', '&quot;')]:
+    for s, h in ESCAPE_CHARS:
         text = text.replace(s,h)
     return text
 
@@ -352,31 +352,28 @@ class Element(Node):
         self.attributes[name] = attr
 
     def removeAttribute(self, name):
-        if self.attributes.has_key(name):
+        if name in self.attributes:
             del self.attributes[name]
 
     def hasAttribute(self, name):
-        return self.attributes.has_key(name)
+        return name in self.attributes
 
     def writexml(self, stream, indent='', addindent='', newl='', strip=0):
         # write beginning
+        NEVERSINGLETON = ('a', 'li', 'div', 'span', 'title')
         w = stream.write
-        w(newl+indent+"<")
-        w(self.tagName)
+        begin = [newl, indent, '<', self.tagName]
+        be = begin.extend
+        j = ''.join
         for attr, val in self.attributes.items():
-            w(" ")
-            w(attr)
-            w("=")
-            w('"')
-            w(escape(val))
-            w('"')
-        if self.childNodes or self.tagName.lower() in ('a', 'li', 'div', 'span', 'title'):
+            be((' ', attr, '="', escape(val), '"'))
+        w(j(begin))
+        if self.childNodes or self.tagName.lower() in NEVERSINGLETON:
             w(">")
+            newindent = indent + addindent
             for child in self.childNodes:
-                child.writexml(stream, indent+addindent, addindent, newl, strip)
-            w(newl+indent+"</")
-            w(self.tagName)
-            w(">")
+                child.writexml(stream, newindent, addindent, newl, strip)
+            w(j((newl, indent, "</", self.tagName, '>')))
         else:
             w(" />")
 
@@ -455,10 +452,9 @@ class MicroDOMParser(XMLParser):
 
     def _getparent(self):
         if self.elementstack:
-            parent = self.elementstack[-1]
+            return self.elementstack[-1]
         else:
-            parent = None
-        return parent
+            return None
 
     def gotDoctype(self, doctype):
         self._mddoctype = doctype
@@ -470,7 +466,7 @@ class MicroDOMParser(XMLParser):
         if self.caseInsensitive:
             name = name.lower()
         if (self.beExtremelyLenient and isinstance(parent, Element) and
-            self.laterClosers.has_key(parent.tagName) and
+            parent.tagName in self.laterClosers and
             name in self.laterClosers[parent.tagName]):
             self.gotTagEnd(parent.tagName)
             parent = self._getparent()
@@ -516,7 +512,7 @@ class MicroDOMParser(XMLParser):
         el = self.elementstack.pop()
         if el.tagName != name:
             if self.beExtremelyLenient:
-                if len(self.elementstack):
+                if self.elementstack:
                     lastEl = self.elementstack[0]
                     for idx in xrange(len(self.elementstack)):
                         if self.elementstack[-(idx+1)].tagName == name:
