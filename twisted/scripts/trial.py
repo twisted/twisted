@@ -120,31 +120,22 @@ class Options(usage.Options):
         self['reporter'] = None
         self['debugflags'] = []
         self['cleanup'] = []
-    
 
     def _loadReporters(self):
-        # without this frobbing of stdout/err the plugin system spews a whole ton
-        # of deprecation warnings and other nonsense
-        sio = StringIO()
-        self.origout, self.origerr, sys.stdout, sys.stderr = sys.stdout, sys.stderr, sio, sio
-        try:
-            self.pluginFlags, self.optToQual = [], {}
-            self.plugins = plugin.getPlugIns("trial_reporter", None, None)
-            for p in self.plugins:
-                self.pluginFlags.append([p.longOpt, p.shortOpt, p.description])
-                qual = "%s.%s" % (p.module, p.klass)
-                self.optToQual[p.longOpt] = qual
+        self.pluginFlags, self.optToQual = [], {}
+        self.plugins = plugin.getPlugIns("trial_reporter", None, None)
+        for p in self.plugins:
+            self.pluginFlags.append([p.longOpt, p.shortOpt, p.description])
+            qual = "%s.%s" % (p.module, p.klass)
+            self.optToQual[p.longOpt] = qual
 
-                # find the default
-                d = getattr(p, 'default', None)
-                if d is not None:
-                    self.defaultReporter = qual
+            # find the default
+            d = getattr(p, 'default', None)
+            if d is not None:
+                self.defaultReporter = qual
 
-            if self.defaultReporter is None:
-                raise PluginError, "no default reporter specified"
-                    
-        finally:
-            sys.stdout, sys.stderr = self.origout, self.origerr
+        if self.defaultReporter is None:
+            raise PluginError, "no default reporter specified"
 
 
     def getReporter(self):
@@ -160,7 +151,6 @@ class Options(usage.Options):
                 return nany
         else:
             return self.fallbackReporter
-            
 
     def opt_reactor(self, reactorName):
         # this must happen before parseArgs does lots of imports
