@@ -73,6 +73,8 @@ if not os.environ.get("DISPLAY"):
     fakeOut("gnome.ui")
     fakeOut("pygtk")
     fakeOut("gtk")
+else:
+    fakeOut("wxPython.wx")
 
 # initial twisted
 from twisted.python import reflect
