@@ -142,10 +142,12 @@ class FlowTest(unittest.TestCase):
         a.addCallable(lambda data: result.append(('a',data)))
         b = Flow()
         b.addCallable(lambda data: result.append(('b',data)))
+        c = Flow()
+        c.addCallable(lambda: result.append("done"))
         f = Flow()
-        f.addChain(a,b)
+        f.addChain(a,b,c)
         f.execute(3)
-        self.assertEqual(result, [('a',6),('b',3)])
+        self.assertEqual(result, [('a',6),('b',3), 'done'])
 
     def testThreaded(self):
         class CountIterator(ThreadedIterator):

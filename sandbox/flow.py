@@ -244,11 +244,11 @@ class Callable(Stage):
     def __init__(self, callable, skip = None):
         self.callable    = callable
         self.skip        = skip
-        self.withContext = (2 == getArgumentCount(callable, 1))
+        args = getArgumentCount(callable, 1)
+        if 0 == args: self.callable = lambda data: callable()
+        self.withContext = (2 == args)
      
     def __call__(self, flow, data):
-        """
-        """
         if self.withContext:
             ret = self.callable(flow.context,data)
         else:
