@@ -36,7 +36,7 @@ I am a support module for making SSH servers with mktap.
 
 from twisted.conch import identity, authorizer
 from twisted.conch.ssh import factory
-from twisted.python import usage
+from twisted.python import reflect, usage
 import sys, pwd
 
 class Options(usage.Options):
@@ -47,9 +47,13 @@ class Options(usage.Options):
 
     longdesc = "Makes a SSH server.."
 
+    def opt_auth(self, authName):
+        authObj = reflect.namedClass(authName)
+        self.opts['auth'] = authObj()
+
 def updateApplication(app, config):
     t = factory.OpenSSHFactory()
-    t.authorizer = authorizer.OpenSSHConchAuthorizer()
+    t.authorizer = config.opts.has_key('auth') and config.opts['auth'] or authorizer.OpenSSHConchAuthorizer()
     t.authorizer.setApplication(app)
     t.dataRoot = config.opts['data']
     portno = int(config.opts['port'])

@@ -15,6 +15,7 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 # 
 import os.path, base64
+from twisted import cred
 from twisted.conch import error
 from twisted.internet import app, defer, reactor
 from twisted.python import failure, log
@@ -84,12 +85,13 @@ class SSHUserAuthServer(service.SSHService):
             self.transport.sendPacket(MSG_USERAUTH_FAILURE, NS(','.join(self.supportedAuthentications))+'\xff')
 
     def _ebBadAuth(self, reason):
-        if isinstance(reason, failure.Failure):
-            reason.trap(error.ConchError)
-        elif foo == "unauthorized":
-            pass
-        else:
-            raise reason
+        reason.trap(error.ConchError, cred.error.Unauthorized)
+        #if isinstance(reason, failure.Failure):
+        #    reason.trap(error.ConchError)
+        #elif foo == "unauthorized":
+        #    pass
+        #else:
+        #    raise reason
         if self.method != 'none': # ignore 'none' as a method
             log.msg('%s failed auth %s' % (self.user, self.method))
             log.msg('potential reason: %s' % reason)
@@ -101,6 +103,8 @@ class SSHUserAuthServer(service.SSHService):
         self.transport.sendPacket(MSG_USERAUTH_FAILURE, NS(','.join(self.supportedAuthentications))+'\x00')
 
     def auth_publickey(self, ident, packet):
+        if not getattr(ident, 'validatePublicKey'):
+            return defer.fail(error.ConchError('identity does not have validatePublicKey'))
         hasSig = ord(packet[0])
         self.hasSigType = hasSig # protocol impl.s differ in this
         algName, blob, rest = getNS(packet[1:], 2)
@@ -248,3 +252,4 @@ for v in dir(userauth):
 
 SSHUserAuthServer.protocolMessages = messages
 SSHUserAuthClient.protocolMessages = messages
+
