@@ -97,8 +97,10 @@ class IView(components.Interface):
         """
 
     def getData(self):
-        """Return the actual data represented by this Model, if this
-        model is just a wrapper. Otherwise, return self.
+        """
+        @return: The actual data (or a L{twisted.internet.defer.Deferred}
+                 resulting in the actual data) represented by this Model,
+                 if this model is just a wrapper. Otherwise, return self.
         """
     
     def setData(self, data):

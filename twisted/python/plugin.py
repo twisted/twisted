@@ -47,7 +47,7 @@ class PlugIn:
         return "<Coil Plugin %s %s%s>" % (repr(self.name), self.module, loaded)
 
 class DropIn:
-    """I am a Python package contianing plugins.tml.
+    """I am a Python package containing plugins.tml.
     """
     def __init__(self, name):
         self.name = name
