@@ -8,19 +8,14 @@
 
 from __future__ import generators
 
-import sys, time, pdb, string, types
-import traceback, os.path as osp, warnings
+import sys, types
+import warnings
 
 from twisted.python import reflect, failure, log, util as tputil
 from twisted.python.compat import adict
 from twisted.internet import defer
 from twisted.trial import itrial, util
 import zope.interface as zi
-
-try:
-    from cStringIO import StringIO
-except ImportError:
-    from StringIO import StringIO
 
 #******************************************************************************
 # turn this off if you're having trouble with traceback printouts or some such
@@ -135,7 +130,6 @@ class TestStats(TestStatsBase):
         return n
 
     def allPassed(self):
-#:        import pdb;pdb.Pdb().set_trace()
         for r in self.original.children:
             if not itrial.ITestStats(r).allPassed:
                 return False
@@ -151,8 +145,6 @@ class TestCaseStats(TestStatsBase):
 
     def numTests(self):
         n = len(self.original.children)
-#:        if n <= 0:
-#:            import pdb;pdb.Pdb().set_trace()
         return n
 
     def allPassed(self):
