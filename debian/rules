@@ -34,7 +34,7 @@ install-stamp: build-stamp
 
 	# Add here commands to install the package into debian/tmp.
 	cp -rf build/lib*/twisted debian/tmp/usr/lib/python1.5/site-packages/
-	cp TODO README CREDITS doc/CodingStandard.html debian/tmp/usr/share/doc/twisted
+	cp TODO README CREDITS doc/*.html debian/tmp/usr/share/doc/twisted
 	cp doc/examples/*.py debian/tmp/usr/share/doc/twisted/examples
 	cp debian/copyright debian/tmp/usr/share/doc/twisted/
 	cp bin/mktap bin/gnusto bin/twistd bin/im bin/faucet debian/tmp/usr/bin

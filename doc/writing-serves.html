@@ -1,0 +1,171 @@
+<HTML><HEAD><TITLE>Writing Servers in Twisted</TITLE></HEAD></BODY>
+
+<H1>Writing Servers in Twisted</H1>
+
+<H2>Concepts</H2>
+
+Twisted is an async framework, so remember that none of your code can
+block. You'll get notified about new data coming in, you'll write small
+functions which deal with it and end so something else can do its thing.
+
+A Twisted server consists of several parts:
+
+<DL>
+<DT>twisted.main.Application</DT>
+<DD>This class is Twisted's connection to the world. Usually, most writers
+    do not deal with it (see below, on deployment considerations).</DD>
+
+<DT>twisted.protocols.protocol.Factory</DT>
+<DD>90% of the time, this class will be good enough. This class seats
+    inside an application, listens to a port, and builds a protocol for
+    each new connection. The default buildProtocol calls the attribute
+    "protocol" (which is usually a class), and then initializes the
+    "factory" attribute. Overriding buildProtocol is easy: just return
+    something which follows the protocol interface.</DD>
+
+<DT>twisted.protocols.protocol.Protocol</DT>
+<DD>While there is no need to derive from this class to write a protocol
+    handler, it usually makes your work easier. The next section will deal
+    with writing a new protocol, since this is where most of your code will
+    be.</DD>
+
+</DL>
+
+<H2>Writing protocols</H2>
+
+The protocol interface has several methods:
+
+<DL>
+<DT>def makeConnection(self, transport, server = None)</DT>
+<DD>This method is already implemented inside 
+    twisted.protocols.protocol.Protocol. It will initialize your protocol
+    with the "connected", "transport" and "server" attributes, and call
+    "connectionMade". If you want to do connection-specific initializing,
+    the right way to do it is to implement "connectionMade".</DD>
+
+<DT>def connectionMade(self)</DT>
+<DD>Called when a connection to the server has been established. Here you
+    should set up attributes, send greetings and similar things.
+    <P>
+    Note that for "clientish" connections, you will probably want to send
+    the initial request to the server here, unless the server sends a greeting,
+    in which case you would set up a callback to the greeting.</DD>
+
+<DT>def dataReceived(self, data)</DT>
+<DD>The protocol's raison d'etre: some data was sent by the other side.
+    You will probably want to handle it in some way.
+    <P>
+    There are a couple of Protocol derived classes which override this
+    method to provide a higher level view of the data - netstrings,
+    lines and length-prefixed messages.</DD>
+
+<DT>def connectionLost(self)</DT>
+<DD>The low-level connection is lost. Clean up after yourself.</DD>
+
+<DT>def connectionFailed(self)</DT>
+<DD>The connection cannot be made. This will only be called on client
+    protocols.</DD>
+
+</DL>
+
+<H2>Transports</H2>
+
+<P>
+One of the most important instance variables of the Protocol class is 
+"transport", which must follow the transport interface. This is what
+lets protocol classes talk to the world.
+</P>
+
+<P>
+Transports have the following methods:
+
+<DL>
+<DT>.write(data)</DT>
+<DD>Write the data when next the connection is available for writing.
+    This method will never block, but it might not send the data right
+    away.</DD>
+
+<DT>.loseConnection()</DT>
+<DD>When there is no more pending data to write, close the connection
+    down.</DD>
+
+<DT>.getPeer()</DT>
+<DD>Returns a tuple. The first element of the tuple is a string describing
+    the kind of the transport, with 'INET' being the identifier of good
+    old TCP sockets.</DD>
+</DL>
+
+
+<H2>Deployment</H2>
+
+Most protocols are deployed using the "tap" mechanism, which hides many
+none interesting details. Tap-based deployment works by writing a module
+in the twisted.tap package which is compatible to the tap interface:
+
+<DL>
+
+<DT>The Options class</DT>
+<DD>This should inherit from twised.python.usage.Options and handle valid 
+    options.
+    It must be called Options. The next section will deal with
+    writing Option classes.</DD>
+
+<DT>The usage_message string</DT>
+<DD>This should be a helpful multiline message which would be displayed
+    when the user asks for help.</DD>
+
+<DT>The getPorts(app, config) function</DT>
+<DD>The function gets a twisted.main.Application and an instance of
+    the Options class defined, and should return an array of two-tuples
+    (port, Factory). See next section about how to get the command-line
+    options from an Option instance.</DD>
+
+</DL>
+
+<H2>Writing Option Class</H2>
+
+<DL>
+
+<DT>optStrings</DT>
+<DD>This is a list of 3-lists, each should be [long_name, flag, default].
+    <P>
+    This will set the "long_name" attribute to the value of that option,
+    or to default, if it was not be given on the command line.</DD>
+
+<DT>optFlags</DT>
+<DD>This is a list of 2-lists, each should be [long_name, flag].
+    <P>
+    This will set the "long_name" attribute to 1 if it was given on the
+    command line, else to 0.</DD>
+
+<DT>opt_* methods</DT>
+<DD>If the method takes no arguments (except from self), it will be
+    called once for every time the part after the "opt_" is given.<P>
+    If it takes one argument, then it will be the value for the option
+    given on the command line.<P>
+    opt_* methods are called in the order the arguments are given on
+    the command line.</DD>
+
+</DL>
+
+<H2>Finishing Touches</H2>
+
+OK.
+<P>
+You have written a protocol, a factory, a twisted.tap submodule which
+parses command line options and returns a valid value from getPorts.
+What now?
+<P>
+<OL>
+<LI>Run "mktap &lt;your twisted.tap submodule> &lt;valid options>". This will
+    create a file named "&lt;your twisted.tap submodule>.tap", which is a
+    pickle containing a twisted.main.Application.</LI>
+<LI>Run "twistd -f &lt;your twisted.tap.submodule>.tap". twistd knows to turn
+    pickled twisted.main.Application into a living, breathing application.
+    Some common arguments are "-l &lt;logfile>" and "-n" (no daemonize).</LI>
+</OL>
+
+<P>
+That is it. You have written a twisted server.
+
+</BODY></HTML>
