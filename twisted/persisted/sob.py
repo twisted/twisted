@@ -1,3 +1,4 @@
+# -*- test-case-name: twisted.test.test_sob -*-
 # Twisted, the Framework of Your Internet
 # Copyright (C) 2001-2003 Matthew W. Lefkowitz
 #
