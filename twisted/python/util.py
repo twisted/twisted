@@ -33,7 +33,7 @@ class OrderedDict(UserDict):
         return '{'+', '.join([('%r: %r' % item) for item in self.items()])+'}'
         
     def __setitem__(self, key, value):
-        if key not in self:
+        if not self.has_key(key):
             self._order.append(key)
         UserDict.__setitem__(self, key, value)
 
