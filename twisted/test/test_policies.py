@@ -100,17 +100,21 @@ class SimpleSenderProtocol(SimpleProtocol):
 
 class ThrottlingTestCase(unittest.TestCase):
 
+    def doIterations(self, count=5):
+        for i in range(count):
+            reactor.iterate()
+            
     def testLimit(self):
         server = Server()
         c1, c2, c3, c4 = [SimpleProtocol() for i in range(4)]
         tServer = policies.ThrottlingFactory(server, 2)
         p = reactor.listenTCP(0, tServer)
         n = p.getHost()[2]
-        reactor.iterate(); reactor.iterate()
+        self.doIterations()
 
         for c in c1, c2, c3:
             reactor.connectTCP("127.0.0.1", n, SillyFactory(c))
-            reactor.iterate(); reactor.iterate()
+            self.doIterations()
 
         self.assertEquals([c.connected for c in c1, c2, c3], [1, 1, 1])
         self.assertEquals([c.disconnected for c in c1, c2, c3], [0, 0, 1])
@@ -118,18 +122,16 @@ class ThrottlingTestCase(unittest.TestCase):
 
         # disconnect one protocol and now another should be able to connect
         c1.transport.loseConnection()
-        reactor.iterate(); reactor.iterate()
-        reactor.iterate(); reactor.iterate()
+        self.doIterations()
         reactor.connectTCP("127.0.0.1", n, SillyFactory(c4))
-        reactor.iterate(); reactor.iterate()
+        self.doIterations()
 
         self.assertEquals(c4.connected, 1)
         self.assertEquals(c4.disconnected, 0)
 
         for c in c2, c4: c.transport.loseConnection()
         p.stopListening()
-        reactor.iterate(); reactor.iterate()
-        reactor.iterate(); reactor.iterate()
+        self.doIterations()
 
     def testWriteLimit(self):
         server = Server()
@@ -144,7 +146,7 @@ class ThrottlingTestCase(unittest.TestCase):
         reactor.iterate(); reactor.iterate()
         for c in c1, c2:
             reactor.connectTCP("127.0.0.1", n, SillyFactory(c))
-            reactor.iterate(); reactor.iterate()
+            self.doIterations()
 
         for p in tServer.protocols.keys():
             p = p.wrappedProtocol
@@ -153,8 +155,7 @@ class ThrottlingTestCase(unittest.TestCase):
 
         c1.transport.write("0123456789")
         c2.transport.write("abcdefghij")
-        reactor.iterate(); reactor.iterate()
-        reactor.iterate(); reactor.iterate()
+        self.doIterations()
 
         self.assertEquals(c1.buffer, "0123456789")
         self.assertEquals(c2.buffer, "abcdefghij")
@@ -191,7 +192,7 @@ class ThrottlingTestCase(unittest.TestCase):
         port.stopListening()
         for p in tServer.protocols.keys():
             p.loseConnection()
-        reactor.iterate(); reactor.iterate()
+        self.doIterations()
 
     def testReadLimit(self):
         server = Server()
@@ -200,15 +201,14 @@ class ThrottlingTestCase(unittest.TestCase):
         tServer = policies.ThrottlingFactory(server, readLimit=10)
         port = reactor.listenTCP(0, tServer)
         n = port.getHost()[2]
-        reactor.iterate(); reactor.iterate()
+        self.doIterations()
         for c in c1, c2:
             reactor.connectTCP("127.0.0.1", n, SillyFactory(c))
-            reactor.iterate(); reactor.iterate()
+            self.doIterations()
 
         c1.transport.write("0123456789")
         c2.transport.write("abcdefghij")
-        reactor.iterate(); reactor.iterate()
-        reactor.iterate(); reactor.iterate()
+        self.doIterations()
         self.assertEquals(c1.buffer, "0123456789")
         self.assertEquals(c2.buffer, "abcdefghij")
         self.assertEquals(tServer.readThisSecond, 20)
@@ -222,8 +222,7 @@ class ThrottlingTestCase(unittest.TestCase):
         # write some more - data should *not* get written for another second
         c1.transport.write("0123456789")
         c2.transport.write("abcdefghij")
-        reactor.iterate(); reactor.iterate()
-        reactor.iterate(); reactor.iterate()
+        self.doIterations()
         self.assertEquals(c1.buffer, "0123456789")
         self.assertEquals(c2.buffer, "abcdefghij")
         self.assertEquals(tServer.readThisSecond, 0)
@@ -237,7 +236,7 @@ class ThrottlingTestCase(unittest.TestCase):
         port.stopListening()
         for p in tServer.protocols.keys():
             p.loseConnection()
-        reactor.iterate(); reactor.iterate()
+        self.doIterations()
 
     # These fail intermittently.
     testReadLimit.skip = "Inaccurate tests are worse than no tests."

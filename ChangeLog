@@ -1,5 +1,8 @@
 2003-04-12  Brian Warner  <warner@lothar.com>
 
+	* twisted/test/test_policies.py (ThrottlingTestCase.doIterations):
+	add more iterations to accomodate reactors that do less IO per pass
+
 	* twisted/test/process_signal.py: reset SIGHUP to default handler,
 	fixes test failures in a 'nohup' environment
 
