@@ -43,10 +43,8 @@ def genmask(start, length):
        genmask(2,3) returns 00111000, or 0x38
     """
     return ((2**(8-start))-1) & ~(2 **(8-start-length)-1)
-    
+
 def extract(bytes, offset, size):
-    print "extract", [hex(ord(x)) for x in bytes], offset, size
-    
     i = offset / 8
     ch = ord(bytes[i])
     offset = offset % 8
@@ -58,9 +56,9 @@ def extract(bytes, offset, size):
         else:
             result = ch
             size -= 8
-            
+
         while size >= 8:
-            # eat a byte at a time 
+            # eat a byte at a time
             i += 1
             ch = ord(bytes[i])
             result = (result << 8) + ch
@@ -72,10 +70,10 @@ def extract(bytes, offset, size):
         result = (result << size) + ((mask & ch) >> 8-offset-size)
     return result
 
-def processDecode(attrs, toproc, bytes):
+def processDecode(i, toproc, bytes):
     offset = 0
     for (a, t) in toproc:
-        attrs[a] = extract(bytes, offset, t.bits)
+        setattr(i, a, extract(bytes, offset, t.bits))
         offset += t.bits
 
 def processEncode(result, toproc):
@@ -95,7 +93,7 @@ def processEncode(result, toproc):
     if offset:
         raise ValueError("Non-byte-aligned values in format")
 
-class RecordType(type):
+class RecordMixin:
     FORMAT_SPECIFIERS = {
         Integer(8, False): 'B',
         Integer(8, True): 'b',
@@ -106,61 +104,46 @@ class RecordType(type):
         Int255String(): 'p',
         }
 
-    def __new__(klass, name, bases, attrs):
-        if '__format__' in attrs:
-            attrs['encode'] = klass.makeEncoder(attrs['__format__'])
-            attrs['decode'] = klass.makeDecoder(attrs['__format__'])
-        return type.__new__(klass, name, bases, attrs)
-
-    def makeEncoder(klass, format):
-        def encode(self):
-            result = []
-            subbytes = []
-            for (attr, type) in format:
-                if type in klass.FORMAT_SPECIFIERS:
-                    processEncode(result, subbytes)
-                    subbytes = []
-
-                    fmt = klass.FORMAT_SPECIFIERS[type]
-                    result.append(struct.pack('>' + fmt, getattr(self, attr)))
-                elif isinstance(type, Integer):
-                    subbytes.append((getattr(self, attr), type))
-                else:
-                    raise NotImplementedError((type, attr))
-            if subbytes:
+    def encode(self):
+        result = []
+        subbytes = []
+        for (attr, type) in self.__format__:
+            if type in self.FORMAT_SPECIFIERS:
                 processEncode(result, subbytes)
-            return ''.join(result)
-        return encode
-    makeEncoder = classmethod(makeEncoder)
+                subbytes = []
 
-    def makeDecoder(klass, format):
-        def decode(cls, bytes):
-            d = {}
-            offset = 0
-            subbytes = []
-            for (attr, type) in format:
-                if type in klass.FORMAT_SPECIFIERS:
-                    if offset:
-                        raise ValueError("Non-byte-aligned values in format")
-                    fmt = klass.FORMAT_SPECIFIERS[type]
-                    size = struct.calcsize('>' + fmt)
-                    d[attr] = struct.unpack('>' + fmt, bytes[:size])[0]
-                    bytes = bytes[size:]
-                else:
-                    if offset + type.bits < 8:
-                        subbytes.append((attr, type))
-                        offset += type.bits
-                    elif (offset + type.bits) % 8 == 0:
-                        subbytes.append((attr, type))
-                        processDecode(d, subbytes, bytes)
-                        bytes = bytes[(offset + type.bits) / 8:]
-                        subbytes = []
-                        offset = 0
-            i = cls()
-            i.__dict__.update(d)
-            return i
-        return classmethod(decode)
-    makeDecoder = classmethod(makeDecoder)
+                fmt = self.FORMAT_SPECIFIERS[type]
+                result.append(struct.pack('>' + fmt, getattr(self, attr)))
+            elif isinstance(type, Integer):
+                subbytes.append((getattr(self, attr), type))
+            else:
+                raise NotImplementedError((type, attr))
+        if subbytes:
+            processEncode(result, subbytes)
+        return ''.join(result)
 
-class Record(object):
-    __metaclass__ = RecordType
+
+    def decode(cls, bytes):
+        i = cls()
+        offset = 0
+        subbytes = []
+        for (attr, type) in i.__format__:
+            if type in cls.FORMAT_SPECIFIERS:
+                if offset:
+                    raise ValueError("Non-byte-aligned values in format")
+                fmt = cls.FORMAT_SPECIFIERS[type]
+                size = struct.calcsize('>' + fmt)
+                setattr(i, attr, struct.unpack('>' + fmt, bytes[:size])[0])
+                bytes = bytes[size:]
+            else:
+                if offset + type.bits < 8:
+                    subbytes.append((attr, type))
+                    offset += type.bits
+                elif (offset + type.bits) % 8 == 0:
+                    subbytes.append((attr, type))
+                    processDecode(i, subbytes, bytes)
+                    bytes = bytes[(offset + type.bits) / 8:]
+                    subbytes = []
+                    offset = 0
+        return i
+    decode = classmethod(decode)

@@ -1,7 +1,7 @@
 
 import random
 
-from record import Record, Integer, Int255String
+from record import RecordMixin as Record, Integer, Int255String
 
 class SingleSignedByte(Record):
     __format__ = [('a', Integer(8, True))]
@@ -82,8 +82,41 @@ class RecordPacking(unittest.TestCase):
             for (k, t) in fmt:
                 # Pick a random value that the attribute can take on
                 setattr(inst, k, randomValue(t))
-                print 'Randomly picked', vars(inst)[k], 'for', t
             s = inst.encode()
             msg = "%s encoded to %d bytes, not %d bytes" % (rt.__name__, len(s), rt.EXPECTED_ENCODED_SIZE)
             self.assertEquals(len(s), rt.EXPECTED_ENCODED_SIZE, msg)
             self.assertEquals(vars(rt.decode(s)), vars(inst))
+
+class DynamicFoo(Record):
+    def __format__():
+        def get(self):
+            # First there is a length byte
+            yield ('length', Integer(8, False))
+            # Then there is a type byte
+            yield ('type', Integer(8, False))
+
+            if self.type == 0:
+                # If the type byte was 0, there is just one more byte
+                yield ('x', Integer(8, False))
+                # And then we're done!
+            else:
+                # Otherwise there are four tiny fields
+                yield ('a', Integer(4, False))
+                yield ('b', Integer(4, False))
+                yield ('c', Integer(4, False))
+                yield ('d', Integer(4, False))
+                # And then we're done
+        return get,
+    __format__ = property(*__format__())
+
+class DynamicFormatGeneration(unittest.TestCase):
+    def testDynamicFormat(self):
+        tests = [('\x0A\x00\xFF',
+                  {'length': 10, 'type': 0, 'x': 255}),
+                 ('\xA0\x01\xA7\x4C',
+                  {'length': 160, 'type': 1, 'a': 10, 'b': 7, 'c': 4, 'd': 12})]
+
+        for (bytes, attrs) in tests:
+            i = DynamicFoo.decode(bytes)
+            self.assertEquals(vars(i), attrs)
+            self.assertEquals(i.encode(), bytes)
