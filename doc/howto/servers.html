@@ -84,7 +84,7 @@ class QOTD(Protocol):
 
     def connectionMade(self):
         self.transport.write("An apple a day keeps the doctor away\r\n") 
-        self.transport.loseConnction()
+        self.transport.loseConnection()
 </pre>
 
 <p>This protocol responds to the initial connection with a well
@@ -102,7 +102,7 @@ class Echo(Protocol):
 
     def connectionMade(self):
         self.factory.numProtocols = self.factory.numProtocols+1 
-        if self.factory.numProtocols&gt;100:
+        if self.factory.numProtocols &gt; 100:
             self.transport.write("Too many connections, try later") 
             self.transport.loseConnection()
 
