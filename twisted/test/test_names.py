@@ -50,6 +50,8 @@ class NoFileAuthority(common.ResolverBase):
     def _lookup(self, name, cls, type, timeout = 10):
         if name.lower().endswith(self.soa[0].lower()):
             l = [r for r in self.records[name.lower()] if type == dns.ALL_RECORDS or r.TYPE == type]
+            for r in l:
+                r.ttl = 10
             return defer.succeed(l)
         return defer.fail(ValueError(dns.ENAME))
 
