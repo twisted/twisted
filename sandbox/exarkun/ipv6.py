@@ -5,6 +5,25 @@ from twisted.internet import default
 from twisted.internet import protocol
 from twisted.internet import reactor
 
+class IPv6Address(object):
+    def __init__(self, type, host, port, flowInfo, scope):
+        self.type = type
+        self.host = host
+        self.port = port
+        self.flowInfo = flowInfo
+        self.scope = scope
+
+    def __eq__(self, other):
+        if isinstance(other, IPv6Address):
+            a = (self.type, self.host, self.port, self.flowInfo, self.scope)
+            b = (other.type, other.host, other.port, other.flowInfo, other.scope)
+            return a == b
+        return False
+    
+    def __str__(self):
+        return 'IPv6Address(%s, %r, %d, %d, %d)' % (
+            self.type, self.host, self.port, self.flowInfo, self.scope)
+
 def isIPv6Address(ip):
     try:
         socket.inet_pton(socket.AF_INET6, ip)
@@ -23,11 +42,11 @@ class Client(tcp.Client):
                 self._setRealAddress, self.failIfNotConnected
             )
 
-    def getPeer(self):
-        return ('INET6',) + self.socket.getpeername()
-
     def getHost(self):
-        return ('INET6',) + self.socket.getsockname()
+        return IPv6Address('TCP', *self.socket.getsockname())
+
+    def getPeer(self):
+        return IPv6Address('TCP', *self.socket.getpeername())
 
 
 class Connector(tcp.Connector):
@@ -35,25 +54,28 @@ class Connector(tcp.Connector):
         return Client(self.host, self.port, self.bindAddress, self, self.reactor)
     
     def getDestination(self):
-        return ('INET6', self.host, self.port)
+        return IPv6Address('TCP', self.host, self.port)
 
 class Server(tcp.Server):
     def getHost(self):
-        return ('INET6',) + self.socket.getsockname()
+        return IPv6Address('TCP', *self.socket.getsockname())
 
     def getPeer(self):
-        return ('INET6',) + self.client
+        return IPv6Address('TCP', *self.client)
 
 class Port(tcp.Port):
     addressFamily = socket.AF_INET6
 
     transport = Server
 
+    def _buildAddr(self, address):
+        return IPv6Address('TCP', *address)
+
     def getHost(self):
-        return ('INET6',) + self.socket.getsockname()
-    
+        return IPv6Address('TCP', *self.socket.getsockname())
+
     def getPeer(self):
-        return ('INET6',) + self.socket.getpeername()
+        return IPv6Address('TCP', *self.socket.getpeername())
 
 def connectTCP6(host, port, factory, timeout=30, bindAddress=None, reactor=None):
     if reactor is None:
