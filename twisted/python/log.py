@@ -63,8 +63,8 @@ def write(stuff):
 
 def debug(*stuff,**otherstuff):
     """
-    Write some data to the log, indented, so it's easier to
-    distinguish from 'normal' output.
+    Write some debug data to the log. It passes debug=1 in the log
+    dict.
     """
     msg(debug=1, *stuff, **otherstuff)
 

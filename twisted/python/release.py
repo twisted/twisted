@@ -60,9 +60,25 @@ class Transaction:
         print "%s HAS NO ROLLBACK!" % self.__class__.__name__
 
 
+def runTransactions(transactions, *args):
+    last = None
+
+    for trans in transactions:
+        try:
+            f = trans().run(*args)
+        except:
+            lastmsg = ''
+            if last is not None:
+                lastmsg = "Last successful command was %s." % (last,)
+            f = failure.Failure()
+            log.msg(transaction="ERROR: %s failed. %s"
+                    % (trans.__name__, lastmsg),
+                    failure=f)
+            break
+        last = trans
+
 
 def main():
-    
     try:
         opts = Options()
         opts.parseOptions()
@@ -70,21 +86,7 @@ def main():
         print "%s: %s (see --help)" % (sys.argv[0], ue)
         sys.exit(2)
 
-    last = None
-
-    for command in opts['commands']:
-        try:
-            f = command().run(opts)
-            if f is not None:
-                raise f
-        except:
-            print ("ERROR: %s failed. last successful command was %s. "
-                   "Traceback follows:" % (command.__name__, last))
-            import traceback
-            traceback.print_exc()
-            break
-
-        last = command
+    runTransactions(opts['commands'])
 
 
 # utilities
