@@ -15,7 +15,7 @@
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 #
-# $Id: mktap.py,v 1.13 2002/07/10 23:47:14 dp Exp $
+# $Id: mktap.py,v 1.14 2002/07/11 19:02:09 carmstro Exp $
 
 """ Implementation module for the `mktap` command.
 """
@@ -63,18 +63,20 @@ Usage::
 'apptype' can be one of: %s
 """ % string.join(tapMods)
 
-    optStrings = [['uid', 'u', '0'],
+    optParameters = [['uid', 'u', '0'],
                   ['gid', 'g', '0'],
                   ['append', 'a', None]]
     optFlags = [['xml', 'x', "Output as XML, rather than pickle."],
                 ['source', 's', "Output as Python source-code (AOT format), rather than pickle."]]
-    help = 0
+    def __init__(self):
+        usage.Options.__init__(self)
+        self['help'] = 0 # default
 
     def opt_help(self):
         """display this message"""
         # Ugh, we can't print the help now, we need to let getopt
         # finish parsinsg and parseArgs to run.
-        self.help = 1
+        self['help'] = 1
 
     def parseArgs(self, *args):
         self.args = args
@@ -93,8 +95,8 @@ def getModule(type):
 def run():
     options = GeneralOptions()
     if hasattr(os, 'getgid'):
-        options.opts['uid'] = os.getuid()
-        options.opts['gid'] = os.getgid()
+        options['uid'] = os.getuid()
+        options['gid'] = os.getgid()
     try:
         options.parseOptions(sys.argv[1:])
     except:
@@ -102,7 +104,7 @@ def run():
         print str(options)
         sys.exit(2)
 
-    if options.help or not options.args:
+    if options['help'] or not options.args:
         if options.args:
             mod = getModule(options.args[0])
             config = mod.Options()
@@ -120,11 +122,11 @@ def run():
         print "Usage Error: %s" % ue
         config.opt_help()
         sys.exit(1)
-
-    if not options.opts['append']:
-        a = app.Application(options.args[0], int(options.opts['uid']), int(options.opts['gid']))
+        
+    if not options['append']:
+        a = app.Application(options.args[0], int(options['uid']), int(options['gid']))
     else:
-        a = cPickle.load(open(options.opts['append'], 'rb'))
+        a = cPickle.load(open(options['append'], 'rb'))
 
     try:
         mod.updateApplication(a, config)

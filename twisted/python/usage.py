@@ -1,5 +1,5 @@
 # -*- Python -*-
-# $Id: usage.py,v 1.21 2002/07/10 14:21:22 carmstro Exp $
+# $Id: usage.py,v 1.22 2002/07/11 19:02:07 carmstro Exp $
 # Twisted, the Framework of Your Internet
 # Copyright (C) 2001 Matthew W. Lefkowitz
 #
@@ -81,13 +81,14 @@ class Options(UserDict.UserDict):
 
     def __init__(self):
         UserDict.UserDict.__init__(self)
+        self.opts = self.data
         # These are strings/lists we will pass to getopt
         self.longOpt = []
         self.shortOpt = ''
         self.docs = {}
         self.synonyms = {}
         self.__dispatch = {}
-        self.opts = self.data
+
 
         collectors = [
             self._gather_flags,
@@ -116,10 +117,11 @@ class Options(UserDict.UserDict):
         """
         I make sure that old style 'optObj.option' access still works.
         """
+        if attr == 'data':
+            raise AttributeError('Options instance has no attribute data: You probably forgot to call Options.__init__ from your subclass.')
         #XXX GET RID OF ME!
-
         if self.opts.has_key(attr):
-            print "optionObject.option is deprecated! Use new-style optionObject.opts['option'] instead! (This is only a warning) (%s, %s)" % (attr, self.opts[attr])
+            print "optionObject.option is deprecated! Use new-style optionObject['option'] instead! (This is only a warning) (%s, %s)" % (attr, self.opts[attr])
             return self.opts[attr]
         else:
             raise AttributeError("%s instance has no attribute '%s'" % (self.__class__, attr))
@@ -239,6 +241,11 @@ class Options(UserDict.UserDict):
         docs, settings, synonyms, dispatch = {}, {}, {}, {}
 
         parameters = []
+
+        reflect.accumulateClassList(self.__class__, 'optStrings',
+                                    parameters)
+        if parameters:
+            print "Warning: Options.optStrings is deprecated, please use optParameters instead."
 
         reflect.accumulateClassList(self.__class__, 'optParameters',
                                     parameters)
