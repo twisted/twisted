@@ -26,12 +26,6 @@ sys.path.append("../../pahan/sendmsg")
 from sendmsg import recvmsg
 
 class Client(unix.Client):
-    connected = True
-    
-    def connectionLost(self, reason):
-        self.connected = False
-        unix.Client.connectionLost(self, reason)
-
     def doRead(self):
         if not self.connected:
             return
@@ -68,16 +62,24 @@ class _FileDescriptorUnpickler:
         self.fdmemo = {}
 
     def persistent_load(self, id):
-        r = None
-        kname, mode, id = id.split(":")
+        if id == 'reactor':
+            from twisted.internet import reactor
+            return reactor
+        id, rest = id.split(":", 1)
         id = int(id)
         if id in self.fdmemo:
             return self.fdmemo[id]
-        if kname == "file":
-            r = self.fdmemo[id] = os.fdopen(self.fdmap[id], mode)
-        elif kname == "socket":
-            r = self.fdmemo[id] = socket.fromfd(self.fdmap[id])
-        return r
+        rest = rest.split(":")
+        type = rest.pop(0)
+        method = getattr(self, "type_" + type)
+        result = self.fdmemo[id] = method(id, *rest)
+        return result
+
+    def type_file(self, id, mode):
+        return os.fdopen(self.fdmap[id], mode)
+
+    def type_socket(self, id):
+        return socket.fromfd(self.fdmap[id])
 
 def FileDescriptorUnpickler(s, fdmap):
     ph = _FileDescriptorUnpickler(fdmap)
@@ -117,8 +119,7 @@ class FileDescriptorRequestFactory(protocol.ClientFactory):
 
 class UserStateReceiver(pb.Referenceable):
     def stateReceived(self, state):
-        for f in state:
-            print repr(f.read(80))
+        print state
 
     def unproxyFileDescriptors(self, fds, state):
         s = StringIO.StringIO(state)

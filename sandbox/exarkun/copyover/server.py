@@ -21,6 +21,9 @@ except ImportError:
 from twisted.internet import reactor
 from twisted.internet import protocol
 from twisted.internet import abstract
+from twisted.internet import tcp
+from twisted.internet import unix
+from twisted.persisted import styles
 from twisted.python import log
 from twisted.spread import pb
 from twisted.cred import portal
@@ -54,6 +57,7 @@ class UNIXServer(internet._AbstractServer):
         return reactor.listenWith(Port, *self.args, **self.kwargs)
 
 class _FileDescriptorPickler:
+
     def __init__(self, fdmap):
         self.fdmap = fdmap
 
@@ -63,11 +67,18 @@ class _FileDescriptorPickler:
         return id
 
     def persistent_id(self, obj):
-        if isinstance(obj, FileType):
-            return 'file:%s:%d' % (obj.mode, self.__id(obj.fileno()))
+        from twisted.internet import reactor
+        if obj is reactor:
+            return 'reactor'
+        elif isinstance(obj, FileType):
+            return '%d:file:%s' % (self.__id(obj.fileno()), obj.mode)
         elif isinstance(obj, SocketType):
-            return 'socket::%d' % (self.__id(obj.fileno()),)
-        return None
+            return '%d:socket' % (self.__id(obj.fileno()),)
+        elif isinstance(obj, styles.Ephemeral):
+            print 'Serializing ephemeral', obj
+            return obj.__dict__.copy()
+        else:
+            return None
 
 def FileDescriptorPickler(s, fdmap):
     ph = _FileDescriptorPickler(fdmap)
@@ -180,9 +191,11 @@ class Realm:
         return pb.IPerspective, a, a.logout
 
 def sendSomeState(avatar):
-    global f
-    f = [file("client.py"), file("server.py")]
-    avatar.sendUserState(f)
+    from twisted.web import server
+    from twisted.web.woven import dirlist
+    from twisted.internet import reactor
+    port = reactor.listenTCP(19191, server.Site(dirlist.DirectoryLister(".")))
+    avatar.sendUserState(port)
 
 def main():
     log.startLogging(sys.stdout)
