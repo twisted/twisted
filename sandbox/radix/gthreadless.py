@@ -33,7 +33,7 @@ def blockOn(d):
     d.addBoth(cb)
     return greenlet.main.switch()
 
-class GreenletWrapper(object):
+class GreenletWrapper(object):   
     """Wrap an object which presents an asynchronous interface (via Deferreds).
     
     The wrapped object will present the same interface, but all methods will
@@ -44,19 +44,24 @@ class GreenletWrapper(object):
     control is switched back to the created greenlet and execution resumes with
     the result.
     """
-    def __init__(self, wrappee):
+
+    def __init__(self, wrappee):  
         self.wrappee = wrappee
 
     def __getattribute__(self, name):
         wrappee = super(GreenletWrapper, self).__getattribute__('wrappee')
         original = getattr(wrappee, name)
         if callable(original):
-            def wrapper(*__a, **__kw):
-                result = original(*__a, **__kw)
-                if isinstance(result, defer.Deferred):
-                    return blockOn(result)
-                return result
-            return wrapper
+            def outerWrapper(*a, **kw):
+                assert greenlet.getcurrent() is not greenlet.main
+                def innerWrapper():
+                    # result = greenlet.greenlet(original).switch(*a, **kw)
+                    result = original(*a, **kw)
+                    if isinstance(result, defer.Deferred):   
+                        return blockOn(result)
+                    return result
+                return greenlet.greenlet(innerWrapper).switch()
+            return outerWrapper
         return original
 
 class Asynchronous(object):
@@ -73,6 +78,7 @@ class Asynchronous(object):
         1/0
     
     def asyncException(self, n):
+        from twisted.internet import reactor
         def fail():
             try:
                 1/0
@@ -87,6 +93,8 @@ def TEST():
     Show off deferredGreenlet and blockOn.
     """
     from twisted.internet import reactor
+
+    FINISHED = []
 
     import time
     #let's make sure we're not blocking anywhere
@@ -115,7 +123,9 @@ def TEST():
 
     def _cbJunk(r):
         print "RESULT", r
-        reactor.stop()
+        FINISHED.append(None)
+        if len(FINISHED) == 2:
+            reactor.stop()
 
     d.addCallback(_cbJunk)
     print "kicking it off!"
@@ -124,6 +134,7 @@ def TEST():
     # trivialities like calling blockOn.
     def magic():
         o = GreenletWrapper(Asynchronous())
+        print o.syncResult(3), o.asyncResult(0.1, 4)
         assert o.syncResult(3) == 3
         assert o.asyncResult(0.1, 4) == 4
         try:
@@ -140,11 +151,16 @@ def TEST():
         else:
             assert False
         print '4 magic tests passed'
-    magic()
+
+    def f(result):
+        print 'great, bye'
+        FINISHED.append(None)
+        if len(FINISHED) == 2:
+            reactor.stop()
+    deferredGreenlet(magic)().addCallback(f)
     
     reactor.run()
     
 
 if __name__ == '__main__':
     TEST()
-    TEST2()
