@@ -42,7 +42,7 @@ Test coverage needs to be better.
 <http://www.irchelp.org/irchelp/rfc/ctcpspec.html>}
 """
 
-__version__ = '$Revision: 1.68 $'[11:-2]
+__version__ = '$Revision: 1.69 $'[11:-2]
 
 from twisted.internet import reactor, protocol
 from twisted.persisted import styles
@@ -127,6 +127,7 @@ class IRC(protocol.Protocol):
         self.channels = []
 
     def sendLine(self, line):
+        log.msg('send: %s' % line)
         self.transport.write("%s%s%s" % (line, CR, LF))
 
     def sendMessage(self, command, *parameter_list, **prefix):
@@ -231,6 +232,7 @@ class IRCClient(basic.LineReceiver):
     @type lineRate: Number of Seconds.
     """
 
+    motd = ""
     nickname = 'irc'
     password = None
     realname = None
@@ -509,13 +511,13 @@ class IRCClient(basic.LineReceiver):
     def dccResume(self, user, fileName, port, resumePos):
         """Send a DCC RESUME request to another user."""
         self.ctcpMakeQuery(user, [
-            ('DCC', ['SEND', 'RESUME', fileName, port, resumePos])])
+            ('DCC', ['RESUME', fileName, port, resumePos])])
 
     def dccAcceptResume(self, user, fileName, port, resumePos):
         """Send a DCC ACCEPT response to clients who have requested a resume.
         """
         self.ctcpMakeQuery(user, [
-            ('DCC', ['SEND', 'ACCEPT', fileName, port, resumePos])])
+            ('DCC', ['ACCEPT', fileName, port, resumePos])])
 
     ### server->client messages
     ### You might want to fiddle with these,
@@ -780,13 +782,6 @@ class IRCClient(basic.LineReceiver):
         data = text.splitQuoted(data)
         if len(data) < 3:
             raise IRCBadMessage, "malformed DCC SEND request: %r" % (data,)
-
-        dcctype = data[0].upper()
-        if dcctype in ('RESUME', 'ACCEPT'):
-            handler = getattr(self, 'dcc_SEND_' + dcctype, None)
-            data.pop()
-            handler(user, channel, data)
-            return
 
         (filename, address, port) = data[:3]
 
