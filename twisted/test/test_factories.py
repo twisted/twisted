@@ -73,12 +73,12 @@ class ReconnectingFactoryTestCase(unittest.TestCase):
         PORT = port.getHost()[2]
         reactor.connectTCP('localhost', PORT, c)
         
-        howLong = 500
+        howLong = 1000
         while howLong and len(f.allMessages) != 2:
             howLong -= 1
             reactor.iterate(0.1)
         
-        self.failIf(c.continueTrying, "stopTrying never called or ineffective")
-        self.assertEquals(f.connections, 2, "Number of successful connections incorrect")
+        self.assertEquals(f.connections, 2,
+                          "Number of successful connections incorrect")
         self.assertEquals(f.allMessages, [Out.msgs] * 2)
-        
+        self.failIf(c.continueTrying, "stopTrying never called or ineffective")
