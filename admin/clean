@@ -6,4 +6,4 @@ if [ -x /usr/bin/fakeroot ]; then fakeroot debian/rules clean;fi > /dev/null
 rm -rf _trial_temp
 find . -name ".#*" | xargs rm -f
 rm -f twisted/test/myrebuilder.py
-rm -rf doc/api/private doc/api/public
+rm -rf doc/api/private doc/api/public doc/api/epydoc.css
