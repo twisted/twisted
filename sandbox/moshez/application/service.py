@@ -145,9 +145,7 @@ class MultiService(Service):
 
 
 class IProcess:
-
-    def getID(self):
-        pass
+    pass
 
 
 class Process:
@@ -163,9 +161,6 @@ class Process:
             if gid is None:
                 gid = os.getgid()
             self.gid = gid
-
-    def getID(self):
-        return self.uid, self.gid
     
 
 class Application(components.Componentized):
