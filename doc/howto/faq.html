@@ -218,6 +218,11 @@ is common to get a rather opaque error like so:</p>
 Failed to load application: global name 'initRun' is not defined
 </pre>
 
+<p>The rest of the error will try to explain how to solve this problem,
+but a short comment first: this error is indeed terse -- but there is
+probably more data available elsewhere -- namely, the <code>twistd.log</code>
+file. Open it up to see the full exception.</p>
+
 <p>To load a <code>.tap</code> file, as with any unpickling operation, all
 the classes used by all the objects inside it must be accessible at the time
 of the reload. This may require the PYTHONPATH variable to have the same
