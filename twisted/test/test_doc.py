@@ -9,7 +9,7 @@ import setup
 
 def errorInFile(f, line=17, name=''):
     """Return a filename formatted so emacs will recognize it as an error point
-    
+
     @param line: Line number in file.  Defaults to 17 because that's about how
         long the copyright headers are.
     """
@@ -25,7 +25,6 @@ class DocCoverage(unittest.TestCase):
 
     def test_modules(self):
         """Looking for docstrings in all modules."""
-        raise unittest.SkipTest, "Remove this line when you feel like writing docstrings."
         docless = []
         for packageName in self.packageNames:
             if packageName in ('twisted.test',):
@@ -85,3 +84,7 @@ class DocCoverage(unittest.TestCase):
         del package
         self.failIf(docless, "No docstrings for package files\n"
                     "%s" % ('\n'.join(map(errorInFile, docless),)))
+
+
+    # This test takes a while and doesn't come close to passing.  :(
+    test_modules.skip = "Activate me when you feel like writing docstrings."
