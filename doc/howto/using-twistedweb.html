@@ -10,296 +10,6 @@
 <body>
 <h1>Configuring and Using the Twisted.Web Server</h1>
 
-<h2>Installation</h2>
-
-<p> To install the Twisted.Web server, you'll need to have
-<a href="installing-twisted.html">installed Twisted</a>.</p>
-
-<p> Twisted servers, like the web server, do not have configuration files.  Instead, you instantiate the server and store it into a 'Pickle' file, <code>web.tap</code>.  This file will then be loaded by the Twisted Daemon.   </p>
-
-<pre class="shell">
-% mktap web --path /path/to/web/content
-</pre>
-
-<p> If you just want to serve content from your own home directory, the following will do:  </p>
-
-<pre class="shell">
-% mktap web --path ~/public_html/
-</pre>
-
-<p> Some other configuration options are available as well:  </p>
-
-<ul>
-  <li> <code>--port</code>: Specify the port for the web 
-       server to listen on.  This defaults to 8080.  </li>
-  <li> <code>--logfile</code>: Specify the path to the
-       log file. </li>
-</ul>
-
-<p> The full set of options that are available can be seen with:  </p>
-
-<pre class="shell">
-% mktap web --help
-</pre>
-
-
-<h2>Using Twisted.Web</h2>
-
-<h3>Stopping and Starting the Server</h3>
-
-<p> Once you've created your <code>web.tap</code> file and done any configuration, you can start the server:  </p>
-
-<pre class="shell">
-% twistd -f web.tap
-</pre>
-
-<p> You can stop the server at any time by going back to the directory you started it in and running the command: </p>
-
-<pre class="shell">
-% kill `cat twistd.pid`
-</pre>
-
-<h3>Serving Flat HTML</h3>
-
-<p> Twisted.Web serves flat HTML files just as it does any other flat file.  </p>
-
-<a name="ResourceScripts" />
-<h3>Resource Scripts</h3>
-
-<p> A Resource script is a Python file ending with the extension <code>.rpy</code>, which is required to create an instance of a (subclass of a) <code class="API">twisted.web.resource.Resource</code>. </p>
-
-<p> Resource scripts have 3 special variables: </p>
-
-<ul>
-  <li> <code class="py-src-identifier">__file__</code>: The name of the .rpy file, including the full path.  This variable is automatically defined and present within the namespace.  </li>
-  <li> <code class="py-src-identifier">registry</code>: An object of class <code class="API" base="twisted.web">static.Registry</code>. It can be used to access and set persistent data keyed by a class.</li>
-  <li> <code class="py-src-identifier">resource</code>: The variable which must be defined by the script and set to the resource instance that will be used to render the page. </li>
-</ul>
-
-<p> A very simple Resource Script might look like:  </p>
-
-<pre class="python">
-from twisted.web import resource
-class MyGreatResource(resource.Resource):
-    def render(self, request):
-        return "&lt;html&gt;foo&lt;/html&gt;"
-
-resource = MyGreatResource()
-</pre>
-
-<p> A slightly more complicated resource script, which accesses some
-persistent data, might look like:</p>
-
-<pre class="python">
-from twisted.web import resource
-from SillyWeb import Counter
-
-counter = registry.getComponent(Counter)
-if not counter:
-   registry.setComponent(Counter, Counter())
-counter = registry.getComponent(Counter)
-
-class MyResource(resource.Resource):
-    def render(self, request):
-        counter.increment()
-        return "you are visitor %d" % counter.getValue()
-
-resource = MyResource()
-</pre>
-
-<p> This is assuming you have the <code>SillyWeb.Counter</code> module,
-implemented something like the following:</p>
-
-<pre class="python">
-class Counter:
-
-    def __init__(self):
-        self.value = 0
-
-    def increment(self):
-        self.value += 1
-
-    def getValue(self):
-        return self.value
-</pre>
-
-<h3>Woven</h3>
-
-<p>
-The Woven API is an advanced system for giving web UIs to your
-application with something resembling MVC and templates.  See <a
-href="woven.html">its documentation</a> for more details.
-</p>
-
-<a name="SpreadableWebServers" />
-<h3>Spreadable Web Servers</h3>
-
-<p> One of the most interesting applications of Twisted.Web is the distributed webserver; multiple servers can all answer requests on the same port, using the <code class="API">twisted.spread</code> package for <q>spreadable</q> computing.  In two different directories, run the commands:  </p>
-
-<pre class="shell">
-% mktap web --user
-% mktap web --personal [other options, if you desire]
-</pre>
-
-<p> Both of these create a <code>web.tap</code>; you need to run both at the same time.  Once you have, go to <code>http://localhost:8080/your_username.twistd/</code> -- you will see the front page from the server you created with the <code>--personal</code> option.  What's happening here is that the request you've sent is being relayed from the central (User) server to your own (Personal) server, over a PB connection.  This technique can be highly useful for small <q>community</q> sites; using the code that makes this demo work, you can connect one HTTP port to multiple resources running with different permissions on the same machine, on different local machines, or even over the internet to a remote site.  </p>
-
-
-<h3>Serving PHP/Perl/CGI</h3>
-
-<p>Everything related to CGI is located in the
-<code>twisted.web.twcgi</code>, and it's here you'll find the classes that you
-need to subclass in order to support the language of your (or somebody elses)
-taste. You'll also need to create your own kind of resource if you are using a
-non-unix operatingsystem (such as Windows), or if the default resources has
-wrong pathnames to the parsers.</p>
-
-<p>The following snippet is a .rpy that serves perl-files. Look at <code>twisted.web.twcgi</code>
-for more examples regarding twisted.web and CGI.</p>
-
-<pre class="python">
-from twisted.web import static, twcgi
-
-class PerlScript(twcgi.FilteredScript):
-    filter = '/usr/bin/perl' # Points to the perl parser
-
-resource = static.File("/perlsite") # Points to the perl website
-resource.processors = {".pl": PerlScript} # Files that end with .pl will be
-                                          # processed by PerlScript
-resource.indexNames = ['index.pl']
-</pre>
-
-<h3>Using VHostMonster</h3>
-
-<p>It is common to use one server (for example, Apache) on a site with multiple
-names which then uses reverse proxy (in Apache, via <code>mod_proxy</code>) to different
-internal web servers, possibly on different machines. However, naive 
-configuration causes miscommunication: the internal server firmly believes it
-is running on <q>internal-name:port</q>, and will generate URLs to that effect,
-which will be completely wrong when received by the client.</p>
-
-<p>While Apache has the ProxyPassReverse directive, it is really a hack
-and is nowhere near comprehensive enough. Instead, the recommended practice
-in case the internal web server is Twisted.Web is to use VHostMonster.</p>
-
-<p>From the Twisted side, using VHostMonster is easy: just drop a file named
-(for example) <code>vhost.rpy</code> containing the following:</p>
-
-<pre class="python">
-from twisted.web import vhost
-resource = vhost.VHostMonsterResource()
-</pre>
-
-<p>Of course, an equivalent <code>.trp</code> can also be used. Make sure
-the web server is configured with the correct processors for the 
-<code>rpy</code> or <code>trp</code> extensions (the web server 
-<code>mktap web --path</code> generates by default is so configured).</p>
-
-<p>From the Apache side, instead of using the following ProxyPass directive:</p>
-
-<pre>
-&lt;VirtualHost ip-addr&gt;
-ProxyPass / http://localhost:8538/
-ServerName example.com
-&lt;/VirtualHost&gt;
-</pre>
-
-<p>Use the following directive:</p>
-
-<pre>
-&lt;VirtualHost ip-addr&gt;
-ProxyPass / http://localhost:8538/vhost.rpy/http/example.com:80/
-ServerName example.com
-&lt;/VirtualHost&gt;
-</pre>
-
-<p>Here is an example for Twisted.Web's reverse proxy:</p>
-
-<pre class="python">
-from twisted.internet import app
-from twisted.web import proxy, server, vhost
-vhostName = 'example.com'
-reverseProxy = proxy.ReverseProxyResource('internal', 8538,
-                                          '/vhost.rpy/http/'+vhostName+'/')
-root = vhost.NamedVirtualHost()
-root.addHost(vhostName, reverseProxy)
-site = server.Site(root)
-application = app.Application('web-proxy')
-application.listenTCP(80, site)
-</pre>
-
-<h2>Rewriting URLs</h2>
-
-<p>Sometimes it is convenient to modify the content of the 
-<code class="API" base="twisted.web.server">Request</code> object
-before passing it on. Because this is most often used to rewrite
-either the URL, the similarity to Apache's <code>mod_rewrite</code> has
-inspired the <code class="API">twisted.web.rewrite</code> module. Using
-this module is done via wrapping a resource with a
-<code class="API">twisted.web.rewrite.RewriterResource</code> which
-then has rewrite rules. Rewrite rules are functions which accept a request
-object, and possible modify it. After all rewrite rules run, the child
-resolution chain continues as if the wrapped resource, rather than
-the <code class="API" base="twisted.web.rewrite">RewriterResource</code>,
-was the child.</p>
-
-<p>Here is an example, using the only rule currently supplied by Twisted
-itself:</p>
-
-<pre class="python">
-default_root = rewrite.RewriterResource(default, rewrite.tildeToUsers)
-</pre>
-
-<p>This causes the URL <code>/~foo/bar.html</code> to be treated like
-<code>/users/foo/bar.html</code>. If done after setting default's
-<code>users</code> child to a
-<code class="API" base="twisted.web">distrib.UserDirectory</code>,
-it gives a configuration similar to the classical configuration of
-web server, common since the first NCSA servers.</p>
-
-<h2>Knowing When We're Not Wanted</h2>
-
-<p>Sometimes it is useful to know when the other side has broken the connection.
-Here is an example which does that:</p>
-
-<pre class="python">
-from twisted.web.resource import Resource
-from twisted.web import server
-from twisted.internet import reactor
-from twisted.python.util import println
-
-
-class ExampleResource(Resource):
-
-    def render(self, request):
-        request.write("hello world")
-        d = request.notifyFinish()
-        d.addCallback(lambda _: println("finished normally"))
-        d.addErrback(println, "error")
-        reactor.callLater(10, request.finish)
-        return server.NOT_DONE_YET
-
-resource = ExampleResource()
-</pre>
-
-<p>This will allow us to run statistics on the log-file to see how many users
-are frustrated after merely 10 seconds.</p>
-
-<h2>As-Is Serving</h2>
-
-<p>Sometimes, you want to be able to send headers and status directly. While
-you can do this with a
-<code base="twisted.web.script" class="API">ResourceScript</code>, an easier
-way is to use <code base="twisted.web.static" class="API">AsIsProcessor</code>.
-Use it by, for example, addding it as a processor for the <code>.asis</code>
-extension. Here is a sample file:</p>
-
-<pre>
-HTTP/1.0 200 OK
-Content-Type: text/html
-
-Hello world
-</pre>
-
 <h2>Twisted Web Development</h2><a name="development" />
 
 <p>Twisted Web serves python objects that implement the interface 
@@ -625,6 +335,299 @@ application = app.Application('web')
 
 for num in map(int, open("/etc/web/ports").read().split()):
     application.listenTCP(num, server.Site(root))
+</pre>
+
+
+<h2>Installing a pre-configured server</h2>
+
+<p>In many cases, you'll end up repeating common usage patterns of twisted.web. In those cases you'll probably want to use Twisted's pre-configured web server setup.</p>
+
+<p> To install the Twisted.Web server, you'll need to have
+<a href="installing-twisted.html">installed Twisted</a>.</p>
+
+<p> Pre-configured Twisted servers, like the web server, do not have configuration files.  Instead, you instantiate the server and store it into a 'Pickle' file, <code>web.tap</code>.  This file will then be loaded by the Twisted Daemon.   </p>
+
+<pre class="shell">
+% mktap web --path /path/to/web/content
+</pre>
+
+<p> If you just want to serve content from your own home directory, the following will do:  </p>
+
+<pre class="shell">
+% mktap web --path ~/public_html/
+</pre>
+
+<p> Some other configuration options are available as well:  </p>
+
+<ul>
+  <li> <code>--port</code>: Specify the port for the web 
+       server to listen on.  This defaults to 8080.  </li>
+  <li> <code>--logfile</code>: Specify the path to the
+       log file. </li>
+</ul>
+
+<p> The full set of options that are available can be seen with:  </p>
+
+<pre class="shell">
+% mktap web --help
+</pre>
+
+
+<h2>Using Twisted.Web</h2>
+
+<h3>Stopping and Starting the Server</h3>
+
+<p> Once you've created your <code>web.tap</code> file and done any configuration, you can start the server:  </p>
+
+<pre class="shell">
+% twistd -f web.tap
+</pre>
+
+<p> You can stop the server at any time by going back to the directory you started it in and running the command: </p>
+
+<pre class="shell">
+% kill `cat twistd.pid`
+</pre>
+
+<h3>Serving Flat HTML</h3>
+
+<p> Twisted.Web serves flat HTML files just as it does any other flat file.  </p>
+
+<a name="ResourceScripts" />
+<h3>Resource Scripts</h3>
+
+<p> A Resource script is a Python file ending with the extension <code>.rpy</code>, which is required to create an instance of a (subclass of a) <code class="API">twisted.web.resource.Resource</code>. </p>
+
+<p> Resource scripts have 3 special variables: </p>
+
+<ul>
+  <li> <code class="py-src-identifier">__file__</code>: The name of the .rpy file, including the full path.  This variable is automatically defined and present within the namespace.  </li>
+  <li> <code class="py-src-identifier">registry</code>: An object of class <code class="API" base="twisted.web">static.Registry</code>. It can be used to access and set persistent data keyed by a class.</li>
+  <li> <code class="py-src-identifier">resource</code>: The variable which must be defined by the script and set to the resource instance that will be used to render the page. </li>
+</ul>
+
+<p> A very simple Resource Script might look like:  </p>
+
+<pre class="python">
+from twisted.web import resource
+class MyGreatResource(resource.Resource):
+    def render(self, request):
+        return "&lt;html&gt;foo&lt;/html&gt;"
+
+resource = MyGreatResource()
+</pre>
+
+<p> A slightly more complicated resource script, which accesses some
+persistent data, might look like:</p>
+
+<pre class="python">
+from twisted.web import resource
+from SillyWeb import Counter
+
+counter = registry.getComponent(Counter)
+if not counter:
+   registry.setComponent(Counter, Counter())
+counter = registry.getComponent(Counter)
+
+class MyResource(resource.Resource):
+    def render(self, request):
+        counter.increment()
+        return "you are visitor %d" % counter.getValue()
+
+resource = MyResource()
+</pre>
+
+<p> This is assuming you have the <code>SillyWeb.Counter</code> module,
+implemented something like the following:</p>
+
+<pre class="python">
+class Counter:
+
+    def __init__(self):
+        self.value = 0
+
+    def increment(self):
+        self.value += 1
+
+    def getValue(self):
+        return self.value
+</pre>
+
+<h3>Woven</h3>
+
+<p>
+The Woven API is an advanced system for giving web UIs to your
+application with something resembling MVC and templates.  See <a
+href="woven.html">its documentation</a> for more details.
+</p>
+
+<a name="SpreadableWebServers" />
+<h3>Spreadable Web Servers</h3>
+
+<p> One of the most interesting applications of Twisted.Web is the distributed webserver; multiple servers can all answer requests on the same port, using the <code class="API">twisted.spread</code> package for <q>spreadable</q> computing.  In two different directories, run the commands:  </p>
+
+<pre class="shell">
+% mktap web --user
+% mktap web --personal [other options, if you desire]
+</pre>
+
+<p> Both of these create a <code>web.tap</code>; you need to run both at the same time.  Once you have, go to <code>http://localhost:8080/your_username.twistd/</code> -- you will see the front page from the server you created with the <code>--personal</code> option.  What's happening here is that the request you've sent is being relayed from the central (User) server to your own (Personal) server, over a PB connection.  This technique can be highly useful for small <q>community</q> sites; using the code that makes this demo work, you can connect one HTTP port to multiple resources running with different permissions on the same machine, on different local machines, or even over the internet to a remote site.  </p>
+
+
+<h3>Serving PHP/Perl/CGI</h3>
+
+<p>Everything related to CGI is located in the
+<code>twisted.web.twcgi</code>, and it's here you'll find the classes that you
+need to subclass in order to support the language of your (or somebody elses)
+taste. You'll also need to create your own kind of resource if you are using a
+non-unix operatingsystem (such as Windows), or if the default resources has
+wrong pathnames to the parsers.</p>
+
+<p>The following snippet is a .rpy that serves perl-files. Look at <code>twisted.web.twcgi</code>
+for more examples regarding twisted.web and CGI.</p>
+
+<pre class="python">
+from twisted.web import static, twcgi
+
+class PerlScript(twcgi.FilteredScript):
+    filter = '/usr/bin/perl' # Points to the perl parser
+
+resource = static.File("/perlsite") # Points to the perl website
+resource.processors = {".pl": PerlScript} # Files that end with .pl will be
+                                          # processed by PerlScript
+resource.indexNames = ['index.pl']
+</pre>
+
+<h3>Using VHostMonster</h3>
+
+<p>It is common to use one server (for example, Apache) on a site with multiple
+names which then uses reverse proxy (in Apache, via <code>mod_proxy</code>) to different
+internal web servers, possibly on different machines. However, naive 
+configuration causes miscommunication: the internal server firmly believes it
+is running on <q>internal-name:port</q>, and will generate URLs to that effect,
+which will be completely wrong when received by the client.</p>
+
+<p>While Apache has the ProxyPassReverse directive, it is really a hack
+and is nowhere near comprehensive enough. Instead, the recommended practice
+in case the internal web server is Twisted.Web is to use VHostMonster.</p>
+
+<p>From the Twisted side, using VHostMonster is easy: just drop a file named
+(for example) <code>vhost.rpy</code> containing the following:</p>
+
+<pre class="python">
+from twisted.web import vhost
+resource = vhost.VHostMonsterResource()
+</pre>
+
+<p>Of course, an equivalent <code>.trp</code> can also be used. Make sure
+the web server is configured with the correct processors for the 
+<code>rpy</code> or <code>trp</code> extensions (the web server 
+<code>mktap web --path</code> generates by default is so configured).</p>
+
+<p>From the Apache side, instead of using the following ProxyPass directive:</p>
+
+<pre>
+&lt;VirtualHost ip-addr&gt;
+ProxyPass / http://localhost:8538/
+ServerName example.com
+&lt;/VirtualHost&gt;
+</pre>
+
+<p>Use the following directive:</p>
+
+<pre>
+&lt;VirtualHost ip-addr&gt;
+ProxyPass / http://localhost:8538/vhost.rpy/http/example.com:80/
+ServerName example.com
+&lt;/VirtualHost&gt;
+</pre>
+
+<p>Here is an example for Twisted.Web's reverse proxy:</p>
+
+<pre class="python">
+from twisted.internet import app
+from twisted.web import proxy, server, vhost
+vhostName = 'example.com'
+reverseProxy = proxy.ReverseProxyResource('internal', 8538,
+                                          '/vhost.rpy/http/'+vhostName+'/')
+root = vhost.NamedVirtualHost()
+root.addHost(vhostName, reverseProxy)
+site = server.Site(root)
+application = app.Application('web-proxy')
+application.listenTCP(80, site)
+</pre>
+
+<h2>Rewriting URLs</h2>
+
+<p>Sometimes it is convenient to modify the content of the 
+<code class="API" base="twisted.web.server">Request</code> object
+before passing it on. Because this is most often used to rewrite
+either the URL, the similarity to Apache's <code>mod_rewrite</code> has
+inspired the <code class="API">twisted.web.rewrite</code> module. Using
+this module is done via wrapping a resource with a
+<code class="API">twisted.web.rewrite.RewriterResource</code> which
+then has rewrite rules. Rewrite rules are functions which accept a request
+object, and possible modify it. After all rewrite rules run, the child
+resolution chain continues as if the wrapped resource, rather than
+the <code class="API" base="twisted.web.rewrite">RewriterResource</code>,
+was the child.</p>
+
+<p>Here is an example, using the only rule currently supplied by Twisted
+itself:</p>
+
+<pre class="python">
+default_root = rewrite.RewriterResource(default, rewrite.tildeToUsers)
+</pre>
+
+<p>This causes the URL <code>/~foo/bar.html</code> to be treated like
+<code>/users/foo/bar.html</code>. If done after setting default's
+<code>users</code> child to a
+<code class="API" base="twisted.web">distrib.UserDirectory</code>,
+it gives a configuration similar to the classical configuration of
+web server, common since the first NCSA servers.</p>
+
+<h2>Knowing When We're Not Wanted</h2>
+
+<p>Sometimes it is useful to know when the other side has broken the connection.
+Here is an example which does that:</p>
+
+<pre class="python">
+from twisted.web.resource import Resource
+from twisted.web import server
+from twisted.internet import reactor
+from twisted.python.util import println
+
+
+class ExampleResource(Resource):
+
+    def render(self, request):
+        request.write("hello world")
+        d = request.notifyFinish()
+        d.addCallback(lambda _: println("finished normally"))
+        d.addErrback(println, "error")
+        reactor.callLater(10, request.finish)
+        return server.NOT_DONE_YET
+
+resource = ExampleResource()
+</pre>
+
+<p>This will allow us to run statistics on the log-file to see how many users
+are frustrated after merely 10 seconds.</p>
+
+<h2>As-Is Serving</h2>
+
+<p>Sometimes, you want to be able to send headers and status directly. While
+you can do this with a
+<code base="twisted.web.script" class="API">ResourceScript</code>, an easier
+way is to use <code base="twisted.web.static" class="API">AsIsProcessor</code>.
+Use it by, for example, addding it as a processor for the <code>.asis</code>
+extension. Here is a sample file:</p>
+
+<pre>
+HTTP/1.0 200 OK
+Content-Type: text/html
+
+Hello world
 </pre>
 
 </body>
