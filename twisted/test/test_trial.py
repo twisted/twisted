@@ -147,16 +147,14 @@ class ChProcessProtoocol(protocol.ProcessProtocol):
 
 class SpawningMixin:
     def spawnChild(self, args):
-        PYTHON = sys.executable
         TRIAL = procutils.which('trial')[0]
 
         env = {}
         env['PATH'] = os.environ.get('PATH', '')
-        env['PYTHONPATH'] = os.environ.get('PYTHONPATH', '')
 
         done = defer.Deferred()
         self.cpp = ChProcessProtoocol(done)
-        self.process = reactor.spawnProcess(self.cpp, PYTHON, args, env)
+        self.process = procutils.spawnPythonProcess(self.cpp, args, env)
         return done
 
 
