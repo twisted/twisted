@@ -26,6 +26,7 @@ efficient, but it's good for easy debugging.
 
 import os
 import types
+import base64
 _open = __builtins__['open']
 
 class DirDBM:
@@ -39,12 +40,23 @@ class DirDBM:
         self.dname = os.path.abspath(name)
         if not os.path.isdir(self.dname):
             os.mkdir(self.dname)
-        
+    
+    def _encode(self, k):
+        """Encode a key so it can be used as a filename.
+        """
+        return base64.encodestring(k)
+    
+    def _decode(self, k):
+        """Decode a filename to get the key.
+        """
+        return base64.decodestring(k)
+    
     def __setitem__(self, k, v):
         """dirdbm[foo] = bar; create or modify a textfile in this directory
         """
         assert type(k) == types.StringType
         assert type(v) == types.StringType
+        k = self._encode(k)
         f = _open(os.path.join(self.dname, k),'wb')
         f.write(v)
         f.flush()
@@ -54,6 +66,7 @@ class DirDBM:
         """dirdbm[foo]; get the contents of a file in this directory as a string
         """
         assert type(k) == types.StringType
+        k = self._encode(k)
         try:    return _open(os.path.join(self.dname, k)).read()
         except: raise KeyError(k)
 
@@ -61,13 +74,14 @@ class DirDBM:
         """del dirdbm[foo]; delete a file in this directory
         """
         assert type(k) == types.StringType
+        k = self._encode(k)
         try:    os.remove(os.path.join(self.dname, k))
         except: raise KeyError(k)
 
     def keys(self):
         """dirdbm.keys(); return a list of filenames
         """
-        return os.listdir(self.dname)
+        return map(self._decode, os.listdir(self.dname))
 
     def values(self):
         """dirdbm.values(); return a list of file-contents
@@ -85,11 +99,13 @@ class DirDBM:
         keys = self.keys()
         for key in keys:
             items.append((key, self[key]))
+        return items
 
     def has_key(self, key):
         """dirdbm.has_key(key); return whether the file `key' exists.
         """
         assert type(key) == types.StringType
+        key = self._encode(key)
         return os.path.isfile(os.path.join(self.dname, key))
     
     def update(self, dict):
