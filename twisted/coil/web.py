@@ -117,10 +117,12 @@ class AppConfiguratorPage(widgets.Presentation):
         subIndent = indentLevel + 1
         for name, entity in collection.listStaticEntities():
             collection = coil.getCollection(entity)
-            if collection is not None:
+            configurator = coil.getConfigurator(entity)
+            if collection or configurator:
                 write('%s + <a href="%s/%s">%s</a> <br>' %
                       (indentLevel * '&nbsp;', inPath, name, name))
-                self.displayTreeElement(write, name, '%s/%s' % (inPath, name), collection, subIndent)
+                if collection:
+                    self.displayTreeElement(write, name, '%s/%s' % (inPath, name), collection, subIndent)
             else:
                 write("%s. %s <br>" % (subIndent * '&nbsp;', name))
 
