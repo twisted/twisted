@@ -956,6 +956,10 @@ class NewCredTestCase(unittest.TestCase):
     
     def testLoginLogout(self):
         factory = pb.PBClientFactory()
+        # NOTE: real code probably won't need anything where we have the "BRAINS!"
+        # argument, passing None is fine. We just do it here to test that it is
+        # being passed. It is used to give additional info to the realm to aid
+        # perspective creation, if you don't need that, ignore it.
         d = factory.login(credentials.UsernamePassword("user", "pass"), "BRAINS!")
         reactor.connectTCP("127.0.0.1", self.portno, factory)
         p = dR(d)
