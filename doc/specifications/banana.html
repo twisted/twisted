@@ -41,7 +41,10 @@
 
     <dl>
       <dt>List -- 0x80</dt>
-      <dd>The following N bytes are a list of elements.</dd>
+      
+      <dd>The following bytes are a list of N elements.  Lists may be nested,
+        and a child list counts as only one element to its parent (regardless
+        of how many elements the child list contains). </dd>
 
       <dt>Integer -- 0x81</dt>
       <dd>The value of this element is the positive integer N. Following bytes are not part of this element. Integers can have values of 0 &lt;= N &lt;= 2147483647.</dd>
