@@ -2343,7 +2343,7 @@ class IMAP4Client(basic.LineReceiver):
 
         This command is allowed in the Selected state.
 
-        @type messages: C{str}
+        @type messages: C{MessageSet} or C{str}
         @param messages: A message sequence set
 
         @rtype: C{Deferred}
@@ -2360,7 +2360,7 @@ class IMAP4Client(basic.LineReceiver):
 
         This command is allowed in the Selected state.
 
-        @type messages: C{MessageSet}
+        @type messages: C{MessageSet} or C{str}
         @param messages: The messages for which to retrieve flags.
 
         @type uid: C{bool}
@@ -2381,7 +2381,7 @@ class IMAP4Client(basic.LineReceiver):
 
         This command is allowed in the Selected state.
 
-        @type messages: C{MessageSet}
+        @type messages: C{MessageSet} or C{str}
         @param messages: The messages for which to retrieve the internal date.
 
         @type uid: C{bool}
@@ -2403,7 +2403,7 @@ class IMAP4Client(basic.LineReceiver):
 
         This command is allowed in the Selected state.
 
-        @type messages: C{MessageSet}
+        @type messages: C{MessageSet} or C{str}
         @param messages: The messages for which to retrieve envelope data.
 
         @type uid: C{bool}
@@ -2430,7 +2430,7 @@ class IMAP4Client(basic.LineReceiver):
 
         This command is allowed in the Selected state.
 
-        @type messages: C{MessageSet}
+        @type messages: C{MessageSet} or C{str}
         @param messages: The messages for which to retrieve body structure
         data.
 
@@ -2460,7 +2460,7 @@ class IMAP4Client(basic.LineReceiver):
 
         This command is allowed in the Selected state.
 
-        @type messages: C{str}
+        @type messages: C{MessageSet} or C{str}
         @param messages: A message sequence set
 
         @type uid: C{bool}
@@ -2483,7 +2483,7 @@ class IMAP4Client(basic.LineReceiver):
 
         This command is allowed in the Selected state.
 
-        @type messages: C{str}
+        @type messages: C{MessageSet} or C{str}
         @param messages: A message sequence set
 
         @type uid: C{bool}
@@ -2504,7 +2504,7 @@ class IMAP4Client(basic.LineReceiver):
 
         This command is allowed in the Selected state.
 
-        @type messages: C{str}
+        @type messages: C{MessageSet} or C{str}
         @param messages: A message sequence set
 
         @type uid: C{bool}
@@ -2525,7 +2525,7 @@ class IMAP4Client(basic.LineReceiver):
 
         This command is allowed in the Selected state.
 
-        @type messages: C{str}
+        @type messages: C{MessageSet} or C{str}
         @param messages: A message sequence set
 
         @type uid: C{bool}
@@ -2546,7 +2546,7 @@ class IMAP4Client(basic.LineReceiver):
 
         This command is allowed in the Selected state.
 
-        @type messages: C{str}
+        @type messages: C{MessageSet} or C{str}
         @param messages: A message sequence set
 
         @type uid: C{bool}
@@ -2570,7 +2570,7 @@ class IMAP4Client(basic.LineReceiver):
         C{fetchSize}, C{fetchEnvelope}, and C{fetchSimplifiedBody}
         functions.
 
-        @type messages: C{str}
+        @type messages: C{MessageSet} or C{str}
         @param messages: A message sequence set
 
         @type uid: C{bool}
@@ -2597,7 +2597,7 @@ class IMAP4Client(basic.LineReceiver):
         to issuing all of the C{fetchFlags}, C{fetchInternalDate},
         C{fetchSize}, and C{fetchEnvelope} functions.
 
-        @type messages: C{str}
+        @type messages: C{MessageSet} or C{str}
         @param messages: A message sequence set
 
         @type uid: C{bool}
@@ -2624,7 +2624,7 @@ class IMAP4Client(basic.LineReceiver):
         to issuing all of the C{fetchFlags}, C{fetchInternalDate}, and
         C{fetchSize} functions.
 
-        @type messages: C{str}
+        @type messages: C{MessageSet} or C{str}
         @param messages: A message sequence set
 
         @type uid: C{bool}
@@ -2673,7 +2673,7 @@ class IMAP4Client(basic.LineReceiver):
                       offset=None, length=None):
         """Retrieve a specific section of one or more messages
 
-        @type messages: C{str}
+        @type messages: C{MessageSet} or C{str}
         @param messages: A message sequence set
 
         @type uid: C{bool}
@@ -3879,7 +3879,7 @@ class IMailbox(components.Interface):
     def fetch(self, messages, uid):
         """Retrieve one or more messages.
 
-        @type messages: A MessageSet object with the list of messages requested
+        @type messages: C{MessageSet}
         @param messages: The identifiers of messages to retrieve information
         about
 
