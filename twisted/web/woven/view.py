@@ -21,6 +21,7 @@ from __future__ import nested_scopes
 import interfaces
 import template
 import utils
+import controller
 from utils import doSendPage, Stack
 import model
 
@@ -59,7 +60,7 @@ class View(template.DOMTemplate):
         """
         self.model = self.mainModel = model.adaptToIModel(m, None, None)
         if self.setupStacks:
-            self.modelStack = Stack([self.model])
+            self.model.modelStack = Stack([self.model])
             self.setupViewStack()
             self.subviews = {}
             self.currentId = 0
@@ -67,10 +68,6 @@ class View(template.DOMTemplate):
                 self.controller = controller
             else:
                 self.controller = self.controllerFactory(self.model)
-            if self.controller:
-                self.controllerStack = self.controller.controllerStack
-            else:
-                self.controllerStack = Stack([])
             if doneCallback is None:
                 self.doneCallback = doSendPage
             else:
@@ -91,6 +88,8 @@ class View(template.DOMTemplate):
         self.viewStack.push(namespace)
 
     def render(self, request, doneCallback=None, block=None):
+        if self.controller is None:
+            self.controller = controller.Controller(self.model)
         if doneCallback is not None:
             self.doneCallback = doneCallback
         else:
@@ -130,7 +129,6 @@ class View(template.DOMTemplate):
 
     def setController(self, controller):
         self.controller = controller
-        self.controllerStack = controller.controllerStack
 
     def setNode(self, node):
         self.node = node
@@ -147,9 +145,9 @@ class View(template.DOMTemplate):
         parent = None
         if submodel:
             if submodel == '.':
-                m = self.modelStack.peek()
+                m = self.model.modelStack.peek()
             else:
-                for parent in self.modelStack:
+                for parent in self.model.modelStack:
                     if parent is None:
                         continue
                     m = parent.lookupSubmodel(submodel)
@@ -159,10 +157,11 @@ class View(template.DOMTemplate):
                 else:
                     raise Exception("Node had a model=%s "
                                   "attribute, but the submodel was not "
-                                  "found in %s." % (submodel, filter(lambda x: x, self.modelStack)))
+                                  "found in %s." % (submodel, 
+                                  filter(lambda x: x, self.model.modelStack.stack)))
         else:
             m = None
-        self.modelStack.push(m)
+        self.model.modelStack.push(m)
         if m:
             if parent is not m:
                 m.parent = parent
@@ -171,7 +170,7 @@ class View(template.DOMTemplate):
             return m
         #print `submodel`, self.getTopOfModelStack()
         if submodel:
-            return self.modelStack.peek()
+            return self.model.modelStack.peek()
         return None
 
     def getNodeController(self, request, node, submodel, model):
@@ -184,14 +183,14 @@ class View(template.DOMTemplate):
         controller = None
 
         if model is None:
-            model = self.modelStack.peek()
+            model = self.model.modelStack.peek()
 
         # Look up a controller factory.
         if controllerName:
             if not node.hasAttribute('name'):
                 warnings.warn("POTENTIAL ERROR: %s had a controller, but not a "
                               "'name' attribute." % node)
-            for namespace in self.controllerStack:
+            for namespace in self.controller.controllerStack:
                 if namespace is None:
                     continue
                 controller = namespace.getSubcontroller(request, node, model, controllerName)
@@ -201,9 +200,9 @@ class View(template.DOMTemplate):
                 raise NotImplementedError("You specified controller name %s on "
                                           "a node, but no factory_%s method "
                                           "was found in %s." % (controllerName,
-                                                            controllerName,
-                                                            filter(lambda x: x, self.controllerStack)
-                                                            + [input]))
+                                        controllerName,
+                                        filter(lambda x: x, self.controller.controllerStack.stack)
+                                        ))
         elif node.getAttribute("model"):
             # If no "controller" attribute was specified on the node, see if
             # there is a IController adapter registerred for the model.
@@ -252,7 +251,7 @@ class View(template.DOMTemplate):
         viewName = node.getAttribute('view')
 
         if model is None:
-            model = self.modelStack.peek()
+            model = self.model.modelStack.peek()
 
         # Look up a view factory.
         if viewName:
@@ -266,8 +265,8 @@ class View(template.DOMTemplate):
                 raise NotImplementedError("You specified view name %s on a "
                                           "node, but no factory_%s method was "
                                           "found in %s." % (viewName,
-                                                                   viewName,
-                                                                  filter(lambda x: x,self.viewStack)))
+                                          viewName,
+                                          filter(lambda x: x,self.viewStack.stack)))
         elif node.getAttribute("model"):
             # If no "view" attribute was specified on the node, see if there
             # is a IView adapter registerred for the model.
@@ -310,12 +309,16 @@ class View(template.DOMTemplate):
 
         if view or controller:
             if model is None:
-                model = self.modelStack.peek()
+                model = self.model.modelStack.peek()
             if not view or not isinstance(view, View):
-                view = widgets.DefaultWidget(model)
+                view = widgets.DefaultWidget(model, viewStack = self.viewStack.clone())
+            else:
+                view.viewStack = self.viewStack.clone()
             if not controller:
-                controller = input.DefaultHandler(model)
-            controller.parent = self.controllerStack[0]
+                controller = input.DefaultHandler(model, controllerStack = self.controller.controllerStack.clone())
+            else:
+                controller.controllerStack = self.controller.controllerStack.clone()
+            controller.parent = self.controller.controllerStack.peek()
 
             if not isinstance(view, widgets.DefaultWidget):
                 model.addView(view)
@@ -333,12 +336,10 @@ class View(template.DOMTemplate):
             # If a Widget was constructed directly with a model that so far
             # is not in modelspace, we should put it on the stack so other
             # Widgets below this one can find it.
-            if view.model is not self.modelStack.peek():
-                self.modelStack.poke(view.model)
+            if view.model is not self.model.modelStack.peek():
+                self.model.modelStack.poke(view.model)
 
-            view.modelStack = self.modelStack.clone()
-            view.viewStack = self.viewStack.clone()
-            view.controllerStack = self.controllerStack.clone()
+            model.modelStack = self.model.modelStack.clone()
 
             view.setController(controller)
             view.setNode(node)
@@ -348,12 +349,12 @@ class View(template.DOMTemplate):
             # xxx refactor this into a widget interface and check to see if the object implements IWidget
             # the view may be a deferred; this is why this check is required
             controller.setView(view)
-            controller._parent = self.controllerStack.peek()
+            controller._parent = self.controller.controllerStack.peek()
             controllerResult = controller.handle(request)
         else:
             controllerResult = (None, None)
 
-        self.controllerStack.push(controller)
+        self.controller.controllerStack.push(controller)
         self.viewStack.push(view)
         self.outstandingCallbacks += 1
         self.handleControllerResults(controllerResult, request, node,
@@ -379,9 +380,9 @@ class View(template.DOMTemplate):
         returnNode = self.dispatchResult(request, node, view)
         if not isinstance(returnNode, defer.Deferred):
             self.recurseChildren(request, returnNode)
-            self.modelStack.pop()
+            self.model.modelStack.pop()
             self.viewStack.pop()
-            self.controllerStack.pop()
+            self.controller.controllerStack.pop()
 
         if isCallback and not self.outstandingCallbacks:
             log.msg("Sending page from controller callback!")

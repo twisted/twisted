@@ -73,7 +73,7 @@ class Widget(view.View):
     # Don't do lots of work setting up my stacks; they will be passed to me
     setupStacks = 0
     tagName = None
-    def __init__(self, model = None, submodel = None, setup = None, controller = None):
+    def __init__(self, model = None, submodel = None, setup = None, controller = None, viewStack=None):
         self.errorFactory = Error
         self.controller = controller
         self.become = None
@@ -89,6 +89,7 @@ class Widget(view.View):
             self.setupMethods = [setup]
         else:
             self.setupMethods = []
+        self.viewStack = viewStack
         self.initialize()
 
     def _reset(self):
@@ -300,7 +301,7 @@ class Widget(view.View):
         mutator.d = request.d
         mutator.generate(request, oldNode)
         self.node = newNode
-        parent = self.parent; viewStack = self.viewStack; modelStack = self.modelStack; controllerStack = self.controllerStack
+        parent = self.parent; viewStack = self.viewStack; modelStack = self.model.modelStack; controllerStack = self.controller.controllerStack
         self.recurseChildren(request, newNode)
         return newNode
 

@@ -48,7 +48,14 @@ class InputHandler(controller.Controller):
     """
     invalidErrorText = "Error!"
     setupStacks = 0
-    def __init__(self, model, parent=None, check=None, commit = None, invalidErrorText = None, submodel=None):
+    def __init__(self, model, 
+                parent=None, 
+                check=None, 
+                commit = None, 
+                invalidErrorText = None, 
+                submodel=None,
+                controllerStack=None):
+        self.controllerStack = controllerStack
         controller.Controller.__init__(self, model)
         self._check = check
         self._commit = commit
