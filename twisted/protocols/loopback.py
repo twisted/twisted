@@ -108,7 +108,7 @@ def loopbackTCP(server, client, port=64124):
     serverPort = reactor.listenTCP(port, f, interface='127.0.0.1')
     reactor.iterate()
     clientF = LoopbackClientFactory(client)
-    reactor.connectTCP('127.0.0.1', port, clientF)
+    reactor.connectTCP('127.0.0.1', serverPort.getHost()[2], clientF)
     
     while not clientF.disconnected:
         reactor.iterate()
