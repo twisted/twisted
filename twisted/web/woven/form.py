@@ -248,8 +248,12 @@ class FormFillerWidget(widgets.Widget):
         values = self.getValues(request, model)
         if not values:
             p1, p2 = "", ""
-        else:
+        elif len(values) == 1:
+            p1, p2 = values, ""
+        elif len(values) == 2:
             p1, p2 = values
+        else:
+            p1, p2 = "", ""
         div = content.div()
         div.text("Password: ")
         div.input(type="password", size="20", name=model.name, value=str(p1))
