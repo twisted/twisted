@@ -1,3 +1,8 @@
+2003-12-31  Jp Calderone  <exarkun@twistedmatrix.com>
+
+	* twisted/protocols/ident.py: Client and server ident implementation
+	* twisted/test/test_ident.py: Test cases for ident protocol
+
 2003-12-29  Jp Calderone  <exarkun@twistedmatrix.com>
 
 	* twisted/spread/pb.py: Changed PBServerFactory to use "protocol"
