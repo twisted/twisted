@@ -31,6 +31,7 @@ class GuardSession(components.Componentized):
         self.uid = uid
         self.expireCallbacks = []
         self.setLifetime(60)
+        self.services = {}
         self.touch()
 
     def _getSelf(self, interface=None):
@@ -39,6 +40,26 @@ class GuardSession(components.Componentized):
             return self
         else:
             return self.getComponent(interface)
+
+    # REMEMBER THIS IS A SEPARATE INTERFACE
+
+    def clientForService(self, service):
+        x = self.services.get(service)
+        if x:
+            return x[1]
+        else:
+            return x
+
+    def setClientForService(self, ident, perspective, client, service):
+        if self.services.has_key(service):
+            p, c, i = self.services[service]
+            p.detached(c)
+        else:
+            self.services[service] = perspective, client, ident
+            perspective.attached(client, ident)
+        # this return value is useful for services that need to do asynchronous
+        # stuff.
+        return client
 
     def setLifetime(self, lifetime):
         """Set the approximate lifetime of this session, in seconds.
@@ -96,11 +117,12 @@ class SessionWrapper(Resource):
         self.sessions = {}
 
     def getChild(self, path, request):
-        # we need this in several cases, so let's get it here:
+        # XXX refactor with PerspectiveWrapper
         if not request.prepath:
             return None
         pp = request.prepath.pop()
         _urlToMe = request.prePathURL()
+        request.prepath.append(pp)
         def urlToChild(*ar):
             c = '/'.join(ar)
             if _urlToMe[-1] == '/':
@@ -108,7 +130,7 @@ class SessionWrapper(Resource):
                 return _urlToMe + c
             else:
                 return _urlToMe + '/' + c
-        request.prepath.append(pp)
+        # XXX
         # print "I think I'm at:", _urlToMe
         cookie = request.getCookie(self.cookieKey)
         setupURL = request.setupSessionURL = urlToChild(INIT_SESSION, *([path]+request.postpath))
@@ -148,7 +170,7 @@ class SessionWrapper(Resource):
             request.addCookie(self.cookieKey, newCookie, path="/")
             rd = Redirect(urlToChild(newCookie,*request.postpath))
             rd.isLeaf = 1
-            sz = self.sessions[newCookie] = GuardSession(self,newCookie)
+            sz = self.sessions[newCookie] = GuardSession(self, newCookie)
             sz.checkExpired()
             return rd
         else:
@@ -157,3 +179,50 @@ class SessionWrapper(Resource):
             # without a session
             request.getSession = lambda interface=None: None
             return self.resource.getChildWithDefault(path, request)
+
+INIT_PERSPECTIVE = 'perspective-init'
+
+from twisted.python import formmethod as fm
+from twisted.web.woven import form
+
+loginSignature = fm.MethodSignature(
+    fm.String("identity", "",
+              "Identity", "The unique name of your account."),
+    fm.Password("password", "",
+                "Password", "The creative name of your password."),
+    fm.String("perspective", None, "Perspective",
+              "(Optional) The name of the role within your account "
+              "you wish to perform."))
+
+class PerspectiveWrapper(Resource):
+    def __init__(self, service, noAuthResource, authResourceFactory):
+        Resource.__init__(self)
+        self.service = service
+        self.noAuthResource = noAuthResource
+        self.authResourceFactory = authResourceFactory
+
+    def getChild(self, path, request):
+        s = request.getSession()
+        if s is None:
+            return request.setupSession()
+
+        if path == INIT_PERSPECTIVE:
+            def loginMethod(identity, password, perspective=None):
+                idfr = self.service.authorizer.getIdentityRequest(identity)
+                idfr.addCallback(
+                    lambda ident:
+                    ident.verifyPlainPassword(password).
+                    addCallback(lambda ign:
+                                ident.requestPerspectiveForService(self.service.serviceName))
+                    .addCallback(lambda psp:
+                                 s.setClientForService(ident, psp,
+                                                       self.authResourceFactory(psp),
+                                                       self.service)))
+                return idfr
+            return form.FormProcessor(loginSignature.method(loginMethod))
+        else:
+            sc = s.clientForService(self.service)
+            if sc:
+                return sc.getChildWithDefault(path, request)
+            return self.noAuthResource.getChildWithDefault(path, request)
+

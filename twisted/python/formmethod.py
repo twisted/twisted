@@ -45,6 +45,10 @@ class Text(String):
     """A long string.
     """
 
+class Password(String):
+    """A string which should be obscured when input.
+    """
+
 class Integer(Argument):
     """A single integer.
     """

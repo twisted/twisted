@@ -381,6 +381,7 @@ class FakeHTTPChannel:
     def __init__(self):
         self.transport = self
         self.factory = self
+        self.received_cookies = {}
 
     # 'factory' attribute needs this
     def log(self, req):
@@ -403,6 +404,14 @@ class FakeHTTPChannel:
         for data in datas:
             self.write(data)
 
+    # Utility for testing.
+
+    def makeFakeRequest(self, path, **vars):
+        req = FakeHTTPRequest(self, queued=0)
+        req.received_cookies.update(self.received_cookies)
+        req.requestReceived("GET", path, "1.0")
+        return req
+
 class FakeHTTPRequest(server.Request):
     def __init__(self, *args, **kw):
         server.Request.__init__(self, *args, **kw)
@@ -410,12 +419,17 @@ class FakeHTTPRequest(server.Request):
         from cStringIO import StringIO
         self.content = StringIO()
         self.received_headers['host'] = 'fake.com'
-        
+        self.written = StringIO()
+
+    def write(self, data):
+        self.written.write(data)
+        server.Request.write(self, data)
+    
     def addCookie(self, k, v, *args,**kw):
         server.Request.addCookie(self,k,v,*args,**kw)
         assert not self._cookieCache.has_key(k), "Should not be setting duplicate cookies!"
         self._cookieCache[k] = v
-        self.received_cookies[k] = v
+        self.channel.received_cookies[k] = v
 
     def processingFailed(self, fail):
         raise fail
@@ -431,11 +445,11 @@ from twisted.web import static
 class GuardTest(unittest.TestCase):
     def testSessionInit(self):
         sessWrapped = static.Data("you should never see this", "text/plain")
-        swChild = static.Data("YES", "text/plain")
+        swChild = static.Data("NO", "text/plain")
         sessWrapped.putChild("yyy",swChild)
-        sess = guard.SessionWrapper(sessWrapped)
+        swrap = guard.SessionWrapper(sessWrapped)
         da = static.Data("b","text/plain")
-        da.putChild("xxx", sess)
+        da.putChild("xxx", swrap)
         st = FakeSite(da)
         chan = FakeHTTPChannel()
         chan.site = st
@@ -464,10 +478,46 @@ class GuardTest(unittest.TestCase):
         oldreq = req
         
         # now let's try with a request for the session-cookie URL that has a cookie set
-        req = FakeHTTPRequest(chan, queued=0)
-        req.received_cookies[sess.cookieKey] = cookie
         url = "/"+(oldreq.headers['location'].split('http://fake.com/',1))[1]
-        req.requestReceived("GET",url, "1.0")
-        self.assertEquals(req.headers['location'],
-                          'http://fake.com/xxx/')
-        
+        req = chan.makeFakeRequest(url)
+        self.assertEquals(req.headers['location'], 'http://fake.com/xxx/')
+
+    def testPerspectiveInit(self):
+        # TODO: this is an awful lot of crap to have to import / do in order to
+        # create a functional authentication system.  Cut down on it.
+        from twisted.internet.app import MultiService
+        ms = MultiService("hello")
+        from twisted.cred.authorizer import DefaultAuthorizer
+        auth = DefaultAuthorizer(ms)
+        from twisted.cred.service import Service
+        svc = Service("test_service", ms, auth)
+        myp = svc.createPerspective("test")
+        myp.makeIdentity("test")
+
+        sessWrapped = static.Data("you should never see this", "text/plain")
+        swChild = static.Data("NO", "text/plain")
+        sessWrapped.putChild("yyy",swChild)
+        da = static.Data("b","text/plain")
+        q = static.Data("you should never see this either", "text/plain")
+        q.putChild("yyy", static.Data("YES", "text/plain"))
+        authFactory = lambda p: q
+        pwrap = guard.PerspectiveWrapper(svc, sessWrapped, authFactory)
+        swrap = guard.SessionWrapper(pwrap)
+        da.putChild("xxx", swrap)
+        st = FakeSite(da)
+        chan = FakeHTTPChannel()
+        chan.site = st
+
+        req = chan.makeFakeRequest("/xxx/"+guard.INIT_SESSION+"/yyy")
+        req = chan.makeFakeRequest("/xxx/yyy")
+        self.assertEquals(req.written.getvalue(),"NO")
+        req = chan.makeFakeRequest("/xxx/"+guard.INIT_PERSPECTIVE+
+                                   "?identity=test&password=tenxt")
+        assert not req.session.services.values()
+        req = chan.makeFakeRequest("/xxx/"+guard.INIT_PERSPECTIVE+
+                                   "?identity=test&password=test")
+        self.assertEquals(req.session.services.values()[0][0], myp)
+        # print req.written.getvalue()
+        req = chan.makeFakeRequest("/xxx/yyy")
+        self.assertEquals(req.written.getvalue(), "YES")
+        # print req.session.services

@@ -210,6 +210,7 @@ class FormProcessor(resource.Resource):
             return ''
 
     mangle_string = mangle_single
+    mangle_password = mangle_single
     mangle_text = mangle_single
     mangle_integer = mangle_single
     mangle_float = mangle_single
