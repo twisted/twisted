@@ -7,6 +7,26 @@ work with guard. As always, when using this framework, start
 by writing a <code>IRealm</code>. The guard module expects the
 realm to respond to the <code>resource.IResource</code> interace.</p>
 
+<p>Here is an example of a simple realm which generates different
+resources for logged-in and non-logged-in users:</p>
+
+<pre class="python">
+from twisted.cred import portal, checkers
+from twisted.web import resource, static
+
+class Realm:
+    __implements__ = portal.IRealm
+    def requestAvatar(self, avatarId, mind, *interfaces):
+        if resource.IResource not in interfaces:
+            raise NotImplementedError
+        if avatarId is checkers.ANONYMOUS:
+            return static.Data("Who are you?", 'text/html')
+        return static.Data("The answer is 42", 'text/html')
+</pre>
+
+<p>This realm makes sure that only non-anonymous users will know
+the answer to life, the universe and everything.</p>
+
 <p>Usually, one or more custom resource classes will be written
 when using guard, but it is not necessary. For example, a guard
 intended to protect a certain directory can use a
@@ -19,6 +39,25 @@ log in. From whatever resources the
 non-anonymous avatars get it is strongly recommended to link to
 <code>guard.DESTROY_PERSPECTIVE</code>. This is the only way
 users can log out.</p>
+
+<pre class="python">
+from twisted.cred import portal, checkers
+from twisted.web import resource, static
+from twisted.web.woven import guard
+
+login='<a href="%s">login</a>' % guard.PERSPECTIVE_INIT
+logout='<a href="%s">logout</a>' % guard.PERSPECTIVE_DESTROY
+
+class Realm:
+    __implements__ = portal.IRealm
+    def requestAvatar(self, avatarId, mind, *interfaces):
+        if resource.IResource not in interfaces:
+            raise NotImplementedError
+        if avatarId is checkers.ANONYMOUS:
+            return static.Data("Who are you?<br>"+login, 'text/html')
+        return static.Data("The answer is 42, %s<br>%s" % (avatarId, logout),
+                           'text/html')
+</pre>
 
 <p>Once the realm is written, it is possible to generate a resource
 which will wrap it with appropriate code to manage users, sessions
@@ -44,6 +83,14 @@ def parentRedirect(_):
     return util.ParentRedirect()
 </pre>
 
+<p>When a client first reaches a guarded resource, it is redirected
+to <code>session-init/</code>. From there, it will be redirected
+to a URL containing a long magic hex string, where a cookie will
+be set, and then to the original URL with
+<code>?__session_just_started__=1</code> tucked at the end. The
+addition is to guarantee that the client will not think it is in
+a redirection loop (wget, for example, has that problem).</p>
+
 <p>Note that in resources which are children of the guarded resources,
 <code>request.getSession</code> automatically returns the Woven session.
 Since it is a <code>Componentized</code>, it is possible to use
@@ -67,6 +114,6 @@ will return <code>None</code> if the request is anonymous, or an instance
 with a <code>.name</code> attribute, which is the avatar ID. This can
 allow the application to personalize parts of it.</p>
 
-<code>TODO: describe modifying the login form.</code>
+<p>TODO: describe modifying the login form.</p>
 
 </body></html>
