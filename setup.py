@@ -22,7 +22,7 @@ Package installer for Twisted
 Copyright (c) 2001 by Twisted Matrix Laboratories
 All rights reserved, see LICENSE for details.
 
-$Id: setup.py,v 1.16 2002/03/13 22:19:28 itamarst Exp $
+$Id: setup.py,v 1.17 2002/03/14 04:09:59 itamarst Exp $
 """
 
 import distutils, os, sys
@@ -54,7 +54,7 @@ your toaster.
         "twisted",
         # "twisted.bugs",
         "twisted.coil",
-        "twisted.coils",
+        "twisted.coil.plugins",
         "twisted.cred",
         # "twisted.eco",
         "twisted.enterprise",
