@@ -92,7 +92,7 @@ register("Twisted SOCKS TAP builder",
 
 register("Twisted SSH TAP builder",
          "twisted.tap.ssh",
-         descrption="An sshv2 service.",
+         description="An SSHv2 service.",
          type="tap")
 
 register("Twisted Telnet Shell TAP builder",
