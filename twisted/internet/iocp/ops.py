@@ -2,7 +2,7 @@ import struct, socket, os, errno
 
 from twisted.python import failure
 
-from iocpcore import have_connectex
+from _iocp import have_connectex
 import error
 
 SO_UPDATE_ACCEPT_CONTEXT = 0x700B

@@ -3,7 +3,7 @@ from twisted.internet.interfaces import IReactorTCP, IReactorUDP, IReactorArbitr
 from twisted.python import threadable, log
 
 import tcp, udp
-from iocpcore import iocpcore
+from _iocp import iocpcore
 
 class Proactor(iocpcore, base.ReactorBase):
     # TODO: IReactorArbitrary, IReactorUDP, IReactorMulticast,
