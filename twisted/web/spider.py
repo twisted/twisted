@@ -100,7 +100,7 @@ class SpiderSender(app.ApplicationService):
         f.deferred.addCallbacks(callback=self.downloadFinished,
                                 callbackArgs=(uri, depth),
                                 errback=self.downloadFailed,
-                                errbackArgs=(uri))
+                                errbackArgs=(uri,))
         self.downloaders[uri] = reactor.connectTCP(host, port, f)
         self.notifyDownloadStart(uri)
 
