@@ -64,7 +64,8 @@ class XMLReflector(reflector.Reflector):
 
             tableInfo = _TableInfo(rc)
             self.populateSchemaFor(tableInfo)
-        self.populatedDeferred.callback(None)
+        if self.populatedCallback:
+            self.populatedCallback(None)
         
     def _rowLoader(self, tableName, parentRow, data, whereClause, forceChildren):
         d = self.tableDirs[ tableName]

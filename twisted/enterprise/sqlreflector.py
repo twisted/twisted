@@ -46,20 +46,21 @@ class SQLReflector(reflector.Reflector, adbapi.Augmentation):
         reflector.Reflector.__init__(self, rowClasses, populatedCallback)        
 
     def _really_populate(self):
-        defe = self.runInteraction(self._transPopulateSchema)
-        defe.chainDeferred(self.populatedDeferred)
+        self._transPopulateSchema()
+        if self.populatedCallback:
+            self.populatedCallback(None)
 
-    def _transPopulateSchema(self, transaction):
+    def _transPopulateSchema(self):
         """Used to construct the row classes in a single interaction.
         """
         for rc in self.rowClasses:
             if not issubclass(rc, RowObject):
                 raise DBError("Stub class (%s) is not derived from RowObject" % reflect.qual(rc.rowClass))
 
-            self._populateSchemaFor(transaction, rc)
+            self._populateSchemaFor(rc)
         self.populated = 1
 
-    def _populateSchemaFor(self, transaction, rc):
+    def _populateSchemaFor(self, rc):
         """construct all the SQL for database operations on <tableName> and
         populate the class <rowClass> with that info.
         """

@@ -27,7 +27,7 @@ class Reflector:
     """
     populated = 0
 
-    def __init__(self, rowClasses, populatedCallback):
+    def __init__(self, rowClasses, populatedCallback=None):
         """
         Initialize me against a database.
 
@@ -40,10 +40,8 @@ class Reflector:
         self.rowCache = weakref.WeakValueDictionary() # doesnt hold references to cached rows.
         self.rowClasses = rowClasses
         self.schema = {}
-
-        self.populatedDeferred = defer.Deferred()
-        if populatedCallback:
-            self.populatedDeferred.addCallbacks(populatedCallback)
+        self.populatedCallback = populatedCallback
+        self._populate()
 
     def __getstate__(self):
         d = self.__dict__.copy()
@@ -55,14 +53,13 @@ class Reflector:
         self.rowCache = weakref.WeakValueDictionary()
         self._populate()
 
-    def populate(self):
+    def _populate(self):
         # egregiously bad hack, obviously, but we need to avoid calling a
         # cached callback before persistence is really done, and while the
         # mainloop is not running.  I'm not sure what the correct behavior here
         # should be. --glyph
         from twisted.internet import reactor
         reactor.callLater(0, self._really_populate)
-        return self.populatedDeferred
 
     def _really_populate(self):
         """Implement me to populate schema information for the reflector.
