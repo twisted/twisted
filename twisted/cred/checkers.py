@@ -35,6 +35,7 @@ class ICredentialsChecker(components.Interface):
         @return: a Deferred which will fire a string which identifies an
         avatar, an empty tuple to specify an authenticated anonymous user
         (provided as checkers.ANONYMOUS) or fire a Failure(UnauthorizedLogin).
+        Alternatively, return the result itself.
         """
         
 # A note on anonymity - We do not want None as the value for anonymous
