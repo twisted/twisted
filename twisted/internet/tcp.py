@@ -173,7 +173,7 @@ class Client(Connection):
         else:
             task.schedule(protocol.connectionFailed)
 
-    def failIfNotConnected(self):
+    def failIfNotConnected(self, *ignored):
         if (not self.connected) and (not self.disconnected):
             if self.connector:
                 self.connector.connectionFailed()
