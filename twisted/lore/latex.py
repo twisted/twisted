@@ -179,7 +179,10 @@ class LatexSpitter(BaseLatexSpitter):
 
     def _write_img(self, target):
         """Write LaTeX for image."""
-        self.writer('\\begin{center}\\includegraphics{%s}\\end{center}\n' % target)
+        self.writer('\\begin{center}\\includegraphics[%%\n'
+                    'width=1.0\n'
+                    '\\textwidth,height=1.0\\textheight,\nkeepaspectratio]'
+                    '{%s}\\end{center}\n' % target)
     
     def convert_png(self, src, target):
         # XXX there's a *reason* Python comes with the pipes module -
