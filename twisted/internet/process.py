@@ -28,10 +28,12 @@ from twisted.persisted import styles
 from twisted.python import log, failure
 from twisted.python.util import switchUID
 from twisted.internet import protocol
+from twisted.internet.error import ProcessExitedAlready
 
 # Sibling Imports
 import abstract, fdesc, error
 from main import CONNECTION_LOST, CONNECTION_DONE
+
 
 reapProcessHandlers = {}
 
@@ -163,6 +165,11 @@ class ProcessReader(abstract.FileDescriptor):
     def dataReceived(self, data):
         self.proto.childDataReceived(self.name, data)
 
+    def loseConnection(self):
+        if self.connected and not self.disconnecting:
+            self.disconnecting = 1
+            self.reactor.callLater(0, self.connectionLost, CONNECTION_DONE)
+    
     def connectionLost(self, reason):
         """Close my end of the pipe, signal the Process (which signals the
         ProcessProtocol).
@@ -170,11 +177,6 @@ class ProcessReader(abstract.FileDescriptor):
         abstract.FileDescriptor.connectionLost(self, reason)
         os.close(self.fd)
         self.proc.childConnectionLost(self.name)
-
-
-class ProcessExitedAlready(Exception):
-    """The process has already excited, and the operation requested can no longer be performed."""
-    pass
 
 
 class Process(styles.Ephemeral):

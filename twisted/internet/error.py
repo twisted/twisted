@@ -224,6 +224,11 @@ class ProcessTerminated(ConnectionLost):
         if signal is not None: s = s + " by signal %s" % signal
         Exception.__init__(self, s)
 
+
+class ProcessExitedAlready(Exception):
+    """The process has already excited, and the operation requested can no longer be performed."""
+
+
 class NotConnectingError(RuntimeError):
     """The Connector was not connecting when it was asked to stop connecting"""
 
