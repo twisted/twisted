@@ -360,6 +360,16 @@ for its use.</p>
     processing chain, while adding an errback that will
     re-raise its first argument, not affecting further
     processing in the error case.</p>
+
+    <p>Note that, while addCallbacks (plural) requires the arguments to be
+    passed in a tuple, addCallback (singular) takes all its remaining
+    arguments as things to be passed to the callback function. The reason is
+    obvious: addCallbacks (plural) cannot tell whether the arguments are
+    meant for the callback or the errback, so they must be specifically
+    marked by putting them into a tuple. addCallback (singular) knows that
+    everything is destined to go to the callback, so it can use Python's
+    <q>*</q> and <q>**</q> syntax to collect the remaining arguments.</p>
+    
     </li>
     
     <li>
