@@ -2,41 +2,36 @@
 # Copyright (c) 2001-2004 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
-
 """
 A simple port forwarder.
 """
 
 # Twisted imports
-from twisted.internet import reactor, protocol
-
+from twisted.internet import protocol
 
 class Proxy(protocol.Protocol):
+    noisy = True
 
     peer = None
-    buf = ''
 
     def setPeer(self, peer):
         self.peer = peer
-        self.peer.transport.write(self.buf)
-        self.buf = ''
 
     def connectionLost(self, reason):
-        self.peer.transport.loseConnection()
-        del self.peer
+        if self.peer is not None:
+            self.peer.transport.loseConnection()
+            self.peer = None
+        elif self.noisy:
+            log.msg("Unable to connect to peer: %s" % (reason,))
 
     def dataReceived(self, data):
-        if self.peer:
-            self.peer.transport.write(data)
-        else:
-            self.buf += data
-
+        self.peer.transport.write(data)
 
 class ProxyClient(Proxy):
-
     def connectionMade(self):
         self.peer.setPeer(self)
-
+        # We're connected, everybody can read to their hearts content.
+        self.peer.transport.startReading()
 
 class ProxyClientFactory(protocol.ClientFactory):
 
@@ -59,17 +54,22 @@ class ProxyServer(Proxy):
     clientProtocolFactory = ProxyClientFactory
 
     def connectionMade(self):
+        # Don't read anything from the connecting client until we have
+        # somewhere to send it to.
+        self.transport.stopReading()
+
         client = self.clientProtocolFactory()
         client.setServer(self)
-        client = reactor.connectTCP(self.factory.host, self.factory.port,
-                                    client)
+
+        from twisted.internet import reactor
+        reactor.connectTCP(self.factory.host, self.factory.port, client)
 
 
 class ProxyFactory(protocol.Factory):
     """Factory for port forwarder."""
-    
+
     protocol = ProxyServer
-    
+
     def __init__(self, host, port):
         self.host = host
         self.port = port
