@@ -151,7 +151,7 @@ namespace {
 	size_t lbmbuf = 0;
 	for (std::deque<TwistedImpl::LocalBuffer>::const_iterator it = lbm.m_localbuffers.begin();
 	     it != lbm.m_localbuffers.end(); ++it) {
-	    lbmbuf += it->len;
+	    lbmbuf += (*it).len;
 	}
 	if (lbmbuf != bufferedBytes) {
 	    std::cerr << "LocalBuffers: " << lbmbuf << ", BufferdBytes: " << bufferedBytes << std::endl;
