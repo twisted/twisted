@@ -728,19 +728,19 @@ class MXTestCase(unittest.TestCase):
         mx = unittest.deferredResult(self.mx.getMX('test.domain'))
         self.failUnless(str(mx.exchange).split('.', 1)[0] in ('mx1', 'mx2', 'mx3'))
         
-        self.mx.markBad(mx)
+        self.mx.markBad(str(mx.exchange))
         
         nextMX = unittest.deferredResult(self.mx.getMX('test.domain'))
         self.assertNotEqual(str(mx.exchange), str(nextMX.exchange))
         
-        self.mx.markBad(nextMX)
+        self.mx.markBad(str(nextMX.exchange))
         
         lastMX = unittest.deferredResult(self.mx.getMX('test.domain'))
         self.assertNotEqual(str(mx.exchange), str(lastMX.exchange))
         self.assertNotEqual(str(nextMX.exchange), str(lastMX.exchange))
         
-        self.mx.markBad(lastMX)
-        self.mx.markGood(nextMX)
+        self.mx.markBad(str(lastMX.exchange))
+        self.mx.markGood(str(nextMX.exchange))
         
         againMX = unittest.deferredResult(self.mx.getMX('test.domain'))
         self.assertEqual(str(againMX.exchange), str(nextMX.exchange))

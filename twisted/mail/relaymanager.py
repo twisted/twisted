@@ -418,9 +418,19 @@ class MXCalculator:
         self.resolver = resolver
 
     def markBad(self, mx):
-        self.badMXs[mx] = time.time() + self.timeOutBadMX
+        """Indicate a given mx host is not currently functioning.
+        
+        @type mx: C{str}
+        @param mx: The hostname of the host which is down.
+        """
+        self.badMXs[str(mx)] = time.time() + self.timeOutBadMX
 
     def markGood(self, mx):
+        """Indicate a given mx host is back online.
+        
+        @type mx: C{str}
+        @param mx: The hostname of the host which is up.
+        """
         try:
             del self.badMXs[mx]
         except KeyError:
@@ -442,13 +452,14 @@ class MXCalculator:
             raise IOError("No MX found for %r" % (domain,))
         answers = util.dsu(answers, lambda e: e.preference)
         for answer in answers:
-            if answer not in self.badMXs:
+            host = str(answer.exchange)
+            if host not in self.badMXs:
                 return answer
-            t = time.time() - self.badMXs[answer]
+            t = time.time() - self.badMXs[host]
             if t > 0:
-                del self.badMXs[answer]
+                del self.badMXs[host]
                 return answer
-        return answer[0]
+        return answers[0]
 
     def _ebMX(self, failure, domain):
         if self.fallbackToDomain:
