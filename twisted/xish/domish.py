@@ -33,12 +33,17 @@ def _splitPrefix(name):
     else:
         return (None, ntok[0])
 
+# Global map of prefixes that always get injected
+# into the serializers prefix map (note, that doesn't
+# mean they're always _USED_)
+G_PREFIXES = { "http://www.w3.org/XML/1998/namespace":"xml" }    
+
 class _Serializer:
     """ Internal class which serializes an Element tree into a buffer """
     def __init__(self, prefixes = None):
         self.cio = StringIO.StringIO()
         self.prefixes = prefixes or {}
-        self.prefixes["http://www.w3.org/XML/1998/namespace"] = "xml"
+        self.prefixes.update(G_PREFIXES)
         self.prefixCounter = 0
 
     def getValue(self):
@@ -116,6 +121,7 @@ class _ListSerializer:
     def __init__(self, prefixes = None):
         self.writelist = []
         self.prefixes = prefixes or {}
+        self.prefixes.update(G_PREFIXES)
         self.prefixCounter = 0
 
     def getValue(self):
