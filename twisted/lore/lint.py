@@ -23,9 +23,8 @@ import parser, urlparse, os.path
 
 class TagChecker:
 
-    hadErrors = 0
-
     def check(self, dom, filename):
+        self.hadErrors = 0
         for method in reflect.prefixedMethods(self, 'check_'):
             method(dom, filename)
         if self.hadErrors:
