@@ -41,8 +41,10 @@ Factory) listening on a different point:</p>
 
 <a href="listings/manhole/manhole2.py" class="py-listing">manhole2.py</a>
 
-<p>With this in place, you can telnet to port 8007, give the username "boss"
-and password "sekrit", and you'll end up with a shell that behaves very much
+<p>With this in place, you can telnet to port 8007, give the username
+<q>boss</q>
+and password <q>sekrit</q>, and you'll end up with a shell that behaves very
+much
 like the Python interpreter that you get by running <code>python</code> all by
 itself, with lines you type prefixed with <code>&gt;&gt;&gt;</code>.</p>
 
@@ -157,9 +159,9 @@ in the stderr on the application side.</p>
 twisted.manhole.service.Service object, which offers remotely-callable
 methods to evaluate Python code. With the rich remote-method-invocation
 facilities provided by PB, however, much more is possible: the client can
-ask to "watch" certain objects, and then will receive messages every time
+ask to <q>watch</q> certain objects, and then will receive messages every time
 that python object is changed. (this takes advantage of some twisted.python
-code that "hooks" some functions, like .setattr). These features are
+code that <q>hooks</q> some functions, like .setattr). These features are
 described in detail below.</p>
 
 <p>To add a manhole PB Service to your application, you need to do some PB
@@ -169,7 +171,7 @@ finally creating the Service. These steps are part of the normal
 initialization of any PB application, but when you're just starting with
 Twisted, you're probably writing simple servers using <code>listenTCP</code>,
 and haven't dealt with all those new classes yet. There is a shortcut that
-takes advantage of some of the ".tap" configuration code. It isn't pretty or
+takes advantage of some of the <q>.tap</q> configuration code. It isn't pretty or
 clear, but adding the marked four lines will result in a password-protected
 Manhole Perspective being added to your application:</p>
 
@@ -184,13 +186,13 @@ client. This is a Gtk+-based GUI application named <code>manhole</code> that
 gets installed along with the rest of twisted. Execute the command <code
 class="shell">manhole</code> to start the client, and it will bring up a
 dialog that asks for hostname, port number, Service name, username, and
-password (and also "Perspective" but don't worry about that for now). Use
+password (and also <q>Perspective</q> but don't worry about that for now). Use
 the default host/port of localhost/8787 to indicate where the
 <code>twisted.manhole</code> service is listening, and use boss/sekrit for the
-username and password. Use the default Service name 'twisted.manhole', and
+username and password. Use the default Service name <q>twisted.manhole</q>, and
 leave the Perspective blank.</p>
 
-<p> Click the "Log In" button to establish the connection, and you will be
+<p> Click the <q>Log In</q> button to establish the connection, and you will be
 greeted with a short message in a window with an output area in the top, and
 an input area at the bottom. This is just like the python interpreter
 accessed through the telnet shell, but with a different GUI. You can type
@@ -224,11 +226,11 @@ service = a.getServiceNamed("manhole")
 <p>There are a few special commands so far that make debugging Twisted
 objects really nice. These are <code>/browse</code> and <code>/watch</code>.
 You can <code>/browse</code> any type of object, and it will give you some
-nice information about that object in the "Spelunking" window that pops up
+nice information about that object in the <q>Spelunking</q> window that pops up
 when <code>manhole</code> establishes a connection to the <code>manhole</code>
 Service. <code>/watch</code>-ing an object adds hooks to the object,
 allowing you to watch modifications to it in real time. Try the following in
-the <code>manhole</code> window and watch what happens in the "Spelunking"
+the <code>manhole</code> window and watch what happens in the <q>Spelunking</q>
 box:</p>
 
 <pre class="python-interpreter">
