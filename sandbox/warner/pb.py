@@ -184,6 +184,11 @@ class RemoteReference(object):
 
         return req.deferred
 
+    def notifyOnDisconnect(self, callback):
+        self.broker.notifyOnDisconnect(callback)
+    def dontNotifyOnDisconnect(self, callback):
+        self.broker.dontNotifyOnDisconnect(callback)
+
 registerAdapter(flavors.YourReferenceSlicer, RemoteReference, ISlicer)
 
 class URLRemoteReference(RemoteReference):
@@ -715,6 +720,7 @@ class Broker(banana.Banana):
         # sending side uses these
         self.currentRequestID = 0
         self.waitingForAnswers = {} # we wait for the other side to answer
+        self.disconnectWatchers = []
         # receiving side uses these
         self.activeLocalCalls = {} # the other side wants an answer from us
 
@@ -725,7 +731,16 @@ class Broker(banana.Banana):
     def connectionLost(self, why):
         self.disconnected = True
         self.abandonAllRequests(why)
+        dw = self.disconnectWatchers
+        self.disconnectWatchers = []
+        for d in dw:
+            d()
         banana.Banana.connectionLost(self, why)
+
+    def notifyOnDisconnect(self, callback):
+        self.disconnectWatchers.append(callback)
+    def dontNotifyOnDisconnect(self, callback):
+        self.disconnectWatchers.remove(callback)
 
     # Referenceable handling, methods for the sending-side (the side that
     # holds the original Referenceable)

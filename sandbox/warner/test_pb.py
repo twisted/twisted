@@ -493,6 +493,7 @@ class RIHelper(pb.RemoteInterface):
     def get(): return schema.Any()
     def echo(obj=schema.Any()): return schema.Any()
     def defer(obj=schema.Any()): return schema.Any()
+    def hang(): return schema.Any()
 
 class HelperTarget(pb.Referenceable):
     implements(RIHelper)
@@ -508,6 +509,9 @@ class HelperTarget(pb.Referenceable):
         d = defer.Deferred()
         reactor.callLater(1, d.callback, obj)
         return d
+    def remote_hang(self):
+        self.d = defer.Deferred()
+        return self.d
 
 class TestCopyable(unittest.TestCase, TargetMixin):
 
@@ -627,6 +631,31 @@ class TestReferenceable(unittest.TestCase, TargetMixin):
     def testDefer(self):
         res = self.defer(12)
         self.failUnlessEqual(res, 12)
+
+    def testDisconnect1(self):
+        rr, target = self.setupTarget(HelperTarget())
+        d = rr.callRemote("hang")
+        rr.broker.transport.loseConnection(RuntimeError("lost connection"))
+        why = de(d)
+        self.failUnless(why.check(RuntimeError))
+
+    def disconnected(self):
+        self.lost = 1
+
+    def testDisconnect2(self):
+        rr, target = self.setupTarget(HelperTarget())
+        self.lost = 0
+        rr.notifyOnDisconnect(self.disconnected)
+        rr.broker.transport.loseConnection("lost")
+        self.failUnless(self.lost)
+
+    def testDisconnect3(self):
+        rr, target = self.setupTarget(HelperTarget())
+        self.lost = 0
+        rr.notifyOnDisconnect(self.disconnected)
+        rr.dontNotifyOnDisconnect(self.disconnected)
+        rr.broker.transport.loseConnection("lost")
+        self.failIf(self.lost)
 
     def testRef1(self):
         # Referenceables turn into RemoteReferences
@@ -845,7 +874,6 @@ class Test3Way(unittest.TestCase):
 # testTooManyRefs: sending pb.MAX_BROKER_REFS across the wire should die
 # testFactoryCopy?
 # testBadSerialization: make sure deferred is errbacked
-# testDisconnection: need to add rr.notifyOnDisconnect
 
 # tests which aren't relevant right now but which might be once we port the
 # corresponding functionality:
