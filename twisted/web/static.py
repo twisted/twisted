@@ -82,6 +82,7 @@ def redirectTo(URL, request):
 
 class Redirect(resource.Resource):
     def __init__(self, request):
+        resource.Resource.__init__(self)
         self.url = addSlash(request)
         
     def render(self, request):
