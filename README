@@ -1,9 +1,10 @@
-Twisted 0.12.2-pre
+Twisted 0.12.2
 
 Quote of the Release:
 
-<Rugal> Do I have to study something else in order to use twisted? i mean, is 
-        twisted to python how C++ is to java?
+<mbac> strange
+<mbac> all my life i've hated object oriented programming
+<mbac> when the problem was simply that i was using C++
 
 What is this?
 
@@ -32,16 +33,20 @@ What is this?
   
   For more information, visit http://www.twistedmatrix.com.
 
-What's new in 0.12.2-pre?
+What's new in 0.12.2?
 
   Removed some broken and/or experimental code.
   
   Added poll() based event loop implementation.
 
-  Documentation for webwidgets and manhole.
+  New minimal documentation for WebWidgets and Manhole in the doc/ directory.
   
-  Made some changes to SSL APIs - SSL ports can now be added with a listenSSL
-  method.
+  Made some changes to the listen API -- changed from listenOn to listenTCP,
+  listenUDP, and listenSSL.
+
+  Some UI changes for InstanceMessenger.
+
+  Some caching support for static files in twisted.web.
   
   Tons of fixed bugs.
 
