@@ -313,7 +313,7 @@ class SFTPServerForUnixConchUser:
         if attrs.has_key("permissions"):
             os.chmod(path, attrs["permissions"])
         if attrs.has_key("atime") and attrs.has_key("mtime"):
-            os.utime(path, (attrs["atime"]. attrs["mtime"]))
+            os.utime(path, (attrs["atime"], attrs["mtime"]))
 
     def _getAttrs(self, s):
         return {

@@ -156,6 +156,11 @@ class TestOurServerOurClient(SFTPTestBase):
         attrs2 = self._waitWithBuffer(self.client.getAttrs('testfile1'))
         self.failUnlessEqual(attrs, attrs2)
         # XXX test setAttrs
+        # Ok, how about this for a start?  It caught a bug :)  -- spiv.
+        attrs['atime'] = 0
+        self._waitWithBuffer(self.client.setAttrs('testfile1', attrs))
+        attrs3 = self._waitWithBuffer(self.client.getAttrs('testfile1'))
+        self.failUnlessEqual(attrs, attrs3)
 
     def testRemoveFile(self):
         d = self.client.getAttrs("testRemoveFile")
