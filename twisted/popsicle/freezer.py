@@ -78,7 +78,7 @@ class Freezer:
         self._dirty(obj)
         from twisted.internet import reactor
         if not self.pendingCall:
-            self.pendingCall = reactor.callLater(1.0, self.clean)
+            self.pendingCall = reactor.callLater(1.0, self._cleanTime)
 
     def _dirty(self, obj, dirt=SAVE):
         self.dirtySet[obj] = dirt
