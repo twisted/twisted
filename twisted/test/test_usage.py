@@ -27,7 +27,11 @@ class WellBehaved(usage.Options):
                       'this one got docstring'],
                   ]
     optFlags = [['aflag', 'f',
-                 'flagallicious docstringness for this here'],
+                 """
+
+                 flagallicious docstringness for this here
+
+                 """],
                 ['flout', 'o'],
                 ]
 
@@ -186,6 +190,13 @@ class HelpStringTest(unittest.TestCase):
             self.nice.__str__()
         except Exception, e:
             self.fail(e)
+
+    def test_whitespaceStripFlagsAndParameters(self):
+        """Extra whitespace in flag and parameters docs is stripped"""
+        # We test this by making sure aflag and it's help string are on the same line.
+        lines = [s for s in str(self.nice).splitlines() if s.find("aflag")>=0]
+        self.failUnless(len(lines) > 0)
+        self.failUnless(lines[0].find("flagallicious") >= 0)
 
 if __name__ == '__main__':
     unittest.main()
