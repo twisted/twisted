@@ -17,7 +17,7 @@
 from pyunit import unittest
 from twisted.internet import reactor, protocol, error, app
 from twisted.internet.defer import SUCCESS, FAILURE, Deferred, succeed, fail
-from twisted.python import threadable
+from twisted.python import threadable, log
 threadable.init(1)
 
 import sys
@@ -194,6 +194,8 @@ class ProtocolTestCase(unittest.TestCase):
         self.assert_( isinstance(protocol, factory.protocol) )
 
 
+class StopError(Exception): pass
+
 class StoppingService(app.ApplicationService):
 
     def __init__(self, name, succeed):
@@ -204,7 +206,7 @@ class StoppingService(app.ApplicationService):
         if self.succeed:
             return succeed("yay!")
         else:
-            return fail(Exception('boo'))
+            return fail(StopError('boo'))
 
 class StoppingServiceII(app.ApplicationService):
     def stopService(self):
@@ -252,4 +254,5 @@ class MultiServiceTestCase(unittest.TestCase):
         self.assertEqual(len(res), 0)
 
     def tearDown(self):
+        log.flushErrors (StopError)
         self.failUnless(self.callbackRan, "Callback was never run.")

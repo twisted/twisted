@@ -28,6 +28,8 @@ import sys, types, os.path
 
 from twisted.test.test_protocols import StringIOWithoutClosing
 
+from twisted.python import log
+
 FTP_PORT = 2121
 
 class BufferProtocol(Protocol):
@@ -69,6 +71,7 @@ class FTPClientTests(unittest.TestCase):
 
             id = reactor.callLater(2, self.timeout)
             reactor.run()
+            log.flushErrors(ftp.FTPError)
             try:
                 id.cancel()
             except:

@@ -1,5 +1,11 @@
 2002-12-06  Dave Peticolas  <dave@krondo.com>
 
+	* twisted/test/test_ftp.py: flush FTPErrors to prevent failures
+	with non-destructive DeferredLists.
+
+	* twisted/test/test_defer.py: catch the errors to prevent failure
+	with non-destructive DeferredLists
+
 	* twisted/enterprise/util.py: add some postgres types. boolean
 	types need to be quoted. remove unused selectSQL variable.
 
