@@ -22,7 +22,7 @@ Package installer for Twisted
 Copyright (C) 2001 Matthew W. Lefkowitz
 All rights reserved, see LICENSE for details.
 
-$Id: setup.py,v 1.40 2002/05/28 20:23:28 tv Exp $
+$Id: setup.py,v 1.41 2002/07/07 03:58:05 krz Exp $
 """
 
 import distutils, os, sys, string
@@ -31,6 +31,9 @@ from glob import glob
 from distutils.core import setup, Extension
 from distutils.command.build_scripts import build_scripts
 from distutils.command.install_data import install_data
+from distutils.ccompiler import new_compiler
+from distutils.errors import CompileError
+from distutils.command.build_ext import build_ext
 
 from twisted import copyright
 
@@ -149,6 +152,85 @@ class install_data_twisted(install_data):
         )
 
 
+# Custom build_ext command simlar to the one in Python2.1/setup.py.  This
+# allows us to detect (only at build time) what extentions we want to build.
+
+class build_ext_twisted(build_ext):
+
+    def build_extensions(self):
+        """
+        Override the build_ext build_extensions method to call our module detection
+        function before it trys to build the extensions.
+        """
+
+        self._detect_modules()
+        build_ext.build_extensions(self)
+
+
+    def _check_header(self, header_name):
+        """
+        Check if the given header can be included by trying to compile a file
+        that contains only an #include line.
+        """
+        compiler = new_compiler()
+        compiler.announce("checking for %s ..." % header_name, 0)
+
+        conftest = open("conftest.c", "w")
+        conftest.write("#include <%s>\n" % header_name)
+        conftest.close()
+
+        # Attempt to compile the file, I wish I could use compiler.preprocess
+        # instead but it defaults to None in unixccompiler.py.
+        ok = 1
+        try:
+            compiler.compile(["conftest.c"])
+        except CompileError:
+            ok = 0
+
+        # Cleanup
+        try:
+            os.unlink("conftest.c")
+            os.unlink("conftest.o")
+        except:
+            pass
+
+        return ok
+
+
+    def _detect_modules(self):
+        """
+        Determine which extension modules we should build on this system.
+        """
+
+        # always define WIN32 under Windows
+        if os.name == 'nt':
+            define_macros = [("WIN32", 1)]
+        else:
+            define_macros = []
+        
+        # Extension modules to build.
+        exts = []
+
+        # The C reactor
+        # TODO: possibly test for other headers that it uses (autoconf style).
+        if self._check_header("sys/poll.h"):
+            exts.append( Extension("twisted.internet.cReactor",
+                                    [
+                                        "twisted/internet/cReactor/cReactorModule.c",
+                                        "twisted/internet/cReactor/cReactor.c",
+                                        "twisted/internet/cReactor/cReactorTime.c",
+                                        "twisted/internet/cReactor/cReactorTCP.c",
+                                        "twisted/internet/cReactor/cReactorTransport.c",
+                                        "twisted/internet/cReactor/cReactorBuffer.c",
+                                        "twisted/internet/cReactor/cReactorUtil.c",
+                                    ],
+                                    define_macros=define_macros) )
+        else:
+            self.announce("The C reactor is unavailable on this system.")
+
+        self.extensions.extend(exts)
+
+
 #############################################################################
 ### Call setup()
 #############################################################################
@@ -202,6 +284,7 @@ your toaster.
         ## NOT YET for all platforms, see below for win32 test code!
         ##'build_scripts': build_scripts_twisted,
         'install_data': install_data_twisted,
+        'build_ext' : build_ext_twisted,
     },
 }
 
@@ -227,17 +310,20 @@ imPath = os.path.join('twisted', 'im')
 setup_args['data_files'] = [(imPath, [os.path.join(imPath, 'instancemessenger.glade')]),
                             ('twisted', [os.path.join('twisted', 'plugins.tml')])]
 
-
-# for building C banana...
-
+# always define WIN32 under Windows
 if os.name == 'nt':
-    define_macros = [("WIN32", "1")]
+    define_macros = [("WIN32", 1)]
 else:
     define_macros = []
+        
+# We need to include at least one extension module or the build_ext command
+# will not run and our custom command will not execute.  We'll use C banana
+# because it should build anywhere.
 setup_args['ext_modules'] = [
-    Extension("twisted.spread.cBanana", ["twisted/spread/cBanana.c"],
-              define_macros=define_macros),
-    ]
+         Extension("twisted.spread.cBanana",
+                    ["twisted/spread/cBanana.c"],
+                    define_macros=define_macros)
+]
 
 apply(setup, (), setup_args)
 

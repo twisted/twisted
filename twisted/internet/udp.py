@@ -188,7 +188,7 @@ class Port(abstract.FileDescriptor):
         s = self.sessionno
         self.sessionno = s+1
         transport = Connection(self.socket.dup(), protocol, addr, self, s)
-        protocol.makeConnection(transport, self)
+        protocol.makeConnection(transport)
         return transport
 
     def doRead(self):

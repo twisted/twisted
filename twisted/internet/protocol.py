@@ -21,33 +21,8 @@ Start here if you are looking to write a new protocol implementation for
 Twisted Python.  The Protocol class contains some introductory material.
 """
 
-from twisted.python import log, components
-
-
-class IFactory(components.Interface):
-    """Interface for protocol factories.
-    """
-
-    def buildProtocol(self, addr):
-        """Return an object implementing IProtocol, or None.
-
-        This method will be called when a connection has been established
-        to addr.
-        
-        If None is returned, the connection is assumed to have been refused,
-        and the Port will close the connection.
-        
-        TODO:
-         * Document 'addr' argument -- what format is it in?
-         * Is the phrase \"incoming server connection\" correct when Factory
-           is a ClientFactory?
-        """
-
-    def doStart(self):
-        """Called every time this is connected to a Port or Connector."""
-
-    def doStop(self):
-        """Called every time this is unconnected from a Port or Connector."""
+from twisted.python import log
+from twisted.internet.interfaces import IProtocolFactory
 
 
 class Factory:
@@ -57,7 +32,7 @@ class Factory:
     self.protocol.
     """
 
-    __implements__ = IFactory
+    __implements__ = (IProtocolFactory,)
 
     # put a subclass of Protocol here:
     protocol = None
@@ -140,18 +115,15 @@ class Protocol:
 
     connected = 0
     transport = None
-    server = None
 
-    def makeConnection(self, transport, server = None):
+    def makeConnection(self, transport):
         """Make a connection to a transport and a server.
 
-        This sets the 'transport' (and 'server'; the jury is still out as to
-        whether this will remain) attributes of this Protocol, and calls the
+        This sets the 'transport' attribute of this Protocol, and calls the
         connectionMade() callback.
         """
         self.connected = 1
         self.transport = transport
-        self.server = server
         self.connectionMade()
 
     def connectionMade(self):

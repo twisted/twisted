@@ -20,8 +20,7 @@ This is used as the root of the config tree.
 """
 
 # Twisted Imports
-from twisted.internet.interfaces import IConnector
-from twisted.protocols import protocol
+from twisted.internet.interfaces import IConnector, IProtocolFactory
 from twisted.python import log, roots, reflect, components
 from twisted.cred import service
 
@@ -36,7 +35,7 @@ class PortCollection(coil.ConfigCollection):
     """A collection of Ports; names may only be strings which represent port numbers.
     """
 
-    entityType = protocol.IFactory
+    entityType = IProtocolFactory
 
     def __init__(self, app, ptype):
         self.app = app

@@ -1,0 +1,250 @@
+/* cReactor.h */
+
+/* includes */
+#include "Python.h"
+#include <time.h>
+#include <sys/poll.h>
+
+/* Remove unused parameter warnings. */
+#define UNUSED(x) ((void)x)
+
+/* Named constants */
+enum
+{
+    CREACTOR_NUM_EVENT_TYPES    = 3,
+    CREACTOR_NUM_EVENT_PHASES   = 3,
+};
+
+/* System event phases. */
+typedef enum _cReactorEventPhase
+{
+    CREACTOR_EVENT_PHASE_BEFORE     = 0,
+    CREACTOR_EVENT_PHASE_DURING     = 1,
+    CREACTOR_EVENT_PHASE_AFTER      = 2,
+} cReactorEventPhase;
+
+/* System event types. */
+typedef enum _cReactorEventType
+{
+    CREACTOR_EVENT_TYPE_STARTUP     = 0,
+    CREACTOR_EVENT_TYPE_SHUTDOWN    = 1,
+    CREACTOR_EVENT_TYPE_PERSIST     = 2,
+} cReactorEventType;
+
+/* Reactor states. */
+typedef enum _cReactorState
+{
+    CREACTOR_STATE_INIT     = 0,
+    CREACTOR_STATE_RUNNING  = 1,
+    CREACTOR_STATE_STOPPING = 2,
+    CREACTOR_STATE_DONE     = 3,
+} cReactorState;
+
+/* Transport states. */
+typedef enum _cReactorTransportState
+{
+    CREACTOR_TRANSPORT_STATE_ACTIVE     = 0,
+    CREACTOR_TRANSPORT_STATE_CLOSING    = 1,
+    CREACTOR_TRANSPORT_STATE_CLOSED     = 2,
+} cReactorTransportState;
+
+/* Timed method list (opaque type). */
+typedef struct _cReactorMethod cReactorMethod;
+
+/* A simple read/write buffer. */
+typedef struct _cReactorBuffer cReactorBuffer;
+
+/* Forward declare Transport. */
+typedef struct _cReactorTransport cReactorTransport;
+
+/* Forward declare Reactor. */
+typedef struct _cReactor cReactor;
+
+/* The transport functions. */
+typedef void (*cReactorTransportReadFunc)(cReactorTransport *transport);
+typedef void (*cReactorTransportWriteFunc)(cReactorTransport *transport);
+typedef void (*cReactorTransportCloseFunc)(cReactorTransport *transport);
+typedef PyObject * (*cReactorTransportGetPeerFunc)(cReactorTransport *transport);
+typedef PyObject * (*cReactorTransportGetHostFunc)(cReactorTransport *transport);
+
+
+/* The Transport object. */
+struct _cReactorTransport
+{
+    PyObject_HEAD
+   
+    /* Linkage for the list of Transports. */
+    cReactorTransport * next;
+
+    /* The state of this transport. */
+    cReactorTransportState state;
+
+    /* The file descriptor. */
+    int         fd;
+
+    /* A pointer to the poll() event mask that is being used for this
+     * transport.
+     */
+    short *     event_mask;
+
+    /* Transport implementation details. */
+    cReactorTransportReadFunc      do_read;
+    cReactorTransportWriteFunc     do_write;
+    cReactorTransportCloseFunc     do_close;
+    cReactorTransportGetPeerFunc   get_peer;
+    cReactorTransportGetHostFunc   get_host;
+
+    /* The outgoing buffer. */
+    cReactorBuffer *    out_buf;
+
+    /* Optional PyObject to associate with this transport. */
+    PyObject *          object;
+
+    /* A reference back to the reactor this transport is part of. */
+    cReactor *          reactor;
+
+    /* An optional producer for this transport. */
+    PyObject *          producer;
+    int                 producer_streaming;
+};
+
+
+/* The cReactor object. */
+struct _cReactor
+{
+    PyObject_HEAD
+
+    /* The state this reactor is in. */
+    cReactorState       state;
+
+    /* A dictionary of attributes. */
+    PyObject *          attr_dict;
+
+    /* The main list of timed methods. */
+    cReactorMethod *    timed_methods;
+
+    /* A list of method for each event for each phase. */
+    cReactorMethod *    event_triggers[CREACTOR_NUM_EVENT_TYPES][CREACTOR_NUM_EVENT_PHASES];
+
+    /* A list of deferreds we are waiting on before continuing. */
+    PyObject *          defer_list;
+
+    /* A list of Transports. */
+    cReactorTransport * transports;
+    unsigned int        num_transports;
+
+    /* An array of pollfd structs. */
+    struct pollfd *     pollfd_array;
+    unsigned int        pollfd_size;
+
+    /* A flag indicating that the pollfd array is stale. */
+    int                 pollfd_stale;
+};
+
+
+/* Create a new cReactor. */
+PyObject * cReactor_New(void);
+
+/* Create a new Transport. */
+cReactorTransport * cReactorTransport_New(cReactor *reactor,
+                                          int fd,
+                                          cReactorTransportReadFunc do_read,
+                                          cReactorTransportWriteFunc do_write,
+                                          cReactorTransportCloseFunc do_close);
+
+/* The read/write/close methods. */
+void cReactorTransport_Read(cReactorTransport *transport);
+void cReactorTransport_Write(cReactorTransport *transport);
+void cReactorTransport_Close(cReactorTransport *transport);
+
+/* Create a new buffer using the given size as the starting size. */
+cReactorBuffer * cReactorBuffer_New(unsigned int size);
+
+/* Destroy a previously created buffer. */
+void cReactorBuffer_Destroy(cReactorBuffer *buffer);
+
+/* Write some data into the buffer. */
+void cReactorBuffer_Write(cReactorBuffer *buffer, const void *data, unsigned int size);
+
+/* Return the number of bytes contained in the buffer. */
+unsigned int cReactorBuffer_DataAvailable(cReactorBuffer *buffer);
+
+/* Return the internal pointer to the buffer's data. */
+const unsigned char * cReactorBuffer_GetPtr(cReactorBuffer *buffer);
+
+/* Skip over 'forward' number of bytes. */
+void cReactorBuffer_Seek(cReactorBuffer *buffer, unsigned int forward);
+
+/* Emulate "from a.b import c" */
+PyObject * cReactorUtil_FromImport(const char *name, const char *from_item);
+
+/* Create an __implements__ tuple from the given class names. */
+PyObject * cReactorUtil_MakeImplements(const char **names, unsigned int num_names);
+
+/* Add a method to the given method list.  Return the call ID of the method.
+ */
+int cReactorUtil_AddMethod(cReactorMethod **list,
+                           PyObject *callable,
+                           PyObject *args,
+                           PyObject *kw);
+
+/* Add a method to the given list using the given delay (in seconds). */
+int cReactorUtil_AddDelayedMethod(cReactorMethod **list,
+                                  int delay,
+                                  PyObject *callable,
+                                  PyObject *args,
+                                  PyObject *kw);
+
+/* Remove a method from the given method list.  Returns -1 on error and raises
+ * ValueError.
+ */
+int cReactorUtil_RemoveMethod(cReactorMethod **list, int call_id);
+
+/* Run all methods up to 'now'.  This will return the time the next method
+ * needs to be called, or 0 if there are no more methods.
+ */
+time_t cReactorUtil_RunMethods(cReactorMethod **list, time_t now);
+
+/* Iterate over the methods in the given method list. */
+typedef void (*cReactorMethodListIterator)(PyObject *callable,
+                                           PyObject *args,
+                                           PyObject *kw,
+                                           void *user_data);
+
+void cReactorUtil_ForEachMethod(cReactorMethod *list,
+                                cReactorMethodListIterator func,
+                                void *user_data);
+
+/* Return the number of seconds until the next method need to be run. */
+int cReactorUtil_NextMethodDelay(cReactorMethod *list);
+
+/* Destroy the given method list. */
+void cReactorUtil_DestroyMethods(cReactorMethod *list);
+
+/* Convert event type from string to enum. */
+int cReactorUtil_GetEventType(const char *str, cReactorEventType *out_type);
+
+/* Convert event phase from string to enum. */
+int cReactorUtil_GetEventPhase(const char *str, cReactorEventPhase *out_phase);
+
+/* Raise NotImplemented. */
+PyObject * cReactor_not_implemented(PyObject *self, PyObject *args, const char *text);
+
+/* Add an active transport to the reactor.  This steals a reference to the
+ * given Transport.
+ */
+void cReactor_AddTransport(cReactor *reactor, cReactorTransport *transport);
+
+/* Schedule a method to be called at a later time. */
+PyObject * cReactorTime_callLater(PyObject *self, PyObject *args, PyObject *kw);
+
+/* Cancel a previously scheduled method. */
+PyObject * cReactorTime_cancelCallLater(PyObject *self, PyObject *args);
+
+/* Create a TCP IListeningPort. */
+PyObject * cReactorTCP_listenTCP(PyObject *self, PyObject *args, PyObject *kw);
+
+/* XXX: <itamar> clientTCP is in flux */
+PyObject * cReactorTCP_clientTCP(PyObject *self, PyObject *args);
+
+/* vim: set sts=4 sw=4: */

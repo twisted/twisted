@@ -400,8 +400,83 @@ class IProducer(Interface):
         """
 
 
-class IConnector:
+class IConnector(Interface):
     """Connect this to that and make it stick."""
 
     def getProtocol(self):
         """Get the current protocol instance."""
+
+
+class IProtocolFactory(Interface):
+    """Interface for protocol factories.
+    """
+
+    def buildProtocol(self, addr):
+        """Return an object implementing IProtocol, or None.
+
+        This method will be called when a connection has been established
+        to addr.
+        
+        If None is returned, the connection is assumed to have been refused,
+        and the Port will close the connection.
+        
+        TODO:
+         * Document 'addr' argument -- what format is it in?
+         * Is the phrase \"incoming server connection\" correct when Factory
+           is a ClientFactory?
+        """
+
+    def doStart(self):
+        """Called every time this is connected to a Port or Connector."""
+
+    def doStop(self):
+        """Called every time this is unconnected from a Port or Connector."""
+
+
+class ITransport(Interface):
+    """I am a transport for bytes.
+
+    I represent (and wrap) the physical connection and synchronicity
+    of the framework which is talking to the network.  I make no
+    representations about whether calls to me will happen immediately
+    or require returning to a control loop, or whether they will happen
+    in the same or another thread.  Consider methods of this class
+    (aside from getPeer) to be 'thrown over the wall', to happen at some
+    indeterminate time.
+    """
+
+    disconnecting = 0
+
+    def write(self, data):
+        '''Write some data to the physical connection, in sequence.
+
+        If possible, make sure that it is all written.  No data will
+        ever be lost, although (obviously) the connection may be closed
+        before it all gets through.
+        '''
+
+    def loseConnection(self):
+        """Close my connection, after writing all pending data.
+        """
+
+    def getPeer(self):
+        '''Return a tuple of (TYPE, ...).
+
+        This indicates the other end of the connection.  TYPE indicates
+        what sort of connection this is: "INET", "UNIX", or something
+        else.  "INET" tuples have 2 additional elements; hostname and
+        port.
+
+        Treat this method with caution.  It is the unfortunate
+        result of the CGI and Jabber standards, but should not
+        be considered reliable for the usual host of reasons;
+        port forwarding, proxying, firewalls, IP masquerading,
+        etcetera.
+        '''
+
+    def getHost(self):
+        """
+        Similar to getPeer, but returns a tuple describing this side of the
+        connection.
+        """
+

@@ -473,7 +473,7 @@ class Port(abstract.FileDescriptor):
                 s = self.sessionno
                 self.sessionno = s+1
                 transport = self.transport(skt, protocol, addr, self, s)
-                protocol.makeConnection(transport, self)
+                protocol.makeConnection(transport)
             else:
                 self.numberAccepts = self.numberAccepts+20
         except:

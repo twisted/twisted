@@ -17,7 +17,8 @@
 """Coil plugin for the mail service."""
 
 # Twisted Imports
-from twisted.protocols import protocol, pop3, smtp
+from twisted.protocols import pop3, smtp
+from twisted.internet import interfaces
 from twisted.coil import coil
 from twisted.mail import mail, maildir
 from twisted.python import components
@@ -46,8 +47,8 @@ class MailConfigurator(coil.Configurator, coil.ConfigCollection):
     
     def configDispensers(self):
         return [
-            ['makePOP3Server', protocol.IFactory, "POP3 server for %s" % self.instance.serviceName],
-            ['makeSMTPServer', protocol.IFactory, "SMTP server for %s" % self.instance.serviceName]
+            ['makePOP3Server', interfaces.IProtocolFactory, "POP3 server for %s" % self.instance.serviceName],
+            ['makeSMTPServer', interfaces.IProtocolFactory, "SMTP server for %s" % self.instance.serviceName]
             ]
 
     def makePOP3Server(self):

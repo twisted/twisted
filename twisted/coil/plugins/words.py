@@ -17,7 +17,7 @@
 """Coil plugin for words service."""
 
 # Twisted Imports
-from twisted.internet import protocol
+from twisted.internet import interfaces
 from twisted.coil import coil
 from twisted.words import service, ircservice, tendril, webwords
 from twisted.web import resource
@@ -40,11 +40,11 @@ class WordsConfigurator(coil.Configurator):
 
     def configDispensers(self):
         return [
-            ['makeIRCGateway', protocol.IFactory,
+            ['makeIRCGateway', interfaces.IProtocolFactory,
              "IRC chat gateway to %s" % self.instance.serviceName],
             ['makeWebAccounts', resource.IResource,
              "Public Words Website for %s" % self.instance.serviceName],
-            ['makeTendril', protocol.IFactory,
+            ['makeTendril', interfaces.IProtocolFactory,
              "Tendril to IRC from %s" % (self.instance.serviceName,)]
             ]
 

@@ -194,7 +194,8 @@ else:
         'win32': 'twisted.internet.win32eventreactor',
         'win': 'twisted.internet.win32eventreactor',
         'poll': 'twisted.internet.pollreactor',
-        'qt': 'twisted.internet.qtreactor'
+        'qt': 'twisted.internet.qtreactor',
+        'c' : 'twisted.internet.cReactor',
         }
     from twisted.python.reflect import namedModule
     namedModule(reactorTypes[config['reactor']]).install()

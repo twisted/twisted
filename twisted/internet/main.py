@@ -26,6 +26,9 @@ CONNECTION_DONE = -2
 from twisted.python import threadable, log
 from twisted.python.runtime import platform
 from twisted.persisted import styles
+from twisted.python.components import implements
+from twisted.internet.interfaces import IReactorFDSet, IReactorCore
+from twisted.internet.interfaces import IReactorTime, IReactorUNIX
 
 
 class DummyResolver:
@@ -103,13 +106,25 @@ def installReactor(reactor):
     sys.modules['twisted.internet.reactor'] = reactor
 
     # install stuff for backwards compatability
-    addReader = reactor.addReader
-    addWriter = reactor.addWriter
-    removeWriter = reactor.removeWriter
-    removeReader = reactor.removeReader
-    iterate = reactor.iterate
-    addTimeout = lambda m, t, f=reactor.callLater: f(t, m)
-    wakeUp = reactor.wakeUp
+
+    # IReactorCore
+    if implements(reactor, IReactorCore):
+        iterate = reactor.iterate
+
+    # IReactorFDSet
+    if implements(reactor, IReactorFDSet):
+        addReader = reactor.addReader
+        addWriter = reactor.addWriter
+        removeWriter = reactor.removeWriter
+        removeReader = reactor.removeReader
+
+    # IReactorTime
+    if implements(reactor, IReactorTime):
+        addTimeout = lambda m, t, f=reactor.callLater: f(t, m)
+
+    # ???
+    if hasattr(reactor, "wakeUp"):
+        wakeUp = reactor.wakeUp
 
 
 

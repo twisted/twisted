@@ -1,5 +1,5 @@
 # -*- Python -*-
-# $Id: default.py,v 1.16 2002/06/26 06:47:50 glyph Exp $
+# $Id: default.py,v 1.17 2002/07/07 03:58:07 krz Exp $
 #
 # Twisted, the Framework of Your Internet
 # Copyright (C) 2001 Matthew W. Lefkowitz
@@ -28,7 +28,7 @@ import signal
 
 from twisted.internet.interfaces import IReactorCore, IReactorTime, IReactorUNIX
 from twisted.internet.interfaces import IReactorTCP, IReactorUDP, IReactorSSL
-from twisted.internet.interfaces import IReactorProcess
+from twisted.internet.interfaces import IReactorProcess, IReactorFDSet
 from twisted.internet import main
 
 from twisted.internet import main, tcp, udp, task, process
@@ -279,6 +279,8 @@ else:
 class SelectReactor(PosixReactorBase):
     """A select() based reactor - runs on all POSIX platforms and on Win32.
     """
+
+    __implements__ = (ReactorBase.__implements__, IReactorFDSet)
 
     def _preenDescriptors(self):
         log.msg("Malformed file descriptor found.  Preening lists.")
