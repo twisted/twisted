@@ -226,11 +226,6 @@ def run():
     # This will fix up accidental function definitions in evaluation spaces
     # and the like.
     initRun = 0
-    try:
-        application = loadApplication(config, passphrase)
-    except Exception, e:
-        sys.exit("Failed to load application: %s" % (e,))
-
     if os.path.exists(config.opts['pidfile']):
         try:
             pid = int(open(config.opts['pidfile']).read())
@@ -286,6 +281,16 @@ def run():
     if register.LICENSE_ORG:
         log.msg("organization: %s" % register.LICENSE_ORG)
 
+    from twisted.internet import reactor
+    log.msg('reactor class: %s' % reactor.__class__)
+
+    try:
+        application = loadApplication(config, passphrase)
+    except Exception, e:
+        s = "Failed to load application: %s" % (e,)
+        log.msg(s)
+        sys.exit('\n' + s + '\n')
+
     if not config.opts['nodaemon']:
         # Turn into a daemon.
         if os.fork():   # launch child and...
@@ -295,11 +300,6 @@ def run():
         oldstdin.close()
         oldstdout.close()
         oldstderr.close()
-
-    from twisted.internet import reactor
-    log.msg('reactor class: %s' % reactor.__class__)
-
-
 
     # Load any view plugins which have been registered in plugins.tml file
     # This needs to be moved to an event which occurs on web server startup
