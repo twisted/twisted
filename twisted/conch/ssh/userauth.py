@@ -230,18 +230,13 @@ class SSHUserAuthClient(service.SSHService):
     def ssh_USERAUTH_PK_OK(self, packet):
         if self.lastAuth == 'publickey':
             # this is ok
-            privateKey = self.getPrivateKey()
-            if not privateKey:
+            d  = self.getPrivateKey()
+            if not d:
                 self.askForAuth('publickey', '\xff'+NS('')+NS('')+NS(''))
                 # this should fail, we'll move on
                 return
-            publicKey = self.lastPublicKey
-            keyType =  keys.objectType(privateKey)
-            b = NS(self.transport.sessionID) + chr(MSG_USERAUTH_REQUEST) + \
-                NS(self.user) + NS(self.instance.name) + NS('publickey') + '\xff' + \
-                NS(keyType) + NS(publicKey)
-            self.askForAuth('publickey', '\xff' + NS(keyType) + NS(publicKey) + \
-                            NS(keys.signData(privateKey, b)))
+            d.addCallback(self._cbGetPrivateKey)
+            d.addErrback(self._ebGetPrivateKey)
         elif self.lastAuth == 'password':
             prompt, language, rest = getNS(packet, 2)
             self._oldPass = self._newPass = None
@@ -249,6 +244,18 @@ class SSHUserAuthClient(service.SSHService):
             np = self.getPassword(prompt).addCallback(self._setNewPass)
         elif self.lastAuth == 'keyboard-interactive':
             return self.ssh_USERAUTH_INFO_RESPONSE(packet)
+
+    def _cbGetPrivateKey(self, privateKey):
+        publicKey = self.lastPublicKey
+        keyType =  keys.objectType(privateKey)
+        b = NS(self.transport.sessionID) + chr(MSG_USERAUTH_REQUEST) + \
+            NS(self.user) + NS(self.instance.name) + NS('publickey') + '\xff' + \
+            NS(keyType) + NS(publicKey)
+        self.askForAuth('publickey', '\xff' + NS(keyType) + NS(publicKey) + \
+                        NS(keys.signData(privateKey, b)))
+
+    def _ebGetPrivateKey(self, failure):
+        self.askForAuth('publickey', '\xff'+NS('')+NS('')+NS(''))
 
     def _setOldPass(self, op):
         if self._newPass:

@@ -14,7 +14,7 @@
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 #
-# $Id: conch.py,v 1.27 2002/12/22 01:45:31 z3p Exp $
+# $Id: conch.py,v 1.28 2002/12/27 21:17:38 z3p Exp $
 
 #""" Implementation module for the `conch` command.
 #"""
@@ -38,7 +38,7 @@ class GeneralOptions(usage.Options):
                     ['port', 'p', None, 'Connect to this port.  Server must be on the same port.'],
                     ['localforward', 'L', None, 'listen-port:host:port   Forward local port to remote address'],
                     ['remoteforward', 'R', None, 'listen-port:host:port   Forward remote port to local address'],
-                    ['option', 'o', None],
+                    ['option', 'o', None, 'Ignored OpenSSH options'],
                     ]
     
     optFlags = [['null', 'n', 'Redirect input from /dev/null.'],
@@ -187,9 +187,9 @@ class SSHClientTransport(transport.SSHClientTransport):
     def verifyHostKey(self, pubKey, fingerprint):
         goodKey = self.isInKnownHosts(options['host'], pubKey)
         if goodKey == 1: # good key
-            return 1
+            return defer.succeed(1) 
         elif goodKey == 2: # AAHHHHH changed
-            return 0
+            return defer.fail(error.ConchError('changed host key'))
         else:
             oldout, oldin = sys.stdout, sys.stdin
             sys.stdin = sys.stdout = open('/dev/tty','r+')
@@ -212,13 +212,13 @@ class SSHClientTransport(transport.SSHClientTransport):
             sys.stdout,sys.stdin=oldout,oldin
             if ans == 'no':
                 print 'Host key verification failed.'
-                return 0
+                return defer.fail(error.ConchError('bad host key'))
             print "Warning: Permanently added '%s' (%s) to the list of known hosts." % (khHost, {'ssh-dss':'DSA', 'ssh-rsa':'RSA'}[keyType])
             known_hosts = open(os.path.expanduser('~/.ssh/known_hosts'), 'a')
             encodedKey = base64.encodestring(pubKey).replace('\n', '')
             known_hosts.write('%s %s %s' % (khHost, keyType, encodedKey))
             known_hosts.close()
-            return 1
+            return defer.succeed(1)
 
     def isInKnownHosts(self, host, pubKey):
         """checks to see if host is in the known_hosts file for the user.
@@ -296,7 +296,7 @@ class SSHUserAuthClient(userauth.SSHUserAuthClient):
         if not os.path.exists(file):
             return None
         try:
-            return keys.getPrivateKeyObject(file)
+            return defer.succeed(keys.getPrivateKeyObject(file))
         except keys.BadKeyError, e:
             if e.args[0] == 'encrypted key with no password':
                 for i in range(3):
@@ -307,10 +307,10 @@ class SSHUserAuthClient(userauth.SSHUserAuthClient):
                     p=getpass.getpass(prompt)
                     sys.stdout,sys.stdin=oldout,oldin
                     try:
-                        return keys.getPrivateKeyObject(file, password = p)
+                        return defer.succeed(keys.getPrivateKeyObject(file, password = p))
                     except keys.BadKeyError:
                         pass
-                return None
+                return defer.fail(error.ConchError('bad password'))
             raise
 
 class SSHConnection(connection.SSHConnection):

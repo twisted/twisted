@@ -198,7 +198,7 @@ class SSHTestClientAuth(userauth.SSHUserAuthClient):
 
     def getPrivateKey(self):
         self.canSucceedPublicKey = 1
-        return keys.getPrivateKeyObject('dsa_test')
+        return defer.succeed(keys.getPrivateKeyObject('dsa_test'))
 
     def getPublicKey(self):
         return keys.getPublicKeyString('dsa_test.pub')
