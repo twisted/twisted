@@ -17,7 +17,7 @@
 
 from __future__ import nested_scopes
 
-__version__ = "$Revision: 1.36 $"[11:-2]
+__version__ = "$Revision: 1.37 $"[11:-2]
 
 import os
 import cgi
@@ -301,6 +301,7 @@ class LiveController(Controller):
             nodeXML = node.toxml()
             nodeXML = nodeXML.replace('\n', '')
             nodeXML = nodeXML.replace('\r', '')
+            nodeXML = nodeXML.replace("\\", "\\\\")
             nodeXML = nodeXML.replace("'", "\\'")
             js = "top.woven_replaceElement('%s', '%s')" % (nodeId, nodeXML)
             view = sess.getCurrentPage().view
