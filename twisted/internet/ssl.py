@@ -131,6 +131,14 @@ class Connection(tcp.Connection):
             self.startReading()
             return None # don't close socket just yet
     
+    def _closeSocket(self):
+        # For some reason, SSL.Connection's shutdown() method doesn't take a parameter
+        try:
+            self.socket.shutdown()
+        except:
+            deferr.log()
+            
+    
     def doRead(self):
         """See tcp.Connection.doRead for details.
         """
@@ -189,7 +197,7 @@ class Connection(tcp.Connection):
 
 
 
-class Client(tcp.Client):
+class Client(Connection, tcp.Client):
     """I am an SSL client."""
     def __init__(self, host, port, bindAddress, ctxFactory, connector, reactor=None):
         # tcp.Client.__init__ depends on self.ctxFactory being set
@@ -219,9 +227,14 @@ class Client(tcp.Client):
 
 
 
-class Server(tcp.Server):
+class Server(Connection, tcp.Server):
     """I am an SSL server.
     """
+    
+    def __init__(*args, **kw):
+        # We don't want Connection's __init__
+        tcp.Server.__init__(*args, **kw)
+    
     def getHost(self):
         """Returns a tuple of ('SSL', hostname, port).
 
