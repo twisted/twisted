@@ -76,7 +76,6 @@ from twisted.python import components
 from twisted.web import resource
 from twisted.web.resource import Resource
 from twisted.web import widgets # import Widget, Presentation
-from twisted.web import domwidgets
 from twisted.internet.defer import Deferred
 from twisted.python import failure
 from twisted.internet import reactor, defer
@@ -117,27 +116,6 @@ class MethodLookup:
         if self._bytag.has_key(str(node.nodeName)):
             return self._bytag[str(node.nodeName)]
         return None
-
-# If no widget/handler was found in the container controller or view, these modules will be searched.
-import dominput, domwidgets
-
-class DefaultHandler(Controller):
-    def handle(self, request):
-        """
-        By default, we don't do anything
-        """
-        return (None, None)
-
-    def setSubmodel(self, submodel):
-        self.submodel = submodel
-
-
-class DefaultWidget(domwidgets.Widget):
-    def generate(self, request, node):
-        return node
-
-    def setSubmodel(self, submodel):
-        self.submodel = submodel
 
 
 def renderFailure(ignored, request):
@@ -507,3 +485,25 @@ class DOMController(mvc.Controller, Resource):
     def process(self, request, **kwargs):
         log.msg("Processing results: ", kwargs)
         return RESTART_RENDERING
+
+
+# If no widget/handler was found in the container controller or view, these modules will be searched.
+from twisted.web import dominput, domwidgets
+
+class DefaultHandler(Controller):
+    def handle(self, request):
+        """
+        By default, we don't do anything
+        """
+        return (None, None)
+
+    def setSubmodel(self, submodel):
+        self.submodel = submodel
+
+
+class DefaultWidget(domwidgets.Widget):
+    def generate(self, request, node):
+        return node
+
+    def setSubmodel(self, submodel):
+        self.submodel = submodel

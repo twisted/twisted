@@ -20,6 +20,7 @@
 import traceback
 import urllib
 from twisted.web.microdom import parseString
+from twisted.web import widgets
 
 from twisted.python import components, mvc
 from twisted.python import domhelpers, log
@@ -32,6 +33,13 @@ DOMWidgets are views which can be composed into bigger views.
 """
 
 DEBUG = 0
+
+
+def renderFailure(ignored, request):
+    f = failure.Failure()
+    request.write(widgets.formatFailure(f))
+    request.finish()
+
 
 def _getModel(self):
     if not isinstance(self.model, mvc.Model): # see __class__.doc
@@ -150,7 +158,7 @@ class Widget(mvc.View):
         self.setData(result)
         data = self.getData()
         if isinstance(data, defer.Deferred):
-            data.addCallbacks(self.callback, domtemplate.renderFailure, callbackArgs=(request, node), errbackArgs=(request,))
+            data.addCallbacks(self.callback, renderFailure, callbackArgs=(request, node), errbackArgs=(request,))
             return data
         self.setUp(request, node, data)
         return self.generateDOM(request, node)
@@ -414,3 +422,4 @@ class RawText(Widget):
     def generateDOM(self, request, node):
         self.node = domhelpers.RawText(self.getData())
         return self.node
+
