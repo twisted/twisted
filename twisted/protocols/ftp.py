@@ -1501,9 +1501,6 @@ from twisted.internet.interfaces import IProducer, IConsumer, IProtocol, IFinish
 #   * Doesn't understand any of the weird, obscure TELNET stuff (\377...)
 #   * FIXME: Doesn't share any code with the FTPServer
 
-class FTPError(Exception):
-    pass
-
 class ConnectionLost(FTPError):
     pass
 
