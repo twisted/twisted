@@ -28,12 +28,12 @@ class _Cache(components.Adapter):
         memo[id(original)] = result
         return result
 
-class ListAdapter(_Cache):
+class SequenceAdapter(_Cache):
     def rebuild(self, memo):
         o = self.original
         if id(o) in memo:
             return memo[id(o)]
-        return self.cret(memo, o, [IRebuildable(e).rebuild(memo) for e in o])
+        return self.cret(memo, o, type(self.original)([IRebuildable(e).rebuild(memo) for e in o]))
 
 class DictAdapter(_Cache):
     def rebuild(self, memo):
@@ -41,7 +41,7 @@ class DictAdapter(_Cache):
         if id(o) in memo:
             return memo[id(o)]
         d = {}
-        for (k, v) in d.iteritems():
+        for (k, v) in o.iteritems():
             d[IRebuildable(k).rebuild(memo)] = IRebuildable(v).rebuild(memo)
         return self.cret(memo, o, d)
 
@@ -56,7 +56,7 @@ class ClassicClassAdapter(_Cache):
         f.__dict__ = d
         return self.cret(memo, o, f)
 
-class BoundMethodAdapter(_Cache):
+class MethodAdapter(_Cache):
     def rebuild(self, memo):
         o = self.original
         if id(o) in memo:
@@ -73,4 +73,4 @@ class UnboundMethodAdapter(_Cache):
             return memo[id(o)]
         klass = latest(o.im_class)
         name = o.im_func.func_name
-        return self.cret(memo, o, getattr(latest, name))
+        return self.cret(memo, o, getattr(klass, name))
