@@ -155,6 +155,26 @@ getAge("joe").addCallback(printResult)
     params, ...)</code> maps directly onto <code
     class="python">cursor.execute(query, params, ...)</code>.</p>
 
+	<h2>Examples of various database adapters</h2>
+
+	<p>Notice that the first argument is the module name you would
+	usually import and get <code class="python">connect(...)</code>
+	from, and that following arguments are whatever arguments you'd
+	call <code class="python">connect(...)</code> with.</p>
+	 
+<pre class="python">
+from twisted.enterprise import adabapi
+
+# Gadfly
+cp = adbapi.ConnectionPool("gadfly", "test", "/tmp/gadflyDB")
+
+# PostgreSQL PyPgSQL
+cp = adbapi.ConnectionPool("pyPgSQL.PgSQL", database="test")
+
+# MySQL
+cp = adbapi.ConnectionPool("MySQLdb", db="test")
+</pre>
+
     <h2>And that's it!</h2>
 
     <p>That's all you need to know to use a database from within
