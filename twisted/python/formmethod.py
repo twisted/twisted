@@ -45,17 +45,22 @@ class Argument:
     # default value for argument, if no other default is given
     defaultDefault = None
 
-    def __init__(self, name, default=None, shortDesc=None, longDesc=None, hints=()):
+    def __init__(self, name, default=None, shortDesc=None, longDesc=None, hints=None):
         self.name = name
         if default is None:
             default = self.defaultDefault
         self.default = default
         self.shortDesc = shortDesc
         self.longDesc = longDesc
+        if not hints:
+            hints = {}
+        self.hints = hints
 
-    def addHint(self, hint):
-        self.hints.append(hint)
-        hint.added(self)
+    def addHints(self, **kwargs):
+        self.hints.update(kwargs)
+
+    def getHint(self, name, default=None):
+        return self.hints.get(name, default)
 
     def getShortDescription(self):
         return self.shortDesc or self.name.capitalize()
@@ -100,7 +105,7 @@ class Integer(Argument):
 
     defaultDefault = None
 
-    def __init__(self, name, allowNone=1, default=None, shortDesc=None, longDesc=None, hints=()):
+    def __init__(self, name, allowNone=1, default=None, shortDesc=None, longDesc=None, hints=None):
         Argument.__init__(self, name, default, shortDesc, longDesc, hints)
         self.allowNone = allowNone
 
@@ -117,7 +122,7 @@ class Float(Argument):
 
     defaultDefault = None
 
-    def __init__(self, name, allowNone=1, default=None, shortDesc=None, longDesc=None, hints=()):
+    def __init__(self, name, allowNone=1, default=None, shortDesc=None, longDesc=None, hints=None):
         Argument.__init__(self, name, default, shortDesc, longDesc, hints)
         self.allowNone = allowNone
 
@@ -133,7 +138,7 @@ class Float(Argument):
 class Choice(Argument):
     """The result of a choice between enumerated types.
     """
-    def __init__(self, name, choices=[], default=None, shortDesc=None, longDesc=None, hints=()):
+    def __init__(self, name, choices=[], default=None, shortDesc=None, longDesc=None, hints=None):
         self.choices = choices
         Argument.__init__(self, name, default, shortDesc, longDesc, hints)
 
@@ -148,7 +153,7 @@ class Choice(Argument):
 class Flags(Argument):
     """The result of a checkbox group or multi-menu.
     """
-    def __init__(self, name, flags=(), default=(), shortDesc=None, longDesc=None, hints=()):
+    def __init__(self, name, flags=(), default=(), shortDesc=None, longDesc=None, hints=None):
         self.flags = flags
         Argument.__init__(self, name, default, shortDesc, longDesc, hints)
 
@@ -192,7 +197,7 @@ class Date(Argument):
 
     defaultDefault = None
 
-    def __init__(self, name, allowNone=1, default=None, shortDesc=None, longDesc=None, hints=()):
+    def __init__(self, name, allowNone=1, default=None, shortDesc=None, longDesc=None, hints=None):
         Argument.__init__(self, name, default, shortDesc, longDesc, hints)
         self.allowNone = allowNone
         if not allowNone:
@@ -242,14 +247,6 @@ class MethodSignature:
         """
         """
         self.methodSignature = sigList
-
-    def addHintTo(self, **kw):
-        for k,v in kw.items():
-            for a in self.methodSignature:
-                if a.name == k:
-                    a.name == k
-                    a.addHint(v)
-                    continue
 
     def getArgument(self, name):
         for a in self.methodSignature:

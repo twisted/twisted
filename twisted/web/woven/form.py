@@ -80,8 +80,14 @@ class FormFillerWidget(widgets.Widget):
         r.text(str(getValue(request, arg)))
         return r
 
+    def input_string(self, request, content, arg):
+        print "INPUT_STRING"
+        node = self.input_single(request, content, arg)
+        node['size'] = arg.getHint('size', '60')
+        return node
+
     input_integer = input_single
-    input_string = input_single
+    #input_string = input_single
     input_float = input_single
 
     def input_choice(self, request, content, arg):
@@ -295,6 +301,7 @@ class ThankYou(view.View):
 
 class FormProcessor(resource.Resource):
     def __init__(self, formMethod, callback=None, errback=None):
+        resource.Resource.__init__(self)
         self.formMethod = formMethod
         if callback is None:
             callback = self.viewFactory
@@ -391,6 +398,8 @@ class FormProcessor(resource.Resource):
         if args is None:
             return []
         return args
+
+
 
 from twisted.python.formmethod import FormMethod
 
