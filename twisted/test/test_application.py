@@ -411,7 +411,6 @@ class TestConvert(unittest.TestCase):
         self.assert_(isinstance(s, internet.TCPServer))
         args = s.args
         self.assertEqual(args[0], 8080)
-        args[1].resource.template
         self.assertEqual(args[3], '')
 
     def testSimpleUNIX(self):
