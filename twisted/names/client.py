@@ -39,13 +39,16 @@ from twisted.protocols import dns
 class Resolver:
     index = 0
 
+    pending = None
+    connections = None
+
     def __init__(self, resolv = None, servers = None):
         """
         @type servers: C{list} of C{str} or C{None}
         @param servers: If not None, interpreted as a list of addresses of
         domain name servers to attempt to use for this lookup.  Addresses
         should be in dotted-quad form.  If specified, overrides C{resolv}.
-
+        
         @type resolv: C{str}
         @param resolv: Filename to read and parse as a resolver(5)
         configuration file.
@@ -60,6 +63,14 @@ class Resolver:
         
         if not len(self.servers):
             raise ValueError, "No nameservers specified"
+        
+        from twisted.internet import reactor
+        self.protocol = dns.DNSClientProtocol()
+        reactor.listenUDP(0, self.protocol, maxPacketSize=512)
+
+        self.factory = DNSClientFactory(self)
+        self.connections = []
+        self.pending = []
 
 
     def parseConfig(self, conf):
@@ -82,58 +93,62 @@ class Resolver:
         return self.servers[self.index]
 
 
-    def lookup(self, name, type = dns.ALL_RECORDS, cls = dns.ANY):
+    def connectionMade(self, protocol):
+        self.connections.append(protocol)
+        for (d, q) in self.pending:
+            protocol.query(q).chainDeferred(d)
+        del self.pending[:]
+
+
+    def queryUDP(self, *queries):
         """
-        @type name: C{str}
-        @param name: The hostname to look up
-        
-        @type type: C{int}
-        @param type: Specify the query type.  Must be one of:
-        
-        A NS MD MF CNAME SOA MB MG MR NULL MKS PTR
-        HINFO MX TXTAFRX MAILB MAILA ALL_RECORDS
-        
-        @type cls: C{int}
-        @param cls: Specify the query class.  Must be one of:
-        
-        IN CS CH HS ANY
+        Make a number of DNS queries via UDP.
+
+        @type queries: Any non-zero number of C{dns.Query} instances
+        @param queries: The queries to make.
         
         @rtype: C{Deferred}
         """
-        p = dns.DNSClientProtocol()
+        return self.protocol.query((self.pickServer(), dns.PORT), queries)
 
-        from twisted.internet import reactor
-        reactor.connectUDP(self.pickServer(), dns.PORT, p)
-        self.index = (self.index + 1) % len(self.servers)
-        return p.query(name, type, cls)
+
+    def queryTCP(self, *queries):
+        """
+        Make a number of DNS queries via TCP.
+
+        @type queries: Any non-zero number of C{dns.Query} instances
+        @param queries: The queries to make.
+        
+        @rtype: C{Deferred}
+        """
+        if not len(self.connections):
+            from twisted.internet import reactor
+            reactor.connectTCP(self.pickServer(), dns.PORT, self.factory)
+            self.pending.append((defer.Deferred(), queries))
+            return self.pending[-1][0]
+        else:
+            return self.connections[0].query(queries)
 
 
     def filterAnswers(self, type):
         def getOfType(message, type=type):
             if message.trunc:
-                # Woops, re-issue the request over TCP
-                d = defer.Deferred()
-                f = protocol.ClientFactory()
-                f.protocol = lambda q=message.queries, d=d: dns.TCPDNSClientProtocol(q, d)
-                from twisted.internet import reactor
-                reactor.connectTCP(self.pickServer(), dns.PORT, f)
-                print 'going tcp'
-                return d.addCallback(self.filterAnswers(type))
+                return self.queryTCP(message.queries).addCallback(self.filterAnswers(type))
             else:
-                return [n.data for n in message.answers if n.type == type]
+                return [n.payload for n in message.answers if n.type == type]
         return getOfType
 
 
     def lookupAddress(self, name):
-        return self.lookup(name, dns.A, dns.IN).addCallback(self.filterAnswers(dns.A))
+        return self.queryUDP(dns.Query(name, dns.A, dns.IN)).addCallback(self.filterAnswers(dns.A))
 
 
     def lookupMailExchange(self, name):
-        return self.lookup(name, dns.MX, dns.IN).addCallback(self.filterAnswers(dns.MX))
+        return self.queryUDP(dns.Query(name, dns.MX, dns.IN)).addCallback(self.filterAnswers(dns.MX))
 
 
     def lookupNameservers(self, name):
-        return self.lookup(name, dns.NS, dns.IN).addCallback(self.filterAnswers(dns.NS))
+        return self.queryUDP(dns.Query(name, dns.NS, dns.IN)).addCallback(self.filterAnswers(dns.NS))
 
 
 class ThreadedResolver(Resolver):
@@ -141,6 +156,21 @@ class ThreadedResolver(Resolver):
         assert type == dns.A and cls == dns.IN, \
             "No support for query types other than A IN"
         return defer.deferToThread(socket.gethostbyname, name)
+
+
+class DNSClientFactory(protocol.ClientFactory):
+    def __init__(self, controller):
+        self.controller = controller
+    
+
+    def clientConnectionLost(self, connector, reason):
+        print connector, reason
+
+
+    def buildProtocol(self, addr):
+        p = dns.TCPDNSClientProtocol(self.controller)
+        p.factory = self
+        return p
 
 
 try:

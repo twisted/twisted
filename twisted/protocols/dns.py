@@ -28,9 +28,12 @@ Future plans: TCP protocol implementation, intelligent handling of
 
 # System imports
 import StringIO, random, struct
+from socket import inet_aton, inet_ntoa
 
 # Twisted imports
 from twisted.internet import protocol, defer
+
+import dns
 
 PORT = 53
 
@@ -146,11 +149,7 @@ class Name:
 
 
     def __str__(self):
-        return '<Name %r>' % (self.name,)
-
-
-    def __repr__(self):
-        return 'Name(%r)' % (self.name,)
+        return self.name
 
 
 class Query:
@@ -211,7 +210,8 @@ class RR:
     @ivar type: The query type of the original request.
     @ivar cls: The query class of the original request.
     @ivar ttl: The time-to-live for this record.
-    @ivar data: Query Type specific reply information.
+    @ivar data: The unprocessed RR data from the response.
+    @ivar payload: The processed RR data from the response.
     
       For A requests, a dotted-quad IP addresses in C{str} form
       For NS requests, a hostname
@@ -227,6 +227,7 @@ class RR:
     cls = None
     ttl = None
     data = None
+    payload = None
 
     def __init__(self, name='', type=A, cls=IN, ttl=0, data = ''):
         """
@@ -262,21 +263,11 @@ class RR:
         l = struct.calcsize(self.fmt)
         buff = readPrecisely(strio, l)
         self.type, self.cls, self.ttl, l = struct.unpack(self.fmt, buff )
+        self.data = readPrecisely(strio, l)
+        self.payload = getattr(dns, QUERY_TYPES[self.type] + '_Record')()
         
-        if self.type == MX:
-            pref = struct.unpack('!H', readPrecisely(strio, 2))[0]
-            name = Name()
-            name.decode(strio)
-            self.data = pref, name
-        elif self.type == NS:
-            self.data = Name()
-            self.data.decode(strio)
-        elif self.type == A:
-            quads = map(ord, readPrecisely(strio, l))
-            self.data = '.'.join(map(str, quads))
-        else:
-            self.data = readPrecisely(strio, l)
-
+        strio.seek(-l, 1)
+        self.payload.decode(strio)
 
         # Moshe - temp
         self.strio = strio
@@ -290,10 +281,330 @@ class RR:
         )
 
     def __repr__(self):
-        return 'RR(%r, %d, %d, %d, %r)' % (
+        return 'RR(%s, %d, %d, %d, %r)' % (
             self.name.name, self.type, self.cls,
             self.ttl, self.data
         )
+
+# Kinds of RRs - oh my!
+class A_Record:
+    address = None
+
+    def __init__(self, address = 0):
+        self.address = address
+
+
+    def encode(self, strio, compDict = None):
+        strio.write(inet_aton(self.address))
+
+
+    def decode(self, strio):
+        a = readPrecisely(strio, 4)
+        self.address = inet_ntoa(a)
+
+
+    def __str__(self):
+        return '<A %s>' % (self.address,)
+
+
+class NS_Record:
+    nsdname = None
+
+    def __init__(self, nsdname = ''):
+        self.nsdname = Name(nsdname)
+    
+    
+    def encode(self, strio, compDict = None):
+        self.nsdname.encode(strio, compDict)
+    
+    
+    def decode(self, strio):
+        self.nsdname = Name()
+        self.nsdname.decode(strio)
+
+
+    def __str__(self):
+        return '<NS %s>' % (self.nsdname,)
+
+
+class MD_Record:
+    # OBSOLETE
+    def __init__(self, name = ''):
+        self.name = Name(name)
+    
+    
+    def encode(self, strio, compDict = None):
+        self.name.encode(strio, compDict)
+    
+    
+    def decode(self, strio):
+        self.nsdname = Name()
+        self.nsdname.decode(strio)
+
+
+class MF_Record:
+    # OBSOLETE
+    def __init__(self, name = ''):
+        self.name = Name(name)
+    
+    
+    def encode(self, strio, compDict = None):
+        self.name.encode(strio, compDict)
+    
+    
+    def decode(self, strio):
+        self.name = Name()
+        self.name.decode(strio)
+
+
+class CNAME_Record:
+    def __init__(self, name = ''):
+        self.name = Name(name)
+    
+    
+    def encode(self, strio, compDict = None):
+        self.name.encode(strio, compDict)
+    
+    
+    def decode(self, strio):
+        self.name = Name()
+        self.name.decode(strio)
+    
+    
+    def __str__(self):
+        return '<CNAME %s>' % (self.name,)
+
+
+class SOA_Record:
+    def __init__(self, mname = '', rname = '', serial = 0, refresh = 0, retry = 0, expire = 0, minimum = 0):
+        self.mname, self.rname, self.serial, = Name(mname), Name(rname), serial
+        self.refresh, self.retry, self.expire = refresh, retry, expire
+        self.minimum = minimum
+
+
+    def encode(self, strio, compDict = None):
+        self.mname.encode(strio, compDict)
+        self.rname.encode(strio, compDict)
+        strio.write(
+            struct.pack(
+                '!LlllL',
+                self.serial, self.refresh, self.retry, self.expire,
+                self.minimum
+            )
+        )
+    
+    
+    def decode(self, strio):
+        self.mname, self.rname = Name(), Name()
+        self.mname.decode(strio)
+        self.rname.decode(strio)
+        r = struct.unpack('!LlllL', readPrecisely(strio, 20))
+        self.serial, self.refresh, self.retry, self.expire, self.minimum = r
+    
+    
+    def __str__(self):
+        return '<SOA %s %s serial=%d refresh=%d retry=%d expire=%d min=%d>' % (
+            self.mname, self.rname, self.serial, self.refresh,
+            self.retry, self.expire, self.minimum
+        )
+
+
+class MB_Record:
+    # EXPERIMENTAL
+    def __init__(self, name = ''):
+        self.name = Name(name)
+    
+    
+    def encode(self, strio, compDict = None):
+        self.name.encode(strio, compDict)
+    
+    
+    def decode(self, strio):
+        self.name = Name()
+        self.name.decode(strio)
+    
+    
+    def __str__(self):
+        return '<MB %s>' % (self.name,)
+
+
+class MG_Record:
+    # EXPERIMENTAL
+    def __init__(self, name = ''):
+        self.name = Name(name)
+
+
+    def encode(self, strio, compDict = None):
+        self.name.encode(strio, compDict)
+
+
+    def decode(self, strio):
+        self.name = Name()
+        self.name.decode(strio)
+
+
+    def __str__(self):
+        return '<MG %s>' % (self.name,)
+
+
+class MR_Record:
+    # EXPERIMENTAL
+    def __init__(self, newname = ''):
+        self.newname = newname
+
+
+    def encode(self, strio, compDict = None):
+        self.newname.encode(strio, compDict)
+
+
+    def decode(self, strio):
+        self.newname = Name()
+        self.newname.decode(strio)
+
+
+    def __str__(self):
+        return '<MR %s>' % (self.newname,)
+
+
+class NULL_Record:
+    # EXPERIMENTAL
+    def __init__(self, payload = None):
+        self.payload = payload
+    
+    
+    def encode(self, strio, compDict = None):
+        raise NotImplementedError, "Cannot encode or decode NULL records"
+    
+    
+    def decode(self, strio):
+        raise NotImplementedError, "Cannot encode or decode NULL records"
+
+
+# XXX - This *can't* be right, can it?
+class WKS_Record:
+    def __init__(self, address = 0, protocol = 0, map = ''):
+        self.address, self.protocol, self.map = address, protocol, map
+
+
+    def encode(self, strio, compDict = None):
+        strio.write(
+            struct.pack(
+                '!LB',
+                self.address, self.protocol
+            ) + self.map
+        )
+    
+    
+    def decode(self, strio, compDict = None):
+        r = struct.unpack('!LB', readPrecisely(strio, 5))
+        self.address, self.protocol = r
+        # Burp!
+        self.map = strio.read()
+
+
+    def __str__(self):
+        return '<WKS addr=%s proto=%d>' % (self.address, self.protocol)
+
+
+class PTR_Record:
+    def __init__(self, ptrdname = ''):
+        self.ptrdname = Name(ptrdname)
+    
+    
+    def encode(self, strio, compDict = None):
+        self.ptrdname.encode(strio, compDict)
+    
+    
+    def decode(self, strio):
+        self.ptrdname = Name()
+        self.ptrdname.decode(strio)
+
+
+    def __str__(self):
+        return '<PTR %s>' % (self.ptrdname,)
+
+
+class HINFO_Record:
+    def __init__(self, cpu = '', os = ''):
+        self.cpu, self.os = cpu, os
+
+
+    def encode(self, strio, compDict = None):
+        strio.write(struct.pack('!B', len(self.cpu)) + self.cpu)
+        strio.write(struct.pack('!B', len(self.os)) + self.os)
+
+
+    def decode(self, strio):
+        cpu = struct.unpack('!B', readPrecisely(strio, 1))[0]
+        self.cpu = readPrecisely(strio, cpu)
+        os = struct.unpack('!B', readPrecisely(strio, 1))[0]
+        self.os = readPrecisely(strio, os)
+    
+    
+    def __str__(self):
+        return '<HINFO cpu=%s os=%s>' % (self.cpu, self.os)
+
+
+class MINFO_Record:
+    # EXPERIMENTAL
+    def __init__(self, rmailbx = '', emailbx = ''):
+        self.rmailbx, self.emailbx = Name(rmailbx), Name(emailbx)
+    
+    
+    def encode(self, strio, compDict = None):
+        self.rmailbx.encode(strio, compDict)
+        self.emailbx.encode(strio, compDict)
+    
+    
+    def decode(self, strio):
+        self.rmailbx, self.emailbx = Name(), Name()
+        self.rmailbx.decode(strio)
+        self.emailbx.decode(strio)
+
+
+    def __str__(self):
+        return '<MINFO responsibility=%s errors=%s>' % (self.rmailbox, self.emailbox)
+
+
+class MX_Record:
+    def __init__(self, preference = 0, exchange = ''):
+        self.preference, self.exchange = preference, Name(exchange)
+    
+    
+    def encode(self, strio, compDict = None):
+        strio.write(struct.pack('!H', self.preference))
+        self.exchange.encode(strio, compDict)
+    
+    
+    def decode(self, strio):
+        self.preference = struct.unpack('!H', readPrecisely(strio, 2))[0]
+        self.exchange = Name()
+        self.exchange.decode(strio)
+
+
+    def __str__(self):
+        return '<MX %d %s>' % (self.preference, self.exchange)
+
+
+# XXX - This *can't* be right, can it?
+class TXT_Record:
+    def __init__(self, *data):
+        self.data = data
+    
+    
+    def encode(self, strio, compDict = None):
+        for d in self.data:
+            strio.write(struct.pack('!B', len(d)) + d)
+
+
+    def decode(self, strio):
+        self.data = []
+        while 1:
+            try:
+                l = struct.unpack('!B', readPrecisely(strio, 1))[0]
+            except EOFError:
+                break
+            self.data.append(readPrecisely(strio, l))
 
 
 class Message:
@@ -405,47 +716,21 @@ class Message:
         self.decode(strio)
 
 
-class DNSClientBase:
+class DNSClientProtocol(protocol.DatagramProtocol):
     id = 1000
+    liveMessages = {}
+
 
     def pickID(self):
-        DNSClientBase.id = DNSClientBase.id + 1
-        return DNSClientBase.id
+        DNSClientProtocol.id = DNSClientProtocol.id + 1
+        return DNSClientProtocol.id
 
 
-    def writeMessage(self, message):
-        self.transport.write(message.toStr())
+    def writeMessage(self, addr, message):
+        self.transport.write(message.toStr(), addr)
 
 
-    def query(self, name, type=ALL_RECORDS, cls=IN):
-        """
-        Send out a query message.
-        
-        @type name: C{str}
-        @param name: The name about which to request information.
-        
-        @type type: C{int}
-        @param type: Query type
-        
-        @type cls: C{int}
-        @param cls: Query class
-        
-        @rtype: C{Deferred}
-        """
-        id = self.pickID()
-        d = self.liveMessages[id] = defer.Deferred()
-        m = Message(id, recDes=1)
-        m.addQuery(name, type, cls)
-        self.writeMessage(m)
-        return d
-
-
-class DNSClientProtocol(DNSClientBase, protocol.DatagramProtocol):
-    def __init__(self):
-        self.liveMessages = {}
-
-
-    def datagramReceived(self, data):
+    def datagramReceived(self, data, addr):
         m = Message()
         m.fromStr(data)
         if not m.answer:
@@ -454,29 +739,56 @@ class DNSClientProtocol(DNSClientBase, protocol.DatagramProtocol):
             return # XXX - Log this?
         self.liveMessages[m.id].callback(m)
         del self.liveMessages[m.id]
-        self.transport.loseConnection()
 
 
-class TCPDNSClientProtocol(DNSClientBase, protocol.Protocol):
+    def query(self, address, queries):
+        """
+        Send out a message with the given queries.
+        
+        @type name: C{str}
+        @param name: The name about which to request information.
+        
+        @type address: C{tuple} of C{str} and C{int}
+        @param address: The address to which to send the query
+        
+        @type queries: C{list} of C{Query} instances
+        @param queries: The queries to transmit
+        
+        @rtype: C{Deferred}
+        """
+        id = self.pickID()
+        d = self.liveMessages[id] = defer.Deferred()
+        m = Message(id, recDes=1)
+        m.queries = queries
+        self.writeMessage(address, m)
+        return d
+
+
+class TCPDNSClientProtocol(protocol.Protocol):
+    id = 1000
+    liveMessages = {}
+
     length = None
     buffer = ''
     d = None
 
 
-    def __init__(self, prefab, deferred):
-        self.prefab = prefab
-        self.d = deferred
-    
-    
+    def __init__(self, controller):
+        self.controller = controller
+
+
+    def pickID(self):
+        TCPDNSClientProtocol.id = TCPDNSClientProtocol.id + 1
+        return TCPDNSClientProtocol.id
+
+
     def writeMessage(self, message):
-        self.transport.write(struct.pack('!H', len(message.toStr())))
-        DNSClientBase.writeMessage(self, message)
+        s = message.toStr()
+        self.transport.write(struct.pack('!H', len(s)) + s)
 
 
     def connectionMade(self):
-        m = Message(self.pickID(), recDes=1)
-        m.queries = self.prefab
-        self.writeMessage(m)
+        self.controller.connectionMade(self)
 
 
     def dataReceived(self, data):
@@ -488,8 +800,31 @@ class TCPDNSClientProtocol(DNSClientBase, protocol.Protocol):
         if len(self.buffer) == self.length:
             m = Message()
             m.fromStr(self.buffer)
+            
+            try:
+                d = self.liveMessages[m.id]
+            except KeyError:
+                self.controller.messageReceived(m)
+            else:
+                del self.liveMessages[m.id]
+                d.callback(m)
 
-            if not m.answer:
-                return # XXX - Log this?
-            self.d.callback(m)
-            self.transport.loseConnection()
+
+    def query(self, queries):
+        """
+        Send out a message with the given queries.
+        
+        @type name: C{str}
+        @param name: The name about which to request information.
+        
+        @type queries: C{list} of C{Query} instances
+        @param queries: The queries to transmit
+        
+        @rtype: C{Deferred}
+        """
+        id = self.pickID()
+        d = self.liveMessages[id] = defer.Deferred()
+        m = Message(id, recDes=1)
+        m.queries = queries
+        self.writeMessage(m)
+        return d
