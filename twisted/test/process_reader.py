@@ -1,5 +1,3 @@
-#! /usr/bin/python
-
 """Script used by test_process.TestTwoProcesses"""
 
 # run until stdin is closed, then quit
