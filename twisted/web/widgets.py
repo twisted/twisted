@@ -180,7 +180,7 @@ class Form(StreamWidget):
             if args.has_key(field):
                 del args[field]
         if args:
-            raise FormInputError("unknown fields" % repr(args))
+            raise FormInputError("unknown fields: %s" % repr(args))
         return apply(self.process, (write, request), kw)
 
     def stream(self, write, request):
