@@ -52,7 +52,7 @@ applied when serializing arguments.
 # Future Imports
 from __future__ import nested_scopes
 
-__version__ = "$Revision: 1.138 $"[11:-2]
+__version__ = "$Revision: 1.139 $"[11:-2]
 
 
 # System Imports
@@ -1435,13 +1435,12 @@ class PBClientFactory(protocol.ClientFactory):
         self._reset()
     
     def _reset(self):
-        self.perspectiveRequests = [] # list of (deferred, args)
         self.rootObjectRequests = [] # list of deferred
         self._broker = None
         self._root = None
     
     def _failAll(self, reason):
-        deferreds = self.rootObjectRequests + [i[0] for i in self.perspectiveRequests]
+        deferreds = self.rootObjectRequests
         self._reset()
         for d in deferreds:
             d.errback(reason)
@@ -1449,8 +1448,15 @@ class PBClientFactory(protocol.ClientFactory):
     def clientConnectionFailed(self, connector, reason):
         self._failAll(reason)
         
-    def clientConnectionLost(self, connector, reason):
-        self._failAll(reason)
+    def clientConnectionLost(self, connector, reason, reconnecting=0):
+        """Reconnecting subclasses should call with reconnecting=1."""
+        if reconnecting:
+            # any pending requests will go to next connection attempt
+            # so we don't fail them.
+            self._broker = None
+            self._root = None
+        else:
+            self._failAll(reason)
 
     def clientConnectionMade(self, broker):
         self._broker = broker
@@ -1465,7 +1471,7 @@ class PBClientFactory(protocol.ClientFactory):
 
         @return Deferred of the root object.
         """
-        if self._broker:
+        if self._broker and not self._broker.disconnected:
            return defer.succeed(self._root)
         d = defer.Deferred()
         self.rootObjectRequests.append(d)

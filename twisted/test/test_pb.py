@@ -760,6 +760,18 @@ class SpreadUtilTestCase(unittest.TestCase):
         self.assertEquals(m(3), 4)
 
 
+class ReconnectOnce(pb.PBClientFactory):
+
+    reconnected = 0
+    
+    def clientConnectionLost(self, connector, reason):
+        pb.PBClientFactory.clientConnectionLost(self, connector, reason,
+                                                reconnecting=(not self.reconnected))
+        if not self.reconnected:
+            self.reconnected = 1
+            connector.connect()
+
+
 class ConnectionTestCase(unittest.TestCase):
 
     def setUp(self):
@@ -859,6 +871,24 @@ class ConnectionTestCase(unittest.TestCase):
         self.assert_(isinstance(p, pb.RemoteReference))
         p.broker.transport.loseConnection()
 
+    def testReconnect(self):
+        factory = ReconnectOnce()
+        l = []
+        def disconnected(p):
+            self.assertEquals(l, [])
+            l.append(factory.getPerspective("guest", "guest", "test", perspectiveName="any"))
+        d = factory.getPerspective("guest", "guest", "test", perspectiveName="any")
+        reactor.connectTCP("127.0.0.1", self.portno, factory)
+        p = dR(d)
+        self.assert_(isinstance(p, pb.RemoteReference))
+        p.notifyOnDisconnect(disconnected)
+        factory.disconnect()
+        while not l:
+            reactor.iterate()
+        p = dR(l[0])
+        self.assert_(isinstance(p, pb.RemoteReference))
+        factory.disconnect()
+        
 
 # yay new cred, everyone use this:
 
