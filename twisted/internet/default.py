@@ -1,5 +1,5 @@
 # -*- Python -*-
-# $Id: default.py,v 1.51 2002/11/25 02:06:32 spiv Exp $
+# $Id: default.py,v 1.52 2002/11/25 22:03:48 exarkun Exp $
 #
 # Twisted, the Framework of Your Internet
 # Copyright (C) 2001 Matthew W. Lefkowitz
@@ -547,9 +547,9 @@ class SelectReactor(PosixReactorBase):
                     why = getattr(selectable, method)()
                     handfn = getattr(selectable, 'fileno', None)
                     if not handfn:
-                        why = main.ConnectionFdescWentAway('Handler has no fileno method')
+                        why = error.ConnectionFdescWentAway('Handler has no fileno method')
                     elif handfn() == -1:
-                        why = main.ConnectionFdescWentAway('Filedescriptor went away')
+                        why = error.ConnectionFdescWentAway('Filedescriptor went away')
                 except:
                     log.deferr()
                     why = sys.exc_value
