@@ -41,7 +41,8 @@ class SOCKSv4Outgoing(protocol.Protocol):
         self.socks=socks
 
     def connectionMade(self):
-        self.socks.makeReply(90)
+        junk, host, port = self.transport.getPeer()
+        self.socks.makeReply(90, 0, port=port, ip=host)
         self.socks.otherConn=self
 
     def connectionFailed(self):
