@@ -19,14 +19,16 @@
 Tests for twisted.protocols.dns.
 """
 
-from twisted.trial import unittest
-from StringIO import StringIO
-
-from twisted.protocols import dns
-
 import socket
-# Contort ourselves horribly until inet_pton is standard
-IPV6 = hasattr(socket, 'AF_INET6')
+
+try:
+    from cStringIO import StringIO
+except ImportError:
+    from StringIO import StringIO
+
+from twisted.trial import unittest
+from twisted.protocols import dns
+from twisted.test.test_names import IPv6
 
 
 class RoundtripDNSTestCase(unittest.TestCase):
@@ -102,7 +104,7 @@ class RoundtripDNSTestCase(unittest.TestCase):
             dns.Record_HINFO, dns.Record_MINFO, dns.Record_MX, dns.Record_TXT
         ]
         
-        if IPV6:
+        if IPv6:
             records.extend([dns.Record_AAAA, dns.Record_A6])
 
         for k in records:
