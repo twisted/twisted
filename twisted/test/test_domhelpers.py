@@ -233,3 +233,13 @@ class DomHelpersTest(TestCase):
     # def test_superPrependAttribute FIXME
     # def test_superAppendAttribute FIXME
     # def test_substitute FIXME
+
+    def test_escape(self):
+        j='this string " contains many &\' characters> xml< won\'t like'
+        expected='this string &quot; contains many &amp;&apos; characters&gt; xml&lt; won&apos;t like'
+        self.assertEqual(domhelpers.escape(j), expected)
+
+    def test_unescape(self):
+        j='this string &quot; has &&amp;&apos; entities &gt; &lt; and some characters xml won\'t like<'
+        expected='this string " has &&\' entities > < and some characters xml won\'t like<'
+        self.assertEqual(domhelpers.unescape(j), expected)
