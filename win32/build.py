@@ -153,7 +153,7 @@ def run(argv=sys.argv):
         ssh('shell.sf.net chmod g+rw /home/groups/t/tw/twisted/htdocs/%s' %
             (twisteddistnodocs, twisteddist))
     
-    raw_input('Done!\n')
+    raw_input('Done building Twisted! (hit enter)\n')
     
 
 if __name__=='__main__':
