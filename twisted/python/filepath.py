@@ -248,4 +248,13 @@ class FilePath:
     def basename(self):
         return basename(self.path)
 
+    def setContent(self, content, ext='.new'):
+        sib = self.siblingExtension(ext)
+        sib.open('w').write(content)
+        os.rename(sib.path, self.path)
+
+    def getContent(self):
+        return self.open().read()
+
+
 FilePath.clonePath = FilePath

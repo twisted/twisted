@@ -25,6 +25,16 @@ class FilePathTestCase(unittest.TestCase):
         f = open(os.path.join(cmn, "sub3", "file3.ext3"),"wb")
         self.path = filepath.FilePath(cmn)
 
+    def testGetAndSet(self):
+        content = 'newcontent'
+        self.path.child('new').setContent(content)
+        newcontent = self.path.child('new').getContent()
+        self.failUnlessEqual(content, newcontent)
+        content = 'content'
+        self.path.child('new').setContent(content, '.tmp')
+        newcontent = self.path.child('new').getContent()
+        self.failUnlessEqual(content, newcontent)
+
     def testValidSubdir(self):
         sub1 = self.path.child('sub1')
         self.failUnless(sub1.exists(),
