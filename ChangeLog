@@ -2,6 +2,9 @@
 
 	* .: Releasing Twisted 1.0.7 (no code changes since 1.0.7rc1).
 
+	* twisted/web/vhost.py: Un-gobble the path segment that a vhost eats
+	when the resource we're wrapping isLeaf. Potentially closes issue125.
+
 2003-09-12  Itamar Shtull-Trauring  <itamar@itamarst.org>
 
 	* twisted/web/microdom.py: lenient mode correctly handles <script>
