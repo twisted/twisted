@@ -358,7 +358,8 @@ class SSHSession(SSHChannel):
             self.client = SSHSessionClient()
             pty = reactor.spawnProcess(SSHSessionProtocol(self, self.client), \
                 shell, ["-"], self.environ, '/tmp', usePTY = 1)
-            pty.setWindowSize(*self.winSize)
+            fcntl.ioctl(pty.fileno(), tty.TIOCSWINSZ,
+                        struct.pack('4H', *self.winSize))
             if self.modes:
                 attr = tty.tcgetattr(pty.fd)
                 for mode, val in self.modes:
@@ -403,7 +404,9 @@ class SSHSession(SSHChannel):
 
     def request_window_change(self, data):
         cols, rows, xpixel, ypixel = struct.unpack('>4L', data)
-        self.pty.setWindowSize(rows, cols, xpixel, ypixel)
+        self.winSize = (rows, cols, xpixel, ypixel)
+        fcntl.ioctl(self.pty.fileno(), tty.TIOCSWINSZ,
+                    struct.pack('4H', *self.winSize))
         return 1
 
     def subsystem_python(self):

@@ -24,7 +24,7 @@ Maintainer: U{Itamar Shtull-Trauring<mailto:twisted@itamarst.org>}
 """
 
 # System Imports
-import os, sys, traceback, select, errno, tty, fcntl, termios, struct, cStringIO
+import os, sys, traceback, select, errno, struct, cStringIO
 
 try:
     import pty
@@ -467,12 +467,6 @@ class PTYProcess(abstract.FileDescriptor, styles.Ephemeral):
         except:
             log.deferr()
         registerReapProccessHandler(self.pid, self)
-
-    def setWindowSize(self, rows, cols, xpixels = 0, ypixels = 0):
-        """Set the window size for applications like curses."""
-        # idea stolen from pexpect
-        fcntl.ioctl(self.fd, termios.TIOCSWINSZ, 
-                    struct.pack('4H', rows, cols, xpixels, ypixels))
 
     def reapProcess(self):
         """Try to reap a process (without blocking) via waitpid.
