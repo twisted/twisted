@@ -52,7 +52,6 @@ class NoFileAuthority(common.ResolverBase):
             l = [r for r in self.records[name.lower()] if type == dns.ALL_RECORDS or r.TYPE == type]
             for r in l:
                 r.ttl = 10
-            print 'results are', l
             return defer.succeed(l)
         return defer.fail(dns.DomainError(name))
 
@@ -90,6 +89,11 @@ class ServerDNSTestCase(unittest.DeferredTestCase):
                         dns.Record_NS('39.28.189.39'),
                         dns.Record_MX(10, 'host.test-domain.com'),
                         dns.Record_HINFO(os='Linux', cpu='A Fast One, Dontcha know'),
+                        dns.Record_CNAME('canonical.name.com'),
+                        dns.Record_MB('mailbox.test-domain.com'),
+                        dns.Record_MG('mail.group.someplace'),
+                        dns.Record_MR('mail.redirect.or.whatever'),
+                        dns.Record_MINFO(rmailbx='r mail box', emailbx='e mail box'),
                         soa_record
                     ],
                     'host.test-domain.com': [
@@ -228,6 +232,71 @@ class ServerDNSTestCase(unittest.DeferredTestCase):
         self.deferredFailUnlessEqual(
             r.lookupPointer('123.93.84.28.in-addr.arpa').addBoth(setDone),
             [dns.Record_PTR('test.host-reverse.lookup.com')]
+        )
+        while not gotResponse:
+            reactor.iterate(0.05)
+
+
+    def testCNAME(self):
+        """Test DNS 'CNAME' record queries"""
+        global gotResponse
+        gotResponse = 0
+        r = self.resolver
+        self.deferredFailUnlessEqual(
+            r.lookupCanonicalName('test-domain.com').addBoth(setDone),
+            [dns.Record_CNAME('canonical.name.com')]
+        )
+        while not gotResponse:
+            reactor.iterate(0.05)
+
+
+    def testMB(self):
+        """Test DNS 'MB' record queries"""
+        global gotResponse
+        gotResponse = 0
+        r = self.resolver
+        self.deferredFailUnlessEqual(
+            r.lookupMailBox('test-domain.com').addBoth(setDone),
+            [dns.Record_MB('mailbox.test-domain.com')]
+        )
+        while not gotResponse:
+            reactor.iterate(0.05)
+
+
+    def testMG(self):
+        """Test DNS 'MG' record queries"""
+        global gotResponse
+        gotResponse = 0
+        r = self.resolver
+        self.deferredFailUnlessEqual(
+            r.lookupMailGroup('test-domain.com').addBoth(setDone),
+            [dns.Record_MG('mail.group.someplace')]
+        )
+        while not gotResponse:
+            reactor.iterate(0.05)
+
+
+    def testMR(self):
+        """Test DNS 'MR' record queries"""
+        global gotResponse
+        gotResponse = 0
+        r = self.resolver
+        self.deferredFailUnlessEqual(
+            r.lookupMailRename('test-domain.com').addBoth(setDone),
+            [dns.Record_MG('mail.redirect.or.whatever')]
+        )
+        while not gotResponse:
+            reactor.iterate(0.05)
+
+
+    def testMINFO(self):
+        """Test DNS 'MINFO' record queries"""
+        global gotResponse
+        gotResponse = 0
+        r = self.resolver
+        self.deferredFailUnlessEqual(
+            r.lookupMailboxInfo('test-domain.com').addBoth(setDone),
+            [dns.Record_MINFO(rmailbx='r mail box', emailbx='e mail box')]
         )
         while not gotResponse:
             reactor.iterate(0.05)
