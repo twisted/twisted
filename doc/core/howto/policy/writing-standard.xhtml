@@ -1,0 +1,95 @@
+<?xml version="1.0"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <title>Twisted Writing Standard</title>
+  </head>
+
+  <body>
+    <h1>Twisted Writing Standard</h1>
+
+    <p>The Twisted writing standard describes the documentation writing
+    styles we prefer in our documentation. This standard applies particularly
+    to howtos and other descriptive documentation.</p>
+
+    <p>This document should be read with the <a
+    href="doc-standard.xhtml">documentation standard</a>, which describes
+    markup style for the documentation.</p>
+
+    <p>This document is meant to help Twisted documentation authors produce
+    documentation that does not have the following problems:</p>
+
+    <ul>
+    <li>misleads users about what is good Twisted style;</li>
+    <li>misleads users into thinking that an advanced howto is an introduction
+    to writing their first Twisted server; and</li>
+    <li>misleads users about whether they fit the document's target audience:
+    for example, that they are able to use enterprise without knowing how to
+    write SQL queries.</li>
+    </ul>
+
+    <h2>Introductions</h2>
+
+    <p>The introductory section of a Twisted howto should immediately follow
+    the top-level heading and precede any subheadings.</p>
+
+    <p>The following items should be present in the introduction to Twisted
+    howtos: the introductory paragraph and the description of the target
+    audience.</p>
+
+    <h3>Introductory paragraph</h3>
+
+    <p>The introductory paragraph of a document should sumamrise what the
+    document is designed to present. It should use the both proper names for
+    the Twisted technologies and simple non-Twisted descriptions of the
+    technologies. For example, in this paragraph both the name of the technology
+    (&quot;Conch&quot;) and a description (&quot;SSH server&quot;) are used:</p>
+
+    <pre>
+    This document describes setting up a SSH server to serve data from the
+    file system using Conch, the Twisted SSH implementation.
+    </pre>
+
+    <p>The introductory paragraph should be relatively short, but should, like
+    the above, somewhere define the document's objective: what the reader
+    should be able to do using instructions in the document.</p>
+
+    <h3>Description of target audience</h3>
+
+    <p>Subsequent paragraphs in the introduction should describe the target
+    audience of the document: who would want to read it, and what they should
+    know before they can expect to use your document. For example:</p>
+
+    <pre>
+    The target audience of this document is a Twisted user who has a set of
+    filesystem like data objects that they would like to make available to
+    authenticated users over SFTP.
+    
+    Following the directions in this document will require that you are
+    familiar with managing authentication via the Twisted Cred system.
+    </pre>
+
+    <p>Use your discretion about the extent to which you list assumed
+    knowledge. Very introductory documents that are going to be among a
+    reader's first exposure to Twisted will even need to specify that they
+    rely on knowledge of Python and of certain networking concepts (ports,
+    servers, clients, connections) but documents that are going to be sought
+    out by existing Twisted users for particular purposes only need to specify
+    other Twisted knowledge that is assumed.</p>
+
+    <p>Any knowledge of technologies that wouldn't be considered &quot;core
+    Python&quot; and/or &quot;simple networking&quot; need to be explicitly
+    specified, no matter how obvious they seem to someone familiar with the
+    technology. For example, it needs to be stated that someone using
+    enterprise should know SQL and should know how to set up and populate
+    databases for testing purposes.</p>
+
+    <p>Where possible, link to other documents that will fill in missing
+    knowledge for the reader. Linking to documents in the Twisted repository
+    is preferred but not essential.</p>
+
+  </body>
+</html>
+
