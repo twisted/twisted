@@ -20,8 +20,8 @@
 
 2003-05-21  Christopher Armstrong  <radix@twistedmatrix.com>
 
-	* bin/coil, doc/man/coil.1: removed. Coil isn't being maintained,
-	pending a total rewrite.
+	* bin/coil, doc/man/coil.1, doc/man/index.html: removed. Coil
+	isn't being maintained, pending a total rewrite.
 
 2003-05-20  Brian Warner  <warner@lothar.com>
 
