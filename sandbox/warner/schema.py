@@ -190,7 +190,8 @@ class Constraint:
         """
         raise UnboundedSchema
 
-Any = Constraint # accept everything
+class Any(Constraint):
+    pass # accept everything
 
 
 # constraints which describe individual banana tokens

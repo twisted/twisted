@@ -465,6 +465,8 @@ class UnicodeUnslicer(LeafUnslicer):
     string = None
     constraint = None
     def setConstraint(self, constraint):
+        if isinstance(constraint, schema.Any):
+            return
         assert isinstance(constraint, schema.StringConstraint)
         self.constraint = constraint
 
@@ -490,6 +492,8 @@ class ListUnslicer(BaseUnslicer):
     debug = False
 
     def setConstraint(self, constraint):
+        if isinstance(constraint, schema.Any):
+            return
         assert isinstance(constraint, schema.ListConstraint)
         self.maxLength = constraint.maxLength
         self.itemConstraint = constraint.constraint
@@ -571,6 +575,8 @@ class TupleUnslicer(BaseUnslicer):
     constraints = None
 
     def setConstraint(self, constraint):
+        if isinstance(constraint, schema.Any):
+            return
         assert isinstance(constraint, schema.TupleConstraint)
         self.constraints = constraint.constraints
 
@@ -653,6 +659,8 @@ class DictUnslicer(BaseUnslicer):
     maxKeys = None
 
     def setConstraint(self, constraint):
+        if isinstance(constraint, schema.Any):
+            return
         assert isinstance(constraint, schema.DictConstraint)
         self.keyConstraint = constraint.keyConstraint
         self.valueConstraint = constraint.valueConstraint
@@ -1018,6 +1026,8 @@ class BooleanUnslicer(LeafUnslicer):
     constraint = None
 
     def setConstraint(self, constraint):
+        if isinstance(constraint, schema.Any):
+            return
         assert isinstance(constraint, schema.BooleanConstraint)
         self.constraint = constraint
 

@@ -555,6 +555,7 @@ pb.registerRemoteCopy("MyCopyable3name", MyRemoteCopy3Unslicer)
 
 class RIHelper(pb.RemoteInterface):
     def set(obj=schema.Any()): return bool
+    def set2(obj1=schema.Any(), obj2=schema.Any()): return bool
     def get(): return schema.Any()
     def echo(obj=schema.Any()): return schema.Any()
     def defer(obj=schema.Any()): return schema.Any()
@@ -564,6 +565,10 @@ class HelperTarget(pb.Referenceable):
     implements(RIHelper)
     def remote_set(self, obj):
         self.obj = obj
+        return True
+    def remote_set2(self, obj1, obj2):
+        self.obj1 = obj1
+        self.obj2 = obj2
         return True
     def remote_get(self):
         return self.obj
@@ -681,6 +686,12 @@ class TestReferenceable(unittest.TestCase, TargetMixin):
         self.failUnless(dr(d))
         return target.obj
 
+    def send2(self, arg1, arg2):
+        rr, target = self.setupTarget(HelperTarget())
+        d = rr.callRemote("set2", obj1=arg1, obj2=arg2)
+        self.failUnless(dr(d))
+        return (target.obj1, target.obj2)
+
     def echo(self, arg):
         rr, target = self.setupTarget(HelperTarget())
         d = rr.callRemote("echo", obj=arg)
@@ -707,6 +718,38 @@ class TestReferenceable(unittest.TestCase, TargetMixin):
         self.failUnless(res1 is res2) # newpb does this, oldpb didn't
 
     def testRef3(self):
+        # sending the same Referenceable in multiple arguments should result
+        # in equivalent RRs
+        r = Target()
+        res1, res2 = self.send2(r, r)
+        self.failUnless(res1 == res2)
+        self.failUnless(res1 is res2)
+
+    def testRef4(self):
+        # sending the same Referenceable in multiple calls will result in
+        # equivalent RRs
+        r = Target()
+        rr, target = self.setupTarget(HelperTarget())
+        dr(rr.callRemote("set", obj=r))
+        res1 = target.obj
+        dr(rr.callRemote("set", obj=r))
+        res2 = target.obj
+        self.failUnless(res1 == res2)
+        self.failUnless(res1 is res2)
+
+    def testRef5(self):
+        # however that is not true for non-Referenceable objects. The
+        # serialization scope is bounded by each method call
+        r = [1,2]
+        rr, target = self.setupTarget(HelperTarget())
+        dr(rr.callRemote("set", obj=r))
+        res1 = target.obj
+        dr(rr.callRemote("set", obj=r))
+        res2 = target.obj
+        self.failUnless(res1 == res2)
+        self.failIf(res1 is res2)
+
+    def testRef6(self):
         # those RemoteReferences can be used to invoke methods on the sender.
         # 'r' lives on side A. The anonymous target lives on side B. From
         # side A we invoke B.set(r), and we get the matching RemoteReference
@@ -718,7 +761,7 @@ class TestReferenceable(unittest.TestCase, TargetMixin):
         res = dr(rr.callRemote("getName"))
         self.failUnlessEqual(res, "ernie")
 
-    def testRef4(self):
+    def testRef7(self):
         # Referenceables survive round-trips
         r = Target()
         res = self.echo(r)
