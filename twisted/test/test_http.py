@@ -17,6 +17,8 @@
 
 """Test HTTP support."""
 
+from __future__ import nested_scopes
+
 from pyunit import unittest
 from twisted.protocols import http, loopback
 from twisted.internet import protocol
