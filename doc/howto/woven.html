@@ -223,7 +223,7 @@ instantiate a <code>Page</code> instance, passing it a <code>Model</code> and a
 from twisted.web.woven import page
 
 model = {'name': 'Welcome to Woven', 
-                'stuff': ['Foo', 'Bar', 'Baz']}
+         'stuff': ['Foo', 'Bar', 'Baz']}
   
 template = """&lt;html&gt;
   &lt;body&gt;
@@ -235,7 +235,7 @@ template = """&lt;html&gt;
   &lt;/html&gt;
 """
 
-  resource = page.Page(model, template=template)
+resource = page.Page(model, template=template)
 </pre>
 
 <p>Name this script <code>test.rpy</code> and place it in the directory served by <code>twisted.web</code>. Then visit the URL <code>http://localhost:8080/test.rpy</code> with your web browser, and you should see a page with the HTML-formatted model data.</p>
