@@ -196,18 +196,24 @@ def release(opts):
          'Twisted_NoDocs-%s.tar.bz2',
          'Twisted_NoDocs-%s.zip'])
 
-    print "Copying the Docs-Balls!"
-    map(lambda x: shutil.copy(x % ver, rel),
-        ['TwistedDocs-%s.tar.gz',
-         'TwistedDocs-%s.tar.bz2',
-         'TwistedDocs-%s.zip'])
 
-    print "Copying the Full-Balls!"
-    map(lambda x: shutil.copy(x % ver, rel),
-        ['Twisted-%s.tar.gz',
-         'Twisted-%s.tar.bz2',
-         'Twisted-%s.zip'])
+    if os.path.exists('TwistedDocs-%s.tar.gz' % ver):
+        print "Copying the Docs-Balls!"
+        map(lambda x: shutil.copy(x % ver, rel),
+            ['TwistedDocs-%s.tar.gz',
+             'TwistedDocs-%s.tar.bz2',
+             'TwistedDocs-%s.zip'])
+    else:
+        print "not copying DocsBall"
 
+    if os.path.exists('Twisted-%s.tar.gz' % ver):
+        print "Copying the Full-Balls!"
+        map(lambda x: shutil.copy(x % ver, rel),
+            ['Twisted-%s.tar.gz',
+             'Twisted-%s.tar.bz2',
+             'Twisted-%s.zip'])
+    else:
+        print "not copying FullBall."
 
 if __name__=='__main__':
     main()
