@@ -27,6 +27,7 @@ from twisted.internet import reactor
 class Echo(Protocol):
     def dataReceived(self, data):
         """As soon as any data is received, write it back."""
+        print "echoing %r" % (data,)
         self.transport.write(data)
 
 def main():

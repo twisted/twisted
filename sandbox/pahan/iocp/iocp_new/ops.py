@@ -1,7 +1,10 @@
 from socket import AF_INET, SOCK_STREAM # temporary, hopefully
-from socket import socket
+from socket import socket, SOL_SOCKET
+import struct
 
 from twisted.internet import defer
+
+SO_UPDATE_ACCEPT_CONTEXT = 0x700B
 
 # async op does:
 # issue with user defined parameters
@@ -46,7 +49,9 @@ class WSARecvOp(OverlappedOp):
     def initiateOp(self, handle, buffer):
         self.buffer = buffer # save a reference so that things don't blow up
         self.handle = handle
+        print "in WSARecvOp.initiateOp, calling issueRecvOp with (%(handle)r)" % locals()
         (ret, bytes) = self.reactor.issueWSARecv(handle, buffer, self.ovDone)
+        print "in WSARecvOp.initiateOp, issueRecvOp returned (%(ret)s, %(bytes)s), handle %(handle)s" % locals()
         # TODO: need try-except block to at least cleanup self.handle/self.buffer and unregisterFile
         # also, errback if this ReadFile call throws up (perhaps call ovDone ourselves to automate cleanup?)
 
@@ -62,7 +67,10 @@ class WSASendOp(OverlappedOp):
 class AcceptExOp(OverlappedOp):
     list = None
     def ovDone(self, ret, bytes):
-        self.callback(self.list)
+        print "AcceptExOp.ovDone(%(ret)s, %(bytes)s)" % locals()
+        print "    self.list.fileno() %s self.handle %s" % (self.list.fileno(), self.handle)
+        self.list.setsockopt(SOL_SOCKET, SO_UPDATE_ACCEPT_CONTEXT, struct.pack("I", self.list.fileno()))
+        self.callback((self.list, self.list.getpeername()))
 
     def initiateOp(self, handle):
         # TODO: how do I determine these? from handle somehow?
@@ -72,6 +80,7 @@ class AcceptExOp(OverlappedOp):
         self.buffer = self.reactor.AllocateReadBuffer(64) # save a reference so that things don't blow up
         self.handle = handle
         (ret, bytes) = self.reactor.issueAcceptEx(handle, self.list.fileno(), self.buffer, self.ovDone)
+        print "in AcceptExOp.initiateOp, issueAcceptEx returned (%(ret)s, %(bytes)s)" % locals()
         # TODO: need try-except block to at least cleanup self.handle/self.buffer and unregisterFile
         # also, errback if this ReadFile call throws up (perhaps call ovDone ourselves to automate cleanup?)
 

@@ -80,7 +80,7 @@ class RWHandle(log.Logger, styles.Ephemeral):
         op = self.read_op()
         op.addCallback(self.readDone)
         op.addErrback(self.readErr)
-        op.initiateOp(self.handle, self.readbuf, {})
+        op.initiateOp(self.handle, self.readbuf)
 
     def readDone(self, (bytes, kw)):
         # XXX: got to pass a buffer to dataReceived to avoid copying, but most of the stuff expects that

@@ -171,8 +171,10 @@ static PyObject *iocpcore_doIteration(iocpcore* self, PyObject *args) {
     Py_BEGIN_ALLOW_THREADS;
     res = GetQueuedCompletionStatus(self->iocp, &bytes, &key, (OVERLAPPED**)&ov, timeout);
     Py_END_ALLOW_THREADS;
+    printf("gqcs returned %d\n", res);
+    err = GetLastError();
+    printf("    GLE returned %d\n", err);
     if(!res) {
-        err = GetLastError();
         if(!ov) {
             if(err != WAIT_TIMEOUT) {
                 return PyErr_SetFromWindowsErr(err);
@@ -185,7 +187,7 @@ static PyObject *iocpcore_doIteration(iocpcore* self, PyObject *args) {
     // steal its reference, then clobber it to death! I mean free it!
     object = ov->callback;
     if(object) {
-        ret = PyObject_CallFunction(object, "L", bytes);
+        ret = PyObject_CallFunction(object, "ll", err, bytes);
         if(!ret) {
             return NULL;
         }
@@ -231,7 +233,7 @@ static PyObject *iocpcore_WSARecv(iocpcore* self, PyObject *args) {
     res = WSARecv(handle, &wbuf, 1, &bytes, &flags, (OVERLAPPED *)ov, NULL);
     Py_END_ALLOW_THREADS;
     err = GetLastError();
-    if(!res && err != ERROR_IO_PENDING) {
+    if(res == SOCKET_ERROR && err != ERROR_IO_PENDING) {
         return PyErr_SetFromWindowsErr(err);
     }
     return Py_BuildValue("ll", err, bytes);
@@ -272,7 +274,7 @@ static PyObject *iocpcore_WSASend(iocpcore* self, PyObject *args) {
     res = WSASend(handle, &wbuf, 1, &bytes, flags, (OVERLAPPED *)ov, NULL);
     Py_END_ALLOW_THREADS;
     err = GetLastError();
-    if(!res && err != ERROR_IO_PENDING) {
+    if(res == SOCKET_ERROR && err != ERROR_IO_PENDING) {
         return PyErr_SetFromWindowsErr(err);
     }
     return Py_BuildValue("ll", err, bytes);

@@ -4,7 +4,7 @@ from twisted.internet.interfaces import IReactorCore, IReactorTime
 import tcp
 from iocpcore import iocpcore
 
-class Proactor(default.PosixReactorBase,iocpcore):
+class Proactor(iocpcore, default.PosixReactorBase):
     __implements__ = (IReactorCore, IReactorTime)
     handles = None
     iocp = None
