@@ -59,6 +59,7 @@ class TestSuite:
     def __init__(self):
         self.testClasses = {}
         self.numTests = 0
+        self.couldNotImport = {}
 
     def getMethods(self, klass, prefix):
         testMethodNames = [ name for name in dir(klass)
@@ -75,7 +76,11 @@ class TestSuite:
 
     def addModule(self, module):
         if type(module) is types.StringType:
-            module = reflect.namedModule(module)
+            try:
+                module = reflect.namedModule(module)
+            except ImportError:
+                self.couldNotImport[module] = None
+                return
         names = dir(module)
         names.sort()
         for name in names:
@@ -84,7 +89,11 @@ class TestSuite:
                 self.addTestClass(obj)
 
     def addPackage(self, packageName):
-        package = reflect.namedModule(packageName)
+        try:
+            package = reflect.namedModule(packageName)
+        except ImportError:
+            self.couldNotImport[packageName] = None
+            return
         modGlob = os.path.join(os.path.dirname(package.__file__), self.moduleGlob)
         modules = map(reflect.filenameToModuleName, glob.glob(modGlob))
         modules.sort()
@@ -149,18 +158,25 @@ class TestSuite:
                 if ok:
                     output.reportSuccess(testClass, method)
 
+        for name in self.couldNotImport.keys():
+            output.reportImportError(name)
+
         output.stop()
 
 class Reporter:
     def __init__(self):
         self.errors = []
         self.failures = []
+        self.imports = []
         self.numTests = 0
         self.expectedTests = 0
 
     def start(self, expectedTests):
         self.expectedTests = expectedTests
         self.startTime = time.time()
+
+    def reportImportError(self, name):
+        self.imports.append(name)
 
     def reportFailure(self, testClass, method, exc_info):
         self.failures.append((testClass, method, exc_info))
@@ -251,6 +267,11 @@ class TextReporter(Reporter):
         self.writeln('Ran %d tests in %.3fs', self.numTests, self.getRunningTime())
         self.writeln()
         self.writeln(self._statusReport())
+        if self.imports:
+            self.writeln()
+            for name in self.imports:
+                self.writeln('Could not import %s' % name)
+            self.writeln()
 
 class VerboseTextReporter(TextReporter):
     def __init__(self, stream=sys.stdout):
