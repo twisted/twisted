@@ -41,6 +41,13 @@ class IRC(basic.LineReceiver):
     def connectionMade(self):
         self.channels = []
 
+    def connectionLost(self):
+        print self.nickname, "lost connection"
+        if self.nickname != '*':
+            del self.factory.chatters[self.nickname]
+            for channel in self.channels:
+                channel.chatters.remove(self)
+
     def irc_NICK(self, prefix, params):
         nickname = params[0]
         if not self.factory.chatters.has_key(nickname):
@@ -112,7 +119,7 @@ class IRC(basic.LineReceiver):
         #<< who glyph
         #>> :benford.openprojects.net 352 glyph #python glyph adsl-64-123-27-108.dsl.austtx.swbell.net benford.openprojects.net glyph H :0 glyph
         #>> :benford.openprojects.net 315 glyph glyph :End of /WHO list.
-        name = params[-1]
+        name = params[0]
         if name[0] == '#':
             channame = name[1:]
             channel = self.factory.channels[channame]
