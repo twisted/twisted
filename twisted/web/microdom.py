@@ -46,6 +46,8 @@ from twisted.python.reflect import Accessor
 # create NodeList class
 from types import ListType as NodeList
 from types import StringType
+import sys
+dictsAreNotSequences = sys.version_info < (2, 2)
 
 def getElementsByTagName(iNode, name):
     matches = []
@@ -355,8 +357,19 @@ class Element(Node):
         if name in self.attributes:
             del self.attributes[name]
 
+    def removeAttribute_has_key(self, name):
+        if self.attributes.has_key(name):
+            del self.attributes[name]
+            
     def hasAttribute(self, name):
         return name in self.attributes
+
+    def hasAttribute_has_key(self, name):
+        return self.attributes.has_key(name)
+
+    if dictsAreNotSequences:
+        hasAttribute = hasAttribute_has_key
+        removeAttribute = removeAttribute_has_key
 
     def writexml(self, stream, indent='', addindent='', newl='', strip=0):
         # write beginning
