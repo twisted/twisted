@@ -43,7 +43,7 @@ Test coverage needs to be better.
 <http://www.irchelp.org/irchelp/rfc/ctcpspec.html>}
 """
 
-__version__ = '$Revision: 1.85 $'[11:-2]
+__version__ = '$Revision: 1.86 $'[11:-2]
 
 from twisted.internet import reactor, protocol
 from twisted.persisted import styles
@@ -485,6 +485,24 @@ class IRCClient(basic.LineReceiver):
         self.msg(channel, message, length)
 
     def msg(self, user, message, length = None):
+        """Send a message to a user or channel.
+        
+        @type user: C{str}
+        @param user: The username or channel name to which to direct the
+        message.
+        
+        @type message: C{str}
+        @param message: The text to send
+        
+        @type length: C{int}
+        @param length: The maximum number of octets to send at a time.  This
+        has the effect of turning a single call to msg() into multiple
+        commands to the server.  This is useful when long messages may be
+        sent that would otherwise cause the server to kick us off or silently
+        truncate the text we are sending.  If None is passed, the entire
+        message is always send in one command.
+        """
+        
         fmt = "PRIVMSG %s :%%s" % (user,)
 
         if length is None:
