@@ -171,7 +171,9 @@ def notes(document):
 
 def fixRelativeLinks(document, linkrel):
     for node in domhelpers.findElementsWithAttribute(document, "href"):
-        node.setAttribute("href", linkrel+node.getAttribute("href"))
+        href = node.getAttribute('href')
+        if not href.startswith('http'):
+            node.setAttribute("href", linkrel+node.getAttribute("href"))
 
 def munge(document, template, linkrel, d, fullpath, ext, url):
     fixRelativeLinks(template, linkrel)
