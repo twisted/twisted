@@ -1276,8 +1276,9 @@ components.registerAdapter(Response, int, iweb.IResponse)
 
 try:
     # If twisted.web is installed, add an adapter for it
-    from twisted import web
-    components.registerAdapter(compat.OldResourceAdapter, web.Resource, iweb.IOldNevowResource)
+    from twisted.web import resource
 except:
     pass
+else:
+    components.registerAdapter(compat.OldResourceAdapter, resource.IResource, iweb.IOldNevowResource)
 

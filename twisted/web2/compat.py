@@ -90,7 +90,9 @@ class OldRequestAdapter(components.Componentized, object):
     
     method = _getsetFrom('request', 'method')
     uri = _getsetFrom('request', 'uri')
-    clientproto = _getsetFrom('request', 'clientproto')
+    def _getClientproto(self):
+        return "HTTP/%d.%d" % self.request.clientproto
+    clientproto = property(_getClientproto)
     
     received_headers = _getsetHeaders('request')
     headers = _getsetHeaders('response')
@@ -111,7 +113,10 @@ class OldRequestAdapter(components.Componentized, object):
         components.Componentized.__init__(self)
         self.request = request
         self.response = http.Response(stream=stream.ProducerStream())
-
+        # This deferred will be fired by the first call to write on OldRequestAdapter
+        # and will cause the headers to be output.
+        self.deferredResponse = defer.Deferred()
+        
     def registerProducer(self, producer, streaming):
         self.response.stream.registerProducer(producer, streaming)
         
@@ -119,9 +124,17 @@ class OldRequestAdapter(components.Componentized, object):
         self.response.stream.unregisterProducer()
         
     def finish(self):
+        if self.deferredResponse is not None:
+            d = self.deferredResponse
+            self.deferredResponse = None
+            d.callback(self.response)
         self.response.stream.finish()
         
     def write(self, data):
+        if self.deferredResponse is not None:
+            d = self.deferredResponse
+            self.deferredResponse = None
+            d.callback(self.response)
         self.response.stream.write(data)
         
     def getHeader(self, name):
@@ -146,11 +159,11 @@ class OldRequestAdapter(components.Componentized, object):
         return None
 
     def setETag(self, etag):
-        self.original.out_headers.setRawHeaders('ETag', etag)
+        self.response.headers.setRawHeaders('ETag', [etag])
         return None
 
     def getAllHeaders(self):
-        return dict(self.request.headers.iteritems())
+        return dict(self.headers.iteritems())
 
     def getRequestHostname(self):
         return self.request.host.split(':')[0]
@@ -298,32 +311,6 @@ class OldNevowResourceAdapter(object):
         # Can't use self.__original= because of __setattr__.
         self.__dict__['_OldNevowResourceAdapter__original']=original
         
-    def locateChild(self, ctx, segments):
-        import server
-        request = iweb.IRequest(ctx)
-        if request.method == "POST":
-            return server.parsePOSTData(request).addCallback(
-                lambda x: self.__original.locateChild(ctx, segments))
-        return self.__original.locateChild(ctx, segments)
-    
-    def renderHTTP(self, ctx):
-        import server
-        request = iweb.IRequest(ctx)
-        if request.method == "POST":
-            return server.parsePOSTData(request).addCallback(
-                self.__reallyRender, ctx)
-        
-        return self.__reallyRender(None, ctx)
-
-    def __finish(self, data, ctx):
-        oldRequest = iweb.IOldRequest(ctx)
-        oldRequest.write(data)
-        oldRequest.finish()
-        return oldRequest.response
-
-    def __reallyRender(self, ignored, ctx):
-        return defer.maybeDeferred(self.__original.renderHTTP, ctx).addCallback(self.__finish, ctx)
-
     def __getattr__(self, name):
         return getattr(self.__original, name)
 
@@ -332,6 +319,40 @@ class OldNevowResourceAdapter(object):
 
     def __delattr__(self, name):
         delattr(self.__original, name)
+
+    def locateChild(self, ctx, segments):
+        from twisted.web2.server import parsePOSTData
+        request = iweb.IRequest(ctx)
+        if request.method == "POST":
+            return parsePOSTData(request).addCallback(
+                lambda x: self.__original.locateChild(ctx, segments))
+        return self.__original.locateChild(ctx, segments)
+    
+    def renderHTTP(self, ctx):
+        from twisted.web2.server import parsePOSTData
+        request = iweb.IRequest(ctx)
+        if request.method == "POST":
+            return parsePOSTData(request).addCallback(self.__reallyRender, ctx)
+        return self.__reallyRender(None, ctx)
+
+    def __reallyRender(self, ignored, ctx):
+        # This deferred will be called when our resource is _finished_
+        # writing, and will make sure we write the rest of our data
+        # and finish the connection.
+        defer.maybeDeferred(self.__original.renderHTTP, ctx).addCallback(self.__finish, ctx)
+
+        # Sometimes the __original.renderHTTP will write() before we
+        # even get this far, and we don't want to return
+        # oldRequest.deferred if it's already been set to None.
+        oldRequest = iweb.IOldRequest(ctx)
+        if oldRequest.deferredResponse is None:
+            return oldRequest.response
+        return oldRequest.deferredResponse
+
+    def __finish(self, data, ctx):
+        oldRequest = iweb.IOldRequest(ctx)
+        oldRequest.write(data)
+        oldRequest.finish()
 
 
 class OldResourceAdapter(object):
@@ -345,7 +366,7 @@ class OldResourceAdapter(object):
 
     def locateChild(self, ctx, segments):
         import server
-        request = iweb.IOldNevowRequest(ctx)
+        request = iweb.IOldRequest(ctx)
         if self.original.isLeaf:
             return self, server.StopTraversal
         name = segments[0]
@@ -357,13 +378,17 @@ class OldResourceAdapter(object):
         return res, segments[1:]
 
     def _handle_NOT_DONE_YET(self, data, request):
-        if data == server.NOT_DONE_YET:
-            return request.deferred
+        from twisted.web.server import NOT_DONE_YET
+        if data == NOT_DONE_YET:
+            # Return a deferred that will never fire, so the finish
+            # callback doesn't happen. This is because, when returning
+            # NOT_DONE_YET, the page is responsible for calling finish.
+            return defer.Deferred()
         else:
             return data
 
     def renderHTTP(self, ctx):
-        request = iweb.IOldNevowRequest(ctx)
+        request = iweb.IOldRequest(ctx)
         result = defer.maybeDeferred(self.original.render, request).addCallback(
             self._handle_NOT_DONE_YET, request)
         return result

@@ -334,10 +334,11 @@ class Request(http.Request):
                     (actualRes, newpath), path, pageContext))
 
         if newpath is StopTraversal:
-            if newres is pageContext.tag:
+            # We need to rethink how to do this.
+            #if newres is pageContext.tag:
                 return pageContext
-            else:
-                raise ValueError("locateChild must not return StopTraversal with a resource other than self.")
+            #else:
+            #    raise ValueError("locateChild must not return StopTraversal with a resource other than self.")
             
         newres = iweb.IResource(newres)
         if newres is pageContext.tag:
@@ -455,7 +456,7 @@ class Site(http.HTTPFactory):
         http.HTTPFactory.__init__(self, **kwargs)
         self.sessions = {}
         self.context = context.SiteContext()
-        self.resource = resource
+        self.resource = iweb.IResource(resource)
 
     def remember(self, obj, inter=None):
         """Remember the given object for the given interfaces (or all interfaces
