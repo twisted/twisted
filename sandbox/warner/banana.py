@@ -1,295 +1,424 @@
 #! /usr/bin/python
 
+from slicer import RootSlicer, RootUnslicer, DiscardUnslicer, UnbananaFailure
+from twisted.internet import protocol
 from twisted.python.failure import Failure
-from twisted.internet.defer import Deferred
-from twisted.python import log, reflect
+
 import types
 
-class IBananaSlicer:
-    def sendOpen(self, opentype):
-        """Send an Open(type) token. Must be matched with a sendClose.
-        opentype must be a string."""
-    def sendToken(self, token):
-        """Send a token. Must be a number or a string"""
-    def sendClose(self):
-        """Send a Close token."""
-class IJellying:
-    def JellyYourBadSelf(self, banana):
-        """Send banana tokens to banana by calling IBananaSender methods"""
-    def description(self):
-        """Return a short string describing where in the object tree this
-        jellier is sitting. A list of these strings will be used to describe
-        where any problems occurred."""
 
-def getInstanceState(inst):
-    """Utility function to default to 'normal' state rules in serialization.
-    """
-    if hasattr(inst, "__getstate__"):
-        state = inst.__getstate__()
+class BananaError(Exception):
+    pass
+
+def int2b128(integer, stream):
+    if integer == 0:
+        stream(chr(0))
+        return
+    assert integer > 0, "can only encode positive integers"
+    while integer:
+        stream(chr(integer & 0x7f))
+        integer = integer >> 7
+
+def b1282int(st):
+    oneHundredAndTwentyEight = 128l
+    i = 0
+    place = 0
+    for char in st:
+        num = ord(char)
+        i = i + (num * (oneHundredAndTwentyEight ** place))
+        place = place + 1
+    if i <= 2147483647:
+        return int(i)
     else:
-        state = inst.__dict__
-    return state
+        return i
 
-SimpleTokens = (types.IntType, types.LongType, types.FloatType,
-                types.StringType, types.UnicodeType)
+# delimiter characters.
+LIST     = chr(0x80)
+INT      = chr(0x81)
+STRING   = chr(0x82)
+NEG      = chr(0x83)
+FLOAT    = chr(0x84)
+# "optional" -- these might be refused by a low-level implementation.
+LONGINT  = chr(0x85)
+LONGNEG  = chr(0x86)
+# really optional; this is is part of the 'pb' vocabulary
+VOCAB    = chr(0x87)
+# newbanana tokens
+OPEN     = chr(0x88)
+CLOSE    = chr(0x89)
+ABORT    = chr(0x8A)
 
-class BaseSlicer:
-    opentype = None
-    trackReferences = 0
+HIGH_BIT_SET = chr(0x80)
+
+SIZE_LIMIT = 640 * 1024   # 640k is all you'll ever need :-)
+
+class Banana(protocol.Protocol):
+
+    debug = 0
 
     def __init__(self):
-        self.openID = None
+        self.initSend()
+        self.initReceive()
 
-    def describe(self):
-        return "??"
-
-    # start/slice/finish are the main "serialize yourself" entry points used
-    # by Banana
+    # output side
+    def initSend(self):
+        self.rootSlicer = RootSlicer()
+        self.rootSlicer.protocol = self
+        self.slicerStack = [self.rootSlicer]
+        self.openCount = 0
 
     def send(self, obj):
-        # utility function
-        if type(obj) in SimpleTokens:
-            self.banana.sendToken(obj)
-        else:
-            self.banana.slice(obj)
-            # does life stop while we wait for this?
-
-    def start(self, obj):
-        # refid is for reference tracking
-        assert(self.openID == None)
-        self.openID = self.banana.sendOpen(self.opentype)
-        if self.trackReferences:
-            self.banana.setRefID(obj, self.openID)
-
-    def slice(self, obj):
-        """Tokenize the object and send the tokens via
-        self.banana.sendToken(). Will be called after open() and before
-        finish().
-        """
-        raise NotImplementedError
-
-    def finish(self, obj):
-        assert(self.openID is not None)
-        self.banana.sendClose(self.openID)
-        self.openID = None
-
-    def abort(self):
-        """Stop trying to tokenize the object. Send an ABORT token, then a
-        CLOSE. Producers may want to hook this to free up other resources,
-        etc.
-        """
-        self.banana.sendAbort()
-        self.banana.sendClose()
-
-
-    # newSlicer/taste/setRefID/getRefID are the other functions of the Slice
-    # stack
-
-    def newSlicer(self, obj):
-        """Return an IBananaSlicer object based upon the type of the object
-        being serialized. This object will be asked to do start(), slice(),
-        and finish(). The entire Slicer stack is asked for an object: the
-        first slice that returns something other than None will stop the
-        search.
-        """
-        return None
-
-    def taste(self, obj):
-        """All Slicers in the stack get to pass judgement upon the outgoing
-        object. If they don't like that they see, they should raise an
-        InsecureBanana exception.
-        """
-        pass
-
-    def setRefID(self, obj, refid):
-        """To pass references to previously-sent objects, the [OPEN,
-        'reference', number, CLOSE] sequence is used. The numbers are
-        generated implicitly by the sending Banana, counting from 0 for the
-        object described by the very first OPEN sent over the wire,
-        incrementing for each subsequent one. The objects themselves are
-        stored in any/all Slicers who cares to. Generally this is the
-        RootSlicer, but child slices could do it too if they wished.
-        """
-        pass
-
-    def getRefID(self, obj):
-        """'None' means 'ask our parent instead'.
-        """
-        return None
-
-
-class ListSlicer(BaseSlicer):
-    opentype = 'list'
-    trackReferences = 1
-
-    # it would be useful if this could behave more consumer/producerish.
-    # maybe NOT_DONE_YET? Generators?
-
-    def slice(self, obj):
-        for elem in obj:
-            self.send(elem)
-
-class TupleSlicer(ListSlicer):
-    opentype = 'tuple'
-
-class DictSlicer(BaseSlicer):
-    opentype = 'dict'
-    trackReferences = 1
-
-    def slice(self, obj):
-        for key,value in obj.items():
-            self.send(key)
-            self.send(value)
-
-class OrderedDictSlicer(BaseSlicer):
-    opentype = 'dict'
-    trackReferences = 1
-
-    def slice(self, obj):
-        keys = obj.keys()
-        keys.sort()
-        for key in keys:
-            value = obj[key]
-            self.send(key)
-            self.send(value)
-
-class InstanceSlicer(OrderedDictSlicer):
-    opentype = 'instance'
-    trackReferences = 1
-
-    def slice(self, obj):
-        self.banana.sendToken(reflect.qual(obj.__class__))
-        OrderedDictSlicer.slice(self, getInstanceState(obj)) #DictSlicer
-
-class ReferenceSlicer(BaseSlicer):
-    opentype = 'reference'
-
-    def __init__(self, refid):
-        BaseSlicer.__init__(self)
-        assert(type(refid) == types.IntType)
-        self.refid = refid
-
-    def slice(self, obj):
-        self.banana.sendToken(self.refid)
-
-class RootSlicer(BaseSlicer):
-    # this lives at the bottom of the Slicer stack, at least for our testing
-    # purposes
-
-    def __init__(self):
-        self.references = {}
-
-    def start(self, obj):
-        self.references = {}
-
-    def slice(self, obj):
-        self.banana.slice(obj)
-
-    def finish(self, obj):
-        self.references = {}
-
-    def newSlicer(self, obj):
-        refid = self.banana.getRefID(obj)
-        if refid is not None:
-            slicer = ReferenceSlicer(refid)
-            return slicer
-        slicerClass = SlicerRegistry[type(obj)]
-        slicer = slicerClass()
-        return slicer
-
-
-    def setRefID(self, obj, refid):
-        if self.banana.debug:
-            print "setRefID(%s{%s}) -> %s" % (obj, id(obj), refid)
-        self.references[id(obj)] = refid
-
-    def getRefID(self, obj):
-        refid = self.references.get(id(obj))
-        if self.banana.debug:
-            print "getObject(%s{%s}) -> %s{%s}" % (obj, id(obj), refid)
-        return refid
-
-SlicerRegistry = {
-    types.ListType: ListSlicer,
-    types.TupleType: TupleSlicer,
-    types.DictType: OrderedDictSlicer, #DictSlicer
-    types.InstanceType: InstanceSlicer,
-    }
-
-class Banana:
-    def __init__(self):
-        parent = RootSlicer()
-        parent.banana = self
-        self.stack = [parent]
-        self.tokens = []
-        self.openCount = 0
-        self.debug = 0
-
-    # sendOpen/sendToken/sendClose/sendAbort are called by Slicers to put
-    # tokens into the stream
-
-    def sendOpen(self, opentype):
-        openID = self.openCount
-        self.openCount += 1
-        self.sendToken(("OPEN", opentype, openID))
-        return openID
-
-    def sendToken(self, token):
-        self.tokens.append(token)
-
-    def sendClose(self, openID):
-        self.sendToken(("CLOSE", openID))
-
-    def sendAbort(self):
-        self.sendToken(("ABORT",))
-
-
-    def slice(self, obj):
-        # let everybody taste it
-        for i in range(len(self.stack)-1, -1, -1):
-            self.stack[i].taste(obj)
-        # find the Slicer object
-        child = None
-        for i in range(len(self.stack)-1, -1, -1):
-            child = self.stack[i].newSlicer(obj)
-            if child:
-                break
-        if child == None:
-            raise "nothing to send for obj '%s' (type '%s')" % (obj, type(obj))
-        child.banana = self
-        self.stack.append(child)
+        assert(len(self.slicerStack) == 1)
+        assert(isinstance(self.slicerStack[0], RootSlicer))
         self.doSlice(obj)
-        self.stack.pop(-1)
 
     def doSlice(self, obj):
-        slicer = self.stack[-1]
+        slicer = self.slicerStack[-1]
         slicer.start(obj)
         slicer.slice(obj)
         slicer.finish(obj)
 
-    # setRefID/getRefID are used to walk the stack and handle references
+    # slicers require the following methods on their .banana object:
+
+    def slice(self, obj):
+        # let everybody taste it
+        #for i in range(len(self.stack)-1, -1, -1):
+        #    self.stack[i].taste(obj)
+        # find the Slicer object
+        child = None
+        for i in range(len(self.slicerStack)-1, -1, -1):
+            child = self.slicerStack[i].newSlicer(obj)
+            if child:
+                break
+        if child == None:
+            raise "nothing to send for obj '%s' (type '%s')" % (obj, type(obj))
+        child.protocol = self
+        self.slicerStack.append(child)
+        self.doSlice(obj)
+        self.slicerStack.pop(-1)
 
     def setRefID(self, obj, refid):
-        for i in range(len(self.stack)-1, -1, -1):
-            self.stack[i].setRefID(obj, refid)
+        for i in range(len(self.slicerStack)-1, -1, -1):
+            self.slicerStack[i].setRefID(obj, refid)
     def getRefID(self, refid):
         # this definitely needs to be optimized
-        for i in range(len(self.stack)-1, -1, -1):
-            obj = self.stack[i].getRefID(refid)
+        for i in range(len(self.slicerStack)-1, -1, -1):
+            obj = self.slicerStack[i].getRefID(refid)
             if obj is not None:
                 return obj
         return None
 
+    # and these methods define how they emit low-level tokens
 
-    def testSlice(self, obj):
-        assert(len(self.stack) == 1)
-        assert(isinstance(self.stack[0],RootSlicer))
-        self.tokens = []
-        self.doSlice(obj)
-        return self.tokens
+    outgoingSymbols = {}
 
-# flow of control is:
-#  Banana.doSlice
-#   Banana.slice(obj)
-#    stack[0].newSlicer() -> stack[1]
-#     stack[1].start, .slice, .finish
+    def sendOpen(self, opentype):
+        openID = self.openCount
+        self.openCount += 1
+        int2b128(openID, self.transport.write)
+        self.transport.write(OPEN)
+        self.sendToken(opentype)
+        return openID
+
+    def sendToken(self, obj):
+        #self.tokens.append(token)
+        write = self.transport.write
+        if isinstance(obj, types.IntType):
+            if obj >= 0:
+                int2b128(obj, write)
+                write(INT)
+            else:
+                int2b128(-obj, write)
+                write(NEG)
+        elif isinstance(obj, types.LongType):
+            if obj >= 0l:
+                int2b128(obj, write)
+                write(LONGINT)
+            else:
+                int2b128(-obj, write)
+                write(LONGNEG)
+        elif isinstance(obj, types.FloatType):
+            write(FLOAT)
+            write(struct.pack("!d", obj))
+        elif isinstance(obj, types.StringType):
+            # TODO: an API for extending banana...
+            if self.outgoingSymbols.has_key(obj):
+                symbolID = self.outgoingSymbols[obj]
+                int2b128(symbolID, write)
+                write(VOCAB)
+            else:
+                if len(obj) > SIZE_LIMIT:
+                    raise BananaError, \
+                          "string is too long to send (%d)" % len(obj)
+                int2b128(len(obj), write)
+                write(STRING)
+                write(obj)
+        else:
+            raise BananaError, "could not send object: %s" % repr(obj)
+
+    def sendClose(self, openID):
+        #self.sendToken(("CLOSE", openID))
+        int2b128(openID, self.transport.write)
+        self.transport.write(CLOSE)
+
+    def sendAbort(self, count=0):
+        #self.sendToken(("ABORT",))
+        int2b128(count, self.transport.write)
+        self.transport.write(ABORT)
+
+    # they also require the slicerStack list, which they will manipulate
+
+
+    # input side
+
+    def initReceive(self):
+        root = RootUnslicer()
+        root.protocol = self
+        self.receiveStack = [root]
+        self.objectCounter = 0
+        self.objects = {}
+        self.inOpen = 0
+        self.buffer = ''
+
+    def startDiscarding(self, failure, leaf):
+        """Begin discarding everything in the current node. When the node is
+        complete, the given failure is handed to the parent. This is
+        implemented by replacing the current node with a DiscardUnslicer.
+        
+        Slices call startDiscarding in response to an ABORT token or when
+        their receiveChild() method is handed a failure object. The Unslicer
+        will do startDiscarding when a slice raises an exception.
+
+        The 'leaf' argument is just for development paranoia and will go
+        away soon.
+        """
+        if self.debug:
+            print "## startDiscarding called while decoding '%s'" % failure.where
+            print "## current stack leading up to startDiscarding:"
+            import traceback
+            traceback.print_stack()
+            if failure.failure:
+                print "## exception that triggered startDiscarding:"
+                print failure.failure.getBriefTraceback()
+        if len(self.receiveStack) == 1:
+            # uh oh, the RootUnslicer broke. have to drop the connection now
+            print "RootUnslicer broken! hang up or else"
+            raise RuntimeError, "RootUnslicer broken: hang up or else"
+        assert(self.receiveStack[-1] == leaf)
+        d = DiscardUnslicer(failure)
+        d.protocol = self
+        old = self.receiveStack.pop()
+        d.openCount = old.openCount
+        old.finish()
+        self.receiveStack.append(d)
+        if self.debug:
+            self.printStack()
+
+
+    def setObject(self, count, obj):
+        for i in range(len(self.receiveStack)-1, -1, -1):
+            self.receiveStack[i].setObject(count, obj)
+
+    def getObject(self, count):
+        for i in range(len(self.receiveStack)-1, -1, -1):
+            obj = self.receiveStack[i].getObject(count)
+            if obj is not None:
+                return obj
+        raise ValueError, "dangling reference '%d'" % count
+
+
+    def printStack(self, verbose=0):
+        print "STACK:"
+        for s in self.receiveStack:
+            if verbose:
+                d = s.__dict__.copy()
+                del d['protocol']
+                print " %s: %s" % (s, d)
+            else:
+                print " %s" % s
+
+
+    def handleOpen(self, openCount, opentype):
+        objectCount = self.objectCounter
+        self.objectCounter += 1
+        try:
+            # ask openers what to use
+            child = None
+            for i in range(len(self.receiveStack)-1, -1, -1):
+                child = self.receiveStack[i].doOpen(opentype)
+                if child:
+                    break
+            if child == None:
+                raise "nothing to open"
+            if self.debug:
+                print "opened[%d] with %s" % (openCount, child)
+        except:
+            if self.debug:
+                print "failed to open anything, pushing DiscardUnslicer"
+            where = self.describe() + ".<OPEN%s>" % opentype
+            uf = UnbananaFailure(where, Failure())
+            child = DiscardUnslicer(uf)
+        child.protocol = self
+        child.openCount = openCount
+        self.receiveStack.append(child)
+        try:
+            child.start(objectCount)
+        except:
+            where = self.describe() + ".<START>"
+            f = UnbananaFailure(where, Failure())
+            self.startDiscarding(f, child)
+
+    def handleClose(self, closeCount):
+        if self.receiveStack[-1].openCount != closeCount:
+            print "LOST SYNC"
+            self.printStack()
+            assert(0)
+        try:
+            if self.debug:
+                print "receiveClose()"
+            o = self.receiveStack[-1].receiveClose()
+        except:
+            where = self.describe() + ".<CLOSE>"
+            o = UnbananaFailure(where, Failure())
+        if self.debug: print "receiveClose returned", o
+        old = self.receiveStack.pop()
+        old.finish()
+        try:
+            if self.debug: print "receiveChild()"
+            self.receiveStack[-1].childFinished(o)
+        except:
+            where = self.describe()
+            # this is just like receiveToken failing
+            f = UnbananaFailure(where, Failure())
+            self.startDiscarding(f, self.receiveStack[-1])
+
+    def handleAbort(self, count=None):
+        # let the unslicer decide what to do. The default is to do
+        # self.startDiscarding()
+        if self.debug: print "receiveAbort()"
+        self.receiveStack[-1].receiveAbort()
+        return
+
+    def handleToken(self, token):
+        top = self.receiveStack[-1]
+        if self.debug: print "receivetoken(%s)" % token
+        try:
+            top.receiveToken(token)
+        except:
+            # need to give up on the current stack top
+            f = UnbananaFailure(self.describe(), Failure())
+            self.startDiscarding(f, top)
+            return
+
+    def dataReceived(self, chunk):
+        # buffer, assemble into tokens
+        # call self.receiveToken(token) with each
+        buffer = self.buffer + chunk
+        gotItem = self.handleToken
+        while buffer:
+            assert self.buffer != buffer, "This ain't right: %s %s" % (repr(self.buffer), repr(buffer))
+            self.buffer = buffer
+            pos = 0
+            for ch in buffer:
+                if ch >= HIGH_BIT_SET:
+                    break
+                pos = pos + 1
+            else:
+                if pos > 64:
+                    raise BananaError("Security precaution: more than 64 bytes of prefix")
+                return
+            header = buffer[:pos]
+            typebyte = buffer[pos]
+            rest = buffer[pos+1:]
+            if len(header) > 64:
+                raise BananaError("Security precaution: longer than 64 bytes worth of prefix")
+            if typebyte == LIST:
+                raise BananaError("oldbanana peer detected, compatibility code not yet written")
+                #header = b1282int(header)
+                #if header > SIZE_LIMIT:
+                #    raise BananaError("Security precaution: List too long.")
+                #listStack.append((header, []))
+                #buffer = rest
+            elif typebyte == STRING:
+                header = b1282int(header)
+                if header > SIZE_LIMIT:
+                    raise BananaError("Security precaution: String too long.")
+                if len(rest) >= header:
+                    buffer = rest[header:]
+                    if self.inOpen:
+                        self.inOpen = 0
+                        self.handleOpen(self.openCount, rest[:header])
+                    else:
+                        gotItem(rest[:header])
+                else:
+                    return
+            elif typebyte == INT:
+                buffer = rest
+                header = b1282int(header)
+                gotItem(int(header))
+            elif typebyte == LONGINT:
+                buffer = rest
+                header = b1282int(header)
+                gotItem(long(header))
+            elif typebyte == LONGNEG:
+                buffer = rest
+                header = b1282int(header)
+                gotItem(-long(header))
+            elif typebyte == NEG:
+                buffer = rest
+                header = -b1282int(header)
+                gotItem(header)
+            elif typebyte == VOCAB:
+                buffer = rest
+                header = b1282int(header)
+                str = self.incomingVocabulary[header]
+                if self.inOpen:
+                    self.inOpen = 0
+                    self.handleOpen(self.openCount, str)
+                else:
+                    gotItem(str)
+            elif typebyte == FLOAT:
+                if len(rest) >= 8:
+                    buffer = rest[8:]
+                    gotItem(struct.unpack("!d", rest[:8])[0])
+                else:
+                    return
+            elif typebyte == OPEN:
+                buffer = rest
+                self.openCount = b1282int(header)
+                assert not self.inOpen
+                self.inOpen = 1
+            elif typebyte == CLOSE:
+                buffer = rest
+                count = b1282int(header)
+                self.handleClose(count)
+            elif typebyte == ABORT:
+                buffer = rest
+                count = b1282int(header)
+                self.handleAbort(count)
+                
+            else:
+                raise NotImplementedError(("Invalid Type Byte %s" % typebyte))
+            #while listStack and (len(listStack[-1][1]) == listStack[-1][0]):
+            #    item = listStack.pop()[1]
+            #    gotItem(item)
+        self.buffer = ''
+
+
+
+    def describe(self):
+        where = []
+        for i in self.receiveStack:
+            try:
+                piece = i.describe()
+            except:
+                piece = "???"
+            where.append(piece)
+        return ".".join(where)
+
+    def receivedObject(self, obj):
+        """Decoded objects are delivered here, unless you use a RootUnslicer
+        variant which does something else in its .childFinished method.
+        """
+        raise NotImplementedError
+

@@ -2,8 +2,227 @@
 
 from twisted.python.failure import Failure
 from twisted.internet.defer import Deferred
-from twisted.python import log
+from twisted.python import log, reflect
 import types
+
+class IBananaSlicer:
+    def sendOpen(self, opentype):
+        """Send an Open(type) token. Must be matched with a sendClose.
+        opentype must be a string."""
+    def sendToken(self, token):
+        """Send a token. Must be a number or a string"""
+    def sendClose(self):
+        """Send a Close token."""
+class IJellying:
+    def JellyYourBadSelf(self, banana):
+        """Send banana tokens to banana by calling IBananaSender methods"""
+    def description(self):
+        """Return a short string describing where in the object tree this
+        jellier is sitting. A list of these strings will be used to describe
+        where any problems occurred."""
+
+def getInstanceState(inst):
+    """Utility function to default to 'normal' state rules in serialization.
+    """
+    if hasattr(inst, "__getstate__"):
+        state = inst.__getstate__()
+    else:
+        state = inst.__dict__
+    return state
+
+SimpleTokens = (types.IntType, types.LongType, types.FloatType,
+                types.StringType, types.UnicodeType)
+
+class BaseSlicer:
+    opentype = None
+    trackReferences = 0
+
+    def __init__(self):
+        self.openID = None
+
+    def describe(self):
+        return "??"
+
+    # start/slice/finish are the main "serialize yourself" entry points used
+    # by Banana
+
+    def send(self, obj):
+        # utility function
+        if self.protocol.debug:
+            print "BaseSlicer.send(%s{%s})" % (obj, type(obj))
+        if type(obj) in SimpleTokens:
+            if self.protocol.debug:
+                print " was in SimpleTokens"
+            self.protocol.sendToken(obj)
+        else:
+            if self.protocol.debug:
+                print " not in SimpleTokens"
+            self.protocol.slice(obj)
+            # does life stop while we wait for this?
+
+    def start(self, obj):
+        # refid is for reference tracking
+        assert(self.openID == None)
+        self.openID = self.protocol.sendOpen(self.opentype)
+        if self.trackReferences:
+            self.protocol.setRefID(obj, self.openID)
+
+    def slice(self, obj):
+        """Tokenize the object and send the tokens via
+        self.protocol.sendToken(). Will be called after open() and before
+        finish().
+        """
+        raise NotImplementedError
+
+    def finish(self, obj):
+        assert(self.openID is not None)
+        self.protocol.sendClose(self.openID)
+        self.openID = None
+
+    def abort(self):
+        """Stop trying to tokenize the object. Send an ABORT token, then a
+        CLOSE. Producers may want to hook this to free up other resources,
+        etc.
+        """
+        self.protocol.sendAbort()
+        self.protocol.sendClose()
+
+
+    # newSlicer/taste/setRefID/getRefID are the other functions of the Slice
+    # stack
+
+    def newSlicer(self, obj):
+        """Return an IBananaSlicer object based upon the type of the object
+        being serialized. This object will be asked to do start(), slice(),
+        and finish(). The entire Slicer stack is asked for an object: the
+        first slice that returns something other than None will stop the
+        search.
+        """
+        return None
+
+    def taste(self, obj):
+        """All Slicers in the stack get to pass judgement upon the outgoing
+        object. If they don't like that they see, they should raise an
+        InsecureBanana exception.
+        """
+        pass
+
+    def setRefID(self, obj, refid):
+        """To pass references to previously-sent objects, the [OPEN,
+        'reference', number, CLOSE] sequence is used. The numbers are
+        generated implicitly by the sending Banana, counting from 0 for the
+        object described by the very first OPEN sent over the wire,
+        incrementing for each subsequent one. The objects themselves are
+        stored in any/all Slicers who cares to. Generally this is the
+        RootSlicer, but child slices could do it too if they wished.
+        """
+        pass
+
+    def getRefID(self, obj):
+        """'None' means 'ask our parent instead'.
+        """
+        return None
+
+
+class ListSlicer(BaseSlicer):
+    opentype = 'list'
+    trackReferences = 1
+
+    # it would be useful if this could behave more consumer/producerish.
+    # maybe NOT_DONE_YET? Generators?
+
+    def slice(self, obj):
+        for elem in obj:
+            self.send(elem)
+
+class TupleSlicer(ListSlicer):
+    opentype = 'tuple'
+
+class DictSlicer(BaseSlicer):
+    opentype = 'dict'
+    trackReferences = 1
+
+    def slice(self, obj):
+        for key,value in obj.items():
+            self.send(key)
+            self.send(value)
+
+class OrderedDictSlicer(BaseSlicer):
+    opentype = 'dict'
+    trackReferences = 1
+
+    def slice(self, obj):
+        keys = obj.keys()
+        keys.sort()
+        for key in keys:
+            value = obj[key]
+            self.send(key)
+            self.send(value)
+
+class InstanceSlicer(OrderedDictSlicer):
+    opentype = 'instance'
+    trackReferences = 1
+
+    def slice(self, obj):
+        self.protocol.sendToken(reflect.qual(obj.__class__))
+        OrderedDictSlicer.slice(self, getInstanceState(obj)) #DictSlicer
+
+class ReferenceSlicer(BaseSlicer):
+    opentype = 'reference'
+
+    def __init__(self, refid):
+        BaseSlicer.__init__(self)
+        assert(type(refid) == types.IntType)
+        self.refid = refid
+
+    def slice(self, obj):
+        self.protocol.sendToken(self.refid)
+
+class RootSlicer(BaseSlicer):
+    # this lives at the bottom of the Slicer stack, at least for our testing
+    # purposes
+
+    def __init__(self):
+        self.references = {}
+
+    def start(self, obj):
+        self.references = {}
+
+    def slice(self, obj):
+        self.protocol.slice(obj)
+
+    def finish(self, obj):
+        self.references = {}
+
+    def newSlicer(self, obj):
+        refid = self.protocol.getRefID(obj)
+        if refid is not None:
+            slicer = ReferenceSlicer(refid)
+            return slicer
+        slicerClass = SlicerRegistry[type(obj)]
+        slicer = slicerClass()
+        return slicer
+
+
+    def setRefID(self, obj, refid):
+        if self.protocol.debug:
+            print "setRefID(%s{%s}) -> %s" % (obj, id(obj), refid)
+        self.references[id(obj)] = refid
+
+    def getRefID(self, obj):
+        refid = self.references.get(id(obj))
+        if self.protocol.debug:
+            print "getObject(%s{%s}) -> %s" % (obj, id(obj), refid)
+        return refid
+
+SlicerRegistry = {
+    types.ListType: ListSlicer,
+    types.TupleType: TupleSlicer,
+    types.DictType: OrderedDictSlicer, #DictSlicer
+    types.InstanceType: InstanceSlicer,
+    }
+
+
 
 class IBananaUnslicer:
     # .parent
@@ -426,7 +645,7 @@ class RootUnslicer(BaseUnslicer):
 
     def childFinished(self, o):
         self.objects = {}
-        self.protocol.childFinished(o) # send it somewhere
+        self.protocol.receivedObject(o) # give finished object to Banana
 
     def receiveClose(self):
         raise ValueError, "top-level should never receive CLOSE tokens"
@@ -446,195 +665,3 @@ class RootUnslicer(BaseUnslicer):
             print "getObject(%s) -> %s{%s}" % (counter, obj, id(obj))
         return obj
 
-
-class Unbanana:
-    debug = 0
-
-    def __init__(self):
-        parent = RootUnslicer()
-        parent.protocol = self
-        self.stack = [parent]
-        self.objectCounter = 0
-        self.objects = {}
-
-    def startDiscarding(self, failure, leaf):
-        """Begin discarding everything in the current node. When the node is
-        complete, the given failure is handed to the parent. This is
-        implemented by replacing the current node with a DiscardUnslicer.
-        
-        Slices call startDiscarding in response to an ABORT token or when
-        their receiveChild() method is handed a failure object. The Unslicer
-        will do startDiscarding when a slice raises an exception.
-
-        The 'leaf' argument is just for development paranoia and will go
-        away soon.
-        """
-        if self.debug:
-            print "startDiscarding", failure.where
-            import traceback
-            traceback.print_stack()
-            if failure.failure:
-                print failure.failure.getBriefTraceback()
-        assert(self.stack[-1] == leaf)
-        d = DiscardUnslicer(failure)
-        d.protocol = self
-        old = self.stack.pop()
-        d.openCount = old.openCount
-        old.finish()
-        self.stack.append(d)
-        if self.debug:
-            self.printStack()
-
-
-    def setObject(self, count, obj):
-        for i in range(len(self.stack)-1, -1, -1):
-            self.stack[i].setObject(count, obj)
-
-    def getObject(self, count):
-        for i in range(len(self.stack)-1, -1, -1):
-            obj = self.stack[i].getObject(count)
-            if obj is not None:
-                return obj
-        raise ValueError, "dangling reference '%d'" % count
-
-
-    def printStack(self, verbose=0):
-        print "STACK:"
-        for s in self.stack:
-            if verbose:
-                d = s.__dict__.copy()
-                del d['unbanana']
-                print " %s: %s" % (s, d)
-            else:
-                print " %s" % s
-
-
-    def handleOpen(self, token):
-        openCount = token[2]
-        objectCount = self.objectCounter
-        self.objectCounter += 1
-        opentype = token[1]
-        try:
-            # ask openers what to use
-            child = None
-            for i in range(len(self.stack)-1, -1, -1):
-                child = self.stack[i].doOpen(opentype)
-                if child:
-                    break
-            if child == None:
-                raise "nothing to open"
-            if self.debug:
-                print "opened[%d] with %s" % (openCount, child)
-        except:
-            if self.debug:
-                print "failed to open anything, pushing DiscardUnslicer"
-            where = self.describe() + ".<OPEN%s>" % opentype
-            uf = UnbananaFailure(where, Failure())
-            child = DiscardUnslicer(uf)
-        child.protocol = self
-        child.openCount = openCount
-        self.stack.append(child)
-        try:
-            child.start(objectCount)
-        except:
-            where = self.describe() + ".<START>"
-            f = UnbananaFailure(where, Failure())
-            self.startDiscarding(f, child)
-
-    def handleClose(self, token):
-        closeCount = token[1]
-        if self.stack[-1].openCount != closeCount:
-            print "LOST SYNC"
-            self.printStack()
-            assert(0)
-        try:
-            if self.debug:
-                print "receiveClose()"
-            o = self.stack[-1].receiveClose()
-        except:
-            where = self.describe() + ".<CLOSE>"
-            o = UnbananaFailure(where, Failure())
-        if self.debug: print "receiveClose returned", o
-        old = self.stack.pop()
-        old.finish()
-        try:
-            if self.debug: print "receiveChild()"
-            self.stack[-1].childFinished(o)
-        except:
-            where = self.describe()
-            # this is just like receiveToken failing
-            f = UnbananaFailure(where, Failure())
-            self.startDiscarding(f, self.stack[-1])
-
-    def receiveToken(self, token):
-        # future optimization note: most Unslicers on the stack will not
-        # override .taste or .doOpen, so it would be faster to have the few
-        # that *do* add themselves to a separate .openers and/or .tasters
-        # stack. The issue is robustness: if the Unslicer is thrown out
-        # because of an exception or an ABORT token (i.e. startDiscarding is
-        # called), we must be sure to clean out their opener/taster too and
-        # not leave it dangling. Having them implemented as methods inside
-        # the Unslicer makes that easy, but means a full traversal of the
-        # stack for each token even when nobody is doing any tasting.
-
-        for i in range(len(self.stack)-1, -1, -1):
-            self.stack[i].taste(token)
-
-        if self.debug:
-            print "receiveToken(%s)" % (token,)
-
-        if type(token) == types.TupleType and token[0] == "OPEN":
-            self.handleOpen(token)
-            return
-
-        if type(token) == types.TupleType and token[0] == "CLOSE":
-            self.handleClose(token)
-            return
-
-        if type(token) == types.TupleType and token[0] == "ABORT":
-            # let the unslicer decide what to do. The default is to do
-            # self.startDiscarding()
-            if self.debug: print "receiveAbort()"
-            self.stack[-1].receiveAbort()
-            return
-
-        top = self.stack[-1]
-        if self.debug: print "receivetoken(%s)" % token
-        try:
-            top.receiveToken(token)
-        except:
-            # need to give up on the current stack top
-            f = UnbananaFailure(self.describe(), Failure())
-            self.startDiscarding(f, top)
-            return
-
-
-    def describe(self):
-        where = []
-        for i in self.stack:
-            try:
-                piece = i.describe()
-            except:
-                piece = "???"
-            where.append(piece)
-        return ".".join(where)
-
-    def childFinished(self, o):
-        self.object = o
-
-    def processTokens(self, tokens):
-        self.object = None
-        for t in tokens:
-            self.receiveToken(t)
-        return self.object
-
-    def step(self, token):
-        rv = self.processTokens([token])
-        self.printStack(1)
-        return rv
-
-
-def Tester():
-    u = Unbanana()
-    u.object = None
-    return u

@@ -2,8 +2,10 @@
 
 from twisted.trial import unittest
 from twisted.python import reflect
-from unbanana import Unbanana, Dummy, UnbananaFailure, RootUnslicer
-from banana import Banana, RootSlicer
+from banana import Banana
+from slicer import RootSlicer, Dummy, UnbananaFailure, RootUnslicer
+
+import cStringIO, types
 
 def OPENlist(count):
     return ("OPEN", "list", count)
@@ -24,15 +26,85 @@ def OPENdict1(count):
 def OPENdict2(count):
     return ("OPEN", "dict2", count)
 
+class TokenBanana(Banana):
+    """this Banana formats tokens as strings, numbers, and ('OPEN',) tuples
+    instead of bytes. Used for testing purposes."""
+
+    tokens = []
+
+    def sendOpen(self, opentype):
+        openID = self.openCount
+        self.openCount += 1
+        self.sendToken(("OPEN", opentype, openID))
+        return openID
+
+    def sendToken(self, token):
+        self.tokens.append(token)
+
+    def sendClose(self, openID):
+        self.sendToken(("CLOSE", openID))
+
+    def sendAbort(self, count=0):
+        self.sendToken(("ABORT",))
+
+    def testSlice(self, obj):
+        assert(len(self.slicerStack) == 1)
+        assert(isinstance(self.slicerStack[0],RootSlicer))
+        self.tokens = []
+        self.send(obj)
+        assert(len(self.slicerStack) == 1)
+        assert(isinstance(self.slicerStack[0],RootSlicer))
+        return self.tokens
+
+    def receiveToken(self, token):
+        # future optimization note: most Unslicers on the stack will not
+        # override .taste or .doOpen, so it would be faster to have the few
+        # that *do* add themselves to a separate .openers and/or .tasters
+        # stack. The issue is robustness: if the Unslicer is thrown out
+        # because of an exception or an ABORT token (i.e. startDiscarding is
+        # called), we must be sure to clean out their opener/taster too and
+        # not leave it dangling. Having them implemented as methods inside
+        # the Unslicer makes that easy, but means a full traversal of the
+        # stack for each token even when nobody is doing any tasting.
+
+#        for i in range(len(self.receiveStack)-1, -1, -1):
+#            self.receiveStack[i].taste(token)
+
+        if self.debug:
+            print "receiveToken(%s)" % (token,)
+
+        if type(token) == types.TupleType and token[0] == "OPEN":
+            self.handleOpen(token[2], token[1])
+            return
+
+        if type(token) == types.TupleType and token[0] == "CLOSE":
+            self.handleClose(token[1])
+            return
+
+        if type(token) == types.TupleType and token[0] == "ABORT":
+            self.handleAbort()
+            return
+
+        self.handleToken(token)
+
+    def receivedObject(self, obj):
+        self.object = obj
+
+    def processTokens(self, tokens):
+        self.object = None
+        for t in tokens:
+            self.receiveToken(t)
+        return self.object
+
 class UnbananaTestMixin:
     def setUp(self):
-        self.unbanana = Unbanana()
+        self.banana = TokenBanana()
     def tearDown(self):
-        self.failUnless(len(self.unbanana.stack) == 1)
-        self.failUnless(isinstance(self.unbanana.stack[0], RootUnslicer))
+        self.failUnless(len(self.banana.receiveStack) == 1)
+        self.failUnless(isinstance(self.banana.receiveStack[0], RootUnslicer))
             
     def do(self, tokens):
-        return self.unbanana.processTokens(tokens)
+        return self.banana.processTokens(tokens)
 
     def failIfUnbananaFailure(self, res):
         if isinstance(res, UnbananaFailure):
@@ -51,7 +123,7 @@ class UnbananaTestMixin:
                 print res.failure.getTraceback()
                 self.fail("Wrong exception (wanted '%s'):" % failtype)
         self.failUnlessEqual(res.where, where)
-        self.unbanana.object = None # to stop the tearDown check
+        self.banana.object = None # to stop the tearDown check
         
 class UnbananaTestCase(UnbananaTestMixin, unittest.TestCase):
         
@@ -275,12 +347,12 @@ class FailureTests(UnbananaTestMixin, unittest.TestCase):
         
 class BananaTests(unittest.TestCase):
     def setUp(self):
-        self.banana = Banana()
+        self.banana = TokenBanana()
     def do(self, obj):
         return self.banana.testSlice(obj)
     def tearDown(self):
-        self.failUnless(len(self.banana.stack) == 1)
-        self.failUnless(isinstance(self.banana.stack[0], RootSlicer))
+        self.failUnless(len(self.banana.slicerStack) == 1)
+        self.failUnless(isinstance(self.banana.slicerStack[0], RootSlicer))
 
     def testList(self):
         res = self.do([1,2])
@@ -366,12 +438,12 @@ class Foo(Bar):
 
 class BananaInstanceTests(unittest.TestCase):
     def setUp(self):
-        self.banana = Banana()
+        self.banana = TokenBanana()
     def do(self, obj):
         return self.banana.testSlice(obj)
     def tearDown(self):
-        self.failUnless(len(self.banana.stack) == 1)
-        self.failUnless(isinstance(self.banana.stack[0], RootSlicer))
+        self.failUnless(len(self.banana.slicerStack) == 1)
+        self.failUnless(isinstance(self.banana.slicerStack[0], RootSlicer))
     
     def test_one(self):
         obj = Bar()
@@ -397,3 +469,166 @@ class BananaInstanceTests(unittest.TestCase):
                                  CLOSE(2),
                               CLOSE(0)])
 
+class ByteStream(unittest.TestCase):
+    listToken = "\x04\x82list"
+    def setUp(self):
+        self.banana = Banana()
+        self.banana.transport = cStringIO.StringIO()
+    def encode(self, obj):
+        self.banana.send(obj)
+        return self.banana.transport.getvalue()
+    def wantEqual(self, got, wanted):
+        if got != wanted:
+            print
+            print "wanted: '%s'" % wanted
+            print "got   : '%s'" % got
+            self.fail("did not get expected string")
+
+    def OPEN(self, opentype, count):
+        assert count < 128
+        return chr(count) + "\x88" + chr(len(opentype)) + "\x82" + opentype
+    def CLOSE(self, count):
+        assert count < 128
+        return chr(count) + "\x89"
+    def INT(self, num):
+        assert num < 128
+        return chr(num) + "\x81"
+    def STR(self, str):
+        assert len(str) < 128
+        return chr(len(str)) + "\x82" + str
+
+    def test_list(self):
+        obj = [1,2]
+        expected = "".join([self.OPEN("list", 0),
+                            self.INT(1), self.INT(2),
+                            self.CLOSE(0),
+                            ])
+        self.wantEqual(self.encode(obj), expected)
+
+    def test_ref6(self):
+        # everybody's favorite "([(ref0" test case.
+        obj = ([],)
+        obj[0].append((obj,))
+        expected = "".join([self.OPEN("tuple",0),
+                             self.OPEN("list",1),
+                              self.OPEN("tuple",2),
+                               self.OPEN("reference",3),
+                                self.INT(0),
+                               self.CLOSE(3),
+                              self.CLOSE(2),
+                             self.CLOSE(1),
+                            self.CLOSE(0)])
+        self.wantEqual(self.encode(obj), expected)
+
+    def test_two(self):
+        f1 = Foo(); f1.a = 1; f1.b = [2,3]
+        f2 = Bar(); f2.d = 4; f1.c = f2
+        fooname = reflect.qual(Foo)
+        barname = reflect.qual(Bar)
+        # needs OrderedDictSlicer for the test to work
+
+        expected = "".join([self.OPEN("instance",0), self.STR(fooname),
+                             self.STR("a"), self.INT(1),
+                             self.STR("b"),
+                              self.OPEN("list",1),
+                               self.INT(2), self.INT(3),
+                               self.CLOSE(1),
+                             self.STR("c"),
+                               self.OPEN("instance",2), self.STR(barname),
+                                self.STR("d"), self.INT(4),
+                               self.CLOSE(2),
+                            self.CLOSE(0)])
+        self.wantEqual(self.encode(f1), expected)
+
+
+class TestBanana(Banana):
+    def receivedObject(self, obj):
+        self.object = obj
+
+class ThereAndBackAgain(unittest.TestCase):
+
+    def setUp(self):
+        self.banana = TestBanana()
+        self.banana.transport = cStringIO.StringIO()
+
+    def encode(self, obj):
+        self.banana.send(obj)
+        return self.banana.transport.getvalue()
+
+    def decode(self, str):
+        self.banana.object = None
+        self.banana.dataReceived(str)
+        obj = self.banana.object
+        self.banana.object = None
+        return obj
+
+    def loop(self, obj):
+        return self.decode(self.encode(obj))
+    def looptest(self, obj):
+        self.failUnlessEqual(self.loop(obj), obj)
+
+    def test_int(self):
+        self.looptest(42)
+    test_int.todo = "can't yet serialize non-containers"
+    def test_string(self):
+        self.looptest("biggles")
+    test_string.todo = "can't yet serialize non-containers"
+    def test_list(self):
+        self.looptest([1,2])
+    def test_tuple(self):
+        self.looptest((1,2))
+
+    # some stuff from test_newjelly
+    def testIdentity(self):
+        """
+        test to make sure that objects retain identity properly
+        """
+        x = []
+        y = (x)
+        x.append(y)
+        x.append(y)
+        self.assertIdentical(x[0], x[1])
+        self.assertIdentical(x[0][0], x)
+        s = self.encode(x)
+        z = self.decode(s)
+        self.assertIdentical(z[0], z[1])
+        self.assertIdentical(z[0][0], z)
+
+    def testUnicode(self):
+        if hasattr(types, 'UnicodeType'):
+            x = [unicode('blah')]
+            y = self.decode(self.encode(x))
+            self.assertEquals(x, y)
+            self.assertEquals(type(x[0]), type(y[0]))
+    testUnicode.todo = "unicode doesn't work yet"
+
+    def testStressReferences(self):
+        reref = []
+        toplevelTuple = ({'list': reref}, reref)
+        reref.append(toplevelTuple)
+        s = self.encode(toplevelTuple)
+        z = self.decode(s)
+        self.assertIdentical(z[0]['list'], z[1])
+        self.assertIdentical(z[0]['list'][0], z)
+
+    def testMoreReferences(self):
+        a = []
+        t = (a,)
+        a.append((t,))
+        s = self.encode(t)
+        z = self.decode(s)
+        self.assertIdentical(z[0][0][0], z)
+
+    def testLotsaTypes(self):
+        """
+        test for all types currently supported in jelly
+        """
+        a = A()
+        self.looptest(a)
+        self.looptest(a.amethod)
+        items = [afunc, [1, 2, 3], not bool(1), bool(1), 'test', 20.3, (1,2,3), None, A, unittest, {'a':1}, A.amethod]
+        for i in items:
+            self.looptest(i)
+    testLotsaTypes.skip = "not all types are implemented yet"
+
+        
