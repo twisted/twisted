@@ -223,7 +223,8 @@ class Request(pb.Copyable, http.Request):
         self.finish()
 
     def processingFailed(self, reason):
-        body = ("<HTML><BODY><br>web.Server Traceback \n\n"
+        body = ("<html><head><title>web.Server Traceback (most recent call last)</title></head>"
+                "<body><b>web.Server Traceback (most recent call last):</b>\n\n"
                 "%s\n\n</body></html>\n"
                 % webutil.formatFailure(reason))
         reason.printTraceback()
