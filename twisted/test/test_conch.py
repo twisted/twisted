@@ -843,7 +843,7 @@ class SSHTransportTestCase(unittest.TestCase):
 
     sigchldHandler = None
     
-    def setUp(self):
+    def setUpClass(self):
         open('rsa_test','w').write(privateRSA_openssh)
         open('rsa_test.pub','w').write(publicRSA_openssh)
         open('dsa_test.pub','w').write(publicDSA_openssh)
@@ -854,16 +854,16 @@ class SSHTransportTestCase(unittest.TestCase):
         if hasattr(reactor, "_handleSigchld") and hasattr(signal, "SIGCHLD"):
             self.sigchldHandler = signal.signal(signal.SIGCHLD, reactor._handleSigchld)
 
-    def tearDown(self):
+    def tearDownClass(self):
         if self.sigchldHandler:
             signal.signal(signal.SIGCHLD, self.sigchldHandler)
+            self.sigchldHandler = None
 
         for f in ['rsa_test','rsa_test.pub','dsa_test','dsa_test.pub', 'kh_test']:
             os.remove(f)
-        self.server.stopListening()
 
     def testOurServerOurClient(self):
-        """test the SSH server against the SSH client
+        """test the Conch server against the Conch client
         """
         global theTest
         theTest = self
@@ -898,6 +898,7 @@ class SSHTransportTestCase(unittest.TestCase):
             fac.proto.transport.loseConnection()
         except AttributeError:
             pass
+        self.server.stopListening()
         reactor.iterate()
         reactor.iterate()
         reactor.iterate()
@@ -908,7 +909,7 @@ class SSHTransportTestCase(unittest.TestCase):
             pass
 
     def testOurServerOpenSSHClient(self):
-        """test the SSH server against the OpenSSH client
+        """test the Conch server against the OpenSSH client
         """
         cmdline = ('ssh -2 -l testuser -p %i '
                    '-oUserKnownHostsFile=kh_test '
@@ -940,6 +941,8 @@ class SSHTransportTestCase(unittest.TestCase):
         cmds = (cmdline % port).split()
         p = SSHTestOpenSSHProcess()
         def _failTest():
+            p.done = 1
+            self.fail('test took too long')
             try:
                 os.kill(p.transport.pid, 9)
             except OSError:
@@ -951,8 +954,6 @@ class SSHTransportTestCase(unittest.TestCase):
             reactor.iterate(0.1)
             reactor.iterate(0.1)
             reactor.iterate(0.1)
-            p.done = 1
-            self.fail('test took too long')
         timeout = reactor.callLater(10, _failTest)
         reactor.spawnProcess(p, ssh_path, cmds)
         # wait for process to finish
@@ -965,6 +966,9 @@ class SSHTransportTestCase(unittest.TestCase):
             fac.proto.transport.loseConnection()
         except AttributeError:
             pass
+        self.server.stopListening()
+        reactor.iterate()
+        reactor.iterate()
         reactor.iterate()
 
         try:
@@ -973,8 +977,7 @@ class SSHTransportTestCase(unittest.TestCase):
             pass
 
     def testOurServerCmdLineClient(self):
-        """test the Conch server against the cmdline
-        client
+        """test the Conch server against the cmdline client
         """
         if runtime.platformType == 'win32':
             raise unittest.SkipTest, "can't run cmdline client on win32"
@@ -1006,6 +1009,8 @@ class SSHTransportTestCase(unittest.TestCase):
         cmds = (cmd % (exe, conch_path, port)).split()
         p = SSHTestOpenSSHProcess()
         def _failTest():
+            p.done = 1
+            self.fail('test took too long')
             try:
                 os.kill(p.transport.pid, 9)
             except OSError:
@@ -1017,8 +1022,6 @@ class SSHTransportTestCase(unittest.TestCase):
             reactor.iterate(0.1)
             reactor.iterate(0.1)
             reactor.iterate(0.1)
-            p.done = 1
-            self.fail('test took too long')
         #env = {'PYTHONPATH':':'.join(sys.path)}
         timeout = reactor.callLater(10, _failTest)
         reactor.spawnProcess(p, exe, cmds, env=None)
@@ -1032,6 +1035,9 @@ class SSHTransportTestCase(unittest.TestCase):
             fac.proto.transport.loseConnection()
         except AttributeError:
             pass
+        self.server.stopListening()
+        reactor.iterate()
+        reactor.iterate()
         reactor.iterate()
 
         try:
@@ -1040,6 +1046,7 @@ class SSHTransportTestCase(unittest.TestCase):
             pass
 
     def testOurServerUnixClient(self):
+        """Test the Conch server against the client over a UNIX socket"""
         if runtime.platformType == 'win32':
             raise unittest.SkipTest, "can't run cmdline client on win32"
         cmd1 = ('-p %i -l testuser '
@@ -1074,7 +1081,9 @@ class SSHTransportTestCase(unittest.TestCase):
         cmds1 = (cmd1 % port).split()
         cmds2 = (cmd2 % (exe, conch_path, port)).split()
         p = SSHTestOpenSSHProcess()
-        def _failTest():
+        def _failTestU():
+            p.done = 1
+            self.fail('test took too long')
             try:
                 os.kill(p.transport.pid, 9)
             except OSError:
@@ -1086,19 +1095,18 @@ class SSHTransportTestCase(unittest.TestCase):
             reactor.iterate(0.1)
             reactor.iterate(0.1)
             reactor.iterate(0.1)
-            p.done = 1
-            self.fail('test took too long')
         #env = {'PYTHONPATH':':'.join(sys.path)}
-        timeout = reactor.callLater(10, _failTest)
         o = options.ConchOptions()
         def _(host, *args):
             o['host'] = host
         o.parseArgs = _
         o.parseOptions(cmds1)
         vhk = default.verifyHostKey
-        uao = default.SSHUserAuthClient(o['user'], o, SSHTestConnectionForUnix(p, exe, cmds2))
+        conn = SSHTestConnectionForUnix(p, exe, cmds2)
+        uao = default.SSHUserAuthClient(o['user'], o, conn)
         connect.connect(o['host'], int(o['port']), o, vhk, uao)
         
+        timeout = reactor.callLater(10, _failTestU)
         # wait for process to finish
         while not p.done:
             reactor.iterate(0.1)
@@ -1109,6 +1117,8 @@ class SSHTransportTestCase(unittest.TestCase):
             fac.proto.transport.loseConnection()
         except AttributeError:
             pass
+        conn.transport.transport.loseConnection()
+        self.server.stopListening()
         reactor.iterate()
         reactor.iterate()
         reactor.iterate()
