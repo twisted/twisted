@@ -311,7 +311,7 @@ class Shell(Telnet):
             self.transport.write('\r\n')
         except:
             io = StringIO()
-            failure.Failure.printTraceback(file=self)
+            failure.Failure().printTraceback(file=self)
             self.transport.write('\r\n')
         return "Command"
 
