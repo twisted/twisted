@@ -11,12 +11,14 @@ sysconfig._init_posix()
 sysconfig._config_vars["CC"] = "g++"
 sysconfig._config_vars["LDSHARED"] = "g++ -shared"
 
+fusionPath = os.path.dirname(fusion.__file__)
+
 setup(
   name = "echo",
   ext_modules=[ 
     Extension("echo", ["echo.cpp"],
               libraries=["boost_python"],
               include_dirs=["../include"],
-              extra_link_args=["%s" % join(os.path.dirname(fusion.__file__), "tcp.so")]),
+              extra_link_args=[join(fusionPath, "tcp.so"), join(fusionPath, "util.so")]),
     ],
 )

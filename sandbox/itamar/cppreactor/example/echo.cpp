@@ -1,5 +1,6 @@
 #include <iostream>
 using namespace std;
+#include <boost/bind.hpp>
 #include "twisted/tcp.h"
 using namespace Twisted;
 
@@ -11,6 +12,10 @@ public:
     virtual void dealloc(char* buf) { cout << "dealloc\n"; }
 };
 
+void printNum(int i) {
+    cout << i << " seconds passed." << std::endl;
+}
+
 class Echo : public Protocol
 {
 private:
@@ -20,6 +25,8 @@ public:
     virtual void connectionMade()
     {
 	transport->setReadBuffer(buf, 16384);
+	callLater(1, boost::bind(printNum, 1));
+	callLater(2, boost::bind(printNum, 2));
 	cout << "connectionMade" << endl;
     }
 

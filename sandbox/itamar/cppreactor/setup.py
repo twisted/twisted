@@ -10,15 +10,14 @@ sysconfig._init_posix()
 sysconfig._config_vars["CC"] = "g++ -ftemplate-depth-50"
 sysconfig._config_vars["LDSHARED"] = "g++ -shared"
 
+ext_modules = []
+for name in ["tcp", "udp", "util"]:
+    ext_modules.append(Extension("fusion." + name, [join("fusion", "%s.cpp" % name)],
+                                 libraries=["boost_python"],
+                                 include_dirs=["include"]))
+
 setup(
   name = "fusion",
   packages=["fusion"],
-  ext_modules=[ 
-    Extension("fusion.tcp", [join("fusion", "tcp.cpp")],
-              libraries=["boost_python"],
-              include_dirs=["include"]),
-    Extension("fusion.udp", [join("fusion", "udp.cpp")],
-              libraries=["boost_python"],
-              include_dirs=["include"]),
-    ],
+  ext_modules=ext_modules,
 )
