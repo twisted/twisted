@@ -30,7 +30,7 @@ from twisted.internet import defer
 from twisted.python import log, components, util
 from twisted.python.compat import *
 
-import base64, binascii, operator, re, string, types, rfc822, random
+import base64, binascii, operator, re, string, time, types, rfc822, random
 
 
 def maybeDeferred(obj, cb, eb, cbArgs, ebArgs):
@@ -51,7 +51,7 @@ class IMAP4Server(basic.LineReceiver):
 
     """
     Protocol implementation for an IMAP4rev1 server.
-    
+
     The server can be in any of four states:
         Non-authenticated
         Authenticated
@@ -60,40 +60,40 @@ class IMAP4Server(basic.LineReceiver):
     """
     # Capabilities supported by this server
     CAPABILITIES = {}
-    
+
     # Identifier for this server software
     IDENT = 'Twisted IMAP4rev1 Ready'
-    
+
     # Mapping of tags to commands we have received
     tags = None
-    
+
     # The account object for this connection
     account = None
-    
+
     # The currently selected mailbox
     mbox = None
-    
+
     # Command data to be processed when literal data is received
     _pendingLiteral = None
     _pendingBuffer = None
     _pendingSize = None
-    
+
     # Challenge generators for AUTHENTICATE command
     challengers = None
-    
+
     def __init__(self):
         self.challengers = {}
         self.CAPABILITIES = self.CAPABILITIES.copy()
-    
+
     def registerChallenger(self, name, chal):
         """Register a new form of authentication
-        
+
         Challengers registered here will be listed as available to the client
         in the CAPABILITY response.
 
         @type name: C{str}
         @param name: The authentication type to associate
-        
+
         @type chal: Implementor of C{IServerAuthentication}
         @param chal: The object to use to perform the client
         side of this authentication scheme.
@@ -105,7 +105,7 @@ class IMAP4Server(basic.LineReceiver):
         self.tags = {}
         self.state = 'unauth'
         self.sendServerGreeting()
-    
+
     def rawDataReceived(self, data):
         self._pendingSize -= len(data)
         if self._pendingSize > 0:
@@ -122,7 +122,7 @@ class IMAP4Server(basic.LineReceiver):
             self._pendingLiteral = None
             if passon:
                 self.setLineMode(passon)
-    
+
     def lineReceived(self, line):
         # print 'S: ' + line
         args = line.split(None, 2)
@@ -139,8 +139,8 @@ class IMAP4Server(basic.LineReceiver):
         else:
             # XXX - This is rude.
             self.transport.loseConnection()
-            raise IllegalClientResponse(line) 
-    
+            raise IllegalClientResponse(line)
+
         cmd = cmd.upper()
         self.dispatchCommand(tag, cmd, rest)
 
@@ -164,16 +164,16 @@ class IMAP4Server(basic.LineReceiver):
 
     def sendServerGreeting(self):
         self.sendPositiveResponse(message=self.IDENT)
-    
+
     def sendBadResponse(self, tag = None, message = ''):
         self._respond('BAD', tag, message)
-    
+
     def sendPositiveResponse(self, tag = None, message = ''):
         self._respond('OK', tag, message)
-    
+
     def sendNegativeResponse(self, tag = None, message = ''):
         self._respond('NO', tag, message)
-    
+
     def sendUntaggedResponse(self, message):
         self._respond(message, None, None)
 
@@ -209,23 +209,23 @@ class IMAP4Server(basic.LineReceiver):
     auth_CAPABILITY = unauth_CAPABILITY
     select_CAPABILITY = unauth_CAPABILITY
     logout_CAPABILITY = unauth_CAPABILITY
-    
+
     def unauth_LOGOUT(self, tag, args):
         self.sendUntaggedResponse('BYE Nice talking to you')
         self.sendPositiveResponse(tag, 'LOGOUT successful')
         self.transport.loseConnection()
-    
+
     auth_LOGOUT = unauth_LOGOUT
     select_LOGOUT = unauth_LOGOUT
     logout_LOGOUT = unauth_LOGOUT
-    
+
     def unauth_NOOP(self, tag, args):
         self.sendPositiveResponse(tag, 'NOOP No operation performed')
-    
+
     auth_NOOP = unauth_NOOP
     select_NOOP = unauth_NOOP
     logout_NOOP = unauth_NOOP
-    
+
     def unauth_AUTHENTICATE(self, tag, args):
         args = args.upper().strip()
         if not self.challengers.has_key(args):
@@ -241,7 +241,7 @@ class IMAP4Server(basic.LineReceiver):
                 self._pendingLiteral = defer.Deferred()
                 self.sendContinuationRequest(coded)
                 self._pendingLiteral.addCallback(self._cbAuthChunk, auth, challenge, tag)
-    
+
     def _cbAuthChunk(self, result, auth, savedState, tag):
         try:
             savedState, challenge = auth.authenticateResponse(savedState, result)
@@ -266,20 +266,20 @@ class IMAP4Server(basic.LineReceiver):
 
     def authenticateLogin(self, user, passwd):
         """Lookup the account associated with the given parameters
-        
+
         Override this method to define the desired authentication behavior.
-        
+
         @type user: C{str}
         @param user: The username to lookup
-        
+
         @type passwd: C{str}
         @param passwd: The password to login with
-        
+
         @rtype: C{Account}
         @return: An appropriate account object, or None
         """
         return None
-    
+
     def _cbLogin(self, account, tag):
         if account is None:
             self.sendNegativeResponse(tag, 'LOGIN failed')
@@ -287,17 +287,17 @@ class IMAP4Server(basic.LineReceiver):
             self.account = account
             self.sendPositiveResponse(tag, 'LOGIN succeeded')
             self.state = 'auth'
-    
+
     def _ebLogin(self, failure, tag):
         self.sendBadResponse(tag, 'Server error: ' + str(failure.value))
-    
+
     def auth_SELECT(self, tag, args):
         mbox = self.account.select(args)
         if mbox is None:
             self.sendNegativeResponse(tag, 'No such mailbox')
         else:
             self.state = 'select'
-            
+
             flags = mbox.getFlags()
             self.sendUntaggedResponse(str(mbox.getMessageCount()) + ' EXISTS')
             self.sendUntaggedResponse(str(mbox.getRecentCount()) + ' RECENT')
@@ -314,14 +314,14 @@ class IMAP4Server(basic.LineReceiver):
             self.mbox = mbox
             self.sendPositiveResponse(tag, '[%s] SELECT successful' % s)
     select_SELECT = auth_SELECT
-    
+
     def auth_EXAMINE(self, tag, args):
         mbox = self.account.select(args, 0)
         if mbox is None:
             self.sendNegativeResponse(tag, 'No such mailbox')
         else:
             self.state = 'select'
-            
+
             flags = mbox.getFlags()
             self.sendUntaggedResponse(str(mbox.getMessageCount()) + ' EXISTS')
             self.sendUntaggedResponse(str(mbox.getRecentCount()) + ' RECENT')
@@ -333,7 +333,7 @@ class IMAP4Server(basic.LineReceiver):
             self.mbox = mbox
             self.sendPositiveResponse(tag, '[READ-ONLY] EXAMINE successful')
     select_EXAMINE = auth_EXAMINE
-    
+
     def auth_CREATE(self, tag, args):
         try:
             self.account.create(args.strip())
@@ -342,7 +342,7 @@ class IMAP4Server(basic.LineReceiver):
         else:
             self.sendPositiveResponse(tag, 'Mailbox created')
     select_CREATE = auth_CREATE
-    
+
     def auth_DELETE(self, tag, args):
         try:
             self.account.delete(args.strip())
@@ -351,8 +351,8 @@ class IMAP4Server(basic.LineReceiver):
         else:
             self.sendPositiveResponse(tag, 'Mailbox deleted')
     select_DELETE = auth_DELETE
-    
-    
+
+
     def auth_RENAME(self, tag, args):
         try:
             self.account.rename(*args.strip().split())
@@ -363,7 +363,7 @@ class IMAP4Server(basic.LineReceiver):
         else:
             self.sendPositiveResponse(tag, 'Mailbox renamed')
     select_RENAME = auth_RENAME
-    
+
     def auth_SUBSCRIBE(self, tag, args):
         try:
             self.account.subscribe(args.strip())
@@ -372,7 +372,7 @@ class IMAP4Server(basic.LineReceiver):
         else:
             self.sendPositiveResponse(tag, 'Subscribed')
     select_SUBSCRIBE= auth_SUBSCRIBE
-    
+
     def auth_UNSUBSCRIBE(self, tag, args):
         try:
             self.account.unsubscribe(args.strip())
@@ -431,10 +431,10 @@ class IMAP4Server(basic.LineReceiver):
         line = ' '.join(['%s %s' % x for x in status.items()])
         self.sendUntaggedResponse('STATUS %s (%s)' % (box, line))
         self.sendPositiveResponse(tag, 'STATUS complete')
-    
+
     def _ebStatus(self, failure, tag, box):
         self.sendBadResponse(tag, 'STATUS %s failed: %s' % (box, failure))
-    
+
     def auth_APPEND(self, tag, args):
         parts = parseNestedParens(args)
         if len(parts) == 2:
@@ -461,7 +461,7 @@ class IMAP4Server(basic.LineReceiver):
             size = int(size[1:-1])
         except ValueError:
             raise IllegalClientResponse, args
-        
+
         mbox = self.account.select(parts[0])
         if not mbox:
             self.sendNegativeResponse(tag, '[TRYCREATE] No such mailbox')
@@ -474,14 +474,14 @@ class IMAP4Server(basic.LineReceiver):
         d = mbox.addMessage(rest, flags, date)
         d.addCallback(self._cbAppend, tag, mbox)
         d.addErrback(self._ebAppend, tag)
-    
+
     def _cbAppend(self, result, tag, mbox):
         self.sendUntaggedResponse('%d EXISTS' % mbox.getMessageCount())
         self.sendPositiveResponse(tag, 'APPEND complete')
-    
+
     def _ebAppend(self, failure, tag):
         self.sendBadResponse(tag, 'APPEND failed: ' + str(failure.value))
-    
+
     def select_CHECK(self, tag, args):
         d = self.checkpoint()
         if d is None:
@@ -496,13 +496,13 @@ class IMAP4Server(basic.LineReceiver):
 
     def _cbCheck(self, result, tag):
         self.sendPositiveResponse(tag, 'CHECK completed')
-    
+
     def _ebCheck(self, failure, tag):
         self.sendBadResponse(tag, 'CHECK failed: ' + str(failure.value))
-    
+
     def checkpoint(self):
         """Called when the client issues a CHECK command.
-        
+
         This should perform any checkpoint operations required by the server.
         It may be a long running operation, but may not block.  If it returns
         a deferred, the client will only be informed of success (or failure)
@@ -528,7 +528,7 @@ class IMAP4Server(basic.LineReceiver):
 
     def _ebClose(self, failure, tag):
         self.sendBadResponse(tag, 'CLOSE failed: ' + str(failure.value))
-    
+
     def select_EXPUNGE(self, tag, args):
         if self.mbox.isWriteable():
             d = self.mbox.expunge()
@@ -549,12 +549,12 @@ class IMAP4Server(basic.LineReceiver):
 
     def _ebExpunge(self, failure, tag):
         self.sendBadResponse(tag, 'EXPUNGE failed: ' + str(failure.value))
-    
+
     def select_SEARCH(self, tag, args, uid=0):
         query = parseNestedParens(args)
         d = self.mbox.search(query)
         maybeDeferred(d, self._cbSearch, self._ebSearch, (tag, uid), (tag,))
-    
+
     def _cbSearch(self, result, tag, uid):
         if uid:
             topPart = self.mbox.getUIDValidity() << 16
@@ -562,7 +562,7 @@ class IMAP4Server(basic.LineReceiver):
         ids = ' '.join([str(i) for i in result])
         self.sendUntaggedResponse('SEARCH ' + ids)
         self.sendPositiveResponse(tag, 'SEARCH completed')
-    
+
     def _ebSearch(self, failure, tag):
         self.sendBadResponse(tag, 'SEARCH failed: ' + str(failure.value))
 
@@ -578,7 +578,7 @@ class IMAP4Server(basic.LineReceiver):
             messages = map(topPart.__or__, messages)
         d = self.mbox.fetch(messages, query)
         maybeDeferred(d, self._cbFetch, self._ebFetch, (tag, uid), (tag,))
-    
+
     def _cbFetch(self, results, tag, uid):
         for (mId, parts) in results.items():
             for (portion, value) in parts.items():
@@ -604,7 +604,7 @@ class IMAP4Server(basic.LineReceiver):
                 flags = ()
         else:
             raise IllegalClientResponse, args
-        
+
         silent = mode.endswith('SILENT')
         if mode.startswith('+'):
             mode = 1
@@ -612,7 +612,7 @@ class IMAP4Server(basic.LineReceiver):
             mode = -1
         else:
             mode = 0
-        
+
         d = self.mbox.store(messages, flags, mode, uid)
         maybeDeferred(d, self._cbStore, self._ebStore, (tag, silent), (tag,))
 
@@ -624,7 +624,7 @@ class IMAP4Server(basic.LineReceiver):
 
     def _ebStore(self, failure, tag):
         self.sendBadResponse(tag, 'Server error: ' + str(failure.value))
-    
+
     def select_COPY(self, tag, args, uid=0):
         parts = args.split(None, 1)
         if len(parts) != 2:
@@ -640,7 +640,7 @@ class IMAP4Server(basic.LineReceiver):
                     messages[i] = messages[i] | topPart
             d = self.mbox.fetch(messages, ['BODY', [], 'INTERNALDATE', 'FLAGS'])
             maybeDeferred(d, self._cbCopy, self._ebCopy, (tag, mbox), (tag, mbox))
-    
+
     def _cbCopy(self, messages, tag, mbox):
         # XXX - This should handle failures with a rollback or something
         addedDeferreds = []
@@ -661,7 +661,7 @@ class IMAP4Server(basic.LineReceiver):
                     addedIDs.append(d)
         d = defer.DeferredList(addedDeferreds)
         d.addCallback(self._cbCopied, addedIDs, failures, tag, mbox)
-    
+
     def _cbCopied(self, deferredIds, ids, failures, tag, mbox):
         for (result, status) in deferredIds:
             if status:
@@ -678,13 +678,13 @@ class IMAP4Server(basic.LineReceiver):
         parts = args.split(None, 1)
         if len(parts) != 2:
             raise IllegalClientResponse, args
-        
+
         command = parts[0].upper()
         args = parts[1]
-        
+
         if command not in ('COPY', 'FETCH', 'STORE'):
             raise IllegalClientResponse, args
-        
+
         f = getattr(self, 'select_' + command)
         f(tag, args, uid=1)
 
@@ -706,7 +706,7 @@ class IMAP4Client(basic.LineReceiver):
     queued = None
     tagID = 1
     state = None
-    
+
     # Capabilities are not allowed to change during the session
     # So cache the first response and use that for all later
     # lookups
@@ -726,17 +726,17 @@ class IMAP4Client(basic.LineReceiver):
         self.tags = {}
         self.queued = []
         self.authenticators = {}
-    
+
     def registerAuthenticator(self, name, auth):
         """Register a new form of authentication
-        
+
         When invoking the authenticate() method of IMAP4Client, the first
         matching authentication scheme found will be used.  The ordering is
         that in which the server lists support authentication schemes.
-        
+
         @type name: C{str}
         @param name: The authentication type to associate
-        
+
         @type auth: Implementor of C{IClientAuthentication}
         @param auth: The object to use to perform the client
         side of this authentication scheme.
@@ -753,7 +753,7 @@ class IMAP4Client(basic.LineReceiver):
             # XXX - This is rude.
             self.transport.loseConnection()
             raise IllegalServerResponse(line)
-        
+
         self.dispatchCommand(tag, rest)
 
     def makeTag(self):
@@ -824,7 +824,7 @@ class IMAP4Client(basic.LineReceiver):
                 del self.tags[tag]
                 self.waiting = None
                 self._flushQueue()
-    
+
     def _flushQueue(self):
         if self.queued:
             d, t, command, args, continuation = self.queued.pop(0)
@@ -845,9 +845,9 @@ class IMAP4Client(basic.LineReceiver):
 
     def getCapabilities(self):
         """Request the capabilities available on this server.
-        
+
         This command is allowed in any state of connection.
-        
+
         @rtype: C{Deferred}
         @return: A deferred whose callback will be invoked with a
         dictionary mapping capability types to lists of supported
@@ -858,7 +858,7 @@ class IMAP4Client(basic.LineReceiver):
         d = self.sendCommand('CAPABILITY')
         d.addCallback(self._cbCapabilities)
         return d
-    
+
     def _cbCapabilities(self, (lines, tagline)):
         caps = {}
         for rest in lines:
@@ -871,12 +871,12 @@ class IMAP4Client(basic.LineReceiver):
                     caps.setdefault(cap[:eq], []).append(cap[eq+1:])
         self._capCache = caps
         return caps
-    
+
     def logout(self):
         """Inform the server that we are done with the connection.
-        
+
         This command is allowed in any state of connection.
-        
+
         @rtype: C{Deferred}
         @return: A deferred whose callback will be invoked with None
         when the proper server acknowledgement has been received.
@@ -884,17 +884,17 @@ class IMAP4Client(basic.LineReceiver):
         d = self.sendCommand('LOGOUT')
         d.addCallback(self._cbLogout)
         return d
-    
+
     def _cbLogout(self, (lines, tagline)):
         # We don't particularly care what the server said
         return None
-    
-    
+
+
     def noop(self):
         """Perform no operation.
-        
+
         This command is allowed in any state of connection.
-        
+
         @rtype: C{Deferred}
         @return: A deferred whose callback will be invoked with a list
         of untagged status updates the server responds with.
@@ -902,18 +902,18 @@ class IMAP4Client(basic.LineReceiver):
         d = self.sendCommand('NOOP')
         d.addCallback(self._cbNoop)
         return d
-    
+
     def _cbNoop(self, (lines, tagline)):
         # Conceivable, this is elidable.
         # It is, afterall, a no-op.
         return lines
-    
-    
+
+
     def authenticate(self, secret):
         """Attempt to enter the authenticated state with the server
-        
+
         This command is allowed in the Non-Authenticated state.
-        
+
         @rtype: C{Deferred}
         @return: A deferred whose callback is invoked if the authentication
         succeeds and whose errback will be invoked otherwise.
@@ -933,25 +933,25 @@ class IMAP4Client(basic.LineReceiver):
                 break
         else:
             raise NoSupportedAuthentication(auths, self.authenticators.keys())
-        
+
         continuation = defer.Deferred()
         continuation.addCallback(self._cbContinueAuth, scheme, secret)
         d = self.sendCommand('AUTHENTICATE', scheme, continuation)
         d.addCallback(self._cbAuth)
         return d
-    
-    def _cbContinueAuth(self, rest, scheme, secret): 
+
+    def _cbContinueAuth(self, rest, scheme, secret):
         auth = self.authenticators[scheme]
         self.sendLine(auth.challengeResponse(secret, rest + '\n'))
 
     def _cbAuth(self, *args, **kw):
         return None
-    
+
     def login(self, username, password):
         """Authenticate with the server using a username and password
-        
+
         This command is allowed in the Non-Authenticated state.
-        
+
         @type username: C{str}
         @param username: The username to log in with
 
@@ -963,15 +963,15 @@ class IMAP4Client(basic.LineReceiver):
         and whose errback is invoked otherwise.
         """
         return self.sendCommand('LOGIN', ' '.join((username, password)))
-    
+
     def select(self, mailbox):
         """Select a mailbox
-        
+
         This command is allowed in the Authenticated and Selected states.
-        
+
         @type mailbox: C{str}
         @param mailbox: The name of the mailbox to select
-        
+
         @rtype: C{Deferred}
         @return: A deferred whose callback is invoked with mailbox
         information if the select is successful and whose errback is
@@ -980,15 +980,15 @@ class IMAP4Client(basic.LineReceiver):
         d = self.sendCommand('SELECT', mailbox)
         d.addCallback(self._cbSelect)
         return d
-    
+
     def examine(self, mailbox):
         """Select a mailbox in read-only mode
-        
+
         This command is allowed in the Authenticated and Selected states.
-        
+
         @type: mailbox: C{str}
         @param mailbox: The name of the mailbox to examine
-        
+
         @rtype: C{Deferred}
         @return: A deferred whose callback is invoked with mailbox
         information if the examine is successful and whose errback
@@ -997,7 +997,7 @@ class IMAP4Client(basic.LineReceiver):
         d = self.sendCommand('EXAMINE', mailbox)
         d.addCallback(self._cbSelect)
         return d
-    
+
     def _cbSelect(self, (lines, tagline)):
         # In the absense of specification, we are free to assume:
         #   READ-WRITE access
@@ -1053,60 +1053,60 @@ class IMAP4Client(basic.LineReceiver):
             else:
                 log.err('Unhandled SELECT response (4): ' + parts)
         return datum
-    
+
     def create(self, name):
         """Create a new mailbox on the server
-        
+
         This command is allowed in the Authenticated and Selected states.
-        
+
         @type name: C{str}
         @param name: The name of the mailbox to create.
-        
+
         @rtype: C{Deferred}
         @return: A deferred whose callback is invoked if the mailbox creation
         is successful and whose errback is invoked otherwise.
         """
         return self.sendCommand('CREATE', name)
-    
+
     def delete(self, name):
         """Delete a mailbox
-        
+
         This command is allowed in the Authenticated and Selected states.
-        
+
         @type name: C{str}
         @param name: The name of the mailbox to delete.
-        
+
         @rtype: C{Deferred}
         @return: A deferred whose calblack is invoked if the mailbox is
         deleted successfully and whose errback is invoked otherwise.
         """
         return self.sendCommand('DELETE', name)
-    
+
     def rename(self, oldname, newname):
         """Rename a mailbox
-        
+
         This command is allowed in the Authenticated and Selected states.
-        
+
         @type oldname: C{str}
         @param oldname: The current name of the mailbox to rename.
-        
+
         @type newname: C{str}
         @param newname: The new name to give the mailbox.
-        
+
         @rtype: C{Deferred}
         @return: A deferred whose callback is invoked if the rename is
         successful and whose errback is invoked otherwise.
         """
         return self.sendCommand('RENAME', ' '.join((oldname, newname)))
-    
+
     def subscribe(self, name):
         """Add a mailbox to the subscription list
-        
+
         This command is allowed in the Authenticated and Selected states.
-        
+
         @type name: C{str}
         @param name: The mailbox to mark as 'active' or 'subscribed'
-        
+
         @rtype: C{Deferred}
         @return: A deferred whose callback is invoked if the subscription
         is successful and whose errback is invoked otherwise.
@@ -1115,33 +1115,33 @@ class IMAP4Client(basic.LineReceiver):
 
     def unsubscribe(self, name):
         """Remove a mailbox from the subscription list
-        
+
         This command is allowed in the Authenticated and Selected states.
-        
+
         @type name: C{str}
         @param name: The mailbox to unsubscribe
-        
+
         @rtype: C{Deferred}
         @return: A deferred whose callback is invoked if the unsubscription
         is successful and whose errback is invoked otherwise.
         """
         return self.sendCommand('UNSUBSCRIBE', name)
-    
+
     def list(self, reference, wildcard):
         """List a subset of the available mailboxes
-        
+
         This command is allowed in the Authenticated and Selected states.
-        
+
         @type reference: C{str}
         @param reference: The context in which to interpret C{wildcard}
-        
+
         @type wildcard: C{str}
         @param wildcard: The pattern of mailbox names to match, optionally
         including either or both of the '*' and '%' wildcards.  '*' will
         match zero or more characters and cross hierarchical boundaries.
         '%' will also match zero or more characters, but is limited to a
         single hierarchical level.
-        
+
         @rtype: C{Deferred}
         @return: A deferred whose callback is invoked with a list of C{tuple}s,
         the first element of which is a C{tuple} of mailbox flags, the second
@@ -1152,12 +1152,12 @@ class IMAP4Client(basic.LineReceiver):
         d = self.sendCommand('LIST', '"%s" "%s"' % (reference, wildcard))
         d.addCallback(self._cbList, 'LIST')
         return d
-    
+
     def lsub(self, reference, wildcard):
         """List a subset of the subscribed available mailboxes
-        
+
         This command is allowed in the Authenticated and Selected states.
-        
+
         The parameters and returned object are the same as for the C{list}
         method, with one slight difference: Only mailboxes which have been
         subscribed can be included in the resulting list.
@@ -1176,19 +1176,19 @@ class IMAP4Client(basic.LineReceiver):
                 parts[1] = tuple(parts[1])
                 results.append(tuple(parts[1:]))
         return results
-    
+
     def status(self, mailbox, *names):
         """Retrieve the status of the given mailbox
-        
+
         This command is allowed in the Authenticated and Selected states.
-        
+
         @type mailbox: C{str}
         @param mailbox: The name of the mailbox to query
-        
+
         @type names: C{str}
         @param names: The status names to query.  These may be any number of:
         MESSAGES, RECENT, UIDNEXT, UIDVALIDITY, and UNSEEN.
-        
+
         @rtype: C{Deferred}
         @return: A deferred whose callback is invoked with the status information
         if the command is successful and whose errback is invoked otherwise.
@@ -1196,7 +1196,7 @@ class IMAP4Client(basic.LineReceiver):
         d = self.sendCommand('STATUS', "%s (%s)" % (mailbox, ' '.join(names)))
         d.addCallback(self._cbStatus)
         return d
-    
+
     def _cbStatus(self, (lines, last)):
         status = {}
         for line in lines:
@@ -1213,24 +1213,24 @@ class IMAP4Client(basic.LineReceiver):
                 except Exception, e:
                     raise IllegalServerResponse('(%s %s): %s' % (k, status[k], str(e)))
         return status
-    
+
     def append(self, mailbox, message, flags = (), date = None):
         """Add the given message to the currently selected mailbox
-        
+
         This command is allowed in the Authenticated and Selected states.
-        
+
         @type mailbox: C{str}
         @param mailbox: The mailbox to which to add this message.
 
         @type message: C{str}
         @param message: The message to add, in RFC822 format.
-        
+
         @type flags: Any iterable of C{str}
         @param flags: The flags to associated with this message.
-        
+
         @type date: C{str}
         @param data: The date to associate with this message.
-        
+
         @rtype: C{Deferred}
         @return: A deferred whose callback is invoked when this command
         succeeds or whose errback is invoked if it fails.
@@ -1245,48 +1245,48 @@ class IMAP4Client(basic.LineReceiver):
         d = self.sendCommand('APPEND', cmd, continuation)
         d.addCallback(self._cbAppend)
         return d
-    
+
     def _cbContinueAppend(self, lines, message):
         self.transport.write(message)
-    
+
     def _cbAppend(self, result):
         return None
-    
+
     def check(self):
         """Tell the server to perform a checkpoint
-        
+
         This command is allowed in the Selected state.
-        
+
         @rtype: C{Deferred}
         @return: A deferred whose callback is invoked when this command
         succeeds or whose errback is invoked if it fails.
         """
         return self.sendCommand('CHECK')
-    
+
     def close(self):
         """Return the connection to the Authenticated state.
-        
+
         This command is allowed in the Selected state.
-        
+
         Issuing this command will also remove all messages flagged \\Deleted
         from the selected mailbox if it is opened in read-write mode,
         otherwise it indicates success by no messages are removed.
-        
+
         @rtype: C{Deferred}
         @return: A deferred whose callback is invoked when the command
         completes successfully or whose errback is invoked if it fails.
         """
         return self.sendCommand('CLOSE')
-    
+
     def expunge(self):
         """Return the connection to the Authenticate state.
-        
+
         This command is allowed in the Selected state.
-        
+
         Issuing this command will perform the same actions as issuing the
         close command, but will also generate an 'expunge' response for
         every message deleted.
-        
+
         @rtype: C{Deferred}
         @return: A deferred whose callback is invoked with a list of the
         'expunge' responses when this command is successful or whose errback
@@ -1295,7 +1295,7 @@ class IMAP4Client(basic.LineReceiver):
         d = self.sendCommand('EXPUNGE')
         d.addCallback(self._cbExpunge)
         return d
-    
+
     def _cbExpunge(self, (lines, last)):
         ids = []
         for line in lines:
@@ -1307,15 +1307,15 @@ class IMAP4Client(basic.LineReceiver):
                     except ValueError:
                         raise IllegalServerResponse, line
         return ids
-    
+
     def search(self, *queries):
         """Search messages in the currently selected mailbox
-        
+
         This command is allowed in the Selected state.
-        
+
         Any non-zero number of queries are accepted by this method, as
         returned by the C{Query}, C{Or}, and C{Not} functions.
-        
+
         @rtype: C{Deferred}
         @return: A deferred whose callback will be invoked with a list of all
         the message sequence numbers return by the search, or whose errback
@@ -1324,7 +1324,7 @@ class IMAP4Client(basic.LineReceiver):
         d = self.sendCommand('SEARCH', ' '.join(queries))
         d.addCallback(self._cbSearch)
         return d
-    
+
     def _cbSearch(self, (lines, end)):
         ids = []
         for line in lines:
@@ -1339,12 +1339,12 @@ class IMAP4Client(basic.LineReceiver):
 
     def fetchUID(self, messages):
         """Retrieve the unique identifier for one or more messages
-        
+
         This command is allowed in the Selected state.
-        
+
         @type messages: C{str}
         @param messages: A message sequence set
-        
+
         @rtype: C{Deferred}
         @return: A deferred whose callback is invoked with a dict mapping
         message numbers to message identifiers, or whose errback is invoked
@@ -1353,15 +1353,15 @@ class IMAP4Client(basic.LineReceiver):
         d = self._fetch(messages, uid=1)
         d.addCallback(self._cbFetch, lookFor=('UID',))
         return d
-    
+
     def fetchFlags(self, messages):
         """Retrieve the flags for one or more messages
-        
+
         This command is allowed in the Selected state.
-        
+
         @type messages: C{str}
         @param messages: A message sequence set (e.g., '1,3,4' or '2:5,11')
-        
+
         @rtype: C{Deferred}
         @return: A deferred whose callback is invoked with a dict mapping
         message numbers to lists of flags, or whose errback is invoked if
@@ -1373,12 +1373,12 @@ class IMAP4Client(basic.LineReceiver):
 
     def fetchInternalDate(self, messages):
         """Retrieve the internal date associated with one or more messages
-        
+
         This command is allowed in the Selected state.
-        
+
         @type messages: C{str}
         @param messages: A message sequence set
-        
+
         @rtype: C{Deferred}
         @return: A deferred whose callback is invoked with a dict mapping
         message numbers to date strings, or whose errback is invoked
@@ -1390,12 +1390,12 @@ class IMAP4Client(basic.LineReceiver):
 
     def fetchEnvelope(self, messages):
         """Retrieve the envelope data for one or more messages
-        
+
         This command is allowed in the Selected state.
-        
+
         @type messages: C{str}
         @param messages: A message sequence set
-        
+
         @rtype: C{Deferred}
         @return: A deferred whose callback is invoked with a dict mapping
         message numbers to envelope data, or whose errback is invoked
@@ -1407,12 +1407,12 @@ class IMAP4Client(basic.LineReceiver):
 
     def fetchBodyStructure(self, messages):
         """Retrieve the structure of the body of one or more messages
-        
+
         This command is allowed in the Selected state.
-        
+
         @type messages: C{str}
         @param messages: A message sequence set
-        
+
         @rtype: C{Deferred}
         @return: A deferred whose callback is invoked with a dict mapping
         message numbers to structure data, or whose errback is invoked
@@ -1424,12 +1424,12 @@ class IMAP4Client(basic.LineReceiver):
 
     def fetchSimplifiedBody(self, messages):
         """Retrieve the simplified body structure of one or more messages
-        
+
         This command is allowed in the Selected state.
-        
+
         @type messages: C{str}
         @param messages: A message sequence set
-        
+
         @rtype: C{Deferred}
         @return: A deferred whose callback is invoked with a dict mapping
         message numbers to body data, or whose errback is invoked
@@ -1441,12 +1441,12 @@ class IMAP4Client(basic.LineReceiver):
 
     def fetchMessage(self, messages):
         """Retrieve one or more entire messages
-        
+
         This command is allowed in the Selected state.
-        
+
         @type messages: C{str}
         @param messages: A message sequence set
-        
+
         @rtype: C{Deferred}
         @return: A deferred whose callback is invoked with a dict mapping
         message numbers to messages objects, or whose errback is invoked
@@ -1458,12 +1458,12 @@ class IMAP4Client(basic.LineReceiver):
 
     def fetchHeaders(self, messages):
         """Retrieve headers of one or more messages
-        
+
         This command is allowed in the Selected state.
-        
+
         @type messages: C{str}
         @param messages: A message sequence set
-        
+
         @rtype: C{Deferred}
         @return: A deferred whose callback is invoked with a dict mapping
         message numbers to dicts of message headers, or whose errback is
@@ -1475,12 +1475,12 @@ class IMAP4Client(basic.LineReceiver):
 
     def fetchBody(self, messages):
         """Retrieve body text of one or more messages
-        
+
         This command is allowed in the Selected state.
-        
+
         @type messages: C{str}
         @param messages: A message sequence set
-        
+
         @rtype: C{Deferred}
         @return: A deferred whose callback is invoked with a dict mapping
         message numbers to body text, or whose errback is invoked if there
@@ -1492,12 +1492,12 @@ class IMAP4Client(basic.LineReceiver):
 
     def fetchSize(self, messages):
         """Retrieve the size, in octets, of one or more messages
-        
+
         This command is allowed in the Selected state.
-        
+
         @type messages: C{str}
         @param messages: A message sequence set
-        
+
         @rtype: C{Deferred}
         @return: A deferred whose callback is invoked with a dict mapping
         message numbers to sizes, or whose errback is invoked if there is
@@ -1509,15 +1509,15 @@ class IMAP4Client(basic.LineReceiver):
 
     def fetchFull(self, messages):
         """Retrieve several different fields of one or more messages
-        
+
         This command is allowed in the Selected state.  This is equivalent
         to issuing all of the C{fetchFlags}, C{fetchInternalDate},
         C{fetchSize}, C{fetchEnvelope}, and C{fetchSimplifiedBody}
         functions.
-        
+
         @type messages: C{str}
         @param messages: A message sequence set
-        
+
         @rtype: C{Deferred}
         @return: A deferred whose callback is invoked with a dict mapping
         message numbers to dict of the retrieved data values, or whose
@@ -1539,14 +1539,14 @@ class IMAP4Client(basic.LineReceiver):
 
     def fetchAll(self, messages):
         """Retrieve several different fields of one or more messages
-        
+
         This command is allowed in the Selected state.  This is equivalent
         to issuing all of the C{fetchFlags}, C{fetchInternalDate},
         C{fetchSize}, and C{fetchEnvelope} functions.
-        
+
         @type messages: C{str}
         @param messages: A message sequence set
-        
+
         @rtype: C{Deferred}
         @return: A deferred whose callback is invoked with a dict mapping
         message numbers to dict of the retrieved data values, or whose
@@ -1567,14 +1567,14 @@ class IMAP4Client(basic.LineReceiver):
 
     def fetchFast(self, messages):
         """Retrieve several different fields of one or more messages
-        
+
         This command is allowed in the Selected state.  This is equivalent
         to issuing all of the C{fetchFlags}, C{fetchInternalDate}, and
         C{fetchSize} functions.
-        
+
         @type messages: C{str}
         @param messages: A message sequence set
-        
+
         @rtype: C{Deferred}
         @return: A deferred whose callback is invoked with a dict mapping
         message numbers to dict of the retrieved data values, or whose
@@ -1611,40 +1611,40 @@ class IMAP4Client(basic.LineReceiver):
     def fetchSpecific(self, messages, headerType=None, headerNumber=None,
                       headerArgs=None, peek=None, offset=None, length=None):
         """Retrieve a specific section of one or more messages
-        
+
         @type messages: C{str}
         @param messages: A message sequence set
-        
-        @param headerType: C{str} 
+
+        @param headerType: C{str}
         @param headerType: If specified, must be one of HEADER,
         HEADER.FIELDS, HEADER.FIELDS.NOT, MIME, or TEXT, and will determine
         which part of the message is retrieved.  For HEADER.FIELDS and
-        HEADER.FIELDS.NOT, C{headerArgs} must be a sequence of header names. 
+        HEADER.FIELDS.NOT, C{headerArgs} must be a sequence of header names.
         For MIME, C{headerNumber} must be specified.
-        
+
         @type headerNumber: C{int} or C{int} sequence
         @param headerNumber: The nested rfc822 index specifying the
         entity to retrieve.  For example, C{1} retrieves the first
         entity of the message, and C{(2, 1, 3}) retrieves the 3rd
         entity inside the first entity inside the second entity of
         the message.
-        
+
         @type headerArgs: A sequence of C{str}
         @param headerArgs: If C{headerType} is HEADER.FIELDS, these are the
         headers to retrieve.  If it is HEADER.FIELDS.NOT, these are the
         headers to exclude from retrieval.
-        
+
         @type peek: C{bool}
         @param peek: If true, cause the server to not set the \\Seen
         flag on this message as a result of this command.
-        
+
         @type offset: C{int}
         @param offset: The number of octets at the beginning of the result
         to skip.
-        
+
         @type length: C{int}
         @param length: The number of octets to retrieve.
-        
+
         @rtype: C{Deferred}
         @return: A deferred whose callback is invoked with a mapping of
         message numbers to retrieved data, or whose errback is invoked
@@ -1678,7 +1678,7 @@ class IMAP4Client(basic.LineReceiver):
         d = self.sendCommand('FETCH', cmd)
         d.addCallback(self._cbFetchSpecific)
         return d
-        
+
     def _cbFetchSpecific(self, (lines, last)):
         info = {}
         for line in lines:
@@ -1697,22 +1697,22 @@ class IMAP4Client(basic.LineReceiver):
         cmd = ' '.join([s.upper() for s in terms.keys()])
         d = self.sendCommand('FETCH', cmd)
         return d
-    
+
     def setFlags(self, messages, flags, silent=1):
         """Set the flags for one or more messages.
-        
+
         This command is allowed in the Selected state.
-        
+
         @type messages: C{str}
         @param messages: A message sequence set
-        
+
         @type flags: Any iterable of C{str}
         @param flags: The flags to set
-        
+
         @type silent: C{bool}
         @param silent: If true, cause the server to supress its verbose
         response.
-        
+
         @rtype: C{Deferred}
         @return: A deferred whose callback is invoked with a list of the
         the server's responses (C{[]} if C{silent} is true) or whose
@@ -1722,41 +1722,41 @@ class IMAP4Client(basic.LineReceiver):
 
     def addFlags(self, messages, flags, silent=1):
         """Add to the set flags for one or more messages.
-        
+
         This command is allowed in the Selected state.
-        
+
         @type messages: C{str}
         @param messages: A message sequence set
-        
+
         @type flags: Any iterable of C{str}
         @param flags: The flags to set
-        
+
         @type silent: C{bool}
         @param silent: If true, cause the server to supress its verbose
         response.
-        
+
         @rtype: C{Deferred}
         @return: A deferred whose callback is invoked with a list of the
         the server's responses (C{[]} if C{silent} is true) or whose
         errback is invoked if there is an error.
         """
         return self._store(messages, silent and '+FLAGS.SILENT' or '+FLAGS', flags)
-           
+
     def removeFlags(self, messages, flags, silent=1):
         """Remove from the set flags for one or more messages.
-        
+
         This command is allowed in the Selected state.
-        
+
         @type messages: C{str}
         @param messages: A message sequence set
-        
+
         @type flags: Any iterable of C{str}
         @param flags: The flags to set
-        
+
         @type silent: C{bool}
         @param silent: If true, cause the server to supress its verbose
         response.
-        
+
         @rtype: C{Deferred}
         @return: A deferred whose callback is invoked with a list of the
         the server's responses (C{[]} if C{silent} is true) or whose
@@ -1804,99 +1804,99 @@ _NO_QUOTES = (
 
 def Query(sorted=0, **kwarg):
     """Create a query string
-    
+
     Among the accepted keywords are:
 
         message_ids : An iterable of the sequence numbers of messages to
                       include in the search
-        
+
         all         : If set to a true value, search all messages in the
                       current mailbox
-        
+
         answered    : If set to a true value, search messages flagged with
                       \\Answered
-        
+
         bcc         : A substring to search the BCC header field for
-        
+
         before      : Search messages with an internal date before this
                       value
-                      
+
         body        : A substring to search the body of the messages for
-        
+
         cc          : A substring to search the CC header field for
-        
+
         deleted     : If set to a true value, search messages flagged with
                       \\Deleted
-        
+
         draft       : If set to a true value, search messages flagged with
                       \\Draft
-        
+
         flagged     : If set to a true value, search messages flagged with
                       \\Flagged
-        
+
         from        : A substring to search the From header field for
-        
+
         header      : A two-tuple of a header name and substring to search
                       for in that header
-        
+
         keyword     : Search for messages with the given keyword set
-        
+
         larger      : Search for messages larger than this number of octets
-        
+
         new         : If set to a true value, search messages flagged with
                       \\Recent but not \\Seen
-        
+
         old         : If set to a true value, search messages not flagged with
                       \\Recent
-        
+
         on          : Search messages with an internal date which is on this
                       date
-        
+
         recent      : If set to a true value, search for messages flagged with
                       \\Recent
-        
+
         seen        : If set to a true value, search for messages flagged with
                       \\Seen
-        
+
         sentbefore  : Search for messages with an RFC822 'Date' header before
                       this date
-        
+
         senton      : Search for messages with an RFC822 'Date' header which is
                       on this date
-        
+
         sentsince   : Search for messages with an RFC822 'Date' header which is
                       after this date
-        
+
         since       : Search for messages with an internal date that is after
                       this date
-        
+
         smaller     : Search for messages smaller than this number of octets
-        
+
         subject     : A substring to search the 'subject' header for
-        
+
         text        : A substring to search the entire message for
-        
+
         to          : A substring to search the 'to' header for
-        
+
         uid         : Search only the messages in the given message set
-        
+
         unanswered  : If set to a true value, search for messages not
                       flagged with \\Answered
-        
+
         undeleted   : If set to a true value, search for messages not
                       flagged with \\Deleted
-        
+
         undraft     : If set to a true value, search for messages not
                       flagged with \\Draft
-        
+
         unflagged   : If set to a true value, search for messages not
                       flagged with \\Flagged
-        
+
         unkeyword   : Search for messages without the given keyword set
-        
+
         unseen      : If set to a true value, search for messages not
                       flagged with \\Seen
-    
+
     @type sorted: C{bool}
     @param sorted: If true, the output will be sorted, alphabetically.
     The standard does not require it, but it makes testing this function
@@ -1952,17 +1952,17 @@ def wildcardToRegexp(wildcard, delim):
 
 def splitQuoted(s):
     """Split a string into whitespace delimited tokens
-    
+
     Tokens that would otherwise be separated but are surrounded by \"
     remain as a single token.  Any token that is not quoted and is
     equal to \"NIL\" is tokenized as C{None}.
-    
+
     @type s: C{str}
     @param s: The string to be split
-    
+
     @rtype: C{list} of C{str}
     @return: A list of the resulting tokens
-    
+
     @raise MismatchedQuoting: Raised if an odd number of quotes are present
     """
     s = s.strip()
@@ -1997,12 +1997,12 @@ def collapseStrings(results):
     """
     Turns a list of length-one strings and lists into a list of longer
     strings and list.  For example,
-    
+
     ['a', 'b', ['c', 'd']] is returned as ['ab', ['cd']]
-    
+
     @type results: C{list} of C{str} and C{list}
     @param results: The list to be collapsed
-    
+
     @rtype: C{list} of C{str} and C{list}
     @return: A new list which is the collapsed form of C{results}
     """
@@ -2028,10 +2028,10 @@ def collapseStrings(results):
 
 def parseNestedParens(s):
     """Parse an s-exp-like string into a more useful data structure.
-    
+
     @type s: C{str}
     @param s: The s-exp-like string to parse
-    
+
     @rtype: C{list} of C{str} and C{list}
     @return: A list containing the tokens present in the input.
 
@@ -2060,9 +2060,9 @@ def parseNestedParens(s):
 
 def collapseNestedLists(items):
     """Turn a nested list structure into an s-exp-like string.
-    
+
     @type items: Any iterable
-    
+
     @rtype: C{str}
     """
     pieces = []
@@ -2088,24 +2088,24 @@ class AuthenticationError(IMAP4Exception): pass
 class IServerAuthentication(components.Interface):
     def generateChallenge(self):
         """Create a challenge string
-        
+
         @rtype: C{str}
         @return: A string representing the challenge
         """
-    
+
     def authenticateResponse(self, challenge, response):
         """Examine a challenge response for validity.
-        
+
         @type challenge: C{str}
         @param challenge: The challenge string associated with this response
-        
+
         @type response: C{str}
         @param response: The response from the client
-        
+
         @rtype: C{int} or C{str}
         @return: Returns 1 if the response is correct, or a string if
         further interaction is required with the client.
-        
+
         @raise: C{AuthenticationError} if the response is incorrect.
         """
 
@@ -2115,20 +2115,26 @@ class IClientAuthentication(components.Interface):
 
 # Do these belong here?
 class CramMD5ServerAuthenticator:
+    # RFC 2195
     __implements__ = (IServerAuthentication,)
-    
+
     def __init__(self, host, users = None):
         self.host = host
         if users is None:
             users = {}
         self.users = users
-    
+
     def generateChallenge(self):
-        chal = '<%d.%d@%s>' % (
-            random.randrange(2**31-1), random.randrange(2**31-1), self.host
-        )
+        # The data encoded in the first ready response contains an
+        # presumptively arbitrary string of random digits, a timestamp, and
+        # the fully-qualified primary host name of the server.  The syntax of
+        # the unencoded form must correspond to that of an RFC 822 'msg-id'
+        # [RFC822] as described in [POP3].
+        #   -- RFC 2195
+        chal = '<%d.%d@%s>' % (random.randrange(0x7fffffff),
+                               time.time(), self.host)
         return chal
-    
+
     def authenticateResponse(self, state, response):
         try:
             uncoded = base64.decodestring(response)
@@ -2142,23 +2148,23 @@ class CramMD5ServerAuthenticator:
             raise AuthenticationError, "Unknown user"
         secret = self.users[name]
         verify = util.keyed_md5(secret, state)
-        
+
         if verify != digest:
             raise AuthenticationError, "Invalid response"
         return None, 1
 
 class CramMD5ClientAuthenticator:
     __implements__ = (IClientAuthentication,)
-    
+
     def __init__(self, user):
         self.user = user
-    
+
     def challengeResponse(self, secret, challenge):
         chal = base64.decodestring(challenge)
         response = util.keyed_md5(secret, chal)
         both = '%s %s' % (self.user, response)
         return base64.encodestring(both)
-            
+
 
 class MailboxException(IMAP4Exception): pass
 
@@ -2183,7 +2189,7 @@ class Account:
     def __init__(self):
         self.mailboxes = {}
         self.subscriptions = []
-    
+
     def addMailbox(self, name, mbox = None):
         name = name.upper()
         if name == 'INBOX' or self.mailboxes.has_key(name):
@@ -2213,7 +2219,7 @@ class Account:
 
     def release(self, mbox):
         pass
-    
+
     def delete(self, name):
         name = name.upper()
         # See if this mailbox exists at all
@@ -2228,7 +2234,7 @@ class Account:
                 if others != name and others.startswith(name):
                     raise MailboxException, "Hierarchically inferior mailboxes exist and \\Noselect is set"
         mbox.destroy()
-        
+
         # iff there are no hierarchically inferior names, we will
         # delete it from our ken.
         if self._inferiorNames(name) > 1:
@@ -2239,10 +2245,10 @@ class Account:
         newname = newname.upper()
         if not self.mailboxes.has_key(oldname):
             raise NoSuchMailbox, oldname
-        
+
         inferiors = self._inferiorNames(oldname)
         inferiors = [(o, o.replace(oldname, newname, 1)) for o in inferiors]
-        
+
         for (old, new) in inferiors:
             if self.mailboxes.has_key(new):
                 raise MailboxCollision, new
@@ -2257,26 +2263,26 @@ class Account:
             if infname.startswith(name):
                 inferiors.append(infname)
         return inferiors
-    
+
     def isSubscribed(self, name):
         return name.upper() in self.subscriptions
-    
+
     def subscribe(self, name):
         name = name.upper()
         if name not in self.subscriptions:
             self.subscriptions.append(name)
-    
+
     def unsubscribe(self, name):
         name = name.upper()
         if name not in self.subscriptions:
             raise MailboxError, "Not currently subscribed to " + name
         self.subscriptions.remove(name)
-    
+
     def listMailboxes(self, ref, wildcard):
         ref = self._inferiorNames(ref.upper())
         wildcard = wildcardToRegexp(wildcard, '/')
-        return [(i, self.mailboxes[i]) for i in ref if wildcard.match(i)] 
-    
+        return [(i, self.mailboxes[i]) for i in ref if wildcard.match(i)]
+
     def requestStatus(self, mailbox, names):
         mailbox = mailbox.upper()
         if not self.mailboxes.has_key(mailbox):
@@ -2287,22 +2293,22 @@ class Account:
 class IMailbox(components.Interface):
     def getUIDValidity(self):
         """Return the unique validity identifier for this mailbox.
-        
+
         @rtype: C{int}
         """
-    
+
     def getFlags(self):
         """Return the flags defined in this mailbox
-        
+
         Flags with the \\ prefix are reserved for use as system flags.
-        
+
         @rtype: C{list} of C{str}
         @return: A list of the flags that can be set on messages in this mailbox.
         """
-    
+
     def getMessageCount(self):
         """Return the number of messages in this mailbox"""
-    
+
     def getRecentCount(self):
         """Return the number of messages with the 'Recent' flag"""
 
@@ -2311,14 +2317,14 @@ class IMailbox(components.Interface):
 
     def isWriteable(self):
         """Get the read/write status of the mailbox.
-        
+
         @rtype: C{int}
         @return: A true value if write permission is allowed, a false value otherwise.
         """
 
     def destroy(self):
         """Called before this mailbox is deleted, permanently.
-        
+
         If necessary, all resources held by this mailbox should be cleaned
         up here.  This function _must_ set the \\Noselect flag on this
         mailbox.
@@ -2326,62 +2332,62 @@ class IMailbox(components.Interface):
 
     def getHierarchicalDelimiter(self):
         """Get the character which delimits namespaces for in this mailbox.
-        
+
         @rtype: C{str}
         """
-    
+
     def requestStatus(self, names):
         """Return status information about this mailbox.
-        
+
         @type names: Any iterable
         @param names: The status names to return information regarding
-        
+
         @rtype: C{dict} or C{Deferred}
         @return: A dictionary containing status information about the
         requested names is returned.  If the process of looking this
         information up would be costly, a deferred whose callback will
         eventually be passed this dictionary is returned instead.
         """
-    
+
     def addMessage(self, message, flags, date = None):
         """Add the given message to this mailbox.
-        
+
         @type message: C{str}
         @param message: The RFC822 formatted message
-        
+
         @type flags: Any iterable of C{str}
         @param flags: The flags to associate with this message
-        
+
         @type date: C{str}
         @param date: If specified, the date to associate with this
         message.
-        
+
         @rtype: C{Deferred}
         @return: A deferred whose callback is invoked with the message
         id if the message is added successfully and whose errback is
         invoked otherwise.
-        
+
         @raise ReadOnlyMailbox: Raised if this Mailbox is not open for
         read-write.
         """
 
     def expunge(self):
         """Remove all messages flagged \\Deleted.
-        
+
         @rtype: C{list} or C{Deferred}
         @return: The list of message sequence numbers which were deleted,
         or a C{Deferred} whose callback will be invoked with such a list.
-        
+
         @raise ReadOnlyMailbox: Raised if this Mailbox is not open for
         read-write.
         """
 
     def search(self, query):
         """Search for messages that meet the given query criteria.
-        
+
         @type query: C{list}
         @param query: The search criteria
-        
+
         @rtype: C{list} or C{Deferred}
         @return: A list of message sequence numbers which match the search
         criteria or a C{Deferred} whose callback will be invoked with such a
@@ -2390,11 +2396,11 @@ class IMailbox(components.Interface):
 
     def fetch(self, messages, parts):
         """Retrieve one or more portions of one or more messages.
-        
+
         @type messages: sequence of C{int}
         @param messages: The identifiers of messages to retrieve information
         about
-        
+
         @type parts: C{list}
         @param parts: The message portions to retrieve.
 
@@ -2406,25 +2412,25 @@ class IMailbox(components.Interface):
 
     def store(self, messages, flags, mode):
         """Set the flags of one or more messages.
-        
+
         @type messages: sequence of C{int}
         @param messages: The identifiers of the messages to set the flags of.
-        
+
         @type flags: sequence of C{str}
         @param flags: The flags to set, unset, or add.
-        
+
         @type mode: -1, 0, or 1
         @param mode: If mode is -1, these flags should be removed from the
         specified messages.  If mode is 1, these flags should be added to
         the specified messages.  If mode is 0, all existing flags should be
         cleared and these flags should be added.
-        
+
         @rtype: C{dict} or C{Deferred}
         @return: A C{dict} mapping message identifiers to sequences of C{str}
         representing the flags set on the message after this operation has
         been performed, or a C{Deferred} whose callback will be invoked with
         such a C{dict}.
-        
+
         @raise ReadOnlyMailbox: Raised if this mailbox is not open for
         read-write.
         """
