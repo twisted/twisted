@@ -18,14 +18,19 @@
 """I am the support module for creating mail servers with 'mktap'
 """
 
-import string, os
-
-# Twisted Imports
-import mail, maildir, relay, relaymanager
-from twisted.protocols import pop3, smtp
-from twisted.python import usage
-
+import os
 import sys
+
+from twisted.mail import mail
+from twisted.mail import maildir
+from twisted.mail import relay
+from twisted.mail import relaymanager
+
+from twisted.protocols import pop3
+from twisted.protocols import smtp
+from twisted.python import usage
+from twisted.cred import portal
+
 
 class Options(usage.Options):
     synopsis = "Usage: mktap mail [options]"
@@ -47,25 +52,28 @@ class Options(usage.Options):
         self.last_domain = None
         usage.Options.__init__(self)
 
-    def opt_domain(self, domain):
+    def opt_maildirdbmdomain(self, domain):
         """generate an SMTP/POP3 virtual domain which saves to \"path\"
         """
         try:
-            name, path = string.split(domain, '=')
+            name, path = domain.split('=')
         except ValueError:
-            raise usage.UsageError("Argument to --domain must be of the form 'name=path'")
+            raise usage.UsageError("Argument to --maildirdbmdomain must be of the form 'name=path'")
+        
         self.last_domain = maildir.MaildirDirdbmDomain(self.service, os.path.abspath(path))
         self.service.domains[name] = self.last_domain
-    opt_d = opt_domain
+        self.service.portals[name] = portal.Portal(self.last_domain)
+        map(self.service.portals[name].registerChecker, self.last_domain.getCredentialsCheckers())
+    opt_d = opt_domain = opt_maildirdbmdomain
 
     def opt_user(self, user_pass):
         """add a user/password to the last specified domains
         """
         try:
-            user, password = string.split(user_pass, '=')
+            user, password = user_pass.split('=', 1)
         except ValueError:
             raise usage.UsageError("Argument to --user must be of the form 'user=password'")
-        self.last_domain.dbm[user] = password
+        self.last_domain.addUser(user, password)
     opt_u = opt_user
 
     def opt_bounce_to_postmaster(self):
@@ -107,8 +115,8 @@ class Options(usage.Options):
 
 def updateApplication(app, config):
     if config['relay']:
-        addr, dir = string.split(config['relay'], '=', 1)
-        ip, port = string.split(addr, ',', 1)
+        addr, dir = config['relay'].split('=', 1)
+        ip, port = addr.split(',', 1)
         port = int(port)
         config.service.setQueue(relaymanager.Queue(dir))
         default = relay.DomainQueuer(config.service)

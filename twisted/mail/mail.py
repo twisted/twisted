@@ -28,9 +28,24 @@ from twisted.internet import defer
 import protocols
 
 # System imports
-import types
 import os
 
+class IDomain(components.Interface):
+    """An email domain."""
+
+    def exists(self, user):
+        """Check whether or not the specified user exists in this domain."""
+
+    def addUser(self, user, password):
+        """Add a username/password to this domain."""
+    
+    def startMessage(self, user):
+        """Create and return a new message to be delivered to the given user.
+        """
+
+    def getCredentialsCheckers(self):
+        """Return a list of ICredentialsChecker implementors for this domain.
+        """
 
 class DomainWithDefaultDict:
     '''Simulate a dictionary with a default value for non-existing keys.
@@ -51,23 +66,18 @@ class DomainWithDefaultDict:
     def __setitem__(self, name, value):
         self.domains[name] = value
 
-
 class BounceDomain:
     """A domain in which no user exists. 
 
     This can be used to block off certain domains.
     """
+
+    __implements__ = (IDomain,)
+    
     def exists(self, user):
         """No user exists in a BounceDomain -- always return 0
         """
         return defer.fail(smtp.SMTPBadRcpt(user))
-    
-    def authenticateUserAPOP(self, user, digest):
-        return None
-    
-    def authenticateUserPASS(self, user, password):
-        return None
-
 
 class FileMessage:
     """A file we can write an email too."""
@@ -94,16 +104,13 @@ class FileMessage:
         os.remove(self.name)
 
 
-class IDomain(components.Interface):
-    """An email domain."""
-
-
 class MailService(service.Service):
     """An email service."""
 
     def __init__(self, name):
         service.Service.__init__(self, name)
         self.domains = DomainWithDefaultDict({}, BounceDomain())
+        self.portals = {}
 
     def getPOP3Factory(self):
         return protocols.POP3Factory(self)
@@ -114,3 +121,9 @@ class MailService(service.Service):
     def setQueue(self, queue):
         """Set the queue for outgoing emails."""
         self.queue = queue
+
+    def lookupPortal(self, name):
+        return self.portals[name]
+    
+    def defaultPortal(self):
+        return self.portals['']

@@ -21,7 +21,7 @@ from twisted.protocols import smtp
 from twisted.mail import mail
 from twisted.internet import defer
 
-import os, time
+import os
 
 try:
     import cPickle as pickle

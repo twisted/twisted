@@ -18,25 +18,37 @@
 """Mail support for twisted python.
 """
 
-import stat, os, socket, time, md5, string
-from twisted.protocols import pop3, smtp
+import os
+import stat
+import socket
+import time
+import md5
+
+from twisted.protocols import pop3
+from twisted.protocols import smtp
 from twisted.persisted import dirdbm
+from twisted.python import components
 from twisted.mail import mail
 from twisted.internet import defer
 
+from twisted.cred import portal
+from twisted.cred import credentials
+from twisted.cred import checkers
+from twisted.cred import error
 
-_n = 0
-
-def _generateMaildirName():
-    """utility function to generate a unique maildir name
+class _MaildirNameGenerator:
+    """Utility class to generate a unique maildir name
     """
-    global _n
-    t = str(int(time.time()))
-    s = socket.gethostname()
+    n = 0
     p = os.getpid()
-    _n = _n+1
-    return '%s.%s_%s.%s' % (t, p, _n, s)
+    s = socket.gethostname()
 
+    def generate(self):
+        self.n = self.n + 1
+        t = str(int(time.time()))
+        return '%s.%s_%s.%s' % (t, self.p, self.n, self.s)
+
+_generateMaildirName = _MaildirNameGenerator().generate
 
 def initializeMaildir(dir):
     if not os.path.isdir(dir):
@@ -53,8 +65,6 @@ class AbstractMaildirDomain:
     """Abstract maildir-backed domain.
     """
 
-    __implements__ = mail.IDomain
-
     def __init__(self, service, root):
         """Initialize.
         """
@@ -68,6 +78,9 @@ class AbstractMaildirDomain:
         """
         return None
 
+    ##
+    ## IDomain
+    ##
     def exists(self, user):
         """Check for existence of user in the domain
         """
@@ -170,7 +183,12 @@ class MaildirMailbox(pop3.Mailbox):
 class MaildirDirdbmDomain(AbstractMaildirDomain):
     """A Maildir Domain where membership is checked by a dirdbm file
     """
-
+    
+    __implements__ = (portal.IRealm,)
+    
+    portal = None
+    _credcheckers = None
+    
     def __init__(self, service, root, postmaster=0):
         """Initialize
 
@@ -207,22 +225,44 @@ class MaildirDirdbmDomain(AbstractMaildirDomain):
             initializeMaildir(dir)
         return dir
 
-    def authenticateUserAPOP(self, user, magic, digest, domain):
-        """Return Mailbox to valid APOP authentications
+    ##
+    ## IDomain
+    ##
+    def addUser(self, user, password):
+        self.dbm[user] = password
+        # Ensure it is initialized
+        self.userDirectory(user)
+    
+    def getCredentialsCheckers(self):
+        if self._credcheckers is None:
+            self._credcheckers = [DirdbmDatabase(self.root)]
+        return self._credcheckers
 
-        Check the credentials, returning None if they are invalid
-        or a MaildirMailbox if they are valid.
-        """
-        if not self.dbm.has_key(user):
-            return None
-        my_digest = md5.new(magic+self.dbm[user]).digest()
-        my_digest = string.join(map(lambda x: "%02x"%ord(x), my_digest), '')
-        if digest == my_digest:
-            return MaildirMailbox(os.path.join(self.root, user))
-        else:
-            return None
+    ##
+    ## IRealm
+    ##
+    def requestAvatar(self, avatarId, mind, *interfaces):
+        return (
+            interfaces[0],
+            MaildirMailbox(os.path.join(self.root, avatarId)),
+            lambda: None
+        )
 
-    def authenticateUserPASS(self, username, password):
-        if not self.dbm.has_key(username) or self.dbm[username] != password:
-            return None
-        return MaildirMailbox(os.path.join(self.root, username))
+class DirdbmDatabase:
+    __implements__ = (checkers.ICredentialsChecker,)
+    
+    credentialInterfaces = (pop3.IAPOP, credentials.IUsernamePassword)
+    
+    def __init__(self, root):
+        self.dirdbm = dirdbm.open(root)
+    
+    def requestAvatarId(self, credentials):
+        if components.implements(credentials, credentials.IUsernamePassword):
+            if credentials.username in self.dirdbm:
+                if credentials.password == self.dirdbm[credentials.username]:
+                    return credentials.username
+        elif components.implements(credentials, pop3.IAPOP):
+            if credentials.username in self.dirdbm:
+                if credentials.check(self.dirdbm[credentials.username]):
+                    return credentials.username
+        raise error.UnauthorizedLogin
