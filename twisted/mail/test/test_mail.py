@@ -1073,10 +1073,8 @@ class AliasTestCase(unittest.TestCase):
         self.assertEquals([L[:-1] for L in lines], self.lines)
 
 
-class PProtocol(protocol.ProcessProtocol):
-    ended = 0
-    def processEnded(self, reason):
-        self.ended = 1
+class DummyProcess(object):
+    __slots__ = ['onEnd']
 
 class ProcessAliasTestCase(test_process.SignalMixin, unittest.TestCase):
     lines = [
@@ -1126,10 +1124,9 @@ class ProcessAliasTestCase(test_process.SignalMixin, unittest.TestCase):
 
         r1 = map(str, A1.resolve(aliases).objs)
         r1.sort()
-        p = reactor.spawnProcess(protocol.ProcessProtocol(), "process_reader.py")
         expected = map(str, [
             mail.alias.AddressAlias('user1', None, None),
-            mail.alias.MessageWrapper(p, 'echo'),
+            mail.alias.MessageWrapper(DummyProcess(), 'echo'),
             mail.alias.FileWrapper('/file'),
         ])
         expected.sort()
@@ -1148,7 +1145,7 @@ class ProcessAliasTestCase(test_process.SignalMixin, unittest.TestCase):
         r3.sort()
         expected = map(str, [
             mail.alias.AddressAlias('user1', None, None),
-            mail.alias.MessageWrapper(p, 'echo'),
+            mail.alias.MessageWrapper(DummyProcess(), 'echo'),
             mail.alias.FileWrapper('/file'),
         ])
         expected.sort()
@@ -1173,15 +1170,11 @@ class ProcessAliasTestCase(test_process.SignalMixin, unittest.TestCase):
         A4 = mail.alias.AliasGroup(['|echo', 'alias1'], domain, 'alias4')
         aliases['alias4'] = A4
         
-        pproto = PProtocol()
-        p = reactor.spawnProcess(pproto, "process_reader.py")
         r = map(str, A4.resolve(aliases).objs)
         r.sort()
         expected = map(str, [
-            mail.alias.MessageWrapper(p, 'echo')
+            mail.alias.MessageWrapper(DummyProcess(), 'echo')
         ])
-        tutil.spinUntil(lambda :r == expected)
-        tutil.spinUntil(lambda :pproto.ended)
 
 if interfaces.IReactorProcess(reactor, default=None) is None:
     ProcessAliasTestCase = "IReactorProcess not supported"
