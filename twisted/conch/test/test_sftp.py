@@ -364,12 +364,12 @@ class TestOurServerCmdLineClient(test_process.SignalMixin, SFTPTestBase):
         self.failIf(os.path.exists('sftp_test/testfile2'))
         
     def testLink(self):
-        linkRes = self._getCmdResult('ln testlink testfile1')
+        linkRes = self._getCmdResult('ln testLink testfile1')
         self.failIf(linkRes)
-        lslRes = self._getCmdResult('ls -l testlink')
+        lslRes = self._getCmdResult('ls -l testLink')
         log.flushErrors()
         self.failUnless(lslRes.startswith('l'), 'link failed')
-        self.failIf(self._getCmdResult('rm testlink'))
+        self.failIf(self._getCmdResult('rm testLink'))
 
     def testDirectory(self):
         self.failIf(self._getCmdResult('mkdir testMakeDirectory'))
