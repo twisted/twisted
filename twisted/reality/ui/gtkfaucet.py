@@ -359,7 +359,7 @@ def main():
     global lw
     gw = GameWindow()
     lw = gtkutil.Login(gw.connected, gw,
-                       "Damien", "admin",
-                       "localhost", "twisted.reality")
+                       "guest", "guest",
+                       "twistedmatrix.com", "twisted.reality")
     lw.show_all()
     gtk.mainloop()
