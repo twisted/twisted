@@ -837,8 +837,8 @@ class Request:
         self.host = (method, host, port)
 
     def getClientIP(self):
-        if self.client[0] in ('INET', 'SSL'):
-            return self.client[1]
+        if self.client.type in ('INET', 'SSL'):
+            return self.client.host
         else:
             return None
 
