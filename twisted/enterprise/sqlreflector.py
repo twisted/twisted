@@ -47,8 +47,7 @@ class SQLReflector(reflector.Reflector, adbapi.Augmentation):
 
     def _really_populate(self):
         defe = self.runInteraction(self._transPopulateSchema)
-        if self.populatedCallback:
-            defe.addCallbacks(self.populatedCallback)
+        defe.chainDeferred(self.populatedDeferred)
 
     def _transPopulateSchema(self, transaction):
         """Used to construct the row classes in a single interaction.

@@ -48,7 +48,7 @@ class ChildRow(RowObject):
     rowTableName  = childTableName
     rowForeignKeys = [(tableName, [("test_key","varchar")], [("key_string","varchar")], None, 1)]
     
-class EnterpriseTestCase(unittest.TestCase):
+class EnterpriseTestCase(unittest.DeferredTestCase):
     """Enterprise test cases. These will only work with the XML reflector for now. real database
     access requires there to be a database  :) and asynchronous tests (which these are not).
     """
@@ -58,8 +58,12 @@ class EnterpriseTestCase(unittest.TestCase):
     def setUp(self):
         # creates XML db in file system
         self.reflector = XMLReflector(EnterpriseTestCase.DB, [TestRow, ChildRow])
-        self.reflector._really_populate()
+        #self.reflector._really_populate()
+        d = self.reflector.populate()
+        d.addCallback(self.deferred_setUp)
+        return d
 
+    def deferred_setUp(self, ignore=None):
         # create one row to work with
         self.newRow = TestRow()
         self.newRow.assignKeyAttr("key_string", "first")

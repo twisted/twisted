@@ -20,6 +20,7 @@ import weakref
 from twisted.enterprise import adbapi
 from twisted.enterprise.util import DBError, getKeyColumn, quote, _TableInfo, _TableRelationship
 from twisted.enterprise.row import RowObject
+from twisted.internet import defer
 
 class Reflector:
     """Base class for enterprise reflectors. This implements rowCacheing.
@@ -38,9 +39,11 @@ class Reflector:
 
         self.rowCache = weakref.WeakValueDictionary() # doesnt hold references to cached rows.
         self.rowClasses = rowClasses
-        self.schema = {}        
-        self.populatedCallback = populatedCallback
-        self._populate()
+        self.schema = {}
+
+        self.populatedDeferred = defer.Deferred()
+        if populatedCallback:
+            self.populatedDeferred.addCallbacks(populatedCallback)
 
     def __getstate__(self):
         d = self.__dict__.copy()
@@ -52,15 +55,14 @@ class Reflector:
         self.rowCache = weakref.WeakValueDictionary()
         self._populate()
 
-    def _populate(self):
-        
+    def populate(self):
         # egregiously bad hack, obviously, but we need to avoid calling a
         # cached callback before persistence is really done, and while the
         # mainloop is not running.  I'm not sure what the correct behavior here
         # should be. --glyph
-        
         from twisted.internet import reactor
         reactor.callLater(0, self._really_populate)
+        return self.populatedDeferred
 
     def _really_populate(self):
         """Implement me to populate schema information for the reflector.
