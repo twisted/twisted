@@ -105,6 +105,9 @@ twisted.web.test in it."""
         self.opts['root'] = classObj()
 
 
+    def opt_resource_script(self, name):
+        self.opts['root'] = script.ResourceScriptWrapper(name)
+
 
     def opt_mime_type(self, defaultType):
         """Specify the default mime-type for static files."""

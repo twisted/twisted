@@ -89,6 +89,10 @@ SSL certificate to use for HTTPS. [default: server.pem]
 \fB--processor\fR \fI<ext>=<class name>\fR
 Adds a processor to those file names. (Only usable if after
 .B --path)
+.TP
+\fB--resource-script\fR \fI<script name>\fR
+Sets the root as a resource script. This script will be re-evaluated on
+every request.
 .PP
 This creates a web.tap file that can be used by twistd. If you
 specify no arguments, it will be a demo webserver that has the Test

@@ -31,6 +31,7 @@ StringIO = cStringIO
 del cStringIO
 import traceback
 import resource
+import static
 
 rpyNoResource = """<p>You forgot to assign to the variable "resource" in your .rpy script. For example:</p>
 <pre>
@@ -62,6 +63,22 @@ def ResourceTemplate(path, registry):
     e = ptl_compile.compile_template(open(path), path)
     exec e in glob
     return glob['resource']
+
+
+class ResourceScriptWrapper(resource.Resource):
+
+    def __init__(self, path, registry=None):
+        resource.Resource.__init__(self)
+        self.path = path
+        self.registry = registry or static.Registry()
+
+    def render(self, request):
+        res = ResourceScript(self.path, self.registry)
+        return res.render(request)
+
+    def getChild(self, path, request):
+        res = ResourceScript(self.path, self.registry)
+        return res.getChild(path, request)
 
 
 class PythonScript(resource.Resource):
