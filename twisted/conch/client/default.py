@@ -84,12 +84,12 @@ def isInKnownHosts(host, pubKey, options):
     return retVal
 
 class SSHUserAuthClient(userauth.SSHUserAuthClient):
-    usedFiles = []
 
     def __init__(self, user, options, *args):
         userauth.SSHUserAuthClient.__init__(self, user, *args)
         self.keyAgent = None
         self.options = options
+        self.usedFiles = []
 
     def serviceStarted(self):
         if 'SSH_AUTH_SOCK' in os.environ and not self.options['noagent']:
@@ -124,7 +124,7 @@ class SSHUserAuthClient(userauth.SSHUserAuthClient):
             p=getpass.getpass(prompt)
             sys.stdout,sys.stdin=oldout,oldin
             return defer.succeed(p)
-        except KeyboardInterrupt, e:
+        except (KeyboardInterrupt, IOError):
             print
             return defer.fail(ConchError('PEBKAC'))
 
