@@ -132,10 +132,7 @@ class ConnectionPool(pb.Referenceable):
         @return: a Deferred which will fire the return value of
         'interaction(Transaction(...))', or a Failure.
         """
-
-        d = defer.Deferred()
-        apply(self.interaction, (interaction,d.callback,d.errback,)+args, kw)
-        return d
+        return self._deferToThread(self._runInteraction, interaction, *args, **kw)
 
     def runQuery(self, *args, **kw):
         """Execute an SQL query and return the result.
@@ -227,7 +224,7 @@ class ConnectionPool(pb.Referenceable):
     def _runInteraction(self, interaction, *args, **kw):
         trans = Transaction(self, self.connect())
         try:
-            result = apply(interaction, (trans,)+args, kw)
+            result = interaction(trans, *args, **kw)
             trans.close()
             trans._connection.commit()
             return result
