@@ -36,7 +36,10 @@ from twisted.python import usage, util
 import string, os, shutil
 
 # magic for CVS guessing
-defaultRoot = open(util.sibpath(sys.argv[0], 'CVS/Root')).read().strip()
+try:
+    defaultRoot = open(util.sibpath(sys.argv[0], 'CVS/Root')).read().strip()
+except:
+    defaultRoot = None
 
 class Options(usage.Options):
     optParameters = [['version', 'v', None,
@@ -244,7 +247,7 @@ def makeBalls(opts):
          'zip -x %s/doc      -9 -r Twisted_NoDocs-%s.zip     %s > /dev/null'])
 
 
-    if not os.path.exists('doc/api/tree.html' % tdir):#we didn't do the docs
+    if not os.path.exists('doc/api/tree.html'):#we didn't do the docs
         print "makeBalls: Not continuing: `doc/api/tree.html' not found." % tdir
         return
     
