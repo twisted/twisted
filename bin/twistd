@@ -27,9 +27,8 @@ if string.find(os.path.abspath(sys.argv[0]),'Twisted') != -1:
         os.path.dirname(os.path.abspath(sys.argv[0]))))
 ### end of preamble
 
-from twisted.python import usage, util, runtime
+from twisted.python import usage, util, runtime, register
 from twisted.lumberjack import logfile
-
 util.addPluginDir()
 
 # System Imports
@@ -81,6 +80,8 @@ platformType = runtime.platform.getType()
 if platformType != 'java':
     # java can't chdir
     os.chdir(config.rundir)
+    
+register.checkLicenseFile()
 sys.path.append(config.rundir)
 
 if platformType != 'posix' or config.debug:
@@ -158,6 +159,14 @@ sys.stdout.flush()
 log.msg("twistd %s (%s %s) starting up" % (copyright.version,
                                            sys.executable,
                                            runtime.shortPythonVersion()))
+
+if register.LICENSE_USER:
+    log.msg("license user: %s <%s>" % (register.LICENSE_USER, register.LICENSE_EMAIL))
+if register.LICENSE_KEY:
+    log.msg("license code: %s" % (register.LICENSE_KEY))
+if register.LICENSE_ORG:
+    log.msg("organization: %s" % register.LICENSE_ORG)
+
 if not config.python:
     print "Loading %s..." % config.file
     sys.modules['__main__'] = EverythingEphemeral()
