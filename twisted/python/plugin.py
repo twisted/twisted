@@ -87,11 +87,11 @@ def getPluginFileList(debugInspection=0, showProgress=0):
             if seenNames.has_key(plugindir):
                 continue
             seenNames[plugindir] = 1
-            plugindir = os.path.join(d, plugindir)
+            plugindir = os.sep.join((d, plugindir))
             if showProgress:
                 log.logfile.write('+')
                 log.logfile.flush()
-            tmlname = os.path.join(plugindir, "plugins.tml")
+            tmlname = os.sep.join((plugindir, "plugins.tml"))
             if debugInspection:
                 log.msg(tmlname)
             if os.path.exists(tmlname):
