@@ -230,11 +230,11 @@ class Request(pb.Copyable, http.Request, components.Componentized):
         self.finish()
 
     def processingFailed(self, reason):
+        log.err(reason)
         body = ("<html><head><title>web.Server Traceback (most recent call last)</title></head>"
                 "<body><b>web.Server Traceback (most recent call last):</b>\n\n"
                 "%s\n\n</body></html>\n"
                 % webutil.formatFailure(reason))
-        reason.printTraceback()
         self.setResponseCode(http.INTERNAL_SERVER_ERROR)
         self.setHeader('content-type',"text/html")
         self.setHeader('content-length', str(len(body)))
