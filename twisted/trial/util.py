@@ -1,4 +1,4 @@
-# -*- test-case-name: twisted.test.test_trial -*-
+# -*- test-case-name: twisted.trial.test.test_trial -*-
 # Copyright (c) 2001-2004 Twisted Matrix Laboratories.
 # See LICENSE for details.
 #
@@ -309,7 +309,7 @@ def wait(d, timeout=DEFAULT_TIMEOUT, useWaitError=False):
         on. Also, you may or may not be able to call wait on deferreds which
         you have not created, as the originating API may violate this rule
         without your knowledge. For an illustrative example, see 
-        L{twisted.test.test_trial.WaitReentrancyTest} 
+        L{twisted.trial.test.test_trial.WaitReentrancyTest} 
 
       - If you are relying on the original traceback for some reason, do
         useWaitError=True. Due to the way that Deferreds and Failures work, the

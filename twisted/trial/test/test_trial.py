@@ -1,4 +1,4 @@
-# -*- test-case-name: twisted.test.test_trial.FunctionallyTestTrial -*-
+# -*- test-case-name: twisted.trial.test.test_trial -*-
 
 # Copyright (c) 2001-2004 Twisted Matrix Laboratories.
 # See LICENSE for details.
@@ -66,7 +66,7 @@ class TestBenchmark(object):
             self.recordStat(statdatum)
 
     def testBenchmark(self):
-        from twisted.test.test_trial import BogusReporter
+        from twisted.trial.test.common import BogusReporter
         suite = runner.TestSuite(BogusReporter(), util._Janitor(), benchmark=True)
         suite.addTestClass(self.Benchmark)
         suite.run()
