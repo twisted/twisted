@@ -3439,3 +3439,5 @@ private message from dash: wuh oh, drewp is on to us
 <zooko> What the fuck, man?  Why are you memcpying these void*'s?  Where is callbackData_ defined?  What are all these things templated on "class argument Type"??  AAAAiiiigh!
 * zooko holds one hand over his eyes and clicks blindly with the mouse in the attempt to hit the "close window" button.
 %
+<jml> the phrase "unstable reactor" makes me feel a little nervous
+%
