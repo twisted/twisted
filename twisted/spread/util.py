@@ -19,8 +19,9 @@
 """Utility classes for spread."""
 
 from twisted.internet import defer
+from twisted.python import components
 from twisted.python.failure import Failure
-
+from zope.interface import implements
 
 class LocalMethod:
     def __init__(self, local, name):
@@ -59,8 +60,6 @@ class LocalAsRemote:
     def remoteMethod(self, name):
         return LocalMethod(self, name)
 
-from twisted.python.components import Interface, implements
-from twisted.python.reflect import prefixedMethodNames
 
 class LocalAsyncForwarder:
     """A class useful for forwarding a locally-defined interface.
@@ -152,7 +151,7 @@ from twisted.internet import interfaces
 class FilePager(Pager):
     """Reads a file in chunks and sends the chunks as they come.
     """
-    __implements__ = interfaces.IConsumer
+    implements(interfaces.IConsumer)
     
     def __init__(self, collector, fd, callback=None, *args, **kw):
         self.chunks = []
@@ -182,8 +181,9 @@ class FilePager(Pager):
         self.pointer += 1
         self.producer.resumeProducing()
         self.collector.callRemote("gotPage", val)
-            
-            
+
+components.backwardsCompatImplements(FilePager)
+
 
 ### Utility paging stuff.
 from twisted.spread import pb

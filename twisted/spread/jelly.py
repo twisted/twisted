@@ -99,12 +99,12 @@ except ImportError:
 
 from new import instance
 from new import instancemethod
-
+from zope.interface import implements
 
 # Twisted Imports
 from twisted.python.reflect import namedObject, namedModule, qual
 from twisted.persisted.crefutil import NotKnown, _Tuple, _InstanceMethod, _DictKeyAndValue, _Dereference
-from twisted.python import runtime
+from twisted.python import runtime, components
 
 from twisted.spread.interfaces import IJellyable, IUnjellyable
 
@@ -274,7 +274,7 @@ class Jellyable:
     convenience method.
     """
 
-    __implements__ = IJellyable,
+    implements(IJellyable)
     
     def getStateFor(self, jellier):
         return self.__dict__
@@ -286,13 +286,16 @@ class Jellyable:
             jellier.jelly(self.getStateFor(jellier))])
         return jellier.preserve(self, sxp)
 
+components.backwardsCompatImplements(Jellyable)
+
+
 class Unjellyable:
     """
     Inherit from me to Unjelly yourself directly with the
     `setStateFor' convenience method.
     """
 
-    __implements__ = IUnjellyable,
+    implements(IUnjellyable)
     
     def setStateFor(self, unjellier, state):
         self.__dict__ = state
@@ -300,6 +303,8 @@ class Unjellyable:
     def unjellyFor(self, unjellier, jellyList):
         state = unjellier.unjelly(jellyList[1])
         self.setStateFor(unjellier, state)
+
+components.backwardsCompatImplements(Unjellyable)
 
 
 class _Jellier:
