@@ -234,12 +234,20 @@ which takes the attribute's docstring as an argument.
 <h2>Wrapping other people's objects</h2>
 
 <p>One place where interfaces can save the day is when you have to use someone else's library, and
-you need to use their objects in a different way than they intended. For instance, let's say that you
-wrote a function <code>concat</code> that concatenates the two arguments that it gets handed. For
-some reason you find yourself in the situation where calling a 3rd-party library function returns
-a file-like object that you then have to pass to that function and for some reason, this is monsterously
-inconvenient. Here is a way to deal with this (hypothetical and contrived) situation using adapters:
+you need to use their objects in a different way than they intended. One example of this is where
+you want to do object publishing. You want to separate the data to be displayed from the rendering
+code from the code that will display the data.
 </p>
+
+<p>In this last listing I've tried to give a fairly involved example to show what you can do with
+a component system when you begin to get comfortable. This program takes a string that represents
+a path, and wraps it in an interface that allows us to list all files in that directory. We then
+wrap that lister instance in IDisplay to print out the results in two different ways. Next, we wrap
+that lister object in an IFileGrepper interface, set its pattern attribute, and wrap it in an
+IDisplay interface to show (again) two different kinds of output.
+</p>
+
+<p>I'll leave the nitty-gritty details for you to figure out.</p>
 
 <h2>Conclusion</h2>
 
