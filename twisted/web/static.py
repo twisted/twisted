@@ -187,8 +187,20 @@ def loadMimeTypes():
 
 class File(resource.Resource, styles.Versioned):
     """
-    File is a resource that represents a plain non-interpreted file.
-    It's constructor takes a file path.
+    File is a resource that represents a plain non-interpreted file
+    (although it can look for an extension like .rpy or .cgi and hand the
+    file to a processor for interpretation if you wish). Its constructor
+    takes a file path.
+
+    Alternatively, you can give a directory path to the constructor. In this
+    case the resource will represent that directory, and its children will
+    be files underneath that directory. This provides access to an entire
+    filesystem tree with a single Resource.
+
+    If you map the URL 'http://server/FILE' to a resource created as
+    File('/tmp'), then http://server/FILE/ will return an HTML-formatted
+    listing of the /tmp/ directory, and http://server/FILE/foo/bar.html will
+    return the contents of /tmp/foo/bar.html .
     """
 
     # we don't implement IConfigCollection
