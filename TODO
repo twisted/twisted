@@ -127,7 +127,8 @@ this file directly.
     (listenTCP, listenSSL, connectTCP, connectSSL, etc)
 
 025 Jelly needs to handle floats and longs correctly, and banana needs to use
-    the appropriate types for struct.pack.
+    the appropriate types for struct.pack. Add INTERN support to banana. Add
+    Sopwith's C encoder for banana.
 
 026 More ircd-style names for virtual nicks in words; LoginServ (or maybe
     NickServ) instead of *login*.  The asterisks break some clients.
