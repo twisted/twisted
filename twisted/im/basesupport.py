@@ -3,7 +3,6 @@
 
 from locals import ONLINE, OFFLINE
 
-from twisted.internet import tcp
 from twisted.protocols.protocol import Protocol
 
 class AbstractGroup:
