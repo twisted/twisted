@@ -22,15 +22,16 @@
 
 # system imports
 import tempfile
+from zope.interface import implements
 
 # Twisted Imports
 from twisted.internet import interfaces, protocol, main
-from twisted.python import hook, failure
+from twisted.python import hook, failure, components
 
 
 class LoopbackRelay:
 
-    __implements__ = interfaces.ITransport, interfaces.IConsumer
+    implements(interfaces.ITransport, interfaces.IConsumer)
     
     buffer = ''
     shouldLose = 0
@@ -75,6 +76,8 @@ class LoopbackRelay:
     
     def unregisterProducer(self):
         self.producer = None
+
+components.backwardsCompatImplements(LoopbackRelay)
 
 def loopback(server, client, logFile=None):
     """Run session between server and client.

@@ -28,6 +28,7 @@ except ImportError:
 import os
 import sys
 import types
+from zope.interface import implements
 
 from twisted.mail.imap4 import MessageSet
 from twisted.mail import imap4
@@ -674,7 +675,7 @@ class IMAP4HelperTestCase(unittest.TestCase):
                 "len(%r) = %r != %r" % (input, L, expected))
 
 class SimpleMailbox:
-    __implements__ = imap4.IMailboxInfo, imap4.IMailbox, imap4.ICloseableMailbox
+    implements(imap4.IMailboxInfo, imap4.IMailbox, imap4.ICloseableMailbox)
 
     flags = ('\\Flag1', 'Flag2', '\\AnotherSysFlag', 'LastFlag')
     messages = []
@@ -1635,7 +1636,7 @@ class FakeyServer(imap4.IMAP4Server):
         pass
 
 class FakeyMessage:
-    __implements__ = (imap4.IMessage,)
+    implements(imap4.IMessage)
 
     def __init__(self, headers, flags, date, body, uid, subpart):
         self.headers = headers
@@ -2055,7 +2056,7 @@ class NewFetchTestCase(unittest.TestCase, IMAP4HelperMixin):
 
 
 class FetchSearchStoreTestCase(unittest.TestCase, IMAP4HelperMixin):
-    __implements__ = (imap4.ISearchableMailbox,)
+    implements(imap4.ISearchableMailbox)
 
     def setUp(self):
         self.expected = self.result = None
@@ -2169,7 +2170,7 @@ class FakeMailbox:
         return defer.succeed(None)
 
 class FeaturefulMessage:
-    __implements__ = imap4.IMessageFile,
+    implements(imap4.IMessageFile)
 
     def getFlags(self):
         return 'flags'
@@ -2181,7 +2182,7 @@ class FeaturefulMessage:
         return StringIO("open")
 
 class MessageCopierMailbox:
-    __implements__ = imap4.IMessageCopier,
+    implements(imap4.IMessageCopier)
 
     def __init__(self):
         self.msgs = []

@@ -59,6 +59,7 @@ import time
 import random
 import types
 import sys
+from zope.interface import implements
 
 import email.Utils
 
@@ -472,7 +473,7 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
         - Selected
         - Logout
     """
-    __implements__ = (IMailboxListener,)
+    implements(IMailboxListener)
 
     # Identifier for this server software
     IDENT = 'Twisted IMAP4rev1 Ready'
@@ -1921,6 +1922,9 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
         if recent is not None:
             self.sendUntaggedResponse('%d RECENT' % recent, async=True)
 
+components.backwardsCompatImplements(IMAP4Server)
+
+
 class UnhandledResponse(IMAP4Exception): pass
 
 class NegativeResponse(IMAP4Exception): pass
@@ -1938,13 +1942,14 @@ class NoSupportedAuthentication(IMAP4Exception):
 
 class IllegalServerResponse(IMAP4Exception): pass
 
+
 class IMAP4Client(basic.LineReceiver):
     """IMAP4 client protocol implementation
 
     @ivar state: A string representing the state the connection is currently
     in.
     """
-    __implements__ = (IMailboxListener,)
+    implements(IMailboxListener)
 
     tags = None
     waiting = None
@@ -3453,6 +3458,8 @@ class IMAP4Client(basic.LineReceiver):
     def newMessages(self, exists, recent):
         """Override me"""
 
+components.backwardsCompatImplements(IMAP4Client)
+
 
 class IllegalIdentifierError(IMAP4Exception): pass
 
@@ -3878,6 +3885,7 @@ def collapseNestedLists(items):
             pieces.extend([' ', '(%s)' % (collapseNestedLists(i),)])
     return ''.join(pieces[1:])
 
+
 class IClientAuthentication(components.Interface):
     def getName(self):
         """Return an identifier associated with this authentication scheme.
@@ -3889,7 +3897,7 @@ class IClientAuthentication(components.Interface):
         """Generate a challenge response string"""
 
 class CramMD5ClientAuthenticator:
-    __implements__ = (IClientAuthentication,)
+    implements(IClientAuthentication)
 
     def __init__(self, user):
         self.user = user
@@ -3901,8 +3909,10 @@ class CramMD5ClientAuthenticator:
         response = hmac.HMAC(secret, chal).hexdigest()
         return '%s %s' % (self.user, response)
 
+components.backwardsCompatImplements(CramMD5ClientAuthenticator)
+
 class LOGINAuthenticator:
-    __implements__ = (IClientAuthentication,)
+    implements(IClientAuthentication)
 
     def __init__(self, user):
         self.user = user
@@ -3916,8 +3926,10 @@ class LOGINAuthenticator:
         elif chal == 'Password\0':
             return secret
 
+components.backwardsCompatImplements(LOGINAuthenticator)
+
 class PLAINAuthenticator:
-    __implements__ = (IClientAuthentication,)
+    implements(IClientAuthentication)
 
     def __init__(self, user):
         self.user = user
@@ -3927,6 +3939,9 @@ class PLAINAuthenticator:
 
     def challengeResponse(self, secret, chal):
         return '%s\0%s\0' % (self.user, secret)
+
+components.backwardsCompatImplements(PLAINAuthenticator)
+
 
 class MailboxException(IMAP4Exception): pass
 
@@ -3941,6 +3956,7 @@ class NoSuchMailbox(MailboxException):
 class ReadOnlyMailbox(MailboxException):
     def __str__(self):
         return 'Mailbox open in read-only state'
+
 
 class IAccount(components.Interface):
     """Interface for Account classes
@@ -4133,12 +4149,9 @@ class INamespacePresenter(components.Interface):
         If no namespaces of this type exist, None should be returned.
         """
 
+
 class MemoryAccount(perspective.Perspective):
-    __implements__ = (
-        perspective.Perspective.__implements__,
-        IAccount,
-        INamespacePresenter
-    )
+    implements(IAccount, INamespacePresenter)
 
     mailboxes = None
     subscriptions = None
@@ -4260,6 +4273,10 @@ class MemoryAccount(perspective.Perspective):
 
     def getOtherNamespaces(self):
         return None
+
+
+components.backwardsCompatImplements(MemoryAccount)
+
 
 _statusRequestDict = {
     'MESSAGES': 'getMessageCount',
