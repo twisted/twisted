@@ -1,11 +1,11 @@
- DROP TABLE testrooms;
- DROP TABLE furniture;
- DROP TABLE rugs;
- DROP TABLE lamps;
+DROP TABLE testrooms;
+DROP TABLE furniture;
+DROP TABLE rugs;
+DROP TABLE lamps;
 
 CREATE TABLE testrooms
 (
-  roomId  int,
+  roomId  int  PRIMARY KEY,
   town_id  int,
   name     varchar(64),
   owner    varchar(64),
@@ -17,7 +17,7 @@ CREATE TABLE testrooms
 
 CREATE TABLE furniture
 (
-  furnId int,
+  furnId int PRIMARY KEY,
   roomId int,
   name   varchar(64),
   posx   int,
@@ -26,14 +26,14 @@ CREATE TABLE furniture
 
 CREATE TABLE rugs
 (
-  rugId int,
+  rugId int PRIMARY KEY,
   roomId int,
   name varchar(64)
 );
 
 CREATE TABLE lamps
 (
-  lampId int,
+  lampId int PRIMARY KEY,
   furnId int,
   furnName varchar(64),
   lampName varchar(64)

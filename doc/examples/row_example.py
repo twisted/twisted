@@ -17,7 +17,7 @@ manager = None
 def runTests(ignore=0):
     global manager
     print "running tests."
-    manager.loadObjectsFrom("testrooms").addCallback(gotRooms)
+    manager.loadObjectsFrom("testrooms", forceChildren=1).addCallback(gotRooms)
 
 def gotRooms(rooms):
     print "got Rooms.", rooms
@@ -26,12 +26,12 @@ def gotRooms(rooms):
         main.shutDown()
 
     for room in rooms:
-        print "  ", room
+        print "room  ", room
         for child in room.furniture:
-            print "     ", child            
+            print "furn     ", child            
             if hasattr(child, "childRows"):
                 for inner in child.childRows:
-                    print "        ", inner
+                    print "inner        ", inner
 
     room.moveTo( int(random.random() * 100) , int(random.random() * 100) )
     manager.updateRow(room).addCallback(onUpdate)
@@ -67,13 +67,14 @@ def onInsert(data):
 
 def onDelete(data):
     print "row deleted."
-    return manager.loadObjectsFrom("furniture", whereClause=[("furnId",reflector.EQUAL,53)] ).addCallback(onSelected)
+    return manager.loadObjectsFrom("furniture", whereClause=[("furnId",reflector.EQUAL,53)], forceChildren=1 ).addCallback(onSelected)
 
 def onSelected(furn):
     for f in furn:
         print "\ngot Furn:", f
-        for l in f.childRows:
-            print "   ", l
+        if hasattr(f, "childRows"):
+            for l in f.childRows:
+                print "   ", l
     main.shutDown()    
 
 def gotRooms2(rooms):
@@ -91,6 +92,12 @@ dbpool = adbapi.ConnectionPool("pyPgSQL.PgSQL", database="sean", host="localhost
 
 # use this line for SQLite test
 #dbpool = adbapi.ConnectionPool("sqlite", db="test")
+
+# use this line for Interbase / Firebird
+#dbpool = adbapi.ConnectionPool("kinterbasdb", dsn="localhost:/test.gdb",user="SYSDBA",password="masterkey")
+
+# use this for MySQL
+#dbpool = adbapi.ConnectionPool("MySQLdb", db="test", passwd="pass")
 
 # Create Twisted application object
 application = Application("testApp")

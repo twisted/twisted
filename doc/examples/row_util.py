@@ -22,7 +22,7 @@ class RoomRow(row.RowObject):
         ("width",   "int"),
         ("height",  "int")
         ]
-    rowKeyColumns    = [("roomId","int4")]
+    rowKeyColumns    = [("roomId","int")]
     rowTableName     = "testrooms"
     rowFactoryMethod = [myRowFactory]
 
@@ -47,9 +47,9 @@ class FurnitureRow(row.RowObject):
         ("posx",   "int"),
         ("posy",   "int")
         ]
-    rowKeyColumns   = [("furnId","int4")]
+    rowKeyColumns   = [("furnId","int")]
     rowTableName    = "furniture"
-    rowForeignKeys  = [("testrooms", [("roomId","int4")], [("roomId","int4")], "addStuff", 1) ]
+    rowForeignKeys  = [("testrooms", [("roomId","int")], [("roomId","int")], "addStuff", 1) ]
     
     def __repr__(self):
         return "Furniture #%s: room #%s (%s) (%s,%s)" % (self.furnId, self.roomId, self.name, self.posx, self.posy)
@@ -60,10 +60,10 @@ class RugRow(row.RowObject):
         ("roomId", "int"),
         ("name",   "varchar")
         ]
-    rowKeyColumns    = [("rugId","int4")]
+    rowKeyColumns    = [("rugId","int")]
     rowTableName     = "rugs"
     rowFactoryMethod = [myRowFactory]
-    rowForeignKeys   = [( "testrooms", [("roomId","int4")],[("roomId","int4")], "addStuff", 1) ]
+    rowForeignKeys   = [( "testrooms", [("roomId","int")],[("roomId","int")], "addStuff", 1) ]
     
     def __repr__(self):
         return "Rug %#s: room #%s, (%s)" % (self.rugId, self.roomId, self.name)
@@ -75,10 +75,14 @@ class LampRow(row.RowObject):
         ("furnName", "varchar"),
         ("lampName", "varchar")
         ]
-    rowKeyColumns   = [("lampId","int4")]
+    rowKeyColumns   = [("lampId","int")]
     rowTableName    = "lamps"
-    rowForeignKeys  = [("furniture", [("furnId","int4"),("furnName", "varchar")],
-                      [("furnId","int4"),("name", "varchar")], None, 1) ]
+    rowForeignKeys  = [("furniture",
+                        [("furnId","int"),("furnName", "varchar")],  # child table columns (this table)
+                        [("furnId","int"),("name", "varchar")],      # parent table columns (the other table)
+                        None,
+                        1)
+                       ]
                       # NOTE: this has no containerMethod so children will be added to "childRows"
     
     def __repr__(self):
