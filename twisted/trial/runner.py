@@ -1,4 +1,4 @@
-# -*- test-case-name: twisted.test.test_trial.FunctionallyTestTrial -*-
+# -*- test-case-name: twisted.test.trialtest1.TestSkipTestCase -*-
 #
 # -$*- test-case-name: buildbot.test.test_trial.TestRemoteReporter.testConnectToSlave -*-
 #
@@ -382,12 +382,10 @@ class MethodInfoBase(Timed):
     def runningTime(self):
         return self.endTime - self.startTime 
 
-
 class UserMethodError(Exception):
     """indicates that the user method had an error, but raised after
     call is complete
     """
-
 
 class UserMethodWrapper(MethodInfoBase):
    zi.implements(itrial.IUserMethod, itrial.IMethodInfo)
@@ -529,7 +527,7 @@ class TestClassAndMethodBase(TestRunnerBase):
         # attribute's value takes precedence
         #
         for attr in ('skip', 'todo', 'timeout'):
-            v = getattr(testMethod.klass, attr, None)
+            v = getattr(self, attr, None)
             if v is not None and getattr(testMethod, attr, None) is None: 
                 setattr(testMethod, attr, v)
 
@@ -680,7 +678,7 @@ class BenchmarkCaseRunner(TestCaseRunner):
         
 
 class TestMethod(MethodInfoBase):
-    zi.implements(itrial.ITestMethod, itrial.IMethodInfo, itrial.ITimeout)
+    zi.implements(itrial.ITestMethod, itrial.IMethodInfo)
     _status = None
 
     def __init__(self, original):
@@ -747,6 +745,7 @@ class TestMethod(MethodInfoBase):
         log.msg(f.printTraceback())
         if f.check(unittest.FAILING_EXCEPTION,
                    unittest.FailTest):
+                   #doctest.DocTestTestFailure):
             self.failures.append(f)
         elif f.check(KeyboardInterrupt):
             log.msg(iface=ITrialDebug, kbd="KEYBOARD INTERRUPT")
@@ -799,25 +798,16 @@ class TestMethod(MethodInfoBase):
                 try:
                     sys.stdout = util.StdioProxy(sys.stdout)
                     sys.stderr = util.StdioProxy(sys.stderr)
-                   
-                    # --- this is basically the guts of UserMethodWrapper, because I *SUCK* -----
+
+                    um = UserMethodWrapper(self.original, janitor)
+
                     try:
-                        try:
-                            r = self.original(tci)
-                            if isinstance(r, defer.Deferred):
-                                util._wait(r, self.timeout)
-                        finally:
-                            self.endTime = time.time()
-                    except:
-                        f = failure.Failure()
-                        self._eb(f)
-
-                        try:
-                            janitor.do_logErrCheck()
-                        except util.LoggedErrors:
-                            self.errors.append(failure.Failure())
-                    # ----------------------------------------------------------------------------
-
+                        um(tci)
+                    except UserMethodError:
+                        for error in um.errors:
+                            if error.check(KeyboardInterrupt):
+                                error.raiseException()
+                            self._eb(error)
                 finally:
                     self.endTime = time.time()
                     reporter.endTest(self)
