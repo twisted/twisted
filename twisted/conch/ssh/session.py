@@ -23,7 +23,7 @@ This module is unstable.
 Maintainer: U{Paul Swartz<mailto:z3p@twistedmatrix.com>}
 """
 
-import struct, fcntl, tty, os
+import struct, fcntl, tty, os, pty
 
 from twisted.internet import protocol, reactor
 from twisted.python import log
@@ -36,7 +36,8 @@ class SSHSession(connection.SSHChannel):
     def __init__(self, *args, **kw):
         connection.SSHChannel.__init__(self, *args, **kw)
         self. environ = {}
-        self.buf = '' 
+        self.buf = ''
+        self.ptyTuple = 0
 
     def request_subsystem(self, data):
         subsystem = common.getNS(data)[0]
@@ -56,7 +57,7 @@ class SSHSession(connection.SSHChannel):
         return 0
 
     def request_shell(self, data):
-        if not self.environ.has_key('TERM'): # we didn't get a pty-req
+        if not self.ptyTuple: # we didn't get a pty-req
             log.msg('tried to get shell without pty, failing')
             return 0
         user = self.conn.transport.authenticatedUser
@@ -71,7 +72,7 @@ class SSHSession(connection.SSHChannel):
             self.client = SSHSessionClient()
             pty = reactor.spawnProcess(SSHSessionProtocol(self, self.client), \
                   'login', ['login','-p', '-f', user.name], self.environ,  
-                   usePTY = 1)
+                   usePTY = self.ptyTuple)
             fcntl.ioctl(pty.fileno(), tty.TIOCSWINSZ, 
                         struct.pack('4H', *self.winSize))
         except OSError, e:
@@ -82,41 +83,22 @@ class SSHSession(connection.SSHChannel):
         else:
             self.pty = pty
             if self.modes:
-                attr = tty.tcgetattr(pty.fileno())
-                for mode, modeValue in self.modes:
-                    if not ttymodes.TTYMODES.has_key(mode): continue
-                    ttyMode = ttymodes.TTYMODES[mode]
-                    if len(ttyMode) == 2: # flag
-                        flag, ttyAttr = ttyMode
-                        if not hasattr(tty, ttyAttr): continue
-                        ttyval = getattr(tty, ttyAttr)
-                        if modeValue:
-                            attr[flag] = attr[flag]|ttyval
-                        else:
-                            attr[flag] = attr[flag]&~ttyval
-                    elif ttyMode == 'OSPEED':
-                        attr[tty.OSPEED] = getattr(tty, 'B%s'%modeValue)
-                    elif ttyMode == 'ISPEED':
-                        attr[tty.ISPEED] = getattr(tty, 'B%s'%modeValue)
-                    else:
-                        if not hasattr(tty, ttyMode): continue
-                        ttyval = getattr(tty, ttyMode)
-                        attr[tty.CC][ttyval] = chr(modeValue)
-                tty.tcsetattr(pty.fileno(), tty.TCSANOW, attr)
+                self.setModes()
             self.conn.transport.transport.setTcpNoDelay(1)
             return 1
 
     def request_exec(self, data):
         command = common.getNS(data)[0]
-        command = ['/bin/sh', '-c', command]
         user = self.conn.transport.authenticatedUser
         uid, gid = user.getUserGroupID()
         homeDir = user.getHomeDir()
+        shell = user.getShell() or '/bin/sh'
+        command = [shell, '-c', command]
         try:
             self.client = SSHSessionClient()
             pty = reactor.spawnProcess(SSHSessionProtocol(self, self.client), \
-                    '/bin/sh', command, self.environ, homeDir,
-                    uid, gid, usePTY = 1)
+                    shell, command, self.environ, homeDir,
+                    uid, gid, usePTY = self.ptyTuple)
         except OSError, e:
             log.msg('failed to exec %s' % command)
             log.msg('reason:')
@@ -124,7 +106,11 @@ class SSHSession(connection.SSHChannel):
             return 0
         else:
             self.pty = pty
-            tty.setraw(pty.fileno())
+            if self.ptyTuple:
+                if self.modes:
+                    self.setModes()
+            else:
+                tty.setraw(pty.fileno())
             self.conn.transport.transport.setTcpNoDelay(1)
             if self.buf:
                 self.client.dataReceived(self.buf)
@@ -135,6 +121,10 @@ class SSHSession(connection.SSHChannel):
     def request_pty_req(self, data):
         self.environ['TERM'], self.winSize, self.modes =  \
                              parseRequest_pty_req(data)
+        master, slave = pty.openpty()
+        ttyname = os.ttyname(slave)
+        self.environ['SSH_TTY'] = ttyname 
+        self.ptyTuple = (master, slave, ttyname)
         return 1
 
     def request_window_change(self, data):
@@ -166,6 +156,30 @@ class SSHSession(connection.SSHChannel):
         pyshell.loggedIn() # since we've logged in by the time we make it here
         self.receiveEOF = self.loseConnection
         return pyshell
+
+    def setModes(self):
+        pty = self.pty
+        attr = tty.tcgetattr(pty.fileno())
+        for mode, modeValue in self.modes:
+            if not ttymodes.TTYMODES.has_key(mode): continue
+            ttyMode = ttymodes.TTYMODES[mode]
+            if len(ttyMode) == 2: # flag
+                flag, ttyAttr = ttyMode
+                if not hasattr(tty, ttyAttr): continue
+                ttyval = getattr(tty, ttyAttr)
+                if modeValue:
+                    attr[flag] = attr[flag]|ttyval
+                else:
+                    attr[flag] = attr[flag]&~ttyval
+            elif ttyMode == 'OSPEED':
+                attr[tty.OSPEED] = getattr(tty, 'B%s'%modeValue)
+            elif ttyMode == 'ISPEED':
+                attr[tty.ISPEED] = getattr(tty, 'B%s'%modeValue)
+            else:
+                if not hasattr(tty, ttyMode): continue
+                ttyval = getattr(tty, ttyMode)
+                attr[tty.CC][ttyval] = chr(modeValue)
+        tty.tcsetattr(pty.fileno(), tty.TCSANOW, attr)
 
     def dataReceived(self, data):
         if not hasattr(self, 'client'):

@@ -87,6 +87,11 @@ class ConchIdentity(identity.Identity):
         """
         raise NotImplementedError
 
+    def getShell(self):
+        """return the users shell
+        """
+        raise NotImplementedError
+
 class OpenSSHConchIdentity(ConchIdentity):
 
     # XXX fail slower for security reasons
@@ -144,4 +149,9 @@ class OpenSSHConchIdentity(ConchIdentity):
     def getHomeDir(self):
         if pwd:
             return pwd.getpwnam(self.name)[5]
+        raise NotImplementedError
+
+    def getShell(self):
+        if pwd:
+            return pwd.getpwnam(self.name)[6]
         raise NotImplementedError
