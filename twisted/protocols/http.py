@@ -390,16 +390,20 @@ NO_BODY_CODES = (204, 304)
 class Request:
     """A HTTP request.
 
-    @cvar method: The HTTP method that was used.
-    @cvar uri: The full URI that was requested (includes arguments).
+    Subclasses should override the process() method to determine how
+    the request will be processed.
+    
+    @ivar method: The HTTP method that was used.
+    @ivar uri: The full URI that was requested (includes arguments).
     @ivar path: The path only (arguments not included).
     @ivar args: All of the arguments, including URL and POST arguments.
     @type args: A mapping of strings (the argument names) to lists of values.
                 i.e., ?foo=bar&foo=baz&quux=spam results in
                 {'foo': ['bar', 'baz'], 'quux': ['spam']}.
+    @ivar received_headers: All received headers
     """
 
-    __implements__ = interfaces.IConsumer
+    __implements__ = interfaces.IConsumer,
 
     producer = None
     finished = 0
@@ -587,7 +591,8 @@ class Request:
         self.transport.write('%s %s %s\r\n\r\n' % (self.clientproto, code, resp))
 
 
-    # http request methods
+    # The following is the public interface that people should be
+    # writing to.
 
     def getHeader(self, key):
         """Get a header that was sent from the network.
@@ -598,10 +603,6 @@ class Request:
         """Get a cookie that was sent from the network.
         """
         return self.received_cookies.get(key)
-
-
-    # The following is the public interface that people should be
-    # writing to.
 
     def finish(self):
         """We are finished writing data."""
