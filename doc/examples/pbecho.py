@@ -17,6 +17,7 @@
 
 from twisted.spread import pb
 from twisted.internet import app
+from twisted.cred.authorizer import DefaultAuthorizer
 
 class DefinedError(pb.Error):
     pass
@@ -35,6 +36,8 @@ class SimpleService(pb.Service):
 if __name__ == '__main__':
     import pbecho
     appl = app.Application("pbecho")
-    pbecho.SimpleService("pbecho",appl).getPerspectiveNamed("guest").makeIdentity("guest")
-    appl.listenTCP(pb.portno, pb.BrokerFactory(pb.AuthRoot(appl)))
+    auth = DefaultAuthorizer(appl)
+    service = pbecho.SimpleService("pbecho", appl, auth)
+    service.getPerspectiveNamed("guest").makeIdentity("guest")
+    appl.listenTCP(pb.portno, pb.BrokerFactory(pb.AuthRoot(auth)))
     appl.save("start")
