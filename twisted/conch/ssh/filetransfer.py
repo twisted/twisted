@@ -42,12 +42,14 @@ class FileTransferBase(protocol.Protocol):
             packetType = self.packetTypes.get(kind, None)
             if not packetType:
                 print 'no packet type for', kind
-                #XXX error
+                continue
             f = getattr(self, 'packet_%s' % packetType, None)
             if not f:
                 print 'not implemented', packetType
-                return
+                reqId = struct.unpack('!L', data[:4])[0]
+                self._sendStatus(reqId, FX_OP_UNSUPPORTED, "don't understand %s" % packetType)
                 #XXX not implemented
+                continue
             f(data)
 
     def _parseAttributes(self, data):
@@ -78,7 +80,6 @@ class FileTransferBase(protocol.Protocol):
             for i in xrange(extended_count):
                 extended_type, data = common.getNS(data)
                 extended_data, data = common.getNS(data)
-                print 'ext', extended_type, extended_data
                 attrs['ext_%s' % extended_type] = extended_data
         return attrs, data
 
@@ -268,12 +269,12 @@ class FileTransferServer(FileTransferBase):
             d.addErrback(self._ebStatus, requestId, "scan directory failed")
 
     def _cbScanDirectory(self, result, requestId):
-        data = struct.pack('!2L', requestId, len(result))
+        data = ''
         for (filename, longname, attrs) in result:
             data += NS(filename)
             data += NS(longname)
             data += self._packAttributes(attrs)
-        self.sendPacket(FXP_NAME, data)
+        self.sendPacket(FXP_NAME, struct.pack('!2L', requestId, len(result))+data)
 
     def packet_STAT(self, data, followLinks = 1):
         requestId, data = struct.unpack('!L', data[:4])[0], data[4:]
@@ -355,7 +356,6 @@ class FileTransferServer(FileTransferBase):
         self._sendStatus(requestId, FX_OK, msg)
 
     def _ebStatus(self, reason, requestId, msg = "request failed"):
-        print reason
         code = FX_FAILURE
         message = msg
         if reason.type in (IOError, OSError):
@@ -642,16 +642,32 @@ class FileTransferServer(FileTransferBase):
         sends an exception (typically EOFError) to indicate that there are no
         more files in that directory.  Then, the client knows to stop sending
         requests.
+
+        No more than 250 files should be returned at once, as some clients
+        cannot handle packets that large.
         """
-        if len(opaqueId) > 1: raise EOFError
+        if len(opaqueId) > 2: raise EOFError
         path = opaqueId[0]
+        if len(opaqueId) == 2:
+            start = opaqueId[1]
+        else:
+            start = 0
         files = []
-        for f in self._runAsUser(os.listdir, path):
+        d = self._runAsUser(os.listdir, path)[start:]
+        for f in d[:250]:
             s = self._runAsUser(os.lstat, os.path.join(path, f))
             longname = _lsLine(f, s)
             attrs = self._getAttrs(s)
             files.append((f, longname, attrs))
-        opaqueId.append(1)
+        if len(d) > 250:
+            start += 250
+            if len(opaqueId) == 2:
+                opaqueId[1] = start
+            else:
+                opaqueId.append(start)
+        else:
+            opaqueId.append(1)
+            opaqueId.append(1)
         return files
 
     def closeDirectory(self, opaqueId):
