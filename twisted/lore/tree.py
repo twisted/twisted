@@ -86,30 +86,24 @@ def addPyListings(document, d):
         outfile = cStringIO.StringIO()
         htmlizer.filter(open(os.path.join(d, fn)), outfile)
         val = outfile.getvalue()
+        _replaceWithListing(node, val, fn)
 
-        text = ('<div class="py-listing">'
-               #'<pre class="python">%s</pre>' #redundant?
-                '%s'
-                '<div class="py-caption">%s - '
-                '<span class="py-filename">%s</span></div></div>' % (
-            val, domhelpers.getNodeText(node), fn))
-        newnode = microdom.parseString(text).documentElement
-        node.parentNode.replaceChild(newnode, node)
+
+def _replaceWithListing(node, val, fn):
+    text = ('<div class="py-listing">%s<div class="py-caption">%s - '
+            '<span class="py-filename">%s</span></div></div>' %
+            (val, domhelpers.getNodeText(node), fn))
+    newnode = microdom.parseString(text).documentElement
+    node.parentNode.replaceChild(newnode, node)
 
 
 def addHTMLListings(document, d):
     for node in domhelpers.findElementsWithAttribute(document, "class",
                                                      "html-listing"):
         fn = node.getAttribute("href")
-        val = cgi.escape(open(os.path.join(d, fn)).read())
-
-        text = ('<div class="py-listing">'
-                '<pre class="htmlsource">%s</pre>'
-                '<div class="py-caption">%s - '
-                '<span class="py-filename">%s</span></div></div>' % (
-                        val, domhelpers.getNodeText(node), fn))
-        newnode = microdom.parseString(text).documentElement
-        node.parentNode.replaceChild(newnode, node)
+        val = ('<pre class="htmlsource">\n%s</pre>' %
+               cgi.escape(open(os.path.join(d, fn)).read()))
+        _replaceWithListing(node, val, fn)
 
 
 def generateToC(document):
