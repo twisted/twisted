@@ -188,6 +188,12 @@ class JReactor(ReactorBase):
         self.writers = []
         self.q = timeoutqueue.TimeoutQueue()
 
+    def installWaker(self):
+        pass
+
+    def wakeUp(self):
+        self.q.put(lambda x: x, None)
+
     def run(self, **kwargs):
         import main
         main.running = 1
