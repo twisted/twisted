@@ -35,7 +35,10 @@ class PosixProcessTestCase(unittest.TestCase):
     
     def testProcess(self):
         f = cStringIO.StringIO()
-        p = process.Process("/bin/gzip", ["/bin/gzip", "-"], {}, "/tmp")
+        if os.path.exists('/bin/gzip'): cmd = '/bin/gzip'
+        elif os.path.exists('/usr/bin/gzip'): cmd = '/usr/bin/gzip'
+        else: raise "gzip not found in /bin or /usr/bin"
+        p = process.Process(cmd, [cmd, "-"], {}, "/tmp")
         p.handleChunk = f.write
         p.write(s)
         p.closeStdin()
@@ -47,6 +50,7 @@ class PosixProcessTestCase(unittest.TestCase):
     
     def testStderr(self):
         # we assume there is no file named ZZXXX..., both in . and in /tmp
+        if not os.path.exists('/bin/ls'): raise "/bin/ls not found"
         err = popen2.popen3("/bin/ls ZZXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX")[2].read()
         f = cStringIO.StringIO()
         p = process.Process('/bin/ls', ["/bin/ls", "ZZXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"], {}, "/tmp")
