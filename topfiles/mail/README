@@ -1,3 +1,5 @@
 Twisted Mail
 
 Mail was recently split out of Twisted. This needs more work.
+
+Twisted Mail depends on Twisted and Twisted Names.

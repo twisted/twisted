@@ -2,4 +2,5 @@ Twisted News
 
 News was recently split out of Twisted. This needs more work.
 
-News depends on Twisted and Twisted Mail.
+News depends on Twisted, and, if you want to use the moderation
+features, Twisted Mail.
