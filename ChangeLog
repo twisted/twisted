@@ -1,3 +1,17 @@
+2003-07-19  Ying Li <cyli@ai.mit.edu>
+
+	* twisted/web/woven/form.py:  Changed form widgets so that if the 
+	template already has the widget coded, merges the template widget 
+	with the model widget (sets default values, etc.).  
+
+	* twisted/web/woven/form.py, twisted/python/formmethod.py:  Can 
+	format layout of checkgroups and radiogroups into tables, rows, or
+	columns.
+	
+	* twisted/web/woven/form.py, twisted/python/formmethod.py: Added 
+	file input widget (unable to retrieve filename or file type - have 
+	to ask for that separately).
+	
 2003-07-19  Christopher Armstrong  <radix@twistedmatrix.com>
 
 	* twisted/protocols/dns.py, twisted/names: Twisted Names can now
