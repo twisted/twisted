@@ -404,10 +404,18 @@ class FormProcessor(resource.Resource):
             errback = self.errorViewFactory
         self.errback = errback
 
+    def getArgs(self, request):
+        """Return the formmethod.Arguments.
+
+        Overridable hook to allow pre-processing, e.g. if we want to enable
+        on them depending on one of the inputs.
+        """
+        return self.formMethod.getArgs()
+    
     def render(self, request):
         outDict = {}
         errDict = {}
-        for methodArg in self.formMethod.getArgs():
+        for methodArg in self.getArgs(request):
             valmethod = getattr(self,"mangle_"+
                                 (methodArg.__class__.__name__.lower()), None)
             tmpval = request.args.get(methodArg.name)
