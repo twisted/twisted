@@ -22,7 +22,7 @@ Package installer for Twisted
 Copyright (C) 2001 Matthew W. Lefkowitz
 All rights reserved, see LICENSE for details.
 
-$Id: setup.py,v 1.87 2003/01/06 10:38:57 jml Exp $
+$Id: setup.py,v 1.88 2003/01/06 10:46:19 jml Exp $
 """
 
 import distutils, os, sys, string
@@ -211,6 +211,7 @@ http://starship.python.net/crew/mhammond/win32/Downloads.html
         "twisted.news",
         "twisted.persisted",
         "twisted.persisted.journal",
+        "twisted.popsicle",
         "twisted.protocols",
         "twisted.protocols.mice",
         "twisted.python",
