@@ -188,7 +188,7 @@ int main(int argc, char **argv)
                                     define_macros=define_macros))
 
         if sys.platform == 'win32':
-            exts.append( Extension("twisted.internet.iocpreacto._iocp",
+            exts.append( Extension("twisted.internet.iocpreactor._iocp",
                                     ["twisted/internet/iocpreactor/_iocp.c"],
                                     libraries=["ws2_32", "mswsock"],
                                     define_macros=define_macros))
