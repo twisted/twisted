@@ -2,7 +2,13 @@
 <body>
 <h1>Creating and working with a telnet server</h1>
 
-<p>Run <code class="shell">mktap telnet -p 4040 -u admin -w woohoo</code> at
+<h2>Simple Configuration</h2>
+
+<p>To start things off, we're going to create a simple server that just
+gives you remote access to a Python interpreter. We will use a telnet client
+to access this server.</p>
+
+<p>Run <code class="shell">mktap telnet -p 4040 -u admin -w admin</code> at
 your shell prompt. If you list the contents of your current directory,
 you'll notice a new file -- <code>telnet.tap</code>.  After you do this, run
 <code class="shell">twistd -f telnet.tap</code>. Since the Application has a
@@ -16,10 +22,10 @@ Trying 127.0.0.1...
 Connected to localhost.
 Escape character is '^]'.
 
-twisted.protocols.telnet.ShellFactory
-Twisted 0.15.5
+twisted.manhole.telnet.ShellFactory
+Twisted 1.0.4
 username: <em>admin</em>
-password: <em>******</em>
+password: <em>admin</em>
 &gt;&gt;&gt;
 </pre>
 
@@ -36,23 +42,21 @@ here. Let's try looking around.</p>
 <pre class="python-interpreter">
 &gt;&gt;&gt; <em>import __main__</em>
 &gt;&gt;&gt; <em>dir(__main__)</em>
-['EverythingEphemeral', 'ServerOptions', '__builtins__', '__doc__', '__name__',
- 'application', 'config', 'copyright', 'imp', 'initRun', 'load', 'log', 
-'logFile', 'logPath', 'logfile', 'main', 'mainMod', 'oldstderr', 'oldstdin', 
-'oldstdout', 'os', 'platformType', 'rotateLog', 'runtime', 'signal', 'string',
- 'styles', 'sys', 'traceback', 'usage', 'util']
+['__builtins__', '__doc__', '__name__', 'os', 'run', 'string', 'sys']
 
-&gt;&gt;&gt; <em>__main__.application</em>
-&lt;telnet app&gt;
-&gt;&gt;&gt; <em>dir(__main__.application)</em>
-['authorizer', 'connectors', 'delayeds', 'gid', 'name', 'persistenceVersion',
- 'ports', 'resolver', 'running', 'services', 'uid', 'written']
+&gt;&gt;&gt; <em>from twisted.internet import app</em>
+&gt;&gt;&gt; <em>app.theApplication</em>
+&lt;'telnet' app&gt;
+&gt;&gt;&gt; <em>app.theApplication.tcpPorts</em>
+[(4040, &lt;twisted.manhole.telnet.ShellFactory instance at 0x8268edc&gt;,5,'')]
 </pre>
 
-<p>From this session we learned that there is an application
-object stored in <code class="python">__main__</code> that's a
-telnet app, and it has some scary attributes that we're not
-going to worry about for now.</p>
+<p>From this session we learned that there is an application object stored
+in <code class="python">twisted.internet.app.theApplication</code> that's a
+telnet app, and that it is listening on port 4040 with something called a
+<code class="API" base="twisted.manhole.telnet">ShellFactory</code>. There
+are lots of other attributes in <code class="python">theApplication</code>,
+which we're not going to worry about for now.</p>
 
 <p>Alright, so now you've decided that you hate Twisted and
 want to shut it down. Or you just want to go to bed. Either
@@ -75,9 +79,9 @@ make sure that the 'twisted' directory is in your module search
 path.</p>
 
 <pre class="python-interpreter">
-Python 1.5.2 (#0, Dec 27 2000, 13:59:38)  [GCC 2.95.2 20000220 (Debian
-GNU/Linux)] on linux2
-Copyright 1991-1995 Stichting Mathematisch Centrum, Amsterdam
+Python 2.2.2 (#1, Mar 21 2003, 23:01:54) 
+[GCC 3.2.3 20030316 (Debian prerelease)] on linux2
+Type "help", "copyright", "credits" or "license" for more information.
 &gt;&gt;&gt; <em>import sys</em>
 &gt;&gt;&gt; <em>sys.path.append('/twisted/Twisted')</em>
 </pre>
@@ -111,11 +115,13 @@ This step is basically what the 'twistd' utility does.</p>
 twisted.protocols.telnet.ShellFactory starting on 4040
 </pre>
 
-<p>You now have a functioning telnet server! You can connect
-with your telnet program and work with it just the same as you
-did before. When you're done using the telnet server, you can
-switch back to your python console and hit ctrl-C. The
-following should appear:</p>
+<p>You now have a functioning telnet server! You can connect with your
+telnet program and work with it just the same as you did before. The
+username and password both default to <q>admin</q>, but you can change those
+by modifying the attributes of the <code class="python">ShellFactory</code>
+object you created earlier. When you're done using the telnet server, you
+can switch back to your python console and hit ctrl-C. The following should
+appear:</p>
 
 <pre class="python-interpreter">
 Starting Shutdown Sequence.
@@ -136,18 +142,19 @@ class="shell">kill `cat twistd.pid`</code>.</p>
 
 <a href="listings/manhole/manhole1.py" class="py-listing">manhole1.py</a>
 
-<p>Once this is running, it would be nice to poke around inside it. We can
-add the manhole-shell by adding a few lines to create a new server (a
-Factory) listening on a different point:</p>
+<p>This will give us a basic quote-of-the-day server: running <code
+class="shell">telnet localhost 8123</code> will give us a quote. However,
+once this is running, it would be nice to poke around inside it. We can add
+the manhole-shell by adding a few lines to create a new server (a Factory)
+listening on a different point:</p>
 
 <a href="listings/manhole/manhole2.py" class="py-listing">manhole2.py</a>
 
 <p>With this in place, you can telnet to port 8007, give the username
-<q>boss</q>
-and password <q>sekrit</q>, and you'll end up with a shell that behaves very
-much
-like the Python interpreter that you get by running <code>python</code> all by
-itself, with lines you type prefixed with <code>&gt;&gt;&gt;</code>.</p>
+<q>boss</q> and password <q>sekrit</q>, and you'll end up with a shell that
+behaves very much like the Python interpreter that you get by running
+<code>python</code> all by itself, with lines you type prefixed with
+<code>&gt;&gt;&gt;</code>.</p>
 
 
 <pre class="shell">
@@ -174,10 +181,10 @@ An apple a day keeps the doctor away.
 </pre>
 
 <p>The initial namespace of the manhole interpreter is defined by a
-dictionary stored in the '<code>namespace</code>' attribute of the ShellFactory.
-For convenience, you can put references to any objects you like in that dict
-(<code class="python">f.namespace['foo'] = 12</code>), and then retrieve
-them by name from the telnet session.</p>
+dictionary stored in the '<code>namespace</code>' attribute of the
+ShellFactory. For convenience, you can put references to any objects you
+like in that dict (<code class="python">f.namespace['foo'] = 12</code>), and
+then retrieve them by name from the telnet session.</p>
 
 <pre class="python-interpreter">
 &gt;&gt;&gt; foo
@@ -200,12 +207,12 @@ ran using an Application and not the reactor directly):</p>
 &lt;'demo' app&gt;
 </pre>
 
-<p>This object holds a number of things of interest: the list
-of Services (subclasses of ApplicationService that have been added to the
-application, most notably Perspective Broker services), and the list of
-ports on which protocol Factories are listening. The ports are kept in a
-number of lists, and the Factory object itself is available inside those lists (word
-wrapped for clarity):</p>
+<p>This object holds a number of things of interest: the list of Services
+(subclasses of ApplicationService that have been added to the application,
+most notably Perspective Broker services), and the list of ports on which
+protocol Factories are listening. The ports are kept in a number of lists,
+and the Factory object itself is available inside those lists (word wrapped
+for clarity):</p>
 
 <pre class="python-interpreter">
 &gt;&gt;&gt; a.tcpPorts
@@ -217,9 +224,9 @@ wrapped for clarity):</p>
 &lt;twisted.internet.protocol.Factory instance at 0x8249b8c&gt;
 </pre>
 
-<p>Now that we have access to that Factory, what can we do? We can modify
-any attribute of the object, or call functions on it. Remember that the
-Factory stores a reference to a subclass of Protocol, and it uses that
+<p>Now that we have access to that QOTD Factory, what can we do? We can
+modify any attribute of the object, or call functions on it. Remember that
+the Factory stores a reference to a subclass of Protocol, and it uses that
 reference to create new Protocol instances for each new connection. We can
 change that reference to make the Factory create something else:</p>
 

@@ -1,5 +1,8 @@
 2003-04-23  Brian Warner  <warner@lothar.com>
 
+	* doc/howto/telnet.html: Update example from twisted-0.15.5(!) to
+	1.0.4
+
 	* twisted/protocols/loopback.py: use reactor.iterate(0.01) so the
 	tests hammer the CPU slightly less
 
