@@ -69,9 +69,9 @@ class ReconnectingFactoryTestCase(unittest.TestCase):
         c.protocol = Out
         c.howManyTimes = 2
 
-        PORT=9000
+        port = reactor.listenTCP(0, f)
+        PORT = port.getHost()[2]
         reactor.connectTCP('localhost', PORT, c)
-        reactor.listenTCP(PORT, f)
         
         howLong = 500
         while howLong and len(f.allMessages) != 2:
