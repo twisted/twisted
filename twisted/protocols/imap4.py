@@ -58,6 +58,8 @@ import time
 import types
 import sys
 
+import email.Utils
+
 try:
     import cStringIO as StringIO
 except:
@@ -3617,17 +3619,27 @@ def statusRequestHelper(mbox, names):
         r[n] = getattr(mbox, _statusRequestDict[n])()
     return r
 
+def parseAddr(addr):
+    if addr is None:
+        return [(None, None, None),]
+    addrs = email.Utils.getaddresses([addr])
+    return [[fn or None, None] + addr.split('@') for fn, addr in addrs]
+
 def getEnvelope(msg):
-    date = msg.getHeaders(False, 'date',).get('date')
-    subject = msg.getHeaders(False, 'subject').get('subject')
-    from_ = msg.getHeaders(False, 'from').get('from')
-    sender = msg.getHeaders(False, 'sender').get('sender', from_)
-    reply_to = msg.getHeaders(False, 'reply-to').get('reply-to', from_)
-    to = msg.getHeaders(False, 'to').get('to')
-    cc = msg.getHeaders(False, 'cc').get('cc')
-    bcc = msg.getHeaders(False, 'bcc').get('bcc')
-    in_reply_to = msg.getHeaders(False, 'in-reply-to').get('in-reply-to')
-    return date, subject, from_, sender, reply_to, to, cc, bcc, in_reply_to
+    headers = msg.getHeaders(True, ())
+    date = headers.get('date')
+    subject = headers.get('subject')
+    from_ = headers.get('from')
+    sender = headers.get('sender', from_)
+    reply_to = headers.get('reply-to', from_)
+    to = headers.get('to')
+    cc = headers.get('cc')
+    bcc = headers.get('bcc')
+    in_reply_to = headers.get('in-reply-to')
+    mid = headers.get('message-id')
+    return (date, subject, parseAddr(from_), parseAddr(sender),
+        reply_to and parseAddr(reply_to), to and parseAddr(to),
+        cc and parseAddr(cc), bcc and parseAddr(bcc), in_reply_to, mid)
 
 def getBodyStructure(msg, extended=False):
     # XXX - This does not properly handle multipart messages
