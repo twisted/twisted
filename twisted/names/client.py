@@ -193,7 +193,7 @@ class DNSClientFactory(protocol.ClientFactory):
     
 
     def clientConnectionLost(self, connector, reason):
-        print connector, reason
+        pass
 
 
     def buildProtocol(self, addr):
