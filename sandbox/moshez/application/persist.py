@@ -42,6 +42,8 @@ class IPersistable(components.Interface):
 
 class Persistant:
 
+    __implements__ = IPersistable,
+
     style = "pickle"
 
     def __init__(self, original, name):
@@ -92,8 +94,6 @@ class Persistant:
         return ext, dumpFunc
 
     def save(self, tag=None, filename=None, passphrase=None):
-        """Save a pickle of this application to a file in the current directory.
-        """
         ext, dumpFunc = self._getStyle()
         if passphrase:
             ext = 'e' + ext
