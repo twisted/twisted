@@ -16,7 +16,8 @@ bin/conch/conch.
 Documentation resides in the doc/ directory, with a similar layout to
 bin/.
 
-== twisted/ == twisted/, of course, contains the code. Each package
+== twisted/ == 
+twisted/, of course, contains the code. Each package
 that represents a single project (e.g., the toplevel 'twisted', and
 'twisted.web', etc, but not 'twisted.python', since that's a part of
 core) has a 'topfiles' directory inside of it.
