@@ -329,7 +329,7 @@ class LiteralFile:
 class Command:
     _1_RESPONSES = ('CAPABILITY', 'FLAGS', 'LIST', 'LSUB', 'STATUS', 'SEARCH')
     _2_RESPONSES = ('EXISTS', 'EXPUNGE', 'FETCH', 'RECENT')
-    _OK_RESPONSES = ('UIDVALIDITY', 'READ-WRITE', 'READ-ONLY')
+    _OK_RESPONSES = ('UIDVALIDITY', 'READ-WRITE', 'READ-ONLY', 'UIDNEXT', 'PERMANENTFLAGS')
     defer = None
     
     def __init__(self, command, args='', continuation=None, wantResponse=()):
@@ -1565,12 +1565,12 @@ class IMAP4Client(basic.LineReceiver):
             self._parts.append(rest.read())
             self.setLineMode(passon.lstrip('\r\n'))
 
-#    def sendLine(self, line):
-#        print 'S:', repr(line)
-#        return basic.LineReceiver.sendLine(self, line)
+    def sendLine(self, line):
+        print 'S:', repr(line)
+        return basic.LineReceiver.sendLine(self, line)
 
     def lineReceived(self, line):
-#        print 'C: ' + repr(line)
+        print 'C: ' + repr(line)
         if self._parts is None:
             lastPart = line.rfind(' ')
             if lastPart != -1:
@@ -1667,6 +1667,8 @@ class IMAP4Client(basic.LineReceiver):
         self._defaultHandler(tag, rest)
 
     def _defaultHandler(self, tag, rest):
+        if rest.find('EXISTS') != -1:
+            import pdb; pdb.Pdb().set_trace()
         if tag == '*' or tag == '+':
             if not self.waiting:
                 self._extraInfo([rest])
@@ -2021,6 +2023,8 @@ class IMAP4Client(basic.LineReceiver):
                                 datum['UNSEEN'] = int(content[1])
                             except ValueError:
                                 raise IllegalServerResponse(parts)
+                        elif key == 'UIDNEXT':
+                            datum['UIDNEXT'] = int(content[1])
                         elif key == 'PERMANENTFLAGS':
                             datum['PERMANENTFLAGS'] = tuple(parseNestedParens(content[1])[0])
                         else:
