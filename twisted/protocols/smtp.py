@@ -474,10 +474,12 @@ class SMTP(basic.LineReceiver):
         self.sendCode(code, msg)
 
     def _ebValidate(self, failure):
-        log.err(failure)
-        if failure.check(SMTPServerError):
+        if failure.check(SMTPBadRcpt):
+            self.sendCode(550, 'Cannot receive for specified address')
+        elif failure.check(SMTPServerError):
             self.sendCode(failure.value.code, failure.value.resp)
         else:
+            log.err(failure)
             self.sendCode(
                 451,
                 'Requested action aborted: local error in processing'
