@@ -104,7 +104,7 @@ class IResolver(IResolverSimple):
     def lookupNull(self, name, timeout = 10):
         """Lookup the NULL records associated with C{name}."""
 
-    def lookupServices(self, name, timeout = 10):
+    def lookupWellKnownServices(self, name, timeout = 10):
         """Lookup the WKS records associated with C{name}."""
 
     def lookupHostInfo(self, name, timeout = 10):
@@ -116,6 +116,23 @@ class IResolver(IResolverSimple):
     def lookupText(self, name, timeout = 10):
         """Lookup the TXT records associated with C{name}."""
 
+    def lookupText(self, name, timeout = 10):
+        """Lookup the TXT records associated with C{name}."""
+
+    def lookupResponsibility(self, name, timeout = 10):
+        """Lookup the RP records associated with C{name}."""
+
+    def lookupAFSDatabase(self, name, timeout = 10):
+        """Lookup the AFSDB records associated with C{name}."""
+
+    def lookupService(self, name, timeout = 10):
+        """Lookup the SRV records associated with C{name}."""
+
+    def lookupAllRecords(self, name, timeout = 10):
+        """Lookup all records associated with C{name}."""
+
+    def lookupZone(self, name, timeout = 10):
+        """Perform a zone transfer for the given C{name}."""
 
 class IReactorTCP(Interface):
 
