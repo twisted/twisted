@@ -47,7 +47,8 @@ class SocketConnector(BaseConnector):
         if l != []:
             return
         self.cleanMeUp()
-        self.connectionFailed(err)
+        # foad
+        self.reactor.callLater(0, self.connectionFailed, err)
 
     def startConnecting(self):
         d = defer.maybeDeferred(self.prepareAddress)
@@ -77,7 +78,7 @@ class SocketConnector(BaseConnector):
     def connectDone(self, v, l):
         if l != []:
             return
-        p = self.buildProtocol(self.socket.getpeername())
+        p = self.buildProtocol(address.getFull(self.socket.getpeername(), self.af, self.type, self.proto))
         self.sock_transport = self.real_transport(self.socket, p, self)
         p.makeConnection(self.sock_transport)
         del self.stop_flag
@@ -101,4 +102,10 @@ class SocketConnector(BaseConnector):
 
     def loseConnection(self):
         self.sock_transport.loseConnection()
+
+    def getHost(self):
+        return address.getFull(self.socket.getsockname(), self.af, self.type, self.proto)
+
+    def getPeer(self):
+        return address.getFull(self.socket.getpeername(), self.af, self.type, self.proto)
 

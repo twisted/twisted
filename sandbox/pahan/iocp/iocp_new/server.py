@@ -97,9 +97,8 @@ class SocketPort(styles.Ephemeral):
         return reflect.qual(self.factory.__class__)
 
     def getHost(self):
-        """Returns a tuple of ('INET', hostname, port).
-
-        This indicates the server's address.
-        """
         return address.getFull(self.socket.getsockname(), self.af, self.type, self.proto)
+
+    def getPeer(self):
+        return address.getFull(self.socket.getpeername(), self.af, self.type, self.proto)
 

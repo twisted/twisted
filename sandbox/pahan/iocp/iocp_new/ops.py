@@ -1,6 +1,4 @@
-from socket import AF_INET, SOCK_STREAM # temporary, hopefully
-from socket import socket, SOL_SOCKET
-import struct
+import struct, socket
 
 from twisted.internet import defer
 from twisted.python import log
@@ -134,7 +132,13 @@ class AcceptExOp(OverlappedOp):
 #        print "AcceptExOp.ovDone(%(ret)s, %(bytes)s)" % locals()
 #        print "    self.acc_sock.fileno() %s self.handle %s" % (self.acc_sock.fileno(), self.handle)
         if not self.handleError(ret, bytes, False):
-            self.acc_sock.setsockopt(SOL_SOCKET, SO_UPDATE_ACCEPT_CONTEXT, struct.pack("I", self.handle))
+            try:
+                self.acc_sock.setsockopt(socket.SOL_SOCKET, SO_UPDATE_ACCEPT_CONTEXT, struct.pack("I", self.handle))
+            # stab me in the eye with a fork (workaround similar to the one in ConnectExOp.ovDone)
+            except socket.error, se:
+                self.errback(internet.error.UserError())
+                self.cleanUp
+                return
 #            print "AcceptExOp.ovDone callbacking with self.acc_sock %s, peername %s" % \
 #                    (self.acc_sock._sock, self.acc_sock.getpeername())
             self.callback((self.acc_sock, self.acc_sock.getpeername()))
@@ -148,7 +152,7 @@ class AcceptExOp(OverlappedOp):
         self.handle = sock.fileno()
         try:
             max_addr, family, type, protocol = self.reactor.getsockinfo(self.handle)
-            self.acc_sock = socket(family, type, protocol)
+            self.acc_sock = socket.socket(family, type, protocol)
             self.buffer = self.reactor.AllocateReadBuffer(max_addr*2 + 32)
             (ret, bytes) = self.reactor.issueAcceptEx(self.handle, self.acc_sock.fileno(), self.ovDone, self.buffer)
 #            print "in AcceptExOp.initiateOp, issueAcceptEx returned (%(ret)s, %(bytes)s)" % locals()
@@ -160,7 +164,15 @@ class ConnectExOp(OverlappedOp):
     def ovDone(self, ret, bytes):
         print "ConnectExOp.ovDone(%(ret)s, %(bytes)s)" % locals()
         if not self.handleError(ret, bytes, False):
-            self.sock.setsockopt(SOL_SOCKET, SO_UPDATE_CONNECT_CONTEXT, "")
+            try:
+                self.sock.setsockopt(socket.SOL_SOCKET, SO_UPDATE_CONNECT_CONTEXT, "")
+            # Windows succeeds with ConnectEx even if the socket was closed before gqcs
+            # this is a EBADF
+            except socket.error, se:
+                # irrelevant, because Connector is already cancelled, hopefully
+                self.errback(internet.error.UserError())
+                self.cleanUp()
+                return
             self.callback(None)
         self.cleanUp()
 
