@@ -166,8 +166,8 @@ class LatexSpitter(BaseLatexSpitter):
         caption = domhelpers.getNodeText(node)
         if caption == fileName:
             caption = 'Source listing'
-        self.writer('\\begin{center}\\raisebox{1ex}[1ex]{%s --- '
-                    '\\begin{em}%s\\end{em}}\\end{center}' 
+        self.writer('\parbox[b]{\linewidth}{\\begin{center}%s --- '
+                    '\\begin{em}%s\\end{em}\\end{center}}' 
                     % (latexEscape(caption), latexEscape(fileName)))
 
     def visitNode_a_href(self, node):
@@ -281,7 +281,7 @@ class SectionLatexSpitter(LatexSpitter):
         self.visitNodeDefault(node)
         self.writer('\\label{%s}}\n' % os.path.basename(self.filename))
 
-    start_title = end_title = end_body = start_body = start_html = None
+    end_title = end_body = start_body = start_html = None
 
 
 class ChapterLatexSpitter(SectionLatexSpitter):
