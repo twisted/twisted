@@ -193,13 +193,8 @@ class StructuredFile:
             f.write('<th>'+name+'</th>')
         f.write('</tr>')
         for row in self:
-            f.write('<tr>')
-            for item in row:
-                try:
-                    item = hex(item)
-                except:
-                    item = str(item)
-                f.write('<td>'+item+'</td>')
+            f.write('<tr><td>')
+            f.write('</td><td>'.join([str(x) for x in row]))
             f.write('</tr>')
         f.write("</table>")
 
