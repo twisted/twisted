@@ -80,6 +80,7 @@ class Options(usage.Options):
             if (os.sep in arg):
                 # It's a file.
                 if not os.path.exists(arg):
+                    import errno
                     raise IOError(errno.ENOENT, os.strerror(errno.ENOENT), arg)
                 if arg.endswith(os.sep) and (arg != os.sep):
                     arg = arg[:-len(os.sep)]
