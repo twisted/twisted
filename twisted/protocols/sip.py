@@ -39,7 +39,7 @@ import twisted.cred.credentials
 import twisted.cred.error
 
 # sibling imports
-import basic
+from twisted.protocols import basic
 
 PORT = 5060
 
@@ -65,7 +65,6 @@ statusCodes = {
     180: "Ringing",
     181: "Call Is Being Forwarded",
     182: "Queued",
-    183: "Session Progress",
 
     200: "OK",
 
@@ -81,39 +80,30 @@ statusCodes = {
     402: "Payment Required",
     403: "Forbidden",
     404: "Not Found",
-    405: "Method Not Allowed",
     406: "Not Acceptable",
     407: "Proxy Authentication Required",
     408: "Request Timeout",
-    409: "Conflict", # Not in RFC3261
+    409: "Conflict",
     410: "Gone",
-    411: "Length Required", # Not in RFC3261
+    411: "Length Required",
     413: "Request Entity Too Large",
     414: "Request-URI Too Large",
     415: "Unsupported Media Type",
-    416: "Unsupported URI Scheme",
     420: "Bad Extension",
-    421: "Extension Required",
-    423: "Interval Too Brief",
-    480: "Temporarily Unavailable",
-    481: "Call/Transaction Does Not Exist",
+    480: "Temporarily not available",
+    481: "Call Leg/Transaction Does Not Exist",
     482: "Loop Detected",
     483: "Too Many Hops",
     484: "Address Incomplete",
     485: "Ambiguous",
     486: "Busy Here",
-    487: "Request Terminated",
-    488: "Not Acceptable Here",
-    491: "Request Pending",
-    493: "Undecipherable",
     
     500: "Internal Server Error",
     501: "Not Implemented",
-    502: "Bad Gateway", # no donut
+    502: "Bad Gateway",
     503: "Service Unavailable",
-    504: "Server Time-out",
+    504: "Gateway Time-out",
     505: "SIP Version not supported",
-    513: "Message Too Large",
     
     600: "Busy Everywhere",
     603: "Decline",
@@ -125,11 +115,9 @@ specialCases = {
     'cseq': 'CSeq',
     'call-id': 'Call-ID',
     'www-authenticate': 'WWW-Authenticate',
+    'proxy-authenticate': 'Proxy-Authenticate',
+    'proxy-authorization':'Proxy-Authorization',
 }
-
-def dashCapitalize(s):
-    ''' Capitalize a string, making sure to treat - as a word seperator '''
-    return '-'.join([ x.capitalize() for x in s.split('-')])
 
 def unq(s):
     if s[0] == s[-1] == '"':
@@ -215,7 +203,7 @@ class Via:
         s = "SIP/2.0/%s %s:%s" % (self.transport, self.host, self.port)
         if self.hidden:
             s += ";hidden"
-        for n in "ttl", "rport", "branch", "maddr", "received":
+        for n in "ttl", "branch", "maddr", "received", "rport":
             value = getattr(self, n)
             if value == True:
                 s += ";" + n
@@ -307,7 +295,7 @@ class URL:
             w(";%s" % v)
         if self.headers:
             w("?")
-            w("&".join([("%s=%s" % (specialCases.get(h) or dashCapitalize(h), v)) for (h, v) in self.headers.items()]))
+            w("&".join([("%s=%s" % (specialCases.get(h) or h.capitalize(), v)) for (h, v) in self.headers.items()]))
         return "".join(l)
 
     def __str__(self):
@@ -317,7 +305,7 @@ class URL:
         return '<URL %s:%s@%s:%r/%s>' % (self.username, self.password, self.host, self.port, self.transport)
 
 
-def parseURL(url):
+def parseURL(url, host=None, port=None):
     """Return string into URL object.
 
     URIs are of of form 'sip:user@example.com'.
@@ -344,6 +332,10 @@ def parseURL(url):
     else:
         d["host"] = hpparts[0]
         d["port"] = int(hpparts[1])
+    if host != None:
+        d["host"] = host
+    if port != None:
+        d["port"] = port
     for p in params:
         if p == params[-1] and "?" in p:
             d["headers"] = h = {}
@@ -375,7 +367,7 @@ def cleanRequestURL(url):
     url.headers = {}
 
 
-def parseAddress(address, clean=0):
+def parseAddress(address, host=None, port=None, clean=0):
     """Return (name, uri, params) for From/To/Contact header.
 
     @param clean: remove unnecessary info, usually for From and To headers.
@@ -383,7 +375,7 @@ def parseAddress(address, clean=0):
     address = address.strip()
     # simple 'sip:foo' case
     if address.startswith("sip:"):
-        return "", parseURL(address), {}
+        return "", parseURL(address, host=host, port=port), {}
     params = {}
     name, url = address.split("<", 1)
     name = name.strip()
@@ -392,7 +384,7 @@ def parseAddress(address, clean=0):
     if name.endswith('"'):
         name = name[:-1]
     url, paramstring = url.split(">", 1)
-    url = parseURL(url)
+    url = parseURL(url, host=host, port=port)
     paramstring = paramstring.strip()
     if paramstring:
         for l in paramstring.split(";"):
@@ -451,7 +443,7 @@ class Message:
         s = "%s\r\n" % self._getHeaderLine()
         for n, vs in self.headers.items():
             for v in vs:
-                s += "%s: %s\r\n" % (specialCases.get(n) or dashCapitalize(n), v)
+                s += "%s: %s\r\n" % (specialCases.get(n) or n.capitalize(), v)
         s += "\r\n"
         s += self.body
         return s
@@ -652,7 +644,7 @@ class Base(protocol.DatagramProtocol):
     def datagramReceived(self, data, addr):
         self.parser.dataReceived(data)
         self.parser.dataDone()
-        for m in self.messages:            
+        for m in self.messages:
             self._fixupNAT(m, addr)
             if self.debug:
                 log.msg("Received %r from %r" % (m.toString(), addr))
@@ -664,16 +656,13 @@ class Base(protocol.DatagramProtocol):
 
     def _fixupNAT(self, message, (srcHost, srcPort)):
         # RFC 2543 6.40.2,
-        print "checking for NAT fixups"
         senderVia = parseViaHeader(message.headers["via"][0])
-        if senderVia.host != srcHost:
-            print "lies! client claims to be from %s but is from %s" %(senderVia.host, srcHost)
+        if senderVia.host != srcHost:            
             senderVia.received = srcHost
             if senderVia.port != srcPort:
                 senderVia.rport = srcPort
             message.headers["via"][0] = senderVia.toString()
         elif senderVia.rport == True:
-            print "hosts match, rport found"
             senderVia.received = srcHost
             senderVia.rport = srcPort
             message.headers["via"][0] = senderVia.toString()
@@ -694,6 +683,7 @@ class Base(protocol.DatagramProtocol):
         response = Response(code)
         for name in ("via", "to", "from", "call-id", "cseq"):
             response.headers[name] = request.headers.get(name, [])[:]
+
         return response
 
     def sendMessage(self, destURL, message):
@@ -702,7 +692,6 @@ class Base(protocol.DatagramProtocol):
         @param destURL: C{URL}. This should be a *physical* URL, not a logical one.
         @param message: The message to send.
         """
-        log.msg("Sending %s to %s" % (message, destURL))
         if destURL.transport not in ("udp", None):
             raise RuntimeError, "only UDP currently supported"
         if self.debug:
@@ -817,6 +806,10 @@ class Proxy(Base):
         Since at the moment we are stateless proxy, thats basically
         everything.
         """
+        def _mungContactHeader(uri, message):
+            message.headers['contact'][0] = uri.toString()            
+            return self.sendMessage(uri, message)
+        
         viaHeader = self.getVia()
         if viaHeader.toString() in message.headers["via"]:
             # must be a loop, so drop message
@@ -844,6 +837,7 @@ class Proxy(Base):
         # XXX we don't do multicast yet
         host = destVia.received or destVia.host
         port = destVia.rport or destVia.port or self.PORT
+        
         destAddr = URL(host=host, port=port)
         self.sendMessage(destAddr, responseMessage)
 
@@ -852,10 +846,6 @@ class Proxy(Base):
         response = Response(code)
         for name in ("via", "to", "from", "call-id", "cseq"):
             response.headers[name] = request.headers.get(name, [])[:]
-        #compatibility guesses
-        response.addHeader("allow","INVITE, ACK, CANCEL, OPTIONS, BYE, REFER")
-        response.addHeader("User-Agent", "Asterisk PBX") # ha ha we deceive you foolish client
-        #response.addHeader("date", time.asctime())
         return response
     
     def handle_response(self, message, addr):
@@ -1033,26 +1023,25 @@ class RegisterProxy(Proxy):
             self.register(message, host, port)
         else:
             # There is a portal.  Check for credentials.
-            import pprint; pprint.pprint(message.headers)
-            if not message.headers.has_key("proxy-authorization"):
+            if not message.headers.has_key("authorization"):
                 return self.unauthorized(message, host, port)
             else:
                 return self.login(message, host, port)
-    
+
     def unauthorized(self, message, host, port):
-        m = self.responseFromRequest(407, message)
-        m.addHeader('contact', message.headers['contact'][0])
+        m = self.responseFromRequest(401, message)
         for (scheme, auth) in self.authorizers.iteritems():
             chal = auth.getChallenge((host, port))
             if chal is None:
                 value = '%s realm="%s"' % (scheme.title(), self.host)
             else:
                 value = '%s %s,realm="%s"' % (scheme.title(), chal, self.host)
-            m.headers.setdefault('proxy-authenticate', []).append(value)
+            m.headers.setdefault('www-authenticate', []).append(value)
         self.deliverResponse(m)
 
+ 
     def login(self, message, host, port):
-        parts = message.headers['proxy-authorization'][0].split(None, 1)
+        parts = message.headers['authorization'][0].split(None, 1)
         a = self.authorizers.get(parts[0].lower())
         if a:
             try:
@@ -1093,7 +1082,7 @@ class RegisterProxy(Proxy):
             # XXX Check expires on appropriate URL, and pass it to registry
             # instead of having registry hardcode it.
             if contact is not None:
-                name, contactURL, params = parseAddress(contact)
+                name, contactURL, params = parseAddress(contact, host=host, port=port)
                 d = self.registry.registerAddress(message.uri, toURL, contactURL)
             else:
                 d = self.registry.getRegistrationInfo(toURL)
@@ -1158,7 +1147,7 @@ class InMemoryRegistry:
             return defer.succeed(url)
         else:
             return defer.fail(LookupError("no such user"))
-
+            
     def getRegistrationInfo(self, userURI):
         if userURI.host != self.domain:
             return defer.fail(LookupError("unknown domain"))
@@ -1172,11 +1161,11 @@ class InMemoryRegistry:
         try:
             dc, url = self.users[username]
         except KeyError:
-            pass
+            return defer.fail(LookupError("no such user"))
         else:
             dc.cancel()
             del self.users[username]
-            return defer.succeed(Registration(0, url))
+        return defer.succeed(Registration(0, url))
     
     def registerAddress(self, domainURL, logicalURL, physicalURL):
         if domainURL.host != self.domain:
@@ -1196,15 +1185,3 @@ class InMemoryRegistry:
 
     def unregisterAddress(self, domainURL, logicalURL, physicalURL):
         return self._expireRegistration(logicalURL.username)
-
-
-if __name__ == '__main__':
-    import sys
-    log.startLogging(sys.stdout)
-    registrar = RegisterProxy(host="192.168.1.1")
-    registrar.portal = 5
-    registry = InMemoryRegistry("192.168.1.1")
-    registrar.registry = registry
-    registry.locator = registry
-    reactor.listenUDP(PORT, registrar)
-    reactor.run()
