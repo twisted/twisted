@@ -196,7 +196,8 @@ class MessageWrapper:
     
     done = False
     
-    def __init__(self, protocol):
+    def __init__(self, protocol, process=None):
+        self.processName = process
         self.protocol = protocol
         self.completion = defer.Deferred()
         self.protocol.onEnd = self.completion
@@ -220,6 +221,9 @@ class MessageWrapper:
     def connectionLost(self):
         # Heh heh
         pass
+    
+    def __str__(self):
+        return '<ProcessWrapper %s>' % (self.processName,) 
 
 class ProcessAliasProtocol(protocol.ProcessProtocol):
     def processEnded(self, reason):
@@ -244,7 +248,7 @@ class ProcessAlias(AliasBase):
         from twisted.internet import reactor
         p = ProcessAliasProtocol()
         m = MessageWrapper(p)
-        fd = reactor.spawnProcess(p, '/bin/sh', ('-c', self.path))
+        fd = reactor.spawnProcess(p, '/bin/sh', ('/bin/sh', '-c', self.path))
         return m
 
 class MultiWrapper:

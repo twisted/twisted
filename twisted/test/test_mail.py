@@ -30,6 +30,7 @@ from twisted.protocols import dns
 from twisted.protocols import basic
 from twisted.internet import protocol
 from twisted.internet import defer
+from twisted.internet import process
 from twisted.python import components
 from twisted.python import failure
 from twisted.python import util
@@ -1025,17 +1026,17 @@ class AliasTestCase(unittest.TestCase):
             'alias3': A3,
         })
         
-        r1 = map(str, A1.resolve(aliases))
+        r1 = map(str, A1.resolve(aliases).objs)
         r1.sort()
+        p = process.Process(*([None] * 7))
         expected = map(str, [
-            mail.alias.AddressAlias('user1', None, None),
-            mail.alias.ProcessAlias('process', None, None),
-            mail.alias.FileAlias('/file', None, None)
+            mail.alias.MessageWrapper(p, 'process'),
+            mail.alias.FileWrapper('/file'),
         ])
         expected.sort() 
         self.assertEquals(r1, expected)
 
-        r2 = map(str, A2.resolve(aliases))
+        r2 = map(str, A2.resolve(aliases).objs)
         r2.sort()
         expected = map(str, [
             mail.alias.AddressAlias('user2', None, None),
@@ -1044,7 +1045,7 @@ class AliasTestCase(unittest.TestCase):
         expected.sort()
         self.assertEquals(r2, expected)
 
-        r3 = map(str, A3.resolve(aliases))
+        r3 = map(str, A3.resolve(aliases).objs)
         expected = map(str, [A3])
         self.assertEquals(r3, expected)
 
@@ -1060,15 +1061,15 @@ class AliasTestCase(unittest.TestCase):
             'alias3': A3
         })
 
-        self.assertEquals(aliases['alias1'].resolve(aliases), [])
-        self.assertEquals(aliases['alias2'].resolve(aliases), [])
-        self.assertEquals(aliases['alias3'].resolve(aliases), [])
+        self.assertEquals(aliases['alias1'].resolve(aliases), None)
+        self.assertEquals(aliases['alias2'].resolve(aliases), None)
+        self.assertEquals(aliases['alias3'].resolve(aliases), None)
         
         A4 = mail.alias.AliasGroup(['|process', 'alias1'], domain, 'alias4')
         aliases['alias4'] = A4
         
         self.assertEquals(
-            map(str, A4.resolve(aliases)),
+            map(str, A4.resolve(aliases).objs),
             map(str, [mail.alias.ProcessAlias('process', None, None)])
         )
 
