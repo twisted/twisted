@@ -1,7 +1,7 @@
 import random
 
 from twisted.enterprise import adbapi, row
-from twisted.internet import main
+from twisted.internet import app, main
 
 
 # TODO: turn this into real unit test!!!!
@@ -112,7 +112,7 @@ dbpool = adbapi.ConnectionPool("pyPgSQL.PgSQL")
 stubs = [ (RoomRow, "testrooms", [("roomId","int4")]) ]
 
 # Create Twisted application object
-application = main.Application("testApp")
+application = app.Application("testApp")
 
 def kickOffTests(ignoredResult):
     global manager
