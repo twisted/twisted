@@ -98,6 +98,10 @@ d.addCallback(printData)
 reactor.callLater(4, reactor.stop); reactor.run()
 </pre>
 
+<p><em>Deferreds do not make the code magically not block.</em> Once you have
+rewritten your code to not block, Deferreds give you a nice way to build
+an interface to that code.</p>
+
 <p>As we said, multiple callbacks can be added to a Deferred.  The first
 callback in the Deferred's callback chain will be called with the result, the
 second with the result of the first callback, and so on. Why do we need this?
