@@ -716,7 +716,7 @@ class FTPClient(basic.LineReceiver):
             passive data connections.  You can also change this after 
             construction by assigning to self.passive.
             
-        I will login as soon as I receive the weclome message from the server.
+        I will login as soon as I receive the welcome message from the server.
         """
         self.username = username
         self.password = password
@@ -840,7 +840,12 @@ class FTPClient(basic.LineReceiver):
             
             cmd = FTPCommand(command)
             # Ensure that the connection always gets closed
-            cmd.deferred.addErrback(portCmd.fail)
+            cmd.deferred.addErrback(lambda e, pc=portCmd: pc.fail(e) or e)
+
+            # If this cmd fails, the Deferred returned by this method should
+            # fail too.
+            cmd.deferred.addErrback(portCmd.realDeferred.errback)
+            cmd.deferred.arm()
 
             self.queueCommand(cmd)
             return portCmd.realDeferred
@@ -861,14 +866,21 @@ class FTPClient(basic.LineReceiver):
                 # This is a bit hackish -- we already have Protocol instance,
                 # so just return it instead of making a new one
                 self.protocol.factory = self
+                self.port.loseConnection()
                 return self.protocol
         FTPDataPortFactory.protocol = portCmd.protocol
+
+        # Make the protocol call the Deferred returned by retrieve when the
+        # socket closes
         oldCL = portCmd.protocol.connectionLost
         def newCL(oldCL=oldCL, portCmd=portCmd):
             oldCL()
             portCmd.realDeferred.callback(portCmd.protocol)
         portCmd.protocol.connectionLost = newCL
-        listener = FTPDataPort(0, FTPDataPortFactory())
+
+        factory = FTPDataPortFactory()
+        listener = FTPDataPort(0, factory)
+        factory.port = listener
         listener.deferred = portCmd.realDeferred
         listener.startListening()
         portCmd.fail = listener.fail
@@ -1027,10 +1039,11 @@ class FTPFileListProtocol(basic.LineReceiver):
             dict['size'] = int(dict['size'])
             self.files.append(dict)
 
+
 def parsePWDResponse(response):
     """Returns the path from a response to a PWD command.
 
-    Response typically look like:
+    Responses typically look like:
         257 "/home/andrew" is current directory.
     For this example, I will return '/home/andrew'.
 
