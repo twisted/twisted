@@ -721,7 +721,7 @@ class ObjectWrapper:
     def __getattr__(self, name):
         return getattr(self.object, name)
 
-        
+
 class FTPClient(basic.LineReceiver):
     """A Twisted FTP Client
 
@@ -861,6 +861,8 @@ class FTPClient(basic.LineReceiver):
                     def buildProtocol(self, ignored):
                         self.protocol.factory = self
                         return self.protocol
+                    def clientConnectionFailed(self, connector, reason):
+                        self.protocol.connectionFailed()
                 f = _Factory()
                 f.protocol = protocol
                 mutable[0] = reactor.connectTCP(host, port, f)
