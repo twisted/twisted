@@ -1,14 +1,8 @@
-twisted (0.99.4-1) unstable; urgency=low
+twisted (1.0.0-1) unstable; urgency=low
 
-  * New upstream released. not uploaded.
+  * New upstream release 
 
- -- Moshe Zadka <moshez@debian.org>  Mon, 14 Oct 2002 13:23:51 -0500
-
-twisted (0.99.3-1) unstable; urgency=low
-
-  * New upstream released. not uploaded.
-
- -- Moshe Zadka <moshez@debian.org>  Mon, 14 Oct 2002 13:23:21 -0500
+ -- Moshe Zadka <moshez@debian.org>  Tue, 22 Oct 2002 06:22:49 -0500
 
 twisted (0.99.2-4) unstable; urgency=low
 
