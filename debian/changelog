@@ -1,4 +1,4 @@
-twisted (0.16.1-1) unstable; urgency=low
+twisted (0.17.0-1) unstable; urgency=low
 
   * New upstream release
   * Now building two packages -- one for the code, one for the docs
