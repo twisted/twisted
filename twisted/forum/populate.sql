@@ -1,14 +1,18 @@
+DELETE FROM forum_permissions;
+DELETE FROM posts;
+DELETE FROM forums;
 DELETE FROM forum_perspectives;
+
 INSERT INTO forum_perspectives VALUES ('testAccount1', 'postingalias', 'come get me');
 INSERT INTO forum_perspectives VALUES ('testAccount3', 'poster', 'come get some');
 
-DELETE FROM forums;
-INSERT INTO FORUMS (forum_id, name, description, moderator) VALUES 
-   (101, 'Twisted Forum discussion', 'Information about the development of the Twisted server framework and associated technologies.', 'poster');
-INSERT INTO FORUMS (forum_id, name, description, moderator) VALUES 
-   (102, 'Python development discussion', 'Development of the language python and lots of other really boring stuff.', 'poster');
 
-DELETE FROM posts;
+INSERT INTO FORUMS (forum_id, name, description) VALUES 
+   (101, 'Twisted Forum discussion', 'Information about the development of the Twisted server framework and associated technologies.');
+INSERT INTO FORUMS (forum_id, name, description) VALUES 
+   (102, 'Python development discussion', 'Development of the language python and lots of other really boring stuff.');
+
+
 INSERT INTO posts (forum_id, parent_id, thread_id, subject, user_name, posted, body) VALUES 
                   (101, 0, 0, 'testing1', 'poster', now(), 'This if the body of the message');
 INSERT INTO posts (forum_id, parent_id, thread_id, subject, user_name, posted, body) VALUES 
@@ -47,3 +51,8 @@ INSERT INTO posts (forum_id, parent_id, thread_id, subject, user_name, posted, b
                   (101, 17, 5, 'RE: another one', 'poster', now(), 'is if the body of the message');
 
 INSERT INTO posts (forum_id, parent_id, thread_id, subject, user_name, posted, body) VALUES (101, 18, 5, 'one', 'poster', now(), 'message');
+
+
+INSERT INTO forum_permissions VALUES ('poster', 101, 1);
+INSERT INTO forum_permissions VALUES ('postingalias', 101, 1);
+INSERT INTO forum_permissions VALUES ('postingalias', 102, 1);

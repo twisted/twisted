@@ -36,7 +36,7 @@ class ForumGadget(widgets.Gadget, widgets.StreamWidget):
     def display(self, request):
         """Display the intro list of forums. This is only called if there is no URI.
         """
-        d = self.service.manager.getForums(self.gotForums, self.gotError)
+        d = self.service.manager.getForums('poster', self.gotForums, self.gotError)
         return [d]
 
     def gotForums(self, data):
@@ -74,7 +74,7 @@ class ThreadsGadget(widgets.Gadget, widgets.StreamWidget):
     def display(self, request):
         self.forum_id = int(request.args.get('forum_id',[0])[0])
         print "Getting threads for forum: %d" % self.forum_id
-        d = self.service.manager.getTopMessages(self.forum_id, self.onThreadData, self.onThreadError)
+        d = self.service.manager.getTopMessages(self.forum_id, 'poster', self.onThreadData, self.onThreadError)
         return [d]
 
     def onThreadData(self, data):
@@ -93,7 +93,8 @@ class ThreadsGadget(widgets.Gadget, widgets.StreamWidget):
             l.append("</tr>\n")
 
         l.append( '</table><br>' )
-        l.append( '[<a href="/new/?forum_id=%d">Start a new thread</a>]' % (self.forum_id) )        
+        l.append( '[<a href="/new/?forum_id=%d">Start a new thread</a>]' % (self.forum_id) )
+        l.append( '[<a href="/">Return to Forums</a>]' )                
         l.append( '<hr> <i> Twisted Forums </i>' )        
         return l
 
@@ -118,7 +119,7 @@ class FullGadget(widgets.Gadget, widgets.StreamWidget):
         self.forum_id = int(request.args.get('forum_id',[0])[0])
         self.post_id = int(request.args.get('post_id',[0])[0])        
         print "Getting posts for thread %d for forum: %d" % (self.post_id, self.forum_id)
-        d = self.service.manager.getFullMessages(self.forum_id, self.post_id, self.onPostData, self.onPostError)
+        d = self.service.manager.getFullMessages(self.forum_id, self.post_id, 'poster', self.onPostData, self.onPostError)
         return [d]
 
     def onPostData(self, data):
@@ -133,7 +134,7 @@ class FullGadget(widgets.Gadget, widgets.StreamWidget):
             if first == -1:
                 first = post_id
                 l.append( '<tr bgcolor="#ff9900">' )
-                l.append( '<td COLOR="#000000" width=30%><b> Author </b> </td>' )
+                l.append( '<td COLOR="#000000"><b> Author </b> </td>' )
                 l.append( '<td COLOR="#000000"><b> Topic: %s </b> </td>'%subject )        
                 l.append( '</tr>\n' )
 
@@ -296,7 +297,7 @@ class ReplyForm(widgets.Gadget, widgets.Form):
     
     def process(self, write, request, submit, subject, body, post_id, forum_id, thread_id):
         body = string.replace(body,"'","''")                
-        self.service.manager.postMessage(self.forum_id, 1, self.thread_id, int(post_id), subject, body)
+        self.service.manager.postMessage(self.forum_id, 'poster', self.thread_id, int(post_id), subject, body)
         write("Posted reply to '%s'.<hr>\n" % subject)
         write("<a href='/threads/?forum_id=%s'>Return to Threads</a>" % self.forum_id)
 
@@ -350,11 +351,10 @@ class NewPostForm(widgets.Gadget, widgets.Form):
             ]
         
         return widgets.Form.display(self, self.request)
-        
     
     def process(self, write, request, submit, subject, body, forum_id):
         body = string.replace(body,"'","''")
-        self.service.manager.newMessage(self.forum_id, 1, subject, body)             
+        self.service.manager.newMessage(self.forum_id, 'poster', subject, body)             
         write("Posted new message '%s'.<hr>\n" % subject)
         write("<a href='/threads/?forum_id=%s'>Return to Threads</a>" % self.forum_id)
 
