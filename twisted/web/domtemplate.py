@@ -395,7 +395,7 @@ class DOMTemplate(Resource, View):
                 if self.controller:
                     self.controller.process(self, process)
                 else:
-                    self.process(self, process)
+                    self.process(request, **process)
 
         page = str(self.d.toxml())
         request.write(page)
