@@ -1173,8 +1173,11 @@ class IFTPShell(components.Interface):
         pass
 
 
-
-import pwd, grp
+try:
+    import pwd, grp
+except ImportError:
+    # not a POSIX platform
+    pass
 
 def _callWithDefault(default, _f, *_a, **_kw):
     try:
@@ -1227,8 +1230,9 @@ def _testPermissions(uid, gid, spath, mode='r'):
             return True
     return False   
 
+
 class FTPAnonymousShell(object):
-    """"""
+    """Only works on POSIX platforms at the moment."""
     __implements__ = (IFTPShell,)
 
     uid      = None        # uid of anonymous user for shell
