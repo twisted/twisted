@@ -43,6 +43,9 @@ class ResolverBase:
     def lookupAddress(self, name, timeout = 10):
         return self._lookup(name, dns.IN, dns.A, timeout)
 
+    def lookupAddress6(self, name, timeout = 10):
+        return self._lookup(name, dns.IN, dns.AAAA, timeout)
+
     def lookupMailExchange(self, name, timeout = 10):
         return self._lookup(name, dns.IN, dns.MX, timeout)
 
@@ -106,6 +109,7 @@ class ResolverBase:
 
 typeToMethod = {
     dns.A:     'lookupAddress',
+    dns.AAAA:  'lookupAddress6',
     dns.NS:    'lookupNameservers',
     dns.CNAME: 'lookupCanonicalName',
     dns.SOA:   'lookupAuthority',

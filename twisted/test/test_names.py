@@ -27,6 +27,8 @@ from twisted.names import client, server, common, authority
 from twisted.protocols import dns
 from twisted.python import log, failure
 
+# Contort ourselves horribly until inet_pton is standard
+IPV6 = hasattr(socket, 'inet_pton')
 
 gotResponse = 0
 
@@ -82,8 +84,8 @@ test_domain_com = NoFileAuthority(
             dns.Record_MINFO(rmailbx='r mail box', emailbx='e mail box'),
             dns.Record_AFSDB(subtype=1, hostname='afsdb.test-domain.com'),
             dns.Record_RP(mbox='whatever.i.dunno', txt='some.more.text'),
-            dns.Record_WKS(0x12EF4303, socket.IPPROTO_TCP, '\x12\x01\x16\xfe\xc1\x00\x01')
-        ],
+            dns.Record_WKS(0x12EF4303, socket.IPPROTO_TCP, '\x12\x01\x16\xfe\xc1\x00\x01'),
+        ] + (IPV6 and [dns.Record_AAAA('AF43:5634:1294:AFCB:56AC:48EF:34C3:01FF')] or []),
         'http.tcp.test-domain.com': [
             dns.Record_SRV(257, 16383, 43690, 'some.other.place.fool')
         ],
@@ -139,8 +141,11 @@ class ServerDNSTestCase(unittest.DeferredTestCase):
         global gotResponse
         gotResponse = None
         d.addBoth(setDone)
-        while not gotResponse:
+        
+        iters = 100
+        while iters and not gotResponse:
             reactor.iterate(0.05)
+            iters -= 1
 
         if isinstance(gotResponse, failure.Failure):
             raise gotResponse.value
@@ -294,12 +299,13 @@ class ServerDNSTestCase(unittest.DeferredTestCase):
         )
 
 
-#    def testAAAA(self):
-#        """Test DNS 'AAAA' record queries (IPv6)"""
-#        self.namesTest(
-#            self.resolver.lookupAddress6('test-domain.com'),
-#            [dns.Record_AAAA('AF43:5634:1294:AFCB:56AC:48EF:34C3:01FF')]
-#        )
+    if IPV6:
+        def testAAAA(self):
+            """Test DNS 'AAAA' record queries (IPv6)"""
+            self.namesTest(
+                self.resolver.lookupAddress6('test-domain.com'),
+                [dns.Record_AAAA('AF43:5634:1294:AFCB:56AC:48EF:34C3:01FF')]
+            )
 
 
     def testZoneTransfer(self):
