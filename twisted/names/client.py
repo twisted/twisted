@@ -18,7 +18,7 @@
 """
 Asynchronous client DNS
 
-Stability: Unstable
+API Stability: Unstable
 
 Future plans: Proper nameserver acquisition on Windows/MacOS,
   caching, other lookup* methods.
@@ -65,7 +65,7 @@ class Resolver:
             raise ValueError, "No nameservers specified"
         
         from twisted.internet import reactor
-        self.protocol = dns.DNSClientProtocol()
+        self.protocol = dns.DNSClientProtocol(self)
         reactor.listenUDP(0, self.protocol, maxPacketSize=512)
 
         self.factory = DNSClientFactory(self)

@@ -15,25 +15,24 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
 """
-UDP DNS protocol implementation.
+DNS protocol implementation.
 
-Stability: Unstable
+API Stability: Unstable
 
-Future plans: TCP protocol implementation, intelligent handling of
-  more RR types.
+Future Plans: Fix message encoding!  Get rid of some toplevels,
+  maybe.  Put in a better lookupRecordType implementation.
 
 @author: U{Moshe Zadka<mailto:moshez@twistedmatrix.com>},
          U{Jp Calderone<mailto:exarkun@twistedmatrix.com}
 """
 
 # System imports
-import StringIO, random, struct
+import StringIO, struct
 from socket import inet_aton, inet_ntoa
 
 # Twisted imports
 from twisted.internet import protocol, defer
-
-import dns
+from twisted.python import log
 
 PORT = 53
 
@@ -71,6 +70,23 @@ QUERY, IQUERY, STATUS = range(3)
 OK, EFORMAT, ESERVER, ENAME, ENOTIMP, EREFUSED = range(6)
 
 
+def str2time(s):
+    suffixes = (
+        ('M', 60), ('H', 60 * 60), ('D', 60 * 60 * 24),
+        ('W', 60 * 60 * 24 * 7), ('Y', 60 * 60 * 24 * 365)
+    )
+    if isinstance(s, str):
+        s = s.upper().strip()
+        for (suff, mult) in suffixes:
+            if s.endswith(suff):
+                return int(float(s[:-1]) * mult)
+        try:
+            s = int(s)
+        except ValueError:
+            raise ValueError, "Invalid time interval specifier: " + s
+    return s
+
+
 def readPrecisely( file, l ):
     buff = file.read( l )
     if len( buff ) < l:
@@ -78,7 +94,28 @@ def readPrecisely( file, l ):
     return buff
 
 
+class IEncodable:
+    """
+    Interface for something which can be encoded to and decoded
+    from a file object.
+    """
+    def encode(self, strio, compDict = None):
+        """
+        Write a representation of this object to the given
+        file object.
+        """
+    
+    def decode(self, strio):
+        """
+        Reconstruct an object from data read from the given
+        file object.
+        """
+
+
 class Name:
+    __implements__ = (IEncodable,)
+
+
     def __init__(self, name=''):
         self.name = name
 
@@ -161,6 +198,8 @@ class Query:
     @ivar cls: The query class.
     """
 
+    __implements__ = (IEncodable,)
+
     name = None
     type = None
     cls = None
@@ -197,12 +236,12 @@ class Query:
 
 
     def __repr__(self):
-        return 'Query(%r, %r, %r)' % (self.name.name, self.type, self.cls)
+        return 'Query(%r, %r, %r)' % (str(self.name), self.type, self.cls)
 
 
-class RR:
+class RRHeader:
     """
-    A resource record.
+    A resource record header.
     
     @cvar fmt: C{str} specifying the byte format of an RR.
     
@@ -210,26 +249,20 @@ class RR:
     @ivar type: The query type of the original request.
     @ivar cls: The query class of the original request.
     @ivar ttl: The time-to-live for this record.
-    @ivar data: The unprocessed RR data from the response.
-    @ivar payload: The processed RR data from the response.
-    
-      For A requests, a dotted-quad IP addresses in C{str} form
-      For NS requests, a hostname
-      For MX requests, a C{tuple} of C{(preference, hostname)}
-      
-      For all other requests, a C{str} containing the reply data.
+    @ivar payload: An object that implements the IEncodable interface
     """
 
+    __implements__ = (IEncodable,)
+ 
     fmt = "!HHIH"
     
     name = None
     type = None
     cls = None
     ttl = None
-    data = None
     payload = None
 
-    def __init__(self, name='', type=A, cls=IN, ttl=0, data = ''):
+    def __init__(self, name='', type=A, cls=IN, ttl=0, payload=None):
         """
         @type name: C{str}
         @param name: The name about which this reply contains information.
@@ -243,31 +276,33 @@ class RR:
         @type ttl: C{int}
         @param ttl: Time to live for this record.
         
-        @type data: C{str}
-        @param data: Encoded data string.
+        @type payload: An object implementing C{IEncodable}
+        @param payload: A Query Type specific data object.
         """
         self.name = Name(name)
         self.type = type
         self.cls = cls
         self.ttl = ttl
-        self.data = data
+        self.payload = payload
+
 
     def encode(self, strio, compDict=None):
         self.name.encode(strio, compDict)
-        strio.write(struct.pack(self.fmt, self.type, self.cls,
-                                self.ttl, len( self.data)))
-        strio.write(self.data)
+        strio.write(struct.pack(self.fmt, self.type, self.cls, self.ttl, 0))
+        if self.payload:
+            prefix = strio.tell()
+            self.payload.encode(strio, compDict)
+            aft = strio.tell()
+            strio.seek(prefix - 2, 0)
+            strio.write(struct.pack('!H', aft - prefix))
+            strio.seek(aft, 0)
+
 
     def decode(self, strio):
         self.name.decode(strio)
         l = struct.calcsize(self.fmt)
         buff = readPrecisely(strio, l)
-        self.type, self.cls, self.ttl, l = struct.unpack(self.fmt, buff )
-        self.data = readPrecisely(strio, l)
-        self.payload = getattr(dns, QUERY_TYPES[self.type] + '_Record')()
-        
-        strio.seek(-l, 1)
-        self.payload.decode(strio)
+        self.type, self.cls, self.ttl, L = struct.unpack(self.fmt, buff)
 
         # Moshe - temp
         self.strio = strio
@@ -281,105 +316,96 @@ class RR:
         )
 
     def __repr__(self):
-        return 'RR(%s, %d, %d, %d, %r)' % (
-            self.name.name, self.type, self.cls,
-            self.ttl, self.data
+        return 'RR(%r, %d, %d, %d)' % (
+            str(self.name), self.type, self.cls, self.ttl
         )
 
+
+class SimpleRecord:
+    """
+    A Resource Record which consists of a single RFC 1035 domain-name.
+    """
+    
+    __implements__ = (IEncodable,)
+    name = None
+
+    def __init__(self, name = ''):
+        self.name = Name(name)
+
+
+    def encode(self, strio, compDict = None):
+        self.name.encode(strio, compDict)
+
+
+    def decode(self, strio):
+        self.name = Name()
+        self.name.decode(strio)
+    
+    
+    def __str__(self):
+        return '<%s %s>' % (QUERY_TYPES[self.TYPE], self.name)
+
+
 # Kinds of RRs - oh my!
-class A_Record:
+class Record_NS(SimpleRecord):
+    TYPE = NS
+
+class Record_MD(SimpleRecord):       # OBSOLETE
+    TYPE = MD
+
+class Record_MF(SimpleRecord):       # OBSOLETE
+    TYPE = MF
+
+class Record_CNAME(SimpleRecord):
+    TYPE = CNAME
+
+class Record_MB(SimpleRecord):       # EXPERIMENTAL
+    TYPE = MB
+
+class Record_MG(SimpleRecord):       # EXPERIMENTAL
+    TYPE = MG
+
+class Record_MR(SimpleRecord):       # EXPERIMENTAL
+    TYPE = MR
+
+class Record_PTR(SimpleRecord):
+    TYPE = PTR
+
+
+class Record_A:
+    __implements__ = (IEncodable,)
+
+    TYPE = A
     address = None
 
     def __init__(self, address = 0):
+        if isinstance(address, str):
+            address = inet_aton(address)
         self.address = address
 
 
     def encode(self, strio, compDict = None):
-        strio.write(inet_aton(self.address))
+        strio.write(self.address)
 
 
     def decode(self, strio):
-        a = readPrecisely(strio, 4)
-        self.address = inet_ntoa(a)
+        self.address = readPrecisely(strio, 4)
 
 
     def __str__(self):
-        return '<A %s>' % (self.address,)
+        return '<A %s>' % (inet_ntoa(self.address),)
 
 
-class NS_Record:
-    nsdname = None
+class Record_SOA:
+    __implements__ = (IEncodable,)
 
-    def __init__(self, nsdname = ''):
-        self.nsdname = Name(nsdname)
+    TYPE = SOA
     
-    
-    def encode(self, strio, compDict = None):
-        self.nsdname.encode(strio, compDict)
-    
-    
-    def decode(self, strio):
-        self.nsdname = Name()
-        self.nsdname.decode(strio)
-
-
-    def __str__(self):
-        return '<NS %s>' % (self.nsdname,)
-
-
-class MD_Record:
-    # OBSOLETE
-    def __init__(self, name = ''):
-        self.name = Name(name)
-    
-    
-    def encode(self, strio, compDict = None):
-        self.name.encode(strio, compDict)
-    
-    
-    def decode(self, strio):
-        self.nsdname = Name()
-        self.nsdname.decode(strio)
-
-
-class MF_Record:
-    # OBSOLETE
-    def __init__(self, name = ''):
-        self.name = Name(name)
-    
-    
-    def encode(self, strio, compDict = None):
-        self.name.encode(strio, compDict)
-    
-    
-    def decode(self, strio):
-        self.name = Name()
-        self.name.decode(strio)
-
-
-class CNAME_Record:
-    def __init__(self, name = ''):
-        self.name = Name(name)
-    
-    
-    def encode(self, strio, compDict = None):
-        self.name.encode(strio, compDict)
-    
-    
-    def decode(self, strio):
-        self.name = Name()
-        self.name.decode(strio)
-    
-    
-    def __str__(self):
-        return '<CNAME %s>' % (self.name,)
-
-
-class SOA_Record:
     def __init__(self, mname = '', rname = '', serial = 0, refresh = 0, retry = 0, expire = 0, minimum = 0):
-        self.mname, self.rname, self.serial, = Name(mname), Name(rname), serial
-        self.refresh, self.retry, self.expire = refresh, retry, expire
-        self.minimum = minimum
+        self.mname, self.rname = Name(mname), Name(rname)
+        self.serial, self.refresh = str2time(serial), str2time(refresh)
+        self.minimum, self.expire = str2time(minimum), str2time(expire)
+        self.retry = str2time(retry)
 
 
     def encode(self, strio, compDict = None):
@@ -409,65 +435,10 @@ class SOA_Record:
         )
 
 
-class MB_Record:
-    # EXPERIMENTAL
-    def __init__(self, name = ''):
-        self.name = Name(name)
-    
-    
-    def encode(self, strio, compDict = None):
-        self.name.encode(strio, compDict)
-    
-    
-    def decode(self, strio):
-        self.name = Name()
-        self.name.decode(strio)
-    
-    
-    def __str__(self):
-        return '<MB %s>' % (self.name,)
+class Record_NULL:                   # EXPERIMENTAL
+    __implements__ = (IEncodable,)
+    TYPE = NULL
 
-
-class MG_Record:
-    # EXPERIMENTAL
-    def __init__(self, name = ''):
-        self.name = Name(name)
-
-
-    def encode(self, strio, compDict = None):
-        self.name.encode(strio, compDict)
-
-
-    def decode(self, strio):
-        self.name = Name()
-        self.name.decode(strio)
-
-
-    def __str__(self):
-        return '<MG %s>' % (self.name,)
-
-
-class MR_Record:
-    # EXPERIMENTAL
-    def __init__(self, newname = ''):
-        self.newname = newname
-
-
-    def encode(self, strio, compDict = None):
-        self.newname.encode(strio, compDict)
-
-
-    def decode(self, strio):
-        self.newname = Name()
-        self.newname.decode(strio)
-
-
-    def __str__(self):
-        return '<MR %s>' % (self.newname,)
-
-
-class NULL_Record:
-    # EXPERIMENTAL
     def __init__(self, payload = None):
         self.payload = payload
     
@@ -481,7 +452,11 @@ class NULL_Record:
 
 
 # XXX - This *can't* be right, can it?
-class WKS_Record:
+# XXX - Nope, it's not.  See below.
+class Record_WKS:
+    __implements__ = (IEncodable,)
+    TYPE = WKS
+
     def __init__(self, address = 0, protocol = 0, map = ''):
         self.address, self.protocol, self.map = address, protocol, map
 
@@ -506,25 +481,10 @@ class WKS_Record:
         return '<WKS addr=%s proto=%d>' % (self.address, self.protocol)
 
 
-class PTR_Record:
-    def __init__(self, ptrdname = ''):
-        self.ptrdname = Name(ptrdname)
-    
-    
-    def encode(self, strio, compDict = None):
-        self.ptrdname.encode(strio, compDict)
-    
-    
-    def decode(self, strio):
-        self.ptrdname = Name()
-        self.ptrdname.decode(strio)
+class Record_HINFO:
+    __implements__ = (IEncodable,)
 
-
-    def __str__(self):
-        return '<PTR %s>' % (self.ptrdname,)
-
-
-class HINFO_Record:
+    TYPE = HINFO
     def __init__(self, cpu = '', os = ''):
         self.cpu, self.os = cpu, os
 
@@ -545,8 +505,13 @@ class HINFO_Record:
         return '<HINFO cpu=%s os=%s>' % (self.cpu, self.os)
 
 
-class MINFO_Record:
-    # EXPERIMENTAL
+class Record_MINFO:                 # EXPERIMENTAL
+    __implements__ = (IEncodable,)
+    TYPE = MINFO
+    
+    rmailbx = None
+    emailbx = None
+
     def __init__(self, rmailbx = '', emailbx = ''):
         self.rmailbx, self.emailbx = Name(rmailbx), Name(emailbx)
     
@@ -563,19 +528,24 @@ class MINFO_Record:
 
 
     def __str__(self):
-        return '<MINFO responsibility=%s errors=%s>' % (self.rmailbox, self.emailbox)
+        return '<MINFO responsibility=%s errors=%s>' % (self.rmailbx, self.emailbx)
 
 
-class MX_Record:
+class Record_MX:
+    __implements__ = (IEncodable,)
+    TYPE = MX
+
     def __init__(self, preference = 0, exchange = ''):
         self.preference, self.exchange = preference, Name(exchange)
-    
-    
+
+
     def encode(self, strio, compDict = None):
-        strio.write(struct.pack('!H', self.preference))
-        self.exchange.encode(strio, compDict)
-    
-    
+        s = StringIO.StringIO()
+        s.write(struct.pack('!H', self.preference))
+        self.exchange.encode(s, compDict)
+        strio.write(struct.pack('!H', len(s.getvalue())) + s.getvalue())
+
+
     def decode(self, strio):
         self.preference = struct.unpack('!H', readPrecisely(strio, 2))[0]
         self.exchange = Name()
@@ -587,7 +557,13 @@ class MX_Record:
 
 
 # XXX - This *can't* be right, can it?
-class TXT_Record:
+# XXX - No, it's not.  We need to pass the RDLENGTH field down from the header.
+# XXX - Ideas: Add is as a parameter to the decode() method of IEncodable and
+# XXX - pass it all the way down.  It'd be a pain though.
+class Record_TXT:
+    __implements__ = (IEncodable,)
+
+    TYPE = TXT
     def __init__(self, *data):
         self.data = data
     
@@ -659,7 +635,7 @@ class Message:
         size = len(body) + self.headerSize
         if self.maxSize and size > self.maxSize:
             self.trunc = 1
-            body = body[:maxSize - self.headerSize]
+            body = body[:self.maxSize - self.headerSize]
         byte3 = (( ( self.answer & 1 ) << 7 )
                  | ((self.opCode & 0xf ) << 3 )
                  | ((self.auth & 1 ) << 2 )
@@ -676,8 +652,8 @@ class Message:
     def decode(self, strio):
         self.maxSize = 0
         header = readPrecisely(strio, self.headerSize)
-        (self.id, byte3, byte4, nqueries, nans,
-         nns, nadd) = struct.unpack(self.headerFmt, header)
+        r = struct.unpack(self.headerFmt, header)
+        self.id, byte3, byte4, nqueries, nans, nns, nadd = r 
         self.answer = ( byte3 >> 7 ) & 1
         self.opCode = ( byte3 >> 3 ) & 0xf
         self.auth = ( byte3 >> 2 ) & 1
@@ -686,23 +662,40 @@ class Message:
         self.recAv = ( byte4 >> 7 ) & 1
         self.rCode = byte4 & 0xf
 
-        eof = 0
+        self.queries = []
+        for i in range(nqueries):
+            q = Query()
+            try:
+                q.decode(strio)
+            except EOFError:
+                return
+            self.queries.append(q)
 
-        for list, num, cls in ( (self.queries, nqueries, Query),
-                                (self.answers, nans, RR),
-                                (self.ns, nns, RR),
-                                (self.add, nadd, RR) ):
-            list[:] = []
-            if not eof:
-                for i in range(num):
-                    element = cls()
-                    try:
-                        element.decode(strio)
-                    except EOFError:
-                        eof = 1
-                        break
-                    else:
-                        list.append(element)
+        items = ((self.answers, nans), (self.ns, nns), (self.add, nadd))
+        for (l, n) in items:
+            self.parseRecords(l, n, strio)
+
+
+    def parseRecords(self, list, num, strio):
+        for i in range(num):
+            header = RRHeader()
+            try:
+                header.decode(strio)
+            except EOFError:
+                return
+            t = self.lookupRecordType(header.type)
+            if not t:
+                continue
+            header.payload = t()
+            try:
+                header.payload.decode(strio)
+            except EOFError:
+                return
+            list.append(header)
+
+
+    def lookupRecordType(self, type):
+        return globals().get('Record_' + QUERY_TYPES.get(type, ''))
 
 
     def toStr(self):
@@ -716,9 +709,13 @@ class Message:
         self.decode(strio)
 
 
+# This is probably general enough to not be called "Client" anymore
 class DNSClientProtocol(protocol.DatagramProtocol):
     id = 1000
     liveMessages = {}
+    
+    def __init__(self, controller):
+        self.controller = controller
 
 
     def pickID(self):
@@ -733,12 +730,13 @@ class DNSClientProtocol(protocol.DatagramProtocol):
     def datagramReceived(self, data, addr):
         m = Message()
         m.fromStr(data)
-        if not m.answer:
-            return # XXX - Log this?
-        if not self.liveMessages.has_key(m.id):
-            return # XXX - Log this?
-        self.liveMessages[m.id].callback(m)
-        del self.liveMessages[m.id]
+        try:
+            d = self.liveMessages[m.id]
+        except KeyError:
+            self.controller.messageReceived(m, self, addr)
+        else:
+            del self.liveMessages[m.id]
+            d.callback(m)
 
 
     def query(self, address, queries):
@@ -764,6 +762,7 @@ class DNSClientProtocol(protocol.DatagramProtocol):
         return d
 
 
+# Ditto
 class TCPDNSClientProtocol(protocol.Protocol):
     id = 1000
     liveMessages = {}
@@ -804,7 +803,7 @@ class TCPDNSClientProtocol(protocol.Protocol):
             try:
                 d = self.liveMessages[m.id]
             except KeyError:
-                self.controller.messageReceived(m)
+                self.controller.messageReceived(m, self)
             else:
                 del self.liveMessages[m.id]
                 d.callback(m)
