@@ -177,6 +177,7 @@ def loadMimeTypes():
         ".txt": "text/plain",
         ".xul": "application/vnd.mozilla.xul+xml",
         ".zip": "application/x-zip",
+        ".patch": "text/plain",
         }
     upd = contentTypes.update
     if os.path.exists("/etc/mime.types"):
@@ -367,7 +368,7 @@ class File(resource.Resource, styles.Versioned):
     # methods to allow subclasses to e.g. decrypt files on the fly:
     def openForReading(self):
         """Open a file and return it."""
-        return open(self.path,'rb')
+        return open(self.path, "rb")
 
     def getFileSize(self):
         """Return file size."""
