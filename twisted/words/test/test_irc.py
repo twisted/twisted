@@ -75,18 +75,72 @@ class CTCPTest(unittest.TestCase):
         del self.client
         del self.transport
 
-class ModeNoticingClient(IRCClientWithoutLogin):
-    user = channel = set = mode = args = None
+class NoticingClient(object, IRCClientWithoutLogin):
+    methods = {
+        'created': ('when',),
+        'yourHost': ('info',),
+        'myInfo': ('servername', 'version', 'umodes', 'cmodes'),
+        'luserClient': ('info',),
+        'bounce': ('info',),
+        'isupport': ('options',),
+        'luserChannels': ('channels',),
+        'luserOp': ('ops',),
+        'luserMe': ('info',),
+        'receivedMOTD': ('motd',),
 
-    def modeChanged(self, *args):
-        self.user, self.channel, self.set, self.mode, self.args = args
+        'privmsg': ('user', 'channel', 'message'),
+        'joined': ('channel',),
+        'left': ('channel',),
+        'noticed': ('user', 'channel', 'message'),
+        'modeChanged': ('user', 'channel', 'set', 'modes', 'args'),
+        'pong': ('user', 'secs'),
+        'signedOn': (),
+        'kickedFrom': ('channel', 'kicker', 'message'),
+        'nickChanged': ('nick',),
 
+        'userJoined': ('user', 'channel'),
+        'userLeft': ('user', 'channel'),
+        'userKicked': ('user', 'channel', 'kicker', 'message'),
+        'action': ('user', 'channel', 'data'),
+        'topicUpdated': ('user', 'channel', 'newTopic'),
+        'userRenamed': ('oldname', 'newname')}
+
+    def __init__(self, *a, **kw):
+        object.__init__(self)
+        self.calls = []
+
+    def __getattribute__(self, name):
+        if name.startswith('__') and name.endswith('__'):
+            return super(NoticingClient, self).__getattribute__(name)
+        try:
+            args = super(NoticingClient, self).__getattribute__('methods')[name]
+        except KeyError:
+            return super(NoticingClient, self).__getattribute__(name)
+        else:
+            return self.makeMethod(name, args)
+
+    def makeMethod(self, fname, args):
+        def method(*a, **kw):
+            if len(a) > len(args):
+                raise TypeError("TypeError: %s() takes %d arguments "
+                                "(%d given)" % (fname, len(args), len(a)))
+            for (name, value) in zip(args, a):
+                if name in kw:
+                    raise TypeError("TypeError: %s() got multiple values "
+                                    "for keyword argument '%s'" % (fname, name))
+                else:
+                    kw[name] = value
+            if len(kw) != len(args):
+                raise TypeError("TypeError: %s() takes %d arguments "
+                                "(%d given)" % (fname, len(args), len(a)))
+            self.calls.append((fname, kw))
+        return method
 
 class ModeTestCase(unittest.TestCase):
     def setUp(self):
         self.file = StringIOWithoutClosing()
         self.transport = protocol.FileWrapper(self.file)
-        self.client = ModeNoticingClient()
+        self.client = NoticingClient()
         self.client.makeConnection(self.transport)
 
     def tearDown(self):
@@ -98,11 +152,13 @@ class ModeTestCase(unittest.TestCase):
     def test_MODE_CHANGE(self):
         message = ":ChanServ!ChanServ@services. MODE #tanstaafl +o exarkun\r\n"
         self.client.dataReceived(message)
-        self.assertEquals(self.client.user, "ChanServ!ChanServ@services.")
-        self.assertEquals(self.client.channel, "#tanstaafl")
-        self.assertEquals(self.client.set, 1)
-        self.assertEquals(self.client.mode, "o")
-        self.assertEquals(self.client.args, ("exarkun",))
+        self.assertEquals(
+            self.client.calls,
+            [('modeChanged', {'user': "ChanServ!ChanServ@services.",
+                              'channel': '#tanstaafl',
+                              'set': True,
+                              'modes': 'o',
+                              'args': ('exarkun',)})])
 
 class BasicServerFunctionalityTestCase(unittest.TestCase):
     def setUp(self):
