@@ -100,11 +100,12 @@ def _parse(description):
     add(sofar)
     return args, kw 
 
-def parse(description, factory):
+def parse(description, factory, default=None):
     """Parse a description of a reliable virtual circuit server
 
     @type description: C{str}
     @type factory: C{twisted.internet.interfaces.IProtocolFactory}
+    @type default: C{str} or C{None}
     @rtype: C{tuple}
     @return: a tuple of string, tuple and dictionary. The string
     is the name of the method (sans C{'listen'}) to call, and
@@ -118,8 +119,10 @@ def parse(description, factory):
     data necessary to call the reactor methods to listen on the given
     socket with the given factory.
 
-    A simple numeric argument means a TCP port. Otherwise, it is a
-    colon-separated string. The first part means the type -- currently,
+    An argument with no colons means a default port. Usually the default
+    port is C{tcp}, but passing a non-C{None} value as C{default} will
+    set that as the default. Otherwise, it is a colon-separated string.
+    The first part means the type -- currently,
     it can only be ssl, unix or tcp. After that, comes a list of
     arguments. Arguments can be positional or keyword, and can be mixed.
     Keyword arguments are indicated by C{'name=value'}. If a value is supposed
@@ -140,7 +143,8 @@ def parse(description, factory):
     backlog (how many clients to keep in the backlog).
     """
     if ':' not in description:
-        description = 'tcp:'+description
+        default = default or 'tcp'
+        description = default+':'+description
     dsplit = description.split(":")
     args = [arg for arg in dsplit[1:] if '=' not in arg]
     kw = {}
@@ -148,11 +152,12 @@ def parse(description, factory):
         kw[name] = val
     return (dsplit[0].upper(),)+_funcs[dsplit[0]](factory, *args, **kw)
 
-def service(description, factory):
+def service(description, factory, default=None):
     """Return the service corresponding to a description
 
     @type description: C{str}
     @type factory: C{twisted.internet.interfaces.IProtocolFactory}
+    @type default: C{str} or C{None}
     @rtype: C{twisted.application.service.IService}
     @return: the service corresponding to a description of a reliable
     virtual circuit server.
@@ -161,14 +166,15 @@ def service(description, factory):
     of the semantics of the arguments.
     """
     from twisted.application import internet
-    name, args, kw = parse(description, factory)
+    name, args, kw = parse(description, factory, default)
     return getattr(internet, name+'Server')(*args, **kw)
 
-def listen(description, factory):
+def listen(description, factory, default=None):
     """Listen on a port corresponding to a description
 
     @type description: C{str}
     @type factory: C{twisted.internet.interfaces.IProtocolFactory}
+    @type default: C{str} or C{None}
     @rtype: C{twisted.internet.interfaces.IListeningPort}
     @return: the port corresponding to a description of a reliable
     virtual circuit server.
@@ -177,7 +183,7 @@ def listen(description, factory):
     of the semantics of the arguments.
     """
     from twisted.internet import reactor
-    name, args, kw = parse(description, factory)
+    name, args, kw = parse(description, factory, default)
     return getattr(reactor, 'listen'+name)(*args, **kw)
 
 def _test():
