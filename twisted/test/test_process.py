@@ -143,6 +143,26 @@ class SignalMixin:
         if self.sigchldHandler:
             signal.signal(signal.SIGCHLD, self.sigchldHandler)
 
+
+class PausingProcessProtocol(protocol.ProcessProtocol):
+
+    data = ""
+    elapsed = None
+    
+    def connectionMade(self):
+        self.transport.pauseProducing()
+        self.transport.write("a")
+        reactor.callLater(2, self.transport.resumeProducing)
+    
+    def outReceived(self, d):
+        self.data += d
+
+    def processEnded(self, reason):
+        self.data = self.data.lstrip("a")
+        if len(self.data) != 5: raise ValueError
+        self.elapsed = float(self.data)
+
+
 class ProcessTestCase(SignalMixin, unittest.TestCase):
     """Test running a process."""
 
@@ -180,6 +200,15 @@ class ProcessTestCase(SignalMixin, unittest.TestCase):
             reactor.iterate(0.01)
         self.assert_(hasattr(p, 'buffer'))
         self.assertEquals(len(p.buffer), len(p.s * 10))
+
+    def testPausing(self):
+        exe = sys.executable
+        scriptPath = util.sibpath(__file__, "process_pausing.py")
+        p = PausingProcessProtocol()
+        reactor.spawnProcess(p, exe, [exe, "-u", scriptPath], env=None)
+        while p.elapsed == None:
+            reactor.iterate(0.01)
+        self.assert_(2.1 > p.elapsed > 1.5) # assert how long process was paused
 
 
 class TwoProcessProtocol(protocol.ProcessProtocol):

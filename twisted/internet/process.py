@@ -506,6 +506,7 @@ class Process(styles.Ephemeral):
 
     def writeToChild(self, childFD, data):
         self.pipes[childFD].write(data)
+    
     def closeChildFD(self, childFD):
         # for writer pipes, loseConnection tries to write the remaining data
         # out to the pipe before closing it
@@ -513,6 +514,16 @@ class Process(styles.Ephemeral):
         # closed
         if self.pipes.has_key(childFD):
             self.pipes[childFD].loseConnection()
+
+    def pauseProducing(self):
+        for p in self.pipes.itervalues():
+            if isinstance(p, ProcessReader):
+                p.stopReading()
+ 
+    def resumeProducing(self):
+        for p in self.pipes.itervalues():
+            if isinstance(p, ProcessReader):
+                p.startReading()
 
     # compatibility
     def closeStdin(self):
