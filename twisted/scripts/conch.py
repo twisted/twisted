@@ -14,7 +14,7 @@
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 #
-# $Id: conch.py,v 1.20 2002/12/02 21:01:49 z3p Exp $
+# $Id: conch.py,v 1.21 2002/12/04 04:30:11 z3p Exp $
 
 #""" Implementation module for the `ssh` command.
 #"""
@@ -38,6 +38,7 @@ class GeneralOptions(usage.Options):
                     ['port', 'p', None, 'Connect to this port.  Server must be on the same port.'],
                     ['localforward', 'L', None, 'listen-port:host:port   Forward local port to remote address'],
                     ['remoteforward', 'R', None, 'listen-port:host:port   Forward remote port to local address'],
+                    ['option', 'o', None],
                     ]
     
     optFlags = [['null', 'n', 'Redirect input from /dev/null.'],
@@ -47,7 +48,8 @@ class GeneralOptions(usage.Options):
                 ['compress', 'C', 'Enable compression.'],
                 ['noshell', 'N', 'Do not execute a shell or command.'],
                 ['subsystem', 's', 'Invoke command (mandatory) as SSH2 subsystem.'],
-                ['log', 'v', 'Log to stderr']]
+                ['log', 'v', 'Log to stderr'],
+                ['nox11', 'x']]
 
     identitys = ['~/.ssh/id_rsa', '~/.ssh/id_dsa']
     localForwards = []
@@ -108,6 +110,13 @@ def run():
         i = args.index('-l')
         args = args[i:i+2]+args
         del args[i+2:i+4]
+    for arg in args[:]:
+        try:
+            i = args.index(arg)
+            if arg[:2] == '-o' and args[i+1][0]!='-':
+                args[i:i+2] = [] # suck on it scp
+        except ValueError:
+            pass
     options = GeneralOptions()
     try:
         options.parseOptions(args)
@@ -126,6 +135,7 @@ def run():
         options['user'], options['host'] = options['host'].split('@',1)
     host = options['host']
     port = int(options['port'] or 22)
+    log.msg((host,port))
     reactor.connectTCP(host, port, SSHClientFactory())
     fd = sys.stdin.fileno()
     try:
@@ -136,7 +146,7 @@ def run():
         reactor.run()
     finally:
         if old:
-            tty.tcsetattr(fd, tty.TCSANOW, old)
+            tty.tcsetattr(fd, tty.TCSADRAIN, old)
     sys.exit(exitStatus)
 
 def handleError():
