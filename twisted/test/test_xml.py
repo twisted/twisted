@@ -393,7 +393,9 @@ alert("I hate you");
         # testing issue #414
         s = "<?xml version='1.0'?><p><q>smart</q> <code>HairDryer</code></p>"
         d = microdom.parseString(s, beExtremelyLenient=1)
-        self.assertEquals(d.documentElement.toxml(), "<p><q>smart</q> <code>HairDryer</code></p>")
+        expected = "<p><q>smart</q> <code>HairDryer</code></p>"
+        actual = d.documentElement.toxml()
+        self.assertEquals(expected, actual)
 
     testSpacing.todo = "AAARGH white space swallowing screws this up"
     
@@ -491,12 +493,13 @@ alert("I hate you");
         n = microdom.Element("p")
         d = {n : 1} # will fail if Element is unhashable
 
-    def textEscaping(self):
-        raw="&'some \"stuff\"', <what up?>"
-        cooked="&amp;'some &quot;stuff&quot;', &lt;what up?&gt;"
-        esc1=microdom.escape(input)
+    def testEscaping(self):
+        # issue 590
+        raw = "&'some \"stuff\"', <what up?>"
+        cooked = "&amp;'some &quot;stuff&quot;', &lt;what up?&gt;"
+        esc1 = microdom.escape(raw)
         self.assertEquals(esc1, cooked)
-        self.assertEquals(microdom.unescape(esc1), input)
+        self.assertEquals(microdom.unescape(esc1), raw)
 
     def testNamespaces(self):
         s = '''

@@ -77,18 +77,20 @@ def getElementsByTagNameNoCase(iNode, name):
     return matches
 
 # order is important
-HTML_ESCAPE_CHARS = (('&', '&amp;'),
+HTML_ESCAPE_CHARS = (('&', '&amp;'), # don't add any entities before this one
                     ('<', '&lt;'),
                     ('>', '&gt;'),
                     ('"', '&quot;'))
+REV_HTML_ESCAPE_CHARS = list(HTML_ESCAPE_CHARS)
+REV_HTML_ESCAPE_CHARS.reverse()
 
 XML_ESCAPE_CHARS = HTML_ESCAPE_CHARS + (("'", '&apos;'),)
+REV_XML_ESCAPE_CHARS = list(XML_ESCAPE_CHARS)
+REV_XML_ESCAPE_CHARS.reverse()
 
-def unescape(text, chars=HTML_ESCAPE_CHARS):
+def unescape(text, chars=REV_HTML_ESCAPE_CHARS):
     "Perform the exact opposite of 'escape'."
-    rchars = list(chars)
-    rchars.reverse()
-    for s, h in rchars:
+    for s, h in chars:
         text = text.replace(h, s)
     return text
 
