@@ -153,5 +153,6 @@ class OctTree(object):
                     f(False, False, False)
 
         for child in children:
-            for obj in child.iternear(center, radius):
-                yield obj
+            if child is not None:
+                for obj in child.iternear(center, radius):
+                    yield obj
