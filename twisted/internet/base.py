@@ -88,6 +88,9 @@ class DelayedCall(styles.Ephemeral):
             self.time += secondsLater
             self.resetter(self)
 
+    def active(self):
+        return self.cancelled or self.called
+
     def __lt__(self, other):
         # Order reversed for efficiency concerns, see below
         return self.time >= other.time

@@ -1,3 +1,9 @@
+2003-05-13  Christopher Armstrong  <radix@twistedmatrix.com>
+
+	* twisted/internet/{default,internet}.py: Add an `active' method to
+	DelayedCall, which returns True if it hasn't been called or
+	cancelled.
+
 2003-05-13 Jonathan Lange <jml@twistedmatrix.com>
 	
 	* twisted/trial/unittest.py twisted/scripts/trial.py

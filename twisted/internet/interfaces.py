@@ -435,6 +435,13 @@ class IDelayedCall(Interface):
             been cancelled.
         """
 
+    def active(self):
+        """
+        @returns: A bool representing whether or not this call has been called
+                  or cancelled. (True == This DelayedCall has not been called or
+                  cancelled. False, otherwise).
+        """
+
 class IReactorThreads(Interface):
     """Dispatch methods to be run in threads.
 
