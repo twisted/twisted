@@ -243,5 +243,26 @@ class PersistenceTestCase(unittest.TestCase):
                 self.assertEquals(req.headers.get(header, None), resultHeaders[header])
 
 
-if __name__ == '__main__':
-    unittest.main()
+class ChunkingTestCase(unittest.TestCase):
+
+    strings = ["abcv", "", "fdfsd423", "Ffasfas\r\n",
+               "523523\n\rfsdf", "4234"]
+    
+    def testChunks(self):
+        for s in self.strings:
+            self.assertEquals((s, ''), http.fromChunk(http.toChunk(s)))
+
+    def testConcatenatedChunks(self):
+        chunked = string.join(map(http.toChunk, self.strings), '')
+        result = []
+        buffer = ""
+        for c in chunked:
+            buffer = buffer + c
+            try:
+                data, buffer = http.fromChunk(buffer)
+                result.append(data)
+            except ValueError:
+                pass
+        self.assertEquals(result, self.strings)
+
+        

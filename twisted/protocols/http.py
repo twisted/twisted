@@ -216,8 +216,15 @@ def toChunk(data):
     return "%x\r\n%s\r\n" % (len(data), data)
 
 def fromChunk(data):
-    """Convert chunk to string."""
-    raise NotImplementedError
+    """Convert chunk to string.
+
+    Returns tuple (result, remaining), may raise ValueError.
+    """
+    prefix, rest = string.split(data, '\r\n', 1)
+    length = int(prefix, 16)
+    if not rest[length:length+2] == '\r\n':
+        raise ValueError, "chunk must end with CRLF"
+    return rest[:length], rest[length+2:]
 
 
 class HTTPClient(basic.LineReceiver):
