@@ -119,14 +119,17 @@ class Port(base.BasePort):
             except:
                 log.deferr()
 
-    def write(self, datagram, (host, port)):
-        """Write a datagram."""
+    def write(self, datagram, addr):
+        """Write a datagram.
+
+        @param addr: should be a tuple (host, port)
+        """
         try:
-            return self.socket.sendto(datagram, (host, port))
+            return self.socket.sendto(datagram, addr)
         except socket.error, se:
             no = se.args[0]
             if no == EINTR:
-                return self.write(datagram, (host, port))
+                return self.write(datagram, addr)
             elif no == EMSGSIZE:
                 raise error.MessageLengthError, "message too long"
             else:
