@@ -18,7 +18,7 @@
 
 from __future__ import nested_scopes
 
-__version__ = "$Revision: 1.49 $"[11:-2]
+__version__ = "$Revision: 1.50 $"[11:-2]
 
 import os
 import cgi
@@ -311,13 +311,28 @@ class LiveController(Controller):
         self.view = sess.getCurrentPage().view
         #request.d = self.view.d
         target = self.view.subviews[eventTarget]
+        
+        scriptOutput = []
+        def sendScript(js):
+            scriptOutput.append(js)
+        orig = sess.sendScript
+        sess.sendScript = sendScript
+            
         target.onEvent(request, eventName, *eventArgs)
-        sess.sendScript('top.woven_clientToServerEventComplete()')
+        scriptOutput.append('top.woven_clientToServerEventComplete()')
+        
+        sess.sendScript = orig
+        
+        #print "GATHERED JS", scriptOutput
+        
         return '''<html>
 <body>
+    <script language="javascript">
+    %s
+    </script>
     %s event sent to %s with arguments %s.
 </body>
-</html>''' % (eventName, cgi.escape(str(target)), eventArgs)
+</html>''' % ('\n'.join(scriptOutput), eventName, cgi.escape(str(target)), eventArgs)
 
     def gatheredControllers(self, v, d, request):
         Controller.gatheredControllers(self, v, d, request)
