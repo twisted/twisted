@@ -251,6 +251,8 @@ class WebClientTestCase(unittest.TestCase):
             d.addCallback(self._cbPartialTest, expectedData, name)
         
         return d
+
+    testPartial.skip = "Cannot test until webserver can serve partial data properly"
     
     def _cbRunPartial(self, ignored, name, partial):
         return client.downloadPage(self.getURL("file"), name, supportPartial=partial)

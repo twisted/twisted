@@ -306,7 +306,7 @@ class File(resource.Resource, styles.Versioned, filepath.FilePath):
         #for content-length
         fsize = size = self.getFileSize()
 
-        request.setHeader('accept-ranges','bytes')
+#         request.setHeader('accept-ranges','bytes')
 
         if self.type:
             request.setHeader('content-type', self.type)
@@ -353,6 +353,7 @@ class File(resource.Resource, styles.Versioned, filepath.FilePath):
 #         except:
 #             traceback.print_exc(file=log.logfile)
 
+        request.setHeader('content-length', str(fsize))
         if request.method == 'HEAD':
             return ''
 
