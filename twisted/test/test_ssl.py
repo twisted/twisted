@@ -41,4 +41,3 @@ class ProperlyCloseFilesTestCase(test_tcp.ProperlyCloseFilesTestCase):
 
     def testProperlyCloseFiles(self):
         raise unittest.SkipTest, "OpenSSL does not work"
-        
