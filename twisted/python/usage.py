@@ -1,5 +1,5 @@
 # -*- Python -*-
-# $Id: usage.py,v 1.20 2002/04/24 05:58:19 carmstro Exp $
+# $Id: usage.py,v 1.21 2002/07/10 14:21:22 carmstro Exp $
 # Twisted, the Framework of Your Internet
 # Copyright (C) 2001 Matthew W. Lefkowitz
 #
@@ -18,55 +18,11 @@
 
 """
 twisted.python.usage is a module for parsing/handling the
-command line of your program. You use it by subclassing
-Options with certain methods/attributes defined. Here's
-an example::
+command line of your program. 
 
-    from twisted.python import usage
-    import sys
-    class MyOptions(usage.Options):
-        optFlags = [['hello', 'h'], ['goodbye', 'g']]
-        optParameters = [['message', 'm', 'friend!']]
-
-        def __init__(self):
-            usage.Options.__init__(self)
-            self.opts['debug'] = 0
-
-        def opt_debug(self, opt):
-            if opt == 'yes' or opt == 'y' or opt == '1':
-                self.opts['debug'] = 1
-            elif opt == 'no' or opt == 'n' or opt == '0':
-                self.opts['debug'] = 0
-            else:
-                print 'Unknown value for debug, setting to 0'
-                self.opts['debug'] = 0
-        opt_d = opt_debug # a single-char alias for --debug
-    try:
-        config = MyOptions()
-        config.parseOptions()
-    except usage.UsageError, ue:
-        print '%s: %s' % (sys.argv[0], ue)
-    if config.opts['hello']:
-        if config.opts['debug']: print 'printing hello'
-        print 'hello', config.opts['message'] #defaults to 'friend!'
-    if config.opts['goodbye']:
-        if config.opts['debug']: print 'printing goodbye'
-        print 'goodbye', config.opts['message']
-
-#EOF
-
-As you can see, you define optFlags as a list of parameters (with
-both long and short names) that are either on or off.  optParameters
-are parameters with string values, with their default value as
-the third parameter in the list.
-
-If you want to handle your own options, define a method named opt_paramname
-that takes (self, option) as arguments. option will be whatever immediately
-follows the parameter on the command line. You should place any option-related
-state in the 'self.opts' dict, but this isn't required; it's only for
-consistency. A few example command lines that will work:
-
-# XXX - Where'd the examples go?
+For information on how to use it, see 
+http://twistedmatrix.com/documents/howto/options, or doc/howto/options.html
+in your Twisted directory.
 """
 
 # System Imports
@@ -76,6 +32,7 @@ import sys
 import new
 import getopt
 from os import path
+import UserDict
 
 # Sibling Imports
 import reflect
@@ -87,20 +44,50 @@ class UsageError(Exception):
 
 error = UsageError
 
-class Options:
+class Options(UserDict.UserDict):
     """
-    A class which can be subclassed to provide command-line options
-    to your program. See twisted.usage.__doc__ for for details.
+    optFlags and optParameters are lists of available parameters
+    which your program can handle. The difference between the two
+    is the 'flags' have an on(1) or off(0) state (off by default)
+    whereas 'parameters' have an assigned value, with an optional
+    default. (Compare '--verbose' and '--verbosity=2')
+    
+    optFlags is assigned a list of lists. Each list represents
+    a flag parameter, as so:
+
+    |    optFlags = [['verbose', 'v', 'Makes it tell you what it doing.'],
+    |                ['quiet', 'q', 'Be vewy vewy quiet.']]
+
+    As you can see, the first item is the long option name
+    (prefixed with '--' on the command line), followed by the
+    short option name (prefixed with '-'), and the description.
+    The description is used for the in-built handling of the
+    --help switch, which prints a usage summary.
+    
+    optParameters is much the same, except the list also contains
+    a default value:
+    | optParameters = [['outfile', 'O', 'outfile.log, 'Description...']]
+     
+    If you want to handle your own options, define a method named
+    opt_paramname that takes (self, option) as arguments. option
+    will be whatever immediately follows the parameter on the
+    command line. Options fully supports the mapping interface, so you
+    can do things like 'self["option"] = val' in these methods.
+
+    Advanced functionality is covered in the howto documentation,
+    available at http://twistedmatrix.com/documents/howto/options, or
+    doc/howto/options.html in you Twisted directory.
     """
 
     def __init__(self):
+        UserDict.UserDict.__init__(self)
         # These are strings/lists we will pass to getopt
         self.longOpt = []
         self.shortOpt = ''
         self.docs = {}
         self.synonyms = {}
         self.__dispatch = {}
-        self.opts = {}
+        self.opts = self.data
 
         collectors = [
             self._gather_flags,
@@ -120,10 +107,10 @@ class Options:
             self.synonyms.update(synonyms)
             self.__dispatch.update(dispatch)
 
-    def __getitem__(self, key):
-        """Get an item from the 'opts' dictionary.
-        """
-        return self.opts[key]
+    def __hash__(self):
+        #This is required because UserDicts aren't hashable by default
+        #(They define __cmp__ but no __hash__)
+        return id(self)
 
     def __getattr__(self, attr):
         """
@@ -174,7 +161,7 @@ class Options:
         try:
             apply(self.parseArgs,args)
         except TypeError:
-            raise UsageError("wrong number of arguments.")
+            raise UsageError("Wrong number of arguments.")
 
         self.postOptions()
 
@@ -182,9 +169,9 @@ class Options:
         """I am called after the options are parsed.
 
         Override this method in your subclass to do something after
-        the options have been parsed and assigned.
+        the options have been parsed and assigned, like validate that
+        all options are sane.
 
-        XXX: Like what?
         """
         pass
 
@@ -211,18 +198,12 @@ class Options:
 
         self.opts[flagName] = 1
 
-        #XXX: Delete me a few releases after 0.16.1
-        #setattr(self, flagName, 1)
-
     def _generic_parameter(self, parameterName, value):
         if value in ('', None):
             raise UsageError, ("Parameter '%s' requires an argument."
                                % (parameterName,))
 
         self.opts[parameterName] = value
-
-        #XXX: Delete me a few releases after 0.16.1
-        #setattr(self, parameterName, value)
 
     def _gather_flags(self):
         """Gather up boolean (flag) options.
@@ -259,16 +240,6 @@ class Options:
 
         parameters = []
 
-        # XXX: Please, let's delete these after a few releases.
-
-        # We have to keep calling these "optStrings" because this code is
-        # used in the IPC10 paper, which makes it written in stone...
-        reflect.accumulateClassList(self.__class__, 'optStrings',
-                                    parameters)
-
-        # But since "strings" is a very poor description (yes, getopt
-        # does happen to return the values as strings, but that's
-        # irrelevant), provide another name that makes more sense.
         reflect.accumulateClassList(self.__class__, 'optParameters',
                                     parameters)
 
@@ -305,7 +276,7 @@ class Options:
             method = getattr(self, 'opt_'+name)
             reqArgs = method.im_func.func_code.co_argcount
             if reqArgs > 2:
-                raise UsageError('invalid Option function for %s' % name)
+                raise UsageError('Invalid Option function for %s' % name)
             if reqArgs == 2:
                 # argName = method.im_func.func_code.co_varnames[1]
                 takesArg = 1
