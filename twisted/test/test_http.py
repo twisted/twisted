@@ -254,10 +254,10 @@ class ChunkingTestCase(unittest.TestCase):
 
     def testChunks(self):
         for s in self.strings:
-            self.assertEquals((s, ''), http.fromChunk(http.toChunk(s)))
+            self.assertEquals((s, ''), http.fromChunk(''.join(http.toChunk(s))))
 
     def testConcatenatedChunks(self):
-        chunked = string.join(map(http.toChunk, self.strings), '')
+        chunked = ''.join([''.join(http.toChunk(t)) for t in self.strings])
         result = []
         buffer = ""
         for c in chunked:
