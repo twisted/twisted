@@ -14,7 +14,7 @@ href="stylesheet.css" />
 	
     </div>
 
-    <p><a href="index">Go Home</a></p>
+    <p><a href="index.xhtml">Go Home</a></p>
   </body>
 </html>
 
