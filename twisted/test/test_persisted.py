@@ -18,6 +18,7 @@
 # System Imports
 from pyunit import unittest
 import cPickle
+import cStringIO
 
 # Twisted Imports
 from twisted.persisted import styles
@@ -65,5 +66,64 @@ class VersionTestCase(unittest.TestCase):
         assert obj.v3 == 1, "upgraded unnecessarily"
         assert obj.v4 == 1, "upgraded unnecessarily"
 
-testCases = [VersionTestCase]
+
+class MyEphemeral(styles.Ephemeral):
+
+    def __init__(self, x):
+        self.x = x
+
+
+class EphemeralTestCase(unittest.TestCase):
+
+    def testEphemeral(self):
+        o = MyEphemeral(3)
+        self.assertEquals(o.__class__, MyEphemeral)
+        self.assertEquals(o.x, 3)
+        
+        pickl = cPickle.dumps(o)
+        o = cPickle.loads(pickl)
+        
+        self.assertEquals(o.__class__, styles.Ephemeral)
+        self.assert_(not hasattr(o, 'x'))
+
+
+class Pickleable:
+
+    def __init__(self, x):
+        self.x = x
+    
+    def getX(self):
+        return self.x
+
+
+class PicklingTestCase(unittest.TestCase):
+    """Test pickling of extra object types."""
+    
+    def testModule(self):
+        pickl = cPickle.dumps(styles)
+        o = cPickle.loads(pickl)
+        self.assertEquals(o, styles)
+    
+    def testClassMethod(self):
+        pickl = cPickle.dumps(Pickleable.getX)
+        o = cPickle.loads(pickl)
+        self.assertEquals(o, Pickleable.getX)
+    
+    def testInstanceMethod(self):
+        obj = Pickleable(4)
+        pickl = cPickle.dumps(obj.getX)
+        o = cPickle.loads(pickl)
+        self.assertEquals(o(), 4)
+        self.assertEquals(type(o), type(obj.getX))
+    
+    def testcStringIO(self):
+        f = cStringIO.StringIO()
+        f.write("abc")
+        pickl = cPickle.dumps(f)
+        o = cPickle.loads(pickl)
+        self.assertEquals(type(o), type(f))
+        self.assertEquals(f.getvalue(), "abc")
+
+
+testCases = [VersionTestCase, EphemeralTestCase, PicklingTestCase]
 
