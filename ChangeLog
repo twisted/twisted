@@ -1,3 +1,7 @@
+2002-11-16  Itamar Shtull-Trauring  <twisted@itamarst.org>
+
+	* Multicast UDP socket support in most reactors.
+
 2002-11-11  Glyph Lefkowitz  <glyph@twistedmatrix.com>
 
 	* .: Releasing 1.0.1alpha4
