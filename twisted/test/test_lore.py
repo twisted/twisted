@@ -7,6 +7,8 @@ from twisted.lore import default
 
 from twisted.python.util import sibpath
 
+from twisted.scripts.lore import getProcessor, getWalker
+
 import os
 
 options = {"template" : sibpath(__file__, "template.tpl"), 'baseurl': '%s', 'ext': '.xhtml' }
@@ -23,23 +25,6 @@ class TestFactory(unittest.TestCase):
 
     file = sibpath(__file__, 'simple.html')
     linkrel = ""
-
-    def assertEqualFiles(self, exp, act):
-        if (exp == act): return True
-        fact = open(sibpath(__file__, act))
-        self.assertEqualsFile(exp, fact.read())
-
-    def assertEqualsFile(self, exp, act):
-        expected = open(sibpath(__file__, exp)).read()
-        self.assertEqualsString(expected, act)
-
-    def assertEqualsString(self, expected, act):
-        self.assertEquals(len(expected), len(act))
-        for i in range(len(expected)):
-            e = expected[i]
-            a = act[i]
-            self.assertEquals(e, a, "differ at %d: %s vs. %s" % (i, e, a))
-        self.assertEquals(expected, act)
 
     def testProcessingFunctionFactory(self):
         htmlGenerator = factory.generate_html(options)
@@ -109,3 +94,30 @@ class TestFactory(unittest.TestCase):
         tree.makeSureDirectoryExists(filename)
         self.failUnless(os.path.exists(dirname), 'should have created dir')
         os.rmdir(dirname)
+
+    def test_indexAnchorsAdded(self):
+        # generate the output file
+        templ = microdom.parse(open(d['template']))
+
+        tree.doFile(sibpath(__file__, 'lore_index_test.xhtml'), self.linkrel, '.html', d['baseurl'], templ, d)
+        self.assertEqualFiles("lore_index_test_out.html", "lore_index_test.html")
+
+########################################
+
+    def assertEqualFiles(self, exp, act):
+        if (exp == act): return True
+        fact = open(sibpath(__file__, act))
+        self.assertEqualsFile(exp, fact.read())
+
+    def assertEqualsFile(self, exp, act):
+        expected = open(sibpath(__file__, exp)).read()
+        self.assertEqualsString(expected, act)
+
+    def assertEqualsString(self, expected, act):
+        self.assertEquals(len(expected), len(act))
+        for i in range(len(expected)):
+            e = expected[i]
+            a = act[i]
+            self.assertEquals(e, a, "differ at %d: %s vs. %s" % (i, e, a))
+        self.assertEquals(expected, act)
+

@@ -19,6 +19,7 @@ from twisted import copyright
 from twisted.python import htmlizer, text
 from twisted.web import microdom, domhelpers
 import process, latex
+from twisted.python.util import InsensitiveDict
 
 # relative links to html files
 def fixLinks(document, ext):
@@ -138,8 +139,8 @@ def generateToC(document):
         toc += domhelpers.getNodeText(element)
         toc += '</a></li>\n'
         level = elementLevel
-        name = microdom.parseString('<a name="auto%d" />' % id).documentElement
-        element.childNodes.append(name)
+        anchor = microdom.parseString('<a name="auto%d" />' % id).documentElement
+        element.childNodes.append(anchor)
         id += 1
     toc += '</ul>\n' * level
     toc += '</ol>\n'
@@ -188,6 +189,18 @@ def notes(document):
     notePrefix = microdom.parseString('<strong>Note: </strong>').documentElement
     for note in notes:
         note.childNodes.insert(0, notePrefix)
+
+def index(document):
+    entries = domhelpers.findElementsWithAttribute(document, "class", "index")
+    if not footnotes:
+        return
+    i = 0;
+    for entry in entries:
+        i += 1
+        entry.nodeName = 'a' # does this even affect anything?
+        entry.tagName = 'a'
+        entry.endTagName = 'a'
+        entry.attributes = InsensitiveDict({'name': 'index%02d' % i, 'class': 'index'})
 
 def fixRelativeLinks(document, linkrel):
     for attr in 'src', 'href':
@@ -250,6 +263,7 @@ def munge(document, template, linkrel, dir, fullpath, ext, url, config):
     putInToC(template, generateToC(document))
     footnotes(document)
     notes(document)
+    index(document)
     setVersion(template, config.get('version', ''))
 
     # Insert the document into the template
