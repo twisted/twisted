@@ -59,18 +59,6 @@ register("Twisted Words",
          description="A chat service.",
          type="tap")
 
-register("Twisted Sibling 'Parent'",
-         "twisted.sibling.parentap",
-         description="Parent service.",
-         type="tap",
-         tapname="parent")
-
-register("Twisted Sibling 'Sibling'",
-         "twisted.sibling.sibtap",
-         description="Sibling service.",
-         type="tap",
-         tapname="sibling")
-
 register("Twisted News",
          "twisted.tap.news",
          description="News Server",
