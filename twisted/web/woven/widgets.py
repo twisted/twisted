@@ -557,27 +557,27 @@ class Input(Widget):
 
 
 class CheckBox(Input):
-    def initialize(self):
+    def setUp(self, request, node, data):
         self['type'] = 'checkbox'
 
 
 class RadioButton(Input):
-    def initialize(self):
+    def setUp(self, request, node, data):
         self['type'] = 'radio'
 
 
 class File(Input):
-    def initialize(self):
+    def setUp(self, request, node, data):
         self['type'] = 'file'
 
 
 class Hidden(Input):
-    def setUp(self, request, node, m):
+    def setUp(self, request, node, data):
         self['type'] = 'hidden'
 
 
 class InputText(Input):
-    def initialize(self):
+    def setUp(self, request, node, data):
         self['type'] = 'text'
 
 
@@ -585,12 +585,12 @@ class PasswordText(Input):
     """
     I render a password input field.
     """
-    def initialize(self):
+    def setUp(self, request, node, data):
         self['type'] = 'password'
 
 
 class Button(Input):
-    def initialize(self):
+    def setUp(self, request, node, data):
         self['type'] = 'button'
 
 
@@ -733,6 +733,7 @@ class List(Widget):
 
     def _iterateData(self, parentNode, submodel, data):
         currentListItem = 0
+        retVal = [None] * len(data)
         for itemNum in range(len(data)):
             # theory: by appending copies of the li node
             # each node will be handled once we exit from
@@ -740,13 +741,13 @@ class List(Widget):
             # the newly appended nodes
 
             newNode = self.getPattern('listItem')
-            seq = domhelpers.getIfExists(newNode,'listIndex')
-            if seq:
-                seq.setAttribute('value',str(itemNum))
             appendModel(newNode, itemNum)
             if not newNode.getAttribute("view"):
                 newNode.setAttribute("view", self.defaultItemView)
-            parentNode.appendChild(newNode)
+            retVal[itemNum] = newNode
+            newNode.parentNode = parentNode
+#            parentNode.appendChild(newNode)
+        parentNode.childNodes.extend(retVal)
 
 
 class KeyedList(List):
