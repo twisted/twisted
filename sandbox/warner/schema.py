@@ -547,7 +547,7 @@ class MethodArgumentsConstraint(Constraint):
         # build up a list of required arguments for later checking
         self.args = {}
         self.required = []
-        for argname, constraint in self.args:
+        for argname, constraint in kwargs.items():
             if not isinstance(constraint, Optional):
                 self.required.append(argname)
             self.args[argname] = makeConstraint(constraint)
