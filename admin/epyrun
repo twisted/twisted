@@ -88,6 +88,12 @@ from epydoc.html import HTMLFormatter
 import epydoc.html
 
 class TwistedHTMLFormatter(HTMLFormatter):
+    def _uid_to_filename(self, uid):   
+        # Enforce same restrictions as HTMLFormatter._uid_to_filename for sanity
+        # checking
+        assert uid.is_module() or uid.is_class(), 'Bad UID type: %r' % (uid,)
+        return uid.name() + '.html'
+        
     def _uid_to_uri(self, uid):
         if uid.is_module() or uid.is_class():
             return uid.name() + '.html'
@@ -108,17 +114,21 @@ class TwistedHTMLFormatter(HTMLFormatter):
         str = str % (self._uid_to_uri(uid.parent()), uid.shortname())
         return str
 
-    def _write(self, directory, progress_callback):
-        HTMLFormatter._write(self, directory, progress_callback)
+    def write(self, directory=None, progress_callback=None):
+        HTMLFormatter.write(self, directory, progress_callback)
         
         # Write method redirectors
         self._write_method_redirects(directory)
 
     def _write_method_redirects(self, directory):
-        for uid in self._filtersort_uids(self._docmap.keys()):
+        import os.path
+        seen = {}
+        for uid, doc in self._docmap.data.iteritems():
             if uid.is_method():
-                doc = self._docmap[uid]
+                if uid.name() in seen: continue
+                seen[uid.name()] = 1
                 filename = os.path.join(directory, uid.name() + '.html')
+                #assert not os.path.exists(filename), filename
                 s = self._method_to_html(uid)
                 open(filename, 'w').write(s)
 
@@ -148,5 +158,10 @@ os.path.walk('./twisted', addMod, None)
 __builtins__.__import__ = im
 sys.argv = osrv
 sys.argv.extend(modnames)              # list of modules
-cli()
+# Make it easy to profile epyrun
+if 0:
+    import profile
+    profile.run('cli()', 'epyrun.prof')
+else:
+    cli()
 print 'Done!'
