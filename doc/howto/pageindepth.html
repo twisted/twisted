@@ -37,7 +37,7 @@ model = {'name': 'Donovan',
 resource = page.Page(model)
 </pre>
 
-<p>If no Model object is passed as the first argument to the Page constructor, the Page object itself will be treated like a MethodModel. See <a href="models">Models</a> for more information about Model objects.</p>
+<p>If no Model object is passed as the first argument to the Page constructor, the Page object itself will be treated like a MethodModel. See <a href="modelindepth.html">Models</a> for more information about Model objects.</p>
 
 <p>Using a Page object as a Model factory (by not passing a Root Model) is discussed below in <a href="#factories">Factories</a>.</p>
 
@@ -92,7 +92,7 @@ class MyPage(page.Page):
 
 <h2>Child Pages</h2><a name="children" />
 
-  <p>As discussed in the <a href="twistedweb">Twisted Web</a> section of the documentation, Resource objects provide access to their children by providing a getChild method which returns the next Resource object in the URL tree. Woven Page instances implement IResource and thus follow the same rules as any other Resource instance.</p>
+  <p>As discussed in the <a href="using-twistedweb.html">Twisted Web</a> section of the documentation, Resource objects provide access to their children by providing a getChild method which returns the next Resource object in the URL tree. Woven Page instances implement IResource and thus follow the same rules as any other Resource instance.</p>
 
 <p>Woven Page instances can be built into Resource Trees in the same manner as regular Resources, using putChild. However, it is often convenient to construct a Page instance on the fly with a method.</p>
 
@@ -168,7 +168,7 @@ to Python code.</p>
         return widgets.Text(model)
 </pre>
 
-    <p>Widget subclasses are the most common return value from <code>wvfactory_</code> methods. Widgets are discussed in the <a href="views">Views</a> section. However, Page is also an implementor of IView, and you may take advantage of this to insert HTML fragments from other locations into a page which is being rendered:</p>
+    <p>Widget subclasses are the most common return value from <code>wvfactory_</code> methods. Widgets are discussed in the <a href="viewindepth.html">Views</a> section. However, Page is also an implementor of IView, and you may take advantage of this to insert HTML fragments from other locations into a page which is being rendered:</p>
 
 <pre class="python">
 class MyPage(page.Page):
@@ -196,7 +196,7 @@ class MyPage(page.Page):
         widget.setAttribute('style', 'color: red')
 </pre>
 
-    <p>See the <a href="views">Views</a> section for more information on writing your application's View code.</p>
+    <p>See the <a href="viewindepth.html">Views</a> section for more information on writing your application's View code.</p>
 
     <p>Note that if an appropriately named View factory is not found on your page class, Woven will look for the name in the <code>widgets</code> module before giving up and raising an exception. This is why we have been able to create templates that have nodes like <code>&lt;div view="Text" /&gt;</code> and <code>&lt;div view="List" /&gt;</code> without getting exceptions.</p>
 
@@ -211,7 +211,7 @@ class MyPage(page.Page):
 
     <p>The IController implementation classes which validate input currently live in the <code>input</code> module. This will probably be changed in the future.</p>
 
-    <p>See the <a href="controllers">Controllers</a> section for more information on writing your application's Controller code.</p>
+    <p>See the <a href="controllerindepth.html">Controllers</a> section for more information on writing your application's Controller code.</p>
 
     <p>Note that if an appropriately named Controller factory is not found on your page class, Woven will look for the name in the <code>input</code> module before giving up and raising an exception.</p>
 
