@@ -60,7 +60,11 @@ install-base-stamp: build-stamp
 			if [ ! -d `dirname $$target` ]; then\
 				install -d `dirname $$target`; \
 			fi; \
-			mv $$file $$target; \
+			if [ echo $$file | grep -q common ]; then\
+				rm $$file;\
+			else\
+				mv $$file $$target; \
+			fi; \
 		done; \
 	done
 	touch install-base-stamp
