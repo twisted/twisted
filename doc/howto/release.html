@@ -44,7 +44,7 @@
     <li>Add an entry: * .: Releasing Twisted $VERSION</li>
   </ul>
   </li>
-  <li>README: Add a new Quote of the Release.</li>
+  <li>README: For a new non-alpha/RC, add a new Quote of the Release.</li>
 </ul>
 
 <h2>Release</h2>
@@ -117,7 +117,7 @@ $SOMEWHERE/admin/release-twisted -n $SFNAME -V $VERSION --sourceforge \
   <li>cvs commit those</li>
   <li><p>deploy changes:</p>
 <pre class="shell">cd /var/www/WebSite/twistedmatrix.com
-lore --docsdir . --config template=template.tpl --config ext=
+./generate.sh
 </pre>
   </li>
 </ul>
