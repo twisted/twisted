@@ -67,6 +67,8 @@ def parsemsg(s):
     """
     prefix = ''
     trailing = []
+    if not s:
+        raise IRCBadMessage("Empty line.")
     if s[0] == ':':
         prefix, s = string.split(s[1:], ' ', 1)
     if string.find(s,':') != -1:
@@ -320,6 +322,9 @@ class IRCClient(basic.LineReceiver):
     def setNick(self, nickname):
         self.nickname = nickname
         self.sendLine("NICK %s" % nickname)
+
+    def quit(self, message = ''):
+        self.sendLine("QUIT :%s" % message)
 
     ### user input commands, client->client
 
