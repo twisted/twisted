@@ -24,7 +24,7 @@ class IPv6Client(tcp.TCPClient):
             )
 
     def getPeer(self):
-        return ('INET6',) + self.addr
+        return ('INET6',) + self.socket.getpeername()
 
     def getHost(self):
         return ('INET6',) + self.socket.getsockname()
@@ -37,7 +37,19 @@ class IPv6Connector(default.TCPConnector):
     def getDestination(self):
         return ('INET6', self.host, self.port)
 
+class IPv6Server(tcp.Server):
+    def getHost(self):
+        return ('INET6',) + self.socket.getsockname()
+
+    def getPeer(self):
+        if isinstance(self.client, tuple):
+            return ('INET6',) + self.client
+        else:
+            return ('INET6', self.client)
+
 class IPv6Port(tcp.Port):
+    transport = IPv6Server
+
     def createInternetSocket(self):
         s = socket.socket(socket.AF_INET6, socket.SOCK_STREAM)
         s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
