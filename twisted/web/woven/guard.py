@@ -24,12 +24,13 @@ L{UsernamePasswordWrapper}.
 
 from __future__ import nested_scopes
 
-__version__ = "$Revision: 1.33 $"[11:-2]
+__version__ = "$Revision: 1.34 $"[11:-2]
 
 import random
 import time
 import md5
 import warnings
+import urllib
 
 # Twisted Imports
 
@@ -172,6 +173,29 @@ def _setSession(wrap, req, cook):
     req.session = wrap.sessions[cook]
     req.getSession = req.session._getSelf
 
+def urlToChild(request, *ar, **kw):
+    pp = request.prepath.pop()
+    orig = request.prePathURL()
+    request.prepath.append(pp)
+    c = '/'.join(ar)
+    if orig[-1] == '/':
+        # this SHOULD only happen in the case where the URL is just the hostname
+        ret = orig + c
+    else:
+        ret = orig + '/' + c
+    args = request.args.copy()
+    args.update(kw)
+    if args:
+        ret += '?'+urllib.urlencode(args)
+    return ret
+
+def redirectToSession(request, garbage):
+    rd = Redirect(urlToChild(request, *request.postpath, **{garbage:1}))
+    rd.isLeaf = 1
+    return rd
+
+SESSION_KEY='__session_key__'
+
 class SessionWrapper(Resource):
 
     sessionLifetime = 1800
@@ -188,48 +212,34 @@ class SessionWrapper(Resource):
         return redirectTo(addSlash(request), request)
 
     def getChild(self, path, request):
-        # XXX refactor with PerspectiveWrapper
         if not request.prepath:
             return None
-        pp = request.prepath.pop()
-        _urlToMe = request.prePathURL()
-        request.prepath.append(pp)
-        def urlToChild(*ar):
-            c = '/'.join(ar)
-            if _urlToMe[-1] == '/':
-                # this SHOULD only happen in the case where the URL is just the hostname
-                return _urlToMe + c
-            else:
-                return _urlToMe + '/' + c
-        # XXX
-        # print "I think I'm at:", _urlToMe
         cookie = request.getCookie(self.cookieKey)
-        setupURL = request.setupSessionURL = urlToChild(INIT_SESSION, *([path]+request.postpath))
+        setupURL = urlToChild(request, INIT_SESSION, *([path]+request.postpath))
+        request.setupSessionURL = setupURL
         request.setupSession = lambda: Redirect(setupURL)
-        if self.sessions.has_key(path):
-            self.sessions[path].setLifetime(self.sessionLifetime)
-            if cookie == path:
-                # /sessionized-url/aef9c34aecc3d9148/foo
+        if path.startswith(SESSION_KEY):
+            key = path[len(SESSION_KEY):]
+            if key not in self.sessions:
+                return redirectToSession(request, '__start_session__')
+            self.sessions[key].setLifetime(self.sessionLifetime)
+            if cookie == key:
+                # /sessionized-url/${SESSION_KEY}aef9c34aecc3d9148/foo
                 #                  ^
                 #                  we are this getChild
                 # with a matching cookie
-                rd = Redirect(urlToChild(*request.postpath) +
-                              # this next bit prevents 'redirect cycles' in
-                              # wget (and possibly other browsers)
-                              "?__session_just_started__=1")
-                rd.isLeaf = 1
-                return rd
+                return redirectToSession(request, '__session_just_started__')
             else:
                 # We attempted to negotiate the session but failed (the user
                 # probably has cookies disabled): now we're going to return the
                 # resource we contain.  In general the getChild shouldn't stop
                 # there.
-                # /sessionized-url/aef9c34aecc3d9148/foo
-                #                 ^ we are this getChild
+                # /sessionized-url/${SESSION_KEY}aef9c34aecc3d9148/foo
+                #                  ^ we are this getChild
                 # without a cookie (or with a mismatched cookie)
-                _setSession(self, request, path)
+                _setSession(self, request, key)
                 return self.resource
-        elif self.sessions.has_key(cookie):
+        elif cookie in self.sessions:
             # /sessionized-url/foo
             #                 ^ we are this getChild
             # with a session
@@ -242,10 +252,11 @@ class SessionWrapper(Resource):
             # without a session
             newCookie = _sessionCookie()
             request.addCookie(self.cookieKey, newCookie, path="/")
-            rd = Redirect(urlToChild(newCookie,*request.postpath))
-            rd.isLeaf = 1
             sz = self.sessions[newCookie] = GuardSession(self, newCookie)
             sz.checkExpired()
+            rd = Redirect(urlToChild(request, SESSION_KEY+newCookie,
+                                              *request.postpath))
+            rd.isLeaf = 1
             return rd
         else:
             # /sessionized-url/foo
