@@ -1,0 +1,117 @@
+<?xml version="1.0"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <title>Unit Tests in Twisted</title>
+    <!-- Original draft by Kevin Turner (Acapnotic), July 6, 2002. -->
+  </head>
+  <body>
+    <h1>Unit Tests in Twisted</h1>
+
+    <h2>Unit Tests in the Twisted Philosophy</h2>
+
+    <p>The <span class="twisted">Twisted</span> development team
+    adheres to the practice of <a href=
+    "http://c2.com/cgi/wiki?ExtremeProgramming" >Extreme
+    Programming</a> (XP), and the usage of unit tests is a cornerstone
+    XP practice.  Unit tests are a tool to give you increased
+    confidence.  You changed an algorithm -- did you break something?
+    Run the unit tests.  If a test fails, you know where to look,
+    because each test covers only a small amount of code, and you know
+    it has something to do with the changes you just made.  If all the
+    tests pass, you're good to go, and you don't need to second-guess
+    yourself or worry that you just accidently broke someone else's
+    program.</p>
+
+    <h2>What to Test, What Not to Test</h2>
+
+    <blockquote><p>You don't have to write a test for every single
+    method you write, only production methods that could possibly break.</p>
+    </blockquote>
+
+    <p>-- Kent Beck, <cite>Extreme Programming Explained</cite>, p. 58.</p>
+
+    <p>''Note: I haven't yet fully figured this out myself.  Anyone
+    else with more experience want to enlighten us? -- Kevin''</p>
+
+    <h2>Running the Tests</h2>
+
+    <pre class="shell">
+$ Twisted/admin/runtests
+    </pre>
+    
+    <h2>Adding a Test</h2>
+
+    <p>RTFM.  Several variations on TFM can be found in the <a href=
+    "#links" >links below</a>.</p>
+
+    <p>Tests go in Twisted/twisted/test/, and are named test_foo.py,
+    where "foo" is the name of the module or package bing tested.</p>
+
+    <p>One deviation from the <a href=
+    "http://www.python.org/doc/current/lib/module-unittest.html"
+    >standard PyUnit documentation</a>: To ensure that any variations
+    in test results are due to variations in the code or environment
+    and not the test process itself, Twisted ships with its own copy
+    of the PyUnit testing framework.  That just means that when you
+    import the unittest module, you will <code class="python">from
+    pyunit import unittest</code> instead of the standard <code
+    class="python">import unittest</code>.</p>
+
+    <p>(Now that unittest has been in the Python standard library
+    for several releases, I'm even less convinced of this argument
+    than before, but doesn't add more than a second or two to download
+    time, so I don't worry it too much.)</p>
+
+    <p>As long as you have followed the module naming and placement
+    conventions, <code class="shell">runtests</code> will be smart
+    enough to pick up any new tests you write.</p>
+
+    <h2 id="links"><a name="links"></a>Links</h2>
+    <ul>
+      <li>A chapter on <a href=
+      "http://diveintopython.org/roman_divein.html" >Unit Testing</a>
+      in Mark Pilgrim's <a href="http://diveintopython.org">Dive Into
+      Python</a>.</li>
+
+      <li><a href=
+      "http://www.python.org/doc/current/lib/module-unittest.html"
+      ><code>unittest</code> module documentation, in the <a href=
+      "http://www.python.org/doc/current/lib/" >Python Library
+      Reference</a>.</li>
+
+      <li><a href="http://c2.com/cgi/wiki?UnitTests">UnitTests</a> on
+      the <a href="http://c2.com/cgi/wiki">PortlandPatternRepository
+      Wiki</a>, where all the cool <a href=
+      "http://c2.com/cgi/wiki?ExtremeProgramming"
+      >ExtremeProgramming</a> kids hang out.</li>
+
+      <li><a href=
+      "http://www.extremeprogramming.org/rules/unittests.html" >Unit
+      Tests</a> in <a href= "http://www.extremeprogramming.org"
+      >Extreme Programming: A Gentle Introduction</a>.</li>
+
+      <li>Ron Jeffries espouses on the importance of <a href=
+      "http://www.xprogramming.com/xpmag/expUnitTestsAt100.htm" >Unit
+      Tests at 100%</a>.</li>
+
+      <li>Ron Jeffries writes about the <a href=
+      "http://www.xprogramming.com/Practices/PracUnitTest.html" >Unit
+      Test</a> in the <a href=
+      "http://www.xprogramming.com/Practices/xpractices.htm" >Extreme
+      Programming practices of C3</a>.</li>
+
+      <li><a href="http://pyunit.sourceforge.net">PyUnit's homepage</a>.</li>
+
+      <li><code class="API">twisted.test</code>'s inline
+      documentation.</li>
+
+      <li>The <a href=
+      "http://twistedmatrix.com/users/jh.twistd/viewcvs/cgi/viewcvs.cgi/twisted/test/?cvsroot=Twisted"
+      >twisted/test directory</a> in CVS.</li>
+
+    </ul>
+  </body>
+</html>
