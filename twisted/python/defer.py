@@ -1,16 +1,16 @@
 
 # Twisted, the Framework of Your Internet
 # Copyright (C) 2001 Matthew W. Lefkowitz
-# 
+#
 # This library is free software; you can redistribute it and/or
 # modify it under the terms of version 2.1 of the GNU Lesser General Public
 # License as published by the Free Software Foundation.
-# 
+#
 # This library is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
 # Lesser General Public License for more details.
-# 
+#
 # You should have received a copy of the GNU Lesser General Public
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
@@ -47,9 +47,10 @@ class Deferred:
 
     def callback(self, result):
         """Run all success callbacks that have been added to this Deferred.
-        
-        Each callback will have its result passed as the first argument to the
-        next; this way, the callbacks act as a 'processing chain'.
+
+        Each callback will have its result passed as the first
+        argument to the next; this way, the callbacks act as a
+        'processing chain'.
 
         If this deferred has not been armed yet, nothing will happen.
         """
@@ -58,9 +59,10 @@ class Deferred:
 
     def errback(self, error):
         """Run all error callbacks that have been added to this Deferred.
-        
-        Each callback will have its result passed as the first argument to the
-        next; this way, the callbacks act as a 'processing chain'.
+
+        Each callback will have its result passed as the first
+        argument to the next; this way, the callbacks act as a
+        'processing chain'.
 
         If this deferred has not been armed yet, nothing will happen.
         """
@@ -94,9 +96,9 @@ class Deferred:
         """State that this function is ready to be called.
 
         This is to prevent callbacks from being executed sometimes
-        synchronously and sometimes asynchronously.  The system expecting a
-        Delayed will explicitly arm the delayed after it has been returned; at
-        _that_ point, it may fire later.
+        synchronously and sometimes asynchronously.  The system
+        expecting a Delayed will explicitly arm the delayed after
+        it has been returned; at _that_ point, it may fire later.
         """
         if not self.armed:
             self.armed = 1
