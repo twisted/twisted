@@ -135,11 +135,12 @@ Or from the web? Or, or...</p>
 
 <a href="listings/finger/finger09.py" class="py-listing">finger09.py</a>
 
-<p>...from running a local command? Yes, this version (safely!) runs
+<p>...from running a local command? Yes, this version runs
 finger locally with whatever arguments it is given, and returns the
-standard output. This will do exactly what the standard version
-of the finger server does -- without the need for any remote buffer
-overflows, as the networking is done safely.</p>
+standard output. This is probably insecure, so you probably don't
+want a real server to do this without a lot more validation of the
+user input. This will do exactly what the standard version
+of the finger server does.</p>
 
 
 <h2>Read Status from the Web</h2>
@@ -149,7 +150,7 @@ world finally gets through to our invention. Here we use the built-in
 Twisted web client, which also returns a deferred. Finally, we manage
 to have examples of three different database back-ends, which do
 not change the protocol class. In fact, we will not have to change
-the protocol again until the end of this talk: we have achieved,
+the protocol again until the end of this tutorial: we have achieved,
 here, one truly usable class.</p>
 
 <a href="listings/finger/finger10.py" class="py-listing">finger10.py</a>
@@ -183,23 +184,20 @@ application developer can concentrate on writing his networking code.
 </p>
 
 <pre class="shell">
-root% twistd -ny finger.tpy # just like before
-root% twistd -ny finger.py  # also works
+root% twistd -ny finger.tac # just like before
+root% twistd -ny finger.tac  # also works
 root% twistd -ny finger.tac # usually a .tac is more of an app
-root% twistd -y finger.tpy # daemonize, keep pid in twistd.pid
-root% twistd -y finger.tpy --pidfile=finger.pid
-root% twistd -y finger.tpy --rundir=/
-root% twistd -y finger.tpy --chroot=/var
-root% twistd -y finger.tpy -l /var/log/finger.log
-root% twistd -y finger.tpy --syslog # just log to syslog
-root% twistd -y finger.tpy --syslog --prefix=twistedfinger # use given prefix
+root% twistd -y finger.tac # daemonize, keep pid in twistd.pid
+root% twistd -y finger.tac --pidfile=finger.pid
+root% twistd -y finger.tac --rundir=/
+root% twistd -y finger.tac --chroot=/var
+root% twistd -y finger.tac -l /var/log/finger.log
+root% twistd -y finger.tac --syslog # just log to syslog
+root% twistd -y finger.tac --syslog --prefix=twistedfinger # use given prefix
 </pre>
 
 
-
-
 <h2>Setting Message By Local Users</h2>
-
 
 <p>Now that port 1079 is free, maybe we can run on it a different
 server, one which will let people set their messages. It does
@@ -211,7 +209,7 @@ our case. Testing it can be done by simply:
 <pre class="shell">
 % nc localhost 1079   # or telnet localhost 1079
 moshez
-Giving a talk now, sorry!
+Giving a tutorial now, sorry!
 ^D
 </pre>
 
@@ -229,7 +227,7 @@ for manufacturing factories into the service. Note that we stopped
 subclassing: the service simply puts useful methods and attributes
 inside the factories. We are getting better at protocol design:
 none of our protocol classes had to be changed, and neither will
-have to change until the end of the talk.</p>
+have to change until the end of the tutorial.</p>
 
 <a href="listings/finger/finger13.py" class="py-listing">finger13.py</a>
 
@@ -248,7 +246,6 @@ for such scheduled tasks.</p>
 <a href="listings/finger/finger14.py" class="py-listing">finger14.py</a>
 
 
-
 <h2>Announce on Web, Too</h2>
 
 <p>The same kind of service can also produce things useful for
@@ -261,8 +258,6 @@ and overriding it dynamically is possible with getChild.</p>
 <a href="listings/finger/finger15.py" class="py-listing">finger15.py</a>
 
 
-
-
 <h2>Announce on IRC, Too</h2>
 
 <p>This is the first time there is client code. IRC clients often
@@ -273,8 +268,6 @@ back-off algorithms. The IRC client itself is simple: the only
 real hack is getting the nickname from the factory in connectionMade.</p>
 
 <a href="listings/finger/finger16.py" class="py-listing">finger16.py</a>
-
-
 
 
 <h2>Add XML-RPC Support</h2>
@@ -395,7 +388,6 @@ results.</p>
 <a href="listings/finger/finger20.py" class="py-listing">finger20.py</a>
 
 
-
 <h2>Use Perspective Broker</h2>
 
 <p>We add support for perspective broker, Twisted's native remote object
@@ -411,7 +403,6 @@ contortions to get information about users.</p>
 
 
 <h2>Support HTTPS</h2>
-
 
 <p>All we need to do to code an HTTPS site is just write a context factory (in
 this case, which loads the certificate from a certain file) and then use the
@@ -527,33 +518,27 @@ Full source code for finger module here: <a href="listings/finger/finger/finger.
 
 <h2>OS Integration</h2>
 
-<p>If we already have the <q>finger</q> package installed, we can achieve easy
+<p>If we already have the <q>finger</q> package installed in
+PYTHONPATH (e.g.  we added it to site-packages), we can achieve easy
 integration:</p>
 
 <h3>Debian</h3>
 
 <pre class="shell">
-% tap2deb --unsigned -m "Foo &lt;foo@example.com&gt;" --type=python finger.tpy
+% tap2deb --unsigned -m "Foo &lt;foo@example.com&gt;" --type=python finger.tac
 % sudo dpkg -i .build/*.deb
 </pre>
 
 <h3>Red Hat / Mandrake</h3>
 
 <pre class="shell">
-% tap2rpm --type=python finger.tpy #[maybe other options needed]
+% tap2rpm --type=python finger.tac #[maybe other options needed]
 % sudo rpm -i .build/*.rpm
 </pre>
 
-<p>Will properly register configuration files, init.d sripts, etc. etc.</p>
+<p>Will properly register the tap/tac, init.d scripts, etc. for the given file.</p>
 
 <p>If it doesn't work on your favorite OS: patches accepted!</p>
-
-
-
-<h2>Credits</h2>
-
-<p>This document originally authored by Moshe Zadka.</p>
-<p>Edited by Jonathan Lange</p>
 
 </body>
 </html>
