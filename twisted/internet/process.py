@@ -149,7 +149,6 @@ class ProcessError(abstract.FileDescriptor):
         abstract.FileDescriptor.connectionLost(self, reason)
         os.close(self.proc.stderr)
         self.proc.errConnectionLost()
-        del self.proc
 
 
 class Process(abstract.FileDescriptor, styles.Ephemeral):
@@ -288,13 +287,14 @@ class Process(abstract.FileDescriptor, styles.Ephemeral):
     def closeStderr(self):
         """Close stderr."""
         if hasattr(self, "err"):
-            self.err.stopReading()
-            self.err.connectionLost(None)
+             self.err.stopReading()
+             self.err.connectionLost(None)
 
     def closeStdout(self):
         """Close stdout."""
         if not self.lostOutConnection:
-            abstract.FileDescriptor.loseConnection(self)
+            self.stopReading()
+            self.connectionLost(None)
 
     def loseConnection(self):
         self.closeStdin()
