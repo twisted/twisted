@@ -12,9 +12,32 @@ static PyMethodDef sendmsgMethods[] = {
     {NULL, NULL, 0, NULL}
 };
 
+/* Utility function to add integer constant to module dictionary */
+static void insertConstant(PyObject *d, char *name, unsigned long code)
+{
+    PyObject *u = PyString_FromString(name);
+    PyObject *v = PyInt_FromLong((long) code);
+
+    /* Don't bother checking for errors; they'll be caught at the end
+    * of the module initialization function by the caller of
+    * initmodule().
+    */
+    if (u && v) {
+        /* insert in modules dict */
+        PyDict_SetItem(d, u, v);
+    }
+    Py_XDECREF(u);
+    Py_XDECREF(v);
+}
+
 void initsendmsg(void) {
-    PyObject *module;
+    PyObject *module, *dict;
     module = Py_InitModule("sendmsg", sendmsgMethods);
+    dict = PyModule_GetDict(module);
+    if (!dict) {
+        return;
+    }
+    insertConstant(dict, "SCM_RIGHTS", SCM_RIGHTS);
 }
 
 static PyObject *sendmsg_sendmsg(PyObject *self, PyObject *args, PyObject *keywds) {
