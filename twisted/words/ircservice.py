@@ -112,17 +112,17 @@ class IRCChatter(irc.IRC):
                 channame = name[1:]
                 try:
                     self.participant.groupMessage(channame, text)
-                except pb.Error:
-                    print 'oops...'
+                except pb.Error, e:
+                    self.receiveDirectMessage("*error*", str(e))
+                    print 'error chatting to channel:',str(e)
             else:
                 try:
                     self.participant.directMessage(name, text)
                 except (KeyError, pb.Error):
                     ### << PRIVMSG vasdfasdf :hi
                     ### >> :niven.openprojects.net 401 glyph vasdfasdf :No such nick/channel
-                    self.sendLine(
-                        ":%s 401 %s %s :No such nick/channel" %
-                        (self.servicename, self.nickname, name))
+                    self.sendLine(":%s 401 %s %s :No such nick/channel" %
+                                  (self.servicename, self.nickname, name))
 
         else:
             if name == '*login*':
@@ -160,14 +160,14 @@ class IRCChatter(irc.IRC):
 
     def irc_MODE(self, prefix, params):
         name = params[0]
-        log.msg( 'mode? %s %s' % (prefix, params))
+        log.msg('mode? %s %s' % (prefix, params))
         if name[0] == '#':
             # get the channel, maybe?
             self.sendLine(":%s 324 %s +" %
                           (self.servicename, self.nickname))
 
     def irc_unknown(self, prefix, command, params):
-        log.msg( 'unknown irc proto msg!' )
+        log.msg('unknown irc proto msg!')
 
     def irc_WHO(self, prefix, params):
         #<< who #python

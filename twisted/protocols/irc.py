@@ -38,7 +38,6 @@ class IRC(protocol.Protocol):
         RFC says CRLF.  (Also, the flexibility of LineReceiver to turn "line
         mode" on and off was not required.)
         """
-        log.msg( "data: %s" % repr(data) )
         self.buffer = self.buffer + data
         lines = string.split(self.buffer, "\n") # get the lines
         self.buffer = lines.pop() # pop the last element (we're not sure it's a line)
@@ -48,7 +47,7 @@ class IRC(protocol.Protocol):
             prefix, command, params = parsemsg(line)
             # MIRC is a big pile of doo-doo
             command = string.upper(command)
-            log.msg( "%s %s %s" % (prefix, command, params ))
+            log.msg( "%s %s %s" % (prefix, command, params))
             method = getattr(self, "irc_%s" % command, None)
             if method is not None:
                 method(prefix, params)
