@@ -39,10 +39,12 @@ class CConnector(tcp.Connector):
         return CClient(self.host, self.port, self.bindAddress, self, self.reactor)
 
 
-class CUDPPort(cudp.UDPPortMixin, udp.Port):
+_origUDPPort = udp.Port
+
+class CUDPPort(cudp.UDPPortMixin, _origUDPPort):
 
     def __init__(self, *args, **kwargs):
-        udp.Port.__init__(self, *args, **kwargs)
+        _origUDPPort.__init__(self, *args, **kwargs)
         cudp.UDPPortMixin.__init__(self, self)
 
 
