@@ -56,11 +56,12 @@ def ResourceScript(path):
     be an instance of (a subclass of) web.resource.Resource; it will be
     renderred.
     """
-    globals = {'__file__': path, 'resource': SimpleErrorPage()}
+    from pprint import pprint
+    glob = {'__file__': path, 'resource': SimpleErrorPage()}
 
-    execfile(path, globals, globals)
+    execfile(path, glob, glob)
 
-    return globals['resource']
+    return glob['resource']
 
 class PythonScript(resource.Resource):
     """I am an extremely simple dynamic resource; an embedded python script.

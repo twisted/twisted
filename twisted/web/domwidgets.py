@@ -297,3 +297,12 @@ class ColumnList(List):
         
 class Bold(Widget):
     tagName = 'b'
+    
+class Table(Widget):
+    tagName = 'table'
+
+class Row(Widget):
+    tagName = 'tr'
+    
+class Cell(Widget):
+    tagName = 'td'

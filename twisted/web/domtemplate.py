@@ -78,6 +78,7 @@ from twisted.web.resource import Resource
 from twisted.web import widgets # import Widget, Presentation
 from twisted.web import domwidgets
 from twisted.python.defer import Deferred
+from twisted.python import defer
 from twisted.python import failure
 from twisted.internet import reactor
 from twisted.python.mvc import View, IView, Controller
@@ -151,7 +152,7 @@ class DOMTemplate(Resource, View):
     def __init__(self, model = None):
         Resource.__init__(self)
         self.model = model
-        self.controller = None
+        self.controller = self
         self.templateMethods = MethodLookup()
         self.setTemplateMethods( self.getTemplateMethods() )
         self.handlerResults = {1: [], 0: []}
@@ -393,10 +394,7 @@ class DOMTemplate(Resource, View):
             successes = self.handlerResults.get(1, None)
             if successes:
                 process = self.handleSuccesses(request, successes)
-                if self.controller:
-                    self.controller.process(request, **process)
-                else:
-                    stop = self.process(request, **process)
+                stop = self.controller.process(request, **process)
 
         if not stop:
             page = str(self.d.toxml())

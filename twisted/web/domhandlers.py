@@ -59,6 +59,7 @@ class InputHandler(Controller):
         
         -- set the model?
         """
+        if not self.submodel or not self.model: return
         data = str(data)
         assert ';' not in self.submodel, "Semicolon is not legal in handler ids."
         if data != self.view.getData():
