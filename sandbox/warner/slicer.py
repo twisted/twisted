@@ -1,11 +1,15 @@
 #! /usr/bin/python
 
-from twisted.python.failure import Failure
-from twisted.internet.defer import Deferred
-from twisted.python import log, reflect
 import types
 from pickle import whichmodule  # used by FunctionSlicer
 from new import instance, instancemethod
+
+from twisted.python.failure import Failure
+from twisted.internet.defer import Deferred
+from twisted.python import log, reflect
+
+from tokens import Violation
+import schema
 
 class IBananaSlicer:
     def sendOpen(self, opentype):
@@ -324,9 +328,35 @@ SlicerRegistry2.update({
 class IBananaUnslicer:
     # .parent
 
-    # start/receiveToken/receiveChild/receiveAbort/receiveClose are the main
-    # "here are some tokens, make an object out of them" entry points used
-    # by Unbanana
+    # start/receiveChild/receiveClose/finish are
+    # the main "here are some tokens, make an object out of them" entry
+    # points used by Unbanana.
+
+    # start/receiveChild can call self.protocol.abandonUnslicer(failure,
+    # self) to tell the protocol that the unslicer has given up on life and
+    # all its remaining tokens should be discarded. The failure will be
+    # given to the late unslicer's parent in lieu of the object normally
+    # returned by receiveClose.
+    
+    # start/receiveChild/receiveClose/finish may raise a Violation
+    # exception, which tells the protocol that this object is contaminated
+    # and should be abandoned. An UnbananaFailure will be passed to its
+    # parent.
+
+    # Note, however, that it is not valid to both call abandonUnslicer *and*
+    # raise a Violation. That would discard too much.
+
+    def setConstraint(self, constraint):
+        """Add a constraint for this unslicer. The unslicer will enforce
+        this constraint upon all incoming data. The constraint must be of an
+        appropriate type (a ListUnslicer will only accept a ListConstraint,
+        etc). It must not be None.
+
+        If this function is not called, the Unslicer will accept any valid
+        banana as input, which probably means there is no limit on the
+        number of bytes it will accept (and therefore on the memory it could
+        be made to consume) before it finally accepts or rejects the input.
+        """
 
     def start(self, count):
         """Called to initialize the new slice. The 'count' argument is the
@@ -337,44 +367,57 @@ class IBananaUnslicer:
         Deferred there instead.
         """
 
-    def receiveToken(self, token):
-        """token will be a number or a string."""
+    def checkToken(self, typebyte):
+        """Check to see if the given token is acceptable (does it conform to
+        the constraint?). It will not be asked about ABORT or CLOSE tokens,
+        but it *will* be asked about OPEN. It should return a length limit
+        for long tokens (STRING and LONGINT/LONGNEG types). If STRING is
+        acceptable, then VOCAB should be too. A return value of None
+        indicates that unlimited lengths are acceptable. Should raise
+        Violation if the schema indiates the token is not acceptable. Should
+        raise UnbananaError if the type byte violates the basic Banana
+        protocol. (if no schema is in effect, this should never raise
+        Violation, but might still raise UnbananaError).
+        """
+
+    def doOpen(self, opentype):
+        """Opentype is a string. Check to see if this kind of child object
+        conforms to the constraint, raise Violation if not. Create a new
+        Unslicer (usually by calling self.opener, which chains back to the
+        RootUnslicer). Set a constraint on the child unslicer, if any. Set
+        the child's .opener attribute (usually to self.opener).
+        """
 
     def receiveChild(self, childobject):
-        """The unslicer returned in receiveOpen has finished. 'childobject'
-        is the object created by that unslicer. It might be an
-        UnjellyingFailure if something went wrong, in which card it may be
-        appropriate to do self.protocol.startDiscarding(childobject, self).
-        It might also be a Deferred, in which case you should add a callback
-        that will fill in the appropriate object later."""
-
-    def receiveAbort(self):
-        """An 'abort' token was received (indicating something went wrong in
-        the sender). The new object being created should be abandoned. The
-        unslicer can do self.protocol.startDiscarding(failure, self) to
-        have itself replaced with a DiscardUnslicer object."""
+        """'childobject' is being handed to this unslicer. It may be a
+        primitive type (number or string), or a composite type produced by
+        another Unslicer. It might be an UnbananaFailure if something went
+        wrong, in which case it may be appropriate to do
+        self.protocol.abandonUnslicer(failure, self). It might also be a
+        Deferred, in which case you should add a callback that will fill in
+        the appropriate object later."""
 
     def receiveClose(self):
         """Called when the Close token is received. Should return the object
-        just created, or an UnjellyingFailure if something went wrong. If
+        just created, or an UnbananaFailure if something went wrong. If
         necessary, unbanana.setObject should be called, then the Deferred
         created in start() should be fired with the new object."""
 
     def finish(self):
         """Called when the unslicer is popped off the stack. This is called
         even if the pop is because of an exception. The unslicer should
-        perform cleanup and remove itself from any other stacks it may have
-        added itself to."""
+        perform cleanup, including firing the Deferred with an
+        UnbananaFailure if the object it is creating could not be created.
+
+        TODO: can receiveClose and finish be merged? Or should the child
+        object be returned from finish() instead of receiveClose?
+        """
 
     def description(self):
         """Return a short string describing where in the object tree this
-        unslicer is sitting. A list of these strings will be used to
-        describe where any problems occurred."""
-
-    def receiveOpen(self, opentype):
-        """this Unslicer gets to decide what should be pushed on the stack.
-        Return None to defer the request to someone deeper in the stack.
-        Otherwise return a new IBananaUnslicer-capable object"""
+        unslicer is sitting, relative to its parent. These strings are
+        obtained from every unslicer in the stack, and joined to describe
+        where any problems occurred."""
 
 
 
@@ -402,49 +445,29 @@ class BaseUnslicer:
         return "??"
 
 
+    def setConstraint(self, constraint):
+        pass
+
     def start(self, count):
         pass
 
-    def receiveAbort(self):
-        here = self.protocol.describe()
-        failure = UnbananaFailure(here)
-        self.protocol.startDiscarding(failure, self)
-
-    def receiveToken(self, token):
-        raise NotImplementedError
-
-    def receiveClose(self):
-        raise NotImplementedError
-
-    def childFinished(self, unslicer, obj):
-        if isinstance(obj, UnbananaFailure):
-            if self.protocol.debug: print "%s .childFinished for UF" % self
-            self.protocol.startDiscarding(obj, self)
-        self.receiveChild(obj)
-
-    def receiveChild(self, obj):
-        pass
-
-    def finish(self):
-        pass
+    def checkToken(self, typebyte):
+        return None # unlimited
 
     def doOpen(self, opentype):
         """Return an IBananaUnslicer object based upon the 'opentype'
         string. This object will receive all tokens destined for the
-        subnode. The first node to return something other than None will
-        stop the search. To get the default behavior (bypassing deeper
-        nodes), return RootUnslicer.doOpen() directly.
+        subnode.
         """
-        return None # means "defer to the node above me"
+        raise NotImplementedError
 
-    def taste(self, token):
-        """All tasters on the taster stack get to pass judgement upon the
-        incoming tokens. If they don't like what they see, they should raise
-        an InsecureUnbanana exception.
-        """
-        # TODO: This isn't really all that useful. A hook that made it easy
-        # to catch instances of certain classes would probably have more
-        # real-world applications
+    def receiveChild(self, obj):
+        pass
+
+    def receiveClose(self):
+        raise NotImplementedError
+
+    def finish(self):
         pass
 
     def setObject(self, counter, obj):
@@ -465,78 +488,120 @@ class BaseUnslicer:
 
 class LeafUnslicer(BaseUnslicer):
     # inherit from this to reject any child nodes
-    def receiveChild(self, obj):
-        raise ValueError, "'%s' does not accept sub-objects" % self
+
+    # checkToken should reject OPEN tokens
+
     def doOpen(self, opentype):
-        raise ValueError, "'%s' does not accept sub-objects" % self
-    
-
-class DiscardUnslicer(BaseUnslicer):
-    """This Unslicer throws out all incoming tokens. It is used to deal
-    cleanly with failures: the failing Unslicer is replaced with a
-    DiscardUnslicer to eat the rest of its contents without losing sync.
-    """
-    def __init__(self, failure):
-        self.failure = failure
-
-    def start(self, count):
-        pass
-    def receiveToken(self, token):
-        pass
-    def childFinished(self, unslicer, obj):
-        pass
-    def receiveAbort(self):
-        pass # we're already discarding
-    def receiveClose(self):
-        if self.protocol.debug: print "DiscardUnslicer.receiveClose"
-        return self.failure
-
-    def describe(self):
-        return "discard"
-    def doOpen(self, opentype):
-        return DiscardUnslicer()
+        raise Violation, "'%s' does not accept sub-objects" % self
 
 class UnicodeUnslicer(BaseUnslicer):
+    # accept a UTF-8 encoded string
+    string = None
+    constraint = None
+    def setConstraint(self, constraint):
+        assert isinstance(constraint, schema.StringConstraint)
+        self.constraint = constraint
+
+    def checkToken(self, typebyte):
+        if typebyte != tokens.STRING:
+            raise BananaError("UnicideUnslicer only accepts strings")
+        if self.constraint:
+            return self.constraint.checkToken(typebyte)
+        return None # no size limit
+
     def receiveToken(self, token):
-        self.string = unicode(token, "UTF-8")
+
     def receiveChild(self, obj):
-        raise ValueError, "UnicodeUnslicer only accepts a single string"
+        if self.string != None:
+            raise BananaError("already received a string")
+        self.string = unicode(obj, "UTF-8")
     def receiveClose(self):
         return self.string
     def describe(self):
         return "<unicode>"
 
 class ListUnslicer(BaseUnslicer):
-    debug = 0
-    
+    maxLength = None
+    itemConstraint = None
+    # .opener usually chains to RootUnslicer.opener
+    debug = False
+
+    def setConstraint(self, constraint):
+        assert isinstance(constraint, schema.ListConstraint)
+        self.maxLength = constraint.maxLength
+        self.itemConstraint = constraint.constraint
+        print "itemConstraint", self.itemConstraint
+
     def start(self, count):
+        #self.opener = foo # could replace it if we wanted to
         self.list = []
         self.count = count
         if self.debug:
             print "%s[%d].start with %s" % (self, self.count, self.list)
         self.protocol.setObject(count, self.list)
 
+    def checkToken(self, typebyte):
+        if self.maxLength != None and len(self.list) >= self.maxLength:
+            # list is full, no more tokens accepted
+            # this is hit if the max+1 item is a primitive type
+            raise Violation
+        if self.itemConstraint:
+            return self.itemConstraint.checkToken(typebyte)
+        return None # unlimited
+
+    def doOpen(self, opentype):
+        # decide whether the given object type is acceptable here. Raise a
+        # Violation exception if not, otherwise give it to our opener (which
+        # will normally be the RootUnslicer). Apply a constraint to the new
+        # unslicer.
+        if self.maxLength != None and len(self.list) >= self.maxLength:
+            # this is hit if the max+1 item is a non-primitive type
+            raise Violation
+        if self.itemConstraint:
+            self.itemConstraint.checkOpentype(opentype)
+        unslicer = self.opener(opentype)
+        if self.itemConstraint:
+            unslicer.setConstraint(self.itemConstraint)
+        unslicer.opener = self.opener
+        return unslicer
+
     def update(self, obj, index):
+        # obj has already passed typechecking
         if self.debug:
             print "%s[%d].update: [%d]=%s" % (self, self.count, index, obj)
         assert(type(index) == types.IntType)
         self.list[index] = obj
 
-    def receiveToken(self, token):
-        if self.protocol.debug or self.debug:
-            print "%s[%d].receiveToken(%s{%s})" % (self, self.count,
-                                                   token, id(token))
-        self.list.append(token)
+#    def receiveToken(self, token):
+#        if self.protocol.debug or self.debug:
+#            print "%s[%d].receiveToken(%s{%s})" % (self, self.count,
+#                                                   token, id(token))
+#        self.list.append(token)
 
     def receiveChild(self, obj):
         if self.debug:
             print "%s[%d].receiveChild(%s)" % (self, self.count, obj)
+        # obj could be a primitive type, a Deferred, or a complex type like
+        # those returned from an InstanceUnslicer. However, the individual
+        # object has already been through the schema validation process. The
+        # only remaining question is whether the larger schema will accept
+        # it. It could also be an UnbananaFailure (if the subobject were
+        # aborted or if it violated the schema).
+        if self.maxLength != None and len(self.list) >= self.maxLength:
+            # this is redundant
+            # (if it were a non-primitive one, it would be caught in doOpen)
+            # (if it were a primitive one, it would be caught in checkToken)
+            raise Violation
         if isinstance(obj, Deferred):
             if self.debug:
                 print " adding my update[%d] to %s" % (len(self.list), obj)
             obj.addCallback(self.update, len(self.list))
             obj.addErrback(self.printErr)
-        self.receiveToken(obj)
+            self.list.append(None) # placeholder
+        elif isinstance(obj, UnbananaFailure):
+            self.protocol.startDiscarding(obj, self)
+        else:
+            self.list.append(obj)
 
     def printErr(self, why):
         print "ERR!"
@@ -631,6 +696,10 @@ class DictUnslicer(BaseUnslicer):
         else:
             return "{}"
 
+class NewVocabulary:
+    def __init__(self, newvocab):
+        self.nv = newvocab
+
 class VocabUnslicer(LeafUnslicer):
     """Much like DictUnslicer, but keys must be numbers, and values must
     be strings"""
@@ -655,7 +724,7 @@ class VocabUnslicer(LeafUnslicer):
             self.haveKey = 0
 
     def receiveClose(self):
-        return self.d
+        return NewVocabulary(self.d)
 
     def describe(self):
         if self.haveKey:
@@ -754,13 +823,19 @@ class InstanceUnslicer2(InstanceUnslicer):
     
 
 class ReferenceUnslicer(LeafUnslicer):
-
+    constraint = None
     def receiveToken(self, token):
         if hasattr(self, 'obj'):
             raise ValueError, "'reference' token already got number"
         if type(token) != types.IntType:
             raise ValueError, "'reference' token requires integer"
         self.obj = self.protocol.getObject(token)
+        # assert that this conforms to the constraint
+        if self.constraint:
+            self.constraint.checkObject(self.obj)
+        # TODO: it might be a Deferred, but we should know enough about the
+        # incoming value to check the constraint. This requires a subclass
+        # of Deferred which can give us the metadata.
 
     def receiveClose(self):
         return self.obj
@@ -888,34 +963,53 @@ UnslicerRegistry2.update({
 
 
 class RootUnslicer(BaseUnslicer):
+    openRegistry = UnslicerRegistry
+    constraint = None
     def __init__(self):
         self.objects = {}
 
     def start(self, count):
         pass
 
+    def setConstraint(self, constraint):
+        # this constraints top-level objects. E.g., if this is an
+        # IntegerConstraint, then only integers will be accepted.
+        self.constraint = constraint
+
+    def checkToken(self, typebyte):
+        if self.constraint:
+            return self.constraint.checkToken(typebyte)
+        return None
+
     def open(self, opentype):
-        return UnslicerRegistry[opentype]()
+        child = self.openRegistry[opentype]()
+        return child
 
     def doOpen(self, opentype):
+        if self.constraint:
+            self.constraint.checkOpentype(opentype)
         if len(self.protocol.receiveStack) == 1 and opentype == "vocab":
             # only legal at top-level
             child = VocabUnslicer()
         else:
             child = self.open(opentype)
+        if not child:
+            # TODO: Violation? or should we just drop the connection?
+            raise KeyError, "no such open type '%s'" % opentype
         child.opener = self.open
+        if self.constraint:
+            child.setConstraint(self.constraint)
         return child
-
-    def receiveToken(self, token):
-        raise ValueError, "top-level should never receive non-OPEN tokens"
 
     def receiveAbort(self, token):
         raise ValueError, "top-level should never receive ABORT tokens"
 
-    def childFinished(self, unslicer, obj):
+    def receiveChild(self, obj):
+        if self.protocol.debug:
+            print "RootUnslicer.receiveChild(%s)" % obj
         self.objects = {}
-        if isinstance(unslicer, VocabUnslicer):
-            self.protocol.setIncomingVocabulary(obj)
+        if isinstance(obj, NewVocabulary):
+            self.protocol.setIncomingVocabulary(obj.nv)
             return
         self.protocol.receivedObject(obj) # give finished object to Banana
 
@@ -936,15 +1030,6 @@ class RootUnslicer(BaseUnslicer):
         if self.protocol.debug:
             print "getObject(%s) -> %s{%s}" % (counter, obj, id(obj))
         return obj
-
-class RootUnslicer2(RootUnslicer):
-
-    def doOpen(self, opentype):
-        if len(self.protocol.receiveStack) == 1 and opentype == "vocab":
-            # only legal at top-level
-            return VocabUnslicer()
-        return UnslicerRegistry2[opentype]()
-
-    def receiveToken(self, token):
-        self.protocol.receivedObject(token)
     
+
+

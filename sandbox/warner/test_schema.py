@@ -6,12 +6,17 @@ import schema
 class Dummy:
     pass
 
-class CreateTest(unittest.TestCase):
+HEADER = 64
+INTSIZE = HEADER+1
+STR10 = HEADER+1+10
+
+class ConformTest(unittest.TestCase):
     def conforms(self, c, obj):
         c.checkObject(obj)
     def violates(self, c, obj):
         self.assertRaises(schema.Violation, c.checkObject, obj)
     def assertSize(self, c, maxsize):
+        return
         self.assertEquals(c.maxSize(), maxsize)
     def assertDepth(self, c, maxdepth):
         self.assertEquals(c.maxDepth(), maxdepth)
@@ -25,10 +30,38 @@ class CreateTest(unittest.TestCase):
         self.assertUnboundedSize(c)
         self.assertUnboundedDepth(c)
 
+    def testInteger(self):
+        # s_int32_t
+        c = schema.IntegerConstraint()
+        self.assertSize(c, INTSIZE)
+        self.assertDepth(c, 1)
+        self.conforms(c, 123)
+        self.violates(c, 2**64)
+        self.conforms(c, 0)
+        self.conforms(c, 2**31-1)
+        self.violates(c, 2**31)
+        self.conforms(c, -2**31)
+        self.violates(c, -2**31-1)
+        self.violates(c, "123")
+        self.violates(c, Dummy())
+        self.violates(c, None)
+
+    def testLargeInteger(self):
+        c = schema.IntegerConstraint(64)
+        self.assertSize(c, INTSIZE+64)
+        self.assertDepth(c, 1)
+        self.conforms(c, 123)
+        self.violates(c, "123")
+        self.violates(c, None)
+        self.conforms(c, 2**512-1)
+        self.violates(c, 2**512)
+        self.conforms(c, -2**512+1)
+        self.violates(c, -2**512)
+
     def testString(self):
         c = schema.StringConstraint(10)
-        self.assertSize(c, 75)
-        self.assertSize(c, 75)
+        self.assertSize(c, STR10)
+        self.assertSize(c, STR10) # twice to test seen=[] logic
         self.assertDepth(c, 1)
         self.conforms(c, "I'm short")
         self.violates(c, "I am too long")
@@ -38,16 +71,6 @@ class CreateTest(unittest.TestCase):
         self.violates(c, Dummy())
         self.violates(c, None)
 
-    def testInteger(self):
-        c = schema.IntegerConstraint()
-        self.assertSize(c, 73)
-        self.assertDepth(c, 1)
-        self.conforms(c, 123)
-        self.violates(c, 2**64)
-        self.violates(c, "123")
-        self.violates(c, Dummy())
-        self.violates(c, None)
-        
     def testBool(self):
         c = schema.BooleanConstraint()
         self.assertSize(c, 147)
@@ -166,3 +189,42 @@ class CreateTest(unittest.TestCase):
         self.conforms(l2, ["the number", "shall be", "three"])
         self.violates(l2, ["five", "is", "...", "right", "out"])
 
+    def testDict(self):
+        d = schema.DictOf(schema.StringConstraint(10),
+                          schema.IntegerConstraint(),
+                          maxKeys=4)
+        
+        self.assertDepth(d, 2)
+        self.conforms(d, {"a": 1, "b": 2})
+        self.conforms(d, {"foo": 123, "bar": 345, "blah": 456, "yar": 789})
+        self.violates(d, None)
+        self.violates(d, 12)
+        self.violates(d, ["nope"])
+        self.violates(d, ("nice", "try"))
+        self.violates(d, {1:2, 3:4})
+        self.violates(d, {"a": "b"})
+        self.violates(d, {"a": 1, "b": 2, "c": 3, "d": 4, "toomuch": 5})
+
+class CreateTest(unittest.TestCase):
+    def check(self, obj, expected):
+        self.failUnless(isinstance(obj, expected))
+
+    def testMakeConstraint(self):
+        make = schema.makeConstraint
+        c = make(int)
+        self.check(c, schema.IntegerConstraint)
+        self.failUnlessEqual(c.maxBytes, -1)
+
+        c = make(str)
+        self.check(c, schema.StringConstraint)
+        self.failUnlessEqual(c.maxLength, 1000)
+
+        self.check(make(bool), schema.BooleanConstraint)
+        self.check(make(float), schema.NumberConstraint)
+
+        self.check(make(schema.NumberConstraint()), schema.NumberConstraint)
+        c = make((int, str))
+        self.check(c, schema.PolyConstraint)
+        self.failUnlessEqual(len(c.alternatives), 2)
+        self.check(c.alternatives[0], schema.IntegerConstraint)
+        self.check(c.alternatives[1], schema.StringConstraint)

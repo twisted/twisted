@@ -5,11 +5,11 @@ primitive constraints:
    types.StringType: string with maxLength=1k
    String(maxLength=1000): string with arbitrary maxLength
    types.BooleanType: boolean
-   types.IntType: integer with abs(num) < 2**32 ?
-   types.LongType: integer with abs(num) < 2**10000
-   Int(maxValue=2**32): integer with arbitrary maxValue
+   types.IntType: integer that fits in s_int32_t
+   types.LongType: integer with abs(num) < 2**8192 (fits in 1024 bytes)
+   Int(maxBytes=1024): integer with arbitrary maxValue=2**(8*maxBytes)
    types.FloatType: number
-   Number(maxValue=2**32): float or integer with maxValue
+   Number(maxBytes=1024): float or integer with maxBytes
    interface: instance which implements (or adapts to) the Interface
    class: instance of the class or a subclass
    # unicode? types? none?
@@ -41,26 +41,26 @@ modifiers:
 """
 
 import types
-import banana, slicer
+from tokens import Violation, SIZE_LIMIT, STRING, LIST, INT, NEG, \
+     LONGINT, LONGNEG, VOCAB, FLOAT, OPEN
 
 everythingTaster = {
-    banana.STRING: banana.SIZE_LIMIT,
-    banana.LIST: None,
-    banana.INT: None,
-    banana.NEG: None,
-    banana.LONGINT: banana.SIZE_LIMIT,
-    banana.LONGNEG: banana.SIZE_LIMIT,
-    banana.VOCAB: None,
-    banana.FLOAT: None,
-    banana.OPEN: None,
-    banana.CLOSE: None,
-    banana.ABORT: None,
+    # he likes everything
+    STRING: SIZE_LIMIT,
+    LIST: None,
+    INT: None,
+    NEG: None,
+    LONGINT: SIZE_LIMIT,
+    LONGNEG: SIZE_LIMIT,
+    VOCAB: None,
+    FLOAT: None,
+    OPEN: None,
+    }
+openTaster = {
+    OPEN: None,
     }
 
 class UnboundedSchema(Exception):
-    pass
-
-class Violation(Exception):
     pass
 
 class Constraint:
@@ -76,6 +76,7 @@ class Constraint:
     values are size limits: the body portion of the token must not be
     longer than LIMIT bytes.
     """
+
     opentypes = None
     """opentypes is a list of currently acceptable OPEN token types. None
     indicates that all types are accepted. An empty list indicates that no
@@ -86,15 +87,16 @@ class Constraint:
         """Check the token type. Raise an exception if it is not accepted
         right now, or return a body-length limit if it is ok."""
         if not self.taster.has_key(typebyte):
-            raise BananaError("this primitive type is not accepted right now")
+            raise Violation("this primitive type is not accepted right now")
             # really, start discarding instead
         return self.taster[typebyte]
 
     def setNumberTaster(self, maxValue):
-        self.taster = {banana.INT: None,
-                       banana.NEG: None,
-                       banana.LONGINT: None, # TODO
-                       banana.LONGNEG: None,
+        self.taster = {INT: None,
+                       NEG: None,
+                       LONGINT: None, # TODO
+                       LONGNEG: None,
+                       FLOAT: None,
                        }
     def checkOpentype(self, opentype):
         """Check the OPEN token type. Raise an exception if it is not
@@ -103,7 +105,7 @@ class Constraint:
         if self.opentypes == None:
             return
         if opentype not in self.opentypes:
-            raise BananaError, "unacceptable OPEN type"
+            raise Violation, "unacceptable OPEN type"
 
     def checkObject(self, obj):
         """Validate an existing object. Usually objects are validated as
@@ -123,10 +125,27 @@ class Constraint:
         return
 
     def maxSize(self, seen=None):
-        """I return the maximum size (in bytes) which could be consumed by
-        the serialized form of an object which conforms to my constraint,
-        including all possible sub-objects which I contain. I raise an
-        UnboundedSchema exception if there is no bound.
+        """
+        I help a caller determine how much memory could be consumed by the
+        input stream while my constraint is in effect.
+
+        My constraint will be enforced against the bytes that arrive over
+        the wire. Eventually I will either accept the incoming bytes and my
+        Unslicer will provide an object to its parent (including any
+        subobjects), or I will raise a Violation exception which will kick
+        my Unslicer into 'discard' mode.
+
+        I define maxSizeAccept as the maximum number of bytes that will be
+        received before the stream is accepted as valid. maxSizeReject is
+        the maximum that will be received before a Violation is raised. The
+        max of the two provides an upper bound on single objects. For
+        container objects, the upper bound is probably (n-1)*accept +
+        reject, because there can only be one outstanding
+        about-to-be-rejected object at any time.
+
+        I return (maxSizeAccept, maxSizeReject).
+
+        I raise an UnboundedSchema exception if there is no bound.
         """
         raise UnboundedSchema
 
@@ -145,9 +164,12 @@ Any = Constraint # accept everything
 # constraints which describe individual banana tokens
 
 class StringConstraint(Constraint):
+    opentypes = [] # redundant, as taster doesn't accept OPEN
+
     def __init__(self, maxLength=1000):
         self.maxLength = maxLength
-        self.taster = {banana.STRING: self.maxLength}
+        self.taster = {STRING: self.maxLength,
+                       VOCAB: None}
     def checkObject(self, obj):
         if not isinstance(obj, types.StringTypes):
             raise Violation
@@ -161,57 +183,81 @@ class StringConstraint(Constraint):
         return 1
 
 class IntegerConstraint(Constraint):
-    def __init__(self, maxValue=2**32):
-        self.maxValue = maxValue
-        self.setNumberTaster(maxValue)
+    opentypes = [] # redundant
+    # taster set in __init__
+
+    def __init__(self, maxBytes=-1):
+        # -1 means s_int32_t: INT/NEG instead of INT/NEG/LONGINT/LONGNEG
+        # None means unlimited
+        assert maxBytes == -1 or maxBytes == None or maxBytes >= 4
+        self.maxBytes = maxBytes
+        self.taster = {INT: None, NEG: None}
+        if maxBytes != -1:
+            self.taster[LONGINT] = maxBytes
+            self.taster[LONGNEG] = maxBytes
+
     def checkObject(self, obj):
         if not isinstance(obj, (types.IntType, types.LongType)):
             raise Violation
-        if abs(obj) > self.maxValue:
-            raise Violation
+        if self.maxBytes == -1:
+            if obj >= 2**31 or obj < -2**31:
+                raise Violation
+        elif self.maxBytes != None:
+            if abs(obj) >= 2**(8*self.maxBytes):
+                raise Violation
+
     def maxSize(self, seen=None):
-        # TODO: not 8, log256(self.maxValue)
-        return 64+1+8
+        if self.maxBytes == None:
+            raise UnboundedSchema
+        if self.maxBytes == -1:
+            return 64+1
+        return 64+1+self.maxBytes
     def maxDepth(self, seen=None):
         return 1
 
-class SmallIntegerConstraint(IntegerConstraint):
-    def __init__(self):
-        self.maxValue = 2**32
+class NumberConstraint(IntegerConstraint):
+    def __init__(self, maxBytes=1024):
+        assert maxBytes != -1  # not valid here
+        IntegerConstraint.__init__(self, maxBytes)
+        self.taster[FLOAT] = None
 
-class NumberConstraint(Constraint):
-    def __init__(self, maxIntValue=2**32):
-        self.maxIntValue = maxIntValue
-        self.setNumberTaster(maxValue)
     def checkObject(self, obj):
-        if not isinstance(obj, (types.IntType, types.LongType,
-                                types.FloatType)):
-            raise Violation
-        if abs(obj) > self.maxValue:
-            raise Violation
+        if isinstance(obj, types.FloatType):
+            return
+        IntegerConstraint.checkObject(self, obj)
+
     def maxSize(self, seen=None):
-        # TODO: same as IntegerConstraint
-        return 64+1+8
+        # floats are packed into 8 bytes, so the shortest FLOAT token is
+        # 64+1+8
+        intsize = IntegerConstraint.maxSize(self, seen)
+        return max(64+1+8, intsize)
     def maxDepth(self, seen=None):
         return 1
 
 # constraints which describe OPEN sequences
 
-COUNTERBYTES = 0 # max size of opencount
+COUNTERBYTES = 64 # max size of opencount
 
-def OPENBYTES(name=None):
-    # an OPEN,type,CLOSE sequence takes:
-    if name == None:
-        strlen = StringConstraint().maxSize(None)
-    else:
-        strlen = StringConstraint(len(name)).maxSize(None)
-    return COUNTERBYTES+1 + strlen + COUNTERBYTES+1
+def OPENBYTES(dummy):
+    # an OPEN,type,CLOSE sequence could consume:
+    #  64 (header)
+    #  1 (OPEN)
+    #   64 (header)
+    #   1 (STRING)
+    #   1000 (value)
+    #    or
+    #   64 (header)
+    #   1 (VOCAB)
+    #  64 (header)
+    #  1 (CLOSE)
+    # for a total of 65+1065+65 = 1195
+    return COUNTERBYTES+1 + 64+1+1000 + COUNTERBYTES+1
 
 
 class BooleanConstraint(Constraint):
-    taster = {banana.INT: 2**32}
+    taster = {INT: 2**32}
     opentypes = []
-    _myint = SmallIntegerConstraint()
+    _myint = IntegerConstraint()
 
     def checkObject(self, obj):
         if type(obj) != types.BooleanType:
@@ -224,6 +270,9 @@ class BooleanConstraint(Constraint):
         return 1+self._myint.maxDepth(seen)
 
 class InterfaceConstraint(Constraint):
+    taster = openTaster
+    opentypes = ["instance"]
+
     def __init__(self, interface):
         self.interface = interface
     def checkObject(self, obj):
@@ -232,11 +281,20 @@ class InterfaceConstraint(Constraint):
             raise Violation
 
 class ClassConstraint(Constraint):
+    taster = openTaster
+    opentypes = ["instance"]
+
     def __init__(self, klass):
         self.klass = klass
+    def checkObject(self, obj):
+        if not isinstance(obj, self.klass):
+            raise Violation
+
 class PolyConstraint(Constraint):
     def __init__(self, *alternatives):
-        self.alternatives = alternatives
+        self.alternatives = [makeConstraint(a) for a in alternatives]
+        self.alternatives = tuple(self.alternatives)
+        # TODO: should taster/opentypes be a union of the alternatives'
     def checkObject(self, obj):
         ok = False
         for c in self.alternatives:
@@ -267,8 +325,11 @@ class PolyConstraint(Constraint):
 ChoiceOf = PolyConstraint
 
 class TupleConstraint(Constraint):
+    taster = openTaster
+    opentypes = ["tuple"]
+
     def __init__(self, *elemConstraints):
-        self.constraints = elemConstraints
+        self.constraints = [makeConstraint(e) for e in elemConstraints]
     def checkObject(self, obj):
         if type(obj) != types.TupleType:
             raise Violation
@@ -298,8 +359,12 @@ class ListConstraint(Constraint):
     accept lists of any length, use maxLength=None (but you will get a
     UnboundedSchema warning). All member objects must obey the given
     constraint."""
+
+    taster = openTaster
+    opentypes = ["list"]
+
     def __init__(self, constraint, maxLength=30):
-        self.constraint = constraint
+        self.constraint = makeConstraint(constraint)
         self.maxLength = maxLength
     def checkObject(self, obj):
         if type(obj) != types.ListType:
@@ -327,13 +392,20 @@ class ListConstraint(Constraint):
 ListOf = ListConstraint
 
 class DictConstraint(Constraint):
+    taster = openTaster
+    opentypes = ["dict"]
+
     def __init__(self, keyconstraint, valueconstraint, maxKeys=30):
-        self.keyconstraint = keyconstraint
-        self.valueconstraint = valueconstraint
+        self.keyconstraint = makeConstraint(keyconstraint)
+        self.valueconstraint = makeConstraint(valueconstraint)
         self.maxKeys = maxKeys
     def checkObject(self, obj):
         if type(obj) != types.DictType:
-            raise Violation
+            raise Violation, "'%s' (%s) is not a Dictionary" % (obj,
+                                                                type(obj))
+        if self.maxKeys != None and len(obj) > self.maxKeys:
+            raise Violation, "Dict keys=%d > maxKeys=%d" % (len(obj),
+                                                            self.maxKeys)
         for key, value in obj.iteritems():
             self.keyconstraint.checkObject(key)
             self.valueconstraint.checkObject(value)
@@ -359,6 +431,9 @@ class DictConstraint(Constraint):
 DictOf = DictConstraint
 
 class AttributeDictConstraint(Constraint):
+    taster = openTaster
+    opentypes = ["methodcall"] # TODO: ???
+
     def __init__(self, ignoreUnknown=False, *attrTuples):
         self.keys = {}
         for name, constraint in attrTuples:
@@ -385,7 +460,7 @@ class AttributeDictConstraint(Constraint):
                                 for c in self.itervalues()], 1)
 
 
-
+#TODO
 class Shared(Constraint):
     def __init__(self, constraint, refLimit=None):
         self.constraint = makeConstraint(constraint)
@@ -403,6 +478,7 @@ class Shared(Constraint):
         seen.append(self)
         return self.constraint.maxDepth(seen)
 
+#TODO
 class Optional(Constraint):
     def __init__(self, constraint, default):
         self.constraint = makeConstraint(constraint)
@@ -429,7 +505,7 @@ def makeConstraint(t):
         types.StringType: StringConstraint(),
         types.BooleanType: BooleanConstraint(),
         types.IntType: IntegerConstraint(),
-        types.LongType: IntegerConstraint(maxValue=2**10000),
+        types.LongType: IntegerConstraint(maxBytes=1024),
         types.FloatType: NumberConstraint(),
         }
     c = map.get(t, None)
@@ -445,90 +521,11 @@ def makeConstraint(t):
 
     # alternatives
     if type(t) == types.TupleType:
-        return PolyConstraint(t)
+        return PolyConstraint(*t)
 
     raise UnknownSchemaType
 
 
-
-class ListUnslicer(slicer.BaseUnslicer):
-    constraint = Any()
-    # .opener usually chains to RootUnslicer.opener
-    # .constraint is populated by our creator (in doOpen)
-
-    def start(self, count):
-        #self.opener = foo # could replace it if we wanted to
-        assert isinstance(self.constraint, ListConstraint)
-        self.maxLength = self.constraint.maxLength
-        self.itemConstraint = self.constraint.constraint
-
-        self.list = []
-        self.protocol.setObject(count, self.list)
-
-    def checkToken(self, typebyte):
-        return self.itemConstraint.checkToken(typebyte)
-    def checkOpentype(self, opentype):
-        self.itemConstraint.checkOpentype(opentype)
-
-    def doOpen(self, opentype):
-        # decide whether the given object type is acceptable here. Raise a
-        # Violation exception if not, otherwise give it to our opener (which
-        # will normally be the RootUnslicer). Apply a constraint to the new
-        # unslicer.
-        if self.maxLength != None and len(self.list) >= self.maxLength:
-            # this is hit if the max+1 item is a non-primitive type
-            raise Violation
-        self.itemConstraint.checkOpentype(opentype)
-        unslicer = self.opener(opentype)
-        unslicer.constraint = self.itemConstraint
-        unslicer.opener = self.opener
-        return unslicer
-
-    def receiveChild(self, obj):
-        # obj could be a primitive type, a Deferred, or a complex type like
-        # those returned from an InstanceUnslicer. However, the individual
-        # object has already been through the schema validation process. The
-        # only remaining question is whether the larger schema will accept
-        # it.
-        if self.maxLength != None and len(self.list) >= self.maxLength:
-            # this is hit if the max+1 item is a primitive type
-            # (if it were a non-primitive one, it would be caught in doOpen)
-            raise Violation
-        if isinstance(obj, Deferred):
-            obj.addCallback(self.update, len(self.list))
-            obj.addErrback(self.printErr)
-            self.list.append(None) # placeholder
-            return
-        self.list.append(token)
-
-    def update(self, obj, index):
-        # obj has already passed typechecking
-        assert(type(index) == types.IntType)
-        self.list[index] = obj
-
-    def receiveClose(self):
-        return self.list
-
-    def describe(self):
-        return "[%d]" % len(self.list)
-
-
-class ReferenceUnslicer(slicer.LeafUnslicer):
-
-    def receiveToken(self, token):
-        if hasattr(self, 'obj'):
-            raise ValueError, "'reference' token already got number"
-        if type(token) != types.IntType:
-            raise ValueError, "'reference' token requires integer"
-        self.obj = self.protocol.getObject(token)
-        # assert that this conforms to the constraint
-        self.constraint.checkObject(self.obj)
-        # TODO: it might be a Deferred, but we should know enough about the
-        # incoming value to check the constraint. This requires a subclass
-        # of Deferred which can give us the metadata.
-
-    def receiveClose(self):
-        return self.obj
 
 
 # how to accept "([(ref0" ?

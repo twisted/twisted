@@ -2,10 +2,11 @@
 
 from twisted.trial import unittest
 from twisted.python import reflect
-from banana import Banana
+from banana import Banana, BananaError
+import slicer, schema
 from slicer import Dummy, UnbananaFailure
 from slicer import RootSlicer, RootSlicer2
-from slicer import RootUnslicer, RootUnslicer2
+from slicer import RootUnslicer
 
 import cStringIO, types
 
@@ -569,10 +570,126 @@ class ByteStream(TestBananaMixin, unittest.TestCase):
                             CLOSE(0)])
         self.wantEqual(self.encode(f1), expected)
 
+class InboundByteStream(unittest.TestCase):
+
+    def OPEN(self, opentype, count):
+        assert count < 128
+        assert len(opentype) < 128
+        return chr(count) + "\x88" + \
+               chr(len(opentype)) + "\x82" + opentype
+    def OPENlist(self, count):
+        return self.OPEN("list", count)
+    def OPENtuple(self, count):
+        return self.OPEN("tuple", count)
+    def OPENdict(self, count):
+        return self.OPEN("dict", count)
+    def OPENinstance(self, count):
+        return self.OPEN("instance", count)
+    def OPENref(self, count):
+        return self.OPEN("reference", count)
+    def CLOSE(self, count):
+        assert count < 128
+        return chr(count) + "\x89"
+    def INT(self, num):
+        if num >=0:
+            assert num < 128
+            return chr(num) + "\x81"
+        num = -num
+        assert num < 128
+        return chr(num) + "\x83"
+
+    def decode(self, string):
+        banana = TestBanana()
+        banana.object = None
+        banana.dataReceived(string)
+        return banana.object
+    def check(self, obj, stream):
+        obj2 = self.decode(stream)
+        self.failUnlessEqual(obj, obj2)
+
+    def testInt(self):
+        self.check(1, "\x01\x81")
+        self.check(130, "\x02\x01\x81")
+        self.check(-1, "\x01\x83")
+        self.check(-130, "\x02\x01\x83")
+        self.check(0, self.INT(0))
+        self.check(1, self.INT(1))
+        self.check(127, self.INT(127))
+        self.check(-1, self.INT(-1))
+        self.check(-127, self.INT(-127))
+
+    def testString(self):
+        self.check("", "\x82")
+        self.check("", "\x00\x82")
+        self.check("", "\x00\x00\x82")
+        self.assertRaises(BananaError, self.decode, "\x00" * 65)
+        #self.decode("\x00" * 65 + "\x82")
+        self.assertRaises(BananaError, self.decode, "\x00" * 65 + "\x82")
+
+        self.check("a", "\x01\x82a")
+        self.check("b"*130, "\x02\x01\x82" + "b"*130 + "extra")
+        self.check("c"*1025, "\x01\x08\x82" + "c" * 1025 + "extra")
+
+    def decode2(self, string, constraint, childConstraint=None):
+        banana = TestBanana()
+        banana.receiveStack[-1].constraint = constraint
+        banana.receiveStack[-1].childConstraint = childConstraint
+        banana.object = None
+        banana.dataReceived(string)
+        return banana.object
+    def check2(self, stream, obj, constraint, childConstraint=None):
+        obj2 = self.decode2(stream, constraint, childConstraint)
+        self.failUnlessEqual(obj, obj2)
+    def violates(self, stream, where, constraint, childConstraint=None):
+        obj2 = self.decode2(stream, constraint, childConstraint)
+        self.failUnless(isinstance(obj2, slicer.UnbananaFailure))
+        self.failUnlessEqual(obj2.where, where)
+
+    def testConstrainedInt(self):
+        pass # TODO: after implementing new LONGINT token
+
+    def testConstrainedString(self):
+        self.check2("\x82", "",
+                    schema.StringConstraint(10))
+        self.check2("\x0a\x82" + "a"*10 + "extra", "a"*10,
+                    schema.StringConstraint(10))
+        self.violates("\x0b\x82" + "a"*11 + "extra",
+                      "root",
+                      schema.StringConstraint(10))
+
+    def testList(self):
+        self.check([1,2],
+                   (self.OPENlist(1) + self.INT(1) + self.INT(2) +
+                    self.CLOSE(1)))
+        self.check([1,"b"],
+                   (self.OPENlist(1) + self.INT(1) +
+                    "\x01\x82b" +
+                    self.CLOSE(1)))
+        self.check([1,2,[3,4]],
+                   (self.OPENlist(1) + self.INT(1) + self.INT(2) +
+                    (self.OPENlist(2) + self.INT(3) + self.INT(4) +
+                     self.CLOSE(2)) +
+                    self.CLOSE(1)))
+
+    def testConstrainedList(self):
+##         self.check2((self.OPENlist(1) + self.INT(1) + self.INT(2) +
+##                      self.CLOSE(1)),
+##                     [1,2],
+##                     schema.ListOf(int))
+        self.check2((self.OPENlist(1) + self.INT(1) +
+                     "\x01\x82b" +
+                     self.CLOSE(1)),
+                    "root.[1]",
+                    schema.ListOf(int))
+                    
+
+    
+class ConstrainedRootUnslicer(RootUnslicer):
+    openRegistry = slicer.UnslicerRegistry2
 
 class TestBanana(Banana):
     slicerClass = RootSlicer2
-    unslicerClass = RootUnslicer2
+    unslicerClass = ConstrainedRootUnslicer
     def receivedObject(self, obj):
         self.object = obj
 
