@@ -771,9 +771,11 @@ class List(Widget):
             # the newly appended nodes
 
             newNode = self.getPattern('listItem')
-            appendModel(newNode, itemNum)
-            if not newNode.getAttribute("view"):
+            if newNode.getAttribute('model') == '.':
+                newNode.removeAttribute('model')
+            elif not newNode.getAttribute("view"):
                 newNode.setAttribute("view", self.defaultItemView)
+            appendModel(newNode, itemNum)
             retVal[itemNum] = newNode
             newNode.parentNode = parentNode
 #            parentNode.appendChild(newNode)
