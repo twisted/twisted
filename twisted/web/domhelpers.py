@@ -19,6 +19,7 @@
 from __future__ import nested_scopes
 
 from twisted.web import microdom
+from microdom import getElementsByTagName, escape, unescape
 
 try:
     import cStringIO as StringIO
@@ -27,7 +28,6 @@ except ImportError:
 
 class NodeLookupError(Exception): pass
 
-from microdom import getElementsByTagName
 
 def substitute(request, node, subs):
     """
@@ -246,3 +246,4 @@ def getParents(node):
         l.append(node)
         node = node.parentNode
     return l
+

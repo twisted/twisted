@@ -79,7 +79,8 @@ def getElementsByTagNameNoCase(iNode, name):
 ESCAPE_CHARS = (('&', '&amp;'),
                  ('<', '&lt;'),
                  ('>', '&gt;'),
-                 ('"', '&quot;'))
+                 ('"', '&quot;'),
+                 ("'", '&apos;'))
 
 def unescape(text):
     "Perform the exact opposite of 'escape'."
