@@ -263,8 +263,8 @@ desktop environments, and your toaster.
     ],
     'scripts' : [
         'bin/manhole', 'bin/mktap', 'bin/twistd',
-        'bin/im', 'bin/t-im', 'bin/tap2deb', 'bin/tap2rpm',
-        'bin/tapconvert', 'bin/websetroot',
+        'bin/words/im', 'bin/t-im', 'bin/tap2deb', 'bin/tap2rpm',
+        'bin/tapconvert', 'bin/web/websetroot',
         'bin/lore/lore',
         'bin/tkmktap', 'bin/conch/conch', 'bin/conch/ckeygen',
         'bin/conch/tkconch', 'bin/trial', 'bin/mail/mailmail'
