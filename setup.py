@@ -22,7 +22,7 @@ Package installer for Twisted
 Copyright (C) 2001 Matthew W. Lefkowitz
 All rights reserved, see LICENSE for details.
 
-$Id: setup.py,v 1.54 2002/09/25 18:00:05 itamarst Exp $
+$Id: setup.py,v 1.55 2002/09/26 21:50:22 itamarst Exp $
 """
 
 import distutils, os, sys, string
@@ -214,8 +214,12 @@ class build_ext_twisted(build_ext):
             ]
 
         # The C reactor
-        # TODO: possibly test for other headers that it uses (autoconf style).
-        if self._check_header("sys/poll.h"):
+        # if python has poll support, no doubt OS supports
+        try:
+            import select
+        except:
+            select = None
+        if hasattr(select, "poll"):
             exts.append( Extension("twisted.internet.cReactor",
                                     [
                                         "twisted/internet/cReactor/cReactorModule.c",
