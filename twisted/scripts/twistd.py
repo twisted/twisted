@@ -7,7 +7,8 @@
 from twisted.python import runtime
 import sys
 if runtime.platformType != 'posix':
-    sys.exit("Please use twistw on windows, not twistd")
+    sys.exit("Don't use twisted.scripts.twistd on windows; "
+             "use twisted.scripts._twistw.")
 # End hack
 
 from twisted.python import log, syslog
@@ -178,5 +179,3 @@ def run():
     app.run(runApp, ServerOptions)
 
 
-if __name__ == "__main__":
-     run()

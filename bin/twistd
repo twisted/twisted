@@ -18,7 +18,7 @@ if hasattr(os, "getuid") and os.getuid() != 0:
 
 from twisted.python.runtime import platformType
 if platformType == "win32":
-    from twisted.scripts.twistw import run
+    from twisted.scripts._twistw import run
 else:
     from twisted.scripts.twistd import run
 
