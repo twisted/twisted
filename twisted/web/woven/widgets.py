@@ -312,6 +312,11 @@ class Widget(view.View):
             data = self.getData()
         newNode = self._regenerate(request, oldNode, data)
         returnNode = self.dispatchResult(request, oldNode, newNode)
+        # shot in the dark: this seems to make *my* code work.  probably will
+        # break if returnNode returns a Deferred, as it's supposed to be able
+        # to do -glyph
+        self.viewStack.push(self)
+        self.controller.controllerStack.push(self.controller)
         self.handleNewNode(request, returnNode)
         self.controller.domChanged(request, returnNode)
 
