@@ -37,8 +37,8 @@ _arguments -S \
   '(-s -f --file -x --xml -y --python)--source=[Read an application from the given .tas (AOT format) file]:a .tas file to load:_files -g "*.tas"' \
   "(--python -f --file -x --xml -s --source)-y[Read an application from the given .py file]:a .py file to load:_files -g '*.py'" \
   "(-y -f --file -x --xml -s --source)--python=[Read an application from the given .py file]:a .py file to load:_files -g '*.py'" \
-  '(--plugin)-g[Read config.tac from a plugin package]:the plugin name:' \
-  '(-g)--plugin=[Read config.tac from a plugin package]:the plugin name:' \
+  '(--plugin)-g[Read config.tac from a plugin package]:the plugin name: ' \
+  '(-g)--plugin=[Read config.tac from a plugin package]:the plugin name: ' \
   '--syslog[Log to syslog, not to file]' \
-  "--prefix=[Use the given prefix when syslogging. Default is 'twisted']:a prefix string for each syslog message:" \
+  "--prefix=[Use the given prefix when syslogging (default 'twisted')]:a prefix string for each syslog message: " \
   && return 0
