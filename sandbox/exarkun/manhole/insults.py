@@ -13,6 +13,12 @@ class ITerminalListener(components.Interface):
         called.  This method may not be called for real terminals.
         """
 
+    def setMode(self, modes):
+        pass
+
+    def resetMode(self, moeds):
+        pass
+
     def unhandledControlSequence(self, seq):
         """Called when an unsupported control sequence is received.
         """
@@ -25,6 +31,12 @@ class ITerminalListener(components.Interface):
 
 class TerminalListener:
     def terminalSize(self, width, height):
+        pass
+
+    def setMode(self, modes):
+        pass
+
+    def resetModes(self, modes):
         pass
 
     def unhandledControlSequence(self, seq):
@@ -177,7 +189,6 @@ class ITerminal(components.Interface):
 
         Characters to the right of deleted characters are shifted to the left.
         """
-
     def insertLine(self, n=1):
         """Insert n lines at the cursor position.
 
@@ -191,6 +202,7 @@ class ITerminal(components.Interface):
         Lines below the cursor are shifted up.  This command is ignored when the cursor is outside
         the scroll region.
         """
+
 
 CSI = '\x1b'
 CST = dict.fromkeys('HfABCDsuJKmhlp')
@@ -352,7 +364,7 @@ class ServerProtocol(protocol.Protocol):
         self.write('\x1b[%dD' % (n,))
 
     def cursorPosition(self, column, line):
-        self.write('\x1b[%d;%dH' % (column, line))
+        self.write('\x1b[%d;%dH' % (line, column))
 
     def cursorHome(self):
         self.write('\x1b[H')
