@@ -596,9 +596,9 @@ instead of always sending mail through a well-known host, we will look
 up the mail exchange server for the recipient address and try to
 deliver the message to that host.<p>
 
-<p>The first step we'll take in adding this feature is to define a
-function which returns the mail exchange host for a particular
-domain:</p>
+<p>In <a href="smtpclient-9.tac">smtpclient-9.tac</a>, we'll take the
+first step towards this feature by defining a function which returns
+the mail exchange host for a particular domain:</p>
 
 <blockquote><code><pre>
 def getMailExchange(host):
@@ -629,8 +629,9 @@ not to be a very big one.  Determining the mail exchange host for a
 particular domain is going to involve network traffic (specifically,
 some DNS requests).  These might take an arbitrarily large amount of
 time, so we need to introduce a <code>Deferred</code> to represent the
-result of <code>getMailExchange</code>.  We do this first by
-redefining it:</p>
+result of <code>getMailExchange</code>.  <a
+href="smtpclient-10.tac">smtpclient-10.tac</a> redefines it
+thusly:</p>
 
 <blockquote><code><pre>
 def getMailExchange(host):
@@ -680,7 +681,11 @@ def getMailExchange(host):
 rather than a string, we do a little bit of post-processing to get the
 results we want.  We have already converted the rest of the tutorial
 application to expect a <code>Deferred</code> from
-<code>getMailExchange</code>, so no further changes are required.</p>
+<code>getMailExchange</code>, so no further changes are required.  <a
+href="smtpclient-11.tac">smtpclient-11.tac</a> completes this tutorial
+by being able to both look up the mail exchange host for the recipient
+domain, connect to it, complete an SMTP transaction, report its
+results, and finally shut down the reactor.</p>
 
 <h3>Conclusion</h3>
 
