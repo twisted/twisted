@@ -7,6 +7,8 @@ try:
     from twisted.conch import unix
 except ImportError:
     unix = None
+    import sys
+    del sys.modules['twisted.conch.unix'] # remove the bad import
 
 from twisted.conch import avatar
 from twisted.conch.ssh import filetransfer, session

@@ -9,11 +9,15 @@ try:
     from twisted.conch.client import connect, default, options
 except ImportError:
     unix = None
+    import sys
+    del sys.modules['twisted.conch.unix'] # remove the bad import
 
 try:
     import Crypto
 except ImportError:
     Crypto = None
+    import sys
+    del sys.modules['Crypto'] # remove the bad import
 
 from twisted.cred import portal
 from twisted.internet import reactor, protocol, interfaces, defer
