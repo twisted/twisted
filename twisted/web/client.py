@@ -57,7 +57,7 @@ class HTTPPageGetter(http.HTTPClient):
         m()
 
     def handleStatus_200(self):
-        self.factory.gotHeaders(self.headers)
+        pass
 
     def handleStatusDefault(self):
         self.failed = 1
