@@ -163,6 +163,11 @@ class Flow:
             Otherwise, if the final state is None or not provided,
             then the function must return a tuple.
         '''
+        isIterable = getattr(func,'isIterable',isIterable)
+        nextState  = getattr(func,'nextState',nextState)
+        onFinish   = getattr(func,'onFinish',onFinish)
+        onFailure  = getattr(func,'onFailure',onFailure)
+        stopValue  = getattr(func,'stopValue',stopValue)
         tpl = (func, nextState, isIterable, onFinish, onFailure, stopValue)
         self.states[state] = tpl
     #
@@ -223,7 +228,7 @@ class Flow:
             if finish: stack.append((state, None, finish, None, stop))
             data = func(data)
             trace("-> item")
-            if isIterable or getattr(func,'isIterable',0):
+            if isIterable:
                 if data:
                     data = iter(data)
                     self.stack.append((state, None, None,data, stop))
@@ -263,13 +268,7 @@ class _TunnelIterator:
         self.buff       = list()
         self.append     = self.buff.append
     #
-    def __iter__(self):
-        '''
-            This is the place where the pump starts...
-        '''
-        from twisted.internet.reactor import callInThread
-        callInThread(self.process)
-        return self
+    def __iter__(self): return self
     #
     def process(self):
         '''
@@ -310,58 +309,25 @@ class FlowIterator:
        This is an iterator base class which can be used to build
        iterators which are constructed and run within a Flow
     '''
-    def __init__(self, data):
+    def __init__(self):
         '''
-           This method (the initializer) is called by the flow object;
-           this should initialize the iterator.
+            This sets up the iterator before it is even added
+            to the flow object.
         '''
-        self._tunnel    = _TunnelIterator(self)
-        self.data       = data
-        self.__class__.isIterable = 1
-    #    
-    def __iter__(self):
-        return self._tunnel.__iter__() 
+        self.isIterable = 1
+    #
+    def __call__(self,data):
+        from twisted.internet.reactor import callInThread
+        self.data = data  
+        tunnel = _TunnelIterator(self)
+        callInThread(tunnel.process)
+        return tunnel
     #
     def next(self):
         ''' 
             The method used to fetch the next value
         '''
         raise StopIteration
-
-from twisted.enterprise.adbapi import ConnectionPool
-class _FlowQueryIterator(FlowIterator):
-    def __init__(self, pool, sql, data):
-        FlowIterator.__init__(self,data)
-        self._tunnel.append = self._tunnel.buff.extend
-        conn = pool.connect()
-        self.curs = conn.cursor()
-        if data: self.curs.execute(sql % data) 
-        else: self.curs.execute(sql)
-    def next(self):
-        res = self.curs.fetchmany()
-        if not(res): 
-            self.curs.close()
-            raise StopIteration
-        return res
-
-class FlowQueryBuilder:
-    isIterable = 1
-    def __init__(self, pool, sql):
-        self.pool = pool
-        self.sql  = sql
-    def __call__(self, data):
-        return _FlowQueryIterator(self.pool, self.sql, data)
-
-from twisted.enterprise.adbapi import ConnectionPool 
-def testFlowConnect():
-    pool = ConnectionPool("mx.ODBC.EasySoft","SomeDSN")
-    def printResult(x): print x
-    def printDone(): print "done"
-    f = Flow()
-    sql = "SOME-QUERY"
-    f.register(FlowQueryBuilder(pool,sql),nextState='print')
-    f.register(printResult,'print')
-    f.run()
 
 def testFlowIterator():
     class CountIterator(FlowIterator):
@@ -379,9 +345,43 @@ def testFlowIterator():
     def printResult(x): print x
     f = Flow()
     f.waitInterval = 1
-    f.register(CountIterator,nextState='print',onFinish=printDone)
+    f.register(CountIterator(),nextState='print',onFinish=printDone)
     f.register(printResult,'print')
     f.run(5)
+
+
+class FlowQueryIterator(FlowIterator):
+    def __init__(self, pool, sql):
+        FlowIterator.__init__(self)
+        self.curs = None
+        self.sql  = sql
+        self.pool = pool
+    def __call__(self,data):
+        ret = FlowIterator.__call__(self,data)
+        ret.append = ret.buff.extend
+        return ret
+    def next(self):
+        if not self.curs:
+            conn = self.pool.connect()
+            self.curs = conn.cursor()
+            if self.data: self.curs.execute(self.sql % self.data) 
+            else: self.curs.execute(self.sql)
+        res = self.curs.fetchmany()
+        if not(res): 
+            self.curs.close()
+            raise StopIteration
+        return res
+
+def testFlowConnect():
+    from twisted.enterprise.adbapi import ConnectionPool
+    pool = ConnectionPool("mx.ODBC.EasySoft","PSICustomerProto")
+    def printResult(x): print x
+    def printDone(): print "done"
+    f = Flow()
+    sql = "SELECT caption from vw_date"
+    f.register(FlowQueryIterator(pool,sql),nextState='print')
+    f.register(printResult,'print')
+    f.run()
 
 def testFlow():
     '''
@@ -430,18 +430,19 @@ def testFlow():
                    nextState="printResult", onFinish=finishList)
     fHTML.run()
 
+def testBadFlow():
+    print "This should raise an exception"
     def foo(data):
         return "flarbis", data / 99
-    
-    bad = Flow(fFork)
-    bad.register(addOne)
-    bad.register(foo,"multiplyTwo")
-    
+    bad = Flow()
+    bad.register(foo)
     bad.run(5)
 
 if '__main__' == __name__:
     from twisted.internet import reactor
-    #testFlowConnect()
-    testFlowIterator()
-    reactor.run()
     testFlow()
+    # testFlowConnect()
+    testFlowIterator()
+    reactor.callLater(10,reactor.stop)
+    reactor.run()
+    testBadFlow()
