@@ -52,6 +52,9 @@ import twisted.cred.portal
 # Since mail imports t.names.client, we need its DelayedCall hack here too
 import test_names
 
+# Since we run a couple processes, we need SignalMixin from test_process
+import test_process
+
 class DomainWithDefaultsTestCase(unittest.TestCase):
     def testMethods(self):
         d = dict([(x, x + 10) for x in range(10)])
@@ -1000,6 +1003,15 @@ class AliasTestCase(unittest.TestCase):
         lines = file(tmpfile).readlines()
         self.assertEquals([L[:-1] for L in lines], self.lines)
 
+class ProcessAliasTestCase(test_process.SignalMixin, unittest.TestCase):
+    lines = [
+        'First line',
+        'Next line',
+        '',
+        'After a blank line',
+        'Last line'
+    ]
+
     def testProcessAlias(self):
         path = util.sibpath(__file__, 'process.alias.sh')
         a = mail.alias.ProcessAlias(path, None, None)
@@ -1053,8 +1065,6 @@ class AliasTestCase(unittest.TestCase):
         ])
         expected.sort() 
         self.assertEquals(r3, expected)
-    if not components.implements(reactor, interfaces.IReactorProcess):
-        testAliasResolution.skip = "IReactorProcess not supported"
 
     def testCyclicAlias(self):
         aliases = {}
@@ -1082,8 +1092,8 @@ class AliasTestCase(unittest.TestCase):
             mail.alias.MessageWrapper(p, 'process')
         ])
         self.assertEquals(r, expected)
-    if not components.implements(reactor, interfaces.IReactorProcess):
-        testCyclicAlias.skip = "IReactorProcess not supported"
+if not components.implements(reactor, interfaces.IReactorProcess):
+    ProcessAliasTestCase = "IReactorProcess not supported"
 
 class TestDomain:
     def __init__(self, aliases, users):
