@@ -114,12 +114,17 @@ class _TableInfo:
         self.relationships = []
         self.dbColumns = []
 
-    def addForeignKey(self, childTableName, childColumns, localColumns, childRowClass, containerMethod, autoLoad):
-        self.relationships.append( _TableRelationship(childTableName, localColumns, childColumns, childRowClass, containerMethod, autoLoad) )
+    def addForeignKey(self, childColumns, parentColumns, childRowClass, containerMethod, autoLoad):
+        """This information is attached to the "parent" table
+                childColumns - columns of the "child" table
+                parentColumns - columns of the "parent" table, the one being joined to... the "foreign" table
+        """
+        self.relationships.append( _TableRelationship(childColumns, parentColumns,
+                                                      childRowClass, containerMethod, autoLoad) )
 
     def getRelationshipFor(self, tableName):
         for relationship in self.relationships:
-            if relationship.childTableName == tableName:
+            if relationship.childRowClass.rowTableName == tableName:
                 return relationship
         return None
     
@@ -128,15 +133,14 @@ class _TableRelationship:
     
     A foreign key relationship between two tables.
     """
-    def __init__(self, childTableName,
-                 parentColumns,
+    def __init__(self,
                  childColumns,
+                 parentColumns,
                  childRowClass,
                  containerMethod,
                  autoLoad):
-        self.childTableName = childTableName            
-        self.parentColumns = parentColumns
         self.childColumns = childColumns
+        self.parentColumns = parentColumns
         self.childRowClass = childRowClass
         self.containerMethod = containerMethod
         self.autoLoad = autoLoad

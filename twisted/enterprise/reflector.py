@@ -68,12 +68,16 @@ class Reflector:
         raise DBError("not implemented")
     
     def populateSchemaFor(self, tableInfo):
+        """This is called once for each registered rowClass to add it
+        and it's foreign key relationships for that rowClass to the
+        schema.  """
+        
         self.schema[ tableInfo.rowTableName ] = tableInfo
         
-        # add the foreign key to the parent table.
-        for foreignTableName, localColumns, foreignColumns, containerMethod, autoLoad in tableInfo.rowForeignKeys:
-            self.schema[foreignTableName].addForeignKey(tableInfo.rowTableName, localColumns,
-                                                        foreignColumns, tableInfo.rowClass,
+        # add the foreign key to the foreign table.
+        for foreignTableName, childColumns, parentColumns, containerMethod, autoLoad in tableInfo.rowForeignKeys:
+            self.schema[foreignTableName].addForeignKey(childColumns,
+                                                        parentColumns, tableInfo.rowClass,
                                                         containerMethod, autoLoad)
 
     def getTableInfo(self, rowObject):
@@ -101,7 +105,7 @@ class Reflector:
     def buildWhereClause(self, relationship, row):
         """util method used by reflectors. builds a where clause to link a row to another table.
         """
-        whereClause = []                
+        whereClause = []
         for i in range(0,len(relationship.childColumns)):                
             value = getattr(row, relationship.parentColumns[i][0])
             whereClause.append( [relationship.childColumns[i][0], EQUAL, value] )

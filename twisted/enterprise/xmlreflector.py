@@ -112,7 +112,7 @@ class XMLReflector(reflector.Reflector):
                 # build where clause
                 childWhereClause = self.buildWhereClause(relationship, row)             
                 # load the children immediately, but do nothing with them
-                self._rowLoader(relationship.childTableName, row, data, childWhereClause, forceChildren)
+                self._rowLoader(relationship.childRowClass.rowTableName, row, data, childWhereClause, forceChildren)
 
         return results
 

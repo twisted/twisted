@@ -37,7 +37,7 @@ class SQLReflector(reflector.Reflector, adbapi.Augmentation):
         reflector.LIKE        : "like"
         }
     
-    def __init__(self, dbpool, rowClasses, populatedCallback):
+    def __init__(self, dbpool, rowClasses, populatedCallback=None):
         """
         Initialize me against a database.
         """
@@ -45,8 +45,9 @@ class SQLReflector(reflector.Reflector, adbapi.Augmentation):
         reflector.Reflector.__init__(self, rowClasses, populatedCallback)        
 
     def _really_populate(self):
-        self.runInteraction(self._transPopulateSchema).addCallbacks(
-            self.populatedCallback)
+        defe = self.runInteraction(self._transPopulateSchema)
+        if self.populatedCallback:
+            defe.addCallbacks(self.populatedCallback)
 
     def _transPopulateSchema(self, transaction):
         """Used to construct the row classes in a single interaction.
@@ -140,7 +141,7 @@ class SQLReflector(reflector.Reflector, adbapi.Augmentation):
         # execute the query
         transaction.execute(sql)
         rows = transaction.fetchall()
-        
+
         # construct the row objects
         results = []
         newRows = []
@@ -172,7 +173,7 @@ class SQLReflector(reflector.Reflector, adbapi.Augmentation):
                 # build where clause
                 childWhereClause = self.buildWhereClause(relationship, row)             
                 # load the children immediately, but do nothing with them
-                self._rowLoader(transaction, relationship.childTableName, row, data, childWhereClause, forceChildren)
+                self._rowLoader(transaction, relationship.childRowClass.rowTableName, row, data, childWhereClause, forceChildren)
 
         return results
 
