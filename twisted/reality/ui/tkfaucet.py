@@ -52,7 +52,7 @@ class MainWindow(Toplevel, pb.Referenced):
         self.remote = m
         login.withdraw()
         self.deiconify()
-
+        
     def tryAgain(self, er):
         print 'oops'
         
@@ -203,18 +203,23 @@ class Login(Toplevel):
     def doLogin(self, *ev):
         username=self.username.get()
         hostname=self.hostname.get()
-        worldname=self.worldname.get()
         try:
             port=int(self.port.get())
         except:
             port = self.port.get()
         password=self.password.get()
         broker = pb.Broker()
-        m = MainWindow()
-        m.withdraw()
-        broker.notifyOnDisconnect(m.disco)
-        broker.requestPerspective(worldname, username, password, m, m.loggedIn, m.tryAgain)
+        self.m = MainWindow()
+        self.m.withdraw()
+        # he's a hack, he's a hack
+        broker.requestIdentity(username, password, callback= self.gotIdentity, errback= self.m.tryAgain)
+        broker.notifyOnDisconnect(self.m.disco)
+        #broker.requestPerspective(worldname, username, password, m, m.loggedIn, m.tryAgain)
         tcp.Client(hostname, port, broker)
+
+    def gotIdentity(self, identity):
+        # he's a man with a happy knack
+        identity.attach(self.worldname, self, pbCallback=self.m.loggedIn)
 
 def main():
     global root
