@@ -167,8 +167,7 @@ def Application(name, uid=None, gid=None):
     ret = components.Componentized()
     service = MultiService()
     service.setName(name)
-    ret.setComponent(IServiceCollection, service)
-    ret.setComponent(IService, service)
-    ret.setComponent(sob.IPersistable, sob.Persistant(ret, name))
-    ret.setComponent(IProcess, Process(uid, gid))
+    ret.addComponent(service)
+    ret.addComponent(sob.Persistant(ret, name))
+    ret.addComponent(Process(uid, gid))
     return ret
