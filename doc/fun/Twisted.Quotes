@@ -3901,3 +3901,6 @@ On 2003.06.25 05:36, Moshe Zadka wrote:
        brain, i think.
 * Nafai tries to smash the window
 %
+<dunker> ah so the kqueue reactor doesn't spawn right
+<spiv> dunker: Maybe it needs a full moon in spring, like certain types of fish?
+%
