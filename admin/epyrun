@@ -1,5 +1,15 @@
 #!/usr/bin/env python
 # system
+### Twisted Preamble
+# This makes sure that users don't have to set up their environment
+# specially in order to run these programs from bin/.
+import sys, os, string
+if string.find(os.path.abspath(sys.argv[0]), os.sep+'Twisted') != -1:
+    sys.path.insert(0, os.path.normpath(os.path.join(os.path.abspath(sys.argv[0]
+), os.pardir, os.pardir)))
+sys.path.insert(0, os.curdir)
+### end of preamble
+
 import os, sys
 
 # ***** RISE FROM YOUR GRAVE! *****
@@ -11,19 +21,42 @@ twisted.web.minidom = twisted.web.microdom
 sys.modules['xml.dom.minidom'] = twisted.web.microdom
 
 #it'd be nice to get this working
-#im = __import__
-#def myimport(*args):
-#    try: 
-#        return im(*args)
-#    except:
-#        return FakeModule()
+im = __import__
+def myimport(*args):
+    try: 
+        return im(*args)
+    except:
+        mod = FakeModule(args[0], 4)
+        i = args[0].rfind('.')
+        if i != -1:
+            setattr(sys.modules[args[0][:i]], args[0][i+1:], mod)
+        return mod
 
-#__builtins__.__import__ = myimport
+__builtins__.__import__ = myimport
 
-class FakeClass: pass
 class FakeModule:
+
+    def __init__(self, name, level):
+        self.__level = level
+        self.__name__ = name
+
+    def __repr__(self):
+        return '<Fake %s>' % self.__name__
+    __str__ = __repr__
+
+    def __call__(self, *args, **kw):
+        pass #print 'Called:', args
+
     def __getattr__(self, attr):
-        return FakeClass
+        if self.__level == 0:
+            raise AttributeError
+        return FakeModule(self.__name__+'.'+attr, self.__level-1)
+
+    def __cmp__(self, other):
+        if not hasattr(other, '___name__'):
+            return -1
+        return cmp(self.__name__, other.__name__)
+
 
 # initial twisted
 from twisted.python import reflect
