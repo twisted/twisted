@@ -40,8 +40,9 @@ multiple parts, such as List. This example uses two patterns List provides;
 in the list, and 'emptyList' marks the node displayed when the list has no
 items.</p>
 
-<p>Next, we create a <code class="API">Page</code> that will display the
-directory listing, filling the template above (after a few imports):</p>
+<p>Next, we create a <code class="API" base= "twisted.web.woven.page"
+>Page</code> that will display the directory listing, filling the template
+above (after a few imports):</p>
 
 <pre class="python">
 import os
@@ -91,10 +92,11 @@ strings, the directory's content.</p>
 <p>Upon rendering, Woven will scan the template's DOM tree for nodes to fill;
 when it encounters one, it gets the model (in this case by calling methods
 on the Page prefixed with 'wmfactory_'), then creates a view for that model;
-this page uses standard widgets for its models and so contains no custom view
-code. The view fills the DOM node with the appropriate data. Here, the view
-for 'title' is <code class="API">Text</code>, and so will merely insert the
-string. The view for 'directory' is <code class="API">List</code>, and so
+this page uses standard widgets for its models and so contains no custom
+view code. The view fills the DOM node with the appropriate data. Here, the
+view for 'title' is <code class="API" base= "twisted.web.woven.widgets"
+>Text</code>, and so will merely insert the string. The view for 'directory'
+is <code class="API" base= "twisted.web.woven.widgets" >List</code>, and so
 each element of the list will be formatted within the '&lt;ul&gt;'. Since the
 view for list items is Anchor, each item in the list will be formatted as an
 '&lt;a&gt;' tag.</p>
@@ -143,7 +145,7 @@ in the list.</p>
 &lt;/html&gt;
 </pre>
 
-And here is the definition of 'ImageDisplay'::
+And here is the definition of 'ImageDisplay':
 
 <pre class="python">
 class ImageDisplay(page.Page):
@@ -228,11 +230,12 @@ View Update) method on our DirectoryListing class:</p>
 request, the DOM node marked with this view, and the data from the associated
 model (in this case, the name of the image or directory). With this approach,
 we can now modify the DOM as necessary. First, we wrap the node in <code
-class="API">lmx</code>, a class provided by Twisted's DOM implementation that
-provides convenient syntax for modifying DOM nodes; attributes can be treated
-as dictionary keys, and the 'text' and 'add' methods provide for adding text
-to the node and adding children, respectively. If this item is a directory, a
-textual link is displayed; else, it produces an 'IMG' tag of fixed size.</p>
+class= "API" base= "twisted.web.microdom" >lmx</code>, a class provided by
+Twisted's DOM implementation that provides convenient syntax for modifying
+DOM nodes; attributes can be treated as dictionary keys, and the 'text'
+and 'add' methods provide for adding text to the node and adding children,
+respectively. If this item is a directory, a textual link is displayed; else,
+it produces an 'IMG' tag of fixed size.</p>
 
 <h2>Simple Input Handling</h2>
 
