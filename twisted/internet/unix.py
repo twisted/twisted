@@ -183,6 +183,11 @@ class DatagramPort(udp.Port):
                 return self.write(datagram, address)
             elif no == EMSGSIZE:
                 raise error.MessageLengthError, "message too long"
+            elif no == EAGAIN:
+                # oh, well, drop the data. The only difference from UDP
+                # is that UDP won't ever notice.
+                # TODO: add TCP-like buffering
+                pass
             else:
                 raise
 
@@ -264,6 +269,11 @@ class ConnectedDatagramPort(DatagramPort):
                 raise error.MessageLengthError, "message too long"
             elif no == ECONNREFUSED:
                 self.protocol.connectionRefused()
+            elif no == EAGAIN:
+                # oh, well, drop the data. The only difference from UDP
+                # is that UDP won't ever notice.
+                # TODO: add TCP-like buffering
+                pass
             else:
                 raise
 
