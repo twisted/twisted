@@ -14,7 +14,7 @@
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 #
-# $Id: tkconch.py,v 1.5 2002/12/28 18:19:14 z3p Exp $
+# $Id: tkconch.py,v 1.6 2003/02/22 08:10:15 z3p Exp $
 
 """ Implementation module for the `tkconch` command.
 """
@@ -24,7 +24,7 @@ from __future__ import nested_scopes
 import Tkinter, tkFileDialog, tkFont, tkMessageBox, string
 from twisted.conch.ui import tkvt100
 from twisted.conch.ssh import transport, userauth, connection, common, keys
-from twisted.conch.ssh import session, forwarding
+from twisted.conch.ssh import session, forwarding, channel
 from twisted.internet import reactor, defer, protocol, tksupport
 from twisted.python import usage, log
 
@@ -502,7 +502,7 @@ class SSHConnection(connection.SSHConnection):
                 d = self.sendGlobalRequest('tcpip-forward', data)
                 self.remoteForwards[remotePort] = hostport
 
-class SSHSession(connection.SSHChannel):
+class SSHSession(channel.SSHChannel):
 
     name = 'session'
     
