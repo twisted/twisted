@@ -27,6 +27,11 @@ import StringIO
 
 class StringIOWithoutClosing(StringIO.StringIO):
 
+    def read(self, i=None):
+        r = StringIO.StringIO.read(self, i)
+        print 'read:', repr(r)
+        return r
+
     def close(self):
         pass
 
@@ -216,7 +221,3 @@ class Int32TestCase(unittest.TestCase, LPTestCaseMixin):
             for c in struct.pack("!i",len(s))+s:
                 r.dataReceived(c)
         self.assertEquals(r.received, self.strings)
-
-
-if __name__ == '__main__':
-    unittest.main()
