@@ -291,6 +291,8 @@ class IReactorProcess(Interface):
                     POSIX systems.)
 
         @param usePTY: if true, run this process in a psuedo-terminal.
+                       optionally a tuple of (masterfd, slavefd, ttyname),
+                       in which case use those file descriptors.
                        (Not available on all systems.)
 
         @see: C{twisted.protocols.protocol.ProcessProtocol}

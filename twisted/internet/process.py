@@ -24,10 +24,11 @@ Maintainer: U{Itamar Shtull-Trauring<mailto:twisted@itamarst.org>}
 """
 
 # System Imports
-import os, sys, traceback, select, errno, struct, cStringIO
+import os, sys, traceback, select, errno, struct, cStringIO, types
 
 try:
     import pty
+    import fcntl, termios
 except:
     pty = None
 
@@ -406,7 +407,7 @@ class PTYProcess(abstract.FileDescriptor, styles.Ephemeral):
     """An operating-system Process that uses PTY support."""
 
     def __init__(self, reactor, command, args, environment, path, proto,
-                 uid=None, gid=None):
+                 uid=None, gid=None, usePTY=None):
         """Spawn an operating-system process.
 
         This is where the hard work of disconnecting all currently open
@@ -418,7 +419,8 @@ class PTYProcess(abstract.FileDescriptor, styles.Ephemeral):
         nuances of setXXuid on UNIX: it will assume that either your effective
         or real UID is 0.)
         """
-        if not pty: # no pty module
+        if not pty and type(usePTY) not in (types.ListType, types.TupleType): 
+            # no pty module and we didn't get a pty to use
             raise NotImplementedError, "cannot use PTYProcess on platforms without the pty module."
         abstract.FileDescriptor.__init__(self, reactor)
         settingUID = (uid is not None) or (gid is not None)
@@ -434,24 +436,47 @@ class PTYProcess(abstract.FileDescriptor, styles.Ephemeral):
             # prepare to change UID in subprocess
             os.setuid(0)
             os.setgid(0)
-        pid, fd = pty.fork()
+        if type(usePTY) in (types.TupleType, types.ListType):
+            masterfd, slavefd, ttyname = usePTY
+        else:
+            masterfd, slavefd = pty.openpty()
+            ttyname = os.ttyname(slavefd)
+        pid = os.fork()
         self.pid=pid
         if pid == 0: # pid is 0 in the child process
             try:
-                #attrs = tty.tcgetattr(1)
-                #attrs[3] = attrs[3] & ~tty.ICANON & ~tty.ECHO
-                #attrs[6][tty.VMIN] = 1
-                #attrs[6][tty.VTIME] = 0
-                #tty.tcsetattr(1, tty.TCSANOW, attrs)
-                #turns out i don't need that code
+                try:
+                    os.close(masterfd)
+                except:
+                    pass
 
                 sys.settrace(None)
+                
+                os.dup2(slavefd, 0) # stdin
+                os.dup2(slavefd, 1) # stdout
+                os.dup2(slavefd, 2) # stderr
+
+                if hasattr(termios, 'TIOCNOTTY'):
+                    try:
+                        fd = os.open('/dev/tty', os.O_RDWR|os.O_NOCTTY)
+                    except:
+                        pass
+                    else:
+                        fcntl.ioctl(fd, termios.TIOCNOTTY, 0)
+                        os.close(fd)
+
+                os.setsid()
+
+                if hasattr(termios, 'TIOCSCTTY'):
+                    fcntl.ioctl(slavefd, termios.TIOCSCTTY, 0)
+                
 
                 if path:
                     os.chdir(path)
                 for fd in range(3, 256):
                     try:    os.close(fd)
                     except: pass
+
                 # set the UID before I actually exec the process
                 if settingUID:
                     os.setgid(gid)
@@ -466,8 +491,8 @@ class PTYProcess(abstract.FileDescriptor, styles.Ephemeral):
                 traceback.print_exc(file=stderr)
                 stderr.flush()
             os._exit(1)
-        fdesc.setNonBlocking(fd)
-        self.fd=fd
+        fdesc.setNonBlocking(masterfd)
+        self.fd=masterfd
         self.startReading()
         self.connected = 1
         self.proto = proto

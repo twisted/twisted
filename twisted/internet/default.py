@@ -1,5 +1,5 @@
 # -*- Python -*-
-# $Id: default.py,v 1.52 2002/11/25 22:03:48 exarkun Exp $
+# $Id: default.py,v 1.53 2002/12/17 02:31:59 z3p Exp $
 #
 # Twisted, the Framework of Your Internet
 # Copyright (C) 2001 Matthew W. Lefkowitz
@@ -255,7 +255,7 @@ class PosixReactorBase(ReactorBase):
         p = platform.getType()
         if p == 'posix':
             if usePTY:
-                return process.PTYProcess(self, executable, args, env, path, processProtocol, uid, gid)
+                return process.PTYProcess(self, executable, args, env, path, processProtocol, uid, gid, usePTY)
             else:
                 return process.Process(self, executable, args, env, path, processProtocol, uid, gid)
         # This is possible, just needs work - talk to itamar if you want this.
