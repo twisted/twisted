@@ -7,7 +7,7 @@ versions=$(subst -dev,,\
 
 DOC=usr/share/doc
 
-DEFAULT=2.2
+DEFAULT=2.3
 DEFAULTPACKAGE=python$(DEFAULT)-twisted
 
 indeppackages=python-twisted python-twisted-conch twisted-doc \

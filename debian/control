@@ -7,7 +7,7 @@ Standards-Version: 3.5.7
 
 Package: python-twisted
 Architecture: all
-Depends: python2.2-twisted
+Depends: python2.3-twisted
 Recommends: python-gtk
 Description: Event-based framework for internet applications (dummy package)
  This is a dummy package that depends on the twisted library for the
