@@ -124,7 +124,7 @@ class TestStats(TestStatsBase):
         meths = []
         for r in self.original.children:
             meths.extend(r.methodsWithStatus.get(status, []))
-        return meths     
+        return meths
 
     def numTests(self):
         n = 0
@@ -172,24 +172,6 @@ def formatError(tm, tbformat=None):
     if tm.status not in (SUCCESS, SKIP, UNEXPECTED_SUCCESS):
         return "%s\n\n%s" % ('\n'.join(ret),
                              itrial.IFormattedFailure(tm.errors + tm.failures))
-##         for error in util.iterchain(tm.errors, tm.failures):
-##             if error is None:
-##                 continue
-##             elif isinstance(error, failure.Failure):
-##                 # XXX: Need to figure out how to get the right formatting
-##                 if tbformat == 'cgitb':
-##                     import cgitb
-##                     tb = cgitb.text((error.type, error.value, error.tb),
-##                                     context=5)
-##                 else:
-##                     tb = error.getTraceback()  
-##             elif isinstance(error, types.TupleType):
-##                 d = {'plain': traceback,
-##                      'emacs': util}
-##                 tb = ''.join(d[tbformat].format_exception(*error))
-##             else:
-##                 tb = "%s\n" % (error,)
-##             ret.append(str(tb))
     return '\n'.join(ret)
     
 
@@ -256,12 +238,13 @@ class Reporter(object):
     def endClass(self, klass):
         pass
         
-    def upDownError(self, userMeth):
-        minfo = itrial.IMethodInfo(userMeth)
-        tbStr = '\n'.join([e.getTraceback() for e in userMeth.errors]) # if not e.check(unittest.SkipTest)])
-        log.msg(tbStr)
-        msg = "%s%s" % (methNameWarnMsg[minfo.name], tbStr)
-        warnings.warn(msg, BrokenTestCaseWarning, stacklevel=2)
+    def upDownError(self, userMeth, warn=True, printStatus=True):
+        if warn:
+            minfo = itrial.IMethodInfo(userMeth)
+            tbStr = '\n'.join([e.getTraceback() for e in userMeth.errors]) # if not e.check(unittest.SkipTest)])
+            log.msg(tbStr)
+            msg = "%s%s" % (methNameWarnMsg[minfo.name], tbStr)
+            warnings.warn(msg, BrokenTestCaseWarning, stacklevel=2)
 
     def cleanupErrors(self, errs):
         warnings.warn("%s\n%s" % (UNCLEAN_REACTOR_WARN,
@@ -273,14 +256,6 @@ class Reporter(object):
         if self.realtime:
             for err in util.iterchain(method.errors, method.failures):
                 err.printTraceback(sys.stdout)
-
-##         if method.status in (FAILURE, ERROR, EXPECTED_FAILURE):
-##             if self.debugger:
-##                 pdb.Pdb().set_trace()
-##                 if isinstance(results, failure.Failure):
-##                     print "Failure, not Exception -- can't postmortem."
-##                 else:
-##                     pdb.post_mortem(results[2])
 
     def _reportStatus(self, tsuite):
         tstats = itrial.ITestStats(tsuite)
@@ -410,11 +385,12 @@ class TreeReporter(VerboseTextReporter):
         self.endLine(*self._getText(ERROR))
         super(TreeReporter, self).cleanupErrors(errs)
 
-    def upDownError(self, method):
+    def upDownError(self, method, warn=True, printStatus=True):
         m = itrial.IMethodInfo(method)
-        self.write(self.color("  %s" % m.name, self.RED)) 
-        self.endLine(*self._getText(ERROR))
-        super(TreeReporter, self).upDownError(m)
+        self.write(self.color("  %s" % m.name, self.RED))
+        if printStatus:
+            self.endLine(*self._getText(ERROR))
+        super(TreeReporter, self).upDownError(method, warn, printStatus)
         
     def startTest(self, method):
         tm = itrial.ITestMethod(method)
@@ -423,7 +399,7 @@ class TreeReporter(VerboseTextReporter):
             # for those odd folks who start docstrings with a blank line.
             what = tm.docstr.lstrip().split('\n', 1)[0]
         else:
-            what = tm.name 
+            what = tm.name
         self.write('      %s ... ', what)
 
     def endTest(self, method):

@@ -129,7 +129,7 @@ class ChProcessProtoocol(protocol.ProcessProtocol):
 ##             sys.stderr.flush()
 
     def processEnded(self, status):
-        lines = ''.join(self.out).split('\n') 
+        lines = ''.join(self.out).split('\n')
         lines.reverse()
         for line in lines:
             if (line.find("Ran") != -1) and (line.find("tests") != -1):
@@ -138,7 +138,7 @@ class ChProcessProtoocol(protocol.ProcessProtocol):
         self.done.errback(status)
 
 class SpawningMixin:
-    def spawnChild(self, args):        
+    def spawnChild(self, args):
         env = {}
         env['PATH'] = os.environ.get('PATH', '')
         env["PYTHONPATH"] = os.environ.get("PYTHONPATH", "")
@@ -194,7 +194,7 @@ class FunctionallyTestTrial(unittest.TestCase, SpawningMixin):
         args = self.args + ['twisted.test.trialtest1.TestFailureInSetUp']
 
         def _cb(cpp):
-            self._failUnlessIn(reporter.SET_UP_WARN)
+            self._failUnlessIn("[ERROR]: test_foo")
             self._failIfIn(trialtest1.TEAR_DOWN_MSG) # if setUp is broken, tearDown should not run
         return self.spawnChild(args).addCallback(_cb)
     
@@ -202,7 +202,7 @@ class FunctionallyTestTrial(unittest.TestCase, SpawningMixin):
         args = self.args + ['twisted.test.trialtest1.TestFailureInTearDown']
 
         def _cb(cpp):
-            self._failUnlessIn(reporter.TEAR_DOWN_WARN)
+            self._failUnlessIn("[ERROR]: test_foo")
         return self.spawnChild(args).addCallback(_cb)
         
     def testBrokenSetUpClass(self):

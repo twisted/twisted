@@ -98,7 +98,7 @@ class Timed(object):
     endTime = None
 
 def _dbgPA(msg):
-   log.msg(iface=itrial.ITrialDebug, parseargs=msg) 
+   log.msg(iface=itrial.ITrialDebug, parseargs=msg)
 
 class TestSuite(Timed):
     """This is the main organizing object. The front-end script creates a
@@ -390,7 +390,7 @@ class TestModuleRunner(TestRunnerBase):
                 try:
                     if ITestCaseFactory.providedBy(obj):
                         self._tClasses.append(obj)
-                except AttributeError: 
+                except AttributeError:
                     # if someone (looking in exarkun's direction)
                     # messes around with __getattr__ in a particularly funky
                     # way, it's possible to mess up zi's providedBy()
@@ -425,7 +425,7 @@ class TestClassAndMethodBase(TestRunnerBase):
     def testCaseInstance(self):
         # a property getter, called by subclasses
         if not self._tcInstance:
-            self._tcInstance = self._testCase() 
+            self._tcInstance = self._testCase()
         return self._tcInstance
     testCaseInstance = property(testCaseInstance)
 
@@ -437,11 +437,11 @@ class TestClassAndMethodBase(TestRunnerBase):
 
     def setUpModule(self):
         return getattr(self.module, 'setUpModule', _bogusCallable)
-    setUpModule = property(setUpModule)    
+    setUpModule = property(setUpModule)
 
     def tearDownModule(self):
         return getattr(self.module, 'tearDownModule', _bogusCallable)
-    tearDownModule = property(tearDownModule)    
+    tearDownModule = property(tearDownModule)
 
     def runTests(self, randomize=False):
         reporter = self.getReporter()
@@ -485,11 +485,11 @@ class TestClassAndMethodBase(TestRunnerBase):
                 else:
                     reporter.upDownError(um)
                     def _setUpClassError(tm):
-                        tm.errors.extend(um.errors) 
+                        tm.errors.extend(um.errors)
                         reporter.startTest(tm)
                         self.methodsWithStatus.setdefault(tm.status,
                                                           []).append(tm)
-                        reporter.endTest(tm)   
+                        reporter.endTest(tm)
                     return _apply(_setUpClassError) # and we're done
 
             # --- run methods ----------------------------------------------
@@ -680,7 +680,7 @@ class TestMethod(MethodInfoBase, JanitorAndReporterMixin):
             log.msg(iface=ITrialDebug, kbd="KEYBOARD INTERRUPT")
         elif f.check(unittest.SkipTest):
             if len(f.value.args) > 1:
-                reason = f.value.args[0] 
+                reason = f.value.args[0]
             else:
                 warnings.warn(("Do not raise unittest.SkipTest with no "
                                "arguments! "
@@ -714,19 +714,22 @@ class TestMethod(MethodInfoBase, JanitorAndReporterMixin):
                 # capture all a TestMethod run's log events (warner's request)
                 observer = util.TrialLogObserver().install()
 
-                um = UserMethodWrapper(self.setUp, janitor)
+                setUp = UserMethodWrapper(self.setUp, janitor)
                 try:
-                    um(tci)
+                    setUp(tci)
                 except UserMethodError:
-                    for error in um.errors:
+                    for error in setUp.errors:
                         if error.check(KeyboardInterrupt):
                             error.raiseException()
                         self._eb(error)
                     else:
-                        reporter.upDownError(um)
+                        # give the reporter the illusion that the test has run normally
+                        # but don't actually run the test if setUp is broken
+                        reporter.startTest(self)
+                        reporter.upDownError(setUp, warn=False, printStatus=False)
                         return
                  
-                reporter.startTest(self) 
+                reporter.startTest(self)
 
                 try:
                     sys.stdout = util.StdioProxy(sys.stdout)
@@ -753,7 +756,6 @@ class TestMethod(MethodInfoBase, JanitorAndReporterMixin):
 
                 finally:
                     self.endTime = time.time()
-                    reporter.endTest(self)
 
                     self.stdout = sys.stdout.getvalue()
                     self.stderr = sys.stderr.getvalue()
@@ -765,11 +767,11 @@ class TestMethod(MethodInfoBase, JanitorAndReporterMixin):
                         um(tci)
                     except UserMethodError:
                         for error in um.errors:
-                            if error.check(KeyboardInterrupt):
-                                error.raiseException()
+                            self._eb(error)
                         else:
-                            reporter.upDownError(um)
+                            reporter.upDownError(um, warn=False)
             finally:
+                reporter.endTest(self)
                 observer.remove()
                 self.logevents = observer.events
 
