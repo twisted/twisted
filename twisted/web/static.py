@@ -143,6 +143,33 @@ def _upgradeRegistry(registry):
                           app.theApplication)
 
 
+def loadMimeTypes(files = ['/etc/mime.types', os.path.expanduser('~/.mime.types')]):
+    """Read MIME types from a list of a standard mime.types formatted files
+    
+    @type files: C{str} C{list}
+    @rtype: C{dict}
+    @return: A C{dict} whose keys are file extensions and whose values
+    are MIME types
+    """
+    d = {}
+    for f in files:
+        try:
+            f = file(f)
+        except IOError:
+            pass
+        else:
+            lines = [l.strip() for l in f.readlines()]
+            f.close()
+            for L in lines:
+                if not L.startswith('#'):
+                    vals = L.split(None, 1)
+                    if len(vals) == 2:
+                        type, exts = vals
+                        for ext in exts.split():
+                            d[ext] = type
+    return d
+
+
 class File(resource.Resource, styles.Versioned):
     """
     File is a resource that represents a plain non-interpreted file.
@@ -152,33 +179,34 @@ class File(resource.Resource, styles.Versioned):
     # we don't implement IConfigCollection
     __implements__ = resource.IResource
 
-    #argh, we need a MIME db interface
-    contentTypes = {
-        ".css": "text/css",
-        ".exe": "application/x-executable",
-        ".flac": "audio/x-flac",
-        ".gif": "image/gif",
-        ".gtar": "application/x-gtar",
-        ".html": "text/html",
-        ".htm": "text/html",
-        ".java": "text/plain",
-        ".jpeg": "image/jpeg",
-        ".jpg": "image/jpeg",
-        ".lisp": "text/x-lisp",
-        ".mp3":  "audio/mpeg",
-        ".oz": "text/x-oz",
-        ".ogg": "application/x-ogg",
-        ".pdf": "application/x-pdf",
-        ".png": "image/png",
-        ".py": "text/x-python",
-        ".swf": "application/x-shockwave-flash",
-        ".tar": "application/x-tar",
-        ".tgz": "application/x-gtar",
-        ".tif": "image/tiff",
-        ".tiff": "image/tiff",
-        ".txt": "text/plain",
-        ".xul": "application/vnd.mozilla.xul+xml",
-        ".zip": "application/x-zip",
+    contentTypes = loadMimeTypes()
+    if not contentTypes: # Lozar!
+        contentTypes = {
+            ".css": "text/css",
+            ".exe": "application/x-executable",
+            ".flac": "audio/x-flac",
+            ".gif": "image/gif",
+            ".gtar": "application/x-gtar",
+            ".html": "text/html",
+            ".htm": "text/html",
+            ".java": "text/plain",
+            ".jpeg": "image/jpeg",
+            ".jpg": "image/jpeg",
+            ".lisp": "text/x-lisp",
+            ".mp3":  "audio/mpeg",
+            ".oz": "text/x-oz",
+            ".ogg": "application/x-ogg",
+            ".pdf": "application/x-pdf",
+            ".png": "image/png",
+            ".py": "text/x-python",
+            ".swf": "application/x-shockwave-flash",
+            ".tar": "application/x-tar",
+            ".tgz": "application/x-gtar",
+            ".tif": "image/tiff",
+            ".tiff": "image/tiff",
+            ".txt": "text/plain",
+            ".xul": "application/vnd.mozilla.xul+xml",
+            ".zip": "application/x-zip",
         }
 
     contentEncodings = {
