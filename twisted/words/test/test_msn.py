@@ -155,7 +155,7 @@ class NotificationTests(unittest.TestCase):
 
     def testLogin(self):
         self.client.lineReceived('USR 1 OK foo@bar.com Test%20Screen%20Name 1 0')
-        self.failUnless((self.client.state == 'LOGIN'), msg='Failed to detect successful login')
+        self.failUnless((self.client.state == 'LOGIN'), message='Failed to detect successful login')
 
     def testProfile(self):
         m = 'MSG Hotmail Hotmail 353\r\nMIME-Version: 1.0\r\nContent-Type: text/x-msmsgsprofile; charset=UTF-8\r\n'
@@ -163,7 +163,7 @@ class NotificationTests(unittest.TestCase):
         m += 'preferredEmail: foo@bar.com\r\ncountry: AU\r\nPostalCode: 90210\r\nGender: M\r\nKid: 0\r\nAge:\r\nsid: 400\r\n'
         m += 'kv: 2\r\nMSPAuth: 2CACCBCCADMoV8ORoz64BVwmjtksIg!kmR!Rj5tBBqEaW9hc4YnPHSOQ$$\r\n\r\n'
         map(self.client.lineReceived, m.split('\r\n')[:-1])
-        self.failUnless((self.client.state == 'PROFILE'), msg='Failed to detect initial profile')
+        self.failUnless((self.client.state == 'PROFILE'), message='Failed to detect initial profile')
 
     def testStatus(self):
         t = [('ILN 1 AWY foo@bar.com Test%20Screen%20Name 0', 'INITSTATUS', 'Failed to detect initial status report'),
@@ -172,7 +172,7 @@ class NotificationTests(unittest.TestCase):
              ('CHG 1 HDN 0', 'MYSTATUS', 'Failed to detect my status changing')]
         for i in t:
             self.client.lineReceived(i[0])
-            self.failUnless((self.client.state == i[1]), msg=i[2])
+            self.failUnless((self.client.state == i[1]), message=i[2])
 
     def testListSync(self):
         # currently this test does not take into account the fact
@@ -260,7 +260,7 @@ class MessageHandlingTests(unittest.TestCase):
         m.setHeader('Content-Type', 'text/x-msmsgscontrol')
         m.setHeader('TypingUser', 'foo@bar')
         self.client.checkMessage(m)
-        self.failUnless((self.client.state == 'TYPING'), msg='Failed to detect typing notification')
+        self.failUnless((self.client.state == 'TYPING'), message='Failed to detect typing notification')
 
     def testFileInvitation(self):
         m = msn.MSNMessage()
@@ -271,7 +271,7 @@ class MessageHandlingTests(unittest.TestCase):
         m.message += 'Application-File: foobar.ext\r\n'
         m.message += 'Application-FileSize: 31337\r\n\r\n'
         self.client.checkMessage(m)
-        self.failUnless((self.client.state == 'INVITATION'), msg='Failed to detect file transfer invitation')
+        self.failUnless((self.client.state == 'INVITATION'), message='Failed to detect file transfer invitation')
 
     def testFileResponse(self):
         d = Deferred()
@@ -282,7 +282,7 @@ class MessageHandlingTests(unittest.TestCase):
         m.message += 'Invitation-Command: ACCEPT\r\n'
         m.message += 'Invitation-Cookie: 1234\r\n\r\n'
         self.client.checkMessage(m)
-        self.failUnless((self.client.state == 'RESPONSE'), msg='Failed to detect file transfer response')
+        self.failUnless((self.client.state == 'RESPONSE'), message='Failed to detect file transfer response')
 
     def testFileInfo(self):
         d = Deferred()
@@ -296,7 +296,7 @@ class MessageHandlingTests(unittest.TestCase):
         m.message += 'Port: 6891\r\n'
         m.message += 'AuthCookie: 4321\r\n\r\n'
         self.client.checkMessage(m)
-        self.failUnless((self.client.state == 'INFO'), msg='Failed to detect file transfer info')
+        self.failUnless((self.client.state == 'INFO'), message='Failed to detect file transfer info')
 
     def fileResponse(self, (accept, cookie, info)):
         if accept and cookie == 1234: self.client.state = 'RESPONSE'
@@ -326,5 +326,5 @@ class FileTransferTestCase(unittest.TestCase):
         client = msn.FileReceive(auth, "foo@bar.com", self.output)
         client.fileSize = 7000
         loopback.loopback(sender, client)
-        self.failUnless((client.completed and sender.completed), msg="send failed to complete")
-        self.failUnless((self.input.getvalue() == self.output.getvalue()), msg="saved file does not match original")
+        self.failUnless((client.completed and sender.completed), message="send failed to complete")
+        self.failUnless((self.input.getvalue() == self.output.getvalue()), message="saved file does not match original")
