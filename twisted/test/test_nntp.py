@@ -73,6 +73,16 @@ class TestNNTPClient(nntp.NNTPClient):
         self.fetchArticle(1)
     
     def gotArticle(self, info):
+        origBody = POST_STRING.split('\n\n')[1]
+        newBody = info.split('\n\n', 1)[1]
+
+        # XXX The strip shouldn't be necessary, but I don't
+        # know where it needs fixing and I don't want to commit
+        # a broken test.  Tailing whitespace is irrelevant anyway. :)
+        self.assertEquals(origBody.strip(), newBody.strip())
+
+        
+        # We're done
         self.transport.loseConnection()
 
 

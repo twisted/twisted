@@ -20,9 +20,10 @@
     LIST        LISTGROUP    NEWSGROUPS    XOVER    XHDR
     POST        GROUP        ARTICLE       STAT     HEAD
     BODY        NEXT         LAST          MODE     QUIT
+    HELP
     
   The following protocol commands require implementation:
-    HELP        IHAVE        NEWNEWS       SLAVE    CHECK
+                IHAVE        NEWNEWS       SLAVE    CHECK
     MODE STREAM TAKETHIS     XGTITLE       XINDEX   XPAT
     XPATH       XROVER       XTHREAD       AUTHINFO NEWGROUPS
 
@@ -79,9 +80,17 @@ class NNTPClient(basic.LineReceiver):
     def connectionMade(self):
         try:
             self.ip = self.transport.socket.getpeername()
-        #We're not always connected with a socket
+        # We're not always connected with a socket
         except AttributeError:
             self.ip = "unknown"
+
+
+    def lineReceived(self, line):
+        if len(self.state):
+            apply(getattr(self, NNTPClient.states[self.state[0]]), (line,))
+        else:
+            self._statePassive(self, line)
+
 
     def gotAllGroups(self, groups):
         "Override for notification when fetchGroups() action is completed"
@@ -145,12 +154,6 @@ class NNTPClient(basic.LineReceiver):
         self.sendLine('POST')
         self.state.append(NNTPClient.ST_POST)
         self._postText = text
-
-    def lineReceived(self, line):
-        if len(self.state):
-            apply(getattr(self, NNTPClient.states[self.state[0]]), (line,))
-        else:
-            self._statePassive(self, line)
 
     def _statePassive(self, line):
         log.msg('Server said: %s' % line)
@@ -257,6 +260,7 @@ class NNTPClient(basic.LineReceiver):
                 log.msg('_stateBody exception %s' % e)
 
     def _statePost(self, line):
+        print '_statePost'
         del self.state[0]
         code = string.split(line)
         if len(code):
@@ -307,14 +311,14 @@ class NNTPServer(NNTPClient):
         #We're not always connected with a socket
         except AttributeError:
             self.ip = "unknown"
-        self.posting = 0
+        self.inputHandler = None
         self.currentGroup = None
         self.currentIndex = None
         self.sendLine('200 server ready - posting allowed')
 
     def lineReceived(self, line):
-        if self.posting == 1:
-            self._doingPost(line)
+        if self.inputHandler is not None:
+            self.inputHandler(line)
         else:
             parts = filter(None, string.split(string.strip(line)))
             if len(parts):
@@ -464,13 +468,13 @@ class NNTPServer(NNTPClient):
 
 
     def do_POST(self, parts):
-        self.posting = 1
+        self.inputHandler = self._doingPost
         self.message = ''
         self.sendLine('340 send article to be posted.  End with <CR-LF>.<CR-LF>')
 
     def _doingPost(self, line):
         if line == '.':
-            self.posting = 0
+            self.inputHandler = None
             group, article = self.currentGroup, self.message
             del self.message
 
@@ -518,7 +522,7 @@ class NNTPServer(NNTPClient):
         index, id, article = parts
         self.currentIndex = index
         self.sendLine('220 %d %s article' % (index, id))
-        self.transport.write(article)
+        self.transport.write(article.replace('\r\n..', '\r\n.') + '\r\n')
         self.sendLine('.')
 
     def _errArticle(self, article):
@@ -601,6 +605,46 @@ class NNTPServer(NNTPClient):
         self.sendLine('205 goodbye')
         self.transport.loseConnection()
 
+    
+    def do_HELP(self, parts):
+        self.sendLine('100 help text follows')
+        self.sendLine('Read the RFC.')
+        self.sendLine('.')
+    
+    
+    def do_IHAVE(self, parts):
+        if len(parts) != 1:
+            self.sendLine('501 command syntax error')
+        else:
+            id = parts[0]
+            self.factory.backend.articleExistsRequest(id).addCallback(self._foundArticle)
+    
+    def _foundArticle(self, result):
+        if result:
+            self.sendLine('437 article rejected - do not try again')
+        else:
+            self.sendLine('335 send article to be transferred.  End with <CR-LF>.<CR-LF>')
+            self.inputHandler = self._handleIHAVE
+            self.message = ''
+    
+    
+    def _handleIHAVE(self, line):
+        if line == '.':
+            self.inputHandler = None
+            self.factory.backend.postRequest(
+                self.message
+            ).addCallbacks(self._gotIHAVE, self._errIHAVE)
+            
+            self.message = ''
+        else:
+            if line.startswith('.'):
+                line = '.' + line
+            self.message = self.message + line + '\r\n'
 
-    def sendLine(self, line):
-        basic.LineReceiver.sendLine(self, line)
+
+    def _gotIHAVE(self, result):
+        self.sendLine('235 article transferred ok')
+    
+    
+    def _errIHAVE(self, error):
+        self.sendLine('436 transfer failed - try again later')

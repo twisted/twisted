@@ -172,7 +172,14 @@ class PickleStorage:
             return defer.succeed((group, num, high, low, flags))
         else:
             return defer.fail(ERR_NOGROUP)
-        
+
+    def articleExistsRequest(self, id):
+        for g in self.db.values():
+            for a in g.values():
+                if a.getHeader('Message-ID') == id:
+                    return defer.succeed(1)
+        return defer.succeed(0)
+
     def articleRequest(self, group, index):
         if self.db.has_key(group):
             if self.db[group].has_key(index):
