@@ -102,8 +102,8 @@ being used, and the body is empty.</p>
   </li>
 
   <li>
-  <p><code>??: OPEN: [[num]-OPEN-empty]</code></p>
-  <p><code>??: CLOSE: [[num]-CLOSE-empty]</code></p>
+  <p><code>0x88: OPEN: [[num]-OPEN-empty]</code></p>
+  <p><code>0x89: CLOSE: [[num]-CLOSE-empty]</code></p>
 
   <p>These tokens are the newbanana parenthesis markers. They carry an
   optional number in their header: if present, the number counts the
@@ -121,6 +121,21 @@ being used, and the body is empty.</p>
   STRING token or a VOCAB token. This string indicates what kind of new
   sub-expression is being started.</p>
   </li>
+
+  <li>
+  <p><code>0x8A: ABORT: [[num]-ABORT-empty]</code></p>
+
+  <p>This token indicates that something has gone wrong on the sender side,
+  and that the resulting object must not be handed upwards in the unslicer
+  stack. It may be impossible or inconvenient for the sender to stop sending
+  the tokens associated with the unfortunate object, so the receiver must be
+  prepared to silently drop all further tokens up to the matching STOP
+  marker.</p>
+
+  <p>The number, if present, will be the same one used by the OPEN
+  token.</p>
+  </li>
+  
   
 </ul>
 
@@ -415,5 +430,84 @@ code can do a few large writes instead of a gazillion small ones.</p>
 <p>It ought to be possible to mix C and Python slices here: if the C code
 doesn't find the slice in the table, it can fall back to calling a python
 method that does a lookup in an extensible registry.</p>
+
+<h2>Beyond Banana</h2>
+
+<p>Random notes and wild speculations: take everything beyond here with
+<em>two</em> grains of salt</p>
+
+<h3>Oldbanana usage</h3>
+
+<p>The oldbanana usage model has the layer above banana written in one of
+two ways. The simple form is to use the <code
+class="python">banana.encode</code> and <code
+class="python">banana.decode</code> functions to turn an object into a
+bytestream. This is used by twisted.spread.publish . The more flexible model
+is to subclass Banana. The largest example of this technique is, of course,
+twisted.spread.pb.Broker, but others which use it are twisted.trial.remote
+and twisted.scripts.conch (which appears to use it over unix-domain
+sockets).</p>
+
+<p>Banana itself is a Protocol. The Banana subclass would generally override
+the <code>expressionReceived</code> method, which receives s-expressions
+(lists of lists). These are processed to figure out what method should be
+called, etc (processing which only has to deal with strings, numbers, and
+lists). Then the serialized arguments are sent through Unjelly to produce
+actual objects.</p>
+
+<p>On output, the subclass usually calls <code>self.sendEncoded</code> with
+some set of objects. In the case of PB, the arguments to the remote method
+are turned into s-expressions with jelly, then combined with the method
+meta-data (object ID, method name, etc), then the whole request is sent to
+<code>sendEncoded</code>.</p>
+
+<h3>Newbanana</h3>
+
+<p>Newbanana moves the Jelly functionality into a stack of Banana Slices,
+and the lowest-level token-to-bytestream conversion into the new Banana
+object. Instead of overriding <code>expressionReceived</code>, users could
+push a different root Unslicer. to get more control over the receive
+process.
+
+Currently, Slicers call Banana.sendOpen/sendToken/sendClose/sendAbort, which
+must then somehow creates bytes and do a transport.write .
+
+Unbanana.receiveToken is called repeatedly with all kinds of tokens.
+
+To move this into C, the transport should get to call CUnbanana.receiveToken
+There should be CBananaUnslicers. Probably a parent.addMe(self) instead of
+banana.stack.append(self), maybe addMeC for the C unslicer.
+
+*something* has to be a Protocol. Call that a BananaProtocol. It has a
+dataReceived method. (maybe in some C form, data could move directly from a
+CTransport to a CProtocol). It parses tokens and hands them to its Unbanana
+object, which uses the Unslicer stack to do stuff with them. The Unbanana
+object has a root Unslicer, probably created at connectionEstablished time.
+Subclasses of BananaProtocol could have Unbanana objects with different
+RootUnslicer objects.
+
+The Banana object is created with a RootSlicer. The Banana object needs to
+point at the BananaProtocol so it can do bp.writeToken, which serializes the
+token and does transport.write . This could be collapsed if the serializer
+were moved into the Banana object. (a C form could have CSlicer objects
+which hand tokens to a little CBanana which then hands bytes off to a
+CTransport).
+
+Doing the bytestream-to-Token conversion in C loses a lot of utility when
+the conversion is done token at a time. It made more sense when a whole mess
+of s-lists were converted at once.
+
+All Slicers currently have a Banana pointer.. maybe they should have a
+transport pointer instead? The Banana pointer is needed to get to top of the
+stack.
+
+Probably want to merge Banana and Unbanana into BananaProtocol.
+
+want to be able to unserialize lists/tuples/dicts/strings/ints (<q>basic
+types</q>) without surfacing into python. want to deliver the completed
+object to a python function.
+
+
+</p>
 
 </body> </html>
