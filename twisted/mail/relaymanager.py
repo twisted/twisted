@@ -468,7 +468,7 @@ class MXCalculator:
             log.msg("MX lookup failed; attempting to use hostname (%s) directly" % (domain,))
 
             # Alright, I admit, this is a bit icky.
-            from twisted.protocols import dns
+            from twisted.names import dns
             return self.resolver.getHostByName(domain
                 ).addCallback(lambda h: dns.Record_MX(exchange=h)
                 )

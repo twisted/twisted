@@ -26,7 +26,7 @@ import rfc822
 from twisted.trial import unittest
 from twisted.protocols import smtp
 from twisted.protocols import pop3
-from twisted.protocols import dns
+from twisted.names import dns
 from twisted.protocols import basic
 from twisted.internet import protocol
 from twisted.internet import defer
