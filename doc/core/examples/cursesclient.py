@@ -1,13 +1,14 @@
 #!/usr/bin/python
 
 """
-This is an example of integrating curses with the twisted underlying select loop.
-Most of what is in this is insignificant, and the main interest is the 'CursesStdIO'
-class.  
+This is an example of integrating curses with the twisted underlying    
+select loop. Most of what is in this is insignificant -- the main piece 
+of interest is the 'CursesStdIO' class.                                 
 
-This class acts as file-descriptor 0, and is scheduled with the twisted select loop
-via reactor.addReader (once the curses class extends it of course).  When there is input waiting
-doRead is called, and any input-oriented curses calls (ie. getch()) should be executed within this
+This class acts as file-descriptor 0, and is scheduled with the twisted
+select loop via reactor.addReader (once the curses class extends it
+of course). When there is input waiting doRead is called, and any
+input-oriented curses calls (ie. getch()) should be executed within this
 block.
 
 Remember to call nodelay(1) in curses, to make getch() non-blocking.
@@ -124,14 +125,16 @@ class Screen(CursesStdIO):
         i = 0
         index = len(self.lines) - 1
         while i < (self.rows - 3) and index >= 0:
-            self.stdscr.addstr(self.rows - 3 - i, 0, self.lines[index], curses.color_pair(2))
+            self.stdscr.addstr(self.rows - 3 - i, 0, self.lines[index], 
+                               curses.color_pair(2))
             i = i + 1
             index = index - 1
         self.stdscr.refresh()
 
     def paintStatus(self, text):
         if len(text) > self.cols: raise TextTooLongError
-        self.stdscr.addstr(self.rows-2,0,text + ' ' * (self.cols-len(text)), curses.color_pair(1))
+        self.stdscr.addstr(self.rows-2,0,text + ' ' * (self.cols-len(text)), 
+                           curses.color_pair(1))
         # move cursor to input line
         self.stdscr.move(self.rows-1, self.cols-1)
 
@@ -156,7 +159,9 @@ class Screen(CursesStdIO):
             if len(self.searchText) == self.cols-2: return
             self.searchText = self.searchText + chr(c)
 
-        self.stdscr.addstr(self.rows-1, 0, self.searchText + (' ' * (self.cols-len(self.searchText)-2)))
+        self.stdscr.addstr(self.rows-1, 0, 
+                           self.searchText + (' ' * (
+                           self.cols-len(self.searchText)-2)))
         self.stdscr.move(self.rows-1, len(self.searchText))
         self.paintStatus(self.statusText + ' %d' % len(self.searchText))
         self.stdscr.refresh()
