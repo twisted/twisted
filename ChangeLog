@@ -1,3 +1,8 @@
+2002-03-09  Itamar Shtull-Trauring  <itamarst@twistedmatrix.com>
+
+	* Automatic log rotation for twistd. In addition, sending SIGUSR1
+        to twistd will rotate the log.
+
 2002-03-07  Chris Armstrong  <carmstro@twistedmatrix.com>
 
 	* .: Releasing Twisted 0.15.5.

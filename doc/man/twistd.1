@@ -20,7 +20,8 @@ Run profiler
 Do not save shutdown state
 .TP
 \fB\-l\fR, \fB\--logfile\fR \fI<logfile>\fR
-Log to a specified file, - for stdout (default twistd.log)
+Log to a specified file, - for stdout (default twistd.log).
+The log file will be rotated on SIGUSR1.
 .TP
 \fB\--pidfile\fR \fI<pidfile>\fR
 Save pid in specified file (default twistd.pid)
