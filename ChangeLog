@@ -1,9 +1,9 @@
 2002-11-30  Paul Swartz  <z3p@twistedmatrix.com>
 
-    * Summary of Conch changes:  An actual client (bin/conch) which is mostly
-    compatible with the OpenSSH client.  An optional C module to speed up some
-    of the math operations.  A bunch of other stuff has changed too, but it's
-    hard to summarize a month of work.
+	* Summary of Conch changes:  An actual client (bin/conch) which is
+	mostly compatible with the OpenSSH client.  An optional C module to
+	speed up some of the math operations.  A bunch of other stuff has
+	changed too, but it's hard to summarize a month of work.
 
 2002-11-24  Donovan Preston  <dp@twistedmatrix.com>
 
@@ -11,15 +11,16 @@
 	asynchronously updating portions of woven pages that have already been
 	sent to the browser. Added controller.LiveController, page.LivePage,
 	and utils.ILivePage to contain code for dealing with keeping Views alive
-	for as long as the user is still looking at a page and has a live Session
-	object on the server; code for responding to model changed notifications,
-	rerendering Views that depend on those models that have changed; code
-	for sending these rerendered views as html fragments to the browser; and
-	javascript code to mutate the DOM of the live page with the updated HTML.
-	Mozilla only for the moment; ie to come soon.
+	for as long as the user is still looking at a page and has a live
+	Session object on the server; code for responding to model changed
+	notifications, rerendering Views that depend on those models that have
+	changed; code for sending these rerendered views as html fragments to
+	the browser; and javascript code to mutate the DOM of the live page
+	with the updated HTML.  Mozilla only for the moment; ie to come soon.
 
 	* twisted/web/woven/widgets.py: Added API for attaching Python functions
-	to widgets that fire when a given javascript event occurs in the browser.
+	to widgets that fire when a given javascript event occurs in the
+	browser.
 	Widget.addEventHandler(self, eventName, handler, *args) and
 	Widget.onEvent(self, request, eventName, *args). The default onEvent
 	will dispatch to event handlers registered with addEventHandler.
