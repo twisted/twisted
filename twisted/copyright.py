@@ -21,7 +21,7 @@ Copyright information for Twisted.
 """
 
 
-version="0.10.0"
+version="0.10.1"
 
 disclaimer="""
 Twisted, the Framework of Your Internet
