@@ -40,5 +40,5 @@ class MultipleClientPerspective(pb.Perspective):
 
     def __getstate__(self):
         state = styles.Versioned.__getstate__(self)
-        state['client'] = {}
+        state['clients'] = {}
         return state
