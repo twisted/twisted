@@ -99,11 +99,11 @@ class AccessorType(type22):
 
     """
 
-    def __init__(self, name, bases, dict):
-        type.__init__(self, name, bases, dict)
+    def __init__(self, name, bases, d):
+        type.__init__(self, name, bases, d)
         accessors = {}
         prefixs = ["get_", "set_", "del_"]
-        for k in dict.keys():
+        for k in d.keys():
             v = getattr(self, k)
             for i in range(3):
                 if k.startswith(prefixs[i]):
