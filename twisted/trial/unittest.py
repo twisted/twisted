@@ -46,9 +46,10 @@ from twisted.trial.util import deferredResult, deferredError
 import sys, os, glob, types, errno
 try:
     import gc # not available in jython
+    import cPickle as pickle
 except ImportError:
     gc = None
-
+    import pickle
 
 class SkipTest(Exception):
     """Raise this (with a reason) to skip the current test. You may also set
@@ -214,9 +215,9 @@ class TestCase:
         for i in xrange(timesOrSeconds):
             reactor.iterate()
             
-
-# components.registerAdapter(runner.TestClassRunner, TestCase, runner.ITestRunner)
-
+class PerformanceTestCase(TestCase):
+    pass
+                                 
 class Tester:
     """I contain all the supporting machinery for running a single test method.
     """
@@ -312,6 +313,8 @@ class Tester:
             raise ValueError, "Test has not been run yet, no results to get"
         
 
+
+
 class TestSuite:
     moduleGlob = 'test_*.py'
     sortTests = 1
@@ -320,7 +323,8 @@ class TestSuite:
         self.numTests = 0
         self.couldNotImport = {}
         self.tests = []
-
+        self.stats = {}
+        
     def addMethod(self, method):
         """Add a single method of a test case class to this test suite.
         """
@@ -329,7 +333,11 @@ class TestSuite:
         self.numTests += testAdapter.numTests()
 
     def addTestClass(self, testClass):
-        testAdapter = runner.TestClassRunner(testClass)
+        if issubclass(testClass, PerformanceTestCase):
+            testAdapter = runner.PerformanceTestClassRunner(testClass, self.stats)
+        else:
+            testAdapter = runner.TestClassRunner(testClass)
+            
         self.tests.append(testAdapter)
         self.numTests += testAdapter.numTests()
 
@@ -401,5 +409,7 @@ class TestSuite:
         
         for name, exc in self.couldNotImport.items():
             output.reportImportError(name, exc)
+
+        pickle.dump(self.stats, open("test.stats", 'wb'))
 
         output.stop()

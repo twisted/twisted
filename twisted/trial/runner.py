@@ -18,7 +18,7 @@
 #
 
 import types 
-from twisted.python import components, reflect, log
+from twisted.python import components, reflect, log, context
 
 class ITestRunner(components.Interface):
     def getTestClass(self):
@@ -74,7 +74,7 @@ class TestClassRunner:
     __implements__ = (ITestRunner,)
     methodPrefixes = ('test',)
     
-    def __init__(self, testClass):
+    def __init__(self, testClass, stats=None):
         self.testClass = testClass
         self.methodNames = []
         for prefix in self.methodPrefixes:
@@ -82,7 +82,9 @@ class TestClassRunner:
                                       reflect.prefixedMethodNames(testClass, prefix)])
         # N.B.: --random will shuffle testClasses but not our methodNames[]
         self.methodNames.sort()
-
+        if stats is not None:
+            self.stats = stats
+            
     def __str__(self):
         return "%s.%s" % (self.testClass.__module__, self.testClass.__name__)
 
@@ -117,5 +119,23 @@ def runTest(method):
     # testing process. This matches the same check in util.extract_tb that
     # matches SingletonRunner.runTest and TestClassRunner.runTest .
     method()
+
+class PerformanceTestClassRunner(TestClassRunner):
+    methodPrefixes = ('benchmark',)
+
+    def runTests(self, output):
+        self.testCase = self.testClass()
+        self.testCase._resultReporter_ = output
+        self.testCase.setUpClass()
+        for methodName in self.methodNames:
+            fullName = "%s.%s" % (self.testCase.__class__, methodName)
+            log.msg("--> %s <--" % fullName)
+            method = getattr(self.testCase, methodName)
+            output.reportStart(self.testClass, method)
+            self.testCase.recordStat = lambda datum: self.stats.__setitem__(fullName,datum)
+            t = unittest.Tester(self.testClass, self.testCase, method, self.runTest)            
+            results = t.run()
+            output.reportResults(self.testClass, method, *results)
+        self.testCase.tearDownClass()
 
 import unittest
