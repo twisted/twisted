@@ -85,6 +85,7 @@ class HTTPPageGetter(http.HTTPClient):
         self.transport.loseConnection()
 
     handleStatus_302 = lambda self: self.handleStatus_301()
+    handleStatus_303 = lambda self: self.handleStatus_301()
 
     def connectionLost(self, reason):
         if not self.quietLoss:
@@ -189,8 +190,9 @@ class HTTPClientFactory(protocol.ClientFactory):
         self.response_headers = headers
         if headers.has_key('set-cookie'):
             for cookie in headers['set-cookie']:
-                cookparts = cookie.split(';')
-                for cook in cookparts:
+                for cookie in cookie.split(','):
+                    cookparts = cookie.split(';')
+                    cook = cookparts[0]
                     cook.lstrip()
                     k, v = cook.split('=', 1)
                     self.cookies[k.lstrip()] = v.lstrip()
