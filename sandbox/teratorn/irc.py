@@ -43,7 +43,7 @@ Test coverage needs to be better.
 <http://www.irchelp.org/irchelp/rfc/ctcpspec.html>}
 """
 
-__version__ = '$Revision: 1.4 $'[11:-2]
+__version__ = '$Revision: 1.5 $'[11:-2]
 
 from twisted.internet import reactor, protocol, defer
 from twisted.persisted import styles
@@ -369,7 +369,6 @@ class IncomingDccFile(protocol.ClientFactory):
      
     def __init__(self, ircClient, user, address, port, default_filename, size, mode):
         self._ircClient = ircClient
-        self.destdir = ircClient.default_dcc_destdir # default dir to save to, if unspecified
         self.user = user
         self.address = address
         self.port = port
@@ -379,12 +378,12 @@ class IncomingDccFile(protocol.ClientFactory):
 
         self.deferred = defer.Deferred()
 
-    def accept(self, destfile=None, resume_overwrite=False):
+    def accept(self, destfile, resume_overwrite=False):
         """
         Call this to retreive the incoming dcc file.
         
-        @param destfile: An optional parameter. If unset, we will use the default directory and filename. Or you may pass a path to use, or a file-like-object that data will be written to. 
-        @type destfile: A string, a file-like-object, or None.
+        @param destfile: A file path to open and use, or a file-like-object that data will be written to. 
+        @type destfile: A string, or a file-like-object.
         @param resume_overwrite: An optional parameter. Specifies whether to resume, overwrite, or do neither (default). 
         @type resume_overwrite: One of \"resume\", \"overwrite\", or False.
 
@@ -398,17 +397,7 @@ class IncomingDccFile(protocol.ClientFactory):
 
         if hasattr(destfile, 'write'): #assume it's a file-obj
             self.file_obj = destfile
-        else: #see if it's None or a string
-            if destfile is None: #use the default (given by the remote client)
-                if self.destdir.endswith(path.sep):
-                    destfile = self.destdir + self.default_filename
-                else:
-                    destfile = self.destdir + path.sep + self.default_filename
-            elif type(destfile) == types.StringType: #use as-is
-                pass
-            else:
-                raise 'destfile must be None, a string, or a file-like-object'
-            
+        elif type(destfile) == types.StringType: #assume it's a path
             # sanity check so we don't blow away files by accident
             if path.exists(destfile):
                 if not resume_overwrite: # it's there, but we can't resume or overwrite
@@ -421,7 +410,9 @@ class IncomingDccFile(protocol.ClientFactory):
                 self.file_obj = file(destfile, 'a+b')
             else: # no - open for writing (and possibly truncate)
                 self.file_obj = file(destfile, 'wb')
-
+        else:
+            raise 'destfile must be a string, or a file-like-object'
+ 
         # we now have a file-obj to work with
                 
         # do we need to resume first?
@@ -611,8 +602,6 @@ class IRCClient(basic.LineReceiver):
 
     _incomingDccFiles = []
     _outgoingDccFiles = []
-
-    default_dcc_destdir = "."
 
     __pychecker__ = 'unusednames=params,prefix,channel'
         
@@ -976,43 +965,6 @@ class IRCClient(basic.LineReceiver):
             for i in xrange(excess):
                 del self._pings[byValue[i][1]]
 
-    def dccSend(self, user, file):
-        if type(file) == types.StringType:
-            file = open(file, 'r')
-
-        size = fileSize(file)
-
-        name = getattr(file, "name", "file@%s" % (id(file),))
-
-        factory = DccSendFactory(file)
-        port = reactor.listenTCP(0, factory, 1)
-
-        raise NotImplementedError,(
-            "XXX!!! Help!  I need to bind a socket, have it listen, and tell me its address.  "
-            "(and stop accepting once we've made a single connection.)")
-
-        my_address = struct.pack("!I", my_address)
-
-        args = ['SEND', name, my_address, str(port)]
-
-        if not (size is None):
-            args.append(size)
-
-        args = string.join(args, ' ')
-
-        self.ctcpMakeQuery(user, [('DCC', args)])
-
-    def dccResume(self, user, fileName, port, resumePos):
-        """Send a DCC RESUME request to another user."""
-        self.ctcpMakeQuery(user, [
-            ('DCC', ['RESUME', fileName, port, resumePos])])
-
-    def dccAcceptResume(self, user, fileName, port, resumePos):
-        """Send a DCC ACCEPT response to clients who have requested a resume.
-        """
-        self.ctcpMakeQuery(user, [
-            ('DCC', ['ACCEPT', fileName, port, resumePos])])
-
     ### server->client messages
     ### You might want to fiddle with these,
     ### but it is safe to leave them alone.
@@ -1320,13 +1272,20 @@ class IRCClient(basic.LineReceiver):
         self.dcc_SEND(user, channel, data, mode='turbo')
 
     def dcc_SEND(self, user, channel, data, mode='normal'):
-        print 'dcc_SEND'
         # Use splitQuoted for those who send files with spaces in the names.
         data = text.splitQuoted(data)
         if len(data) < 3:
             raise IRCBadMessage, "malformed DCC SEND request: %r" % (data,)
 
         (filename, address, port) = data[:3]
+
+        for c in '/\\:': #security check
+            if c in filename: raise IRCBadMessage, "in DCC SEND offer from %s: path information in filename: %s" % (user, filename)
+
+        # security check, don't want to use filenames that are *too* long, they
+        # could potentially cause a buffer overflow (as seen on Windows)
+        if len(filename) > 100:
+            raise IRCBadMessage, "in DCC SEND offer from %s: filename too long (>100): %s" % (user, filename)
 
         address = dccParseAddress(address)
         try:
