@@ -1,0 +1,15 @@
+#!/bin/sh
+# A couple notes.
+# First, get a checkout (or a release, if one exists) of zpkgtools.
+# Make a ~/.zpkg.resources file that contains 
+
+# zpkgsetup /path/to/zpkgtools/zpkgsetup
+
+# on a line. This will make it so zpkg doesn't have to download
+# zpkgsetup every time you run it.
+
+zpkg --support twistedzpkg \
+     --distribution twistedzpkg.zpkgsupport.Distribution \
+     -m ~/.zpkg.resources \
+     -m resources.zpkgmap \
+     twisted
