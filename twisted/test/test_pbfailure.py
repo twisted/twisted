@@ -55,7 +55,7 @@ class SimpleService(pb.Service):
 
     def startService(self):
         self.tester.runClient()
-                       
+
     def getPerspectiveNamed(self, name):
         p = SimplePerspective(name)
         p.setService(self)
@@ -66,7 +66,7 @@ class PBFailureTest(unittest.TestCase):
     def __init__(self, methodName='runTest'):
         unittest.TestCase.__init__(self, methodName)
         self.total = 0
-        
+
 
     def testPBFailures(self):
         auth = authorizer.DefaultAuthorizer()

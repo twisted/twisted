@@ -27,15 +27,18 @@ from twisted.python import failure
 
 
 class FailureTestCase(unittest.TestCase):
-    
+
     def testFailAndTrap(self):
+        """Trapping a failure."""
         try:
             raise NotImplementedError('test')
         except:
             f = failure.Failure()
         error = f.trap(SystemExit, RuntimeError)
         self.assert_(error == RuntimeError)
-        
+
+    def test_notTrapped(self):
+        """Making sure trap doesn't trap what it shouldn't."""
         try:
             raise ValueError()
         except:
@@ -51,6 +54,6 @@ class FailureTestCase(unittest.TestCase):
         f.printDetailedTraceback(out)
         f.printBriefTraceback(out)
         f.printTraceback(out)
-    
-    
+
+
 testCases = [FailureTestCase]
