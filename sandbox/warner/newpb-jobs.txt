@@ -492,3 +492,85 @@ receive-side should use it too (instead of f.raiseException)
 Several areas where I suspect performance issues but am unwilling to fix
 them before having proof that there is a problem:
 
+** Banana.produce
+
+This is the main loop which creates outbound tokens. It is called once at
+connectionMade() (after version negotiation) and thereafter is fired as the
+result of a Deferred whose callback is triggered by a new item being pushed
+on the output queue. It runs until the output queue is empty, or the
+production process is paused (by a consumer who is full), or streaming is
+enabled and one of the Slicers wants to pause.
+
+Each pass through the loop either pushes a single token into the transport,
+resulting in a number of short writes. We can do better than this by telling
+the transport to buffer the individual writes and calling a flush() method
+when we leave the loop. I think Itamar's new cprotocol work provides this
+sort of hook, but it would be nice if there were a generalized Transport
+interface so that Protocols could promise their transports that they will
+use flush() when they've stopped writing for a little while.
+
+Also, I want to be able to move produce() into C code. This means defining a
+CSlicer in addition to the cprotocol stuff before. The goal is to be able to
+slice a large tree of basic objects (lists, tuples, dicts, strings) without
+surfacing into Python code at all, only coming "up for air" when we hit an
+object type that we don't recognize as having a CSlicer available.
+
+** Banana.handleData
+
+The receive-tokenization process wants to be moved into C code. It's
+definitely on the critical path, but it's ugly because it has to keep
+calling into python code to handle each extracted token. Maybe there is a
+way to have fast C code peek through the incoming buffers for token
+boundaries, then give a list of offsets and lengths to the python code. The
+b128 conversion should also happen in C. The data shouldn't be pulled out of
+the input buffer until we've decided to accept it (i.e. the
+memory-consumption guarantees that the schemas provide do not take any
+transport-level buffering into account, and doing cprotocol tokenization
+would represent memory that an attacker can make us spend without triggering
+a schema violation). Itamar's CLineReceiver is a good example: you tokenize
+a big buffer as much as you can, pass the tokens upstairs to Python code,
+then hand the leftover tail to the next read() call. The tokenizer always
+works on the concatenation of two buffers: the tail of the previous read()
+and the complete contents of the current one.
+
+** Unslicer.doOpen delegation
+
+Unslicers form a stack, and each Unslicer gets to exert control over the way
+that its descendents are deserialized. Most don't bother, they just delegate
+the control methods up to the RootUnslicer. For example, doOpen() takes an
+opentype and may return a new Unslicer to handle the new OPEN sequence. Most
+of the time, each Unslicer delegates doOpen() to their parent, all the way
+up the stack to the RootUnslicer who actually performs the UnslicerRegistry
+lookup.
+
+This provides an optimization point. In general, the Unslicer knows ahead of
+time whether it cares to be involved in these methods or not (i.e. whether
+it wants to pay attention to its children/descendants or not). So instead of
+delegating all the time, we could just have a separate Opener stack.
+Unslicers that care would be pushed on the Opener stack at the same time
+they are pushed on the regular unslicer stack, likewise removed. The
+doOpen() method would only be invoked on the top-most Opener, removing a lot
+of method calls. (I think the math is something like turning
+avg(treedepth)*avg(nodes) into avg(nodes)).
+
+There are some other methods that are delegated in this way. open() is
+related to doOpen(). setObject()/getObject() keep track of references to
+shared objects and are typically only intercepted by a second-level object
+which defines a "serialization scope" (like a single remote method call), as
+well as connection-wide references (like pb.Referenceables) tracked by the
+PBRootUnslicer. These would also be targets for optimization.
+
+The fundamental reason for this optimization is that most Unslicers don't
+care about these methods. There are far more uses of doOpen() (one per
+object node) then there are changes to the desired behavior of doOpen().
+
+** CUnslicer
+
+Like CSlicer, the unslicing process wants to be able to be implemented (for
+built-in objects) entirely in C. This means a CUnslicer "object" (a struct
+full of function pointers), a table accessible from C that maps opentypes to
+both CUnslicers and regular python-based Unslicers, and a CProtocol
+tokenization code fed by a CTransport. It should be possible for the
+python->C transition to occur in the reactor when it calls ctransport.doRead
+python->and then not come back up to Python until Banana.receivedObject(),
+at least for built-in types like dicts and strings.
