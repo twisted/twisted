@@ -419,7 +419,10 @@ class _StdioMixin(_BaseMixin, SignalMixin):
         self.clientTransport = clientTransport
 
     def tearDown(self):
-        self.clientTransport.signalProcess("KILL")
+        try:
+            self.clientTransport.signalProcess("KILL")
+        except OSError:
+            pass
 
     def _testwrite(self, bytes):
         self.processClient.write(bytes)
