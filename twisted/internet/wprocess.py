@@ -19,11 +19,15 @@ class ReactorBuffer(tmprocess.IOBuffer):
         self.lost = lost
         tmprocess.IOBuffer.__init__(self)
         self.closing = 0
+        self.started = 0 # if Process.__init__ raises an exception, this keeps
+                         # self.lost from getting called spuriously
     def _doWrite(self, s):
         if callable(self.receiver): 
             self.reactor.callFromThread(self.receiver, s)
         tmprocess.IOBuffer._doWrite(self, s)
     def _doClose(self):
+        if not self.started:
+            return
         if not self.closing:
             self.closing = 1
             self.reactor.callFromThread(self.lost)
@@ -31,14 +35,12 @@ class ReactorBuffer(tmprocess.IOBuffer):
 
 class Process:
     def __init__(self, reactor, protocol, command, args, environment, path):
-        self.reactor = reactor
-        self.stdin = ReactorBuffer(self.reactor,
-                                   self.inConnectionLost)
-        self.stderr = ReactorBuffer(self.reactor,
-                                    self.errConnectionLost,
+        self.protocol = protocol
+        self.waiting = None
+        self.stdin = ReactorBuffer(reactor, self.inConnectionLost)
+        self.stderr = ReactorBuffer(reactor, self.errConnectionLost,
                                     protocol.errReceived)
-        self.stdout = ReactorBuffer(self.reactor,
-                                    self.outConnectionLost,
+        self.stdout = ReactorBuffer(reactor, self.outConnectionLost,
                                     protocol.outReceived)
         self.process = tmprocess.ProcessProxy([command] + args, mode='b', 
                                               cwd=path, env=environment,
@@ -46,9 +48,8 @@ class Process:
                                               stderr=self.stderr,
                                               stdout=self.stdout,
                                               )
+        self.stderr.started = self.stdout.started = self.stdin.started = 1
         protocol.makeConnection(self)
-        self.protocol = protocol
-        self.waiting = None
 
     def killProcess(self, gracePeriod=1):
         """A poor-man's replacement for signalProcess.  This uses WM_CLOSE.
