@@ -400,12 +400,17 @@ class ReactorBase:
         """Run all pending timed calls.
         """
         if self.threadCallQueue:
+            # Keep track of how many calls we actually make, as we're
+            # making them, in case another call is added to the queue
+            # while we're in this loop.
+            count = 0
             for (f, a, kw) in self.threadCallQueue:
                 try:
                     f(*a, **kw)
                 except:
                     log.err()
-            del self.threadCallQueue[:]
+                count += 1
+            del self.threadCallQueue[:count]
         now = time()
         while self._pendingTimedCalls and (self._pendingTimedCalls[-1].time <= now):
             call = self._pendingTimedCalls.pop()
