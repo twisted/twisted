@@ -19,6 +19,12 @@
 	(IRCChatter.receiveGroupMessage), 
 	(IRCChatter.irc_PRIVMSG): Added CTCP ACTION <-> emote translation
 
+2002-01-30  Chris Armstrong  <carmstro@twistedmatrix.com>
+
+	* twisted/im: a new client for twisted.words (and eventually
+	much more) based on GTK+ and Glade. This is mainly glyph's
+	code, but I organized it for him to check in.
+
 2002-01-29  Itamar Shtull-Trauring <itamarst@twistedmatrix.com>
 
 	* Added hook to tcp.Port and ssl.Port for limiting acceptable
