@@ -238,7 +238,7 @@ def init(with_threads=1):
         raise RuntimeError("threads cannot be disabled, once enabled")
     threaded = with_threads
     if threaded:
-        print 'Enabling Multithreading.'
+        log.msg('Enabling Multithreading.')
         Waiter = _ThreadedWaiter
         XLock = _XLock
         apply(synchronize, _to_be_synched)
