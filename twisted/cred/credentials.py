@@ -1,5 +1,21 @@
 # -*- test-case-name: twisted.test.test_newcred-*-
 
+# Twisted, the Framework of Your Internet
+# Copyright (C) 2003 Matthew W. Lefkowitz
+#
+# This library is free software; you can redistribute it and/or
+# modify it under the terms of version 2.1 of the GNU Lesser General Public
+# License as published by the Free Software Foundation.
+#
+# This library is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+# Lesser General Public License for more details.
+#
+# You should have received a copy of the GNU Lesser General Public
+# License along with this library; if not, write to the Free Software
+# Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+
 from twisted.python import components
 from twisted.python import util
 
@@ -23,23 +39,23 @@ class ICredentials(components.Interface):
 
 class IUsernameHashedPassword(ICredentials):
     """I encapsulate a username and a hashed password.
-    
+
     This credential is used when a hashed password is received from the
     party requesting authentication.  CredentialCheckers which check this
     kind of credential must store the passwords in plaintext (or as
     password-equivalent hashes) form so that they can be hashed in a manner
     appropriate for the particular credentials class.
-    
+
     @type username: C{str} or C{Deferred}
     @ivar username: The username associated with these credentials.
     """
-    
+
     def checkPassword(self, password):
         """Validate these credentials against the correct password.
-        
+
         @param password: The correct, plaintext password against which to
         @check.
-        
+
         @return: a deferred which becomes, or a boolean indicating if the
         password matches.
         """
@@ -47,7 +63,7 @@ class IUsernameHashedPassword(ICredentials):
 
 class IUsernamePassword(ICredentials):
     """I encapsulate a username and a plaintext password.
-    
+
     This encapsulates the case where the password received over the network
     has been hashed with the identity function (That is, not at all).  The
     CredentialsChecker may store the password in whatever format it desires,
@@ -56,17 +72,17 @@ class IUsernamePassword(ICredentials):
 
     @type username: C{str} or C{Deferred}
     @ivar username: The username associated with these credentials.
-    
+
     @type password: C{str} or C{Deferred}
     @ivar password: The password associated with these credentials.
     """
 
     def checkPassword(self, password):
         """Validate these credentials against the correct password.
-        
+
         @param password: The correct, plaintext password against which to
         check.
-        
+
         @return: a deferred which becomes, or a boolean indicating if the
         password matches.
         """
@@ -88,7 +104,7 @@ class CramMD5Credentials:
 
     def __init__(self, host=None):
         self.host = host
-    
+
     def getChallenge(self):
         if self.challenge:
             return self.challenge
@@ -129,7 +145,7 @@ class UsernamePassword:
     def __init__(self, username, password):
         self.username = username
         self.password = password
-    
+
     def checkPassword(self, password):
         return self.password == password
 

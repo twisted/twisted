@@ -1,5 +1,21 @@
 # -*- test-case-name: twisted.test.test_newcred -*-
 
+# Twisted, the Framework of Your Internet
+# Copyright (C) 2003 Matthew W. Lefkowitza
+#
+# This library is free software; you can redistribute it and/or
+# modify it under the terms of version 2.1 of the GNU Lesser General Public
+# License as published by the Free Software Foundation.
+#
+# This library is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+# Lesser General Public License for more details.
+#
+# You should have received a copy of the GNU Lesser General Public
+# License along with this library; if not, write to the Free Software
+# Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+
 from twisted.internet import defer
 from twisted.python import components, failure, log
 from twisted.cred import error, credentials
@@ -15,7 +31,7 @@ class ICredentialsChecker(components.Interface):
         """
         @param credentials: something which implements one of the interfaces in
         self.credentialInterfaces.
-        
+
         @return: a Deferred which will fire a string which identifies an
         avatar, an empty tuple to specify an authenticated anonymous user
         (provided as checkers.ANONYMOUS) or fire a Failure(UnauthorizedLogin).
@@ -69,7 +85,7 @@ class InMemoryUsernamePasswordDatabaseDontUse:
 
 class FilePasswordDB:
     """A file-based, text-based username/password database.
-    
+
     Records in the datafile for this class are delimited by a particular
     string.  The username appears in a fixed field of the columns delimited
     by this string, as does the password.  Both fields are specifiable.  If
@@ -81,29 +97,29 @@ class FilePasswordDB:
     """
 
     __implements__ = (ICredentialsChecker,)
-    
+
     def __init__(self, filename, delim=':', usernameField=0, passwordField=1,
                  caseSensitive=True, hash=None):
         """
         @type filename: C{str}
         @param filename: The name of the file from which to read username and
         password information.
-        
+
         @type delim: C{str}
         @param delim: The field delimiter used in the file.
-        
+
         @type usernameField: C{int}
         @param usernameField: The index of the username after splitting a
         line on the delimiter.
-        
+
         @type caseSensitive: C{bool}
         @param caseSensitive: If true, consider the case of the username when
         performing a lookup.  Ignore it otherwise.
-        
+
         @type passwordField: C{int}
         @param passwordField: The index of the password after splitting a
         line on the delimiter.
-        
+
         @type hash: Three-argument callable.
         @param hash: A function used to transform the plaintext password
         received over the network to a format suitable for comparison against
@@ -117,7 +133,7 @@ class FilePasswordDB:
         self.pfield = passwordField
         self.caseSensitive = caseSensitive
         self.hash = hash
-        
+
         if self.hash is None:
             # The passwords are stored plaintext.  We can support both
             # plaintext and hashed passwords received over the network.

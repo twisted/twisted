@@ -1,7 +1,7 @@
 # -*- test-case-name: twisted.test.test_newcred -*-
 
 # Twisted, the Framework of Your Internet
-# Copyright (C) 2001-2003 Matthew W. Lefkowitz
+# Copyright (C) 2003 Matthew W. Lefkowitz
 #
 # This library is free software; you can redistribute it and/or
 # modify it under the terms of version 2.1 of the GNU Lesser General Public
