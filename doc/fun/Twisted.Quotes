@@ -5052,3 +5052,15 @@ person.
 <Tv> thomasvs: why not just talk some authentication protocol to the other host?
 <thomasvs> Tv: why use something arcane and difficult when I have THE POWER OF TWISTED ?
 %
+<brian_> I'm pretty sure from twisted import __version__ will work
+<slyphon> or i guess you could do that
+<brian_> I import dictionaries
+<slyphon> really? do you have to declare them in customs?
+<dash> slyphon: You are an inspiration to me
+<dash> slyphon: the next language I will design will have an alternative to the import statement
+<dash> slyphon: 'smuggle'
+<MFen> dash: no, that should be your execfile replacement
+<dash> from america.south smuggle guns, drugs, dictionaries
+<slyphon> :D
+<MFen> hah
+%
