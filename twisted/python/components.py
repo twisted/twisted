@@ -244,7 +244,7 @@ class AdapterRegistry:
                    adapterClassLocator=None, persist=None):
         """Return an object that implements the given interface.
 
-        The result will be a wrapper around the object passed as a paramter, or
+        The result will be a wrapper around the object passed as a parameter, or
         the parameter itself if it already implements the interface. If no
         adapter can be found, the 'default' parameter will be returned.
         """
