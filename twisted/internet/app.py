@@ -74,7 +74,8 @@ class Application(log.Logger, styles.Versioned):
     persistenceVersion = 5
 
     def upgradeToVersion5(self):
-        del self.entities
+        if hasattr(self, "entities"):
+            del self.entities
 
     def upgradeToVersion4(self):
         """Version 4 Persistence Upgrade

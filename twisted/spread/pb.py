@@ -225,6 +225,7 @@ class Service(service.Service):
     On this Service, the result of a perspective request must be a
     pb.Perspective rather than a perspective.Perspective.
     """
+    perspectiveClass = Perspective
 
 
 class AsReferenceable(Referenceable):

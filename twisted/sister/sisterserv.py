@@ -94,7 +94,14 @@ class SisterService(Service, Perspective):
 
     def registerResourceLoader(self, resourcePath, resourceLoader):
         """
-        By convention, calls to loadResource 
+        By convention, calls to loadResource will use the first
+        element of the path to determine how to load them; for
+        example, ('twisted.words', 'group', 'foobar') is a
+        twisted.words group, and there will be a twisted.words loader
+        that will deal with constructing it.
+
+        ('Loading' the object just means constructing it in some way;
+        it does not have to be loaded from external media)
         """
         self.resourceLoaders[resourcePath] = resourceLoader
 
@@ -104,7 +111,7 @@ class SisterService(Service, Perspective):
         Arguments:
 
           * path: a tuple of strings, describing the path to the resource on my
-            parent server.  For example, for a twisted.words chatroom of the
+            parent server.  For example, for a twisted.wors chatroom of the
             name "foobar", this path would be ('twisted.words', 'groups',
             'foobar').  For a user of the name "joe", this path would be
             ('twisted.words', 'users', 'joe').

@@ -93,6 +93,7 @@ class ParentService(Service, Perspective):
             # added (e.g. be returned again)
             return d
         else:
+            # try to locate a sister server who can host this resource
             for dhost, dport, dref in self.daughters:
                 if host == dhost and port == dport:
                     d = defer.Deferred()
