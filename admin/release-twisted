@@ -40,6 +40,8 @@ debug = False
 #    conflict, since we just use %Y-%m-%d as the version...
 # 3. Can't generate tarball from a particular tag without exporting it
 #    beforehand.
+# 4. Can't generate a sumo with a new release of package X with
+#    non-trunk versions of subprojects. big issue here.
 
 # Parameterising the release-tag would fix #1 and #3.
 
