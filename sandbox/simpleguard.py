@@ -2,6 +2,7 @@ from twisted.cred import portal
 from twisted.web import resource
 from twisted.web.woven.guard import UsernamePasswordWrapper, SessionWrapper
 
+
 class Authenticated:
     def __init__(self, name=None):
         self.name = name
@@ -42,11 +43,22 @@ class MarkingRealm:
         else:
             return resource.IResource, self.nonauthenticated, lambda:None
 
-def guardResource(resource, *checkers):
+from twisted.web import util
+from twisted.python import urlpath
+
+class ParentRedirect(resource.Resource):
+    isLeaf = 1
+    def render(self, request):
+        return util.redirectTo(urlpath.URLPath.fromRequest(request).here(), request)
+
+    def getChild(self, request):
+        return self
+
+def guardResource(resource, checkers, callback=lambda _: ParentRedirect()):
     myPortal = portal.Portal(MarkingRealm(resource))
     for checker in checkers:
         myPortal.registerChecker(checker)
-    return SessionWrapper(UsernamePasswordWrapper(myPortal))
+    return SessionWrapper(UsernamePasswordWrapper(myPortal, callback=callback))
 
 # Everything below here is user code:
 if __name__ == '__main__':
