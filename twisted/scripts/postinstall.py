@@ -179,7 +179,7 @@ If you want icons to appear in the Start menu, you must:
             files_created.append(uninstall_shortcut_path)
             print "Done."
         print "Post-install successful!"
-        return files_created
+    return files_created
 
 if __name__=='__main__':
     run()
