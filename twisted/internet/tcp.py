@@ -74,54 +74,46 @@ import error
 class _TLSMixin:
     writeBlockedOnRead = 0
     readBlockedOnWrite = 0
-    sslShutdown = 0
-
+    _userWantRead = _userWantWrite = True
+    
     def getPeerCertificate(self):
         return self.socket.get_peer_certificate()
 
     def doRead(self):
         if self.writeBlockedOnRead:
             self.writeBlockedOnRead = 0
-            self.startWriting()
+            self._resetReadWrite()
         try:
             return Connection.doRead(self)
         except SSL.ZeroReturnError:
-            # close SSL layer, since other side has done so, if we haven't
-            if not self.sslShutdown:
-                try:
-                    self.socket.shutdown()
-                    self.sslShutdown = 1
-                except SSL.Error:
-                    pass
             return main.CONNECTION_DONE
         except SSL.WantReadError:
             return
         except SSL.WantWriteError:
             self.readBlockedOnWrite = 1
-            self.startWriting()
+            Connection.startWriting(self)
+            Connection.stopReading(self)
             return
+        except SSL.SysCallError, (retval, desc):
+            if ((retval == -1 and desc == 'Unexpected EOF')
+                or retval > 0):
+                return main.CONNECTION_LOST
+            log.err()
+            return main.CONNECTION_LOST
         except SSL.Error:
             log.err()
             return main.CONNECTION_LOST
 
-    def loseConnection(self):
-        Connection.loseConnection(self)
-        if self.connected:
-            self.startReading()
-
-    def halfCloseConnection(self, read=False, write=False):
-        raise RuntimeError, "TLS connections currently do not support half-closing"
-    
     def doWrite(self):
-        if self.writeBlockedOnRead:
-            self.stopWriting()
-            return
+        # Retry disconnecting
+        if self.disconnected:
+            return self._postLoseConnection()
+        if self._writeDisconnected:
+            return self._closeWriteConnection()
+        
         if self.readBlockedOnWrite:
             self.readBlockedOnWrite = 0
-            # XXX - This is touching internal guts bad bad bad
-            if not self.dataBuffer and not self._tempDataBuffer:
-                self.stopWriting()
-            return self.doRead()
+            self._resetReadWrite()
         return Connection.doWrite(self)
 
     def writeSomeData(self, data):
@@ -131,7 +123,11 @@ class _TLSMixin:
             return 0
         except SSL.WantReadError:
             self.writeBlockedOnRead = 1
+            Connection.stopWriting(self)
+            Connection.startReading(self)
             return 0
+        except SSL.ZeroReturnError:
+            return main.CONNECTION_LOST
         except SSL.SysCallError, e:
             if e[0] == -1 and data == "":
                 # errors when writing empty strings are expected
@@ -156,28 +152,124 @@ class _TLSMixin:
     def _postLoseConnection(self):
         """Gets called after loseConnection(), after buffered data is sent.
 
-        We close the SSL transport layer, and if the other side hasn't
-        closed it yet we start reading, waiting for a ZeroReturnError
-        which will indicate the SSL shutdown has completed.
+        We try to send an SSL shutdown alert, but if it doesn't work, retry
+        when the socket is writable.
         """
+        self.disconnected=1
+        self.socket.set_shutdown(SSL.RECEIVED_SHUTDOWN)
+        return self._sendCloseAlert()
+
+    _first=False
+    def _sendCloseAlert(self):
+        # Okay, *THIS* is a bit complicated.
+        
+        # Basically, the issue is, OpenSSL seems to not actually return
+        # errors from SSL_shutdown. Therefore, the only way to
+        # determine if the close notification has been sent is by 
+        # SSL_shutdown returning "done". However, it will not claim it's
+        # done until it's both sent *and* received a shutdown notification.
+
+        # I don't actually want to wait for a received shutdown
+        # notification, though, so, I have to set RECEIVED_SHUTDOWN
+        # before calling shutdown. Then, it'll return True once it's
+        # *SENT* the shutdown.
+
+        # However, RECEIVED_SHUTDOWN can't be left set, because then
+        # reads will fail, breaking half close.
+
+        # Also, since shutdown doesn't report errors, an empty write call is
+        # done first, to try to detect if the connection has gone away.
+        # (*NOT* an SSL_write call, because that fails once you've called
+        # shutdown)
         try:
-            done = self.socket.shutdown()
-            self.sslShutdown = 1
+            os.write(self.socket.fileno(), '')
+        except OSError, se:
+            if se.args[0] in (EINTR, EWOULDBLOCK, ENOBUFS):
+                return 0
+            # Write error, socket gone
+            return main.CONNECTION_LOST
+
+        try:
+            if hasattr(self.socket, 'set_shutdown'):
+                laststate = self.socket.get_shutdown()
+                self.socket.set_shutdown(laststate | SSL.RECEIVED_SHUTDOWN)
+                done = self.socket.shutdown()
+                if not (laststate & SSL.RECEIVED_SHUTDOWN):
+                    self.socket.set_shutdown(SSL.SENT_SHUTDOWN)
+            else:
+                warnings.warn("SSL connection shutdown possibly unreliable, "
+                              "please upgrade to ver 0.XX", category=UserWarning)
+                self.socket.shutdown()
+                done = True
         except SSL.Error:
             log.err()
             return main.CONNECTION_LOST
+
         if done:
+            self.stopWriting()
             return main.CONNECTION_DONE
         else:
-            # we wait for other side to close SSL connection -
-            # this will be signaled by SSL.ZeroReturnError when reading
-            # from the socket
-            self.stopWriting()
-            self.startReading()
-
-            # don't close socket just yet
+            self.startWriting()
             return None
 
+    def _closeWriteConnection(self):
+        result = self._sendCloseAlert()
+        
+        if result is main.CONNECTION_DONE:
+            self.socket.sock_shutdown(1)
+            p = interfaces.IHalfCloseableProtocol(self.protocol, None)
+            if p:
+                p.writeConnectionLost()
+            return None
+        
+        return result
+
+    def _closeReadConnection(self):
+        # Keeps further reads from being received.
+        if not hasattr(self.socket, 'set_shutdown'):
+            raise NotImplemented("Cannot halfCloseConnection(read=True),"
+                   "because your pyOpenSSL doesn't support set_shutdown.  "
+                   "Please upgrade to ver 0.XX.")
+
+        self.socket.set_shutdown(SSL.RECEIVED_SHUTDOWN)
+        self.socket.sock_shutdown(0)
+        p = interfaces.IHalfCloseableProtocol(self.protocol, None)
+        if p:
+            p.readConnectionLost()
+
+    def startReading(self):
+        self._userWantRead = True
+        if not self.readBlockedOnWrite:
+            return Connection.startReading(self)
+
+    def stopReading(self):
+        self._userWantRead = False
+        if not self.writeBlockedOnRead:
+            return Connection.stopReading(self)
+
+    def startWriting(self):
+        self._userWantWrite = True
+        if not self.writeBlockedOnRead:
+            return Connection.startWriting(self)
+
+    def stopWriting(self):
+        self._userWantWrite = False
+        if not self.readBlockedOnWrite:
+            return Connection.stopWriting(self)
+
+    def _resetReadWrite(self):
+        # After changing readBlockedOnWrite or writeBlockedOnRead,
+        # call this to reset the state to what the user requested.
+        if self._userWantWrite:
+            self.startWriting()
+        else:
+            self.stopWriting()
+        
+        if self._userWantRead:
+            self.startReading()
+        else:
+            self.stopReading()
+    
 class Connection(abstract.FileDescriptor):
     """I am the superclass of all socket-based FileDescriptors.
 
@@ -200,6 +292,7 @@ class Connection(abstract.FileDescriptor):
 
         def startTLS(self, ctx):
             assert not self.TLS
+            error=False
             if self.dataBuffer or self._tempDataBuffer:
                 self.dataBuffer += "".join(self._tempDataBuffer)
                 self._tempDataBuffer = []
@@ -210,8 +303,7 @@ class Connection(abstract.FileDescriptor):
                 self.offset = 0
                 self.dataBuffer = ""
                 if isinstance(written, Exception) or (offset + written != dataLen):
-                    warnings.warn("startTLS with unwritten buffered data currently doesn't work right. See issue #686. Closing connection.", category=RuntimeWarning, stacklevel=2)
-                    self.loseConnection()
+                    error=True
 
 
             self.stopReading()
@@ -220,6 +312,10 @@ class Connection(abstract.FileDescriptor):
             self.socket = SSL.Connection(ctx.getContext(), self.socket)
             self.fileno = self.socket.fileno
             self.startReading()
+            if error:
+                warnings.warn("startTLS with unwritten buffered data currently doesn't work right. See issue #686. Closing connection.", category=RuntimeWarning, stacklevel=2)
+                self.loseConnection()
+                return
 
         def _startTLS(self):
             self.TLS = 1
@@ -248,14 +344,6 @@ class Connection(abstract.FileDescriptor):
                 return
             else:
                 return main.CONNECTION_LOST
-        except SSL.SysCallError, (retval, desc):
-            # Yes, SSL might be None, but self.socket.recv() can *only*
-            # raise socket.error, if anything else is raised, it must be an
-            # SSL socket, and so SSL can't be None. (That's my story, I'm
-            # stickin' to it)
-            if retval == -1 and desc == 'Unexpected EOF':
-                return main.CONNECTION_DONE
-            raise
         if not data:
             return main.CONNECTION_DONE
         return self.protocol.dataReceived(data)

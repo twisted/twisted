@@ -131,7 +131,7 @@ class FileDescriptor(log.Logger, styles.Ephemeral):
                 return self._postLoseConnection()
             elif self._writeDisconnecting:
                 # I was previously asked to to half-close the connection.
-                self._closeWriteConnection()
+                result = self._closeWriteConnection()
                 self._writeDisconnected = True
                 return result
         return result
