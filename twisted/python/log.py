@@ -1,4 +1,3 @@
-
 # Twisted, the Framework of Your Internet
 # Copyright (C) 2001 Matthew W. Lefkowitz
 #
@@ -21,16 +20,11 @@ twisted.log: Logfile and multi-threaded file support.
 
 
 import sys
-import os
-import string
-import cStringIO
+import cStringIO as StringIO
 import time
 import threadable
 import traceback
 import failure
-
-StringIO = cStringIO
-del cStringIO
 
 def _no_log_output(func, *args, **kw):
     io = StringIO.StringIO()
@@ -70,9 +64,9 @@ def write(stuff):
 def msg(*stuff):
     """Write some data to the log (a linebreak will be appended)."""
     if len(stuff) > 1:
-        logfile.write(' '.join(map(str, stuff)) + os.linesep)
+        logfile.write(' '.join(map(str, stuff)) + "\n")
     else:
-        logfile.write(str(stuff[0]) + os.linesep)
+        logfile.write(str(stuff[0]) + "\n")
     logfile.flush()
 
 
@@ -88,7 +82,11 @@ def debug(*stuff):
         msg('debug:', indent(x))
 
 def showwarning(message, category, filename, lineno, file=None):
-    err('''\
+    if file:
+        m = warnings.formatwarning(message, category, filename, lineno)
+        file.write(m)
+    else:
+        err('''\
 WARNING: %s::
 %s
 file: %s; line: %s
@@ -182,7 +180,7 @@ def err(stuff):
         else:
             stuff.printTraceback(file=logerr)
     else:
-        logerr.write(str(stuff)+os.linesep)
+        logerr.write(str(stuff)+"\n")
 
 def deferr():
     """Write the default failure (the current exception) to the log.
@@ -309,8 +307,6 @@ class Log:
     This will create a Log file (intended to be written to with
     'print', but usable from anywhere that a file is) from a file.
     """
-
-    synchronized = ['write', 'writelines']
 
     def __init__(self, file, ownable):
         self.file = file
