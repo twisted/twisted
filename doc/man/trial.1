@@ -2,14 +2,20 @@
 .SH NAME
 trial \- run unit tests
 .SH SYNOPSIS
-.B trial [-m \fImodule\fR [-m \fImodule\fR ... ]] [-p \fIpackage\fR [-p \fIpackage\fR]]
+.B trial [-vb] [-r \fIreactor\fR] [-l \fIlogfile\fR] [-m \fImodule\fR [-m \fImodule\fR ... ]] [-p \fIpackage\fR [-p \fIpackage\fR ... ]] 
 .PP
 .B trial --help
 .SH DESCRIPTION
 .PP
 trial loads and executes a suite of unit tests, obtained from modules and 
 packages listed on the command line.
-The \fB\--help\fR prints out a usage message to standard output.
+The \fB\--help\fR option prints out a usage message to standard output.
+.TP
+\fB-v\fR, \fB--verbose\fR
+Be more verbose. Without this option, trial prints out a single character 
+for each test. (e.g. An 'F' for a failure, A '.' for a success). With this
+option, trial prints a single line for each test. This is especially useful 
+for gauging how long each test takes.
 .TP
 \fB-m\fR, \fB--module\fR <module>
 Module containing test cases.
@@ -20,6 +26,13 @@ trial loads modules named 'test_' within the given package.
 .TP
 \fB-l\fR, \fB--logfile\fR <logfile>
 Log exceptions (and other things) to the given logfile.
+.TP
+\fB-r\fR, \fB--reactor\fR <reactor>
+Use this reactor for running the tests. 
+.TP
+\fB-b\fR, \fB--debug\fR
+Run the tests in the Python debugger.
+ 
 .SH AUTHOR
 Written by Jonathan M. Lange
 .SH "REPORTING BUGS"
