@@ -18,7 +18,7 @@
 
 from __future__ import nested_scopes
 
-__version__ = "$Revision: 1.73 $"[11:-2]
+__version__ = "$Revision: 1.74 $"[11:-2]
 
 # Sibling imports
 import interfaces
@@ -549,44 +549,46 @@ class View:
             controller.setNode(node)
 
             controllerResult = controller.handle(request)
-            controllerResult = (None, None)
+            if controllerResult is not None:
+                ## It's a deferred
+                self.outstandingCallbacks += 1
+                controllerResult.addCallback(
+                    self.handleControllerResults,
+                    request,
+                    node,
+                    controller,
+                    view)
+                controllerResult.addErrback(self.renderFailure, request)
+            else:
+                returnNode = self.dispatchResult(request, node, view)
+                self.handleNewNode(request, returnNode)
         else:
             self.controllerStack = (controller, self.controllerStack)
             self.viewStack = (view, self.viewStack)
 
-            controllerResult = (None, None)
-
-        self.outstandingCallbacks += 1
-        self.handleControllerResults(controllerResult, request, node,
-                                    controller, view, NO_DATA_YET)
-
-    def handleControllerResults(self, controllerResult, request, node,
-                                controller, view, success):
-        isCallback = success != NO_DATA_YET
+    def handleControllerResults(self, 
+        controllerResult, request, node, controller, view, success):
+        """Handle a deferred from a controller.
+        """
         self.outstandingCallbacks -= 1
-        if isinstance(controllerResult, type(())):
-            success, data = controllerResult
-        else:
-            data = controllerResult
-        if isinstance(data, defer.Deferred):
+        if controllerResult is not None:
             self.outstandingCallbacks += 1
-            data.addCallback(self.handleControllerResults, request, node,
-                                controller, view, success)
-            data.addErrback(self.renderFailure, request)
-            return data
-
-        returnNode = self.dispatchResult(request, node, view)
-        self.handleNewNode(request, returnNode)
-        
-        if isCallback and not self.outstandingCallbacks:
-            log.msg("Sending page from controller callback!")
-            self.doneCallback(self, self.d, request)
+            controllerResult.addCallback(
+                self.handleControllerResults,
+                request,
+                node,
+                controller,
+                view)
+            controllerResult.addErrback(self.renderFailure, request)
+        else:
+            returnNode = self.dispatchResult(request, node, view)
+            self.handleNewNode(request, returnNode)
 
     def handleNewNode(self, request, returnNode):
         if not isinstance(returnNode, defer.Deferred):
             self.recurseChildren(request, returnNode)
         else:
-            # TODO: Handle deferreds here.
+            # TODO: Need to handle deferreds here?
             pass
 
     def sendPage(self, request):

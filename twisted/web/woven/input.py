@@ -28,7 +28,7 @@ from twisted.python.reflect import qual
 from twisted.web import domhelpers
 from twisted.web.woven import template, controller, utils
 
-__version__ = "$Revision: 1.28 $"[11:-2]
+__version__ = "$Revision: 1.29 $"[11:-2]
 
 controllerFactory = controller.controllerFactory
 
@@ -95,8 +95,8 @@ class InputHandler(controller.Controller):
         if isinstance(success, defer.Deferred):
             success.addCallback(self.dispatchCheckResult, request, data)
             success.addErrback(utils.renderFailure, request)
-            return (None, success)
-        return self.dispatchCheckResult(success, request, data)
+            return success
+        self.dispatchCheckResult(success, request, data)
 
     def dispatchCheckResult(self, success, request, data):
         if success is not None:
@@ -105,8 +105,7 @@ class InputHandler(controller.Controller):
             else:
                 result = self.handleInvalid(request, data)
             if isinstance(result, defer.Deferred):
-                data = result
-        return (success, data)
+                return result
 
     def check(self, request, data):
         """
@@ -176,7 +175,7 @@ class DefaultHandler(InputHandler):
         """
         By default, we don't do anything
         """
-        return (None, None)
+        pass
 
 
 class SingleValue(InputHandler):
