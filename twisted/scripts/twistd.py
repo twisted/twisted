@@ -7,7 +7,7 @@ from twisted.python import log, syslog
 from twisted.python.util import switchUID
 from twisted.application import app, service
 from twisted import copyright
-import os, errno, signal
+import os, errno, signal, sys
 
 class ServerOptions(app.ServerOptions):
     synopsis = "Usage: twistd [options]"
