@@ -47,6 +47,7 @@ install-stamp: build-stamp
 	cp debian/copyright debian/twisted-doc/usr/share/doc/twisted-doc/
 	cp doc/howto/*.html debian/twisted-doc/usr/share/doc/twisted-doc/howto/
 	cp doc/img/*.{png,bmp} debian/twisted-doc/usr/share/doc/twisted-doc/img/
+	cp -r doc/api/* debian/twisted-doc/usr/share/doc/twisted-doc/
 	cp doc/examples/*.py debian/twisted-doc/usr/share/doc/twisted-doc/examples/
 	gzip -9 debian/twisted-doc/usr/share/doc/twisted-doc/examples/*.py
 	touch install-stamp
