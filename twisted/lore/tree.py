@@ -32,9 +32,12 @@ def fixLinks(document, ext):
             continue
 
         # This is a relative link, so it should be munged.
-        if href.endswith('.html') or href[:href.rfind('#')].endswith('.html'):
+        if href.endswith('html') or href[:href.rfind('#')].endswith('html'):
             fname, fext = os.path.splitext(href)
-            fext = fext.replace('.html', ext) 
+            if '#' in fext:
+                fext = ext+'#'+fext.split('#', 1)[1]
+            else:
+                fext = ext
             node.setAttribute("href", fname + fext)
 
 
