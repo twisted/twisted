@@ -263,7 +263,7 @@ class BaseProtocol:
     My API is quite simple.  Implement dataReceived(data) to handle both
     event-based and synchronous input; output can be sent through the
     'transport' attribute, which is to be an instance that implements
-    L{twisted.internet.interfaces.Transport}.
+    L{twisted.internet.interfaces.ITransport}.
 
     Some subclasses exist already to help you write common types of protocols:
     see the L{twisted.protocols.basic} module for a few of them.
