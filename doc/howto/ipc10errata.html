@@ -76,14 +76,10 @@
       available to them in any given scope, because there is a list
       of available methods for any given class.
     </blockquote>
-    This is still possible to avoid breakages in old code, but
-    after some experimentation, it became clear that simply passing
+<p>This is still possible to avoid breakages in old code, but
+after some experimentation, it became clear that simply passing
     <code class="python">self</code> was an easier method for
-    creating the namespace, both for designers and programmers.
-    <br />
-     <br />
-     
-
+    creating the namespace, both for designers and programmers.</p>
     <p>In addition, since the advent of Zope3, interoperability
     with Zope has become increasingly interesting possibility for
     the Twisted development team, since it would be desirable if
@@ -120,9 +116,6 @@ class MyObject(pb.Referenceable):
                                           myErrback)
 </pre>
     </blockquote>
-    <br />
-     <br />
-     
 
     <blockquote>
       Listing 10: An object responding to its calling perspective 
@@ -138,8 +131,6 @@ class Greeter(pb.Viewable):
     ...
 </pre>
     </blockquote>
-    <br />
-     <br />
      
 
     <blockquote>
@@ -260,8 +251,6 @@ if __name__ == "__main__":
     a.run()
 </pre>
     </blockquote>
-    <br />
-     <br />
   </body>
 </html>
 

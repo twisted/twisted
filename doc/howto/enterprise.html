@@ -31,9 +31,6 @@
       href="http://www.python.org/topics/database/DatabaseAPI-2.0.html">
       the documentation for DBAPI 2.0</a>)</li>
     </ul>
-    <br />
-     <br />
-     
 
     <h2>Quick Overview</h2>
 
@@ -41,21 +38,17 @@
     database modules cannot be used directly, as they typically
     work something like:</p>
 <pre class="python">
-    # Create connection... 
-    db = dbmodule.connect('mydb', 'andrew', 'password') 
-    # ...which blocks for an unknown amount of time 
+# Create connection... 
+db = dbmodule.connect('mydb', 'andrew', 'password') 
+# ...which blocks for an unknown amount of time 
  
-    # Create a cursor 
-    cursor = db.cursor() 
+# Create a cursor 
+cursor = db.cursor() 
  
-    # Do a query... 
-    resultset = cursor.query('SELECT * FROM table WHERE ...') 
-    # ...which could take a long time, perhaps even minutes. 
-   
+# Do a query... 
+resultset = cursor.query('SELECT * FROM table WHERE ...') 
+# ...which could take a long time, perhaps even minutes. 
 </pre>
-    <br />
-     <br />
-     
 
     <p>Those delays are unacceptable when using an asynchronous
     framework such as Twisted. For this reason, twisted provides
@@ -78,14 +71,10 @@
     class="API">enterprise.adbapi</code> to use multiple
     connections, one per thread. This is easy:</p>
 <pre class="python">
-    # Using the "dbmodule" from the previous example, create a ConnectionPool 
-    from twisted.enterprise import adbapi 
-    dbpool = adbapi.ConnectionPool("dbmodule", 'mydb', 'andrew', 'password') 
-   
+# Using the "dbmodule" from the previous example, create a ConnectionPool 
+from twisted.enterprise import adbapi 
+dbpool = adbapi.ConnectionPool("dbmodule", 'mydb', 'andrew', 'password') 
 </pre>
-    <br />
-     <br />
-     
 
     <p>Things to note about doing this:</p>
 
@@ -99,41 +88,34 @@
       class="API">adbapi.ConnectionPool</code>'s constructor.
       Keyword parameters work as well.</li>
     </ul>
-    <br />
-     <br />
-     
 
     <p>So, now you need to be able to dispatch queries to your
     ConnectionPool. We do this by subclassing <code
     class="API">adbapi.Augmentation</code>. Here's an example:</p>
 <pre class="python">
-    class AgeDatabase(adbapi.Augmentation): 
-        """A simple example that can retrieve an age from the database""" 
-        def getAge(self, name): 
-            # Define the query 
-            sql = """SELECT Age FROM People WHERE name = ?""" 
-            # Run the query, and return a Deferred to the caller to add 
-            # callbacks to. 
-            return self.runQuery(sql, name) 
+class AgeDatabase(adbapi.Augmentation): 
+    """A simple example that can retrieve an age from the database""" 
+    def getAge(self, name): 
+        # Define the query 
+        sql = """SELECT Age FROM People WHERE name = ?""" 
+        # Run the query, and return a Deferred to the caller to add 
+        # callbacks to. 
+        return self.runQuery(sql, name) 
  
  
-    def gotAge(resultlist, name): 
-        """Callback for handling the result of the query""" 
-        age = resultlist[0][0]          # First field of first record 
-        print "%s is %d years old" % (name, age) 
+def gotAge(resultlist, name): 
+    """Callback for handling the result of the query""" 
+    age = resultlist[0][0]          # First field of first record 
+    print "%s is %d years old" % (name, age) 
  
-    db = AgeDatabase(dbpool) 
+db = AgeDatabase(dbpool) 
  
-    # These will *not* block.  Hooray! 
-    db.getAge("Andrew").addCallbacks(gotAge, db.operationError, 
-                                     callbackArgs=name).arm() 
-    db.getAge("Glyph").addCallbacks(gotAge, db.operationError, 
-                                    callbackArgs=name).arm() 
-   
+# These will *not* block.  Hooray! 
+db.getAge("Andrew").addCallbacks(gotAge, db.operationError, 
+                                 callbackArgs=name)
+db.getAge("Glyph").addCallbacks(gotAge, db.operationError, 
+                                callbackArgs=name)
 </pre>
-    <br />
-     <br />
-     
 
     <p>This is straightforward, except perhaps for the return value
     of <code>getAge</code>. It returns a <code
@@ -161,8 +143,7 @@
       <a
       href="mailto:andrew%20(at)%20puzzling%20(dot)%20org">Andrew</a>
     </address>
-    <!-- hhmts start -->
-    Last modified: Sat Mar 16 06:29:01 EST 2002 <!-- hhmts end -->
+    <!-- hhmts start --> Last modified: Thu Jun 20 00:44:08 CDT 2002 <!-- hhmts end -->
   </body>
 </html>
 

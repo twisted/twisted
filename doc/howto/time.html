@@ -20,11 +20,7 @@ def f(s):
     print "this will run in 3.5 seconds: %s" % s
 
 reactor.callLater(3.5, f, "hello, world")
-
 </pre>
-    <br />
-     <br />
-     
 
     <p>If we want a task to run every X seconds repeatedly, we can
     just re-add it every time it's run:</p>
@@ -36,10 +32,7 @@ def runEverySecond():
     reactor.callLater(1, runEverySecond)
 
 reactor.callLater(1, runEverySecond)
-
 </pre>
-    <br />
-     <br />
      
 
     <h2>Spreading tasks over time</h2>
@@ -81,10 +74,7 @@ class LongCalculation:
 o = LongCalculation()
 from twisted.internet import main
 main.addDelayed(o)
-
 </pre>
-    <br />
-     <br />
   </body>
 </html>
 

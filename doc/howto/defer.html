@@ -10,9 +10,9 @@
   </head>
 
   <body text="#000000" bgcolor="#ffffff">
-    <h1>Deferreds</h1>
+    <h1>Deferring Execution in the Twisted Framework</h1>
 
-    <h2>Motivation</h2>
+    <h2>The Problem</h2>
 
     <h3>Dealing with Blocking Code</h3>
 
@@ -33,16 +33,14 @@ print g.getData(3)
 
     <h3>Don't Call Us, We'll Call You</h3>
 
-    <p>Unfortunately, Twisted can not support blocking calls in
+    <p>Twisted can not support blocking calls in
     most of its code, since it is single threaded, and event based.
     The solution for this issue is to refactor the code, so that
     instead of blocking until data is available, we return
     immediately, and use a callback to notify the requester once
-    the data eventually arrives. However, this is harder to use,
-    doesn't deal with error raised while waiting for the data, and
-    makes connecting such classes together rather difficult.
-    Nonetheless, looking at how this is implemented will help us
-    understand the necessity for Deferreds.</p>
+    the data eventually arrives. Looking at how this is usually implemented
+    will help us understand the necessity for Deferreds.</p>
+
 <pre class="python">
 class Getter:
 
@@ -60,13 +58,13 @@ def gotData(d):
 
 g = Getter()
 g.getData(3, gotData)
-
-# run the program's event loop here
-from twisted.internet import reactor
-reactor.run()
 </pre>
 
-    <h2>High Level Overview</h2>
+<p>There are several things missing in this simple example.  There is no way to
+know if the data never comes back; no mechanism for handling errors.  There is
+no way to distinguish between different calls to gotData from different
+sessions.  <code>Deferred</code> solves these problems, by creating a single,
+unified way to defer execution of code that depends on blocking calls.</p>
 
     <h2>Deferreds</h2>
 
@@ -315,7 +313,7 @@ d.addCallbacks(callback2, errback2)
 
         <ul>
           <li>
-            <code>addCallback(callback, *callbackArgs,
+            <code class="py-prototype">addCallback(callback, *callbackArgs,
             **callbackKeywords)</code> 
 
             <p>Adds your callback at the next point in the
@@ -325,7 +323,7 @@ d.addCallbacks(callback2, errback2)
           </li>
 
           <li>
-            <code>addErrback(errback, *errbackArgs,
+            <code class="py-prototype">addErrback(errback, *errbackArgs,
             **errbackKeywords)</code> 
 
             <p>Adds your errback at the next point in the
@@ -335,7 +333,7 @@ d.addCallbacks(callback2, errback2)
           </li>
 
           <li>
-            <code>addBoth(callbackOrErrback,
+            <code class="py-prototype">addBoth(callbackOrErrback,
             *callbackOrErrbackArgs,
             **callbackOrErrbackKeywords)</code> 
 
@@ -349,7 +347,7 @@ d.addCallbacks(callback2, errback2)
       </li>
 
       <li>
-        <code>callback(result)</code> 
+        <code class="py-prototype">callback(result)</code> 
 
         <p>Run success callbacks with the given result. <em>This
         can only be run once.</em> Running it twice will raise
@@ -360,7 +358,7 @@ d.addCallbacks(callback2, errback2)
       </li>
 
       <li>
-        <code>errback(failure)</code> 
+        <code class="py-prototype">errback(failure)</code> 
 
         <p>Run error callbacks with the given failure. <em>This can
         only be run once.</em> Running it twice will raise <code
@@ -369,15 +367,12 @@ d.addCallbacks(callback2, errback2)
         point, addCallbacks will run the callbacks immediately.</p>
       </li>
     </ul>
-    <br />
-    <br />
-     
 
     <h3>Chaining Deferreds</h3>
 
     <ul>
       <li>
-        <code>chainDeferred(otherDeferred)</code> 
+        <code class="py-prototype">chainDeferred(otherDeferred)</code> 
 
         <p>Add <code>otherDeferred</code> to the end of this
         Deferred's processing chain. When self.callback is called,
@@ -392,7 +387,7 @@ d.addCallbacks(callback2, errback2)
 
     <ul>
       <li>
-        <code>setTimeout(seconds[, timeoutFunc])</code> 
+        <code class="py-prototype">setTimeout(seconds[, timeoutFunc])</code> 
 
         <p>Set a timeout function to be triggered if this Deferred
         is not called within that time period. By default, this
@@ -441,7 +436,7 @@ d.addCallbacks(callback2, errback2)
 
     <ul>
       <li>
-        <code>pause()</code> 
+        <code class="py-prototype">pause()</code> 
 
         <p>Cease calling any methods as they are added, and do not
         respond to <code>callback</code>, until
@@ -449,7 +444,7 @@ d.addCallbacks(callback2, errback2)
       </li>
 
       <li>
-        <code>unpause()</code> 
+        <code class="py-prototype">unpause()</code> 
 
         <p>If <code>callback</code> has been called on this
         Deferred already, call all the callbacks that have been

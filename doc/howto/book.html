@@ -5,6 +5,9 @@
 <html xmlns="http://www.w3.org/1999/xhtml">
   <head>
     <title>Twisted Documentation</title>
+<style>
+.doit { border: thin blue dashed ; background-color: #0ef }
+</style>
   </head>
 
   <body>
@@ -14,9 +17,10 @@
     an index of all the things that we hope to have in it
     eventually.</p>
 
-    <p>XXX: Something missing from this document is a sample
-    application which will actually require *ALL* of twisted at
-    once. Some brainstorming on this would be helpful.</p>
+    <p>The current working theme of this document for code examples is a "quote
+    of the day" server.  While we have no formal repository for such a server
+    yet, it would be useful to structure your code examples as feature
+    additions to this hypothetical service.</p>
 
     <ul>
       <li>
@@ -34,7 +38,8 @@
 
               <li>Overview of Twisted Spread</li>
 
-              <li>Overview of Twisted Enterprise</li>
+              <li><a href="enterprise.html" >Overview of Twisted
+              Enterprise</a></li>
 
               <li>Overview of Twisted Internet</li>
 
@@ -50,18 +55,23 @@
         </ul>
       </li>
 
-      <li>
-        The Basics 
+      <li class="doit">
+        The Basics
 
         <ul>
-          <li>Getting your Server Set Up</li>
+          <li >Getting your Server Set Up</li>
 
-          <li>Platform support: UNIX, Windows</li>
+          <li >Platform support
+          <ul>
+            <li>UNIX</li>
+            <li>Windows</li>
+          </ul>
+          </li>
         </ul>
       </li>
 
       <li>
-        High-Level Twisted 
+        High-Level Twisted
 
         <ul>
           <li>
@@ -83,7 +93,7 @@
             <ul>
               <li>Simulation model of services</li>
 
-              <li>Descriptions of distinctions between similar
+              <li>Distinctions between similar
               concepts e.g. "plugin" and "service", "perspective"
               and "identity"</li>
             </ul>
@@ -95,16 +105,16 @@
             <ul>
               <li>Resources, CGIs, Static Content and Linking in
               Twisted</li>
-
-              <li><a href="widgets.html">Introducing Web
-              Widgets</a></li>
-
-              <li>Gadgets, Widgets, Pages: introducing a common
-              look and feel</li>
-
-              <li>Database queries with Widgets (maybe more space
-              should be devoted to enterprise?)</li>
-
+              <li>Dynamic Content with DOMTemplate
+              </li>
+              <li><a href="widgets.html">Web Widgets</a>
+              <ul>
+                <li>Gadgets, Widgets, Pages: introducing a common
+                look and feel</li>
+                
+                <li>Database queries with Widgets (maybe more space
+                should be devoted to enterprise?)</li>
+              </ul> </li>
               <li>Authentication on the Web</li>
             </ul>
           </li>
@@ -116,8 +126,7 @@
               <li>Connecting an instance direct to the 'net: simple
               examples with PB</li>
 
-              <li>Interchanging State: getting inside Jelly's
-              head</li>
+              <li>Interchanging State: Jumping Into Jelly</li>
 
               <li>Interfacing PB with a client-side toolkit</li>
             </ul>
@@ -129,26 +138,33 @@
         Low-Level Twisted 
 
         <ul>
-          <li>The Twisted mainloop abstraction</li>
+          <li>Using the Reactor
+          <ul>
+            <li>TCP</li>
+            <li>UDP</li>
+            <li>SSL</li>
+            <li>Time</li>
+          </ul>
+          </li>
 
-          <li>defer, delay, task, and other methods for delaying
-          evaluation</li>
-
-          <li>threadtask and the Twisted threading model
-          (itamar?)</li>
-
-          <li>
-            Protocols 
+          <li>Protocols 
 
             <ul>
-              <li>Writing a server</li>
+              <li><a href="servers.html" >Writing a server</a></li>
 
               <li>Writing a client</li>
             </ul>
           </li>
 
-          <li>Toolkits: Interfacing Twisted with your toolkit of
-          choice</li>
+          <li class="doit">Toolkits: Interfacing Twisted with your toolkit of
+          choice
+          <ul>
+            <li>PyGTK </li>
+            <li>Tkinter </li>
+            <li>WxWindows </li>
+            <li>PyUI </li>
+            <li>MFC </li>
+          </ul> </li>
 
           <li>
             Transports 
@@ -172,11 +188,14 @@
         requirements for it...) 
 
         <ul>
-          <li>Twisted Coil &amp; Plugins</li>
-
           <li>Configuring a new service using Coil</li>
 
-          <li>Writing your service to be a Plugin</li>
+          <li class="doit">Writing your service to be a Plugin
+          <ul>
+            <li>For COIL</li>
+            <li>For TAP</li>
+          </ul></li>
+          
 
           <li>Writing your service to be configurable using
           Coil</li>
@@ -192,8 +211,7 @@
       <a href="mailto:glyph@twistedmatrix.com">Glyph Lefkowitz</a>
     </address>
     <!-- Created: Wed Jan 23 08:22:16 CST 2002 -->
-    <!-- hhmts start -->
-    Last modified: Tue Mar 12 21:13:38 EST 2002 <!-- hhmts end -->
+    <!-- hhmts start --> Last modified: Wed Jun 19 21:55:36 CDT 2002 <!-- hhmts end -->
   </body>
 </html>
 

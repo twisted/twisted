@@ -179,7 +179,7 @@
     post-hooks to methods in classes.</p>
 
     <blockquote>
-<pre>
+<pre class="python">
 # Add all method names beginning with opt_ to the given
 # dictionary. This cannot be done with dir(), since
 # it does not search in superclasses
@@ -220,7 +220,7 @@ for methodName in klass.synchronized:
     correctly.</p>
 
     <blockquote>
-<pre>
+<pre class="python">
 class ServerOptions(usage.Options):
     # Those are (short and long) options which
     # have no argument. The corresponding attribute
@@ -303,7 +303,7 @@ except usage.error, ue:
     Python source which evaluates into a given Python object.</p>
 
     <blockquote>
-<pre>
+<pre class="python">
 from twisted.internet import main
 from twisted.web import proxy, server
 site = server.Site(proxy.ReverseProxyResource('www.yahoo.com', 80, '/'))
@@ -409,7 +409,7 @@ application.listenOn(8080, site)
     <code>twisted.protocols.protocol.Protocol</code>.</p>
 
     <blockquote>
-<pre>
+<pre class="python">
 from twisted.protocols import protocol
 from twisted.internet import main, tcp
 
@@ -463,7 +463,7 @@ app.run()
     port.</p>
 
     <blockquote>
-<pre>
+<pre class="python">
 # A tcp port-forwarder
 # A StupidProtocol sends all data it gets to its peer.
 # A StupidProtocolServer connects to the host/port,
@@ -546,7 +546,7 @@ def makeStupidFactory(host, port):
     protocols in Python.</p>
 
     <blockquote>
-<pre>
+<pre class="python">
 class DomainSMTP(SMTP):
 
     def validateTo(self, helo, destination):
@@ -625,7 +625,7 @@ class DomainSMTP(SMTP):
     arguments to <code>mktap</code> explicitly.</p>
 
     <blockquote>
-<pre>
+<pre class="python">
 from twisted.internet import tcp, stupidproxy
 from twisted.python import usage
 
@@ -665,7 +665,7 @@ def getPorts(app, config):
     management systems.</p>
 
     <blockquote>
-<pre>
+<pre class="shell">
 % mktap --uid 33 --gid 33 web --static /var/www --port 80
 % tap2deb -t web.tap -m 'Moshe Zadka &lt;moshez@debian.org&gt;'
 % su
@@ -785,7 +785,7 @@ password:
     values, so concurrency is not usually a problem.</p>
 
     <blockquote>
-<pre>
+<pre class="shell">
 % mktap mail -d foobar.com=$HOME/Maildir/ -u postmaster=secret -b \
              -p 110 -s 25
 % twistd -f mail.tap
@@ -919,7 +919,7 @@ password:
     not sending confirmations of messages.</p>
 
     <blockquote>
-<pre>
+<pre class="python">
 # Server Side
 class MyObject(pb.Referenceable):
     def remote_doIt(self):
@@ -964,7 +964,7 @@ class MyObject(pb.Referenceable):
     subclass <code>Viewable</code>.</p>
 
     <blockquote>
-<pre>
+<pre class="python">
 # Server Side
 class Greeter(pb.Viewable):
     def view_greet(self, actor):
@@ -1077,7 +1077,7 @@ class Greeter(pb.Viewable):
     you can simply publish an object on a particular port.</p>
 
     <blockquote>
-<pre>
+<pre class="python">
 from twisted.spread import pb
 from twisted.internet import main
 class Echoer(pb.Root):
@@ -1103,7 +1103,7 @@ if __name__ == '__main__':
     almost equally simple.</p>
 
     <blockquote>
-<pre>
+<pre class="python">
 from twisted.spread import pb
 from twisted.internet import main
 def gotObject(object):
@@ -1145,7 +1145,7 @@ main.run()
     unified notion of users and authentication.</p>
 
     <blockquote>
-<pre>
+<pre class="python">
 from twisted.spread import pb
 from twisted.internet import main
 class SimplePerspective(pb.Perspective):
@@ -1208,7 +1208,7 @@ if __name__ == '__main__':
     run, connecting to it is similar to the previous example.</p>
 
     <blockquote>
-<pre>
+<pre class="python">
 from twisted.spread import pb
 from twisted.internet import main
 def success(message):
@@ -1254,7 +1254,7 @@ main.run()
     the seamless meshing of Twisted and GTK.</p>
 
     <blockquote>
-<pre>
+<pre class="python">
 from twisted.internet import main, ingtkernet
 from twisted.spread.ui import gtkutil
 import gtk
@@ -1359,7 +1359,7 @@ gtk.mainloop()
     all deferred elements have been completed.</p>
 
     <blockquote>
-<pre>
+<pre class="python">
 from twisted.spread import pb
 from twisted.python import defer
 from twisted.web import widgets
