@@ -221,6 +221,8 @@ def guessType(filename):
 def loadOrCreate(name, filename, procname, uid, gid):
     if filename and os.path.exists(filename):
         a = sob.load(filename, 'pickle')
+        if service.IServiceCollection(a, None) is None: # old application
+            a = compat.convert(a)
     else:
         a = service.Application(name, uid, gid)
     if options['appname']:
