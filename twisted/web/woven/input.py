@@ -42,6 +42,7 @@ class InputHandler(Controller):
         the page is rendered, but these values could be used to determine what
         page to display next, etc
     """
+    invalidErrorText = "Error!"
     def setId(self, id):
         log.msg("setId is deprecated; please use setSubmodel.")
         self.submodel = id
@@ -94,7 +95,7 @@ class InputHandler(Controller):
         Once it has been determined that the input is invalid, we should
         tell our view to report this fact to the user.
         """
-        self.view.setError(request, "Error!")
+        self.view.setError(request, self.invalidErrorText)
 
     _getMyModel = widgets._getModel
     
