@@ -1,5 +1,5 @@
 # -*- Python -*-
-# $Id: usage.py,v 1.32 2002/09/23 17:11:00 moshez Exp $
+# $Id: usage.py,v 1.33 2002/10/04 23:39:53 bruce Exp $
 # Twisted, the Framework of Your Internet
 # Copyright (C) 2001 Matthew W. Lefkowitz
 #
@@ -21,7 +21,7 @@ twisted.python.usage is a module for parsing/handling the
 command line of your program.
 
 For information on how to use it, see
-http://twistedmatrix.com/documents/howto/options, or doc/howto/options.html
+U{http://twistedmatrix.com/documents/howto/options}, or doc/howto/options.html
 in your Twisted directory.
 """
 
@@ -49,14 +49,14 @@ class Options(UserDict.UserDict):
     """
     An option list parser class
 
-    optFlags and optParameters are lists of available parameters
+    C{optFlags} and C{optParameters} are lists of available parameters
     which your program can handle. The difference between the two
     is the 'flags' have an on(1) or off(0) state (off by default)
     whereas 'parameters' have an assigned value, with an optional
     default. (Compare '--verbose' and '--verbosity=2')
 
     optFlags is assigned a list of lists. Each list represents
-    a flag parameter, as so:
+    a flag parameter, as so::
 
     |    optFlags = [['verbose', 'v', 'Makes it tell you what it doing.'],
     |                ['quiet', 'q', 'Be vewy vewy quiet.']]
@@ -64,40 +64,41 @@ class Options(UserDict.UserDict):
     As you can see, the first item is the long option name
     (prefixed with '--' on the command line), followed by the
     short option name (prefixed with '-'), and the description.
-    The description is used for the in-built handling of the
+    The description is used for the built-in handling of the
     --help switch, which prints a usage summary.
 
-    optParameters is much the same, except the list also contains
-    a default value:
+    C{optParameters} is much the same, except the list also contains
+    a default value::
+
     | optParameters = [['outfile', 'O', 'outfile.log, 'Description...']]
 
     subCommands is a list of 4-tuples of (command name, command shortcut,
     parser class, documentation).  If the first non-option argument found is
     one of the given command names, an instance of the given parser class is
     instantiated and given the remainder of the arguments to parse and
-    self.opts[command] is set to the command name.  For example:
+    self.opts[command] is set to the command name.  For example::
 
     | subCommands = [
-          ['inquisition', 'inquest', InquisitionOptions, 'Perform an inquisition'],
-          ['holyquest', 'quest', HolyQuestOptions, 'Embark upon a holy quest']
-      ]
+    |      ['inquisition', 'inquest', InquisitionOptions, 'Perform an inquisition'],
+    |      ['holyquest', 'quest', HolyQuestOptions, 'Embark upon a holy quest']
+    |  ]
 
-    In this case, "<program> holyquest --horseback --for-grail" will cause
-    HolyQuestOptions to be instantiated and asked to parse
-    ['--horseback', '--for-grail'].  Currently, only the first sub-command
+    In this case, C{"<program> holyquest --horseback --for-grail"} will cause
+    C{HolyQuestOptions} to be instantiated and asked to parse
+    C{['--horseback', '--for-grail']}.  Currently, only the first sub-command
     is parsed, and all options following it are passed to its parser.  If a
     subcommand is found, the subCommand attribute is set to its name and the
     subOptions attribute is set to the Option instance that parsers the
     remaining options.
 
     If you want to handle your own options, define a method named
-    opt_paramname that takes (self, option) as arguments. option
+    C{opt_paramname} that takes C{(self, option)} as arguments. C{option}
     will be whatever immediately follows the parameter on the
     command line. Options fully supports the mapping interface, so you
-    can do things like 'self["option"] = val' in these methods.
+    can do things like C{'self["option"] = val'} in these methods.
 
     Advanced functionality is covered in the howto documentation,
-    available at http://twistedmatrix.com/documents/howto/options, or
+    available at U{http://twistedmatrix.com/documents/howto/options}, or
     doc/howto/options.html in you Twisted directory.
     """
 

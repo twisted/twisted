@@ -50,12 +50,14 @@ class RowObject:
     Once created, the "key column" attributes cannot be changed.
 
 
-    ### Class Attributes that users must supply
+    Class Attributes that users must supply::
+
        rowKeyColumns     # list of key columns in form: [(columnName, typeName)]
        rowTableName      # name of database table
-       rowColumns        # list of the columns in the table with the correct case.
-                         # this will be used to create member variables.
-       rowFactoryMethod  # method to create an instance of this class. HACK: must be in a list!!! [factoryMethod] (optional)
+       rowColumns        # list of the columns in the table with the correct
+                         # case.this will be used to create member variables.
+       rowFactoryMethod  # method to create an instance of this class.
+                         # HACK: must be in a list!!! [factoryMethod] (optional)
        rowForeignKeys    # keys to other tables (optional)
                         
     """
