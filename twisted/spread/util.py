@@ -77,7 +77,7 @@ class LocalAsyncForwarder:
 
     def callRemote(self, method, *args, **kw):
         if hasattr(self.interfaceClass, method):
-            result = defer.execute(self._callMethod, method, *args, **kw)
+            result = defer.maybeDeferred(self._callMethod, method, *args, **kw)
             return result
         elif self.failWhenNotImplemented:
             return defer.fail(

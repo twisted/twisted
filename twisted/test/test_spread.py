@@ -22,10 +22,13 @@ Test cases for twisted.spread package
 from twisted.trial import unittest
 
 from twisted.spread.util import LocalAsyncForwarder
+from twisted.internet import defer
 from twisted.python.components import Interface
 
 class IForwarded:
     def forwardMe(self):
+        pass
+    def forwardDeferred(self):
         pass
 
 class Forwarded:
@@ -39,8 +42,9 @@ class Forwarded:
 
     def dontForwardMe(self):
         self.unforwarded = 1
-
-        
+    
+    def forwardDeferred(self):
+        return defer.succeed(1)
 
 class SpreadUtilTest(unittest.TestCase):
     def testLocalAsyncForwarder(self):
@@ -50,3 +54,7 @@ class SpreadUtilTest(unittest.TestCase):
         assert f.forwarded
         lf.callRemote("dontForwardMe")
         assert not f.unforwarded
+        rr = lf.callRemote("forwardDeferred")        
+        l = []
+        rr.addCallback(l.append)
+        self.assertEqual(l[0], 1)
