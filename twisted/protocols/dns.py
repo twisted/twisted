@@ -259,6 +259,10 @@ class Name:
         if isinstance(other, Name):
             return str(self) == str(other)
         return 0
+    
+    
+    def __hash__(self):
+        return hash(str(self))
 
 
     def __str__(self):
@@ -436,6 +440,10 @@ class SimpleRecord:
         if isinstance(other, SimpleRecord):
             return self.name == other.name
         return 0
+    
+    
+    def __hash__(self):
+        return hash(self.name)
 
 
     def __str__(self):
@@ -950,7 +958,7 @@ class Record_TXT:
     
     
     def __hash__(self):
-        return hash(self.data)
+        return hash(tuple(self.data))
     
     
     def __str__(self):

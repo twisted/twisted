@@ -94,5 +94,4 @@ class RountripDNSTestCase(unittest.TestCase):
             if k.startswith('Record_'):
                 klass = getattr(dns, k)
                 self.assertEquals(hash(klass()), hash(klass()))
-    testHashable.todo = "Fix this!"
     
