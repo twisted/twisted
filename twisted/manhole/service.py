@@ -363,7 +363,7 @@ class Perspective(pb.Avatar):
 
 class Realm:
 
-    zope.interface(portal.IRealm)
+    implements(portal.IRealm)
 
     def __init__(self, service):
         self.service = service
