@@ -157,6 +157,25 @@ class Protocol:
         log.msg( 'Connection Failed!' )
 
 
+class ProcessProtocol(Protocol):
+    """Processes have some additional methods besides receiving data.
+
+    data* and connection* methods from Protocol are used for stdout, but stderr
+    and process signals are supported below.
+    """
+    def errReceived(self, data):
+        """Some data was received from stderr.
+        """
+
+    def errConnectionLost(self):
+        """This will be called when stderr is closed.
+        """
+
+    def processEnded(self):
+        """This will be called when the subprocess is finished.
+        """
+
+
 class Transport:
     """I am a transport for bytes.
 

@@ -16,10 +16,214 @@
 
 """Interface documentation."""
 
-from twisted.python import components
+from twisted.python.components import Interface
+
+### Reactor Interfaces
+
+class IReactorTCP(Interface):
+    def listenTCP(self, port, factory, backlog=5, interface=''):
+        """
+        Connects a given protocol factory to the given numeric TCP/IP port.
+        """
+
+    def clientTCP(self, host, port, factory, timeout=30):
+        """Connect a TCP client.
+
+        Arguments:
+
+          * host: a host name
+
+          * port: a port number
+
+          * factory: a twisted.internet.protocol.Factory
+
+          * timeout: amount of time to wait before assuming the connection has
+            failed.
+        """
+
+class IReactorSSL(Interface):
+    def clientSSL(host, port, protocol, timeout=30, contextFactory=None):
+        """Connect a client Protocol to a remote SSL socket.
+        """
+
+    def listenSSL(self, port, factory, ctxFactory, backlog=5, interface=''):
+        """
+        Connects a given protocol factory to the given numeric TCP/IP port.
+        The connection is a SSL one, using contexts created by the context
+        factory.
+        """
 
 
-class IConsumer(components.Interface):
+class IReactorUNIX(Interface):
+    """UNIX socket methods.
+    """
+    def clientUNIX(address, protocol):
+        """Connect a client Protocol to a UNIX socket.
+        """
+
+    def listenUNIX(address, factory, backlog=5):
+        """Listen on a UNIX socket.
+        """
+
+
+class IReactorUDP(Interface):
+    """UDP socket methods.
+    """
+    def listenUDP(self, port, factory, interface='', maxPacketSize=8192):
+        """
+        Connects a given protocol Factory to the given numeric UDP port.
+        """
+
+    def clientUDP(self, remotehost, remoteport, localport, protocol,
+                  interface='', maxPacketSize=8192):
+        """Connects a Protocol instance to a UDP client port.
+        """
+
+class IReactorProcess(Interface):
+    def spawnProcess(self, processProtocol, executable, args=(), env={}):
+        """Spawn a process, with a process protcol.
+
+        Arguments:
+
+          * processProtocol: a ProcessProtocol instance
+
+          * executable: the file name to spawn
+
+          * args: the command line arguments to pass to the process; a sequence
+            of strings.
+
+          * env: the environment variables to pass to the processs; a
+            dictionary of strings.
+
+        See also:
+
+          twisted.protocols.protocol.ProcessProtocol
+        """
+
+class IReactorTime(Interface):
+    """Time methods that a Reactor should implement.
+    """
+    def callLater(self, delay, callable, *args, **kw):
+        """Call a function later.
+
+        Arguments:
+
+          * delay: the number of seconds to wait.
+
+          * callable: the callable object to call later.
+
+          * *args: the arguments to call it with.
+
+          * **kw: they keyword arguments to call it with.
+
+        Returns:
+
+          An ID that can be used to cancel the call, using cancelCallLater.
+        """
+
+    def cancelCallLater(self, callID):
+        """Cancel a call that would happen later.
+
+        Arguments:
+
+          * callID: this is an opaque identifier returned from callLater that
+            wil be used to cancel a specific call.
+        """
+
+class IReactorCore(Interface):
+    """Core methods that a Reactor must implement.
+    """
+
+    def run(self):
+        """Run the main loop until stop() is called.
+        """
+
+    def stop(self):
+        """Stop the main loop by firing a 'shutdown' System Event.
+        """
+
+    def crash(self):
+        """Stop the main loop *immediately*, without firing any system events.
+
+        This is named as it is because this is an extremely "rude" thing to do;
+        it is possible to lose data and put your system in an inconsistent
+        state by calling this.  However, it is necessary, as sometimes a system
+        can become wedged in a pre-shutdown call.
+        """
+
+    def iterate(self, delay=0):
+        """Run the main loop's I/O polling function for a period of time.
+
+        This is most useful in applications where the UI is being drawn "as
+        fast as possible", such as games.
+        """
+
+    def callFromThread(self, callable, *args, **kw):
+        """Call a function from within another thread.
+
+        This should wake up the main thread (where run() is executing) and run
+        the given function.
+
+        I hope it is obvious from this description that this method must be
+        thread safe.  (If you want to call a method in the next mainloop
+        iteration, but you're in the same thread, use callLater with a delay of
+        0.)
+        """
+
+    def fireSystemEvent(self, eventType):
+        """Fire a system-wide event.
+
+        System-wide events are things like 'startup', 'shutdown', and
+        'persist'.
+        """
+
+    def addSystemEventTrigger(self, phase, eventType, callable, *args, **kw):
+        """Add a function to be called when a system event occurs.
+
+        Each "system event" in Twisted, such as 'startup', 'shutdown', and
+        'persist', has 3 phases: 'before', 'during', and 'after' (in that
+        order, of course).  These events will be fired internally by the
+        Reactor.
+
+        An implementor of this interface must only implement those events
+        described here.
+
+        Callbacks registered for the "before" phase may return either None or a
+        Deferred.  The "during" phase will not execute until all of the
+        Deferreds from the "before" phase have fired.
+
+        Once the "during" phase is running, all of the remaining triggers must
+        execute; their return values must be ignored.
+
+        Arguments:
+
+          * phase: a time to call the event -- either the string 'before',
+            'after', or 'during', describing when to call it relative to the
+            event's execution.
+
+          * eventType: this is a string describing the type of event.  It 
+
+          * callable: the object to call before shutdown.
+
+          * *args: the arguments to call it with.
+
+          * **kw: the keyword arguments to call it with.
+
+        Returns:
+
+          an ID that can be used to remove this call with
+          removeSystemEventTrigger.
+        """
+
+    def removeSystemEventTrigger(self, triggerID):
+        """Removes a trigger added with addSystemEventTrigger.
+
+        Arguments:
+
+          * triggerID: a value returned from addSystemEventTrigger.
+        """
+
+class IConsumer(Interface):
     """A consumer consumes data from a producer."""
     
     def registerProducer(self, producer, streaming):
@@ -42,7 +246,7 @@ class IConsumer(components.Interface):
         raise NotImplementedError
 
 
-class IProducer(components.Interface):
+class IProducer(Interface):
     """A producer produces data for a consumer.
     
     If this is a streaming producer, it will only be
@@ -85,7 +289,7 @@ class IProducer(components.Interface):
         raise NotImplementedError
 
 
-class ISelectable(components.Interface):
+class ISelectable(Interface):
     """An object that can be registered with the networking event loop.
     
     Selectables more or less correspond to object that can be passed to select().
