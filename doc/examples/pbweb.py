@@ -15,7 +15,6 @@
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
-# This example program is cited in the Twisted paper for IPC10.
 from twisted.spread import pb
 from twisted.python import defer
 from twisted.web import widgets
@@ -31,7 +30,7 @@ class EchoDisplay(widgets.Presentation):
         return ['<b>',d,'</b>']
     def makeListOf(self, echoer):
         d = defer.Deferred()
-        echoer.echo(self.echotext, pbcallback=d.callback, pberrback=d.callback)
+        echoer.echo(self.echotext, pbcallback=d.callback, pberrback=d.errback)
         d.addCallbacks(widgets.listify, self.formatTraceback)
         return [d]
 if __name__ == "__main__":
