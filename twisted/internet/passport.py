@@ -90,6 +90,15 @@ class Service:
         """
         return self.serviceType or str(self.__class__)
 
+    def registerWith(self, authorizer):
+        """This is called on the service when it is added to an application.
+        It expects the service to register itself with the authorizer provided
+        so that the authorizer knows how to create perspectives for this service.
+
+        This should be implemented by services that create perspective objects
+        that derive from passport.Perspective.
+        """
+        authorizer.registerService(self.serviceName, self.createPerspective)
 
 class Perspective:
     """I am an Identity's view onto a service.
@@ -312,6 +321,8 @@ class Identity:
         userPass = md.digest()
         return (userPass == self.hashedPassword)
 
+
+        
     # TODO: service discovery through listing of self.keyring.
 
 
@@ -342,6 +353,11 @@ class Authorizer:
         """
         raise NotImplementedError("%s.getIdentityRequest"%str(self.__class__))
 
+    def registerService(self, serviceName, perspectiveCreator):
+        """used to tell the authorizer how to create perspectives for
+        services. See twisted.enterprise.dbpassport
+        """
+        raise NotImplementedError("%s.registerService"%str(self.__class__))
 
 class DefaultAuthorizer(Authorizer):
 
@@ -379,3 +395,9 @@ class DefaultAuthorizer(Authorizer):
         else:
             req.errback("unauthorized")
         return req
+
+    def registerService(self, serviceName, perspectiveCreator):
+        """this authorizer does not create perspectives.
+        """
+        pass
+    

@@ -183,7 +183,8 @@ class Application(log.Logger, styles.Versioned, roots.Locked):
         """Add a service to this application.
         """
         self.services[service.serviceName] = service
-
+        service.registerWith(self.authorizer)
+        
     def __repr__(self):
         return "<%s app>" % self.name
 
