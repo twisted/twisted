@@ -113,7 +113,7 @@ class BounceTestCase(unittest.TestCase):
         self.domain = mail.mail.BounceDomain()
     
     def testExists(self):
-        self.assertRaises(smtp.AddressError, self.domain.exists, "any user")
+        self.assertRaises(smtp.SMTPBadRcpt, self.domain.exists, "any user")
 
     def testRelay(self):
         self.assertEquals(
