@@ -19,7 +19,7 @@ from twisted.lore import tree
 from twisted.web import domhelpers
 from twisted.python import reflect
 
-import parser
+import parser, urlparse
 
 class TagChecker:
 
@@ -122,6 +122,17 @@ class TagChecker:
             for node in domhelpers.findNodesNamed(dom, hname):
                 if domhelpers.findNodesNamed(node, 'a'):
                     self._reportError(filename, node, 'anchor in heading')
+
+    def check_texturl_matches_href(self, dom, filename):
+        for node in domhelpers.findNodesNamed(dom, 'a'):
+            if not node.hasAttribute('href'):
+                continue
+            text = node.childNodes[0].data
+            proto = urlparse.urlparse(text)[0]
+            if proto:
+                if text != node.getAttribute('href',''):
+                    self._reportError(filename, node, 
+                                      'link text does not match href')
 
 
 def list2dict(l):
