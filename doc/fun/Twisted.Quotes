@@ -3685,3 +3685,7 @@ On 2003.05.23 18:54, Glyph Lefkowitz wrote:
 <zooko> "THERE IS A WEB CAM IN THIS ROOM" and stuff like that.
 <zooko> As soon as the party started some people pushed the cam aside and started doing lines of coke on the desktop.
 %
+<fzZzy> dang. when there are so many layers of abstraction you don't understand it's tough to do a minimal test :(
+<fzZzy> and when glyph writes no docstrings
+<fzZzy> now I know how people feel trying to use woven
+%
