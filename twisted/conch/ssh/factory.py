@@ -53,17 +53,19 @@ class SSHFactory(protocol.Factory):
             raise error.ConchError('no host keys, failing')
         if not hasattr(self,'primes'):
             self.primes = self.getPrimes()
-            if not self.primes:
-                log.msg('disabling diffie-hellman-group-exchange because we cannot find moduli file')
-                transport.SSHServerTransport.supportedKeyExchanges.remove('diffie-hellman-group-exchange-sha1')
-            else:
+            #if not self.primes:
+            #    log.msg('disabling diffie-hellman-group-exchange because we cannot find moduli file')
+            #    transport.SSHServerTransport.supportedKeyExchanges.remove('diffie-hellman-group-exchange-sha1')
+            if self.primes:
                 self.primesKeys = self.primes.keys()
 
     def buildProtocol(self, addr):
         t = transport.SSHServerTransport()
         t.supportedPublicKeys = self.privateKeys.keys()
-        #if not self.primes:
-        #    t.supportedKeyExchanges.remove('diffie-hellman-group-exchange-sha1')
+        if not self.primes:
+            ske = t.supportedKeyExchanges[:]
+            ske.remove('diffie-hellman-group-exchange-sha1')
+            t.supportedKeyExchanges = ske
         t.factory = self
         return t
 

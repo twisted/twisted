@@ -1120,3 +1120,22 @@ class SSHTransportTestCase(unittest.TestCase):
             pass
 
     #testOurServerUnixClient.skip = "doesn't work yet"
+
+class TestSSHFactory(unittest.TestCase):
+
+    def testMultipleFactories(self):
+        f1 = factory.SSHFactory()
+        f2 = factory.SSHFactory()
+        gpk = lambda: {'ssh-rsa' : "don't use"}
+        f1.getPrimes = lambda: None
+        f2.getPrimes = lambda: {1:(2,3)}
+        f1.getPublicKeys = f2.getPublicKeys = gpk
+        f1.getPrivateKeys = f2.getPrivateKeys = gpk
+        f1.startFactory()
+        f2.startFactory()
+        p1 = f1.buildProtocol(None)
+        p2 = f2.buildProtocol(None)
+        self.failIf('diffie-hellman-group-exchange-sha1' in p1.supportedKeyExchanges,
+                p1.supportedKeyExchanges)
+        self.failUnless('diffie-hellman-group-exchange-sha1' in p2.supportedKeyExchanges,
+                p2.supportedKeyExchanges)
