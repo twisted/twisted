@@ -33,7 +33,7 @@ class Proactor(default.PosixReactorBase):
             raise ValueError("unexpected completion key %s" % (key,)) # what's the right thing to do here?
         o = self.completables[int(key)]
         print "IOCPReactor got event", ret, bytes, key, ov, ov.object
-        m = o.getattr(str(ov.object))
+        m = getattr(o, str(ov.object), None)
         print "... calling", m, "to handle"
         m(bytes)
 
