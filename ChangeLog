@@ -1,3 +1,7 @@
+2003-01-09  Dave Peticolas  <dave@krondo.com>
+
+	* twisted/protocols/http.py: start/stop log timer as needed
+
 2003-01-08  Dave Peticolas  <dave@krondo.com>
 
 	* twisted/test/test_smtp.py: cleanup timers after test

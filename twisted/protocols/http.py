@@ -190,17 +190,29 @@ def datetimeToLogString(msSinceEpoch=None):
     return s
 
 
-# a  hack so we don't need to recalculate log datetime every hit,
+# a hack so we don't need to recalculate log datetime every hit,
 # at the price of a small, unimportant, inaccuracy.
-logDateTime = None
+_logDateTime = None
+_logDateTimeUsers = 0
+_resetLogDateTimeID = None
 
 def _resetLogDateTime():
-    global logDateTime
-    logDateTime = datetimeToLogString()
-    reactor.callLater(1, _resetLogDateTime)
+    global _logDateTime
+    global _resetLogDateTime
+    _logDateTime = datetimeToLogString()
+    _resetLogDateTimeID = reactor.callLater(1, _resetLogDateTime)
 
-_resetLogDateTime()
+def _logDateTimeStart():
+    global _logDateTimeUsers
+    if not _logDateTimeUsers:
+        _resetLogDateTime()
+    _logDateTimeUsers += 1
 
+def _logDateTimeStop():
+    global _logDateTimeUsers
+    _logDateTimeUsers -= 1;
+    if not _logDateTimeUsers and _resetLogDateTimeID:
+        _resetLogDateTimeID.cancel()
 
 def timegm(year, month, day, hour, minute, second):
     """Convert time tuple in GMT to seconds since epoch, GMT"""
@@ -956,6 +968,7 @@ class HTTPFactory(protocol.ServerFactory):
         self.logPath = logPath
 
     def startFactory(self):
+        _logDateTimeStart()
         if self.logPath:
             self.logFile = self._openLogFile(self.logPath)
         else:
@@ -966,6 +979,7 @@ class HTTPFactory(protocol.ServerFactory):
             if self.logFile != log.logfile:
                 self.logFile.close()
             del self.logFile
+        _logDateTimeStop()
 
     def _openLogFile(self, path):
         """Override in subclasses, e.g. to use lumberjack."""
@@ -978,7 +992,7 @@ class HTTPFactory(protocol.ServerFactory):
         line = '%s - - %s "%s" %d %s "%s" "%s"\n' % (
             request.getClientIP(),
             # request.getUser() or "-", # the remote user is almost never important
-            logDateTime,
+            _logDateTime,
             repr(request),
             request.code,
             request.sentLength or "-",
