@@ -1,4 +1,4 @@
-#!/usr/bin/python2.2
+#!/usr/bin/python
 from twisted.internet import default
 default.install()
 from twisted.protocols import oscar
