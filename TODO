@@ -21,14 +21,11 @@ this file directly.
 001 [[Glyph]] Asynchronous Authentication Service.  PB (and similiar) servers
     ought to be able to defer their authentication at least to another PB
     service.  This means that the Authenticator interface has to be revamped to
-    use callbacks instead of return values.
+    use callbacks instead of return values. (this is twisted.manhole.webcoil)
 
-002 [[Matt Walker]] Configuration Application.  Twisted needs an interactive
-    application for exploring and composing the various types of services that
-    are available; mktap is not adequate. (I believe the current plan is to use
-    a GTK GUI, but ideally it would be nice to have several versions of this
-    app at varying levels of complexity, ranging from the hard-core UNIX nerd's
-    GTK app to the light'n'fruity Mac user's web admin page...)
+002 *{Glyph Lefkowitz}* Configuration Application.  Twisted needs an
+    interactive application for exploring and composing the various types of
+    services that are available; mktap is not adequate.
 
 003 [[Paul Swartz]] Integration of TOC and Words.  twisted.protocols.toc ought
     to integrate with twisted.words, so that AIM, IRC, and PB clients can all
@@ -95,9 +92,17 @@ this file directly.
 017 mod_pb, an apache module which allows communication with Twisted servers --
     hopefully compatible with the current twisted.web spread model.
 
-018 [[Ying Li]] Better win32 integration. Support for running twisted servers
-    as WinNT services. twisted.internet support for the win32 event loop as
-    provided by win32all.
+018 Better win32 integration. 
+
+018.1 Support for running twisted servers as WinNT services.
+
+018.2 twisted.internet support for the win32 event loop as
+      provided by win32all.
+
+018.3 GUI startup and system tray icon for twistd process on non-NT machines.
+
+018.4 Generating an installer with distutils that actually installs an icon
+      into your start menu to start twistd (running webcoil).
 
 019 IMAP support, possibly based on alpha code written by Michel Pelletier
     (http://www.zope.org/Members/michel/MyWiki/IMAPServer).
@@ -107,7 +112,7 @@ this file directly.
 
 021 [[Glyph Lefkowitz]] Update GTK IM client to be current with twisted.words.
 
-022 [[Paul Swartz]] Update Tk IM client so it doesn't suck so much.  (There are
+022 *{Paul Swartz}* Update Tk IM client so it doesn't suck so much.  (There are
     TONS of graphical artifacts and problems with the UI, and the networking
     code seems to flake out around the edges)
 
