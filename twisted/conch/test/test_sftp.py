@@ -465,8 +465,6 @@ exit
         res = self._getBatchOutput(cmds).split('\n')
         self.failUnlessEqual(res[1:-2], ['testDirectory', 'testRemoveFile', 'testRenameFile', 'testfile1'])
 
-    testBatchFile.todo = "This test is broken on freebsd and osx - slyphon"
-
     def testError(self):
         cmds = """chown 0 missingFile
 pwd
@@ -482,8 +480,6 @@ exit
 """
         res = self._getBatchOutput(cmds)
         self.failIf(res.find('sftp_test') == -1)
-
-    testIgnoredError.todo = "This test is broken on freebsd and osx - slyphon"
 
 if not unix or not Crypto:
     TestOurServerOurClient.skip = "don't run on non-posix"
