@@ -26,16 +26,21 @@ from twisted.cred import checkers, portal, credentials
 from twisted.web import static
 from nevow import rend, loaders, inevow, guard, url
 
-def getActionURL(current, history):
+def getActionURL(current, root):
+    assert root is not None
+    root = root.pathList()
+    me = current.pathList(copy=True)
+    diff = len(me) - len(root)
+    assert diff >= 0
     action = current
-    if len(history) == 1:
+    if diff == 1:
         action = action.here()
     else:
-        for element in history[1:]:
+        while diff > 1:
+            diff -= 1
             action = action.parent()
-
     action = action.child(guard.LOGIN_AVATAR)
-    for element in history:
+    for element in me[len(root):]:
         action = action.child(element)
     return action
 
@@ -45,17 +50,14 @@ class LoginPage(rend.Page):
         'login.xhtml',
         templateDir=os.path.split(os.path.abspath(__file__))[0])
 
-    def __init__(self, history):
-        self.history = history
-        super(LoginPage, self).__init__()
-
     def locateChild(self, request, segments):
-        return LoginPage(self.history + list(segments)), []
+        return LoginPage(), []
 
     def render_form(self, context, data):
         request = context.locate(inevow.IRequest)
         current = url.URL.fromRequest(request)
-        action = getActionURL(current, self.history)
+        root = request.getComponent(inevow.ISessionRoot)
+        action = getActionURL(current, root)
         context.fillSlots('action-url', str(action))
         return context.tag
 
@@ -90,7 +92,7 @@ class Public(rend.Page):
 
     def child_secret(self, request):
         if not request.getSession().getLoggedInRoot().loggedIn:
-            return LoginPage(['public', 'secret'])
+            return LoginPage()
         return Authenticated()
 
 class MainPage(rend.Page):
@@ -105,12 +107,12 @@ class MainPage(rend.Page):
 
     def child_secret(self, request):
         if not request.getSession().getLoggedInRoot().loggedIn:
-            return LoginPage(['secret'])
+            return LoginPage()
         return Authenticated()
 
     def child_another(self, request):
         if not request.getSession().getLoggedInRoot().loggedIn:
-            return LoginPage(['another'])
+            return LoginPage()
         return Another()
 
     def child_public(self, request):
