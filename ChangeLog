@@ -1,3 +1,12 @@
+2004-01-21  Pavel Pergamenshchik  <pp64@cornell.edu>
+
+	* twisted/protocols/stateful.py: A new way to write protocols!
+	Current state is encoded as a pair (func, len). As soon as len
+	of data arrives, func is called with that amount of data.  New
+	state is returned from func.
+	* twisted/test/test_stateful.py: Tests and an example, an
+	Int32StringReceiver implementation.
+
 2004-01-18  Christopher Armstrong  <radix@twistedmatrix.com>
 
 	* twisted/web/resource.py: The default render method of Resource
