@@ -14,13 +14,8 @@ try:
 except ImportError:
     import StringIO
 
-import operator
-import cgi
-import copy
-import time
-import os
+import operator, cgi, time, urlparse
 from urllib import quote
-import urlparse
 try:
     from twisted.protocols._c_urlarg import unquote
 except ImportError:
@@ -51,11 +46,11 @@ class Request(http.Request):
             self.site = kw['site']
             del kw['site']
         if kw.has_key('prepathuri'):
-            self.prepathuri = kw['prepathuri']
+            self._initialprepath = kw['prepathuri']
             del kw['prepathuri']
         
         http.Request.__init__(self, *args, **kw)
-
+        
     def defaultHeaders(self):
         self.out_headers.setHeader('server', server_version)
         self.out_headers.setHeader('date', time.time())
@@ -65,10 +60,27 @@ class Request(http.Request):
         (self.scheme, self.host, self.path,
          self.params, argstring, fragment) = urlparse.urlparse(self.uri)
         
-        # FIXME: denial of service risk here. argstring may be arbitrary data.
-        # Parsing it into a hashtable with a known hash algorithm is dangerous.
         self.args = cgi.parse_qs(argstring, True)
+
+        path = map(unquote, self.path[1:].split('/'))
+        if self._initialprepath:
+            # We were given an initial prepath -- this is for supporting
+            # CGI-ish applications where part of the path has already
+            # been processed
+            prepath = map(unquote, self._initialprepath[1:].split('/'))
+            
+            if self.postpath[:len(prepath)] == prepath:
+                self.prepath = prepath
+                self.postpath = path[len(prepath):]
+            else:
+                self.prepath = []
+                self.postpath = path
+        else:
+            self.prepath = []
+            self.postpath = path
+        self.sitepath = self.prepath[:]
         
+
     def getHost(self):
         if self.host:
             return self.host
@@ -84,33 +96,26 @@ class Request(http.Request):
         # get site from channel
         if not self.site:
             self.site = self.chanRequest.channel.site
-        self.defaultHeaders()
-        self.parseURL()
-        self.host = self.getHost()
-        if not self.host:
+
+        requestContext = context.RequestContext(tag=self)
+        
+        try:
+            self.checkExpect()
+            self.defaultHeaders()
+            self.parseURL()
+            self.host = self.getHost()
+        except error.Error:
+            self._processingFailed(requestContext)
             return
-        # Resource Identification
-        if self.prepathuri:
-            # We were given an initial prepath.
-            prepath = map(unquote, self.prepathuri[1:].split('/'))
-            self.postpath = map(unquote, self.path[1:].split('/'))
-            
-            if self.postpath[:len(prepath)] == prepath:
-                self.prepath = prepath
-                self.postpath = self.postpath[len(prepath):]
-        else:
-            self.prepath = []
-            self.postpath = map(unquote, self.path[1:].split('/'))
-        self.sitepath = self.prepath[:]
         
         # make content string.
         # FIXME: make resource interface for choosing how to
         # handle content.
         self.content = StringIO.StringIO()
 
-        requestContext = context.RequestContext(tag=self)
-        
-        self.deferredContext = self._getChild(requestContext, self.site.getRootResource(), self.postpath)
+        self.deferredContext = self._getChild(requestContext,
+                                              self.site.getRootResource(),
+                                              self.postpath)
         self.deferredContext.addErrback(self._processingFailed, requestContext)
         
     def handleContentChunk(self, data):
@@ -264,7 +269,6 @@ class Site(http.HTTPFactory):
 
     counter = 0
     requestFactory = Request
-    displayTracebacks = True
     version = "TwistedWeb/%s" % copyright.version
     
     def __init__(self, resource, timeout=60*60*12):

@@ -90,6 +90,7 @@ class Request:
 
     implements(iweb.IRequest, interfaces.IConsumer)
 
+    known_expects = ('100-continue',)
     _code = responsecode.OK
     startedWriting = False
     sentLength = 0 # content bytes sent to client
@@ -115,6 +116,7 @@ class Request:
         
         self.out_headers = http_headers.Headers()
         self.in_headers = in_headers
+
         self.process()
     
     def process(self):
@@ -145,6 +147,12 @@ class Request:
     # The following is the public interface that people should be
     # writing to.
 
+    def checkExpect(self):
+        expects = self.in_headers.getHeader('Expect', ())
+        for expect in expects:
+            if expect not in self.known_expects:
+                raise error.Error(responsecode.EXPECTATION_FAILED)
+        
     def acceptData(self):
         """Notify the client that you will accept the incoming data.
         Should be called after checking if the request is valid.
@@ -188,12 +196,12 @@ class Request:
         # if this is a "HEAD" request, we shouldn't return any data
         if self.method == "HEAD":
             self.write = lambda data: None
-            return False
+            return
 
         # for certain result codes, we should never return any data
         if self._code in NO_BODY_CODES:
             self.write = lambda data: None
-            return False
+            return
         
         self.sentLength = self.sentLength + len(data)
         if data:
@@ -808,7 +816,8 @@ class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin):
 
     """
     
-
+    # implement(interfaces.IHalfCloseableProtocol)
+    
     # these two are generally overridden by the defaults set in HTTPFactory
     timeOut = 60 * 4
     maxPipeline = 4
@@ -820,6 +829,11 @@ class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin):
     _first_line = 2
     _savedTimeOut = None
     persistent = True
+    
+    _readLost = False
+    _losingWrite = False
+    
+    _lingerTimer = None
     
     def __init__(self):
         # the request queue
@@ -857,7 +871,8 @@ class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin):
     def lineLengthExceeded(self, line):
         if self._first_line:
             # Fabricate a request object to respond to the line length violation.
-            self.chanRequest = self.chanRequestFactory(self, "GET fake HTTP/1.0", 0)
+            self.chanRequest = self.chanRequestFactory(self, "GET fake HTTP/1.0",
+                                                       len(self.requests))
         try:
             self.chanRequest.lineLengthExceeded(line)
         except AbortedException:
@@ -899,6 +914,9 @@ class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin):
             if(self.persistent != PERSIST_NO_PIPELINE and
                len(self.requests) < self.maxPipeline):
                 self.resumeProducing()
+        elif self._readLost:
+            # No more incoming data, they already closed!
+            self.transport.loseConnection()
         else:
             if self._savedTimeOut:
                 self.setTimeout(self._savedTimeOut)
@@ -917,18 +935,78 @@ class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin):
             # incoming requests.
             reactor.callLater(0, self._startNextRequest)
         else:
-            self.transport.loseConnection()
+            self.lingeringClose()
 
     def timeoutConnection(self):
         log.msg("Timing out client: %s" % str(self.transport.getPeer()))
         policies.TimeoutMixin.timeoutConnection(self)
 
+    def lingeringClose(self):
+        """This is a bit complicated. This process is necessary to ensure
+        proper workingness when HTTP pipelining is in use.
+        
+        Here is what it wants to do:
+        1)  Finish writing any buffered data, then close our write side.
+        
+            While doing so, read and discard any incoming data.
+            (On linux we could call halfCloseConnection(read=True)
+            instead, but on other OSes I think that'll also cause the RST
+            we're trying to avoid.)
+        2)  When that happens (writeConnectionLost called), wait up to 20
+            seconds for the remote end to close their write side (our read
+            side).
+        3a) If they do (readConnectionLost called), close the socket,
+            and cancel the timeout.
+        3b) If that doesn't happen, the timer fires, and makes the socket
+            close anyways.
+        """
+        # XXX: Until itamar finishes the half-closing support, cannot use
+        # the real code.
+        self.transport.loseConnection()
+        return
+        # XXX
+        
+        # Close write half
+        self._losingWrite = True
+        self.transport.halfCloseConnection(write=True)
+        
+        # Throw out any incoming data
+        self.transport.startReading()
+        self.dataReceived = self.lineReceived = lambda *args: None
+        
+    def writeConnectionLost(self, reason):
+        if self._losingWrite:
+            # Okay, all data has been written
+            # In 20 seconds, actually close the socket
+            self._lingerTimer = reactor.callLater(20, self.transport.loseConnection)
+        else:
+            # Write error, lose as normal.
+            self.transport.loseConnection()
+        
+    def readConnectionLost(self, reason):
+        """Read connection lost"""
+        # If in the lingering-close state, lose the socket.
+        if self._lingerTimer:
+            self._lingerTimer.cancel()
+            self._lingerTimer = None
+            self.transport.loseConnection()
+            return
+        
+        # If between requests, drop connection
+        # when all current requests have written their data.
+        self._readLost = True
+        
+        # If currently in the process of reading a request, this is
+        # probably a client abort, so lose the connection.
+        if self.chanRequest:
+            self.loseConnection()
+        
     def connectionLost(self, reason):
         self.setTimeout(None)
+        # Tell all requests to abort.
         for request in self.requests:
             request.connectionLost(reason)
 
-    
 
 class HTTPFactory(protocol.ServerFactory):
     """Factory for HTTP server."""

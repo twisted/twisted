@@ -243,6 +243,9 @@ class RequestHeaderParsingTests(HeaderParsingTestBase):
              'name="value";$Path="/foo";$Domain="www.local";$Port="80,8000";'
              'name2="value"',
              [Cookie('name', 'value', path='/foo', domain='www.local', ports=(80,8000), version=1), Cookie('name2', 'value', version=1)]),
+            ('$Version="1";'
+             'name="value";$Port',
+             [Cookie('name', 'value', ports=(), version=1)]),
             ('$Version = 1, NAME = "qq\\"qq",Frob=boo',
              [Cookie('name', 'qq"qq', version=1), Cookie('frob', 'boo', version=1)],
              '$Version="1";name="qq\\"qq";frob="boo"'),
@@ -455,6 +458,9 @@ class EntityHeaderParsingTests(HeaderParsingTestBase):
             ("bytes 500-999/1234", ("bytes", 500, 999, 1234)),
             ("bytes 500-1233/1234", ("bytes", 500, 1233, 1234)),
             ("bytes 734-1233/1234", ("bytes", 734, 1233, 1234)),
+            ("bytes 734-1233/*", ("bytes", 734, 1233, None)),
+            ("bytes */1234", ("bytes", None, None, 1234)),
+            ("bytes */*", ("bytes", None, None, None))
             )
         self.runRoundtripTest("Content-Range", table)
         
@@ -484,7 +490,7 @@ class DateTimeTest(unittest.TestCase):
         timeStrs = ('Sun, 06 Nov 1994 08:49:37 GMT',
                     'Sunday, 06-Nov-94 08:49:37 GMT',
                     'Sun Nov  6 08:49:37 1994',
-                    
+
                     # Also some non-RFC formats, for good measure.
                     'Somefakeday 6 Nov 1994 8:49:37',
                     '6 Nov 1994 8:49:37',
@@ -499,6 +505,13 @@ class DateTimeTest(unittest.TestCase):
                     )
         for timeStr in timeStrs:
             self.assertEquals(http_headers.parseDateTime(timeStr), timeNum)
+
+        # Test 2 Digit date wraparound yuckiness.
+        self.assertEquals(http_headers.parseDateTime(
+            'Monday, 11-Oct-04 14:56:50 GMT'), 1097506610)
+        self.assertEquals(http_headers.parseDateTime(
+            'Monday, 11-Oct-2004 14:56:50 GMT'), 1097506610)
+
 
     def testGenerate(self):
         self.assertEquals(http_headers.generateDateTime(784111777), 'Sun, 06 Nov 1994 08:49:37 GMT')

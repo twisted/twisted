@@ -1,12 +1,13 @@
 from __future__ import nested_scopes
 
-import time
+import time, sys
 from twisted.trial import unittest
+from twisted.trial.util import deferredResult
 from twisted.web2 import http, http_headers, responsecode, error
 
-from twisted.internet import reactor, protocol, address, interfaces
+from twisted.internet import reactor, protocol, address, interfaces, utils
 from twisted.protocols import loopback
-
+from twisted.python import util
 from zope.interface import implements
 
 
@@ -42,6 +43,16 @@ class PreconditionTestCase(unittest.TestCase):
     def testIfMatch(self):
         request = http.Request(None, "GET", "/", "HTTP/1.1", http_headers.Headers())
 
+        # Behavior with no ETag set, should be same as with an ETag
+        request.in_headers.setRawHeaders("If-Match", ('*',))
+        self.checkPreconditions(request, True, responsecode.OK)
+        self.checkPreconditions(request, False, responsecode.PRECONDITION_FAILED, entityExists=False)
+        
+        # Ask for tag, but no etag set.
+        request.in_headers.setRawHeaders("If-Match", ('"frob"',))
+        self.checkPreconditions(request, False, responsecode.PRECONDITION_FAILED)
+
+        ## Actually set the ETag header
         request.out_headers.setHeader("ETag", http_headers.ETag('foo'))
         request.out_headers.setHeader("Last-Modified", 946771200) # Sun, 02 Jan 2000 00:00:00 GMT
 
@@ -67,9 +78,14 @@ class PreconditionTestCase(unittest.TestCase):
         request.in_headers.setRawHeaders("If-Match", ('W/"foo"',))
         self.checkPreconditions(request, False, responsecode.PRECONDITION_FAILED)
 
-        
     def testIfUnmodifiedSince(self):
         request = http.Request(None, "GET", "/", "HTTP/1.1", http_headers.Headers())
+
+        # No Last-Modified => always fail.
+        request.in_headers.setRawHeaders("If-Unmodified-Since", ('Mon, 03 Jan 2000 00:00:00 GMT',))
+        self.checkPreconditions(request, False, responsecode.PRECONDITION_FAILED)
+
+        # Set output headers
         request.out_headers.setHeader("ETag", http_headers.ETag('foo'))
         request.out_headers.setHeader("Last-Modified", 946771200) # Sun, 02 Jan 2000 00:00:00 GMT
 
@@ -91,8 +107,14 @@ class PreconditionTestCase(unittest.TestCase):
     def testIfModifiedSince(self):
         if time.time() < 946771200:
             raise "Your computer's clock is way wrong, this test will be invalid."
-        
+
         request = http.Request(None, "GET", "/", "HTTP/1.1", http_headers.Headers())
+
+        # No Last-Modified => always succeed
+        request.in_headers.setRawHeaders("If-Modified-Since", ('Mon, 03 Jan 2000 00:00:00 GMT',))
+        self.checkPreconditions(request, True, responsecode.OK)
+
+        # Set output headers
         request.out_headers.setHeader("ETag", http_headers.ETag('foo'))
         request.out_headers.setHeader("Last-Modified", 946771200) # Sun, 02 Jan 2000 00:00:00 GMT
         
@@ -116,6 +138,10 @@ class PreconditionTestCase(unittest.TestCase):
 
     def testIfNoneMatch(self):
         request = http.Request(None, "GET", "/", "HTTP/1.1", http_headers.Headers())
+
+        request.in_headers.setRawHeaders("If-None-Match", ('"foo"',))
+        self.checkPreconditions(request, True, responsecode.OK)
+        
         request.out_headers.setHeader("ETag", http_headers.ETag('foo'))
         request.out_headers.setHeader("Last-Modified", 946771200) # Sun, 02 Jan 2000 00:00:00 GMT
         
@@ -180,7 +206,11 @@ class IfRangeTestCase(unittest.TestCase):
     def testIfRange(self):
         request = http.Request(None, "GET", "/", "HTTP/1.1", http_headers.Headers())
 
+        self.assertEquals(request.checkIfRange(), False)
+
         request.in_headers.setRawHeaders("If-Range", ('"foo"',))
+        self.assertEquals(request.checkIfRange(), False)
+        
         request.out_headers.setHeader("ETag", http_headers.ETag('foo'))
         self.assertEquals(request.checkIfRange(), True)
 
@@ -242,7 +272,6 @@ class TestRequest(http.Request):
         self.cmds.append(('contentComplete',))
         
     def connectionLost(self, reason):
-        print "server connection lost"
         self.cmds.append(('connectionLost', reason))
         
 class TestClient(protocol.Protocol):
@@ -269,7 +298,7 @@ class TestConnection:
         self.client = None
 
 class HTTPTests(unittest.TestCase):
-    def connect(self, logFile=None, maxPipeline=4):
+    def connect(self, logFile=None, maxPipeline=4, timeOut=60000):
         cxn = TestConnection()
 
         def makeTestRequest(*args):
@@ -279,6 +308,7 @@ class HTTPTests(unittest.TestCase):
         factory = http.HTTPFactory()
         factory.requestFactory = makeTestRequest
         factory.maxPipeline = maxPipeline
+        factory.timeOut = timeOut
         
         cxn.client = TestClient()
         cxn.server = factory.buildProtocol(address.IPv4Address('TCP', '127.0.0.1', 2345))
@@ -314,12 +344,15 @@ class CoreHTTPTestCase(HTTPTests):
     #       matching. It is acceptable for this to change and break
     #       the test if you know what you are doing.
     
-    def testHTTP0_9(self):
+    def testHTTP0_9(self, nouri=False):
         cxn = self.connect()
         cmds = [[]]
         data = ""
-        
-        cxn.client.write("GET /\r\n")
+
+        if nouri:
+            cxn.client.write("GET\r\n")
+        else:
+            cxn.client.write("GET /\r\n")
         # Second request which should not be handled
         cxn.client.write("GET /two\r\n")
         
@@ -340,6 +373,9 @@ class CoreHTTPTestCase(HTTPTests):
         self.compareResult(cxn, cmds, data)
         
         self.assertDone(cxn)
+
+    def testHTTP0_9_nouri(self):
+        self.testHTTP0_9(True)
         
     def testHTTP1_0(self):
         cxn = self.connect()
@@ -536,6 +572,82 @@ class CoreHTTPTestCase(HTTPTests):
         cxn.client.loseConnection()
         self.assertDone(cxn)
 
+    def testHTTP1_1_expect_continue(self):
+        cxn = self.connect()
+        cmds = [[]]
+        data = ""
+        cxn.client.write("GET / HTTP/1.1\r\nContent-Length: 5\r\nHost: localhost\r\nExpect: 100-continue\r\n\r\n")
+        cmds[0] += [('init', 'GET', '/', (1,1),
+                     (('Content-Length', ['5']), ('Host', ['localhost']), ('Expect', ['100-continue'])))]
+        self.compareResult(cxn, cmds, data)
+        
+        cxn.requests[0].acceptData()
+        data += "HTTP/1.1 100 Continue\r\n\r\n"
+        self.compareResult(cxn, cmds, data)
+
+        cxn.client.write("Input")
+        cmds[0] += [('contentChunk', 'Input'),
+                    ('contentComplete',)]
+        self.compareResult(cxn, cmds, data)
+
+        cxn.requests[0].out_headers.setRawHeaders("Content-Length", ("6",))
+        cxn.requests[0].write("Output")
+        cxn.requests[0].finish()
+        
+        data += "HTTP/1.1 200 OK\r\nContent-Length: 6\r\n\r\nOutput"
+        self.compareResult(cxn, cmds, data)
+        
+        cxn.client.loseConnection()
+        self.assertDone(cxn)
+        
+    def testHeaderContinuation(self):
+        cxn = self.connect()
+        cmds = [[]]
+        data = ""
+        
+        cxn.client.write("GET / HTTP/1.1\r\nHost: localhost\r\nFoo: yada\r\n yada\r\n\r\n")
+        cmds[0] += [('init', 'GET', '/', (1,1),
+                     (('Host', ['localhost']), ('Foo', ['yada yada']),)),
+                    ('contentComplete',)]
+        self.compareResult(cxn, cmds, data)
+        
+        cxn.client.loseConnection()
+        self.assertDone(cxn)
+
+    def testTimeout_immediate(self):
+        # timeout 0 => timeout on first iterate call
+        cxn = self.connect(timeOut = 0)
+        self.assertDone(cxn)
+
+    def testTimeout_inRequest(self):
+        cxn = self.connect(timeOut = 0.3)
+        cmds = [[]]
+        data = ""
+
+        cxn.client.write("GET / HTTP/1.1\r\n")
+        time.sleep(0.5)
+        self.assertDone(cxn)
+        
+    def testTimeout_betweenRequests(self):
+        cxn = self.connect(timeOut = 0.3)
+        cmds = [[]]
+        data = ""
+        
+        cxn.client.write("GET / HTTP/1.1\r\n\r\n")
+        cmds[0] += [('init', 'GET', '/', (1,1), ()),
+                    ('contentComplete',)]
+        self.compareResult(cxn, cmds, data)
+
+        cxn.requests[0].acceptData()
+        cxn.requests[0].out_headers.setRawHeaders("Content-Length", ("0",))
+        cxn.requests[0].finish()
+        
+        data += "HTTP/1.1 200 OK\r\nContent-Length: 0\r\n\r\n"
+
+        self.compareResult(cxn, cmds, data)
+        time.sleep(0.5) # Wait for timeout
+        self.assertDone(cxn)
+        
 class ErrorTestCase(HTTPTests):
     def assertStartsWith(self, first, second, msg=None):
         self.assert_(first.startswith(second), '%r.startswith(%r)' % (first, second))
@@ -576,6 +688,12 @@ class ErrorTestCase(HTTPTests):
         cxn = self.connect()
         cxn.client.write("GET / HTTP/1.1\r\n")
         cxn.client.write("Foo: "+("Bar"*10000))
+
+        self.checkError(cxn, 400)
+
+    def testLineTooLong2(self):
+        cxn = self.connect()
+        cxn.client.write("GET "+("/Bar")*10000 +" HTTP/1.1\r\n")
 
         self.checkError(cxn, 400)
 
@@ -660,3 +778,47 @@ class PipelinedErrorTestCase(ErrorTestCase):
         
         cxn.requests[0].finish()
         ErrorTestCase.checkError(self, cxn, code)
+
+
+class SimpleRequest(http.Request):
+    def process(self):
+        self.setResponseCode(404)
+        self.finish()
+        
+    def handleContentChunk(self, data):
+        pass
+        
+    def handleContentComplete(self):
+        pass
+        
+    def connectionLost(self, reason):
+        pass
+
+class RealServerTest(unittest.TestCase):
+    def setUp(self):
+        factory=http.HTTPFactory()
+        factory.requestFactory = SimpleRequest
+        
+        self.socket = reactor.listenTCP(0, factory)
+        self.port = self.socket.getHost().port
+
+    def tearDown(self):
+        self.socket.loseConnection()
+        
+    def testBasicWorkingness(self):
+        out,err,code = deferredResult(
+            utils.getProcessOutputAndValue(sys.executable, args=(util.sibpath(__file__, "simple_client.py"), "basic", str(self.port))))
+        if code != 0:
+            print "Error output: \n", err
+        self.assertEquals(code, 0)
+        self.assertEquals(out, "HTTP/1.1 404 Not Found\r\nConnection: close\r\n\r\n")
+    
+    def testLingeringClose(self):
+        out,err,code = deferredResult(
+            utils.getProcessOutputAndValue(sys.executable, args=(util.sibpath(__file__, "simple_client.py"), "lingeringClose", str(self.port))))
+        if code != 0:
+            print "Error output: \n", err
+        self.assertEquals(code, 0)
+        self.assertEquals(out, "HTTP/1.1 404 Not Found\r\nConnection: close\r\n\r\n")
+
+    testLingeringClose.todo = "half-close support not implemented yet"

@@ -190,13 +190,13 @@ def split(seq, delim):
             cur.append(item)
     yield cur
 
-def find(seq, *args):
-    """The same as seq.index but returns -1 if not found, instead 
-    Too bad it's not builtin to python!"""
-    try:
-        return seq.index(value, *args)
-    except ValueError:
-        return -1
+# def find(seq, *args):
+#     """The same as seq.index but returns -1 if not found, instead 
+#     Too bad it's not builtin to python!"""
+#     try:
+#         return seq.index(value, *args)
+#     except ValueError:
+#         return -1
     
 
 def filterTokens(seq):
@@ -677,7 +677,13 @@ def parseCookie(headers):
             last_cookie = None
             rr_cookies = split(r_cookie, Token(';'))
             for cookie in rr_cookies:
-                (name,), (value,) = split(cookie, Token('='))
+                nameval = tuple(split(cookie, Token('=')))
+                if len(nameval) == 2:
+                    (name,), (value,) = nameval
+                else:
+                    (name,), = nameval
+                    value = None
+                
                 name=name.lower()
                 if name == '$version':
                     continue
@@ -688,7 +694,10 @@ def parseCookie(headers):
                         elif name == '$domain':
                             last_cookie.domain=value
                         elif name == '$port':
-                            last_cookie.ports=tuple([int(s) for s in value.split(',')])
+                            if value is None:
+                                last_cookie.ports = ()
+                            else:
+                                last_cookie.ports=tuple([int(s) for s in value.split(',')])
                 else:
                     last_cookie = Cookie(name, value, version=1)
                     cookies.append(last_cookie)
@@ -913,45 +922,45 @@ def generateSetCookie2(cookies):
         setCookies.append('; '.join(out))
     return setCookies
 
-##### Random shits
-def sortMimeQuality(s):
-    def sorter(item1, item2):
-        if item1[0] == '*':
-            if item2[0] == '*':
-                return 0
+##### Random stuff that looks useful.
+# def sortMimeQuality(s):
+#     def sorter(item1, item2):
+#         if item1[0] == '*':
+#             if item2[0] == '*':
+#                 return 0
 
 
-def sortQuality(s):
-    def sorter(item1, item2):
-        if item1[1] < item2[1]:
-            return -1
-        if item1[1] < item2[1]:
-            return 1
-        if item1[0] == item2[0]:
-            return 0
+# def sortQuality(s):
+#     def sorter(item1, item2):
+#         if item1[1] < item2[1]:
+#             return -1
+#         if item1[1] < item2[1]:
+#             return 1
+#         if item1[0] == item2[0]:
+#             return 0
             
             
-def getMimeQuality(mimeType, accepts):
-    type,args = parseArgs(mimeType)
-    type=type.split(Token('/'))
-    if len(type) != 2:
-        raise ValueError, "MIME Type "+s+" invalid."
+# def getMimeQuality(mimeType, accepts):
+#     type,args = parseArgs(mimeType)
+#     type=type.split(Token('/'))
+#     if len(type) != 2:
+#         raise ValueError, "MIME Type "+s+" invalid."
 
-    for accept in accepts:
-        accept,acceptQual=accept
-        acceptType=accept[0:1]
-        acceptArgs=accept[2]
+#     for accept in accepts:
+#         accept,acceptQual=accept
+#         acceptType=accept[0:1]
+#         acceptArgs=accept[2]
         
-        if ((acceptType == type or acceptType == (type[0],'*') or acceptType==('*','*')) and
-            (args == acceptArgs or len(acceptArgs) == 0)):
-            return acceptQual
+#         if ((acceptType == type or acceptType == (type[0],'*') or acceptType==('*','*')) and
+#             (args == acceptArgs or len(acceptArgs) == 0)):
+#             return acceptQual
 
-def getQuality(type, accepts):
-    qual = accepts.get(type)
-    if qual is not None:
-        return qual
+# def getQuality(type, accepts):
+#     qual = accepts.get(type)
+#     if qual is not None:
+#         return qual
     
-    return accepts.get('*')
+#     return accepts.get('*')
 
 # Headers object
 class __RecalcNeeded(object):
@@ -1001,7 +1010,7 @@ class Headers:
                 # if isinstance(h, types.GeneratorType):
                 #     h=list(h)
         except ValueError,v:
-            # print v
+            print v
             h=None
         
         self._headers[name]=h
