@@ -47,13 +47,16 @@ class AtLeastImportTestCase(unittest.TestCase):
         from twisted.internet import process
         from twisted.internet import task
         from twisted.internet import threadtask
+        from twisted.internet import udp
 
     def test_spread(self):
         """Test importing spreadables
         """
         from twisted.spread import pb
         from twisted.spread import jelly
-
+        from twisted.spread import banana
+        from twisted.spread import flavors
+    
     def test_twistedPython(self):
         """Test importing twisted.python
         """
@@ -66,7 +69,10 @@ class AtLeastImportTestCase(unittest.TestCase):
         from twisted.python import threadable
         from twisted.python import threadpool
         from twisted.python import usage
-
+        from twisted.python import defer
+        from twisted.python import otp
+    
+    
     def test_reality(self):
         """Test importing reality
         """
@@ -96,7 +102,10 @@ class AtLeastImportTestCase(unittest.TestCase):
         from twisted.protocols import protocol
         from twisted.protocols import smtp
         from twisted.protocols import telnet
-
+        from twisted.protocols.ldap import ldapclient
+        from twisted.protocols import oscar
+        from twisted.protocols import toc
+    
     def test_web(self):
         """Test importing web
         """
@@ -108,7 +117,10 @@ class AtLeastImportTestCase(unittest.TestCase):
         from twisted.web import static
         from twisted.web import test
         from twisted.web import vhost
-
+        from twisted.web import guard
+        from twisted.web import webpassport
+        from twisted.web import error
+    
     def test_words(self):
         """Test importing words
         """
