@@ -1466,7 +1466,7 @@ class FetchSearchStoreCopyTestCase(unittest.TestCase, IMAP4HelperMixin):
             return self.client.fetchMessage(self.messages, uid=uid)
         
         self.expected = {
-            29281: {'BODY': 'XXX fill this in bucko'},
+            29281: {'RFC822': 'XXX fill this in bucko'},
         }
         self.messages = '19884,1,23872,666:777'
         self.parts = ['RFC822']
