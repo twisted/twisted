@@ -176,7 +176,7 @@ register("Zoot Ponger TAP Builder",
          tapname="ponger")
 
 register("Twisted DNS Server",
-         "twisted.names.dns",
+         "twisted.names.tap",
          description="A Domain Name Server",
          type="tap",
          tapname="dns")
