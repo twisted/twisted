@@ -3561,7 +3561,7 @@ class IMailbox(components.Interface):
     def requestStatus(self, names):
         """Return status information about this mailbox.
 
-        Mailboxes which do not intent to do any special processing to
+        Mailboxes which do not intend to do any special processing to
         generate the return value, C{statusRequestHelper} can be used
         to build the dictionary by calling the other interface methods
         which return the data for each name.
