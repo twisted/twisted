@@ -12,12 +12,14 @@
 
     <h2>Multi-line Code Snippets</h2>
 
-    <p>Multi-line code snippets should be delimited with a
-    &lt;pre&gt; tag, with a mandatory 'class' attribute. The two
-    available classes are "python" and "python-interpreter". For
-    example:</p>
+    <p>Multi-line code snippets should be delimited with a &lt;pre&gt; tag,
+    with a mandatory 'class' attribute. The conventionalized classes are "python",
+    "python-interpreter", and "shell". For example:</p>
 
 <pre>
+
+<b>"python"</b>
+
     &lt;p&gt;
     For example, this is how one defines a Resource:
     &lt;/p&gt;
@@ -30,11 +32,9 @@
                 return "Hello, world!"
     &lt;/pre&gt;
    
-</pre>
 
-    <p>and...</p>
+<b>"python-interpreter"</b>
 
-<pre>
     &lt;pre class="python-interpreter"&gt;
         &amp;gt;&amp;gt;&amp;gt; from twisted.web import resource
         &amp;gt;&amp;gt;&amp;gt; class MyResource(resource.Resource):
@@ -45,7 +45,16 @@
         "Hello, world!"
      &lt;/pre&gt;
    
+
+<b>"shell"</b>
+
+    &lt;pre class="shell"&gt;
+        $ mktap web -s /var/www
+    &lt;/pre&gt;
+
 </pre>
+
+
 
     <h2>Code inside paragraph text</h2>
 
@@ -103,8 +112,18 @@
     <p>
       All tags will be done in lower-case. XHTML demands this, and so do I. :-)
     </p>
-    <hr />
 
+
+
+    <h2>Suggestions</h2>
+    <p>
+      Use 'tidy -e -xml foo.html' before every commit! Also, tidy can be
+      utilized in other ways to auto-correct your XHTML (or convert HTML to
+      XHTML), but can sometimes cause undesirable effects, like converting some
+      <code>&lt;/p&gt;</code>s to <code>&lt;br /&gt;</code>s. 
+    </p>
+
+    <hr />
     <address>
       <a href="mailto:radix@twistedmatrix.com">Chris Armstrong</a>
     </address>
