@@ -65,6 +65,10 @@ class Request(pb.RemoteCopy, server.Request):
         self.remote.callRemote("registerProducer",
                                _ReferenceableProducerWrapper(producer),
                                streaming).addErrback(self.fail)
+
+    def unregisterProducer(self):
+        self.remote.callRemote("unregisterProducer").addErrback(self.fail)
+
     def fail(self, failure):
         log.msg(failure.getBriefTraceback())
 

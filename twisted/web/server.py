@@ -263,6 +263,9 @@ class Request(pb.Copyable, http.Request):
         """
         self.registerProducer(_RemoteProducerWrapper(producer), streaming)
 
+    def view_unregisterProducer(self, issuer):
+        self.unregisterProducer()
+
     ### these calls remain local
 
     session = None
