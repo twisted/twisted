@@ -161,6 +161,8 @@ weekdayname = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
 monthname = [None,
              'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
              'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+weekdayname_lower = [name.lower() for name in weekdayname]
+monthname_lower = [name and name.lower() for name in monthname]
 
 def parse_qs(qs, keep_blank_values=0, strict_parsing=0, unquote=unquote):
     """like cgi.parse_qs, only with custom unquote function"""
@@ -247,12 +249,53 @@ def timegm(year, month, day, hour, minute, second):
     return seconds
 
 def stringToDatetime(dateString):
-    """Convert an HTTP date string to seconds since epoch."""
-    parts = dateString.split(' ')
-    day = int(parts[1])
-    month = int(monthname.index(parts[2]))
-    year = int(parts[3])
-    hour, min, sec = map(int, parts[4].split(':'))
+    """Convert an HTTP date string (one of three formats) to seconds since epoch."""
+    parts = dateString.split()
+
+    if not parts[0][0:3].lower() in weekdayname_lower:
+        # Weekday is stupid. Might have been omitted.
+        try:
+            return stringToDatetime("Sun, "+dateString)
+        except ValueError:
+            # Guess not.
+            pass
+
+    partlen = len(parts)
+    if (partlen == 5 or partlen == 6) and parts[1].isdigit():
+        # 1st date format: Sun, 06 Nov 1994 08:49:37 GMT
+        # (Note: "GMT" is literal, not a variable timezone)
+        # (also handles without "GMT")
+        # This is the normal format
+        day = parts[1]
+        month = parts[2]
+        year = parts[3]
+        time = parts[4]
+    elif (partlen == 3 or partlen == 4) and parts[1].find('-') != -1:
+        # 2nd date format: Sunday, 06-Nov-94 08:49:37 GMT
+        # (Note: "GMT" is literal, not a variable timezone)
+        # (also handles without without "GMT")
+        # Two digit year, yucko.
+        day, month, year = parts[1].split('-')
+        time = parts[2]
+        year=int(year)
+        if year < 69:
+            year = year + 2000
+        elif year < 100:
+            year = year + 1900
+    elif len(parts) == 5:
+        # 3rd date format: Sun Nov  6 08:49:37 1994
+        # ANSI C asctime() format.
+        day = parts[2]
+        month = parts[1]
+        year = parts[4]
+        time = parts[3]
+    else:
+        raise ValueError("Unknown datetime format %r" % dateString)
+    
+    day = int(day)
+    month = int(monthname_lower.index(month.lower()))
+    year = int(year)
+    hour, min, sec = map(int, time.split(':'))
     return int(timegm(year, month, day, hour, min, sec))
 
 def toChunk(data):
