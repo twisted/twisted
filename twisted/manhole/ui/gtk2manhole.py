@@ -179,43 +179,180 @@ class ConsoleOutput:
         self._willScroll = None
         return False
 
+class History(object):
+    _hist = None
+    active = False
+    __debug = False
+
+    def __init__(self):
+        from sets import Set
+        self._hist = []
+        self._set = Set()
+        self._idx = 0
+
+    def add(self, text):
+        self._hist.insert(0, text)
+    
+    _state = property(lambda self: '_hist: %r, _idx: %s, active: %r' % (repr(self._hist), self._idx, self.active))
+
+    def _incr(self):
+        if self._idx + 1 < len(self._hist):   
+            if self.__debug:
+                log.msg(history='incrementing _idx: %s' % self._idx)
+            self._idx += 1                 
+        
+    def _decr(self):
+        if self._idx > 0:
+            self._idx -= 1
+        log.msg(history='_idx: %s' % self._idx)
+        
+
+    def prev(self):
+        log.msg(history=self._state)
+        h = None
+
+        if self.active:
+            self._incr()
+
+        try:
+            h = self._hist[self._idx]            
+        except IndexError:
+            log.msg('index error raised')
+            pass
+
+        if not self.active:
+            self._incr()
+
+        log.msg(history='_idx: %s' % self._idx)
+        self.active = True
+        return h
+
+    def next(self):
+        log.msg(history=self._state)
+        h = None
+
+        self._decr()
+
+        try:
+            h = self._hist[self._idx]
+        except IndexError:
+            pass
+
+        return h
+            
+    def reset(self):
+        self._idx = 0
+        self.active = False
+
 
 class ConsoleInput:
-    toplevel = None
+    toplevel, rkeymap = None, None 
+    __debug = False
+
     def __init__(self, textView):
         self.textView=textView
+        self.rkeymap = {}
+        self.history = History()
+        for name in dir(gtk.keysyms):
+            try:
+                self.rkeymap[getattr(gtk.keysyms, name)] = name
+            except TypeError:
+                pass
 
     def _on_key_press_event(self, entry, event):
         stopSignal = False
-        if event.keyval == gtk.keysyms.Return:
-            buffer = self.textView.get_buffer()
-            iter1, iter2 = buffer.get_bounds()
-            text = buffer.get_text(iter1, iter2, False)
+        ksym = self.rkeymap.get(event.keyval, None)
 
-            # Figure out if that Return meant "next line" or "execute."
-            try:
-                c = code.compile_command(text)
-            except SyntaxError, e:
-                # This could conceivably piss you off if the client's python
-                # doesn't accept keywords that are known to the manhole's
-                # python.
-                point = buffer.get_iter_at_line_offset(e.lineno, e.offset)
-                buffer.place(point)
-                # TODO: Componentize!
-                self.toplevel.output.append(str(e), "exception")
-            except (OverflowError, ValueError), e:
-                self.toplevel.output.append(str(e), "exception")
+        mods = []
+        for prefix, mask in [('ctrl', gtk.gdk.CONTROL_MASK), ('shift', gtk.gdk.SHIFT_MASK)]:
+            if event.state & mask:
+                mods.append(prefix)
+
+        if mods:
+            ksym = '_'.join(mods + [ksym])
+
+        if ksym:
+            getattr(self, 'key_%s' % ksym, lambda *a, **kw: None)(entry, event)
+
+        if self.__debug:
+            print ksym
+        return False
+
+    def getText(self):
+        buffer = self.textView.get_buffer()
+        iter1, iter2 = buffer.get_bounds()
+        text = buffer.get_text(iter1, iter2, False)
+        return text
+
+    def setText(self, text):
+        self.textView.get_buffer().set_text(text)
+
+    def key_Return(self, entry, event):
+        text = self.getText()
+        # Figure out if that Return meant "next line" or "execute."
+        try:
+            c = code.compile_command(text)
+        except SyntaxError, e:
+            # This could conceivably piss you off if the client's python
+            # doesn't accept keywords that are known to the manhole's
+            # python.
+            point = buffer.get_iter_at_line_offset(e.lineno, e.offset)
+            buffer.place(point)
+            # TODO: Componentize!
+            self.toplevel.output.append(str(e), "exception")
+        except (OverflowError, ValueError), e:
+            self.toplevel.output.append(str(e), "exception")
+        else:
+            if c is not None:
+                self.sendMessage()
+                # Don't insert Return as a newline in the buffer.
+                self.history.add(text)
+                self.history.reset()
+                self.clear()
+                entry.emit_stop_by_name("key_press_event")
             else:
-                if c is not None:
-                    self.sendMessage()
-                    # Don't insert Return as a newline in the buffer.
-                    entry.emit_stop_by_name("key_press_event")
-                    self.clear()
-                else:
-                    # not a complete code block
-                    pass
+                # not a complete code block
+                pass
 
         return False
+    
+    def key_ctrl_p(self, entry, event):
+        log.msg('C-p key event')
+
+        hist = self.history.prev()
+        text = self.getText()
+
+        print "hist: %s, text: %s" % (hist, text)
+
+        self.setText(hist)
+
+        return False
+
+    def key_ctrl_n(self, entry, event):
+        log.msg('C-n key event')
+
+        text = self.getText()
+
+        if not self.history.active and text: 
+            # it is stupid for someone to hit history-next when they're not in history mode
+            return False
+        
+        hist = self.history.next()
+
+        # for right now history-next will lose the currently edited buffer
+        self.clear()
+        self.setText(hist)
+        
+        return False
+
+    def key_ctrl_shift_F9(self, entry, event):
+        if self.__debug:
+            import pdb; pdb.set_trace() 
+        
+    def key_ctrl_shift_F5(self, entry, event):
+        if self.__debug:
+            log.msg(self.history._state)
+            
 
     def clear(self):
         buffer = self.textView.get_buffer()
