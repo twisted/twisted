@@ -377,6 +377,30 @@ class ComponentDoubler(ComponentMeta):
 components.registerAdapter(MetaAdder, MetaNumber, IMeta)
 components.registerAdapter(ComponentAdder, ComponentNumber, IMeta)
 
+class IAttrX(components.Interface):
+    def x(self):
+        pass
+
+class IAttrXX(components.Interface):
+    def xx(self):
+        pass
+
+class Xcellent:
+    __implements__ = IAttrX
+    def x(self):
+        return 'x!'
+
+class DoubleXAdapter:
+    num = 42
+    def __init__(self, original):
+        self.original = original
+    def xx(self):
+        return (self.original.x(), self.original.x())
+    def __cmp__(self, other):
+        return cmp(self.num, other.num)
+
+components.registerAdapter(DoubleXAdapter, IAttrX, IAttrXX)
+
 class TestMetaInterface(unittest.TestCase):
     
     def testBasic(self):
@@ -409,6 +433,11 @@ class TestMetaInterface(unittest.TestCase):
         del i1, i2, i3, i4
         self.assertNotEqual(r(), IMeta(n))
         self.assertNotEqual(IMeta(n), IMeta(n))
+
+    def testAdapterWithCmp(self):
+        # Make sure that a __cmp__ on an adapter doesn't break anything
+        xx = IAttrXX(Xcellent())
+        self.assertEqual(('x!', 'x!'), xx.xx())
 
 
 class IISource1(components.Interface): pass

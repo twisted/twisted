@@ -324,12 +324,12 @@ class MetaInterface(interface.InterfaceClass):
 
         marker = object()
         adapter = interface.InterfaceClass.__call__(self, adaptable, alternate=marker)
-        if adapter == marker:
+        if adapter is marker:
             if hasattr(self, '__instadapt__'):
                 adapter = self.__instadapt__(adaptable, default)
             else:
                 adapter = default
-        if adapter == default and default == _Nothing:
+        if adapter is default and default is _Nothing:
             raise CannotAdapt("%s to %s" % (adaptable, self))
         return adapter
     
