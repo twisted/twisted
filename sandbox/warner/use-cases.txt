@@ -40,3 +40,6 @@ An example, in oldpb lingo:
       else:
         raise NotImplementedError
 
+
+data schemas in Zope3:
+http://svn.zope.org/Zope3/trunk/src/zope/schema/README.txt?rev=13888&view=auto
