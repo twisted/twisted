@@ -12,6 +12,22 @@ class FingerProtocol(basic.LineReceiver):
         ).addCallback(lambda m:
          (self.transport.write(m+"\r\n"),self.transport.loseConnection()))
 
+class MotdResource(resource.Resource):
+    
+    def __init__(self, users):
+        self.users = users
+        resource.Resource.__init__(self)
+
+    # we treat the path as the username
+    def getChild(self, username, request):
+        motd = self.users.get(username)
+        username = cgi.escape(username)
+        if motd is not None:
+            motd = cgi.escape(motd)
+            text = '<h1>%s</h1><p>%s</p>' % (username,motd)
+        else:
+            text = '<h1>%s</h1><p>No such user</p>' % username
+        return static.Data(text, 'text/html')
 
 class FingerService(service.Service):
     def __init__(self, file):
@@ -32,14 +48,9 @@ class FingerService(service.Service):
         f.protocol, f.getUser = FingerProtocol, self.getUser
         f.startService = self.startService
         return f
+    
     def getResource(self):
-        r = resource.Resource()
-        r.getChild = (lambda path, request:
-                      static.Data('<h1>%s</h1><p>%s</p>' %
-                      tuple(map(cgi.escape,
-                      [path,self.users.get(path,
-                      "No such user.<p/>http://this.site/user")])),
-                      'text/html'))
+        r = MotdResource(self.users)
         return r
     
 application = service.Application('finger', uid=1, gid=1)
