@@ -44,9 +44,10 @@ server, and see the power of easy remote method calls.</p>
 their name was 'bob': no passwords or anything. If you wanted a direct-send
 one-to-one message feature, you might have implemented it by handing a User
 reference directly off to another User. (so they could invoke
-.remote_sendMessage() on the receiving User): but that lets them do anything
-else to that user too, things that should probably be restricted to the
-"owner" user, like .remote_joinGroup() or .remote_quit().</p>
+<tt>.remote_sendMessage()</tt> on the receiving User): but that lets them do
+anything else to that user too, things that should probably be restricted to
+the "owner" user, like <tt>.remote_joinGroup()</tt> or
+<tt>.remote_quit()</tt>.</p>
 
 <p>And there were probably places where the easiest implementation was to
 have the client send a message that included their own name as an argument.
@@ -70,12 +71,12 @@ remotegroup.callRemote("sendMessage", "bob", "i like pork")
 <p>much to the horror of Bob's vegetarian friends.</p>
 
 <p>(In general, learn to get suspicious if you see "groupName" or "userName"
-in an argument list).</p>
+in the argument list of a remotely-invokable method).</p>
 
 <p>You could fix this by adding more classes (with fewer remotely-invokable
 methods), and making sure that the reference you give to Alice won't let her
-pretend to be anybody else. You'd probably give Alice an object that had her
-name buried inside:</p>
+pretend to be anybody else. You'd probably give Alice her own object, with
+her name buried inside:</p>
 
 <pre class="python">
 class User(pb.Referenceable):
@@ -86,6 +87,12 @@ class User(pb.Referenceable):
     for user in g.users:
       user.callRemote("sendMessage", "&lt;%s&gt;: %s" % (self.name, message)
 </pre>
+
+<p>This improves matters because, as long as Alice only has a reference to
+<b>this</b> object and nobody else's, she can't cause a different
+<tt>self.name</tt> to get used. Of course, you have to make sure that you
+don't give her a reference to the wrong object. <a name="F1"><a href="#f1"
+>[1]</a></a> </p>
 
 <p>But now she could sneak into another group. So you might have to have an
 object per-group-per-user:</p>
@@ -104,8 +111,8 @@ class UserGroup(pb.Referenceable):
 
 
 <p>But that means more code, and more code is bad, especially when it's a
-common problem (everybody designs with security in mind, right? Right??). <a
-name="F1"><a href="#f1" >[1]</a></a> </p>
+common problem (everybody designs with security in mind, right?
+Right??).</p>
 
 
 <p>So we have a security problem. We need a way to ask for and verify a
@@ -506,21 +513,38 @@ gift store on your way out, and have a really nice day. Buh-bye now!</p>
 
 <a  name="f1"><a href="#F1">[1]</a></a>
 
-<p>Footnote: third party references</p>
+<p>Footnote: third party references (there aren't any)</p>
 
-<p>Note that the reference that the server gives to the client is only
-useable by that one client: if it tries to hand it off to a third party,
-they'll get an exception (XXX: which?). This appears to help: only the
-client you gave the reference to can cause any damage with it. Of course,
-the client might agree to do anything the third party wants. If you don't
-trust them, don't give them that reference.</p>
+<p>Note that the reference that the server gives to a client is only useable
+by that one client: if they try to hand it off to a third party, they'll get
+an exception (XXX: which?). This helps somewhat: only the client you gave
+the reference to can cause any damage with it. Of course, the client might
+be a brainless zombie, simply doing anything some third party wants. When
+it's not proxying <tt>callRemote</tt> invocations, it's probably terrorizing
+the living and searching out human brains for sustenance. In short, if you
+don't trust them, don't give them that reference.</p>
 
-<p>Also note that the design of the serialization mechanism (XXX: pb.jelly?)
-makes it impossible for the client to obtain a reference that they weren't
-explicitly given. References passed over the wire are given id numbers and
-recorded in a per-connection dictionary. If you didn't give them the
-reference, the id number won't be in the dict, and no amount of id guessing
-by a malicious client will give them anything else.</p>
+<p>Also note that the design of the serialization mechanism (implemented in
+<code class="API">twisted.spread.jelly</code>: pb, jelly, spread.. get it?
+Also look for "banana" and "marmalade". What other networking framework can
+claim API names based on sandwich ingredients?) makes it impossible for the
+client to obtain a reference that they weren't explicitly given. References
+passed over the wire are given id numbers and recorded in a per-connection
+dictionary. If you didn't give them the reference, the id number won't be in
+the dict, and no amount of id guessing by a malicious client will give them
+anything else. The dict goes away when the connection is dropped, limiting
+further the scope of those references.</p>
+
+<p>Of course, everything you've ever given them over that connection can
+come back to you. If expect the client to invoke your method with some
+object A that you sent to them earlier, and instead they send you object B
+(that you also sent to them earlier), and you don't check it somehow, then
+you've just opened up a security hole. A better design is to keep such
+objects in a dictionary on the server side, and have the client send you an
+index string instead. Doing it that way makes it obvious that they can send
+you anything they want, and improves the chances that you'll remember to
+implement the right checks.</p>
+
 
 <a  name="f2"><a href="#F2">[2]</a></a>
 
@@ -548,6 +572,6 @@ this will make more sense later. </p>
  <a href="http://www.lothar.com">Brian Warner</a> &lt;warner@lothar.com&gt;
 </address>
 <!-- hhmts start -->
-Last modified: Mon Oct  7 23:42:29 PDT 2002 
+Last modified: Sun Oct 13 12:57:38 PDT 2002 
 <!-- hhmts end -->
 </body> </html>
