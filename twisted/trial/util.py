@@ -153,10 +153,12 @@ def suppressWarnings(f, *warningz):
     def _(*args, **kwargs):
         for warning in warningz:
             warnings.filterwarnings('ignore', *warning)
-        ret = f(*args, **kwargs)
-        for warning in warningz:
-            warnings.filterwarnings('default', *warning)
-        return ret
+        try:
+            ret = f(*args, **kwargs)
+        finally:
+            for warning in warningz:
+                warnings.filterwarnings('default', *warning)
+                return ret
     return new.function(_.func_code, _.func_globals, f.func_name,
                         inspect.getargspec(_), _.func_closure)
     
