@@ -2,7 +2,7 @@
 
 import re, os, sys
 
-from twisted.internet import protocol, reactor
+from twisted.internet import protocol, reactor, defer
 from twisted.python.procutils import spawnProcess
 
 
@@ -34,11 +34,10 @@ class ProcProto(protocol.ProcessProtocol):
 
         @type reason: L{twisted.python.failure.Failure}
         """
-        reactor.stop()
 
 
 class Expect(object):
-    child = step = None
+    child = _step = None
     
     def __init__(self):
         self.seq = []
@@ -46,8 +45,9 @@ class Expect(object):
     def spawnChild(self, executable, args=(), env={}, path=None, uid=None,
                  gid=None, usePTY=1, packages=()):
         self.child = ProcProto()
+
         self.child.reacter = self._react
-        self.child.debug = True
+#        self.child.debug = True
         spawnProcess(self.child, executable, args, env, path, uid, gid, usePTY, packages)
 
     def expect(self, pattern, timeout=None):
@@ -62,10 +62,18 @@ class Expect(object):
     def sendline(self, data=''):
         self.seq.append(('send', data + os.linesep))
 
+    def getStep(self):
+        print "getStep: %r" % (self._step,)
+        return self._step
+
+    def setStep(self, val):
+        print "setStep: %r" % (val,)
+        self._step = val
+
+    step = property(getStep, setStep)
+
     def _react(self, data):
         if not self.seq:
-            print "alldone"
-            reactor.stop()
             return
         
         if self.step is None:
@@ -76,9 +84,11 @@ class Expect(object):
         if s[0] == 'expect' or s[0] == 'expectAndCall':
             if s[1].search(data): # we match, so run the next step
                 if s[0] == 'expectAndCall':
+                    print "expectAndCall reached"
                     self.step = None
                     s[2](s[3], s[4])
-                self.step = s = self.seq.pop(0)
+                if self.seq:
+                    self.step = s = self.seq.pop(0)
                 if s[0] == 'expect':
                     return
                 elif s[0] == 'send':
@@ -93,6 +103,9 @@ class Expect(object):
             self.child.transport.write(s[1])
             self.step = None
 
+def done():
+    print "done called"
+    reactor.stop()
 
 def runTest():
     e = Expect()
@@ -104,6 +117,7 @@ def runTest():
     e.sendline("yes")
     e.expect(r"virtual machines to access the host's")
     e.sendline("no")
+    e.expectAndCall("You can now run VMware", done)
     e.spawnChild('/usr/local/bin/vmware-config.pl', args=('vmware-config.pl',), env=os.environ)
 
 

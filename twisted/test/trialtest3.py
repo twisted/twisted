@@ -1,4 +1,4 @@
-# -*- test-case-name: twisted.test.test_trial.FunctionallyTestTrial.testTests -*-
+# -*- test-case-name: twisted.test.test_trial.FunctionallyTestTrial.testClassTimeoutAttribute -*-
 
 import cPickle as pickle
 
@@ -362,3 +362,17 @@ class TestBenchmark(unittest.TestCase):
         stats = pickle.load(file('test.stats', 'rb'))
         failUnlessEqual(stats, {itrial.IFQMethodName(self.Benchmark.benchmarkValues): statdatum})
 
+
+
+class TestClassTimeoutAttribute(unittest.TestCase):
+    def setUp(self):
+        self.d = defer.Deferred()
+
+    def _calledLater(self):
+        self.d.callback('hoorj!')
+
+    def test_timeoutAttr(self):
+        reactor.callLater(4.2, self._calledLater)
+        return self.d
+
+TestClassTimeoutAttribute.timeout = 6.0
