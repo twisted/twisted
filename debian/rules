@@ -53,6 +53,7 @@ install-stamp: build-stamp
 	install -d debian/twisted-doc/usr/share/doc/twisted-doc/examples
 	install -d debian/twisted-doc/usr/share/doc/twisted-doc/howto
 	install -d debian/twisted-doc/usr/share/doc/twisted-doc/specifications
+	install -d debian/twisted-doc/usr/share/doc/twisted-doc/man
 	install -d debian/twisted-doc/usr/share/doc/twisted-doc/historic
 	install -d debian/twisted-doc/usr/share/doc/twisted-doc/img
 	install -d debian/twisted-doc/usr/share/doc/twisted-doc/api
@@ -73,6 +74,8 @@ install-stamp: build-stamp
 	               debian/twisted-doc/usr/share/doc/twisted-doc/howto/
 	install -m 644 doc/specifications/*.xhtml \
 	               debian/twisted-doc/usr/share/doc/twisted-doc/specifications/
+	install -m 644 doc/man/*.xhtml \
+	               debian/twisted-doc/usr/share/doc/twisted-doc/man/
 	install -m 644 doc/img/*.png \
 	               debian/twisted-doc/usr/share/doc/twisted-doc/img/
 	install -m 644 doc/img/*.bmp \
