@@ -139,7 +139,7 @@ class IRCChatter(irc.IRC):
 ##                              (self.servicename, nickname))
                     self.pendingLogin = participant
                 else:
-                    self.service.check(nickname, self.paswd)
+                    self.service.check(nickname, self.passwd)
                     self.participant = participant
                     self.participant.attached(self)
                     self.receiveDirectMessage("*login*", "Pasword already accepted.  Thank you.")
