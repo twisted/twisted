@@ -603,19 +603,20 @@ class IRCClient(basic.LineReceiver):
             self.dcc_sessions = []
 
         if dcctype == 'SEND':
-            size = -1
-            if len(data) >= 5:
-                try:
-                    size = int(data[4])
-                except ValueError:
-                    pass
+            print "hah! how dare you try to DCC me!"
+##            size = -1
+##            if len(data) >= 5:
+##                try:
+##                    size = int(data[4])
+##                except ValueError:
+##                    pass
 
-            filename = path.basename(arg)
-            protocol = DccFileReceive(filename, size,
-                                      (user,channel,data),self.dcc_destdir)
+##            filename = path.basename(arg)
+##            protocol = DccFileReceive(filename, size,
+##                                      (user,channel,data),self.dcc_destdir)
 
-            reactor.clientTCP(address, port, protocol)
-            self.dcc_sessions.append(protocol)
+##            reactor.clientTCP(address, port, protocol)
+##            self.dcc_sessions.append(protocol)
 
         elif dcctype == 'CHAT':
             protocol = DccChat(self, queryData=(user, channel, data))
