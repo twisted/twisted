@@ -2,6 +2,7 @@
 Cake is like eacher, but upside down and on fire. >:)
 """
 
+import types
 from cStringIO import StringIO
 
 class _later:
@@ -75,8 +76,11 @@ class Recipe(Cake):
             if isinstance(fn, Recipe):
                 res = fn(res)
             else:
-                _res = getattr(res, fn)(*args, **kwargs)
-                res = _res is None and res or _res
+                if fn == '__getitem__' and isinstance(res, list) and isinstance(args[0], types.SliceType):
+                    res = res[args[0].start:args[0].stop]
+                else:
+                    _res = getattr(res, fn)(*args, **kwargs)
+                    res = _res is None and res or _res
         return res
 
     def __repr__(self):
@@ -119,6 +123,11 @@ class Compiler:
     # optimize all you like here, isn't this really f'ing scary?
 
     def handle_getitem(self, fn, args, kwargs):
+        if isinstance(args[0], types.SliceType):
+            if args[0].step is None:
+               name = self.newlocal(args[0])
+               self.writeln('res = res[%s.start:%s.stop]' % (name, name))
+               return 
         self.writeln('res = res[%s]' % self.newlocal(args[0]))
 
     def handle_add(self, fn, args, kwargs):
