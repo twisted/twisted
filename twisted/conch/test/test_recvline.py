@@ -355,6 +355,9 @@ class _BaseMixin:
 
 class _SSHMixin(_BaseMixin):
     def setUp(self):
+        if not ssh:
+            raise unittest.SkipTest("Crypto requirements missing, can't run historic recvline tests over ssh")
+
         u, p = 'testuser', 'testpass'
         rlm = TerminalRealm()
         rlm.userFactory = TestUser
@@ -612,8 +615,7 @@ class HistoricRecvlineLoopbackTelnet(_TelnetMixin, unittest.TestCase, HistoricRe
     pass
 
 class HistoricRecvlineLoopbackSSH(_SSHMixin, unittest.TestCase, HistoricRecvlineLoopbackMixin):
-    if not ssh:
-        skip = "Crypto requirements missing, can't run historic recvline tests over ssh"
+    pass
 
 class HistoricRecvlineLoopbackStdio(_StdioMixin, unittest.TestCase, HistoricRecvlineLoopbackMixin):
     if stdio is None:
