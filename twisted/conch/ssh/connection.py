@@ -100,9 +100,11 @@ class SSHConnection(service.SSHService):
 
     def ssh_CHANNEL_CLOSE(self, packet):
         localChannel = struct.unpack('>L', packet[:4])[0]
-        self.channels[localChannel].closed()
+        channel = self.channels[localChannel]
+        channel.closed()
         del self.localToRemoteChannel[localChannel]
         del self.channels[localChannel]
+        del self.channelsToRemoteChannel[channel]
 
     def ssh_CHANNEL_REQUEST(self, packet):
         localChannel = struct.unpack('>L', packet[:4])[0]
@@ -161,7 +163,7 @@ class SSHConnection(service.SSHService):
                                             common.NS(data))
 
     def sendClose(self, channel):
-        if channel not in self.channels.values():
+        if channel not in self.channelsToRemoteChannel.keys():
             return # we're already closed
         self.transport.sendPacket(MSG_CHANNEL_CLOSE, struct.pack('>L',
                                             self.channelsToRemoteChannel[channel]))        
@@ -277,7 +279,8 @@ class SSHSession(SSHChannel):
             return 0
         shell = '/bin/sh' # fix this
         try:
-            ptypro.Process(shell, [shell], self.environ, '/tmp', SSHSessionProtocol(self)) # fix this too
+            self.client = SSHSessionClient()
+            ptypro.Process(shell, [shell], self.environ, '/tmp', SSHSessionProtocol(self, self.client)) # fix this too
             #reactor.spawnProcess(SSHSessionProtocol(self), shell, ['-'], self.environ)
         except OSError, ImportError:
             log.msg('failed to get pty')
@@ -352,8 +355,12 @@ class SSHSession(SSHChannel):
         SSHChannel.closed(self)
 
 class SSHSessionProtocol(protocol.Protocol, protocol.ProcessProtocol):
-    def __init__(self, session):
+    def __init__(self, session, client):
         self.session = session
+        self.client = client
+
+    def connectionMade(self):
+            self.client.transport = self.transport
 
     def dataReceived(self, data):
         self.session.write(data)
@@ -363,11 +370,15 @@ class SSHSessionProtocol(protocol.Protocol, protocol.ProcessProtocol):
     def errReceived(self, err):
         self.session.conn.sendExtendedData(self.session, EXTENDED_DATA_STDERR, err)
 
-    def connectionLost(self, reason):
+    def connectionLost(self, reason = None):
         self.session.loseConnection()
 
     processEnded = connectionLost
 
+class SSHSessionClient:
+
+    def dataReceived(self, data):
+        self.transport.write(data)
 
 MSG_GLOBAL_REQUEST                = 80
 MSG_REQUEST_SUCCESS               = 81

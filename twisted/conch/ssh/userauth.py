@@ -48,6 +48,7 @@ class SSHUserAuthServer(service.SSHService):
         if kind not in self.supportedAuthentications:
             return defer.fail(error.ConchError('unsupported authentication, failing'))
         d = self.transport.factory.authorizer.getIdentityRequest(user)
+        print self.transport.factory.authorizer
         d.pause()
         d.addCallback(self._cbTryAuth, kind, data)
         return d

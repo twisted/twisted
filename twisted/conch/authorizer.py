@@ -27,7 +27,7 @@ class OpenSSHConchAuthorizer(authorizer.DefaultAuthorizer):
         try:
             pwd.getpwnam(name)
         except KeyError:
-            defer.fail(error.ConchError('not a valid key'))
+            return defer.fail(error.ConchError('not a valid username'))
         else:
             if not self.identities.has_key(name):
                 log.msg('adding %s for %s' % (self.identityClass, name))

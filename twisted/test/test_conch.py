@@ -276,4 +276,3 @@ class SSHTransportTestCase(unittest.TestCase):
         port = host[2]
         reactor.connectTCP('localhost', port, SSHTestClientFactory())
         reactor.run()
-
