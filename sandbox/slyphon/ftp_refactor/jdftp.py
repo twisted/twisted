@@ -294,18 +294,18 @@ class DTP(protocol.Protocol):
             transform = None
         return fs.beginFileTransfer(self.pi.fp, self.transport, transform
                 ).addCallback(debugDeferred,'firing at end of file transfer'
-                ).addCallback(self._finishedFileTransfer
+                ).addCallback(self._dtpPostTransferCleanup
                 )
 
-    def _finishedFileTransfer(self, *arg):
-        log.debug("dtp._finishedFileTransfer")
+    def _dtpPostTransferCleanup(self, *arg):
+        log.debug("dtp._dtpPostTransferCleanup")
         self.transport.loseConnection()
         t = self.transport
         log.debug("disconnecting?: %d, disconnected?: %d" % (t.disconnecting, t.disconnected))
 
     def connectionLost(self, reason):
         log.debug('dtp.connectionLost: %s' % reason)
-#        self.pi.cleanupDTP()
+        self.pi._finishedFileTransfer()
         
 
 class DTPFactory(protocol.Factory): 
@@ -356,14 +356,15 @@ class DTPFactory(protocol.Factory):
 # -- FTP-PI (Protocol Interpreter) --
 
 
-def cleanPath(params):
+def cleanPath(path):
     # cleanup backslashes and multiple foreslashes
-    if params:
-        params = re.sub(r'[\\]{2,}?', '/', params)
-        params = re.sub(r'[/]{2,}?','/', params)
-        params = re.sub(r'[*]?', '', params)
-    log.debug('cleaned path: %s' % params)
-    return params
+    log.debug("pre-cleaned path: %s" % path)
+    if path:
+        path = re.sub(r'[\\]{2,}?', '/', path)
+        path = re.sub(r'[/]{2,}?','/', path)
+        path = re.sub(r'[*]?', '', path)
+    log.debug('cleaned path: %s' % path)
+    return path
 
 class FTP(basic.LineReceiver, policies.TimeoutMixin):      
     # FTP is a bit of a misonmer, as this is the PI - Protocol Interpreter
@@ -386,7 +387,8 @@ class FTP(basic.LineReceiver, policies.TimeoutMixin):
         self.dtpPort     = None     # object returned from listenTCP
         self.dtpInetPort = None     # result of dtpPort.getHost() used for saving inet port number
         self.dtpHostPort = None     # client address/port to connect to on PORT command
-        self.timeOut     = None     # how much idleness we can stand before leaving
+
+        
     
     def connectionMade(self):
         log.debug('ftp-pi connectionMade')
@@ -425,6 +427,10 @@ class FTP(basic.LineReceiver, policies.TimeoutMixin):
             d, self.dtpFactory.deferred = self.dtpFactory.deferred, None
             d.errback(FTPTimeoutError('cleaning up dtp!'))
 
+    def setTimeout(self, seconds):
+        log.msg('ftp.setTimeout to %s seconds' % str(seconds))
+        policies.TimeoutMixin.setTimeout(self, seconds)
+
     def lineReceived(self, line):
         "Process the input from the client"
         self.resetTimeout()
@@ -433,7 +439,9 @@ class FTP(basic.LineReceiver, policies.TimeoutMixin):
         line = self.reTelnetChars.sub('', line)  # clean up '\xff\xf4\xff' nonsense
         line = line.encode() 
         try:
-            self.processCommand(*line.split())
+            cmdAndArgs = line.split(' ',1)
+            log.debug('processing command %s' % cmdAndArgs)
+            self.processCommand(*cmdAndArgs)
         except CmdSyntaxError, (e,):
             self.reply(SYNTAX_ERR, string.upper(command))
         except CmdArgSyntaxError, (e,):
@@ -597,9 +605,7 @@ class FTP(basic.LineReceiver, policies.TimeoutMixin):
             d.addCallback(lambda _: self._cbDTPCommand())
             d.addCallback(debugDeferred, 'running cleanupDTP')
             d.addCallback(lambda _: self.cleanupDTP())
-            d.addCallback(debugDeferred, 'running ftp._finishedFileTransfer')
-            d.addCallback(lambda _: self._finishedFileTransfer())
-            d.addCallback(debugDeferred, 'running ftp.setTimeout(%s)' % self.timeOut)
+            d.addCallback(debugDeferred, 'running ftp.setTimeout()')
             d.addCallback(lambda _: self.setTimeout(self.timeOut))
             d.addCallback(debugDeferred, 'running ftp._unblock')
             d.addCallback(lambda _: self._unblock())
@@ -622,9 +628,6 @@ class FTP(basic.LineReceiver, policies.TimeoutMixin):
     def _cbDTPCommand(self):
         '''called back when any DTP command has completed successfully'''
         log.debug("DTP Command success")
-        return
-#        self.cleanupDTP()
-#        self.setTimeout(self.timeOut)               # restart timeOut clock after DTP returns
 
     def ftp_USER(self, params, *_):
         """Get the login name, and reset the session
@@ -837,10 +840,14 @@ class FTP(basic.LineReceiver, policies.TimeoutMixin):
         self.shell.cdup()
         self.reply(REQ_FILE_ACTN_COMPLETED_OK)
 
-    def ftp_RETR(self, params, *_):
+    def ftp_RETR(self, params):
         if self.dtpTxfrMode is None:
             raise BadCmdSequenceError('must send PORT or PASV before RETR')
         self.fp, self.fpsize = self.shell.retr(cleanPath(params))
+        if self.dtpInstance and self.dtpInstance.connected:
+            self.reply(DATA_CNX_ALREADY_OPEN_START_XFR)
+        else:
+            self.reply(FILE_STATUS_OK_OPEN_DATA_CNX)
         self._doDTPCommand('RETR')
 
     def ftp_STRU(self, params="", *_):
@@ -874,7 +881,7 @@ class FTPFactory(protocol.Factory):
         pi            = protocol.Factory.buildProtocol(self, addr)
         pi.protocol   = self.protocol
         pi.portal     = self.portal
-        pi.timeOut    = self.timeOut
+        pi.timeOut    = FTPFactory.timeOut
         pi.factory    = self
         self.instances.append(pi)
         return pi
