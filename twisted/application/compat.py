@@ -383,8 +383,8 @@ def convert(oldApp):
             s.privileged = 1
     for s in oldApp.services.values():
         if not components.implements(s, service.IService):
-            s = _NewService(s)
             s.serviceParent = None
+            s = _NewService(s)
             s.setServiceParent(IOldApplication(c))
         else:
             s.serviceParent = None
