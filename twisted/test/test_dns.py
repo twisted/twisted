@@ -67,7 +67,24 @@ class RountripDNSTestCase(unittest.TestCase):
         f.seek(0, 0)
         result = dns.RRHeader()
         result.decode(f)
-        self.assertEquals(result.name.name, "test.org")
+        self.assertEquals(str(result.name), "test.org")
         self.assertEquals(result.type, 3)
         self.assertEquals(result.cls, 4)
         self.assertEquals(result.ttl, 17)
+
+
+    def testResources(self):
+        names = (
+            "this.are.test.name",
+            "will.compress.will.this.will.name.will.hopefully",
+            "test.CASE.preSErVatIOn.YeAH",
+            "a.s.h.o.r.t.c.a.s.e.t.o.t.e.s.t",
+            "singleton"
+        )
+        for s in names:
+            f = StringIO()
+            dns.SimpleRecord(s).encode(f)
+            f.seek(0, 0)
+            result = dns.SimpleRecord()
+            result.decode(f)
+            self.assertEquals(str(result.name), s)
