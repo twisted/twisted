@@ -31,6 +31,7 @@ from twisted.internet import protocol
 
 # Sibling Imports
 import abstract, fdesc
+from main import CONNECTION_LOST
 
 
 _stdio_in_use = 0
