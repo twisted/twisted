@@ -4,8 +4,7 @@
 
 from twisted.trial import unittest
 
-from twisted.internet import task
-from twisted.internet import reactor
+from twisted.internet import task, reactor, defer
 
 class TestException(Exception):
     pass
@@ -66,8 +65,6 @@ class LoopTestCase(unittest.TestCase):
 
     def testBadDelay(self):
         lc = task.LoopingCall(lambda: None)
-        self.assertRaises(ValueError, lc.start, 0)
-        lc = task.LoopingCall(lambda: None)
         self.assertRaises(ValueError, lc.start, -1)
     
     def testDelayedStart(self):
@@ -79,3 +76,16 @@ class LoopTestCase(unittest.TestCase):
         d = lc.start(10, now=False)
         lc.stop()
         self.failIf(ran)
+
+    def testEveryIteration(self):
+        ran = []
+
+        def foo():
+            ran.append(None)
+            if len(ran) > 5:
+                lc.stop()
+
+        lc = task.LoopingCall(foo)
+        d = lc.start(0)
+        x = unittest.wait(d)
+        self.assertEquals(len(ran), 6)

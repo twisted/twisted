@@ -50,7 +50,7 @@ class LoopingCall:
         raises an exception.
         """
         assert not self.running
-        if interval <= 0:
+        if interval < 0:
             raise ValueError, "interval must be >= 0"
         self.running = True
         d = self.deferred = defer.Deferred()
@@ -90,6 +90,10 @@ class LoopingCall:
             self._reschedule()
     
     def _reschedule(self):
+        if self.interval == 0:
+            self.call = reactor.callLater(0, self._loop)
+            return
+
         fromNow = self.starttime - seconds()
 
         while self.running:
