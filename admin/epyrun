@@ -84,17 +84,45 @@ from twisted.internet import reactor
 # epydoc
 from epydoc.cli import cli
 from epydoc.html import HTMLFormatter
+import epydoc.html
 
-def _uid_to_uri(self, uid):
-    if uid.is_module() or uid.is_class():
-        return uid.name() + '.html'
+class TwistedHTMLFormatter(HTMLFormatter):
+    def _uid_to_uri(self, uid):
+        if uid.is_module() or uid.is_class():
+            return uid.name() + '.html'
 
-    parent = uid.parent()
-    if parent is None:
-        return uid.name() + '.html'
+        parent = uid.parent()
+        if parent is None:
+            return uid.name() + '.html'
 
-    return parent.name() + '.html#' + uid.shortname()
-HTMLFormatter._uid_to_uri = _uid_to_uri
+        return parent.name() + '.html#' + uid.shortname()
+
+    def _method_to_html(self, uid):
+        """
+        Dodgy redirect hack.
+        """
+        str = ('<html><head>\n'
+               '<meta http-equiv=refresh content="0; url=%s#%s">\n'
+               '</head></html>\n')
+        str = str % (self._uid_to_uri(uid.parent()), uid.shortname())
+        return str
+
+    def _write(self, directory, progress_callback):
+        HTMLFormatter._write(self, directory, progress_callback)
+        
+        # Write method redirectors
+        self._write_method_redirects(directory)
+
+    def _write_method_redirects(self, directory):
+        for uid in self._filtersort_uids(self._docmap.keys()):
+            if uid.is_method():
+                doc = self._docmap[uid]
+                filename = os.path.join(directory, uid.name() + '.html')
+                s = self._method_to_html(uid)
+                open(filename, 'w').write(s)
+
+epydoc.html.HTMLFormatter = TwistedHTMLFormatter
+        
 
 modnames = []
 def addMod(arg, path, files):
