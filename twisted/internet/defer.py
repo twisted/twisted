@@ -144,6 +144,14 @@ def timeout(deferred):
 def passthru(arg):
     return arg
 
+def setDebugging(on):
+    """Enable or disable Deferred debugging.
+
+    When debugging is on, the call stacks from creation and invocation are
+    recorded, and added to any AlreadyCalledErrors we raise.
+    """
+    Deferred.debug=bool(on)
+
 class Deferred:
     """This is a callback which will be put off until later.
 
@@ -163,14 +171,17 @@ class Deferred:
     default = 0
     paused = 0
     timeoutCall = None
-    # enable .debug to record creation/first-invoker call stacks, and they
-    # will be added to any AlreadyCalledErrors we raise
+    _debugInfo = None
+
+    # Keep this class attribute for now, for compatibility with code that
+    # sets it directly.
     debug = False
 
     def __init__(self):
         self.callbacks = []
         if self.debug:
-            self.creator = traceback.format_stack()[:-1]
+            self._debugInfo = DebugInfo()
+            self._debugInfo.creator = traceback.format_stack()[:-1]
 
     def addCallbacks(self, callback, errback=None,
                      callbackArgs=None, callbackKeywords=None,
@@ -286,12 +297,12 @@ class Deferred:
 
     def _startRunCallbacks(self, result):
         if self.called:
-            if not self.debug:
-                raise AlreadyCalledError
-            extra = "\n" + self._debugInfo()
-            raise AlreadyCalledError(extra)
+            if self.debug:
+                extra = "\n" + self._debugInfo._getDebugTracebacks()
+                raise AlreadyCalledError(extra)
+            raise AlreadyCalledError
         if self.debug:
-            self.invoker = traceback.format_stack()[:-2]
+            self._debugInfo.invoker = traceback.format_stack()[:-2]
         self.called = True
         self.result = result
         if self.timeoutCall:
@@ -299,21 +310,9 @@ class Deferred:
                 self.timeoutCall.cancel()
             except:
                 pass
-            # Avoid reference cycles, because this object defines __del__
+            
             del self.timeoutCall
         self._runCallbacks()
-
-    def _debugInfo(self):
-        info = ''
-        if hasattr(self, "creator"):
-            info += " C: Deferred was created:\n C:"
-            info += "".join(self.creator).rstrip().replace("\n","\n C:")
-            info += "\n"
-        if hasattr(self, "invoker"):
-            info += " I: First Invoker was:\n I:"
-            info += "".join(self.invoker).rstrip().replace("\n","\n I:")
-            info += "\n"
-        return info
 
     def _runCallbacks(self):
         if not self.paused:
@@ -341,9 +340,15 @@ class Deferred:
                         break
                 except:
                     self.result = failure.Failure()
+            
         if isinstance(self.result, failure.Failure):
             self.result.cleanFailure()
-
+            if self._debugInfo is None:
+                self._debugInfo = DebugInfo()
+            self._debugInfo.failResult = self.result
+        else:
+            if self._debugInfo is not None:
+                self._debugInfo.failResult = None
 
     def arm(self):
         """This method is deprecated.
@@ -396,6 +401,21 @@ class Deferred:
         return "<%s at %s>" % (cname, hex(unsignedID(self)))
     __repr__ = __str__
 
+class DebugInfo:
+    """Deferred debug helper"""
+    failResult = None
+
+    def _getDebugTracebacks(self):
+        info = ''
+        if hasattr(self, "creator"):
+            info += " C: Deferred was created:\n C:"
+            info += "".join(self.creator).rstrip().replace("\n","\n C:")
+            info += "\n"
+        if hasattr(self, "invoker"):
+            info += " I: First Invoker was:\n I:"
+            info += "".join(self.invoker).rstrip().replace("\n","\n I:")
+            info += "\n"
+        return info
 
     def __del__(self):
         """Print tracebacks and die.
@@ -403,13 +423,12 @@ class Deferred:
         If the *last* (and I do mean *last*) callback leaves me in an error
         state, print a traceback (if said errback is a Failure).
         """
-        if (self.called and
-            isinstance(self.result, failure.Failure)):
+        if self.failResult is not None:
             log.msg("Unhandled error in Deferred:", isError=True)
-            if self.debug:
-                log.msg("(debug: " + self._debugInfo() + ")", isError=True)
-            log.err(self.result)
-
+            debugInfo = self._getDebugTracebacks()
+            if debugInfo != '':
+                log.msg("(debug: " + debugInfo + ")", isError=True)
+            log.err(self.failResult)
 
 class DeferredList(Deferred):
     """I combine a group of deferreds into one callback.
