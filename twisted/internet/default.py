@@ -1,5 +1,5 @@
 # -*- Python -*-
-# $Id: default.py,v 1.53 2002/12/17 02:31:59 z3p Exp $
+# $Id: default.py,v 1.54 2003/01/01 13:18:38 tv Exp $
 #
 # Twisted, the Framework of Your Internet
 # Copyright (C) 2001 Matthew W. Lefkowitz
@@ -29,6 +29,7 @@ from time import time, sleep
 import os
 import socket
 import sys
+import types
 
 from twisted.internet.interfaces import IReactorCore, IReactorTime, IReactorUNIX
 from twisted.internet.interfaces import IReactorTCP, IReactorUDP, IReactorSSL
@@ -142,6 +143,10 @@ class TCPConnector(BaseConnector):
 
     def __init__(self, reactor, host, port, factory, timeout, bindAddress):
         self.host = host
+        if isinstance(port, types.IntType):
+            port = port
+        else:
+            port = socket.getservbyname(port, 'tcp')
         self.port = port
         self.bindAddress = bindAddress
         BaseConnector.__init__(self, reactor, factory, timeout)
