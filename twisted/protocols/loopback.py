@@ -25,14 +25,19 @@ class LoopbackRelay(protocol.Transport):
     buffer = ''
     shouldLose = 0
 
-    def __init__(self, target):
+    def __init__(self, target, logFile=None):
         self.target = target
+        self.logFile = logFile
 
     def write(self, data):
         #print "writing", `data`
         self.buffer = self.buffer + data
+        if self.logFile:
+            self.logFile.write("loopback writing %s\n" % repr(data))
 
     def clearBuffer(self):
+        if self.logFile:
+            self.logFile.write("loopback receiving %s\n" % repr(self.buffer))
         try:
             self.target.dataReceived(self.buffer)
         finally:
@@ -46,15 +51,18 @@ class LoopbackRelay(protocol.Transport):
     def getHost(self):
         return 'loopback'
 
-def loopback(server, client):
-    serverToClient = LoopbackRelay(client)
-    clientToServer = LoopbackRelay(server)
+def loopback(server, client, logFile=None):
+    serverToClient = LoopbackRelay(client, logFile)
+    clientToServer = LoopbackRelay(server, logFile)
     server.makeConnection(serverToClient)
     client.makeConnection(clientToServer)
     while 1:
         serverToClient.clearBuffer()
         clientToServer.clearBuffer()
-        if serverToClient.shouldLose or clientToServer.shouldLose:
+        if serverToClient.shouldLose:
+            serverToClient.clearBuffer()
+            break
+        elif clientToServer.shouldLose:
             break
     client.connectionLost()
     server.connectionLost()
