@@ -1,6 +1,7 @@
 #include <unistd.h>
 #include <queue>
 #include <deque>
+#include <iostream>
 #include <sys/uio.h>
 #include <boost/python.hpp> 
 #include <boost/python/call_method.hpp>
@@ -46,12 +47,17 @@ namespace TwistedImpl
 	
 	// fix first item to take into account m_bytessent:
 	inline void twiddleFirst() {
+	    if (!m_bytessent)
+		return;
+	    assert (m_vecs[m_offset].iov_len > m_bytessent);
 	    m_vecs[m_offset].iov_base = (char*)(m_vecs[m_offset].iov_base) + m_bytessent;
 	    m_vecs[m_offset].iov_len -= m_bytessent;
 	}
 
 	// unfix first item to no longer take into account m_bytessent:
 	inline void untwiddleFirst() {
+	    if (!m_bytessent)
+		return;
 	    m_vecs[m_offset].iov_base = (char*)(m_vecs[m_offset].iov_base) - m_bytessent;
 	    m_vecs[m_offset].iov_len += m_bytessent;
 	}
@@ -60,17 +66,17 @@ namespace TwistedImpl
 	    ensureEnoughSpace();
 	    m_vecs[m_offset + m_used].iov_base = (void*) buf;
 	    m_vecs[m_offset + m_used].iov_len = len;
-	    m_used += 1;
+	    m_used++;
 	    m_ownerqueue.push(std::make_pair(isExternal, p));
 	}
 		
 	// Adding locally owned storage:
-	inline void add(const char* buf, size_t len) {
-	    if (m_used && m_vecs[m_offset + m_used - 1].iov_base == (void*)buf) {
-		m_vecs[m_offset + m_used - 1].iov_len += len;
-	    } else {
+	inline void add(const char* buf, size_t len, bool newChunk) {
+	    //if (!newChunk && m_used && m_vecs[m_offset + m_used - 1].iov_base == (void*)buf) {
+	    //m_vecs[m_offset + m_used - 1].iov_len += len;
+	    //} else {
 		reallyAdd(buf, len, OwnerPtr(), false);
-	    }
+		//}
 	}
 
 	// Add externally owned storage:
@@ -120,6 +126,40 @@ namespace TwistedImpl
 	~LocalBufferManager();
     };    
 } // namespace TwistedImpl
+
+
+namespace {
+    bool checkLocalBuffer(const TwistedImpl::LocalBuffer& l) {
+	return (l.offset <= TwistedImpl::LocalBuffer::CHUNK_SIZE * l.numchunks) &&
+	 (l.len <= TwistedImpl::LocalBuffer::CHUNK_SIZE * l.numchunks) &&
+	 (l.len + l.offset <= TwistedImpl::LocalBuffer::CHUNK_SIZE * l.numchunks) &&
+	 (l.available() <= TwistedImpl::LocalBuffer::CHUNK_SIZE * l.numchunks);
+    }
+
+    bool checkBuffered(size_t bufferedBytes, const TwistedImpl::IOVecManager& iov, 
+		       const TwistedImpl::LocalBufferManager& lbm)
+    {
+	bufferedBytes += iov.m_bytessent;
+	size_t iobuf = 0;
+	for (size_t i = 0; i < iov.m_used; i++) {
+	    iobuf += iov.m_vecs[iov.m_offset + i].iov_len;
+	}
+	if (iobuf != bufferedBytes) {
+	    std::cerr << "IOVec: " << iobuf << ", BufferdBytes: " << bufferedBytes << std::endl;
+	    return false;
+	}
+	size_t lbmbuf = 0;
+	for (std::deque<TwistedImpl::LocalBuffer>::const_iterator it = lbm.m_localbuffers.begin();
+	     it != lbm.m_localbuffers.end(); ++it) {
+	    lbmbuf += it->len;
+	}
+	if (lbmbuf != bufferedBytes) {
+	    std::cerr << "LocalBuffers: " << lbmbuf << ", BufferdBytes: " << bufferedBytes << std::endl;
+	    return  false;
+	}
+	return true;
+    }
+}
 
 
 namespace Twisted
@@ -175,19 +215,22 @@ namespace Twisted
 	void write(size_t reserve, W writer) {
 	    if (!connected || reserve == 0)
 		return;
+	    assert (checkBuffered(m_bufferedbytes, m_iovec, m_local));
 	    char* buf = m_local.getBuffer(reserve);
 	    size_t written = writer(buf);
 	    assert (written <= reserve);
 	    m_local.didntUse(reserve - written);
 	    if (written == 0)
 		return;
-	    m_iovec.add(buf, written);
 	    m_bufferedbytes += written;
+	    const LocalBuffer& b = m_local.m_localbuffers.back();
+	    m_iovec.add(buf, written, b.len == written);
 	    if (m_hasproducer && m_bufferedbytes > 131072) {
 		this->producerPaused = true;
 		m_producer.attr("pauseProducing")();
 	    }
 	    startWriting();
+	    assert (checkBuffered(m_bufferedbytes, m_iovec, m_local));
 	}
 
 	void write(char* buf, size_t len, OwnerPtr owner) {

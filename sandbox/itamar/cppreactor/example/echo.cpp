@@ -23,11 +23,11 @@ struct Writer
 class Echo : public Protocol
 {
 private:
-    char buf[65536];
+    char buf[131072];
 public:
     virtual void connectionMade()
     {
-	transport->setReadBuffer(buf, 65536);
+	transport->setReadBuffer(buf, 131072);
 	callLater(1, boost::bind(printNum, 1));
 	callLater(2, boost::bind(printNum, 2));
 	std::cout << "connectionMade" << std::endl;
@@ -36,7 +36,7 @@ public:
     virtual void dataReceived(char* b, int buflen)
     {
 	transport->write(buflen, Writer(b, buflen));
-	transport->setReadBuffer(this->buf, 65536);
+	transport->setReadBuffer(this->buf, 131072);
     }
 
     virtual void connectionLost(object reason)

@@ -10,19 +10,31 @@ using namespace boost::python;
 #include "twisted/util.h"
 using namespace Twisted;
 
-
 namespace {
     object None = import("__builtin__").attr("None");
+
+    void debugLBM(TwistedImpl::LocalBufferManager* lbm) {
+	std::cerr << "LocalBufferManager: ";
+	for (std::deque<LocalBuffer>::iterator it = lbm->m_localbuffers.begin();
+	     it != lbm->m_localbuffers.end(); ++it) {
+	    std::cerr << (int) it->buf << "," << it->numchunks << ",";
+	    std::cerr << it->offset << "," << it->len << std::endl;
+	}
+    }
 }
+
 
 void TwistedImpl::IOVecManager::ensureEnoughSpace() 
 {
+    assert (m_offset <= m_len);
+    assert (m_used <= m_len);
+    assert (m_offset + m_used <= m_len);
     if (m_len > m_offset + m_used) {
 	return;
     }
     // no slot at end, check if we can move
     if (m_offset > 128) {
-	::memmove(m_vecs, m_vecs + m_offset, m_used);
+	::memmove(m_vecs, m_vecs + m_offset, m_used * sizeof(iovec));
 	m_offset = 0;
     } else {
 	// allocate more
@@ -34,8 +46,15 @@ void TwistedImpl::IOVecManager::ensureEnoughSpace()
 
 char* TwistedImpl::LocalBufferManager::getBuffer(size_t bytes)
 {
+    if (!m_localbuffers.empty()) {
+	assert (checkLocalBuffer(m_localbuffers.front()));
+	assert (checkLocalBuffer(m_localbuffers.back()));
+    }    
     // first, make sure we have a buffer with sufficient 
     if (m_localbuffers.empty() || m_localbuffers.back().available() < bytes) {
+	while (!m_localbuffers.empty() && m_localbuffers.back().len == 0) {
+	    m_localbuffers.pop_back();
+	}
 	LocalBuffer b;
 	b.numchunks = bytes / LocalBuffer::CHUNK_SIZE;
 	if (bytes % LocalBuffer::CHUNK_SIZE)
@@ -43,6 +62,7 @@ char* TwistedImpl::LocalBufferManager::getBuffer(size_t bytes)
 	b.offset = 0;
 	b.len = 0;
 	b.buf = (char*) new char[LocalBuffer::CHUNK_SIZE * b.numchunks];
+	assert (LocalBuffer::CHUNK_SIZE * b.numchunks >= bytes);
 	m_localbuffers.push_back(b);
     }
     LocalBuffer& b = m_localbuffers.back();
@@ -56,6 +76,10 @@ void TwistedImpl::LocalBufferManager::didntUse(size_t bytes)
     LocalBuffer& b = m_localbuffers.back();
     assert (bytes <= b.len);
     b.len -= bytes;
+    if (!m_localbuffers.empty()) {
+	assert(checkLocalBuffer(m_localbuffers.front()));
+	assert(checkLocalBuffer(m_localbuffers.back()));
+    }
 }
 
 void TwistedImpl::LocalBufferManager::freePartOfBuffer(size_t bytes)
@@ -66,8 +90,9 @@ void TwistedImpl::LocalBufferManager::freePartOfBuffer(size_t bytes)
     b.len -= bytes;
     if (b.len == 0) {
 	b.offset = 0;
-	if (m_localbuffers.size() == 1)
+	if (m_localbuffers.size() == 1) {
 	    return;
+	}
 	if (m_localbuffers.back().available() > 0) {
 	    delete[] b.buf;
 	    m_localbuffers.pop_front();
@@ -75,9 +100,17 @@ void TwistedImpl::LocalBufferManager::freePartOfBuffer(size_t bytes)
 	    m_localbuffers.push_back(b);
 	    m_localbuffers.pop_front();
 	}
+	if (!m_localbuffers.empty()) {
+	    assert(checkLocalBuffer(m_localbuffers.front()));
+	    assert(checkLocalBuffer(m_localbuffers.back()));
+	}
 	return;
     } else {
 	b.offset += bytes;
+    }
+    if (!m_localbuffers.empty()) {
+	assert(checkLocalBuffer(m_localbuffers.front()));
+	assert(checkLocalBuffer(m_localbuffers.back()));
     }
 }
 
@@ -88,6 +121,7 @@ TwistedImpl::LocalBufferManager::~LocalBufferManager()
 	delete[] it->buf;
     }
 }
+
 
 Twisted::TCPTransport::TCPTransport(object self) : 
     m_self(self), m_hasproducer(false), m_writable(false), 
@@ -139,10 +173,12 @@ object Twisted::TCPTransport::doWrite()
     if (!m_protocol) {
 	return import("twisted.internet.tcp").attr("Connection").attr("doWrite")(m_self);
     }
+    assert (checkBuffered(m_bufferedbytes, m_iovec, m_local));
     m_iovec.twiddleFirst();
     ssize_t result = ::writev(m_sockfd, m_iovec.m_vecs + m_iovec.m_offset, 
 			  std::min(int(m_iovec.m_used), IOV_MAX));
     m_iovec.untwiddleFirst();
+    assert (result <= m_bufferedbytes);
     if (result < 0) {
 	if (errno == EINTR) {
 	    return doWrite(); // try again
@@ -157,7 +193,7 @@ object Twisted::TCPTransport::doWrite()
     }
     if (m_bufferedbytes == 0) {
 	assert (m_local.m_localbuffers.empty() || 
-		m_local.localbuffers.front().len == 0);
+		m_local.m_localbuffers.front().len == 0);
 	assert (m_iovec.m_used == 0);
 	stopWriting();
 	if (m_hasproducer && (!this->streamingProducer || this->producerPaused)) {
@@ -175,6 +211,7 @@ void Twisted::TCPTransport::wrote(size_t bytes)
     if (bytes == 0)
 	return;
     assert (bytes <= m_bufferedbytes);
+    assert (checkBuffered(m_bufferedbytes, m_iovec, m_local));
     m_bufferedbytes -= bytes;
     if (m_iovec.m_bytessent) {
 	bytes += m_iovec.m_bytessent;
@@ -197,6 +234,7 @@ void Twisted::TCPTransport::wrote(size_t bytes)
 	}
     }
     assert (bytes == 0);
+    assert (checkBuffered(m_bufferedbytes, m_iovec, m_local));
 }
 
 
