@@ -23,15 +23,21 @@ class ITerminalProtocol(components.Interface):
         """Called to indicate the size of the terminal.
 
         A terminal of 80x24 should be assumed if this method is not
-        called.  This method may not be called for real terminals.
+        called.  This method might not be called for real terminals.
         """
 
     def unhandledControlSequence(self, seq):
         """Called when an unsupported control sequence is received.
+
+        @type seq: C{str}
+        @param seq: The whole control sequence which could not be interpreted.
         """
 
     def connectionLost(self, reason):
-        pass
+        """Called when the connection has been lost.
+
+        reason is a Failure describing why.
+        """
 
 class TerminalProtocol(object):
     __implements__ = (ITerminalProtocol,)

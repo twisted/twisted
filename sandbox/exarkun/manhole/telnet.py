@@ -633,9 +633,7 @@ class TelnetTransport(Telnet, ProtocolTransportMixin):
 
     @ivar protocolFactory: A callable which returns protocol
     instances.  This will be invoked when a connection is
-    established.  It is passed the TelnetTransport instance
-    as the first argument, and any additional arguments which
-    were passed to __init__.
+    established.  It is passed *protocolArgs and **protocolKwArgs.
 
     @ivar protocolArgs: A tuple of additional arguments to
     pass to protocolFactory.
