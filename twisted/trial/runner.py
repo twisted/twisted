@@ -722,6 +722,7 @@ class TestMethod(MethodInfoBase, JanitorAndReporterMixin):
                 observer = util.TrialLogObserver().install()
 
                 # Run the setUp method
+                reporter.startTest(self)
                 setUp = UserMethodWrapper(self.setUp, janitor)
                 try:
                     setUp(tci)
@@ -733,12 +734,9 @@ class TestMethod(MethodInfoBase, JanitorAndReporterMixin):
                     else:
                         # give the reporter the illusion that the test has run normally
                         # but don't actually run the test if setUp is broken
-                        reporter.startTest(self)
                         reporter.upDownError(setUp, warn=False, printStatus=False)
                         return
                  
-                reporter.startTest(self)
-
                 # Run the test method
                 try:
                     sys.stdout = util.StdioProxy(sys.stdout)
