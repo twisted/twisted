@@ -220,6 +220,13 @@ class LoopbackTestCase(PortCleanerUpper):
         clientF.reason.trap(error.ConnectionRefusedError)
         #self.assert_(time.time() - start < 0.1)
 
+    def testConnectByServiceFail(self):
+        try:
+            reactor.connectTCP("127.0.0.1", "thisbetternotexist", MyClientFactory())
+        except error.ServiceNameUnknownError:
+            return
+        self.assert_(False, "connectTCP didn't raise ServiceNameUnknownError")
+    
     def testConnectByService(self):
         serv = socket.getservbyname
         try:

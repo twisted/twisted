@@ -819,7 +819,7 @@ class Connector(base.BaseConnector):
             try:
                 port = socket.getservbyname(port, 'tcp')
             except socket.error, e:
-                raise error.ServiceNameUnknownError(string=str(e))
+                raise error.ServiceNameUnknownError(string="%s (%r)" % (e, port))
         self.port = port
         self.bindAddress = bindAddress
         base.BaseConnector.__init__(self, factory, timeout, reactor)
