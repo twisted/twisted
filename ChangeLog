@@ -1,3 +1,10 @@
+2002-11-30  Paul Swartz  <z3p@twistedmatrix.com>
+
+    * Summary of Conch changes:  An actual client (bin/conch) which is mostly
+    compatible with the OpenSSH client.  An optional C module to speed up some
+    of the math operations.  A bunch of other stuff has changed too, but it's
+    hard to summarize a month of work.
+
 2002-11-24  Donovan Preston  <dp@twistedmatrix.com>
 
 	* twisted/web/woven/*: Added the beginnings of a general framework for
