@@ -70,7 +70,7 @@ class NameVirtualHost(resource.Resource):
         if name == "Virtual Hosts":
             return VirtualHostCollection(self)
         else:
-            return resource.Resource.getStaticEntity(self)
+            return resource.Resource.getStaticEntity(self, name)
 
     def addHost(self, name, resrc):
         """Add a host to this virtual host.
