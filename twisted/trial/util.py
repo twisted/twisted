@@ -115,6 +115,9 @@ class LoggedErrors(Exception):
 class DirtyReactorError(Exception):
     """emitted when the reactor has been left in an unclean state"""
 
+class DirtyReactorWarning(Warning):
+    """emitted when the reactor has been left in an unclean state"""
+
 class PendingTimedCallsError(Exception):
     """raised when timed calls are left in the reactor"""
 
@@ -192,7 +195,7 @@ class Janitor(object):
                 s = DIRTY_REACTOR_MSG + repr([repr(obj) for obj in junk])
         if s is not None:
             # raise DirtyReactorError, s
-            warnings.warn(s, DirtyReactorError)
+            warnings.warn(s, DirtyReactorWarning)
 
     do_cleanReactor = classmethod(do_cleanReactor)
 
