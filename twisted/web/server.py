@@ -97,7 +97,6 @@ class Request(pb.Copyable, http.Request):
 
     def getStateToCopyFor(self, issuer):
         x = copy.copy(self.__dict__)
-        print x.keys()
         del x['transport']
         # XXX refactor this attribute out; it's from protocol
         # del x['server']

@@ -1,6 +1,6 @@
 
 # Twisted, the Framework of Your Internet
-# Copyright (C) 2001 Matthew W. Lefkowitz
+# Copyright (C) 2000-2002 Matthew W. Lefkowitz
 # 
 # This library is free software; you can redistribute it and/or
 # modify it under the terms of version 2.1 of the GNU Lesser General Public
@@ -21,7 +21,7 @@ Copyright information for Twisted.
 """
 
 
-version="0.17.2-pre"
+version="0.17.2"
 longversion="Twisted %s" % version
 copyright="Copyright (c) 2000-2002 Matthew William Lefkowitz, all rights reserved."
 

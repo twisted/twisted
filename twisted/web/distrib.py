@@ -64,7 +64,9 @@ class Request(pb.RemoteCopy, server.Request):
     def registerProducer(self, producer, streaming):
         self.remote.callRemote("registerProducer",
                                _ReferenceableProducerWrapper(producer),
-                               streaming)
+                               streaming).addErrback(self.fail)
+    def fail(self, failure):
+        log.msg(failure.getBriefTraceback())
 
 
 pb.setCopierForClass(str(server.Request), Request)
@@ -80,14 +82,15 @@ class Issue:
             self.request.write(result)
             self.request.finish()
 
-    def failed(self, expt):
+    def failed(self, failure):
         self.request.write(
             error.ErrorPage(http.INTERNAL_SERVER_ERROR,
                             "Server Connection Lost",
                             "Connection to distributed server lost:" +
-                            html.PRE(expt)).
+                            html.PRE(failure.getBriefTraceback())).
             render(self.request))
         self.request.finish()
+        log.msg(failure.getBriefTraceback())
 
 
 class ResourceSubscription(resource.Resource):
