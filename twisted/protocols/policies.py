@@ -347,7 +347,7 @@ class TimeoutProtocol(ProtocolWrapper):
         ProtocolWrapper.dataReceived(self, data)
 
     def connectionLost(self, reason):
-        self._cancelTimeout()
+        self.cancelTimeout()
         ProtocolWrapper.connectionLost(self, reason)
 
 class TimeoutFactory(WrappingFactory):
