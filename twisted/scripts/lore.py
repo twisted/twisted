@@ -24,6 +24,7 @@ class Options(usage.Options):
 
     optParameters = [
                      ["input", "i", 'lore'],
+                     ["inputext", "e", ".xhtml", "The extension that your Lore input files have"],
                      ["docsdir", "d", None],
                      ["linkrel", "l", ''],
                      ["output", "o", 'html'],
@@ -79,7 +80,7 @@ def run():
         klass = process.PlainReportingWalker
     if opt['null']: 
         klass = process.NullReportingWalker
-    w = klass(df, '.xhtml', opt['linkrel'])
+    w = klass(df, opt['inputext'], opt['linkrel'])
     if opt['files']:
         for fn in opt['files']:
             w.walked.append(('', fn))
