@@ -22,7 +22,7 @@ from twisted.web import resource
 from twisted.web.woven import view
 
 
-class WController(mvc.Controller, Resource):
+class WController(mvc.Controller, resource.Resource):
     """
     A simple controller that automatically passes responsibility on to the view
     class registered for the model. You can override render to perform
@@ -32,7 +32,7 @@ class WController(mvc.Controller, Resource):
     
     def __init__(self, *args, **kwargs):
         mvc.Controller.__init__(self, *args, **kwargs)
-        Resource.__init__(self)
+        resource.Resource.__init__(self)
     
     def setUp(self, request):
         pass
