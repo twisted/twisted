@@ -14,7 +14,8 @@
 
 2004-07-05  Jp Calderone  <exarkun@twistedmatrix.com>
 
-	* bin/newtexaco, twisted/scripts/newtexaco.py: sendmail replacement
+	* bin/mailmail, doc/man/mailmail.1, twisted/scripts/mailmail.py:
+	sendmail replacement
 
 2003-07-04  Dave Peticolas  <dave@krondo.com>
 
