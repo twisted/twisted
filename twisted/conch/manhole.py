@@ -102,29 +102,32 @@ class ManholeInterpreter(code.InteractiveInterpreter):
             sys.displayhook = orighook
 
     def displayhook(self, obj):
+        self.locals['_'] = obj
         if isinstance(obj, defer.Deferred):
             # XXX Ick, where is my "hasFired()" interface?
             if hasattr(obj, "result"):
                 self.write(repr(obj))
+            elif id(obj) in self._pendingDeferreds:
+                self.write("<Deferred #%d>" % (self._pendingDeferreds[id(obj)][0],))
             else:
                 d = self._pendingDeferreds
                 k = self.numDeferreds
-                d[k] = obj
+                d[id(obj)] = (k, obj)
                 self.numDeferreds += 1
                 obj.addCallbacks(self._cbDisplayDeferred, self._ebDisplayDeferred,
-                                 callbackArgs=(k,), errbackArgs=(k,))
+                                 callbackArgs=(k, obj), errbackArgs=(k, obj))
                 self.write("<Deferred #%d>" % (k,))
         elif obj is not None:
             self.write(repr(obj))
 
-    def _cbDisplayDeferred(self, result, k):
+    def _cbDisplayDeferred(self, result, k, obj):
         self.write("Deferred #%d called back: %r" % (k, result), True)
-        del self._pendingDeferreds[k]
+        del self._pendingDeferreds[id(obj)]
         return result
 
-    def _ebDisplayDeferred(self, failure, k):
+    def _ebDisplayDeferred(self, failure, k, obj):
         self.write("Deferred #%d failed: %r" % (k, failure.getErrorMessage()), True)
-        del self._pendingDeferreds[k]
+        del self._pendingDeferreds[id(obj)]
         return failure
 
     def write(self, data, async=False):
@@ -200,7 +203,7 @@ class VT102Writer:
         'identifier': '\x1b[31m',
         'keyword': '\x1b[32m',
         'parameter': '\x1b[33m',
-        'variable': '\x1b[34m',
+        'variable': '\x1b[1;33m',
         'string': '\x1b[35m',
         'number': '\x1b[36m',
         'op': '\x1b[37m'}
