@@ -306,18 +306,18 @@ class Date(Argument):
         try:
             year, month, day = map(positiveInt, args)
         except ValueError:
-            raise InputError, "Invalid date values."
+            raise InputError, "Invalid date"
         if (month, day) == (2, 29):
             if not calendar.isleap(year):
-                raise InputError, "%d was not a leap year." % year
+                raise InputError, "%d was not a leap year" % year
             else:
                 return year, month, day
         try:
             mdays = calendar.mdays[month]
         except IndexError:
-            raise InputError, "Invalid date."
+            raise InputError, "Invalid date"
         if day > mdays:
-            raise InputError, "Invalid date."
+            raise InputError, "Invalid date"
         return year, month, day
 
 
