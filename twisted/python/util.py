@@ -18,7 +18,7 @@
 
 from __future__ import nested_scopes, generators
 
-__version__ = '$Revision: 1.47 $'[11:-2]
+__version__ = '$Revision: 1.48 $'[11:-2]
 
 import os
 import sys
@@ -68,7 +68,7 @@ class InsensitiveDict:
         self.data[k] = (key, value)
 
     def has_key(self, key):
-        """Case insensitive test wether 'key' exists."""
+        """Case insensitive test whether 'key' exists."""
         k = self._lowerOrReturn(key)
         return self.data.has_key(k)
     __contains__=has_key
@@ -82,18 +82,15 @@ class InsensitiveDict:
 
     def keys(self):
         """List of keys in their original case."""
-        return [self._doPreserve(v[0]) for v in self.data.values()]
+        return list(self.iterkeys())
 
     def values(self):
         """List of values."""
-        return [v[1] for v in self.data.values()]
+        return list(self.itervalues())
 
     def items(self):
         """List of (key,value) pairs."""
-        items=[]
-        for k, v in self.data.values():
-            items.append((self._doPreserve(k), v))
-        return items
+        return list(self.iteritems())
 
     def get(self, key, default=None):
         """Retrieve value associated with 'key' or return default value
@@ -121,16 +118,16 @@ class InsensitiveDict:
         return "InsensitiveDict({%s})" % items
 
     def iterkeys(self):
-        for k in self.keys():
-            yield k
+        for v in self.data.itervalues():
+            yield self._doPreserve(v[0])
 
     def itervalues(self):
-        for v in self.values():
-            yield v
+        for v in self.data.itervalues():
+            yield v[1]
 
     def iteritems(self):
-        for i in self.items():
-            yield i
+        for (k, v) in self.data.itervalues():
+            yield self._doPreserve(k), v
 
     def popitem(self):
         i=self.items()[0]
