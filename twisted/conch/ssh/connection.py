@@ -150,7 +150,11 @@ class SSHConnection(service.SSHService):
         channel.dataReceived(data)
 
     def ssh_CHANNEL_EXTENDED_DATA(self, packet):
-        localChannel, typeCode = struct.unpack('>2L', packet[: 8])
+        localChannel, typeCode, dataLength = struct.unpack('>3L', packet[: 12])
+        channel = self.channels[localChannel]
+        if dataLength > channel.localMaxPacket:
+            self.sendClose(channel)
+            return
         data = common.getNS(packet[8:])[0]
         self.channels[localChannel].extReceived(typeCode, data)
 
