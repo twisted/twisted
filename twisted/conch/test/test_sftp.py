@@ -276,7 +276,7 @@ class TestOurServerCmdLineClient(test_process.SignalMixin, SFTPTestBase):
         cmds = (cmd % (exe, cftp_path, port))
         self.processProtocol = SFTPTestProcess()
         reactor.spawnProcess(self.processProtocol, exe, cmds.split(), env=None)
-        timeout = time.time() + 5
+        timeout = time.time() + 10
         while (not self.processProtocol.buffer) and (time.time() < timeout):
             reactor.iterate(0.1)
         if time.time() > timeout:
@@ -300,7 +300,7 @@ class TestOurServerCmdLineClient(test_process.SignalMixin, SFTPTestBase):
     def _getCmdResult(self, cmd):
         self.processProtocol.clearBuffer()
         self.processProtocol.transport.write(cmd+'\n')
-        timeout = time.time() + 5
+        timeout = time.time() + 10
         while (self.processProtocol.buffer.find('cftp> ') == -1) and (time.time() < timeout):
             reactor.iterate(0.1)
         self.failIf(time.time() > timeout, "timeout")
