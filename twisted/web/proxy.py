@@ -110,6 +110,7 @@ class ProxyRequest(http.Request):
         port = self.ports[protocol]
         if ':' in host:
             host, port = string.split(host, ':')
+            port = int(port)
         rest = urlparse.urlunparse(('','')+parsed[2:])
         if not rest:
             rest = rest+'/'
