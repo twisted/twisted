@@ -63,6 +63,7 @@ class SSHUserAuthServer(service.SSHService):
 
     def _cbTryAuth(self, identity, kind, data):
         log.msg('%s trying auth %s with identity' % (identity.name, kind))
+        self.identity = identity
         f = getattr(self,'auth_%s'%kind, None)
         if f:
             return f(identity, data)
@@ -88,6 +89,7 @@ class SSHUserAuthServer(service.SSHService):
         if self.areDone():
             self.cancelLoginTimeout.cancel()
             self.transport.sendPacket(MSG_USERAUTH_SUCCESS, '')
+            self.transport.authenticatedUser = self.identity
             self.transport.setService(self.transport.factory.services[self.nextService]())
         else:
             self.transport.sendPacket(MSG_USERAUTH_FAILURE, NS(','.join(self.supportedAuthentications))+'\xff')

@@ -32,6 +32,13 @@ except:
 else:
     import crypt
 
+try:
+    # get these from http://www.twistedmatrix.com/users/z3p/files/pyshadow-0.1.tar.gz
+    import md5_crypt
+    import shadow
+except:
+    shadow = None
+
 from twisted.cred import identity
 from twisted.internet import defer
 
@@ -59,6 +66,21 @@ class ConchIdentity(identity.Identity):
         """
         self.clients[serviceName] = clientClass
 
+    def getUserGroupID(self):
+        """return a tuple of (uid, gid) for this user.
+        """
+        raise NotImplementedError
+
+    def getHomeDir(self):
+        """return the home directory for this user.
+        """
+        raise NotImplementedError
+
+    def getShell(self):
+        """return the shell for this user.
+        """
+        raise NotImplementedError
+
 class OpenSSHConchIdentity(ConchIdentity):
 
     # XXX fail slower for security reasons
@@ -84,12 +106,38 @@ class OpenSSHConchIdentity(ConchIdentity):
             except KeyError: # no such user
                 return defer.fail(error.ConchError('no such user'))
             else:
-                if cryptedPass in ['*', 'x']: # shadow, fail for now
-                    return defer.fail(error.ConchError('cant read shadow'))
-                ourCryptedPass = crypt.crypt(password, cryptedPass[:2])
-                if ourCryptedPass == cryptedPass:
-                    return defer.succeed('')
-                return defer.fail(error.ConchError('bad password'))
-        return defer.fail(error.ConchError('cannot do password auth')) # can't do password auth with out this now
+                if cryptedPass not in ['*', 'x']:
+                    ourCryptedPass = crypt.crypt(password, cryptedPass[:2])
+                    if ourCryptedPass == cryptedPass:
+                        return defer.succeed('')
+                    return defer.fail(error.ConchError('bad password'))
 
+        if shadow:
+            try:
+                shadowPass = shadow.getspnam(self.name)[1]
+            except KeyError:
+                return defer.fail(error.ConchError('no such user'))
+            salt = shadowPass.split('$')[2]
+            if shadowPass == md5_crypt.md5_crypt(password, salt):
+                return defer.succeed('')
+            return defer.fail(error.ConchError('bad password'))
 
+    return defer.fail(error.ConchError('cannot do password auth')) # can't do password auth with out this now
+
+    def getUserGroupID(self):
+        if pwd:
+           return pwd.getpwnam(self.name)[2:4]
+
+        raise NotImplementedError, 'cannot get uid/gid without pwd'
+
+    def getHomeDir(self):
+        if pwd:
+            return pwd.getpwnam(self.name)[5]
+
+        raise NotImplementedError, 'cannot get home directory without pwd'
+
+    def getShell(self):
+        if pwd:
+            return pwd.getpwnam(self.name)[6]
+
+        raise NotImplementedError, 'cannot get shell without pwd'

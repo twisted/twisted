@@ -53,11 +53,14 @@ class SSHSession(SSHChannel):
         if not self.environ.has_key('TERM'): # we didn't get a pty-req
             log.msg('tried to get shell without pty, failing')
             return 0
-        shell = '/bin/sh' # fix this
+        user = self.transport.authenticatedUser
+        uid, gid = user.getUserGroupID()
+        homeDir = user.getHomeDir()
+        shell = user.getShell()
         try:
             self.client = SSHSessionClient()
             pty = reactor.spawnProcess(SSHSessionProtocol(self, self.client),  \
-              shell, ["-"], self.environ, '/tmp', usePTY = 1)
+              shell, ["-"], self.environ, homeDir, uid, gid, usePTY = 1)
             fcntl.ioctl(pty.fileno(), tty.TIOCSWINSZ, 
                         struct.pack('4H', *self.winSize))
             if self.modes:
