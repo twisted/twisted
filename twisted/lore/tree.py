@@ -14,7 +14,7 @@
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
-import re, os, cStringIO, time, cgi, glob, string
+import re, os, cStringIO, time, cgi, string
 from twisted import copyright
 from twisted.python import htmlizer, text
 from twisted.web import microdom, domhelpers
