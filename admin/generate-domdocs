@@ -154,9 +154,10 @@ class Walker:
             self.percentdone((float(i) / len(self.walked)), fname)
             document = dom.parse(open(fullpath))
             template = self.templ.cloneNode(1)
-            self.munge(document, template, linkrel, d, fullpath)
+            munge(document, template, linkrel, d, fullpath, self.ext, self.cache)
             template.writexml(open(fname+self.ext, 'wb'))
         self.percentdone(1., "*Done*")
+
     def percentdone(self, percent, fname):
         # override for neater progress bars
         proglen = 40
@@ -170,104 +171,104 @@ class Walker:
 
 
 
-    def munge(self, document, template, linkrel, d, fullpath):
-        # relative links to html files
-        for node in (findElementsWithAttribute(template, "href")+
-                     findElementsWithAttribute(document, "href")):
-            href = node.getAttribute("href")
-            if not (href.startswith("http://") or href.startswith("mailto:")):
-                fname = os.path.splitext(href)
-                if len(fname) == 2 and fname[1] == '.html':
-                    # print 'rel link', href
-                    node.setAttribute("href", fname[0] + self.ext)
-        for node in findElementsWithAttribute(template, "class", "mtime"):
-            mode, ino, dev, nlink, uid, gid, size, atime, mtime, ctime =\
-                  os.stat(fullpath)
-            # print mtime
-            node.appendChild(dom.Text(time.asctime(time.localtime(mtime))))
-        # things linked from the top
-        for node in (
-            findElementsWithAttribute(template,"src") +
-            findElementsWithAttribute(template,"href") +
-            findElementsWithAttribute(document, "fromtop")):
-            if node.hasAttribute('src'):
-                attr = 'src'
-            else:
-                attr = 'href'
-            node.setAttribute(attr, linkrel+node.getAttribute(attr))
-        
-        # API references
-        for node in findElementsWithAttribute(document, "class", "API"):
-            if len(node.childNodes) > 1:
-                print 'There are too many child nodes of this API link.'
-            base = ""
-            if node.hasAttribute("base"):
-                base = node.getAttribute("base") + "."
-            newref = self.cache.match(base + node.childNodes[0].nodeValue)
-            if newref:
-                node2 = document.createElement("a")
-                node2.setAttribute("href", newref)
-                node2.childNodes = node.childNodes
-                node.childNodes = [node2]
-        for node in findElementsWithAttribute(document, "class", "py-listing"):
-            fn = node.getAttribute("href")
-            outfile = cStringIO.StringIO()
-            fontifyFiles(open(os.path.join(d, fn)), outfile)
-            val = outfile.getvalue()
+def munge(document, template, linkrel, d, fullpath, ext, cache):
+    # relative links to html files
+    for node in (findElementsWithAttribute(template, "href")+
+                 findElementsWithAttribute(document, "href")):
+        href = node.getAttribute("href")
+        if not (href.startswith("http://") or href.startswith("mailto:")):
+            fname = os.path.splitext(href)
+            if len(fname) == 2 and fname[1] == '.html':
+                # print 'rel link', href
+                node.setAttribute("href", fname[0] + ext)
+    for node in findElementsWithAttribute(template, "class", "mtime"):
+        mode, ino, dev, nlink, uid, gid, size, atime, mtime, ctime =\
+              os.stat(fullpath)
+        # print mtime
+        node.appendChild(dom.Text(time.asctime(time.localtime(mtime))))
+    # things linked from the top
+    for node in (
+        findElementsWithAttribute(template,"src") +
+        findElementsWithAttribute(template,"href") +
+        findElementsWithAttribute(document, "fromtop")):
+        if node.hasAttribute('src'):
+            attr = 'src'
+        else:
+            attr = 'href'
+        node.setAttribute(attr, linkrel+node.getAttribute(attr))
 
-            text = str('<div class="py-listing">'
-                       '<pre class="python">%s</pre>'
-                       '<div class="py-caption">%s - '
-                       '<span class="py-filename">%s</span></div></div>' % (
-                val, getNodeText(node), node.getAttribute("href")))
-            newnode = dom.parseString(text).documentElement
-            node.parentNode.replaceChild(newnode, node)
-            
-        for node in findElementsWithAttribute(document, "class", "python"):
-            if node.tagName == 'pre':
-                newio = cStringIO.StringIO()
-                # write the python code to a buffer
-                oldio = cStringIO.StringIO()
-                writeNodeData(node, oldio)
-                oiv = oldio.getvalue()
-                oivs = oiv.strip() + '\n'
-                oldio = cStringIO.StringIO()
-                oldio.write(oivs)
-                oldio.seek(0)
-                fontifyFiles(oldio, newio)
-                newio.seek(0)
-                newdom = dom.parse(newio)
-                newel = newdom.documentElement
-                newel.setAttribute("class", "python")
-                node.parentNode.replaceChild(newel, node)
-        
-        for node in findElementsWithAttribute(document, "class", "html-listing"):
-            fn = node.getAttribute("href")
-            val = open(os.path.join(d, fn)).read()
+    # API references
+    for node in findElementsWithAttribute(document, "class", "API"):
+        if len(node.childNodes) > 1:
+            print 'There are too many child nodes of this API link.'
+        base = ""
+        if node.hasAttribute("base"):
+            base = node.getAttribute("base") + "."
+        newref = cache.match(base + node.childNodes[0].nodeValue)
+        if newref:
+            node2 = document.createElement("a")
+            node2.setAttribute("href", newref)
+            node2.childNodes = node.childNodes
+            node.childNodes = [node2]
+    for node in findElementsWithAttribute(document, "class", "py-listing"):
+        fn = node.getAttribute("href")
+        outfile = cStringIO.StringIO()
+        fontifyFiles(open(os.path.join(d, fn)), outfile)
+        val = outfile.getvalue()
 
-            #somebody please let me know if there is a better way to convert from '<' to &lt;
-            import htmlentitydefs
-            reverseEntityDefs = {}
-            for key, value in htmlentitydefs.entitydefs.items():
-                reverseEntityDefs[value]=key
-            val = map(lambda x, red = reverseEntityDefs: red.has_key(x) and '&%s;' % red[x] or x, val)
-            val = string.join(val, '')
+        text = str('<div class="py-listing">'
+                   '<pre class="python">%s</pre>'
+                   '<div class="py-caption">%s - '
+                   '<span class="py-filename">%s</span></div></div>' % (
+            val, getNodeText(node), node.getAttribute("href")))
+        newnode = dom.parseString(text).documentElement
+        node.parentNode.replaceChild(newnode, node)
 
-            text = str('<div class="py-listing">'
-                            '<pre class="htmlsource">%s</pre>'
-                            '<div class="py-caption">%s - '
-                            '<span class="py-filename">%s</span></div></div>' % (
-                            val, getNodeText(node), node.getAttribute('href')))
-            newnode = dom.parseString(text).documentElement
-            node.parentNode.replaceChild(newnode, node)
+    for node in findElementsWithAttribute(document, "class", "python"):
+        if node.tagName == 'pre':
+            newio = cStringIO.StringIO()
+            # write the python code to a buffer
+            oldio = cStringIO.StringIO()
+            writeNodeData(node, oldio)
+            oiv = oldio.getvalue()
+            oivs = oiv.strip() + '\n'
+            oldio = cStringIO.StringIO()
+            oldio.write(oivs)
+            oldio.seek(0)
+            fontifyFiles(oldio, newio)
+            newio.seek(0)
+            newdom = dom.parse(newio)
+            newel = newdom.documentElement
+            newel.setAttribute("class", "python")
+            node.parentNode.replaceChild(newel, node)
 
-        # the title
-        findNodesNamed(template, "title")[0].childNodes.extend(
-            findNodesNamed(document, 'title')[0].childNodes)
-        body = findNodesNamed(document, "body")[0]
-        tmplbody = findElementsWithAttribute(template, "class", "body")[0]
-        tmplbody.childNodes = body.childNodes
-        tmplbody.setAttribute("class", "content")
+    for node in findElementsWithAttribute(document, "class", "html-listing"):
+        fn = node.getAttribute("href")
+        val = open(os.path.join(d, fn)).read()
+
+        #somebody please let me know if there is a better way to convert from '<' to &lt;
+        import htmlentitydefs
+        reverseEntityDefs = {}
+        for key, value in htmlentitydefs.entitydefs.items():
+            reverseEntityDefs[value]=key
+        val = map(lambda x, red = reverseEntityDefs: red.has_key(x) and '&%s;' % red[x] or x, val)
+        val = string.join(val, '')
+
+        text = str('<div class="py-listing">'
+                        '<pre class="htmlsource">%s</pre>'
+                        '<div class="py-caption">%s - '
+                        '<span class="py-filename">%s</span></div></div>' % (
+                        val, getNodeText(node), node.getAttribute('href')))
+        newnode = dom.parseString(text).documentElement
+        node.parentNode.replaceChild(newnode, node)
+
+    # the title
+    findNodesNamed(template, "title")[0].childNodes.extend(
+        findNodesNamed(document, 'title')[0].childNodes)
+    body = findNodesNamed(document, "body")[0]
+    tmplbody = findElementsWithAttribute(template, "class", "body")[0]
+    tmplbody.childNodes = body.childNodes
+    tmplbody.setAttribute("class", "content")
 
 
 class Options(usage.Options):
@@ -277,6 +278,15 @@ class Options(usage.Options):
                      ["apidir", "a", "doc/api/Twisted-%s" % str(copyright.version), "The location of the API documentation generated by HappyDoc."],
                      ["docsdir", "d", "doc/howto"],
                      ["ext", "e", ".xhtml", "The extension of output files (and thus what links are munged to)"]]
+
+    def parseArgs(self, *files):
+        self['files'] = files
+        if files:
+            #silly kludge
+            if self['docsdir'] == 'doc/howto':
+                self['docsdir'] = '.'
+            if self['template'] == 'doc/howto/template.tpl':
+                self['template'] = 'template.tpl'
 
 
 def main():
@@ -294,8 +304,15 @@ def main():
     templ = dom.parse(open(opt['template']))
     print "getting apidocs from", opt['apidir']
     c = Cache(opt['apidir'], 'http://twistedmatrix.com/documents/TwistedDocs/Twisted-%s/' % opt['version'])
-    w = Walker(templ, c, ext)
-    w.walkdir(opt['docsdir'])
+    if opt['files']:
+        for fn in opt['files']:
+            doc = dom.parse(open(fn))
+            cn = templ.cloneNode(1)
+            munge(doc, cn, '', opt['docsdir'], fn, ext, c)
+            cn.writexml(open(os.path.splitext(fn)[0]+ext, 'wb'))
+    else:
+        w = Walker(templ, c, ext)
+        w.walkdir(opt['docsdir'])
     print
 
 if __name__=='__main__':
