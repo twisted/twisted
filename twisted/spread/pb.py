@@ -52,7 +52,7 @@ applied when serializing arguments.
 # Future Imports
 from __future__ import nested_scopes
 
-__version__ = "$Revision: 1.124 $"[11:-2]
+__version__ = "$Revision: 1.125 $"[11:-2]
 
 
 # System Imports
@@ -73,6 +73,7 @@ from twisted.cred import authorizer, service, perspective, identity
 from twisted.persisted import styles
 
 # Sibling Imports
+from twisted.spread.interfaces import IJellyable, IUnjellyable
 from jelly import jelly, unjelly, globalSecurity
 import banana
 
@@ -258,6 +259,8 @@ class RemoteReference(Serializable, styles.Ephemeral):
     @ivar broker: The broker I am obtained through.
     @type broker: L{Broker}
     """
+
+    __implements__ = IUnjellyable,
 
     def __init__(self, perspective, broker, luid, doRefCount):
         """(internal) Initialize me with a broker and a locally-unique ID.

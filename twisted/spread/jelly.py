@@ -65,7 +65,7 @@ Instance Method: s.center, where s is an instance of UserString.UserString:
 @author: U{Glyph Lefkowitz<mailto:glyph@twistedmatrix.com>}
 """
 
-__version__ = "$Revision: 1.46 $"[11:-2]
+__version__ = "$Revision: 1.47 $"[11:-2]
 
 # System Imports
 import string
@@ -106,6 +106,9 @@ from twisted.python.reflect import namedObject, namedModule, qual
 from twisted.persisted.crefutil import NotKnown, _Tuple, _InstanceMethod, _DictKeyAndValue, _Dereference
 from twisted.python import runtime
 from twisted.python.compat import bool
+
+from twisted.spread.interfaces import IJellyable, IUnjellyable
+
 
 if runtime.platform.getType() == "java":
     from org.python.core import PyStringMap
@@ -265,9 +268,15 @@ class Unpersistable:
     def __repr__(self):
         return "Unpersistable(%s)" % repr(self.reason)
 
+
 class Jellyable:
-    """Inherit from me to Jelly yourself directly.
     """
+    Inherit from me to Jelly yourself directly with the `getStateFor'
+    convenience method.
+    """
+
+    __implements__ = IJellyable,
+    
     def getStateFor(self, jellier):
         return self.__dict__
 
@@ -279,8 +288,13 @@ class Jellyable:
         return jellier.preserve(self, sxp)
 
 class Unjellyable:
-    """Inherit from me to Unjelly yourself directly.
     """
+    Inherit from me to Unjelly yourself directly with the
+    `setStateFor' convenience method.
+    """
+
+    __implements__ = IUnjellyable,
+    
     def setStateFor(self, unjellier, state):
         self.__dict__ = state
 
