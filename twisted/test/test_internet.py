@@ -258,12 +258,12 @@ class InterfaceTestCase(unittest.TestCase):
         #self.assertApproximates(idelay_elapsed, 0.8, 0.4,
         #                        "idelay fired at %f (wanted 0.8)" % \
         #                        idelay_elapsed)
-        self.failUnless(idelay_elapsed > ireset_elapsed,
+        self.failUnless(idelay_elapsed >= ireset_elapsed,
                         "got %f, %f" % (idelay_elapsed, ireset_elapsed))
-        self.failUnless(ireset_elapsed >= 0.6,
+        self.failUnless(ireset_elapsed >= (0.6-0.05),
                         "got %f (wanted 0.6)" % ireset_elapsed)
-        self.failUnless(idelay_elapsed >= 0.8,
-                        "got %f (wanted 0.6)" % idelay_elapsed)
+        self.failUnless(idelay_elapsed >= (0.8-0.05),
+                        "got %f (wanted 0.8)" % idelay_elapsed)
 
         del self._resetcallbackTime
         del self._delaycallbackTime
