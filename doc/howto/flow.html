@@ -78,7 +78,7 @@ to merge the result of each request into a single notification, which is
 used to stop the main event loop.
 </p>
 
-<pre>
+<pre class="python">
 from twisted.internet import reactor, defer
 
 class Request:
@@ -247,7 +247,7 @@ from the stage, the operation must yield the wrapper object.  During this
 yield bookkeeping is done to prepare the next value, or, if the next value
 is not available, re-scheduling the operation to be executed later.</p>
 
-<pre>
+<pre class="python">
 from __future__ import generators
 from twisted.flow import flow
 
@@ -275,7 +275,7 @@ print list(flow.Block(Consumer))
 <p>In the above code, <code>producer.next()</code> is called
 implicitly, and thus the generator above is equivalent to...</p>
 
-<pre>
+<pre class="python">
 def Consumer():
     producer = flow.wrap(Counter(3))
     while True:
@@ -292,7 +292,7 @@ And finally, checking to see if the end of the input has been reached.
 More concretely...
 </p>
 
-<pre>
+<pre class="python">
 def Consumer():
     producer = flow.wrap(Counter(3))
     while True:
@@ -318,7 +318,7 @@ expected exceptions in the call to <code>flow.wrap</code>.  Alternatively,
 a try/except block can be used, catching <code>flow.Failure</code> objects.
 </p>
 
-<pre>
+<pre class="python">
 from __future__ import generators
 from twisted.flow import flow
 
