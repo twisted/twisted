@@ -1,5 +1,8 @@
 2003-04-19  Brian Warner  <warner@lothar.com>
 
+	* twisted/python/failure.py (Failure.__getstate__): stringify
+	.type and .value too
+
 	* twisted/trial/remote.py (JellyReporter.reportResults): send only
 	name of testClass/method to remote reporter, not whole class and
 	method. Also add .taster hook to DecodeReport to let users specify
