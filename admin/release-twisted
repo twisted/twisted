@@ -62,7 +62,6 @@ class Options(usage.Options):
     def opt_tag(self):
         """`cvs tag -c <version>'s a CVS checkout.
         Reqs: A `Twisted' directory."""
-        print "tooty"
         self['commands'].append('tag')
 
     def opt_exp(self):
@@ -117,11 +116,11 @@ def main():
     for command in opts['commands']:
         d[command](opts)
 
-debug = 1
+debug = 0
 
-def sh(command):
-    if debug:
-        if raw_input("%r ??" % command)[0].lower() != 'n':
+def sh(command, sensitive=0):
+    if debug or sensitive:
+        if not raw_input("%r ??" % command).startswith('n'):
             os.system(command)
         
 def replaceInFile(filename, oldstr, newstr):
@@ -137,14 +136,14 @@ def updateVersions(opts):
     files = ('README', 'doc/howto/installing-twisted.html', 'twisted/copyright.py')
     for file in files:
         replaceInFile(file, oldver, newver)
-    sh('cvs commit %s' % ' '.join(files))
+    sh('cvs commit %s' % ' '.join(files), 1)
     os.chdir('..')
 
 def tag(opts):
     print "tag"
     ver = opts['version']
     os.chdir(opts['root'])
-    sh('cvs tag -c release-%s' % ver.replace('.', '_'))
+    sh('cvs tag -c release-%s' % ver.replace('.', '_'), 1)
     os.chdir('..')
 
 def exportCVS(opts):
