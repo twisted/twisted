@@ -112,6 +112,11 @@ class _TLSMixin:
 
     def doWrite(self):
         if self.writeBlockedOnRead:
+            # if we always stopWriting the tests fail, apparently some
+            # data never gets read or something. this should insure it
+            # always will be. we need to stopWriting or we get massive
+            # cpu usage from doWrite repeatedly being called when waiting
+            # for client to send data for SSL negotiation.
             if select.select([self.socket], [], [], 0)[0]:
                 return self.doRead()
             else:
