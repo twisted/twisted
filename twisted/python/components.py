@@ -36,6 +36,11 @@ class _Nothing:
     An alternative to None - default value for functions which raise if default not passed.
     """
 
+class _NoImplementor:
+    """
+    Same as _Nothing but used by MetaInterface.__call__
+    """
+
 def getRegistry(r):
     if r is None:
         return context.get(AdapterRegistry, theAdapterRegistry)
@@ -56,19 +61,21 @@ class MetaInterface(type):
         """
         adapter = default
         registry = getRegistry(registry)
-        try:
-            # should this be `implements' of some kind?
-            if (persist is None or persist) and hasattr(adaptable, 'getComponent'):
-                adapter = adaptable.getComponent(self, registry, default=_Nothing)
-            else:
-                adapter = registry.getAdapter(adaptable, self, _Nothing, persist=persist)
-        except NotImplementedError:
+        # should this be `implements' of some kind?
+        if (persist is None or persist) and hasattr(adaptable, 'getComponent'):
+            adapter = adaptable.getComponent(self, registry, default=_NoImplementor)
+        else:
+            adapter = registry.getAdapter(adaptable, self, _NoImplementor,
+                                          persist=persist)
+        if adapter is _NoImplementor:
             if hasattr(self, '__adapt__'):
                 adapter = self.__adapt__.im_func(adaptable, default)
+            else:
+                adapter = default
 
         if adapter is _Nothing:
             raise CannotAdapt("%s cannot be adapted to %s." %
-                                      (adaptable, self))
+                              (adaptable, self))
         return adapter
 
 
