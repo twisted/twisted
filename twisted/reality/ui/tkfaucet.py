@@ -173,7 +173,7 @@ class Login(Toplevel):
 
         l=Label(f,text="World: ")
         self.worldname=Entry(f)
-        self.worldname.insert('0','reality')
+        self.worldname.insert('0','twisted.reality')
 
         l.grid(column=0,row=2); self.worldname.grid(column=1,row=2)
 
@@ -211,7 +211,7 @@ class Login(Toplevel):
         broker = pb.Broker()
         self.m = MainWindow()
         self.m.withdraw()
-        # he's a hack, he's a hack
+         # he's a hack, he's a hack
         broker.requestIdentity(username, password, callback= self.gotIdentity, errback= self.m.tryAgain)
         broker.notifyOnDisconnect(self.m.disco)
         #broker.requestPerspective(worldname, username, password, m, m.loggedIn, m.tryAgain)
@@ -219,7 +219,7 @@ class Login(Toplevel):
 
     def gotIdentity(self, identity):
         # he's a man with a happy knack
-        identity.attach(self.worldname, self, pbCallback=self.m.loggedIn)
+        identity.attach(self.worldname.get(), self.m, pbCallback=self.m.loggedIn)
 
 def main():
     global root
