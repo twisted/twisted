@@ -20,9 +20,9 @@ Async DNS server
 
 API Stability: Unstable
 
-Future plans: Have this work.  Better config file format maybe;
-  Make sure to differentiate between different classes; handle
-  recursive lookups; notice truncation bit; probably other stuff.
+Future plans: Better config file format maybe;
+  Make sure to differentiate between different classes;
+  notice truncation bit; probably other stuff.
 
 @author: U{Jp Calderone <exarkun@twistedmatrix.com>}
 """
