@@ -13,12 +13,12 @@ class MQuote(model.Model):
         self._filename = filename
         self._quoter = quoters.FortuneQuoter([filename])
     
-    def getData(self):
+    def getData(self, request):
         """Get a random quote from the quotefile.
         """
         return self._quoter.getQuote()
 
-    def setData(self, data):
+    def setData(self, request, data):
         """Add a new quote to the quotefile.
         """
         file = open(self._filename, 'a')
