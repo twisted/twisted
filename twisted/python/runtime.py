@@ -56,3 +56,4 @@ class Platform:
 
 
 platform = Platform()
+platformType = platform.getType()
