@@ -152,6 +152,23 @@ def multireplace(st, dct):
     return st
 
 class Telnet(protocol.Protocol):
+    """I am a Protocol for handling Telnet connections. I have two
+    sets of special methods, telnet_* and iac_*.
+
+    telnet_* methods get called on every line sent to me. The method
+    to call is decided by the current mode. The initial mode is 'User';
+    this means that telnet_User is the first telnet_* method to be called.
+    All telnet_* methods should return a string which specifies the mode
+    to go into next; thus dictating which telnet_* method to call next.
+    For example, the default telnet_User method returns 'Password' to go
+    into Password mode, and the default telnet_Password method returns
+    'Command' to go into Command mode.
+
+    The iac_* methods are less-used; they are called when an IAC telnet
+    byte is received. You can define iac_DO, iac_DONT, iac_WILL, iac_WONT,
+    and iac_IP methods to do what you want when one of these bytes is
+    received."""
+
 
     gotIAC = 0
     iacByte = None
@@ -161,47 +178,58 @@ class Telnet(protocol.Protocol):
     mode = "User"
 
     def connectionMade(self):
+        """I will write a welcomeMessage and loginPrompt to the client."""
         self.transport.write(self.welcomeMessage() + self.loginPrompt())
 
     def welcomeMessage(self):
+        """Override me to return a string which will be sent to the client
+        before login."""
         x = self.factory.__class__
         return ("\r\n" + x.__module__ + '.' + x.__name__ +
                 '\r\nTwisted %s\r\n' % copyright.version
                 )
 
     def loginPrompt(self):
+        """Override me to return a 'login:'-type prompt."""
         return "username: "
-
-    def iacDO(self, feature):
-        pass
-
-    def iacDONT(self, feature):
-        pass
-
-    def iacWILL(self, feature):
-        pass
-
-    def iacWONT(self, feature):
-        pass
 
     def iacSBchunk(self, chunk):
         pass
 
-    def iacIP(self, feature):
-        self.goodBye()
+    def iac_DO(self, feature):
+        pass
 
-    def goodBye(self):
+    def iac_DONT(self, feature):
+        pass
+
+    def iac_WILL(self, feature):
+        pass
+
+    def iac_WONT(self, feature):
+        pass
+
+    def iac_IP(self, feature):
         pass
 
     def processLine(self, line):
+        """I call a method that looks like 'telnet_*' where '*' is filled
+        in by the current mode. telnet_* methods should return a string which
+        will become the new mode."""
         self.mode = getattr(self, "telnet_"+self.mode)(line)
 
     def telnet_User(self, user):
+        """I take a username, set it to the 'self.username' attribute,
+        print out a password prompt, and switch to 'Password' mode. If
+        you want to do something else when the username is received (ie,
+        create a new user if the user doesn't exist), override me."""
         self.username = user
         self.transport.write(IAC+WILL+ECHO+"password: ")
         return "Password"
 
     def telnet_Password(self, paswd):
+        """I accept a passwd argument, and check it with the
+        checkUserAndPass method. If the login is successful, I call
+        loggedIn()."""
         self.transport.write(IAC+WONT+ECHO+"*****\r\n")
         if not self.checkUserAndPass(self.username, paswd):
             return "Done"
@@ -209,9 +237,14 @@ class Telnet(protocol.Protocol):
         return "Command"
 
     def telnet_Command(self, cmd):
+        """The default 'command processing' mode. You probably want to
+        override me."""
         return "Command"
 
     def processChunk(self, chunk):
+        """I take a chunk of data and delegate out to telnet_* methods
+        by way of processLine. If the current mode is 'Done', I'll close
+        the connection. """
         self.buffer = self.buffer + chunk
         idx = string.find(self.buffer,'\r\n')
         if idx == -1:
@@ -241,7 +274,7 @@ class Telnet(protocol.Protocol):
                     else:
                         # got all I need to know state
                         try:
-                            getattr(self, 'iac'+iacBytes[self.iacByte])(char)
+                            getattr(self, 'iac_%s' % iacBytes[self.iacByte])(char)
                         except KeyError:
                             pass
                         del self.iacByte
@@ -317,6 +350,9 @@ class Shell(Telnet):
             return "Command"
     
     def doCommand(self, cmd):
+
+        # TODO -- refactor this, Reality.author.Author, and the manhole shell
+        #to use common functionality (perhaps a twisted.python.code module?)
         fn = '$telnet$'
         result = None
         try:
@@ -365,8 +401,6 @@ class ShellFactory(protocol.Factory):
     def __getstate__(self):
         """This returns the persistent state of this shell factory.
         """
-        # TODO -- refactor this and twisted.reality.author.Author to use common
-        # functionality (perhaps the 'code' module?)
         dict = self.__dict__
         ns = copy.copy(dict['namespace'])
         dict['namespace'] = ns

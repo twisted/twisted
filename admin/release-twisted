@@ -144,7 +144,7 @@ def makeBalls(opts):
     map(lambda x: os.system(x % ((ver,)*2)),
         ['tar czf Twisted_NoDocs-%s.tar.gz Twisted-%s',
          'tar cjf Twisted_NoDocs-%s.tar.bz2 Twisted-%s',
-         'zip -r Twisted_NoDocs-%s.zip Twisted-%s > /dev/null'])
+         'zip -9 -r Twisted_NoDocs-%s.zip Twisted-%s > /dev/null'])
 
 
     if not os.path.exists('doc'):#we didn't do the docs
@@ -162,7 +162,7 @@ def makeBalls(opts):
     map(lambda x: os.system(x % ((ver,)*2)),
         ['tar czf TwistedDocs-%s.tar.gz TwistedDocs-%s',
          'tar cjf TwistedDocs-%s.tar.bz2 TwistedDocs-%s',
-         'zip -r TwistedDocs-%s.zip TwistedDocs-%s > /dev/null'])
+         'zip -9 -r TwistedDocs-%s.zip TwistedDocs-%s > /dev/null'])
     
     
     print "putting documentation back"
@@ -176,7 +176,7 @@ def makeBalls(opts):
     map(lambda x: os.system(x % ((ver,)*2)),
         ['tar czf Twisted-%s.tar.gz Twisted-%s',
          'tar cjf Twisted-%s.tar.bz2 Twisted-%s',
-         'zip -r Twisted-%s.zip Twisted-%s > /dev/null'])
+         'zip -9 -r Twisted-%s.zip Twisted-%s > /dev/null'])
     
 
 
