@@ -44,11 +44,15 @@ class ThreadPool:
     """
     This class (hopefully) generalizes the functionality of a pool of
     threads to which work can be dispatched.
+    
+    dispatch(), dispatchWithCallback() and stop() should only be called from
+    a single thread, unless you make a subclass where stop() and 
+    _startSomeWorkers() are synchronized.
     """
     __inited = 0
     min = 5
+    max = 20
     qlen = 0
-    synchronized = ['_startSomeWorkers', 'stop']
     
     def __init__(self, minthreads=5, maxthreads=20, qlen=0):
         assert minthreads <= maxthreads, 'minimum is greater than maximum'
@@ -150,5 +154,3 @@ class ThreadPool:
         print 'workers:',self.working
         print 'total:',self.threads
 
-
-threadable.synchronize(ThreadPool)

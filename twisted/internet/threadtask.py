@@ -75,5 +75,3 @@ def dispatch(callback, errback, func, *args, **kw):
     dispatchApply(callback, errback, func, args, kw)
 
 main.addShutdown(theDispatcher.stop)
-
-threadable.synchronize(ThreadDispatcher)
