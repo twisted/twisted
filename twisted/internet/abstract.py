@@ -140,7 +140,7 @@ class FileDescriptor(log.Logger):
                 if l == len(data):
                     # all data was sent, our work here is done
                     return
-                elif l > 0:
+                elif not isinstance(l, Exception) and l > 0:
                     # some data was sent
                     self.unsent = data[l:]
                 else:
