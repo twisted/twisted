@@ -1,15 +1,15 @@
 # Twisted, the Framework of Your Internet
 # Copyright (C) 2001 Matthew W. Lefkowitz
-# 
+#
 # This library is free software; you can redistribute it and/or
 # modify it under the terms of version 2.1 of the GNU Lesser General Public
 # License as published by the Free Software Foundation.
-# 
+#
 # This library is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
 # Lesser General Public License for more details.
-# 
+#
 # You should have received a copy of the GNU Lesser General Public
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
@@ -133,12 +133,14 @@ class InvalidConfiguration(Exception):
 def createConfigurable(configClass, container, name):
     """Instantiate a configurable.
 
-    First, I will create an instance object of class configClass.  Then I will
-    call configInit, with 'container' and 'name' as arguments.  If the class
-    passed in is not a subclass of Configurable, I will fail.
+    First, I will create an instance object of class configClass.
+    Then I will call its configInit, with 'container' and 'name'
+    as arguments.  If the class passed in is not a subclass of
+    Configurable, I will fail.
     """
     if not issubclass(configClass, Configurable):
-        raise TypeError("Types don't match!")
+        raise TypeError("%s is not a subclass of %s" %
+                        (configClass, Configurable))
     instance = new.instance(configClass, {})
     instance.configInit(container, name)
     return instance
@@ -155,6 +157,9 @@ class Configurable:
     I have a list attribute, configDispensers, that indicates what methods on
     me may be called with no arguments to create an instance of another
     Configurable.  It is a list of the form [(method name, class, descString), ...].
+
+    Custom handling of configuration-item-setting can be had by adding
+    configure_%s(self, value) methods to my subclass.
     """
 
     # Change this attribute in subclasses.
@@ -198,8 +203,9 @@ class Configurable:
                 except:
                     raise InvalidConfiguration("non-boolean for boolean type")
             else:
-                raise InvalidConfiguration("Unknown Type: %s" % t)
-                
+                raise InvalidConfiguration("Configuration item '%s' has "
+                                           "unknown type '%s'" % (name, t))
+
         for name, value in items:
             func = getattr(self, "config_%s" % name, None)
             if func:
@@ -231,7 +237,7 @@ class Package:
     def __init__(self, name):
         self.name = name
         self.modules = []
-        
+
     def register(self, name, module, description):
         self.modules.append(Module(name, module, description))
 
