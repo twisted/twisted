@@ -382,9 +382,12 @@ class DOMView(DOMTemplate, View):
 
         controller.setView(view)
         controller.setId(id)
-        view.setController(controller)
-        view.setId(id)
-        view.setNode(node)
+        # xxx refactor this into a widget interface and check to see if the object implements IWidget
+        # the view may be a deferred; this is why this check is required
+        if hasattr(view, 'setController'):
+            view.setController(controller)
+            view.setId(id)
+            view.setNode(node)
         
         result = controller.handle(request)
         returnNode = self.dispatchResult(request, node, result)
