@@ -55,7 +55,7 @@ class CrossByteField(Record):
     __format__ = [('a', Integer(6)),
                   ('b', Integer(6)),
                   ('c', Integer(6)),
-                  ('c', Integer(6))]
+                  ('d', Integer(6))]
     EXPECTED_ENCODED_SIZE = 3
 
 records = [SingleSignedByte, SingleUnsignedByte, SingleSignedShort,
