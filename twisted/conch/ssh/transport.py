@@ -55,10 +55,11 @@ class SSHTransportBase(protocol.Protocol):
     comment = ''
     ourVersionString = ('SSH-'+protocolVersion+'-'+version+' '+comment).strip()
 
-    supportedCiphers = ['aes256-ctr', 'aes256-cbc', 'aes192-ctr', 'aes192-cbc', 
-                        'aes128-ctr', 'aes128-cbc', 'cast128-ctr', 
-                        'cast128-cbc', 'blowfish-ctr', 'blowfish', 'idea-ctr',
-                        'idea-cbc', '3des-ctr', '3des-cbc']
+    supportedCiphers = ['aes256-cbc', 'aes192-cbc', 
+                        'aes128-cbc',  
+                        'cast128-cbc', 'blowfish', 
+                        'idea-cbc', '3des-cbc']
+                        # XXX make the *-ctr modes work
     supportedMACs = ['hmac-sha1', 'hmac-md5']
     supportedKeyExchanges = ['diffie-hellman-group-exchange-sha1', 
                              'diffie-hellman-group1-sha1']
@@ -674,19 +675,25 @@ class SSHCiphers:
         modName, keySize, counterMode = self.cipherMap[cip]
         if not modName: return # no cipher
         mod = __import__('Crypto.Cipher.%s'%modName, {}, {}, 'x')
-        if counterMode:
-            def counter(bs = mod.block_size):
-                ret = MP(counter.current)[4:]
-                if len(ret) < bs:
-                    ret = '\x00'*(bs-len(ret)) + ret
-                counter.current+=1
-                if counter.current==2L**keySize:
-                    counter.current = 0
-                return ret
-            counter.current = getMP('\xff\xff\xff\xff'+iv)[0]%(2L**keySize)
-            return mod.new(key[:keySize], mod.MODE_CTR, iv[:mod.block_size], counter=counter)
-        else:
-            return mod.new(key[: keySize], mod.MODE_CBC, iv[: mod.block_size])
+#        if counterMode:
+#            def counter(bs = keySize):
+#                log.msg('bs: %i' % bs)
+#                ret = MP(counter.current)[4:]
+#                if len(ret) < bs:
+#                    ret = '\x00'*(bs-len(ret)) + ret
+#                log.msg('num: %i' % counter.current)
+#                counter.current+=1
+#                if counter.current==2L**keySize:
+#                    counter.current = 0
+#                log.msg('count: %s' % repr(ret))
+#                log.msg(str(len(ret)))
+#                return ret
+#            log.msg('initial iv: %s' % repr(iv))
+#            counter.current = getMP('\xff\xff\xff\xff'+iv)[0]%(256L**keySize)
+#            log.msg('initial counter: %i' % counter.current)
+#            return mod.new(key[:keySize], mod.MODE_CTR, iv[:keySize], counter=counter)
+#        else:
+        return mod.new(key[: keySize], mod.MODE_CBC, iv[: mod.block_size])
 
     def _getMAC(self, mac, key):
         modName = self.macMap[mac]
