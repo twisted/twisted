@@ -1,5 +1,5 @@
 
-"""
+"""(DEPRECATED)
 A module for authentication.
 
 This provides challenge/response authentication utilities, a standardized
@@ -67,7 +67,7 @@ class Authenticator:
         return self.userdict[username]
 
 
-    def check(self, user, plainpass):
+    def checkUserAndPass(self, user, plainpass):
         """Check the plaintext password of a given user.
         This will return the string `user' if it succeeds, otherwise it will
         raise Unauthorized().

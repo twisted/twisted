@@ -131,11 +131,9 @@ class ResourceSubscription(resource.Resource):
 class ResourcePublisher(pb.Service, pb.Perspective):
     def __init__(self, site):
         pb.Service.__init__(self)
+        pb.Perspective.__init__(self, "web", self, "web")
         self.site = site
         
-    def authenticate(self, user, challenge, password):
-        return self
-
     def getPerspectiveNamed(self, name):
         return self
 

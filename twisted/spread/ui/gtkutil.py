@@ -124,15 +124,19 @@ class Login(gtk.GtkWindow):
         pswd = self.password.get_text()
         b = pb.Broker()
         self.broker = b
-        b.requestPerspective(service, user, pswd,
-                             referenced = self.pbReferenced,
-                             callback   = self.pbCallback,
-                             errback    = self.couldNotConnect)
+        b.requestIdentity(user, pswd,
+                          callback   = self.gotIdentity,
+                          errback    = self.couldNotConnect)
         b.notifyOnDisconnect(self.disconnected)
         tcp.Client(host, port, b)
 
-    def couldNotConnect(self):
+    def gotIdentity(self, identity):
+        identity.attach(self.service.get_text(), self.pbReferenced, pbcallback=self.pbCallback)
+
+    def couldNotConnect(self, msg):
+        print 'couldNotConnect', msg
         self.loginReport("could not connect.")
 
     def disconnected(self):
+        print 'disconnected'
         self.loginReport("disconnected from server.")

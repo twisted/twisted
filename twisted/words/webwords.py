@@ -1,13 +1,22 @@
 
 from twisted.web import html, server, resource, static
 
+from twisted.internet import passport
+
 class AccountCreation(html.Interface):
+
     def content(self, request):
         if request.args.has_key("username"):
             u, p = request.args['username'][0], request.args['password'][0]
             print u, p
             svc = request.site.service
-            part = svc.addParticipant(u,p)
+            app = svc.application
+            ident = passport.Identity(u, app)
+            ident.setPassword(p)
+            app.authorizer.addIdentity(ident)
+            part = svc.addParticipant(u)
+            part.setIdentity(ident)
+            ident.addKeyFor(part)
             if part:
                 return "Participant Added."
             else:

@@ -26,9 +26,8 @@ class Options(usage.Options):
                   ["web", "w", "8080"]]
 
 def getPorts(app, config):
-    svc = service.Service()
-    bkr = pb.BrokerFactory()
-    bkr.addService("twisted.words", svc)
+    svc = service.Service("twisted.words", app)
+    bkr = pb.BrokerFactory(app)
     irc = ircservice.IRCGateway(svc)
     adm = webwords.WebWordsAdminSite(svc)
     return [(int(config.port), bkr),

@@ -1,5 +1,4 @@
 """
-
 Perspective Broker
 
     "This isn't a professional opinion, but it's probably got enough internet
@@ -31,6 +30,8 @@ import new
 # Twisted Imports
 from twisted.python import authenticator, log
 from twisted.protocols import protocol
+from twisted.internet import passport
+from twisted.persisted import styles
 
 # Sibling Imports
 import jelly
@@ -107,7 +108,7 @@ def printTraceback(tb):
     log.msg('Perspective Broker Traceback:' )
     log.msg(tb)
 
-class Perspective:
+class Perspective(passport.Perspective):
     """A perspective on a service.
     
     per*spec*tive, n. : The relationship of aspects of a subject to each other
@@ -150,40 +151,30 @@ class Perspective:
             raise TypeError("%s didn't accept %s and %s" % (method, args, kw))
         return broker.serialize(state, self, method, args, kw)
 
-    def attached(self, broker):
-        """Called when a broker is 'attached' to me.
+    def attached(self, reference):
+        """Called when a remote reference is 'attached' to me.
 
         After being authenticated and sent to the peer who requested me, I will
-        receive this message, telling me that this broker is now attached to
+        receive this message, telling me that this reference is now attached to
         me.
         """
         log.msg('attached [%s]' % str(self.__class__))
 
-    def detached(self, broker):
+    def detached(self, reference):
         """Called when a broker is 'detached' from me.
 
         When a peer disconnects, this is called in order to indicate that the
-        broker associated with that peer is no longer attached to this
+        reference associated with that peer is no longer attached to this
         perspective.
         """
         log.msg('detached [%s]' % str(self.__class__))
 
-
-
-
-class Service(authenticator.Authenticator):
+class Service(passport.Service):
     """A service for Perspective Broker.
+
+    On this Service, getPerspectiveNamed must return a pb.Perspective rather
+    than a passport.Perspective.
     """
-
-    def getPerspectiveNamed(self, name):
-        """Return a perspective that represents a user for this service.
-
-        Raises a KeyError if no such user exists.
-
-        You must implement this method.
-        """
-        raise NotImplementedError("%s.getPerspectiveNamed" % str(self.__class__))
-
 
 class Referenced(Serializable):
     perspective = None
@@ -218,6 +209,43 @@ class Referenced(Serializable):
         """
         return remote_atom, broker.registerReference(self)
 
+class AsReferenced(Referenced):
+    """AsReferenced: a reference directed towards another object.
+    """
+    def __init__(self, object):
+        """Initialize me with an object.
+        """
+        self.object = object
+
+    def remoteMessageReceived(self, broker, message, args, kw):
+        """Redirect this call to the object I'm a reference to.
+        """
+        return self.object.remoteMessageReceived(broker, message, args, kw)
+
+
+class IdentityWrapper(Referenced):
+    """I delegate most functionality to a passport.Identity.
+    """
+    def __init__(self, broker, identity):
+        """Initialize, specifying an identity to wrap.
+        """
+        self.identity = identity
+        self.broker = broker
+
+    def remote_attach(self, perspectiveName, remoteRef):
+        """Attach the remote reference to a requested perspective.
+        """
+        perspective = self.identity.getKey(perspectiveName).getPerspective()
+        print "*** ATTACHING TO PERSPECTIVE: %s" % repr(perspective) 
+        perspective.attached(remoteRef)
+        # Make sure that when connectionLost happens, this perspective will be
+        # tracked in order that 'detached' will be called.
+        self.broker.perspectives.append((perspective, remoteRef))
+        return AsReferenced(perspective)
+
+    # (Possibly?) TODO: Implement 'remote_detach' as well.
+
+
 class Proxy(Referenced):
     """I act as an indirect reference to an object accessed through a Perspective.
 
@@ -237,11 +265,10 @@ class Proxy(Referenced):
           return Proxy(self, self.service.getPerspectiveNamed(name))
 
     This will allow you to have references to Perspective objects in two
-    different ways.  One is through the initial requestPerspective call -- each
-    peer will have a reference to their perspective directly.  The other is
-    through this method; each peer can get a reference to all other
-    perspectives in the service; but that reference will be to a Proxy, not
-    directly to the object.
+    different ways.  One is through the initial 'attach' call -- each peer will
+    have a reference to their perspective directly.  The other is through this
+    method; each peer can get a reference to all other perspectives in the
+    service; but that reference will be to a Proxy, not directly to the object.
 
     The practical offshoot of this is that you can implement 2 varieties of
     remotely callable methods on this Perspective; proxy_xxx and
@@ -535,7 +562,7 @@ class Cached(Copied):
             del kw['pberrback']
         broker.sendCacheMessage(cacheID, methodName, perspective, args, kw, callback, errback)
 
-class Reference(Serializable):
+class Reference(Serializable, styles.Ephemeral):
     """This is a translucent reference to a remote object.
 
     I may be a reference to a Proxy, a Referenced, or a Perspective.  From the
@@ -814,15 +841,13 @@ class Broker(banana.Banana):
     """I am a broker for objects.
     """
     
-    version = 2
+    version = 3
     username = None
+    requestedIdentity = None
 
     def __init__(self):
         banana.Banana.__init__(self)
-        self.awaitingPerspectives = {}
-        self.serverServices = {}
-        self.expq = []
-        self.perspectives = {}
+        self.perspectives = []
         self.disconnected = 0
         self.disconnects = []
 
@@ -863,62 +888,47 @@ class Broker(banana.Banana):
         """
         log.msg( "Didn't understand command:", repr(command) )
 
-    def addService(self, name, service):
-        self.myServices[name] = service
-
-    def getService(self, name):
-        foo = self.myServices.get(name)
-        if foo is None:
-            return self.serverServices[name]
-        return foo
-
-    def proto_login(self, service, username, objid):
-        """Receive a service, login name, and object, and respond with a challenge.
+    def proto_login(self, username):
+        """Receive a user name and respond with a challenge.
 
         This is the second step in the protocol, the first being version number
-        checking.  The peer to this is requestPerspective.
+        checking.  The peer to this is requestIdentity.
 
         See the documentation for twisted.python.authenticator for more
         information on the challenge/response system that is used here.
         """
         self.username = username
-        self.loginService = self.getService(service)
-        self.loginTag = service
-        self.loginObjID = objid
-        self.challenge = authenticator.challenge()
+        defr = self.factory.app.authorizer.getIdentityRequest(username)
+        defr.addCallbacks(self.gotIdentityForLogin, self.noIdentityForLogin)
+        defr.arm()
+
+    def gotIdentityForLogin(self, identity):
+        """(internal) Callback for when login identity is available.
+        """
+        self.loginIdentity = identity
+        self.challenge = identity.challenge()
         self.sendCall("challenge", self.challenge)
+
+    def noIdentityForLogin(self, error):
+        log.msg("pb closing connection: %s" % error)
+        self.transport.loseConnection()
 
     def proto_password(self, password):
         """Receive a password, and authenticate using it.
-        
+
         This will use the provided authenticator to authenticate, using the
         previously-sent challenge and previously-received username.
         """
-        assert self.username is not None, "login directive must appear *BEFORE* password directive"
-        try:
-            try:
-                self.loginService.authenticate(self.username, self.challenge, password)
-                perspective = self.loginService.getPerspectiveNamed(self.username)
-                if self.loginObjID == -1:
-                    loginObj = None
-                else:
-                    loginObj = Reference(perspective, self, self.loginObjID, 1)
-                perspective.attached(loginObj)
-                self.perspectives[self.loginTag] = (perspective, loginObj)
-                self.setNameForLocal(self.loginTag, perspective)
-                self.sendCall("perspective", self.loginTag)
-            except authenticator.Unauthorized:
-                log.msg("Unauthorized Login Attempt: %s" % self.username)
-                self.sendCall("inperspective", self.loginTag)
-                # TODO; this should do some more heuristics rather than just
-                # closing the connection immediately.
-                self.transport.loseConnection()
-        finally:
-            del self.username
-            del self.challenge
-            del self.loginTag
-            del self.loginService
-            del self.loginObjID
+        if self.loginIdentity.verifyPassword(self.challenge, password):
+            # the password has been verified!  Let's continue.
+            self.setNameForLocal("identity", IdentityWrapper(self, self.loginIdentity))
+            self.sendCall("logged_in")
+        else:
+            log.msg("Unauthorized Login Attempt: %s" % self.username)
+            self.sendCall("not_logged_in", "unauthorized")
+            # TODO; this should do some more heuristics rather than just
+            # closing the connection immediately.
+            self.transport.loseConnection()
 
     def connectionMade(self):
         """Initialize.
@@ -952,25 +962,27 @@ class Broker(banana.Banana):
         security.allowTypes("copy", "cache", "cached", "local", "remote", "lcache")
         self.jellier = None
         self.unjellier = None
-        self.myServices = {}
-        for perspective, username, password, referenced, callback, errback in self.expq:
-            self.requestPerspective(perspective, username, password, referenced, callback, errback)
+        if self.requestedIdentity:
+            apply(self.requestIdentity, self.requestedIdentity)
+            del self.requestedIdentity
 
     def connectionFailed(self):
         """The connection failed; bail on any awaiting perspective requests.
         """
-        for perspective, username, password, referenced, callback, errback in self.expq:
+        if self.requestedIdentity:
+            username, password, callback, errback = self.requestedIdentity
             try:
-                errback()
+                errback('connection failed')
             except:
                 traceback.print_exc(file=log.logfile)
+            del self.requestedIdentity
 
     def connectionLost(self):
         """The connection was lost.
         """
         self.disconnected = 1
         # nuke potential circular references.
-        for perspective, client in self.perspectives.values():
+        for perspective, client in self.perspectives:
             try:
                 perspective.detached(client)
             except:
@@ -984,11 +996,11 @@ class Broker(banana.Banana):
                 errback(PB_CONNECTION_LOST)
             except:
                 traceback.print_exc(file=log.logfile)
-        for callback, errback in self.awaitingPerspectives.values():
-            try:
-                errback()
-            except:
-                traceback.print_exc(file=log.logfile)
+        try:
+            if hasattr(self, 'loginCallback'):
+                self.loginErrback('disconnected')
+        except:
+            traceback.print_exc(file=log.logfile)
         for notifier in self.disconnects:
             try:
                 notifier()
@@ -1124,32 +1136,27 @@ class Broker(banana.Banana):
             self.perspective = None
             self.unjellier = None
 
-    def _gotPerspective(self, perspective, isPerspective, *args):
-        """(internal)
+    def proto_logged_in(self):
+        """Received when the identity authenticates correctly.
         """
-        it = self.awaitingPerspectives[perspective][not isPerspective]
-        del self.awaitingPerspectives[perspective]
-        apply(it, args)
+        self.loginCallback(self.remoteForName('identity'))
+        self._cleanupLogin()
 
-    def proto_perspective(self, perspective):
-        """Received when a perspective authenticates correctly.
-        """
-        self._gotPerspective(perspective, 1, self.remoteForName(perspective))
-
-    def proto_inperspective(self, perspective):
+    def proto_not_logged_in(self, message):
         """Received when a perspective authenticates incorrectly.
         """
-        self._gotPerspective(perspective, 0)
+        self.loginErrback(message)
+        self._cleanupLogin()
 
+    def _cleanupLogin(self):
+        del self.loginCallback
+        del self.loginErrback
 
-    def requestPerspective(self, perspective, username, password, referenced=None, callback=noOperation, errback=printTraceback):
+    def requestIdentity(self, username, password, callback=noOperation, errback=printTraceback):
         """
-        Request a perspective from this broker, and give a callback when it is or is not available.
+        Request the identity from this broker, making a callback when it's finished.
 
         Arguments:
-
-          * perspective: this is the name of the perspective broker service to
-            request.
 
           * username: this is the username you wish to authenticate with.
 
@@ -1157,33 +1164,26 @@ class Broker(banana.Banana):
             it in plaintext, it will be hashed using a challenge-response
             authentication handshake automatically.
 
-          * referenced: this is pb.Referenced instance which represents the
-            "client" to the remote side.  This argument may not be optional
-            depending on the sort of service you are authenticating to.
-
           * callback: a callback which will be made (with a reference to the
-            resulting perspective as the argument) if and when the
-            authentication succeeds.
+            resulting identity as the argument) if and when the authentication
+            succeeds.
 
           * errback: a callback which will be made (with an error message as
             the argument) if and when the authentication fails.
 
         """
         if self.connected:
-            if referenced == None:
-                num = -1
-            else:
-                num = self.registerReference(referenced)
-            self.sendCall("login", perspective, username, num)
-            self.awaitingPerspectives[perspective] = callback, errback
+            self.sendCall("login", username)
+            self.loginCallback = callback
+            self.loginErrback = errback
             self.password = password
         else:
-            self.expq.append((perspective, username, password, referenced, callback, errback))
+            self.requestedIdentity = (username, password, callback, errback)
 
     def proto_challenge(self, challenge):
         """Use authenticator.respond to respond to the server's challenge.
         """
-        self.sendCall("password", authenticator.respond(challenge, self.password))
+        self.sendCall("password", passport.respond(challenge, self.password))
 
     def newLocalID(self):
         """Generate a new LUID.
@@ -1251,6 +1251,8 @@ class Broker(banana.Banana):
         """
         try:
             object = self.localObjectForID(objectID)
+            if object is None:
+                raise Error("Invalid Object ID")
             # Special message to check for validity of object-ID.
             if message == '__ping__':
                 result = (object is not None)
@@ -1371,25 +1373,18 @@ class Broker(banana.Banana):
 class BrokerFactory(protocol.Factory):
     """I am a server for object brokerage.
     """
-    
-    def __init__(self):
-        """Initialize me.
+
+    def __init__(self, application):
+        """Initialize me, indicating an authorizer.
         """
-        self.services = {}
+        self.app = application
 
-    def addService(self, tag, service):
-        """Add a service to me.
-        """
-        self.services[tag] = service
-
-    def getService(self, tag):
-        return self.services[tag]
-
+    # XXX REFACTOR: addService AND getService REMOVED.
     def buildProtocol(self, addr):
         """Return a Broker attached to me (as the service provider).
         """
         proto = Broker()
-        proto.serverServices = self.services
+        proto.factory = self
         return proto
 
 

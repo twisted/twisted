@@ -27,6 +27,31 @@ class Player(thing.Thing, pb.Perspective):
     A convenience class for sentient beings (implying turing-test quality AI)
     """
 
+    def __init__(self, name, reality='', identityName="Nobody"):
+        """Initialize me.
+        """
+        self.identityName = identityName
+        thing.Thing.__init__(self, name, reality)
+
+    def set_reality(self, reality):
+        if self.reality is reality:
+            return
+        assert self.reality is None, 'player migration not implemented.'
+        thing.Thing.set_reality(self, reality)
+        pb.Perspective.__init__(self, self.name, self.reality, self.identityName)
+
+    def set_service(self, svc):
+        """Don't really set the service, since it can be retrieved through self.reality.
+        """
+        assert svc == self.reality, "Service _must_ be the same as reality."
+    
+    def get_service(self):
+        """Return my reality, so that it's not duplicately stored.
+
+        This is so that my passport.Perspective methods work properly.
+        """
+        return self.reality
+    
     hollow = 1
     def indefiniteArticle(self, observer):
         return ""
@@ -344,7 +369,7 @@ unpickleable.
         """
         snipname = sentence.directString()
         def cancel(self): pass
-        def ok(self,code,o=self):
+        def ok(self,code,o=self, snipname=snipname):
             cs = o.code_space
             cs[snipname] = code
             try:

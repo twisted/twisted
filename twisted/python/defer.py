@@ -1,5 +1,9 @@
 
+# System Imports
 import traceback
+
+# Twisted Imports
+from twisted.python import log
 
 class Deferred:
     """This is a callback which will be put off until later.
@@ -31,7 +35,7 @@ class Deferred:
     def errback(self, error):
         """The error callback to register with whatever will be calling this Deferred.
         """
-        self.runCallbacks(result, 1)
+        self.runCallbacks(error, 1)
 
 
     def runCallbacks(self, result, isError):
@@ -49,7 +53,8 @@ class Deferred:
                 args = args or ()
                 kw = kw or {}
                 try:
-                    result = callback((result,)+args, kw)
+                    print callback, result, args, kw
+                    result = apply(callback, (result,)+args, kw)
                 except:
                     traceback.print_exc()
                     isError = 1
@@ -68,3 +73,5 @@ class Deferred:
             self.armed = 1
             if self.called:
                 self.runCallbacks(self.cbResult, self.called - 1)
+        else:
+            log.msg("WARNING: double-arming deferred.")

@@ -32,13 +32,13 @@ class Hose(telnet.Telnet):
         return "character: "
 
 
-    def authenticate(self, username, password):
+    def checkUserAndPass(self, username, password):
         """Checks authentication against the reality; returns a boolean indicating success.
         """
         try:
-            self.factory.reality.check(username, password)
+            self.factory.reality.checkUserAndPass(username, password)
             p = self.factory.reality.getPerspectiveNamed(self.username)
-            p.attached( self )
+            p.attached(self)
         except authenticator.Unauthorized, u:
             self.transport.write("Login Refused: %s\r\n" % str(u))
             return 0

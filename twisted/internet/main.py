@@ -22,17 +22,35 @@ threadable.requireInit()
 
 # Sibling Imports
 
-import task, tcp
+import task, tcp, passport
 
 class Application(log.Logger):
     running = 0
-    def __init__(self, name, uid=None, gid=None):
+    def __init__(self, name, uid=None, gid=None, authorizer=None):
         self.name = name
+        # a list of twisted.internet.tcp.Ports
         self.ports = []
+        # a list of twisted.python.delay.Delayeds
         self.delayeds = []
+        # a list of twisted.internet.passport.Services
+        self.services = {}
+        # a passport authorizer
+        self.authorizer = authorizer or passport.DefaultAuthorizer()
         if os.name == "posix":
             self.uid = uid or os.getuid()
             self.gid = gid or os.getgid()
+
+    def getService(self, serviceName):
+        """Retrieve the named service from this application.
+
+        Raise a KeyError if there is no such service name.
+        """
+        return self.services[serviceName]
+
+    def addService(self, service):
+        """Add a service to this application.
+        """
+        self.services[service.serviceName] = service
 
     def __repr__(self):
         return "<%s app>" % self.name

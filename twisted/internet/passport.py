@@ -9,7 +9,8 @@ import random
 from twisted.python import defer
 
 class Unauthorized(Exception):
-    raise 
+    """An exception that is raised when unauthorized actions are attempted.
+    """
 
 class Key:
     """A key to a Perspective linked through an Identity.
@@ -28,9 +29,15 @@ class Key:
         self.perspective = perspective
 
     def getPerspective(self):
-        """Turn this key
+        """Get the perspective that I am a key to.
+
+        This should only be done _after_ authentication!  I retrieve
+        identity.application[service][perspective].
         """
-        return self.identity.application.getService(self.service).getPerspective(self.perspective)
+        app = self.identity.application
+        svc = app.getService(self.service)
+        psp = svc.getPerspectiveNamed(self.perspective)
+        return psp
 
 class Service:
     """I am a service that internet applications interact with.
@@ -40,15 +47,23 @@ class Service:
 
     (See Also: twisted.spread.pb.Service)
     """
-    def __init__(self, serviceName, application):
+
+    application = None
+    
+    def __init__(self, serviceName, application=None):
         """Create me, attached to the given application.
-        
+
         Arguments: application, a twisted.internet.main.Application instance.
         """
-        self.application = application
         self.serviceName = serviceName
         self.perspectives = {}
-        application.addService(self)
+        self.setApplication(application)
+
+    def setApplication(self, application):
+        assert not self.application, "Application already set!"
+        if application:
+            self.application = application
+            application.addService(self)
 
     def addPerspective(self, perspective):
         """Add a perspective to this Service.
@@ -65,6 +80,11 @@ class Service:
         """
         return self.perspectives[name]
 
+    def getServiceName(self):
+        """The name of this service.
+        """
+        return self.serviceName
+
 
 class Perspective:
     """I am an Identity's view onto a service.
@@ -73,15 +93,24 @@ class Perspective:
     a service; I represent the actions a user may perform upon a service, and
     the state associated with that user for that service.
     """
-    def __init__(self, perspectiveName, service, identityName):
+    def __init__(self, perspectiveName, service, identityName="Nobody"):
         """Create me.
 
-        I require a name for myself, a reference to the service I participate
-        in, and a name for my identity.
+        I require a name for myself and a reference to the service I
+        participate in.  (My identity name will be 'Nobody' by default, which
+        will normally not resolve.)
         """
         self.perspectiveName = perspectiveName
         self.service = service
         self.identityName = identityName
+
+    def setIdentityName(self, name):
+        self.identityName = name
+
+    def setIdentity(self, identity):
+        """Determine which identity I connect to.
+        """
+        self.setIdentityName(identity.name)
 
     def getPerspectiveName(self):
         """Return the unique name of this perspective.
@@ -99,16 +128,22 @@ class Perspective:
     def getIdentityRequest(self):
         """Request my identity.
         """
-        self.service.application.authorizer.getIdentityRequest(self.identityName)
+        return (self.service.application.authorizer.
+                getIdentityRequest(self.identityName))
 
 
 def respond(challenge, password):
     """Respond to a challenge.
     This is useful for challenge/response authentication.
     """
-    m = md5.new(md5.new(password).digest())
+    m = md5.new()
+    m.update(password)
+    hashedPassword = m.digest()
+    m = md5.new()
+    m.update(hashedPassword)
     m.update(challenge)
-    return m.digest()
+    doubleHashedPassword = m.digest()
+    return doubleHashedPassword
 
 
 class Identity:
@@ -140,9 +175,9 @@ class Identity:
     def addKeyFor(self, perspective):
         """Add a key for the given perspective.
         """
-        perspectiveName = perspective.getName()
+        perspectiveName = perspective.getPerspectiveName()
         serviceName = perspective.service.getServiceName()
-        
+        self.setKey(serviceName, perspectiveName)
     
     def setKey(self, serviceName, perspectiveName):
         """Set a key on my keyring.
@@ -166,6 +201,11 @@ class Identity:
         else:
             self.hashedPassword = md5.new(plaintext).digest()
 
+    def setAlreadyHashedPassword(self, cyphertext):
+        """(legacy) Set a password for this identity, already md5 hashed.
+        """
+        self.hashedPassword = cyphertext
+
     def challenge(self):
         """I return some random data.
 
@@ -176,6 +216,7 @@ class Identity:
         for x in range(random.randrange(15,25)):
             crap = crap + chr(random.randint(65,90))
         crap = md5.new(crap).digest()
+        crap = 'hi'
         return crap
 
     def verifyPassword(self, challenge, hashedPassword):
@@ -185,22 +226,26 @@ class Identity:
         md.update(self.hashedPassword)
         md.update(challenge)
         correct = md.digest()
-        return (hashedPassword == correct)
+        result = (hashedPassword == correct)
+        return result
 
     def verifyPlainPassword(self, plaintext):
         """Verify plain text password.
+
+        This is insecure, but necessary to support legacy protocols such as
+        IRC, POP3, HTTP, etc.
         """
         md = md5.new()
         md.update(plaintext)
-        correct = md.digest()
-        return (plaintext == correct)
+        userPass = md.digest()
+        return (userPass == self.hashedPassword)
 
 
 
 class Authorizer:
     """An interface to a set of identities.
     """
-    def addIdentity(self, name, callback, errback):
+    def addIdentity(self, identity):
         """Create an identity and make a callback when it has been created.
         """
         raise NotImplementedError()
@@ -228,20 +273,24 @@ class DefaultAuthorizer(Authorizer):
         """
         self.identities = {}
 
-    def addIdentity(self, name, password):
-        """Add an identity to me, with the given name and cleartext password.
+    def addIdentity(self, identity):
+        """Add an identity to me.
         """
-        i = Identity()
-        i.setPassword(password)
-        self.identities[name] = i
-        return i
+        if self.identities.has_key(identity.name):
+            raise KeyError("Already have an identity by that name.")
+        self.identities[identity.name] = identity
 
     def getIdentityRequest(self, name):
-        """Get an IdentityRequest
+        """Get a Deferred callback registration object.
+
+        I return a deferred (twisted.python.defer.Deferred) which will be
+        called back to when an identity is discovered to be available (or
+        errback for unavailable).  It will be returned unarmed, so you must arm
+        it yourself.
         """
         req = defer.Deferred()
-        if self.identities.has_key(callback):
+        if self.identities.has_key(name):
             req.callback(self.identities[name])
         else:
-            req.errback(name)
+            req.errback("unauthorized")
         return req

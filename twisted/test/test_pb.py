@@ -10,11 +10,11 @@ from pyunit import unittest
 from twisted.spread import pb
 from twisted.python import authenticator
 from twisted.protocols import protocol
-
+from twisted.internet import passport, main
 
 class Dummy(pb.Proxied):
     def proxy_doNothing(self, user):
-        if isinstance(user,DummyPerspective):
+        if isinstance(user, DummyPerspective):
             return 'hello world!'
         else:
             return 'goodbye, cruel world!'
@@ -24,8 +24,14 @@ class DummyPerspective(pb.Perspective):
         return Dummy()
 
 class DummyService(pb.Service):
+    """A dummy PB service to test with.
+    """
     def getPerspectiveNamed(self, user):
-        return DummyPerspective()
+        """
+        """
+        # Note: I don't need to go back and forth between identity and
+        # perspective here, so I _never_ need to specify identityName.
+        return DummyPerspective("any", self)
 
 class IOPump:
     """Utility to pump data between clients and servers for protocol testing.
@@ -65,10 +71,15 @@ def connectedServerAndClient():
     """Returns a 3-tuple: (client, server, pump)
     """
     c = pb.Broker()
-    svr = pb.BrokerFactory()
-    svr.addService("test", DummyService())
+    app = main.Application("pb-test")
+    ident = passport.Identity("guest", app)
+    ident.setPassword("guest")
+    svc = DummyService("test", app)
+    ident.addKeyFor(svc.getPerspectiveNamed("any"))
+    app.authorizer.addIdentity(ident)
+    svr = pb.BrokerFactory(app)
     s = svr.buildProtocol(('127.0.0.1',))
-    c.requestPerspective("test", "guest", "guest")
+    c.requestIdentity("guest", "guest")
     s.copyTags = {}
     
     cio = StringIO()
@@ -392,8 +403,12 @@ class BrokerTestCase(unittest.TestCase):
     def testProxy(self):
         c, s, pump = connectedServerAndClient()
         pump.pump()
-        test = c.remoteForName("test")
+        ident = c.remoteForName("identity")
         accum = []
+        ident.attach("test", None, pbcallback=accum.append)
+        pump.pump() # send call
+        pump.pump() # get response
+        test = accum.pop() # okay, this should be our perspective...
         test.getDummyProxy(pbcallback=accum.append)
         pump.pump() # send call
         pump.pump() # get response

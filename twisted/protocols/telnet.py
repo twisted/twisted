@@ -186,7 +186,7 @@ class Telnet(protocol.Protocol):
 
     def processPassword(self, paswd):
         self.transport.write(IAC+WONT+ECHO+"*****\r\n")
-        if not self.authenticate(self.username, paswd):
+        if not self.checkUserAndPass(self.username, paswd):
             return "Done"
         return "Command"
 
@@ -255,9 +255,8 @@ class Telnet(protocol.Protocol):
 
 class Shell(Telnet):
 
-    def authenticate(self, username, password):
-        return ((self.factory.username == username) and
-                (password == self.factory.password))
+    def checkUserAndPass(self, username, password):
+        return ((self.factory.username == username) and (password == self.factory.password))
 
     def flush(self):
         """Try to flush; I might not be able to though.

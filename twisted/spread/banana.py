@@ -144,8 +144,8 @@ class Banana(protocol.Protocol, styles.Ephemeral):
         'login'          : -20,
         'password'       : -21,
         'challenge'      : -22,
-        'perspective'    : -23,
-        'inperspective'  : -24,
+        'perspective'    : -23,# not very useful any longer, as the perspective
+        'inperspective'  : -24,# message has been replaced by logged_in...
         'cachemessage'   : -25,
         'message'        : -26,
         'answer'         : -27,

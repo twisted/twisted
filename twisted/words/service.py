@@ -1,11 +1,11 @@
 
 # System Imports
-import md5
 import string
 
 # Twisted Imports
 from twisted.spread import pb
 from twisted.python import authenticator, log
+from twisted.persisted import styles
 from twisted import copyright
 
 # Status "enumeration"
@@ -21,10 +21,9 @@ statuses = {
     }
 
 class Participant(pb.Perspective):
-    def __init__(self, name, password, service):
+    def __init__(self, name, service):
+        pb.Perspective.__init__(self, name, service)
         self.name = name
-        self.service = service
-        self.password = md5.new(password).digest()
         self.status = OFFLINE
         self.contacts = []
         self.reverseContacts = []
@@ -33,7 +32,9 @@ class Participant(pb.Perspective):
         self.info = ""
 
     def attached(self, client):
-        if self.client:
+        if ((self.client is not None)
+            and self.client.__class__ != styles.Ephemeral):
+            print self.client
             raise authenticator.Unauthorized("duplicate login not permitted.")
         log.msg("attached: %s" % self.name)
         self.client = client
@@ -162,8 +163,8 @@ class Group(pb.Cached):
 class Service(pb.Service):
     """I am a chat service.
     """
-
-    def __init__(self):
+    def __init__(self, name, app):
+        pb.Service.__init__(self, name, app)
         self.participants = {}
         self.groups = {}
 
@@ -174,15 +175,12 @@ class Service(pb.Service):
             self.groups[name] = group
         return group
 
-    def addParticipant(self, name, password):
+    def addParticipant(self, name):
         if not self.participants.has_key(name):
             log.msg("Created New Participant: %s" % name)
-            p = Participant(name, password, self)
+            p = Participant(name, self)
             self.participants[name] = p
             return p
-
-    def getPassword(self, name):
-        return self.getPerspectiveNamed(name).password
 
     def getPerspectiveNamed(self, name):
         return self.participants[name]

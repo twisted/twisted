@@ -11,29 +11,37 @@ import string
 # Twisted Imports
 from twisted.python import reflect, reference, delay
 from twisted.spread import pb
+from twisted.internet import passport
 
 class Reality(delay.Delayed,
               reference.Resolver,
               pb.Service):
-    def __init__(self):
+
+    serviceName = 'twisted.reality'
+    def __init__(self, name='twisted.reality', app=None):
         delay.Delayed.__init__(self)
-        reference.Resolver.__init__(self,self)
+        reference.Resolver.__init__(self, self)
+        pb.Service.__init__(self, name, app)
         self.__counter = 0
         self.__ids = {}
         self.__names = {}
 
+    def addPlayersAsIdentities(self):
+        """Add all players with passwords as identities.
+        """
+        for th in self.__ids.values():
+            if hasattr(th, 'password'):
+                idname = th.name
+                print "Adding identity %s" % idname
+                ident = passport.Identity(idname, self.application)
+                ident.setAlreadyHashedPassword(th.password)
+                ident.setKey(self.getServiceName(), th.name)
+                self.application.authorizer.addIdentity(ident)
+
     def getThingById(self, thingid):
         return self.__ids[thingid]
 
-    ### PB methods
-    def getPassword(self, playerName):
-        """Attempt to look up a player by name, and return their MD5-hashed password.
-        """
-        try:
-            return self[playerName].password
-        except:
-            raise KeyError('bad login')
-
+    ### PB
     def getPerspectiveNamed(self, playerName):
         """Get a perspective from a named player.
 
@@ -98,7 +106,6 @@ class Reality(delay.Delayed,
     def objects(self):
         return self.__ids.values()
 
-
     def resolveAll(self):
         self.resolve(self.objects())
 
@@ -116,9 +123,9 @@ from twisted.reality import thing
 from twisted.reality import reality
 t=reference.Reference
 m=reference.AttributeReference
-result = thing._default = reality.Reality()
+result = thing._default = reality.Reality('%s')
 
-""")
+""" % self.getServiceName())
         oo = self.objects()
         oo.sort(lambda x, y: cmp(string.lower(x.name),
                                  string.lower(y.name)))

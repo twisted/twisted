@@ -134,19 +134,37 @@ class IRCChatter(irc.IRC):
                                   'w', 'n') # user and channel modes
                 if self.passwd is None:
                     self.receiveDirectMessage("*login*", "Password?")
-##                self.sendLine(":*login*!*login*@%s NOTICE %s :You 'must /msg *login* <your password>' to use this server" %
-##                              (self.servicename, nickname))
                     self.pendingLogin = participant
                 else:
-                    self.service.check(nickname, self.passwd)
-                    self.participant = participant
-                    self.participant.attached(self)
-                    self.receiveDirectMessage("*login*", "Pasword already accepted.  Thank you.")
+                    self.logInAs(participant, self.paswd)
         else:
             # XXX: Is this error string appropriate?
             self.sendLine(irc.ERR_NICKNAMEINUSE,
                           nickname, ":this username is invalid")
 
+    def logInAs(self, participant, password):
+        self.pendingLogin = participant
+        self.pendingPassword = password
+        req = participant.getIdentityRequest()
+        req.addCallbacks(self.loggedInAs, self.notLoggedIn)
+        req.arm()
+
+    def loggedInAs(self, ident):
+        """Successfully logged in.
+        """
+        if ident.verifyPlainPassword(self.pendingPassword):
+            self.pendingLogin.attached(self)
+            self.participant = self.pendingLogin
+            self.receiveDirectMessage("*login*", "Authentication accepted.  Thank you.")
+        else:
+            self.notLoggedIn("unauthorized")
+        del self.pendingLogin
+        del self.pendingPassword
+            
+    def notLoggedIn(self, message):
+        """Login failed.
+        """
+        self.receiveDirectMessage("*login*", "Login failed: %s" % message)
 
     def irc_USER(self, prefix, params):
         """User message -- Set your realname.
@@ -411,15 +429,9 @@ class IRCChatter(irc.IRC):
                     ### >> :niven.openprojects.net 401 glyph vasdfasdf :No such nick/channel
                     self.sendMessage(irc.ERR_NOSUCHNICK, name,
                                      ":No such nick/channel")
-
         else:
             if name == '*login*':
-                self.service.check(self.nickname, text)
-                self.participant = self.pendingLogin
-                self.receiveDirectMessage(
-                    "*login*",
-                    "Login accepted.  Welcome to %s." % self.servicename)
-                self.participant.attached(self)
+                self.logInAs(self.pendingLogin, text)
             else:
                 self.receiveDirectMessage("*login*", "You haven't logged in yet.")
 
