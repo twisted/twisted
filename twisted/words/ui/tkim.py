@@ -58,6 +58,31 @@ class AddContact(Toplevel):
         if contact: 
             self.im.addContact(self.im.gateways[gatewayname],contact)
             self.destroy()
+            
+class StartConversation(Toplevel):
+    def __init__(self,im,*args,**kw):
+        apply(Toplevel.__init__,(self,)+args,kw)
+        self.im=im
+        self.title("Start Conversation - Instance Messenger")
+        Label(self,text="Start Conversation With?").grid(column=0,row=0)
+        self.contact=Entry(self)
+        self.contact.grid(column=1,row=0)
+        self.contact.bind('<Return>',self.startConvo)
+        self.gates=Listbox(self)
+        self.gates.grid(column=0,row=1,columnspan=2)
+        for k in self.im.gateways.keys():
+            self.gates.insert(END,k)
+        Button(self,text="Start Conversation",command=self.startConvo).grid(column=0,row=2)
+        Button(self,text="Cancel",command=self.destroy).grid(column=1,row=2)
+        self.protocol('WM_DELETE_WINDOW',self.destroy)
+        tkutil.grid_setexpand(self)
+
+    def startConvo(self,*args):
+        contact=self.contact.get()
+        gatewayname=self.gates.get(ACTIVE)
+        if contact: 
+            self.im.conversationWith(self.im.gateways[gatewayname],contact)
+            self.destroy()
 
 class JoinGroup(Toplevel):
     def __init__(self,im,*args,**kw):
@@ -144,6 +169,17 @@ class GroupSession(Toplevel):
         users=list(self.list.get(0,END))
         i=users.index(user)
         self.list.delete(i)
+
+    def changeMemberName(self,user,newName):
+        users=list(self.list.get(0,END))
+        try:
+            i=users.index(user)
+        except ValueError:
+            pass
+        else:
+            self._out("%s changed nick to %s.\n"%(user,newName))
+            self.list.delete(i)
+            self.list.insert(i,newName)
     
     def say(self,*args):
         text=self.input.get("1.0",END)[:-1]
@@ -191,6 +227,11 @@ class Conversation(Toplevel):
         text="%s:%s:%s %s: %s\n"%(h,min,sec,sender or self.contact,message)
         self._addtext(text)
         self.output.see(END)
+
+    def changeName(self,newName):
+        self.title("%s - Instance Messenger"%newName)
+        self._addtext("%s changed nick to %s.\n"%(self.contact,newName))
+        self.contact=newName
     
     def say(self,event):
         message=self.input.get('1.0',END)[:-1]
@@ -212,7 +253,8 @@ class ContactList(Toplevel):
         #myim.add_cascade(label="Change Status",menu=statuschange)
         #for k in service.statuses.keys():
         #    statuschange.add_command(label=service.statuses[k],command=lambda im=self.im,status=k:im.remote.changeStatus(status))
-        myim.add_command(label="Account Manager",command=lambda i=self.im:i.am.deiconify())
+        myim.add_command(label="Account Manager...",command=lambda i=self.im:i.am.deiconify())
+        myim.add_command(label="Start Conversation...",command=lambda i=self.im:StartConversation(i))
         bar=Scrollbar(self)
         self.list=tkutil.CList(self,["Gateway","Username","Status"],height=2,yscrollcommand=bar.set)
         self.list.grid(column=0,row=0,sticky=N+E+S+W)
@@ -260,10 +302,22 @@ class ContactList(Toplevel):
                 self.list.delete(row)
                 break
         self.list.insert(row,[gateway.name,contact,status])
+
+    def changeContactName(self,gateway,contact,newName):
+        users=self.list.get(0,END)
+        row=END
+        for u in range(len(users)):
+            if users[u][0]==gateway.name and users[u][1]==contact:
+                row=u
+                self.list.delete(row)
+                self.list.insert(row,[gateway.name,newName,users[u][2]])
     
     def sendMessage(self):
         gatewayname,user,state=self.list.get(ACTIVE)
-        self.im.conversationWith(self.im.gateways[gatewayname],user)
+        try:
+            self.im.conversationWith(self.im.gateways[gatewayname],user)
+        except KeyError:
+            pass
     
     def joinGroup(self):
         JoinGroup(self.im)
@@ -474,13 +528,13 @@ class AccountManager(Toplevel):
 
     def handleAttached(self,im,gateway,event):
         for account in self.accounts:
-            if account.gatewayname==gateway.protocol and account.options["username"]==gateway.username:
+            if account.gatewayname==gateway.protocol and account.options["username"]==gateway.logonUsername:
                 self._modifyaccount(account,"True")
 
     def handleDetached(self,im,gateway,event):
         if im.cl!=None: im.cl.removeGateway(gateway)
         for account in self.accounts:
-            if account.gatewayname==gateway.protocol and account.options["username"]==gateway.username:
+            if account.gatewayname==gateway.protocol and account.options["username"]==gateway.logonUsername:
                 self._modifyaccount(account,"False")
 
 im2.Conversation=Conversation

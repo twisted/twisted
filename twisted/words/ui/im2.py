@@ -22,6 +22,7 @@ from twisted.spread import pb
 from twisted.words.ui import gateways
 
 ERROR,CONNECTIONFAILED,CONNECTIONLOST=range(3) # the error codes
+STATUSES=["Offline","Online","Away"]
 
 class Conversation:
     def __init__(self,im,gateway,target):
@@ -164,7 +165,7 @@ class InstanceMessenger:
         if not self.logging: return
         path=os.path.expanduser("~")
         gatewayname=gateway.username+"-"+gateway.protocol
-        user=string.replace(user," ","")
+        user=string.lower(string.replace(user," ",""))
         filename=path+os.sep+"im"+os.sep+gatewayname+"-"+user+".log"
         f=open(filename,"a")
         f.write("(%s) %s\n"%(time.asctime(time.localtime(time.time())),text))
@@ -261,6 +262,31 @@ class InstanceMessenger:
         self.sendEvent(gateway,"notifyStatusChanged",contact,newStatus)
         self.cl.changeContactStatus(gateway,contact,newStatus)
         self._log(gateway,contact,"%s is %s!"%(contact,newStatus))
+
+    def notifyNameChanged(self,gateway,contact,newName):
+        """
+        called when the nickname of a contact we're observing (on contact list,
+        in chat room, direct message) changes their name.  we get one of these
+        as well if we change our nickname.
+        gateway := the gateway the contact is on (class Gateway)
+        contact := the old name of the contact (string)
+        newName := the new name of the contact (string)
+        """
+        self.sendEvent(gateway,"notifyNameChanged",contact,newName)
+        self.cl.changeContactName(gateway,contact,newName)
+        try:
+            conv=self.conversations[str(gateway)+contact]
+        except KeyError:
+            pass
+        else:
+            conv.changeName(newName)
+            del self.conversations[str(gateway)+contact]
+            self.conversations[str(gateway)+newName]=conv
+        l=len(str(gateway))
+        for k in self.groups.keys():
+            if k[:l]==str(gateway):
+                self.groups[k].changeMemberName(contact,newName)
+        self._log(gateway,contact,"%s changed name to %s!"%(contact,newName))
 
     def joinGroup(self,gateway,group):
         """
@@ -485,10 +511,10 @@ def logoffAccount(im,account):
     account := the account to disconnect (class Account)
     """
     for g in im.gateways.values():
-        if g.username==account.options["username"] and g.protocol==account.gatewayname:
+        if g.logonUsername==account.options["username"] and g.protocol==account.gatewayname:
             im.addCallback(g,"error",_handleDisconnect)
             g.loseConnection()
 
 def _handleDisconnect(im,gateway,event,code,message):
     im.removeCallback(gateway,event,_handleDisconnect)
-    if code==im2.CONNECTIONLOST: return "break"
+    if code==CONNECTIONLOST: return "break"

@@ -70,6 +70,7 @@ class WordsGateway(gateway.Gateway,pb.Referenceable):
     def __init__(self,username):
         gateway.Gateway.__init__(self)
         self.username=username
+        self.logonUsername=username
         self.name="%s (%s)"%(self.username,self.protocol)
         self._connected=0
         self._list=()

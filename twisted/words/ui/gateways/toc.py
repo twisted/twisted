@@ -52,7 +52,7 @@ class TOCGateway(gateway.Gateway,toc.TOCClient):
         gateway.Gateway.__init__(self)
         apply(toc.TOCClient.__init__,(self,username,password)+args,kw)
         self.name="%s (%s)"%(username,self.protocol)
-        self._usermapping={}
+        self.logonUsername=username
         self._chatmapping={}
         self._roomid={}
 
@@ -69,13 +69,19 @@ class TOCGateway(gateway.Gateway,toc.TOCClient):
 
     def loseConnection(self):
         self.transport.loseConnection()
-
+        
+#    def tocNICK(self,data):
+#        self.changeContactName(self.username,data[0])
+#        #self.username=data[0]
+    
     def gotConfig(self,mode,buddylist,permit,deny):
         users=[]
+        self._currentusers=[]
         for k in buddylist.keys():
             for u in buddylist[k]:
                 self.add_buddy([u])
                 users.append((u,"Offline"))
+                self._currentusers.append(u)
         self.add_deny([])
         self.signon()
         self.receiveContactList(users)
@@ -84,10 +90,18 @@ class TOCGateway(gateway.Gateway,toc.TOCClient):
         self._savedpermit=permit
         self._saveddeny=deny
         
+    def updateName(self,user):
+        for u in self._currentusers:
+            if toc.normalize(u)==toc.normalize(user): # same user
+                if user!=u: # whoopsies, name change
+                    self.notifyNameChanged(u,user)
+                    i=self._currentusers.index(u)
+                    self._currentusers[i]=user
+
     def hearMessage(self,user,message,autoreply):
         message=dehtml(message)
         if autoreply: message="<AUTO-REPLY>: "+message
-        if self._usermapping.has_key(toc.normalize(user)):user=self._usermapping[toc.normalize(user)]
+        self.updateName(user)
         self.receiveDirectMessage(user,message)
 
     def updateBuddy(self,user,online,evilness,signontime,idletime,userclass,away):
@@ -95,7 +109,7 @@ class TOCGateway(gateway.Gateway,toc.TOCClient):
         if idletime>0: state="Idle"
         if away: state="Away"
         if not online: state="Offline"
-        if self._usermapping.has_key(toc.normalize(user)):user=self._usermapping[toc.normalize(user)]
+        self.updateName(user)
         self.notifyStatusChanged(user,state)
         
     def chatJoined(self,roomid,roomname):
@@ -103,7 +117,7 @@ class TOCGateway(gateway.Gateway,toc.TOCClient):
         self._roomid[roomid]=roomname
 
     def chatUpdate(self,roomid,user,inroom):
-        if self._usermapping.has_key(toc.normalize(user)):user=self._usermapping[toc.normalize(user)]
+        self.updateName(user)
         if inroom:
             self.memberJoined(user,self._roomid[roomid])
         else:
@@ -112,7 +126,7 @@ class TOCGateway(gateway.Gateway,toc.TOCClient):
     def chatHearMessage(self,roomid,user,message):
         if user==self.username: return
         message=dehtml(message)
-        if self._usermapping.has_key(toc.normalize(user)):user=self._usermapping[toc.normalize(user)]
+        self.updateName(user)
         self.receiveGroupMessage(user,self._roomid[roomid],message)
 
     def chatLeft(self,roomid):
@@ -133,7 +147,6 @@ class TOCGateway(gateway.Gateway,toc.TOCClient):
             self._savedlist[k]=[]
         self._savedlist[k].append(contact)
         self.writeNewConfig()
-        self._usermapping[toc.normalize(contact)]=contact
         self.notifyStatusChanged(contact,"Offline")
 
     def removeContact(self,contact):
