@@ -26,9 +26,7 @@ Maintainer: U{James Y Knight <mailto:foom@fuhm.net>}
 
 # system imports
 from cStringIO import StringIO
-import tempfile
 import base64, binascii
-import cgi
 import socket
 import math
 import time
@@ -40,37 +38,10 @@ import os
 from twisted.internet import interfaces, reactor, protocol, address
 from twisted.protocols import policies, basic
 from twisted.python import log, components
-try: # try importing the fast, C version
-    from twisted.protocols._c_urlarg import unquote
-except ImportError:
-    from urllib import unquote
 
 # sibling imports
 import responsecode
 import http_headers
-
-protocol_version = "HTTP/1.1"
-
-
-def parse_qs(qs, keep_blank_values=0, strict_parsing=0, unquote=unquote):
-    """like cgi.parse_qs, only with custom unquote function"""
-    d = {}
-    items = [s2 for s1 in qs.split("&") for s2 in s1.split(";")]
-    for item in items:
-        try:
-            k, v = item.split("=", 1)
-        except ValueError:
-            if strict_parsing:
-                raise
-            continue
-        if v or keep_blank_values:
-            k = unquote(k.replace("+", " "))
-            v = unquote(v.replace("+", " "))
-            if k in d:
-                d[k].append(v)
-            else:
-                d[k] = [v]
-    return d
 
 def toChunk(data):
     """Convert string to a chunk.
@@ -92,7 +63,7 @@ class StringTransport:
         return getattr(self.__dict__['s'], attr)
 
 # response codes that must have empty bodies
-NO_BODY_CODES = (204, 304, 100, 101)
+NO_BODY_CODES = (204, 304)
 
 class Request:
     """A HTTP request.
@@ -116,8 +87,10 @@ class Request:
     code_message = None
     startedWriting = 0
     sentLength = 0 # content bytes sent to client
-
-    _foreceSSL = False
+    
+    acceptedData = False
+    
+    _forceSSL = False
     
     
     def __init__(self, chanRequest, command, path, version, in_headers):
@@ -132,10 +105,10 @@ class Request:
         self.out_headers = http_headers.Headers()
         self.in_headers = in_headers
         self.process()
-
+    
     def process(self):
         """Called by __init__ to let you process the request.
-
+        
         Can be overridden by a subclass to do something useful."""
         pass
     
@@ -147,7 +120,7 @@ class Request:
     
     def handleContentComplete(self):
         """Called by channel when all data has been received.
-
+        
         Should be overridden by a subclass to do something appropriate."""
         
     def connectionLost(self, reason):
@@ -158,17 +131,25 @@ class Request:
     def __repr__(self):
         return '<%s %s %s>'% (self.method, self.uri, self.clientproto)
 
-    # private http response methods
-
-    def _sendError(self, code, resp=''):
-        self.transport.write('%s %s %s\r\n\r\n' % (self.clientproto, code, resp))
-    
     # The following is the public interface that people should be
     # writing to.
 
+    def acceptData(self):
+        """Notify the client that you will accept the incoming data.
+        Should be called after checking if the request is valid.
+        
+        If you don't want to accept the data, write a response before
+        calling this method. That may cause keepalive to be canceled,
+        and the connection closed, so you shouldn't do that except
+        when sending an error code (4xx/5xx).
+        
+        """
+        self.acceptedData = True
+        if not self.startedWriting and '100-continue' in self.in_headers.getHeader('Expect', ()):
+            self.chanRequest.writeIntermediateResponse(responsecode.CONTINUE)
+            
     def finish(self):
         """We are finished writing data."""
-        print "Request.finish, startedWriting=", self.startedWriting
         if not self.startedWriting:
             # write headers
             self.write('')
@@ -185,6 +166,11 @@ class Request:
         time this is called, it writes out response headers.
         """
         if not self.startedWriting:
+            if not self.acceptedData:
+                self.chanRequest.persistent = False
+                if self.code < 300:
+                    warnings.warn("Warning! Didn't call acceptData, but responded with success code.")
+            
             self.startedWriting = 1
             self.chanRequest.writeHeaders(self.code, self.out_headers, code_message=self.code_message)
         
@@ -242,20 +228,22 @@ v        """
         if not lastModified or (lastModified < when):
             self.out_headers.setHeader('Last-Modified', when)
         
-    def checkBody(self):
-        """Check to see if this request should have a body. As a side-effect
-        may modify my response code to L{NOT_MODIFIED} or L{PRECONDITION_FAILED},
-        if appropriate.
+    def checkPreconditions(self):
+        """Check to see if this request passes the conditional checks specified
+        by the client. As a side-effect, may modify my response code to
+        L{NOT_MODIFIED} or L{PRECONDITION_FAILED}.
         
         Call this function after setting the ETag and Last-Modified
         output headers, but before actually proceeding with request
         processing.
         
         This examines the appropriate request headers for conditionals,
-        the existing response headers and sets the response code as necessary.
+        (If-Modified-Since, If-Unmodified-Since, If-Match, If-None-Match,
+        or If-Range), compares with the existing response headers and
+        and then sets the response code as necessary.
         
-        @return: True if you should write a body, False if you should
-                 not.
+        @return: True if you should proceed with processing the request,
+                 False if not.
         """
         tags = self.in_headers.getHeader("if-none-match")
         etag = self.out_headers.getHeader("etag")
@@ -361,6 +349,11 @@ v        """
         self._authorize()
         return self.password
 
+
+
+class AbortedException(Exception):
+    pass
+
 class ChannelRequest:
     headerlen = 0
     length = None
@@ -372,6 +365,8 @@ class ChannelRequest:
     
     channel = None
     request = None
+    
+    out_version = "HTTP/1.1"
     
     def __init__(self, channel, initialLine, queued=0):
         self.reqHeaders = http_headers.Headers()
@@ -386,12 +381,36 @@ class ChannelRequest:
 
 
         parts = initialLine.split()
+        # set the version to a fallback for error generation
+        self.version = (1,0)
+            
         if len(parts) != 3:
-            self.transport.write("HTTP/1.1 400 Bad Request\r\n\r\n")
-            self.transport.loseConnection()
-            return
-        self.command, self.path, self.version = parts
+            if len(parts) in (1,2):
+                if len(parts) < 2:
+                    parts.append('/')
+                parts.append('HTTP/0.9')
+            else:
+                self._abortWithError(responsecode.BAD_REQUEST, 'Bad request line: %s' % initialLine)
+
+        self.command, self.path, strversion = parts
+        version = strversion[5:].split('.')
         
+        if strversion[0:5].lower() != 'http/' or len(version) != 2:
+            self._abortWithError(responsecode.BAD_REQUEST, "Unknown protocol: %s" % strversion)
+
+        try:
+            self.version = int(version[0]), int(version[1])
+        except:
+            self._abortWithError(responsecode.BAD_REQUEST, "Unknown protocol: %s" % strversion)
+            
+        # Check for HTTP 0 or HTTP 1.
+        if self.version[0] > 1:
+            self._abortWithError(responsecode.HTTP_VERSION_NOT_SUPPORTED)
+
+        if self.version[0] == 0:
+            # simulate end of headers
+            self.lineReceived('')
+            
     def lineReceived(self, line):
         if self.chunkedIn:
             # Parsing a chunked input
@@ -402,7 +421,7 @@ class ChannelRequest:
                 try:
                     self.length = int(chunksize, 16)
                 except:
-                    raise BadRequest("Invalid chunk size, not a hex number: %s!" % chunksize)
+                    self._abortWithError(responsecode.BAD_REQUEST, "Invalid chunk size, not a hex number: %s!" % chunksize)
 
                 if self.length == 0:
                     self.chunkedIn = 3
@@ -412,7 +431,7 @@ class ChannelRequest:
                 # After we got data bytes of the appropriate length, we end up here,
                 # waiting for the CRLF, then go back to get the next chunk size.
                 if line != '':
-                    raise BadRequest("Excess %d bytes sent in chunk transfer mode" % len(line))
+                    self._abortWithError(responsecode.BAD_REQUEST, "Excess %d bytes sent in chunk transfer mode" % len(line))
                 self.chunkedIn = 1
             elif self.chunkedIn == 3:
                 # TODO: support Trailers (maybe! but maybe not!)
@@ -426,7 +445,7 @@ class ChannelRequest:
             if self.partialHeader:
                 self.headerReceived(self.partialHeader)
             self.partialHeader = ''
-            self.allHeadersReceived()
+            self.allHeadersReceived()    # can set chunkedIn
             if self.chunkedIn:
                 pass
             elif self.length == 0:
@@ -463,8 +482,7 @@ class ChannelRequest:
         """
         nameval = line.split(':', 1)
         if len(nameval) != 2:
-            self.FIXME.transport.write("HTTP/1.1 400 Bad Request\r\n\r\n")
-            self.FIXME.transport.loseConnection()
+            self._abortWithError(responsecode.BAD_REQUEST, "No ':' in header.")
         
         name, val = nameval
         val.lstrip(' \t')
@@ -473,8 +491,7 @@ class ChannelRequest:
         self.headerlen = self.headerlen+ len(line)
         
         if self.headerlen > self.channel.maxHeaderLength:
-            self.FIXME.transport.write("HTTP/1.1 400 Bad Request\r\n\r\n")
-            self.FIXME.transport.loseConnection()
+            self._abortWithError(responsecode.BAD_REQUEST, 'Headers too long.')
             
     def allHeadersReceived(self):
         print "allHeadersReceived"
@@ -521,7 +538,7 @@ class ChannelRequest:
         connHeaders = http_headers.Headers()
         
         move('Connection')
-        if self.version != "HTTP/1.1":
+        if self.version < (1,1):
             # Remove all headers mentioned in Connection, because a HTTP 1.0
             # proxy might have erroneously forwarded it from a 1.1 client.
             for name in connHeaders.getHeader('Connection', ()):
@@ -556,7 +573,7 @@ class ChannelRequest:
         # fine. (Hrm just noticed, Squid only supports HTTP 1.0 so far, so this
         # might be an issue worth thinking about after all)
         
-        if (self.version == "HTTP/1.1"
+        if (self.version >= (1,1)
             and not 'close' in connHeaders.getHeader('connection', ())):
             self.persistent = True
         else:
@@ -570,21 +587,13 @@ class ChannelRequest:
         
         print "TransferEncoding:", transferEncoding
         if transferEncoding:
-            try: # Why doesn't list have a .find? stupid python.
-                i = transferEncoding.index('chunked')
-            except:
-                i = -1
-            
-            if i != -1:
+            if transferEncoding[-1] == 'chunked':
                 # Chunked
                 self.chunkedIn = 1
-                if i != len(transferEncoding) - 1:
-                    # Not last element.
-                    raise BadRequest("Transfer-Encoding sent with chunked encoding in a non-final position.")
             else:
                 # Would close on end of connection, except this can't happen for
                 # client->server data.
-                raise BadRequest("Transfer-Encoding sent without chunked encoding.")
+                self._abortWithError(responsecode.BAD_REQUEST, "Transfer-Encoding received without chunked in last position.")
             
             # Cut off the chunked encoding (cause it's special)
             transferEncoding = transferEncoding[:-1]
@@ -592,7 +601,7 @@ class ChannelRequest:
             # FOR NOW: report an error if the client uses any encodings.
             # They shouldn't, because we didn't send a TE: header saying it's okay.
             if transferEncoding:
-                raise BadRequest("Transfer-Encoding %s not supported." % transferEncoding)
+                self._abortWithError(responsecode.NOT_IMPLEMENTED, "Transfer-Encoding %s not supported." % transferEncoding)
         else:
             # No transfer-coding.
             # If no Content-Length either, assume no content.
@@ -606,24 +615,40 @@ class ChannelRequest:
     finished = 0
     
     ##### Request Callbacks #####
-    def writeHeaders(self, code, headers, outversion="HTTP/1.1", code_message=None):
+    def writeIntermediateResponse(self, code, headers=None, code_message=None):
+        if self.version >= (1,1):
+            self._writeHeaders(code, headers, code_message, False)
+
+    def writeHeaders(self, code, headers, code_message=None):
+        self._writeHeaders(code, headers, code_message, True)
+        
+    def _writeHeaders(self, code, headers, code_message, addConnectionHeaders):
+        if self.version[0] == 0:
+            return
+        
         l = []
         if code_message is None:
             code_message = responsecode.RESPONSES.get(code, "Unknown Status")
         
-        l.append('%s %s %s\r\n' % (outversion, code,
+        l.append('%s %s %s\r\n' % (self.out_version, code,
                                    code_message))
-        for name, valuelist in headers._raw_headers.items():
-            for value in valuelist:
-                l.append("%s: %s\r\n" % (name, value))
-        # if we don't have a content length, we send data in
-        # chunked mode, so that we can support pipelining in
-        # persistent connections.
-        if ((self.version == "HTTP/1.1") and
-            (headers.getHeader('Content-Length') is None) and
-            not (code in NO_BODY_CODES)):
-            l.append("%s: %s\r\n" % ('Transfer-encoding', 'chunked'))
-            self.chunkedOut = 1
+        if headers is not None:
+            for name, valuelist in headers.getRawHeaders():
+                for value in valuelist:
+                    l.append("%s: %s\r\n" % (name, value))
+
+        if addConnectionHeaders:
+            # if we don't have a content length, we send data in
+            # chunked mode, so that we can support pipelining in
+            # persistent connections.
+            if (self.version >= (1,1) and
+                headers.getHeader('Content-Length') is None and
+                not (code in NO_BODY_CODES)):
+                l.append("%s: %s\r\n" % ('Transfer-encoding', 'chunked'))
+                self.chunkedOut = 1
+            if not self.persistent:
+                l.append("%s: %s\r\n" % ('Connection', 'close'))
+        
         l.append("\r\n")
         self.transport.writeSequence(l)
         
@@ -648,8 +673,26 @@ class ChannelRequest:
         if not self.queued:
             self._cleanup()
 
+
+    def abortConnection(self):
+        if not self.request:
+            self.channel.queueRequest(self)
+        self.channel.requestReadFinished(self, False)
+        
     ##### End Request Callbacks #####
 
+    def _abortWithError(self, errorcode, text=''):
+        headers = http_headers.Headers()
+        headers.setHeader('Content-Length', len(text))
+        
+        self.abortConnection()
+        self.persistent = False
+        # FIXME: generalize error handling.
+        self.writeHeaders(errorcode, headers)
+        self.writeData(text)
+        self.finish()
+        raise AbortedException
+    
     def _cleanup(self):
         """Called when have finished responding and are no longer queued."""
         if self.producer:
@@ -711,7 +754,8 @@ class ChannelRequest:
 
     def connectionLost(self, reason):
         """connection was lost"""
-        self.request.connectionLost(reason)
+        if self.request:
+            self.request.connectionLost(reason)
 
     
 class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin):
@@ -721,7 +765,7 @@ class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin):
     maxHeaderLength = 10240 # maximum length of headers (10KiB)
     chanRequestFactory = ChannelRequest
     
-    _first_line = 1
+    _first_line = 2
     _savedTimeOut = None
     persistent = True
 
@@ -748,23 +792,35 @@ class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin):
                 return
             
             self._first_line = 0
-            self.chanRequest = self.chanRequestFactory(self, line, len(self.requests))
+            try:
+                self.chanRequest = self.chanRequestFactory(self, line, len(self.requests))
+            except AbortedException:
+                pass
         else:
-            self.chanRequest.lineReceived(line)
+            try:
+                self.chanRequest.lineReceived(line)
+            except AbortedException:
+                pass
+            
         
     def rawDataReceived(self, data):
         self.resetTimeout()
-        self.chanRequest.rawDataReceived(data)
+        try:
+            self.chanRequest.rawDataReceived(data)
+        except AbortedException:
+            pass
 
     def queueRequest(self, request):
         # create a new Request object
         self.requests.append(request)
         
     def requestReadFinished(self, request, persist):
-        # reset state variables
         self.persistent = persist
+        
+        # reset state variables
         self._first_line = 1
         self.chanRequest = None
+        self.setLineMode()
         
         # Disable the idle timeout, in case this request takes a long
         # time to finish generating output.
@@ -857,6 +913,33 @@ class HTTPFactory(protocol.ServerFactory):
         self.logFile.write(line)
 
 
+
+# import cgi
+# import tempfile
+# try: # try importing the fast, C version
+#     from twisted.protocols._c_urlarg import unquote
+# except ImportError:
+#     from urllib import unquote
+
+# def parse_qs(qs, keep_blank_values=0, strict_parsing=0, unquote=unquote):
+#     """like cgi.parse_qs, only with custom unquote function"""
+#     d = {}
+#     items = [s2 for s1 in qs.split("&") for s2 in s1.split(";")]
+#     for item in items:
+#         try:
+#             k, v = item.split("=", 1)
+#         except ValueError:
+#             if strict_parsing:
+#                 raise
+#             continue
+#         if v or keep_blank_values:
+#             k = unquote(k.replace("+", " "))
+#             v = unquote(v.replace("+", " "))
+#             if k in d:
+#                 d[k].append(v)
+#             else:
+#                 d[k] = [v]
+#     return d
 
 
 #     def gotLength(self, length):

@@ -2,6 +2,10 @@ import types
 from calendar import timegm
 from time import gmtime
 
+def dashCapitalize(s):
+    ''' Capitalize a string, making sure to treat - as a word seperator '''
+    return '-'.join([ x.capitalize() for x in s.split('-')])
+
 # datetime parsing and formatting
 weekdayname = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
 monthname = [None,
@@ -357,7 +361,7 @@ def generateAccept(accept):
         params = params.copy()
         del params['q']
         if q != 1.0 or params:
-            out+=(';q=%.2f' % (q,)).rstrip('0').rstrip('.')
+            out+=(';q=%.3f' % (q,)).rstrip('0').rstrip('.')
         
         if params:
             out+=';'+generateKeyValues(params)
@@ -372,7 +376,7 @@ def generateAcceptQvalue(keyvalue):
     if keyvalue[1] == 1.0:
         return "%s" % keyvalue[0:1]
     else:
-        return ("%s;q=%.2f" % keyvalue).rstrip('0').rstrip('.')
+        return ("%s;q=%.3f" % keyvalue).rstrip('0').rstrip('.')
 
 def generateDateTime(secSinceEpoch):
     """Convert seconds since epoch to HTTP datetime string."""
@@ -526,20 +530,33 @@ class Headers:
         old.append(strvalue)
         self._headers[name] = _RecalcNeeded
     
-    def _parser(self, name):
+    def _toParsed(self, name):
         parser = self.parsers.get(name, None)
         if parser is None:
             raise ValueError("No header parser for header '%s', either add one or use getHeaderRaw." % (name,))
 
-        return parser
+        h = self._raw_headers[name]
+        for p in parser:
+            # print "Parsing %s: %s(%s)" % (name, repr(p), repr(h))
+            h = p(h)
+            # if isinstance(h, types.GeneratorType):
+            #     h=list(h)
+        
+        self._headers[name]=h
+        return h
 
-    def _generator(self, name):
+    def _toRaw(self, name):
         generator = self.generators.get(name, None)
         if generator is None:
             raise ValueError("No header generator for header '%s', either add one or use setHeaderRaw." % (name,))
-
-        return generator
-
+        
+        h = self._headers[name]
+        for g in generator:
+            h = g(h)
+            
+        self._raw_headers[name] = h
+        return h
+    
     def hasHeader(self, name):
         name=name.lower()
         return self._raw_headers.has_key(name)
@@ -551,15 +568,8 @@ class Headers:
         raw_header = self._raw_headers.get(name, default)
         if raw_header is not _RecalcNeeded:
             return raw_header
-        
-        generator = self._generator(name)
-        
-        h = self._headers[name]
-        for g in generator:
-            h = g(h)
 
-        self._raw_headers[name] = h
-        return h
+        return self._toRaw(name)
     
     def getHeader(self, name, default=None):
         """Returns the parsed representation of the given header.
@@ -574,17 +584,7 @@ class Headers:
         parsed = self._headers.get(name, default)
         if parsed is not _RecalcNeeded:
             return parsed
-        parser = self._parser(name)
-        
-        h = self._raw_headers[name]
-        for p in parser:
-            # print "Parsing %s: %s(%s)" % (name, repr(p), repr(h))
-            h = p(h)
-            # if isinstance(h, types.GeneratorType):
-            #     h=list(h)
-        
-        self._headers[name]=h
-        return h
+        return self._toParsed(name)
     
     def setRawHeader(self, name, value):
         """Sets the raw representation of the given header.
@@ -615,6 +615,21 @@ class Headers:
     def __repr__(self):
         return '<Headers: Raw: %s Parsed: %s>'% (self._raw_headers, self._headers)
 
+    def canonicalNameCaps(self, name):
+        """Return the name with the canonical capitalization, if known,
+        otherwise, Caps-After-Dashes"""
+        return header_case_mapping.get(name) or dashCapitalize(name)
+    
+    def getRawHeaders(self):
+        """Return an iterator of key,value pairs of all headers
+        contained in this object, as strings. The keys are capitalized
+        in canonical capitalization."""
+        
+        for k,v in self._raw_headers.iteritems():
+            if v is _RecalcNeeded:
+                v = self._toRaw(k)
+            yield self.canonicalNameCaps(k), v
+            
 """The following dicts are all mappings of header to list of operations
    to perform. The first operation should generally be 'tokenize' if the
    header can be parsed according to the normal tokenization rules. If
@@ -762,10 +777,21 @@ DefaultHTTPGenerators.update(generator_general_headers)
 DefaultHTTPGenerators.update(generator_request_headers)
 DefaultHTTPGenerators.update(generator_entity_headers)
 
+header_case_mapping = {}
+
+def casemappingify(d):
+    global header_case_mapping
+    newd = dict([(key.lower(),key) for key in d.keys()])
+    header_case_mapping.update(newd)
+
 def lowerify(d):
     newd = dict([(key.lower(),value) for key,value in d.items()])
     d.clear()
     d.update(newd)
-    
+
+
+casemappingify(DefaultHTTPParsers)
+casemappingify(DefaultHTTPGenerators)
+
 lowerify(DefaultHTTPParsers)
 lowerify(DefaultHTTPGenerators)
