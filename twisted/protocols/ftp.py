@@ -71,7 +71,7 @@ import StringIO
 from math import floor
 
 # Twisted Imports
-from twisted.internet import abstract, reactor, protocol, utils
+from twisted.internet import abstract, reactor, protocol
 from twisted.internet.interfaces import IProducer
 from twisted.protocols import basic
 from twisted.internet.protocol import ClientFactory, ServerFactory, Protocol
@@ -146,7 +146,7 @@ class SendFileTransfer:
 
     def stopProducing(self):
         self.request.unregisterProducer()
-        utils.schedule(self.request.finish)
+        reactor.callLater(0, self.request.finish)
         self.request = None
 
 

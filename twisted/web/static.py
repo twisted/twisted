@@ -196,8 +196,8 @@ class File(resource.Resource, styles.Versioned):
     def upgradeToVersion5(self):
         if not isinstance(self.registry, Registry):
             self.registry = Registry()
-            from twisted.internet import utils
-            utils.schedule(_upgradeRegistry, self.registry)
+            from twisted.internet import reactor
+            reactor.callLater(0, _upgradeRegistry, self.registry)
 
     def upgradeToVersion4(self):
         if not hasattr(self, 'registry'):

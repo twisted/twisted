@@ -16,7 +16,7 @@
 
 from pyunit import unittest
 from twisted.protocols import ftp, loopback
-from twisted.internet import reactor, utils
+from twisted.internet import reactor
 from twisted.internet.protocol import Protocol, FileWrapper, Factory, \
                                       ClientFactory
 
@@ -80,7 +80,7 @@ class FTPClientTests(unittest.TestCase):
 
     def writeResponses(self, protocol, responses):
         for response in responses:
-            utils.schedule(protocol.lineReceived, response)
+            reactor.callLater(0, protocol.lineReceived, response)
 
 
 class FTPServerTests(unittest.TestCase):

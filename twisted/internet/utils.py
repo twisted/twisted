@@ -78,12 +78,3 @@ class _ValueGetter(protocol.ProcessProtocol):
 def getProcessValue(executable, args=(), env={}, path='.'):
     """Spawn a process and return its exit code as a Deferred."""
     return callProtocolWithDeferred(_ValueGetter, executable, args, env, path)
-
-
-def schedule(f, *args, **kw):
-    """Run a function in the next iteration of the event loop.
-
-    There will be no wait for the next iteration - it will run immediately
-    after the current iteration is done.
-    """
-    reactor.callLater(0, f, *args, **kw)
