@@ -636,7 +636,7 @@ class SMTPSenderFactory(protocol.ClientFactory):
         return p
 
 
-def sendEmail(smtphost, fromEmail, toEmail, content, headers = None, attachments = None):
+def sendEmail(smtphost, fromEmail, toEmail, content, headers = None, attachments = None, multipartbody = "mixed"):
     """Send an email, optionally with attachments.
 
     @type smtphost: str
@@ -659,6 +659,11 @@ def sendEmail(smtphost, fromEmail, toEmail, content, headers = None, attachments
       attachment, the mime-type of the attachment, and a string that is
       the attachment itself.
 
+    @type multipartbody: str
+    @param multipartbody: The type of MIME multi-part body.  Generally
+      either "mixed" (as in text and images) or "alternative" (html email
+      with a fallback to text/plain).
+
     @rtype: Deferred
     @return: The returned Deferred has its callback or errback invoked when
       the mail is successfully sent or when an error occurs, respectively.
@@ -672,7 +677,7 @@ def sendEmail(smtphost, fromEmail, toEmail, content, headers = None, attachments
         for (header, value) in headers.items():
             writer.addheader(header, value)
 
-    writer.startmultipartbody("mixed")
+    writer.startmultipartbody(multipartbody)
 
     # message body
     part = writer.nextpart()
@@ -683,9 +688,14 @@ def sendEmail(smtphost, fromEmail, toEmail, content, headers = None, attachments
         # add attachments
         for (file, mime, attachment) in attachments:
             part = writer.nextpart()
-            part.addheader("Content-Transfer-Encoding", "base64")
+            if mime.startswith('text'):
+                encoding = "7bit"
+            else:
+                attachment = base64.encodestring(attachment)
+                encoding = "base64"
+            part.addheader("Content-Transfer-Encoding", encoding)
             body = part.startbody("%s; name=%s" % (mime, file))
-            body.write(base64.encodestring(attachment))
+            body.write(attachment)
 
     # finish
     writer.lastpart()
