@@ -133,9 +133,7 @@ class ResourceSubscription(resource.Resource):
 
         else:
             i = Issue(request)
-            self.publisher.request(request,
-                                   pbcallback=i.finished,
-                                   pberrback=i.failed)
+            self.publisher.request(request).addCallbacks(i.finished, i.failed)
         return NOT_DONE_YET
 
 class ResourcePublisher(pb.Root, styles.Versioned):

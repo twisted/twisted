@@ -405,7 +405,7 @@ class Login(Toplevel):
         tcp.Client(host, port, b)
 
     def gotIdentity(self,identity):
-        identity.attach(self.service.get(),self.pbReferenceable,pbcallback=self.pbCallback)
+        identity.attach(self.service.get(),self.pbReferenceable).addCallback(self.pbCallback)
 
     def couldNotConnect(self,*args):
         self.loginReport("could not connect.")

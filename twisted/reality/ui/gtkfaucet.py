@@ -166,9 +166,7 @@ class GameWindow(gtk.GtkWindow, pb.Referenceable):
     def sendVerb(self, verb):
         self.seeEvent("> "+verb,boldFont)
         self.cmdarea.set_text(verb)
-        self.remote.execute(verb,
-                            pbcallback = self.finishVerb,
-                            pberrback = self.errorVerb)
+        self.remote.execute(verb).addCallbacks(self.finishVerb, self.errorVerb)
 
     def errorVerb(self, error):
         self.seeEvent(error, boldFont)

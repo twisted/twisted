@@ -1,6 +1,6 @@
 # -*- Python -*-
 # Twisted, the Framework of Your Internet
-# $Id: spelunk_gnome.py,v 1.5 2002/01/14 10:18:12 acapnotic Exp $
+# $Id: spelunk_gnome.py,v 1.6 2002/01/24 10:20:41 itamarst Exp $
 # Copyright (C) 2001 Matthew W. Lefkowitz
 #
 # This library is free software; you can redistribute it and/or
@@ -547,7 +547,7 @@ class ClassVisage(Visage):
     def fill_properties(self, propValues):
         Visage.fill_properties(self, propValues)
         basesExplorer = propValues.get('bases')[1]
-        basesExplorer.view.get_elements(pbcallback=self.fill_bases)
+        basesExplorer.view.get_elements().addCallback(self.fill_bases)
 
     def fill_bases(self, baseExplorers):
         box = gtk.HBox()

@@ -142,7 +142,7 @@ class WordsGateway(gateway.Gateway,pb.Referenceable):
         self.leftGroup(group)
 
     def event_getGroupMembers(self,group):
-        self.remote.getGroupMembers(group,pberrback=lambda tb,s=self,g=group:s.noGroupMembers(g))
+        self.remote.getGroupMembers(group).addCallbacks(lambda x: x, lambda tb,s=self,g=group:s.noGroupMembers(g))
 
     def noGroupMembers(self,group):
         self.receiveGroupMembers([],group)

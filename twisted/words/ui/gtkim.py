@@ -168,9 +168,7 @@ class Conversation(gtk.GtkWindow):
         txt = self.entry.get_text()
         self.entry.set_text("")
         ms = MessageSent(self.im, self, txt)
-        self.im.remote.directMessage(self.contact, txt,
-                                             pbcallback=ms.success,
-                                             pberrback=ms.failure)
+        self.im.remote.directMessage(self.contact, txt).addCallbacks(ms.success, ms.failure)
 
     def removeFromList(self, win, evt):
         del self.im.conversations[self.contact]

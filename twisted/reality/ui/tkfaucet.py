@@ -106,9 +106,7 @@ class MainWindow(Toplevel, pb.Referenceable):
         pass 
 
     def doNow(self, verb):
-        self.remote.execute(verb,
-                            pbcallback = self.verbSuccess,
-                            pberrback = self.verbFailure)
+        self.remote.execute(verb).addCallbacks(self.verbSuccess, self.verbFailure)
 
     def remote_seeEvent(self,text):
         self.happenings.insert('end',text+'\n')
