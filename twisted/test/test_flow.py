@@ -397,24 +397,34 @@ class FlowTest(unittest.TestCase):
         self.assertEquals('testing', unittest.deferredResult(client.factory.d))
 
     def testThreaded(self):
-        result = [5,4,3,2,1]
+        expect = [5,4,3,2,1]
         d = flow.Deferred(flow.Threaded(CountIterator(5)))
-        self.assertEquals(result, unittest.deferredResult(d))
+        self.assertEquals(expect, unittest.deferredResult(d))
 
     def testThreadedSleep(self):
-        result = [5,4,3,2,1]
+        expect = [5,4,3,2,1]
         d = flow.Deferred(flow.Threaded(CountIterator(5)))
         sleep(.5)
-        self.assertEquals(result, unittest.deferredResult(d))
+        self.assertEquals(expect, unittest.deferredResult(d))
         
-    def testThreadedYield(self):
-        # test for a nasty race condition
-        result = [5,4,3,2,1]
+    def testThreadedImmediate(self):
+        """ test for the case where the callback function is
+            not provided to the thread till after the thread has
+            completed; do it in such a way that 1/2 of the results
+            are done normally as well; resetting f.results
+        """
+        expect = [5,4,3,2,1]
+        result = []
         f = flow.Threaded(CountIterator(5))
-        cl = f._yield()
-        sleep(1)
-        d = defer.Deferred()
         def callback():
-            d.callback(f.results)
-        reactor.callLater(0,cl.callLater,callback)
-        self.assertEquals(result, unittest.deferredResult(d))
+            result.extend(f.results)
+            f.results = []
+        d = defer.Deferred()
+        while True:
+            cl = f._yield()
+            sleep(.2)
+            if not cl:
+                reactor.callLater(0,d.callback,result)
+                break
+            cl.callLater(callback)
+        self.assertEquals(expect, unittest.deferredResult(d))
