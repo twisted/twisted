@@ -10,6 +10,14 @@
   <body>
     <h1>Unit Tests in Twisted</h1>
 
+    <p>Each <em>unit test</em> tests one bit of functionality in the
+    software.  Unit tests are entirely automated and complete quickly.
+    Unit tests for the entire system are gathered into one test suite,
+    and may all be run in a single batch.  The result of a unit test
+    is simple: either it passes, or it doesn't.  All this means you
+    can test the entire system at any time without inconvience, and
+    quickly see what passes and what fails.</p>
+
     <h2>Unit Tests in the Twisted Philosophy</h2>
 
     <p>The <span class="twisted">Twisted</span> development team
@@ -38,27 +46,60 @@
 
     <h2>Running the Tests</h2>
 
+    <h3>How</h3>
+
     <pre class="shell">
 $ Twisted/admin/runtests
     </pre>
     
+    <p>You'll find that having something like this in your emacs init
+    files is quite handy:</p>
+
+<pre class="elisp">
+(defun runtests () (interactive)
+  (compile "python /somepath/Twisted/admin/runtests"))
+
+(global-set-key [(alt t)] 'runtests)
+</pre>
+    <h3>When</h3>
+
+    <p>Always always <em>always</em> be sure <a href=
+     "http://www.xprogramming.com/xpmag/expUnitTestsAt100.htm">all the
+     tests pass</a> before committing any code.  If someone else
+     checks out code at the start of a development session and finds
+     failing tests, they will not be happy and may decide to <em>hunt
+     you down</em>.</p>
+
+    <p>Since this is a geographically dispersed team, the person who
+    can help you get your code working probably isn't in the room with
+    you.  You may want to share your work in progress over the
+    network, but you want to leave the main CVS tree in good working
+    order.  So <a href=
+    "http://www.cvshome.org/docs/manual/cvs_5.html" >use a branch</a>,
+    and merge your changes back in only after your problem is solved
+    and all the unit tests pass again.</p>
+
     <h2>Adding a Test</h2>
 
-    <p>RTFM.  Several variations on TFM can be found in the <a href=
-    "#links" >links below</a>.</p>
+    <p>Please don't add new modules to Twisted without adding tests
+    for them too.  Otherwise we could change something which breaks
+    your module and not find out until later, making it hard to know
+    exactly what the change that broke it was, or until after a
+    release, and nobody wants broken code in a release.</p>
 
     <p>Tests go in Twisted/twisted/test/, and are named test_foo.py,
-    where "foo" is the name of the module or package bing tested.</p>
+    where "foo" is the name of the module or package bing tested.
+    Extensive documentation on using the PyUnit framework for writing
+    unit tests can be found in the <a href= "#links" >links
+    section</a> below.</p>
 
-    <p>One deviation from the <a href=
-    "http://www.python.org/doc/current/lib/module-unittest.html"
-    >standard PyUnit documentation</a>: To ensure that any variations
-    in test results are due to variations in the code or environment
-    and not the test process itself, Twisted ships with its own copy
-    of the PyUnit testing framework.  That just means that when you
-    import the unittest module, you will <code class="python">from
-    pyunit import unittest</code> instead of the standard <code
-    class="python">import unittest</code>.</p>
+    <p>One deviation from the standard PyUnit documentation: To ensure
+    that any variations in test results are due to variations in the
+    code or environment and not the test process itself, Twisted ships
+    with its own copy of the PyUnit testing framework.  That just
+    means that when you import the unittest module, you will <code
+    class= "python" >from pyunit import unittest</code> instead of the
+    standard <code class="python">import unittest</code>.</p>
 
     <p>(Now that unittest has been in the Python standard library
     for several releases, I'm even less convinced of this argument
@@ -105,8 +146,9 @@ $ Twisted/admin/runtests
 
       <li><a href="http://pyunit.sourceforge.net">PyUnit's homepage</a>.</li>
 
-      <li><code class="API">twisted.test</code>'s inline
-      documentation.</li>
+      <li><a href=
+      "http://twistedmatrix.com/documents/TwistedDocs/Twisted-0.18.0/twisted/test/"
+      >twisted.test</a>'s inline documentation.</li>
 
       <li>The <a href=
       "http://twistedmatrix.com/users/jh.twistd/viewcvs/cgi/viewcvs.cgi/twisted/test/?cvsroot=Twisted"
