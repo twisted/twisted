@@ -244,8 +244,7 @@ class MulticastMixin:
 
     def getOutgoingInterface(self):
         i = self.socket.getsockopt(socket.IPPROTO_IP, socket.IP_MULTICAST_IF)
-        # is this cross-platform?
-        return socket.inet_ntoa(struct.pack("<l", i))
+        return socket.inet_ntoa(struct.pack("@l", i))
     
     def setOutgoingInterface(self, addr):
         """Returns Deferred of success."""
