@@ -34,7 +34,7 @@ class Options(usage.Options):
     optParameters = [["port", "p", "8080","Port to start the server on."],
                      ["telnet", "t", None, "Run a telnet server on this port."],
                      ["logfile", "l", None, "Path to web log file."],
-                     ["https", "s", None, "Port to listen on for Secure HTTP."],
+                     ["https", None, None, "Port to listen on for Secure HTTP."],
                      ["certificate", "c", "server.pem", "SSL certificate to use for HTTPS."],
                      ["privkey", "k", "server.pem", "SSL certificate to use for HTTPS."],
                      ]
@@ -102,7 +102,6 @@ twisted.web.test in it."""
                "a future release. Please use --path.")
         self.opt_path(path)
     opt_s = opt_static
-
     
     def opt_class(self, className):
         """Create a Resource subclass with a zero-argument constructor.
