@@ -197,9 +197,10 @@ def runMailTest():
     if os.path.exists('dump2'):
         scmd('rm -rf dump2')
     os.mkdir("dump2")
-    cmd("mktap mail --domain foo.bar=dump --user postmaster=postmaster")
+    cmd("mktap mail --domain foo.bar=dump --user postmaster=postmaster "
+        " --pop 18110")
     cmd("mktap --append mail.tap mail --relay 127.0.0.1,8025=dump2"
-         "      --smtp 18026 --pop 18110")
+         "      --smtp 18026 --pop 18111")
     twistdf("mail")
     import smtplib, poplib
     s = smtplib.SMTP('127.0.0.1', 18026)
@@ -223,7 +224,7 @@ Subject: How are you ladies?
 All your dependents are belong to us
 ''')
     s.quit()
-    time.sleep(3)
+    time.sleep(10)
     p = poplib.POP3('127.0.0.1', 18110)
     p.apop('postmaster@foo.bar', 'postmaster')
     print string.join(p.retr(1)[1], '\n')
