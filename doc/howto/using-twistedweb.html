@@ -236,6 +236,35 @@ application = app.Application('web-proxy')
 application.listenTCP(80, site)
 </pre>
 
+<h2>Rewriting URLs</h2>
+
+<p>Sometimes it is convenient to modify the content of the 
+<code class="API" base="twisted.web.server">Request</code> object
+before passing it on. Because this is most often used to rewrite
+either the URL, the similarity to Apache's <code>mod_rewrite</code> has
+inspired the <code class="API">twisted.web.rewrite</code> module. Using
+this module is done via wrapping a resource with a
+<code class="API">twisted.web.rewrite.RewriterResource</code> which
+then has rewrite rules. Rewrite rules are functions which accept a request
+object, and possible modify it. After all rewrite rules run, the child
+resolution chain continues as if the wrapped resource, rather than
+the <code class="API" base="twisted.web.rewrite">RewriterResource</code>,
+was the child.</p>
+
+<p>Here is an example, using the only rule currently supplied by Twisted
+itself:</p>
+
+<pre>
+default_root = rewrite.RewriterResource(default, rewrite.tildeToUsers)
+</pre>
+
+<p>This causes the URL <code>/~foo/bar.html</code> to be treated like
+<code>/users/foo/bar.html</code>. If done after setting default's
+<code>users</code> child to a
+<code class="API" base="twisted.web">distrib.UserDirectory</code>,
+it gives a configuration similar to the classical configuration of
+web server, common since the first NCSA servers.</p>
+
 
 </body>
 </html>
