@@ -284,7 +284,7 @@ class DummyLocator:
 class FailingLocator:
     __implements__ = sip.ILocator,
     def getAddress(self, logicalURL):
-        return defer.fail(sip.LookupError())
+        return defer.fail(LookupError())
     
 
 class ProxyTestCase(unittest.TestCase):
@@ -490,13 +490,13 @@ class RegistrationTestCase(unittest.TestCase):
         self.register()
         url = sip.URL(username="joe", host="foo.com")
         f = unittest.deferredError(self.proxy.locator.getAddress(url))
-        f.trap(sip.LookupError)
+        f.trap(LookupError)
     
     def testNoContactLookup(self):
         self.register()
         url = sip.URL(username="jane", host="bell.example.com")
         f = unittest.deferredError(self.proxy.locator.getAddress(url))
-        f.trap(sip.LookupError)
+        f.trap(LookupError)
 
 
 class Client(sip.Base):

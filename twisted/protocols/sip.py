@@ -54,61 +54,66 @@ for k, v in shortHeaders.items():
     longHeaders[v] = k
 del k, v
 
-# XXX I got bored, type them all in
-statusCodes = {100: "Trying",
-               180: "Ringing",
-               181: "Call Is Being Forwarded",
-               182: "Queued",
-               200: "OK",
+statusCodes = {
+    100: "Trying",
+    180: "Ringing",
+    181: "Call Is Being Forwarded",
+    182: "Queued",
 
-               300: "Multiple Choices",
-               301: "Moved Permanently",
-               302: "Moved Temporarily",
-               303: "See Other",
-               305: "Use Proxy",
-               380: "Alternative Service",
+    200: "OK",
 
-               400: "Bad Request",
-               401: "Unauthorized",
-               402: "Payment Required",
-               403: "Forbidden",
-               404: "Not Found",
-               406: "Not Acceptable",
-               407: "Proxy Authentication Required",
-               408: "Request Timeout",
-               409: "Conflict",
-               410: "Gone",
-               411: "Length Required",
-               413: "Request Entity Too Large",
-               414: "Request-URI Too Large",
-               415: "Unsupported Media Type",
-               420: "Bad Extension",
-               480: "Temporarily not available",
-               481: "Call Leg/Transaction Does Not Exist",
-               482: "Loop Detected",
-               483: "Too Many Hops",
-               484: "Address Incomplete",
-               485: "Ambiguous",
-               486: "Busy Here",
-               
-               500: "Internal Server Error",
-               501: "Not Implemented",
-               502: "Bad Gateway",
-               503: "Service Unavailable",
-               504: "Gateway Time-out",
-               505: "SIP Version not supported",
-               
-               600: "Busy Everywhere",
-               603: "Decline",
-               604: "Does not exist anywhere",
-               606: "Not Acceptable",
-               }
+    300: "Multiple Choices",
+    301: "Moved Permanently",
+    302: "Moved Temporarily",
+    303: "See Other",
+    305: "Use Proxy",
+    380: "Alternative Service",
 
+    400: "Bad Request",
+    401: "Unauthorized",
+    402: "Payment Required",
+    403: "Forbidden",
+    404: "Not Found",
+    406: "Not Acceptable",
+    407: "Proxy Authentication Required",
+    408: "Request Timeout",
+    409: "Conflict",
+    410: "Gone",
+    411: "Length Required",
+    413: "Request Entity Too Large",
+    414: "Request-URI Too Large",
+    415: "Unsupported Media Type",
+    420: "Bad Extension",
+    480: "Temporarily not available",
+    481: "Call Leg/Transaction Does Not Exist",
+    482: "Loop Detected",
+    483: "Too Many Hops",
+    484: "Address Incomplete",
+    485: "Ambiguous",
+    486: "Busy Here",
+    
+    500: "Internal Server Error",
+    501: "Not Implemented",
+    502: "Bad Gateway",
+    503: "Service Unavailable",
+    504: "Gateway Time-out",
+    505: "SIP Version not supported",
+    
+    600: "Busy Everywhere",
+    603: "Decline",
+    604: "Does not exist anywhere",
+    606: "Not Acceptable",
+}
 
 specialCases = {
     'cseq': 'CSeq',
     'call-id': 'Call-ID',
 }
+
+def unq(s):
+    if s[0] == s[-1] == '"':
+        return s[1:-1]
+    return s
 
 class Via:
     """A SIP Via header."""
@@ -316,6 +321,19 @@ def parseAddress(address, clean=0):
     return name, url, params
 
 
+class SIPError(Exception):
+    def __init__(self, code, phrase=None):
+        if phrase is None:
+            phrase = statusCodes[code]
+        Exception.__init__(self, "SIP error (%d): %s" % (code, phrase))
+        self.code = code
+        self.phrase = phrase
+
+
+class RegistrationError(SIPError):
+    """Registration was not possible."""
+
+
 class Message:
     """A SIP message."""
 
@@ -355,6 +373,8 @@ class Message:
 
 
 class Request(Message):
+    """A Request for a URI"""
+
 
     def __init__(self, method, uri, version="SIP/2.0"):
         Message.__init__(self)
@@ -373,6 +393,7 @@ class Request(Message):
 
 
 class Response(Message):
+    """A Response to a URI Request"""
 
     def __init__(self, code, phrase=None, version="SIP/2.0"):
         Message.__init__(self)
@@ -543,11 +564,30 @@ class Base(protocol.DatagramProtocol):
         for m in self.messages:
             log.msg("Received %s from %s" % (m, addr))
             if isinstance(m, Request):
-                f = getattr(self, "handle_%s_request" % m.method, self.handle_request_default)
-                f(m, addr)
+                self.handle_request(m, addr)
             else:
                 self.handle_response(m, addr)
         self.messages[:] = []
+
+    def deliverResponse(self, responseMessage):
+        """Deliver response.
+
+        Destination is based on topmost Via header."""
+        destVia = parseViaHeader(responseMessage.headers["via"][0])
+        # XXX we don't do multicast yet
+        port = destVia.port or self.PORT
+        if destVia.received:
+            destAddr = URL(host=destVia.received, port=port)
+        else:
+            destAddr = URL(host=destVia.host, port=port)
+        self.sendMessage(destAddr, responseMessage)
+
+    def responseFromRequest(self, code, request):
+        """Create a response to a request message."""
+        response = Response(code)
+        for name in ("via", "to", "from", "call-id", "cseq"):
+            response.headers[name] = request.headers.get(name, [])[:]
+        return response
 
     def sendMessage(self, destURL, message):
         """Send a message.
@@ -560,19 +600,25 @@ class Base(protocol.DatagramProtocol):
             raise RuntimeError, "only UDP currently supported"
         self.transport.write(message.toString(), (destURL.host, destURL.port or self.PORT))
 
+    def handle_request(self, message, addr):
+        """Override to define behavior for requests received
+
+        @type message: C{Message}
+        @type addr: C{tuple}
+        """
+        raise NotImplementedError
+
     def handle_response(self, message, addr):
+        """Override to define behavior for responses received.
+        
+        @type message: C{Message}
+        @type addr: C{tuple}
+        """
         raise NotImplementedError
 
-    def handle_request_default(self, message, addr):
-        raise NotImplementedError
 
-
-class LookupError(Exception):
-    """Error doing lookup."""
-
-
-class RegistrationError(Exception):
-    """Registration was not possible."""
+class IContact(Interface):
+    """A user of a registrar or proxy"""
 
 
 class IContact(Interface):
@@ -584,13 +630,13 @@ class IRegistry(Interface):
     def registerAddress(self, domainURL, logicalURL, physicalURL):
         """Register the physical address of a logical URL.
 
-        @return Deferred of (secondsToExpiry, contact URL) or failure with RegistrationError.
+        @return: Deferred of (secondsToExpiry, contact URL) or failure with RegistrationError.
         """
 
     def getRegistrationInfo(self, logicalURL):
         """Get registration info for logical URL.
 
-        @return Deferred of (secondsToExpiry, contact URL) or failure with LookupError.
+        @return: Deferred of (secondsToExpiry, contact URL) or failure with LookupError.
         """
 
 
@@ -625,6 +671,23 @@ class Proxy(Base):
     def getVia(self):
         """Return value of Via header for this proxy."""
         return Via(host=self.host, port=self.port)
+
+    def handle_request(self, message, addr):
+        f = getattr(self, "handle_%s_request" % message.method, None)
+        if f is None:
+            f = self.handle_request_default
+        try:
+            d = f(message, addr)
+        except SIPError, e:
+            self.deliverResponse(self.responseFromRequest(e.code, message))
+        except:
+            log.err()
+            self.deliverResponse(self.responseFromRequest(500, message))
+        else:
+            if d is not None:
+                d.addErrback(lambda e:
+                    self.deliverResponse(self.responseFromRequest(e.code, message))
+                )
         
     def handle_request_default(self, message, (srcHost, srcPort)):
         """Default request handler.
@@ -697,6 +760,120 @@ class Proxy(Base):
         """Called with responses that are addressed at this server."""
         pass
 
+class IAuthorizer(Interface):
+    def getChallenge(self, peer):
+        """Generate a challenge the client may respond to.
+        
+        @type peer: C{tuple}
+        @type peer: The client's address
+        
+        @rtype: C{str}
+        @return: The challenge string
+        """
+    
+    def decode(self, response):
+        """Create a credentials object from the given response.
+        
+        @type response: C{str}
+        """
+ 
+class BasicAuthorizer:
+    __implements__ = (IAuthorizer,)
+    
+    def getChallenge(self, peer):
+        return None
+    
+    def decode(self, response):
+        # At least one SIP client improperly pads its Base64 encoded messages
+        for i in range(3):
+            try:
+                creds = (response + ('=' * i)).decode('base64')
+            except:
+                pass
+            else:
+                break
+        else:
+            # Totally bogus
+            raise SIPError(400)
+        p = creds.split(':', 1)
+        if len(p) == 2:
+            return cred.credentials.UsernamePassword(*p)
+        raise SIPError(400)
+
+#class DigestedCredentials(cred.credentials.UsernameHashedPassword):
+#    """Yet Another Simple Digest-MD5 authentication scheme"""
+#    
+#    def __init__(self, username, challenge, response):
+#        self.username = username
+#        self.when, self.r1, self.r2 = challenge.decode('hex').split('-')
+#        self.response = response.decode('hex')
+#    
+#    def checkPassword(self, password):
+#        return md5.,md5(self.username + ':' + password) 
+#
+#class DigestAuthorizer:
+#    CHALLENGE_LIFETIME = 15
+#    
+#    __implements__ = (IAuthorizer,)
+#    
+#    def __init__(self):
+#        self.outstanding = {}
+#    
+#    def getChallenge(self, peer):
+#        # I am uncertain of the effectiveness of this form of challenge.
+#        # Time is included so as to limit the possibility of replay attacks.
+#        # No responses to challenges more than 5 or 10 seconds will be
+#        # accepted.  The random numbers are included to increase the size of
+#        # the challenge.
+#
+#        # The peer address could be included to limit the possible field of
+#        # repliers.  No responses from anyone whose address does not match
+#        # the address in the challenge would then be accepted.  RFC 2617
+#        # contains a note suggesting that including the client address in
+#        # the nonce (this challenge) is neither effective nor desirable,
+#        # primarily due to the existence of proxy farms.
+#
+#        t = str(time.time())
+#        
+#        # XXX - Something needs to clean this dictionary out
+#        self.outstanding[t] = True
+#        
+#        r1 = random.randrange(sys.maxint)
+#        r2 = random.randrange(sys.maxint)
+#        # p = peer[0] + ':' + str(peer[1])
+#        return ('-'.join((t, r1, r2))).encode('hex')
+#
+#    def decode(self, response):
+#        response = ' '.join(response.splitlines())
+#        parts = map(str.split, response.split(','))
+#        auth = dict([(k, unq(v)) for (k, v) in [p.split('=', 1) for p in parts]])
+#        try:
+#            username = auth['username']
+#            response = auth['response']
+#            challenge = auth['nonce']
+#        except KeyError:
+#            raise SIPError(401)
+#        try:
+#            return DigestedCredentials(username, challenge, response)
+#        except:
+#            raise SIPError(400)
+#
+#    def validate(self, username, password, challenge, response):
+#        try:
+#            t, r1, r2 = challenge.decode('hex').split('-')
+#        except:
+#            raise SIPError(400)
+#        else:
+#            try:
+#                del self.outstanding[t]
+#            except KeyError:
+#                raise SIPError(401)
+#            
+#            if time.time() - self.CHALLENGE_LIFETIME > t:
+#                raise SIPError(401)
+#
+#            r = md5.md5(password + ':' + challenge)
+#            return r.hexdigest() == response                
 
 class RegisterProxy(Proxy):
     """A proxy that allows registration for a specific domain.
@@ -707,6 +884,15 @@ class RegisterProxy(Proxy):
     portal = None
 
     registry = None # should implement IRegistry
+
+    authorizers = {
+        'basic': BasicAuthorizer(),
+#        'digest': DigestAuthorizer(),
+    }
+    
+    def __init__(self, *args, **kw):
+        Proxy.__init__(self, *args, **kw)
+        self.liveChallenges = {}
         
     def handle_REGISTER_request(self, message, (host, port)):
         """Handle a registration request.
@@ -719,25 +905,43 @@ class RegisterProxy(Proxy):
         else:
             # There is a portal.  Check for credentials.
             if not message.headers.has_key("authorization"):
-                self.unauthorized(message, host, port)
+                return self.unauthorized(message, host, port)
             else:
-                self.login(message, host, port)
+                return self.login(message, host, port)
     
     def unauthorized(self, message, host, port):
-        self.deliverResponse(self.responseFromRequest(401, message))
+        m = self.responseFromRequest(401, message)
+        for (scheme, auth) in self.authorizers.iteritems():
+            nonce = auth.getChallenge((host, port))
+            if nonce is None:
+                continue
+            
+            while True:
+                cnonce = random.randrange(sys.maxint)
+                if cnonce not in self.liveChallanges:
+                    break
+            
+            v = '%s realm="%s", nonce="%s"' % (scheme.title(), self.host, nonce)
+            m.headers.setdefault('www-authentication', []).append(v)
+        self.deliverResponse(m)
 
     def login(self, message, host, port):
         parts = message.headers['authorization'][0].split(None, 1)
-        f = getattr(self, 'authorize_' + parts[0].upper())
-        if f:
+        a = self.authorizers.get(parts[0].lower())
+        if a:
             try:
-                f(parts[1:], message, host, port
-                    ).addCallback(self._cbLogin, message, host, port
-                    ).addErrback(self._ebLogin, message, host, port
-                    )
+                c = a.decode(parts[1])
+            except SIPError:
+                raise
             except:
                 log.err()
                 self.deliverResponse(self.responseFromRequest(500, message))
+            else:
+                self.portal.login(c, None, IContact
+                    ).addCallback(self._cbLogin, message, host, port
+                    ).addErrback(self._ebLogin, message, host, port
+                    ).addErrback(log.err
+                    )
         else:
             self.deliverResponse(self.responseFromRequest(501, message))
 
@@ -747,28 +951,6 @@ class RegisterProxy(Proxy):
     
     def _ebLogin(self, failure, message, host, port):
         self.unauthorized(message, host, port)
-
-    def authorize_BASIC(self, parts, message, host, port):
-        enc = parts[0]
-        # At least one SIP client improperly pads its Base64 encoded messages
-        for i in range(3):
-            try:
-                creds = (enc + ('=' * i)).decode('base64')
-            except:
-                pass
-            else:
-                break
-        else:
-            self.deliverResponse(self.responseFromRequest(400, message))
-            return
-
-        parts = creds.split(':', 1)
-        if len(parts) != 2:
-            self.deliverResponse(self.responseFromRequest(400, message))
-            return
-
-        creds = cred.credentials.UsernamePassword(*parts)
-        return self.portal.login(creds, None, IContact)
 
     def register(self, message, host, port):
         """Allow all users to register"""
@@ -831,10 +1013,10 @@ class InMemoryRegistry:
     def registerAddress(self, domainURL, logicalURL, physicalURL):
         if domainURL.host != self.domain:
             log.msg("Registration for domain we don't handle.")
-            return defer.fail(RegistrationError())
+            return defer.fail(RegistrationError(404))
         if logicalURL.host != self.domain:
             log.msg("Registration for domain we don't handle.")
-            return defer.fail(RegistrationError())
+            return defer.fail(RegistrationError(404))
         # XXX we should check for expires header and in URI, and allow
         # unregistration
         if self.users.has_key(logicalURL.username):
