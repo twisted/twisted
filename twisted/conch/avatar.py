@@ -1,4 +1,4 @@
-# -*- test-case-name: twisted.test.test_conch -*-
+# -*- test-case-name: twisted.conch.test.test_conch -*-
 from interfaces import IConchUser
 from error import ConchError
 from ssh.connection import OPEN_UNKNOWN_CHANNEL_TYPE

@@ -40,7 +40,8 @@ register("Twisted SOCKS",
          type="tap")
 
 register("Twisted Conch Server",
-         "twisted.tap.conch",
+         "twisted.conch.tap",
+         tapname='conch',
          description="A Conch SSH service.",
          type="tap")
 
