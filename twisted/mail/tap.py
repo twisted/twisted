@@ -32,11 +32,12 @@ class Options(usage.Options):
 
     optParameters = [
         ["pop3", "p", 8110, "Port to start the POP3 server on (0 to disable)."],
-#        ["pop3s", "S", 8995, "Port to start the POP3 over SSL server on (0 to disable)."],
+        ["pop3s", "S", 8995, "Port to start the POP3-over-SSL server on (0 to disable)."],
         ["smtp", "s", 8025, "Port to start the SMTP server on (0 to disable)."],
         ["relay", "r", None, 
             "relay mail we do not know how to handle to this IP,"
-            " using the given path as a queue directory"]
+            " using the given path as a queue directory"],
+        ["certificate", "c", None, "Certificate file to use for SSL connections"]
     ]
 
     longdesc = "This creates a mail.tap file that can be used by twistd."
@@ -85,19 +86,23 @@ class Options(usage.Options):
             assert 0 <= self['smtp'] < 2 ** 16, ValueError
         except ValueError:
             raise usage.UsageError('Invalid port specified to --smtp: %s' % self['smtp'])
-#        try:
-#            self['pop3s'] = int(self['pop3s'])
-#            assert 0 <= self['pop3s'] < 2 ** 16, ValueError
-#        except ValueError:
-#            raise usage.UsageError('Invalid port specified to --pop3s: %s' % self['pop3s'])
+        try:
+            self['pop3s'] = int(self['pop3s'])
+            assert 0 <= self['pop3s'] < 2 ** 16, ValueError
+        except ValueError:
+            raise usage.UsageError('Invalid port specified to --pop3s: %s' % self['pop3s'])
+        else:
+            if not self['certificate']:
+                raise usage.UsageError("Cannot specify --pop3s without --certificate")
+            elif not os.path.exists(self['certificate']):
+                raise usage.UsageError("Certificate file %r does not exist." % self['certificate'])
 
-#        if not (self['pop3'] or self['smtp'] or self['pop3s']):
-        if not (self['pop3'] or self['smtp']):
+        if not (self['pop3'] or self['smtp'] or self['pop3s']):
             raise usage.UsageError("You cannot disable all protocols")
 
 def updateApplication(app, config):
-    if config.opts['relay']:
-        addr, dir = string.split(config.opts['relay'], '=', 1)
+    if config['relay']:
+        addr, dir = string.split(config['relay'], '=', 1)
         ip, port = string.split(addr, ',', 1)
         port = int(port)
         config.service.setQueue(relaymanager.Queue(dir))
@@ -109,8 +114,13 @@ def updateApplication(app, config):
         app.addDelayed(delayed)
     
     if config['pop3']:
-        app.listenTCP(config.opts['pop3'], config.service.getPOP3Factory())
-#    if config['pop3s']:
-#        app.listenSSL(config.opts['pop3s'], config.service.getPOP3Factory())
+        app.listenTCP(config['pop3'], config.service.getPOP3Factory())
+    if config['pop3s']:
+        from twisted.mail.protocols import SSLContextFactory
+        app.listenSSL(
+            config['pop3s'],
+            config.service.getPOP3Factory(),
+            SSLContextFactory(config['certificate'])
+        )
     if config['smtp']:
-        app.listenTCP(config.opts['smtp'], config.service.getSMTPFactory())
+        app.listenTCP(config['smtp'], config.service.getSMTPFactory())

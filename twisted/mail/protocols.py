@@ -95,3 +95,29 @@ class POP3Factory(protocol.ServerFactory):
         p.service = self.service
         p.factory = self
         return p
+
+#
+# It is useful to know, perhaps, that the required file for this to work can
+# be created thusly:
+#
+# openssl req -x509 -newkey rsa:2048 -keyout file.key -out file.crt \
+# -days 365 -nodes
+#
+# And then cat file.key and file.crt together.  The number of days and bits
+# can be changed, of course.
+#
+class SSLContextFactory:
+    """An SSL Context Factory
+    
+    This loads a certificate and private key from a specified file.
+    """
+    def __init__(self, filename):
+        self.filename = filename
+
+    def getContext(self):
+        """Create an SSL context."""
+        from OpenSSL import SSL
+        ctx = SSL.Context(SSL.SSLv23_METHOD)
+        ctx.use_certificate_file(self.filename)
+        ctx.use_privatekey_file(self.filename)
+        return ctx
