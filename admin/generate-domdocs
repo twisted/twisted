@@ -29,6 +29,7 @@ sys.path.append('.')
 
 
 import re
+import os
 import cStringIO
 import py2html, PyFontify
 from pprint import pprint
@@ -117,6 +118,15 @@ def getNodeText(node):
     writeNodeData(node, oldio)
     return oldio.getvalue()
 cols = 79
+
+def dircount(d):
+    ents = d.split("/")
+    cou = 0
+    for el in ents:
+        if el and el != '.':
+            cou += 1
+    return cou
+
 class Walker:
     def __init__(self, templ, cache, ext):
         self.templ = templ
@@ -125,12 +135,12 @@ class Walker:
         self.walked = []
 
     def walkdir(self, topdir):
+        self.basecount = dircount(topdir)
         os.path.walk(topdir, self.walk, None)
         self.walkAround()
 
-
     def walk(self, ig, d, names):
-        linkrel = '../' * (d.count('/')-1)
+        linkrel = '../' * (dircount(d) - self.basecount)
         for name in names:
             fullpath = os.path.join(d, name)
             fname, fext = os.path.splitext(fullpath)
@@ -161,16 +171,26 @@ class Walker:
 
 
     def munge(self, document, template, linkrel, d):
-        # relative links
-        for node in findElementsWithAttribute(template,"href"):
-            node.setAttribute("href", node.getAttribute("href") + linkrel)
-        for node in findElementsWithAttribute(document, "href"):
+        # relative links to html files
+        for node in (findElementsWithAttribute(template, "href")+
+                     findElementsWithAttribute(document, "href")):
             href = node.getAttribute("href")
             if not (href.startswith("http://") or href.startswith("mailto:")):
-                fname = href.split('/')[-1].split('.')
-                if len(fname) == 2 and fname[1] == 'html':
+                fname = os.path.splitext(href)
+                if len(fname) == 2 and fname[1] == '.html':
                     # print 'rel link', href
                     node.setAttribute("href", fname[0] + self.ext)
+        # things linked from the top
+        for node in (
+            findElementsWithAttribute(template,"src") +
+            findElementsWithAttribute(template,"href") +
+            findElementsWithAttribute(document, "fromtop")):
+            if node.hasAttribute('src'):
+                attr = 'src'
+            else:
+                attr = 'href'
+            node.setAttribute(attr, linkrel+node.getAttribute(attr))
+        
         # API references
         for node in findElementsWithAttribute(document, "class", "API"):
             if len(node.childNodes) > 1:
