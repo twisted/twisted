@@ -21,7 +21,6 @@ Now with 30% more starch.
 from twisted.trial import unittest
 from twisted.cred import portal, checkers, credentials, error
 from twisted.python import components
-from zope.interface import implements
 from twisted.python import util
 from twisted.internet import defer
 
@@ -49,7 +48,7 @@ class TestAvatar:
         self.loggedOut = True
 
 class Testable(components.Adapter):
-    implements(ITestable)
+    __implements__ = ITestable
 
 # components.Interface(TestAvatar).adaptWith(Testable, ITestable)
 
@@ -96,7 +95,7 @@ class NewCredTest(unittest.TestCase):
         iface, impl, logout = l[0]
         # whitebox
         self.assertEquals(iface, ITestable)
-        self.failUnless(iface.providedBy(impl),
+        self.failUnless(components.implements(impl, iface),
                         "%s does not implement %s" % (impl, iface))
         # greybox
         self.failUnless(impl.original.loggedIn)

@@ -33,6 +33,7 @@ from twisted.python import log
 from twisted.python import threadable, failure
 from twisted.python.runtime import platform
 from twisted.persisted import styles
+from twisted.python.components import implements
 from twisted.internet.interfaces import IReactorFDSet, IReactorCore
 from twisted.internet.interfaces import IReactorTime, IReactorUNIX
 import error
@@ -94,18 +95,18 @@ def installReactor(reactor):
     # install stuff for backwards compatability
 
     # IReactorCore
-    if IReactorCore.providedBy(reactor):
+    if implements(reactor, IReactorCore):
         iterate = reactor.iterate
 
     # IReactorFDSet
-    if IReactorFDSet.providedBy(reactor):
+    if implements(reactor, IReactorFDSet):
         addReader = reactor.addReader
         addWriter = reactor.addWriter
         removeWriter = reactor.removeWriter
         removeReader = reactor.removeReader
 
     # IReactorTime
-    if IReactorTime.providedBy(reactor):
+    if implements(reactor, IReactorTime):
         def addTimeout(m, t, f=reactor.callLater):
             warnings.warn("main.addTimeout is deprecated, use reactor.callLater instead.")
             f(t, m)

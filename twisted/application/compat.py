@@ -382,7 +382,7 @@ def convert(oldApp):
         if hasattr(s, 'privileged'):
             s.privileged = 1
     for s in oldApp.services.values():
-        if not service.IService.providedBy(s):
+        if not components.implements(s, service.IService):
             s.serviceParent = None
             s = _NewService(s)
             s.setServiceParent(IOldApplication(c))
