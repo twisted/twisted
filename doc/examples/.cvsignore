@@ -1,3 +1,4 @@
 *.pyc
 *.tap
 *.class
+*.xhtml
