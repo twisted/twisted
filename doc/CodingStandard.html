@@ -219,6 +219,21 @@ def foo2bar(f):
         function, class, method, or module, make sure that it won't instantly
         break other code.
       </p>
+      <p>
+        If your class has attributes that are intended to be private and
+        implementation specific (e.g. the current state of a state-machine),
+        prefix your attribute with __. This will make sure that they don't
+        interfere with subclasses' attributes by mistake. For example:
+        <pre>
+class Foo:
+
+    __state = 1
+
+    def doSomething(self):
+        # ...
+        self.__state = 2
+        </pre>
+      </p>
     <hr>
     <address><a href="mailto:glyph@helix.twistedmatrix.com">Glyph Lefkowitz</a></address>
 <!-- Created: Thu Apr 26 07:53:26 CDT 2001 -->
