@@ -177,10 +177,10 @@ class CGIProcessProtocol(protocol.ProcessProtocol, pb.Viewable):
         self.stopProducing()
 
     def resumeProducing(self):
-        pass
+        self.transport.resumeProducing()
 
     def pauseProducing(self):
-        pass
+        self.transport.pauseProducing()
 
     def stopProducing(self):
         self.transport.loseConnection()
