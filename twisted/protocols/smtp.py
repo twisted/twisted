@@ -840,7 +840,7 @@ class SMTPClient(basic.LineReceiver):
     def stopProducing(self):
         self.mailFile = None
 
-    def connectionLost(self, reason=connectionDone):
+    def connectionLost(self, reason=protocol.connectionDone):
         """We are no longer connected"""
         self.mailFile = None
 
