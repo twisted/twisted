@@ -4,11 +4,11 @@
 
 <html xmlns="http://www.w3.org/1999/xhtml">
   <head>
-    <title>Creating XML-RPC Servers with Twisted</title>
+    <title>Creating XML-RPC Servers and Clients with Twisted</title>
   </head>
 
   <body>
-<h1>Creating XML-RPC Servers with Twisted</h1>
+<h1>Creating XML-RPC Servers and Clients with Twisted</h1>
 
 <h2>Introduction</h2>
 
@@ -91,6 +91,59 @@ resource scripts. The following is an example of such a resource script:</p>
 between XML-RPC support and SOAP support. Here is an example of SOAP usage:</p>
 
 <a href="listings/TwistedQuotes/soap.rpy" class="py-listing">soap.rpy</a>
+
+
+<h2>Creating an XML-RPC Client</h2>
+
+<p>XML-RPC clients in Twisted are meant to look as something which will be
+familiar either to <code>xmlrpclib</code> or to Perspective Broker users,
+taking features from both, as appropriate. There are two major deviations
+from the <code>xmlrpclib</code> way which should be noted:</p>
+
+<ol>
+<li>No implicit <code>/RPC2</code>. If the services uses this path for the
+    XML-RPC calls, then it will have to be given explicitly.</li>
+<li>No magic <code>__getattr__</code>: calls must be made by an explicit
+    <code>callMethod</code>.</li>
+</ol>
+
+<p>The interface Twisted presents to XML-RPC client is that of a proxy object:
+<code class="API">twisted.web.xmlrpc.Proxy</code>. The constructor for the
+object receives a URL: it must be an HTTP or HTTPS URL. When an XML-RPC service
+is described, the URL to that service will be given there.</p>
+
+<p>Having a proxy object, one can just call the <code>callMethod</code> method,
+which accepts a method name and a variable argument list (but no named
+arguments, as these are not supported by XML-RPC). It returns a deferred,
+which will be called back with the result. If there is any error, at any
+level, the errback will be cauled. The exception will be the relevant Twisted
+error in the case of a problem with the underlying connection (for example,
+a timeout), <code>IOError</code> containing the status and message in the case
+of a non-200 status or a <code>xmlrpclib.Fault</code> in the case of an
+XML-RPC level problem.</p>
+
+<pre class="python">
+from twisted.web.xmlrpc import Proxy
+from twisted.internet import reactor
+
+def printValue(value):
+    print repr(value)
+    reactor.stop()
+
+def printError(error):
+    print 'error', error
+    reactor.stop()
+
+proxy = Proxy('http://advogato.org/XMLRPC')
+proxy.callMethod('test.sumprod', 3, 5).addCallbacks(printValue, printError)
+reactor.run()
+</pre>
+
+<p>prints:</p>
+
+<pre>
+[8, 15]
+</pre>
 
   </body>
 </html>
