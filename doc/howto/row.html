@@ -1,12 +1,9 @@
 <HTML>
 <HEAD>
-  <META NAME="GENERATOR" CONTENT="Adobe PageMill 3.0 Win">
   <TITLE>Twisted Enterprise Row Objects</TITLE>
 </HEAD>
 <BODY>
 
-<P>&lt;?xml version=&quot;1.0&quot;?&gt; <!DOCTYPE-- html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
-    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head>
 </head><body></P>
 
 <H1>Twisted Enterprise Row Objects</H1>
@@ -40,29 +37,27 @@ table that class corresponds to. The required class attributes
 are:</P>
 
 <UL>
-  <LI>rowColumns - list of the columns in the table with the correct
-  case
-  <LI>dbKeyColumns - list of key columns in form: [(columnName,
-  typeName)]
-  <LI>tableName - the name of the database table
+  <LI>rowColumns - list of the columns in the table with the correct case
+  <LI>rowKeyColumns - list of key columns in form: [(columnName, typeName)]
+  <LI>rowTableName - the name of the database table
 </UL>
 
 <P>There are also two optional class attributes that can be specified:</P>
 
 <UL>
-  <LI>foreignKeys - list of foreign keys to other database tables
+  <LI>rowForeignKeys - list of foreign keys to other database tables
   in the form: [(tableName, [(columnName, columnType)]]
-  <LI>factoryMethod - a method that creates instances of this class
+  <LI>rowFactoryMethod - a method that creates instances of this class
 </UL>
 
 <P>For example:</P>
 
 <PRE>
 class RoomRow(row.RowObject):
-    rowColumns    = [&quot;roomId&quot;,&quot;town_id&quot;,&quot;name&quot;,&quot;owner&quot;,&quot;posx&quot;,&quot;posy&quot;,&quot;width&quot;,&quot;height&quot;]
-    dbKeyColumns  = [(&quot;id&quot;, &quot;int4&quot;)]
-    tableName     = &quot;testrooms&quot;
-    factoryMethod = [myRowFactory]</PRE>
+    rowColumns       = [&quot;roomId&quot;,&quot;town_id&quot;,&quot;name&quot;,&quot;owner&quot;,&quot;posx&quot;,&quot;posy&quot;,&quot;width&quot;,&quot;height&quot;]
+    rowKeyColumns    = [(&quot;id&quot;, &quot;int4&quot;)]
+    rowTableName     = &quot;testrooms&quot;
+    rowFactoryMethod = [myRowFactory]</PRE>
 
 <P>The items in the rowColumns list will become data members of
 classes of this type when they are created by the DBReflector.</P>
@@ -158,6 +153,23 @@ method of the DBReflector. For example:</P>
 
 <P>This will insert a new row into the database table for this
 new RowObject instance.</P>
+
+<H2>Relationships Between Tables</H2>
+
+<P>Specifying a foreign key for a RowClass creates a relationship
+between database tables. When <i>loadObjectsFrom</i> is called for a
+table, it will automatically load all the children rows for the rows
+from the specified table. The child rows will be put into a list
+member variable of the rowObject instance with the same name as the
+child table.</P>
+
+<H2> Duplicate Row Objects </H2>
+
+<P>If a reflector tries to load an instance of a rowObject that is
+already loaded, it will return a reference to the existing rowObject
+rather than creating a new instance.  The reflector maintains a cache
+of weak references to all loaded row objects by their unique keys for
+this purpose.<P>
 
 <H2>Updating Row Objects</H2>
 
