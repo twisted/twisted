@@ -3,8 +3,7 @@
 import string
 
 from Zope.Publisher.Publish import publish
-from Zope.Publisher.HTTP.HTTPRequest import HTTPRequest
-from Zope.Publisher.HTTP.HTTPResponse import HTTPResponse
+from Zope.Publisher.Browser.BrowserRequest import BrowserRequest
 
 from twisted.protocols import protocol, http
 from twisted.internet import reactor, threadtask, main
@@ -42,7 +41,7 @@ class ZopeHTTPRequest(log.Logger, http.Request):
     def _process(self):
         env = self.create_environment()
         self.content.seek(0, 0)
-        req = HTTPRequest(self.content, self, env)
+        req = BrowserRequest(self.content, self, env)
         req.setPublication(self.channel.publication)
         response = req.getResponse()
         response.setHeaderOutput(self)
@@ -83,7 +82,7 @@ class ZopeHTTPRequest(log.Logger, http.Request):
         return env
 
 
-class HTTPFactory(protocol.ServerFactory):
+class HTTPFactory(http.HTTPFactory):
 
     def buildProtocol(self, addr):
         """Generate a request attached to this site.
@@ -103,26 +102,16 @@ class HTTPFactory(protocol.ServerFactory):
 
 if __name__ == '__main__':
 
-    from Zope.Publisher.DefaultPublication import DefaultPublication
-   
-    class tested_object:
-        """An example object to be published."""
-        tries = 0
+    from Zope.App.ZopePublication.Browser.Publication import BrowserPublication
+    from ZODB.FileStorage import FileStorage
+    from ZODB.DB import DB
+    from Zope.Configuration.xmlconfig import XMLConfig
+
+    XMLConfig("site.zcml")()
+    db = DB(FileStorage("Data.fs"))
+    pub = BrowserPublication(db)
     
-        def __call__(self, REQUEST):
-            self.tries += 1
-            result = ""
-            result += "Number of times: %d\n" % self.tries
-            for key in REQUEST.keys():
-                result += "%r = %r\n" % (key, REQUEST.get(key))
-            return result
-        
-        def redirect_method(self, RESPONSE):
-            "Generates a redirect using the redirect() method."
-            RESPONSE.redirect("http://somewhere.com/redirect")
-
-
-    from twisted.internet import main, app
+    from twisted.internet import app
     application = app.Application("zope")
-    application.listenTCP(8080, HTTPFactory(DefaultPublication(tested_object())))
+    application.listenTCP(8080, HTTPFactory(pub))
     application.run(save=0)
