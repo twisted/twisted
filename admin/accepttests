@@ -180,10 +180,25 @@ Subject: How are you gentlemen?
 All your base are belong to us
 ''')
     s.quit()
-    time.sleep(10)
+    time.sleep(5)
     p = poplib.POP3('127.0.0.1', 8110)
     p.apop('postmaster@foo.bar', 'postmaster')
     print string.join(p.retr(1)[1], '\n')
+    p.dele(1)
+    p.quit()
+
+    s = smtplib.SMTP('127.0.0.1', 8026)
+    s.sendmail("postmaster@foo.bar", ['moshez@no.such.domain'], '''\
+Subject: How are you ladies?
+
+All your dependents are belong to us
+''')
+    s.quit()
+    time.sleep(3)
+    p = poplib.POP3('127.0.0.1', 8110)
+    p.apop('postmaster@foo.bar', 'postmaster')
+    print string.join(p.retr(1)[1], '\n')
+    p.dele(1)
     p.quit()
     killit()
 
@@ -196,8 +211,8 @@ def runAllTests():
     runManholeTest()
     runTelnetTest()
     runWordsTest()
-    runRealityTest()
-    #runExampleTest()
+    #runRealityTest()
+    runExampleTest()
     runMailTest()
     message('All tests run.')
 

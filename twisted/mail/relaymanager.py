@@ -32,7 +32,7 @@ for the twisted.mail SMTP server
 from twisted.python import delay, log
 from twisted.mail import relay, mail, bounce
 from twisted.internet import reactor
-import os, string, time
+import os, string, time, cPickle
 
 
 class SMTPManagedRelayer(relay.SMTPRelayer):
@@ -53,6 +53,10 @@ class SMTPManagedRelayer(relay.SMTPRelayer):
         """
         relay.SMTPRelayer.__init__(self, messages)
         self.manager = manager
+
+    def lineReceived(self, line):
+        print "managed -- got", line
+        relay.SMTPRelayer.lineReceived(self, line)
 
     def sentMail(self, addresses):
         """called when e-mail has been sent
@@ -202,6 +206,7 @@ class SmartHostSMTPRelayingManager:
 
         Mark it as sent in our lists
         """
+        print "success sending", message, "removing from queue"
         self._finish(relay, message)
 
     def notifyFailure(self, relay, message):
@@ -210,16 +215,17 @@ class SmartHostSMTPRelayingManager:
         # Moshe - Bounce E-mail here
         # Be careful: if it's a bounced bounce, silently
         # discard it
+        message = os.path.basename(message)
         fp = self.queue.getEnvelopeFile(message)
         from_, to = cPickle.load(fp)
         fp.close()
-	from_, to, bounce = bounce.generateBounceMessage(from_, to, open(self.queue.getPathFor(message)+'-D'))
-        fp, message = self.queue.createNewMessage()
-        cPickle.dump(fp, (from_, to))
+	from_, to, bounceMessage = bounce.generateBounce(open(self.queue.getPath(message)+'-D'), from_, to)
+        fp, outgoingMessage = self.queue.createNewMessage()
+        cPickle.dump([from_, to], fp)
         fp.close()
-        for line in string.split(bounce, '\n')[:-1]:
-             message.lineReceived(line)
-        message.eomReceived()
+        for line in string.split(bounceMessage, '\n')[:-1]:
+             outgoingMessage.lineReceived(line)
+        outgoingMessage.eomReceived()
         self._finish(relay, message)
 
     def notifyDone(self, relay):
