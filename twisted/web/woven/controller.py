@@ -17,7 +17,7 @@
 
 from __future__ import nested_scopes
 
-__version__ = "$Revision: 1.45 $"[11:-2]
+__version__ = "$Revision: 1.46 $"[11:-2]
 
 import os
 import cgi
@@ -167,6 +167,11 @@ class Controller(resource.Resource):
         resource.Resource.getChild(self, name, request)
 
     def wchild_index(self, request):
+        """By default, we return ourself as the index.
+        Override this to provide different behavior
+        for a URL that ends in a slash.
+        """
+        self.addSlash = 0
         return self
 
     def render(self, request):
