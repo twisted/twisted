@@ -392,7 +392,7 @@ class BERDecoderContext:
         return "<"+self.__class__.__name__ \
                +" identities="+repr(self.Identities) \
                +" fallback="+repr(self.fallback) \
-               +" inherit="+repr(self.inherit) \
+               +" inherit="+repr(self.inherit_context) \
                +">"
 
 def ber2object(context, m):
