@@ -1,4 +1,3 @@
-
 # Twisted, the Framework of Your Internet
 # Copyright (C) 2001 Matthew W. Lefkowitz
 #
@@ -15,7 +14,7 @@
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 #
-# $Id: conch.py,v 1.19 2002/12/02 20:21:49 moshez Exp $
+# $Id: conch.py,v 1.20 2002/12/02 21:01:49 z3p Exp $
 
 #""" Implementation module for the `ssh` command.
 #"""
@@ -122,11 +121,11 @@ def run():
         sys.stdout = realout
     else:
         log.discardLogs()
+    log.deferr = handleError # HACK
     if '@' in options['host']:
         options['user'], options['host'] = options['host'].split('@',1)
     host = options['host']
     port = int(options['port'] or 22)
-    log.msg(str((host,port)))
     reactor.connectTCP(host, port, SSHClientFactory())
     fd = sys.stdin.fileno()
     try:
@@ -139,6 +138,14 @@ def run():
         if old:
             tty.tcsetattr(fd, tty.TCSANOW, old)
     sys.exit(exitStatus)
+
+def handleError():
+    from twisted.python import failure
+    global exitStatus
+    exitStatus = 2
+    log.err(failure.Failure())
+    reactor.stop()
+    raise
 
 class SSHClientFactory(protocol.ClientFactory):
     noisy = 1 

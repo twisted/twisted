@@ -80,10 +80,10 @@ MP_py = MP
 _MPpow_py = _MPpow
 
 try:
-    import _common
-    getMP = _common.getMP
-    MP = _common.MP
-    _MPpow = _common._MPpow
-    __builtins__['pow'] = _common.pow # this is probably evil
+    import tcs_common
+    getMP = tcs_common.getMP
+    MP = tcs_common.MP
+    _MPpow = tcs_common._MPpow
+    __builtins__['pow'] = tcs_common.pow # this is probably evil
 except ImportError:
     pass

@@ -22,7 +22,7 @@ Package installer for Twisted
 Copyright (C) 2001 Matthew W. Lefkowitz
 All rights reserved, see LICENSE for details.
 
-$Id: setup.py,v 1.76 2002/12/02 17:46:11 radix Exp $
+$Id: setup.py,v 1.77 2002/12/02 21:01:47 z3p Exp $
 """
 
 import distutils, os, sys, string
@@ -158,14 +158,6 @@ class build_ext_twisted(build_ext):
                                     define_macros=define_macros) )
         else:
             self.announce("Sun-RPC portmap support is unavailable on this system (but that's OK, you probably don't need it anyway).")
-
-        if self._check_header("gmp.h"):
-            exts.append( Extension("twisted.conch.ssh._common",
-                                    ["twisted/conch/ssh/_common.c"],
-                                    libraries=['gmp'],
-                                    define_macros=define_macros) )
-        else:
-            self.announce("GMP library not available, not compiling speed-ups for conch.")
 
         self.extensions.extend(exts)
 
