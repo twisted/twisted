@@ -1,5 +1,4 @@
-from twisted.internet import default; default.install()
-from twisted.internet import reactor, protocol, ptypro
+from twisted.internet import reactor, protocol
 
 class FakeTelnet(protocol.Protocol):
     commandToRun = ['/bin/sh'] # could have args too
@@ -7,20 +6,23 @@ class FakeTelnet(protocol.Protocol):
     def connectionMade(self):
         print 'connection made'
         self.propro = ProcessProtocol(self)
-        ptypro.Process(self.commandToRun[0],self.commandToRun,{},
-            self.dirToRunIn, self.propro)
+        reactor.spawnProcess(self.propro, self.commandToRun[0], self.commandToRun, {},
+                             self.dirToRunIn, usePTY=1)
     def dataReceived(self, data):
         self.propro.transport.write(data)
     def conectionLost(self):
         print 'connection lost'
         self.propro.tranport.loseConnection()
 
-class ProcessProtocol(protocol.Protocol):
+class ProcessProtocol(protocol.ProcessProtocol):
+
     def __init__(self, pr):
         self.pr = pr
-    def dataReceived(self, data):
+
+    def outReceived(self, data):
         self.pr.transport.write(data)
-    def processEnded(self):
+    
+    def processEnded(self, reason):
         print 'protocol conection lost'
         self.pr.transport.loseConnection()
 
