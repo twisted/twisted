@@ -137,7 +137,6 @@ class DefaultWidget(domwidgets.Widget):
     def setId(self, id):
         self.id = id
 
-
 class DOMTemplate(Resource, View):
     """A resource that renders pages using DOM."""
     
@@ -152,6 +151,7 @@ class DOMTemplate(Resource, View):
         self.model = model
         self.templateMethods = MethodLookup()
         self.setTemplateMethods( self.getTemplateMethods() )
+        self.handlerResults = {1: [], 0: []}
         
         self.outstandingCallbacks = 0
 
@@ -302,10 +302,13 @@ class DOMTemplate(Resource, View):
         return self.processString(request, html, node)
 
     def processString(self, request, html, node):
-        try:
-            child = minidom.parseString(html)
-        except Exception, e:
-            print "damn, error parsing, probably invalid xml:", e
+        if html:
+            try:
+                child = minidom.parseString(html)
+            except Exception, e:
+                print "damn, error parsing, probably invalid xml:", e
+                child = self.d.createTextNode(html)
+        else:
             child = self.d.createTextNode(html)
         return self.processNode(request, child, node)
 
@@ -326,32 +329,35 @@ class DOMTemplate(Resource, View):
         id = node.getAttribute('model')
         if id is None: id = node.getAttribute('id')
         
-        defaultHandlerFactory = lambda x: DefaultHandler(x)
-        defaultWidgetFactory = lambda x: DefaultWidget(x)
-        controllerFactory, viewFactory = (defaultHandlerFactory, defaultWidgetFactory)
 
         # Look up a handler
+        controllerFactory = DefaultHandler
         if controllerName:
             if hasattr(self, 'controller'):
-                controllerFactory = getattr(self.controller, 'factory_' + controllerName, defaultHandlerFactory)
-            if controllerFactory is defaultHandlerFactory:
-                controllerFactory = getattr(domhandlers, controllerName, defaultHandlerFactory)
-
-        # Look up either a widget factory, or a dom-mutating method
-        viewMethod = None
-        viewMethod = self.templateMethods.getMethodForNode(node)
-        if viewMethod:
-            log.msg("getTemplateMethods is deprecated. Please switch from using class or id to using the model attribute, and prefix your methods with domview_*.")
-        else:
-            if viewName:
-                viewFactory = getattr(self, 'factory_' + viewName, defaultWidgetFactory)
-                if viewFactory is defaultWidgetFactory:
-                    viewMethod = getattr(self, 'domview_' + viewName, None)
-                    if viewMethod is None:
-                        viewFactory = getattr(domwidgets, viewName, defaultWidgetFactory)
+                controllerFactory = getattr(self.controller, 'factory_' + controllerName, DefaultHandler)
+            if controllerFactory is DefaultHandler:
+                controllerFactory = getattr(domhandlers, controllerName, DefaultHandler)
 
         controller = controllerFactory(self.model)
-        view = viewFactory(self.model)
+
+        # Look up either a widget factory, or a dom-mutating method
+        view = DefaultWidget(self.model)
+        viewMethod = self.templateMethods.getMethodForNode(node)
+        if viewMethod:
+            log.msg("getTemplateMethods is deprecated. Please switch from using class or id to using the model attribute, and prefix your methods with factory_*.")
+        else:
+            viewMethod = view.generateDOM
+            if viewName:
+                viewMethod = getattr(self, 'factory_' + viewName, None)
+                if viewMethod is None:
+                    view = getattr(domwidgets, viewName, DefaultWidget)(self.model)
+                    viewMethod = view.generateDOM
+                else:
+                    # Check to see if the viewMethod returns a widget. (Use IWidget instead?)
+                    maybeWidget = viewMethod(request, node)
+                    if isinstance(maybeWidget, domwidgets.Widget):
+                        view = maybeWidget
+                        viewMethod = view.generateDOM
 
         controller.setView(view)
         controller.setId(id)
@@ -365,36 +371,23 @@ class DOMTemplate(Resource, View):
         
         success, data = controller.handle(request)
         if success is not None:
-            results = getattr(self, 'handlerResults', {})
-            resultList = results.get(success, [])
-            resultList.append((controller, data, node))
-            results[success] = resultList
-            setattr(self, 'handlerResults', results)
+            self.handlerResults[success].append((controller, data, node))
 
-        if viewMethod is None:
-            viewMethod = view.generateDOM
-        self.mutateDOM(request, node, viewMethod)
-
-    def mutateDOM(self, request, node, viewMethod):
         result = viewMethod(request, node)
         returnNode = self.dispatchResult(request, node, result)
         if not isinstance(returnNode, Deferred):
-            node = returnNode
-            self.recurseChildren(request, node)
+            self.recurseChildren(request, returnNode)
 
     def sendPage(self, request):
         """
         Check to see if handlers recorded any errors before sending the page
         """
-        # First, check to see if any results were recorded by handlers
-        handlerResults = getattr(self, 'handlerResults', None)
-        if handlerResults:
-            # do something
-            failures = handlerResults.get(0, None)
-            if failures:
-                stop = self.handleFailures(request, failures)
-                if stop: return
-            successes = handlerResults.get(1, None)
+        failures = self.handlerResults.get(0, None)
+        stop = 0
+        if failures:
+            stop = self.handleFailures(request, failures)
+        if not stop:
+            successes = self.handlerResults.get(1, None)
             if successes:
                 self.handleSuccesses(request, successes)
 

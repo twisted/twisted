@@ -128,7 +128,7 @@ class File(resource.Resource, styles.Versioned):
 
     processors = {}
 
-    indexNames = ["index", "index.html", "index.trp"]
+    indexNames = ["index", "index.html", "index.trp", "index.rpy"]
 
     ### Versioning
 

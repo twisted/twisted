@@ -186,6 +186,13 @@ class Button(Input):
 
 class Anchor(Widget):
     tagName = 'a'
+    def __init__(self, text):
+        if isinstance(text, Model):
+            Widget.__init__(self, text)
+        else:
+            Widget.__init__(self, Model())
+        self.text = text
+
     def setText(self, text):
         self.text = text
     
@@ -193,12 +200,16 @@ class Anchor(Widget):
         self['href'] = href
     
     def setAttributes(self, request):
-        self['href'] = self.getData()
+        if isinstance(self.text, Model):
+            self['href'] = self.getData()
+            return self.getData()
+        return self.text
         
     def generateDOM(self, request, node):
-        self.setAttributes(request)
+        text = self.setAttributes(request)
         node = Widget.generateDOM(self, request, node)
-        node.appendChild(document.createTextNode(self.getData()))
+        if text:
+            node.appendChild(document.createTextNode(text))
         return node
 
 class GetAnchor(Anchor):
@@ -233,4 +244,29 @@ class List(Widget):
             
             domhelpers.superPrependAttribute(newNode, 'model', self.id + '[' + str(itemNum) + ']')
             node.appendChild(newNode)
+        return node
+
+class ColumnList(List):
+    def __init__(self, model, columns=1):
+        List.__init__(self, model)
+        self.columns = 1
+
+    def setColumns(self, columns):
+        self.columns = columns
+
+    def generateDOM(self, request, node):
+        node = Widget.generateDOM(self, request, node)
+        listRow = domhelpers.get(node, 'listRow')
+        listItem = domhelpers.get(listRow, 'listItem')
+        domhelpers.clearNode(node)
+        domhelpers.clearNode(listRow)
+        row = listRow.cloneNode(1)
+        node.appendChild(row)
+        for itemNum in range(len(self.getData())):
+            if itemNum % self.columns == 0:
+                row = listRow.cloneNode(1)
+                node.appendChild(row)
+            newNode = listItem.cloneNode(1)
+            domhelpers.superPrependAttribute(newNode, 'model', self.id + '[' + str(itemNum) + ']')
+            row.appendChild(newNode)
         return node
