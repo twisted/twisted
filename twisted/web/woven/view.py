@@ -15,14 +15,16 @@
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
-from twisted.web.woven import template
-from twisted.web import resource
+# Sibling imports
+import interfaces
+import template
+import utils
 
+# Twisted imports
+from twisted.internet import defer
 from twisted.python import components
 from twisted.python import log
-from twisted.internet import defer
-
-from twisted.web.woven import interfaces
+from twisted.web import resource
 
 NO_DATA_YET = 2
 
@@ -197,7 +199,7 @@ class View(template.DOMTemplate):
         if isinstance(data, defer.Deferred):
             self.outstandingCallbacks += 1
             data.addCallback(self.handleControllerResults, request, node, controller, view, success)
-            data.addErrback(template.renderFailure, request)
+            data.addErrback(utils.renderFailure, request)
             return data
         if success is not None:
             self.handlerResults[success].append((controller, data, node))
@@ -227,7 +229,7 @@ class View(template.DOMTemplate):
                 stop = self.controller.process(request, **process)
                 if isinstance(stop, defer.Deferred):
                     stop.addCallback(self.handleProcessCallback, request)
-                    stop.addErrback(template.renderFailure, request)
+                    stop.addErrback(utils.renderFailure, request)
                     stop = template.STOP_RENDERING
     
         if not stop:
@@ -261,7 +263,7 @@ class View(template.DOMTemplate):
             if isinstance(result, defer.Deferred):
                 self.outstandingCallbacks += 1
                 result.addCallback(self.handleCommitCallback, request)
-                result.addErrback(template.renderFailure, request)
+                result.addErrback(utils.renderFailure, request)
         return process
 
     def handleCommitCallback(self, result, request):

@@ -63,7 +63,7 @@ class InputHandler(controller.Controller):
         success = self.check(request, data)
         if isinstance(success, defer.Deferred):
             success.addCallback(self.dispatchCheckResult, request, data)
-            success.addErrback(template.renderFailure, request)
+            success.addErrback(utils.renderFailure, request)
             return (None, success)
         return self.dispatchCheckResult(success, request, data)
     
