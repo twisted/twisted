@@ -106,7 +106,7 @@ class Port(base.BasePort):
                 read += len(data)
                 self.protocol.datagramReceived(data, addr)
             except socket.error, se:
-                if se.args[0] in (EAGAIN, EINTR):
+                if se.args[0] in (EAGAIN, EINTR, EWOULDBLOCK):
                     return
                 else:
                     raise
@@ -212,7 +212,7 @@ class ConnectedPort(Port):
                 read += len(data)
                 self.protocol.datagramReceived(data)
             except socket.error, se:
-                if se.args[0] in (EAGAIN, EINTR):
+                if se.args[0] in (EAGAIN, EINTR, EWOULDBLOCK):
                     return
                 else:
                     raise
