@@ -102,15 +102,13 @@ class Connection(tcp.Connection):
         except (SSL.ZeroReturnError, SSL.SysCallError):
             return main.CONNECTION_LOST
 
-    def connectionLost(self):
-        """See tcp.Connection.connectionLost for details.
-        """
+    def _closeSocket(self):
         # do the SSL shutdown exchange, before we close the underlying socket
         try:
             self.socket.shutdown()
         except SSL.Error:
             pass
-        tcp.Connection.connectionLost(self)
+        self.socket.close()
 
 
 class Client(Connection, tcp.Client):

@@ -106,18 +106,22 @@ class Connection(abstract.FileDescriptor,
             else:
                 return main.CONNECTION_LOST
 
-    def connectionLost(self):
-        """See abstract.FileDescriptor.connectionLost().
-        """
-        abstract.FileDescriptor.connectionLost(self)
-        # This used to close() the socket, but that doesn't *really* close it if
+    def _closeSocket(self):
+        """Called to close our socket."""
+        # This used to close() the socket, but that doesn't *really* close if
         # there's another reference to it in the TCP/IP stack, e.g. if it was
         # was inherited by a subprocess. And we really do want to close the
-        # connection.
+        # connection. So we use shutdown() instead.
         try:
             self.socket.shutdown(2)
         except socket.error:
             pass
+    
+    def connectionLost(self):
+        """See abstract.FileDescriptor.connectionLost().
+        """
+        abstract.FileDescriptor.connectionLost(self)
+        self._closeSocket()
         protocol = self.protocol
         del self.protocol
         del self.socket
