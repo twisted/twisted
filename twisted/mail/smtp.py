@@ -1465,9 +1465,12 @@ class ESMTPSender(SenderMixin, ESMTPClient):
         except ImportError:
             return None
         else:
-            context = ssl.ClientContextFactory()
-            context.method = ssl.SSL.TLSv1_METHOD
-            return context
+            try:
+                context = ssl.ClientContextFactory()
+                context.method = ssl.SSL.TLSv1_METHOD
+                return context
+            except AttributeError:
+                return None
 
 
 class ESMTPSenderFactory(SMTPSenderFactory):
