@@ -385,6 +385,17 @@ def run():
                 callback()
             except:
                 traceback.print_exc(file=log.logfile)
+
+def addShutdown(function):
+    """Add a function to be called at shutdown.
+    """
+    shutdowns.append(function)
+
+def addDelayed(delayed):
+    """Add a Delayed object to the event loop.
+    """
+    delayeds.append(delayed)
+
 def addReader(reader):
     """Add a FileDescriptor for notification of data available to read.
     """
@@ -496,19 +507,6 @@ def wakeUp():
     if not threadable.isInIOThread():
         waker.wakeUp()
 
-def wakeAddReader(reader):
-    """Selector.addReader(selectable) -> None
-    Adds a Selectable to the list of objects monitored for data being
-    available to read. (waking up the main I/O thread if necessary)"""
-    reads[reader] = 1
-    wakeUp()
-
-def wakeAddWriter(writer):
-    """Selector.addWriter(selectable) -> None
-    Adds a Selectable to the list of objects monitored for data being
-    available to write. (waking up the main I/O thread if necessary)"""
-    writes[writer] = 1
-    wakeUp()
 
 wakerInstalled = 0
 
@@ -518,8 +516,6 @@ def installWaker():
         wakerInstalled = 1
         waker = _Waker()
         addReader(waker)
-        addReader = wakeAddReader
-        addWriter = wakeAddWriter
 
 if threadable.threaded:
     installWaker()
