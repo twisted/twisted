@@ -15,7 +15,7 @@ class DatabaseAuthorizer(passport.Authorizer, adbapi.Augmentation):
       password          varchar(64)
     );
     
-    CREATE TABLE services
+    CREATE TABLE twisted_services
     (
       service_name      varchar(64) PRIMARY KEY
     );
