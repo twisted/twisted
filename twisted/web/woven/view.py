@@ -118,8 +118,7 @@ class View(template.DOMTemplate):
         """Allow a view to be used like a widget. Will look up the template
         file and return it in place of the incoming node.
         """
-        d = self.lookupTemplate(request)
-        return d.firstChild()
+        return self.lookupTemplate(request)
 
     def setController(self, controller):
         self.controller = controller
