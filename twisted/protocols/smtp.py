@@ -1236,8 +1236,13 @@ class SMTPSenderFactory(protocol.ClientFactory):
         self.toEmail = toEmail
         self.file = file
         self.result = deferred
+        self.result.addBoth(self._removeDeferred)
         self.sendFinished = 0
         self.retries = -retries
+
+    def _removeDeferred(self, argh):
+        del self.result
+        return argh
     
     def clientConnectionFailed(self, connector, error):
         self.result.errback(error)
