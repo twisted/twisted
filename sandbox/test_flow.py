@@ -107,35 +107,26 @@ class badgen:
     def next(self):
         return self.state()
 
-def toList(it):
-    ret = []
-    it = flow.iter(it)
-    try:
-       while 1:
-           ret.append(it.next())
-    except flow.StopIteration: pass
-    return ret         
-
 class FlowTest(unittest.TestCase):
     def testBasic(self):
         lhs = [1,2,3]
-        rhs = toList(flow.Block([1,2,3]))
+        rhs = list(flow.Block([1,2,3]))
         self.assertEqual(lhs,rhs)
 
     def testProducer(self):
         lhs = [(1,'one'),(2,'two'),(3,'three')]
-        rhs = toList(flow.Block(producer()))
+        rhs = list(flow.Block(producer()))
         self.assertEqual(lhs,rhs)
 
     def testConsumer(self):
         lhs = ['Title',(1,'one'),(2,'two'),(3,'three')]
-        rhs = toList(flow.Block(consumer()))
+        rhs = list(flow.Block(consumer()))
         self.assertEqual(lhs,rhs)
 
     def testMerge(self):
         lhs = [1,'a',2,'b','c',3]
         mrg = flow.Merge([1,2,flow.Cooperate(),3],['a','b','c'])
-        rhs = toList(flow.Block(mrg))
+        rhs = list(flow.Block(mrg))
         self.assertEqual(lhs,rhs)
 
     def testDeferred(self):
@@ -184,6 +175,8 @@ class FlowTest(unittest.TestCase):
                     raise flow.StopIteration
                 self.count -= 1
                 return val
-        #print list(flow.Block(flow.Threaded(CountIterator(5))))
+        result = [5,4,3,2,1]
+        f = flow.Threaded(CountIterator(5))
+        self.assertEquals(result, list(flow.Block(f)))
         d = flow.Deferred(flow.Threaded(CountIterator(5)))
-        self.assertEquals(unittest.deferredResult(d),[5,4,3,2,1])
+        self.assertEquals(result, unittest.deferredResult(d))

@@ -121,7 +121,7 @@ def render(req):
              <tr>
     """)
     zips   = flow.wrap(cooperative())
-    states = flow.wrap(flow.ThreadedIterator(blocking()))
+    states = flow.wrap(flow.Threaded(blocking()))
     yield states
     for cnt, abbr, state in states:
         req.write("""

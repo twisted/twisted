@@ -309,11 +309,8 @@ class Threaded(Stage):
             self._append = self._buffer.extend
         else:
             self._append = self._buffer.append
-    def __iter__(self): 
-        """ start the process running in a separate thread """
         from twisted.internet.reactor import callInThread
         callInThread(self._process)
-        return self
     def _process(self):
         """ pull values from the iterable and add them to the buffer """
         try:
