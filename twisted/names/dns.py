@@ -129,12 +129,12 @@ class SentQuery:
         self.done = 1
         self.removeAll()
         if not message.answers:
-            self.errback()
+            self.errback("No answers")
             return
         process = getattr(self, 'processAnswer_%d' % message.answers[0].type, 
                           None)
         if process is None:
-            self.errback()
+            self.errback("No processor for answer type %s" % message.answers[0].type)
             return
         self.callback(process(message))
 
