@@ -37,16 +37,16 @@ from twisted.internet import defer
 import base
 
 
-class OrderedDict:
+class OrderedSet:
     """Store keys in order they were inserted in."""
 
     def __init__(self):
         self.keys = []
         self.map = {}
 
-    def __setitem__(self, key, value):
+    def add(self, key):
         if self.map.has_key(key):
-            self.keys[self.map[key]] = value
+            return
         else:
             self.keys.append(key)
             self.map[key] = len(self.keys) - 1
@@ -62,6 +62,9 @@ class OrderedDict:
     def keys(self):
         return self.keys
 
+    def clear(self):
+        self.__init__(self)
+
 
 class RowJournal(base.Journal):
     """Journal that stores data 'snapshot' in using twisted.enterprise.row.
@@ -73,26 +76,26 @@ class RowJournal(base.Journal):
 
     def __init__(self, log, journaledService, reflector):
         self.reflector = reflector
-        self.dirtyRows = OrderedDict()
-        self.insertedRows = OrderedDict()
-        self.deletedRows = OrderedDict()
+        self.dirtyRows = OrderedSet()
+        self.insertedRows = OrderedSet()
+        self.deletedRows = OrderedSet()
         self.syncing = 0
         base.Journal.__init__(self, log, journaledService)
     
     def updateRow(self, obj):
         """Mark on object for updating when sync()ing."""
         if self.insertedRows.has_key(obj):
-            self.insertedRows[obj] = 1
+            self.insertedRows.add(obj)
         else:
-            self.dirtyRows[obj] = 1
+            self.dirtyRows.add(obj)
 
     def insertRow(self, obj):
         """Mark on object for inserting when sync()ing."""
         if self.deletedRows.has_key(obj):
             del self.deletedRows[obj]
-            self.dirtyRows[obj] = 1
+            self.dirtyRows.add(obj)
         else:
-            self.insertedRows[obj] = 1
+            self.insertedRows.add(obj)
 
     def deleteRow(self, obj):
         """Mark on object for deleting when sync()ing."""
@@ -101,7 +104,7 @@ class RowJournal(base.Journal):
             return
         if self.dirtyRows.has_key(obj):
             del self.dirtyRows[obj]
-        self.deletedRows[obj] = 1
+        self.deletedRows.add(obj)
 
     def loadObjectsFrom(self, tableName, parentRow=None, data=None, whereClause=None, forceChildren=0):
         """Flush all objects to the database and then load objects."""
