@@ -83,8 +83,6 @@ class Redirect(resource.Resource):
     def render(self, request):
         return redirectTo(self.url, request)
 
-from twisted.internet.interfaces import IServiceCollection
-from twisted.internet.app import ApplicationService
 
 class Registry(components.Componentized, styles.Versioned):
     """
@@ -106,54 +104,6 @@ class Registry(components.Componentized, styles.Versioned):
 
     def getCachedPath(self, path):
         return self._pathCache.get(path)
-
-    def _grabService(self, svc, sclas):
-        """
-        Find an instance of a particular class in a service collection and all
-        subcollections.
-        """
-        for s in svc.services.values():
-            if isinstance(s, sclas):
-                return s
-            if components.implements(s, IServiceCollection):
-                ss = self._grabService(s, sclas)
-                if ss:
-                    return ss
-
-    def getComponent(self, interface, registry=None):
-        """
-        Very similar to Componentized.getComponent, with a little magic.
-
-        This adds the additional default behavior that if no component already
-        exists and 'interface' is a subclass of
-        L{twisted.internet.app.ApplicationService}, it will automatically scan
-        through twisted.internet.app.theApplication and look for instances of
-        'interface'.
-
-        This has the general effect that if your web script (in an RPY, EPY, or
-        anywhere else that a Registry is present) wishes to locate a Service in
-        a default webserver, it can say 'registry.getComponent(MyServiceClass)'
-        and if there is a service of that type registered with the Application,
-        it will be found.  Additionally, in a more complex server, the registry
-        can be explicitly given a service to locate for that interface using
-        setComponent(MyServiceClass, myServiceInstance). Separate File
-        instances can be used to represent access to different services.
-        """
-        c = components.Componentized.getComponent(self, interface, registry)
-        if c is not None:
-            return c
-        elif issubclass(interface, ApplicationService):
-            from twisted.internet.app import theApplication
-            gs = self._grabService(theApplication, interface)
-            if gs:
-                self.setComponent(interface, gs)
-                return gs
-
-
-def _upgradeRegistry(registry):
-    from twisted.internet import app
-    registry.setComponent(interfaces.IServiceCollection,
-                          app.theApplication)
 
 
 def loadMimeTypes(mimetype_locations=['/etc/mime.types']):
@@ -251,8 +201,6 @@ class File(resource.Resource, styles.Versioned, filepath.FilePath):
     def upgradeToVersion5(self):
         if not isinstance(self.registry, Registry):
             self.registry = Registry()
-            from twisted.internet import reactor
-            reactor.callLater(0, _upgradeRegistry, self.registry)
 
     def upgradeToVersion4(self):
         if not hasattr(self, 'registry'):

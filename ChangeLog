@@ -1,3 +1,8 @@
+2003-10-14  Itamar Shtull-Trauring  <itamar@sheriffpony>
+
+	* twisted/web/static.py: registry no longer has support for
+	getting services based on their interfaces.
+
 2003-10-14  Christopher Armstrong  <radix@twistedmatrix.com>
 
 	* .: Releasing Twisted 1.1.0alpha1.
