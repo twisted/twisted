@@ -101,7 +101,7 @@ def timeoutSetter():
 
     # make sure the timeout gets cancelled as soon as the deferred fires,
     # either with an error or with a successful result
-    d.addBoth(getTimeoutCancelFunction)
+    d.addBoth(getTimeoutCancelFunction())
     # add further callbacks and errbacks to d here
     # ...
 </pre>
