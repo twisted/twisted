@@ -8,6 +8,7 @@ from iocpcore import iocpcore
 class Proactor(iocpcore, base.ReactorBase):
     # TODO: IReactorArbitrary, IReactorUDP, IReactorMulticast,
     # IReactorSSL (or leave it until exarkun finishes TLS)
+    # IReactorProcess, IReactorCore (cleanup)
     __implements__ = base.ReactorBase.__implements__ + (IReactorTCP,)#IReactorUDP)
     handles = None
     iocp = None

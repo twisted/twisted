@@ -5,7 +5,7 @@ from twisted.cred.credentials import UsernamePassword
 import time
 
 class PBBenchClient:
-    hostname = 'linen'
+    hostname = 'localhost'
     portno = pb.portno
     calledThisSecond = 0
 
