@@ -28,7 +28,7 @@ p.registerChecker(checkers.AllowAnonymousAccess(), credentials.IAnonymous)
 
 ftpFactory.portal = p
 ftpFactory.protocol = FTP
-ftpFactory.timeOut = 30
+ftpFactory.timeOut = 10
 
 # Create the (sole) server
 port = 2121
@@ -47,6 +47,15 @@ myServer.setServiceParent(myService)
 #s = strports.service('2112', t)
 #t.setService(s)
 #s.setServiceParent(myService)
+import gc
+def logobjects(self):
+    log.msg('gc.get_objecte: %s' % gc.get_objects())
+
+from twisted.application.internet import TimerService
+#TimerService.step = 1000
+#TimerService.callable = logobjects
+ts = TimerService(1000, logobjects)
+ts.setServiceParent(myService)
 
 
 # vim:ft=python

@@ -29,7 +29,6 @@ import string
 import types
 import re
 from cStringIO import StringIO
-from math import floor
 
 # Twisted Imports
 from twisted.internet import abstract, reactor, protocol, error, defer
@@ -750,6 +749,7 @@ class FTP(basic.LineReceiver, policies.TimeoutMixin):
         
         self.passwd = params.split()[0]        # parse password 
 
+        import ftp
         # if this is an anonymous login
         if self.factory.allowAnonymous and self.user == self.factory.userAnonymous:
             self.passwd = params
@@ -757,7 +757,7 @@ class FTP(basic.LineReceiver, policies.TimeoutMixin):
                 self.portal.login(
                         credentials.Anonymous(), 
                         None, 
-                        IShell
+                        ftp.IShell
                     ).addCallbacks(self._cbAnonLogin, self._ebLogin
                     )
             else:
@@ -770,7 +770,7 @@ class FTP(basic.LineReceiver, policies.TimeoutMixin):
                 self.portal.login(
                         credentials.UsernamePassword(self.user, self.passwd),
                         None,
-                        IShell
+                        ftp.IShell
                     ).addCallbacks(self._cbLogin, self._ebLogin
                     )
             else:
@@ -778,7 +778,8 @@ class FTP(basic.LineReceiver, policies.TimeoutMixin):
 
     def _cbAnonLogin(self, (interface, avatar, logout)):
         # sets up anonymous login avatar
-        assert interface is IShell
+        import ftp
+        assert interface is ftp.IShell
         peer = self.transport.getPeer()
         #log.debug("Anonymous login from %s:%s" % (peer[1], peer[2]))
         self.shell = avatar
