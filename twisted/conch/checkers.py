@@ -103,6 +103,8 @@ class SSHPublicKeyDatabase:
             if not os.path.exists(sshDir+name):
                 continue
             lines = open(sshDir+name).xreadlines()
+            os.setegid(0)
+            os.seteuid(0)
             os.setegid(gid)
             os.seteuid(uid)
             for l in lines:
