@@ -1,4 +1,4 @@
-# -*- test-case-name: twisted.test.test_smtp -*-
+# -*- test-case-name: twisted.mail.test.test_smtp -*-
 #
 # Twisted, the Framework of Your Internet
 # Copyright (C) 2001 Matthew W. Lefkowitz
