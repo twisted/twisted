@@ -43,7 +43,7 @@ Test coverage needs to be better.
 <http://www.irchelp.org/irchelp/rfc/ctcpspec.html>}
 """
 
-__version__ = '$Revision: 1.1 $'[11:-2]
+__version__ = '$Revision: 1.2 $'[11:-2]
 
 from twisted.internet import reactor, protocol, defer
 from twisted.persisted import styles
@@ -1349,50 +1349,67 @@ class IncomingDccFile(protocol.ClientFactory):
 
         self.deferred = defer.Deferred()
         
-    def accept(self, destdir=None, filename=None, resume_overwrite=False):
+    def accept(self, destfile=None, resume_overwrite=False):
         """
-        We will attempt to open the destination path immediately.
-        If that fails, either IOError or DccDestFileExists will be raised.
-        If successful, a Deferred will be returned.  It will fire when the file is saved,
-        or errback is something funky happens along the way.
+        Call this to retreive and save the incoming dcc file.
+        
+        The 'destfile' parameter is optional. If unset, we will use the default directory and filename. Or you may pass a path to use, or an open file-like-object that data will be written to.
+        
+        Unless you pass a file-object, we will attempt to open the destination path immediately.
+        If that fails, either IOError or DccFileExists will be raised.
+        
+        If all goes well, a Deferred will be returned.
+        It will callback when the file is saved, or errback is something funky happens along the way.
 
-        resume_overwrite may be False, \"resume\", or \"overwrite\"
+        @param destfile: The path, or a file-object, to save to. 
+        @type destfile: A string or a file-like-object
+        @param resume_overwrite: Whether to resume, overwrite, or do neither. 
+        @type resume_overwrite: One of \"resume\", \"overwrite\", or False.
+
+        @return: A L{Deferred<defer.Deferred>} instance or raises an exception.
+
+        @raise IOError: If destfile is a path and opening it failed.
+        @raise DccFileExists: If destfile is a path, and resume_overwrite is False, and the path exists.
         """
+
         if self.accepted:
             raise "accept() already called successfully!"
 
-        if destdir == None:
-            destdir = self.default_destdir
-        if filename == None:
-            filename = self.default_filename
-
-        if destdir.endswith(path.sep):
-            destpath = destdir + filename
-        else:
-            destpath = destdir + path.sep + filename
+        if hasattr(destfile, 'write'): #assume it's a file-obj
+            self.file_obj = destfile
+        else: #see if it's None or a string
+            if destfile is None: #use the default (given by the remote client)
+                destfile = self.default_filename
+            elif type(destfile) == types.StringType: #use as-is
+                pass
+            else:
+                raise 'destfile must be None, a string, or a file-like-object'
             
-        # see if the path exists
-        if path.exists(destpath):
-            if not resume_overwrite: # it's there, but we can't resume or overwrite
-                raise DccFileExists()
+            # sanity check so we don't blow away files by accident
+            if path.exists(destfile):
+                if not resume_overwrite: # it's there, but we can't resume or overwrite
+                    raise DccFileExists()
 
-        if resume_overwrite == 'resume': # open for appending
-            self.file_obj = file(destpath, 'a+b')
-            # now we have to ask to resume before we can connect
+            # now we need to open the destination file
+
+            # we open it differently if we are resuming
+            if resume_overwrite == 'resume': # yes - open for appending
+                self.file_obj = file(destfile, 'a+b')
+            else: # no - open for writing (and possibly truncate)
+                self.file_obj = file(destfile, 'wb')
+
+        # we now have a file-obj to work with
+                
+        # do we need to resume first?
+        if resume_overwrite == 'resume': # yes - send the request
             self.resumePos = fileSize(self.file_obj)
             self.ircClient.ctcpMakeQuery(self.user.split('!')[0], [
                 ('DCC', ['RESUME', self.default_filename, self.port, self.resumePos])])
-            
-        else: # otherwise open for writing (and possibly truncate)
-            self.file_obj = file(destpath, 'wb')
-            # we can connect right now, since we aren't asking for a resume
+        # no, we aren't resuming - we can connect right now
+        else: 
             self._makeConnection()
 
         self.accepted = True
-        self.destdir = destdir
-        self.filename = filename
-        self.destpath = destpath
-        
         return self.deferred
 
     def reject(self):
