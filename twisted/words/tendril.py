@@ -71,7 +71,7 @@ class TendrilClient(irc.IRCClient, wordsService.WordsClientInterface):
 
     realname = 'Tendril'
     versionName = 'Tendril'
-    versionNum = '$Revision: 1.12 $'[11:-2]
+    versionNum = '$Revision: 1.13 $'[11:-2]
     versionEnv = copyright.longversion
 
     helptext = (
@@ -411,14 +411,16 @@ class TendrilClient(irc.IRCClient, wordsService.WordsClientInterface):
 
     def action(self, user, channel, message):
         """Speak about a participant in third-person.
-
-        XXX: Words needs 'emote'!
         """
         group = channelToGroupName(channel)
         nick = string.split(user,'!',1)[0]
-        self.groupMessage(group, '* %s%s %s' %
-                          (nick, self.networkSuffix, message))
-
+        try:
+            self._getParticipant(nick).groupMessage(group, message,
+                                                    {'style': 'emote'}) 
+        except wordsService.NotInGroupError:
+            self._getParticipant(nick).joinGroup(group)
+            self._getParticipant(nick).groupMessage(group, message,
+                                                    {'style': 'emote'})
 
     ### Bot event methods
 
