@@ -388,6 +388,22 @@ alert("I hate you");
         self.assertEquals(len(c1.childNodes), len(c2.childNodes))
         self.failIfEquals(c1.firstChild(), c2.firstChild())
         self.assertEquals(s, clone.toxml())
+        self.assertEquals(node.namespace, clone.namespace)
+
+    def testCloneDocument(self):
+        # sorry bout the >80 cols, but whitespace is a sensitive thing
+        s = '''<?xml version="1.0"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+"http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><foo></foo>'''
+
+        node = microdom.parseString(s)
+        clone = node.cloneNode(deep=1)
+        self.failIfEquals(node, clone)
+        self.assertEquals(len(node.childNodes), len(clone.childNodes))
+        self.assertEquals(s, clone.toxml())
+
+        self.failUnless(clone.isEqualToDocument(node))
+        self.failUnless(node.isEqualToDocument(clone))
+
 
     def testLMX(self):
         n = microdom.Element("p")
@@ -414,7 +430,7 @@ alert("I hate you");
 
     def testNamespaces(self):
         s = '''
-        <x xmlns="base" xmlns:x="a" xmlns:y="b">
+        <x xmlns="base">
         <y />
         <y q="1" x:q="2" y:q="3" />
         <y:y xml:space="1">here is    some space </y:y>
@@ -424,12 +440,18 @@ alert("I hate you");
         '''
         d = microdom.parseString(s)
         # at least make sure it doesn't traceback
-        d.toprettyxml()
+        s2 = d.toprettyxml()
         self.assertEquals(d.documentElement.namespace,
                           "base")
         self.assertEquals(d.documentElement.childNodes[0].namespace,
                           "base")
-        self.assertEquals(d.documentElement.childNodes[1].getAttributeNS('a','q'),
-                          '2')
         self.assertEquals(d.documentElement.childNodes[1].getAttributeNS('base','q'),
+                          '1')
+        
+        d2 = microdom.parseString(s2)
+        self.assertEquals(d2.documentElement.namespace,
+                          "base")
+        self.assertEquals(d2.documentElement.childNodes[0].namespace,
+                          "base")
+        self.assertEquals(d2.documentElement.childNodes[1].getAttributeNS('base','q'),
                           '1')

@@ -207,6 +207,7 @@ class Document(Node):
 
     def cloneNode(self, deep=0, parent=None):
         d = Document()
+        d.doctype = self.doctype
         if deep:
             newEl = self.documentElement.cloneNode(1, self)
         else:
@@ -421,7 +422,7 @@ class Element(Node):
         return (self.attributes == n.attributes) and (self.nodeName == n.nodeName)
 
     def cloneNode(self, deep=0, parent=None):
-        clone = Element(self.tagName, parentNode=parent)
+        clone = Element(self.tagName, parentNode=parent, namespace=self.namespace)
         clone.attributes.update(self.attributes)
         if deep:
             clone.childNodes = [child.cloneNode(1, clone) for child in self.childNodes]
