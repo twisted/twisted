@@ -38,8 +38,8 @@ from twisted.python import log, threadable, failure
 # Sibling Imports
 import main, default
 
-reads = default.reads
-writes = default.writes
+reads = {}
+writes = {}
 hasReader = reads.has_key
 hasWriter = writes.has_key
 
@@ -59,8 +59,8 @@ class TwistedSocketNotifier(QSocketNotifier):
         QObject.connect( self, SIGNAL("activated(int)"), self.fn )
 
     def shutdown(self):
-        self.setEnabled(0)
         QObject.disconnect(self, SIGNAL("activated(int)"), self.fn)
+        self.setEnabled(0)
         self.fn = self.watcher = None
 
     def read(self, sock):
@@ -98,7 +98,7 @@ class TwistedSocketNotifier(QSocketNotifier):
                 log.deferr()
             self.reactor.removeReader(w)
             self.reactor.removeWriter(w)
-        else:
+        elif why is not None:
             self.setEnabled(1)
         self.reactor.simulate()
 
@@ -111,6 +111,7 @@ class QTReactor(default.PosixReactorBase):
     """Qt based reactor."""
 
     def __init__(self, installSignalHandlers=1, app=None):
+        self.running = 1
         default.PosixReactorBase.__init__(self, installSignalHandlers)
         if app is None:
             app = QApplication([])
@@ -143,6 +144,10 @@ class QTReactor(default.PosixReactorBase):
     def simulate(self):
         global _timer
         if _timer: _timer.stop()
+        if not self.running:
+            self.running = 1
+            self.qApp.exit_loop()
+            return
         self.runUntilCurrent()
 
         # gah
@@ -169,12 +174,13 @@ class QTReactor(default.PosixReactorBase):
         self.qApp.processEvents(delay)
     
     def run(self):
+        self.running = 1
         self.startRunning()
         self.simulate()
-        self.qApp.exec_loop()
+        self.qApp.enter_loop()
 
     def crash(self):
-        self.qApp.quit()
+        self.running = 0
 
 
 def install(app=None):
