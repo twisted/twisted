@@ -407,6 +407,7 @@ class AccountManager(Toplevel):
         return self.accounts
 
     def loadState(self,state):
+        autos=[]
         for account in state:
             self._addaccount(account)
             if account.autologon: # autologon
@@ -451,16 +452,13 @@ class AccountManager(Toplevel):
         missing=im2.logonAccount(self.im,account)
         while missing:
             for foo,key,bar in missing:
-                print "asking for "+key
                 if key[:4]=="pass":
-                    print "pass"
+                    # XXX this hangs on windows
                     value=tkutil.askpassword("Enter %s for %s"%(foo, \
                                     account.options["username"]), foo+": ")
                 else:
-                    print "other"
                     value=tkSimpleDialog.askstring("Enter %s for %s"%(foo, \
                                     account.options["username"]), foo+": ")
-                print "got %s: %s"%(key,value)
                 account.options[key]=value
             missing=im2.logonAccount(self.im,account)
 

@@ -117,6 +117,16 @@ class Gateway:
         newStatus := their current status, one of ["Online","Offline","Away"]
         """
         self.im.notifyStatusChanged(self,contact,newStatus)
+        
+    def notifyNameChanged(self,contact,newName):
+        """
+        called when the nickname of a contact we're observing (on contact list,
+        in chat room, direct message) changes their name.  we get one of these
+        as well if we change our nickname.
+        contact := the /old/ contact name (string)
+        newName := the new contact name (string)
+        """
+        self.im.notifyNameChanged(self,contact,newName)
 
     def joinGroup(self,group):
         """

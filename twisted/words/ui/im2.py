@@ -40,6 +40,13 @@ class Conversation:
         """
         raise NotImplementedError
 
+    def changeName(self,newName):
+        """
+        called when this user changes their name on the server.
+        newName := the users new name (string)
+        """
+        raise NotImplementedError
+
 class ContactList:
     def __init__(self,im):
         """
@@ -52,9 +59,19 @@ class ContactList:
     def changeContactStatus(self,gateway,contact,newStatus):
         """
         change the status of a contact on our list.
-        gateway := the gateway the user is from (class Gateway)
+        gateway := the gateway the contact is from (class Gateway)
         contact := the username of the contact that changed (string)
         newStatus := the new status (string)
+        """
+        raise NotImplementedError
+
+    def changeContactName(self,gateway,contact,newName):
+        """
+        change the name of a contact on our list.  it could be our username as
+        well, in which case, the gateway name has probably changed as well.
+        gateway := the gateway the contact is from (class Gateway)
+        contact := the old name of the contact (string)
+        newName := the new name of the contact (string)
         """
         raise NotImplementedError
 
@@ -67,7 +84,46 @@ class GroupSession:
         gateway := the gateway that's being used (class Gateway)
         """
         raise NotImplementedError
+    
+    def receiveGroupMembers(self,members):
+        """
+        called when we receive the list of members already in the group
+        members := the names of the current members (list of strings)
+        """
+        raise NotImplementedError
+    
+    def receiveGroupMessage(self,member,message):
+        """
+        called when a member of the group sends a message. note: we /don't/ get
+        this call when we send a message.
+        member := the member who sent the message (string)
+        message := the message (string)
+        """
+        raise NotImplementedError
+    
+    def memberJoined(self,member):
+        """
+        called when a member joins the group.
+        member := the member who just joined the group
+        """
+        raise NotImplementedError
+    
+    def memberLeft(self,member):
+        """
+        called when a member leaves the group.
+        member := the member who just left the group
+        """
+        raise NotImplementedError
 
+    def changeMemberName(self,member,newName):
+        """
+        change the name of a member in the group.  it could be our username as
+        well, in which case, the gateway name has probably changed as well.
+        member := the old name of the member (string)
+        newName := the new name of the member (string)
+        """
+        raise NotImplementedError
+        
 def ErrorWindow(error,message):
     """
     displayed when an error occurs.
@@ -366,7 +422,6 @@ class InstanceMessenger:
             if callbacks:
                 for g,c in callbacks:
                     if g in (gateway,None):
-                        print "calling %s with %s"%(c,(self,gateway,event)+args)
                         r=apply(c,(self,gateway,event)+args,{})
                         if r=="break": br=1
         return not br
@@ -419,9 +474,7 @@ def logonAccount(im,account):
         for foo,key,bar in gateways.__gateways__[account.gatewayname].loginOptions:
             if not account.options.has_key(key):
                 ret.append([foo,key,bar])
-        print ret
         return ret
-    print im,account.__dict__
     apply(gateways.__gateways__[account.gatewayname].makeConnection,(im,),account.options)
 
 def logoffAccount(im,account):
@@ -432,7 +485,6 @@ def logoffAccount(im,account):
     account := the account to disconnect (class Account)
     """
     for g in im.gateways.values():
-        print g.username,g.protocol
         if g.username==account.options["username"] and g.protocol==account.gatewayname:
             im.addCallback(g,"error",_handleDisconnect)
             g.loseConnection()
