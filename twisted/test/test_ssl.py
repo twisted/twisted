@@ -339,55 +339,7 @@ class ImmediateDisconnectTestCase(unittest.TestCase, ContextGeneratingMixin):
         return clientProtocolFactory.connectionDisconnected.addCallback(
             lambda ignoredResult: self.serverPort.stopListening())
 
-
-class CertificateVerificationCallback(unittest.TestCase, ContextGeneratingMixin):
-    def testVerificationCallback(self):
-
-        self.calls = {}
-        def serverCallback(*args):
-            self.calls['server'] = args
-            return True
-
-        def clientCallback(*args):
-            self.calls['client'] = args
-            return True
-
-        org = "twisted.test.test_ssl"
-        self.setupServerAndClient(
-            (org, org + ", client"), {"verifyCallback": clientCallback},
-            (org, org + ", server"), {"verifyCallback": serverCallback})
-
-        # Set up a server, connect to it with a client, which should work since our verifiers
-        # allow anything, then disconnect.
-        serverProtocolFactory = protocol.ServerFactory()
-        serverProtocolFactory.protocol = protocol.Protocol
-        self.serverPort = serverPort = reactor.listenSSL(0, 
-            serverProtocolFactory, self.serverCtxFactory)
-
-        clientProtocolFactory = protocol.ClientFactory()
-        clientProtocolFactory.protocol = AlmostImmediatelyDisconnectingProtocol
-        clientProtocolFactory.connectionDisconnected = defer.Deferred()
-        clientConnector = reactor.connectSSL('127.0.0.1', 
-            serverPort.getHost().port, clientProtocolFactory, self.clientCtxFactory)
-
-        # Go go go go
-        return clientProtocolFactory.connectionDisconnected.addCallback(
-            self._cbVerificationCallback)
-
-    def _cbVerificationCallback(self, ignoredResult):
-        self.assertEquals(len(self.calls), 2)
-        self.assertEquals(
-            crypto.dump_certificate(crypto.FILETYPE_PEM, self.calls['client'][1]),
-            file(os.extsep.join((self.serverBase, 'cert'))).read())
-        self.assertEquals(
-            crypto.dump_certificate(crypto.FILETYPE_PEM, self.calls['server'][1]),
-            file(os.extsep.join((self.clientBase, 'cert'))).read())
-
-
-        return self.serverPort.stopListening()
-
 if SSL is None:
     for tCase in [StolenTCPTestCase, TLSTestCase, SpammyTLSTestCase, 
-                  BufferingTestCase, ImmediateDisconnectTestCase,
-                  CertificateVerificationCallback]:
+                  BufferingTestCase, ImmediateDisconnectTestCase]:
         tCase.skip = "OpenSSL not present, cannot run SSL tests"

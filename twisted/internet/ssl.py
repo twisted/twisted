@@ -69,29 +69,21 @@ class ContextFactory:
 class DefaultOpenSSLContextFactory(ContextFactory):
 
     def __init__(self, privateKeyFileName, certificateFileName,
-                 sslmethod=SSL.SSLv23_METHOD, verifyCallback=None):
+                 sslmethod=SSL.SSLv23_METHOD):
         """
         @param privateKeyFileName: Name of a file containing a private key
         @param certificateFileName: Name of a file containing a certificate
         @param sslmethod: The SSL method to use
-        
-        @param verifyCallback: None or a callable of 5 arguments: connection,
-        certificate, error number, depth, and return code.  If not None,
-        used as a callback to verify the peer's certificate.  Should return
-        True to allow it, False otherwise.
         """
         self.privateKeyFileName = privateKeyFileName
         self.certificateFileName = certificateFileName
         self.sslmethod = sslmethod
-        self.verifyCallback = verifyCallback
         self.cacheContext()
 
     def cacheContext(self):
         ctx = SSL.Context(self.sslmethod)
         ctx.use_certificate_file(self.certificateFileName)
         ctx.use_privatekey_file(self.privateKeyFileName)
-        if self.verifyCallback is not None:
-            ctx.set_verify(SSL.VERIFY_PEER, self.verifyCallback)
         self._context = ctx
 
     def __getstate__(self):
