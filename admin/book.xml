@@ -37,8 +37,6 @@
 
 <chapter><title>Perspective Broker</title>
 
-@node Perspective Broker
-@chapter Perspective Broker
 @include pb-intro.xml
 @include pb-usage.xml
 @include pb-cred.xml
@@ -68,7 +66,7 @@
 
 </chapter>
 
-<chapter><title>Working on the Twisted Code Base</chapter>
+<chapter><title>Working on the Twisted Code Base</title>
 
 @include coding-standard.xml
 @include doc-standard.xml
