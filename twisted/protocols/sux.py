@@ -93,6 +93,7 @@ class XMLParser(Protocol):
     encodings = None
     filename = "<xml />"
     beExtremelyLenient = 0
+    _prepend = None
 
     def connectionMade(self):
         self.lineno = 1
@@ -121,6 +122,8 @@ class XMLParser(Protocol):
     def _decode(self, data):
         if 'UTF-16' in self.encodings or 'UCS-2' in self.encodings:
             assert not len(data) & 1, 'UTF-16 must come in pairs for now'
+        if self._prepend:
+            data = self._prepend + data
         for encoding in self.encodings:
             data = unicode(data, encoding)
         return data
@@ -130,7 +133,13 @@ class XMLParser(Protocol):
         if not self.state:
             # all UTF-16 starts with this string
             if data.startswith('\xff\xfe'):
+                self._prepend = '\xff\xfe'
                 self.encodings.append('UTF-16')
+                data = data[2:]
+            elif data.startswith('\xfe\xff'):
+                self._prepend = '\xfe\xff'
+                self.encodings.append('UTF-16')
+                data = data[2:]
             self.state = 'begin'
         if self.encodings:
             data = self._decode(data)

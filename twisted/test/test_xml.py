@@ -313,6 +313,7 @@ class MicroDOMTest(TestCase):
         self.failUnlessEqual(d, d3)
 
     def testUnicodeTolerance(self):
+        import struct
         s = '<foo><bar><baz /></bar></foo>'
         j =(u'<?xml version="1.0" encoding="UCS-2" ?>\r\n<JAPANESE>\r\n'
             u'<TITLE>\u5c02\u9580\u5bb6\u30ea\u30b9\u30c8 </TITLE></JAPANESE>')
@@ -323,12 +324,19 @@ class MicroDOMTest(TestCase):
             '\x00>\x00\r\x00\n\x00<\x00T\x00I\x00T\x00L\x00E\x00>\x00\x02\\'
             '\x80\x95\xb6[\xea0\xb90\xc80 \x00<\x00/\x00T\x00I\x00T\x00L\x00E'
             '\x00>\x00<\x00/\x00J\x00A\x00P\x00A\x00N\x00E\x00S\x00E\x00>\x00')
+        def reverseBytes(s):
+            fmt = str(len(s) / 2) + 'H'
+            return struct.pack('<' + fmt, *struct.unpack('>' + fmt, s))
+        urd = microdom.parseString(reverseBytes(s.encode('UTF-16')))
         ud = microdom.parseString(s.encode('UTF-16'))
         sd = microdom.parseString(s)
         self.assertEquals(ud, sd)
+        self.assertEquals(ud, urd)
         ud = microdom.parseString(j)
+        urd = microdom.parseString(reverseBytes(j2))
         sd = microdom.parseString(j2)
         self.assertEquals(ud, sd)
+        self.assertEquals(ud, urd)
 
     def testCloneNode(self):
         s = '<foo a="b"><bax>x</bax></foo>'
