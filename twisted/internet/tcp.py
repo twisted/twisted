@@ -36,6 +36,7 @@ import operator
 import warnings
 
 if os.name == 'nt':
+    EPERM       = 10001
     EINVAL      = 10022
     EWOULDBLOCK = 10035
     EINPROGRESS = 10036
@@ -44,6 +45,7 @@ if os.name == 'nt':
     EISCONN     = 10056
     ENOTCONN    = 10057
 elif os.name != 'java':
+    from errno import EPERM
     from errno import EINVAL
     from errno import EWOULDBLOCK
     from errno import EINPROGRESS
@@ -434,6 +436,8 @@ class Port(base.BasePort):
                     if e.args[0] == EWOULDBLOCK:
                         self.numberAccepts = i
                         break
+                    elif e.args[0] == EPERM:
+                        continue
                     raise
                 protocol = self.factory.buildProtocol(addr)
                 if protocol is None:
