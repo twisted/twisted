@@ -417,6 +417,8 @@ class PTYProcess(abstract.FileDescriptor, styles.Ephemeral):
         nuances of setXXuid on UNIX: it will assume that either your effective
         or real UID is 0.)
         """
+        if not pty: # no pty module
+            raise NotImplementedError, "cannot use PTYProcess on platforms without the pty module."
         abstract.FileDescriptor.__init__(self, reactor)
         settingUID = (uid is not None) or (gid is not None)
         if settingUID:
@@ -524,7 +526,7 @@ class PTYProcess(abstract.FileDescriptor, styles.Ephemeral):
         if self.lostProcess == 2:
             try:
                 if self.status != -1:
-                    exitCode = self.status >> 8
+                    exitCode = os.WEXITSTATUS(self.status) 
                 else:
                     exitCode = None # wonder when this happens
                 if exitCode:
