@@ -34,7 +34,7 @@ class OpenSSHConchAuthorizer(authorizer.DefaultAuthorizer):
     def getIdentityRequest(self, name):
         """
         Return a Deferred that will callback with an Identity for the given
-        name.  For the purposes of Conch, this should /always/ callback with
+        name.  For the purposes of Conch, this should B{always} callback with
         an Indentity to prevent attackers from learning what users are valid
         and which aren't.
 
