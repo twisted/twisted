@@ -405,14 +405,13 @@ class FTP(object, basic.LineReceiver, policies.TimeoutMixin):
         raise CmdNotImplementedError(cmd)                 # if we didn't find cmd, raise an error and alert client
 
     def _unblock(self, *_):
-#        log.debug('_unblock running')                                           # unblock commands
-        commands = self.blocked                                                 
-        self.blocked = None                                                     # reset blocked to allow new commands
-        while commands and self.blocked is None:                                # while no other method has set self.blocked
-            cmd, args = commands.pop(0)                                         # pop a command off the queue
-            self.processCommand(cmd, *args)                                     # and process it
-        if self.blocked is not None:                                            # if someone has blocked during the time we were processing
-            self.blocked.extend(commands)                                       # add our commands that we dequeued back into the queue
+        commands, self.blocked = self.blocked, None
+        while commands:
+            if self.blocked is None:                         # while no other method has set self.blocked
+                cmd, args = commands.pop(0)                  # pop a command off the queue and process it
+                self.processCommand(cmd, *args)              
+            else:                                            # if someone has blocked during the time we were processing
+                self.blocked.extend(commands)                # add our commands that we dequeued back into the queue
 
 # TODO: Re-implement DTP as an adapter to FTP-PI
 
