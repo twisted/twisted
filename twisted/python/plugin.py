@@ -70,6 +70,7 @@ def getPluginFileList(debugInspection=0, showProgress=0):
         log.logfile.flush()
     found = 0
 
+    seenNames = {}
     for d in filter(os.path.isdir, map(os.path.abspath, sys.path)):
         if loaded.has_key(d):
             if debugInspection:
@@ -81,6 +82,9 @@ def getPluginFileList(debugInspection=0, showProgress=0):
             loaded[d] = 1
 
         for plugindir in os.listdir(d):
+            if seenNames.has_key(plugindir):
+                continue
+            seenNames[plugindir] = 1
             plugindir = os.path.join(d, plugindir)
             if showProgress:
                 log.logfile.write('+')
