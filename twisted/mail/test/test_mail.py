@@ -900,7 +900,7 @@ class LiveFireExercise(unittest.TestCase):
         # Yoink!  Now the internet obeys OUR every whim!
         manager.mxcalc = mail.relaymanager.MXCalculator(self.resolver)
         # And this is our whim.
-        self.auth.addresses['destination.domain'] = ['localhost']
+        self.auth.addresses['destination.domain'] = ['127.0.0.1']
 
         f = insServ.getSMTPFactory()
         self.insServer = reactor.listenTCP(0, f, interface='127.0.0.1')

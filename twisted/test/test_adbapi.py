@@ -427,14 +427,14 @@ class FirebirdConnector(DBTestConnector):
 
     def getPoolArgs(self):
         args = ('kinterbasdb',)
-        kw = {'database': self.DB_NAME, 'host': 'localhost',
+        kw = {'database': self.DB_NAME, 'host': '127.0.0.1',
               'user': self.DB_USER, 'password': self.DB_PASS}
         return args, kw
 
     def stopDB(self):
         import kinterbasdb
         conn = kinterbasdb.connect(database=self.DB_NAME,
-                                   host='localhost', user=self.DB_USER,
+                                   host='127.0.0.1', user=self.DB_USER,
                                    password=self.DB_PASS)
         conn.drop_database()
         conn.close()

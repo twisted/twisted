@@ -222,7 +222,7 @@ class CmdLineClientTestBase(SignalMixin, _LogTimeFormatMixin):
         open('dsa_test','w').write(privateDSA_openssh)
         os.chmod('dsa_test', 33152)
         os.chmod('rsa_test', 33152)
-        open('kh_test','w').write('localhost '+publicRSA_openssh)
+        open('kh_test','w').write('127.0.0.1 '+publicRSA_openssh)
 
     def tearDownClass(self):
         SignalMixin.tearDownClass(self)
@@ -270,7 +270,7 @@ class CmdLineClientTestBase(SignalMixin, _LogTimeFormatMixin):
         port = serv.getHost().port
         lport = self._getRandomPort()
         p = ConchTestForwardingProcess(lport,self.fac)
-        self.execute('', p, preargs='-N -L%i:localhost:%i' % (lport, port))
+        self.execute('', p, preargs='-N -L%i:127.0.0.1:%i' % (lport, port))
         serv.stopListening()
 
     def testRemoteToLocalForwarding(self):
@@ -280,7 +280,7 @@ class CmdLineClientTestBase(SignalMixin, _LogTimeFormatMixin):
         port = serv.getHost().port
         lport = self._getRandomPort()
         p = ConchTestForwardingProcess(lport, self.fac)
-        self.execute('', p, preargs='-N -R %i:localhost:%i' % (lport, port))
+        self.execute('', p, preargs='-N -R %i:127.0.0.1:%i' % (lport, port))
         serv.stopListening()
 
 class OpenSSHClientTestCase(CmdLineClientTestBase, unittest.TestCase):
@@ -293,7 +293,7 @@ class OpenSSHClientTestCase(CmdLineClientTestBase, unittest.TestCase):
                    '-oHostKeyAlgorithms=ssh-rsa '
                    '-a '
                    '-i dsa_test ') + preargs + \
-                   ' localhost ' + args
+                   ' 127.0.0.1 ' + args
         port = self.server.getHost().port
         ssh_path = None
         for path in ['/usr', '', '/usr/local']:
@@ -326,7 +326,7 @@ class CmdLineClientTestCase(CmdLineClientTestBase, unittest.TestCase):
                '-K direct '
                '-i dsa_test '
                '-v ') % port + preargs + \
-               ' localhost ' + args
+               ' 127.0.0.1 ' + args
         cmds = _makeArgs(cmd.split())
         log.msg(str(cmds))
         
@@ -355,11 +355,11 @@ class UnixClientTestCase(CmdLineClientTestBase, unittest.TestCase):
                 '-a ' 
                 '-K direct '
                 '-i dsa_test '
-                'localhost') % port
+                '127.0.0.1') % port
         cmd2 = ('-p %i -l testuser '
                 '-K unix '
                 '-v ') % port + preargs + \
-                ' localhost ' + args
+                ' 127.0.0.1 ' + args
         cmds1 = cmd1.split()
         cmds2 = _makeArgs(cmd2.split())
         o = options.ConchOptions()

@@ -64,7 +64,7 @@ class CFTPClientTestBase(SFTPTestBase):
         open('dsa_test.pub','w').write(test_ssh.publicDSA_openssh)
         open('dsa_test','w').write(test_ssh.privateDSA_openssh)
         os.chmod('dsa_test', 33152)
-        open('kh_test','w').write('localhost '+test_ssh.publicRSA_openssh)
+        open('kh_test','w').write('127.0.0.1 '+test_ssh.publicRSA_openssh)
 
     def startServer(self):
         realm = FileTransferTestRealm()
@@ -107,7 +107,7 @@ class TestOurServerCmdLineClient(test_process.SignalMixin, CFTPClientTestBase):
                '-i dsa_test '
                '-a --nocache '
                '-v '
-               'localhost')
+               '127.0.0.1')
         port = self.server.getHost().port
         cmds = test_conch._makeArgs((cmds % port).split(), mod='cftp')
         log.msg('running %s %s' % (sys.executable, cmds))
@@ -290,7 +290,7 @@ class TestOurServerBatchFile(test_process.SignalMixin, CFTPClientTestBase):
                     '-K direct '
                     '-i dsa_test '
                     '-a --nocache '
-                    '-v -b %s localhost') % (port, fn)
+                    '-v -b %s 127.0.0.1') % (port, fn)
         cmds = test_conch._makeArgs(cmds.split(), mod='cftp')[1:]
         log.msg('running %s %s' % (sys.executable, cmds))
         d = getProcessOutputAndValue(sys.executable, cmds, env=os.environ)
@@ -348,7 +348,7 @@ class TestOurServerUnixClient(test_process.SignalMixin, CFTPClientTestBase):
                 '-a '
                 '-K direct '
                 '-i dsa_test '
-                'localhost'
+                '127.0.0.1'
                 )
         port = self.server.getHost().port
         cmds1 = (cmd1 % port).split()
@@ -376,7 +376,7 @@ class TestOurServerUnixClient(test_process.SignalMixin, CFTPClientTestBase):
         cmds = ('-p %i -l testuser '
                     '-K unix '
                     '-a '
-                    '-v -b %s localhost') % (port, fn)
+                    '-v -b %s 127.0.0.1') % (port, fn)
         cmds = test_conch._makeArgs(cmds.split(), mod='cftp')[1:]
         log.msg('running %s %s' % (sys.executable, cmds))
         d = getProcessOutputAndValue(sys.executable, cmds, env=os.environ)

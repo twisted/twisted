@@ -68,7 +68,7 @@ class SOAPTestCase(unittest.TestCase):
         reactor.iterate()
 
     def proxy(self):
-        return soap.Proxy("http://localhost:%d/" % self.port)
+        return soap.Proxy("http://127.0.0.1:%d/" % self.port)
 
     def testResults(self):
         x = self.proxy().callRemote("add", 2, 3)

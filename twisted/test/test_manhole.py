@@ -13,7 +13,7 @@ class Dummy:
 
 class DummyTransport:
     def getHost(self):
-        return 'INET', 'localhost', 0
+        return 'INET', '127.0.0.1', 0
 
 class DummyManholeClient(LocalAsRemote):
     zero = 0

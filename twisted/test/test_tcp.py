@@ -125,7 +125,7 @@ class ListeningTestCase(PortCleanerUpper):
     def testNamedInterface(self):
         f = MyServerFactory()
         # use named interface instead of 127.0.0.1
-        p1 = reactor.listenTCP(0, f, interface='localhost')
+        p1 = reactor.listenTCP(0, f, interface='127.0.0.1')
         # might raise exception if reactor can't handle named interfaces
         p1.stopListening()
 
@@ -152,7 +152,7 @@ class LoopbackTestCase(PortCleanerUpper):
         self.ports.append(port)
         f.port = port
         clientF = MyClientFactory()
-        reactor.connectTCP("localhost", self.n, clientF)
+        reactor.connectTCP("127.0.0.1", self.n, clientF)
 
         spinWhile(lambda :(not clientF.protocol or not clientF.protocol.closed))
 
@@ -170,7 +170,7 @@ class LoopbackTestCase(PortCleanerUpper):
         self.n = port.getHost().port
         self.ports.append(port)
         clientF = MyClientFactory()
-        reactor.connectTCP("localhost", self.n, clientF)
+        reactor.connectTCP("127.0.0.1", self.n, clientF)
 
         spinUntil(lambda :(f.called > 0 and getattr(clientF, 'protocol', None) is not None))
 
@@ -193,7 +193,7 @@ class LoopbackTestCase(PortCleanerUpper):
         self.n = port.getHost().port
         self.ports.append(port)
         clientF = MyClientFactory()
-        reactor.connectTCP("localhost", self.n, clientF)
+        reactor.connectTCP("127.0.0.1", self.n, clientF)
 
         spinUntil(lambda :(f.called > 0 and getattr(clientF, 'protocol', None) is not None))
 
@@ -212,7 +212,7 @@ class LoopbackTestCase(PortCleanerUpper):
     def testFailing(self):
         clientF = MyClientFactory()
         # XXX we assume no one is listening on TCP port 69
-        reactor.connectTCP("localhost", 69, clientF, timeout=5)
+        reactor.connectTCP("127.0.0.1", 69, clientF, timeout=5)
         start = time.time()
 
         spinUntil(lambda :clientF.failed)
@@ -230,7 +230,7 @@ class LoopbackTestCase(PortCleanerUpper):
             self.ports.append(port)
             cf = MyClientFactory()
             try:
-                c = reactor.connectTCP('localhost', 'http', cf)
+                c = reactor.connectTCP('127.0.0.1', 'http', cf)
             except:
                 socket.getservbyname = serv
                 raise
@@ -549,7 +549,7 @@ class WriteDataTestCase(PortCleanerUpper):
         n = p.getHost().port
         self.ports.append(p)
         clientF = WriterClientFactory()
-        reactor.connectTCP("localhost", n, clientF)
+        reactor.connectTCP("127.0.0.1", n, clientF)
 
         spinUntil(lambda :(f.done and clientF.done))
 
@@ -744,7 +744,7 @@ class LargeBufferTestCase(PortCleanerUpper):
         n = p.getHost().port
         self.ports.append(p)
         clientF = LargeBufferReaderClientFactory()
-        reactor.connectTCP("localhost", n, clientF)
+        reactor.connectTCP("127.0.0.1", n, clientF)
 
         while 1:
             rxlen = clientF.len

@@ -93,7 +93,7 @@ class XMLRPCTestCase(unittest.TestCase):
         reactor.iterate()
 
     def proxy(self):
-        return xmlrpc.Proxy("http://localhost:%d/" % self.port)
+        return xmlrpc.Proxy("http://127.0.0.1:%d/" % self.port)
 
     def testResults(self):
         x = self.proxy().callRemote("add", 2, 3)
@@ -128,7 +128,7 @@ class XMLRPCTestCase2(XMLRPCTestCase):
     """Test with proxy that doesn't add a slash."""
 
     def proxy(self):
-        return xmlrpc.Proxy("http://localhost:%d" % self.port)
+        return xmlrpc.Proxy("http://127.0.0.1:%d" % self.port)
 
 
 class XMLRPCTestIntrospection(XMLRPCTestCase):

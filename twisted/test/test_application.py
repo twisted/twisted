@@ -366,7 +366,7 @@ class TestInternet(unittest.TestCase):
         factory = protocol.ClientFactory()
         factory.protocol = Foo
         factory.line = None
-        c.connectTCP('localhost', num, factory)
+        c.connectTCP('127.0.0.1', num, factory)
         util.spinWhile(lambda :factory.line is None)
         util.wait(defer.maybeDeferred(s.stopService))
         self.assertEqual(factory.line, 'lalala')
@@ -539,7 +539,7 @@ class TestInternet2(unittest.TestCase):
         factory = protocol.ClientFactory()
         factory.protocol = Foo
         factory.line = None
-        internet.TCPClient('localhost', num, factory).setServiceParent(s)
+        internet.TCPClient('127.0.0.1', num, factory).setServiceParent(s)
         util.spinWhile(lambda :factory.line is None)
         self.assertEqual(factory.line, 'lalala')
 
@@ -580,7 +580,7 @@ class TestInternet2(unittest.TestCase):
         factory = protocol.ClientFactory()
         factory.protocol = Foo
         factory.line = None
-        c = internet.TCPClient('localhost', num, factory)
+        c = internet.TCPClient('127.0.0.1', num, factory)
         c.startService()
         util.spinWhile(lambda :factory.line is None)
         self.assertEqual(factory.line, 'lalala')
@@ -600,7 +600,7 @@ class TestInternet2(unittest.TestCase):
         l = []
         factory = protocol.ClientFactory()
         factory.clientConnectionFailed = lambda *args: l.append(None)
-        c = internet.TCPClient('localhost', num, factory)
+        c = internet.TCPClient('127.0.0.1', num, factory)
         c.startService()
         util.spinWhile(lambda :not l)
         self.assertEqual(l, [None])
