@@ -86,25 +86,30 @@ class _AbstractServiceCollection:
         return self.services[serviceName]
 
     def addService(self, service):
-        """Add a service to this application.
+        """Add a service to this collection.
         """
-        # XXX TODO remove existing service first
+        if self.services.has_key(service.serviceName):
+            self.removeService(service)
         self.services[service.serviceName] = service
 
+    def removeService(self, service):
+        """Remove a service from this collection."""
+        del self.services[service.serviceName]
 
 class ApplicationService(Accessor, styles.Versioned):
     """I am a service you can add to an application.
 
     I represent some chunk of functionality which may be bound to many or no
-    event sources.  By adding an ApplicationService to an Application, it will
-    be notified when the Application starts and stops (or removes/shuts down
-    the service).  See the startService and stopService calls.
+    event sources.  By adding an ApplicationService to an L{Application}, it
+    will be notified when the Application starts and stops (or removes/shuts
+    down the service).  See the L{startService} and L{stopService} calls.
 
-    Since services may want to incorporate certain other elements, notably
-    Perspective Broker (remote invocation) accessibility and authentication,
-    derivatives of ApplicationService exist in twisted.cred.service and
-    twisted.spread.pb.  These may be more suitable for your service than
-    directly subclassing ApplicationService.
+    Since services may want to incorporate certain other elements,
+    notably Perspective Broker (remote invocation) accessibility
+    and authentication, derivatives of ApplicationService exist
+    in L{twisted.cred.service<twisted.cred.service.Service>} and
+    L{twisted.spread.pb<twisted.spread.pb.Service>}.  These may be more
+    suitable for your service than directly subclassing ApplicationService.
     """
 
     serviceType = None
@@ -143,6 +148,12 @@ class ApplicationService(Accessor, styles.Versioned):
             raise RuntimeError("Service Parent already set!")
         self.serviceParent = serviceParent
         serviceParent.addService(self)
+
+    def disownServiceParent(self):
+        """Have my parent disown me."""
+        if self.serviceParent:
+            self.serviceParent.removeService(self)
+            self.serviceParent = None
 
     def set_application(self, application):
         warnings.warn("application attribute is deprecated; use serviceParent instead.",
@@ -200,6 +211,12 @@ class MultiService(_AbstractServiceCollection, ApplicationService):
         _AbstractServiceCollection.addService(self, service)
         if self.serviceRunning:
             service.startService()
+
+    def removeService(self, service):
+        if service.serviceRunning:
+            service.stopService()
+        _AbstractServiceCollection.removeService(self, service)
+
 
 class Application(log.Logger, styles.Versioned,
                   Accessor, _AbstractServiceCollection):
@@ -471,7 +488,7 @@ class Application(log.Logger, styles.Versioned,
                 filename = "%s-2.%s" % (self.name, ext)
                 finalname = "%s.%s" % (self.name, ext)
         log.msg("Saving "+self.name+" application to "+finalname+"...")
-        
+
         if passphrase is None:
             f = open(filename, 'wb')
             dumpFunc(self, f)
