@@ -22,3 +22,5 @@ def run():
     checker = lint.getDefaultChecker()
     for file in sys.argv[1:]:
         lint.doFile(file, checker)
+    if checker.hadErrors:
+        sys.exit(3)

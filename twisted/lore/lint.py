@@ -23,6 +23,8 @@ import parser, urlparse, os.path
 
 class TagChecker:
 
+    hadErrors = 0
+
     def check(self, dom, filename):
         for method in reflect.prefixedMethods(self, 'check_'):
             method(dom, filename)
@@ -30,6 +32,7 @@ class TagChecker:
     def _reportError(self, filename, element, error):
         hlint = element.hasAttribute('hlint') and element.getAttribute('hlint')
         if hlint != 'off':
+            self.hadErrors = 1
             pos = getattr(element, '_markpos', None) or (0, 0)
             print "%s:%s:%s: %s" % ((filename,)+pos+(error,))
 
