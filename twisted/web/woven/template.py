@@ -1,4 +1,5 @@
-
+# -*- test-case-name: twisted.test.test_woven -*-
+#
 # Twisted, the Framework of Your Internet
 # Copyright (C) 2000-2002 Matthew W. Lefkowitz
 #

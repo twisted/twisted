@@ -1,4 +1,5 @@
-
+# -*- test-case-name: twisted.test.test_woven -*-
+#
 # Twisted, the Framework of Your Internet
 # Copyright (C) 2000-2002 Matthew W. Lefkowitz
 #
@@ -17,7 +18,7 @@
 
 from __future__ import nested_scopes
 
-__version__ = "$Revision: 1.72 $"[11:-2]
+__version__ = "$Revision: 1.73 $"[11:-2]
 
 # Sibling imports
 import interfaces

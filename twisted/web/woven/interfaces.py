@@ -1,5 +1,6 @@
+# -*- test-case-name: twisted.test.test_woven -*-
 
-__version__ = "$Revision: 1.9 $"[11:-2]
+__version__ = "$Revision: 1.10 $"[11:-2]
 
 from twisted.web import server
 from twisted.python import components

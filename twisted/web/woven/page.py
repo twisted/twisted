@@ -1,6 +1,8 @@
+# -*- test-case-name: twisted.test.test_woven -*-
+#
 # page.py
 
-__version__ = "$Revision: 1.16 $"[11:-2]
+__version__ = "$Revision: 1.17 $"[11:-2]
 
 from twisted.python import reflect
 from twisted.web import resource
