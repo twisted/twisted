@@ -45,7 +45,9 @@ Usage::
   mktap *apptype* *application_options*
   mktap --help *apptype*
 
-So far *apptype* can be 'web', 'words', 'reality', 'toc', 'mail' and 'telnet'
+So far *apptype* can be one of:
+'enterprise', 'ftp', 'mail', 'manhole', 'reality', 
+'stupid', 'telnet', 'toc', 'web', and 'words'
 """ # XXX: This list is never kept up to date --
     #     we should auto-generate it.
 
@@ -76,7 +78,8 @@ def getModule(type):
         return mod
     except ImportError:
         traceback.print_exc()
-        print "Please select one of: telnet words reality web toc."
+        print """Please select one of:
+        enterprise ftp mail manhole reality stupid telnet toc web words"""
         sys.exit()
 
 options = GeneralOptions()

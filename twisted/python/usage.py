@@ -450,7 +450,7 @@ def docMakeChunks(optList, width=80):
 
         if (opt.get("optType", None) != "flag") \
            and not (opt.get('default', None) is None):
-            doc = "%s [%s]" % (doc, opt['default'])
+            doc = "%s [default: %s]" % (doc, opt['default'])
 
         if doc:
             column2_l = text.wordWrap(doc, colWidth2)
