@@ -114,6 +114,7 @@
 
 from twisted.flow.base import *
 from twisted.flow.stage import *
+from twisted.flow.pipe import *
 from twisted.flow.wrap import wrap
 from twisted.flow.controller import Deferred, Block
 from twisted.flow.protocol import makeProtocol, Protocol

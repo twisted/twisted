@@ -20,56 +20,14 @@
 
 """ flow.stage 
 
-    Base flow stages for manipulating the stream
+    Various stages for manipulating data flows, in particular, those
+    stages which take more than one input stages or alternative input,
+    such as a callback.
 
 """
 from base import *
 from wrap import wrap
 from twisted.python.failure import Failure
-
-class Filter(Stage):
-    """ flow equivalent to filter:  Filter(function, stage, ... )
-
-        Yield those elements from a stage for which a function
-        returns true.   If the function is None, the identity 
-        function is assumed, that is, all items yielded that are
-        false (zero or empty) are discarded.
-
-            def odd(val):
-                if val % 2:
-                    return True
-            
-            def range():
-                yield 1
-                yield 2
-                yield 3
-                yield 4
-            
-            source = flow.Filter(odd,range)
-            printFlow(source)
-
-    """
-    def __init__(self, func, stage, *trap):
-        Stage.__init__(self, *trap)
-        self.func = func
-        self.stage = wrap(stage)
-
-    def _yield(self):
-        if self.stop or self.failure:
-            return
-        stage = self.stage
-        while not self.results:
-            instruction = stage._yield()
-            if instruction:
-                return instruction
-            self.results.extend(filter(self.func,stage.results))
-            stage.results = []
-            if stage.stop:
-                self.stop = 1
-                return
-            if stage.failure:
-                self.failure = stage.failure
-                return
 
 class Map(Stage):
     """ flow equivalent to map:  Map(function, stage, ... )
