@@ -663,6 +663,9 @@ class Port(base.BasePort, _SocketCloser):
     `transport' attribute will be called with the signature expected for
     Server.__init__, so it can be replaced.
     """
+
+    implements(interfaces.IListeningPort)
+
     addressFamily = socket.AF_INET
     socketType = socket.SOCK_STREAM
 
@@ -681,7 +684,8 @@ class Port(base.BasePort, _SocketCloser):
         self.interface = interface
 
     def __repr__(self):
-        return "<%s on %s>" % (self.factory.__class__, self.getHost().port)
+        return "<%s of %s on %s>" % (self.__class__, self.factory.__class__,
+                                     self.getHost().port)
 
     def createInternetSocket(self):
         s = base.BasePort.createInternetSocket(self)
@@ -806,6 +810,7 @@ class Port(base.BasePort, _SocketCloser):
         """
         return address.IPv4Address('TCP', *(self.socket.getsockname() + ('INET',)))
 
+components.backwardsCompatImplements(Port)
 
 class Connector(base.BaseConnector):
     def __init__(self, host, port, factory, timeout, bindAddress, reactor=None):

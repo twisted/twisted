@@ -665,7 +665,10 @@ components.backwardsCompatImplements(BaseConnector)
 
 
 class BasePort(abstract.FileDescriptor):
-    """Basic implementation of a ListeningPort."""
+    """Basic implementation of a ListeningPort.
+    
+    Note: This does not actually implement IListeningPort.
+    """
 
     addressFamily = None
     socketType = None
