@@ -26,5 +26,5 @@ if string.find(os.path.abspath(sys.argv[0]), os.sep+'Twisted') != -1:
 ### end of preamble
 
 
-from twisted.scripts.conch import run
+from twisted.conch.scripts.conch import run
 run()
