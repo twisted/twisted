@@ -18,7 +18,7 @@ An asynchronous mapping to U{DB-API 2.0<http://www.python.org/topics/database/Da
 """
 
 from twisted.spread import pb
-from twisted.internet import task, defer
+from twisted.internet import defer
 from twisted.internet import threads
 from twisted.python import reflect, log, failure
 

@@ -21,6 +21,9 @@ The functionality it used to provide is now provided by reactor.callFromThread,
 and reactor.callLater(0, ...).
 """
 
+import warnings
+warnings.warn("This module is deprecated.", DeprecationWarning, stacklevel=2)
+
 def schedule(callable, *args, **kw):
     from twisted.internet import reactor
     from twisted.python import log
