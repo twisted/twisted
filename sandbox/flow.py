@@ -356,14 +356,17 @@ class CooperateCallback(Cooperate):
     """
     def __init__(self, results, finished):
         Cooperate.__init__(self)
-        self._results = results
+        self._results  = results
         self._finished = finished
+        self.execute   = None
     def finish(self):
         self._finished.append(1)
-        self.execute()
+        if self.execute: 
+            self.execute()
     def callback(self, value):
         self._results.append(value)
-        self.execute()
+        if self.execute:
+            self.execute()
 
 class Callback(Stage):
     """ Converts a single-thread push interface into a pull interface """
