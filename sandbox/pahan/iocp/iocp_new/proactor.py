@@ -1,45 +1,49 @@
-class Proactor(PosixReactorBase):
-    # are these necessary?
+from win32file import CreateIoCompletionPort, GetQueuedCompletionStatus, INVALID_HANDLE_VALUE
+from win32event import INFINITE
+
+from twisted.internet import default, defer
+from twisted.internet.interfaces import IReactorCore, IReactorTime
+
+import tcp
+
+class Proactor(default.PosixReactorBase):
+    __implements__ = (IReactorCore, IReactorTime)
+    handles = None
+    iocp = None
+
+    def __init__(self):
+        default.PosixReactorBase.__init__(self)
+        self.completables = {}
+        self.iocp = CreateIoCompletionPort(INVALID_HANDLE_VALUE, 0, 0, 1)
+
     def registerHandler(self, handle, handler):
-        self.completables[handle] = handler
+        self.completables[int(handle)] = handler
+        CreateIoCompletionPort(handle, self.iocp, int(handle), 1)
 
     def unregisterHandler(self, handle):
         del self.completables[handle]
 
-    # or notify one-by-one?
+    def doIteration(self, timeout):
+        if timeout is None:
+            timeout = INFINITE
+        else:
+            timeout = int(timeout * 1000)
+        (ret, bytes, key, ov) = GetQueuedCompletionStatus(self.iocp, timeout)
+        if int(key) not in self.completables:
+            raise ValueError("unexpected completion key %s" % (key,)) # what's the right thing to do here?
+        o = self.completables[int(key)]
+        print "IOCPReactor got event", ret, bytes, key, ov, ov.object
+        m = o.getattr(str(ov.object))
+        print "... calling", m, "to handle"
+        m(bytes)
 
-# async op does:
-# issue with user defined parameters
-# TODO: how is this handled on the ITransport level?
-# ugh extra object creation overhead omfg (these are deferreds, not reusable, but perhaps make them so)
-# write callbacks with bytes written
-# read callbacks with (bytes_read, dict_of_optional_data), for example recvfrom address or ancillary crud
+    def listenTCP(self, port, factory, backlog=5, interface=''):
+        p = tcp.Port((interface, port), factory, backlog)
+        p.startListening()
+        return p
 
-class AsyncOp(Deferred):
-    def initiateOp(self):
-        raise NotImplementedError
-
-class OverlappedOp(AsyncOp):
-    def __init__(self, *a, **kw):
-        self.ov = OVERLAPPED()
-        self.ov.object = "ovDone"
-
-    def ovDone(self, ret, bytes):
-        from twisted.internet import reactor
-        reactor.unregisterHandler(self.handle)
-        del self.handle
-        del self.buffer
-        # TODO: errback if ret is not good, for example cancelled
-        self.callback(bytes)
-
-class ReadFileOp(OverlappedOp)
-    def initiateOp(self, handle, buffer):
-        self.buffer = buffer # save a reference so that things don't blow up
-        self.handle = handle
-        # XXX: is this expensive to do? is this circular importing dangerous?
-        from twisted.internet import reactor
-        reactor.registerHandler(handle, self)
-        (ret, bytes) = ReadFile(handle, buffer, self.ov)
-        # TODO: need try-except block to at least cleanup self.handle/self.buffer and unregisterFile
-        # also, errback if this ReadFile call throws up (perhaps call ovDone ourselves to automate cleanup?)
+def install():
+    p = Proactor()
+    from twisted.internet import main
+    main.installReactor(p)
 
