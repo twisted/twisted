@@ -61,6 +61,19 @@ class TagChecker:
                 continue 
             self._reportError(filename, node.parentNode, 'contains quote')
 
+    def check_align(self, dom, filename):
+        for node in domhelpers.findElementsWithAttribute(dom, 'align'):
+            self._reportError(filename, node.parentNode, 'explicit alignment')
+
+    def check_style(self, dom, filename):
+        for node in domhelpers.findNodesNamed(dom, 'style'):
+            if not node.childNodes:
+                continue
+            if (len(node.childNodes)==1 and hasattr(node.childNodes[0], 'data')
+                and node.childNodes[0].data == ''):
+                continue
+            self._reportError(filename, node.parentNode, 'hand hacked style')
+
 def list2dict(l):
     d = {}
     for el in l:
