@@ -1,3 +1,8 @@
+2003-03-15  Jp Calderone  <exarkun@twistedmatrix.com>
+
+	* twisted/internet/app.py: Renamed "factory" argument to
+	Application.listenUDP() to "proto"
+
 2003-03-13  Tommi Virtanen  <tv@twistedmatrix.com>
 
 	* twisted/tap/procmon.py, twisted/plugins.tml: support for mktapping
