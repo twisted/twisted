@@ -168,12 +168,17 @@ class VirtualPOP3(pop3.POP3):
             )
 
     def authenticateUserPASS(self, user, password):
-        portal = self.service.defaultPortal()
-        return portal.login(
-            cred.credentials.UsernamePassword(user, password),
-            None,
-            pop3.IMailbox
-        )
+        user, domain = self.lookupDomain(user)
+        try:
+            portal = self.service.lookupPortal(domain)
+        except KeyError:
+            return defer.fail(cred.error.UnauthorizedLogin())
+        else:
+            return portal.login(
+                cred.credentials.UsernamePassword(user, password),
+                None,
+                pop3.IMailbox
+            )
 
     def lookupDomain(self, user):
         try:
