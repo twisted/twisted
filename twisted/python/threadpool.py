@@ -30,7 +30,7 @@ import copy
 import sys
 
 # Twisted Imports
-from twisted.python import log
+from twisted.python import log, runtime
 
 WorkerStop = None
 
@@ -59,7 +59,10 @@ class ThreadPool:
         self.q = Queue.Queue(0)
         self.min = minthreads
         self.max = maxthreads
-        self.waiters = []
+        if runtime.platform.getType() != "java":
+            self.waiters = []
+        else:
+            self.waiters = ThreadSafeList()
         self.threads = []
         self.working = {}
     
@@ -153,3 +156,27 @@ class ThreadPool:
         print 'workers:',self.working
         print 'total:',self.threads
 
+
+class ThreadSafeList:
+    """In Jython 2.1 lists aren't thread-safe, so this wraps it."""
+
+    def __init__(self):
+        self.lock = threading.Lock()
+        self.l = []
+
+    def append(self, i):
+        self.lock.acquire()
+        try:
+            self.l.append(i)
+        finally:
+            self.lock.release()
+
+    def remove(self, i):
+        self.lock.acquire()
+        try:
+            self.l.remove(i)
+        finally:
+            self.lock.release()
+
+    def __len__(self):
+        return len(self.l)
