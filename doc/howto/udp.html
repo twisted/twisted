@@ -46,7 +46,7 @@ class Echo(DatagramProtocol):
         self.transport.write(data, (host, port))
 
 reactor.listenUDP(9999, Echo())
-reactor.start()
+reactor.run()
     </pre>
     
     <p>As you can see, the protocol is registed with the reactor.
@@ -80,7 +80,7 @@ class Echo(ConnectedDatagramProtocol):
         self.transport.write(data)
 
 reactor.connectUDP("www.example.com", 9999, Echo())
-reactor.start()
+reactor.run()
     </pre>
 
     
