@@ -124,8 +124,10 @@ class WordsGateway(gateway.Gateway,pb.Referenceable):
     def remote_memberLeft(self,member,group):
         self.memberLeft(member,group)
 
-    def remote_setGroupMeta(self,dict):
-        pass # we'll handle this later
+    def remote_setGroupMetadata(self,dict,group):
+        for k,v in dict.items():
+            if k=='topic':
+                self.im.send(self,"receiveGroupTopic",group=group,topic=v)
 
     def event_addContact(self,contact):
         self.remote.addContact(contact)
