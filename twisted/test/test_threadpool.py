@@ -16,7 +16,7 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
 from twisted.trial import unittest
-import pickle, time
+import pickle, time, threading
 
 from twisted.python import threadpool, threadable, log
 
@@ -34,7 +34,7 @@ threadable.synchronize(Counter)
 
 class ThreadPoolTestCase(unittest.TestCase):
     """Test threadpools."""
-    
+
     def testPersistence(self):
         tp = threadpool.ThreadPool(7, 20)
         tp.start()
@@ -80,4 +80,27 @@ class ThreadPoolTestCase(unittest.TestCase):
         while not done: pass
         tp.stop()
 
-testCases = [ThreadPoolTestCase]
+
+class RaceConditionTestCase(unittest.TestCase):
+
+    def setUp(self):
+        self.event = threading.Event()
+        self.threadpool = threadpool.ThreadPool(0, 10)
+        self.threadpool.start()
+    
+    def tearDown(self):
+        del self.event
+        self.threadpool.stop()
+        del self.threadpool
+    
+    def testRace(self):
+        self.threadpool.callInThread(self.event.set)
+        self.event.wait()
+        self.event.clear()
+        for i in range(3):
+            self.threadpool.callInThread(self.event.wait)
+        self.threadpool.callInThread(self.event.set)
+        time.sleep(2)
+        if not self.event.isSet():
+            self.event.set()
+            raise RuntimeError, "test failed"

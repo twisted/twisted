@@ -32,8 +32,9 @@ import sys
 
 # Twisted Imports
 from twisted.python import log, runtime, context
-
-WorkerStop = None
+class WorkerStop:
+    pass
+WorkerStop = WorkerStop()
 
 # initialize threading
 threadable.init(1)
@@ -62,27 +63,42 @@ class ThreadPool:
 
         @param maxthreads: maximum number of threads in the pool
         """
-
+        assert minthreads >= 0, 'minimum is negative'
         assert minthreads <= maxthreads, 'minimum is greater than maximum'
         self.q = Queue.Queue(0)
         self.min = minthreads
         self.max = maxthreads
         if runtime.platform.getType() != "java":
             self.waiters = []
+            self.threads = []
+            self.working = []
         else:
             self.waiters = ThreadSafeList()
-        self.threads = []
-        self.working = {}
-    
+            self.threads = ThreadSafeList()
+            self.working = ThreadSafeList()
+
     def start(self):
         """Start the threadpool.
         """
-        self.workers = min(max(self.min, self.q.qsize()), self.max)
         self.joined = 0
         self.started = 1
-        for i in range(self.workers):
-            name = "PoolThread-%s-%s" % (id(self), i)
-            threading.Thread(target=self._worker, name=name).start()
+        # Start some threads.
+        self.adjustPoolsize()
+
+    def startAWorker(self):
+        self.workers = self.workers + 1
+        name = "PoolThread-%s-%s" % (id(self), self.workers)
+        try:
+            firstJob = self.q.get(0)
+        except Queue.Empty:
+            firstJob = None
+        newThread = threading.Thread(target=self._worker, name=name, args=(firstJob,))
+        self.threads.append(newThread)
+        newThread.start()
+
+    def stopAWorker(self):
+        self.q.put(WorkerStop)
+        self.workers = self.workers-1
 
     def __setstate__(self, state):
         self.__dict__ = state
@@ -95,11 +111,11 @@ class ThreadPool:
         return state
     
     def _startSomeWorkers(self):
-        if not self.waiters:
-            if self.workers < self.max:
-                self.workers = self.workers + 1
-                name = "PoolThread-%s-%s" % (id(self), self.workers)
-                threading.Thread(target=self._worker, name=name).start()
+        if self.workers >= self.max:
+            return
+        # FIXME: Wait for any waiters to eat of the queue.
+        while self.workers < self.max and self.q.qsize() > 0:
+            self.startAWorker()
 
     def dispatch(self, owner, func, *args, **kw):
         """Dispatch a function to be a run in a thread.
@@ -112,7 +128,7 @@ class ThreadPool:
         ctx = context.theContextTracker.currentContext().contexts[-1]
         o = (ctx, func, args, kw)
         self.q.put(o)
-        if self.started and not self.waiters:
+        if self.started:
             self._startSomeWorkers()
     
     def _runWithCallback(self, callback, errback, func, args, kwargs):
@@ -130,24 +146,23 @@ class ThreadPool:
         thread-safe."""
         self.callInThread(self._runWithCallback, callback, errback, func, args, kw)
 
-    def _worker(self):
+    def _worker(self, o):
         ct = threading.currentThread()
-        self.threads.append(ct)
-        
         while 1:
+            if o is not None:
+                if o == WorkerStop: break
+                self.working.append(ct)
+                ctx, function, args, kwargs = o
+                try:
+                    context.call(ctx, function, *args, **kwargs)
+                except:
+                    context.call(ctx, log.deferr)
+                self.working.remove(ct)
             self.waiters.append(ct)
             o = self.q.get()
             self.waiters.remove(ct)
-            if o == WorkerStop: break
-            self.working[ct] = ct
-            ctx, function, args, kwargs = o
-            try:
-                context.call(ctx, function, *args, **kwargs)
-            except:
-                context.call(ctx, log.deferr)
-            del self.working[ct]
+
         self.threads.remove(ct)
-        self.workers = self.workers-1
     
     def stop(self):
         """Shutdown the threads in the threadpool."""
@@ -155,11 +170,36 @@ class ThreadPool:
         threads = copy.copy(self.threads)
         for thread in range(self.workers):
             self.q.put(WorkerStop)
+            self.workers = self.workers-1
 
         # and let's just make sure
+        # FIXME: threads that have died before calling stop() are not joined.
         for thread in threads:
             thread.join()
-    
+
+    def adjustPoolsize(self, minthreads=None, maxthreads=None):
+        if minthreads is None:
+            minthreads = self.min
+        if maxthreads is None:
+            maxthreads = self.max
+
+        assert minthreads >= 0, 'minimum is negative'
+        assert minthreads <= maxthreads, 'minimum is greater than maximum'
+
+        self.min = minthreads
+        self.max = maxthreads
+        if not self.started:
+            return
+        
+        # Kill of some threads if we have too many.
+        while self.workers > self.max:
+            self.stopAWorker()
+        # Start some threads if we have too few.
+        while self.workers < self.min:
+            self.startAWorker()
+        # Start some threads if there is a need.
+        self._startSomeWorkers()
+   
     def dumpStats(self):
         log.msg('queue: %s'   % self.q.queue)
         log.msg('waiters: %s' % self.waiters)
