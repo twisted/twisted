@@ -39,21 +39,21 @@ this file directly.
     few things.  Those things should be added; relaying is at the top of the
     list but there are other tasks too.
 
-005 Twisted.Internet for Jython.  Although Java lacks the select() call, JDK
-    1.4 *does* have an API for doing asynchronous I/O.  Even previous to that
-    upgrade, it should be possible to fake it by spawning a bunch of threads.
-    I would probably prefer having the bunch-of-threads approach initially
-    since old JVMs are all over the place; however, it would certainly be
-    higher performance to have it actually using an asyncio API; so I'd like to
-    have both eventually.  I would really like to have the Jython Faucet back
-    up and running again.
+005 *{Glyph Lefkowitz}* Twisted.Internet for Jython.  Although Java lacks the
+    select() call, JDK 1.4 *does* have an API for doing asynchronous I/O.  Even
+    previous to that upgrade, it should be possible to fake it by spawning a
+    bunch of threads.  I would probably prefer having the bunch-of-threads
+    approach initially since old JVMs are all over the place; however, it would
+    certainly be higher performance to have it actually using an asyncio API;
+    so I'd like to have both eventually.  I would really like to have the
+    Jython Faucet back up and running again.
 
 006 [[Sean Riley]] "Enterprise".  Similiar to WebWare's MiddleKit, it would be
     nice to have a library for object-relational interaction.  Better yet that
     such interaction could be event-based rather than dependant upon blocking
     DB APIs.  This is a nastier problem than it sounds like.
 
-007 [[Glyph Lefkowitz]] Web widgetry.  Twisted.Web ought to have a way of
+007 *{Glyph Lefkowitz}* Web widgetry.  Twisted.Web ought to have a way of
     assembling pages where bits of the pages can be rendered asynchronously
     (for example, from pb requests or fetched from other URLs) but the resource
     author shouldn't have to manually juggle NOT_DONE_YET requests.
@@ -77,16 +77,16 @@ this file directly.
     would be best, so you could browse different heirarchies (twisted reality
     objects, etc) and edit them.
 
-012 Twisted.Internet for wxwindows.  This might be a better cross-platform
-    toolkit solution than tkinter, especially given how poorly tkinter works on
-    MacOS.  (At least wxwindows *plans* to support the mac...)
+012 [[Samuel Jordan]] Twisted.Internet for wxwindows.  This might be a better
+    cross-platform toolkit solution than tkinter, especially given how poorly
+    tkinter works on MacOS.  (At least wxwindows *plans* to support the mac...)
 
 013 [[Allen Short]] Destroy the sun.
 
 014 *{Glyph Lefkowitz}* Web authentication widget which combines Passport with
     Web so that asynchronous authentication won't bother web pages.
 
-015 Twisted Names, a full replacement for BIND.
+015 [[Itay Ben-Yaacov]] Twisted Names, a full replacement for BIND.
 
 016 [[Glyph Lefkowitz]] Web Session Expiry. (30 minutes seems like a reasonable
     default...
@@ -101,5 +101,13 @@ this file directly.
 019 IMAP support, possibly based on alpha code written by Michel Pelletier
     (http://www.zope.org/Members/michel/MyWiki/IMAPServer).
 
-020 NNTP support, server can be based off asyncore code itamar got from Sum
+020 NNTP support, server can be based off asyncore code itamar got from Sam
     Rushing (and is known to work with Netscape and Pan).
+
+021 [[Glyph Lefkowitz]] Update GTK IM client to be current with twisted.words.
+
+022 [[Paul Swartz]] Update Tk IM client so it doesn't suck so much.  (There are
+    TONS of graphical artifacts and problems with the UI, and the networking
+    code seems to flake out around the edges)
+
+023 [[Allen Short]] Emacs integration with PB.
