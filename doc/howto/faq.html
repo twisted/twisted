@@ -115,8 +115,7 @@ databases, in a Factory's <code>__init__</code> either.  Instead, do that in
 
 <h3>Where can I find out how to write Twisted servers?</h3>
 
-<p>Try <a href="http://www.twistedmatrix.com/documents/howto/servers">Writing
-Servers</a>.</p> 
+<p>Try <a href="servers.html">Writing Servers</a>.</p> 
 
 
 <h3>When I try to install my reactor, I get errors about a reactor
@@ -186,9 +185,20 @@ that name will be recorded in the pickled <code>.tap</code> file. When the
 
 <p>Here is a short example of this technique:</p>
 
-<a class="py-listing" skipLines="16" href="../examples/echoserv.py" 
+<a class="py-listing" skipLines="18" href="../examples/echoserv.py" 
 >doc/examples/echoserv.py</a>
 
+
+<h3>I get <q>Interrupted system call</q> errors when I use <code
+class="python">os.popen2</code>.  How do I read results from a sub-process in
+Twisted?</h3>
+
+<p>You should be using <code class="python">reactor.spawnProcess</code> (see
+<code class="API"
+base="twisted.internet">interfaces.IReactorProcess.spawnProcess</code>).
+There's also a convenience function, <code class="API"
+base="twisted.internet.utils">getProcessOutput</code>, in <code
+class="API">twisted.internet.utils</code>.</p>
 
 
 <h2>Web</h2>
@@ -229,7 +239,40 @@ gives?</h3>
 <code>.pxp</code> files that you have lying around and the error will probably
 go away.</p>
 
+<h3>My Woven pages are sent to the browser with a trailing slash appended to the
+URL, which breaks all of the relative links.  How do I get rid of the trailing
+slash?</h3>
 
+<p>If you are subclassing <code class="API"
+base="twisted.web.woven.page">Page</code>, you can add a class attribute <code
+class="python">addSlash = 0</code>, like this:</p>
+
+<pre class="python">
+class Foo(page.Page):
+        addSlash = 0
+</pre>
+
+<p>If you are still subclassing <code class="API"
+base="twisted.web.woven.controller">Controller</code>, you can put the <code
+class="python">addSlash = 0</code> there. Consider subclassing <code class="API"
+base="twisted.web.woven.page">Page</code> instead, as having a <code class="API"
+base="twisted.web.woven.model">Model</code>, <code class="API"
+base="twisted.web.woven.view">View</code>, <code class="API"
+base="twisted.web.woven.controller">Controller</code> triad as the base of a
+<code class="API" base="twisted.web.woven.page">Page</code> will be deprecated
+in the near future.</p>
+
+<p>If you're just using the generic <code class="API"
+base="twisted.web.woven.page">Page</code> instance, you can set it after
+creation like this:</p>
+
+<pre class="python">
+resource = page.Page("foo")
+resource.addSlash = 0
+</pre>
+
+<p>The default behavior of Woven is now to automatically add a slash
+because it makes creating relative links far easier, ironically ;-)</p>
 
 
 <h2>Requests and Contributing</h2>
