@@ -1,5 +1,7 @@
 2003-10-24  Brian Warner  <warner@lothar.com>
 
+	* doc/howto/test-standard.xhtml: Add section on how to clean up.
+
 	* twisted/test/test_conch.py: improve post-test cleanup. Addresses
 	problems seen in issue343.
 
