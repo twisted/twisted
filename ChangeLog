@@ -1,3 +1,7 @@
+2003-05-08  Christopher Armstrong  <radix@twistedmatrix.com>
+
+	* .: Releasing Twisted 1.0.5 (same code-base as rc2).
+
 2003-05-08  Glyph Lefkowitz  <glyph@twistedmatrix.com>
 
 	* twisted/world: Added an object database to Twisted.  This is
