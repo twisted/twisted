@@ -3,10 +3,10 @@ SCP=bash admin/aapscp
 HERE=`os.getcwd()`
 :python
     from __future__ import generators
-    import sys
-    import os.path
     import winreg
     from aapwin import quickdict, getValueFromReg, pathdb
+
+    sys.path.insert(0, os.getcwd())
 
     def renderDatafilesToIss(data_files):
         """Iterate a distutils-style data_files list, yielding strings
@@ -52,9 +52,9 @@ HERE=`os.getcwd()`
         """Return the version of Twisted in $HERE, which may be
         different from the version of Twisted in sys.path.
         """
-        execfile("./twisted/copyright.py", globals())
-        return version
-
+        globs=globals().copy()
+        execfile("./twisted/copyright.py", globs)
+        return globs['version']
 
 # get the version of twisted from the tree being built, not sys.path
 Version=`getBuildingTwistedVersion()`
@@ -121,7 +121,7 @@ dist/Twisted_NoDocs-$(Version).win32-py$(pyversion).exe: $(ExeDeps)
 
 
 # fetch docs from latest release (this better be there)
-:attr {fetch=scp://shell.sf.net//home/groups/t/tw/twisted/htdocs/TwistedDocs-$(Version).tar.bz2} doc/TwistedDocs-$(Version).tar.bz2
+:attr {fetch=http://twisted.sf.net/TwistedDocs-$(Version).tar.bz2} doc/TwistedDocs-$(Version).tar.bz2
 
 # uncompress and rezip doc
 doc/twisteddoc.zip: doc/TwistedDocs-$(Version).tar.bz2
