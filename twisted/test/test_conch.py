@@ -888,10 +888,16 @@ class SSHTransportTestCase(unittest.TestCase):
         reactor.run()
 
         # test finished.. might have passed, might have failed. Must cleanup.
-        fac.proto.done = 1
-        cfac.client.done = 1
-        fac.proto.transport.loseConnection()
-        cfac.client.transport.loseConnection()
+        try:
+            cfac.client.done = 1
+            cfac.client.transport.loseConnection()
+        except AttributeError:
+            pass
+        try:
+            fac.proto.done = 1
+            fac.proto.transport.loseConnection()
+        except AttributeError:
+            pass
         reactor.iterate()
         reactor.iterate()
         reactor.iterate()
@@ -954,8 +960,11 @@ class SSHTransportTestCase(unittest.TestCase):
             reactor.iterate(0.1)
 
         # cleanup
-        fac.proto.done = 1
-        fac.proto.transport.loseConnection()
+        try:
+            fac.proto.done = 1
+            fac.proto.transport.loseConnection()
+        except AttributeError:
+            pass
         reactor.iterate()
 
         try:
@@ -1017,8 +1026,11 @@ class SSHTransportTestCase(unittest.TestCase):
             reactor.iterate(0.1)
 
         # cleanup
-        fac.proto.done = 1
-        fac.proto.transport.loseConnection()
+        try:
+            fac.proto.done = 1
+            fac.proto.transport.loseConnection()
+        except AttributeError:
+            pass
         reactor.iterate()
 
         try:
@@ -1091,8 +1103,11 @@ class SSHTransportTestCase(unittest.TestCase):
             reactor.iterate(0.1)
         # cleanup
         #os.kill(p1.transport.pid, 9)
-        fac.proto.done = 1
-        fac.proto.transport.loseConnection()
+        try:
+            fac.proto.done = 1
+            fac.proto.transport.loseConnection()
+        except AttributeError:
+            pass
         reactor.iterate()
         reactor.iterate()
         reactor.iterate()
