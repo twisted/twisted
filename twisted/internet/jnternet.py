@@ -244,6 +244,9 @@ def portGotSocket(tcpPort, skt):
     transport.writeBlocker = wb
     ReadBlocker(transport, theMultiplexor.q).start()
 
+def doSelect(*args):
+    """Do nothing."""
+    pass
 
 # change port around
 import tcp
@@ -254,3 +257,5 @@ import main
 main.run = theMultiplexor.run
 main.wakeUp = wakeUp
 main.shutDown = shutDown
+main.doSelect = doSelect
+
