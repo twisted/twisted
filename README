@@ -154,6 +154,10 @@ Additional Servers & Services
 
 Documentation and Support
 
+  Although this is far from enough, some examples on how to use basic Twisted
+  APIs are located in doc/examples; this might ease the learning curve a
+  little bit, since all these files are kept as short as possible.
+
   As of this release, I realize that Twisted's documentation is rather sparse.
   I encourage you to read the source code and docstrings, but if you're curious
   as to what Twisted can do, please feel free to drop me an email at
