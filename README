@@ -1,11 +1,11 @@
-Twisted 1.0.4rc1
+Twisted 1.0.4
 
 Quote of the Release:
 
 <kiko> is it just me or is the term "software design" too vague to shake a stick at?
 <exarkun> kiko: get a bigger stick
 
-For information on what's new in Twisted 1.0.4rc1, see the ChangeLog file
+For information on what's new in Twisted 1.0.4, see the ChangeLog file
 that comes with the distribution, or http://twistedmatrix.com/ChangeLog.txt.
 
 What is this?
