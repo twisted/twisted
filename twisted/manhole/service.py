@@ -133,10 +133,7 @@ def runInConsole(command, console, globalNS=None, localNS=None,
                         src = src_lines[lineNum]
                         tb_list[i] = (filename_, lineNum, func, src)
 
-        # tb_list = traceback.format_list(tb_list)
         ex_list = traceback.format_exception_only(eType, eVal)
-        # s = string.join(tb_list + ex_list, '')
-        # errfile.write(s)
         errfile.write({'traceback': tb_list,
                        'exception': ex_list})
 
@@ -144,6 +141,7 @@ def runInConsole(command, console, globalNS=None, localNS=None,
         console(output)
 
     return val
+
 
 class Perspective(pb.Perspective):
     def __init__(self, perspectiveName, identityName="Nobody"):
@@ -166,6 +164,8 @@ class Perspective(pb.Perspective):
         self.browser.globalNamespace = service.namespace
 
     def attached(self, client, identity):
+        """A client has attached -- welcome them and add them to the list.
+        """
         self.clients[client] = identity
 
         msg = self.service.welcomeMessage % {
@@ -188,7 +188,23 @@ class Perspective(pb.Perspective):
 
         return pb.Perspective.detached(self, client, identity)
 
+    def runInConsole(self, command, *args, **kw):
+        """Convience method to \"runInConsole with my stuff\".
+        """
+        return runInConsole(command,
+                            self.console,
+                            self.service.namespace,
+                            self.localNamespace,
+                            str(self.service),
+                            args=args,
+                            kw=kw)
+
+
+    ### Methods for communicating to my clients.
+
     def console(self, message):
+        """Pass a message to my clients' console.
+        """
         clients = self.clients.keys()
         for client in clients:
             try:
@@ -198,6 +214,8 @@ class Perspective(pb.Perspective):
                 self.detached(client, None)
 
     def receiveBrowserObject(self, objectLink):
+        """Pass a ObjectLink on to my clients.
+        """
         clients = self.clients.keys()
         for client in clients:
             try:
@@ -206,37 +224,52 @@ class Perspective(pb.Perspective):
                 # Stale broker.
                 self.detached(client, None)
 
-    def perspective_do(self, mesg):
-        log.msg(">>> %s" % mesg)
-        val = self.runInConsole(mesg)
+
+    ### perspective_ methods, commands used by the client.
+
+    def perspective_do(self, expr):
+        """Evaluate the given expression, with output to the console.
+
+        The result is stored in the local variable '_', and its repr()
+        string is sent to the console as a \"result\" message.
+        """
+        log.msg(">>> %s" % expr)
+        val = self.runInConsole(expr)
         if val is not None:
             self.localNamespace["_"] = val
             self.console([("result", repr(val) + '\n')])
         log.msg("<<<")
 
     def perspective_browse(self, identifier):
+        """Browse the object obtained by evaluating the identifier.
+
+        The resulting ObjectLink is passed back through the client's
+        receiveBrowserObject method.
+        """
         object = self.runInConsole(identifier)
         if object:
-            self.receiveBrowserObject(
-                self.browser.browseObject(object, identifier))
+            oLink = self.runInConsole(self.browser.browseObject,
+                                      object, identifier)
+            self.receiveBrowserObject(oLink)
 
     def perspective_watch(self, identifier):
+        """Watch the object obtained by evaluating the identifier.
+
+        Whenever I think this object might have changed, I will pass
+        an ObjectLink of it back to the client's receiveBrowserObject
+        method.
+        """
         object = self.runInConsole(identifier)
         if object:
-            self.browser.browseObject(object, identifier)
-            self.receiveBrowserObject(
-                self.browser.browseObject(object, identifier))
-            self.browser.watchObject(object, identifier,
-                                     self.receiveBrowserObject)
+            # Return an ObjectLink of this right away, before the watch.
+            oLink = self.runInConsole(self.browser.browseObject,
+                                      object, identifier)
+            self.receiveBrowserObject(oLink)
 
-    def runInConsole(self, command, *args, **kw):
-        return runInConsole(command,
-                            self.console,
-                            self.service.namespace,
-                            self.localNamespace,
-                            str(self.service),
-                            args=args,
-                            kw=kw)
+            self.runInConsole(self.browser.watchObject,
+                              object, identifier,
+                              self.receiveBrowserObject)
+
 
 class Service(pb.Service):
     perspectiveClass = Perspective

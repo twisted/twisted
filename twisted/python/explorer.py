@@ -22,6 +22,7 @@ import new, string, sys, types
 import reflect, text
 
 def typeString(type):
+    """Given a Type, returns a string."""
     return jelly.typeNames.get(type, type.__name__)
 
 class ObjectLink(pb.Copyable):
@@ -45,6 +46,8 @@ class ObjectLink(pb.Copyable):
           attribute carries information *about* the object I represent,
           rather than being a direct representation.  Convert a TypeType
           to this string with the explorer.typeString function.
+
+        * Has an 'id' number with the id() of the object I represent.
 
         * represents an object from *my* view.  That is, if
           it's a Perspective object with the methods bar() and
@@ -132,6 +135,12 @@ class ObjectBrowser:
     localNamespace = None
 
     def __init__(self, globalNamespace=None, localNamespace=None):
+        """Create a new ObjectBrowser.
+
+        The global and local namespaces are used to evaluate
+        identifiying exprsessions in by the browseIdentifier and
+        watchIdentifier methods.
+        """
         if globalNamespace is not None:
             self.globalNamespace = globalNamespace
 
@@ -143,12 +152,16 @@ class ObjectBrowser:
         self.watchUninstallers = {}
 
     def browseStrictlyIdentifier(self, identifier):
-        """
+        """Browse an object in the local namespace by its name.
+
         This checks for the identifier in the local and global
         namespaces.  If it's not there, raise a NameError.  Doesn't
         do any getattr for dots or getitem for brackets or evaluate
         nothin.
         """
+        # XXX: Actually, splitting on dots and doing getattr() would
+        # probably be okay, wouldn't it?
+
         if self.localNamespace.has_key(identifier):
             object = self.localNamespace[identifier]
         elif self.globalNamespace.has_key(identifier):
@@ -159,10 +172,9 @@ class ObjectBrowser:
         return self.browseObject(object, identifier)
 
     def browseIdentifier(self, identifier):
-        """WARNING: This calls eval() on its argument!
+        """Browse the object obtained by evaluating the identifier.
 
-        This browses the object returned by evaluating
-        the given expression.
+        WARNING: This calls eval() on its argument!
         """
         object = eval(identifier,
                       self.globalNamespace,
@@ -171,21 +183,52 @@ class ObjectBrowser:
 
     def browseObject(self, object, identifier=None):
         """Browse the given object.
+
+        The identifier argument is used to generate identifiers for
+        objects which are members of this one.
         """
         method = self.typeTable.get(type(object),
                                     self.__class__.browse_other)
 
         return method(self, object, identifier)
 
+    # TODO:
+    #
+    #  * an exclude mechanism for the watcher's browser, to avoid
+    #    sending back large and uninteresting data structures.
+    #
+    #  * an exclude mechanism for the watcher's trigger, to avoid
+    #    triggering on some frequently-called-method-that-doesn't-
+    #    actually-change-anything.
+    #
+    #  * XXX! need removeWatch()
+
     def watchIdentifier(self, identifier, callback):
+        """Watch the object returned by evaluating the identifier.
+
+        Whenever I think the object might have changed, I'll send an
+        ObjectLink of it to the callback.
+
+        WARNING: This calls eval() on its argument!
+        """
         object = eval(identifier,
                       self.globalNamespace,
                       self.localNamespace)
         return self.watchObject(object, identifier, callback)
 
     def watchObject(self, object, identifier, callback):
+        """Watch the given object.
+
+        Whenever I think the object might have changed, I'll send an
+        ObjectLink of it to the callback.
+
+        The identifier argument is used to generate identifiers for
+        objects which are members of this one.
+        """
         if type(object) is not types.InstanceType:
             raise TypeError, "Sorry, can only place a watch on Instances."
+
+        # uninstallers = []
 
         dct = {}
         reflect.addMethodNamesToDict(object.__class__, dct, '')
@@ -193,8 +236,6 @@ class ObjectBrowser:
             dct[k] = 1
 
         members = dct.keys()
-
-        uninstallers = []
 
         clazzNS = {}
         clazz = new.classobj('Watching%s%X' %
@@ -207,7 +248,7 @@ class ObjectBrowser:
             cb(b.browseObject(slf, i)),
             None, clazz)
 
-        orig_class = object.__class__
+        # orig_class = object.__class__
         object.__class__ = clazz
 
         for name in members:
@@ -215,24 +256,48 @@ class ObjectBrowser:
             # Only hook bound methods.
             if ((type(m) is types.MethodType)
                 and (m.im_self is not None)):
+                # What's the use of putting watch monkeys on methods
+                # in addition to __setattr__?  Well, um, uh, if the
+                # methods modify their attributes (i.e. add a key to
+                # a dictionary) instead of [re]setting them, then
+                # we wouldn't know about it unless we did this.
+                # (Is that convincing?)
 
                 monkey = _WatchMonkey(object)
                 monkey.install(name)
-                uninstallers.append(monkey.uninstall)
+                # uninstallers.append(monkey.uninstall)
 
         # XXX: This probably prevents these objects from ever having a
         # zero refcount.  Leak, Leak!
         ## self.watchUninstallers[object] = uninstallers
 
-    def browse_other(self, thing, identifier, seenThings=None):
+
+    ### browse_ methods generate ObjectLinks for specific types of objects
+
+    # It's questionable whether these should really be defined as methods
+    # of this class, as they don't make use of any stored state in the
+    # ObjectBrowser instance.  I can think of one good argument for these
+    # to be methods, though: you can override them in a sub-class this
+    # way.  e.g. if you want an ObjectBrowser which doesn't return
+    # data methods when browsing modules, you could subclass this and
+    # override the browse_module method.
+
+    def browse_other(self, thing, identifier, _seenThings=None):
+        """Returns an ObjectLink of any old thing.
+
+        If the object is recognized as a sequence, I walk through it
+        and the resulting ObjectLink holds a sequence of ObjectLinks.
+        Otherwise, the ObjectLink contains a string representation of
+        the object.
+
+        _seenThings -- a set of id()s of the things already seen, to
+            avoid circular references when descending trees.
         """
-        returns an ObjectLink with no special properties.
-        """
-        if seenThings is None:
-            seenThings = {}
+        if _seenThings is None:
+            _seenThings = {}
 
         thingId = id(thing)
-        seenThings[thingId] = 'Set'
+        _seenThings[thingId] = 'Set'
 
         thingType = type(thing)
         if thingType in (types.StringType, types.NoneType,
@@ -247,13 +312,13 @@ class ObjectBrowser:
             for i in xrange(len(thing)):
                 iIdentifier = "%s[%d]" % (identifier, i)
 
-                if seenThings.has_key(id(thing[i])):
+                if _seenThings.has_key(id(thing[i])):
                     lst[i] = ObjectLink(str(thing[i]), iIdentifier,
                                         type(thing[i]), id(thing[i]))
                 else:
-                    seenThings[id(thing[i])] = 'Set'
+                    _seenThings[id(thing[i])] = 'Set'
                     lst[i] = self.browse_other(thing[i], iIdentifier,
-                                               seenThings)
+                                               _seenThings)
 
             if thingType is types.TupleType:
                 thing = tuple(lst)
@@ -270,20 +335,20 @@ class ObjectBrowser:
 
                 valueIdentifier = "%s[%s]" % (identifier, key)
 
-                if seenThings.has_key(id(key)):
+                if _seenThings.has_key(id(key)):
                     key = ObjectLink(str(key), keyIdentifier, type(key),
                                      id(key))
                 else:
-                    seenThings[id(key)] = 'Set'
+                    _seenThings[id(key)] = 'Set'
                     key = self.browse_other(key, keyIdentifier,
-                                            seenThings)
-                if seenThings.has_key(id(value)):
+                                            _seenThings)
+                if _seenThings.has_key(id(value)):
                     value = ObjectLink(str(value), valueIdentifier,
                                        type(value), id(value))
                 else:
-                    seenThings[id(value)] = 'Set'
+                    _seenThings[id(value)] = 'Set'
                     value = self.browse_other(value, valueIdentifier,
-                                              seenThings)
+                                              _seenThings)
 
                 dct[key] = value
 
@@ -294,7 +359,8 @@ class ObjectBrowser:
         return ObjectLink(thing, identifier, thingType, thingId)
 
     def browse_builtin(self, function, identifier):
-        """
+        """Returns an ObjectLink with a builtin's name and docstring.
+
         Returns a dictionary in an ObjectLink with type BulitinFunctionType.
         The dictionary contains the members:
             name -- the name the function was defined as
@@ -309,7 +375,8 @@ class ObjectBrowser:
                           id(function))
 
     def browse_instance(self, instance, identifier):
-        """
+        """Returns an ObjectLink with the instance's attributes.
+
         Returns a dictionary in an ObjectLink with type InstanceType.
 
         The dictionary contains the members:
@@ -319,6 +386,11 @@ class ObjectBrowser:
 
         Note these are only the *instance* methods and members --
         if you want the class methods, you'll have to look up the class.
+
+        TODO: Make something which provides an ObjectLink of me with
+        all the attributes that I appear to have.  That is, all the
+        attributes on me, my class, and my base class which don't
+        overlap.
         """
         members = {}
         methods = {}
@@ -346,7 +418,8 @@ class ObjectBrowser:
                           id(instance))
 
     def browse_class(self, theClass, identifier):
-        """
+        """Returns an ObjectLink with the class's attributes.
+
         Returns a dictionary in an ObjectLink with type ClassType.
 
         The dictionary contains the members:
@@ -363,8 +436,6 @@ class ObjectBrowser:
         for i in dir(theClass):
             if (i[0] == '_') and (i != '__init__'):
                 continue
-            #if i in ('__module__', '__doc__'):
-            #    continue
 
             mIdentifier = string.join([identifier, i], ".")
             member = getattr(theClass, i)
@@ -387,7 +458,8 @@ class ObjectBrowser:
         return ObjectLink(rval, identifier, types.ClassType)
 
     def browse_method(self, method, identifier):
-        """
+        """Returns an ObjectLink with the method's signature and class.
+
         Returns a dictionary in an ObjectLink with type MethodType.
 
         In addition to the elements in the browse_function dictionary,
@@ -400,9 +472,9 @@ class ObjectBrowser:
         link = self.browse_function(function, identifier)
         link.id = id(method)
         link.value['class'] = self.browse_other(method.im_class,
-                                             identifier + '.im_class')
+                                                identifier + '.im_class')
         link.value['self'] = self.browse_other(method.im_self,
-                                            identifier + '.im_self')
+                                               identifier + '.im_self')
         link.setType(types.MethodType)
         if method.im_self:
             # I'm a bound method -- eat the 'self' arg.
@@ -410,7 +482,8 @@ class ObjectBrowser:
         return link
 
     def browse_function(self, function, identifier):
-        """
+        """Returns an ObjectLink with the function's signature.
+
         Returns a dictionary in an ObjectLink with type FunctionType.
 
         The dictionary contains the elements:
@@ -465,7 +538,8 @@ class ObjectBrowser:
                           id(function))
 
     def browse_module(self, module, identifier):
-        """
+        """Returns an ObjectString with the module's properties and members.
+
         Returns a dictionary in an ObjectLink with type ModuleType.
 
         The dictionary contains the elements:
@@ -478,9 +552,9 @@ class ObjectBrowser:
 
         (\"Public\" is taken to be \"anything that doesn't start with _\")
         """
-        functions = []
-        classes = []
-        data = []
+        functions = {}
+        classes = {}
+        data = {}
         for key, value in module.__dict__.items():
             if key[0] == '_':
                 continue
@@ -488,13 +562,13 @@ class ObjectBrowser:
             mIdentifier = "%s.%s" % (identifier, key)
 
             if type(value) is types.ClassType:
-                classes.append(self.browse_class(value, mIdentifier))
+                classes[key] = self.browse_class(value, mIdentifier)
             elif type(value) is types.FunctionType:
-                functions.append(self.browse_function(value, mIdentifier))
+                functions[key] = self.browse_function(value, mIdentifier)
             elif type(value) is types.ModuleType:
                 pass # pass on imported modules
             else:
-                data.append(self.browse_other(value, mIdentifier))
+                data[key] = self.browse_other(value, mIdentifier)
 
         rval = {'name': module.__name__,
                 'doc': text.docstringLStrip(module.__doc__),
@@ -514,7 +588,6 @@ class ObjectBrowser:
                  types.BuiltinFunctionType: browse_builtin,
                  }
 
-
 class _WatchMonkey:
     """I hang on a method and tell you what I see.
 
@@ -524,25 +597,29 @@ class _WatchMonkey:
     oldMethod = None
 
     def __init__(self, instance):
-        """
-
-        instance -- to watch
+        """Make a monkey to hang on this instance object.
         """
         self.instance = instance
 
     def install(self, methodIdentifier):
+        """Install myself on my instance in place of this method.
+        """
         oldMethod = getattr(self.instance, methodIdentifier, None)
 
         # XXX: this conditional probably isn't effective.
         if oldMethod is not self:
+            # avoid triggering __setattr__
             self.instance.__dict__[methodIdentifier] = (
                 new.instancemethod(self, self.instance,
                                    self.instance.__class__))
             self.oldMethod = (methodIdentifier, oldMethod)
 
     def uninstall(self):
+        """Remove myself from this instance and restore the original method.
+
+        (I hope.)
+        """
         if self.oldMethod is None:
-            # Not installed.
             return
 
         # XXX: This probably doesn't work if multiple monkies are hanging
@@ -553,6 +630,8 @@ class _WatchMonkey:
             setattr(self.instance, self.oldMethod[0], self.oldMethod[1])
 
     def __call__(self, instance, *a, **kw):
+        """Pretend to be the method I replaced, and ring the bell.
+        """
         if self.oldMethod[1]:
             rval = apply(self.oldMethod[1], a, kw)
         else:
@@ -561,13 +640,21 @@ class _WatchMonkey:
         instance._watchEmitChanged()
         return rval
 
+
 class _MonkeysSetattrMixin:
+    """A mix-in class providing __setattr__ for objects being watched.
+    """
     def __setattr__(self, k, v):
+        """Set the attribute and ring the bell.
+        """
         if hasattr(self.__class__.__bases__[1], '__setattr__'):
             # Hack!  Using __bases__[1] is Bad, but since we created
             # this class, we can be reasonably sure it'll work.
             self.__class__.__bases__[1].__setattr__(self, k, v)
         else:
             self.__dict__[k] = v
+
+        # XXX: Hey, waitasec, did someone just hang a new method on me?
+        #  Do I need to put a monkey on it?
 
         self._watchEmitChanged()
