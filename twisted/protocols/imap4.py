@@ -1233,12 +1233,6 @@ def Query(**kwarg):
         on          : Search messages with an internal date which is on this
                       date
         
-        not         : A dictionary of search queries, the conjunction of the
-                      negation of each of which messages will be tested against.
-        
-        or          : A dictionary of search queries, the disjunction of which
-                      messages will be tested against.
-        
         recent      : If set to a true value, search for messages flagged with
                       \\Recent
         
@@ -1304,6 +1298,7 @@ def Query(**kwarg):
         return ' '.join(cmd)
 
 def Or(*args):
+    """The disjunction of two or more queries"""
     if len(args) < 2:
         raise IllegalQueryError, args
     elif len(args) == 2:
@@ -1312,6 +1307,7 @@ def Or(*args):
         return '(OR %s %s)' % (args[0], Or(*args[1:]))
 
 def Not(query):
+    """The negation of a query"""
     return '(NOT %s)' % (query,)
 
 class MismatchedNesting(Exception):
