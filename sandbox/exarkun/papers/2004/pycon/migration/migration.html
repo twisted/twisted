@@ -29,7 +29,7 @@ to as "transluscent".</p>
 <p>The first requirement is that a migration server be made to listen on a
 socket providing virtual circuit capabilities.  In the demonstration, a
 stream oriented UNIX socket (<code>AF_UNIX</code>, <code>SOCK_STREAM</code>)
-is used, but a TCP/IP socket (<core>AF_INET</code>,
+is used, but a TCP/IP socket (<code>AF_INET</code>,
 <code>SOCK_STREAM</code>) would work equally as well.  When migration is to
 occur, the process assuming responsibility for services will connect to this
 server to initiate the migration procedure.  The server must be made aware
