@@ -19,8 +19,16 @@ class ICredentialsChecker(components.Interface):
         avatar, or fire a Failure(UnauthorizedLogin).
         """
 
+class AllowAnonymousAccess:
+    __implements__ = ICredentialsChecker
+    credentialInterfaces = credentials.IAnonymous,
+
+    def requestAvatarId(self, credentials):
+        return defer.succeed('')
+
 class InMemoryUsernamePasswordDatabaseDontUse:
     credentialInterfaces = credentials.IUsernamePassword,
+    __implements__ = ICredentialsChecker
     def __init__(self):
         self.users = {}
 
@@ -33,3 +41,4 @@ class InMemoryUsernamePasswordDatabaseDontUse:
             return defer.succeed(credentials.username)
         else:
             return defer.fail(error.UnauthorizedLogin())
+

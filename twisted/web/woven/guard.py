@@ -3,7 +3,7 @@
 
 from __future__ import nested_scopes
 
-__version__ = "$Revision: 1.17 $"[11:-2]
+__version__ = "$Revision: 1.18 $"[11:-2]
 
 import random
 import time
@@ -12,11 +12,11 @@ import md5
 # Twisted Imports
 
 from twisted.python import log, components
-from twisted.web.resource import Resource
+from twisted.web.resource import Resource, IResource
 from twisted.web.util import redirectTo, Redirect
 from twisted.web.static import addSlash
 from twisted.internet import reactor
-from twisted.cred.error import Unauthorized
+from twisted.cred.error import Unauthorized, LoginFailed, UnauthorizedLogin
 
 def _sessionCookie():
     return md5.new("%s_%s" % (str(random.random()) , str(time.time()))).hexdigest()
@@ -37,6 +37,7 @@ class GuardSession(components.Componentized):
         self.checkExpiredID = None
         self.setLifetime(60)
         self.services = {}
+        self.portals = {}
         self.touch()
 
     def _getSelf(self, interface=None):
@@ -46,7 +47,7 @@ class GuardSession(components.Componentized):
         else:
             return self.getComponent(interface)
 
-    # REMEMBER THIS IS A SEPARATE INTERFACE
+    # Old Guard interfaces
 
     def clientForService(self, service):
         x = self.services.get(service)
@@ -66,6 +67,26 @@ class GuardSession(components.Componentized):
         # this return value is useful for services that need to do asynchronous
         # stuff.
         return client
+
+    # New Guard Interfaces
+
+    def resourceForPortal(self, port):
+        return self.portals.get(port)
+
+    def setResourceForPortal(self, rsrc, port, logout):
+        self.portalLogout(port)
+        self.portals[port] = rsrc, logout
+        return rsrc
+
+    def portalLogout(self, port):
+        p = self.portals.get(port)
+        if p:
+            r, l = p
+            try: l()
+            except: log.err()
+            del self.portals[port]
+
+    # timeouts and expiration
 
     def setLifetime(self, lifetime):
         """Set the approximate lifetime of this session, in seconds.
@@ -291,6 +312,57 @@ class PerspectiveWrapper(Resource):
             if sc:
                 return sc.getChildWithDefault(path, request)
             return self.noAuthResource.getChildWithDefault(path, request)
+
+newLoginSignature = fm.MethodSignature(
+    fm.String("username", "",
+              "Username", "Your user name."),
+    fm.Password("password", "",
+                "Password", "Your password.")
+    )
+
+from twisted.cred.credentials import UsernamePassword, Anonymous
+import tapestry
+
+class UsernamePasswordWrapper(Resource):
+    def __init__(self, portal):
+        Resource.__init__(self)
+        self.portal = portal
+
+    def startLoggingIn(self, username, password, session):
+        return self.portal.login(UsernamePassword(username, password),
+                                 None, IResource).addCallback(
+            lambda (interface, avatarAspect, logout):
+            session.setResourceForPortal(avatarAspect, self.portal, logout))
+
+    def _ebFilter(self, f):
+        f.trap(LoginFailed, UnauthorizedLogin)
+        raise fm.FormException(str(f.value))
+
+    def getChild(self, path, request):
+        s = request.getSession()
+        if s is None:
+            return request.setupSession()
+        if path == INIT_PERSPECTIVE:
+            return form.FormProcessor(
+                newLoginSignature.method(
+                lambda username, password:
+                self.startLoggingIn(username, password, s).addErrback(
+                self._ebFilter
+                )))
+        elif path == DESTROY_PERSPECTIVE:
+            s.portalLogout(self.portal)
+            return Redirect(".")
+        else:
+            r = s.resourceForPortal(self.portal)
+            if r:
+                return r[0]
+            else:
+                return tapestry._ChildJuggler(
+                    self.portal.login(Anonymous(), None, IResource
+                                      ).addCallback(
+                    lambda (interface, avatarAspect, logout):
+                    s.setResourceForPortal(avatarAspect,
+                                           self.portal, logout)))
 
 
 from twisted.web.woven import interfaces, utils

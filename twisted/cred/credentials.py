@@ -19,6 +19,10 @@ class IUsernamePassword(ICredentials):
     docstring can give.
     """
 
+class IAnonymous(ICredentials):
+    """I am an explicitly anonymous request for access.
+    """
+
 class SimpleMD5ChallengeResponse(ICredentials):
     """XXX specify PB c/r protocol
     """
@@ -28,3 +32,6 @@ class UsernamePassword:
     def __init__(self, username, password):
         self.username = username
         self.password = password
+
+class Anonymous:
+    __implements__ = IAnonymous

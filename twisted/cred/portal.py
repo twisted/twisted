@@ -44,20 +44,21 @@ class Portal:
         woven) or on the user's client program may be intelligent enough to
         respond to several ``server''-side interfaces.
 
-        @return: A deferred which will fire a tuple of (interface, avatar,
-        logout).  The interface will be one of the interfaces passed in the
-        'interfaces' argument.  The 'avatar' will implement that interface.
-        The 'logout' object is a callable which will detach the mind from the
-        avatar.  It must be called when the user has conceptually disconnected
-        from the service.  Although in some cases this will not be in
-        connectionLost (such as in a web-based session), it will always be at
-        the end of a user's interactive session.
+        @return: A deferred which will fire a tuple of (interface,
+        avatarAspect, logout).  The interface will be one of the interfaces
+        passed in the 'interfaces' argument.  The 'avatarAspect' will implement
+        that interface.  The 'logout' object is a callable which will detach
+        the mind from the avatar.  It must be called when the user has
+        conceptually disconnected from the service.  Although in some cases
+        this will not be in connectionLost (such as in a web-based session), it
+        will always be at the end of a user's interactive session.
         """
-        for i in components.getInterfaces(credentials):
+        ifac = components.getInterfaces(credentials)
+        for i in ifac:
             c = self.checkers.get(i)
             if c is not None:
                 return c.requestAvatarId(credentials).addCallback(
                     self.realm.requestAvatar, mind, *interfaces)
         return defer.fail(failure.Failure(error.UnhandledCredentials(
-            "No checker for %s" % reflect.qual(i))))
+            "No checker for %s" % ' ,'.join(map(reflect.qual, ifac)))))
 
