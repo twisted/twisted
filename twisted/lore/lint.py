@@ -86,12 +86,28 @@ class TagChecker:
         if domhelpers.getNodeText(h1[0]) != domhelpers.getNodeText(title[0]):
             self._reportError(filename, h1[0], 'title and h1 text differ')
 
-    def check_pre(self, dom, filename):
+    def check_80_columns(self, dom, filename):
         for node in domhelpers.findNodesNamed(dom, 'pre'):
             for line in domhelpers.getNodeText(node).split('\n'):
                 if len(line) > 80:
                     self._reportError(filename, node, 
                                       'text wider than 80 columns in pre')
+        for node in domhelpers.findNodesNamed(dom, 'a'):
+            if node.getAttribute('class', '').endswith('listing'):
+                try:
+                    fn = os.path.dirname(filename) 
+                    fn = os.path.join(fn, node.getAttribute('href'))
+                    lines = open(fn,'r').readlines()
+                except:
+                    self._reportError(filename, node,
+                                      'bad listing href: %r' %
+                                      node.getAttribute('href'))
+                    continue
+
+                for line in lines:
+                    if len(line) > 80:
+                        self._reportError(filename, node, 
+                                          'listing wider than 80 columns')
 
     def check_pre_py_listing(self, dom, filename):
         for node in domhelpers.findNodesNamed(dom, 'pre'):
