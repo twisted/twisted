@@ -59,7 +59,7 @@ class LoopbackTestCase(unittest.TestCase):
 
     def testFailing(self):
         client = ClosingProtocol()
-        reactor.clientTCP("localhost", 10081, client)
+        reactor.clientTCP("localhost", 10081, client, timeout=5)
 
         while not client.failed:
             reactor.iterate()
