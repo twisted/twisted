@@ -340,7 +340,13 @@ class FlowTest(unittest.TestCase):
         b = flow.Merge(a, slowlist([1,2,flow.Cooperate(),3]))
         rhs = unittest.deferredResult(flow.Deferred(b))
         self.assertEquals(rhs, [1, 2, 'test', 3])
-    
+
+    def testDeferredWrapperImmediate(self):
+        from twisted.internet import defer
+        a = defer.Deferred()
+        a.callback("test")
+        self.assertEquals(["test"], list(flow.Block(a)))
+ 
     def testDeferredWrapperFail(self):
         from twisted.internet import defer
         from twisted.internet import reactor 
