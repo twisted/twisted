@@ -50,7 +50,7 @@ class LatexSpitter(XMLParser):
         if self.normalizing:
             data = data.replace('\n', ' ')
         if self.escaping:
-            data = escapingRE.sub(r'\\\1{}', data).replace('\\', '$\backslash$')
+            data = escapingRE.sub(r'\\\1{}', data.replace('\\', '$\\backslash$'))
         self.writer(data)
 
     def gotEntityReference(self, entityRef):
