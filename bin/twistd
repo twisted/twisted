@@ -29,7 +29,7 @@ if string.find(os.path.abspath(sys.argv[0]),'Twisted') != -1:
 
 from twisted import copyright
 from twisted.python import usage, util, runtime, register, plugin
-from twisted.lumberjack import logfile
+from twisted.python import logfile
 util.addPluginDir()
 
 # System Imports
