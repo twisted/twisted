@@ -27,9 +27,9 @@ def fixLinks(document, ext):
         href = node.getAttribute("href")
         
         if urlparse.urlparse(href)[0] in supported_schemes:
-            break
+            continue
         if node.getAttribute("class", "") == "absolute":
-            break
+            continue
 
         # This is a relative link, so it should be munged.
         if href.endswith('.html') or href[:href.rfind('#')].endswith('.html'):
