@@ -15,7 +15,7 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 #
 
-import os, gc, struct
+import os, gc, struct, random
 
 from twisted.trial import unittest
 from twisted.python.compat import *
@@ -505,6 +505,38 @@ class TestFixedClasses(unittest.TestCase):
         gc.collect()
         self.failUnlessEqual(len(lst.list), 0)
 
+    def testListOf_index(self): 
+        lst = ListOfStorables()
+        lst.list = []
+        verify = []
+
+        for x in range(10):
+            lst.list.append(x)
+            lst.list.append(chr(x))
+            verify.append(x)
+            verify.append(chr(x))
+        
+        for e in verify:
+            self.assertEquals(lst.list.index(e), verify.index(e))
+
+    def testListOf_remove(self):
+        lst = ListOfStorables()
+        lst.list = []
+        verify = []
+        
+        for x in range(100):
+            lst.list.append(x)
+            lst.list.append(chr(x))
+        
+        r = range(100)
+        random.shuffle(r)
+        
+        for e in r:
+            lst.list.remove(e)
+            lst.list.remove(chr(e))
+        
+        self.assertEquals(lst.list, [])
+            
     def testStorableDictionary(self):
         sd = compound.StorableDictionary(self.db, str, int)
         rd = {}

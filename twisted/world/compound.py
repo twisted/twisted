@@ -227,6 +227,15 @@ class StorableList(Allocation):
         l.sort()
         self[:] = l
 
+    def index(self, x):
+        for i in xrange(len(self)):
+            if x == self[i]:
+                return i
+        raise ValueError, "StorableList.index(x): x not in list"
+
+    def remove(self, x):
+        del self[self.index(x)]
+
 class _Nothing:
     """
     this can stop torg
