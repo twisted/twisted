@@ -256,4 +256,5 @@ class CGIProcessProtocol(protocol.ProcessProtocol, pb.Viewable):
                 error.ErrorPage(http.INTERNAL_SERVER_ERROR,
                                 "CGI Script Error",
                                 "Premature end of script headers.").render(self.request))
+        self.request.unregisterProducer()
         self.request.finish()
