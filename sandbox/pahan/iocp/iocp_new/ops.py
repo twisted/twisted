@@ -131,7 +131,7 @@ class AcceptExOp(OverlappedOp):
         if not self.handleError(ret, bytes, False):
             self.acc_sock.setsockopt(SOL_SOCKET, SO_UPDATE_ACCEPT_CONTEXT, struct.pack("I", self.handle))
 #            print "AcceptExOp.ovDone callbacking with self.acc_sock %s, peername %s" % \
-                    (self.acc_sock._sock, self.acc_sock.getpeername())
+#                    (self.acc_sock._sock, self.acc_sock.getpeername())
             self.callback((self.acc_sock, self.acc_sock.getpeername()))
         self.cleanUp()
 
@@ -153,7 +153,7 @@ class AcceptExOp(OverlappedOp):
 
 class ConnectExOp(OverlappedOp):
     def ovDone(self, ret, bytes):
-#        print "ConnectExOp.ovDone(%(ret)s, %(bytes)s)" % locals()
+        print "ConnectExOp.ovDone(%(ret)s, %(bytes)s)" % locals()
         if not self.handleError(ret, bytes, False):
             self.sock.setsockopt(SOL_SOCKET, SO_UPDATE_CONNECT_CONTEXT, "")
             self.callback(None)

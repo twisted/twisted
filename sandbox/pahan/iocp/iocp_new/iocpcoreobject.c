@@ -74,12 +74,12 @@ static PyObject *iocpcore_doIteration(iocpcore* self, PyObject *args) {
     Py_BEGIN_ALLOW_THREADS;
     res = GetQueuedCompletionStatus(self->iocp, &bytes, &key, (OVERLAPPED**)&ov, timeout);
     Py_END_ALLOW_THREADS;
-//    printf("gqcs returned res %d, ov 0x%p\n", res, ov);
+    printf("gqcs returned res %d, ov 0x%p\n", res, ov);
     err = GetLastError();
-//    printf("    GLE returned %d\n", err);
+    printf("    GLE returned %d\n", err);
     if(!res) {
         if(!ov) {
-//            printf("gqcs returned NULL ov\n");
+            printf("gqcs returned NULL ov\n");
             if(err != WAIT_TIMEOUT) {
                 return PyErr_SetFromWindowsErr(err);
             } else {
@@ -314,10 +314,12 @@ static PyObject *iocpcore_AcceptEx(iocpcore* self, PyObject *args) {
     Py_INCREF(object);
     ov->callback = object;
     CreateIoCompletionPort((HANDLE)handle, self->iocp, 0, 1);
+    printf("calling AcceptEx(%d, %d, 0x%p, %d, %d, %d, 0x%p, 0x%p)\n", handle, acc_sock, buf, 0, buflen/2, buflen/2, &bytes, ov);
     Py_BEGIN_ALLOW_THREADS;
     res = gAcceptEx(handle, acc_sock, buf, 0, buflen/2, buflen/2, &bytes, (OVERLAPPED *)ov);
     Py_END_ALLOW_THREADS;
     err = WSAGetLastError();
+    printf("    ae returned %d, err %d\n", res, err);
     if(!res && err != ERROR_IO_PENDING) {
         return PyErr_SetFromWindowsErr(err);
     }
@@ -390,13 +392,13 @@ static PyObject *iocpcore_ConnectEx(iocpcore* self, PyObject *args) {
     Py_INCREF(object);
     ov->callback = object;
     CreateIoCompletionPort((HANDLE)handle, self->iocp, 0, 1);
-//    printf("calling ConnectEx(%d, 0x%p, %d, 0x%p)\n", handle, addr, addrlen, ov);
+    printf("calling ConnectEx(%d, 0x%p, %d, 0x%p)\n", handle, addr, addrlen, ov);
     Py_BEGIN_ALLOW_THREADS;
     res = gConnectEx(handle, addr, addrlen, NULL, 0, NULL, (OVERLAPPED *)ov);
     Py_END_ALLOW_THREADS;
     PyMem_Free(addr);
     err = WSAGetLastError();
-//    printf("    ce returned %d, err %d\n", res, err);
+    printf("    ce returned %d, err %d\n", res, err);
     if(!res && err != ERROR_IO_PENDING) {
         return PyErr_SetFromWindowsErr(err);
     }
