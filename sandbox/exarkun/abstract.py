@@ -136,18 +136,17 @@ class _IOVecBufferMixin:
             self.producer.pauseProducing()
 
     def writeVector(self, data):
-        raise NotImplementedError()
+        raise NotImplementedError("%s does not implement writeVector()" % (self.__class__.__name__,))
 
     def doWrite(self):
-        if not self.vector:
-            return 0
-        l = self.writeVector(self.vector)
-        if l < 0 or isinstance(l, Exception):
-            return l
-        if l == 0 and self.vector:
-            result = 0
-        else:
-            result = None
+        if self.vector:
+            l = self.writeVector(self.vector)
+            if l < 0 or isinstance(l, Exception):
+                return l
+            if l == 0 and self.vector:
+                result = 0
+            else:
+                result = None
         if not self.vector:
             self.stopWriting()
             if self.producer is not None and ((not self.streamingProducer)
