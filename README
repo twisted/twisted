@@ -34,19 +34,7 @@ What is this?
 
 What's new in 0.12.2-pre?
 
-  This is mainly a bug fix release, with some minor new features.
-
-  New features in Manhole: new '/browse' and '/watch' commands that allow you
-  to look at an object or watch method call/attribute changes on it. Also
-  some minor protocol changes for better performance.
-
-  Behind-the-scenes updates to InstanceMessenger, the multi-protocol chat
-  client. Hopefully this design will stick; it seems good.
-
-  Overhaul of twisted.web.widgets: hopefully there will be documentation
-  (or at least examples) soon!
-
-  More robust DirDBM - atomic writes and crash recovery.
+  Added poll() based event loop implementation.
 
   Tons of fixed bugs.
 
