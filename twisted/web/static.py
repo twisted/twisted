@@ -306,7 +306,7 @@ class File(resource.Resource, styles.Versioned, filepath.FilePath):
                                                           self.defaultType)
 
         if not self.exists():
-            return error.NoResource("File not found.").render(request)
+            return self.childNotFound.render(request)
 
         if self.isdir():
             return self.redirect(request)
@@ -402,6 +402,7 @@ class File(resource.Resource, styles.Versioned, filepath.FilePath):
         # refactoring by steps, here - constructor should almost certainly take these
         f.processors = self.processors
         f.indexNames = self.indexNames[:]
+        f.childNotFound = self.childNotFound
         return f
 
 
