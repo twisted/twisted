@@ -55,11 +55,11 @@ class RecvLine(insults.TerminalProtocol):
 
     def setInsertMode(self):
         self.mode = 'insert'
-        self.transport.setMode([insults.IRM])
+        self.transport.setModes([insults.IRM])
 
     def setTypeoverMode(self):
         self.mode = 'typeover'
-        self.transport.resetMode([insults.IRM])
+        self.transport.resetModes([insults.IRM])
 
     def terminalSize(self, width, height):
         # XXX - Clear the previous input line, redraw it at the new cursor position
@@ -69,12 +69,6 @@ class RecvLine(insults.TerminalProtocol):
         self.transport.write(self.ps[self.pn] + ''.join(self.lineBuffer))
 
     def unhandledControlSequence(self, seq):
-        pass
-
-    def setMode(self, modes):
-        pass
-
-    def resetMode(self, modes):
         pass
 
     def keystrokeReceived(self, keyID):

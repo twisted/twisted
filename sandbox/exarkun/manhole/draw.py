@@ -6,7 +6,7 @@ class Draw(insults.TerminalProtocol):
 
     def connectionMade(self):
         self.transport.eraseDisplay()
-        self.transport.resetMode([insults.IRM])
+        self.transport.resetModes([insults.IRM])
         self.cursor = self.cursors[0]
 
     def keystrokeReceived(self, keyID):
