@@ -2864,7 +2864,7 @@ class IMAP4Client(basic.LineReceiver):
         store = uid and 'UID STORE' or 'STORE'
         args = ' '.join((messages, cmd, '(%s)' % ' '.join(flags)))
         d = self.sendCommand(Command(store, args, wantResponse=('FETCH',)))
-        d.addCallback(self.__cbFetch, lookFor='FLAGS')
+        d.addCallback(self.__cbFetch)
         return d
     
     def copy(self, messages, mailbox, uid):
