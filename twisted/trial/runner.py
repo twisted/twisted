@@ -374,8 +374,16 @@ class TestModuleRunner(TestRunnerBase):
             for obj in objects:
                 if isinstance(obj, (components.MetaInterface, zi.Interface)):
                     continue
-                elif ITestCaseFactory.providedBy(obj):
-                    self._tClasses.append(obj)
+
+                try:
+                    if ITestCaseFactory.providedBy(obj):
+                        self._tClasses.append(obj)
+                except AttributeError: 
+                    # if someone (looking in exarkun's direction)
+                    # messes around with __getattr__ in a particularly funky
+                    # way, it's possible to mess up zi's providedBy()
+                    pass
+
         return self._tClasses
 
     def runTests(self, randomize=False):
