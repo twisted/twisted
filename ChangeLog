@@ -1,3 +1,21 @@
+2003-07-03  Dave Peticolas  <dave@krondo.com>
+
+	* twisted/test/test_enterprise.py: add gadfly test
+
+	* twisted/web/woven/input.py: remove excess newline.
+
+	* twisted/trial/unittest.py: take out unused methodPrefix var
+
+	* twisted/enterprise/adbapi.py: accept 'noisy' kw arg. persist
+	noisy, min, and max args. just warn about non-dbapi db libs.
+
+	* twisted/enterprise/reflector.py: fix spelling
+
+	* twisted/enterprise/sqlreflector.py 80 columns, don't addToCache
+	in insertRow
+
+	* twisted/enterprise/xmlreflector.py: 80 columns
+
 2003-07-01  Brian Warner  <warner@lothar.com>
 
 	* sandbox/warner/fusd_twisted.py: experimental glue code for FUSD,
@@ -2759,7 +2777,3 @@
 	* First go at database for twisted.bugs. I hate RDBMS. I hate web.
 
 --- 0.13.0 Release ---
-
-# Local Variables:
-# add-log-time-format: add-log-iso8601-time-string
-# End:
