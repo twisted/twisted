@@ -37,6 +37,15 @@ class NonClosingStringIO(StringIO):
     def close(self):
         pass
 
+class CustomFileWrapper(protocol.FileWrapper):
+    def write(self, data):
+        protocol.FileWrapper.write(self, data)
+        self._checkProducer()
+
+    def loseConnection(self):
+        self.closed = 1
+
+
 class CustomLogObserver(log.FileLogObserver):
     '''a log observer that prints more than the default'''
     def emit(self, eventDict):
@@ -242,8 +251,8 @@ class ConnectedFTPServer(object):
         c.factory = protocol.ClientFactory()
         c.factory.protocol = DummyClient
 
-        c.makeConnection(protocol.FileWrapper(self.cio))
-        s.makeConnection(protocol.FileWrapper(self.sio))
+        c.makeConnection(CustomFileWrapper(self.cio))
+        s.makeConnection(CustomFileWrapper(self.sio))
 
         iop = IOPump(c, s, self.cio, self.sio)
         self.c, self.s, self.iop = c, s, iop
@@ -262,13 +271,13 @@ class ConnectedFTPServer(object):
 
         self.s.TestingSoJustSkipTheReactorStep = True
 
-        ds.makeConnection(protocol.FileWrapper(self.dsio))
+        ds.makeConnection(CustomFileWrapper(self.dsio))
         
         dc = DummyClient()
         dc.logname = 'ftp-dtp'
         dc.factory = protocol.ClientFactory()
         dc.factory.protocol = DummyClient
-        dc.makeConnection(protocol.FileWrapper(self.dcio))
+        dc.makeConnection(CustomFileWrapper(self.dcio))
 
         iop = IOPump(dc, ds, self.dcio, self.dsio)
         self.dc, self.ds, self.diop = dc, ds, iop
@@ -378,12 +387,14 @@ class BogusAvatar(object):
         
         del text[(size - 2):]
         text.extend(endln)
-        sio = StringIO(''.join(text))
-        sio.truncate(size)
-        fsize = len(sio.getvalue())
-        log.msg("BogusAvatar.retr: file size = %d" % fsize)
+        sio = NonClosingStringIO(''.join(text))
+        #import cStringIO
+        #sio = cStringIO.StringIO(''.join(text))
+        #sio.truncate(size)
+        self.finalFileSize = len(sio.getvalue())
+        log.msg("BogusAvatar.retr: file size = %d" % self.finalFileSize)
         sio.seek(0)
-        return (sio, fsize)
+        return (sio, self.finalFileSize)
 
 
     def stor(self, params):
@@ -544,7 +555,7 @@ class TestFTPServer:#(FTPTestCase):
 
 class TestDTPTesting(FTPTestCase):
     def testEffectsOfChunkSizeOnDTPTesting(self):
-        filesizes = [(n*100) for n in xrange(1000,1010)]
+        filesizes = [(n*100) for n in xrange(100,110)]
         for fs in filesizes:
             self.tearDown()
             self.setUp()
@@ -555,6 +566,7 @@ class TestDTPTesting(FTPTestCase):
         avatar = self.cnx.loadAvatar()
         avatar.filesize = filesize
         sr.dtpTxfrMode = ftp.PASV
+        sr.binary = True                            # set transfer mode to binary
         self.cnx.hookUpDTP()
         dc, ds, diop = self.cnx.getDtpCSTuple()
         sr.ftp_RETR('')
@@ -562,8 +574,8 @@ class TestDTPTesting(FTPTestCase):
         diop.flush()
         log.debug('dc.lines size: %d' % len(dc.lines))
         lenRx = len(''.join(dc.lines))
-        sizes = 'filesize before txmit: %d, filesize after txmit: %d' % (filesize, lenRx)
-        percent = 'percent actually received %f' % ((float(lenRx) / float(filesize))*100)
+        sizes = 'filesize before txmit: %d, filesize after txmit: %d' % (avatar.finalFileSize, lenRx)
+        percent = 'percent actually received %f' % ((float(lenRx) / float(avatar.finalFileSize))*100)
         log.debug(sizes)
         log.debug(percent)
         print sizes
