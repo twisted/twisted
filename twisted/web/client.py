@@ -73,14 +73,20 @@ class HTTPPageGetter(http.HTTPClient):
 
 class HTTPPageDownloader(HTTPPageGetter):
 
+    transmittingPage = 0
+
     def handleStatus_200(self):
+        self.transmittingPage = 1
         self.factory.pageStart()
 
     def handleResponsePart(self, data):
-        self.factory.pagePart(data)
+        if self.transmittingPage:
+            self.factory.pagePart(data)
 
     def handleResponseEnd(self):
-        self.factory.pageEnd()
+        if self.transmittingPage:
+            self.factory.pageEnd()
+            self.transmittingPage = 0
 
 
 class HTTPClientFactory(protocol.ClientFactory):
