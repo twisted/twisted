@@ -1,6 +1,10 @@
 #!/bin/sh
 set -e
-url=http://twistedmatrix.com/documents/TwistedDocs/TwistedDocs-$1/api/%s.html
+if test "x$1" = "x" ; then
+	url=http://twistedmatrix.com/documents/TwistedDocs/current/api/%s.html
+else
+	url=http://twistedmatrix.com/documents/TwistedDocs/TwistedDocs-$1/api/%s.html
+fi
 templ=doc/howto/template.tpl
 if sh -c 'which python2.2 > /dev/null'; then PYTHON=2.2; fi
 if sh -c 'which python2.3 > /dev/null'; then PYTHON=2.3; fi
