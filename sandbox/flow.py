@@ -62,11 +62,7 @@ from __future__ import nested_scopes
 from twisted.python import failure
 from twisted.python.compat import StopIteration, iter
 
-class FlowCommand: 
-    """ Objects given special meaning when returned from yield """
-    pass
-
-class Cooperate(FlowCommand):
+class Cooperate:
     """ Represents a request to delay and let other events process
 
         Objects of this type are returned within a flow when
@@ -76,6 +72,10 @@ class Cooperate(FlowCommand):
     """
     def __init__(self, timeout = 0):
         self.timeout = timeout
+
+class FlowCommand: 
+    """ Objects given special meaning when returned from yield """
+    pass
 
 class Wrap(FlowCommand):
     """ Wraps a generator or other iterator for use in a flow 
@@ -171,10 +171,9 @@ class Flow:
                         return
             else:
                 result = head.result
+                if isinstance(result, Cooperate):
+                    return result.timeout
                 if isinstance(result, FlowCommand):
-                    if isinstance(result, Cooperate):
-                        return result.timeout
-                    assert(isinstance(result, Wrap))
                     self._stack.append(result)
                 else:
                     if len(self._stack) > 1:
