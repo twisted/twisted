@@ -71,7 +71,10 @@ class Application(log.Logger, styles.Versioned):
         self.resolver = main.resolver
 
 
-    persistenceVersion = 4
+    persistenceVersion = 5
+
+    def upgradeToVersion5(self):
+        del self.entities
 
     def upgradeToVersion4(self):
         """Version 4 Persistence Upgrade
@@ -304,3 +307,11 @@ class Application(log.Logger, styles.Versioned):
 
 # sibling import
 import main
+
+#
+# These are dummy classes for backwards-compatibility!
+#
+
+class PortCollection: pass
+
+class ServiceCollection: pass
