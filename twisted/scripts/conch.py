@@ -15,7 +15,7 @@
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 #
-# $Id: conch.py,v 1.2 2002/11/07 22:30:04 z3p Exp $
+# $Id: conch.py,v 1.3 2002/11/07 23:01:15 z3p Exp $
 
 #""" Implementation module for the `ssh` command.
 #"""
@@ -24,7 +24,7 @@ from twisted.conch.ssh import transport, userauth, connection, common, keys
 from twisted.internet import reactor, stdio, defer, protocol
 from twisted.python import usage, log
 
-import os, sys, getpass, struct, tty
+import os, sys, getpass, struct, tty, fcntl
 
 class GeneralOptions(usage.Options):
     synopsis = """Usage:    ssh [options] host [command]
@@ -158,7 +158,7 @@ class SSHConnection(connection.SSHConnection):
     def serviceStarted(self):
 # port forwarding will go here
         if not options['notty']:
-            self.openChannel(SSHSession(1048576, 1073741824))
+            self.openChannel(SSHSession(1048576, 4294967295L))
 
 class SSHSession(connection.SSHChannel):
     name = 'session'
@@ -180,8 +180,6 @@ class SSHSession(connection.SSHChannel):
         c.dataReceived = self.write
         stdio.StandardIO(c)
         term = os.environ['TERM']
-        columns = int(os.environ.get('COLUMNS', 80))
-        rows = int(os.environ.get('ROWS', 25))
         if options['subsystem']:
             self.conn.sendRequest(self, 'subsystem', \
                 common.NS(options['command']))
@@ -189,8 +187,11 @@ class SSHSession(connection.SSHChannel):
             self.conn.sendRequest(self, 'exec', \
                 common.NS(options['command']))
         else:
+            winsz = fcntl.ioctl(fd, tty.TIOCGWINSZ, '12345678')
+            rows, columns, xpixels, ypixels = struct.unpack('4H', winsz)
             self.conn.sendRequest(self, 'pty-req', common.NS(term) + \
-                struct.pack('>4L', columns, rows, 0, 0) + common.NS(''))
+                struct.pack('>4L', columns, rows, xpixels, ypixels) + \
+                common.NS(''))
             self.conn.sendRequest(self, 'shell', '')
 
     def dataReceived(self, data):
