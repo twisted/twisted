@@ -309,7 +309,12 @@ class AdapterTestCase(unittest.TestCase):
         components.ALLOW_DUPLICATES = 0
         self.assertRaises(ValueError, components.registerAdapter,
                           IntMultiplyWithAdder, IntAdder, IMultiply)
-
+    
+    def testAdapterGetComponent(self):
+        o = object()
+        a = Adept(o)
+        self.assertRaises(components.CannotAdapt, IAdder, a)
+        self.assertEquals(IAdder(a, default=None), None)
 
 class IMeta(components.Interface):
     def __adapt__(o, dflt):

@@ -323,10 +323,15 @@ class Adapter:
 
     def getComponent(self, interface, registry=None, default=None):
         """
-        I forward getComponent to self.original on the assumption that it is an
-        instance of Componentized.
+        I forward getComponent to self.original if it has it, otherwise I
+        simply return default.
         """
-        return self.original.getComponent(interface, registry=None, default=default)
+        try:
+            f = self.original.getComponent
+        except AttributeError:
+            return default
+        else:
+            return f(interface, registry=registry, default=default)
 
     def isuper(self, iface, adapter):
         """
