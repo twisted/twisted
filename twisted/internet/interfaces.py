@@ -14,10 +14,12 @@
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
-"""Interface documentation"""
+"""Interface documentation."""
+
+from twisted.python import components
 
 
-class IProducer:
+class IProducer(components.Interface):
     """A producer produces data for a consumer.
     
     If this is a streaming producer, it will only be
@@ -41,7 +43,7 @@ class IProducer:
         This tells a producer to re-add itself to the main loop and produce
         more data for its consumer.
         """
-        pass
+        raise NotImplementedError
 
     def pauseProducing(self):
         """Pause producing data.
@@ -49,7 +51,7 @@ class IProducer:
         Tells a producer that it has produced too much data to process for
         the time being, and to stop until resumeProducing() is called.
         """
-        pass
+        raise NotImplementedError
 
     def stopProducing(self):
         """Stop producing data.
@@ -57,10 +59,10 @@ class IProducer:
         This tells a producer that its consumer has died, so it must stop
         producing data for good.
         """
-        pass
+        raise NotImplementedError
 
 
-class ISelectable:
+class ISelectable(components.Interface):
     """An object that can be registered with the networking event loop.
     
     Selectables more or less correspond to object that can be passed to select().
@@ -79,7 +81,7 @@ class ISelectable:
         This will only be called if this object has been registered as a writer in
         the event loop.
         """
-        pass
+        raise NotImplementedError
     
     def doRead(self):
         """Called when data is available for reading.
@@ -87,19 +89,21 @@ class ISelectable:
         This will only be called if this object has been registered as a reader in
         the event loop.
         """
-        pass
+        raise NotImplementedError
     
     def fileno(self):
         """Return a file descriptor number for select().
 
         This method must return an integer, the object's file descriptor.
         """
-        pass
+        raise NotImplementedError
     
     def connectionLost(self):
         """Called if an error has occured or the object's connection was closed.
         
         This may be called even if the connection was never opened in the first place.
         """
-        pass
+        raise NotImplementedError
 
+
+__all__ = ["IProducer", "ISelectable"]
