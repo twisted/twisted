@@ -1534,13 +1534,13 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
             elif part.type == 'internaldate':
                 response.extend(('INTERNALDATE', msg.getInternalDate()))
             elif part.type == 'rfc822header':
-                response.extend(('RFC822.HEADER', _formatHeaders(msg.getHeaders(True)) + '\r\n'))
+                response.extend(('RFC822.HEADER', _formatHeaders(msg.getHeaders(True))))
             elif part.type == 'rfc822text':
                 response.extend(('RFC822.TEXT', msg.getBodyFile()))
             elif part.type == 'rfc822size':
                 response.extend(('RFC822.SIZE', str(msg.getSize())))
             elif part.type == 'rfc822':
-                response.extend(('RFC822', _formatHeaders(msg.getHeaders(True)) + msg.getBodyFile().read()))
+                response.extend(('RFC822', _formatHeaders(msg.getHeaders(True)) +'\r\n' + msg.getBodyFile().read()))
             elif part.type == 'uid':
                 seenUID = True
                 response.extend(('UID', str(msg.getUID())))
@@ -1552,16 +1552,16 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
                     subMsg = subMsg.getSubPart(p)
                 if part.header:
                     if not part.header.fields:
-                        response.extend((str(part), _formatHeaders(msg.getHeaders(True)) + '\r\n'))
+                        response.extend((str(part), _formatHeaders(msg.getHeaders(True))))
                     else:
                         hdrs = subMsg.getHeaders(part.header.negate, *part.header.fields)
-                        response.extend((str(part), _formatHeaders(hdrs) + '\r\n'))
+                        response.extend((str(part), _formatHeaders(hdrs)))
                 elif part.text:
                     response.extend((str(part), subMsg.getBodyFile()))
                 elif part.mime:
-                    response.extend((str(part), _formatHeaders(msg.getHeaders(True)) + '\r\n'))
+                    response.extend((str(part), _formatHeaders(msg.getHeaders(True))))
                 elif part.empty:
-                    response.extend((str(part), _formatHeaders(msg.getHeaders(True)) + subMsg.getBodyFile().read()))
+                    response.extend((str(part), _formatHeaders(msg.getHeaders(True)) + '\r\n' + subMsg.getBodyFile().read()))
                 else:
                     # Simplified bodystructure request
                     response.extend(('BODY', getBodyStructure(msg, False)))
