@@ -6,7 +6,6 @@
 
 from twisted.internet import reactor, protocol, defer
 from twisted.xish import domish, utility
-from twisted.words.protocols.jabber.xmpp_stringprep import nodeprep, resourceprep, nameprep
 import string
 
 class InvalidFormat(Exception):
@@ -28,62 +27,44 @@ def parse(jidstring):
         else:
             # host/resource
             server = jidstring[0:res_sep]
-            resource = jidstring[res_sep + 1:] or None
+            resource = jidstring[res_sep + 1:]
     else:
         if res_sep == -1:
             # user@host
-            user = jidstring[0:user_sep] or None
+            user = jidstring[0:user_sep]
             server = jidstring[user_sep + 1:]
         else:
             if user_sep < res_sep:
                 # user@host/resource
-                user = jidstring[0:user_sep] or None
+                user = jidstring[0:user_sep]
                 server = jidstring[user_sep + 1:user_sep + (res_sep - user_sep)]
-                resource = jidstring[res_sep + 1:] or None
+                resource = jidstring[res_sep + 1:]
             else:
                 # server/resource (with an @ in resource)
                 server = jidstring[0:res_sep]
-                resource = jidstring[res_sep + 1:] or None
+                resource = jidstring[res_sep + 1:]
 
-    return prep(user, server, resource)
-
-def prep(user, server, resource):
-    """ Perform stringprep on all JID fragments """
-
-    if user:
-        try:
-            user = nodeprep.prepare(unicode(user))
-        except UnicodeError:
-            raise InvalidFormat, "Invalid character in username"
-    else:
-        user = None
-
-    if not server:
+    # Check for misc. invalid cases
+    if user and (user.find("@") != -1 or user.find("/") != -1):
+        raise InvalidFormat, "Invalid character in username"
+    if not server or len(server) == 0:
         raise InvalidFormat, "Server address required."
-    else:
-        try:
-            server = nameprep.prepare(unicode(server))
-        except UnicodeError:
-            raise InvalidFormat, "Invalid character in hostname"
+    if server and (server.find("@") != -1 or server.find("/") != -1):
+        raise InvalidFormat, "Invalid character in hostname"
 
-    if resource:
-        try:
-            resource = resourceprep.prepare(unicode(resource))
-        except UnicodeError:
-            raise InvalidFormat, "Invalid character in resource"
-    else:
+    # Treat empty resource as NULL resource
+    if resource and len(resource) == 0:
         resource = None
 
+    # XXX: Do string prep here!
+
+    # Return the tuple
     return (user, server, resource)
 
 __internJIDs = {}
 
 def internJID(str):
-    """ Return interned JID.
-
-    Assumes C{str} is stringprep'd.
-    """
-
+    # XXX: Ensure that stringprep'd jids map to same JID
     if str in __internJIDs:
         return __internJIDs[str]
     else:
@@ -92,19 +73,13 @@ def internJID(str):
         return j
 
 class JID:
-    """ Represents a stringprep'd Jabber ID.
-
-    Note that it is assumed that the attributes C{host}, C{user} and
-    C{resource}, when set individually, have been properly stringprep'd.
-    """
-
     def __init__(self, str = None, tuple = None):
         assert (str or tuple)
         
         if str:
             user, host, res = parse(str)
         else:
-            user, host, res = prep(*tuple)
+            user, host, res = tuple
 
         self.host = host
         self.user = user
