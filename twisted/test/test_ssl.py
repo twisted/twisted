@@ -204,9 +204,13 @@ class TLSTestCase(unittest.TestCase):
     
 class SpammyTLSTestCase(TLSTestCase):
     fillBuffer = 1
+    def testTLS(self):
+        TLSTestCase.testTLS(self)
+    def testBackwardsTLS(self):
+        TLSTestCase.testBackwardsTLS(self)
 
-SpammyTLSTestCase.testTLS.im_func.todo = "startTLS doesn't empty buffer before starting TLS. :("
-SpammyTLSTestCase.testBackwardsTLS.im_func.todo = "startTLS doesn't empty buffer before starting TLS. :("
+    testTLS.todo = "startTLS doesn't empty buffer before starting TLS. :("
+    testBackwardsTLS.todo = "startTLS doesn't empty buffer before starting TLS. :("
 
 class SingleLineServerProtocol(protocol.Protocol):
     def connectionMade(self):
