@@ -2,22 +2,53 @@
 Twisted Test Framework
 """
 
-from twisted.python.components import Interface, implements
 from twisted.python import reflect
 import sys, time, string, traceback, types, os, glob
 
-class IUnitTest(Interface):
+class TestCase:
     def setUp(self):
         pass
 
     def tearDown(self):
         pass
 
+    def fail(self, message=None):
+        raise AssertionError, msg
+
+    def failIf(self, condition, message=None):
+        if condition:
+            raise AssertionError, msg
+
+    def failUnless(self, condition, message=None):
+        if not condition:
+            raise AssertionError, msg
+
+    def failUnlessRaises(self, exception, f, *args, **kwargs):
+        try:
+            f(*args, **kwargs)
+        except exception:
+            pass
+        else:
+            raise AssertionError, exception.__name__
+
+    def failUnlessEqual(self, first, second, msg=None):
+        if not first == second:
+            raise AssertionError, (msg or '%s != %s' (first, second))
+
+    def failIfEqual(self, first, second, msg=None):
+        if first == second:
+            raise AssertionError, (msg or '%s == %s' (first, second))
+
+    assertEqual = assertEquals = failUnlessEqual
+    assertNotEqual = assertNotEquals = failIfEqual
+    assertRaises = failUnlessRaises
+    assert_ = failUnless
+
 def isTestClass(testClass):
-    return implements(testClass, IUnitTest)
+    return issubclass(testClass, TestCase)
 
 def isTestCase(testCase):
-    return implements(testCase, IUnitTest)
+    return isinstance(testCase, TestCase)
 
 class TestSuite:
     methodPrefix = 'test'
@@ -28,10 +59,11 @@ class TestSuite:
 
     def addTestCase(self, testCase):
         #print 'adding test case %s' % testCase
-        testCases = [ (testCase, method) for method in
-                      reflect.prefixedMethods(testCase, self.methodPrefix) ]
-        #testCases = [ (testCase, method) for method in testCase.suite() ]
-        testCases.sort()
+        methodDict = {}
+        reflect.accumulateMethods(testCase, methodDict, self.methodPrefix)
+        methods = methodDict.items()
+        methods.sort()
+        testCases = [ (testCase, method[1]) for method in methods ]
         self.testCases.extend(testCases)
 
     def addTestClass(self, testClass):
