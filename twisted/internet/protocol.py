@@ -35,7 +35,7 @@ class Factory:
     protocol = None
 
     numPorts = 0
-    noisy = "sure, why not"
+    noisy = True
 
     def doStart(self):
         """Make sure startFactory is called.
@@ -224,7 +224,8 @@ class ReconnectingClientFactory(ClientFactory):
         """Have this connector connect again, after a suitable delay.
         """
         if not self.continueTrying:
-            log.msg("Abandoning %s on explicit request" % (connector,))
+            if self.noisy:
+                log.msg("Abandoning %s on explicit request" % (connector,))
             return
 
         if connector is None:
@@ -235,8 +236,9 @@ class ReconnectingClientFactory(ClientFactory):
 
         self.retries += 1
         if self.maxRetries is not None and (self.retries > self.maxRetries):
-            log.msg("Abandoning %s after %d retries." %
-                    (connector, self.retries))
+            if self.noisy:
+                log.msg("Abandoning %s after %d retries." %
+                        (connector, self.retries))
             return
 
         self.delay = min(self.delay * self.factor, self.maxDelay)
@@ -244,7 +246,8 @@ class ReconnectingClientFactory(ClientFactory):
             self.delay = random.normalvariate(self.delay,
                                               self.delay * self.jitter)
 
-        log.msg("%s will retry in %d seconds" % (connector, self.delay,))
+        if self.noisy:
+            log.msg("%s will retry in %d seconds" % (connector, self.delay,))
         from twisted.internet import reactor
 
         def reconnector():
