@@ -1100,7 +1100,7 @@ class HTTPFactory(protocol.ServerFactory):
             request.getClientIP(),
             # request.getUser() or "-", # the remote user is almost never important
             _logDateTime,
-            repr(request),
+            '%s %s %s' % (request.method, request.uri, request.clientproto),
             request.code,
             request.sentLength or "-",
             request.getHeader("referer") or "-",
