@@ -414,7 +414,7 @@ class BaseClient(Connection):
 
     def connectionLost(self, reason):
         if not self.connected:
-            self.failIfNotConnected(error.ConnectError())
+            self.failIfNotConnected(error.ConnectError(string=reason))
         else:
             Connection.connectionLost(self, reason)
             self.connector.connectionLost(reason)
