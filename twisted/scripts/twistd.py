@@ -17,7 +17,7 @@
 from __future__ import nested_scopes
 
 from twisted import copyright
-from twisted.python import usage, util, runtime, register, plugin
+from twisted.python import usage, util, runtime, plugin
 from twisted.python import log, logfile
 from twisted.persisted import styles
 util.addPluginDir()
@@ -216,7 +216,6 @@ def runApp(config):
     global initRun
     platformType = runtime.platform.getType()
 
-    register.checkLicenseFile()
     sys.path.append(config['rundir'])
 
     # Install a reactor immediately.  The application will not load properly
@@ -304,13 +303,6 @@ directory, or use my --pidfile and --logfile parameters to avoid clashes.
     log.msg("twistd %s (%s %s) starting up" % (copyright.version,
                                                sys.executable,
                                                runtime.shortPythonVersion()))
-
-    if register.LICENSE_USER:
-        log.msg("license user: %s <%s>" % (register.LICENSE_USER, register.LICENSE_EMAIL))
-    if register.LICENSE_KEY:
-        log.msg("license code: %s" % (register.LICENSE_KEY))
-    if register.LICENSE_ORG:
-        log.msg("organization: %s" % register.LICENSE_ORG)
 
     from twisted.internet import reactor
     log.msg('reactor class: %s' % reactor.__class__)
