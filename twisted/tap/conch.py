@@ -34,8 +34,9 @@
 I am a support module for making SSH servers with mktap.
 """
 
-from twisted.conch import identity, authorizer
+from twisted.conch import identity, authorizer, checkers, realm
 from twisted.conch.ssh import factory
+from twisted.cred import portal
 from twisted.python import reflect, usage
 import sys
 
@@ -48,14 +49,11 @@ class Options(usage.Options):
 
     longdesc = "Makes a Conch SSH server.."
 
-    def opt_auth(self, authName):
-        authObj = reflect.namedClass(authName)
-        self['auth'] = authObj()
-
 def updateApplication(app, config):
     t = factory.OpenSSHFactory()
-    t.authorizer = config.has_key('auth') and config['auth'] or authorizer.OpenSSHConchAuthorizer()
-    t.authorizer.setApplication(app)
+    t.portal = portal.Portal(realm.UnixSSHRealm())
+    t.portal.registerChecker(checkers.UNIXPasswordDatabase())
+    t.portal.registerChecker(checkers.SSHPublicKeyDatabase())
     t.dataRoot = config['data']
     t.moduliRoot = config['moduli'] or config['data']
     portno = int(config['port'])

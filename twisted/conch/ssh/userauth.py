@@ -23,8 +23,7 @@ Maintainer: U{Paul Swartz<mailto:z3p@twistedmatrix.com>}
 """
 
 import struct
-from twisted import cred
-from twisted.conch import error
+from twisted.conch import error, credentials
 from twisted.internet import app, defer, reactor
 from twisted.python import failure, log
 from common import NS, getNS, MP
@@ -43,7 +42,7 @@ class SSHUserAuthServer(service.SSHService):
         self.loginAttempts = 0
         self.user = None
         self.nextService = None
-        self.identity = None
+        self.portal = self.transport.factory.portal
 
         if not self.transport.isEncrypted('out'):
             self.supportedAuthentications.remove('password')
@@ -69,18 +68,11 @@ class SSHUserAuthServer(service.SSHService):
         log.msg('%s trying auth %s' % (user, kind))
         if kind not in self.supportedAuthentications:
             return defer.fail(error.ConchError('unsupported authentication, failing'))
-        d = self.transport.factory.authorizer.getIdentityRequest(user)
-        d.pause()
-        d.addCallback(self._cbTryAuth, kind, data)
-        return d
-
-    def _cbTryAuth(self, identity, kind, data):
-        self.identity = identity
         kind = kind.replace('-', '_')
         f = getattr(self,'auth_%s'%kind, None)
         if f:
-            return f(identity, data)
-        raise error.ConchError('bad auth type: %s' % kind) # this should make it err back
+            return f(data)
+        return defer.fail(error.ConchError('bad auth type: %s' % kind))
 
     def ssh_USERAUTH_REQUEST(self, packet):
         user, nextService, method, rest = getNS(packet, 3)
@@ -90,119 +82,109 @@ class SSHUserAuthServer(service.SSHService):
         self.nextService = nextService
         self.method = method
         d = self.tryAuth(method, user, rest)
-        d.addCallbacks(self._cbGoodAuth, self._ebBadAuth)
-        d.unpause() # we need this because it turns out Deferreds /really/ want to report errors
+        d.addCallbacks(self._cbFinishedAuth)
+        d.addErrback(self._ebMaybeBadAuth)
+        d.addErrback(self._ebBadAuth)
 
-    def _cbGoodAuth(self, foo):
-        if foo == -1: # got a callback saying we sent another packet type
-            return
+    def _cbFinishedAuth(self, (interface, avatar, logout)):
         log.msg('%s authenticated with %s' % (self.user, self.method))
-        self.authenticatedWith.append(self.method)
-        if self.areDone():
-            self.cancelLoginTimeout.cancel()
-            self.cancelLoginTimeout = None
-            self.transport.sendPacket(MSG_USERAUTH_SUCCESS, '')
-            self.transport.authenticatedUser = self.identity
-            self.transport.setService(self.transport.factory.services[self.nextService]())
-        else:
-            self.transport.sendPacket(MSG_USERAUTH_FAILURE, NS(','.join(self.supportedAuthentications))+'\xff')
+        self.transport.sendPacket(MSG_USERAUTH_SUCCESS, '')
+        self.transport.authenticatedUser = avatar
+        self.transport.logoutFunction = logout
+        self.transport.setService(self.transport.factory.services[self.nextService]())
+
+    def _ebMaybeBadAuth(self, reason):
+        reason.trap(error.NotEnoughAuthentication)
+        self.transport.sendPacket(MSG_USERAUTH_FAILURE, NS(','.join(self.supportedAuthentications))+'\xff')
 
     def _ebBadAuth(self, reason):
-        if self.method != 'none': # ignore 'none' as a method
+        if reason.type == error.IgnoreAuthentication:
+            return 
+        if self.method != 'none': 
             log.msg('%s failed auth %s' % (self.user, self.method))
             log.msg('reason:')
             if reason.type == error.ConchError:
                 log.msg(str(reason))
             else:
-                reason.printTraceback()
+                log.msg(reason.printTraceback())
             self.loginAttempts += 1
             if self.loginAttempts > self.attemptsBeforeDisconnect:
                 self.transport.sendDisconnect(transport.DISCONNECT_NO_MORE_AUTH_METHODS_AVAILABLE,
                                               'too many bad auths')
-                return -1
         self.transport.sendPacket(MSG_USERAUTH_FAILURE, NS(','.join(self.supportedAuthentications))+'\x00')
-        return -1
 
-    def auth_publickey(self, ident, packet):
-        if not getattr(ident, 'validatePublicKey'):
-            return defer.fail(error.ConchError('identity does not have validatePublicKey'))
+    def auth_publickey(self, packet):
         hasSig = ord(packet[0])
-        self.hasSigType = hasSig # protocol impl.s differ in this
         algName, blob, rest = getNS(packet[1:], 2)
-        if hasSig:
-            d = ident.validatePublicKey(blob)
-            d.addCallback(self._cbToVerifySig, ident, blob, getNS(rest)[0])
-            return d
-        else:
-            d = ident.validatePublicKey(blob)
-            d.addCallback(self._cbValidateKey, packet[1:])
-            return d
-
-    def _cbToVerifySig(self, ignored, ident, blob, signature):
-        if not self.verifySignatureFor(ident, blob, signature):
-            raise error.ConchError('bad sig') # this kicks it into errback mode
-
-    def _cbValidateKey(self, ignored, packet):
-        self.transport.sendPacket(MSG_USERAUTH_PK_OK, packet)
-        return -1
-        
-    def verifySignatureFor(self, ident, blob, signature):
         pubKey = keys.getPublicKeyObject(data = blob)
         b = NS(self.transport.sessionID) + chr(MSG_USERAUTH_REQUEST) + \
-            NS(ident.name) + NS(self.nextService) + NS('publickey') + chr(self.hasSigType) + \
-            NS(keys.objectType(pubKey)) + NS(blob)
-        return keys.verifySignature(pubKey, signature, b)
-
-    def auth_password(self, ident, packet):
-        password = getNS(packet[1:])[0]
-        return ident.verifyPlainPassword(password)
-
-    def auth_keyboard_interactive(self, ident, packet):
-        if packet != '':
-            self.transport.sendDisconnect(transport.DISCONNECT_PROTOCOL_ERROR, "keyboard_interactive auth takes no data")
-        if hasattr(self, '_pamDeferred'):
-            return defer.fail(error.ConchError('cannot run kbd-int twice at once'))
-        d = pamauth.pamAuthenticate('ssh', ident.name, self._pamConv)
-        return d
-
-    def _pamConv(self, items):
-        resp = []
-        for message, kind in items:
-            if kind == 1: # password
-                resp.append((message, 0))
-            elif kind == 2: # text
-                resp.append((message, 1))
-            elif kind in (3, 4):
-                return defer.fail(error.ConchError('cannot handle PAM 3 or 4 messages'))
-            else:
-                return defer.fail(error.ConchError('bad PAM auth kind %i' % kind))
-        packet = NS('')+NS('')+NS('')
-        packet += struct.pack('>L', len(resp))
-        for prompt, echo in resp:
-            packet += NS(prompt)
-            packet += chr(echo)
-        self.transport.sendPacket(MSG_USERAUTH_INFO_REQUEST, packet)
-        self._pamDeferred = defer.Deferred()
-        return self._pamDeferred
-
-    def ssh_USERAUTH_INFO_RESPONSE(self, packet):
-        if not self.identity:
-            return defer.fail(error.ConchError('bad username'))
-        d = self._pamDeferred
-        del self._pamDeferred
-        try:
-            resp = []
-            numResps = struct.unpack('>L', packet[:4])[0]
-            packet = packet[4:]
-            while packet:
-                response, packet = getNS(packet)
-                resp.append((response, 0))
-            assert len(resp) == numResps
-        except:
-            d.errback(failure.Failure())
+            NS(self.user) + NS(self.nextService) + NS('publickey') + \
+            chr(hasSig) +  NS(keys.objectType(pubKey)) + NS(blob)
+        signature = hasSig and getNS(rest)[0] or None
+        c = credentials.SSHPrivateKey(self.user, blob, b, signature)
+        if hasSig:
+            return self.portal.login(c, None, None)
         else:
-            d.callback(resp)
-            
+            return self.portal.login(c, None, None).addErrback(self._ebCheckKey,
+                                                               packet[1:])
+
+    def _ebCheckKey(self, reason, packet):
+        reason.trap(error.ValidPublicKey)
+        # if we make it here, it means that the publickey is valid
+        self.transport.sendPacket(MSG_USERAUTH_PK_OK, packet)
+        return failure.Failure(error.IgnoreAuthentication())
+
+    def auth_password(self, packet):
+        password = getNS(packet[1:])[0]
+        c = credentials.UsernamePassword(self.user, password)
+        return self.portal.login(c, None, None)
+
+#    def auth_keyboard_interactive(self, ident, packet):
+#        if packet != '':
+#            self.transport.sendDisconnect(transport.DISCONNECT_PROTOCOL_ERROR, "keyboard_interactive auth takes no data")
+#        if hasattr(self, '_pamDeferred'):
+#            return defer.fail(error.ConchError('cannot run kbd-int twice at once'))
+#        d = pamauth.pamAuthenticate('ssh', ident.name, self._pamConv)
+#        return d
+#
+#    def _pamConv(self, items):
+#        resp = []
+#        for message, kind in items:
+#            if kind == 1: # password
+#                resp.append((message, 0))
+#            elif kind == 2: # text
+#                resp.append((message, 1))
+#            elif kind in (3, 4):
+#                return defer.fail(error.ConchError('cannot handle PAM 3 or 4 messages'))
+#            else:
+#                return defer.fail(error.ConchError('bad PAM auth kind %i' % kind))
+#        packet = NS('')+NS('')+NS('')
+#        packet += struct.pack('>L', len(resp))
+#        for prompt, echo in resp:
+#            packet += NS(prompt)
+#            packet += chr(echo)
+#        self.transport.sendPacket(MSG_USERAUTH_INFO_REQUEST, packet)
+#        self._pamDeferred = defer.Deferred()
+#        return self._pamDeferred
+#
+#    def ssh_USERAUTH_INFO_RESPONSE(self, packet):
+#        if not self.identity:
+#            return defer.fail(error.ConchError('bad username'))
+#        d = self._pamDeferred
+#        del self._pamDeferred
+#        try:
+#            resp = []
+#            numResps = struct.unpack('>L', packet[:4])[0]
+#            packet = packet[4:]
+#            while packet:
+#                response, packet = getNS(packet)
+#                resp.append((response, 0))
+#            assert len(resp) == numResps
+#        except:
+#            d.errback(failure.Failure())
+#        else:
+#            d.callback(resp)
+#            
 
     # overwrite on the client side            
     def areDone(self):
@@ -293,7 +275,7 @@ class SSHUserAuthClient(service.SSHService):
         else:
             self._newPass = np
 
-    def _errPass(self, failure):
+    def _errPass(self, reason):
         self.askForAuth('none', '')
 
     def auth_publickey(self):

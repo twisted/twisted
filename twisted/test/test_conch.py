@@ -16,9 +16,10 @@
 
 from __future__ import nested_scopes
 import os, struct, sys
-from twisted.conch import identity, error
+from twisted.conch import identity, error, checkers
 from twisted.conch.ssh import keys, transport, factory, userauth, connection, common, session,channel
-from twisted.cred import authorizer
+from twisted.cred import portal
+from twisted.cred.credentials import IUsernamePassword
 from twisted.internet import reactor, defer, app, protocol
 from twisted.python import log
 from twisted.trial import unittest
@@ -124,27 +125,44 @@ class SSHKeysHandlingTestCase(unittest.TestCase):
 
 theTest = None
 
-class ConchTestIdentity(identity.ConchIdentity):
+class ConchTestRealm:
+    
+    def requestAvatar(self, avatarID, mind, *interfaces):
+        theTest.assertEquals(avatarID, 'testuser')
+        a = ConchTestAvatar()
+        return interfaces[0], a, a.logout
 
-    def validatePublicKey(self, pubKey):
+class ConchTestAvatar:
+    loggedOut = False
+    
+    def logout(self):
+        loggedOut = True
+
+class ConchTestPublicKeyChecker(checkers.SSHPublicKeyDatabase):
+    def checkKey(self, credentials):
         global theTest
-        theTest.assert_(pubKey==keys.getPublicKeyString('dsa_test.pub'), 'bad public key')
-        return defer.succeed(1)
+        theTest.assertEquals(credentials.username, 'testuser', 'bad username')
+        theTest.assertEquals(credentials.blob, keys.getPublicKeyString('dsa_test.pub'), 'bad public key')
+        return 1
 
-    def verifyPlainPassword(self, password):
+class ConchTestPasswordChecker:
+    credentialInterfaces = IUsernamePassword,
+
+    def requestAvatarId(self, credentials):
         global theTest
-        theTest.assert_(password == 'testpass', 'bad password')
-        return defer.succeed(1)
+        theTest.assertEquals(credentials.username, 'testuser', 'bad username')
+        theTest.assertEquals(credentials.password, 'testpass', 'bad password')
+        return defer.succeed(credentials.username)
 
-class ConchTestAuthorizer(authorizer.Authorizer):
+class ConchTestSSHChecker(checkers.SSHProtocolChecker):
 
-    def addIdentity(self, ident):
-        self.ident = ident
-
-    def getIdentityRequest(self, name):
+    def areDone(self, avatarId):
         global theTest
-        theTest.assert_(name == 'testuser')
-        return defer.succeed(self.ident)
+        theTest.assertEquals(avatarId, 'testuser')
+        if len(self.successfulCredentials[avatarId]) < 2:
+            return 0
+        else:
+            return 1
 
 class SSHTestBase:
 
@@ -170,13 +188,6 @@ class SSHTestBase:
         theTest.fail('got unimplemented: seqid %s'  % seqID)
 
 class SSHTestServer(SSHTestBase, transport.SSHServerTransport): pass
-
-class SSHTestServerAuth(userauth.SSHUserAuthServer):
-
-    authCount = None # this will be set by each test
-
-    def areDone(self):
-        return len(self.authenticatedWith) == self.authCount
 
 class SSHTestClientAuth(userauth.SSHUserAuthClient):
 
@@ -382,7 +393,7 @@ class SSHTestFactory(factory.SSHFactory):
     noisy = 0
 
     services = {
-        'ssh-userauth':SSHTestServerAuth,
+        'ssh-userauth':userauth.SSHUserAuthServer,
         'ssh-connection':SSHTestServerConnection
     }
 
@@ -453,12 +464,14 @@ class SSHTransportTestCase(unittest.TestCase):
         if os.name != 'posix': return
         global theTest
         theTest = self
-        auth = ConchTestAuthorizer()
-        ident = ConchTestIdentity('testuser', auth)
-        SSHTestServerAuth.authCount = 2
-        auth.addIdentity(ident)
+        realm = ConchTestRealm()
+        p = portal.Portal(realm)
+        sshpc = ConchTestSSHChecker()
+        sshpc.registerChecker(ConchTestPasswordChecker())
+        sshpc.registerChecker(ConchTestPublicKeyChecker())
+        p.registerChecker(sshpc)
         fac = SSHTestFactory()
-        fac.authorizer = auth
+        fac.portal = p
         theTest.fac = fac
         host = reactor.listenTCP(0, fac, interface="127.0.0.1").getHost()
         port = host[2]
@@ -493,12 +506,11 @@ class SSHTransportTestCase(unittest.TestCase):
                    'echo hello')
         global theTest
         theTest = self
-        auth = ConchTestAuthorizer()
-        ident = ConchTestIdentity('testuser', auth)
-        SSHTestServerAuth.authCount = 1 # only public key
-        auth.addIdentity(ident)
+        realm = ConchTestRealm()
+        p = portal.Portal(realm)
+        p.registerChecker(ConchTestPublicKeyChecker())
         fac = SSHTestFactory()
-        fac.authorizer = auth
+        fac.portal = p
         theTest.fac = fac
         host = reactor.listenTCP(0, fac, interface="127.0.0.1").getHost()
         port = host[2]

@@ -63,10 +63,10 @@ class SSHSession(channel.SSHChannel):
             log.msg('tried to get shell without pty, failing')
             return 0
         user = self.conn.transport.authenticatedUser
-        uid, gid = user.getUserGroupID()
+        uid, gid = user.getUserGroupId()
         homeDir = user.getHomeDir()
         shell = user.getShell()
-        self.environ['USER'] = user.name
+        self.environ['USER'] = user.username
         self.environ['HOME'] = homeDir
         self.environ['SHELL'] = shell
         peerHP = tuple(self.conn.transport.transport.getPeer()[1:])

@@ -1,3 +1,8 @@
+2003-06-19  Paul Swartz  <z3p@twistedmatrix.com>
+	* twisted/conch/{checkers,credentials,realm}.py, 
+	twisted/conch/ssh/userauth.py: Moved the Conch user authentication
+	code to use the new version of Cred.
+
 2003-06-19  Christopher Armstrong  <radix@twistedmatrix.com>
 
 	* .: Releasing Twisted 1.0.6alpha3. There was a problem in
