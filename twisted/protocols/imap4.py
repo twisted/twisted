@@ -167,8 +167,8 @@ class IMAP4Server(basic.LineReceiver):
         @param chal: The object to use to perform the client
         side of this authentication scheme.
         """
-        self.challengers[chal.getName()] = chal
-        self.CAPABILITIES.setdefault('AUTH', []).append(chal.getName())
+        self.challengers[chal.getName().upper()] = chal
+        self.CAPABILITIES.setdefault('AUTH', []).append(chal.getName().upper())
 
     def connectionMade(self):
         self.tags = {}
@@ -328,7 +328,7 @@ class IMAP4Server(basic.LineReceiver):
 
     def unauth_AUTHENTICATE(self, tag, args):
         args = args.upper().strip()
-        if not self.challengers.has_key(args):
+        if args not in self.challengers:
             self.sendNegativeResponse(tag, 'AUTHENTICATE method unsupported')
         else:
             auth = self.challengers[args]
@@ -916,7 +916,7 @@ class IMAP4Client(basic.LineReceiver):
         @param auth: The object to use to perform the client
         side of this authentication scheme.
         """
-        self.authenticators[auth.getName()] = auth
+        self.authenticators[auth.getName().upper()] = auth
 
     def rawDataReceived(self, data):
         self._pendingSize -= len(data)
@@ -1197,7 +1197,7 @@ class IMAP4Client(basic.LineReceiver):
 
     def __cbAuthenticate(self, auths, secret):
         for scheme in auths:
-            if self.authenticators.has_key(scheme):
+            if scheme.upper() in self.authenticators:
                 break
         else:
             raise NoSupportedAuthentication(auths, self.authenticators.keys())
