@@ -122,6 +122,7 @@ class SentQuery:
         self.done = 0
         self.boss = boss
         for nameserver in nameservers:
+            print "nameserver is", nameserver
             self.ids.append(boss.queryUDP((nameserver, 53), name, 
                                           self.getAnswer, type=type))
 
@@ -199,4 +200,4 @@ class ResolveConfResolver(Resolver):
         self.nameservers = []
         for line in map(string.split, lines):
             if line[0] == 'nameserver':
-                self.nameservers.append(line)
+                self.nameservers.append(line[1])
