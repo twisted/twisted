@@ -6,10 +6,7 @@ Usage: python RunTests.py
 Run a python GUI which starts up a UnitTestRunner for the Twisted
 test-suite.
 """
-try:
-    import Tkinter
-except ImportError:
-    Tkinter = None
+
 ### Twisted Preamble
 # This makes sure that users don't have to set up their environment
 # specially in order to run these programs from bin/.
@@ -20,11 +17,25 @@ if string.find(os.path.abspath(sys.argv[0]),'Twisted') != -1:
         os.path.dirname(os.path.abspath(sys.argv[0])))) 
 ### end of preamble
 
-if Tkinter is not None:
-    from pyunit import unittestgui
-    unittestgui.main('twisted.test.test_all.testSuite')
-else:
+from twisted.test import test_all
+
+def runText():
     from pyunit import unittest
-    import test_twisted.test_all
+    from twisted.test import test_all
     runner = unittest.TextTestRunner()
-    runner.run(twisted.test.test_all.testSuite())
+    runner.run(test_all.testSuite())
+    
+def runGUI():
+    try:
+        import Tkinter
+    except ImportError:
+        raise "error"
+    try:
+        from pyunit import unittestgui
+        unittestgui.main('twisted.test.test-all.testSuite')
+    except Tkinter.TclError:
+        raise "error"
+try:
+    runGUI()
+except "error":
+    runText()
