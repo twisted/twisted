@@ -2,9 +2,12 @@ Twisted 1.1.1rc4
 
 Quote of the Release:
 
-<tmcvs> Commit from sjj (changed 2) in 2 subdirs of Twisted: "add
-        copyright info" msn_example.py, test_msn.py
-<sjj> Now all I have to do is wait for them to deport glyph to syria.
+<jml> It is like wandering through the desert, for weeks, without a
+drop of water, but knowing that there is an oasis ahead. And all the
+time, I am being stabbed in the face with a blunt spoon by a flatulent
+person.
+ -- jml describes PHP, after using nevow
+
 
 For information on what's new in Twisted 1.1.1rc4, see the ChangeLog file
 that comes with the distribution, or http://twistedmatrix.com/ChangeLog.txt.
