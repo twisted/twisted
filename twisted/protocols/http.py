@@ -434,7 +434,7 @@ class Request:
     def _cleanup(self):
         """Called when have finished responding and are no longer queued."""
         if self.producer:
-            log.err(RuntimeError("Producer was not unregistered for %s" % request.uri))
+            log.err(RuntimeError("Producer was not unregistered for %s" % self.uri))
             self.unregisterProducer()
         self.channel.requestDone(self)
         del self.channel
