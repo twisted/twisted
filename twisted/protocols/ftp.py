@@ -621,7 +621,6 @@ class FTP(object, basic.LineReceiver, policies.TimeoutMixin):
         d.addCallback(self._unblock)                            # VERY IMPORTANT: call _unblock when client connects
         d.addErrback(self._ebDTP)
 
-
     def _ebDTP(self, error):
         self.setTimeout(self.timeOut)               # restart timeOut clock after DTP returns
         log.err(error)
@@ -956,9 +955,16 @@ class FTP(object, basic.LineReceiver, policies.TimeoutMixin):
 
 
 class FTPFactory(protocol.Factory):
+    """A factory for producing ftp protocol instances
+    @ivar maxProtocolInstances: the maximum number of FTP protocol instances
+        this factory will create. When the maximum number is reached, a protocol
+        instance will be spawned that will give the "Too many connections" message
+        to the client and then close the connection.
+    @ivar timeOut: the protocol interpreter's idle timeout time in seconds
+    """
     protocol = FTP
     allowAnonymous = True
-    userAnonymous = 'anonymous'
+    #userAnonymous = 'anonymous'        # this is set in the Realm
     timeOut = 600
 
     maxProtocolInstances = 100
@@ -1016,8 +1022,6 @@ class IFTPShell(components.Interface):
     def cwd(self, path):
         """Change working directory
 
-        should throw a FileNotFound exception on failure
-
         from the rfc:
             This command allows the user to work with a different
             directory or dataset for file storage or retrieval without
@@ -1025,6 +1029,9 @@ class IFTPShell(components.Interface):
             parameters are similarly unchanged.  The argument is a
             pathname specifying a directory or other system dependent
             file group designator.
+
+        @param path: the path you're interested in
+        @type path: string
         """
         pass
 
@@ -1043,6 +1050,9 @@ class IFTPShell(components.Interface):
         to be created as a directory (if the pathname is absolute)
         or as a subdirectory of the current working directory (if
         the pathname is relative).
+
+        @param path: the path you're interested in
+        @type path: string
         """
         pass
 
@@ -1051,17 +1061,23 @@ class IFTPShell(components.Interface):
         to be removed as a directory (if the pathname is absolute)
         or as a subdirectory of the current working directory (if
         the pathname is relative). 
+
+        @param path: the path you're interested in
+        @type path: string
         """
         pass
 
     def dele(self, path):
-        """ This command causes the file specified in the pathname to be
+        """This command causes the file specified in the pathname to be
         deleted at the server site. 
+
+        @param path: the path you're interested in
+        @type path: string
         """
         pass
 
     def list(self, path):
-        """@returns a tuple of (StringIO_object, size) containing the directory 
+        """@return: a tuple of (StringIO_object, size) containing the directory 
         listing to be sent to the client via the DTP
         
 
@@ -1084,6 +1100,9 @@ class IFTPShell(components.Interface):
         to return information that can be used by a program to
         further process the files automatically.  For example, in
         the implementation of a "multiple get" function.
+
+        @param path: the path to generate output for
+        @type path: string
         """
         pass
 
@@ -1093,7 +1112,7 @@ class IFTPShell(components.Interface):
         at the other end of the data connection.  The status and
         contents of the file at the server site shall be unaffected.
 
-        @returns a tuple of (fp, size) where fp is an opened file-like object 
+        @return: a tuple of (fp, size) where fp is an opened file-like object 
         to the data requested and size is the size, in bytes, of fp
         """
         pass
@@ -1110,26 +1129,55 @@ class IFTPShell(components.Interface):
         pass
 
     def mdtm(self, path):
-        """returns the date of path in the form of %Y%m%d%H%M%S"""
+        """get the date and time for path
+        @param path: the path you're interested in
+        @type path: string
+        @return: the date of path in the form of %Y%m%d%H%M%S
+        @rtype: string
+        """
         pass
 
 
+import pwd, grp
+
 class FTPAnonymousShell(object):
+    """"""
     __implements__ = (IFTPShell,)
 
-    def __init__(self):
-        self.user     = None        # user name
+    def __init__(self, user=None):
+        """Constructor
+        @param user: the name of the user whose permissions we'll be using
+        @type user: string
+        """
+        self.user     = user        # user name
         self.uid      = None        # uid of anonymous user for shell
         self.gid      = None        # gid of anonymous user for shell
         self.clientwd = None
         self.tld      = None
         self.debug    = True
 
-    def _getUserUIDAndGID(self):
-        import pwd, grp
+        # TODO: self.user needs to be set to something!!!
+        if self.user is None:
+            self.user = pwd.getpwuid(os.getuid())[0]
+
+            self.getUserUIDAndGID()
+
+    def getUserUIDAndGID(self):
+        """used to set up permissions checking. finds the uid and gid of 
+        the shell.user. called during __init__
+        """
         pw_name, pw_passwd, pw_uid, pw_gid, pw_dir = range(5)
-        p = pwd.getpwnam(self.user)
-        self.uid, self.gid = p[pw_uid], p[pw_gid]
+        try:
+            p = pwd.getpwnam(self.user)
+            self.uid, self.gid = p[pw_uid], p[pw_gid]
+        except KeyError, (e,):
+            log.msg("""
+COULD NOT SET ANONYMOUS UID! Name %s could not be found.
+We will continue using the user %s.
+""" % (self.user, pwd.getpwuid(os.getuid())[pw_name]))
+
+    def _anonUserErrorMsg(self):
+        pass
 
     # basically, i'm thinking of the paths as a list of path elements
     #
@@ -1142,6 +1190,15 @@ class FTPAnonymousShell(object):
         return self.clientwd
 
     def myjoin(self, lpath, rpath):
+        """does a dumb join between two path elements, ensuring
+        there is only one '/' between them. pays no attention to the
+        filesystem, unlike os.path.join
+        
+        @param lpath: path element to the left of the '/' in the result
+        @type lpath: string
+        @param rpath: path element to the right of the '/' in the result
+        @type rpath: string
+        """
         if lpath and lpath[-1] == os.sep:
             lpath = lpath[:-1]
         if rpath and rpath[0] == os.sep:
@@ -1199,6 +1256,14 @@ class FTPAnonymousShell(object):
         raise AnonUserDeniedError()
 
     def getUnixLongListString(self, path):
+        """generates the equivalent output of a unix ls -l path, but
+        using python-native code. 
+
+        @param path: the path to return the listing for
+        @type path: string
+        @attention: this has only been tested on posix systems, I don't
+            know at this point whether or not it will work on win32
+        """
         from stat import ST_MODE,ST_NLINK,ST_UID,ST_GID,ST_SIZE,ST_MTIME
         import pwd, grp, time
         cpath, spath = self.mapCPathToSPath(path)
@@ -1291,15 +1356,26 @@ class FTPAnonymousShell(object):
         return os.path.getsize(spath)
    
     def nlist(self, path):
-        pass
+        raise CmdNotImplementedError()
 
 class FTPRealm:
     __implements__ = (portal.IRealm,)
-    ANONYMOUS_DIR = '/usr/local/ftp'
     clientwd = '/'
     user = 'anonymous'
     logout = None
-    tld = ANONYMOUS_DIR         # tld = Top Level Directory, i.e. the root directory on the server
+    tld = None          
+
+    def __init__(self, tld=None, logout=None):
+        """constructor
+        @param tld: the top-level (i.e. root) directory on the server
+        @type tld: string
+        @attention: you *must* set tld somewhere before using the avatar!!
+        @param logout: a special logout routine you want to be run when the user
+            logs out (cleanup)
+        @type logout: a function/method object
+        """
+        self.tld = tld
+        self.logout = logout
 
     def requestAvatar(self, avatarId, mind, *interfaces):
         if IFTPShell in interfaces:
