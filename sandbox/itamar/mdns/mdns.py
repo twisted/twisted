@@ -26,7 +26,7 @@ This makes sure you only run one resolver per process.
 import random
 
 from twisted.internet import reactor, defer, protocol
-from twisted.protocols import dns
+from twisted.names import dns
 from twisted.python import failure
 from twisted.python.components import Interface
 from twisted.persisted.styles import Ephemeral
@@ -298,6 +298,7 @@ class mDNSDatagramProtocol(protocol.DatagramProtocol):
         reactor.listenMulticast(5353, self, maxPacketSize=1024, listenMultiple=True)
         self.transport.joinGroup(MDNS_ADDRESS)
         self.transport.setTTL(255)
+        self.transport.setLoopbackMode(False)
 
     def datagramReceived(self, data, addr):
         m = dns.Message()
