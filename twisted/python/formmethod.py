@@ -239,7 +239,7 @@ def positiveInt(x):
     return x
 
 class Date(Argument):
-    """A date."""
+    """A date -- (year, month, day) tuple."""
 
     defaultDefault = None
 
