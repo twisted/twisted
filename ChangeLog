@@ -1,3 +1,9 @@
+2002-11-04  Itamar Shtull-Trauring  <twisted@itamarst.org>
+
+	* twisted/internet/tksupport.py: new, better Tkinter integration.
+	Unlike before, run the reactor as usual, do *not* call Tkinter's
+	mainloop() yourself.
+
 2002-10-25  Moshe Zadka <moshez@twistedmatrix.com>
 
 	* twisted/web/domhelpers.py twisted/python/domhelpers.py
