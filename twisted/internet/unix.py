@@ -33,7 +33,7 @@ if not hasattr(socket, 'AF_UNIX'):
 # Twisted imports
 from twisted.internet import base, tcp, udp, error, interfaces, protocol, address
 from twisted.internet.error import CannotListenError
-from twisted.python import log, reflect, failure
+from twisted.python import lockfile, log, reflect, failure
 
 
 class Server(tcp.Server):
@@ -53,9 +53,11 @@ class Port(tcp.Port):
 
     transport = Server
 
-    def __init__(self, fileName, factory, backlog=5, mode=0666, reactor=None):
+    def __init__(self, fileName, factory, backlog=5, mode=0666, reactor=None, wantPID = 0):
         tcp.Port.__init__(self, fileName, factory, backlog, reactor=reactor)
         self.mode = mode
+        self.wantPID = wantPID
+        self.lockFile = None
 
     def __repr__(self):
         return '<%s on %r>' % (self.factory.__class__, self.port)
@@ -70,6 +72,15 @@ class Port(tcp.Port):
         This is called on unserialization, and must be called after creating a
         server to begin listening on the specified port.
         """
+        if self.wantPID:
+            d = lockfile.createLock(self.port, usePID=1)
+            d.addCallback(self._cbGotLock)
+            d.addErrback(self.connectionLost)
+        else:
+            self._cbGotLock(None)
+
+    def _cbGotLock(self, lf):
+        self.lockFile = lf
         log.msg("%s starting on %r" % (self.factory.__class__, repr(self.port)))
         self.factory.doStart()
         try:
@@ -93,6 +104,8 @@ class Port(tcp.Port):
     def connectionLost(self, reason):
         tcp.Port.connectionLost(self, reason)
         os.unlink(self.port)
+        if self.lockFile:
+            self.lockFile.remove()
 
     def getHost(self):
         """Returns a UNIXAddress.
@@ -107,9 +120,11 @@ class Client(tcp.BaseClient):
     addressFamily = socket.AF_UNIX
     socketType = socket.SOCK_STREAM
 
-    def __init__(self, filename, connector, reactor=None):
+    def __init__(self, filename, connector, reactor=None, checkPID = 0):
         self.connector = connector
         self.realAddress = self.addr = filename
+        if checkPID and not lockfile.checkLock(filename):
+            self._finishInit(None, None, lockfile.DidNotGetLock(), reactor)
         self._finishInit(self.doConnect, self.createInternetSocket(),
                          None, reactor)
 
@@ -121,12 +136,13 @@ class Client(tcp.BaseClient):
 
 
 class Connector(base.BaseConnector):
-    def __init__(self, address, factory, timeout, reactor):
+    def __init__(self, address, factory, timeout, reactor, checkPID):
         base.BaseConnector.__init__(self, factory, timeout, reactor)
         self.address = address
+        self.checkPID = checkPID
 
     def _makeTransport(self):
-        return Client(self.address, self, self.reactor)
+        return Client(self.address, self, self.reactor, self.checkPID)
 
     def getDestination(self):
         return address.UNIXAddress(self.address)
@@ -265,3 +281,22 @@ class ConnectedDatagramPort(DatagramPort):
 
     def getPeer(self):
         return address.UNIXAddress(self.remoteaddr)
+
+def _checkPIDFile(pidname):
+    try:
+        pid = int(open(pidfile).read())
+    except ValueError:
+        log.msg('pid file %s contains non-numeric' % pidfile)
+        raise
+    else:
+        try:
+            os.kill(pid, 0)
+        except OSError, why:
+            if why[0] == errno.ESRCH:
+                # pid doesn't exist
+                log.msg('removing stale pidfile %s' % pidfile)
+                os.remove(pidfile)
+            else:
+                log.msg("can't check PID %i from file %s: %s" %
+                        (pid, pidfile, why[1]))
+            raise

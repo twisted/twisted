@@ -256,7 +256,7 @@ class IReactorSSL(Interface):
 class IReactorUNIX(Interface):
     """UNIX socket methods."""
 
-    def connectUNIX(self, address, factory, timeout=30):
+    def connectUNIX(self, address, factory, timeout=30, checkPID=0):
         """Connect a client protocol to a UNIX socket.
 
         @param address: a path to a unix socket on the filesystem.
@@ -266,10 +266,13 @@ class IReactorUNIX(Interface):
         @param timeout: number of seconds to wait before assuming the connection
             has failed.
 
+        @param checkPID: if True, check for a pid file to verify that a server
+            is listening.
+
         @returns: an L{IConnector}.
         """
 
-    def listenUNIX(self, address, factory, backlog=5, mode=0666):
+    def listenUNIX(self, address, factory, backlog=5, mode=0666, wantPID=0):
         """Listen on a UNIX socket.
 
         @param address: a path to a unix socket on the filesystem.
@@ -279,6 +282,8 @@ class IReactorUNIX(Interface):
         @param backlog: number of connections to allow in backlog.
 
         @param mode: mode to set on the unix socket.
+
+        @param wantPID: if True, create a pidfile for the socket.
         """
 
 

@@ -1,13 +1,19 @@
+from twisted.internet import defer
 import os
 import time
 
-from twisted.internet import reactor, defer
+def createLock(lockedFile, retryCount = 10, retryTime = 5, usePID = 0):
+    filename = lockedFile + ".lock"
+    d = defer.Deferred()
+    _tryCreateLock(d, filename, retryCount, 0, retryTime, usePID)
+    return d
 
 class DidNotGetLock(Exception): pass
 
 class LockFile:
 
-    def __init__(self, filename, writePID = 0):
+    def __init__(self, filename, writePID):
+        from twisted.internet import reactor
         pid = os.getpid()
         t = (time.time()%1)*10
         host = os.uname()[1]
@@ -41,13 +47,9 @@ class LockFile:
         self._killLaterTouch.cancel()
         os.remove(self.filename)
 
-def createLock(lockedFile, retryCount = 10, retryTime = 5, usePID = 0):
-    filename = lockedFile + ".lock"
-    d = defer.Deferred()
-    _tryCreateLock(d, filename, retryCount, 0, retryTime, usePID)
-    return d
 
 def _tryCreateLock(d, filename, retryCount, retryCurrent, retryTime, usePID):
+    from twisted.internet import reactor
     if retryCount == retryCurrent:
         return d.errback(DidNotGetLock())
     if retryTime > 60: retryTime = 60

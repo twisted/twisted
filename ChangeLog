@@ -1,3 +1,12 @@
+2004-4-3  Paul Swartz <z3p@twistedmatrix.com>
+
+	* twisted.python.lockfile: added lockfile support, based on
+	liblockfile.
+	* twisted.internet.unix.Port: added a wantPID kwarg.  If True, it
+	checks for and gets a lockfile for the UNIX socket.
+	* twisted.internet.unix.Connector: added a checkPID kwarg.  If True,
+        it checks that the lockfile for the socket is current.
+
 2004-03-23  Pavel Pergamenshchik  <pp64@cornell.edu>
 
 	* twisted.internet.iocp: Support for Windows IO Completion Ports.

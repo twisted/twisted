@@ -231,19 +231,19 @@ class PosixReactorBase(ReactorBase):
 
     # IReactorUNIX
 
-    def connectUNIX(self, address, factory, timeout=30):
+    def connectUNIX(self, address, factory, timeout=30, checkPID=0):
         """@see: twisted.internet.interfaces.IReactorUNIX.connectUNIX
         """
         assert unixEnabled, "UNIX support is not present"
-        c = unix.Connector(address, factory, timeout, self)
+        c = unix.Connector(address, factory, timeout, self, checkPID)
         c.connect()
         return c
 
-    def listenUNIX(self, address, factory, backlog=5, mode=0666):
+    def listenUNIX(self, address, factory, backlog=5, mode=0666, wantPID=0):
         """@see: twisted.internet.interfaces.IReactorUNIX.listenUNIX
         """
         assert unixEnabled, "UNIX support is not present"
-        p = unix.Port(address, factory, backlog, mode, self)
+        p = unix.Port(address, factory, backlog, mode, self, wantPID)
         p.startListening()
         return p
 

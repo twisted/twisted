@@ -15,7 +15,7 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
 from twisted.internet import interfaces, reactor, protocol, error, address
-from twisted.python import components
+from twisted.python import components, lockfile
 from twisted.protocols import loopback
 from twisted.trial import unittest
 import test_smtp
@@ -70,6 +70,16 @@ class UnixSocketTestCase(test_smtp.LoopbackSMTPTestCase):
         reactor.connectUNIX(filename, TestClientFactory(self, filename))
         self.runReactor(0.2, True)
         l.stopListening()
+
+    def testPIDFile(self):
+        filename = self.mktemp()
+        l = reactor.listenUNIX(filename, Factory(self, filename), mode = 0600, wantPID=1)
+        self.assert_(lockfile.checkLock(filename))
+        reactor.connectUNIX(filename, TestClientFactory(self, filename), checkPID=1)
+        self.runReactor(0.2, True)
+        l.stopListening()
+        reactor.iterate(0.1)
+        self.assert_(not lockfile.checkLock(filename))
 
 class ClientProto(protocol.ConnectedDatagramProtocol):
     def datagramReceived(self, data):
