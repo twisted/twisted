@@ -14,9 +14,8 @@ Source:		%{name}-%{version}.tar.bz2
 License:	LGPL
 Group:		System/Libraries
 URL:		http://www.twistedmatrix.com/
-Requires:	python = %{py_ver}
-Requires:	python = %{py_ver}
-BuildRequires:	python-devel = %{py_ver}
+Requires:	python >= %{py_libver}
+BuildRequires:	python-devel
 BuildRoot:	%{_tmppath}/%{name}-buildroot
 Prefix:		%{_prefix}
 
