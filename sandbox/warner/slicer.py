@@ -222,7 +222,10 @@ class RootSlicer:
         slicerFactory = self.slicerTable.get(type(obj))
         if slicerFactory:
             return slicerFactory(obj)
-        return ISlicer(obj)
+        slicer = ISlicer(obj, None)
+        if not slicer:
+            raise Violation("cannot serialize %s (%s)" % (obj, type(obj)))
+        return slicer
 
     def slice(self):
         return self
