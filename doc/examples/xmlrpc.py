@@ -14,6 +14,7 @@
 """
 
 from twisted.web import xmlrpc
+from twisted.python import defer
 
 
 class Echoer(xmlrpc.XMLRPC):
@@ -40,6 +41,12 @@ class Echoer(xmlrpc.XMLRPC):
     def xmlrpc_hello(self, *args):
         """Return 'hello, world'."""
         return 'hello, world!'
+    
+    def xmlrpc_defer(self, *args):
+        return defer.succeed("hello")
+    
+    def xmlrpc_defer_fail(self, *args):
+        return defer.fail(12)
 
 
 def main():

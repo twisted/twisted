@@ -22,10 +22,12 @@ downloaded from http://www.pythonware.com/products/xmlrpc/).
 """
 
 # System Imports
-import xmlrpclib, sys, traceback
+import xmlrpclib
 
 # Sibling Imports
-from twisted.web import resource
+from twisted.web import resource, server
+from twisted.python import log, defer
+from twisted.internet import task
 
 
 class NoSuchFunction(Exception):
@@ -41,6 +43,13 @@ class XMLRPC(resource.Resource):
     
     isLeaf = 1
     
+    def __init__(self):
+        resource.Resource.__init__(self)
+        self.requests = {}
+    
+    def requestFinished(self, request):
+        del self.requests[request]
+    
     def render(self, request):
         args, functionPath = xmlrpclib.loads(request.content)
         try:
@@ -49,18 +58,51 @@ class XMLRPC(resource.Resource):
             result = xmlrpclib.Fault(1, "no such function")
         else:
             try:
-                result = (apply(function, args), )
+                result = apply(function, args)
             except:
-                traceback.print_exc(file=sys.stdout)
+                log.deferr()
                 result = xmlrpclib.Fault(2, "error")
         
         request.setHeader("content-type", "text/xml")
-        return xmlrpclib.dumps(result, methodresponse=1)
+        if isinstance(result, defer.Deferred):
+            responder = Result(self, request)
+            self.requests[responder] = 1
+            result.addCallbacks(responder.gotResult, responder.gotFailure)
+            task.schedule(result.arm)
+            return server.NOT_DONE_YET
+        else:
+            if not isinstance(result, xmlrpclib.Fault):
+                result = (result,) # wrap as tuple
+            return xmlrpclib.dumps(result, methodresponse=1)
     
     def _getFunction(self, functionPath):
         """Given a string, return a function, or raise NoSuchFunction.
+        
+        This function will be called, and should return the result of the call
+        or a Deferred.
         
         Override in subclasses.
         """
         raise NotImplementedError, "implement in subclass"
 
+
+class Result:
+    """The result of an XML-RPC request."""
+    
+    def __init__(self, resource, request):
+        self.resource = resource
+        self.request = request
+    
+    def gotResult(self, result):
+        """Callback for when request finished."""
+        self.finish((result,))
+
+    def gotFailure(self, error):
+        """Callback for when request failed."""
+        self.finish(xmlrpclib.Fault(2, "error"))
+
+    def finish(self, result):
+        self.request.write(xmlrpclib.dumps(result, methodresponse=1))
+        self.request.finish()
+        self.resource.requestFinished(self)
+        del self.resource
