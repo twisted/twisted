@@ -146,16 +146,16 @@ install-indep-stamp: install-base-stamp
 	install -d debian/twisted-doc/usr/share/doc-base/
 	install -m 644 debian/twisted-book \
 	               debian/twisted-doc/usr/share/doc-base/
-	install -m 644 doc/howto/*.xhtml doc/howto/book.* \
+	install -m 644 doc/howto/*.html doc/howto/book.* \
 	               doc/howto/stylesheet.css $(docdir)/howto/
 	gzip -9 $(docdir)/howto/book.ps
-	install -m 644 doc/specifications/*.xhtml $(docdir)/specifications/
-	install -m 644 doc/vision/*.xhtml $(docdir)/vision/
+	install -m 644 doc/specifications/*.html $(docdir)/specifications/
+	install -m 644 doc/vision/*.html $(docdir)/vision/
 	install -m 644 doc/img/*.png doc/img/*.bmp $(docdir)/img/
 	cp -ar doc/examples/* $(docdir)/examples/
 	rm -rf $(docdir)/examples/CVS
 	find $(docdir)/examples/ -name .cvsignore | xargs -r rm
-	sed '/api/d' doc/index.html > $(docdir)/index.xhtml
+	sed '/api/d' doc/index.xhtml > $(docdir)/index.html
 	set -e;for maint in postinst prerm;\
 		do sed 's/@CONTROL@/twisted-book/' debian/twisted-doc.$$maint > \
 		           debian/twisted-doc/DEBIAN/$$maint;\
