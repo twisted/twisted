@@ -102,7 +102,100 @@ def parseViaHeader(value):
         result[name] = value
     return Via(**result)
 
-    
+
+class URL:
+    """A SIP URL."""
+
+    def __init__(self, username, host, password=None, port=None,
+                 transport=None, usertype=None, method=None,
+                 ttl=None, maddr=None, tag=None, other=None, headers=None):
+        self.username = username
+        self.host = host
+        self.password = password
+        self.port = port
+        self.transport = transport
+        self.usertype = usertype
+        self.method = method
+        self.tag = tag
+        self.ttl = ttl
+        self.maddr = maddr
+        if other == None:
+            self.other = []
+        else:
+            self.other = other
+        if headers == None:
+            self.headers = {}
+        else:
+            self.headers = headers
+
+    def toString(self):
+        l = []; w = l.append
+        w("sip:%s" % self.username)
+        if self.password != None:
+            w(":%s" % self.password)
+        w("@%s" % self.host)
+        if self.port != None:
+            w(":%d" % self.port)
+        if self.usertype != None:
+            w(";user=%s" % self.usertype)
+        for n in ("transport", "ttl", "maddr", "method", "tag"):
+            v = getattr(self, n)
+            if v != None:
+                w(";%s=%s" % (n, v))
+        for v in self.other:
+            w(";%s" % v)
+        if self.headers:
+            w("?")
+            w("&".join([("%s=%s" % p) for p in self.headers.items()]))
+        return "".join(l)
+
+
+def parseURL(url):
+    """Return string into URL object.
+
+    URIs are of of form 'sip:user@example.com'.
+    """
+    d = {}
+    if not url.startswith("sip:"):
+        raise ValueError("unsupported scheme")
+    parts = url[4:].split(";")
+    userdomain, params = parts[0], parts[1:]
+    userpass, hostport = userdomain.split("@")
+    upparts = userpass.split(":", 1)
+    if len(upparts) == 1:
+        d["username"] = upparts[0]
+    else:
+        d["username"] = upparts[0]
+        d["password"] = upparts[1]
+    hpparts = hostport.split(":", 1)
+    if len(hpparts) == 1:
+        d["host"] = hpparts[0]
+    else:
+        d["host"] = hpparts[0]
+        d["port"] = int(hpparts[1])
+    for p in params:
+        if p == params[-1] and "?" in p:
+            d["headers"] = h = {}
+            p, headers = p.split("?", 1)
+            for header in headers.split("&"):
+                k, v = header.split("=")
+                h[k] = v
+        nv = p.split("=", 1)
+        if len(nv) == 1:
+            d.setdefault("other", []).append(p)
+            continue
+        name, value = nv
+        if name == "user":
+            d["usertype"] = value
+        elif name in ("transport", "ttl", "maddr", "method", "tag"):
+            if name == "ttl":
+                value = int(value)
+            d[name] = value
+        else:
+            d.setdefault("other", []).append(p)
+    return URL(**d)
+
+
 class Message:
     """A SIP message."""
 

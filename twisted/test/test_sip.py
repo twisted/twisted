@@ -213,3 +213,26 @@ class ViaTestCase(unittest.TestCase):
         self.assertEquals(v.hidden, 1)
         self.assertEquals(v.toString(),
                           "SIP/2.0/UDP example.com:5060;hidden")
+
+
+class URLTestCase(unittest.TestCase):
+
+    def testRoundtrip(self):
+        for url in [
+            "sip:j.doe@big.com",
+            "sip:j.doe:secret@big.com;transport=tcp",
+            "sip:j.doe@big.com?subject=project",
+            ]:
+            self.assertEquals(sip.parseURL(url).toString(), url)
+
+    def testComplex(self):
+        s = ("sip:user:pass@hosta:123;transport=udp;user=phone;method=foo;"
+             "ttl=12;maddr=1.2.3.4;blah;goo=bar?a=b&c=d")
+        url = sip.parseURL(s)
+        for k, v in [("username", "user"), ("password", "pass"),
+                     ("host", "hosta"), ("port", 123),
+                     ("transport", "udp"), ("usertype", "phone"),
+                     ("method", "foo"), ("ttl", 12),
+                     ("maddr", "1.2.3.4"), ("other", ["blah", "goo=bar"]),
+                     ("headers", {"a": "b", "c": "d"})]:
+            self.assertEquals(getattr(url, k), v)
