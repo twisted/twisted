@@ -1,18 +1,14 @@
-#!/bin/sh
-set -e -v
+#!/usr/bin/python
+import sys, glob, os
 
-DEFAULT_PYTHON=`/usr/bin/python -c 'import sys;v=sys.hexversion;print "%s.%s" % ( (v>>24)&0xff, (v>>16)&0xff)'`
-DIR=debian/python${DEFAULT_PYTHON}-twisted
+version = '%s.%s' % sys.version_info[:2]
+dir = 'debian/python%s-twisted' % version
 
-for file in $DIR/usr/bin/*
-do
-	file=`basename $file`
-	ln -s $file $DIR/usr/bin/`echo $file|sed 's/...$//'`
-done
+for file in os.listdir(os.path.join(dir, 'usr/bin')):
+    os.symlink(file, os.path.join(dir, 'usr/bin', file[:-len(version)]))
 
-for file in $DIR/usr/share/man/man1/*
-do
-	file=`basename $file`
-	target=`echo $file|sed 's/'$DEFAULT_PYTHON'//'`
-	ln -s $file $DIR/usr/share/man/man1/$target
-done
+suffix = '.1.gz'
+
+for file in os.listdir(os.path.join(dir, 'usr/share/man/man1')):
+    target = file[:-len(version+suffix)]+suffix
+    os.symlink(file, os.path.join(dir, 'usr/share/man/man1', target))

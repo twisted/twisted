@@ -1,35 +1,70 @@
-#!/bin/sh
-set -e -v
+#!/usr/bin/python
+import os, glob, sys
 
-DIR=debian/python$1-twisted
+version = sys.argv[1]
+package = 'python%s-twisted' % version
+basedir = os.path.join('debian', package)
 
-install -d $DIR/usr/share/doc/python$1-twisted/
-install -d $DIR/usr/share/man/man1/
-install -d $DIR/usr/lib/menu/
+def makedirs(dir):
+    if not os.path.isdir(dir):
+        os.makedirs(dir)
 
-install -m 644 TODO README CREDITS $DIR/usr/share/doc/python$1-twisted/
-install -m 644 ChangeLog $DIR/usr/share/doc/python$1-twisted/changelog
-install -m 644 debian/changelog $DIR/usr/share/doc/python$1-twisted/changelog.Debian
-gzip -9 $DIR/usr/share/doc/python$1-twisted/*
-install -m 644 debian/copyright $DIR/usr/share/doc/python$1-twisted/
-for file in $DIR/usr/bin/*;
-do
-	sed '1s|.*|#!/usr/bin/python'$1'|' $file > $file.$$
-	cat $file.$$ > $file''$1;rm $file $file.$$
-done
-chmod +x $DIR/usr/bin/*
-for file in doc/man/*.1
-do
-	install -m 644 $file \
-	           $DIR/usr/share/man/man1/`basename $file .1`$1.1
-done
-install -m 644 debian/python$1-twisted.menu $DIR/usr/lib/menu/python$1-twisted
-gzip -9 $DIR/usr/share/man/man1/*
+def all(dir):
+    return glob.glob(os.path.join(dir, '*'))
 
-find $DIR -name "*.so" | xargs -n1 strip --remove-section=.comment --remove-section=.note --strip-unneeded
+def system(command):
+    ret = os.system(command)
+    if ret != 0:
+        raise OSError(ret)
 
-install -d $DIR/DEBIAN
-for maint in prerm postrm postinst
-do
-	install -m 755 debian/python$1-twisted.$maint $DIR/DEBIAN/$maint
-done
+def install(files, target, mode='644'):
+    system('install -m %s %s %s' % (mode, ' '.join(files), target))
+
+def debdir(dir):
+    return os.path.join(basedir, dir)
+
+docdir = debdir('usr/share/doc/%s' % package)
+mandir = debdir('usr/share/man/man1')
+menudir = debdir('usr/lib/menu/')
+bindir = debdir('usr/bin/')
+
+for dir in (docdir, mandir, menudir):
+    makedirs(dir)
+
+install(['TODO', 'README', 'CREDITS'], docdir)
+install(['ChangeLog'], os.path.join(docdir, 'changelog'))
+install(['debian/changelog'], os.path.join(docdir, 'changelog.Debian'))
+
+for file in os.listdir(docdir):
+    system('gzip -9 %s' % os.path.join(docdir, file))
+
+install(['debian/copyright'], docdir)
+
+for file in all(bindir):
+    lines = open(file).readlines()
+    lines[0] = '#!/usr/bin/python%s\n' % version
+    open(file, 'w').writelines(lines)
+    system('mv %s %s%s' % (file, file, version))
+
+for file in all('doc/man'):
+    target = os.path.splitext(os.path.basename(file))[0]+version+'.1'
+    install([file], os.path.join(mandir, target))
+    system('gzip -9 %s' % os.path.join(mandir, target))
+
+install(['debian/%s.menu' % package],
+        os.path.join(menudir, package))
+
+def strip(_, dirname, fnames):
+    for fname in fnames:
+        if os.path.splitext(fname)[1] == '.so':
+            fname = os.path.join(dirname, fname)
+            system('strip --remove-section=.comment '
+                   '--remove-section=.note --strip-unneeded ' + fname)
+
+os.path.walk(basedir, strip, None)
+
+makedirs(debdir('DEBIAN'))
+
+for maint in 'prerm postrm postinst'.split():
+    install(['debian/%s.%s' % (package, maint)],
+            debdir('DEBIAN/%s' % maint), 755)
