@@ -24,7 +24,7 @@ from __future__ import nested_scopes
 import sys, socket, operator
 from twisted.trial import unittest
 
-from twisted.internet import reactor, protocol, defer
+from twisted.internet import reactor, protocol, defer, error
 from twisted.names import client, server, common, authority
 from twisted.protocols import dns
 from twisted.python import log, failure
