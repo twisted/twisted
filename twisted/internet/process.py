@@ -14,7 +14,7 @@ from twisted.python import log, threadable
 
 # Sibling Imports
 import abstract, main
-from main import CONNECTION_LOST
+from main import CONNECTION_LOST, CONNECTION_DONE
 
 def reapProcess(*args):
     """Reap as many processes as possible (without blocking) via waitpid.

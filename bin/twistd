@@ -101,7 +101,7 @@ try:
     print "running", application.name, "application"
     if config.profile:
         import profile
-        profile.run("selector.run()")
+        profile.run("application.run()")
     else:
         application.run()
 except:

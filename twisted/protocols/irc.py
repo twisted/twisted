@@ -36,10 +36,31 @@ def parsemsg(s):
         params.append(trailing)
     return prefix, command, params
 
-class IRC(basic.LineReceiver):
+
+class IRC(protocol.Protocol):
     nickname = '*'
+    buffer = ""
+    
     def connectionMade(self):
+        print "connection made"
         self.channels = []
+
+    def sendLine(self, line):
+        self.transport.write(line+"\r\n")
+
+    def dataReceived(self, data):
+        """ This hack is to support mIRC, which sends LF only, even though the
+        RFC says CRLF.  (Also, the flexibility of LineReceiver to turn "line
+        mode" on and off was not required.)
+        """
+        print "data: %s" % repr(data)
+        self.buffer = self.buffer + data
+        lines = string.split(self.buffer, "\n") # get the lines
+        self.buffer = lines.pop() # pop the last element (we're not sure it's a line)
+        for line in lines:
+            if line[-1] == "\r":
+                line = line[:-1]
+            self.lineReceived(line)
 
     def connectionLost(self):
         print self.nickname, "lost connection"
@@ -75,7 +96,8 @@ class IRC(basic.LineReceiver):
             self.factory.channels[channame] = channel
         channel.chatters.append(self)
         self.channels.append(channel)
-        self.sendLine(":%s!nowhere JOIN :#%s" % (self.nickname,channame))
+        for chatter in channel.chatters:
+            chatter.sendLine(":%s!nowhere JOIN :#%s" % (self.nickname,channame))
         self.irc_NAMES('', [params[0]])
         self.irc_TOPIC('', [params[0]])
 
@@ -89,7 +111,6 @@ class IRC(basic.LineReceiver):
             if channel in self.channels:
                 channel.say(self, text)
         else:
-            print self.factory.chatters
             chatter = self.factory.chatters[name]
             chatter.hearWhisper(self, text)
         
@@ -97,7 +118,10 @@ class IRC(basic.LineReceiver):
         channame = params[0][1:]
         channel = self.factory.channels[channame]
         self.channels.remove(channel)
-        self.sendLine(":%s!nowhere PART :#%s" % channame)
+        for chatter in channel.chatters:
+            chatter.sendLine(":%s!nowhere PART :#%s" % (self.nickname, channame))
+        channel.chatters.remove(self)
+
 
     def irc_MODE(self, prefix, params):
         name = params[0]
@@ -151,9 +175,20 @@ class IRC(basic.LineReceiver):
             channame = params[0][1:]
             channel = self.factory.channels[channame]
             self.sendLine(":ircservice 332 %s #%s :%s" % (self.nickname, channel.name, channel.topic))
+        else:
+            #<< TOPIC #qdf :test
+            #>> :glyph!glyph@adsl-64-123-27-108.dsl.austtx.swbell.net TOPIC #qdf :test
+            channame = params[0][1:]
+            newTopic = params[-1]
+            channel = self.factory.channels[channame]
+            channel.topic = newTopic
+            for chatter in channel.chatters:
+                chatter.sendLine(":%s!nowhere TOPIC #%s :%s" % (self.nickname, channame, newTopic))
         
     def lineReceived(self, line):
         prefix, command, params = parsemsg(line)
+        # MIRC is a big pile of doo-doo
+        command = string.upper(command)
         print prefix, command, params
         method = getattr(self, "irc_%s" % command, None)
         if method is not None:
@@ -175,15 +210,22 @@ class ChatRoom:
     def __init__(self, name):
         self.name = name
         self.chatters = []
-        self.topic = ''
+        self.topic = 'Welcome to #%s' % name
 
     def say(self, user, message):
         for chatter in self.chatters:
             chatter.hearMsg(self, user, message)
 
+class Evaluator(ChatRoom):
+    nickname = "EvalServ"
+    def say(self, user, message):
+        value = eval(message)
+        for chatter in self.chatters:
+            chatter.hearMsg(self, self, "(%s) => (%s)" % (message, value))
+
 class IRCFactory(protocol.Factory):
     def __init__(self):
-        self.channels = {}
+        self.channels = {"eval":Evaluator("eval")}
         self.chatters = {}
 
     def buildProtocol(self, addr):

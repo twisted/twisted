@@ -82,7 +82,7 @@ class LineReceiver(protocol.Protocol):
     This is useful for line-oriented protocols such as IRC, HTTP, POP, etc.
     """
     line_mode = 1
-    __buffer = ''
+    buffer = ''
     delimiter = '\r\n'
 
     def dataReceived(self, data):
@@ -90,17 +90,17 @@ class LineReceiver(protocol.Protocol):
         Translates bytes into lines, and calls lineReceived (or
         rawDataReceived, depending on mode.)
         """
-        self.__buffer = self.__buffer+data
+        self.buffer = self.buffer+data
         while self.line_mode:
             try:
-                line, self.__buffer = string.split(self.__buffer, 
+                line, self.buffer = string.split(self.buffer, 
                                                    self.delimiter, 1)
             except ValueError:
                 break
             else:
                 self.lineReceived(line)
         else:
-            data, self.__buffer = self.__buffer, ''
+            data, self.buffer = self.buffer, ''
             if data:
                 return self.rawDataReceived(data)
 

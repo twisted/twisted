@@ -178,10 +178,10 @@ class UserDirectory(html.Interface):
             pw_name, pw_passwd, pw_uid, pw_gid, pw_gecos, pw_dir, pw_shell \
                      = pwd.getpwnam(username)
         except KeyError:
-            return ErrorPage(http.NOT_FOUND,
-                             "No Such User",
-                             "The user %s was not found on this system." %
-                             repr(username))
+            return error.ErrorPage(http.NOT_FOUND,
+                                   "No Such User",
+                                   "The user %s was not found on this system." %
+                                   repr(username))
         if sub:
             twistdsock = os.path.join(pw_dir, self.userSocketName)
             rs = ResourceSubscription('unix',twistdsock)
