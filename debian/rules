@@ -157,6 +157,7 @@ install-indep-stamp: install-base-stamp
 	cp -ar doc/examples/* $(docdir)/examples/
 	find $(docdir)/examples/ -name CVS | xargs -r rm -r
 	find $(docdir)/examples/ -name .cvsignore | xargs -r rm
+	find $(docdir)/examples/ -name .svn | xargs -r rm
 	sed '/api/d' doc/index.xhtml > $(docdir)/index.html
 	set -e;for maint in postinst prerm;\
 		do sed 's/@CONTROL@/twisted-book/' debian/twisted-doc.$$maint > \
@@ -169,6 +170,7 @@ install-indep-stamp: install-base-stamp
 	cp -ar doc/api/ debian/twisted-doc-api/${DOC}/twisted-doc/
 	rm -rf `find debian/twisted-doc-api/${DOC}/twisted-doc -name .cvsignore`
 	rm -rf `find debian/twisted-doc-api/${DOC}/twisted-doc -name CVS`
+	rm -rf `find debian/twisted-doc-api/${DOC}/twisted-doc -name .svn`
 	install -m 644 debian/twisted-api \
 	               debian/twisted-doc-api/usr/share/doc-base/
 	set -e;for maint in postinst prerm;\
