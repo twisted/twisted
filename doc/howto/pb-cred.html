@@ -14,8 +14,8 @@
 <a name="intro"><h2>Authentication, Identities, and Perspectives</h2></a>
 
 <p>This next section is an exciting ride. Keep your arms and legs inside the
-car at all times, you must be *this* tall to get on board, and we cannot be
-responsible for any lost or stolen articles. Permanecen sentados, por
+car at all times, you must be <em>this</em> tall to get on board, and we cannot
+be responsible for any lost or stolen articles. Permanecen sentados, por
 favor.</p>
 
 <a name="motivation"><h2>Motivation</h2></a>
@@ -139,7 +139,7 @@ Right??).</p>
 <p>So we have a security problem. We need a way to ask for and verify a
 password, so we know that Bob is really Bob and not Alice wearing her "Hi,
 my name is Bob" t-shirt. And it would make the code cleaner (i.e.: fewer
-classes) if some methods could know reliably *who* is calling them. You
+classes) if some methods could know reliably <em>who</em> is calling them. You
 could add that layer of password checking to your application, but once
 again the basement denizens at Twisted Matrix Laboratories have beaten you
 to it.</p>
@@ -195,7 +195,7 @@ Service) is a layer on top of the basic PB system that handles
 username/password checking. The basic idea is that there is a separate
 Perspective object (probably a subclass you've created) for each
 user<span class="footnote">Actually there is a perspective per user*service,
-but we'll get into that later</span>,, and <em>only</em> the authorized user
+but we'll get into that later</span>, and <em>only</em> the authorized user
 gets a remote reference to that Perspective object. You can store whatever
 permissions or capabilities the user possesses in that object, and then use
 them when the user invokes a remote method. You give the user access to the

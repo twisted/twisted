@@ -67,10 +67,10 @@ use twisted's Perspective Broker protocol rather than trying to shoehorn
 your needs into something like HTTP, or implementing yet another RPC
 mechanism.</p>
 
-<p>(most of Twisted is like this. hell, most of unix is like this: if *you*
-think it would be useful, someone else has probably thought that way in the
-past, and acted on it, and you can take advantage of the tool they created
-to solve the same problem you're facing now).</p>
+<p>(most of Twisted is like this. hell, most of unix is like this: if
+<em>you</em> think it would be useful, someone else has probably thought that
+way in the past, and acted on it, and you can take advantage of the tool they
+created to solve the same problem you're facing now).</p>
 
 <p>The Perspective Broker system (abbreviated "PB", spawning numerous
 sandwich-related puns) is based upon a few central concepts:</p>
@@ -567,18 +567,21 @@ references to the objects get transferred over the wire.</p>
   <code>remote_*</code> methods, objects derived from this class export <code>view_*</code>
   methods. These methods are invoked with an extra first argument that
   contains the Perspective which provided the reference to the original
-  pb.Viewable object.</li>
+  pb.Viewable object.
 
-  <div class="note"><p>When a <code>perspective_*</code> method returns a pb.Viewable
- object, an intermediate object called a ViewPoint is created, and the
- client gets a RemoteReference to that ViewPoint instead. The ViewPoint
- remembers which Perspective it came from. Running .callRemote() on the
- reference of the ViewPoint results in a <code>view_*</code> method being invoked on
- the pb.Viewable object.</p></div>
+  <div class="note"><p>When a <code>perspective_*</code> method returns a
+  pb.Viewable object, an intermediate object called a ViewPoint is created, and
+  the client gets a RemoteReference to that ViewPoint instead. The ViewPoint
+  remembers which Perspective it came from. Running .callRemote() on the
+  reference of the ViewPoint results in a <code>view_*</code> method being
+  invoked on the pb.Viewable object.</p></div>
+ 
+  <div class="note"><p>It is possible to have both <code>perspective_*</code>
+  methods and <code>view_*</code> methods in the same class. See the docstring
+  for spread.flavors.ViewPoint for details.</p></div>
 
-<div class="note"><p>It is possible to have both <code>perspective_*</code>
-methods and <code>view_*</code> methods in the same class. See the docstring for
-spread.flavors.ViewPoint for details.</p></div>
+  </li>
+
 
   <p>This is useful to let the object know which client is calling the
   method. This will make more sense after you've read through the pb.cred
