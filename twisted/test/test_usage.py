@@ -157,11 +157,11 @@ class SubCommandTest(unittest.TestCase):
         self.failUnlessEqual(o.subOptions['expect'], False)
         self.failUnlessEqual(o.subOptions['torture-device'], 'comfy-chair')
 
-    def test_subCommandInitHasParent(self):
+    def test_subCommandParseOptionsHasParent(self):
         class SubOpt(usage.Options):
-            def __init__(self, *a, **kw):
-                usage.Options.__init__(self, *a, **kw)
+            def parseOptions(self, *a, **kw):
                 self.sawParent = self.parent
+                usage.Options.parseOptions(self, *a, **kw)
         class Opt(usage.Options):
             subCommands = [
                 ('foo', 'f', SubOpt, 'bar'),
