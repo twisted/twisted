@@ -1,3 +1,9 @@
+2002-02-02  Paul Swartz <z3p@twistedmatrix.com>
+
+    * SOCKSv4 support: there is now a protocols.socks, which contains
+    support for SOCKSv4, a TCP proxying protocol.  mktap also has
+    support for the new protocol.
+
 2002-02-02  Kevin Turner  <acapnotic@twistedmatrix.com>
 
 	* twisted/words/ircservice.py (IRCChatter.receiveDirectMessage),
