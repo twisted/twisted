@@ -241,7 +241,7 @@ class IMAP4HelperTestCase(unittest.TestCase):
             p = imap4._FetchParser()
             p.parseString(inp)
             self.assertEquals(len(p.result), outp[0])
-            p = [p.type for p in p.result]
+            p = [str(p).lower() for p in p.result]
             p.sort()
             outp[1].sort()
             self.assertEquals(p, outp[1])
