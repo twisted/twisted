@@ -37,10 +37,7 @@ else:
 
 
 def loadPlugins(debug = None, progress = None):
-    try:
-        plugins = plugin.getPlugIns("tap", debug, progress)
-    except IOError:
-        raise usage.UsageError("Couldn't load the plugins file!")
+    plugins = plugin.getPlugIns("tap", debug, progress)
     tapLookup = {}
     for plug in plugins:
         if hasattr(plug, 'tapname'):
@@ -130,7 +127,10 @@ class FirstPassOptions(usage.Options):
         if self['progress']:
             progress = self._reportProgress
             self.pb = util.makeStatBar(60, 1.0)
-        self.tapLookup = loadPlugins(debug, progress)
+        try:
+            self.tapLookup = loadPlugins(debug, progress)
+        except IOError:
+            raise usage.UsageError("Couldn't load the plugins file!")
         self.init(self.tapLookup)
         self.recursing = 1
         self.parseOptions(self.params)
