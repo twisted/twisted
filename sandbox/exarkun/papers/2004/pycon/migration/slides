@@ -52,45 +52,47 @@ lecture = Lecture(
           Bullet("Unexpected difficulties leave service offline",
                  SubBullet(Bullet("Service unavailable while troubleshooting occurs")))),
     Slide("Upgrading code",
-          Bullet("In-Process",
-                 SubBullet(Bullet("Difficult to reverse reload()"))),
+          Bullet("In-Process with reload()",
+                 SubBullet(Bullet("Difficult to reverse"),
+                           Bullet("Leaves two versions of code side-by-side in one process"),
+                           Bullet("Upgrade on a per-module basis"))),
           Bullet("Intra-Process",
                  SubBullet(Bullet("Incremental updates"),
                            SubBullet(Bullet("Cheaper code updates means more frequent code updates"),
-                                     Bullet("More frequent code updates means smaller code updates"))),
+                                     Bullet("More frequent code updates means smaller code updates"),
+                                     Bullet("Upgrade on a per-user basis"))),
                  SubBullet(Bullet("Testable"),
                            SubBullet(Bullet("State can be migrated from live server to test server"),
                                      Bullet("For testing, user connections can be ignored"),
                                      Bullet("Failed migration test leads to defunct test/staging server, leave production server unchanged"))))),
-    Slide("Problems with migration",
+    Slide("Problems with intra-process migration",
           Bullet("Requires all state to be serializable or otherwise persistent",
                  SubBullet(Bullet("Most data-driven services require this anyway"),
                            Bullet("If user data doesn't persist, the service isn't very useful"),
-                           Bullet("But migration can introduce unexpected serialization requirements")))),
-    Slide("Different migration models",
-          Bullet("Migration can occur all at once or gradually over time"),
-          Bullet("Complexity can vary",
-                 SubBullet(Bullet("Stateless migration (listening ports)")),
-                 SubBullet(Bullet("Stateful migration (client and connection data)")))),
+                           Bullet("But migration can introduce unexpected serialization requirements",
+                                  SubBullet(Bullet("Twisted Factories / Twisted Protocols")))))),
     Slide("execl()",
           Bullet("Replace existing process with a new one"),
           Bullet("File descriptors remain open"),
           Bullet("Used by numerous MUDs",
-                 SubBullet(Bullet("Administrator enters command"),
-                           Bullet("Entire game is paused"),
+                 SubBullet(Bullet("Players happily slashing up monsters"),
+                           Bullet("Administrator enters command"),
+                           Bullet("Entire game is paused (players are interrupted)"),
                            Bullet("Player data is saved, world-state is not"),
                            Bullet("Process re-executes"),
                            Bullet("Player data loaded from disk, world-state initialized from defaults"),
-                           Bullet("Game-play continues")))),
+                           Bullet("Game-play continues (players complain)")))),
     Slide("Problems with execl()",
           Bullet("Monolithic"),
           Bullet("Difficult to test"),
           Bullet("Irreversible"),
           Bullet("Failure can lead to long periods of downtime")),
-    Slide("Multiple processes, one machine",
-          Bullet("Socket passing tricks work"),
+    Slide("Migration between processes on one machine",
+          Bullet("Bring up new server"),
+          Bullet("Serialize and transfer state from old server to new server"),
+          Bullet("Bring down old server"),
           Bullet("... but doesn't scale up without massively parallel hardware")),
-    Slide("Multiple machines",
+    Slide("Migration between processes on Multiple machines",
           Bullet("Scales way, way up"),
           Bullet("Additional protection from hardware failure"),
           Bullet("More benefits such as useful load balancing")),
@@ -126,7 +128,17 @@ lecture = Lecture(
 >>> sys.version
 '2.2.3+ (#1, Feb 25 2004, 23:29:31) \n[GCC 3.3.3 (Debian)]'
 >>> os.getpid()
+29713
+""")),
+          Bullet("Magic occurs")),
+    Slide("Migration - a demonstration - part 3",
+          Bullet(PythonInterpreter("""\
+>>> import sys, os
+>>> sys.version
+'2.2.3+ (#1, Feb 25 2004, 23:29:31) \n[GCC 3.3.3 (Debian)]'
+>>> os.getpid()
 29713""")),
+          Bullet("Magic occurs"),
           Bullet(PythonInterpreter("""\
 >>> sys.version
 '2.3.3 (#2, Jan 13 2004, 00:47:05) \n[GCC 3.3.3 20040110 (prerelease)
@@ -149,15 +161,35 @@ Starting factory &lt;twisted.spread.pb.PBServerFactory instance at 0x405ccb4c>
 set uid/gid 1000/1000
 """))))),
     Slide("Migration walk-through - part 2",
-          Bullet("Connect to the server with a telnet client",
+          Bullet("Connect to telnet server with telnet client",
+                 SubBullet(Bullet(Shell("""\
+$ telnet localhost 8000
+Trying ::1...
+Trying 127.0.0.1...
+Connected to localhost.
+Escape character is '^]'.
+
+telnet.ShellFactory
+Twisted 1.2.1alpha1
+username: admin
+password: *****
+>>> import sys, os
+>>> sys.version
+'2.2.3+ (#1, Feb 25 2004, 23:29:31) \n[GCC 3.3.3 (Debian)]'
+>>> os.getpid()
+29713
+"""))))),
+    Slide("Migration walk-through - part 3",
+          Bullet("Start a migration client (server output)",
                  SubBullet(Bullet(Shell("""\
 server.ServerFactory starting on "'/tmp/tmp4mUJ49'"
 Starting factory &lt;server.ServerFactory instance at 0x405a4d8c>
 Jellying &lt;Shell #0 on 8000>
 Jellying &lt;telnet.ShellFactory on 8000>
-"""))))),
-    Slide("Migration walk-through - part 3",
-          Bullet("Start a migration client",
+""")),
+                           Bullet("Jelly is similar to pickle")))),
+    Slide("Migration walk-through - part 4",
+          Bullet("Start a migration client (client output)",
                  SubBullet(Bullet(Shell("""\
 Starting factory &lt;twisted.spread.pb.PBClientFactory instance at 0x4054090c>
 Starting factory &lt;client.ClientFactory instance at 0x4059ce4c>
@@ -165,7 +197,7 @@ Owned server &lt;twisted.manhole.telnet.Shell instance at 0x405a0e4c>
 Stopping factory &lt;twisted.spread.pb.PBClientFactory instance at 0x4054090c>
 Stopping factory &lt;client.ClientFactory instance at 0x4059ce4c>
 """))))),
-    Slide("Migration walk-through - part 4",
+    Slide("Migration walk-through - part 5",
           Bullet("Server shuts down",
                  SubBullet(Bullet(Shell("""\
 (Port 'migrate' Closed)
@@ -174,6 +206,14 @@ Stopping factory &lt;twisted.spread.pb.PBServerFactory instance at 0x405ccb4c>
 Stopping factory &lt;server.ServerFactory instance at 0x405a4d8c>
 Main loop terminated.
 Server Shut Down.
+"""))))),
+    Slide("Migration walk-through - part 6",
+          Bullet("What is the client experience?",
+                 SubBullet(Bullet(Shell("""\
+>>> print sys
+&lt;module 'sys' (built-in)>
+>>> print os
+&lt;module 'os' from '/usr/lib/python2.3/os.pyc'>
 """))))),
     Slide("Integration with existing software",
           Bullet("Serialization code should be kept separate from application code"),
@@ -191,7 +231,7 @@ class ShellFactory(telnet.ShellFactory):
         return p
 """))))),
     Slide("Design for migratibility",
-          Bullet("Maintain clear separate between code and data"),
+          Bullet("Maintain clear separation between code and data"),
           Bullet("Maintain clear separation between different services")),
     Slide("Conclusions",
           Bullet("Multitude of migration options available for Python software"),
