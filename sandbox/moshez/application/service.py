@@ -50,13 +50,13 @@ class Service:
             raise RuntimeError("cannot change name when parent exists")
         self.name = name
 
-    def setParent(self, parent):
+    def setServiceParent(self, parent):
         if self.parent is not None:
             self.unsetParent()
         self.parent = parent
         self.parent.addService(self)
 
-    def unsetParent(self):
+    def disownServiceParent(self):
         self.parent.removeService(self)
         self.parent = None
 
