@@ -58,6 +58,7 @@ PARTIALQUERYHITRESULTLENGTH=8
 PARTIALQUERYHITRESULTENCODING="<II" # fileIndex, fileSize
 
 SERVENTIDENTIFIERENCODING="<%ds" % DESCRIPTORLENGTH # serventIdentifier
+SERVENTIDENTIFIERLENGTH=16
 
 PUSHPAYLOADENCODING="<%dsIBBBBH" % DESCRIPTORLENGTH # serventIdentifier, fileIndex, -- 4 octets of IPv4 address --, port
 
@@ -199,7 +200,7 @@ class GnutellaTalker(LineReceiver):
         assert (type(descriptorId) is types.StringType) and (len(descriptorId) == DESCRIPTORLENGTH), "precondition failure: " + "descriptorId must be a string of length DESCRIPTORLENGTH." + " -- " + "descriptorId: %s :: %s" % (repr(descriptorId), str(type(descriptorId)),)
         log.msg("%s.queryHitReceived(%s, %s, %s, ipAddress=%s, port=%s, resultSet=%s, serventIdentifier=%s, speed=%s" % (str(self), repr(descriptorId), str(ttl), str(hops), str(ipAddress), str(port), str(resultSet), str(serventIdentifier), str(speed),))
     
-    def pushReceived(descriptorId, ttl, hops, ipAddress, port, serventIdentifier, fileIndex):
+    def pushReceived(self, descriptorId, ttl, hops, ipAddress, port, serventIdentifier, fileIndex):
         """
         Override this to handle push messages.
         
