@@ -225,7 +225,8 @@ class FunctionalTest(common.RegistryBaseMixin, unittest.TestCase):
             del sys.modules[modname]
         assert_(modname not in sys.modules)
         self.suite.addModule(modname)
-        assert_(modname in sys.modules)
+        # in python-2.4, broken imports are not left in sys.modules
+        #assert_(modname in sys.modules)
         self.suite.run()
         
         failIf(itrial.ITestStats(self.suite).allPassed)
