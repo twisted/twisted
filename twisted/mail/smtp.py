@@ -494,6 +494,9 @@ class SMTP(basic.LineReceiver, policies.TimeoutMixin):
     host = DNSNAME
     portal = None
 
+    # Control whether we log SMTP events
+    noisy = True
+
     # A factory for IMessageDelivery objects.  If an
     # avatar implementing IMessageDeliveryFactory can
     # be acquired from the portal, it will be used to
@@ -731,8 +734,9 @@ class SMTP(basic.LineReceiver, policies.TimeoutMixin):
                 self.mode = COMMAND
                 return
         self.sendCode(354, 'Continue')
-        fmt = 'Receiving message for delivery: from=%s to=%s'
-        log.msg(fmt % (origin, [str(u) for (u, f) in recipients]))
+        if self.noisy:
+            fmt = 'Receiving message for delivery: from=%s to=%s'
+            log.msg(fmt % (origin, [str(u) for (u, f) in recipients]))
 
     def connectionLost(self, reason):
         # self.sendCode(421, 'Dropping connection.') # This does nothing...
@@ -742,7 +746,10 @@ class SMTP(basic.LineReceiver, policies.TimeoutMixin):
         if self.mode is DATA:
             try:
                 for message in self.__messages:
-                    message.connectionLost()
+                    try:
+                        message.connectionLost()
+                    except:
+                        log.err()
                 del self.__messages
             except AttributeError:
                 pass
@@ -769,8 +776,8 @@ class SMTP(basic.LineReceiver, policies.TimeoutMixin):
                     return
                 defer.DeferredList([
                     m.eomReceived() for m in self.__messages
-                ]).addCallback(self._messageHandled
-                ).addErrback(self._messageNotHandled)
+                ], consumeErrors=True).addCallback(self._messageHandled
+                                                   )
                 del self.__messages
                 return
             line = line[1:]
@@ -801,19 +808,20 @@ class SMTP(basic.LineReceiver, policies.TimeoutMixin):
                 message.connectionLost()
     state_DATA = dataLineReceived
 
-    def _messageHandled(self, _):
-        self.sendCode(250, 'Delivery in progress')
-        log.msg('Accepted message for delivery')
-
-    def _messageNotHandled(self, failure):
-        if failure.check(SMTPServerError):
-            self.sendCode(failure.value.code, failure.value.resp)
-            fmt = 'Message not handled: (%d) %s'
-            log.msg(fmt % (failure.value.code, failure.value.resp))
+    def _messageHandled(self, resultList):
+        failures = 0
+        for (success, result) in resultList:
+            if not success:
+                failures += 1
+                log.err(result)
+        if failures:
+            msg = 'Could not send e-mail'
+            L = len(resultList)
+            if L > 1:
+                msg += ' (%d failures out of %d recipients)' % (failures, L)
+            self.sendCode(550, msg)
         else:
-            self.sendCode(550, 'Could not send e-mail')
-            log.msg('Message not handled: (550) Could not send e-mail')
-        log.err(failure)
+            self.sendCode(250, 'Delivery in progress')
 
     def _cbAuthenticated(self, (iface, avatar, logout)):
         if issubclass(iface, IMessageDeliveryFactory):
@@ -1135,7 +1143,7 @@ class ESMTPClient(SMTPClient):
 
     # Refuse to proceed if TLS is not available
     requireTransportSecurity = False
-    
+
     # Indicate whether or not our transport can be considered secure.
     tlsMode = False
 
@@ -1498,15 +1506,15 @@ class SMTPSenderFactory(protocol.ClientFactory):
         """
         @param fromEmail: The RFC 2821 address from which to send this
         message.
-        
+
         @param toEmail: A sequence of RFC 2821 addresses to which to
         send this message.
-        
+
         @param file: A file-like object containing the message to send.
-        
+
         @param deferred: A Deferred to callback or errback when sending
         of this message completes.
-        
+
         @param retries: The number of times to retry delivery of this
         message.
         """
