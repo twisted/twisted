@@ -31,22 +31,12 @@ class IResource(components.Interface):
     ## If True, getChildWithDefault will not be called on this Resource.
     isLeaf = 0
 
-    def listNames():
-        """Return a list of string names that are valid children of this resource.
-        """
-
     def getChildWithDefault(name, request):
         """Return a child with the given name for the given request.
         This is the external interface used by the Resource publishing
         machinery. If implementing IResource without subclassing
         Resource, it must be provided. However, if subclassing Resource,
         getChild overridden instead.
-        """
-
-    def getChild(name, request):
-        """(informal) Resource subclasses can override this to produce
-        dynamic children--names that are not present in the children
-        dictionary populated by putChild.
         """
 
     def putChild(path, child):
@@ -147,9 +137,12 @@ class Resource(coil.ConfigCollection):
         return error.NoResource("No such child resource.")
 
     def getChildWithDefault(self, path, request):
-        """(internal) Retrieve a static or dynamically generated child resource from me.
+        """Retrieve a static or dynamically generated child resource from me.
 
-        Arguments are similiar to getChild.
+        First checks if a resource was added manually by putChild, and then
+        call getChild to check for dynamic resources. Only override if you want
+        to affect behaviour of all child lookups, rather than just dynamic
+        ones.
 
         This will check to see if I have a pre-registered child resource of the
         given name, and call getChild if I do not.
@@ -175,7 +168,7 @@ class Resource(coil.ConfigCollection):
 
 
     def putChild(self, path, child):
-        """Register a child with me.
+        """Register a static child.
         """
         self.children[path] = child
         child.server = self.server
