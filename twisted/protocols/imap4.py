@@ -365,8 +365,46 @@ class IMAP4Server(basic.LineReceiver):
             for (name, box) in mailboxes:
                 flags = '(%s)' % ' '.join(box.getFlags())
                 delim = box.getHierarchicalDelimiter()
-                self.sendUntaggedResponse('%s "%s" %s' % (flags, delim, name))
+                self.sendUntaggedResponse('LIST %s "%s" %s' % (flags, delim, name))
             self.sendPositiveResponse(tag, 'LIST completed')
+    
+    def auth_LSUB(self, tag, args):
+        args = splitQuoted(args)
+        if len(args) != 2:
+            self.sendBadResponse(tag, 'Incorrect usage')
+        else:
+            ref, mbox = args
+            mailboxes = self.account.listMailboxes(ref, mbox)
+            for (name, box) in mailboxes:
+                if self.account.isSubscribed(name):
+                    flags = '(%s)' % ' '.join(box.getFlags())
+                    delim = box.getHierarchicalDelimiter()
+                    self.sendUntaggedResponse('LSUB %s "%s" %s' % (flags, delim, name))
+            self.sendPositiveResponse(tag, 'LSUB completed')
+
+    def auth_STATUS(self, tag, args):
+        names = parseNestedParens(args)
+        if len(names) != 2:
+            raise IllegalClientResponse(args)
+        mailbox, names = names
+        try:
+            d = self.account.requestStatus(mailbox, names)
+        except MailboxException, e:
+            self.sendNegativeResponse(tag, str(e))
+        else:
+            if isinstance(d, defer.Deferred):
+                d.addCallback(self._cbStatus, tag, mailbox)
+                d.addErrback(self._ebStatus, tag, mailbox)
+            else:
+                self._cbStatus(d, tag)
+    
+    def _cbStatus(self, status, tag, box):
+        line = ' '.join(['%s %s' % x for x in status.items()])
+        self.sendUntaggedResponse('STATUS %s (%s)' % (box, line))
+        self.sendPositiveResponse(tag, 'STATUS complete')
+    
+    def _ebStatus(self, failure, tag, box):
+        self.sendBadResponse(tag, 'STATUS %s failed: %s' % (box, failure))
 
 class UnhandledResponse(IMAP4Exception): pass
 
@@ -397,6 +435,10 @@ class IMAP4Client(basic.LineReceiver):
     authenticators = None
 
     STATUS_CODES = ('OK', 'NO', 'BAD', 'PREAUTH', 'BYE')
+
+    STATUS_TRANSFORMATIONS = {
+        'MESSAGES': int, 'RECENT': int, 'UNSEEN': int
+    }
 
     def __init__(self):
         self.tags = {}
@@ -823,19 +865,67 @@ class IMAP4Client(basic.LineReceiver):
         the deferred's errback is invoked instead.
         """
         d = self.sendCommand('LIST', '"%s" "%s"' % (reference, wildcard))
-        d.addCallback(self._cbList)
+        d.addCallback(self._cbList, 'LIST')
         return d
     
-    def _cbList(self, (lines, last)):
+    def lsub(self, reference, wildcard):
+        """List a subset of the subscribed available mailboxes
+        
+        This command is allowed in the Authenticated and Selected states.
+        
+        The parameters and returned object are the same as for the C{list}
+        method, with one slight difference: Only mailboxes which have been
+        subscribed can be included in the resulting list.
+        """
+        d = self.sendCommand('LSUB', '"%s" "%s"' % (reference, wildcard))
+        d.addCallback(self._cbList, 'LSUB')
+        return d
+
+    def _cbList(self, (lines, last), command):
         results = []
         for L in lines:
             parts = parseNestedParens(L)
-            if len(parts) != 3:
+            if len(parts) != 4:
                 raise IllegalServerResponse, L
-            parts[0] = tuple(parts[0])
-            results.append(tuple(parts))
+            if parts[0] == command:
+                parts[1] = tuple(parts[1])
+                results.append(tuple(parts[1:]))
         return results
-
+    
+    def status(self, mailbox, *names):
+        """Retrieve the status of the given mailbox
+        
+        @type mailbox: C{str}
+        @param mailbox: The name of the mailbox to query
+        
+        @type names: C{str}
+        @param names: The status names to query.  These may be any number of:
+        MESSAGES, RECENT, UIDNEXT, UIDVALIDITY, and UNSEEN.
+        
+        @rtype: C{Deferred}
+        @return: A deferred whose callback is invoked with the status information
+        if the command is successful and whose errback is invoked otherwise.
+        """
+        d = self.sendCommand('STATUS', "%s (%s)" % (mailbox, ' '.join(names)))
+        d.addCallback(self._cbStatus)
+        return d
+    
+    def _cbStatus(self, (lines, last)):
+        status = {}
+        for line in lines:
+            parts = parseNestedParens(line)
+            if parts[0] == 'STATUS':
+                items = parts[2]
+                items = [items[i:i+2] for i in range(0, len(items), 2)]
+                status.update(dict(items))
+        for k in status.keys():
+            t = self.STATUS_TRANSFORMATIONS.get(k)
+            if t:
+                try:
+                    status[k] = t(status[k])
+                except Exception, e:
+                    raise IllegalServerResponse('(%s %s): %s' % (k, status[k], str(e)))
+        return status
 
 class MismatchedNesting(Exception):
     pass
@@ -1081,6 +1171,9 @@ class Account:
                 inferiors.append(infname)
         return inferiors
     
+    def isSubscribed(self, name):
+        return name.upper() in self.subscriptions
+    
     def subscribe(self, name):
         name = name.upper()
         if name not in self.subscriptions:
@@ -1096,6 +1189,12 @@ class Account:
         ref = self._inferiorNames(ref.upper())
         wildcard = wildcardToRegexp(wildcard, '/')
         return [(i, self.mailboxes[i]) for i in ref if wildcard.match(i)] 
+    
+    def requestStatus(self, mailbox, names):
+        mailbox = mailbox.upper()
+        if not self.mailboxes.has_key(mailbox):
+            raise NoSuchMailbox, mailbox
+        return self.mailboxes[mailbox].requestStatus(names)
 
 
 class IMailbox(components.Interface):
@@ -1120,6 +1219,9 @@ class IMailbox(components.Interface):
     def getRecentCount(self):
         """Return the number of messages with the 'Recent' flag"""
 
+    def getUnseenCount(self):
+        """Return the number of messages with the 'Unseen' flag"""
+
     def isWriteable(self):
         """Get the read/write status of the mailbox.
         
@@ -1139,4 +1241,17 @@ class IMailbox(components.Interface):
         """Get the character which delimits namespaces for in this mailbox.
         
         @rtype: C{str}
+        """
+    
+    def requestStatus(self, names):
+        """Return status information about this mailbox.
+        
+        @type names: Any iterable
+        @param names: The status names to return information regarding
+        
+        @rtype: C{dict} or C{Deferred}
+        @return: A dictionary containing status information about the
+        requested names is returned.  If the process of looking this
+        information up would be costly, a deferred whose callback will
+        eventually be passed this dictionary is returned instead.
         """

@@ -128,6 +128,9 @@ class SimpleMailbox:
     
     def getRecentCount(self):
         return 3
+
+    def getUnseenCount(self):
+        return 4
     
     def isWriteable(self):
         return 1
@@ -137,6 +140,20 @@ class SimpleMailbox:
     
     def getHierarchicalDelimiter(self):
         return '/'
+    
+    def requestStatus(self, names):
+        r = {}
+        if 'MESSAGES' in names:
+            r['MESSAGES'] = self.getMessageCount()
+        if 'RECENT' in names:
+            r['RECENT'] = self.getRecentCount()
+        if 'UIDNEXT' in names:
+            r['UIDNEXT'] = self.getMessageCount() + 1
+        if 'UIDVALIDITY' in names:
+            r['UIDVALIDITY'] = self.getUID()
+        if 'UNSEEN' in names:
+            r['UNSEEN'] = self.getUnseenCount()
+        return defer.succeed(r)
 
 class SimpleServer(imap4.IMAP4Server):
     def authenticateLogin(self, username, password):
@@ -440,27 +457,61 @@ class IMAP4ServerTestCase(unittest.TestCase):
         
         self.assertEquals(SimpleServer.theAccount.subscriptions, ['THAT/MBOX'])
 
-    def testList(self):
+    def _listSetup(self, f):
         SimpleServer.theAccount.addMailbox('root/subthing')
         SimpleServer.theAccount.addMailbox('root/another-thing')
         SimpleServer.theAccount.addMailbox('non-root/subthing')
         
         def login():
             return self.client.login('testuser', 'password-test')
-        def list():
-            return self.client.list('root', '%')
         def listed(answers):
             self.listed = answers
         
         self.listed = None
         d = self.connected.addCallback(strip(login))
         d.addCallbacks(strip(list), self._ebGeneral)
+        d.addCallbacks(strip(f), self._ebGeneral)
         d.addCallbacks(listed, self._ebGeneral)
         d.addCallbacks(strip(self._cbStopClient), self._ebGeneral)
         loopback.loopback(self.server, self.client)
         
+        return self.listed
+
+    def testList(self):
+        def list():
+            return self.client.list('root', '%')
+        listed = self._listSetup(list)
         self.assertEquals(
-            self.listed,
+            listed,
             [(SimpleMailbox.flags, "/", "ROOT/SUBTHING"),
              (SimpleMailbox.flags, "/", "ROOT/ANOTHER-THING")]
         )
+
+    def testLSub(self):
+        SimpleServer.theAccount.subscribe('ROOT/SUBTHING')
+        def lsub():
+            return self.client.lsub('root', '%')
+        listed = self._listSetup(lsub)
+        self.assertEquals(listed, [(SimpleMailbox.flags, "/", "ROOT/SUBTHING")])
+
+    def testStatus(self):
+        SimpleServer.theAccount.addMailbox('root/subthing')
+        def login():
+            return self.client.login('testuser', 'password-test')
+        def status():
+            return self.client.status('root/subthing', 'MESSAGES', 'UIDNEXT', 'UNSEEN')
+        def statused(result):
+            self.statused = result
+        
+        self.statused = None
+        d = self.connected.addCallback(strip(login))
+        d.addCallbacks(strip(status), self._ebGeneral)
+        d.addCallbacks(statused, self._ebGeneral)
+        d.addCallbacks(strip(self._cbStopClient), self._ebGeneral)
+        loopback.loopback(self.server, self.client)
+        
+        self.assertEquals(
+            self.statused,
+            {'MESSAGES': 9, 'UIDNEXT': '10', 'UNSEEN': 4}
+        )
+        
