@@ -123,12 +123,12 @@ class MyPatternWidget(widgets.Widget):
 <p>This widget could be used with the following template to abstractly allow the designer to style elements which are larger than 10:</p>
 
 <pre>
-  &lt;div model="listOfIntegers" view="List"&gt;
-    &lt;div pattern="listItem" view="MyPatternWidget"&gt;
-        &lt;span pattern="large" style="background-color: red" view="Text" /&gt;
-        &lt;span pattern="small" style="background-color: blue" view="Text" /&gt;
-    &lt;/div&gt;
+&lt;div model="listOfIntegers" view="List"&gt;
+  &lt;div pattern="listItem" view="MyPatternWidget"&gt;
+      &lt;span pattern="large" style="background-color: red" view="Text" /&gt;
+      &lt;span pattern="small" style="background-color: blue" view="Text" /&gt;
   &lt;/div&gt;
+&lt;/div&gt;
 </pre>
 
 <p>Notice how the Widgets chain themselves to create the final page; the List widget makes copies of the pattern node which have <code>view="MyPatternWidget"</code> on them; the <code>MyPatternWidget</code> widget makes copies of the <code>pattern="large"</code> or <code>pattern="small"</code> nodes which have <code>view="Text"</code> directives on them; and the Text widget inserts the actual model data from the list into the innermost <code>&lt;span&gt;</code> element.</p>
