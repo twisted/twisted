@@ -184,7 +184,7 @@ if not hasattr(socket, 'inet_pton'):
         if af == socket.AF_INET:
             parts = map(int, addr.split('.'))
             return struct.pack('!BBBB', *parts)
-        elif af == socket.AF_INET6:
+        elif af == getattr(socket, 'AF_INET6', None):
             parts = addr.split(':')
             elide = parts.count('')
             if elide == 3:
@@ -198,17 +198,17 @@ if not hasattr(socket, 'inet_pton'):
             parts = [int(x, 16) for x in parts]
             return struct.pack('!HHHHHHHH', *parts)
         else:
-            raise ValueError, "unsupported address family"
+            raise socket.error(97, 'Address family not supported by protocol')
 
     def inet_ntop(af, addr):
         if af == socket.AF_INET:
             parts = struct.unpack('!BBBB', addr)
             return '.'.join(map(str, parts))
-        elif af == socket.AF_INET6:
+        elif af == getattr(socket, 'AF_INET6', None):
             parts = struct.unpack('!HHHHHHHH', addr)
             return ':'.join([hex(x)[2:] for x in parts])
         else:
-            raise ValueError, "unsupported address family"
+            raise socket.error(97, 'Address family not supported by protocol')
 
     socket.inet_pton = inet_pton
     socket.inet_ntop = inet_ntop

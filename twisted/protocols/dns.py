@@ -35,6 +35,8 @@ try:
 except ImportError:
     import StringIO
 
+AF_INET6 = getattr(socket, 'AF_INET6', -1)
+
 try:
     from Crypto.Util import randpool
 except ImportError:
@@ -603,7 +605,7 @@ class Record_AAAA:               # OBSOLETE (or headed there)
     TYPE = AAAA
     
     def __init__(self, address = '::'):
-        self.address = socket.inet_pton(socket.AF_INET6, address)
+        self.address = socket.inet_pton(AF_INET6, address)
 
 
     def encode(self, strio, compDict = None):
@@ -621,7 +623,7 @@ class Record_AAAA:               # OBSOLETE (or headed there)
 
 
     def __str__(self):
-        return '<AAAA %s>' % (socket.inet_ntop(socket.AF_INET6, self.address),)
+        return '<AAAA %s>' % (socket.inet_ntop(AF_INET6, self.address),)
 
 
 class Record_A6:
@@ -630,7 +632,7 @@ class Record_A6:
     
     def __init__(self, prefixLen = 0, suffix = '::', prefix = ''):
         self.prefixLen = prefixLen
-        self.suffix = socket.inet_pton(socket.AF_INET6, suffix)
+        self.suffix = socket.inet_pton(AF_INET6, suffix)
         self.prefix = Name(prefix)
         self.bytes = int((128 - self.prefixLen) / 8.0)
 
@@ -664,7 +666,7 @@ class Record_A6:
     def __str__(self):
         return '<A6 %s %s (%d)>' % (
             self.prefix,
-            socket.inet_ntop(socket.AF_INET6, self.suffix),
+            socket.inet_ntop(AF_INET6, self.suffix),
             self.prefixLen
         )
 
