@@ -117,7 +117,7 @@ class Hose(telnet.Telnet):
         if cmd[:3] == 'say':
             cmd = 'say "%s"' % cmd[4:].replace('"', r'\"')
         if cmd[:5] == 'emote':
-            cmd = 'emote %s' % cmd[6:].replace('"', r'\"')
+            cmd = 'emote "%s"' % cmd[6:].replace('"', r'\"')
 
         #shortcut translations.
         if cmd[0] == '"':
