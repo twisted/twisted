@@ -152,7 +152,7 @@ class FileTransferServer(FileTransferBase):
         flags, data = struct.unpack('!L', data[:4])[0], data[4:]
         attrs, data = self._parseAttributes(data)
         assert data == '', 'still have data in OPEN: %s' % repr(data)
-        d = defer.maybeDeferred(self.avatar.openFile, filename, flags, attrs)
+        d = defer.maybeDeferred(self.client.openFile, filename, flags, attrs)
         d.addCallback(self._cbOpenFile, requestId)
         d.addErrback(self._ebStatus, requestId, "open failed")
 
