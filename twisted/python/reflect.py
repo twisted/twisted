@@ -40,7 +40,6 @@ except:
     _safe_repr = repr
 
 # Sibling Imports
-import reference
 import failure
 
 
@@ -177,11 +176,7 @@ class OriginalAccessor:
 
     def __setattr__(self, k,v):
         kstring='set_%s'%k
-        # early-out for references, since they will be reassigned
-        # later, and no accessor method should have to know what to do
-        # with them.
-        if (not isinst(v, reference.Reference) and
-            hasattr(self.__class__,kstring)):
+        if hasattr(self.__class__,kstring):
             return getattr(self,kstring)(v)
         else:
             self.reallySet(k,v)
