@@ -1,11 +1,11 @@
 from pyunit import unittest
-import string, random
+import string, random, copy
 
 from twisted.web import server, resource, widgets, guard
 from twisted.python import defer
 from twisted.internet import app
 from twisted.cred import service, identity, perspective
-
+from twisted.protocols import http, loopback
 
 class DateTimeTest(unittest.TestCase):
     """Test date parsing functions."""
@@ -55,6 +55,67 @@ class SiteTest(unittest.TestCase):
         site = server.Site(sres1)
         assert site.getResourceFor(DummyRequest([''])) is sres2, "Got the wrong resource."
 
+class ArgProcessingResource(resource.Resource):
+    def processArgs(self, request):
+        print "I am processing the arguments."
+        args = copy.copy(request.args)
+        print "They used to be %r..." % args
+        args.update({"bleh": "foo"})
+        print "But now they shall be %r!" % args
+        return args
+
+    def render(self, request):
+        return "args: " + str(request.args)
+
+
+class TestHTTPClient(http.HTTPClient):
+    expected_result = "args: {'bleh': 'foo'}"
+    def connectionMade(self):
+        self.sendCommand("GET", "/")
+        self.endHeaders()
+
+    def handleStatus(self, version, status, message):
+        pass
+    
+    def handleResponse(self, data):
+        open('out.html', 'w').write(data)
+        if data != self.expected_result:
+            raise ValueError("data != %s" % self.expected_result)
+
+    def handleHeader(self, key, value):
+        pass
+
+    def handleEndHeaders(self):
+        pass
+
+class LoopbackSite(loopback.LoopbackRelay, server.Site):
+    def __init__(self, resource, client):
+        loopback.LoopbackRelay.__init__(self, client)
+        server.Site.__init__(self, resource)
+
+    def stopConsuming(self):
+        print "stopped consuming??"
+
+class LoopbackSiteTestCase(unittest.TestCase):
+
+    def testArgProcessingResource(self):
+        res = resource.Resource()
+        argRes = ArgProcessingResource()
+        res.putChild("", argRes)
+        client = TestHTTPClient()
+        serverToClient = LoopbackSite(res, client)
+        req = serverToClient.buildProtocol("addr")
+        clientToServer = loopback.LoopbackRelay(req)
+        req.makeConnection(serverToClient)
+        client.makeConnection(clientToServer)
+        while 1:
+            serverToClient.clearBuffer()
+            clientToServer.clearBuffer()
+            if serverToClient.shouldLose or clientToServer.shouldLose:
+                break
+        
+        
+        
 class SimpleWidget(widgets.Widget):
     def display(self, request):
         return ['correct']
