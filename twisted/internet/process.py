@@ -647,15 +647,23 @@ class PTYProcess(abstract.FileDescriptor, styles.Ephemeral):
             try:
                 sys.settrace(None)
                 os.close(masterfd)
+                if hasattr(termios, 'TIOCNOTTY'):
+                    try:
+                        fd = os.open("/dev/tty", os.O_RDWR | os.O_NOCTTY)
+                    except OSError:
+                        pass
+                    else:
+                        fcntl.ioctl(fd, termios.TIOCNOTTY, '')
+                        os.close(fd)
+                    
                 os.setsid()
+                
                 if hasattr(termios, 'TIOCSCTTY'):
                     fcntl.ioctl(slavefd, termios.TIOCSCTTY, '')
-                else:
-                    for fd in range(3):
-                        if fd != slavefd:
-                            os.close(fd)
-                    fd = os.open(ttyname, os.O_RDWR)
-                    os.close(fd)
+                
+                for fd in range(3):
+                    if fd != slavefd:
+                        os.close(fd)
 
                 os.dup2(slavefd, 0) # stdin
                 os.dup2(slavefd, 1) # stdout
