@@ -67,6 +67,11 @@ except:
     from org.python.core import PyMethod
     instancemethod = PyMethod
 
+try:
+    True, False
+except NameError:
+    True, False = 1, 0
+
 class Freezer:
     DELETE = 0
     SAVE = 1
