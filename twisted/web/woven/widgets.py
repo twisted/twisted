@@ -533,7 +533,7 @@ class ParagraphText(Widget):
             self.add(para)
 
 
-class Image(Text):
+class Image(Widget):
     """
     A simple Widget that creates an `img' tag.
     """
@@ -590,26 +590,31 @@ class Input(Widget):
 class CheckBox(Input):
     def setUp(self, request, node, data):
         self['type'] = 'checkbox'
+        Input.setUp(self, request, node, data)
 
 
 class RadioButton(Input):
     def setUp(self, request, node, data):
         self['type'] = 'radio'
+        Input.setUp(self, request, node, data)
 
 
 class File(Input):
     def setUp(self, request, node, data):
         self['type'] = 'file'
+        Input.setUp(self, request, node, data)
 
 
 class Hidden(Input):
     def setUp(self, request, node, data):
         self['type'] = 'hidden'
+        Input.setUp(self, request, node, data)
 
 
 class InputText(Input):
     def setUp(self, request, node, data):
         self['type'] = 'text'
+        Input.setUp(self, request, node, data)
 
 
 class PasswordText(Input):
@@ -618,11 +623,13 @@ class PasswordText(Input):
     """
     def setUp(self, request, node, data):
         self['type'] = 'password'
+        Input.setUp(self, request, node, data)
 
 
 class Button(Input):
     def setUp(self, request, node, data):
         self['type'] = 'button'
+        Input.setUp(self, request, node, data)
 
 
 class Select(Input):
@@ -645,6 +652,7 @@ class Option(Input):
 
     def setUp(self, request, node, data):
         self.add(Text(self.text or data))
+        Input.setUp(self, request, node, data)
 
 
 class Anchor(Widget):
