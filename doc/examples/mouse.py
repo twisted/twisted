@@ -1,6 +1,9 @@
-#!/usr/bin/python
+#!/usr/bin/env python
+"""
+Example using MouseMan protocol with the SerialPort transport
+"""
 
-# TODO set line speed, tty modes, etc.
+# TODO set tty modes, etc.
 # This works for me:
 
 # speed 1200 baud; rows 0; columns 0; line = 0;
@@ -14,47 +17,60 @@
 # -echo -echoe -echok -echonl -noflsh -xcase -tostop -echoprt -echoctl
 # -echoke
 
-import sys, os, os.path
-from twisted.internet import reactor
-from twisted.python import usage
+import sys
+from twisted.python import usage, log
 from twisted.protocols.mice import mouseman
-from twisted.internet import protocol, abstract, fdesc
 
-class SerialPort(abstract.FileDescriptor):
-    def __init__(self, filename):
-        self.fd = os.open(filename, os.O_RDONLY)
-
-    def fileno(self):
-        return self.fd
-
-    def doRead(self):
-        return fdesc.readFromFD(self.fileno(), self.protocol.dataReceived)
+if sys.platform == 'win32':
+    # win32 serial does not work yet!
+    raise NotImplementedError, "The SerialPort transport does not currently support Win32"
+    from twisted.internet import win32eventreactor
+    win32eventreactor.install()
 
 class Options(usage.Options):
-    synopsis = "Usage: %s [--file=FILE]" % os.path.basename(sys.argv[0])
-    optParameters = [['file', 'f', '/dev/tts/0']]
+    optParameters = [
+        ['port', 'p', '/dev/mouse', 'Device for serial mouse'],
+        ['baudrate', 'b', '1200', 'Baudrate for serial mouse'],
+        ['outfile', 'o', None, 'Logfile [default: sys.stdout]'],
+    ]
 
 class McFooMouse(mouseman.MouseMan):
     def down_left(self):
-        print "LEFT"
+        log.msg("LEFT")
+
     def up_left(self):
-        print "left"
+        log.msg("left")
 
     def down_middle(self):
-        print "MIDDLE"
+        log.msg("MIDDLE")
+
     def up_middle(self):
-        print "middle"
+        log.msg("middle")
 
     def down_right(self):
-        print "RIGHT"
+        log.msg("RIGHT")
+
     def up_right(self):
-        print "right"
+        log.msg("right")
 
     def move(self, x, y):
-        print "(%d,%d)" % (x, y)
+        log.msg("(%d,%d)" % (x, y))
 
-o = Options()
-transport = SerialPort(o.opts['file'])
-transport.protocol = McFooMouse()
-reactor.addReader(transport)
-reactor.run()
+if __name__ == '__main__':
+    from twisted.internet import reactor
+    from twisted.internet.serialport import SerialPort
+    o = Options()
+    try:
+        o.parseOptions()
+    except usage.UsageError, errortext:
+        print "%s: %s" % (sys.argv[0], errortext)
+        print "%s: Try --help for usage details." % (sys.argv[0])
+        raise SystemExit, 1
+
+    logFile = sys.stdout
+    if o.opts['outfile']:
+        logFile = o.opts['outfile']
+    log.startLogging(logFile)
+    
+    SerialPort(McFooMouse(), o.opts['port'], reactor, baudrate=int(o.opts['baudrate']))
+    reactor.run()
