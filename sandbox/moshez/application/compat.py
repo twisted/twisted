@@ -82,7 +82,8 @@ class ServiceNetwork:
 
     def connectUDP(self, remotehost, remoteport, protocol, localport=0,
                   interface='', maxPacketSize=8192):
-        s = internet.GenericClient(connectorType,  *args, **kw)
+        s = internet.UDPClient(remotehost, remoteport, protocol, localport,
+                               interface, maxPacketSize)
         s.setServiceParent(self.app)
 
     def connectTCP(self, host, port, factory, timeout=30, bindAddress=None):
