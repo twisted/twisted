@@ -668,11 +668,11 @@ class TupleUnslicer(ListUnslicer):
 
 
 class DictUnslicer(BaseUnslicer):
+    gettingKey = True
 
     def start(self, count):
         self.d = {}
         self.protocol.setObject(count, self.d)
-        self.gettingKey = True
         self.key = None
 
     def checkToken(self, typebyte):
@@ -775,19 +775,19 @@ class BrokenDictUnslicer(DictUnslicer):
 
     def receiveValue(self, value):
         if value == "die":
-            raise Violation("aaaaaaaaargh")
+            raise "aaaaaaaaargh"
         if value == "please_die_in_finish":
             self.dieInFinish = 1
         DictUnslicer.receiveValue(self, value)
 
     def receiveClose(self):
         if self.dieInFinish:
-            raise Violation("dead in receiveClose()")
+            raise "dead in receiveClose()"
         DictUnslicer.receiveClose(self)
 
 class ReallyBrokenDictUnslicer(DictUnslicer):
     def start(self, count):
-        raise Violation("dead in start")
+        raise "dead in start"
 
 
 class Dummy:
@@ -1125,7 +1125,7 @@ class RootUnslicer(BaseUnslicer):
             child = self.openRegistry[opentype]()
         except KeyError:
             raise BananaError("unknown OPEN type '%s'" % opentype,
-                              self.where() + ".<OPEN>")
+                              self.where() + ".<OPEN(%s)>" % opentype)
         return child
 
     def doOpen(self, opentype):

@@ -9,7 +9,7 @@ from slicer import RootSlicer, RootUnslicer, \
      UnbananaFailure, VocabSlicer, SimpleTokens
 from tokens import Violation, SIZE_LIMIT, STRING, LIST, INT, NEG, \
      LONGINT, LONGNEG, VOCAB, FLOAT, OPEN, CLOSE, ABORT, tokenNames, \
-     BananaError
+     BananaError, BananaError2
 
 def int2b128(integer, stream):
     if integer == 0:
@@ -284,10 +284,18 @@ class Banana(protocol.Protocol):
                     try:
                         sizelimit = self.getLimit(typebyte)
                     except Violation:
+                        where = self.describe()
                         e = BananaError("schema rejected %s token" % \
-                                        tokenNames[typebyte])
+                                        tokenNames[typebyte],
+                                        where + "<checkToken>")
                         rejected = True
                         gotItem(UnbananaFailure(self.describe(), e))
+                    except BananaError:
+                        raise
+                    except:
+                        e = BananaError2(Failure(),
+                                         self.describe() + "<checkToken>")
+                        raise e
 
             header = buffer[:pos]
             rest = buffer[pos+1:]
@@ -439,17 +447,21 @@ class Banana(protocol.Protocol):
             if self.debug:
                 print "opened[%d] with %s" % (openCount, child)
         except Violation:
-            # could be Violation, could be coding error
-
             # must discard the rest of the child object. There is no new
             # unslicer pushed yet, so we don't use abandonUnslicer
             self.discardCount += 1
 
             # and give an UnbananaFailure to the parent who rejected it
-            where = self.describe() + ".<OPEN%s>" % opentype
+            where = self.describe() + ".<OPEN(%s)>" % opentype
             failure = UnbananaFailure(where, Failure())
             top.receiveChild(failure)
             return
+        except BananaError:
+            raise
+        except:
+            # blow up, but make a note of which object caused the problem
+            where = self.describe() + ".<OPEN(%s)>" % opentype
+            raise BananaError2(Failure(), where)
 
         child.protocol = self
         child.openCount = openCount
@@ -462,6 +474,11 @@ class Banana(protocol.Protocol):
             where = self.describe() + ".<START>"
             f = UnbananaFailure(where, Failure())
             self.abandonUnslicer(f, child)
+        except BananaError:
+            raise
+        except:
+            where = self.describe() + ".<START>"
+            raise BananaError2(Failure(), where)
 
     def handleToken(self, token):
         top = self.receiveStack[-1]
@@ -480,6 +497,11 @@ class Banana(protocol.Protocol):
 
             f = UnbananaFailure(self.describe(), Failure())
             self.abandonUnslicer(f, top)
+        except BananaError:
+            raise
+        except:
+            where = self.describe() + ".<receiveChild(%s)>" % token
+            raise BananaError2(Failure(), where)
 
     def handleClose(self, closeCount):
         if self.debug:
@@ -499,6 +521,12 @@ class Banana(protocol.Protocol):
             # to the parent.
             where = self.describe() + ".<CLOSE>"
             obj = UnbananaFailure(where, Failure())
+        except BananaError:
+            raise
+        except:
+            where = self.describe() + ".<CLOSE>"
+            raise BananaError2(Failure(), where)
+
         if self.debug: print "receiveClose returned", obj
 
         try:
@@ -520,6 +548,11 @@ class Banana(protocol.Protocol):
 
             where = self.describe() + ".<FINISH>"
             obj = UnbananaFailure(where, Failure())
+        except BananaError:
+            raise
+        except:
+            where = self.describe() + ".<FINISH>"
+            raise BananaError2(Failure(), where)
 
         self.receiveStack.pop()
 
@@ -535,7 +568,11 @@ class Banana(protocol.Protocol):
             # contaminated. This is just like receiveToken failing
             f = UnbananaFailure(self.describe(), Failure())
             self.abandonUnslicer(f, parent)
-
+        except BananaError:
+            raise
+        except:
+            where = self.describe() + ".<receiveChild(%s)>" % obj
+            raise BananaError2(Failure(), where)
 
     def abandonUnslicer(self, failure, leaf=None):
         """The top-most Unslicer has decided to give up. We must discard all
@@ -561,6 +598,8 @@ class Banana(protocol.Protocol):
         except Violation:
             # they've already failed once
             pass
+        # let other exceptions pop up here, because the .where argument
+        # isn't really useful (TODO: really?)
 
         assert leaf == old
 
@@ -587,7 +626,12 @@ class Banana(protocol.Protocol):
 
             # TODO: need a mechanism to chain the UnbananaFailures
             self.abandonUnslicer(failure, top)
-
+        except BananaError:
+            raise
+        except:
+            where = self.describe() + \
+                    ".<abandonUnslicer-receiveChild(%s)>" % failure
+            raise BananaError2(Failure(), where)
 
     def describe(self):
         where = []

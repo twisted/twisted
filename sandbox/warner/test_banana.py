@@ -143,6 +143,8 @@ class UnbananaTestMixin:
                 raise
             if where != None:
                 if e.where != where:
+                    print "e.where", e.where
+                    print "where", where
                     self.fail("BananaError '%s' didn't occur at '%s'" % \
                               (e, where))
         self.hangup = True # to stop the tearDown check
@@ -349,10 +351,10 @@ class FailureTests(UnbananaTestMixin, unittest.TestCase):
         
     def test_dict1(self):
         # dies during open because of bad opentype
-        self.assertRaisesBananaError("root.[1].<OPEN>",
+        self.assertRaisesBananaError("root.[1].<OPEN(bad)>",
                                      self.do,
                                      [OPENlist(0), 1,
-                                       ("OPEN", "die", 1),
+                                       ("OPEN", "bad", 1),
                                         "a", 2,
                                         "b", 3,
                                        CLOSE(1),
@@ -378,7 +380,7 @@ class FailureTests(UnbananaTestMixin, unittest.TestCase):
 
     def test_dict4(self):
         # dies during value
-        self.assertRaisesBananaError("root.[1].{}[b]",
+        self.assertRaisesBananaError("root.[1].{}[b].<receiveChild(die)>",
                                      self.do,
                                      [OPENlist(0), 1,
                                        OPENdict1(1),

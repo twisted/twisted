@@ -42,6 +42,8 @@ class BananaError(Exception):
     """This exception is raised in response to a fundamental protocol
     violation. The connection should be dropped immediately.
 
+    .why is a string that describes what kind of violation occurred
+    
     .where is an optional string that describes the node of the object graph
     where the failure was noticed.
     """
@@ -52,3 +54,14 @@ class BananaError(Exception):
 
     def __str__(self):
         return "BananaError(in %s): %s" % (self.where, self.why)
+
+class BananaError2(BananaError):
+    """This exception is raised when something else goes wrong during the
+    unserialization process. This catches arbitrary exceptions in Unslicer
+    methods.
+
+    This exists solely to add the .where attribute to the raised exception.
+    """
+
+    def __str__(self):
+        return "BananaError2(in %s): %s" % (self.where, self.why)
