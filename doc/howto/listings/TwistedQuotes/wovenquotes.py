@@ -1,15 +1,15 @@
 # webmvcquotes
 
-from twisted.web import wmvc
-from twisted.web import domwidgets
-from twisted.web import domhandlers
+from twisted.web.woven import model, view, controller
+from twisted.web.woven import widgets, input
 from twisted.python import domhelpers
 
 from TwistedQuotes import quoters
 
 
-class MQuote(wmvc.WModel):
+class MQuote(model.WModel):
     def __init__(self, filename):
+        model.WModel.__init__(self)
         self._filename = filename
         self._quoter = quoters.FortuneQuoter([filename])
         self.quote = ""
@@ -22,7 +22,7 @@ class MQuote(wmvc.WModel):
         return self._filename
 
 
-class QuoteWidget(domwidgets.Widget):
+class QuoteWidget(widgets.Widget):
     def setUp(self, request, node, data):
         """
         Set up this Widget object before it gets rendered into HTML.
@@ -31,11 +31,11 @@ class QuoteWidget(domwidgets.Widget):
         Text widget to self. I then rely on Widget.generateDOM to convert
         from Widgets into the Document Object Model.
         """
-        self.add(domwidgets.Text(data))
+        self.add(widgets.Text(data))
 
 
-class VQuote(wmvc.WView):
-    templateFile = "WebMVCQuotes.xhtml"
+class VQuote(view.WView):
+    templateFile = "WovenQuotes.xhtml"
 
     def setUp(self, request, document):
         """
@@ -54,7 +54,7 @@ class VQuote(wmvc.WView):
         return domwidgets.Text(self.model)
 
 
-class NewQuoteHandler(domhandlers.SingleValue):
+class NewQuoteHandler(input.SingleValue):
     def check(self, request, data):
         if data:
             return 1
@@ -65,12 +65,12 @@ class NewQuoteHandler(domhandlers.SingleValue):
         file.write('\n%\n'  + newQuote)
 
 
-class CQuote(wmvc.WController):
+class CQuote(controller.WController):
     def factory_newQuote(self, model):
         """Create a handler which knows how to verify input in a form with the
         name "newQuote"."""
         return NewQuoteHandler(model)
 
 
-wmvc.registerViewForModel(VQuote, MQuote)
-wmvc.registerControllerForModel(CQuote, MQuote)
+view.registerViewForModel(VQuote, MQuote)
+controller.registerControllerForModel(CQuote, MQuote)

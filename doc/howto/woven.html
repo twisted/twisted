@@ -4,13 +4,13 @@
 
 <html xmlns="http://www.w3.org/1999/xhtml">
   <head>
-    <title>Developing Componentized Web Applications with MVC, DOMWidgets, and DOMHandlers</title>
+    <title>Developing Componentized Web Applications using Woven, the Web Object Visualization Environment</title>
     <meta http-equiv="content-type"
     content="text/html; charset=ISO-8859-1" />
   </head>
 
   <body text="#000000" bgcolor="#ffffff">
-    <h1>Developing Componentized Web Applications in the Twisted Framework</h1>
+    <h1>Developing Componentized Web Applications using Woven, the Web Object Visualization Environment</h1>
 
 <p>
 DOMTemplate solves the problem of separating logic from presentation, and allows the templating logic to be expressed in Python code form using the DOM API. However, the DOM API is too low level and it quickly becomes tedious to use to build complicated HTML structures.
@@ -20,11 +20,11 @@ DOMTemplate solves the problem of separating logic from presentation, and allows
     <h2>Twisted's Solution</h2>
 
 <p>
-Twisted's solution is to provide a Model-View-Controller based component framework, which allows you to construct complex HTML "Views" out of many small interacting components, or "DOMWidgets".
+Twisted's solution is to provide a Model-View-Controller based component framework, which allows you to construct complex HTML "Views" out of many small interacting components, or "woven.widgets".
 </p>
 
 <p>
-Instead of manipulating DOM objects which represent low-level HTML Nodes, you construct and compose views using widgets defined in twisted.web.domwidgets,
+Instead of manipulating DOM objects which represent low-level HTML Nodes, you construct and compose views using widgets defined in twisted.web.woven.widgets,
 and higher-level widgets that you define yourself for an application-specific purpose.
 </p>
 
@@ -56,10 +56,14 @@ components.registerAdapter(CFoo, MFoo, mvc.IController)
 Although it is not always necessary to define a complete MVC triad, I recommend doing so initially even if your class bodies are simply 'pass'. This will get you used to thinking about MVC objects as a complete triad of cooperating objects, and make it easy to add functionality to your triad later.
 </p>
 
-    <h3>DOMTemplate and DOMController</h3>
+    <h3>WView and WController</h3>
 
 <p>
-The View and Controller objects that Twisted defines know nothing about the web; thus, twisted defines subclasses DOMTemplate and DOMController for interacting with twisted.web, Twisted's HTTP server. twisted.web defines IResource, the interface that Resource objects must implement in order to support publishing themselves on the web. DOMTemplate and DOMController both support this interface, giving you an easy and powerful way to handle incoming web requests and generate template-driven web pages.
+The View and Controller objects that Twisted defines know nothing about the web; thus, twisted defines subclasses WView and WController for interacting with twisted.web, Twisted's HTTP server. twisted.web defines IResource, the interface that Resource objects must implement in order to support publishing themselves on the web. WView and WController both support this interface, giving you an easy and powerful way to handle incoming web requests and generate template-driven web pages.
+</p>
+
+<p>
+WView is a subclass of DOMTemplate, and much of Woven is based upon the semantics DOMTemplate uses to transform an input XHTML template into the final page which the user sees.
 </p>
 
 <p>
@@ -67,21 +71,21 @@ Here is an example MVC triad for the web:
 </p>
 
 <pre class="python">
-from twisted.python import wmvc
+from twisted.python.woven import model, view, controller
 
 
-class MExample(wmvc.WModel):
+class MExample(model.WModel):
     pass
-class VExample(wmvc.WView):
+class VExample(view.WView):
     templateFile = 'Example.xhtml'
-class CExample(wmvc.WController):
+class CExample(controller.WController):
     pass
 
 
 # Register VExample as a View for MExample
-wmvc.registerViewForModel(VExample, MExample)
+view.registerViewForModel(VExample, MExample)
 # Register CExample as a Controller for MExample
-wmvc.registerControllerForModel(CExample, MExample)
+controller.registerControllerForModel(CExample, MExample)
 </pre>
 
 <p>
@@ -89,21 +93,21 @@ While using Twisted's WebMVC you will be using all this boilerplate code for eve
 </p>
 
 <p>
-Now, let's take a look at an actual application written in WebMVC. Here is a template that a designer has provided for the quote page on our site:
+Now, let's take a look at an actual application written in Woven. Here is a template that a designer has provided for the quote page on our site:
 </p>
 
-<a href="listings/TwistedQuotes/WebMVCQuotes.xhtml" class="html-listing">Listing 1: WebMVCQuotes.html: Twisted Quotes Web Template</a>
+<a href="listings/TwistedQuotes/WovenQuotes.xhtml" class="html-listing">Listing 1: WovenQuotes.html: Twisted Quotes Web Template</a>
 
 <p>
 Notice that we have placed "model", "view" and "controller" attributes on those elements that we are interested in operating on. When DOMTemplate is iterating the template looking for nodes to operate on, any node with these attributes will be looked for in both the view and controller. If a node has view attribute of "foo" the method factory_foo will be looked for in the view, and if a node has a controller attribute of "bar" the method factory_bar will be looked for in the controller.
 </p>
 
 <p>
-These factory methods will be called with the request object and current node object as parameters. A view factory is expected to return a Widget subclass; there are many widgets in twisted.web.domwidgets that can be composed into larger widgets which are specific to your application. A controller factory, usually only relevant on an INPUT node, is expected to return an InputHandler subclass; these are defined in domhandlers.
+These factory methods will be called with the request object and current node object as parameters. In the WView subclass, a view factory is expected to return a Widget subclass; there are many widgets in twisted.web.woven.widgets that can be composed into larger widgets which are specific to your application. A controller factory, usually only relevant on an INPUT node, is expected to return an InputHandler subclass; these are defined in twisted.web.woven.input.
 </p>
 
 <p>
-<a href="listings/TwistedQuotes/webmvcquotes.py" class="py-listing">Listing 2: webmvcquotes.py: Twisted Quotes WebMVC module</a>
+<a href="listings/TwistedQuotes/wovenquotes.py" class="py-listing">Listing 2: wovenquotes.py: Twisted Quotes Woven module</a>
 </p>
 
 <p>
@@ -111,7 +115,7 @@ So, to bring our template to life, we first override setUp to prepare the view f
 </p>
 
 <p>
-A DOMWidget's main responsibility is implementing generateDOM, which should return a DOM node hierarchy suitable for inserting into the tree. In this case, we take advantage of the higher level Widgets API and rely on domwidgets.Widget.generateDOM to do the work for us.
+A DOMWidget's main responsibility is implementing setUp, which should set up the widget in preperation for conversion to DOM and insertion into the tree. In this case, we take advantage of the higher level Widgets API and simply add a Text widget to ourself. When the widget is turned into DOM, the text widget will know how to create a DOM text node, and insert it into the tree.
 </p>
 
 <p>
@@ -119,15 +123,15 @@ Finally, we provide a factory_newQuote method on the controller which returns a 
 </p>
 
 <p>
-Now, you just need a Resource Script to handle everything.
+Now, you just need a Resource Script to handle the web request.
 </p>
 
 <p>
-<a href="listings/TwistedQuotes/webmvcquote.rpy" class="py-listing">Listing 3: webmvcquote.rpy: Twisted Quotes WebMVC Resource module</a>
+<a href="listings/TwistedQuotes/wovenquotes.rpy" class="py-listing">Listing 3: wovenquotes.rpy: Twisted Quotes Woven Resource script</a>
 </p>
 
 <p>
-This is only the beginning of what can be done with Twisted's WebMVC modules. With a little extra work put into componentizing your logic into separate domains, I think you will find that you will be creating more and more complex web sites with ease in no time.
+This is only the beginning of what can be done with Twisted's Woven modules. With a little extra work put into componentizing your logic into separate domains, I think you will find that you will be creating more and more complex web sites with ease in no time.
 </p>
 
 </body>
