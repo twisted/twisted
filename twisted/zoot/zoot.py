@@ -24,3 +24,6 @@ class Zoot:
     def setHost(self, host):
         assert (self.host is None) or (self.host == host)
         self.host = host
+
+    def getHost(self):
+        return self.host
