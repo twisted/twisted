@@ -61,9 +61,19 @@ class DirectoryListing(page.Page):
         self.directory = kwargs['directory']
 
     def wmfactory_title(self, request):
+        """Model factory for the title.
+
+        This method will be called to create the model to use when
+        'model="title"' is found in the template.
+        """
         return self.directory
 
     def wmfactory_directory(self, request):
+        """Model factory for the directory.
+
+        This method will be called to create the model to use when
+        'model="directory"' is found in the template.
+        """
         files = os.listdir(self.directory)
         for i in xrange(len(files)):
             if os.path.isdir(os.path.join(self.directory,files[i])):
