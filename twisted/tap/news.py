@@ -62,36 +62,84 @@ class PickleOptions(usage.Options):
 
         # XXX - Hrm.
         ["groups",     "g", "groups.list",   "File containing group list"],
-        ["servers",    "s", "servers.list",  "File containing server list"]
+        ["servers",    "s", "servers.list",  "File containing server list"],
+        ["moderators", "m", "moderators.list",
+         "File containing moderators list"],
     ]
+    
+    subCommands = None
 
     def postOptions(self):
         # XXX - Hmmm.
-        self['groups'] = [g.strip() for g in open(self['groups']).readlines() if not g.startswith('#')]
-        self['servers'] = [s.strip() for s in open(self['servers']).readlines() if not s.startswith('#')]
-
-        self.db = database.PickleStorage(filename, self['groups'])
+        filename = self['file']
+        self['groups'] = [g.strip() for g in open(self['groups']).readlines()
+                          if not g.startswith('#')]
+        self['servers'] = [s.strip() for s in open(self['servers']).readlines()
+                           if not s.startswith('#')]
+        self['moderators'] = [s.split()
+                              for s in open(self['moderators']).readlines()
+                              if not s.startswith('#')]
+        self.db = database.PickleStorage(filename, self['groups'],
+                                         self['moderators'])
 
 
 class Options(usage.Options):
     synopsis = "Usage: mktap news [options]"
+    
+#    groups = None
+#    servers = None
+#    subscriptions = None
 
     optParameters = [
         ["port",       "p", "119",           "Listen port"],
         ["interface",  "i", "",              "Interface to which to bind"],
+        ["datadir",    "d", "news.db",       "Root data storage path"]
     ]
-    
-    subCommands = [
-        ['sql',    None, DBOptions,     'Create an SQL RDBM backed news server'],
-        ['pickle', None, PickleOptions, 'Create a Pickle backed news server']
-    ]
+
+    def __init__(self):
+        usage.Options.__init__(self)
+        self.groups = []
+        self.servers = []
+        self.subscriptions = []
+
+
+    def opt_group(self, group):
+        """The name of a newsgroup to carry."""
+        self.groups.append([group, None])
+
+
+    def opt_moderator(self, moderator):
+        """The email of the moderator for the most recently passed group."""
+        self.groups[-1][1] = moderator
+
+
+    def opt_subscription(self, group):
+        """A newsgroup to list as a recommended subscription."""
+        self.subscriptions.append(group)
+
+
+    def opt_server(self, server):
+        """The address of a Usenet server to pass messages to and receive messages from."""
+        self.servers.append(server)
 
 
 def updateApplication(app, config):
-    if not hasattr(config, 'subCommand'):
-        raise usage.UsageError("Must specify a subcommand.")
+    if not len(config.groups):
+        raise usage.UsageError("No newsgroups specified")
+    
+    db = database.NewsShelf(config['datadir'])
+    for (g, m) in config.groups:
+        if m:
+            db.addGroup(g, 'm')
+            db.addModerator(g, m)
+        else:
+            db.addGroup(g, 'y')
+    for s in config.subscriptions:
+        print s
+        db.addSubscription(s)
+
     app.listenTCP(
         int(config['port']),
-        news.UsenetServerFactory(config.subOptions.db, config.subOptions['servers']),
+        news.UsenetServerFactory(db, config.servers),
         interface = config['interface']
     )

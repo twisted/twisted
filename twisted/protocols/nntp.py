@@ -45,7 +45,7 @@ Other desired features:
 
 from twisted.internet import protocol, reactor
 from twisted.protocols import basic
-from twisted.python import log
+from twisted.python import log, failure
 
 import string, random, socket, time
 
@@ -538,6 +538,10 @@ class NNTPServer(basic.LineReceiver):
     def __init__(self):
         self.servingSlave = 0
 
+    def sendLine(self, line):
+        print line
+        basic.LineReceiver.sendLine(self, line)
+
     def connectionMade(self):
         try:
             self.ip = self.transport.socket.getpeername()
@@ -550,6 +554,7 @@ class NNTPServer(basic.LineReceiver):
         self.sendLine('200 server ready - posting allowed')
 
     def lineReceived(self, line):
+        print line
         if self.inputHandler is not None:
             self.inputHandler(line)
         else:
@@ -564,6 +569,7 @@ class NNTPServer(basic.LineReceiver):
                         self.sendLine('501 command syntax error')
                     except:
                         self.sendLine('503 program fault - command not performed')
+                        log.deferr()
                 else:
                     self.sendLine('500 command not recognized')
 
@@ -610,7 +616,7 @@ class NNTPServer(basic.LineReceiver):
 
     def _errSubscription(self, failure):
         print 'SUBSCRIPTIONS failed: ', failure
-        self.sendLine('503 program error, function not performed')
+        self.sendLine('503 program fault - comand not performed')
 
 
     def _gotOverview(self, parts):
@@ -622,7 +628,7 @@ class NNTPServer(basic.LineReceiver):
 
     def _errOverview(self, failure):
         print 'LIST OVERVIEW.FMT failed: ', failure
-        self.sendLine('503 program error, function not performed')
+        self.sendLine('503 program fault - command not performed')
 
 
     def do_LISTGROUP(self, group = None):
@@ -643,7 +649,7 @@ class NNTPServer(basic.LineReceiver):
 
         self.sendLine('211 list of article numbers follow')
         for i in articles:
-            self.sendLine('%d' % i)
+            self.sendLine(str(i))
         self.sendLine('.')
 
 
@@ -834,7 +840,7 @@ class NNTPServer(basic.LineReceiver):
                         article = int(article)
                         return func(self.currentGroup, article) 
                     except ValueError, e:
-                        self.sendLine('503 command syntax error')
+                        self.sendLine('501 command syntax error')
 
 
     def do_ARTICLE(self, article = None):

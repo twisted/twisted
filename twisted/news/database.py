@@ -29,11 +29,13 @@ less NNTP specific
 from __future__ import nested_scopes
 
 from twisted.protocols.nntp import NNTPError
+from twisted.protocols import smtp
 from twisted.internet import defer
 from twisted.enterprise import adbapi
 from twisted.persisted import dirdbm
 
 import getpass, pickle, time, socket, md5, string
+import smtplib, os
 
 ERR_NOGROUP, ERR_NOARTICLE = range(2, 4)  # XXX - put NNTP values here (I guess?)
 
@@ -73,12 +75,12 @@ class Article:
             self.putHeader('Date', time.ctime(time.time()))
 
 
-    
     def getHeader(self, header):
         if self.headers.has_key(string.lower(header)):
             return self.headers[string.lower(header)][1]
         else:
             return ''
+
 
     def putHeader(self, header, value):
         self.headers[string.lower(header)] = (header, value)
@@ -95,6 +97,10 @@ class Article:
         for i in OVERVIEW_FMT:
             xover.append(self.getHeader(i))
         return xover
+
+
+class NewsServerError(Exception):
+    pass
 
 
 class NewsStorage:
@@ -221,9 +227,31 @@ class PickleStorage(NewsStorage):
 
     sharedDBs = {}
 
-    def __init__(self, filename, groups = None):
+    def __init__(self, filename, groups = None, moderators = ()):
         self.datafile = filename
-        self.load(filename, groups)
+        self.load(filename, groups, moderators)
+
+
+    def getModerators(self, groups):
+        # first see if any groups are moderated.  if so, nothing gets posted,
+        # but the whole messages gets forwarded to the moderator address
+        moderators = []
+        for group in groups:
+            moderators.append(self.db['moderators'].get(group, None))
+        return filter(None, moderators)
+
+
+    def notifyModerators(self, moderators, article):
+        # Moderated postings go through as long as they have an Approved
+        # header, regardless of what the value is
+        a.putHeader('To', ', '.join(moderators))
+        return smtp.sendEmail(
+            'twisted@' + socket.gethostname(),
+            moderators,
+            article.body,
+            dict(article.headers.values())
+        )
+
 
     def listRequest(self):
         "Returns a list of 4-tuples: (name, max index, min index, flags)"
@@ -235,7 +263,10 @@ class PickleStorage(NewsStorage):
                 high = max(self.db[i].keys()) + 1
             else:
                 low = high = 0
-            flags = 'y'
+            if self.db['moderators'].has_key(i):
+                flags = 'm'
+            else:
+                flags = 'y'
             r.append((i, high, low, flags))
         return defer.succeed(r)
 
@@ -249,6 +280,11 @@ class PickleStorage(NewsStorage):
         a = Article(headers, article)
         groups = string.split(a.getHeader('Newsgroups'))
         xref = []
+
+        # Check moderated status
+        moderators = self.getModerators(groups)
+        if moderators and not a.getHeader('Approved'):
+            return self.notifyModerators(moderators, a)
 
         for group in groups:
             if self.db.has_key(group):
@@ -360,7 +396,7 @@ class PickleStorage(NewsStorage):
         pickle.dump(self.db, open(self.datafile, 'w'))
 
 
-    def load(self, filename, groups = None):
+    def load(self, filename, groups = None, moderators = ()):
         if PickleStorage.sharedDBs.has_key(filename):
             self.db = PickleStorage.sharedDBs[filename]
         else:
@@ -373,7 +409,240 @@ class PickleStorage(NewsStorage):
                 if groups is not None:
                     for i in groups:
                         self.db[i] = {}
+                self.db['moderators'] = dict(moderators)
                 self.flush()
+
+
+class Group:
+    name = None
+    flags = ''
+    minArticle = 1
+    maxArticle = 0
+    articles = None
+    
+    def __init__(self, name, flags = 'y'):
+        self.name = name
+        self.flags = flags
+        self.articles = {}
+
+
+class NewsShelf(NewsStorage):
+    """
+    A NewStorage implementation using Twisted's dirdbm persistence module.
+    """
+    
+    def __init__(self, path):
+        self.dbm = dirdbm.Shelf(path)
+        self.path = path
+        if not len(self.dbm.keys()):
+            self.initialize()
+
+
+    def initialize(self):
+        # A dictionary of group name/Group instance items
+        self.dbm['groups'] = dirdbm.Shelf(os.path.join(self.path, 'groups'))
+
+        # A dictionary of group name/email address
+        self.dbm['moderators'] = dirdbm.Shelf(os.path.join(self.path, 'moderators'))
+
+        # A list of group names
+        self.dbm['subscriptions'] = []
+
+        # A dictionary of MessageID strings/xref lists
+        self.dbm['Message-IDs'] = dirdbm.Shelf(os.path.join(self.path, 'Message-IDs'))
+
+
+    def addGroup(self, name, flags):
+        self.dbm['groups'][name] = Group(name, flags)
+
+
+    def addSubscription(self, name):
+        self.dbm['subscriptions'] = self.dbm['subscriptions'] + [name]
+
+
+    def addModerator(self, group, email):
+        self.dbm['moderators'][group] = email
+
+
+    def listRequest(self):
+        result = []
+        for g in self.dbm['groups'].values():
+            result.append((g.name, g.maxArticle, g.minArticle, g.flags))
+        return defer.succeed(result)
+
+
+    def subscriptionRequest(self):
+        return defer.succeed(self.dbm['subscriptions'])
+    
+    
+    def getModerator(self, groups):
+        # first see if any groups are moderated.  if so, nothing gets posted,
+        # but the whole messages gets forwarded to the moderator address
+        for group in groups:
+            try:
+                return self.dbm['moderators'][group]
+            except KeyError:
+                pass
+        return None
+
+
+    def notifyModerator(self, moderator, article):
+        # Moderated postings go through as long as they have an Approved
+        # header, regardless of what the value is
+        print 'To is ', moderator
+        article.putHeader('To', moderator)
+        return smtp.sendEmail(
+            'localhost',
+            'twisted-news@' + socket.gethostname(),
+            moderator,
+            article.body,
+            dict(article.headers.values())
+        )
+
+
+    def postRequest(self, message):
+        cleave = message.find('\r\n\r\n')
+        headers, article = message[:cleave], message[cleave + 1:]
+        
+        article = Article(headers, article)
+        groups = article.getHeader('Newsgroups').split()
+        xref = []
+        
+        # Check for moderated status
+        moderator = self.getModerator(groups)
+        if moderator and not article.getHeader('Approved'):
+            return self.notifyModerator(moderator, article)
+        
+        
+        for group in groups:
+            try:
+                g = self.dbm['groups'][group]
+            except KeyError:
+                pass
+            else:
+                index = g.maxArticle + 1
+                g.maxArticle += 1
+                g.articles[index] = article
+                xref.append((group, str(index)))
+                self.dbm['groups'][group] = g
+
+        if not xref:
+            return defer.fail(NewsServerError("No groups carried: " + ' '.join(groups)))
+
+        article.putHeader('Xref', '%s %s' % (socket.gethostname().split()[0], ' '.join(map(lambda x: ':'.join(x), xref))))
+        self.dbm['Message-IDs'][article.getHeader('Message-ID')] = xref
+        return defer.succeed(None)
+
+
+    def overviewRequest(self):
+        return defer.succeed(OVERVIEW_FMT)
+    
+    
+    def xoverRequest(self, group, low, high):
+        if not self.dbm['groups'].has_key(group):
+            return defer.succeed([])
+        
+        if low is None:
+            low = 0
+        if high is None:
+            high = self.dbm['groups'][group].maxArticle
+        r = []
+        for i in range(low, high + 1):
+            if self.dbm['groups'][group].articles.has_key(i):
+                r.append([str(i)] + self.dbm['groups'][group].articles[i].overview())
+        return defer.succeed(r)
+
+
+    def xhdrRequest(self, group, low, high, header):
+        if group not in self.dbm['groups']:
+            return defer.succeed([])
+        
+        if low is None:
+            low = 0
+        if high is None:
+            high = self.dbm['groups'][group].maxArticle
+        r = []
+        for i in range(low, high + 1):
+            if self.dbm['groups'][group].articles.has_key(i):
+                r.append((i, self.dbm['groups'][group].articles[i].getHeader(header)))
+        return defer.succeed(r)
+
+
+    def listGroupRequest(self, group):
+        if self.dbm['groups'].has_key(group):
+            return defer.succeed((group, self.dbm['groups'][group].articles.keys()))
+        return defer.fail(NewsServerError("No such group: " + group))
+
+
+    def groupRequest(self, group):
+        try:
+            g = self.dbm['groups'][group]
+        except KeyError:
+            return defer.fail(NewsServerError("No such group: " + group))
+        else:
+            flags = g.flags
+            low = g.minArticle
+            high = g.maxArticle
+            num = high - low + 1
+            return defer.succeed((group, num, high, low, flags))
+
+
+    def articleExistsRequest(self, id):
+        return defer.succeed(id in self.dbm['Message-IDs'])
+    
+    
+    def articleRequest(self, group, index, id = None):
+        if id is not None:
+            try:
+                xref = self.dbm['Message-IDs'][id]
+            except KeyError:
+                return defer.fail(NewsServerError("No such article: " + id))
+            else:
+                group, index = xref[0]
+                index = int(index)
+        
+        try:
+            a = self.dbm['groups'][group].articles[index]
+        except KeyError:
+            return defer.fail(NewsServerError("No such group: " + group))
+        else:
+            return defer.succeed((index, a.getHeader('Message-ID'), a.textHeaders() + a.body))
+    
+    
+    def headRequest(self, group, index, id = None):
+        if id is not None:
+            try:
+                xref = self.dbm['Message-IDs'][id]
+            except KeyError:
+                return defer.fail(NewsServerError("No such article: " + id))
+            else:
+                group, index = xref[0]
+                index = int(index)
+        
+        try:
+            a = self.dbm['groups'][group].articles[index]
+        except KeyError:
+            return defer.fail(NewsServerError("No such group: " + group))
+        else:
+            return defer.succeed((index, a.getHeader('Message-ID'), a.textHeaders()))
+
+
+    def bodyRequest(self, group, index, id = None):
+        if id is not None:
+            try:
+                xref = self.dbm['Message-IDs'][id]
+            except KeyError:
+                return defer.fail(NewsServerError("No such article: " + id))
+            else:
+                group, index = xref[0]
+                index = int(index)
+        
+        try:
+            a = self.dbm['groups'][group].articles[index]
+        except KeyError:
+            return defer.fail(NewsServerError("No such group: " + group))
+        else:
+            return defer.succeed((index, a.getHeader('Message-ID'), a.body))
 
 
 class NewsStorageAugmentation(adbapi.Augmentation, NewsStorage):
