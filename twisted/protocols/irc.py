@@ -42,7 +42,7 @@ Test coverage needs to be better.
 <http://www.irchelp.org/irchelp/rfc/ctcpspec.html>}
 """
 
-__version__ = '$Revision: 1.79 $'[11:-2]
+__version__ = '$Revision: 1.80 $'[11:-2]
 
 from twisted.internet import reactor, protocol
 from twisted.persisted import styles
@@ -216,6 +216,11 @@ class IRCClient(basic.LineReceiver):
        does).
      - Add flood protection/rate limiting for my CTCP replies.
      - NickServ cooperation.  (a mix-in?)
+     - Heartbeat.  The transport may die in such a way that it does not realize
+       it is dead until it is written to.  Sending something (like \"PING
+       this.irc-host.net\") during idle peroids would alleviate that.  If
+       you're concerned with the stability of the host as well as that of the
+       transport, you might care to watch for the corresponding PONG.
 
     @ivar nickname: Nickname the client will use.
     @ivar password: Password used to log on to the server.  May be C{None}.
