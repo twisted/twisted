@@ -3430,6 +3430,9 @@ private message from dash: wuh oh, drewp is on to us
 %
 <-- Spec has quit ("The bell that controls our lives has released us into the world....woot.")
 %
+<exarkun> What's a good, low-cost way to notice when a new file exists in a directory?
+<SamB> exarkun: open the directory for reading, read to the end, and use select? (crazy!)
+%
 <coderman> you ever see my callback templates for use with static and member functions?
 <coderman> it works nicely, which is a credit to the STL, but it is also so incredibly ugly it makes my head hurt
 <coderman> http://cubicmetercrystal.com/alpine/gen_html/base/AppUtils/AppCallback.h.html
