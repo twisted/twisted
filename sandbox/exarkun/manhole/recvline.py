@@ -28,7 +28,8 @@ class RecvLineHandler:
             proto.LEFT_ARROW: self.handle_LEFT,
             proto.RIGHT_ARROW: self.handle_RIGHT,
             '\r': self.handle_RETURN,
-            '\x7f': self.handle_BACKSPACE}
+            '\x7f': self.handle_BACKSPACE,
+            '\x04': self.handle_DELETE}
 
     def setInsertMode(self):
         self.mode = 'insert'
