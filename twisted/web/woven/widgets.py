@@ -616,6 +616,7 @@ class Anchor(Widget):
             href = href + '?' + params
         data = self.getData()
         self['href'] = href or str(data) + self.trailingSlash
+        self['href'] = urllib.quote(self['href'])
         if data is None:
             data = ""
         self.add(Text(self.text or data, self.raw, 0))
@@ -748,7 +749,9 @@ class KeyedList(List):
         """
         """
         currentListItem = 0
-        for key in data.keys():
+        keys = data.keys()
+        keys.sort()
+        for key in keys:
             newNode = self.getPattern('keyedListItem')
             if not newNode:
                 newNode = self.getPattern('item', _RAISE)
