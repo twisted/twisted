@@ -21,7 +21,7 @@
 import types
 from twisted.trial import unittest
 from twisted.spread import newjelly as jelly
-#from twisted import sexpy
+from twisted.spread import pb
 
 from twisted.python.compat import bool
 
@@ -217,4 +217,17 @@ class JellyTestCase(unittest.TestCase):
         x = jelly.unjelly(friendly, taster)
         assert x is A, "A came back: %s" % x
 
-testCases = [JellyTestCase]
+class ClassA(pb.Copyable, pb.RemoteCopy):
+    def __init__(self):
+        self.ref = ClassB(self)
+
+class ClassB(pb.Copyable, pb.RemoteCopy):
+    def __init__(self, ref):
+        self.ref = ref
+
+class CircularReferenceTestCase(unittest.TestCase):
+    def testSimpleCircle(self):
+        a = jelly.unjelly(jelly.jelly(ClassA()))
+        self.failUnless(a.ref.ref is a, "Identity not preserved in circular reference")
+
+testCases = [JellyTestCase, CircularReferenceTestCase]
