@@ -1,7 +1,7 @@
 #! /usr/bin/python
 
+from twisted.application import service, internet
 from twisted.spread import pb
-import twisted.internet.app
         
 class Echo1(pb.Root):
     def remote_foo(self, arg):
@@ -24,12 +24,12 @@ class MyBrokerFactory(pb.BrokerFactory):
             proto.setNameForLocal(name, self.objects[name])
         return proto
         
-app = twisted.internet.app.Application("pb4server")
 rootobject = Echo1()
 objects = {
     "one": EchoN(1),
     "two": EchoN(2),
     "three": EchoN(3),
     }
-app.listenTCP(8800, MyBrokerFactory(rootobject, objects))
-app.run(save=0)
+application = service.Application("pb4server")
+internet.TCPServer(8800, MyBrokerFactory(rootobject,
+    objects)).setServiceParent( service.IServiceCollection(application))

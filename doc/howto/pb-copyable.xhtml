@@ -226,12 +226,11 @@ persisted (across time) differently than they are transmitted (across
 <p>When this is run, it produces the following output:</p>
 
 <pre class="shell">
-% ./copy_receiver.py 
-twisted.spread.pb.BrokerFactory starting on 8800
-Starting factory &lt;twisted.spread.pb.BrokerFactory instance at 0x815085c&gt;
-   [program pauses here until copy_sender.py is run]
- got pond: &lt;__main__.ReceiverPond instance at 0x832941c&gt;
-7 frogs
+% twistd -n -y copy_receiver.py
+[-] twisted.spread.pb.BrokerFactory starting on 8800
+[-] Starting factory &lt;twisted.spread.pb.BrokerFactory instance at 0x406159cc&gt;
+[Broker,0,127.0.0.1]  got pond: &lt;__builtin__.ReceiverPond instance at 0x406ec7ac&gt;
+[Broker,0,127.0.0.1] 7 frogs
 </pre>
 
 <pre class="shell">
@@ -292,11 +291,11 @@ course, to create the object in the first place.</p>
 <p>When run, the <code>copy2</code> example emits the following:</p>
 
 <pre class="shell">
-% ./copy2_receiver.py 
-twisted.spread.pb.BrokerFactory starting on 8800
-Starting factory &lt;twisted.spread.pb.BrokerFactory instance at 0x8337f2c&gt;
- got pond: &lt;copy2_classes.ReceiverPond instance at 0x8150dbc&gt;
- count 7
+% twistd -n -y copy2_receiver.py 
+[-] twisted.spread.pb.BrokerFactory starting on 8800
+[-] Starting factory &lt;twisted.spread.pb.BrokerFactory instance at 0x405af48c&gt;
+[Broker,0,127.0.0.1]  got pond: &lt;copy2_classes.ReceiverPond instance at 0x406eb5ac&gt;
+[Broker,0,127.0.0.1]  count 7
 </pre>
 
 <pre class="shell">
@@ -484,15 +483,17 @@ cache that tracks changes to the master:</p>
 <p>When run, this example emits the following:</p>
 
 <pre class="shell">
-% ./cache_receiver.py 
- cache - sitting, er, setting ducks
-got pond: &lt;cache_classes.SlaveDuckPond instance at 0x82a15e4&gt;
-[2] ducks:  ['one duck', 'two duck']
- cache - addDuck
-[3] ducks:  ['one duck', 'two duck', 'ugly duckling']
- cache - removeDuck
-[2] ducks:  ['two duck', 'ugly duckling']
-dropping pond
+% twistd -n -y cache_receiver.py 
+[-] twisted.spread.pb.BrokerFactory starting on 8800
+[-] Starting factory &lt;twisted.spread.pb.BrokerFactory instance at 0x40615acc&gt;
+[Broker,0,127.0.0.1]  cache - sitting, er, setting ducks
+[Broker,0,127.0.0.1] got pond: &lt;cache_classes.SlaveDuckPond instance at 0x406eb7ac&gt;
+[Broker,0,127.0.0.1] [2] ducks:  ['one duck', 'two duck']
+[Broker,0,127.0.0.1]  cache - addDuck
+[Broker,0,127.0.0.1] [3] ducks:  ['one duck', 'two duck', 'ugly duckling']
+[Broker,0,127.0.0.1]  cache - removeDuck
+[Broker,0,127.0.0.1] [2] ducks:  ['two duck', 'ugly duckling']
+[Broker,0,127.0.0.1] dropping pond
 % 
 </pre>
 
