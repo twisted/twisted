@@ -547,6 +547,9 @@ class ConnectedDatagramProtocol(DatagramProtocol):
 
 class FileWrapper:
     """A wrapper around a file-like object to make it behave as a Transport.
+
+    This doesn't actually stream the file to the attached protocol,
+    and is thus useful mainly as a utility for debugging protocols.
     """
 
     implements(interfaces.ITransport)
