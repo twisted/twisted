@@ -10,70 +10,10 @@
 # System Imports
 import string
 
-# Twisted Imports
-from twisted.python import roots
-
 # Sibling Imports
 import resource
-import error
-
-from nevow import rend
-from nevow import loaders
-from nevow.stan import directive
-from nevow.tags import *
-from nevow import inevow
-
-class VirtualHostList(rend.Page):
-    def __init__(self, nvh):
-        rend.Page.__init__(self)
-        self.nvh = nvh
-
-    stylesheet = """
-    body { border: 0; padding: 0; margin: 0; background-color: #efefef; }
-    h1 {padding: 0.1em; background-color: #777; color: white; border-bottom: thin white dashed;}
-"""
-
-    def getStyleSheet(self):
-        return self.stylesheet
- 
-    def data_hostlist(self, context, data):
-        return self.nvh.hosts.keys()
-
-    def render_hostlist(self, context, data):
-        host=data
-        req = context.locate(inevow.IRequest)
-        proto = req.clientproto.split('/')[0].lower()
-
-        link = "%s://%s" % (proto, host)
-
-        if ':' in req.getHeader('host'):
-            port = req.getHeader('host').split(':')[1]
-            
-            if port != 80:
-                link += ":%s" % port
-
-        link += req.path
-
-        return context.tag[a(href=link)[ host ]]
- 
-    def render_title(self, context, data):
-        req = context.locate(inevow.IRequest)
-        proto = req.clientproto.split('/')[0].lower()
-        host = req.getHeader('host')
-        return context.tag[ "Virtual Host Listing for %s://%s" % (proto, host) ]
-
-    docFactory = loaders.stan(
-        html[
-            head[
-                title(render=render_title),
-                style(type="text/css")[
-                    getStyleSheet
-                ]
-            ],
-            body[
-                h1(render=render_title),
-                ul(data=directive("hostlist"), render=directive("sequence"))[
-                    li(pattern="item", render=render_hostlist)]]])
+import responsecode
+import iweb
 
 class NameVirtualHost(resource.Resource):
     """I am a resource which represents named virtual hosts. 
@@ -82,18 +22,14 @@ class NameVirtualHost(resource.Resource):
     
     supportNested = True
 
-    def __init__(self, default=None, listHosts=True):
+    def __init__(self, default=None):
         """Initialize. - Do you really need me to tell you that?
         """
         resource.Resource.__init__(self)
         self.hosts = {}
        
         self.default = default
-        self.listHosts = listHosts
         
-        if self.listHosts and self.default == None:
-            self.default = VirtualHostList(self)
-            
     def addHost(self, name, resrc):
         """Add a host to this virtual host. - The Fun Stuff(TM)
             
@@ -105,7 +41,6 @@ class NameVirtualHost(resource.Resource):
 
         I told you that was fun.
         """
-        
         self.hosts[name] = resrc
 
     def removeHost(self, name):
@@ -113,14 +48,20 @@ class NameVirtualHost(resource.Resource):
         """
         del self.hosts[name]
 
-    def _getResourceForRequest(self, request):
+    def _getResourceForRequest(self, ctx):
         """(Internal) Get the appropriate resource for the request
         """
+
+    def locateChild(self, ctx, segments):
+        """It's a NameVirtualHost, do you know where your children are?
         
-        hostHeader = request.getHeader('host')
+        This uses locateChild magic so you don't have to mutate the request.
+        """
+
+        hostHeader = iweb.IRequest(ctx).host
         
         if hostHeader == None:
-            return self.default or error.NoResource()
+            return self.default or responsecode.NOT_FOUND
         else:
             host = hostHeader.split(':')[0].lower()
             
@@ -133,15 +74,7 @@ class NameVirtualHost(resource.Resource):
                 while not self.hosts.has_key(host) and len(host.split('.')) > 1:
                     host = '.'.join(host.split('.')[1:])
 
-        return (self.hosts.get(host, self.default) or error.NoResource())
-
-    def locateChild(self, request, segments):
-        """It's a NameVirtualHost, do you know where your children are?
-        
-        This uses locateChild magic so you don't have to mutate the request.
-        """
-        resrc = self._getResourceForRequest(request)
-        return resrc, segments
+        return (self.hosts.get(host, self.default) or responsecode.NOT_FOUND), segments
         
 
 class VHostMonsterResource(resource.Resource):
