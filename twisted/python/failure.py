@@ -139,6 +139,11 @@ class Failure:
         frames = self.frames = []
         stack = self.stack = []
 
+        # added 2003-06-23 by Chris Armstrong. Yes, I actually have a
+        # use case where I need this traceback object, and I've made
+        # sure that it'll be cleaned up.
+        self.tb = tb
+
         if tb:
             f = tb.tb_frame
         elif not isinstance(self.value, Failure):
@@ -269,6 +274,9 @@ class Failure:
                 [(j[0], repr(j[1])) for j in v[4]]
             ] for v in self.frames
         ]
+
+        # added 2003-06-23. See comment above in __init__
+        c['tb'] = None
 
         if self.stack is not None:
             # XXX: This is a band-aid.  I can't figure out where these
