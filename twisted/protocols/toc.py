@@ -167,7 +167,7 @@ class TOC(protocol.Protocol):
         if len(self._buf)<6+length: return None
         data=self._buf[6:6+length]
         self._buf=self._buf[6+length:]
-        if data[-1]=="\000":
+        if data and data[-1]=="\000":
             data=data[:-1]
         self._debug([type,data])
         return [type,data]

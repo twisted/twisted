@@ -365,7 +365,6 @@ class InstanceMessenger:
             if callbacks:
                 for g,c in callbacks:
                     if g in (gateway,None):
-                        print "calling %s with %s"%(c,(self,gateway,event)+args)
                         r=apply(c,(self,gateway,event)+args,{})
                         if r=="break": br=1
         return not br
