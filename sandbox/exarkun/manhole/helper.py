@@ -179,7 +179,7 @@ class TerminalBuffer(protocol.Protocol):
 
     def eraseToDisplayEnd(self):
         self.eraseToLineEnd()
-        height = self.height - self.y
+        height = self.height - self.y - 1
         self.lines[self.y + 1:] = [self._emptyLine(self.width) for i in range(height)]
 
     def eraseToDisplayBeginning(self):

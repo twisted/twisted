@@ -264,3 +264,38 @@ class BufferTestCase(unittest.TestCase):
             str(self.term),
             (self.term.fill * (len(s) - 4)) + s[-4:] + (self.term.fill * (WIDTH - len(s))) + '\n' +
             '\n'.join([self.term.fill * WIDTH for i in xrange(HEIGHT - 1)]))
+
+    def testEraseDisplay(self):
+        self.term.write('Hello world\n')
+        self.term.write('Goodbye world\n')
+        self.term.eraseDisplay()
+
+        self.assertEquals(
+            str(self.term),
+            '\n'.join([self.term.fill * WIDTH for i in xrange(HEIGHT)]))
+
+    def testEraseToDisplayEnd(self):
+        s1 = "Hello world"
+        s2 = "Goodbye world"
+        self.term.write('\n'.join((s1, s2, '')))
+        self.term.cursorPosition(5, 1)
+        self.term.eraseToDisplayEnd()
+
+        self.assertEquals(
+            str(self.term),
+            s1 + (self.term.fill * (WIDTH - len(s1))) + '\n' +
+            s2[:5] + (self.term.fill * (WIDTH - 5)) + '\n' +
+            '\n'.join([self.term.fill * WIDTH for i in xrange(HEIGHT - 2)]))
+
+    def testEraseToDisplayBeginning(self):
+        s1 = "Hello world"
+        s2 = "Goodbye world"
+        self.term.write('\n'.join((s1, s2, '')))
+        self.term.cursorPosition(5, 1)
+        self.term.eraseToDisplayBeginning()
+
+        self.assertEquals(
+            str(self.term),
+            self.term.fill * WIDTH + '\n' +
+            (self.term.fill * 6) + s2[6:] + (self.term.fill * (WIDTH - len(s2))) + '\n' +
+            '\n'.join([self.term.fill * WIDTH for i in xrange(HEIGHT - 2)]))
