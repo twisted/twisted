@@ -1,3 +1,7 @@
+2003-10-24  Christopher Armstrong  <radix@twistedmatrix.com>
+
+	* .: Releasing Twisted 1.1.0 final. Same codebase as rc2.
+
 2003-10-24  Brian Warner  <warner@lothar.com>
 
 	* doc/howto/test-standard.xhtml: Add section on how to clean up.
