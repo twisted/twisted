@@ -34,13 +34,15 @@ class Options(usage.Options):
         ["port",      "p", "53", "The port on which to listen"],
         ["resolv-conf", None, None,
             "Override location of resolv.conf (implies --recursive)"],
+        ["hosts-file", None, "/etc/hosts", "Override location of hosts file (implies --hosts)"],
     ]
 
     optFlags = [
         ["cache",       "c", "Enable record caching"],
         ["recursive",   "r", "Perform recursive lookups"],
         ["iterative",   "I", "Perform lookups using the root servers"],
-        ["verbose",     "v", "Log verbosely"]
+        ["verbose",     "v", "Log verbosely"],
+        ["hosts",       "H", "Perform lookups via a hosts file"]
     ]
 
     zones = None
@@ -84,9 +86,11 @@ class Options(usage.Options):
     def postOptions(self):
         if self['resolv-conf']:
             self['recursive'] = True
+        if self['hosts-file']:
+            self['hosts'] = True
         if self['iterative'] and self['recursive']:
             raise usage.UsageError("--iterative and --recursive are mutually exclusive.")
-
+        
         self.svcs = []
         self.zones = []
         for f in self.zonefiles:
@@ -111,13 +115,15 @@ class Options(usage.Options):
 
 
 def makeService(config):
-    import client, cache
+    import client, cache, hosts
 
     ca, cl = [], []
     if config['cache']:
         ca.append(cache.CacheResolver(verbose=config['verbose']))
     if config['recursive']:
         cl.append(client.createResolver(resolvconf=config['resolv-conf']))
+    if config['hosts']:
+        cl.append(hosts.Resolver(file=config['hosts-file']))
 
     f = server.DNSServerFactory(config.zones, ca, cl, config['verbose'])
     p = dns.DNSDatagramProtocol(f)
