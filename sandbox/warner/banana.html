@@ -49,9 +49,11 @@ being used, and the body is empty.</p>
   <li>
   <code>0x81: INT: [value-INT-empty]</code>
 
-  <p>This token defines a single positive short integer. The range is
-  defined as <q>whatever fits in a Python IntType</q>, as opposed to a
-  LongType.</p>
+  <p>This token defines a single positive integer. The range is unlimited
+  (<q>[zero, infinity)</q>): if the value represented by the incoming
+  base-128 digits grows larger than a regular Python IntType can accomodate,
+  the receiving system will use a LongType or a BigNum as necessary.
+  </p>
   </li>
 
   <li>
@@ -68,7 +70,9 @@ being used, and the body is empty.</p>
   <li>
   <code>0x83: NEG: [value-NEG-empty]</code>
 
-  <p>This token defines a negative short integer.</p>
+  <p>This token defines a negative integer. It is identical to the
+  <code>INT</code> tag except that the results are negated before
+  storage.</p>
   </li>
 
   <li>
@@ -80,8 +84,8 @@ being used, and the body is empty.</p>
   </li>
 
   <li>
-  <p><code>0x85: LONGINT: [value-LONGINT-empty]</code></p>
-  <p><code>0x86: LONGNEG: [value-LONGNEG-empty]</code></p>
+  <p><code>0x85: (old) LONGINT: [value-LONGINT-empty]</code></p>
+  <p><code>0x86: (old) LONGNEG: [value-LONGNEG-empty]</code></p>
 
   <p>These define positive/negative long integers, defined as Python's
   <q>long integer</q> types.</p>
