@@ -135,7 +135,7 @@ class IWordsClient(components.Interface):
 
 class WordsClient:
     __implements__ = IWordsClient
-    """A stubbed version of IWordsClient.
+    """A stubbed version of L{IWordsClient}.
 
     Useful for partial implementations.
     """
@@ -211,7 +211,7 @@ class Participant(pb.Perspective, styles.Versioned):
         return state
 
     def attached(self, client, identity):
-        """Attach a client which implements WordsClientInterface to me.
+        """Attach a client which implements L{IWordsClient} to me.
         """
         if ((self.client is not None)
             and self.client.__class__ != styles.Ephemeral):
@@ -376,7 +376,21 @@ class Participant(pb.Perspective, styles.Versioned):
         return s
 
 class Group(styles.Versioned):
+    """
+    This class represents a group of people engaged in a chat session
+    with one another.
 
+    @type name:            C{string}
+    @ivar name:            The name of the group
+    @type members:         C{list}
+    @ivar members:         The members of the group
+    @type metadata:        C{dictionary}
+    @ivar metadata:        Metadata that describes the group.  Common
+                           keys are:
+                             - C{'topic'}: The topic string for the group.
+                             - C{'topic_author'}: The name of the user who
+                               last set the topic.
+    """
     def __init__(self, name):
         self.name = name
         self.members = []

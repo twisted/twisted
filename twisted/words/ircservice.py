@@ -263,7 +263,7 @@ class IRCChatter(irc.IRC, service.WordsClient):
         """User mode message
 
         Parameters: <nickname>
-            *( ( "+" / "-" ) *( "i" / "w" / "o" / "O" / "r" ) )
+        *( ( "+" / "-" ) *( "i" / "w" / "o" / "O" / "r" ) )
 
 
         [REQUIRED]
