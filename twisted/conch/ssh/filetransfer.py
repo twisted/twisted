@@ -834,7 +834,7 @@ class SFTPDirectory:
 
 class SFTPError(Exception):
 
-    def __init__(self, errorCode, errorMessage, lang):
+    def __init__(self, errorCode, errorMessage, lang = ''):
         Exception.__init__(self)
         self.code = errorCode
         self.message = errorMessage
