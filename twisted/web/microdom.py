@@ -517,20 +517,26 @@ def parseString(st, *args, **kw):
 # Utility
 
 class lmx:
+    """Easy creation of XML."""
+    
     def __init__(self, node='div'):
         if isinstance(node, StringType):
             node = Element(node)
         self.node = node
+
     def __getattr__(self, name):
         if name[0] == '_':
             raise AttributeError("no private attrs")
         return lambda **kw: self.add(name,**kw)
+
     def __setitem__(self, key, val):
         self.node.setAttribute(key, val)
+
     def text(self, txt, raw=0):
         nn = Text(txt, raw=raw)
         self.node.appendChild(nn)
         return self
+
     def add(self, tagName, **kw):
         newNode = Element(tagName)
         self.node.appendChild(newNode)
