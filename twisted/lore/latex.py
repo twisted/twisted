@@ -30,6 +30,7 @@ class LatexSpitter(XMLParser):
     normalizing = 1
     escaping = 1
     baseLevel = 0
+    raw = 0
 
     def __init__(self, writer, currDir='.'):
         self.writer = writer
@@ -39,7 +40,7 @@ class LatexSpitter(XMLParser):
 
     def gotTagStart(self, name, attributes):
         s = getattr(self, "mapStart_"+name, None)
-        if s:
+        if s and not self.raw:
             self.writer(s)
         m = getattr(self, "start_"+name, None)
         m and m(name, attributes)
@@ -64,7 +65,7 @@ class LatexSpitter(XMLParser):
 
     def gotTagEnd(self, name):
         s = getattr(self, "mapEnd_"+name, None)
-        if s:
+        if s and not self.raw:
             self.writer(s)
         m = getattr(self, "end_"+name, None)
         m and m(name)
@@ -97,9 +98,12 @@ class LatexSpitter(XMLParser):
 
     def start_pre(self, _, _1):
         self.normalizing = self.escaping = 0
+        self.raw = 1
 
     def end_pre(self, _):
         self.normalizing = self.escaping = 1
+        self.raw = 0
+        self.writer(self.mapEnd_pre)
 
     def start_code(self, _, _1):
         self.escaping = 0
