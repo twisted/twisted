@@ -7,12 +7,15 @@ import point
 BLACK = (0, 0, 0)
 WHITE = (255, 255, 255)
 
+# Get a configuration
+from sol import config, width as WIDTH, height as HEIGHT
+
 # PyGame's clock sucks nuts
 class Clock:
     def tick(self, n):
         now = time.time()
         left = now % (1.0 / n)
-        # time.sleep(left)
+        time.sleep(left)
 
 def main():
     pygame.init()
@@ -21,20 +24,12 @@ def main():
     space = point.Space()
 
     bodies = []
-##     for (mass, pos, vel) in [(1e9, (150, 150, 0), None),
-##                              (1e6, (250, 150, 0), (0, -0.277, 0)),
-##                              (1e6, (50, 150, 0), (0, 0.277, 0)),
-##                              (1e6, (150, 50, 0), (-0.277, 0, 0)),
-##                              (1e6, (150, 250, 0), (0.277, 0, 0))]:
-    for (mass, pos, vel) in [(1e8, (250, 150, 0), (0, -0.0277, 0)),
-                             (1e8, (50, 150, 0), (0, 0.0277, 0)),
-                             (1e8, (150, 50, 0), (-0.0277, 0, 0)),
-                             (1e8, (150, 250, 0), (0.0277, 0, 0))]:
+    for (mass, pos, vel) in config:
         b = (point.Body(space, mass, pos, vel), image.get_rect())
         bodies.append(b)
 
-    perFrame = 5
-    size = width, height = 640, 480
+    perFrame = 60
+    size = width, height = 800, 600
     screen = pygame.display.set_mode(size)
     clock = Clock()
 
@@ -50,8 +45,8 @@ def main():
 
         blit = False
         for (b, r) in bodies:
-            left = int(b.position[0] / 300 * width)
-            top = int(b.position[1] / 300 * height)
+            left = long(b.position[0] / WIDTH * width) + (width / 2)
+            top = long(b.position[1] / HEIGHT * height) + (height / 2)
             if left != r.left or top != r.top:
                 r.left = left
                 r.top = top

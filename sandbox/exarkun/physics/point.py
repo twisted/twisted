@@ -10,8 +10,9 @@ _VELOCITY = slice(4, 7)
 
 class Space(object):
     def __init__(self):
-        self.contents = N.array((), type='f')
+        self.contents = N.array((), type='d')
         self.freelist = []
+        self._accel = N.zeros(3, typecode='d')
 
     def getNewHandle(self):
         if self.freelist:
@@ -35,26 +36,26 @@ class Space(object):
         # Do it in place for speeeed
         N.add(self.contents[:,_POSITION], self.contents[:,_VELOCITY], self.contents[:,_POSITION])
 
-    def _updateVelocity(self):
+    def _updateVelocity(self, sum=N.sum, add=N.add, _M=_MASS, _P=_POSITION, _V=_VELOCITY):
         # Adjust velocities for gravitational effects
+        accel = self._accel
         for a in self.contents:
-            accel = N.zeros(3, typecode='f')
-            mass = a[_MASS]
+            mass = a[_M]
             if not mass:
                 continue
+            accel[:] = 0
             for b in self.contents:
-                deltas = b[_POSITION] - a[_POSITION]
+                deltas = b[_P] - a[_P]
                 delta2 = deltas * deltas
-                distance2 = N.sum(delta2)
-                if mass and distance2:
+                distance2 = sum(delta2)
+                if distance2:
                     distance = distance2 ** 0.5
-                    unit = deltas / distance2
-                    force = G * mass * b[_MASS]
+                    unit = deltas / distance
+                    force = G * mass * b[_M] / distance2
                     deltaA = unit * force / mass
-                    N.add(accel, deltaA, accel)
-            velocity = a[_VELOCITY]
-            N.add(velocity, accel, velocity)
-
+                    add(accel, deltaA, accel)
+            velocity = a[_V]
+            add(velocity, accel, velocity)
 
 class Body(object):
     __slots__ = ["_space", "_handle", "mass", "position", "velocity"]
