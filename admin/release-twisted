@@ -43,8 +43,6 @@ class Options(usage.Options):
 
     def postOptions(self):
 
-        self['wipurl'] = '%s/branches/wip-%s' % (repourl,
-                                                 self['core-version'])
         self['tagurl'] = '%s/tags/release-%s' % (repourl,
                                                  self['core-version'])
         self['temptagurl'] = '%s/tags/temp-%s' % (repourl,
@@ -115,7 +113,7 @@ def tar(tdir):
 
 def tagTemp(opts):
     sh('svn cp %s %s -m "Tagging preliminary %s"'
-       % (opts['wipurl'], opts['temptagurl'], opts['core-version']))
+       % (trunkurl, opts['temptagurl'], opts['core-version']))
 
 def exportTemp(opts):
     if os.path.exists('Twisted.exp'):
