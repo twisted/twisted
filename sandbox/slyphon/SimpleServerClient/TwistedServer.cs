@@ -13,20 +13,14 @@ namespace CSReactor {
     Exception failure {get; set;}
   }
 
-  public interface ITransport {
-    void write(String data);
-    void writeSequence(ICollection data);
-    void loseConnection();
-    IPEndPoint getHost();
-  }
+  public interface IReactor {}
 
   public interface IProtocol {
-    ITransport Transport { get; set; }
     IFactory Factory { get; set; }
     bool Connected { get; }
     void dataReceived(String data);
     void connectionLost(IConnectionLost reason);
-    void makeConnection(ITransport transport);
+    void makeConnection();
     void connectionMade();
   }
 	
@@ -38,7 +32,6 @@ namespace CSReactor {
 
   public class BaseProtocol {
     protected bool connected = false;
-    protected ITransport transport;
     protected IFactory factory;
     protected IPEndPoint address = null;
 		
@@ -56,21 +49,16 @@ namespace CSReactor {
       get { return this.connected; }
     }
 		
-    public ITransport Transport {
-      get { return (ITransport)this.transport; }
-      set { this.transport = (ITransport)value; }
-    }
-
     public IFactory Factory {
       get { return this.factory; }
       set { this.factory = value; }
     }
 
-    public virtual void makeConnection(ITransport transport) {
+    public virtual void makeConnection() {
       this.connected = true;
-      this.transport = transport;
       this.connectionMade();
     }
+
     public virtual void connectionMade() {}
   }
 
@@ -80,90 +68,98 @@ namespace CSReactor {
   }
 
   public class Factory : IFactory {
-    /* System.Type protocolClass = typeof(Foo)
-     */
-		
+    protected Type protocol;
+
+    public System.Type Protocol {
+      get { return this.protocol; }
+      set { this.protocol = value; }
+    }
+
     public virtual void doStart() {}
     public virtual void doStop() {}
     public virtual IProtocol buildProtocol() {
-      return this.buildProtocol(null, null);
-    }
-    public virtual IProtocol buildProtocol(IPEndPoint addr) {
-      return this.buildProtocol(addr, null);
-    }
-    public virtual IProtocol buildProtocol(IPEndPoint addr, IFactory factory) {
-      // YOU MUST OVERRIDE THIS IN SUBCLASSES!
-      return null;
+      return (IProtocol)System.Activator.CreateInstance(this.protocol);
     }
   }
 	
-  public class Transport : ITransport {
-    public virtual void write(String data) {}
-    public virtual void writeSequence(ICollection data) {}
-    public virtual void loseConnection() {}
-    public virtual IPEndPoint getHost() { return null; }
+  public class BaseConnector {
+    protected IFactory factory;
+    protected int timeout;
+    protected IReactor reactor;
+    protected Socket sock;
+    protected IProtocol protocol;
+    private static int BUF_SIZE = 8192;
+    private byte[] readBuffer = new byte[BUF_SIZE];
+
+    public Socket SockHandle {
+      get { return this.sock; }
+    }
+
+    public IPEndPoint BindAddress {
+      get { return (IPEndPoint)sock.LocalEndPoint; }
+    }
+
+    public IPEndPoint Peer {
+      get { return (IPEndPoint)sock.RemoteEndPoint; }
+    }
+
+    public BaseConnector(IFactory factory, int timeout, IReactor reactor) {
+      this.factory = factory;
+      this.timeout = timeout;
+      this.reactor = reactor;
+    }
+    
+    private IAsyncResult SetupRead() {
+      for (int i=0; i < readBuffer.Length; i++) {
+        readBuffer[i] = 0;
+      }
+      return sock.BeginReceive(this.readBuffer, 0, BUF_SIZE, SocketFlags.None,
+        new AsyncCallback(this.DoRead), this);
+    }
+
+    public void DoRead(IAsyncResult ar) {
+      sock.EndReceive(ar);
+      StringBuilder sb = new StringBuilder(BUF_SIZE);
+      for (int i=0; i < readBuffer.Length; i++) {
+        sb.Append(Convert.ToChar(sb[i]));
+      }
+      protocol.dataReceived(sb.ToString());
+      SetupRead();
+    }
+
+    public void DoConnect(IAsyncResult ar) {
+      Socket listener = (Socket)ar.AsyncState;
+      Socket sock = listener.EndAccept(ar);
+      protocol = (IProtocol) factory.buildProtocol();
+      SetupRead();
+    }  
   }
 
-  public class TwistedServer {
+  public class TwistedServer : IReactor {
+    private ArrayList listeners = new ArrayList(); 
+    private bool running = false;
 
-    public static IPAddress localhost = IPAddress.Parse("127.0.0.1");
-    public static int port = 9999;
+    public IAsyncResult ListenTCP(IPEndPoint endPoint, IFactory factory, int backlog){
+      Socket listener = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
+      listener.Bind(endPoint);
+      listener.Listen(backlog);
+      BaseConnector cnx = new BaseConnector(factory,20, this);
+      listeners.Add(cnx);
+      return listener.BeginAccept(new AsyncCallback(cnx.DoConnect), listener);
+    }	
 
-    public void Server() {
-      try {
-        TcpListener myList = new TcpListener(localhost, port);
-        myList.Start();
-
-        Console.WriteLine("server listening on " + port);
-        Console.WriteLine("local end point is: " + myList.LocalEndpoint);
-        Console.WriteLine("waiting for a connection....");
-
-        Socket s = myList.AcceptSocket();
-        Console.WriteLine("connection accepted from " + s.RemoteEndPoint);
-        byte[] b = new byte[1024];
-        int k = s.Receive(b);
-        Console.WriteLine("received...");
-				
-        for (int i=0;i<k;i++)
-          Console.Write(Convert.ToChar(b[i]));
-        ASCIIEncoding asen = new ASCIIEncoding();
-        s.Send(asen.GetBytes("the string was received by the server."));
-        Console.WriteLine("\nSent Ack");
-        s.Close();
-        myList.Stop();
-      } catch (Exception e) {
-        Console.WriteLine("error\n:" + e.StackTrace);
-      }
-    }
-		
-
-    public void OnConnect(IAsyncResult ar) {
-      Console.WriteLine("got connection");
-      Socket listener = (Socket)ar.AsyncState;
-      Socket theclient = listener.EndAccept(ar);
-      ASCIIEncoding asen = new ASCIIEncoding();
-      theclient.Send(asen.GetBytes("this is the message"));
-      listener.BeginAccept(new AsyncCallback(OnConnect), listener);
+    public void Run() {
+      this.running = true;  
+      MainLoop();
     }
 
-    public void AsyncServer() {
-      try {
-        Socket listener = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
-        listener.Bind(new IPEndPoint(localhost, port));
-        listener.Listen(10);
-        listener.BeginAccept(new AsyncCallback(OnConnect), listener);
-        Console.WriteLine("set up async callback");
-      } catch (Exception e) {
-        Console.WriteLine("error\n:" + e.StackTrace);
-      }				
+    public void Stop() {
+      this.running = false;
     }
 
-    public static void Main() {
-      TwistedServer ss = new TwistedServer();
-      ss.AsyncServer();
-
-      Console.WriteLine("Press a key...");
-      Console.Read();
+    protected void MainLoop() {
+      Console.WriteLine("MainLoop running");
+      while (this.running) {}
     }
   }
 }
