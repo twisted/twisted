@@ -137,7 +137,7 @@ class FileDescriptor(log.Logger, styles.Ephemeral):
         otherwise this adds data to be written the next time this file descriptor is
         ready for writing.
         """
-        assert type(data) == types.StringType, "Data must be a string."
+        assert isinstance(data, str), "Data must be a string."
         if not self.connected:
             return
         if data:
