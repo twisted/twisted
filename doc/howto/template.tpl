@@ -10,11 +10,13 @@ href="stylesheet.css" />
   </head>
 
   <body bgcolor="white">
+    <h1 class="title"></h1>
+    <div class="toc"></div>
     <div class="body">
 	
     </div>
 
-    <p><a href="index.xhtml">Go Home</a></p>
+    <p><a href="index.xhtml">Index</a></p>
   </body>
 </html>
 

@@ -144,12 +144,16 @@ def generateToC(document):
 
 
 def putInToC(document, toc):
+    tocOrig = domhelpers.findElementsWithAttribute(document, 'class', 'toc')
+    if toc:
+        tocOrig= tocOrig[0]
+        tocOrig.childNodes = [toc]
+
+def removeH1(document):
     h1 = domhelpers.findNodesNamed(document, 'h1')
-    if h1:
-        h1 = h1[0]
-        parent = h1.parentNode
-        i = parent.childNodes.index(h1)
-        parent.childNodes[i+1:i+1] = [toc]
+    empty = microdom.Element('span')
+    for node in h1:
+        node.parentNode.replaceChild(empty, node)
 
 def footnotes(document):
     footnotes = domhelpers.findElementsWithAttribute(document, "class",
@@ -184,18 +188,22 @@ def notes(document):
 
 def munge(document, template, linkrel, d, fullpath, ext, url):
     addMtime(template, fullpath)
+    removeH1(document)
     expandAPI(document)
     fixAPI(document, url)
     fontifyPython(document)
     addPyListings(document, d)
     addHTMLListings(document, d)
     fixLinks(document, ext)
-    putInToC(document, generateToC(document))
+    putInToC(template, generateToC(document))
     footnotes(document)
     notes(document)
 
     # the title
     domhelpers.findNodesNamed(template, "title")[0].childNodes.extend(
+        domhelpers.findNodesNamed(document, 'title')[0].childNodes)
+    domhelpers.findElementsWithAttribute(template, "class",
+                                         'title')[0].childNodes.extend(
         domhelpers.findNodesNamed(document, 'title')[0].childNodes)
     body = domhelpers.findNodesNamed(document, "body")[0]
     tmplbody = domhelpers.findElementsWithAttribute(template, "class",
