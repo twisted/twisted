@@ -62,12 +62,17 @@ def nevowify(filename, linkrel, ext, url, templ, options=None, outfileGenerator=
     s = page.renderString()
     from twisted.trial.util import wait
     s = wait(s)
-    doc = parseStringAndReport(s)
 
+    newFilename = outfileGenerator(filename, ext)
+
+    if options.has_key('nolore'):
+        open(newFilename, 'w').write(s)
+        return
+
+    doc = parseStringAndReport(s)
     clonedNode = templ.cloneNode(1)
     tree.munge(doc, clonedNode, linkrel, os.path.dirname(filename), filename, ext,
                url, options, outfileGenerator)
-    newFilename = outfileGenerator(filename, ext)
     tree.makeSureDirectoryExists(newFilename)
     clonedNode.writexml(open(newFilename, 'wb'))
 
