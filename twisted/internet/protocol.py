@@ -103,7 +103,7 @@ class ClientFactory(Factory):
     """A Protocol factory for clients.
 
     This can be used together with the various connectXXX methods in
-    reactors and Applications.
+    reactors.
     """
 
     def startedConnecting(self, connector):
