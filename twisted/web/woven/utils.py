@@ -35,6 +35,12 @@ def doSendPage(self, d, request):
     return page
 
 
+class Script:
+    type="javascript1.2"
+    def __init__(self, script):
+        self.script = script
+
+
 class WovenLivePage:
     currentPage = None
     __implements__ = interfaces.IWovenLivePage
@@ -64,13 +70,18 @@ class WovenLivePage:
             print "CACHING",
             self.cached.append(text)
         else:
+            if isinstance(text, Script):
+                if hasattr(self.output, 'writeScript'):
+                    self.output.writeScript(text.script)
+                    return
+                text = '<script language="%s">%s</script>\r\n' % (text.type, text.script)
             print "WRITING", text
             if text[-1] != '\n':
                 text += '\n'
             self.output.write(text)
 
-    def sendJavaScript(self, js):
-        self.write('<script language="javascript">' + js + "</script>\r\n")
+    def sendScript(self, js):
+        self.write(Script(js))
 
     def hookupOutputConduit(self, request):
         """Hook up the given request as the output conduit for this
@@ -82,6 +93,9 @@ class WovenLivePage:
             self.write(text)
         self.cached = []
         # xxx start some sort of keepalive timer.
+
+    def unhookOutputConduit(self):
+        self.output = None
 
     def hookupInputConduit(self, obj):
         """Hook up the given object as the input conduit for this

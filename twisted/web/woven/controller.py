@@ -17,16 +17,17 @@
 
 from __future__ import nested_scopes
 
-__version__ = "$Revision: 1.29 $"[11:-2]
+__version__ = "$Revision: 1.30 $"[11:-2]
 
+import os
 import cgi
 import types
 
 from twisted.python import log
 from twisted.python import components
-from twisted.web import resource, server
+from twisted.web import resource, server, static
 from twisted.web.woven import interfaces, utils
-
+from twisted.web import woven
 
 import warnings
 from time import time as now
@@ -199,13 +200,15 @@ class Controller(resource.Resource):
             parent.domChanged(request, node)
 
 
+WOVEN_PATH = os.path.split(woven.__file__)[0]
+
 class LiveController(Controller):
     """A Controller that encapsulates logic that makes it possible for this
     page to be "Live". A live page can have it's content updated after the
     page has been sent to the browser, and can translate client-side
     javascript events into server-side events.
     """
-    def render(self, request, block=0):
+    def render(self, request):
         """First, check to see if this request is attempting to hook up the
         output conduit. If so, do it. Otherwise, unlink the current session's
         View from the MVC notification infrastructure, then render the page
@@ -238,7 +241,7 @@ class LiveController(Controller):
             page.unlinkViews()
             sess.setCurrentPage(None)
         self.pageSession = None
-        return Controller.render(self, request, block=block)
+        return Controller.render(self, request)
 
     def gatheredControllers(self, v, d, request):
         Controller.gatheredControllers(self, v, d, request)
@@ -256,8 +259,31 @@ class LiveController(Controller):
             nodeXML = nodeXML.replace('\r', '')
             nodeXML = nodeXML.replace("'", "\\'")
             js = "top.woven_replaceElement('%s', '%s')" % (nodeId, nodeXML)
-            self.pageSession.sendJavaScript(js)
-        
+            self.pageSession.sendScript(js)
+
+    def wchild_WebConduit2_js(self, request):
+        print "returning js file"
+        h = request.getHeader("user-agent")
+        if h.count("MSIE"):
+            fl = "WebConduit2_msie.js"
+        else:
+            fl = "WebConduit2_mozilla.js"
+
+        return static.File(os.path.join(WOVEN_PATH, fl))
+
+    def wchild_FlashConduit_swf(self, request):
+        print "returning flash file"
+        return static.File(os.path.join(WOVEN_PATH, "flashconduit.swf"))
+
+    def wchild_input_html(self, request):
+        return BlankPage()
+
+
+class BlankPage(resource.Resource):
+    def render(self, request):
+        return "<html>nothing</html>"
+
+
 WController = Controller
 
 def registerControllerForModel(controller, model):

@@ -134,6 +134,11 @@ twisted.web.test in it."""
                                    "after --path.")
         self.opts['root'].ignoreExt(ext)
 
+    def opt_flashconduit(self, port=None):
+        if not port:
+            port = "4321"
+        self.opts['flashconduit'] = port
+
     def postOptions(self):
         if self['https']:
             try:
@@ -178,3 +183,8 @@ def updateApplication(app, config):
                           DefaultOpenSSLContextFactory(config['privkey'],
                                                        config['certificate']))
         app.listenTCP(int(config.opts['port']), site)
+    
+    flashport = config.opts.get('flashconduit', None)
+    if flashport:
+        from twisted.web.woven.flashconduit import FlashConduitFactory
+        app.listenTCP(int(flashport), FlashConduitFactory(site))

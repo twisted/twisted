@@ -1,5 +1,5 @@
 
-__version__ = "$Revision: 1.8 $"[11:-2]
+__version__ = "$Revision: 1.9 $"[11:-2]
 
 from twisted.web import server
 from twisted.python import components
@@ -185,8 +185,9 @@ class IWovenLivePage(components.Interface):
         """Set the current page object contained in this session.
         """
 
-    def write(text):
-        """Write "text" to the live page's persistent output conduit.
-        If there is no conduit connected yet, save the text and write it
-        as soon as the output conduit is connected.
+    def sendJavaScript(js):
+        """Send "js" to the live page's persistent output conduit for
+        execution in the browser. If there is no conduit connected yet, 
+        save the js and write it as soon as the output conduit is 
+        connected.
         """

@@ -4,7 +4,7 @@ function woven_eventHandler(eventName, node) {
     var additionalArguments = ''
     for (i = 2; i<arguments.length; i++) {
         additionalArguments += '&woven_clientSideEventArguments='
-        additionalArguments += eval(arguments[i])
+        additionalArguments += escape(eval(arguments[i]))
     }
     var source = '?woven_clientSideEventName=' + eventName + '&woven_clientSideEventTarget=' + eventTarget + additionalArguments
 
@@ -24,7 +24,7 @@ function onkeyevent(theEvent)
 
 function send() {
     var inputText = document.getElementById('inputText')
-    document.getElementById("input").src = "?wovenLivePageInput=" + escape(inputText.value)
+    document.getElementById("woven_inputConduit").src = "?wovenLivePageInput=" + escape(inputText.value)
     recv("-> " + inputText.value)
     inputText.value = ""
     inputText.focus()
@@ -32,20 +32,17 @@ function send() {
 
 function woven_replaceElement(theId, htmlStr) {
     var oldNode = document.getElementById(theId)
-    var r = oldNode.ownerDocument.createRange();
-    r.setStartBefore(oldNode);
-    var parsedHTML = r.createContextualFragment(htmlStr);
-    oldNode.parentNode.replaceChild(parsedHTML, oldNode);
+    oldNode.outerHTML = htmlStr
 }
 
 
 function recv(stuff) {
     var output = document.getElementById("content")
 // Works on ie mac and mozilla but not as well on ie win
-//    output.appendChild(document.createTextNode(unescape(stuff)))
-//    output.appendChild(document.createElement("br"))
+    output.appendChild(document.createTextNode(unescape(stuff)))
+    output.appendChild(document.createElement("br"))
 // Works on ie win & mac, and mozilla, but is a bit slower
-    output.innerHTML = output.innerHTML + unescape(stuff) + '<br \>'
+    //output.innerHTML = output.innerHTML + unescape(stuff) + '<br \>'
     window.scrollBy(0, window.innerHeight)
 }
 
