@@ -18,7 +18,7 @@ class AddEntry:
         self.value = value
 
     def execute(self, svc, time):
-        svc.values[self.key] = self.value
+        svc.add(self.key, self.value)
 
     def __eq__(self, other):
         if hasattr(other, "__dict__"):
@@ -35,7 +35,7 @@ class DeleteEntry:
         self.key = key
 
     def execute(self, svc, time):
-        del svc.values[self.key]
+        svc.delete(self.key)
 
     def __eq__(self, other):
         if hasattr(other, "__dict__"):
@@ -49,7 +49,7 @@ class AddTime:
     __implements__ = ICommand
 
     def execute(self, svc, cmdtime):
-        svc.values["time"] = cmdtime
+        svc.addtime(cmdtime)
 
 
 class Service:
@@ -64,23 +64,35 @@ class Service:
         else:
             self.values = result
 
-    # next 3 methods are "business logic":
+    # next 4 methods are "business logic":
 
     def add(self, key, value):
         """Add a new entry."""
-        self.journal.executeCommand(AddEntry(key, value))
-
+        self.values[key] = value
+    
     def delete(self, key):
         """Delete an entry."""
-        self.journal.executeCommand(DeleteEntry(key))
+        del self.values[key]
 
     def get(self, key):
         """Return value of an entry."""
         return self.values[key]
 
-    def addtime(self):
+    def addtime(self, t):
         """Set a key 'time' with the current time."""
-        self.journal.executeCommand(AddTime())
+        self.values["time"] = t
+
+    # and now the command wrappers
+    
+    def command_add(self, journal, key, value):
+        journal.executeCommand(AddEntry(key, value))
+
+    def command_delete(self, journal, key):
+        journal.executeCommand(DeleteEntry(key))
+
+    def command_addtime(self, journal):
+        """Set a key 'time' with the current time."""
+        journal.executeCommand(AddTime())
 
 
 class JournalTestCase(unittest.TestCase):
@@ -107,9 +119,10 @@ class JournalTestCase(unittest.TestCase):
     def testLogging(self):
         svc = self.svc
         log = self.svc.journal.log
-        svc.add("foo", "bar")
-        svc.add(1, "hello")
-        svc.delete("foo")
+        j = self.svc.journal
+        svc.command_add(j, "foo", "bar")
+        svc.command_add(j, 1, "hello")
+        svc.command_delete(j, "foo")
 
         commands = [AddEntry("foo", "bar"), AddEntry(1, "hello"), DeleteEntry("foo")]
 
@@ -120,11 +133,12 @@ class JournalTestCase(unittest.TestCase):
 
     def testRecovery(self):
         svc = self.svc
-        svc.add("foo", "bar")
-        svc.add(1, "hello")
+        j = svc.journal
+        svc.command_add(j, "foo", "bar")
+        svc.command_add(j, 1, "hello")
         # we sync *before* delete to make sure commands get executed
         svc.journal.sync(svc.values)
-        svc.delete("foo")
+        svc.command_delete(j, "foo")
         del svc, self.svc
 
         # first, load from snapshot
@@ -141,7 +155,7 @@ class JournalTestCase(unittest.TestCase):
 
     def testTime(self):
         svc = self.svc
-        svc.addtime()
+        svc.command_addtime(svc.journal)
         t = svc.get("time")
 
         log = self.svc.journal.log
