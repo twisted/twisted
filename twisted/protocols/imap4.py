@@ -304,7 +304,7 @@ class IMAP4Server(basic.LineReceiver):
                 d.addCallback(self._cbAuthChunk, savedState, tag)
 
     def unauth_LOGIN(self, tag, args):
-        args = args.split()
+        args = parseNestedParens(args)
         if len(args) != 2:
             self.sendBadResponse(tag, 'Wrong number of arguments')
         else:
@@ -339,7 +339,10 @@ class IMAP4Server(basic.LineReceiver):
         self.sendBadResponse(tag, 'Server error: ' + str(failure.value))
 
     def auth_SELECT(self, tag, args):
-        mbox = self.account.select(args)
+        args = parseNestedParens(args)
+        if len(args) != 1:
+            raise IllegalClientResponse, args
+        mbox = self.account.select(args[0])
         if mbox is None:
             self.sendNegativeResponse(tag, 'No such mailbox')
         else:
@@ -364,7 +367,10 @@ class IMAP4Server(basic.LineReceiver):
     select_SELECT = auth_SELECT
 
     def auth_EXAMINE(self, tag, args):
-        mbox = self.account.select(args, 0)
+        args = parseNestedParens(args)
+        if len(args) != 1:
+            raise IllegalClientResponse, args
+        mbox = self.account.select(args[0], 0)
         if mbox is None:
             self.sendNegativeResponse(tag, 'No such mailbox')
         else:
@@ -620,8 +626,10 @@ class IMAP4Server(basic.LineReceiver):
         if len(parts) != 2:
             raise IllegalClientResponse, args
         messages, args = parts
-        messages = parseIdList(messages)
+        messages = parseIdList(messages, self.mbox.getUIDNext())
         query = parseNestedParens(args)
+        while len(query) == 1 and isinstance(query[0], types.ListType):
+            query = query[0]
         if uid:
             topPart = self.mbox.getUIDValidity() << 16
             messages = map(topPart.__or__, messages)
@@ -630,13 +638,14 @@ class IMAP4Server(basic.LineReceiver):
 
     def _cbFetch(self, results, tag, uid):
         for (mId, parts) in results.items():
-            for (portion, value) in parts.items():
-                if uid:
-                    topPart = self.mbox.getUIDValidity() << 16
-                    value.extend(['UID', str(mId | topPart)])
-                self.sendUntaggedResponse(
-                    '%d %s %s' % (mId, portion, collapseNestedLists(value))
-                )
+            if parts:
+                for (portion, value) in parts.items():
+                    if uid:
+                        topPart = self.mbox.getUIDValidity() << 16
+                        value.extend(['UID', str(mId | topPart)])
+                    self.sendUntaggedResponse(
+                        '%d %s %s' % (mId, portion, collapseNestedLists(value))
+                    )
         self.sendPositiveResponse(tag, 'FETCH completed')
 
     def _ebFetch(self, failure, tag):
@@ -645,7 +654,7 @@ class IMAP4Server(basic.LineReceiver):
     def select_STORE(self, tag, args, uid=0):
         parts = parseNestedParens(args)
         if 2 >= len(parts) >= 3:
-            messages = parseIdList(parts[0])
+            messages = parseIdList(parts[0], self.mbox.getUIDNext())
             mode = parts[1].upper()
             if len(parts) == 3:
                 flags = parts[2]
@@ -678,7 +687,7 @@ class IMAP4Server(basic.LineReceiver):
         parts = args.split(None, 1)
         if len(parts) != 2:
             raise IllegalClientResponse, args
-        messages = parseIdList(parts[0])
+        messages = parseIdList(parts[0], self.mbox.getUIDNext())
         mbox = self.account.select(parts[1])
         if not mbox:
             self.sendNegativeResponse(tag, 'No such mailbox: ' + parts[1])
@@ -1847,7 +1856,7 @@ class IMAP4Client(basic.LineReceiver):
 
 class IllegalIdentifierError(IMAP4Exception): pass
 
-def parseIdList(s):
+def parseIdList(s, topValue):
     res = []
     parts = s.split(',')
     for p in parts:
@@ -1855,7 +1864,10 @@ def parseIdList(s):
             low, high = p.split(':', 1)
             try:
                 low = int(low)
-                high = int(high) + 1
+                if high == '*':
+                    high = topValue
+                else:
+                    high = int(high) + 1
             except ValueError:
                 raise IllegalIdentifierError, p
             else:
@@ -2377,6 +2389,12 @@ class IMailbox(components.Interface):
         @rtype: C{int}
         """
 
+    def getUIDNext(self):
+        """Return the likely UID for the next message added to this mailbox.
+        
+        @rtype: C{int}
+        """
+
     def getFlags(self):
         """Return the flags defined in this mailbox
 
@@ -2387,13 +2405,22 @@ class IMailbox(components.Interface):
         """
 
     def getMessageCount(self):
-        """Return the number of messages in this mailbox"""
+        """Return the number of messages in this mailbox.
+        
+        @rtype: C{int}
+        """
 
     def getRecentCount(self):
-        """Return the number of messages with the 'Recent' flag"""
+        """Return the number of messages with the 'Recent' flag.
+        
+        @rtype: C{int}
+        """
 
     def getUnseenCount(self):
-        """Return the number of messages with the 'Unseen' flag"""
+        """Return the number of messages with the 'Unseen' flag.
+        
+        @rtype: C{int}
+        """
 
     def isWriteable(self):
         """Get the read/write status of the mailbox.
