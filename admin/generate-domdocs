@@ -210,20 +210,6 @@ def munge(document, template, linkrel, d, fullpath, ext, cache):
             node2.setAttribute("href", newref)
             node2.childNodes = node.childNodes
             node.childNodes = [node2]
-    for node in findElementsWithAttribute(document, "class", "py-listing"):
-        fn = node.getAttribute("href")
-        outfile = cStringIO.StringIO()
-        fontifyFiles(open(os.path.join(d, fn)), outfile)
-        val = outfile.getvalue()
-
-        text = str('<div class="py-listing">'
-                   '<pre class="python">%s</pre>'
-                   '<div class="py-caption">%s - '
-                   '<span class="py-filename">%s</span></div></div>' % (
-            val, getNodeText(node), node.getAttribute("href")))
-        newnode = dom.parseString(text).documentElement
-        node.parentNode.replaceChild(newnode, node)
-
     for node in findElementsWithAttribute(document, "class", "python"):
         if node.tagName == 'pre':
             newio = cStringIO.StringIO()
@@ -241,6 +227,21 @@ def munge(document, template, linkrel, d, fullpath, ext, cache):
             newel = newdom.documentElement
             newel.setAttribute("class", "python")
             node.parentNode.replaceChild(newel, node)
+
+    for node in findElementsWithAttribute(document, "class", "py-listing"):
+        fn = node.getAttribute("href")
+        outfile = cStringIO.StringIO()
+        fontifyFiles(open(os.path.join(d, fn)), outfile)
+        val = outfile.getvalue()
+
+        text = str('<div class="py-listing">'
+                   '<pre class="python">%s</pre>'
+                   '<div class="py-caption">%s - '
+                   '<span class="py-filename">%s</span></div></div>' % (
+            val, getNodeText(node), node.getAttribute("href")))
+        newnode = dom.parseString(text).documentElement
+        node.parentNode.replaceChild(newnode, node)
+
 
     for node in findElementsWithAttribute(document, "class", "html-listing"):
         fn = node.getAttribute("href")
