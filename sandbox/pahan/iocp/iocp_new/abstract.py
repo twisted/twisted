@@ -1,5 +1,3 @@
-from win32file import AllocateReadBuffer, CancelIo
-
 from sets import Set
 import warnings
 import socket
@@ -28,8 +26,10 @@ class RWHandle(log.Logger, styles.Ephemeral):
     write_op = WriteFileOp
     # XXX: we don't care about producer/consumer crap, let itamar and other smarties fix the stuff first
     def __init__(self):
+        from twisted.internet import reactor
+        self.reactor = reactor
         self.writebuf = []
-        self.readbuf = AllocateReadBuffer(self.bufferSize)
+        self.readbuf = self.reactor.AllocateReadBuffer(self.bufferSize)
         self.bufferhandlers = Set()
 
     def addBufferCallback(self, handler):
@@ -233,7 +233,7 @@ class SocketPort:
     def stopListening(self):
         log.msg('(Port %r Closed)' % self.address)
         self.accepting = 0
-        CancelIo(self.socket.fileno())
+        self.reactor.CancelIo(self.socket.fileno())
         self.socket.close()
         del self.socket
         self.factory.doStop()

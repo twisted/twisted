@@ -1,4 +1,6 @@
 #include <Python.h>
+#include <winsock2.h>
+#include <mswsock.h>
 #include <windows.h>
 #include "structmember.h"
 
@@ -152,7 +154,7 @@ static PyObject *iocpcore_doIteration(iocpcore* self, PyObject *args) {
     long timeout;
     PyObject *tm, *ret, *object;
     DWORD bytes;
-    ULONG_PTR key;
+    unsigned long key;
     MyOVERLAPPED *ov;
     int res, err;
     if(!PyArg_ParseTuple(args, "O", &tm)) {
@@ -183,7 +185,7 @@ static PyObject *iocpcore_doIteration(iocpcore* self, PyObject *args) {
     // steal its reference, then clobber it to death! I mean free it!
     object = ov->callback;
     if(object) {
-        ret = PyObject_CallFunction(object, "%i", bytes);
+        ret = PyObject_CallFunction(object, "L", bytes);
         if(!ret) {
             return NULL;
         }
@@ -194,14 +196,15 @@ static PyObject *iocpcore_doIteration(iocpcore* self, PyObject *args) {
     return Py_BuildValue("");
 }
 
-static PyObject *iocpcore_WriteFile(iocpcore* self, PyObject *args) {
-    HANDLE handle;
+static PyObject *iocpcore_WSARecv(iocpcore* self, PyObject *args) {
+    SOCKET handle;
     char *buf;
-    int buflen, res, len = -1, temp;
+    int buflen, res, len = -1;
+    DWORD bytes, err, flags;
     PyObject *object;
     MyOVERLAPPED *ov;
-    // TODO: should probably accept the offset arguments
-    if(!PyArg_ParseTuple(args, "it#O|i", &handle, &buf, &buflen, &object, &len)) {
+    WSABUF wbuf;
+    if(!PyArg_ParseTuple(args, "lw#O|ll", &handle, &buf, &buflen, &object, &len, &flags)) {
         return NULL;
     }
     if(len == -1) {
@@ -220,17 +223,120 @@ static PyObject *iocpcore_WriteFile(iocpcore* self, PyObject *args) {
     }
     memset(ov, 0, sizeof(MyOVERLAPPED));
     Py_INCREF(object);
-    ov->object = object;
+    ov->callback = object;
+    wbuf.len = len;
+    wbuf.buf = buf;
+    CreateIoCompletionPort((HANDLE)handle, self->iocp, 0, 1);
     Py_BEGIN_ALLOW_THREADS;
-    res = WriteFile(handle, buf, len, &temp, ov);
+    res = WSARecv(handle, &wbuf, 1, &bytes, &flags, (OVERLAPPED *)ov, NULL);
     Py_END_ALLOW_THREADS;
+    err = GetLastError();
+    if(!res && err != ERROR_IO_PENDING) {
+        return PyErr_SetFromWindowsErr(err);
+    }
+    return Py_BuildValue("ll", err, bytes);
+}
+
+static PyObject *iocpcore_WSASend(iocpcore* self, PyObject *args) {
+    SOCKET handle;
+    char *buf;
+    int buflen, res, len = -1;
+    DWORD bytes, err, flags;
+    PyObject *object;
+    MyOVERLAPPED *ov;
+    WSABUF wbuf;
+    if(!PyArg_ParseTuple(args, "lt#O|ll", &handle, &buf, &buflen, &object, &len, &flags)) {
+        return NULL;
+    }
+    if(len == -1) {
+        len = buflen;
+    }
+    if(len <= 0 || len > buflen) {
+        PyErr_SetString(PyExc_ValueError, "Invalid length specified");
+    }
+    if(!PyCallable_Check(object)) {
+        PyErr_SetString(PyExc_TypeError, "Callback must be callable");
+    }
+    ov = malloc(sizeof(MyOVERLAPPED));
+    if(!ov) {
+        PyErr_NoMemory();
+        return NULL;
+    }
+    memset(ov, 0, sizeof(MyOVERLAPPED));
+    Py_INCREF(object);
+    ov->callback = object;
+    wbuf.len = len;
+    wbuf.buf = buf;
+    CreateIoCompletionPort((HANDLE)handle, self->iocp, 0, 1);
+    Py_BEGIN_ALLOW_THREADS;
+    res = WSASend(handle, &wbuf, 1, &bytes, flags, (OVERLAPPED *)ov, NULL);
+    Py_END_ALLOW_THREADS;
+    err = GetLastError();
+    if(!res && err != ERROR_IO_PENDING) {
+        return PyErr_SetFromWindowsErr(err);
+    }
+    return Py_BuildValue("ll", err, bytes);
+}
+
+static PyObject *iocpcore_AcceptEx(iocpcore* self, PyObject *args) {
+    SOCKET handle, list;
+    char *buf;
+    int buflen, res, len = -1;
+    DWORD bytes, err, flags;
+    PyObject *object;
+    MyOVERLAPPED *ov;
+    if(!PyArg_ParseTuple(args, "llt#O|ll", &handle, &list, &buf, &buflen, &object, &len, &flags)) {
+        return NULL;
+    }
+    if(len == -1) {
+        len = buflen;
+    }
+    if(len <= 0 || len > buflen) {
+        PyErr_SetString(PyExc_ValueError, "Invalid length specified");
+    }
+    if(!PyCallable_Check(object)) {
+        PyErr_SetString(PyExc_TypeError, "Callback must be callable");
+    }
+    ov = malloc(sizeof(MyOVERLAPPED));
+    if(!ov) {
+        PyErr_NoMemory();
+        return NULL;
+    }
+    memset(ov, 0, sizeof(MyOVERLAPPED));
+    Py_INCREF(object);
+    ov->callback = object;
+    CreateIoCompletionPort((HANDLE)handle, self->iocp, 0, 1);
+    Py_BEGIN_ALLOW_THREADS;
+    // TODO: what the comments in ops.AcceptExOp say
+    res = AcceptEx(handle, list, buf, 0, len/2, len/2, &bytes, (OVERLAPPED *)ov);
+    Py_END_ALLOW_THREADS;
+    err = GetLastError();
+    if(!res && err != ERROR_IO_PENDING) {
+        return PyErr_SetFromWindowsErr(err);
+    }
+    return Py_BuildValue("ll", err, bytes);
+}
+
+PyObject *iocpcore_AllocateReadBuffer(PyObject *self, PyObject *args)
+{
+    int bufSize;
+    if(!PyArg_ParseTuple(args, "i", &bufSize)) {
+        return NULL;
+    }
+    return PyBuffer_New(bufSize);
 }
 
 static PyMethodDef iocpcore_methods[] = {
     {"doIteration", (PyCFunction)iocpcore_doIteration, METH_VARARGS,
      "Perform one event loop iteration"},
-    {"WriteFile", (PyCFunction)iocpcore_WriteFile, METH_VARARGS,
-     "Issue an overlapped WriteFile operation"},
+    {"issueWSARecv", (PyCFunction)iocpcore_WSARecv, METH_VARARGS,
+     "Issue an overlapped WSARecv operation"},
+    {"issueWSASend", (PyCFunction)iocpcore_WSASend, METH_VARARGS,
+     "Issue an overlapped WSASend operation"},
+    {"issueAcceptEx", (PyCFunction)iocpcore_AcceptEx, METH_VARARGS,
+     "Issue an overlapped AcceptEx operation"},
+    {"AllocateReadBuffer", (PyCFunction)iocpcore_AllocateReadBuffer, METH_VARARGS,
+     "Allocate a buffer to read into"},
     {NULL}
 };
 

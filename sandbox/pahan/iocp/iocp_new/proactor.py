@@ -1,21 +1,20 @@
-from win32file import CreateIoCompletionPort, GetQueuedCompletionStatus, INVALID_HANDLE_VALUE
-from win32event import INFINITE
-
 from twisted.internet import default, defer
 from twisted.internet.interfaces import IReactorCore, IReactorTime
 
 import tcp
+from iocpcore import iocpcore
 
-class Proactor(default.PosixReactorBase):
+class Proactor(default.PosixReactorBase,iocpcore):
     __implements__ = (IReactorCore, IReactorTime)
     handles = None
     iocp = None
 
     def __init__(self):
         default.PosixReactorBase.__init__(self)
-        self.completables = {}
-        self.iocp = CreateIoCompletionPort(INVALID_HANDLE_VALUE, 0, 0, 1)
+#        self.completables = {}
 
+    blah = None
+    """
     def registerHandler(self, handle, handler):
         self.completables[int(handle)] = handler
         CreateIoCompletionPort(handle, self.iocp, int(handle), 1)
@@ -36,6 +35,7 @@ class Proactor(default.PosixReactorBase):
         m = getattr(o, str(ov.object), None)
         print "... calling", m, "to handle"
         m(bytes)
+    """
 
     def listenTCP(self, port, factory, backlog=5, interface=''):
         p = tcp.Port((interface, port), factory, backlog)
