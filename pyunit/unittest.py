@@ -270,14 +270,14 @@ class TestCase:
            operator.
         """
         if first != second:
-            raise self.failureException, (msg or '%s != %s' % (first, second))
+            raise self.failureException, (msg or '%s != %s' % (repr(first), repr(second)))
 
     def failIfEqual(self, first, second, msg=None):
         """Fail if the two objects are equal as determined by the '=='
            operator.
         """
         if first == second:
-            raise self.failureException, (msg or '%s == %s' % (first, second))
+            raise self.failureException, (msg or '%s == %s' % (repr(first), repr(second)))
 
     assertEqual = assertEquals = failUnlessEqual
 
