@@ -1,6 +1,5 @@
 # -*- test-case-name: twisted.test.test_sister -*-
 import copy
-import socket
 
 from twisted.spread.pb import Service, Perspective, Error
 from twisted.spread.sturdy import PerspectiveConnector
@@ -52,7 +51,7 @@ class SisterService(Service, Perspective):
     """
 
     def __init__(self, parentHost, parentPort, parentService, localPort,
-                 sharedSecret, serviceName="twisted.sister", application=None):
+                 sharedSecret, publishHost, serviceName="twisted.sister", application=None):
         """Initialize me.
 
         (Application's authorizer must be a TicketAuthorizer, otherwise
@@ -73,7 +72,7 @@ class SisterService(Service, Perspective):
         self.makeIdentity(sharedSecret)
         self.application.authorizer.sisterService = self
         # this will be the first method called on the parent connection once it is setup
-        self.parentRef.callRemote('publishIP', socket.gethostbyname(socket.gethostname()), self.localPort, self.sisterParent)
+        self.parentRef.callRemote('publishIP', publishHost, self.localPort, self.sisterParent)
         
     def startService(self):
         log.msg( 'starting sister, woo')
