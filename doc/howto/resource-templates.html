@@ -45,7 +45,8 @@ more Python coding and are outside the scope of this HOWTO.</p>
 <p>ResourceTemplates are coded in an extension of Python called the
 <q>Python Templating Language</q>. Complete documentation of the PTL
 is available at <a href="http://www.mems-exchange.org/software/quixote/doc/PTL.html">the quixote web site</a>. The web server
-will expect the PTL source file to define a variable named "resource".
+will expect the PTL source file to define a variable named
+<code>resource</code>.
 This should be a <code class="API">twisted.web.server.Resource</code>,
 whose <code>.render</code> method be called. Usually, you would want
 to define <code>render</code> using the keyword <code>template</code>
