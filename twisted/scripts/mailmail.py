@@ -159,7 +159,7 @@ def parseOptions(argv):
             o.to.extend([
                 a[1] for a in rfc822.AddressList(hdrs[1]).addresslist
             ])
-            if hdr != 'bcc':
+            if hdr == 'bcc':
                 write = 0
         elif hdr == 'from':
             o.sender = rfc822.parseaddr(hdrs[1])[1]
@@ -298,7 +298,7 @@ def sendmail(host, options, ident):
 
 def senderror(failure, options):
     recipient = [options.sender]
-    sender = '"Internally Generated Message" <postmaster> (%s)' % (sys.argv[0],)
+    sender = '"Internally Generated Message (%s)"<postmaster@%s>' % (sys.argv[0], smtp.DNSNAME)
     error = StringIO.StringIO()
     failure.printTraceback(file=error)
     body = StringIO.StringIO(ERROR_FMT % error.getvalue())
