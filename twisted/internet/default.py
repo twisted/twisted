@@ -1,5 +1,5 @@
 # -*- test-case-name: twisted.test.test_internet -*-
-# $Id: default.py,v 1.76 2003/05/02 06:43:38 anthony Exp $
+# $Id: default.py,v 1.77 2003/05/02 06:52:40 anthony Exp $
 #
 # Twisted, the Framework of Your Internet
 # Copyright (C) 2001 Matthew W. Lefkowitz
@@ -476,11 +476,11 @@ class SelectReactor(PosixReactorBase):
         }):
         try:
             why = getattr(selectable, method)()
-            #handfn = getattr(selectable, 'fileno', None)
-            #if not handfn:
-            #    why = _NO_FILENO
-            #elif handfn() == -1:
-            #    why = _NO_FILEDESC
+            handfn = getattr(selectable, 'fileno', None)
+            if not handfn:
+                why = _NO_FILENO
+            elif handfn() == -1:
+                why = _NO_FILEDESC
         except:
             why = sys.exc_info()[1]
             log.err()
