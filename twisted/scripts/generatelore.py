@@ -67,12 +67,14 @@ class Walker:
         sys.stdout.write(progstat)
         sys.stdout.flush()
 
+
 class Options(usage.Options):
 
-    optParameters = [["template", "t", "template.tpl",
-                      "The template to follow for generating content."],
+    optParameters = [
                      ["docsdir", "d", None],
                      ["linkrel", "l", ''],
+                     ["template", "t", "template.tpl",
+                      "The template to follow for generating content."],
                      ["ext", "e", ".xhtml",
                       "The extension of output files (and thus what links are "
                       "munged to)"],
@@ -84,6 +86,17 @@ class Options(usage.Options):
         self['files'] = files
 
 
+def makeProcessingFunction(d):
+    if d['ext'] == "None":
+        ext = ""
+    else:
+        ext = d['ext']
+    templ = microdom.parse(open(d['template']))
+    df = lambda file, linkrel: tree.doFile(file, linkrel, d['ext'],
+                                           d['baseurl'], templ)
+    return df
+
+
 def run():
     opt = Options()
     try:
@@ -92,13 +105,7 @@ def run():
         print '%s: %s' % (sys.argv[0], errortext)
         print '%s: Try --help for usage details.' % (sys.argv[0])
         sys.exit(1)
-    if opt['ext'] == "None":
-        ext = ""
-    else:
-        ext = opt['ext']
-    templ = microdom.parse(open(opt['template']))
-    df = lambda file, linkrel: tree.doFile(file, linkrel, ext,
-                                           opt['baseurl'], templ)
+    df = makeProcessingFunction(opt)
     w = Walker(df, '.html', opt['linkrel'])
     if opt['files']:
         for fn in opt['files']:
