@@ -64,6 +64,8 @@ class Options(usage.Options):
     def opt_coverage(self, coverdir):
         """Generate coverage information in the given directory
         (relative to _trial_temp). Requires Python 2.3.3."""
+
+        print "Setting coverage directory to %s." % (coverdir,)
         import trace
 
         # WOO MONKEY PATCH
