@@ -1,3 +1,9 @@
+twisted (1.0.0-2) unstable; urgency=low
+
+  * Put api docs in api/ (Closes: #167196) 
+
+ -- Moshe Zadka <moshez@debian.org>  Thu,  7 Nov 2002 12:27:37 -0600
+
 twisted (1.0.0-1) unstable; urgency=low
 
   * New upstream release 
