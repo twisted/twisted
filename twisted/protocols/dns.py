@@ -22,6 +22,39 @@ import string, struct, StringIO
 QUERY, IQUERY, STATUS = range(3)
 OK, EFORMAT, ESERVER, ENAME, ENOTIMP, EREFUSED = range(6)
 
+# Types
+A = 1
+NS = 2
+MD = 3 # Obsolete - use MX
+MF = 4 # Obsolete - use MX
+CNAME = 5 
+SOA = 6
+MB = 7 # EXPERIMENTAL
+MG = 8 # EXPERIMENTA
+MR = 9 # EXPERIMENTAL
+NULL = 10 # EXPERIMENTAL
+WKS = 11 
+PTR = 12
+HINFO = 13
+MINFO = 14
+MX = 15
+TXT = 16
+
+# Additional QTypes
+AXFR = 252
+MAILB = 253
+MAILA = 254 # Obsolete - see MX
+ALL_RECORDS = 255
+
+# Classes
+IN = 1
+CS = 2 # Obsolete - used only for examples in some obsolete RFCs
+CH = 3
+HS = 4
+
+# Additional QClasses
+ALL_CLASSES = 255
+
 def readPrecisely( file, l ):
     buff = file.read( l )
     if len( buff ) < l:
