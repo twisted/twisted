@@ -56,8 +56,8 @@ class Resolver(common.ResolverBase):
     connections = None
 
     resolv = None
-    resolv_last_read = 0
-    resolv_read_interval = 60
+    _lastResolvTime = None
+    _resolvReadInterval = 60
 
     def __init__(self, resolv = None, servers = None, timeout = (1, 3, 11, 45)):
         """
@@ -98,43 +98,40 @@ class Resolver(common.ResolverBase):
         
         self.connections = []
         self.pending = []
+        
+        self.maybeParseConfig()
 
 
     def __getstate__(self):
         d = self.__dict__.copy()
         d['connections'] = []
+        d['_parseCall'] = None
         return d
 
     def maybeParseConfig(self):
-        if self.resolv_last_read + self.resolv_read_interval < time.time():
+        exists = self.resolv and os.path.exists(self.resolv)
+        mtime = os.path.getmtime(self.resolv)
+        if exists and mtime != self._lastResolvTime:
+            log.msg('%s changed, reparsing' % (self.resolv,))
+            self._lastResolvTime = mtime
             self.parseConfig()
+        from twisted.internet import reactor
+        self._parseCall = reactor.callLater(self._resolvReadInterval, self.maybeParseConfig)
 
     def parseConfig(self):
-        if self.resolv is None:
-            return
-        try:
-            file = open(self.resolv)
-        except IOError, e:
-            if e.errno == errno.ENOENT:
-                return
-            else:
-                raise
-
-        lines = file.readlines()
-        self.resolv_last_read = os.fstat(file.fileno()).st_mtime
-        file.close()
+        resolvConf = file(self.resolv)
         servers = []
-        for l in lines:
-            l = l.strip()
-            if l.startswith('nameserver'):
-                resolver = (l.split()[1], dns.PORT)
+        for L in resolvConf:
+            L = L.strip()
+            if L.startswith('nameserver'):
+                resolver = (L.split()[1], dns.PORT)
                 servers.append(resolver)
                 log.msg("Resolver added %r to server list" % (resolver,))
-            elif l.startswith('domain'):
-                self.domain = l.split()[1]
+            elif L.startswith('domain'):
+                self.domain = L.split()[1]
                 self.search = None
-            elif l.startswith('search'):
-                self.search = l.split()[1:]
+            elif L.startswith('search'):
+                self.search = L.split()[1:]
                 self.domain = None
         self.dynamicServers = servers
 
@@ -146,16 +143,17 @@ class Resolver(common.ResolverBase):
         TODO: Weight servers for response time so faster ones can be
         preferred.
         """
-        self.maybeParseConfig()
         if not self.servers and not self.dynamicServers:
             return None
-        self.index = ((self.index + 1)
-                      % (len(self.servers) + len(self.dynamicServers)))
-        if self.index < len(self.servers):
+        serverL = len(self.servers)
+        dynL = len(self.dynamicServers)
+
+        self.index += 1
+        self.index %= (serverL + dynL)
+        if self.index < serverL:
             return self.servers[self.index]
         else:
-            return self.dynamicServers[self.index - len(self.servers)]
-
+            return self.dynamicServers[self.index - serverL]
 
     def connectionMade(self, protocol):
         self.connections.append(protocol)
