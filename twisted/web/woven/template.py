@@ -124,7 +124,7 @@ class NodeNodeMutator(NodeMutator):
             if parent:
                 parent.replaceChild(self.data, node)
             else:
-                warnings.warn("Warning: There was no parent for node %s; node not mutated." % node)
+                log.msg("Warning: There was no parent for node %s; node not mutated." % node)
         return self.data
 
 
