@@ -39,24 +39,25 @@
     <p>Acceptance tests are all automated by the admin/accepttests
     script currently. (TODO: real acceptance tests strategy!)</p>
 
-<p>Run the unit tests tests before you check anything in.</p>
+    <p>Run the unit tests tests before you check anything in.</p>
 
-<p>Let me repeat that, for emphasis: <em>run the unit tests before you check
-<strong>anything</strong> in</em>.  Code which breaks functionality is
-unfortunate and unavoidable.  The acceptance tests are highly nonportable and
-sometimes a pain to run, so this is pardonable.  Code which breaks the unit
-tests in a way that you could have prevented by running them yourself, however,
-may be grounds for anything from merciless taunting through revertion of
-the breakage to revocation of cvs commit privileges.</p>
+    <p>Let me repeat that, for emphasis: <em>run the unit tests before you 
+       check <strong>anything</strong> in</em>.  Code which breaks 
+    functionality is unfortunate and unavoidable.  The acceptance tests
+    are highly nonportable and sometimes a pain to run, so this is pardonable.
+    Code which breaks the unit tests in a way that you could have prevented 
+    by running them yourself, however, may be grounds for anything from 
+    merciless taunting through revertion of the breakage to revocation 
+    of cvs commit privileges.</p>
 
-<p>It is strongly suggested that developers learn to use Emacs, and use the
-<code>twisted-dev.el</code> file included in the TwistedEmacs package to bind
-the F9 key to <q>run unit tests</q> and bang on it frequently.  Support for
-other editors is unavailable at this time but we would love to provide it.</p>
+    <p>It is strongly suggested that developers learn to use Emacs, and use 
+    the <code>twisted-dev.el</code> file included in the TwistedEmacs 
+    package to bind the F9 key to <q>run unit tests</q> and bang on it 
+    frequently.  Support for other editors is unavailable at this time
+    but we would love to provide it.</p>
 
-<p>If you modify, or write a new, HOWTO, please read the <a
-href="lore.html">Lore documentation</a> to learn the format the
-docs.</p>
+    <p>If you modify, or write a new, HOWTO, please read the <a
+    href="lore.html">Lore documentation</a> to learn the format the docs.</p>
 
     <h2>Whitespace</h2>
 
@@ -75,11 +76,13 @@ docs.</p>
     consider refactoring to include more related functionality in
     that module.</p>
 
-<p>Depending on the situation, it is acceptable to have imports look like this:
-<pre class="python">from twisted.internet.defer import Deferred</pre> or like
-this: <pre class="python">from twisted.internet import defer</pre> That is,
-modules should import <em>modules</em> or <em>classes and functions</em>, but
-not <em>packages</em>.  </p>
+    <p>Depending on the situation, it is acceptable to have imports i
+       look like this:
+       <pre class="python">from twisted.internet.defer import Deferred</pre>
+       or like this: 
+       <pre class="python">from twisted.internet import defer</pre> 
+       That is, modules should import <em>modules</em> or 
+       <em>classes and functions</em>, but not <em>packages</em>.</p>
 
     <h2>Packages</h2>
 
@@ -97,6 +100,7 @@ not <em>packages</em>.  </p>
     example, to break a large module out into several smaller
     files, the accepted way to do this is to promote from within
     the module. For example,</p>
+
 <pre class="python">
 # parent/
 # --- __init__.py ---
@@ -109,8 +113,8 @@ class Foo:
 parent.Foo = Foo
 </pre>
 
-<p>Every package should be added to the list in
-<code class="shell">setup.py</code>.</p>
+    <p>Every package should be added to the list in
+    <code class="shell">setup.py</code>.</p>
 
     <p>Packages must not depend circularly upon each other.  To simplify
     maintaining this state, packages must also not import each other
@@ -141,9 +145,9 @@ parent.Foo = Foo
     <p>Docstrings should be triple-quoted.</p>
 
     <p>Docstrings should be written in epytext format; more
-    documentation is available in the <a
-    href="http://epydoc.sourceforge.net/epytext.html">Epytext Markup Language
-    documentation</a>.</p>
+    documentation is available in the
+    <a href="http://epydoc.sourceforge.net/epytext.html"
+    >Epytext Markup Language documentation</a>.</p>
 
     <p>Additionally, to accommodate emacs users:</p>
 
@@ -187,28 +191,32 @@ def foo2bar(f):
     <p>For each <q>script</q>, that is, a program you expect a Twisted user
     to run from the command-line, the following things must be done:</p>
 
-<ol>
-<li>Write a module in <code class="API">twisted.scripts</code> which contains
-a callable global named <code>run</code>. This will be called by the
-command line part with no arguments (it will usually read
-<code>sys.argv</code>). Feel free to write more functions or classes in this
-module, if you feel they are useful to others.</li>
-<li>Write a file in <code class="shell">bin/</code> which contains the
-Twisted running-from-CVS header, and ending with 
+    <ol>
+      <li>Write a module in <code class="API">twisted.scripts</code> 
+      which contains a callable global named <code>run</code>. This 
+      will be called by the command line part with no arguments (it 
+      will usually read <code>sys.argv</code>). Feel free to write more 
+      functions or classes in this module, if you feel they are useful 
+      to others.</li>
+
+      <li>Write a file in <code class="shell">bin/</code> which contains the
+          Twisted running-from-CVS header, and ending with 
 
 <pre class="python">
 from twisted.scripts.yourmodule import run
 run()
 </pre></li>
-<li>Write a manpage in <code class="shell">doc/man</code>.
-On debian systems you can find a skeleton example of a manpage in
-<code>/usr/share/doc/man-db/examples/manpage.example</code>.</li>
-<li>Add your script to the script list in
-<code class="shell">setup.py</code>.</li>
-</ol>
 
-<p>This will insure your program will work correctly for users of CVS,
-Windows releases and Debian packages.</p>
+      <li>Write a manpage in <code class="shell">doc/man</code>.
+      On debian systems you can find a skeleton example of a manpage in
+      <code>/usr/share/doc/man-db/examples/manpage.example</code>.</li>
+
+      <li>Add your script to the script list in
+      <code class="shell">setup.py</code>.</li>
+    </ol>
+
+    <p>This will insure your program will work correctly for users of CVS,
+    Windows releases and Debian packages.</p>
 
     <h2>Standard Library Extension Modules</h2>
 
@@ -234,9 +242,9 @@ except ImportError:
     with an appropriate entry in the ChangeLog that summarizes that impact.</p>
 
     <p>The correct format for the ChangeLog is GNU changelog format.  There is
-    an emacs mode for editing this, use <code>M-x add-change-log-entry</code>.  If you
-    are, for whatever absurd reason, using an editor other than emacs to edit
-    Twisted, you can use Moshe Zadka's helpfully provided
+    an emacs mode for editing this, use <code>M-x add-change-log-entry</code>.
+    If you are, for whatever absurd reason, using an editor other than emacs 
+    to edit Twisted, you can use Moshe Zadka's helpfully provided
     <code>admin/change</code> script to add a properly-formatted entry.</p>
 
     <h2>Classes</h2>
@@ -276,7 +284,8 @@ except ImportError:
 
     <p>Methods should be in mixed case, with the first letter lower
     case, each word separated by having its first letter
-    capitalized. For example, <code>someMethodName</code>, <code>method</code>.</p>
+    capitalized. For example, <code>someMethodName</code>, 
+    <code>method</code>.</p>
 
     <p>Sometimes, a class will dispatch to a specialized sort of
     method using its name; for example, twisted.reflect.Accessor.
