@@ -480,3 +480,9 @@ class ITransport(Interface):
         connection.
         """
 
+
+class ISSLTransport(ITransport):
+    """A SSL/TLS based transport."""
+
+    def getPeerCertificate(self):
+        """Return an object with the peer's certificate info."""
