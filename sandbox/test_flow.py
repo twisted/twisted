@@ -133,6 +133,12 @@ class FlowTest(unittest.TestCase):
         rhs = toList(flow.Iterator(consumer()))
         self.assertEqual(lhs,rhs)
 
+    def testMerge(self):
+        lhs = [1,'a',2,'b','c',3]
+        mrg = flow.Merge([1,2,flow.Cooperate(),3],['a','b','c'])
+        rhs = toList(flow.Iterator(mrg))
+        self.assertEqual(lhs,rhs)
+
     def testDeferred(self):
         lhs = ['Title', (1,'one'),(2,'two'),(3,'three')]
         d = flow.Deferred(consumer())

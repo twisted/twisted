@@ -171,8 +171,45 @@ class Wrap(Command):
             return
 
 class Merge(Command):
-     """ Merges two or more Commands into a single stream """
-     pass
+    """ Merges two or more Commands results into a single stream
+
+        Basically, this Command can be used for merging two iterators 
+        into a single iterator, all while maintaining the ability to 
+        pause the iterator using Cooperate.   Note, that the order of
+        the items returned is not necessarly predictable.
+    """
+    def __init__(self, *commands):
+        Command.__init__(self)
+        self._queue = []
+        for cmd in commands:
+            if not isinstance(cmd, Command):
+                 cmd = Wrap(cmd)
+            self._queue.append(cmd)
+        self._cooperate = None
+        self._timeout = None
+    def _next(self):
+        while self._queue:
+            curr = self._queue.pop(0)
+            result = curr._next()
+            if result: 
+                if isinstance(result, Cooperate):
+                    self._queue.append(curr)
+                    if self._cooperate is curr:
+                        return Cooperate(self._timeout)
+                    if self._cooperate is None:
+                        self._cooperate = curr
+                        self._timeout = result.timeout
+                        continue
+                    if self._timeout > result.timeout:
+                         self._timeout = result.timeout
+                    continue
+                raise TypeError("Invalid command result")
+            self.result = curr.result
+            if not curr.stop:
+                self._queue.append(curr)
+                return
+        self.result = None
+        self.stop = 1
 
 class Iterator:
     """ Converts a Command into an Iterator
