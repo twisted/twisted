@@ -143,7 +143,7 @@ class GameWindow(gtk.GtkWindow, pb.Referenced):
         
         self.signal_connect('destroy',gtk.mainquit,None)
         
-        self.cmdarea.connect("key_press_event", self.key_function)
+        self.cmdarea.connect("key_press_event", self.processKey)
         self.cmdarea.grab_focus()
 
         self.history = ['']
@@ -180,7 +180,7 @@ class GameWindow(gtk.GtkWindow, pb.Referenced):
         self.cmdarea.set_text("")
 
 
-    def key_function(self, entry, event):
+    def processKey(self, entry, event):
         possible_fill=self.keycuts.get(event.keyval)
         if possible_fill:
             self.cmdarea.set_sensitive(gtk.FALSE)
