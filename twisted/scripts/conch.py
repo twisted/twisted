@@ -14,7 +14,7 @@
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 #
-# $Id: conch.py,v 1.21 2002/12/04 04:30:11 z3p Exp $
+# $Id: conch.py,v 1.22 2002/12/04 22:02:07 z3p Exp $
 
 #""" Implementation module for the `ssh` command.
 #"""
@@ -167,6 +167,15 @@ class SSHClientFactory(protocol.ClientFactory):
         return SSHClientTransport()
 
 class SSHClientTransport(transport.SSHClientTransport):
+
+    def receiveError(self, code, desc):
+        global exitStatus
+        exitStatus = 'error:\tRemote side disconnected with error code %i\nerror:\treason: %s' % (code, desc)
+
+    def sendDisconnect(self, code, reason):
+        global exitStatus
+        exitStatus = 'error:\tSending disconnect with error code %i\nerror:\treason: %s' % (code, reason)
+        transport.SSHClientTransport.sendDisconnect(self, code, reason)
 
     def receiveDebug(self, alwaysDisplay, message, lang):
         global options

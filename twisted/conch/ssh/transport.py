@@ -125,6 +125,7 @@ class SSHTransportBase(protocol.Protocol):
 
     def getPacket(self):
         bs = self.currentEncryptions and self.currentEncryptions.dec_block_size or 8
+        ms = self.currentEncryptions and self.currentEncryptions.verify_digest_size or 0
         if len(self.buf) < bs: return # not enough data
         if not hasattr(self, 'first'):
             if self.currentEncryptions:
@@ -138,7 +139,7 @@ class SSHTransportBase(protocol.Protocol):
         if packetLen > 1048576: # 1024 ** 2
             self.sendDisconnect(DISCONNECT_PROTOCOL_ERROR, 'bad packet length %s'%packetLen)
             return
-        if len(self.buf) < packetLen:
+        if len(self.buf) < packetLen+4+ms:
             self.first = first
             return # not enough packet
         if(packetLen+4)%bs != 0:
@@ -152,9 +153,8 @@ class SSHTransportBase(protocol.Protocol):
         if len(packet) != 4+packetLen:
             self.sendDisconnect(DISCONNECT_PROTOCOL_ERROR, 'bad packet length')
             return
-        if self.currentEncryptions:
-            macData, self.buf = self.buf[: self.currentEncryptions.verify_digest_size],  \
-                               self.buf[self.currentEncryptions.verify_digest_size:]
+        if ms: 
+            macData, self.buf = self.buf[:ms],  self.buf[ms:]
             if not self.currentEncryptions.verify(self.incomingPacketSequence, packet, macData):
                 self.sendDisconnect(DISCONNECT_MAC_ERROR, 'bad MAC')
                 return
