@@ -6,11 +6,66 @@ non-independent things left to do on newpb
 
 PBServerFactory, PBClientFactory, pb.getRemoteURL, pb.callRemoteURL
 
-* thoroughly test failure-handling at all points of unserialization
+DONE, need glyph to do URL parsing
+
+* thoroughly test failure-handling at all points of in/out serialization
+
+places where BananaError or Violation might be raised
+
+sending side:
+ Slicer creation (schema pre-validation?)
+ .slice (called in pushSlicer) ?
+ .slice.next raising Violation
+ .slice.next returning Deferrable when streaming isn't allowed
+ .sendToken (non-primitive token, can't happen)
+ .newSlicerFor (no ISlicer adapter)
+ top.childAborted
+
+receiving side:
+ long header (>64 bytes)
+ checkToken (top.openerCheckToken)
+ checkToken (top.checkToken)
+ typebyte == LIST (oldbanana)
+ bad VOCAB key
+ too-long vocab key
+ bad FLOAT encoding
+ top.receiveClose
+ top.finish
+ top.reportViolation
+ oldtop.finish (in from handleViolation)
+ top.doOpen
+ top.start
+plus all of these when discardCount != 0
+
+** add connection-shutdown checking?
+
+A BananaError on the receiving end (like sending a URL-based RR in a
+your-reference sequence) will drop the connection, which turns (somewhere, I
+can't figure out quite where) into a regular ConnectionDone error. It would
+be nice to know why the far end hung up on us. For most PB things I'd think
+you could just error-back the request (if the error occurs after the req-id
+is sent). But sometimes you can't, or it isn't convenient. It might be nice
+to add a banana-error sequence which allowed a short text message to be put
+into the caller's log, after which the connection would be dropped. It would
+help one end distinguish between an intentional disconnect and a BananaError
+dropping the connection.
+
+* document Unslicer interface: what attributes are set
+
+at the moment: .protocol, .openCount, .parent
+
+maybe use constructor instead of start()? Or would that make adaptation
+harder?
+
+* implement Slicer schema pre-validation
 
 * implement/test CopiedFailureConstraint
 
 * test failure-handing during callRemote argument serialization
+
+* implement/test some streaming Slicers
+
+* test producer Banana
 
 * implement named Referenceables
 
@@ -106,6 +161,8 @@ also some APIs to get a list of everything in the registry
 
 * RemoteInterface instances should have an "RI-" prefix instead of "I-"
 
+DONE
+
 * change the method-call syntax to include an interfacename
 
 Scope the method name to the interface. This implies (I think) one of two
@@ -114,6 +171,41 @@ things:
  callRemote() must take a RemoteInterface argument
 
  each RemoteReference handles just a single Interface
+
+Probably the latter, maybe have the RR keep both default RI and a list of
+all implemented ones, then adapting the RR to a new RI can be a simple copy
+(and change of the default one) if the Referenceable knows about the RI.
+Otherwise something on the local side will need to adapt one RI to another.
+Need to handle reference-counting/DECREF properly for these shared RRs.
+
+From glyph:
+
+ callRemote(methname, **args) # searches RIs
+ callRemoteInterface(remoteinterface, methname, **args) # single RI
+
+ getRemoteURL(url, *interfaces)
+
+ URL-RRefs should turn into the original Referenceable (in args/results)
+  (map through the factory's table upon receipt)
+
+ URL-RRefs will not survive round trips. leave reference exchange for later.
+  (like def remote_foo(): return GlobalReference(self) )
+
+ move method-invocation code into pb.Referenceable (or IReferenceable
+ adapter). Continue using remote_ prefix for now, but make it a property of
+ that code so it can change easily.
+  <warner> ok, for today I'm just going to stick with remote_foo() as a
+  low-budget decorator, so the current restrictions are 1: subclass
+  pb.Referenceable, 2: implements() a RemoteInterface with method named "foo",
+  3: implement a remote_foo method
+  <warner> and #1 will probably go away within a week or two, to be replaced by
+  #1a: subclass pb.Referenceable OR #1b: register an IReferenceable adapter
+
+ try serializing with ISliceable first, then try IReferenceable. The
+ IReferenceable adapter must implements() some RemoteInterfaces and gets
+ serialized with a MyReferenceSlicer.
+
+http://svn.twistedmatrix.com/cvs/trunk/pynfo/admin.py?view=markup&rev=44&root=pynfo
 
 * consider a smaller scope for OPEN-counter reference numbers
 

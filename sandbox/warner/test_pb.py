@@ -479,11 +479,18 @@ class MyRemoteCopy3Unslicer(flavors.RemoteCopyUnslicer):
 components.registerAdapter(MyCopyable3Slicer, MyCopyable3, tokens.ISlicer)
 pb.registerRemoteCopy("MyCopyable3name", MyRemoteCopy3Unslicer)
 
+class RIHelper(pb.RemoteInterface):
+    def set(obj=schema.Any()): return bool
+    def get(): return schema.Any()
+    def echo(obj=schema.Any()): return schema.Any()
 
 class HelperTarget(pb.Referenceable):
-    def remote_store(self, obj):
+    implements(RIHelper)
+    def remote_set(self, obj):
         self.obj = obj
         return True
+    def remote_get(self):
+        return self.obj
     def remote_echo(self, obj):
         self.obj = obj
         return obj
@@ -499,7 +506,7 @@ class TestCopyable(unittest.TestCase, TargetMixin):
 
     def send(self, arg):
         rr, target = self.setupTarget(HelperTarget())
-        d = rr.callRemote("store", obj=arg)
+        d = rr.callRemote("set", obj=arg)
         self.failUnless(dr(d))
         return target.obj
 
@@ -587,7 +594,7 @@ class TestReferenceable(unittest.TestCase, TargetMixin):
 
     def send(self, arg):
         rr, target = self.setupTarget(HelperTarget())
-        d = rr.callRemote("store", obj=arg)
+        d = rr.callRemote("set", obj=arg)
         self.failUnless(dr(d))
         return target.obj
 
@@ -598,20 +605,75 @@ class TestReferenceable(unittest.TestCase, TargetMixin):
         return res
 
     def testRef1(self):
+        # Referenceables turn into RemoteReferences
         r = Target()
         res = self.send(r)
         self.failUnless(isinstance(res, pb.RemoteReference))
         self.failUnlessEqual(res.broker, self.targetBroker)
+        self.failUnless(type(res.refID) is int)
         self.failUnless(self.callingBroker.getReferenceable(res.refID) is r)
         self.failUnlessEqual(res.interfaceNames, ['RIMyTarget'])
 
     def testRef2(self):
+        # Referenceables survive round-trips
         r = Target()
         res = self.echo(r)
         self.failUnlessIdentical(res, r)
 
+    def testRemoteRef1(self):
+        # known URLRemoteReferences turn into Referenceables
+        root = Target()
+        rr, target = self.setupTarget(HelperTarget())
+        self.targetBroker.factory = pb.PBServerFactory(root)
+        urlRRef = self.callingBroker.remoteReferenceForName("", [])
+        # urlRRef points at root
+        d = rr.callRemote("set", obj=urlRRef)
+        self.failUnless(dr(d))
+
+        self.failUnlessIdentical(target.obj, root)
+
+    def testRemoteRef2(self):
+        # unknown URLRemoteReferences are errors
+        root = Target()
+        rr, target = self.setupTarget(HelperTarget())
+        self.targetBroker.factory = pb.PBServerFactory(root)
+        urlRRef = self.callingBroker.remoteReferenceForName("bogus", [])
+        # urlRRef points at nothing
+        d = rr.callRemote("set", obj=urlRRef)
+        f = de(d)
+        #print f
+        #self.failUnlessEqual(f.type, tokens.Violation)
+        self.failUnless(f.value.args[0].find("unknown clid 'bogus'") != -1)
+
+
 class TestFactory(unittest.TestCase):
+
+    def testGet1(self):
+        t = Target()
+        s = pb.PBServerFactory(t)
+        port = reactor.listenTCP(0, s, interface="127.0.0.1")
+        portnum = port.getHost().port
+        d = pb.getRemoteURL_TCP("localhost", portnum, "", RIMyTarget)
+        rr = dr(d)
+        d = rr.callRemote("add", a=1, b=2)
+        res = dr(d)
+        self.failUnlessEqual(res, 3)
+
+    def testGet2(self):
+        # multiple RemoteInterfaces
+        t = Target()
+        s = pb.PBServerFactory(t)
+        port = reactor.listenTCP(0, s, interface="127.0.0.1")
+        portnum = port.getHost().port
+        d = pb.getRemoteURL_TCP("localhost", portnum, "",
+                                RIMyTarget, RIHelper)
+        rr = dr(d)
+        d = rr.callRemote("add", a=1, b=2)
+        res = dr(d)
+        self.failUnlessEqual(res, 3)
+
     def testCall1(self):
+        # callRemoteURL
         t = Target()
         s = pb.PBServerFactory(t)
         port = reactor.listenTCP(0, s, interface="127.0.0.1")
@@ -650,3 +712,92 @@ class TestFactory(unittest.TestCase):
         res = dr(d)
         self.failUnlessEqual(res, "gabriel")
 
+class ThreeWayHelper:
+    passed = False
+
+    def start(self):
+        print "start"
+        d = pb.getRemoteURL_TCP("localhost", self.portnum1, "", RIHelper)
+        d.addCallback(self.step2)
+        d.addErrback(self.err)
+        return d
+
+    def step2(self, remote1):
+        print "step2", remote1
+        self.remote1 = remote1
+        d = pb.getRemoteURL_TCP("localhost", self.portnum2, "", RIHelper)
+        d.addCallback(self.step3)
+        return d
+
+    def step3(self, remote2):
+        print "step3", remote2
+        print " remote1", self.remote1.broker.disconnected
+        self.remote2 = remote2
+        # sending a RemoteReference back to its source should be ok
+        d = self.remote1.callRemote("set", self.remote1)
+        d.addCallback(self.step4)
+        return d
+
+    def step4(self, res):
+        print "step4", res
+        assert self.target1.obj is self.target1
+        # but sending one to someone else is not
+        d = self.remote2.callRemote("set", self.remote1)
+        d.addCallback(self.step5bad)
+        d.addErrback(self.step5good)
+        return d
+
+    def step5bad(self, res):
+        print "step5bad", res
+        why = unittest.FailTest("sending a 3rd-party reference did not fail")
+        self.err(failure.Failure(why))
+        return None
+
+    def step5good(self, why):
+        print "step5good", why
+        bad = None
+        if why.type != tokens.Violation:
+            bad = "%s failure should be a Violation" % why.type
+        elif why.value.args[0].find("RemoteReferences can only be sent back to their home Broker") == -1:
+            bad = "wrong error message: '%s'" % why.value.args[0]
+        if bad:
+            why = unittest.FailTest(bad)
+            self.passed = failure.Failure(why)
+        else:
+            self.passed = True
+
+    def err(self, why):
+        self.passed = why
+
+class Test3Way(unittest.TestCase):
+    def setUp(self):
+        self.ports = []
+
+    def tearDown(self):
+        for p in self.ports:
+            p.stopListening()
+
+    def test3Way(self):
+        raise unittest.SkipTest("works, but kills TestAnswer")
+        helper = ThreeWayHelper()
+
+        t1 = HelperTarget()
+        s1 = pb.PBServerFactory(t1)
+        port1 = reactor.listenTCP(0, s1, interface="127.0.0.1")
+        self.ports.append(port1)
+        helper.portnum1 = port1.getHost().port
+        helper.target1 = t1
+
+        t2 = HelperTarget()
+        s2 = pb.PBServerFactory(t2)
+        port2 = reactor.listenTCP(0, s2, interface="127.0.0.1")
+        self.ports.append(port2)
+        helper.portnum2 = port2.getHost().port
+
+
+        d = helper.start()
+        res = dr(d)
+
+        if helper.passed != True:
+            # should be a Failure instance
+            helper.passed.raiseException()

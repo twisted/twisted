@@ -183,6 +183,15 @@ class RemoteReference(object):
 
 registerAdapter(flavors.YourReferenceSlicer, RemoteReference, ISlicer)
 
+class URLRemoteReference(RemoteReference):
+    # Just like RemoteReference, but refID is a string. These are created by
+    # Broker.remoteReferenceForName when we use a PB URL to refer to someone
+    # else's object. We use a different class to reduce the confusion when a
+    # URLRemoteReference emerges from a round-trip as an unrelated
+    # RemoteReference
+    pass
+registerAdapter(flavors.YourReferenceSlicer, URLRemoteReference, ISlicer)
+
 
 class DecRefUnslicer(BaseUnslicer):
     refID = None
@@ -248,14 +257,25 @@ class CallUnslicer(BaseUnslicer):
         return unslicer
 
     def receiveChild(self, token):
-        self.propagateUnbananaFailures(token)
+        #print "CallUnslicer.receiveChild [s%d]" % self.stage, repr(token)
         # TODO: if possible, return an error to the other side
         if self.stage == 0:
+            # we don't yet know which reqID to send any failure to
+            self.propagateUnbananaFailures(token)
             self.reqID = token
             self.stage += 1
             assert not self.broker.activeLocalCalls.get(self.reqID)
             self.broker.activeLocalCalls[self.reqID] = self
-        elif self.stage == 1:
+            return
+
+        if isinstance(token, UnbananaFailure):
+            #print "CallUnslicer.receiveChild got UnbananaFailure"
+            # error-back the request
+            #self.broker.sendError(token, self.reqID)
+            # now start ignoring the rest of the request
+            raise Violation(failure=token)
+
+        if self.stage == 1:
             # this might raise an exception if objID is invalid
             self.obj = self.broker.getReferenceable(token)
             self.stage += 1
@@ -298,6 +318,7 @@ class CallUnslicer(BaseUnslicer):
                 argvalue = token
                 self.args[self.argname] = argvalue
                 self.argname = None
+
     def receiveClose(self):
         if self.stage != 3 or self.argname != None:
             raise BananaError("'call' sequence ended too early")
@@ -314,6 +335,7 @@ class CallUnslicer(BaseUnslicer):
     def reportViolation(self, f):
         # if the Violation was raised after we know the reqID, we can send
         # back an Error.
+        #print "CallUnslicer.reportViolation"
         if self.stage > 0:
             self.broker.sendError(f, self.reqID)
         return f
@@ -762,7 +784,7 @@ class Broker(banana.Banana):
             raise
 
     def remoteReferenceForName(self, name, interfaces):
-        return RemoteReference(self, name, interfaces)
+        return URLRemoteReference(self, name, interfaces)
 
     # remote-method-invocation methods, calling side (RemoteReference):
     # RemoteReference.callRemote, gotAnswer, gotError
@@ -923,7 +945,7 @@ class PBClientFactory(protocol.ClientFactory):
         # exception.
         for i in interfaces:
             assert isinstance(i, flavors.RemoteInterfaceClass)
-        # create a RemoteReference
+        # create a URLRemoteReference
         d = self.getBroker()
         d.addCallback(self._getObjectNamed, name, interfaces)
         return d
@@ -954,9 +976,9 @@ def connect(host, port):
     reactor.connectTCP(host, port, f)
     return d
 
-def getRemoteURL_TCP(host, port, pathname, interface):
+def getRemoteURL_TCP(host, port, pathname, *interfaces):
     f = PBClientFactory()
-    d = f.getObjectNamed(pathname, [interface])
+    d = f.getObjectNamed(pathname, interfaces)
     reactor.connectTCP(host, port, f)
     return d
 

@@ -318,7 +318,7 @@ value (or somewhere inside them).</p>
         CLOSE</TD></TR>
 
   <TR><TD>pb.RemoteReference</TD>
-      <TD>OPEN(your-reference) INT(clid)
+      <TD>OPEN(your-reference) INT/STR(clid)
         CLOSE</TD></TR>
 
   <TR><TD>pb.Copyable</TD><TD>OPEN(copyable) STRING(reflect.qual(class))
@@ -430,27 +430,37 @@ result in the method argument or return value.</p>
 string-indexed <code>Referenceable</code>s kept in the PBServerFactory's
 <code>localObjects</code> dictionary. This table is used to publish objects
 to the outside world. These objects are the targets of the
-<code>pb.callRemoteURL</code> function.</p>
+<code>pb.getRemoteURL</code> and <code>pb.callRemoteURL</code>
+functions.</p>
 
-<p>To access these, a <code>RemoteReference</code> must be created that
-refers to a string <code>clid</code> instead of a numeric one. This
-<code>RemoteReference</code> is created manually, rather than being
-generated automatically upon the receipt of a <code>my-reference</code>
-sequence. The <code>pb.callRemoteURL</code> is responsible for this. It also
-assumes a list of Interface names (which are usually provided by the holder
-of the <code>Referenceable</code>).</p>
+<p>To access these, a <code>URLRemoteReference</code> must be created that
+refers to a string <code>clid</code> instead of a numeric one. This is a
+simple subclass of <code>RemoteReference</code>: it behaves exactly the
+same. The <code>URLRemoteReference</code> is created manually by
+<code>pb.getRemoteURL</code>, rather than being generated automatically upon
+the receipt of a <code>my-reference</code> sequence. It also assumes a list
+of Interface names (which are usually provided by the holder of the
+<code>Referenceable</code>).</p>
 
 <p>To invoke methods on a URL-indexed object, a string token is used as the
 <code>clid</code> in the <q>your-reference-id</q> argument of a
 <code>call</code> sequence.</p>
 
-<p>At present, the <code>clid</code> of a <code>your-reference</code>
-sequence must be numeric: URL-indexed objects may not be used in arguments
-or return values of method invocations. If the URL-indexed object returns
-<code>self</code> from the method, the caller will get a regular numeric
-(implicit) reference. This may change in the future as the URL-based
-referencing scheme is developed. It might also become possible for string
-<code>clid</code>s to appear in <code>my-reference</code> sequences, giving
+<p>In addition, the <code>clid</code> of a <code>your-reference</code>
+sequence can be a string to use URL-indexed objects as arguments or return
+values of method invocations. This allows one side to send a
+<code>URLRemoteReference</code> to the other and have it turn into the
+matching <code>Referenceable</code> when it arrives. Of course, if it is
+invalid, the method call that tried to send it will fail.</p>
+
+<p>Note that these <code>URLRemoteReference</code> objects wil not survive a
+roundtrip like regular <code>RemoteReference</code>s do. The
+<code>URLRemoteReference</code> turns into a <code>Referenceable</code>, but
+the <code>Referenceable</code> will turn into a regular numeric (implicit)
+<code>RemoteReference</code> when it comes back. This may change in the
+future as the URL-based referencing scheme is developed. It might also
+become possible for string <code>clid</code>s to appear in
+<code>my-reference</code> sequences, giving
 <code>Referenceable</code>-holders the ability to publish URL references
 explicitly.</p>
 

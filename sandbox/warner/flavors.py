@@ -10,7 +10,7 @@ Interface = interface.Interface
 from twisted.internet.defer import Deferred
 
 import schema, slicer, tokens
-from tokens import ISlicer, BananaError
+from tokens import ISlicer, BananaError, Violation
 
 
 class RemoteInterfaceClass(interface.InterfaceClass):
@@ -393,8 +393,10 @@ class YourReferenceSlicer(slicer.BaseSlicer):
     opentype = ('your-reference',)
 
     def sliceBody(self, streamable, broker):
-        assert self.obj.broker == broker # only send to home broker
-        yield self.obj.refID
+        if not self.obj.broker == broker:
+            # only send to home broker
+            raise Violation("RemoteReferences can only be sent back to their home Broker")
+        yield self.obj.refID # either string or int
 # the registerAdapter() is performed in pb.py, since RemoteReference lives
 # there
 
@@ -402,8 +404,8 @@ class YourReferenceUnslicer(slicer.LeafUnslicer):
     clid = None
 
     def checkToken(self, typebyte, size):
-        if typebyte != tokens.INT:
-            raise BananaError("your-reference ID must be an INT")
+        if typebyte not in (tokens.INT, tokens.STRING, tokens.VOCAB):
+            raise BananaError("your-reference ID must be an INT or STRING")
 
     def receiveChild(self, token):
         self.propagateUnbananaFailures(token)
@@ -412,8 +414,6 @@ class YourReferenceUnslicer(slicer.LeafUnslicer):
     def receiveClose(self):
         if self.clid is None:
             raise BananaError("sequence ended too early")
-        # broker.getReferenceable will accept a string, but we do not yet
-        # allow URLs in your-reference sequences (only in call sequences).
         obj = self.broker.getReferenceable(self.clid)
         if not obj:
             raise Violation("unknown clid '%s'" % self.clid)
