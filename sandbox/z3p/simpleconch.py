@@ -1,8 +1,10 @@
 # inital work at building a simpler interface to the Conchcode
 
+import struct
 from twisted.conch.ssh import common, transport, userauth, connection, keys
 from twisted.conch.ssh import channel, session
-from twisted.internet import defer, protocol
+from twisted.internet import defer, protocol, error
+from twisted.python import failure
 
 class SimpleTransport(transport.SSHClientTransport):
 
@@ -40,7 +42,7 @@ class SimpleTransport(transport.SSHClientTransport):
         Returns (keyType, keyData, fingerprint)
         """
         t, k = common.getNS(self._hostKey)
-        return (t, k, self._fingerprint)
+        return (t, self._hostKey, self._fingerprint)
 
     def isAuthenticated(self):
         """
@@ -56,7 +58,7 @@ class SimpleTransport(transport.SSHClientTransport):
         else:
             self._authClient.user = username
             d = self._authClient._d = defer.Deferred()
-            self._authClient.getPassword = lambda:password
+            self._authClient.getPassword = lambda:defer.succeed(password)
             self._authClient.tryAuth('password')
         return d
 
@@ -131,8 +133,22 @@ class SimpleSession(channel.SSHChannel):
     # client methods
 
     def setClient(self, client):
-        self.dataReceived = client.dataReceived
-        self.closed = lambda:client.connectionLost(protocol.connectionDone)
+        if isinstance(client, protocol.ProcessProtocol):
+            self.dataReceived = client.outReceived
+            self.extReceived = client.errReceived
+            self.eofReceived = client.inConnectionLost
+            def _exit_status(status):
+                code = struct.unpack('!L', status[:4])[0]
+                if code == 0:
+                    err = error.ProcessDone(None)
+                else:
+                    err = error.ProcessTerminated(code)
+                client.processEnded(failure.Failure(err))
+                return True
+            self.request_exit_status = _exit_status
+        else:
+            self.dataReceived = client.dataReceived
+            self.closed = lambda:client.connectionLost(protocol.connectionDone)
         client.makeConnection(self)
 
     def requestPTY(self, term='xterm', width=80, height=24, xpixel=0, ypixel=0, modes='', wantReply = 0):

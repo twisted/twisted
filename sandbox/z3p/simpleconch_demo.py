@@ -21,13 +21,16 @@ def _session(s):
     s.setClient(c)
     s.openExec('echo hello world!')
 
-class CrazyProtocol(protocol.Protocol):
-    def dataReceived(self, data):
+class CrazyProtocol(protocol.ProcessProtocol):
+    buf = ''
+    def outReceived(self, data):
+        self.buf += data
+
+    def processEnded(self, reason):
+        assert reason.value.exitCode == 0, reason.value.exitCode
+        assert self.buf == 'hello world!\n'
         reactor.stop()
-        if data != 'hello world!\n':
-            assert 0
-        else:
-            print 'worked!'
+
 
 d = defer.Deferred()
 protocol.ClientCreator(reactor, SimpleTransport, d).connectTCP('localhost', 22)
