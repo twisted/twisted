@@ -378,13 +378,14 @@ class Request(pb.Copyable, http.HTTP):
         # Session management
         if not self.session:
             cookietxt = self.getHeader("cookie")
+            cookiename = string.join(['TWISTED_SESSION'] + self.sitepath, "_")
             if cookietxt:
                 cookie = string.split(cookietxt, '; ')
                 vals = {}
                 for cook in cookie:
                     k, v = string.split(cook, '=')
                     vals[k] = v
-                sessionCookie = vals.get('TWISTED_SESSION')
+                sessionCookie = vals.get(cookiename)
                 if sessionCookie:
                     try:
                         self.session = self.site.getSession(sessionCookie)
@@ -394,7 +395,7 @@ class Request(pb.Copyable, http.HTTP):
             if not self.session:
                 self.session = self.site.makeSession()
                 self.setHeader('Set-Cookie',
-                               'TWISTED_SESSION='+self.session.uid)
+                               '%s=%s' % (cookiename, self.session.uid))
         self.session.touch()
         return self.session
 
@@ -544,8 +545,8 @@ class Site(protocol.Factory):
         stopping when it hits an element where isLeaf is true.
         """
         request.site = self
-        # XXX: This seems like it might be useful but all the places it's
-        # actually been used have been eliminated.
+        # Sitepath is used to determine cookie names between distributed
+        # servers and disconnected sites.
         request.sitepath = copy.copy(request.prepath)
         return self.resource.getChildForRequest(request)
 
