@@ -23,7 +23,7 @@ from twisted.cred import portal, checkers, credentials, error
 from twisted.python import components
 from twisted.python import util
 from twisted.internet import defer
-
+from zope import interface
 import hmac
 
 try:
@@ -48,14 +48,14 @@ class TestAvatar:
         self.loggedOut = True
 
 class Testable(components.Adapter):
-    __implements__ = ITestable
+    interface.implements(ITestable)
 
 # components.Interface(TestAvatar).adaptWith(Testable, ITestable)
 
 components.registerAdapter(Testable, TestAvatar, ITestable)
 
 class TestRealm:
-    __implements__ = portal.IRealm
+    interface.implements(portal.IRealm)
     def __init__(self):
         self.avatars = {}
 
@@ -95,7 +95,7 @@ class NewCredTest(unittest.TestCase):
         iface, impl, logout = l[0]
         # whitebox
         self.assertEquals(iface, ITestable)
-        self.failUnless(components.implements(impl, iface),
+        self.failUnless(iface.providedBy(impl),
                         "%s does not implement %s" % (impl, iface))
         # greybox
         self.failUnless(impl.original.loggedIn)

@@ -26,6 +26,7 @@ Future Plans: Errors may be changed to unify reporting in twisted.cred.
 
 from twisted.python import log, reflect, components
 from twisted.cred import identity
+from zope import interface
 import types
 
 class IPerspective(components.Interface):
@@ -71,7 +72,7 @@ class Perspective:
     user for that service.
     """
     
-    __implements__ = IPerspective,
+    interface.implements(IPerspective)
 
     _service_cached = 0 # Has my service cached me from a loaded store, or do I live in memory usually?
 
@@ -191,3 +192,5 @@ class Perspective:
         else:
             log.msg(" (multiple references attached: %s)" % self._attachedCount)
         return self
+
+components.backwardsCompatImplements(Perspective)

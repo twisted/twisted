@@ -17,6 +17,7 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
 from twisted.python import components
+from zope import interface
 
 import hmac
 import time
@@ -25,9 +26,8 @@ import random
 class ICredentials(components.Interface):
     """I check credentials.
 
-    @cvar __implements__: Implementors _must_ provide an __implements__
-    attribute which contains at least the list of sub-interfaces of
-    ICredentials to which it conforms.
+    Implementors _must_ specify which sub-interfaces of ICredentials
+    to which it conforms, using zope.interface.implements().
     """
 
 
@@ -88,7 +88,7 @@ class IAnonymous(ICredentials):
 
 
 class CramMD5Credentials:
-    __implements__ = (IUsernameHashedPassword,)
+    interface.implements(IUsernameHashedPassword)
 
     challenge = ''
     response = ''
@@ -120,8 +120,10 @@ class CramMD5Credentials:
         verify = hmac.HMAC(password, self.challenge).hexdigest()
         return verify == self.response
 
+components.backwardsCompatImplements(CramMD5Credentials)
+
 class UsernameHashedPassword:
-    __implements__ = (IUsernameHashedPassword,)
+    interface.implements(IUsernameHashedPassword)
 
     def __init__(self, username, hashed):
         self.username = username
@@ -130,8 +132,10 @@ class UsernameHashedPassword:
     def checkPassword(self, password):
         return self.hashed == password
 
+components.backwardsCompatImplements(UsernameHashedPassword)
+
 class UsernamePassword:
-    __implements__ = (IUsernamePassword,)
+    interface.implements(IUsernamePassword)
 
     def __init__(self, username, password):
         self.username = username
@@ -140,5 +144,9 @@ class UsernamePassword:
     def checkPassword(self, password):
         return self.password == password
 
+components.backwardsCompatImplements(UsernamePassword)
+
 class Anonymous:
-    __implements__ = (IAnonymous,)
+    interface.implements(IAnonymous)
+
+components.backwardsCompatImplements(Anonymous)

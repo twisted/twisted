@@ -19,6 +19,7 @@
 from twisted.internet import defer
 from twisted.python import components, failure, log
 from twisted.cred import error, credentials
+from zope import interface
 
 class ICredentialsChecker(components.Interface):
     """I check sub-interfaces of ICredentials.
@@ -52,15 +53,16 @@ ANONYMOUS = ()
 
 
 class AllowAnonymousAccess:
-    __implements__ = ICredentialsChecker
+    interface.implements(ICredentialsChecker)
     credentialInterfaces = credentials.IAnonymous,
 
     def requestAvatarId(self, credentials):
         return defer.succeed(ANONYMOUS)
 
+components.backwardsCompatImplements(AllowAnonymousAccess)
 
 class InMemoryUsernamePasswordDatabaseDontUse:
-    __implements__ = ICredentialsChecker
+    interface.implements(ICredentialsChecker)
 
     credentialInterfaces = (credentials.IUsernamePassword,
         credentials.IUsernameHashedPassword)
@@ -86,6 +88,7 @@ class InMemoryUsernamePasswordDatabaseDontUse:
         else:
             return failure.Failure(error.UnauthorizedLogin())
 
+components.backwardsCompatImplements(InMemoryUsernamePasswordDatabaseDontUse)
 
 class FilePasswordDB:
     """A file-based, text-based username/password database.
@@ -100,7 +103,7 @@ class FilePasswordDB:
     IUsernameHashedPassword credentials will be checkable as well.
     """
 
-    __implements__ = (ICredentialsChecker,)
+    interface.implements(ICredentialsChecker)
 
     def __init__(self, filename, delim=':', usernameField=0, passwordField=1,
                  caseSensitive=True, hash=None):
@@ -200,6 +203,8 @@ class FilePasswordDB:
             else:
                 return defer.maybeDeferred(c.checkPassword, p
                     ).addCallback(self._cbPasswordMatch, u)
+
+components.backwardsCompatImplements(FilePasswordDB)
 
 # For backwards compatibility
 # Allow access as the old name.

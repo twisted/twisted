@@ -36,6 +36,9 @@ from twisted.internet import defer, app
 # Sibling Imports
 from perspective import IPerspective, Perspective
 
+# Zope interface Imports
+from zope import interface
+
 # System Imports
 import types
 import warnings
@@ -54,7 +57,7 @@ class Service(app.ApplicationService):
     @see: L{twisted.spread.pb.Service}
     """
 
-    __implements__ = IService
+    interface.implements(IService)
 
     # ugh, load order
     perspectiveClass = Perspective
@@ -176,3 +179,5 @@ class Service(app.ApplicationService):
         app.ApplicationService.setServiceParent(self, parent)
         if self.authorizer is not None:
             self.authorizer.setServiceCollection(parent)
+
+components.backwardsCompatImplements(Service)

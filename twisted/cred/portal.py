@@ -20,6 +20,7 @@ from twisted.internet import defer
 from twisted.internet.defer import maybeDeferred
 from twisted.python import failure, reflect, components
 from twisted.cred import error
+from zope import interface
 
 
 class IRealm(components.Interface):
@@ -87,7 +88,7 @@ class Portal:
         this will not be in connectionLost (such as in a web-based session), it
         will always be at the end of a user's interactive session.
         """
-        ifac = components.getInterfaces(credentials)
+        ifac = interface.providedBy(credentials)
         for i in ifac:
             c = self.checkers.get(i)
             if c is not None:
