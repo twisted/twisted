@@ -206,7 +206,10 @@ def setAuthors(template, authors):
         # xml.sax.saxutils.{escape,quoteattr}?)
         anchor = '<a href="%s">%s</a>' % (href, name)
         if (name, href) == authors[-1]:
-            text += 'and ' + anchor
+            if len(authors) == 1:
+                text = anchor
+            else:
+                text += 'and ' + anchor
         else:
             text += anchor + ','
 
