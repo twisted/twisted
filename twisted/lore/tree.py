@@ -55,7 +55,7 @@ def expandAPI(document):
         api = _getAPI(node)
         if seenAPI.get(api) or node.hasAttribute('noexpand'):
             continue
-        node.childNodes[0].nodevalue = api
+        node.childNodes[0].nodeValue = api
         node.removeAttribute('base')
         seenAPI[api] = 1
 
