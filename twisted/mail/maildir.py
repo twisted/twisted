@@ -22,7 +22,6 @@ import stat, os, socket, time, md5, string
 from twisted.protocols import pop3, smtp
 from twisted.persisted import dirdbm
 from twisted.mail import mail
-from twisted.internet import defer
 
 
 _n = 0
@@ -125,7 +124,9 @@ class MaildirMailbox(pop3.Mailbox):
         This is done using the basename of the filename.
         It is globally unique because this is how Maildirs are designed.
         """
-        return os.path.basename(self.list[i])
+        # Returning the actual filename is a mistake.  Hash it.
+        base = os.path.basename(self.list[i])
+        return md5.md5(base).hexdigest()
 
     def deleteMessage(self, i):
         """Delete a message
