@@ -36,6 +36,24 @@ from twisted.python import usage, threadable, log
 from twisted.persisted import styles
 from cPickle import load
 
+# Load the servers.
+# This will fix up accidental function definitions in evaluation spaces
+# and the like.
+initRun = 0
+mainMod = sys.modules['__main__']
+
+class EverythingEphemeral(styles.Ephemeral):
+    def __getattr__(self, key):
+        try:
+            return getattr(mainMod, key)
+        except AttributeError:
+            if initRun:
+                raise
+            else:
+                print "Warning!  Loading from __main__: %s" % key
+                return styles.Ephemeral()
+
+
 class ServerOptions(usage.Options):
     optFlags = [['nodaemon','n'],
                 ['profile','p'],
@@ -87,14 +105,6 @@ oldstdin = sys.stdin
 oldstdout = sys.stdout
 oldstderr = sys.stderr
 log.startLogging(logFile)
-# Load the servers.
-# This will fix up accidental function definitions in evaluation spaces
-# and the like.
-class EverythingEphemeral:
-    def __getattr__(self, key):
-        print "Warning!  Loading from __main__: %s" % key
-        return styles.Ephemeral()
-mainMod = sys.modules['__main__']
 sys.modules['__main__'] = EverythingEphemeral()
 sys.stdout.flush()
 
@@ -109,7 +119,7 @@ else:
 
 print "Loaded."
 sys.modules['__main__'] = mainMod
-
+initRun = 1
 
 if not config.nodaemon:
     # Turn into a daemon.

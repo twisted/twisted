@@ -20,9 +20,6 @@ except:
     from org.python.core import PyMethod
     instancemethod = PyMethod
 
-class Ephemeral:
-    pass
-
 ## First, let's register support for some stuff that really ought to
 ## be registerable...
 
@@ -110,6 +107,7 @@ class Ephemeral:
     This type of object is never persisted; if possible, even references to it
     are eliminated.
     """
+
     def __getstate__(self):
         print "WARNING: serializing ephemeral", self
         return None
