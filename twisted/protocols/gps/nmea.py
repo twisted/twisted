@@ -1,6 +1,6 @@
+# -*- test-case-name: twisted.test.test_nmea -*-
 # Copyright (c) 2001-2004 Twisted Matrix Laboratories.
 # See LICENSE for details.
- 
 
 """NMEA 0183 implementation
 
@@ -72,8 +72,8 @@ class NMEAReceiver(basic.LineReceiver):
             raise InvalidSentence("sentencetype %r" % (sentencetype,))
         if not self.ignore_checksum_mismatch:
             checksum, calculated_checksum = int(checksum, 16), reduce(operator.xor, map(ord, strmessage))
-        if checksum != calculated_checksum:
-            raise InvalidChecksum("Given 0x%02X != 0x%02X" % (checksum, calculated_checksum))
+            if checksum != calculated_checksum:
+                raise InvalidChecksum("Given 0x%02X != 0x%02X" % (checksum, calculated_checksum))
         handler = getattr(self, "handle_%s" % dispatch, None)
         decoder = getattr(self, "decode_%s" % dispatch, None)
         if not (dispatch and handler and decoder):
