@@ -37,6 +37,9 @@ Note: the API for DeferredResults is not final - I'm open to suggestions
 on how to improve it.  --itamar
 """
 
+# system import
+import copy
+
 # twisted import
 from twisted.python import threadable, reflect
 
@@ -140,7 +143,7 @@ class DeferredResult:
         try:
             result = apply(function, args, kwargs)
         except Exception, e:
-            self._exception = exception
+            self._exception = e
         else:
             self._result = result
         self._finished = 1
