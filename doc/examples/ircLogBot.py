@@ -19,7 +19,7 @@
 
 # twisted imports
 from twisted.protocols import irc
-from twisted.internet import app, protocol
+from twisted.internet import reactor, protocol
 
 # system imports
 import string, time
@@ -42,11 +42,6 @@ class LogBot(irc.IRCClient):
         irc.IRCClient.connectionLost(self)
         self.log("[disconnected at %s]" % time.asctime(time.localtime(time.time())))
         self.file.close()
-
-    def connectionFailed(self):
-        irc.IRCClient.connectionFailed(self)
-        self.file = open(self.factory.filename, "a")
-        self.log("[connection failed at %s]" % time.asctime(time.localtime(time.time())))
 
     def log(self, s):
         timestamp = time.strftime("[%H:%M:%S]", time.localtime(time.time()))
@@ -92,11 +87,11 @@ class LogBotFactory(protocol.ClientFactory):
         self.filename = filename
 
     def clientConnectionLost(self, connector, reason):
+        """If we get disconnected, reconnect to server."""
         connector.connect()
 
     def clientConnectionFailed(self, connector, reason):
         print "connection failed:", reason
-        from twisted.internet import reactor
         reactor.stop()
 
 
@@ -104,10 +99,9 @@ if __name__ == '__main__':
     # create factory protocol and application
     import sys
     f = LogBotFactory(sys.argv[1], sys.argv[2])
-    application = app.Application("logbot")
 
-    # connect to this host and port, and reconnect if we get disconnected
-    application.connectTCP("irc.openprojects.net", 6667, f)
+    # connect factory to this host and port
+    reactor.connectTCP("irc.openprojects.net", 6667, f)
 
     # run bot
-    application.run(save=0)
+    reactor.run()
