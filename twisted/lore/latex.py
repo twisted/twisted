@@ -110,7 +110,7 @@ class LatexSpitter(XMLParser):
     def end_a(self, _):
         self.ignoring = 0
         if hasattr(self, 'ref'):
-            self.writer(' (\\S\\ref{%s})' % self.ref)
+            self.writer(' (page \\pageref{%s})' % self.ref)
             del self.ref
 
     def start_style(self, _, _1):
