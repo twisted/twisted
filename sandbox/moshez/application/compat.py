@@ -46,6 +46,10 @@ class IOldApplication(components.Interface):
     def connectTCP(self, host, port, factory, timeout=30, bindAddress=None):
         pass
 
+    def connectSSL(self, host, port, factory, ctxFactory, timeout=30,
+                   bindAddress=None):
+        pass
+
     def connectUNIX(self, address, factory, timeout=30):
         pass
 
@@ -68,6 +72,9 @@ class IOldApplication(components.Interface):
         pass
 
     def unlistenSSL(self, port, interface=''):
+        pass
+
+    def removeService(self, service):
         pass
 
 
@@ -111,6 +118,12 @@ class ServiceNetwork:
 
     def connectTCP(self, host, port, factory, timeout=30, bindAddress=None):
         s = internet.TCPClient(host, port, factory, timeout, bindAddress)
+        s.setServiceParent(self.app)
+
+    def connectSSL(self, host, port, factory, ctxFactory, timeout=30,
+                   bindAddress=None):
+        s = internet.SSLClient(host, port, factory, ctxFactory, timeout,
+                               bindAddress)
         s.setServiceParent(self.app)
 
     def connectUNIX(self, address, factory, timeout=30):

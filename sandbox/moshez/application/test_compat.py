@@ -67,6 +67,18 @@ class TestInternet(unittest.TestCase):
         s.stopService()
         self.assertEqual(factory.line, 'lalala')
 
+    def testCalling(self):
+        s = service.MultiService()
+        c = compat.IOldApplication(s)
+        c.listenTCP(None, None)
+        c.listenSSL(None, None, None)
+        c.listenUDP(None, None)
+        c.listenUNIX(None, None)
+        c.connectTCP(None, None, None)
+        c.connectSSL(None, None, None, None)
+        c.connectUDP(None, None, None)
+        c.connectUNIX(None, None)
+
     def testServices(self):
         s = service.MultiService()
         c = compat.IOldApplication(s)
