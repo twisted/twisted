@@ -25,7 +25,6 @@ from cStringIO import StringIO
 from pyunit import unittest
 
 from twisted.spread import pb
-from twisted.python import authenticator
 from twisted.protocols import protocol
 from twisted.internet import passport, main
 
@@ -102,7 +101,7 @@ def connectedServerAndClient():
     cio = StringIO()
     sio = StringIO()
     c.makeConnection(protocol.FileWrapper(cio))
-    s.makeConnection(protocol.FileWrapper(sio), authenticator.Authenticator())
+    s.makeConnection(protocol.FileWrapper(sio))
     pump = IOPump(c, s, cio, sio)
     # Challenge-response authentication:
     while pump.pump():

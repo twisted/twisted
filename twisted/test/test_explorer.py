@@ -22,7 +22,6 @@ Test cases for explorer
 from pyunit import unittest
 
 from twisted.python import explorer
-from twisted.python import authenticator
 
 class ObjectBrowserTestCase(unittest.TestCase):
     def setUp(self):
@@ -65,8 +64,9 @@ class SecureObjectBrowserTestCase(unittest.TestCase):
     def testCode(self):
         try:
             self.ob.code('print 1')
-        except authenticator.Unauthorized: pass
+        except AssertionError:
+            pass
         else:
-            raise AssertionError, "Hey, code should've failed."
+            assert 0, "Hey, code should've failed."
 
 testCases = [ObjectBrowserTestCase, SecureObjectBrowserTestCase]

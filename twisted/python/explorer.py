@@ -16,9 +16,6 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
 
-# Twisted Imports
-from twisted.python import authenticator
-
 class ObjectBrowser:
     def __init__(self, ns):
         self.ns = ns
@@ -54,4 +51,4 @@ class SecureObjectBrowser(ObjectBrowser):
             self.ns = getattr(self.ns, ns)
 
     def code(self, code):
-        raise authenticator.Unauthorized("You are not allowed to do that in a Secure Object Browser.")
+        assert 0, "You can't do that."

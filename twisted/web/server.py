@@ -39,10 +39,9 @@ import time
 
 # Twisted Imports
 from twisted.spread import pb
-from twisted.internet import tcp
+from twisted.internet import tcp, passport
 from twisted.protocols import http, protocol
 from twisted.python import log, threadable, reflect
-from twisted.python import authenticator
 from twisted import copyright
 
 # Sibling Imports
@@ -193,7 +192,7 @@ class Request(pb.Copyable, http.HTTP):
                     "Resource: "+html.PRE(reflect.safe_repr(resrc))+"<BR>"+
                     "Value: "+html.PRE(reflect.safe_repr(body))).render(self)
 
-        except authenticator.Unauthorized:
+        except passport.Unauthorized:
             body = "<HTML><BODY>You're not cleared for that.</BODY></HTML>"
             self.setResponseCode(http.UNAUTHORIZED)
             self.setHeader('content-type',"text/html")

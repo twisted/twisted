@@ -25,9 +25,10 @@ import time
 
 
 # Twisted Imports
-from twisted.python import threadable, reflect, log, authenticator, rebuild
+from twisted.python import threadable, reflect, log, rebuild
 from twisted.spread import pb
 from twisted.persisted import styles
+from twisted.internet import passport
 
 # Sibling Imports
 import thing
@@ -112,7 +113,7 @@ class Player(styles.Versioned, thing.Thing, pb.Perspective):
         """
         if hasattr(self, 'intelligence'):
             log.msg("player duplicate: [%s]" % self.name)
-            raise authenticator.Unauthorized("Already logged in from another location.")
+            raise passport.Unauthorized("Already logged in from another location.")
         log.msg("player login: [%s]" % self.name)
         if hasattr(self, 'oldlocation'):
             self.location = self.oldlocation

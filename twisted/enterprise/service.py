@@ -21,7 +21,7 @@ import sys
 
 # Twisted Imports
 from twisted.spread import pb
-from twisted.python import delay, authenticator
+from twisted.python import delay
 
 # Sibling Imports
 import manager

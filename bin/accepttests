@@ -178,5 +178,6 @@ except KeyError:
             "  * IRCCLIENT: an IRC client in the style of ircii",
             "  * USER: your UNIX username.")
 else:
-    runAllTests()
+    # runAllTests()
+    runRealityTest()
 

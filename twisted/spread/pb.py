@@ -45,7 +45,7 @@ import types
 import new
 
 # Twisted Imports
-from twisted.python import authenticator, log, defer
+from twisted.python import log, defer
 from twisted.protocols import protocol
 from twisted.internet import passport, tcp
 from twisted.persisted import styles
@@ -914,9 +914,6 @@ class Broker(banana.Banana):
 
         This is the second step in the protocol, the first being version number
         checking.  The peer to this is requestIdentity.
-
-        See the documentation for twisted.python.authenticator for more
-        information on the challenge/response system that is used here.
         """
         self.username = username
         defr = self.factory.app.authorizer.getIdentityRequest(username)
@@ -1205,7 +1202,7 @@ class Broker(banana.Banana):
             self.requestedIdentity = (username, password, callback, errback)
 
     def proto_challenge(self, challenge):
-        """Use authenticator.respond to respond to the server's challenge.
+        """Use passport.respond to respond to the server's challenge.
         """
         self.sendCall("password", passport.respond(challenge, self.password))
 

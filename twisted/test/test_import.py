@@ -26,7 +26,6 @@ class AtLeastImportTestCase(unittest.TestCase):
         """
         from twisted import copyright
         
-        from twisted.python import authenticator
         from twisted.python import delay
         from twisted.python import hook
         from twisted.python import log
