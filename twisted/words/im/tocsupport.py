@@ -18,12 +18,14 @@
 
 # System Imports
 import string, re
+from zope.interface import implements
 
 # Twisted Imports
 from twisted.words.protocols import toc
 from twisted.words.im.locals import ONLINE, OFFLINE, AWAY
 from twisted.internet import defer, reactor, protocol
 from twisted.internet.defer import succeed
+from twisted.python import components
 
 # Sibling Imports
 from twisted.words.im import basesupport, interfaces, locals
@@ -76,7 +78,7 @@ class TOCPerson(basesupport.AbstractPerson):
         return succeed(text)
 
 class TOCGroup(basesupport.AbstractGroup):
-    __implements__ = (interfaces.IGroup,)
+    implements(interfaces.IGroup)
     def __init__(self, name, tocAccount):
         basesupport.AbstractGroup.__init__(self, name, tocAccount)
         self.roomID = self.client.roomID[self.name]
@@ -94,6 +96,8 @@ class TOCGroup(basesupport.AbstractGroup):
         if self.account.client is None:
             raise locals.OfflineError
         self.account.client.chat_leave(self.roomID)
+
+components.backwardsCompatImplements(TOCGroup)
 
 class TOCProto(basesupport.AbstractClientMixin, toc.TOCClient):
     def __init__(self, account, chatui, logonDeferred):
@@ -213,7 +217,7 @@ class TOCProto(basesupport.AbstractClientMixin, toc.TOCClient):
         self.chat_join(4,toc.normalize(name))
 
 class TOCAccount(basesupport.AbstractAccount):
-    __implements__ = (interfaces.IAccount,)
+    implements(interfaces.IAccount)
     gatewayType = "AIM (TOC)"
 
     _groupFactory = TOCGroup
@@ -226,3 +230,5 @@ class TOCAccount(basesupport.AbstractAccount):
         d = cc.connectTCP(self.host, self.port)
         d.addErrback(logonDeferred.errback)
         return logonDeferred
+
+components.backwardsCompatImplements(TOCAccount)

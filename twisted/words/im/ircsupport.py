@@ -22,8 +22,10 @@ from twisted.words.protocols import irc
 from twisted.words.im.locals import ONLINE
 from twisted.internet import defer, reactor, protocol
 from twisted.internet.defer import succeed
-
+from twisted.python import components
 from twisted.words.im import basesupport, interfaces, locals
+from zope.interface import implements
+
 
 class IRCPerson(basesupport.AbstractPerson):
 
@@ -56,7 +58,7 @@ class IRCPerson(basesupport.AbstractPerson):
 
 class IRCGroup(basesupport.AbstractGroup):
 
-    __implements__ = (interfaces.IGroup,)
+    implements(interfaces.IGroup)
 
     def imgroup_testAction(self):
         print 'action test!'
@@ -91,6 +93,9 @@ class IRCGroup(basesupport.AbstractGroup):
             raise locals.OfflineError
         self.account.client.leave(self.name)
         self.account.client.getGroupConversation(self.name,1)
+
+components.backwardsCompatImplements(IRCGroup)
+
 
 class IRCProto(basesupport.AbstractClientMixin, irc.IRCClient):
     def __init__(self, account, chatui, logonDeferred=None):
@@ -255,7 +260,7 @@ class IRCProto(basesupport.AbstractClientMixin, irc.IRCClient):
         self.getGroupConversation(name)
 
 class IRCAccount(basesupport.AbstractAccount):
-    __implements__ = (interfaces.IAccount,)
+    implements(interfaces.IAccount)
     gatewayType = "IRC"
 
     _groupFactory = IRCGroup
@@ -276,3 +281,5 @@ class IRCAccount(basesupport.AbstractAccount):
         d = cc.connectTCP(self.host, self.port)
         d.addErrback(logonDeferred.errback)
         return logonDeferred
+
+components.backwardsCompatImplements(IRCAccount)

@@ -20,13 +20,15 @@ from __future__ import nested_scopes
 
 from twisted.internet import defer
 from twisted.internet import error
-from twisted.python import log
+from twisted.python import log, components
 from twisted.python.failure import Failure
 from twisted.spread import pb
 
 from twisted.words.im.locals import ONLINE, OFFLINE, AWAY
 
 from twisted.words.im import basesupport, interfaces
+from zope.interface import implements
+
 
 class TwistedWordsPerson(basesupport.AbstractPerson):
     """I a facade for a person you can talk to through a twisted.words service.
@@ -62,7 +64,7 @@ class TwistedWordsPerson(basesupport.AbstractPerson):
         self.chat.getContactsList().setContactStatus(self)
 
 class TwistedWordsGroup(basesupport.AbstractGroup):
-    __implements__ = (interfaces.IGroup,)
+    implements(interfaces.IGroup)
     def __init__(self, name, wordsClient):
         basesupport.AbstractGroup.__init__(self, name, wordsClient)
         self.joined = 0
@@ -101,6 +103,8 @@ class TwistedWordsGroup(basesupport.AbstractGroup):
         return self.account.client.perspective.callRemote('leaveGroup',
                                                           self.name)
 
+
+components.backwardsCompatImplements(TwistedWordsGroup)
 
 
 class TwistedWordsClient(pb.Referenceable, basesupport.AbstractClientMixin):
@@ -191,7 +195,7 @@ pbFrontEnds = {
 
 
 class PBAccount(basesupport.AbstractAccount):
-    __implements__ = (interfaces.IAccount,)
+    implements(interfaces.IAccount)
     gatewayType = "PB"
     _groupFactory = TwistedWordsGroup
     _personFactory = TwistedWordsPerson
@@ -267,3 +271,5 @@ class PBAccount(basesupport.AbstractAccount):
     def _ebConnected(self, error):
         print 'Not connected.'
         return error
+
+components.backwardsCompatImplements(PBAccount)
