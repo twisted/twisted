@@ -21,6 +21,7 @@ I am a support module for making TOC servers with mktap.
 
 from twisted.protocols import toc
 from twisted.python import usage
+from twisted.application import internet
 import sys
 
 class Options(usage.Options):
@@ -29,7 +30,7 @@ class Options(usage.Options):
 
     longdesc = "Makes a TOC server."
 
-def updateApplication(app, config):
+def makeService(config):
     t = toc.TOCFactory()
     portno = int(config['port'])
-    app.listenTCP(portno, t)
+    return internet.TCPServer(portno, t)

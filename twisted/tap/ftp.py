@@ -21,7 +21,7 @@ I am the support module for making a ftp server with mktap.
 
 from twisted.protocols import ftp
 from twisted.python import usage
-import sys
+from twisted.application import internet
 import os.path
 
 
@@ -49,7 +49,7 @@ def addUser(factory, username, password):
     else:
         factory.userdict[username]["passwd"] = password
 
-def updateApplication(app, config):
+def makeService(config):
     t = ftp.FTPFactory()
     # setting the config
     t.anonymous = config['anonymous']
@@ -66,4 +66,4 @@ def updateApplication(app, config):
         portno = int(config['port'])
     except KeyError:
         portno = 2121
-    app.listenTCP(portno, t)
+    return internet.TCPServer(portno, t)

@@ -21,6 +21,7 @@ I am a support module for making SOCKSv4 servers with mktap.
 
 from twisted.protocols import socks
 from twisted.python import usage
+from twisted.application import internet
 import sys
 
 class Options(usage.Options):
@@ -31,8 +32,8 @@ class Options(usage.Options):
 
     longdesc = "Makes a SOCKSv4 server."
 
-def updateApplication(app, config):
-    if config.interface != "127.0.0.1":
+def makeService(config):
+    if config["interface"] != "127.0.0.1":
         print
         print "WARNING:"
         print "  You have chosen to listen on a non-local interface."
@@ -41,4 +42,4 @@ def updateApplication(app, config):
         print
     t = socks.SOCKSv4Factory(config['log'])
     portno = int(config['port'])
-    app.listenTCP(portno, t, interface=config['interface'])
+    return internet.TCPServer(portno, t, interface=config['interface'])
