@@ -93,7 +93,7 @@ class FileDescriptor(log.Logger):
         """
         # Send as much data as you can.
         l = self.writeSomeData(self.unsent)
-        if l < 0:
+        if l < 0 or isinstance(l, Exception):
             return l
         if l == 0 and self.unsent:
             result = 0
