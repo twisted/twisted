@@ -18,7 +18,7 @@
 
 from __future__ import nested_scopes
 
-__version__ = '$Revision: 1.29 $'[11:-2]
+__version__ = '$Revision: 1.30 $'[11:-2]
 
 import os, sys
 from UserDict import UserDict
@@ -239,9 +239,13 @@ def spewer(frame, s, ignored):
     from twisted.python import reflect
     if frame.f_locals.has_key('self'):
         se = frame.f_locals['self']
+        if hasattr(se, '__class__'):
+            k = reflect.qual(se.__class__)
+        else:
+            k = reflect.qual(type(se))
         print 'method %s of %s at %s' % (
-            frame.f_code.co_name, reflect.qual(se.__class__), id(se)
-            )
+            frame.f_code.co_name, k, id(se)
+        )
 
 def searchupwards(start, files=[], dirs=[]):
     """Walk upwards from start, looking for a directory containing 
