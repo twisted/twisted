@@ -1,4 +1,8 @@
 
+"""Telnet protocol implementation.
+
+"""
+
 import struct
 
 from twisted.application import internet
@@ -759,6 +763,7 @@ class AuthenticatingTelnetProtocol(StatefulTelnetProtocol):
     """
 
     state = "User"
+    protocol = None
 
     def __init__(self, portal):
         self.portal = portal
@@ -794,9 +799,9 @@ class AuthenticatingTelnetProtocol(StatefulTelnetProtocol):
         self.transport.protocol = protocol
 
     def _ebLogin(self, failure):
-        self.transport.write("Authentication failed\n")
+        self.transport.write("\nAuthentication failed\n")
         self.transport.write("Username: ")
-        return "User"
+        self.state = "User"
 
     def connectionLost(self, reason):
         if self.protocol is not None:
