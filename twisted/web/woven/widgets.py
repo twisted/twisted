@@ -361,6 +361,7 @@ class Anchor(Widget):
         self.baseHREF = ''
         self.parameters = {}
         self.raw = 0
+        self.text = ''
     
     def setRaw(self, raw):
         self.raw = raw
@@ -371,16 +372,19 @@ class Anchor(Widget):
     def setParameter(self, key, value):
         self.parameters[key] = value
 
+    def setText(self, text):
+        self.text = text
+
     def generateDOM(self, request, node):
         href = self.baseHREF
         params = urllib.urlencode(self.parameters)
         if params:
             href = href + '?' + params
-        self['href'] = href or self.getData() + '/'
         data = self.getData()
+        self['href'] = href or data + '/'
         if data is None:
             data = ""
-        self.add(Text(data, self.raw))
+        self.add(Text(self.text or data, self.raw))
         return Widget.generateDOM(self, request, node)
 
 class List(Widget):
