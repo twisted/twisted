@@ -64,22 +64,3 @@ class XMLRPC(resource.Resource):
         """
         raise NotImplementedError, "implement in subclass"
 
-
-class PB(XMLRPC):
-    """Publish a pb.Perspective instance using XML-RPC."""
-    
-    def __init__(self, perspective):
-        XMLRPC.__init__(self)
-        self.perspective = perspective
-    
-    def _getFunction(self, functionPath):
-        """Convert the functionPath to a method beginning with 'perspective_'.
-        
-        For example, 'echo' returns the method 'perspective_echo'
-        of self.perspective.
-        """
-        f = getattr(self.perspective, "perspective_%s" % functionPath, None)
-        if f:
-            return f
-        else:
-            raise NoSuchFunction

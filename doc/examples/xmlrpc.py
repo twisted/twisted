@@ -16,19 +16,37 @@
 from twisted.web import xmlrpc
 
 
-class Echoer:
-    """An example object to be published."""
+class Echoer(xmlrpc.XMLRPC):
+    """An example object to be published.
     
-    def perspective_echo(self, *args):
+    Has two methods accessable by XML-RPC, 'echo' and 'hello'.
+    """
+    
+    def _getFunction(self, functionPath):
+        """Convert the functionPath to a method beginning with 'xmlrpc_'.
+        
+        For example, 'echo' returns the method 'xmlrpc_echo'.
+        """
+        f = getattr(self, "xmlrpc_%s" % functionPath, None)
+        if f:
+            return f
+        else:
+            raise xmlrpc.NoSuchFunction
+    
+    def xmlrpc_echo(self, *args):
         """Return all passed args."""
         return args
+    
+    def xmlrpc_hello(self, *args):
+        """Return 'hello, world'."""
+        return 'hello, world!'
 
 
 def main():
     from twisted.internet.app import Application
     from twisted.web import server
     app = Application("xmlrpc")
-    r = xmlrpc.PB(Echoer())
+    r = Echoer()
     app.listenTCP(7080, server.Site(r))
     app.run(0)
 
