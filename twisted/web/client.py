@@ -7,7 +7,7 @@
 
 """HTTP client.
 
-API Stability: unstable
+API Stability: stable
 """
 
 import urlparse, os, types
