@@ -24,6 +24,7 @@ import zlib
 from Crypto import Util
 from Crypto.Hash import HMAC
 from Crypto.PublicKey import RSA
+from Crypto.Util import randpool
 
 # twisted imports
 from twisted.conch import error
@@ -33,6 +34,11 @@ from twisted.python import log
 # sibling importsa
 from common import NS, getNS, MP, getMP, ffs # ease of use
 import keys
+
+
+entropy = randpool.RandomPool()
+entropy.stir()
+
 
 class SSHTransportBase(protocol.Protocol):
     protocolVersion = '2.0'
@@ -68,7 +74,7 @@ class SSHTransportBase(protocol.Protocol):
     def connectionMade(self):
         self.transport.write('%s\r\n' % (self.ourVersionString)
                             )
-        self.ourKexInitPayload = chr(MSG_KEXINIT) + open('/dev/random').read(16) + \
+        self.ourKexInitPayload = chr(MSG_KEXINIT) + entropy.get_bytes(16) + \
                         NS(','.join(self.supportedKeyExchanges)) + \
                         NS(','.join(self.supportedPublicKeys)) + \
                         NS(','.join(self.supportedCiphers)) + \
@@ -96,7 +102,7 @@ class SSHTransportBase(protocol.Protocol):
         lenPad = bs - (totalSize % bs)
         if lenPad < 4:
             lenPad = lenPad + bs
-        randomPad = open('/dev/random').read(lenPad)
+        randomPad = entropy.get_bytes(lenPad)
         packet = struct.pack('!LB', 1 + len(payload) + lenPad, lenPad) + \
                  payload + randomPad
         assert len(packet)%bs == 0, '%s extra bytes in packet' % (len(packet)%bs)
@@ -275,7 +281,7 @@ class SSHServerTransport(SSHTransportBase):
     def ssh_KEX_DH_GEX_REQUEST_OLD(self, packet):
         if self.kexAlg == 'diffie-hellman-group1-sha1': # this is really KEXDH_INIT
             clientDHPubKey, foo = getMP(packet)
-            y = Util.number.getRandomNumber(16, open('/dev/random').read)
+            y = Util.number.getRandomNumber(16, entropy.get_bytes)
             f = pow (DH_GENERATOR, y, DH_PRIME)
             sharedSecret = MP(pow(clientDHPubKey, y, DH_PRIME))
             h = sha.new()
@@ -306,7 +312,7 @@ class SSHServerTransport(SSHTransportBase):
 
     def ssh_KEX_DH_GEX_INIT(self, packet):
         clientDHPubKey, foo = getMP(packet)
-        y = Util.number.getRandomNumber(16, open('/dev/random').read)
+        y = Util.number.getRandomNumber(16, entropy.get_bytes)
         f = pow (self.g, y, self.p)
         sharedSecret = MP(pow(clientDHPubKey, y, self.p)) 
         h = sha.new()
@@ -392,7 +398,7 @@ class SSHClientTransport(SSHTransportBase):
             self.sendDisconnect(DISCONNECT_KEY_EXCHANGE_FAILED, "couldn't match all kex parts")
             return            
         if kexAlg == 'diffie-hellman-group1-sha1':
-            self.x = Util.number.getRandomNumber(512, open('/dev/random').read)
+            self.x = Util.number.getRandomNumber(512, entropy.get_bytes)
             self.DHpubKey = pow(DH_GENERATOR, self.x, DH_PRIME)
             self.sendPacket(MSG_KEXDH_INIT, MP(self.DHpubKey))
         else:
@@ -429,7 +435,7 @@ class SSHClientTransport(SSHTransportBase):
             return
         self.p, rest = getMP(packet)
         self.g, rest = getMP(rest)
-        self.x = Util.number.getRandomNumber(512, open('/dev/random').read)
+        self.x = Util.number.getRandomNumber(512, entropy.get_bytes)
         self.DHpubKey = pow(self.g, self.x, self.p)
         self.sendPacket(MSG_KEX_DH_GEX_INIT, MP(self.DHpubKey))
 
