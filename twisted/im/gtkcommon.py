@@ -14,7 +14,8 @@
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
-import os
+import os, re
+
 from twisted.python import reflect
 from twisted.python import util
 from twisted.manhole.ui.pywidgets import isCursorOnFirstLine, isCursorOnLastLine
@@ -70,6 +71,10 @@ class InputOutputWindow:
         stopSignal = False
         # ASSUMPTION: Assume Meta == mod4
         isMeta = event.state & gtk.GDK.MOD4_MASK
+
+        ##
+        # Return handling
+        ##
         if event.keyval == gtk.GDK.Return:
             isShift = event.state & gtk.GDK.SHIFT_MASK
             if isShift:
@@ -83,23 +88,70 @@ class InputOutputWindow:
                 self.entry.delete_text(0, -1)
                 self.linemode = False
                 self.sendText(text)
+                self.history.append(text)
+                self.histpos = len(self.history)
+
+        ##
+        # History handling
+        ##
         elif ((event.keyval == gtk.GDK.Up and isCursorOnFirstLine(entry))
               or (isMeta and event.string == 'p')):
+            print "history up"
             self.historyUp()
             stopSignal = True
         elif ((event.keyval == gtk.GDK.Down and isCursorOnLastLine(entry))
               or (isMeta and event.string == 'n')):
+            print "history down"
             self.historyDown()
             stopSignal = True
+
+        ##
+        # Tab Completion
+        ##
+        elif event.keyval == gtk.GDK.Tab:
+            oldpos = entry.get_point()
+            word, pos = self.getCurrentWord(entry)
+            result = self.tabComplete(word)
+
+            #If there are multiple potential matches, then we spit
+            #them out and don't insert a tab, so the user can type
+            #a couple more characters and try completing again.
+            if len(result) > 1:
+                for nick in result:
+                    self.output.insert_defaults(nick + " ")
+                self.output.insert_defaults('\n')
+                stopSignal = True
+
+            elif result: #only happens when len(result) == 1
+                entry.freeze()
+                apply(entry.delete_text, pos)
+                entry.set_position(pos[0])
+                entry.insert_text(result[0])
+                entry.set_position(oldpos+len(result[0])-len(word))
+                entry.thaw()
+                stopSignal = True
 
         if stopSignal:
             entry.emit_stop_by_name("key_press_event")
             return True
 
+    def tabComplete(self, word):
+        """Override me to implement tab completion for your window,
+        I should return a list of potential matches."""
+        pass
+
+    def getCurrentWord(self, entry):
+        i = entry.get_point()
+        text = entry.get_chars(0,-1)
+        word = re.split(r'\s', text)[-1]
+        start = string.rfind(text, word)
+        end = start+len(word)
+        return (word, (start, end))
+    
     def historyUp(self):
         if self.histpos > 0:
-            self.histpos = self.histpos - 1
             self.entry.delete_text(0, -1)
+            self.histpos = self.histpos - 1
             self.entry.insert_defaults(self.history[self.histpos])
             self.entry.set_position(0)
 
@@ -109,7 +161,7 @@ class InputOutputWindow:
             self.entry.delete_text(0, -1)
             self.entry.insert_defaults(self.history[self.histpos])
         elif self.histpos == len(self.history) - 1:
-            self.entry.histpos = self.histpos + 1
+            self.histpos = self.histpos + 1
             self.entry.delete_text(0, -1)
 
 

@@ -253,6 +253,17 @@ class GroupConversation(InputOutputWindow):
         _msgDisplay(self.output, self.group.client.name, text, self.myColor,
                     (metadata and metadata.get("style", None) == "emote"))
 
+    def tabComplete(self, word):
+        """InputOutputWindow calls me when tab is pressed."""
+        if not word:
+            return
+        potentialMatches = []
+        for nick in self.members:
+            if string.lower(nick[:len(word)]) == string.lower(word):
+                potentialMatches.append(nick + ": ") #colon is a nick-specific thing
+        return potentialMatches
+
+        
     def setGroupMembers(self, members):
         self.members = members
         self.refreshMemberList()

@@ -48,7 +48,9 @@ class IRCGroup(basesupport.AbstractGroup):
         if meta and meta.get("style", None) == "emote":
             self.client.me(self.name,text)
             return succeed(text)
-        self.client.say(self.name,text)
+        #standard shmandard, clients don't support plain escaped newlines!
+        for line in string.split(text, '\n'): 
+            self.client.say(self.name, line)
         return succeed(text)
 
     def leave(self):
