@@ -30,7 +30,7 @@ class _VolatileDataService(service.Service):
 class _AbstractServer(_VolatileDataService):
 
     privileged = 0
-    volatile = '_port'
+    volatile = ['_port']
 
     def __init__(self, *args, **kwargs):
         self.args = args
