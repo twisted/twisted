@@ -62,11 +62,12 @@ def main():
         return
 
     makeDist(opts)
-    if not opts.opts['dontrelease']:
-        release(opts)
                
     if opts.opts['docs']:
         makeDocs(opts)
+
+    if not opts.opts['dontrelease']:
+        release(opts)
 
 
 def makeDist(opts):
@@ -81,6 +82,8 @@ def makeDist(opts):
     print "Copying %s to %s..." % (source, destDir)
     shutil.copytree(source, destDir)
 
+
+    #shwack the crap
     print "Stripping *~, *.pyc, *.rpl, *.tap..."
     for x in ['*~', '*.pyc', '*.rpl', '*.tap', '.cvsignore', '.#*']:
         os.system('find %s -name "%s" | xargs rm -f' % (destDir, x))
@@ -88,6 +91,7 @@ def makeDist(opts):
     print "Stripping 'CVS' directories..."
     os.system('find %s -name CVS | xargs rm -rf' % destDir)
 
+    #tarballs
     print "Making dist tarball..."
     os.system('tar czf Twisted-%s.tar.gz %s' % (ver, destDir))
 
@@ -115,6 +119,12 @@ def release(opts):
     shutil.copy('Twisted-%s.tar.gz' % ver, rel)
     shutil.copy('Twisted-%s.zip' % ver, rel)
 
+    print "Trying to copy the docs, don't mind if this gives errors:"
+    shutil.copy('TwistedDocs-%s.tar.gz' % ver, rel)
+    shutil.copy('TwistedDocs-%s.zip' % ver, rel)
+    print "Done copying docs. Any more errors aren't expected ;-)"
+
+
 def makeDocs(opts):
     print "Making Docs!"
     ver = opts.opts['version']
@@ -123,11 +133,18 @@ def makeDocs(opts):
         print "Twisted-%s doesn't exist!" % ver
         sys.exit(2)
     os.system('happydoc --author="Glyph Lefkowitz <glyph@twistedmatrix.com>" --no_comments -t "Twisted Documentation" Twisted-%s' % ver)
+    os.system('mv doc/* Twisted-%s/doc/api' % ver)
+
+    os.chdir('Twisted-%s/' % ver)
+    #<yuck>
     os.system('mv doc TwistedDocs-%s' % ver)
     os.system('tar czf TwistedDocs-%s.tar.gz TwistedDocs-%s' % ((ver,)*2))
     os.system('zip -r TwistedDocs-%s.zip TwistedDocs-%s' % ((ver,)*2))
-    shutil.copy('TwistedDocs-%s.tar.gz' % ver, rel)
-    shutil.copy('TwistedDocs-%s.zip' % ver, rel)
+    os.system('mv TwistedDocs-%s doc' % ver)
+    os.system('mv TwistedDocs-* ../')
+    #</yuck>
+    os.chdir('..')
+    
 
 if __name__=='__main__':
     main()
