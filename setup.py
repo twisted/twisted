@@ -22,7 +22,7 @@ Package installer for Twisted
 Copyright (C) 2001 Matthew W. Lefkowitz
 All rights reserved, see LICENSE for details.
 
-$Id: setup.py,v 1.33 2002/04/11 01:15:40 carmstro Exp $
+$Id: setup.py,v 1.34 2002/04/11 04:33:19 carmstro Exp $
 """
 
 import distutils, os, sys, string
@@ -215,8 +215,8 @@ if hasattr(distutils.dist.DistributionMetadata, 'get_platforms'):
 
 if os.name == 'posix':
     setup_args['scripts'] = [
-        'bin/manhole', 'bin/mktap', 'bin/gnusto', 'bin/twistd',
-        'bin/im', 'bin/t-im', 'bin/faucet', 'bin/tap2deb',
+        'bin/manhole', 'bin/mktap', 'bin/twistd',
+        'bin/im', 'bin/t-im', 'bin/tap2deb',
         'bin/coil',
     ]
 else:
