@@ -18,7 +18,7 @@
 
 To use::
 
-    | # given a wxApp instance call myWxAppInstance:
+    | # given a wxApp instance called myWxAppInstance:
     | from twisted.internet import wxsupport
     | wxsupport.install(myWxAppInstance)
     

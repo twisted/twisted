@@ -19,8 +19,8 @@
 To install the event loop (and you should do this before any connections,
 listeners or connectors are added):
 
-    from twisted.internet import poll
-    poll.install()
+    | from twisted.internet import pollreactor
+    | pollreactor.install()
 
 """
 
