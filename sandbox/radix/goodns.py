@@ -34,6 +34,12 @@ def _scroungeRecords(result, reqkey, dnstype, cnameLevel, nsLevel, resolver):
 
     # XXX - timeouts??
 
+    # XXX - CNAME support is totally broken, I think. When return the
+    # ultimate records, the code that rummages through them (the
+    # callbacks down below) will check that rrheader.name ==
+    # nameIRequested. But it won't be! it'll be the target of the
+    # CNAME.
+    
     if cnames:
         if not cnameLevel:
             return None
