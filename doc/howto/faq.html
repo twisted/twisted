@@ -167,5 +167,15 @@ gives?</h2>
 <code>.pxp</code> files that you have lying around and the error will probably
 go away.</p>
 
+<h2>When I try to install my reactor, I get errors about a reactor
+already being installed. What gives?</h2>
+
+<p>Here's the rule - installing a reactor should always be the *first*
+thing you do, and I do mean first. Importing other stuff before you
+install the reactor can break your code.</p>
+
+<p>Tkinter and wxPython support, as they do not install a new reactor, can be
+done at any point, IIRC.</p>
+
 </body>
 </html>
