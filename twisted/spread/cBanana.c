@@ -349,7 +349,13 @@ PyObject* cBanana_encode_internal(PyObject* encodeobj, cBananaBuf* writeobj) {
     PyObject* argtup;
     argtup = PyTuple_New(2);
     Py_INCREF(encodeobj);
-    PyTuple_SetItem(argtup, 0, encodeobj);
+    if (PyObject_Compare(encodeobj, PyLong_FromDouble(0.0)) == -1) {
+      singleByte = LONGNEG;
+      PyTuple_SetItem(argtup, 0, PyNumber_Negative(encodeobj));
+    } else {
+      singleByte = LONGINT;
+      PyTuple_SetItem(argtup, 0, encodeobj);
+    }
     /* Py_INCREF(writeobj); */
     PyTuple_SetItem(argtup, 1, PyObject_GetAttrString((PyObject*) writeobj, "write"));
     result = PyObject_CallObject(PyObject_GetAttrString(cBanana_module, "pyint2b128"), argtup);
@@ -358,7 +364,6 @@ PyObject* cBanana_encode_internal(PyObject* encodeobj, cBananaBuf* writeobj) {
       return NULL;
     }
     Py_DECREF(result);
-    singleByte = LONGINT;
     cBananaBuf_write_internal(writeobj, &singleByte, 1);
   } else if (PyFloat_Check(encodeobj)) {
     double x;

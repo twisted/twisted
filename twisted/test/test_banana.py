@@ -62,6 +62,10 @@ class BananaTestCase(unittest.TestCase):
         self.enc.dataReceived(self.io.getvalue())
         assert self.result == 1015l, "should be 1015l, got %s" % self.result
         
+    def testNegativeLong(self):
+        self.enc.sendEncoded(-1015l)
+        self.enc.dataReceived(self.io.getvalue())
+        assert self.result == -1015l, "should be -1015l, got %s" % self.result
 
     def testInteger(self):
         self.enc.sendEncoded(1015)
@@ -79,7 +83,7 @@ class BananaTestCase(unittest.TestCase):
         assert self.result == 1015.
 
     def testList(self):
-        foo = [1, 2, [3, 4], [30.5, 40.2], 5, ["six", "seven", ["eight", 9]], [10]]
+        foo = [1, 2, [3, 4], [30.5, 40.2], 5, ["six", "seven", ["eight", 9]], [10], []]
         self.enc.sendEncoded(foo)
         self.enc.dataReceived(self.io.getvalue())
         assert self.result == foo, "%s!=%s" % (repr(self.result), repr(self.result))
@@ -88,7 +92,7 @@ class BananaTestCase(unittest.TestCase):
         foo = [1, 2, [3, 4], [30.5, 40.2], 5,
                ["six", "seven", ["eight", 9]], [10],
                # TODO: currently the C implementation's a bit buggy...
-               sys.maxint * 3l, sys.maxint * 2l]
+               sys.maxint * 3l, sys.maxint * 2l, sys.maxint * -2l]
         self.enc.sendEncoded(foo)
         for byte in self.io.getvalue():
             self.enc.dataReceived(byte)
