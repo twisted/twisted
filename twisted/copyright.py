@@ -21,6 +21,6 @@ Please see the LICENSE file for more technical details about what you
 can and can't do with this software.
 """ 
 
-copyright="(c) 2000 Twisted Matrix Laboratories, all rights reserved."
+copyright="(c) 2000 Matthew William Lefkowitz, all rights reserved."
 
-longversion="Twisted Python %s"% version
+longversion="Twisted %s"% version
