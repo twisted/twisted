@@ -1,19 +1,19 @@
 # Twisted, the Framework of Your Internet
-# Copyright (C) 2001-2002 Matthew W. Lefkowitz
-# 
+# Copyright (C) 2001-2004 Matthew W. Lefkowitz
+#
 # This library is free software; you can redistribute it and/or
 # modify it under the terms of version 2.1 of the GNU Lesser General Public
 # License as published by the Free Software Foundation.
-# 
+#
 # This library is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
 # Lesser General Public License for more details.
-# 
+#
 # You should have received a copy of the GNU Lesser General Public
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
-# 
+#
 import tokenize, cgi, keyword
 
 class TokenPrinter:
@@ -23,7 +23,7 @@ class TokenPrinter:
 
     def __init__(self, writer):
         self.writer = writer
- 
+
     def printtoken(self, type, token, (srow, scol), (erow, ecol), line):
         if self.currentLine < srow:
             self.writer('\n'*(srow-self.currentLine))
@@ -50,7 +50,7 @@ class TokenPrinter:
         self.lastIdentifier = token in ('def', 'class')
         if token == ':':
             self.parameters = 0
-       
+
 
 class HTMLWriter:
 
@@ -64,7 +64,7 @@ class HTMLWriter:
         else:
             self.writer('<span class="py-src-%s">%s</span>' %
                         (type, token))
-       
+
 
 def filter(inp, out):
     out.write('<pre>\n')
