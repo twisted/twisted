@@ -105,7 +105,7 @@ class SOCKSv4(protocol.Protocol):
                 self.makeReply(91)
                 return
             if code==1: # CONNECT
-                reactor.clientTCP(server,port,SOCKSv4Outgoing(self))
+                protocol.ClientCreator(reactor, SOCKSv4Outgoing, self).connectTCP(server,port)
             elif code==2: # BIND
                 self.serv = reactor.listenTCP(0, SOCKSv4IncomingFactory(self, socket.gethostbyname(server)))
                 kind, ourip, ourport = self.serv.getHost()
