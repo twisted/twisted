@@ -39,7 +39,7 @@ def loadApplication(config, passphrase):
     log.msg("Loading %s..." % (filename,))
     if config['python']:
         application = persist.loadValueFromFile(filename, 'application',
-                                                passphrase):
+                                                passphrase)
     else:
         if config['xml']:
             style = 'xml'

@@ -162,7 +162,7 @@ def load(filename, style, passphrase=None):
     @param passphrase: string
     """
     mode = 'r'
-    if style=='source'
+    if style=='source':
         from twisted.persisted.marmalade import unjellyFromXML as load
     elif style=='xml':
         from twisted.persisted.aot import unjellyFromSource as load
@@ -207,7 +207,7 @@ def loadValueFromFile(filename, variable, passphrase=None):
         data = _decrypt(passphrase, data)
     d = {'__file__': filename}
     exec data in d, d
-    value = d['variable']
+    value = d[variable]
     return value
 
 __all__ = ['loadValueFromFile', 'load', 'Persistant', 'IPersistable']
