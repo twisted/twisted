@@ -139,5 +139,54 @@ resource.processors = {".pl": PerlScript} # Files that end with .pl will be proc
 resource.indexNames = ['index.pl']
 </pre>
 
+<h3>Using VHostMonster</h3>
+
+<p>It is common to use one server (for example, Apache) on a site with multiple
+names which then uses reverse proxy (in Apache, via mod_proxy) to different
+internal web servers, possibly on different machines. However, naive 
+configuration causes miscommunication: the internal server firmly believes it
+is running on "internal-name:port", and will generate URLs to that effect,
+which will be completely wrong when gotten to the client.</p>
+
+<p>While Apache has the ProxyPassReverse directive, it is really a hack
+and is nowhere near comprehensive enough. Instead, the recommended practice
+in case the internal web server is Twisted.Web is to use VHostMonster.</p>
+
+<p>From the Twisted side, using VHostMonster is easy: just drop a file named
+(for example) <code>vhost.rpy</code> containing the following:</p>
+
+<pre>
+from twisted.web import vhost
+resource = vhost.VHostMonsterResource()
+</pre>
+
+<p>Of course, an equivalent <code>.trp</code> can also be used. Make sure
+the web server is configured with the correct processors for the 
+<code>rpy</code> or <code>trp</code> extensions (the web server 
+<code>mktap web --path</code> generates by default is so configured).</p>
+
+<p>From the Apache side, instead of using the following ProxyPass directive:</p>
+
+<pre>
+&lt;VirtualHost ip-addr&gt;
+ProxyPass / http://localhost:8538/
+ServerName example.com
+&lt;/VirtualHost&gt;
+</pre>
+
+<p>Use the following directive:</p>
+
+<pre>
+&lt;VirtualHost ip-addr&gt;
+ProxyPass / http://localhost:8538/vhost.rpy/http/example.com:80/
+ServerName example.com
+&lt;/VirtualHost&gt;
+</pre>
+
+<p>Naturally, mutatis-mutandis if you use Twisted.Web itself to do the
+reverse proxying (though in that case, consider if you're not better off
+using Twisted's internal distributed web facilities), Squid reverse proxying
+or any other tool.</p>
+
 </body>
 </html>
