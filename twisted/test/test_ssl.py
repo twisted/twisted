@@ -226,11 +226,8 @@ class BufferingTestCase(unittest.TestCase):
         client.protocol = RecordingClientProtocol
         client.buffer = []
 
-        from twisted.internet.ssl import DefaultOpenSSLContextFactory
-        from twisted.internet.ssl import ClientContextFactory
-
-        sCTX = DefaultOpenSSLContextFactory(certPath, certPath)
-        cCTX = ClientContextFactory()
+        sCTX = ssl.DefaultOpenSSLContextFactory(certPath, certPath)
+        cCTX = ssl.ClientContextFactory()
 
         port = reactor.listenSSL(0, server, sCTX, interface='127.0.0.1')
         reactor.connectSSL('127.0.0.1', port.getHost().port, client, cCTX)
@@ -241,6 +238,22 @@ class BufferingTestCase(unittest.TestCase):
             reactor.iterate()
 
         self.assertEquals(client.buffer, ["+OK <some crap>\r\n"])
+
+class ImmediatelyDisconnectingProtocol(protocol.Protocol):
+    def connectionMade(self):
+        # Twisted's SSL support is terribly broken.
+        self.transport.loseConnection()
+
+    def connectionLost(self, reason):
+        self.factory.connectionDisconnected.callback(None)
+
+class AlmostImmediatelyDisconnectingProtocol(protocol.Protocol):
+    def connectionMade(self):
+        # Twisted's SSL support is terribly broken.
+        reactor.callLater(0.1, self.transport.loseConnection)
+
+    def connectionLost(self, reason):
+        self.factory.connectionDisconnected.callback(None)
 
 def generateCertificateObjects(organization, organizationalUnit):
     pkey = crypto.PKey()
@@ -256,7 +269,7 @@ def generateCertificateObjects(organization, organizationalUnit):
     cert = crypto.X509()
     cert.set_serial_number(1)
     cert.gmtime_adj_notBefore(0)
-    cert.gmtime_adj_notAfter(365 * 5 * 86400) # expires after 5 years
+    cert.gmtime_adj_notAfter(60) # Testing certificates need not be long lived
     cert.set_issuer(req.get_subject())
     cert.set_subject(req.get_subject())
     cert.set_pubkey(req.get_pubkey())
@@ -276,18 +289,50 @@ def generateCertificateFiles(basename, organization, organizationalUnit):
         fObj.write(dumpFunc(crypto.FILETYPE_PEM, obj))
         fObj.close()
 
-class ImmediatelyDisconnectingProtocol(protocol.Protocol):
-    def connectionMade(self):
-        # Twisted's SSL support is terribly broken.
-        reactor.callLater(0.1, self.transport.loseConnection)
+class ContextGeneratingMixin:
+    def makeContextFactory(self, org, orgUnit, *args, **kwArgs):
+        base = self.mktemp()
+        generateCertificateFiles(base, org, orgUnit)
+        serverCtxFactory = ssl.DefaultOpenSSLContextFactory(
+            os.extsep.join((base, 'key')),
+            os.extsep.join((base, 'cert')),
+            *args, **kwArgs)
+        
+        return base, serverCtxFactory
+    
+    def setupServerAndClient(self, clientArgs, clientKwArgs, serverArgs, serverKwArgs):
+        self.clientBase, self.clientCtxFactory = self.makeContextFactory(
+            *clientArgs, **clientKwArgs)
+        self.serverBase, self.serverCtxFactory = self.makeContextFactory(
+            *serverArgs, **serverKwArgs)
 
-    def connectionLost(self, reason):
-        self.factory.connectionDisconnected.callback(None)
 
-class CertificateVerificationCallback(unittest.TestCase):
+class ImmediateDisconnectTestCase(unittest.TestCase, ContextGeneratingMixin):
+    def testImmediateDisconnect(self):
+        org = "twisted.test.test_ssl"
+        self.setupServerAndClient(
+            (org, org + ", client"), {},
+            (org, org + ", server"), {})
+        
+        # Set up a server, connect to it with a client, which should work since our verifiers
+        # allow anything, then disconnect.
+        serverProtocolFactory = protocol.ServerFactory()
+        serverProtocolFactory.protocol = protocol.Protocol
+        self.serverPort = serverPort = reactor.listenSSL(0, 
+            serverProtocolFactory, self.serverCtxFactory)
+
+        clientProtocolFactory = protocol.ClientFactory()
+        clientProtocolFactory.protocol = ImmediatelyDisconnectingProtocol
+        clientProtocolFactory.connectionDisconnected = defer.Deferred()
+        clientConnector = reactor.connectSSL('127.0.0.1', 
+            serverPort.getHost().port, clientProtocolFactory, self.clientCtxFactory)
+        
+        return clientProtocolFactory.connectionDisconnected.addCallback(
+            lambda ignoredResult: self.serverPort.stopListening())
+
+
+class CertificateVerificationCallback(unittest.TestCase, ContextGeneratingMixin):
     def testVerificationCallback(self):
-        from twisted.internet.ssl import DefaultOpenSSLContextFactory
-        from twisted.internet.ssl import ClientContextFactory
 
         self.calls = {}
         def serverCallback(*args):
@@ -298,32 +343,23 @@ class CertificateVerificationCallback(unittest.TestCase):
             self.calls['client'] = args
             return True
 
-        # Make a fake certificate for the server
-        self.serverBase = self.mktemp()
-        generateCertificateFiles(self.serverBase, "twisted.test.test_ssl", "testVerificationCallback, server")
-        serverCtxFactory = DefaultOpenSSLContextFactory(
-            os.extsep.join((self.serverBase, 'key')),
-            os.extsep.join((self.serverBase, 'cert')),
-            verifyCallback=serverCallback)
-
-        # Now do the same thing for the client
-        self.clientBase = self.mktemp()
-        generateCertificateFiles(self.clientBase, "twisted.test.test_ssl", "testVerificationCallback, client")
-        clientCtxFactory = DefaultOpenSSLContextFactory(
-            os.extsep.join((self.clientBase, 'key')),
-            os.extsep.join((self.clientBase, 'cert')),
-            verifyCallback=clientCallback)
+        org = "twisted.test.test_ssl"
+        self.setupServerAndClient(
+            (org, org + ", client"), {"verifyCallback": clientCallback},
+            (org, org + ", server"), {"verifyCallback": serverCallback})
 
         # Set up a server, connect to it with a client, which should work since our verifiers
         # allow anything, then disconnect.
         serverProtocolFactory = protocol.ServerFactory()
         serverProtocolFactory.protocol = protocol.Protocol
-        self.serverPort = serverPort = reactor.listenSSL(0, serverProtocolFactory, serverCtxFactory)
+        self.serverPort = serverPort = reactor.listenSSL(0, 
+            serverProtocolFactory, self.serverCtxFactory)
 
         clientProtocolFactory = protocol.ClientFactory()
-        clientProtocolFactory.protocol = ImmediatelyDisconnectingProtocol
+        clientProtocolFactory.protocol = AlmostImmediatelyDisconnectingProtocol
         clientProtocolFactory.connectionDisconnected = defer.Deferred()
-        clientConnector = reactor.connectSSL('127.0.0.1', serverPort.getHost().port, clientProtocolFactory, clientCtxFactory)
+        clientConnector = reactor.connectSSL('127.0.0.1', 
+            serverPort.getHost().port, clientProtocolFactory, self.clientCtxFactory)
 
         # Go go go go
         return clientProtocolFactory.connectionDisconnected.addCallback(
