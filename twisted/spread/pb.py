@@ -67,7 +67,7 @@ applied when serializing arguments.
 @author: U{Glyph Lefkowitz<mailto:glyph@twistedmatrix.com>}
 """
 
-__version__ = "$Revision: 1.150 $"[11:-2]
+__version__ = "$Revision: 1.151 $"[11:-2]
 
 
 # System Imports
@@ -1636,8 +1636,9 @@ class PBServerFactory(protocol.ServerFactory):
 
     unsafeTracebacks = 0
     
-    def __init__(self, root):
+    def __init__(self, root, unsafeTracebacks=False):
         self.root = IPBRoot(root)
+        self.unsafeTracebacks = unsafeTracebacks
 
     def buildProtocol(self, addr):
         """Return a Broker attached to me (as the service provider).
@@ -1723,6 +1724,7 @@ class _PortalAuthChallenger(Referenceable):
         self.challenge = challenge
     
     def remote_respond(self, response, mind):
+        print 'MIND for REMOTE_RESPOND', mind
         self.response = response
         d = self.portalWrapper.portal.login(self, mind, IPerspective)
         d.addCallback(self._loggedIn)
