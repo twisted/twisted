@@ -611,6 +611,9 @@ class ProperlyCloseFilesTestCase(PortCleanerUpper):
 
 
 class AProtocol(protocol.Protocol):
+    lostCnx = 0
+    def connectionLost(self, reason):
+        self.lostCnx = 1
 
     def connectionMade(self):
         reactor.callLater(0.1, self.transport.loseConnection)
@@ -679,6 +682,7 @@ class AddressTestCase(PortCleanerUpper):
         self.ports.append(acf.protocol.transport)
 
         self.assert_(hasattr(self, "ran"))
+        spinUntil(lambda :acf.protocol.lostCnx)
         del self.ran
 
 
