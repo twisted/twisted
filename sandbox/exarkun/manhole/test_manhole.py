@@ -5,6 +5,10 @@ from test_recvline import _x
 
 import manhole
 
+ctrlc = '\x03'
+ctrlq = '\x04'
+ctrld = '\x1c'
+
 class ManholeLoopback(_x, unittest.TestCase):
     serverProtocol = manhole.ColoredManhole
 
@@ -57,3 +61,20 @@ class ManholeLoopback(_x, unittest.TestCase):
              '  File "<console>", line 1, in ?',
              "ZeroDivisionError: integer division or modulo by zero",
              ">>>"])
+
+    def testControlC(self):
+        self._test(
+            "cancelled line" + ctrlc,
+            [">>> cancelled line",
+             "KeyboardInterrupt",
+             ">>>"])
+
+    def testControlQ(self):
+        self._test(
+            "cancelled line" + ctrlq,
+            [""])
+
+    def testControlD(self):
+        self._test(
+            "cancelled line" + ctrld,
+            [""])
