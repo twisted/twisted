@@ -54,6 +54,14 @@ class IRCGateway(irc.IRCClient,gateway.Gateway):
         self.setNick(self.logonUsername)
         self.sendLine("USER %s foo bar :%s"%(self.nickname,self.realname))
 
+    def connectionFailed(self):
+        self.im.connectionFailed(self,"Connection Failed!")
+        self.im.detachGateway(self)
+
+    def connectionLost(self):
+        self.im.connectionLost(self,"Connection lost.")
+        self.im.detachGateway(self)
+
     def loseConnection(self):
 	self.transport.loseConnection()
 

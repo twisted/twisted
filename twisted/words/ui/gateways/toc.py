@@ -167,12 +167,10 @@ class TOCGateway(gateway.Gateway,toc.TOCClient):
         self._chatmapping[toc.normalize(groupname)]=groupname
         self.chat_join(4,groupname)
 
-    def leaveChat(self,groupname):
+    def leaveGroup(self,groupname):
         for i in self._roomid.keys():
-            if self.roomid[i]==groupname:
-                self.chat_leave(groupname)
-                del self._roomid[i]
-                if self._chatmapping.has_key(toc.normalize(groupname)):del self._chatmapping[toc.normalize(groupname)]
+            if self._roomid[i]==groupname:
+                self.chat_leave(i)
 
     def getGroupMembers(self,groupname):
         #self.receiveGroupMembers([],groupname)

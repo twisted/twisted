@@ -307,7 +307,10 @@ class InstanceMessenger:
         """
         if self.sendEvent(gateway,"leaveGroup",group):
             gateway.leaveGroup(group)
-            del self.groups[str(gateway)+group]
+            try:
+                del self.groups[str(gateway)+group]
+            except KeyError:
+                pass
             self._log(gateway,group+".chat","Left group!")
 
     def getGroupMembers(self,gateway,group):
@@ -326,7 +329,10 @@ class InstanceMessenger:
         group := the name of the group (string)
         """
         self.sendEvent(gateway,"receiveGroupMembers",members,group)
-        self.groups[str(gateway)+group].receiveGroupMembers(members)
+        try:
+            self.groups[str(gateway)+group].receiveGroupMembers(members)
+        except KeyError:
+            pass
         self._log(gateway,group+".chat","Users in group: %s"%members)
 
     def receiveGroupMessage(self,gateway,member,group,message):
@@ -338,7 +344,10 @@ class InstanceMessenger:
         message := the message (string)
         """
         if self.sendEvent(gateway,"receiveGroupMessage",member,group,message):
-            self.groups[str(gateway)+group].displayMessage(member,message)
+            try:
+                self.groups[str(gateway)+group].displayMessage(member,message)
+            except KeyError:
+                pass
             self._log(gateway,group+".chat","<%s> %s"%(member,message))
 
     def memberJoined(self,gateway,member,group):
@@ -349,7 +358,10 @@ class InstanceMessenger:
         group := the group the member joined (string)
         """
         if self.sendEvent(gateway,"memberJoined",member,group):
-            self.groups[str(gateway)+group].memberJoined(member)
+            try:
+                self.groups[str(gateway)+group].memberJoined(member)
+            except KeyError:
+                pass
             self._log(gateway,group+".chat","%s joined!"%member)
 
     def memberLeft(self,gateway,member,group):
@@ -360,7 +372,10 @@ class InstanceMessenger:
         group := the group the member left (string)
         """
         if self.sendEvent(gateway,"memberLeft",member,group):
-            self.groups[str(gateway)+group].memberLeft(member)
+            try:
+                self.groups[str(gateway)+group].memberLeft(member)
+            except KeyError:
+                pass
             self._log(gateway,group+".chat","%s left!"%member)
 
     def directMessage(self,gateway,user,message):

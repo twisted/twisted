@@ -483,12 +483,13 @@ class AccountManager(Toplevel):
         account=self.accounts[index]
         ModifyAccount(self,account)
         
-    def _modifyaccount(self,account,online="False"):
+    def _modifyaccount(self,account,online=None):
         # assumes username is an option
         #self.accounts[name]=account
         i=self.accounts.index(account)
         username,foo,bar,gateway=self.list.get(i)
         auto=account.autologon and "True" or "False"
+        online=online or foo
         self.list.delete(i)
         self.list.insert(i,[username,online,auto,gateway])
 

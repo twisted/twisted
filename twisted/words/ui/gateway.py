@@ -45,7 +45,7 @@ def makeConnection(im,**kw):
     and attaches it to the InstanceMessenger instance given as the first
     argument.
     """
-    pass
+    raise NotImplementedError
 
 class Gateway:
     """
@@ -73,19 +73,20 @@ class Gateway:
         detach us from an InstanceMessenger.
         """
         self.im=None
+
     def addContact(self,contact):
         """
         add the given contact to the users contact list.
         contact := the username to add to the contact list
         """
-        pass # XXX: override for gateway
+        raise NotImplementedError # XXX: override for gateway
 
     def removeContact(self,contact):
         """
         remove the given contact from the users contact list.
         contact := the username to remove from the contact list
         """
-        pass # XXX: override for gateway
+        raise NotImplementedError # XXX: override for gateway
     
     def receiveContactList(self,contacts):
         """
@@ -108,7 +109,7 @@ class Gateway:
         newStatus := string for the new status (currently, one of: )
             ["Online","Offline","Away"] 
         """
-        pass # XXX: override for gateway
+        raise NotImplementedError # XXX: override for gateway
 
     def notifyStatusChanged(self,contact,newStatus):
         """
@@ -133,21 +134,21 @@ class Gateway:
         join a group.
         group := the name of the group to join
         """
-        pass # XXX: override for gateway
+        raise NotImplementedError # XXX: override for gateway
 
     def leaveGroup(self,group):
         """
         leave a group.
         group := the name of the group to leave
         """
-        pass # XXX: override for gateway
+        raise NotImplementedError # XXX: override for gateway
 
     def getGroupMembers(self,group):
         """
         ask for the members of a group we are in.
         group := the name of the group we want the members for
         """
-        pass # XXX: override for gateway
+        raise NotImplementedError # XXX: override for gateway
 
     def receiveGroupMembers(self,members,group):
         """
@@ -188,7 +189,7 @@ class Gateway:
         recipientName := the user to send the message to
         message := the message to send them
         """
-        pass # XXX: override for gateway
+        raise NotImplementedError # XXX: override for gateway
 
     def groupMessage(self,groupName,message):
         """
@@ -196,6 +197,6 @@ class Gateway:
         groupName := the group to send the message to
         message := the message to send
         """
-        pass # XXX: override for gateway
+        raise NotImplementedError # XXX: override for gateway
 
     
