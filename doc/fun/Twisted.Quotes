@@ -4174,3 +4174,10 @@ experience is characterised by waves of confusion and euphoria."
 <exarkun> radix: Go skeptate elsewhere!
 <exarkun> radix: You're harshing my buzz.
 %
+<exarkun> all twisted has in the way of ipv6 support is Twisted/sandbox/exarkun/ipv6.py
+<exarkun> Which someone should rewrite as an internet newapp service and drop in a more useful location
+<glyph> exarkun: hum
+<glyph> exarkun: I suppose we should take our lead from DNS
+<glyph> exarkun: and add a function to the reactor called
+<glyph> listenTCPTCPTCPTCP
+%
