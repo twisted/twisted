@@ -1,17 +1,15 @@
-from twisted.conch import avatar, unix
-from twisted.conch.ssh import filetransfer
 from twisted.trial import unittest, util
+try:
+    from twisted.conch import unix
+except ImportError:
+    unix = None
+from twisted.conch import avatar
+from twisted.conch.ssh import filetransfer
 from twisted.protocols import loopback
 from twisted.internet import defer, reactor
 from twisted.python import components, log
 
 import os, os.path
-"""
-The file system at the start:
-testfile1: "a"*10 + "b"*10
-testRemoveFile: ""
-testRenameFile: ""
-"""
 
 class FileTransferTestAvatar(avatar.ConchUser): 
 
@@ -29,18 +27,18 @@ class FileTransferTestAvatar(avatar.ConchUser):
 
     def getHomeDir(self):
         return os.path.join(os.getcwd(), 'sftp_test')
+if unix:
+    class FileTransferForTestAvatar(unix.SFTPServerForUnixConchUser):
 
-class FileTransferForTestAvatar(unix.SFTPServerForUnixConchUser):
+        def gotVersion(self, version, otherExt):
+            return {'conchTest' : 'ext data'}
 
-    def gotVersion(self, version, otherExt):
-        return {'conchTest' : 'ext data'}
+        def extendedRequest(self, extName, extData):
+            if extName == 'testExtendedRequest':
+                return 'bar'
+            raise NotImplementedError
 
-    def extendedRequest(self, extName, extData):
-        if extName == 'testExtendedRequest':
-            return 'bar'
-        raise NotImplementedError
-
-components.registerAdapter(FileTransferForTestAvatar, FileTransferTestAvatar, filetransfer.ISFTPServer)
+    components.registerAdapter(FileTransferForTestAvatar, FileTransferTestAvatar, filetransfer.ISFTPServer)
 
 class TestOurServerOurClient(unittest.TestCase):
 
@@ -178,4 +176,7 @@ class TestOurServerOurClient(unittest.TestCase):
         self.failUnlessEqual(self._waitWithBuffer(d), 'bar')
         d = self.client.extendedRequest('testBadRequest', '')
         self.failUnlessRaises(NotImplementedError, self._waitWithBuffer, d)
+
+if not unix:
+    TestOurServerOurClient.skip = "don't run on non-posix"
 

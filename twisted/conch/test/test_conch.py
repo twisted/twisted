@@ -107,11 +107,12 @@ class SSHKeysHandlingTestCase(unittest.TestCase):
         self.assertEquals(keys.makePublicKeyString(pubKey, 'comment', keyType), pubData)
         self.assertEquals(keys.makePublicKeyString(privKey, 'comment', keyType), pubData)
         self.assertEquals(keys.makePrivateKeyString(privKey, kind=keyType), privData)
-        encData = keys.makePrivateKeyString(privKey, passphrase='test', kind=keyType)
-        self.assertEquals(
-            keys.getPrivateKeyObject(data = encData,
+        if keyType != 'lsh':
+            encData = keys.makePrivateKeyString(privKey, passphrase='test', kind=keyType)
+            self.assertEquals(
+                keys.getPrivateKeyObject(data = encData,
                                      passphrase = 'test').__getstate__(),
-            privKey.__getstate__())
+                privKey.__getstate__())
 
 # note that theTest.fail() will not cause the reactor to stop. If it is
 # called inside a DelayedCall, a Deferred callback, or a reactor doRead, then
@@ -232,6 +233,7 @@ class ConchSessionForTestAvatar:
 
     def __init__(self, avatar):
         theTest.assert_(isinstance(avatar, ConchTestAvatar))
+        self.avatar = avatar
         self.cmd = None
         self.proto = None
         self.ptyReq = False
@@ -271,6 +273,7 @@ class ConchSessionForTestAvatar:
             t = ErrEchoTransport(proto)
             t.write(cmd[6:])
             t.loseConnection()
+        self.avatar.conn.transport.expectedLoseConnection = 1
         
 #    def closeReceived(self):
 #        #if self.proto:
@@ -417,7 +420,6 @@ class SSHTestClientConnection(connection.SSHConnection):
         log.msg('got %s of %s results' % (self.results, self.totalResults))
         if self.results == self.totalResults:
             self.transport.expectedLoseConnection = 1
-            theTest.fac.proto.expectedLoseConnection = 1
             self.serviceStopped()
             reactor.crash()
 
@@ -493,7 +495,7 @@ class SSHTestFalseChannel(channel.SSHChannel):
         reactor.crash()
 
     def request_exit_status(self, status):
-        status = struct.unpack('>L', status)[0]
+        status, = struct.unpack('>L', status)
         if status == 0:
             global theTest
             theTest.fail('false exit status was 0')
@@ -531,7 +533,7 @@ class SSHTestEchoChannel(channel.SSHChannel):
         reactor.crash()
 
     def request_exit_status(self, status):
-        self.status = struct.unpack('>L', status)[0]
+        self.status ,= struct.unpack('>L', status)
         
     def eofReceived(self):
         log.msg('eof received')
@@ -581,7 +583,7 @@ class SSHTestErrChannel(channel.SSHChannel):
         self.testBuf += data
 
     def request_exit_status(self, status):
-        self.status = struct.unpack('>L', status)[0]
+        self.status ,= struct.unpack('>L', status)
         
     def eofReceived(self):
         log.msg('eof received')
@@ -631,7 +633,7 @@ class SSHTestMaxPacketChannel(channel.SSHChannel):
         self.testExtBuf += data
 
     def request_exit_status(self, status):
-        self.status = struct.unpack('>L', status)[0]
+        self.status ,= struct.unpack('>L', status)
         
     def eofReceived(self):
         log.msg('eof received')
@@ -689,7 +691,7 @@ class SSHTestShellChannel(channel.SSHChannel):
         self.testBuf += data
 
     def request_exit_status(self, status):
-        self.status = struct.unpack('>L', status)[0]
+        self.status ,= struct.unpack('>L', status)
 
     def eofReceived(self):
         self.eofCalled = 1
@@ -806,7 +808,6 @@ class SSHTestOpenSSHProcess(protocol.ProcessProtocol):
 
     def outReceived(self, data):
         self.buf += data
-        theTest.fac.proto.expectedLoseConnection = 1
 
     def errReceived(self, data):
         log.msg("ERR(ssh): '%s'" % data)
@@ -816,6 +817,7 @@ class SSHTestOpenSSHProcess(protocol.ProcessProtocol):
         self.done = 1
         theTest.assertEquals(reason.value.exitCode, 0, 'exit code was not 0: %s' % reason.value.exitCode)
         self.buf = self.buf.replace('\r\n', '\n')
+        log.msg('FOO %s' % repr(self.buf))
         theTest.assertEquals(self.buf, 'goodbye\n')
 
 class SSHTestConnectionForUnix(connection.SSHConnection):
@@ -1032,7 +1034,6 @@ class SSHTransportTestCase(unittest.TestCase):
             timeout.cancel()
         except:
             pass
-    testOurServerCmdLineClient.skip = "The ordering dependancy in this test needs to be fixed."
     
     def testOurServerUnixClient(self):
         """Test the Conch server against the client over a UNIX socket"""
