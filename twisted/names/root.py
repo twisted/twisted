@@ -30,10 +30,24 @@ todo: robustify it
 
 import random
 
+from twisted.flow import flow
 from twisted.python import log
 from twisted.internet import defer
 from twisted.protocols import dns
 from twisted.names import common
+
+def retry(t, p, *args):
+    t = list(t)
+    def errback(failure):
+        failure.trap(defer.TimeoutError)
+        if not t:
+            return failure
+        return p.query(timeout=t.pop(0), *args
+            ).addErrback(errback
+            )
+    return p.query(timeout=t.pop(0), *args
+        ).addErrback(errback
+        )
 
 class _DummyController:
     def messageReceived(self, *args):
@@ -45,9 +59,10 @@ class Resolver(common.ResolverBase):
         self.hints = hints
 
     def _lookup(self, name, cls, type, timeout):
-        d = discoverAuthority(name, self.hints)
-        d.addCallback(lambda (auth, _): _)
-        d.addCallback(self.discoveredAuthority, name, cls, type, timeout)
+        return flow.Deferred(discoverAuthority(name, self.hints)
+            ).addCallback(lambda a: a[0]
+            ).addCallback(self.discoveredAuthority, name, cls, type, timeout
+            )
         return d
     
     def discoveredAuthority(self, auth, name, cls, type, timeout):
@@ -58,70 +73,93 @@ class Resolver(common.ResolverBase):
         d.addCallback(r.filterAnswers)
         return d
 
-def discoverAuthority(host, roots, timeout=10, p=None, cache=None):
+def lookupNameservers(host, atServer, p=None):
     if p is None:
         p = dns.DNSDatagramProtocol(_DummyController())
+        p.noisy = False
+    return retry(
+        (1, 3, 11, 45),                     # Timeouts
+        p,                                  # Protocol instance
+        (atServer, dns.PORT),               # Server to query
+        [dns.Query(host, dns.NS, dns.IN)]   # Question to ask
+    )
+
+def lookupAddress(host, atServer, p=None):
+    if p is None:
+        p = dns.DNSDatagramProtocol(_DummyController())
+        p.noisy = False
+    return retry(
+        (1, 3, 11, 45),                     # Timeouts
+        p,                                  # Protocol instance
+        (atServer, dns.PORT),               # Server to query
+        [dns.Query(host, dns.A, dns.IN)]    # Question to ask
+    )
+
+def discoverAuthority(host, roots, cache=None, p=None):
     if cache is None:
         cache = {}
 
-    parts = host.rstrip('.').split('.', 1)
-    if len(parts) == 1:
-        # This must be some kind of crazy top-level domain!
-        host = random.choice(roots)
-        d = p.query((host, dns.PORT), [dns.Query(parts[0] + '.', dns.NS)], timeout)
-        d.addCallback(lambda r, h=host: (r, h))
-        return d
-    else:
-        # We have some recursion to do!
-        d = discoverAuthority(parts[1], roots, timeout, p, cache)
+    rootAuths = list(roots)
+
+    parts = host.rstrip('.').split('.')
+    parts.reverse()
+    
+    authority = rootAuths.pop()
+    
+    soFar = ''
+    for part in parts:
+        soFar = part + '.' + soFar
         
-        def gotAuthority((message, previous)):
-            potent = message.answers + message.authority
-            all = potent + message.additional
+        msg = flow.wrap(lookupNameservers(soFar, authority, p))
+        yield msg
+        msg = msg.next()
 
-            # Update our cache
-            for a in all:
-                if a.type == dns.A:
-                    cache[str(a.name)] = a.payload.dottedQuad()
+        records = msg.answers + msg.authority + msg.additional
+        nameservers = [r for r in records if r.type == dns.NS]
+        
+        # print 'Records for', soFar, ':', records
+        # print 'NS for', soFar, ':', nameservers
 
-            ns = [a.payload for a in potent if a.type == dns.NS]
-            if ns:
-                ns = ns[0]
-                for a in message.additional:
-                    if a.type == dns.A and a.name == ns.name:
-                        return (a.payload.dottedQuad(), previous)
+        if not records:
+            raise IOError("No records")
+        
+        for r in records:
+            if r.type == dns.A:
+                cache[str(r.name)] = r.payload.dottedQuad()
 
-                # Check the cache if they didn't tell us
-                try:
-                    return (cache[str(ns.name)], previous)
-                except KeyError:
-                    pass
-
-                # They deigned to NOT FREAKING TELL US the address of the
-                # authority.  Jerks.  Look for *some* A record they gave us
-                # and ask it.
-                for a in all:
-                    if a.type == dns.A:
-                        addr = (a.payload.dottedQuad(), dns.PORT)
-                        query = dns.Query(ns.name, dns.A)
-                        d = p.query(addr, [query], timeout)
-                        d.addCallback(lambda r, h=addr[0]: (r, h))
-                        return d
-
-            # They gave us *no* A records.  They are serious wacked out.
-            # Maybe the last authority we tried will give us a hand.
-            return (previous, previous)
-
-        def lookupNext((address, previous)):
-            addr = (address, dns.PORT)
-            query = [dns.Query(host, dns.NS)]
-            d = p.query(addr, query, timeout)
-            d.addCallback(lambda r: (r, address))
-            return d
-
-        d.addCallback(gotAuthority)
-        d.addCallback(lookupNext)
-        return d
+        newAuth = None
+        for r in records:
+            if r.type == dns.NS:
+                if str(r.payload.name) in cache:
+                    newAuth = cache[str(r.payload.name)]
+                    break
+        else:
+            for addr in records:
+                if addr.type == dns.A and addr.name == r.name:
+                    newAuth = addr.payload.dottedQuad()
+                    break
+        if newAuth is not None:
+            authority = newAuth
+        else:
+            if nameservers:
+                r = str(nameservers[0].payload.name)
+                # print 'Recursively discovering authority for', r
+                authority = flow.wrap(discoverAuthority(r, roots, cache, p))
+                yield authority
+                authority = authority.next()
+                # print 'Discovered to be', authority, 'for', r
+            else:
+                # print 'Doing address lookup for', soFar, 'at', authority
+                msg = flow.wrap(lookupAddress(soFar, authority, p))
+                yield msg
+                msg = msg.next()
+                records = msg.answers + msg.authority + msg.additional
+                addresses = [r for r in records if r.type == dns.A]
+                if addresses:
+                    authority = addresses[0].payload.dottedQuad()
+                else:
+                    raise IOError("Resolution error")
+    yield authority
 
 def makePlaceholder(deferred, name):
     def placeholder(*args, **kw):
@@ -156,8 +194,23 @@ def bootstrap(resolver):
     """
     domains = [chr(ord('a') + i) for i in range(13)]
     from twisted.python import log
-    f = lambda r: (log.msg('Root server address: ' + str(r)), r)[1]
+    # f = lambda r: (log.msg('Root server address: ' + str(r)), r)[1]
+    f = lambda r: r
     L = [resolver.getHostByName('%s.root-servers.net' % d).addCallback(f) for d in domains]
     d = defer.DeferredList(L)
     d.addCallback(lambda r: Resolver([e[1] for e in r if e[0]]))
     return DeferredResolver(d)
+
+if __name__ == '__main__':
+    from twisted.python import log
+    import sys
+    if len(sys.argv) < 2:
+        print 'Specify a domain'
+    else:
+        log.startLogging(sys.stdout)
+        from twisted.names.client import ThreadedResolver
+        r = bootstrap(ThreadedResolver())
+        d = r.lookupAddress(sys.argv[1])
+        d.addCallbacks(log.msg, log.err).addBoth(lambda _: reactor.stop())
+        from twisted.internet import reactor
+        reactor.run()
