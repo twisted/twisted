@@ -98,5 +98,5 @@ def updateApplication(app, config):
     p = dns.DNSDatagramProtocol(f)
     f.noisy = 0
 
-    app.listenUDP(config['port'], p)
-    app.listenTCP(config['port'], f)
+    app.listenUDP(config['port'], p, interface=config['interface'])
+    app.listenTCP(config['port'], f, interface=config['interface'])
