@@ -96,12 +96,12 @@ import %(module)s
 def %(name)s(*args, **kw):
     klazz = %(module)s.%(klass)s
     for preMethod in klazz.%(preName)s:
-        apply(preMethod, args, kw)
+        preMethod(*args, **kw)
     try:
-        return apply(klazz.%(originalName)s, args, kw)
+        return klazz.%(originalName)s(*args, **kw)
     finally:
         for postMethod in klazz.%(postName)s:
-            apply(postMethod, args, kw)
+            postMethod(*args, **kw)
 """
 
 _PRE = '__hook_pre_%s_%s_%s__'
