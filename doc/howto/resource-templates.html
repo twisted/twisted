@@ -36,14 +36,14 @@ flag. Here is an example:</p>
         --processor=.rtl=twisted.web.script.ResourceTemplate
 </pre>
 
-<p>The above command line binds the "rtl" extension to use the 
+<p>The above command line binds the <code>rtl</code> extension to use the 
 ResourceTemplate processor. Other ways are possible, but would require
 more Python coding and are outside the scope of this HOWTO.</p>
 
 <h2>Using ResourceTemplate</h2>
 
 <p>ResourceTemplates are coded in an extension of Python called the
-"Python Templating Language". Complete documentation of the PTL
+<q>Python Templating Language</q>. Complete documentation of the PTL
 is available at <a href="http://www.mems-exchange.org/software/quixote/doc/PTL.html">the quixote web site</a>. The web server
 will expect the PTL source file to define a variable named "resource".
 This should be a <code class="API">twisted.web.server.Resource</code>,

@@ -144,7 +144,7 @@ reactor.run()
   <li><code>.outReceived(data)</code>: This is called with data that was
   received from the process' stdout pipe. Pipes tend to provide data in
   larger chunks than sockets (one kilobyte is a common buffer size), so you
-  may not experience the "random dribs and drabs" behavior typical of
+  may not experience the <q>random dribs and drabs</q> behavior typical of
   network sockets, but regardless you should be prepared to deal if you
   don't get all your data in a single call. To do it properly,
   <code>outReceived</code> ought to simply accumulate the data and put off doing
