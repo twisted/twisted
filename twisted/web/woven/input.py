@@ -25,7 +25,7 @@ from twisted.python.reflect import qual
 
 from twisted.web.woven import template, controller, utils
 
-__version__ = "$Revision: 1.24 $"[11:-2]
+__version__ = "$Revision: 1.25 $"[11:-2]
 
 controllerFactory = controller.controllerFactory
 
@@ -153,9 +153,6 @@ class InputHandler(controller.Controller):
                 self.model.notify({'request': request, self.submodel: data})
         else:
             self._commit(data)
-    
-
-wcfactory_InputHandler = controllerFactory(InputHandler)
 
 
 class DefaultHandler(InputHandler):
@@ -165,16 +162,12 @@ class DefaultHandler(InputHandler):
         """
         return (None, None)
 
-wcfactory_DefaultHandler = controllerFactory(DefaultHandler)
-
 
 class SingleValue(InputHandler):
     def getInput(self, request):
         input = request.args.get(self.submodel, None)
         if input:
             return input[0]
-
-wcfactory_SingleValue = controllerFactory(SingleValue)
 
 
 class Anything(SingleValue):
@@ -185,8 +178,6 @@ class Anything(SingleValue):
         if data is not None:
             return 1
         return None
-
-wcfactory_Anything = controllerFactory(Anything)
 
 
 class Integer(SingleValue):
@@ -205,8 +196,6 @@ class Integer(SingleValue):
         self.invalidErrorText = "%s is not an integer. Please enter an integer." % data
         SingleValue.handleInvalid(self, request, data)
 
-wcfactory_Integer = controllerFactory(Integer)
-
 
 class Float(SingleValue):
     """
@@ -224,14 +213,10 @@ class Float(SingleValue):
         self.invalidErrorText = "%s is not an float. Please enter a float." % data
         SingleValue.handleInvalid(self, request, data)
 
-wcfactory_Float = controllerFactory(Float)
-
 
 class List(InputHandler):
     def check(self, request, data):
         return None
-
-wcfactory_List = controllerFactory(List)
 
 
 class NewObject(SingleValue):
@@ -275,6 +260,4 @@ class NewObject(SingleValue):
         self.invalidErrorText = self.errorReason
         SingleValue.handleInvalid(self, request, data)
 
-wcfactory_NewObject = controllerFactory(NewObject)
 
-defaultHandlerInstance = DefaultHandler(None)
