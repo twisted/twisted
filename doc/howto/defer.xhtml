@@ -122,7 +122,7 @@ class Getter:
         if x % 2 == 0:
             self.d.callback(x*3)
         else:
-            self.d.errback(ValueError("You used an even number!"))
+            self.d.errback(ValueError("You used an odd number!"))
 
     def _toHTML(self, r):
         return "<p>Result: %s</p>" % r
