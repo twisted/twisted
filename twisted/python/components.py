@@ -105,95 +105,101 @@ def superInterfaces(interface):
     return result
 
 
-# mapping between (<class>, <interface>) and <adapter class>
-adapterRegistry = {}
-
-
-def registerAdapter(adapterClass, origClass, *interfaceClasses):
-    """Register an adapter class.
-
-    An adapter class is expected to implement the given interface, by
-    adapting instances of paramter 'origClass'. An adapter class's
-    __init__ method should accept one parameter, an instance of 'origClass'.
-    """
-    assert interfaceClasses, "You need to pass an Interface"
-    for interfaceClass in interfaceClasses:
-        if adapterRegistry.has_key((origClass, interfaceClass)):
-            raise ValueError(
-                "an adapter (%s) was already registered." % (
-                    adapterRegistry[(origClass, interfaceClass)]
-                )
-            )
-
-        # this may need to be removed
-        if not implements(adapterClass, interfaceClass):
-            raise ValueError, "%s instances don't implement interface %s" % (adapterClass, interfaceClass)
-
-        if not issubclass(interfaceClass, Interface):
-            raise ValueError, "interface %s doesn't inherit from %s" % (interfaceClass, Interface)
-
-        for i in superInterfaces(interfaceClass):
-            # don't override already registered adapters for super-interfaces
-            if not adapterRegistry.has_key((origClass, i)):
-                adapterRegistry[(origClass, i)] = adapterClass
-
-
-def getAdapterClass(klass, interfaceClass, default):
-    """Return registered adapter for a given class and interface.
-    """
-    adapterClass = adapterRegistry.get((klass, interfaceClass), _Nothing)
-    if adapterClass is _Nothing:
-        return default
-    else:
-        return adapterClass
-
-
-def getAdapterClassWithInheritance(klass, interfaceClass, default):
-    """Return registered adapter for a given class and interface.
-    """
-    adapterClass = adapterRegistry.get((klass, interfaceClass), _Nothing)
-    if adapterClass is _Nothing:
-        for baseClass in reflect.allYourBase(klass):
-            adapterClass = adapterRegistry.get((baseClass, interfaceClass),
-                                               _Nothing)
-            if adapterClass is not _Nothing:
-                return adapterClass
-    else:
-        return adapterClass
-    return default
-
-
 class _Nothing: #An alternative to None
     pass
 
-def getAdapter(obj, interfaceClass, default=_Nothing,
-               adapterClassLocator=None):
-    """Return an object that implements the given interface.
 
-    The result will be a wrapper around the object passed as a paramter, or
-    the parameter itself if it already implements the interface. If no
-    adapter can be found, the 'default' parameter will be returned.
-    """
-    if hasattr(obj, '__class__'):
-        klas = obj.__class__
-    else:
-        klas = type(obj)
+class AdapterRegistry:
 
-    if implements(obj, interfaceClass):
-        return obj
-    adapterClass =  (
-        adapterClassLocator or getAdapterClass
-                    )(
-        klas, interfaceClass, None
-                     )
-    if adapterClass is None:
-        if default is _Nothing:
-            raise NotImplementedError('%s instance does not implement %s, and '
-                                      'there is no registered adapter.' %
-                                      (obj, interfaceClass))
+    def __init__(self):
+        # mapping between (<class>, <interface>) and <adapter class>
+        self.adapterRegistry = {}
+
+    def registerAdapter(self, adapterClass, origClass, *interfaceClasses):
+        """Register an adapter class.
+
+        An adapter class is expected to implement the given interface, by
+        adapting instances of paramter 'origClass'. An adapter class's
+        __init__ method should accept one parameter, an instance of 'origClass'.
+        """
+        assert interfaceClasses, "You need to pass an Interface"
+        for interfaceClass in interfaceClasses:
+            if self.adapterRegistry.has_key((origClass, interfaceClass)):
+                raise ValueError(
+                    "an adapter (%s) was already registered." % (
+                        self.adapterRegistry[(origClass, interfaceClass)]
+                    )
+                )
+
+            # this may need to be removed
+            if not implements(adapterClass, interfaceClass):
+                raise ValueError, "%s instances don't implement interface %s" % (adapterClass, interfaceClass)
+
+            if not issubclass(interfaceClass, Interface):
+                raise ValueError, "interface %s doesn't inherit from %s" % (interfaceClass, Interface)
+
+            for i in superInterfaces(interfaceClass):
+                # don't override already registered adapters for super-interfaces
+                if not self.adapterRegistry.has_key((origClass, i)):
+                    self.adapterRegistry[(origClass, i)] = adapterClass
+
+
+    def getAdapterClass(self, klass, interfaceClass, default):
+        """Return registered adapter for a given class and interface.
+        """
+        adapterClass = self.adapterRegistry.get((klass, interfaceClass), _Nothing)
+        if adapterClass is _Nothing:
+            return default
+        else:
+            return adapterClass
+
+    def getAdapterClassWithInheritance(self, klass, interfaceClass, default):
+        """Return registered adapter for a given class and interface.
+        """
+        adapterClass = self.adapterRegistry.get((klass, interfaceClass), _Nothing)
+        if adapterClass is _Nothing:
+            for baseClass in reflect.allYourBase(klass):
+                adapterClass = self.adapterRegistry.get((baseClass, interfaceClass),
+                                                   _Nothing)
+                if adapterClass is not _Nothing:
+                    return adapterClass
+        else:
+            return adapterClass
         return default
-    else:
-        return adapterClass(obj)
+
+    def getAdapter(self, obj, interfaceClass, default=_Nothing,
+                   adapterClassLocator=None):
+        """Return an object that implements the given interface.
+
+        The result will be a wrapper around the object passed as a paramter, or
+        the parameter itself if it already implements the interface. If no
+        adapter can be found, the 'default' parameter will be returned.
+        """
+        if hasattr(obj, '__class__'):
+            klas = obj.__class__
+        else:
+            klas = type(obj)
+
+        if implements(obj, interfaceClass):
+            return obj
+        adapterClass = ( (adapterClassLocator or self.getAdapterClass)(
+            klas, interfaceClass, None) )
+        if adapterClass is None:
+            if default is _Nothing:
+                raise NotImplementedError('%s instance does not implement %s, and '
+                                          'there is no registered adapter.' %
+                                          (obj, interfaceClass))
+            return default
+        else:
+            return adapterClass(obj)
+
+
+theAdapterRegistry = AdapterRegistry()
+registerAdapter = theAdapterRegistry.registerAdapter
+getAdapterClass = theAdapterRegistry.getAdapterClass
+getAdapterClassWithInheritance = theAdapterRegistry.getAdapterClassWithInheritance
+getAdapter = theAdapterRegistry.getAdapter
+
 
 class Adapter:
     """I am the default implementation of an Adapter for some interface.
@@ -351,4 +357,5 @@ class Componentized(styles.Versioned):
 
 
 __all__ = ["Interface", "implements", "getInterfaces", "superInterfaces",
-           "registerAdapter", "getAdapterClass", "getAdapter", "Componentized"]
+           "registerAdapter", "getAdapterClass", "getAdapter", "Componentized",
+           "AdapterRegistry"]
