@@ -39,7 +39,7 @@ class FileDescriptor(log.Logger):
     unsent = ""
     producer = None
     disconnected = 0
-    __reap = 0
+    disconnecting = 0
 
     __implements__ = (interfaces.IProducer,)
 
@@ -89,7 +89,7 @@ class FileDescriptor(log.Logger):
                 # tell them to supply some more.
                 self.producer.resumeProducing()
                 self.producerPaused = 0
-            elif self.__reap:
+            elif self.disconnecting:
                 # But if I was previously asked to let the connection die, do
                 # so.
                 return main.CONNECTION_DONE
@@ -137,7 +137,7 @@ class FileDescriptor(log.Logger):
         if self.connected:
             self.stopReading()
             self.startWriting()
-            self.__reap = 1
+            self.disconnecting = 1
 
     def stopReading(self):
         """Stop waiting for read availability.

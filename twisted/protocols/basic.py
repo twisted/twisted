@@ -159,6 +159,8 @@ class LineReceiver(protocol.Protocol):
                     self.transport.loseConnection()
                     return
                 self.lineReceived(line)
+                if self.transport.disconnecting:
+                    return
         else:
             data, self.__buffer = self.__buffer, ''
             if data:
