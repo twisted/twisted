@@ -35,7 +35,8 @@ from twisted.enterprise import adbapi
 from twisted.persisted import dirdbm
 
 import getpass, pickle, time, socket, md5
-import smtplib, os
+import os
+import StringIO
 
 ERR_NOGROUP, ERR_NOARTICLE = range(2, 4)  # XXX - put NNTP values here (I guess?)
 
@@ -189,13 +190,14 @@ class NewsStorage:
 
 
     def articleRequest(self, group, index, id = None):
-        """
-        Returns a deferred whose callback will be passed the full article
-        text (headers and body) for the article of the specified index
-        in the specified group, and whose errback will be invoked if the
-        article or group does not exist.  If id is not None, index is
-        ignored and the article with the given Message-ID will be returned
-        instead, along with its index in the specified group
+        """ 
+        Returns a deferred whose callback will be passed a file-like object
+        containing the full article text (headers and body) for the article
+        of the specified index in the specified group, and whose errback
+        will be invoked if the article or group does not exist.  If id is
+        not None, index is ignored and the article with the given Message-ID
+        will be returned instead, along with its index in the specified
+        group.
         """
         raise NotImplementedError
 
@@ -364,7 +366,11 @@ class PickleStorage(NewsStorage):
         if self.db.has_key(group):
             if self.db[group].has_key(index):
                 a = self.db[group][index]
-                return defer.succeed((index, a.getHeader('Message-ID'), a.textHeaders() + '\r\n' + a.body))
+                return defer.succeed((
+                    index,
+                    a.getHeader('Message-ID'),
+                    StringIO.StringIO(a.textHeaders() + '\r\n' + a.body)
+                ))
             else:
                 return defer.fail(ERR_NOARTICLE)
         else:
@@ -386,7 +392,7 @@ class PickleStorage(NewsStorage):
         if self.db.has_key(group):
             if self.db[group].has_key(index):
                 a = self.db[group][index]
-                return defer.succeed((index, a.getHeader('Message-ID'), a.body))
+                return defer.succeed((index, a.getHeader('Message-ID'), StringIO.StringIO(a.body)))
             else:
                 return defer.fail(ERR_NOARTICLE)
         else:
@@ -608,7 +614,11 @@ class NewsShelf(NewsStorage):
         except KeyError:
             return defer.fail(NewsServerError("No such group: " + group))
         else:
-            return defer.succeed((index, a.getHeader('Message-ID'), a.textHeaders() + '\r\n' + a.body))
+            return defer.succeed((
+                index,
+                a.getHeader('Message-ID'),
+                StringIO.StringIO(a.textHeaders() + '\r\n' + a.body)
+            ))
     
     
     def headRequest(self, group, index, id = None):
@@ -644,7 +654,7 @@ class NewsShelf(NewsStorage):
         except KeyError:
             return defer.fail(NewsServerError("No such group: " + group))
         else:
-            return defer.succeed((index, a.getHeader('Message-ID'), a.body))
+            return defer.succeed((index, a.getHeader('Message-ID'), StringIO.StringIO(a.body)))
 
 
 class NewsStorageAugmentation(adbapi.Augmentation, NewsStorage):
@@ -910,7 +920,11 @@ class NewsStorageAugmentation(adbapi.Augmentation, NewsStorage):
             """ % (index, adbapi.safe(group))
 
         return self.runQuery(sql).addCallback(
-            lambda result: (result[0][0], result[0][1], result[0][2] + '\r\n' + result[0][3])
+            lambda result: (
+                result[0][0],
+                result[0][1],
+                StringIO.StringIO(result[0][2] + '\r\n' + result[0][3])
+            )
         )
 
 
@@ -937,7 +951,11 @@ class NewsStorageAugmentation(adbapi.Augmentation, NewsStorage):
             AND groups.name = '%s'
         """ % (index, adbapi.safe(group))
         
-        return self.runQuery(sql).addCallback(lambda result: result[0])
+        return self.runQuery(sql).addCallback(
+            lambda result: result[0]
+        ).addCallback(
+            lambda (index, id, body): (index, id, StringIO.StringIO(body))
+        )
 
 
 ####

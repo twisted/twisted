@@ -100,7 +100,8 @@ class NewsTestCase(unittest.TestCase):
         self.failUnless(self.result[1] == MESSAGE_ID,
                         "callback result Message-Id doesn't match: %s vs %s" %
                         (MESSAGE_ID, self.result[1]))
-        self.failUnless(self.result[2].find('\r\n\r\n'),
+        body = self.result[2].read()
+        self.failUnless(body.find('\r\n\r\n'),
                         "Can't find \\r\\n\\r\\n between header and body")
 
     def testHeadRequest(self):
@@ -158,5 +159,6 @@ class NewsTestCase(unittest.TestCase):
         if error:
             raise error[0], error[1], error[2]
 
-        self.failUnless(self.result[2][0:4] == 'this', "message body has been altered: " +
-                        pformat(self.result[2][0:4]))
+        body = self.result[2].read()
+        self.failUnless(body[0:4] == 'this', "message body has been altered: " +
+                        pformat(body[0:4]))

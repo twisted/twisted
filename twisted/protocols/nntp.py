@@ -43,11 +43,18 @@ Other desired features:
    - A control protocol
 """
 
-from twisted.internet import protocol, reactor
+from twisted.internet import protocol
 from twisted.protocols import basic
-from twisted.python import log, failure
+from twisted.python import log
+from twisted.python import failure
 
-import string, random, socket, time
+import time
+import types
+
+try:
+    import cStringIO as StringIO
+except:
+    import StringIO
 
 def parseRange(text):
     articles = text.split('-')
@@ -108,12 +115,7 @@ class NNTPClient(basic.LineReceiver):
 
 
     def connectionMade(self):
-        try:
-            self.ip = self.transport.socket.getpeername()
-        # We're not always connected with a socket
-        except AttributeError:
-            self.ip = "unknown"
-
+        self.ip = self.transport.getPeer()[1:]
 
     def gotAllGroups(self, groups):
         "Override for notification when fetchGroups() action is completed"
@@ -386,7 +388,7 @@ class NNTPClient(basic.LineReceiver):
 
     def _newLine(self, line, check = 1):
         if check and line and line[0] == '.':
-            line = '.' + line
+            line = line[1:]
         self._inputBuffers[0].append(line)
 
 
@@ -540,11 +542,7 @@ class NNTPServer(basic.LineReceiver):
 
 
     def connectionMade(self):
-        try:
-            self.ip = self.transport.socket.getpeername()
-        #We're not always connected with a socket
-        except AttributeError:
-            self.ip = "unknown"
+        self.ip = self.transport.getPeer()[1:]
         self.inputHandler = None
         self.currentGroup = None
         self.currentIndex = None
@@ -554,9 +552,9 @@ class NNTPServer(basic.LineReceiver):
         if self.inputHandler is not None:
             self.inputHandler(line)
         else:
-            parts = filter(None, string.split(string.strip(line)))
+            parts = line.strip().split()
             if len(parts):
-                cmd, parts = string.upper(parts[0]), parts[1:]
+                cmd, parts = parts[0].upper(), parts[1:]
                 if cmd in NNTPServer.COMMANDS:
                     func = getattr(self, 'do_%s' % cmd)
                     try:
@@ -751,7 +749,7 @@ class NNTPServer(basic.LineReceiver):
             defer.addCallbacks(self._gotPost, self._errPost)
         else:
             if line and line[0] == '.':
-                line = '.' + line
+                line = line[1:]
             self.message = self.message + line + '\r\n'
 
 
@@ -795,7 +793,7 @@ class NNTPServer(basic.LineReceiver):
             d.addCallbacks(self._didTakeThis, self._errTakeThis)
         else:
             if line and line[0] == '.':
-                line = '.' + line
+                line = line[1:]
             self.message = self.message + line + '\r\n'
 
 
@@ -851,10 +849,32 @@ class NNTPServer(basic.LineReceiver):
 
 
     def _gotArticle(self, (index, id, article)):
+        if isinstance(article, types.StringType):
+            import warnings
+            warnings.warn(
+                "Returning the article as a string from `articleRequest' "
+                "is deprecated.  Return a file-like object instead."
+            )
+            article = StringIO.StringIO(article)
         self.currentIndex = index
         self.sendLine('220 %d %s article' % (index, id))
-        self.transport.write(article.replace('\r\n..', '\r\n.') + '\r\n')
-        self.sendLine('.')
+        s = basic.FileSender()
+        d = s.beginFileTransfer(article, self.transport, self.transformChunk)
+        d.addCallback(self.finishedFileTransfer)
+    
+    ##   
+    ## Helpers for FileSender
+    ##
+    def transformChunk(self, chunk):
+        return chunk.replace('\n', '\r\n').replace('\r\n.', '\r\n..')
+
+    def finishedFileTransfer(self, lastsent):
+        if lastsent != '\n':
+            line = '\r\n.'
+        else:
+            line = '.'
+        self.sendLine(line)
+    ##
 
     def _errArticle(self, failure):
         print 'ARTICLE failed: ', failure
@@ -902,11 +922,18 @@ class NNTPServer(basic.LineReceiver):
 
 
     def _gotBody(self, (index, id, body)):
+        if isinstance(body, types.StringType):
+            import warnings
+            warnings.warn(
+                "Returning the article as a string from `articleRequest' "
+                "is deprecated.  Return a file-like object instead."
+            )
+            body = StringIO.StringIO(body)
         self.currentIndex = index
         self.sendLine('221 %d %s article retrieved' % (index, id))
-        self.transport.write(body.replace('\r\n..', '\r\n.') + '\r\n')
-        self.sendLine('.')
-
+        s = basic.FileSender()
+        d = s.beginFileTransfer(body, self.transport, self.transformChunk)
+        d.addCallback(self.finishedFileTransfer)
 
     def _errBody(self, failure):
         print 'BODY failed: ', failure
@@ -995,7 +1022,7 @@ class NNTPServer(basic.LineReceiver):
             self.message = ''
         else:
             if line.startswith('.'):
-                line = '.' + line
+                line = line[1:]
             self.message = self.message + line + '\r\n'
 
 

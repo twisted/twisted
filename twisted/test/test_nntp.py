@@ -49,7 +49,7 @@ class TestNNTPClient(nntp.NNTPClient):
         nntp.NNTPClient.__init__(self)
 
     def assertEquals(self, foo, bar):
-        if foo != bar: raise AssertionError("%s != %s!" % (foo, bar))
+        if foo != bar: raise AssertionError("%r != %r!" % (foo, bar))
     
     def connectionMade(self):
         nntp.NNTPClient.connectionMade(self)
@@ -98,8 +98,9 @@ class TestNNTPClient(nntp.NNTPClient):
 
     
     def gotArticle(self, info):
-        origBody = POST_STRING.split('\n\n')[1]
-        newBody = info.split('\n\n', 1)[1]
+        origPost = POST_STRING.replace('\n', '\r\n')
+        origBody = origPost.split('\r\n\r\n')[1]
+        newBody = info.split('\r\n\r\n', 1)[1]
 
         # XXX The strip shouldn't be necessary, but I don't
         # know where it needs fixing and I don't want to commit
