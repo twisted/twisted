@@ -1,3 +1,9 @@
+twisted (1.0.4-1) unstable; urgency=low
+
+  * New upstream version
+
+ -- Moshe Zadka <moshez@debian.org>  Thu,  1 May 2003 09:06:49 +0300
+
 twisted (1.0.3-1) unstable; urgency=low
 
   * Split out conch
