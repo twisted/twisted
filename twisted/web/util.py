@@ -259,7 +259,7 @@ def saferepr(x):
     return rx
 
 def htmlUnknown(x):
-    return '<CODE>'+html.escape(saferepr(x))+'</code>'
+    return '<code>'+html.escape(saferepr(x))+'</code>'
 
 def htmlDict(d):
     io = StringIO()
