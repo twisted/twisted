@@ -14,7 +14,7 @@
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 #
-# $Id: conch.py,v 1.38 2003/02/18 21:19:17 z3p Exp $
+# $Id: conch.py,v 1.39 2003/02/19 07:09:21 z3p Exp $
 
 #""" Implementation module for the `conch` command.
 #"""
@@ -389,6 +389,9 @@ class SSHUnixServerProtocol(banana.Banana):
     def _ebDeferred(self, reason, di):
         self.sendMessage('errbackDeferred', di, cPickle.dumps(reason))
 
+    def haveChannel(self, channelID):
+        return conn.channels.has_key(channelID)
+
     def getChannel(self, channelID):
         channel = conn.channels[channelID]
         if not isinstance(channel, SSHUnixChannel):
@@ -409,6 +412,7 @@ class SSHUnixServerProtocol(banana.Banana):
 
     def server_sendRequest(self, lst):
         cn, requestType, data, wantReply = lst
+        if not self.haveChannel(cn): return
         channel = self.getChannel(cn)
         d = conn.sendRequest(channel, requestType, data, wantReply)
         if wantReply:
@@ -416,26 +420,31 @@ class SSHUnixServerProtocol(banana.Banana):
 
     def server_adjustWindow(self, lst):
         cn, bytesToAdd = lst
+        if not self.haveChannel(cn): return
         channel = self.getChannel(cn)
         conn.adjustWindow(channel, bytesToAdd)
 
     def server_sendData(self, lst):
         cn, data = lst
+        if not self.haveChannel(cn): return
         channel = self.getChannel(cn)
         conn.sendData(channel, data)
 
     def server_sendExtended(self, lst):
         cn, dataType, data = lst
+        if not self.haveChannel(cn): return
         channel = self.getChannel(cn)
         conn.sendExtendedData(channel, dataType, data)
 
     def server_sendEOF(self, lst):
         (cn, ) = lst
+        if not self.haveChannel(cn): return
         channel = self.getChannel(cn)
         conn.sendEOF(channel)
 
     def server_sendClose(self, lst):
         (cn, ) = lst
+        if not self.haveChannel(cn): return
         channel = self.getChannel(cn)
         conn.sendClose(channel)
 
@@ -466,6 +475,8 @@ class SSHUnixChannel(channel.SSHChannel):
 
     def closed(self):
         self.unix.sendMessage('closed', self.id)
+        if len(conn.channels) == 1: # just us left
+            reactor.stop()
 
 class SSHClientFactory(protocol.ClientFactory):
     noisy = 1 
