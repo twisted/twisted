@@ -24,14 +24,14 @@ import socket
 # Twisted Imports
 from twisted.protocols import protocol
 from twisted.python import log, defer
-from twisted.persisted import styles
+from twisted.persisted import styles, marmalade
 from twisted.python.runtime import platform
 from twisted.cred.authorizer import DefaultAuthorizer
 
 # Sibling Imports
 import main
 
-class Application(log.Logger, styles.Versioned):
+class Application(log.Logger, styles.Versioned, marmalade.DOMJellyable):
     """I am the `root object' in a Twisted process.
 
     I represent a set of persistent, potentially interconnected listening TCP
@@ -57,21 +57,106 @@ class Application(log.Logger, styles.Versioned):
         """
         self.name = name
         # a list of (tcp, ssl, udp) Ports
-        self.tcpPorts = []
+        self.tcpPorts = []              # check
         self.udpPorts = []
         self.sslPorts = []
         # a list of (tcp, ssl, udp) Connectors
-        self.connectors = []
+        self.connectors = []            # check
         # a list of twisted.python.delay.Delayeds
-        self.delayeds = []
+        self.delayeds = []              # check
         # a list of twisted.internet.cred.service.Services
-        self.services = {}
+        self.services = {}              # check
         # a cred authorizer
-        self.authorizer = authorizer or authorizer_ or DefaultAuthorizer()
+        self.authorizer = authorizer or authorizer_ or DefaultAuthorizer() # check
         self.authorizer.setApplication(self)
         if platform.getType() == "posix":
             self.uid = uid or os.getuid()
             self.gid = gid or os.getgid()
+
+
+    jellyDOMVersion = 1
+
+    def jellyToDOM_1(self, jellier, node):
+        if hasattr(self, 'uid'):
+            node.setAttribute("uid", str(self.uid))
+            node.setAttribute("gid", str(self.gid))
+        node.setAttribute("name", self.name)
+        tcpnode = jellier.document.createElement("tcp")
+        node.appendChild(tcpnode)
+        svcnode = jellier.document.createElement("services")
+        node.appendChild(svcnode)
+        delaynode = jellier.document.createElement("delayeds")
+        node.appendChild(delaynode)
+        authnode = jellier.document.createElement("authorizer")
+        node.appendChild(authnode)
+        for svc in self.services.values():
+            svcnode.appendChild(jellier.jellyToNode(svc))
+        for port, factory, backlog, interface in self.tcpPorts:
+            n = jellier.jellyToNode(factory)
+            n.setAttribute("parent:listen", str(port))
+            if backlog != 5:
+                n.setAttribute("parent:backlog", str(backlog))
+            if interface != '':
+                n.setAttribute("parent:interface", str(interface))
+            tcpnode.appendChild(n)
+        for connector in self.connectors:
+            n = jellier.jellyToNode(connector.factory)
+            n.setAttribute("parent:connect", "%s:%d" % (connector.host, str(connector.portno)))
+            if connector.timeout != 30:
+                n.setAttribute("parent:timeout", connector.timeout)
+            tcpnode.appendChild(n)
+        for delayed in self.delayeds:
+            n = jellier.jellyToNode(delayed)
+            delaynode.appendChild(n)
+        authnode.appendChild(jellier.jellyToNode(self.authorizer))
+
+    def _cbConnectTCP(self, factory, hostname, portno, timeout):
+        self.connectTCP(hostname, portno, factory, timeout)
+
+    def _cbListenTCP(self, factory, portno, backlog, interface):
+        self.listenTCP(portno, factory, backlog, interface)
+        
+
+    def unjellyFromDOM_1(self, unjellier, node):
+        from xml.dom.minidom import Element
+        if node.hasAttribute("uid"):
+            self.uid = int(node.getAttribute("uid"))
+            self.gid = int(node.getAttribute("gid"))
+        self.name = node.getAttribute("name")
+        self.udpPorts = []
+        self.sslPorts = []
+        for subnode in node.childNodes:
+            if isinstance(subnode, Element):
+                if subnode.tagName == 'tcp':
+                    self.tcpPorts = []
+                    self.connectors = []
+                    for facnode in subnode.childNodes:
+                        if isinstance(facnode, Element):
+                            if facnode.hasAttribute("parent:connect"):
+                                s = facnode.getAttribute("parent:connect")
+                                hostname, portno = string.split(s, ":")
+                                portno = int(portno)
+                                s = facnode.getAttribute("parent:timeout") or 0
+                                timeout = int(s)
+                                unjellier.unjellyLater(facnode).addCallback(self._cbConnectTCP, hostname, portno, timeout).arm()
+                            elif facnode.hasAttribute("parent:listen"):
+                                portno = int(facnode.getAttribute("parent:listen"))
+                                interface = facnode.getAttribute("parent:interface") or ''
+                                backlog = int(facnode.getAttribute("parent:backlog") or 5)
+                                unjellier.unjellyLater(facnode).addCallback(self._cbListenTCP, portno, backlog, interface).arm()
+                            else:
+                                raise ValueError("Couldn't determine type of TCP node.")
+                elif subnode.tagName == 'services':
+                    self.services = {}
+                    for svcnode in subnode.childNodes:
+                        unjellier.unjellyLater(svcnode).addCallback(self.addService).arm()
+                elif subnode.tagName == 'authorizer':
+                    authnode = marmalade.getValueElement(subnode)
+                    unjellier.unjellyAttribute(self, "authorizer", authnode)
+                elif subnode.tagName == 'delayeds':
+                    self.delayeds = []
+                    for delnode in subnode.childNodes:
+                        unjellier.unjellyLater(delnode).addCallback(self.addDelayed).arm()
 
     persistenceVersion = 7
 
@@ -181,10 +266,11 @@ class Application(log.Logger, styles.Versioned):
         """
         raise 'temporarily unimplemented'
 
-    def connectTCP(self, host, port, factory):
-        """Connect a given client protocol factory to a specific TCP server."""
+    def connectTCP(self, host, port, factory, timeout=30):
+        """Connect a given client protocol factory to a specific TCP server.
+        """
         from twisted.internet import tcp
-        self.addConnector(tcp.Connector(host, port, factory))
+        self.addConnector(tcp.Connector(host, port, factory, timeout))
 
     def connectSSL(self, host, port, factory, ctxFactory=None):
         """Connect a given client protocol factory to a specific SSL server."""
