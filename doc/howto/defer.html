@@ -10,7 +10,7 @@
 <body>
 <h1>Deferring Execution</h1>
 
-<h2>The Problem</h2>
+<h2>The Context</h2>
 
 <h3>Dealing with Blocking Code</h3>
 
@@ -19,14 +19,22 @@ file access - there are many APIs that are blocking, and many
 methods where the common idiom is to block until a result is
 gotten.</p>
 <pre class="python">
+
 class Getter:
 
     def getData(self, x):
-        self.blockUntilResult(x)
-        return result
+        return self.someBlockingCall(x)
+
+    def someBlockingCall(self,x)
+        print "blocking"
+        import time
+        time.sleep(4)
+        return x * 3
 
 g = Getter()
 print g.getData(3)
+print "blocking"
+
 </pre>
 
 <h3>Don't Call Us, We'll Call You</h3>
@@ -39,29 +47,43 @@ eventually arrives. Looking at how this is usually implemented will help us
 understand the necessity for Deferreds.</p>
 
 <pre class="python">
+
 class Getter:
 
     def getData(self, x, callback):
-        self.callback = callback
-        # this call does not block, it ensure self.gotResult is called
-        # when we have the result
-        self.onResult(x, self.gotResult)
-    
-    def gotResult(self, result):
-        self.callback(result)
+        self.callback = callback; self.x = x
+        self.nonBlockingOperation()
+        #
+        # Timer class happens to wrap the previous code in 
+        # a thread; but this could be any asyncronous operation 
+        # such as selecting from a socket, etc.
+        #
+        from threading import Timer
+        t = Timer(4, self.gotResult)
+        t.start()
+
+    def nonBlockingOperation(self): 
+        print "non-blocking"
+
+    def gotResult(self):
+        self.callback(3*self.x)
 
 def gotData(d):
     print d
 
 g = Getter()
 g.getData(3, gotData)
+
 </pre>
 
-<p>There are several things missing in this simple example.  There is no way to
-know if the data never comes back; no mechanism for handling errors.  There is
-no way to distinguish between different calls to gotData from different
-sessions.  <code>Deferred</code> solves these problems, by creating a single,
-unified way to defer execution of code that depends on blocking calls.</p>
+<p>There are several things missing in this simple example.  There is no way
+to know if the data never comes back; no mechanism for handling errors.  The
+example does not handle a multiple callback functions, nor does it give a
+method to merge arguments before and after execution.  Further, there is no
+way to distinguish between different calls to gotData from different
+producer objects. <code>Deferred</code> solves these problems, by creating 
+a single, unified way to handle callbacks and errors from deferred
+execution.</p>
 
 <h2>Deferreds</h2>
 
@@ -69,9 +91,45 @@ unified way to defer execution of code that depends on blocking calls.</p>
 a function will at some point have a result.  We can attach callback functions
 to a Deferred, and once it gets a result these callbacks will be called. In
 addition Deferreds allow the developer to register a callback for an error,
-with the default behavior of logging the error. This is an asynchronous
-equivalent of the common idiom of blocking until a result is returned or an
-exception it raised.</p>
+with the default behavior of logging the error.  The deferred mechanism 
+standardizes the application programmer's interface with all sorts of 
+blocking or delayed operations.</p>
+
+<pre class="python">
+
+from twisted.internet.defer import Deferred
+
+class Getter:
+
+    def getData(self, x):
+        d = Deferred()
+        self.nonBlockingOperation()
+        #
+        # For a blocking operation, don't use python's threads
+        # directly, instead use twisted.internet.threads
+        #
+        from threading import Timer
+        t = Timer(4, self.gotResult, (d, x))
+        t.start()
+        return d
+
+    def nonBlockingOperation(self): 
+        print "non-blocking"
+
+    def gotResult(self, d, x):
+        """Called when we get some info from somewhere via the event 
+           loop.  E.g. this may be called because we got a chunk 
+           of data off a socket.
+        """
+        d.callback(3*x)
+
+def gotData(d):
+    print d
+
+g = Getter()
+d = g.getData(3)
+d.addCallback(gotData)
+</pre>
 
 <p>As we said, multiple callbacks can be added to a Deferred.  The first
 callback in the Deferred's callback chain will be called with the result, the
@@ -82,39 +140,48 @@ HTML, and pass the Deferred onwards, where the callback will be used by twisted
 to return the result to the HTTP client.</p>
 
 <pre class="python">
-import sys
-from twisted.internet import defer
+
+from twisted.internet.defer import Deferred
 
 class Getter:
 
-    def getResult(self, x):
-        self.d = defer.Deferred()
-        self.doNonblockingStuff(x)
-        return self.d
-    
-    def gotResult(self, result):
-        """Called when we get some info from somewhere via the event loop.
+    def getData(self, x):
+        d = Deferred()
+        self.nonBlockingOperation()
+        from threading import Timer
+        t = Timer(4, self.gotResult, (d, x))
+        t.start()
+        return d
 
-        E.g. this may be called because we got a chunk of data off a socket.
+    def nonBlockingOperation(self):
+        print "non-blocking"
+
+    def gotResult(self, d, x):
+        """Simulate an error condition.  In this case,
+           odd numbers are good; even numbers are bad.
         """
-        if self.goodResult(result):
+        if x % 2:
             # tell the Deferred that we have a result for it
-            self.d.callback(result)
+            d.callback(x*3)
         else:
             # tell the Deferred that we have an error
-            self.d.errback("An error has occured.")
+            d.errback("You used an even number!")
 
-def printData(d): sys.stdout.write(d)
-def printError(e): sys.stderr.write(e)
+def printData(result):
+    print result
+def printError(failure):
+    import sys
+    sys.stderr.write(str(failure))
 
 g = Getter()
-d = g.getResult(3) # notice how this is similar to the blocking version
-d.addCallback(printData) # printData will be called when a result is available
-d.addErrback(printError) # printError will be called on an error
+d = g.getData(3)
+d.addCallback(printData)  # for a good result
+d.addErrback(printError)  # for nasty situations
 
-# run main event loop here
-from twisted.internet import reactor
-reactor.run()
+d = g.getData(4)
+d.addCallback(printData)
+d.addErrback(printError)
+
 </pre>
 
 <h3>Visual Explanation</h3>
