@@ -276,10 +276,11 @@ class ProcessStreamerTest(unittest.TestCase):
 class AdapterTestCase(unittest.TestCase):
 
     def test_adapt(self):
-        f = file("foo", "w")
+        fName = self.mktemp()
+        f = file(fName, "w")
         f.write("test")
         f.close()
-        for i in ("test", buffer("test"), file("foo")):
+        for i in ("test", buffer("test"), file(fName)):
             s = stream.IByteStream(i)
             assertEquals(str(s.read()), "test")
             assertEquals(s.read(), None)
