@@ -67,6 +67,10 @@ void Twisted::TCPTransport::write(const char* buf,
     }
 }
 
+void Twisted::deleteDeallocate(const char* buf, size_t buflen, void* extra) {
+    delete[] buf;
+}
+
 
 
 BOOST_PYTHON_MODULE(tcp)

@@ -15,9 +15,8 @@ namespace Twisted
     // Signature for deallocation strategy function.
     typedef void (*deallocateFunc)(const char*, size_t, void*);
 
-    void deleteDeallocate(const char* buf, size_t buflen, void* extra) {
-	delete[] buf;
-    }
+    // delete[] deallocation.
+    void deleteDeallocate(const char* buf, size_t buflen, void* extra);
 
     class Protocol;     // forward definition
 
