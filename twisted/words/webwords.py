@@ -15,71 +15,138 @@
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
+import time
 
-from twisted.web import html, server, resource, static
+from twisted.web import html, server, error, widgets
 
 from twisted.internet import passport
 
-class AccountCreation(html.Interface):
+class AccountCreationWidget(widgets.Form):
+    title = "Account Creation"
+    formFields = [
+        ['string','Username','username',''],
+        ['password','Password','password',''],
+        ]
 
-    def content(self, request):
-        if request.args.has_key("username"):
-            u, p = request.args['username'][0], request.args['password'][0]
-            print u, p
-            svc = request.site.service
-            app = svc.application
+    def __init__(self, service):
+        self.service = service
+
+
+    def process(self, write, request, **args):
+        if args.has_key("username"):
+            u,p = request.args['username'][0], request.args['password'][0]
+            app = self.service.application
             ident = passport.Identity(u, app)
             ident.setPassword(p)
             app.authorizer.addIdentity(ident)
-            part = svc.createParticipant(u)
+            part = self.service.createParticipant(u)
             part.setIdentity(ident)
             ident.addKeyForPerspective(part)
             if part:
-                return "Participant Added."
+                write("Participant Added.")
             else:
-                return "Duplicate Name"
-        else:
-            return self.box(request,
-                            "New Account",
-                            self.form(request,
-                                      [['string', "Username:", "username", ""],
-                                       ['password', "Password:", "password", ""]])
-                            )
+                write("Duplicate.")
+
+##        if request.args.has_key("username"):
+##            u, p = request.args['username'][0], request.args['password'][0]
+##            print u, p
+##            svc = request.site.service
+##            app = svc.application
+##            ident = passport.Identity(u, app)
+##            ident.setPassword(p)
+##            app.authorizer.addIdentity(ident)
+##            part = svc.createParticipant(u)
+##            part.setIdentity(ident)
+##            ident.addKeyForPerspective(part)
+##            if part:
+##                return "Participant Added."
+##            else:
+##                return "Duplicate Name"
+##        else:
+##            return self.box(request,
+##                            "New Account",
+##                            self.form(request,
+##                                      [['string', "Username:", "username", ""],
+##                                       ['password', "Password:", "password", ""]])
+##                            )
 
 
-class ParticipantInfo(html.Interface):
-    def content(self, request):
-        return "Sorry, this feature not complete yet."
+class ParticipantInfoWidget(widgets.Widget):
+    def __init__(self, name, svc):
+        self.name = name
+        self.title = "Info for Participant %s" % name
+        self.service = svc
+        self.part = svc.participants[name]
 
-class ParticipantsDirectory(html.Interface):
-    def content(self, request):
+    def display(self, request):
+        return ['''
+        Name: %s<br>
+        Currently in groups: %s<br>
+        Current status: %s<br>
+        ''' % (self.part.name,
+               map(lambda x: x.name, self.part.groups),
+               {0: "Offline", 1: "Online"}[self.part.status])]
+
+class ParticipantListWidget(widgets.Gadget, widgets.Widget):
+    def __init__(self, service):
+        widgets.Gadget.__init__(self)
+        self.service = service
+        self.page = Page
+        self.title = "Participant List"
+        
+    def display(self, request):
         """Get HTML for a directory of participants.
         """
-        svc = request.site.service
-        keys =  svc.participants.keys()
+        keys = self.service.participants.keys()
         keys.sort()
-        return self.runBox(request, "Directory",
-                           html.linkList, map(
-            lambda key, request=request: (request.childLink(key),key), keys))
+        return [html.linkList(map(lambda key, request=request:
+                                  (key, key), keys))]
 
-    def getChild(self, path, request):
+    def getWidget(self, name, request):
         """Get info for a particular participant.
         """
-        return ParticipantInfo()
+        print 'GETTING A PARTICIPANT'
+        if name in self.service.participants.keys():
+            return ParticipantInfoWidget(name, self.service)
+        else:
+            return error.NoResource("That participant does not exist.")
 
-class AdminDir(html.Interface):
-    def content(self, request):
-        return html.linkList([
-            ("users", "User Listing"),
-            ("create", "Create Account")])
+class WordsGadget(widgets.Gadget, widgets.Widget):
+    title = "WebWords Administration Interface"
+    def __init__(self, svc):
+        widgets.Gadget.__init__(self)
+        self.section = ""
+        self.putWidget("create", AccountCreationWidget(svc))
+        self.putWidget("users", ParticipantListWidget(svc))
+        self.page = Page
+
+    def display(self, request):
+        return [html.linkList([[request.childLink("create"),
+                                "Create an Account"],
+                               [request.childLink("users"),
+                                "View the list of Participants"]])]
+    
+    
+
+class Page(widgets.WidgetPage):
+    box = widgets.TitleBox
+    template = ('''
+    <html><head><title>%%%%widget.title%%%%</title></head>
+    <body bgcolor="#FFFFFF" text="#000000">
+    <table><tr>'''
+    #<td>%%%%widget.sidebar(widget.mode, widget.section)%%%%</td>
+    '''
+    <td>
+    %%%%box(widget.title, widget)%%%%
+    </td>
+    </body></html>
+    ''')
+
 
 class WebWordsAdminSite(server.Site):
     def __init__(self, svc):
-        res = resource.Resource()
-        res.putChild("users", ParticipantsDirectory())
-        res.putChild("create", AccountCreation())
-        res.putChild("", AdminDir())
+        res = WordsGadget(svc)
         server.Site.__init__(self, res)
-        self.service = svc
+
         
 
