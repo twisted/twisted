@@ -7,7 +7,7 @@ from wxPython.xrc import *
 from twisted.internet import wxsupport, reactor, defer
 from twisted.python import failure, log
 # local
-from PASS_unzip import unzip
+from PASS_unzip import unzipiter
 
 class ProgressFrame:
     def __init__(self):
@@ -30,7 +30,7 @@ class Unzipness:
     """
     
     def __init__(self, filename, frame):
-        self.unzipper=unzip(filename, generator=1)
+        self.unzipper=unzipiter(filename)
         zf=zipfile.ZipFile(filename)
         frame.gauge.SetRange(len(zf.namelist()))
         self.frame=frame

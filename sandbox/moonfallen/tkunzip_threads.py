@@ -7,7 +7,7 @@ from Tkinter import *
 from twisted.internet import tksupport, reactor, defer, threads
 from twisted.python import failure, log
 # local
-from PASS_unzip import unzip
+from PASS_unzip import unzipiter
 
 
 class ProgressBar:
@@ -100,7 +100,7 @@ class Unzipness:
     """
     
     def __init__(self, filename, frame):
-        self.unzipper=unzip(filename, generator=1)
+        self.unzipper=unzipiter(filename)
         zf=zipfile.ZipFile(filename)
         frame.updateProgress(0, len(zf.namelist()))
         self.frame=frame
@@ -123,7 +123,7 @@ def run(argv=sys.argv):
         return
     root=Tkinter.Tk()
     tksupport.install(root)
-    frame=ProgressBar(root, value=0, labelColor="orange",
+    frame=ProgressBar(root, value=0, labelColor="black",
                       labelText="Unzipping...", width=200)
     frame.pack(side=Tkinter.LEFT)
 
