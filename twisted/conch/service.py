@@ -17,6 +17,3 @@ class SSHService:
             print "couldn't handle", messageType
             print repr(packet[1:])
             self.transport.sendUnimplemented()
-
-
-

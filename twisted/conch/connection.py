@@ -218,7 +218,3 @@ for v in dir(connection):
         messages[getattr(connection,v)] = v # doesn't handle doubles
 
 SSHConnection.protocolMessages = messages
-
-
-
-

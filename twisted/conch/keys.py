@@ -154,7 +154,3 @@ def test():
         assert verifySignature(dsaPub, signature, testData)
         print 'dsa is ok'
 if __name__=='__main__': test()
-
-
-
-

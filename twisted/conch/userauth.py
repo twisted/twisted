@@ -179,7 +179,3 @@ for v in dir(userauth):
 
 SSHUserAuthServer.protocolMessages = messages
 SSHUserAuthClient.protocolMessages = messages
-
-
-
-
