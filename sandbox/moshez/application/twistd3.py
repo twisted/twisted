@@ -14,7 +14,7 @@
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 from twisted import copyright
-from twisted.python import usage, util, runtime, reflect, log, logfile, syslog
+from twisted.python import util, runtime, reflect, log, logfile, syslog
 from twisted.python import failure
 from twisted.persisted import styles
 from twisted.application import apprun
@@ -36,18 +36,10 @@ reactorTypes = {
     }
 
 
-class ServerOptions(usage.Options):
+class ServerOptions(apprun.ServerOptions):
     synopsis = "Usage: twistd [options]"
 
     optFlags = [['nodaemon','n',  "don't daemonize"],
-                ['savestats', None,
-                 "save the Stats object rather than the text output of "
-                 "the profiler."],
-                ['debug', 'b',
-                 "run the application in the Python Debugger "
-                 "(implies nodaemon), sending SIGINT will drop into debugger"],
-                ['quiet','q',     "be a little more quiet"],
-                ['no_save','o',   "do not save state on shutdown"],
                 ['originalname', None, "Don't try to change the process name"],
                 ['syslog', None,   "Log to syslog, not to file"],
                 ['euid', '',
@@ -57,39 +49,16 @@ class ServerOptions(usage.Options):
                  "after binding ports, retaining the option to regain "
                  "privileges in cases such as spawning processes. "
                  "Use with caution.)"],
-                ['encrypted', 'e',
-                 "The specified tap/aos/xml file is encrypted."]]
+               ]
 
-    optParameters = [['logfile','l', None,
-                      "log to a specified file, - for stdout"],
-                     ['profile', 'p', None,
-                      "Run in profile mode, dumping results to specified file"],
-                     ['file','f','twistd.tap',
-                      "read the given .tap file"],
+    optParameters = [
                      ['prefix', None,'twisted',
                       "use the given prefix when syslogging"],
-                     ['python','y', None,
-                      "read an application from within a Python file"],
-                     ['xml', 'x', None,
-                      "Read an application from a .tax file "
-                      "(Marmalade format)."],
-                     ['source', 's', None,
-                      "Read an application from a .tas file (AOT format)."],
                      ['pidfile','','twistd.pid',
                       "Name of the pidfile"],
-                     ['rundir','d','.',
-                      'Change to a supplied directory before running'],
                      ['chroot', None, None,
                       'Chroot to a supplied directory before running'],
-                     ['reactor', 'r', None,
-                      'Which reactor to use out of: %s.' %
-                      ', '.join(reactorTypes.keys())],
-                     ['report-profile', None, None,
-                      'E-mail address to use when reporting dynamic execution '
-                      'profiler stats.  This should not be combined with '
-                      'other profiling options.  This will only take effect '
-                      'if the application to be run has an application '
-                      'name.']]
+                    ]
 
     def opt_version(self):
         """Print version information and exit.
@@ -97,11 +66,6 @@ class ServerOptions(usage.Options):
         print 'twistd (the Twisted daemon) %s' % copyright.version
         print copyright.copyright
         sys.exit()
-
-    def opt_spew(self):
-        """Print an insanely verbose log of everything that happens.  Useful
-        when debugging freezes or locks in complex code."""
-        sys.settrace(util.spewer)
 
 
 def checkPID(pidfile, quiet):
