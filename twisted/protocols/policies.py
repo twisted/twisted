@@ -39,6 +39,12 @@ class ProtocolWrapper(Protocol):
         self.wrappedProtocol = wrappedProtocol
         self.factory = factory
 
+    def makeConnection(self, transport):
+        class _MyClass(self.__class__):
+            __implements__ = transport.__implements__
+        self.__class__ = _MyClass
+        Protocol.makeConnection(self, transport)
+    
     # Transport relaying
     
     def write(self, data):
@@ -66,6 +72,8 @@ class ProtocolWrapper(Protocol):
     def stopConsuming(self):
         self.transport.stopConsuming()
 
+    def __getattr__(self, name):
+        return getattr(self.transport, name)
     
     # Protocol relaying
     
