@@ -215,8 +215,7 @@ class Client(Connection, tcp.Client):
     def getPeer(self):
         """Returns a tuple of ('SSL', hostname, port).
 
-        This indicates the address that I am connected to.  I implement
-        twisted.protocols.protocol.Transport.
+        This indicates the address that I am connected to.
         """
         return ('SSL',)+self.addr
 
