@@ -17,7 +17,8 @@
 from twisted.trial import unittest
 
 from twisted.python import util
-import os, sys
+import os.path, sys
+import shutil
 
 class UtilTestCase(unittest.TestCase):
 
@@ -99,3 +100,26 @@ print test_util.reversePassword()
         # The reversing trick it so make sure that there's not some weird echo
         # thing just sending back what we type in.
         self.failUnlessEqual(reverseString(secret), "secret")
+
+class SearchUpwardsTest(unittest.TestCase):
+    def testSearchupwards(self):
+        os.makedirs('searchupwards/a/b/c')
+        file('searchupwards/foo.txt', 'w').close()
+        file('searchupwards/a/foo.txt', 'w').close()
+        file('searchupwards/a/b/c/foo.txt', 'w').close()
+        os.mkdir('searchupwards/bar')
+        os.mkdir('searchupwards/bam')
+        os.mkdir('searchupwards/a/bar')
+        os.mkdir('searchupwards/a/b/bam')
+        actual=util.searchupwards('searchupwards/a/b/c', 
+                                  files=['foo.txt'], 
+                                  dirs=['bar', 'bam'])
+        expected=os.path.abspath('searchupwards') + os.sep
+        self.assertEqual(actual, expected)
+        shutil.rmtree('searchupwards')
+        actual=util.searchupwards('searchupwards/a/b/c', 
+                                  files=['foo.txt'], 
+                                  dirs=['bar', 'bam'])
+        expected=None
+        self.assertEqual(actual, expected)
+        

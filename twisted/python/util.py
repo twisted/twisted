@@ -18,7 +18,7 @@
 
 from __future__ import nested_scopes
 
-__version__ = '$Revision: 1.28 $'[11:-2]
+__version__ = '$Revision: 1.29 $'[11:-2]
 
 import os, sys
 from UserDict import UserDict
@@ -71,12 +71,13 @@ class OrderedDict(UserDict):
 
 def uniquify(lst):
     """Make the elements of a list unique by inserting them into a dictionary.
+    This must not change the order of the input lst.
     """
-    dict = {}
+    dct = {}
     result = []
     for k in lst:
-        if not dict.has_key(k): result.append(k)
-        dict[k] = 1
+        if not dct.has_key(k): result.append(k)
+        dct[k] = 1
     return result
 
 def padTo(n, seq, default=None):
@@ -242,9 +243,35 @@ def spewer(frame, s, ignored):
             frame.f_code.co_name, reflect.qual(se.__class__), id(se)
             )
 
+def searchupwards(start, files=[], dirs=[]):
+    """Walk upwards from start, looking for a directory containing 
+    all files and directories given as arguments::
+    >>> searchupwards('.', ['foo.txt'], ['bar', 'bam'])
+
+    If not found, return None
+    """
+    start=os.path.abspath(start)
+    parents=start.split(os.sep)
+    exists=os.path.exists; join=os.sep.join; isdir=os.path.isdir
+    while len(parents):
+        candidate=join(parents)+os.sep
+        allpresent=1
+        for f in files:
+            if not exists("%s%s" % (candidate, f)):
+                allpresent=0
+                break
+        if allpresent:
+            for d in dirs:
+                if not isdir("%s%s" % (candidate, d)):
+                    allpresent=0
+                    break
+        if allpresent: return candidate
+        parents.pop(-1)
+    return None
+
 
 __all__ = [
     "uniquify", "padTo", "getPluginDirs", "addPluginDir", "sibpath",
     "getPassword", "dict", "println", "keyed_md5", "makeStatBar",
-    "OrderedDict", "spewer", 
+    "OrderedDict", "spewer", "searchupwards",
 ]
