@@ -2069,7 +2069,7 @@ class NewFetchTestCase(unittest.TestCase, IMAP4HelperMixin):
         self.testFetchFast(1)
 
 
-class FetchSearchStoreCopyTestCase(unittest.TestCase, IMAP4HelperMixin):
+class FetchSearchStoreTestCase(unittest.TestCase, IMAP4HelperMixin):
     __implements__ = (imap4.ISearchableMailbox,)
 
     def setUp(self):
@@ -2170,7 +2170,7 @@ class FetchSearchStoreCopyTestCase(unittest.TestCase, IMAP4HelperMixin):
         self.assertEquals(self.parts, self.server_received_parts)
         self.assertEquals(imap4.parseIdList(self.messages),
                           imap4.parseIdList(self.server_received_messages))
-
+    
 class TLSTestCase(IMAP4HelperMixin, unittest.TestCase):
     serverCTX = ServerTLSContext and ServerTLSContext()
     clientCTX = ClientTLSContext and ClientTLSContext()
