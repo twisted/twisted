@@ -59,19 +59,15 @@
 from __future__ import generators
 
 
-import os, glob, types, warnings, time, sys, gc, cPickle as pickle, signal, inspect
+import os, glob, types, warnings, time, sys, cPickle as pickle, signal, inspect
 import os.path as osp, fnmatch, random
 from os.path import join as opj
 
-import doctest
-
 from twisted.internet import defer
-from twisted.python import components, reflect, log, context, failure, \
-     util as tputil
+from twisted.python import components, reflect, log, failure
 from twisted.trial import itrial, util, unittest, registerAdapter, \
      adaptWithDefault
-from twisted.trial.itrial import ITestCaseFactory, IReporter, \
-     IPyUnitTCFactory, ITrialDebug
+from twisted.trial.itrial import ITestCaseFactory, IReporter, ITrialDebug
 from twisted.trial.reporter import SKIP, EXPECTED_FAILURE, FAILURE, \
      ERROR, UNEXPECTED_SUCCESS, SUCCESS
 import zope.interface as zi
@@ -348,7 +344,7 @@ class TestRunnerBase(Timed, ParentAttributeMixin):
     _tcInstance = None
     methodNames = setUpClass = tearDownClass = methodsWithStatus = None
     children = parent = None
-    testCaseInstance = lambda x: None
+    testCaseInstance = lambda self: None
     skip = None
     
     def __init__(self, original):
@@ -536,7 +532,6 @@ class TestClassAndMethodBase(TestRunnerBase):
 
             # --- run methods ----------------------------------------------
 
-            methodNames = self.methodNames
             if randomize:
                 random.shuffle(self.methodNames)
 
