@@ -226,6 +226,15 @@ class Referenceable(Serializable):
 
 
 class Root(Referenceable):
+    """I provide a root object to Brokers for a BrokerFactory.
+
+    When a BrokerFactory produces a Broker, it supplies that Broker
+    with an object named "root".  That object is obtained by calling
+    my rootObject method.
+
+    See also: getObjectAt
+    """
+
     def rootObject(self, broker):
         """A BrokerFactory is requesting to publish me as a root object.
 
@@ -1305,7 +1314,9 @@ class BrokerFactory(protocol.Factory, styles.Versioned):
 
 ### AUTH STUFF
 
-class AuthRoot(Referenceable):
+class AuthRoot(Root):
+    """I provide AuthServs as root objects to Brokers for a BrokerFactory.
+    """
     def __init__(self, app):
         self.app = app
 
@@ -1346,6 +1357,11 @@ class IdentityWrapper(Referenceable):
 
 
 class AuthChallenger(Referenceable):
+    """XXX
+
+    See also: AuthServ
+    """
+    
     def __init__(self, ident, serv, challenge):
         self.ident = ident
         self.challenge = challenge
@@ -1358,7 +1374,11 @@ class AuthChallenger(Referenceable):
 
 
 class AuthServ(Referenceable):
+    """XXX
 
+    See also: AuthRoot
+    """
+    
     def __init__(self, app, broker):
         self.app = app
         self.broker = broker
@@ -1378,6 +1398,8 @@ class AuthServ(Referenceable):
             return challenge, AuthChallenger(ident, self, challenge)
 
 class _ObjectRetrieval:
+    """(Internal) Does callbacks for getObjectAt."""
+
     def __init__(self, broker, cb, eb):
         self.cb = cb
         self.eb = eb
@@ -1410,6 +1432,17 @@ class _ObjectRetrieval:
             self.eb("connection failed")
 
 def getObjectAt(host, port, cb, eb, timeout=None):
+    """Establishes a PB connection and returns with a RemoteReference.
+
+    A Broker is created to communicate with the given host and port.
+    When the connection is established successfully, the callback cb is
+    called with the root object provided to the Broker.  If the
+    attempt to establish a connection failed, the callback eb is
+    called with the error.
+
+    See also: Root
+    """
+
     b = Broker()
     _ObjectRetrieval(b, cb, eb)
     tcp.Client(host, port, b, timeout)
