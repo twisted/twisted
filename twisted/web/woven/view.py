@@ -15,6 +15,7 @@
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
+import time
 
 from twisted.web.woven import template
 from twisted.python import components
@@ -22,7 +23,8 @@ from twisted.python import mvc
 from twisted.python import log
 from twisted.internet import defer
 
-# If no widget/handler was found in the container controller or view, these modules will be searched.
+# If no widget/handler was found in the container controller or view, these
+# modules will be searched.
 from twisted.web.woven import input
 from twisted.web.woven import widgets
 
@@ -134,7 +136,8 @@ class WView(template.DOMTemplate):
         controller.setView(result)
         if not getattr(controller, 'submodel', None):
             controller.setSubmodel(submodel)
-        # xxx refactor this into a widget interface and check to see if the object implements IWidget
+        # XXX: refactor this into a widget interface and check to see if
+        # the object implements IWidget
         # the view may be a deferred; this is why this check is required
         if hasattr(result, 'setController'):
             result.setController(controller)
@@ -170,6 +173,9 @@ class WView(template.DOMTemplate):
             request.finish()
             return page
         elif stop == template.RESTART_RENDERING:
+            # Set the last modified date to ask the browser to
+            # not use a cached version.
+            request.setLastModified(time.time())
             # Start the whole damn thing again with fresh state
             selfRef = request.pathRef()
             otherSelf = selfRef.getObject()
