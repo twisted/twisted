@@ -227,7 +227,7 @@ class View(template.DOMTemplate):
             if vm.func_code.co_argcount == 3 and not type(vm) == types.LambdaType:
                  warnings.warn("wvfactory_ methods take (request, node, "
                                "model) instead of (request, node) now. \n"
-                               "Please instanciate your widgets with a "
+                               "Please instantiate your widgets with a "
                                "reference to model instead of self.model",
                                DeprecationWarning)
                  self.model = model
