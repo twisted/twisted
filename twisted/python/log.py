@@ -357,11 +357,13 @@ def initThreads():
 
 threadable.whenThreaded(initThreads)
 
-def startLogging(file):
+def startLogging(file, setStdout=1):
     """Initialize logging to a specified file."""
     global logfile
-    logfile = sys.stdout = sys.stderr = Log(file, logOwner)
+    logfile = Log(file, logOwner)
     msg("Log opened.")
+    if setStdout:
+        sys.stdout = sys.stderr = logfile
 
 class NullFile:
     def write(self, data):
