@@ -138,6 +138,7 @@ class ProcessWriter(abstract.FileDescriptor):
         os.close(self.fd)
         self.proc.childConnectionLost(self.name)
 
+
 class ProcessReader(abstract.FileDescriptor):
     """ProcessReader
 
@@ -180,9 +181,11 @@ class ProcessReader(abstract.FileDescriptor):
         os.close(self.fd)
         self.proc.childConnectionLost(self.name)
 
+
 class ProcessExitedAlready(Exception):
     """The process has already excited, and the operation requested can no longer be performed."""
     pass
+
 
 class Process(styles.Ephemeral):
     """An operating-system Process.
@@ -499,7 +502,7 @@ class Process(styles.Ephemeral):
             pid = None
         if pid:
             self.processEnded(status)
-            del reapProcessHandlers[pid]
+            unregisterReapProcessHandler(pid, self)
 
     def writeToChild(self, childFD, data):
         self.pipes[childFD].write(data)
@@ -574,7 +577,7 @@ class Process(styles.Ephemeral):
             exitCode = sig = None
             if self.status != -1:
                 if os.WIFEXITED(self.status):
-                    exitCode = os.WEXITSTATUS(self.status)
+                   exitCode = os.WEXITSTATUS(self.status)
                 else:
                     sig = os.WTERMSIG(self.status)
             else:
@@ -585,6 +588,7 @@ class Process(styles.Ephemeral):
                 e = error.ProcessDone(self.status)
             if self.proto is not None:
                 self.proto.processEnded(failure.Failure(e))
+                self.proto = None
         except:
             log.err()
 
@@ -704,7 +708,7 @@ class PTYProcess(abstract.FileDescriptor, styles.Ephemeral):
             pid = None
         if pid:
             self.processEnded(status)
-            del reapProcessHandlers[pid]
+            unregisterReapProcessHandler(self.pid, self)
 
     # PTYs do not have stdin/stdout/stderr. They only have in and out, just
     # like sockets. You cannot close one without closing off the entire PTY.
@@ -762,6 +766,7 @@ class PTYProcess(abstract.FileDescriptor, styles.Ephemeral):
                 else:
                     e = error.ProcessDone(self.status)
                 self.proto.processEnded(failure.Failure(e))
+                self.proto = None
             except:
                 log.err()
 
