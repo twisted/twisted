@@ -41,7 +41,10 @@ def b1282int(st):
         num = ord(char)
         i = i + (num * (oneHundredAndTwentyEight ** place))
         place = place + 1
-    return i
+    try:
+        return int(i)
+    except OverflowError:
+        return i
 
 # delimiter characters.
 LIST     = chr(0x80)
