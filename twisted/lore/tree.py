@@ -204,8 +204,7 @@ def munge(document, template, linkrel, d, fullpath, ext, cache):
     fontifyPython(document)
     addPyListings(document, d)
     addHTMLListings(document, d)
-    for doc in (template, document):
-        fixLinks(doc, ext)
+    fixLinks(document, ext)
     putInToC(document, generateToC(document))
     footnotes(document)
 
