@@ -454,8 +454,8 @@ class AOTJellier:
         self.stack = []
 
     def prepareForRef(self, aoref, object):
-        """I prepare an object for later referencing, by storing it's id()
-        and it's _AORef in a cache."""
+        """I prepare an object for later referencing, by storing its id()
+        and its _AORef in a cache."""
         self.prepared[id(object)] = aoref
 
     def jellyToAO(self, obj):

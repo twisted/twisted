@@ -197,7 +197,7 @@ class DOMTemplate(Resource, View):
     
     def getTemplate(self, request):
         """
-        Override this if you want to have your subclass look up it's template
+        Override this if you want to have your subclass look up its template
         using a different method.
         """
         return self.template

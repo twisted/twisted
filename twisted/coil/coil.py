@@ -326,7 +326,7 @@ class DispenserStorage:
         self.addObject(root)
 
     def addObject(self, object):
-        """Add the dispensers for an object and it's config children."""
+        """Add the dispensers for an object and its config children."""
         dispensers = self.dispensers
 
         for cfg in getConfiguratorsForTree(object):

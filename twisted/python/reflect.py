@@ -254,7 +254,7 @@ def isinst(inst,clazz):
 
 
 def namedModule(name):
-    """Return a module give it's name."""
+    """Return a module give its name."""
     return __import__(name, {}, {}, 'x')
 
 def namedObject(name):
@@ -337,7 +337,7 @@ def prefixedMethodNames(classObj, prefix):
 def addMethodNamesToDict(classObj, dict, prefix, baseClass=None):
     """
     addMethodNamesToDict(classObj, dict, prefix, baseClass=None) -> dict
-    this goes through 'classObj' (and it's bases) and puts method names
+    this goes through 'classObj' (and its bases) and puts method names
     starting with 'prefix' in 'dict' with a value of 1. if baseClass isn't
     None, methods will only be added if classObj is-a baseClass
 

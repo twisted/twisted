@@ -63,8 +63,8 @@ class IView(components.Interface):
     """A MVC View"""
     def __init__(model, controller=None):
         """
-        A view must be told what it's model is, and may be told what it's
-        controller is, but can also look up it's controller if none specified.
+        A view must be told what its model is, and may be told what its
+        controller is, but can also look up its controller if none specified.
         """
 
     def modelChanged(changed):
@@ -168,14 +168,14 @@ class Model:
 
 class View:
     """
-    A View which tracks a model and displays it's contents to the user.
+    A View which tracks a model and displays its contents to the user.
     """
     __implements__ = IView
     
     def __init__(self, model):
         """
-        A view must be told what it's model is, and may be told what it's
-        controller is, but can also look up it's controller if none specified.
+        A view must be told what its model is, and may be told what its
+        controller is, but can also look up its controller if none specified.
         """
         self.model = model
         self.controller = self.controllerFactory(model)

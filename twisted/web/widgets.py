@@ -743,7 +743,7 @@ class RenderSession:
         if not type(result) in (types.ListType, types.TupleType):
             result = [result]
 
-        # If the deferred does not wish to produce it's result all at
+        # If the deferred does not wish to produce its result all at
         # once, it can give us a partial result as
         #  (NOT_DONE_YET, partial_result)
         ## XXX: How would a deferred go about producing the result in multiple
