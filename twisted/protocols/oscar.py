@@ -139,6 +139,12 @@ class OSCARUser:
                     self.icqStatus = 'online'
                 elif v[2] == '\x01':
                     self.icqStatus = 'away'
+                elif v[2] == '\x02':
+                    self.icqStatus = 'dnd'
+                elif v[2] == '\x04':
+                    self.icqStatus = 'out'
+                elif v[2] == '\x10':
+                    self.icqStatus = 'busy'
                 else:
                     self.icqStatus = 'unknown'
             elif k == 10: # icq ip address
@@ -638,7 +644,7 @@ class BOSConnection(SNACBased):
         """
         stats reporting interval
         """
-        self.reportingInterval = struct.unpack('!H',snac[3])[0]
+        self.reportingInterval = struct.unpack('!H',snac[3][:2])[0]
 
     def oscar_13_03(self, snac):
         """
@@ -1230,3 +1236,4 @@ CAP_GET_FILE = '\011F\023HL\177\021\321\202"DEST\000\000'
 CAP_SEND_FILE = '\011F\023CL\177\021\321\202"DEST\000\000'
 CAP_GAMES = '\011F\023GL\177\021\321\202"DEST\000\000'
 CAP_SEND_LIST = '\011F\023KL\177\021\321\202"DEST\000\000'
+CAP_SERV_REL = '\011F\023IL\177\021\321\202"DEST\000\000'
