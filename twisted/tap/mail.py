@@ -36,6 +36,7 @@ This creates a mail.tap file that can be used by twistd.
 
 # Twisted Imports
 from twisted.mail import mail
+from twisted.mail import maildir
 from twisted.internet import tcp
 from twisted.python import usage
 
@@ -52,7 +53,7 @@ class Options(usage.Options):
 
     def opt_domain(self, domain):
         name, path = string.split(domain, '=')
-        self.last_domain = mail.MaildirDirdbmDomain(os.path.abspath(path))
+        self.last_domain = maildir.MaildirDirdbmDomain(os.path.abspath(path))
         self.domains[name] = self.last_domain
     opt_d = opt_domain
 
