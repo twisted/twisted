@@ -22,7 +22,7 @@ Package installer for Twisted
 Copyright (C) 2001 Matthew W. Lefkowitz
 All rights reserved, see LICENSE for details.
 
-$Id: setup.py,v 1.31 2002/04/10 19:00:05 carmstro Exp $
+$Id: setup.py,v 1.32 2002/04/10 21:55:35 carmstro Exp $
 """
 
 import distutils, os, sys, string
@@ -172,7 +172,6 @@ your toaster.
 """,
     'packages': [
         "twisted",
-        # "twisted.bugs",
         "twisted.coil",
         "twisted.coil.plugins",
         "twisted.cred",
