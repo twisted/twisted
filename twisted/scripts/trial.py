@@ -40,7 +40,11 @@ class Options(usage.Options):
                       "The Twisted reactor to install before running the tests (looked up as a module contained in twisted.internet)"],
                      ["logfile", "l", "test.log", "log file name"],
                      ["random", "z", None,
-                      "Run tests in random order using the specified seed"]]
+                      "Run tests in random order using the specified seed"],
+                     ["extra","x", None,
+                      "Add an extra argument.  "
+                      "(This is a hack necessary for "
+                      "interfacing with emacs's `gud'.)" ]]
 
     def __init__(self):
         usage.Options.__init__(self)
@@ -95,6 +99,9 @@ class Options(usage.Options):
     opt_f = opt_file
 
     def parseArgs(self, *args):
+        if self['extra'] is not None:
+            args = list(args)
+            args.append(self['extra'])
         for arg in args:
             if (os.sep in arg):
                 # It's a file.
