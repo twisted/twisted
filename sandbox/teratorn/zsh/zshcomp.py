@@ -51,9 +51,10 @@ def makeZshCode(cmd_name, optionsClass, out_file):
             long, short, descr = optList
             longExclusion = ''
             if short:
-                escape('(--%s)-%s[%s]' % (long, short, descr))
+                out_file.write(escape('(--%s)-%s[%s]' % (long, short, descr)))
+                out_file.write(' \\\n')
                 longExclusion = '(-%s)' % short
-            out_file.write(escape('%s-%s[%s]' % (longExclusion, long, descr)))
+            out_file.write(escape('%s--%s[%s]' % (longExclusion, long, descr)))
             out_file.write(' \\\n')
 
     out_file.write('&& return 0\n')
