@@ -32,13 +32,6 @@ def clearEntries():
     global entries
     entries = {}
 
-def compareIgnoringCase(x, y):
-    a = x.lower();
-    b = y.lower();
-    if a < b: return -1
-    if a > b: return 1
-    return 0
-
 def generateIndex():
     global entries
     global indexFilename
@@ -47,8 +40,9 @@ def generateIndex():
         return
 
     f = open(indexFilename, 'w')
-    sortedEntries = entries.keys()
-    sortedEntries.sort(compareIgnoringCase)
+    sortedEntries = [(e.lower(), e) for e in entries]
+    sortedEntries.sort()
+    sortedEntries = [e[1] for e in sortedEntries]
     for text in sortedEntries:
         refs = []
         f.write(text.replace('!', ', ') + ': ')
