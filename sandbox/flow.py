@@ -181,20 +181,28 @@ class Flow:
             are executed in the current flow context
         """
         return self._append(Chain(flows))
+ 
+    def addConstants(self, **constants):
+        """ adds a number of constants to the current context """
+        return self._append(Constants(constants))
+
     
     def __init__(self):
-        self.stageHead    = None
-        self.stageTail    = None
+        self._stageHead    = None
+        self._stageTail    = None
+
+    def __getattr__(self, attr):
+        return getattr(self._stageHead.stage, attr)
           
     def _append(self, stage):
         """ adds an additional stage to the singly-lined list """
         link = _LinkItem(stage)
-        if not self.stageHead:
-            self.stageHead = link
-            self.stageTail = link
+        if not self._stageHead:
+            self._stageHead = link
+            self._stageTail = link
         else:
-            self.stageTail.next = link
-            self.stageTail = link
+            self._stageTail.next = link
+            self._stageTail = link
         return self
 
     def build(self, data = None, context = None):
@@ -206,8 +214,8 @@ class Flow:
             if not in the context of Twisted, or should have iterate()
             called on it subsequent times.
         """
-        assert self.stageHead, "What? A flow without stages?"
-        return _Stack(self.stageHead, data, context)
+        assert self._stageHead, "What? A flow without stages?"
+        return _Stack(self._stageHead, data, context)
 
     def execute(self, data = None, context = None):
         """ builds and runs a flow stack w/o pause function
@@ -219,10 +227,19 @@ class Flow:
         stack = self.build(data, context)
         while stack.iterate(): pass
 
+
 class Stage:
     def __call__(self, flow, data):
         pass
  
+class Constants(Stage):
+    def __init__(self, constants):
+        self.constants = constants
+    def __call__(self, flow, data):
+        for (key, val) in self.constants.items():
+            setattr(flow.context, key, val)
+        flow.push(ret)
+
 class Callable(Stage):
     def __init__(self, callable, skip = None):
         self.callable    = callable
@@ -339,10 +356,11 @@ class Chain(Stage):
         flows = list(flows)
         flows.reverse()
         self.flows = flows
-      
+    def __getitem__(self, idx):
+        return self.flows[-idx-1]      
     def __call__(self, flow, data):
         def start(flow, subflow):
-            curr = subflow.stageHead
+            curr = subflow._stageHead
             flow.push(data, curr.stage, curr.next)
         for item in self.flows:
             flow.push(item, start)
@@ -498,8 +516,8 @@ class ThreadedIterator:
         from twisted.internet.reactor import callInThread
         self.data = data  
         tunnel = _TunnelIterator(self)
-        callInThread(tunnel.process)
         self._tunnel = tunnel
+        callInThread(tunnel.process)
      
     def __iter__(self): 
         return self._tunnel
@@ -543,6 +561,7 @@ class _TunnelIterator:
                 callFromThread(self.buff.extend,val)
         except StopIteration:
             callFromThread(self.stop)
+        self.source = None
      
     def setFailure(self, failure):
         self.failure = failure
@@ -561,12 +580,12 @@ class _TunnelIterator:
 
 class QueryIterator(ThreadedIterator):
     def __init__(self, pool, sql, fetchall=0):
-        Iterator.__init__(self)
         self.curs = None
         self.sql  = sql
         self.pool = pool
         self.data = None
         self.fetchall = fetchall
+        ThreadedIterator.__init__(self)
      
     def __call__(self,data):
         self.data = data
