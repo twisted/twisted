@@ -1,5 +1,5 @@
 # -*- test-case-name: twisted.test.test_internet -*-
-# $Id: default.py,v 1.89 2003/12/03 17:32:43 itamarst Exp $
+# $Id: default.py,v 1.90 2004/01/06 22:35:22 warner Exp $
 #
 # Twisted, the Framework of Your Internet
 # Copyright (C) 2001 Matthew W. Lefkowitz
@@ -154,14 +154,18 @@ class PosixReactorBase(ReactorBase):
 
     # IReactorProcess
 
-    def spawnProcess(self, processProtocol, executable, args=(), env={}, path=None,
-                     uid=None, gid=None, usePTY = 0):
+    def spawnProcess(self, processProtocol, executable, args=(),
+                     env={}, path=None,
+                     uid=None, gid=None, usePTY=0, childFDs=None):
         p = platform.getType()
         if p == 'posix':
             if usePTY:
-                return process.PTYProcess(self, executable, args, env, path, processProtocol, uid, gid, usePTY)
+                assert childFDs == None
+                return process.PTYProcess(self, executable, args, env, path,
+                                          processProtocol, uid, gid, usePTY)
             else:
-                return process.Process(self, executable, args, env, path, processProtocol, uid, gid)
+                return process.Process(self, executable, args, env, path,
+                                       processProtocol, uid, gid, childFDs)
         # This is possible, just needs work - talk to itamar if you want this.
         #elif p == "win32":
         #    if win32process:
@@ -171,7 +175,8 @@ class PosixReactorBase(ReactorBase):
         #    else:
         #        raise NotImplementedError, "process not available since win32all is not installed"
         else:
-            raise NotImplementedError, "process only available in this reactor on POSIX, use win32eventreactor on Windows"
+            raise NotImplementedError, "process only available in this " \
+                  "reactor on POSIX, use win32eventreactor on Windows"
 
 
     # IReactorUDP
@@ -572,6 +577,7 @@ class SelectReactor(PosixReactorBase):
                 del reads[reader]
             if writes.has_key(reader):
                 del writes[reader]
+        self.waker = None
         return readers
 
 

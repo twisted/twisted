@@ -1,3 +1,27 @@
+2004-01-06  Brian Warner  <warner@lothar.com>
+
+	* twisted/internet/default.py (PosixReactorBase.spawnProcess): add
+	a 'childFDs' argument which allows the child's file descriptors to
+	be arbitrarily mapped to parent FDs or pipes. This allows you to
+	set up additional pipes into the child (say for a GPG passphrase
+	or separate status information).
+
+	* twisted/internet/process.py (Process): add childFDs, split out
+	ProcessReader and ProcessWriter (so that Process itself is no
+	longer also reading stdout).
+
+	* twisted/internet/protocol.py (ProcessProtocol): add new
+	childDataReceived and childConnectionLost methods, which default
+	to invokking the old methods for backwards compatibility
+
+	* twisted/test/test_process.py (FDTest): add test for childFDs
+	mapping. Also add timeouts to most tests, and make all
+	reactor.iterate() loops wait 10ms between iterations to avoid
+	spamming the CPU quite so badly.
+	* twisted/test/process_fds.py: new child process for FDTest
+
+	* doc/howto/process.xhtml: document childFDs argument, add example
+
 2004-01-04  Itamar Shtull-Trauring  <itamar@itamarst.org>
 
 	* twisted/internet/gladereactor.py: logs all network traffic for

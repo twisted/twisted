@@ -405,22 +405,31 @@ class ProcessProtocol(BaseProtocol):
     """Processes have some additional methods besides receiving data.
     """
 
+    def childDataReceived(self, childFD, data):
+        if childFD == 1:
+            self.outReceived(data)
+        elif childFD == 2:
+            self.errReceived(data)
+
     def outReceived(self, data):
         """Some data was received from stdout."""
-
     def errReceived(self, data):
-        """Some data was received from stderr.
-        """
+        """Some data was received from stderr."""
 
-    def errConnectionLost(self):
-        """This will be called when stderr is closed.
-        """
-
-    def outConnectionLost(self):
-        """Called when stdout is shut down."""
+    def childConnectionLost(self, childFD):
+        if childFD == 0:
+            self.inConnectionLost()
+        elif childFD == 1:
+            self.outConnectionLost()
+        elif childFD == 2:
+            self.errConnectionLost()
 
     def inConnectionLost(self):
-        """Called when stdin is shut down."""
+        """This will be called when stdin is closed."""
+    def outConnectionLost(self):
+        """This will be called when stdout is closed."""
+    def errConnectionLost(self):
+        """This will be called when stderr is closed."""
 
     def processEnded(self, reason):
         """This will be called when the subprocess is finished.

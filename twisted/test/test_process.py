@@ -151,8 +151,11 @@ class ProcessTestCase(SignalMixin, unittest.TestCase):
         scriptPath = util.sibpath(__file__, "process_tester.py")
         p = TestProcessProtocol()
         reactor.spawnProcess(p, exe, [exe, "-u", scriptPath], env=None)
-        while not p.finished:
-            reactor.iterate()
+
+        timeout = time.time() + 10
+        while not p.finished and not (time.time() > timeout):
+            reactor.iterate(0.01)
+        self.failUnless(p.finished)
         self.assertEquals(p.stages, [1, 2, 3, 4, 5])
 
         # test status code
@@ -305,6 +308,103 @@ class TestTwoProcessesPosix(TestTwoProcessesBase, SignalMixin, unittest.TestCase
             reactor.iterate(0.01)
             self.check()
 
+class FDChecker(protocol.ProcessProtocol):
+    state = 0
+    data = ""
+    done = False
+    failed = None
+
+    def fail(self, why):
+        self.failed = why
+        self.done = True
+
+    def connectionMade(self):
+        self.transport.writeToChild(0, "abcd")
+        self.state = 1
+
+    def childDataReceived(self, childFD, data):
+        #print "[%d] dataReceived(%d,%s)" % (self.state, childFD, data)
+        if self.state == 1:
+            if childFD != 1:
+                self.fail("read '%s' on fd %d (not 1) during state 1" \
+                          % (childFD, data))
+                return
+            self.data += data
+            #print "len", len(self.data)
+            if len(self.data) == 6:
+                if self.data != "righto":
+                    self.fail("got '%s' on fd1, expected 'righto'" \
+                              % self.data)
+                    return
+                self.data = ""
+                self.state = 2
+                #print "state2", self.state
+                self.transport.writeToChild(3, "efgh")
+                return
+        if self.state == 2:
+            self.fail("read '%s' on fd %s during state 2" % (childFD, data))
+            return
+        if self.state == 3:
+            if childFD != 1:
+                self.fail("read '%s' on fd %s (not 1) during state 3" \
+                          % (childFD, data))
+                return
+            self.data += data
+            if len(self.data) == 6:
+                if self.data != "closed":
+                    self.fail("got '%s' on fd1, expected 'closed'" \
+                              % self.data)
+                    return
+                self.state = 4
+            return
+        if self.state == 4:
+            self.fail("read '%s' on fd %s during state 4" % (childFD, data))
+            return
+
+    def childConnectionLost(self, childFD):
+        #print "[%d] connectionLost(%d)" % (self.state, childFD)
+        if self.state == 1:
+            self.fail("got connectionLost(%d) during state 1" % childFD)
+            return
+        if self.state == 2:
+            if childFD != 4:
+                self.fail("got connectionLost(%d) (not 4) during state 2" \
+                          % childFD)
+                return
+            self.state = 3
+            self.transport.closeChildFD(5)
+            return
+
+    def processEnded(self, status):
+        #print "[%d] processEnded" % self.state
+        rc = status.value.exitCode
+        if self.state != 4:
+            self.fail("processEnded early, rc %d" % rc)
+            return
+        if status.value.signal != None:
+            self.fail("processEnded with signal %s" % status.value.signal)
+            return
+        if rc != 0:
+            self.fail("processEnded with rc %d" % rc)
+            return
+        self.done = True
+
+class FDTest(unittest.TestCase):
+    def testFD(self):
+        exe = sys.executable
+        scriptPath = util.sibpath(__file__, "process_fds.py")
+        p = FDChecker()
+        reactor.spawnProcess(p, exe, [exe, "-u", scriptPath], env=None,
+                             path=None,
+                             childFDs={0:"w", 1:"r", 2:2,
+                                       3:"w", 4:"r", 5:"w"})
+        timeout = time.time() + 5
+        while not p.done and time.time() < timeout:
+            reactor.iterate(0.01)
+        self.failUnless(p.done, "timeout")
+        self.failIf(p.failed, p.failed)
+
+
 class Accumulator(protocol.ProcessProtocol):
     """Accumulate data from a process."""
 
@@ -398,8 +498,10 @@ class PosixProcessTestCase(SignalMixin, unittest.TestCase, PosixProcessBase):
         p.transport.write("abc")
         p.transport.write("123")
         p.transport.closeStdin()
-        while not p.closed:
+        timeout = time.time() + 10
+        while not p.closed and not (time.time() > timeout):
             reactor.iterate(0.01)
+        self.failUnless(p.closed)
         self.assertEquals(p.outF.getvalue(), "hello, worldabc123", "Error message from process_twisted follows:\n\n%s\n\n" % p.errF.getvalue())
 
     def testStderr(self):
@@ -428,8 +530,10 @@ class PosixProcessTestCase(SignalMixin, unittest.TestCase, PosixProcessBase):
         p.transport.write(s)
         p.transport.closeStdin()
 
-        while not p.closed:
+        timeout = time.time() + 10
+        while not p.closed and not (time.time() > timeout):
             reactor.iterate(0.01)
+        self.failUnless(p.closed)
         f = p.outF
         f.seek(0, 0)
         gf = gzip.GzipFile(fileobj=f)
@@ -438,7 +542,7 @@ class PosixProcessTestCase(SignalMixin, unittest.TestCase, PosixProcessBase):
 class PosixProcessTestCasePTY(SignalMixin, unittest.TestCase, PosixProcessBase):
     """Just like PosixProcessTestCase, but use ptys instead of pipes."""
     usePTY = 1
-    # PTYs are not pipes. What still makes sense?
+    # PTYs only offer one input and one output. What still makes sense?
     # testNormalTermination
     # testAbnormalTermination
     # testSignal
@@ -458,7 +562,7 @@ class Win32ProcessTestCase(SignalMixin, unittest.TestCase):
         p.transport.closeStdin()
 
         while not p.closed:
-            reactor.iterate()
+            reactor.iterate(0.01)
         self.assertEquals(p.errF.getvalue(), "err\nerr\n")
         self.assertEquals(p.outF.getvalue(), "out\nhello, world\nout\n")
 
