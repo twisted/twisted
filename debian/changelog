@@ -10,6 +10,7 @@ twisted (0.9.6-1) unstable; urgency=low
   * Fixed debian/rules clean target (closes: Bug#108245)
   * New arguments to twistd: --python, --no_save
   * twisted.tcp.Port can now change the size of the backlog from 5
+  * UDP servers now possible
 
  -- Moshe Zadka <moshez@debian.org>  Thu,  9 Aug 2001 09:37:03 +0300
 
