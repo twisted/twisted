@@ -34,18 +34,16 @@ except ImportError:
     SSL = None
 
 if os.name == 'nt':
-    # we hardcode these since windows actually wants e.g.
-    # WSAEALREADY rather than EALREADY. Possibly we should
-    # just be doing "from errno import WSAEALREADY as EALREADY".
-    EPERM       = 10001
-    EINVAL      = 10022
-    EWOULDBLOCK = 10035
-    EINPROGRESS = 10036
-    EALREADY    = 10037
-    ECONNRESET  = 10054
-    EISCONN     = 10056
-    ENOTCONN    = 10057
-    EINTR       = 10004
+     # no such thing as WSAEPERM or error code 10001 according to winsock.h or MSDN
+    from errno import EPERM
+    from errno import WSAEINVAL as EINVAL
+    from errno import WSAEWOULDBLOCK as EWOULDBLOCK
+    from errno import WSAEINPROGRESS as EINPROGRESS
+    from errno import WSAEALREADY as EALREADY
+    from errno import WSAECONNRESET as ECONNRESET
+    from errno import WSAEISCONN as EISCONN
+    from errno import WSAENOTCONN as ENOTCONN
+    from errno import WSAEINTR as EINTR
     from errno import WSAENOBUFS as ENOBUFS
 elif os.name != 'java':
     from errno import EPERM
