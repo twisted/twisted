@@ -3705,11 +3705,11 @@ def produceNestedLists(items):
                 if isinstance(e, types.StringType): 
                     L += len(e)
                 else:
-                    b = e.tell()
+                    B = e.tell()
                     e.seek(0, 2)
-                    e = e.tell()
-                    e.seek(b, 0)
-                    L += (e - b)
+                    E = e.tell()
+                    e.seek(B, 0)
+                    L += (E - B)
             pieces.extend((' ', '{%d}%s' % (L, IMAP4Server.delimiter)))
             if top:
                 top = False
@@ -4524,11 +4524,13 @@ def _formatHeaders(headers, order=None):
     return hdrs
 
 def _wholeMessage(msg):
-    parts = [_formatHeaders(msg.getHeaders(True))]
+    parts = [_formatHeaders(msg.getHeaders(True)) + '\r\n']
     try:
+        i = 0
         while True:
-            submsg = msg.getSubPart(len(parts))
+            submsg = msg.getSubPart(i)
             parts.extend(_wholeMessage(submsg))
+            i += 1
     except TypeError:
         # Not multipart
         parts.append(msg.getBodyFile())
