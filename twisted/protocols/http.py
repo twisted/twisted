@@ -215,11 +215,10 @@ class HTTPClient(basic.LineReceiver):
     the site you're connecting to, in order to not break name
     based virtual hosting.
     """
-
-    firstLine = 0
-    __buffer = ''
     length = None
-    
+    firstLine = 1
+    __buffer = ''
+
     def sendCommand(self, command, path):
         self.transport.write('%s %s HTTP/1.0\r\n' % (command, path))
 

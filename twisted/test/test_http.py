@@ -157,12 +157,19 @@ class HTTPLoopbackTestCase(unittest.TestCase):
                        'Version' : 'HTTP/1.0',
                        'Content-Length' : '21'}
     numHeaders = 0
+    gotStatus = 0
+    gotResponse = 0
+    gotEndHeaders = 0
     
     def _handleStatus(self, version, status, message):
+        print "status"
+        self.gotStatus = 1
         self.assertEquals(version, "HTTP/1.0")
         self.assertEquals(status, "200")
     
     def _handleResponse(self, data):
+        print "response"
+        self.gotResponse = 1
         self.assertEquals(data, "'''\n10\n0123456789'''\n")
     
     def _handleHeader(self, key, value):
@@ -170,6 +177,8 @@ class HTTPLoopbackTestCase(unittest.TestCase):
         self.assertEquals(self.expectedHeaders[key], value)
     
     def _handleEndHeaders(self):
+        print "headers"
+        self.gotEndHeaders = 1
         self.assertEquals(self.numHeaders, 4)
     
     def testLoopback(self):
@@ -181,6 +190,12 @@ class HTTPLoopbackTestCase(unittest.TestCase):
         client.handleEndHeaders = self._handleEndHeaders
         client.handleStatus = self._handleStatus
         loopback.loopback(server, client)
+        if not (self.gotStatus and self.gotResponse and self.gotEndHeaders):
+            raise RuntimeError, "didn't got all callbacks %s" % [self.gotStatus, self.gotResponse, self.gotEndHeaders]
+        del self.gotEndHeaders
+        del self.gotResponse
+        del self.gotStatus
+        del self.numHeaders
 
 
 class PRequest:
