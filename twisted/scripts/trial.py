@@ -286,7 +286,7 @@ def run():
         try:
             rcFile = open("../.pdbrc")
         except IOError:
-            pass
+            hasattr(sys, 'exc_clear') and sys.exc_clear()
         else:
             dbg.rcLines.extend(rcFile.readlines())
         dbg.run("suite.run(reporter, config['random'])", globals(), locals())
