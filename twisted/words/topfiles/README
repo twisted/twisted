@@ -2,5 +2,8 @@ Twisted Words
 
 Words was recently split out of Twisted. This needs more work.
 
-Twisted Words depends on Twisted and, if you want MSN or the web
-interface to work, Twisted Web.
+Twisted Words depends on Twisted.
+
+If you want MSN or the web interface to work, you need Twisted Web.
+
+If you want Jabber to work, you need Twisted Xish.
