@@ -84,7 +84,7 @@ def getModule(type):
     except ImportError:
         #traceback.print_exc()
         print """Please select one of: %s""" % tapMods
-        sys.exit()
+        sys.exit(2)
 
 options = GeneralOptions()
 if hasattr(os, 'getgid'):
@@ -95,7 +95,7 @@ try:
 except Exception, e:
     print str(e)
     print str(options)
-    sys.exit()
+    sys.exit(2)
 
 if options.help or not options.args:
     if options.args:
@@ -114,7 +114,7 @@ try:
 except usage.error, ue:
     print "Usage Error: %s" % ue
     config.opt_help()
-    sys.exit()
+    sys.exit(1)
 
 if not options.append:
     a = app.Application(options.args[0], int(options.uid), int(options.gid))
