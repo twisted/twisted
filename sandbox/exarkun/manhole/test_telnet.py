@@ -10,8 +10,12 @@ class TestHandler:
         self.subcmd = ''
         self.calls = []
 
-        d = proto.subcommandMap = {}
-        d['\x12'] = 'test_command'
+        d = proto.negotiationMap = {}
+        d['\x12'] = self.neg_TEST_COMMAND
+
+        d = proto.commandMap = proto.commandMap.copy()
+        for cmd in ('NOP', 'DM', 'BRK', 'IP', 'AO', 'AYT', 'EC', 'EL', 'GA'):
+            d[getattr(telnet, cmd)] = lambda arg, cmd=cmd: self.calls.append(cmd)
 
     def connectionMade(self):
         pass
@@ -22,12 +26,7 @@ class TestHandler:
     def connectionLost(self, reason):
         pass
 
-    def __getattr__(self, name):
-        if name.startswith('telnet_'):
-            return lambda: self.calls.append(name)
-        raise AttributeError(name)
-
-    def subcmd_TEST_COMMAND(self, payload):
+    def neg_TEST_COMMAND(self, payload):
         self.subcmd = payload
 
 class TelnetTestCase(unittest.TestCase):
@@ -82,7 +81,7 @@ class TelnetTestCase(unittest.TestCase):
         for b in L:
             self.p.dataReceived(b)
 
-        self.assertEquals(h.calls, ['telnet_' + cmdName])
+        self.assertEquals(h.calls, [cmdName])
         self.assertEquals(h.bytes, ''.join(L).replace(cmd, ''))
 
     def testInterrupt(self):

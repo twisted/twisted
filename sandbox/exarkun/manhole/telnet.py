@@ -115,22 +115,12 @@ class TelnetListener:
 
 class Telnet(protocol.Protocol):
     commandMap = {
-        NOP: 'NOP',
-        DM: 'DM',
-        BRK: 'BRK',
-        IP: 'IP',
-        AO: 'AO',
-        AYT: 'AYT',
-        EC: 'EC',
-        EL: 'EL',
-        GA: 'GA',
-
         WILL: 'WILL',
         WONT: 'WONT',
         DO: 'DO',
         DONT: 'DONT'}
 
-    subcommandMap = {
+    negotiationMap = {
         }
 
     # One of a lot of things
@@ -138,6 +128,12 @@ class Telnet(protocol.Protocol):
 
     def __init__(self):
         self.options = {}
+        self.negotiationMap = {}
+        self.commandMap = {
+            WILL: self.telnet_WILL,
+            WONT: self.telnet_WONT,
+            DO: self.telnet_DO,
+            DONT: self.telnet_DONT}
 
     def write(self, bytes):
         self.transport.write(bytes)
@@ -159,7 +155,7 @@ class Telnet(protocol.Protocol):
                     self.commands = []
                 elif b in (NOP, DM, BRK, IP, AO, AYT, EC, EL, GA):
                     self.state = 'data'
-                    self.telnetCommandReceived(b, None)
+                    self.commandReceived(b, None)
                 elif b in (WILL, WONT, DO, DONT):
                     self.state = 'command'
                     self.command = b
@@ -169,7 +165,7 @@ class Telnet(protocol.Protocol):
                 self.state = 'data'
                 command = self.command
                 del self.command
-                self.telnetCommandReceived(command, b)
+                self.commandReceived(command, b)
             elif self.state == 'subnegotiation':
                 if b == IAC:
                     self.state = 'subnegotiation-escaped'
@@ -177,7 +173,7 @@ class Telnet(protocol.Protocol):
                     self.state = 'data'
                     commands = self.commands
                     del self.commands
-                    self.subnegotiationCommandReceived(commands)
+                    self.negotiate(commands)
                 else:
                     self.commands.append(b)
             elif self.state == 'subnegotiation-escaped':
@@ -186,61 +182,17 @@ class Telnet(protocol.Protocol):
             else:
                 raise ValueError("How'd you do this?")
 
+    def commandReceived(self, command, argument):
+        cmdFunc = self.commandMap.get(command)
+        if cmdFunc is None:
+            log.msg("Unhandled telnet command: %d %s" % (ord(command), argument and ord(argument)))
+        else:
+            cmdFunc(argument)
+
     def applicationByteReceived(self, byte):
         pass
 
-    def telnetCommandReceived(self, command, argument):
-        cmdName = self.commandMap.get(command)
-        if cmdName is None:
-            # Some ill-formed command.  Return us to the data state.
-            # After complaining.
-            log.msg("Client (%r) sent a bad command: %d" % (self.transport.getPeer(), ord(command)))
-            self.state = 'data'
-        else:
-            cmdFunc = getattr(self, 'telnet_' + cmdName)
-            if argument is None:
-                cmdFunc()
-            else:
-                cmdFunc(argument)
-
-    def telnet_NOP(self):
-        pass
-
-    def telnet_DM(self):
-        pass
-
-    def telnet_BRK(self):
-        pass
-
-    def telnet_IP(self):
-        pass
-
-    def telnet_AO(self):
-        pass
-
-    def telnet_AYT(self):
-        pass
-
-    def telnet_EC(self):
-        pass
-
-    def telnet_EL(self):
-        pass
-
-    def telnet_GA(self):
-        pass
-
-    def subnegotiationCommandReceived(self, bytes):
-        if not bytes:
-            log.msg("Funny subnegotiation (no payload!)")
-        else:
-            cmdName = self.subcommandMap.get(bytes[0])
-            if cmdName is None:
-                log.msg("Unhandled subnegotiation thingy: %d %r" % (ord(bytes[0]), bytes[1:]))
-            else:
-                self.negotiate(cmdName, bytes[1:])
-
-    def negotiate(self, command, payload):
+    def negotiate(self, bytes):
         pass
 
     # DO/DONT WILL/WONT are a bit more complex.  They require us to
@@ -370,11 +322,16 @@ class Telnet2(Telnet):
             fname = 'telnet_' + cmdName
             setattr(self, fname, getattr(self.handler, fname, lambda: None))
 
+    def negotiate(self, bytes):
+        command, bytes = bytes[0], bytes[1:]
+        cmdFunc = self.negotiationMap.get(command)
+        if cmdFunc is None:
+            self.handler.unknownNegotiation(command, bytes)
+        else:
+            cmdFunc(bytes)
+
     def applicationByteReceived(self, bytes):
         self.handler.dataReceived(bytes)
-
-    def negotiate(self, command, payload):
-        getattr(self.handler, 'subcmd_' + command.upper())(payload)
 
     def connectionLost(self, reason):
         self.handler.connectionLost(reason)
