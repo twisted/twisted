@@ -345,6 +345,8 @@ class DOMTemplate(Resource, View):
         return controllerFactory(self.model)
     
     def getNodeView(self, request, node):
+        result = None
+        
         # Most specific
         viewName = node.getAttribute('view')
         # Next-most specific
@@ -372,8 +374,11 @@ class DOMTemplate(Resource, View):
                     if isinstance(maybeWidget, domwidgets.Widget):
                         view = maybeWidget
                         viewMethod = view.generateDOM
+                    else:
+                        result = maybeWidget
+                        viewMethod = None
 
-        return view, viewMethod
+        return view, viewMethod, result
 
     def handleNode(self, request, node):
         if not hasattr(node, 'getAttribute'): # text node?
@@ -384,7 +389,7 @@ class DOMTemplate(Resource, View):
         if not id: id = node.getAttribute('class')
         
         controller = self.getNodeController(request, node)
-        view, viewMethod = self.getNodeView(request, node)
+        view, viewMethod, result = self.getNodeView(request, node)
 
         controller.setView(view)
         controller.setSubmodel(id)
@@ -400,7 +405,8 @@ class DOMTemplate(Resource, View):
         if success is not None:
             self.handlerResults[success].append((controller, data, node))
 
-        result = viewMethod(request, node)
+        if viewMethod is not None:
+            result = viewMethod(request, node)
         returnNode = self.dispatchResult(request, node, result)
         if not isinstance(returnNode, Deferred):
             self.recurseChildren(request, returnNode)
