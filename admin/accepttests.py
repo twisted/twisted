@@ -254,7 +254,7 @@ twistedBinDir = os.path.join(os.path.dirname(sys.argv[0]), '..', 'bin')
 examplesDir = twistedBinDir+'/../doc/examples'
 
 def main():
-    global webbrowser, username, ircclient
+    global webbrowser, username, ircclient, block
     try:
         block = sys.argv[1] == "-b"
     except IndexError:
