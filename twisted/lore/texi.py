@@ -16,13 +16,15 @@
 # 
 
 from cStringIO import StringIO
-import os
+import os, re
 from twisted.python import text
-import latex
+from twisted.web import domhelpers
+import latex, tree
 
+spaceRe = re.compile('\s+')
 
 def texiEscape(text):
-    return text.replace('\n', ' ')
+    return spaceRe.sub(text, ' ')
 
 entities = latex.entities.copy()
 entities['copy'] = '@copyright{}'
@@ -36,12 +38,19 @@ class TexiSpitter(latex.BaseLatexSpitter):
         latex.getLatexText(node, self.writer, texiEscape, entities)
 
     def visitNode_title(self, node):
-        self.writer('@section ')
-        self.visitNodeDefault(node)
-        self.writer('\n')
         self.writer('@node ')
         self.visitNodeDefault(node)
         self.writer('\n')
+        self.writer('@section ')
+        self.visitNodeDefault(node)
+        self.writer('\n')
+        headers = tree.getHeaders(domhelpers.getParents(node)[-1])
+        if not headers:
+            return
+        self.writer('@menu\n')
+        for header in headers:
+            self.writer('* %s::\n' % domhelpers.getNodeText(header))
+        self.writer('@end menu\n')
 
     def visitNode_pre(self, node):
         self.writer('@verbatim\n')
@@ -56,10 +65,13 @@ class TexiSpitter(latex.BaseLatexSpitter):
         self.writer('@code{'+fout.getvalue()+'}')
 
     def visitNodeHeader(self, node):
-        level = (int(node.tagName[1])-2)+self.baseLevel
-        self.writer('\n\n@'+level*'sub'+'section{')
+        self.writer('\n\n@node ')
         self.visitNodeDefault(node)
-        self.writer('}\n')
+        self.writer('\n')
+        level = (int(node.tagName[1])-2)+self.baseLevel
+        self.writer('\n\n@'+level*'sub'+'section ')
+        self.visitNodeDefault(node)
+        self.writer('\n')
 
     def visitNode_a_listing(self, node):
         fileName = os.path.join(self.currDir, node.getAttribute('href'))
@@ -87,7 +99,7 @@ class TexiSpitter(latex.BaseLatexSpitter):
     start_li = '@item\n'
     end_li = '\n'
 
-    start_dt = '@item'
+    start_dt = '@item\n'
     end_dt = ': '
     end_dd = '\n'
 
