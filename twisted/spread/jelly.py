@@ -105,6 +105,9 @@ typeNames = {
     types.NoneType: "None",
     }
 
+if hasattr(types, 'UnicodeType'):
+    typeNames[types.UnicodeType] = 'unicode'
+
 class Unpersistable:
     """
     This is an instance of a class that comes back when something couldn't be
@@ -207,6 +210,11 @@ class _Jellier:
         This just happens to be the string itself.
         """
         return st
+
+    def _jelly_unicode(self, u):
+        """(internal) (python2.1 only) UTF-8 encode a unicode string.
+        """
+        return ['unicode', u.encode('UTF-8')]
     
     def _jelly_int(self, nt):
         """(internal)
@@ -459,6 +467,9 @@ class _Unjellier:
 
     def _unjelly_None(self, exp):
         return None
+
+    def _unjelly_unicode(self, exp):
+        return unicode(exp[0], "UTF-8")
 
     def unjellyInto(self, obj, loc, jel):
         o = self._unjelly(jel)
