@@ -56,12 +56,11 @@ class Echoer(xmlrpc.XMLRPC):
 
 
 def main():
-    from twisted.internet.app import Application
+    from twisted.internet import reactor
     from twisted.web import server
-    app = Application("xmlrpc")
     r = Echoer()
-    app.listenTCP(7080, server.Site(r))
-    app.run(0)
+    reactor.listenTCP(7080, server.Site(r))
+    reactor.run()
 
 
 if __name__ == '__main__':
