@@ -67,10 +67,21 @@ class MetaInterface(type):
                 adapter = registry.getAdapter(adaptable, self, _Nothing, 
                                               persist=persist)
         except NotImplementedError:
-            # if the interface has implemented PEP 246, Object Adaption
+            # Support for PEP 246, Object Adaption
             # http://www.python.org/peps/pep-0246.html
-            if hasattr(self, '__adapt__'):
-                adapter = self.__adapt__.im_func(adaptable, _Nothing)
+            conform = getattr(adaptable, '__conform__',None)
+            if conform:
+                try:
+                    adapter = conform(self)
+                except TypeError: 
+                    pass
+            if adapter is _Nothing:
+                adapt = getattr(self, '__adapt__', None)
+                if adapt:
+                    try:
+                        adapter = adapt.im_func(adaptable)
+                    except TypeError: 
+                        pass
 
         if adapter is _Nothing:
             raise CannotAdapt("%s cannot be adapted to %s." %
