@@ -367,7 +367,7 @@ class GenerateDocs(Transaction):
             file = os.path.basename(file)
             file = os.path.splitext(file)[0]
             sh("groff -man -Thtml %(tdir)s/doc/man/%(file)s.1 >"
-                                 "%(tdir)s/doc/man/%(file)s.html")
+                                 "%(tdir)s/doc/man/%(file)s.html" % vars())
 
         #everything after this is atomic (enough).
         #shwack the crap
@@ -430,7 +430,7 @@ class CreateTarballs(Transaction):
              cd %(tdir)s && 
              mv doc %(docdir)s
 
-             tar czf -  %(docdir)s | gzip -9 > %(docdir)s.tar.gz&& 
+             tar cf -  %(docdir)s | gzip -9 > %(docdir)s.tar.gz&& 
              mv %(docdir)s.tar.gz ../ && 
 
              tar cjf   %(docdir)s.tar.bz2 %(docdir)s && 
@@ -475,15 +475,13 @@ class Release(Transaction):
         print "Release: Copying TwistedDocs."
         sh('''
               cp TwistedDocs-%(ver)s.tar.gz  %(rel)s &&
-              cp TwistedDocs-%(ver)s.tar.bz2 %(rel)s && 
-              cp TwistedDocs-%(ver)s.zip     %(rel)s
+              cp TwistedDocs-%(ver)s.tar.bz2 %(rel)s
            ''' % locals())
 
         print "Release: Copying Twisted."
         sh('''
               cp %(tdir)s.tar.gz %(rel)s &&
-              cp %(tdir)s.tar.bz2 %(rel)s && 
-              cp %(tdir)s.zip %(rel)s
+              cp %(tdir)s.tar.bz2 %(rel)s
            ''' % locals())
 
     def undoIt(self, opts, fail):
