@@ -1,12 +1,26 @@
-
+# Twisted, the Framework of Your Internet
+# Copyright (C) 2001 Matthew W. Lefkowitz
+#
+# This library is free software; you can redistribute it and/or
+# modify it under the terms of version 2.1 of the GNU Lesser General Public
+# License as published by the Free Software Foundation.
+#
+# This library is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+# Lesser General Public License for more details.
+#
+# You should have received a copy of the GNU Lesser General Public
+# License along with this library; if not, write to the Free Software
+# Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
 """
 Form-based method objects.
 
 This module contains support for descriptive method signatures that can be used
 to format methods.  Currently this is only used by woven.
-
 """
+
 
 class InputError(Exception):
     """
@@ -21,8 +35,13 @@ class FormException(Exception):
         Exception.__init__(self, *args)
         self.descriptions = kwargs
 
+
 class Argument:
+    """Base class for form arguments."""
+
+    # default value for argument, if no other default is given
     defaultDefault = None
+
     def __init__(self, name, default=None, shortDesc=None, longDesc=None, hints=()):
         self.name = name
         if default is None:
@@ -41,6 +60,11 @@ class Argument:
     def getLongDescription(self):
         return self.longDesc or "The %s." % self.name
 
+    def coerce(self, val):
+        """Convert the value to the correct format."""
+        raise UnimplementedError, "implement in subclass"
+
+
 class String(Argument):
     """A single string.
     """
@@ -49,13 +73,16 @@ class String(Argument):
     def coerce(self, val):
         return str(val)
 
+
 class Text(String):
     """A long string.
     """
 
+
 class Password(String):
     """A string which should be obscured when input.
     """
+
 
 class Integer(Argument):
     """A single integer.
@@ -64,9 +91,11 @@ class Integer(Argument):
     def coerce(self, val):
         return int(val)
 
+
 class Float(Argument):
     def coerce(self, val):
         return float(val)
+
 
 class Choice(Argument):
     """The result of a choice between enumerated types.
@@ -104,8 +133,10 @@ class Flags(Argument):
 class CheckGroup(Flags):
     pass
 
+
 class RadioGroup(Choice):
     pass
+
 
 class Boolean(Argument):
     def coerce(self, inVal):
@@ -148,8 +179,8 @@ class MethodSignature:
 
 
 class FormMethod:
-    """A callable object with a signature.
-    """
+    """A callable object with a signature."""
+    
     def __init__(self, signature, callable):
         self.signature = signature
         self.callable = callable
