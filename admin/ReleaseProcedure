@@ -44,12 +44,14 @@ mv web-shutdown.tap web-`date +%Y-%M-%d`.tap
 su jh; ~jh/bin/stop; ~jh/bin/start; exit
 
  * Restart the pb server:
-su pb; cd ~/Working; kill `cat twistd.pid`; /twisted/Twisted/bin/twistd -f manhole-shutdown.tap; mv manhole-shutdown.tap oldtaps/manhole-shutdown-`date -I`.tap; exit
+su pb; cd ~/Working; kill `cat twistd.pid`; twistd -f manhole-shutdown.tap; mv manhole-shutdown.tap oldtaps/manhole-shutdown-`date -I`.tap; exit
 
  * If everything's cool, edit WebSite/twistedmatrix.com/news.html, index, and products/download.html
+ * cvs commit those
  * go to 
-cd /var/www/WebSite
-./generate.sh
+su - pb
+cd /var/www/WebSite/twistedmatrix.com
+$WORKING/Twisted.CVS/Twisted/admin/generate-domdocs --docsdir . --template template.tpl -e None
 
  * For final versions only
  * Alright, now for the hell that is sourceforge release-procedure:
