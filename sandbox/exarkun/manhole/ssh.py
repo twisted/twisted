@@ -46,7 +46,7 @@ class TerminalSession:
         self.avatar = avatar
 
     def getPty(self, term, windowSize, attrs):
-        self.width, self.height = windowSize[:2]
+        self.height, self.width = windowSize[:2]
 
     def openShell(self, proto):
         self.transportFactory(proto, self.avatar, self.width, self.height)
