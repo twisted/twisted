@@ -42,6 +42,7 @@ class ChangeChecker:
         d = client.getPage(self.url)
         d.addErrback(self.noPage)
         d.addCallback(self.page)
+        self.call = None
 
     def noPage(self, e):
         self.gotMD5(None)
@@ -61,7 +62,8 @@ class ChangeChecker:
             self.md5 = md5
         else:
             self.reportNoChange()
-        self.call = reactor.callLater(self.delay, self._getPage)
+        if not self.call:
+            self.call = reactor.callLater(self.delay, self._getPage)
 
     def reportChange(self, old, new):
         """status or content of the web resource has changed"""
