@@ -16,7 +16,7 @@ clean:
 	rm -rf build
 	find . -name "*.pyc" |xargs -r rm
 	# Add here commands to clean up after the build process.
-	rm -rf debian/python*-twisted debian/python*-twisted-bin debian/twisted-doc
+	rm -rf debian/python*-twisted debian/python*-twisted-bin debian/twisted-doc debian/twisted-quotes
 	rm -rf debian/files debian/substvars
 
 
@@ -79,6 +79,18 @@ install-stamp: build-stamp
 	gzip -9 debian/python-twisted/usr/share/doc/python-twisted/changelog.Debian
 	install -m 644 debian/python-twisted.README.Debian \
 	               debian/python-twisted/usr/share/doc/python-twisted/README.Debian
+
+	install -d debian/twisted-quotes/usr/share/doc/twisted-quotes
+	install -d debian/twisted-quotes/DEBIAN
+	install -m 644 debian/copyright \
+	               debian/twisted-quotes/usr/share/doc/twisted-quotes/
+	install -m 644 debian/changelog \
+	               debian/twisted-quotes/usr/share/doc/twisted-quotes/changelog.Debian
+	gzip -9 debian/twisted-quotes/usr/share/doc/twisted-quotes/changelog.Debian
+	install -d debian/twisted-quotes/usr/share/games/fortune/
+	install -m 644 doc/fun/Twisted.Quotes \
+	               debian/twisted-quotes/usr/share/games/fortune/twisted-quotes
+	strfile debian/twisted-quotes/usr/share/games/fortune/twisted-quotes
 	touch install-stamp
 
 
@@ -87,6 +99,11 @@ binary-indep: build install
 	chown -R root.root debian/twisted-doc
 	chmod -R go=rX debian/twisted-doc
 	dpkg --build debian/twisted-doc ..
+
+	dpkg-gencontrol -isp -ptwisted-quotes -Pdebian/twisted-quotes
+	chown -R root.root debian/twisted-quotes
+	chmod -R go=rX debian/twisted-quotes
+	dpkg --build debian/twisted-quotes ..
 
 	dpkg-gencontrol -isp -ppython-twisted -Pdebian/python-twisted
 	chown -R root.root debian/python-twisted

@@ -3,6 +3,7 @@ Section: net
 Priority: extra
 Maintainer: Moshe Zadka <moshez@debian.org>
 Build-Depends: python2.1-dev, python2.2-dev
+Build-Depends-Indep: fortune-mod
 Standards-Version: 3.5.6
 
 Package: python-twisted
@@ -69,3 +70,11 @@ Suggests: twisted
 Description: The official documentation of Twisted.
  This contains various HOWTOs, overviews and automatically generated
  API documentation.
+
+Package: twisted-quotes
+Architecture: all
+Suggests: twisted
+Depends: fortune-mod
+Description: Quotes from the Twisted development team
+ Quotes about programming, politics and anything else. Gathered by the
+ Twisted development team from IRC and e-mail.
