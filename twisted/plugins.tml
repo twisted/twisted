@@ -34,6 +34,11 @@ register("TCP Port Forwarder",
          description="TCP port forwarding.",
          type='coil')
 
+register("SOCKSv4 Proxy",
+         "twisted.protocols.socks",
+         description="SOCKSv4 proxy for firewalls.",
+         type='coil')
+
 
 ## Pending making this realistically work...
 ##register("Twisted Forum",

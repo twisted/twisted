@@ -24,12 +24,15 @@ import protocol
 
 # twisted imports
 from twisted.internet import tcp
+from twisted.manhole import coil
+from twisted.python import log
 
 # python imports
 import struct
 import string
 import socket
 import time
+import types
 
 
 class SOCKSv4Outgoing(protocol.Protocol):
@@ -87,7 +90,6 @@ class SOCKSv4(protocol.Protocol):
             return
         self.buf=self.buf+data
         if '\000' in self.buf[8:]:
-            #print repr(self.buf)
             head,self.buf=self.buf[:8],self.buf[8:]
             try:
                 version,code,port=struct.unpack("!BBH",head[:4])
@@ -117,7 +119,7 @@ class SOCKSv4(protocol.Protocol):
             assert self.buf=="","hmm, still stuff in buffer... '%s'"
 
     def authorize(self,code,server,port,user):
-        print "code %s connection to %s:%s (user %s)"%(code,server,port,user)
+        log.msg("code %s connection to %s:%s (user %s) authorized" % (code,server,port,user))
         return 1
 
     def makeReply(self,reply,version=4,port=0,ip="0.0.0.0"):
@@ -143,7 +145,7 @@ class SOCKSv4(protocol.Protocol):
             f.write((16-len(p))*3*' ')
             for c in p:
                 if len(repr(c))>3: f.write('.')
-                else: out=f.write(c)
+                else: f.write(c)
             f.write('\n')
         f.write('\n')
         f.close()
@@ -161,7 +163,7 @@ class SOCKSv4(protocol.Protocol):
             return 0
 
 
-class SOCKSv4Factory(protocol.Factory):
+class SOCKSv4Factory(protocol.Factory, coil.Configurable):
     """A factory for a SOCKSv4 proxy.
     
     Constructor accepts one argument, a logfile.
@@ -172,6 +174,25 @@ class SOCKSv4Factory(protocol.Factory):
     
     def buildProtocol(self,addr):
         return SOCKSv4(self.logging)
+
+    # config interface
+    
+    def configInit(self, container, name):
+        self.__init__(None)
+    
+    def getConfiguration(self):
+        return {"logging": self.logging}
+
+    configTypes = {
+        'logging': types.StringType,
+        }
+
+    configName = 'SOCKSv4 Proxy'
+
+    def config_logging(self, logging):
+        self.logging = logging
+
+coil.registerClass(SOCKSv4Factory)
 
 
 class SOCKSv4IncomingFactory(protocol.Factory):
