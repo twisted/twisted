@@ -220,9 +220,110 @@ delete = "\x1b[3~"
 end = "\x1b[4~"
 backspace = "\x7f"
 
-class _TelnetMixin:
-    serverProtocol = None
+from twisted.cred import checkers
+from twisted.conch.ssh import transport, userauth, channel, connection
+class TestAuth(userauth.SSHUserAuthClient):
+    def __init__(self, username, password, *a, **kw):
+        userauth.SSHUserAuthClient.__init__(self, username, *a, **kw)
+        self.password = password
 
+    def getPassword(self):
+        return defer.succeed(self.password)
+
+class SessionChannel(channel.SSHChannel):
+    name = 'session'
+
+    def __init__(self, width, height, *a, **kw):
+        channel.SSHChannel.__init__(self, *a, **kw)
+        self.width = width
+        self.height = height
+
+    def channelOpen(self, data):
+        term = session.packRequest_pty_req("vt102", (self.height, self.width, 0, 0), '')
+        self.conn.sendRequest('pty-req', term)
+        self.conn.sendRequest(self, 'shell', '')
+
+    def dataReceived(self, data):
+        print repr(data)
+
+class TestConnection(connection.SSHConnection):
+    def __init__(self, width, height, *a, **kw):
+        connection.SSHConnection.__init__(self, *a, **kw)
+        self.width = width
+        self.height = hieght
+
+    def serviceStarted(self):
+        self.__channel = SessionChannel(self.width, self.height)
+        self.openChannel(self.__channel)
+
+    def write(self, bytes):
+        return self.__channel.write(bytes)
+
+class TestTransport(transport.SSHClientTransport):
+    def __init__(self, username, password, width, height, *a, **kw):
+        # transport.SSHClientTransport.__init__(self, *a, **kw)
+        self.username = username
+        self.password = password
+        self.width = width
+        self.height = height
+
+    def verifyHostKey(self, hostKey, fingerprint):
+        return defer.succeed(True)
+
+    def connectionSecure(self):
+        print 'yonk'
+        self.__connection = TestConnection(self.width, self.height)
+        self.requestService(
+            TestAuth(self.username, self.password, self.__connection))
+
+    def write(self, bytes):
+        return self.__connection.write(bytes)
+
+class _SSHMixin:
+    def setUp(self):
+        HEIGHT = 24
+        WIDTH = 80
+        u, p = 'testuser', 'testpass'
+        from ssh import ConchFactory
+        sshFactory = ConchFactory([checkers.InMemoryUsernamePasswordDatabaseDontUse(**{u: p})])
+
+        recvlineServer = self.serverProtocol()
+        insultsServer = insults.ServerProtocol(lambda: recvlineServer)
+        sshServer = sshFactory.buildProtocol(None)
+        serverTransport = loopback.LoopbackRelay(sshServer)
+
+        recvlineClient = helper.TerminalBuffer()
+        insultsClient = insults.ClientProtocol(lambda: recvlineClient)
+        sshClient = TestTransport(u, p, WIDTH, HEIGHT)
+        clientTransport = loopback.LoopbackRelay(sshClient)
+
+        sshClient.makeConnection(clientTransport)
+        sshServer.makeConnection(serverTransport)
+
+        self.HEIGHT = HEIGHT
+        self.recvlineClient = recvlineClient
+        self.sshClient = sshClient
+        self.clientTransport = clientTransport
+        self.serverTransport = serverTransport
+
+        self._emptyBuffers()
+
+    def _emptyBuffers(self):
+        while self.serverTransport.buffer or self.clientTransport.buffer:
+            self.serverTransport.clearBuffer()
+            self.clientTransport.clearBuffer()
+
+    def _test(self, s, lines):
+        self.sshClient.write(s)
+
+        self._emptyBuffers()
+
+        self.assertEquals(
+            str(self.recvlineClient),
+            '\n'.join(lines) +
+            '\n' * (self.HEIGHT - len(lines)))
+
+class _TelnetMixin:
     def setUp(self):
         WIDTH = 80
         HEIGHT = 24
@@ -260,7 +361,7 @@ class _TelnetMixin:
             '\n'.join(lines) +
             '\n' * (self.HEIGHT - len(lines)))
 
-class RecvlineLoopback(_TelnetMixin, unittest.TestCase):
+class RecvlineLoopbackMixin:
     serverProtocol = EchoServer
 
     def testSimple(self):
@@ -324,7 +425,13 @@ class RecvlineLoopback(_TelnetMixin, unittest.TestCase):
              "end line",
              ">>>"])
 
-class HistoricRecvlineLoopback(_x, unittest.TestCase):
+class RecvlineLoopbackTelnet(_TelnetMixin, unittest.TestCase, RecvlineLoopbackMixin):
+    pass
+
+class RecvlineLoopbackSSH(_SSHMixin, unittest.TestCase, RecvlineLoopbackMixin):
+    pass
+
+class HistoricRecvlineLoopbackMixin:
     serverProtocol = EchoServer
 
     def testUpArrow(self):
@@ -342,3 +449,9 @@ class HistoricRecvlineLoopback(_x, unittest.TestCase):
              ">>> second line",
              "second line",
              ">>> second line"])
+
+class HistoricRecvlineLoopbackTelnet(_TelnetMixin, unittest.TestCase, HistoricRecvlineLoopbackMixin):
+    pass
+
+class HistoricRecvlineLoopbackSSH(_SSHMixin, unittest.TestCase, HistoricRecvlineLoopbackMixin):
+    pass
