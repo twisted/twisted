@@ -163,12 +163,30 @@ class ConvertOptions(usage.Options):
     
     def postOptions(self):
         if self['in'] is None:
+            self.opt_help()
             raise usage.UsageError("You must specify the input filename.")
+
+
+def guessType(filename):
+    ext = os.path.splitext(filename)[1]
+    try:
+        return {
+            '.py':  'python',
+            '.tap': 'pickle',
+            '.tas': 'source',
+            '.tax': 'xml'
+        }[ext]
+    except KeyError:
+        raise usage.UsageError("Could not guess type for '%s'" % (filename,))
 
 
 def run():
     options = ConvertOptions()
-    options.parseOptions(sys.argv[1:])
+    try:
+        options.parseOptions(sys.argv[1:])
+    except usage.UsageError, e:
+        print e
+        return
 
     passphrase = None
     if options.opts['decrypt']:
@@ -176,18 +194,8 @@ def run():
         passphrase = getpass.getpass('Passphrase: ')
 
     if options["typein"] == "guess":
-        ext = os.path.splitext(options["in"])[1]
-        try:
-            options["typein"] = ({ '.py':  'python',
-                                   '.tap': 'pickle',
-                                   '.tas': 'source',
-                                   '.tax': 'xml' }[ext])
-        except KeyError:
-            print "Error: Could not guess the type."
-            return
+        options["typein"] = guessType(options["in"])
 
-    if None in [options['in']]:
-        options.opt_help()
     a = loadPersisted(options["in"], options["typein"], options["decrypt"], passphrase)
     try:
         a.persistStyle = ({'xml': 'xml',
@@ -196,5 +204,5 @@ def run():
                           [options["typeout"]])
     except KeyError:
         print "Error: Unsupported output type."
-        return
-    savePersisted(a, filename=options["out"], encrypted=options["encrypt"])
+    else:
+        savePersisted(a, filename=options["out"], encrypted=options["encrypt"])
