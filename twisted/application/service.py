@@ -75,7 +75,7 @@ class IService(components.Interface):
         """
 
     def privilegedStartService(self):
-        """Do preperation work for starting the service.
+        """Do preparation work for starting the service.
 
         Here things which should be done before changing directory,
         root or shedding privileges are done."""
