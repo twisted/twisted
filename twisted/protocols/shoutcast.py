@@ -14,7 +14,7 @@
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
-"""Chop up shoutcast stream into MP3s and metadata."""
+"""Chop up shoutcast stream into MP3s and metadata, if available."""
 
 from twisted.protocols import http
 
@@ -30,9 +30,11 @@ class ShoutcastClient(http.HTTPClient):
 
     def __init__(self, path="/"):
         self.path = path
+        self.got_metadata = False
+        self.metaint = None
         self.metamode = "mp3"
         self.databuffer = ""
-    
+        
     def connectionMade(self):
         self.sendCommand("GET", self.path)
         self.sendHeader("Icy-MetaData", "1")
@@ -48,8 +50,19 @@ class ShoutcastClient(http.HTTPClient):
     def handleHeader(self, key, value):
         if key.lower() == 'icy-metaint':
             self.metaint = int(value)
-    
-    def handleResponsePart(self, data):
+            self.got_metadata = True
+
+    def handleEndHeaders(self):
+        # Lets check if we got metadata, and set the
+        # appropriate handleResponsePart method.
+        if self.got_metadata:
+            # if we have metadata, then it has to be parsed out of the data stream
+            self.handleResponsePart = self.handleResponsePart_with_metadata
+        else:
+            # otherwise, all the data is MP3 data
+            self.handleResponsePart = self.gotMP3Data
+
+    def handleResponsePart_with_metadata(self, data):
         self.databuffer += data
         while self.databuffer:
             stop = getattr(self, "handle_%s" % self.metamode)()
@@ -92,7 +105,8 @@ class ShoutcastClient(http.HTTPClient):
         return meta
     
     def gotMetaData(self, metadata):
-        """Called with a list of (key, value) pairs of metadata.
+        """Called with a list of (key, value) pairs of metadata,
+        if metadata is available on the server.
 
         Will only be called on non-empty metadata.
         """
