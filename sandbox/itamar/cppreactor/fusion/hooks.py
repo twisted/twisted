@@ -21,6 +21,9 @@ class CClient(ctcp.TCPTransportMixin, tcp.Client):
 
     def __init__(self, *args, **kwargs):
         tcp.Client.__init__(self, *args, **kwargs)
+    
+    def _connectDone(self):
+        tcp.Client._connectDone(self)
         ctcp.TCPTransportMixin.__init__(self, self)
 
 
@@ -44,14 +47,19 @@ class CMulticastPort(cudp.UDPPortMixin, udp.MulticastPort):
         cudp.UDPPortMixin.__init__(self, self)
 
 
+INSTALLED = False
+
 def install():
     """Install support for C protocols."""
+    global INSTALLED
+    if INSTALLED:
+        return
     # XXX this'll fail if code does "from t.i.tcp import Port"
     # but since default.py doesn't this should be ok for now
     tcp.Port = CPort
     tcp.Connector = CConnector
     udp.Port = CUDPPort
     udp.MulticastPort = CMulticastPort
-
+    INSTALLED = True
 
 __all__ = ["install"]
