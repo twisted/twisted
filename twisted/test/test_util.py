@@ -140,3 +140,24 @@ class SearchUpwardsTest(unittest.TestCase):
         expected=None
         self.assertEqual(actual, expected)
         
+class InfinityTestCase(unittest.TestCase):
+    def testInequality(self):
+        self.failUnless(util.Infinity > 0)
+        self.failUnless(util.Infinity > 1e100)
+        self.failUnless(util.Infinity > -1e100)
+        
+        self.failUnless(-util.Infinity < 0)
+        self.failUnless(-util.Infinity < 1e100)
+        self.failUnless(-util.Infinity < -1e100)
+
+    def testEquality(self):
+        self.assertEquals(util.Infinity, util.Infinity)
+
+    def testNonEquality(self):
+        self.failIf(util.Infinity == -util.Infinity)
+        self.failIf(util.Infinity == 0)
+        self.failIf(-util.Infinity == 0)
+        
+        self.failUnless(util.Infinity != -util.Infinity)
+        self.failUnless(util.Infinity != 0)
+        self.failUnless(-util.Infinity != 0)
