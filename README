@@ -1,22 +1,21 @@
-Twisted 0.9.0
+Twisted 0.9.1
 
-Quote of the Release::
+Quote of the Release:
 
-  <dash> i want distributed everything
-  <dash> yesterday
+  <dash> "COM Error: Errors occurred"
+  * dash attacks ASP with a rusty hacksaw blade
 
 What is this?
 
   Twisted is an event-based framework for internet applications.  It includes a
   web server, a telnet server, a multiplayer RPG engine, a generic client and
-  server for remote object access, and APIs for creating new
-  protocols.
+  server for remote object access, and APIs for creating new protocols.
 
 What can I do with it?
 
-  First, put /where/you/untarred/Twisted-0.9.0/bin into your PATH, or
+  First, put /where/you/untarred/Twisted-x.x.x/bin into your PATH, or
   equivalent variable for your OS.  If you plan to do Python development using
-  Twisted, you probably want to put /where/you/untarred/Twisted-0.9.0 into your
+  Twisted, you probably want to put /where/you/untarred/Twisted-x.x.x into your
   PYTHONPATH environment variable as well.  Currently these scripts take a
   UNIX-centric view of the world, but to the best of my knowledge they function
   on win32 as well.
@@ -114,9 +113,11 @@ Copyright
 
   Most of the code in this distribution is (C) Twisted Matrix Laboratories.
   (Twisted Matrix Laboratories is a trademark of Matthew W. Lefkowitz,
-  throughout this archive referred to as "Glyph").  The sole exception to this
-  is the PyUnit directory, which is a derivative work of PyUnit, which can be
-  found at http://pyunit.sourceforge.net.
+  throughout this archive referred to as "Glyph").  There are 2 exceptions to
+  this: the 'pyunit' directory is a derivative work of PyUnit, which can
+  be found at http://pyunit.sourceforge.net; and the contrib/ directory, which
+  are user-contributed works that may have additional copyright encumbrances,
+  as noted by those files individually.
 
   Twisted is made available under the GNU Lesser General Public License.  The
   included LICENSE file describes this in detail.

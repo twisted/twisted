@@ -84,6 +84,7 @@ class Protocol:
         This will only be called on client protocols; this message tells the
         protocol that the expected connection can not be made.
         """
+        print 'Connection Failed!'
 
 
 class Transport:

@@ -74,14 +74,18 @@ class ResourceSubscription(resource.Resource):
         self.waiting = 0
         for request in self.pending:
             self.render(request)
+        self.pending = []
 
     def notConnected(self):
         """I can't connect to a publisher; I'll now reply to all pending requests.
         """
         print "could not connect to distributed web service."
+        self.waiting = 0
+        self.publisher = None
         for request in self.pending:
             request.write("Unable to connect to distributed server.")
             request.finish()
+        self.pending = []
 
     def booted(self):
         print 'lost pb connection'
@@ -99,6 +103,7 @@ class ResourceSubscription(resource.Resource):
         if not self.publisher:
             self.pending.append(request)
             if not self.waiting:
+                self.waiting = 1
                 broker = pb.Broker()
                 broker.requestPerspective(self.service,
                                           self.username,
@@ -107,7 +112,6 @@ class ResourceSubscription(resource.Resource):
                                           self.notConnected)
                 broker.notifyOnDisconnect(self.booted)
                 c = tcp.Client(self.host, self.port, broker)
-                self.waiting = 1
         else:
             i = Issue(request)
             self.publisher.request(request,
