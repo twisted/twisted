@@ -11,7 +11,7 @@ __version__ = "$Revision: 1.17 $"[11:-2]
 from twisted.trial.reporter import SKIP, EXPECTED_FAILURE, FAILURE, ERROR, UNEXPECTED_SUCCESS, SUCCESS
 from twisted.python import reflect, failure, log, procutils, util as pyutil, compat
 from twisted.python.runtime import platformType
-from twisted.internet import defer, reactor, protocol, error
+from twisted.internet import defer, reactor, protocol, error, threads
 from twisted.protocols import loopback
 from twisted.spread import banana, jelly
 from twisted.trial import unittest, reporter, util, runner, itrial, remote
@@ -26,7 +26,7 @@ import zope.interface as zi
 from pprint import pprint
 import sys, os, os.path as osp
 from os.path import join as opj
-
+import time
 import cPickle as pickle
 
     
@@ -89,7 +89,32 @@ class TestUserMethod(unittest.TestCase):
         failUnlessRaises(runner.UserMethodError, umw)
         failUnless(umw.errors[0].check(UserError))
         failUnless(umw.endTime > umw.startTime)
-        
+    
+    def testReturnedDeferredThenWait(self):
+        def threadedOperation():
+            time.sleep(0.1)
+            return "Beginning"
+        d = threads.deferToThread(threadedOperation)
+        return d.addCallback(self._cbDoWait)
+    
+    def _cbDoWait(self, result):
+        self.assertEquals(result, "Beginning")
+        d = defer.Deferred()
+        reactor.callLater(0.1, d.callback, "End")
+        self.assertEquals(unittest.wait(d), "End")
+    
+    testReturnedDeferredThenWait.todo = "runUntilCurrent is not re-entrant!"
+    
+    def testReentrantWait(self):
+        def threadedOperation(n):
+            time.sleep(n)
+            return n
+        d1 = threads.deferToThread(threadedOperation, 0.125)
+        d2 = threads.deferToThread(threadedOperation, 0.250)
+        d1.addCallback(lambda ignored: unittest.wait(d2))
+        unittest.wait(d1)
+    
+    testReentrantWait.todo = "runUntilCurrent is not re-entrant!"
 
 class BogusReporter(reporter.Reporter):
     def __init__(self):
@@ -282,3 +307,4 @@ class FunctionalTest(unittest.TestCase, SpawningMixin):
         return self.spawnChild(args).addCallback(_cb)
         
 FunctionalTest.timeout = 30.0
+
