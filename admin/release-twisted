@@ -366,10 +366,7 @@ class GenerateDocs(Transaction):
 
         print "makeDocs: man pages"
         for file in glob.glob("%s/doc/man/*.1" % tdir):
-            file = os.path.basename(file)
-            file = os.path.splitext(file)[0]
-            sh("groff -man -Thtml %(tdir)s/doc/man/%(file)s.1 >"
-                                 "%(tdir)s/doc/man/%(file)s.html" % vars())
+            sh("cd %s && ./admin/man2html %s" % (tdir, file))
 
         print "makeDocs: book"
         sh('cd %s &&  ./admin/makebook' % tdir)
