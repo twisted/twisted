@@ -409,6 +409,7 @@ version = "TwistedWeb/%s" % copyright.version
 class Site(http.HTTPFactory):
 
     counter = 0
+    requestFactory = Request
 
     def __init__(self, resource, logPath=None):
         """Initialize.
@@ -452,7 +453,7 @@ class Site(http.HTTPFactory):
         """Generate a channel attached to this site.
         """
         channel = http.HTTPFactory.buildProtocol(self, addr)
-        channel.requestFactory = Request
+        channel.requestFactory = self.requestFactory
         channel.site = self
         return channel
 
