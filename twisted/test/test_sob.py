@@ -50,7 +50,6 @@ class PersistTestCase(unittest.TestCase):
             sob.IPersistable(o).setStyle(style)
             sob.IPersistable(o).save(filename='lala.'+style)
             o1 = sob.load('lala.'+style, style)
-            print o1
             self.failUnlessEqual(o.foo, o1.foo)
             self.failUnlessEqual(sob.IPersistable(o1).style, style)
 
