@@ -400,12 +400,12 @@ class ReactorBase:
         """Run all pending timed calls.
         """
         if self.threadCallQueue:
-            for i in range(len(self.threadCallQueue)):
-                callable, args, kw = self.threadCallQueue.pop(0)
+            for (f, a, kw) in self.threadCallQueue:
                 try:
-                    callable(*args, **kw)
+                    f(*a, **kw)
                 except:
-                    log.deferr()
+                    log.err()
+            del self.threadCallQueue[:]
         now = time()
         while self._pendingTimedCalls and (self._pendingTimedCalls[-1].time <= now):
             call = self._pendingTimedCalls.pop()
