@@ -1292,6 +1292,8 @@ class BrokerFactory(protocol.Factory, styles.Versioned):
 
     def upgradeToVersion2(self):
         app = self.app
+        del self.app
+        self.__init__(AuthRoot(app))
 
     def buildProtocol(self, addr):
         """Return a Broker attached to me (as the service provider).
