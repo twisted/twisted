@@ -631,21 +631,24 @@ class IMAP4Server(basic.LineReceiver):
         while len(query) == 1 and isinstance(query[0], types.ListType):
             query = query[0]
         if uid:
-            topPart = self.mbox.getUIDValidity() << 16
-            messages = map(topPart.__or__, messages)
+            topPart = ~(self.mbox.getUIDValidity() << 16)
+            messages = map(topPart.__and__, messages)
         d = self.mbox.fetch(messages, query)
         maybeDeferred(d, self._cbFetch, self._ebFetch, (tag, uid), (tag,))
 
     def _cbFetch(self, results, tag, uid):
         for (mId, parts) in results.items():
-            if parts:
-                for (portion, value) in parts.items():
-                    if uid:
-                        topPart = self.mbox.getUIDValidity() << 16
-                        value.extend(['UID', str(mId | topPart)])
-                    self.sendUntaggedResponse(
-                        '%d %s %s' % (mId, portion, collapseNestedLists(value))
-                    )
+            if uid:
+                topPart = self.mbox.getUIDValidity() << 16
+                try:
+                    index = parts.index('UID') + 1
+                except ValueError:
+                    parts[:0] = ['UID', str(mId | topPart)]
+                else:
+                    parts[index] = str(mId | topPart)
+            self.sendUntaggedResponse(
+                '%d FETCH %s' % (mId, collapseNestedLists([parts]))
+            )
         self.sendPositiveResponse(tag, 'FETCH completed')
 
     def _ebFetch(self, failure, tag):
@@ -2162,8 +2165,8 @@ def collapseNestedLists(items):
             pieces.extend([' ', 'NIL'])
         elif isinstance(i, types.StringTypes):
             if '\n' in i:
-                pieces.extend([' ', '{%d}' % (len(i),), IMAP4ServerProtocol.delimiter, i])
-            elif ' ' in i or '\t' in i:
+                pieces.extend([' ', '{%d}' % (len(i),), IMAP4Server.delimiter, i, IMAP4Server.delimiter])
+            elif (not i.startswith('BODY')) and (' ' in i or '\t' in i):
                 pieces.extend([' ', '"%s"' % (i,)])
             else:
                 pieces.extend([' ', i])
