@@ -5,31 +5,19 @@
 <html xmlns="http://www.w3.org/1999/xhtml">
 
 <head>
-<title>PB Walking Tour Part Two: twisted.cred</title>
+<title>Authentication with Perspective Broker</title>
 
 <style src="stylesheet-unprocessed.css"></style>
 
 </head>
 
 <body>
-<h1>PB Walking Tour Part Two: twisted.cred</h1>
+<h1>Authentication with Perspective Broker</h1>
 
-<a name="intro"><h2>Authentication, Identities, and Perspectives</h2></a>
+<h2>Motivation</h2>
 
-<p>This next section is an exciting ride. Keep your arms and legs inside the
-car at all times, you must be <em>this</em> tall to get on board, and we cannot
-be responsible for any lost or stolen articles. Permanecen sentados, por
-favor.</p>
-
-<a name="motivation"><h2>Motivation</h2></a>
-
-<p>So now that you've gotten through the <a href="pb-tour.html">PB Walking
-Tour</a>, you've become a master at distributed objects and remote method
-calls. What you've got so far is a really clean way to get objects and
-references thrown around from one process to another. You've written a chat
-server, and see the power of easy remote method calls.</p>
-
-<p>But there were some problems. You had to trust the user when they said
+<p>In the examples shown in <a href="pb-usage.html">Using Perspective
+Broker</a> there were some problems. You had to trust the user when they said
 their name was <q>bob</q>: no passwords or anything. If you wanted a direct-send
 one-to-one message feature, you might have implemented it by handing a User
 reference directly off to another User. (so they could invoke
@@ -144,13 +132,9 @@ Right??).</p>
 <p>So we have a security problem. We need a way to ask for and verify a
 password, so we know that Bob is really Bob and not Alice wearing her <q>Hi,
 my name is Bob</q> t-shirt. And it would make the code cleaner (i.e.: fewer
-classes) if some methods could know reliably <em>who</em> is calling them. You
-could add that layer of password checking to your application, but once
-again the basement denizens at Twisted Matrix Laboratories have beaten you
-to it.</p>
+classes) if some methods could know reliably <em>who</em> is calling them.</p>
 
-
-<a name="sample"><h2>A sample application</h2></a>
+<h2>A sample application</h2>
 
 <p>As a framework for this chapter, we'll be referring to a hypothetical
 game implemented by several programs using the Twisted framework. This game
@@ -191,11 +175,13 @@ class Game(pb.Referenceable):
 </pre>
 
 <p>and move the responsibility (and capability) for calling Game.move() out
-to a different class. That class is a pb.Perspective.</p>
+to a different class. That class is a 
+<code class="API" base="twisted.spread">pb.Perspective</code>.</p>
 
-<a name="perspectives"><h2>Perspectives</h2></a>
+<h2>Perspectives</h2>
 
-<p>pb.Perspective (and some related classes: Identity, Authorizer, and
+<p><code class="API" base="twisted.spread">pb.Perspective</code>
+(and some related classes: Identity, Authorizer, and
 Service) is a layer on top of the basic PB system that handles
 username/password checking. The basic idea is that there is a separate
 Perspective object (probably a subclass you've created) for each
@@ -229,8 +215,8 @@ class PlayerPerspective(pb.Perspective):
 it the right playerName and a reference to the Game object. The remote
 player doesn't get a reference to the Game object, only their own
 PlayerPerspective, so they don't have an opportunity to lie about their
-name: it comes from the .playerName attribute, not an argument of their
-remote method call.</p>
+name: it comes from the <code class="python">.playerName</code> attribute, not
+an argument of their remote method call.</p>
 
 <p>Here is a brief example of using a Perspective. Most of the support code
 is magic for now: we'll explain it later.</p>

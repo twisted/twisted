@@ -1,0 +1,428 @@
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<title>Using Perspective Broker</title>
+<style src="stylesheet-unprocessed.css"></style>
+</head>
+
+<body>
+<h1>Using Perspective Broker</h1>
+
+<h2>Basic Example</h2>
+
+<p>The first example to look at is a complete (although somewhat trivial)
+application. It uses <code>BrokerFactory()</code> on the server side, and
+<code>pb.getObjectAt()</code> on the client side.</p>
+
+<a href="../examples/pbsimple.py" class="py-listing">pbsimple.py</a>
+<a href="../examples/pbsimpleclient.py" class="py-listing">pbsimpleclient.py</a>
+
+<p>First we look at the server. This defines an Echoer class (derived from
+<code class="API" base="twisted.spread">pb.Root</code>), with a method called
+<code>remote_echo()</code>. 
+<code class="API" base="twisted.spread">pb.Root</code> objects (because of
+their inheritance of 
+<code class="API" base="twisted.spread">pb.Referenceable</code>, described
+later) can define methods with names of the form <code>remote_*</code>; a
+client which obtains a remote reference to that 
+<code class="API" base="twisted.spread">pb.Root</code> object will be able to
+invoke those methods.</p>
+
+<p>The <code class="API" base="twisted.spread">pb.Root</code>-ish object is
+given to a 
+<code class="API" base="twisted.spread">pb.BrokerFactory</code><code>()</code>.
+This is a <code class="API" base="twisted.internet.protocol">Factory</code>
+object like any other: the 
+<code class="API" base="twisted.internet.protocol">Protocol</code> objects it
+creates for new connections know how to speak the PB protocol. The object you
+give to <code>pb.BrokerFactory()</code> becomes the <q>root object</q>, which
+simply makes it available for the client to retrieve. The client may only
+request references to the objects you want to provide it: this helps you
+implement your security model. Because it is so common to export just a single
+object (and because a <code>remote_*</code> method on that one can return a
+reference to any other object you might want to give out), the simplest example
+is one where the <code class="API" base="twisted.spread">BrokerFactory</code>
+is given the root object, and the client retrieves it.</p>
+
+<p>The client side calls 
+<code class="API" base="twisted.spread">pb.getObjectAt</code> to make a
+connection to a given port. This is a convenience function (not a method) which
+runs through the PB protocol steps necessary to retrieve the root object from a
+<code class="API" base="twisted.spread.pb">BrokerFactory</code> sitting at the
+given port.</p>
+
+<p>Because <code>.getObjectAt()</code> has to make a network connection and
+exchange some data, it may take a while, so it returns a Deferred, to which the
+gotObject() callback is attached. (See the documentation on <a
+href="defer.html">Deferring Execution</a> for a complete explanation of
+<code class="API" base="twisted.internet.defer">Deferred</code>s). If and when
+the connection succeeds and a reference to the remote root object is obtained,
+this callback is run. The first argument passed to the callback is a remote
+reference to the distant root object.  (you can give other arguments to the
+callback too, see the other parameters for <code>.addCallback()</code> and
+<code>.addCallbacks()</code>).</p>
+
+<p>The callback does:</p>
+
+<pre class="python">
+object.callRemote("echo", "hello network")
+</pre>
+
+<p>which causes the server's <code>.remote_echo()</code> method to be invoked.
+(running <code>.callRemote("boom")</code> would cause
+<code>.remote_boom()</code> to be run, etc). Again because of the delay
+involved, <code>callRemote()</code> returns a 
+<code class="API" base="twisted.internet.defer">Deferred</code>. Assuming the
+remote method was run without causing an exception (including an attempt to
+invoke an unknown method), the callback attached to that
+<code class="API" base="twisted.internet.defer">Deferred</code> will be
+invoked with any objects that were returned by the remote method call.</p>
+
+<p>In this example, the server's <code>Echoer</code> object has a method
+invoked, <em>exactly</em> as if some code on the server side had done:</p>
+
+<pre class="python">
+echoer_object.remote_echo("hello network")
+</pre>
+
+<p>and from the definition of <code>remote_echo()</code> we see that this just
+returns the same string it was given: <q>hello network</q>.</p>
+
+<p>From the client's point of view, the remote call gets another 
+<code class="API" base="twisted.internet.defer">Deferred</code> object
+instead of that string. <code>callRemote()</code> <em>always</em> returns a
+<code class="API" base="twisted.internet.defer">Deferred</code>. This is why PB
+is described as a system for <q>translucent</q> remote method calls instead of
+<q>transparent</q> ones: you cannot pretend that the remote object is really
+local.
+Trying to do so (as some other RPC mechanisms do, coughCORBAcough) breaks down
+when faced with the asynchronous nature of the network. Using Deferreds turns
+out to be a very clean way to deal with the whole thing.</p>
+
+<p>The remote reference object (the one given to <code>getObjectAt()</code>'s
+success callback) is an instance the 
+<code class="API" base="twisted.spread.pb">RemoteReference</code> class. This
+means you can use it to invoke methods on the remote object that it refers to.
+Only instances of 
+<code class="API" base="twisted.spread.pb">RemoteReference</code> eligible for
+<code>.callRemote()</code>. The
+<code class="API" base="twisted.spread.pb">RemoteReference</code> object is the
+one that lives on the remote side (the client, in this case), not the local
+side (where the actual object is defined).</p>
+
+<p>In our example, the local object is that <code>Echoer()</code> instance,
+which inherits from <code class="API" base="twisted.spread">pb.Root</code>,
+which inherits from 
+<code class="API" base="twisted.spread">pb.Referenceable</code>. It is that
+<code>Referenceable</code> class that makes the object eligible to be available
+for remote method calls<span class="footnote">There are a few other classes
+that can bestow this ability, but pb.Referenceable is the easiest to
+understand; see 'flavors' below for details on the others.</span>. If you have
+an object that is Referenceable, then any client that manages to get a
+reference to it can invoke any <code>remote_*</code> methods they please.</p>
+
+<div class="note">
+<p>The <em>only</em> thing they can do is invoke those
+methods.  In particular, they cannot access attributes. From a security point
+of view, you control what they can do by limiting what the
+<code>remote_*</code> methods can do.</p>
+
+<p>Also note: the other classes like 
+<code class="API" base="twisted.spread.pb">Referenceable</code> allow access to
+other methods, in particular <code>perspective_*</code> and <code>view_*</code>
+may be accessed.  Don't write local-only methods with these names, because then
+remote callers will be able to do more than you intended.</p>
+
+<p>Also also note: the other classes like 
+<code class="API" base="twisted.spread">pb.Copyable</code> <em>do</em> allow
+access to attributes, but you control which ones they can see.</p>
+</div>
+
+<p>You don't have to be a 
+<code class="API" base="twisted.spread">pb.Root</code> to be remotely callable,
+but you do have to be 
+<code class="API" base="twisted.spread">pb.Referenceable</code>.  (Objects that
+inherit from <code class="API" base="twisted.spread">pb.Referenceable</code>
+but not from <code class="API" base="twisted.spread">pb.Root</code> can be
+remotely called, but only 
+<code class="API" base="twisted.spread">pb.Root</code>-ish objects can be given
+to the <code class="API" base="twisted.spread.pb">BrokerFactory</code>.)</p>
+
+<h2>Complete Example</h2>
+
+<p>A service is the <q>global</q> state associated with your application, which
+can contain things such as support for archiving objects, basic abstractions
+common to all users, and collections of domain-specific objects.  A perspective
+is the representation of a user with respect to a particular service.  For PB,
+a Perspective is where all interaction begins.  When a user logs in for the
+first time, all the methods they can initially call are methods of their
+Perspective.  The Perspective's methods can return objects which themselves
+have methods that you can call, as well as copies of objects, as described
+later. </p>
+
+<a href="listings/TwistedQuotes/pbquote.py" class="py-listing">Quote Service
+and Perspective</a>
+
+<p>For examples of these, we're returning to the TwistedQuotes project
+discussed in the <q>Writing Plugins</q>.  The PB <code
+class="python">Service</code> for
+TwistedQuotes is pretty small.  The only thing it needs to keep track of for
+itself is the quoter object; PB's service, that we will inherit from, already
+keeps track of perspectives.</p>
+
+<p>The perspective is a <code class="python">QuoteReader</code>, which
+publishes one method.
+By subclassing <code class="API" base="twisted.spread.pb">Perspective</code>,
+we are declaring that all methods with
+the <code class="python">perspective_</code> prefix are remotely accessible.</p>
+
+<p>In order to get this Service published, so that we can actually connect to
+it, we need to re-visit the TAP building plugin, so we can actually get an
+Application that has a PB broker factory listening on a port.  (The default
+port for PB is 8787.)  </p>
+
+<a href="listings/TwistedQuotes/quotetap2.py" class="py-listing">TAP Plugin
+with PB Quotes Service support</a>
+
+<p>In the TAP builder, we create a <code class="python">QuoteService</code>
+that wraps the quoter.  We then create a 
+<code class="python">QuoteReader</code> perspective and attach it to the 
+<code class="python">QuoteService</code>, through the 
+<code class="python">createPerspective</code> call inherited from 
+<code class="API" base="twisted.spread.pb">Service</code>.  Finally, we
+register with the <code class="python">QuoteService</code>'s authorizer.</p>
+
+<p>Accessing this through a client is fairly easy, as we can use the
+<code class="API" base="twisted.spread">pb.connect</code> convenience
+function.</p>
+
+<a href="listings/TwistedQuotes/pbquoteclient.py" class="py-listing">PB Quotes
+Client Code</a>
+
+<p><code class="API" base="twisted.spread">pb.connect</code> will handle all
+the details of creating a
+connection and authenticating.  It returns a 
+<code class="API" base="twisted.internet.defer">Deferred</code>, which will
+have its callback called when 
+<code class="API" base="twisted.spread">pb.connect</code> connects to a
+perspective, and have its <code class="python">errback</code> called when the
+object-connection fails for any reason, whether it's host lookup failure,
+connection refusal, or incorrect authentication credentials.  </p>
+
+<p>In this example, the <code class="python">connected</code> callback should
+be made when the script is run.  Looking at the code, it should be clear that
+in the event of a connection success, the client will print out a quote and
+exit.  If you start up a server, you can see:</p>
+
+<pre class="shell">
+% <em>mktap qotd --pb 8787</em>
+Saving qotd application to qotd.tap...
+Saved.
+% <em>twistd -f qotd.tap</em>
+% <em>python -c 'import TwistedQuotes.pbquoteclient'</em>
+An apple a day keeps the doctor away.
+</pre>
+
+<p>The argument to this callback, <code class="python">perspective</code>, is a
+<code class="API" base="twisted.spread.pb">RemoteReference</code>.  The
+<code class="python">perspective</code> reference represents a reference to a
+<code class="python">QuoteReader</code> perspective object.</p>
+
+<p><code class="API" base="twisted.spread.pb">RemoteReference</code> objects
+have one method which is their purpose for being: 
+<code class="python">callRemote</code>.  This method allows you to call a
+remote method on the object being referred to by the Reference.  
+<code class="API" base="twisted.spread.pb">RemoteReference.callRemote</code>,
+like <code class="API" base="twisted.spread">pb.connect</code>, returns a
+<code class="API" base="twisted.internet.defer">Deferred</code>.  When a
+response to the method-call being sent arrives, the 
+<code class="API" base="twisted.internet.defer">Deferred</code>'s
+<code class="python">callback</code> or <code class="python">errback</code>
+will be made, depending on whether an error occurred in processing the
+method-call.</p>
+
+<p>This introduction to PB does not showcase all of the features that it
+provides, but hopefully it gives you a good idea of where to get started
+setting up your own application.  Here are some of the othe building blocks you
+can use.</p>
+
+<h2>Passing more references</h2>
+
+<p>Here is an example of using 
+<code class="API" base="twisted.spread">pb.Referenceable</code> in a second
+class. The second <code class="API" base="twisted.spread">Referenceable</code>
+object can have remote methods invoked too, just like the first. In this
+example, the initial root object has a method that returns a reference to the
+second object.</p>
+
+
+<a href="listings/pb/pb1server.py" class="py-listing">pb1server.py</a>
+<a href="listings/pb/pb1client.py" class="py-listing">pb1client.py</a>
+
+<p>The root object has a method called <code>remote_getTwo</code>, which
+returns the <code>Two()</code> instance. On the client end, the callback gets a
+<code class="API" base="twisted.spread.pb">RemoteReference</code> to that
+instance. The client can then invoke two's <code>.remote_three()</code>
+method.</p>
+
+<p>You can use this technique to provide access to arbitrary sets of objects.
+Just remember that any object that might get passed <q>over the wire</q> must
+inherit from <code class="API" base="twisted.spread.pb">Referenceable</code>
+(or one of the other flavors). If you try to pass a non-Referenceable object
+(say, by returning one from a <code>remote_*</code> method), you'll get an
+<code class="API" base="twisted.spread.jelly">InsecureJelly</code>
+exception<span class="footnote">This can be overridden, by subclassing one of
+the Serializable flavors and defining custom serialization code for your class.
+See XXX for details.</span>.</p>
+
+
+<h2>References can come back to you</h2>
+
+<p>If your server gives a reference to a client, and then that client gives
+the reference back to the server, the server will wind up with the same
+object it gave out originally. The serialization layer watches for returning
+reference identifiers and turns them into actual objects. You need to stay
+aware of where the object lives: if it is on your side, you do actual method
+calls. If it is on the other side, you do 
+<code>.callRemote()</code><span class="footnote">The binary nature of this
+local vs. remote scheme works because you cannot give RemoteReferences to a
+third party. If you could, then your object A could go to B, B could give it to
+C, C might give it back to you, and you would be hard pressed to tell if the
+object lived in C's memory space, in B's, or if it was really your own object,
+tarnished and sullied after being handed down like a really ugly picture that
+your great aunt owned and which nobody wants but which nobody can bear to throw
+out. Ok, not really like that, but you get the idea.</span>.</p>
+
+<a href="listings/pb/pb2server.py" class="py-listing">pb2server.py</a>
+<a href="listings/pb/pb2client.py" class="py-listing">pb2client.py</a>
+
+<p>The server gives a <code>Two()</code> instance to the client, who then
+returns the reference back to the server. The server compares the <q>two</q>
+given with the <q>two</q> received and shows that they are the same, and that
+both are real objects instead of remote references.</p>
+
+<p>A few other techniques are demonstrated in <code>pb3client.py</code>. One is
+that the callbacks are are added with <code>.addCallback</code> instead of
+<code>.addCallbacks</code>. As you can tell from the <a
+href="defer.html">Deferred</a> documentation, <code>.addCallback</code> is a
+simplified form which only adds a success callback. The other is that to
+keep track of state from one callback to the next (the remote reference to
+the main One() object), we create a simple class, store the reference in an
+instance thereof, and point the callbacks at a sequence of bound methods.
+This is a convenient way to encapsulate a state machine. Each response kicks
+off the next method, and any data that needs to be carried from one state to
+the next can simply be saved as an attribute of the object.</p>
+
+<p>Remember that the client can give you back any remote reference you've
+given them. Don't base your zillion-dollar stock-trading clearinghouse
+server on the idea that you trust the client to give you back the right
+reference. The security model inherent in PB means that they can <em>only</em>
+give you back a reference that you've given them for the current connection
+(not one you've given to someone else instead, nor one you gave them last
+time before the TCP session went down, nor one you haven't yet given to the
+client), but just like with URLs and HTTP cookies, the particular reference
+they give you is entirely under their control.</p>
+
+
+<h2>References to client-side objects</h2>
+
+<p>Anything that's Referenceable can get passed across the wire, <em>in either
+direction</em>. The <q>client</q> can give a reference to the
+<q>server</q>, and then the server can use .callRemote() to invoke methods on
+the client end.  This fuzzes the distinction between <q>client</q> and
+<q>server</q>: the only real difference is who initiates the original TCP
+connection; after that it's all symmetric.</p>
+
+<a href="listings/pb/pb3server.py" class="py-listing">pb3server.py</a>
+<a href="listings/pb/pb3client.py" class="py-listing">pb3client.py</a>
+
+<p>In this example, the client gives a reference to its own object to the
+server. The server then invokes a remote method on the client-side
+object.</p>
+
+
+<h2>Raising Remote Exceptions</h2>
+
+<p>Everything so far has covered what happens when things go right. What
+about when they go wrong? The Python Way is to raise an exception of some
+sort. The Twisted Way is the same.</p>
+
+<p>The only special thing you do is to define your <code>Exception</code>
+subclass by deriving it from 
+<code class="API" base="twisted.spread">pb.Error</code>.  (You do define
+<code>Exception</code> subclasses, right? String exceptions are, like,
+<em>so</em> 5 minutes ago. Get with the new century, ok?). When any
+remotely-invokable method (like <code>remote_*</code> or
+<code>perspective_*</code>) raises a <code>pb.Error</code>-derived exception, a
+serialized form of that Exception object will be sent back over the 
+wire<span class="footnote">To be precise, the Failure will be sent if
+<em>any</em> exception is raised, not just pb.Error-derived ones.
+But the server will print ugly error messages if you raise ones that aren't
+derived from pb.Error.</span>. The other side (which did
+<code>callRemote</code>) will have the <q><code>errback</code></q> callback run
+with a <code class="API" base="twisted.python.failure">Failure</code> object
+that contains a copy of the exception object. This <code>Failure</code> object
+can be queried to retrieve the error message and a stack traceback.</p>
+
+<p><code class="API" base="twisted.python.failure">Failure</code> is a
+special class, defined in <code>twisted/python/failure.py</code>, created to
+make it easier to handle asynchronous exceptions. Just as exception handlers
+can be nested, <code>errback</code> functions can be chained. If one errback
+can't handle the particular type of failure, it can be <q>passed along</q> to a
+errback handler further down the chain.</p>
+
+<p>For simple purposes, think of the <code>Failure</code> as just a container
+for remotely-thrown <code>Exception</code> objects. To extract the string that
+was put into the exception, use its <code>.getErrorMessage()</code> method.
+To get the type of the exception (as a string), look at its
+<code>.type</code> attribute. The stack traceback is available too. The
+intent is to let the errback function get just as much information about the
+exception as Python's normal <code>try:</code> clauses do, even though the
+exception occurred in somebody else's memory space at some unknown time in
+the past.</p>
+
+<p>To implement the equivalent of the Python try/except blocks (which can
+trap particular kinds of exceptions and pass others <q>up</q> to higher-level
+try/except blocks), you can use the <code>.trap()</code> method in
+conjunction with multiple <code>errback</code> handlers on the
+<code>Deferred</code>. Raising an exception in an <code>errback</code> handler
+serves to pass that new exception to the next handler in the chain. Check
+the <code>Failure.trap</code> docstring for details. XXX: add a working example
+of this.</p>
+
+<a href="listings/pb/exc_server.py" class="py-listing">exc_server.py</a>
+<a href="listings/pb/exc_client.py" class="py-listing">exc_client.py</a>
+
+<pre class="shell">
+% ./exc_client.py 
+got remote Exception
+ .__class__ = twisted.spread.pb.CopiedFailure
+ .getErrorMessage() = fall down go boom
+ .type = __main__.MyError
+Main loop terminated.
+</pre>
+
+<p>Oh, and what happens if you raise some other kind of exception? Something
+that <em>isn't</em> subclassed from <code>pb.Error</code>? Well, those are
+called <q>unexpected exceptions</q>, which make Twisted think that something
+has <em>really</em> gone wrong. These will raise an exception on the
+<em>server</em> side. This won't break the connection (XXX: verify this), but
+it will print out an unsightly stack trace on the server's stderr (XXX: if
+logging is turned on, does it go into the log instead?), just as if the
+exception had happened outside a remotely-invokable method. The client will get
+the same <code>Failure</code> object in either case, but subclassing your
+exception from <code>pb.Error</code> is the way to tell Twisted that you expect
+this sort of exception, and that it is ok to just let the client handle it.
+Look at <code>exc_client.py</code> and change it to invoke
+<code>broken2()</code> instead of <code>broken()</code> to see the change in
+the server's behavior.</p>
+
+<p>If you don't add an <code>errback</code> function to the <code class="API"
+base="twisted.internet.defer">Deferred</code>, then a remote exception will
+still send a <code>Failure</code> object back over, but the side that did
+<code>callRemote</code> will emit a message about an <q>Unhandled error in
+Deferred</q>, along with an ugly stack trace. It can't raise an exception
+(after all, the <code>callRemote</code> that triggered the problem is long
+gone), but it will emit a traceback. So be a good programmer and <em>always add
+<code>errback</code> handlers</em>.</p>
+
+</body> </html>
