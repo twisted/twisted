@@ -30,6 +30,7 @@ from twisted.python import log
 from twisted.python import components
 from twisted.python import util
 from twisted.python import reflect
+from twisted.python import failure
 
 from twisted import cred
 import twisted.cred.checkers

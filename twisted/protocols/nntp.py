@@ -489,7 +489,7 @@ class NNTPClient(basic.LineReceiver):
             del self._postText[0]
             self._newState(None, self.postFailed, self._headerPosted)
         else:
-            self.postFailed(line)
+            self.postFailed('%d %s' % (code, message))
         self._endState()
 
 

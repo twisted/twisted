@@ -43,7 +43,7 @@ Test coverage needs to be better.
 <http://www.irchelp.org/irchelp/rfc/ctcpspec.html>}
 """
 
-__version__ = '$Revision: 1.84 $'[11:-2]
+__version__ = '$Revision: 1.85 $'[11:-2]
 
 from twisted.internet import reactor, protocol
 from twisted.persisted import styles
@@ -563,7 +563,7 @@ class IRCClient(basic.LineReceiver):
 
         my_address = struct.pack("!I", my_address)
 
-        args = ['SEND', name, my_address, str(portNum)]
+        args = ['SEND', name, my_address, str(port)]
 
         if not (size is None):
             args.append(size)
@@ -1524,6 +1524,7 @@ mQuoteTable = {
 mDequoteTable = {}
 for k, v in mQuoteTable.items():
     mDequoteTable[v[-1]] = k
+del k, v
 
 mEscape_re = re.compile('%s.' % (re.escape(M_QUOTE),), re.DOTALL)
 
