@@ -114,7 +114,7 @@ class IMailboxListener(components.Interface):
         C{None}.
         """
 
-class IMAP4Server(policies.TimeoutMixin, basic.LineReceiver):
+class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
     """
     Protocol implementation for an IMAP4rev1 server.
 
@@ -176,7 +176,7 @@ class IMAP4Server(policies.TimeoutMixin, basic.LineReceiver):
         self.CAPABILITIES.setdefault('AUTH', []).append(chal.getName().upper())
 
     def connectionMade(self):
-        policies.TimeoutMixin.connectionMade(self)
+        self.setTimeout(self.timeOut)
 
         if self.ctx and implements(self.transport, ITLSTransport):
             self.CAPABILITIES['LOGINDISABLED'] = None
@@ -186,9 +186,8 @@ class IMAP4Server(policies.TimeoutMixin, basic.LineReceiver):
         self.state = 'unauth'
         self.sendServerGreeting()
     
-    def dataReceived(self, data):
-        policies.TimeoutMixin.dataReceived(self, data)
-        basic.LineReceiver.dataReceived(self, data)
+    def connectionLost(self, reason):
+        self.setTimeout(None)
 
     def timeoutConnection(self):
         self.sendLine('* BYE Autologout; connection idle too long')
@@ -197,6 +196,8 @@ class IMAP4Server(policies.TimeoutMixin, basic.LineReceiver):
             self.mbox.removeListener(self)
 
     def rawDataReceived(self, data):
+        self.resetTimeout()
+        
         self._pendingSize -= len(data)
         if self._pendingSize > 0:
             self._pendingBuffer.write(data)
@@ -216,6 +217,8 @@ class IMAP4Server(policies.TimeoutMixin, basic.LineReceiver):
 
     def lineReceived(self, line):
         # print 'S: ' + line.replace('\r', '\\r')
+        self.resetTimeout()
+
         args = line.split(None, 2)
         rest = None
         if self._pendingLiteral:

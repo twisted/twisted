@@ -309,11 +309,14 @@ class TimeoutTester(protocol.Protocol, policies.TimeoutMixin):
     timedOut = 0
 
     def connectionMade(self):
-        policies.TimeoutMixin.connectionMade(self)
+        self.setTimeout(self.timeOut)
 
     def dataReceived(self, data):
-        policies.TimeoutMixin.dataReceived(self, data)
+        self.resetTimeout()
         protocol.Protocol.dataReceived(self, data)
+
+    def connectionLost(self):
+        self.setTimeout(None)
 
     def timeoutConnection(self):
         self.timedOut = 1
