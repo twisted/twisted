@@ -1,3 +1,10 @@
+2003-06-09  Christopher Armstrong  <radix@twistedmatrix.com>
+
+	* twisted/trial/{unittest,runner}.py: Added setUpClass and
+	tearDownClass methods and invocations to twisted.trial. Implement
+	those methods in your TestCases if you want to manage resources on
+	a per-class level.
+ 
 2003-06-09  Jp Calderone  <exarkun@twistedmatrix.com>
 
 	* twisted/mail/relay.py: Default relaying rule change from all
