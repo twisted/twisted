@@ -100,13 +100,13 @@ class BufferingConsumer:
 class MessageProducerTestCase(unittest.TestCase):
     def testSinglePart(self):
         body = 'This is body text.  Rar.'
-        msg = FakeyMessage({
-                'from': 'sender@host',
-                'to': 'recipient@domain',
-                'subject': 'booga booga boo',
-                'content-type': 'text/plain',
-            }, (), None, body, 123, None
-        )
+        headers = util.OrderedDict()
+        headers['from'] = 'sender@host'
+        headers['to'] = 'recipient@domain'
+        headers['subject'] = 'booga booga boo'
+        headers['content-type'] = 'text/plain'
+
+        msg = FakeyMessage(headers, (), None, body, 123, None )
 
         c = BufferingConsumer()
         p = imap4.MessageProducer(msg)
@@ -121,22 +121,23 @@ class MessageProducerTestCase(unittest.TestCase):
             '\r\n'
             + body
         )
-    testSinglePart.todo = "Fix header ordering issues"
 
     def testSingleMultiPart(self):
         outerBody = ''
         innerBody = 'Contained body message text.  Squarge.'
-        msg = FakeyMessage({
-                'from': 'sender@host',
-                'to': 'recipient@domain',
-                'subject': 'booga booga boo',
-                'content-type': 'multipart/alternative; boundary="xyz"',
-            }, (), None, outerBody, 123, [FakeyMessage({
-                    'content-type': 'text/plain',
-                    'subject': 'this is subject text',
-                }, (), None, innerBody, None, None
-            )],
-        )
+        headers = util.OrderedDict()
+        headers['from'] = 'sender@host'
+        headers['to'] = 'recipient@domain'
+        headers['subject'] = 'booga booga boo'
+        headers['content-type'] = 'multipart/alternative; boundary="xyz"'
+
+        innerHeaders = util.OrderedDict()
+        innerHeaders['subject'] = 'this is subject text'
+        innerHeaders['content-type'] = 'text/plain'
+        msg = FakeyMessage(headers, (), None, outerBody, 123,
+                           [FakeyMessage(innerHeaders, (), None, innerBody,
+                                         None, None)],
+                           )
 
         c = BufferingConsumer()
         p = imap4.MessageProducer(msg)
@@ -151,32 +152,32 @@ class MessageProducerTestCase(unittest.TestCase):
             '\r\n'
             '\r\n'
             '--xyz\r\n'
-            'Content-Type: text/plain\r\n'
             'Subject: this is subject text\r\n'
+            'Content-Type: text/plain\r\n'
             '\r\n'
             + innerBody
             + '\r\n--xyz--\r\n'
         )
-    testSingleMultiPart.todo = "Fix header ordering issues"
 
     def testMultipleMultiPart(self):
         outerBody = ''
         innerBody1 = 'Contained body message text.  Squarge.'
         innerBody2 = 'Secondary <i>message</i> text of squarge body.'
-        msg = FakeyMessage({
-                'from': 'sender@host',
-                'to': 'recipient@domain',
-                'subject': 'booga booga boo',
-                'content-type': 'multipart/alternative; boundary="xyz"',
-            }, (), None, outerBody, 123, [FakeyMessage({
-                    'subject': 'this is subject text',
-                    'content-type': 'text/plain',
-                }, (), None, innerBody1, None, None
-            ), FakeyMessage({
-                    'subject': '<b>this is subject</b>',
-                    'content-type': 'text/html',
-                }, (), None, innerBody2, None, None
-            )],
+        headers = util.OrderedDict()
+        headers['from'] = 'sender@host'
+        headers['to'] = 'recipient@domain'
+        headers['subject'] = 'booga booga boo'
+        headers['content-type'] = 'multipart/alternative; boundary="xyz"'
+        innerHeaders = util.OrderedDict()
+        innerHeaders['subject'] = 'this is subject text'
+        innerHeaders['content-type'] = 'text/plain'
+        innerHeaders2 = util.OrderedDict()
+        innerHeaders2['subject'] = '<b>this is subject</b>'
+        innerHeaders2['content-type'] = 'text/html'
+        msg = FakeyMessage(headers, (), None, outerBody, 123, [
+            FakeyMessage(innerHeaders, (), None, innerBody1, None, None),
+            FakeyMessage(innerHeaders2, (), None, innerBody2, None, None)
+            ],
         )
 
         c = BufferingConsumer()
@@ -203,7 +204,6 @@ class MessageProducerTestCase(unittest.TestCase):
             + innerBody2
             + '\r\n--xyz--\r\n'
         )
-    testMultipleMultiPart.todo = "Fix header ordering issues"
 
 class IMAP4HelperTestCase(unittest.TestCase):
     def testFileProducer(self):

@@ -4470,13 +4470,9 @@ class IMailbox(components.Interface):
         read-write.
         """
 
-def _formatHeaders(headers, order=None):
-    if order is not None:
-        headers = dict([(h.lower(), v) for (h, v) in headers.iteritems()])
-        items = [(h, headers[h.lower()]) for h in order if h.lower() in headers]
-    else:
-        items = headers.iteritems()
-    hdrs = [': '.join((k.title(), '\r\n'.join(v.splitlines()))) for (k, v) in items]
+def _formatHeaders(headers):
+    hdrs = [': '.join((k.title(), '\r\n'.join(v.splitlines()))) for (k, v)
+            in headers.iteritems()]
     hdrs = '\r\n'.join(hdrs) + '\r\n'
     return hdrs
 
@@ -4521,6 +4517,15 @@ class MessageProducer:
     CHUNK_SIZE = 2 ** 2 ** 2 ** 2
 
     def __init__(self, msg, buffer = None):
+        """Produce this message.
+
+        @param msg: The message I am to produce.
+        @type msg: L{IMessage}
+
+        @param buffer: A buffer to hold the message in.  If None, I will
+            use a L{tempfile.TemporaryFile}.
+        @type buffer: file-like
+        """
         self.msg = msg
         if buffer is None:
             buffer = tempfile.TemporaryFile()
