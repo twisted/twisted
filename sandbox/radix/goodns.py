@@ -13,16 +13,20 @@ import operator
 def _scroungeRecords(result, reqkey, dnstype, cnameLevel, nsLevel, resolver):
     """
     Inspired by twisted.names.common.extractRecords.
-    
-    @return: None or the RRHeaders matching dnstype
+
+    @return: None or the RRHeaders matching dnstype and reqkey
     @rtype: (Maybe a Deferred resulting in) a list or None
     """
+##    print "** Scrounging (%s, %s) **" % (dns.QUERY_TYPES[dnstype], reqkey)
+##    print result
+##    print
+    
     r = []
     cnames = []
     nses = []
 
     for rec in reduce(operator.add, result):
-        if rec.type == dnstype:
+        if rec.type == dnstype and rec.name.name == reqkey:
             r.append(rec)
         elif rec.type == dns.CNAME:
             cnames.append(rec.payload)
@@ -34,34 +38,35 @@ def _scroungeRecords(result, reqkey, dnstype, cnameLevel, nsLevel, resolver):
 
     # XXX - timeouts??
 
-    # XXX - CNAME support is totally broken, I think. When return the
-    # ultimate records, the code that rummages through them (the
-    # callbacks down below) will check that rrheader.name ==
-    # nameIRequested. But it won't be! it'll be the target of the
-    # CNAME.
-    
     if cnames:
         if not cnameLevel:
             return None
         m = getattr(resolver, common.typeToMethod[dnstype])
+##        print "== CNAME =="
+##        print "trying to look up", dns.QUERY_TYPES[dnstype], "with", cnames[0].name.name
+##        print
         # XXX what about multiple CNAMEs?
-        d = m(cnames[0].payload.name.name)
-        d.addCallback(_scroungeRecords, reqkey, dnstype, cnameLevel-1, nsLevel, resolver)
+        newkey = cnames[0].name.name
+        d = m(cnames[0].name.name)
+        d.addCallback(_scroungeRecords, newkey, dnstype, cnameLevel-1, nsLevel, resolver)
         return d
 
     if nses:
         if not nsLevel:
             return None
         from twisted.names import client
+##        print "== NS =="
+##        print "trying to look up", dns.QUERY_TYPES[dnstype], "with", reqkey
+##        print
         # XXX - what about multiple NSes?
-        r = client.Resolver(servers=[(str(nses[0].payload.name), dns.PORT)])
+        r = client.Resolver(servers=[(str(nses[0].name), dns.PORT)])
         m = getattr(r, common.typeToMethod[dnstype])
         d = m(reqkey)
         d.addCallback(_scroungeRecords, reqkey, dnstype, cnameLevel, nsLevel-1, resolver)
         return d
 
 
-def lookupText(domain, cnameLevel=10, nsLevel=10, resolver=client, timeout=None):
+def lookupText(domain, cnameLevel=4, nsLevel=4, resolver=client, timeout=None):
     d = resolver.lookupText(domain, timeout)
     d.addCallback(_scroungeRecords, domain, dns.TXT, cnameLevel, nsLevel, resolver)
     d.addCallback(_cbGotTxt, domain, cnameLevel, resolver)
@@ -71,10 +76,10 @@ def lookupText(domain, cnameLevel=10, nsLevel=10, resolver=client, timeout=None)
 def _cbGotTxt(result, name, followCNAME, resolver):
     if not result:
         return None
-    return [x.payload.data for x in result if x.name.name == name]
+    return [x.payload.data for x in result]
 
 
-def lookupMailExchange(domain, resolveResults=True, cnameLevel=10, nsLevel=10, resolver=client, timeout=None):
+def lookupMailExchange(domain, resolveResults=True, cnameLevel=4, nsLevel=4, resolver=client, timeout=None):
     """
     I return a list of hosts sorted by their MX priority (low -> high).
     XXX - is having the actual numeric priorities ever relevant?
@@ -89,7 +94,7 @@ def lookupMailExchange(domain, resolveResults=True, cnameLevel=10, nsLevel=10, r
 def _cbGotMX(result, name):
     if not result:
         return None
-    mxes = [(r.payload.preference, r.payload.exchange) for r in result if r.name.name == name]
+    mxes = [(r.payload.preference, r.payload.exchange) for r in result]
     mxes.sort()
     return [x[1].name for x in mxes]
 
@@ -109,7 +114,7 @@ def ptrize(ip):
     parts.reverse()
     return '.'.join(parts) + '.in-addr.arpa'
 
-def lookupPointer(name, cnameLevel=10, nsLevel=10, resolver=client, timeout=None):
+def lookupPointer(name, cnameLevel=4, nsLevel=4, resolver=client, timeout=None):
     d = resolver.lookupPointer(name, timeout)
     d.addCallback(_scroungeRecords, name, dns.PTR, cnameLevel, nsLevel, resolver)
     d.addCallback(_cbExtractNames, name)
@@ -118,9 +123,9 @@ def lookupPointer(name, cnameLevel=10, nsLevel=10, resolver=client, timeout=None
 def _cbExtractNames(result, name):
     if not result:
         return None
-    return [x.payload.name.name for x in result if x.name.name == name]
+    return [x.payload.name.name for x in result]
 
-def lookupAddress(name, cnameLevel=10, nsLevel=10, resolver=client, timeout=None):
+def lookupAddress(name, cnameLevel=4, nsLevel=4, resolver=client, timeout=None):
     d = resolver.lookupAddress(name, timeout)
     d.addCallback(_scroungeRecords, name, dns.A, cnameLevel, nsLevel, resolver)
     d.addCallback(_cbExtractAddresses, name)
@@ -129,4 +134,4 @@ def lookupAddress(name, cnameLevel=10, nsLevel=10, resolver=client, timeout=None
 def _cbExtractAddresses(result, name):
     if not result:
         return None
-    return [x.payload.dottedQuad() for x in result if x.name.name == name]
+    return [x.payload.dottedQuad() for x in result]
