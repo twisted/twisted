@@ -251,8 +251,12 @@ class RootSlicer:
         if slicerFactory:
             if self.debug: print " got slicerFactory", slicerFactory
             return slicerFactory(obj)
-        if self.debug: print "cannot serialize %s %s" % (obj, type(obj))
-        raise Violation("cannot serialize %s (%s)" % (obj, type(obj)))
+        if issubclass(type(obj), types.InstanceType):
+            name = str(obj.__class__)
+        else:
+            name = str(type(obj))
+        if self.debug: print "cannot serialize %s (%s)" % (obj, name)
+        raise Violation("cannot serialize %s (%s)" % (obj, name))
 
     def slice(self):
         return self

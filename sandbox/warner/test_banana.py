@@ -873,7 +873,7 @@ class EncodeFailureTest(unittest.TestCase):
         why = e.value.args[0]
         self.failUnless(
             why.startswith("cannot serialize <test_banana.Foo instance at"))
-        self.failUnless(why.endswith(" (<type 'instance'>)"))
+        self.failUnless(why.endswith(" (test_banana.Foo)"))
         # it will fail before any tokens have been emitted
         self.failUnlessEqual(self.banana.tokens, [])
 
