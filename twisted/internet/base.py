@@ -188,8 +188,11 @@ class ReactorBase:
         for reader in selectables:
             try:
                 log.logOwner.own(reader)
-                reader.connectionLost(failure.Failure(main.CONNECTION_LOST))
-                log.logOwner.disown(reader)
+                try:
+                    reader.connectionLost(failure.Failure(main.CONNECTION_LOST))
+                finally:
+                    log.logOwner.disown(reader)
+                    raise
             except:
                 log.deferr()
 
