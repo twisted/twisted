@@ -840,6 +840,7 @@ class Link(Widget):
             node.tagName = 'a'
             node.setAttribute("href", data)
         else:
+            data = self.model
             txt = data.getSubmodel("text").getData()
             if not isinstance(txt, Node):
                 txt = document.createTextNode(txt)
