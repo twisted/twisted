@@ -199,8 +199,13 @@ def implements(obj, interfaceClass):
     is due to the change in terminology.
     """
     warnings.warn("Please use providedBy() or implementedBy()", DeprecationWarning)
-    fixClassImplements(obj.__class__)
-    return interfaceClass.providedBy(obj)
+    # try to support both classes and instances, which is HORRIBLE
+    if isinstance(obj, (type, types.ClassType)):
+        fixClassImplements(obj)
+        return interfaceClass.implementedBy(obj)
+    else:
+        fixClassImplements(obj.__class__)
+        return interfaceClass.providedBy(obj)
 
 
 def getInterfaces(klass):
