@@ -56,6 +56,14 @@ class ClassicClassAdapter(_Cache):
         f.__dict__ = d
         return self.cret(memo, o, f)
 
+class FunctionAdapter(_Cache):
+    def rebuild(self, memo):
+        o = self.original
+        if id(o) in memo:
+            return memo[id(o)]
+        module = reflect.namedAny(o.__module__)
+        return self.cret(memo, o, getattr(module, o.func_name))
+
 class MethodAdapter(_Cache):
     def rebuild(self, memo):
         o = self.original
