@@ -23,11 +23,11 @@ class TicketPerspective(Perspective):
         return self.realPerspective.attached(reference, identity)
 
 class TicketAuthorizer(DefaultAuthorizer):
-    def addTicket(self, realPerspective):
+    def addTicket(self, realPerspective, name):
         ticket = challenge()
-        ticketPerspective = TicketPerspective(ticket, realPerspective, self)
+        ticketPerspective = TicketPerspective(name, realPerspective, self)
         self.sisterService.ticketService.addPerspective(ticketPerspective)
-        ticketPerspective.makeIdentity(ticket)
+        ident = ticketPerspective.makeIdentity(ticket)
         return ticket
 
 True = 1
@@ -66,13 +66,15 @@ class SisterService(Service, Perspective):
         self.resourceLoaders = {}
         self.localPort = localPort
         self.parentRef = PerspectiveConnector(
-            parentHost, parentPort, "parent", sharedSecret, parentService,
+            parentHost, parentPort, "parent", sharedSecret,
+            parentService,
             client=(localPort, SisterParentClient(self)))
         self.makeIdentity(sharedSecret)
         self.application.authorizer.sisterService = self
 
     def startService(self):
         log.msg( 'starting sister, woo')
+        print "sister: staring service"
         self.parentRef.startConnecting()
 
     def __getstate__(self):
@@ -116,7 +118,7 @@ class SisterService(Service, Perspective):
             dvalue = defer.succeed(value)
         dvalue.addCallback(self.ownResource, resourceType, resourceName)
         if generateTicket:
-            dvalue.addCallback(self.application.authorizer.addTicket)
+            dvalue.addCallback(self.application.authorizer.addTicket, resourceName)
         return dvalue
 
     def registerResourceLoader(self, resourceType, resourceLoader):
@@ -126,3 +128,9 @@ class SisterService(Service, Perspective):
         """
         log.msg( 'sister: registering resource loader %s:%s' % (resourceType, repr(resourceLoader)))
         self.resourceLoaders[resourceType] = resourceLoader
+
+    def unloadResource(self, resourceType, resourceName):
+        return self.parentRef.callRemote("unloadResource", resourceType, resourceName).addCallback(self._cbUnload)
+
+    def _cbUnload(self, data):
+        print "Unloaded resource:", data
