@@ -22,7 +22,9 @@ def makeService(args):
 
     checker = checkers.InMemoryUsernamePasswordDatabaseDontUse(username="password")
 
-    # XXX Can only support one handler via ssh per process!  Muy suck.
+    # XXX Multiple handlers can be supported, but we need to use
+    # multiple kinds of avatars for that.  Right now let's just
+    # support one.
     components.registerAdapter(ConstructedSession, TerminalUser, session.ISession)
 
     f = protocol.ServerFactory()

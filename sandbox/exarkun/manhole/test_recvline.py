@@ -2,6 +2,7 @@
 import insults, recvline
 
 from twisted.python import log
+from twisted.internet import defer
 from twisted.trial import unittest
 from twisted.test.proto_helpers import StringTransport
 
@@ -222,7 +223,8 @@ end = "\x1b[4~"
 backspace = "\x7f"
 
 from twisted.cred import checkers
-from twisted.conch.ssh import transport, userauth, channel, connection
+from twisted.conch.ssh import transport, userauth, channel, connection, session
+
 class TestAuth(userauth.SSHUserAuthClient):
     def __init__(self, username, password, *a, **kw):
         userauth.SSHUserAuthClient.__init__(self, username, *a, **kw)
@@ -234,35 +236,51 @@ class TestAuth(userauth.SSHUserAuthClient):
 class SessionChannel(channel.SSHChannel):
     name = 'session'
 
-    def __init__(self, width, height, *a, **kw):
+    def __init__(self, protocolFactory, protocolArgs, protocolKwArgs, width, height, *a, **kw):
         channel.SSHChannel.__init__(self, *a, **kw)
+
+        self.protocolFactory = protocolFactory
+        self.protocolArgs = protocolArgs
+        self.protocolKwArgs = protocolKwArgs
+
         self.width = width
         self.height = height
 
     def channelOpen(self, data):
         term = session.packRequest_pty_req("vt102", (self.height, self.width, 0, 0), '')
-        self.conn.sendRequest('pty-req', term)
+        self.conn.sendRequest(self, 'pty-req', term)
         self.conn.sendRequest(self, 'shell', '')
 
+        self._protocolInstance = self.protocolFactory(*self.protocolArgs, **self.protocolKwArgs)
+        self._protocolInstance.makeConnection(self)
+
     def dataReceived(self, data):
-        print repr(data)
+        self._protocolInstance.dataReceived(data)
 
 class TestConnection(connection.SSHConnection):
-    def __init__(self, width, height, *a, **kw):
+    def __init__(self, protocolFactory, protocolArgs, protocolKwArgs, width, height, *a, **kw):
         connection.SSHConnection.__init__(self, *a, **kw)
+
+        self.protocolFactory = protocolFactory
+        self.protocolArgs = protocolArgs
+        self.protocolKwArgs = protocolKwArgs
+
         self.width = width
-        self.height = hieght
+        self.height = height
 
     def serviceStarted(self):
-        self.__channel = SessionChannel(self.width, self.height)
+        self.__channel = SessionChannel(self.protocolFactory, self.protocolArgs, self.protocolKwArgs, self.width, self.height)
         self.openChannel(self.__channel)
 
     def write(self, bytes):
         return self.__channel.write(bytes)
 
 class TestTransport(transport.SSHClientTransport):
-    def __init__(self, username, password, width, height, *a, **kw):
+    def __init__(self, protocolFactory, protocolArgs, protocolKwArgs, username, password, width, height, *a, **kw):
         # transport.SSHClientTransport.__init__(self, *a, **kw)
+        self.protocolFactory = protocolFactory
+        self.protocolArgs = protocolArgs
+        self.protocolKwArgs = protocolKwArgs
         self.username = username
         self.password = password
         self.width = width
@@ -272,31 +290,42 @@ class TestTransport(transport.SSHClientTransport):
         return defer.succeed(True)
 
     def connectionSecure(self):
-        print 'yonk'
-        self.__connection = TestConnection(self.width, self.height)
+        self.__connection = TestConnection(self.protocolFactory, self.protocolArgs, self.protocolKwArgs, self.width, self.height)
         self.requestService(
             TestAuth(self.username, self.password, self.__connection))
 
     def write(self, bytes):
         return self.__connection.write(bytes)
 
+from ssh import TerminalUser, TerminalSession, TerminalSessionTransport, ConchFactory
+from demolib import TerminalForwardingProtocol
+from twisted.python import components
+
+class TestSessionTransport(TerminalSessionTransport):
+    protocolFactory = staticmethod(lambda: TerminalForwardingProtocol(EchoServer))
+
+class TestSession(TerminalSession):
+    transportFactory = TestSessionTransport
+
+components.registerAdapter(TestSession, TerminalUser, session.ISession)
+
 class _SSHMixin:
     def setUp(self):
         HEIGHT = 24
         WIDTH = 80
         u, p = 'testuser', 'testpass'
-        from ssh import ConchFactory
         sshFactory = ConchFactory([checkers.InMemoryUsernamePasswordDatabaseDontUse(**{u: p})])
+        sshFactory.startFactory()
 
         recvlineServer = self.serverProtocol()
         insultsServer = insults.ServerProtocol(lambda: recvlineServer)
         sshServer = sshFactory.buildProtocol(None)
-        serverTransport = loopback.LoopbackRelay(sshServer)
+        clientTransport = loopback.LoopbackRelay(sshServer)
 
         recvlineClient = helper.TerminalBuffer()
         insultsClient = insults.ClientProtocol(lambda: recvlineClient)
-        sshClient = TestTransport(u, p, WIDTH, HEIGHT)
-        clientTransport = loopback.LoopbackRelay(sshClient)
+        sshClient = TestTransport(lambda: insultsClient, (), {}, u, p, WIDTH, HEIGHT)
+        serverTransport = loopback.LoopbackRelay(sshClient)
 
         sshClient.makeConnection(clientTransport)
         sshServer.makeConnection(serverTransport)
