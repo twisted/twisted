@@ -1,4 +1,12 @@
-2003-9-11  Moshe Zadka <moshez@twistedmatrix.com>
+2003-09-19  Christopher Armstrong  <radix@twistedmatrix.com>
+
+	* twisted/names/authority.py twisted/test/test_names.py
+	twisted/protocols/dns.py: Client and server support for TTLs on
+	all records. All Record_* types now take a ttl= keyword
+	argument. You can pass the ttl= argument to all the record classes
+	in your pyzones, too.
+
+2003-09-19  Moshe Zadka <moshez@twistedmatrix.com>
 
 	* twisted/application/__init__.py twisted/application/app.py
         twisted/application/compat.py twisted/application/internet.py
