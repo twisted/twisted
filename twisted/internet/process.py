@@ -20,24 +20,13 @@
 """
 
 # System Imports
-import os, sys, traceback
-if os.name != 'java':
-    import errno
-    import select
-
-if os.name == 'posix':
-    # Inter-process communication and FCNTL fun isn't available on windows.
-    import fcntl
-    if (sys.hexversion >> 16) >= 0x202:
-        FCNTL = fcntl
-    else:
-        import FCNTL
+import os, sys, traceback, select, errno
 
 from twisted.persisted import styles
 from twisted.python import log
 
 # Sibling Imports
-import abstract, main
+import abstract, main, fdesc
 from main import CONNECTION_LOST, CONNECTION_DONE
 
 def reapProcess(*args):
@@ -230,7 +219,7 @@ class Process(abstract.FileDescriptor, styles.Ephemeral):
         for fd in stdout_write, stderr_write, stdin_read:
             os.close(fd)
         for fd in (stdout_read, stderr_read, stdin_write):
-            fcntl.fcntl(fd, FCNTL.F_SETFL, os.O_NONBLOCK)
+            fdesc.setNonBlocking(fd)
         self.stdout = stdout_read # os.fdopen(stdout_read, 'r')
         self.stderr = stderr_read # os.fdopen(stderr_read, 'r')
         self.stdin = stdin_write
@@ -255,30 +244,12 @@ class Process(abstract.FileDescriptor, styles.Ephemeral):
     def doError(self):
         """Called when my standard error stream is ready for reading.
         """
-        try:
-            output = os.read(self.stderr, 8192)
-        except IOError, ioe:
-            if ioe.args[0] == errno.EAGAIN:
-                return
-            return CONNECTION_LOST
-        if not output:
-            return CONNECTION_LOST
-        self.proto.errReceived(output)
+        return fdesc.readFromFD(self.stderr, self.proto.errReceived)
 
     def doRead(self):
         """Called when my standard output stream is ready for reading.
         """
-        fd = self.fileno()
-        try:
-            output = os.read(self.stdout, 8192) #.read()
-        except IOError, ioe:
-            if ioe.args[0] == errno.EAGAIN:
-                return
-            else:
-                return CONNECTION_LOST
-        if not output:
-            return CONNECTION_LOST
-        self.proto.dataReceived(output)
+        return fdesc.readFromFD(self.stdout, self.proto.dataReceived)
 
     def doWrite(self):
         """Called when my standard output stream is ready for writing.

@@ -1,4 +1,3 @@
-
 # Twisted, the Framework of Your Internet
 # Copyright (C) 2001 Matthew W. Lefkowitz
 # 
@@ -16,19 +15,14 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
 # system imports
-import sys, os
-import fcntl
-if (sys.hexversion >> 16) >= 0x202:
-    FCNTL = fcntl
-else:
-    import FCNTL
+import sys
 
 # Twisted Imports
 from twisted.internet import protocol
 
 # Sibling Imports
-import abstract
-from main import CONNECTION_LOST, CONNECTION_DONE
+import abstract, fdesc
+
 
 _stdio_in_use = 0
 
@@ -48,8 +42,7 @@ class StandardIO(abstract.FileDescriptor, protocol.Transport):
             raise RuntimeError, "Standard IO already in use."
         _stdio_in_use = 1
         self.fileno = sys.__stdin__.fileno
-        # set stdin to non-blocking
-        fcntl.fcntl(self.fileno(), FCNTL.F_SETFL, os.O_NONBLOCK)
+        fdesc.setNonBlocking(self.fileno())
         self.protocol = protocol
         self.protocol.makeConnection(self)
         self.startReading()
@@ -65,10 +58,7 @@ class StandardIO(abstract.FileDescriptor, protocol.Transport):
     def doRead(self):
         """Some data's readable from standard input.
         """
-        data = os.read(self.fileno(), 8192)
-        if data == '':
-            return CONNECTION_LOST
-        self.protocol.dataReceived(data)
+        return fdesc.readFromFD(self.fileno(), self.protocol.dataReceived)
 
     def connectionLost(self):
         """The connection was lost.
