@@ -27,6 +27,42 @@ from twisted.coil import coil
 class IResource(components.Interface):
     """A web resource."""
 
+    ## Signal if this IResource implementor is a "leaf node" or not.
+    ## If True, getChildWithDefault will not be called on this Resource.
+    isLeaf = 0
+
+    def listNames():
+        """Return a list of string names that are valid children of this resource.
+        """
+
+    def getChildWithDefault(name, request):
+        """Return a child with the given name for the given request.
+        This is the external interface used by the Resource publishing
+        machinery. If implementing IResource without subclassing
+        Resource, it must be provided. However, if subclassing Resource,
+        getChild overridden instead.
+        """
+
+    def getChild(name, request):
+        """(informal) Resource subclasses can override this to produce
+        dynamic children--names that are not present in the children
+        dictionary populated by putChild.
+        """
+
+    def putChild(path, child):
+        """Put a child IResource implementor at the given path.
+        """
+
+    def render(request):
+        """Render a request. This is called on the leaf resource for
+        a request. Render must return either a string, which will
+        be sent to the browser as the HTML for the request, or
+        server.NOT_DONE_YET. If NOT_DONE_YET is returned,
+        at some point later (in a Deferred callback, usually)
+        call request.write("<html>") to write data to the request,
+        and request.finish() to send the data to the browser.
+        """
+
 
 class Resource(coil.ConfigCollection):
     """I define a web-accessible resource.
