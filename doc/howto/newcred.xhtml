@@ -13,10 +13,10 @@
 <p>Cred is an pluggable authentication system for servers. It allows a
 protocol to take credentials, such as a username/password pair, and
 login, getting back a business logic object specific to that protocol
-and "user". For example, POP3 might pass username and password and get
+and <q>user</q>. For example, POP3 might pass username and password and get
 back a mailbox object for the specified email account. Cred is
 designed to allow both the backend implementation of the business
-logic - called the "avatar" - and the authentication database to be
+logic - called the <em>avatar</em> - and the authentication database to be
 decided during deployment. For example, the same POP3 server should be
 able to authenticate against /etc/passwd or an LDAP server without
 having to know anything about how or where mail is stored.  </p>
@@ -166,7 +166,7 @@ return a Deferred or a synchronous result.</p>
 <p>An avatar is a business logic object for a specific user. For POP3, it's
 a mailbox, for a first-person-shooter it's the object that interacts with
 the game, the actor as it were. Avatars are specific to an application,
-and each avatar represents a single "user".</p>
+and each avatar represents a single <q>user</q>.</p>
 
     <h2>Responsibilities</h2>
 
