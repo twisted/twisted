@@ -152,6 +152,7 @@ class ReactorBase:
     __name__ = "twisted.internet.reactor"
 
     def __init__(self):
+        self.threadCallQueue = []
         self._eventTriggers = {}
         self._pendingTimedCalls = []
         self.running = 0
@@ -170,9 +171,6 @@ class ReactorBase:
         import thread
         self.usingThreads = 1
         self.installWaker()
-        self.threadCallQueue = []
-
-    threadCallQueue = None
 
     def installWaker(self):
         raise NotImplementedError()
@@ -184,14 +182,11 @@ class ReactorBase:
         """See twisted.internet.interfaces.IReactorThreads.callFromThread.
         """
         assert callable(f), "%s is not callable" % f
-        if threadable.isInIOThread():
-            self.callLater(0, f, *args, **kw)
-        else:
-            # lists are thread-safe in CPython, but not in Jython
-            # this is probably a bug in Jython, but until fixed this code
-            # won't work in Jython.
-            self.threadCallQueue.append((f, args, kw))
-            self.wakeUp()
+        # lists are thread-safe in CPython, but not in Jython
+        # this is probably a bug in Jython, but until fixed this code
+        # won't work in Jython.
+        self.threadCallQueue.append((f, args, kw))
+        self.wakeUp()
 
     def wakeUp(self):
         """Wake up the event loop."""
@@ -260,19 +255,19 @@ class ReactorBase:
         """Handle a SIGINT interrupt.
         """
         log.msg("Received SIGINT, shutting down.")
-        self.callLater(0, self.stop)
+        self.callFromThread(self.stop)
 
     def sigBreak(self, *args):
         """Handle a SIGBREAK interrupt.
         """
         log.msg("Received SIGBREAK, shutting down.")
-        self.callLater(0, self.stop)
+        self.callFromThread(self.stop)
 
     def sigTerm(self, *args):
         """Handle a SIGTERM interrupt.
         """
         log.msg("Received SIGTERM, shutting down.")
-        self.callLater(0, self.stop)
+        self.callFromThread(self.stop)
 
     def disconnectAll(self):
         """Disconnect every reader, and writer in the system.

@@ -97,8 +97,7 @@ class PosixReactorBase(ReactorBase):
         callLater calls at any time, even interleaved inside it's own
         methods; it must block SIGCHLD if it is unable to guarantee this.
         """
-        self.callLater(0, process.reapAllProcesses)
-        self.wakeUp()
+        self.callFromThread(process.reapAllProcesses)
 
     def startRunning(self, installSignalHandlers=1):
         threadable.registerAsIOThread()
