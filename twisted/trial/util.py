@@ -20,41 +20,6 @@ _failureConditionals = [
     'failUnlessIdentical', 'failIfEqual', 'assertApproximates']
 
 
-# -- helpful internal adapters --
-
-def _getModuleNameFromModuleType(obj):
-    return obj.__name__
-
-def _getModuleNameFromClassType(obj):
-    # also for types.InstanceType
-    return obj.__module__
-
-def _getModuleNameFromMethodType(obj):
-    return obj.im_class.__module__
-
-def _getModuleNameFromFunctionType(obj):
-    return obj.func_globals['__name__']
-        
-def _getClassNameFromClass(obj):
-    return obj.__name__
-
-def _getClassNameFromMethodType(obj):
-    return obj.im_class.__name__
-
-def _getFQClassName(obj):
-    return "%s.%s" % (itrial.IModuleName(obj), itrial.IClassName(obj))
-
-def _getFQMethodName(obj):
-    return "%s.%s" % (itrial.IFQClassName(obj), obj.__name__)
-
-def _getClassFromMethodType(obj):
-    return obj.im_class
-
-def _getModuleFromMethodType(obj):
-    return reflect.namedModule(obj.im_class.__module__)
-
-def _getClassFromFQString(obj):
-    return reflect.namedAny(obj)
 
 # ---------------------------------
 
@@ -226,34 +191,37 @@ def _wait(d, timeout=None):
 
     itimeout = itrial.ITimeout(timeout)
 
-    end += float(itimeout.duration)
-
     resultSet = []
     d.addBoth(resultSet.append)
-    while not resultSet:
-        if itimeout.duration >= 0.0 and time.time() > end:
-            raise itimeout.excClass, itimeout.excArg
-        reactor.iterate(0.01)
+
+    if itimeout.duration is None:
+        while not resultSet:
+            reactor.iterate(0.01)
+    else:
+        end += float(itimeout.duration)
+        while not resultSet:
+            if itimeout.duration >= 0.0 and time.time() > end:
+                raise itimeout.excClass, itimeout.excArg
+            reactor.iterate(0.01)
+
     r = resultSet[0]
     if isinstance(r, failure.Failure):
         r.raiseException()
     Janitor.do_logErrCheck()
     return r
 
+DEFAULT_TIMEOUT = 4.0 # sec
 
-def wait(d, timeout=None):
+def wait(d, timeout=DEFAULT_TIMEOUT):
     """Waits (spins the reactor) for a Deferred to arrive, then returns
     or throws an exception, based on the result. The difference
     between this and deferredResult is that it actually throws the
     original exception, not the Failure, so synchronous exception
     handling is much more sane.
-    @param timeout: None indicates the default timeout period of 4.0 seconds,
-    pass a number to set it to some other value
+    @param timeout: None indicates that we will wait indefinately,
+    the default is to wait 4.0 seconds. 
     @type timeout: types.FloatType
     """
-##     warnings.warn(("twisted.trial.util.wait is DEPRECATED! "
-##                    "Return a deferred from your test method,"
-##                    " and trial will do the Right Thing"), DeprecationWarning, stacklevel=2)
     return _wait(d, timeout)
 
 

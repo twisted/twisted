@@ -65,25 +65,6 @@ methNameWarnMsg = adict(setUpClass = SET_UP_CLASS_WARN,
 
 # -------------------------------------------------------------------------------
 
-def formatFailureTraceback(fail):
-    if HIDE_TRIAL_INTERNALS:
-        sio = StringIO()
-        fail.printTraceback(sio)
-        L = []
-        for line in sio.getvalue().split('\n'):
-            if (line.find(failure.EXCEPTION_CAUGHT_HERE) != -1) or L:
-                L.append(line)
-        return "\n".join(L[1:])
-    return fail.getTraceback()
-
-def formatMultipleFailureTracebacks(failList):
-    if failList:
-        s = '\n'.join(["%s\n\n" % itrial.IFormattedFailure(fail) for fail in failList])
-        return s
-    return ''
-
-def formatTestMethodFailures(testMethod):
-    return itrial.IFormattedFailure(testMethod.errors + testMethod.failures)
 
 def makeLoggingMethod(name, f):
     def loggingMethod(*a, **kw):
@@ -140,19 +121,19 @@ class TestStats(TestStatsBase):
 
     def _collect(self, status):
         meths = []
-        for r in self.original.runners:
+        for r in self.original.children:
             meths.extend(r.methodsWithStatus.get(status, []))
         return meths     
 
     def numTests(self):
         n = 0
-        for r in self.original.runners:
+        for r in self.original.children:
             n += itrial.ITestStats(r).numTests
         return n
     numTests = property(numTests)
 
     def allPassed(self):
-        for r in self.original.runners:
+        for r in self.original.children:
             if not itrial.ITestStats(r).allPassed:
                 return False
         return True

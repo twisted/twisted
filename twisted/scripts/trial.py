@@ -30,7 +30,7 @@ from twisted.application import app
 from twisted.python import usage, reflect, failure, log, plugin
 from twisted.python.util import spewer
 from twisted.spread import jelly
-from twisted.trial import runner, util, itrial, registerAdapter, remote
+from twisted.trial import runner, util, itrial, registerAdapter, remote, adapters
 from twisted.trial.itrial import ITrialDebug 
 
 import zope.interface as zi
@@ -86,7 +86,6 @@ class Options(usage.Options):
                 ["benchmark", None, "Run performance tests instead of unit tests."],
                 ["until-failure", "u", "Repeat test until it fails"],
                 ["recurse", "R", "Search packages recursively"],
-                ['doctest', None, 'search modules for doctests (EXPERIMENTAL)'],
                 ['psyco', None, 'run tests with psyco.full() (EXPERIMENTAL)'],
                 ['verbose', 'v', 'verbose color output'],
                 ['bwverbose', 'o', 'Colorless verbose output'],
@@ -438,7 +437,6 @@ def _setUpAdapters():
     for a, o, i in [(runner.TestCaseRunner, itrial.ITestCaseFactory, itrial.ITestRunner),
                     (runner.TestModuleRunner, types.ModuleType, itrial.ITestRunner),
                     (runner.PyUnitTestCaseRunner, itrial.IPyUnitTCFactory, itrial.ITestRunner),
-                    (runner.TestCaseRunner, runner.DocTestCase, itrial.ITestRunner),
                     (runner.TestCaseMethodRunner, types.MethodType, itrial.ITestRunner),
                     (runner.TestMethod, types.MethodType, itrial.ITestMethod),
                     (reporter.TestStats, itrial.ITestSuite, itrial.ITestStats),
@@ -446,31 +444,32 @@ def _setUpAdapters():
                     (reporter.TestCaseStats, runner.TestCaseRunner, itrial.ITestStats),
                     (reporter.TestCaseStats, runner.TestCaseMethodRunner, itrial.ITestStats),
                     (reporter.TestCaseStats, runner.PyUnitTestCaseRunner, itrial.ITestStats),
-                    (reporter.formatFailureTraceback, failure.Failure, itrial.IFormattedFailure),
-                    (reporter.formatMultipleFailureTracebacks, types.ListType, itrial.IFormattedFailure),
-                    (reporter.formatMultipleFailureTracebacks, types.TupleType, itrial.IFormattedFailure),
-                    (reporter.formatTestMethodFailures, itrial.ITestMethod, itrial.IFormattedFailure),
-                    (util._getModuleNameFromModuleType, types.ModuleType, itrial.IModuleName),
-                    (util._getModuleNameFromClassType, types.ClassType, itrial.IModuleName),
-                    (util._getModuleNameFromMethodType, types.MethodType, itrial.IModuleName),
-                    (util._getModuleNameFromFunctionType, types.FunctionType, itrial.IModuleName),
-                    (util._getClassNameFromClass, types.ClassType, itrial.IClassName),
-                    (util._getClassNameFromMethodType, types.MethodType, itrial.IClassName),
-                    (util._getFQClassName, types.ClassType, itrial.IFQClassName),
-                    (util._getFQClassName, types.MethodType, itrial.IFQClassName),
-                    (util._getFQMethodName, types.MethodType, itrial.IFQMethodName),
-                    (util._getClassFromMethodType, types.MethodType, itrial.IClass),
-                    (util._getClassFromFQString, types.StringType, itrial.IClass),
-                    (util._getModuleFromMethodType, types.MethodType, itrial.IModule),
+                    (adapters.formatFailureTraceback, failure.Failure, itrial.IFormattedFailure),
+                    (adapters.formatMultipleFailureTracebacks, types.ListType, itrial.IFormattedFailure),
+                    (adapters.formatMultipleFailureTracebacks, types.TupleType, itrial.IFormattedFailure),
+                    (adapters.formatTestMethodFailures, itrial.ITestMethod, itrial.IFormattedFailure),
+                    (adapters.getModuleNameFromModuleType, types.ModuleType, itrial.IModuleName),
+                    (adapters.getModuleNameFromClassType, types.ClassType, itrial.IModuleName),
+                    (adapters.getModuleNameFromMethodType, types.MethodType, itrial.IModuleName),
+                    (adapters.getModuleNameFromFunctionType, types.FunctionType, itrial.IModuleName),
+                    (adapters.getClassNameFromClass, types.ClassType, itrial.IClassName),
+                    (adapters.getClassNameFromMethodType, types.MethodType, itrial.IClassName),
+                    (adapters.getFQClassName, types.ClassType, itrial.IFQClassName),
+                    (adapters.getFQClassName, types.MethodType, itrial.IFQClassName),
+                    (adapters.getFQMethodName, types.MethodType, itrial.IFQMethodName),
+                    (adapters.getClassFromMethodType, types.MethodType, itrial.IClass),
+                    (adapters.getClassFromFQString, types.StringType, itrial.IClass),
+                    (adapters.getModuleFromMethodType, types.MethodType, itrial.IModule),
                     (lambda x: x, types.StringType, itrial.IClassName),
                     (lambda x: x, types.StringType, itrial.IModuleName),
-                    (runner.TupleTodo, types.TupleType, itrial.ITodo),
-                    (runner.StringTodo, types.StringType, itrial.ITodo),
-                    (runner.TodoBase, types.NoneType, itrial.ITodo),
-                    (runner.TupleTimeout, types.TupleType, itrial.ITimeout),
-                    (runner.NumericTimeout, types.FloatType, itrial.ITimeout),
-                    (runner.NumericTimeout, types.IntType, itrial.ITimeout),
-                    (runner.TimeoutBase, types.NoneType, itrial.ITimeout),
+                    (adapters.TupleTodo, types.TupleType, itrial.ITodo),
+                    (adapters.StringTodo, types.StringType, itrial.ITodo),
+                    (adapters.TodoBase, types.NoneType, itrial.ITodo),
+                    (adapters.TupleTimeout, types.TupleType, itrial.ITimeout),
+                    (adapters.NumericTimeout, types.FloatType, itrial.ITimeout),
+                    (adapters.NumericTimeout, types.IntType, itrial.ITimeout),
+                    (adapters.TimeoutBase, types.NoneType, itrial.ITimeout),
+                    (runner.UserMethodWrapper, types.MethodType, itrial.IUserMethod),
                     (remote.JellyableTestMethod, itrial.ITestMethod, jelly.IJellyable)]:
         registerAdapter(a, o, i)
 
@@ -517,8 +516,7 @@ def _getSuite(config):
     
     suite = runner.TestSuite(reporterKlass(args=config['reporter-args'], realtime=config['rterrors']),
                              _getJanitor(),
-                             benchmark=config['benchmark'],
-                             doctests=config['doctest'])
+                             benchmark=config['benchmark'])
     suite.couldNotImport.update(config['_couldNotImport'])
 
     for package in config['packages']:

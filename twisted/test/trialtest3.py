@@ -1,9 +1,9 @@
-# -*- test-case-name: twisted.test.test_trial.FunctionallyTestTrial.testTests -*-
+# -*- test-case-name: twisted.test.trialtest3.TestTests -*-
 
 import cPickle as pickle
 
 from twisted.trial.reporter import SKIP, EXPECTED_FAILURE, FAILURE, ERROR, UNEXPECTED_SUCCESS, SUCCESS
-from twisted.trial import unittest, runner, reporter, util, itrial
+from twisted.trial import unittest, runner, reporter, util, itrial, adapters
 from twisted.trial.unittest import failUnless, failUnlessRaises, failIf, failUnlessEqual
 from twisted.trial.unittest import failUnlessSubstring, failIfSubstring
 from twisted.test.test_trial import BogusReporter
@@ -12,7 +12,13 @@ from twisted.python.compat import adict
 from twisted.internet import defer, reactor
 
 TIMEOUT_MSG = "this is a timeout arg"
+CLASS_TIMEOUT_MSG = "this is a class level timeout arg"
 
+METHOD_SKIP_MSG = "skip this method"
+CLASS_SKIP_MSG = "skip all methods in this class"
+
+METHOD_TODO_MSG = "todo this method"
+CLASS_TODO_MSG = "todo all methods in this class"
 
 class TestTests(unittest.TestCase):
     # first, the things we're going to test
@@ -196,14 +202,14 @@ class TestTests(unittest.TestCase):
         testTimeout7_timeout.timeout = (0.0, TIMEOUT_MSG)
         testTimeout7_timeout.t_duration = 0.0
         testTimeout7_timeout.t_excArg = TIMEOUT_MSG
-        testTimeout7_timeout.t_excClass = runner.TimeoutBase.excClass
+        testTimeout7_timeout.t_excClass = adapters.TimeoutBase.excClass
 
         def testTimeout8_timeout(self):
             return defer.Deferred()
         testTimeout8_timeout.timeout = (0.0,)
         testTimeout8_timeout.t_duration = 0.0
-        testTimeout8_timeout.t_excClass = runner.TimeoutBase.excClass
-        testTimeout8_timeout.t_excArg = runner.TimeoutBase._defaultExcArg % 0.0
+        testTimeout8_timeout.t_excClass = adapters.TimeoutBase.excClass
+        testTimeout8_timeout.t_excArg = adapters.TimeoutBase._defaultExcArg % 0.0
 
         
         def testNewStyleTodo1_exfail(self):
@@ -227,8 +233,29 @@ class TestTests(unittest.TestCase):
         testMethodAttributeHasPrecedence_timeout.t_duration = 0.1
         testMethodAttributeHasPrecedence_timeout.t_excArg = TIMEOUT_MSG
         testMethodAttributeHasPrecedence_timeout.t_excClass = StandardError
-    TestLeetTimeout.timeout = (0.5, "Class-level timeout argument", RuntimeError)
 
+        def testClassIsDefault_timeoutClassAttr(self):
+            return defer.Deferred()
+    TestLeetTimeout.timeout = (0.5, CLASS_TIMEOUT_MSG, RuntimeError)
+    TestLeetTimeout.t_excArg = CLASS_TIMEOUT_MSG
+    TestLeetTimeout.t_duration = 0.5
+    TestLeetTimeout.t_excClass = RuntimeError
+
+    class TestSkipClassAttr(unittest.TestCase):
+        def testMethodSkipPrecedence_skipAttr(self):
+            pass
+        testMethodSkipPrecedence_skipAttr.skip = METHOD_SKIP_MSG
+        def testClassSkipPrecedence_skipClassAttr(self):
+            pass
+    TestSkipClassAttr.skip = CLASS_SKIP_MSG
+
+    class TestTodoClassAttr(unittest.TestCase):
+        def testMethodTodoPrecedence_todoAttr(self):
+            pass
+        testMethodTodoPrecedence_todoAttr.todo = METHOD_TODO_MSG
+        def testClassTodoPrecedence_todoClassAttr(self):
+            pass
+    TestTodoClassAttr.todo = CLASS_TODO_MSG
 
     def checkResults(self, method):
         def _dbg(msg):
@@ -325,6 +352,27 @@ class TestTests(unittest.TestCase):
                 failUnlessEqual(f.value.args[0], tm.original.t_excArg)
                 failUnlessEqual(itrial.ITimeout(tm.timeout).duration, tm.original.t_duration)
 
+            elif tm.name.endswith("_timeoutClassAttr"):
+                failUnless(tm.errors, "tm.errors was %s" % (tm.errors,))
+                expectedExc, f = tm.klass.t_excClass, tm.errors[0]
+                failUnless(f.check(expectedExc),
+                           "exception '%s', with tb:\n%s\n\n was not of expected type '%s'" % (
+                           f, f.getTraceback(), expectedExc))
+                failUnlessEqual(f.value.args[0], tm.klass.t_excArg)
+                failUnlessEqual(itrial.ITimeout(tm.timeout).duration, tm.klass.t_duration)
+
+            elif tm.name.endswith("_skipClassAttr"):
+                failUnlessEqual(tm.skip, CLASS_SKIP_MSG) 
+
+            elif tm.name.endswith("_skipAttr"):
+                failUnlessEqual(tm.skip, METHOD_SKIP_MSG)
+
+            elif tm.name.endswith("_todoClassAttr"):
+                failUnlessEqual(tm.todo, CLASS_TODO_MSG)
+
+            elif tm.name.endswith("_todoAttr"):
+                failUnlessEqual(tm.todo, METHOD_TODO_MSG)
+
             else:
                 raise unittest.FailTest, "didn't have tests for a method ending in %s" % (
                                          tm.name.split('_')[1],)
@@ -334,7 +382,7 @@ class TestTests(unittest.TestCase):
         
 
     def testMethods(self):
-        for klass in (self.Tests, self.TestLeetTimeout):
+        for klass in (self.Tests, self.TestLeetTimeout, self.TestSkipClassAttr, self.TestTodoClassAttr):
             suite = runner.TestSuite(BogusReporter(), util.Janitor())
             suite.addTestClass(klass)
             suite.run()
@@ -362,3 +410,24 @@ class TestBenchmark(unittest.TestCase):
         stats = pickle.load(file('test.stats', 'rb'))
         failUnlessEqual(stats, {itrial.IFQMethodName(self.Benchmark.benchmarkValues): statdatum})
 
+    def tearDownClass(self):
+        # this is nasty, but Benchmark tests change global state by
+        # deregistering adapters
+        from twisted.trial import registerAdapter
+        for a, o, i in [(None, itrial.ITestCaseFactory, itrial.ITestRunner),
+                        (runner.TestCaseRunner, itrial.ITestCaseFactory, itrial.ITestRunner)]:
+            registerAdapter(a, o, i)
+
+
+class TestClassTimeoutAttribute(unittest.TestCase):
+    def setUp(self):
+        self.d = defer.Deferred()
+
+    def _calledLater(self):
+        self.d.callback('hoorj!')
+
+    def test_timeoutAttr(self):
+        reactor.callLater(4.2, self._calledLater)
+        return self.d
+
+TestClassTimeoutAttribute.timeout = 6.0

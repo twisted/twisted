@@ -16,7 +16,7 @@ from twisted.spread import banana, jelly
 from twisted.trial import unittest, reporter, util, runner, itrial, remote
 from twisted.trial.unittest import failUnless, failUnlessIn, failIfIn, failUnlessRaises
 from twisted.trial.unittest import failUnlessEqual, failIf, failIfIdentical, failUnlessSubstring
-from twisted.trial.unittest import failUnlessSubstring, failIfSubstring
+from twisted.trial.unittest import failUnlessSubstring, failIfSubstring, assert_
 from twisted.test import trialtest1, trialtest2
 from StringIO import StringIO
 
@@ -27,16 +27,6 @@ import sys, os, os.path as osp
 from os.path import join as opj
 
 import cPickle as pickle
-
-__doctest__ = True
-
-def foobar(arg):
-    """excercise doctest capabilities
-    >>> foobar('happy days')
-    happy days
-    >>> 
-    """
-    print arg
 
     
 class LogObserver:
@@ -256,6 +246,13 @@ class FunctionallyTestTrial(unittest.TestCase, SpawningMixin):
 
     def testBenchmark(self):
         args = self.args + ['twisted.test.trialtest3.TestBenchmark']
+        def _cb(cpp):
+            self._failUnlessIn("[OK]")
+            self._failUnlessIn("PASSED")
+        return self.spawnChild(args).addCallback(_cb)
+
+    def testClassTimeoutAttribute(self):
+        args = self.args + ['twisted.test.trialtest3.TestClassTimeoutAttribute']
         def _cb(cpp):
             self._failUnlessIn("[OK]")
             self._failUnlessIn("PASSED")

@@ -54,7 +54,7 @@ class TestFailureInSetUpClass(unittest.TestCase):
     def setUpClass(self):
         if DO_OUTPUT:
             print SET_UP_CLASS_MSG
-        raise FoolishError, "I am a broken setUp method"
+        raise FoolishError, "I am a broken setUpClass method"
 
     def test_foo(self):
         if DO_OUTPUT:

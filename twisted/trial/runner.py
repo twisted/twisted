@@ -1,5 +1,7 @@
-# -*- test-case-name: twisted.test.trialtest1.TestSkipTestCase -*-
-#
+# -*- test-case-name: twisted.test.test_trial -*-
+
+# -#*- test-case-name: twisted.test.trialtest3.TestTests -*-
+# -@*- test-case-name: twisted.test.trialtest3 -*-
 # -$*- test-case-name: buildbot.test.test_trial.TestRemoteReporter.testConnectToSlave -*-
 #
 # Copyright (c) 2001-2004 Twisted Matrix Laboratories.
@@ -72,6 +74,7 @@ from twisted.trial.reporter import SKIP, EXPECTED_FAILURE, FAILURE, \
 import zope.interface as zi
 
 
+MAGIC_ATTRS = ('skip', 'todo', 'timeout')
 
 # --- Exceptions and Warnings ------------------------ 
 
@@ -85,102 +88,6 @@ class CouldNotImportWarning(Warning):
 class TwistedPythonComponentsBugWarning(Warning):
     pass
 
-
-# --- Some Adapters for 'magic' attributes ------------
-
-class NewSkoolAdapter(object):
-    def __init__(self, original):
-        self.original = original
-
-class TodoBase(NewSkoolAdapter):
-    zi.implements(itrial.ITodo)
-    types = msg = None
-
-    def isExpected(self, fail):
-        if self.types is None:
-            return True
-        for t in self.types:
-            if fail.check(t):
-                return True
-        return False
-
-    def __add__(self, other):
-        return self.msg + other
-
-class TupleTodo(TodoBase):
-    def types(self):
-        e = self.original[0]
-        if isinstance(e, types.TupleType):
-            return e
-        elif e is None:
-            return e
-        else:
-            return tuple([e])
-    types = property(types)
-
-    def msg(self):
-        return self.original[1]
-    msg = property(msg)
-
-class StringTodo(TodoBase):
-    def __init__(self, original):
-        super(StringTodo, self).__init__(original)
-
-        # XXX: How annoying should we *really* be?
-        #
-        #warnings.warn("the .todo attribute should now be a tuple of (ExpectedExceptionClass, message), "
-        #              "see the twisted.trial.unittest docstring for info", stacklevel=2)
-
-        self.types = None
-        self.msg = original
-
-class TimeoutBase(NewSkoolAdapter, tputil.FancyStrMixin):
-    showAttributes = ('duration', 'excArg', 'excClass') 
-    duration = excArg = None
-    excClass = defer.TimeoutError
-    _defaultTimeout, _defaultExcArg = 4.0, "deferred timed out after %s sec"
-
-    def __init__(self, original):
-        super(TimeoutBase, self).__init__(original)
-        if original is None:
-            self.duration = self._defaultTimeout
-            self.excArg = self._defaultExcArg % self.duration
-
-    def __str__(self):
-        return tputil.FancyStrMixin.__str__(self)
-    __repr__ = __str__
-
-
-class TupleTimeout(TimeoutBase):
-    _excArg = None
-
-    def __init__(self, original):
-        super(TupleTimeout, self).__init__(original)
-        self._set(*original)
-
-    def _set(self, duration=None, excArg=None, excClass=None):
-        for attr, param in [('duration', duration),
-                            ('excClass', excClass),
-                            ('excArg', excArg)]:
-            if param is not None:
-                setattr(self, attr, param)
-
-    def _getExcArg(self):
-        excArg = self._excArg
-        if excArg is None:
-            excArg = self._defaultExcArg % self.duration
-        return excArg 
-
-    def _setExcArg(self, val):
-        self._excArg = val
-
-    excArg = property(_getExcArg, _setExcArg)
-
-
-class NumericTimeout(TimeoutBase):
-    def __init__(self, original):
-        self.duration = original 
-        super(NumericTimeout, self).__init__(original)
 
 class Timed(object):
     zi.implements(itrial.ITimed)
@@ -200,29 +107,28 @@ class TestSuite(Timed):
     moduleGlob = 'test_*.py'
     sortTests = 1
 
-    def __init__(self, reporter, janitor, benchmark=0, doctests=False):
+    def __init__(self, reporter, janitor, benchmark=0):
         self.reporter = IReporter(reporter)
-        self._janitor = itrial.IJanitor(janitor)
+        self.janitor = itrial.IJanitor(janitor)
         util._wait(self.reporter.setUpReporter())
         self.benchmark = benchmark
         self.startTime, self.endTime = None, None
         self.numTests = 0
         self.couldNotImport = {}
         self.tests = []
-        self.runners = []
+        self.children = []
         if benchmark:
             registerAdapter(None, itrial.ITestCaseFactory,
                             itrial.ITestRunner)
             registerAdapter(BenchmarkCaseRunner, itrial.ITestCaseFactory,
                             itrial.ITestRunner)
-        self.doctests = doctests
 
     def addMethod(self, method):
         self.tests.append(method)
 
     def _getMethods(self):
-        for runner in self.runners:
-            for meth in runner.testMethods:
+        for runner in self.children:
+            for meth in runner.children:
                 yield meth
     methods = property(_getMethods)
         
@@ -245,8 +151,6 @@ class TestSuite(Timed):
             _dbgPA("adding module: %r" % module)
             self.tests.append(module)
 
-            if hasattr(module, '__doctest__') and self.doctests:
-                self.addDoctest(mod)
 
     def addPackage(self, package):
         modGlob = os.path.join(os.path.dirname(package.__file__),
@@ -266,32 +170,20 @@ class TestSuite(Timed):
         packageDir = os.path.dirname(package.__file__)
         os.path.walk(packageDir, self._packageRecurse, None)
 
-    def addDoctest(self, module):
-        warnings.warn("doctest support is EXPERIMENTAL")
-        if isinstance(module, types.StringType):
-            try:
-                mod = reflect.namedModule(module)
-            except KeyboardInterrupt:
-                log.msg(iface=ITrialDebug, kbd="KEYBOARD INTERRUPT")
-                raise
-            except:
-                self.couldNotImport[module] = failure.Failure()
-                return
-        elif isinstance(module, types.ModuleType):
-            mod = module
-        else:
-            warning.warn("bug slyphon about doctest support being so crappy")
-            return 
-
-        self.tests.append(DocTestCase(mod))
 
     def _getBenchmarkStats(self):
         stat = {}
-        for r in self.runners:
-            for m in r.testMethods:
+        for r in self.children:
+            for m in r.children:
                 stat.update(getattr(m, 'benchmarkStats', {}))
         return stat
     benchmarkStats = property(_getBenchmarkStats)
+
+    def getJanitor(self):
+        return self.janitor
+
+    def getReporter(self):
+        return self.reporter
 
     def run(self, seed=None):
         self.startTime = time.time()
@@ -330,10 +222,11 @@ class TestSuite(Timed):
             # the predicted number of tests to be run
             for test in tests:
                 tr = itrial.ITestRunner(test)
-                self.runners.append(tr)
+                self.children.append(tr)
+                tr.parent = self
 
                 try:
-                    tr.runTests(self.reporter, self._janitor, randomize=(seed is not None))
+                    tr.runTests(randomize=(seed is not None))
                 except KeyboardInterrupt:
                     log.msg(iface=ITrialDebug, kbd="KEYBOARD INTERRUPT")
                     _bail()
@@ -382,6 +275,7 @@ class MethodInfoBase(Timed):
     def runningTime(self):
         return self.endTime - self.startTime 
 
+
 class UserMethodError(Exception):
     """indicates that the user method had an error, but raised after
     call is complete
@@ -413,25 +307,33 @@ class UserMethodWrapper(MethodInfoBase):
            raise UserMethodError
 
 
-class TestRunnerBase(Timed):
+class JanitorAndReporterMixin:
+    def getJanitor(self):
+        return self.parent.getJanitor()
+
+    def getReporter(self):
+        return self.parent.getReporter()
+
+
+class TestRunnerBase(Timed, JanitorAndReporterMixin):
     zi.implements(itrial.ITestRunner)
     _tcInstance = None
-    methodNames = setUpClass = tearDownClass = methodsWithStatus = testMethods = None
+    methodNames = setUpClass = tearDownClass = methodsWithStatus = children = parent = None
     testCaseInstance = lambda x: None
     skip = None
     
     def __init__(self, original):
         self.original = original
         self.methodsWithStatus = {}
-        self.testMethods = []
+        self.children = []
         self.startTime, self.endTime = None, None
         self._signalStateMgr = util.SignalStateManager()
 
-    def doCleanup(self, janitor):
+    def doCleanup(self):
         """do cleanup after the test run. check log for errors, do reactor cleanup, and restore
         signals to the state they were in before the test ran
         """
-        return janitor.postCaseCleanup()
+        return self.getJanitor().postCaseCleanup()
 
 
 def _bogusCallable(ignore=None):
@@ -451,7 +353,7 @@ class TestModuleRunner(TestRunnerBase):
 
         self.setUpClass = _bogusCallable
         self.tearDownClass = _bogusCallable
-        self.runners = []
+        self.children = []
 
     def methodNames(self):
         if self._mnames is None:
@@ -476,7 +378,8 @@ class TestModuleRunner(TestRunnerBase):
                     self._tClasses.append(obj)
         return self._tClasses
 
-    def runTests(self, reporter, janitor, randomize=False):
+    def runTests(self, randomize=False):
+        reporter = self.getReporter()
         reporter.startModule(self.original)
 
         # add setUpModule handling
@@ -484,14 +387,14 @@ class TestModuleRunner(TestRunnerBase):
         if randomize:
             random.shuffle(tests)
         for testClass in tests:
-            tc = itrial.ITestRunner(testClass)
-            self.runners.append(tc)
-            tc.runTests(reporter, janitor, randomize)
-            for k, v in tc.methodsWithStatus.iteritems():
+            runner = itrial.ITestRunner(testClass)
+            self.children.append(runner)
+            runner.parent = self.parent
+            runner.runTests(randomize)
+            for k, v in runner.methodsWithStatus.iteritems():
                 self.methodsWithStatus.setdefault(k, []).extend(v)
 
         # add tearDownModule handling
-
         reporter.endModule(self.original)
 
 
@@ -520,31 +423,20 @@ class TestClassAndMethodBase(TestRunnerBase):
         return getattr(self.module, 'tearDownModule', _bogusCallable)
     tearDownModule = property(tearDownModule)    
 
-    def _applyClassAttrs(self, testMethod):
-        # if this class has a .skip, .todo, or attribute, that
-        # attribute's value is applied to all of the class' methods
-        # if the method already has one of these attributes, the method
-        # attribute's value takes precedence
-        #
-        for attr in ('skip', 'todo', 'timeout'):
-            v = getattr(self, attr, None)
-            if v is not None and getattr(testMethod, attr, None) is None: 
-                setattr(testMethod, attr, v)
+    def runTests(self, randomize=False):
+        reporter = self.getReporter()
+        janitor = self.getJanitor()
 
-
-    def runTests(self, reporter, janitor, randomize=False):
-        def _apply(f):
+        def _apply(f):                  # XXX: need to rename this
             for mname in self.methodNames:
                 m = getattr(self._testCase, mname)
                 tm = adaptWithDefault(itrial.ITestMethod, m, default=None)
                 if tm == None:
                     continue
 
-                self.testMethods.append(tm)
+                tm.parent = self
+                self.children.append(tm)
                 f(tm)
-                reporter.startTest(tm) 
-                self.methodsWithStatus.setdefault(tm.status, []).append(tm)
-                reporter.endTest(tm)   
         
 
         tci = self.testCaseInstance
@@ -564,6 +456,8 @@ class TestClassAndMethodBase(TestRunnerBase):
                 for error in um.errors:
                     if error.check(unittest.SkipTest):
                         self.skip = error.value[0]
+                        def _setUpSkipTests(tm):
+                            tm.skip = self.skip
                         break                              # <--- skip the else: clause
                     elif error.check(KeyboardInterrupt):
                         log.msg(iface=ITrialDebug, kbd="KEYBOARD INTERRUPT")
@@ -572,29 +466,26 @@ class TestClassAndMethodBase(TestRunnerBase):
                     reporter.upDownError(um)
                     def _setUpClassError(tm):
                         tm.errors.extend(um.errors) 
+                        reporter.startTest(tm)
+                        self.methodsWithStatus.setdefault(tm.status, []).append(tm)
+                        reporter.endTest(tm)   
                     return _apply(_setUpClassError) # and we're done
 
             # --- run methods -------------------------------------------------------
+
             methodNames = self.methodNames
             if randomize:
-                random.shuffle(methodNames)
-            for mname in methodNames:
-                m = getattr(self._testCase, mname)
+                random.shuffle(self.methodNames)
 
-                testMethod = adaptWithDefault(itrial.ITestMethod, m, default=None)
-                if testMethod == None:
-                    continue
-
+            def _runTestMethod(testMethod):
                 log.msg("--> %s.%s.%s <--" % (testMethod.module.__name__,
                                               testMethod.klass.__name__,
                                               testMethod.name))
-                self.testMethods.append(testMethod)
 
-                self._applyClassAttrs(testMethod)
-                
-             
-                testMethod.run(tci, reporter, janitor)
+                testMethod.run(tci)
                 self.methodsWithStatus.setdefault(testMethod.status, []).append(testMethod)
+
+            _apply(_runTestMethod)
 
             # --- tearDownClass ------------------------------------------------------
 
@@ -610,7 +501,7 @@ class TestClassAndMethodBase(TestRunnerBase):
                     reporter.upDownError(um)
 
         finally:
-            errs = self.doCleanup(janitor)
+            errs = self.doCleanup()
             if errs:
                 reporter.cleanupErrors(errs)
             self._signalStateMgr.restore()
@@ -631,9 +522,8 @@ class TestCaseRunner(TestClassAndMethodBase):
 
         self.methodNames = [name for name in dir(self.testCaseInstance)
                             if name.startswith(self.methodPrefix)]
-        self.skip = getattr(self.original, 'skip', None)
-        self.todo = getattr(self.original, 'todo', None)
-        self.timeout = getattr(self.original, 'timeout', None)
+        for attr in MAGIC_ATTRS:
+            setattr(self, attr, getattr(self.original, attr, None))
 
 
 class TestCaseMethodRunner(TestClassAndMethodBase):
@@ -647,9 +537,11 @@ class TestCaseMethodRunner(TestClassAndMethodBase):
         self.setUpClass = self.testCaseInstance.setUpClass
         self.tearDownClass = self.testCaseInstance.tearDownClass
 
-        self.skip = getattr(self.original, 'skip', None)
-        self.todo = getattr(self.original, 'todo', None)
-        self.timeout = getattr(self.original, 'timeout', None)
+        for attr in MAGIC_ATTRS:
+            v = getattr(self.original, attr, None)
+            if v is None:
+                v = getattr(self._testCase, attr, None)
+            setattr(self, attr, v)
 
     # TODO: for 2.1
     # this needs a custom runTests to handle setUpModule/tearDownModule
@@ -660,35 +552,33 @@ class PyUnitTestCaseRunner(TestClassAndMethodBase):
     def __init__(self, original):
         original.__init__ = lambda _: None
         super(PyUnitTestCaseRunner, self).__init__(original)
-        
+
     testCaseInstance = property(TestClassAndMethodBase.testCaseInstance)
+
 
 class BenchmarkCaseRunner(TestCaseRunner):
     """I run benchmarking tests"""
     methodPrefix = 'benchmark'
-    def runTests(self, reporter, janitor, randomize=False):
+    def runTests(self, randomize=False):
         # need to hook up randomize for Benchmark test cases
         registerAdapter(None, types.MethodType, itrial.ITestMethod)
         registerAdapter(BenchmarkMethod, types.MethodType, itrial.ITestMethod)
         try:
-            super(BenchmarkCaseRunner, self).runTests(reporter, janitor)
+            super(BenchmarkCaseRunner, self).runTests()
         finally:
             registerAdapter(None, types.MethodType, itrial.ITestMethod)
             registerAdapter(TestMethod, types.MethodType, itrial.ITestMethod)
         
 
-class TestMethod(MethodInfoBase):
-    zi.implements(itrial.ITestMethod, itrial.IMethodInfo)
-    _status = None
+class TestMethod(MethodInfoBase, JanitorAndReporterMixin):
+    zi.implements(itrial.ITestMethod, itrial.IMethodInfo, itrial.ITimeout)
+    _status = parent = todo = timeout = None
 
     def __init__(self, original):
         super(TestMethod, self).__init__(original)
-        self.todo = getattr(self.original, 'todo', None)
 
         self.setUp = self.klass.setUp
         self.tearDown = self.klass.tearDown
-
-        self.timeout = getattr(self.original, 'timeout', None)
 
         self.runs = 0
         self.failures = []
@@ -698,6 +588,7 @@ class TestMethod(MethodInfoBase):
 
         self._skipReason = None  
         self._signalStateMgr = util.SignalStateManager()
+
 
     def _checkTodo(self):
         # returns EXPECTED_FAILURE for now if ITodo.types is None for backwards compatiblity
@@ -731,12 +622,22 @@ class TestMethod(MethodInfoBase):
     status = property(_getStatus)
         
     def _getSkip(self):
-        return (getattr(self.original, 'skip', None) or self._skipReason)
+        return (getattr(self.original, 'skip', None) or self._skipReason or self.parent.skip)
     def _setSkip(self, value):
         self._skipReason = value
     skip = property(_getSkip, _setSkip)
 
-    
+    def todo(self):
+        return getattr(self.original, 'todo', getattr(self.parent, 'todo', None))
+    todo = property(todo)
+   
+    def timeout(self):
+        if hasattr(self.original, 'timeout'):
+            return getattr(self.original, 'timeout')
+        else:
+            return getattr(self.parent, 'timeout', util.DEFAULT_TIMEOUT)
+    timeout = property(timeout)
+
     def hasTbs(self):
         return self.errors or self.failures
     hasTbs = property(hasTbs)
@@ -745,7 +646,6 @@ class TestMethod(MethodInfoBase):
         log.msg(f.printTraceback())
         if f.check(unittest.FAILING_EXCEPTION,
                    unittest.FailTest):
-                   #doctest.DocTestTestFailure):
             self.failures.append(f)
         elif f.check(KeyboardInterrupt):
             log.msg(iface=ITrialDebug, kbd="KEYBOARD INTERRUPT")
@@ -761,11 +661,13 @@ class TestMethod(MethodInfoBase):
             self.errors.append(f)
 
 
-    def run(self, testCaseInstance, reporter, janitor):
+    def run(self, testCaseInstance):
         self.testCaseInstance = tci = testCaseInstance
         self.runs += 1
         self.startTime = time.time()
         self._signalStateMgr.save()
+        janitor = self.parent.getJanitor()
+        reporter = self.parent.getReporter()
 
         try:
             # don't run test methods that are marked as .skip
@@ -798,16 +700,25 @@ class TestMethod(MethodInfoBase):
                 try:
                     sys.stdout = util.StdioProxy(sys.stdout)
                     sys.stderr = util.StdioProxy(sys.stderr)
-
-                    um = UserMethodWrapper(self.original, janitor)
-
+                   
+                    # --- this is basically the guts of UserMethodWrapper, because I *SUCK* -----
                     try:
-                        um(tci)
-                    except UserMethodError:
-                        for error in um.errors:
-                            if error.check(KeyboardInterrupt):
-                                error.raiseException()
-                            self._eb(error)
+                        try:
+                            r = self.original(tci)
+                            if isinstance(r, defer.Deferred):
+                                util._wait(r, self.timeout)
+                        finally:
+                            self.endTime = time.time()
+                    except:
+                        f = failure.Failure()
+                        self._eb(f)
+
+                        try:
+                            janitor.do_logErrCheck()
+                        except util.LoggedErrors:
+                            self.errors.append(failure.Failure())
+                    # ----------------------------------------------------------------------------
+
                 finally:
                     self.endTime = time.time()
                     reporter.endTest(self)
@@ -831,16 +742,16 @@ class TestMethod(MethodInfoBase):
                 self.logevents = observer.events
 
         finally:
-            errs = self.doCleanup(janitor)
+            errs = self.doCleanup()
             if errs:
                 reporter.cleanupErrors(errs)
             self._signalStateMgr.restore()
 
 
-    def doCleanup(self, janitor):
+    def doCleanup(self):
         """do cleanup after the test run. check log for errors, do reactor cleanup
         """
-        errs = janitor.postMethodCleanup()
+        errs = self.getJanitor().postMethodCleanup()
         for f in errs:
             if f.check(unittest.FailTest):
                 self.failures.append(f)
@@ -854,91 +765,11 @@ class BenchmarkMethod(TestMethod):
         super(BenchmarkMethod, self).__init__(original)
         self.benchmarkStats = {}
 
-    def run(self, testCaseInstance, janitor, reporter):
+    def run(self, testCaseInstance):
         # WHY IS THIS MONKEY PATCH HERE?
         testCaseInstance.recordStat = lambda datum: self.benchmarkStats.__setitem__(itrial.IFQMethodName(self.original), datum)
         self.original(testCaseInstance)
         
-
-# ----------------------------------------------------------------------------
-# **WARNING** Doctest support code **WARNING**
-#
-# (some nasty shit follows)
-
-def bogus(n=None):
-    pass
-
-# XXX: This is a horrid hack to avoid rewriting most of runner.py
-
-class Proxy(object):
-    def __init__(self, method):
-        self.method = method
-
-    def __call__(self, *a):
-        self.method(*a)
-
-
-class DocTestMethod(TestMethod):
-    zi.implements(itrial.ITestMethod)
-    def __init__(self, module, name, doc, filename, lineno):
-        self._module, self._name, self._doc, self._filename, self._lineno = module, name, doc, filename, lineno
-
-        def _orig(ignore=None):
-            tester = Tester(self._module)
-            _utest(tester, self._name, self._doc, self._filename, self._lineno)
-
-        proxy = Proxy(_orig)
-
-        proxy.__name__ = self._name
-        proxy.im_class = DocTestMethod
-        proxy.__module__ = self._module
-        proxy.__doc__ = self._doc
-
-        super(DocTestMethod, self).__init__(proxy)
-
-        self.fullname = "doctest %s of file %s at lineno %s" % (name, filename, lineno)
-        print self.fullname
-
-    def bogus(*a):
-        pass
-    setUp = classmethod(bogus)
-    tearDown = classmethod(bogus)
-
-    todo = skip = None
-    status = property(TestMethod._getStatus)
-    hasTbs = property(TestMethod.hasTbs)
-
-
-class DocTestCase(object):
-    zi.classProvides(itrial.ITestCaseFactory)
-    def __init__(self, module):
-        from doctest import _normalize_module, _find_tests
-        self.setUp = self.tearDown = self.setUpClass = self.tearDownClass = bogus
-        module = _normalize_module(module)
-        tests = _find_tests(module)
-
-        if not tests:
-            raise ValueError(module, 'has no tests')
-
-        for name, doc, filename, lineno in tests:
-            if not filename:
-                filename = module.__file__
-                if filename.endswith(".pyc"):
-                    filename = filename[:-1]
-                elif filename.endswith(".pyo"):
-                    filename = filename[:-1]
-
-            tmname = 'test_%s' % (name.replace('.', '_'),)
-            dtm = DocTestMethod(module, name, doc, filename, lineno)
-
-            # XXX: YES I AM A TERRIBLE PERSON!
-            self.__dict__[tmname] = dtm
-
-    def __call__(self):
-        return None
-               
-# (end nasty shit)
-# ----------------------------------------------------------------------------
 
 def runTest(method):
     # utility function, used by test_trial to more closely emulate the usual
