@@ -56,63 +56,63 @@ ENDLN = str('\015\012')
 
 # response codes
 
-RESTART_MARKER_REPLY                    = 100
-SERVICE_READY_IN_N_MINUTES              = 120
-DATA_CNX_ALREADY_OPEN_START_XFR         = 125
-FILE_STATUS_OK_OPEN_DATA_CNX            = 150
+RESTART_MARKER_REPLY                    = "100"
+SERVICE_READY_IN_N_MINUTES              = "120"
+DATA_CNX_ALREADY_OPEN_START_XFR         = "125"
+FILE_STATUS_OK_OPEN_DATA_CNX            = "150"
 
-CMD_OK                                  = 200.1
-TYPE_SET_OK                             = 200.2
-ENTERING_PORT_MODE                      = 200.3
-CMD_NOT_IMPLMNTD_SUPERFLUOUS            = 202
-SYS_STATUS_OR_HELP_REPLY                = 211
-DIR_STATUS                              = 212
-FILE_STATUS                             = 213
-HELP_MSG                                = 214
-NAME_SYS_TYPE                           = 215
-SVC_READY_FOR_NEW_USER                  = 220.1
-WELCOME_MSG                             = 220.2
-SVC_CLOSING_CTRL_CNX                    = 221
-GOODBYE_MSG                             = 221
-DATA_CNX_OPEN_NO_XFR_IN_PROGRESS        = 225
-CLOSING_DATA_CNX                        = 226
-TXFR_COMPLETE_OK                        = 226
-ENTERING_PASV_MODE                      = 227
-ENTERING_EPSV_MODE                      = 229
-USR_LOGGED_IN_PROCEED                   = 230.1     # v1 of code 230
-GUEST_LOGGED_IN_PROCEED                 = 230.2     # v2 of code 230
-REQ_FILE_ACTN_COMPLETED_OK              = 250
-PWD_REPLY                               = 257
+CMD_OK                                  = "200.1"
+TYPE_SET_OK                             = "200.2"
+ENTERING_PORT_MODE                      = "200.3"
+CMD_NOT_IMPLMNTD_SUPERFLUOUS            = "202"
+SYS_STATUS_OR_HELP_REPLY                = "211"
+DIR_STATUS                              = "212"
+FILE_STATUS                             = "213"
+HELP_MSG                                = "214"
+NAME_SYS_TYPE                           = "215"
+SVC_READY_FOR_NEW_USER                  = "220.1"
+WELCOME_MSG                             = "220.2"
+SVC_CLOSING_CTRL_CNX                    = "221"
+GOODBYE_MSG                             = "221"
+DATA_CNX_OPEN_NO_XFR_IN_PROGRESS        = "225"
+CLOSING_DATA_CNX                        = "226"
+TXFR_COMPLETE_OK                        = "226"
+ENTERING_PASV_MODE                      = "227"
+ENTERING_EPSV_MODE                      = "229"
+USR_LOGGED_IN_PROCEED                   = "230.1"     # v1 of code 230
+GUEST_LOGGED_IN_PROCEED                 = "230.2"     # v2 of code 230
+REQ_FILE_ACTN_COMPLETED_OK              = "250"
+PWD_REPLY                               = "257"
 
-USR_NAME_OK_NEED_PASS                   = 331.1     # v1 of Code 331
-GUEST_NAME_OK_NEED_EMAIL                = 331.2     # v2 of code 331
-NEED_ACCT_FOR_LOGIN                     = 332
-REQ_FILE_ACTN_PENDING_FURTHER_INFO      = 350
+USR_NAME_OK_NEED_PASS                   = "331.1"     # v1 of Code 331
+GUEST_NAME_OK_NEED_EMAIL                = "331.2"     # v2 of code 331
+NEED_ACCT_FOR_LOGIN                     = "332"
+REQ_FILE_ACTN_PENDING_FURTHER_INFO      = "350"
 
-SVC_NOT_AVAIL_CLOSING_CTRL_CNX          = 421.1
-TOO_MANY_CONNECTIONS                    = 421.2
-CANT_OPEN_DATA_CNX                      = 425
-CNX_CLOSED_TXFR_ABORTED                 = 426
-REQ_ACTN_ABRTD_FILE_UNAVAIL             = 450
-REQ_ACTN_ABRTD_LOCAL_ERR                = 451
-REQ_ACTN_ABRTD_INSUFF_STORAGE           = 452
+SVC_NOT_AVAIL_CLOSING_CTRL_CNX          = "421.1"
+TOO_MANY_CONNECTIONS                    = "421.2"
+CANT_OPEN_DATA_CNX                      = "425"
+CNX_CLOSED_TXFR_ABORTED                 = "426"
+REQ_ACTN_ABRTD_FILE_UNAVAIL             = "450"
+REQ_ACTN_ABRTD_LOCAL_ERR                = "451"
+REQ_ACTN_ABRTD_INSUFF_STORAGE           = "452"
 
-SYNTAX_ERR                              = 500
-SYNTAX_ERR_IN_ARGS                      = 501
-CMD_NOT_IMPLMNTD                        = 502
-BAD_CMD_SEQ                             = 503
-CMD_NOT_IMPLMNTD_FOR_PARAM              = 504
-NOT_LOGGED_IN                           = 530.1     # v1 of code 530 - please log in
-AUTH_FAILURE                            = 530.2     # v2 of code 530 - authorization failure
-NEED_ACCT_FOR_STOR                      = 532
-FILE_NOT_FOUND                          = 550.1     # no such file or directory
-PERMISSION_DENIED                       = 550.2     # permission denied
-ANON_USER_DENIED                        = 550.3     # anonymous users can't alter filesystem
-IS_NOT_A_DIR                            = 550.4     # rmd called on a path that is not a directory
-REQ_ACTN_NOT_TAKEN                      = 550.5
-PAGE_TYPE_UNK                           = 551
-EXCEEDED_STORAGE_ALLOC                  = 552
-FILENAME_NOT_ALLOWED                    = 553
+SYNTAX_ERR                              = "500"
+SYNTAX_ERR_IN_ARGS                      = "501"
+CMD_NOT_IMPLMNTD                        = "502"
+BAD_CMD_SEQ                             = "503"
+CMD_NOT_IMPLMNTD_FOR_PARAM              = "504"
+NOT_LOGGED_IN                           = "530.1"     # v1 of code 530 - please log in
+AUTH_FAILURE                            = "530.2"     # v2 of code 530 - authorization failure
+NEED_ACCT_FOR_STOR                      = "532"
+FILE_NOT_FOUND                          = "550.1"     # no such file or directory
+PERMISSION_DENIED                       = "550.2"     # permission denied
+ANON_USER_DENIED                        = "550.3"     # anonymous users can't alter filesystem
+IS_NOT_A_DIR                            = "550.4"     # rmd called on a path that is not a directory
+REQ_ACTN_NOT_TAKEN                      = "550.5"
+PAGE_TYPE_UNK                           = "551"
+EXCEEDED_STORAGE_ALLOC                  = "552"
+FILENAME_NOT_ALLOWED                    = "553"
 
 
 RESPONSE = {
@@ -434,6 +434,7 @@ def cleanPath(path):
         path = re.sub(r'[\\]{2,}?', '/', path)
         path = re.sub(r'[/]{2,}?','/', path)
         path = re.sub(r'[*]?', '', path)
+    path = os.path.normpath(path)
     log.debug('cleaned path: %s' % path)
     return path
 
@@ -1149,6 +1150,12 @@ class IFTPShell(components.Interface):
 
 import pwd, grp
 
+def _callWithDefault(default, _f, *_a, **_kw):
+    try:
+        return _f(*_a, **_kw)
+    except KeyError:
+        return default
+
 class FTPAnonymousShell(object):
     """"""
     __implements__ = (IFTPShell,)
@@ -1167,6 +1174,7 @@ class FTPAnonymousShell(object):
 
         # TODO: self.user needs to be set to something!!!
         if self.user is None:
+            uid = os.getuid()
             self.user = pwd.getpwuid(os.getuid())[0]
 
             self.getUserUIDAndGID()
@@ -1273,7 +1281,6 @@ We will continue using the user %s.
         @attention: this has only been tested on posix systems, I don't
             know at this point whether or not it will work on win32
         """
-        from stat import ST_MODE,ST_NLINK,ST_UID,ST_GID,ST_SIZE,ST_MTIME
         import pwd, grp, time
         cpath, spath = self.mapCPathToSPath(path)
         log.debug('cpath: %s,   spath:%s' % (cpath, spath))
@@ -1304,13 +1311,13 @@ We will continue using the user %s.
                 pmask = lambda mode: ''.join([mode & (256 >> n) and 'rwx'[n % 3] or '-' for n in range(9)])
                 dtype = lambda mode: [fmt[i] for i in range(7) if (mode >> 12) & (1 << i)][0]
 
-                type = dtype(pstat[ST_MODE])
-                pmstr = pmask(pstat[ST_MODE])
-                nlinks = str(pstat[ST_NLINK])
-                owner = pwd.getpwuid(pstat[ST_UID])[0]
-                group = grp.getgrgid(pstat[ST_GID])[0]
-                size = str(pstat[ST_SIZE])
-                mtime = time.strftime('%b %d %I:%M', time.gmtime(pstat[ST_MTIME]))
+                type = dtype(pstat.st_mode)
+                pmstr = pmask(pstat.st_mode)
+                nlinks = str(pstat.st_nlink)
+                owner = _callWithDefault([str(pstat.st_uid)], pwd.getpwuid, pstat.st_uid)[0]
+                group = _callWithDefault([str(pstat.st_gid)], grp.getgrgid, pstat.st_gid)[0]
+                size = str(pstat.st_size)
+                mtime = time.strftime('%b %d %I:%M', time.gmtime(pstat.st_mtime))
                 name = os.path.split(item)[1]
                 unixpms = "%s%s" % (type,pmstr)
             except (OSError, KeyError), e:
@@ -1388,12 +1395,11 @@ class FTPRealm:
 
     def requestAvatar(self, avatarId, mind, *interfaces):
         if IFTPShell in interfaces:
-            if avatarId == checkers.ANONYMOUS:
-                avatar = FTPAnonymousShell()
-                avatar.tld = self.tld
-                avatar.clientwd = self.clientwd
-                avatar.user = self.user
-                avatar.logout = self.logout
+            avatar = FTPAnonymousShell()
+            avatar.tld = self.tld
+            avatar.clientwd = self.clientwd
+            avatar.user = self.user
+            avatar.logout = self.logout
             return IFTPShell, avatar, avatar.logout
         raise NotImplementedError("Only IFTPShell interface is supported by this realm")
 
