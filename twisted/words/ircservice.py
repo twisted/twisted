@@ -66,6 +66,13 @@ class IRCChatter(irc.IRC):
         self.realname = params[-1]
 
 
+
+    paswd = None
+    def irc_PASS(self, prefix, params):
+        """Register a password.
+        """
+        self.paswd = params[-1]
+        
     def irc_NICK(self, prefix, params):
         """Set your nickname.
         """
@@ -84,10 +91,15 @@ class IRCChatter(irc.IRC):
                 self.sendLine(":%s 001 %s :connected to Twisted IRC" %
                               (self.servicename, nickname))
                 self.nickname = nickname
-                self.receiveDirectMessage("*login*", "Password?")
+                if self.paswd is None:
+                    self.receiveDirectMessage("*login*", "Password?")
 ##                self.sendLine(":*login*!*login*@%s NOTICE %s :You 'must /msg *login* <your password>' to use this server" %
 ##                              (self.servicename, nickname))
-                self.pendingLogin = participant
+                    self.pendingLogin = participant
+                else:
+                    self.service.check(nickname, self.paswd)
+                    self.participant = participant
+                    self.receiveDirectMessage("*login*", "Pasword already accepted.  Thank you.")
         else:
             self.sendLine(":%s 433 %s %s :this username is invalid" %
                           (self.servicename, self.nickname, nickname))
