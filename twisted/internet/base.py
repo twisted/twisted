@@ -29,8 +29,8 @@ from bisect import insort
 
 from twisted.internet.interfaces import IReactorCore, IReactorTime, IReactorUNIX, IReactorThreads
 from twisted.internet.interfaces import IReactorTCP, IReactorUDP, IReactorSSL
-from twisted.internet.interfaces import IReactorProcess
-from twisted.internet import main, error
+from twisted.internet.interfaces import IReactorProcess, IReactorPluggableResolver
+from twisted.internet import main, error, abstract, defer
 from twisted.python import threadable, log, failure, reflect
 from twisted.internet.defer import Deferred, DeferredList
 
@@ -98,7 +98,7 @@ class ReactorBase:
     """Default base class for Reactors.
     """
 
-    __implements__ = IReactorCore, IReactorTime, IReactorThreads
+    __implements__ = IReactorCore, IReactorTime, IReactorThreads, IReactorPluggableResolver
     installed = 0
 
     __name__ = "twisted.internet.reactor"
@@ -108,6 +108,7 @@ class ReactorBase:
         self._pendingTimedCalls = []
         self._delayeds = main._delayeds
         self.waker = None
+        self.resolver = None
         self.usingThreads = 0
         self.addSystemEventTrigger('during', 'shutdown', self.crash)
         self.addSystemEventTrigger('during', 'shutdown', self.disconnectAll)
@@ -127,6 +128,9 @@ class ReactorBase:
 
     def installWaker(self):
         raise NotImplementedError()
+    
+    def installResolver(self, resolver):
+        self.resolver = resolver
 
     def callFromThread(self, f, *args, **kw):
         """See twisted.internet.interfaces.IReactorCore.callFromThread.
@@ -168,22 +172,25 @@ class ReactorBase:
     def removeAll(self):
         raise NotImplementedError
 
-    def resolve(self, name, type=1, timeout=10):
+    def resolve(self, name, timeout = 10):
         """Return a Deferred that will resolve a hostname.
         """
-        # XXX TODO: alternative resolver implementations
-        from twisted.internet.defer import Deferred
-        deferred = Deferred()
-        if type == 1:
-            try:
-                address = socket.gethostbyname(name)
-            except socket.error:
-                deferred.errback(failure.Failure(error.DNSLookupError("address not found")))
-            else:
-                deferred.callback(address)
+        if not name:
+            # XXX - This is *less than* '::', and will screw up IPv6 servers
+            return defer.succeed('0.0.0.0')
+        if abstract.isIPAddress(name):
+            return defer.succeed(name)
+        if self.resolver is None:
+            return self._internalResolve(name, timeout)
+        return self.resolver.getHostByName(name, timeout)
+
+    def _internalResolve(self, name, timeout):
+        try:
+            address = socket.gethostbyname(name)
+        except socket.error:
+            return defer.fail(failure.Failure(error.DNSLookupError("address not found")))
         else:
-            deferred.errback(failure.Failure(ValueError("type not supported")))
-        return deferred
+            return defer.succeed(address)
 
     # Installation.
 

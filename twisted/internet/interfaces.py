@@ -445,7 +445,7 @@ class IReactorCore(Interface):
     """Core methods that a Reactor must implement.
     """
 
-    def resolve(self, name, type=1, timeout=10):
+    def resolve(self, name, timeout=10):
         """Return a L{Deferred} that will resolve a hostname.
         """
 
@@ -522,6 +522,17 @@ class IReactorCore(Interface):
         """Removes a trigger added with addSystemEventTrigger.
 
         @param triggerID: a value returned from addSystemEventTrigger.
+        """
+
+
+class IReactorPluggableResolver(Interface):
+    """A reactor with a pluggable name resolver interface.
+    """
+    def installResolver(self, resolver):
+        """Set the internal resolver to use to for name lookups.
+        
+        @type resolver: An object implementing the C{IResolverSimple} interface
+        @param resolver: The new resolver to use.
         """
 
 
