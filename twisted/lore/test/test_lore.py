@@ -45,7 +45,7 @@ from twisted.python import usage
 
 from twisted.lore.scripts import lore
 
-import os
+import os, shutil
 
 def sp(originalFileName):
     return sibpath(__file__, originalFileName)
@@ -87,6 +87,14 @@ class TestFactory(unittest.TestCase):
             a = act[i]
             self.assertEquals(e, a, "differ at %d: %s vs. %s" % (i, e, a))
         self.assertEquals(expected, act)
+
+    def makeTemp(self, *filenames):
+        tmp = self.mktemp()
+        os.mkdir(tmp)
+        for filename in filenames:
+            tmpFile = os.path.join(tmp, filename)
+            shutil.copyfile(sp(filename), tmpFile)
+        return tmp
 
 ########################################
 
@@ -170,9 +178,12 @@ class TestFactory(unittest.TestCase):
         indexer.setIndexFilename('theIndexFile.html')
         # generate the output file
         templ = microdom.parse(open(d['template']))
+        tmp = self.makeTemp('lore_index_test.xhtml')
 
-        tree.doFile(sp('lore_index_test.xhtml'), self.linkrel, '.html', d['baseurl'], templ, d)
-        self.assertEqualFiles("lore_index_test_out.html", "lore_index_test.html")
+        tree.doFile(os.path.join(tmp, 'lore_index_test.xhtml'),
+                    self.linkrel, '.html', d['baseurl'], templ, d)
+        self.assertEqualFiles1("lore_index_test_out.html",
+                               os.path.join(tmp, "lore_index_test.html"))
 
     def test_indexEntriesAdded(self):
         indexer.addEntry('lore_index_test.html', 'index02', 'language of programming', '1.3')
@@ -199,11 +210,13 @@ class TestFactory(unittest.TestCase):
 
     def test_runningLore(self):
         options = lore.Options()
+        tmp = self.makeTemp('lore_index_test.xhtml')
+
         templateFilename = sp('template.tpl')
-        inputFilename = sp('lore_index_test.xhtml')
+        inputFilename = os.path.join(tmp, 'lore_index_test.xhtml')
         indexFilename = 'theIndexFile'
 
-        bookFilename = sp('lore_test_book.book')
+        bookFilename = os.path.join(tmp, 'lore_test_book.book')
         bf = open(bookFilename, 'w')
         bf.write('Chapter(r"%s", None)\n' % inputFilename)
         bf.close()
@@ -217,12 +230,13 @@ class TestFactory(unittest.TestCase):
         self.assertEqualFiles1("lore_index_file_unnumbered_out.html", indexFilename + ".html")
 
     def test_runningLoreMultipleFiles(self):
+        tmp = self.makeTemp('lore_index_test.xhtml')
         templateFilename = sp('template.tpl')
-        inputFilename = sp('lore_index_test.xhtml')
+        inputFilename = os.path.join(tmp, 'lore_index_test.xhtml')
         inputFilename2 = sp('lore_index_test2.xhtml')
         indexFilename = 'theIndexFile'
 
-        bookFilename = sp('lore_test_book.book')
+        bookFilename = os.path.join(tmp, 'lore_test_book.book')
         bf = open(bookFilename, 'w')
         bf.write('Chapter(r"%s", None)\n' % inputFilename)
         bf.write('Chapter(r"%s", None)\n' % inputFilename2)
@@ -236,7 +250,8 @@ class TestFactory(unittest.TestCase):
         result = lore.runGivenOptions(options)
         self.assertEquals(None, result)
         self.assertEqualFiles1("lore_index_file_unnumbered_multiple_out.html", indexFilename + ".html")
-        self.assertEqualFiles("lore_index_test_out.html", "lore_index_test.html")
+        self.assertEqualFiles1("lore_index_test_out.html",
+                               os.path.join(tmp, "lore_index_test.html"))
         self.assertEqualFiles("lore_index_test_out2.html", "lore_index_test2.html")
 
     def XXXtest_NumberedSections(self):
