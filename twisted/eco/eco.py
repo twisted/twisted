@@ -118,7 +118,7 @@ class Function:
         if i != len(args):
             raise TypeError("Wrong number of arguments!")
         
-        newEnv = extendEnv(VAR, self.env, func_map(lambda x, env=self.env: cons(car(x), evalExp(cadr(x), env)),  bindings))
+        newEnv = extendEnv(VAR, self.env, func_map(lambda x, env=self.env: cons(car(x), evalExp(cdr(x), env)),  bindings))
         return evalExp(self.body, newEnv)
 
 class Macro(Function):
