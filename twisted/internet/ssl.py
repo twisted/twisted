@@ -125,6 +125,22 @@ class Client(Connection, tcp.Client):
         sock = tcp.Client.createInternetSocket(self)
         return SSL.Connection(self.ctxFactory.getContext(), sock)
 
+    def getHost(self):
+        """Returns a tuple of ('SSL', hostname, port).
+
+        This indicates the address from which I am connecting.
+        """
+        return ('SSL',)+self.socket.getsockname()
+
+    def getPeer(self):
+        """Returns a tuple of ('SSL', hostname, port).
+
+        This indicates the address that I am connected to.  I implement
+        twisted.protocols.protocol.Transport.
+        """
+        return ('SSL',)+self.addr
+
+
 
 class Server(Connection, tcp.Server):
     """I am an SSL server.
@@ -133,6 +149,21 @@ class Server(Connection, tcp.Server):
     def __init__(*args, **kwargs):
         # we need those so we don't use ssl.Connection's __init__
         apply(tcp.Server.__init__, args, kwargs)
+
+    def getHost(self):
+        """Returns a tuple of ('SSL', hostname, port).
+
+        This indicates the servers address.
+        """
+        return ('SSL',)+self.socket.getsockname()
+
+    def getPeer(self):
+        """
+        Returns a tuple of ('SSL', hostname, port), indicating the connected
+        client's address.
+        """
+        return ('SSL',)+self.client
+
 
 
 class Port(tcp.Port):
