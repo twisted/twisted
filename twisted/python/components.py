@@ -468,4 +468,4 @@ class Componentized(styles.Versioned):
 
 __all__ = ["Interface", "implements", "getInterfaces", "superInterfaces",
            "registerAdapter", "getAdapterClass", "getAdapter", "Componentized",
-           "AdapterRegistry"]
+           "AdapterRegistry", "Adapter"]
