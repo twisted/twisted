@@ -99,9 +99,9 @@ HTMLFormatter._uid_to_uri = _uid_to_uri
 modnames = []
 def addMod(arg, path, files):
     for fn in files:
-        file = os.path.join(path, fn).replace('/__init__', '')
-        if file[-3:] == '.py' and not file.count('/test/'):
-            modName = file[2:-3].replace('/','.')
+        file = os.path.join(path, fn).replace('%s__init__'%os.sep, '')
+        if file[-3:] == '.py' and not file.count('%stest%s' % (os.sep,os.sep)):
+            modName = file[2:-3].replace(os.sep,'.')
             try:
                 #print 'pre-loading', modName
                 reflect.namedModule(modName)
