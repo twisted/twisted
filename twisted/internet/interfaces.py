@@ -56,14 +56,23 @@ class IConnector(Interface):
 
 
 class IResolverSimple(Interface):
-    def lookupAddress(self, name, timeout = 10):
+    def getHostByName(self, name, timeout = 10):
         """Resolve the domain name C{name} into an IP address.
 
         @type name: C{str}
         @type timeout: C{int}
         @rtype: C{Deferred}
-        @raise C{twisted.internet.defer.TimeoutError}: Raised if the name
-        cannot be resolved within the specified timeout period.
+        @return: The callback of the C{Deferred} that is returned will be
+        passed a string that represents the IP address of the specified
+        name, or the errback will be called if the lookup times out.  If 
+        multiple types of address records are associated with the name,
+        A6 records will be returned in preference to AAAA records, which
+        will be returned in preference to A records.  If there are multiple
+        records of the type to be returned, one will be selected at random.
+
+        @raise C{twisted.internet.defer.TimeoutError}: Raised
+        (asynchronously) if the name cannot be resolved within the specified
+        timeout period.
         """
 
 class IResolver(IResolverSimple):
@@ -76,6 +85,15 @@ class IResolver(IResolverSimple):
         """Interpret and dispatch a query object to the appropriate
         lookup* method.
         """
+
+    def lookupAddress(self, name, timeout = 10):
+        """Lookup the A records associated with C{name}."""
+
+    def lookupAddress6(self, name, timeout = 10):
+        """Lookup all the A6 records associated with C{name}."""
+
+    def lookupIPV6Address(self, name, timeout = 10):
+        """Lookup all the AAAA records associated with C{name}."""
 
     def lookupMailExchange(self, name, timeout = 10):
         """Lookup the MX records associated with C{name}."""
@@ -133,6 +151,7 @@ class IResolver(IResolverSimple):
 
     def lookupZone(self, name, timeout = 10):
         """Perform a zone transfer for the given C{name}."""
+
 
 class IReactorTCP(Interface):
 
