@@ -1,7 +1,7 @@
 
 import telnet
 
-from twisted.trial import unittest
+from twisted.trial import unittest, util
 from twisted.test import proto_helpers
 
 class TestProtocol:
@@ -298,9 +298,7 @@ class TelnetTestCase(unittest.TestCase):
 
         self.p.dataReceived(telnet.IAC + telnet.WILL + '\x42')
 
-        # XXX I want a construct for asserting that a Deferred _has_ fired
-        # and examining its value _right now_.
-        self.assertEquals(d.result, True)
+        self.assertEquals(util.wait(d), True)
         self.assertEquals(self.p.protocol.enabled, ['\x42'])
         self.assertEquals(self.p.protocol.disabled, [])
 
@@ -315,9 +313,7 @@ class TelnetTestCase(unittest.TestCase):
 
         self.p.dataReceived(telnet.IAC + telnet.WONT + '\x42')
 
-        # XXX I want a construct for asserting that a Deferred _has_ fired
-        # and examining its value _right now_.
-        self.assertEquals(d.result, False)
+        self.assertEquals(util.wait(d), False)
         self.assertEquals(self.p.protocol.enabled, [])
         self.assertEquals(self.p.protocol.disabled, [])
 
@@ -335,8 +331,33 @@ class TelnetTestCase(unittest.TestCase):
 
         self.p.dataReceived(telnet.IAC + telnet.WONT + '\x42')
 
-        # XXX I want a construct for asserting that a Deferred _has_ fired
-        # and examining its value _right now_.
-        self.assertEquals(d.result, True)
+        self.assertEquals(util.wait(d), True)
         self.assertEquals(self.p.protocol.enabled, [])
         self.assertEquals(self.p.protocol.disabled, ['\x42'])
+
+    def testNegotiationBlocksFurtherNegotiation(self):
+        # Try to enable an option, then immediately try to enable it, then
+        # immediately try to disable it.  Ensure that the 2nd and 3rd calls
+        # fail quickly with the right exception.
+        d = self.p.requestEnable('\x24')
+
+        self.assertRaises(telnet.AlreadyNegotiating, util.wait, self.p.requestEnable('\x24'))
+        self.assertRaises(telnet.AlreadyNegotiating, util.wait, self.p.requestDisable('\x24'))
+
+        self.p.dataReceived(telnet.IAC + telnet.WONT + '\x24')
+
+        d = self.p.requestEnable('\x24')
+        self.p.dataReceived(telnet.IAC + telnet.WILL + '\x24')
+        self.assertEquals(util.wait(d), True)
+
+    def testSuperfluousDisableRequestRaise(self):
+        # Try to disable a disabled option.  Make sure it fails properly.
+        d = self.p.requestDisable('\xab')
+        self.assertRaises(telnet.AlreadyDisabled, util.wait, d)
+
+    def testSuperfluousEnableRequestRaise(self):
+        # Try to disable a disabled option.  Make sure it fails properly.
+        s = self.p.getOptionState('\xab')
+        s.state = 'yes'
+        d = self.p.requestEnable('\xab')
+        self.assertRaises(telnet.AlreadyEnabled, util.wait, d)

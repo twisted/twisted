@@ -195,10 +195,10 @@ class Telnet(protocol.Protocol):
 
     def requestEnable(self, option):
         s = self.getOptionState(option)
-        if s.state == 'yes':
-            return defer.fail(AlreadyEnabled(option))
-        elif s.negotiating:
+        if s.negotiating:
             return defer.fail(AlreadyNegotiating(option))
+        elif s.state == 'yes':
+            return defer.fail(AlreadyEnabled(option))
         else:
             s.negotiating = True
             s.onResult = d = defer.Deferred()
@@ -207,10 +207,10 @@ class Telnet(protocol.Protocol):
 
     def requestDisable(self, option):
         s = self.getOptionState(option)
-        if s.state == 'no':
-            return defer.fail(AlreadyDisabled(option))
-        elif s.negotiating:
+        if s.negotiating:
             return defer.fail(AlreadyNegotiating(option))
+        elif s.state == 'no':
+            return defer.fail(AlreadyDisabled(option))
         else:
             s.negotiating = True
             s.onResult = d = defer.Deferred()
