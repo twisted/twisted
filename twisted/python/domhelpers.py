@@ -31,6 +31,9 @@ def get(node, nodeId):
     if result: return result
     raise NodeLookupError, nodeId
 
+def getIfExists(node, nodeId):
+    return _get(node, nodeId)
+
 def getAndClear(node, nodeId):
     result = get(node, nodeId)
     if result:
