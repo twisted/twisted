@@ -24,6 +24,18 @@ def findBeginningOfLineWithPoint(entry):
     #print 'oops.'
     return 0
 
+def isCursorOnFirstLine(entry):
+    firstnewline = string.find(entry.get_chars(0,-1), '\n')
+    if entry.get_point() <= firstnewline or firstnewline == -1:
+        #print "cursor is on first line"
+        return 1
+
+def isCursorOnLastLine(entry):
+    if entry.get_point() >= string.rfind(string.rstrip(entry.get_chars(0,-1)), '\n'):
+        #print "cursor is on last line"
+        return 1
+    
+
 class Interaction(gtk.GtkWindow):
     def __init__(self):
         gtk.GtkWindow.__init__(self, gtk.WINDOW_TOPLEVEL)
@@ -54,6 +66,7 @@ class Interaction(gtk.GtkWindow):
             self.histpos = self.histpos - 1
             self.input.delete_text(0, -1)
             self.input.insert_defaults(self.history[self.histpos])
+            self.input.set_point(1)
 
     def historyDown(self):
         if self.histpos < len(self.history) - 1:
@@ -87,11 +100,11 @@ class Interaction(gtk.GtkWindow):
                 self.input.delete_text(0, -1)
                 self.input.emit_stop_by_name("key_press_event")
                 self.linemode = 0
-        elif event.keyval == gtk.GDK.Up:
+        elif event.keyval == gtk.GDK.Up and isCursorOnFirstLine(self.input):
             self.historyUp()
             gtk.idle_add(self.focusInput)
             self.input.emit_stop_by_name("key_press_event")
-        elif event.keyval == gtk.GDK.Down:
+        elif event.keyval == gtk.GDK.Down and isCursorOnLastLine(self.input):
             self.historyDown()
             gtk.idle_add(self.focusInput)
             self.input.emit_stop_by_name("key_press_event")
