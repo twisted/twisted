@@ -15,7 +15,7 @@
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 #
-# $Id: conch.py,v 1.4 2002/11/09 04:09:24 z3p Exp $
+# $Id: conch.py,v 1.5 2002/11/09 04:27:58 z3p Exp $
 
 #""" Implementation module for the `ssh` command.
 #"""
@@ -180,6 +180,7 @@ class SSHSession(connection.SSHChannel):
             tty.setraw(fd)
         c = connection.SSHSessionClient()
         c.dataReceived = self.write
+        c.connectionLost = self.sendEOF
         stdio.StandardIO(c)
         term = os.environ['TERM']
         if options['subsystem']:
@@ -219,6 +220,9 @@ class SSHSession(connection.SSHChannel):
         global exitStatus
         exitStatus = struct.unpack('>L', data)[0]
         log.msg('exit status: %s' % exitStatus)
+
+    def sendEOF(self):
+        self.conn.sendEOF(self)
 
 # Make it script-callable for testing purposes
 if __name__ == "__main__":
