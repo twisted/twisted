@@ -116,6 +116,7 @@ class _HostResource(resource.Resource):
     def getChild(self, path, request):
         if ':' in path:
             host, port = path.split(':', 1)
+            port = int(port)
         else:
             host, port = path, 80
         request.setHost(host, port)
