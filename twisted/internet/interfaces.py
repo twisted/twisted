@@ -353,11 +353,6 @@ class IReactorMulticast(Interface):
         @returns: object conforming to L{IListeningPort}.
         """
 
-    def connectMulticast(self, remotehost, remoteport, protocol, localport=0,
-                         interface='', maxPacketSize=8192):
-        """Connects a L{ConnectedDatagramProtocol<twisted.internet.protocol.ConnectedDatagramProtocol>} instance to a UDP port.
-        """
-
 
 class IReactorProcess(Interface):
 
