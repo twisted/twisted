@@ -113,6 +113,8 @@ def main():
 		 'tag': tag,
          'upver': updateVersions}
 
+    sys.path.insert(0, os.path.abspath('Twisted'))
+    
     for command in opts['commands']:
         d[command](opts)
 
@@ -129,8 +131,10 @@ def replaceInFile(filename, oldstr, newstr):
 
 def updateVersions(opts):
     print "updateVersions"
-    oldver = opts['oldver']
+    from twisted.copyright import version
+    oldver = version.replace('.', '_')
     newver = opts['version']
+   
     r = opts['root']
     os.chdir(r)
     files = ('README', 'doc/howto/installing-twisted.html', 'twisted/copyright.py')
@@ -151,7 +155,7 @@ def exportCVS(opts):
     ver = opts['version']
     sh('cvs -d%s export -r release-%s Twisted' % (root, ver.replace('.', '_')))
 
-    sys.path.insert(0, os.path.abspath('Twisted'))
+
     from twisted import copyright
     if opts['version'] != copyright.version:
         print '''Error: the version you passed in is not the same as copyright.version:
