@@ -1,3 +1,10 @@
+2002-9-20  Christopher Armstrong  <radix@twistedmatrix.com>
+
+	* Together with Moshe
+
+	* admin/release-twisted: add option to install debs into a real
+	aptable archive, make it transactional and other minor improvements
+
 2002-9-19  Moshe Zadka <moshez@twistedmatrix.com>
 
 	* twisted/scripts/twistd.py: Added ability to chroot. Moved directory
