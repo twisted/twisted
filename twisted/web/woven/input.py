@@ -28,7 +28,7 @@ from twisted.python.reflect import qual
 from twisted.web import domhelpers
 from twisted.web.woven import template, controller, utils
 
-__version__ = "$Revision: 1.32 $"[11:-2]
+__version__ = "$Revision: 1.33 $"[11:-2]
 
 controllerFactory = controller.controllerFactory
 
@@ -322,8 +322,7 @@ class ListAggregator(Anything):
             func = self._commit
             if hasattr(func, 'im_func'):
                 func = func.im_func
-            args, varargs, varkw, defaults = inspect.getargspec(
-                                                            func)
+            args, varargs, varkw, defaults = inspect.getargspec(func)
             self.numArgs = len(args)
             wantsRequest = args[1] == 'request'
             if wantsRequest:
