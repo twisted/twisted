@@ -19,11 +19,6 @@ class IFingerSetterService(components.Interface):
     def setUser(self, user, status):
         """Set the user's status to something"""
 
-class IFingerSetterService(components.Interface):
-
-    def setUser(self, user, status):
-        """Set the user's status to something"""
-
 def catchError(err):
     return "Internal error in server"
 
