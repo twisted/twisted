@@ -175,10 +175,14 @@ class SSHSession(SSHChannel, protocol.Protocol): # treat us as a protocol for th
         if f:
             self.client = f()
             return 1
+        
         print 'failed to get subsystem', subsystem
         return 0
 
     def request_shell(self, data):
+        if not self.environ.has_key('TERM'): # we didn't get a pty-req
+            print 'tried to get shell without pty, failing'
+            return 0
         shell = '/bin/sh' # fix this
         print 'accepted shell', shell
         ptypro.Process(shell, [shell], self.environ, '/tmp', self) # fix this too
@@ -212,7 +216,7 @@ class SSHSession(SSHChannel, protocol.Protocol): # treat us as a protocol for th
         self.namespace = {
             'session':self,
             'connection':self.conn,
-            'transport':self.conn.transport
+            'transport':self.conn.transport,
         }
         pyshell.factory = self
         pyshell.delimiters.append('\n')
@@ -225,7 +229,7 @@ class SSHSession(SSHChannel, protocol.Protocol): # treat us as a protocol for th
     def receiveData(self, data):
         self.client.dataReceived(data)
 
-    # protocol stuff
+    # protocol/process stuff
     def dataReceived(self, data):
         self.conn.sendData(self, data)
 

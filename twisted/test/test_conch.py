@@ -16,8 +16,10 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
 import os
-from twisted.internet import reactor, defer
-from twisted.conch import keys, transport, factory, userauth
+from twisted.conch import identity
+from twisted.conch.ssh import keys, transport, factory, userauth
+from twisted.cred import authorizer
+from twisted.internet import reactor, defer, app
 from pyunit import unittest
 
 publicRSA = "ssh-rsa AAAAB3NzaC1yc2EAAAABIwAAAEEAtGjpLkkSunM1pejcYuIPPH4vO/Duf734AKqjl2n7a4jhRJ8XRdRpw1+YZlCvQ4JJCD5wc74RWukctaO1Nkjz7w== Paul@MOO"
@@ -43,8 +45,7 @@ nqEsrLLZuOdPb2HuFoQsT5cd+rZsz19yQPHYUs5IgnPLzdWZAhUAl1TqdmlAG/b4
 nnVchGiO9sML8MM=
 -----END DSA PRIVATE KEY-----"""
 
-
-class ConchKeysHandlingTestCase(unittest.TestCase):
+class SSHKeysHandlingTestCase(unittest.TestCase):
     """
     test the handling of reading/signing/verifying with RSA and DSA keys
     assumed test keys are in test/
@@ -97,23 +98,48 @@ class ConchKeysHandlingTestCase(unittest.TestCase):
         self.assert_(pubFS.__dict__ == pubKey.__dict__,
                      'getting %s public key from string failed' % keyType)
 
+theTest = None
 
+class ConchTestIdentity(identity.ConchIdentity):
+
+    def validatePublicKey(self, pubKey):
+        global theTest
+        theTest.assert_(pubKey==keys.getPublicKeyString('dsa_test.pub'), 'bad public key')
+        return defer.succeed(1)
+
+    def verifyPlainPassword(self, password):
+        global theTest
+        theTest.assert_(password == 'testpass', 'bad password')
+        return defer.succeed(1)
+
+class ConchTestAuthorizer(authorizer.Authorizer):
+    
+    def addIdentity(self, ident):
+        self.ident = ident
+
+    def getIdentityRequest(self, name):
+        global theTest
+        theTest.assert_(name == 'testuser')
+        return defer.succeed(self.ident)
 
 class SSHTestBase:
 
     def connectionLost(self):
+        global theTest
         if not hasattr(self,'expectedLoseConnection'):
-            self.test.fail('unexpectedly lost connection')
-        self.test.reactorRunning = 0
+            theTest.fail('unexpectedly lost connection')
+        theTest.reactorRunning = 0
 
     def receiveError(self, reasonCode, desc):
-        self.test.fail('got disconnect: reason %s, desc: %s' %
+        global theTest
+        theTest.fail('got disconnect: reason %s, desc: %s' %
                        (reasonCode, desc))
-        self.test.reactorRunning = 0
+        theTest.reactorRunning = 0
 
     def receiveUnimplemented(self, seqID):
-        self.test.fail('got unimplemented: seqid %s'  % seqID)
-        self.test.reactorRunning = 0
+        global theTest
+        theTest.fail('got unimplemented: seqid %s'  % seqID)
+        theTest.reactorRunning = 0
 
 
 class SSHTestServer(SSHTestBase, transport.SSHServerTransport): pass
@@ -124,22 +150,45 @@ class SSHTestServerAuth(userauth.SSHUserAuthServer):
         #self.tranport.factory.services['ssh-connection'] = SSHTestConnection
         return len(self.authenticatedWith)==2
 
-    def isValidKeyFor(self, user, pubKey):
-        self.transport.factory.test.assert_(user=='testuser','bad username')
-        self.transport.factory.test.assert_(pubKey==keys.getPublicKeyString('dsa_test.pub'), 'bad public key')
-        return 1
-
-    def verifyPassword(self,user, password):
-        self.transport.factory.test.assert_(user=='testuser','bad username')
-        self.transport.factory.test.assert_(password=='testpass','bad password')
-        return 1
+#    def isValidKeyFor(self, user, pubKey):
+#        global theTest
+#        theTest.assert_(user=='testuser','bad username')
+#        theTest.assert_(pubKey==keys.getPublicKeyString('dsa_test.pub'), 'bad public key')
+#        return defer.succeed(None)
+#
+#    def verifyPassword(self,user, password):
+#        global theTest
+#        theTest.assert_(user=='testuser','bad username')
+#        theTest.assert_(password=='testpass','bad password')
+#        return defer.succeed(None)
 
 class SSHTestClientAuth(userauth.SSHUserAuthClient):
+
+    hasTriedNone = 0 # have we tried the 'none' auth yet?
+    canSucceedPublicKey = 0 # can we succed with this yet?
+    canSucceedPassword = 0
+    
+    def ssh_USERAUTH_SUCCESS(self, packet):
+        if not self.canSucceedPassword and self.canSucceedPublicKey:
+            global theTest
+            theTest.fail('got USERAUTH_SUCESS before password and publickey')
+            theTest.reactorRunning = 0
+        userauth.SSHUserAuthClient.ssh_USERAUTH_SUCCESS(self, packet)
+
+#    def ssh_USERAUTH_FAILURE(self, packet):
+#        if self.hasFailedEnough:
+#            self.hasTriedNone += 1
+#            return userauth.SSHUserAuthClient.ssh_USERAUTH_FAILURE(self, packet)
+#        else:
+#            global theTest
+#            theTest.fail('client failed auth method %s' % self.lastAuth)
     
     def getPassword(self):
+        self.canSucceedPassword = 1
         return defer.succeed('testpass')
 
     def getPrivateKey(self):
+        self.canSucceedPublicKey = 1
         return keys.getPrivateKeyObject('dsa_test')
 
     def getPublicKey(self):
@@ -148,7 +197,8 @@ class SSHTestClientAuth(userauth.SSHUserAuthClient):
 class SSHTestClient(SSHTestBase, transport.SSHClientTransport):
 
     def checkFingerprint(self, fp):
-        self.test.assertEquals(fp,'34:f1:6f:02:29:ad:17:f9:8f:96:8a:9b:94:c7:49:43')
+        global theTest
+        theTest.assertEquals(fp,'34:f1:6f:02:29:ad:17:f9:8f:96:8a:9b:94:c7:49:43')
         return 1
 
     def connectionSecure(self):
@@ -162,7 +212,8 @@ class SSHTestConnection:
         #self.transport.expectedLostConnection = 1
         if not hasattr(self.transport, 'factory'):
             # make the client end the connection
-            self.transport.test.reactorRunning = 0
+            global theTest
+            theTest.reactorRunning = 0
 
 class SSHTestFactory(factory.SSHFactory):
 
@@ -173,10 +224,10 @@ class SSHTestFactory(factory.SSHFactory):
 
     def buildProtocol(self, addr):
         if hasattr(self, 'proto'):
-            self.test.fail('connected twice to factory')
+            global theTest
+            theTest.fail('connected twice to factory')
         self.proto = SSHTestServer()
         self.proto.supportedPublicKeys = self.privateKeys.keys()
-        self.proto.test = self.test
         self.proto.factory = self
         return self.proto
 
@@ -197,7 +248,7 @@ class SSHTestFactory(factory.SSHFactory):
             2048:[(transport.DH_GENERATOR, transport.DH_PRIME)]
         }
 
-class ConchTransportTest(unittest.TestCase):
+class SSHTransportTest(unittest.TestCase):
 
     def setUp(self):
         open('rsa_test','w').write(privateRSA)
@@ -210,10 +261,14 @@ class ConchTransportTest(unittest.TestCase):
             os.remove(f)
 
     def testOurServerOurClient(self):
+        global theTest
+        theTest = self
+        auth = ConchTestAuthorizer()
+        ident = ConchTestIdentity('testuser', app.Application('conchtest'))
+        auth.addIdentity(ident)
         fac = SSHTestFactory()
-        fac.test = self
+        fac.authorizer = auth
         client = SSHTestClient()
-        client.test = self
         client.serverfac = fac
         reactor.listenTCP(66722, fac)
         reactor.clientTCP('localhost', 66722, client)
