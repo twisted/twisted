@@ -1,8 +1,8 @@
 0.1.0:
-
  - Tons of bugfixes in IMAP4, POP3, and SMTP protocols
  - Maildir append support
  - Brand new, improved POP3 client (twisted.mail.pop3.AdvancedPOP3Client)
+ - Deprecated the old POP3 client (twisted.mail.pop3.POP3Client)
  - SMTP client:
    - Support SMTP AUTH
    - Allow user to supply SSL context

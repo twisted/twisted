@@ -1,4 +1,0 @@
-2004-10-29  Jp Calderone <exarkun@twistedmatrix.com>
-
-	* twisted/names/client.py: Retry logic now tries multiple servers
-	instead of retrying the same one over and over.

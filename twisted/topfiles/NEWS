@@ -20,6 +20,9 @@ Miscellaneous fixes/features
  - Boolean support for twisted.persisted.marmalade.
  - Refactor of plugin and application HOWTO documentation
  - Async HOWTO expanded muchly.
+ - The twistd command has --uid --gid command line arguments.
+ - *Incompatibility: mktap defaults to not change UID/GID, instead of saving
+   the invoking user's UID/GID.
 
 twisted.trial
 -------------
@@ -28,19 +31,26 @@ twisted.trial
 twisted.internet
 ----------------
  - Multi-listen UDP multicast support
- - gtk2reactor can optionally use glib event loop instead of gtk
- - Add utils.getProcessOutputAndValue to get stdout/err/value.
  - protocol.ClientCreator has a connectSSL.
- - Default DNS resolver is now non-blocking.
- - gtk2reactor notifies gobject to initialize thread support
  - Increased default TCP accept backlog from 5 to 50.
  - Make buffering large amounts of TCP data work on Windows.
  - Fixed SSL disconnect to not wait for remote host. Fixes issue with firefox.
- - Many Process bugfixes
- - Fix registering a streaming producer on a transport.
+
+ - defer.deferredGenerator: allows you to write Deferred code w/o callbacks.
  - Separate state for Deferred finalization so that GC-loops preventing
    finalization don't occur.
+ - New defer.DeferredLock/DeferredSemaphore/DeferredQueue.
+
+ - Many Process bugfixes
+ - Add utils.getProcessOutputAndValue to get stdout/err/value.
+ - Default DNS resolver is now non-blocking.
+
+ - gtk2reactor can optionally use glib event loop instead of gtk
+ - gtk2reactor notifies gobject to initialize thread support
+
+ - Fix registering a streaming producer on a transport.
  - Close client sockets explicitly after failed connections.
+
 
 twisted.protocols
 -----------------
