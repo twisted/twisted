@@ -7,6 +7,8 @@ from Zope.Publisher.HTTP.HTTPRequest import HTTPRequest
 from Zope.Publisher.HTTP.HTTPResponse import HTTPResponse
 
 from twisted.protocols import protocol, http
+from twisted.internet import task, threadtask, main
+from twisted.python import log
 
 
 rename_headers = {
@@ -16,7 +18,10 @@ rename_headers = {
     }
 
 
-class ZopeHTTPRequest(http.Request):
+class ZopeHTTPRequest(log.Logger, http.Request):
+    
+    def write(self, data):
+        task.schedule(http.Request.write, self, data)
     
     # methods for HTTPResponse
     def setResponseStatus(self, status, reason):
@@ -31,13 +36,14 @@ class ZopeHTTPRequest(http.Request):
             k, v = string.split(i, ': ', 2)
             self.setHeader(k, v)
     
-        
     def process(self):
-        factory = self.channel.factory
+        self.channel.threadpool.dispatch(self, self._process)
+    
+    def _process(self):
         env = self.create_environment()
         self.content.seek(0, 0)
         req = HTTPRequest(self.content, self, env)
-        req.setPublication(factory.publication)
+        req.setPublication(self.channel.publication)
         response = req.getResponse()
         response.setHeaderOutput(self)
         publish(req)
@@ -85,11 +91,15 @@ class HTTPFactory(protocol.ServerFactory):
         h = http.HTTPChannel()
         h.requestFactory = ZopeHTTPRequest
         h.factory = self
+        h.threadpool = self.tp
+        h.publication = self.publication
         return h
     
     def __init__(self, publication):
         self.publication = publication
-
+        self.tp = threadtask.ThreadDispatcher(4, 4)
+        main.callDuringShutdown(self.tp.stop)
+    
 
 if __name__ == '__main__':
 
