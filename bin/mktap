@@ -17,7 +17,7 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
 
-"""
+usageMessage = """
 Usage::
 
   mktap *apptype* *application_options*
@@ -67,7 +67,7 @@ if hasattr(os, 'getgid'):
 try:
     options.parseOptions(sys.argv[1:])
 except:
-    print __doc__
+    print usageMessage
     sys.exit()
 
 if options.help or not options.args:
@@ -76,7 +76,7 @@ if options.help or not options.args:
         print mod.usage_message
         sys.exit()
     else:
-        print __doc__
+        print usageMessage
         sys.exit()
 else:
     mod = getModule(options.args[0])
