@@ -71,11 +71,11 @@ _generateMaildirName = _MaildirNameGenerator().generate
 
 def initializeMaildir(dir):
     if not os.path.isdir(dir):
-        os.mkdir(dir)
+        os.mkdir(dir, 0700)
         for subdir in ['new', 'cur', 'tmp', '.Trash']:
-            os.mkdir(os.path.join(dir, subdir))
+            os.mkdir(os.path.join(dir, subdir), 0700)
         for subdir in ['new', 'cur', 'tmp']:
-            os.mkdir(os.path.join(dir, '.Trash', subdir))
+            os.mkdir(os.path.join(dir, '.Trash', subdir), 0700)
         # touch
         open(os.path.join(dir, '.Trash', 'maildirfolder'), 'w').close()
 
