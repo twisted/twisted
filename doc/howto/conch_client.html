@@ -38,7 +38,7 @@ class ClientTransport(transport.SSHClientTransport):
         self.requestService(ClientUserAuth('user', ClientConnection()))
 </pre>
 
-<p>See how easy it is?  SSHClientTransport handles the negotiation of encryption and the verification of keys for you.  The one security element that you as a client writer need to implement is verifyHostKey().  This method is called with two strings: the public key sent by the server and its fingerprint.  You should verify the host key the server sends, either by checking against a hard-coded value as in the example, or by asking the user.  verifyHostKey returns a <code class="API">twisted.internet.defer.Deferred</code> which gets a callback if the host key is valid, or an errback if it is not. Note that in the above, replace 'user' with the username you're attempting to ssh with, for instance a call to os.getlogin for the current user.</p>
+<p>See how easy it is?  SSHClientTransport handles the negotiation of encryption and the verification of keys for you.  The one security element that you as a client writer need to implement is verifyHostKey().  This method is called with two strings: the public key sent by the server and its fingerprint.  You should verify the host key the server sends, either by checking against a hard-coded value as in the example, or by asking the user.  verifyHostKey returns a <code class="API">twisted.internet.defer.Deferred</code> which gets a callback if the host key is valid, or an errback if it is not. Note that in the above, replace 'user' with the username you're attempting to ssh with, for instance a call to os.getlogin() for the current user.</p>
 
 <p>The second method you need to implement is connectionSecure().  It is called when the encryption is set up and other services can be run.  The example requests that the ClientUserAuth service be started.  This service will be discussed next.</p>
 
@@ -173,5 +173,7 @@ if __name__ == "__main__":
 
 <P>We call connectTCP() to connect to localhost, port 22 (the standard port for
 ssh), and pass it an instance of <code class="API">twisted.internet.protocol.ClientFactory</code>. This instance has the attribute protocol set to our earlier ClientTransport class. Note that the protocol is set to the class ClientFactory, not an instance of ClientFactory! When the connectTCP call completes, the protocol will be called to create a ClientTransport() object - this then invokes all our previous work.</P>
+
+<P>It's worth noting that in the example main() routine, the reactor.run() call never returns. If you want to make the program exit, call reactor.stop() in the earlier close() method.</P>
 
 </body></html>
