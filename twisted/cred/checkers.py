@@ -71,7 +71,7 @@ class InMemoryUsernamePasswordDatabaseDontUse:
         if matched:
             return username
         else:
-            return failure.Failure(error.UnauthorizedLogin())
+            raise error.UnauthorizedLogin()
 
     def requestAvatarId(self, credentials):
         if credentials.username in self.users:
