@@ -42,5 +42,5 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 Copyright Exceptions:
 
- * twisted/python/process.py, twisted/python/process.py: (C) ActiveState 2004
+ * twisted/python/process.py, twisted/python/which.py: (C) ActiveState 2004
    Author: Trent Mick.
