@@ -8,8 +8,11 @@ from twisted.spread import pb
 from twisted.python import authenticator
 from twisted import copyright
 
-# Sibling Imports
-from status import *
+# Status "enumeration"
+
+OFFLINE = 0
+ONLINE  = 1
+AWAY = 2
 
 class Participant(pb.Perspective):
     def __init__(self, name, password, service):
