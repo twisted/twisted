@@ -3641,5 +3641,12 @@ private message from dash: wuh oh, drewp is on to us
                  this person's ass while they're running around, I wanna see 
                  something decent.
 %
+<Tv> How does everyone feel about getting all dirty with low-level networking in twisted?
+<Tv> I'm thinking ip, udp etc.
+<Tv> As in, "here's the full packet".
+<itamar> personally, it fills me with an unholy glee
+%
 <itamar> Tv: there are people who will offer to marry you if you release this
+%
+<jml> if only I could eat whitespace
 %
