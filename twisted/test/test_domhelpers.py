@@ -62,7 +62,7 @@ class DomHelpersTest(TestCase):
         expected='abdgheicfj'
         assert actual==expected, 'expected %s, got %s' % (expected, actual)
 
-    def test_gatherTextNode(self):
+    def test_gatherTextNodes(self):
         doc1=microdom.parseString('<a>foo</a>')
         actual=domhelpers.gatherTextNodes(doc1)
         expected='foo'
@@ -176,7 +176,9 @@ class DomHelpersTest(TestCase):
         expected=2
         assert actual==expected, 'expected %d, got %d' % (expected, actual)
 
+    # NOT SURE WHAT THESE ARE SUPPOSED TO DO..
     # def test_RawText  FIXME
     # def test_superSetAttribute FIXME
     # def test_superPrependAttribute FIXME
     # def test_superAppendAttribute FIXME
+    # def test_substitute FIXME
