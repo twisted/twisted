@@ -120,14 +120,20 @@ class _TLSMixin:
         return Connection.doWrite(self)
 
     def writeSomeData(self, data):
-        if not data:
-            return 0
         try:
             return Connection.writeSomeData(self, data)
         except SSL.WantWriteError:
             return 0
         except SSL.WantReadError:
             self.writeBlockedOnRead = 1
+            return 0
+        except SSL.SysCallError, e:
+            if e[0] == -1 and data == "":
+                # errors when writing empty strings are expected
+                # and can be ignored
+                return 0
+            else:
+                return main.CONNECTION_LOST
         except SSL.Error:
             return main.CONNECTION_LOST
 
@@ -135,10 +141,11 @@ class _TLSMixin:
         try:
             self.socket.sock_shutdown(2)
         except:
-            try:
-                self.socket.close()
-            except:
-                pass
+            pass
+        try:
+            self.socket.close()
+        except:
+            pass
 
     def _postLoseConnection(self):
         """Gets called after loseConnection(), after buffered data is sent.
@@ -395,11 +402,14 @@ class BaseClient(Connection):
         # we first stop and then start, to reset any references to the old doRead
         self.stopReading()
         self.stopWriting()
+        self._connectDone()
+
+    def _connectDone(self):
         self.startReading()
         self.protocol = self.connector.buildProtocol(self.getPeer())
         self.protocol.makeConnection(self)
         self.logstr = self.protocol.__class__.__name__+",client"
-
+    
     def connectionLost(self, reason):
         if not self.connected:
             self.failIfNotConnected(error.ConnectError())

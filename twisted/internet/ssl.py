@@ -1,3 +1,4 @@
+# -*- test-case-name: twisted.test.test_ssl -*-
 # Twisted, the Framework of Your Internet
 # Copyright (C) 2001 Matthew W. Lefkowitz
 # 
@@ -117,9 +118,10 @@ class Client(tcp.Client):
         """
         return ('SSL',)+self.addr
 
-    def _finishInit(self, whenDone, skt, error, reactor):
-        tcp.Client._finishInit(self, whenDone, skt, error, reactor)
+    def _connectDone(self):
         self.startTLS(self.ctxFactory)
+        self.startWriting()
+        tcp.Client._connectDone(self)
 
 
 class Server(tcp.Server):

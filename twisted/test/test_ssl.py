@@ -40,6 +40,7 @@ class StolenTCPTestCase(test_tcp.ProperlyCloseFilesTestCase, test_tcp.WriteDataT
         
         f = protocol.ClientFactory()
         f.protocol = test_tcp.ConnectionLosingProtocol
+
         f.protocol.master = self
         
         L = []
@@ -222,9 +223,7 @@ class BufferingTestCase(unittest.TestCase):
         port = reactor.listenSSL(0, server, sCTX, interface='127.0.0.1')
         reactor.connectSSL('127.0.0.1', port.getHost()[2], client, cCTX)
         
-        for i in range(50):
+        for i in range(500):
             reactor.iterate()
         
         self.assertEquals(client.buffer, ["+OK <some crap>\r\n"])
-
-    testOpenSSLBuffering.todo = "This wasn't working before anyway."
