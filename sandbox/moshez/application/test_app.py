@@ -92,6 +92,9 @@ application = service.Application("hello")
         self.assertEqual(service.IService(appl).name, "lala")
         self.assertEqual(sob.IPersistable(appl).name, "lala")
         self.assertEqual(sob.IPersistable(appl).style, "pickle")
+        sob.IPersistable(appl).save(filename=file)
+        appl = app.loadOrCreate("lolo", file, None, 8, 9)
+        self.assertEqual(service.IProcess(appl).processName, "notname")
 
     def test_convertStyle(self):
         appl = service.Application("lala")
