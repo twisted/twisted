@@ -1,9 +1,12 @@
 # -*- test-case-name: twisted.test.test_woven -*-
-# Resource protection for Woven.
+"""Resource protection for Woven. If you wish to use twisted.cred to protect
+your Woven application, you are probably most interested in
+L{UsernamePasswordWrapper}.
+"""
 
 from __future__ import nested_scopes
 
-__version__ = "$Revision: 1.23 $"[11:-2]
+__version__ = "$Revision: 1.24 $"[11:-2]
 
 import random
 import time
@@ -323,7 +326,41 @@ newLoginSignature = fm.MethodSignature(
 from twisted.cred.credentials import UsernamePassword, Anonymous
 
 class UsernamePasswordWrapper(Resource):
+    """I bring a C{twisted.cred} Portal to the web. Use me to provide different Resources
+    (usually entire pages) based on a user's authentication details.
+
+    A C{UsernamePasswordWrapper} is a
+    L{Resource<twisted.web.resource.Resource>}, and is usually wrapped in a
+    L{SessionWrapper} before being inserted into the site tree.
+
+    The L{Realm<twisted.cred.portal.IRealm>} associated with your
+    L{Portal<twisted.cred.portal.Portal>} should be prepared to accept a
+    request for an avatar that implements the L{twisted.web.resource.IResource}
+    interface. This avatar should probably be something like a Woven
+    L{Page<twisted.web.woven.page.Page>}. That is, it should represent a whole
+    web page. Once you return this avatar, requests for it's children do not go
+    through guard.
+
+    If you want to determine what unauthenticated users see, make sure your
+    L{Portal<twisted.cred.portal.Portal>} has a checker associated that allows
+    anonymous access. (See L{twisted.cred.checkers.AllowAnonymousAccess})
+    
+    """
+    
     def __init__(self, portal, callback=None, errback=None):
+        """Constructs a UsernamePasswordWrapper around the given portal.
+
+        @param portal: A cred portal for your web application. The checkers
+            associated with this portal must be able to accept username/password
+            credentials.
+        @type portal: L{twisted.cred.portal.Portal}
+        
+        @param callback: I don't know what this callback does
+        @type callback: A callable (WHAT ARE IT'S ARGS)
+
+        @param errback: I don't know what this errback does
+        @type errback: A callable (WHAT ARE IT'S ARGS)
+        """
         Resource.__init__(self)
         self.portal = portal
         self.callback = callback
