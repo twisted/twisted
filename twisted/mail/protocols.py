@@ -83,3 +83,31 @@ class POP3Factory(protocol.ServerFactory):
         p = VirtualPOP3()
         p.service = self.service
         return p
+
+
+class SMTPClientFactory(protocol.ClientFactory):
+    """
+    Factory to manage the connections required to send an email.
+    """
+
+    protocol = smtp.SMTPSender
+    
+    def __init__(self, fromEmail, toEmail, file, deferred):
+        self.fromEmail = fromEmail
+        self.toEmail = toEmail
+        self.file = file
+        self.result = deferred
+        self.sendFinished = 0
+    
+    def clientConnectionFailed(self, connector, error):
+        self.result.errback(error)
+
+    def clientConnectionLost(self, connector, error):
+        # if email wasn't sent, try again
+        if not self.sendFinished:
+            connector.connect() # reconnect to SMTP server
+
+    def buildProtocol(self, addr):
+        p = self.protocol(self.fromEmail)
+        p.factory = self
+        return p

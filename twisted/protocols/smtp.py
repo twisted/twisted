@@ -310,3 +310,29 @@ class SMTPClient(basic.LineReceiver):
     def sentMail(self, addresses):
         """Called with list of emails to which we sent the message."""
         pass
+
+class SMTPSender(SMTPClient):
+
+    done = 0
+
+    def smtpCode_default(self, line):
+        """Deal with unexpected SMTP messages."""
+        SMTPClient.smtpCode_default(self, line)
+        self.sentMail([])
+    
+    def getMailFrom(self):
+        if not self.done:
+            self.done = 1
+            return self.factory.fromEmail
+        else:
+            return None
+
+    def getMailTo(self):
+        return [self.factory.toEmail]
+
+    def getMailData(self):
+        return self.factory.file
+
+    def sentMail(self, addresses):
+        self.factory.sendFinished = 1
+        self.factory.result.callback(addresses == [self.factory.toEmail])
