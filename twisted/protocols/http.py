@@ -1018,7 +1018,7 @@ class HTTPFactory(protocol.ServerFactory):
         _logDateTimeStop()
 
     def _openLogFile(self, path):
-        """Override in subclasses, e.g. to use lumberjack."""
+        """Override in subclasses, e.g. to use twisted.python.logfile."""
         f = open(path, "a")
         f.seek(2, 0)
         return f
