@@ -22,7 +22,7 @@ Package installer for Twisted
 Copyright (C) 2001 Matthew W. Lefkowitz
 All rights reserved, see LICENSE for details.
 
-$Id: setup.py,v 1.60 2002/10/09 03:54:57 spiv Exp $
+$Id: setup.py,v 1.61 2002/10/11 22:28:25 itamarst Exp $
 """
 
 import distutils, os, sys, string
@@ -233,7 +233,7 @@ class build_ext_twisted(build_ext):
                                     ],
                                     define_macros=define_macros) )
         else:
-            self.announce("The C reactor is unavailable on this system.")
+            self.announce("The C reactor is unavailable on this system (this is fine, don't worry about it, everything will still work).")
 
         # The portmap module (for inetd)
         if self._check_header("rpc/pmap_clnt.h"):
