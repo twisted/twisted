@@ -1,3 +1,8 @@
+2003-01-11  Itamar Shtull-Trauring  <itamar@itamarst.org>
+
+	* twisted/protocols/shoutcast.py: add client support for
+	Shoutcast MP3 streaming protocol.
+
 2003-01-10  Itamar Shtull-Trauring  <itamar@itamarst.org>
 
 	* twisted/scripts/twistd.py: in debug mode, jump into debugger for any
