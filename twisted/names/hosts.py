@@ -39,7 +39,7 @@ class Resolver:
 
     def resolve(self, name, callback, errback=None, type=1, timeout=10):
         if type != 1:
-            fail()
+            errback()
         res = searchFileFor(self.file, name)
         if res is not None:
             callback(res)
