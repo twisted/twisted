@@ -92,7 +92,7 @@ class Authenticated(page.Page):
 
 class Another(page.Page):
     isLeaf = 1
-    template='''<html>This is another page requiring authentication. And there's  <a href="more">more</a>. Go <a href="../">up</a>.</html>'''
+    template="""<html>This is another page requiring authentication. And there's  <a href="more">more</a>. Go <a href="../">up</a>.</html>"""
 
     def wchild_more(self, request):
         return self
