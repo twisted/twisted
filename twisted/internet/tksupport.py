@@ -28,24 +28,26 @@ import Tkinter, tkSimpleDialog, tkMessageBox
 
 # twisted imports
 from twisted.python import log
+from twisted.internet import task
 
 
-def _guiUpdate(reactor, widget, delay):
-    try:
-        widget.update() # do all pending GUI events
-    except Tkinter.TclError:
-        log.deferr()
-        return
-    reactor.callLater(delay, _guiUpdate, reactor, widget, delay)
-
+_task = None
 
 def install(widget, ms=10, reactor=None):
     """Install a Tkinter.Tk() object into the reactor."""
-    if reactor is None:
-        from twisted.internet import reactor
-    _guiUpdate(reactor, widget, ms/1000.0)
-    
     installTkFunctions()
+    global _task
+    _task = task.LoopingCall(widget.update)
+    _task.start(ms / 1000.0, False)
+
+def uninstall():
+    """Remove the root Tk widget from the reactor.
+
+    Call this before destroy()ing the root widget.
+    """
+    global _task
+    _task.stop()
+    _task = None
 
 
 def installTkFunctions():
@@ -64,4 +66,4 @@ def getPassword(prompt = '', confirm = 0):
         else:
             tkMessageBox.showerror('Password Mismatch', 'Passwords did not match, starting over')
 
-__all__ = ["install"]
+__all__ = ["install", "uninstall"]
