@@ -89,6 +89,25 @@ class PortCleanerUpper(unittest.TestCase):
                 pass
         reactor.iterate()
 
+class ListeningTestCase(PortCleanerUpper):
+    def testListen(self):
+        f = MyServerFactory()
+        p1 = reactor.listenTCP(9990, f) # listen on port 9990
+        p1.stopListening()
+
+    def testNumberedInterface(self):
+        f = MyServerFactory()
+        # listen only on the loopback interface
+        p1 = reactor.listenTCP(9990, f, interface='127.0.0.1')
+        p1.stopListening()
+        
+    def testNamedInterface(self):
+        f = MyServerFactory()
+        # use named interface instead of 127.0.0.1
+        p1 = reactor.listenTCP(9990, f, interface='localhost')
+        # might raise exception if reactor can't handle named interfaces
+        p1.stopListening()
+
 class LoopbackTestCase(PortCleanerUpper):
     """Test loopback connections."""
         
