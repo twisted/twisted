@@ -318,7 +318,7 @@ def htmlFor_checkgroup(write, name, value):
 class FormInputError(Exception):
     pass
 
-class Form(StreamWidget):
+class Form(Widget):
     """I am a web form.
 
     In order to use me, you probably want to set self.formFields (or override
@@ -605,25 +605,36 @@ class Form(StreamWidget):
         self.format(self.getFormFields(req), w, req)
         return l
 
-    def stream(self, write, request):
-        """Render the results of displaying or processing the form.
-        """
-        args = request.args
+    def display(self, request):
+        """Display the form."""
+        result = []
         form = self.getFormFields(request)
         if isinstance(form, defer.Deferred):
-            form.addCallback(lambda form, f=self._streamForm, w=write, r=request: f(w, r, form))
-            form.arm()
+            if self.shouldProcess(request):
+                form.addCallback(lambda form, f=self._displayProcess, r=request: f(r, form))
+            else:
+                form.addCallback(lambda form, f=self._displayFormat, r=request: f(r, form))
+            return [form]
         else:
-            return self._streamForm(write, request, form)
+            if self.shouldProcess(request):
+                return self._displayProcess(request, form)
+            else:
+                return self._displayFormat(request, form)
 
-    def _streamForm(self, write, request, form):
-        """Callback for rendering a form."""
-        if self.shouldProcess(request):
-            try:
-                return self._doProcess(form, write, request)
-            except FormInputError, fie:
-                write(self.formatError(str(fie)))
-        return self.format(form, write, request)
+    def _displayProcess(self, request, form):
+        l = []
+        write = l.append
+        try:
+            self._doProcess(form, write, request)
+        except FormInputError, fie:
+            write(self.formatError(str(fie)))
+        return l
+
+    def _displayFormat(self, request, form):
+        l = []
+        self.format(form, l.append, request)
+        return l
+    
 
 
 class DataWidget(Widget):
