@@ -1098,7 +1098,7 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
         if mbox is None:
             self.sendNegativeResponse(tag, 'No such mailbox')
             return
-        if '\\Noselect' in mbox.getFlags():
+        if '\\noselect' in [s.lower() for s in mbox.getFlags()]:
             self.sendNegativeResponse(tag, 'Mailbox cannot be selected')
             return
 
