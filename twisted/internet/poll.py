@@ -98,37 +98,45 @@ def removeAll():
         poller.unregister(fd)
     return result
 
+POLL_DISCONNECTED = (select.POLLHUP | select.POLLERR | select.POLLNVAL)
+
 def doPoll(timeout,
            reads=reads,
            writes=writes,
            selectables=selectables,
-           select=select):
+           select=select,
+           log=log,
+           POLL_DISCONNECTED=POLL_DISCONNECTED,
+           POLLIN=select.POLLIN,
+           POLLOUT=select.POLLOUT):
     """Poll the poller for new events."""
     timeout = int(timeout * 1000) # convert seconds to milliseconds
 
     try:
-        l=poller.poll(timeout)
+        l = poller.poll(timeout)
     except select.error, e:
-        log.msg(repr(e))
+        log.deferr()
         if e[0] == errno.EINTR:
             return
         else:
             raise
+    
     for fd, event in l:
+        why = None
         selectable = selectables[fd]
         log.logOwner.own(selectable)
         
-        if event & (select.POLLHUP | select.POLLERR | select.POLLNVAL):
+        if event & POLL_DISCONNECTED:
             why = main.CONNECTION_LOST
-        
-        try:
-            if event & select.POLLIN: why = getattr(selectable, "doRead")()
-            if event & select.POLLOUT: why = getattr(selectable, "doWrite")()
-            if not selectable.fileno() == fd:
+        else:
+            try:
+                if event & POLLIN: why = selectable.doRead()
+                if event & POLLOUT: why = selectable.doWrite()
+                if not selectable.fileno() == fd:
+                    why = main.CONNECTION_LOST
+            except:
+                log.deferr()
                 why = main.CONNECTION_LOST
-        except:
-            log.deferr()
-            why = main.CONNECTION_LOST
         
         if why == main.CONNECTION_LOST:
             removeReader(selectable)
