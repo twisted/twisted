@@ -147,8 +147,7 @@ class LineReceiver(protocol.Protocol):
         self.__buffer = self.__buffer+data
         while self.line_mode:
             try:
-                line, self.__buffer = string.split(self.__buffer,
-                                                   self.delimiter, 1)
+                line, self.__buffer = self.__buffer.split(self.delimiter, 1)
             except ValueError:
                 if len(self.__buffer) > self.MAX_LENGTH:
                     self.transport.loseConnection()
