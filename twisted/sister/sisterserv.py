@@ -138,6 +138,8 @@ class SisterService(Service, Perspective):
         self.resourceLoaders[resourceType] = resourceLoader
         
     def unloadResource(self, resourceType, resourceName):
+        print "sister: unloading (%s:%s)" %(resourceType, resourceName)
+        del self.ownedResources[ (resourceType, resourceName) ]
         return self.motherRef.callRemote("unloadResource", resourceType, resourceName).addCallback(self._cbUnload)
 
     def _cbUnload(self, data):
@@ -165,4 +167,4 @@ class SisterService(Service, Perspective):
 
     def removeIdentity(self, identityName):
         self.application.authorizer.removeIdentity(identityName)
-        self.motherRef.callRemote("unloadResource", "identity", identityName)
+        self.unloadResource("identity", identityName)
