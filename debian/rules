@@ -156,6 +156,7 @@ install-indep-stamp: install-base-stamp
 	install -m 644 doc/img/*.png doc/img/*.bmp $(docdir)/img/
 	cp -ar doc/examples/* $(docdir)/examples/
 	rm -rf $(docdir)/examples/CVS
+	sed '/api/d' doc/index.html > $(docdir)/index.xhtml
 	set -e;for maint in postinst prerm;\
 		do sed 's/@CONTROL@/twisted-book/' debian/twisted-doc.$$maint > \
 		           debian/twisted-doc/DEBIAN/$$maint;\
