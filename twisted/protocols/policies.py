@@ -410,6 +410,14 @@ class TimeoutMixin:
 
     def dataReceived(self, data):
         self.__lastReceived = time.time()
+    
+    def resetTimeout(self, time):
+        self.timeOut = time
+        if self.__timeoutCall:
+            self.__timeoutCall.cancel()
+            self.__timeoutCall = None
+        if time is not None:
+            self.__timeoutCall = reactor.callLater(time, self.__timedOut)
 
     def __timedOut(self):
         self.__timeoutCall = None
