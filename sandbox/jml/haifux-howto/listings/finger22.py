@@ -153,12 +153,12 @@ components.registerAdapter(UsersModel, IFingerService)
 
 class UserStatusTree(page.Page):
 
-    template = """&lt;html>&lt;head>&lt;title>Users&lt;/title>&lt;head>&lt;body>
-                  &lt;h1>Users&lt;/h1>
-                  &lt;ul model="users" view="List">
-                  &lt;li pattern="listItem" />&lt;a view="Link" model="."
-                  href="dummy">&lt;span model="." view="Text" />&lt;/a>
-                  &lt;/ul>&lt;/body>&lt;/html>"""
+    template = """<html><head><title>Users</title><head><body>
+                  <h1>Users</h1>
+                  <ul model="users" view="List">
+                  <li pattern="listItem" /><a view="Link" model="."
+                  href="dummy"><span model="." view="Text" /></a>
+                  </ul></body></html>"""
 
     def initialize(self, **kwargs):
         self.putChild('RPC2.0', UserStatusXR(self.model.service))
@@ -170,10 +170,10 @@ components.registerAdapter(UserStatusTree, IFingerService)
 
 class UserStatus(page.Page):
 
-    template='''&lt;html>&lt;head>&lt;title view="Text" model="user"/>&lt;/heaD>
-    &lt;body>&lt;h1 view="Text" model="user"/>
-    &lt;p mode="status" view="Text" />
-    &lt;/body>&lt;/html>'''
+    template='''<html><head><title view="Text" model="user"/></head>
+    <body><h1 view="Text" model="user"/>
+    <p mode="status" view="Text" />
+    </body></html>'''
 
     def initialize(self, **kwargs):
         self.user = kwargs['user']

@@ -48,7 +48,7 @@ class FingerService(app.ApplicationService):
           r = resource.Resource()
           r.getChild = (lambda path, request:
            static.Data('text/html',
-            '&lt;h1>%s&lt;/h1>&lt;p>%s&lt;/p>' %
+            '<h1>%s</h1><p>%s</p>' %
               tuple(map(cgi.escape,
                         [path,self.users.get(path, "No such user")]))))
       def getIRCBot(self, nickname):

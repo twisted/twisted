@@ -147,9 +147,9 @@ class UserStatusTree(resource.Resource):
     def render(self, request):
         d = self.service.getUsers()
         def formatUsers(users):
-            l = ["&lt;li>&lt;a href="%s">%s&lt;/a>&lt;/li> % (user, user)
+            l = ['<li><a href="%s">%s</a></li>' % (user, user)
                 for user in users]
-            return '&lt;ul>'+''.join(l)+'&lt;/ul>'
+            return '<ul>'+''.join(l)+'</ul>'
         d.addCallback(formatUsers)
         d.addCallback(request.write)
         d.addCallback(lambda _: request.finish())
@@ -171,7 +171,7 @@ class UserStatus(resource.Resource):
         d = self.service.getUser(self.user)
         d.addCallback(cgi.escape)
         d.addCallback(lambda m:
-                      '&lt;h1>%s&lt;/h1>'%self.user+'&lt;p>%s&lt;/p>'%m)
+                      '<h1>%s</h1>'%self.user+'<p>%s</p>'%m)
         d.addCallback(request.write)
         d.addCallback(lambda _: request.finish())
         return server.NOT_DONE_YET
