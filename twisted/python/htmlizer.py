@@ -48,7 +48,7 @@ class HTMLWriter:
                 type = 'keyword'
             else:
                 type = tokenize.tok_name[type].lower()
-            self.writer('<span class="python-%s">%s</span>' %
+            self.writer('<span class="py-src-%s">%s</span>' %
                         (type, token))
        
 
