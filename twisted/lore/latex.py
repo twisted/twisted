@@ -167,7 +167,9 @@ class LatexSpitter(XMLParser):
     mapStart_strong = mapStart_em = '\\begin{em}'
     mapEnd_strong = mapEnd_em = '\\end{em}'
 
-    mapStart_q = mapEnd_q = '"'
+    mapStart_q = "``"
+    mapEnd_q = "''"
+
     mapStart_span_footnote = '\\footnote{'
     mapEnd_span_footnote = '}'
 
