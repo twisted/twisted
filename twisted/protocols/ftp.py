@@ -163,46 +163,53 @@ RESPONSE = {
    
         
 # -- Custom Exceptions --
+
+class FTPCmdError(Exception):
+    errorCode = None
+    errorMessage = None
+    def __init__(self, msg):
+        self.errorMessage = msg
+
 class TLDNotSetInRealmError(Exception):
     '''raised if the tld (root) directory for the FTPRealm was not set 
     before requestAvatar was called'''
     pass
 
-class FileNotFoundError(Exception):
-    pass
+class FileNotFoundError(FTPCmdError):
+    errorCode = FILE_NOT_FOUND
 
 class PermissionDeniedError(Exception):
     pass
 
-class AnonUserDeniedError(Exception):
+class AnonUserDeniedError(FTPCmdError):
     """raised when an anonymous user issues a command
     that will alter the filesystem
     """
-    pass
+    errorCode = ANON_USER_DENIED
 
 class IsNotADirectoryError(Exception):
     """raised when RMD is called on a path that isn't a directory
     """
     pass
 
-class OperationFailedError(Exception):
+class OperationFailedError(FTPCmdError):
     """raised when a command like rmd or mkdir fails for a reason other than permissions errors
     """
-    pass
+    errorCode = REQ_ACTN_NOT_TAKEN
 
-class CmdSyntaxError(Exception):
-    pass
+class CmdSyntaxError(FTPCmdError):
+    errorCode = SYNTAX_ERR
 
-class CmdArgSyntaxError(Exception):
-    pass
+class CmdArgSyntaxError(FTPCmdError):
+    errorCode = SYNTAX_ERR_IN_ARGS
 
-class CmdNotImplementedError(Exception):
+class CmdNotImplementedError(FTPCmdError):
     """raised when an unimplemented command is given to the server
     """
-    pass
+    errorCode = CMD_NOT_IMPLMNTD
 
-class CmdNotImplementedForArgError(Exception):
-    pass
+class CmdNotImplementedForArgError(FTPCmdError):
+    errorCode = CMD_NOT_IMPLMNTD_FOR_PARAM
 
 class FTPError(Exception):
     pass
@@ -220,19 +227,19 @@ class BogusClientError(Exception):
     request came from"""
     pass
 
-class PathBelowTLDError(Exception):
-    pass
+class PathBelowTLDError(FTPCmdError):
+    errorCode = PERMISSION_DENIED
 
 class ClientDisconnectError(Exception):
     pass
 
-class BadCmdSequenceError(Exception):
+class BadCmdSequenceError(FTPCmdError):
     """raised when a client sends a series of commands in an illogical sequence"""
-    pass
+    errorCode = BAD_CMD_SEQ
 
-class AuthorizationError(Exception):
+class AuthorizationError(FTPCmdError):
     """raised when client authentication fails"""
-    pass
+    errorCode = AUTH_FAILURE
 
 # -- DTP Protocol --
 
@@ -548,32 +555,14 @@ class FTP(object, basic.LineReceiver, policies.TimeoutMixin):
             cmdAndArgs = line.split(' ',1)
             log.debug('processing command %s' % cmdAndArgs)
             self.processCommand(*cmdAndArgs)
-        except CmdSyntaxError, (e,):
-            self.reply(SYNTAX_ERR, string.upper(command))
-        except CmdArgSyntaxError, (e,):
+        except CmdSyntaxError, e:
+            self.reply(e.errorCode, command.upper())
+        except OperationFailedError, e:
             log.debug(e)
-            self.reply(SYNTAX_ERR_IN_ARGS, e)
-        except AnonUserDeniedError, (e,):
-            log.debug(e)
-            self.reply(ANON_USER_DENIED, e)
-        except CmdNotImplementedError, (e,):
-            log.debug(e)
-            self.reply(CMD_NOT_IMPLMNTD, e)
-        except BadCmdSequenceError, (e,): 
-            log.debug(e)
-            self.reply(BAD_CMD_SEQ, e)
-        except AuthorizationError, (e,):
-            log.debug(e)
-            self.reply(AUTH_FAILURE, 'internal server error')
-        except FileNotFoundError, (e,):
-            log.debug(e)
-            self.reply(FILE_NOT_FOUND, e)
-        except PathBelowTLDError, (e,):
-            log.debug(e)
-            self.reply(PERMISSION_DENIED, e)
-        except OperationFailedError, (e,):
-            log.debug(e)
-            self.reply(REQ_ACTN_NOT_TAKEN, '')
+            self.reply(e.errorCode, '')
+        except FTPCmdError, e:
+            self.reply(e.errorCode, e.errorMessage)
+        
         except Exception, e:
             log.err(e)
             self.reply(REQ_ACTN_NOT_TAKEN, 'internal server error')
