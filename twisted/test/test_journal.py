@@ -2,7 +2,7 @@
 
 from pyunit import unittest
 
-from twisted.persisted.journal.base import ICommand, MemoryJournal, serviceCommand, ServiceWrapperCommand
+from twisted.persisted.journal.base import ICommand, MemoryJournal, serviceCommand, ServiceWrapperCommand, command, Wrappable
 from twisted.persisted.journal.picklelog import DirDBMLog
 
 import tempfile
@@ -17,6 +17,23 @@ class AddTime:
         svc.values["time"] = cmdtime
 
 
+class Counter(Wrappable):
+
+    objectType = "counter"
+
+    def __init__(self, uid):
+        self.uid = uid
+        self.x = 0
+
+    def getUid(self):
+        return self.uid
+    
+    def _increment(self):
+        self.x += 1
+
+    increment = command("_increment")
+
+
 class Service:
 
     def __init__(self, logpath, journalpath):
@@ -26,9 +43,21 @@ class Service:
     def _gotData(self, result):
         if result is None:
             self.values = {}
+            self.counters = {}
         else:
-            self.values = result
+            self.values, self.counters = result
 
+    def _makeCounter(self, id):
+        c = Counter(id)
+        self.counters[id] = c
+        return c
+
+    makeCounter = serviceCommand("_makeCounter")
+    
+    def loadObject(self, type, id):
+        if type != "counter": raise ValueError
+        return self.counters[id]
+    
     def _add(self, key, value):
         """Add a new entry."""
         self.values[key] = value
@@ -99,13 +128,16 @@ class JournalTestCase(unittest.TestCase):
         svc.add(j, "foo", "bar")
         svc.add(j, 1, "hello")
         # we sync *before* delete to make sure commands get executed
-        svc.journal.sync(svc.values)
+        svc.journal.sync((svc.values, svc.counters))
         svc.delete(j, "foo")
+        d = svc.makeCounter(j, 1)
+        d.addCallback(lambda c, j=j: c.increment(j))
         del svc, self.svc
 
         # first, load from snapshot
         svc = Service(self.logpath, self.journalpath)
         self.assertEquals(svc.values, {1: "hello"})
+        self.assertEquals(svc.counters[1].x, 1)
         del svc
 
         # now, tamper with log, and then try
@@ -114,7 +146,8 @@ class JournalTestCase(unittest.TestCase):
         f.close()
         svc = Service(self.logpath, self.journalpath)
         self.assertEquals(svc.values, {1: "hello"})
-
+        self.assertEquals(svc.counters[1].x, 1)
+        
     def testTime(self):
         svc = self.svc
         svc.addtime(svc.journal)
@@ -123,3 +156,5 @@ class JournalTestCase(unittest.TestCase):
         log = self.svc.journal.log
         (t2, c), = log.getCommandsSince(1)
         self.assertEquals(t, t2)
+
+        

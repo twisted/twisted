@@ -146,7 +146,7 @@ class WrapperCommand:
     
     __implements__ = ICommand
 
-    def __init__(self, methodName, obj, *args, **kwargs):
+    def __init__(self, methodName, obj, args=(), kwargs={}):
         self.obj = obj
         self.objId = obj.getUid()
         self.objType = obj.objectType
