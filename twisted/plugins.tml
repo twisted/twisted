@@ -2,6 +2,8 @@
 
 ## Twisted Modules List
 
+## Coil modules
+
 register("Twisted Words",
          "twisted.words.service",
          description="A chat and collaboration system.",
@@ -17,11 +19,6 @@ register("Twisted Web",
          description="Web servers & services for Twisted",
          type='coil')
 
-## Pending Moshe's integration of coil w/ mail.
-##register("Twisted Mail",
-##         "twisted.mail.mail",
-##         description="Mail protocol implementations for Twisted.")
-
 register("Twisted Manhole",
          "twisted.manhole.service",
          description="Mail protocol implementation for Twisted.",
@@ -36,3 +33,63 @@ register("Telnet Shell Plugin",
 ##register("Twisted Forum",
 ##         "twisted.forum.service",
 ##         description="Web-based threaded forum for Twisted.")
+## Pending Moshe's integration of coil w/ mail.
+
+##register("Twisted Mail",
+##         "twisted.mail.mail",
+##         description="Mail protocol implementations for Twisted.")
+
+register("Twisted Web Automated TAP builder",
+         "twisted.tap.web",
+         description="automated TAP building",
+         type="tap")
+
+register("Twisted Chord Automated TAP builder",
+         "twisted.tap.chord",
+         description="automated TAP building",
+         type="tap")
+
+register("Twisted FTP Automated TAP builder",
+         "twisted.tap.ftp",
+         description="automated TAP building",
+         type="tap")
+
+register("Twisted Mail Automated TAP builder",
+         "twisted.tap.mail",
+         description="automated TAP building",
+         type="tap")
+
+register("Twisted Manhole Automated TAP builder",
+         "twisted.tap.manhole",
+         description="automated TAP building",
+         type="tap")
+
+register("Twisted Reality Automated TAP builder",
+         "twisted.tap.reality",
+         description="automated TAP building",
+         type="tap")
+
+register("Twisted SOCKS Automated TAP builder",
+         "twisted.tap.socks",
+         description="automated TAP building",
+         type="tap")
+
+register("Twisted Port-Forwarding Automated TAP builder",
+         "twisted.tap.stupid",
+         description="automated TAP building",
+         type="tap")
+
+register("Twisted Telnet Shell Automated TAP builder",
+         "twisted.tap.telnet",
+         description="automated TAP building",
+         type="tap")
+
+register("Twisted TOC Server Automated TAP builder",
+         "twisted.tap.toc",
+         description="automated TAP building",
+         type="tap")
+
+register("Twisted Words Automated TAP builder",
+         "twisted.tap.words",
+         description="automated TAP building",
+         type="tap")

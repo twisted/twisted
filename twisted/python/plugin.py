@@ -18,20 +18,23 @@
 import sys
 import os
 
+# Sibling Imports
+from reflect import namedModule
+
 class PlugIn:
     """I am a Python module registered in a plugins.tml file.
     """
-    def __init__(self, name, module, description, type):
+    def __init__(self, name, module, **kw):
         self.name = name
         self.module = module
-        self.description = description
-        self.type = type
+        for key, value in kw.items():
+            setattr(self, key, value)
 
     def isLoaded(self):
         return sys.modules.has_key(self.module)
 
     def load(self):
-        return __import__(self.module)
+        return namedModule(self.module)
 
     def __repr__(self):
         if self.isLoaded():
@@ -47,42 +50,54 @@ class DropIn:
         self.name = name
         self.plugins = []
 
-    def register(self, name, module, description, type):
+    def register(self, name, module, **kw):
         """Register a new plug-in.
         """
-        self.plugins.append(PlugIn(name, module, description, type))
+        self.plugins.append(apply(PlugIn, (name, module), kw))
 
     def __repr__(self):
         return "<Coil Package %s %s>" % (self.name, self.plugins)
 
-def getPlugIns(plugInType, debugInspection=0):
+def getPlugIns(plugInType, debugInspection=0, showProgress=0):
     loaded = {}
-    dirs = sys.path # getPluginDirs()
+    dirs = sys.path
     import twisted
     result = []
     plugindirs = []
+    if showProgress:
+        sys.stdout.write(' Loading: [')
+        sys.stdout.flush()
     for d in dirs:
         d = os.path.abspath(d)
         if loaded.has_key(d):
             continue
         else:
             loaded[d] = 1
-        if os.path.exists(d):
+        if os.path.isdir(d):
             for plugindir in os.listdir(d):
-                plugindirs.append(os.path.join(d, plugindir))
-    for plugindir in plugindirs:
-        tmlname = os.path.join(plugindir, "plugins.tml")
-        pname = os.path.split(os.path.abspath(plugindir))[-1]
-        if os.path.exists(tmlname):
-            dropin = DropIn(pname)
-            ns = {'register': dropin.register}
-            execfile(tmlname, ns)
-            for plugin in dropin.plugins:
-                if plugInType == plugin.type:
-                    result.append(plugin)
-            if debugInspection:
-                print "Successfully loaded %s!" % plugindir
-        elif os.path.exists(os.path.join(plugindir,'__init__.py')):
-            if debugInspection:
-                print "module %s has no plugins index. (%s)" % (pname, plugindir)
+                if os.path.isdir(plugindir):
+                    plugindir = os.path.join(d, plugindir)
+                    if showProgress:
+                        sys.stdout.write('-')
+                        sys.stdout.flush()
+                    tmlname = os.path.join(plugindir, "plugins.tml")
+                    pname = os.path.split(os.path.abspath(plugindir))[-1]
+                    if os.path.exists(tmlname):
+                        dropin = DropIn(pname)
+                        ns = {'register': dropin.register}
+                        execfile(tmlname, ns)
+                        if showProgress:
+                            sys.stdout.write('+')
+                            sys.stdout.flush()
+                        for plugin in dropin.plugins:
+                            if plugInType == plugin.type:
+                                result.append(plugin)
+                        if debugInspection:
+                            print "Successfully loaded %s!" % plugindir
+        if showProgress:
+            sys.stdout.write('.')
+            sys.stdout.flush()
+    if showProgress:
+        sys.stdout.write(' ]\n')
+        sys.stdout.flush()
     return result

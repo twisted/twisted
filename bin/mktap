@@ -37,24 +37,30 @@ del service
 
 import sys, traceback, os, cPickle, glob
 
+from twisted.python.plugin import getPlugIns
 
-import twisted.tap
+plugins = getPlugIns("tap")
 
-tapMods = []
-for file in glob.glob(os.path.split(twisted.tap.__file__)[0] + "/*.py"):
-    fn = os.path.splitext(os.path.split(file)[1])[0]
-    if fn == '__init__': continue
-    tapMods.append(fn)
+tapLookup = {}
+for plug in plugins:
+    if hasattr(plug, 'tapname'):
+        shortTapName = plug.tapname
+    else:
+        shortTapName = string.split(plug.module, '.')[-1]
+    tapLookup[shortTapName] = plug
+
+tapMods = tapLookup.keys()
+
 
 class GeneralOptions(usage.Options):
     synopsis="""\
 Usage::
 
-  mktap *apptype* *application_options*
-  mktap --help *apptype*
+  mktap 'apptype' [application_options]
+  mktap --help 'apptype'
 
-So far *apptype* can be one of: %s
-""" % tapMods
+'apptype' can be one of: %s
+""" % string.join(tapMods)
 
     optStrings = [['uid', 'u', '0'],
                   ['gid', 'g', '0'],
@@ -67,25 +73,23 @@ So far *apptype* can be one of: %s
                    " no manhole service will be created.)"],
                   ['manholePort', None, pb.portno]]
 
-
+    help = 0
+    
     def opt_help(self):
         """display this message"""
         # Ugh, we can't print the help now, we need to let getopt
         # finish parsinsg and parseArgs to run.
         self.help = 1
 
-    opt_h = opt_help
-    
     def parseArgs(self, *args):
         self.args = args
 
 def getModule(type):
     try:
-        mod = __import__("twisted.tap.%s" % type, globals(), locals(), type)
+        mod = tapLookup[type].load()
         return mod
-    except ImportError:
-        #traceback.print_exc()
-        print """Please select one of: %s""" % tapMods
+    except KeyError:
+        print """Please select one of: %s""" % string.join(tapMods)
         sys.exit(2)
 
 options = GeneralOptions()
