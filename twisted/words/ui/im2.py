@@ -48,6 +48,13 @@ class Conversation:
         """
         raise NotImplementedError
 
+    def changeStatus(self,newState):
+        """
+        called when this user changes their status.
+        newState := the users new state (string)
+        """
+        raise NotImplementedError
+
 class ContactList:
     def __init__(self,im):
         """
@@ -265,6 +272,9 @@ class InstanceMessenger:
         if not self.cl: self.cl=ContactList(self)
         self.sendEvent(gateway,"notifyStatusChanged",contact,newStatus)
         self.cl.changeContactStatus(gateway,contact,newStatus)
+        conv=self.conversations.get(str(gateway)+contact)
+        if conv:
+            conv.changeStatus(newStatus)
         self._log(gateway,contact,"%s is %s!"%(contact,newStatus))
 
     def notifyNameChanged(self,gateway,contact,newName):

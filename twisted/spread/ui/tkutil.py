@@ -70,7 +70,9 @@ class CList(Frame):
         self.lists=[]
         kw["exportselection"]=0
         for i in range(len(labels)):
-            Label(self,text=labels[i],anchor=W,relief=RAISED).grid(column=i,row=0,sticky=N+E+W)
+            b=Button(self,text=labels[i],anchor=W,height=1,pady=0)
+            b.config(command=lambda s=self,i=i:s.setSort(i))
+            b.grid(column=i,row=0,sticky=N+E+W)
             box=apply(Listbox,(self,),kw)
             box.grid(column=i,row=1,sticky=N+E+S+W)
             self.lists.append(box)
@@ -80,6 +82,7 @@ class CList(Frame):
         self._callall("bind",'<B1-Motion>',self.Button1)
         self.bind('<Up>',self.UpKey)
         self.bind('<Down>',self.DownKey)
+        self.sort=None
 
     def _callall(self,funcname,*args,**kw):
         rets=[]
@@ -110,6 +113,24 @@ class CList(Frame):
             self.select_set(index+1)
         return "break"
 
+    def setSort(self,index):
+        if self.sort==None:
+            self.sort=[index,1]
+        elif self.sort[0]==index:
+            self.sort[1]=-self.sort[1]
+        else:
+            self.sort=[index,1]
+        self._sort()
+
+    def _sort(self):
+        if self.sort==None:
+            return
+        ind,direc=self.sort
+        li=list(self.get(0,END))
+        li.sort(lambda x,y,i=ind,d=direc:d*cmp(x[i],y[i]))
+        self.delete(0,END)
+        for l in li:
+            self._insert(END,l)
     def activate(self,index):
         self._callall("activate",index)
 
@@ -138,6 +159,10 @@ class CList(Frame):
         return self.lists[0].index(index)
 
     def insert(self,index,items):
+        self._insert(index,items)        
+        self._sort()
+
+    def _insert(self,index,items):
         for i in range(len(items)):
             self.lists[i].insert(index,items[i])
 
@@ -297,3 +322,11 @@ class Login(Toplevel):
 
     def disconnected(self,*args):
         self.loginReport("disconnected from server.")
+
+if __name__=="__main__":
+    root=Tk()
+    o=CList(root,["Username","Online","Auto-Logon","Gateway"])
+    o.pack()
+    for i in range(0,16,4):
+        o.insert(END,[i,i+1,i+2,i+3])
+    mainloop()

@@ -192,10 +192,11 @@ class GroupSession(Toplevel):
         self._sortlist()
     
     def memberLeft(self,user):
-        self._out("\n%s left!"%user)
         users=list(self.list.get(0,END))
-        i=users.index(user)
-        self.list.delete(i)
+        if user in users:
+            self._out("\n%s left!"%user)
+            i=users.index(user)
+            self.list.delete(i)
 
     def changeMemberName(self,user,newName):
         users=list(self.list.get(0,END))
@@ -317,6 +318,9 @@ class Conversation(Toplevel):
         self.title("%s - Instance Messenger"%newName)
         self._addtext("\n%s changed nick to %s."%(self.contact,newName))
         self.contact=newName
+
+    def changeStatus(self,newState):
+        self._addtext("\n%s is now %s."%(self.contact,newState))
     
     def say(self,event):
         message=self.input.get('1.0',END)[:-1]
@@ -370,7 +374,7 @@ class ContactList(Toplevel):
     def removeContact(self):
         gatewayname,contact,state=self.list.get(ACTIVE)
         self.list.delete(ACTIVE)
-        self.im.removeContact(gatewayname,contact)
+        self.im.removeContact(self.im.gateways[gatewayname],contact)
 
     def removeGateway(self,gateway):
         users=self.list.get(0,END)
