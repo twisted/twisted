@@ -31,6 +31,12 @@ class FailTest(AssertionError):
     """Raised to indicate the current test has failed to pass."""
     pass
 
+# .todo attributes can either be set on the TestCase or on an individual
+# test* method, and indicate that the test is expected to fail. New tests
+# (for which the underlying functionality has not yet been added) can set
+# this flag while the code is being written. Once the feature is added and
+# the test starts to pass, the flag should be removed.
+
 # Set this to True if you want to disambiguate between test failures and
 # other assertions.  If you are in the habit of using the "assert" statement
 # in your tests, you probably want to leave this false.
