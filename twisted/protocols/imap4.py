@@ -1333,12 +1333,13 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
         if i == 4:
             reactor.callLater(0, self.__cbManualSearch, result, tag, mbox, query, uid, searchResults)
         else:
-            self.sendUntaggedResponse('SEARCH' + ' '.join(searchResults))
-            self.sendPositiveResponse(tag, 'OK SEARCH completed')
+            if searchResults:
+                self.sendUntaggedResponse('SEARCH ' + ' '.join(searchResults))
+            self.sendPositiveResponse(tag, 'SEARCH completed')
     
     def searchFilter(self, query, id, msg):
         while query:
-            if not self.singleSearch(query, id, msg):
+            if not self.singleSearchStep(query, id, msg):
                 return False
         return True
 
@@ -1348,7 +1349,7 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
             if not self.searchFilter(q, id, msg):
                 return False
         else:
-            c = query.pop(0).upper()
+            c = q.upper()
             f = getattr(self, 'search_' + c)
             if f:
                 if not f(query, id, msg):
@@ -1526,6 +1527,7 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
     def _sendMessageFetchResponse(self, msgId, msg, query, uid):
         seenUID = False
         response = []
+        doLast = []
         for part in query:
             if part.type == 'envelope':
                 response.extend(('ENVELOPE', getEnvelope(msg)))
@@ -1534,15 +1536,16 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
             elif part.type == 'internaldate':
                 response.extend(('INTERNALDATE', msg.getInternalDate()))
             elif part.type == 'rfc822header':
-                response.extend(('RFC822.HEADER', _formatHeaders(msg.getHeaders(True))))
+                hdrs = _formatHeaders(msg.getHeaders(True))
+                doLast.extend(('RFC822.HEADER', hdrs))
             elif part.type == 'rfc822text':
-                response.extend(('RFC822.TEXT', msg.getBodyFile()))
+                doLast.extend(('RFC822.TEXT', msg.getBodyFile()))
             elif part.type == 'rfc822size':
                 response.extend(('RFC822.SIZE', str(msg.getSize())))
             elif part.type == 'rfc822':
                 hdrs = _formatHeaders(msg.getHeaders(True))
                 body = msg.getBodyFile().read()
-                response.extend(('RFC822',  hdrs + '\r\n' + body))
+                doLast.extend(('RFC822',  hdrs + '\r\n' + body))
             elif part.type == 'uid':
                 seenUID = True
                 response.extend(('UID', str(msg.getUID())))
@@ -1554,22 +1557,25 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
                     subMsg = subMsg.getSubPart(p)
                 if part.header:
                     if not part.header.fields:
-                        response.extend((str(part), _formatHeaders(msg.getHeaders(True))))
+                        doLast.extend((str(part), _formatHeaders(msg.getHeaders(True))))
                     else:
                         hdrs = subMsg.getHeaders(part.header.negate, *part.header.fields)
-                        response.extend((str(part), _formatHeaders(hdrs)))
+                        doLast.extend((str(part), _formatHeaders(hdrs, part.header.fields)))
                 elif part.text:
-                    response.extend((str(part), subMsg.getBodyFile()))
+                    doLast.extend((str(part), subMsg.getBodyFile()))
                 elif part.mime:
-                    response.extend((str(part), _formatHeaders(msg.getHeaders(True))))
+                    doLast.extend((str(part), _formatHeaders(msg.getHeaders(True))))
                 elif part.empty:
-                    response.extend((str(part), _formatHeaders(msg.getHeaders(True)) + '\r\n' + subMsg.getBodyFile().read()))
+                    doLast.extend((str(part), _formatHeaders(msg.getHeaders(True)) + '\r\n' + subMsg.getBodyFile().read()))
                 else:
                     # Simplified bodystructure request
                     response.extend(('BODY', getBodyStructure(msg, False)))
 
         if uid and not seenUID:
             response[:0] = ['UID', str(msg.getUID())]
+        if doLast:
+            response.extend(doLast)
+
         self.sendUntaggedResponse("%d FETCH %s" % (msgId, collapseNestedLists([response])))
 
     def __ebFetch(self, failure, tag):
@@ -4395,7 +4401,7 @@ def _formatHeaders(headers, order=None):
         items = [(h, headers[h.lower()]) for h in order if h.lower() in headers]
     else:
         items = headers.iteritems()
-    hdrs = [': '.join((k, '\r\n'.join(v.splitlines()))) for (k, v) in items]
+    hdrs = [': '.join((k.title(), '\r\n'.join(v.splitlines()))) for (k, v) in items]
     hdrs = '\r\n'.join(hdrs) + '\r\n'
     return hdrs
 
