@@ -1,3 +1,9 @@
+2003-05-20  Brian Warner  <warner@lothar.com>
+
+	* twisted/python/reflect.py (namedAny): re-raise ImportErrors that
+	happen inside the module being imported, instead of assuming that
+	it means the module doesn't exist.
+
 2003-05-19  Christopher Armstrong  <radix@twistedmatrix.com>
 
 	* twisted/web/server.py: Added two new methods to Request objects:
