@@ -204,21 +204,21 @@ class Mailsicle(popsicle.DirectoryRepository):
             if idxs.has_key(idx):
                 # if I had it before, update it
                 if idxs[idx] != value:
-                    print 'updating index',oid,idx,idxs[idx],'=>',value
+                    # print 'updating index',oid,idx,idxs[idx],'=>',value
                     self.removeIndex(oid, idx, idxs[idx])
                     self.storeIndex(oid, idx, value)
                 # track it's been removed
                 del idxs[idx]
             else:
-                print 'storing new index',oid,idx,'=>',value
+                # print 'storing new index',oid,idx,'=>',value
                 self.storeIndex(oid, idx, value)
         for idx, value in idxs.items():
             # clear all remaining indexes
-            print 'clearing old index',oid,idx,'=>',value
+            # print 'clearing old index',oid,idx,'=>',value
             self.removeIndex(oid, idx, value)
 
     def storeIndex(self, oid, idx, value):
-        print 'indexing',oid,idx,value
+        # print 'indexing',oid,idx,value
         oid = str(oid)
         idxd = "index-"+idx
         opj = os.path.join
@@ -229,7 +229,7 @@ class Mailsicle(popsicle.DirectoryRepository):
                    opj(self.dirname, idxd, value, oid))
 
     def removeIndex(self, oid, idx, value):
-        print 'deindexing', oid, idx, value
+        # print 'deindexing', oid, idx, value
         oid = str(oid)
         idxd = "index-"+idx
         opj = os.path.join

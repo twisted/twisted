@@ -138,10 +138,10 @@ class Freezer:
                         continue
                     for saver in ent[1]:
                         if doSave:
-                            print 'saving',obj
+                            # print 'saving',obj
                             saver.save(obj)
                         else:
-                            print 'deleting',obj
+                            # print 'deleting',obj
                             saver.delete(obj)
         finally:
             self.cleaning = False
