@@ -229,6 +229,8 @@ class PassportNexus(HTTPClient):
             self.deferred.errback(failure.Failure(failure.DefaultException("Invalid Nexus Reply")))
         self.deferred.callback('https://' + self.headers['passporturls']['dalogin'])
 
+    def handleResponse(self, r): pass
+
 class PassportLogin(HTTPClient):
     """
     This class is used internally to obtain
