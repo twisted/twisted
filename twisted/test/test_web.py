@@ -329,3 +329,23 @@ resource = Data('dynamic world','text/plain')
         child_without_ext = f.getChild('AreBelong', dreq)
         self.assertNotEquals(child_without_ext, f.childNotFound)
 
+class DummyChannel:
+    class Baz:
+        def getPeer(self):
+            return None
+        def getHost(self):
+            return None
+    transport = Baz()
+    site = server.Site(resource.Resource())
+
+class TestRequest(unittest.TestCase):
+
+    def testChildLink(self):
+        request = server.Request(DummyChannel(), 1)
+        request.gotLength(0)
+        request.requestReceived('GET', '/foo/bar', 'HTTP/1.0')
+        self.assertEqual(request.childLink('baz'), 'bar/baz')
+        request = server.Request(DummyChannel(), 1)
+        request.gotLength(0)
+        request.requestReceived('GET', '/foo/bar/', 'HTTP/1.0')
+        self.assertEqual(request.childLink('baz'), 'baz')
