@@ -531,6 +531,38 @@ def setCopierForClass(classname, copier):
     global copyTags
     copyTags[classname] = copier
 
+def setCopierForClassTree(module, baseClass, prefix=None):
+    """Set all classes in a module derived from base_class as copiers for a corresponding remote class.
+
+    When you have a heirarchy of Copyable (or Cacheable) classes on
+    one side, and a mirror structure of Copied (or RemoteCache)
+    classes on the other, use this to setCopierForClass all your
+    Copieds for the Copyables.
+
+    Each copyTag (the \"classname\" argument to getTypeToCopyFor, and
+    what the Copyable's getTypeToCopyFor returns) is formed from
+    adding a prefix to the Copied's class name.  The prefix defaults
+    to module.__name__.  If you wish the copy tag to consist of solely
+    the classname, pass the empty string \'\'.
+
+    module -- a module object from which to pull the Copied classes.
+              (passing sys.modules[__name__] might be useful)
+
+    baseClass -- the base class from which all your Copied classes derive.
+
+    prefix -- the string prefixed to classnames to form the copyTags.
+    """
+    if prefix is None:
+        prefix = module.__name__
+
+    if prefix:
+        prefix = "%s." % prefix
+
+    for i in dir(module):
+        i_ = getattr(module, i)
+        if type(i_) == types.ClassType:
+            if issubclass(i_, baseClass):
+                setCopierForClass('%s%s' % (prefix, i), i_)
 
 class RemoteCacheMethod:
     """A method on a reference to a RemoteCache.
