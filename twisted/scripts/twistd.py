@@ -132,7 +132,7 @@ def daemonize():
 def shedPrivileges(euid, uid, gid):
     extra = 'e'*int(euid)
     try:
-        for (method, value) in zip(['gid', 'uid'], [uid, gid]):
+        for (method, value) in zip(['gid', 'uid'], [gid, uid]):
             getattr(os, 'set'+extra+method)(value)
     except OSError:
         pass
