@@ -338,3 +338,5 @@ def _makeLookup(method):
 for method in common.typeToMethod.values():
     globals()[method] = _makeLookup(method)
 del method
+
+getHostByName = _makeLookup('getHostByName')
