@@ -146,7 +146,7 @@ class TemplateFilter(sgmllib.SGMLParser):
 
 class Walker:
     def __init__(self, templ, cache):
-        self.shwackBeginning = re.compile('.*<body>', re.MULTILINE | re.I)
+        self.shwackBeginning = re.compile('.*<body.*?>', re.MULTILINE | re.I)
         self.shwackEnd = re.compile('</body>.*', re.MULTILINE | re.I)
         self.templ = templ
         self.APICache = cache
@@ -172,7 +172,7 @@ class Walker:
                 
                 if end:
                     end = end.start()
-                    
+                
                 data = data[start:end]
 
                 outFile = open(fname,'wb')
@@ -238,7 +238,7 @@ class Options(usage.Options):
 def main():
     opt = Options()
     opt.parseOptions(sys.argv[1:])
-    cache = Cache(opt.apidir, 'http://twistedmatrix.com/documents/TwistedDocs/Twisted-%s' % opt.version)
+    cache = Cache(opt.apidir, 'http://twistedmatrix.com/documents/TwistedDocs/Twisted-%s/' % opt.version)
 
     templ = open(opt.template).read()
 
