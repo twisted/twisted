@@ -29,14 +29,14 @@ usage: mktap stupid [OPTIONS]
 
 Options are as follows:
         --port <#>, -p:         set the port number to <#>.
-	--host <host>, -h:      set the host to <host>
-	--dest_port <#>, -d:    set the destination port to <#>
+        --host <host>, -h:      set the host to <host>
+        --dest_port <#>, -d:    set the destination port to <#>
 """
 
 class Options(usage.Options):
     optStrings = [["port", "p", 6666],
-		  ["host", "h", "localhost"],
-		  ["dest_port", "d", 6665]]
+        	  ["host", "h", "localhost"],
+        	  ["dest_port", "d", 6665]]
 
 def getPorts(app, config):
     s = stupidproxy.makeStupidFactory(config.host, int(config.dest_port))
