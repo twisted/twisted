@@ -243,7 +243,7 @@ class HTMLSlide:
         self.pos = pos
 
 
-def munge(document, template, linkrel, d, fullpath, ext, url):
+def munge(document, template, linkrel, d, fullpath, ext, url, config):
     # FIXME: This has *way* to much duplicated crap in common with tree.munge
     from tree import removeH1, expandAPI, fixAPI, fontifyPython, \
                      addPyListings, addHTMLListings, setTitle
