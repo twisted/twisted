@@ -1527,7 +1527,6 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
     def _sendMessageFetchResponse(self, msgId, msg, query, uid):
         seenUID = False
         response = []
-        doLast = []
         for part in query:
             if part.type == 'envelope':
                 response.extend(('ENVELOPE', getEnvelope(msg)))
@@ -1537,15 +1536,15 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
                 response.extend(('INTERNALDATE', msg.getInternalDate()))
             elif part.type == 'rfc822header':
                 hdrs = _formatHeaders(msg.getHeaders(True))
-                doLast.extend(('RFC822.HEADER', hdrs))
+                response.extend(('RFC822.HEADER', hdrs))
             elif part.type == 'rfc822text':
-                doLast.extend(('RFC822.TEXT', msg.getBodyFile()))
+                response.extend(('RFC822.TEXT', msg.getBodyFile()))
             elif part.type == 'rfc822size':
                 response.extend(('RFC822.SIZE', str(msg.getSize())))
             elif part.type == 'rfc822':
                 hdrs = _formatHeaders(msg.getHeaders(True))
                 body = msg.getBodyFile().read()
-                doLast.extend(('RFC822',  hdrs + '\r\n' + body))
+                response.extend(('RFC822',  hdrs + '\r\n' + body))
             elif part.type == 'uid':
                 seenUID = True
                 response.extend(('UID', str(msg.getUID())))
@@ -1557,24 +1556,22 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
                     subMsg = subMsg.getSubPart(p)
                 if part.header:
                     if not part.header.fields:
-                        doLast.extend((str(part), _formatHeaders(msg.getHeaders(True))))
+                        response.extend((str(part), _formatHeaders(msg.getHeaders(True))))
                     else:
                         hdrs = subMsg.getHeaders(part.header.negate, *part.header.fields)
-                        doLast.extend((str(part), _formatHeaders(hdrs, part.header.fields)))
+                        response.extend((str(part), _formatHeaders(hdrs, part.header.fields)))
                 elif part.text:
-                    doLast.extend((str(part), subMsg.getBodyFile()))
+                    response.extend((str(part), subMsg.getBodyFile()))
                 elif part.mime:
-                    doLast.extend((str(part), _formatHeaders(msg.getHeaders(True))))
+                    response.extend((str(part), _formatHeaders(msg.getHeaders(True))))
                 elif part.empty:
-                    doLast.extend((str(part), _formatHeaders(msg.getHeaders(True)) + '\r\n' + subMsg.getBodyFile().read()))
+                    response.extend((str(part), _formatHeaders(msg.getHeaders(True)) + '\r\n' + subMsg.getBodyFile().read()))
                 else:
                     # Simplified bodystructure request
                     response.extend(('BODY', getBodyStructure(msg, False)))
 
         if uid and not seenUID:
             response[:0] = ['UID', str(msg.getUID())]
-        if doLast:
-            response.extend(doLast)
 
         self.sendUntaggedResponse("%d FETCH %s" % (msgId, collapseNestedLists([response])))
 
