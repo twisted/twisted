@@ -27,6 +27,7 @@ API Stability: unstable
 Maintainer: U{Moshe Zadka<mailto:moshez@twistedmatrix.com>}
 """
 
+from twisted.python import log
 from twisted.application import service
 
 
@@ -149,18 +150,27 @@ class TimerService(_VolatileDataService):
     def startService(self):
         from twisted.internet import reactor
         service.Service.startService(self)
-        self._call = reactor.callLater(self.step, self.loop.start, self.step)
+        self._call = reactor.callLater(self.step, self._startLoop, self.step)
+
+    def _startLoop(self, step):
+        self._call = None
+        self.loop.start(step).addBoth(self._cleanupLoop).addErrback(log.err)
+
+    def _cleanupLoop(self, result):
+        self.loop = None
+        return result
 
     def stopService(self):
         service.Service.stopService(self)
-        if self._call.active():
-            self._call.cancel()
-        else:
-            self.loop.stop()
+        if self._call is not None:
+            _call, self._call = self._call, None
+            _call.cancel()
+        elif self.loop is not None:
+            loop, self.loop = self.loop, None
+            loop.stop()
 
 
 __all__ = (['TimerService']+
            [tran+side
          for tran in 'Generic TCP UNIX SSL UDP UNIXDatagram Multicast'.split()
          for side in 'Server Client'.split()])
-

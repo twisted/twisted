@@ -18,6 +18,7 @@ from twisted.trial import unittest
 from twisted.application import service, compat, internet, app
 from twisted.persisted import sob
 from twisted.python import components
+from twisted.python import log
 from twisted.python.runtime import platformType
 from twisted.internet import utils, interfaces, defer
 from twisted.protocols import wire, basic
@@ -171,7 +172,7 @@ class TestProcess(unittest.TestCase):
         p = service.Process()
         self.assertEqual(p.uid, curuid)
         self.assertEqual(p.gid, curgid)
-    
+
     def testProcessName(self):
         p = service.Process()
         self.assertEqual(p.processName, None)
@@ -655,6 +656,15 @@ class TestInternet2(unittest.TestCase):
             reactor.iterate(0.1)
         t.stopService()
         self.assertEqual(l, ["hello"]*10)
+
+    def testBrokenTimer(self):
+        t = internet.TimerService(1, lambda: 1 / 0)
+        t.startService()
+        while t.loop is not None:
+            reactor.iterate(0.1)
+        t.stopService()
+        self.assertEquals([ZeroDivisionError],
+                          [o.value.__class__ for o in log.flushErrors(ZeroDivisionError)])
 
     def testEverythingThere(self):
         trans = 'TCP UNIX SSL UDP UNIXDatagram Multicast'.split()
