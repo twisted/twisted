@@ -117,7 +117,7 @@ class Client(Connection):
         self.host = host
         self.port = port
         Connection.__init__(self, skt, protocol)
-	self.doWrite = self.doConnect
+        self.doWrite = self.doConnect
         self.doConnect()
         self.logstr = self.protocol.__class__.__name__+",client"
 
@@ -136,10 +136,10 @@ class Client(Connection):
             self.socket.connect(self.addr)
         except socket.error, se:
             if se.args[0] in (EWOULDBLOCK, EALREADY, EINPROGRESS):
-	        pass
+                pass
             else:
                 self.protocol.connectionFailed()
-		return CONNECTION_LOST
+                return CONNECTION_LOST
         # If I have reached this point without raising or returning, that means
         # that the socket is connected.
         del self.doWrite
@@ -176,20 +176,20 @@ class Server(Connection):
         Connection.__init__(self, sock, protocol)
         self.server = server
         self.client = client
-	self.sessionno = sessionno
+        self.sessionno = sessionno
         try:
             self.hostname = client[0]
         except:
             self.hostname = 'unix'
         self.startReading()
         self.connected = 1
-	self.logstr = "%s,%s,%s" % (self.protocol.__class__.__name__, sessionno, self.hostname)
+        self.logstr = "%s,%s,%s" % (self.protocol.__class__.__name__, sessionno, self.hostname)
         self.repstr = "<%s #%s on %s>" % (self.protocol.__class__.__name__, self.sessionno, self.server.port)
 
     def __repr__(self):
         """A string representation of this connection.
-	"""
-	return self.repstr
+        """
+        return self.repstr
 
     def getPeer(self):
         """
@@ -225,7 +225,7 @@ class Port(abstract.FileDescriptor):
         """Initialize with a numeric port to listen on.
         """
         self.port = port
-	self.factory = factory
+        self.factory = factory
 
     def __repr__(self):
         return "<%s on %s>" % (self.factory.__class__, self.port)

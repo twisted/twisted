@@ -1,4 +1,4 @@
-import gtk, sys
+import gtk, sys, string
 
 from twisted.words.ui import gtkim
 from twisted.spread.ui import gtkutil
@@ -10,6 +10,19 @@ normalFont = gtk.load_font("-adobe-courier-medium-r-normal-*-*-120-*-*-m-*-iso88
 font = normalFont
 boldFont = gtk.load_font("-adobe-courier-bold-r-normal-*-*-120-*-*-m-*-iso8859-1")
 errorFont = gtk.load_font("-adobe-courier-medium-o-normal-*-*-120-*-*-m-*-iso8859-1")
+
+def findBeginningOfLineWithPoint(entry):
+    pos = entry.get_point()
+    while pos:
+        pos = pos - 1
+        #print 'looking at',pos
+        c = entry.get_chars(pos, pos+1)
+        #print 'found',repr(c)
+        if c == '\n':
+            #print 'got it!'
+            return pos+1
+    #print 'oops.'
+    return 0
 
 class Interaction(gtk.GtkWindow):
     def __init__(self):
@@ -31,49 +44,120 @@ class Interaction(gtk.GtkWindow):
 
         self.add(vb)
         self.signal_connect('destroy', sys.exit, None)
+        self.history = []
+        self.histpos = 0
 
+    linemode = 0
+
+    def historyUp(self):
+        if self.histpos > 0:
+            self.histpos = self.histpos - 1
+            self.input.delete_text(0, -1)
+            self.input.insert_defaults(self.history[self.histpos])
+
+    def historyDown(self):
+        if self.histpos < len(self.history) - 1:
+            self.histpos = self.histpos + 1
+            self.input.delete_text(0, -1)
+            self.input.insert_defaults(self.history[self.histpos])
+        elif self.histpos == len(self.history) - 1:
+            self.histpos = self.histpos + 1
+            self.input.delete_text(0, -1)
+    
     def processKey(self, entry, event):
         if event.keyval == gtk.GDK.Return:
-#            if self.input.get_chars(self.input.get_length()-1,-1) == ":":
-#                print "woo!"
-#            else:
-                self.sendMessage(entry)
-                self.input.delete_text(0,-1)
+            l = self.input.get_length()
+            # if l is 0, this coredumps gtk ;-)
+            if not l:
                 self.input.emit_stop_by_name("key_press_event")
+                return
+            lpos = findBeginningOfLineWithPoint(self.input)
+            pt = entry.get_point()
+            #print 'HELLO',pt,lpos
+            isShift = event.state & gtk.GDK.SHIFT_MASK
+            #print isShift
+            if (self.input.get_chars(l-1,-1) == ":"):
+                #print "woo!"
+                self.linemode = 1
+            elif isShift:
+                self.linemode = 1
+                self.input.insert_defaults('\n')
+            elif (not self.linemode) or (pt == lpos):
+                self.sendMessage(entry)
+                self.input.delete_text(0, -1)
+                self.input.emit_stop_by_name("key_press_event")
+                self.linemode = 0
+        elif event.keyval == gtk.GDK.Up:
+            self.historyUp()
+            gtk.idle_add(self.focusInput)
+            self.input.emit_stop_by_name("key_press_event")
+        elif event.keyval == gtk.GDK.Down:
+            self.historyDown()
+            gtk.idle_add(self.focusInput)
+            self.input.emit_stop_by_name("key_press_event")
 
+    def focusInput(self):
+        self.input.grab_focus()
+        return gtk.FALSE # do not requeue
+    maxBufSz = 10000
+    
     def messageReceived(self, message):
-        print "received: ", message
-        win = self.get_window()
-        blue = win.colormap.alloc(0x0000, 0x0000, 0xffff)
-        red = win.colormap.alloc(0xffff, 0x0000, 0x0000)
-        green = win.colormap.alloc(0x0000, 0xffff, 0x0000)
-        black = win.colormap.alloc(0x0000, 0x0000, 0x0000)
-
+        # print "received: ", message
         t = self.output
         t.set_point(t.get_length())
         t.freeze()
-        styles = {"out": black, "err": green, "result": blue, "error": red}
         for element in message:
-            t.insert(font, styles[element[0]], None, element[1])
-        a = t.get_vadjustment()
+            # print 'processing',element
+            t.insert(font, self.textStyles[element[0]], None, element[1])
+        l = t.get_length()
+        diff = self.maxBufSz - l
+        if diff < 0:
+            diff = - diff
+            t.delete_text(0,diff)
         t.thaw()
+        a = t.get_vadjustment()
         a.set_value(a.upper - a.page_size)
         self.input.grab_focus()
 
+    blockcount = 0
+    
     def sendMessage(self, unused_data=None):
-        self.perspective.do(self.input.get_chars(0,-1), pbcallback=self.messageReceived)
+        text = self.input.get_chars(0,-1)
+        if self.linemode:
+            self.blockcount = self.blockcount + 1
+            fmt = ">>> # begin %s\n%%s\n#end %s\n" % (
+                self.blockcount, self.blockcount)
+        else:
+            fmt = ">>> %s\n"
+        self.history.append(text)
+        self.histpos = len(self.history)
+        self.messageReceived([['command',fmt % text]])
+        self.perspective.do(text,
+                            pbcallback=self.messageReceived)
 
     def connected(self, perspective):
         self.name = lw.username.get_text()
         lw.hide()
         self.perspective = perspective
         self.show_all()
+        win = self.get_window()
+        blue = win.colormap.alloc(0x0000, 0x0000, 0xffff)
+        red = win.colormap.alloc(0xffff, 0x0000, 0x0000)
+        orange = win.colormap.alloc(0xaaaa, 0x8888, 0x0000)
+        black = win.colormap.alloc(0x0000, 0x0000, 0x0000)
+        gray = win.colormap.alloc(0x6666, 0x6666, 0x6666)
+        self.textStyles = {"out": black,   "err": orange,
+                           "result": blue, "error": red,
+                           "command": gray}
+
 
 def main():
     global lw
     i = Interaction()
-    lw = gtkutil.Login(i.connected, initialUser="admin",
-                       initialPassword="admin", initialService="manhole")
+    lw = gtkutil.Login(i.connected,
+                       initialUser="guest",
+                       initialPassword="guest",
+                       initialService="manhole")
     lw.show_all()
     gtk.mainloop()
 

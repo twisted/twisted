@@ -154,6 +154,7 @@ class Perspective:
         receive this message, telling me that this broker is now attached to
         me.
         """
+        log.msg('attached [%s]' % str(self.__class__))
 
     def detached(self, broker):
         """Called when a broker is 'detached' from me.
@@ -162,6 +163,7 @@ class Perspective:
         broker associated with that peer is no longer attached to this
         perspective.
         """
+        log.msg('detached [%s]' % str(self.__class__))
 
 
 
