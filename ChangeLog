@@ -1,3 +1,7 @@
+2003-10-22  Christopher Armstrong  <radix@twistedmatrix.com>
+
+	* .: Releasing Twisted 1.1.0rc2.
+
 2003-10-21  Andrew Bennetts  <spiv@twistedmatrix.com>
 
 	* twisted/lore/tree.py, twisted/lore/lint.py,
