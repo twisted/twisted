@@ -60,6 +60,8 @@ install-stamp: build-stamp
 	install -m 644 debian/changelog \
 	               debian/twisted-doc/usr/share/doc/twisted-doc/changelog.Debian
 	gzip -9 debian/twisted-doc/usr/share/doc/twisted-doc/changelog.Debian
+	install -m 644 doc/howto/book.* \
+	               debian/twisted-doc/usr/share/doc/twisted-doc/howto/
 	install -m 644 doc/howto/*.xhtml \
 	               debian/twisted-doc/usr/share/doc/twisted-doc/howto/
 	install -m 644 doc/howto/*.html \
