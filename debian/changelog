@@ -9,6 +9,7 @@ twisted (0.9.6-1) unstable; urgency=low
   * tap2deb can create policy compliant Debian packages around .tap's
   * Fixed debian/rules clean target (closes: Bug#108245)
   * New arguments to twistd: --python, --no_save
+  * New arguments to mktap: --append
   * twisted.tcp.Port can now change the size of the backlog from 5
   * UDP servers now possible
 
