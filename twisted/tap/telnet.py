@@ -21,7 +21,7 @@ I am the support module for making a telnet server with mktap.
 
 from twisted.manhole import telnet
 from twisted.python import usage
-import sys
+from twisted.application import internet
 
 
 class Options(usage.Options):
@@ -40,7 +40,7 @@ class Options(usage.Options):
             raise usage.error("Invalid argument to 'port'!")
     opt_p = opt_port
 
-def updateApplication(app, config):
+def makeService(config):
     t = telnet.ShellFactory()
     t.username = config['username']
     t.password = config['password']
@@ -48,4 +48,4 @@ def updateApplication(app, config):
         portno = config['port']
     except KeyError:
         portno = 4040
-    app.listenTCP(portno, t)
+    return internet.TCPServer(portno, t)
