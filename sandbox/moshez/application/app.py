@@ -95,8 +95,6 @@ def getPassphrase(needed):
         return None
 
 def getApplication(config, passphrase):
-    global initRun
-    initRun = 0
     try:
         application = loadApplication(config, passphrase)
     except Exception, e:
@@ -105,7 +103,6 @@ def getApplication(config, passphrase):
         log.msg(s)
         log.deferr()
         sys.exit('\n' + s + '\n')
-    initRun = 1
     if service.IService(application, None) is None:
         # oh my god! it is an old style application
         # convert convert before anyone sees us with it
