@@ -20,7 +20,8 @@ from __future__ import nested_scopes
 import gtk
 
 from twisted import copyright
-from twisted.python import defer, failure, log, util
+from twisted.internet import defer
+from twisted.python import failure, log, util
 from twisted.spread import pb
 
 from twisted.internet import error as netError
