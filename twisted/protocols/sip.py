@@ -24,6 +24,7 @@ import socket, time
 # twisted imports
 from twisted.python import log, util
 from twisted.internet import protocol, defer, reactor
+from twisted.python.components import Interface
 
 # sibling imports
 import basic
@@ -468,7 +469,7 @@ class MessagesParser(basic.LineReceiver):
                     self.messageDone()
 
 
-class BaseSIP(protocol.DatagramProtocol):
+class Base(protocol.DatagramProtocol):
     """Base class for SIP clients and servers."""
     
     def __init__(self):
@@ -484,8 +485,7 @@ class BaseSIP(protocol.DatagramProtocol):
                 f = getattr(self, "handle_%s_request" % m.method, self.handle_request_default)
                 f(m, addr)
             else:
-                f = getattr(self, "handle_%s_response" % m.code, self.handle_response_default)
-                f(m, addr)
+                self.handle_response(m, addr)
         self.messages[:] = []
 
     def sendMessage(self, destURL, message):
@@ -499,38 +499,66 @@ class BaseSIP(protocol.DatagramProtocol):
             raise RuntimeError, "only UDP currently supported"
         self.transport.write(message.toString(), (destURL.host, destURL.port))
 
-    def handle_response_default(self, message, addr):
-        pass
+    def handle_response(self, message, addr):
+        raise NotImplementedError
 
     def handle_request_default(self, message, addr):
-        pass
+        raise NotImplementedError
 
 
 class LookupError(Exception):
     """Error doing lookup."""
 
 
-class Proxy(BaseSIP):
-    """SIP proxy."""
+class RegistrationError(Exception):
+    """Registration was not possible."""
 
-    def __init__(self, host=None, port=5060):
-        self.host = host or socket.getfqdn()
-        self.port = port
-        BaseSIP.__init__(self)
-        
-    def getVia(self):
-        """Return value of Via header for this proxy."""
-        return Via(host=self.host, port=self.port)
 
-    def getServerAddress(self, userURL):
+class IRegistry(Interface):
+    """Allows registration of logical->physical URL mapping."""
+
+    def registerAddress(self, domainURL, logicalURL, physicalURL):
+        """Register the physical address of a logical URL.
+
+        @return Deferred of (secondsToExpiry, contact URL) or failure with RegistrationError.
+        """
+
+    def getRegistrationInfo(self, logicalURL):
+        """Get registration info for logical URL.
+
+        @return Deferred of (secondsToExpiry, contact URL) or failure with LookupError.
+        """
+
+
+class ILocator(Interface):
+    """Allow looking up physical address for logical URL."""
+
+    def getAddress(self, logicalURL):
         """Return physical URL of server for logical URL of user.
-
-        Override in subclasses - this is the registry hook.
 
         @param userURL: a logical C{URL}.
         @return: Deferred which becomes URL or fails with LookupError.
         """
-        raise NotImplementedError
+
+
+class Proxy(Base):
+    """SIP proxy."""
+
+    locator = None # object implementing ILocator
+    
+    def __init__(self, host=None, port=5060):
+        """Create new instance.
+
+        @param host: our hostname/IP as set in Via headers.
+        @param port: our port as set in Via headers.
+        """
+        self.host = host or socket.getfqdn()
+        self.port = port
+        Base.__init__(self)
+        
+    def getVia(self):
+        """Return value of Via header for this proxy."""
+        return Via(host=self.host, port=self.port)
         
     def handle_request_default(self, message, (srcHost, srcPort)):
         """Default request handler.
@@ -554,7 +582,7 @@ class Proxy(BaseSIP):
             message.headers["via"][0] = senderVia.toString()
         message.headers["via"].insert(0, viaHeader.toString())
         name, uri, tags = parseAddress(message.headers["to"][0], clean=1)
-        d = self.getServerAddress(uri)
+        d = self.locator.getAddress(uri)
         d.addCallback(self.sendMessage, message)
         d.addErrback(self._cantForwardRequest, message)
     
@@ -583,7 +611,7 @@ class Proxy(BaseSIP):
             response.headers[name] = request.headers.get(name, [])[:]
         return response
     
-    def handle_response_default(self, message, addr):
+    def handle_response(self, message, addr):
         """Default response handler."""
         v = parseViaHeader(message.headers["via"][0])
         if (v.host, v.port) != (self.host, self.port):
@@ -610,12 +638,46 @@ class RegisterProxy(Proxy):
     Unregistered users won't be handled.
     """
 
-    def __init__(self, domain, host=None, port=5060):
-        Proxy.__init__(self, host=host, port=port)
+    registry = None # should implement IRegistry
+        
+    def handle_REGISTER_request(self, message, (host, port)):
+        """Handle a registration request.
+
+        Currently registration is not proxied.
+        """
+        name, toURL, params = parseAddress(message.headers["to"][0], clean=1)
+        if message.headers.has_key("contact"):
+            contact = message.headers["contact"][0]
+            name, contactURL, params = parseAddress(contact)
+            d = self.registry.registerAddress(message.uri, toURL, contactURL)
+        else:
+            d = self.registry.getRegistrationInfo(toURL)
+        d.addCallbacks(self._registeredResult, self._registerError, callbackArgs=(message,))
+        
+    def _registeredResult(self, (expirySeconds, contactURL), message):
+        response = self.responseFromRequest(200, message)
+        if contactURL != None:
+            response.addHeader("contact", contactURL.toString())
+            response.addHeader("expires", "%d" % expirySeconds)
+        response.addHeader("content-length", "0")
+        self.deliverResponse(response)
+
+    def _registerError(self, error):
+        error.trap(RegistrationError, LookupError)
+        # XXX return error message, and alter tests to deal with
+        # this, currently tests assume no message sent on failure
+
+
+class InMemoryRegistry:
+    """A simplistic registry for a specific domain."""
+
+    __implements__ = IRegistry, ILocator
+    
+    def __init__(self, domain):
         self.domain = domain # the domain we handle registration for
         self.users = {} # map username to (IDelayedCall for expiry, address URI)
 
-    def getServerAddress(self, userURI):
+    def getAddress(self, userURI):
         if userURI.host != self.domain:
             return defer.fail(LookupError("unknown domain"))
         if self.users.has_key(userURI.username):
@@ -624,51 +686,46 @@ class RegisterProxy(Proxy):
         else:
             return defer.fail(LookupError("no such user"))
 
+    def getRegistrationInfo(self, userURI):
+        if userURI.host != self.domain:
+            return defer.fail(LookupError("unknown domain"))
+        if self.users.has_key(userURI.username):
+            dc, url = self.users[userURI.username]
+            return defer.succeed((int(dc.getTime() - time.time()), url))
+        else:
+            return defer.fail(LookupError("no such user"))
+        
     def _expireRegistration(self, username):
         try:
             del self.users[username]
         except KeyError:
             pass
-    
-    def handle_REGISTER_request(self, message, (host, port)):
-        """Handle a registration request."""
-        if message.uri.host != self.domain:
-            # xxx return response
+
+    def registerAddress(self, domainURL, logicalURL, physicalURL):
+        if domainURL.host != self.domain:
             log.msg("Registration for domain we don't handle.")
-            return
-        name, toURL, params = parseAddress(message.headers["to"][0], clean=1)
-        if toURL.host != self.domain:
-            # xxx return response
+            return defer.fail(RegistrationError())
+        if logicalURL.host != self.domain:
             log.msg("Registration for domain we don't handle.")
-            return
-        if message.headers.has_key("contact"):
-            contact = message.headers["contact"][0]
-            name, contactURL, params = parseAddress(contact)
-            # XXX we should check for expires header and in URI, and allow
-            # unregistration
-            if self.users.has_key(toURL.username):
-                dc, old = self.users[toURL.username]
-                dc.reset(3600)
-            else:
-                dc = reactor.callLater(3600, self._expireRegistration, toURL.username)
-            log.msg("Registered %s at %s" % (toURL.toString(), contactURL.toString()))
-            self.users[toURL.username] = (dc, contactURL)
+            return defer.fail(RegistrationError())
+        # XXX we should check for expires header and in URI, and allow
+        # unregistration
+        if self.users.has_key(logicalURL.username):
+            dc, old = self.users[logicalURL.username]
+            dc.reset(3600)
         else:
-            if self.users.has_key(toURL.username):
-                dc, contactURL = self.users[toURL.username]
-            else:
-                contactURL = None
-        response = self.responseFromRequest(200, message)
-        if contactURL != None:
-            response.addHeader("contact", contactURL.toString())
-            response.addHeader("expires", "%d" % int(dc.getTime() - time.time()))
-        response.addHeader("content-length", "0")
-        self.deliverResponse(response)
+            dc = reactor.callLater(3600, self._expireRegistration, logicalURL.username)
+        log.msg("Registered %s at %s" % (logicalURL.toString(), physicalURL.toString()))
+        self.users[logicalURL.username] = (dc, physicalURL)
+        return defer.succeed((int(dc.getTime() - time.time()), physicalURL))
 
 
 if __name__ == '__main__':
     import sys
-    from twisted.internet import reactor
     log.startLogging(sys.stdout)
-    reactor.listenUDP(5060, RegisterProxy("192.168.123.128", host="192.168.123.128"))
+    registrar = RegisterProxy(host="192.168.123.128")
+    registry = InMemoryRegistry("192.168.123.128")
+    registrar.registry = registry
+    registry.locator = registry
+    reactor.listenUDP(5060, registrar)
     reactor.run()
