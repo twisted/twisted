@@ -98,7 +98,9 @@ class Options(usage.Options):
                 ['bwverbose', 'o', 'Colorless verbose output'],
                 ['summary', 's', 'minimal summary output'],
                 ['text', 't', 'terse text output'],
-                ['timing', None, 'Timing output']]
+                ['timing', None, 'Timing output'],
+                ['suppresswarnings', None, 'Only print warnings to log, not stdout'],
+                ]
 
     optParameters = [["reactor", "r", None,
                       "Which reactor to use out of: " + \
@@ -430,6 +432,10 @@ class Options(usage.Options):
 
 
     def postOptions(self):
+        # Want to do this stuff as early as possible
+        _setUpTestdir()
+        _setUpLogging(self)
+
         def _mustBeInt():
             raise usage.UsageError("Argument to --random must be a positive integer")
             
@@ -523,7 +529,8 @@ def _setUpLogging(config):
            if x.has_key('warning'):
                print
                print x['format'] % x
-       log.addObserver(seeWarnings)
+       if not config['suppresswarnings']:
+           log.addObserver(seeWarnings)
        log.startLogging(open(config['logfile'], 'a'), 0)
     
 def _getReporter(config):
@@ -683,8 +690,6 @@ def run():
     _setUpAdapters()
 
     _initialDebugSetup(config)
-    _setUpTestdir()
-    _setUpLogging(config)
 
     suite = reallyRun(config)
 
