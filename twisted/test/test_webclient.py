@@ -69,6 +69,14 @@ class HostHeaderResource(resource.Resource):
     def render(self, request):
         return request.received_headers["host"]
 
+class PayloadResource(resource.Resource):
+
+    def render(self, request):
+        data = request.content.read()
+        if len(data) != 100 or int(request.received_headers["content-length"]) != 100:
+            return "ERROR"
+        return data
+
 
 class WebClientTestCase(unittest.TestCase):
     def _listen(self, site):
@@ -87,6 +95,7 @@ class WebClientTestCase(unittest.TestCase):
         r.putChild("error", ErrorResource())
         r.putChild("nolength", NoLengthResource())
         r.putChild("host", HostHeaderResource())
+        r.putChild("payload", PayloadResource())
         site = server.Site(r, timeout=None)
         self.port = self._listen(site)
         reactor.iterate(); reactor.iterate()
@@ -102,6 +111,11 @@ class WebClientTestCase(unittest.TestCase):
     def getURL(self, path):
         return "http://127.0.0.1:%d/%s" % (self.portno, path)
 
+    def testPayload(self):
+        s = "0123456789" * 10
+        self.assertEquals(unittest.deferredResult(client.getPage(self.getURL("payload"), postdata=s)),
+                          s)
+        
     def testHostHeader(self):
         # if we pass Host header explicitly, it should be used, otherwise
         # it should extract from url

@@ -47,11 +47,16 @@ class HTTPPageGetter(http.HTTPClient):
             for cookie, cookval in self.factory.cookies.items():  
                 l.append('%s=%s' % (cookie, cookval))
             self.sendHeader('Cookie', '; '.join(l))
+        data = getattr(self.factory, 'postdata', None)
+        if data is not None:
+            self.sendHeader("Content-Length", str(len(data)))
         for (key, value) in self.factory.headers.items():
-            self.sendHeader(key, value)
+            if key.lower() != "content-length":
+                # we calculated it on our own
+                self.sendHeader(key, value)
         self.endHeaders()
         self.headers = {}
-        data = getattr(self.factory, 'postdata', None)
+        
         if data is not None:
             self.transport.write(data)
 
