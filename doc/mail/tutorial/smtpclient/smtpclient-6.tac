@@ -10,7 +10,7 @@ class SMTPClientFactory(protocol.ClientFactory):
     protocol = smtp.ESMTPClient
 
     def buildProtocol(self, addr):
-        return self.protocol(secret=None, identity=None)
+        return self.protocol(secret=None, identity='example.com')
 
 smtpClientFactory = SMTPClientFactory()
 

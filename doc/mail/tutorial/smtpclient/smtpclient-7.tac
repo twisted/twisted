@@ -31,6 +31,9 @@ Hello, how are you, goodbye.
     def getMailData(self):
         return StringIO.StringIO(self.mailData)
 
+    def sentMail(self, code, resp, numOk, addresses, log):
+        print 'Sent', numOk, 'messages'
+
 class SMTPClientFactory(protocol.ClientFactory):
     protocol = SMTPTutorialClient
 

@@ -376,12 +376,12 @@ class SMTPClientFactory(protocol.ClientFactory):
     protocol = smtp.ESMTPClient
 
     def buildProtocol(self, addr):
-        return self.protocol(secret=None, identity=None)
+        return self.protocol(secret=None, identity='example.com')
 </pre></code></blockquote>
 
 <p>The overridden method does almost the same thing as the base
 implementation: the only change is that it passes values for two
-arguments to <code>twisted.mail.smtp.ESMTPClient</code>'s initializer.
+arguments to <code>twisted.mail.smtp.ESMTPClient</code>'s initializer.  The <code>secret</code> argument is used for SMTP authentication (which we will not attempt yet).  The <code>identity</code> argument is used as a to identify ourselves
 Another minor change to note is that the <code>protocol</code>
 attribute is now defined in the class definition, rather than tacked
 onto an instance after one is created.  This means it is a class
@@ -397,28 +397,154 @@ factories.</p>
 smtpClientFactory = SMTPClientFactory()
 </code></blockquote>
 
-<p>Running this version of the code, we observe that we are once more
-traceback-free:</p>
+<p>Running this version of the code, we observe that the code
+<strong>still</strong> isn't quite traceback-free.</p>
 
 <blockquote><code><pre>
-exarkun@boson:~/Projects/svn/Twisted/trunk/doc/mail/tutorial/smtpclient$ twistd -noy smtpclient-6.tac
-2005/03/27 22:53 EST [-] Log opened.
-2005/03/27 22:53 EST [-] twistd SVN-Trunk (/usr/bin/python2.4 2.4.1) starting up
-2005/03/27 22:53 EST [-] reactor class: twisted.internet.selectreactor.SelectReactor
-2005/03/27 22:53 EST [-] Loading smtpclient-6.tac...
-2005/03/27 22:53 EST [-] Loaded.
-2005/03/27 22:53 EST [-] Starting factory <__builtin__.SMTPClientFactory instance at 0xb791e68c>
-2005/03/27 22:53 EST [-] Enabling Multithreading.
-2005/03/27 22:53 EST [-] Received SIGINT, shutting down.
-2005/03/27 22:53 EST [ESMTPClient,client] Stopping factory <__builtin__.SMTPClientFactory instance at 0xb791e68c>
-2005/03/27 22:53 EST [-] Main loop terminated.
-2005/03/27 22:53 EST [-] Server Shut Down.
-exarkun@boson:~/Projects/svn/Twisted/trunk/doc/mail/tutorial/smtpclient$ 
+exarkun@boson:~/Projects/svn/Twisted/trunk/doc/mail/tutorial/smtpclient$ PYTHONPATH=~/Projects/svn/Twisted/trunk/ twistd -noy smtpclient-6.tac
+2005/03/29 21:17 EST [-] Log opened.
+2005/03/29 21:17 EST [-] twistd SVN-Trunk (/usr/bin/python2.4 2.4.1) starting up
+2005/03/29 21:17 EST [-] reactor class: twisted.internet.selectreactor.SelectReactor
+2005/03/29 21:17 EST [-] Loading smtpclient-6.tac...
+2005/03/29 21:17 EST [-] Loaded.
+2005/03/29 21:17 EST [-] Starting factory <__builtin__.SMTPClientFactory instance at 0xb77fd68c>
+2005/03/29 21:17 EST [-] Enabling Multithreading.
+2005/03/29 21:17 EST [ESMTPClient,client] Traceback (most recent call last):
+          File "/home/exarkun/Projects/svn/Twisted/trunk/twisted/python/log.py", line 56, in callWithLogger
+            return callWithContext({"system": lp}, func, *args, **kw)
+          File "/home/exarkun/Projects/svn/Twisted/trunk/twisted/python/log.py", line 41, in callWithContext
+            return context.call({ILogContext: newCtx}, func, *args, **kw)
+          File "/home/exarkun/Projects/svn/Twisted/trunk/twisted/python/context.py", line 52, in callWithContext
+            return self.currentContext().callWithContext(ctx, func, *args, **kw)
+          File "/home/exarkun/Projects/svn/Twisted/trunk/twisted/python/context.py", line 31, in callWithContext
+            return func(*args,**kw)
+        --- <exception caught here> ---
+          File "/home/exarkun/Projects/svn/Twisted/trunk/twisted/internet/selectreactor.py", line 139, in _doReadOrWrite
+            why = getattr(selectable, method)()
+          File "/home/exarkun/Projects/svn/Twisted/trunk/twisted/internet/tcp.py", line 351, in doRead
+            return self.protocol.dataReceived(data)
+          File "/home/exarkun/Projects/svn/Twisted/trunk/twisted/protocols/basic.py", line 221, in dataReceived
+            why = self.lineReceived(line)
+          File "/home/exarkun/Projects/svn/Twisted/trunk/twisted/mail/smtp.py", line 1039, in lineReceived
+            why = self._okresponse(self.code,'\n'.join(self.resp))
+          File "/home/exarkun/Projects/svn/Twisted/trunk/twisted/mail/smtp.py", line 1281, in esmtpState_serverConfig
+            self.tryTLS(code, resp, items)
+          File "/home/exarkun/Projects/svn/Twisted/trunk/twisted/mail/smtp.py", line 1294, in tryTLS
+            self.authenticate(code, resp, items)
+          File "/home/exarkun/Projects/svn/Twisted/trunk/twisted/mail/smtp.py", line 1343, in authenticate
+            self.smtpState_from(code, resp)
+          File "/home/exarkun/Projects/svn/Twisted/trunk/twisted/mail/smtp.py", line 1062, in smtpState_from
+            self._from = self.getMailFrom()
+          File "/home/exarkun/Projects/svn/Twisted/trunk/twisted/mail/smtp.py", line 1137, in getMailFrom
+            raise NotImplementedError
+        exceptions.NotImplementedError:
+
+2005/03/29 21:17 EST [ESMTPClient,client] Stopping factory <__builtin__.SMTPClientFactory instance at 0xb77fd68c>
+2005/03/29 21:17 EST [-] Received SIGINT, shutting down.
+2005/03/29 21:17 EST [-] Main loop terminated.
+2005/03/29 21:17 EST [-] Server Shut Down.
+exarkun@boson:~/Projects/svn/Twisted/trunk/doc/mail/tutorial/smtpclient$
 </pre></code></blockquote>
 
-<p>However, our client <strong>still</strong> doesn't do anything!  We
-are quite close, however.  In example 7, we will see how to actually
-get a message sent.</p>
+<p>What we have accomplished with this iteration of the example is to
+navigate far enough into an SMTP transaction that Twisted is now
+interested in calling back to application-level code to determine what
+its next step should be.  In the next example, we'll see how to
+provide that information to it.</p>
+
+<h3>SMTP Client 7</h3>
+
+<p>SMTP Client 7 is the first version of our SMTP client which
+actually includes message data to transmit.  For simplicity's sake,
+the message is defined as part of a new class.  In a useful program
+which sent email, message data might be pulled in from the filesystem,
+a database, or be generated based on user-input.  <a
+href="smtpclient-7.tac">smtpclient-7.tac</a>, however, defines a new
+class, <code>SMTPTutorialClient</code>, with three class attributes
+(<code>mailFrom</code>, <code>mailTo</code>, and
+<code>mailData</code>):</p>
+
+<blockquote><code><pre>
+class SMTPTutorialClient(smtp.ESMTPClient):
+    mailFrom = "tutorial_sender@example.com"
+    mailTo = "tutorial_recipient@example.net"
+    mailData = '''\
+Date: Fri, 6 Feb 2004 10:14:39 -0800
+From: Tutorial Guy <tutorial_sender@example.com>
+To: Tutorial Gal <tutorial_recipient@example.net>
+Subject: Tutorate!
+
+Hello, how are you, goodbye.
+'''
+</pre></code></blockquote>
+
+<p>This statically defined data is accessed later in the class
+definition by three of the methods which are part of the
+<em>SMTPClient callback API</em>.  Twisted expects each of the three
+methods below to be defined and to return an object with a particular
+meaning.  First, <code>getMailFrom</code>:</p>
+
+<blockquote><code><pre>
+    def getMailFrom(self):
+        result = self.mailFrom
+        self.mailFrom = None
+        return result
+</pre></code></blockquote>
+
+<p>This method is called to determine the <em>reverse-path</em>,
+otherwise known as the <em>envelope from</em>, of the message.  This
+value will be used when sending the <code>MAIL FROM</code> SMTP
+command.  The method must return a string which conforms to the <a
+href="http://www.faqs.org/rfcs/rfc2821.html">RFC 2821</a> definition
+of a <em>reverse-path</em>.  In simpler terms, it should be a string
+like <code>"alice@example.com"</code>.  Only one <em>envelope
+from</em> is allowed by the SMTP protocol, so it cannot be a list of
+strings or a comma separated list of addresses.  Our implementation
+of <code>getMailFrom</code> does a little bit more than just return a
+string; we'll get back to this in a little bit.</p>
+
+<p>The next method is <code>getMailTo</code>:</p>
+
+<blockquote><code><pre>
+    def getMailTo(self):
+        return [self.mailTo]
+</pre></code></blockquote>
+
+<p><code>getMailTo</code> is similar to <code>getMailFrom</code>.  It
+returns one or more RFC 2821 addresses (this time a
+<em>forward-path</em>, or <em>envelope to</em>).  Since SMTP allows
+multiple recipients, <code>getMailTo</code> returns a list of these
+addresses.  The list must contain at least one address, and even if
+there is exactly one recipient, it must still be in a list.</p>
+
+<p>The final callback we will define to provide information to
+Twisted is <code>getMailData</code>:</p>
+
+<blockquote><code><pre>
+    def getMailData(self):
+        return StringIO.StringIO(self.mailData)
+</pre></code></blockquote>
+
+<p>This one is quite simple as well: it returns a file or a file-like
+object which contains the message contents.  In our case, we return a
+<code>StringIO</code> since we already have a string containing our
+message.  If the contents of the file returned by
+<code>getMailData</code> span multiple lines (as email messages often
+do), the lines should be "\n" delimited (as they would be when opening
+a text file in the "rt" mode): necessary newline translation will be
+performed by <code>SMTPClient</code> automatically.</p>
+
+<p>There is one more new callback method defined in smtpclient-7.tac.
+This one isn't for providing information about the messages to
+Twisted, but for Twisted to provide information about the success or
+failure of the message transmission to the application:</p>
+
+<blockquote><code><pre>
+    def sentMail(self, code, resp, numOk, addresses, log):
+        print 'Sent', numOk, 'messages'
+</pre></code></blockquote>
+
+<p></p>
 
 </body>
 </html>
