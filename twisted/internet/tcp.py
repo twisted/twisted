@@ -213,7 +213,6 @@ class Client(Connection):
             if se.args[0] == EISCONN:
                 pass
             elif se.args[0] in (EINPROGRESS, EWOULDBLOCK, EALREADY, EINVAL):
-                self.startWriting()
                 self.startReading()
                 return
             else:
@@ -226,6 +225,8 @@ class Client(Connection):
         del self.doWrite
         del self.doRead
         self.connected = 1
+        # we first stop and then start, to reset any references to the old doRead
+        self.stopReading()
         self.startReading()
         self.protocol.makeConnection(self)
 
