@@ -3,7 +3,7 @@
 
 from __future__ import nested_scopes
 
-__version__ = "$Revision: 1.7 $"[11:-2]
+__version__ = "$Revision: 1.8 $"[11:-2]
 
 import random
 import time
@@ -202,7 +202,31 @@ loginSignature = fm.MethodSignature(
               "you wish to perform."))
 
 class PerspectiveWrapper(Resource):
+    """I am a wrapper that will restrict access to Resources based on a
+    C{twisted.cred.service.Service}'s 'authorizer' and perspective list.
+
+    Please note that I must be in turn wrapped by a SessionWrapper, since my
+    login functionality requires a session to be established.
+    """
+    
     def __init__(self, service, noAuthResource, authResourceFactory):
+        """Create a PerspectiveWrapper.
+        
+        @type service: C{twisted.cred.service.Service}
+
+        @type noAuthResource: C{Resource}
+
+        @type authResourceFactory: a callable object
+
+        @param authResourceFactory: This should be a function which takes as an
+        argument perspective from 'service' and returns a
+        C{Resource} instance.
+
+        @param noAuthResource: This parameter is the C{Resource} that is used
+        when the user is browsing this site anonymously.  Somewhere accessible
+        from this should be a link to 'perspective-init', which will display a
+        C{form.FormProcessor} that allows the user to log in.
+        """
         Resource.__init__(self)
         self.service = service
         self.noAuthResource = noAuthResource
