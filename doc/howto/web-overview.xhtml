@@ -14,11 +14,8 @@
 
     <p>Twisted Web is a web application server written in pure
     Python, with APIs at multiple levels of abstraction to
-    facilitate different kinds of web programming. The most useful
-    for web application designers is <a href="woven.xhtml">Woven</a>,
-    a high-level MVC-and-template oriented system.
-    There is also the Resource system, which Woven is built
-    on.</p>
+    facilitate different kinds of web programming.
+    </p>
 
     <h2>Twisted Web's Structure</h2>
 
@@ -52,12 +49,21 @@
     whenever you're done.
     </p>
 
-    <h2>Woven</h2>
+    <h2>
+	Web programming with Twisted Web
+    </h2>
 
-    <p>Woven is an added layer of abstraction over Resources
-    -- it's much nicer for most sorts of web applications. For
-    more information on Woven, see <a
-    href="woven.xhtml">Woven Overview</a>.</p>
+    <p>
+	Web programmers seeking a higher level abstraction than the Resource system
+	should look at <a href="http://stewstuff.com/doc/nevow.xhtml">Nevow</a>, available as
+	part of the <a href="http://www.divmod.org/Quotient/">Quotient</a> project. Nevow
+	is not distributed as part of Twisted.
+    </p>
+
+    <p>
+	Nevow is based on the same ideas as the earlier <a href="woven.xhtml">Woven</a> framework.
+	Woven only remains part of Twisted in order to support existing projects, and should
+	not be used for new projects. Nevow is a simpler framework which retains the strengths of Woven.
+    </p>
   </body>
-</html>
 
