@@ -84,17 +84,16 @@ def install():
         python_dir=sysconfig.get_config_var("prefix")
         scripts_dir=os.path.join(python_dir, "scripts")
         # FIXME - this list needs some work
-        advertised_scripts=" ".join(["twistd", "mktap", "generatelore",
-                                     "hlint", "manhole", "tapconvert",
-                                     "html2latex", "ckeygen", "trial",
-                                     "coil",
+        advertised_scripts=" ".join(["twistd", "mktap", "manhole",
+                                     "tapconvert", "ckeygen", "trial",
+                                     "coil", "lore",
                                      ])
         # The following scripts are not advertised for the following reasons
-        # conch - issues an exception when run with no arguments
-        # websetroot - issues an exception when run with no args
-        # im, t-im - issue exceptions for missing gtk when run
-        # tap2deb - platform-specific
-        # tk* - the ones that work have icons in the start menu, no need
+        #  conch - issues an exception when run with no arguments
+        #  websetroot - issues an exception when run with no args
+        #  im, t-im - issue exceptions for missing gtk when run
+        #  tap2deb - platform-specific
+        #  tk* - the ones that work have icons in the start menu, no need
         pathdict={'scripts_dir': scripts_dir,
                   'advertised_scripts': advertised_scripts}
         batch_script="""@echo off
