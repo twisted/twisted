@@ -79,8 +79,41 @@ class User(pb.Referenceable):
 <p>This improves matters because, as long as Alice only has a reference to
 <em>this</em> object and nobody else's, she can't cause a different
 <code>self.name</code> to get used. Of course, you have to make sure that you
-don't give her a reference to the wrong object. <a name="F1"><a href="#f1"
->[1]</a></a> </p>
+don't give her a reference to the wrong object.</p>
+
+<div class="note">
+<p>Third party references (there aren't any)</p>
+
+<p>Note that the reference that the server gives to a client is only useable
+by that one client: if they try to hand it off to a third party, they'll get
+an exception (XXX: which?). This helps somewhat: only the client you gave
+the reference to can cause any damage with it. Of course, the client might
+be a brainless zombie, simply doing anything some third party wants. When
+it's not proxying <code>callRemote</code> invocations, it's probably terrorizing
+the living and searching out human brains for sustenance. In short, if you
+don't trust them, don't give them that reference.</p>
+
+<p>Also note that the design of the serialization mechanism (implemented in
+<code class="API">twisted.spread.jelly</code>: pb, jelly, spread.. get it?
+Also look for "banana" and "marmalade". What other networking framework can
+claim API names based on sandwich ingredients?) makes it impossible for the
+client to obtain a reference that they weren't explicitly given. References
+passed over the wire are given id numbers and recorded in a per-connection
+dictionary. If you didn't give them the reference, the id number won't be in
+the dict, and no amount of id guessing by a malicious client will give them
+anything else. The dict goes away when the connection is dropped, limiting
+further the scope of those references.</p>
+
+<p>Of course, everything you've ever given them over that connection can
+come back to you. If expect the client to invoke your method with some
+object A that you sent to them earlier, and instead they send you object B
+(that you also sent to them earlier), and you don't check it somehow, then
+you've just opened up a security hole. A better design is to keep such
+objects in a dictionary on the server side, and have the client send you an
+index string instead. Doing it that way makes it obvious that they can send
+you anything they want, and improves the chances that you'll remember to
+implement the right checks.</p>
+</div>
 
 <p>But now she could sneak into another group. So you might have to have an
 object per-group-per-user:</p>
@@ -117,8 +150,10 @@ to it.</p>
 <p>As a framework for this chapter, we'll be referring to a hypothetical
 game implemented by several programs using the Twisted framework. This game
 will have multiple players, where users log in using their client programs,
-and there is a server, and users can do some things but not others. <a
-name="F2"><a href="#f2" >[2]</a></a></p>
+and there is a server, and users can do some things but not
+others<span class="footnote">There actually exists such a thing. It's called
+twisted.reality, and was the whole reason Twisted was created. I haven't
+played it yet: I'm too afraid.</span>.</p>
 
 <p>The players make moves in this game by invoking remote methods on objects
 that live in the server. The clients can't really be relied upon to tell the
@@ -158,8 +193,9 @@ to a different class. That class is a pb.Perspective.</p>
 <p>pb.Perspective (and some related classes: Identity, Authorizer, and
 Service) is a layer on top of the basic PB system that handles
 username/password checking. The basic idea is that there is a separate
-Perspective object (probably a subclass you've created) for each user <a
-name="F3"><a href="#f3" >[3]</a></a>, and <em>only</em> the authorized user
+Perspective object (probably a subclass you've created) for each
+user<span class="footnote">Actually there is a perspective per user*service,
+but we'll get into that later</span>,, and <em>only</em> the authorized user
 gets a remote reference to that Perspective object. You can store whatever
 permissions or capabilities the user possesses in that object, and then use
 them when the user invokes a remote method. You give the user access to the
@@ -192,8 +228,16 @@ name: it comes from the .playerName attribute, not an argument of their
 remote method call.</p>
 
 <p>Here is a brief example of using a Perspective. Most of the support code
-is magic for now: we'll explain it later. <a name="F4"><a
-href="#f4">[4]</a></a> </p>
+is magic for now: we'll explain it later.</p>
+
+<div class="note">This example has more support code than you'd actually need.
+If you only
+have one Service, then there's probably a one-to-one relationship between
+your Identities and your Perspectives. If that's the case, you can use a
+utility method called Perspective.makeIdentity() instead of creating the
+perspectives and identities in separate steps. This is shorter, but hides
+some of the details that are useful here to explain what's going on. Again,
+this will make more sense later.</div>
 
 <a href="listings/pb/pb5server.py" class="py-listing">pb5server.py</a>
 <a href="listings/pb/pb5client.py" class="py-listing">pb5client.py</a>
@@ -207,9 +251,57 @@ methods just prints a message.</p>
 <p>Ok, so that wasn't really very exciting. It doesn't accomplish much more
 than the first PB example, and used a lot more code to do it. Let's try it
 again with two users this time, each with their own Perspective. We also
-override <code>.attached()</code> and <code>.detached()</code> <a name="F5"><a
-href="#f5">[5]</a></a>, just to see how they are called.</p>
+override <code>.attached()</code> and <code>.detached()</code>,
+just to see how they are called.</p>
 
+<div class="note">
+
+<p>The Perspective object is usually expected to outlast the user's
+connection to it: it is nominally created some time before the user
+connects, and survives after they disconnect. <code>.attached()</code> and
+<code>.detached()</code> are invoked to let the Perspective know when the user
+has connected and disconnected.</p>
+
+<p> When the client runs <code>pb.connect</code> to establish the connection,
+they can provide it with an optional '<code>client</code>' argument (which must
+be a <code>pb.Referenceable</code> object). If they do, then a reference to that
+object will be handed to the server-side Perspective's <code>.attached</code>
+method, in the '<code>clientref</code>' argument. </p>
+
+<p> The server-side Perspective can use it to invoke remote methods on
+something in the client, so that the client doesn't always have to drive the
+interaction. In a chat server, the client object would be the one to which
+"display text" messages were sent. In a game, this would provide a way to
+tell the clients that someone has made a move, so they can update their game
+boards. To actually use it, you'd probably want to subclass Perspective and
+change the .attached method to stash the clientref somewhere, because the
+default implementation just drops it.</p>
+
+<p><code>.attached()</code> also receives a reference to the <code>Identity</code>
+object that represents the user. (The user has proved, by using a password
+of some sort, that they are that <code>Identity</code>, and then they can access
+any service/perspective on the Identity's keyring). The method can use that
+reference to extract more information about the user.</p>
+
+<p>In addition, <code>.attached()</code> has the opportunity to return a
+different Perspective, if it so chooses. You could have all users initially
+access the same Perspective, but then as they connect (and
+<code>.attached()</code> gets called), give them unique Perspectives based upon
+their individual Identities. The client will get a reference to whatever
+<code>.attached()</code> returns, so the default case is to 'return self'.</p>
+
+<p>Finally, when the client goes away (i.e., the network connection has been
+closed), <code>.detached()</code> will be called. The Perspective can use this
+to mark the user as having gone away: this may mean that outgoing messages
+should be queued in the Perspective until they reconnect, or callers should
+be given an error message because they messages cannot be delivered, etc. It
+can also be used to terminate or suspend any sessions the user was
+participating in. <code>detached</code> is called with the same 'clientref' and
+Identity objects that were given to the original 'attached' call. It will be
+invoked on the Perspective object that was returned by <code>.attached()</code>.
+</p>
+
+</div>
 
 <a href="listings/pb/pb6server.py" class="py-listing">pb6server.py</a>
 <a href="listings/pb/pb6client1.py" class="py-listing">pb6client1.py</a>
@@ -254,7 +346,18 @@ web-based chat service and an IM server in the same program, that let you
 exchange messages between the two. Or your program might provide different
 kinds of interfaces to different classes of users: administrators could get
 one <code>Service</code>, while mere end-users get a less-powerful
-<code>Service</code>. <a name="F6"><a href="#f6">[6]</a></a> </p>
+<code>Service</code>.</p>
+
+<div class="note">
+
+<p>Note that the <code>Service</code> is a server of some sort, but that
+doesn't mean there's a one-to-one relationship between the
+<code>Service</code> and the TCP port that's being listened to. In theory,
+several different <code>Service</code>s can hang off the same TCP port. Look
+at the MultiService class for details.</p>
+
+</div>
+
 
 <p>The <code>Service</code> is reponsible for providing
 <code>Perspective</code> objects. More on that later.</p>
@@ -325,8 +428,9 @@ to <code class="python">auth.addIdentity(i)</code>).</p>
 
 <p>However, you can make a subclass of <code>Authorizer</code> with a
 <code>.getIdentityRequest</code> method that behaves differently: your version
-could look in <code>/etc/passwd</code>, or do an SQL database lookup<a
-name="F7"><a href="#f7">[7]</a></a>, or create new Identities for anyone
+could look in <code>/etc/passwd</code>, or do an SQL database
+lookup<span class="footnote">See twisted.enterprise.dbcred for a module that
+does exactly that.</span>, or create new Identities for anyone
 that asks (with a really secret password like '1234' that the user will
 probably never change, even if you ask them to). The Identities could be
 created by your server at startup time and stored in a dict, or they could
@@ -335,9 +439,16 @@ be pickled and stored in a file until needed (in which case
 unpickle the contents, and return the resulting <code>Identity</code>
 object), or created brand-new based upon whatever data you want. Any
 function that returns a Deferred (that will eventually get called back with
-the <code>Identity</code> object) can be used here.<a
-name="F8"><a href="#f8">[8]</a></a></p>
+the <code>Identity</code> object) can be used here.</p>
 
+<div class="note">
+<p>For static Identities that are available right away, the Deferred's
+callback() method is called right away. This is why the interface of
+<code>.getIdentityRequest()</code> specifies that its Deferred is returned
+unarmed, so that the caller has a chance to actually add a callback to it
+before the callback gets run. (XXX: check, I think armed/unarmed is an
+outdated concept)</p>
+</div>
 
 <a name="responsibilities/identity"><h3>Identity</h3></a>
 
@@ -439,8 +550,8 @@ single <code>MyPerspective</code> by adding it to the keyring. We added the
 <code>Identity</code> objects to the <code>Authorizer</code>, and then glued
 the authorizer to the <code>pb.BrokerFactory</code>.</p>
 
-<p>How did that last bit of magic glue work? I won't tell you here<a
-name="F9"><a href="#f9">[9]</a></a>, because it isn't very useful to
+<p>How did that last bit of magic glue work? I won't tell you here,
+because it isn't very useful to
 override it, but you effectively hang an <code>Authorizer</code> off of a
 TCP port. The combination of the object and methods exported by the <code
 class="API" base="twisted.spread">pb.AuthRoot</code> object works together
@@ -453,6 +564,27 @@ servicename/perspectivename you give are matched against the ones authorized
 by the <code>Identity</code> (in its <code>.keyring</code> attribute). You
 eventually get back a remote reference to a <code>Perspective</code>
 provided by the <code>Service</code> that you named.</p>
+
+<div class="note">
+
+<p>Here is how the magic glue code works:</p>
+
+<pre class="python">
+app.listenTCP(8800, pb.BrokerFactory(pb.AuthRoot(auth)))
+</pre>
+
+<p><code class="python">pb.AuthRoot()</code> provides objects that are
+subclassed from <code class="API" base="twisted.spread">pb.Root</code>, so
+as we saw in the first example, they can be served up by <code
+class="python">pb.BrokerFactory()</code>. <code>AuthRoot</code> happens to
+use the <code>.rootObject</code> hook described earlier to serve up an <code
+class="API" base="twisted.spread.pb">AuthServ</code> object, which wraps the
+<code class="API" base="twisted.cred.authorizer">Authorizer</code> and
+offers a method called <code>.remote_username</code>, which is called by the
+client to declare which <code>Identity</code> it claims to be. That method
+starts the challenge-response sequence.</p>
+
+</div>
 
 
 <a name="walkthrough"><h2>Code Walkthrough: pb.connect()</h2></a>
@@ -553,153 +685,5 @@ players.</p>
 <p>That's the end of the tour. If you have any questions, the folks at the
 welcome office will be more than happy to help. Don't forget to stop at the
 gift store on your way out, and have a really nice day. Buh-bye now!</p>
-
-
-<h2>Footnotes</h2>
-
-
-
-<a  name="f1"><a href="#F1">[1]</a></a>
-
-<p>Footnote: third party references (there aren't any)</p>
-
-<p>Note that the reference that the server gives to a client is only useable
-by that one client: if they try to hand it off to a third party, they'll get
-an exception (XXX: which?). This helps somewhat: only the client you gave
-the reference to can cause any damage with it. Of course, the client might
-be a brainless zombie, simply doing anything some third party wants. When
-it's not proxying <code>callRemote</code> invocations, it's probably terrorizing
-the living and searching out human brains for sustenance. In short, if you
-don't trust them, don't give them that reference.</p>
-
-<p>Also note that the design of the serialization mechanism (implemented in
-<code class="API">twisted.spread.jelly</code>: pb, jelly, spread.. get it?
-Also look for "banana" and "marmalade". What other networking framework can
-claim API names based on sandwich ingredients?) makes it impossible for the
-client to obtain a reference that they weren't explicitly given. References
-passed over the wire are given id numbers and recorded in a per-connection
-dictionary. If you didn't give them the reference, the id number won't be in
-the dict, and no amount of id guessing by a malicious client will give them
-anything else. The dict goes away when the connection is dropped, limiting
-further the scope of those references.</p>
-
-<p>Of course, everything you've ever given them over that connection can
-come back to you. If expect the client to invoke your method with some
-object A that you sent to them earlier, and instead they send you object B
-(that you also sent to them earlier), and you don't check it somehow, then
-you've just opened up a security hole. A better design is to keep such
-objects in a dictionary on the server side, and have the client send you an
-index string instead. Doing it that way makes it obvious that they can send
-you anything they want, and improves the chances that you'll remember to
-implement the right checks.</p>
-
-
-<a  name="f2"><a href="#F2">[2]</a></a>
-
-<p>There actually exists such a thing. It's called twisted.reality, and was
-the whole reason Twisted was created. I haven't played it yet: I'm too
-afraid </p>
-
-<a  name="f3"><a href="#F3">[3]</a></a>
-
-<p>actually there is a perspective per user*service, but we'll get into that
-later</p>
-
-<a  name="f4"><a href="#F4">[4]</a></a>
-
-<p>This example has more support code than you'd actually need. If you only
-have one Service, then there's probably a one-to-one relationship between
-your Identities and your Perspectives. If that's the case, you can use a
-utility method called Perspective.makeIdentity() instead of creating the
-perspectives and identities in separate steps. This is shorter, but hides
-some of the details that are useful here to explain what's going on. Again,
-this will make more sense later. </p>
-
-<a  name="f5"><a href="#F5">[5]</a></a>
-
-<p>The Perspective object is usually expected to outlast the user's
-connection to it: it is nominally created some time before the user
-connects, and survives after they disconnect. <code>.attached()</code> and
-<code>.detached()</code> are invoked to let the Perspective know when the user
-has connected and disconnected.</p>
-
-<p> When the client runs <code>pb.connect</code> to establish the connection,
-they can provide it with an optional '<code>client</code>' argument (which must
-be a <code>pb.Referenceable</code> object). If they do, then a reference to that
-object will be handed to the server-side Perspective's <code>.attached</code>
-method, in the '<code>clientref</code>' argument. </p>
-
-<p> The server-side Perspective can use it to invoke remote methods on
-something in the client, so that the client doesn't always have to drive the
-interaction. In a chat server, the client object would be the one to which
-"display text" messages were sent. In a game, this would provide a way to
-tell the clients that someone has made a move, so they can update their game
-boards. To actually use it, you'd probably want to subclass Perspective and
-change the .attached method to stash the clientref somewhere, because the
-default implementation just drops it.</p>
-
-<p><code>.attached()</code> also receives a reference to the <code>Identity</code>
-object that represents the user. (The user has proved, by using a password
-of some sort, that they are that <code>Identity</code>, and then they can access
-any service/perspective on the Identity's keyring). The method can use that
-reference to extract more information about the user.</p>
-
-<p>In addition, <code>.attached()</code> has the opportunity to return a
-different Perspective, if it so chooses. You could have all users initially
-access the same Perspective, but then as they connect (and
-<code>.attached()</code> gets called), give them unique Perspectives based upon
-their individual Identities. The client will get a reference to whatever
-<code>.attached()</code> returns, so the default case is to 'return self'.</p>
-
-<p>Finally, when the client goes away (i.e., the network connection has been
-closed), <code>.detached()</code> will be called. The Perspective can use this
-to mark the user as having gone away: this may mean that outgoing messages
-should be queued in the Perspective until they reconnect, or callers should
-be given an error message because they messages cannot be delivered, etc. It
-can also be used to terminate or suspend any sessions the user was
-participating in. <code>detached</code> is called with the same 'clientref' and
-Identity objects that were given to the original 'attached' call. It will be
-invoked on the Perspective object that was returned by <code>.attached()</code>.
-</p>
-
-<a  name="f6"><a href="#F6">[6]</a></a>
-
-<p>Note that the <code>Service</code> is a server of some sort, but that
-doesn't mean there's a one-to-one relationship between the
-<code>Service</code> and the TCP port that's being listened to. In theory,
-several different <code>Service</code>s can hang off the same TCP port. Look
-at the MultiService class for details.</p>
-
-<a  name="f7"><a href="#F7">[7]</a></a>
-
-<p>See twisted.enterprise.dbcred for a module that does exactly that.</p>
-
-<a  name="f8"><a href="#F8">[8]</a></a>
-
-<p>For static Identities that are available right away, the Deferred's
-callback() method is called right away. This is why the interface of
-<code>.getIdentityRequest()</code> specifies that its Deferred is returned
-unarmed, so that the caller has a chance to actually add a callback to it
-before the callback gets run. (XXX: check, I think armed/unarmed is an
-outdated concept)</p>
-
-<a  name="f9"><a href="#F9">[9]</a></a>
-
-<p>but I will tell you here:</p>
-
-<pre class="python">
-app.listenTCP(8800, pb.BrokerFactory(pb.AuthRoot(auth)))
-</pre>
-
-<p><code class="python">pb.AuthRoot()</code> provides objects that are
-subclassed from <code class="API" base="twisted.spread">pb.Root</code>, so
-as we saw in the first example, they can be served up by <code
-class="python">pb.BrokerFactory()</code>. <code>AuthRoot</code> happens to
-use the <code>.rootObject</code> hook described earlier to serve up an <code
-class="API" base="twisted.spread.pb">AuthServ</code> object, which wraps the
-<code class="API" base="twisted.cred.authorizer">Authorizer</code> and
-offers a method called <code>.remote_username</code>, which is called by the
-client to declare which <code>Identity</code> it claims to be. That method
-starts the challenge-response sequence.</p>
 
 </body> </html>
