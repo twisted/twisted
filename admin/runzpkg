@@ -12,4 +12,5 @@ zpkg --support twistedzpkg \
      --distribution twistedzpkg.zpkgsupport.Distribution \
      -m ~/.zpkg.resources \
      -m resources.zpkgmap \
-     twisted
+     $*
+
