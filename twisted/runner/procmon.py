@@ -119,7 +119,7 @@ class ProcessMonitor(app.ApplicationService):
         self.murder = {}
 
     def __getstate__(self):
-        dct = self.__dict__.copy()
+        dct = app.ApplicationService.__getstate__(self)
         for k in ('active', 'consistency'):
             if dct.has_key(k):
                 del dct[k]
@@ -199,8 +199,22 @@ class ProcessMonitor(app.ApplicationService):
     def restartAll(self):
         for name in self.processes.keys():
             self.stopProcess(name)
-           
 
+    def __repr__(self):
+        l = []
+        for name, proc in self.processes.items():
+            uidgid = ''
+            if proc[1] is not None:
+                uidgid = str(proc[1])
+            if proc[2] is not None:
+                uidgid += ':'+str(proc[2])
+
+            if uidgid:
+                uidgid = '(' + uidgid + ')'
+            l.append('%r%s: %r' % (name, uidgid, proc[0]))
+        return ('<' + self.__class__.__name__ + ' '
+                + ' '.join(l)
+                + '>')
 
 def main():
     application = app.Application('monitor')
