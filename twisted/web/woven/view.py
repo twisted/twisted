@@ -37,6 +37,9 @@ NO_DATA_YET = 2
 
 
 def viewFactory(viewClass):
+    return lambda request, node, model: viewClass(model)
+
+def viewMethod(viewClass):
     return lambda self, request, node, model: viewClass(model)
 
 
@@ -76,10 +79,10 @@ class View(template.DOMTemplate):
         self.model = self.mainModel = model.adaptToIModel(m, None, None)
         self.controller = self.controllerFactory(self.model)
         self.modelStack = [self.model]
-        self.viewStack = [self]
+        self.viewStack = [self, widgets]
         self.subviews = {}
         self.currentId = 0
-        self.controllerStack = [self.controller]
+        self.controllerStack = [self.controller, input]
         template.DOMTemplate.__init__(self, self.model, templateFile)
 
     def getTopOfModelStack(self):
@@ -167,49 +170,60 @@ class View(template.DOMTemplate):
         """
         controllerName = node.getAttribute('controller')
         
-        # Look up an InputHandler
-        controllerFactory = input.DefaultHandler
+        if model is None:
+            model = self.getTopOfModelStack()
+
+        # Look up a controller factory.
         if controllerName:
             if not node.hasAttribute('name'):
                 warnings.warn("POTENTIAL ERROR: %s had a controller, but not a "
                               "'name' attribute." % node)
             for namespace in self.controllerStack:
-                controllerFactory = getattr(namespace, 'wcfactory_' + controllerName, None)
+                controllerFactory = getattr(namespace, 'wcfactory_' +
+                                            controllerName, None)
                 if controllerFactory is not None:
                     break
-                controllerFactory = getattr(namespace, 'factory_' + controllerName, None)
+                controllerFactory = getattr(namespace, 'factory_' +
+                                             controllerName, None)
                 if controllerFactory is not None:
+                    warnings.warn("factory_ methods are deprecated; please use "
+                                  "wcfactory_ instead", DeprecationWarning)
                     break
-            if controllerFactory is None:
-                controllerFactory = getattr(input, controllerName, None)
             if controllerFactory is None:
                 raise NotImplementedError("You specified controller name %s on "
-                                          "a node, but no factory_%s method was "
-                                          "found in %s." % (controllerName,
+                                          "a node, but no factory_%s method "
+                                          "was found in %s." % (controllerName,
                                                             controllerName,
-                                                            self.controllerStack + [input]))
+                                                            self.controllerStack 
+                                                            + [input]))
+            try:
+                controller = controllerFactory(request, node, model)
+            except TypeError:
+                warnings.warn("A Controller Factory takes "
+                              "(request, node, model) "
+                              "now instead of (model)", DeprecationWarning)
+                controller = controllerFactory(model)
         else:
             # If no "controller" attribute was specified on the node, see if 
             # there is a IController adapter registerred for the model.
-            if hasattr(model, '__class__'):
-                controllerFactory = components.getAdapterClassWithInheritance(
-                                model.__class__, 
-                                interfaces.IController, 
-                                controllerFactory)
-        if model is None:
-            model = self.getTopOfModelStack()
-        try:
-            return controllerFactory(request, node, model)
-        except TypeError:
-            warnings.warn("A Controller Factory takes (request, node, model) "
-                          "now instead of (model)", DeprecationWarning)
-            return controllerFactory(model)
+            controller = components.getAdapter(
+                            model, 
+                            interfaces.IController, 
+                            None,
+                            components.getAdapterClassWithInheritance)
+        if controller is None:
+            controller = input.DefaultHandler(model)
+
+        return controller
     
     def getNodeView(self, request, node, submodel, model):
         view = None   
         viewName = node.getAttribute('view')
 
-        # Look up either a widget factory, or a dom-mutating method
+        if model is None:
+            model = self.getTopOfModelStack()
+        
+        # Look up a view factory.
         if viewName:
             for namespace in self.viewStack:
                 viewMethod = getattr(namespace, 'wvfactory_' + viewName, None)
@@ -221,25 +235,17 @@ class View(template.DOMTemplate):
                                   "wvfactory_ instead", DeprecationWarning)
                     break
 
-            if viewMethod is None:
-                view = getattr(widgets, viewName, None)
-                if view is not None:
-                    view = view(model)
-
-            else:
-                if model is None:
-                    model = self.getTopOfModelStack()
-                try:
-                    view = viewMethod(request, node, model)
-                except TypeError:
-                    warnings.warn("wvfactory_ methods take (request, node, "
-                                  "model) instead of (request, node) now. \n"
-                                  "Please instanciate your widgets with a "
-                                  "reference to model instead of self.model",
-                                  DeprecationWarning)
-                    self.model = model
-                    view = viewMethod(request, node)
-                    self.model = self.mainModel
+            try:
+                view = viewMethod(request, node, model)
+            except TypeError:
+                warnings.warn("wvfactory_ methods take (request, node, "
+                              "model) instead of (request, node) now. \n"
+                              "Please instanciate your widgets with a "
+                              "reference to model instead of self.model",
+                              DeprecationWarning)
+                self.model = model
+                view = viewMethod(request, node)
+                self.model = self.mainModel
 
             if view is None and not hasattr(self, 'wvupdate_' + viewName):
                 raise NotImplementedError("You specified view name %s on a "
@@ -248,18 +254,15 @@ class View(template.DOMTemplate):
                                                                   viewName,
                                                                   self,
                                                                   widgets))
+            # Look for wvupdate_ methods.
             for namespace in self.viewStack:
                 if namespace is None: continue
                 setupMethod = getattr(namespace, 'wvupdate_' + viewName, None)
                 if setupMethod:
                     if view is None:
-                        if model is None:
-                            model = self.getTopOfModelStack()
-                        self.model = model
                         view = widgets.Widget(self.model)
-                        self.model = self.mainModel
                     view.setupMethods.append(setupMethod)
-        else:
+        elif model is not self.model:
             # If no "view" attribute was specified on the node, see if there
             # is a IView adapter registerred for the model.
             # First, see if the model is Componentized.
@@ -270,6 +273,7 @@ class View(template.DOMTemplate):
                                 interfaces.IView, 
                                 None,
                                 components.getAdapterClassWithInheritance)
+
         if view is None:
             view = node
         return view
@@ -318,9 +322,11 @@ class View(template.DOMTemplate):
         
         controllerResult = controller.handle(request)
         self.outstandingCallbacks += 1
-        self.handleControllerResults(controllerResult, request, node, controller, view, NO_DATA_YET)
+        self.handleControllerResults(controllerResult, request, node, 
+                                    controller, view, NO_DATA_YET)
 
-    def handleControllerResults(self, controllerResult, request, node, controller, view, success):
+    def handleControllerResults(self, controllerResult, request, node, 
+                                controller, view, success):
         isCallback = success != NO_DATA_YET
         self.outstandingCallbacks -= 1
         if isinstance(controllerResult, type(())):
@@ -329,7 +335,8 @@ class View(template.DOMTemplate):
             data = controllerResult
         if isinstance(data, defer.Deferred):
             self.outstandingCallbacks += 1
-            data.addCallback(self.handleControllerResults, request, node, controller, view, success)
+            data.addCallback(self.handleControllerResults, request, node, 
+                                controller, view, success)
             data.addErrback(self.renderFailure, request)
             return data
         if success is not None:
@@ -393,7 +400,8 @@ class View(template.DOMTemplate):
             if request.args.has_key(node.getAttribute('name')):
                 del request.args[node.getAttribute('name')]
             result = controller.commit(request, node, data)
-            returnNodes = controller.model.notify({'request': request, controller.submodel: data})
+            returnNodes = controller.model.notify({'request': request, 
+                                        controller.submodel: data})
             for newNode in returnNodes:
                 if newNode is not None:
                     self.recurseChildren(request, newNode)
@@ -414,7 +422,8 @@ class View(template.DOMTemplate):
         self.sendPage(request)
 
     def setSubviewFactory(self, name, factory, setup=None):
-        setattr(self, "wvfactory_" + name, lambda request, node, model: factory(model))
+        setattr(self, "wvfactory_" + name, lambda request, node, m: 
+                                                    factory(m))
         if setup:
             setattr(self, "wvupdate_" + name, setup)
 

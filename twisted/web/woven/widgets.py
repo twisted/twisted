@@ -33,6 +33,7 @@ from twisted.python import components, failure
 from twisted.python import log
 from twisted.internet import defer
 
+viewFactory = view.viewFactory
 document = parseString("<xml />")
 
 """
@@ -336,20 +337,12 @@ class Widget(view.View):
         return clone
 
 
-class DefaultWidget(Widget):
-    def generate(self, request, node):
-        """
-        By default, we just return the node unchanged
-        """
-        return node
-
-
-#None = DefaultWidget
+wvfactory_Widget = viewFactory(Widget)
 
 
 class WidgetNodeMutator(template.NodeMutator):
-    """
-    XXX: Document
+    """A WidgetNodeMutator replaces the node that is passed into generate
+    with the result of generating the Widget it adapts.
     """
     def generate(self, request, node):
         newNode = self.data.generate(request, node)
@@ -360,6 +353,17 @@ class WidgetNodeMutator(template.NodeMutator):
         return nodeMutator.generate(request, node)
 
 components.registerAdapter(WidgetNodeMutator, Widget, template.INodeMutator)
+
+
+class DefaultWidget(Widget):
+    def generate(self, request, node):
+        """
+        By default, we just return the node unchanged
+        """
+        return node
+
+wvfactory_DefaultWidget = viewFactory(DefaultWidget)
+wvfactory_None = viewFactory(DefaultWidget)
 
 
 class Text(Widget):
@@ -399,6 +403,9 @@ class Text(Widget):
             else:
                 return document.createTextNode(self.text)
 
+wvfactory_Text = viewFactory(Text)
+
+
 class Image(Text):
     """
     A simple Widget that creates an `img' tag.
@@ -415,6 +422,8 @@ class Image(Text):
         node.setAttribute('src', data)
         return node
 
+wvfactory_Image = viewFactory(Image)
+
 
 class Error(Widget):
     tagName = 'span'
@@ -427,15 +436,26 @@ class Error(Widget):
         self.add(Text(" " + self.message))
         return Widget.generateDOM(self, request, node)
 
+wvfactory_Error = viewFactory(Error)
+
 
 class Div(Widget):
     tagName = 'div'
 
+wvfactory_Div = viewFactory(Div)
+
+
 class Span(Widget):
     tagName = 'span'
 
+wvfactory_Span = viewFactory(Span)
+
+
 class Br(Widget):
     tagName = 'br'
+
+wvfactory_Br = viewFactory(Br)
+
 
 class Input(Widget):
     tagName = 'input'    
@@ -449,25 +469,43 @@ class Input(Widget):
             self['value'] = str(mVal)
         return Widget.generateDOM(self, request, node)
 
+wvfactory_Input = viewFactory(Input)
+
+
 class CheckBox(Input):
     def initialize(self):
         self['type'] = 'checkbox'
+
+wvfactory_CheckBox = viewFactory(CheckBox)
+
 
 class RadioButton(Input):
     def initialize(self):
         self['type'] = 'radio'
 
+wvfactory_RadioButton = viewFactory(RadioButton)
+
+
 class File(Input):
     def initialize(self):
         self['type'] = 'file'
+
+wvfactory_File = viewFactory(File)
+
 
 class Hidden(Input):
     def initialize(self):
         self['type'] = 'hidden'
 
+wvfactory_Hidden = viewFactory(Hidden)
+
+
 class InputText(Input):
     def initialize(self):
         self['type'] = 'text'
+
+wvfactory_InputText = viewFactory(InputText)
+
 
 class PasswordText(Input):
     """
@@ -476,12 +514,21 @@ class PasswordText(Input):
     def initialize(self):
         self['type'] = 'password'
 
+wvfactory_PasswordText = viewFactory(PasswordText)
+
+
 class Button(Input):
     def initialize(self):
         self['type'] = 'button'
 
+wvfactory_Button = viewFactory(Button)
+
+
 class Select(Input):
     tagName = 'select'
+
+wvfactory_Select = viewFactory(Select)
+
 
 class Option(Input):
     tagName = 'option'
@@ -500,6 +547,9 @@ class Option(Input):
     def generateDOM(self, request, node):
         self.add(Text(self.text or self.getData()))
         return Input.generateDOM(self, request, node)
+
+wvfactory_Option = viewFactory(Option)
+
 
 class Anchor(Widget):
     tagName = 'a'
@@ -534,9 +584,13 @@ class Anchor(Widget):
         self.add(Text(self.text or data, self.raw, 0))
         return Widget.generateDOM(self, request, node)
 
+wvfactory_Anchor = viewFactory(Anchor)
+
 
 class DirectoryAnchor(Anchor):
     trailingSlash = '/'
+
+wvfactory_DirectoryAnchor = viewFactory(DirectoryAnchor)
 
 
 def appendModel(newNode, modelName):
@@ -621,6 +675,9 @@ class List(Widget):
 
             parentNode.appendChild(newNode)
 
+wvfactory_List = viewFactory(List)
+
+
 class KeyedList(List):
     """
     I am a widget which knows how to display the values stored within a
@@ -655,6 +712,9 @@ class KeyedList(List):
             appendModel(newNode, key)
 
             parentNode.appendChild(newNode)
+
+wvfactory_KeyedList = viewFactory(KeyedList)
+
 
 class ColumnList(List):
     def __init__(self, model, columns=1, start=0, end=0):
@@ -700,28 +760,47 @@ class ColumnList(List):
             row.appendChild(newNode)
         return node
 
+wvfactory_ColumnList = viewFactory(ColumnList)
+
 
 class Bold(Widget):
     tagName = 'b'
-    
+
+wvfactory_Bold = viewFactory(Bold)
+
+
 class Table(Widget):
     tagName = 'table'
+
+wvfactory_Table = viewFactory(Table)
+
 
 class Row(Widget):
     tagName = 'tr'
 
+wvfactory_Row = viewFactory(Row)
+
+
 class Cell(Widget):
     tagName = 'td'
+
+wvfactory_Cell = viewFactory(Cell)
+
 
 class RawText(Widget):
     def generateDOM(self, request, node):
         self.node = domhelpers.RawText(self.getData())
         return self.node
 
+wvfactory_RawText = viewFactory(RawText)
+
 
 class StringDefault(Widget):
     def setUp(self, request, node, data):
         self.add(Text(data))
+
+wvfactory_StringDefault = viewFactory(StringDefault)
+
 
 view.registerViewForModel(Text, model.StringModel)
 view.registerViewForModel(List, model.ListModel)

@@ -24,6 +24,10 @@ from twisted.python import log
 
 from twisted.web.woven import template, controller, utils
 
+
+controllerFactory = controller.controllerFactory
+
+
 class InputHandler(controller.Controller):
     """
     An InputHandler is like a controller, but it operates on something
@@ -107,12 +111,17 @@ class InputHandler(controller.Controller):
             self.model.setData(data)
 
 
+wcfactory_InputHandler = controllerFactory(InputHandler)
+
+
 class DefaultHandler(InputHandler):
     def handle(self, request):
         """
         By default, we don't do anything
         """
         return (None, None)
+
+wcfactory_DefaultHandler = controllerFactory(DefaultHandler)
 
 
 class SingleValue(InputHandler):
@@ -121,7 +130,8 @@ class SingleValue(InputHandler):
         if input:
             return input[0]
 
-SingleValueInputHandler = SingleValue
+wcfactory_SingleValue = controllerFactory(SingleValue)
+
 
 class Anything(SingleValue):
     """
@@ -132,7 +142,8 @@ class Anything(SingleValue):
             return 1
         return None
 
-AnythingInputHandler = Anything
+wcfactory_Anything = controllerFactory(Anything)
+
 
 class Integer(SingleValue):
     """
@@ -148,9 +159,11 @@ class Integer(SingleValue):
 
     def handleInvalid(self, request, data):
         if data is not None:
-            self.view.setError(request, "%s is not an integer. Please enter an integer." % data)
+            self.view.setError(request, "%s is not an integer."
+                            " Please enter an integer." % data)
 
-IntHandler = Integer
+wcfactory_Integer = controllerFactory(Integer)
+
 
 class Float(SingleValue):
     """
@@ -166,15 +179,18 @@ class Float(SingleValue):
 
     def handleInvalid(self, request, data):
         if data is not None:
-            self.view.setError(request, "%s is not an float. Please enter a float." % data)
+            self.view.setError(request, "%s is not an float."
+                                " Please enter a float." % data)
 
-FloatHandler = Float
+wcfactory_Float = controllerFactory(Float)
+
 
 class List(InputHandler):        
     def check(self, request, data):
         return None
 
-ListHandler = List
+wcfactory_List = controllerFactory(List)
+
 
 class NewObject(SingleValue):
     """
@@ -216,4 +232,5 @@ class NewObject(SingleValue):
         """
         self.view.setError(request, self.errorReason)
 
-NewObjectHandler = NewObject
+wcfactory_NewObject = controllerFactory(NewObject)
+

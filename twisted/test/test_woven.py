@@ -197,7 +197,9 @@ class MIdentityList(model.Model):
 class VIdentityList(view.View):
     template = """<html>
     <ul id="list" view="identityList" model="identityList">
-        <li itemOf="identityList" view="text" />
+        <li listItemOf="identityList" view="text">
+            Stuff.
+        </li>
     </ul>
 </html>"""
 

@@ -20,6 +20,14 @@ from twisted.python import components
 from twisted.web import resource
 from twisted.web.woven import interfaces
 
+
+def controllerFactory(controllerClass):
+    return lambda request, node, model: controllerClass(model)
+
+def controllerMethod(controllerClass):
+    return lambda self, request, node, model: controllerClass(model)
+
+
 class Controller(resource.Resource):
     """
     A Controller which handles to events from the user. Such events
