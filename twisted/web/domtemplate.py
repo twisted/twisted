@@ -149,6 +149,7 @@ class DOMTemplate(Resource, View):
     def __init__(self, model = None):
         Resource.__init__(self)
         self.model = model
+        self.controller = None
         self.templateMethods = MethodLookup()
         self.setTemplateMethods( self.getTemplateMethods() )
         self.handlerResults = {1: [], 0: []}
@@ -390,7 +391,11 @@ class DOMTemplate(Resource, View):
         if not stop:
             successes = self.handlerResults.get(1, None)
             if successes:
-                self.handleSuccesses(request, successes)
+                process = self.handleSuccesses(request, successes)
+                if self.controller:
+                    self.controller.process(self, process)
+                else:
+                    self.process(self, process)
 
         page = str(self.d.toxml())
         request.write(page)
@@ -403,7 +408,13 @@ class DOMTemplate(Resource, View):
 
     def handleSuccesses(self, request, successes):
         print "There were successes: ", successes
-        pass
+        process = {}
+        for controller, data, node in successes:
+            process[controller.submodel] = data
+        return process
+
+    def process(self, process):
+        print "Processing results: ", process
 
 # DOMView is now deprecated since the functionality was merged into domtemplate
 DOMView = DOMTemplate
@@ -424,3 +435,6 @@ class DOMController(mvc.Controller, Resource):
         self.view = components.getAdapter(self.model, mvc.IView, None)
         self.view.setController(self)
         return self.view.render(request)
+
+    def process(self, process):
+        print "Processing results: ", process
