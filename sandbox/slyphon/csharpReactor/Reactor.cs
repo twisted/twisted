@@ -13,13 +13,13 @@ namespace csharpReactor {
 		private Hashtable writes = new Hashtable();
 		private bool running = false;
 		
-		public Port ListenTCP(IPEndPoint endPoint, IFactory factory, int backlog) {
+		public Port listenTCP(IPEndPoint endPoint, IFactory factory, int backlog) {
 			Port p = new Port(endPoint, factory, backlog, this);
-			p.StartListening();
+			p.startListening();
 			return p;
 		}
 
-		public void DoSelect(int timeout) {
+		public void doSelect(int timeout) {
 			ArrayList readers = new ArrayList(reads.Keys);
 			ArrayList writers = new ArrayList(writes.Keys);
 
@@ -29,30 +29,30 @@ namespace csharpReactor {
 			}
 		}
 		
-		public void AddReader(IFileDescriptor fd) {
-			this.reads.Add(fd.SelectableSocket, fd);
+		public void addReader(IFileDescriptor fd) {
+			this.reads.Add(fd.selectableSocket, fd);
 		}
 			
-		public void Run() {
+		public void run() {
 			this.running = true;
-			MainLoop();
+			mainLoop();
 		}
 
-		public void Stop() {
+		public void stop() {
 			this.running = false;
 		}
 
-		public void MainLoop() {
+		public void mainLoop() {
 			Console.WriteLine("MainLoop running");
 			while (this.running) {
-				this.DoSelect(100);
+				this.doSelect(100);
 			}
 		}
 
 		public static void Main() { 
 			Reactor r = new Reactor();
-			r.ListenTCP(new IPEndPoint(IPAddress.Parse("127.0.0.1"), 9999), new Factory(), 10);
-			r.Run();
+			r.listenTCP(new IPEndPoint(IPAddress.Parse("127.0.0.1"), 9999), new Factory(), 10);
+			r.run();
 		}
 	}
 }

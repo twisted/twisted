@@ -3,31 +3,37 @@ using System.Net;
 
 namespace csharpReactor {
 	public class Protocol {
-		protected bool connected = false;
-		protected IFactory factory;
-		protected IPEndPoint address = null;
-		
+		protected bool _connected = false;
+		protected IFactory _factory;
+		protected IPEndPoint _address = null;
+		protected ITransport _transport = null;
+
 		public Protocol() : this(null, null) {}
 
 		public Protocol(IPEndPoint address) : this(address, null) {
 		}
 
 		public Protocol(IPEndPoint address, IFactory factory) {
-			this.address = address;
-			this.factory = factory;
+			this._address = address;
+			this._factory = factory;
 		}
 
-		public bool Connected {
-			get { return this.connected; }
+		public virtual bool Connected {
+			get { return this._connected; }
 		}
 		
-		public IFactory Factory {
-			get { return this.factory; }
-			set { this.factory = value; }
+		public virtual IFactory Factory {
+			get { return this._factory; }
+			set { this._factory = value; }
 		}
 
-		public virtual void makeConnection() {
-			this.connected = true;
+		public virtual ITransport transport {
+			get { return this._transport; }
+		}
+
+		public virtual void makeConnection(ITransport t) {
+			this._connected = true;
+			this._transport = t;
 			this.connectionMade();
 		}
 

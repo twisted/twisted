@@ -77,6 +77,11 @@
         <Files>
             <Include>
                 <File
+                    RelPath = "Address.cs"
+                    SubType = "Code"
+                    BuildAction = "Compile"
+                />
+                <File
                     RelPath = "App.ico"
                     BuildAction = "Content"
                 />
@@ -113,6 +118,10 @@
                 <File
                     RelPath = "Tcp.cs"
                     SubType = "Code"
+                    BuildAction = "Compile"
+                />
+                <File
+                    RelPath = "TestReactor.cs"
                     BuildAction = "Compile"
                 />
                 <File

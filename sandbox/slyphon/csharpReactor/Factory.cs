@@ -2,16 +2,16 @@ using System;
 
 namespace csharpReactor {
 	public class Factory : IFactory {
-		protected Type protocol;
+		protected Type _protocol;
 
-		public System.Type Protocol {
-			get { return this.protocol; }
-			set { this.protocol = value; }
+		public System.Type protocol {
+			get { return this._protocol; }
+			set { this._protocol = value; }
 		}
 
-		public virtual void DoStart() {}
-		public virtual void DoStop() {}
-		public virtual IProtocol BuildProtocol() {
+		public virtual void doStart() {}
+		public virtual void doStop() {}
+		public virtual IProtocol buildProtocol(IAddress addr) {
 			return (IProtocol)System.Activator.CreateInstance(this.protocol);
 		}
 	}
