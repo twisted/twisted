@@ -82,3 +82,23 @@ class MicroDOMTest(TestCase):
         for s in '<test>', '<test> </tset>', '</test>':
             self.assertRaises(microdom.MismatchedTags, microdom.parseString, s)
 
+    def testComment(self):
+        s = "<bar> <!--<foo />--> </bar>"
+        d = microdom.parseString(s)
+        e = d.documentElement
+        self.assertEquals(e.nodeName, "bar")
+        # do it like this after we fix it so we don't have empty text nodes:
+        #c = e.childNodes[0]
+        #self.assert_(isinstance(c, microdom.Comment))
+        c = None
+        for n in e.childNodes:
+            if isinstance(n, microdom.Comment):
+                c = n
+        self.assertEquals(c.value, "<foo />")
+
+    def testText(self):
+        d = microdom.parseString("<bar>xxxx</bar>").documentElement
+        text = d.childNodes[0]
+        self.assert_(isinstance(text, microdom.Text))
+        self.assertEquals(text.value, "xxxx")
+        
