@@ -427,6 +427,10 @@ class DeferredList(Deferred):
         self.fireOnOneErrback = fireOnOneErrback
 
     def addDeferred(self, deferred):
+        """DEPRECATED"""
+        import warnings
+        warnings.warn('DeferredList.addDeferred is deprecated.',
+                      DeprecationWarning, stacklevel=2)
         self.resultList.append(None)
         index = len(self.resultList) - 1
         deferred.addCallbacks(self._cbDeferred, self._cbDeferred,
