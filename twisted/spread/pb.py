@@ -554,6 +554,7 @@ class Broker(banana.Banana):
         self.remotelyCachedObjects = None
         self.remotelyCachedLUIDs = None
         self.locallyCachedObjects = None
+        self.localObjects = None
 
     def notifyOnDisconnect(self, notifier):
         """Call the given callback when the Broker disconnects."""
@@ -852,7 +853,7 @@ class Broker(banana.Banana):
         self.sendCall("decref", objectID)
 
     def proto_decref(self, objectID):
-        """(internal) Decrement the refernce count of an object.
+        """(internal) Decrement the reference count of an object.
 
         If the reference count is zero, it will free the reference to this
         object.
