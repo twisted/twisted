@@ -44,8 +44,11 @@ def verifyHostKey(transport, host, pubKey, fingerprint):
             return defer.fail(ConchError('bad host key'))
         print "Warning: Permanently added '%s' (%s) to the list of known hosts." % (khHost, {'ssh-dss':'DSA', 'ssh-rsa':'RSA'}[keyType])
         known_hosts = open(os.path.expanduser('~/.ssh/known_hosts'), 'a')
+        known_hosts.seek(-1, 2)
+        if known_hosts.read(1) != '\n':
+            known_hosts.write('\n')
         encodedKey = base64.encodestring(pubKey).replace('\n', '')
-        known_hosts.write('\n%s %s %s' % (khHost, keyType, encodedKey))
+        known_hosts.write('%s %s %s\n' % (khHost, keyType, encodedKey))
         known_hosts.close()
         return defer.succeed(1)
 
