@@ -68,6 +68,11 @@ failure rather than have an obscure protocol-level error message pop up an
 hour later. So negotiation isn't the only goal: simple capability awareness
 is a useful lesser goal.
 
+It kind of makes sense for the first object of a stream to be a negotiation
+blob. We could make a new 'version' opentype, and declare that the contents
+will be something simple and forever-after-parseable (like a dict, with heavy
+constraints on the keys and values, all strings emitted in full).
+
 * connection initiation
 
 ** define PB URLs
