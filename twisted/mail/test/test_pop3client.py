@@ -15,40 +15,46 @@ def setUp():
     p.makeConnection(t)
     return p, t
 
+def assertRaisesInst(_exceptionInstance, _f, *_a, **_kw):
+    try:
+        result = _f(*_a, **_kw)
+    except _exceptionInstance.__class__, exc:
+        unittest.assertEquals(exc.args, _exceptionInstance.args)
+    else:
+        raise unittest.FailTest(
+            "%s returned %r instead of raising %r" % (
+                _f.func_name, result, _exceptionInstance))
+
 class POP3ClientLoginTestCase(unittest.TestCase):
     def testOkUser(self):
         p, t = setUp()
         d = p.user("username")
         self.assertEquals(t.value(), "USER username\r\n")
         p.dataReceived("+OK send password\r\n")
-        r = unittest.deferredResult(d)
-        self.assertEquals(r, "send password")
+        return d.addCallback(unittest.assertEqual, "send password")
 
     def testBadUser(self):
         p, t = setUp()
         d = p.user("username")
         self.assertEquals(t.value(), "USER username\r\n")
         p.dataReceived("-ERR account suspended\r\n")
-        f = unittest.deferredError(d)
-        f.trap(ServerErrorResponse)
-        self.assertEquals(f.value.args, ("account suspended",))
+        exc = ServerErrorResponse("account suspended")
+        assertRaisesInst(exc, unittest.wait, d)
 
     def testOkPass(self):
         p, t = setUp()
         d = p.password("password")
         self.assertEquals(t.value(), "PASS password\r\n")
         p.dataReceived("+OK you're in!\r\n")
-        r = unittest.deferredResult(d)
-        self.assertEquals(r, "you're in!")
+        return d.addCallback(unittest.assertEqual, "you're in!")
 
     def testBadPass(self):
         p, t = setUp()
         d = p.password("password")
         self.assertEquals(t.value(), "PASS password\r\n")
         p.dataReceived("-ERR go away\r\n")
-        f = unittest.deferredError(d)
-        f.trap(ServerErrorResponse)
-        self.assertEquals(f.value.args, ("go away",))
+        exc = ServerErrorResponse("go away")
+        assertRaisesInst(exc, unittest.wait, d)
 
     def testOkLogin(self):
         p, t = setUp()
@@ -58,8 +64,7 @@ class POP3ClientLoginTestCase(unittest.TestCase):
         p.dataReceived("+OK go ahead\r\n")
         self.assertEquals(t.value(), "USER username\r\nPASS password\r\n")
         p.dataReceived("+OK password accepted\r\n")
-        r = unittest.deferredResult(d)
-        self.assertEquals(r, "password accepted")
+        return d.addCallback(unittest.assertEqual, "password accepted")
 
     def testBadPasswordLogin(self):
         p, t = setUp()
@@ -69,9 +74,8 @@ class POP3ClientLoginTestCase(unittest.TestCase):
         p.dataReceived("+OK waiting on you\r\n")
         self.assertEquals(t.value(), "USER username\r\nPASS password\r\n")
         p.dataReceived("-ERR bogus login\r\n")
-        f = unittest.deferredError(d)
-        f.trap(ServerErrorResponse)
-        self.assertEquals(f.value.args, ("bogus login",))
+        exc = ServerErrorResponse("bogus login")
+        assertRaisesInst(exc, unittest.wait, d)
 
     def testBadUsernameLogin(self):
         p, t = setUp()
@@ -79,9 +83,8 @@ class POP3ClientLoginTestCase(unittest.TestCase):
         d = p.login("username", "password")
         self.assertEquals(t.value(), "USER username\r\n")
         p.dataReceived("-ERR bogus login\r\n")
-        f = unittest.deferredError(d)
-        f.trap(ServerErrorResponse)
-        self.assertEquals(f.value.args, ("bogus login",))
+        exc = ServerErrorResponse("bogus login")
+        assertRaisesInst(exc, unittest.wait, d)
 
     def testServerGreeting(self):
         p, t = setUp()
@@ -105,16 +108,14 @@ class POP3ClientLoginTestCase(unittest.TestCase):
         d = p.login("username", "password")
         self.assertEquals(t.value(), "APOP username 97d2e519bbf4a11acb72c45456cf3e90\r\n")
         p.dataReceived("+OK Welcome!\r\n")
-        r = unittest.deferredResult(d)
-        self.assertEquals(r, "Welcome!")
+        return d.addCallback(unittest.assertEqual, "Welcome!")
 
     def testInsecureLoginRaisesException(self):
         p, t = setUp()
         p.dataReceived("+OK Howdy")
         d = p.login("username", "password")
         self.failIf(t.value())
-        e = unittest.deferredError(d)
-        e.trap(InsecureAuthenticationDisallowed)
+        self.assertRaises(InsecureAuthenticationDisallowed, unittest.wait, d)
 
 class ListConsumer:
     def __init__(self):
@@ -137,8 +138,7 @@ class POP3ClientListTestCase(unittest.TestCase):
         self.assertEquals(t.value(), "LIST\r\n")
         p.dataReceived("+OK Here it comes\r\n")
         p.dataReceived("1 3\r\n2 2\r\n3 1\r\n.\r\n")
-        r = unittest.deferredResult(d)
-        self.assertEquals(r, [3, 2, 1])
+        return d.addCallback(unittest.assertEqual, [3, 2, 1])
 
     def testListSizeWithConsumer(self):
         p, t = setUp()
@@ -152,17 +152,15 @@ class POP3ClientListTestCase(unittest.TestCase):
         p.dataReceived("5 3\r\n6 2\r\n7 1\r\n")
         self.assertEquals(c.data, {0: [3], 1: [2], 2: [1], 4: [3], 5: [2], 6: [1]})
         p.dataReceived(".\r\n")
-        r = unittest.deferredResult(d)
-        self.assertIdentical(r, f)
+        return d.addCallback(unittest.assertIdentical, f)
 
     def testFailedListSize(self):
         p, t = setUp()
         d = p.listSize()
         self.assertEquals(t.value(), "LIST\r\n")
         p.dataReceived("-ERR Fatal doom server exploded\r\n")
-        f = unittest.deferredError(d)
-        f.trap(ServerErrorResponse)
-        self.assertEquals(f.value.args[0], "Fatal doom server exploded")
+        exc = ServerErrorResponse("Fatal doom server exploded")
+        assertRaisesInst(exc, unittest.wait, d)
 
     def testListUID(self):
         p, t = setUp()
@@ -170,8 +168,7 @@ class POP3ClientListTestCase(unittest.TestCase):
         self.assertEquals(t.value(), "UIDL\r\n")
         p.dataReceived("+OK Here it comes\r\n")
         p.dataReceived("1 abc\r\n2 def\r\n3 ghi\r\n.\r\n")
-        r = unittest.deferredResult(d)
-        self.assertEquals(r, ["abc", "def", "ghi"])
+        return d.addCallback(unittest.assertEqual, ["abc", "def", "ghi"])
 
     def testListUIDWithConsumer(self):
         p, t = setUp()
@@ -183,17 +180,15 @@ class POP3ClientListTestCase(unittest.TestCase):
         p.dataReceived("1 xyz\r\n2 abc\r\n5 mno\r\n")
         self.assertEquals(c.data, {0: ["xyz"], 1: ["abc"], 4: ["mno"]})
         p.dataReceived(".\r\n")
-        r = unittest.deferredResult(d)
-        self.assertIdentical(r, f)
+        return d.addCallback(unittest.assertIdentical, f)
 
     def testFailedListUID(self):
         p, t = setUp()
         d = p.listUID()
         self.assertEquals(t.value(), "UIDL\r\n")
         p.dataReceived("-ERR Fatal doom server exploded\r\n")
-        f = unittest.deferredError(d)
-        f.trap(ServerErrorResponse)
-        self.assertEquals(f.value.args[0], "Fatal doom server exploded")
+        exc = ServerErrorResponse("Fatal doom server exploded")
+        assertRaisesInst(exc, unittest.wait, d)
 
 class POP3ClientMessageTestCase(unittest.TestCase):
     def testRetrieve(self):
@@ -204,9 +199,10 @@ class POP3ClientMessageTestCase(unittest.TestCase):
         p.dataReceived("La la la here is message text\r\n")
         p.dataReceived(".Further message text tra la la\r\n")
         p.dataReceived(".\r\n")
-        r = unittest.deferredResult(d)
-        self.assertEquals(r, ["La la la here is message text",
-                              ".Further message text tra la la"])
+        return d.addCallback(
+            unittest.assertEqual, 
+            ["La la la here is message text",
+             ".Further message text tra la la"])
 
     def testRetrieveWithConsumer(self):
         p, t = setUp()
@@ -217,8 +213,7 @@ class POP3ClientMessageTestCase(unittest.TestCase):
         p.dataReceived("+OK Message incoming\r\n")
         p.dataReceived("La la la here is message text\r\n")
         p.dataReceived(".Further message text\r\n.\r\n")
-        r = unittest.deferredResult(d)
-        self.assertIdentical(r, f)
+        self.assertIdentical(unittest.wait(d), f)
         self.assertEquals(c.data, ["La la la here is message text",
                                    ".Further message text"])
 
@@ -230,9 +225,10 @@ class POP3ClientMessageTestCase(unittest.TestCase):
         p.dataReceived("Line the first!  Woop\r\n")
         p.dataReceived("Line the last!  Bye\r\n")
         p.dataReceived(".\r\n")
-        r = unittest.deferredResult(d)
-        self.assertEquals(r, ["Line the first!  Woop",
-                              "Line the last!  Bye"])
+        return d.addCallback(
+            unittest.assertEqual,
+            ["Line the first!  Woop",
+             "Line the last!  Bye"])
 
     def testPartialRetrieveWithConsumer(self):
         p, t = setUp()
@@ -244,8 +240,7 @@ class POP3ClientMessageTestCase(unittest.TestCase):
         p.dataReceived("Line the first!  Woop\r\n")
         p.dataReceived("Line the last!  Bye\r\n")
         p.dataReceived(".\r\n")
-        r = unittest.deferredResult(d)
-        self.assertIdentical(r, f)
+        self.assertIdentical(unittest.wait(d), f)
         self.assertEquals(c.data, ["Line the first!  Woop",
                                    "Line the last!  Bye"])
 
@@ -255,9 +250,8 @@ class POP3ClientMessageTestCase(unittest.TestCase):
         d = p.retrieve(0)
         self.assertEquals(t.value(), "RETR 1\r\n")
         p.dataReceived("-ERR Fatal doom server exploded\r\n")
-        f = unittest.deferredError(d)
-        f.trap(ServerErrorResponse)
-        self.assertEquals(f.value.args[0], "Fatal doom server exploded")
+        exc = ServerErrorResponse("Fatal doom server exploded")
+        assertRaisesInst(exc, unittest.wait, d)
 
 class POP3ClientMiscTestCase(unittest.TestCase):
     def testCapability(self):
@@ -266,8 +260,7 @@ class POP3ClientMiscTestCase(unittest.TestCase):
         self.assertEquals(t.value(), "CAPA\r\n")
         p.dataReceived("+OK Capabilities on the way\r\n")
         p.dataReceived("X\r\nY\r\nZ\r\n.\r\n")
-        r = unittest.deferredResult(d)
-        self.assertEquals(r, ["X", "Y", "Z"])
+        return d.addCallback(unittest.assertEqual, ["X", "Y", "Z"])
 
     def testCapabilityWithConsumer(self):
         p, t = setUp()
@@ -277,8 +270,7 @@ class POP3ClientMiscTestCase(unittest.TestCase):
         self.assertEquals(t.value(), "CAPA\r\n")
         p.dataReceived("+OK Capabilities on the way\r\n")
         p.dataReceived("X\r\nY\r\nZ\r\n.\r\n")
-        r = unittest.deferredResult(d)
-        self.assertIdentical(r, f)
+        self.assertIdentical(unittest.wait(d), f)
         self.assertEquals(c.data, ["X", "Y", "Z"])
 
     def testCapabilityError(self):
@@ -286,23 +278,20 @@ class POP3ClientMiscTestCase(unittest.TestCase):
         d = p.capabilities()
         self.assertEquals(t.value(), "CAPA\r\n")
         p.dataReceived("-ERR This server is lame!\r\n")
-        f = unittest.deferredError(d)
-        f.trap(ServerErrorResponse)
-        self.assertEquals(f.value.args[0], "This server is lame!")
+        exc = ServerErrorResponse("This server is lame!")
+        assertRaisesInst(exc, unittest.wait, d)
 
     def testDelete(self):
         p, t = setUp()
         d = p.delete(3)
         self.assertEquals(t.value(), "DELE 4\r\n")
         p.dataReceived("+OK Hasta la vista\r\n")
-        r = unittest.deferredResult(d)
-        self.assertEquals(r, "Hasta la vista")
+        return d.addCallback(unittest.assertEqual, "Hasta la vista")
 
     def testDeleteError(self):
         p, t = setUp()
         d = p.delete(3)
         self.assertEquals(t.value(), "DELE 4\r\n")
         p.dataReceived("-ERR Winner is not you.\r\n")
-        f = unittest.deferredError(d)
-        f.trap(ServerErrorResponse)
-        self.assertEquals(f.value.args[0], "Winner is not you.")
+        exc = ServerErrorResponse("Winner is not you.")
+        assertRaisesInst(exc, unittest.wait, d)

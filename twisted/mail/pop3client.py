@@ -31,6 +31,9 @@ class InsecureAuthenticationDisallowed(POP3ClientError):
 class ServerErrorResponse(POP3ClientError):
     """The server returned an error response to a request.
     """
+    def __init__(self, reason, consumer=None):
+        POP3ClientError.__init__(self, reason)
+        self.consumer = consumer
 
 class LineTooLong(POP3ClientError):
     """The server sent an extremely long line.
