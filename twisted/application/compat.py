@@ -368,7 +368,7 @@ def convert(oldApp):
     In case this behaviour is not desirable, pass a deep copy
     of the old application
     '''
-    ret = service.Application(oldApp.name, oldApp.uid, oldApp.gid)
+    ret = service.Application(oldApp.name, getattr(oldApp, "uid", None), getattr(oldApp, "gid", None))
     c = service.IServiceCollection(ret)
     service.IProcess(ret).processName = oldApp.processName
     for (pList, klass) in [(oldApp.extraPorts, internet.GenericServer),
