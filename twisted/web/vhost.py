@@ -46,4 +46,4 @@ class NameVirtualHost(resource.Resource):
         """Implementation of resource.Resource's getChild method.
         """
         resrc = self._getResourceForRequest(request)
-        return resrc.getChild(path, request)
+        return resrc.getChildWithDefault(path, request)
