@@ -91,17 +91,12 @@ class MainPage(rend.Page):
         self.loggedIn = loggedIn
         super(MainPage, self).__init__()
 
-    def beforeRender(self, request):
-        request.rememberRootURL()
-
     def child_secret(self, request):
-        request.rememberRootURL()
         if not request.getSession().getLoggedInRoot().loggedIn:
             return LoginPage(['secret'])
         return Authenticated()
 
     def child_another(self, request):
-        request.rememberRootURL()
         if not request.getSession().getLoggedInRoot().loggedIn:
             return LoginPage(['another'])
         return Another()
