@@ -99,9 +99,12 @@ class Options(usage.Options):
 
         ## set up some convenience ##
 
-        self['full-version'] = (self['base-version']
-                           + self['type']
-                           + (self['tinyver'] or ''))
+        if self['type'] in ('alpha', 'rc'):
+            self['full-version'] = (self['base-version']
+                                    + self['type']
+                                    + self['tinyver'])
+        else:
+            self['full-version'] = self['base-version']
 
         self['trunkurl'] = self['svnurl'] + '/trunk'
         self['wipurl'] = '%s/branches/wip-%s' % (self['svnurl'],
