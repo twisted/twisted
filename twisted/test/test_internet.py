@@ -15,7 +15,7 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
 from pyunit import unittest
-from twisted.internet import reactor
+from twisted.internet import reactor, protocol
 from twisted.python.defer import Deferred
 from twisted.python import threadable
 threadable.init(1)
@@ -168,3 +168,21 @@ class callFromThreadTestCase(unittest.TestCase):
         self.assertEquals(c.index, 0)
         reactor.iterate()
         self.assertEquals(c.index, 1)
+
+
+class MyProtocol(protocol.Protocol):
+    """Sample protocol."""
+
+class MyFactory(protocol.Factory):
+    """Sample factory."""
+    
+    protocol = MyProtocol
+
+
+class ProtocolTestCase(unittest.TestCase):
+
+    def testFactory(self):
+        factory = MyFactory()
+        protocol = factory.buildProtocol(None)
+        self.assertEquals(protocol.factory, factory)
+        self.assert_( isinstance(protocol, factory.protocol) )
