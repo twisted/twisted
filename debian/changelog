@@ -1,8 +1,15 @@
+twisted (1.0.5-1) unstable; urgency=low
+
+  * New upstream version
+  * Remove Python 2.1 packages -- upstream no longer supports 2.1 
+
+ -- Moshe Zadka <moshez@debian.org>  Thu,  1 May 2003 09:06:49 +0300
+
 twisted (1.0.4-1) unstable; urgency=low
 
   * New upstream version
 
- -- Moshe Zadka <moshez@debian.org>  Thu,  1 May 2003 09:06:49 +0300
+ -- Moshe Zadka <moshez@debian.org>  Fri, 18 Apr 2003 03:46:22 +0000
 
 twisted (1.0.3-1) unstable; urgency=low
 
