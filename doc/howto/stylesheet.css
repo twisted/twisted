@@ -19,6 +19,11 @@ PRE
   border: thin black solid;
 }
 
+.boxed
+{
+  padding: 1em;
+  border: thin black solid;
+}
 
 .shell
 { 

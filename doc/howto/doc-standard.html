@@ -98,10 +98,16 @@ $ mktap web --path /var/www
     reference an API document, then make sure you at least have a
     single module-name so that the processing code will be able to
     figure out which module or class you're referring to.</p>
+
+    <p>You may also use the <code>base</code> attribute in conjuction
+    with a class of "API" to indicate the module that should be prepended
+    to the module or classname.  This is to help keep the documentation
+    clearer and less cluttered by allowing links to API docs that don't
+    need the module name.</p>
 <pre>
         &lt;p&gt;
     To add a &lt;code class="API"&gt;twisted.web.widgets.Widget&lt;/code&gt;
-    instance to a &lt;code class="API"&gt;twisted.web.widgets.Gadget&lt;/code&gt;
+    instance to a &lt;code class="API" base="twisted.web.widgets"&gt;Gadget&lt;/code&gt;
     instance, do 
     &lt;code class="python"&gt;myGadget.putWidget("widgetPath", MyWidget())&lt;/code&gt;.  
         &lt;/p&gt;
@@ -114,6 +120,24 @@ $ mktap web --path /var/www
         &lt;/p&gt;
     
 </pre>
+    <hr />
+<div class="boxed">
+        <p>
+    To add a <code class="API">twisted.web.widgets.Widget</code>
+    instance to a <code class="API" base="twisted.web.widgets">Gadget</code>
+    instance, do
+    <code class="python">myGadget.putWidget("widgetPath", MyWidget())</code>.
+        </p>
+
+        <p>
+    (implementation note: the widgets are stored in the <code
+    class="python">gadgetInstance.widgets</code> attribute,
+    which is a
+    list.)
+        </p>
+
+</div>
+    <hr />
 
     <h2>Headers</h2>
 
