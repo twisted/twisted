@@ -306,5 +306,7 @@ def formatFailure(myFailure):
             
         w('</div>') # frame
     w('</div>') # stacktrace
+    w(exceptionHTML % (html.escape(str(myFailure.type)),
+                       html.escape(str(myFailure.value))))
 
     return io.getvalue()
