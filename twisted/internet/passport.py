@@ -116,6 +116,20 @@ class Perspective:
         """
         self.setIdentityName(identity.name)
 
+    def makeIdentity(self, password):
+        """Make an identity from this perspective with a password.
+
+        This is a utility method, which can be used in circumstances where the
+        distinction between Perspective and Identity is weak, such as
+        single-Service servers.
+        """
+        ident = Identity(self.perspectiveName, self.service.application)
+        self.setIdentityName(self.perspectiveName)
+        ident.setPassword(password)
+        ident.addKeyForPerspective(self)
+        self.service.application.authorizer.addIdentity(ident)
+        return ident
+
     def getPerspectiveName(self):
         """Return the unique name of this perspective.
 
