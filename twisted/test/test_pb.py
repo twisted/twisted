@@ -28,7 +28,7 @@ from twisted.spread import pb, util
 from twisted.internet import protocol, main
 from twisted.internet.app import Application
 from twisted.python import failure, log
-from twisted.cred import identity
+from twisted.cred import identity, authorizer
 from twisted.internet import reactor, defer
 
 class Dummy(pb.Viewable):
@@ -102,13 +102,15 @@ def connectedServerAndClient():
     """Returns a 3-tuple: (client, server, pump)
     """
     c = pb.Broker()
-    app = Application("pb-test")
-    ident = identity.Identity("guest", app)
+    auth = authorizer.DefaultAuthorizer()
+    appl = Application("pb-test")
+    auth.setApplication(appl)
+    ident = identity.Identity("guest", authorizer=auth)
     ident.setPassword("guest")
-    svc = DummyService("test", app)
+    svc = DummyService("test", appl, authorizer=auth)
     ident.addKeyForPerspective(svc.getPerspectiveNamed("any"))
-    app.authorizer.addIdentity(ident)
-    svr = pb.BrokerFactory(pb.AuthRoot(app))
+    auth.addIdentity(ident)
+    svr = pb.BrokerFactory(pb.AuthRoot(auth))
     s = svr.buildProtocol(('127.0.0.1',))
     s.copyTags = {}
 
