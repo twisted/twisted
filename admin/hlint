@@ -39,6 +39,7 @@ def main():
         checker.makeConnection(None)
         checker.fileName = file
         checker.dataReceived(f.read())
+        checker.connectionLost()
 
 if __name__ == '__main__':
    main()
