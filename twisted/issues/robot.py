@@ -216,6 +216,8 @@ class IssueBot(WordsClient):
     def issue_list(self, issuePerson, message):
         """List issues in a specified queue.
         """
+        if not message:
+            message = "default"
         q = self.repository.getQueue(message)
         now = time.time()
         for issue in q.issues:
