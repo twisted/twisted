@@ -480,7 +480,7 @@ class TestClassAndMethodBase(TestRunnerBase):
                         break                   # <--- skip the else: clause
                     elif error.check(KeyboardInterrupt):
                         log.msg(iface=ITrialDebug, kbd="KEYBOARD INTERRUPT")
-                        um.error.raiseException()
+                        error.raiseException()
                 else:
                     reporter.upDownError(um)
                     def _setUpClassError(tm):
