@@ -151,11 +151,11 @@ class XMLRPC(resource.Resource):
 
 class _DeferredResult:
     """The deferred result of an XML-RPC request."""
-    
+
     def __init__(self, resource, request):
         self.resource = resource
         self.request = request
-    
+
     def gotResult(self, result):
         """Callback for when request finished."""
         if not isinstance(result, Fault):
@@ -167,11 +167,15 @@ class _DeferredResult:
         self.finish(Fault(FAILURE, "error"))
 
     def finish(self, result):
-        self.request.write(xmlrpclib.dumps(result, methodresponse=1))
+        try:
+            output = xmlrpclib.dumps(result, methodresponse=1)
+        except:
+            fault = Fault(FAILURE, "can't serialize output")
+            output = xmlrpclib.dumps(fault, methodresponse=1)
+        self.request.write(output)
         self.request.finish()
         self.resource.requestFinished(self)
         del self.resource
-
 
 
 class QueryProtocol(http.HTTPClient):
@@ -192,6 +196,7 @@ class QueryProtocol(http.HTTPClient):
     def handleResponse(self, contents):
         self.factory.parseResponse(contents)
 
+
 payloadTemplate = """<?xml version="1.0"?>
 <methodCall>
 <methodName>%s</methodName>
@@ -209,7 +214,7 @@ class QueryFactory(protocol.ClientFactory):
         self.url, self.host = url, host
         self.payload = payloadTemplate % (method, xmlrpclib.dumps(args))
         self.deferred = defer.Deferred()
-    
+
     def parseResponse(self, contents):
         if not self.deferred:
             return
@@ -223,8 +228,9 @@ class QueryFactory(protocol.ClientFactory):
             self.deferred = None
 
     def clientConnectionLost(self, _, reason):
-        self.deferred.errback(reason)
-        self.deferred = None
+        if self.deferred is not None:
+            self.deferred.errback(reason)
+            self.deferred = None
 
     clientConnectionFailed = clientConnectionLost
 
@@ -233,6 +239,13 @@ class QueryFactory(protocol.ClientFactory):
         self.deferred = None
 
 class Proxy:
+    """A Proxy for making remote XML-RPC calls.
+
+    Pass the URL of the remote XML-RPC server to the constructor.
+
+    Use proxy.callRemote('foobar', *args) to call remote method
+    'foobar' with *args.
+    """
 
     def __init__(self, url):
         parts = urlparse.urlparse(url)

@@ -1,3 +1,10 @@
+2003-01-22  Dave Peticolas  <dave@krondo.com>
+
+	* twisted/web/xmlrpc.py: add docstring for Proxy. handle
+	serialization errors. check for empty deferred on connectionLost.
+
+	* twisted/test/test_internet.py: make sure wakeUp actually works
+
 2003-01-21  Itamar Shtull-Trauring  <itamar@itamarst.org>
 
 	* twisted/internet/defer.py: added utility method for
