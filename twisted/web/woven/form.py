@@ -14,6 +14,7 @@ from twisted.web.woven import model, view, controller, widgets, input, interface
 
 from twisted.web.microdom import parseString, lmx
 
+
 class FormFillerWidget(widgets.Widget):
 
     def createShell(self, request, node, data):
@@ -132,7 +133,15 @@ class FormErrorModel(FormDisplayModel):
     def initialize(self, fmethod, args, err):
         FormDisplayModel.initialize(self, fmethod)
         self.args = args
-        self.err = err
+        if isinstance(err, Exception):
+            self.err = getattr(err, "descriptions", {})
+            self.desc = err
+        else:
+            self.err = err
+            self.desc = "Please try again"
+
+    def wmfactory_description(self):
+        return str(self.desc)
 
 
 class ThankYou(view.View):
@@ -151,8 +160,14 @@ class ThankYou(view.View):
 
 
 class FormProcessor(resource.Resource):
-    def __init__(self, formMethod):
+    def __init__(self, formMethod, callback=None, errback=None):
         self.formMethod = formMethod
+        if callback is None:
+            callback = self.viewFactory
+        self.callback = callback
+        if errback is None:
+            errback = self.errorViewFactory
+        self.errback = errback
 
     def render(self, request):
         outDict = {}
@@ -171,10 +186,15 @@ class FormProcessor(resource.Resource):
                 errDict[methodArg.name] = failure.Failure()
         if errDict:
             # there were problems processing the form
-            return self.errorViewFactory(self.errorModelFactory(request.args, outDict, errDict)).render(request)
+            return self.errback(self.errorModelFactory(request.args, outDict, errDict)).render(request)
         else:
-            outObj = self.formMethod.call(**outDict)
-            return self.viewFactory(self.modelFactory(outObj)).render(request)
+            try:
+                outObj = self.formMethod.call(**outDict)
+            except formmethod.FormException, e:
+                err = request.errorInfo = self.errorModelFactory(request.args, outDict, e)
+                return self.errback(err).render(request)
+            else:
+                return self.callback(self.modelFactory(outObj)).render(request)
 
     def errorModelFactory(self, args, out, err):
         return FormErrorModel(self.formMethod, args, err)
@@ -187,6 +207,7 @@ class FormProcessor(resource.Resource):
         <title> Form Error View </title>
         </head>
         <body>
+        Error: <span model="description" />
         <form model=".">
         </form>
         </body>
@@ -195,7 +216,7 @@ class FormProcessor(resource.Resource):
         return v
 
     def modelFactory(self, outObj):
-        return getAdapter(outObj, interfaces.IModel)
+        return getAdapter(outObj, interfaces.IModel, outObj)
 
     def viewFactory(self, model):
         # return getAdapter(model, interfaces.IView)

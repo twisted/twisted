@@ -91,6 +91,7 @@ class View(template.DOMTemplate):
         if not hasattr(namespace, 'getSubview'):
             namespace.getSubview = utils.createGetFunction(namespace)
         self.viewStack.push(namespace)
+        return self
 
     def render(self, request, doneCallback=None, block=None):
         request.currentId = 0

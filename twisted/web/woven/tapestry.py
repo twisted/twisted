@@ -128,6 +128,6 @@ class Tapestry(Resource):
             if isinstance(p, Deferred):
                 return _ChildJuggler(p)
             adapter = components.getAdapter(p, IResource, None)
-            if adapter:
+            if adapter is not None:
                 return adapter
         return Resource.getChild(self, path, request)

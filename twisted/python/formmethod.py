@@ -13,6 +13,14 @@ class InputError(Exception):
     An error occurred with some input.
     """
 
+
+class FormException(Exception):
+    """An error occured calling the form method.
+    """
+    def __init__(self, *args, **kwargs):
+        Exception.__init__(self, *args)
+        self.descriptions = kwargs
+
 class Argument:
     defaultDefault = None
     def __init__(self, name, default=None, shortDesc=None, longDesc=None, hints=()):
@@ -174,6 +182,6 @@ def test():
                                  ))
     m = msf.method(funky)
 
-    
+
 if __name__ == '__main__':
     test()
