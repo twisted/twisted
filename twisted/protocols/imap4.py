@@ -492,12 +492,12 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
         if passon is not None:
             self.setLineMode(passon)
 
-    def sendLine(self, line):
-        print 'C:', repr(line)
-        return basic.LineReceiver.sendLine(self, line)
+#    def sendLine(self, line):
+#        print 'C:', repr(line)
+#        return basic.LineReceiver.sendLine(self, line)
 
     def lineReceived(self, line):
-        print 'S:', repr(line)
+#        print 'S:', repr(line)
         self.resetTimeout()
         
         f = getattr(self, 'parse_' + self.parseState)
@@ -1705,9 +1705,8 @@ class IMAP4Client(basic.LineReceiver):
         if useCache and self._capCache is not None:
             return defer.succeed(self._capCache)
         cmd = 'CAPABILITY'
-        args = ''
         resp = ('CAPABILITY',)
-        d = self.sendCommand(Command(cmd, args, wantResponse=resp))
+        d = self.sendCommand(Command(cmd, wantResponse=resp))
         d.addCallback(self.__cbCapabilities)
         return d
 
@@ -4150,8 +4149,8 @@ class _FetchParser:
             part = ''
             if self.part:
                 part = '.'.join([str(x + 1) for x in self.part]) + '.'
-            if self.peek:
-                base += '.PEEK'
+#            if self.peek:
+#                base += '.PEEK'
             if self.header:
                 base += '[%s%s]' % (part, self.header,)
             elif self.text:
