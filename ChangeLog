@@ -1,8 +1,12 @@
 2002-10-22  Moshe Zadka <moshez@twistedmatrix.com>
 
+	* setup.py: conditionalize cReactor on threads support too. This
+	is somewhat of a hack as it it done currently, but it's only necessary
+	on weird OSes like NetBSD. I assume any UNIX with thread support has
+	pthreads.
+
 	* twisted/internet/tksupport.py: tunable reactor iterate delay
         parameter [by Jp Calderone]
-
 
 2002-10-17  Moshe Zadka <moshez@twistedmatrix.com>
 
