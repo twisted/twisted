@@ -829,7 +829,6 @@ class Gadget(resource.Resource):
     self.pageFactory should be a Resource that takes a Widget in its
     constructor. The default is twisted.web.widgets.WidgetPage.
     """
-    page = WidgetPage
 
     isLeaf = 0
 
@@ -885,9 +884,12 @@ class Gadget(resource.Resource):
         is only for backwards-compatibility -- you should set the 'pageFactory'
         attribute on your Gadget inside of its __init__ method.
         """
+        #XXX: delete this after a while.
         if hasattr(self, "page"):
             print "Gadget.page is deprecated, use Gadget.pageFactory instead"
             return apply(self.page, args, kwargs)
+        else:
+            return apply(WidgetPage, args, kwargs)
 
     def getChild(self, path, request):
         if path == '':
