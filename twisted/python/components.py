@@ -228,7 +228,7 @@ class AdapterRegistry:
         """
         import warnings
         warnings.warn("You almost certainly want to be using interface->interface adapters. "
-                      "If you do not, modify your desire.", DeprecationWarning, stacklevel=2)
+                      "If you do not, modify your desire.", DeprecationWarning, stacklevel=3)
         adapterClass = self.adapterRegistry.get((klass, interfaceClass), _Nothing)
         if adapterClass is _Nothing:
             for baseClass in reflect.allYourBase(klass):
