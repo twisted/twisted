@@ -12,9 +12,9 @@ Twisted Test Framework v2.0::
    soft cushions. Well, we shall see. Biggles! Put her in
    the Comfy Chair!'
 
-Author/Maintainer: Jonathan D. Simms U{slyphon@twistedmatrix.com<mailto:slyphon@twistedmatrix.com>}
+Original Author: Jonathan 'jml' Lange 
 
-Original Author: Jonathan 'jml' Lange <jml@twistedmatrix.com>
+Author/Maintainer: Jonathan 'slyphon' Simms U{slyphon@twistedmatrix.com<mailto:slyphon@twistedmatrix.com>}
 
 changes in trial v2.0:
 ======================

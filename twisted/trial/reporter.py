@@ -3,9 +3,6 @@
 # Copyright (c) 2001-2004 Twisted Matrix Laboratories.
 # See LICENSE for details.
 #
-# Author: Jonathan D. Simms <slyphon@twistedmatrix.com>
-# Original Author: Jonathan Lange <jml@twistedmatrix.com>
-
 from __future__ import generators
 
 import sys, time, pdb, string, types

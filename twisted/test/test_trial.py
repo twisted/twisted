@@ -154,7 +154,7 @@ class SpawningMixin:
 
         done = defer.Deferred()
         self.cpp = ChProcessProtoocol(done)
-        self.process = procutils.spawnPythonProcess(self.cpp, args, env, packages=('twisted',))
+        self.process = procutils.spawnPythonProcess(self.cpp, args, env)
         return done
 
 

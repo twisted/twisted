@@ -2,7 +2,7 @@
 # Copyright (c) 2001-2004 Twisted Matrix Laboratories.
 # See LICENSE for details.
 #
-# Author: Jonathan D. Simms <slyphon@twistedmatrix.com>
+# Author: Jonathan Simms <slyphon@twistedmatrix.com>
 #         and countless contributors
 #
 from __future__ import generators
@@ -70,8 +70,7 @@ class SignalStateManager:
 
     def restore(self):
         for signum, handler in self._store.iteritems():
-            if handler is not None:
-                signal.signal(signum, handler)
+            signal.signal(signum, handler)
 
     def clear(self):
         self._store = {}
