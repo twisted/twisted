@@ -6,6 +6,13 @@ from twisted.python import components
 
 
 class ITerminalListener(components.Interface):
+    def terminalSize(self, width, height):
+        """Called to indicate the size of the terminal.
+
+        A terminal of 80x24 should be assumed if this method is not
+        called.  This method may not be called for real terminals.
+        """
+
     def unhandledControlSequence(self, seq):
         """Called when an unsupported control sequence is received.
         """
@@ -17,6 +24,9 @@ class ITerminalListener(components.Interface):
         """
 
 class TerminalListener:
+    def terminalSize(self, width, height):
+        pass
+
     def unhandledControlSequence(self, seq):
         pass
 
@@ -40,7 +50,7 @@ class ITerminal(components.Interface):
         """Move the cursor left n columns.
         """
 
-    def cursorPosition(self, line, column):
+    def cursorPosition(self, column, line):
         """Move the cursor to the given line and column.
         """
 
@@ -341,8 +351,8 @@ class ServerProtocol(protocol.Protocol):
     def cursorBackward(self, n=1):
         self.write('\x1b[%dD' % (n,))
 
-    def cursorPosition(self, line, column):
-        self.write('\x1b[%d;%dH' % (line, column))
+    def cursorPosition(self, column, line):
+        self.write('\x1b[%d;%dH' % (column, line))
 
     def cursorHome(self):
         self.write('\x1b[H')

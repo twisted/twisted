@@ -1,5 +1,5 @@
 
-import random, string
+import random, string, struct
 
 from twisted.application import internet, service
 from twisted.internet import protocol, task
@@ -40,6 +40,9 @@ class Drawable:
 
 
 class Splat(Drawable):
+    HEIGHT = 5
+    WIDTH = 11
+
     def draw_1(self):
         # . .
         #. . .
@@ -91,6 +94,9 @@ class Splat(Drawable):
     erase_5 = erase_4
 
 class Drop(Drawable):
+    WIDTH = 3
+    HEIGHT = 4
+
     def draw_1(self):
         # o
         self.drawLines(' o')
@@ -101,7 +107,6 @@ class Drop(Drawable):
     def draw_2(self):
         # _
         #/ \
-        #| |
         #\./
         self.drawLines(' _ \n/ \\\n\\./')
 
@@ -116,28 +121,57 @@ class Drop(Drawable):
         self.drawLines('  ')
 
 class DemoHandler(insults.TerminalListener):
+    width = 80
+    height = 24
+
+    interval = 0.1
+    rate = 0.05
+
     def run(self, proto):
         # Clear the screen, matey
+        self.proto = proto
         proto.eraseDisplay()
 
-        self._call = task.LoopingCall(self._iterate, proto)
-        self._call.start(0.2)
+        self._call = task.LoopingCall(self._iterate)
+        self._call.start(self.interval)
 
-    def _iterate(self, proto):
+    def _iterate(self):
+        cls = random.choice((Splat, Drop))
+
         # Move to a random location on the screen
-        line = random.randrange(60) + 20
-        col = random.randrange(10) + 10
+        col = random.randrange(self.width - cls.WIDTH) + cls.WIDTH
+        line = random.randrange(self.height - cls.HEIGHT) + cls.HEIGHT
 
-        s = random.choice((Splat, Drop))(proto, line, col)
+        s = cls(self.proto, col, line)
+
         c = task.LoopingCall(s.iterate)
-        c.start(0.05).addErrback(lambda f: f.trap(DrawingFinished)).addErrback(log.err)
+        c.start(self.rate).addErrback(lambda f: f.trap(DrawingFinished)).addErrback(log.err)
 
     # ITerminalListener
+    def terminalSize(self, width, height):
+        self.width = width
+        self.height = height
+
     def unhandledControlSequence(self, seq):
         log.msg("Client sent something weird: %r" % (seq,))
 
     def keystrokeReceived(self, keyID):
-        log.msg("Client sent: %r" % (keyID,))
+        if keyID == '+':
+            self.interval /= 1.1
+        elif keyID == '-':
+            self.interval *= 1.1
+        elif keyID == '*':
+            self.rate /= 1.1
+        elif keyID == '/':
+            self.rate *= 1.1
+        else:
+            log.msg("Client sent: %r" % (keyID,))
+            return
+
+        self._call.stop()
+        self._call = task.LoopingCall(self._iterate)
+        self._call.start(self.interval)
+
 
 class SillyProtocol(insults.ServerProtocol):
     def connectionMade(self):
@@ -151,6 +185,7 @@ MODE_ACK = 4
 SOFT_TAB = 8
 LIT_ECHO = 16
 
+NAWS = '\x1f'
 SUPPRESS_GO_AHEAD = '\x03'
 
 class RetardedTelnetBootstrapProtocol(telnet.Telnet):
@@ -159,9 +194,16 @@ class RetardedTelnetBootstrapProtocol(telnet.Telnet):
     def connectionMade(self):
         self.transport.write(telnet.IAC + telnet.DO + telnet.LINEMODE)
         self.transport.write(telnet.IAC + telnet.WILL + telnet.ECHO)
+        self.transport.write(telnet.IAC + telnet.DO + NAWS)
         p = self.protocol()
         p.makeConnection(self)
         self.chainedProtocol = p
+
+    def iacSBchunk(self, chunk):
+        if chunk[0] == NAWS:
+            if len(chunk) == 6:
+                width, height = struct.unpack('!HH', chunk[1:-1])
+                self.chainedProtocol.handler.terminalSize(width, height)
 
     def iac_WILL(self, feature):
         if feature == telnet.LINEMODE:
