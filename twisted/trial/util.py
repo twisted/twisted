@@ -118,7 +118,7 @@ class DirtyReactorError(Exception):
 class PendingTimedCallsError(Exception):
     """raised when timed calls are left in the reactor"""
 
-DIRTY_REACTOR_MSG = "reactor left in unclean state, the following Selectables were left over: "
+DIRTY_REACTOR_MSG = "THIS WILL BECOME AN ERROR SOON! reactor left in unclean state, the following Selectables were left over: "
 PENDING_TIMED_CALLS_MSG = "pendingTimedCalls still pending (consider setting twisted.internet.base.DelayedCall.debug = True):"
 
 
@@ -191,7 +191,8 @@ class Janitor(object):
             if junk:
                 s = DIRTY_REACTOR_MSG + repr([repr(obj) for obj in junk])
         if s is not None:
-            raise DirtyReactorError, s
+            # raise DirtyReactorError, s
+            warnings.warn(s, DirtyReactorError)
 
     do_cleanReactor = classmethod(do_cleanReactor)
 
