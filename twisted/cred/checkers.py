@@ -71,7 +71,7 @@ class InMemoryUsernamePasswordDatabaseDontUse:
         if matched:
             return username
         else:
-            raise error.UnauthorizedLogin()
+            return failure.Failure(error.UnauthorizedLogin())
 
     def requestAvatarId(self, credentials):
         if credentials.username in self.users:
@@ -80,7 +80,7 @@ class InMemoryUsernamePasswordDatabaseDontUse:
                 self.users[credentials.username]).addCallback(
                 self._cbPasswordMatch, credentials.username)
         else:
-            raise error.UnauthorizedLogin()
+            return failure.Failure(error.UnauthorizedLogin())
 
 
 class FilePasswordDB:
@@ -153,7 +153,7 @@ class FilePasswordDB:
         if matched:
             return username
         else:
-            raise error.UnauthorizedLogin()
+            return failure.Failure(error.UnauthorizedLogin())
 
     def getUser(self, username):
         try:
@@ -184,17 +184,17 @@ class FilePasswordDB:
         try:
             u, p = self.getUser(c.username)
         except KeyError:
-            raise error.UnauthorizedLogin()
+            return failure.Failure(error.UnauthorizedLogin())
         else:
             if self.hash and components.implements(c, credentials.IUsernameHashedPassword):
                 h = self.hash(c.username, c.password, p)
                 if h == p:
                     return u
-                raise error.UnauthorizedLogin()
+                return failure.Failure(error.UnauthorizedLogin())
             else:
                 return defer.maybeDeferred(c.checkPassword, p
                     ).addCallback(self._cbPasswordMatch, u)
-            raise error.UnauthorizedLogin()
+            return failure.Failure(error.UnauthorizedLogin())
 
 # For backwards compatibility
 # Allow access as the old name.
