@@ -17,6 +17,7 @@ from twisted import copyright
 from twisted.python import usage, util, runtime, reflect, log, logfile, syslog
 from twisted.python import failure
 from twisted.persisted import styles
+from twisted.application import apprun
 import cPickle as pickle
 import cStringIO as StringIO
 import traceback, imp, sys, os, errno, signal, pdb, profile, getpass
@@ -103,104 +104,6 @@ class ServerOptions(usage.Options):
         sys.settrace(util.spewer)
 
 
-def decrypt(passphrase, data):
-    import md5
-    from Crypto.Cipher import AES
-    return AES.new(md5.new(passphrase).digest()[:16]).decrypt(data)
-
-
-def createApplicationDecoder(config):
-    mainMod = sys.modules['__main__']
-
-    # Twisted Imports
-    class EverythingEphemeral(styles.Ephemeral):
-        def __getattr__(self, key):
-            try:
-                return getattr(mainMod, key)
-            except AttributeError:
-                if initRun:
-                    raise
-                else:
-                    log.msg("Warning!  Loading from __main__: %s" % key)
-                    return styles.Ephemeral()
-
-    # Application creation/unserializing
-    if config['python']:
-        def decode(filename, data):
-            log.msg('Loading %s...' % (filename,))
-            d = {'__file__': filename}
-            exec data in d, d
-            try:
-                return d['application']
-            except KeyError:
-                log.msg("Error - python file %r must set a variable named "
-                        "'application', an instance of "
-                        "twisted.internet.app.Application. No such variable "
-                        "was found!" % filename)
-                sys.exit()
-        filename = os.path.abspath(config['python'])
-        mode = 'r'
-    elif config['xml']:
-        def decode(filename, data):
-            from twisted.persisted.marmalade import unjellyFromXML
-            log.msg('<Loading file="%s" />' % (filename,))
-            sys.modules['__main__'] = EverythingEphemeral()
-            application = unjellyFromXML(StringIO.StringIO(data))
-            sys.modules['__main__'] = mainMod
-            styles.doUpgrade()
-            return application
-        filename = config['xml']
-        mode = 'r'
-    elif config['source']:
-        def decode(filename, data):
-            from twisted.persisted.aot import unjellyFromSource
-            log.msg("Loading %s..." % (filename,))
-            sys.modules['__main__'] = EverythingEphemeral()
-            application = unjellyFromSource(StringIO.StringIO(data))
-            sys.modules['__main__'] = mainMod
-            styles.doUpgrade()
-            return application
-        filename = config['source']
-        mode = 'r'
-    else:
-        def decode(filename, data):
-            log.msg("Loading %s..." % (filename,))
-            sys.modules['__main__'] = EverythingEphemeral()
-            application = pickle.loads(data)
-            sys.modules['__main__'] = mainMod
-            styles.doUpgrade()
-            return application
-        filename = config['file']
-        mode = 'rb'
-    return filename, decode, mode
-
-
-def loadApplication(config, passphrase):
-    filename, decode, mode = createApplicationDecoder(config)
-    if config['encrypted']:
-        data = open(filename, 'rb').read()
-        data = decrypt(passphrase, data)
-        try:
-            return decode(filename, data)
-        except:
-            # Too bad about this.
-            log.msg("Error loading Application - "
-                    "perhaps you used the wrong passphrase?")
-            raise
-    else:
-        data = open(filename, mode).read()
-        return decode(filename, data)
-
-
-def debugSignalHandler(*args):
-    """Break into debugger."""
-    pdb.set_trace()
-
-
-def installReactor(reactor):
-    if reactor:
-        reflect.namedModule(reactorTypes[reactor]).install()
-
 def checkPID(pidfile, quiet):
     if os.path.exists(pidfile):
         try:
@@ -266,41 +169,6 @@ def startLogging(logfilename, syslog, prefix, nodaemon):
                                                runtime.shortPythonVersion()))
 
 
-
-def runReactor(config, oldstdout, oldstderr):
-    from twisted.internet import reactor
-    if config['profile']:
-        p = profile.Profile()
-        p.runctx("reactor.run()", globals(), locals())
-        if config['savestats']:
-            p.dump_stats(config['profile'])
-        else:
-            # XXX - omfg python sucks
-            tmp, sys.stdout = sys.stdout, open(config['profile'], 'a')
-            p.print_stats()
-            sys.stdout, tmp = tmp, sys.stdout
-            tmp.close()
-    elif config['debug']:
-        failure.startDebugMode()
-        sys.stdout = oldstdout
-        sys.stderr = oldstderr
-        signal.signal(signal.SIGINT, debugSignalHandler)
-        pdb.run("reactor.run()", globals(), locals())
-    else:
-        reactor.run()
-
-def runReactorWithLogging(config, oldstdout, oldstderr):
-    try:
-        runReactor(config, oldstdout, oldstderr)
-    except:
-        if config['nodaemon']:
-            file = oldstdout
-        else:
-            file = open("TWISTD-CRASH.log",'a')
-        traceback.print_exc(file=file)
-        file.flush()
-
-
 def daemonize():
     if os.fork():   # launch child and...
         os._exit(0) # kill off parent
@@ -322,27 +190,6 @@ def shedPrivileges(euid, uid, gid):
         pass
     else:
         log.msg('set %suid/%sgid %s/%s' % (extra, extra, uid, gid))
-
-def getPassphrase(needed):
-    if needed:
-        return getpass.getpass('Passphrase: ')
-    else:
-        return None
-
-def getApplication(config, passphrase):
-    global initRun
-    initRun = 0
-    try:
-        application = loadApplication(config, passphrase)
-    except Exception, e:
-        s = "Failed to load application: %s" % (e,)
-        traceback.print_exc(file=log.logfile)
-        log.msg(s)
-        log.deferr()
-        sys.exit('\n' + s + '\n')
-    log.msg("Loaded.")
-    initRun = 1
-    return application
 
 def launchWithName(name):
     if name and name != sys.argv[0]:
@@ -370,19 +217,9 @@ def startApplication(config, application):
     if not config['no_save']:
         application.scheduleSave()
 
-def reportProfile(report_profile, name):
-    if name:
-        from twisted.python.dxprofile import report
-        log.msg("Sending DXP stats...")
-        report(report_profile, name)
-        log.msg("DXP stats sent.")
-    else:
-        log.err("--report-profile specified but application has no "
-                "name (--appname unspecified)")
-
 def runApp(config):
-    passphrase = getPassphrase(config['encrypted'])
-    installReactor(config['reactor'])
+    passphrase = apprun.getPassphrase(config['encrypted'])
+    apprun.installReactor(config['reactor'])
     config['nodaemon'] = config['nodaemon'] and not config['debug']
     oldstdout = sys.stdout
     oldstderr = sys.stderr
@@ -391,11 +228,11 @@ def runApp(config):
     checkPID(config['pidfile'], config['quiet'])
     from twisted.internet import reactor
     log.msg('reactor class: %s' % reactor.__class__)
-    startApplication(config, getApplication(config, passphrase))
-    runReactorWithLogging(config, oldstdout, oldstderr)
+    startApplication(config, apprun.getApplication(config, passphrase))
+    apprun.runReactorWithLogging(config, oldstdout, oldstderr)
     removePID(config['pidfile'])
     if config['report-profile']:
-        reportProfile(config['report-profile'], application.processName)
+        apprun.reportProfile(config['report-profile'], application.processName)
     log.msg("Server Shut Down.")
 
 

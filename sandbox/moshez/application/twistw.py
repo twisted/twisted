@@ -15,11 +15,8 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 from twisted import copyright
 from twisted.python import usage, util, runtime, log, logfile
+from twisted.application import apprun
 import sys, os, pdb, profile, getpass
-from twistd import decrypt, createApplicationDecoder, loadApplication,\
-                   installReactor, runReactor, runReactorWithLogging,
-                   getPassphrase, getApplication, reportProfile
-# runReactor will have to be made portable
 
 util.addPluginDir()
 
@@ -113,17 +110,17 @@ def startApplication(config, application):
         application.scheduleSave()
 
 def runApp(config):
-    passphrase = getPassphrase(config['encrypted'])
-    installReactor(config['reactor'])
+    passphrase = apprun.getPassphrase(config['encrypted'])
+    apprun.installReactor(config['reactor'])
     oldstdout = sys.stdout
     oldstderr = sys.stderr
     startLogging(config['logfile'])
     from twisted.internet import reactor
     log.msg('reactor class: %s' % reactor.__class__)
-    startApplication(config, getApplication(config, passphrase))
-    runReactorWithLogging(config, oldstdout, oldstderr)
+    startApplication(config, apprun.getApplication(config, passphrase))
+    apprun.runReactorWithLogging(config, oldstdout, oldstderr)
     if config['report-profile']:
-        reportProfile(config['report-profile'], application.processName)
+        apprun.reportProfile(config['report-profile'], application.processName)
     log.msg("Server Shut Down.")
 
 
