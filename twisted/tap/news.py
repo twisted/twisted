@@ -60,8 +60,8 @@ def updateApplication(app, config):
 
         open(schema, 'w').write(
             database.NewsStorageAugmentation.schema + '\n' +
-            database.NewsStorageAugmentation.makeGroupSQL(config['groups']) + '\n' +
-            database.NewsStorageAugmentation.makeOverviewSQL()
+            database.makeGroupSQL(config['groups']) + '\n' +
+            database.makeOverviewSQL()
         )
         db = database.NewsStorageAugmentation(info)
     elif config['backend'].lower() == 'pickle':

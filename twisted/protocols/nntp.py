@@ -466,7 +466,6 @@ class NNTPServer(NNTPClient):
                         self.sendLine('501 command syntax error')
                     except:
                         self.sendLine('503 program fault - command not performed')
-                        raise
                 else:
                     self.sendLine('500 command not recognized')
 
@@ -500,6 +499,7 @@ class NNTPServer(NNTPClient):
 
 
     def _errList(self, failure):
+        print 'LIST failed: ', failure
         self.sendLine('503 program fault - command not performed')
 
 
@@ -511,6 +511,7 @@ class NNTPServer(NNTPClient):
 
 
     def _errSubscription(self, failure):
+        print 'SUBSCRIPTIONS failed: ', failure
         self.sendLine('503 program error, function not performed')
 
 
@@ -522,6 +523,7 @@ class NNTPServer(NNTPClient):
 
 
     def _errOverview(self, failure):
+        print 'LIST OVERVIEW.FMT failed: ', failure
         self.sendLine('503 program error, function not performed')
 
 
@@ -534,8 +536,7 @@ class NNTPServer(NNTPClient):
             defer.addCallbacks(self._gotListGroup, self._errListGroup)
 
 
-    def _gotListGroup(self, parts):
-        group, articles = parts
+    def _gotListGroup(self, (group, articles)):
         self.currentGroup = group
         if len(articles):
             self.currentIndex = int(articles[0])
@@ -549,6 +550,7 @@ class NNTPServer(NNTPClient):
 
 
     def _errListGroup(self, failure):
+        print 'LISTGROUP failed: ', failure
         self.sendLine('502 no permission')
 
 
@@ -564,11 +566,12 @@ class NNTPServer(NNTPClient):
     def _gotXOver(self, parts):
         self.sendLine('224 Overview information follows')
         for i in parts:
-            self.sendLine(string.join(i, '\t'))
+            self.sendLine('\t'.join(map(str, i)))
         self.sendLine('.')
 
 
     def _errXOver(self, failure):
+        print 'XOVER failed: ', failure
         self.sendLine('420 No article(s) selected')
 
 
@@ -605,6 +608,7 @@ class NNTPServer(NNTPClient):
         self.sendLine('.')
 
     def _errXHDR(self, failure):
+        print 'XHDR failed: ', failure
         self.sendLine('502 no permission')
 
 
@@ -622,6 +626,7 @@ class NNTPServer(NNTPClient):
 
 
     def _errXROVER(self, failure):
+        print 'XROVER failed: ',
         self._errXHDR(failure)
 
 
@@ -650,6 +655,7 @@ class NNTPServer(NNTPClient):
         
     
     def _errPost(self, failure):
+        print 'POST failed: ', failure
         self.sendLine('441 posting failed')
 
 
@@ -666,6 +672,7 @@ class NNTPServer(NNTPClient):
     
     
     def _errCheck(self, failure):
+        print 'CHECK failed: ', failure
         self.sendLine('431 try sending it again later')
 
 
@@ -691,7 +698,8 @@ class NNTPServer(NNTPClient):
         self.sendLine('239 article transferred ok')
     
     
-    def _errTakeThis(self, result):
+    def _errTakeThis(self, failure):
+        print 'TAKETHIS failed: ', failure
         self.sendLine('439 article transfer failed')
 
 
@@ -700,23 +708,27 @@ class NNTPServer(NNTPClient):
         defer.addCallbacks(self._gotGroup, self._errGroup)
 
     
-    def _gotGroup(self, parts):
-        name, num, high, low, flags = parts
+    def _gotGroup(self, (name, num, high, low, flags)):
         self.currentGroup = name
         self.currentIndex = low
         self.sendLine('211 %d %d %d %s group selected' % (num, low, high, name))
     
     
     def _errGroup(self, failure):
+        print 'GROUP failed: ', failure
         self.sendLine('411 no such group')
 
 
-    def articleWork(self, article, cmd):
+    def articleWork(self, article, cmd, func):
         if self.currentGroup is None:
             self.sendLine('412 no newsgroup has been selected')
         else:
             if article is None:
-                article = self.currentIndex
+                if self.currentIndex is None:
+                    self.sendLine('420 no current article has been selected')
+                    return
+                else:
+                    article = self.currentIndex
             else:
                 if article[0] == '<':
                     # XXX - FIXME: Request for article by message-id not implemented
@@ -729,10 +741,11 @@ class NNTPServer(NNTPClient):
                         self.sendLine('503 command syntax error')
                         return
 
-            return self.factory.backend.articleRequest(self.currentGroup, article)
+            return func(self.currentGroup, article) 
+
 
     def do_ARTICLE(self, article = None):
-        defer = self.articleWork(article, 'ARTICLE')
+        defer = self.articleWork(article, 'ARTICLE', self.factory.backend.articleRequest)
         if defer:
             defer.addCallbacks(self._gotArticle, self._errArticle)
 
@@ -743,12 +756,13 @@ class NNTPServer(NNTPClient):
         self.transport.write(article.replace('\r\n..', '\r\n.') + '\r\n')
         self.sendLine('.')
 
-    def _errArticle(self, article):
+    def _errArticle(self, failure):
+        print 'ARTICLE failed: ', failure
         self.sendLine('423 bad article number')
 
 
     def do_STAT(self, article = None):
-        defer = self.articleWork(article, 'STAT')
+        defer = self.articleWork(article, 'STAT', self.factory.backend.articleRequest)
         if defer:
             defer.addCallbacks(self._gotStat, self._errStat)
     
@@ -759,11 +773,12 @@ class NNTPServer(NNTPClient):
 
 
     def _errStat(self, failure):
+        print 'STAT failed: ', failure
         self.sendLine('423 bad article number')
 
 
     def do_HEAD(self, article = None):
-        defer = self.articleWork(article, 'HEAD')
+        defer = self.articleWork(article, 'HEAD', self.factory.backend.headRequest)
         if defer:
             defer.addCallbacks(self._gotHead, self._errHead)
     
@@ -776,11 +791,12 @@ class NNTPServer(NNTPClient):
     
     
     def _errHead(self, failure):
+        print 'HEAD failed: ', failure
         self.sendLine('423 no such article number in this group')
 
 
     def do_BODY(self, article):
-        defer = self.articleWork(article, 'BODY')
+        defer = self.articleWork(article, 'BODY', self.factory.backend.bodyRequest)
         if defer:
             defer.addCallbacks(self._gotBody, self._errBody)
 
@@ -793,6 +809,7 @@ class NNTPServer(NNTPClient):
 
 
     def _errBody(self, failure):
+        print 'BODY failed: ', failure
         self.sendLine('423 no such article number in this group')
 
 
@@ -811,7 +828,7 @@ class NNTPServer(NNTPClient):
 
 
     def do_MODE(self, cmd):
-        cmd = cmd[0].strip().upper()
+        cmd = cmd.strip().upper()
         if cmd == 'READER':
             self.servingSlave = 0
             self.sendLine('200 Hello, you can post')
@@ -887,4 +904,5 @@ class NNTPServer(NNTPClient):
     
     
     def _errIHAVE(self, failure):
+        print 'IHAVE failed: ', failure
         self.sendLine('436 transfer failed - try again later')

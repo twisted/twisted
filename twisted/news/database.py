@@ -33,12 +33,6 @@ OVERVIEW_FMT = [
 def hexdigest(md5): #XXX: argh. 1.5.2 doesn't have this.
     return string.join(map(lambda x: hex(ord(x))[2:], md5.digest()), '')
 
-try:
-    # Does this version of Python have staticmethod?
-    staticmethod
-except:
-    staticmethod = lambda f: lambda s, *args, **kwargs: f(*args, **kwargs)
-
 class Article:
     def __init__(self, head, body):
         self.body = body
@@ -399,7 +393,6 @@ class NewsStorageAugmentation(adbapi.Augmentation, NewsStorage):
         article_index INTEGER NOT NULL
     );
 
-    CREATE UNIQUE INDEX posting_group_index ON postings (group_id);
     CREATE UNIQUE INDEX posting_article_index ON postings (article_id);
 
     CREATE TABLE subscriptions (
@@ -464,7 +457,7 @@ class NewsStorageAugmentation(adbapi.Augmentation, NewsStorage):
             SELECT name, group_id FROM groups
             WHERE name IN (%s)
         """ % (', '.join([("'%s'" % (adbapi.safe(group),)) for group in groups]),)
-
+        
         transaction.execute(sql)
         result = transaction.fetchall()
         
@@ -474,7 +467,7 @@ class NewsStorageAugmentation(adbapi.Augmentation, NewsStorage):
         
         # Got some groups, now find the indices this article will have in each
         sql = """
-            SELECT groups.group_id, COALESCE(MAX(postings.article_index), 1)
+            SELECT groups.group_id, COALESCE(MAX(postings.article_index), 0) + 1
             FROM groups LEFT OUTER JOIN postings
             ON postings.group_id = groups.group_id
             WHERE groups.group_id IN (%s)
@@ -484,7 +477,6 @@ class NewsStorageAugmentation(adbapi.Augmentation, NewsStorage):
         transaction.execute(sql)
         indices = transaction.fetchall()
 
-        # XXX - This condition is an error, log it
         if not len(indices):
             raise NNTPError('Internal server error - no indices found')
         
@@ -533,21 +525,31 @@ class NewsStorageAugmentation(adbapi.Augmentation, NewsStorage):
 
     def xoverRequest(self, group, low, high):
         sql = """
-            SELECT articles.article_id, articles.header FROM articles,postings,groups
-            WHERE postings.group_id = groups.group_id AND groups.name = '%s'
+            SELECT postings.article_index, articles.header
+            FROM articles,postings,groups
+            WHERE postings.group_id = groups.group_id
+            AND groups.name = '%s'
             AND postings.article_id = articles.article_id
-            AND postings.article_index >= %d
-            AND postings.article_index <= %d
-        """ % (adbapi.safe(group), low, high)
+            %s
+            %s
+        """ % (
+            adbapi.safe(group),
+            low is not None and "AND postings.article_index >= %d" % (low,) or "",
+            high is not None and "AND postings.article_index <= %d" % (high,) or ""
+        )
 
-        return self.runQuery(sql).addCallback(lambda results: [Article(header, None).overview() for (id, header) in results])
+        return self.runQuery(sql).addCallback(
+            lambda results: [
+                [id] + Article(header, None).overview() for (id, header) in results
+            ]
+        )
 
 
     def xhdrRequest(self, group, low, high, header):
         sql = """
-            SELECT postings.article_index, articles.header FROM articles,postings,groups
-            WHERE postings.group_id = groups.group_id AND groups.name = '%s'
-            AND postings.article_id = articles.article_id
+            SELECT articles.header
+            FROM groups,postings,articles
+            WHERE groups.name = '%s' AND postings.group_id = groups.group_id
             AND postings.article_index >= %d
             AND postings.article_index <= %d
         """ % (adbapi.safe(group), low, high)
@@ -593,7 +595,7 @@ class NewsStorageAugmentation(adbapi.Augmentation, NewsStorage):
         sql = """
             SELECT COUNT(message_id) FROM articles
             WHERE message_id = '%s'
-        """ % (id,)
+        """ % (adbapi.safe(id),)
         
         return self.runQuery(sql).addCallback(
             lambda result: bool(result[0][0])
@@ -601,51 +603,58 @@ class NewsStorageAugmentation(adbapi.Augmentation, NewsStorage):
 
 
     def articleRequest(self, group, index):
-        sql = """
-            SELECT articles.header, articles.body FROM groups,postings,articles
-            WHERE groups.name = '%s' AND postings.group_id = groups.group_id
-            AND postings.article_index = %d
-        """ % (adbapi.safe(group), index)
+        sql = """ 
+            SELECT postings.article_index, articles.message_id, articles.header, articles.body
+            FROM groups,articles LEFT OUTER JOIN postings
+            ON postings.article_id = articles.article_id
+            WHERE postings.article_index = %d
+            AND postings.group_id = groups.group_id
+            AND groups.name = '%s'
+        """ % (index, adbapi.safe(group))
         
         return self.runQuery(sql).addCallback(
-            lambda result: result[0][0] + '\r\n' + result[0][1]
+            lambda result: (result[0][0], result[0][1], result[0][2] + '\r\n' + result[0][3])
         )
 
 
     def headRequest(self, group, index):
         sql = """
-            SELECT articles.header FROM groups,postings,articles
-            WHERE groups.name = '%s' AND postings.group_id = groups.group_id
-            AND postings.article_index = %d
-        """ % (adbapi.safe(group), index)
+            SELECT postings.article_index, articles.message_id, articles.header
+            FROM groups,articles LEFT OUTER JOIN postings
+            ON postings.article_id = articles.article_id
+            WHERE postings.article_index = %d
+            AND postings.group_id = groups.group_id
+            AND groups.name = '%s'
+        """ % (index, adbapi.safe(group))
         
-        return self.runQuery(sql).addCallback(lambda result: result[0][0])
+        return self.runQuery(sql).addCallback(lambda result: result[0])
 
 
     def bodyRequest(self, group, index):
         sql = """
-            SELECT articles.body FROM groups,postings,articles
-            WHERE groups.name = '%s' AND postings.group_id = groups.group_id
-            AND postings.article_index = %d
-        """ % (adbapi.safe(group), index)
+            SELECT postings.article_index, articles.message_id, articles.body
+            FROM groups,articles LEFT OUTER JOIN postings
+            ON postings.article_id = articles.article_id
+            WHERE postings.article_index = %d
+            AND postings.group_id = groups.group_id
+            AND groups.name = '%s'
+        """ % (index, adbapi.safe(group))
         
-        return self.runQuery(sql).addCallback(lambda result: result[0][0])
+        return self.runQuery(sql).addCallback(lambda result: result[0])
 
 
-    ####
-    #### Extension to NewsStorage
-    ####
-    def makeGroupSQL(groups):
-        res = ''
-        for g in groups:
-            res = res + """\n    INSERT INTO groups (name) VALUES ('%s');\n""" % (adbapi.safe(g),)
-        return res
-    makeGroupSQL = staticmethod(makeGroupSQL)
+####
+#### XXX - make these static methods some day
+####
+def makeGroupSQL(groups):
+    res = ''
+    for g in groups:
+        res = res + """\n    INSERT INTO groups (name) VALUES ('%s');\n""" % (adbapi.safe(g),)
+    return res
 
 
-    def makeOverviewSQL():
-        res = ''
-        for o in OVERVIEW_FMT:
-            res = res + """\n    INSERT INTO overview (header) VALUES ('%s');\n""" % (adbapi.safe(o),)
-        return res
-    makeOverviewSQL = staticmethod(makeOverviewSQL)
+def makeOverviewSQL():
+    res = ''
+    for o in OVERVIEW_FMT:
+        res = res + """\n    INSERT INTO overview (header) VALUES ('%s');\n""" % (adbapi.safe(o),)
+    return res
