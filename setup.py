@@ -108,12 +108,6 @@ desktop environments, and your toaster.
 )
 
 
-if hasattr(distutils.dist.DistributionMetadata, 'get_keywords'):
-    setup_args['keywords'] = "internet www tcp framework games"
-
-if hasattr(distutils.dist.DistributionMetadata, 'get_platforms'):
-    setup_args['platforms'] = "win32 posix"
-
 # Include the post install script when building windows packages
 # because it's executed after install-time
 if os.name=='nt':

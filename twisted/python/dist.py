@@ -10,6 +10,19 @@ from distutils import core
 
 
 def setup(**kw):
+    if 'twisted_subproject' in kw:
+        if 'twisted' not in os.listdir('.'):
+            raise RuntimeError("Sorry, you need to run setup.py from the "
+                               "toplevel source directory.")
+        topfiles = os.path.dirname(kw['twisted_subproject'])
+        tsp = os.path.normpath(os.path.join(topfiles, '..'))
+        twistedpath = os.path.normpath(os.path.join(tsp, '..', '..'))
+        
+        kw['packages'] = getPackages(tsp, parent='twisted')
+        print "PACKAGES OF", tsp, kw['packages']
+        kw['data_files'] = getDataFiles(tsp, parent=twistedpath)
+        del kw['twisted_subproject']
+        
     if 'cmdclass' not in kw:
         kw['cmdclass'] = {
             'install_data': install_data_twisted,
