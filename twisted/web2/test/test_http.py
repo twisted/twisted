@@ -950,3 +950,5 @@ class SSLServerTest(unittest.TestCase):
         self.assertEquals(code, 0)
         self.assertEquals(out, "HTTP/1.1 402 Payment Required\r\nContent-Length: 0\r\nConnection: close\r\n\r\n")
 
+if interfaces.IReactorProcess(reactor, None) is None:
+    TCPServerTest.skip = SSLServerTest.skip = "Required process support missing from reactor"
