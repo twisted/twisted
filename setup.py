@@ -22,7 +22,7 @@ Package installer for Twisted
 Copyright (C) 2001 Matthew W. Lefkowitz
 All rights reserved, see LICENSE for details.
 
-$Id: setup.py,v 1.52 2002/09/08 17:05:05 spiv Exp $
+$Id: setup.py,v 1.53 2002/09/17 17:30:58 glyph Exp $
 """
 
 import distutils, os, sys, string
@@ -347,5 +347,6 @@ if os.name == "posix":
               glob('twisted/internet/cReactor/*.c'),
               define_macros=define_macros))
 
-apply(setup, (), setup_args)
+if __name__ == '__main__':
+    apply(setup, (), setup_args)
 
