@@ -1,3 +1,13 @@
+2003-07-12  Christopher Armstrong  <radix@twistedmatrix.com>
+
+	* twisted/web/util.py: Add a new ChildRedirector that, when placed
+	at /foo to redirect to /bar, will also redirect /foo/abc to
+	/bar/abc.
+
+	* twisted/web/scripts.py: Fixed ResourceScriptWrapper so that you
+	can now .putChild on the resource you create in an .rpy file that
+	is wrapped with this class.
+
 2003-07-06  Paul Swartz  <z3p@twistedmatrix.com>
 	* twisted/conch/[checkers,credentials,pamauth].py,
 	  twisted/conch/ssh/userauth.py, twisted/tap/conch.py: made PAM
