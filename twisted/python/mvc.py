@@ -143,7 +143,6 @@ class Model:
         """
         if changed is None: changed = {}
         for view in self.views:
-            print self.views
             view.modelChanged(changed)
         for key, value in self.subviews.items():
             value.modelChanged(changed)
