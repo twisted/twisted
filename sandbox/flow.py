@@ -494,12 +494,6 @@ class Concurrent(Stage):
         later = []
         exit = None
         while stages:
-            def ids(lst):
-                ret = []
-                for x in lst:
-                    ret.append(id(x))
-                return ret
-            #print "_yield", ids(stages), id(exit), ids(later)
             if stages[0] is exit:
                 if self.results:
                     return
