@@ -484,6 +484,16 @@ class Application(log.Logger, styles.Versioned,
         if main.running and self.running:
             main.removeDelayed(delayed)
 
+    def setEUID(self):
+        """Retrieve persistent uid/gid pair (if possible) and set the current 
+        process's euid/egid.
+        """
+        if hasattr(os, 'getgid'):
+            if not os.getgid():
+                os.setegid(self.gid)
+                os.seteuid(self.uid)
+                log.msg('set euid/egid %s/%s' % (self.uid, self.gid))
+
     def setUID(self):
         """Retrieve persistent uid/gid pair (if possible) and set the current process's uid/gid
         """
