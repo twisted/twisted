@@ -50,6 +50,22 @@ def loadPlugins(debug = None, progress = None):
         tapLookup[shortTapName] = plug
     return tapLookup
 
+def makeService(mod, s, options):
+    if hasattr(mod, 'updateApplication'):
+        ser = service.MultiService()
+        mod.updateApplication(compat.IOldApplication(ser), options)
+    else:
+        ser = mod.makeService(options)
+    ser.setServiceParent(s)
+
+def makeApplication(options):
+    mod = options.tapLookup[options.subCommand].load()
+    a = app.loadOrCreate(options.subCommand, options['append'],
+                         options['appname'],
+                         *getid(options['uid'], options['gid']))
+    makeService(mod, service.IServiceCollection(a), options.subOptions)
+    app.saveApplication(a,
+                    options['type'], options['encrypted'], options['append'])
 
 class FirstPassOptions(usage.Options):
     synopsis = """Usage:    mktap [options] <command> [command options] """
@@ -130,14 +146,6 @@ class FirstPassOptions(usage.Options):
             raise usage.UsageError("Please select one of: "+
                               ' '.join(self.tapLookup.keys()))
        
-        
-def makeService(mod, s, options):
-    if hasattr(mod, 'updateApplication'):
-        ser = service.MultiService()
-        mod.updateApplication(compat.IOldApplication(ser), options)
-    else:
-        ser = mod.makeService(options)
-    ser.setServiceParent(s)
 
 def run():
     options = FirstPassOptions()
@@ -148,10 +156,4 @@ def run():
         sys.exit(2)
     except KeyboardInterrupt:
         sys.exit(1)
-    mod = options.tapLookup[options.subCommand].load()
-    a = app.loadOrCreate(options.subCommand, options['append'],
-                         options['appname'],
-                         *getid(options['uid'], options['gid']))
-    makeService(mod, service.IServiceCollection(a), options.subOptions)
-    app.saveApplication(a,
-                    options['type'], options['encrypted'], options['append'])
+    makeApplication(options)
