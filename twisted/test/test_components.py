@@ -466,6 +466,9 @@ components.backwardsCompatImplements(Zoper) # add __implements__
 
 components.registerAdapter(lambda o: id(o), Zopeable, IZope)
 
+class SubZoper(Zoper):
+    zinterface.implements(ISub)
+
 
 class TestZope(unittest.TestCase):
 
@@ -484,3 +487,9 @@ class TestZope(unittest.TestCase):
         self.assert_(components.implements(ThirdParty(), IAdder))
         self.assert_(components.implements(ThirdParty(), IFoo))
         self.assert_(components.implements(ThirdParty(), IZope))
+
+    def testNewSubclass(self):
+        # new-style implementing class subclasses backwardsCompatImplements class
+        o = SubZoper()
+        self.assert_(components.implements(o, IZope))
+        self.assert_(components.implements(o, ISub))

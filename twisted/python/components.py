@@ -125,6 +125,8 @@ def _hook(iface, ob, lookup=globalRegistry.lookup1):
 interface.adapter_hooks.append(_hook)
 
 
+class _implementsTuple(tuple): pass
+
 def backwardsCompatImplements(klass):
     """Make a class have __implements__, for backwards compatability.
 
@@ -145,7 +147,7 @@ def backwardsCompatImplements(klass):
 
     """
     _fixedClasses[klass] = True # so fixClassImplements will skip it
-    klass.__implements__ = tuple(declarations.implementedBy(klass))
+    klass.__implements__ = _implementsTuple(declarations.implementedBy(klass))
 
 
 # WARNING: EXTREME ICKYNESS FOLLOWS
@@ -168,7 +170,17 @@ def fixClassImplements(klass):
     """
     if _fixedClasses.has_key(klass):
         return
-    if hasattr(klass, "__implements__") and isinstance(klass.__implements__, (tuple, MetaInterface)):
+    if not hasattr(klass, "__implements__"):
+        return
+    if isinstance(klass.__implements__, _implementsTuple):
+        # apparently inhereted from superclass that had backwardsCompatImplements()
+        # called on it. if subclass did its own __implements__, this would
+        # be a regular tuple, and thus trigger the warning-enabled code branch
+        # below, but since it's not, they're probably using new style implements()
+        # or didn't change implements from base class at all.
+        backwardsCompatImplements(klass)
+        return
+    if isinstance(klass.__implements__, (tuple, MetaInterface)):
         warnings.warn("Please use implements(), not __implements__ for class %s" % klass, DeprecationWarning, stacklevel=3)
         iList = tupleTreeToList(klass.__implements__)
         if iList:
@@ -331,8 +343,10 @@ class MetaInterface(interface.InterfaceClass):
         registry.register([self], to, '', using)
 
     def __getattr__(self, attr):
-        warnings.warn("Don't get attributes off Interface, use .queryDescriptionFor() etc. instead",
-                      DeprecationWarning, stacklevel=3)
+        if attr != "__instadapt__": # __instadapt__ is part of our own backwards compat layer
+            warnings.warn("Don't get attributes (in this case, %r) off Interface, use "
+                          ".queryDescriptionFor() etc. instead" % (attr,),
+                          DeprecationWarning, stacklevel=3)
         if self.__attrs.has_key(attr):
             return self.__attrs[attr]
         result = self.queryDescriptionFor(attr)
