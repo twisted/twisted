@@ -240,14 +240,3 @@ class Port(tcp.Port):
         except:
             log.deferr()
 
-
-class Connector(tcp.Connector):
-    """Connect a protocol to a server using SSL and if it fails make a new one."""
-    
-    transportFactory = Client
-    contextFactory = ClientContextFactory
-    
-    def startConnecting(self):
-        proto = self.factory.buildProtocol((self.host, self.portno))
-        self.transportFactory(self.host, self.portno, proto,
-                              self.contextFactory, self.timeout, self)
