@@ -291,8 +291,6 @@ class IDTPParent(components.Interface):
     @ivar dtpFactory: the dtp factory that creates an instance when needed
     @ivar dtpInstance: the instance that the factory creates. since only
         one dtp instance is created, this will be a single object reference
-    @ivar dtpTxfrMode: binary or ascii, right now dtp ignores this and only
-        does binary transfers
     @ivar dtpPort: value returned from listenTCP or connectTCP
     @ivar peerHost: the (type,ip,port) of the other server
     """
@@ -336,8 +334,7 @@ class DTP(object, protocol.Protocol):
             return
 
         log.debug('firing dtpFactory deferred')
-        d, self.factory.deferred = self.factory.deferred, defer.Deferred()
-        d.callback(None)
+        self.factory.deferred.callback(None)
 
     def transformChunk(self, chunk):
         log.msg('transformChunk: before = %s' % chunk)
@@ -346,7 +343,7 @@ class DTP(object, protocol.Protocol):
         return newChunk
 
     def dtp_RETR(self): # RETR = sendFile
-        """ssnds a file object out the wire
+        """sends a file object out the wire
         @param fpSizeTuple a tuple of a file object and that file's size
         """
         filename = _getFPName(self.pi.fp)
@@ -449,13 +446,11 @@ class FTP(object, basic.LineReceiver, policies.TimeoutMixin):
     @ivar shell: The connected avatar
     @ivar user: The username of the connected client
     @ivar peerHost: The (type, ip, port) of the client
-    @ivar dtpTxfrMode: The current mode -- PASV or PORT
     @ivar blocked: Command queue for command pipelining
     @ivar binary: The transfer mode.  If false, ASCII.
     @ivar dtpFactory: Generates a single DTP for this session
     @ivar dtpPort: Port returned from listenTCP
     @ivar dtpInetPort: dtpPort.getHost()
-    @ivar dtpHostPort: cluient (address, port) to connect to on a PORT command
     """
     implements(IDTPParent)
     
@@ -474,13 +469,11 @@ class FTP(object, basic.LineReceiver, policies.TimeoutMixin):
     shell       = None     # the avatar
     user        = None     # the username of the client connected
     peerHost    = None     # the (type,ip,port) of the client
-    dtpTxfrMode = None     # PASV or PORT, no default
     blocked     = None     # a command queue for pipelining
     dtpFactory  = None     # generates a single DTP for this session
     dtpInstance = None     # a DTP protocol instance
     dtpPort     = None     # object returned from listenTCP
     dtpInetPort = None     # result of dtpPort.getHost() used for saving inet port number
-    dtpHostPort = None     # client address/port to connect to on PORT command
 
     binary      = True     # binary transfers? False implies ASCII. defaults to True
 
@@ -616,20 +609,20 @@ class FTP(object, basic.LineReceiver, policies.TimeoutMixin):
         if self.blocked is not None:                                            # if someone has blocked during the time we were processing
             self.blocked.extend(commands)                                       # add our commands that we dequeued back into the queue
 
-    def _createDTP(self):
+    def _createDTP(self, mode, host=None, port=None):
         self.setTimeout(None)     # don't timeOut when setting up DTP
         log.debug('_createDTP')
         if not self.dtpFactory:
-            phost = self.transport.getPeer()[1]
+            phost = self.transport.getPeer().host
             self.dtpFactory = DTPFactory(pi=self, peerHost=phost)
             self.dtpFactory.setTimeout(self.dtpTimeout)
-        if self.dtpTxfrMode == PASV:    
+        if mode == PASV:    
             self.dtpPort = reactor.listenTCP(0, self.dtpFactory)
-        elif self.dtpTxfrMode == PORT: 
-            host, port = self.dtpHostPort
+        elif mode == PORT: 
             self.dtpPort = reactor.connectTCP(host, port, self.dtpFactory)
         else:
             log.err('SOMETHING IS SCREWY: _createDTP')
+            assert False
 
         d = self.dtpFactory.deferred        
         d.addCallback(debugDeferred, 'dtpFactory deferred')
@@ -661,6 +654,7 @@ class FTP(object, basic.LineReceiver, policies.TimeoutMixin):
         """
         log.debug('cleanupDTP')
 
+        log.msg(self.dtpPort)
         dtpPort, self.dtpPort = self.dtpPort, None
         try:
             dtpPort.stopListening()
@@ -897,7 +891,6 @@ class FTP(object, basic.LineReceiver, policies.TimeoutMixin):
         # summary: this method is a special case, so keep that in mind
         #
         log.debug('ftp_PASV') 
-        self.dtpTxfrMode = PASV
         if self.dtpFactory:                 # if we have a DTP port set up
             self.cleanupDTP()               # lose it 
         if not self.dtpFactory:             # if we haven't set up a DTP port yet (or just closed one)
@@ -906,7 +899,7 @@ class FTP(object, basic.LineReceiver, policies.TimeoutMixin):
             #      the code and comments in this function are very confusing!
             #        - spiv, 2005-04-02.
             try:
-                self._createDTP()
+                self._createDTP(PASV)
             except error.CannotListenError:
                 self.reply(CANT_OPEN_DATA_CNX)
                 return
@@ -920,8 +913,6 @@ class FTP(object, basic.LineReceiver, policies.TimeoutMixin):
 
     def ftp_PORT(self, params):
         log.debug('ftp_PORT')
-        self.dtpTxfrMode = PORT
-        self.dtpHostPort = decodeHostPort(params)
         if self.dtpFactory:                 # if we have a DTP port set up
             self.cleanupDTP()               # lose it 
         if not self.dtpFactory:             # if we haven't set up a DTP port yet (or just closed one)
@@ -930,7 +921,7 @@ class FTP(object, basic.LineReceiver, policies.TimeoutMixin):
             #      the code and comments in this function are very confusing!
             #        - spiv, 2005-04-02.
             try:
-                self._createDTP()
+                self._createDTP(PORT, decodeHostPort(params))
             except OSError, (e,):           # we're watching for a could not listen on port error
                 # XXX: Eh?  "could not listen on port error"?  PORT commands
                 #      connect to sockets, not make listening ports!  This code
@@ -950,7 +941,7 @@ class FTP(object, basic.LineReceiver, policies.TimeoutMixin):
         self.reply(REQ_FILE_ACTN_COMPLETED_OK)
 
     def ftp_RETR(self, params):
-        if self.dtpTxfrMode is None:
+        if self.dtpInstance is None:
             raise BadCmdSequenceError('must send PORT or PASV before RETR')
         self.fp, self.fpsize = self.shell.retr(cleanPath(params))
         log.debug('self.fp = %s, self.fpsize = %s' % (self.fp, self.fpsize))

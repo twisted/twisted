@@ -405,9 +405,10 @@ class TestFTPServer(FTPTestCase):
     def testPASV(self):
         cli, sr, iop, send = self.cnx.getCSTuple()
         self.cnx.loadAvatar()
-        # Hack getHost to make it look like there's a real TCP connection, even
-        # though there isn't really.
+        # Hack getHost and getPeer to make it look like there's a real TCP
+        # connection, even though there isn't really.
         self.cnx.s.transport.getHost = lambda: IPv4Address('TCP', '1.2.3.4', 0)
+        self.cnx.s.transport.getPeer = lambda: IPv4Address('TCP', '5.6.7.8', 0)
         self.cnx.s.ftp_PASV()
         iop.flush()
         reply = cli.lines[-1]
