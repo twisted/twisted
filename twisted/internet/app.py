@@ -397,7 +397,7 @@ class Application(log.Logger, styles.Versioned,
         self.tcpPorts.append((port, factory, backlog, interface))
         if self.running:
             from twisted.internet import reactor
-            reactor.listenTCP(port, factory, backlog, interface)
+            return reactor.listenTCP(port, factory, backlog, interface)
 
     def unlistenTCP(self, port, interface=''):
         toRemove = []
@@ -414,10 +414,10 @@ class Application(log.Logger, styles.Versioned,
         """
         Connects a given protocol factory to the given numeric UDP port.
         """
-        from twisted.internet import reactor
         self.udpPorts.append((port, factory, interface, maxPacketSize))
         if self.running:
-            reactor.listenUDP(port, factory, interface, maxPacketSize)
+            from twisted.internet import reactor
+            return reactor.listenUDP(port, factory, interface, maxPacketSize)
 
     def dontListenUDP(self, portno):
         raise 'temporarily not implemented'
@@ -428,31 +428,31 @@ class Application(log.Logger, styles.Versioned,
         The connection is a SSL one, using contexts created by the context
         factory.
         """
-        from twisted.internet import reactor
         self.sslPorts.append((port, factory, ctxFactory, backlog, interface))
         if self.running:
-            reactor.listenSSL(port, factory, ctxFactory, backlog, interface)
+            from twisted.internet import reactor
+            return reactor.listenSSL(port, factory, ctxFactory, backlog, interface)
 
     def connectTCP(self, host, port, factory, timeout=30, bindAddress=None):
         """Connect a given client protocol factory to a specific TCP server."""
-        from twisted.internet import reactor
         self.tcpConnectors.append((host, port, factory, timeout, bindAddress))
         if self.running:
-            reactor.connectTCP(host, port, factory, timeout, bindAddress)
+            from twisted.internet import reactor
+            return reactor.connectTCP(host, port, factory, timeout, bindAddress)
 
     def connectSSL(self, host, port, factory, ctxFactory, timeout=30, bindAddress=None):
         """Connect a given client protocol factory to a specific SSL server."""
-        from twisted.internet import reactor
         self.sslConnectors.append((host, port, factory, ctxFactory, timeout, bindAddress))
         if self.running:
-            reactor.connectSSL(host, port, factory, ctxFactory, timeout, bindAddress)
+            from twisted.internet import reactor
+            return reactor.connectSSL(host, port, factory, ctxFactory, timeout, bindAddress)
 
     def connectUNIX(self, address, factory, timeout=30):
         """Connect a given client protocol factory to a specific UNIX socket."""
-        from twisted.internet import reactor
         self.unixConnectors.append((address, factory, timeout))
         if self.running:
-            reactor.connectUNIX(address, factory, timeout)
+            from twisted.internet import reactor
+            return reactor.connectUNIX(address, factory, timeout)
 
     def addDelayed(self, delayed):
         """
