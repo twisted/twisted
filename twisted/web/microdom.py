@@ -52,14 +52,31 @@ dictsAreNotSequences = sys.version_info < (2, 2)
 
 def getElementsByTagName(iNode, name):
     matches = []
+    matches_append = matches.append
     if iNode.nodeName == name:
-        matches.append(iNode)
+        matches_append(iNode)
     slice = iNode.childNodes[:]
+    slice_extend = slice.extend
     while len(slice)>0:
         c = slice.pop(0)
         if c.nodeName == name:
-            matches.append(c)
-        slice = c.childNodes + slice
+            matches_append(c)
+        slice_extend(c.childNodes)
+    return matches
+
+def getElementsByTagNameNoCase(iNode, name):
+    matches = []
+    matches_append = matches.append
+    name = name.lower()
+    if iNode.nodeName.lower() == name:
+        matches.append(iNode)
+    slice = iNode.childNodes[:]
+    slice_extend = slice.extend
+    while len(slice)>0:
+        c = slice.pop(0)
+        if c.nodeName.lower() == name:
+            matches_append(c)
+        slice_extend(c.childNodes)
     return matches
 
 # order is important
@@ -211,6 +228,8 @@ class Document(Node, Accessor):
         return Text(text)
 
     def getElementsByTagName(self, name):
+        if self.documentElement.caseInsensitive:
+            return getElementsByTagNameNoCase(self, name)
         return getElementsByTagName(self, name)
 
     def getElementById(self, id):
@@ -316,15 +335,19 @@ import new
 
 class Element(Node):
 
-    def __init__(self, tagName, attributes=None, parentNode=None, filename=None, markpos=None):
+    def __init__(self, tagName, attributes=None, parentNode=None, filename=None, markpos=None, caseInsensitive=1, preserveCase=0):
         Node.__init__(self, parentNode)
+        self.preserveCase = preserveCase or not caseInsensitive
+        self.caseInsensitive = caseInsensitive
+        if not preserveCase:
+            tagName = tagName.lower()
         if attributes is None:
             self.attributes = {}
         else:
             self.attributes = attributes
             for k, v in self.attributes.items():
                 self.attributes[k] = v.replace('&quot;', '"')
-        self.nodeName = self.tagName = tagName
+        self.endTagName = self.nodeName = self.tagName = tagName
         self._filename = filename
         self._markpos = markpos
 
@@ -333,7 +356,14 @@ class Element(Node):
             return 0
         return self.isEqualToElement(n) and self.isEqualToNode(n)
 
+    def endTag(self, endTagName):
+        if not self.preserveCase:
+            endTagName = endTagName.lower()
+        self.endTagName = endTagName
+
     def isEqualToElement(self, n):
+        if self.caseInsensitive:
+            return (self.attributes == n.attributes) and (self.nodeName.lower() == n.nodeName.lower())
         return (self.attributes == n.attributes) and (self.nodeName == n.nodeName)
 
     def cloneNode(self, deep=0, parent=None):
@@ -346,6 +376,8 @@ class Element(Node):
         return clone
 
     def getElementsByTagName(self, name):
+        if self.caseInsensitive:
+            return getElementsByTagNameNoCase(self, name)
         return getElementsByTagName(self, name)
     
     def hasAttributes(self):
@@ -381,6 +413,10 @@ class Element(Node):
     def writexml(self, stream, indent='', addindent='', newl='', strip=0):
         # write beginning
         NEVERSINGLETON = ('a', 'li', 'div', 'span', 'title')
+        # this should never be necessary unless people start 
+        # changing .tagName on the fly(?)
+        if not self.preserveCase:
+            self.endTagName = self.tagName
         w = stream.write
         begin = [newl, indent, '<', self.tagName]
         bext = begin.extend
@@ -393,7 +429,7 @@ class Element(Node):
             newindent = indent + addindent
             for child in self.childNodes:
                 child.writexml(stream, newindent, addindent, newl, strip)
-            w(j((newl, indent, "</", self.tagName, '>')))
+            w(j((newl, indent, "</", self.endTagName, '>')))
         else:
             w(" />")
 
@@ -455,12 +491,13 @@ class MicroDOMParser(XMLParser):
                     }
 
 
-    def __init__(self, beExtremelyLenient=0, caseInsensitive=1):
+    def __init__(self, beExtremelyLenient=0, caseInsensitive=1, preserveCase=0):
         self.elementstack = []
         self.documents = []
         self._mddoctype = None
         self.beExtremelyLenient = beExtremelyLenient
         self.caseInsensitive = caseInsensitive
+        self.preserveCase = preserveCase or not caseInsensitive
         # self.indentlevel = 0
 
     def shouldPreserveSpace(self):
@@ -483,15 +520,15 @@ class MicroDOMParser(XMLParser):
         # print ' '*self.indentlevel, 'start tag',name
         # self.indentlevel += 1
         parent = self._getparent()
-        if self.caseInsensitive:
-            name = name.lower()
         if (self.beExtremelyLenient and isinstance(parent, Element) and
             self.laterClosers.has_key(parent.tagName) and
             name in self.laterClosers[parent.tagName]):
             self.gotTagEnd(parent.tagName)
             parent = self._getparent()
         el = Element(name, _unescapeDict(attributes), parent,
-                     self.filename, self.saveMark())
+                     self.filename, self.saveMark(), 
+                     caseInsensitive=self.caseInsensitive,
+                     preserveCase=self.preserveCase)
         self.elementstack.append(el)
         if parent:
             parent.appendChild(el)
@@ -520,8 +557,6 @@ class MicroDOMParser(XMLParser):
         self._gotStandalone(CDATASection, cdata)
 
     def gotTagEnd(self, name):
-        if self.caseInsensitive:
-            name = name.lower()
         # print ' '*self.indentlevel, 'end tag',name
         # self.indentlevel -= 1
         if not self.elementstack:
@@ -530,12 +565,13 @@ class MicroDOMParser(XMLParser):
             raise MismatchedTags(*((self.filename, "NOTHING", name)
                                    +self.saveMark()+(0,0)))
         el = self.elementstack.pop()
-        if el.tagName != name:
+        if not (el.tagName == name or (self.caseInsensitive and el.tagName.lower() == name.lower())):
             if self.beExtremelyLenient:
                 if self.elementstack:
                     lastEl = self.elementstack[0]
                     for idx in xrange(len(self.elementstack)):
                         if self.elementstack[-(idx+1)].tagName == name:
+                            self.elementstack[-(idx+1)].endTag(name)
                             break
                     else:
                         # this was a garbage close tag; wait for a real one
@@ -548,6 +584,7 @@ class MicroDOMParser(XMLParser):
             else:
                 raise MismatchedTags(*((self.filename, el.tagName, name)
                                        +self.saveMark()+el._markpos))
+        el.endTag(name)
         if not self.elementstack:
             self.documents.append(el)
 

@@ -353,7 +353,7 @@ class XMLParser(Protocol):
             if self.attrval.endswith('/'):
                 endTag = 1
                 self.attrval = self.attrval[:-1]
-            self.tagAttributes[self.attrname]=self.attrval
+            self.tagAttributes[self.attrname] = self.attrval
             self.gotTagStart(self.tagName, self.tagAttributes)
             if endTag:
                 self.gotTagEnd(self.tagName)

@@ -100,6 +100,29 @@ class MicroDOMTest(TestCase):
         l = domhelpers.findNodesNamed(d.documentElement, 'blink')
         self.assertEquals(len(l), 1)
 
+    def testPreserveCase(self):
+        s = '<eNcApSuLaTe><sUxor /><bOrk><w00T>TeXt</W00t></BoRk></EnCaPsUlAtE>'
+        s2 = s.lower().replace('text', 'TeXt')
+        # these are the only two option permutations that *can* parse the above
+        d = microdom.parseString(s, caseInsensitive=1, preserveCase=1)
+        d2 = microdom.parseString(s, caseInsensitive=1, preserveCase=0)
+        # caseInsensitive=0 preserveCase=0 is not valid, it's converted to
+        # caseInsensitive=0 preserveCase=1
+        d3 = microdom.parseString(s2, caseInsensitive=0, preserveCase=1)
+        d4 = microdom.parseString(s2, caseInsensitive=1, preserveCase=0)
+        d5 = microdom.parseString(s2, caseInsensitive=1, preserveCase=1)
+        # this is slightly contrived, toxml() doesn't need to be identical
+        # for the documents to be equivalent (i.e. <b></b> to <b/>),
+        # however this assertion tests preserving case for start and
+        # end tags while still matching stuff like <bOrk></BoRk>
+        self.assertEquals(d.documentElement.toxml(), s)
+        self.assertEquals(d, d2, "%r != %r" % (d.toxml(), d2.toxml()))
+        self.assertEquals(d2, d3, "%r != %r" % (d2.toxml(), d3.toxml()))
+        # caseInsensitive=0 on the left, NOT perserveCase=1 on the right
+        self.assertNotEquals(d3, d2, "%r == %r" % (d3.toxml(), d2.toxml()))
+        self.assertEquals(d3, d4, "%r != %r" % (d3.toxml(), d4.toxml()))
+        self.assertEquals(d4, d5, "%r != %r" % (d4.toxml(), d5.toxml()))
+
     def testDifferentQuotes(self):
         s = '<test a="a" b=\'b\' />'
         d = microdom.parseString(s)
@@ -214,10 +237,25 @@ class MicroDOMTest(TestCase):
 
     def testSearch(self):
         s = "<foo><bar id='me' /><baz><foo /></baz></foo>"
+        s2 = "<fOo><bAr id='me' /><bAz><fOO /></bAz></fOo>"
         d = microdom.parseString(s)
+        d2 = microdom.parseString(s2, caseInsensitive=0, preserveCase=1)
+        d3 = microdom.parseString(s2, caseInsensitive=1, preserveCase=1)
         root = d.documentElement
         self.assertEquals(root.firstChild(), d.getElementById('me'))
         self.assertEquals(d.getElementsByTagName("foo"),
+                          [root, root.lastChild().firstChild()])
+        root = d2.documentElement
+        self.assertEquals(root.firstChild(), d2.getElementById('me'))
+        self.assertEquals(d2.getElementsByTagName('fOo'), [root])
+        self.assertEquals(d2.getElementsByTagName('fOO'), 
+                          [root.lastChild().firstChild()])
+        self.assertEquals(d2.getElementsByTagName('foo'), []) 
+        root = d3.documentElement
+        self.assertEquals(root.firstChild(), d3.getElementById('me'))
+        self.assertEquals(d3.getElementsByTagName('FOO'),
+                          [root, root.lastChild().firstChild()])
+        self.assertEquals(d3.getElementsByTagName('fOo'),
                           [root, root.lastChild().firstChild()])
 
     def testDoctype(self):
