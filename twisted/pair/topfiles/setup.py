@@ -14,6 +14,7 @@ except NameError:
 def dict(**kw): return kw
 
 dotdot = os.path.normpath(util.sibpath(__file__, '..'))
+twistedpath = os.path.normpath(os.path.join(dotdot, '..', '..'))
 ver = copyright.version.replace('-', '_') #RPM doesn't like '-'
 
 setup_args = dict(
@@ -23,15 +24,15 @@ setup_args = dict(
     description="Twisted Pair is low-level netorking stuff.",
     author="Twisted Matrix Laboratories",
     author_email="twisted-python@twistedmatrix.com",
-    maintainer="James Knight",
-    maintainer_email="foom@fuhm.net",
+    maintainer="Tommi Virtanen",
+    maintainer_email="tv@twistedmatrix.com",
     url="http://twistedmatrix.com/projects/pair/",
     license="MIT",
     long_description="Twisted Pair is low-level netorking stuff.",
 
     # build stuff
     packages=dist.getPackages(dotdot, parent="twisted"),
-    data_files=dist.getDataFiles(dotdot),
+    data_files=dist.getDataFiles(dotdot, parent=twistedpath),
 )
 
 if hasattr(distutils.dist.DistributionMetadata, 'get_platforms'):

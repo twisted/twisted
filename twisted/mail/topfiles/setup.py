@@ -14,6 +14,7 @@ except NameError:
 def dict(**kw): return kw
 
 dotdot = os.path.normpath(util.sibpath(__file__, '..'))
+twistedpath = os.path.normpath(os.path.join(dotdot, '..', '..'))
 ver = copyright.version.replace('-', '_') #RPM doesn't like '-'
 
 setup_args = dict(
@@ -31,7 +32,7 @@ setup_args = dict(
 
     # build stuff
     packages=dist.getPackages(dotdot, parent="twisted"),
-    data_files=dist.getDataFiles(dotdot),
+    data_files=dist.getDataFiles(dotdot, parent=twistedpath),
 )
 
 if hasattr(distutils.dist.DistributionMetadata, 'get_platforms'):

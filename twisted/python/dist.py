@@ -41,7 +41,48 @@ def _filterNames(names):
                  if (not fnmatch.fnmatch(n, pattern)) and (not n.endswith('.py'))]
     return names
 
-def getDataFiles(dname, ignore=None):
+def relativeTo(basepath, relativee):
+    """
+    Gets 'relativee' relative to 'basepath'.
+
+    i.e.,
+
+    >>> relativeTo('/home/', '/home/radix/')
+    'radix'
+    >>> relativeTo('.', '/home/radix/Projects/Twisted') # curdir is /home/radix
+    'Projects/Twisted'
+
+    The 'relativee' must be a child of 'basepath'.
+    """
+    basepath = os.path.abspath(basepath)
+    relativee = os.path.abspath(relativee)
+    if relativee.startswith(basepath):
+        relative = relativee[len(basepath):]
+        if relative.startswith('/'):
+            relative = relative[1:]
+        return relative
+    raise ValueError("%s is not a subpath of %s" % (relativee, basepath))
+
+
+def getDataFiles(dname, ignore=None, parent=None):
+    """
+    Get all the data files that should be included in this distutils Project.
+
+    'dname' should be the path to the package that you're distributing.
+
+    'ignore' is a list of sub-packages to ignore.  This facilitates
+    disparate package hierarchies.  That's a fancy way of saying that
+    the 'twisted' package doesn't want to include the 'twisted.conch'
+    package, so it will pass ['conch'] as the value.
+
+    'parent' is necessary if you're distributing a subpackage like
+    twisted.conch.  'dname' should point to 'twisted/conch' and 'parent'
+    should point to 'twisted'.  This ensures that your data_files are
+    generated correctly, only using relative paths for the first element
+    of the tuple ('twisted/conch/*').
+    The default 'parent' is the current working directory.
+    """
+    parent = parent or "."
     ignore = ignore or []
     result = []
     for directory, subdirectories, filenames in os.walk(dname):
@@ -55,8 +96,9 @@ def getDataFiles(dname, ignore=None):
         for filename in _filterNames(filenames):
             resultfiles.append(filename)
         if resultfiles:
-            result.append((directory, [os.path.join(directory, filename)
-                                       for filename in resultfiles]))
+            result.append((relativeTo(parent, directory),
+                           [relativeTo(parent, os.path.join(directory, filename))
+                            for filename in resultfiles]))
     return result
 
 def getPackages(dname, pkgname=None, results=None, ignore=None, parent=None):

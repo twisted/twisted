@@ -14,6 +14,7 @@ except NameError:
 def dict(**kw): return kw
 
 dotdot = os.path.normpath(util.sibpath(__file__, '..'))
+twistedpath = os.path.normpath(os.path.join(dotdot, '..', '..'))
 ver = copyright.version.replace('-', '_') #RPM doesn't like '-'
 
 setup_args = dict(
@@ -23,8 +24,8 @@ setup_args = dict(
     description="Twisted Lore is a documentation system.",
     author="Twisted Matrix Laboratories",
     author_email="twisted-python@twistedmatrix.com",
-    maintainer="James Knight",
-    maintainer_email="foom@fuhm.net",
+    maintainer="Andrew Bennetts",
+    maintainer_email="spiv@twistedmatrix.com",
     url="http://twistedmatrix.com/projects/lore/",
     license="MIT",
     long_description="Twisted Lore is a documentation system.",
