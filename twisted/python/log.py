@@ -62,12 +62,6 @@ file_protocol = ['close', 'closed', 'fileno', 'flush', 'mode', 'name', 'read',
                  'readline', 'readlines', 'seek', 'softspace', 'tell',
                  'write', 'writelines']
 
-# Prevent logfile from being erased on reload.  This only works in cpython.
-try:
-    logfile
-except NameError:
-    logfile = sys.stdout
-
 def write(stuff):
     """Write some data to the log."""
     logfile.write(str(stuff))
@@ -371,6 +365,12 @@ class NullFile:
 
     def flush(self):
         pass
+
+# Prevent logfile from being erased on reload.  This only works in cpython.
+try:
+    logfile
+except NameError:
+    logfile = NullFile()
 
 def discardLogs():
     """Throw away all logs.

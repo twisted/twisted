@@ -1,3 +1,8 @@
+2002-12-12  Moshe Zadka <moshez@twistedmatrix.com>
+
+	* twisted/python/log.py: add setStdout, set logfile to NullFile by
+	default. 
+
 2002-12-11  Donovan Preston <dp@twistedmatrix.com>
 
 	* Added new woven example, Hello World.
@@ -8,28 +13,28 @@
 
 2002-12-11  Paul Swartz <z3p@twistedmatix.com>
 
-    * twisted/conch/*: enabled 'exec' on the server, disabled core dumps,
-    and some fixes
+	* twisted/conch/*: enabled 'exec' on the server, disabled core dumps,
+	and some fixes
 
 2002-12-10  Paul Swartz  <z3p@twistedmatrix.com>
 
-    * twisted/conch/*: many fixes to conch server, now works and can run
-    as root.
+	* twisted/conch/*: many fixes to conch server, now works and can run
+	as root.
 
-    * twisted/conh/ssh/session.py: fix root exploit where a python shell was
-    left acessable to anyone.
+	* twisted/conh/ssh/session.py: fix root exploit where a python shell was
+	left acessable to anyone.
 
 2002-12-10  Cory Dodt  <corydodt@yahoo.com>
 
-    * t/scripts/postinstall.py: new.  Create shortcut icons on win32.
+	* t/scripts/postinstall.py: new.  Create shortcut icons on win32.
 
-    * twisted-post-install.py: new.  Runs t/scripts/postinstall.py
+	* twisted-post-install.py: new.  Runs t/scripts/postinstall.py
 
-    * setup.py: copy twisted-post-install.py during install_scripts
+	* setup.py: copy twisted-post-install.py during install_scripts
 
 2002-12-09  Paul Swartz  <z3p@twistedmatrix.com>
 
-    * twisted/internet/app.py: actually set the euid/egid if users ask
+	* twisted/internet/app.py: actually set the euid/egid if users ask
 
 2002-12-09  Dave Peticolas  <dave@krondo.com>
 
@@ -41,8 +46,8 @@
 
 2002-12-09  Paul Swartz  <z3p@twistedmatrix.com>
 
-    * twisted/conch/ssh/transport.py: don't accept host keys by default
-    because it's a huge security hole.
+	* twisted/conch/ssh/transport.py: don't accept host keys by default
+	because it's a huge security hole.
 
 2002-12-09  Dave Peticolas  <dave@krondo.com>
 
