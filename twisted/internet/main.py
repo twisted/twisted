@@ -198,10 +198,23 @@ def addTimeout(method, seconds):
     """
     theTimeouts.later(method, seconds)
 
-class DummyResolver:
+import socket
 
-    def resolve(self, address, success, fail):
-        fail()
+class DummyResolver:
+    """
+    An implementation of a synchronous resolver, from Python's socket stuff.
+    This may be ill-placed.
+    """
+    def resolve(self, name, callback, errback=None, type=1, timeout=10):
+        if type != 1:
+            errback()
+            return
+        try:
+            address = socket.gethostbyname(name)
+        except socket.error:
+            errback()
+        else:
+            callback(address)
 
 reads = {}
 writes = {}

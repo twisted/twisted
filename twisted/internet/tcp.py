@@ -170,6 +170,7 @@ class Client(Connection):
                                                 self.failIfNotConnected)
 
     def setRealAddress(self, address):
+        print 'real address:',repr(address),repr(self.addr)
         self.realAddress = address
         self.doConnect()
 
@@ -187,6 +188,7 @@ class Client(Connection):
                 self.startWriting()
                 return
             else:
+                print "unknown socket error in connect",se
                 self.protocol.connectionFailed()
                 self.stopWriting()
                 return
