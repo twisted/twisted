@@ -45,7 +45,7 @@ namespace Twisted
 	object portobj; // so that we have INCREF the port
     public:
 	PyObject* self;
-	UDPPort* port;
+	UDPPort* transport;
 
 	DatagramProtocol() {};
 	virtual ~DatagramProtocol() {}
@@ -54,7 +54,7 @@ namespace Twisted
 	}
 	void makeConnection(object t) {
 	    this->portobj = t;
-	    this->port = extract<UDPPort*>(t);
+	    this->transport = extract<UDPPort*>(t);
 	    this->startProtocol();
 	}
 	virtual void startProtocol() {
@@ -67,9 +67,9 @@ namespace Twisted
 	     call_method<void>(self, "connectionRefused");
 	}
 	/* For non-connected UDP */
-	virtual void datagramReceived(char* buf, size_t buflen, struct sockaddr_in sender) {};
+	virtual void datagramReceived(const char* buf, size_t buflen, struct sockaddr_in sender) {};
 	/* For connected UDP */
-	virtual void datagramReceived(char* buf, size_t buflen) {};
+	virtual void datagramReceived(const char* buf, size_t buflen) {};
     };
 
 }

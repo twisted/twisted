@@ -7,7 +7,7 @@ from distutils import sysconfig
 
 # break abstraction to set g++ as linker - is there better way?
 sysconfig._init_posix()
-sysconfig._config_vars["CC"] = "g++"
+sysconfig._config_vars["CC"] = "g++ -ftemplate-depth-50"
 sysconfig._config_vars["LDSHARED"] = "g++ -shared"
 
 setup(

@@ -1,7 +1,8 @@
 """C++ hooks from inside reactor."""
 
 from twisted.internet import tcp, udp
-from fusion import tcp as ctcp, cudp
+from fusion import tcp as ctcp
+from fusion import udp as cudp
 
 
 class CServer(ctcp.TCPTransportMixin, tcp.Server):
