@@ -2,24 +2,31 @@
 import sys, os, re
 
 tcRe = re.compile('# -\*- test-case-name: (.*) -\*-')
-filename = sys.argv[1]
-ext = os.path.splitext(filename)[1]
 
-if ext == ".py":
-    # Test it is valid Python syntax
-    compile(open(filename).read(), filename, 'exec')
-    if filename.startswith("twisted"): # it's a module, search for a unit test
-        # read 1st line
-        line = open(filename).readline()
-	m = tcRe.match(line)
-	if m:
-            testcase = m.group(1)
-            n = os.system("./bin/trial -m %s" % testcase)
+value = 0
+
+for filename in sys.argv[1:]:
+    ext = os.path.splitext(filename)[1]
+    
+    if ext == ".py":
+        # Test it is valid Python syntax
+        try:
+            compile(open(filename).read(), filename, 'exec')
+        except SyntaxError:
+            value = 1
+        if filename.startswith("twisted"): # search for a unit test
+            # read 1st line
+            line = open(filename).readline()
+	    m = tcRe.match(line)
+	    if m:
+                testcase = m.group(1)
+                n = os.system("./bin/trial -m %s" % testcase)
+                if n:
+                    value = 1
+    elif ext == '.html':
+        if os.path.dirname(filename) in ["doc/man", "doc/howto",
+                                         "doc/specifications"]:
+            n = os.system("./bin/lore -n -olint %s" % filename)
             if n:
-                sys.exit(1)
-elif ext == '.html':
-    if os.path.dirname(filename) in ["doc/man", "doc/howto",
-                                     "doc/specifications"]:
-        n = os.system("./bin/lore -n -olint %s" % filename)
-        if n:
-            sys.exit(1)
+                value = 1
+sys.exit(value)
