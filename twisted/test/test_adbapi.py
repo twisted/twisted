@@ -10,7 +10,7 @@ import os, stat, tempfile, types
 
 from twisted.enterprise.adbapi import ConnectionPool, ConnectionLost
 from twisted.internet import defer
-from twisted.trial.util import deferredResult, deferredError
+from twisted.trial.util import deferredError
 from twisted.python import log
 
 simple_table_schema = """
@@ -28,10 +28,10 @@ class ADBAPITestBase:
         self.startDB()
         self.dbpool = self.makePool(cp_openfun=self.openfun)
         self.dbpool.start()
-        deferredResult(self.dbpool.runOperation(simple_table_schema))
+        unittest.wait(self.dbpool.runOperation(simple_table_schema))
 
     def tearDown(self):
-        deferredResult(self.dbpool.runOperation('DROP TABLE simple'))
+        unittest.wait(self.dbpool.runOperation('DROP TABLE simple'))
         self.dbpool.close()
         self.stopDB()
 
@@ -54,7 +54,7 @@ class ADBAPITestBase:
 
         # verify simple table is empty
         sql = "select count(1) from simple"
-        row = deferredResult(self.dbpool.runQuery(sql))
+        row = unittest.wait(self.dbpool.runQuery(sql))
         self.failUnless(int(row[0][0]) == 0, "Interaction not rolled back")
 
         self.checkOpenfunCalled()
@@ -69,7 +69,7 @@ class ADBAPITestBase:
 
         # make sure they were added (runQuery)
         sql = "select x from simple order by x";
-        rows = deferredResult(self.dbpool.runQuery(sql))
+        rows = unittest.wait(self.dbpool.runQuery(sql))
         self.failUnless(len(rows) == self.num_iterations,
                         "Wrong number of rows")
         for i in range(self.num_iterations):
@@ -77,7 +77,7 @@ class ADBAPITestBase:
             self.failUnless(rows[i][0] == i, "Values not returned.")
 
         # runInteraction
-        res = deferredResult(self.dbpool.runInteraction(self.interaction))
+        res = unittest.wait(self.dbpool.runInteraction(self.interaction))
         self.assertEquals(res, "done")
 
         # give the pool a workout
@@ -86,7 +86,7 @@ class ADBAPITestBase:
             sql = "select x from simple where x = %d" % i
             ds.append(self.dbpool.runQuery(sql))
         dlist = defer.DeferredList(ds, fireOnOneErrback=True)
-        result = deferredResult(dlist)
+        result = unittest.wait(dlist)
         for i in range(self.num_iterations):
             self.failUnless(result[i][1][0][0] == i, "Value not returned")
 
@@ -96,11 +96,11 @@ class ADBAPITestBase:
             sql = "delete from simple where x = %d" % i
             ds.append(self.dbpool.runOperation(sql))
         dlist = defer.DeferredList(ds, fireOnOneErrback=True)
-        deferredResult(dlist)
+        unittest.wait(dlist)
 
         # verify simple table is empty
         sql = "select count(1) from simple"
-        row = deferredResult(self.dbpool.runQuery(sql))
+        row = unittest.wait(self.dbpool.runQuery(sql))
         self.failUnless(int(row[0][0]) == 0,
                         "Didn't successfully delete table contents")
 
@@ -149,16 +149,16 @@ class ReconnectTestBase:
         self.dbpool = self.makePool(cp_max=1, cp_reconnect=True,
                                     cp_good_sql=self.good_sql)
         self.dbpool.start()
-        deferredResult(self.dbpool.runOperation(simple_table_schema))
+        unittest.wait(self.dbpool.runOperation(simple_table_schema))
 
     def tearDown(self):
-        deferredResult(self.dbpool.runOperation('DROP TABLE simple'))
+        unittest.wait(self.dbpool.runOperation('DROP TABLE simple'))
         self.dbpool.close()
         self.stopDB()
 
     def testPool(self):
         sql = "select count(1) from simple"
-        row = deferredResult(self.dbpool.runQuery(sql))
+        row = unittest.wait(self.dbpool.runQuery(sql))
         self.failUnless(int(row[0][0]) == 0, "Table not empty")
 
         # reach in and close the connection manually
@@ -168,7 +168,7 @@ class ReconnectTestBase:
             err = deferredError(self.dbpool.runQuery(sql))
             self.failUnless(err.check(ConnectionLost))
 
-        row = deferredResult(self.dbpool.runQuery(sql))
+        row = unittest.wait(self.dbpool.runQuery(sql))
         self.failUnless(int(row[0][0]) == 0, "Table not empty")
 
         sql = "select * from NOTABLE" # bad sql
