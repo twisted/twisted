@@ -775,7 +775,8 @@ class HTTPFactory(protocol.ServerFactory):
 
     def stopFactory(self):
         if hasattr(self, "logFile"):
-            self.logFile.close()
+            if self.logFile != log.logfile:
+                self.logFile.close()
             del self.logFile
 
     def _openLogFile(self, path):
