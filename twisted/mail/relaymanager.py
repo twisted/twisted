@@ -216,7 +216,7 @@ class SmartHostSMTPRelayingManager:
         self.queue = queue
 
     def _finish(self, relay, message):
-	self.managed[relay].remove(os.path.basename(message))
+        self.managed[relay].remove(os.path.basename(message))
         self.queue.done(message)
 
     def notifySuccess(self, relay, message):
